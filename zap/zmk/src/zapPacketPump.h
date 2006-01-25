@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,42 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_PACKETPUMP_H__
+#define __ZAP_PACKETPUMP_H__
 
-interface nsIPropertyBag2;
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+////////////////////////////////////////////////////////////////////////
+// zapPacketPump
+
+// {35A96EF1-5D16-4E31-9613-27127B35E799}
+#define ZAP_PACKETPUMP_CID                             \
+  { 0x35a96ef1, 0x5d16, 0x4e31, { 0x96, 0x13, 0x27, 0x12, 0x7b, 0x35, 0xe7, 0x99 } }
+
+#define ZAP_PACKETPUMP_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "pump"
+
+class zapPacketPump : public zapIMediaNode,
+                      public zapIMediaSource,
+                      public zapIMediaSink
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPIMEDIASINK
   
-  readonly attribute ACString data;
+  zapPacketPump();
+  ~zapPacketPump();
+
+private:
+  friend class zapPacketPumpClock;
+  
+  zapPacketPumpClock *mClock; // weak reference managed by object itself
+  
+  nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
+#endif // __ZAP_PACKETPUMP_H__

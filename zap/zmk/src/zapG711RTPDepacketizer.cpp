@@ -91,7 +91,7 @@ zapG711RTPDepacketizer::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapG711RTPDepacketizer::OpenStream(nsIPropertyBag2* streamInfo)
+zapG711RTPDepacketizer::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -117,11 +117,6 @@ zapG711RTPDepacketizer::OpenStream(nsIPropertyBag2* streamInfo)
                                      NS_LITERAL_CSTRING("audio/pcmu") :
                                      NS_LITERAL_CSTRING("audio/pcma"));
   return NS_OK;
-}
-
-void
-zapG711RTPDepacketizer::CloseStream()
-{
 }
 
 nsresult

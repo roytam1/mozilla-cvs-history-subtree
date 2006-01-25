@@ -59,8 +59,7 @@ public:
                           const nsACString & id,
                           nsIPropertyBag2 *node_pars);
   NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult OpenStream(nsIPropertyBag2* streamInfo);
-  virtual void CloseStream();
+  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
 
 private:

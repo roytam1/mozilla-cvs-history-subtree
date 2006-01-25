@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,57 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_TTONEGENERATOR_H__
+#define __ZAP_TTONEGENERATOR_H__
 
-interface nsIPropertyBag2;
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "zapIMediaGraph.h"
+#include "zapIMediaFrame.h"
+#include "nsCOMPtr.h"
+#include "nsIWritablePropertyBag2.h"
+#include "zapITToneGenerator.h"
+#include "nsDeque.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+////////////////////////////////////////////////////////////////////////
+// zapTToneGenerator
+
+// {E239A6DF-C6D2-4B17-B2C6-C013D3BEEA8D}
+#define ZAP_TTONEGENERATOR_CID \
+  { 0xe239a6df, 0xc6d2, 0x4b17, { 0xb2, 0xc6, 0xc0, 0x13, 0xd3, 0xbe, 0xea, 0x8d } }
+
+#define ZAP_TTONEGENERATOR_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "ttone-generator"
+
+class zapTToneGenerator : public zapIMediaNode,
+                          public zapIMediaSource,
+                          public zapITToneGenerator
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
+public:
+  zapTToneGenerator();
+  ~zapTToneGenerator();
   
-  readonly attribute ACString data;
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPITTONEGENERATOR
+
+private:
+  void ClearState();
+  nsresult ParseTonesData(const char *buf);
+  nsresult ParseTone(const char **bufp);
+  
+  // node parameters (set from zapIMediaGraph::AddNode()):
+  PRUint16 mMaxSamplesPerFrame;
+
+  nsDeque mBuffer; // tone buffer
+  PRUint32 mToneSamplesPlayed; // samples played for current tone
+  PRBool mLoop; // true: loop the buffer
+  PRUint32 mSampleClock;
+  
+  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
+#endif // __ZAP_TTONEGENERATOR_H__

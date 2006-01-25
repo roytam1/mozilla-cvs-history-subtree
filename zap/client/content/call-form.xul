@@ -74,6 +74,10 @@
                   "",
                   "chrome,resizable");
     }
+
+    function cmdSendDTMF(code) {
+      wCall.callPipe.dtmfCtl.play(code);
+    }
   ]]>
   </script>
 
@@ -216,6 +220,10 @@
           </conditions>
           <action>
             <vbox uri="?node" flex="1">
+              <hbox>
+                <label value="Send DTMF: "/>
+                <textbox onkeypress="dump(String.fromCharCode(event.charCode));cmdSendDTMF(String.fromCharCode(event.charCode))"/> 
+              </hbox>
               <hbox>
                 <spacer flex="1"/>
                 <button label="Hang Up" oncommand="cmdHangup()"/>

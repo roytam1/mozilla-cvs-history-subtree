@@ -75,12 +75,6 @@ private:
   
   // splitter input source:
   nsCOMPtr<zapIMediaSource> mInput;
-
-  PRBool mWaiting; // true == we have requested the next frame
-  PRBool mProcessing; // true == we are currently processing a frame;
-                      // don't request new frame until finished
-  
-  nsCOMPtr<zapIMediaFrame> mFrame; // the current frame
 };
 
 #endif // __ZAP_SPLITTER_H__

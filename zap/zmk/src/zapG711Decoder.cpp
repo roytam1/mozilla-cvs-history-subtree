@@ -85,7 +85,7 @@ zapG711Decoder::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapG711Decoder::OpenStream(nsIPropertyBag2* streamInfo)
+zapG711Decoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -112,7 +112,7 @@ zapG711Decoder::OpenStream(nsIPropertyBag2* streamInfo)
   NS_NewHashPropertyBag(getter_AddRefs(bag));
   mStreamInfo = do_QueryInterface(bag);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio"));
+                                     NS_LITERAL_CSTRING("audio/pcm"));
   mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
                                    8000.0);
   mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
@@ -124,11 +124,6 @@ zapG711Decoder::OpenStream(nsIPropertyBag2* streamInfo)
 
   
   return NS_OK;
-}
-
-void
-zapG711Decoder::CloseStream()
-{
 }
 
 nsresult

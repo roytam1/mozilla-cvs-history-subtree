@@ -51,7 +51,7 @@ zapSpeexDecoder::zapSpeexDecoder()
     : mDecoderState(nsnull)
 {
 #ifdef DEBUG_afri_zmk
-  printf("zapSpeexDecoder::zapSpeexDecoder()");
+  printf("zapSpeexDecoder::zapSpeexDecoder()\n");
 #endif
 }
 
@@ -59,7 +59,7 @@ zapSpeexDecoder::~zapSpeexDecoder()
 {
   NS_ASSERTION(!mDecoderState, "unclean shutdown");
 #ifdef DEBUG_afri_zmk
-  printf("zapSpeexDecoder::~zapSpeexDecoder()");
+  printf("zapSpeexDecoder::~zapSpeexDecoder()\n");
 #endif
 }
 
@@ -151,7 +151,7 @@ zapSpeexDecoder::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapSpeexDecoder::OpenStream(nsIPropertyBag2* streamInfo)
+zapSpeexDecoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -178,7 +178,7 @@ zapSpeexDecoder::OpenStream(nsIPropertyBag2* streamInfo)
   NS_NewHashPropertyBag(getter_AddRefs(bag));
   mStreamInfo = do_QueryInterface(bag);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio"));
+                                     NS_LITERAL_CSTRING("audio/pcm"));
   mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
                                    mSampleRate);
   mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
@@ -190,11 +190,6 @@ zapSpeexDecoder::OpenStream(nsIPropertyBag2* streamInfo)
 
   
   return NS_OK;
-}
-
-void
-zapSpeexDecoder::CloseStream()
-{
 }
 
 nsresult

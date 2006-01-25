@@ -56,22 +56,19 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIASINK
 
-  void RequestFrame();
-  // consume the current frame, return value of mActive:
-  PRBool ConsumeFrame(zapIMediaFrame**frame);
+  // fetch a frame from input:
+  nsresult ProduceFrame(zapIMediaFrame**frame);
   
 private:
   nsRefPtr<zapAudioMixer> mMixer;
-  nsCOMPtr<zapIMediaSource> mSource;
-  PRBool mWaiting; // are we waiting for the next frame?
-  nsCOMPtr<zapIMediaFrame> mFrame; // buffers the next frame
-  PRBool mActive; // input connected; stream open
+  nsCOMPtr<zapIMediaSource> mInput;
+  nsCOMPtr<nsIPropertyBag2> mLastValidStreamInfo;
+
+  PRBool ValidateFrame(zapIMediaFrame *frame);
 };
 
 //----------------------------------------------------------------------
 zapAudioMixerInput::zapAudioMixerInput()
-    : mWaiting(PR_FALSE),
-      mActive(PR_FALSE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapAudioMixerInput::zapAudioMixerInput()\n");
@@ -86,11 +83,6 @@ zapAudioMixerInput::~zapAudioMixerInput()
 #endif
   // clean up references:
   mMixer->mInputs.RemoveElement(this);
-
-  // make sure mixer gets EOF frame if this was the last input:
-  if (!mMixer->mInputs.Count())
-    mMixer->FrameAvailable();
-  
   mMixer = nsnull;
 }
 
@@ -98,8 +90,6 @@ void zapAudioMixerInput::Init(zapAudioMixer* mixer) {
   mMixer = mixer;
   // append ourselves to the mixer's array of inputs:
   mMixer->mInputs.AppendElement(this);
-  mWaiting = mMixer->mWaiting;
-
 }
 
 //----------------------------------------------------------------------
@@ -121,11 +111,8 @@ NS_IMETHODIMP
 zapAudioMixerInput::ConnectSource(zapIMediaSource *source,
                                   const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSource, "source already connected");
-  mSource = source;
-  
-  if (mWaiting)
-    mSource->RequestFrame();
+  NS_ASSERTION(!mInput, "already connected");
+  mInput = source;
   
   return NS_OK;
 }
@@ -135,60 +122,53 @@ NS_IMETHODIMP
 zapAudioMixerInput::DisconnectSource(zapIMediaSource *source,
                                      const nsACString & connection_id)
 {
-  mSource = nsnull;
-  mActive = PR_FALSE;
+  mInput = nsnull;
   return NS_OK;
 }
 
-/* void processFrame (in zapIMediaFrame frame); */
+/* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapAudioMixerInput::ProcessFrame(zapIMediaFrame *frame)
+zapAudioMixerInput::ConsumeFrame(zapIMediaFrame * frame)
 {
-  NS_ASSERTION(mWaiting, "uh-oh, unexpectatly received a frame");
-  mFrame = frame;
-  mWaiting = PR_FALSE;
-  if (mFrame)
-    mActive = PR_TRUE;
-  else
-    mActive = PR_FALSE;
-  
-  mMixer->FrameAvailable();
+  NS_ERROR("Not a passive sink - maybe you need some buffering?");
   return NS_OK;
 }
 
 //----------------------------------------------------------------------
 
-void zapAudioMixerInput::RequestFrame()
+nsresult zapAudioMixerInput::ProduceFrame(zapIMediaFrame** frame)
 {
-  if (mWaiting) return;
-  if (mFrame) {
-    mMixer->FrameAvailable();
-    return;
+  if (!mInput ||
+      NS_FAILED(mInput->ProduceFrame(frame)) ||
+      !ValidateFrame(*frame))
+    return NS_ERROR_FAILURE;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+
+PRBool zapAudioMixerInput::ValidateFrame(zapIMediaFrame* frame)
+{
+  nsCOMPtr<nsIPropertyBag2> streamInfo;
+  frame->GetStreamInfo(getter_AddRefs(streamInfo));
+  if (streamInfo == mLastValidStreamInfo)
+    return PR_TRUE;
+
+  // we have a new stream info. Check if the stream is compatible with
+  // us:
+  if (!CheckAudioStream(streamInfo, mMixer->mStreamParameters)) {
+    return PR_FALSE;
   }
-
-  mWaiting = PR_TRUE;
-  if (mSource)
-    mSource->RequestFrame();
+  
+  mLastValidStreamInfo = streamInfo;
+  return  PR_TRUE;
 }
 
-PRBool zapAudioMixerInput::ConsumeFrame(zapIMediaFrame** frame)
-{
-#ifdef DEBUG_afri_zmk
-  if (mActive && mWaiting)
-    printf("Underflow in audiomixer input %p\n", this);
-#endif
-  *frame = mFrame;
-  NS_IF_ADDREF(*frame);
-  mFrame = nsnull;
-  return mActive;
-}
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioMixer
 
 zapAudioMixer::zapAudioMixer()
-    : mFramesAvailable(PR_FALSE),
-      mWaiting(PR_FALSE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapAudioMixer::zapAudioMixer()\n");
@@ -223,52 +203,18 @@ zapAudioMixer::AddedToGraph(zapIMediaGraph *graph,
                             const nsACString & id,
                             nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  mSampleRate = 8000; // 8000Hz
-  mFrameDuration = 0.02; // 20ms
-  mNumChannels = 1; // mono
-  mSampleFormat = sf_float32_32768;
+  // unpack node parameters:
+  nsresult rv;
+  rv = mStreamParameters.InitWithProperties(node_pars);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  if (mStreamParameters.sample_format != sf_float32_32768) {
+    NS_ERROR("unsupported sample format! write me!");
+    return NS_ERROR_FAILURE;
+  }
 
-  // extract node parameters:
-
-   if (node_pars) {
-     node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
-                                    &mSampleRate);
-     node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                    &mFrameDuration);
-     node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                    &mNumChannels);
-     nsCString sampleformat_string;
-     if (NS_SUCCEEDED(node_pars->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                                       sampleformat_string))) {
-       mSampleFormat = StrToZapAudioSampleFormat(sampleformat_string);
-       if (mSampleFormat != sf_float32_32768) {
-         NS_ERROR("unsupported sample format");
-         return NS_ERROR_FAILURE;
-       }
-     }
-   }
-
-  mSamplesPerFrame = (PRUint32)(mSampleRate*mFrameDuration*mNumChannels);
-   
-  // create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio"));
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
-                                   mSampleRate);
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                   mFrameDuration);
-  mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                   mNumChannels);
-
-  nsCString format_string;
-  ZapAudioSampleFormatToStr(mSampleFormat, format_string);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                     format_string);
+  // create a new stream info:
+  mStreamInfo = mStreamParameters.CreateStreamInfo();
   
   return NS_OK;
 }
@@ -326,95 +272,52 @@ zapAudioMixer::DisconnectSink(zapIMediaSink *sink,
   return NS_OK;
 }
 
-/* void requestFrame (); */
+/* zapIMediaFrame produceFrame (); */
 NS_IMETHODIMP
-zapAudioMixer::RequestFrame()
+zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
 {
-  if (mWaiting) return NS_OK; // we're already waiting for data
-
-  if (!mFramesAvailable) {
-    // request frames from inputs:
-    for (PRInt32 i=0, l=mInputs.Count(); i<l; ++i) {
-      ((zapAudioMixerInput*)mInputs[i])->RequestFrame();
-    }
-    // don't return; we might get some synchronous frames
+  PRInt32 activeInputs = mInputs.Count();//XXX
+  if (!activeInputs) {
+    *_retval = nsnull;
+    return NS_ERROR_FAILURE;
   }
   
-  if (!mFramesAvailable) {
-    // still no frames. set async waiting flag:
-    // the first frame that arrives will trigger mixing now.
-    mWaiting = PR_TRUE;
-  }
-  else {
-    // We've got frames -> mix synchronously
-    Mix();
-  }
-  
-  return NS_OK;
-}
+  // construct audio frame:
+  zapMediaFrame* frame = new zapMediaFrame();
+  frame->AddRef();
+  frame->mStreamInfo = mStreamInfo;
+  frame->mTimestamp = 0; // XXX
 
-//----------------------------------------------------------------------
+  frame->mData.SetLength(mStreamParameters.GetFrameLength());
+  float* d = (float*)frame->mData.BeginWriting();
+  PRUint32 samplesPerFrame = mStreamParameters.GetSamplesPerFrame();
+  memset(d, 0, frame->mData.Length());
 
-void zapAudioMixer::FrameAvailable()
-{
-  mFramesAvailable = PR_TRUE;
-  if (mWaiting) {
-    Mix();
-  }
-}
-
-void zapAudioMixer::Mix()
-{
-  mWaiting = PR_FALSE;
-  mFramesAvailable = PR_FALSE;
-  
-  nsCString outdata;
-  outdata.SetLength(GetZapAudioSampleSize(sf_float32_32768) * mSamplesPerFrame);
-  float* d = (float*)outdata.BeginWriting();
-  memset(d, 0, outdata.Length());
-
-  PRInt32 activeInputs = 0;
-  for (PRInt32 i=0, l=mInputs.Count(); i<l; ++i) {
+  for (PRInt32 i=0; i<activeInputs; ++i) {
     nsCOMPtr<zapIMediaFrame> frame;
-    activeInputs += ((zapAudioMixerInput*)mInputs[i])->ConsumeFrame(getter_AddRefs(frame));
+    ((zapAudioMixerInput*)mInputs[i])->ProduceFrame(getter_AddRefs(frame));
     if (frame) {
       nsCString indata;
       frame->GetData(indata);
-      NS_ASSERTION(indata.Length() == GetZapAudioSampleSize(sf_float32_32768) * mSamplesPerFrame,
+      NS_ASSERTION(indata.Length() == mStreamParameters.GetFrameLength(),
                    "buffer length mismatch");
       float* s = (float*)indata.BeginReading();
-      for (int sp=0; sp < mSamplesPerFrame; ++sp)
+      for (int sp=0; sp < samplesPerFrame; ++sp)
         d[sp] += s[sp];
     }
   }
 
-  if (activeInputs == 0) {
-    // EOF
-    if (mOutput) {
-#ifdef DEBUG_afri_zmk
-      printf("(mixer->EOF)");
-#endif
-      mOutput->ProcessFrame(nsnull);
-    }
-    return;
-  }
-  
   // scale data
   if (activeInputs > 1) {
     float scalefactor = 1.0f / sqrt((float)activeInputs);
-    for (int sp=0; sp < mSamplesPerFrame; ++sp) {
+    for (int sp=0; sp < samplesPerFrame; ++sp) {
       d[sp] *= scalefactor;
       }
   }
   
-  zapMediaFrame* frame = new zapMediaFrame();
-  frame->AddRef();
-  frame->mData = outdata;
-  //XXX timestamp
-  frame->mStreamInfo = mStreamInfo;
-
-  // send frame and clean up:
-  if (mOutput)
-    mOutput->ProcessFrame(frame);
-  frame->Release();
+  *_retval = frame;
+  return NS_OK;
 }
+
+
+

@@ -37,6 +37,7 @@
 #include "nsISupports.idl"
 
 interface zapIMediaSink;
+interface zapIMediaFrame;
 
 /**
  * \ingroup ZMK_MODULE
@@ -57,10 +58,10 @@ interface zapIMediaSource : nsISupports
   void disconnectSink(in zapIMediaSink sink, in ACString connection_id);
   
   /**
-   * Called by a sink to request the first or next media frame.  The
-   * source must call processFrame() on the sink as soon as a frame
-   * becomes available. The processFrame() call may be nested in the
-   * request or scheduled.
+   * Called by an sink to request a media frame.
+   * If no frame is available (either because this is not a passive
+   * source, or because there is buffer underrun) the source must
+   * return null and throw an exception.
    */
-  void requestFrame();
+  zapIMediaFrame produceFrame();
 };

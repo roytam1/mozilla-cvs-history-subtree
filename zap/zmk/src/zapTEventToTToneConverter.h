@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,43 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_TEVENTTOTTONECONVERTER_H__
+#define __ZAP_TEVENTTOTTONECONVERTER_H__
 
-interface nsIPropertyBag2;
+#include "zapFilterNode.h"
+#include "nsIWritablePropertyBag2.h"
+#include "zapAudioToneFrame.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+////////////////////////////////////////////////////////////////////////
+// zapTEventToTToneConverter
+
+// {9A0858F3-67BB-4C7B-937C-B1A12490D4F5}
+#define ZAP_TEVENTTOTTONECONVERTER_CID \
+  { 0x9a0858f3, 0x67bb, 0x4c7b, { 0x93, 0x7c, 0xb1, 0xa1, 0x24, 0x90, 0xd4, 0xf5 } }
+
+#define ZAP_TEVENTTOTTONECONVERTER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "tevent->ttone"
+
+class zapTEventToTToneConverter : public zapFilterNode
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
+public:
+  zapTEventToTToneConverter();
+  ~zapTEventToTToneConverter();
   
-  readonly attribute ACString data;
+  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
+                          const nsACString & id,
+                          nsIPropertyBag2 *node_pars);
+  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
+  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
+  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+
+private:
+  nsresult SetFrequenciesForEvent(zapAudioToneFrame* frame, PRUint16 event);
+  
+  PRUint32 mCurrentFrameTimestamp;
+  PRUint16 mCurrentFrameSent; // duration sent for current frame
+  PRBool mCurrentFrameEndSent; // flag for ignoring end frame retransmissions
+  
+  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
 };
 
+#endif // __ZAP_TEVENTTOTTONECONVERTER_H__

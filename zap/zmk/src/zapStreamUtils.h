@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,36 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_STREAMUTILS_H__
+#define __ZAP_STREAMUTILS_H__
 
-interface nsIPropertyBag2;
+#include "nsString.h"
+#include "nsIWritablePropertyBag2.h"
+#include "nsCOMPtr.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
-{
-  readonly attribute nsIPropertyBag2 streamInfo;
+already_AddRefed<nsIWritablePropertyBag2> CreateStreamInfo(const nsACString& type);
 
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
-  
-  readonly attribute ACString data;
-};
+extern nsCString transientCString;
+extern double transientDouble;
+extern PRUint32 transientUint32;
 
+#define CHECK_STREAM_CSTRING(streamInfo, name, val)                     \
+  (NS_SUCCEEDED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING(name), \
+                                                  transientCString)) && \
+   transientCString == val)
+
+#define CHECK_STREAM_TYPE(streamInfo, type) \
+  CHECK_STREAM_CSTRING(streamInfo, "type", type)
+
+#define CHECK_STREAM_DOUBLE(streamInfo, name, val)                      \
+  (NS_SUCCEEDED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING(name), \
+                                                &transientDouble)) &&   \
+   transientDouble == val)
+
+#define CHECK_STREAM_UINT32(streamInfo, name, val)                      \
+  (NS_SUCCEEDED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING(name), \
+                                                &transientUint32)) &&   \
+   transientUint32 == val)
+
+
+#endif // __ZAP_STREAMUTILS_H__

@@ -80,16 +80,20 @@ MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
 
 //  void init(in ACString originUsername,
 //            in ACString originAddress,
-//            in ACString connectionAddress);
+//            in ACString connectionAddress,
+//            in ACString callAudioIn,
+//            in ACString callAudioOut);
 MediaSession.fun(
-  function init(originUsername, originAddress, connectionAddress) {
+  function init(originUsername, originAddress, connectionAddress,
+                callAudioIn, callAudioOut) {
     this.originUsername = originUsername;
     this.originAddress = originAddress;
     this.connectionAddress = connectionAddress;
-
+    this.callAudioIn = callAudioIn;
+    this.callAudioOut = callAudioOut;
+    
     // We use getService here to retrieve the global media graph that
     // should have been set up by our client application:
-    // This graph must contain an 'ain' and an 'aout' node:
     this.mediaGraph = Components.classes["@mozilla.org/zap/mediagraph;1"].getService(Components.interfaces.zapIMediaGraph);
     this.socketpair = this.mediaGraph.addNode("udp-socket-pair", null);
     this.changeState("INITIALIZED");
@@ -317,8 +321,7 @@ MediaSession.fun(
     if (this.rtpsession) {
       this.mediaGraph.removeNode(this.enc);
       this.mediaGraph.removeNode(this.dec);
-//    this.mediaGraph.removeNode(this.buf1);
-      this.mediaGraph.removeNode(this.buf2);
+      this.mediaGraph.removeNode(this.buf);
       this.mediaGraph.removeNode(this.speex2rtp);
       this.mediaGraph.removeNode(this.rtp2speex);
       this.mediaGraph.removeNode(this.rtpsession);
@@ -338,8 +341,7 @@ MediaSession.fun(
 //    this.dec = this.mediaGraph.addNode("speex-decoder", null);
     this.enc = this.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcmu"}));
     this.dec = this.mediaGraph.addNode("g711-decoder", null);
-//    this.buf1 = this.mediaGraph.addNode("buffer", PB({$prefill_size:1, $max_size:10}));
-    this.buf2 = this.mediaGraph.addNode("buffer", PB({$prefill_size:4, $max_size:30}));
+    this.buf = this.mediaGraph.addNode("buffer", PB({$lift_count:15, $drop_count:15, $max_size:30}));
 //     this.speex2rtp = this.mediaGraph.addNode("speex-rtp-packetizer",
 //                                              PB({$payload_type:remotePayloadFormat}));
 //     this.rtp2speex = this.mediaGraph.addNode("speex-rtp-depacketizer", null);
@@ -351,23 +353,21 @@ MediaSession.fun(
                                                   $rtp_port:remoteRTPPort,
                                                   $rtcp_port:remoteRTCPPort}));
     // encoder pipe:
-    this.A = this.mediaGraph.connect("ain", null, this.enc, null);
+    this.A = this.mediaGraph.connect(this.callAudioIn, null, this.enc, null);
     this.B = this.mediaGraph.connect(this.enc, null, this.speex2rtp, null);
     this.C = this.mediaGraph.connect(this.speex2rtp, null,
                                      this.rtpsession, PB({$name:"local-rtp"}));
     this.D = this.mediaGraph.connect(this.rtpsession, PB({$name:"remote-rtp"}),
-//                                     this.buf1, null);
-//    this.E = this.mediaGraph.connect(this.buf1, null,
                                      this.socketpair, PB({$name:"socket-a"}));
     // decoder pipe:
-    this.F = this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
-                                     this.buf2, null);
-    this.G = this.mediaGraph.connect(this.buf2, null,
+    this.E = this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
+                                     this.buf, null);
+    this.F = this.mediaGraph.connect(this.buf, null,
                                      this.rtpsession, PB({$name:"remote-rtp"}));
-    this.H = this.mediaGraph.connect(this.rtpsession, PB({$name:"local-rtp"}),
+    this.G = this.mediaGraph.connect(this.rtpsession, PB({$name:"local-rtp"}),
                                      this.rtp2speex, null);
-    this.I = this.mediaGraph.connect(this.rtp2speex, null, this.dec, null);
-    this.J = this.mediaGraph.connect(this.dec, null, "aout", null);
+    this.H = this.mediaGraph.connect(this.rtp2speex, null, this.dec, null);
+    this.I = this.mediaGraph.connect(this.dec, null, this.callAudioOut, null);
   });
 
 

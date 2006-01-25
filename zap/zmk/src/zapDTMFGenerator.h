@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,39 +34,59 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_G711DECODER_H__
-#define __ZAP_G711DECODER_H__
+#ifndef __ZAP_DTMFGENERATOR_H__
+#define __ZAP_DTMFGENERATOR_H__
 
-#include "zapFilterNode.h"
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "zapIMediaGraph.h"
+#include "zapIMediaFrame.h"
+#include "nsCOMPtr.h"
 #include "nsIWritablePropertyBag2.h"
+#include "zapIDTMFGenerator.h"
+#include "nsDeque.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapG711Decoder
+// zapDTMFGenerator
 
-// {82F4532A-4DAF-4FBC-B508-EA12AFB79C31}
-#define ZAP_G711DECODER_CID                             \
-  { 0x82f4532a, 0x4daf, 0x4fbc, { 0xb5, 0x08, 0xea, 0x12, 0xaf, 0xb7, 0x9c, 0x31 } }
+// {8A380362-B150-4B9C-88CF-1A8788699BF0}
+#define ZAP_DTMFGENERATOR_CID                             \
+  { 0x8a380362, 0xb150, 0x4b9c, { 0x88, 0xcf, 0x1a, 0x87, 0x88, 0x69, 0x9b, 0xf0 } }
 
-#define ZAP_G711DECODER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "g711-decoder"
+#define ZAP_DTMFGENERATOR_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "dtmf-generator"
 
-class zapG711Decoder : public zapFilterNode
+class zapDTMFGenerator : public zapIMediaNode,
+                         public zapIMediaSource,
+                         public zapIDTMFGenerator
 {
 public:
-  zapG711Decoder();
-  ~zapG711Decoder();
-
-  NS_DECL_ISUPPORTS_INHERITED
+  zapDTMFGenerator();
+  ~zapDTMFGenerator();
   
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
-
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPIDTMFGENERATOR
+  
 private:
+  void ClearState();
+  nsresult ParseDTMFData(const char *buf);
+  void QueueTEvent(PRUint16 event);
+  
+  // node parameters (set from zapIMediaGraph::AddNode()):
+  PRUint32 mToneDuration; // tone duration in sample units
+  PRUint32 mPauseDuration; // pause duration in sample units
+  PRUint16 mVolume; // volume in dBm0 with reversed sign
+  PRUint16 mMaxSamplesPerFrame;
+
+  nsDeque mBuffer; // tevent buffer
+  PRUint32 mTEventSamplesPlayed; // samples played for current tevent 
+  PRUint32 mSampleClock;
+  
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  enum { pcmu, pcma } mType;
+
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
-#endif // __ZAP_G711DECODER_H__
+#endif // __ZAP_DTMFGENERATOR_H__

@@ -69,25 +69,16 @@ public:
 private:
   friend class zapAudioMixerInput;
 
-  void FrameAvailable();
-  void Mix();
-  
+  // node parameters (set in zapIMediaGraph::AddNode()):
+  zapAudioStreamParameters mStreamParameters;
+
   // zapAudioMixerInput inputs (weak references):
   nsVoidArray mInputs;
   
+  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  
   // mixer output sink:
   nsCOMPtr<zapIMediaSink> mOutput;
-
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-
-  double mSampleRate;
-  double mFrameDuration;
-  PRUint32 mNumChannels;
-  zapAudioStreamSampleFormat mSampleFormat;
-  PRUint32 mSamplesPerFrame;
-  
-  PRBool mFramesAvailable;
-  PRBool mWaiting;
 };
 
 #endif // __ZAP_AUDIOMIXER_H__

@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,63 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_TELEPHONEEVENTFRAME_H__
+#define __ZAP_TELEPHONEEVENTFRAME_H__
 
-interface nsIPropertyBag2;
+#include "zapITelephoneEventFrame.h"
+#include "nsString.h"
+#include "nsCOMPtr.h"
+#include "nsIPropertyBag2.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
-{
-  readonly attribute nsIPropertyBag2 streamInfo;
 
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
-  
-  readonly attribute ACString data;
+// helper struct for holding/accessing the frame's data:
+struct zapTelephoneEvent {
+  zapTelephoneEvent();
+  zapTelephoneEvent(const nsACString& octets);
+
+  PRUint16 GetEvent();
+  void SetEvent(PRUint16 tevent);
+
+  PRBool GetE();
+  void SetE(PRBool E);
+
+  PRUint16 GetVolume();
+  void SetVolume(PRUint16 volume);
+
+  PRUint16 GetDuration();
+  void SetDuration(PRUint16 duration);
+
+  nsCString data;
 };
 
+class zapTelephoneEventFrame : public zapITelephoneEventFrame
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPITELEPHONEEVENTFRAME
+  NS_DECL_ZAPIMEDIAFRAME
+  
+  zapTelephoneEventFrame();
+  ~zapTelephoneEventFrame();
+  PRBool Init(const nsACString& octets, nsIPropertyBag2* streamInfo);
+  PRBool Init(const zapTelephoneEvent& tevent, nsIPropertyBag2* streamInfo);
+  PRBool Init();
+
+  PRBool mMarkerBit;
+  zapTelephoneEvent mTEventData;
+  PRUint32 mTimestamp;
+  nsCOMPtr<nsIPropertyBag2> mStreamInfo;
+};
+
+//----------------------------------------------------------------------
+// helpers to create add-refed telephone event frame objects:
+
+zapITelephoneEventFrame *
+CreateTelephoneEventFrame(const nsACString& octets, nsIPropertyBag2* streamInfo);
+
+zapTelephoneEventFrame *
+CreateTelephoneEventFrame(const zapTelephoneEvent& tevent, nsIPropertyBag2* streamInfo);
+
+zapTelephoneEventFrame * CreateTelephoneEventFrame();
+
+#endif // __ZAP_TELEPHONEEVENTFRAME_H__

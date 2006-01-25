@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,57 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-
-interface nsIPropertyBag2;
+#include "zapIMediaFrame.idl"
 
 /**
  * \ingroup ZMK_MODULE
+ * An RFC2833 audio/tone media frame.
  */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+[scriptable, uuid(fdfc20e0-21b5-46dd-b275-5af169d17d3a)]
+interface zapIAudioToneFrame : zapIMediaFrame
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
+  /**
+   * Marker bit. Signifies the start of a new tone.
+   */
+  attribute boolean M;
+  
+  /**
+   * modulation frequency in Hz (9 bits: 0 to 511Hz). If the 'T' bit
+   * is set this must be divided by 3.
+   */
+  attribute unsigned short modulation;
 
   /**
-   * Timestamp in sample clock units.
+   * 'T' bit. If set, the modulation frequency is to be divided by 3.
    */
-  readonly attribute unsigned long timestamp;
+  attribute boolean T;
   
-  readonly attribute ACString data;
+  /**
+   * Power level of the tone in dBm0 after dropping sign.  (6 bits: 0
+   * to -63dBm0)
+   */
+  attribute unsigned short volume;
+
+  /**
+   * Duration of tone in timestamp units (16 bits).
+   */
+  attribute unsigned short duration;
+
+  /**
+   * Number of frequencies in this tone.
+   */
+  readonly attribute unsigned short frequencyCount;
+
+  /**
+   * Accessor for nth frequency (0-based).
+   * Frequencies are in Hz (12 bits: 0 to 4095Hz)
+   */
+  unsigned short getFrequencyAt(in unsigned short n);
+
+  /**
+   * Add a frequency to the frame.
+   * Frequencies are in Hz (12 bits: 0 to 4095Hz)
+   */
+  void addFrequency(in unsigned short frequency);
 };
 

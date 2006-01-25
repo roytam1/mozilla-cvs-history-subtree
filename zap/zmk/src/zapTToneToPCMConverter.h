@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,39 +34,58 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_G711DECODER_H__
-#define __ZAP_G711DECODER_H__
+#ifndef __ZAP_TTONETOPCMCONVERTER_H__
+#define __ZAP_TTONETOPCMCONVERTER_H__
 
-#include "zapFilterNode.h"
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsString.h"
+#include "nsVoidArray.h"
 #include "nsIWritablePropertyBag2.h"
+#include "zapAudioStreamUtils.h"
+#include "zapIAudioToneFrame.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapG711Decoder
+// zapTToneGenerator
 
-// {82F4532A-4DAF-4FBC-B508-EA12AFB79C31}
-#define ZAP_G711DECODER_CID                             \
-  { 0x82f4532a, 0x4daf, 0x4fbc, { 0xb5, 0x08, 0xea, 0x12, 0xaf, 0xb7, 0x9c, 0x31 } }
+// {3C06D906-1B8C-4CCD-837E-419A918A194E}
+#define ZAP_TTONETOPCMCONVERTER_CID                             \
+  { 0x3c06d906, 0x1b8c, 0x4ccd, { 0x83, 0x7e, 0x41, 0x9a, 0x91, 0x8a, 0x19, 0x4e } }
 
-#define ZAP_G711DECODER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "g711-decoder"
+#define ZAP_TTONETOPCMCONVERTER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "ttone->pcm"
 
-class zapG711Decoder : public zapFilterNode
+class zapTToneToPCMConverter : public zapIMediaNode,
+                               public zapIMediaSource,
+                               public zapIMediaSink
 {
 public:
-  zapG711Decoder();
-  ~zapG711Decoder();
+  zapTToneToPCMConverter();
+  ~zapTToneToPCMConverter();
 
-  NS_DECL_ISUPPORTS_INHERITED
-  
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPIMEDIASINK
 
 private:
+  PRBool GetNextInputFrame();
+  
+  // node parameters (set from zapIMediaGraph::AddNode()):
+  zapAudioStreamParameters mOutStreamParameters;
+  double mZtlp; // zero dBm0 tranmission level point as a fraction of
+                // max output amplitude
+
+  nsCOMPtr<nsIPropertyBag2> mCurrentInputStreamInfo;
+  nsCOMPtr<zapIAudioToneFrame> mCurrentInputFrame;
+  PRUint32 mSampleClock; // sample clock advances for every requested
+                         // frame and is synchronized to input stream
+  
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  enum { pcmu, pcma } mType;
+  
+  nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
-#endif // __ZAP_G711DECODER_H__
+#endif // __ZAP_TTONETOPCMCONVERTER_H__

@@ -76,13 +76,10 @@ public:
 private:
   nsCOMPtr<nsIUDPSocket> mSocket;
   
-  PRBool mSinkWaiting;
-  PRBool mWaitingOnSource;
-  
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   
-  nsCOMPtr<zapIMediaSource> mSource;
-  nsCOMPtr<zapIMediaSink> mSink;
+  nsCOMPtr<zapIMediaSource> mInput;
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
 #endif // __ZAP_UDPSOCKET_H__

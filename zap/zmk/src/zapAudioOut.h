@@ -72,33 +72,31 @@ public:
   NS_DECL_ZAPIAUDIOOUT
 
 private:
-  friend class zapAudioOutRequestEvent;
-  friend class zapAudioOutCloseEvent;
+  friend class zapAudioOutPlayFrameEvent;
   friend int AudioOutCallback(void* inputBuffer, void* outputBuffer,
                               unsigned long framesPerBuffer,
                               PaTimestamp outTime, void* userData);
-  
-  nsresult StartStream(nsIPropertyBag2* streamInfo);
+
+  void PlayFrame(void* outputBuffer);
+  PRBool ValidateFrame(zapIMediaFrame* frame);
+  nsresult StartStream();
   void CloseStream();
     
+  nsCOMPtr<zapIMediaGraph> mGraph;
   nsCOMPtr<nsIEventQueue> mEventQ;   // media graph event queue
 
   // node parameters (set in zapIMediaGraph::AddNode()):
   PaDeviceID mOutputDevice;
-
-  // stream parameters (obtained from first stream frame):
-  zapAudioStreamSampleFormat mSampleFormat;
-  PRUint32 mSamplesPerFrame;
-
-  // We need a buffer for 1 frame to mediate between the portaudio
-  // callback and the sync/async processing model of the graph:
-  nsCOMPtr<zapIMediaFrame> mFrame;
-
-  PRBool mWaiting; // true == waiting for data
+  zapAudioStreamParameters mStreamParameters;
+  
   PortAudioStream* mStream;
-  PRLock* mLock; // lock to synchronize portaudio and media threads
 
-  nsCOMPtr<zapIMediaSource> mSource;
+  nsCOMPtr<zapIMediaSource> mInput;
+  nsCOMPtr<nsIPropertyBag2> mLastValidStreamInfo; // the most recent
+                                                  // valid stream info
+                                                  // (used for
+                                                  // detecting stream
+                                                  // breaks)
 };
 
 #endif // __ZAP_AUDIOOUT_H__

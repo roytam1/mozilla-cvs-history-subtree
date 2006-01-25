@@ -40,13 +40,12 @@
 #include "nsString.h"
 #include "zapDatagramFrame.h"
 #include "nsNetCID.h"
+#include "nsAutoPtr.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPSocket
 
 zapUDPSocket::zapUDPSocket()
-    : mSinkWaiting(PR_FALSE),
-      mWaitingOnSource(PR_FALSE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapUDPSocket::zapUDPSocket()\n");
@@ -139,7 +138,7 @@ zapUDPSocket::RemovedFromGraph(zapIMediaGraph *graph)
 NS_IMETHODIMP
 zapUDPSocket::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 {
-  if (mSink) {
+  if (mOutput) {
     NS_ERROR("already connected");
     return NS_ERROR_FAILURE;
   }
@@ -153,7 +152,7 @@ zapUDPSocket::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 NS_IMETHODIMP
 zapUDPSocket::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 {
-  if (mSource) {
+  if (mInput) {
     NS_ERROR("already connected");
     return NS_ERROR_FAILURE;
   }
@@ -170,30 +169,29 @@ zapUDPSocket::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 /* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
 NS_IMETHODIMP
 zapUDPSocket::ConnectSink(zapIMediaSink *sink,
-                        const nsACString & connection_id)
+                          const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSink, "already connected");
-  mSink = sink;
+  NS_ASSERTION(!mOutput, "already connected");
+  mOutput = sink;
   return NS_OK;
 }
 
 /* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
 NS_IMETHODIMP
 zapUDPSocket::DisconnectSink(zapIMediaSink *sink,
-                           const nsACString & connection_id)
+                             const nsACString & connection_id)
 {
-  mSink = nsnull;
-  mSinkWaiting = PR_FALSE;
+  mOutput = nsnull;
   return NS_OK;
 }
 
-/* void requestFrame (); */
+/* zapIMediaFrame produceFrame (); */
 NS_IMETHODIMP
-zapUDPSocket::RequestFrame()
+zapUDPSocket::ProduceFrame(zapIMediaFrame ** frame)
 {
-  NS_ASSERTION(!mSinkWaiting, "protocol error");
-  mSinkWaiting = PR_TRUE;
-  return NS_OK;
+  NS_ERROR("Not a passive source - maybe you need some buffering?");
+  *frame = nsnull;
+  return NS_ERROR_FAILURE;
 }
 
 
@@ -203,53 +201,43 @@ zapUDPSocket::RequestFrame()
 /* void connectSource (in zapIMediaSource source, in ACString connection_id); */
 NS_IMETHODIMP
 zapUDPSocket::ConnectSource(zapIMediaSource *source,
-                           const nsACString & connection_id)
+                            const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSource, "already connected");
-  mSource = source;
+  NS_ASSERTION(!mInput, "already connected");
+  mInput = source;
 
-  // request first buffer frame:
-  mWaitingOnSource = PR_TRUE;
-  mSource->RequestFrame();
-  
   return NS_OK;
 }
 
 /* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
 NS_IMETHODIMP
 zapUDPSocket::DisconnectSource(zapIMediaSource *source,
-                              const nsACString & connection_id)
+                               const nsACString & connection_id)
 {
-  mSource = nsnull;
-  mWaitingOnSource = PR_FALSE;
+  mInput = nsnull;
   return NS_OK;
 }
 
-/* void processFrame (in zapIMediaFrame frame); */
+/* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapUDPSocket::ProcessFrame(zapIMediaFrame *frame)
+zapUDPSocket::ConsumeFrame(zapIMediaFrame * frame)
 {
   nsCOMPtr<nsIDatagram> dg = do_QueryInterface(frame);
   if (!dg) {
-#ifdef DEBUG_afri_zmk
-    printf("n");
+#ifdef DEBUG_afri_udp
+    printf("zmk udp socket: null datagram\n");
 #endif
-    // silently drop EOF or incompatible frame
-  }
-  else {
-    nsCString data, address;
-    PRInt32 port;
-    dg->GetData(data);
-    dg->GetAddress(address);
-    dg->GetPort(&port);
-    mSocket->Send(data, address, port);
+    // drop incompatible frame
+    return NS_ERROR_FAILURE;
   }
 
-  // request next frame
-  // XXX we need some pacing callback here
-  mWaitingOnSource = PR_FALSE;
-  mSource->RequestFrame();
-  
+  nsCString data, address;
+  PRInt32 port;
+  dg->GetData(data);
+  dg->GetAddress(address);
+  dg->GetPort(&port);
+  mSocket->Send(data, address, port);
+
   return NS_OK;
 }
 
@@ -260,24 +248,14 @@ zapUDPSocket::ProcessFrame(zapIMediaFrame *frame)
 NS_IMETHODIMP
 zapUDPSocket::HandleDatagram(nsIUDPSocket *socket, nsIDatagram *data)
 {
-  if (!mSinkWaiting) {
-    // silently discard datagram:
-#ifdef DEBUG_afri_zmk
-    printf("d");
-#endif
-  }
-  else {
-    NS_ASSERTION(mSink, "uh-oh, no sink!");
-    NS_ASSERTION(data, "no datagram");
-    // build frame
-    zapDatagramWrapperFrame* frame = new zapDatagramWrapperFrame();
-    frame->AddRef();
-    frame->mStreamInfo = mStreamInfo;
-    frame->mDatagram = data;
-    mSinkWaiting = PR_FALSE;
-    mSink->ProcessFrame(frame);
-    frame->Release();
-  }
+  NS_ASSERTION(data, "no datagram");
+  if (!mOutput) return NS_OK; // discard silently
+    
+  // build frame
+  nsRefPtr<zapDatagramWrapperFrame> frame = new zapDatagramWrapperFrame();
+  frame->mStreamInfo = mStreamInfo;
+  frame->mDatagram = data;
+  mOutput->ConsumeFrame(frame);
   
   return NS_OK;
 }

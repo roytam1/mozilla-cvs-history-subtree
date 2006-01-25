@@ -102,17 +102,12 @@ zapRTPTransmitter::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapRTPTransmitter::OpenStream(nsIPropertyBag2* streamInfo)
+zapRTPTransmitter::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   ZMK_VERIFY_STREAM_TYPE(streamInfo, "rtp");
   ZMK_CREATE_STREAM_INFO(mStreamInfo, "datagram");
 
   return NS_OK;
-}
-
-void
-zapRTPTransmitter::CloseStream()
-{
 }
 
 nsresult

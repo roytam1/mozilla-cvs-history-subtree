@@ -44,8 +44,6 @@
 // zapFilterNode
 
 zapFilterNode::zapFilterNode()
-    : mStreamOpen(PR_FALSE),
-      mWaiting(PR_FALSE)
 {
 }
 
@@ -74,8 +72,8 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 zapFilterNode::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 {
-  if (mSink) {
-    NS_ERROR("source end already connected");
+  if (mOutput) {
+    NS_ERROR("output end already connected");
     *_retval = nsnull;
     return NS_ERROR_FAILURE;
   }
@@ -88,8 +86,8 @@ zapFilterNode::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval
 NS_IMETHODIMP
 zapFilterNode::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 {
-  if (mSource) {
-    NS_ERROR("sink end already connected");
+  if (mInput) {
+    NS_ERROR("input end already connected");
     *_retval = nsnull;
     return NS_ERROR_FAILURE;
   }
@@ -106,8 +104,9 @@ zapFilterNode::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 NS_IMETHODIMP
 zapFilterNode::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSink, "sink already connected");
-  mSink = sink;
+  NS_ASSERTION(!mOutput, "output end already connected");
+  mOutput = sink;
+  mCurrentInputStreamInfo = nsnull;
   return NS_OK;
 }
 
@@ -115,23 +114,32 @@ zapFilterNode::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id
 NS_IMETHODIMP
 zapFilterNode::DisconnectSink(zapIMediaSink *sink, const nsACString & connection_id)
 {
-  mSink = nsnull;
-  if (mStreamOpen) {
-    mStreamOpen = PR_FALSE;
-    CloseStream();
-  }
+  mOutput = nsnull;
+  mCurrentInputStreamInfo = nsnull;
   return NS_OK;
 }
 
-/* void requestFrame (); */
+/* zapIMediaFrame produceFrame (); */
 NS_IMETHODIMP
-zapFilterNode::RequestFrame()
+zapFilterNode::ProduceFrame(zapIMediaFrame ** frame)
 {
-  if (mWaiting) return NS_OK; // already waiting
-  mWaiting = PR_TRUE;
-  if (mSource)
-    mSource->RequestFrame();
-  return NS_OK;
+  *frame = nsnull;
+  
+  if (!mInput) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<zapIMediaFrame> input_frame;
+  if (NS_FAILED(mInput->ProduceFrame(getter_AddRefs(input_frame))))
+    return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIPropertyBag2> streamInfo;
+  input_frame->GetStreamInfo(getter_AddRefs(streamInfo));
+  if (streamInfo != mCurrentInputStreamInfo) {
+    if (NS_FAILED(ValidateNewStream(streamInfo)))
+      return NS_ERROR_FAILURE;
+    mCurrentInputStreamInfo = streamInfo;
+  }
+
+  return Filter(input_frame, frame);
 }
 
 //----------------------------------------------------------------------
@@ -141,12 +149,9 @@ zapFilterNode::RequestFrame()
 NS_IMETHODIMP
 zapFilterNode::ConnectSource(zapIMediaSource *source, const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSource, "source already connected");
-  mSource = source;
-  
-  if (mWaiting)
-    mSource->RequestFrame();
-  
+  NS_ASSERTION(!mInput, "input end already connected");
+  mInput = source;
+  mCurrentInputStreamInfo = nsnull;
   return NS_OK;
 }
 
@@ -154,55 +159,29 @@ zapFilterNode::ConnectSource(zapIMediaSource *source, const nsACString & connect
 NS_IMETHODIMP
 zapFilterNode::DisconnectSource(zapIMediaSource *source, const nsACString & connection_id)
 {
-  mSource = nsnull;
-  if (mStreamOpen && mWaiting) {
-    mStreamOpen = PR_FALSE;
-    mWaiting = PR_FALSE;
-    CloseStream();
-    // send EOF frame:
-    if (mSink)
-      mSink->ProcessFrame(nsnull);
-  }
+  mInput = nsnull;
+  mCurrentInputStreamInfo = nsnull;
   return NS_OK;
 }
 
-/* void processFrame (in zapIMediaFrame frame); */
+/* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapFilterNode::ProcessFrame(zapIMediaFrame *frame)
+zapFilterNode::ConsumeFrame(zapIMediaFrame *frame)
 {
-  NS_ASSERTION(mWaiting, "uh-oh, unexpectatly received a frame");
-  if (!mSink) {
-    // silently drop frame
-    mWaiting = PR_FALSE;
-    if (mStreamOpen) {
-      CloseStream();
-      mStreamOpen = PR_FALSE;
-    } 
-  }
-  else if (!frame) {
-    // EOF
-    if (mStreamOpen) {
-      CloseStream();
-      mStreamOpen = PR_FALSE;
-    }
-    mWaiting = PR_FALSE;
-    mSink->ProcessFrame(nsnull);
-  }
-  else {
-    if (!mStreamOpen) {
-      nsCOMPtr<nsIPropertyBag2> streamInfo;
-      frame->GetStreamInfo(getter_AddRefs(streamInfo));
-      if (NS_FAILED(OpenStream(streamInfo)))
-        return NS_ERROR_FAILURE;
-      mStreamOpen = PR_TRUE;
-    }
-    mWaiting = PR_FALSE;
-    nsCOMPtr<zapIMediaFrame> output_frame;
-    if (NS_FAILED(Filter(frame, getter_AddRefs(output_frame))))
+  if (!mOutput) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIPropertyBag2> streamInfo;
+  frame->GetStreamInfo(getter_AddRefs(streamInfo));
+  if (streamInfo != mCurrentInputStreamInfo) {
+    if (NS_FAILED(ValidateNewStream(streamInfo)))
       return NS_ERROR_FAILURE;
-    mSink->ProcessFrame(output_frame);
+    mCurrentInputStreamInfo = streamInfo;
   }
   
-  return NS_OK;
+  nsCOMPtr<zapIMediaFrame> output_frame;
+  if (NS_FAILED(Filter(frame, getter_AddRefs(output_frame))))
+    return NS_ERROR_FAILURE;
+
+  return mOutput->ConsumeFrame(output_frame);
 }
 

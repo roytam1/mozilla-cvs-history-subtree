@@ -69,7 +69,9 @@ public:
 private:
   // node parameters (set from zapIMediaGraph::AddNode()):
   PRBool mLoop;
-
+  double mAmplitude;
+  zapAudioStreamParameters mStreamParameters;
+  
   // parsed array of tones:
   struct Tone {
     float frequency; // Hz
@@ -78,30 +80,19 @@ private:
   Tone* mTones;
   PRUint32 mToneCount;
 
-  // pointer to current tone:
-  struct { PRUint32 current; float offset; } mTonePointer;
-  
-  // source parameters (set from zapIMediaGraph::Connect()):
-  double mSampleRate;
-  double mFrameDuration;
-  double mAmplitude;
-  PRUint32 mNumChannels;
-  zapAudioStreamSampleFormat mSampleFormat;
-  PRUint32 mSamplesPerFrame;
-
-  PRBool mPlay; // true == play sample
-  PRBool mWaiting; // true == sink waiting for data
-  
-  nsCOMPtr<zapIMediaSink> mSink;
-
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-
   nsresult ParseRTTTL(const char* buf);
   bool ParseControlValue(const char** bufp, float* result);
   bool ParseToneCommand(const char **bufp, Tone* tone,
                         float base_octave,
                         float base_duration,
                         float base_bpm);
+  
+  // pointer to current tone:
+  struct { PRUint32 current; float offset; } mTonePointer;
+  
+  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
 #endif // __ZAP_RTTTLPLAYER_H__

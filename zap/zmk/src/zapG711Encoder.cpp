@@ -106,7 +106,7 @@ zapG711Encoder::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapG711Encoder::OpenStream(nsIPropertyBag2* streamInfo)
+zapG711Encoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -116,7 +116,7 @@ zapG711Encoder::OpenStream(nsIPropertyBag2* streamInfo)
   nsCString type;
   if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
                                                  type)) ||
-      type != NS_LITERAL_CSTRING("audio")) {
+      type != NS_LITERAL_CSTRING("audio/pcm")) {
     NS_ERROR("can only encode audio streams");
     return NS_ERROR_FAILURE;
   }
@@ -169,11 +169,6 @@ zapG711Encoder::OpenStream(nsIPropertyBag2* streamInfo)
                                      NS_LITERAL_CSTRING("audio/pcma"));
   
   return NS_OK;
-}
-
-void
-zapG711Encoder::CloseStream()
-{
 }
 
 nsresult

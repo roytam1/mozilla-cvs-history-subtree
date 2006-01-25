@@ -69,7 +69,7 @@ zapSpeexRTPDepacketizer::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapSpeexRTPDepacketizer::OpenStream(nsIPropertyBag2* streamInfo)
+zapSpeexRTPDepacketizer::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -93,11 +93,6 @@ zapSpeexRTPDepacketizer::OpenStream(nsIPropertyBag2* streamInfo)
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
                                      NS_LITERAL_CSTRING("audio/speex"));
   return NS_OK;
-}
-
-void
-zapSpeexRTPDepacketizer::CloseStream()
-{
 }
 
 nsresult

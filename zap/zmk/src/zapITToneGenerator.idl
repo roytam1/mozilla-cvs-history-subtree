@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,21 +36,39 @@
 
 #include "nsISupports.idl"
 
-interface nsIPropertyBag2;
+interface zapIAudioDevice;
 
 /**
  * \ingroup ZMK_MODULE
  */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+[scriptable, uuid(7be1f9b2-6013-401a-8006-035aff005234)]
+interface zapITToneGenerator : nsISupports
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
   /**
-   * Timestamp in sample clock units.
+   * Play the tone sequence described by 'tonesData'.
+   * Any sequence currently being played will be immediately
+   * replaced by the new sequence.
+   *
+   * tonesData has the following syntax:
+   * - tonesData: command *
+   * - command: tone-cmd | repeat-all-flag
+   * - tone-cmd:  '@' duration tone-par*
+   * - tone-par: volume-par | freq-par | modulation-par
+   * - volume-par: 'v' volume
+   * - freq-par: '+' frequency
+   * - modulation-par: '*' modulation-frequency [ '/' '3' ]
+   * - repeat-all-flag: 'R'
+   *
+   * - volume, frequency, modulation-frequency are integers
+   * - duration is the tone duration in seconds (decimal number).
+   * - volume is in dBm0 with reversed sign.
+   * - frequency is in Hz. Multiple frequencies can be specified.
+   * - modulation-frequency is in Hz and will be divided by 3 if '/3' is
+   *   appended.
+   *
+   * Range limits are as defined in RFC2833 for audio/tone packets
+   * with the exception of duration which may be longer. A duration
+   * of 0 signifies a continuous tone.
    */
-  readonly attribute unsigned long timestamp;
-  
-  readonly attribute ACString data;
+  void play(in ACString tonesData);
 };
-

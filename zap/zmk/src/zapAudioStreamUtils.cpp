@@ -35,6 +35,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapAudioStreamUtils.h"
+#include "nsHashPropertyBag.h"
+
+//----------------------------------------------------------------------
 
 zapAudioStreamSampleFormat StrToZapAudioSampleFormat(const nsACString& str)
 {
@@ -132,4 +135,79 @@ PaSampleFormat ZapAudioSampleFormatToPaFormat(zapAudioStreamSampleFormat format)
       NS_ERROR("unknown format");
   }
   return 0;
+}
+
+//----------------------------------------------------------------------
+
+void zapAudioStreamParameters::InitWithDefaults()
+{
+  sample_rate = 8000;
+  frame_duration = 0.02;
+  channels = 1;
+  sample_format = sf_float32_32768;
+}
+
+nsresult
+zapAudioStreamParameters::InitWithProperties(nsIPropertyBag2* properties)
+{
+  InitWithDefaults();
+  if (properties) {
+    properties->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+                                    &sample_rate);
+    properties->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
+                                    &frame_duration);
+    properties->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
+                                    &channels);
+    nsCString sampleformat_string;
+    if (NS_SUCCEEDED(properties->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
+                                                       sampleformat_string))) {
+      sample_format = StrToZapAudioSampleFormat(sampleformat_string);
+      if (sample_format == sf_unknown) {
+        NS_ERROR("unknown sample format");
+        return NS_ERROR_FAILURE;
+      }
+    }
+  }
+  return NS_OK;
+}
+
+already_AddRefed<nsIWritablePropertyBag2>
+zapAudioStreamParameters::CreateStreamInfo()
+{
+  nsIWritablePropertyBag2 *bag;
+  NS_NewHashPropertyBag2(&bag);
+
+  bag->SetPropertyAsACString(NS_LITERAL_STRING("type"),
+                             NS_LITERAL_CSTRING("audio/pcm"));
+  bag->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+                           sample_rate);
+  bag->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
+                           frame_duration);
+  bag->SetPropertyAsUint32(NS_LITERAL_STRING("channels"),
+                           channels);
+
+  nsCString format_string;
+  ZapAudioSampleFormatToStr(sample_format, format_string);
+  bag->SetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
+                             format_string);
+  return bag;
+}
+
+
+//----------------------------------------------------------------------
+
+PRBool CheckAudioStream(nsIPropertyBag2* streamInfo,
+                        const zapAudioStreamParameters& pars)
+{
+  if (!streamInfo) {
+    NS_ERROR("null stream info");
+    return false;
+  }
+  nsCString sample_format_str;
+  ZapAudioSampleFormatToStr(pars.sample_format, sample_format_str);  
+  return CHECK_STREAM_TYPE(streamInfo, NS_LITERAL_CSTRING("audio/pcm")) &&
+    CHECK_STREAM_DOUBLE(streamInfo, "sample_rate", pars.sample_rate) &&
+    CHECK_STREAM_DOUBLE(streamInfo, "frame_duration", pars.frame_duration) &&
+    CHECK_STREAM_UINT32(streamInfo, "channels", pars.channels) &&
+    CHECK_STREAM_CSTRING(streamInfo, "sample_format", sample_format_str);
 }

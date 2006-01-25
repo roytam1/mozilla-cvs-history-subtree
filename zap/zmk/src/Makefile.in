@@ -22,52 +22,65 @@ REQUIRES	= \
 		$(NULL)
 
 CPPSRCS		= \
-		zapMediaGraph.cpp \
-		zapMediaFrame.cpp \
-		zapAudioDeviceManager.cpp \
 		zapAudioDevice.cpp \
-		zapAudioStreamUtils.cpp \
-		zapAudioOut.cpp \
+		zapAudioDeviceManager.cpp \
 		zapAudioIn.cpp \
 		zapAudioMixer.cpp \
+		zapAudioOut.cpp \
+		zapAudioStreamUtils.cpp \
+		zapAudioToneFrame.cpp \
+		zapDTMFGenerator.cpp \
+		zapDatagramFrame.cpp \
+		zapFilterNode.cpp \
+		zapG711Decoder.cpp \
+		zapG711Encoder.cpp \
+		zapG711RTPDepacketizer.cpp \
+		zapG711RTPPacketizer.cpp \
+		zapMediaFrame.cpp \
+		zapMediaGraph.cpp \
 		zapMediaModule.cpp \
 		zapPacketBuffer.cpp \
-		zapFilterNode.cpp \
-		zapSpeexEncoder.cpp \
-		zapSpeexDecoder.cpp \
-		zapSpeexRTPPacketizer.cpp \
-		zapSpeexRTPDepacketizer.cpp \
-		zapG711Encoder.cpp \
-		zapG711Decoder.cpp \
-		zapG711RTPPacketizer.cpp \
-		zapG711RTPDepacketizer.cpp \
-		zapUDPSocket.cpp \
-		zapUDPSocketPair.cpp \
-		zapDatagramFrame.cpp \
+		zapPacketPump.cpp \
 		zapRTPFrame.cpp \
-		zapRTPTransmitter.cpp \
 		zapRTPReceiver.cpp \
 		zapRTPSession.cpp \
-		zapSplitter.cpp \
+		zapRTPTransmitter.cpp \
 		zapRtttlPlayer.cpp \
+		zapSpeexDecoder.cpp \
+		zapSpeexEncoder.cpp \
+		zapSpeexRTPDepacketizer.cpp \
+		zapSpeexRTPPacketizer.cpp \
+		zapSplitter.cpp \
+		zapStreamUtils.cpp \
+		zapTEventToTToneConverter.cpp \
+		zapTToneGenerator.cpp \
+		zapTToneToPCMConverter.cpp \
+		zapTelephoneEventFrame.cpp \
+		zapUDPSocket.cpp \
+		zapUDPSocketPair.cpp \
 		$(NULL)
 
-XPIDLSRCS	= zapIMediaGraph.idl \
-		  zapIMediaNode.idl \
-		  zapIMediaSource.idl \
-		  zapIMediaSink.idl \
-		  zapIMediaFrame.idl \
-		  zapIAudioDeviceManager.idl \
-		  zapIAudioIn.idl \
-		  zapIAudioOut.idl \
-		  zapIAudioDevice.idl \
-		  zapIPortaudioDevice.idl \
-		  zapISpeexEncoder.idl \
-		  zapISpeexDecoder.idl \
-		  zapIRTPFrame.idl \
-		  zapIUDPSocket.idl \
-		  zapIUDPSocketPair.idl \
-		  $(NULL)
+XPIDLSRCS	= \
+		zapIAudioDevice.idl \
+		zapIAudioDeviceManager.idl \
+		zapIAudioIn.idl \
+		zapIAudioOut.idl \
+		zapIAudioToneFrame.idl \
+		zapIDTMFGenerator.idl \
+		zapIMediaFrame.idl \
+		zapIMediaGraph.idl \
+		zapIMediaNode.idl \
+		zapIMediaSink.idl \
+		zapIMediaSource.idl \
+		zapIPortaudioDevice.idl \
+		zapIRTPFrame.idl \
+		zapISpeexDecoder.idl \
+		zapISpeexEncoder.idl \
+		zapITToneGenerator.idl \
+		zapITelephoneEventFrame.idl \
+		zapIUDPSocket.idl \
+		zapIUDPSocketPair.idl \
+		$(NULL)
 
 SHARED_LIBRARY_LIBS += \
 		$(DIST)/lib/$(LIB_PREFIX)moz_portaudio_v18_1.$(LIB_SUFFIX) \

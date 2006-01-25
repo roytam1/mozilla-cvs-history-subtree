@@ -49,8 +49,6 @@
 #include "nsIWritablePropertyBag2.h"
 #include "zapAudioStreamUtils.h"
 
-class zapAudioInState;
-
 ////////////////////////////////////////////////////////////////////////
 // zapAudioIn
 
@@ -74,38 +72,18 @@ public:
   NS_DECL_ZAPIAUDIOIN
 
 private:
-  friend class zapAudioInState;
-  friend class zapAudioIn_STOP_IDLE_CLOSED;
-  friend class zapAudioIn_PLAY_IDLE_CLOSED;
-  friend class zapAudioIn_PLAY_IDLE_OPEN;
-  friend class zapAudioIn_STOP_WAITING_CLOSED;
-  friend class zapAudioIn_STOP_IDLEEOF_CLOSED;
-  friend class zapAudioIn_PLAY_IDLEEOF_CLOSED;
-  friend class zapAudioIn_PLAY_WAITING_OPEN;
-  
-  void ChangeState(zapAudioInState* state);
-    
-  zapAudioInState* mState;
-  
   nsresult StartStream();
   void CloseStream();
-  void SendFrame(const nsACString& data, double timestamp);
+  void CreateFrame(const nsACString& data, double timestamp);
   
   // node parameters (set from zapIMediaGraph::AddNode()):
   PaDeviceID mInputDevice;
-  
-  // source parameters (set from zapIMediaGraph::Connect()):
-  double mSampleRate;
-  double mFrameDuration;
-  PRUint32 mNumChannels;
-  zapAudioStreamSampleFormat mSampleFormat;
-  PRUint32 mSamplesPerFrame;
-
-  nsCOMPtr<zapIMediaSink> mSink;
+  zapAudioStreamParameters mStreamParameters;
 
   PortAudioStream* mStream;
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   
+  nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
   nsCOMPtr<nsIEventQueue> mEventQ; // media graph event queue
   
   friend class zapAudioInSendEvent;
@@ -115,219 +93,8 @@ private:
   PRLock* mCallbackLock; // lock to synchronize portaudio and media threads
   PRBool mKeepRunning; // signals the portaudio callback whether to
                        // shut down or not
-  
+
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioInState: baseclass for zapAudioIn states
-
-class zapAudioInState
-{
-public:
-  // zapIAudioIn handlers:
-  virtual nsresult Play(zapAudioIn* audioin)=0;
-  virtual nsresult Stop(zapAudioIn* audioin)=0;
-  
-  // zapIMediaSource handlers:
-  virtual nsresult ConnectSink(zapAudioIn* audioin, zapIMediaSink* sink,
-                               const nsACString& connection_id);
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id)=0;
-  virtual nsresult RequestFrame(zapAudioIn* audioin);
-
-  // portaudio callback handlers:
-  virtual void SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame);
-
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName()=0;
-#endif
-  
-protected:
-  void ChangeState(zapAudioIn* audioin, zapAudioInState* state);
-};
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_STOP_IDLE_CLOSED
-
-class zapAudioIn_STOP_IDLE_CLOSED : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult ConnectSink(zapAudioIn* audioin, zapIMediaSink* sink,
-                               const nsACString& connection_id);
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-  virtual nsresult RequestFrame(zapAudioIn* audioin);
-  
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "STOP_IDLE_CLOSED";
-    return name;
-  }
-#endif
-private:
-  static zapAudioInState* mInstance;
-};
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_PLAY_IDLE_CLOSED: waiting for sink to connect and/or
-// request first frame
-
-class zapAudioIn_PLAY_IDLE_CLOSED : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult ConnectSink(zapAudioIn* audioin, zapIMediaSink* sink,
-                               const nsACString& connection_id);
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-  virtual nsresult RequestFrame(zapAudioIn* audioin);
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "PLAY_IDLE_CLOSED";
-    return name;
-  }
-#endif
-
-private:
-  static zapAudioInState* mInstance;
-};
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_PLAY_IDLE_OPEN
-
-class zapAudioIn_PLAY_IDLE_OPEN : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-  virtual nsresult RequestFrame(zapAudioIn* audioin);
-
-  virtual void SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame);
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "PLAY_IDLE_OPEN";
-    return name;
-  }
-#endif
-
-private:
-  static zapAudioInState* mInstance;
-};
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_STOP_WAITING_CLOSED
-
-class zapAudioIn_STOP_WAITING_CLOSED : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "STOP_WAITING_CLOSED";
-    return name;
-  }
-#endif
-
-private:
-  static zapAudioInState* mInstance;
-};
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_STOP_IDLEEOF_CLOSED
-
-class zapAudioIn_STOP_IDLEEOF_CLOSED : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-  virtual nsresult RequestFrame(zapAudioIn* audioin);
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "STOP_IDLEEOF_CLOSED";
-    return name;
-  }
-#endif
-
-private:
-  static zapAudioInState* mInstance;
-};
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_STOP_IDLEEOF_CLOSED
-
-class zapAudioIn_PLAY_IDLEEOF_CLOSED : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-  virtual nsresult RequestFrame(zapAudioIn* audioin);
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "PLAY_IDLEEOF_CLOSED";
-    return name;
-  }
-#endif
-
-private:
-  static zapAudioInState* mInstance;
-};
-
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioIn_PLAY_WAITING_OPEN
-
-class zapAudioIn_PLAY_WAITING_OPEN : public zapAudioInState
-{
-public:
-  static zapAudioInState* Instance();
-
-  virtual nsresult Play(zapAudioIn* audioin);
-  virtual nsresult Stop(zapAudioIn* audioin);
-  
-  virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
-                                  const nsACString & connection_id);
-
-  virtual void SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame);
-#ifdef DEBUG_afri_zmk
-  virtual const char* GetName() {
-    static const char* name = "PLAY_WAITING_OPEN";
-    return name;
-  }
-#endif
-
-private:
-  static zapAudioInState* mInstance;
-};
-
 
 #endif // __ZAP_AUDIOIN_H__

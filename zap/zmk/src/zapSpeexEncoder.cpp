@@ -42,6 +42,7 @@
 #include "zapMediaFrame.h"
 #include "stdio.h"
 #include "nsHashPropertyBag.h"
+#include "zapAudioStreamUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapSpeexEncoder
@@ -50,7 +51,7 @@ zapSpeexEncoder::zapSpeexEncoder()
     : mEncoderState(nsnull)
 {
 #ifdef DEBUG_afri_zmk
-  printf("zapSpeexEncoder::zapSpeexEncoder()");
+  printf("zapSpeexEncoder::zapSpeexEncoder()\n");
 #endif
 }
 
@@ -58,7 +59,7 @@ zapSpeexEncoder::~zapSpeexEncoder()
 {
   NS_ASSERTION(!mEncoderState, "unclean shutdown");
 #ifdef DEBUG_afri_zmk
-  printf("zapSpeexEncoder::~zapSpeexEncoder()");
+  printf("zapSpeexEncoder::~zapSpeexEncoder()\n");
 #endif
 }
 
@@ -229,7 +230,6 @@ zapSpeexEncoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIP
   mSampleRate = 8000.0f;
   
   // extract node parameters:
-
   if (node_pars) {
     if (NS_SUCCEEDED(node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
                                                     &mSampleRate))) {
@@ -264,7 +264,7 @@ zapSpeexEncoder::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapSpeexEncoder::OpenStream(nsIPropertyBag2* streamInfo)
+zapSpeexEncoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -274,11 +274,11 @@ zapSpeexEncoder::OpenStream(nsIPropertyBag2* streamInfo)
   nsCString type;
   if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
                                                  type)) ||
-      type != NS_LITERAL_CSTRING("audio")) {
+      type != NS_LITERAL_CSTRING("audio/pcm")) {
     NS_ERROR("can only encode audio streams");
     return NS_ERROR_FAILURE;
   }
-
+  
   double sampleRate;
   if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
                                                 &sampleRate)) ||
@@ -306,7 +306,6 @@ zapSpeexEncoder::OpenStream(nsIPropertyBag2* streamInfo)
     return NS_ERROR_FAILURE;
   }
 
-
   nsCString sampleFormat;
   if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
                                                 sampleFormat)) ||
@@ -330,11 +329,6 @@ zapSpeexEncoder::OpenStream(nsIPropertyBag2* streamInfo)
                                      NS_LITERAL_CSTRING("audio/speex"));
   
   return NS_OK;
-}
-
-void
-zapSpeexEncoder::CloseStream()
-{
 }
 
 nsresult

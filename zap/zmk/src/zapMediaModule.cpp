@@ -56,6 +56,11 @@
 #include "zapRTPSession.h"
 #include "zapSplitter.h"
 #include "zapRtttlPlayer.h"
+#include "zapTToneToPCMConverter.h"
+#include "zapDTMFGenerator.h"
+#include "zapTToneGenerator.h"
+#include "zapTEventToTToneConverter.h"
+#include "zapPacketPump.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -77,6 +82,11 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPReceiver)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPSession)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSplitter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRtttlPlayer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapTToneToPCMConverter)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapDTMFGenerator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapTToneGenerator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapTEventToTToneConverter)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapPacketPump)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -184,6 +194,31 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_RTTTLPLAYER_CID,
     ZAP_RTTTLPLAYER_CONTRACTID,
     zapRtttlPlayerConstructor
+  },
+  { "Mozilla ZMK audio/tone to audio/pcm converter",
+    ZAP_TTONETOPCMCONVERTER_CID,
+    ZAP_TTONETOPCMCONVERTER_CONTRACTID,
+    zapTToneToPCMConverterConstructor
+  },
+  { "Mozilla ZMK DTMF Generator",
+    ZAP_DTMFGENERATOR_CID,
+    ZAP_DTMFGENERATOR_CONTRACTID,
+    zapDTMFGeneratorConstructor
+  },
+  { "Mozilla ZMK Telephony Tone Generator",
+    ZAP_TTONEGENERATOR_CID,
+    ZAP_TTONEGENERATOR_CONTRACTID,
+    zapTToneGeneratorConstructor
+  },
+  { "Mozilla ZMK audio/telephone-event to audio/tone converter",
+    ZAP_TEVENTTOTTONECONVERTER_CID,
+    ZAP_TEVENTTOTTONECONVERTER_CONTRACTID,
+    zapTEventToTToneConverterConstructor
+  },
+  { "Mozilla ZMK packet pump",
+    ZAP_PACKETPUMP_CID,
+    ZAP_PACKETPUMP_CONTRACTID,
+    zapPacketPumpConstructor
   }
 };
 

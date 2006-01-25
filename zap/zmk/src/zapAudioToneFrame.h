@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,67 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_AUDIOTONEFRAME_H__
+#define __ZAP_AUDIOTONEFRAME_H__
 
-interface nsIPropertyBag2;
+#include "zapIAudioToneFrame.h"
+#include "nsString.h"
+#include "nsCOMPtr.h"
+#include "nsIPropertyBag2.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
-{
-  readonly attribute nsIPropertyBag2 streamInfo;
 
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
+// helper struct for holding/accessing the frame's data:
+struct zapAudioTone {
+  zapAudioTone();
+  zapAudioTone(const nsACString& octets);
+
+  PRUint16 GetModulation();
+  void SetModulation(PRUint16 modulation);
+
+  PRBool GetT();
+  void SetT(PRBool T);
+
+  PRUint16 GetVolume();
+  void SetVolume(PRUint16 volume);
+
+  PRUint16 GetDuration();
+  void SetDuration(PRUint16 duration);
+
+  PRUint16 GetFrequencyCount();
+  PRUint16 GetFrequencyAt(PRUint16 n);
+  void AddFrequency(PRUint16 frequency);
   
-  readonly attribute ACString data;
+  nsCString data;
 };
 
+class zapAudioToneFrame : public zapIAudioToneFrame
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIAUDIOTONEFRAME
+  NS_DECL_ZAPIMEDIAFRAME
+  
+  zapAudioToneFrame();
+  ~zapAudioToneFrame();
+  PRBool Init(const nsACString& octets, nsIPropertyBag2* streamInfo);
+  PRBool Init(const zapAudioTone& tone, nsIPropertyBag2* streamInfo);
+  PRBool Init();
+  
+  PRBool mMarkerBit;
+  zapAudioTone mToneData;
+  PRUint32 mTimestamp;
+  nsCOMPtr<nsIPropertyBag2> mStreamInfo;
+};
+
+//----------------------------------------------------------------------
+// helpers to create add-refed audiotone frame objects:
+
+zapIAudioToneFrame *
+CreateAudioToneFrame(const nsACString& octets, nsIPropertyBag2* streamInfo);
+
+zapAudioToneFrame *
+CreateAudioToneFrame(const zapAudioTone& tone, nsIPropertyBag2* streamInfo);
+
+zapAudioToneFrame * CreateAudioToneFrame();
+
+#endif // __ZAP_AUDIOTONEFRAME_H__

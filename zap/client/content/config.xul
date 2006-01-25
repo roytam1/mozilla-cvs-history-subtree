@@ -135,6 +135,42 @@
               </description>
             </info>
           </irow>
+          <irow>
+            <label control="urn:mozilla:zap:dialtone" value="Dial Tone:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:dialtone"/>
+            <info>
+              <description>
+                Dial tone played when making outgoing calls. XXX Describe format
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:ringingtone" value="Ringing Tone:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:ringingtone"/>
+            <info>
+              <description>
+                Ringing tone played when making outgoing calls. XXX Describe format
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:busytone" value="Busy Tone:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:busytone"/>
+            <info>
+              <description>
+                Busy tone played when making outgoing calls. XXX Describe format
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:errortone" value="Error Tone:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:errortone"/>
+            <info>
+              <description>
+                Error tone played when making outgoing calls. XXX Describe format
+              </description>
+            </info>
+          </irow>
         </rows>
       </grid>
     </cgroup>

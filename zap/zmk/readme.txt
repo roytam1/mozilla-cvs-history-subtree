@@ -1,6 +1,187 @@
 Mozilla ZAP Media Kit
 =====================
 
+Built-in media frame types:
+===========================
+
+I) audio/pcm
+------------
+
+PCM audio frame.
+
+Interfaces: zapIMediaFrame
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "audio/pcm"
+- double "sample_rate" : sample rate in Hz
+- double "frame_duration" : duration of frame in s
+- unsigned long "channels" : number of channels
+- ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32" 
+
+zapIMediaFrame::data :
+
+"sample_format" == "float32_1" | "float32_32768" | "int32":
+(max amplitude = +/-1 | +/- 32768 | +/- 2^31)
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      sample 0 channel 0                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      sample 0 channel 1                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             ...                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      sample 0 channel n-1                     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      sample 1 channel 0                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             ...                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|       sample 'sample_rate*frame_duration-1' channel n-1       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+"sample_format" == "int16":
+
+As above but with 16bit samples.
+
+----------------------------------------------------------------------
+
+II) datagram
+------------
+
+Generic datagram frame for transmission over a network socket.
+
+Interfaces: zapIMediaFrame, 
+            nsIDatagram (see netwerk/base/public/nsIUDPSocket.idl)
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "datagram"
+
+zapIMediaFrame::data :
+- same as nsIDatagram::data
+
+----------------------------------------------------------------------
+
+III) audio/speex
+----------------
+
+Speex encoded audio frame.
+
+Interfaces: zapIMediaFrame
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "audio/speex"
+
+zapIMediaFrame::data :
+- binary data as described in speex specs
+
+----------------------------------------------------------------------
+
+IV) rtp
+-------
+
+RTP packet.
+
+Interfaces: zapIRTPFrame (spec of zapIMediaFrame)
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "rtp"
+
+zapIMediaFrame::data : 
+- raw rtp packet data including header
+
+----------------------------------------------------------------------
+
+V) audio/pcmu
+-------------
+
+Mu-law encoded pcm audio frame.
+
+Interfaces: zapIMediaFrame
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "audio/pcmu"
+
+zapIMediaFrame::data :
+
+8 bit pcmu samples.
+Framing is currently fixed to 8000Hz, 0.02s, 1 channel
+
+----------------------------------------------------------------------
+
+VI) audio/pcma
+--------------
+
+Alpha-law encoded pcm audio frame.
+
+Interfaces: zapIMediaFrame
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "audio/pcma"
+
+zapIMediaFrame::data :
+
+8 bit pcma samples.
+Framing is currently fixed to 8000Hz, 0.02s, 1 channel
+
+----------------------------------------------------------------------
+
+VII) audio/tone
+---------------
+
+Telephony tone frame as described in RFC2833.
+
+Interfaces: zapIAudioToneFrame (spec of zapIMediaFrame)
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "audio/tone"
+
+zapIMediaFrame::data :
+
+- raw audio/tone payload as described in RFC2833 with implied 
+  8000Hz sample rate.
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|    modulation   |T|  volume   |          duration             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 0 0 0|       frequency       |0 0 0 0|       frequency       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| ....                                                          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 0 0 0|       frequency       |0 0 0 0|       frequency       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+----------------------------------------------------------------------
+
+VIII) audio/telephone-event
+---------------------------
+
+Telephone events (e.g. DTMF digits) as defined in RFC2833.
+
+Interfaces: zapITelephoneEventFrame (spec of zapIMediaFrame)
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "audio/telephone-event"
+
+zapIMediaFrame::data :
+
+- raw audio/telephone-event payload as described in RFC2833 with 
+  implied 8000Hz sample rate.
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     event     |E|0|  volume   |          duration             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+
+======================================================================
+======================================================================
+
 Built-in node types:
 ====================
 
@@ -11,15 +192,13 @@ Built-in node types:
 
 Audio source.
 
-Sources: 1
 Sinks: none
+Sources: 1 (active)
 
 Control interfaces: zapIAudioIn
 
 Node parameters: 
 - zapIAudioDevice "device" (default: default audio in)
-
-Source parameters:
 - double "sample_rate" : sample rate in Hz (default: 8000)
 - double "frame_duration" : duration of one frame in s (default: 0.02)
 - unsigned long "channels" : number of channels (default: 1)
@@ -27,12 +206,12 @@ Source parameters:
                              (default: "float32_32768")
 
 Output stream:
-audio stream with
-- ACString "type" == "audio"
-- double "sample_rate"
-- double "frame_duration"
-- unsigned long "channels"
-- unsigned long "sample_format"
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == corresponding node parameter
+
 
 ----------------------------------------------------------------------
 
@@ -41,21 +220,25 @@ audio stream with
 
 Audio sink.
 
+Sinks: 1 (active)
 Sources: none
-Sinks: 1
 
 Control interfaces: zapIAudioOut
 
 Node parameters: 
 - zapIAudioDevice "device" (default: default audio out)
+- double "sample_rate" : sample rate in Hz (default: 8000)
+- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "channels" : number of channels (default: 1)
+- ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
+                             (default: "float32_32768")
 
-Input stream:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate"
-- double "frame_duration"
-- unsigned long "channels"
-- unsigned long "sample_format"
+Input stream: 
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == corresponding node parameter
 
 ----------------------------------------------------------------------
 
@@ -67,8 +250,8 @@ Audio mixer node, mixes n audio sinks to one audio source.
 Control interfaces:
 - 
 
-Sources: 1
-Sinks: n
+Sinks: n (active)
+Sources: 1 (passive)
 
 Node parameters:
 - double "sample_rate" : sample rate in Hz (default: 8000)
@@ -77,21 +260,18 @@ Node parameters:
 - ACString "sample_format" : "float32_32768" (default: "float32_32768")
 
 Input streams:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate" (equals corresponding node parameter)
-- double "frame_duration" (equals corresponding node parameter)
-- unsigned long "channels" (equals corresponding node parameter)
-- unsigned long "sample_format" (== "float32_32768")
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == "float32_32768"
 
 Output stream:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate" (equals corresponding node parameter)
-- double "frame_duration" (equals corresponding node parameter)
-- unsigned long "channels" (equals corresponding node parameter)
-- unsigned long "sample_format" (== "float32_32768")
-
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == "float32_32768"
 
 ----------------------------------------------------------------------
 
@@ -100,14 +280,18 @@ audio stream with
 
 General purpose packet buffer.
 
-Sources: 1
-Sinks: 1
+Sinks: 1 (passive)
+Sources: 1 (passive)
 
 Node parameters:
 - int "max_size" : maximum number of packets to buffer (10)
-- int "prefill_size" : no of packets to prebuffer at start of stream (0)
-- boolean "rebuffer" : refill buffer to prefill_size whenever the number
-                       of packets in the buffer drops to 0 (true)
+- int "lift_count" : whenever the size of the buffer drops to 0, 
+                     lift_count packets will be pre-buffered before
+                     the attached sink is allowed to take any packets
+                     out of the buffer (0)
+- int "drop_count" : number of packets to drop at the front of the buffer 
+                     (older packets) when a new packet arrives for a buffer 
+                     that has reached its maximum size (0)
 
 Input stream:
 any
@@ -125,8 +309,8 @@ A UDP socket for sending and receiving datagrams.
 Control interfaces:
 - zapIUDPSocket
 
-Sources: 1
-Sinks: 1
+Sinks: 1 (passive)
+Sources: 1 (active)
 
 Node parameters:
 - nsIUDPSocket "socket" : An initialized udp socket (nsIUDPSocket). 
@@ -138,15 +322,10 @@ If neither "port" nor "socket" are given, the behaviour will be as
 if a "port"==0 had been specified (allocate a random free port).
 
 Input stream:
-datagram stream with
-- ACString "type" (== "datagram")
-Frames must implement nsIDatagram in addition to zapIMediaFrame
+datagram frames
 
 Output stream:
-datagram stream with
-- ACString "type" (== "datagram")
-Frames implement nsIDatagram in addition to zapIMediaFrame
-
+datagram frames
 
 ----------------------------------------------------------------------
 
@@ -159,13 +338,13 @@ such that portbase <= port_a, port_a = 2*n, and port_b = 2*n+1
 Control interfaces:
 - zapIUDPSocketPair
 
-Sources: 2
-- ACString "name" == "socket-a"
-- ACString "name" == "socket-b"
-
 Sinks: 2
-- ACString "name" == "socket-a"
-- ACString "name" == "socket-b"
+- ACString "name" == "socket-a" (passive)
+- ACString "name" == "socket-b" (passive)
+
+Sources: 2
+- ACString "name" == "socket-a" (active)
+- ACString "name" == "socket-b" (active)
 
 Node parameters:
 - unsigned short "portbase" : port at which to start searching for a 
@@ -190,16 +369,14 @@ Node parameters:
 - double "sample_rate" : 8000|16000|32000 (default: 8000)
 
 Input stream:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate" (== 8000, 16000, or 32000; must match node parameter)
-- double "frame_duration" (== 0.02)
-- unsigned long "channels" (== 1)
-- unsigned long "sample_format" (== "float32_32768")
+audio/pcm frames with
+- double "sample_rate" == 8000, 16000, or 32000; must match node parameter
+- double "frame_duration" == 0.02
+- unsigned long "channels" == 1
+- unsigned long "sample_format" == "float32_32768"
 
 Output stream:
-audio/speex stream with
-- ACString "type" == "audio/speex"
+audio/speex frames
 
 ----------------------------------------------------------------------
 
@@ -214,16 +391,14 @@ Node parameters:
 -double "sample_rate" : 8000|16000|32000 (default:8000)
 
 Input stream:
-audio/speex stream with
-- ACString "type" == "audio/speex"
+audio/speex frames
 
 Output stream:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate" (== 8000, 16000, or 32000; matches node parameter)
-- double "frame_duration" (== 0.02)
-- unsigned long "channels" (== 1)
-- unsigned long "sample_format" (== "float32_32768")
+audio/pcm frames with
+- double "sample_rate" == 8000, 16000, or 32000; matches node parameter
+- double "frame_duration" == 0.02
+- unsigned long "channels" == 1
+- unsigned long "sample_format" == "float32_32768"
 
 ----------------------------------------------------------------------
 
@@ -236,11 +411,10 @@ Node parameters:
 - unsigned short "payload_type" (default: 96)
 
 Input stream:
-- ACString "type" (== "audio/speex")
+audio/speex frames
 
 Output stream:
-- ACString "type" (== "rtp")
-- SSRC and sequence number NOT set.
+rtp frames (SSRC and sequence number NOT set).
 
 ----------------------------------------------------------------------
 
@@ -250,10 +424,10 @@ Output stream:
 Filter for converting rtp streams into speex streams.
 
 Input stream:
-- ACString "type" (== "rtp")
+rtp frames (with assumed speex payload)
 
 Output stream:
-- ACString "type" (== "audio/speex")
+audio/speex frames
 
 ----------------------------------------------------------------------
 
@@ -268,16 +442,14 @@ Node parameters:
 - ACString "type" == "audio/pcmu" | "audio/pcma" (default: "audio/pcmu")
 
 Input stream:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate" (== 8000)
-- double "frame_duration" (== 0.02)
-- unsigned long "channels" (== 1)
-- unsigned long "sample_format" (== "float32_32768")
+audio/pcm frames with
+- double "sample_rate" == 8000
+- double "frame_duration" == 0.02
+- unsigned long "channels" == 1
+- unsigned long "sample_format" == "float32_32768"
 
-Output stream:
-audio stream with
-- ACString "type" == "audio/pcmu" | "audio/pcma" (as node parameter)
+Output frames:
+audio/pcmu or audio/pcma frames; determined by node parameter
 
 ----------------------------------------------------------------------
 
@@ -291,16 +463,14 @@ Control interfaces:
 Node parameters:
 
 Input stream:
-audio stream with
-- ACString "type" == "audio/pcmu" | "audio/pcma"
+audio/pcmu or audio/pcma frames
 
 Output stream:
-audio stream with
-- ACString "type" (== "audio")
-- double "sample_rate" (== 8000)
-- double "frame_duration" (== 0.02)
-- unsigned long "channels" (== 1)
-- unsigned long "sample_format" (== "float32_32768")
+audio/pcm frames with
+- double "sample_rate" == 8000
+- double "frame_duration" == 0.02
+- unsigned long "channels" == 1
+- unsigned long "sample_format" == "float32_32768"
 
 ----------------------------------------------------------------------
 
@@ -313,11 +483,10 @@ Node parameters:
 - unsigned short "payload_type" (default: 0)
 
 Input stream:
-- ACString "type" (== "audio/pcmu" | "audio/pcma")
+audio/pcmu or audio/pcma frames 
 
 Output stream:
-- ACString "type" (== "rtp")
-- SSRC and sequence number NOT set.
+rtp frames (SSRC and sequence number NOT set).
 
 ----------------------------------------------------------------------
 
@@ -330,10 +499,10 @@ Node parameters:
 - ACString "type" == "audio/pcmu" | "audio/pcma" (default: "audio/pcmu")
 
 Input stream:
-- ACString "type" (== "rtp")
+rtp frames with assumed g711 payload
 
 Output stream:
-- ACString "type" == "audio/pcmu" | "audio/pcma" (as node parameter)
+audio/pcmu or audio/pcma frames (determined by node parameter)
 
 ----------------------------------------------------------------------
 
@@ -347,8 +516,17 @@ Node parameters:
 - unsigned short "rtp_port" : destination port for rtp datagrams
 - unsigned short "rtcp_port" : destination port for rtcp datagrams
 
-Sinks: 3 (ACString "name" == "local-rtp"|"remote-rtp"|"remote-rtcp")
-Sources: 3 (ACString "name" == "local-rtp"|"remote-rtp"|"remote-rtcp")
+Sinks: 3 
+
+ACString "name" == "local-rtp"   : outbound rtp frames   (neutral)
+ACString "name" == "remote-rtp"  : inbound rtp datagrams  (neutral)
+ACString "name" == "remote-rtcp" : inbound rtcp datagrams (neutral)
+
+Sources: 3 
+
+ACString "name" == "local-rtp"   : inbound rtp frames      (neutral)
+ACString "name" == "remote-rtp"  : outbound rtp datagrams (neutral)
+ACString "name" == "remote-rtcp" : outbound rtcp frames   (neutral)
 
 ----------------------------------------------------------------------
 
@@ -363,13 +541,11 @@ Node parameters:
 - unsigned short "port" : destination port for datagrams
 
 Input stream:
-- ACString "type" (== "rtp")
+rtp frames.
 rtp-transmitter will set SSRC and sequence number
 
 Output stream:
-- ACString "type" (== "datagram")
-- Frames implement nsIDatagram in addition to zapIMediaFrame
-
+datagram frames.
 
 ----------------------------------------------------------------------
 
@@ -379,10 +555,10 @@ Output stream:
 Filter for receiving RTP datagrams. Used internally by rtp-session.
 
 Input stream:
-- ACString "type" (== "datagram")
+datagram frames
 
 Output stream:
-- ACString "type" (== "rtp")
+rtp frames
 
 
 ----------------------------------------------------------------------
@@ -392,8 +568,8 @@ Output stream:
 
 Duplicates one input to several outputs.
 
-Sources: n
-Sinks: 1
+Sinks: 1 (passive)
+Sources: n (active)
 
 Node parameters:
 
@@ -413,8 +589,8 @@ Audio source for playing RTTTL-encoded ringtones.
 RTTTL is the "Ringing Tones Text Transfer Language", a popular format
 for Nokia mobile phone ringtones.
 
-Sources: 1
 Sinks: none
+Sources: 1 (passive)
 
 Control interfaces:
 
@@ -423,7 +599,6 @@ Node parameters:
 - boolean "loop" : true: the sample should be looped indefinitely (default: true)
 - double "amplitude" : 0.0 <= amplitude <= 1.0 (default: 0.5)
 
-Source parameters:
 - double "sample_rate" : sample rate in Hz (default: 8000)
 - double "frame_duration" : duration of one frame in s (default: 0.02)
 - unsigned long "channels" : number of channels (default: 1)
@@ -431,9 +606,130 @@ Source parameters:
                              (default: "float32_32768")
 
 Output stream:
-audio stream with
-- ACString "type" == "audio"
-- double "sample_rate"
-- double "frame_duration"
-- unsigned long "channels"
-- unsigned long "sample_format"
+audio/pcm frames (layout determined by source parameters).
+
+----------------------------------------------------------------------
+
+20) ttone->pcm
+--------------
+
+Decoder for generating pcm from audio/tone telephony tones (RFC2833).
+
+Sinks: 1 (active)
+Sources: 1 (passive)
+
+Control interfaces: 
+
+Node parameters:
+double "ztlp" : zero dBm0 tranmission level point as a fraction of the 
+                maximum output stream amplitude (Default: 1.0==maximum amplitude
+                of output stream)
+double "sample_rate" : sample rate in Hz (default: 8000)
+double "frame_duration" : duration of one frame in s (default: 0.02)
+unsigned long "channels" : number of channels (default: 1)
+ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
+                               (default: "float32_32768")
+
+Input stream:
+audio/tone frames
+
+Output stream:
+audio/pcm frames (layout determined by source parameters).
+
+----------------------------------------------------------------------
+
+21) dtmf-generator
+------------------
+
+Generates RFC2833 dtmf audio/telephone-event frames from user input
+Note: Doesn't generate end frame retransmissions. Frames will be played
+without inter-frame pauses; the consumer has to reconstruct the timing from
+the frame timestamps.
+
+Sinks: none
+Sources: 1 (passive)
+
+Control interfaces: zapIDTMFGenerator
+
+Node parameters:
+- double "tone_duration" : duration of tones in s (0.09). 
+                           x <= (2^16-1)/sample_rate
+- double "pause_duration" : duration of pauses in s (0.07).
+                            x <= (2^16-1)/sample_rate
+- double "volume" : volume in dBm0 (-8)
+- double "sample_rate" : XXX 8000Hz hardcoded atm.
+- double "max_frame_duration" : minimum packetization interval in 
+                                seconds (0.02).
+                                1/sample_rate <= x <= (2^16-1)/sample_rate
+
+Output stream:
+audio/telephone-event frames WITHOUT end frame retransmissions
+
+----------------------------------------------------------------------
+
+22) tevent->ttone
+-----------------
+
+Filter for generating audio/tone frames from audio/telephone-event
+frames (RFC2833). Note: This is currently implemented as a passive
+filter. One implication is that it might not deal gracefully with end
+frame retransmissions that don't stick to the pipeline's packetization
+period. Inter-frame pauses will not be converted to packets; the
+consumer has to reconstruct the timing from the frame timestamps.
+
+Sinks: 1 (neutral)
+Sources: 1 (neutral)
+
+Control interfaces: 
+
+Node parameters:
+
+Input stream:
+audio/telephone-event frames
+
+Output stream:
+audio/tone frames
+
+----------------------------------------------------------------------
+
+23) ttone-generator
+-------------------
+
+Generates RFC2833 telephony tone frames from user input
+
+Sinks: none
+Sources: 1 (passive)
+
+Control interfaces: zapITToneGenerator
+
+Node parameters:
+- double "sample_rate" : XXX 8000Hz hardcoded atm.
+- double "max_frame_duration" : minimum packetization interval in seconds 
+                                (default: 0.02s).
+                                1/sample_rate <= x <= (2^16-1)/sample_rate
+
+
+Output stream:
+audio/tone frames
+
+----------------------------------------------------------------------
+
+24) pump
+--------
+
+General purpose packet pump. Pumps an unaltered "input" packet to the
+output whenever a "clock" frame is received.
+
+Sinks: 2 
+
+ACString "name" == "input" : pumped input frames; any stream type (active)
+ACString "name" == "clock" : reference clock; any stream type (passive)
+Sources: 1 (active)
+
+Node parameters:
+none
+
+Output stream:
+same as "input" stream
+
+----------------------------------------------------------------------

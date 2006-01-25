@@ -50,24 +50,19 @@ public:
   ~zapSplitterOutput();
 
   void Init(zapSplitter* splitter);
+  void ConsumeFrame(zapIMediaFrame *frame);
   
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIASOURCE
 
-  void FrameAvailable();
-  
 private:
   nsRefPtr<zapSplitter> mSplitter;
-  nsCOMPtr<zapIMediaSink> mSink;
-
-  PRBool mWaiting;
-  PRBool mFrameAvailable;
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
 //----------------------------------------------------------------------
+
 zapSplitterOutput::zapSplitterOutput()
-    : mWaiting(PR_FALSE),
-      mFrameAvailable(PR_FALSE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapSplitterOutput::zapSplitterOutput()\n");
@@ -110,8 +105,8 @@ NS_IMETHODIMP
 zapSplitterOutput::ConnectSink(zapIMediaSink *sink,
                                const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSink, "sink already connected");
-  mSink = sink;
+  NS_ASSERTION(!mOutput, "already connected");
+  mOutput = sink;
   return NS_OK;
 }
 
@@ -120,48 +115,25 @@ NS_IMETHODIMP
 zapSplitterOutput::DisconnectSink(zapIMediaSink *sink,
                                   const nsACString & connection_id)
 {
-  mSink = nsnull;
+  mOutput = nsnull;
   return NS_OK;
 }
 
-/* void requestFrame (); */
+/* zapIMediaFrame produceFrame (); */
 NS_IMETHODIMP
-zapSplitterOutput::RequestFrame()
+zapSplitterOutput::ProduceFrame(zapIMediaFrame ** frame)
 {
-  if (mWaiting) return NS_OK; // we're already waiting for data
-
-  if (mFrameAvailable) {
-    mFrameAvailable = PR_FALSE;
-    mSink->ProcessFrame(mSplitter->mFrame);
-  }
-  else {
-    mWaiting = PR_TRUE;
-    // request next frame:
-    mSplitter->RequestFrame();
-  }
-  
-  return NS_OK;
+  NS_ERROR("Not a passive source - maybe you need some buffering?");
+  *frame = nsnull;
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
 
-void zapSplitterOutput::FrameAvailable()
+void zapSplitterOutput::ConsumeFrame(zapIMediaFrame *frame)
 {
-  if (!mWaiting) {
-    // we're not ready to accept a frame
-#ifdef DEBUG_afri_zmk
-    if (mFrameAvailable)
-      printf("overflow in splitter output %p\n", this);
-#endif
-    mFrameAvailable = PR_TRUE;
-  }
-  else {
-    mWaiting = PR_FALSE;
-    if (mSink) {
-      mFrameAvailable = PR_FALSE;
-      mSink->ProcessFrame(mSplitter->mFrame);
-    }
-  }
+  if (mOutput)
+    mOutput->ConsumeFrame(frame);
 }
 
 
@@ -169,8 +141,6 @@ void zapSplitterOutput::FrameAvailable()
 // zapSplitter
 
 zapSplitter::zapSplitter()
-    : mWaiting(PR_FALSE),
-      mProcessing(PR_FALSE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapSplitter::zapSplitter()\n");
@@ -252,9 +222,6 @@ zapSplitter::ConnectSource(zapIMediaSource *source,
   NS_ASSERTION(!mInput, "sink already connected");
   mInput = source;
   
-  if (mWaiting)
-    mInput->RequestFrame();
-  
   return NS_OK;
 }
 
@@ -267,40 +234,13 @@ zapSplitter::DisconnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void processFrame (in zapIMediaFrame frame); */
+/* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapSplitter::ProcessFrame(zapIMediaFrame *frame)
+zapSplitter::ConsumeFrame(zapIMediaFrame * frame)
 {
-  NS_ASSERTION(mWaiting, "uh-oh, unexpectatly received a frame");
-  mFrame = frame;
-  mWaiting = PR_FALSE;
-
-  // make sure we don't synchronously request new frames while
-  // updating outputs:
-  mProcessing = PR_TRUE;
-  // inform outputs:
   for (int i=0, l=mOutputs.Count(); i<l; ++i) {
-    ((zapSplitterOutput*)mOutputs[i])->FrameAvailable();
+    ((zapSplitterOutput*)mOutputs[i])->ConsumeFrame(frame);
   }
-  mProcessing = PR_FALSE;
-
-  // check if any of our outputs requested a new frame while updating:
-  if (mWaiting) {
-    // yes. request the frame now:
-    mInput->RequestFrame();
-  }
-  
   return NS_OK;
 }
 
-//----------------------------------------------------------------------
-
-void zapSplitter::RequestFrame()
-{
-  if (mWaiting) return; // already waiting for frame
-  mWaiting = PR_TRUE;
-  if (!mProcessing && mInput) {
-    // request new frame now:
-    mInput->RequestFrame();
-  }
-}

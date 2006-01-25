@@ -75,7 +75,7 @@ zapRTPReceiver::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapRTPReceiver::OpenStream(nsIPropertyBag2* streamInfo)
+zapRTPReceiver::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   ZMK_VERIFY_STREAM_TYPE(streamInfo, "datagram");
   ZMK_CREATE_STREAM_INFO(mStreamInfo, "rtp");
@@ -83,17 +83,23 @@ zapRTPReceiver::OpenStream(nsIPropertyBag2* streamInfo)
   return NS_OK;
 }
 
-void
-zapRTPReceiver::CloseStream()
-{
-}
-
 nsresult
 zapRTPReceiver::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
 {
   nsCString octets;
   input->GetData(octets);
-  // create RTP frame from packet octets:
-  *output = CreateRTPFrame(octets, mStreamInfo);
+
+  zapIRTPFrame *rtpFrame = CreateRTPFrame(octets, mStreamInfo);
+#ifdef DEBUG_afri_rtp
+  if (rtpFrame) {
+    PRUint16 seq;
+    rtpFrame->GetSequenceNumber(&seq);
+    if (seq != ++mSequenceNumber) {
+      printf("rtp packet dropped! (expected=%d, received=%d)\n", mSequenceNumber-1, seq);
+      mSequenceNumber = seq;
+    }
+  }
+#endif
+  *output = rtpFrame;
   return NS_OK;
 }

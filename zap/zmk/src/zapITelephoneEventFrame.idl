@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,39 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-
-interface nsIPropertyBag2;
+#include "zapIMediaFrame.idl"
 
 /**
  * \ingroup ZMK_MODULE
+ * An RFC2833 audio/telephone-event media frame.
  */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+[scriptable, uuid(f66ae845-d2cd-4e82-835b-e9fde75c1d12)]
+interface zapITelephoneEventFrame : zapIMediaFrame
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
+  /**
+   * Marker bit. Signifies the start of a new event.
+   */
+  attribute boolean M;
+  
+  /**
+   * Event field (8 bits)
+   */
+  attribute unsigned short event;
 
   /**
-   * Timestamp in sample clock units.
+   * 'E' bit. Signifies the end of an event.
    */
-  readonly attribute unsigned long timestamp;
+  attribute boolean E;
   
-  readonly attribute ACString data;
+  /**
+   * Power level of the tone in dBm0 after dropping sign.  (6 bits: 0
+   * to -63dBm0)
+   */
+  attribute unsigned short volume;
+
+  /**
+   * Duration of tone in timestamp units (16 bits).
+   */
+  attribute unsigned short duration;
 };
 

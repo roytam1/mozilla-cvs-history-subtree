@@ -45,11 +45,7 @@
 // zapRtttlPlayer
 
 zapRtttlPlayer::zapRtttlPlayer()
-    : mPlay(PR_TRUE),
-      mWaiting(PR_FALSE),
-      mTones(nsnull),
-      mAmplitude(0.5),
-      mLoop(PR_TRUE)
+    : mTones(nsnull)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapRtttlPlayer::zapRtttlPlayer()\n");
@@ -91,6 +87,8 @@ zapRtttlPlayer::AddedToGraph(zapIMediaGraph *graph,
 {
   // node parameter defaults:
   nsCString rtttl = NS_LITERAL_CSTRING("zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p");
+  mAmplitude = 0.5;
+  mLoop = PR_TRUE;
   // unpack node parameters:
   if (node_pars) {
     node_pars->GetPropertyAsACString(NS_LITERAL_STRING("rtttl"),
@@ -98,9 +96,28 @@ zapRtttlPlayer::AddedToGraph(zapIMediaGraph *graph,
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("loop"), &mLoop);
     node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("amplitude"), &mAmplitude);
   }
+
+  nsresult rv;
+  // init stream parameters:
+  rv = mStreamParameters.InitWithProperties(node_pars);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (mStreamParameters.sample_rate != 8000 ||
+      mStreamParameters.frame_duration != 0.02 ||
+      mStreamParameters.channels != 1 ||
+      mStreamParameters.sample_format != sf_float32_32768) {
+    NS_ERROR("unsupported sample format! write me!");
+    return NS_ERROR_FAILURE;
+  }
+
+  // create a new stream info:
+  mStreamInfo = mStreamParameters.CreateStreamInfo();
   
   // parse rtttl into Tone structure:
-  return ParseRTTTL(PromiseFlatCString(rtttl).get());
+  rv = ParseRTTTL(PromiseFlatCString(rtttl).get());
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return NS_OK;
 }
 
 /* void removedFromGraph (in zapIMediaGraph graph); */
@@ -114,66 +131,11 @@ zapRtttlPlayer::RemovedFromGraph(zapIMediaGraph *graph)
 NS_IMETHODIMP
 zapRtttlPlayer::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 {
-  if (mSink) {
-    NS_ERROR("already connected");
+  if (mOutput) {
+    NS_ERROR("output end already connected");
     return NS_ERROR_FAILURE;
   }
 
-  // source parameter defaults:
-  mSampleRate = 8000; // 8000Hz
-  mFrameDuration = 0.02; // 20ms
-  mNumChannels = 1; // mono
-  mSampleFormat = sf_float32_32768;
-
-  // unpack source parameters:
-  if (source_pars) {
-    source_pars->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
-                                     &mSampleRate);
-    source_pars->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                     &mFrameDuration);
-    source_pars->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                     &mNumChannels);
-    nsCString sampleformat_string;
-    if (NS_SUCCEEDED(source_pars->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                                        sampleformat_string))) {
-      mSampleFormat = StrToZapAudioSampleFormat(sampleformat_string);
-      if (mSampleFormat == sf_unknown) {
-        NS_ERROR("unknown sample format");
-        return NS_ERROR_FAILURE;
-      }
-    }
-  }
-
-  if (mSampleRate != 8000 ||
-      mFrameDuration != 0.02 ||
-      mNumChannels != 1 ||
-      mSampleFormat != sf_float32_32768) {
-    NS_ERROR("unsupported sample format! write me!");
-    return NS_ERROR_FAILURE;
-  }
-      
-
-  mSamplesPerFrame = (PRUint32)(mSampleRate*mFrameDuration*mNumChannels);
-
-  // create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio"));
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
-                                   mSampleRate);
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                   mFrameDuration);
-  mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                   mNumChannels);
-
-  nsCString format_string;
-  ZapAudioSampleFormatToStr(mSampleFormat, format_string);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                     format_string);
-  
   *_retval = this;
   NS_ADDREF(*_retval);
   return NS_OK;
@@ -195,8 +157,11 @@ NS_IMETHODIMP
 zapRtttlPlayer::ConnectSink(zapIMediaSink *sink,
                             const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSink, "sink already connected");
-  mSink = sink;
+  if (mOutput) {
+    NS_ERROR("output end already connected");
+    return NS_ERROR_FAILURE;
+  }
+  mOutput = sink;
   return NS_OK;
 }
 
@@ -205,33 +170,28 @@ NS_IMETHODIMP
 zapRtttlPlayer::DisconnectSink(zapIMediaSink *sink,
                                const nsACString & connection_id)
 {
-  mWaiting = PR_FALSE;
-  mSink = nsnull;
+  mOutput = nsnull;
   return NS_OK;
 }
 
-/* void requestFrame (); */
+/* zapIMediaFrame produceFrame (); */
 NS_IMETHODIMP
-zapRtttlPlayer::RequestFrame()
+zapRtttlPlayer::ProduceFrame(zapIMediaFrame ** _retval)
 {
-  if (mWaiting) {
-    NS_ASSERTION(!mPlay, "inconsistent state");
-    return NS_OK; // already waiting
-  }
   // construct audio frame:
   zapMediaFrame* frame = new zapMediaFrame();
   frame->AddRef();
   frame->mStreamInfo = mStreamInfo;
   frame->mTimestamp = 0; // XXX
-
+  
   // write frame data:
-  frame->mData.SetLength(mSamplesPerFrame * GetZapAudioSampleSize(mSampleFormat));
+  frame->mData.SetLength(mStreamParameters.GetFrameLength());
   float* d = (float*)frame->mData.BeginWriting();
-  float sample_step = 1/mSampleRate;
-  int samples_left = mSamplesPerFrame;
+  float sample_step = 1/mStreamParameters.sample_rate;
+  int samples_left = mStreamParameters.GetSamplesPerFrame();
   while (1) {
     int tone_samples_left = (int)((mTones[mTonePointer.current].duration-
-                                   mTonePointer.offset)*mSampleRate);
+                                   mTonePointer.offset)*mStreamParameters.sample_rate);
     int c = PR_MIN(samples_left, tone_samples_left);
     float sample_time = mTonePointer.offset;
     float omega = 6.28318530718*mTones[mTonePointer.current].frequency;
@@ -256,15 +216,12 @@ zapRtttlPlayer::RequestFrame()
     }
     else {
       // advance offset within tone:
-      mTonePointer.offset += samples_left/mSampleRate;
+      mTonePointer.offset += samples_left/mStreamParameters.sample_rate;
       break;
     }
   }
-    
-  mWaiting = PR_FALSE;
-  if (mSink)
-    mSink->ProcessFrame(frame);
-  frame->Release();
+
+  *_retval = frame;
   return NS_OK;
 }
 

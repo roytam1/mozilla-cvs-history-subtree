@@ -39,6 +39,12 @@
 
 #include "nsString.h"
 #include "portaudio.h"
+#include "zapStreamUtils.h"
+#include "nsIWritablePropertyBag2.h"
+#include "nsCOMPtr.h"
+
+//----------------------------------------------------------------------
+// sample format mapping
 
 enum zapAudioStreamSampleFormat {
   sf_float32_1,
@@ -55,5 +61,40 @@ PRUint32 GetZapAudioSampleSize(zapAudioStreamSampleFormat format);
 PRUint32 GetPortAudioSampleSize(zapAudioStreamSampleFormat format);
                                 
 PaSampleFormat ZapAudioSampleFormatToPaFormat(zapAudioStreamSampleFormat format);
+
+//----------------------------------------------------------------------
+//
+
+struct zapAudioStreamParameters {
+  double sample_rate; // sample rate in Hz
+  double frame_duration; // frame duration in s
+  PRUint32 channels; // number of channels
+  zapAudioStreamSampleFormat sample_format; 
+
+  // initialize with default parameters (sample_rate: 8000,
+  // frame_duration: 0.02, channels: 1, sample_format:
+  // sf_float32_32768)
+  void InitWithDefaults();
+
+  nsresult InitWithProperties(nsIPropertyBag2* properties);
+
+  PRUint32 GetSamplesPerFrame() {
+    return (PRUint32)(sample_rate*frame_duration*channels);
+  }
+
+  PRUint32 GetFrameLength() {
+    return GetSamplesPerFrame()*GetZapAudioSampleSize(sample_format);
+  }
+  
+  already_AddRefed<nsIWritablePropertyBag2> CreateStreamInfo();
+};
+
+
+//----------------------------------------------------------------------
+// CheckAudioStream:
+// check that the audio stream defined by 'streamInfo' matches the
+// given stream parameters
+PRBool CheckAudioStream(nsIPropertyBag2* streamInfo,
+                        const zapAudioStreamParameters& pars);
 
 #endif // __ZAP_AUDIOSTREAMUTILS_H__

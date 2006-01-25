@@ -62,8 +62,7 @@ public:
 
 zapPacketBuffer::zapPacketBuffer()
     : mBuffer(0),
-      mSourceState(zapPacketBufferSource_STOP_IDLE::Instance()),
-      mSinkState(zapPacketBufferSink_IDLE_PREFILLING::Instance())
+      mLifting(PR_TRUE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapPacketBuffer::zapPacketBuffer()\n");
@@ -100,24 +99,24 @@ zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
                               const nsACString & id,
                               nsIPropertyBag2* node_pars)
 {
-#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
-  graph->GetEventQueue(getter_AddRefs(mEventQueue));
-#endif
   // node parameter defaults:
-  mPrefillSize = 0;
+  mLiftCount = 0;
+  mDropCount = 1;
   mMaxSize = 10;
-  mRebuffer = PR_TRUE;
   // unpack node parameters:
   if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("prefill_size"), &mPrefillSize);
+    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("lift_count"), &mLiftCount);
+    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("drop_count"), &mDropCount);
     node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("max_size"), &mMaxSize);
 
-    if (mMaxSize<mPrefillSize) {
-      NS_WARNING("adjusted maximum buffer size");
-      mMaxSize = mPrefillSize;
+    if (mLiftCount > mMaxSize) {
+      NS_WARNING("adjusted lift count");
+      mLiftCount = mMaxSize;
     }
-
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("rebuffer"), &mRebuffer);
+    if (mDropCount > mMaxSize) {
+      NS_WARNING("adjusting drop count");
+      mDropCount = mMaxSize;
+    }    
   }
 
   return NS_OK;
@@ -135,6 +134,11 @@ NS_IMETHODIMP
 zapPacketBuffer::GetSource(nsIPropertyBag2 *source_pars,
                            zapIMediaSource **_retval)
 {
+  if (mOutput) {
+    NS_ERROR("output end already connected");
+    return NS_ERROR_FAILURE;
+  }
+
   *_retval = this;
   NS_ADDREF(*_retval);
   return NS_OK;
@@ -144,6 +148,11 @@ zapPacketBuffer::GetSource(nsIPropertyBag2 *source_pars,
 NS_IMETHODIMP
 zapPacketBuffer::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 {
+  if (mInput) {
+    NS_ERROR("input end already connected");
+    return NS_ERROR_FAILURE;
+  }
+
   *_retval = this;
   NS_ADDREF(*_retval);
   return NS_OK;
@@ -157,7 +166,10 @@ NS_IMETHODIMP
 zapPacketBuffer::ConnectSource(zapIMediaSource *source,
                                const nsACString & connection_id)
 {
-  return mSourceState->ConnectSource(this, source, connection_id);
+  NS_ASSERTION(!mInput, "already connected");
+  mInput = source;
+
+  return NS_OK;
 }
 
 /* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
@@ -165,14 +177,35 @@ NS_IMETHODIMP
 zapPacketBuffer::DisconnectSource(zapIMediaSource *source,
                                   const nsACString & connection_id)
 {
-  return mSourceState->DisconnectSource(this, source, connection_id);
+  mInput = nsnull;
+
+  return NS_OK;
 }
 
-/* void processFrame (in zapIMediaFrame frame); */
+/* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapPacketBuffer::ProcessFrame(zapIMediaFrame *frame)
+zapPacketBuffer::ConsumeFrame(zapIMediaFrame * frame)
 {
-  return mSourceState->ProcessFrame(this, frame);
+  if (mBuffer.GetSize() >= mMaxSize) {
+#ifdef DEBUG_afri_zmk
+    //printf("O");
+#endif
+    if (!mDropCount)
+      return NS_ERROR_FAILURE;
+    // ... else pop mDropCount packets from front:
+    PRUint32 c = mDropCount;
+    while (c--)
+      ((zapIMediaFrame*)mBuffer.PopFront())->Release();
+    // and ... proceed with enqueuing the new packet
+  }
+  // enqueue packet:
+  NS_IF_ADDREF(frame);
+  mBuffer.Push(frame);
+
+  if (mLifting && mBuffer.GetSize() >= mLiftCount)
+    mLifting = PR_FALSE;
+  
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -183,7 +216,12 @@ NS_IMETHODIMP
 zapPacketBuffer::ConnectSink(zapIMediaSink *sink,
                              const nsACString & connection_id)
 {
-  return mSinkState->ConnectSink(this, sink, connection_id);
+  if (mOutput) {
+    NS_ERROR("output end already connected");
+    return NS_ERROR_FAILURE;
+  }
+  mOutput = sink;
+  return NS_OK;
 }
 
 /* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
@@ -191,627 +229,37 @@ NS_IMETHODIMP
 zapPacketBuffer::DisconnectSink(zapIMediaSink *sink,
                                 const nsACString & connection_id)
 {
-  return mSinkState->DisconnectSink(this, sink, connection_id);
+  mOutput = nsnull;
+  return NS_OK;
 }
 
-/* void requestFrame (); */
+/* zapIMediaFrame produceFrame (); */
 NS_IMETHODIMP
-zapPacketBuffer::RequestFrame()
+zapPacketBuffer::ProduceFrame(zapIMediaFrame ** frame)
 {
-  return mSinkState->RequestFrame(this);
+  if (mLifting || !mBuffer.GetSize()) {
+#ifdef DEBUG_afri_zmk
+//    printf("U");
+#endif
+    *frame = nsnull;
+    return NS_ERROR_FAILURE;
+  }
+  *frame = (zapIMediaFrame*)mBuffer.PopFront();
+  if (!mBuffer.GetSize())
+    mLifting = PR_TRUE;
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
 // Implementation helpers:
-
-void
-zapPacketBuffer::ChangeSourceState(zapPacketBufferSourceState* state)
-{
-  mSourceState = state;
-}
-
-void
-zapPacketBuffer::ChangeSinkState(zapPacketBufferSinkState* state)
-{
-  mSinkState = state;
-}
-
-void zapPacketBuffer::RunQueueing()
-{
-  mSourceState->RunQueueing(this);
-}
-
-void zapPacketBuffer::StopQueueing()
-{
-  mSourceState->StopQueueing(this);
-}
-
-void zapPacketBuffer::PacketQueued()
-{
-  mSinkState->PacketQueued(this);
-}
-
-void zapPacketBuffer::PacketDequeued()
-{
-  mSourceState->PacketDequeued(this);
-}
 
 void zapPacketBuffer::ClearBuffer()
 {
   PacketDeallocator deallocator;
   mBuffer.ForEach(deallocator);
   mBuffer.Empty();
-}
-
-#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
-class zapPacketBufferRequestFrameEvent : public PLEvent
-{
-public:
-  zapPacketBufferRequestFrameEvent(zapPacketBuffer* pb)
-      : packetbuffer(pb)
-  {
-    PL_InitEvent(this, packetbuffer, EventHandler, EventCleanup);
-  }
-
-  PR_STATIC_CALLBACK(void *) EventHandler(PLEvent* ev)
-  {
-    zapPacketBuffer* pb = (zapPacketBuffer*) ev->owner;
-
-    if (pb->mSource)
-      pb->mSource->RequestFrame();
-    
-    return (void*)PR_TRUE;
-  }
-
-  PR_STATIC_CALLBACK(void) EventCleanup(PLEvent* ev)
-  {
-    delete (zapPacketBufferRequestFrameEvent*) ev;
-  }
-
-  nsRefPtr<zapPacketBuffer> packetbuffer;
-};
-#endif
-
-void zapPacketBuffer::PostFrameRequest()
-{
-#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
-   mEventQueue->EnterMonitor();
-   zapPacketBufferRequestFrameEvent* ev = new zapPacketBufferRequestFrameEvent(this);
-   mEventQueue->PostEvent(ev);
-   mEventQueue->ExitMonitor();
-#else
-   if (mSource)
-     mSource->RequestFrame();
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSourceState implementation
-
-nsresult
-zapPacketBufferSourceState::ConnectSource(zapPacketBuffer* pb,
-                                          zapIMediaSource* source,
-                                          const nsACString & connection_id)
-{
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBufferSourceState::ConnectSource: protocol error in state %s\n",
-         GetName());
-#endif
-  return NS_ERROR_FAILURE;
-}
-
-nsresult
-zapPacketBufferSourceState::DisconnectSource(zapPacketBuffer* pb,
-                                             zapIMediaSource* source,
-                                             const nsACString& connection_id)
-{
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBufferSourceState::DisconnectSource: protocol error in state %s\n",
-         GetName());
-#endif
-  return NS_ERROR_FAILURE;
-}
-
-nsresult
-zapPacketBufferSourceState::ProcessFrame(zapPacketBuffer* pb,
-                                         zapIMediaFrame* frame)
-{
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBufferSourceState::ProcessFrame: protocol error in state %s\n",
-         GetName());
-#endif
-  return NS_ERROR_FAILURE;  
-}
-
-void zapPacketBufferSourceState::ChangeState(zapPacketBuffer* pb,
-                                             zapPacketBufferSourceState* state)
-{
-  pb->ChangeSourceState(state);
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSource_STOP_IDLE implementation
-
-zapPacketBufferSourceState* zapPacketBufferSource_STOP_IDLE::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSource_STOP_IDLE;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSourceState* zapPacketBufferSource_STOP_IDLE::mInstance = nsnull;
-
-void zapPacketBufferSource_STOP_IDLE::PacketDequeued(zapPacketBuffer* pb)
-{
-  NS_ERROR("not reached");
-}
-
-void zapPacketBufferSource_STOP_IDLE::RunQueueing(zapPacketBuffer* pb)
-{
-  if (pb->mSource) {
-    ChangeState(pb, zapPacketBufferSource_RUN_WAITING::Instance());
-    pb->mSource->RequestFrame();
-  }
-  else
-    ChangeState(pb, zapPacketBufferSource_RUN_IDLE::Instance());
-}
-
-void zapPacketBufferSource_STOP_IDLE::StopQueueing(zapPacketBuffer* pb)
-{
-  // we're already stopped; do nothing
-}
-
-nsresult
-zapPacketBufferSource_STOP_IDLE::ConnectSource(zapPacketBuffer* pb,
-                                               zapIMediaSource* source,
-                                               const nsACString & connection_id)
-{
-  if (pb->mSource) {
-    NS_ERROR("source already connected");
-    return NS_ERROR_FAILURE;
-  }
-
-  pb->mSource = source;
-  return NS_OK;
-}
-
-nsresult
-zapPacketBufferSource_STOP_IDLE::DisconnectSource(zapPacketBuffer* pb,
-                                                  zapIMediaSource* source,
-                                                  const nsACString& connection_id)
-{
-  pb->mSource = nsnull;
-  return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSource_STOP_WAITING implementation
-
-zapPacketBufferSourceState* zapPacketBufferSource_STOP_WAITING::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSource_STOP_WAITING;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSourceState* zapPacketBufferSource_STOP_WAITING::mInstance = nsnull;
-
-void zapPacketBufferSource_STOP_WAITING::PacketDequeued(zapPacketBuffer* pb)
-{
-  NS_ERROR("not reached");
-}
-
-void zapPacketBufferSource_STOP_WAITING::RunQueueing(zapPacketBuffer* pb)
-{
-  ChangeState(pb, zapPacketBufferSource_RUN_WAITING::Instance());
-}
-
-void zapPacketBufferSource_STOP_WAITING::StopQueueing(zapPacketBuffer* pb)
-{
-  // queuing is already stopped
-}
-
-nsresult
-zapPacketBufferSource_STOP_WAITING::DisconnectSource(zapPacketBuffer* pb,
-                                                     zapIMediaSource* source,
-                                                     const nsACString& connection_id)
-{
-  pb->mSource = nsnull;
-  // we won't get a packet from the source anymore:
-  ChangeState(pb, zapPacketBufferSource_STOP_IDLE::Instance());
-  return NS_OK;
-}
-
-nsresult
-zapPacketBufferSource_STOP_WAITING::ProcessFrame(zapPacketBuffer* pb,
-                                                 zapIMediaFrame* frame)
-{
-  // silently discard frame; the sink doesn't want it:
-#ifdef DEBUG_afri_zmk
-  printf("(buffer discard)");
-#endif
-  ChangeState(pb, zapPacketBufferSource_STOP_IDLE::Instance());
-  return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSource_RUN_WAITING implementation
-
-zapPacketBufferSourceState* zapPacketBufferSource_RUN_WAITING::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSource_RUN_WAITING;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSourceState* zapPacketBufferSource_RUN_WAITING::mInstance = nsnull;
-
-void zapPacketBufferSource_RUN_WAITING::PacketDequeued(zapPacketBuffer* pb)
-{
-  // nothing to do; we're already waiting for a packet
-}
-
-void zapPacketBufferSource_RUN_WAITING::RunQueueing(zapPacketBuffer* pb)
-{
-  // already running
-}
-
-void zapPacketBufferSource_RUN_WAITING::StopQueueing(zapPacketBuffer* pb)
-{
-  ChangeState(pb, zapPacketBufferSource_STOP_WAITING::Instance());
-}
-
-nsresult
-zapPacketBufferSource_RUN_WAITING::DisconnectSource(zapPacketBuffer* pb,
-                                                    zapIMediaSource* source,
-                                                    const nsACString& connection_id)
-{
-  pb->mSource = nsnull;
-  // enqueue an EOF frame:
-  pb->mBuffer.Push(nsnull);
-  // we won't get any more packet from this source:
-  ChangeState(pb, zapPacketBufferSource_RUN_IDLE::Instance());
-  pb->PacketQueued();
-  return NS_OK;
-}
-
-nsresult
-zapPacketBufferSource_RUN_WAITING::ProcessFrame(zapPacketBuffer* pb,
-                                                zapIMediaFrame* frame)
-{
-  // enqueue packet:
-  NS_IF_ADDREF(frame);
-  pb->mBuffer.Push(frame);
-
-  if (pb->mBuffer.GetSize() < pb->mMaxSize) {
-    // our buffer is not full; schedule next packet
-    pb->PostFrameRequest();
-  }
-  else {
-#ifdef DEBUG_afri_zmk_buffer
-    printf("(buffer full! %d)\n", pb->mMaxSize);
-#endif
-    ChangeState(pb, zapPacketBufferSource_RUN_IDLE::Instance());
-  }
-  pb->PacketQueued();
-
-  return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSource_RUN_IDLE implementation
-
-zapPacketBufferSourceState* zapPacketBufferSource_RUN_IDLE::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSource_RUN_IDLE;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSourceState* zapPacketBufferSource_RUN_IDLE::mInstance = nsnull;
-
-void zapPacketBufferSource_RUN_IDLE::PacketDequeued(zapPacketBuffer* pb)
-{
-  if (pb->mSource && pb->mBuffer.GetSize() < pb->mMaxSize) {
-    pb->PostFrameRequest();
-    ChangeState(pb, zapPacketBufferSource_RUN_WAITING::Instance());
-  }
-}
-
-void zapPacketBufferSource_RUN_IDLE::RunQueueing(zapPacketBuffer* pb)
-{
-  // already running
-}
-
-void zapPacketBufferSource_RUN_IDLE::StopQueueing(zapPacketBuffer* pb)
-{
-  ChangeState(pb, zapPacketBufferSource_STOP_IDLE::Instance());
-}
-
-nsresult
-zapPacketBufferSource_RUN_IDLE::ConnectSource(zapPacketBuffer* pb,
-                                              zapIMediaSource* source,
-                                              const nsACString & connection_id)
-{
-  if (pb->mSource) {
-    NS_ERROR("source already connected");
-    return NS_ERROR_FAILURE;
-  }
-
-  pb->mSource = source;
-
-  if (pb->mBuffer.GetSize() < pb->mMaxSize) {
-    pb->PostFrameRequest();
-    ChangeState(pb, zapPacketBufferSource_RUN_WAITING::Instance());
-  }
-  
-  return NS_OK;
-}
-
-nsresult
-zapPacketBufferSource_RUN_IDLE::DisconnectSource(zapPacketBuffer* pb,
-                                                 zapIMediaSource* source,
-                                                 const nsACString& connection_id)
-{
-  pb->mSource = nsnull;
-  // enqueue an EOF frame:
-  pb->mBuffer.Push(nsnull);
-  pb->PacketQueued();
-  return NS_OK;
+  mLifting = PR_TRUE;
 }
 
 
 
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSinkState implementation
-
-nsresult
-zapPacketBufferSinkState::ConnectSink(zapPacketBuffer* pb, zapIMediaSink* sink,
-                                      const nsACString& connection_id)
-{
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBufferSinkState::ConnectSink: protocol error in state %s\n",
-         GetName());
-#endif
-  return NS_ERROR_FAILURE;  
-}
-
-nsresult
-zapPacketBufferSinkState::DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
-                                         const nsACString & connection_id)
-{
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBufferSinkState::DisconnectSink: protocol error in state %s\n",
-         GetName());
-#endif
-  return NS_ERROR_FAILURE;  
-}
-
-nsresult
-zapPacketBufferSinkState::RequestFrame(zapPacketBuffer* pb)
-{
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBufferSinkState::RequestFrame: protocol error in state %s\n",
-         GetName());
-#endif
-  return NS_ERROR_FAILURE;  
-}
-
-void zapPacketBufferSinkState::ChangeState(zapPacketBuffer* pb,
-                                           zapPacketBufferSinkState* state)
-{
-  pb->ChangeSinkState(state);
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSink_WAITING_PREFILLING implementation
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_WAITING_PREFILLING::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSink_WAITING_PREFILLING;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_WAITING_PREFILLING::mInstance = nsnull;
-
-void zapPacketBufferSink_WAITING_PREFILLING::PacketQueued(zapPacketBuffer* pb)
-{
-  if (pb->mBuffer.GetSize() >= pb->mPrefillSize ||
-      (zapIMediaFrame*)pb->mBuffer.Peek() == nsnull) {
-    // we are finished prefilling or the stream has ended.
-    // start dequeuing:
-    ChangeState(pb, zapPacketBufferSink_IDLE::Instance());
-    zapIMediaFrame* frame = (zapIMediaFrame*)pb->mBuffer.PopFront();
-    pb->mSink->ProcessFrame(frame);
-    NS_IF_RELEASE(frame);
-    pb->PacketDequeued();
-  }
-}
-
-nsresult
-zapPacketBufferSink_WAITING_PREFILLING::DisconnectSink(zapPacketBuffer* pb,
-                                                       zapIMediaSink *sink,
-                                                       const nsACString & connection_id)
-{
-  pb->mSink = nsnull;
-  pb->StopQueueing();
-  pb->ClearBuffer();
-  ChangeState(pb, zapPacketBufferSink_IDLE_PREFILLING::Instance());
-  return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSink_WAITING implementation
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_WAITING::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSink_WAITING;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_WAITING::mInstance = nsnull;
-
-void zapPacketBufferSink_WAITING::PacketQueued(zapPacketBuffer* pb)
-{
-  NS_ASSERTION(pb->mBuffer.GetSize(), "packet queued, but empty queue");
-  zapIMediaFrame* frame = (zapIMediaFrame*)pb->mBuffer.PopFront();
-  if (!frame) {
-    // An EOF frame. Make sure next stream gets prefilled again:
-    ChangeState(pb, zapPacketBufferSink_IDLE_PREFILLING::Instance());
-  }
-  else
-    ChangeState(pb, zapPacketBufferSink_IDLE::Instance());
-  pb->mSink->ProcessFrame(frame);
-  NS_IF_RELEASE(frame);
-  pb->PacketDequeued();
-}
-
-nsresult
-zapPacketBufferSink_WAITING::DisconnectSink(zapPacketBuffer* pb,
-                                            zapIMediaSink *sink,
-                                            const nsACString & connection_id)
-{
-  pb->mSink = nsnull;
-  pb->StopQueueing();
-  pb->ClearBuffer();
-  ChangeState(pb, zapPacketBufferSink_IDLE_PREFILLING::Instance());
-  return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSink_IDLE implementation
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_IDLE::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSink_IDLE;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_IDLE::mInstance = nsnull;
-
-void zapPacketBufferSink_IDLE::PacketQueued(zapPacketBuffer* pb)
-{
-  // do nothing
-}
-
-
-nsresult
-zapPacketBufferSink_IDLE::DisconnectSink(zapPacketBuffer* pb,
-                                         zapIMediaSink *sink,
-                                         const nsACString & connection_id)
-{
-  pb->mSink = nsnull;
-  pb->StopQueueing();
-  pb->ClearBuffer();
-  ChangeState(pb, zapPacketBufferSink_IDLE_PREFILLING::Instance());
-  return NS_OK;
-}
-
-nsresult
-zapPacketBufferSink_IDLE::RequestFrame(zapPacketBuffer* pb)
-{
-  if (pb->mBuffer.GetSize()) {
-    zapIMediaFrame* frame = (zapIMediaFrame*)pb->mBuffer.PopFront();
-    if (!frame) {
-      // An EOF frame. Make sure next stream gets prefilled again:
-      ChangeState(pb, zapPacketBufferSink_IDLE_PREFILLING::Instance());
-    }
-    pb->mSink->ProcessFrame(frame);
-    NS_IF_RELEASE(frame);
-    pb->PacketDequeued();
-  }
-  else {
-    // nothing in buffer
-#ifdef DEBUG_afri_zmk
-    printf("E");
-#endif
-    if (pb->mRebuffer)
-      ChangeState(pb, zapPacketBufferSink_WAITING_PREFILLING::Instance());
-    else
-      ChangeState(pb, zapPacketBufferSink_WAITING::Instance());
-  }
-  return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBufferSink_IDLE_PREFILLING implementation
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_IDLE_PREFILLING::Instance()
-{
-  if (!mInstance) {
-    mInstance = new zapPacketBufferSink_IDLE_PREFILLING;
-  }
-  return mInstance;
-}
-
-zapPacketBufferSinkState*
-zapPacketBufferSink_IDLE_PREFILLING::mInstance = nsnull;
-
-void zapPacketBufferSink_IDLE_PREFILLING::PacketQueued(zapPacketBuffer* pb)
-{
-  // do nothing
-}
-
-
-nsresult
-zapPacketBufferSink_IDLE_PREFILLING::ConnectSink(zapPacketBuffer* pb,
-                                                 zapIMediaSink* sink,
-                                                 const nsACString& connection_id)
-{
-  if (pb->mSink) {
-    NS_ERROR("already connected");
-    return NS_ERROR_FAILURE;
-  }
-  pb->mSink = sink;
-  
-  return NS_OK;
-}
-
-
-nsresult
-zapPacketBufferSink_IDLE_PREFILLING::DisconnectSink(zapPacketBuffer* pb,
-                                                    zapIMediaSink *sink,
-                                                    const nsACString & connection_id)
-{
-  pb->mSink = nsnull;
-  pb->StopQueueing();
-  pb->ClearBuffer();
-  return NS_OK;
-}
-
-nsresult
-zapPacketBufferSink_IDLE_PREFILLING::RequestFrame(zapPacketBuffer* pb)
-{
-  pb->RunQueueing();
-  
-  if (pb->mBuffer.GetSize() <= pb->mPrefillSize) {
-    ChangeState(pb, zapPacketBufferSink_WAITING_PREFILLING::Instance());
-  }
-  else {
-    zapIMediaFrame* frame = (zapIMediaFrame*)pb->mBuffer.PopFront();
-    if (frame)
-      ChangeState(pb, zapPacketBufferSink_IDLE::Instance());
-    // else ... prefill next frame
-    pb->mSink->ProcessFrame(frame);
-    NS_IF_RELEASE(frame);
-    pb->PacketDequeued();
-  }
-  return NS_OK;
-}

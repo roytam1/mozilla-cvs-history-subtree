@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,21 +36,20 @@
 
 #include "nsISupports.idl"
 
-interface nsIPropertyBag2;
+interface zapIAudioDevice;
 
 /**
  * \ingroup ZMK_MODULE
  */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+[scriptable, uuid(61ac0163-bf83-4182-a27b-60dcfefabb74)]
+interface zapIDTMFGenerator : nsISupports
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
   /**
-   * Timestamp in sample clock units.
+   * Play the given string of DTMF codes. The string will be appended
+   * to any DTMF codes still to be played.
+   *
+   * DTMF codes must be one of '0','1','2','3','4','5','6','7','8','9',
+   * '*','#','A','B','C','D'
    */
-  readonly attribute unsigned long timestamp;
-  
-  readonly attribute ACString data;
+  void play(in ACString dtmfCodes);
 };
-

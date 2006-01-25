@@ -58,8 +58,10 @@ interface zapIMediaSink : nsISupports
   void disconnectSource(in zapIMediaSource source, in ACString connection_id);
 
   /**
-   * Called by a source in response to a previous
-   * requestFrame() call.
+   * Called by an active source to push a frame to the sink.
+   * If the sink cannot accept the frame (either because it is not a
+   * passive sink, or because there is buffer overrun) the sink must
+   * throw an exception
    */
-  void processFrame(in zapIMediaFrame frame);
+  void consumeFrame(in zapIMediaFrame frame);
 };

@@ -40,17 +40,13 @@
 #include "zapMediaFrame.h"
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"
-#include "nsAutoLock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioOut
 
 zapAudioOut::zapAudioOut()
-    : mStream(nsnull),
-      mWaiting(PR_FALSE)
+    : mStream(nsnull)
 {
-  mLock = PR_NewLock();
-  
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
 #ifdef DEBUG_afri_zmk
@@ -65,8 +61,6 @@ zapAudioOut::zapAudioOut()
 
 zapAudioOut::~zapAudioOut()
 {
-  PR_DestroyLock(mLock);
-  
   NS_ASSERTION(!mStream, "stream still running");
 
   Pa_Terminate();
@@ -97,6 +91,12 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
                           const nsACString & id,
                           nsIPropertyBag2* node_pars)
 {
+  // Add a reference to the mediagraph. We must hang onto this
+  // reference until the node is destroyed so that any proxies on us
+  // have a context to shut down in even after the graph has shut
+  // down.
+  mGraph = graph;
+  
   graph->GetEventQueue(getter_AddRefs(mEventQ));
 
   // node parameter defaults:
@@ -113,13 +113,19 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
 #ifdef DEBUG_afri_zmk
   printf("(audioout using device %d)", mOutputDevice);
 #endif
-  return NS_OK;
+  
+  return mStreamParameters.InitWithProperties(node_pars);
 }
 
 /* void removedFromGraph (in zapIMediaGraph graph); */
 NS_IMETHODIMP
 zapAudioOut::RemovedFromGraph(zapIMediaGraph *graph)
 {
+#ifdef DEBUG_afri_zmk
+  printf("(audioout removed from graph)");
+#endif
+  CloseStream();
+  mEventQ = nsnull;
   return NS_OK;
 }
 
@@ -135,137 +141,14 @@ zapAudioOut::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 NS_IMETHODIMP
 zapAudioOut::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 {
-  if (mSource) {
-    NS_ERROR("already connected");
+  if (mInput) {
+    NS_ERROR("input end already connected");
     return NS_ERROR_FAILURE;
   }
+
   *_retval = this;
   NS_ADDREF(*_retval);
   return NS_OK;
-}
-
-//----------------------------------------------------------------------
-// portaudio audio sink callback:
-
-class zapAudioOutRequestEvent : public PLEvent
-{
-public:
-  zapAudioOutRequestEvent(zapAudioOut* audioout)
-  {
-    PL_InitEvent(this, audioout, EventHandler, EventCleanup);
-  }
-
-  PR_STATIC_CALLBACK(void *) EventHandler(PLEvent* ev)
-  {
-    zapAudioOutRequestEvent* rev = (zapAudioOutRequestEvent*) ev;
-    zapAudioOut* audioout = (zapAudioOut*) ev->owner;
-
-    nsAutoLock lock(audioout->mLock);
-    NS_ASSERTION(audioout->mSource, "source gone");
-    NS_ASSERTION(!audioout->mWaiting, "protocol error");
-    audioout->mWaiting = PR_TRUE;
-    audioout->mFrame = nsnull;
-    lock.unlock();
-    audioout->mSource->RequestFrame();
-    return (void*)PR_TRUE;
-  }
-
-  PR_STATIC_CALLBACK(void) EventCleanup(PLEvent* ev)
-  {
-    delete (zapAudioOutRequestEvent*) ev;
-  }
-};
-
-int AudioOutCallback(void* inputBuffer, void* outputBuffer,
-                     unsigned long framesPerBuffer,
-                     PaTimestamp outTime, void* userData)
-{
-#ifdef DEBUG_afri_zmk  
-//  printf("[");
-#endif
-
-  PRBool stopStream = PR_FALSE;
-  zapAudioOut* audioout = (zapAudioOut*)userData;
-  
-  nsAutoLock lock(audioout->mLock);
-
-  if (audioout->mWaiting) {
-    // underflow: we are still waiting for the next frame.
-#ifdef DEBUG_afri_zmk
-    printf("U");
-#endif
-    // Generate a silence buffer
-    // XXX in the case of Float32 samples, this requires a sane
-    // floating point representation where zero is 0 0 0 0.
-    if (audioout->mSampleFormat == sf_float32_32768) {
-      // output buffer is int16:
-      memset(outputBuffer, 0, audioout->mSamplesPerFrame*2);
-    }
-    else {
-      memset(outputBuffer, 0, audioout->mSamplesPerFrame * GetZapAudioSampleSize(audioout->mSampleFormat));
-    }
-  }
-  else {
-    if (audioout->mFrame) {
-      // We've got a frame. Consume it.
-#ifdef DEBUG_afri_zmk
-//       PRUint32 timestamp;
-//       audioout->mFrame->GetTimestamp(&timestamp);
-//       printf("<%d>", timestamp);
-#endif
-      nsCString data;
-      audioout->mFrame->GetData(data);
-      NS_ASSERTION(data.Length() == audioout->mSamplesPerFrame * GetZapAudioSampleSize(audioout->mSampleFormat),
-                   "buffer length mismatch");
-      PRUint32 l = PR_MIN(data.Length(), audioout->mSamplesPerFrame * GetZapAudioSampleSize(audioout->mSampleFormat));
-      if (audioout->mSampleFormat == sf_float32_32768) {
-        // convert to int16
-        float* s = (float*)data.BeginReading();
-        PRInt16* d = (PRInt16*)outputBuffer;
-        for (int i=0; i<l/4; ++i) 
-          *d++ = (PRInt16)*s++;
-      }
-      else {
-        // data is already in portaudio compatible format:
-        memcpy(outputBuffer, data.BeginReading(), l);
-      }
-      
-      // Request next frame on the media thread. We need to do this
-      // synchronously because the portaudio callback is sometimes
-      // called in quick succession without giving the media thread a
-      // chance to run.
-      audioout->mEventQ->EnterMonitor();
-      zapAudioOutRequestEvent* ev = new zapAudioOutRequestEvent(audioout);
-      void* result = nsnull;
-
-      // Unlock mLock. This must be done after we've entered the
-      // eventQ monitor to synchronize ourselves with event revocation
-      // in the case of stream closure.
-      lock.unlock();
-      audioout->mEventQ->PostSynchronousEvent(ev, &result);
-      audioout->mEventQ->ExitMonitor();
-      if (!result) {
-        // the event was cancelled
-#ifdef DEBUG_afri_zmk
-        printf("(audioout stop1)");
-#endif
-        stopStream = PR_TRUE;
-      }
-    }
-    else {
-      // EOF
-#ifdef DEBUG_afri_zmk
-      printf("(audioout stop2)");
-#endif
-      stopStream = PR_TRUE;
-    }
-  }
-
-#ifdef DEBUG_afri_zmk
-//  printf("]");
-#endif
-  
-  return stopStream;
 }
 
 //----------------------------------------------------------------------
@@ -276,16 +159,12 @@ NS_IMETHODIMP
 zapAudioOut::ConnectSource(zapIMediaSource *source,
                            const nsACString & connection_id)
 {
-  NS_ASSERTION(!mSource, "already connected");
-  NS_ASSERTION(!mWaiting, "protocol error");
+  NS_ASSERTION(!mInput, "already connected");
   NS_ASSERTION(!mStream, "protocol error");
 
-  mSource = source;
-
-  // request first buffer frame:
-  mWaiting = PR_TRUE;
-  mSource->RequestFrame();
-
+  mInput = source;
+  StartStream();
+  
   return NS_OK;
 }
 
@@ -294,79 +173,17 @@ NS_IMETHODIMP
 zapAudioOut::DisconnectSource(zapIMediaSource *source,
                               const nsACString & connection_id)
 {
-  mSource = nsnull;
-  if (mStream) {
-    CloseStream();
-  }
-  mWaiting = PR_FALSE;
+  mInput = nsnull;
+  CloseStream();
   return NS_OK;
 }
 
-class zapAudioOutCloseEvent : public PLEvent
-{
-public:
-  zapAudioOutCloseEvent(zapAudioOut* _audioout)
-      : audioout(_audioout)
-  {
-    PL_InitEvent(this, audioout, EventHandler, EventCleanup);
-  }
-
-  PR_STATIC_CALLBACK(void *) EventHandler(PLEvent* ev)
-  {
-    zapAudioOutCloseEvent* rev = (zapAudioOutCloseEvent*) ev;
-
-    rev->audioout->CloseStream();
-    return (void*)PR_TRUE;
-  }
-
-  PR_STATIC_CALLBACK(void) EventCleanup(PLEvent* ev)
-  {
-    delete (zapAudioOutCloseEvent*) ev;
-  }
-
-  // reference to keep alive the audioout object while the stream is
-  // being closed:
-  nsRefPtr<zapAudioOut> audioout;
-};
-
-
-/* void processFrame (in zapIMediaFrame frame); */
+/* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapAudioOut::ProcessFrame(zapIMediaFrame *frame)
+zapAudioOut::ConsumeFrame(zapIMediaFrame * frame)
 {
-  nsAutoLock lock(mLock);
-  NS_ASSERTION(mWaiting, "protocol error");
-  mWaiting = PR_FALSE;
-  mFrame = frame;
-
-  if (mStream && !frame) {
-    // Schedule stream closure. The call needs to be asynchronous
-    // since this ProcessFrame call might be nested in the callback's
-    // RequestFrame call:
-    mEventQ->EnterMonitor();
-    zapAudioOutCloseEvent* ev = new zapAudioOutCloseEvent(this);
-    mEventQ->PostEvent(ev);
-    mEventQ->ExitMonitor();
-  }
-  else if (!mStream) {
-    if (frame) {
-      nsCOMPtr<nsIPropertyBag2> streamInfo;
-      frame->GetStreamInfo(getter_AddRefs(streamInfo));
-      if (NS_FAILED(StartStream(streamInfo))) {
-#ifdef DEBUG_afri_zmk
-        NS_ERROR("Error opening stream");
-#endif
-      }
-    }
-    else {
-      // an EOF frame. request next stream:
-      mWaiting = PR_TRUE;
-			lock.unlock();
-      mSource->RequestFrame();
-    }
-  }
-  
-  return NS_OK;
+  NS_ERROR("Not a passive sink - maybe you need some buffering?");
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
@@ -387,66 +204,143 @@ zapAudioOut::GetDefaultOutputDevice(zapIAudioDevice * *aDefaultOutputDevice)
 }
 
 //----------------------------------------------------------------------
+// portaudio audio sink callback:
+
+class zapAudioOutPlayFrameEvent : public PLEvent
+{
+public:
+  zapAudioOutPlayFrameEvent(zapAudioOut* audioout,
+                            void *buf) :
+      outputBuffer(buf)
+  {
+    PL_InitEvent(this, audioout, EventHandler, EventCleanup);
+  }
+
+  PR_STATIC_CALLBACK(void *) EventHandler(PLEvent* ev)
+  {
+    zapAudioOutPlayFrameEvent* rev = (zapAudioOutPlayFrameEvent*) ev;
+    zapAudioOut* audioout = (zapAudioOut*) ev->owner;
+
+    audioout->PlayFrame(rev->outputBuffer);
+
+    return (void*)PR_TRUE;
+  }
+
+  PR_STATIC_CALLBACK(void) EventCleanup(PLEvent* ev)
+  {
+    delete (zapAudioOutPlayFrameEvent*) ev;
+  }
+
+  void *outputBuffer;
+};
+
+
+int AudioOutCallback(void* inputBuffer, void* outputBuffer,
+                     unsigned long framesPerBuffer,
+                     PaTimestamp outTime, void* userData)
+{
+  zapAudioOut* audioout = (zapAudioOut*)userData;
+  
+  audioout->mEventQ->EnterMonitor();
+  zapAudioOutPlayFrameEvent* ev = new zapAudioOutPlayFrameEvent(audioout,
+                                                                outputBuffer);
+  void* result;
+  audioout->mEventQ->PostSynchronousEvent(ev, &result);
+  audioout->mEventQ->ExitMonitor();
+
+  // stop stream if event was cancelled
+  return (result==(void*)PR_TRUE ? 0 : 1);
+}
+
+//----------------------------------------------------------------------
 // Implementation helpers:
 
-nsresult zapAudioOut::StartStream(nsIPropertyBag2* streamInfo)
+// called from portaudio callback:
+void zapAudioOut::PlayFrame(void* outputBuffer)
+{
+  nsCOMPtr<zapIMediaFrame> frame;
+  if (mInput)
+    mInput->ProduceFrame(getter_AddRefs(frame));
+
+  if (!frame || !ValidateFrame(frame)) {
+    // undeflow or incompatible frame
+#ifdef DEBUG_afri_zmk
+//    printf("U");
+#endif
+    // Generate a silence buffer
+    // XXX in the case of Float32 samples, this requires a sane
+    // floating point representation where zero is 0 0 0 0.
+    if (mStreamParameters.sample_format == sf_float32_32768) {
+      // output buffer is int16:
+      memset(outputBuffer, 0, mStreamParameters.GetSamplesPerFrame()*2);
+    }
+    else {
+      memset(outputBuffer, 0, mStreamParameters.GetSamplesPerFrame() *
+                              GetZapAudioSampleSize(mStreamParameters.sample_format));
+    }
+  }
+  else {
+    // we've got a frame. Consume it.
+#ifdef DEBUG_afri_zmk
+//       PRUint32 timestamp;
+//       audioout->mFrame->GetTimestamp(&timestamp);
+//       printf("<%d>", timestamp);
+#endif
+    nsCString data;
+    frame->GetData(data);
+    NS_ASSERTION(data.Length() == mStreamParameters.GetSamplesPerFrame() *
+                 GetZapAudioSampleSize(mStreamParameters.sample_format),
+                 "buffer length mismatch");
+    PRUint32 l = PR_MIN(data.Length(),
+                        mStreamParameters.GetSamplesPerFrame() *
+                        GetZapAudioSampleSize(mStreamParameters.sample_format));
+    if (mStreamParameters.sample_format == sf_float32_32768) {
+      // convert to int16
+      float* s = (float*)data.BeginReading();
+      PRInt16* d = (PRInt16*)outputBuffer;
+      for (int i=0; i<l/4; ++i)
+        *d++ = (PRInt16)*s++;
+    }
+    else {
+      // data is already in portaudio compatible format:
+      memcpy(outputBuffer, data.BeginReading(), l);
+    }
+  }
+}
+
+PRBool zapAudioOut::ValidateFrame(zapIMediaFrame* frame)
+{
+  nsCOMPtr<nsIPropertyBag2> streamInfo;
+  frame->GetStreamInfo(getter_AddRefs(streamInfo));
+  if (streamInfo == mLastValidStreamInfo)
+    return PR_TRUE;
+
+  // we have a new stream info. Check if the stream is compatible with
+  // us:
+  if (!CheckAudioStream(streamInfo, mStreamParameters)) {
+#ifdef DEBUG_afri_zmk
+    printf("(aout incomp. frames!)");
+#endif
+    return PR_FALSE;
+  }
+  
+  mLastValidStreamInfo = streamInfo;
+  return  PR_TRUE;
+}
+
+nsresult zapAudioOut::StartStream()
 {
   NS_ASSERTION(!mStream, "stream still running");
-
-  if (!streamInfo) {
-    NS_ERROR("missing stream info");
-    return NS_ERROR_FAILURE;
-  }
-  
-  nsCString type;
-  if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                                 type)) ||
-      type != NS_LITERAL_CSTRING("audio")) {
-    NS_ERROR("unsupported stream type");
-    return NS_ERROR_FAILURE;
-  }
-  
-  double sampleRate;
-  if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
-                                                &sampleRate))) {
-    NS_ERROR("unknown sample rate");
-    return NS_ERROR_FAILURE;
-  }
-  
-  double frameDuration;
-  if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                                &frameDuration))) {
-    NS_ERROR("unknown frame duration");
-    return NS_ERROR_FAILURE;
-  }
-  
-  PRUint32 numOutputChannels;
-  if (NS_FAILED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                                &numOutputChannels))) {
-    NS_ERROR("unknown output channel count");
-    return NS_ERROR_FAILURE;
-  }
-
-  nsCString format_string;
-  if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                                  format_string))) {
-    NS_ERROR("unknown sample format");
-    return NS_ERROR_FAILURE;
-  }
-  mSampleFormat = StrToZapAudioSampleFormat(format_string);
-  if (mSampleFormat == sf_unknown) {
-    NS_ERROR("unknown sample format");
-    return NS_ERROR_FAILURE;
-  }
-    
-  mSamplesPerFrame = (PRUint32)(sampleRate*frameDuration*numOutputChannels);
 
   // try to open stream:
   PaError err = Pa_OpenStream(&mStream,
                               paNoDevice, 0, 0, nsnull,
-                              mOutputDevice, numOutputChannels,
-                              ZapAudioSampleFormatToPaFormat(mSampleFormat), nsnull,
-                              sampleRate, mSamplesPerFrame/numOutputChannels, 0,
+                              mOutputDevice, mStreamParameters.channels,
+                              ZapAudioSampleFormatToPaFormat(mStreamParameters.sample_format),
+                              nsnull,
+                              mStreamParameters.sample_rate,
+                              mStreamParameters.GetSamplesPerFrame()/mStreamParameters.channels,
+                              0,
                               paNoFlag,
                               AudioOutCallback, this);
   
@@ -467,46 +361,15 @@ void zapAudioOut::CloseStream()
 {
   if (!mStream) return; // stream already stopped
 
-  // XXX Note: If the stream is not stopped before closing,
-  // Pa_CloseStream() will block the media thread until the next
-  // callback. More gravely, if the stream is closed while in the
-  // callback, portaudio will crash.  The first issue we can't prevent
-  // easily. To prevent the second issue we must revoke any pending
-  // events from the callback that prevent it from completing while
-  // the media thread is not pumping events:
-
-  // Ensure that if the portaudio callback is called now, it will see
-  // an EOF frame and stop the stream rather than posting a new
-  // request:
-  nsAutoLock lock(mLock);
-  mFrame = nsnull;
-  mWaiting = PR_FALSE;
-  lock.unlock();
-  
-  // Depending on when the callback ran we might still have an old
-  // callback waiting for a pending frame request. By cancelling all
-  // requests we ensure that it can run to completion (also stopping
-  // the stream):
+  // cancel any outstanding PlayFrame() notifications:
   mEventQ->EnterMonitor();
   mEventQ->RevokeEvents(this);
   mEventQ->ExitMonitor();
   
-  // At this point we have made sure that the portaudio callback can
-  // run to completion and it is safe to close the
-  // stream. Pa_CloseStream() will wait for the callback to complete,
-  // blocking the media thread.
-    
   Pa_CloseStream(mStream);
   mStream = nsnull;
 #ifdef DEBUG_afri_zmk
   printf("(audioout stream closed)");
 #endif
-
-  if (mSource) {
-    // we still have a source. request first frame of next stream:
-    mWaiting = PR_TRUE;
-    mSource->RequestFrame();
-  }
-    
 }
 

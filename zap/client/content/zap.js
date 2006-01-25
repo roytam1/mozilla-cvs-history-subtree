@@ -222,7 +222,13 @@ Config.prototype.datasources["default"] = wConfigDS;
 Config.rdfResourceAttrib("urn:mozilla:zap:identity",
                          "urn:mozilla:zap:initial_identity");
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
+
 Config.rdfLiteralAttrib("urn:mozilla:zap:ringtone", "zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"); //"nuages_gris:d=4,o=4,b=180:p,d,g,2c#5,d5,a#,g,p,d,g,c#5,c#5,d5,a#,g,1p");
+Config.rdfLiteralAttrib("urn:mozilla:zap:dialtone", "@0+350+440v8");
+Config.rdfLiteralAttrib("urn:mozilla:zap:ringingtone", "@2.0+440+480v8@4.0R");
+Config.rdfLiteralAttrib("urn:mozilla:zap:busytone", "@0.5+480+620v8@0.5R");
+Config.rdfLiteralAttrib("urn:mozilla:zap:errortone", "@.25+480+620v8@.25R");
+
 Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 // time constants for flow failure recovery (draft-ietf-sip-outbound-01.txt 4.3):
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_max_time", "1800");
@@ -1576,6 +1582,9 @@ var wMediaPipeline = {
                                        this.audioout, null);
       this.mediagraph.setAlias("ain", this.asplitter);
       this.mediagraph.setAlias("aout", this.amixer);
+      this.ainCtl = this.mediagraph.getNode(this.audioin,
+                                            Components.interfaces.zapIAudioIn, true);
+      this.ainCtl.play(); //XXX do this on demand
     }
     catch(e) {
       dump("Error during media pipeline initialization: "+e+"\n");
@@ -1589,8 +1598,101 @@ var wMediaPipeline = {
     catch(e) {}
     delete this.mediagraph;
   }
-  
 }
+
+//----------------------------------------------------------------------
+// Ringback class: helper to provide ringback for outbound calls
+
+var Ringback = makeClass("Ringback", ErrorReporter);
+
+Ringback.appendCtor(
+  function Ringback_Ctor() {
+    this.ttone2pcm = wMediaPipeline.mediagraph.addNode("ttone->pcm", null);
+    this.ttoneGen = wMediaPipeline.mediagraph.addNode("ttone-generator", null);
+    wMediaPipeline.mediagraph.connect(this.ttone2pcm, null, "aout", null);
+    wMediaPipeline.mediagraph.connect(this.ttoneGen, null, this.ttone2pcm, null);
+    this.ttoneCtl = wMediaPipeline.mediagraph.getNode(this.ttoneGen,
+                                                      Components.interfaces.zapITToneGenerator, true);
+  });
+
+Ringback.fun(
+  function play(tones) {
+    try {
+      this.ttoneCtl.play(tones);
+    } catch(e) { this._dump("Invalid ringback tone"); }
+  });
+
+Ringback.fun(
+  function terminate() {
+    // shutdown in 3 seconds, so that the user has a chance to hear
+    // any final ringback signals
+    var me = this;
+    schedule(function Ringback_shutdown() {
+               wMediaPipeline.mediagraph.removeNode(me.ttone2pcm);
+               wMediaPipeline.mediagraph.removeNode(me.ttoneGen);
+               delete me.ttoneCtl;
+             },
+             3000);
+  });
+
+//----------------------------------------------------------------------
+// CallPipe class: per-call media pipeline
+
+var PB = makePropertyBag;
+
+var CallPipe = makeClass("CallPipe", ErrorReporter);
+
+CallPipe.appendCtor(
+  function CallPipe_Ctor() {
+    var g = wMediaPipeline.mediagraph;
+    this.dtmf = g.addNode("dtmf-generator", null);
+    this.tevent2ttone = g.addNode("tevent->ttone", null);
+    this.ttone2pcm = g.addNode("ttone->pcm", null);
+    this.dtmfpump = g.addNode("pump", null);
+    this.dtmfsplit = g.addNode("splitter", null);
+    this.dtmf2aoutbuf = g.addNode("buffer", null);
+    this.dtmf2coutbuf = g.addNode("buffer", null);
+    this.ain2coutbuf = g.addNode("buffer", null);
+    this.coutmix = g.addNode("audio-mixer", null);
+    this.coutpump = g.addNode("pump", null);
+
+    g.connect(this.dtmf, null, this.tevent2ttone, null);
+    g.connect(this.tevent2ttone, null, this.ttone2pcm, null);
+    g.connect(this.ttone2pcm, null, this.dtmfpump, PB({$name:"input"}));
+    g.connect("ain", null, this.dtmfpump, PB({$name:"clock"}));
+    g.connect(this.dtmfpump, null, this.dtmfsplit, null);
+    g.connect(this.dtmfsplit, null, this.dtmf2aoutbuf, null);
+    g.connect(this.dtmfsplit, null, this.dtmf2coutbuf, null);
+    g.connect(this.dtmf2aoutbuf, null, "aout", null);
+    g.connect(this.dtmf2coutbuf, null, this.coutmix, null);
+    g.connect("ain", null, this.ain2coutbuf, null);
+    g.connect(this.ain2coutbuf, null, this.coutmix, null);
+    g.connect(this.coutmix, null, this.coutpump, PB({$name:"input"}));
+    g.connect("ain", null, this.coutpump, PB({$name:"clock"}));
+
+    this.callAudioOut = "aout";
+    this.callAudioIn = this.coutpump;
+    this.dtmfCtl = g.getNode(this.dtmf,
+                             Components.interfaces.zapIDTMFGenerator, true);
+  });
+
+CallPipe.fun(
+  function terminate() {
+    var g = wMediaPipeline.mediagraph;
+
+    g.removeNode(this.dtmf);
+    g.removeNode(this.tevent2ttone);
+    g.removeNode(this.ttone2pcm);
+    g.removeNode(this.dtmfpump);
+    g.removeNode(this.dtmfsplit);
+    g.removeNode(this.dtmf2aoutbuf);
+    g.removeNode(this.dtmf2coutbuf);
+    g.removeNode(this.ain2coutbuf);
+    g.removeNode(this.coutmix);
+    g.removeNode(this.coutpump);
+
+    delete this.dtmfCtl;
+  });
 
 ////////////////////////////////////////////////////////////////////////
 // SipStack
@@ -1809,6 +1911,9 @@ ActiveCall.spec(
     
     // mark as active:
     this["urn:mozilla:zap:active"] = "true";
+
+    // set up our call pipe:
+    this.callPipe = CallPipe.instantiate();
     
     // enter into active calls hash:
     wActiveCalls[this.resource.Value] = this;
@@ -1829,6 +1934,9 @@ ActiveCall.spec(
 
     // mark as active:
     this["urn:mozilla:zap:active"] = "true";
+
+    // set up our call pipe:
+    this.callPipe = CallPipe.instantiate();
     
     // enter into active calls hash:
     wActiveCalls[this.resource.Value] = this;
@@ -1841,6 +1949,8 @@ ActiveCall.spec(
 ActiveCall.fun(
   function terminated() {
     if (this.Terminated) return; // already terminated
+
+    this.callPipe.terminate();
     
     this.Terminated = true; // clears any pending schedules
     this["urn:mozilla:zap:active"] = "false";
@@ -1874,6 +1984,9 @@ OutboundCall.fun(
   function makeCall(toAddress, identity) {
     this.toAddress = toAddress;
     this.identity = identity;
+
+    this.ringback = Ringback.instantiate();
+    this.ringback.play(wConfig["urn:mozilla:zap:dialtone"]);
     
     this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
     this.setTimestamp();
@@ -1905,6 +2018,7 @@ OutboundCall.fun(
         if (response.statusCode == "408") {
           // the request didn't make it. give up.
           me["urn:mozilla:zap:status"] = "Destination can't be reached";
+          me.ringback.play(wConfig["urn:mozilla:zap:errortone"]);
           me.terminated();
         }
         // else... any response will do:
@@ -1934,6 +2048,7 @@ OutboundCall.fun(
 OutboundCall.fun(
   function proceedWithCall() {
     this["urn:mozilla:zap:status"] = "Calling...";
+    this.ringback.play("");
     this.callHandler = OutboundCallHandler.instantiate();
     this.callHandler.call = this;
 
@@ -1967,7 +2082,9 @@ OutboundCall.fun(
 
     this.mediasession.init("zap",
                            connectionAddress,
-                           connectionAddress);
+                           connectionAddress,
+                           this.callPipe.callAudioIn,
+                           this.callPipe.callAudioOut);
     var offer = this.mediasession.generateSDPOffer();
 
     rc.request.setContent("application", "sdp", offer.serialize());
@@ -1981,10 +2098,17 @@ OutboundCall.fun(
     else if (!this.Terminated){
       // we might e.g. still be resolving_by_OPTIONS
       this["urn:mozilla:zap:status"] = "Cancelled";
+      this.ringback.play("");
       this.terminated();
     }
   });
-    
+
+OutboundCall.spec(
+  function terminated() {
+    this.ringback.terminate();
+    this._OutboundCall_terminated();
+  });
+
 //----------------------------------------------------------------------
 // OutboundCallHandler
 // CALLING -> 2XX_RECEIVED -> TERMINATED
@@ -2018,6 +2142,8 @@ OutboundCallHandler.fun(
     }
     catch(e) {
       this.call["urn:mozilla:zap:status"] = "Can't parse other party's session description";
+      this.call.ringback.play(wConfig["urn:mozilla:zap:errortone"]);
+      
       // send a BYE:
       // XXX need a way to send ACK first
       dialog.createNonInviteRequestClient("BYE").sendRequest();
@@ -2031,6 +2157,7 @@ OutboundCallHandler.fun(
     catch(e) {
       // XXX add verbose error
       this.call["urn:mozilla:zap:status"] = "Session negotiation failed";
+      this.call.ringback.play(wConfig["urn:mozilla:zap:errortone"]);
       
       // send a BYE:
       // XXX need a way to send ACK first
@@ -2045,6 +2172,7 @@ OutboundCallHandler.fun(
     this.call.dialog.listener = this.call;
     this.call["urn:mozilla:zap:session-running"] = "true";
     this.call["urn:mozilla:zap:status"] = "Connected";
+    this.call.ringback.play("");
     return ackTemplate;
   });
 
@@ -2052,9 +2180,14 @@ OutboundCallHandler.fun(
 OutboundCallHandler.fun(
   function notifyResponseReceived(rc, dialog, response, flow) {
     this._dump(response.statusCode+" response for call="+this.call);
-    if (response.statusCode[0] == "1")
+    if (response.statusCode[0] == "1") {
+      if (response.statusCode == "180") {
+        // ringing
+        this.call.ringback.play(wConfig["urn:mozilla:zap:ringingtone"]);
+      }
       this.call["urn:mozilla:zap:status"] =
         response.statusCode + " " + response.reasonPhrase;
+    }
     else if (response.statusCode[0] == "2") {
       // we handle 2XX codes in handle2XXResponse
     }
@@ -2075,6 +2208,7 @@ OutboundCallHandler.fun(
     else {
       this.call["urn:mozilla:zap:status"] =
         response.statusCode + " " + response.reasonPhrase;
+      this.call.ringback.play(wConfig["urn:mozilla:zap:busytone"]);
       this.terminate();
     }
   });
@@ -2207,7 +2341,9 @@ InboundCallHandler.fun(
       // initialize a mediasession:
       this.call.mediasession.init("zap",
                                   connectionAddress,
-                                  connectionAddress);
+                                  connectionAddress,
+                                  this.call.callPipe.callAudioIn,
+                                  this.call.callPipe.callAudioOut);
       this.answer = this.call.mediasession.processSDPOffer(offer);
     }
     catch(e) {

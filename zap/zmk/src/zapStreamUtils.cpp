@@ -34,23 +34,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#include "zapStreamUtils.h"
+#include "nsHashPropertyBag.h"
 
-interface nsIPropertyBag2;
-
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+already_AddRefed<nsIWritablePropertyBag2>
+CreateStreamInfo(const nsACString& type)
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
+  nsIWritablePropertyBag2 *bag;
+  NS_NewHashPropertyBag2(&bag);
 
-  /**
-   * Timestamp in sample clock units.
-   */
-  readonly attribute unsigned long timestamp;
-  
-  readonly attribute ACString data;
-};
+  bag->SetPropertyAsACString(NS_LITERAL_STRING("type"),
+                             type);
 
+  return bag;
+}
+
+nsCString transientCString;
+double transientDouble;
+PRUint32 transientUint32;

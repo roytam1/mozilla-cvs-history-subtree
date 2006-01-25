@@ -63,15 +63,13 @@ class zapFilterNode : public zapIMediaNode,
   // methods to be implemented by subclass:
   // NS_IMETHOD AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars) = 0;
   // NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph) = 0;
-  virtual nsresult OpenStream(nsIPropertyBag2* streamInfo)=0;
-  virtual void CloseStream()=0;
+  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo)=0;
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output)=0;
   
 private:
-  PRBool mStreamOpen; 
-  PRBool mWaiting; // are we waiting for the next frame?
-  nsCOMPtr<zapIMediaSink> mSink;
-  nsCOMPtr<zapIMediaSource> mSource;
+  nsCOMPtr<nsIPropertyBag2> mCurrentInputStreamInfo;
+  nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
 #endif // __ZAP_FILTER_H__

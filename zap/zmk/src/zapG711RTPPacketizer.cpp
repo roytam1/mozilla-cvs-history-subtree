@@ -76,7 +76,7 @@ zapG711RTPPacketizer::RemovedFromGraph(zapIMediaGraph *graph)
 }
 
 nsresult
-zapG711RTPPacketizer::OpenStream(nsIPropertyBag2* streamInfo)
+zapG711RTPPacketizer::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
   if (!streamInfo) {
     NS_ERROR("can't open stream without info");
@@ -102,11 +102,6 @@ zapG711RTPPacketizer::OpenStream(nsIPropertyBag2* streamInfo)
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
                                      NS_LITERAL_CSTRING("rtp"));
   return NS_OK;
-}
-
-void
-zapG711RTPPacketizer::CloseStream()
-{
 }
 
 nsresult

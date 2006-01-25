@@ -65,16 +65,16 @@ interface zapIMediaNode : nsISupports
   /**
    * Return a source with the given parameters.
    * Throw error if the source as characterized by the parameter map
-   * is not supported, if this is a sink-only node, or if the node
-   * can't take any more connections.
+   * is not supported, if this is a sink-only node, or (optionally) if
+   * all sources on the node are already connected.
    */
   zapIMediaSource getSource(in nsIPropertyBag2 source_pars);
 
   /**
    * Returns a sink with the given parameters.
-   * Throws error if the sink as characterized by the parameter map
-   * is not supported, if this is a source-only node, or if the node
-   * can't take any more connections.
+   * Throws error if the sink as characterized by the parameter map is
+   * not supported, if this is a source-only node, or (optionally) if
+   * all sinks on the node are already connected.
    */
   zapIMediaSink getSink(in nsIPropertyBag2 sink_pars);
 };
