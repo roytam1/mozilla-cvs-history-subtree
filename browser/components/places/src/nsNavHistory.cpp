@@ -1213,7 +1213,7 @@ nsNavHistory::GetUpdateRequirements(nsCOMArray<nsINavHistoryQuery>* aQueries,
     return QUERYUPDATE_COMPLEX;
 
   PRBool nonTimeBasedItems = PR_FALSE;
-  for (PRInt32 i = 0; i < aQueries->Count(); i ++) {
+  for (i = 0; i < aQueries->Count(); i ++) {
     nsresult rv;
     nsCOMPtr<nsNavHistoryQuery> query = do_QueryInterface((*aQueries)[i], &rv);
     if (NS_FAILED(rv)) {

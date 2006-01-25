@@ -239,8 +239,8 @@ nsNavHistoryContainerResultNode::nsNavHistoryContainerResultNode(
   // The container type must be a host or day. This constructor is used when
   // we are grouping and want to create host or day containers. Therefore, you
   // can't use it with folder or query containers.
-  NS_ASSERTION(aContainerType == nsINavHistoryResultNode::RESULT_TYPE_HOST ||
-               aContainerType == nsINavHistoryResultNode::RESULT_TYPE_DAY,
+  NS_ASSERTION(aContainerType == nsNavHistoryResultNode::RESULT_TYPE_HOST ||
+               aContainerType == nsNavHistoryResultNode::RESULT_TYPE_DAY,
                "You are passing in a container type that isn't valid");
 }
 
@@ -691,7 +691,7 @@ PRInt32 PR_CALLBACK nsNavHistoryContainerResultNode::SortComparison_URILess(
     nsNavHistoryURIResultNode* aURI = a->GetAsURI();
     nsNavHistoryURIResultNode* bURI = b->GetAsURI();
     value = aURI->mURI.Compare(bURI->mURI.get());
-  }  else if (aType == nsINavHistoryResultNode::RESULT_TYPE_DAY) {
+  }  else if (aType == nsNavHistoryResultNode::RESULT_TYPE_DAY) {
     // date nodes use date (skip conflict resolution because it uses date too)
     return ComparePRTime(a->mTime, b->mTime);
   } else {
@@ -1149,7 +1149,7 @@ nsNavHistoryQueryResultNode::nsNavHistoryQueryResultNode(
     const nsACString& aTitle, PRUint32 aAccessCount, PRTime aTime,
     const nsACString& aIconURI, const nsACString& aQueryURI) :
   nsNavHistoryContainerResultNode(aTitle, aAccessCount, aTime, aIconURI,
-                                  nsINavHistoryResultNode::RESULT_TYPE_QUERY,
+                                  nsNavHistoryResultNode::RESULT_TYPE_QUERY,
                                   PR_TRUE),
   mGeneratingOptions(aGeneratingOptions),
   mQueryURI(aQueryURI),
@@ -1168,7 +1168,7 @@ nsNavHistoryQueryResultNode::nsNavHistoryQueryResultNode(
     const nsACString& aIconURI, nsINavHistoryQuery** aQueries,
     PRUint32 aQueryCount, nsNavHistoryQueryOptions* aOptions) :
   nsNavHistoryContainerResultNode(aTitle, aAccessCount, aTime, aIconURI,
-                                  nsINavHistoryResultNode::RESULT_TYPE_QUERY,
+                                  nsNavHistoryResultNode::RESULT_TYPE_QUERY,
                                   PR_TRUE),
   mGeneratingOptions(aGeneratingOptions),
   mContentsValid(PR_FALSE),
@@ -2054,7 +2054,7 @@ nsNavHistoryFolderResultNode::nsNavHistoryFolderResultNode(
     const nsACString& aTitle, PRUint32 aAccessCount, PRTime aTime,
     nsNavHistoryQueryOptions* aOptions, PRInt64 aFolderId) :
   nsNavHistoryContainerResultNode(aTitle, aAccessCount, aTime, EmptyCString(),
-                                  nsINavHistoryResultNode::RESULT_TYPE_FOLDER,
+                                  nsNavHistoryResultNode::RESULT_TYPE_FOLDER,
                                   PR_FALSE),
   mContentsValid(PR_FALSE),
   mOptions(aOptions),
