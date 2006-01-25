@@ -549,7 +549,7 @@ SdpRtpAvpMediaDescription.fun(
       var fmtObj = SdpRtpAvpMediaFormat.instantiate();
       fmtObj.payloadType = formatVal[1];
       this._RtpAvpFormats.push(fmtObj);
-      format_hash[formatVal] = fmtObj;
+      format_hash[formatVal[1]] = fmtObj;
     }
     if (this._RtpAvpFormats.length == 0) this._verboseError(PARSE_ERROR+": rtp/avp formats missing.");
     iter.advance();
