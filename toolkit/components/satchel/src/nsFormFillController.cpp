@@ -39,8 +39,13 @@
 
 #include "nsFormFillController.h"
 
+#ifdef MOZ_STORAGE
+#include "nsStorageFormHistory.h"
+#include "nsIAutoCompleteSimpleResult.h"
+#elif defined(MOZ_MORK)
 #include "nsFormHistory.h"
 #include "nsIAutoCompleteResultTypes.h"
+#endif
 #include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsIServiceManager.h"
@@ -486,17 +491,27 @@ nsFormFillController::StartSearch(const nsAString &aSearchString, const nsAStrin
                                   nsIAutoCompleteResult *aPreviousResult, nsIAutoCompleteObserver *aListener)
 {
   nsCOMPtr<nsIAutoCompleteResult> result;
-  nsCOMPtr<nsIAutoCompleteMdbResult> mdbResult = do_QueryInterface(aPreviousResult);
+
+#ifdef MOZ_STORAGE
+  // This assumes that FormHistory uses nsIAutoCompleteSimpleResult,
+  // while PasswordManager does not.
+  nsCOMPtr<nsIAutoCompleteSimpleResult> historyResult;
+#elif defined(MOZ_MORK)
+  nsCOMPtr<nsIAutoCompleteMdbResult> historyResult;
+#else
+#error either mozstorage or mork must be compiled
+#endif
+  historyResult = do_QueryInterface(aPreviousResult);
 
   nsPasswordManager* passMgr = nsPasswordManager::GetInstance();
   if (!passMgr)
     return NS_ERROR_OUT_OF_MEMORY;
 
   // Only hand off a previous result to the password manager if it's
-  // a password manager result (i.e. not an nsIAutoCompleteMdbResult).
+  // a password manager result (i.e. not an nsIAutoCompleteMdb/SimpleResult).
 
   if (!passMgr->AutoCompleteSearch(aSearchString,
-                                   mdbResult ? nsnull : aPreviousResult,
+                                   historyResult ? nsnull : aPreviousResult,
                                    mFocusedInput,
                                    getter_AddRefs(result)))
   {
@@ -504,9 +519,8 @@ nsFormFillController::StartSearch(const nsAString &aSearchString, const nsAStrin
     if (history) {
       history->AutoCompleteSearch(aSearchParam,
                                   aSearchString,
-                                  mdbResult,
+                                  historyResult,
                                   getter_AddRefs(result));
-      NS_RELEASE(history);
     }
   }
   NS_RELEASE(passMgr);

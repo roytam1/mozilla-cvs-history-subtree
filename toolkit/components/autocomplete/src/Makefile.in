@@ -52,13 +52,16 @@ REQUIRES =	xpcom \
 		string \
 		dom \
 		layout \
-		mork \
 		unicharutil \
 	 	$(NULL)
 
 CPPSRCS = nsAutoCompleteController.cpp \
-          nsAutoCompleteMdbResult.cpp \
           nsAutoCompleteSimpleResult.cpp \
           $(NULL)
+
+ifdef MOZ_MORK
+REQUIRES += mork
+CPPSRCS += nsAutoCompleteMdbResult.cpp
+endif
 
 include $(topsrcdir)/config/rules.mk

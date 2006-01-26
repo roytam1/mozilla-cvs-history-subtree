@@ -47,15 +47,23 @@
 #ifndef MOZ_THUNDERBIRD
 #include "nsDocShellCID.h"
 #include "nsAutoCompleteController.h"
+#ifdef MOZ_MORK
 #include "nsAutoCompleteMdbResult.h"
+#endif
 #include "nsAutoCompleteSimpleResult.h"
 #ifdef MOZ_XPINSTALL
 #include "nsDownloadManager.h"
 #include "nsDownloadProxy.h"
 #endif
-#include "nsFormHistory.h"
 #include "nsFormFillController.h"
+#ifdef MOZ_STORAGE
+#include "nsStorageFormHistory.h"
+#elif defined(MOZ_MORK)
+#include "nsFormHistory.h"
+#endif
+#ifndef MOZ_PLACES
 #include "nsGlobalHistory.h"
+#endif
 #include "nsPasswordManager.h"
 #include "nsSingleSignonPrompt.h"
 #include "nsTypeAheadFind.h"
@@ -72,11 +80,16 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAlertsService)
 
 #ifndef MOZ_THUNDERBIRD
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
+#ifdef MOZ_MORK
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
+#endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteSimpleResult)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTypeAheadFind)
-NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsFormHistory, nsFormHistory::GetInstance)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsFormHistory, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFormFillController)
+#if defined(MOZ_STORAGE) && defined(MOZ_MORKREADER)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsFormHistoryImporter)
+#endif
 #ifndef MOZ_PLACES
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsGlobalHistory, Init)
 #endif
@@ -94,7 +107,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
 static void PR_CALLBACK nsToolkitCompModuleDtor(nsIModule* self)
 {
 #ifndef MOZ_THUNDERBIRD
-  nsFormHistory::ReleaseInstance();
   nsPasswordManager::Shutdown();
 #endif
 }
@@ -129,10 +141,12 @@ static const nsModuleComponentInfo components[] =
     NS_AUTOCOMPLETESIMPLERESULT_CONTRACTID,
     nsAutoCompleteSimpleResultConstructor },
 
+#ifdef MOZ_MORK
   { "AutoComplete Mdb Result",
     NS_AUTOCOMPLETEMDBRESULT_CID, 
     NS_AUTOCOMPLETEMDBRESULT_CONTRACTID,
     nsAutoCompleteMdbResultConstructor },
+#endif
   
 #ifdef MOZ_XPINSTALL
   { "Download Manager",
@@ -159,6 +173,13 @@ static const nsModuleComponentInfo components[] =
     NS_FORMFILLCONTROLLER_CID, 
     NS_FORMHISTORYAUTOCOMPLETE_CONTRACTID,
     nsFormFillControllerConstructor },
+
+#if defined(MOZ_STORAGE) && defined(MOZ_MORKREADER)
+  { "Form History Importer",
+    NS_FORMHISTORYIMPORTER_CID,
+    NS_FORMHISTORYIMPORTER_CONTRACTID,
+    nsFormHistoryImporterConstructor },
+#endif
 
 #ifndef MOZ_PLACES
   // "places" replaces global history

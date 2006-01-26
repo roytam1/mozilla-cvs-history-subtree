@@ -199,7 +199,7 @@ Sanitizer.prototype = {
       {
         var formHistory = Components.classes["@mozilla.org/satchel/form-history;1"]
                                     .getService(Components.interfaces.nsIFormHistory);
-        return formHistory.rowCount != 0;
+        return formHistory.hasEntries;
       }
     },
     

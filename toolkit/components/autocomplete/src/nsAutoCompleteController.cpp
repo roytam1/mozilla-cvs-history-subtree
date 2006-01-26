@@ -41,7 +41,6 @@
 
 #include "nsAutoCompleteController.h"
 
-#include "nsIAutoCompleteResultTypes.h"
 #include "nsIServiceManager.h"
 #include "nsIDOMElement.h"
 #include "nsIAtomService.h"
