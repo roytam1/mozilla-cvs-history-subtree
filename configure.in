@@ -108,6 +108,8 @@ GNOMEUI_VERSION=2.2.0
 GCONF_VERSION=1.2.1
 LIBGNOME_VERSION=2.0
 
+MSMANIFEST_TOOL=
+
 dnl Set various checks
 dnl ========================================================
 MISSING_X=
@@ -203,6 +205,10 @@ case "$target" in
     cat shunt.out
     rm shunt.out
     $srcdir/build/wince/tools/topsrcdir.h
+
+    `$srcdir/build/cygwin-wrapper evc $srcdir/build/wince/shunt/build/static/shunt.vcw /MAKE ALL > shunt.out <<\EOF`
+    cat shunt.out
+    rm shunt.out
 
     echo -n "#define TOPSRCDIR \"" > $srcdir/build/wince/tools/topsrcdir.h
     `$srcdir/build/cygwin-wrapper echo -n $_topsrcdir >> $srcdir/build/wince/tools/topsrcdir.h`
@@ -386,6 +392,22 @@ case "$target" in
         else
             AC_MSG_ERROR([This version of the MSVC compiler, $CC_VERSION , is unsupported.])
         fi
+	
+	# bug #249782
+	# ensure that mt.exe is Microsoft (R) Manifest Tool and not magnetic tape manipulation utility (or something else)
+	if test "$_CC_SUITE" -ge "8"; then
+		MSMT_TOOL=`mt 2>&1|grep 'Microsoft (R) Manifest Tool'`
+		if test -n "MSMT_TOOL"; then
+			MSMANIFEST_TOOL_VERSION=`echo ${MSMANIFEST_TOOL}|grep -Po "(^|\s)[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(\s|$)"`
+			if test -z "MSMANIFEST_TOOL_VERSION"; then
+				AC_MSG_WARN([Unknown version of the Microsoft (R) Manifest Tool.])
+			fi
+			MSMANIFEST_TOOL=1
+			unset MSMT_TOOL
+		else
+			AC_MSG_ERROR([Microsoft (R) Manifest Tool must be in your \$PATH.])
+		fi
+	fi
 
         # Check linker version
         _LD_FULL_VERSION=`"${LD}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
@@ -940,6 +962,7 @@ CYGWIN32_NT|CYGWIN_NT*|MINGW*_NT*)
     ;;
 AIX)
     OS_RELEASE=`uname -v`.`uname -r`
+    OS_TEST=`uname -p`
     ;;
 BSD_386)
     OS_ARCH=BSD
@@ -1294,6 +1317,7 @@ case "$target" in
                 AC_MSG_RESULT([yes])    
             fi
             AC_LANG_RESTORE
+            TARGET_COMPILER_ABI="ibmc"
             CC_VERSION=`lslpp -Lcq vac.C 2>/dev/null | awk -F: '{ print $3 }'`
             CXX_VERSION=`lslpp -Lcq vacpp.cmp.core 2>/dev/null | awk -F: '{ print $3 }'`
         fi
@@ -1729,7 +1753,13 @@ case "$target" in
         AC_MSG_ERROR([Cannot find $_GLIB_PREFIX_DIR/include/glib.h .])
     fi
     GLIB_CFLAGS="-I${_GLIB_PREFIX_DIR}/include"
-    GLIB_LIBS="${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"
+    if test -f "${_GLIB_PREFIX_DIR}/lib/glib-1.2_s.lib"; then
+        GLIB_LIBS="${_GLIB_PREFIX_DIR}/lib/glib-1.2_s.lib"
+    elif test -f "${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"; then
+        GLIB_LIBS="${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"
+    else
+        AC_MSG_ERROR([Cannot find $_GLIB_PREFIX_DIR/lib/glib-1.2.lib or $_GLIB_PREFIX_DIR/lib/glib-1.2_s.lib])
+    fi
 
     if test -n "$LIBIDL_PREFIX"; then
         _LIBIDL_PREFIX_DIR=`cd $LIBIDL_PREFIX && pwd`
@@ -1748,17 +1778,40 @@ case "$target" in
         AC_MSG_ERROR([Cannot find $_LIBIDL_PREFIX_DIR/include/libIDL/IDL.h .])
     fi
     LIBIDL_CFLAGS="-I${_LIBIDL_PREFIX_DIR}/include ${GLIB_CFLAGS}"
-    LIBIDL_LIBS="${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6.lib ${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"
+    if test -f "${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6_s.lib"; then
+        LIBIDL_LIBS="${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6_s.lib"
+        STATIC_LIBIDL=1
+    elif test -f "${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6.lib"; then
+        LIBIDL_LIBS="${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6.lib"
+    else
+        AC_MSG_ERROR([Cannot find $_LIBIDL_PREFIX_DIR/lib/libidl-0.6.lib or $_LIBIDL_PREFIX_DIR/lib/libidl-0.6_s.lib])
+    fi
+    LIBIDL_LIBS="${LIBIDL_LIBS} ${GLIB_LIBS}"
     ;;
+
     *) # else cross-compiling
         if test -n "$GLIB_PREFIX"; then
             GLIB_CFLAGS="-I${GLIB_PREFIX}/include"
-            GLIB_LIBS="${GLIB_PREFIX}/lib/glib-1.2.lib"
+            if test -f "${GLIB_PREFIX}/lib/glib-1.2_s.lib"; then
+                GLIB_LIBS="${GLIB_PREFIX}/lib/glib-1.2_s.lib"
+            elif test -f "${GLIB_PREFIX}/lib/glib-1.2.lib"; then
+                GLIB_LIBS="${GLIB_PREFIX}/lib/glib-1.2.lib"
+            else
+                AC_MSG_ERROR([Cannot find $GLIB_PREFIX/lib/glib-1.2.lib or $GLIB_PREFIX/lib/glib-1.2_s.lib])
+            fi
         fi
         if test -n "$LIBIDL_PREFIX"; then
             LIBIDL_CFLAGS="-I${LIBIDL_PREFIX}/include ${GLIB_CFLAGS}"
-            LIBIDL_LIBS="${LIBIDL_PREFIX}/lib/libIDL-0.6.lib ${GLIB_LIBS}"
+            if test -f "${LIBIDL_PREFIX}/lib/libIDL-0.6_s.lib"; then
+                LIBIDL_LIBS="${LIBIDL_PREFIX}/lib/libIDL-0.6_s.lib"
+                STATIC_LIBIDL=1
+            elif test -f "${LIBIDL_PREFIX}/lib/libIDL-0.6.lib"; then
+                LIBIDL_LIBS="${LIBIDL_PREFIX}/lib/libIDL-0.6.lib"
+            else
+                AC_MSG_ERROR([Cannot find $LIBIDL_PREFIX/lib/libIDL-0.6.lib or $LIBIDL_PREFIX/lib/libIDL-0.6_s.lib])
+            fi
         fi
+        LIBIDL_LIBS="${LIBIDL_LIBS} ${GLIB_LIBS}"
         ;;
     esac 
 
@@ -3607,7 +3660,7 @@ else
         $(DIST)/lib/$(LIB_PREFIX)nss'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
         $(DIST)/lib/$(LIB_PREFIX)softokn'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX)'
    else
-       NSS_LIBS='-L$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lsoftokn$NSS_VERSION"
+       NSS_LIBS='$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lsoftokn$NSS_VERSION"
    fi
 fi
 
@@ -6533,6 +6586,7 @@ fi
 
 AC_SUBST(LIBIDL_CFLAGS)
 AC_SUBST(LIBIDL_LIBS)
+AC_SUBST(STATIC_LIBIDL)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 AC_SUBST(GLIB_GMODULE_LIBS)
@@ -6595,7 +6649,11 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
        # Define macros for cairo-features.h
        if test "$MOZ_X11"; then
            XLIB_SURFACE_FEATURE="#define CAIRO_HAS_XLIB_SURFACE 1"
+           PS_SURFACE_FEATURE="#define CAIRO_HAS_PS_SURFACE 1"
+           PDF_SURFACE_FEATURE="#define CAIRO_HAS_PDF_SURFACE 1"
            FT_FONT_FEATURE="#define CAIRO_HAS_FT_FONT 1"
+           MOZ_ENABLE_CAIRO_FT=1
+           CAIRO_FT_CFLAGS="$FT2_CFLAGS"
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "mac" -o "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
            QUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_SURFACE 1"
@@ -6608,6 +6666,14 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
        if test "$MOZ_ENABLE_GLITZ"; then
            GLITZ_SURFACE_FEATURE="#define CAIRO_HAS_GLITZ_SURFACE 1"
        fi
+       if test "$MOZ_WIDGET_TOOLKIT" = "beos"; then
+           PKG_CHECK_MODULES(CAIRO_FT, fontconfig freetype2)
+           BEOS_SURFACE_FEATURE="#define CAIRO_HAS_BEOS_SURFACE 1"
+           FT_FONT_FEATURE="#define CAIRO_HAS_FT_FONT 1"
+           MOZ_ENABLE_CAIRO_FT=1
+       fi
+       AC_SUBST(MOZ_ENABLE_CAIRO_FT)
+       AC_SUBST(CAIRO_FT_CFLAGS)
 
        if test "$MOZ_DEBUG"; then
          SANITY_CHECKING_FEATURE="#define CAIRO_DO_SANITY_CHECKING 1"
@@ -6638,7 +6704,7 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
                MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $(DIST)/lib/mozglitz.lib $(DIST)/lib/mozglitzwgl.lib"
            fi
        else
-           MOZ_CAIRO_LIBS="-lmozcairo -lmozlibpixman"
+           MOZ_CAIRO_LIBS='-L$(DIST)/lib'" -lmozcairo -lmozlibpixman $CAIRO_FT_LIBS"
 
            if test "$MOZ_X11"; then
                MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $XLDFLAGS -lXrender -lfreetype -lfontconfig"
@@ -6726,13 +6792,37 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python/xpcom` -ne 0; then
     else
         dnl Non-Windows include and libs
         MOZ_PYTHON_DLL_SUFFIX=$DLL_SUFFIX
-        PYTHON_INCLUDE_SRC=$MOZ_PYTHON_PREFIX/include/python$MOZ_PYTHON_VER_DOTTED
-        PYTHON_LIB_SRC=`$PYTHON  -c 'from distutils import sysconfig; print sysconfig.get_config_var("LIBPL")'`
-        if test ! -f $PYTHON_INCLUDE_SRC/Python.h; then
-            AC_MSG_ERROR([Include directory $PYTHON_INCLUDE_SRC not found or does not contain development headers])
+        MOZ_PYTHON_INCLUDES="-I$MOZ_PYTHON_PREFIX/include/python$MOZ_PYTHON_VER_DOTTED"
+        dnl Check for dynamic Python lib
+        dnl - A static Python is no good - multiple dynamic libraries (xpcom
+        dnl - core, xpcom loader, pydom etc) all need to share Python.
+        dnl - Python 2.3's std --enable-shared configure option will
+        dnl   create a libpython2.3.so.1.0. We should first try this
+        dnl   dotted versioned .so file because this is the one that
+        dnl   the PyXPCOM build mechanics tries to link to.
+        dnl   XXX Should find a better way than hardcoding "1.0".
+        dnl - Python developement tree dir layouts are NOT allowed here
+        dnl   because the PyXPCOM build just dies on it later anyway.
+        dnl - Fixes to the above by Python/*nix knowledgable people welcome!
+        if test -f "$MOZ_PYTHON_PREFIX/lib/libpython$MOZ_PYTHON_VER_DOTTED.so.1.0"; then
+            MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX/lib -lpython$MOZ_PYTHON_VER_DOTTED"
+        elif test -f "$MOZ_PYTHON_PREFIX/lib/libpython$MOZ_PYTHON_VER_DOTTED.so"; then
+            MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX/lib -lpython$MOZ_PYTHON_VER_DOTTED"
+        elif test -f "$MOZ_PYTHON_PREFIX/libpython$MOZ_PYTHON_VER_DOTTED.so"; then
+            dnl Don't Python development tree directory layout.
+            MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX -lpython$MOZ_PYTHON_VER_DOTTED"
+            AC_MSG_ERROR([The Python at $MOZ_PYTHON_PREFIX looks like a dev tree. The PyXPCOM build cannot handle this yet. You must 'make install' Python and use the installed tree.])
+        elif test "$OS_ARCH" = "Darwin"; then
+            dnl We do Darwin last, so if a custom non-framework build of
+            dnl python is used on OSX, then it will be picked up first by
+            dnl the logic above.
+            MOZ_PYTHON_LIBS="-framework Python"
+        else
+            AC_MSG_ERROR([Could not find build shared libraries for Python at $MOZ_PYTHON_PREFIX.  This is required for PyXPCOM.])
         fi
-        MOZ_PYTHON_INCLUDES="-I$PYTHON_INCLUDE_SRC"
-        MOZ_PYTHON_LIBS="-L$PYTHON_LIB_SRC -lpython$MOZ_PYTHON_VER_DOTTED"
+        if test "$OS_ARCH" = "Linux"; then
+            MOZ_PYTHON_LIBS="$MOZ_PYTHON_LIBS -lutil"
+        fi
     fi
     dnl Handle "_d" on Windows
     if test "$OS_ARCH" = "WINNT" && test -n "$MOZ_DEBUG"; then
@@ -7168,6 +7258,7 @@ AC_SUBST(IMPORT_LIB_SUFFIX)
 AC_SUBST(USE_N32)
 AC_SUBST(CC_VERSION)
 AC_SUBST(CXX_VERSION)
+AC_SUBST(MSMANIFEST_TOOL)
 
 if test "$USING_HCC"; then
    CC='${topsrcdir}/build/hcc'
