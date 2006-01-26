@@ -56,8 +56,6 @@
   <!-- Commands -->
   <commandset>
     <command id="cmd_exit" oncommand="cmdExit()"/>
-    <command id="cmd_call" oncommand="cmdCall()"/>
-    <command id="cmd_request" oncommand="cmdRequest()"/>
     <command id="cmd_about" oncommand="cmdAbout()"/>
     <command id="cmd_generic_request" oncommand="cmdGenericRequest()"/>
   </commandset>
