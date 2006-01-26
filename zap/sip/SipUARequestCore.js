@@ -129,7 +129,7 @@ SipNonInviteRC.statefun(
       // branch parameter, ...). At the moment we do a shallow clone,
       // so any header modifications feed through to the original
       // request. Maybe we should always clone deep.
-      this.currentRequest = this.request.clone(false);
+      this.currentRequest = this.request.clone(false).QueryInterface(Components.interfaces.zapISipRequest);
       this.currentRequest.removeHeader(this.currentRequest.getTopHeader("Route"));
     }
     else
