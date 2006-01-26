@@ -68,7 +68,7 @@
         return;
       }
       
-      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;
+      var route = parent.wCurrentIdentity.getRoutingInfo() ? parent.wCurrentIdentity.getRoutingInfo().routeset : [];
 
       wRC = parent.wSipStack.createNonInviteRequestClient(address, 
                                                           parent.wCurrentIdentity.getFromAddress(),
@@ -125,7 +125,7 @@
   <vbox id="module_page" flex="1">
     <label class="titlebox" value="Send Generic Non-Invite Request"/>
     <label value="Remote party:"/>
-    <textbox id="remote" value="sip:afri@fwd.pulver.com"/>
+    <textbox id="remote" value="sip:613@fwd.pulver.com"/>
     <label value="Method:"/>
     <textbox id="method" value="OPTIONS"/>
     <hbox>

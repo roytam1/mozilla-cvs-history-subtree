@@ -60,7 +60,6 @@
     <command id="cmd_request" oncommand="cmdRequest()"/>
     <command id="cmd_about" oncommand="cmdAbout()"/>
     <command id="cmd_generic_request" oncommand="cmdGenericRequest()"/>
-    <command id="cmd_register_request" oncommand="cmdRegisterRequest()"/>
   </commandset>
 
   <toolbox>
@@ -74,20 +73,19 @@
                     command="cmd_exit" />
         </menupopup>
       </menu>
-      <menu label="Options"
+<!--
+        <menu label="Options"
             accesskey="O">
         <menupopup>
         </menupopup>
-      </menu>
+      </menu> 
+-->
       <menu label="Tools"
             accesskey="T">
         <menupopup>
           <menuitem label="Send generic request..."
                     accesskey="g"
                     command="cmd_generic_request" />
-          <menuitem label="Send REGISTER request..."
-                    accesskey="r"
-                    command="cmd_register_request" />
         </menupopup>
       </menu>
       <menu label="Help"

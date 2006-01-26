@@ -183,10 +183,6 @@ function cmdGenericRequest() {
   loadPage("chrome://zap/content/generic-request.xul", false);
 }
 
-function cmdRegisterRequest() {
-  loadPage("chrome://zap/content/register-request.xul", false);
-}
-  
 ////////////////////////////////////////////////////////////////////////
 // Interaction pane:
 

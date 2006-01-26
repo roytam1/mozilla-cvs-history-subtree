@@ -19,7 +19,6 @@ zap.jar:
   content/zap/calls.xul              (content/calls.xul)
   content/zap/config.xul             (content/config.xul)
   content/zap/generic-request.xul    (content/generic-request.xul)
-  content/zap/register-request.xul   (content/register-request.xul)
   content/zap/services.xul           (content/services.xul)
 
 en-US.jar:
