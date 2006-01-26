@@ -119,11 +119,17 @@ zapDatagramWrapperFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
   return NS_OK;
 }
 
-/* readonly attribute unsigned long timestamp; */
+/* attribute unsigned long timestamp; */
 NS_IMETHODIMP
 zapDatagramWrapperFrame::GetTimestamp(PRUint32 *aTimestamp)
 {
   *aTimestamp = 0;
+  // shouldn't be called for datagram frames
+  return NS_ERROR_FAILURE;
+}
+NS_IMETHODIMP
+zapDatagramWrapperFrame::SetTimestamp(PRUint32 aTimestamp)
+{
   // shouldn't be called for datagram frames
   return NS_ERROR_FAILURE;
 }

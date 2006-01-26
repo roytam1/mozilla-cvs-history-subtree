@@ -1646,32 +1646,23 @@ CallPipe.appendCtor(
   function CallPipe_Ctor() {
     var g = wMediaPipeline.mediagraph;
     this.dtmf = g.addNode("dtmf-generator", null);
-    this.tevent2ttone = g.addNode("tevent->ttone", null);
-    this.ttone2pcm = g.addNode("ttone->pcm", null);
     this.dtmfpump = g.addNode("pump", null);
     this.dtmfsplit = g.addNode("splitter", null);
-    this.dtmf2aoutbuf = g.addNode("buffer", null);
-    this.dtmf2coutbuf = g.addNode("buffer", null);
-    this.ain2coutbuf = g.addNode("buffer", null);
-    this.coutmix = g.addNode("audio-mixer", null);
-    this.coutpump = g.addNode("pump", null);
+    this.dtmfbuf = g.addNode("buffer", null);
+    this.tevent2ttone = g.addNode("tevent->ttone", null);
+    this.ttone2pcm = g.addNode("ttone->pcm", null);
 
-    g.connect(this.dtmf, null, this.tevent2ttone, null);
-    g.connect(this.tevent2ttone, null, this.ttone2pcm, null);
-    g.connect(this.ttone2pcm, null, this.dtmfpump, PB({$name:"input"}));
+    g.connect(this.dtmf, null, this.dtmfpump, PB({$name:"input"}));
     g.connect("ain", null, this.dtmfpump, PB({$name:"clock"}));
     g.connect(this.dtmfpump, null, this.dtmfsplit, null);
-    g.connect(this.dtmfsplit, null, this.dtmf2aoutbuf, null);
-    g.connect(this.dtmfsplit, null, this.dtmf2coutbuf, null);
-    g.connect(this.dtmf2aoutbuf, null, "aout", null);
-    g.connect(this.dtmf2coutbuf, null, this.coutmix, null);
-    g.connect("ain", null, this.ain2coutbuf, null);
-    g.connect(this.ain2coutbuf, null, this.coutmix, null);
-    g.connect(this.coutmix, null, this.coutpump, PB({$name:"input"}));
-    g.connect("ain", null, this.coutpump, PB({$name:"clock"}));
+    g.connect(this.dtmfsplit, null, this.dtmfbuf, null);
+    g.connect(this.dtmfbuf, null, this.tevent2ttone, null);
+    g.connect(this.tevent2ttone, null, this.ttone2pcm, null);
+    g.connect(this.ttone2pcm, null, "aout", null );
 
-    this.callAudioOut = "aout";
-    this.callAudioIn = this.coutpump;
+    this.callAudioOut = "aout"; // (active)
+    this.callAudioIn = "ain"; // (active)
+    this.callTEventIn = this.dtmfsplit; // (active)
     this.dtmfCtl = g.getNode(this.dtmf,
                              Components.interfaces.zapIDTMFGenerator, true);
   });
@@ -1681,16 +1672,12 @@ CallPipe.fun(
     var g = wMediaPipeline.mediagraph;
 
     g.removeNode(this.dtmf);
-    g.removeNode(this.tevent2ttone);
-    g.removeNode(this.ttone2pcm);
     g.removeNode(this.dtmfpump);
     g.removeNode(this.dtmfsplit);
-    g.removeNode(this.dtmf2aoutbuf);
-    g.removeNode(this.dtmf2coutbuf);
-    g.removeNode(this.ain2coutbuf);
-    g.removeNode(this.coutmix);
-    g.removeNode(this.coutpump);
-
+    g.removeNode(this.dtmfbuf);
+    g.removeNode(this.tevent2ttone);
+    g.removeNode(this.ttone2pcm);
+    
     delete this.dtmfCtl;
   });
 
@@ -2084,7 +2071,8 @@ OutboundCall.fun(
                            connectionAddress,
                            connectionAddress,
                            this.callPipe.callAudioIn,
-                           this.callPipe.callAudioOut);
+                           this.callPipe.callAudioOut,
+                           this.callPipe.callTEventIn);
     var offer = this.mediasession.generateSDPOffer();
 
     rc.request.setContent("application", "sdp", offer.serialize());
@@ -2232,7 +2220,7 @@ OutboundCallHandler.statefun(
 OutboundCallHandler.fun(
   function terminate() {
     this.changeState("TERMINATED");
-    if (!this.call.dialog) {
+    if (!this.call.dialog && !this.call.Terminated) {
       this.call.terminated();
     }
     delete this.call.callHandler;
@@ -2346,7 +2334,8 @@ InboundCallHandler.fun(
                                   connectionAddress,
                                   connectionAddress,
                                   this.call.callPipe.callAudioIn,
-                                  this.call.callPipe.callAudioOut);
+                                  this.call.callPipe.callAudioOut,
+                                  this.call.callPipe.callTEventIn);
       this.answer = this.call.mediasession.processSDPOffer(offer);
     }
     catch(e) {

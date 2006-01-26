@@ -51,7 +51,10 @@ CPPSRCS		= \
 		zapSpeexRTPDepacketizer.cpp \
 		zapSpeexRTPPacketizer.cpp \
 		zapSplitter.cpp \
+		zapStreamMerger.cpp \
+		zapStreamSyncer.cpp \
 		zapStreamUtils.cpp \
+		zapTEventRTPPacketizer.cpp \
 		zapTEventToTToneConverter.cpp \
 		zapTToneGenerator.cpp \
 		zapTToneToPCMConverter.cpp \

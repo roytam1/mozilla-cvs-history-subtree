@@ -61,6 +61,9 @@
 #include "zapTToneGenerator.h"
 #include "zapTEventToTToneConverter.h"
 #include "zapPacketPump.h"
+#include "zapStreamMerger.h"
+#include "zapTEventRTPPacketizer.h"
+#include "zapStreamSyncer.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -87,6 +90,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapDTMFGenerator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapTToneGenerator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapTEventToTToneConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapPacketPump)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamMerger)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapTEventRTPPacketizer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamSyncer)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -219,6 +225,21 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_PACKETPUMP_CID,
     ZAP_PACKETPUMP_CONTRACTID,
     zapPacketPumpConstructor
+  },
+  { "Mozilla ZMK stream merger",
+    ZAP_STREAMMERGER_CID,
+    ZAP_STREAMMERGER_CONTRACTID,
+    zapStreamMergerConstructor
+  },
+  { "Mozilla ZMK TEvent RTP packetizer",
+    ZAP_TEVENTRTPPACKETIZER_CID,
+    ZAP_TEVENTRTPPACKETIZER_CONTRACTID,
+    zapTEventRTPPacketizerConstructor
+  },
+  { "Mozilla ZMK stream syncer",
+    ZAP_STREAMSYNCER_CID,
+    ZAP_STREAMSYNCER_CONTRACTID,
+    zapStreamSyncerConstructor
   }
 };
 

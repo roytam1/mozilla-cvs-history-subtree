@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,47 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_STREAMMERGER_H__
+#define __ZAP_STREAMMERGER_H__
 
-interface nsIPropertyBag2;
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsString.h"
+#include "nsVoidArray.h"
+#include "nsIWritablePropertyBag2.h"
+#include "zapAudioStreamUtils.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+////////////////////////////////////////////////////////////////////////
+// zapStreamMerger
+
+
+// {D0F3C165-942F-4676-9150-D98D04B77AD8}
+#define ZAP_STREAMMERGER_CID                             \
+  { 0xd0f3c165, 0x942f, 0x4676, { 0x91, 0x50, 0xd9, 0x8d, 0x04, 0xb7, 0x7a, 0xd8 } }
+
+#define ZAP_STREAMMERGER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stream-merger"
+
+class zapStreamMerger : public zapIMediaNode,
+                        public zapIMediaSource
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
+public:
+  zapStreamMerger();
+  ~zapStreamMerger();
 
-  /**
-   * Timestamp in sample clock units.
-   */
-  attribute unsigned long timestamp;
-  
-  readonly attribute ACString data;
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+
+private:
+  friend class zapStreamMergerInput;
+
+  // zapStreamMergerInput inputs (weak references):
+  nsVoidArray mInputs;
+
+  // output sink:
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
+#endif // __ZAP_STREAMMERGER_H__

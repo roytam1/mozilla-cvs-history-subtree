@@ -110,7 +110,7 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
 
   if (E && timestamp == mCurrentFrameTimestamp && mCurrentFrameEndSent) {
 #ifdef DEBUG_afri_zmk
-    printf("F1<redun>");
+    //printf("F1<redun>");
 #endif
     // this is a redundant end frame.
     // XXX what we really want to do here is request the next frame,
@@ -132,7 +132,7 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
   if (mCurrentFrameTimestamp != timestamp) {
     // this is a new event or a new segment. reset state:
 #ifdef DEBUG_afri_zmk
-    printf("F1<new>");
+    //printf("F1<new>");
 #endif
     mCurrentFrameTimestamp = timestamp;
     mCurrentFrameSent = 0;
@@ -143,7 +143,7 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
   outputFrame->mTimestamp = timestamp + mCurrentFrameSent;
 
 #ifdef DEBUG_afri_zmk
-    printf("F1<%d,%d>", outputFrame->mTimestamp, duration - mCurrentFrameSent);
+  //printf("F1<%d,%d>", outputFrame->mTimestamp, duration - mCurrentFrameSent);
 #endif
   
   // update state:

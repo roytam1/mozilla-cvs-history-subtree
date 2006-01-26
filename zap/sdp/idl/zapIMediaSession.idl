@@ -45,7 +45,8 @@ interface zapIMediaSession : nsISupports
             in ACString originAddress,
             in ACString connectionAddress,
             in ACString callAudioIn,
-            in ACString callAudioOut);
+            in ACString callAudioOut,
+            in ACString callTEventIn);
   
   zapISdpSessionDescription generateSDPOffer();
   

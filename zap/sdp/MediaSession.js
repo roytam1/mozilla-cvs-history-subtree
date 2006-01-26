@@ -82,15 +82,38 @@ MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
 //            in ACString originAddress,
 //            in ACString connectionAddress,
 //            in ACString callAudioIn,
-//            in ACString callAudioOut);
+//            in ACString callAudioOut,
+//            in ACString callTEventIn);
 MediaSession.fun(
   function init(originUsername, originAddress, connectionAddress,
-                callAudioIn, callAudioOut) {
+                callAudioIn, callAudioOut, callTEventIn) {
     this.originUsername = originUsername;
     this.originAddress = originAddress;
     this.connectionAddress = connectionAddress;
     this.callAudioIn = callAudioIn;
     this.callAudioOut = callAudioOut;
+    this.callTEventIn = callTEventIn;
+
+    var PCMUFormatDescriptor = {};
+    PCMUFormatDescriptor.localPayloadType = "0";
+    PCMUFormatDescriptor.remotePayloadType = "";
+    PCMUFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
+    PCMUFormatDescriptor.sdpformat.payloadType = PCMUFormatDescriptor.localPayloadType;
+    PCMUFormatDescriptor.sdpformat.encodingName = "PCMU";
+    PCMUFormatDescriptor.sdpformat.clockRate = "8000";
+
+    var TEventFormatDescriptor = {};
+    TEventFormatDescriptor.localPayloadType = "101";
+    PCMUFormatDescriptor.remotePayloadType = "";
+    TEventFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
+    TEventFormatDescriptor.sdpformat.payloadType = TEventFormatDescriptor.localPayloadType;
+    TEventFormatDescriptor.sdpformat.encodingName = "telephone-event";
+    TEventFormatDescriptor.sdpformat.clockRate = "8000";
+    TEventFormatDescriptor.sdpformat.fmtParameters = "0-15";
+    
+    this.supportedRTPAVPFormats = [PCMUFormatDescriptor,
+                                   TEventFormatDescriptor];
+
     
     // We use getService here to retrieve the global media graph that
     // should have been set up by our client application:
@@ -108,20 +131,14 @@ MediaSession.fun(
     mediaDescription.port = this.localRTPPort;
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
-    var formatPCMU = gSdpService.createRtpAvpMediaFormat();
-    formatPCMU.payloadType = "0";
-    formatPCMU.encodingName = "pcmu";
-    formatPCMU.clockRate = "8000";
-    formatPCMU.encodingParameters = "1";
-//    mediaDescription.setFormats(["97"], 1);
-    mediaDescription.setRtpAvpFormats([formatPCMU], 1);
-    // a=
-//    var attribs = [];
-    //attribs.push("rtpmap:97 speex/8000");
-//    attribs.push("rtpmap:0 pcmu/8000/1");
-    //attribs.push("rtpmap:97 iLBC/8000");
-// //attribs.push("fmtp:97 mode=30");
-//    mediaDescription.setAttribs(attribs, attribs.length);
+
+    // construct array of offered formats:
+    var formatsOffered = [];
+    for (var i=0,l=this.supportedRTPAVPFormats.length; i<l; ++i) {
+      formatsOffered.push(this.supportedRTPAVPFormats[i].sdpformat);
+    }
+    mediaDescription.setRtpAvpFormats(formatsOffered,
+                                      formatsOffered.length);
     
     var offer = gSdpService.formulateSDPOffer(this.originUsername,
                                               this.originAddress,
@@ -132,10 +149,31 @@ MediaSession.fun(
     return offer;
   });
 
+// find matching payload formats among our list of supported formats
+// and set remotePayloadType as appropriate. Returns true if there are
+// matching formats
+MediaSession.fun(
+  function matchRemotePayloadFormats(remoteFormats) {
+    var hasMatchingFormats = false;
+    for (var i=0,l=remoteFormats.length; i<l; ++i) {
+      for (var j=0,m=this.supportedRTPAVPFormats.length; j<m; ++j) {
+        if (remoteFormats[i].encodingName == this.supportedRTPAVPFormats[j].sdpformat.encodingName &&
+            remoteFormats[i].clockRate == this.supportedRTPAVPFormats[j].sdpformat.clockRate &&
+            (remoteFormats[i].encodingParameters == "1" ||
+             !remoteFormats[i].encodingParameters)) {
+          this.supportedRTPAVPFormats[j].remotePayloadType = remoteFormats[i].payloadType;
+          hasMatchingFormats = true;
+          break;
+        }
+      }
+    }
+    return hasMatchingFormats;
+  });
+
 //  zapISdpSessionDescription processSDPOffer(in zapISdpSessionDescription offer);
 MediaSession.fun(
   function processSDPOffer(offer) {
-    var remoteHost, remoteRTPPort, remoteRTCPPort, remotePayloadFormat;
+    var remoteHost, remoteRTPPort, remoteRTCPPort;
     
     try {
       var mediaDescriptions = offer.getMediaDescriptions({});
@@ -148,33 +186,9 @@ MediaSession.fun(
       if (!connection)
            connection = offer.connection;
       remoteHost = connection.address;
-        
-// //         // find media description that contains an a=rtpmap:xx iLBC/8000
-// //         // attribute to determine payload type:
-// //         var attribs = mediaDescriptions[0].getAttribs({});
-// //         var match;
-// //         for (var i=0,l=attribs.length; i<l; ++i)
-// //           if ((match = /rtpmap:(\d+) iLBC\/8000/(attribs[i]))) {
-// //             remotePayloadFormat = match[1];
-// //             break;
-// //           }
-        
-      // find media description that contains an a=rtpmap:xx speex/8000
-      // attribute to determine payload type:
-      var formats = d.getRtpAvpFormats({});
-      for (var i=0,l=formats.length;i<l; ++i)
-        if (formats[i].encodingName == "pcmu" &&
-            formats[i].clockRate == "8000") {
-          remotePayloadFormat = formats[i].payloadType;
-          break;
-        }
-//       var attribs = d.getAttribs({});
-//       var match;
-//       for (var i=0,l=attribs.length; i<l; ++i)
-//         if ((match = /rtpmap:(\d+) pcmu\/8000/i(attribs[i]))) {
-//           remotePayloadFormat = match[1];
-//           break;
-//         }
+
+      if (!this.matchRemotePayloadFormats(d.getRtpAvpFormats({})))
+        throw("No matching payload formats!");
     }
     catch(e) {
       this._verboseError("Session negotiation failed for offer ["+offer.serialize()+"]: "+e);
@@ -185,7 +199,7 @@ MediaSession.fun(
     this.remoteHost = remoteHost;
     this.remoteRTPPort = remoteRTPPort;
     this.remoteRTCPPort = remoteRTCPPort;
-    this.remotePayloadFormat = remotePayloadFormat;
+    this.remotePayloadFormat = this.supportedRTPAVPFormats[0].remotePayloadType; //XXX
 
     // change state:
     this.changeState("NEGOTIATED");
@@ -216,12 +230,15 @@ MediaSession.fun(
     mediaDescription.port = this.localRTPPort;
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
-    var formatPCMU = gSdpService.createRtpAvpMediaFormat();
-    formatPCMU.payloadType = "0";
-    formatPCMU.encodingName = "pcmu";
-    formatPCMU.clockRate = "8000";
-    formatPCMU.encodingParameters = "1";
-    mediaDescription.setRtpAvpFormats([formatPCMU], 1);
+    // construct array of accepted formats:
+    var formatsAccepted = [];
+    for (var i=0,l=this.supportedRTPAVPFormats.length; i<l; ++i) {
+      formatsAccepted.push(this.supportedRTPAVPFormats[i].sdpformat);
+    }
+
+    
+    mediaDescription.setRtpAvpFormats(formatsAccepted,
+                                      formatsAccepted.length);
     
     answer.setMediaDescriptions([mediaDescription], 1);
 
@@ -231,7 +248,7 @@ MediaSession.fun(
 //  void processSDPAnswer(in zapISdpSessionDescription answer);
 MediaSession.fun(
   function processSDPAnswer(answer) {
-    var remoteHost, remoteRTPPort, remoteRTCPPort, remotePayloadFormat;
+    var remoteHost, remoteRTPPort, remoteRTCPPort;
     
     try {
       var mediaDescriptions = answer.getMediaDescriptions({});
@@ -245,32 +262,9 @@ MediaSession.fun(
       if (!connection)
            connection = answer.connection;
       remoteHost = connection.address;
-        
-// //         // find media description that contains an a=rtpmap:xx iLBC/8000
-// //         // attribute to determine payload type:
-// //         var attribs = mediaDescriptions[0].getAttribs({});
-// //         var match;
-// //         for (var i=0,l=attribs.length; i<l; ++i)
-// //           if ((match = /rtpmap:(\d+) iLBC\/8000/(attribs[i]))) {
-// //             remotePayloadFormat = match[1];
-// //             break;
-// //           }
-      var formats = d.getRtpAvpFormats({});
-      for (var i=0,l=formats.length;i<l; ++i)
-        if (formats[i].encodingName == "pcmu" &&
-            formats[i].clockRate == "8000") {
-          remotePayloadFormat = formats[i].payloadType;
-          break;
-        }        
-//       // find media description that contains an a=rtpmap:xx speex/8000
-//       // attribute to determine payload type:
-//       var attribs = d.getAttribs({});
-//       var match;
-//       for (var i=0,l=attribs.length; i<l; ++i)
-//         if ((match = /rtpmap:(\d+) pcmu\/8000/i(attribs[i]))) {
-//           remotePayloadFormat = match[1];
-//           break;
-//         }
+
+      if (!this.matchRemotePayloadFormats(d.getRtpAvpFormats({})))
+        throw("No matching payload formats!");
     }
     catch(e) {
       this._verboseError("Session negotiation failed for answer ["+answer.serialize()+"]: "+e);
@@ -281,7 +275,7 @@ MediaSession.fun(
     this.remoteHost = remoteHost;
     this.remoteRTPPort = remoteRTPPort;
     this.remoteRTCPPort = remoteRTCPPort;
-    this.remotePayloadFormat = remotePayloadFormat;
+    this.remotePayloadFormat = this.supportedRTPAVPFormats[0].remotePayloadType;
 
     // change state:
     this.changeState("NEGOTIATED");
@@ -292,7 +286,7 @@ MediaSession.statefun(
   "NEGOTIATED",
   function startSession() {
     this.start(this.remoteHost, this.remoteRTPPort,
-               this.remoteRTCPPort, this.remotePayloadFormat);
+               this.remoteRTCPPort);
     this.changeState("RUNNING");
   });
 
@@ -322,9 +316,12 @@ MediaSession.fun(
       this.mediaGraph.removeNode(this.enc);
       this.mediaGraph.removeNode(this.dec);
       this.mediaGraph.removeNode(this.buf);
-      this.mediaGraph.removeNode(this.speex2rtp);
-      this.mediaGraph.removeNode(this.rtp2speex);
+      this.mediaGraph.removeNode(this.g7112rtp);
+      this.mediaGraph.removeNode(this.rtp2g711);
       this.mediaGraph.removeNode(this.rtpsession);
+      this.mediaGraph.removeNode(this.merger);
+      this.mediaGraph.removeNode(this.sync);
+      this.mediaGraph.removeNode(this.tevent2rtp);
     }
     delete this.mediaGraph;
     
@@ -336,38 +333,54 @@ MediaSession.fun(
 
 MediaSession.fun(
   function start(remoteHost, remoteRTPPort,
-                 remoteRTCPPort, remotePayloadFormat) {
-//    this.enc = this.mediaGraph.addNode("speex-encoder", null);
-//    this.dec = this.mediaGraph.addNode("speex-decoder", null);
+                 remoteRTCPPort) {
+    var haveG711 = false;
+    if (this.supportedRTPAVPFormats[0].remotePayloadType) haveG711 = true;
+    var haveTE = false;
+    if (this.supportedRTPAVPFormats[0].remotePayloadType) haveTE = true;
+    
     this.enc = this.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcmu"}));
     this.dec = this.mediaGraph.addNode("g711-decoder", null);
     this.buf = this.mediaGraph.addNode("buffer", PB({$lift_count:15, $drop_count:15, $max_size:30}));
-//     this.speex2rtp = this.mediaGraph.addNode("speex-rtp-packetizer",
-//                                              PB({$payload_type:remotePayloadFormat}));
-//     this.rtp2speex = this.mediaGraph.addNode("speex-rtp-depacketizer", null);
-    this.speex2rtp = this.mediaGraph.addNode("g711-rtp-packetizer",
-                                             PB({$payload_type:remotePayloadFormat}));
-    this.rtp2speex = this.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcmu"}));
+    this.g7112rtp = this.mediaGraph.addNode("g711-rtp-packetizer",
+                                            PB({$payload_type:this.supportedRTPAVPFormats[0].remotePayloadType}));
+    this.rtp2g711 = this.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcmu"}));
+    this.tevent2rtp = this.mediaGraph.addNode("tevent-rtp-packetizer",
+                                              PB({$payload_type:this.supportedRTPAVPFormats[1].remotePayloadType}));
+    this.merger = this.mediaGraph.addNode("stream-merger", null);
     this.rtpsession = this.mediaGraph.addNode("rtp-session",
                                               PB({$address:remoteHost,
                                                   $rtp_port:remoteRTPPort,
                                                   $rtcp_port:remoteRTCPPort}));
+    this.sync = this.mediaGraph.addNode("stream-syncer", null);
+    
     // encoder pipe:
-    this.A = this.mediaGraph.connect(this.callAudioIn, null, this.enc, null);
-    this.B = this.mediaGraph.connect(this.enc, null, this.speex2rtp, null);
-    this.C = this.mediaGraph.connect(this.speex2rtp, null,
-                                     this.rtpsession, PB({$name:"local-rtp"}));
-    this.D = this.mediaGraph.connect(this.rtpsession, PB({$name:"remote-rtp"}),
-                                     this.socketpair, PB({$name:"socket-a"}));
+    this.mediaGraph.connect(this.callAudioIn, null, this.enc, null);
+    this.mediaGraph.connect(this.enc, null, this.g7112rtp, null);
+    
+    if (haveG711)
+      this.mediaGraph.connect(this.g7112rtp, null, this.merger, null);
+    
+    this.mediaGraph.connect(this.callTEventIn, null, this.sync, PB({$name:"input"}));
+    this.mediaGraph.connect(this.callAudioIn, null, this.sync, PB({$name:"timebase"}));
+    this.mediaGraph.connect(this.sync, null, this.tevent2rtp, null);
+
+    if (haveTE)
+      this.mediaGraph.connect(this.tevent2rtp, null, this.merger, null);
+    
+    this.mediaGraph.connect(this.merger, null,
+                            this.rtpsession, PB({$name:"local-rtp"}));
+    this.mediaGraph.connect(this.rtpsession, PB({$name:"remote-rtp"}),
+                            this.socketpair, PB({$name:"socket-a"}));
     // decoder pipe:
-    this.E = this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
-                                     this.buf, null);
-    this.F = this.mediaGraph.connect(this.buf, null,
-                                     this.rtpsession, PB({$name:"remote-rtp"}));
-    this.G = this.mediaGraph.connect(this.rtpsession, PB({$name:"local-rtp"}),
-                                     this.rtp2speex, null);
-    this.H = this.mediaGraph.connect(this.rtp2speex, null, this.dec, null);
-    this.I = this.mediaGraph.connect(this.dec, null, this.callAudioOut, null);
+    this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
+                            this.buf, null);
+    this.mediaGraph.connect(this.buf, null,
+                            this.rtpsession, PB({$name:"remote-rtp"}));
+    this.mediaGraph.connect(this.rtpsession, PB({$name:"local-rtp"}),
+                            this.rtp2g711, null);
+    this.mediaGraph.connect(this.rtp2g711, null, this.dec, null);
+    this.mediaGraph.connect(this.dec, null, this.callAudioOut, null);
   });
 
 

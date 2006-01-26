@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,50 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_STREAMSYNCER_H__
+#define __ZAP_STREAMSYNCER_H__
 
-interface nsIPropertyBag2;
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsIPropertyBag2.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+////////////////////////////////////////////////////////////////////////
+// zapStreamSyncer
+
+// {925EDCAB-657E-444B-87CD-A48DE1E2BB25}
+#define ZAP_STREAMSYNCER_CID                             \
+  { 0x925edcab, 0x657e, 0x444b, { 0x87, 0xcd, 0xa4, 0x8d, 0xe1, 0xe2, 0xbb, 0x25 } }
+
+#define ZAP_STREAMSYNCER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stream-syncer"
+
+class zapStreamSyncer : public zapIMediaNode,
+                        public zapIMediaSource,
+                        public zapIMediaSink
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
-  /**
-   * Timestamp in sample clock units.
-   */
-  attribute unsigned long timestamp;
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPIMEDIASINK
   
-  readonly attribute ACString data;
+  zapStreamSyncer();
+  ~zapStreamSyncer();
+
+private:
+  friend class zapStreamSyncerTimebase;
+
+  void RebaseFrame(zapIMediaFrame* frame);
+  
+  PRUint32 mOffset;
+  PRBool mOffsetStale;
+  
+  zapStreamSyncerTimebase *mTimebase; // weak reference managed by object itself
+
+  nsCOMPtr<nsIPropertyBag2> mInputStreamInfo;
+  
+  nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
+#endif // __ZAP_STREAMSYNCER_H__

@@ -197,13 +197,13 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
       // sources are synchronized and move on to the next frame?
       mSampleClock = frameStart;
 #ifdef DEBUG_afri_zmk
-      printf("P<past>");
+      //printf("P<past>");
 #endif
       continue;
     }
     else if ((PRInt32)(windowEnd - frameStart) <= 0) {
 #ifdef DEBUG_afri_zmk
-      printf("P<future %d,%d>", windowEnd, frameStart);
+      //printf("P<future %d,%d>", windowEnd, frameStart);
 #endif
       // frame begins in the future. -> bail
       break;
@@ -364,7 +364,7 @@ zapTToneToPCMConverter::GetNextInputFrame()
     // resynchronize our sample clock:
     mCurrentInputFrame->GetTimestamp(&mSampleClock);
 #ifdef DEBUG_afri_zmk
-    printf("P<sampleclock %d>", mSampleClock);
+    //printf("P<sampleclock %d>", mSampleClock);
 #endif
   }
   

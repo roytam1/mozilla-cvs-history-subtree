@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,23 +34,37 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_TEVENTRTPPACKETIZER_H__
+#define __ZAP_TEVENTRTPPACKETIZER_H__
 
-interface nsIPropertyBag2;
+#include "zapFilterNode.h"
+#include "nsIWritablePropertyBag2.h"
 
-/**
- * \ingroup ZMK_MODULE
- */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
-interface zapIMediaFrame : nsISupports
+////////////////////////////////////////////////////////////////////////
+// zapTEventRTPPacketizer
+
+// {0038F151-0F9C-44A8-909E-A135C80F4E3F}
+#define ZAP_TEVENTRTPPACKETIZER_CID                             \
+  { 0x0038f151, 0x0f9c, 0x44a8, { 0x90, 0x9e, 0xa1, 0x35, 0xc8, 0x0f, 0x4e, 0x3f } }
+
+#define ZAP_TEVENTRTPPACKETIZER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "tevent-rtp-packetizer"
+
+class zapTEventRTPPacketizer : public zapFilterNode
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
-
-  /**
-   * Timestamp in sample clock units.
-   */
-  attribute unsigned long timestamp;
+public:
+  zapTEventRTPPacketizer();
+  ~zapTEventRTPPacketizer();
   
-  readonly attribute ACString data;
+  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
+                          const nsACString & id,
+                          nsIPropertyBag2 *node_pars);
+  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
+  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
+  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+
+private:
+  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  PRUint16 mPayloadType;
 };
 
+#endif // __ZAP_TEVENTRTPPACKETIZER_H__

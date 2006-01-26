@@ -138,11 +138,6 @@ zapDTMFGenerator::AddedToGraph(zapIMediaGraph *graph,
   
   mVolume = (PRUint16)(-volume);
   
-  
-  
-  // create a new stream info:
-  mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("audio/telephone-event"));
-  
   return NS_OK;
 }
 
@@ -206,9 +201,23 @@ zapDTMFGenerator::ProduceFrame(zapIMediaFrame ** _retval)
 {
   // XXX We don't handle segmentation yet (events longer than 0xFFFF samples)
   
+  // XXX Pause packets ('E' frame retransmissions) are not currently
+  // consolidated with follow-on packets.
+  
   TEvent* currentTEvent = (TEvent*)mBuffer.PeekFront();
-  if (!currentTEvent) return NS_ERROR_FAILURE;
+  if (!currentTEvent) {
+    // make sure we generate a new stream when we have digits available:
+    mStreamInfo = nsnull; 
+    return NS_ERROR_FAILURE;
+  }
 
+  if (!mStreamInfo) {
+    // create a new stream info:
+    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("audio/telephone-event"));
+    // rebase our clock:
+    mSampleClock = 0;
+  }
+  
   // construct telephone-event frame:
   zapTelephoneEventFrame* frame = CreateTelephoneEventFrame(currentTEvent->teventData,
                                                             mStreamInfo);
@@ -220,39 +229,74 @@ zapDTMFGenerator::ProduceFrame(zapIMediaFrame ** _retval)
     // this is the beginning of a new event:
     frame->SetM(PR_TRUE);
   }
-  
-  if (currentTEvent->duration - mTEventSamplesPlayed <= mMaxSamplesPerFrame) {
-    // the tevent (or whatever remainer we are currently playing of it)
-    // will fit into one frame
-#ifdef DEBUG_afri_zmk
-    printf("d<%d,%d,%d>", currentTEvent->teventData.GetEvent(), frame->mTimestamp, currentTEvent->duration);
-#endif
-    // set duration to cumulative duration (see RFC2833):
+
+  if (mTEventSamplesPlayed >= currentTEvent->duration) {
+    // we're in a pause:
+    // retransmit 'E' frame:
     frame->mTEventData.SetDuration((PRUint16)(currentTEvent->duration));
     frame->SetE(PR_TRUE);
-    
-    mSampleClock += currentTEvent->duration - mTEventSamplesPlayed + mPauseDuration;
-    mTEventSamplesPlayed = 0;
 
-    // move on to next tevent:
-    mBuffer.PopFront();
-    delete currentTEvent;
+    //XXX we really want to consolidate pauses with follow-on tone frames.
+    // For now we just increment timestamp by full frame length. This means
+    // that a pause might be longer by up to the packetization interval-1.
+    mSampleClock += mMaxSamplesPerFrame;
+    mTEventSamplesPlayed += mMaxSamplesPerFrame;
+    if (mTEventSamplesPlayed >= currentTEvent->duration + mPauseDuration) {
+      // the pause is done; move on to next frame:
+      mTEventSamplesPlayed = 0;
+      mBuffer.PopFront();
+      delete currentTEvent;
+    }
   }
   else {
-    // the tevent needs to be split over several frames:
-    mTEventSamplesPlayed += mMaxSamplesPerFrame;
-
+    // we're in a tone:
+    if (currentTEvent->duration - mTEventSamplesPlayed <= mMaxSamplesPerFrame) {
+      // the tevent (or whatever remainer we are currently playing of it)
+      // will fit into one frame
 #ifdef DEBUG_afri_zmk
-    printf("D<%d,%d,%d>", currentTEvent->teventData.GetEvent(), frame->mTimestamp, mTEventSamplesPlayed);
+//      printf("d<%d,%d,%d>", currentTEvent->teventData.GetEvent(), frame->mTimestamp, currentTEvent->duration);
 #endif
-
+      // set duration to cumulative duration (see RFC2833):
+      frame->mTEventData.SetDuration((PRUint16)(currentTEvent->duration));
+      frame->SetE(PR_TRUE);
+            
+      // check if the pause after the tone fits into the remainder of
+      // the packet:
+      if (mPauseDuration <=
+          mMaxSamplesPerFrame - (currentTEvent->duration - mTEventSamplesPlayed)) {
+        // yes. we can move on to the next tone:
+        mSampleClock += currentTEvent->duration - mTEventSamplesPlayed + mPauseDuration;
+        mTEventSamplesPlayed = 0;
+        // move on to next tevent:
+        mBuffer.PopFront();
+        delete currentTEvent;
+      }
+      else {
+        // no. update the sample clock by the number of samples written
+        // and whatever part of the pause is covered by this frame. the
+        // next invocation(s) of ProduceFrame() will generate additional
+        // end frames until the pause is used up by the packetization
+        // interval:
+        mSampleClock += mMaxSamplesPerFrame;
+        mTEventSamplesPlayed += mMaxSamplesPerFrame;
+      }
+    }
+    else {
+      // the tevent needs to be split over several frames:
+      mTEventSamplesPlayed += mMaxSamplesPerFrame;
+      
+#ifdef DEBUG_afri_zmk
+//      printf("D<%d,%d,%d>", currentTEvent->teventData.GetEvent(), frame->mTimestamp, mTEventSamplesPlayed);
+#endif
+      
 // set duration to cumulative duration (see RFC2833):
-    frame->mTEventData.SetDuration(mTEventSamplesPlayed);
-    mSampleClock += mMaxSamplesPerFrame;
+      frame->mTEventData.SetDuration(mTEventSamplesPlayed);
+      mSampleClock += mMaxSamplesPerFrame;
+    }
   }
-
+  
   *_retval = frame;
-
+    
   return NS_OK;
 }
 

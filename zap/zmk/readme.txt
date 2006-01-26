@@ -566,7 +566,9 @@ rtp frames
 18) splitter
 ------------
 
-Duplicates one input to several outputs.
+Sends one input to several outputs.
+XXX The input frames are not cloned! Unexpected things might happen if
+a mutable stream (like e.g. rtp) is being split!
 
 Sinks: 1 (passive)
 Sources: n (active)
@@ -641,7 +643,9 @@ audio/pcm frames (layout determined by source parameters).
 21) dtmf-generator
 ------------------
 
-Generates RFC2833 dtmf audio/telephone-event frames from user input
+Generates RFC2833 dtmf audio/telephone-event frames from user input.
+Will generate a new stream based (timebase=0) for each new synchronous
+'run' of digits.
 Note: Doesn't generate end frame retransmissions. Frames will be played
 without inter-frame pauses; the consumer has to reconstruct the timing from
 the frame timestamps.
@@ -718,7 +722,8 @@ audio/tone frames
 --------
 
 General purpose packet pump. Pumps an unaltered "input" packet to the
-output whenever a "clock" frame is received.
+output whenever a "clock" frame is received. The timestamp of the
+frame is NOT modified.
 
 Sinks: 2 
 
@@ -733,3 +738,61 @@ Output stream:
 same as "input" stream
 
 ----------------------------------------------------------------------
+
+25) tevent-rtp-packetizer
+-------------------------
+
+Filter for converting telephone-event streams into rtp streams.
+
+Node parameters:
+- unsigned short "payload_type" (default: 101)
+
+Input stream:
+audio/telephone-event frames
+
+Output stream:
+rtp frames (SSRC and sequence number NOT set).
+
+----------------------------------------------------------------------
+
+26) stream-merger
+-----------------
+
+Sends unaltered packets from several input streams to the output
+stream as soon as they arrive.
+
+Sinks: n (passive)
+Sources: 1 (active)
+
+Control interfaces: 
+-
+
+Node parameters:
+
+Input streams:
+any
+
+Output stream:
+as input streams
+
+----------------------------------------------------------------------
+
+27) stream-syncer
+-----------------
+
+Adds an offset to the timestamp of input frames, so that the timestamp
+of the first frame of an input stream coincides with the last
+timestamp seen at the 'timebase' input. Whenever the input stream or
+timebase stream changes (i.e. when the frameinfo is different from one
+frame to the next), the offset will be recalculated.
+Note: Warning: this node mutates frames. XXX maybe we need cloning.
+
+Sinks: 1
+
+- ACString "name" == "input" : input stream (any type) (neutral)
+- ACString "name" == "timebase" : timebase stream (any type) (passive)
+
+Sources: 1 
+
+Output stream:
+as input stream, with frame timestamps adjusted.

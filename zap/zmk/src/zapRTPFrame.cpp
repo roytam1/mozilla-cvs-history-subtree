@@ -263,11 +263,17 @@ zapRTPFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
   return NS_OK;
 }
 
-/* readonly attribute unsigned long timestamp; */
+/* attribute unsigned long timestamp; */
 NS_IMETHODIMP
 zapRTPFrame::GetTimestamp(PRUint32 *aTimestamp)
 {
   return GetRtpTimestamp(aTimestamp);
+}
+NS_IMETHODIMP
+zapRTPFrame::SetTimestamp(PRUint32 aTimestamp)
+{
+  SetRtpTimestamp(aTimestamp);
+  return NS_OK;
 }
 
 /* readonly attribute ACString data; */
