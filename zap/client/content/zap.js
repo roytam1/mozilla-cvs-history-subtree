@@ -176,7 +176,27 @@ function cmdExit() {
 }
 
 function cmdGo() {
-  loadPage("chrome://zap/content/make-call.xul", true);
+  // temporarily kickstart call directly:
+  try {
+    var address = wURLField.value;
+    if (!/sip:/.test(address))
+      address = "sip:"+address;
+    var remoteAddress = parent.wSipStack.syntaxFactory.deserializeAddress(address);
+  } catch(e) {
+    // by default make-call.xul displays the error page, 
+    // so let's show it:
+    loadPage("chrome://zap/content/make-call.xul", true);
+    return;
+  }
+
+  var oc = OutboundCall.instantiate();
+  oc.createNew(true);
+  oc["urn:mozilla:zap:remote"] = remoteAddress.serialize();
+  // start the ball rolling:
+  oc.makeCall(remoteAddress, wCurrentIdentity);
+  parent.loadPage("chrome://zap/content/call.xul?resource="+escape(oc.resource.Value));
+
+  
 }
 
 function cmdGenericRequest() {

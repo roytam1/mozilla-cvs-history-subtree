@@ -42,8 +42,8 @@
 <page id="zap_make_call"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         xmlns:html="http://www.w3.org/1999/xhtml"
-        onload="initPage()"
-        onunload="cleanup()">
+        xonload="initPage()"
+        xonunload="cleanup()">
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
