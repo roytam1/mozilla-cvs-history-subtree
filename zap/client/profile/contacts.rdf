@@ -3,7 +3,18 @@
      xmlns:NC="http://home.netscape.com/NC-rdf#"
      xmlns:zap="urn:mozilla:zap:">
   <rdf:Seq rdf:about="urn:mozilla:zap:contacts">
+    <rdf:li rdf:resource="rdf:#$iGARN2"/>
   </rdf:Seq>
   <rdf:Seq rdf:about="urn:mozilla:zap:friends">
   </rdf:Seq>
+  <rdf:Description rdf:about="rdf:#$iGARN2"
+                   zap:chromepage="chrome://zap/content/contacts.xul"
+                   NC:Name="zap voice mail"
+                   zap:nodetype="contact"
+                   zap:sip_uri="sip:1234@russell.croczilla.com"
+                   zap:isfriend="false">
+    <zap:sidebarparent rdf:resource="urn:mozilla:zap:friends"/>
+    <zap:notes>This is the zap voice mailbox.
+Since you've come this far, please leave us a message with your feedback!</zap:notes>
+  </rdf:Description>
 </rdf:RDF>
