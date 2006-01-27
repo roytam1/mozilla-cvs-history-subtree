@@ -41,28 +41,99 @@
 
 <page id="zap_home"
         xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        xmlns:html="http://www.w3.org/1999/xhtml">
+        xmlns:html="http://www.w3.org/1999/xhtml"
+        onclick="handleClick(event)">
 
+<html:style>
+    *[sip] { color: blue; text-decoration: underline;}
+    *[sip]:hover { cursor: pointer;}
+    label[sip] { margin-left:0px; margin-right:0px; }
+</html:style>
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
-  <vbox id="module_page" flex="1">
-    <label class="titlebox" value="&zap.title;"/>
-    <description>
-      <html:b>Welcome to zap! - the Open Source Mozilla SIP client.</html:b>
-      <html:p>
-        With zap! v0.1 you can make peer-to-peer voice calls to other SIP users.
-      </html:p>
-      <html:p>
-        Some things we are planning for the future:
-        <html:ul>
-          <html:li>More voice codecs. At the moment we only have speex, G.711 and (by separate download) iLBC.</html:li>
-          <html:li>Video chat</html:li>
-          <html:li>Peer-2-peer gaming</html:li>
-          <html:li>...</html:li>
-        </html:ul>
-      </html:p>
+  <script type="text/javascript">
+    <![CDATA[
+    function handleClick(event) {   
+      // handle click on a sip link:
+      if (event.button==0 && event.originalTarget.getAttribute('sip'))  {
+        parent.wURLField.value = event.originalTarget.getAttribute('sip');
+        parent.cmdGo();
+      }
+    }
+    ]]>
+  </script>
+
+  <vbox flex="1" style="background-color:white;">
+    <label class="zap-form-title" value="&zap.title;"/>
+    <hbox flex="1" style="padding:5px; overflow: -moz-scrollbars-vertical;">
+    <description style="font-size:11px;">
+      <html:h3>Welcome to zap! - the Open Source Mozilla SIP Client.</html:h3>
+
+      Read more about the goals of zap! in 
+      <html:a href="http://www.croczilla.com/zap/whitepaper.rtx">this whitepaper</html:a> or visit the project home page 
+      <html:a href="http://www.croczilla.com/zap/">www.croczilla.com/zap/</html:a>.
+
+      <html:h4>Here are some SIP addresses you can try calling straight away - no SIP account required:</html:h4>
+
+      <html:ul>
+        <html:li><label sip="sip:613@fwd.pulver.com" value="sip:613@fwd.pulver.com"/>: 
+          The ubiquitous callback test at FWD.
+        </html:li>
+        <html:li><label sip="sip:411@fwd.pulver.com" value="sip:411@fwd.pulver.com"/>:
+          1-800-555-TELL service. Honestly, you will want to try this!
+        </html:li>
+        <html:li><label sip="sip:*266300@sipbroker.com" value="sip:*266300@sipbroker.com"/>: Monkey sounds from blueface.ie.
+        </html:li>
+        <html:li><label sip="sip:*266305@sipbroker.com" value="sip:*266305@sipbroker.com"/>: Chill music from blueface.ie.
+        </html:li>
+        <html:li><label sip="sip:*74719498245414@sipbroker.com" value="sip:*74719498245414@sipbroker.com"/>: University of California Irvine voice menu (via sipphone.com). Enroll in a course using zap!
+        </html:li>
+        <html:li><label sip="sip:*2589123@sipbroker.com" value="sip:*2589123@sipbroker.com"/>: UK Time (via voiptalk.org)
+        </html:li>
+        <html:li><label sip="sip:*266303@sipbroker.com" value="sip:*266303@sipbroker.com"/>: Ireland Time (via blueface.ie)
+        </html:li>
+        <html:li><label sip="sip:612@fwd.pulver.com" value="sip:612@fwd.pulver.com"/>: New York Time (via pulver.com)
+        </html:li>
+      </html:ul>
+
+      <html:h4>Trouble?</html:h4>
+        <html:p>
+          Please visit <html:a href="irc://moznet/zap">irc://moznet/zap</html:a> 
+          or send an email to  
+          <html:a href="mailto:alex@croczilla.com">afri@croczilla.com</html:a> 
+          with your problems/suggestions/questions.
+        </html:p>
+        <html:p>
+        If you are having trouble connecting to the numbers above, try a 
+        <label sip="sip:localhost" value="local echo test"/> to test your speaker/microphone.
+        </html:p>
+        <html:p>
+        If the local echo test works fine (i.e you can hear it ringing and you can
+        hear yourself after accepting the call), the problem might be 
+        firewall related.
+        </html:p>
+
+      <html:h4>SIP Accounts</html:h4>
+        <html:p>
+        To get zap to register with your SIP account,
+        create a new identity (Sidebar > Identities > New Identity) and 
+        enter the address-of-record.
+        </html:p>
+        <html:p>
+        Registered contacts appear in the sidebar with a green halo around them.
+        If registration fails for your account, you might need to add a new 
+        SIP service definition (Sidebar > Configuration >
+        SIP Settings > Configure SIP Services... > Add new Service). Please tell us
+        about your new service definitions so that we can include them in the master 
+        list.
+        </html:p>
+        <html:p>
+        You can register with several accounts at the same time. Use the 'Identity'
+        dropdown in the toolbar to switch your identity for outgoing calls.
+        </html:p>
     </description>
+    </hbox>
   </vbox>
 </page>

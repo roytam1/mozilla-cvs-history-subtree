@@ -10,3 +10,4 @@ pref("network.protocol-handler.expose-all", false);
 pref("network.protocol-handler.warn-external.http", false);
 pref("network.protocol-handler.warn-external.https", false);
 pref("network.protocol-handler.warn-external.ftp", false);
+pref("network.protocol-handler.warn-external.mailto", false);
