@@ -634,13 +634,21 @@ radiogroup[type="zap-formwidget"][modified="true"] > radio[selected="true"] {
   font-weight: bold;
 }
 
+.zap-form-title[active="true"] { 
+  background-color: #ffaaaa;
+}
+
 .zap-form-title-box { 
   background-color: #c0c0d0;
   color: #ffffff;
   -moz-box-align: center;
 }
 
-.zap-form-title-box > label {
+.zap-form-title-box[active="true"] { 
+  background-color: #ffaaaa;
+}
+
+.zap-form-title-box > label, .zap-form-title-box-label {
   font-size: 130%;
   font-weight: bold;
 }
