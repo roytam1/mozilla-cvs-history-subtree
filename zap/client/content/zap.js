@@ -467,15 +467,36 @@ Identity.getter(
     return this._idHash;
   });
 
+Identity.spec(
+  function initWithResource(r) {
+    this._Identity_initWithResource(r);
+    this.attemptInitialization();
+  });
+
+Identity.spec(
+  function createFromDocument(doc) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
+    this._Identity_createFromDocument(doc);
+    this.autoflush = true;
+    
+    // Append to identities:
+    wIdentitiesContainer.AppendElement(this.resource);
+
+    this.flush();
+    this.attemptInitialization();
+  });
+
+
 // This will be set after we have attempted to resolve our stun
 // address (if requested). Once this condition is reached, the
 // Identity can be used for making calls, registering, etc (although
 // it might not be fully operational).
 Identity.addCondition("InitializationAttempted");
 
-Identity.spec(
-  function initWithResource(r) {
-    this._Identity_initWithResource(r);
+Identity.fun(
+  function attemptInitialization() {
     this.hostAddress = wSipStack.hostAddress;
     if (this.service["urn:mozilla:zap:ua_contact_address_type"] == "stun")
       this.resolveStunAddress();
@@ -503,19 +524,6 @@ Identity.fun(
                           });
   });
 
-Identity.spec(
-  function createFromDocument(doc) {
-    // Temporarily defer flushing until later, so that the container
-    // changes get flushed as well:
-    this.autoflush = false;
-    this._Identity_createFromDocument(doc);
-    this.autoflush = true;
-    
-    // Append to identities:
-    wIdentitiesContainer.AppendElement(this.resource);
-
-    this.flush();
-  });
 
 // zapISipCredentialsProvider methods:
 Identity.fun(
