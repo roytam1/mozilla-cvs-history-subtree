@@ -58,8 +58,7 @@ var gRDF;
 var gContactsDS;
 var gContactsContainer;
 var gResourceName;
-var gResourceSip1;
-var gResourceSip2;
+var gResourceSipURI;
 
 var gInitialized = false;
 
@@ -72,8 +71,7 @@ function ensureModuleInitialized() {
 gContactsContainer.Init(gContactsDS,
                         gRDF.GetResource("urn:mozilla:zap:contacts"));
   gResourceName = gRDF.GetResource("http://home.netscape.com/NC-rdf#Name");
-  gResourceSip1 = gRDF.GetResource("urn:mozilla:zap:sip1");
-  gResourceSip2 = gRDF.GetResource("urn:mozilla:zap:sip2");
+  gResourceSipURI = gRDF.GetResource("urn:mozilla:zap:sip_uri");
   
   gInitialized = true;
 }
@@ -219,15 +217,9 @@ zapAutocompleter.fun(
     while (contacts.hasMoreElements()) {
       var resource = contacts.getNext();
       var name = gContactsDS.GetTarget(resource, gResourceName, true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
-      var sip1 = gContactsDS.GetTarget(resource, gResourceSip1, true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
-      var sip2 = gContactsDS.GetTarget(resource, gResourceSip2, true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
-      if (sip1) {
-        var addr = name+" <"+canoniziseSIPURL(sip1)+">";
-        if (re.test(addr))
-          arr.push(addr);
-      }
-      if (sip2) {
-        var addr = name+" <"+canoniziseSIPURL(sip2)+">";
+      var sipuri = gContactsDS.GetTarget(resource, gResourceSipURI, true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+      if (sipuri) {
+        var addr = name+" <"+canoniziseSIPURL(sipuri)+">";
         if (re.test(addr))
           arr.push(addr);
       }

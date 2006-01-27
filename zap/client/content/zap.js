@@ -1424,11 +1424,8 @@ Contact.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
                          "chrome://zap/content/contacts.xul");
 Contact.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
 Contact.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "contact");
-Contact.rdfLiteralAttrib("urn:mozilla:zap:sip1", "");
-Contact.rdfLiteralAttrib("urn:mozilla:zap:sip2", "");
-Contact.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
-Contact.rdfLiteralAttrib("urn:mozilla:zap:email", "");
-Contact.rdfLiteralAttrib("urn:mozilla:zap:homepage", "");
+Contact.rdfLiteralAttrib("urn:mozilla:zap:sip_uri", "");
+Contact.rdfLiteralAttrib("urn:mozilla:zap:notes", "");
 // if isfriend is true, the contact will be displayed in the sidebar:
 Contact.rdfLiteralAttrib("urn:mozilla:zap:isfriend", "true");
 

@@ -40,59 +40,57 @@
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <page id="zap_contacts"
-        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        onload="initPage()" >
-
-  <broadcasterset>
-    <broadcaster id="selection_state" disabled="true"/>
-  </broadcasterset>
-
+      class="zap-form"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="initPage()" >
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
   <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
+
   <script type="application/x-javascript">
   <![CDATA[
-    var wContactsTree;    
-    var wSelectionState;
+    var wContactsTree;
+    var wContactBox;
+    var wCallInteractionState;
     var wCurrentContact;
-    var wMode = "init"; // init|browsing|editing|adding
 
     function initPage() {
-      wContactsTree = document.getElementById("contacts_tree");
-      wSelectionState = document.getElementById("selection_state");
+      widgetStateChanged = formWidgetStateChanged;
+
+      wContactsTree = document.getElementById("contacts");
+      wContactBox = document.getElementById("contact-box");
+      wCallInteractionState = document.getElementById("call-interaction-state");
+
       wContactsTree.database.AddDataSource(parent.wContactsDS);
       wContactsTree.builder.rebuild();
       selectResource(wContactsTree, parent.getSelectedSidebarResource());
     }
 
     function contactsSelectionChange() {
-      if (wMode != "init") {
+      // make sure we have a non-sticky buttonbar:
+      setButtonBarState(false);
+
+      // enable interaction buttons:
+      wCallInteractionState.setAttribute("disabled", "false");
+
+      var resource = getSelectedResource(wContactsTree);
+      
+      if (resource != parent.getSelectedSidebarResource()) {
         // XXX what we actually want to do is to update the sidebar selection to 
         // reflect the new choice, but this is difficult because not all contacts
         // are in the sidebar. Let's clear the selection for the time being:
         parent.clearSidebarSelection();
       }
 
-      if (wMode != "browsing") {
-        document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;      
-        wMode = "browsing";
-      }
-
-      var resource = getSelectedResource(wContactsTree);
       if (!resource) {
-        // fill with blank data
-        wCurrentContact = parent.Contact.instantiate();
-        wCurrentContact.fillDocument(document);
-
-        wSelectionState.setAttribute("disabled", "true");
+        wContactBox.hidden = true;
+        return;
       }
-      else {
-        wSelectionState.removeAttribute("disabled");
-        wCurrentContact = parent.Contact.instantiate();
-        wCurrentContact.initWithResource(resource);
-        wCurrentContact.fillDocument(document);      
-      }
+      wCurrentContact = parent.Contact.instantiate();
+      wCurrentContact.initWithResource(resource);
+      wCurrentContact.fillDocument(document);
+      wContactBox.hidden = false;
     }
 
     function clearSelection() {
@@ -104,18 +102,16 @@
     function add() {
       clearSelection();
       wCurrentContact = parent.Contact.instantiate();
-      wCurrentContact.fillDocument(document);
-      document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("button_deck").selectedIndex = 1;      
-      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
-      wMode = "adding";      
-    }
 
-    function edit() {
-      document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("button_deck").selectedIndex = 1;      
+      // make sure we have a sticky buttonbar:
+      setButtonBarState(true);
+
+      // disable call interaction buttons:
+      wCallInteractionState.setAttribute("disabled", "true");
+
+      wCurrentContact.fillDocument(document);
+      wContactBox.hidden = false;
       document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
-      wMode = "editing";            
     }
 
     function del() {
@@ -123,135 +119,149 @@
                                              "Are you sure you wish to delete contact '"+wCurrentContact["http://home.netscape.com/NC-rdf#Name"]+"'?");
       if (ok) {
         wCurrentContact.remove();
-      }      
+      }
     }
 
     function commit() {
-      if (wMode == "adding") {
-        wCurrentContact.createFromDocument(document);
-        // select newly created contact (will automatically restore "browsing" mode)
-        selectResource(wContactsTree, wCurrentContact.resource);
-      }
-      else if (wMode == "editing") {
+      if (wCurrentContact.resource) {
         wCurrentContact.updateFromDocument(document);
-        document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;      
-        wMode = "browsing";
+      }
+      else {
+        // we're adding a new record
+        wCurrentContact.createFromDocument(document);
+        // select newly created contact:
+        selectResource(wContactsTree, wCurrentContact.resource);
       }
     }
 
     function cancel() {
-      if (wMode == "adding") {
-        parent.reloadPage();
-      }
-      else if (wMode == "editing") {
-        document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;
+      if (wCurrentContact.resource)
         wCurrentContact.fillDocument(document);
-        wMode = "browsing";      
+      else {
+        // we're canceling adding a record
+        wContactBox.hidden = true;
+        // reset sticky button bar
+        setButtonBarState(false);
       }
     }
 
+    function call() {
+      // copy sip uri to URLField:
+      parent.wURLField.value = wCurrentContact["urn:mozilla:zap:sip_uri"];
+      parent.cmdGo();
+    }
   ]]>
   </script>
 
-  <vbox id="module_page" flex="1" readonly="true">
-    <label class="titlebox" value="Contacts"/>
+  <broadcasterset>
+    <broadcasterset id="call-interaction-state" disabled="false"/>
+  </broadcasterset>
 
-    <hbox flex="1">
-      <vbox flex="1">
-        <tree id="contacts_tree" flex="1" 
-              seltype="single"
-              datasources="rdf:null"
-              ref="urn:mozilla:zap:contacts"
-              onselect="contactsSelectionChange()"
-              flags="dont-build-content">
-          <treecols>
-            <treecol id="contacts_col_name" label="Name"  flex="1"/>
-            <treecol id="contacts_col_sip1" label="SIP Address" flex="1" hidden="true"/>
-            <treecol id="contacts_col_sip2" label="Alternative SIP Address" flex="1" hidden="true"/>
-            <treecol id="contacts_col_organization" label="Organization" flex="1" hidden="true"/>
-            <treecol id="contacts_col_email" label="Email" flex="1" hidden="true"/>
-            <treecol id="contacts_col_www" label="WWW" flex="1" hidden="true"/>
-          </treecols>
-          <template>
-            <rule>
-              <conditions>
-                <content uri="?container"/>
-                <member container="?container" child="?node"/>
-              </conditions>
-              <bindings>
-                <binding subject="?node"
-                         predicate="http://home.netscape.com/NC-rdf#Name"
-                         object="?name"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:sip1"
-                         object="?sip1"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:sip2"
-                         object="?sip2"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:organization"
-                         object="?organization"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:email"
-                         object="?email"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:homepage"
-                         object="?homepage"/>
-              </bindings>
-              <action>
-                <treechildren>
-                  <treeitem uri="?node">
-                    <treerow>
-                      <treecell label="?name"/>
-                      <treecell label="?sip1"/>
-                      <treecell label="?sip2"/>
-                      <treecell label="?organization"/>
-                      <treecell label="?email"/>
-                      <treecell label="?homepage"/>
-                    </treerow>
-                  </treeitem>
-                </treechildren>
-              </action>
-            </rule>
-          </template>
-        </tree>
-      </vbox>
-      <splitter/>     
-      <vbox flex="1">
-        <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
-        <textbox id="http://home.netscape.com/NC-rdf#Name"/>
-        <checkbox label="Display this contact in sidebar" id="urn:mozilla:zap:isfriend" />
-        <label control="urn:mozilla:zap:organization" value="Organization:"/>
-        <textbox id="urn:mozilla:zap:organization"/>
-        <label control="urn:mozilla:zap:sip1" value="SIP Address 1:"/>
-        <textbox id="urn:mozilla:zap:sip1"/>
-        <label control="urn:mozilla:zap:sip2" value="SIP Address 2:"/>
-        <textbox id="urn:mozilla:zap:sip2"/>
-        <label control="urn:mozilla:zap:email" value="Email:"/>
-        <textbox id="urn:mozilla:zap:email"/>
-        <label control="urn:mozilla:zap:homepage" value="WWW:"/>
-        <textbox id="urn:mozilla:zap:homepage"/>
-      </vbox>
-
-    </hbox>
-
-    <hbox>
-      <deck id="button_deck" flex="1">
-        <hbox flex="1">
-          <spacer flex="1"/>
-          <button label="New" oncommand="add()" />
-          <button label="Delete" oncommand="del()" observes="selection_state"/>
-          <button label="Edit" oncommand="edit()" observes="selection_state"/>
-        </hbox>
-        <hbox flex="1">
-          <spacer flex="1"/>
-          <button label="Commit" oncommand="commit()" />
-          <button label="Cancel" oncommand="cancel()" />
-        </hbox>
-      </deck>
-    </hbox>
-
+  <vbox flex="1">
+  <vbox class="zap-form-list" id="contacts-box" flex="1" 
+        height="200" minheight="50" persist="height">
+    <box class="zap-form-title-box">
+      <label value="Contacts" crop="right"/>
+      <spacer flex="1"/>
+      <button label="Add new Contact" oncommand="add()"/>
+    </box>
+    <tree id="contacts" flex="1"
+          class="zap-form-tree"
+          seltype="single"
+          datasources="rdf:null"
+          ref="urn:mozilla:zap:contacts"
+          onselect="contactsSelectionChange()"
+          flags="dont-build-content">
+      <treecols>
+        <treecol id="contacts_col_name" label="Name" flex="1"/>
+        <treecol id="contacts_col_sip_uri" label="SIP URI" flex="1"/>
+      </treecols>
+      <template>
+        <rule>
+          <conditions>
+            <content uri="?container"/>
+            <member container="?container" child="?node"/>
+          </conditions>
+          <bindings>
+            <binding subject="?node"
+                     predicate="http://home.netscape.com/NC-rdf#Name"
+                     object="?name"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:sip_uri"
+                     object="?sip_uri"/>
+          </bindings>
+          <action>
+            <treechildren>
+              <treeitem uri="?node">
+                <treerow>
+                  <treecell label="?name"/>
+                  <treecell label="?sip_uri"/>
+                </treerow>
+              </treeitem>
+            </treechildren>
+          </action>
+        </rule>
+      </template>
+    </tree>
   </vbox>
+  <splitter class="zap-form-splitter"/>
+  <vbox flex="100" height="200" persist="height" class="zap-form-body">
+    <vbox id="contact-box" hidden="true" flex="1">
+      <box class="zap-form-title-box">
+        <label value="Contact" crop="right"/>
+        <spacer flex="1"/>
+        <button id="call-button" label="Call" oncommand="call()" observes="call-interaction-state"/>
+        <button id="delete-button" label="Delete" oncommand="del()" observes="call-interaction-state"/>
+      </box>
+      <grid>
+        <columns><column/><column flex="1"/><column/></columns>
+        <rows>
+          <irow>
+            <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
+            <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"/>
+            <info>
+              <description>
+                Human-readable name for this contact.
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:sip_uri" value="SIP URI:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:sip_uri"
+                     validator="validateSIPURI" />
+            <info>
+              <description>
+              SIP address for this contact. Example: 
+              <html:br/><html:i>sip:username@the_sip_service_provider.com</html:i>
+              </description>
+            </info>
+          </irow>
+        </rows>
+      </grid>
+      <igroup>
+        <checkbox type="zap-formwidget" label="Display in sidebar" 
+                  id="urn:mozilla:zap:isfriend"/>
+        <info>
+          <description>
+          If checked, this contact will be displayed in the sidebar for quick access and, in a future zap release, for displaying presence information.
+          </description>
+        </info>
+      </igroup>
+      <igroup orient="vertical">
+        <label control="urn:mozilla:zap:notes" value="Notes:"/>
+        <textbox type="zap-formwidget" id="urn:mozilla:zap:notes" multiline="true" rows="8" flex="1"/>
+        <info>
+          <description>
+          Use this field for any additional information you would like to record for this contact.
+          </description>
+        </info>
+      </igroup>
+    </vbox>
+  </vbox>
+  </vbox>
+  <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
+    <spacer flex="1"/>
+    <button id="apply" label="Apply changes" oncommand="commit()" />
+    <button label="Cancel" oncommand="cancel()" />
+  </hbox>
 </page>
