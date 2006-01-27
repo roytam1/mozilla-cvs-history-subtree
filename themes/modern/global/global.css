@@ -175,3 +175,6 @@ resizer[dir="bottomright"] {
   -moz-user-focus: ignore !important;
 }
 
+description.error {
+  color: #FF0000;
+}
