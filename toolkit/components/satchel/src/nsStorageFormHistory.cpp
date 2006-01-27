@@ -405,6 +405,7 @@ nsFormHistory::OpenDatabase()
                                 getter_AddRefs(mDBInsertNameValue));
   NS_ENSURE_SUCCESS(rv, rv);
 
+#ifdef MOZ_MORKREADER
   if (!exists) {
     // Locate the old formhistory.dat file and import it.
     nsCOMPtr<nsIFile> historyFile;
@@ -418,6 +419,7 @@ nsFormHistory::OpenDatabase()
       importer->ImportFormHistory(historyFile, this);
     }
   }
+#endif
 
   return NS_OK;
 }
