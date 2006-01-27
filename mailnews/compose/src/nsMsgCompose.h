@@ -58,6 +58,7 @@
 #include "nsIMimeConverter.h"
 #include "nsIUnicodeDecoder.h"
 #include "nsIEditor.h"
+#include "nsIMsgFolder.h"
 
 // Forward declares
 class QuotingOutputStreamListener;
@@ -154,6 +155,7 @@ private:
   nsCOMPtr<nsISupportsArray>                mStateListeners;		// contents are nsISupports
   PRBool                                    mCharsetOverride;
   PRBool                                    mDeleteDraft;
+  nsMsgDispositionState                     mDraftDisposition;
   nsCOMPtr <nsIMsgDBHdr>                    mOrigMsgHdr;
 
   nsCOMPtr<nsIMsgSendListener>              mExternalSendListener;
