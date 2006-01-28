@@ -110,11 +110,10 @@ var gSearchNotificationListener =
         statusFeedback.showProgress(0);
         gStatusBar.setAttribute("mode","normal");
         gSearchInProgress = false;
-        viewDebug("gSearchInput = " + gSearchInput.value + "\n");
 
         // ### TODO need to find out if there's quick search within a virtual folder.
         if (gCurrentVirtualFolderUri &&
-         (gSearchInput.value == "" || gSearchInput.showingSearchCriteria))
+         (!gSearchInput || gSearchInput.value == "" || gSearchInput.showingSearchCriteria))
         {
           var vFolder = GetMsgFolderFromUri(gCurrentVirtualFolderUri, false);
           var dbFolderInfo = vFolder.getMsgDatabase(msgWindow).dBFolderInfo;
@@ -217,10 +216,9 @@ function initializeSearchBar()
 
 function onEnterInSearchBar()
 {
-  viewDebug ("onEnterInSearchBar gSearchInput.value = " + gSearchInput.value + " showing criteria = " + gSearchInput.showingSearchCriteria +"\n");
-   if (gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
+   if (!gSearchInput || gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
    {
-     if (gSearchInput.searchMode == kQuickSearchHighlight)
+     if (gSearchInput && gSearchInput.searchMode == kQuickSearchHighlight)
        removeHighlighting();
      
      if (gDBView.viewType == nsMsgViewType.eShowQuickSearchResults 
@@ -243,6 +241,7 @@ function onEnterInSearchBar()
      else if (gPreQuickSearchView && !gDefaultSearchViewTerms)// may be a quick search from a cross-folder virtual folder
       restorePreSearchView();
      
+     if (gSearchInput)
      gSearchInput.showingSearchCriteria = true;
      
      gQSViewIsDirty = false;
@@ -402,7 +401,7 @@ function getScopeToUse(aTermsArray, aFolderToSearch, aIsOffline)
   if (aIsOffline || aFolderToSearch.server.type != 'imap')
     return nsMsgSearchScope.offlineMail;
 
-  var scopeToUse = gSearchInput.searchMode == kQuickSearchBody && !gSearchInput.showingSearchCriteria
+  var scopeToUse = gSearchInput && gSearchInput.searchMode == kQuickSearchBody && !gSearchInput.showingSearchCriteria
                    ? nsMsgSearchScope.onlineMail : nsMsgSearchScope.offlineMail;
 
   // it's possible one of our search terms may require us to use an online mail scope (such as imap body searches)
@@ -645,6 +644,7 @@ function ClearQSIfNecessary()
 // of a quick search view...
 function clearQuickSearchAfterFolderChange()
 {
+  if (gSearchInput)
   gSearchInput.setSearchCriteriaText();
 }
 
