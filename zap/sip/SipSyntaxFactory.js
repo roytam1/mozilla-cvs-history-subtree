@@ -299,8 +299,8 @@ var REGEXP_TRIM_WSP = new RegExp("^[ \\t]*([^ \\t]+(?:.*[^ \\t])?)[ \\t]*$");
 var REGEXP_TOKEN = new RegExp("^"+PATTERN_TOKEN+"$");
 
 // Match a sequence of tokens separated by single spaces (used for
-// deciding when to the token or quoted string forms for display
-// names):
+// deciding whether to use the token or quoted string forms for
+// a display name):
 var REGEXP_DISPLAY_NAME_TOKENS = new RegExp("^"+PATTERN_TOKEN+
                                             "(?: "+PATTERN_TOKEN+")*$");
 
