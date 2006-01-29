@@ -99,7 +99,8 @@ public:
   // script object is slower in this case, but is safe for long-lived
   // object holders.
   nsScriptObjectHolder(PRUint32 aLangID, void *aObject = nsnull) :
-      mObject(aObject), mContextOrLangID(aLangID*2 + 1) {
+      mObject(aObject),
+      mContextOrLangID((aLangID << 1) | SOH_HAS_LANGID_BIT) {
     NS_ASSERTION(aLangID != nsIProgrammingLanguage::UNKNOWN,
                  "Please supply a valid language ID");
   }
@@ -215,11 +216,12 @@ public:
 protected:
   PRUint32 getScriptTypeIDFromBits() const {
     NS_ASSERTION(mContextOrLangID & SOH_HAS_LANGID_BIT, "Not in the bits!");
-    return (mContextOrLangID-1)/2;
+    return (mContextOrLangID & ~SOH_HAS_LANGID_BIT) >> 1;
   }
   void *mObject;
   // We store either an nsIScriptContext* if this bit is clear,
-  // else the language ID (specifically, lang_id * 2 + 1) when set.
+  // else the language ID (specifically, ((lang_id << 1) | SOH_HAS_LANGID_BIT)
+  // when set.
   typedef PRWord PtrBits;
   enum { SOH_HAS_LANGID_BIT = 0x1 };
 
