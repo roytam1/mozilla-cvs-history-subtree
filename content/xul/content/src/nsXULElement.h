@@ -253,7 +253,7 @@ public:
 
     virtual ~nsXULPrototypeElement()
     {
-        PRInt32 i;
+        PRUint32 i;
         for (i = 0; i < mNumAttributes; i++)
             mAttributes[i].Finalize(mScriptTypeID);
         delete[] mAttributes;
