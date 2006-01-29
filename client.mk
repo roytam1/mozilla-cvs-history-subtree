@@ -123,6 +123,7 @@ MODULES_core :=                                 \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
   mozilla/tools/cross-commit                    \
+  mozilla/tools/test-harness                    \
   $(NULL)
 
 LOCALES_core :=                                 \

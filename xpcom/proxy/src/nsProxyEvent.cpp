@@ -58,7 +58,6 @@
 #include "xptcall.h"
 
 #include "nsIComponentManager.h"
-#include "nsIServiceManager.h"
 #include "nsMemory.h"
 #include "nsIEventQueueService.h"
 #include "nsIThread.h"
@@ -73,9 +72,8 @@
 #define nsAUTF8String nsACString
 #define nsUTF8String nsCString
 
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_IID(kProxyObject_Identity_Class_IID, NS_PROXYEVENT_IDENTITY_CLASS_IID);
-        
+
 static void* PR_CALLBACK EventHandler(PLEvent *self);
 static void  PR_CALLBACK DestroyHandler(PLEvent *self);
 static void* PR_CALLBACK CompletedEventHandler(PLEvent *self);
@@ -299,9 +297,10 @@ nsProxyObjectCallInfo::SetCallersQueue(nsIEventQueue* queue)
 }   
 
 
-nsProxyObject::nsProxyObject(nsIEventQueue *destQueue, PRInt32 proxyType, nsISupports *realObject)
+nsProxyObject::nsProxyObject(nsIEventQueue *destQueue, PRInt32 proxyType, nsISupports *realObject,
+	nsIEventQueueService* eventQService)
 {
-    mEventQService = do_GetService(kEventQueueServiceCID);
+    mEventQService = eventQService;
 
     mRealObject      = realObject;
     mDestQueue       = do_QueryInterface(destQueue);
@@ -309,9 +308,10 @@ nsProxyObject::nsProxyObject(nsIEventQueue *destQueue, PRInt32 proxyType, nsISup
 }
 
 
-nsProxyObject::nsProxyObject(nsIEventQueue *destQueue, PRInt32  proxyType, const nsCID &aClass,  nsISupports *aDelegate,  const nsIID &aIID)
+nsProxyObject::nsProxyObject(nsIEventQueue *destQueue, PRInt32  proxyType, const nsCID &aClass,  
+	nsISupports *aDelegate,  const nsIID &aIID, nsIEventQueueService* eventQService)
 {
-    mEventQService = do_GetService(kEventQueueServiceCID);
+    mEventQService = eventQService;
 
     nsCOMPtr<nsIComponentManager> compMgr;
     NS_GetComponentManager(getter_AddRefs(compMgr));

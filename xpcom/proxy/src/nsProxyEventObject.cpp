@@ -44,6 +44,9 @@
 #include "nsIProxyObjectManager.h"
 #include "nsProxyEventPrivate.h"
 
+#include "nsIEventQueueService.h"
+#include "nsServiceManagerUtils.h"
+
 #include "nsHashtable.h"
 
 #include "nsIInterfaceInfoManager.h"
@@ -52,9 +55,12 @@
 #include "nsAutoLock.h"
 
 static NS_DEFINE_IID(kProxyObject_Identity_Class_IID, NS_PROXYEVENT_IDENTITY_CLASS_IID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 static void* PR_CALLBACK ProxyObjectDestructorEventHandler(PLEvent *self);
 static void  PR_CALLBACK ProxyObjectDestructorDestroyHandler(PLEvent *self);
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -246,6 +252,10 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
         return nsnull;
     }
 
+    nsCOMPtr<nsIEventQueueService> eventQService(do_GetService(kEventQueueServiceCID, &rv));
+    if (NS_FAILED(rv))
+        return nsnull;
+    
     nsAutoMonitor mon(manager->GetMonitor());
 
     // Get the hash table containing root proxy objects...
@@ -298,7 +308,8 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
                                      proxyType, 
                                      rootObject, 
                                      rootClazz, 
-                                     nsnull);
+                                     nsnull,
+                                     eventQService);
         if(!peo) {
             // Ouch... Out of memory!
             return nsnull;
@@ -350,7 +361,8 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
                                  proxyType, 
                                  rawInterface, 
                                  proxyClazz, 
-                                 rootProxy);
+                                 rootProxy,
+                                 eventQService);
     if (!peo) {
         // Ouch... Out of memory!
         return nsnull;
@@ -399,14 +411,15 @@ nsProxyEventObject::nsProxyEventObject(nsIEventQueue *destQueue,
                                        PRInt32 proxyType,
                                        nsISupports* aObj,
                                        nsProxyEventClass* aClass,
-                                       nsProxyEventObject* root)
+                                       nsProxyEventObject* root,
+                                       nsIEventQueueService* eventQService)
     : mClass(aClass),
       mRoot(root),
       mNext(nsnull)
 {
     NS_IF_ADDREF(mRoot);
 
-    mProxyObject = new nsProxyObject(destQueue, proxyType, aObj);
+    mProxyObject = new nsProxyObject(destQueue, proxyType, aObj, eventQService);
 
 #ifdef DEBUG_xpcom_proxy
     DebugDump("Create", 0);
