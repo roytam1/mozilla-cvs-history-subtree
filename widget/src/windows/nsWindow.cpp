@@ -79,7 +79,23 @@
 #include <process.h>
 
 #ifdef WINCE
+
+#define NS_VK_APP1  0x0201
+#define NS_VK_APP2  0x0202
+#define NS_VK_APP3  0x0203
+#define NS_VK_APP4  0x0204
+#define NS_VK_APP5  0x0205
+#define NS_VK_APP6  0x0206
+#define NS_VK_APP7  0x0207
+#define NS_VK_APP8  0x0208
+#define NS_VK_APP9  0x0209
+#define NS_VK_APP10 0x020A
+#define NS_VK_APP11 0x020B
+
+
 #include "aygshell.h"
+#include "imm.h"
+#include "tpcshell.h"
 #endif
 
 // unknwn.h is needed to build with WIN32_LEAN_AND_MEAN
@@ -182,6 +198,7 @@ static inline PRBool IsAlphaTranslucencySupported() { return pUpdateLayeredWindo
 
 
 #ifdef WINCE
+static PRBool gSoftKeyMenuBar = PR_FALSE;
 static PRBool gUseOkayButton  = PR_FALSE;
 static PRBool gOverrideHWKeys = PR_TRUE;
 
@@ -189,9 +206,26 @@ typedef BOOL (__stdcall *UnregisterFunc1Proc)( UINT, UINT );
 static UnregisterFunc1Proc gProcUnregisterFunc = NULL;
 static HINSTANCE gCoreDll = NULL;
 
+UINT gHardwareKeys[][2] =
+  {
+    { 0xc1, MOD_WIN },
+    { 0xc2, MOD_WIN },
+    { 0xc3, MOD_WIN },
+    { 0xc4, MOD_WIN },
+    { 0xc5, MOD_WIN },
+    { 0xc6, MOD_WIN },
+
+    { 0x72, 0 },// Answer - 0x72 Modifier - 0  
+    { 0x73, 0 },// Hangup - 0x73 Modifier - 0 
+    { 0x74, 0 },// 
+    { 0x75, 0 },// Volume Up   - 0x75 Modifier - 0
+    { 0x76, 0 },// Volume Down - 0x76 Modifier - 0
+    { 0, 0 },
+  };
+
 static void MapHardwareButtons(HWND window)
 {
-  if (!gOverrideHWKeys)
+  if (!window)
     return;
 
   // handle hardware buttons so that they broadcast into our
@@ -200,35 +234,80 @@ static void MapHardwareButtons(HWND window)
   //
   // http://www.pocketpcdn.com/articles/handle_hardware_keys.html
   
-  if (!gProcUnregisterFunc)
+  if (gOverrideHWKeys)
   {
-    gCoreDll = LoadLibrary(_T("coredll.dll"));
-  
-    if (gCoreDll)
-      gProcUnregisterFunc = (UnregisterFunc1Proc)GetProcAddress( gCoreDll, _T("UnregisterFunc1"));
+    if (!gProcUnregisterFunc)
+    {
+      gCoreDll = LoadLibrary(_T("coredll.dll")); // leak
+      
+      if (gCoreDll)
+        gProcUnregisterFunc = (UnregisterFunc1Proc)GetProcAddress( gCoreDll, _T("UnregisterFunc1"));
+    }
+    
+    if (gProcUnregisterFunc)
+    {    
+      for (int i=0; gHardwareKeys[i][0]; i++)
+      {
+        UINT mod = gHardwareKeys[i][1];
+        UINT kc = gHardwareKeys[i][0];
+        
+        gProcUnregisterFunc(mod, kc);
+        RegisterHotKey(window, kc, mod, kc);
+      }
+    }
   }
-  
+}
+
+static void UnmapHardwareButtons()
+{
   if (!gProcUnregisterFunc)
     return;
 
-  for (int i=0xc1; i<=0xcf; i++) 
+  for (int i=0; gHardwareKeys[i][0]; i++)
   {
-    gProcUnregisterFunc(MOD_WIN, i);
-    RegisterHotKey(window, i, MOD_WIN, i);
-  }
-  // Other interesting ones which may not work if we are in
-  // a DLL according to msdn.
-  //
-  // Volume Up - 0x75 Modifier - 0
-  // Volume Down - 0x76 Modifier - 0
-  // Answer - 0x72 Modifier - 0
-  // Hangup - 0x73 Modifier - 0 
+    UINT mod = gHardwareKeys[i][1];
+    UINT kc = gHardwareKeys[i][0];
 
-  gProcUnregisterFunc(MOD_WIN, 0x75);
-  RegisterHotKey(window, 0x75, MOD_WIN, i);
+    gProcUnregisterFunc(mod, kc);
+  }
+}
+
+HWND CreateSoftKeyMenuBar(HWND wnd)
+{
+  if (!wnd)
+    return nsnull;
+
+  SHMENUBARINFO mbi;
+  ZeroMemory(&mbi, sizeof(SHMENUBARINFO));
+  mbi.cbSize = sizeof(SHMENUBARINFO);
+  mbi.hwndParent = wnd;
+
+  //  On windows ce smartphone, events never occur if the
+  //  menubar is empty.  This doesn't work: 
+  //  mbi.dwFlags = SHCMBF_EMPTYBAR;
+
+  mbi.nToolBarId = IDC_DUMMY_CE_MENUBAR;
+  mbi.hInstRes   = GetModuleHandle(NULL);
   
-  gProcUnregisterFunc(MOD_WIN, 0x76);
-  RegisterHotKey(window, 0x76, MOD_WIN, 0x76);
+  if (!SHCreateMenuBar(&mbi))
+    return nsnull;
+
+  SetWindowPos(mbi.hwndMB, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE);
+
+  SendMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TBACK,
+              MAKELPARAM(SHMBOF_NODEFAULT | SHMBOF_NOTIFY,
+                         SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
+  
+  SendMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TSOFT1, 
+              MAKELPARAM (SHMBOF_NODEFAULT | SHMBOF_NOTIFY, 
+                          SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
+  
+  
+  SendMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TSOFT2, 
+              MAKELPARAM (SHMBOF_NODEFAULT | SHMBOF_NOTIFY, 
+                          SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
+
+  return mbi.hwndMB;
 }
 
 #endif
@@ -290,7 +369,6 @@ static NS_DEFINE_IID(kRenderingContextCID, NS_RENDERING_CONTEXT_CID);
 
 static const char *sScreenManagerContractID = "@mozilla.org/gfx/screenmanager;1";
 
-#ifndef WINCE
 ////////////////////////////////////////////////////
 // Manager for Registering and unregistering OLE
 // This is needed for drag & drop & Clipboard support
@@ -325,7 +403,6 @@ OleRegisterMgr::~OleRegisterMgr()
 #endif
   ::OleUninitialize();
 }
-#endif //WINCE
 
 ////////////////////////////////////////////////////
 // nsWindow Class static variable definitions
@@ -813,6 +890,7 @@ HWND nsWindow::GetTopLevelHWND(HWND aWnd, PRBool aStopOnFirstTopLevel)
   {
     topWnd = curWnd;
 
+#ifndef WINCE
     if (aStopOnFirstTopLevel)
     {
       DWORD style = nsToolkit::mGetWindowLong(curWnd, GWL_STYLE);
@@ -820,6 +898,7 @@ HWND nsWindow::GetTopLevelHWND(HWND aWnd, PRBool aStopOnFirstTopLevel)
       if (!(style & WS_CHILDWINDOW))    // first top-level window
         break;
     }
+#endif
 
     curWnd = ::GetParent(curWnd);       // Parent or owner (if has no parent)
   }
@@ -1005,6 +1084,9 @@ nsWindow::nsWindow() : nsBaseWidget()
       prefBranch->GetBoolPref("config.wince.overrideHWKeys", &gOverrideHWKeys);
     }
   }
+
+  mSoftKeyMenuBar = nsnull;
+
 #endif
 }
 
@@ -1061,6 +1143,10 @@ nsWindow::~nsWindow()
   }
 
   NS_IF_RELEASE(mNativeDragTarget);
+
+#ifdef WINCE
+  // are we suppose to free mSoftKeyMenuBar.  MSDN isn't sure.
+#endif
 }
 
 
@@ -1356,8 +1442,15 @@ nsWindow::EventIsInsideWindow(UINT Msg, nsWindow* aWindow)
   RECT r;
 
   if (Msg == WM_ACTIVATE)
+#ifndef WINCE
     // don't care about activation/deactivation
     return PR_FALSE;
+#else
+    // but on Windows CE we do care about
+    // activation/deactivation because there doesn't exist
+    // cancelable Mouse Activation events
+    return TRUE;
+#endif
 
   ::GetWindowRect(aWindow->mWnd, &r);
   DWORD pos = ::GetMessagePos();
@@ -1557,7 +1650,6 @@ nsWindow::StandardWindowCreate(nsIWidget *aParent,
 
   mHas3DBorder = (extendedStyle & WS_EX_CLIENTEDGE) > 0;
 
-#ifndef WINCE
   if (mWindowType == eWindowType_dialog) {
     struct {
       DLGTEMPLATE t;
@@ -1584,10 +1676,7 @@ nsWindow::StandardWindowCreate(nsIWidget *aParent,
                                        (DLGPROC)DummyDialogProc,
                                        NULL);
 
-  } 
-  else 
-#endif //WINCE
-  {
+  } else {
 
     mWnd = nsToolkit::mCreateWindowEx(extendedStyle,
                                       aInitData && aInitData->mDropShadow ?
@@ -1652,7 +1741,10 @@ nsWindow::StandardWindowCreate(nsIWidget *aParent,
     }
   }
 #ifdef WINCE
-  MapHardwareButtons(mWnd);
+    if (mWindowType == eWindowType_dialog || mWindowType == eWindowType_toplevel )
+      mSoftKeyMenuBar = CreateSoftKeyMenuBar(mWnd);
+
+    MapHardwareButtons(mWnd);
 #endif
 
   return NS_OK;
@@ -1847,8 +1939,8 @@ NS_METHOD nsWindow::Show(PRBool bState)
           case nsSizeMode_Maximized :
             mode = SW_SHOWMAXIMIZED;
             break;
-#ifndef WINCE
           case nsSizeMode_Minimized :
+#ifndef WINCE
             mode = SW_SHOWMINIMIZED;
 #endif
             break;
@@ -1935,11 +2027,11 @@ NS_IMETHODIMP nsWindow::SetSizeMode(PRInt32 aMode) {
       case nsSizeMode_Maximized :
         mode = SW_MAXIMIZE;
         break;
-#ifndef WINCE
       case nsSizeMode_Minimized :
+#ifndef WINCE
         mode = gTrimOnMinimize ? SW_MINIMIZE : SW_SHOWMINIMIZED;
-        break;
 #endif
+        break;
       default :
         mode = SW_RESTORE;
     }
@@ -2300,6 +2392,11 @@ NS_METHOD nsWindow::SetFocus(PRBool aRaise)
     if (::IsIconic(toplevelWnd))
       ::OpenIcon(toplevelWnd);
     ::SetFocus(mWnd);
+
+#ifdef WINCE
+    MapHardwareButtons(mWnd);
+#endif
+
   }
   return NS_OK;
 }
@@ -2625,7 +2722,8 @@ NS_METHOD nsWindow::SetCursor(nsCursor aCursor)
     
     if (gHCursor == oldCursor) {
       NS_IF_RELEASE(gCursorImgContainer);
-      ::DestroyIcon(gHCursor);
+      if (gHCursor != NULL)
+        ::DestroyIcon(gHCursor);
       gHCursor = NULL;
     }
   }
@@ -4368,32 +4466,76 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 #endif
 			
 #ifdef WINCE
+      // This needs to move into nsIDOMKeyEvent.idl && nsGUIEvent.h
     case WM_HOTKEY:
     {
+      // SmartPhones has a one or two menu buttons at the
+      // bottom of the screen.  They are dispatched via a
+      // menu resource, rather then a hotkey.  To make
+      // this look consistent, we have mapped this menu to
+      // fire hotkey events.  See
+      // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/win_ce/html/pwc_TheBackButtonandOtherInterestingButtons.asp
+      
+      if (VK_TSOFT1 == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam))))
+      {
+        keybd_event(VK_F23, 0, 0, 0);
+        keybd_event(VK_F23, 0, KEYEVENTF_KEYUP, 0);
+        result = 0;
+        break;
+      }
+      
+      if (VK_TSOFT2 == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam))))
+      {
+        keybd_event(VK_F24, 0, 0, 0);
+        keybd_event(VK_F24, 0, KEYEVENTF_KEYUP, 0);
+        result = 0;
+        break;
+      }
+      
+      if (VK_TBACK == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam))))
+      {
+        keybd_event(VK_BACK, 0, 0, 0);
+        keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, 0);
+        result = 0;
+        break;
+      }
+
       switch (wParam) 
       {
         case VK_APP1:
-          result = DispatchKeyEvent(NS_KEY_PRESS, NS_VK_F1, 0, 0, 0);
+          keybd_event(VK_F1, 0, 0, 0);
+          keybd_event(VK_F1, 0, KEYEVENTF_KEYUP, 0);
+          result = 0;
           break;
 
         case VK_APP2:
-          result = DispatchKeyEvent(NS_KEY_PRESS, NS_VK_F2, 0, 0, 0);
+          keybd_event(VK_F2, 0, 0, 0);
+          keybd_event(VK_F2, 0, KEYEVENTF_KEYUP, 0);
+          result = 0;
           break;
 
         case VK_APP3:
-          result = DispatchKeyEvent(NS_KEY_PRESS, NS_VK_F3, 0, 0, 0);
+          keybd_event(VK_F3, 0, 0, 0);
+          keybd_event(VK_F3, 0, KEYEVENTF_KEYUP, 0);
+          result = 0;
           break;
 
         case VK_APP4:
-          result = DispatchKeyEvent(NS_KEY_PRESS, NS_VK_F4, 0, 0, 0);
+          keybd_event(VK_F4, 0, 0, 0);
+          keybd_event(VK_F4, 0, KEYEVENTF_KEYUP, 0);
+          result = 0;
           break;
 
         case VK_APP5:
-          result = DispatchKeyEvent(NS_KEY_PRESS, NS_VK_F5, 0, 0, 0);
+          keybd_event(VK_F5, 0, 0, 0);
+          keybd_event(VK_F5, 0, KEYEVENTF_KEYUP, 0);
+          result = 0;
           break;
 
         case VK_APP6:
-          result = DispatchKeyEvent(NS_KEY_PRESS, NS_VK_F6, 0, 0, 0);
+          keybd_event(VK_F6, 0, 0, 0);
+          keybd_event(VK_F6, 0, KEYEVENTF_KEYUP, 0);
+          result = 0;
           break;
       }
     }
@@ -4552,17 +4694,20 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       //RelayMouseEvent(msg,wParam, lParam);
     {
 #ifdef WINCE
-      SHRGINFO  shrg;
-      shrg.cbSize = sizeof(shrg);
-      shrg.hwndClient = mWnd;
-      shrg.ptDown.x = LOWORD(lParam);
-      shrg.ptDown.y = HIWORD(lParam);
-      shrg.dwFlags = SHRG_RETURNCMD | SHRG_NOANIMATION;
-      if (SHRecognizeGesture(&shrg)  == GN_CONTEXTMENU)
+      if (!gRollupListener && !gRollupWidget) 
       {
-        result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_DOWN, wParam);
-        result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_UP, wParam);
-        break;
+        SHRGINFO  shrg;
+        shrg.cbSize = sizeof(shrg);
+        shrg.hwndClient = mWnd;
+        shrg.ptDown.x = LOWORD(lParam);
+        shrg.ptDown.y = HIWORD(lParam);
+        shrg.dwFlags = SHRG_RETURNCMD;
+        if (SHRecognizeGesture(&shrg)  == GN_CONTEXTMENU)
+        {
+          result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_DOWN, wParam);
+          result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_UP, wParam);
+          break;
+        }
       }
 #endif
       // check whether IME window do mouse operation
@@ -4699,7 +4844,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           PRBool result = DispatchWindowEvent(&event);
           NS_RELEASE(event.widget);
 
-#ifndef WINCE
           if (event.acceptActivation)
             *aRetValue = MA_ACTIVATE;
           else
@@ -4707,22 +4851,11 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
           if (gSwitchKeyboardLayout && mLastKeyboardLayout)
             ActivateKeyboardLayout(mLastKeyboardLayout, 0);
-#endif
         }
       }
       break;
 
 #ifndef WINCE
-    case WM_MOUSEACTIVATE:
-    {
-      // This seems to be the only way we're
-      // notified when a child window that doesn't have this handler proc
-      // (read as: windows created by plugins like Adobe Acrobat)
-      // has been activated via clicking.
-      DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
-    }
-    break;
-
     case WM_WINDOWPOSCHANGING:
     {
       LPWINDOWPOS info = (LPWINDOWPOS) lParam;
@@ -4734,7 +4867,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         info->flags &= ~SWP_SHOWWINDOW;
     }
     break;
-
 #endif
 
     case WM_SETFOCUS:
@@ -4748,6 +4880,32 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       if (nsWindow::gIsAccessibilityOn) {
         // Create it for the first time so that it can start firing events
         GetRootAccessible();
+      }
+#endif
+
+#ifdef WINCE
+      // On Windows CE, we have a window that overlaps
+      // the ISP button.  In this case, we should always
+      // try to hide it when we are activated
+      if (mWindowType == eWindowType_dialog || mWindowType == eWindowType_toplevel) {
+        
+        // This should work on all platforms, but it doesn't...
+        SHFullScreen(mWnd, SHFS_HIDESIPBUTTON);
+        
+        // So do it the hard way....
+        HWND hWndSIP = FindWindow( _T( "SipWndClass" ), NULL );
+        if (hWndSIP)
+        {
+          ShowWindow( hWndSIP, SW_HIDE );
+          SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+        }
+        
+        hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
+        if (hWndSIP) 
+        {
+          ShowWindow( hWndSIP, SW_HIDE );
+          SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+        }
       }
 #endif
       break;
@@ -4854,7 +5012,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
          an impending min/max/restore change (WM_NCCALCSIZE would
          also work, but it's also sent when merely resizing.)) */
       if (wp->flags & SWP_FRAMECHANGED && ::IsWindowVisible(mWnd)) {
-#ifndef WINCE
         WINDOWPLACEMENT pl;
         pl.length = sizeof(pl);
         ::GetWindowPlacement(mWnd, &pl);
@@ -4889,16 +5046,28 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         }
 
         NS_RELEASE(event.widget);
-#else
-        result = DispatchFocus(NS_GOTFOCUS, PR_TRUE);
-        result = DispatchFocus(NS_ACTIVATE, PR_TRUE);
-#endif // WINCE
       }
     }
     break;
 
     case WM_SETTINGCHANGE:
-      getWheelInfo = PR_TRUE;
+#ifdef WINCE
+      if (wParam == SPI_SETWORKAREA)
+      {
+        RECT workArea;
+        ::SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+     
+        SetWindowPos(mWnd, 
+                     nsnull, 
+                     workArea.left, 
+                     workArea.top, 
+                     workArea.right, 
+                     workArea.bottom, 
+                     SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+      }
+      else
+#endif
+        getWheelInfo = PR_TRUE;
       break;
 
     case WM_PALETTECHANGED:
@@ -5514,7 +5683,7 @@ DWORD nsWindow::WindowExStyle()
       return WS_EX_WINDOWEDGE | WS_EX_CAPTIONOKBTN;
 
     case eWindowType_popup:
-      return WS_EX_TOOLWINDOW;
+      return WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
 
     default:
       NS_ASSERTION(0, "unknown border style");
@@ -6168,10 +6337,6 @@ PRBool nsWindow::DispatchFocus(PRUint32 aEventType, PRBool isMozWindowTakingFocu
     PRBool result = DispatchWindowEvent(&event);
     NS_RELEASE(event.widget);
 
-#ifdef WINCE
-    if (isMozWindowTakingFocus && aEventType == NS_GOTFOCUS)
-      MapHardwareButtons(mWnd);
-#endif
     return result;
   }
   return PR_FALSE;
@@ -6448,9 +6613,6 @@ nsWindow::HandleTextEvent(HIMC hIMEContext,PRBool aCheckAttr)
 BOOL
 nsWindow::HandleStartComposition(HIMC hIMEContext)
 {
-#ifdef WINCE
-  return false;
-#else
   // ATOK send the messages following order at starting composition.
   // 1. WM_IME_COMPOSITION
   // 2. WM_IME_STARTCOMPOSITION
@@ -6518,7 +6680,6 @@ nsWindow::HandleStartComposition(HIMC hIMEContext)
   sIMEIsComposing = PR_TRUE;
 
   return PR_TRUE;
-#endif // WINCE
 }
 
 void
@@ -7873,7 +8034,6 @@ VOID CALLBACK nsWindow::HookTimerForPopups(HWND hwnd, UINT uMsg, UINT idEvent, D
     gRollupMsgWnd = NULL;
   }
 }
-
 #endif // WinCE
 
 //
@@ -7885,11 +8045,10 @@ VOID CALLBACK nsWindow::HookTimerForPopups(HWND hwnd, UINT uMsg, UINT idEvent, D
 BOOL
 nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inLParam, LRESULT* outResult )
 {
-  if (gRollupListener && gRollupWidget && IsWindowVisible(inWnd)) {
+  if (gRollupListener && gRollupWidget && ::IsWindowVisible(inWnd)) {
 
-    if (inMsg == WM_ACTIVATE || inMsg == WM_LBUTTONDOWN ||
-      inMsg == WM_RBUTTONDOWN || inMsg == WM_MBUTTONDOWN ||
-      inMsg == WM_MOUSEWHEEL || inMsg == uMSH_MOUSEWHEEL
+    if (inMsg == WM_LBUTTONDOWN || inMsg == WM_RBUTTONDOWN || inMsg == WM_MBUTTONDOWN ||
+        inMsg == WM_MOUSEWHEEL  || inMsg == uMSH_MOUSEWHEEL || inMsg == WM_ACTIVATE
 #ifndef WINCE
         || 
         inMsg == WM_NCRBUTTONDOWN || 
@@ -7940,7 +8099,6 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
         } // if rollup listener knows about menus
       }
 
-#ifndef WINCE
       if (inMsg == WM_MOUSEACTIVATE) {
         // Prevent the click inside the popup from causing a change in window
         // activation. Since the popup is shown non-activated, we need to eat
@@ -7967,9 +8125,7 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
         }
       }
       // if we've still determined that we should still rollup everything, do it.
-      else 
-#endif // WINCE
-     if ( rollup ) {
+      else if ( rollup ) {
         gRollupListener->Rollup();
 
         // Tell hook to stop processing messages

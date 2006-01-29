@@ -340,17 +340,6 @@ isArea(nsIContent* content)
 }
 
 PRBool
-isDocument(nsIFrame* frame)
-{
-  nsIContent* content = frame->GetContent();
-
-  if (!content || !content->IsContentOfType(nsIContent::eHTML))
-      return PR_FALSE;
-
-  return isContentOfType(content, "map");
-}
-
-PRBool
 isMap(nsIFrame* frame)
 {
   nsIContent* content = frame->GetContent();
@@ -373,6 +362,9 @@ isTargetable(PRBool focusDocuments, nsIFrame* frame)
       return PR_FALSE;
 
   if (isContentOfType(currentContent, "map"))
+    return PR_TRUE;
+
+  if (isContentOfType(currentContent, "button"))
     return PR_TRUE;
 
   if (isContentOfType(currentContent, "a"))

@@ -60,7 +60,7 @@ NS_IMETHODIMP
 nsSpatialNavigationService::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
 {
   nsresult rv;
-  
+
   if (!strcmp(aTopic,"domwindowopened")) 
   {
     nsCOMPtr<nsIDOMWindow> chromeWindow = do_QueryInterface(aSubject);
@@ -98,18 +98,18 @@ nsSpatialNavigationService::Observe(nsISupports *aSubject, const char *aTopic, c
     }
     return NS_OK;
   }
+
   
-  if (!strcmp(aTopic,"xpcom-startup")) 
+  if (!strcmp(aTopic,"app-startup")) 
   {
     nsCOMPtr<nsIWindowWatcher> windowWatcher = do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
     windowWatcher->RegisterNotification(this);
     
-    nsCOMPtr<nsIPrefBranch2> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
+    nsCOMPtr<nsIPrefBranch2> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-    
+
 	prefBranch->AddObserver("snav.", this, PR_FALSE);
-    
     return NS_OK;
   }
   
@@ -119,14 +119,14 @@ nsSpatialNavigationService::Observe(nsISupports *aSubject, const char *aTopic, c
     nsXPIDLCString cstr;
     
     const char* pref = NS_ConvertUCS2toUTF8(aData).get();
-    
+
     if (!strcmp(pref, "snav.enabled"))
     {
-      prefBranch->GetIntPref(pref, &mEnabled);
+      prefBranch->GetBoolPref(pref, &mEnabled);
     }
     else if (!strcmp(pref, "snav.ignoreTextFields"))
     {
-      prefBranch->GetIntPref(pref, &mIgnoreTextFields);
+      prefBranch->GetBoolPref(pref, &mIgnoreTextFields);
     }
     else if (!strcmp(pref, "snav.directionalBias"))
     {
@@ -136,7 +136,7 @@ nsSpatialNavigationService::Observe(nsISupports *aSubject, const char *aTopic, c
     }
     else if (!strcmp(pref, "snav.disableJS"))
     {
-      prefBranch->GetIntPref(pref, &mDisableJSWhenFocusing);
+      prefBranch->GetBoolPref(pref, &mDisableJSWhenFocusing);
     }
     else if (!strcmp(pref, "snav.rectFudge"))
     {
@@ -186,7 +186,6 @@ nsSpatialNavigationService::Observe(nsISupports *aSubject, const char *aTopic, c
 
 #define SpatialNavigationService_ContractID "@mozilla.org/spatialnavigation/service"
 
-
 static NS_METHOD SpatialNavigationServiceRegistration(nsIComponentManager *aCompMgr,
                                                       nsIFile *aPath,
                                                       const char *registryLocation,
@@ -209,7 +208,7 @@ static NS_METHOD SpatialNavigationServiceRegistration(nsIComponentManager *aComp
     return rv;
   
   char* previous = nsnull;
-  rv = catman->AddCategoryEntry("xpcom-startup",
+  rv = catman->AddCategoryEntry("app-startup",
                                 "SpatialNavigationService", 
                                 SpatialNavigationService_ContractID,
                                 PR_TRUE, 
@@ -240,7 +239,7 @@ static NS_METHOD SpatialNavigationServiceUnregistration(nsIComponentManager *aCo
   if (NS_FAILED(rv))
     return rv;
   
-  rv = catman->DeleteCategoryEntry("xpcom-startup",
+  rv = catman->DeleteCategoryEntry("app-startup",
                                    "SpatialNavigationService", 
                                    PR_TRUE);
   

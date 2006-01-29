@@ -78,6 +78,7 @@ CPPSRCS		= \
 	nsDataObj.cpp  \
 	nsDataObjCollection.cpp  \
 	nsClipboard.cpp      \
+	nsFilePicker.cpp     \
 	$(NULL)
 
 ifneq ($(OS_ARCH), WINCE)
@@ -87,7 +88,6 @@ CPPSRCS += \
 	nsDragService.cpp  \
 	nsImageClipboard.cpp \
 	nsBidiKeyboard.cpp   \
-	nsFilePicker.cpp     \
 	nsSound.cpp          \
 	$(NULL)
 endif

@@ -143,7 +143,9 @@ endif
 FORCE_USE_PIC	= 1 
 
 ifndef MOZ_ENABLE_LIBXUL
+ifndef MINIMO
 FORCE_SHARED_LIB = 1
+endif
 endif
 
 # UNIX98 iconv support

@@ -940,11 +940,11 @@ static HGLOBAL CopyGlobalMemory(HGLOBAL hSource)
     return NULL;
 
   // copy the bits
-  LPVOID lpSource = ::GlobalLock(hSource);
-  LPVOID lpDest = ::GlobalLock(hDest);
+  LPVOID lpSource = GlobalLock(hSource);
+  LPVOID lpDest = GlobalLock(hDest);
   memcpy(lpDest, lpSource, nSize);
-  ::GlobalUnlock(hDest);
-  ::GlobalUnlock(hSource);
+  GlobalUnlock(hDest);
+  GlobalUnlock(hSource);
 
   return hDest;
 }

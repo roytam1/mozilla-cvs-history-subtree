@@ -620,7 +620,11 @@ protected:
   // Drag & Drop
   nsNativeDragTarget * mNativeDragTarget;
 
-  // Enumeration of the methods which are accessable on the "main GUI thread"
+#ifdef WINCE
+  HWND                    mSoftKeyMenuBar;
+#endif
+
+  // Enumeration of the methods which are accessible on the "main GUI thread"
   // via the CallMethod(...) mechanism...
   // see nsSwitchToUIThread
   enum {

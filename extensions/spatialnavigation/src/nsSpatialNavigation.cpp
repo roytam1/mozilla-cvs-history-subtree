@@ -84,48 +84,70 @@ nsSpatialNavigation::KeyUp(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
 {
-  
-  // check to see if we are in a text field.
-  
-  if (!mService->mIgnoreTextFields)
-  {
-    // based on nsTypeAheadFind.
+  nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  PRBool enabled;
+  prefBranch->GetBoolPref("snav.enabled", &enabled);
+  if (!enabled) //  this doesn't work.  wtf? if (!mService->mEnabled)
+    return NS_OK;
+ 
 
-    //nsEvent should be renamed.
-    nsCOMPtr<nsIDOMNSEvent> nsEvent = do_QueryInterface(aEvent);
-    if (!nsEvent)
-      return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDOMNSUIEvent> uiEvent(do_QueryInterface(aEvent));
+  if (uiEvent)
+  {
+    // If a web page wants to use the keys mapped to our
+    // move, they have to use evt.preventDefault() after
+    // they get the key
+
+    PRBool preventDefault;
+    uiEvent->GetPreventDefault(&preventDefault);
+    if (preventDefault)
+      return NS_OK;
+  }
+
+  PRInt32 formControlType = -1;
+  // check to see if we are in a text field.
+  // based on nsTypeAheadFind.
     
-    nsCOMPtr<nsIDOMEventTarget> domEventTarget;
-    nsEvent->GetOriginalTarget(getter_AddRefs(domEventTarget));
-    
-    nsCOMPtr<nsIContent> targetContent = do_QueryInterface(domEventTarget);
-    
-    if (targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) 
-    {
+  //nsEvent should be renamed.
+  nsCOMPtr<nsIDOMNSEvent> nsEvent = do_QueryInterface(aEvent);
+  if (!nsEvent)
+    return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsIDOMEventTarget> domEventTarget;
+  nsEvent->GetOriginalTarget(getter_AddRefs(domEventTarget));
+  
+  nsCOMPtr<nsIContent> targetContent = do_QueryInterface(domEventTarget);
+
+  if (targetContent->IsContentOfType(nsIContent::eXUL)) 
+    return NS_OK;
+  
+  if (targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) 
+  {
       nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(targetContent));
-      PRInt32 controlType = formControl->GetType();
+      formControlType = formControl->GetType();
       
-      if (controlType == NS_FORM_TEXTAREA ||
-          controlType == NS_FORM_INPUT_TEXT ||
-          controlType == NS_FORM_INPUT_PASSWORD ||
-          controlType == NS_FORM_INPUT_FILE) 
+      if (!mService->mIgnoreTextFields)
       {
-        return NS_OK;
+        if (formControlType == NS_FORM_TEXTAREA ||
+            formControlType == NS_FORM_INPUT_TEXT ||
+            formControlType == NS_FORM_INPUT_PASSWORD ||
+            formControlType == NS_FORM_INPUT_FILE) 
+        {
+          return NS_OK;
+        }
       }
-    }
-    else if (targetContent->IsContentOfType(nsIContent::eHTML)) 
-    {
-      // Test for isindex, a deprecated kind of text field. We're using a string 
-      // compare because <isindex> is not considered a form control, so it does 
-      // not support nsIFormControl or eHTML_FORM_CONTROL, and it's not worth 
-      // having a table of atoms just for it. 
-      
+  }
+  else if (!mService->mIgnoreTextFields && targetContent->IsContentOfType(nsIContent::eHTML)) 
+  {
+    // Test for isindex, a deprecated kind of text field. We're using a string 
+    // compare because <isindex> is not considered a form control, so it does 
+    // not support nsIFormControl or eHTML_FORM_CONTROL, and it's not worth 
+    // having a table of atoms just for it. 
+    
       if (isContentOfType(targetContent, "isindex"))
         return NS_OK;
-    }
   }
-  
+
   PRUint32 keyCode;
   PRBool isModifier;
   nsCOMPtr<nsIDOMKeyEvent> keyEvent(do_QueryInterface(aEvent));
@@ -189,6 +211,18 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
   
   if (keyCode == mService->mKeyCodeUp)
   {
+
+    // If we are going up or down, in a select, lets not
+    // navigate.
+    //
+    // FIX: What we really want to do is determine if we are
+    // at the start or the end fo the form element, and
+    // based on the selected position we decide to nav. or
+    // not.
+
+    if (formControlType == NS_FORM_SELECT)
+      return NS_OK;
+
     aEvent->StopPropagation();
 	aEvent->PreventDefault();
     return Up();
@@ -196,6 +230,17 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
   
   if (keyCode == mService->mKeyCodeDown)
   {
+    // If we are going up or down, in a select, lets not
+    // navigate.
+    //
+    // FIX: What we really want to do is determine if we are
+    // at the start or the end fo the form element, and
+    // based on the selected position we decide to nav. or
+    // not.
+
+    if (formControlType == NS_FORM_SELECT)
+      return NS_OK;
+
     aEvent->StopPropagation();  // We're using this key, no one else should
 	aEvent->PreventDefault();
     return Down();
@@ -494,9 +539,6 @@ nsSpatialNavigation::handleMove(int direction)
 {
   PRUint32 type = FOCUS;
 
-  if (!mService->mEnabled)
-    return NS_OK;
-  
   nsCOMPtr<nsIContent> focusedContent;
   getFocusedContent(direction, getter_AddRefs(focusedContent));
 
@@ -694,8 +736,8 @@ nsSpatialNavigation::setFocusedContent(nsIContent* c)
   //#ifdef OLDER_LAYOUT  
   nsPresContext* presContext = getPresContext(c);
   
-  nsIFrame* frame = nsnull;
   nsIPresShell *presShell = presContext->PresShell();
+  nsIFrame* frame;
   presShell->GetPrimaryFrameFor(c, &frame);
   
   if (frame) {

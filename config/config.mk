@@ -459,6 +459,27 @@ endif
 endif
 endif
 
+ifdef MINIMO
+ifdef LIBXUL_LIBRARY
+DEFINES += \
+		-D_IMPL_NS_COM \
+		-DEXPORT_XPT_API \
+		-DEXPORT_XPTC_API \
+		-DEXPORT_XPTI_API \
+		-D_IMPL_NS_COM_OBSOLETE \
+		-D_IMPL_NS_GFX \
+		-D_IMPL_NS_WIDGET \
+		-DIMPL_XULAPI \
+		-DIMPL_NS_NET \
+		$(NULL)
+endif
+
+ifdef WINCE
+DEFINES += -D_BUILD_NSPR_STATIC_
+endif
+
+endif
+
 # Force _all_ exported methods to be |_declspec(dllexport)| when we're
 # building them into the executable.
 
