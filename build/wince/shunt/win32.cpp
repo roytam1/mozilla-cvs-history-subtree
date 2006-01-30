@@ -52,6 +52,19 @@ extern "C" {
 
 #define wcharcount(array) (sizeof(array) / sizeof(TCHAR))
 
+
+MOZCE_SHUNT_API DWORD mozce_CommDlgExtendedError()
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("mozce_CommDlgExtendedError called\n");
+#endif
+
+    return -1 /*CDERR_DIALOGFAILURE*/;
+}
+
+
 MOZCE_SHUNT_API int mozce_MulDiv(int inNumber, int inNumerator, int inDenominator)
 {
     MOZCE_PRECHECK
@@ -160,6 +173,12 @@ MOZCE_SHUNT_API int mozce_ExtSelectClipRgn(HDC inDC, HRGN inRGN, int inMode)
     // RGN_DIFF = 4
     // RGN_COPY = 5
     
+
+    if (inMode == RGN_COPY)
+    {
+        return SelectClipRgn(inDC, inRGN);
+    }
+
     HRGN cRGN = NULL;
     int result = GetClipRgn(inDC, cRGN);
     
@@ -407,7 +426,7 @@ static int CALLBACK collectProc(CONST LOGFONT* inLF, CONST TEXTMETRIC* inTM, DWO
     return retval;
 }
 
-MOZCE_SHUNT_API int mozce_EnumFontFamiliesEx(HDC inDC, LPLOGFONT inLogfont, FONTENUMPROC inFunc, LPARAM inParam, DWORD inFlags)
+MOZCE_SHUNT_API int mozce_EnumFontFamiliesEx(HDC inDC, const LOGFONTA* inLogfont, FONTENUMPROC inFunc, LPARAM inParam, DWORD inFlags)
 {
     MOZCE_PRECHECK
 
@@ -759,6 +778,40 @@ MOZCE_SHUNT_API HRESULT mozce_CoLockObjectExternal(IUnknown* inUnk, BOOL inLock,
 
     return retval;
 }
+
+MOZCE_SHUNT_API HRESULT mozce_CoInitialize(LPVOID pvReserved)
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("-- mozce_Conitialize called\n");
+#endif
+
+    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    return S_OK;
+
+}
+
+MOZCE_SHUNT_API LRESULT mozce_OleInitialize(LPVOID pvReserved)
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("-- mozce_OleInitialize called\n");
+#endif
+
+    return S_OK;
+}
+
+MOZCE_SHUNT_API void mozce_OleUninitialize()
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("-- mozce_OleUninitialize called\n");
+#endif
+}
+
 MOZCE_SHUNT_API HRESULT mozce_OleQueryLinkFromData(IDataObject* inSrcDataObject)
 {
     MOZCE_PRECHECK
@@ -817,19 +870,17 @@ MOZCE_SHUNT_API BOOL mozce_GetUserName(LPTSTR inBuffer, LPDWORD inoutSize)
 }
 
 
-MOZCE_SHUNT_API DWORD mozce_GetShortPathName(LPCTSTR inLongPath, LPTSTR outShortPath, DWORD inBufferSize)
+MOZCE_SHUNT_API DWORD mozce_GetShortPathName(LPCSTR inLongPath, LPSTR outShortPath, DWORD inBufferSize)
 {
     MOZCE_PRECHECK
-
+        
 #ifdef DEBUG
-    mozce_printf("-- mozce_GetShortPathName called\n");
+   mozce_printf("mozce_GetShortPathName called\n");
 #endif
-
-    DWORD retval = 0;
-
-    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
-
-    return retval;
+    
+    DWORD retval = strlen(inLongPath);
+    strncpy(outShortPath, inLongPath, inBufferSize);
+    return ((retval > inBufferSize) ? inBufferSize : retval);
 }
 
 MOZCE_SHUNT_API DWORD mozce_GetEnvironmentVariable(LPCSTR lpName, LPCSTR lpBuffer, DWORD nSize)
@@ -860,97 +911,19 @@ MOZCE_SHUNT_API void mozce_GetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFile
     SystemTimeToFileTime(&st,lpSystemTimeAsFileTime);
 }
 
-struct lconv s_locale_conv =
-{
-    ".",   /* decimal_point */
-    ",",   /* thousands_sep */
-    "333", /* grouping */
-    "$",   /* int_curr_symbol */
-    "$",   /* currency_symbol */
-    "",    /* mon_decimal_point */
-    "",    /* mon_thousands_sep */
-    "",    /* mon_grouping */
-    "+",   /* positive_sign */
-    "-",   /* negative_sign */
-    '2',   /* int_frac_digits */
-    '2',   /* frac_digits */
-    1,     /* p_cs_precedes */
-    1,     /* p_sep_by_space */
-    1,     /* n_cs_precedes */
-    1,     /* n_sep_by_space */
-    1,     /* p_sign_posn */
-    1,     /* n_sign_posn */
-};
-
-MOZCE_SHUNT_API struct lconv * mozce_localeconv(void)
-{
-    MOZCE_PRECHECK
-
-#ifdef DEBUG
-    mozce_printf("mozce_localeconv called\n");
-#endif
-    return &s_locale_conv;
-}
-
-MOZCE_SHUNT_API DWORD mozce_GetCurrentThreadId(void)
-{
-    MOZCE_PRECHECK
-
-#ifdef DEBUG
-    mozce_printf("mozce_GetCurrentThreadId called\n");
-#endif
-    return GetCurrentThreadId();
-}
-
-
-MOZCE_SHUNT_API DWORD mozce_GetCurrentProcessId(void)
-{
-    MOZCE_PRECHECK
-
-#ifdef DEBUG
-    mozce_printf("mozce_GetCurrentProcessId called\n");
-#endif
-    return GetCurrentProcessId();
-}
-
-MOZCE_SHUNT_API DWORD mozce_TlsAlloc(void)
-{
-    MOZCE_PRECHECK
-
-#ifdef DEBUG
-    mozce_printf("mozce_TlsAlloc called\n");
-#endif
-    return TlsAlloc();
-}
-
-MOZCE_SHUNT_API BOOL mozce_TlsFree(DWORD dwTlsIndex)
-{
-    MOZCE_PRECHECK
-
-#ifdef DEBUG
-    mozce_printf("mozce_TlsFree called\n");
-#endif
-    return TlsFree(dwTlsIndex);
-}
-
-MOZCE_SHUNT_API HANDLE mozce_GetCurrentProcess(void)
-{
-    MOZCE_PRECHECK
-
-#ifdef DEBUG
-    mozce_printf("mozce_GetCurrentProcess called\n");
-#endif
-    return GetCurrentProcess();
-}
-
 #ifndef MIN
 #define MIN(a,b) (((a)<(b)) ? (a) : (b))
 #endif
 
-MOZCE_SHUNT_API DWORD mozce_GetFullPathName(LPCSTR lpFileName, 
+
+#ifndef MAX
+#define MAX(a,b) (((a)>(b)) ? (a) : (b))
+#endif
+
+MOZCE_SHUNT_API DWORD mozce_GetFullPathName(const char* lpFileName, 
                                             DWORD nBufferLength, 
-                                            LPCSTR lpBuffer, 
-                                            LPCSTR* lpFilePart)
+                                            const char* lpBuffer, 
+                                            const char** lpFilePart)
 {
 #ifdef DEBUG
     mozce_printf("mozce_GetFullPathName called\n");
@@ -980,16 +953,43 @@ MOZCE_SHUNT_API DWORD mozce_GetFullPathName(LPCSTR lpFileName,
     return len;	
 }
 
-MOZCE_SHUNT_API DWORD mozce_MsgWaitForMultipleObjects(DWORD nCount, const HANDLE* pHandles, BOOL bWaitAll, DWORD dwMilliseconds, DWORD dwWakeMask)
+static LONG gGetMessageTime = 0;
+
+MOZCE_SHUNT_API BOOL mozce_GetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax )
 {
     MOZCE_PRECHECK
 
 #ifdef DEBUG
-    mozce_printf("mozce_MsgWaitForMultipleObjects called\n");
+    mozce_printf("mozce_GetMessage called\n");
 #endif
 
-    return MsgWaitForMultipleObjects(nCount, (HANDLE*) pHandles, bWaitAll, dwMilliseconds, dwWakeMask);
+    BOOL b = GetMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMin);
+
+    if (b)
+        gGetMessageTime = lpMsg->time;
+
+    return b;
 }
+
+
+MOZCE_SHUNT_API BOOL mozce_PeekMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
+{
+    MOZCE_PRECHECK
+
+#ifdef LOUD_PEEKMESSAGE
+#ifdef DEBUG
+    mozce_printf("mozce_PeekMessageA called\n");
+#endif
+#endif
+
+    BOOL b = PeekMessageW(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
+    
+    if (b && wRemoveMsg == PM_REMOVE)
+        gGetMessageTime = lpMsg->time; 
+    
+    return b;
+}
+
 
 MOZCE_SHUNT_API LONG mozce_GetMessageTime(void)
 {
@@ -998,8 +998,8 @@ MOZCE_SHUNT_API LONG mozce_GetMessageTime(void)
 #ifdef DEBUG
     mozce_printf("mozce_GetMessageTime called\n");
 #endif
-  // Close enough guess?
-  return GetTickCount();
+
+  return gGetMessageTime;
 }
 
 MOZCE_SHUNT_API UINT mozce_GetACP(void)
@@ -1026,11 +1026,179 @@ MOZCE_SHUNT_API DWORD mozce_ExpandEnvironmentStrings(LPCTSTR lpSrc, LPTSTR lpDst
     return 0;
 }
 
+MOZCE_SHUNT_API DWORD mozce_ExpandEnvironmentStringsW(const unsigned short* lpSrc, const unsigned short* lpDst, DWORD nSize)
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("mozce_ExpandEnvironmentStrings called\n");
+#endif
+
+    return 0;
+}
+
 MOZCE_SHUNT_API BOOL mozce_GdiFlush(void)
 {
     MOZCE_PRECHECK
 
     return TRUE;
+}
+
+MOZCE_SHUNT_API BOOL mozce_GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl)
+{
+   MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("mozce_GetWindowPlacement called\n");
+#endif
+
+   memset(lpwndpl, 0, sizeof(WINDOWPLACEMENT));
+   
+   // This is wrong when the window is minimized.
+   lpwndpl->showCmd = SW_SHOWNORMAL;
+   GetWindowRect(hWnd, &lpwndpl->rcNormalPosition);
+   
+   return TRUE;
+}
+
+MOZCE_SHUNT_API HINSTANCE mozce_ShellExecute(HWND hwnd, 
+                                             LPCSTR lpOperation, 
+                                             LPCSTR lpFile, 
+                                             LPCSTR lpParameters, 
+                                             LPCSTR lpDirectory, 
+                                             INT nShowCmd)
+{
+    
+    LPTSTR op   = a2w_malloc(lpOperation, -1, NULL);
+    LPTSTR file = a2w_malloc(lpFile, -1, NULL);
+    LPTSTR parm = a2w_malloc(lpParameters, -1, NULL);
+    LPTSTR dir  = a2w_malloc(lpDirectory, -1, NULL);
+    
+    SHELLEXECUTEINFO info;
+    info.cbSize = sizeof(SHELLEXECUTEINFO);
+    info.fMask  = SEE_MASK_NOCLOSEPROCESS;
+    info.hwnd   = hwnd;
+    info.lpVerb = op;
+    info.lpFile = file;
+    info.lpParameters = parm;
+    info.lpDirectory  = dir;
+    info.nShow  = nShowCmd;
+    
+    BOOL b = ShellExecuteEx(&info);
+    
+    if (op)
+        free(op);
+    if (file)
+        free(file);
+    if (parm)
+        free(parm);
+    if (dir)
+        free(dir);
+    
+    return (HINSTANCE) info.hProcess;
+}
+
+struct lconv s_locale_conv =
+{
+    ".",   /* decimal_point */
+    ",",   /* thousands_sep */
+    "333", /* grouping */
+    "$",   /* int_curr_symbol */
+    "$",   /* currency_symbol */
+    "",    /* mon_decimal_point */
+    "",    /* mon_thousands_sep */
+    "",    /* mon_grouping */
+    "+",   /* positive_sign */
+    "-",   /* negative_sign */
+    '2',   /* int_frac_digits */
+    '2',   /* frac_digits */
+    1,     /* p_cs_precedes */
+    1,     /* p_sep_by_space */
+    1,     /* n_cs_precedes */
+    1,     /* n_sep_by_space */
+    1,     /* p_sign_posn */
+    1,     /* n_sign_posn */
+};
+
+
+
+MOZCE_SHUNT_API struct lconv * mozce_localeconv(void)
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("mozce_localeconv called\n");
+#endif
+    return &s_locale_conv;
+}
+
+MOZCE_SHUNT_API BOOL mozce_AlphaBlend(
+                                      HDC hdcDest,                 // handle to destination DC
+                                      int nXOriginDest,            // x-coord of upper-left corner
+                                      int nYOriginDest,            // y-coord of upper-left corner
+                                      int nWidthDest,              // destination width
+                                      int nHeightDest,             // destination height
+                                      HDC hdcSrc,                  // handle to source DC
+                                      int nXOriginSrc,             // x-coord of upper-left corner
+                                      int nYOriginSrc,             // y-coord of upper-left corner
+                                      int nWidthSrc,               // source width
+                                      int nHeightSrc,              // source height
+                                      BLENDFUNCTION blendFunction  // alpha-blending function
+                                      ){
+    DWORD SCA = blendFunction.SourceConstantAlpha;
+    int w = MIN(nWidthSrc,nWidthDest);
+    int h = MIN(nHeightSrc, nHeightDest);
+    for ( int x = 0; x<= w; x++){
+        for( int y = 0; y<=h; y++){
+            COLORREF dc = GetPixel(hdcDest, nXOriginDest+x, nYOriginDest+y);
+            COLORREF sc = GetPixel(hdcSrc,  nXOriginSrc+x,  nYOriginSrc+y);
+            color Src,Dst;
+            Src.Red = GetRValue(sc);
+            Dst.Red = GetRValue(dc);
+            Src.Green = GetGValue(sc);
+            Dst.Green = GetGValue(dc);
+            Src.Blue = GetBValue(sc);
+            Dst.Blue = GetBValue(dc);
+            
+            Src.Alpha = 1.0 - (double)((sc >> 24)/255.0);
+            Dst.Alpha = 1.0 - (double)((dc >> 24)/255.0);
+            
+            //Src.Alpha = 1.0;//(double)((sc >> 24)/255.0);
+            //Dst.Alpha = 1.0;//(double)((dc >> 24)/255.0);
+            
+            
+            if(blendFunction.AlphaFormat & AC_SRC_ALPHA){
+                Dst.Red 	= (unsigned char)(Src.Red * (SCA/255.0) 	+ Dst.Red * (1.0 - (SCA/255.0)));
+                Dst.Green 	= (unsigned char)(Src.Green * (SCA/255.0) 	+ Dst.Green * (1.0 - (SCA/255.0)));
+                Dst.Blue 	= (unsigned char)(Src.Blue * (SCA/255.0) 	+ Dst.Blue * (1.0 - (SCA/255.0)));
+                Dst.Alpha 	= MAX(0,MIN(1,Src.Alpha * (SCA/255.0) 	+ Dst.Alpha * (1.0 - (SCA/255.0))));
+            }else if(SCA == 0xff){
+                Dst.Red 	= (unsigned char)(Src.Alpha*Src.Red 	+ (1 - Src.Alpha) * Dst.Red);
+                Dst.Green 	= (unsigned char)(Src.Alpha*Src.Green 	+ (1 - Src.Alpha) * Dst.Green);
+                Dst.Blue 	= (unsigned char)(Src.Alpha*Src.Blue 	+ (1 - Src.Alpha) * Dst.Blue);
+                Dst.Alpha 	= MAX(0,MIN(1,Src.Alpha 	+ (1 - Src.Alpha) * Dst.Alpha));
+            }else{
+                Src.Red 	= (unsigned char)(Src.Red 	* SCA / 255.0);
+                Src.Green 	= (unsigned char)(Src.Green 	* SCA / 255.0);
+                Src.Blue 	= (unsigned char)(Src.Blue 	* SCA / 255.0);
+                Src.Alpha 	= MAX(0,MIN(1,Src.Alpha 	* SCA / 255.0));
+                double t = (Src.Red 	+ (1 - Src.Alpha) * Dst.Red);
+                Dst.Red 	= (unsigned char)(t>255?255:t);
+                t = (Src.Green 	+ (1 - Src.Alpha) * Dst.Green);
+                Dst.Green 	= (unsigned char)(t>255?255:t);
+                t = (Src.Blue 	+ (1 - Src.Alpha) * Dst.Blue);
+                Dst.Blue 	= (unsigned char)(t>255?255:t);
+                Dst.Alpha 	= MAX(0,MIN(1,Src.Alpha 	+ (1 - Src.Alpha) * Dst.Alpha));
+            }
+            SetPixel(hdcDest,nXOriginDest+x, nYOriginDest+y, RGB(Dst.Red,Dst.Green,Dst.Blue));
+            
+            //(((unsigned char)(Dst.Alpha*255) & 0xff) << 24)|
+        }
+    }
+    
+    
+    return true;
+    
 }
 
 #if 0
@@ -1042,10 +1210,10 @@ void dumpMemoryInfo()
 {
     MEMORYSTATUS ms;
     ms.dwLength = sizeof(MEMORYSTATUS);
-
-
+    
+    
     GlobalMemoryStatus(&ms);
-
+    
     wprintf(L"-> %d %d %d %d %d %d %d\n", 
             ms.dwMemoryLoad, 
             ms.dwTotalPhys, 

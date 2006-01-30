@@ -237,24 +237,16 @@ MOZCE_SHUNT_API BOOL mozce_CreateProcessA(LPCSTR pszImageName, LPCSTR pszCmdLine
     mozce_printf("mozce_CreateProcessA called\n");
 #endif
 
-    BOOL retval = FALSE;
-    TCHAR pszImageNameW[MAX_PATH];
+	LPTSTR image   = a2w_malloc(pszImageName, -1, NULL);
+	LPTSTR cmdline = a2w_malloc(pszCmdLine, -1, NULL);
 
-    if(a2w_buffer(pszImageName, -1, pszImageNameW, MAX_PATH))
-    {
-        LPTSTR pszCmdLineW = NULL;
+	BOOL retval = CreateProcessW(image, cmdline, NULL, NULL, FALSE, fdwCreate, NULL, NULL, NULL, pProcInfo);
 
-        pszCmdLineW = a2w_malloc(pszCmdLine, -1, NULL);
-        if(NULL != pszCmdLineW || NULL == pszCmdLine)
-        {
-            retval = CreateProcessW(pszImageNameW, pszCmdLineW, NULL, NULL, FALSE, fdwCreate, NULL, NULL, NULL, pProcInfo);
-
-            if(NULL != pszCmdLineW)
-            {
-                free(pszCmdLineW);
-            }
-        }
-    }
+	if (image)
+		free(image);
+	
+	if (cmdline)
+		free(cmdline);
 
     return retval;
 }
@@ -423,7 +415,7 @@ MOZCE_SHUNT_API LONG mozce_RegQueryValueExA(HKEY inKey, LPCSTR inValueName, LPDW
 
 
 
-MOZCE_SHUNT_API LONG mozce_RegSetValueExA(HKEY hKey, const char *valname, DWORD dwReserved, DWORD dwType, LPBYTE lpData, DWORD dwSize)
+MOZCE_SHUNT_API LONG mozce_RegSetValueExA(HKEY hKey, const char *valname, DWORD dwReserved, DWORD dwType, const BYTE* lpData, DWORD dwSize)
 {
     MOZCE_PRECHECK
 
@@ -431,10 +423,10 @@ MOZCE_SHUNT_API LONG mozce_RegSetValueExA(HKEY hKey, const char *valname, DWORD 
     mozce_printf("mozce_RegSetValueExA called\n");
 #endif
 
-  wchar_t valnamew[256];
+  unsigned short valnamew[256];
   LONG res;
 
-  LPBYTE lpDataNew = lpData;
+  LPBYTE lpDataNew = (LPBYTE) lpData;
   DWORD dwDataSize = dwSize;
 
   MultiByteToWideChar(CP_ACP, 0, valname, -1, valnamew, charcount(valnamew));
@@ -444,7 +436,7 @@ MOZCE_SHUNT_API LONG mozce_RegSetValueExA(HKEY hKey, const char *valname, DWORD 
       dwDataSize = dwSize * 2;
       lpDataNew = (LPBYTE) malloc(dwDataSize);
       
-      MultiByteToWideChar(CP_ACP, 0, (const char*) lpData, -1, (wchar_t *)lpDataNew, dwDataSize);
+      MultiByteToWideChar(CP_ACP, 0, (const char*) lpData, -1, (unsigned short *)lpDataNew, dwDataSize);
   }
 
   res = RegSetValueExW(hKey, valnamew, dwReserved, dwType, lpDataNew, dwDataSize);
@@ -472,7 +464,7 @@ MOZCE_SHUNT_API LONG mozce_RegCreateKeyExA(HKEY hKey, const char *subkey, DWORD 
 }
 
 
-MOZCE_SHUNT_API LONG mozce_RegDeleteValueA(HKEY hKey, LPCSTR lpValueName)
+MOZCE_SHUNT_API LONG mozce_RegDeleteValueA(HKEY hKey, const char* lpValueName)
 {
   MOZCE_PRECHECK
         
@@ -640,7 +632,7 @@ MOZCE_SHUNT_API HDC mozce_CreateDCA2(LPCSTR inDriver, LPCSTR inDevice, LPCSTR in
     return retval;
 }
 
-MOZCE_SHUNT_API BOOL mozce_GetTextExtentExPointA(HDC inDC, char* inStr, int inLen, int inMaxExtent, LPINT outFit, LPINT outDx, LPSIZE inSize)
+MOZCE_SHUNT_API BOOL mozce_GetTextExtentExPointA(HDC inDC, const char * inStr, int inLen, int inMaxExtent, LPINT outFit, LPINT outDx, LPSIZE inSize)
 {
     MOZCE_PRECHECK
 
@@ -650,13 +642,9 @@ MOZCE_SHUNT_API BOOL mozce_GetTextExtentExPointA(HDC inDC, char* inStr, int inLe
 
     BOOL retval = FALSE;
 
-    if (!inStr)
-        return retval;
-
-    inStr[inLen] = '\0';
-
-    LPTSTR wStr = a2w_malloc(inStr, inLen, NULL);
-
+    // BUG:  if inString has any embedded nulls, this function will not produce the desired effect!
+	LPTSTR wStr = a2w_malloc(inStr, inLen, NULL);
+	
     if(NULL != wStr)
     {
         retval = GetTextExtentExPointW(inDC, wStr, inLen, inMaxExtent, outFit, outDx, inSize);
@@ -666,36 +654,43 @@ MOZCE_SHUNT_API BOOL mozce_GetTextExtentExPointA(HDC inDC, char* inStr, int inLe
     return retval;
 }
 
-MOZCE_SHUNT_API BOOL mozce_ExtTextOutA(HDC inDC, int inX, int inY, UINT inOptions, const LPRECT inRect, LPCSTR inString, UINT inCount, const LPINT inDx)
+MOZCE_SHUNT_API BOOL mozce_ExtTextOutA(HDC inDC, int inX, int inY, UINT inOptions, LPCRECT inRect, const char* inString, UINT inCount, const LPINT inDx)
 {
     MOZCE_PRECHECK
 
 #ifdef DEBUG
-    mozce_printf("mozce_ExtTextOutA called\n");
+        mozce_printf("mozce_ExtTextOutA (%s) called\n", inString);
 #endif
-
+    
     BOOL retval = false;
     
     if (inCount == -1)
-		inCount = strlen(inString);
-
+        inCount = strlen(inString);
+    
     int wLen = 0;
     LPTSTR wStr = a2w_malloc(inString, inCount, &wLen);
-
+    
     if(NULL != wStr)
-    {
+    {	
         retval = ExtTextOutW(inDC, inX, inY, inOptions, inRect, wStr, wLen, inDx);
+        
         free(wStr);
         wStr = NULL;
     }
-
+    
     return retval;
 }
 
 
-MOZCE_SHUNT_API BOOL mozce_TextOutA(HDC hdc, int nXStart, int nYStart, LPCSTR lpString, int cbString)
+MOZCE_SHUNT_API BOOL mozce_TextOutA(HDC hdc, int nXStart, int nYStart, const char* lpString, int cbString)
 {
-  return mozce_ExtTextOutA(hdc, nXStart, nYStart, 0, NULL, lpString, cbString, NULL);
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("mozce_TextOutA (%s) called\n", lpString);
+#endif
+    
+    return mozce_ExtTextOutA(hdc, nXStart, nYStart, 0, NULL, lpString, cbString, NULL);
 }
 
 MOZCE_SHUNT_API DWORD mozce_GetGlyphOutlineA(HDC inDC, CHAR inChar, UINT inFormat, void* inGM, DWORD inBufferSize, LPVOID outBuffer, CONST mozce_MAT2* inMAT2)
@@ -974,23 +969,15 @@ MOZCE_SHUNT_API HWND mozce_FindWindowA(LPCSTR inClass, LPCSTR inWindow)
     HWND retval = NULL;
 
     LPTSTR wClass = a2w_malloc(inClass, -1, NULL);
-    if(NULL != wClass)
-    {
-        if(NULL == inWindow)
-        {
-            retval = FindWindow(wClass, NULL);
-        }
-        else
-        {
-            LPTSTR wWindow = a2w_malloc(inWindow, -1, NULL);
-            if(NULL != wWindow)
-            {
-                retval = FindWindow(wClass, wWindow);
-                free(wWindow);
-            }
-        }
+    LPTSTR wWindow = a2w_malloc(inWindow, -1, NULL); 
+   
+    retval = FindWindow(wClass, NULL);
+    
+    if (wWindow)
+        free(wWindow);
+
+    if (wClass)
         free(wClass);
-    }
 
     return retval;
 }
@@ -1056,7 +1043,7 @@ MOZCE_SHUNT_API LRESULT mozce_SendMessageA(HWND hWnd, UINT msg, WPARAM wParam, L
     mozce_printf("mozce_SendMessageA called\n");
 #endif
 
-    wchar_t *lpNewText = NULL;
+    unsigned short *lpNewText = NULL;
     LRESULT res;
     LPARAM lParamOrig = lParam;
     
@@ -1168,19 +1155,6 @@ MOZCE_SHUNT_API BOOL mozce_GetVersionExA(LPOSVERSIONINFOA lpv)
 
     w2a_buffer(vw.szCSDVersion, -1, lpv->szCSDVersion, sizeof(lpv->szCSDVersion));    
     return TRUE;
-}
-
-MOZCE_SHUNT_API BOOL mozce_PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
-{
-    MOZCE_PRECHECK
-
-#ifdef LOUD_PEEKMESSAGE
-#ifdef DEBUG
-    mozce_printf("mozce_PeekMessageA called\n");
-#endif
-#endif
-
-    return PeekMessageW(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
 }
 
 
@@ -1388,15 +1362,45 @@ MOZCE_SHUNT_API FARPROC mozce_GetProcAddressA(HMODULE hMod, const char *name)
     return p;
 }
 
+MOZCE_SHUNT_API HBITMAP mozce_LoadBitmapA(HINSTANCE hInstance, LPCSTR lpCursorName)
+{
+    MOZCE_PRECHECK
+
+#ifdef DEBUG
+    mozce_printf("mozce_LoadBitmapA called\n");
+#endif
+
+    unsigned short *bitmapNameW;
+    HBITMAP hc;
+    
+    if(lpCursorName > (LPCSTR) 0xFFFF)
+    {
+        int len = strlen(lpCursorName);
+        
+        bitmapNameW = (unsigned short*)_alloca((len + 1) * 2);
+        MultiByteToWideChar(CP_ACP, 0, lpCursorName, -1, bitmapNameW, len + 1);
+    }
+    else
+    {
+        bitmapNameW = (LPWSTR) (LPSTR) lpCursorName;
+    }
+    
+    hc = LoadBitmapW(hInstance, bitmapNameW);
+    
+    return hc;
+}
+
 MOZCE_SHUNT_API HCURSOR mozce_LoadCursorA(HINSTANCE hInstance, LPCSTR lpCursorName)
 {
     MOZCE_PRECHECK
 
 #ifdef DEBUG
-    mozce_printf("mozce_LoadCursorA called\n");
+    mozce_printf("-- mozce_LoadCursorA called\n");
 #endif
 
-    wchar_t *lpCursorNameW;
+	return NULL;
+
+    unsigned short *lpCursorNameW;
     HCURSOR hc;
     
     if(lpCursorName > (LPCSTR) 0xFFFF)
@@ -1561,7 +1565,7 @@ MOZCE_SHUNT_API HANDLE mozce_CreateEventA(LPSECURITY_ATTRIBUTES lpEventAttribute
 #endif
     
     HANDLE hEvent;
-    wchar_t *lpNameNew = NULL;
+    unsigned short *lpNameNew = NULL;
     int len;
     
     if(lpName)
@@ -1603,8 +1607,12 @@ MOZCE_SHUNT_API HMENU mozce_LoadMenuA(HINSTANCE hInstance, LPCSTR lpMenuName)
 }
 
 
+#ifdef GetProp
+#undef GetProp
+#endif
+#define GetProp GetProp
 
-MOZCE_SHUNT_API HANDLE mozce_GetPropA(HWND hWnd, LPCSTR lpString)
+MOZCE_SHUNT_API HANDLE mozce_GetPropA(HWND hWnd, const char* lpString)
 {
     MOZCE_PRECHECK
 
@@ -1625,7 +1633,12 @@ MOZCE_SHUNT_API HANDLE mozce_GetPropA(HWND hWnd, LPCSTR lpString)
     return h;
 }
 
-MOZCE_SHUNT_API BOOL mozce_SetPropA(HWND hWnd, LPCSTR lpString, HANDLE hData)
+#ifdef SetProp
+#undef SetProp
+#endif
+#define SetProp SetProp
+
+MOZCE_SHUNT_API BOOL mozce_SetPropA(HWND hWnd, const char* lpString, HANDLE hData)
 {
     MOZCE_PRECHECK
 
@@ -1647,8 +1660,12 @@ MOZCE_SHUNT_API BOOL mozce_SetPropA(HWND hWnd, LPCSTR lpString, HANDLE hData)
     }
     return b;
 }
+#ifdef RemoveProp
+#undef RemoveProp
+#endif
+#define RemoveProp RemoveProp
 
-MOZCE_SHUNT_API HANDLE mozce_RemovePropA(HWND hWnd, LPCSTR lpString)
+MOZCE_SHUNT_API HANDLE mozce_RemovePropA(HWND hWnd, const char* lpString)
 {
     MOZCE_PRECHECK
 
@@ -1661,7 +1678,7 @@ MOZCE_SHUNT_API HANDLE mozce_RemovePropA(HWND hWnd, LPCSTR lpString)
     if (IS_INTRESOURCE(lpString))
         return RemoveProp(hWnd, (const unsigned short *)lpString);
 
-    LPTSTR wString = a2w_malloc(lpString, -1, NULL);
+    unsigned short* wString = a2w_malloc(lpString, -1, NULL);
     if (wString) {
         h = RemoveProp(hWnd, wString);
         free(wString);
@@ -1670,7 +1687,7 @@ MOZCE_SHUNT_API HANDLE mozce_RemovePropA(HWND hWnd, LPCSTR lpString)
 }
 
 
-MOZCE_SHUNT_API HANDLE mozce_FindFirstFileA(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData)
+MOZCE_SHUNT_API HANDLE mozce_FindFirstFileA(const char* lpFileName, LPWIN32_FIND_DATAA lpFindFileData)
 {
     MOZCE_PRECHECK
 
@@ -1708,7 +1725,7 @@ MOZCE_SHUNT_API HANDLE mozce_FindFirstFileA(LPCSTR lpFileName, LPWIN32_FIND_DATA
     return h;
 }
 
-MOZCE_SHUNT_API BOOL mozce_FindNextFileA(HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData)
+MOZCE_SHUNT_API BOOL mozce_FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATAA* lpFindFileData)
 {
     MOZCE_PRECHECK
 
@@ -1875,7 +1892,7 @@ MyEnumFontFamProc(CONST LOGFONT *lf, CONST TEXTMETRIC *tm, DWORD fonttype, LPARA
     return (*fn) (&lfw, tm, fonttype, parg->lParam);
 }
 
-MOZCE_SHUNT_API int mozce_EnumFontFamiliesA(HDC hdc, LPCSTR lpszFamily, FONTENUMPROC lpEnumFontFamProc, LPARAM lParam)
+MOZCE_SHUNT_API int mozce_EnumFontFamiliesA(HDC hdc, const char* lpszFamily, FONTENUMPROC lpEnumFontFamProc, LPARAM lParam)
 {
     MOZCE_PRECHECK
 
@@ -1884,7 +1901,7 @@ MOZCE_SHUNT_API int mozce_EnumFontFamiliesA(HDC hdc, LPCSTR lpszFamily, FONTENUM
 #endif
     
     MYENUMFONTFAMARG arg;
-    wchar_t *lpszFamilyW = NULL;
+    unsigned short *lpszFamilyW = NULL;
     
     if(lpszFamily != NULL)
         lpszFamilyW = a2w_malloc(lpszFamily, -1, NULL);
@@ -1901,7 +1918,7 @@ MOZCE_SHUNT_API int mozce_EnumFontFamiliesA(HDC hdc, LPCSTR lpszFamily, FONTENUM
 }
 
 
-MOZCE_SHUNT_API int mozce_GetTextFaceA(HDC hdc, int nCount, LPSTR lpFaceName)
+MOZCE_SHUNT_API int mozce_GetTextFaceA(HDC hdc, int nCount, const char* lpFaceName)
 {
     MOZCE_PRECHECK
 
@@ -1920,7 +1937,7 @@ MOZCE_SHUNT_API int mozce_GetTextFaceA(HDC hdc, int nCount, LPSTR lpFaceName)
     int res = GetTextFaceW(hdc, nCount, wBuffer);
     if(res != GDI_ERROR && res != 0 && lpFaceName) 
     {
-        int result = w2a_buffer(wBuffer, -1, lpFaceName, nCount);
+        int result = w2a_buffer(wBuffer, -1, (char*)lpFaceName, nCount);
         if (result == 0)
             res = result;
 
@@ -1933,7 +1950,7 @@ MOZCE_SHUNT_API int mozce_GetTextFaceA(HDC hdc, int nCount, LPSTR lpFaceName)
     return res;
 }
 
-MOZCE_SHUNT_API BOOL mozce_GetTextMetricsA(HDC hdc, LPTEXTMETRICA lptma)
+MOZCE_SHUNT_API BOOL mozce_GetTextMetricsA(HDC hdc, TEXTMETRICA*  lptma)
 {
     MOZCE_PRECHECK
 

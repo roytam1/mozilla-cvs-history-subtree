@@ -1,5 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
+ * ***** BEG LICENSE BLOCK *****
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -58,7 +59,7 @@ MOZCE_SHUNT_API void mozce_abort(void)
 #if defined(DEBUG)
     DebugBreak();
 #endif
-    TerminateProcess(GetCurrentProcess(), 3);
+    TerminateProcess((HANDLE) GetCurrentProcessId(), 3);
 }
 
 
@@ -73,7 +74,6 @@ MOZCE_SHUNT_API char* mozce_getenv(const char* inName)
     char* retval = NULL;
 
 #ifdef DEBUG_NSPR_ALL
-
     if (!strcmp(inName, "NSPR_LOG_MODULES"))
         return "all:5";
 
@@ -88,6 +88,9 @@ MOZCE_SHUNT_API char* mozce_getenv(const char* inName)
     if (!strcmp(inName, "NS_TIMELINE_ENABLE"))
         return "1";
 #endif
+
+	if (!_stricmp(inName, "tmp"))
+        return "/Temp";
     return retval;
 }
 
