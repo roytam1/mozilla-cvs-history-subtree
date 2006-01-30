@@ -43,6 +43,12 @@
 #include <malloc.h>
 #include <memory.h>
 
+// System header files
+
+#ifdef MOZ_WIDGET_GTK2
+#include <gtk/gtk.h>
+#endif
+
 // Mozilla header files
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsAppShellCID.h"
@@ -53,6 +59,7 @@
 #include "nsIAppShell.h"
 #include "nsIAppShellService.h"
 #include "nsIAppStartupNotifier.h"
+#include "nsIBadCertListener.h"
 #include "nsIClipboardCommands.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIDOMWindow.h"
@@ -64,6 +71,8 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsIPromptService.h"
+#include "nsIPromptService.h"
+#include "nsIStringBundle.h"
 #include "nsITimelineService.h"
 #include "nsIURI.h"
 #include "nsIWebBrowserChrome.h"
@@ -88,7 +97,9 @@ void GetScreenSize(unsigned long* x, unsigned long* y);
 
 void WriteConsoleLog();
 
+#include "nsIBrowserInstance.h"
 
 #include "nsBrowserStatusFilter.h"
+#include "nsBrowserInstance.h"
 
 #endif // MINIMO_PRIVATE_H

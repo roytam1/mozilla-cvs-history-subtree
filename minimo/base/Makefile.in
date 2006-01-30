@@ -44,11 +44,18 @@ include $(DEPTH)/config/autoconf.mk
 
 MOZILLA_INTERNAL_API = 1
 
+
+ifdef WINCE
+DIRS        = wince
+endif
+
 PROGRAM		= minimo$(BIN_SUFFIX)
 
 MODULE		= minimo
 
 REQUIRES	= xpcom					 \
+		      browser                \
+		      history                \
 		      appshell				 \
 		      string				 \
 		      embed_base			 \
@@ -68,38 +75,38 @@ REQUIRES	= xpcom					 \
 		      content				 \
 		      profdirserviceprovider \
 		      pref					 \
+		      pipnss                 \
+		      intl                   \
 		      embedcomponents		 \
 		      appcomps				 \
 		      phone					 \
-		      $(NULL)				 \
+		      js					 \
+		      $(NULL)
 
 CPPSRCS	    = Minimo.cpp		  \
 		      WindowCreator.cpp	  \
 		      SplashScreen.cpp	  \
 		      nsConsoleWriter.cpp \
-	          $(NULL)			  \
+	          $(NULL)
 
 
 # this should move into the toolkit!
 LOCAL_INCLUDES	= -I$(srcdir) -I$(topsrcdir)/xpfe/browser/src/
-CPPSRCS    += nsBrowserStatusFilter.cpp
+CPPSRCS    += nsBrowserStatusFilter.cpp nsBrowserInstance.cpp
 
 ifdef WINCE
 RCINCLUDE  = wince/SplashScreen.rc
 endif
 
-EXTRA_DSO_LIBS	= embed_base_s profdirserviceprovider_s
+LIBS =
 
-LIBS	  = $(EXTRA_DSO_LIBS)		\
-			$(MOZ_UNICHARUTIL_LIBS)	\
-			$(XPCOM_LIBS)			\
-			$(NSPR_LIBS)			\
-			$(MOZ_JS_LIBS)			\
-			$(NULL)
+ifndef WINCE
+LIBS	  += $(NSPR_LIBS)
+endif
 
 ifdef MOZ_ENABLE_GTK2
-LIBS	 += $(XLDFLAGS)	\
-		 	$(XLIBS)	\
+LIBS	 += $(XLDFLAGS)	 \
+		 	$(XLIBS)	 \
 			$(NULL)
 endif
 
@@ -107,7 +114,7 @@ include $(topsrcdir)/config/config.mk
 
 ifdef WINCE
 LOCAL_INCLUDES	+= -I$(srcdir)/wince
-OS_LIBS += $(call EXPAND_LIBNAME, aygshell cellcore)
+OS_LIBS += $(call EXPAND_LIBNAME, aygshell cellcore commdlg uuid ole32 oleaut32 ws2)
 endif
 
 
@@ -116,8 +123,13 @@ ifdef BUILD_STATIC_LIBS
 ifdef WINCE
 FINAL_PLATFORM=wince
 else
+ifeq ($(OS_ARCH),WINNT)
+FINAL_PLATFORM=winnt
+else
 FINAL_PLATFORM=linux
 endif
+endif
+
 
 FINAL_LINK_COMPS=$(topsrcdir)/minimo/base/$(FINAL_PLATFORM)/minimo-link-comps
 FINAL_LINK_COMP_NAMES=$(topsrcdir)/minimo/base/$(FINAL_PLATFORM)/minimo-link-names
@@ -147,13 +159,28 @@ endif
 
 export::
 	$(NSINSTALL) $(topsrcdir)/xpfe/browser/src/nsBrowserStatusFilter.cpp .
+	$(NSINSTALL) $(topsrcdir)/xpfe/browser/src/nsBrowserInstance.cpp .
 
-GARBAGE += nsBrowserStatusFilter.cpp
+
+GARBAGE += nsBrowserStatusFilter.cpp nsBrowserInstance.cpp
 
 ifdef WINCE
+package::
+	bash $(srcdir)/../config/wince_package.sh         $(MOZ_BUILD_ROOT) $(srcdir)
+
+installer_only::
+	bash $(srcdir)/../config/wince_buildinstaller.sh  $(MOZ_BUILD_ROOT) $(srcdir)
+
 installer::
-	bash $(srcdir)/../config/wince_package.sh  $(MOZ_BUILD_ROOT) $(srcdir)
+	bash $(srcdir)/../config/wince_package.sh         $(MOZ_BUILD_ROOT) $(srcdir)
+	bash $(srcdir)/../config/wince_buildinstaller.sh  $(MOZ_BUILD_ROOT) $(srcdir)
+
+
 else
+package::
+	bash $(srcdir)/../config/linux_package.sh  $(MOZ_BUILD_ROOT) $(srcdir)
+
 installer::
 	bash $(srcdir)/../config/linux_package.sh  $(MOZ_BUILD_ROOT) $(srcdir)
 endif
+

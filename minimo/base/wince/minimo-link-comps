@@ -21,12 +21,10 @@ chrome
 mork
 tkitcmps
 xmlextra
-t8iix
-websrvcs
-gkplugin
 softkey
-pipboot
-pipnss
-pippki
 phone
 snav
+ssr
+native_ssl
+cookie
+perms

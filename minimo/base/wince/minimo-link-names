@@ -9,7 +9,6 @@ nsRDFModule
 nsParserModule
 nsGfxModule
 nsImageLib2Module
-nsPluginModule
 nsWidgetModule
 nsLayoutModule
 docshell_provider
@@ -22,11 +21,10 @@ nsChromeModule
 nsMorkModule
 nsToolkitCompsModule
 nsXMLExtrasModule
-TransformiixModule
-nsWebServicesModule
 SoftKeyBoardModule
-BOOT
-NSS
-PKI
 nsPhoneSupportModule
 SpatialNavigationModule
+SSRModule
+nsNativeSSLModule
+nsCookieModule
+nsPermissionsModule

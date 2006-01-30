@@ -39,11 +39,51 @@
 #ifdef WINCE
 #include "resource.h"
 
+
+// **************************************************************************
+// Function Name: IsSmartphone
+// 
+// Purpose: Determine if platform is smartphone
+//
+// Arguments:
+//	 none
+//
+// Return Values:
+//  BOOL
+//   TRUE if the current platform is a Smartphone platform
+//   FALSE if the current platform is not a Smartphone platform
+// 
+// Description:  
+//  This function retreives the current platforms type and then
+//  does a case insensitive string comparison.
+
+static BOOL IsSmartphone() 
+{
+    unsigned short platform[64];
+
+    if (TRUE == SystemParametersInfo(SPI_GETPLATFORMTYPE,
+                                     sizeof(platform),
+                                     platform,
+                                     0))
+    {
+      if (0 == _wcsicmp(L"Smartphone", platform)) 
+      {
+        return TRUE;
+      }
+    }
+    return FALSE;   
+}
+
 static HWND gSplashScreenDialog = NULL;
 
 BOOL CALLBACK
 SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp ) 
 {
+  if (msg == WM_ERASEBKGND)
+  {
+    return 1; // don't erase the background
+  } 
+
   if ( msg == WM_INITDIALOG ) 
   {
     SetWindowText(dlg, "Minimo");
@@ -62,12 +102,18 @@ SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp )
         BITMAP bitmap;
         if ( GetObject( hbitmap, sizeof bitmap, &bitmap ) )
         {
+          int maxXMetric = SM_CXSCREEN;
+          int maxYMetric = SM_CYSCREEN;
+          
+          int x = (::GetSystemMetrics(maxXMetric) - bitmap.bmWidth  - 2)/2;
+          int y = (::GetSystemMetrics(maxYMetric) - bitmap.bmHeight - 2)/2; 
+          
           SetWindowPos( dlg,
                         NULL,
-                        GetSystemMetrics(SM_CXSCREEN)/2 - bitmap.bmWidth/2,
-                        GetSystemMetrics(SM_CYSCREEN)/2 - bitmap.bmHeight/2,
-                        bitmap.bmWidth,
-                        bitmap.bmHeight,
+                        x,
+                        y,
+                        bitmap.bmWidth  +2,
+                        bitmap.bmHeight +2,
                         SWP_NOZORDER );
           ShowWindow( dlg, SW_SHOW );
         }
@@ -129,6 +175,10 @@ void GetScreenSize(unsigned long* x, unsigned long* y)
 
   *x = workarea.right - workarea.left;
   *y = workarea.bottom - workarea.top;
+
+  if (IsSmartphone())
+    *y += 26;
+
 }
 
 #else
@@ -137,7 +187,9 @@ void CreateSplashScreen() {}
 void KillSplashScreen() {}
 void GetScreenSize(unsigned long* x, unsigned long* y)
 {
-  *x = *y = 0;
+  // we need to figure this out.
+  *x = 240;
+  *y = 320;
 }
 
 
