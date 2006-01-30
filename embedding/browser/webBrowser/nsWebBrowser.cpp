@@ -235,13 +235,13 @@ NS_IMETHODIMP nsWebBrowser::GetInterface(const nsIID& aIID, void** aSink)
 //  - nsIWebProgressListener
 NS_IMETHODIMP nsWebBrowser::AddWebBrowserListener(nsIWeakReference *aListener, const nsIID& aIID)
 {           
-    nsresult rv = NS_ERROR_INVALID_ARG;
     NS_ENSURE_ARG_POINTER(aListener);
 
+    nsresult rv = NS_OK;
     if (!mWebProgress) {
         // The window hasn't been created yet, so queue up the listener. They'll be
         // registered when the window gets created.
-        nsWebBrowserListenerState *state = nsnull;
+        nsAutoPtr<nsWebBrowserListenerState> state;
         NS_NEWXPCOM(state, nsWebBrowserListenerState);
         if (!state) return NS_ERROR_OUT_OF_MEMORY;
 
@@ -250,10 +250,17 @@ NS_IMETHODIMP nsWebBrowser::AddWebBrowserListener(nsIWeakReference *aListener, c
 
         if (!mListenerArray) {
             NS_NEWXPCOM(mListenerArray, nsVoidArray);
-            if (!mListenerArray) return NS_ERROR_OUT_OF_MEMORY;
+            if (!mListenerArray) {
+                return NS_ERROR_OUT_OF_MEMORY;
+            }
         }
 
-        if (!mListenerArray->AppendElement(state)) return NS_ERROR_OUT_OF_MEMORY;
+        if (!mListenerArray->AppendElement(state)) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        // We're all set now; don't delete |state| after this point
+        state.forget();
     } else {
         nsCOMPtr<nsISupports> supports(do_QueryReferent(aListener));
         if (!supports) return NS_ERROR_INVALID_ARG;
@@ -286,9 +293,9 @@ NS_IMETHODIMP nsWebBrowser::BindListener(nsISupports *aListener, const nsIID& aI
 
 NS_IMETHODIMP nsWebBrowser::RemoveWebBrowserListener(nsIWeakReference *aListener, const nsIID& aIID)
 {
-    nsresult rv = NS_ERROR_INVALID_ARG;
     NS_ENSURE_ARG_POINTER(aListener);
 
+    nsresult rv = NS_OK;
     if (!mWebProgress) {
         // if there's no-one to register the listener w/, and we don't have a queue going,
         // the the called is calling Remove before an Add which doesn't make sense.
