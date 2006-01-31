@@ -4062,6 +4062,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
     return NS_MSG_MESSAGE_NOT_FOUND;
   }
   rv = GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
+  NS_ENSURE_SUCCESS(rv, rv);
   m_flags[index] = flags;
   NoteChange(index, 1, nsMsgViewNotificationCode::changed);
   if (m_viewFlags & nsMsgViewFlagsType::kUnreadOnly)
