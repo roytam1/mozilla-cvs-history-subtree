@@ -42,7 +42,7 @@
 #include "zapIMediaSink.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
-#include "nsDataHashTable.h"
+#include "nsDataHashtable.h"
 #include "zapIMediaFrame.h"
 #include "zapIStreamSwitch.h"
 
