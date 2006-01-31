@@ -250,7 +250,7 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_max_time", "1800");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_all_fail", "30");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_not_failed", "60");
-Config.rdfLiteralAttrib("urn:mozilla:zap:short_branch_parameters", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:short_branch_parameters", "true");
 
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
