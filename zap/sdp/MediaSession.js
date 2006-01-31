@@ -380,7 +380,8 @@ MediaSession.fun(
     // construct array of accepted formats:
     var formatsAccepted = [];
     for (var i=0,l=this.supportedRTPAVPFormats.length; i<l; ++i) {
-      formatsAccepted.push(this.supportedRTPAVPFormats[i].sdpformat);
+      if (this.supportedRTPAVPFormats[i].remotePayloadType)
+        formatsAccepted.push(this.supportedRTPAVPFormats[i].sdpformat);
     }
 
     
