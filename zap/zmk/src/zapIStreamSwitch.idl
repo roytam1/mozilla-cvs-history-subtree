@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,39 +36,12 @@
 
 #include "nsISupports.idl"
 
+
 /**
- * \ingroup SDP_MODULE
- * An RTP/AVP media format (as specified in m= lines of RTP/AVP media)
- * with its corresponding rtpmap & fmtp attributes.
+ * \ingroup ZMK_MODULE
  */
-[scriptable, uuid(8ac4169a-31ae-4e22-907d-597517b37791)]
-interface zapISdpRtpAvpMediaFormat : nsISupports
+[scriptable, uuid(7b0ae3f8-8260-4ca5-86ba-b1a8440ceee9)]
+interface zapIStreamSwitch : nsISupports
 {
-  /**
-   * RTP/AVP payload type.
-   *
-   * Must be in the range 0-127.
-   * For types that map to a static encoding as defined in RFC3551 (table 4),
-   * the rtpmap attribute fields will be set automatically when setting
-   * payloadType or when deserializing a media format.
-   */ 
-  attribute ACString payloadType;
-
-  /**
-   * \name 'rtpmap' attribute
-   */
-  //@{
-  attribute ACString encodingName;
-  attribute ACString clockRate;
-  attribute ACString encodingParameters;
-  //@}
-
-  /**
-   * \name 'fmtp' attribute for this media format
-   */
-  //@{
-  attribute ACString fmtParameters;
-  //@}
-
+  void selectOutput(in ACString id);
 };
-

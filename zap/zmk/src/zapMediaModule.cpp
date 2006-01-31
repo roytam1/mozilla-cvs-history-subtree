@@ -64,6 +64,8 @@
 #include "zapStreamMerger.h"
 #include "zapTEventRTPPacketizer.h"
 #include "zapStreamSyncer.h"
+#include "zapRTPDemuxer.h"
+#include "zapStreamSwitch.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -93,6 +95,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapPacketPump)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamMerger)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapTEventRTPPacketizer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamSyncer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPDemuxer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamSwitch)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -240,6 +244,16 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_STREAMSYNCER_CID,
     ZAP_STREAMSYNCER_CONTRACTID,
     zapStreamSyncerConstructor
+  },
+  { "Mozilla ZMK RTP demuxer",
+    ZAP_RTPDEMUXER_CID,
+    ZAP_RTPDEMUXER_CONTRACTID,
+    zapRTPDemuxerConstructor
+  },
+  { "Mozilla ZMK stream switch",
+    ZAP_STREAMSWITCH_CID,
+    ZAP_STREAMSWITCH_CONTRACTID,
+    zapStreamSwitchConstructor
   }
 };
 

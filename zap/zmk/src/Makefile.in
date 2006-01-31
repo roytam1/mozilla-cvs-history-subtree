@@ -41,6 +41,7 @@ CPPSRCS		= \
 		zapMediaModule.cpp \
 		zapPacketBuffer.cpp \
 		zapPacketPump.cpp \
+		zapRTPDemuxer.cpp \
 		zapRTPFrame.cpp \
 		zapRTPReceiver.cpp \
 		zapRTPSession.cpp \
@@ -52,6 +53,7 @@ CPPSRCS		= \
 		zapSpeexRTPPacketizer.cpp \
 		zapSplitter.cpp \
 		zapStreamMerger.cpp \
+		zapStreamSwitch.cpp \
 		zapStreamSyncer.cpp \
 		zapStreamUtils.cpp \
 		zapTEventRTPPacketizer.cpp \
@@ -79,6 +81,7 @@ XPIDLSRCS	= \
 		zapIRTPFrame.idl \
 		zapISpeexDecoder.idl \
 		zapISpeexEncoder.idl \
+		zapIStreamSwitch.idl \
 		zapITToneGenerator.idl \
 		zapITelephoneEventFrame.idl \
 		zapIUDPSocket.idl \

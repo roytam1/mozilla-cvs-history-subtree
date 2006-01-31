@@ -303,20 +303,68 @@ SdpRtpAvpMediaFormat.addInterfaces(Components.interfaces.zapISdpRtpAvpMediaForma
 //----------------------------------------------------------------------
 // zapISdpRtpAvpMediaFormat implementation:
 
-// attribute ACString payloadType; XXX getter/setter set encodingName, etc for static payload types.
-SdpRtpAvpMediaFormat.parsedAttrib("payloadType", REGEXP_TOKEN, null);
+// payload types that we automatically map when
+// SdpRtpAvpMediaFormat.payloadType is set:
+var RFC3551_StaticPayloads = {
+  "0":  ["PCMU",  "8000",  ""], // audio
+  "3":  ["GSM",   "8000",  ""], // audio
+  "4":  ["G723",  "8000",  ""], // audio
+  "5":  ["DVI4",  "8000",  ""], // audio
+  "6":  ["DVI4", "16000",  ""], // audio
+  "7":  ["LPC",   "8000",  ""], // audio
+  "8":  ["PCMA",  "8000",  ""], // audio
+  "9":  ["G722",  "8000",  ""], // audio
+  "10": ["L16",  "44100", "2"], // audio
+  "11": ["L16",  "44100",  ""], // audio
+  "12": ["QCELP", "8000",  ""], // audio
+  "13": ["CN",    "8000",  ""], // audio
+  "14": ["MPA",  "90000",  ""], // audio
+  "15": ["G728",  "8000",  ""], // audio
+  "16": ["DVI4", "11025",  ""], // audio
+  "17": ["DVI4", "22050",  ""], // audio
+  "18": ["G729",  "8000",  ""], // audio
+  "25": ["CelB", "90000",  ""], // video
+  "26": ["JPEG", "90000",  ""], // video
+  "28": ["nv",   "90000",  ""], // video
+  "31": ["H261", "90000",  ""], // video
+  "32": ["MPV",  "90000",  ""], // video
+  "33": ["MP2T", "90000",  ""], // audio/video
+  "34": ["H263", "90000",  ""] // video
+};
+
+// attribute ACString payloadType;
+SdpRtpAvpMediaFormat.obj("_payloadType", "");
+SdpRtpAvpMediaFormat.gettersetter(
+  "payloadType",
+  function get_payloadType() {
+    return this._payloadType;
+  },
+  function set_payloadType(t) {
+    if (!REGEXP_TOKEN.test(t))
+      this._error("invalid payload type "+t);
+
+    this._payloadType = t;
+    var staticPayload = RFC3551_StaticPayloads[t];
+    if (staticPayload) {
+      // fill in rtpmap fields:
+      this.encodingName = staticPayload[0];
+      this.clockRate = staticPayload[1];
+      this.encodingParameters = staticPayload[2];
+    }
+  });
+
 
 // attribute ACString encodingName; XXX parsedAttrib?
-SdpRtpAvpMediaFormat.obj("encodingName", null);
+SdpRtpAvpMediaFormat.obj("encodingName", "");
 
 // attribute ACString clockRate; XXX parsedAttrib?
-SdpRtpAvpMediaFormat.obj("clockRate", null);
+SdpRtpAvpMediaFormat.obj("clockRate", "");
 
 // attribute ACString encodingParameters; XXX parsedAttrib?
-SdpRtpAvpMediaFormat.obj("encodingParameters", null);
+SdpRtpAvpMediaFormat.obj("encodingParameters", "");
 
 // attribute ACString fmtParameters; XXX parsedAttrib?
-SdpRtpAvpMediaFormat.obj("fmtParameters", null);
+SdpRtpAvpMediaFormat.obj("fmtParameters", "");
 
 
 ////////////////////////////////////////////////////////////////////////

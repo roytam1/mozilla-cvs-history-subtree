@@ -94,6 +94,50 @@ MediaSession.fun(
     this.callAudioOut = callAudioOut;
     this.callTEventIn = callTEventIn;
 
+    //--------------------------------------------------
+    var SpeexFormatDescriptor = {};
+    SpeexFormatDescriptor.localPayloadType = "97";
+    SpeexFormatDescriptor.remotePayloadType = "";
+    SpeexFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
+    SpeexFormatDescriptor.sdpformat.payloadType = SpeexFormatDescriptor.localPayloadType;
+    SpeexFormatDescriptor.sdpformat.encodingName = "speex";
+    SpeexFormatDescriptor.sdpformat.clockRate = "8000";
+    
+    SpeexFormatDescriptor.connect = function speex_connect(session) {
+      if (!this.remotePayloadType) return;
+      
+      this.enc = session.mediaGraph.addNode("speex-encoder", null);
+      this.dec = session.mediaGraph.addNode("speex-decoder", null);
+      this.speex2rtp = session.mediaGraph.addNode("speex-rtp-packetizer",
+                                              PB({$payload_type:this.remotePayloadType}));
+      this.rtp2speex = session.mediaGraph.addNode("speex-rtp-depacketizer",
+                                                  null);
+
+      session.mediaGraph.connect(session.outboundSwitch,
+                                 PB({$id:this.localPayloadType}),
+                                 this.enc, null);
+      session.mediaGraph.connect(this.enc, null, this.speex2rtp, null);    
+      session.mediaGraph.connect(this.speex2rtp, null,
+                                 session.outboundMerger,
+                                 null);
+
+      session.mediaGraph.connect(session.demuxer,
+                                 PB({$payload_type:this.localPayloadType}),
+                                 this.rtp2speex, null);
+      session.mediaGraph.connect(this.rtp2speex, null, this.dec, null);
+      session.mediaGraph.connect(this.dec, null, session.inboundMerger, null);
+    };
+    
+    SpeexFormatDescriptor.disconnect = function speex_disconnect(session) {
+      if (!this.remotePayloadType) return;
+      
+      session.mediaGraph.removeNode(this.enc);
+      session.mediaGraph.removeNode(this.dec);
+      session.mediaGraph.removeNode(this.speex2rtp);
+      session.mediaGraph.removeNode(this.rtp2speex);
+    };
+
+    //--------------------------------------------------
     var PCMUFormatDescriptor = {};
     PCMUFormatDescriptor.localPayloadType = "0";
     PCMUFormatDescriptor.remotePayloadType = "";
@@ -101,17 +145,121 @@ MediaSession.fun(
     PCMUFormatDescriptor.sdpformat.payloadType = PCMUFormatDescriptor.localPayloadType;
     PCMUFormatDescriptor.sdpformat.encodingName = "PCMU";
     PCMUFormatDescriptor.sdpformat.clockRate = "8000";
+    
+    PCMUFormatDescriptor.connect = function PCMU_connect(session) {
+      if (!this.remotePayloadType) return;
+      
+      this.enc = session.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcmu"}));
+      this.dec = session.mediaGraph.addNode("g711-decoder", null);
+      this.g7112rtp = session.mediaGraph.addNode("g711-rtp-packetizer",
+                                              PB({$payload_type:this.remotePayloadType}));
+      this.rtp2g711 = session.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcmu"}));
 
+      session.mediaGraph.connect(session.outboundSwitch,
+                                 PB({$id:this.localPayloadType}),
+                                 this.enc, null);
+      session.mediaGraph.connect(this.enc, null, this.g7112rtp, null);    
+      session.mediaGraph.connect(this.g7112rtp, null,
+                                 session.outboundMerger,
+                                 null);
+
+      session.mediaGraph.connect(session.demuxer,
+                                 PB({$payload_type:this.localPayloadType}),
+                                 this.rtp2g711, null);
+      session.mediaGraph.connect(this.rtp2g711, null, this.dec, null);
+      session.mediaGraph.connect(this.dec, null, session.inboundMerger, null);
+    };
+    
+    PCMUFormatDescriptor.disconnect = function PCMU_disconnect(session) {
+      if (!this.remotePayloadType) return;
+      
+      session.mediaGraph.removeNode(this.enc);
+      session.mediaGraph.removeNode(this.dec);
+      session.mediaGraph.removeNode(this.g7112rtp);
+      session.mediaGraph.removeNode(this.rtp2g711);
+    };
+
+    //--------------------------------------------------
+    var PCMAFormatDescriptor = {};
+    PCMAFormatDescriptor.localPayloadType = "8";
+    PCMAFormatDescriptor.remotePayloadType = "";
+    PCMAFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
+    PCMAFormatDescriptor.sdpformat.payloadType = PCMAFormatDescriptor.localPayloadType;
+    PCMAFormatDescriptor.sdpformat.encodingName = "PCMA";
+    PCMAFormatDescriptor.sdpformat.clockRate = "8000";
+
+    PCMAFormatDescriptor.connect = function PCMA_connect(session) {
+
+      if (!this.remotePayloadType) return;
+      
+      this.enc = session.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcma"}));
+      this.dec = session.mediaGraph.addNode("g711-decoder", null);
+      this.g7112rtp = session.mediaGraph.addNode("g711-rtp-packetizer",
+                                              PB({$payload_type:this.remotePayloadType}));
+      this.rtp2g711 = session.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcma"}));
+
+      session.mediaGraph.connect(session.outboundSwitch,
+                                 PB({$id:this.localPayloadType}),
+                                 this.enc, null);
+      session.mediaGraph.connect(this.enc, null, this.g7112rtp, null);    
+      session.mediaGraph.connect(this.g7112rtp, null,
+                                 session.outboundMerger,
+                                 null);
+
+      session.mediaGraph.connect(session.demuxer,
+                                 PB({$payload_type:this.localPayloadType}),
+                                 this.rtp2g711, null);
+      session.mediaGraph.connect(this.rtp2g711, null, this.dec, null);
+      session.mediaGraph.connect(this.dec, null, session.inboundMerger, null);
+    };
+    
+    PCMAFormatDescriptor.disconnect = function PCMA_disconnect(session) {
+
+      if (!this.remotePayloadType) return;
+      
+      session.mediaGraph.removeNode(this.enc);
+      session.mediaGraph.removeNode(this.dec);
+      session.mediaGraph.removeNode(this.g7112rtp);
+      session.mediaGraph.removeNode(this.rtp2g711);
+    };
+
+    
+    //--------------------------------------------------
     var TEventFormatDescriptor = {};
     TEventFormatDescriptor.localPayloadType = "101";
-    PCMUFormatDescriptor.remotePayloadType = "";
+    TEventFormatDescriptor.remotePayloadType = "";
     TEventFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
     TEventFormatDescriptor.sdpformat.payloadType = TEventFormatDescriptor.localPayloadType;
     TEventFormatDescriptor.sdpformat.encodingName = "telephone-event";
     TEventFormatDescriptor.sdpformat.clockRate = "8000";
     TEventFormatDescriptor.sdpformat.fmtParameters = "0-15";
+
+    TEventFormatDescriptor.connect = function TEvent_connect(session) {
+      if (!this.remotePayloadType) return;
+      
+      this.tevent2rtp = session.mediaGraph.addNode("tevent-rtp-packetizer",
+                                                   PB({$payload_type:this.remotePayloadType}));
+      this.sync = session.mediaGraph.addNode("stream-syncer", null);
+      
+      session.mediaGraph.connect(session.callTEventIn, null, this.sync, PB({$name:"input"}));
+      session.mediaGraph.connect(session.callAudioIn, null, this.sync, PB({$name:"timebase"}));
+      session.mediaGraph.connect(this.sync, null, this.tevent2rtp, null);
+      session.mediaGraph.connect(this.tevent2rtp, null,
+                                 session.outboundMerger,
+                                 null);
+    };
+
+    TEventFormatDescriptor.disconnect = function TEvent_disconnect(session) {
+      if (!this.remotePayloadType) return;
+      
+      session.mediaGraph.removeNode(this.sync);
+      session.mediaGraph.removeNode(this.tevent2rtp);      
+    };
     
+    //--------------------------------------------------
     this.supportedRTPAVPFormats = [PCMUFormatDescriptor,
+                                   PCMAFormatDescriptor,
+                                   SpeexFormatDescriptor,
                                    TEventFormatDescriptor];
 
     
@@ -199,7 +347,6 @@ MediaSession.fun(
     this.remoteHost = remoteHost;
     this.remoteRTPPort = remoteRTPPort;
     this.remoteRTCPPort = remoteRTCPPort;
-    this.remotePayloadFormat = this.supportedRTPAVPFormats[0].remotePayloadType; //XXX
 
     // change state:
     this.changeState("NEGOTIATED");
@@ -275,7 +422,6 @@ MediaSession.fun(
     this.remoteHost = remoteHost;
     this.remoteRTPPort = remoteRTPPort;
     this.remoteRTCPPort = remoteRTCPPort;
-    this.remotePayloadFormat = this.supportedRTPAVPFormats[0].remotePayloadType;
 
     // change state:
     this.changeState("NEGOTIATED");
@@ -313,15 +459,18 @@ MediaSession.fun(
     // remove all the nodes we added to the graph:
     this.mediaGraph.removeNode(this.socketpair);
     if (this.rtpsession) {
-      this.mediaGraph.removeNode(this.enc);
-      this.mediaGraph.removeNode(this.dec);
       this.mediaGraph.removeNode(this.buf);
-      this.mediaGraph.removeNode(this.g7112rtp);
-      this.mediaGraph.removeNode(this.rtp2g711);
       this.mediaGraph.removeNode(this.rtpsession);
-      this.mediaGraph.removeNode(this.merger);
-      this.mediaGraph.removeNode(this.sync);
-      this.mediaGraph.removeNode(this.tevent2rtp);
+      this.mediaGraph.removeNode(this.outboundSwitch);
+      delete this.outboundSwitchCtl;
+      this.mediaGraph.removeNode(this.outboundMerger);
+      this.mediaGraph.removeNode(this.inboundMerger);
+      this.mediaGraph.removeNode(this.demuxer);
+      
+      // disconnect our codecs:
+      for (var i=0,l=this.supportedRTPAVPFormats.length; i<l; ++i) {
+        this.supportedRTPAVPFormats[i].disconnect(this);
+      }
     }
     delete this.mediaGraph;
     
@@ -333,54 +482,45 @@ MediaSession.fun(
 
 MediaSession.fun(
   function start(remoteHost, remoteRTPPort,
-                 remoteRTCPPort) {
-    var haveG711 = false;
-    if (this.supportedRTPAVPFormats[0].remotePayloadType) haveG711 = true;
-    var haveTE = false;
-    if (this.supportedRTPAVPFormats[0].remotePayloadType) haveTE = true;
-    
-    this.enc = this.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcmu"}));
-    this.dec = this.mediaGraph.addNode("g711-decoder", null);
+                 remoteRTCPPort) {    
     this.buf = this.mediaGraph.addNode("buffer", PB({$lift_count:15, $drop_count:15, $max_size:30}));
-    this.g7112rtp = this.mediaGraph.addNode("g711-rtp-packetizer",
-                                            PB({$payload_type:this.supportedRTPAVPFormats[0].remotePayloadType}));
-    this.rtp2g711 = this.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcmu"}));
-    this.tevent2rtp = this.mediaGraph.addNode("tevent-rtp-packetizer",
-                                              PB({$payload_type:this.supportedRTPAVPFormats[1].remotePayloadType}));
-    this.merger = this.mediaGraph.addNode("stream-merger", null);
+    this.outboundSwitch = this.mediaGraph.addNode("stream-switch", null);
+    this.outboundSwitchCtl = this.mediaGraph.getNode(this.outboundSwitch,
+                                                     Components.interfaces.zapIStreamSwitch,
+                                                     true);
+    this.outboundMerger = this.mediaGraph.addNode("stream-merger", null);
+    this.inboundMerger = this.mediaGraph.addNode("stream-merger", null);
+    this.demuxer = this.mediaGraph.addNode("rtp-demuxer", null);
     this.rtpsession = this.mediaGraph.addNode("rtp-session",
                                               PB({$address:remoteHost,
                                                   $rtp_port:remoteRTPPort,
                                                   $rtcp_port:remoteRTCPPort}));
-    this.sync = this.mediaGraph.addNode("stream-syncer", null);
     
     // encoder pipe:
-    this.mediaGraph.connect(this.callAudioIn, null, this.enc, null);
-    this.mediaGraph.connect(this.enc, null, this.g7112rtp, null);
-    
-    if (haveG711)
-      this.mediaGraph.connect(this.g7112rtp, null, this.merger, null);
-    
-    this.mediaGraph.connect(this.callTEventIn, null, this.sync, PB({$name:"input"}));
-    this.mediaGraph.connect(this.callAudioIn, null, this.sync, PB({$name:"timebase"}));
-    this.mediaGraph.connect(this.sync, null, this.tevent2rtp, null);
-
-    if (haveTE)
-      this.mediaGraph.connect(this.tevent2rtp, null, this.merger, null);
-    
-    this.mediaGraph.connect(this.merger, null,
+    this.mediaGraph.connect(this.callAudioIn, null,
+                            this.outboundSwitch, null);
+    this.mediaGraph.connect(this.outboundMerger, null,
                             this.rtpsession, PB({$name:"local-rtp"}));
     this.mediaGraph.connect(this.rtpsession, PB({$name:"remote-rtp"}),
                             this.socketpair, PB({$name:"socket-a"}));
     // decoder pipe:
     this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
-                            this.buf, null);
-    this.mediaGraph.connect(this.buf, null,
                             this.rtpsession, PB({$name:"remote-rtp"}));
     this.mediaGraph.connect(this.rtpsession, PB({$name:"local-rtp"}),
-                            this.rtp2g711, null);
-    this.mediaGraph.connect(this.rtp2g711, null, this.dec, null);
-    this.mediaGraph.connect(this.dec, null, this.callAudioOut, null);
+                            this.demuxer, null);
+    this.mediaGraph.connect(this.inboundMerger, null, 
+                            this.buf, null);
+    this.mediaGraph.connect(this.buf, null, this.callAudioOut, null);
+
+    // connect our codecs:
+    var haveOutbound = false;
+    for (var i=0,l=this.supportedRTPAVPFormats.length; i<l; ++i) {
+      this.supportedRTPAVPFormats[i].connect(this);
+      if (!haveOutbound && this.supportedRTPAVPFormats[i].remotePayloadType) {
+        this.outboundSwitchCtl.selectOutput(this.supportedRTPAVPFormats[i].localPayloadType);
+        haveOutbound = true;
+      } 
+    }
   });
 
 

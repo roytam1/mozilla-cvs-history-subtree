@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,41 +34,48 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_RTPDEMUXER_H__
+#define __ZAP_RTPDEMUXER_H__
 
-/**
- * \ingroup SDP_MODULE
- * An RTP/AVP media format (as specified in m= lines of RTP/AVP media)
- * with its corresponding rtpmap & fmtp attributes.
- */
-[scriptable, uuid(8ac4169a-31ae-4e22-907d-597517b37791)]
-interface zapISdpRtpAvpMediaFormat : nsISupports
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsString.h"
+#include "nsDataHashTable.h"
+#include "zapIMediaFrame.h"
+
+////////////////////////////////////////////////////////////////////////
+// zapRTPDemuxer
+
+// {88528AD5-9F64-4573-B94E-A6130FF0F3FB}
+#define ZAP_RTPDEMUXER_CID                             \
+  { 0x88528ad5, 0x9f64, 0x4573, { 0xb9, 0x4e, 0xa6, 0x13, 0x0f, 0xf0, 0xf3, 0xfb } }
+
+#define ZAP_RTPDEMUXER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "rtp-demuxer"
+
+class zapRTPDemuxer : public zapIMediaNode,
+                      public zapIMediaSink
 {
-  /**
-   * RTP/AVP payload type.
-   *
-   * Must be in the range 0-127.
-   * For types that map to a static encoding as defined in RFC3551 (table 4),
-   * the rtpmap attribute fields will be set automatically when setting
-   * payloadType or when deserializing a media format.
-   */ 
-  attribute ACString payloadType;
+public:
+  zapRTPDemuxer();
+  ~zapRTPDemuxer();
 
-  /**
-   * \name 'rtpmap' attribute
-   */
-  //@{
-  attribute ACString encodingName;
-  attribute ACString clockRate;
-  attribute ACString encodingParameters;
-  //@}
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASINK
 
-  /**
-   * \name 'fmtp' attribute for this media format
-   */
-  //@{
-  attribute ACString fmtParameters;
-  //@}
+private:
+  friend class zapRTPDemuxerOutput;
 
+  void RequestFrame();
+  
+  // zapRTPDemuxerOutput outputs (weak references), indexed by payload
+  // type:
+  nsDataHashtable<nsUint32HashKey, zapRTPDemuxerOutput*> mOutputs;
+  
+  // RTPDemuxer input source:
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
+#endif // __ZAP_RTPDEMUXER_H__

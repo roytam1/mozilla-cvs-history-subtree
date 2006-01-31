@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,41 +34,53 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_STREAMSWITCH_H__
+#define __ZAP_STREAMSWITCH_H__
 
-/**
- * \ingroup SDP_MODULE
- * An RTP/AVP media format (as specified in m= lines of RTP/AVP media)
- * with its corresponding rtpmap & fmtp attributes.
- */
-[scriptable, uuid(8ac4169a-31ae-4e22-907d-597517b37791)]
-interface zapISdpRtpAvpMediaFormat : nsISupports
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsString.h"
+#include "nsDataHashTable.h"
+#include "zapIMediaFrame.h"
+#include "zapIStreamSwitch.h"
+
+////////////////////////////////////////////////////////////////////////
+// zapStreamSwitch
+
+// {D43A998B-587E-42FD-A32A-156C94BB3895}
+#define ZAP_STREAMSWITCH_CID                             \
+  { 0xd43a998b, 0x587e, 0x42fd, { 0xa3, 0x2a, 0x15, 0x6c, 0x94, 0xbb, 0x38, 0x95 } }
+
+#define ZAP_STREAMSWITCH_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stream-switch"
+
+class zapStreamSwitch : public zapIMediaNode,
+                        public zapIMediaSink,
+                        public zapIStreamSwitch
 {
-  /**
-   * RTP/AVP payload type.
-   *
-   * Must be in the range 0-127.
-   * For types that map to a static encoding as defined in RFC3551 (table 4),
-   * the rtpmap attribute fields will be set automatically when setting
-   * payloadType or when deserializing a media format.
-   */ 
-  attribute ACString payloadType;
+public:
+  zapStreamSwitch();
+  ~zapStreamSwitch();
 
-  /**
-   * \name 'rtpmap' attribute
-   */
-  //@{
-  attribute ACString encodingName;
-  attribute ACString clockRate;
-  attribute ACString encodingParameters;
-  //@}
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASINK
+  NS_DECL_ZAPISTREAMSWITCH
 
-  /**
-   * \name 'fmtp' attribute for this media format
-   */
-  //@{
-  attribute ACString fmtParameters;
-  //@}
+private:
+  friend class zapStreamSwitchOutput;
 
+  void RequestFrame();
+  
+  // zapStreamSwitchOutput outputs (weak references), indexed by id:
+  nsDataHashtable<nsCStringHashKey, zapStreamSwitchOutput*> mOutputs;
+
+  // currently selected output (weak ref):
+  zapStreamSwitchOutput *mSelectedOutput;
+  
+  // StreamSwitch input source:
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
+#endif // __ZAP_STREAMSWITCH_H__

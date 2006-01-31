@@ -796,3 +796,46 @@ Sources: 1
 
 Output stream:
 as input stream, with frame timestamps adjusted.
+
+----------------------------------------------------------------------
+
+28) rtp-demuxer
+---------------
+
+Dispatches input frames from one input to several outputs based on rtp
+payload type number.
+
+Sinks: 1 (passive)
+Sources: n (active). 
+Source parameters: ACString "payload_type" == payload type of this
+output (no default; parameter MUST be specified)
+
+Input stream:
+rtp frames
+
+Output streams:
+rtp frames; as input
+
+----------------------------------------------------------------------
+
+29) stream-switch
+-----------------
+
+Switches one input stream to one of n outputs.
+
+Sinks: 1 (neutral)
+Sources: n (neutral)
+Source parameters:
+ACString "id" : id by which a particular output can be selected with
+zapISwitch::selectOutput(). Must be unique among all sources
+
+
+Control interfaces: zapIStreamSwitch
+
+Input stream:
+any
+
+Output stream:
+as input stream
+
+----------------------------------------------------------------------

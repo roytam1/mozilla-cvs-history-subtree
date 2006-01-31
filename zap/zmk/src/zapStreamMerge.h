@@ -34,41 +34,53 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef __ZAP_AUDIOMIXER_H__
+#define __ZAP_AUDIOMIXER_H__
 
-/**
- * \ingroup SDP_MODULE
- * An RTP/AVP media format (as specified in m= lines of RTP/AVP media)
- * with its corresponding rtpmap & fmtp attributes.
- */
-[scriptable, uuid(8ac4169a-31ae-4e22-907d-597517b37791)]
-interface zapISdpRtpAvpMediaFormat : nsISupports
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsString.h"
+#include "nsVoidArray.h"
+#include "nsIWritablePropertyBag2.h"
+#include "zapAudioStreamUtils.h"
+
+////////////////////////////////////////////////////////////////////////
+// zapAudioMixer
+
+// {69044C68-74FA-48D0-AF1C-A3A9878DF3B6}
+#define ZAP_AUDIOMIXER_CID                             \
+  { 0x69044c68, 0x74fa, 0x48d0, { 0xaf, 0x1c, 0xa3, 0xa9, 0x87, 0x8d, 0xf3, 0xb6 } }
+
+#define ZAP_AUDIOMIXER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audio-mixer"
+
+class zapAudioMixer : public zapIMediaNode,
+                      public zapIMediaSource
 {
-  /**
-   * RTP/AVP payload type.
-   *
-   * Must be in the range 0-127.
-   * For types that map to a static encoding as defined in RFC3551 (table 4),
-   * the rtpmap attribute fields will be set automatically when setting
-   * payloadType or when deserializing a media format.
-   */ 
-  attribute ACString payloadType;
+public:
+  zapAudioMixer();
+  ~zapAudioMixer();
 
-  /**
-   * \name 'rtpmap' attribute
-   */
-  //@{
-  attribute ACString encodingName;
-  attribute ACString clockRate;
-  attribute ACString encodingParameters;
-  //@}
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
 
-  /**
-   * \name 'fmtp' attribute for this media format
-   */
-  //@{
-  attribute ACString fmtParameters;
-  //@}
+private:
+  friend class zapAudioMixerInput;
 
+  // node parameters (set in zapIMediaGraph::AddNode()):
+  zapAudioStreamParameters mStreamParameters;
+
+  // zapAudioMixerInput inputs (weak references):
+  nsVoidArray mInputs;
+
+  PRUint32 mSampleClock;
+  
+  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  
+  // mixer output sink:
+  nsCOMPtr<zapIMediaSink> mOutput;
 };
 
+#endif // __ZAP_AUDIOMIXER_H__
