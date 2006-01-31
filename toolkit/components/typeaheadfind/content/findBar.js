@@ -47,6 +47,7 @@ const CHAR_CODE_SLASH = "/".charCodeAt(0);
 const CHAR_CODE_APOSTROPHE = "'".charCodeAt(0);
 
 // Global find variables
+var gFindEnabled = true;
 var gFindMode = FIND_NORMAL;
 var gFoundLink = null;
 var gCurrentWindow = null;
@@ -319,6 +320,13 @@ function changeSelectionColor(aAttention)
 
 function openFindBar()
 {
+  // Notify anyone else that might want to handle this event
+  var findActivatedEvent = document.createEvent("Events");
+  findActivatedEvent.initEvent("find-activated", false, true);
+  window.dispatchEvent(findActivatedEvent);
+  if (!gFindEnabled)
+    throw Components.results.NS_OK;
+
   if (!gNotFoundStr || !gWrappedToTopStr || !gWrappedToBottomStr) {
     var bundle = document.getElementById("bundle_findBar");
     gNotFoundStr = bundle.getString("NotFound");
@@ -566,11 +574,17 @@ function onBrowserKeyPress(evt)
 
   if (evt.charCode == CHAR_CODE_APOSTROPHE || evt.charCode == CHAR_CODE_SLASH ||
       (gUseTypeAheadFind && evt.charCode && evt.charCode != CHAR_CODE_SPACE)) {
+    try {
+      var opened = openFindBar();
+    }
+    catch (e) {
+      return;
+    }    
     var findMode = (evt.charCode == CHAR_CODE_APOSTROPHE ||
                     (gTypeAheadLinksOnly && evt.charCode != CHAR_CODE_SLASH))
                    ? FIND_LINKS : FIND_TYPEAHEAD;
     setFindMode(findMode);
-    if (openFindBar()) {
+    if (opened) {
       setFindCloseTimeout();
       selectFindBar();
       focusFindBar();
@@ -714,8 +728,12 @@ function flashFindBar()
 
 function onFindCmd()
 {
+  try {
+    openFindBar();
+  }
+  catch (e) {
+  }
   setFindMode(FIND_NORMAL);
-  openFindBar();
   if (gFlashFindBar) {
     gFlashFindBarTimeout = setInterval(flashFindBar, 500);
     var prefService = Components.classes["@mozilla.org/preferences-service;1"]
@@ -737,7 +755,12 @@ function onFindAgainCmd()
 
   var res = findNext();
   if (res == Components.interfaces.nsITypeAheadFind.FIND_NOTFOUND) {
-    if (openFindBar()) {
+    try {
+      var opened = openFindBar();
+    }
+    catch(e) {
+    }
+    if (opened) {
       focusFindBar();
       selectFindBar();
       if (gFindMode != FIND_NORMAL)
@@ -758,7 +781,12 @@ function onFindPreviousCmd()
  
   var res = findPrevious();
   if (res == Components.interfaces.nsITypeAheadFind.FIND_NOTFOUND) {
-    if (openFindBar()) {
+    try {
+      var opened = openFindBar();
+    }
+    catch (e) {
+    }
+    if (opened) {
       focusFindBar();
       selectFindBar();
       if (gFindMode != FIND_NORMAL)
@@ -877,8 +905,5 @@ function onFindBarCompositionEnd(evt)
 
 function setFindMode(mode)
 {
-  if (mode == gFindMode)
-    return;
-
   gFindMode = mode;
 }
