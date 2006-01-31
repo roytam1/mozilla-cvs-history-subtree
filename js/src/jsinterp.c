@@ -2242,6 +2242,7 @@ js_Interpret(JSContext *cx, jsval *result)
             }                                                                 \
         } else {                                                              \
             VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_NUMBER, &lval);               \
+            sp[-2] = lval;                                                    \
             VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_NUMBER, &rval);               \
             if (JSVAL_IS_STRING(lval) && JSVAL_IS_STRING(rval)) {             \
                 str  = JSVAL_TO_STRING(lval);                                 \
@@ -2283,10 +2284,12 @@ js_Interpret(JSContext *cx, jsval *result)
                 cond = 1 OP 0;                                                \
             } else {                                                          \
                 if (ltmp == JSVAL_OBJECT) {                                   \
-                    VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &lval);         \
+                    VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &sp[-2]);       \
+                    lval = sp[-2];                                            \
                     ltmp = JSVAL_TAG(lval);                                   \
                 } else if (rtmp == JSVAL_OBJECT) {                            \
-                    VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &rval);         \
+                    VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &sp[-1]);       \
+                    rval = sp[-1];                                            \
                     rtmp = JSVAL_TAG(rval);                                   \
                 }                                                             \
                 if (ltmp == JSVAL_STRING && rtmp == JSVAL_STRING) {           \
@@ -2429,16 +2432,18 @@ js_Interpret(JSContext *cx, jsval *result)
           case JSOP_ADD:
             rval = FETCH_OPND(-1);
             lval = FETCH_OPND(-2);
-            VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &ltmp);
-            VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &rtmp);
-            if ((cond = JSVAL_IS_STRING(ltmp)) || JSVAL_IS_STRING(rtmp)) {
+            VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &sp[-2]);
+            lval = sp[-2];
+            VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &sp[-1]);
+            rval = sp[-1];
+            if ((cond = JSVAL_IS_STRING(lval)) || JSVAL_IS_STRING(rval)) {
                 SAVE_SP(fp);
                 if (cond) {
-                    str = JSVAL_TO_STRING(ltmp);
-                    ok = (str2 = js_ValueToString(cx, rtmp)) != NULL;
+                    str = JSVAL_TO_STRING(lval);
+                    ok = (str2 = js_ValueToString(cx, rval)) != NULL;
                 } else {
-                    str2 = JSVAL_TO_STRING(rtmp);
-                    ok = (str = js_ValueToString(cx, ltmp)) != NULL;
+                    str2 = JSVAL_TO_STRING(rval);
+                    ok = (str = js_ValueToString(cx, lval)) != NULL;
                 }
                 if (!ok)
                     goto out;
@@ -2741,7 +2746,9 @@ js_Interpret(JSContext *cx, jsval *result)
 /*
  * Initially, rval contains the value to increment or decrement, which is not
  * yet converted.  As above, the expression result goes in rtmp, the updated
- * value goes in rval.
+ * value goes in rval.  Our caller must set vp to point at a GC-rooted jsval
+ * in which we home rtmp, to protect it from GC in case the unconverted rval
+ * is not a number.
  */
 #define NONINT_INCREMENT_OP()                                                 \
     JS_BEGIN_MACRO                                                            \
@@ -2752,6 +2759,7 @@ js_Interpret(JSContext *cx, jsval *result)
                 ok = js_NewNumberValue(cx, d, &rtmp);                         \
                 if (!ok)                                                      \
                     goto out;                                                 \
+                *vp = rtmp;                                                   \
             }                                                                 \
             (cs->format & JOF_INC) ? d++ : d--;                               \
             ok = js_NewNumberValue(cx, d, &rval);                             \
@@ -2763,6 +2771,20 @@ js_Interpret(JSContext *cx, jsval *result)
         if (!ok)                                                              \
             goto out;                                                         \
     JS_END_MACRO
+
+                if (cs->format & JOF_POST) {
+                    /*
+                     * We must push early to protect the postfix increment
+                     * or decrement result, if converted to a jsdouble from
+                     * a non-number value, from GC nesting in the setter.
+                     */
+                    vp = sp++;
+                    SAVE_SP(fp);
+                    --i;
+                }
+#ifdef __GNUC__
+                else vp = NULL; /* suppress bogus gcc warnings */
+#endif
 
                 NONINT_INCREMENT_OP();
             }
