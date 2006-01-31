@@ -65,6 +65,7 @@
 #include "nsCRT.h"
 #include "nsPrintfCString.h"
 #include "nsNSSShutDown.h"
+#include "nsNSSCertHelper.h"
 
 #include "ssl.h"
 #include "secerr.h"
@@ -88,10 +89,6 @@
 /* SSM_UserCertChoice: enum for cert choice info */
 typedef enum {ASK, AUTO} SSM_UserCertChoice;
 
-
-/* strings for marking invalid user cert nicknames */
-#define NICKNAME_EXPIRED_STRING " (expired)"
-#define NICKNAME_NOT_YET_VALID_STRING " (not yet valid)"
 
 static SECStatus PR_CALLBACK
 nsNSS_SSLGetClientAuthData(void *arg, PRFileDesc *socket,
@@ -2033,9 +2030,7 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
       goto noCert;
     }
 
-    nicknames = CERT_NicknameStringsFromCertList(certList,
-                                                 NICKNAME_EXPIRED_STRING,
-                                                 NICKNAME_NOT_YET_VALID_STRING);
+    nicknames = getNSSCertNicknamesFromCertList(certList);
 
     if (nicknames == NULL) {
       goto loser;
