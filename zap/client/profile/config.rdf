@@ -27,7 +27,7 @@
   <rdf:Description rdf:about="rdf:#$xmowo"
                    NC:Name="Freedom2surf"
                    zap:domain="f2s.com"
-                   zap:route1="&lt;sip:sip.f2s.com&gt;"
+                   zap:route1="&lt;sip:sip.f2s.com;lr&gt;"
                    zap:elide_destination_route_header="true"
                    zap:ua_contact_address_type="options"
                    zap:options_keep_alive="true" />
