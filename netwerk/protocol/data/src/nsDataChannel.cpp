@@ -180,8 +180,8 @@ nsDataChannel::ParseData() {
     if (lBase64) {
         *base64 = ';';
         PRInt32 resultLen = 0;
-        if (dataBuffer[dataLen-1] == '=') {
-            if (dataBuffer[dataLen-2] == '=')
+        if (dataLen >= 1 && dataBuffer[dataLen-1] == '=') {
+            if (dataLen >= 2 && dataBuffer[dataLen-2] == '=')
                 resultLen = dataLen-2;
             else
                 resultLen = dataLen-1;
