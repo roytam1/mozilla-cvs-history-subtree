@@ -654,44 +654,41 @@ InternetSearchDataSource::GetSearchEngineToPing(nsIRDFResource **theEngine, nsCS
 	if (NS_FAILED(rv = mUpdateArray->Count(&numEngines)))	return(rv);
 	if (numEngines < 1)	return(NS_OK);
 
-	nsCOMPtr<nsISupports>	isupports = mUpdateArray->ElementAt(0);
+	nsCOMPtr<nsIRDFResource> aRes (do_QueryElementAt(mUpdateArray, 0));
 
 	// note: important to remove element from array
 	mUpdateArray->RemoveElementAt(0);
-	if (isupports)
+
+	if (aRes)
 	{
-		nsCOMPtr<nsIRDFResource> aRes (do_QueryInterface(isupports));
-		if (aRes)
+		if (isSearchCategoryEngineURI(aRes))
 		{
-			if (isSearchCategoryEngineURI(aRes))
-			{
-				nsCOMPtr<nsIRDFResource>	trueEngine;
-				rv = resolveSearchCategoryEngineURI(aRes, getter_AddRefs(trueEngine));
-				if (NS_FAILED(rv) || (rv == NS_RDF_NO_VALUE))	return(rv);
-				if (!trueEngine)	return(NS_RDF_NO_VALUE);
+			nsCOMPtr<nsIRDFResource>	trueEngine;
+			rv = resolveSearchCategoryEngineURI(aRes, getter_AddRefs(trueEngine));
+			if (NS_FAILED(rv) || (rv == NS_RDF_NO_VALUE))	return(rv);
+			if (!trueEngine)	return(NS_RDF_NO_VALUE);
 
-				aRes = trueEngine;
-			}
+			aRes = trueEngine;
+		}
 
-			if (!aRes)	return(NS_OK);
+		if (!aRes)	return(NS_OK);
 
-			*theEngine = aRes.get();
-			NS_ADDREF(*theEngine);
+		*theEngine = aRes.get();
+		NS_ADDREF(*theEngine);
 
-			// get update URL
-			nsCOMPtr<nsIRDFNode>	aNode;
-			if (NS_SUCCEEDED(rv = mInner->GetTarget(aRes, kNC_Update, PR_TRUE, getter_AddRefs(aNode)))
+		// get update URL
+		nsCOMPtr<nsIRDFNode>	aNode;
+		if (NS_SUCCEEDED(rv = mInner->GetTarget(aRes, kNC_Update, PR_TRUE, getter_AddRefs(aNode)))
 				&& (rv != NS_RDF_NO_VALUE))
+		{
+			nsCOMPtr<nsIRDFLiteral>	aLiteral (do_QueryInterface(aNode));
+			if (aLiteral)
 			{
-				nsCOMPtr<nsIRDFLiteral>	aLiteral (do_QueryInterface(aNode));
-				if (aLiteral)
+				const PRUnichar	*updateUni = nsnull;
+				aLiteral->GetValueConst(&updateUni);
+				if (updateUni)
 				{
-					const PRUnichar	*updateUni = nsnull;
-					aLiteral->GetValueConst(&updateUni);
-					if (updateUni)
-					{
-						updateURL.AssignWithConversion(updateUni);
-					}
+					updateURL.AssignWithConversion(updateUni);
 				}
 			}
 		}
@@ -2225,9 +2222,7 @@ InternetSearchDataSource::filterSite(nsIRDFResource *aResource)
 	if (NS_FAILED(rv = array->Count(&count)))	return(rv);
 	for (PRUint32 loop=0; loop<count; loop++)
 	{
-		nsCOMPtr<nsISupports>	element = array->ElementAt(loop);
-		if (!element)	break;
-		nsCOMPtr<nsIRDFResource> aSearchRoot (do_QueryInterface(element));
+		nsCOMPtr<nsIRDFResource> aSearchRoot (do_QueryElementAt(array, loop));
 		if (!aSearchRoot)	break;
 
 		if (NS_SUCCEEDED(rv = mInner->GetTargets(aSearchRoot, kNC_Child,
@@ -2392,9 +2387,7 @@ InternetSearchDataSource::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSourc
 
 	for (loop=((PRInt32)numSources)-1; loop>=0; loop--)
 	{
-		nsCOMPtr<nsISupports>	aSource = aSources->ElementAt(loop);
-		if (!aSource)	return(NS_ERROR_NULL_POINTER);
-		nsCOMPtr<nsIRDFResource> src (do_QueryInterface(aSource));
+		nsCOMPtr<nsIRDFResource> src (do_QueryElementAt(aSources, loop));
 		if (!src)	return(NS_ERROR_NO_INTERFACE);
 
 		if (aCommand == kNC_SearchCommand_AddToBookmarks)
