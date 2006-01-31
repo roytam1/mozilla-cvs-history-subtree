@@ -5787,12 +5787,16 @@ function getPluginInfo(pluginElement)
     } else {
       pluginsPage = pluginElement.getAttribute("pluginspage");
     }
-    var doc = pluginElement.ownerDocument;
-    var docShell = findChildShell(doc, gBrowser.selectedBrowser.docShell, null);
-    try {
-      pluginsPage = makeURI(pluginsPage, doc.characterSet, docShell.currentURI).spec;
-    } catch (ex) { 
-      pluginsPage = "";
+
+    // only attempt if a pluginsPage is defined.
+    if (pluginsPage) {
+      var doc = pluginElement.ownerDocument;
+      var docShell = findChildShell(doc, gBrowser.selectedBrowser.docShell, null);
+      try {
+        pluginsPage = makeURI(pluginsPage, doc.characterSet, docShell.currentURI).spec;
+      } catch (ex) { 
+        pluginsPage = "";
+      }
     }
 
     tagMimetype = pluginElement.QueryInterface(Components.interfaces.nsIPluginElement).actualType;
