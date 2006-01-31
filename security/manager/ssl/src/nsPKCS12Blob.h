@@ -91,7 +91,23 @@ private:
   nsresult inputToDecoder(SEC_PKCS12DecoderContext *, nsILocalFile *);
   void unicodeToItem(const PRUnichar *, SECItem *);
   PRBool handleError(int myerr = 0);
-  nsresult ImportFromFileHelper(nsILocalFile *file, PRBool &aWantRetry);
+
+  // RetryReason and ImportMode are used when importing a PKCS12 file.
+  // There are two reasons that cause us to retry:
+  // - When the password entered by the user is incorrect.
+  //   The user will be prompted to try again.
+  // - When the user entered a zero length password.
+  //   An empty password should be represented as an empty
+  //   string (a SECItem that contains a single terminating
+  //   NULL UTF16 character), but some applications use a
+  //   zero length SECItem.
+  //   We try both variations, zero length item and empty string,
+  //   without giving a user prompt when trying the different empty password flavors.
+  
+  enum RetryReason { rr_do_not_retry, rr_bad_password, rr_auto_retry_empty_password_flavors };
+  enum ImportMode { im_standard_prompt, im_try_zero_length_secitem };
+  
+  nsresult ImportFromFileHelper(nsILocalFile *file, ImportMode aImportMode, RetryReason &aWantRetry);
 
   // NSPR file I/O for temporary digest file
   PRFileDesc *mTmpFile;
