@@ -14634,7 +14634,7 @@ fi
 MOZ_EXTENSIONS=`${PERL} ${srcdir}/build/unix/uniq.pl ${MOZ_EXTENSIONS}`
 
 case "$target_os" in
-cygwin*|mingw*|msvc*|mks*|os2*|wince*)
+cygwin*|mingw*|msvc*|mks*|os2*|wince*|beos*)
     MOZ_IMG_DECODERS_DEFAULT="$MOZ_IMG_DECODERS_DEFAULT icon"
     ;;
 darwin*)

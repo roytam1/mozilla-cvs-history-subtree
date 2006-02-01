@@ -4972,7 +4972,7 @@ dnl ========================================================
 dnl Image decoders
 dnl ========================================================
 case "$target_os" in
-cygwin*|mingw*|msvc*|mks*|os2*|wince*)
+cygwin*|mingw*|msvc*|mks*|os2*|wince*|beos*)
     MOZ_IMG_DECODERS_DEFAULT="$MOZ_IMG_DECODERS_DEFAULT icon"
     ;;
 darwin*)
