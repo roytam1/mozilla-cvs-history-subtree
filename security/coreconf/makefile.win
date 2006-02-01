@@ -1,4 +1,4 @@
-#
+# 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -35,51 +35,70 @@
 #
 # ***** END LICENSE BLOCK *****
 
-include $(CORE_DEPTH)/coreconf/UNIX.mk
+#
+# An NMAKE file to set up and adjust coreconf's build system for
+# Client build.  Client build should invoke NMAKE on this file
+# instead of invoking gmake directly.
+#
 
-DEFAULT_COMPILER	= gcc
-CC			= gcc
-CCC			= g++
-RANLIB			= ranlib
-
-ifeq ($(OS_TEST),alpha)
-CPU_ARCH		= alpha
-else
-CPU_ARCH		= x86
-endif
-
-OS_CFLAGS		= $(DSO_CFLAGS) -ansi -Wall -DFREEBSD -DHAVE_STRERROR -DHAVE_BSD_FLOCK
-
-DSO_CFLAGS		= -fPIC
-DSO_LDOPTS		= -shared -Wl,-soname -Wl,$(notdir $@)
+NS_DEPTH = ..
+include <$(NS_DEPTH)\config\config.mak>
+#include <$(NS_DEPTH)\config\rules.mak>
 
 #
-# The default implementation strategy for FreeBSD is pthreads.
+# Backslashes are escape characters to gmake, so flip all backslashes
+# in $(MOZ_TOOLS) to forward slashes and pass that to gmake.
 #
-ifndef CLASSIC_NSPR
-USE_PTHREADS		= 1
-DEFINES			+= -D_THREAD_SAFE -D_REENTRANT
-OS_LIBS			+= -pthread
-DSO_LDOPTS		+= -pthread
-endif
 
-ARCH			= freebsd
+GMAKE = $(MOZ_TOOLS)\bin\gmake.exe MOZ_TOOLS_FLIPPED=$(MOZ_TOOLS:\=/)
 
-MOZ_OBJFORMAT		:= $(shell test -x /usr/bin/objformat && /usr/bin/objformat || echo aout)
+GMAKE = $(GMAKE) PR_CLIENT_BUILD=1 PR_CLIENT_BUILD_WINDOWS=1
 
-ifeq ($(MOZ_OBJFORMAT),elf)
-DLL_SUFFIX		= so
-else
-DLL_SUFFIX		= so.1.0
-endif
+#
+# The Client's debug build uses MSVC's debug runtime library (/MDd).
+#
 
-MKSHLIB			= $(CC) $(DSO_LDOPTS)
-ifdef MAPFILE
-# Add LD options to restrict exported symbols to those in the map file
-endif
-# Change PROCESS to put the mapfile in the correct format for this platform
-PROCESS_MAP_FILE = cp $< $@
+!ifdef MOZ_DEBUG
+GMAKE = $(GMAKE) USE_DEBUG_RTL=1
+!else
+GMAKE = $(GMAKE) BUILD_OPT=1
+!endif
 
-G++INCLUDES		= -I/usr/include/g++
+!if "$(MOZ_BITS)" == "16"
+GMAKE = $(GMAKE) OS_TARGET=WIN16
+!else
 
-INCLUDES		+= -I/usr/X11R6/include
+GMAKE = $(GMAKE) OS_TARGET=WIN95
+!ifdef MOZ_DEBUG
+PR_OBJDIR = WIN954.0_DBG.OBJD
+!else
+PR_OBJDIR = WIN954.0_OPT.OBJ
+!endif
+
+!endif
+
+#
+# The rules.  Simply invoke gmake with the same target
+# for Win16, use the watcom compiler with the MSVC headers and libs
+#
+
+# this rule is needed so that nmake with no explicit target will only build
+# all, and not build all the targets named below in succession!
+default:: all
+
+# a rule like this one must only be used for explicitly named targets!
+all depend export libs install clobber clobber_all clean::
+!if "$(MOZ_BITS)" == "16"
+	set PATH=%WATCPATH%
+	set INCLUDE=%MSVC_INC%
+	set LIB=%MSVC_LIB%
+!endif
+	$(GMAKE) $@
+!if "$(MOZ_BITS)" == "16"
+	set PATH=%MSVCPATH%
+	set INCLUDE=%MSVC_INC%
+	set LIB=%MSVC_LIB%
+!endif
+
+show:
+	@echo "MAKEFLAGS = $(MAKEFLAGS)"

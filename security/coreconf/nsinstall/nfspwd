@@ -1,3 +1,4 @@
+#! perl
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -35,51 +36,15 @@
 #
 # ***** END LICENSE BLOCK *****
 
-include $(CORE_DEPTH)/coreconf/UNIX.mk
+require "fastcwd.pl";
 
-DEFAULT_COMPILER	= gcc
-CC			= gcc
-CCC			= g++
-RANLIB			= ranlib
-
-ifeq ($(OS_TEST),alpha)
-CPU_ARCH		= alpha
-else
-CPU_ARCH		= x86
-endif
-
-OS_CFLAGS		= $(DSO_CFLAGS) -ansi -Wall -DFREEBSD -DHAVE_STRERROR -DHAVE_BSD_FLOCK
-
-DSO_CFLAGS		= -fPIC
-DSO_LDOPTS		= -shared -Wl,-soname -Wl,$(notdir $@)
-
-#
-# The default implementation strategy for FreeBSD is pthreads.
-#
-ifndef CLASSIC_NSPR
-USE_PTHREADS		= 1
-DEFINES			+= -D_THREAD_SAFE -D_REENTRANT
-OS_LIBS			+= -pthread
-DSO_LDOPTS		+= -pthread
-endif
-
-ARCH			= freebsd
-
-MOZ_OBJFORMAT		:= $(shell test -x /usr/bin/objformat && /usr/bin/objformat || echo aout)
-
-ifeq ($(MOZ_OBJFORMAT),elf)
-DLL_SUFFIX		= so
-else
-DLL_SUFFIX		= so.1.0
-endif
-
-MKSHLIB			= $(CC) $(DSO_LDOPTS)
-ifdef MAPFILE
-# Add LD options to restrict exported symbols to those in the map file
-endif
-# Change PROCESS to put the mapfile in the correct format for this platform
-PROCESS_MAP_FILE = cp $< $@
-
-G++INCLUDES		= -I/usr/include/g++
-
-INCLUDES		+= -I/usr/X11R6/include
+$_ = &fastcwd;
+if (m@^/[uh]/@o || s@^/tmp_mnt/@/@o) {
+    print("$_\n");
+} elsif ((($user, $rest) = m@^/usr/people/(\w+)/(.*)@o)
+      && readlink("/u/$user") eq "/usr/people/$user") {
+    print("/u/$user/$rest\n");
+} else {
+    chop($host = `hostname`);
+    print("/h/$host$_\n");
+}
