@@ -64,6 +64,13 @@
                                          else this.removeAttribute('readonly'); return val;"
                                   onget="return this.inputField.readonly;"/>
 
+      <property name="editor" readonly="true">
+        <getter><![CDATA[
+          const nsIDOMNSEditableElement = Components.interfaces.nsIDOMNSEditableElement;
+          return this.inputField.QueryInterface(nsIDOMNSEditableElement).editor;
+        ]]></getter>
+      </property>
+
       <method name="select">
         <body>
           this.inputField.select();

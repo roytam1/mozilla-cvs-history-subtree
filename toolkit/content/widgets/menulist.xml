@@ -390,6 +390,13 @@
                        else this.removeAttribute('disableautoselect'); return val;"
                 onget="return this.hasAttribute('disableautoselect');"/>
 
+      <property name="editor" readonly="true">
+        <getter><![CDATA[
+          const nsIDOMNSEditableElement = Components.interfaces.nsIDOMNSEditableElement;
+          return this.inputField.QueryInterface(nsIDOMNSEditableElement).editor;
+        ]]></getter>
+      </property>
+
       <method name="select">
         <body>
           this.inputField.select();
