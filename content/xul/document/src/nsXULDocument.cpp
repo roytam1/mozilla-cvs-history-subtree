@@ -357,8 +357,7 @@ struct BroadcastListener {
 
 nsXULDocument::nsXULDocument(void)
     : mResolutionPhase(nsForwardReference::eStart),
-      mState(eState_Master),
-      mDocumentLoaded(PR_FALSE)
+      mState(eState_Master)
 {
 
     // NOTE! nsDocument::operator new() zeroes out all members, so don't
