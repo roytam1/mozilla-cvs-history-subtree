@@ -119,6 +119,7 @@ MODULES_core :=                                 \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
+  mozilla/tools/test-harness                    \
   $(NULL)
 
 LOCALES_core :=                                 \

@@ -23,6 +23,7 @@
 #
 # Contributor(s):
 #  Darin Fisher <darin@meer.net>
+#  Dave Liebreich <davel@mozilla.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -41,15 +42,45 @@
 # allow core dumps
 ulimit -c 20480 2> /dev/null
 
-dir=`dirname $0`
-bin="$dir/.."
+# MOZILLA_FIVE_HOME is exported by run-mozilla.sh, and is usually $(DIST)/bin
+# we need to know that dir path in order to find xpcshell
+bin=${MOZILLA_FIVE_HOME:-`dirname $0`}
 
 exit_status=0
 
-for t in $dir/test_*.js
+# The sample Makefile for the xpcshell-simple harness adds the directory
+# where the *.js files reside as an arg.  If no arg is specified, assume 
+# the current directory is where the *.js files live.
+testdir="$1"
+if [ "x$testdir" = "x" ]; then
+    testdir=.
+fi
+
+headfiles="-f $bin/test-harness/xpcshell-simple/head.js"
+
+# files matching the pattern head_*.js are treated like test setup files
+# - they are run after head.js but before the test file
+for h in $testdir/head_*.js
+do
+    if [ -f $h ]; then
+	headfiles="$headfiles -f $h"
+    fi
+done
+
+tailfiles="-f $bin/test-harness/xpcshell-simple/tail.js"
+# files matching the pattern tail_*.js are treated like teardown files
+# - they are run after tail.js
+for t in $testdir/tail_*.js
+do
+    if [ -f $t ]; then
+	tailfiles="$tailfiles -f $t"
+    fi
+done
+
+for t in $testdir/test_*.js
 do
     echo -n "$t: "
-    $bin/xpcshell -f $dir/head.js -f $t -f $dir/tail.js 2> $t.log 1>&2
+    $bin/xpcshell $headfiles -f $t $tailfiles 2> $t.log 1>&2
     if [ `grep -c '\*\*\* PASS' $t.log` = 0 ]
     then
         echo "FAIL (see $t.log)"
