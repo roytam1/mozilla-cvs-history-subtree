@@ -237,6 +237,7 @@ LAYOUT_ATOM(Unicode, "x-unicode")
 
   // other
 LAYOUT_ATOM(wildcard, "*")
+LAYOUT_ATOM(_moz_target, "_moz_target")
 LAYOUT_ATOM(mozdirty, "_moz_dirty")
 LAYOUT_ATOM(stylesheet, "stylesheet")
 LAYOUT_ATOM(transform, "transform")
