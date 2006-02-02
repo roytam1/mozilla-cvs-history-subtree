@@ -42,7 +42,7 @@ var gConnectionsDialog = {
       this.doAutoconfigURLFixup();
       return true;
     }
-    
+
     if (proxyTypePref.value != 1)
       return true;
 
@@ -62,6 +62,9 @@ var gConnectionsDialog = {
         proxyPortPref.value = httpProxyPortPref.value;
       }
     }
+    
+    var noProxiesPref = document.getElementById("network.proxy.no_proxies_on");
+    noProxiesPref.value = noProxiesPref.value.replace(/[;]/g,',');
     
     return true;
   },
