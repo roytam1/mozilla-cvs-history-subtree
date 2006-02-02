@@ -232,7 +232,7 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
       mCurrentInputFrame->GetModulation(&modulation);
       mCurrentInputFrame->GetT(&T);
       double modulationFrequency = T ? modulation : modulation/3.0;
-      double amplitude = pow(10.0, volume/-10.0) * mZtlp * 32768.0 / frequencyCount;
+      double amplitude = frequencyCount ? pow(10.0, volume/-10.0) * mZtlp * 32768.0 / frequencyCount : 0.0;
 
       // construct array of 2*pi*f for all frequencies in the tone:
       double* frequencies = new double[frequencyCount];
