@@ -15,16 +15,16 @@
  * The Original Code is Mozilla XForms support.
  *
  * The Initial Developer of the Original Code is
- * Olli Pettay.
+ * Novell, Inc.
  * Portions created by the Initial Developer are Copyright (C) 2005
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Olli Pettay <Olli.Pettay@helsinki.fi> (original author)
+ *  Allan Beaufour <allan@beaufour.dk>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -36,51 +36,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "nsIDOMNode.idl"
-#include "nsIXFormsDelegate.idl"
+#include "nsXFormsDelegateStub.h"
+#include "nsXFormsRangeAccessors.h"
 
 /**
- * Interface implemented by the item element.
+ * Implementation of the XForms \<range\> element
+ * @see http://www.w3.org/TR/xforms/slice8.html#ui-range
+ *
+ * @todo Check data binding restrictions (XXX)
  */
-[scriptable, uuid(ec8d3556-8ed2-4143-88d1-6b7b2c8b0b3b)]
-interface nsIXFormsItemElement : nsISupports
+class nsXFormsRangeElement : public nsXFormsDelegateStub
 {
-  /**
-   * The text value of the \<label\> child element of the item.
-   */
-  readonly attribute AString labelText;
+public:
 
-  /**
-   * The value of the item element.
-   */
-  readonly attribute AString value;
+  // nsIXFormsDelegate overrides
+  NS_IMETHOD GetXFormsAccessors(nsIXFormsAccessors **aAccessor);
 
-  /**
-   * Marks item active. In current implementation '_moz_active' attribute is 
-   * set to the element if aActive is true. The attribute can be used when
-   * styling the element.
-   */
-  void setActive(in boolean aActive);
-
-  /**
-   * This is called by the \<label\> child element whenever it is refreshed.
-   * This information will be propagated by the \<item\> to the nearest
-   * \<select1\> element, which can then refresh its UI.
-   */
-  void labelRefreshed();
-
-  /**
-   * Indicates whether the item element contains a value child or a copy
-   * child.  We'll assume that if the item is NOT a copy item, then it must
-   * be a value item.  Which means that it must contain a XForms value element
-   * child.
-   */
-  attribute boolean isCopyItem;
-
-  /*
-   * returns the node that the contained copy element is bound to
-   */
-  readonly attribute nsIDOMNode copyNode;
-
+#ifdef DEBUG_smaug
+  virtual const char* Name() { return "range"; }
+#endif
 };
+
+// nsIXFormsDelegate
+
+NS_IMETHODIMP
+nsXFormsRangeElement::GetXFormsAccessors(nsIXFormsAccessors **aAccessor)
+{
+  if (!mAccessor) {
+    mAccessor = new nsXFormsRangeAccessors(this, mElement);
+    if (!mAccessor) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+  }
+  NS_ADDREF(*aAccessor = mAccessor);
+  return NS_OK;
+}
+
+
+// Creator
+
+NS_HIDDEN_(nsresult)
+NS_NewXFormsRangeElement(nsIXTFElement **aResult)
+{
+  *aResult = new nsXFormsRangeElement();
+  if (!*aResult)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  NS_ADDREF(*aResult);
+  return NS_OK;
+}

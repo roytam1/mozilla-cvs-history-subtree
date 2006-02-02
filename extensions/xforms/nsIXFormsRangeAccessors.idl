@@ -15,12 +15,12 @@
  * The Original Code is Mozilla XForms support.
  *
  * The Initial Developer of the Original Code is
- * IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * Novell, Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Brian Ryner <bryner@brianryner.com>
+ *  Allan Beaufour <abeaufour@novell.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,23 +36,22 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-
-interface nsIDOMDocument;
-interface nsIDOMElement;
+#include "nsIXFormsAccessors.idl"
 
 /**
- * Private interface implemented by the instance element.
+ * Accessors provided by XForms \<range\> controls.
+ *
+ * @see http://www.w3.org/TR/xforms/slice8.html#ui-range
  */
-[uuid(debb24ef-7ba1-4e01-9f62-18106b25c993)]
-interface nsIInstanceElementPrivate : nsISupports
+[scriptable, uuid(8a6c4540-4c2b-4591-af0e-ef147543eee7)]
+interface nsIXFormsRangeAccessors : nsIXFormsAccessors
 {
-  /**
-   * The document which holds the live instance data.
-   */
-  attribute nsIDOMDocument document;
-  readonly attribute nsIDOMElement element;
-  void backupOriginalDocument();
-  void restoreOriginalDocument();
-  void initialize();
+  /** The start of the range interval */
+  DOMString getRangeStart();
+
+  /** The end of the range interval */
+  DOMString getRangeEnd();
+
+  /** The step size */
+  DOMString getRangeStep();
 };

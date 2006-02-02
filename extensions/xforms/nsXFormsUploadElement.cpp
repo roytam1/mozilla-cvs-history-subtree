@@ -51,7 +51,6 @@
 #include "nsIDOMAbstractView.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIStringBundle.h"
-#include "nsIDOM3Node.h"
 #include "nsAutoBuffer.h"
 #include "nsIEventStateManager.h"
 #include "prmem.h"
@@ -149,24 +148,15 @@ nsXFormsUploadElement::GetBoundType()
   nsBoundType result = TYPE_DEFAULT;
 
   // get type bound to node
-  nsAutoString type, prefix, nsuri;
-  nsresult rv = nsXFormsUtils::ParseTypeFromNode(mBoundNode, type, prefix);
-
-  if (NS_SUCCEEDED(rv)) {
-    // get the namespace url from the prefix
-    nsCOMPtr<nsIDOM3Node> domNode3 = do_QueryInterface(mElement, &rv);
-    if (NS_SUCCEEDED(rv)) {
-      rv = domNode3->LookupNamespaceURI(prefix, nsuri);
-
-      if (NS_SUCCEEDED(rv) && nsuri.EqualsLiteral(NS_NAMESPACE_XML_SCHEMA)) {
-        if (type.EqualsLiteral("anyURI")) {
-          result = TYPE_ANYURI;
-        } else if (type.EqualsLiteral("base64Binary")) {
-          result = TYPE_BASE64;
-        } else if (type.EqualsLiteral("hexBinary")) {
-          result = TYPE_HEX;
-        }
-      }
+  nsAutoString type, nsuri;
+  nsresult rv = nsXFormsUtils::ParseTypeFromNode(mBoundNode, type, nsuri);
+  if (NS_SUCCEEDED(rv) && nsuri.EqualsLiteral(NS_NAMESPACE_XML_SCHEMA)) {
+    if (type.EqualsLiteral("anyURI")) {
+      result = TYPE_ANYURI;
+    } else if (type.EqualsLiteral("base64Binary")) {
+      result = TYPE_BASE64;
+    } else if (type.EqualsLiteral("hexBinary")) {
+      result = TYPE_HEX;
     }
   }
 
@@ -208,12 +198,9 @@ nsXFormsUploadElement::PickFile()
 
   // get nsIDOMWindowInternal
   nsCOMPtr<nsIDOMDocument> doc;
+  nsCOMPtr<nsIDOMWindowInternal> internal;
   mElement->GetOwnerDocument(getter_AddRefs(doc));
-  nsCOMPtr<nsIDOMDocumentView> dview = do_QueryInterface(doc);
-  NS_ENSURE_STATE(dview);
-  nsCOMPtr<nsIDOMAbstractView> aview;
-  dview->GetDefaultView(getter_AddRefs(aview));
-  nsCOMPtr<nsIDOMWindowInternal> internal = do_QueryInterface(aview);
+  rv = nsXFormsUtils::GetWindowFromDocument(doc, getter_AddRefs(internal));
   NS_ENSURE_STATE(internal);
 
   // init filepicker

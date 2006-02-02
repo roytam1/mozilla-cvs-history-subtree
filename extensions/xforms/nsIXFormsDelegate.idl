@@ -39,45 +39,36 @@
 
 #include "nsISupports.idl"
 
+interface nsIXFormsAccessors;
+
 /**
  * Interface implemented by XForms controls that delegates the UI to an
  * external entity.
+ *
+ * For more information on this interface please see
+ * http://developer.mozilla.org/en/docs/XForms:Custom_Controls
+ *
  */
-[scriptable, uuid(3b2300dc-9311-4eb7-a5c9-ca2ee4064de6)]
+[scriptable, uuid(902898eb-490e-4c36-a00b-9e74adcfbc43)]
 interface nsIXFormsDelegate : nsISupports
 {
   /**
-   * The value bound to the XForms control.
+   * Get the IXFormsAccessors object for this control.
    */
-  attribute DOMString value;
-
-  /**
-   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-readOnly
-   */
-  readonly attribute boolean isReadonly;
-
-  /**
-   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-relevant
-   */
-  readonly attribute boolean isEnabled;
-
-  /**
-   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-required
-   */
-  readonly attribute boolean isRequired;
-
-  /**
-   * Tells whether the XForms control is valid.
-   */
-  readonly attribute boolean isValid;
-
-  /**
-   * true, if XForms control is bound to a node in a data model.
-   */
-  readonly attribute boolean hasBoundNode;
+  nsIXFormsAccessors getXFormsAccessors();
 
   /**
    * This should be called by XBL widgets, when they are created.
    */
   void widgetAttached();
+
+  /**
+   * Report an error
+   *
+   * @param errorMsg          The error message id
+   *
+   * @todo XXX this should be extended to allow for "raw strings", not
+   * necessarily kept in bundles.
+   */
+  void reportError(in DOMString errorMsg);
 };

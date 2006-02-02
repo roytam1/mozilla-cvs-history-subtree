@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *  Allan Beaufour <abeaufour@novell.com>
- *  Olli Pettay <Olli.Pettay@helsinki.fi>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,30 +36,68 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDOMElement.idl"
+#include "nsISupports.idl"
+#include "nsIDOMNode.idl"
 
 /**
- * Interface implemented by XForms UI widgets.
+ * Interface exposing the states of an XForms control.
  *
  * For more information on this interface please see
  * http://developer.mozilla.org/en/docs/XForms:Custom_Controls
- *
  */
-[scriptable, uuid(b88a1c27-47a2-4c25-be7c-170501a93643)]
-interface nsIXFormsUIWidget : nsIDOMElement
+[scriptable, uuid(74992960-42a9-4479-a1ff-f7f1b37e187a)]
+interface nsIXFormsAccessors : nsISupports
 {
   /**
-   * Called, when UI Widget should refresh itself.
+   * Get the value bound to the XForms control.
    */
-  void refresh();
+  DOMString getValue();
 
   /**
-   * Tries to focus the UI Widget. Returns true, if focusing succeeded.
+   * Set the value bound to the XForms control.
    */
-  boolean focus();
+  void setValue(in DOMString value);
 
   /**
-   * During submission, the \<submit\> should be disabled.
+   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-readOnly
    */
-  void disable(in boolean disable); // for <submit>
+  boolean isReadonly();
+
+  /**
+   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-relevant
+   */
+  boolean isRelevant();
+
+  /**
+   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-required
+   */
+  boolean isRequired();
+
+  /**
+   * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-validate
+   */
+  boolean isValid();
+
+  /**
+   * true, if XForms control is bound to a node in a data model.
+   */
+  boolean hasBoundNode();
+
+  /**
+   * Node that the control is bound to in its data model.
+   */
+  nsIDOMNode getBoundNode();
+
+  /**
+   * Used to set the complete contents of the bound node.  This function is
+   * meant to be used like setValue() except that it can be used to set more
+   * than just the first textnode contained under the bound node.  If there
+   * is nothing contained under aNode, then all children of the bound node
+   * will be eliminated.
+   *
+   * @param aNode         aNode should be a copy of the bound node.  setContent
+   *                      will take the contents of aNode and move them under
+   *                      bound node.
+   */
+  void setContent(in nsIDOMNode aNode);
 };

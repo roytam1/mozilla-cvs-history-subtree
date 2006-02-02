@@ -77,7 +77,7 @@
 #include "nsIStringBundle.h"
 #include "nsIDOMSerializer.h"
 #include "nsIServiceManager.h"
-#include "nsIXFormsDelegate.h"
+#include "nsIDelegateInternal.h"
 
 #define EPHEMERAL_STYLE \
   "position:absolute;z-index:2147483647; \
@@ -98,6 +98,7 @@
    <?xml-stylesheet href='chrome://global/skin/' type='text/css'?> \
    <window title='[XForms]'\
      xmlns='http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul' \
+     onkeypress='if (event.keyCode == event.DOM_VK_ESCAPE) window.close();' \
      onload='document.documentElement.lastChild.previousSibling \
              .firstChild.nextSibling.focus();'>"
 
@@ -293,7 +294,7 @@ nsXFormsMessageElement::CloneNode(nsIDOMNode* aSrc, nsIDOMNode** aTarget)
   // to support <output> here.
   if (ns.EqualsLiteral(NS_NAMESPACE_XFORMS) &&
       localName.EqualsLiteral("output")) {
-    nsCOMPtr<nsIXFormsDelegate> outEl(do_QueryInterface(aSrc));
+    nsCOMPtr<nsIDelegateInternal> outEl(do_QueryInterface(aSrc));
     if (outEl) {
       nsCOMPtr<nsIDOMDocument> doc;
       aSrc->GetOwnerDocument(getter_AddRefs(doc));
@@ -456,20 +457,12 @@ PRBool
 nsXFormsMessageElement::HandleInlineAlert(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIDOMDocument> doc;
+  nsCOMPtr<nsIDOMWindowInternal> internal;
   mElement->GetOwnerDocument(getter_AddRefs(doc));
-  
-  nsCOMPtr<nsIDOMDocumentView> dview(do_QueryInterface(doc));
-  if (!dview)
+  nsXFormsUtils::GetWindowFromDocument(doc, getter_AddRefs(internal));
+  if (!internal) {
     return PR_FALSE;
-
-  nsCOMPtr<nsIDOMAbstractView> aview;
-  dview->GetDefaultView(getter_AddRefs(aview));
-  if (!aview)
-    return PR_FALSE;
-
-  nsCOMPtr<nsIDOMWindowInternal> internal(do_QueryInterface(aview));
-  if (!internal)
-    return PR_FALSE;
+  }
 
   nsCOMPtr<nsIDOMViewCSS> cssView(do_QueryInterface(internal));
   if (!cssView)
@@ -600,16 +593,11 @@ nsresult
 nsXFormsMessageElement::HandleModalAndModelessMessage(nsIDOMDocument* aDoc,
                                                       nsAString& aLevel)
 {
-  nsCOMPtr<nsIDOMDocumentView> dview(do_QueryInterface(aDoc));
-  if (!dview)
+  nsCOMPtr<nsIDOMWindowInternal> internal;
+  nsXFormsUtils::GetWindowFromDocument(aDoc, getter_AddRefs(internal));
+  if (!internal) {
     return NS_OK;
-
-  nsCOMPtr<nsIDOMAbstractView> aview;
-  dview->GetDefaultView(getter_AddRefs(aview));
-
-  nsCOMPtr<nsIDOMWindowInternal> internal(do_QueryInterface(aview));
-  if (!internal)
-    return NS_OK;
+  }
 
   nsAutoString instanceData;
   PRBool hasBinding = nsXFormsUtils::GetSingleNodeBindingValue(mElement,

@@ -15,16 +15,16 @@
  * The Original Code is Mozilla XForms support.
  *
  * The Initial Developer of the Original Code is
- * Olli Pettay.
+ * Novell, Inc.
  * Portions created by the Initial Developer are Copyright (C) 2005
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Olli Pettay <Olli.Pettay@helsinki.fi> (original author)
+ *  Allan Beaufour <abeaufour@novell.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -36,51 +36,50 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "nsIDOMNode.idl"
-#include "nsIXFormsDelegate.idl"
+#ifndef __NSXFORMSACCESSORS_H__
+#define __NSXFORMSACCESSORS_H__
+
+#include "nsIClassInfo.h"
+#include "nsIXFormsAccessors.h"
+#include "nsIDelegateInternal.h"
+
+class nsIDOMElement;
 
 /**
- * Interface implemented by the item element.
+ * Implementation of the nsIXFormsAccessors object. It is always owned by a
+ * nsIXFormsDelegate.
  */
-[scriptable, uuid(ec8d3556-8ed2-4143-88d1-6b7b2c8b0b3b)]
-interface nsIXFormsItemElement : nsISupports
+class nsXFormsAccessors : public nsIXFormsAccessors,
+                          public nsIClassInfo
 {
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSICLASSINFO
+  NS_DECL_NSIXFORMSACCESSORS
+
+  /** Constructor */
+  nsXFormsAccessors(nsIDelegateInternal* aDelegate, nsIDOMElement* aElement)
+    : mDelegate(aDelegate), mElement(aElement) 
+  {
+  }
+
+  /** Called by the owning delegate when it itself is destroyed */
+  void Destroy();
+
+protected:
   /**
-   * The text value of the \<label\> child element of the item.
+   * Checks the status of the model item properties
+   *
+   * @param aState       The state to check
+   * @para  aStateVal    The returned state
    */
-  readonly attribute AString labelText;
+  nsresult GetState(PRInt32 aState, PRBool *aStateVal);
 
-  /**
-   * The value of the item element.
-   */
-  readonly attribute AString value;
+  /** The delegate owning us */
+  nsIDelegateInternal*   mDelegate;
 
-  /**
-   * Marks item active. In current implementation '_moz_active' attribute is 
-   * set to the element if aActive is true. The attribute can be used when
-   * styling the element.
-   */
-  void setActive(in boolean aActive);
-
-  /**
-   * This is called by the \<label\> child element whenever it is refreshed.
-   * This information will be propagated by the \<item\> to the nearest
-   * \<select1\> element, which can then refresh its UI.
-   */
-  void labelRefreshed();
-
-  /**
-   * Indicates whether the item element contains a value child or a copy
-   * child.  We'll assume that if the item is NOT a copy item, then it must
-   * be a value item.  Which means that it must contain a XForms value element
-   * child.
-   */
-  attribute boolean isCopyItem;
-
-  /*
-   * returns the node that the contained copy element is bound to
-   */
-  readonly attribute nsIDOMNode copyNode;
-
+  /** The control DOM element */
+  nsIDOMElement*         mElement;
 };
+
+#endif

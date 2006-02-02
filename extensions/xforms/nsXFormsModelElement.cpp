@@ -176,7 +176,8 @@ static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
   NS_IDOMEVENTTARGET_IID,
   NS_IDOM3NODE_IID,
-  NS_IXFORMSMODELELEMENT_IID
+  NS_IXFORMSMODELELEMENT_IID,
+  NS_IXFORMSNSMODELELEMENT_IID
 };
 
 static nsIAtom* sModelPropsList[eModel__count];
@@ -259,19 +260,24 @@ nsXFormsModelElement::nsXFormsModelElement()
     mPendingInstanceCount(0),
     mDocumentLoaded(PR_FALSE),
     mNeedsRefresh(PR_FALSE),
-    mInstanceList(16),
+    mInstancesInitialized(PR_FALSE),
+    mInstanceDocuments(nsnull),
     mLazyModel(PR_FALSE)
 {
 }
 
-NS_IMPL_ISUPPORTS_INHERITED6(nsXFormsModelElement,
-                             nsXFormsStubElement,
-                             nsIXFormsModelElement,
-                             nsIModelElementPrivate,
-                             nsISchemaLoadListener,
-                             nsIWebServiceErrorHandler,
-                             nsIDOMEventListener,
-                             nsIXFormsContextControl)
+NS_INTERFACE_MAP_BEGIN(nsXFormsModelElement)
+  NS_INTERFACE_MAP_ENTRY(nsIXFormsModelElement)
+  NS_INTERFACE_MAP_ENTRY(nsIXFormsNSModelElement)
+  NS_INTERFACE_MAP_ENTRY(nsIModelElementPrivate)
+  NS_INTERFACE_MAP_ENTRY(nsISchemaLoadListener)
+  NS_INTERFACE_MAP_ENTRY(nsIWebServiceErrorHandler)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
+  NS_INTERFACE_MAP_ENTRY(nsIXFormsContextControl)
+NS_INTERFACE_MAP_END_INHERITING(nsXFormsStubElement)
+
+NS_IMPL_ADDREF_INHERITED(nsXFormsModelElement, nsXFormsStubElement)
+NS_IMPL_RELEASE_INHERITED(nsXFormsModelElement, nsXFormsStubElement)
 
 NS_IMETHODIMP
 nsXFormsModelElement::OnDestroyed()
@@ -281,7 +287,9 @@ nsXFormsModelElement::OnDestroyed()
   mElement = nsnull;
   mSchemas = nsnull;
 
-  mInstanceList.Clear();
+  if (mInstanceDocuments)
+    mInstanceDocuments->DropReferences();
+
   return NS_OK;
 }
 
@@ -298,8 +306,16 @@ nsXFormsModelElement::RemoveModelFromDocument()
   RemoveFromModelList(domDoc, this);
 
   nsCOMPtr<nsIDOMEventTarget> targ = do_QueryInterface(domDoc);
-  if (targ)
+  if (targ) {
     targ->RemoveEventListener(NS_LITERAL_STRING("DOMContentLoaded"), this, PR_TRUE);
+
+    nsCOMPtr<nsIDOMWindowInternal> window;
+    nsXFormsUtils::GetWindowFromDocument(domDoc, getter_AddRefs(window));
+    targ = do_QueryInterface(window);
+    if (targ) {
+      targ->RemoveEventListener(NS_LITERAL_STRING("unload"), this, PR_TRUE);
+    }
+  }
 }
 
 NS_IMETHODIMP
@@ -314,10 +330,6 @@ NS_IMETHODIMP
 nsXFormsModelElement::WillChangeDocument(nsIDOMDocument* aNewDocument)
 {
   RemoveModelFromDocument();
-  if(!aNewDocument) {
-    // can't send this much later or the model won't still be in the document!
-    nsXFormsUtils::DispatchEvent(mElement, eEvent_ModelDestruct);
-  }
   return NS_OK;
 }
 
@@ -330,8 +342,16 @@ nsXFormsModelElement::DocumentChanged(nsIDOMDocument* aNewDocument)
   AddToModelList(aNewDocument, this);
 
   nsCOMPtr<nsIDOMEventTarget> targ = do_QueryInterface(aNewDocument);
-  if (targ)
+  if (targ) {
     targ->AddEventListener(NS_LITERAL_STRING("DOMContentLoaded"), this, PR_TRUE);
+
+    nsCOMPtr<nsIDOMWindowInternal> window;
+    nsXFormsUtils::GetWindowFromDocument(aNewDocument, getter_AddRefs(window));
+    targ = do_QueryInterface(window);
+    if (targ) {
+      targ->AddEventListener(NS_LITERAL_STRING("unload"), this, PR_TRUE);
+    }
+  }
   
   return NS_OK;
 }
@@ -339,6 +359,36 @@ nsXFormsModelElement::DocumentChanged(nsIDOMDocument* aNewDocument)
 NS_IMETHODIMP
 nsXFormsModelElement::DoneAddingChildren()
 {
+  return InitializeInstances();
+}
+
+nsresult
+nsXFormsModelElement::InitializeInstances()
+{
+  if (mInstancesInitialized || !mElement) {
+    return NS_OK;
+  }
+
+  mInstancesInitialized = PR_TRUE;
+
+  nsCOMPtr<nsIDOMNodeList> children;
+  mElement->GetChildNodes(getter_AddRefs(children));
+
+  PRUint32 childCount = 0;
+  if (children) {
+    children->GetLength(&childCount);
+  }
+
+  for (PRUint32 i = 0; i < childCount; ++i) {
+    nsCOMPtr<nsIDOMNode> child;
+    children->Item(i, getter_AddRefs(child));
+    if (nsXFormsUtils::IsXFormsElement(child, NS_LITERAL_STRING("instance"))) {
+      nsCOMPtr<nsIInstanceElementPrivate> instance(do_QueryInterface(child));
+      if (instance) {
+        instance->Initialize();
+      }
+    }
+  }
 
   // (XForms 4.2.1)
   // 1. load xml schemas
@@ -415,8 +465,13 @@ nsXFormsModelElement::DoneAddingChildren()
   // If all of the children are added and there aren't any instance elements,
   // yet, then we need to make sure that one is ready in case the form author
   // is using lazy authoring.
-  PRUint32 instCount = mInstanceList.Count();
+  NS_ENSURE_STATE(mInstanceDocuments);
+  PRUint32 instCount;
+  mInstanceDocuments->GetLength(&instCount);
   if (!instCount) {
+#ifdef DEBUG
+    printf("Creating lazy instance\n");
+#endif
     nsCOMPtr<nsIDOMDocument> domDoc;
     mElement->GetOwnerDocument(getter_AddRefs(domDoc));
     nsCOMPtr<nsIDOMDocumentXBL> xblDoc(do_QueryInterface(domDoc));
@@ -426,8 +481,7 @@ nsXFormsModelElement::DoneAddingChildren()
                            NS_LITERAL_STRING(XFORMS_LAZY_INSTANCE_BINDING));
       NS_ENSURE_SUCCESS(rv, rv);
 
-      NS_WARN_IF_FALSE(mInstanceList.Count() == 1, 
-                       "Installing lazy instance didn't succeed!");
+      mInstanceDocuments->GetLength(&instCount);
 
       nsCOMPtr<nsIDOMNodeList> list;
       xblDoc->GetAnonymousNodes(mElement, getter_AddRefs(list));
@@ -443,7 +497,7 @@ nsXFormsModelElement::DoneAddingChildren()
           nsCOMPtr<nsIInstanceElementPrivate> instance =
             do_QueryInterface(item);
           if (instance) {
-            rv = instance->InitializeLazyInstance();
+            rv = instance->Initialize();
             NS_ENSURE_SUCCESS(rv, rv);
 
             mLazyModel = PR_TRUE;
@@ -452,6 +506,7 @@ nsXFormsModelElement::DoneAddingChildren()
         }
       }
     }
+    NS_WARN_IF_FALSE(mLazyModel, "Installing lazy instance didn't succeed!");
   }
 
   // (XForms 4.2.1 - cont)
@@ -498,6 +553,8 @@ nsXFormsModelElement::HandleDefault(nsIDOMEvent *aEvent, PRBool *aHandled)
     Ready();
   } else if (type.EqualsASCII(sXFormsEventsEntries[eEvent_Reset].name)) {
     Reset();
+  } else if (type.EqualsASCII(sXFormsEventsEntries[eEvent_BindingException].name)) {
+    *aHandled = nsXFormsUtils::HandleBindingException(mElement);
   } else {
     *aHandled = PR_FALSE;
   }
@@ -542,10 +599,22 @@ nsXFormsModelElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 
   mSchemas = do_GetService(NS_SCHEMALOADER_CONTRACTID);
 
+  mInstanceDocuments = new nsXFormsModelInstanceDocuments();
+  NS_ASSERTION(mInstanceDocuments, "could not create mInstanceDocuments?!");
+
   return NS_OK;
 }
 
 // nsIXFormsModelElement
+
+NS_IMETHODIMP
+nsXFormsModelElement::GetInstanceDocuments(nsIDOMNodeList **aDocuments)
+{
+  NS_ENSURE_STATE(mInstanceDocuments);
+  NS_ENSURE_ARG_POINTER(aDocuments);
+  NS_ADDREF(*aDocuments = mInstanceDocuments);
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 nsXFormsModelElement::GetInstanceDocument(const nsAString& aInstanceID,
@@ -867,56 +936,12 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
 
   nsAutoString type;
   aEvent->GetType(type);
-  if (!type.EqualsLiteral("DOMContentLoaded"))
-    return NS_OK;
 
-  mDocumentLoaded = PR_TRUE;
-
-  // dispatch xforms-model-construct, xforms-rebuild, xforms-recalculate,
-  // xforms-revalidate
-
-  // We wait until DOMContentLoaded to dispatch xforms-model-construct,
-  // since the model may have an action handler for this event and Mozilla
-  // doesn't register XML Event listeners until the document is loaded.
-
-  // xforms-model-construct is not cancellable, so always proceed.
-
-  nsXFormsUtils::DispatchEvent(mElement, eEvent_ModelConstruct);
-
-  if (mPendingInlineSchemas.Count() > 0) {
-    nsCOMPtr<nsIDOMElement> el;
-    nsresult rv;
-    for (PRInt32 i=0; i<mPendingInlineSchemas.Count(); ++i) {
-      GetSchemaElementById(mElement, *mPendingInlineSchemas[i],
-                           getter_AddRefs(el));
-      if (!el) {
-        rv = NS_ERROR_UNEXPECTED;
-      } else {
-        nsCOMPtr<nsISchema> schema;
-        // no need to observe errors via the callback.  instead, rely on
-        // this method returning a failure code when it encounters errors.
-        rv = mSchemas->ProcessSchemaElement(el, nsnull,
-                                            getter_AddRefs(schema));
-        if (NS_SUCCEEDED(rv))
-          mSchemaCount++;
-      }
-      if (NS_FAILED(rv)) {
-        // this is a fatal error (XXX)
-        nsXFormsUtils::ReportError(NS_LITERAL_STRING("schemaLoadError"), mElement);
-        nsXFormsUtils::DispatchEvent(mElement, eEvent_LinkException);
-        return NS_OK;
-      }
-    }
-    if (IsComplete()) {
-      rv = FinishConstruction();
-      NS_ENSURE_SUCCESS(rv, rv);
-      nsXFormsUtils::DispatchEvent(mElement, eEvent_Refresh);
-    }
-    mPendingInlineSchemas.Clear();
+  if (type.EqualsLiteral("DOMContentLoaded")) {
+    return HandleLoad(aEvent);
+  }else if (type.EqualsLiteral("unload")) {
+    return HandleUnload(aEvent);
   }
-
-  // We may still be waiting on external documents to load.
-  MaybeNotifyCompletion();
 
   return NS_OK;
 }
@@ -977,26 +1002,15 @@ nsXFormsModelElement::GetTypeForControl(nsIXFormsControl  *aControl,
 nsXFormsModelElement::GetTypeAndNSFromNode(nsIDOMNode *aInstanceData,
                                            nsAString &aType, nsAString &aNSUri)
 {
-  nsAutoString schemaTypePrefix;
-  nsresult rv = nsXFormsUtils::ParseTypeFromNode(aInstanceData, aType,
-                                                 schemaTypePrefix);
+  nsresult rv = nsXFormsUtils::ParseTypeFromNode(aInstanceData, aType, aNSUri);
 
   if(rv == NS_ERROR_NOT_AVAILABLE) {
     // if there is no type assigned, then assume that the type is 'string'
     aNSUri.Assign(NS_LITERAL_STRING(NS_NAMESPACE_XML_SCHEMA));
     aType.Assign(NS_LITERAL_STRING("string"));
     rv = NS_OK;
-  } else {
-    if (schemaTypePrefix.IsEmpty()) {
-      aNSUri.AssignLiteral("");
-    } else {
-      // get the namespace url from the prefix
-      nsCOMPtr<nsIDOM3Node> domNode3 = do_QueryInterface(mElement, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = domNode3->LookupNamespaceURI(schemaTypePrefix, aNSUri);
-    }
   }
+
   return rv;
 }
 
@@ -1029,14 +1043,16 @@ NS_IMETHODIMP
 nsXFormsModelElement::FindInstanceElement(const nsAString &aID,
                                           nsIInstanceElementPrivate **aElement)
 {
+  NS_ENSURE_STATE(mInstanceDocuments);
   *aElement = nsnull;
 
-  PRUint32 instCount = mInstanceList.Count();
+  PRUint32 instCount;
+  mInstanceDocuments->GetLength(&instCount);
   if (instCount) {
     nsCOMPtr<nsIDOMElement> element;
     nsAutoString id;
     for (PRUint32 i = 0; i < instCount; ++i) {
-      nsIInstanceElementPrivate* instEle = mInstanceList.ObjectAt(i);
+      nsIInstanceElementPrivate* instEle = mInstanceDocuments->GetInstanceAt(i);
       instEle->GetElement(getter_AddRefs(element));
 
       if (aID.IsEmpty()) {
@@ -1083,6 +1099,16 @@ nsXFormsModelElement::GetNodeValue(nsIDOMNode *aContextNode,
                            aNodeValue);
 }
  
+NS_IMETHODIMP
+nsXFormsModelElement::SetNodeContent(nsIDOMNode      *aContextNode,
+                                     nsIDOMNode      *aNodeContent,
+                                     PRBool          *aNodeChanged)
+{ 
+  return mMDG.SetNodeContent(aContextNode,
+                             aNodeContent,
+                             aNodeChanged);
+}
+
 NS_IMETHODIMP
 nsXFormsModelElement::ValidateNode(nsIDOMNode *aInstanceNode, PRBool *aResult)
 {
@@ -1293,11 +1319,15 @@ nsXFormsModelElement::Ready()
 void
 nsXFormsModelElement::BackupOrRestoreInstanceData(PRBool restore)
 {
+  if (!mInstanceDocuments)
+    return;
 
-  PRUint32 instCount = mInstanceList.Count();
+  PRUint32 instCount;
+  mInstanceDocuments->GetLength(&instCount);
   if (instCount) {
     for (PRUint32 i = 0; i < instCount; ++i) {
-      nsIInstanceElementPrivate *instance = mInstanceList.ObjectAt(i);
+      nsIInstanceElementPrivate *instance =
+        mInstanceDocuments->GetInstanceAt(i);
 
       // Don't know what to do with error if we get one.
       // Restore/BackupOriginalDocument will already output warnings.
@@ -1661,22 +1691,11 @@ nsXFormsModelElement::SetStates(nsIXFormsControl *aControl, nsIDOMNode *aBoundNo
   return SetStatesInternal(aControl, aBoundNode, PR_TRUE);
 }
 
-NS_IMETHODIMP
-nsXFormsModelElement::GetInstanceList(nsCOMArray<nsIInstanceElementPrivate> **aInstanceList)
-{
-  if (aInstanceList) {
-    *aInstanceList = &mInstanceList;
-  }
-  return NS_OK;  
-}
-
 nsresult
 nsXFormsModelElement::AddInstanceElement(nsIInstanceElementPrivate *aInstEle) 
 {
-  // always append to the end of the list.  We need to keep the elements in
-  // document order since the first instance element is the default instance
-  // document for the model.
-  mInstanceList.AppendObject(aInstEle);
+  NS_ENSURE_STATE(mInstanceDocuments);
+  mInstanceDocuments->AddInstance(aInstEle);
 
   return NS_OK;
 }
@@ -1764,6 +1783,74 @@ nsXFormsModelElement::ProcessDeferredBinds(nsIDOMDocument *aDoc)
 }
 
 nsresult
+nsXFormsModelElement::HandleLoad(nsIDOMEvent* aEvent)
+{
+  if (!mInstancesInitialized) {
+    // XXX This is for Bug 308106. In Gecko 1.8 DoneAddingChildren is not
+    //     called in XUL if the element doesn't have any child nodes.
+    InitializeInstances();
+  }
+
+  mDocumentLoaded = PR_TRUE;
+
+  // dispatch xforms-model-construct, xforms-rebuild, xforms-recalculate,
+  // xforms-revalidate
+
+  // We wait until DOMContentLoaded to dispatch xforms-model-construct,
+  // since the model may have an action handler for this event and Mozilla
+  // doesn't register XML Event listeners until the document is loaded.
+
+  // xforms-model-construct is not cancellable, so always proceed.
+
+  nsXFormsUtils::DispatchEvent(mElement, eEvent_ModelConstruct);
+
+  if (mPendingInlineSchemas.Count() > 0) {
+    nsCOMPtr<nsIDOMElement> el;
+    nsresult rv;
+    for (PRInt32 i=0; i<mPendingInlineSchemas.Count(); ++i) {
+      GetSchemaElementById(mElement, *mPendingInlineSchemas[i],
+                           getter_AddRefs(el));
+      if (!el) {
+        rv = NS_ERROR_UNEXPECTED;
+      } else {
+        nsCOMPtr<nsISchema> schema;
+        // no need to observe errors via the callback.  instead, rely on
+        // this method returning a failure code when it encounters errors.
+        rv = mSchemas->ProcessSchemaElement(el, nsnull,
+                                            getter_AddRefs(schema));
+        if (NS_SUCCEEDED(rv))
+          mSchemaCount++;
+      }
+      if (NS_FAILED(rv)) {
+        // this is a fatal error (XXX)
+        nsXFormsUtils::ReportError(NS_LITERAL_STRING("schemaLoadError"), mElement);
+        nsXFormsUtils::DispatchEvent(mElement, eEvent_LinkException);
+        return NS_OK;
+      }
+    }
+    if (IsComplete()) {
+      rv = FinishConstruction();
+      NS_ENSURE_SUCCESS(rv, rv);
+      nsXFormsUtils::DispatchEvent(mElement, eEvent_Refresh);
+    }
+    mPendingInlineSchemas.Clear();
+  }
+
+  // We may still be waiting on external documents to load.
+  MaybeNotifyCompletion();
+
+  return NS_OK;
+}
+
+nsresult
+nsXFormsModelElement::HandleUnload(nsIDOMEvent* aEvent)
+{
+  // due to fastback changes, had to move this notification out from under
+  // model's WillChangeDocument override.
+  return nsXFormsUtils::DispatchEvent(mElement, eEvent_ModelDestruct);
+}
+
+nsresult
 NS_NewXFormsModelElement(nsIXTFElement **aResult)
 {
   *aResult = new nsXFormsModelElement();
@@ -1772,4 +1859,125 @@ NS_NewXFormsModelElement(nsIXTFElement **aResult)
 
   NS_ADDREF(*aResult);
   return NS_OK;
+}
+
+
+// ---------------------------- //
+
+// nsXFormsModelInstanceDocuments
+
+NS_IMPL_ISUPPORTS2(nsXFormsModelInstanceDocuments, nsIDOMNodeList, nsIClassInfo)
+
+nsXFormsModelInstanceDocuments::nsXFormsModelInstanceDocuments()
+  : mInstanceList(16)
+{
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetLength(PRUint32* aLength)
+{
+  *aLength = mInstanceList.Count();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
+{
+  *aReturn = nsnull;
+  nsIInstanceElementPrivate* instance = mInstanceList.SafeObjectAt(aIndex);
+  if (instance) {
+    nsCOMPtr<nsIDOMDocument> doc;
+    if (NS_SUCCEEDED(instance->GetDocument(getter_AddRefs(doc))) && doc) {
+      NS_ADDREF(*aReturn = doc);
+    }
+  }
+
+  return NS_OK;
+}
+
+nsIInstanceElementPrivate*
+nsXFormsModelInstanceDocuments::GetInstanceAt(PRUint32 aIndex)
+{
+  return mInstanceList.ObjectAt(aIndex);
+}
+
+void
+nsXFormsModelInstanceDocuments::AddInstance(nsIInstanceElementPrivate *aInst)
+{
+  // always append to the end of the list.  We need to keep the elements in
+  // document order since the first instance element is the default instance
+  // document for the model.
+  mInstanceList.AppendObject(aInst);
+}
+
+void
+nsXFormsModelInstanceDocuments::DropReferences()
+{
+  mInstanceList.Clear();
+}
+
+// nsIClassInfo implementation
+
+static const nsIID sInstScriptingIIDs[] = {
+  NS_IDOMNODELIST_IID
+};
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetInterfaces(PRUint32   *aCount,
+                                              nsIID   * **aArray)
+{
+  return
+    nsXFormsUtils::CloneScriptingInterfaces(sInstScriptingIIDs,
+                                            NS_ARRAY_LENGTH(sInstScriptingIIDs),
+                                            aCount, aArray);
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetHelperForLanguage(PRUint32 language,
+                                                     nsISupports **_retval)
+{
+  *_retval = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetContractID(char * *aContractID)
+{
+  *aContractID = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetClassDescription(char * *aClassDescription)
+{
+  *aClassDescription = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetClassID(nsCID * *aClassID)
+{
+  *aClassID = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetImplementationLanguage(PRUint32 *aLang)
+{
+  *aLang = nsIProgrammingLanguage::CPLUSPLUS;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetFlags(PRUint32 *aFlags)
+{
+  *aFlags = nsIClassInfo::DOM_OBJECT;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelInstanceDocuments::GetClassIDNoAlloc(nsCID *aClassIDNoAlloc)
+{
+  return NS_ERROR_NOT_AVAILABLE;
 }

@@ -766,11 +766,14 @@ nsXFormsRepeatElement::Refresh()
     rv = result->SnapshotItem(i - 1, getter_AddRefs(contextNode));
     NS_ENSURE_SUCCESS(rv, rv);
         
-    nsCOMPtr<nsIDOMElement> contextElement = do_QueryInterface(contextNode);
-    NS_ENSURE_TRUE(contextElement, NS_ERROR_FAILURE);
-
     // Set context node, position, and size
-    rv = riContext->SetContext(contextElement, i, contextSize);
+    rv = riContext->SetContext(contextNode, i, contextSize);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // We need to insert the context node before adding the children, or the
+    // children will fail to set up their proper XForms context.
+    nsCOMPtr<nsIDOMNode> domNode;
+    rv = mHTMLElement->AppendChild(riElement, getter_AddRefs(domNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Iterate over template children, clone them, and append them to <contextcontainer>
@@ -778,6 +781,8 @@ nsXFormsRepeatElement::Refresh()
     rv = mElement->GetFirstChild(getter_AddRefs(child));
     NS_ENSURE_SUCCESS(rv, rv);
     while (child) {
+      /// XXX the node probably refreshes itself twice here, once on cloning
+      /// and once when it's inserted ... that's not necessary.
       nsCOMPtr<nsIDOMNode> childClone;
       rv = CloneNode(child, getter_AddRefs(childClone));
       NS_ENSURE_SUCCESS(rv, rv);
@@ -790,16 +795,6 @@ nsXFormsRepeatElement::Refresh()
       NS_ENSURE_SUCCESS(rv, rv);
       child = newNode;
     }
-
-    // Append node
-    nsCOMPtr<nsIDOMNode> domNode;
-    rv = mHTMLElement->AppendChild(riElement, getter_AddRefs(domNode));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // There is an awfull lot of evaluating being done by all the
-    // children, as they are created and inserted into the different
-    // places in the DOM, the only refresh necessary is the one when they
-    // are appended in mHTMLElement.
   }
 
   if (!mParent && !mCurrentIndex && mMaxIndex) {
