@@ -950,9 +950,13 @@ PRBool	nsIMAPBodypartLeaf::ShouldFetchInline()
       if (prefBranch)
         prefBranch->GetBoolPref("mailnews.display.prefer_plaintext", &preferPlainText);
 
-      if ((preferPlainText && !PL_strcmp(m_partNumberString, "1") &&
-                               !PL_strcasecmp(m_bodyType, "text"))
-          || m_parentPart->IsLastTextPart(m_partNumberString))
+      nsIMAPBodypart *grandParentPart = m_parentPart->GetParentPart();
+      if (((preferPlainText || !PL_strcasecmp(m_parentPart->GetBodySubType(), "mixed")) 
+              && !PL_strcmp(m_partNumberString, "1") 
+              && !PL_strcasecmp(m_bodyType, "text"))
+          || ((!PL_strcasecmp(m_parentPart->GetBodySubType(), "alternative") ||
+                (grandParentPart && !PL_strcasecmp(grandParentPart->GetBodySubType(), "alternative"))) &&
+                m_parentPart->IsLastTextPart(m_partNumberString)))
       {
         return PR_TRUE;	// we're downloading it inline
       }
@@ -1477,7 +1481,12 @@ PRBool	nsIMAPBodypartMultipart::ShouldFetchInline()
       return PR_FALSE;
     
     nsIMAPBodypart *grandparentPart = m_parentPart->GetParentPart();
-    
+
+    // if we're a multipart sub-part of multipart alternative, we need to 
+    // be fetched because mime will always display us.
+    if (!PL_strcasecmp(m_parentPart->GetBodySubType(), "alternative") &&
+        GetType() == IMAP_BODY_MULTIPART)
+      return PR_TRUE;
     // If "Show Attachments as Links" is on, and
     // the parent of this multipart is not a message,
     // then it's not inline.
