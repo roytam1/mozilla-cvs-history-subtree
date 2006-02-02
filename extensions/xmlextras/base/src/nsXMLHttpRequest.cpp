@@ -865,7 +865,12 @@ nsXMLHttpRequest::OpenRequest(const nsACString& method,
 {
   NS_ENSURE_ARG(!method.IsEmpty());
   NS_ENSURE_ARG(!url.IsEmpty());
-  
+
+  // Disallow HTTP/1.1 TRACE method (see bug 302489).
+  if (method.Equals("trace", nsCaseInsensitiveCStringComparator())) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
   nsresult rv;
   nsCOMPtr<nsIURI> uri; 
   PRBool authp = PR_FALSE;
