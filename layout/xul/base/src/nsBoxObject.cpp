@@ -446,6 +446,17 @@ nsBoxObject::GetPropertyAsSupports(const PRUnichar* aPropertyName, nsISupports**
 NS_IMETHODIMP
 nsBoxObject::SetPropertyAsSupports(const PRUnichar* aPropertyName, nsISupports* aValue)
 {
+#ifdef DEBUG
+  if (aValue) {
+    nsIFrame* frame;
+    CallQueryInterface(aValue, &frame);
+    NS_ASSERTION(!frame,
+                 "Calling SetPropertyAsSupports on a frame.  Prepare to crash "
+                 "and be exploited any time some random website decides to "
+                 "exploit you");
+  }
+#endif
+  
   if (!mPresState)
     NS_NewPresState(getter_AddRefs(mPresState));
 

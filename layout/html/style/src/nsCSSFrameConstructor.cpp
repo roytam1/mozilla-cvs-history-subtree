@@ -229,7 +229,7 @@ static FrameCtorDebugFlags gFlags[] = {
 #include "nsPopupSetFrame.h"
 #include "nsTreeColFrame.h"
 #include "nsIBoxObject.h"
-#include "nsIListBoxObject.h"
+#include "nsPIListBoxObject.h"
 #include "nsListBoxBodyFrame.h"
 #include "nsListItemFrame.h"
 
@@ -8657,11 +8657,11 @@ PRBool NotifyListBoxBody(nsIPresContext*    aPresContext,
       if (xulEl) {
         nsCOMPtr<nsIBoxObject> boxObject;
         xulEl->GetBoxObject(getter_AddRefs(boxObject));
-        nsCOMPtr<nsIListBoxObject> listBoxObject(do_QueryInterface(boxObject));
-        nsIListBoxObject* bodyBoxObject = nsnull;
-        listBoxObject->GetListboxBody(&bodyBoxObject);
-        listBoxBody = NS_STATIC_CAST(nsListBoxBodyFrame*, bodyBoxObject);
-        NS_IF_RELEASE(bodyBoxObject);
+        nsCOMPtr<nsPIListBoxObject> listBoxObject = do_QueryInterface(boxObject);
+        if (listBoxObject) {
+          nsIListBoxObject* bodyBoxObject = listBoxObject->GetListBoxBody();
+          listBoxBody = NS_STATIC_CAST(nsListBoxBodyFrame*, bodyBoxObject);
+        }
       }
     }
 
