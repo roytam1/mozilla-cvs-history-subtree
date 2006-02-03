@@ -68,6 +68,8 @@
 #include "nsITimer.h"
 #include "nsAutoPtr.h"
 #include "nsStyleSet.h"
+#include "nsIDOMNSDocument.h"
+#include "nsPIListBoxObject.h"
 
 /////////////// nsListScrollSmoother //////////////////
 
@@ -274,6 +276,34 @@ nsListBoxBodyFrame::Destroy(nsIPresContext* aPresContext)
   // make sure we cancel any posted callbacks.
   if (mReflowCallbackPosted)
      aPresContext->PresShell()->CancelReflowCallback(this);
+
+  // Make sure we tell our listbox's box object we're being destroyed.
+  nsIFrame *parent = mParent;
+  while (parent) {
+    nsIContent *content = parent->GetContent();
+    nsIDocument *doc;
+
+    if (content &&
+        content->GetNodeInfo()->Equals(nsXULAtoms::listbox,
+                                       kNameSpaceID_XUL) &&
+        (doc = content->GetDocument())) {
+      nsCOMPtr<nsIDOMElement> e(do_QueryInterface(content));
+      nsCOMPtr<nsIDOMNSDocument> nsdoc(do_QueryInterface(doc));
+
+      nsCOMPtr<nsIBoxObject> box;
+      nsdoc->GetBoxObjectFor(e, getter_AddRefs(box));
+
+      nsCOMPtr<nsPIListBoxObject> pibox(do_QueryInterface(box));
+
+      if (pibox) {
+        pibox->ClearCachedListBoxBody();
+      }
+
+      break;
+    }
+
+    parent = parent->GetParent();
+  }
 
   return nsBoxFrame::Destroy(aPresContext);
 }

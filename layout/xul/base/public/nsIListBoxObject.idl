@@ -44,6 +44,8 @@ interface nsIDOMElement;
 [scriptable, uuid(FDE7C970-0B4E-49f4-B1EB-974AE6C96336)]
 interface nsIListBoxObject : nsISupports
 {
+  // listboxBody is always null.  It's only here to avoid changing the
+  // interface.
   readonly attribute nsIListBoxObject listboxBody;
 
   long getRowCount();

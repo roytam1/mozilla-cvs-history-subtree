@@ -41,7 +41,7 @@
 
 #include "nscore.h"
 #include "nsLeafBoxFrame.h"
-#include "nsITreeBoxObject.h"
+#include "nsPITreeBoxObject.h"
 #include "nsITreeView.h"
 #include "nsICSSPseudoComparator.h"
 #include "nsIScrollbarMediator.h"
@@ -473,7 +473,7 @@ protected: // Data Members
   nsIPresContext* mPresContext;
 
   // The cached box object parent.
-  nsCOMPtr<nsITreeBoxObject> mTreeBoxObject;
+  nsCOMPtr<nsPITreeBoxObject> mTreeBoxObject;
 
   // The current view for this tree widget.  We get all of our row and cell data
   // from the view.
