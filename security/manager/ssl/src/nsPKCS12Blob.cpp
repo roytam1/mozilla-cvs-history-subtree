@@ -294,7 +294,7 @@ nsPKCS12Blob::LoadCerts(const PRUnichar **certNames, int numCerts)
   }
   /* Add the certs */
   for (int i=0; i<numCerts; i++) {
-    strcpy(namecpy, NS_ConvertUCS2toUTF8(certNames[i]));
+    strcpy(namecpy, NS_ConvertUTF16toUTF8(certNames[i]));
     CERTCertificate *nssCert = PK11_FindCertFromNickname(namecpy, NULL);
     if (!nssCert) {
       if (!handleError())
