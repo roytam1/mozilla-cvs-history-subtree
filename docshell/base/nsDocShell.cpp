@@ -1118,10 +1118,27 @@ nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
                 name.EqualsIgnoreCase("_new")) {
                 name.Truncate();
             }
+
+            // Push a null JSContext on the JSContext stack.  We don't want
+            // this search by name to use random stuff from the stack as the
+            // "caller" -- we're the caller.
+            nsCOMPtr<nsIJSContextStack> stack =
+                do_GetService("@mozilla.org/js/xpc/ContextStack;1");
+            if (stack) {
+                rv = stack->Push(nsnull);
+                NS_ENSURE_SUCCESS(rv, rv);
+            }
+            
             rv = parentWindow->Open(EmptyString(),          // URL to load
                                     name,                   // Window name
                                     EmptyString(),          // Window features
                                     getter_AddRefs(newWindow));
+
+            if (stack) {
+                JSContext* cx;
+                stack->Pop(&cx);
+                NS_ASSERTION(!cx, "Unexpected JSContext popped!");
+            }
         }
         if (NS_FAILED(rv)) return rv;
 
