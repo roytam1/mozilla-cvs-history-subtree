@@ -370,6 +370,23 @@ ifdef HOST_NSPR_MDCPUCFG
 HOST_CC := $(HOST_CC) -DMDCPUCFG=$(TARGET_NSPR_MDCPUCFG)
 endif
 
+ifdef CROSS_COMPILE
+DEFINES += -DCROSS_COMPILE=1
+
+# This is incredibly hacky.  Darwin NSPR uses the same MDCPUCFG for multiple
+# processors, and determines which processor to configure for based on
+# #ifdef i386.  This macro is among the NSPR defines, but is also automatically
+# defined by the compiler when building for i386.  It therefore needs to be
+# defined here if targeting i386, and explicitly undefined otherwise.
+ifeq ($(OS_ARCH),Darwin)
+ifeq ($(TARGET_CPU_ARCH),ppc)
+DEFINES += -Ui386
+else
+DEFINES += -Di386=1
+endif
+endif
+endif
+
 ifeq ($(OS_ARCH),QNX)
 ifneq ($(OS_TARGET),NTO)
 # QNX's compiler apparently can't build a binary directly from a source file.

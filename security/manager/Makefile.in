@@ -138,10 +138,14 @@ DEFAULT_GMAKE_FLAGS += \
 	RANLIB="$(RANLIB)" \
 	RC="$(RC) $(RCFLAGS)" \
 	OS_ARCH="$(OS_ARCH)" \
-	CPU_ARCH="$(TARGET_CPU)" \
 	$(NULL)
+ifdef TARGET_CPU_ARCH
+DEFAULT_GMAKE_FLAGS += CPU_ARCH="$(TARGET_CPU_ARCH)"
+else
+DEFAULT_GMAKE_FLAGS += CPU_ARCH="$(TARGET_CPU)"
+endif # TARGET_CPU_ARCH
 SKIP_CHK=1
-endif
+endif # CROSS_COMPILE
 SUBMAKEFILES = boot/Makefile ssl/Makefile pki/Makefile locales/Makefile
 
 include $(topsrcdir)/config/rules.mk

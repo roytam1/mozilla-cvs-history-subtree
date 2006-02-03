@@ -87,6 +87,9 @@ CC=$(HOST_CC)
 CCC=$(HOST_CXX)
 CFLAGS=$(HOST_CFLAGS)
 CXXFLAGS=$(HOST_CXXFLAGS)
+ifeq ($(OS_ARCH),Darwin)
+OS_LDFLAGS:=$(shell echo $(OS_LDFLAGS)|sed -E -e "s%-isysroot $(MACOS_SDK_DIR)%%g")
+endif
 endif
 endif
 endif
