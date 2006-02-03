@@ -373,6 +373,7 @@ nsBrowserStatusHandler.prototype =
    */
    
   bmInitXUL(document,document.getElementById("browserleftbar"));
+  document.getElementById("browserleftbar").style.display="block";
   
 }
 
