@@ -13098,8 +13098,16 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsIPresContext* aPresContext,
 
   nsIPresShell *shell = aPresContext->PresShell();
 
-  if (IsBlockFrame(aPresContext, aFrame)) {
-    // If aFrame is a block frame, then we're done: make
+  // Check whether the frame is an inline.  Here "an inline" is an
+  // actual inline frame (positioned or not) or a lineframe
+  // (corresponding to :first-line), since the latter should stop at
+  // the first block it runs into and we might be inserting one in the
+  // middle of it.
+  nsIAtom* frameType = aFrame->GetType();
+  if (frameType != nsLayoutAtoms::inlineFrame &&
+      frameType != nsLayoutAtoms::positionedInlineFrame &&
+      frameType != nsLayoutAtoms::lineFrame) {
+    // If aFrame is a block-like frame, then we're done: make
     // aBlockChildFrame and aRightInlineChildFrame children of aFrame,
     // and insert aBlockChildFrame and aRightInlineChildFrame after
     // aLeftInlineChildFrame
