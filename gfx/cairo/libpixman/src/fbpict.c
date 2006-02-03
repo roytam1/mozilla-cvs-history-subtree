@@ -1927,7 +1927,7 @@ enum CPUFeatures {
 };
 
 static unsigned int detectCPUFeatures(void) {
-    unsigned int result;
+    unsigned int result, features;
     char vendor[13];
     vendor[0] = 0;
     vendor[12] = 0;
@@ -1973,7 +1973,7 @@ static unsigned int detectCPUFeatures(void) {
              : "%eax", "%ecx", "%edx"
         );
 
-    unsigned int features = 0;
+    features = 0;
     if (result) {
         /* result now contains the standard feature bits */
         if (result & (1 << 15))
