@@ -74,4 +74,5 @@ postflight_all:
 	mkdir -p $(DIST)/universal/$(MOZ_PKG_APPNAME)
 	rm -f $(DIST_X86)/universal
 	ln -s $(DIST)/universal $(DIST_X86)/universal
+	rm -rf $(DIST)/universal/$(MOZ_PKG_APPNAME)/$(APPNAME).app
 	$(TOPSRCDIR)/build/macosx/universal/unify $(DIST)/$(MOZ_PKG_APPNAME)/$(APPNAME).app $(DIST_X86)/$(MOZ_PKG_APPNAME)/$(APPNAME).app $(DIST)/universal/$(MOZ_PKG_APPNAME)/$(APPNAME).app
