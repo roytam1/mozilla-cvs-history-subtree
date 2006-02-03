@@ -368,6 +368,12 @@ nsBrowserStatusHandler.prototype =
    */
   gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("urlbar").inputField));
   
+  /* 
+   * Homebar init...
+   */
+   
+  bmInitXUL(document,document.getElementById("browserleftbar"));
+  
 }
 
 /* 
