@@ -673,6 +673,9 @@ nsFileControlFrame::Paint(nsPresContext*      aPresContext,
                           nsFramePaintLayer    aWhichLayer,
                           PRUint32             aFlags)
 {
+  if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
+    return NS_OK;
+  }
   PRBool isVisible;
   if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && !isVisible) {
     return NS_OK;
