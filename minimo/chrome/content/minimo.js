@@ -619,6 +619,19 @@ function BrowserOpenLinkAsTab()
   }
 }
 
+/*
+ * Used by the Homebar - Open URL as Tab. 
+ * WARNING: We need to validate this URL through an existing security mechanism. 
+ */
+
+function BrowserOpenURLasTab(tabUrl) {
+  try {  
+    gBrowser.selectedTab = gBrowser.addTab(tabUrl);   
+    browserInit(gBrowser.selectedTab);
+  } catch (e) {
+  }  
+}
+
 /**
  * FOR - keyboard acessibility - context menu for tabbed area *** 
  * Launches the popup for the tabbed area / tabbrowser. Make sure to call this function 
