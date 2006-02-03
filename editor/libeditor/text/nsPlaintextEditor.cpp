@@ -48,7 +48,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIDOMEventReceiver.h" 
-#include "nsIDOM3EventTarget.h" 
+#include "nsIEventListenerManager.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMMouseListener.h"
 #include "nsISelection.h"
@@ -110,10 +110,15 @@ nsPlaintextEditor::~nsPlaintextEditor()
   nsresult result = GetDOMEventReceiver(getter_AddRefs(erP));
   if (NS_SUCCEEDED(result) && erP) 
   {
-    nsCOMPtr<nsIDOM3EventTarget> dom3Targ(do_QueryInterface(erP));
     nsCOMPtr<nsIDOMEventGroup> sysGroup;
-    if (NS_SUCCEEDED(erP->GetSystemEventGroup(getter_AddRefs(sysGroup)))) {
-      result = dom3Targ->RemoveGroupedEventListener(NS_LITERAL_STRING("keypress"), mKeyListenerP, PR_FALSE, sysGroup);
+    erP->GetSystemEventGroup(getter_AddRefs(sysGroup));
+    nsCOMPtr<nsIEventListenerManager> elmP;
+    erP->GetListenerManager(getter_AddRefs(elmP));
+    if (sysGroup && elmP) {
+      result = elmP->RemoveEventListenerByType(mKeyListenerP,
+                                               NS_LITERAL_STRING("keypress"),
+                                               NS_EVENT_FLAG_BUBBLE,
+                                               sysGroup);
     }
 
     if (mMouseListenerP) {
@@ -354,11 +359,17 @@ printf("nsTextEditor.cpp: failed to get TextEvent Listener\n");
     return result;
   }
 
-  // register the event listeners with the DOM event reveiver
-  nsCOMPtr<nsIDOM3EventTarget> dom3Targ(do_QueryInterface(erP));
+  // register the event listeners with the listener manager
   nsCOMPtr<nsIDOMEventGroup> sysGroup;
-  if (NS_SUCCEEDED(erP->GetSystemEventGroup(getter_AddRefs(sysGroup)))) {
-    result = dom3Targ->AddGroupedEventListener(NS_LITERAL_STRING("keypress"), mKeyListenerP, PR_FALSE, sysGroup);
+  erP->GetSystemEventGroup(getter_AddRefs(sysGroup));
+  nsCOMPtr<nsIEventListenerManager> elmP;
+  erP->GetListenerManager(getter_AddRefs(elmP));
+  if (sysGroup && elmP) {
+    result = elmP->AddEventListenerByType(mKeyListenerP,
+                                          NS_LITERAL_STRING("keypress"),
+                                          NS_EVENT_FLAG_BUBBLE |
+                                          NS_PRIV_EVENT_UNTRUSTED_PERMITTED,
+                                          sysGroup);
     NS_ASSERTION(NS_SUCCEEDED(result), "failed to register key listener in system group");
   }
 
@@ -755,38 +766,17 @@ nsPlaintextEditor::GetDOMEventReceiver(nsIDOMEventReceiver **aEventReceiver)
   if (!rootElement) 
     return NS_ERROR_FAILURE; 
 
-  // Now hack to make sure we are not anonymous content. 
-  // If we are grab the parent of root element for our observer. 
-
   nsCOMPtr<nsIContent> content = do_QueryInterface(rootElement); 
-  if (content) 
+  if (content && content->IsNativeAnonymous())
   { 
-    nsCOMPtr<nsIContent> parent = content->GetParent();
-    if (parent)
-    { 
-      if (parent->IndexOf(content) < 0 ) 
-      { 
-        rootElement = do_QueryInterface(parent); //this will put listener on the form element basically 
-        result = CallQueryInterface(rootElement, aEventReceiver);
-      } 
-      else 
-        rootElement = 0; // Let the event receiver work on the document instead of the root element 
-    } 
+    CallQueryInterface(content->GetParent(), aEventReceiver);
   } 
   else 
-    rootElement = 0; 
-
-  if (!rootElement && mDocWeak) 
   { 
     // Don't use getDocument here, because we have no way of knowing if 
     // Init() was ever called.  So we need to get the document ourselves, 
     // if it exists. 
-
-    nsCOMPtr<nsIDOMDocument> domdoc = do_QueryReferent(mDocWeak); 
-    if (!domdoc) 
-      return NS_ERROR_FAILURE; 
-
-    result = domdoc->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), (void **)aEventReceiver); 
+    result = CallQueryReferent(mDocWeak.get(), aEventReceiver);
   } 
 
   return result; 
