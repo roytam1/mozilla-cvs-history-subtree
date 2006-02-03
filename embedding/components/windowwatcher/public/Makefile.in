@@ -55,6 +55,7 @@ XPIDLSRCS	= nsIDialogParamBlock.idl \
                   nsPIPromptService.idl \
                   nsPIWindowWatcher.idl \
                   nsIAuthPromptWrapper.idl \
+                  nsINonBlockingAlertService.idl \
                   $(NULL)
 
 include $(topsrcdir)/config/rules.mk
