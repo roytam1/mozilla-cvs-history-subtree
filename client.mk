@@ -22,6 +22,7 @@
 #   Stephen Lamm
 #   Benjamin Smedberg <bsmedberg@covad.net>
 #   Chase Phillips <chase@mozilla.org>
+#   Mark Mentovai <mark@moxienet.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -90,6 +91,11 @@
 #   MOZ_CO_LOCALES       - localizations to pull (MOZ_CO_LOCALES="de-DE,pt-BR")
 #   MOZ_LOCALE_DIRS      - directories which contain localizations
 #   LOCALES_CVSROOT      - CVSROOT to use to pull localizations
+#   MOZ_BUILD_DATE_DIR   - OBJDIR whose MOZ_BUILD_DATE is to be copied
+#   MOZ_PREFLIGHT_ALL  } - Makefiles to run before any project in
+#   MOZ_PREFLIGHT      }   MOZ_BUILD_PROJECTS, before each project, after
+#   MOZ_POSTFLIGHT     }   each project, and after all projects
+#   MOZ_POSTFLIGHT_ALL }
 #
 
 AVAILABLE_PROJECTS = \
@@ -699,6 +705,15 @@ else
 #####################################################
 # After First Checkout
 
+build profiledbuild alldep::
+ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_PREFLIGHT_ALL),,1))
+ifeq (,$(MOZ_BUILD_PROJECTS)$(if $(MOZ_CURRENT_PROJECT),,1))
+	$(MAKE) -f $(MOZ_PREFLIGHT_ALL) preflight_all TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR)
+else
+	$(MAKE) -f $(MOZ_PREFLIGHT_ALL) preflight_all TOPSRCDIR=$(TOPSRCDIR) MOZ_OBJDIR=$(MOZ_OBJDIR)
+endif
+endif
+
 # If we're building multiple projects, but haven't specified which project,
 # loop through them.
 
@@ -782,6 +797,27 @@ depend:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE) export && $(MOZ_MAKE) depend
 
 ####################################
+# Build date harmonization
+
+ifdef MOZ_BUILD_DATE_DIR
+ifndef MOZ_BUILD_DATE
+MOZ_BUILD_DATE_DIR_ABS = $(shell test -d $(MOZ_BUILD_DATE_DIR) && cd $(MOZ_BUILD_DATE_DIR) && pwd)
+OBJDIR_ABS = $(shell test -d $(OBJDIR) && cd $(OBJDIR) && pwd)
+ifneq ($(MOZ_BUILD_DATE_DIR_ABS),$(OBJDIR_ABS))
+MOZ_BUILD_DATE=$(shell $(TOPSRCDIR)/config/bdate-get $(MOZ_BUILD_DATE_DIR_ABS))
+ifneq (,$(MOZ_BUILD_DATE))
+export MOZ_BUILD_DATE
+endif
+endif
+endif
+endif # MOZ_BUILD_DATE_DIR
+
+build profiledbuild alldep::
+ifdef MOZ_PREFLIGHT
+	$(MAKE) -f $(MOZ_PREFLIGHT) preflight TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR)
+endif
+
+####################################
 # Build it
 
 build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
@@ -809,7 +845,22 @@ profiledbuild:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE) $@
 
+build profiledbuild alldep::
+ifdef MOZ_POSTFLIGHT
+	$(MAKE) -f $(MOZ_POSTFLIGHT) postflight TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR)
+endif
+
 endif # MOZ_CURRENT_PROJECT
+
+# Postflight
+build profiledbuild alldep::
+ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_POSTFLIGHT_ALL),,1))
+ifeq (,$(MOZ_BUILD_PROJECTS)$(if $(MOZ_CURRENT_PROJECT),,1))
+	$(MAKE) -f $(MOZ_POSTFLIGHT_ALL) postflight_all TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR)
+else
+	$(MAKE) -f $(MOZ_POSTFLIGHT_ALL) postflight_all TOPSRCDIR=$(TOPSRCDIR) MOZ_OBJDIR=$(MOZ_OBJDIR)
+endif
+endif
 
 cleansrcdir:
 	@cd $(TOPSRCDIR); \

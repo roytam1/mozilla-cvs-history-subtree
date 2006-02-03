@@ -1,0 +1,826 @@
+#!/usr/bin/perl
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
+# The Original Code is the Mozilla Mac OS X Universal Binary Packaging System
+#
+# The Initial Developer of the Original Code is Google Inc.
+# Portions created by the Initial Developer are Copyright (C) 2006
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#  Mark Mentovai <mark@moxienet.com> (Original Author)
+#
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+#
+# ***** END LICENSE BLOCK *****
+
+use strict;
+use warnings;
+
+use Archive::Zip(':ERROR_CODES');
+use Errno;
+use File::Compare;
+use File::Copy;
+
+my (%gConfig);
+
+sub compareZipArchives($$);
+sub copyIfIdentical($$$);
+sub makeUniversal($$$);
+sub makeUniversalDirectory($$$);
+sub makeUniversalInternal($$$$);
+sub makeUniversalFile($$$);
+sub readZipCRCs($);
+
+{
+  package FileAttrCache;
+
+  sub new($$);
+
+  sub isFat($);
+  sub isMachO($);
+  sub isZip($);
+  sub lIsDir($);
+  sub lIsRegularFile($);
+  sub lIsSymLink($);
+  sub lstat($);
+  sub lstatType($);
+  sub magic($);
+  sub path($);
+  sub stat($);
+  sub statSize($);
+}
+
+%gConfig = (
+  'cmd_lipo' => 'lipo',
+  'cmd_rm'   => 'rm',
+);
+
+if (scalar(@ARGV) != 3) {
+  print STDERR ('usage: '.$0." <ppc> <x86> <universal>\n");
+  exit(1);
+}
+
+if (!makeUniversal($ARGV[0],$ARGV[1],$ARGV[2])) {
+  exit(1);
+}
+
+exit(0);
+
+sub compareZipArchives($$) {
+  my ($zip1, $zip2);
+  ($zip1, $zip2) = @_;
+
+  my ($CRCHash1, $CRCHash2);
+  if (!defined($CRCHash1 = readZipCRCs($zip1))) {
+    # readZipCRCs printed an error.
+    return undef;
+  }
+  if (!defined($CRCHash2 = readZipCRCs($zip2))) {
+    # readZipCRCs printed an error.
+    return undef;
+  }
+
+  my ($memberName);
+  foreach $memberName (keys(%$CRCHash1)) {
+    if (!exists($$CRCHash2{$memberName})) {
+      # The member is present in $zip1 but not $zip2.
+      print STDERR ($0.': compareZipArchives "'.$zip1.'", "'.$zip2.
+                    '": member '.$memberName.'" not present in latter'."\n");
+      return 0;
+    }
+    if ($$CRCHash1{$memberName} ne $$CRCHash2{$memberName}) {
+      # The member is present in both archives but its CRC or some other
+      # other critical attribute isn't identical.
+      print STDERR ($0.': compareZipArchives "'.$zip1.'", "'.$zip2.
+                    '": member '.$memberName.'" differs'."\n");
+      return 0;
+    }
+    delete($$CRCHash2{$memberName});
+  }
+
+  if (keys(%$CRCHash2)) {
+    # There are members present in $zip2 that weren't in $zip1.
+    print STDERR ($0.': compareZipArchives "'.$zip1.'", "'.$zip2.'": '.
+                  "members not present in former\n");
+    return 0;
+  }
+
+  return 1;
+}
+
+sub copyIfIdentical($$$) {
+  my ($source1, $source2, $target);
+  ($source1, $source2, $target) = @_;
+
+  my ($comparison);
+  if (!defined($comparison = compare($source1->path(), $source2->path())) ||
+      $comparison == -1) {
+    print STDERR ($0.': diff "'.$source1->path().'", "'.$source2->path().'": '.$!."\n");
+    return 0;
+  }
+  elsif ($comparison != 0) {
+    my ($zip1, $zip2);
+    if (defined($zip1 = $source1->isZip()) &&
+        defined($zip2 = $source2->isZip()) &&
+        $zip1 && $zip2) {
+      my ($zipComparison);
+      if (!defined($zipComparison = compareZipArchives($source1->path(),
+                                                       $source2->path)) ||
+          !$zipComparison) {
+        # An error occurred or the zip files aren't sufficiently identical.
+        # compareZipArchives will have printed an error message.
+        return 0;
+      }
+      # The zip files were compared successfully, and they both contain
+      # all of the same members, and all of their members' CRCs are
+      # identical.  For the purposes of this script, the zip files can be
+      # treated as identical, so reset $comparison.
+      $comparison = 0;
+    }
+  }
+  if ($comparison != 0) {
+    print STDERR ($0.': diff "'.$source1->path().'", "'.$source2->path().'" differ'."\n");
+    return 0;
+  }
+
+  if (!copy($source1->path(), $target)) {
+    print STDERR ($0.': copy '.$target.': '.$!."\n");
+    return 0;
+  }
+
+  return 1;
+}
+
+sub makeUniversal($$$) {
+  my ($pathTarget, $pathPPC, $pathX86);
+  ($pathPPC, $pathX86, $pathTarget) = @_;
+
+  my ($filePPC, $fileX86);
+  $filePPC = FileAttrCache->new($pathPPC);
+  $fileX86 = FileAttrCache->new($pathX86);
+
+  return makeUniversalInternal(1, $filePPC, $fileX86, $pathTarget);
+}
+
+sub makeUniversalDirectory($$$) {
+  my ($dirPPC, $dirX86, $dirTarget, %common, $file, $filePPC, @filesPPC, $fileTargetPath, $fileX86, @filesX86, %onlyPPC, %onlyX86);
+  ($dirPPC, $dirX86, $dirTarget) = @_;
+
+  my ($dh);
+
+  if (!opendir($dh, $dirPPC->path())) {
+    return 0;
+  }
+  @filesPPC = readdir($dh);
+  closedir($dh);
+
+  if (!opendir($dh, $dirX86->path())) {
+    return 0;
+  }
+  @filesX86 = readdir($dh);
+  closedir($dh);
+
+  foreach $file (@filesPPC) {
+    if ($file eq '.' || $file eq '..') {
+      next;
+    }
+    $onlyPPC{$file}=1;
+  }
+
+  foreach $file (@filesX86) {
+    if ($file eq '.' || $file eq '..') {
+      next;
+    }
+    if ($onlyPPC{$file}) {
+      delete $onlyPPC{$file};
+      $common{$file}=1;
+    }
+    else {
+      $onlyX86{$file}=1;
+    }
+  }
+
+  # First, handle files common to both.
+  foreach $file (sort(keys(%common))) {
+    if (!makeUniversalInternal(0,
+                               FileAttrCache->new($dirPPC->path().'/'.$file),
+                               FileAttrCache->new($dirX86->path().'/'.$file),
+                               $dirTarget.'/'.$file)) {
+      return 0;
+    }
+  }
+
+  # Handle files found only in a single directory here.
+
+  return 1;
+}
+
+# makeUniversalFile($sourcePPC, $sourceX86, $targetPath)
+#
+# Creates a universal file at pathname $targetPath based on a ppc image at
+# $sourcePPC and an x86 image at $sourceX86.  $sourcePPC and $sourceX86 are
+# both FileAttrCache objects.  Returns true on success and false on failure.
+# On failure, diagnostics will be printed to stderr.
+#
+# The source files may be either thin Mach-O images of the appropriate
+# architecture, or fat Mach-O files that contain images of the appropriate
+# architecture.
+#
+# This function wraps the lipo utility, see lipo(1).
+sub makeUniversalFile($$$) {
+  my ($sourcePPC, $sourceX86, $targetPath, @tempThinFiles, $thinPPC, $thinX86);
+  ($sourcePPC, $sourceX86, $targetPath) = @_;
+  $thinPPC = $sourcePPC;
+  $thinX86 = $sourceX86;
+
+  @tempThinFiles = ();
+
+  # The source files might already be fat.  They should be thinned out to only
+  # contain a single architecture.
+ 
+  my ($isFatPPC, $isFatX86);
+
+  if(!defined($isFatPPC = $sourcePPC->isFat())) {
+    # isFat printed its own error
+    return 0;
+  }
+  elsif($isFatPPC) {
+    $thinPPC = FileAttrCache->new($targetPath.'.ppc');
+    push(@tempThinFiles, $thinPPC->path());
+    if (system($gConfig{'cmd_lipo'}, '-thin', 'ppc',
+               $sourcePPC->path(), '-output', $thinPPC->path()) != 0) {
+      print STDERR ($0.": ppc thin failed for ".$targetPath."\n");
+      unlink(@tempThinFiles);
+      return 0;
+    }
+  }
+
+  if(!defined($isFatX86 = $sourceX86->isFat())) {
+    # isFat printed its own error
+    unlink(@tempThinFiles);
+    return 0;
+  }
+  elsif($isFatX86) {
+    $thinX86 = FileAttrCache->new($targetPath.'.x86');
+    push(@tempThinFiles, $thinX86->path());
+    if (system($gConfig{'cmd_lipo'}, '-thin', 'i386',
+               $sourceX86->path(), '-output', $thinX86->path()) != 0) {
+      print STDERR ($0.": x86 thin failed for ".$targetPath."\n");
+      unlink(@tempThinFiles);
+      return 0;
+    }
+  }
+
+  # The image for each architecture in the fat file will be aligned on
+  # a specific boundary, default 4096 bytes, see lipo(1) -segalign.
+  # Since there's no tail-padding, the fat file will consume the least
+  # space on disk if the image that comes last exceeds the segment size
+  # by the smallest amount.
+  #
+  # This saves an average of 1kB per fat file over the naive approach of
+  # always putting one architecture first: average savings is 2kB per
+  # file, but the naive approach would have gotten it right half of the
+  # time.
+
+  my ($sizePPC, $sizeX86);
+
+  if(!defined($sizePPC = $thinPPC->statSize())) {
+    print STDERR ($0.': stat ppc for '.$thinPPC->path().': '.$!."\n");
+    unlink(@tempThinFiles);
+    return 0;
+  }
+  if(!defined($sizeX86 = $thinX86->statSize())) {
+    print STDERR ($0.': stat x86 for '.$thinX86->path().': '.$!."\n");
+    unlink(@tempThinFiles);
+    return 0;
+  }
+
+  $sizePPC = $sizePPC % 4096;
+  $sizeX86 = $sizeX86 % 4096;
+
+  my (@thinFiles);
+
+  if ($sizePPC == 0) {
+    # PPC image ends on an alignment boundary, there will be no padding before
+    # starting the x86 image.
+    @thinFiles = ($thinPPC->path(), $thinX86->path());
+  }
+  elsif ($sizeX86 == 0 || $sizeX86 > $sizePPC) {
+    # x86 image ends on an alignment boundary, there will be no padding before
+    # starting the PPC image, or the x86 image exceeds its alignment boundary
+    # by more than the PPC image, so there will be less padding if the x86
+    # comes first.
+    @thinFiles = ($thinX86->path(), $thinPPC->path());
+  }
+  else {
+    # PPC image exceeds its alignment boundary by more than the x86 image, so
+    # there will be less padding if the PPC comes first.
+    @thinFiles = ($thinPPC->path(), $thinX86->path());
+  }
+
+  # Create the fat file.
+  if (system($gConfig{'cmd_lipo'}, '-create', @thinFiles,
+             '-output', $targetPath) != 0) {
+    print STDERR ($0.": fat create failed for ".$targetPath."\n");
+    unlink(@tempThinFiles);
+    return 0;
+  }
+
+  unlink(@tempThinFiles);
+
+  return 1;
+}
+
+sub makeUniversalInternal($$$$) {
+  my ($filePPC, $fileTargetPath, $fileX86, $isToplevel);
+  ($isToplevel, $filePPC, $fileX86, $fileTargetPath) = @_;
+
+  my ($typePPC, $typeX86);
+  if (!defined($typePPC = $filePPC->lstatType())) {
+    print STDERR ($0.': lstat ppc for '.$filePPC->path().': '.$!."\n");
+    return 0;
+  }
+  if (!defined($typeX86 = $fileX86->lstatType())) {
+    print STDERR ($0.': lstat x86 for '.$fileX86->path().': '.$!."\n");
+    return 0;
+  }
+
+  if($typePPC != $typeX86) {
+    print STDERR ($0.': incompatible types for '.$filePPC->path().' and '.$fileX86->path()."\n");
+    return 0;
+  }
+
+  if ($filePPC->lIsDir()) {
+    if (!mkdir($fileTargetPath)) {
+      print STDERR ($0.': mkdir "'.$fileTargetPath.'": '.$!."\n");
+      return 0;
+    }
+
+    my ($rv);
+
+    if (!($rv = makeUniversalDirectory($filePPC, $fileX86, $fileTargetPath))) {
+      # makeUniversalDirectory printed an error.
+      if ($isToplevel) {
+        system($gConfig{'cmd_rm'},'-rf','--',$fileTargetPath);
+      }
+    }
+    else {
+      # Touch the directory when leaving it.  If unify is being run on an
+      # .app bundle, the .app might show up without an icon because the
+      # system might have found the .app before it was completely built.
+      # Touching it dirties it in LaunchServices' mind.
+      utime(undef, undef, $fileTargetPath);
+    }
+
+    return $rv;
+  }
+  elsif ($filePPC->lIsSymLink()) {
+    my ($linkPPC, $linkX86);
+    if (!defined($linkPPC=readlink($filePPC->path()))) {
+      print STDERR ($0.': readlink ppc for '.$filePPC->path().': '.$!."\n");
+      return 0;
+    }
+    if (!defined($linkX86=readlink($fileX86->path()))) {
+      print STDERR ($0.': readlink x86 for '.$fileX86->path().': '.$!."\n");
+      return 0;
+    }
+    if ($linkPPC ne $linkX86) {
+      print STDERR ($0.': symbolic links differ: '.$filePPC->path().' and '.$fileX86->path()."\n");
+      return 0;
+    }
+
+    if(!symlink($linkPPC, $fileTargetPath)) {
+      print STDERR ($0.': symlink for '.$fileTargetPath.': '.$!."\n");
+      return 0;
+    }
+
+    return 1;
+  }
+  elsif($filePPC->lIsRegularFile()) {
+    # Unlike mkdir and symlink, neither makeUniversalFile nor copyIfIdentical
+    # care if the target file already exists, and they can't be made to care
+    # without writing lipo and cp equivalents that open files with
+    # O_CREAT|O_EXCL.  Since this script is supposed to be short and sweet,
+    # that's not going to happen.  The next best thing is to check to make
+    # sure the target file doesn't already exist before calling lipo or cp.
+    # It's open to a race, but this script isn't expected to run in hostile
+    # race-prone environments, and since it's expected to be called on
+    # directories and not files, the parent directory's mkdir addresses the
+    # race situation anyway.
+
+    my ($fileTarget);
+    $fileTarget = FileAttrCache->new($fileTargetPath);
+    $! = 0;
+    if ($fileTarget->lstat()) {
+      $! = Errno::EEXIST;
+    }
+    if ($! != Errno::ENOENT) {
+      print STDERR ($0.': file "'.$fileTargetPath.'": '.$!."\n");
+      return 0;
+    }
+
+    my ($machPPC, $machX86);
+    if (!defined($machPPC=$filePPC->isMachO())) {
+      print STDERR ($0.': isFileMachO ppc failed for '.$filePPC->path()."\n");
+      return 0;
+    }
+    if (!defined($machX86=$fileX86->isMachO())) {
+      print STDERR ($0.': isFileMachO x86 failed for '.$fileX86->path()."\n");
+      return 0;
+    }
+
+    if ($machPPC != $machX86) {
+      print STDERR ($0.': variant Mach-O qualities for '.$filePPC->path().' ('.$machPPC.') and '.$fileX86->path().' ('.$machX86.")\n");
+      return 0;
+    }
+
+    my($rv);
+
+    if ($machPPC) {
+      # makeUniversalFile will print an error if it fails.
+      $rv = makeUniversalFile($filePPC, $fileX86, $fileTargetPath);
+    }
+    else {
+      # Regular file.  copyIfIdentical will print an error if it fails.
+      $rv = copyIfIdentical($filePPC, $fileX86, $fileTargetPath);
+    }
+
+    if (!$rv) {
+      unlink($fileTargetPath);
+    }
+
+    return $rv;
+  }
+  else {
+    # Special file, don't know how to handle.
+    print STDERR ($0.': cannot handle special file '.$fileTargetPath."\n");
+    return 0;
+  }
+
+  # Not reached.
+  return undef;
+}
+
+sub readZipCRCs($) {
+  my ($zipFile);
+  ($zipFile) = @_;
+
+  my ($ze, $zip);
+  $zip = Archive::Zip->new();
+
+  if (($ze = $zip->read($zipFile)) != AZ_OK) {
+    print STDERR ($0.': read zip "'.$zipFile.'": error '.$ze."\n");
+    return 0;
+  }
+
+  my ($member, %memberCRCs, @memberList);
+  %memberCRCs = ();
+  @memberList = $zip->members();
+
+  foreach $member (@memberList) {
+    # Take a few of the attributes that identify the file and stuff them into
+    # the members hash.  Directories will show up with size 0 and crc32 0,
+    # so isDirectory() is used to distinguish them from empty files.
+    $memberCRCs{$member->fileName()} = join(',', $member->isDirectory() ? 1 : 0,
+                                                 $member->uncompressedSize(),
+                                                 $member->crc32String());
+  }
+
+  return {%memberCRCs};
+}
+
+{
+  # FileAttrCache allows various attributes about a file to be cached
+  # so that if they are needed again after first use, no system calls
+  # will be made and the program won't need to hit the disk.
+
+  package FileAttrCache;
+
+  use Fcntl(':DEFAULT', ':mode');
+
+  # FileAttrCache->new($path)
+  #
+  # Creates a new FileAttrCache object for the file at path $path and
+  # returns it.  The cache is not primed at creation time, values are
+  # fetched lazily as they are needed.
+  sub new($$) {
+    my ($class, $path, $proto, $this);
+    ($proto, $path) = @_;
+    if (!($class = ref($proto))) {
+      $class = $proto;
+    }
+    $this = {
+      'path'        => $path,
+      'lstat'       => undef,
+      'lstatErrno'  => 0,
+      'lstatInit'   => 0,
+      'magic'       => undef,
+      'magicErrno'  => 0,
+      'magicErrMsg' => undef,
+      'magicInit'   => 0,
+      'stat'        => undef,
+      'statErrno'   => 0,
+      'statInit'    => 0,
+    };
+    bless($this, $class);
+    return($this);
+  }
+
+  # $FileAttrCache->isFat()
+  #
+  # Returns true if the file is a fat Mach-O file, false if it's not, and
+  # undef if an error occurs.  See /usr/include/mach-o/fat.h.
+  sub isFat($) {
+    my ($magic, $this);
+    ($this) = @_;
+
+    # magic() caches, there's no separate cache because isFat() doesn't hit
+    # the disk other than by calling magic().
+
+    if (!defined($magic = $this->magic())) {
+      return undef;
+    }
+
+    if ($magic == 0xcafebabe) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  # $FileAttrCache->isMachO()
+  #
+  # Returns true if the file is a Mach-O image (including a fat file), false
+  # if it's not, and undef if an error occurs.  See
+  # /usr/include/mach-o/loader.h and /usr/include/mach-o/fat.h.
+  sub isMachO($) {
+    my ($magic, $this);
+    ($this) = @_;
+
+    # magic() caches, there's no separate cache because isMachO() doesn't hit
+    # the disk other than by calling magic().
+
+    if (!defined($magic = $this->magic())) {
+      return undef;
+    }
+
+    # Accept Mach-O fat files or Mach-O thin files of either endianness.
+    if ($magic == 0xfeedface ||
+        $magic == 0xcefaedfe ||
+        $magic == 0xcafebabe) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  # $FileAttrCache->isZip()
+  #
+  # Returns true if the file is a zip file, false if it's not, and undef if
+  # an error occurs.  See http://www.pkware.com/business_and_developers/developer/popups/appnote.txt .
+  sub isZip($) {
+    my ($magic, $this);
+    ($this) = @_;
+
+    # magic() caches, there's no separate cache because isFat() doesn't hit
+    # the disk other than by calling magic().
+
+    if (!defined($magic = $this->magic())) {
+      return undef;
+    }
+
+    if ($magic == 0x504b0304) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  # $FileAttrCache->lIsDir()
+  #
+  # Wraps $FileAttrCache->lstat(), returning true if the file is a directory,
+  # false if it isn't, or undef if an error occurs.  Because lstat is used,
+  # this will return false even if the file is a symlink pointing to a
+  # directory.  On error, $! is set to lstat's errno.
+  sub lIsDir($) {
+    my ($type, $this);
+    ($this) = @_;
+
+    if (!defined($type = $this->lstatType())) {
+      return undef;
+    }
+
+    return S_ISDIR($type);
+  }
+
+  # $FileAttrCache->lIsRegularFile()
+  #
+  # Wraps $FileAttrCache->lstat(), returning true if the file is a regular,
+  # file, false if it isn't, or undef if an error occurs.  Because lstat is
+  # used, this will return false even if the file is a symlink pointing to a
+  # regular file.  On error, $! is set to lstat's errno.
+  sub lIsRegularFile($) {
+    my ($type, $this);
+    ($this) = @_;
+
+    if (!defined($type = $this->lstatType())) {
+      return undef;
+    }
+
+    return S_ISREG($type);
+  }
+
+  # $FileAttrCache->lIsSymLink()
+  #
+  # Wraps $FileAttrCache->lstat(), returning true if the file is a symbolic,
+  # link, false if it isn't, or undef if an error occurs.  On error, $! is
+  # set to lstat's errno.
+  sub lIsSymLink($) {
+    my ($type, $this);
+    ($this) = @_;
+   
+    if (!defined($type = $this->lstatType())) {
+      return undef;
+    }
+
+    return S_ISLNK($type);
+  }
+
+  # $FileAttrCache->lstat()
+  #
+  # Wraps the lstat system call, providing a cache to speed up multiple
+  # lstat calls for the same file.  See lstat(2) and lstat in perlfunc(1).
+  sub lstat($) {
+    my (@stat, $this);
+    ($this) = @_;
+
+    # Use the cached lstat result.
+    if ($$this{'lstatInit'}) {
+      if (defined($$this{'lstatErrno'})) {
+        $! = $$this{'lstatErrno'};
+      }
+      return @{$$this{'lstat'}};
+    }
+    $$this{'lstatInit'} = 1;
+
+    if (!(@stat = CORE::lstat($$this{'path'}))) {
+      $$this{'lstatErrno'} = $!;
+    }
+
+    $$this{'lstat'} = [@stat];
+    return @stat;
+  }
+
+  # $FileAttrCache->lstatType()
+  #
+  # Wraps $FileAttrCache->lstat(), returning the type bits from the st_mode
+  # field, or undef if an error occurs.  On error, $! is set to lstat's
+  # errno.
+  sub lstatType($) {
+    my (@stat, $this);
+    ($this) = @_;
+
+    if (!(@stat = $this->lstat())) {
+      return undef;
+    }
+
+    return S_IFMT($stat[2]);
+  }
+
+  # $FileAttrCache->magic()
+  #
+  # Returns the "magic number" for the file by reading its first four bytes
+  # as a big-endian unsigned 32-bit integer and returning the result.  If an
+  # error occurs, returns undef and prints diagnostic messages to stderr.  If
+  # the file is shorter than 32 bits, returns -1.  A cache is provided to
+  # speed multiple magic calls for the same file.
+  sub magic($) {
+    my ($this);
+    ($this) = @_;
+
+    # Use the cached magic result.
+    if ($$this{'magicInit'}) {
+      if (defined($$this{'magicErrno'})) {
+        if (defined($$this{'magicErrMsg'})) {
+          print STDERR ($0.': magic: '.$$this{'magicErrMsg'}."\n");
+        }
+        $! = $$this{'magicErrno'};
+      }
+      return $$this{'magic'};
+    }
+
+    $$this{'magicInit'} = 1;
+
+    my ($fh);
+    if (!sysopen($fh, $$this{'path'}, O_RDONLY)) {
+      $$this{'magicErrno'} = $!;
+      $$this{'magicErrMsg'} = 'open "'.$$this{'path'}.'": '.$!;
+      print STDERR ($0.': magic: '.$$this{'magicErrMsg'}."\n");
+      return undef;
+    }
+
+    $! = 0;
+    my ($bytes, $magic);
+    if (!defined($bytes = sysread($fh, $magic, 4))) {
+      $$this{'magicErrno'} = $!;
+      $$this{'magicErrMsg'} = 'read "'.$$this{'path'}.'": '.$!;
+      print STDERR ($0.': magic: '.$$this{'magicErrMsg'}."\n");
+      close($fh);
+      return undef;
+    }
+
+    close($fh);
+
+    if ($bytes != 4) {
+      # The file is too short, didn't read a magic number.  This isn't really
+      # an error.  Return an unlikely value.
+      $$this{'magic'} = -1;
+      return -1;
+    }
+
+    $$this{'magic'} = unpack('N', $magic);
+    return $$this{'magic'};
+  }
+
+  # $FileAttrCache->path()
+  #
+  # Returns the file's pathname.
+  sub path($) {
+    my ($this);
+    ($this) = @_;
+    return $$this{'path'};
+  }
+
+  # $FileAttrCache->stat()
+  #
+  # Wraps the stat system call, providing a cache to speed up multiple
+  # stat calls for the same file.  If lstat() has already been called and
+  # the file is not a symbolic link, the cached lstat() result will be used.
+  # See stat(2) and lstat in perlfunc(1).
+  sub stat($) {
+    my (@stat, $this);
+    ($this) = @_;
+
+    # Use the cached stat result.
+    if ($$this{'statInit'}) {
+      if (defined($$this{'statErrno'})) {
+        $! = $$this{'statErrno'};
+      }
+      return @{$$this{'stat'}};
+    }
+
+    $$this{'statInit'} = 1;
+
+    # If lstat has already been called, and the file isn't a symbolic link,
+    # use the cached lstat result.
+    if ($$this{'lstatInit'} && !$$this{'lstatErrno'} &&
+        !S_ISLNK(${$$this{'lstat'}}[2])) {
+      $$this{'stat'} = $$this{'lstat'};
+      return @{$$this{'stat'}};
+    }
+
+    if (!(@stat = CORE::stat($$this{'path'}))) {
+      $$this{'statErrno'} = $!;
+    }
+
+    $$this{'stat'} = [@stat];
+    return @stat;
+  }
+
+  # $FileAttrCache->statSize()
+  #
+  # Wraps $FileAttrCache->stat(), returning the st_size field, or undef
+  # undef if an error occurs.  On error, $! is set to stat's errno.
+  sub statSize($) {
+    my (@stat, $this);
+    ($this) = @_;
+
+    if (!(@stat = $this->lstat())) {
+      return undef;
+    }
+
+    return $stat[7];
+  }
+}
