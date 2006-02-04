@@ -358,6 +358,11 @@ struct nsDiskCacheHeader {
         mEntryCount  = ::PR_htonl(mEntryCount);
         mIsDirty     = ::PR_htonl(mIsDirty);
         mRecordCount = ::PR_htonl(mRecordCount);
+
+        for (PRUint32 i = 0; i < kBuckets ; i++) {
+            mEvictionRank[i] = ::PR_htonl(mEvictionRank[i]);
+            mBucketUsage[i]  = ::PR_htonl(mBucketUsage[i]);
+        }
 #endif
     }
     
@@ -369,6 +374,11 @@ struct nsDiskCacheHeader {
         mEntryCount  = ::PR_ntohl(mEntryCount);
         mIsDirty     = ::PR_ntohl(mIsDirty);
         mRecordCount = ::PR_ntohl(mRecordCount);
+
+        for (PRUint32 i = 0; i < kBuckets ; i++) {
+            mEvictionRank[i] = ::PR_ntohl(mEvictionRank[i]);
+            mBucketUsage[i]  = ::PR_ntohl(mBucketUsage[i]);
+        }
 #endif
     }
 };
