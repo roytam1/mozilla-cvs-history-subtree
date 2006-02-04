@@ -104,15 +104,16 @@ public:
   NS_IMETHOD MatchName(nsString *name, PRBool *matches);
 
   nsresult CreateDirectoryForFolder(nsFileSpec &path);
+  nsresult GetMsgPreviewTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputStream *stream);
 protected:
   
-	// this is a little helper function that is not part of the public interface. 
-	// we use it to get the IID of the incoming server for the derived folder.
-	// w/out a function like this we would have to implement GetServer in each
-	// derived folder class.
-	virtual const char* GetIncomingServerType() = 0;
+  // this is a little helper function that is not part of the public interface. 
+  // we use it to get the IID of the incoming server for the derived folder.
+  // w/out a function like this we would have to implement GetServer in each
+  // derived folder class.
+  virtual const char* GetIncomingServerType() = 0;
 
-	virtual nsresult CreateBaseMessageURI(const char *aURI);
+  virtual nsresult CreateBaseMessageURI(const char *aURI);
 
 
   // helper routine to parse the URI and update member variables
@@ -160,7 +161,7 @@ protected:
   virtual nsresult SpamFilterClassifyMessage(const char *aURI, nsIMsgWindow *aMsgWindow, nsIJunkMailPlugin *aJunkMailPlugin);
   virtual nsresult SpamFilterClassifyMessages(const char **aURIArray, PRUint32 aURICount, nsIMsgWindow *aMsgWindow, nsIJunkMailPlugin *aJunkMailPlugin);
 
-
+  void    SetMRUTime();
 protected:
   nsCOMPtr<nsIMsgDatabase> mDatabase;
   nsCString mCharset;

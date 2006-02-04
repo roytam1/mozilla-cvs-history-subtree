@@ -53,9 +53,7 @@ fLineOfTokens(nsnull),
 fStartOfLineOfTokens(nsnull),
 fCurrentTokenPlaceHolder(nsnull),
 fAtEndOfLine(PR_FALSE),
-fSyntaxErrorLine(nsnull),
-fSyntaxError(PR_FALSE),
-fDisconnected(PR_FALSE)
+fParserState(stateOK)
 {
 }
 
@@ -63,7 +61,6 @@ nsIMAPGenericParser::~nsIMAPGenericParser()
 {
   PR_FREEIF( fCurrentLine );
   PR_FREEIF( fStartOfLineOfTokens);
-  PR_FREEIF( fSyntaxErrorLine );
 }
 
 void nsIMAPGenericParser::HandleMemoryFailure()
@@ -82,57 +79,29 @@ void nsIMAPGenericParser::ResetLexAnalyzer()
 
 PRBool nsIMAPGenericParser::LastCommandSuccessful()
 {
-	return Connected() && !SyntaxError();
+  return fParserState == stateOK;
 }
 
 void nsIMAPGenericParser::SetSyntaxError(PRBool error)
 {
-  fSyntaxError = error;
-  PR_FREEIF( fSyntaxErrorLine );
   if (error)
-  {
-    NS_ASSERTION(PR_FALSE, "syntax error in generic parser");	
-    fSyntaxErrorLine = PL_strdup(fCurrentLine);
-  }
+      fParserState |= stateSyntaxErrorFlag;
   else
-    fSyntaxErrorLine = NULL;
-}
-
-char *nsIMAPGenericParser::CreateSyntaxErrorLine()
-{
-  return PL_strdup(fSyntaxErrorLine);
-}
-
-
-PRBool nsIMAPGenericParser::SyntaxError()
-{
-  return fSyntaxError;
+      fParserState &= ~stateSyntaxErrorFlag;
+  NS_ASSERTION(!error, "syntax error in generic parser");	
 }
 
 void nsIMAPGenericParser::SetConnected(PRBool connected)
 {
-  fDisconnected = !connected;
-}
-
-PRBool nsIMAPGenericParser::Connected()
-{
-  return !fDisconnected;
-}
-
-PRBool nsIMAPGenericParser::ContinueParse()
-{
-  return !fSyntaxError && !fDisconnected;
-}
-
-
-PRBool nsIMAPGenericParser::at_end_of_line()
-{
-  return (fAtEndOfLine || (nsCRT::strcmp(fNextToken, CRLF) == 0));
+  if (connected)
+      fParserState &= ~stateDisconnectedFlag;
+  else
+      fParserState |= stateDisconnectedFlag;
 }
 
 void nsIMAPGenericParser::skip_to_CRLF()
 {
-  while (Connected() && !at_end_of_line())
+  while (Connected() && !fAtEndOfLine)
     AdvanceToNextToken();
 }
 
@@ -145,37 +114,33 @@ void nsIMAPGenericParser::skip_to_CRLF()
 void nsIMAPGenericParser::skip_to_close_paren()
 {
   int numberOfCloseParensNeeded = 1;
-  if (fNextToken && *fNextToken == ')')
+  while (ContinueParse())
   {
-    numberOfCloseParensNeeded--;
-    fNextToken++;
-    if (!fNextToken || !*fNextToken)
-      AdvanceToNextToken();
-  }
-  
-  while (ContinueParse() && numberOfCloseParensNeeded > 0)
-  {
-    // go through fNextToken, count the number
-    // of open and close parens, to account
-    // for nested parens which might come in
-    // the response
-    char *loc = 0;
+    // go through fNextToken, account for nested parens
+    char *loc;
     for (loc = fNextToken; loc && *loc; loc++)
     {
       if (*loc == '(')
         numberOfCloseParensNeeded++;
       else if (*loc == ')')
-        numberOfCloseParensNeeded--;
-      if (numberOfCloseParensNeeded == 0)
       {
-        fNextToken = loc + 1;
-        if (!fNextToken || !*fNextToken)
-          AdvanceToNextToken();
-        break;	// exit the loop
+        numberOfCloseParensNeeded--;
+        if (numberOfCloseParensNeeded == 0)
+        {
+          fNextToken = loc + 1;
+          if (!fNextToken || !*fNextToken)
+            AdvanceToNextToken();
+          return;
+        }
+      }
+      else if (*loc == '{' || *loc == '"') {
+        // quoted or literal  
+        char *a = CreateAstring();
+        PR_FREEIF(a);
+        break; // move to next token
       }
     }
-    
-    if (numberOfCloseParensNeeded > 0)
+    if (ContinueParse())
       AdvanceToNextToken();
   }
 }
@@ -184,8 +149,20 @@ void nsIMAPGenericParser::AdvanceToNextToken()
 {
   if (!fCurrentLine || fAtEndOfLine)
     AdvanceToNextLine();
-  else if (Connected())
+  if (Connected())
   {
+    if (!fStartOfLineOfTokens)
+    {
+      // this is the first token of the line; setup tokenizer now
+      fStartOfLineOfTokens = PL_strdup(fCurrentLine);
+      if (!fStartOfLineOfTokens)
+      {
+        HandleMemoryFailure();
+        return;
+      }
+      fLineOfTokens = fStartOfLineOfTokens;
+      fCurrentTokenPlaceHolder = fStartOfLineOfTokens;
+    }
     fNextToken = nsCRT::strtok(fCurrentTokenPlaceHolder, WHITESPACE, &fCurrentTokenPlaceHolder);
     if (!fNextToken)
     {
@@ -207,34 +184,38 @@ void nsIMAPGenericParser::AdvanceToNextLine()
     fStartOfLineOfTokens = nsnull;
     fLineOfTokens = nsnull;
     fCurrentTokenPlaceHolder = nsnull;
+    fAtEndOfLine = PR_TRUE;
     fNextToken = CRLF;
   }
-  else if (fCurrentLine)	// might be NULL if we are would_block ?
+  else if (!fCurrentLine)
   {
-    fStartOfLineOfTokens = PL_strdup(fCurrentLine);
-    if (fStartOfLineOfTokens)
-    {
-      fLineOfTokens = fStartOfLineOfTokens;
-      fNextToken = nsCRT::strtok(fLineOfTokens, WHITESPACE, &fCurrentTokenPlaceHolder);
-      if (!fNextToken)
-      {
-        fAtEndOfLine = PR_TRUE;
-        fNextToken = CRLF;
-      }
-      else
-        fAtEndOfLine = PR_FALSE;
-    }
-    else
-      HandleMemoryFailure();
+    HandleMemoryFailure();
   }
   else
-    HandleMemoryFailure();
+  {
+     fNextToken = nsnull;
+     // determine if there are any tokens (without calling AdvanceToNextToken);
+     // otherwise we are already at end of line
+     NS_ASSERTION(strlen(WHITESPACE) == 3, "assume 3 chars of whitespace");
+     char *firstToken = fCurrentLine;
+     while (*firstToken && (*firstToken == WHITESPACE[0] ||
+            *firstToken == WHITESPACE[1] || *firstToken == WHITESPACE[2]))
+       firstToken++;
+     fAtEndOfLine = (*firstToken == '\0');
+  }
 }
 
 // advances |fLineOfTokens| by |bytesToAdvance| bytes
 void nsIMAPGenericParser::AdvanceTokenizerStartingPoint(int32 bytesToAdvance)
 {
   NS_PRECONDITION(bytesToAdvance>=0, "bytesToAdvance must not be negative");
+  if (!fStartOfLineOfTokens)
+  {
+    AdvanceToNextToken();  // the tokenizer was not yet initialized, do it now
+    if (!fStartOfLineOfTokens)
+      return;
+  }
+    
   if(!fStartOfLineOfTokens)
       return;
   // The last call to AdvanceToNextToken() cleared the token separator to '\0'
@@ -462,11 +443,9 @@ char *nsIMAPGenericParser::CreateLiteral()
     {
       if (bytesToCopy == 0)
       {
-          // the loop above was never executed, we just move to the next line
-          if(terminatedLine) {
-              AdvanceToNextLine();
-              AdvanceTokenizerStartingPoint(0);
-          }
+        // the loop above was never executed, we just move to the next line
+        if (terminatedLine)
+          AdvanceToNextLine();
       }
       else if (currentLineLength == bytesToCopy)
       {
@@ -480,10 +459,9 @@ char *nsIMAPGenericParser::CreateLiteral()
           // next line to ensure that the next call to AdvanceToNextToken()
           // would lead to fNextToken=="A3" in our example.
           // Note that setting fAtEndOfLine=PR_TRUE is wrong here, since the "\r\n"
-          // were just some characters from the literal; at_end_of_line() would
+          // were just some characters from the literal; fAtEndOfLine would
           // give a misleading result.
           AdvanceToNextLine();
-          AdvanceTokenizerStartingPoint(0);
       }
       else
       {

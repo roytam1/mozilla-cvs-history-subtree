@@ -54,20 +54,14 @@ public:
 	nsIMAPGenericParser();
 	virtual ~nsIMAPGenericParser();
 
-  // Connected() && !SyntaxError()
-	// Add any specific stuff in the derived class
+  // Add any specific stuff in the derived class
   virtual PRBool     LastCommandSuccessful();
-    
-  PRBool     SyntaxError();
-  virtual PRBool     ContinueParse();
-    
-  // if we get disconnected, end the current url processing and report to the
-  // the user.
-  PRBool			    Connected();
-  virtual void        SetConnected(PRBool error);
-    
-  char        *CreateSyntaxErrorLine();
 
+  PRBool SyntaxError() { return (fParserState & stateSyntaxErrorFlag) != 0; }
+  PRBool ContinueParse() { return fParserState == stateOK; }
+  PRBool Connected() { return !(fParserState & stateDisconnectedFlag); }
+  void SetConnected(PRBool error);
+    
 protected:
 
 	// This is a pure virtual member which must be overridden in the derived class
@@ -79,21 +73,20 @@ protected:
 	virtual PRBool	GetNextLineForParser(char **nextLine) = 0;	
 
   virtual void	HandleMemoryFailure();
-  virtual void    skip_to_CRLF();
-  virtual void    skip_to_close_paren();
-	virtual char	*CreateString();
-	virtual char	*CreateAstring();
-	virtual char	*CreateNilString();
-  virtual char    *CreateLiteral();
-	virtual char	*CreateAtom();
-  virtual char    *CreateQuoted(PRBool skipToEnd = PR_TRUE);
-	virtual char	*CreateParenGroup();
+  void skip_to_CRLF();
+  void skip_to_close_paren();
+  char *CreateString();
+  char *CreateAstring();
+  char *CreateNilString();
+  char *CreateLiteral();
+  char *CreateAtom();
+  char *CreateQuoted(PRBool skipToEnd = PR_TRUE);
+  char *CreateParenGroup();
   virtual void        SetSyntaxError(PRBool error);
-  virtual PRBool     at_end_of_line();
 
   void AdvanceToNextToken();
   void AdvanceToNextLine();
-	void AdvanceTokenizerStartingPoint (int32 bytesToAdvance);
+  void AdvanceTokenizerStartingPoint(int32 bytesToAdvance);
   void ResetLexAnalyzer();
 
 protected:
@@ -105,12 +98,11 @@ protected:
   char           *fCurrentTokenPlaceHolder;
   PRBool          fAtEndOfLine;
 
-  char           *fSyntaxErrorLine;
-  PRBool          fSyntaxError;
 private:
-  PRBool          fDisconnected;
-
-
+  enum nsIMAPGenericParserState { stateOK = 0,
+                                  stateSyntaxErrorFlag = 0x1,
+                                  stateDisconnectedFlag = 0x2 };
+  PRUint32 fParserState;
 };
 
 #endif

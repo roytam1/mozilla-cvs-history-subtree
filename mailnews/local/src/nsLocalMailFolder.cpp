@@ -109,6 +109,7 @@
 #include "nsIFileStreams.h"
 #include "nsAutoPtr.h"
 #include "nsIRssIncomingServer.h"
+#include "nsNetUtil.h"
 
 
 static NS_DEFINE_CID(kMailboxServiceCID,          NS_MAILBOXSERVICE_CID);
@@ -492,7 +493,22 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetDatabaseWOReparse(nsIMsgDatabase **aDatab
     {
       rv = msgDBService->OpenFolderDB(this, PR_FALSE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(mDatabase));
       if (mDatabase && NS_SUCCEEDED(rv))
+      {
         mDatabase->AddListener(this);
+        PRBool hasNewMessages = PR_FALSE;
+        for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++)
+        {
+          PRBool isRead = PR_FALSE;
+          mDatabase->IsRead(m_newMsgs[keyIndex], &isRead);
+          if (!isRead)
+          {
+            hasNewMessages = PR_TRUE;
+            mDatabase->AddToNewList(m_newMsgs[keyIndex]);
+          }
+        }
+        SetHasNewMessages(hasNewMessages);
+
+      }
     }
   }
   *aDatabase = mDatabase;
@@ -1693,6 +1709,10 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
       srcFolder->NotifyFolderEvent(mDeleteOrMoveMsgFailedAtom);
     return OnCopyCompleted(srcSupport, PR_FALSE);
   }
+
+  if (!(mFlags & MSG_FOLDER_FLAG_TRASH|MSG_FOLDER_FLAG_JUNK))
+    SetMRUTime();
+
   nsXPIDLCString uri;
   rv = srcFolder->GetURI(getter_Copies(uri));
   nsCAutoString protocolType(uri);
@@ -2276,14 +2296,10 @@ nsresult nsMsgLocalMailFolder::WriteStartOfNewMessage()
   if (mCopyState->m_dummyEnvelopeNeeded)
   {
     nsCString result;
-    char timeBuffer[128];
-    PRExplodedTime now;
-    PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &now);
-    PR_FormatTimeUSEnglish(timeBuffer, sizeof(timeBuffer),
-                           "%a %b %d %H:%M:%S %Y",
-                           &now);
+    nsCAutoString nowStr;
+    MsgGenerateNowStr(nowStr);
     result.Append("From - ");
-    result.Append(timeBuffer);
+    result.Append(nowStr);
     result.Append(MSG_LINEBREAK);
 
     // *** jt - hard code status line for now; come back later
@@ -3712,6 +3728,7 @@ nsMsgLocalMailFolder::GetUidlFromFolder(nsLocalFolderScanState *aState,
       size = aState->m_header.Length();
       if (!size)
         break;
+      // this isn't quite right - need to account for line endings
       len -= size;
       // account key header will always be before X_UIDL header
       if (!accountKey)
@@ -3722,7 +3739,8 @@ nsMsgLocalMailFolder::GetUidlFromFolder(nsLocalFolderScanState *aState,
           accountKey += strlen(HEADER_X_MOZILLA_ACCOUNT_KEY) + 2;
           aState->m_accountKey = accountKey;
         }
-      } else
+      }
+      else
       {
         aState->m_uidl = strstr(aState->m_header.get(), X_UIDL);
         if (aState->m_uidl)
@@ -3811,5 +3829,47 @@ nsMsgLocalMailFolder::WarnIfLocalFileTooBig(nsIMsgWindow *aWindow, PRBool *aTooB
     }
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgLocalMailFolder::FetchMsgPreviewText(nsMsgKey *aKeysToFetch, PRUint32 aNumKeys,
+                                                 PRBool aLocalOnly, nsIUrlListener *aUrlListener, 
+                                                 PRBool *aAsyncResults)
+{
+  NS_ENSURE_ARG_POINTER(aKeysToFetch);
+  NS_ENSURE_ARG_POINTER(aAsyncResults);
+
+  *aAsyncResults = PR_FALSE;
+  nsXPIDLCString nativePath;
+  mPath->GetNativePath(getter_Copies(nativePath));
+
+  nsCOMPtr <nsILocalFile> localStore;
+  nsCOMPtr <nsIInputStream> inputStream;
+
+  nsresult rv = NS_NewNativeLocalFile(nativePath, PR_TRUE, getter_AddRefs(localStore));
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = NS_NewLocalFileInputStream(getter_AddRefs(inputStream), localStore);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  for (PRUint32 i = 0; i < aNumKeys; i++)
+  {
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    nsXPIDLCString prevBody;
+    rv = GetMessageHeader(aKeysToFetch[i], getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
+    // ignore messages that already have a preview body.
+    msgHdr->GetStringProperty("preview", getter_Copies(prevBody));
+    if (!prevBody.IsEmpty())
+      continue;
+    PRUint32 messageOffset;
+
+    msgHdr->GetMessageOffset(&messageOffset);
+    nsCOMPtr <nsISeekableStream> seekableStream = do_QueryInterface(inputStream);
+    if (seekableStream)
+      rv = seekableStream->Seek(nsISeekableStream::NS_SEEK_CUR, messageOffset);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = GetMsgPreviewTextFromStream(msgHdr, inputStream);
+
+  }
+  return rv;
 }
 

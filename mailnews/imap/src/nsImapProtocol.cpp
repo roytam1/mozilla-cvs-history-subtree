@@ -794,7 +794,7 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
                                               *socketHost, socketPort, proxyInfo,
                                               getter_AddRefs(m_transport));
         }
-        if (m_transport)
+        if (m_transport && m_mockChannel)
         {
           // Ensure that the socket can get the notification callbacks
           SetSecurityCallbacksFromChannel(m_transport, m_mockChannel);
@@ -987,6 +987,7 @@ NS_IMETHODIMP nsImapProtocol::OnInputStreamReady(nsIAsyncInputStream *inStr)
     if (bytesAvailable != 0)
     {
       PR_EnterMonitor(m_urlReadyToRunMonitor);
+      m_lastActiveTime = PR_Now();
       m_nextUrlReadyToRun = PR_TRUE;
       PR_Notify(m_urlReadyToRunMonitor);
       PR_ExitMonitor(m_urlReadyToRunMonitor);
@@ -1055,7 +1056,6 @@ nsImapProtocol::TellThreadToDie(PRBool isSafeToClose)
 NS_IMETHODIMP
 nsImapProtocol::GetLastActiveTimeStamp(PRTime* aTimeStamp)
 {
-  nsAutoCMonitor mon(this);
   if (aTimeStamp)
       *aTimeStamp = m_lastActiveTime;
   return NS_OK;
@@ -1415,7 +1415,6 @@ PRBool nsImapProtocol::ProcessCurrentURL()
       if (request)
         rv = m_channelListener->OnStopRequest(request, m_channelContext, NS_OK);
   }
-  m_lastActiveTime = PR_Now(); // ** jt -- is this the best place for time stamp
   SetFlag(IMAP_CLEAN_UP_URL_STATE);
 
   nsCOMPtr <nsISupports> copyState;
@@ -1568,6 +1567,11 @@ nsresult nsImapProtocol::SendData(const char * dataBuffer, PRBool aSuppressLoggi
       ClearFlag(IMAP_CONNECTION_IS_OPEN); 
       TellThreadToDie(PR_FALSE);
       SetConnectionStatus(-1);
+      if (m_runningUrl && !m_retryUrlOnError)
+      {
+        m_runningUrl->SetRerunningUrl(PR_TRUE);
+        m_retryUrlOnError = PR_TRUE;
+      }
     }
   }
 
@@ -1999,13 +2003,14 @@ void nsImapProtocol::ProcessSelectedStateURL()
       case nsIImapUrl::nsImapMsgFetch:
       case nsIImapUrl::nsImapMsgFetchPeek:
       case nsIImapUrl::nsImapMsgDownloadForOffline:
+      case nsIImapUrl::nsImapMsgPreview:
         {
           nsXPIDLCString messageIdString;
           m_runningUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
-          // we dont want to send the flags back in a group
+          // we don't want to send the flags back in a group
           // GetServerStateParser().ResetFlagInfo(0);
           if (HandlingMultipleMessages(messageIdString) || m_imapAction == nsIImapUrl::nsImapMsgDownloadForOffline
-            || m_imapAction == nsIImapUrl::nsImapMsgFetchPeek)
+             || m_imapAction == nsIImapUrl::nsImapMsgPreview)
           {
             // multiple messages, fetch them all
             SetProgressString(IMAP_FOLDER_RECEIVING_MESSAGE_OF);
@@ -2017,13 +2022,19 @@ void nsImapProtocol::ProcessSelectedStateURL()
             if (m_imapAction == nsIImapUrl::nsImapMsgFetchPeek)
               SetContentModified(IMAP_CONTENT_NOT_MODIFIED);
             FetchMessage(messageIdString, 
-              kEveryThingRFC822Peek,
+              (m_imapAction == nsIImapUrl::nsImapMsgPreview)
+              ? kBodyStart : kEveryThingRFC822Peek,
               bMessageIdsAreUids);
+            if (m_imapAction == nsIImapUrl::nsImapMsgPreview)
+              HeaderFetchCompleted(); 
             SetProgressString(0);
           }
           else
           {
             // A single message ID
+		    nsIMAPeFetchFields whatToFetch = kEveryThingRFC822;
+	        if(m_imapAction == nsIImapUrl::nsImapMsgFetchPeek)
+              whatToFetch = kEveryThingRFC822Peek;
             
             // First, let's see if we're requesting a specific MIME part
             char *imappart = nsnull;
@@ -2139,7 +2150,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
                 // Not doing bodystructure.  Fetch the whole thing, and try to do
                 // it in chunks.
                 SetContentModified(IMAP_CONTENT_NOT_MODIFIED);
-                FetchTryChunking(messageIdString, kEveryThingRFC822,
+                FetchTryChunking(messageIdString, whatToFetch,
                   bMessageIdsAreUids, NULL, messageSize, PR_TRUE);
               }
             }
@@ -2717,7 +2728,7 @@ void nsImapProtocol::PipelinedFetchMessageParts(const char *uid, nsIMAPMessagePa
       switch (currentPart->GetFields())
       {
       case kMIMEHeader:
-        what = "BODY[";
+        what = "BODY.PEEK[";
         what.Append(currentPart->GetPartNumberString());
         what.Append(".MIME]");
         stringToFetch.Append(what);
@@ -2725,7 +2736,7 @@ void nsImapProtocol::PipelinedFetchMessageParts(const char *uid, nsIMAPMessagePa
       case kRFC822HeadersOnly:
         if (currentPart->GetPartNumberString())
         {
-          what = "BODY[";
+          what = "BODY.PEEK[";
           what.Append(currentPart->GetPartNumberString());
           what.Append(".HEADER]");
           stringToFetch.Append(what);
@@ -2733,7 +2744,7 @@ void nsImapProtocol::PipelinedFetchMessageParts(const char *uid, nsIMAPMessagePa
         else
         {
           // headers for the top-level message
-          stringToFetch.Append("BODY[HEADER]");
+          stringToFetch.Append("BODY.PEEK[HEADER]");
         }
         break;
       default:
@@ -2857,19 +2868,30 @@ nsImapProtocol::FetchMessage(const char * messageIds,
       {
         // use body[].peek since rfc822.peek is not in IMAP4rev1
         if (server_capabilityFlags & kHasXSenderCapability)
-          formatString = " %s (XSENDER UID RFC822.SIZE BODY.PEEK[])";
+          formatString = " %s (XSENDER UID RFC822.SIZE BODY.PEEK[]";
         else
-          formatString = " %s (UID RFC822.SIZE BODY.PEEK[])";
+          formatString = " %s (UID RFC822.SIZE BODY.PEEK[]";
       }
       else
       {
         if (server_capabilityFlags & kHasXSenderCapability)
-          formatString = " %s (XSENDER UID RFC822.SIZE RFC822.peek)";
+          formatString = " %s (XSENDER UID RFC822.SIZE RFC822.peek";
         else
-          formatString = " %s (UID RFC822.SIZE RFC822.peek)";
+          formatString = " %s (UID RFC822.SIZE RFC822.peek";
       }
       
       commandString.Append(formatString);
+      if (endByte > 0)
+      {
+        // if we are retrieving chunks
+        char *byterangeString = PR_smprintf("<%ld.%ld>",startByte,endByte);
+        if (byterangeString)
+        {
+          commandString.Append(byterangeString);
+          PR_Free(byterangeString);
+        }
+      }
+      commandString.Append(")");
     }
     break;
   case kHeadersRFC822andUid:
@@ -2932,6 +2954,16 @@ nsImapProtocol::FetchMessage(const char * messageIds,
   case kRFC822Size:
     commandString.Append(" %s (RFC822.SIZE)");
     break;
+  case kBodyStart:
+    {
+      PRInt32 numBytesToFetch;
+      m_runningUrl->GetNumBytesToFetch(&numBytesToFetch);
+
+      commandString.Append(" %s (UID BODY.PEEK[HEADER.FIELDS (Content-Type)] BODY.PEEK[TEXT]<0.");
+      commandString.AppendInt(numBytesToFetch);
+      commandString.Append(">)");
+    }
+    break;
   case kRFC822HeadersOnly:
     if (GetServerStateParser().ServerHasIMAP4Rev1Capability())
     {
@@ -2957,7 +2989,7 @@ nsImapProtocol::FetchMessage(const char * messageIds,
       commandString.Append(" %s (RFC822.HEADER)");
     break;
   case kMIMEPart:
-    commandString.Append(" %s (BODY[%s]");
+    commandString.Append(" %s (BODY.PEEK[%s]");
     if (endByte > 0)
     {
       // if we are retrieving chunks
@@ -3100,7 +3132,7 @@ void nsImapProtocol::PipelinedFetchMessageParts(nsCString &uid, nsIMAPMessagePar
       switch (currentPart->GetFields())
       {
       case kMIMEHeader:
-        what = "BODY[";
+        what = "BODY.PEEK[";
         what += currentPart->GetPartNumberString();
         what += ".MIME]";
         stringToFetch += what;
@@ -3108,7 +3140,7 @@ void nsImapProtocol::PipelinedFetchMessageParts(nsCString &uid, nsIMAPMessagePar
       case kRFC822HeadersOnly:
         if (currentPart->GetPartNumberString())
         {
-          what = "BODY[";
+          what = "BODY.PEEK[";
           what += currentPart->GetPartNumberString();
           what += ".HEADER]";
           stringToFetch += what;
@@ -3116,7 +3148,7 @@ void nsImapProtocol::PipelinedFetchMessageParts(nsCString &uid, nsIMAPMessagePar
         else
         {
           // headers for the top-level message
-          stringToFetch += "BODY[HEADER]";
+          stringToFetch += "BODY.PEEK[HEADER]";
         }
         break;
       default:
@@ -3181,7 +3213,7 @@ nsImapProtocol::PostLineDownLoadEvent(msg_line_info *downloadLineDontDelete)
     if (m_imapMessageSink && downloadLineDontDelete && echoLineToMessageSink && !GetPseudoInterrupted())
     {
       m_imapMessageSink->ParseAdoptedMsgLine(downloadLineDontDelete->adoptedMessageLine, 
-      downloadLineDontDelete->uidOfMessage);
+                                             downloadLineDontDelete->uidOfMessage);
     }
   }
   // ***** We need to handle the pseudo interrupt here *****
@@ -3342,7 +3374,7 @@ void nsImapProtocol::HandleMessageDownLoadLine(const char *line, PRBool isPartia
     if (!m_curHdrInfo)
       BeginMessageDownLoad(GetServerStateParser().SizeOfMostRecentMessage(), MESSAGE_RFC822);
     m_curHdrInfo->CacheLine(messageLine, GetServerStateParser().CurrentResponseUID());
-    PR_FREEIF(localMessageLine);
+    PR_Free(localMessageLine);
     return;
   }
   // if this line is for a different message, or the incoming line is too big
@@ -3374,7 +3406,7 @@ void nsImapProtocol::HandleMessageDownLoadLine(const char *line, PRBool isPartia
   else
     m_downloadLineCache.CacheLine(messageLine, GetServerStateParser().CurrentResponseUID());
 
-  PR_FREEIF(localMessageLine);
+  PR_Free(localMessageLine);
 }
 
 
@@ -7153,19 +7185,6 @@ void nsImapProtocol::ProcessAuthenticatedStateURL()
         }
         break;
       }
-    case nsIImapUrl::nsImapDiscoverLevelChildrenUrl:
-      {
-        char *canonicalParent = nsnull;
-        m_runningUrl->CreateServerSourceFolderPathString(&canonicalParent);
-        PRInt32 depth = 0;
-        m_runningUrl->GetChildDiscoveryDepth(&depth);
-        if (canonicalParent)
-        {
-          NthLevelChildList(canonicalParent, depth);
-          PR_Free(canonicalParent);
-        }
-        break;
-      }
     case nsIImapUrl::nsImapSubscribe:
       sourceMailbox = OnCreateServerSourceFolderPathString();
       OnSubscribe(sourceMailbox); // used to be called subscribe
@@ -8519,7 +8538,7 @@ NS_IMETHODIMP nsImapMockChannel::GetName(nsACString &result)
 
 NS_IMETHODIMP nsImapMockChannel::IsPending(PRBool *result)
 {
-    *result = PR_TRUE;
+    *result = m_channelListener != nsnull;
     return NS_OK; 
 }
 

@@ -1125,3 +1125,14 @@ void Seconds2PRTime(PRUint32 seconds, PRTime *prTime)
   LL_UI2L(intermediateResult, seconds);
   LL_MUL((*prTime), intermediateResult, microSecondsPerSecond);
 }
+
+void MsgGenerateNowStr(nsACString &nowStr)
+{
+  char dateBuf[100];
+  dateBuf[0] = '\0';
+  PRExplodedTime exploded;
+  PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &exploded);
+  PR_FormatTimeUSEnglish(dateBuf, sizeof(dateBuf), "%a %b %d %H:%M:%S %Y", &exploded);
+  nowStr.Assign(dateBuf);
+}
+

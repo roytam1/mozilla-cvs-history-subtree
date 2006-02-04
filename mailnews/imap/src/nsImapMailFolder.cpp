@@ -113,6 +113,7 @@
 #include "nsEmbedCID.h"
 #include "nsIMsgComposeService.h"
 #include "nsMsgCompCID.h"
+#include "nsICacheEntryDescriptor.h"
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
@@ -602,7 +603,7 @@ nsresult nsImapMailFolder::CreateSubFolders(nsFileSpec &path)
       // automatically computed from the URI, which is in utf7 form.
       if (!currentFolderNameStr.IsEmpty())
         child->SetPrettyName(currentFolderNameStr.get());
-
+      child->SetMsgDatabase(nsnull);
     }
   }
   return rv;
@@ -689,6 +690,20 @@ nsresult nsImapMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
 
     if(mDatabase)
     {
+      PRBool hasNewMessages = PR_FALSE; 
+      for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++) 
+      { 
+        PRBool isRead = PR_FALSE; 
+        mDatabase->IsRead(m_newMsgs[keyIndex], &isRead); 
+        if (!isRead) 
+        { 
+          hasNewMessages = PR_TRUE; 
+          mDatabase->AddToNewList(m_newMsgs[keyIndex]); 
+        } 
+      } 
+      
+      SetHasNewMessages(hasNewMessages); 
+
       if(mAddListener)
         mDatabase->AddListener(this);
       UpdateSummaryTotals(PR_TRUE);
@@ -728,9 +743,6 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
       NS_ASSERTION(NS_SUCCEEDED(rv), "failed to add temp filters");
     }
   }
-  
-  nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
-  if (NS_FAILED(rv)) return rv;
   
   selectFolder = PR_TRUE;
   
@@ -795,14 +807,11 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   // don't run select if we're already running a url/select...
   if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
   {
-    nsCOMPtr <nsIEventQueue> eventQ;
-    nsCOMPtr<nsIEventQueueService> pEventQService = 
-      do_GetService(kEventQueueServiceCID, &rv); 
-    if (NS_SUCCEEDED(rv) && pEventQService)
-      pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
-      getter_AddRefs(eventQ));
+    nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
+    if (NS_FAILED(rv)) return rv;
+  
     nsCOMPtr <nsIURI> url;
-    rv = imapService->SelectFolder(eventQ, this, m_urlListener, msgWindow, getter_AddRefs(url));
+    rv = imapService->SelectFolder(m_eventQueue, this, m_urlListener, msgWindow, getter_AddRefs(url));
     if (NS_SUCCEEDED(rv))
       m_urlRunning = PR_TRUE;
     if (url)
@@ -996,6 +1005,8 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
       unusedDB->SetSummaryValid(PR_TRUE);
       unusedDB->Commit(nsMsgDBCommitType::kLargeCommit);
       unusedDB->Close(PR_TRUE);
+      // don't want to hold onto this newly created db.
+      child->SetMsgDatabase(nsnull);
     }
   }
   if (!suppressNotification)
@@ -2624,6 +2635,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
     if ((imapUIDValidity != folderValidity) /* && // if UIDVALIDITY Changed 
       !NET_IsOffline() */)
     {
+      NS_ASSERTION(PR_FALSE, "uid validity seems to have changed, blowing away db");
       nsCOMPtr<nsIFileSpec> pathSpec;
       rv = GetPath(getter_AddRefs(pathSpec));
       if (NS_FAILED(rv)) return rv;
@@ -2801,11 +2813,18 @@ NS_IMETHODIMP nsImapMailFolder::ParseMsgHdrs(nsIImapProtocol *aProtocol, nsIImap
 {
   PRInt32 numHdrs;
   nsCOMPtr <nsIImapHeaderInfo> headerInfo;
-
+  nsCOMPtr <nsIImapUrl> aImapUrl;
+  nsImapAction imapAction = nsIImapUrl::nsImapTest; // unused value.
   if (!mDatabase)
     GetDatabase(nsnull);
   
   nsresult rv = aHdrXferInfo->GetNumHeaders(&numHdrs);
+  if (aProtocol)
+  {
+    (void) aProtocol->GetRunningImapURL(getter_AddRefs(aImapUrl));
+    if (aImapUrl)
+      aImapUrl->GetImapAction(&imapAction);
+  }
   for (PRUint32 i = 0; NS_SUCCEEDED(rv) && i < numHdrs; i++)
   {
 
@@ -2821,6 +2840,20 @@ NS_IMETHODIMP nsImapMailFolder::ParseMsgHdrs(nsIImapProtocol *aProtocol, nsIImap
     headerInfo->GetMsgUid(&msgKey);
     if (msgKey == nsMsgKey_None) // not a valid uid.
       continue;
+    if (imapAction == nsIImapUrl::nsImapMsgPreview)
+    {
+      nsCOMPtr <nsIMsgDBHdr> msgHdr;
+      headerInfo->GetMsgHdrs(&msgHdrs);
+      // create an input stream based on the hdr string.
+      nsCOMPtr<nsIStringInputStream> inputStream = 
+            do_CreateInstance("@mozilla.org/io/string-input-stream;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+      inputStream->ShareData(msgHdrs, strlen(msgHdrs));
+      GetMessageHeader(msgKey, getter_AddRefs(msgHdr));
+      if (msgHdr)
+        GetMsgPreviewTextFromStream(msgHdr, inputStream);
+      continue;
+    }
     if (mDatabase && NS_SUCCEEDED(mDatabase->ContainsKey(msgKey, &containsKey)) && containsKey)
     {
       NS_ASSERTION(PR_FALSE, "downloading hdrs for hdr we already have");
@@ -2831,7 +2864,7 @@ NS_IMETHODIMP nsImapMailFolder::ParseMsgHdrs(nsIImapProtocol *aProtocol, nsIImap
     headerInfo->GetMsgHdrs(&msgHdrs);
     rv = ParseAdoptedHeaderLine(msgHdrs, msgKey);
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = NormalEndHeaderParseStream(aProtocol);
+    rv = NormalEndHeaderParseStream(aProtocol, aImapUrl);
   }
 
   return rv;
@@ -2890,8 +2923,7 @@ nsresult nsImapMailFolder::ParseAdoptedHeaderLine(const char *aMessageLine, PRUi
   return NS_OK;
 }
     
-nsresult nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol*
-                                                           aProtocol)
+nsresult nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol *aProtocol, nsIImapUrl* imapUrl)
 {
   nsCOMPtr<nsIMsgDBHdr> newMsgHdr;
   nsresult rv = NS_OK;
@@ -2910,18 +2942,12 @@ nsresult nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol*
     PRInt32 headersSize;
 
     nsCOMPtr <nsIMsgWindow> msgWindow;
-    if (aProtocol)
+    nsCOMPtr <nsIMsgMailNewsUrl> msgUrl;
+    if (imapUrl)
     {
-      nsCOMPtr <nsIImapUrl> aImapUrl;
-      nsCOMPtr <nsIMsgMailNewsUrl> msgUrl;
-      rv = aProtocol->GetRunningImapURL(getter_AddRefs(aImapUrl));
-      if (NS_SUCCEEDED(rv) && aImapUrl)
-      {
-        msgUrl = do_QueryInterface(aImapUrl);
-        if (msgUrl)
-          msgUrl->GetMsgWindow(getter_AddRefs(msgWindow));
-      }
-
+      msgUrl = do_QueryInterface(imapUrl);
+      if (msgUrl)
+        msgUrl->GetMsgWindow(getter_AddRefs(msgWindow));
     }
     nsCOMPtr<nsIMsgIncomingServer> server;
     rv = GetServer(getter_AddRefs(server));
@@ -3166,6 +3192,7 @@ NS_IMETHODIMP nsImapMailFolder::CopyDataDone()
   return NS_OK;
 }
 
+// sICopyMessageListener methods, BeginCopy, CopyData, EndCopy, EndMove, StartMessage, EndMessage
 
 NS_IMETHODIMP nsImapMailFolder::CopyData(nsIInputStream *aIStream,
                      PRInt32 aLength)
@@ -4293,21 +4320,11 @@ nsImapMailFolder::OnlineCopyCompleted(nsIImapProtocol *aProtocol, ImapOnlineCopy
         rv = imapUrl->CreateListOfMessageIdsString(getter_Copies(messageIds));
 
         if (NS_FAILED(rv)) return rv;
-        nsCOMPtr<nsIEventQueue> queue;  
-        // get the Event Queue for this thread...
-        nsCOMPtr<nsIEventQueueService> pEventQService = 
-                 do_GetService(kEventQueueServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        rv = pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
-                                                 getter_AddRefs(queue));
-        if (NS_FAILED(rv)) return rv;
-        
         nsCOMPtr<nsIImapService> imapService = 
                  do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv,rv);
    
-        rv = imapService->AddMessageFlags(queue, this, nsnull, nsnull,
+        rv = imapService->AddMessageFlags(m_eventQueue, this, nsnull, nsnull,
                                           messageIds,
                                           kImapMsgDeletedFlag,
                                           PR_TRUE);
@@ -4804,7 +4821,19 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
                 srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE/* dbBatching*/);
                 // even if we're showing deleted messages, 
                 // we still need to notify FE so it will show the imap deleted flag
-                srcFolder->NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);      
+                srcFolder->NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);
+                // is there a way to see that we think we have new msgs?
+                nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
+                if (NS_SUCCEEDED(rv))
+                {
+                  PRBool showPreviewText;
+                  prefBranch->GetBoolPref("mail.showPreviewText", &showPreviewText);
+                  // if we're showing preview text, update ourselves if we got a new unread
+                  // message copied so that we can download the new headers and have a chance
+                  // to preview the msg bodies.
+                  if (!folderOpen && showPreviewText && m_copyState->m_unreadCount > 0)
+                    UpdateFolder(msgWindow);
+                }
               }
               else
               {
@@ -5268,6 +5297,7 @@ nsImapMailFolder::HeaderFetchCompleted(nsIImapProtocol* aProtocol)
   if (m_performingBiff)
     GetNumNewMessages(PR_FALSE, &numNewBiffMsgs);
 
+  PRBool pendingMoves = m_moveCoalescer && m_moveCoalescer->HasPendingMoves();
   PlaybackCoalescedOperations();
   if (aProtocol)
   {
@@ -5322,7 +5352,8 @@ nsImapMailFolder::HeaderFetchCompleted(nsIImapProtocol* aProtocol)
 
   PRBool filtersRun;
   CallFilterPlugins(msgWindow, &filtersRun);
-  if (!filtersRun && m_performingBiff && mDatabase && numNewBiffMsgs > 0)
+  if (!filtersRun && m_performingBiff && mDatabase && numNewBiffMsgs > 0 && 
+      (!pendingMoves || !ShowPreviewText()))
   {
     // If we are performing biff for this folder, tell the
     // stand-alone biff about the new high water mark
@@ -6927,13 +6958,16 @@ nsImapFolderCopyState::StartNextCopy()
   nsCOMPtr <nsIImapService> imapService = do_GetService (NS_IMAPSERVICE_CONTRACTID, &rv);
   if (NS_SUCCEEDED(rv))
   {
-    nsCOMPtr <nsIEventQueue> eventQueue;
-    nsCOMPtr<nsIEventQueueService> pEventQService = 
-      do_GetService(kEventQueueServiceCID, &rv); 
-    NS_ENSURE_SUCCESS(rv, rv);
-    pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(eventQueue));
     nsXPIDLString folderName;
     m_srcFolder->GetName(getter_Copies(folderName));
+
+    nsCOMPtr<nsIEventQueueService> pEventQService = 
+      do_GetService(kEventQueueServiceCID, &rv); 
+    nsCOMPtr <nsIEventQueue> eventQueue;
+    if (NS_SUCCEEDED(rv) && pEventQService)
+      pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+      getter_AddRefs(eventQueue));
+
     rv = imapService->EnsureFolderExists(eventQueue, m_destParent,
                             folderName.get(), 
                             this, nsnull);
@@ -8104,6 +8138,20 @@ nsImapMailFolder::StoreCustomKeywords(nsIMsgWindow *aMsgWindow, const char *aFla
   return imapService->StoreCustomKeywords(m_eventQueue, this, aMsgWindow, aFlagsToAdd, aFlagsToSubtract, msgIds.get(), _retval);
 }
 
+NS_IMETHODIMP nsImapMailFolder::NotifyIfNewMail()
+{
+  return PerformBiffNotifications();
+}
+
+PRBool nsImapMailFolder::ShowPreviewText()
+{
+  PRBool showPreviewText = PR_FALSE;
+  nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  if (prefBranch)
+    prefBranch->GetBoolPref("mail.showPreviewText", &showPreviewText);
+  return showPreviewText;
+}
+
 nsresult
 nsImapMailFolder::PlaybackCoalescedOperations()
 {
@@ -8118,7 +8166,7 @@ nsImapMailFolder::PlaybackCoalescedOperations()
       StoreCustomKeywords(m_moveCoalescer->GetMsgWindow(), "NonJunk", "", nonJunkKeysToClassify->GetArray(), nonJunkKeysToClassify->GetSize(), nsnull);
     junkKeysToClassify->RemoveAll();
     nonJunkKeysToClassify->RemoveAll();
-    return m_moveCoalescer->PlaybackMoves();
+    return m_moveCoalescer->PlaybackMoves(ShowPreviewText());
   }
   return NS_OK; // must not be any coalesced operations
 }
@@ -8247,9 +8295,10 @@ nsImapMailFolder::OnMessageClassified(const char *aMsgURI, nsMsgJunkStatus aClas
         m_junkMessagesToMarkAsRead->SizeTo(0);
       }
     }
+    PRBool pendingMoves = m_moveCoalescer && m_moveCoalescer->HasPendingMoves();
     PlaybackCoalescedOperations();
     // If we are performing biff for this folder, tell the server object
-    if (m_performingBiff)
+    if ((!pendingMoves || !ShowPreviewText()) && m_performingBiff)
     {
       // we don't need to adjust the num new messages in this folder because
       // the playback moves code already did that.
@@ -8306,3 +8355,101 @@ void nsImapMailFolder::GetTrashFolderName(nsAString &aFolderName)
     }
   }
 }
+NS_IMETHODIMP nsImapMailFolder::FetchMsgPreviewText(nsMsgKey *aKeysToFetch, PRUint32 aNumKeys,
+                                                 PRBool aLocalOnly, nsIUrlListener *aUrlListener, 
+                                                 PRBool *aAsyncResults)
+{
+  NS_ENSURE_ARG_POINTER(aKeysToFetch);
+  NS_ENSURE_ARG_POINTER(aAsyncResults);
+
+  nsMsgKeyArray keysToFetchFromServer;
+
+  *aAsyncResults = PR_FALSE;
+  nsresult rv = NS_OK;
+
+  for (PRUint32 i = 0; i < aNumKeys; i++)
+  {
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    nsXPIDLCString prevBody;
+    rv = GetMessageHeader(aKeysToFetch[i], getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
+    // ignore messages that already have a preview body.
+    msgHdr->GetStringProperty("preview", getter_Copies(prevBody));
+    if (!prevBody.IsEmpty())
+      continue;
+
+    /* check if message is in memory cache or offline store. */
+    nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr <nsIMsgMessageService> msgService = do_QueryInterface(imapService);
+    nsCOMPtr <nsIURI> url;
+    nsCOMPtr<nsIInputStream> inputStream;
+
+    nsXPIDLCString messageUri;
+    rv = GetUriForMsg(msgHdr, getter_Copies(messageUri));
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = msgService->GetUrlForUri(messageUri, getter_AddRefs(url), nsnull);
+    NS_ENSURE_SUCCESS(rv,rv);
+    nsCAutoString urlSpec;
+    url->GetAsciiSpec(urlSpec);
+
+    nsCOMPtr<nsICacheSession> cacheSession;
+    rv = imapService->GetCacheSession(getter_AddRefs(cacheSession));
+    NS_ENSURE_SUCCESS(rv, rv);
+    PRInt32 uidValidity;
+    GetUidValidity(&uidValidity);
+    // stick the uid validity in front of the url, so that if the uid validity
+    // changes, we won't re-use the wrong cache entries.
+    nsCAutoString cacheKey;
+    cacheKey.AppendInt(uidValidity, 16);
+    cacheKey.Append(urlSpec);
+    nsCOMPtr <nsICacheEntryDescriptor> cacheEntry;
+
+    // if mem cache entry is broken or empty, go to next message.
+    rv = cacheSession->OpenCacheEntry(cacheKey, nsICache::ACCESS_READ, PR_FALSE, getter_AddRefs(cacheEntry));
+    if (cacheEntry)
+    {
+      rv = cacheEntry->OpenInputStream(0, getter_AddRefs(inputStream));
+      if (NS_SUCCEEDED(rv))
+      {
+        PRUint32 bytesAvailable = 0;
+        rv = inputStream->Available(&bytesAvailable);
+        if (!bytesAvailable)
+          continue;
+        rv = GetMsgPreviewTextFromStream(msgHdr, inputStream);
+      }
+    }
+    else // lets look in the offline store
+    {
+      PRUint32 msgFlags;
+      msgHdr->GetFlags(&msgFlags);
+      nsMsgKey msgKey;
+      msgHdr->GetMessageKey(&msgKey);
+      if (msgFlags & MSG_FLAG_OFFLINE)
+      {
+        nsMsgKey messageOffset;
+        PRUint32 messageSize;
+        GetOfflineFileStream(msgKey, &messageOffset, &messageSize, getter_AddRefs(inputStream));
+        if (inputStream)
+          rv = GetMsgPreviewTextFromStream(msgHdr, inputStream);
+      }
+      else if (!aLocalOnly)
+        keysToFetchFromServer.Add(msgKey);
+    }
+  }
+  if (keysToFetchFromServer.GetSize() > 0)
+  {
+      nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv,rv);
+      PRUint32 msgCount = keysToFetchFromServer.GetSize();
+      nsCAutoString messageIds;
+
+      AllocateImapUidString(keysToFetchFromServer.GetArray(), msgCount, 
+                           nsnull, messageIds);
+      rv = imapService->GetBodyStart(m_eventQueue, this, aUrlListener,
+                                         messageIds.get(), 2048, nsnull);
+      *aAsyncResults = PR_TRUE; // the preview text will be available async...
+  }
+  return NS_OK;
+}
+
