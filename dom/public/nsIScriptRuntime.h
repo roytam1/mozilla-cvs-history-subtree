@@ -81,4 +81,11 @@ public:
   virtual nsresult HoldScriptObject(void *object) = 0;
 };
 
+/* helper functions */
+nsresult NS_GetScriptRuntime(const nsAString &aLanguageName,
+                             nsIScriptRuntime **aRuntime);
+
+nsresult NS_GetScriptRuntimeByID(PRUint32 aLanguageID,
+                                 nsIScriptRuntime **aRuntime);
+
 #endif // nsIScriptRuntime_h__

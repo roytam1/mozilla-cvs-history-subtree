@@ -97,11 +97,4 @@ public:
                                   const nsCID *aConstructorCID) = 0;
 };
 
-/* helper functions */
-nsresult NS_GetScriptRuntime(const nsAString &aScriptType,
-                             nsIScriptRuntime **aLanguage);
-
-nsresult NS_GetScriptRuntimeByID(PRUint32 aScriptTypeID,
-                                 nsIScriptRuntime **aLanguage);
-
 #endif /* nsIDOMScriptObjectFactory_h__ */
