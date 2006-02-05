@@ -15,14 +15,14 @@
     <resources>
       <stylesheet src="chrome://global/skin/textbox.css"/>
     </resources>
-    
+
     <content>
       <xul:hbox class="textbox-input-box" flex="1" xbl:inherits="context">
         <html:input class="textbox-input" flex="1" anonid="input"
                     xbl:inherits="onfocus,onblur,value,type,maxlength,disabled,size,readonly,tabindex,accesskey"/>
       </xul:hbox>
     </content>
-    
+
     <implementation implements="nsIAccessibleProvider, nsIDOMXULTextBoxElement">
       <property name="accessible">
         <getter>
@@ -34,15 +34,17 @@
       </property>
 
       <field name="mInputField">null</field>
-      
+      <field name="mIgnoreClick">false</field>
+      <field name="mIgnoreFocus">false</field>
+
       <property name="inputField" readonly="true">
         <getter><![CDATA[
-          if (!this.mInputField)    
+          if (!this.mInputField)
             this.mInputField = document.getAnonymousElementByAttribute(this, "anonid", "input");
           return this.mInputField;
         ]]></getter>
       </property>
-      
+
       <property name="value"      onset="this.inputField.value = val; return val;"
                                   onget="return this.inputField.value;"/>
       <property name="type"       onset="this.inputField.type = val; return val;"
@@ -63,6 +65,10 @@
                                          if (val) this.setAttribute('readonly', 'true');
                                          else this.removeAttribute('readonly'); return val;"
                                   onget="return this.inputField.readonly;"/>
+      <property name="clickSelectsAll"
+                onget="return this.getAttribute('clickSelectsAll') == 'true';"
+                onset="if (val) this.setAttribute('clickSelectsAll', 'true');
+                       else this.removeAttribute('clickSelectsAll'); return val;" />
 
       <property name="editor" readonly="true">
         <getter><![CDATA[
@@ -83,7 +89,7 @@
                                       onget="return this.inputField.selectionStart;"/>
       <property name="selectionEnd"   onset="this.inputField.selectionEnd = val; return val;"
                                       onget="return this.inputField.selectionEnd;"/>
-     
+
       <method name="setSelectionRange">
         <parameter name="aSelectionStart"/>
         <parameter name="aSelectionEnd"/>
@@ -100,24 +106,48 @@
       <destructor action="if (this.inputField.value) this.boxObject.setProperty('value', this.inputField.value);"/>
    
     </implementation>
-    
+
     <handlers>
       <handler event="focus" phase="capturing">
         <![CDATA[
-          if (!this.hasAttribute('focused')) {
-            if (document.commandDispatcher.focusedElement != this.inputField) 
+          if (!this.hasAttribute("focused")) {
+            if (document.commandDispatcher.focusedElement != this.inputField)
               this.inputField.focus();
-            this.setAttribute('focused','true');
+            else if (this.mIgnoreFocus)
+              this.mIgnoreFocus = false;
+            else if (this.clickSelectsAll)
+              this.inputField.select();
+
+            this.setAttribute("focused", "true");
           }
         ]]>
       </handler>
-      
+
       <handler event="blur" phase="capturing">
         <![CDATA[
           this.removeAttribute('focused');
         ]]>
       </handler>
-    </handlers>    
+
+      <handler event="mousedown">
+        <![CDATA[
+          this.mIgnoreClick = this.hasAttribute("focused");
+
+          if (!this.mIgnoreClick) {
+            this.mIgnoreFocus = true;
+            this.inputField.setSelectionRange(0, 0);
+          }
+        ]]>
+      </handler>
+
+      <handler event="click">
+        <![CDATA[
+          if (!this.mIgnoreClick && this.clickSelectsAll &&
+              this.inputField.selectionStart == this.inputField.selectionEnd)
+            this.inputField.select();
+        ]]>
+      </handler>
+    </handlers>
   </binding>
 
   <binding id="timed-textbox" extends="chrome://global/content/bindings/textbox.xml#textbox">
@@ -148,7 +178,7 @@
           ]]>
         </body>
       </method>
-    </implementation>    
+    </implementation>
     <handlers>
       <handler event="input">
         <![CDATA[
@@ -228,5 +258,5 @@
       </method>
     </implementation>
   </binding>
-  
+
 </bindings>
