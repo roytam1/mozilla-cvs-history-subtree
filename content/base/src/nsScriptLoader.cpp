@@ -373,8 +373,10 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
   // Script evaluation can also be disabled in the current script
   // context even though it's enabled in the document.
   // XXX - still hard-coded for JS here, even though another language
-  // may be specified.  This currently doesn't matter as we still refuse to
-  // run anything other than JS, but it will one day...
+  // may be specified.  Should this check be made *after* we examine
+  // the attributes to locate the script-type?
+  // For now though, if JS is disabled we assume every language is
+  // disabled.
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
   if (globalObject)
   {
@@ -389,8 +391,10 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
     }
   }
 
-  // soon the default language will be specified by the doc (or something!)
-  PRUint32 langID = langID = nsIProgrammingLanguage::JAVASCRIPT;
+  // Default script language is whatever the root content specifies
+  // (which may come from a header or http-meta tag)
+  PRUint32 typeID = mDocument->GetRootContent()->GetScriptTypeID();
+
   PRUint32 version = 0;
 
   nsAutoString language, type, src;
@@ -433,7 +437,7 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
       }
     }
     if (isJavaScript)
-      langID = nsIProgrammingLanguage::JAVASCRIPT;
+      typeID = nsIProgrammingLanguage::JAVASCRIPT;
     else {
       // Use the object factory to locate a matching language.
       nsCOMPtr<nsIScriptRuntime> runtime;
@@ -441,11 +445,11 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
       if (NS_FAILED(rv) || runtime == nsnull) {
         // Failed to get the explicitly specified language
         NS_WARNING("Failed to find a scripting language");
-        langID = nsIProgrammingLanguage::UNKNOWN;
+        typeID = nsIProgrammingLanguage::UNKNOWN;
       } else
-        langID = runtime->GetScriptTypeID();
+        typeID = runtime->GetScriptTypeID();
     }
-    if (langID != nsIProgrammingLanguage::UNKNOWN) {
+    if (typeID != nsIProgrammingLanguage::UNKNOWN) {
       // Get the version string, and ensure the language supports it.
       nsAutoString versionName;
       rv = mimeHdrParser->GetParameter(typeAndParams, "version",
@@ -457,7 +461,7 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
           return rv;
       } else {
         nsCOMPtr<nsIScriptRuntime> runtime;
-        rv = NS_GetScriptRuntimeByID(langID, getter_AddRefs(runtime));
+        rv = NS_GetScriptRuntimeByID(typeID, getter_AddRefs(runtime));
         if (NS_FAILED(rv)) {
           NS_ERROR("Failed to locate the language with this ID");
           return rv;
@@ -465,13 +469,13 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
         rv = runtime->ParseVersion(versionName, &version);
         if (NS_FAILED(rv)) {
           NS_WARNING("This script language version is not supported - ignored");
-          langID = nsIProgrammingLanguage::UNKNOWN;
+          typeID = nsIProgrammingLanguage::UNKNOWN;
         }
       }
     }
 
     // Some js specifics yet to be abstracted.
-    if (langID == nsIProgrammingLanguage::JAVASCRIPT) {
+    if (typeID == nsIProgrammingLanguage::JAVASCRIPT) {
       nsAutoString value;
 
       rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
@@ -499,9 +503,9 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
       htmlScriptElement->GetAttribute(NS_LITERAL_STRING("language"), language);
       if (!language.IsEmpty()) {
         if (nsParserUtils::IsJavaScriptLanguage(language, &version))
-          langID = nsIProgrammingLanguage::JAVASCRIPT;
+          typeID = nsIProgrammingLanguage::JAVASCRIPT;
         else
-          langID = nsIProgrammingLanguage::UNKNOWN;
+          typeID = nsIProgrammingLanguage::UNKNOWN;
         // IE, Opera, etc. do not respect language version, so neither should
         // we at this late date in the browser wars saga.  Note that this change
         // affects HTML but not XUL or SVG (but note also that XUL has its own
@@ -516,17 +520,24 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
   }
 
   // If we don't know the language, we don't know how to evaluate
-  if (langID == nsIProgrammingLanguage::UNKNOWN) {
+  if (typeID == nsIProgrammingLanguage::UNKNOWN) {
     return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
   }
-  // Our nsScriptLoadRequest is not yet language agnostic
-  // We would also need to check the language is "safe".  Currently the only
-  // other language impl is Python, and that is *not* safe in untrusted code -
-  // so fixing this isn't a priority.
-  if (langID != nsIProgrammingLanguage::JAVASCRIPT) {
-    NS_WARNING("Nearly got another language executed");
+  // If not from a chrome document (which is always trusted), we need some way 
+  // of checking the language is "safe".  Currently the only other language 
+  // impl is Python, and that is *not* safe in untrusted code - so fixing 
+  // this isn't a priority.!
+  if (typeID != nsIProgrammingLanguage::JAVASCRIPT &&
+      !nsContentUtils::IsCallerChrome()) {
+    NS_WARNING("Untrusted language called from non-chrome - ignored");
     return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
   }
+
+  nsCOMPtr<nsIContent> eltContent(do_QueryInterface(aElement));
+  if (eltContent)
+    eltContent->SetScriptTypeID(typeID);
+  else
+    NS_ERROR("Element is not nsIContent - can't set scripttype");
 
   // Create a request object for this script
   nsRefPtr<nsScriptLoadRequest> request = new nsScriptLoadRequest(aElement, aObserver, version);
@@ -743,10 +754,20 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
   NS_ENSURE_TRUE(globalObject, NS_ERROR_FAILURE);
 
+  // Get the script-type to be used by this element.
+  nsCOMPtr<nsIContent> scriptContent(do_QueryInterface(aRequest->mElement));
+  NS_ASSERTION(scriptContent, "no content - what is default script-type?");
+  PRUint32 stid = scriptContent ? scriptContent->GetScriptTypeID() :
+                                  nsIProgrammingLanguage::JAVASCRIPT;
+  // and make sure we are setup for this type of script.
+  rv = globalObject->EnsureScriptEnvironment(stid);
+  if (NS_FAILED(rv))
+    return rv;
+
   // Make sure context is a strong reference since we access it after
   // we've executed a script, which may cause all other references to
   // the context to go away.
-  nsCOMPtr<nsIScriptContext> context = globalObject->GetContext();
+  nsCOMPtr<nsIScriptContext> context = globalObject->GetScriptContext(stid);
   if (!context) {
     return NS_ERROR_FAILURE;
   }
@@ -773,7 +794,7 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   mCurrentScript = aRequest->mElement;
 
   PRBool isUndefined;
-  void *scope = globalObject->GetScriptGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+  void *scope = globalObject->GetScriptGlobal(stid);
   context->EvaluateString(aScript, scope,
                           principal, url.get(), aRequest->mLineNo,
                           aRequest->mJSVersion, nsnull, &isUndefined);
@@ -781,16 +802,19 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   // Put the old script back in case it wants to do anything else.
   mCurrentScript = oldCurrent;
 
-  ::JS_ReportPendingException((JSContext *)context->GetNativeContext());
+  if (stid == nsIProgrammingLanguage::JAVASCRIPT)
+    ::JS_ReportPendingException((JSContext *)context->GetNativeContext());
 
   context->SetProcessingScriptTag(oldProcessingScriptTag);
 
-  nsCOMPtr<nsIXPCNativeCallContext> ncc;
-  nsContentUtils::XPConnect()->
-    GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  if (stid == nsIProgrammingLanguage::JAVASCRIPT) {
+    nsCOMPtr<nsIXPCNativeCallContext> ncc;
+    nsContentUtils::XPConnect()->
+      GetCurrentNativeCallContext(getter_AddRefs(ncc));
 
-  if (ncc) {
-    ncc->SetExceptionWasThrown(PR_FALSE);
+    if (ncc) {
+      ncc->SetExceptionWasThrown(PR_FALSE);
+    }
   }
 
   return rv;
