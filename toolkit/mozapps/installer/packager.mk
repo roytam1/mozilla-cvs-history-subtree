@@ -163,19 +163,25 @@ endif
 
 # dummy macro if we don't have PSM built
 SIGN_NSS		=
-ifndef CROSS_COMPILE
+ifneq (0_0,$(if $(CROSS_COMPILE),0,1)_$(if $(UNIVERSAL),1,0))
 ifdef MOZ_PSM
-SIGN_NSS		= @echo signing nss libraries;
+SIGN_NSS		= @echo signing nss libraries
 
+ifdef UNIVERSAL
+NATIVE_ARCH	= $(shell uname -p | sed -e s/powerpc/ppc/)
+NATIVE_DIST	= $(DIST)/../../$(NATIVE_ARCH)/dist
+SIGN_CMD	= $(NATIVE_DIST)/bin/run-mozilla.sh $(NATIVE_DIST)/bin/shlibsign -v -i
+else
 SIGN_CMD	= $(DIST)/bin/run-mozilla.sh $(DIST)/bin/shlibsign -v -i
+endif
 
-SOFTOKN		= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)softokn3$(DLL_SUFFIX)
-FREEBL		= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl3$(DLL_SUFFIX)
-FREEBL_32FPU	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_32fpu_3$(DLL_SUFFIX)
-FREEBL_32INT	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_32int_3$(DLL_SUFFIX)
-FREEBL_32INT64	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_32int64_3$(DLL_SUFFIX)
-FREEBL_64FPU	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_64fpu_3$(DLL_SUFFIX)
-FREEBL_64INT	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_64int_3$(DLL_SUFFIX)
+SOFTOKN		= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)softokn3$(DLL_SUFFIX)
+FREEBL		= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl3$(DLL_SUFFIX)
+FREEBL_32FPU	= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_32fpu_3$(DLL_SUFFIX)
+FREEBL_32INT	= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_32int_3$(DLL_SUFFIX)
+FREEBL_32INT64	= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_32int64_3$(DLL_SUFFIX)
+FREEBL_64FPU	= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_64fpu_3$(DLL_SUFFIX)
+FREEBL_64INT	= $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_64int_3$(DLL_SUFFIX)
 
 SIGN_NSS	+= $(SIGN_CMD) $(SOFTOKN); \
 	if test -f $(FREEBL); then $(SIGN_CMD) $(FREEBL); fi; \
@@ -276,14 +282,17 @@ ifdef MOZ_PKG_MANIFEST
 	$(PERL) $(topsrcdir)/xpinstall/packager/xptlink.pl -s $(DIST) -d $(DIST)/xpt -f $(DIST)/$(MOZ_PKG_APPNAME)/components -v
 else # !MOZ_PKG_MANIFEST
 ifeq ($(MOZ_PKG_FORMAT),DMG)
+# If UNIVERSAL, the package will be made from an already-prepared $(SOURCEDIR)
+ifndef UNIVERSAL
 	@cd $(DIST) && rsync -auv --copy-unsafe-links $(_APPNAME) $(MOZ_PKG_APPNAME)
+endif
 else
 	@cd $(DIST)/bin && tar $(TAR_CREATE_FLAGS) - * | (cd ../$(MOZ_PKG_APPNAME); tar -xf -)
 endif # DMG
 endif # MOZ_PKG_MANIFEST
 ifndef PKG_SKIP_STRIP
 	@echo "Stripping package directory..."
-	@cd $(DIST)/$(MOZ_PKG_APPNAME); find . ! -type d \
+	@cd $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME); find . ! -type d \
 			! -name "*.js" \
 			! -name "*.xpt" \
 			! -name "*.gif" \
@@ -310,10 +319,10 @@ ifndef PKG_SKIP_STRIP
 endif
 	@echo "Removing unpackaged files..."
 ifdef NO_PKG_FILES
-	cd $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH); rm -rf $(NO_PKG_FILES)
+	cd $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH); rm -rf $(NO_PKG_FILES)
 endif
 ifdef MOZ_PKG_REMOVALS
-	$(SYSINSTALL) $(MOZ_PKG_REMOVALS_GEN) $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)
+	$(SYSINSTALL) $(MOZ_PKG_REMOVALS_GEN) $(DIST)/$(SOURCEDIR)$(MOZ_PKG_APPNAME)$(_BINPATH)
 endif # MOZ_PKG_REMOVALS
 	@echo "Compressing..."
 	cd $(DIST); $(MAKE_PACKAGE)
