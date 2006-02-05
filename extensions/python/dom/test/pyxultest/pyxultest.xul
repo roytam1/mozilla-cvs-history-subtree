@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 
 <?xul-overlay href="chrome://pyxultest/content/js_overlay.xul"?>
 <?xul-overlay href="chrome://pyxultest/content/python_overlay.xul"?>
@@ -103,7 +103,9 @@ dump("Window location is %s", this.window.location.href)
            value = "If you can see this, things aren't working well!"
            rows="15" multiline="true" flex="1"
   />
-
+<!--
+  <iframe src="chrome://pyxultest/content/html_content.html" height="30"/>
+-->
   <groupbox>
     <caption label="Items from Overlays"/>
     <!-- A box from our overlay - it will have one button using js events
