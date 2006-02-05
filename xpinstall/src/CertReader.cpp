@@ -164,7 +164,6 @@ CertReader::OnDataAvailable(nsIRequest *request,
     size = PR_MIN(aLength, sizeof(buf));
     
     rv = aIStream->Read(buf, size, &amt);
-    
     if (NS_FAILED(rv)) 
       return rv;
 
@@ -201,41 +200,53 @@ CertReader::OnDataAvailable(nsIRequest *request,
 
     // the assumption here is that we have the fileEntry in mLeftoverBuffer
 
+    int err = 0;
+    unsigned char* orgData = nsnull;
+    unsigned char* sigData = nsnull;
     const char* data = (caret + 
                         ZIPLOCAL_SIZE + 
                         xtoint(ziplocal->filename_len) +
                         xtoint(ziplocal->extrafield_len));
 
+    PRUint32 sigSize = 0;
     PRUint32 orgSize = xtolong ((unsigned char *) ziplocal->orglen);
     PRUint32 cSize   = xtolong ((unsigned char *) ziplocal->size);
 
-    if (orgSize == 0)
-      return NS_BINDING_ABORTED;
+    switch (xtoint(ziplocal->method))
+    {
+      case STORED:
+        // file is uncompressed, can use the data where it is
+        sigSize = cSize;
+        sigData = (unsigned char*)data;
+        break;
 
-    unsigned char* orgData;
-    int err = 0;
+      case DEFLATED:
+        if (orgSize == 0 || orgSize > MAX_SIGNATURE_SIZE)
+          return NS_BINDING_ABORTED;
 
-    orgData = (unsigned char*) malloc(orgSize);
-    
-    if (!orgData)
-	  return NS_BINDING_ABORTED;
+        orgData = (unsigned char*) malloc(orgSize);
+        if (!orgData)
+          return NS_BINDING_ABORTED;
 
-    if (xtoint(ziplocal->method) == DEFLATED) {
+        err = my_inflate((unsigned char*)data, 
+                         cSize,
+                         orgData,
+                         orgSize);
 
-      err = my_inflate((unsigned char*)data, 
-                       cSize, 
-                       orgData,
-                       orgSize);
+        sigSize = orgSize;
+        sigData = orgData;
+        break;
+
+      default:
+        // unsupported compression method
+        err = Z_DATA_ERROR;
+        break;
     }
-    else {
-      memcpy(orgData, data, orgSize);
-    }
-
 
     if (err == 0) 
     {
       PRInt32 verifyError;
-      rv = mVerifier->VerifySignature((char*)orgData, orgSize, nsnull, 0, 
+      rv = mVerifier->VerifySignature((char*)sigData, sigSize, nsnull, 0,
                                  &verifyError, getter_AddRefs(mPrincipal));
     }
     if (orgData)  
