@@ -1619,6 +1619,7 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
                                                  handlerBody,
                                                  url.get(), lineNo,
                                                  handler);
+          NS_ENSURE_SUCCESS(result, result);
           // And bind it.
           result = aContext->BindCompiledEventHandler(aObject, aScope,
                                                       aName, handler);
