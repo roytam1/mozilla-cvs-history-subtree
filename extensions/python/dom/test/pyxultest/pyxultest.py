@@ -53,6 +53,7 @@ def do_load():
 
     # And a 2 second 'interval' timer to change the image.
     global timer_id
+    assert timer_id is None, "Already have a timer - event fired twice??"
     timer_id = this.setInterval(on_timer, 2000, 10)
 
 # Add an event listener as a function
