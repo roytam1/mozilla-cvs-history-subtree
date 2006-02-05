@@ -121,7 +121,8 @@ static char gShowCRC;
 #define NS_DTD_FLAG_FRAMES_ENABLED         0x00000200
 #define NS_DTD_FLAG_ALTERNATE_CONTENT      0x00000400 // NOFRAMES, NOSCRIPT 
 #define NS_DTD_FLAG_MISPLACED_CONTENT      0x00000800
-#define NS_DTD_FLAG_STOP_PARSING           0x00001000
+#define NS_DTD_FLAG_IN_MISPLACED_CONTENT   0x00001000
+#define NS_DTD_FLAG_STOP_PARSING           0x00002000
 
 /**
  *  This method gets called as part of our COM-like interfaces.
@@ -629,11 +630,26 @@ nsresult CNavDTD::DidBuildModel(nsresult anErrorCode,
       if (mFlags & NS_DTD_FLAG_MISPLACED_CONTENT) {
         // Looks like the misplaced contents are not processed yet.
         // Here is our last chance to handle the misplaced content.
-        mFlags &= ~NS_DTD_FLAG_MISPLACED_CONTENT; 
+
+        // Keep track of the top index.
+        PRInt32 topIndex = mBodyContext->mContextTopIndex;
         
-        // mContextTopIndex refers to the misplaced content's legal parent index.
-        result = HandleSavedTokens(mBodyContext->mContextTopIndex);
-        NS_ENSURE_SUCCESS(result, result);
+        // Loop until we've really consumed all of our misplaced content.
+        // See bug 269095.
+        do {
+          mFlags &= ~NS_DTD_FLAG_MISPLACED_CONTENT; 
+
+          // mContextTopIndex refers to the misplaced content's legal parent index.
+          result = HandleSavedTokens(mBodyContext->mContextTopIndex);
+          NS_ENSURE_SUCCESS(result, result);
+
+          // If we start handling misplaced content while handling misplaced
+          // content, mContextTopIndex gets modified. However, this new index
+          // necessarily points to the middle of a closed tag (since we close
+          // new tags after handling the misplaced content). So we restore the
+          // insertion point after every iteration.
+          mBodyContext->mContextTopIndex = topIndex;
+        } while (mFlags & NS_DTD_FLAG_MISPLACED_CONTENT);
 
         mBodyContext->mContextTopIndex = -1; 
       }          
@@ -911,6 +927,13 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
       static eHTMLTags gLegalElements[]={eHTMLTag_table,eHTMLTag_thead,eHTMLTag_tbody,
                                          eHTMLTag_tr,eHTMLTag_td,eHTMLTag_th,eHTMLTag_tfoot};
       if(theToken) {
+        // Don't even try processing misplaced tokens if we're already
+        // handling misplaced content.
+        if (mFlags & NS_DTD_FLAG_IN_MISPLACED_CONTENT) {
+          PushIntoMisplacedStack(theToken);
+          return result;
+        }
+
         eHTMLTags theParentTag=mBodyContext->Last();
         theTag=(eHTMLTags)theToken->GetTypeID();
         if((FindTagInSet(theTag,gLegalElements,sizeof(gLegalElements)/sizeof(theTag))) ||
@@ -2124,7 +2147,8 @@ nsresult CNavDTD::HandleSavedTokens(PRInt32 anIndex) {
       PRInt32  theBadTokenCount   = mMisplacedContent.GetSize();
 
       if(theBadTokenCount > 0) {
-        
+        mFlags |= NS_DTD_FLAG_IN_MISPLACED_CONTENT;
+
         if(mTempContext==nsnull) mTempContext=new nsDTDContext();
 
         CToken*   theToken;
@@ -2197,6 +2221,8 @@ nsresult CNavDTD::HandleSavedTokens(PRInt32 anIndex) {
         mSink->EndContext(anIndex);
         MOZ_TIMER_DEBUGLOG(("Start: Parse Time: CNavDTD::HandleSavedTokensAbove(), this=%p\n", this));
         START_TIMER()
+
+        mFlags &= ~NS_DTD_FLAG_IN_MISPLACED_CONTENT;
       }
     }
     return result;
