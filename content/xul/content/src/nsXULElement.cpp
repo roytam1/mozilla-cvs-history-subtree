@@ -3273,6 +3273,7 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     nsIScriptContext *context = aGlobal->GetScriptContext(
                                             mScriptObject.getScriptTypeID());
     NS_ASSERTION(context != nsnull, "Have no context for deserialization");
+    NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
     nsScriptObjectHolder newScriptObject(context);
     rv = context->Deserialize(aStream, newScriptObject);
     if (NS_FAILED(rv)) {
