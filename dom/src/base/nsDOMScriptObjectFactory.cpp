@@ -172,7 +172,7 @@ nsDOMScriptObjectFactory::GetScriptRuntimeByID(PRUint32 aLanguageID,
   *aLanguage = mLanguageArray[NS_STID_INDEX(aLanguageID)];
   if (!*aLanguage) {
     nsCAutoString contractid(NS_LITERAL_CSTRING(
-                        "@mozilla.org/script-language;1?script-type="));
+                        "@mozilla.org/script-language;1?id="));
     char langIdStr[25]; // space for an int.
     sprintf(langIdStr, "%d", aLanguageID);
     contractid += langIdStr;
