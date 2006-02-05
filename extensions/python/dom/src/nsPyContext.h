@@ -78,6 +78,7 @@ class nsPyDOMObjectLeakStats
           }
           if (!leaked)
             printf(" => no leaks.\n");
+          printf(" %d Python references remain\n", _Py_RefTotal);
         }
 
       PRInt32 mEventHandlerCount;
@@ -169,6 +170,13 @@ public:
   virtual nsIScriptGlobalObject *GetGlobalObject();
   virtual void *GetNativeContext();
   virtual void *GetNativeGlobal();
+  virtual nsresult CreateNativeGlobalForInner(
+                                      nsIScriptGlobalObject *aGlobal,
+                                      PRBool aIsChrome,
+                                      void **aNativeGlobal,
+                                      nsISupports **aHolder);
+  virtual nsresult ConnectToInner(void *aOuterGlobal,
+                                  nsIScriptGlobalObject *aNewInner);
   virtual nsresult InitContext(nsIScriptGlobalObject *aGlobalObject);
   virtual PRBool IsContextInitialized();
   virtual void FinalizeContext();
@@ -195,6 +203,7 @@ public:
 
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();
+  virtual void DidSetDocument(nsIDOMDocument *aDocdoc, void *aGlobal);
 
   virtual nsresult Serialize(nsIObjectOutputStream* aStream, void *aScriptObject);
   virtual nsresult Deserialize(nsIObjectInputStream* aStream,

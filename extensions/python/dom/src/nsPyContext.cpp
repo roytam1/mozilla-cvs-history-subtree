@@ -45,6 +45,7 @@
 #include "nsString.h"
 #include "nsGUIEvent.h"
 #include "nsDOMScriptObjectHolder.h"
+#include "nsIDOMDocument.h"
 
 #include "nsPyDOM.h"
 #include "nsPyContext.h"
@@ -77,6 +78,31 @@ AtomToEventHandlerName(nsIAtom *aName)
 
   return name;
 }
+
+// A simple "object holder" - an XPCOM object that keeps a reference to
+// a Python object.  When the XPCOM object dies, the Python reference is
+// dropped.
+class nsPyObjectHolder : public nsISupports
+{
+public:
+  NS_DECL_ISUPPORTS
+  nsPyObjectHolder(PyObject *ob) : m_ob(ob) {Py_XINCREF(m_ob);}
+  ~nsPyObjectHolder() {
+	  CEnterLeavePython _celp;
+	  Py_XDECREF(m_ob);
+  }
+private:
+  PyObject *m_ob;
+};
+
+// QueryInterface implementation for nsPyObjectHolder
+NS_INTERFACE_MAP_BEGIN(nsPyObjectHolder)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsPyObjectHolder)
+NS_IMPL_RELEASE(nsPyObjectHolder)
+
 
 nsPythonContext::nsPythonContext() :
     mIsInitialized(PR_FALSE),
@@ -181,32 +207,67 @@ nsresult nsPythonContext::HandlePythonError()
   return ret;
 }
 
+// WillInitializeContext() is called before InitContext().  Both
+// may be called multiple times as a context is re-initialized for a new
+// document.
+void
+nsPythonContext::WillInitializeContext()
+{
+  mIsInitialized = PR_FALSE;
+  // Don't create a new delegate if we are being re-initialized - it
+  // may have useful state (eg, the previous script global)
+  CEnterLeavePython _celp;
+  if (!mDelegate) {
+    // Load our delegate.
+    PyObject *mod = PyImport_ImportModule("nsdom.context");
+    if (mod==NULL) {
+      HandlePythonError();
+      return;
+    }
+    PyObject *klass = PyObject_GetAttrString(mod, "ScriptContext");
+    Py_DECREF(mod);
+    if (klass == NULL) {
+      HandlePythonError();
+      return;
+    }
+    mDelegate = PyObject_Call(klass, NULL, NULL);
+    Py_DECREF(klass);
+  }
+  PyObject *ret = PyObject_CallMethod(mDelegate, "WillInitializeContext", NULL);
+  if (ret == NULL)
+    HandlePythonError();
+}
+
+void
+nsPythonContext::DidInitializeContext()
+{
+  NS_ASSERTION(mDelegate, "No delegate!");
+  if (mDelegate) {
+    CEnterLeavePython _celp;
+    PyObject *ret = PyObject_CallMethod(mDelegate, "DidInitializeContext", NULL);
+    Py_XDECREF(ret);
+    HandlePythonError();
+  }
+  mIsInitialized = PR_TRUE;
+}
+
+PRBool
+nsPythonContext::IsContextInitialized()
+{
+  return mIsInitialized;
+}
+
 nsresult
 nsPythonContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
 {
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::InitContext");
-  // Make sure callers of this use
-  // WillInitializeContext/DidInitializeContext around this call?
-  // We don't really care though.
   NS_ENSURE_TRUE(!mIsInitialized, NS_ERROR_ALREADY_INITIALIZED);
-  // Load our delegate.
-  CEnterLeavePython _celp;
-  // this assertion blowing means we need to create the delegate elsewhere...
-  NS_ASSERTION(mDelegate == NULL, "Init context called multiple times!");
-  Py_XDECREF(mDelegate);
-  PyObject *mod = PyImport_ImportModule("nsdom.context");
-  if (mod==NULL)
-    return HandlePythonError();
-  PyObject *klass = PyObject_GetAttrString(mod, "ScriptContext");
-  Py_DECREF(mod);
-  if (klass == NULL)
-    return HandlePythonError();
-  mDelegate = PyObject_Call(klass, NULL, NULL);
-  Py_DECREF(klass);
+  NS_ASSERTION(mDelegate != NULL, "WillInitContext didn't create delegate");
 
   if (mDelegate == NULL)
-    return HandlePythonError();
+    return NS_ERROR_UNEXPECTED;
 
+  CEnterLeavePython _celp;
   PyObject *obGlobal;
   if (aGlobalObject) {
     obGlobal = PyObject_FromNSDOMInterface(mDelegate, aGlobalObject,
@@ -224,6 +285,34 @@ nsPythonContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   // stash the global away so we can fetch it locally.
   mScriptGlobal = aGlobalObject;
   return NS_OK;
+}
+
+void
+nsPythonContext::DidSetDocument(nsIDOMDocument *aDoc, void *aGlobal)
+{
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::DidSetDocument");
+  NS_ASSERTION(mDelegate != NULL, "No delegate");
+
+  if (mDelegate == NULL)
+    return;
+
+  CEnterLeavePython _celp;
+  PyObject *obDoc;
+  if (aDoc) {
+    obDoc = PyObject_FromNSDOMInterface(mDelegate, aDoc,
+                                        NS_GET_IID(nsIDOMDocument));
+    if (!obDoc) {
+      HandlePythonError();
+      return;
+    }
+  } else {
+    obDoc = Py_None;
+    Py_INCREF(Py_None);
+  }
+  PyObject *ret = PyObject_CallMethod(mDelegate, "DidSetDocument",
+                                      "NO", obDoc, aGlobal);
+  Py_XDECREF(ret);
+  HandlePythonError();
 }
 
 nsresult
@@ -669,6 +758,7 @@ nsPythonContext::GetNativeGlobal()
 {
   NS_ASSERTION(mDelegate, "Script context has no delegate");
   NS_ENSURE_TRUE(mDelegate, nsnull);
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::GetNativeGlobal");
   CEnterLeavePython _celp;
   PyObject *ret = PyObject_CallMethod(mDelegate, "GetNativeGlobal", NULL);
   if (!ret) {
@@ -681,22 +771,54 @@ nsPythonContext::GetNativeGlobal()
   return ret;
 }
 
-void
-nsPythonContext::WillInitializeContext()
+nsresult
+nsPythonContext::CreateNativeGlobalForInner(
+                                nsIScriptGlobalObject *aGlobal,
+                                PRBool aIsChrome,
+                                void **aNativeGlobal, nsISupports **aHolder)
 {
-  mIsInitialized = PR_FALSE;
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CreateNativeGlobalForInner");
+  CEnterLeavePython _celp;
+  PyObject *obGlob = PyObject_FromNSDOMInterface(mDelegate, aGlobal,
+                                          NS_GET_IID(nsIScriptGlobalObject));
+  if (!obGlob)
+    return HandlePythonError();
+  
+  PyObject *ret = PyObject_CallMethod(mDelegate,
+                                      "CreateNativeGlobalForInner",
+                                      "Ni", obGlob, aIsChrome);
+  if (!ret) {
+    HandlePythonError();
+    return nsnull;
+  }
+  // Create a new holder to manage the lifetime of the returned object.
+  nsPyObjectHolder *holder = new nsPyObjectHolder(ret);
+  *aNativeGlobal = ret;
+  Py_DECREF(ret);
+  if (!holder)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  return holder->QueryInterface(NS_GET_IID(nsISupports), (void **)aHolder);
 }
 
-void
-nsPythonContext::DidInitializeContext()
+nsresult
+nsPythonContext::ConnectToInner(void *aOuterGlobal, nsIScriptGlobalObject *aNewInner)
 {
-  mIsInitialized = PR_TRUE;
-}
+  NS_ENSURE_ARG(aNewInner);
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::ConnectToInner");
+  CEnterLeavePython _celp;
+  PyObject *obNewInner = PyObject_FromNSDOMInterface(mDelegate, aNewInner,
+                                          NS_GET_IID(nsIScriptGlobalObject));
+  if (!obNewInner)
+    return HandlePythonError();
+  // Python code can't call this method - so we do it here and pass it in.
+  PyObject *obInnerScope = (PyObject *)aNewInner->GetScriptGlobal(
+                                            nsIProgrammingLanguage::PYTHON);
 
-PRBool
-nsPythonContext::IsContextInitialized()
-{
-  return mIsInitialized;
+  PyObject *ret = PyObject_CallMethod(mDelegate, "ConnectToInner", "ONO",
+                                      aOuterGlobal, obNewInner, obInnerScope);
+  Py_XDECREF(ret);
+  return HandlePythonError();
 }
 
 PRBool
@@ -777,7 +899,7 @@ nsPythonContext::FinalizeContext()
 void
 nsPythonContext::GC()
 {
-  ;
+  // sadly as at python 2.4, PyGC_Collect(); is not correctly exported.
 }
 
 void

@@ -53,6 +53,7 @@ class nsIVariant;
 class nsIObjectInputStream;
 class nsIObjectOutputStream;
 class nsScriptObjectHolder;
+class nsIDOMDocument;
 
 typedef void (*nsScriptTerminationFunc)(nsISupports* aRef);
 
@@ -285,6 +286,26 @@ public:
   virtual void *GetNativeGlobal() = 0;
 
   /**
+   * Create a new global object that will be used for an inner window.
+   * Return the native global and an nsISupports 'holder' that can be used
+   * to manage the lifetime of it.
+   */
+  virtual nsresult CreateNativeGlobalForInner(
+                                      nsIScriptGlobalObject *aNewInner,
+                                      PRBool aIsChrome,
+                                      void **aNativeGlobal,
+                                      nsISupports **aHolder) = 0;
+
+  /**
+   * Connect this context to a new inner window, to allow "prototype"
+   * chaining from the inner to the outer.
+   * Called after both the the inner and outer windows are initialized
+   **/
+  virtual nsresult ConnectToInner(void *aOuterGlobal,
+                                  nsIScriptGlobalObject *aNewInner) = 0;
+
+
+  /**
    * Init this context.
    *
    * @param aGlobalObject the gobal object
@@ -414,6 +435,12 @@ public:
    * Tell the context we're done reinitializing it.
    */
   virtual void DidInitializeContext() = 0;
+
+  /**
+   * Tell the context our global has a new document, and the scope
+   * used by it.
+   */
+  virtual void DidSetDocument(nsIDOMDocument *aDocdoc, void *aGlobal) = 0;
 
   /* Memory managment for script objects.  Used by the implementation of
    * nsScriptObjectHolder to manage the lifetimes of the held script objects/

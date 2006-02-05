@@ -498,7 +498,7 @@ protected:
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
 
-  nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
+  nsCOMPtr<nsISupports>         mInnerWindowHolders[NS_STID_ARRAY_UBOUND];
 
   // These member variable are used only on inner windows.
   nsCOMPtr<nsIEventListenerManager> mListenerManager;

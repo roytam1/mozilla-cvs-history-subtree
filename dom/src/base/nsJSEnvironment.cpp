@@ -1605,7 +1605,7 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                                       nsIAtom *aName,
                                       void *aHandler)
 {
-  NS_PRECONDITION(aHandler, "Null handler param");
+  NS_ENSURE_ARG(aHandler);
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
   const char *charName = AtomToEventHandlerName(aName);
@@ -1879,6 +1879,67 @@ void *
 nsJSContext::GetNativeGlobal()
 {
     return ::JS_GetGlobalObject(mContext);
+}
+
+nsresult
+nsJSContext::CreateNativeGlobalForInner(
+                                nsIScriptGlobalObject *aNewInner,
+                                PRBool aIsChrome,
+                                void **aNativeGlobal, nsISupports **aHolder)
+{
+  nsIXPConnect *xpc = nsContentUtils::XPConnect();
+  PRUint32 flags = aIsChrome? nsIXPConnect::FLAG_SYSTEM_GLOBAL_OBJECT : 0;
+  nsCOMPtr<nsIXPConnectJSObjectHolder> jsholder;
+  nsresult rv = xpc->
+          InitClassesWithNewWrappedGlobal(mContext,
+                                          aNewInner, NS_GET_IID(nsISupports),
+                                          flags,
+                                          getter_AddRefs(jsholder));
+  if (NS_FAILED(rv))
+    return rv;
+  jsholder->GetJSObject(NS_REINTERPRET_CAST(JSObject **, aNativeGlobal));
+  *aHolder = jsholder.get();
+  NS_ADDREF(*aHolder);
+  return NS_OK;
+}
+
+nsresult
+nsJSContext::ConnectToInner(void *aOuterGlobal, nsIScriptGlobalObject *aNewInner)
+{
+  NS_ENSURE_ARG(aNewInner);
+  JSObject *newInnerJSObject = (JSObject *)aNewInner->GetScriptGlobal(JAVASCRIPT);
+  JSObject *myobject = (JSObject *)aOuterGlobal;
+
+  // we can clear the outer scope again to make *all* properties
+  // forward to the inner window.
+  ::JS_ClearScope(mContext, myobject);
+
+  // Make the inner and outer window both share the same
+  // prototype. The prototype we share is the outer window's
+  // prototype, this way XPConnect can still find the wrapper to
+  // use when making a call like alert() (w/o qualifying it with
+  // "window."). XPConnect looks up the wrapper based on the
+  // function object's parent, which is the object the function
+  // was called on, and when calling alert() we'll be calling the
+  // alert() function from the outer window's prototype off of the
+  // inner window. In this case XPConnect is able to find the
+  // outer (through the JSExtendedClass hook outerObject), so this
+  // prototype sharing works.
+
+  // We do *not* want to use anything else out of the outer
+  // object's prototype chain than the first prototype, which is
+  // the XPConnect prototype. The rest we want from the inner
+  // window's prototype, i.e. the global scope polluter and
+  // Object.prototype. This way the outer also gets the benefits
+  // of the global scope polluter, and the inner window's
+  // Object.prototype.
+  JSObject *proto = ::JS_GetPrototype(mContext, myobject);
+  JSObject *innerProto = ::JS_GetPrototype(mContext, newInnerJSObject);
+  JSObject *innerProtoProto = ::JS_GetPrototype(mContext, innerProto);
+
+  ::JS_SetPrototype(mContext, newInnerJSObject, proto);
+  ::JS_SetPrototype(mContext, proto, innerProtoProto);
+  return NS_OK;
 }
 
 void *

@@ -18,7 +18,7 @@ IID_nsIDOMXULElement = components.interfaces.nsIDOMXULElement
 
 # Borrow the xpcom logger (but use a new sub-logger)
 logger = logging.getLogger("xpcom.nsdom")
-# Note that may calls to logger.debug are prefixed with if __debug__.
+# Note that many calls to logger.debug are prefixed with if __debug__.
 # This is to prevent *any* penalty in non-debug mode for logging in perf
 # critical areas.
 
@@ -159,9 +159,11 @@ class WrappedNative(Component):
     def addEventListener(self, event, handler, useCapture=False):
         # We need to transform string or function objects into
         # nsIDOMEventListener interfaces.
+        logger.debug("addEventListener for %r, event=%r, handler=%r, cap=%s",
+                     self, event, handler, useCapture)
         if not hasattr(handler, "handleEvent"): # may already be a handler instance.
             # Wrap it in our instance, which knows how to convert
-            handler = EventListener(event, handler, self._context_.GetNativeGlobal())
+            handler = EventListener(event, handler, self._expandos_)
 
         base = self.__getattr__('addEventListener')
         base(event, handler, useCapture)
@@ -221,6 +223,9 @@ class ScriptContext:
         for ro in self._remembered_objects_.itervalues():
             ro._expandos_.clear()
         self._remembered_objects_.clear()
+        # self.globalObject is the "outer window" global, whereas the
+        # inner window global tends to be passed in to each function as the
+        # 'scope' object.
         self.globalObject = None
         self.globalNamespace.clear()
 
@@ -229,7 +234,7 @@ class ScriptContext:
 
     # Called by the _nsdom C++ support to wrap the DOM objects.
     def MakeInterfaceResult(self, object, iid):
-        if __debug__:
+        if 0 and __debug__: # this is a little noisy...
             logger.debug("MakeInterfaceResult for %r (remembered=%s)",
                          object,
                          self._remembered_objects_.has_key(object))
@@ -301,6 +306,59 @@ class ScriptContext:
     def GetNativeGlobal(self):
         return self.globalNamespace
 
+    def CreateNativeGlobalForInner(self, globalObject, isChrome):
+        ret = dict()
+        if __debug__:
+            logger.debug("%r CreateNativeGlobalForInner returning %d",
+                         self, id(ret))
+        return ret
+
+    def ConnectToInner(self, globalScope, newInner, innerScope):
+        if __debug__:
+            logger.debug("%r ConnectToInner(%d, %r, %d)",
+                         self, id(globalScope), newInner, id(innerScope))
+        globalScope['_inner_'] = innerScope # will do for now.
+
+        self._prepareGlobalNamespace(newInner, innerScope)
+
+    def WillInitializeContext(self):
+        if __debug__:
+            logger.debug("%r WillInitializeContent", self)
+
+    def DidInitializeContext(self):
+        if __debug__:
+            logger.debug("%r DidInitializeContent", self)
+
+    def DidSetDocument(self, doc, scope):
+        if __debug__:
+            logger.debug("%r DidSetDocument doc=%r scope=%d",
+                         self, doc, id(scope))
+        scope['document'] = doc
+
+    def _prepareGlobalNamespace(self, globalObject, globalNamespace):
+        assert isinstance(globalObject, WrappedNativeGlobal), \
+               "Our global should have been wrapped in WrappedNativeGlobal"
+        if __debug__:
+            logger.debug("%r initializing (outer=%s), ns=%d", self,
+                         _nsdom.IsOuterWindow(globalObject),
+                         id(globalNamespace))
+        assert len(globalObject._expandos_)==0, \
+               "already initialized this global?"
+        ns = globalObject.__dict__['_expandos_'] = globalNamespace
+        # Do an optimized 'setattr' for the global
+        self._remember_object(globalObject)
+        ns['this'] = globalObject
+        # How is this magic supposed to work?  What others are there?
+        ns['window'] = globalObject
+        # we can't fetch 'document' and stash it now - there may not be one
+        # at this instant (ie, it may be in the process of being attached)
+#        try:
+#            ns['document'] = globalObject.document
+#        except AttributeError:
+#            logger.warning("'this' object has no document global")
+        # Poke some other utilities etc into the namespace.
+        ns['dump'] = dump
+
     def InitContext(self, globalObject):
         self._reset()
         self.globalObject = globalObject
@@ -308,24 +366,7 @@ class ScriptContext:
             logger.debug("%r initializing with NULL global, ns=%d", self,
                          id(self.globalNamespace))
         else:
-            assert isinstance(globalObject, WrappedNativeGlobal), \
-                   "Our global should have been wrapped in WrappedNativeGlobal"
-            if __debug__:
-                logger.debug("%r initializing (outer=%s), ns=%d", self,
-                             _nsdom.IsOuterWindow(globalObject),
-                             id(self.globalNamespace))
-            ns = globalObject.__dict__['_expandos_'] = self.globalNamespace
-            # Do an optimized 'setattr' for the global
-            self._remember_object(globalObject)
-            ns['this'] = globalObject
-            # How is this magic supposed to work?  What others are there?
-            ns['window'] = globalObject
-            try:
-                ns['document'] = globalObject.document
-            except AttributeError:
-                logger.warning("'this' object has no document global")
-            # Poke some other utilities etc into the namespace.
-            ns['dump'] = dump
+            self._prepareGlobalNamespace(globalObject, self.globalNamespace)
 
     def FinalizeClasses(self, globalObject):
         self._reset()
@@ -333,8 +374,7 @@ class ScriptContext:
     def ClearScope(self, globalObject):
         if __debug__:
             logger.debug("%s.ClearScope (%d)", self, id(globalObject))
-        assert globalObject is self.GetNativeGlobal(), "Wrong global being cleared?"
-        self._reset()
+        globalObject.clear()
 
     def FinalizeContext(self):
         if __debug__:
@@ -343,12 +383,13 @@ class ScriptContext:
 
     def EvaluateString(self, script, glob, principal, url, lineno, ver):
         # This appears misnamed - return value it not used.  Therefore we can
-        # just to a simple 'exec'.  If we needed a return value, we would have
+        # just do a simple 'exec'.  If we needed a return value, we would have
         # to treat this like a string event-handler, and compile as a temp
         # function.
         assert type(glob) == types.DictType
-        # XXX - use lineno etc
-        exec script in glob
+        # compile then exec to make use of lineno
+        co = domcompile.compile(script, url, lineno=lineno-1)
+        exec co in glob
 
     def ExecuteScript(self, scriptObject, scopeObject):
         if __debug__:
@@ -356,7 +397,6 @@ class ScriptContext:
                          self, scriptObject, id(scopeObject))
         if scopeObject is None:
             scopeObject = self.GetNativeGlobal()
-        assert scopeObject is self.GetNativeGlobal(), "Global was changed??"
         assert type(scriptObject) == types.CodeType, \
                "Script object should be a code object (got %r)" % (scriptObject,)
         exec scriptObject in scopeObject
@@ -376,11 +416,9 @@ class ScriptContext:
         if __debug__:
             logger.debug("CallEventHandler %r on target %s in scope %s",
                          handler, target, id(scope))
-        assert scope is self.GetNativeGlobal(), "scope was changed??"
         # Event handlers must fire in our real globals (not a copy) so
         # it can set global vars!
-        globs = self.globalObject._expandos_
-        #globs['this'] = target # XXX - what should this be exposed as?
+        globs = scope
         # Although handler is already a function object, we must re-bind to
         # new globals
         f = new.function(handler.func_code, globs, handler.func_name,
@@ -394,7 +432,6 @@ class ScriptContext:
         if __debug__:
             logger.debug("%s.BindCompiledEventHandler (%s=%r) on target %s in scope %s",
                          self, name, handler, target, id(scope))
-        assert scope is self.GetNativeGlobal(), "scope was changed??"
         # Keeps a ref to both the target and handler.
         ns = target._expandos_
         ns[name] = handler
@@ -404,18 +441,8 @@ class ScriptContext:
         if __debug__:
             logger.debug("%s.GetBoundEventHandler for '%s' on target %s in scope %s",
                          self, name, target, id(scope))
-        assert scope is self.GetNativeGlobal(), "scope was changed??"
-        # No handler by that name?  Just let the py exception propogate - it
-        # really should already have been bound, so we don't want it silent.
-        # EEEK - this has something to do with inner vs outer windows
-        # and is almost certainly not correct
         ns = target._expandos_
-        try:
-            return ns[name]
-        except KeyError:
-            logger.info("Event handler %s not found in my namespace - checking scope",
-                        name)
-            return scope[name]
+        return ns[name]
 
     def SetProperty(self, target, name, value):
         if __debug__:
