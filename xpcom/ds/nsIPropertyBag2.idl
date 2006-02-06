@@ -51,6 +51,7 @@ interface nsIPropertyBag2 : nsIPropertyBag
   PRInt64     getPropertyAsInt64       (in AString prop);
   PRUint64    getPropertyAsUint64      (in AString prop);
   double      getPropertyAsDouble      (in AString prop);
+  float       getPropertyAsFloat       (in AString prop);
   AString     getPropertyAsAString     (in AString prop);
   ACString    getPropertyAsACString    (in AString prop);
   AUTF8String getPropertyAsAUTF8String (in AString prop);

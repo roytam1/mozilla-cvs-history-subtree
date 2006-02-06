@@ -48,6 +48,7 @@ interface nsIWritablePropertyBag2 : nsIPropertyBag2
   void        setPropertyAsInt64       (in AString prop, in PRInt64 value);
   void        setPropertyAsUint64      (in AString prop, in PRUint64 value);
   void        setPropertyAsDouble      (in AString prop, in double value);
+  void        setPropertyAsFloat       (in AString prop, in float value);
   void        setPropertyAsAString     (in AString prop, in AString value);
   void        setPropertyAsACString    (in AString prop, in ACString value);
   void        setPropertyAsAUTF8String (in AString prop, in AUTF8String value);
