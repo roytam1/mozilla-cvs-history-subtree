@@ -1428,6 +1428,7 @@ NS_IMETHODIMP nsDocLoader::OnChannelRedirect(nsIChannel *aOldChannel,
 #endif /* DEBUG */
     }
 
+    OnRedirectStateChange(aOldChannel, aNewChannel, aFlags, stateFlags);
     FireOnStateChange(this, aOldChannel, stateFlags, NS_OK);
   }
 
