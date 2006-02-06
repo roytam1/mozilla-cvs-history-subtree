@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* vim: set ts=4 sw=4 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -82,7 +83,7 @@ struct PRLogModuleInfo;
  */
 class nsXULDocument : public nsXMLDocument,
                       public nsIXULDocument,
-                      public nsIDOMXULDocument,
+                      public nsIDOMXULDocument2,
                       public nsIStreamLoaderObserver
 {
 public:
@@ -161,6 +162,7 @@ public:
 
     // nsIDOMXULDocument interface
     NS_DECL_NSIDOMXULDOCUMENT
+    NS_DECL_NSIDOMXULDOCUMENT2
 
     // nsIDOMNSDocument
     NS_IMETHOD GetContentType(nsAString& aContentType);

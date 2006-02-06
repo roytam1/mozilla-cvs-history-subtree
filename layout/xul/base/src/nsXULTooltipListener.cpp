@@ -143,11 +143,11 @@ nsXULTooltipListener::MouseOut(nsIDOMEvent* aMouseEvent)
     nsCOMPtr<nsIDOMNode> targetNode(do_QueryInterface(eventTarget));
 
     // which node is our tooltip on?
-    nsCOMPtr<nsIDOMXULDocument> xulDoc(do_QueryInterface(mCurrentTooltip->GetDocument()));
+    nsCOMPtr<nsIDOMXULDocument2> xulDoc(do_QueryInterface(mCurrentTooltip->GetDocument()));
     if (!xulDoc)     // remotely possible someone could have 
       return NS_OK;  // removed tooltip from dom while it was open
     nsCOMPtr<nsIDOMNode> tooltipNode;
-    xulDoc->GetTooltipNode (getter_AddRefs(tooltipNode));
+    xulDoc->TrustedGetTooltipNode (getter_AddRefs(tooltipNode));
 
     // if they're the same, the mouse left the node the tooltip appeared on,
     // close the tooltip.
