@@ -262,8 +262,3 @@ pref("browser.backspace_action", 1);
 pref("general.autoScroll", false);
 #endif
 #endif
-
-// XXX This should really be in mailnews.js, however so that we can
-// ship it for SeaMonkey 1.0 we're putting it here for the Gecko 1.8 branch.
-// Trunk already has it in mailnews.js.
-pref("mail.addr_book.im.onlineCheckAllowed", false);
