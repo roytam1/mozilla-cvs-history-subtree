@@ -1050,6 +1050,8 @@ static void
 fun_finalize(JSContext *cx, JSObject *obj)
 {
     JSFunction *fun;
+    jsval v;
+    JSPrincipals *prin;
 
     /* No valid function object should lack private data, but check anyway. */
     fun = (JSFunction *) JS_GetPrivate(cx, obj);
@@ -1062,6 +1064,10 @@ fun_finalize(JSContext *cx, JSObject *obj)
         return;
     if (fun->script)
         js_DestroyScript(cx, fun->script);
+    if (JS_GetReservedSlot(cx, obj, 2, &v) && !JSVAL_IS_VOID(v)) {
+        prin = JSVAL_TO_PRIVATE(v);
+        JSPRINCIPALS_DROP(cx, prin);
+    }
     JS_free(cx, fun);
 }
 
@@ -1350,13 +1356,21 @@ fun_mark(JSContext *cx, JSObject *obj, void *arg)
 }
 
 /*
- * Reserve two slots in all function objects for XPConnect.  Note that this
- * does not bloat every instance, only those on which reserved slots are set,
- * and those on which ad-hoc properties are defined.
+ * Reserve three slots in all function objects. The first two are used by
+ * XPConnect to remember information about what interface and member function a
+ * particular cloned function represents.  The third slot is used by
+ * js_CloneFunctionObject to remember a cloned function object's principal.
+ * Cloned function objects are objects created when we need to dynamically bind
+ * a function to a closure that is not its compile-time closure (e.g., a
+ * function expression or brutal sharing).  See the uses of JS_GetReservedSlot
+ * in xpcwrappednativeinfo.cpp and XPCDispObject.cpp
+ *
+ * Note that this does not bloat every instance, only those on which reserved
+ * slots are set, and those on which ad-hoc properties are defined.
  */
 JSClass js_FunctionClass = {
     js_Function_str,
-    JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE | JSCLASS_HAS_RESERVED_SLOTS(2),
+    JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE | JSCLASS_HAS_RESERVED_SLOTS(3),
     JS_PropertyStub,  JS_PropertyStub,
     fun_getProperty,  JS_PropertyStub,
     JS_EnumerateStub, (JSResolveOp)fun_resolve,
@@ -1959,6 +1973,14 @@ js_CloneFunctionObject(JSContext *cx, JSObject *funobj, JSObject *parent)
     newfunobj = js_NewObject(cx, &js_FunctionClass, funobj, parent);
     if (!newfunobj)
         return NULL;
+    if (cx->findObjectPrincipals) {
+        JSPrincipals *prin;
+
+        prin = cx->findObjectPrincipals(cx, parent);
+        if (!prin || !JS_SetReservedSlot(cx, newfunobj, 2, PRIVATE_TO_JSVAL(prin)))
+            return NULL;
+        JSPRINCIPALS_HOLD(cx, prin);
+    }
     fun = (JSFunction *) JS_GetPrivate(cx, funobj);
     if (!js_LinkFunctionObject(cx, fun, newfunobj)) {
         cx->newborn[GCX_OBJECT] = NULL;

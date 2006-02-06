@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* vim: set ts=4 sw=4 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -1855,11 +1856,24 @@ nsScriptSecurityManager::GetFunctionObjectPrincipal(JSContext *cx,
         }
         else if (JS_GetFunctionObject(fun) != obj)
         {
-            // Function is a clone, its prototype was precompiled from
-            // brutally shared chrome. For this case only, get the
-            // principals from the clone's scope since there's no
-            // reliable principals compiled into the function.
-            return doGetObjectPrincipal(cx, obj, result);
+            // Function is a clone. In some cases (such as brutal sharing or
+            // when a function comes from a function expression) the JS engine
+            // sticks the function's principals in the third slot (0 based).  If
+            // it doesn't, then we're probably looking at a function that was
+            // not in a script page (such as a function in a JS component), and
+            // we should fall back on getting the principals from its scope.
+            jsval v;
+            if (!JS_GetReservedSlot(cx, obj, 2, &v))
+                return NS_ERROR_FAILURE;
+            if (JSVAL_IS_VOID(v))
+                return doGetObjectPrincipal(cx, obj, result);
+
+            nsJSPrincipals *prin =
+                NS_STATIC_CAST(nsJSPrincipals *,
+                               NS_STATIC_CAST(JSPrincipals*,
+                                              JSVAL_TO_PRIVATE(v)));
+            NS_ADDREF(*result = prin->nsIPrincipalPtr);
+            return NS_OK;
         }
         else
         {
