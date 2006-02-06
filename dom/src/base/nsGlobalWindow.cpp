@@ -1491,21 +1491,16 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       // xxxmarkh - should we also drop mArgumentsLast?
     }
 
-    // Drop holders and tell each context to cleanup.
     PRUint32 st_ndx;
-    NS_STID_FOR_INDEX(st_ndx) {
-      mInnerWindowHolders[st_ndx] = nsnull;
-      langCtx = currentInner->mScriptContexts[st_ndx];
-      if (langCtx)
-        langCtx->GC();
-    }
 
-    // force release of all script contexts now.
+    // Drop holders and tell each context to cleanup and release them now.
     NS_ASSERTION(mContext == mScriptContexts[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)],
                  "Contexts confused");
     NS_STID_FOR_INDEX(st_ndx) {
+      mInnerWindowHolders[st_ndx] = nsnull;
       langCtx = mScriptContexts[st_ndx];
       if (langCtx) {
+        langCtx->GC();
         langCtx->SetOwner(nsnull);
         langCtx->FinalizeContext();
         mScriptContexts[st_ndx] = nsnull;
