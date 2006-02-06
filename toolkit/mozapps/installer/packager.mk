@@ -165,7 +165,7 @@ endif
 SIGN_NSS		=
 ifneq (0_0,$(if $(CROSS_COMPILE),0,1)_$(if $(UNIVERSAL),1,0))
 ifdef MOZ_PSM
-SIGN_NSS		= @echo signing nss libraries
+SIGN_NSS		= @echo signing nss libraries;
 
 ifdef UNIVERSAL
 NATIVE_ARCH	= $(shell uname -p | sed -e s/powerpc/ppc/)
