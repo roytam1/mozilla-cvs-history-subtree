@@ -451,7 +451,7 @@ sub EnsureFileInDir
         unlink $destPath;       # in case we had a symlink on unix
         if ($preproc) {
             my $preproc_flags = '';
-            if ($srcfile =~ /\.css$/o;) {
+            if ($srcFile =~ /\.css$/o) {
                 $preproc_flags = '--marker=%';
             }
 
