@@ -522,7 +522,7 @@ input[type="file"] > input[type="text"] {
   input[type="file"] { height: 2em; }
 }
 
-#if OSARCH=="OS2"
+%if OSARCH=="OS2"
 input {
   font: medium serif; font-family: inherit
 }
@@ -541,9 +541,9 @@ input[type="submit"] {
   font: medium serif; font-family: inherit
 }
 
-#endif
+%endif
 
-#if MOZ_DEFAULT_TOOLKIT=="cocoa"
+%if MOZ_DEFAULT_TOOLKIT=="cocoa"
 /* makes sure enabled and disabled input and text area fields are drawn */
 input,
 input[disabled] {
@@ -691,4 +691,4 @@ input[type="file"] > input[type="button"]:active:hover {
   font-size: inherit;
 }
 
-#endif
+%endif
