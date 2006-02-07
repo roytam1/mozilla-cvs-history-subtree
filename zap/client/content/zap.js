@@ -538,9 +538,9 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "true");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
                           "urn:mozilla:zap:automatic_service");
-Identity.rdfLiteralAttrib("urn:mozilla:zap:is_registered",
-                          "false", "global-ephemeral");
-
+// registration_status: "registered"|"registering"|""
+Identity.rdfLiteralAttrib("urn:mozilla:zap:registration_status",
+                          "", "global-ephemeral");
 
 // make sure that we re-resolve the service when certain attributes change:
 Identity.rdfAttribTrigger(
@@ -881,7 +881,7 @@ function notifyServiceUpdated(service_resource) {
   // automatic registration or are currently registered:
   for (var identity in wIdentities) {
     if (wIdentities[identity].service.resource.Value == service_id &&
-        (wIdentities[identity]["urn:mozilla:zap:is_registered"]=="true" ||
+        (wIdentities[identity]["urn:mozilla:zap:registration_status"]=="registered" ||
          wIdentities[identity]["urn:mozilla:zap:automatic_registration"]=="true"))
       registerIdentity(wIdentities[identity]);
   }
@@ -960,7 +960,7 @@ RegistrationGroup.fun(
                         1);
       this.registrations.push(registration);
     }
-
+    this.identity["urn:mozilla:zap:registration_status"] = "registering";
     return true;
   });
 
@@ -969,7 +969,7 @@ RegistrationGroup.fun(
     // make sure that we don't act upon pending notifications:
     this.unregistering = true;
     // mark our identity as un-registered:
-    this.identity["urn:mozilla:zap:is_registered"] = "false";
+    this.identity["urn:mozilla:zap:registration_status"] = "";
     // walk through existing registrations and unregister:
     if (this.registrations) {
       this.registrations.forEach(function(r) {
@@ -1006,9 +1006,9 @@ RegistrationGroup.fun(
   function notifyRegistrationSuccess(registration) {
     if (this.unregistering) return;
     this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" succeeded");
-    if (this.identity["urn:mozilla:zap:is_registered"] != "true") {
+    if (this.identity["urn:mozilla:zap:registration_status"] != "registered") {
       // mark our identity as registered:      
-      this.identity["urn:mozilla:zap:is_registered"] = "true";
+      this.identity["urn:mozilla:zap:registration_status"] = "registered";
     }
   });
 
@@ -1038,7 +1038,7 @@ RegistrationGroup.fun(
     }
     else {
       // mark our identity as un-registered:
-      this.identity["urn:mozilla:zap:is_registered"] = "false";
+      this.identity["urn:mozilla:zap:registration_status"] = "registering";
     
       base_time = wConfig["urn:mozilla:zap:registration_recovery_base_time_all_fail"];
     }

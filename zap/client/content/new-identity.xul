@@ -71,8 +71,8 @@
     function commit() {
       // add new identity to identities datasource:
       wIdentity.createFromDocument(document);
-      parent.selectSidebarNode(wIdentity.resource.Value);
       parent.registerIdentity(wIdentity);
+      parent.selectSidebarNode(wIdentity.resource.Value);
     }
 
     function cancel() {

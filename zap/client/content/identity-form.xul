@@ -102,9 +102,8 @@
                   id="urn:mozilla:zap:automatic_registration"/>
         <info>
           <description>
-            If checked, zap will automatically attempt to register (and continue to
-            attempt re-registration when registration fails)
-            with the registrar for this address-of-record.
+            If checked, zap will automatically attempt to register 
+            on application startup.
           </description>
         </info>
       </igroup>

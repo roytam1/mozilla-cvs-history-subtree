@@ -35,6 +35,7 @@ classic.jar:
   skin/classic/zap/account.png       (skin/classic/account.png)
   skin/classic/zap/account-inactive.png         (skin/classic/account-inactive.png)
   skin/classic/zap/account-registered.png       (skin/classic/account-registered.png)
+  skin/classic/zap/account-registering.png      (skin/classic/account-registering.png)
   skin/classic/zap/folder-closed.png (skin/classic/folder-closed.png)
   skin/classic/zap/folder-open.png   (skin/classic/folder-open.png)
   skin/classic/zap/logs.png          (skin/classic/logs.png)

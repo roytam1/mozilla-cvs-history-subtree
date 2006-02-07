@@ -176,8 +176,8 @@
                        predicate="urn:mozilla:zap:nodetype"
                        object="?nodetype"/>
               <binding subject="?node"
-                       predicate="urn:mozilla:zap:is_registered"
-                       object="?registered"/>
+                       predicate="urn:mozilla:zap:registration_status"
+                       object="?registration_status"/>
               <binding subject="?node"
                        predicate="urn:mozilla:zap:active"
                        object="?active"/>
@@ -196,7 +196,7 @@
                 <treeitem uri="?node">
                   <treerow properties="active-?active">
                     <treecell label="?name"
-                              properties="nodetype-?nodetype registered-?registered direction-?direction status-?status" />
+                              properties="nodetype-?nodetype registration_status-?registration_status direction-?direction status-?status" />
                   </treerow>
                 </treeitem>
               </treechildren>

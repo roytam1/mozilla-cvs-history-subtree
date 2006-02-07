@@ -86,7 +86,7 @@
         parent.currentIdentityUpdated();
       // (re-)register if this identity is currently registered or if it has
       // the automatic registration flag set:
-      if (wIdentity["urn:mozilla:zap:is_registered"] == "true" ||
+      if (wIdentity["urn:mozilla:zap:registration_status"] == "registered" ||
           wIdentity["urn:mozilla:zap:automatic_registration"] == "true")
         parent.registerIdentity(wIdentity);
     }

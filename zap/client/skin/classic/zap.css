@@ -294,8 +294,12 @@ statusbar {
   list-style-image: url("chrome://zap/skin/account.png");
 }
 
-#sidebar-tree > treechildren::-moz-tree-image(nodetype-identity, registered-true) { 
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-identity, registration_status-registered) { 
   list-style-image: url("chrome://zap/skin/account-registered.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-identity, registration_status-registering) { 
+  list-style-image: url("chrome://zap/skin/account-registering.png");
 }
 
 #sidebar-tree > treechildren::-moz-tree-image(nodetype-contacts) {
