@@ -528,9 +528,11 @@ var TOKENIZER_GENERIC_PARAMS =
                 "("+PATTERN_GEN_VALUE+"))?");
 
 // Tokenizes a list of auth-param separated by COMMA into (name, value) pairs:
+// XXX For compatibility with older Asterisk versions we also allow
+// trailing whitespace
 var TOKENIZER_AUTH_PARAMS =
   makeTokenizer("("+PATTERN_TOKEN+")"+PATTERN_EQUAL+"("+PATTERN_AUTH_VALUE+")(?:"+
-                PATTERN_COMMA+"|$)");
+                PATTERN_COMMA+"|[ \\t]*$)");
 
 // Tokenizes a comma-separated header value of the form
 //   header-value *(COMMA header-value)
