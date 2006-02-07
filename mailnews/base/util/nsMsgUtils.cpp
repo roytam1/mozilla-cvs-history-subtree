@@ -668,10 +668,10 @@ nsresult EscapeFromSpaceLine(nsIFileSpec *pDst, char *start, const char *end)
       // Found a line so check if it's a qualified "From " line.
       if (IsAFromSpaceLine(start, pChar))
         rv = pDst->Write(">", 1, &written);
-
-      rv = pDst->Write(start, pChar-start+2, &written);
+      PRInt32 lineTerminatorCount = (*(pChar + 1) == nsCRT::LF) ? 2 : 1;
+      rv = pDst->Write(start, pChar - start + lineTerminatorCount, &written);
       NS_ENSURE_SUCCESS(rv,rv);
-      pChar += 2;
+      pChar += lineTerminatorCount;
       start = pChar;
     }
     else if (start < end)
