@@ -359,14 +359,6 @@ Config.rdfAttribTrigger(
   });
 
 
-Config.getter(
-  "instanceIDHash",
-  function get_instanceIDHash() {
-    if (!this._instanceIDHash)
-      this._instanceIDHash = MD5Hex(this["urn:mozilla:zap:instance_id"]);
-    return this._instanceIDHash;
-  });
-
 // pool of services, indexed by resource id:
 var wServices = {};
 
@@ -451,6 +443,15 @@ function getIdentityByAOR(uri) {
   }
   return null;
 }
+
+function getIdentityByGridPar(grid) {
+  for (var id in wIdentities) {
+    if (wIdentities[id].grid == grid)
+      return wIdentities[id];
+  }
+  return null;
+}
+
 
 function initIdentities() {
   wPasswordManager = Components.classes["@mozilla.org/passwordmanager;1"].
@@ -554,12 +555,14 @@ Identity.rdfAttribTrigger(
     this._service = null;
   });
 
+// 'grid' parameter, used to map from registered contacts to zap
+// instances / identities - see draft-ietf-sip-gruu-05.txt:
 Identity.getter(
-  "idHash",
-  function get_idHash() {
-    if (!this._idHash)
-      this._idHash = MD5Hex(this.resource.Value);
-    return this._idHash;
+  "grid",
+  function get_grid() {
+    if (!this._grid)
+      this._grid = MD5Hex(this.resource.Value+wConfig["urn:mozilla:zap:instance_id"]);
+    return this._grid;
   });
 
 Identity.spec(
@@ -763,7 +766,7 @@ Identity.fun(
 
     // The grid will allow us to identify the identity for incoming
     // calls. 
-    uri.setURIParameter("grid", constructGridPar(this));
+    uri.setURIParameter("grid", this.grid);
     
     return addr;
   });
@@ -843,22 +846,6 @@ Identity.getter(
 // AOR. Investigate whether this is common enough to care or whether
 // we should remove registration groups altogether.
 var wRegistrations = {};
-
-// 'grid' uri parameter helpers (used to map from registered contacts
-// to zap instances / identities - see draft-ietf-sip-gruu-05.txt):
-
-function constructGridPar(identity) {
-  return wConfig.instanceIDHash + identity.idHash;
-}
-
-function getIdentityByGridPar(grid) {
-  var idHash = grid.substring(32);
-  for (var id in wIdentities) {
-    if (wIdentities[id].idHash == idHash)
-      return wIdentities[id];
-  }
-  return null;
-}
 
 // set up or refresh a registration group for the given identity
 function registerIdentity(identity) {
@@ -1404,7 +1391,7 @@ Registration.fun(
             // XXX the second term is only necessary because our uri
             // comparsion doesn't compare uri parameters yet
             if (!uri.hasURIParameter("grid") ||
-                uri.getURIParameter("grid") != constructGridPar(this.group.identity))
+                uri.getURIParameter("grid") != this.group.identity.grid)
               continue;
             // else ... we've found a match
             contactHeader = c;
