@@ -4583,7 +4583,7 @@ PR_IMPLEMENT(PRStatus) PR_UnlockFile(PRFileDesc *fd)
  * defined here for historical (or hysterical) reasons.
  */
 
-PRInt32 PR_GetSysfdTableMax(void)
+PR_IMPLEMENT(PRInt32) PR_GetSysfdTableMax(void)
 {
 #if defined(XP_UNIX) && !defined(AIX) && !defined(VMS)
     struct rlimit rlim;
@@ -4597,7 +4597,7 @@ PRInt32 PR_GetSysfdTableMax(void)
 #endif
 }
 
-PRInt32 PR_SetSysfdTableSize(PRIntn table_size)
+PR_IMPLEMENT(PRInt32) PR_SetSysfdTableSize(PRIntn table_size)
 {
 #if defined(XP_UNIX) && !defined(AIX) && !defined(VMS)
     struct rlimit rlim;
