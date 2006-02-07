@@ -327,15 +327,39 @@ nsresult zapDTMFGenerator::ParseDTMFData(const char *buf)
     switch (*buf) {
       case '0':
       case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
         QueueTEvent(*buf - '0');
+        break;
+      case '2': 
+      case 'a': case 'b': case 'c': /* synonyms for '2' */
+        QueueTEvent(2);
+        break;
+      case '3': 
+      case 'd': case 'e': case 'f': /* synonyms for '3' */
+        QueueTEvent(3);
+        break;
+      case '4': 
+      case 'g': case 'h': case 'i': /* synonyms for '4' */
+        QueueTEvent(4);
+        break;
+      case '5': 
+      case 'j': case 'k': case 'l': /* synonyms for '5' */
+        QueueTEvent(5);
+        break;
+      case '6': 
+      case 'm': case 'n': case 'o': /* synonyms for '6' */
+        QueueTEvent(6);
+        break;
+      case '7': 
+      case 'p': case 'q': case 'r': case 's': /* synonyms for '7' */
+        QueueTEvent(7);
+        break;
+      case '8': 
+      case 't': case 'u': case 'v': /* synonyms for '8' */
+        QueueTEvent(8);
+        break;
+      case '9': 
+      case 'w': case 'x': case 'y': case 'z': /* synonyms for '9' */
+        QueueTEvent(9);
         break;
       case '*':
         QueueTEvent(10);
