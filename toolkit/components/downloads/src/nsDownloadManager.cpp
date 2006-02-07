@@ -65,6 +65,7 @@
 #include "nsEnumeratorUtils.h"
 #include "nsIFileURL.h"
 #include "nsEmbedCID.h"
+#include "nsAutoPtr.h"
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
@@ -704,7 +705,10 @@ nsDownloadManager::CancelDownload(const PRUnichar* aPath)
   if (!mCurrDownloads.Exists(&key))
     return RemoveDownload(aPath); // XXXBlake for now, to provide a workaround for stuck downloads
   
-  nsDownload* internalDownload = NS_STATIC_CAST(nsDownload*, mCurrDownloads.Get(&key));
+  // Take a strong reference to the download object as we may remove it from
+  // mCurrDownloads in DownloadEnded.
+  nsRefPtr<nsDownload> internalDownload =
+      NS_STATIC_CAST(nsDownload*, mCurrDownloads.Get(&key));
   if (!internalDownload)
     return NS_ERROR_FAILURE;
 
