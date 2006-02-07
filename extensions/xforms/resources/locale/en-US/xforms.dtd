@@ -46,3 +46,5 @@
 
 <!ENTITY xforms.upload.browsetext "Browse...">
 <!ENTITY xforms.upload.cleartext "Clear">
+
+<!ENTITY xforms.datepicker.title "Show Date Picker">

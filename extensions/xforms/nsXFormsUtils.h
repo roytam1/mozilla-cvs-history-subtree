@@ -44,10 +44,12 @@
 #include "nsCOMPtr.h"
 #include "nsCOMArray.h"
 #include "nsIDOMNode.h"
+#include "nsIDocument.h"
 #include "nsIDOMXPathResult.h"
 #include "nsIModelElementPrivate.h"
 #include "nsIScriptError.h"
 #include "nsVoidArray.h"
+#include "nsIDOMWindowInternal.h"
 
 class nsIDOMElement;
 class nsIXFormsModelElement;
@@ -349,9 +351,9 @@ public:
                                                 PRInt32                 *aContextSize);
 
   /**
-   * @return true if aTestURI has the same origin as aBaseURI
+   * @return true if aTestURI has the same origin as aBaseDocument
    */
-  static NS_HIDDEN_(PRBool) CheckSameOrigin(nsIURI *aBaseURI,
+  static NS_HIDDEN_(PRBool) CheckSameOrigin(nsIDocument *aBaseDocument,
                                             nsIURI *aTestURI);
 
   /**
@@ -382,12 +384,16 @@ public:
                                                      nsIDOMNode  **aInstanceNode);
 
   /**
-   * This function takes an instance data node, finds the type bound to it, and
-   * returns the seperated out type (integer) and namespace prefix (xsd).
+   * Returns the type bound to the given node.
+   *
+   * @param aInstanceData   An instance data node or attribute on an instance
+   *                        data node from which to retrieve type.
+   * @param aType           On return, type of given node.
+   * @param aNSUri          On return, namespace URI of aType.
    */
   static NS_HIDDEN_(nsresult) ParseTypeFromNode(nsIDOMNode *aInstanceData,
                                                 nsAString  &aType,
-                                                nsAString  &aNSPrefix);
+                                                nsAString  &aNSUri);
 
   /**
    * Outputs to the JavaScript console.
@@ -448,6 +454,60 @@ public:
                                              const PRBool      aOnlyXForms,
                                              nsIDOMElement    *aCaller,
                                              nsIDOMElement   **aElement);
+
+
+  /**
+   * Shows an error dialog for the user the first time an
+   * xforms-binding-exception event is received by the control.
+   *
+   * The dialog can be disabled via the |xforms.disablePopup| preference.
+   *
+   * @param aElement         Element the exception occured at
+   * @return                 Whether handling was successful
+   */
+  static PRBool HandleBindingException(nsIDOMElement *aElement);
+
+  /**
+   * Returns whether the given NamedNodeMaps of Entities are equal
+   *
+   */
+  static NS_HIDDEN_(PRBool) AreEntitiesEqual(nsIDOMNamedNodeMap *aEntities1,
+                                             nsIDOMNamedNodeMap *aEntities2);
+
+  /**
+   * Returns whether the given NamedNodeMaps of Notations are equal
+   *
+   */
+  static NS_HIDDEN_(PRBool) AreNotationsEqual(nsIDOMNamedNodeMap *aNotations1,
+                                              nsIDOMNamedNodeMap *aNotations2);
+
+  /**
+   * Returns whether the given nodes are equal as described in the isEqualNode
+   * function defined in the DOM Level 3 Core spec.
+   * http://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/DOM3-Core.html#core-Node3-isEqualNode
+   *
+   * XXX: this is just temporary until isEqualNode is implemented in Mozilla
+   * (https://bugzilla.mozilla.org/show_bug.cgi?id=159167)
+   *
+   * @param aFirstNode          The first node to compare
+   * @param aSecondNode         The second node to compare
+   * @param aAlreadyNormalized  Whether the two nodes and their children, etc.
+   *                            have already been normalized to allow for
+   *                            more accurate child node comparisons, as
+   *                            recommended in the DOM Level 3 Core spec.
+   */
+  static NS_HIDDEN_(PRBool) AreNodesEqual(nsIDOMNode *aFirstNode,
+                                          nsIDOMNode *aSecondNode,
+                                          PRBool      aAlreadyNormalized = PR_FALSE);
+
+  /**
+   * Retrieve the window object from the given document
+   *
+   * @param aDoc              The document to get window object from
+   * @param aWindow           The found window object
+   */
+  static NS_HIDDEN_(nsresult) GetWindowFromDocument(nsIDOMDocument        *aDoc,
+                                                    nsIDOMWindowInternal **aWindow);
 };
 
 #endif

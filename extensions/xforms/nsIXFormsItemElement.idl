@@ -37,11 +37,13 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsISupports.idl"
+#include "nsIDOMNode.idl"
+#include "nsIXFormsDelegate.idl"
 
 /**
  * Interface implemented by the item element.
  */
-[scriptable, uuid(796a2e26-a40b-4ebf-be2c-42faf5fea6c4)]
+[scriptable, uuid(ec8d3556-8ed2-4143-88d1-6b7b2c8b0b3b)]
 interface nsIXFormsItemElement : nsISupports
 {
   /**
@@ -67,4 +69,18 @@ interface nsIXFormsItemElement : nsISupports
    * \<select1\> element, which can then refresh its UI.
    */
   void labelRefreshed();
+
+  /**
+   * Indicates whether the item element contains a value child or a copy
+   * child.  We'll assume that if the item is NOT a copy item, then it must
+   * be a value item.  Which means that it must contain a XForms value element
+   * child.
+   */
+  attribute boolean isCopyItem;
+
+  /*
+   * returns the node that the contained copy element is bound to
+   */
+  readonly attribute nsIDOMNode copyNode;
+
 };
