@@ -455,6 +455,10 @@ igroup > info {
   min-width           : 21px !important;
 }
 
+rows .igroup-info-button {  
+  margin-right: 4px !important;
+}
+
 .igroup-info-button:hover { 
   cursor: pointer;
 }
@@ -485,7 +489,7 @@ irow[showinfo=true] {
   background-color: #fdffc2;
 }
 
-rows info { 
+rows > info { 
   margin: 0px;
   margin-bottom: 4px;
   border: 1px solid yellow;

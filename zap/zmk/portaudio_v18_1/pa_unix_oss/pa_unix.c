@@ -705,6 +705,9 @@ error:
 
 int Pa_GetMinNumBuffers( int framesPerBuffer, double framesPerSecond )
 {
+#if defined(MOZILLA_CLIENT)
+  return 2;
+#else
     int minBuffers;
     int minLatencyMsec = MIN_LATENCY_MSEC;
     char *minLatencyText = getenv(PA_LATENCY_ENV_NAME);
@@ -719,6 +722,7 @@ int Pa_GetMinNumBuffers( int framesPerBuffer, double framesPerSecond )
     minBuffers = (int) ((minLatencyMsec * framesPerSecond) / ( 1000.0 * framesPerBuffer ));
     if( minBuffers < 2 ) minBuffers = 2;
     return minBuffers;
+#endif
 }
 
 /*******************************************************************/

@@ -25,6 +25,7 @@ CPPSRCS		= \
 		zapAudioDevice.cpp \
 		zapAudioDeviceManager.cpp \
 		zapAudioIn.cpp \
+		zapAudioIO.cpp \
 		zapAudioMixer.cpp \
 		zapAudioOut.cpp \
 		zapAudioStreamUtils.cpp \
@@ -47,6 +48,7 @@ CPPSRCS		= \
 		zapRTPSession.cpp \
 		zapRTPTransmitter.cpp \
 		zapRtttlPlayer.cpp \
+		zapSpeexAudioProcessor.cpp \
 		zapSpeexDecoder.cpp \
 		zapSpeexEncoder.cpp \
 		zapSpeexRTPDepacketizer.cpp \
@@ -55,6 +57,7 @@ CPPSRCS		= \
 		zapStreamMerger.cpp \
 		zapStreamSwitch.cpp \
 		zapStreamSyncer.cpp \
+		zapStreamTap.cpp \
 		zapStreamUtils.cpp \
 		zapTEventRTPPacketizer.cpp \
 		zapTEventToTToneConverter.cpp \
@@ -69,6 +72,7 @@ XPIDLSRCS	= \
 		zapIAudioDevice.idl \
 		zapIAudioDeviceManager.idl \
 		zapIAudioIn.idl \
+		zapIAudioIO.idl \
 		zapIAudioOut.idl \
 		zapIAudioToneFrame.idl \
 		zapIDTMFGenerator.idl \
@@ -77,8 +81,10 @@ XPIDLSRCS	= \
 		zapIMediaNode.idl \
 		zapIMediaSink.idl \
 		zapIMediaSource.idl \
+		zapIPacketBuffer.idl \
 		zapIPortaudioDevice.idl \
 		zapIRTPFrame.idl \
+		zapISpeexAudioProcessor.idl \
 		zapISpeexDecoder.idl \
 		zapISpeexEncoder.idl \
 		zapIStreamSwitch.idl \
@@ -101,6 +107,11 @@ endif
 ifeq ($(OS_ARCH),Darwin)
 OS_LIBS += -framework CoreAudio  -framework AudioToolbox
 endif
+
+
+#needed for compiling with speex_echo.h:
+DEFINES += -Drestrict=
+
 
 include $(topsrcdir)/config/rules.mk
 

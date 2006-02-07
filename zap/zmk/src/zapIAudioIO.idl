@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,56 +34,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_PACKETBUFFER_H__
-#define __ZAP_PACKETBUFFER_H__
+#include "nsISupports.idl"
 
-#include "zapIMediaNode.h"
-#include "zapIMediaSource.h"
-#include "zapIMediaSink.h"
-#include "nsDeque.h"
-#include "nsCOMPtr.h"
-#include "zapIPacketBuffer.h"
-#include "zapIMediaGraph.h"
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketBuffer
-
-// {2FD0FE12-0727-4EED-96EE-94901F4FE201}
-#define ZAP_PACKETBUFFER_CID                             \
-  { 0x2fd0fe12, 0x0727, 0x4eed, { 0x96, 0xee, 0x94, 0x90, 0x1f, 0x4f, 0xe2, 0x01 } }
-
-#define ZAP_PACKETBUFFER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "buffer"
-
-class zapPacketBuffer : public zapIMediaNode,
-                        public zapIMediaSource,
-                        public zapIMediaSink,
-                        public zapIPacketBuffer
+/**
+ * \ingroup ZMK_MODULE
+ */
+[scriptable, uuid(486adb0a-fafb-4666-862b-a79ee986ce8d)]
+interface zapIAudioIO : nsISupports
 {
-  NS_DECL_ISUPPORTS
-  NS_DECL_ZAPIMEDIANODE
-  NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIMEDIASINK
-  NS_DECL_ZAPIPACKETBUFFER
-
-  zapPacketBuffer();
-  ~zapPacketBuffer();
-
-private:
-  void ClearBuffer();
-  
-  // node parameters (set in zapIMediaGraph::AddNode()):  
-  PRUint32 mLiftCount; // number of packets to prefill the buffer with
-  PRUint32 mDropCount;
-  PRUint32 mMaxSize; // maximum number of packets buffered
-  PRUint32 mMinSize; // minimum number of packets to maintain in buffer
-  
-  PRBool mLifting; // are we currently lifting?
-  
-  nsDeque mBuffer; // the actual buffer
-
-  nsCOMPtr<zapIMediaSink> mOutput;
-  nsCOMPtr<zapIMediaSource> mInput;
-  nsCOMPtr<zapIMediaGraph> mGraph;
 };
-
-#endif // __ZAP_PACKETBUFFER_H__

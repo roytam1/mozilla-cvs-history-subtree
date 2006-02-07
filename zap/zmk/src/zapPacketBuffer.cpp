@@ -88,6 +88,7 @@ NS_INTERFACE_MAP_BEGIN(zapPacketBuffer)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIPacketBuffer)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
@@ -99,16 +100,28 @@ zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
                               const nsACString & id,
                               nsIPropertyBag2* node_pars)
 {
+  // hang on to graph until destructor so that any interface
+  // references to us have a message loop:
+  mGraph = graph;
+  
   // node parameter defaults:
   mLiftCount = 0;
   mDropCount = 1;
   mMaxSize = 10;
+  mMinSize = 1;
   // unpack node parameters:
   if (node_pars) {
     node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("lift_count"), &mLiftCount);
     node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("drop_count"), &mDropCount);
     node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("max_size"), &mMaxSize);
+    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("min_size"), &mMinSize);
 
+    if (mMaxSize < 1) return NS_ERROR_FAILURE;
+    if (mMaxSize < 1) return NS_ERROR_FAILURE;
+    if (mMinSize > mMaxSize) {
+      NS_WARNING("adjusting min size");
+      mMinSize = mMaxSize;
+    }
     if (mLiftCount > mMaxSize) {
       NS_WARNING("adjusted lift count");
       mLiftCount = mMaxSize;
@@ -237,7 +250,7 @@ zapPacketBuffer::DisconnectSink(zapIMediaSink *sink,
 NS_IMETHODIMP
 zapPacketBuffer::ProduceFrame(zapIMediaFrame ** frame)
 {
-  if (mLifting || !mBuffer.GetSize()) {
+  if (mLifting || mBuffer.GetSize() < mMinSize) {
 #ifdef DEBUG_afri_zmk
 //    printf("U");
 #endif
@@ -251,6 +264,57 @@ zapPacketBuffer::ProduceFrame(zapIMediaFrame ** frame)
 }
 
 //----------------------------------------------------------------------
+// zapIPacketBuffer
+
+/* attribute unsigned long maxSize; */
+NS_IMETHODIMP
+zapPacketBuffer::GetMaxSize(PRUint32 *aMaxSize)
+{
+  *aMaxSize = mMaxSize;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapPacketBuffer::SetMaxSize(PRUint32 aMaxSize)
+{
+  if (aMaxSize < 1) return NS_ERROR_FAILURE;
+  if (mLiftCount > aMaxSize) mLiftCount = aMaxSize;
+  if (mDropCount > aMaxSize) mDropCount = aMaxSize;
+  if (mMinSize > aMaxSize) mMinSize = aMaxSize;
+  mMaxSize = aMaxSize;
+  if (mBuffer.GetSize() > mMaxSize) {
+    // drop execess packets:
+    PRUint32 drop = mBuffer.GetSize() - mMaxSize;
+    while (drop--)
+      ((zapIMediaFrame*)mBuffer.PopFront())->Release();
+  }
+  return NS_OK;
+}
+
+/* attribute unsigned long minSize; */
+NS_IMETHODIMP
+zapPacketBuffer::GetMinSize(PRUint32 *aMinSize)
+{
+  *aMinSize = mMinSize;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapPacketBuffer::SetMinSize(PRUint32 aMinSize)
+{
+  if (aMinSize < 1) return NS_ERROR_FAILURE;
+  if (aMinSize > mMaxSize) mMaxSize = aMinSize;
+  mMinSize = aMinSize;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned long currentSize; */
+NS_IMETHODIMP
+zapPacketBuffer::GetCurrentSize(PRUint32 *aCurrentSize)
+{
+  *aCurrentSize = mBuffer.GetSize();
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
 // Implementation helpers:
 
 void zapPacketBuffer::ClearBuffer()
@@ -260,6 +324,3 @@ void zapPacketBuffer::ClearBuffer()
   mBuffer.Empty();
   mLifting = PR_TRUE;
 }
-
-
-

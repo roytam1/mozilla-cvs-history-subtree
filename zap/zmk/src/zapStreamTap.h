@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,69 +34,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_AUDIOIN_H__
-#define __ZAP_AUDIOIN_H__
+#ifndef __ZAP_STREAMTAP_H__
+#define __ZAP_STREAMTAP_H__
 
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
-#include "zapIMediaFrame.h"
-#include "zapIAudioIn.h"
 #include "nsCOMPtr.h"
-#include "portaudio.h"
-#include "nsIEventQueue.h"
-#include "nsIWritablePropertyBag2.h"
-#include "zapAudioStreamUtils.h"
+#include "nsString.h"
+#include "nsVoidArray.h"
+#include "zapIMediaFrame.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapAudioIn
+// zapStreamTap
 
-// {FF982BFD-61EB-4C5E-9C11-90584445399A}
-#define ZAP_AUDIOIN_CID                             \
-  { 0xff982bfd, 0x61eb, 0x4c5e, { 0x9c, 0x11, 0x90, 0x58, 0x44, 0x45, 0x39, 0x9a } }
+// {A7D440CE-96D7-43E3-8355-CD9FE07F850C}
+#define ZAP_STREAMTAP_CID                             \
+  { 0xa7d440ce, 0x96d7, 0x43e3, { 0x83, 0x55, 0xcd, 0x9f, 0xe0, 0x7f, 0x85, 0x0c } }
 
-#define ZAP_AUDIOIN_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audioin"
+#define ZAP_STREAMTAP_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stream-tap"
 
-class zapAudioIn : public zapIMediaNode,
-                   public zapIMediaSource,
-                   public zapIAudioIn
+class zapStreamTap : public zapIMediaNode,
+                     public zapIMediaSink,
+                     public zapIMediaSource
 {
 public:
-  zapAudioIn();
-  ~zapAudioIn();
-  
+  zapStreamTap();
+  ~zapStreamTap();
+
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASINK
   NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIAUDIOIN
 
 private:
-  nsresult StartStream();
-  void CloseStream();
-  void CreateFrame(const nsACString& data, double timestamp);
-  
-  // node parameters (set from zapIMediaGraph::AddNode()):
-  PaDeviceID mInputDevice;
-  zapAudioStreamParameters mStreamParameters;
+  friend class zapStreamTapOutput;
 
-  PortAudioStream* mStream;
-  PRUint32 mBuffers; // number of internal port audio buffers (>=2)
+  void RequestFrame();
   
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  // zapStreamTapOutput active tap outputs (weak references):
+  nsVoidArray mOutputs;
   
-  nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
-  nsCOMPtr<nsIEventQueue> mEventQ; // media graph event queue
-  
-  friend class zapAudioInSendEvent;
-  friend int AudioInCallback(void* inputBuffer, void* outputBuffer,
-                             unsigned long framesPerBuffer,
-                             PaTimestamp outTime, void* userData);
-  PRLock* mCallbackLock; // lock to synchronize portaudio and media threads
-  PRBool mKeepRunning; // signals the portaudio callback whether to
-                       // shut down or not
+  // StreamTap input source:
+  nsCOMPtr<zapIMediaSource> mInput;
 
-  nsCOMPtr<zapIMediaSink> mOutput;
+  // master output (driving the node):
+  nsCOMPtr<zapIMediaSink> mMasterOutput;
 };
 
-#endif // __ZAP_AUDIOIN_H__
+#endif // __ZAP_STREAMTAP_H__

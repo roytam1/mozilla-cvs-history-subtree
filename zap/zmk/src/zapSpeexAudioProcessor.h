@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,69 +34,66 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_AUDIOIN_H__
-#define __ZAP_AUDIOIN_H__
+#ifndef __ZAP_SPEEXAUDIOPROCESSOR_H__
+#define __ZAP_SPEEXAUDIOPROCESSOR_H__
 
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
-#include "zapIMediaFrame.h"
-#include "zapIAudioIn.h"
 #include "nsCOMPtr.h"
-#include "portaudio.h"
-#include "nsIEventQueue.h"
-#include "nsIWritablePropertyBag2.h"
-#include "zapAudioStreamUtils.h"
+#include "speex/speex_echo.h"
+#include "speex/speex_preprocess.h"
+#include "zapISpeexAudioProcessor.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapAudioIn
+// zapSpeexAudioProcessor
 
-// {FF982BFD-61EB-4C5E-9C11-90584445399A}
-#define ZAP_AUDIOIN_CID                             \
-  { 0xff982bfd, 0x61eb, 0x4c5e, { 0x9c, 0x11, 0x90, 0x58, 0x44, 0x45, 0x39, 0x9a } }
+// {CEC63161-9244-4B29-9A22-5EC6AADD46EB}
+#define ZAP_SPEEXAUDIOPROCESSOR_CID                             \
+  { 0xcec63161, 0x9244, 0x4b29, { 0x9a, 0x22, 0x5e, 0xc6, 0xaa, 0xdd, 0x46, 0xeb } }
 
-#define ZAP_AUDIOIN_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audioin"
+#define ZAP_SPEEXAUDIOPROCESSOR_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "speex-audio-processor"
 
-class zapAudioIn : public zapIMediaNode,
-                   public zapIMediaSource,
-                   public zapIAudioIn
+class zapSpeexAudioProcessor : public zapIMediaNode,
+                               public zapIMediaSource,
+                               public zapIMediaSink,
+                               public zapISpeexAudioProcessor
 {
-public:
-  zapAudioIn();
-  ~zapAudioIn();
-  
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
   NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIAUDIOIN
+  NS_DECL_ZAPIMEDIASINK
+  NS_DECL_ZAPISPEEXAUDIOPROCESSOR
+  
+  zapSpeexAudioProcessor();
+  ~zapSpeexAudioProcessor();
 
 private:
-  nsresult StartStream();
-  void CloseStream();
-  void CreateFrame(const nsACString& data, double timestamp);
-  
-  // node parameters (set from zapIMediaGraph::AddNode()):
-  PaDeviceID mInputDevice;
-  zapAudioStreamParameters mStreamParameters;
-
-  PortAudioStream* mStream;
-  PRUint32 mBuffers; // number of internal port audio buffers (>=2)
-  
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  void Filter(zapIMediaFrame *frame, zapIMediaFrame **outframe);
   
   nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
-  nsCOMPtr<nsIEventQueue> mEventQ; // media graph event queue
   
-  friend class zapAudioInSendEvent;
-  friend int AudioInCallback(void* inputBuffer, void* outputBuffer,
-                             unsigned long framesPerBuffer,
-                             PaTimestamp outTime, void* userData);
-  PRLock* mCallbackLock; // lock to synchronize portaudio and media threads
-  PRBool mKeepRunning; // signals the portaudio callback whether to
-                       // shut down or not
-
+  PRBool mAEC;
+  PRBool mAEC2Stage;
+  float mAECTail;
+  PRBool mDenoise;
+  PRBool mAGC;
+  float mAGCLevel;
+  PRBool mVAD;
+  PRBool mDereverb;
+  float mDereverbLevel;
+  float mDereverbDecay;
+  
+  SpeexEchoState* mEchoState;
+  SpeexPreprocessState* mPreprocessState;
+  float* mResidue;
+  
+  friend class zapSpeexAudioProcessorEcho;
+  
+  zapSpeexAudioProcessorEcho *mEcho; // weak reference managed by object itself
+  
   nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
-#endif // __ZAP_AUDIOIN_H__
+#endif // __ZAP_SPEEXAUDIOPROCESSOR_H__

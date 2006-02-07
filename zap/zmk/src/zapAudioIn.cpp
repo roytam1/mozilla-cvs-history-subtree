@@ -107,6 +107,7 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
   
   // node parameter defaults:
   mInputDevice = Pa_GetDefaultInputDeviceID();
+  mBuffers = 4;
   // unpack node parameters:
   if (node_pars) {
     nsCOMPtr<zapIPortaudioDevice> device;
@@ -116,7 +117,13 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
     if (device) {
       device->GetDeviceID(&mInputDevice);
     }
+    
+    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("buffers"),
+                                   &mBuffers);
   }
+  
+  if (mBuffers < 2) mBuffers = 2;
+  
 #ifdef DEBUG_afri_zmk
   printf("(audioin using device %d)", mInputDevice);
 #endif
@@ -325,7 +332,7 @@ nsresult zapAudioIn::StartStream()
                               paNoDevice, 0, 0, nsnull,
                               mStreamParameters.sample_rate,
                               mStreamParameters.GetSamplesPerFrame()/mStreamParameters.channels,
-                              1,
+                              mBuffers,
                               paNoFlag,
                               AudioInCallback, this);
 

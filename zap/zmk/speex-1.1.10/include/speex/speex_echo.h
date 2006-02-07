@@ -86,7 +86,8 @@ SpeexEchoState *speex_echo_state_init(int frame_size, int filter_length);
 void speex_echo_state_destroy(SpeexEchoState *st);
 
 /** Performs echo cancellation a frame */
-void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, float *Y);
+/** Signature changed to float for Mozilla ZMK */
+void speex_echo_cancel(SpeexEchoState *st, float *ref, float *echo, float *out, float *Y);
 
 /** Reset the echo canceller state */
 void speex_echo_state_reset(SpeexEchoState *st);

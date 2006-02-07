@@ -952,6 +952,9 @@ static int PaHost_GetMinSystemLatency( void )
 #define PA_LATENCY_ENV_NAME  ("PA_MIN_LATENCY_MSEC")
 int Pa_GetMinNumBuffers( int framesPerBuffer, double sampleRate )
 {
+#if defined(MOZILLA_CLIENT)
+  return 2;
+#else
     char      envbuf[PA_ENV_BUF_SIZE];
     DWORD     hresult;
     int       minLatencyMsec = 0;
@@ -974,6 +977,7 @@ int Pa_GetMinNumBuffers( int framesPerBuffer, double sampleRate )
     minBuffers = (int) (1.0 + ((double)minLatencyMsec / msecPerBuffer));
     if( minBuffers < 2 ) minBuffers = 2;
     return minBuffers;
+#endif
 }
 /*************************************************************************/
 PaError PaHost_Term( void )

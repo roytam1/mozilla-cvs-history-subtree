@@ -90,6 +90,7 @@ private:
   zapAudioStreamParameters mStreamParameters;
   
   PortAudioStream* mStream;
+  PRUint32 mBuffers; // number of internal port audio buffers (>=2)
 
   nsCOMPtr<zapIMediaSource> mInput;
   nsCOMPtr<nsIPropertyBag2> mLastValidStreamInfo; // the most recent

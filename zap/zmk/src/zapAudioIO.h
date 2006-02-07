@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,15 +34,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_AUDIOIN_H__
-#define __ZAP_AUDIOIN_H__
+#ifndef __ZAP_AUDIOIO_H__
+#define __ZAP_AUDIOIO_H__
 
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
 #include "zapIMediaGraph.h"
 #include "zapIMediaFrame.h"
-#include "zapIAudioIn.h"
+#include "zapIAudioIO.h"
 #include "nsCOMPtr.h"
 #include "portaudio.h"
 #include "nsIEventQueue.h"
@@ -50,53 +50,58 @@
 #include "zapAudioStreamUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapAudioIn
+// zapAudioIO
 
-// {FF982BFD-61EB-4C5E-9C11-90584445399A}
-#define ZAP_AUDIOIN_CID                             \
-  { 0xff982bfd, 0x61eb, 0x4c5e, { 0x9c, 0x11, 0x90, 0x58, 0x44, 0x45, 0x39, 0x9a } }
+// {57429DEE-A835-46A8-BA52-1E8839BA57AF}
+#define ZAP_AUDIOIO_CID                             \
+  { 0x57429dee, 0xa835, 0x46a8, { 0xba, 0x52, 0x1e, 0x88, 0x39, 0xba, 0x57, 0xaf } }
 
-#define ZAP_AUDIOIN_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audioin"
+#define ZAP_AUDIOIO_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audioio"
 
-class zapAudioIn : public zapIMediaNode,
+class zapAudioIO : public zapIMediaNode,
+                   public zapIMediaSink,
                    public zapIMediaSource,
-                   public zapIAudioIn
+                   public zapIAudioIO
 {
 public:
-  zapAudioIn();
-  ~zapAudioIn();
-  
+  zapAudioIO();
+  ~zapAudioIO();
+
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASINK
   NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIAUDIOIN
+  NS_DECL_ZAPIAUDIOIO
 
 private:
-  nsresult StartStream();
-  void CloseStream();
-  void CreateFrame(const nsACString& data, double timestamp);
-  
-  // node parameters (set from zapIMediaGraph::AddNode()):
-  PaDeviceID mInputDevice;
-  zapAudioStreamParameters mStreamParameters;
-
-  PortAudioStream* mStream;
-  PRUint32 mBuffers; // number of internal port audio buffers (>=2)
-  
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  
-  nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
-  nsCOMPtr<nsIEventQueue> mEventQ; // media graph event queue
-  
-  friend class zapAudioInSendEvent;
-  friend int AudioInCallback(void* inputBuffer, void* outputBuffer,
+  friend class zapAudioIOMonitor;
+  friend class zapAudioIOEvent;
+  friend int AudioIOCallback(void* inputBuffer, void* outputBuffer,
                              unsigned long framesPerBuffer,
                              PaTimestamp outTime, void* userData);
-  PRLock* mCallbackLock; // lock to synchronize portaudio and media threads
-  PRBool mKeepRunning; // signals the portaudio callback whether to
-                       // shut down or not
 
+  void ProcessInputFrame(void* outputBuffer);
+  PRBool ValidateInputFrame(zapIMediaFrame* frame);
+  void CreateOutputFrame(double timestamp, void* inputBuffer);
+  nsresult StartStream();
+  void CloseStream();
+    
+  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<nsIEventQueue> mEventQ;   // media graph event queue
+
+  // node parameters (set in zapIMediaGraph::AddNode()):
+  PRUint32 mBuffers; // number of internal port audio buffers (>=2)
+  PaDeviceID mInputDevice;
+  PaDeviceID mOutputDevice;
+  zapAudioStreamParameters mStreamParameters;
+  
+  PortAudioStream* mStream;
+
+  zapAudioIOMonitor *mAudioIOMonitor; // weak reference
   nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
+  nsCOMPtr<nsIWritablePropertyBag2> mOutputStreamInfo;
+  nsCOMPtr<nsIPropertyBag2> mLastValidInputStreamInfo;
 };
 
-#endif // __ZAP_AUDIOIN_H__
+#endif // __ZAP_AUDIOIO_H__

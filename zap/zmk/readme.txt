@@ -199,6 +199,8 @@ Control interfaces: zapIAudioIn
 
 Node parameters: 
 - zapIAudioDevice "device" (default: default audio in)
+- int "buffers" : number of buffer mediating between zmk and device
+                  (default: 2, must be >=2)
 - double "sample_rate" : sample rate in Hz (default: 8000)
 - double "frame_duration" : duration of one frame in s (default: 0.02)
 - unsigned long "channels" : number of channels (default: 1)
@@ -227,6 +229,8 @@ Control interfaces: zapIAudioOut
 
 Node parameters: 
 - zapIAudioDevice "device" (default: default audio out)
+- int "buffers" : number of buffer mediating between zmk and device
+                  (default: 4, must be >=2)
 - double "sample_rate" : sample rate in Hz (default: 8000)
 - double "frame_duration" : duration of one frame in s (default: 0.02)
 - unsigned long "channels" : number of channels (default: 1)
@@ -284,14 +288,25 @@ Sinks: 1 (passive)
 Sources: 1 (passive)
 
 Node parameters:
-- int "max_size" : maximum number of packets to buffer (10)
-- int "lift_count" : whenever the size of the buffer drops to 0, 
-                     lift_count packets will be pre-buffered before
-                     the attached sink is allowed to take any packets
-                     out of the buffer (0)
-- int "drop_count" : number of packets to drop at the front of the buffer 
-                     (older packets) when a new packet arrives for a buffer 
-                     that has reached its maximum size (0)
+- unsigned long "max_size" : maximum number of packets to buffer (10)
+                             Must be >= 1.
+- unsigned long "min_size" : minimum number of packets that need to be in 
+                             the buffer before a packet can be taken out (1). 
+                             Must be >= 1.
+- unsigned long "lift_count" : whenever the size of the buffer drops to 0, 
+                               lift_count packets will be pre-buffered before
+                               the attached sink is allowed to take any packets
+                               out of the buffer (0). A lift_count of 0 has the 
+                               same effect as a lift_count of 1.
+- unsigned int "drop_count" : number of packets to drop at the front of the buffer 
+                              (older packets) when a new packet arrives for a 
+                              buffer that has reached its maximum size (0). 
+                              If this is zero, no new packet will be added to 
+                              a buffer that has reached its maximum size, 
+                              i.e. newly arriving packets will be dropped.
+
+Control interfaces: zapIPacketBuffer
+
 
 Input stream:
 any
@@ -839,3 +854,114 @@ Output stream:
 as input stream
 
 ----------------------------------------------------------------------
+
+30) stream-tap
+--------------
+
+Similar to a splitter, but one output is passive ("type"=="master")
+and the other outputs active ("type"=="tap"), i.e. they receive a
+packet whenever the master output requests one.
+XXX The input frames are not cloned! Unexpected things might happen if
+a mutable stream (like e.g. rtp) is being tapped!
+
+Sinks: 1 (active)
+Sources: n (1 passive , n-1 active)
+
+Source parameters:
+passive master source: ACString "type" == "master"
+active tap sources: ACString "type" == "tap"
+
+Node parameters:
+
+Input stream:
+any
+
+Output stream:
+any
+
+----------------------------------------------------------------------
+
+31) speex-audio-processor
+-------------------------
+
+Speex acoustic echo canceller and audio preprocessor
+
+
+Sinks: 2
+ACString "name" == "input" (neutral): Audio as captured by the microphone
+ACString "name" == "echo" (active): Audio played through speaker
+
+Sources: 1 (neutral): Audio with echo removed
+
+Node parameters:
+- boolean "aec" : toggles acoustic echo cancellation (default: false)
+- boolean "aec_2_stage" : toggles 2 stage AEC (default: false)
+- float "aec_tail" : AEC tail in ms (default: 300)
+- boolean "denoise" : toggles denoising (default: false)
+- boolean "agc" : toggles automatic gain control (default: false)
+- float "agc_level" : (default: 8000)
+- boolean "vad" : toggles voice activity detection (default: false)
+- boolean "dereverb" : toggles dereverb (default: false)
+- float "dereverb_level" : (default: 0.2)
+- float "dereverb_decay" : (default: 0.5)
+
+Control interfaces: zapISpeexAudioProcessor
+
+Input streams:
+audio/pcm frames with
+- double "sample_rate" == 8000
+- double "frame_duration" == 0.02
+- unsigned long "channels" == 1
+- unsigned long "sample_format" == "float32_32768"
+
+Output stream:
+audio/pcm frames (as input streams)
+
+----------------------------------------------------------------------
+
+32) audioio
+-----------
+
+Combined audio source/sink. Provides lower resource use and better
+synchronization than having separate audioin and audioout. The latter
+is important for things like echo cancellation, where the audio output
+needs to be correlated with the input.
+For each sampling period, the audioio node will call "consumeFrame" on
+the attached sink before calling "produceFrame" on the attached
+source.
+
+
+Sinks: 1 (active)
+Sources: 2 (active)
+
+Source parameters:
+ACString "name" == "ain" : audio in.
+ACString "name" == "monitor" : receives every frame played on audioout,
+                               including missing frames.
+
+Control interfaces: zapIAudioIO
+
+Node parameters:
+- zapIAudioDevice "input_device" (default: default audio in)
+- zapIAudioDevice "output_device" (default: default audio out)
+- int "buffers" : number of buffers mediating between zmk and audio hardware
+                  (default: 4, must be >=2)
+- double "sample_rate" : sample rate in Hz (default: 8000)
+- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "channels" : number of channels (default: 1)
+- ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
+                             (default: "float32_32768")
+
+Input stream:
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == corresponding node parameter
+
+Output stream:
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == corresponding node parameter

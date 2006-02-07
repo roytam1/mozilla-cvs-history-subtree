@@ -111,7 +111,8 @@
 
   <vbox class="zap-form-body">
     <label class="zap-form-title" value="Configuration"/>
-    <cgroup title="UI Preferences">
+    <cgroup title="UI Preferences" id="cgroup-uiprefs" 
+            closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
@@ -121,7 +122,8 @@
       </grid>
     </cgroup>
 
-    <cgroup title="Notifications">
+    <cgroup title="Notifications" id="cgroup-notifications"
+            closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>
@@ -175,7 +177,153 @@
       </grid>
     </cgroup>
 
-    <cgroup title="SIP Settings">
+    <cgroup title="Audio Settings" id="cgroup-audio"
+            closed="true" persist="closed">
+      <grid>
+        <columns><column/><column flex="1"/></columns>
+        <rows>
+          <irow>
+            <label control="urn:mozilla:zap:audioio_latency" value="Audio IO latency (ms):"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:audioio_latency"
+                     validator="makeNumberValidator(20, 10000)"/>
+            <info>
+              <description>
+                Size of buffer mediating between zap and the 
+                audio hardware. Must be between 20ms and 10000ms. 
+                Set to a higher value if you experience choppy audio 
+                that can't be traced to network problems.                 
+                <html:br/>This setting should be coordinated with the acoustic
+                echo cancellation window offset setting.
+                <html:br/>Changes to this field will take effect after a restart.
+              </description>
+            </info>
+          </irow>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="Use acoustic echo cancellation"
+                      id="urn:mozilla:zap:aec"/>
+            <info>
+              <description>
+              Turns on the acoustic echo canceller.
+              </description>
+            </info>
+          </igroup>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="2-stage acoustic echo cancellation"
+                      id="urn:mozilla:zap:aec_2_stage"/>
+            <info>
+              <description>
+              Improves echo cancellation performance.
+              </description>
+            </info>
+          </igroup>
+          <irow>
+            <label control="urn:mozilla:zap:aec_window_offset" 
+                   value="AEC window offset (ms):"/>
+            <textbox type="zap-formwidget" 
+                     id="urn:mozilla:zap:aec_window_offset"/>
+            <info>
+              <description>
+              Delay after which echo is expected at the earliest. Should be
+              set to at least the audio IO latency.
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:aec_window_length" 
+                   value="AEC window length (ms):"/>
+            <textbox type="zap-formwidget" 
+                     id="urn:mozilla:zap:aec_window_length"/>
+            <info>
+              <description>
+              Temporal length of window over which echo cancellation is
+              performed. The recommended length is approximately a third
+              of the room reverberation time. E.g. for a small room the 
+              reverberation time is in the order of 300ms, so a tail 
+              length of 100ms would be appropriate.
+              </description>
+            </info>
+          </irow>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="Denoise microphone input"
+                      id="urn:mozilla:zap:denoise"/>
+            <info>
+              <description>
+              Reduces the amount of background noise present 
+              in the input signal.
+              </description>
+            </info>
+          </igroup>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="Automatic microphone gain control"
+                      id="urn:mozilla:zap:agc"/>
+            <info>
+              <description>
+              Automatically adjust the recording level.
+              </description>
+            </info>
+          </igroup>
+          <irow>
+            <label control="urn:mozilla:zap:agc_level" 
+                   value="AGC level:"/>
+            <textbox type="zap-formwidget" 
+                     id="urn:mozilla:zap:agc_level"/>
+            <info>
+              <description>
+              </description>
+            </info>
+          </irow>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="Use voice activity detection"
+                      id="urn:mozilla:zap:vad"/>
+            <info>
+              <description>
+              Silences the input signal when no voice is being detected.
+              </description>
+            </info>
+          </igroup>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="Dereverb"
+                      id="urn:mozilla:zap:dereverb"/>
+            <info>
+              <description>
+              </description>
+            </info>
+          </igroup>
+          <irow>
+            <label control="urn:mozilla:zap:dereverb_level" 
+                   value="Dereverb level:"/>
+            <textbox type="zap-formwidget" 
+                     id="urn:mozilla:zap:dereverb_level"/>
+            <info>
+              <description>
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:dereverb_decay" 
+                   value="Dereverb decay:"/>
+            <textbox type="zap-formwidget" 
+                     id="urn:mozilla:zap:dereverb_decay"/>
+            <info>
+              <description>
+              </description>
+            </info>
+          </irow>
+          <button label="Reset audio processor" 
+                  oncommand="parent.wMediaPipeline.dspCtl.reset()"/>
+        </rows>
+      </grid>
+    </cgroup>
+
+
+    <cgroup title="SIP Settings" id="cgroup-sipsettings"
+            closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
@@ -290,7 +438,8 @@
       <button label="Configure SIP Services..." oncommand="configureServices()"/>
     </cgroup>
 
-    <cgroup title="Security">
+    <cgroup title="Security" id="cgroup-security"
+            closed="true" persist="closed">
       <grid>
         <columns><column flex="1"/><column/></columns>
         <rows>

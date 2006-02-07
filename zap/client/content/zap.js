@@ -97,6 +97,8 @@ function warning(message) {
   ErrorReporterSink.reporterFunction(message);
 }
 
+var PB = makePropertyBag;
+
 ////////////////////////////////////////////////////////////////////////
 // Initialization:
 
@@ -255,6 +257,19 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:short_branch_parameters", "true");
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
 
+Config.rdfLiteralAttrib("urn:mozilla:zap:audioio_latency", "160");
+Config.rdfLiteralAttrib("urn:mozilla:zap:aec", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:aec_2_stage", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:aec_window_offset", "160");
+Config.rdfLiteralAttrib("urn:mozilla:zap:aec_window_length", "200");
+Config.rdfLiteralAttrib("urn:mozilla:zap:denoise", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:agc", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:agc_level", "8000");
+Config.rdfLiteralAttrib("urn:mozilla:zap:vad", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:dereverb", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:dereverb_level", "0.2");
+Config.rdfLiteralAttrib("urn:mozilla:zap:dereverb_decay", "0.5");
+
 // triggers:
 Config.rdfAttribTrigger(
   "urn:mozilla:zap:short_branch_parameters",
@@ -263,6 +278,87 @@ Config.rdfAttribTrigger(
       wSipStack.shortBranchParameters = (val == "true");
   });
 
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:aec",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.aec = (val == "true");
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:aec_2_stage",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.aec2Stage = (val == "true");
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:aec_window_offset",
+  function(prop, val) {
+    if (wMediaPipeline.echoBufCtl) {
+      var frames = parseFloat(val)/20; // 20ms hardcoded
+      wMediaPipeline.echoBufCtl.minSize = frames;
+      wMediaPipeline.echoBufCtl.maxSize = frames;
+    }
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:aec_window_length",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.aecTail = val;
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:denoise",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.denoise = (val == "true");
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:agc",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.agc = (val == "true");
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:agc_level",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.agcLevel = val;
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:vad",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.vad = (val == "true");
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:dereverb",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.dereverb = (val == "true");
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:dereverb_level",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.dereverbLevel = val;
+  });
+
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:dereverb_decay",
+  function(prop, val) {
+    if (wMediaPipeline.dspCtl)
+      wMediaPipeline.dspCtl.dereverbDecay = val;
+  });
+
+
 Config.getter(
   "instanceIDHash",
   function get_instanceIDHash() {
@@ -270,7 +366,6 @@ Config.getter(
       this._instanceIDHash = MD5Hex(this["urn:mozilla:zap:instance_id"]);
     return this._instanceIDHash;
   });
-
 
 // pool of services, indexed by resource id:
 var wServices = {};
@@ -1593,19 +1688,53 @@ var wMediaPipeline = {
       this.mediagraph = Components.classes["@mozilla.org/zap/mediagraph;1"].getService(Components.interfaces.zapIMediaGraph);
 
       // 8000Hz, 20ms, 1 channel audio pipe:      
-      this.audioin = this.mediagraph.addNode("audioin", null);
+      this.audioio = this.mediagraph.addNode("audioio",
+                                             PB({$buffers:parseFloat(wConfig["urn:mozilla:zap:audioio_latency"])/20}));
       this.asplitter = this.mediagraph.addNode("splitter", null);
-      this.audioout = this.mediagraph.addNode("audioout", null);
       this.amixer = this.mediagraph.addNode("audio-mixer", null);
-      this.A = this.mediagraph.connect(this.audioin, null,
-                                       this.asplitter, null);
-      this.B = this.mediagraph.connect(this.amixer, null,
-                                       this.audioout, null);
+      this.echoBuf = this.mediagraph.addNode("buffer",
+         PB({
+             $max_size: parseFloat(wConfig["urn:mozilla:zap:aec_window_offset"])/20,
+             $min_size: parseFloat(wConfig["urn:mozilla:zap:aec_window_offset"])/20
+           }));
+      
+      this.dsp = this.mediagraph.addNode("speex-audio-processor",
+         PB({
+             $aec: (wConfig["urn:mozilla:zap:aec"] == "true"),
+             $aec_2_stage: (wConfig["urn:mozilla:zap:aec_2_stage"] == "true"),
+             $aec_tail: wConfig["urn:mozilla:zap:aec_window_length"],
+             $denoise: (wConfig["urn:mozilla:zap:denoise"] == "true"),
+             $agc: (wConfig["urn:mozilla:zap:agc"] == "true"),
+             $agc_level: wConfig["urn:mozilla:zap:agc_level"],
+             $vad: (wConfig["urn:mozilla:zap:vad"] == "true"),
+             $dereverb: (wConfig["urn:mozilla:zap:dereverb"] == "true"),
+             $dereverb_level: wConfig["urn:mozilla:zap:dereverb_level"],
+             $dereverb_decay: wConfig["urn:mozilla:zap:dereverb_decay"]
+           }));
+
+      // output pipe:
+      this.mediagraph.connect(this.amixer, null,
+                              this.audioio, null);
+      this.mediagraph.connect(this.audioio, PB({$name:"monitor"}),
+                              this.echoBuf, null);
+
+      // input pipe:
+      this.mediagraph.connect(this.audioio, PB({$name:"ain"}),
+                              this.dsp, PB({$name:"input"}));
+      this.mediagraph.connect(this.echoBuf, null,
+                              this.dsp, PB({$name:"echo"}));
+      this.mediagraph.connect(this.dsp, null,
+                              this.asplitter, null);
+      
       this.mediagraph.setAlias("ain", this.asplitter);
       this.mediagraph.setAlias("aout", this.amixer);
-      this.ainCtl = this.mediagraph.getNode(this.audioin,
-                                            Components.interfaces.zapIAudioIn, true);
-      this.ainCtl.play(); //XXX do this on demand
+      
+      this.dspCtl = this.mediagraph.getNode(this.dsp,
+                                            Components.interfaces.zapISpeexAudioProcessor,
+                                            true);
+      this.echoBufCtl = this.mediagraph.getNode(this.echoBuf,
+                                                Components.interfaces.zapIPacketBuffer,
+                                                true);
     }
     catch(e) {
       dump("Error during media pipeline initialization: "+e+"\n");
@@ -1614,6 +1743,8 @@ var wMediaPipeline = {
   
   cleanup: function() {
     try {
+      delete this.dspCtl;
+      delete this.echoBufCtl;
       this.mediagraph.shutdown();
     }
     catch(e) {}
@@ -1658,8 +1789,6 @@ Ringback.fun(
 
 //----------------------------------------------------------------------
 // CallPipe class: per-call media pipeline
-
-var PB = makePropertyBag;
 
 var CallPipe = makeClass("CallPipe", ErrorReporter);
 

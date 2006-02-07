@@ -548,7 +548,8 @@ static void speex_compute_agc(SpeexPreprocessState *st, float mean_prior)
    
 }
 
-static void preprocess_analysis(SpeexPreprocessState *st, spx_int16_t *x)
+/** Signature changed to float for Mozilla ZMK */
+static void preprocess_analysis(SpeexPreprocessState *st, float *x)
 {
    int i;
    int N = st->ps_size;
@@ -621,7 +622,8 @@ static void update_noise_prob(SpeexPreprocessState *st)
 
 #define NOISE_OVERCOMPENS 1.4
 
-int speex_preprocess(SpeexPreprocessState *st, spx_int16_t *x, float *echo)
+/** Signature changed to float for Mozilla ZMK */
+int speex_preprocess(SpeexPreprocessState *st, float *x, float *echo)
 {
    int i;
    int is_speech=1;
@@ -938,7 +940,8 @@ int speex_preprocess(SpeexPreprocessState *st, spx_int16_t *x, float *echo)
    return is_speech;
 }
 
-void speex_preprocess_estimate_update(SpeexPreprocessState *st, spx_int16_t *x, float *echo)
+/** Signature changed to float for Mozilla ZMK */
+void speex_preprocess_estimate_update(SpeexPreprocessState *st, float *x, float *echo)
 {
    int i;
    int N = st->ps_size;

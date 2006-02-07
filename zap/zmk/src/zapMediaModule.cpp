@@ -66,6 +66,9 @@
 #include "zapStreamSyncer.h"
 #include "zapRTPDemuxer.h"
 #include "zapStreamSwitch.h"
+#include "zapStreamTap.h"
+#include "zapSpeexAudioProcessor.h"
+#include "zapAudioIO.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -97,6 +100,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapTEventRTPPacketizer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamSyncer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPDemuxer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamSwitch)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamTap)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexAudioProcessor)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIO)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -254,6 +260,21 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_STREAMSWITCH_CID,
     ZAP_STREAMSWITCH_CONTRACTID,
     zapStreamSwitchConstructor
+  },
+  { "Mozilla ZMK stream tap",
+    ZAP_STREAMTAP_CID,
+    ZAP_STREAMTAP_CONTRACTID,
+    zapStreamTapConstructor
+  },
+  { "Mozilla ZMK speex audio processor",
+    ZAP_SPEEXAUDIOPROCESSOR_CID,
+    ZAP_SPEEXAUDIOPROCESSOR_CONTRACTID,
+    zapSpeexAudioProcessorConstructor
+  },
+  { "Mozilla ZMK Audio IO",
+    ZAP_AUDIOIO_CID,
+    ZAP_AUDIOIO_CONTRACTID,
+    zapAudioIOConstructor
   }
 };
 

@@ -232,7 +232,8 @@ void speex_echo_state_destroy(SpeexEchoState *st)
 
       
 /** Performs echo cancellation on a frame */
-void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, float *Yout)
+/** Signature changed to float for Mozilla ZMK */
+void speex_echo_cancel(SpeexEchoState *st, float *ref, float *echo, float *out, float *Yout)
 {
    int i,j,m;
    int N,M;
