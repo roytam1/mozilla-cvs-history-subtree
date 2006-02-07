@@ -705,6 +705,9 @@ PropertyBag.obj("getPropertyAsUint64", PropertyBag.prototype.getProperty);
 /* double      getPropertyAsDouble      (in AString prop); */
 PropertyBag.obj("getPropertyAsDouble", PropertyBag.prototype.getProperty);
 
+/* float       getPropertyAsFloat       (in AString prop); */
+PropertyBag.obj("getPropertyAsFloat", PropertyBag.prototype.getProperty);
+
 /* AString     getPropertyAsAString     (in AString prop); */
 PropertyBag.obj("getPropertyAsAString", PropertyBag.prototype.getProperty);
 
@@ -717,7 +720,7 @@ PropertyBag.obj("getPropertyAsAUTF8String", PropertyBag.prototype.getProperty);
 /* boolean     getPropertyAsBool        (in AString prop); */
 PropertyBag.obj("getPropertyAsBool", PropertyBag.prototype.getProperty);
 
-/*  void        getPropertyAsInterface   (in AString prop,
+/*  void       getPropertyAsInterface   (in AString prop,
                                         in nsIIDRef iid,
                                         [iid_is(iid), retval] out nsQIResult result); */
 PropertyBag.fun(
