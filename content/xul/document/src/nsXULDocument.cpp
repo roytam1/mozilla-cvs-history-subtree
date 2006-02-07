@@ -149,6 +149,7 @@ const nsForwardReference::Phase nsForwardReference::kPasses[] = {
     nsForwardReference::eDone
 };
 
+const PRUint32 kMaxAttributeLength = 4096;
 
 //----------------------------------------------------------------------
 //
@@ -1532,6 +1533,12 @@ nsXULDocument::Persist(nsIContent* aElement, PRInt32 aNameSpaceID,
     nsAutoString valuestr;
     rv = aElement->GetAttr(kNameSpaceID_None, aAttribute, valuestr);
     if (NS_FAILED(rv)) return rv;
+
+    // prevent over-long attributes that choke the parser (bug 319846)
+    // (can't simply Truncate without testing, it's implemented
+    // using SetLength and will grow a short string)
+    if (valuestr.Length() > kMaxAttributeLength)
+        valuestr.Truncate(kMaxAttributeLength);
 
     PRBool novalue = (rv != NS_CONTENT_ATTR_HAS_VALUE);
 
