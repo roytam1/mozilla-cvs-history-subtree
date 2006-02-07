@@ -2218,7 +2218,7 @@ OutboundCall.fun(
 
 OutboundCall.fun(
   function cancel() {
-    if (this.callHandler.rc)
+    if (this.callHandler && this.callHandler.rc)
       this.callHandler.rc.cancel();
     else if (!this.Terminated){
       // we might e.g. still be resolving_by_OPTIONS
