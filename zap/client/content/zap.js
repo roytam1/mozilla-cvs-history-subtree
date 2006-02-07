@@ -2322,10 +2322,7 @@ OutboundCallHandler.fun(
   function notifyResponseReceived(rc, dialog, response, flow) {
     this._dump(response.statusCode+" response for call="+this.call);
     if (response.statusCode[0] == "1") {
-      if (response.statusCode == "180") {
-        // ringing
-        this.call.ringback.play(wConfig["urn:mozilla:zap:ringingtone"]);
-      }
+      this.call.ringback.play(wConfig["urn:mozilla:zap:ringingtone"]);
       this.call["urn:mozilla:zap:status"] =
         response.statusCode + " " + response.reasonPhrase;
     }
