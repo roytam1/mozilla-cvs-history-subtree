@@ -524,6 +524,7 @@ Identity.addInterfaces(Components.interfaces.zapISipCredentialsProvider);
 
 Identity.prototype.datasources["default"] = wIdentitiesDS;
 Identity.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
+Identity.addInMemoryDS("ephemeral");
 
 Identity.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
                            "urn:mozilla:zap:identities");
@@ -541,6 +542,12 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
 // registration_status: "registered"|"registering"|""
 Identity.rdfLiteralAttrib("urn:mozilla:zap:registration_status",
                           "", "global-ephemeral");
+// This is to provide an entrypoint for template recursion. see
+// e.g. calls.xul for usage and comments in
+// RDFUtils.js::rdfPointerAttrib:
+Identity.rdfPointerAttrib("urn:mozilla:zap:root",
+                          "urn:mozilla:zap:current-identity",
+                          "ephemeral");
 
 // make sure that we re-resolve the service when certain attributes change:
 Identity.rdfAttribTrigger(

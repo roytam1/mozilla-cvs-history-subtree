@@ -59,6 +59,7 @@
       initIdentityForm();
       wIdentity = parent.getIdentity(parent.getSelectedSidebarResource().Value);
       wIdentity.fillDocument(document);
+      wIdentity.initXULTemplate(document.getElementById("identity-template-1"), true);
     }    
 
     function del() {
@@ -95,6 +96,14 @@
       wIdentity.fillDocument(document);
     }
 
+    function registerNow() {
+      parent.registerIdentity(wIdentity);
+    }
+
+    function unregisterNow() {
+      parent.unregisterIdentity(wIdentity);
+    }
+
   ]]>
   </script>
 
@@ -104,6 +113,73 @@
       <spacer flex="1"/>
       <button label="Delete this identity" oncommand="del()"/>
     </box>
+
+    <vbox id="identity-template-1"
+          containment="urn:mozilla:zap:current-identity"
+          datasources="rdf:null"
+          flags="dont-buid-content"
+          ref="urn:mozilla:zap:root">
+      <template>
+        <rule><!-- NON-REGISTERED IDENTITY -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:registration_status"
+                    object=""/>                
+          </conditions>
+          <action>
+            <groupbox flex="1" uri="?node">
+              <caption><label value="Status"/></caption>
+              <hbox flex="1">
+                <label value="Not registered"/>
+                <spacer flex="1"/>
+                <button label="Register now" oncommand="registerNow()"/>
+              </hbox>
+            </groupbox>
+          </action>
+        </rule>
+        <rule><!-- REGISTERED IDENTITY -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:registration_status"
+                    object="registered"/>                
+          </conditions>
+          <action>
+            <groupbox flex="1" uri="?node">
+              <caption><label value="Status"/></caption>
+              <hbox flex="1">
+                <label value="Registered"/>
+                <spacer flex="1"/>
+                <button label="Unregister now" oncommand="unregisterNow()"/>
+              </hbox>
+            </groupbox>
+          </action>
+        </rule>
+        <rule><!-- REGISTERING IDENTITY -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:registration_status"
+                    object="registering"/>   
+          </conditions>
+          <action>
+            <groupbox flex="1" uri="?node">
+              <caption><label value="Status"/></caption>
+              <hbox flex="1">
+                <label value="Registering..."/>
+                <spacer flex="1"/>
+                <button label="Stop registering" oncommand="unregisterNow()"/>
+              </hbox>
+            </groupbox>
+          </action>
+        </rule>
+      </template>
+    </vbox>
+    
     <vbox id="zap_identity_form"/>
   </vbox>
   <hbox style="display:none" class="zap-form-buttonbar">
