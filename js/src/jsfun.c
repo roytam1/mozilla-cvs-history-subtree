@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=80:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -1977,9 +1978,11 @@ js_CloneFunctionObject(JSContext *cx, JSObject *funobj, JSObject *parent)
         JSPrincipals *prin;
 
         prin = cx->findObjectPrincipals(cx, parent);
-        if (!prin || !JS_SetReservedSlot(cx, newfunobj, 2, PRIVATE_TO_JSVAL(prin)))
-            return NULL;
-        JSPRINCIPALS_HOLD(cx, prin);
+        if (prin) {
+            if (!JS_SetReservedSlot(cx, newfunobj, 2, PRIVATE_TO_JSVAL(prin)))
+                return NULL;
+            JSPRINCIPALS_HOLD(cx, prin);
+        }
     }
     fun = (JSFunction *) JS_GetPrivate(cx, funobj);
     if (!js_LinkFunctionObject(cx, fun, newfunobj)) {
