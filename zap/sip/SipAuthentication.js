@@ -35,7 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-
 debug("*** loading SipResolver.js\n");
 
 Components.utils.importModule("gre:ComponentUtils.jsm");
@@ -169,7 +168,7 @@ SipAuthentication.fun(
       // check if there is already an Authorization for the given
       // realm in the request:
       var hasRejectedCredentials = false;      
-      for (var j=0, m=authorizationHeaders.length; i<m; ++i) {
+      for (var j=0, m=authorizationHeaders.length; j<m; ++j) {
         if (authorizationHeaders[j].QueryInterface(authorizationHeaderInterface).getParameter("realm") == realm) {
           // yes, we have an authorization header already. check
           // whether the credentials were rejected or whether the
@@ -180,11 +179,9 @@ SipAuthentication.fun(
           // new credentials again:
           request.removeHeader(authorizationHeaders[j]);
           authorizationHeaders.splice(j, 1);
+          break;
         }
       }
-      if (i<m)
-        continue; // the inner loop breaked -> don't retry
-                  // authorization for this header
 
       var algorithm = header.getParameter("algorithm");
       if (!algorithm)
