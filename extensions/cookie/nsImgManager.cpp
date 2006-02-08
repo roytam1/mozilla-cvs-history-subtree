@@ -224,6 +224,7 @@ void nsImgManager::CheckMailNews(PRBool isFtp,
           contentScheme.Equals("news") || contentScheme.Equals("snews") ||
           contentScheme.Equals("nntp") || contentScheme.Equals("imap") ||
           contentScheme.Equals("addbook") || contentScheme.Equals("pop") ||
+          contentScheme.Equals("enigmail") ||
           contentScheme.Equals("mailbox") || contentScheme.Equals("about")) {
         *shouldLoad = PR_TRUE;
       }
