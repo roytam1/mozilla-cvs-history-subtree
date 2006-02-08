@@ -395,7 +395,7 @@ case "$target" in
         fi
 
         if test -n "$WIN32_REDIST_DIR"; then
-            WIN32_REDIST_DIR=`cd "$WIN32_REDIST_DIR" && pwd`
+            WIN32_REDIST_DIR=`cd "$WIN32_REDIST_DIR" && pwd | sed 's, ,\\ ,g'`
         fi
 	
         # bug #249782
@@ -4225,10 +4225,12 @@ NECKO_PROTOCOLS_DEFAULT="about data file ftp gopher http keyword res viewsource"
 NECKO_SMALL_BUFFERS=
 SUNCTL=
 JS_STATIC_BUILD=
+XPC_IDISPATCH_SUPPORT=
 
 case "$target_os" in
     msvc*|mks*|cygwin*|mingw*)
         if test -z "$GNU_CC"; then 
+            XPC_IDISPATCH_SUPPORT=1
             MOZ_NO_ACTIVEX_SUPPORT=
             MOZ_ACTIVEX_SCRIPTING_SUPPORT=1
         fi
@@ -5446,6 +5448,15 @@ AC_SUBST(MOZ_UPDATE_PACKAGING)
 dnl ========================================================
 dnl ActiveX
 dnl ========================================================
+
+MOZ_ARG_DISABLE_BOOL(xpconnect-idispatch,
+[  --disable-xpconnect-idispatch
+                          Disable building of xpconnect support for IDispatch
+                          (win32 only)],
+    XPC_IDISPATCH_SUPPORT=,
+    XPC_IDISPATCH_SUPPORT=1)
+AC_SUBST(XPC_IDISPATCH_SUPPORT)
+
 MOZ_ARG_DISABLE_BOOL(activex,
 [  --disable-activex       Disable building of ActiveX control (win32 only)],
     MOZ_NO_ACTIVEX_SUPPORT=1,
@@ -7204,6 +7215,7 @@ AC_SUBST(MOZ_TOOLS_DIR)
 AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(AS_PERL)
 AC_SUBST(WIN32_REDIST_DIR)
+AC_SUBST(WIN32_REDIST_DIR_QUOTED)
 
 dnl Echo the CFLAGS to remove extra whitespace.
 CFLAGS=`echo \
