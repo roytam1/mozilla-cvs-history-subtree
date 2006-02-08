@@ -1118,7 +1118,7 @@ nsIEProfileMigrator::CopyFavorites(PRBool aReplace) {
 
   nsAutoString personalToolbarFolderName;
 
- #ifdef MOZ_PLACES
+#ifdef MOZ_PLACES
   PRInt64 folder;
 #else
   nsCOMPtr<nsIRDFResource> folder;
@@ -1197,6 +1197,7 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
   if (regKey && 
       NS_SUCCEEDED(regKey->Open(nsIWindowsRegKey::ROOT_KEY_CURRENT_USER,
                                 searchUrlKey, nsIWindowsRegKey::ACCESS_READ))) {
+
 #ifdef MOZ_PLACES
     nsresult rv;
     nsCOMPtr<nsINavBookmarksService> bms(do_GetService(NS_NAVBOOKMARKSSERVICE_CONTRACTID, &rv));
@@ -1262,6 +1263,7 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
           nsresult rv = bundle->FormatStringFromName(
                         NS_LITERAL_STRING("importedSearchURLsTitle").get(),
                         nameStrings, 1, getter_Copies(keywordName));
+
           const PRUnichar* descStrings[] = { keyName.get(), host.get() };
           nsXPIDLString keywordDesc;
           rv = bundle->FormatStringFromName(
