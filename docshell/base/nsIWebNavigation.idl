@@ -118,10 +118,9 @@ interface nsIWebNavigation : nsISupports
 
   /**
    * This flag specifies that the load should have the semantics of an HTML
-   * Meta-refresh tag (i.e., that the cache should be bypassed).  This flag
-   * is only applicable to loadURI.
+   * META refresh (i.e., that the cache should be validated).  This flag is
+   * only applicable to loadURI.
    * XXX the meaning of this flag is poorly defined.
-   * XXX no one uses this, so we should probably deprecate and remove it.
    */
   const unsigned long LOAD_FLAGS_IS_REFRESH      = 0x0010;
 
