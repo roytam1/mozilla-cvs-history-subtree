@@ -3094,9 +3094,11 @@ nsHttpChannel::Cancel(nsresult status)
     mStatus = status;
     if (mProxyRequest)
         mProxyRequest->Cancel(status);
-    else if (mTransaction)
+    if (mTransaction)
         gHttpHandler->CancelTransaction(mTransaction, status);
-    else if (mCachePump)
+    if (mTransactionPump)
+        mTransactionPump->Cancel(status);
+    if (mCachePump)
         mCachePump->Cancel(status);
     return NS_OK;
 }
