@@ -45,6 +45,8 @@
 #include "nsDataHashtable.h"
 #include "zapIMediaFrame.h"
 
+class zapRTPDemuxerOutput;
+
 ////////////////////////////////////////////////////////////////////////
 // zapRTPDemuxer
 

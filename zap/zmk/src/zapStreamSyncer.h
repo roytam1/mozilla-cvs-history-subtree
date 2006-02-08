@@ -43,6 +43,8 @@
 #include "nsCOMPtr.h"
 #include "nsIPropertyBag2.h"
 
+class zapStreamSyncerTimebase;
+
 ////////////////////////////////////////////////////////////////////////
 // zapStreamSyncer
 

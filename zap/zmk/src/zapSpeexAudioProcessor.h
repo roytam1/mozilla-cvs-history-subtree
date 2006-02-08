@@ -45,6 +45,8 @@
 #include "speex/speex_preprocess.h"
 #include "zapISpeexAudioProcessor.h"
 
+class zapSpeexAudioProcessorEcho;
+
 ////////////////////////////////////////////////////////////////////////
 // zapSpeexAudioProcessor
 

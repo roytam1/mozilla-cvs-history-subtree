@@ -42,6 +42,8 @@
 #include "zapIMediaSink.h"
 #include "nsCOMPtr.h"
 
+class zapPacketPumpClock;
+
 ////////////////////////////////////////////////////////////////////////
 // zapPacketPump
 

@@ -46,6 +46,8 @@
 #include "zapIMediaFrame.h"
 #include "zapIStreamSwitch.h"
 
+class zapStreamSwitchOutput;
+
 ////////////////////////////////////////////////////////////////////////
 // zapStreamSwitch
 
