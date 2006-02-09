@@ -81,6 +81,8 @@ private:
   friend int AudioIOCallback(void* inputBuffer, void* outputBuffer,
                              unsigned long framesPerBuffer,
                              PaTimestamp outTime, void* userData);
+  PRBool mKeepRunning; // signals the portaudio callback whether to
+                       // shut down or not
 
   void ProcessInputFrame(void* outputBuffer);
   PRBool ValidateInputFrame(zapIMediaFrame* frame);

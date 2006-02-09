@@ -148,7 +148,8 @@ void zapAudioIOMonitor::ConsumeFrame(const nsACString& data) {
 
 zapAudioIO::zapAudioIO()
     : mStream(nsnull),
-      mAudioIOMonitor(nsnull)
+      mAudioIOMonitor(nsnull),
+      mKeepRunning(PR_FALSE)
 {
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
@@ -417,13 +418,17 @@ int AudioIOCallback(void* inputBuffer, void* outputBuffer,
   zapAudioIO* audioio = (zapAudioIO*)userData;
   
   audioio->mEventQ->EnterMonitor();
-  zapAudioIOEvent* ev = new zapAudioIOEvent(audioio, outTime,
-                                            inputBuffer, outputBuffer);
-  void* result;
-  audioio->mEventQ->PostSynchronousEvent(ev, &result);
+  void* result=(void*)PR_FALSE;
+  // only post event if we're still supposed to be running:
+  // (otherwise we might end in deadlock)
+  if (audioio->mKeepRunning) {
+    zapAudioIOEvent* ev = new zapAudioIOEvent(audioio, outTime,
+                                              inputBuffer, outputBuffer);
+    audioio->mEventQ->PostSynchronousEvent(ev, &result);
+  }
   audioio->mEventQ->ExitMonitor();
 
-  // stop stream if event was cancelled
+  // stop stream if event was cancelled or mKeepRunning is false
   return (result==(void*)PR_TRUE ? 0 : 1);
 }
 
@@ -577,6 +582,7 @@ nsresult zapAudioIO::StartStream()
   }
   
   // start playing stream:
+  mKeepRunning = PR_TRUE;
   Pa_StartStream(mStream);
 
   return NS_OK;
@@ -588,6 +594,7 @@ void zapAudioIO::CloseStream()
 
   // cancel any outstanding PlayFrame() notifications:
   mEventQ->EnterMonitor();
+  mKeepRunning = PR_FALSE;
   mEventQ->RevokeEvents(this);
   mEventQ->ExitMonitor();
   
