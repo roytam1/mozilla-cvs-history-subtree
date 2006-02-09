@@ -2,6 +2,7 @@
 #include "resource.h"
 #include "newres.h"
 
+
 IDD_SPLASHSCREEN DIALOG DISCARDABLE  0, 0, 31, 27
 BEGIN
     CONTROL         104,IDC_SPLASHBMP,"Static",SS_BITMAP,7,7,15,13
