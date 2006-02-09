@@ -75,4 +75,8 @@ extern BOOL             gbAllowMultipleInstalls;
 extern uninstallGen     ugUninstall;
 extern diU              diUninstall;
 
+extern DWORD            dwParentPID;
+
+extern BOOL             gbUninstallCompleted;
+
 #endif

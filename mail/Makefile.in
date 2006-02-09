@@ -40,9 +40,11 @@ topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
-include $(DEPTH)/config/autoconf.mk
+include $(topsrcdir)/config/config.mk
 
 DIRS		= base locales components extensions themes app 
+
+include $(topsrcdir)/config/rules.mk
 
 # this will get cleaned up once OSX comes on board. We won't need platform specific ifdefs for
 # entering mail\config
@@ -50,7 +52,13 @@ DIRS		= base locales components extensions themes app
 ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_INSTALLER
 DIRS += installer/windows
-endif
-endif
 
-include $(topsrcdir)/config/rules.mk
+# Generate uninstall.ini (en-US only for now)
+UNINSTALLER_INC = $(topsrcdir)/mail/locales/en-US/installer/uninstaller.inc
+$(FINAL_TARGET)/uninstall/uninstall.ini: $(topsrcdir)/mail/installer/windows/uninstall.it $(UNINSTALLER_INC)
+	$(NSINSTALL) -D $(@D)
+	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(UNINSTALLER_INC) $< > $@
+libs:: $(FINAL_TARGET)/uninstall/uninstall.ini
+
+endif
+endif
