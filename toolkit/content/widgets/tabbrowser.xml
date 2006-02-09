@@ -650,9 +650,14 @@
                 this.mCurrentBrowser.focusedElement = document.commandDispatcher.focusedElement;
               }
 
-              if (this.mCurrentBrowser.focusedElement) {
+              if (this.mCurrentBrowser.focusedElement instanceof NSHTMLElement || 
+                  this.mCurrentBrowser.focusedElement instanceof XULElement) {
                 // Clear focus outline before we draw on top of it
                 this.mCurrentBrowser.focusedElement.blur();
+              }
+              else {
+                // non-HTML/XUL elements have no blur method, see bug 323805
+                this.mCurrentBrowser.focusedElement = null;
               }
               this.mCurrentBrowser.setAttribute("type", "content");
             }
@@ -745,7 +750,10 @@
 
             function setFocus(element) {
               document.commandDispatcher.suppressFocusScroll = true;
-              element.focus();
+              if (element instanceof NSHTMLElement || 
+                  element instanceof XULElement) {
+                element.focus();
+              }
               document.commandDispatcher.suppressFocusScroll = false;
             }
 
