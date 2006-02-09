@@ -39,6 +39,7 @@ function nsContextMenu( xulMenu ) {
     this.popupURL       = null;
     this.onTextInput    = false;
     this.onImage        = false;
+    this.onLoadedImage  = false;
     this.onLink         = false;
     this.onMailtoLink   = false;
     this.onSaveableLink = false;
@@ -126,7 +127,7 @@ nsContextMenu.prototype = {
         this.showItem( "context-savelink", this.onSaveableLink );
 
         // Save image depends on whether there is one.
-        this.showItem( "context-saveimage", this.onImage || this.onStandaloneImage);
+        this.showItem( "context-saveimage", this.onLoadedImage || this.onStandaloneImage);
         
         this.showItem( "context-sendimage", this.onImage || this.onStandaloneImage);
     },
@@ -143,11 +144,11 @@ nsContextMenu.prototype = {
         this.showItem( "context-sep-properties", !( this.inDirList || this.isTextSelected || this.onTextInput ) );
         // Set As Wallpaper depends on whether an image was clicked on, and only works on Windows.
         var isWin = navigator.appVersion.indexOf("Windows") != -1;
-        this.showItem( "context-setWallpaper", isWin && (this.onImage || this.onStandaloneImage));
+        this.showItem( "context-setWallpaper", isWin && (this.onLoadedImage || this.onStandaloneImage));
 
         this.showItem( "context-sep-image", this.onImage || this.onStandaloneImage);
 
-        if( isWin && this.onImage )
+        if( isWin && this.onLoadedImage )
             // Disable the Set As Wallpaper menu item if we're still trying to load the image
           this.setItemAttr( "context-setWallpaper", "disabled", (("complete" in this.target) && !this.target.complete) ? "true" : null );
 
@@ -233,6 +234,7 @@ nsContextMenu.prototype = {
     setTarget : function ( node ) {
         // Initialize contextual info.
         this.onImage    = false;
+        this.onLoadedImage = false;
         this.onStandaloneImage = false;
         this.onMetaDataItem = false;
         this.onTextInput = false;
@@ -248,12 +250,14 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target instanceof HTMLImageElement ) {
+             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent ) {
                 this.onImage = true;
+                var request = this.target.getRequest( Components.interfaces.nsIImageLoadingContent.CURRENT_REQUEST );
+                if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
+                    this.onLoadedImage = true;
                 this.imageURL = this.target.src;
 
-                var documentType = window._content.document.contentType;
-                if ( documentType.substr(0,6) == "image/" )
+                if ( this.target.ownerDocument instanceof ImageDocument )
                     this.onStandaloneImage = true;
 
                 // Look for image map.

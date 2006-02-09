@@ -3562,6 +3562,7 @@ function nsContextMenu( xulMenu ) {
     this.onTextInput    = false;
     this.onKeywordField = false;
     this.onImage        = false;
+    this.onLoadedImage  = false;
     this.onLink         = false;
     this.onMailtoLink   = false;
     this.onSaveableLink = false;
@@ -3637,7 +3638,7 @@ nsContextMenu.prototype = {
         this.showItem( "context-savelink", this.onSaveableLink );
 
         // Save image depends on whether there is one.
-        this.showItem( "context-saveimage", this.onImage );
+        this.showItem( "context-saveimage", this.onLoadedImage );
         
         this.showItem( "context-sendimage", this.onImage );
         
@@ -3660,9 +3661,9 @@ nsContextMenu.prototype = {
         if (shell)
           haveSetWallpaper = true;
 #endif
-        this.showItem( "context-setWallpaper", haveSetWallpaper && this.onImage );
+        this.showItem( "context-setWallpaper", haveSetWallpaper && this.onLoadedImage );
 
-        if( haveSetWallpaper && this.onImage ) {
+        if( haveSetWallpaper && this.onLoadedImage ) {
             // Disable the Set As Wallpaper menu item if we're still trying to load the image or the load failed
             const nsIImageLoadingContent = Components.interfaces.nsIImageLoadingContent;
             var disableSetWallpaper = false;
@@ -3776,6 +3777,7 @@ nsContextMenu.prototype = {
         }
         // Initialize contextual info.
         this.onImage    = false;
+        this.onLoadedImage = false;
         this.onMetaDataItem = false;
         this.onTextInput = false;
         this.onKeywordField = false;
@@ -3791,8 +3793,11 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target instanceof HTMLImageElement ) {
+             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent ) {
                 this.onImage = true;
+                var request = this.target.getRequest( Components.interfaces.nsIImageLoadingContent.CURRENT_REQUEST );
+                if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
+                    this.onLoadedImage = true;
                 this.imageURL = this.target.src;
                 // Look for image map.
                 var mapName = this.target.getAttribute( "usemap" );
@@ -4080,12 +4085,12 @@ nsContextMenu.prototype = {
     },
     // Change current window to the URL of the image.
     viewImage : function (e) {
-        urlSecurityCheck( this.imageURL, document )
+        urlSecurityCheck( this.imageURL, document );
         openUILink( this.imageURL, e );
     },
     // Change current window to the URL of the background image.
     viewBGImage : function (e) {
-        urlSecurityCheck( this.bgImageURL, document )
+        urlSecurityCheck( this.bgImageURL, document );
         openUILink( this.bgImageURL, e );
     },
     setWallpaper: function() {
