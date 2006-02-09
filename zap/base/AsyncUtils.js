@@ -41,7 +41,8 @@ Components.utils.importModule("gre:FunctionUtils.js");
 EXPORTED_SYMBOLS = [ "getUIEventQ",
                      "makeOneShotTimer",
                      "resetOneShotTimer",
-                     "schedule" ];
+                     "schedule",
+                     "schedulePeriodic"];
 
 // object to hold module's documentation:
 var _doc_ = {};
@@ -101,5 +102,17 @@ function schedule(fct, interval) {
       }
     },
     interval);
+  return timer;
+}
+
+
+// Periodically make an asynchronous call to 'fct' every 'period'
+// ms. Return timer object. Calling 'cancel()' on the return value
+// will cancel the schedule.
+function schedulePeriodic(fct, period) {
+  var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
+  timer.initWithCallback({ notify : function(timer) { fct(); }},
+                         period,
+                         this.Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
   return timer;
 }
