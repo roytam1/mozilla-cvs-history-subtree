@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=2 sw=2 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -50,6 +51,8 @@
 #include "nsIChromeRegistry.h"
 #include "nsIPrincipal.h"
 #include "nsIPrincipalObsolete.h"
+#include "nsIScriptSecurityManager.h"
+#include "nsContentUtils.h"
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
@@ -88,6 +91,9 @@ public:
   NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete** aPrincipal);
   NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
     
+  static JSBool doCheckAccess(JSContext *cx, JSObject *obj, jsval id,
+                              PRUint32 accessType);
+
 protected:
   virtual ~nsXBLDocGlobalObject();
 
@@ -98,7 +104,63 @@ protected:
   static JSClass gSharedGlobalClass;
 };
 
-void PR_CALLBACK nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
+JSBool
+nsXBLDocGlobalObject::doCheckAccess(JSContext *cx, JSObject *obj, jsval id, PRUint32 accessType)
+{
+  nsIScriptSecurityManager *ssm = nsContentUtils::GetSecurityManager();
+  if (!ssm) {
+    ::JS_ReportError(cx, "Unable to verify access to a global object property.");
+    return JS_FALSE;
+  }
+
+  // Make sure to actually operate on our object, and not some object further
+  // down on the proto chain.
+  while (JS_GET_CLASS(cx, obj) != &nsXBLDocGlobalObject::gSharedGlobalClass) {
+    obj = ::JS_GetPrototype(cx, obj);
+    if (!obj) {
+      ::JS_ReportError(cx, "Invalid access to a global object property.");
+      return JS_FALSE;
+    }
+  }
+
+  nsresult rv = ssm->CheckPropertyAccess(cx, obj, JS_GET_CLASS(cx, obj)->name,
+                                         id, accessType);
+  return NS_SUCCEEDED(rv);
+}
+
+PR_STATIC_CALLBACK(JSBool)
+nsXBLDocGlobalObject_getProperty(JSContext *cx, JSObject *obj,
+                                 jsval id, jsval *vp)
+{
+  return nsXBLDocGlobalObject::
+    doCheckAccess(cx, obj, id, nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
+}
+
+PR_STATIC_CALLBACK(JSBool)
+nsXBLDocGlobalObject_setProperty(JSContext *cx, JSObject *obj,
+                                 jsval id, jsval *vp)
+{
+  return nsXBLDocGlobalObject::
+    doCheckAccess(cx, obj, id, nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
+}
+
+PR_STATIC_CALLBACK(JSBool)
+nsXBLDocGlobalObject_checkAccess(JSContext *cx, JSObject *obj, jsval id,
+                                 JSAccessMode mode, jsval *vp)
+{
+  PRUint32 translated;
+  if (mode & JSACC_WRITE) {
+    translated = nsIXPCSecurityManager::ACCESS_SET_PROPERTY;
+  } else {
+    translated = nsIXPCSecurityManager::ACCESS_GET_PROPERTY;
+  }
+
+  return nsXBLDocGlobalObject::
+    doCheckAccess(cx, obj, id, translated);
+}
+
+PR_STATIC_CALLBACK(void)
+nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
 {
   nsISupports *nativeThis = (nsISupports*)JS_GetPrivate(cx, obj);
 
@@ -111,8 +173,8 @@ void PR_CALLBACK nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
   NS_RELEASE(nativeThis);
 }
 
-
-JSBool PR_CALLBACK nsXBLDocGlobalObject_resolve(JSContext *cx, JSObject *obj, jsval id)
+PR_STATIC_CALLBACK(JSBool)
+nsXBLDocGlobalObject_resolve(JSContext *cx, JSObject *obj, jsval id)
 {
   JSBool did_resolve = JS_FALSE;
   return JS_ResolveStandardClass(cx, obj, id, &did_resolve);
@@ -122,9 +184,11 @@ JSBool PR_CALLBACK nsXBLDocGlobalObject_resolve(JSContext *cx, JSObject *obj, js
 JSClass nsXBLDocGlobalObject::gSharedGlobalClass = {
     "nsXBLPrototypeScript compilation scope",
     JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS,
-    JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, nsXBLDocGlobalObject_resolve,  JS_ConvertStub,
-    nsXBLDocGlobalObject_finalize
+    JS_PropertyStub,  JS_PropertyStub,
+    nsXBLDocGlobalObject_getProperty, nsXBLDocGlobalObject_setProperty,
+    JS_EnumerateStub, nsXBLDocGlobalObject_resolve,
+    JS_ConvertStub, nsXBLDocGlobalObject_finalize,
+    NULL, nsXBLDocGlobalObject_checkAccess
 };
 
 //----------------------------------------------------------------------
