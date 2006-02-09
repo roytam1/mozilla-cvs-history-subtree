@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=80:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -528,16 +529,13 @@ js_EnterSharpObject(JSContext *cx, JSObject *obj, JSIdArray **idap,
                 JS_ReportOutOfMemory(cx);
                 goto bad;
             }
-            *sp = NULL;
             sharpid = 0;
             goto out;
         }
     }
 
     sharpid = (jsatomid) he->value;
-    if (sharpid == 0) {
-        *sp = NULL;
-    } else {
+    if (sharpid != 0) {
         len = JS_snprintf(buf, sizeof buf, "#%u%c",
                           sharpid >> SHARP_ID_SHIFT,
                           (sharpid & SHARP_BIT) ? '#' : '=');
@@ -953,6 +951,27 @@ obj_valueOf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
+/*
+ * Check whether principals subsumes scopeobj's principals, and return true
+ * if so.
+ */
+static JSBool
+CheckEvalAccess(JSContext *cx, JSObject *scopeobj, JSPrincipals *principals)
+{
+    JSPrincipals *scopePrincipals;
+
+    if (cx->findObjectPrincipals) {
+        scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
+        if (!principals || !scopePrincipals ||
+            !principals->subsume(principals, scopePrincipals)) {
+            JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                 JSMSG_BAD_INDIRECT_CALL, js_eval_str);
+            return JS_FALSE;
+        }
+    }
+    return JS_TRUE;
+}
+
 static JSBool
 obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
@@ -962,7 +981,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSString *str;
     const char *file;
     uintN line;
-    JSPrincipals *principals, *scopePrincipals;
+    JSPrincipals *principals;
     JSScript *script;
     JSBool ok;
 #if JS_HAS_EVAL_THIS_SCOPE
@@ -1008,6 +1027,9 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         if (indirectCall) {
             callerScopeChain = caller->scopeChain;
             if (obj != callerScopeChain) {
+                if (!CheckEvalAccess(cx, obj, caller->script->principals))
+                    return JS_FALSE;
+
                 scopeobj = js_NewObject(cx, &js_WithClass, obj,
                                         callerScopeChain);
                 if (!scopeobj)
@@ -1085,17 +1107,9 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
      * Belt-and-braces: check that the lesser of eval's principals and the
      * caller's principals has access to scopeobj.
      */
-    if (principals && cx->findObjectPrincipals) {
-        scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
-        if (scopePrincipals &&
-            !principals->subsume(principals, scopePrincipals)) {
-            JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                                 JSMSG_BAD_INDIRECT_CALL, js_eval_str);
-            return JS_FALSE;
-        }
-    }
-
-    ok = js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
+    ok = CheckEvalAccess(cx, scopeobj, principals);
+    if (ok)
+        ok = js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
     JS_DestroyScript(cx, script);
 
 out:
