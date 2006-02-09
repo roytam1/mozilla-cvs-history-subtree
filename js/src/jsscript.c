@@ -63,6 +63,8 @@
 
 #if JS_HAS_SCRIPT_OBJECT
 
+static const char js_script_exec[] = "Script.prototype.exec";
+
 #if JS_HAS_TOSOURCE
 static JSBool
 script_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
@@ -294,13 +296,13 @@ script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     /* Belt-and-braces: check that this script object has access to scopeobj. */
     principals = script->principals;
-    if (principals && cx->findObjectPrincipals) {
+    if (cx->findObjectPrincipals) {
         scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
-        if (scopePrincipals &&
+        if (!principals || !scopePrincipals ||
             !principals->subsume(principals, scopePrincipals)) {
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                  JSMSG_BAD_INDIRECT_CALL,
-                                 "Script.prototype.exec");
+                                 js_script_exec);
             return JS_FALSE;
         }
     }
