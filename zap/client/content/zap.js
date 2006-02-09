@@ -43,6 +43,7 @@ Components.utils.importModule("gre:RDFUtils.js");
 Components.utils.importModule("gre:FileUtils.js");
 Components.utils.importModule("gre:StringUtils.js");
 Components.utils.importModule("gre:AsyncUtils.js");
+Components.utils.importModule("gre:ArrayUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
@@ -118,12 +119,14 @@ function windowInit() {
     else
       dump(mes);
   };
-  
+
   wInteractPane = document.getElementById("interactpane");
   wURLField = document.getElementById("url_field");
   wAlertBar = document.getElementById("alertbar");
   
   initConfig();
+  wUIHeartbeat.start(wConfig["urn:mozilla:zap:ui_update_period"]);
+
   initContacts();
   initCalls();
   initSidebar();
@@ -137,6 +140,7 @@ function windowInit() {
 function windowClose() {
   cleanupSipStack();
   wMediaPipeline.cleanup();
+  wUIHeartbeat.stop();
   
   // close error log:
   wErrorLog.close();
@@ -162,6 +166,41 @@ function ensureProfile() {
   wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
   wSidebarDS = wRDF.GetDataSourceBlocking(getProfileFileURL("sidebar.rdf"));
 }
+
+//----------------------------------------------------------------------
+// UI heartbeat:
+
+var wUIHeartbeat = {
+  start : function(period) {
+    if (this.timer) this.stop();
+    var me = this;
+    this.timer = schedulePeriodic(function() {
+                                    me._hooks.forEach(function(h) { h(); });
+                                  },
+                                  period);
+  },
+
+  stop : function() {
+    if (!this.timer) return;
+    this.timer.cancel();
+    delete this.timer;
+  },
+
+  _hooks : [],
+  
+  addHook : function(fct) {
+    arraymerge(this._hooks, [fct]);
+  },
+
+  removeHook : function(fct) {
+    for (var i=0,l=this._hooks.length; i<l; ++i) {
+      if (this._hooks[i] == fct) {
+        this._hooks.splice(i,1);
+        break;
+      }
+    }
+  }
+};
 
 ////////////////////////////////////////////////////////////////////////
 // UI Commands:
@@ -240,6 +279,8 @@ Config.prototype.datasources["default"] = wConfigDS;
 Config.rdfResourceAttrib("urn:mozilla:zap:identity",
                          "urn:mozilla:zap:initial_identity");
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
+
+Config.rdfLiteralAttrib("urn:mozilla:zap:ui_update_period", "1000");
 
 Config.rdfLiteralAttrib("urn:mozilla:zap:ringtone", "zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"); //"nuages_gris:d=4,o=4,b=180:p,d,g,2c#5,d5,a#,g,p,d,g,c#5,c#5,d5,a#,g,1p");
 Config.rdfLiteralAttrib("urn:mozilla:zap:dialtone", "@0+350+440v8");
@@ -1977,20 +2018,18 @@ Call.rdfAttribTrigger(
 Call.rdfAttribTrigger(
   "urn:mozilla:zap:session-running",
   function(prop, val) {
-    var me = this;
     if (val == "true") {
-      this.sessionStart = new Date();
-      this.sessionTimer = schedule(
-        function(reschedule) {
-          var duration_ms = (new Date()) - me.sessionStart;
-          me["urn:mozilla:zap:duration"] = Math.round(duration_ms/1000);
-          reschedule();
-        }, 1000);
+      var me = this;
+      var sessionStart = new Date();
+      this.sessionTimeUpdater = function() {
+        var duration_ms = (new Date()) - sessionStart;
+        me["urn:mozilla:zap:duration"] = Math.round(duration_ms/1000);
+      };
+      wUIHeartbeat.addHook(this.sessionTimeUpdater);
     }
-    else if (this.sessionTimer) {
-      this.sessionTimer.cancel();
-      delete this.sessionTimer;
-      delete this.sessionStart;
+    else if (this.sessionTimeUpdater) {
+      wUIHeartbeat.removeHook(this.sessionTimeUpdater);
+      delete this.sessionTimeUpdater;
     }
   });
 
