@@ -1811,6 +1811,13 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
     m_db->AddListener(this);
     m_folder = folder;
     m_viewFolder = folder;
+
+    PRUint32 seconds;
+    PRTime2Seconds(PR_Now(), &seconds);
+    nsCAutoString nowStr;
+    nowStr.AppendInt(seconds);
+    m_folder->SetStringProperty(MRU_TIME_PROPERTY, nowStr.get());
+
     // determine if we are in a news folder or not.
     // if yes, we'll show lines instead of size, and special icons in the thread pane
     nsCOMPtr <nsIMsgIncomingServer> server;
