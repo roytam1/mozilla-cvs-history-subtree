@@ -599,7 +599,7 @@ js_LeaveSharpObject(JSContext *cx, JSIdArray **idap)
     }
 }
 
-#define OBJ_TOSTRING_EXTRA      3       /* for 3 local GC roots */
+#define OBJ_TOSTRING_EXTRA      4       /* for 4 local GC roots */
 
 #if JS_HAS_INITIALIZERS || JS_HAS_TOSOURCE
 JSBool
@@ -620,7 +620,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     JSProperty *prop;
     uintN attrs;
 #endif
-    jsval val[2];
+    jsval *val;
     JSString *gsop[2];
     JSAtom *atom;
     JSString *idstr, *valstr, *str;
@@ -691,6 +691,13 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
     comma = NULL;
 
+    /*
+     * We have four local roots for cooked and raw value GC safety.  Hoist the
+     * "argv + 2" out of the loop using the val local, which refers to the raw
+     * (unconverted, "uncooked") values.
+     */
+    val = argv + 2;
+
     for (i = 0, length = ida->length; i < length; i++) {
         /* Get strings for id and value and GC-root them via argv. */
         id = ida->vector[i];
@@ -758,7 +765,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             ok = JS_FALSE;
             goto error;
         }
-        argv[0] = STRING_TO_JSVAL(idstr);
+        *rval = STRING_TO_JSVAL(idstr);         /* local root */
 
         /*
          * If id is a string that's a reserved identifier, or else id is not
@@ -773,7 +780,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 ok = JS_FALSE;
                 goto error;
             }
-            argv[0] = STRING_TO_JSVAL(idstr);
+            *rval = STRING_TO_JSVAL(idstr);     /* local root */
         }
         idstrchars = JSSTRING_CHARS(idstr);
         idstrlength = JSSTRING_LENGTH(idstr);
@@ -785,7 +792,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 ok = JS_FALSE;
                 goto error;
             }
-            argv[1+j] = STRING_TO_JSVAL(valstr);
+            argv[j] = STRING_TO_JSVAL(valstr);  /* local root */
             vchars = JSSTRING_CHARS(valstr);
             vlength = JSSTRING_LENGTH(valstr);
 
@@ -2008,6 +2015,7 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
                    JSObject *parent, uintN argc, jsval *argv)
 {
     jsval cval, rval;
+    JSTempValueRooter tvr;
     JSObject *obj, *ctor;
 
     if (!FindConstructor(cx, parent, clasp->name, &cval))
@@ -2016,6 +2024,13 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
         js_ReportIsNotFunction(cx, &cval, JSV2F_CONSTRUCT | JSV2F_SEARCH_STACK);
         return NULL;
     }
+
+    /*
+     * Protect cval in case a crazy getter for .prototype uproots it.  After
+     * this point, all control flow must exit through label out with obj set.
+     */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, cval, &tvr);
+    obj = NULL;
 
     /*
      * If proto or parent are NULL, set them to Constructor.prototype and/or
@@ -2028,7 +2043,7 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
         if (!OBJ_GET_PROPERTY(cx, ctor,
                               (jsid)cx->runtime->atomState.classPrototypeAtom,
                               &rval)) {
-            return NULL;
+            goto out;
         }
         if (JSVAL_IS_OBJECT(rval))
             proto = JSVAL_TO_OBJECT(rval);
@@ -2036,14 +2051,19 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
 
     obj = js_NewObject(cx, clasp, proto, parent);
     if (!obj)
-        return NULL;
+        goto out;
 
-    if (!js_InternalConstruct(cx, obj, cval, argc, argv, &rval))
-        goto bad;
-    return JSVAL_IS_OBJECT(rval) ? JSVAL_TO_OBJECT(rval) : obj;
-bad:
-    cx->newborn[GCX_OBJECT] = NULL;
-    return NULL;
+    if (!js_InternalConstruct(cx, obj, cval, argc, argv, &rval)) {
+        cx->newborn[GCX_OBJECT] = NULL;
+        obj = NULL;
+        goto out;
+    }
+
+    if (!JSVAL_IS_PRIMITIVE(rval))
+        obj = JSVAL_TO_OBJECT(rval);
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return obj;
 }
 
 void
