@@ -1775,8 +1775,14 @@ nsHTMLInputElement::ParseAttribute(nsIAtom* aAttribute,
       return PR_FALSE;
     }
 
-    mType = aResult.GetEnumValue();
-    if (mType == NS_FORM_INPUT_FILE) {
+    // Make sure to do the check for newType being NS_FORM_INPUT_FILE and the
+    // corresponding SetValueInternal() call _before_ we set mType.  That way
+    // the logic in SetValueInternal() will work right (that logic makes
+    // assumptions about our frame based on mType, but we won't have had time
+    // to recreate frames yet -- that happens later in the SetAttr()
+    // process).
+    PRInt8 newType = aResult.GetEnumValue();
+    if (newType == NS_FORM_INPUT_FILE) {      
       // If the type is being changed to file, set the element value
       // to the empty string. This is for security.
       // Call SetValueInternal so that this doesn't accidentally get caught
@@ -1784,6 +1790,8 @@ nsHTMLInputElement::ParseAttribute(nsIAtom* aAttribute,
       SetValueInternal(EmptyString(), nsnull);
     }
 
+    mType = newType;
+    
     return PR_TRUE;
   }
   if (aAttribute == nsHTMLAtoms::width) {
