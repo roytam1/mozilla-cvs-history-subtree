@@ -1887,6 +1887,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 {
     JSAtom *atom;
     JSObject *proto, *ctor;
+    JSTempValueRooter tvr;
     JSBool named;
     JSFunction *fun;
     jsval junk;
@@ -1900,6 +1901,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
     proto = js_NewObject(cx, clasp, parent_proto, obj);
     if (!proto)
         return NULL;
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(proto), &tvr);
 
     if (!constructor) {
         /* Lacking a constructor, name the prototype (e.g., Math). */
@@ -1946,13 +1948,16 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
         (static_fs && !JS_DefineFunctions(cx, ctor, static_fs))) {
         goto bad;
     }
+
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
     return proto;
 
 bad:
     if (named)
         (void) OBJ_DELETE_PROPERTY(cx, obj, (jsid)atom, &junk);
-    cx->newborn[GCX_OBJECT] = NULL;
-    return NULL;
+    proto = NULL;
+    goto out;
 }
 
 #ifdef JS_THREADSAFE

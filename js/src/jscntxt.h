@@ -303,6 +303,58 @@ typedef struct JSResolvingEntry {
 #define JSRESFLAG_LOOKUP        0x1     /* resolving id from lookup */
 #define JSRESFLAG_WATCH         0x2     /* resolving id from watch */
 
+typedef struct JSTempValueRooter JSTempValueRooter;
+
+/*
+ * If count is -1, then u.value contains the single value to root.  Otherwise
+ * u.array points to a stack-allocated vector of jsvals.  Note that the vector
+ * may have length 0 or 1 for full generality, so we need -1 to discriminate
+ * the union.
+ */
+struct JSTempValueRooter {
+    JSTempValueRooter   *down;
+    jsint               count;
+    union {
+        jsval           value;
+        jsval           *array;
+    } u;
+};
+
+#define JS_PUSH_TEMP_ROOT_COMMON(cx,tvr)                                      \
+    JS_BEGIN_MACRO                                                            \
+        JS_ASSERT((cx)->tempValueRooters != (tvr));                           \
+        (tvr)->down = (cx)->tempValueRooters;                                 \
+        (cx)->tempValueRooters = (tvr);                                       \
+    JS_END_MACRO
+
+#define JS_PUSH_SINGLE_TEMP_ROOT(cx,val,tvr)                                  \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = -1;                                                    \
+        (tvr)->u.value = (val);                                               \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT(cx,cnt,arr,tvr)                                     \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = (cnt);                                                 \
+        (tvr)->u.array = (arr);                                               \
+    JS_END_MACRO
+
+#define JS_POP_TEMP_ROOT(cx,tvr)                                              \
+    JS_BEGIN_MACRO                                                            \
+        JS_ASSERT((cx)->tempValueRooters == (tvr));                           \
+        (cx)->tempValueRooters = (tvr)->down;                                 \
+    JS_END_MACRO
+
+#define JS_TEMP_ROOT_EVAL(cx,cnt,val,expr)                                    \
+    JS_BEGIN_MACRO                                                            \
+        JSTempValueRooter tvr;                                                \
+        JS_PUSH_TEMP_ROOT(cx, cnt, val, &tvr);                                \
+        (expr);                                                               \
+        JS_POP_TEMP_ROOT(cx, &tvr);                                           \
+    JS_END_MACRO
+
 struct JSContext {
     JSCList             links;
 
@@ -412,6 +464,9 @@ struct JSContext {
 
     /* Optional hook to find principals for an object being accessed on cx. */
     JSObjectPrincipalsFinder findObjectPrincipals;
+
+    /* Stack of thread-stack-allocated temporary GC roots. */
+    JSTempValueRooter   *tempValueRooters;
 };
 
 /* Slightly more readable macros, also to hide bitset implementation detail. */

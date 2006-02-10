@@ -1020,6 +1020,7 @@ js_GC(JSContext *cx, uintN gcflags)
     JSStackFrame *fp, *chain;
     uintN i, depth, nslots, type;
     JSStackHeader *sh;
+    JSTempValueRooter *tvr;
     JSArena *a, **ap;
     uint8 flags, *flagp, *split;
     JSGCThing *thing, *limit, **flp, **oflp;
@@ -1286,6 +1287,17 @@ restart:
             METER(rt->gcStats.stackseg++);
             METER(rt->gcStats.segslots += sh->nslots);
             GC_MARK_JSVALS(cx, sh->nslots, JS_STACK_SEGMENT(sh), "stack");
+        }
+
+        for (tvr = acx->tempValueRooters; tvr; tvr = tvr->down) {
+            if (tvr->count < 0) {
+                if (JSVAL_IS_GCTHING(tvr->u.value)) {
+                    GC_MARK(cx, JSVAL_TO_GCTHING(tvr->u.value), "tvr->u.value",
+                            NULL);
+                }
+            } else {
+                GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");
+            }
         }
     }
 
