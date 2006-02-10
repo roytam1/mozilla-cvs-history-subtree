@@ -579,6 +579,12 @@ nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
         m_editor->EndOfDocument();
         SetBodyAttributes(bodyAttributes);
       }
+      // when forwarding a message as inline, tag any embedded objects
+      // which refer to local images or files so we know not to include 
+      // send them
+      if (mType == nsIMsgCompType::ForwardInline)
+        (void)TagEmbeddedObjects(mailEditor);
+
       if (!aSignature.IsEmpty())
         htmlEditor->InsertHTML(aSignature);
     }
