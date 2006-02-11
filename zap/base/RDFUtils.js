@@ -218,15 +218,18 @@ PersistentRDFObject.fun(
   });
 
 // Add a triple(subject, predicate, this.resource) in datasource dsid
-// when this object is initialized or created. Unassert in remove()
+// when this object is initialized or created. Unassert in remove().
+// Existing arcs with the same subject and predicate will not be changed.
+// A new arcs will be created alongside them.
 //
-// Provide a workaround for a template builder limitation. The
-// template builder always operates off some notion of containment
-// with a 'container' variable and a 'member' variable. This means
-// that it can't be used to generate content for a resource if there
-// is no container ('ref') for the resources. 'rdfPointerAttrib'
-// ensures that 'subject' is a suitable container. Usually for this
-// usage, 'dsid' would be an ephemeral datasource.
+// Provide (among other things) a workaround for a template builder
+// limitation. The template builder always operates off some notion of
+// containment with a 'container' variable and a 'member'
+// variable. This means that it can't be used to generate content for
+// a resource if there is no container ('ref') for the
+// resources. 'rdfPointerAttrib' ensures that 'subject' is a suitable
+// container. Usually for this usage, 'dsid' would be an ephemeral
+// datasource.
 PersistentRDFObject.metafun(
   function rdfPointerAttrib(_subject, _predicate, _dsid) {
     this.prototype._arcsIn.push({subject: _subject,
@@ -242,10 +245,10 @@ PersistentRDFObject.fun(
       function(a) {
         var subj = gRDF.GetResource(a.subject);
         var pred = gRDF.GetResource(a.predicate);
-        var target = me.datasources[a.dsid].GetTarget(subj, pred, true);
-        if (target)
-          me.datasources[a.dsid].Change(subj, pred, target, me.resource, true);
-        else
+//         var target = me.datasources[a.dsid].GetTarget(subj, pred, true);
+//         if (target)
+//           me.datasources[a.dsid].Change(subj, pred, target, me.resource, true);
+//         else
           me.datasources[a.dsid].Assert(subj, pred, me.resource, true);
         //XXX should we flush here?
       });

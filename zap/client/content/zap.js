@@ -199,6 +199,28 @@ var wUIHeartbeat = {
         break;
       }
     }
+  },
+
+  // counts down a property on obj.
+  // returns a function that stops the countdown when called.
+  countdownProperty : function(obj, prop, seconds) {
+    var me = this;
+    var start = new Date();
+    obj[prop] = seconds;
+    function countdown() {
+      var timeLeft = seconds - Math.round(((new Date()) - start)/1000);
+      if (timeLeft <= 0) {
+        obj[prop] = 0;
+        me.removeHook(countdown);
+      }
+      else {
+        obj[prop] = timeLeft;
+      }
+    }
+    me.addHook(countdown);
+    return function() {
+      me.removeHook(countdown);
+    }
   }
 };
 
@@ -493,7 +515,6 @@ function getIdentityByGridPar(grid) {
   return null;
 }
 
-
 function initIdentities() {
   wPasswordManager = Components.classes["@mozilla.org/passwordmanager;1"].
     createInstance(Components.interfaces.nsIPasswordManager);
@@ -583,6 +604,7 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
 // registration_status: "registered"|"registering"|""
 Identity.rdfLiteralAttrib("urn:mozilla:zap:registration_status",
                           "", "global-ephemeral");
+
 // This is to provide an entrypoint for template recursion. see
 // e.g. calls.xul for usage and comments in
 // RDFUtils.js::rdfPointerAttrib:
@@ -1289,6 +1311,8 @@ Registration.fun(
   function unregister() {
     this.Terminated = true; // this will clear any pending schedules
     
+    this.setForeignRegistrations([]);
+    
     this._unmonitorFlow();
 
     if (this.registrationRC) {
@@ -1336,7 +1360,8 @@ function firstHopChanged(newRoute, oldRoute, currentFlow) {
 // given registration response (which can be null - in which case the
 // preloaded route will be restored).  Returns 'true' if the first hop
 // in the new route is different to the remote end of the flow over
-// which the response was received. See http://www.croczilla.com/zap/codedocs/notes A.
+// which the response was received. See
+// http://www.croczilla.com/zap/codedocs/notes A.
 Registration.fun(
   function _updateRequestRoute(response, flow) {
     var newRoute = null;
@@ -1426,24 +1451,34 @@ Registration.fun(
       return;
     }
     else if (response.statusCode[0] == "2") {
-      // find our registration among the returned contact headers:
+      // find our registration among the returned contact headers and
+      // accumulate foreign registrations at the same time:
       var contacts = response.getHeaders("Contact", {});
       var contactHeader;
       var myURI = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader).address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+      var foreignContacts = [];
       for (var i=0,l=contacts.length; i<l; ++i) {
         var c = contacts[i].QueryInterface(Components.interfaces.zapISipContactHeader);
         try {
           var uri = c.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
-          if (uri.equals(myURI)) {
-            // make sure the grids match:
-            // XXX the second term is only necessary because our uri
-            // comparsion doesn't compare uri parameters yet
-            if (!uri.hasURIParameter("grid") ||
-                uri.getURIParameter("grid") != this.group.identity.grid)
-              continue;
-            // else ... we've found a match
-            contactHeader = c;
-            break;
+          // make sure the uri & grids match:
+          // XXX the third term is only necessary because our uri
+          // comparsion doesn't compare uri parameters yet
+          if (uri.equals(myURI) &&
+              uri.hasURIParameter("grid") &&
+              uri.getURIParameter("grid") == this.group.identity.grid) {
+            if (contactHeader) {
+              // we already found our contact. This must be an error in the
+              // registrar's response
+              this._warning("multiple matching contacts in registrar response");
+            }
+            else
+              contactHeader = c;
+            //break; XXX stay in loop to accumulate foreign registrations
+          }
+          else {
+            // this is a 'foreign registration'. accumulate
+            foreignContacts.push(c);
           }
         }
         catch(e) {
@@ -1490,6 +1525,7 @@ Registration.fun(
             // inform our group:            
             this.group.notifyRegistrationSuccess(this);
           }
+          this.setForeignRegistrations(foreignContacts);
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
           this._maybeMonitorFlow(flow);
@@ -1502,6 +1538,7 @@ Registration.fun(
     this.contactHeader = null;
     this.gruu = null;
     ++this.failureCount;
+    this.setForeignRegistrations([]);
     this._unmonitorFlow();
     // let our registration group handle recovery:
     this.group.notifyRegistrationFailure(this);
@@ -1532,10 +1569,94 @@ Registration.fun(
     // stop monitoring the flow; recover as described in
     // draft-ietf-sip-outbound-01.txt
     this._unmonitorFlow();
+    this.setForeignRegistrations([]);
     this.registered = false;
     // we leave recovery up to our group:
     ++this.failureCount;
     this.group.notifyFlowFailure(this);
+  });
+
+Registration.fun(
+  function setForeignRegistrations(contacts) {
+    var oldRegs = this._foreignRegs;
+    if (!oldRegs) oldRegs = {};
+    this._foreignRegs = {};
+    for (var i=0,l=contacts.length; i<l; ++i) {
+      var regID = contacts[i].address.serialize();
+      if (oldRegs[regID]) {
+        // we've got this foreign reg already. copy over and remove
+        // from oldRegs, so that we don't delete it below:
+        this._foreignRegs[regID] = oldRegs[regID];
+        delete oldRegs[regID];
+      }
+      else {
+        // we haven't got this reg yet. create a new one:
+        this._foreignRegs[regID] = ForeignRegistration.instantiate();
+        this._foreignRegs[regID].createNew(this.group.identity,
+                                           contacts[i]);
+      }
+    }
+    // delete stale registrations:
+    for (var r in oldRegs)
+      oldRegs[r].remove();
+  });
+
+//----------------------------------------------------------------------
+// Foreign registrations:
+
+// all current foreign registrations indexed by resource id:
+var wForeignRegistrations = {};
+
+function getForeignRegistration(resourceID) {
+  return wForeignRegistrations[resourceID];
+}
+
+var ForeignRegistration = makeClass("ForeignRegistration",
+                                    PersistentRDFObject);
+
+ForeignRegistration.prototype.datasources["default"] = wGlobalEphemeralDS;
+ForeignRegistration.addInMemoryDS("ephemeral");
+
+ForeignRegistration.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
+ForeignRegistration.rdfLiteralAttrib("urn:mozilla:zap:nodetype",
+                                     "foreign-registration");
+ForeignRegistration.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
+                                     "chrome://zap/content/foreign-registration.xul");
+ForeignRegistration.rdfLiteralAttrib("urn:mozilla:zap:contact", "");
+ForeignRegistration.rdfLiteralAttrib("urn:mozilla:zap:aor", "");
+
+// This is to provide an entrypoint for template recursion. see
+// e.g. calls.xul for usage and comments in
+// RDFUtils.js::rdfPointerAttrib:
+ForeignRegistration.rdfPointerAttrib("urn:mozilla:zap:root",
+                                     "urn:mozilla:zap:current-foreign-registration",
+                                     "ephemeral");
+
+ForeignRegistration.spec(
+  function createNew(identity, contact) {
+    // clone arcsIn array and add a dynamic instance-specific pointer attrib:
+    this._arcsIn = arrayclone(this._arcsIn);
+    this._arcsIn.push({subject: identity.resource.Value,
+                       predicate: "urn:mozilla:zap:foreign-registration",
+                       dsid:"default"});
+    
+    this._ForeignRegistration_createNew(true);
+    
+    if (contact.address.displayName) {
+      this["http://home.netscape.com/NC-rdf#Name"] = contact.address.displayName;
+    }
+    else
+      this["http://home.netscape.com/NC-rdf#Name"] = contact.address.serialize();
+    
+    this["urn:mozilla:zap:contact"] = contact.serialize();
+    this["urn:mozilla:zap:aor"] = identity["http://home.netscape.com/NC-rdf#Name"];
+    wForeignRegistrations[this.resource.Value] = this;
+  });
+
+ForeignRegistration.spec(
+  function remove() {
+    delete wForeignRegistrations[this.resource.Value];
+    this._ForeignRegistration_remove();
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1630,7 +1751,7 @@ Contact.spec(
 // initialize wSidebarDS and wSidebarTree:
 function initSidebar() {
   // Construct an ephemeral sidebar container. Its content will be
-  // merged with the static sibar content from sidebar.rdf.
+  // merged with the static sidebar content from sidebar.rdf.
   wEphemeralSidebarContainer = wRDFContainerUtils.MakeBag(wGlobalEphemeralDS,
                                                           wRDF.GetResource("urn:mozilla:zap:sidebar"));
 

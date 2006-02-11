@@ -154,6 +154,8 @@
             datasources="rdf:null"
             ref="urn:mozilla:zap:sidebar"
             onselect="sidebarSelectionChange()"
+            containment="urn:mozilla:zap:foreign-registration"
+            coalesceduplicatearcs="false"
             flags="dont-build-content">
         <treecols>
           <treecol id="sidebar_col_name" primary="true" 

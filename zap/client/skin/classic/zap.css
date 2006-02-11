@@ -302,6 +302,10 @@ statusbar {
   list-style-image: url("chrome://zap/skin/account-registering.png");
 }
 
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-foreign-registration) { 
+  list-style-image: url("chrome://zap/skin/account-inactive.png");
+}
+
 #sidebar-tree > treechildren::-moz-tree-image(nodetype-contacts) {
   list-style-image: url("chrome://zap/skin/contacts.png");
 }
