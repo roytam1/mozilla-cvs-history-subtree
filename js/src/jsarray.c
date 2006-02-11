@@ -323,7 +323,6 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
                jsval *rval, JSBool localeString)
 {
     JSBool ok;
-    jsval v;
     jsuint length, index;
     jschar *chars, *ochars;
     size_t nchars, growth, seplen, tmplen;
@@ -398,6 +397,9 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
     sepstr = NULL;
     seplen = JSSTRING_LENGTH(sep);
 
+    /* Use rval to locally root each element value as we loop and convert. */
+#define v (*rval)
+
     v = JSVAL_NULL;
     for (index = 0; index < length; index++) {
         ok = JS_GetElement(cx, obj, index, &v);
@@ -470,6 +472,8 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
             free(chars);
         return ok;
     }
+
+#undef v
 
   make_string:
     if (!chars) {
