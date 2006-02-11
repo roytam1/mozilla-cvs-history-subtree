@@ -521,11 +521,12 @@ nsTableOuterFrame::InvalidateDamage(PRUint8         aCaptionSide,
 /* virtual */ nscoord
 nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord width = aInnerMargin.left + 
-                  ((nsTableFrame *)mInnerTableFrame)->GetMinWidth() + 
-                  aInnerMargin.right;
+  nscoord width = ((nsTableFrame *)mInnerTableFrame)->GetMinWidth() + 
+                  nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                    mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
+                    nsLayoutUtils::MARGIN);
   DISPLAY_MIN_WIDTH(this, width);
-  if (mCaptionFrame) { 
+  if (mCaptionFrame) {
     nscoord capWidth =
       nsLayoutUtils::IntrinsicForContainer(aRenderingContext, mCaptionFrame,
                                            nsLayoutUtils::MIN_WIDTH);
@@ -556,7 +557,9 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   DISPLAY_PREF_WIDTH(this, maxWidth);
 
   maxWidth = ((nsTableFrame *)mInnerTableFrame)->GetPreferredWidth() + 
-               aInnerMargin.left + aInnerMargin.right;
+             nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+               mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
+               nsLayoutUtils::MARGIN);
   if (mCaptionFrame) {
     PRUint8 captionSide = GetCaptionSide();
     switch(captionSide) {
