@@ -333,6 +333,7 @@ pref("browser.chrome.toolbar_tips",         true);
 pref("browser.chrome.toolbar_style",        2);
 
 pref("browser.xul.error_pages.enabled", true);
+pref("mail.attachment.store.version", 0);
 
 // Dialog modality issues
 pref("browser.show_about_as_stupid_modal_window", false);
