@@ -447,14 +447,14 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:route4", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:stun_server", "");
 // type of address resolution to perform for ua address that will be
 // registered ('local'|'stun'|'options'):
-Service.rdfLiteralAttrib("urn:mozilla:zap:ua_contact_address_type", "local");
+Service.rdfLiteralAttrib("urn:mozilla:zap:ua_contact_address_type", "options");
 
 // whether or not we should send OPTIONS requests to keep alive the connection:
-Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "false");
+Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "true");
 Service.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "");
 // whether or not the top (loose) route header should be removed from
 // (non-dialog) requests:
-Service.rdfLiteralAttrib("urn:mozilla:zap:elide_destination_route_header", "false");
+Service.rdfLiteralAttrib("urn:mozilla:zap:elide_destination_route_header", "true");
 
 Service.fun(
   function getStunServer() {
@@ -994,14 +994,7 @@ RegistrationGroup.fun(
 
 RegistrationGroup.fun(
   function init2() {
-    this.domain = this.identity.service["urn:mozilla:zap:domain"];
-    
-    if (!this.domain) {
-      // the service isn't bound to a particular domain (probably
-      // because it is the 'default' service.
-      // -> use the identity's host:
-      this.domain = this.identity.getHost();
-    }
+    this.domain = this.identity.getHost();
   
     if (this.domain == "anonymous.invalid") {
       // don't attempt to register our 'anonymous' identity

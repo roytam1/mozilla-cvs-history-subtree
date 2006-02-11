@@ -211,12 +211,15 @@
             <textbox type="zap-formwidget" id="urn:mozilla:zap:domain"/>
             <info>
               <description>
-                Home domain of the SIP service. It will be used as the request URI 
-                when registering an identity with the service and is typically identical 
-                to the host part of the address-of-record of an identity using this
-                SIP service.<html:br/>
-                Zap also uses this field to choose an appropriate service for identities
-                configured for '(automatic)' service.
+                Home domain of the SIP service or suffix thereof.<html:br/>
+                Zap uses this field to choose an appropriate service for identities
+                configured for '(automatic)' service by matching it against the 
+                host part of the identity's address of record.<html:br/>
+                Example:<html:br/>
+                An identity with address of record "sip:user@foo.bar.com"
+                would match SIP services with domains "foo.bar.com", "bar.com",
+                "ar.com", etc. A full match ("foo.bar.com") is preferred over
+                partial matches.
               </description>
             </info>
           </irow>

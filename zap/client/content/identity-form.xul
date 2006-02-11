@@ -170,6 +170,10 @@
                 the services list (configured from the 'Configuration' form), i.e. the first 
                 service for which the domain matches the host part of the 
                 address-of-record of this identity.
+                <html:br/>
+                Zap will use the host part of the 
+                address-of-record as request URI for REGISTER requests and send 
+                the request over the routes configured in the service profile.
               </description>
             </info>
           </irow>
