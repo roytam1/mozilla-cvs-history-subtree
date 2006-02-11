@@ -532,14 +532,8 @@ nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
                                            nsLayoutUtils::MIN_WIDTH);
     switch(GetCaptionSide()) {
     case NS_SIDE_LEFT:
-      if (capWidth > aInnerMargin.left) {
-        width += capWidth - aInnerMargin.left;
-      }
-      break;
     case NS_SIDE_RIGHT:
-      if (capWidth > aInnerMargin.right) {
-        width += capWidth - aInnerMargin.right;
-      }
+      width += capWidth;
       break;
     default:
       if (capWidth > width) {
