@@ -632,7 +632,8 @@ static PRInt32 gNoiseIndent = 0;
 /* static */ nscoord
 nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
                                      nsIFrame *aFrame,
-                                     IntrinsicWidthType aType)
+                                     IntrinsicWidthType aType,
+                                     IntrinsicWidthPart aPart)
 {
   NS_PRECONDITION(aFrame, "null frame");
   NS_PRECONDITION(aType == MIN_WIDTH || aType == PREF_WIDTH, "bad type");
@@ -644,67 +645,76 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
          aType == MIN_WIDTH ? "min" : "pref");
 #endif
 
-  const nsStylePosition *stylePos = aFrame->GetStylePosition();
-  nscoord min = GetCoord(stylePos->mMinWidth, 0),
-          max = GetCoord(stylePos->mMaxWidth, nscoord_MAX);
+  nscoord result = 0;
 
-  nscoord result;
-  if (min < max) {
-    const nsStyleCoord &styleWidth = stylePos->mWidth;
-    if (styleWidth.GetUnit() == eStyleUnit_Coord) {
-      result = styleWidth.GetCoordValue();
-    // XXX If it's a percent, should we use 0 for min-width?
+  if (aPart & CONTENT) {
+    const nsStylePosition *stylePos = aFrame->GetStylePosition();
+    nscoord min = GetCoord(stylePos->mMinWidth, 0),
+            max = GetCoord(stylePos->mMaxWidth, nscoord_MAX);
+
+    if (min < max) {
+      const nsStyleCoord &styleWidth = stylePos->mWidth;
+      if (styleWidth.GetUnit() == eStyleUnit_Coord) {
+        result = styleWidth.GetCoordValue();
+      // XXX If it's a percent, should we use 0 for min-width?
+      } else {
+#ifdef DEBUG_INTRINSIC_WIDTH
+        ++gNoiseIndent;
+#endif
+        if (aType == MIN_WIDTH)
+          result = aFrame->GetMinWidth(aRenderingContext);
+        else
+          result = aFrame->GetPrefWidth(aRenderingContext);
+#ifdef DEBUG_INTRINSIC_WIDTH
+        --gNoiseIndent;
+        nsFrame::IndentBy(stdout, gNoiseIndent);
+        NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
+        printf(" %s intrinsic width from frame is %d.\n",
+               aType == MIN_WIDTH ? "min" : "pref", result);
+#endif
+      }
+
+      if (result > max)
+        result = max;
+      if (result < min)
+        result = min;
     } else {
-#ifdef DEBUG_INTRINSIC_WIDTH
-      ++gNoiseIndent;
-#endif
-      if (aType == MIN_WIDTH)
-        result = aFrame->GetMinWidth(aRenderingContext);
-      else
-        result = aFrame->GetPrefWidth(aRenderingContext);
-#ifdef DEBUG_INTRINSIC_WIDTH
-      --gNoiseIndent;
-      nsFrame::IndentBy(stdout, gNoiseIndent);
-      NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
-      printf(" %s intrinsic width from frame is %d.\n",
-             aType == MIN_WIDTH ? "min" : "pref", result);
-#endif
-    }
-
-    if (result > max)
-      result = max;
-    if (result < min)
+      // width is determined by 'max-width' and 'min-width'
       result = min;
-  } else {
-    // width is determined by 'max-width' and 'min-width'
-    result = min;
-  }
+    }
 #ifdef DEBUG_INTRINSIC_WIDTH
-  nsFrame::IndentBy(stdout, gNoiseIndent);
-  NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
-  printf(" %s intrinsic width for content box is %d.\n",
-         aType == MIN_WIDTH ? "min" : "pref", result);
+    nsFrame::IndentBy(stdout, gNoiseIndent);
+    NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
+    printf(" %s intrinsic width for content box is %d.\n",
+           aType == MIN_WIDTH ? "min" : "pref", result);
 #endif
+  }
 
   nsStyleCoord tmp;
 
-  const nsStylePadding *stylePadding = aFrame->GetStylePadding();
-  result += GetCoord(stylePadding->mPadding.GetLeft(tmp), 0);
-  result += GetCoord(stylePadding->mPadding.GetRight(tmp), 0);
+  if (aPart & PADDING) {
+    const nsStylePadding *stylePadding = aFrame->GetStylePadding();
+    result += GetCoord(stylePadding->mPadding.GetLeft(tmp), 0);
+    result += GetCoord(stylePadding->mPadding.GetRight(tmp), 0);
+  }
 
-  const nsStyleBorder *styleBorder = aFrame->GetStyleBorder();
-  result += styleBorder->GetBorderWidth(NS_SIDE_LEFT);
-  result += styleBorder->GetBorderWidth(NS_SIDE_RIGHT);
+  if (aPart & BORDER) {
+    const nsStyleBorder *styleBorder = aFrame->GetStyleBorder();
+    result += styleBorder->GetBorderWidth(NS_SIDE_LEFT);
+    result += styleBorder->GetBorderWidth(NS_SIDE_RIGHT);
+  }
 
-  const nsStyleMargin *styleMargin = aFrame->GetStyleMargin();
-  result += GetCoord(styleMargin->mMargin.GetLeft(tmp), 0);
-  result += GetCoord(styleMargin->mMargin.GetRight(tmp), 0);
+  if (aPart & MARGIN) {
+    const nsStyleMargin *styleMargin = aFrame->GetStyleMargin();
+    result += GetCoord(styleMargin->mMargin.GetLeft(tmp), 0);
+    result += GetCoord(styleMargin->mMargin.GetRight(tmp), 0);
+  }
 
 #ifdef DEBUG_INTRINSIC_WIDTH
   nsFrame::IndentBy(stdout, gNoiseIndent);
   NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
-  printf(" %s intrinsic width for container is %d twips.\n",
-         aType == MIN_WIDTH ? "min" : "pref", result);
+  printf(" %s intrinsic width (parts 0x%X) for container is %d twips.\n",
+         aType == MIN_WIDTH ? "min" : "pref", aPart, result);
 #endif
 
   return result;

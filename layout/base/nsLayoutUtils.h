@@ -336,9 +336,14 @@ public:
    * and margin.
    */
   enum IntrinsicWidthType { MIN_WIDTH, PREF_WIDTH };
+  enum IntrinsicWidthPart {
+    CONTENT = (1<<0), PADDING = (1<<1), BORDER = (1<<2), MARGIN = (1<<3),
+    ALL_PARTS = (CONTENT | PADDING | BORDER | MARGIN)
+  };
   static nscoord IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
                                        nsIFrame *aFrame,
-                                       IntrinsicWidthType aType);
+                                       IntrinsicWidthType aType,
+                                       IntrinsicWidthPart aPart = ALL_PARTS);
 };
 
 #endif // nsLayoutUtils_h__
