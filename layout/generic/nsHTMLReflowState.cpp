@@ -1626,13 +1626,6 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
     nsStyleUnit heightUnit = mStylePosition->mHeight.GetUnit();
 
-    // Check for a percentage based width and an unconstrained containing
-    // block width
-    if (eStyleUnit_Percent == widthUnit) {
-      if (NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) {
-        widthUnit = eStyleUnit_Auto;
-      }
-    }
     // Check for a percentage based height and a containing block height
     // that depends on the content height
     if (eStyleUnit_Percent == heightUnit) {
@@ -1822,6 +1815,12 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
   }
 }
 
+inline PRBool IsSideCaption(nsIFrame* aCaptionFrame)
+{
+  PRUint8 captionSide = aCaptionFrame->GetStyleTableBorder()->mCaptionSide;
+  return captionSide == NS_SIDE_LEFT || captionSide == NS_SIDE_RIGHT;
+}
+
 // Compute the box data for block and block-replaced elements in the
 // normal flow.
 void
@@ -1847,8 +1846,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       nsIAtom* fType = frame->GetType();
       if (nsLayoutAtoms::tableOuterFrame == fType) {
         mComputedWidth = 0; // XXX temp fix for trees
-      } else if ((nsLayoutAtoms::tableFrame == fType) ||
-                 (nsLayoutAtoms::tableCaptionFrame == fType)) {
+      } else if (nsLayoutAtoms::tableFrame == fType) {
         // The width is shrink-to-fit
         // XXX We need to subtract border and padding from available width.
         nscoord prefWidth = frame->GetPrefWidth(rendContext);
@@ -1858,8 +1856,9 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
           nscoord minWidth = frame->GetMinWidth(rendContext);
           mComputedWidth = PR_MAX(minWidth, availableWidth);
         }
-        // XXX This is probably quite wrong for captions and for tables
-        // with captions.  We need to do more of this on the outer frame.
+      } else if (nsLayoutAtoms::tableCaptionFrame == fType &&
+                 IsSideCaption(frame)) {
+        mComputedWidth = frame->GetMinWidth(rendContext);
       } else {
         mComputedWidth = availableWidth - mComputedMargin.left -
           mComputedMargin.right - mComputedBorderPadding.left -

@@ -187,13 +187,7 @@ public:
   /** @see nsITableFrame::GetTableSize */
   NS_IMETHOD GetTableSize(PRInt32& aRowCount, PRInt32& aColCount);
 
-  static void ZeroAutoMargin(nsHTMLReflowState& aReflowState,
-                             nsMargin&          aMargin);
-
   PRBool IsNested(const nsHTMLReflowState& aReflowState) const;
-
-  static PRBool IsAutoWidth(nsIFrame& aTableOrCaption,
-                            PRBool*   aIsPctWidth = nsnull);
 
 protected:
 
@@ -242,11 +236,6 @@ protected:
                       nscoord&        aWidth,
                       nscoord&        aHeight);
 
-  void PctAdjustMinCaptionWidth(nsPresContext*           aPresContext,
-                                const nsHTMLReflowState&  aOuterRS,
-                                PRUint8                   aCaptionSide,
-                                nscoord&                  capMin);
-
   void BalanceLeftRightCaption(PRUint8         aCaptionSide,
                                const nsMargin& aInnerMargin, 
                                const nsMargin& aCaptionMargin,
@@ -270,23 +259,6 @@ protected:
                             const nsSize&    aInnerSize,
                             nsMargin&        aInnerMargin,
                             nsPoint&         aOrigin);
-  // Get the available width for the caption, aInnerMarginNoAuto is aInnerMargin, but with 
-  // auto margins set to 0
-  nscoord GetCaptionAvailWidth(nsPresContext*          aPresContext,
-                               nsIFrame*                aCaptionFrame,
-                               const nsHTMLReflowState& aReflowState,
-                               nsMargin&                aCaptionMargin,
-                               nsMargin&                aCaptionPad,
-                               nscoord*                 aInnerWidth        = nsnull,
-                               const nsMargin*          aInnerMarginNoAuto = nsnull,
-                               const nsMargin*          aInnerMargin       = nsnull);
-
-  nscoord GetInnerTableAvailWidth(nsPresContext*          aPresContext,
-                                  nsIFrame*                aInnerTable,
-                                  const nsHTMLReflowState& aOuterRS,
-                                  nscoord*                 aCaptionWidth,
-                                  nsMargin&                aInnerMargin,
-                                  nsMargin&                aInnerPadding);
   
   // reflow the child (caption or innertable frame),aMarginNoAuto is aMargin, 
   // but with auto margins set to 0 
@@ -319,16 +291,6 @@ protected:
                         PRBool          aCaptionChanged,
                         nsRect*         aOldOverflowArea);
   
-  // Get the margin and padding, aMarginNoAuto is aMargin, but with auto 
-  // margins set to 0
-  void GetMarginPadding(nsPresContext*          aPresContext,                     
-                        const nsHTMLReflowState& aOuterRS,
-                        nsIFrame*                aChildFrame,
-                        nscoord                  aAvailableWidth,
-                        nsMargin&                aMargin,
-                        nsMargin&                aMarginNoAuto,
-                        nsMargin&                aPadding);
-
 private:
   // used to keep track of this frame's children. They are redundant with mFrames, but more convient
   nsTableFrame* mInnerTableFrame; 
