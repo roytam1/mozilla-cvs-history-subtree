@@ -359,7 +359,6 @@ public:
   nsresult ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                        const nsHTMLReflowState& aReflowState,
                        nscoord                  aAvailHeight,
-                       nsReflowReason           aReason,
                        nsIFrame*&               aLastChildReflowed,
                        PRBool&                  aDidBalance,
                        nsReflowStatus&          aStatus);

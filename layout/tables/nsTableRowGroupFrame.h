@@ -55,8 +55,6 @@ struct nsRowGroupReflowState {
 
   nsTableFrame* tableFrame;
 
-  nsReflowReason reason;
-
   // The available size (computed from the parent)
   nsSize availSize;
 
@@ -69,7 +67,6 @@ struct nsRowGroupReflowState {
   {
     availSize.width  = reflowState.availableWidth;
     availSize.height = reflowState.availableHeight;
-    reason = reflowState.reason;
     y = 0;  
   }
 
