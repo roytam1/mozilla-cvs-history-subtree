@@ -585,20 +585,26 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 {
     jsuint len, half, i;
     jsid id, id2;
-    jsval v, v2;
+    jsval *tmproot, *tmproot2;
 
     if (!js_GetLengthProperty(cx, obj, &len))
         return JS_FALSE;
 
+    /*
+     * Use argv[argc] and argv[argc + 1] as local roots to hold temporarily
+     * array elements for GC-safe swap.
+     */
+    tmproot = argv + argc;
+    tmproot2 = argv + argc + 1;
     half = len / 2;
     for (i = 0; i < half; i++) {
         if (!IndexToId(cx, i, &id))
             return JS_FALSE;
         if (!IndexToId(cx, len - i - 1, &id2))
             return JS_FALSE;
-        if (!OBJ_GET_PROPERTY(cx, obj, id, &v))
+        if (!OBJ_GET_PROPERTY(cx, obj, id, tmproot))
             return JS_FALSE;
-        if (!OBJ_GET_PROPERTY(cx, obj, id2, &v2))
+        if (!OBJ_GET_PROPERTY(cx, obj, id2, tmproot2))
             return JS_FALSE;
 
 #if JS_HAS_SPARSE_ARRAYS
@@ -613,9 +619,9 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         OBJ_DROP_PROPERTY(cx, obj2, prop);
 #endif
 
-        if (!OBJ_SET_PROPERTY(cx, obj, id, &v2))
+        if (!OBJ_SET_PROPERTY(cx, obj, id, tmproot2))
             return JS_FALSE;
-        if (!OBJ_SET_PROPERTY(cx, obj, id2, &v))
+        if (!OBJ_SET_PROPERTY(cx, obj, id2, tmproot))
             return JS_FALSE;
     }
 
@@ -1289,9 +1295,11 @@ array_slice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsid id, id2;
     jsval v;
 
+    /* Create a new Array object and store it in the rval local root. */
     nobj = js_NewArrayObject(cx, 0, NULL);
     if (!nobj)
         return JS_FALSE;
+    *rval = OBJECT_TO_JSVAL(nobj);
 
     if (!js_GetLengthProperty(cx, obj, &length))
         return JS_FALSE;
@@ -1336,7 +1344,6 @@ array_slice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         if (!OBJ_SET_PROPERTY(cx, nobj, id2, &v))
             return JS_FALSE;
     }
-    *rval = OBJECT_TO_JSVAL(nobj);
     return JS_TRUE;
 }
 #endif /* JS_HAS_SEQUENCE_OPS */
@@ -1351,7 +1358,7 @@ static JSFunctionSpec array_methods[] = {
     /* Perl-ish methods. */
 #if JS_HAS_SOME_PERL_FUN
     {"join",                array_join,             1,0,0},
-    {"reverse",             array_reverse,          0,0,0},
+    {"reverse",             array_reverse,          0,0,2},
     {"sort",                array_sort,             1,0,0},
 #endif
 #if JS_HAS_MORE_PERL_FUN
