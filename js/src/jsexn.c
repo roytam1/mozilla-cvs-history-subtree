@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=80:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -627,6 +628,7 @@ exn_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (!OBJ_GET_PROPERTY(cx, obj, (jsid)cx->runtime->atomState.nameAtom, &v))
         return JS_FALSE;
     name = JSVAL_IS_STRING(v) ? JSVAL_TO_STRING(v) : cx->runtime->emptyString;
+    *rval = STRING_TO_JSVAL(name);
 
     if (!JS_GetProperty(cx, obj, js_message_str, &v))
         return JS_FALSE;
@@ -681,16 +683,19 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     name = js_ValueToString(cx, v);
     if (!name)
         return JS_FALSE;
+    *rval = STRING_TO_JSVAL(name);
 
     if (!JS_GetProperty(cx, obj, js_message_str, &v) ||
         !(message = js_ValueToSource(cx, v))) {
         return JS_FALSE;
     }
+    argv[argc] = STRING_TO_JSVAL(message);
 
     if (!JS_GetProperty(cx, obj, js_filename_str, &v) ||
         !(filename = js_ValueToSource(cx, v))) {
         return JS_FALSE;
     }
+    argv[argc + 1] = STRING_TO_JSVAL(filename);
 
     if (!JS_GetProperty(cx, obj, js_lineno_str, &v) ||
         !js_ValueToInt32 (cx, v, &lineno)) {
@@ -778,7 +783,7 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
 static JSFunctionSpec exception_methods[] = {
 #if JS_HAS_TOSOURCE
-    {js_toSource_str,   exn_toSource,           0,0,0},
+    {js_toSource_str,   exn_toSource,           0,0,2},
 #endif
     {js_toString_str,   exn_toString,           0,0,0},
     {0,0,0,0,0}
