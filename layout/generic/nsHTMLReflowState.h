@@ -193,6 +193,8 @@ struct nsHTMLReflowState {
   nsMargin         mComputedOffsets;
 
   // Computed values for 'min-width/max-width' and 'min-height/max-height'
+  // XXXldb The width ones here should go; they should be needed only
+  // internally.
   nscoord          mComputedMinWidth, mComputedMaxWidth;
   nscoord          mComputedMinHeight, mComputedMaxHeight;
 
