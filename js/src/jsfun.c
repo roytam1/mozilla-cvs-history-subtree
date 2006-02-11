@@ -1703,6 +1703,14 @@ Function(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         principals = NULL;
     }
 
+    /*
+     * Belt-and-braces: be absolutely certain that the caller should be able to
+     * access the parent of this function to avoid returning a function with
+     * stronger principals than the caller should be receiving.
+     */
+    if (!js_CheckPrincipalsAccess(cx, parent, principals, js_Function_str))
+        return JS_FALSE;
+
     n = argc ? argc - 1 : 0;
     if (n > 0) {
         /*

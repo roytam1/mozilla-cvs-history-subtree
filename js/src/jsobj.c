@@ -962,8 +962,9 @@ obj_valueOf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
  * Check whether principals subsumes scopeobj's principals, and return true
  * if so.
  */
-static JSBool
-CheckEvalAccess(JSContext *cx, JSObject *scopeobj, JSPrincipals *principals)
+JSBool
+js_CheckPrincipalsAccess(JSContext *cx, JSObject *scopeobj,
+                         JSPrincipals *principals, const char *caller)
 {
     JSPrincipals *scopePrincipals;
 
@@ -972,7 +973,7 @@ CheckEvalAccess(JSContext *cx, JSObject *scopeobj, JSPrincipals *principals)
         if (!principals || !scopePrincipals ||
             !principals->subsume(principals, scopePrincipals)) {
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                                 JSMSG_BAD_INDIRECT_CALL, js_eval_str);
+                                 JSMSG_BAD_INDIRECT_CALL, caller);
             return JS_FALSE;
         }
     }
@@ -1034,8 +1035,11 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         if (indirectCall) {
             callerScopeChain = caller->scopeChain;
             if (obj != callerScopeChain) {
-                if (!CheckEvalAccess(cx, obj, caller->script->principals))
+                if (!js_CheckPrincipalsAccess(cx, obj,
+                                              caller->script->principals,
+                                              js_eval_str)) {
                     return JS_FALSE;
+                }
 
                 scopeobj = js_NewObject(cx, &js_WithClass, obj,
                                         callerScopeChain);
@@ -1114,7 +1118,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
      * Belt-and-braces: check that the lesser of eval's principals and the
      * caller's principals has access to scopeobj.
      */
-    ok = CheckEvalAccess(cx, scopeobj, principals);
+    ok = js_CheckPrincipalsAccess(cx, scopeobj, principals, js_eval_str);
     if (ok)
         ok = js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
     JS_DestroyScript(cx, script);
