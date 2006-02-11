@@ -881,14 +881,28 @@ Identity.fun(
     // walk through known Services:
     var services = wServicesContainer.GetElements();
     var resourceDomain = wRDF.GetResource("urn:mozilla:zap:domain");
-    var resourceTheDomain = wRDF.GetLiteral(this.getHost());
+    var host = this.getHost();
+    var partialMatch = null;
     while (services.hasMoreElements()) {
       var service = services.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-      if (wConfigDS.HasAssertion(service,
-                                 resourceDomain,
-                                 resourceTheDomain, true)) {
+      var serviceHost = wConfigDS.GetTarget(service,
+                                            resourceDomain,
+                                            true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+      if (serviceHost == host)
         return service.Value;
-      }
+      if (!partialMatch) {
+        // look for partial suffix match:
+        var index;
+        if ((index = host.lastIndexOf(serviceHost)) != -1) {
+          if (index + serviceHost.length == host.length) {
+            // an end match
+            partialMatch = service;
+          }
+        }
+      }        
+    }
+    if (partialMatch) {
+      return service.Value;
     }
     // nope, we don't know the service; use the default service:
     return "urn:mozilla:zap:default_service";
