@@ -4384,7 +4384,6 @@ xulrunner)
   MOZ_JAVAXPCOM=1
   MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs"
   AC_DEFINE(MOZ_XULRUNNER)
-  AC_DEFINE(MOZ_ZAP)
   ;;
 
 macbrowser) 
@@ -4403,11 +4402,13 @@ zap)
   MOZ_APP_DISPLAYNAME=Mozilla
   MOZ_ZAP=1
   MOZ_XUL_APP=1
+  MOZ_UPDATER=1
   MOZ_XULRUNNER=1
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" xml-rpc xmlextras pref universalchardet webservices gnomevfs auth jssh"
+  MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs jssh"
   AC_DEFINE(MOZ_XULRUNNER)
+  AC_DEFINE(MOZ_ZAP)
   ;;
 
 content/xslt)
