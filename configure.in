@@ -395,7 +395,7 @@ case "$target" in
         fi
 
         if test -n "$WIN32_REDIST_DIR"; then
-            WIN32_REDIST_DIR=`cd "$WIN32_REDIST_DIR" && pwd | sed 's, ,\\ ,g'`
+            WIN32_REDIST_DIR=`cd "$WIN32_REDIST_DIR" && pwd`
         fi
 	
         # bug #249782
@@ -5744,18 +5744,6 @@ else
 fi
 
 dnl ========================================================
-dnl Crash on assert
-dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(crash-on-assert,
-[  --enable-crash-on-assert
-                          Make NS_ASSERTION crash on Unix],
-    _CRASH_ON_ASSERT=1,
-    _CRASH_ON_ASSERT= )
-if test "$_CRASH_ON_ASSERT"; then
-    AC_DEFINE(UNIX_CRASH_ON_ASSERT)
-fi
-
-dnl ========================================================
 dnl = Enable function reordering. Off by default
 dnl ========================================================
 MOZ_ARG_ENABLE_BOOL(reorder,
@@ -7215,7 +7203,6 @@ AC_SUBST(MOZ_TOOLS_DIR)
 AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(AS_PERL)
 AC_SUBST(WIN32_REDIST_DIR)
-AC_SUBST(WIN32_REDIST_DIR_QUOTED)
 
 dnl Echo the CFLAGS to remove extra whitespace.
 CFLAGS=`echo \
