@@ -47,6 +47,10 @@ $lib_ldap = $ENV{"LDAPSDKLIBDIR"}; # Full Path to C SDK Library directory
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
 $ldapsdk_pr = $ENV{"LDAPPR"};      # Y to include prldap_ functions
 $nspr_loc = $ENV{"NSPRDIR"};       # Full Path to NSPR Top-Level
+$include_nspr = $ENV{"NSPRINCDIR"};       # Full Path to NSPR include dir
+$lib_nspr = $ENV{"NSPRLIBDIR"};       # Full Path to NSPR lib dir
+$nss_loc = $ENV{"NSSDIR"};       # Full Path to NSS Top-Level
+$lib_nss = $ENV{"NSSLIBDIR"};       # Full Path to NSS lib dir
 
 $libexts = "so|sl|a|lib|dll|dylib";
 $default_root = "${dir_sep}usr";
@@ -72,9 +76,11 @@ if ( !$lib_ldap && -d '../../dist/lib' ) {
 }
 
 # find the path to NSPR
-if (!$nspr_loc && -d '../../dist') {
+if (!$nspr_loc && !$include_nspr && !$lib_nspr && -d '../../dist') {
 	require File::Find;
 	$nspr_loc = findNSPR('../../dist');
+    $include_nspr = $nspr_loc . "/include";
+    $lib_nspr = $nspr_loc . "/lib";
 }
 
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
@@ -144,7 +150,7 @@ if ( -f "$include_ldap${dir_sep}nspr.h" ) {
 
 print "Directory containing NSPR API 'include' and 'lib'\n";
 print "directories for NSPR support (type 'n' or 'none' to omit) (default: $nspr_loc): ";
-if (!$ENV{NSPRDIR}) {
+if (!$ENV{NSPRDIR} && !$ENV{NSPRINCDIR} && !$ENV{NSPRLIBDIR}) {
    $silent = 0;
    chomp ($input = <STDIN>);
    if ($input =~ /^n/i) {
@@ -157,8 +163,12 @@ if (!$ENV{NSPRDIR}) {
 }
 
 if ($nspr_loc) {
-   $lib_nspr = $nspr_loc . ${dir_sep} . 'lib';
-   $include_nspr = $nspr_loc . ${dir_sep} . 'include';
+   if (!$lib_nspr) {
+      $lib_nspr = $nspr_loc . ${dir_sep} . 'lib';
+   }
+   if (!$include_nspr) {
+      $include_nspr = $nspr_loc . ${dir_sep} . 'include';
+   }
    croak("Missing required include file $include_nspr${dir_sep}nspr.h") unless -f "$include_nspr${dir_sep}nspr.h";
    $pr_def = "-DPRLDAP"
 }
@@ -166,15 +176,21 @@ if ($nspr_loc) {
 opendir(DIR,$lib_ldap);
 if ($ssl_def)
 {
-   @libfiles = grep{/ldap|lber|ssl|nss|pl[cd]|nspr/} readdir(DIR);
+   @libfiles = grep{/ldap|ssl\d|nss\d|pl[cd]|nspr/} readdir(DIR);
 } else {
-   @libfiles = grep{/ldap|lber/} readdir(DIR);
+   @libfiles = grep{/ldap/} readdir(DIR);
 }
 closedir(DIR);
 
 if ($lib_nspr && -d $lib_nspr) {
 opendir(DIR,$lib_nspr);
-push @libfiles, grep{/pl[cd]|nspr/} readdir(DIR);
+push @libfiles, grep{/pl[cd]|nspr|ssl|nss/} readdir(DIR);
+closedir(DIR);
+}
+
+if ($lib_nss && -d $lib_nss) {
+opendir(DIR,$lib_nss);
+push @libfiles, grep{/ssl\d|nss\d/} readdir(DIR);
 closedir(DIR);
 }
 
@@ -192,13 +208,13 @@ if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
    @lberlib = grep{/^(ns)?lber.*$/} @libs;
 
    @ldapslib = grep{/^(ssldap|nsldapssl).*$/} @libs if $ssl_def;
-   @ssllib = grep{/^ssl[0-9].*$/} @libs if $ssl_def;
-   @nsslib = grep{/^nss[0-9].*$/} @libs if $ssl_def;
-   @plclib = grep{/^plc[0-9].*$/} @libs if $ssl_def;
-   @pldslib = grep{/^plds[0-9].*$/} @libs if $ssl_def;
+   @ssllib = grep{/^ssl\d.*$/} @libs if $ssl_def;
+   @nsslib = grep{/^nss\d.*$/} @libs if $ssl_def;
+   @plclib = grep{/^plc\d.*$/} @libs if $ssl_def;
+   @pldslib = grep{/^plds\d.*$/} @libs if $ssl_def;
 }
 
-@nsprlib = grep{/^nspr[0-9].*$/} @libs;
+@nsprlib = grep{/^nspr\d.*$/} @libs;
 
 if ($#ldaplib < 0)
 {
@@ -214,29 +230,28 @@ if ($#ldaplib > 0)
    }
 }
 
+# construct linker libraries string
+$lline = "";
+
+# add libraries in order of dependencies
+$lline .= " -l$ldapslib[0]" if ($#ldapslib >= 0);
+
 #
 # Add "main" LDAP library to link line, and the NSPR version
 # as well (if available).
 #
-$lline = "-l$ldaplib[0]";
 $lline .= " -l$prldaplib[0]" if ($#prldaplib >= 0);
-
-#
-# I think this is obsolete, and will never trigger, but I'll keep it.
-#
-if ($#lberlib >= 0 && $lline =~ /ldap$/)
-{
-   $lline .= " -l$lberlib[0]";
-}
+$lline .= " -l$ldaplib[0]";
 
 #
 # Add SSL libraries, if needed
 #
-$lline .= " -l$ldapslib[0]" if ($#ldapslib >= 0);
+$lline .= " -L$lib_nss" if ($lib_nss);
 $lline .= " -l$ssllib[0]" if ($#ssllib >= 0);
+$lline .= " -l$nsslib[0]" if ($#nsslib >= 0);
 
 # Add the NSS/NSPR libraries, if needed
-$lline .= " -l$nsslib[0]" if ($#nsslib >= 0);
+$lline .= " -L$lib_nspr" if ($lib_nspr);
 $lline .= " -l$plclib[0]" if ($#plclib >= 0);
 $lline .= " -l$pldslib[0]" if ($#pldslib >= 0);
 $lline .= " -l$nsprlib[0]" if ($#nsprlib >= 0);
