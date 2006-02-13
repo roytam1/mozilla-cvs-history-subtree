@@ -274,6 +274,17 @@ pref("capability.policy.default.Window.self.get", "allAccess");
 pref("capability.policy.default.Window.top.get", "allAccess");
 pref("capability.policy.default.Window.window.get", "allAccess");
 
+pref("capability.policy.default.XULControllers.commandDispatcher", "noAccess");
+pref("capability.policy.default.XULControllers.getControllerForCommand", "noAccess");
+pref("capability.policy.default.XULControllers.insertControllerAt", "noAccess");
+pref("capability.policy.default.XULControllers.removeControllerAt", "noAccess");
+pref("capability.policy.default.XULControllers.getControllerAt", "noAccess");
+pref("capability.policy.default.XULControllers.appendController", "noAccess");
+pref("capability.policy.default.XULControllers.removeController", "noAccess");
+pref("capability.policy.default.XULControllers.getControllerId", "noAccess");
+pref("capability.policy.default.XULControllers.getControllerById", "noAccess");
+pref("capability.policy.default.XULControllers.getControllerCount", "noAccess");
+
 // Restrictions on the DOM for mail/news - see bugs 66938 and 84545
 pref("capability.policy.mailnews.sites", "mailbox: imap: news:");
 
