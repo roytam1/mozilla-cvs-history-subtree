@@ -78,7 +78,7 @@ class nsPyDOMObjectLeakStats
           }
           if (!leaked)
             printf(" => no leaks.\n");
-#ifdef NS_DEBUG // _Py_RefTotal only available in debug builds.
+#ifdef Py_DEBUG // _Py_RefTotal only available in debug builds.
           printf(" %d Python references remain\n", _Py_RefTotal);
 #endif
         }
