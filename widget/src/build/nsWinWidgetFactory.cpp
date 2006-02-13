@@ -66,9 +66,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(ChildWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboard)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboardHelper)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsFilePicker)
 
 #ifndef WINCE
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsFilePicker)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboardImage)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
@@ -100,11 +100,11 @@ static const nsModuleComponentInfo components[] =
     NS_CLIPBOARDHELPER_CID,
     "@mozilla.org/widget/clipboardhelper;1",
     nsClipboardHelperConstructor },
-#ifndef WINCE
   { "File Picker",
     NS_FILEPICKER_CID,
     "@mozilla.org/filepicker;1",
     nsFilePickerConstructor },
+#ifndef WINCE
   { "Sound",
     NS_SOUND_CID,
     //    "@mozilla.org/widget/sound/win;1"
