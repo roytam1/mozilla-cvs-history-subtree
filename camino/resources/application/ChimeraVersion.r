@@ -58,7 +58,7 @@
 
 // Version Strings (Finder's Get Info dialog box) //
 
-#define     VERSION_STRING          "1.0"
+#define     VERSION_STRING          "1.0.0+"
 
 #define     COPYRIGHT_STRING        "© 1998-2006 Contributors"
 #define     GETINFO_VERSION         VERSION_STRING ", " COPYRIGHT_STRING
