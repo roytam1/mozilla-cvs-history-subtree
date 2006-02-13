@@ -562,6 +562,17 @@ zapSpeexAudioProcessor::Reset()
   speex_echo_state_reset(mEchoState);
   speex_preprocess_state_destroy(mPreprocessState);
   mPreprocessState = speex_preprocess_state_init(160, 8000);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_DENOISE, &mDenoise);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_AGC, &mAGC);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_AGC_LEVEL,
+                       &mAGCLevel);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_VAD, &mVAD);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_DEREVERB,
+                       &mDereverb);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_DEREVERB_LEVEL,
+                       &mDereverbLevel);
+  speex_preprocess_ctl(mPreprocessState, SPEEX_PREPROCESS_SET_DEREVERB_DECAY,
+                       &mDereverbDecay);
 
   return NS_OK;
 }
