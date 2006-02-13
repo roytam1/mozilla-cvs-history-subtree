@@ -44,6 +44,11 @@
 #include "nsAlertsService.h"
 #endif
 
+#ifdef MOZ_XPINSTALL
+#include "nsDownloadManager.h"
+#include "nsDownloadProxy.h"
+#endif
+
 #ifndef MOZ_THUNDERBIRD
 #include "nsDocShellCID.h"
 #include "nsAutoCompleteController.h"
@@ -51,10 +56,6 @@
 #include "nsAutoCompleteMdbResult.h"
 #endif
 #include "nsAutoCompleteSimpleResult.h"
-#ifdef MOZ_XPINSTALL
-#include "nsDownloadManager.h"
-#include "nsDownloadProxy.h"
-#endif
 #include "nsFormFillController.h"
 #ifdef MOZ_STORAGE
 #include "nsStorageFormHistory.h"
@@ -78,6 +79,11 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsUserInfo)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAlertsService)
 #endif
 
+#ifdef MOZ_XPINSTALL
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init) 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
+#endif
+
 #ifndef MOZ_THUNDERBIRD
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
 #ifdef MOZ_MORK
@@ -95,10 +101,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsGlobalHistory, Init)
 #endif
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsPasswordManager, nsPasswordManager::GetInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSingleSignonPrompt)
-#ifdef MOZ_XPINSTALL
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init) 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
-#endif
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
@@ -130,6 +132,16 @@ static const nsModuleComponentInfo components[] =
     NS_ALERTSERVICE_CONTRACTID,
     nsAlertsServiceConstructor },
 #endif
+#ifdef MOZ_XPINSTALL
+  { "Download Manager",
+    NS_DOWNLOADMANAGER_CID,
+    NS_DOWNLOADMANAGER_CONTRACTID,
+    nsDownloadManagerConstructor },
+  { "Download",
+    NS_DOWNLOAD_CID,
+    NS_TRANSFER_CONTRACTID,
+    nsDownloadProxyConstructor },
+#endif
 #ifndef MOZ_THUNDERBIRD
   { "AutoComplete Controller",
     NS_AUTOCOMPLETECONTROLLER_CID, 
@@ -148,17 +160,6 @@ static const nsModuleComponentInfo components[] =
     nsAutoCompleteMdbResultConstructor },
 #endif
   
-#ifdef MOZ_XPINSTALL
-  { "Download Manager",
-    NS_DOWNLOADMANAGER_CID,
-    NS_DOWNLOADMANAGER_CONTRACTID,
-    nsDownloadManagerConstructor },
-  { "Download",
-    NS_DOWNLOAD_CID,
-    NS_TRANSFER_CONTRACTID,
-    nsDownloadProxyConstructor },
-#endif
-
   { "HTML Form History",
     NS_FORMHISTORY_CID, 
     NS_FORMHISTORY_CONTRACTID,
