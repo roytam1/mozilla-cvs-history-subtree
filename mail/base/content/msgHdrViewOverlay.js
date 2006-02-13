@@ -121,12 +121,12 @@ var gMessageListeners = new Array;
 // Our first view is the collapsed view. This is very light weight view of the data. We only show a couple
 // fields.
 var gCollapsedHeaderList = [ {name:"subject", outputFunction:updateHeaderValueInTextNode},
-                             {name:"from", useToggle:true, useShortView:true, outputFunction:OutputEmailAddresses},
+                             {name:"from", useShortView:true, outputFunction:OutputEmailAddresses},
                              {name:"date", outputFunction:updateHeaderValueInTextNode}];
 
 // We also have an expanded header view. This shows many of your more common (and useful) headers.
 var gExpandedHeaderList = [ {name:"subject"}, 
-                            {name:"from", useToggle:true, outputFunction:OutputEmailAddresses},
+                            {name:"from", outputFunction:OutputEmailAddresses},
                             {name:"sender", outputFunction:OutputEmailAddresses},
                             {name:"reply-to", outputFunction:OutputEmailAddresses},
                             {name:"date"},
@@ -167,20 +167,10 @@ var currentAttachments = new Array();
 // headerListInfo --> entry from a header list.
 function createHeaderEntry(prefix, headerListInfo)
 {
-  var useShortView = false;
   var partialIDName = prefix + headerListInfo.name;
   this.enclosingBox = document.getElementById(partialIDName + 'Box');
   this.textNode = document.getElementById(partialIDName + 'Value');
   this.isValid = false;
-
-  if ("useShortView" in headerListInfo)
-  {
-    useShortView = headerListInfo.useShortView;
-    if (useShortView)
-      this.enclosingBox = this.textNode;
-    else
-      this.enclosingBox.emailAddressNode = this.textNode;
-  }
 
   if ("useToggle" in headerListInfo)
   {
@@ -195,8 +185,13 @@ function createHeaderEntry(prefix, headerListInfo)
   else
    this.useToggle = false;
 
-  if (this.textNode)
-    this.textNode.useShortView = useShortView;
+  if ("useShortView" in headerListInfo)
+  {
+    this.useShortView = headerListInfo.useShortView;
+    this.enclosingBox.emailAddressNode = this.textNode;
+  }
+  else
+    this.useShortView = false;
 
   if ("outputFunction" in headerListInfo)
     this.outputFunction = headerListInfo.outputFunction;
@@ -364,8 +359,8 @@ var messageHeaderSink = {
     processHeaders: function(headerNameEnumerator, headerValueEnumerator, dontCollectAddress)
     {
       this.onStartHeaders(); 
+      var fromMailbox;
 
-      const kMailboxSeparator = ", ";
       var index = 0;
       while (headerNameEnumerator.hasMore()) 
       {
@@ -381,22 +376,11 @@ var messageHeaderSink = {
         // already. 
         if (lowerCaseHeaderName == "x-mailer" || lowerCaseHeaderName == "x-mimeole")
           lowerCaseHeaderName = "user-agent";   
-
-        if (this.mDummyMsgHeader)
+        
+        if (lowerCaseHeaderName == "sender")
         {
-          if (lowerCaseHeaderName == "from")
-            this.mDummyMsgHeader.author = header.headerValue;
-          else if (lowerCaseHeaderName == "to")
-            this.mDummyMsgHeader.recipients = header.headerValue;
-          else if (lowerCaseHeaderName == "cc")
-            this.mDummyMsgHeader.ccList = header.headerValue;
-          else if (lowerCaseHeaderName == "subject")
-            this.mDummyMsgHeader.subject = header.headerValue;
-          else if (lowerCaseHeaderName == "reply-to")
-            this.mDummyMsgHeader.replyTo = header.headerValue;
-          else if (lowerCaseHeaderName == "message-id")
-            this.mDummyMsgHeader.messageId = header.headerValue;
-
+          if (fromMailbox == header.headerValue)
+            continue;
         }
         // according to RFC 2822, certain headers
         // can occur "unlimited" times
@@ -417,37 +401,32 @@ var messageHeaderSink = {
 
         if (lowerCaseHeaderName == "from")
         {
-          if (header.headerValue)
-          {
-            try
-            {
-              var createCard = (gCollectIncoming && !dontCollectAddress) || (gCollectNewsgroup && dontCollectAddress);
-              if (createCard || gCollectOutgoing)
-              {
-                if (!abAddressCollector)
-                  abAddressCollector = Components.classes[abAddressCollectorContractID]
-                                                 .getService(Components.interfaces.nsIAbAddressCollecter);
+          if (msgHeaderParser && header.value)
+            fromMailbox = msgHeaderParser.extractHeaderAddressMailboxes(null, header.value);
 
-                gCollectAddress = header.headerValue;
-                // collect, add card if doesn't exist and gCollectOutgoing is set, 
-                // otherwise only update existing cards, unknown preferred send format
-                gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, ' + createCard + ', Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
-              }
+          if (header.value) {
+            if ((gCollectIncoming && !dontCollectAddress) || 
+                (gCollectNewsgroup && dontCollectAddress))
+            {
+              if (!abAddressCollector)
+                abAddressCollector = Components.classes[abAddressCollectorContractID].getService(Components.interfaces.nsIAbAddressCollecter);
+
+              gCollectAddress = header.headerValue;
+              // collect, and add card if doesn't exist, unknown preferred send format
+              gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, true, Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
             }
-            catch(ex) {}
-          }
+            else if (gCollectOutgoing) 
+            {
+              if (!abAddressCollector)
+                abAddressCollector = Components.classes[abAddressCollectorContractID].getService(Components.interfaces.nsIAbAddressCollecter);
+
+              // collect, but only update existing cards, unknown preferred send format
+              gCollectAddress = header.headerValue;
+              gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, false, Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
+            }
+          } 
         } // if lowerCaseHeaderName == "from"
       } // while we have more headers to parse
-
-      if (("from" in currentHeaderData) && ("sender" in currentHeaderData) && msgHeaderParser)
-      {
-        var senderMailbox = kMailboxSeparator + msgHeaderParser.extractHeaderAddressMailboxes(null,
-                            currentHeaderData.sender.headerValue) + kMailboxSeparator;
-        var fromMailboxes = kMailboxSeparator + msgHeaderParser.extractHeaderAddressMailboxes(null,
-                            currentHeaderData.from.headerValue) + kMailboxSeparator;
-        if (fromMailboxes.indexOf(senderMailbox) >= 0)
-          delete currentHeaderData.sender;
-      }
 
       this.onEndHeaders();
     },
@@ -459,7 +438,7 @@ var messageHeaderSink = {
 
       try
       {
-        if (!this.mSaveHdr)
+        if (!mSaveHdr)
           this.mSaveHdr = messenger.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
       }
       catch (ex) {}
@@ -473,10 +452,6 @@ var messageHeaderSink = {
         }
       }
 
-      // display name optimization. Eliminate any large quantities of white space from the display name.
-      // such that Hello       World.txt becomes Hello World.txt.
-      displayName = displayName.replace(/ +/g, " ");
-          
       currentAttachments.push (new createNewAttachmentInfo(contentType, url, displayName, uri, isExternalAttachment));
       // if we have an attachment, set the MSG_FLAG_ATTACH flag on the hdr
       // this will cause the "message with attachment" icon to show up
@@ -512,7 +487,7 @@ var messageHeaderSink = {
         var messageUrl = url.QueryInterface(Components.interfaces.nsIMsgMessageUrl);
         try
         {
-          this.mSaveHdr = messenger.msgHdrFromURI(messageUrl.uri);
+          this.mSaveHdr = messenger.messageServiceFromURI(messageUrl.uri).messageURIToMsgHdr(messageUrl.uri);
         }
         catch (ex) {}
 
@@ -747,6 +722,7 @@ function createNewHeaderView(headerName)
   this.enclosingBox = newHeader;
   this.isValid = false;
   this.useToggle = false;
+  this.useShortView = false;
   this.outputFunction = updateHeaderValue;
 }
 
@@ -758,7 +734,6 @@ function UpdateMessageHeaders()
   // iterate over each header we received and see if we have a matching entry in each
   // header view table...
 
-  var headerName;
   for (headerName in currentHeaderData)
   {
     var headerField = currentHeaderData[headerName];
@@ -876,12 +851,17 @@ function OutputNewsgroups(headerEntry, headerValue)
 // extracts them one by one, linkifying each email address into a mailto url. 
 // Then we add the link-ified email address to the parentDiv passed in.
 // 
+// defaultParentDiv --> the div to add the link-ified email addresses into. 
 // emailAddresses --> comma separated list of the addresses for this header field
+// includeShortLongToggle --> true if you want to include the ability to toggle between short/long
+// address views for this header field. If true, then pass in a another div which is the div the long
+// view will be added too...
+// useShortView --> if true, we'll only generate the Name of the email address field instead of
+//                        showing the name + the email address.
 
 function OutputEmailAddresses(headerEntry, emailAddresses)
 {
-  if (!emailAddresses)
-    return;
+  if ( !emailAddresses ) return;
 
   if (msgHeaderParser)
   {
@@ -897,14 +877,19 @@ function OutputEmailAddresses(headerEntry, emailAddresses)
       // if we want to include short/long toggle views and we have a long view, always add it.
       // if we aren't including a short/long view OR if we are and we haven't parsed enough
       // addresses to reach the cutoff valve yet then add it to the default (short) div.
-      var address = {};
-      address.emailAddress = addresses.value[index];
-      address.fullAddress = fullNames.value[index];
-      address.displayName = names.value[index];
       if (headerEntry.useToggle)
+      {
+        var address = {};
+        address.emailAddress = addresses.value[index];
+        address.fullAddress = fullNames.value[index];
+        address.displayName = names.value[index];
         headerEntry.enclosingBox.addAddressView(address);
+      }
       else
-        updateEmailAddressNode(headerEntry.enclosingBox.emailAddressNode, address);
+      {
+        updateEmailAddressNode(headerEntry.enclosingBox.emailAddressNode, addresses.value[index], 
+                               fullNames.value[index], names.value[index], headerEntry.useShortView);
+      }
 
       if (headerEntry.enclosingBox.getAttribute("id") == "expandedfromBox") {
         setFromBuddyIcon(addresses.value[index]);
@@ -963,16 +948,22 @@ function setFromBuddyIcon(email)
    fromBuddyIcon.setAttribute("src", "");
 }
 
-function updateEmailAddressNode(emailAddressNode, address)
+function updateEmailAddressNode(emailAddressNode, emailAddress, fullAddress, displayName, useShortView)
 {
-  emailAddressNode.setAttribute("label", address.fullAddress || address.displayName);
-  emailAddressNode.removeAttribute("tooltiptext");
-  emailAddressNode.setTextAttribute("emailAddress", address.emailAddress);
-  emailAddressNode.setTextAttribute("fullAddress", address.fullAddress);
-  emailAddressNode.setTextAttribute("displayName", address.displayName);
+  if (useShortView && displayName) {
+    emailAddressNode.setAttribute("label", displayName);
+    emailAddressNode.setAttribute("tooltiptext", emailAddress);
+  } else {
+    emailAddressNode.setAttribute("label", fullAddress);
+    emailAddressNode.removeAttribute("tooltiptext");
+  }
+
+  emailAddressNode.setTextAttribute("emailAddress", emailAddress);
+  emailAddressNode.setTextAttribute("fullAddress", fullAddress);  
+  emailAddressNode.setTextAttribute("displayName", displayName);  
   
   if ("AddExtraAddressProcessing" in this)
-    AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
+    AddExtraAddressProcessing(emailAddress, emailAddressNode);
 }
 
 // thunderbird has smart logic for determining if we should show just the display name.
@@ -983,7 +974,7 @@ function updateEmailAddressNode(emailAddressNode, address)
 function AddExtraAddressProcessing(emailAddress, addressNode)
 {
   var displayName = addressNode.getTextAttribute("displayName");  
-  var mailAddress = addressNode.getTextAttribute("emailAddress");
+  var emailAddress = addressNode.getTextAttribute("emailAddress");
 
   // always show the address for the from and reply-to fields
   var parentElementId = addressNode.parentNode.id;
@@ -991,10 +982,10 @@ function AddExtraAddressProcessing(emailAddress, addressNode)
   if (parentElementId == "expandedfromBox" || parentElementId == "expandedreply-toBox")
     condenseName = false;
 
-  if (condenseName && gShowCondensedEmailAddresses && displayName && useDisplayNameForAddress(mailAddress))
+  if (condenseName && gShowCondensedEmailAddresses && displayName && useDisplayNameForAddress(emailAddress))
   {
     addressNode.setAttribute('label', displayName); 
-    addressNode.setAttribute("tooltiptext", mailAddress);
+    addressNode.setAttribute("tooltiptext", emailAddress);
     addressNode.setAttribute("tooltip", "emailAddressTooltip");
   }
   else
@@ -1160,19 +1151,6 @@ function detachAttachment(aAttachment, aSaveFirst)
                            aAttachment.messageUri, aSaveFirst);
 }
 
-function CanDetachAttachments()
-{
-  var uri = GetLoadedMessage();
-  var canDetach = !IsNewsMessage(uri) && (!IsImapMessage(uri) || CheckOnline());
-  if (canDetach && ("content-type" in currentHeaderData))
-  {
-    var contentType = currentHeaderData["content-type"].headerValue;
-    canDetach = contentType.indexOf("application/x-pkcs7-mime") < 0 && 
-        contentType.indexOf("application/x-pkcs7-signature") < 0;
-  }
-  return canDetach;
-}
-
 function onShowAttachmentContextMenu()
 {
   // if no attachments are selected, disable the Open and Save...
@@ -1182,47 +1160,32 @@ function onShowAttachmentContextMenu()
   var saveMenu = document.getElementById('context-saveAttachment');
   var detachMenu = document.getElementById('context-detachAttachment');
   var deleteMenu = document.getElementById('context-deleteAttachment');
-  var detachAllMenu = document.getElementById('context-detachAllAttachments');
-  var deleteAllMenu = document.getElementById('context-deleteAllAttachments');
-  var canDetach = CanDetachAttachments();
-  var canOpen = false;
-  for (var i = 0; i < selectedAttachments.length && !canOpen; i++)
-    canOpen = selectedAttachments[i].attachment.contentType != 'text/x-moz-deleted';
-  if (canOpen && selectedAttachments.length == 1)
+
+  var canDetach = false;
+  if (selectedAttachments.length > 0)
   {
+    var attachment = selectedAttachments[0].attachment
+    canDetach = attachment.contentType != 'text/x-moz-deleted' &&
+        !(/news-message:/.test(attachment.messageUri)) && 
+        (!(/imap-message/.test(attachment.messageUri)) || CheckOnline());
     openMenu.removeAttribute('disabled');
-  }
-  else
-  {
-    openMenu.setAttribute('disabled', true);
-  }
-  if (canOpen)
-  {
     saveMenu.removeAttribute('disabled');
   }
   else
   {
+    openMenu.setAttribute('disabled', true);
     saveMenu.setAttribute('disabled', true);
   }
-  if (canDetach && canOpen)
+
+  if (canDetach)
   {
     detachMenu.removeAttribute('disabled');
     deleteMenu.removeAttribute('disabled');
   }
   else
   {
-    detachMenu.setAttribute('disabled', 'true');
-    deleteMenu.setAttribute('disabled', 'true');
-  }
-  if (canDetach)
-  {
-    detachAllMenu.removeAttribute('disabled');
-    deleteAllMenu.removeAttribute('disabled');
-  }
-  else
-  {
-    detachAllMenu.setAttribute('disabled', 'true');
-    deleteAllMenu.setAttribute('disabled', 'true');
+    detachMenu.setAttribute('disabled', true);
+    deleteMenu.setAttribute('disabled', true);
   }
 }
 
@@ -1362,18 +1325,6 @@ function FillAttachmentListPopup(popup)
   }
 
   gBuildAttachmentPopupForCurrentMsg = false;
-  var detachAllMenu = document.getElementById('file-detachAllAttachments');
-  var deleteAllMenu = document.getElementById('file-deleteAllAttachments');
-  if (CanDetachAttachments())
-  {
-    detachAllMenu.removeAttribute('disabled');
-    deleteAllMenu.removeAttribute('disabled');
-  }
-  else
-  {
-    detachAllMenu.setAttribute('disabled', 'true');
-    deleteAllMenu.setAttribute('disabled', 'true');
-  }
 
 }
 
@@ -1414,22 +1365,19 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       while (popup.childNodes[indexOfSeparator].localName != 'menuseparator')
         indexOfSeparator++;
 
+      item = popup.insertBefore(item, popup.childNodes[indexOfSeparator]);
+
       var formattedDisplayNameString = gMessengerBundle.getFormattedString("attachmentDisplayNameFormat",
                                        [attachmentIndex, attachment.displayName]);
 
       item.setAttribute('label', formattedDisplayNameString); 
       item.setAttribute('accesskey', attachmentIndex); 
 
-      // each attachment in the list gets its own menupopup with options for saving, deleting, detaching, etc. 
       var openpopup = document.createElement('menupopup');
       openpopup = item.appendChild(openpopup);
 
-      // Due to Bug #314228, we must append our menupopup to the new attachment menu item
-      // before we inserting the attachment menu into the popup. If we don't, our attachment
-      // menu items will not show up.
-      item = popup.insertBefore(item, popup.childNodes[indexOfSeparator]);
+      var menuitementry = document.createElement('menuitem');     
 
-      var menuitementry = document.createElement('menuitem');
       menuitementry.attachment = cloneAttachment(attachment);
       menuitementry.setAttribute('oncommand', 'openAttachment(this.attachment)'); 
 
@@ -1454,15 +1402,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       // but that uses X-Mozilla-External-Attachment-URL, which
       // we'd need to check for somehow.
 
-      var signedOrEncrypted = false;
-      if ("content-type" in currentHeaderData)
-      {
-        var contentType = currentHeaderData["content-type"].headerValue;
-        signedOrEncrypted = contentType.indexOf("application/x-pkcs7-mime") >= 0 || 
-            contentType.indexOf("application/x-pkcs7-signature") >= 0;
-      }
       var canDetach = !(/news-message:/.test(attachment.uri)) && 
-          !signedOrEncrypted &&
           (!(/imap-message/.test(attachment.uri)) || CheckOnline());
       menuitementry.setAttribute('label', gOpenLabel); 
       menuitementry.setAttribute('accesskey', gOpenLabelAccesskey); 
@@ -1478,7 +1418,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       menuitementry.setAttribute('oncommand', 'saveAttachment(this.attachment)'); 
       menuitementry.setAttribute('label', gSaveLabel); 
       menuitementry.setAttribute('accesskey', gSaveLabelAccesskey); 
-      if (attachment.contentType == 'text/x-moz-deleted')
+      if (attachment.contentType == 'text/x-moz-deleted' || !canDetach)
         menuitementry.setAttribute('disabled', true); 
       menuitementry = openpopup.appendChild(menuitementry);
 
@@ -1486,8 +1426,8 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       openpopup.appendChild(menuseparator);
 
       menuitementry = document.createElement('menuitem');
-      menuitementry.attachment = cloneAttachment(attachment);
-      menuitementry.setAttribute('oncommand', 'detachAttachment(this.attachment, true)'); 
+      menuitementry.attachment = attachment;
+      menuitementry.setAttribute('oncommand', 'this.attachment.detachAttachment()'); 
       menuitementry.setAttribute('label', gDetachLabel); 
       menuitementry.setAttribute('accesskey', gDetachLabelAccesskey); 
       if (attachment.contentType == 'text/x-moz-deleted' || !canDetach)
@@ -1495,8 +1435,8 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       menuitementry = openpopup.appendChild(menuitementry);
 
       menuitementry = document.createElement('menuitem');
-      menuitementry.attachment = cloneAttachment(attachment);
-      menuitementry.setAttribute('oncommand', 'detachAttachment(this.attachment, false)'); 
+      menuitementry.attachment = attachment;
+      menuitementry.setAttribute('oncommand', 'this.attachment.deleteAttachment()'); 
       menuitementry.setAttribute('label', gDeleteLabel); 
       menuitementry.setAttribute('accesskey', gDeleteLabelAccesskey); 
       if (attachment.contentType == 'text/x-moz-deleted' || !canDetach)
@@ -1684,15 +1624,17 @@ function nsDummyMsgHeader()
 
 nsDummyMsgHeader.prototype =
 {
-  mProperties : new Array,
-  getStringProperty : function(property) {return this.mProperties[property];},
-  setStringProperty : function(property, val) {this.mProperties[property] = val;},
-  messageSize : 0,
-  recipients : null,
-  from : null,
-  subject : null,
-  ccList : null,
-  messageId : null,
-  accountKey : "",
-  folder : null
+  QueryInterface : function(iid)
+  {
+      if (iid.equals(Components.interfaces.nsIMsgDBHdr) ||
+          iid.equals(Components.interfaces.nsISupports))
+        return this;
+      throw Components.results.NS_NOINTERFACE;
+  },
+
+  mMessageSize : 0,
+
+  setMessageSize : function(aMessageSize) {mMessageSize = aMessageSize;},
+  getMessageSize : function() {return mMessageSize;},
+  folder : function() {return null;}
 };

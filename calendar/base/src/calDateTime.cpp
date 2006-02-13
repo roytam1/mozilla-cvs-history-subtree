@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
- *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,8 +45,6 @@
 #include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
 #include "calIICSService.h"
-#include "calIDuration.h"
-#include "calIErrors.h"
 
 #include "jsdate.h"
 
@@ -57,44 +54,19 @@ extern "C" {
 
 static NS_DEFINE_CID(kCalICSService, CAL_ICSSERVICE_CID);
 
-NS_IMPL_ISUPPORTS2_CI(calDateTime, calIDateTime, nsIXPCScriptable)
+NS_IMPL_ISUPPORTS2(calDateTime, calIDateTime, nsIXPCScriptable)
 
 calDateTime::calDateTime()
     : mImmutable(PR_FALSE),
-      mIsValid(PR_FALSE)
+      mValid(PR_FALSE)
 {
     Reset();
 }
 
 calDateTime::calDateTime(struct icaltimetype *atimeptr)
-    : mImmutable(PR_FALSE)
 {
     FromIcalTime(atimeptr);
-    mIsValid = PR_TRUE;
-}
-
-calDateTime::calDateTime(const calDateTime& cdt)
-{
-    // bitwise copy everything
-    mIsValid = cdt.mIsValid;
-    mNativeTime = cdt.mNativeTime;
-    mYear = cdt.mYear;
-    mMonth = cdt.mMonth;
-    mDay = cdt.mDay;
-    mHour = cdt.mHour;
-    mMinute = cdt.mMinute;
-    mSecond = cdt.mSecond;
-    mWeekday = cdt.mWeekday;
-    mYearday = cdt.mYearday;
-
-    mIsDate = cdt.mIsDate;
-
-    mLastModified = PR_Now();
-
-    // copies are always mutable
-    mImmutable = PR_FALSE;
-
-    mTimezone.Assign(cdt.mTimezone);
+    mValid = PR_TRUE;
 }
 
 NS_IMETHODIMP
@@ -110,7 +82,7 @@ NS_IMETHODIMP
 calDateTime::MakeImmutable()
 {
     if (mImmutable)
-        return NS_ERROR_OBJECT_IS_IMMUTABLE;
+        return NS_ERROR_CALENDAR_IMMUTABLE;
 
     mImmutable = PR_TRUE;
     return NS_OK;
@@ -119,9 +91,31 @@ calDateTime::MakeImmutable()
 NS_IMETHODIMP
 calDateTime::Clone(calIDateTime **aResult)
 {
-    calDateTime *cdt = new calDateTime(*this);
+    calDateTime *cdt = new calDateTime();
     if (!cdt)
         return NS_ERROR_OUT_OF_MEMORY;
+
+    // bitwise copy everything
+    cdt->mValid = mValid;
+    cdt->mNativeTime = mNativeTime;
+    cdt->mYear = mYear;
+    cdt->mMonth = mMonth;
+    cdt->mDay = mDay;
+    cdt->mHour = mHour;
+    cdt->mMinute = mMinute;
+    cdt->mSecond = mSecond;
+    cdt->mIsUtc = mIsUtc;
+    cdt->mWeekday = mWeekday;
+    cdt->mYearday = mYearday;
+
+    cdt->mIsDate = mIsDate;
+
+    cdt->mLastModified = PR_Now();
+
+    // copies are always mutable
+    cdt->mImmutable = PR_FALSE;
+
+    cdt->mTimezone.Assign(mTimezone);
 
     NS_ADDREF(*aResult = cdt);
     return NS_OK;
@@ -140,16 +134,16 @@ calDateTime::Reset()
     mHour = 0;
     mMinute = 0;
     mSecond = 0;
+    mIsUtc = PR_FALSE;
     mWeekday = 0;
     mYearday = 0;
+    mTimezoneOffset = 0;
     mIsDate = PR_FALSE;
-    mTimezone.AssignLiteral("UTC");
 
-    mIsValid = PR_FALSE;
     return NS_OK;
 }
 
-CAL_VALUETYPE_ATTR_GETTER(calDateTime, PRBool, IsValid)
+CAL_VALUETYPE_ATTR_GETTER(calDateTime, PRBool, Valid)
 
 CAL_VALUETYPE_ATTR(calDateTime, PRInt16, Year)
 CAL_VALUETYPE_ATTR(calDateTime, PRInt16, Month)
@@ -157,68 +151,14 @@ CAL_VALUETYPE_ATTR(calDateTime, PRInt16, Day)
 CAL_VALUETYPE_ATTR(calDateTime, PRInt16, Hour)
 CAL_VALUETYPE_ATTR(calDateTime, PRInt16, Minute)
 CAL_VALUETYPE_ATTR(calDateTime, PRInt16, Second)
+CAL_VALUETYPE_ATTR(calDateTime, PRBool, IsUtc)
+CAL_VALUETYPE_ATTR(calDateTime, PRBool, IsDate)
+CAL_VALUETYPE_ATTR(calDateTime, PRInt32, TimezoneOffset)
 
 CAL_VALUETYPE_ATTR_GETTER(calDateTime, PRInt16, Weekday)
 CAL_VALUETYPE_ATTR_GETTER(calDateTime, PRInt16, Yearday)
 
-CAL_STRINGTYPE_ATTR_GETTER(calDateTime, nsACString, Timezone)
-
-NS_IMETHODIMP
-calDateTime::SetIsDate(PRBool aIsDate)
-{
-    if (mImmutable)
-        return NS_ERROR_FAILURE;
-
-    mIsDate = aIsDate;
-    if (aIsDate) {
-        mHour = 0;
-        mMinute = 0;
-        mSecond = 0;
-        Normalize();
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-calDateTime::GetIsDate(PRBool *aResult)
-{
-    NS_ENSURE_ARG_POINTER(aResult);
-
-    *aResult = mIsDate;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-calDateTime::SetTimezone(const nsACString& aTimezone)
-{
-    if (aTimezone.EqualsLiteral("UTC") || aTimezone.EqualsLiteral("utc")) {
-        mTimezone.AssignLiteral("UTC");
-    } else if (aTimezone.EqualsLiteral("floating")) {
-        mTimezone.AssignLiteral("floating");
-    } else {
-        icaltimezone *tz = nsnull;
-        nsresult rv = GetIcalTZ(aTimezone, &tz);
-        if (NS_FAILED(rv))
-            return rv;
-
-        mTimezone.Assign(aTimezone);
-    }
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-calDateTime::GetTimezoneOffset(PRInt32 *aResult)
-{
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-
-    int dst;
-    *aResult = 
-        icaltimezone_get_utc_offset(NS_CONST_CAST(icaltimezone* ,icalt.zone),
-                                    &icalt, &dst);
-    return NS_OK;
-}
+CAL_STRINGTYPE_ATTR(calDateTime, nsACString, Timezone)
 
 NS_IMETHODIMP
 calDateTime::GetNativeTime(PRTime *aResult)
@@ -230,7 +170,7 @@ calDateTime::GetNativeTime(PRTime *aResult)
 NS_IMETHODIMP
 calDateTime::SetNativeTime(PRTime aNativeTime)
 {
-    return SetTimeInTimezone (aNativeTime, NS_LITERAL_CSTRING("UTC"));
+    return SetTimeInTimezone (aNativeTime, NULL);
 }
 
 NS_IMETHODIMP
@@ -239,88 +179,61 @@ calDateTime::Normalize()
     struct icaltimetype icalt;
 
     ToIcalTime(&icalt);
+
     icalt = icaltime_normalize(icalt);
+
     FromIcalTime(&icalt);
     
-    mIsValid = PR_TRUE;
+    mValid = PR_TRUE;
 
     return NS_OK;
 }
 
 NS_IMETHODIMP
-calDateTime::AddDuration(calIDuration *aDuration)
+calDateTime::AddDuration(calIDateTime *aDuration)
 {
     NS_ENSURE_ARG_POINTER(aDuration);
 
-    struct icaldurationtype idt;
-    aDuration->ToIcalDuration(&idt);
-    
-    struct icaltimetype itt;
-    ToIcalTime(&itt);
+    PRTime nativeDur;
+    nsresult rv = aDuration->GetNativeTime(&nativeDur);
+    if (NS_FAILED(rv))
+        return rv;
 
-    struct icaltimetype newitt;
-    newitt = icaltime_add(itt, idt);
-    FromIcalTime(&newitt);
+    mLastModified = PR_Now();
 
-    mIsValid = PR_TRUE;
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-calDateTime::SubtractDate(calIDateTime *aDate, calIDuration **aDuration)
-{
-    NS_ENSURE_ARG_POINTER(aDate);
-
-    struct icaltimetype itt1;
-    struct icaltimetype itt2;
-
-    ToIcalTime(&itt1);
-    aDate->ToIcalTime(&itt2);
-
-    struct icaldurationtype idt;
-    idt = icaltime_subtract(itt1, itt2);
-
-    nsCOMPtr<calIDuration> result(do_CreateInstance("@mozilla.org/calendar/duration;1"));
-    if (!result)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    result->SetIsNegative(idt.is_neg);
-    result->SetWeeks(idt.weeks);
-    result->SetDays(idt.days);
-    result->SetHours(idt.hours);
-    result->SetMinutes(idt.minutes);
-    result->SetSeconds(idt.seconds);
-
-    *aDuration = result;
-    NS_ADDREF(*aDuration);
-
-    return NS_OK;
+    return SetNativeTime(mNativeTime + nativeDur);
 }
 
 NS_IMETHODIMP
 calDateTime::ToString(nsACString& aResult)
 {
     aResult.Assign(nsPrintfCString(100,
-                                   "%04d/%02d/%02d %02d:%02d:%02d %s",
+                                   "%04d/%02d/%02d %02d:%02d:%02d%s%s",
                                    mYear, mMonth + 1, mDay,
                                    mHour, mMinute, mSecond,
-                                   mTimezone.get()));
+                                   ((mTimezone.IsEmpty()) ? "" : " "),
+                                   ((mTimezone.IsEmpty()) ? "" : mTimezone.get())));
     return NS_OK;
 }
 
 NS_IMETHODIMP
-calDateTime::SetTimeInTimezone(PRTime aTime, const nsACString& aTimezone)
+calDateTime::SetTimeInTimezone(PRTime aTime, const char *aTimezone)
 {
     struct icaltimetype icalt;
     time_t tt;
-    icaltimezone *tz = nsnull;
 
-    if (aTimezone.IsEmpty())
-        return NS_ERROR_INVALID_ARG;
+    icaltimezone *zone = icaltimezone_get_utc_timezone();
 
-    nsresult rv = GetIcalTZ(aTimezone, &tz);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (aTimezone) {
+        nsCOMPtr<calIICSService> ics = do_GetService(kCalICSService);
+        nsCOMPtr<calIIcalComponent> tz;
+        ics->GetTimezone(nsDependentCString(aTimezone), getter_AddRefs(tz));
+        if (!tz)
+            return NS_ERROR_FAILURE;
+
+        icalcomponent *zonecomp = tz->GetIcalComponent();
+        zone = icalcomponent_get_timezone(zonecomp, aTimezone);
+    }
 
     PRInt64 temp, million;
     LL_I2L(million, PR_USEC_PER_SEC);
@@ -329,50 +242,48 @@ calDateTime::SetTimeInTimezone(PRTime aTime, const nsACString& aTimezone)
     LL_L2I(sectime, temp);
 
     tt = sectime;
-    icalt = icaltime_from_timet_with_zone(tt, 0, tz);
+    if (zone) {
+        icalt = icaltime_from_timet_with_zone(tt, 0, zone);
+    } else {
+        icalt = icaltime_from_timet(tt, 0);
+    }
     FromIcalTime(&icalt);
-
-    mIsValid = PR_TRUE;
 
     return NS_OK;
 }
 
 NS_IMETHODIMP
-calDateTime::GetInTimezone(const nsACString& aTimezone, calIDateTime **aResult)
+calDateTime::GetInTimezone(const char *aTimezone, calIDateTime **aResult)
 {
-    calDateTime *cdt = nsnull;
+    struct icaltimetype icalt;
+    icaltimezone *destzone;
 
-    if (mIsDate) {
-        // if it's a date, we really just want to make a copy of this
-        // and set the timezone.
-        cdt = new calDateTime(*this);
-        if (!mTimezone.EqualsLiteral("floating"))
-            cdt->mTimezone.Assign(aTimezone);
+    ToIcalTime(&icalt);
+
+    if (!aTimezone) {
+        destzone = icaltimezone_get_utc_timezone();
     } else {
-        struct icaltimetype icalt;
-        icaltimezone *tz = nsnull;
+        nsCOMPtr<calIICSService> ics = do_GetService(kCalICSService);
+        nsCOMPtr<calIIcalComponent> tz;
 
-        ToIcalTime(&icalt);
+        ics->GetTimezone(nsDependentCString(aTimezone), getter_AddRefs(tz));
+        if (!tz)
+            return NS_ERROR_FAILURE;
 
-        nsresult rv = GetIcalTZ(aTimezone, &tz);
-        if (NS_FAILED(rv))
-            return rv;
-
-        /* If there's a zone, we need to convert; otherwise, we just
-         * assign, since this item is floating */
-        if (icalt.zone && tz) {
-            icaltimezone_convert_time(&icalt, (icaltimezone*) icalt.zone, tz);
-        }
-        if (tz == icaltimezone_get_utc_timezone())
-            icalt.is_utc = 1;
-        else
-            icalt.is_utc = 0;
-
-        if (!mTimezone.EqualsLiteral("floating"))
-            icalt.zone = tz;
-
-        cdt = new calDateTime(&icalt);
+        icalcomponent *zonecomp = tz->GetIcalComponent();
+        destzone = icalcomponent_get_timezone(zonecomp, aTimezone);
     }
+
+    /* If there's a zone, we need to convert; otherwise, we just
+     * assign, since this item is floating */
+    if (icalt.zone) {
+        icaltimezone_convert_time(&icalt, (icaltimezone*) icalt.zone, destzone);
+        icalt.zone = destzone;
+    } else {
+        icalt.zone = destzone;
+    }
+
+    calDateTime *cdt = new calDateTime(&icalt);
 
     NS_ADDREF (*aResult = cdt);
     return NS_OK;
@@ -381,85 +292,37 @@ calDateTime::GetInTimezone(const nsACString& aTimezone, calIDateTime **aResult)
 NS_IMETHODIMP
 calDateTime::GetStartOfWeek(calIDateTime **aResult)
 {
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-    int day_of_week = icaltime_day_of_week(icalt);
-    if (day_of_week > 1)
-        icaltime_adjust(&icalt, - (day_of_week - 1), 0, 0, 0);
-    icalt.is_date = 1;
-
-    calDateTime *cdt = new calDateTime(&icalt);
-    NS_ADDREF(*aResult = cdt);
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 calDateTime::GetEndOfWeek(calIDateTime **aResult)
 {
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-    int day_of_week = icaltime_day_of_week(icalt);
-    if (day_of_week < 7)
-        icaltime_adjust(&icalt, 7 - day_of_week, 0, 0, 0);
-    icalt.is_date = 1;
-
-    calDateTime *cdt = new calDateTime(&icalt);
-    NS_ADDREF(*aResult = cdt);
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 calDateTime::GetStartOfMonth(calIDateTime **aResult)
 {
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-    icalt.day = 1;
-    icalt.is_date = 1;
-
-    calDateTime *cdt = new calDateTime(&icalt);
-    NS_ADDREF(*aResult = cdt);
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 calDateTime::GetEndOfMonth(calIDateTime **aResult)
 {
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-    icalt.day = icaltime_days_in_month(icalt.month, icalt.year);
-    icalt.is_date = 1;
-
-    calDateTime *cdt = new calDateTime(&icalt);
-    NS_ADDREF(*aResult = cdt);
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 calDateTime::GetStartOfYear(calIDateTime **aResult)
 {
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-    icalt.month = 1;
-    icalt.day = 1;
-    icalt.is_date = 1;
-
-    calDateTime *cdt = new calDateTime(&icalt);
-    NS_ADDREF(*aResult = cdt);
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 calDateTime::GetEndOfYear(calIDateTime **aResult)
 {
-    struct icaltimetype icalt;
-    ToIcalTime(&icalt);
-    icalt.month = 12;
-    icalt.day = 31;
-    icalt.is_date = 1;
-
-    calDateTime *cdt = new calDateTime(&icalt);
-    NS_ADDREF(*aResult = cdt);
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -494,24 +357,26 @@ calDateTime::ToIcalTime(icaltimetype *icalt)
     icalt->minute = mMinute;
     icalt->second = mSecond;
 
+    icalt->is_utc = mIsUtc ? 1 : 0;
     icalt->is_date = mIsDate ? 1 : 0;
     icalt->is_daylight = 0;
 
-    icaltimezone* tz = nsnull;
-    nsresult rv = GetIcalTZ(mTimezone, &tz);
-    // this will always succeed, because
-    // mTimezone can't be set without GetIcalTZ
-    // succeeding.
-    if (NS_FAILED(rv)) {
-        NS_ERROR("calDateTime::ToIcalTime: GetIcalTZ failed!");
+    if (icalt->is_utc) {
+        icalt->zone = icaltimezone_get_utc_timezone();
+    } else if (mTimezone.IsEmpty()) {
+        icalt->zone = nsnull;
+    } else {
+        nsCOMPtr<calIICSService> ics = do_GetService(kCalICSService);
+        nsCOMPtr<calIIcalComponent> tz;
+        ics->GetTimezone(mTimezone, getter_AddRefs(tz));
+        if (tz) {
+            icalcomponent *zonecomp = tz->GetIcalComponent();
+            icalt->zone = icalcomponent_get_timezone(zonecomp, mTimezone.get());
+        } else {
+            NS_WARNING("Specified timezone not found; generating floating time!");
+            icalt->zone = nsnull;
+        }
     }
-
-    icalt->zone = tz;
-
-    if (icalt->zone == icaltimezone_get_utc_timezone())
-        icalt->is_utc = 1;
-    else
-        icalt->is_utc = 0;
 }
 
 void
@@ -522,39 +387,17 @@ calDateTime::FromIcalTime(icaltimetype *icalt)
     mYear = t.year;
     mMonth = t.month - 1;
     mDay = t.day;
+    mHour = t.hour;
+    mMinute = t.minute;
+    mSecond = t.second;
 
+    mIsUtc = (t.zone == icaltimezone_get_utc_timezone());
     mIsDate = t.is_date ? PR_TRUE : PR_FALSE;
 
-    if (!mIsDate) {
-        mHour = t.hour;
-        mMinute = t.minute;
-        mSecond = t.second;
-    } else {
-        mHour = 0;
-        mMinute = 0;
-        mSecond = 0;
-    }
-
-    if (t.is_utc || t.zone == icaltimezone_get_utc_timezone())
-        mTimezone.AssignLiteral("UTC");
-    else if (t.zone)
-        mTimezone.Assign(icaltimezone_get_tzid((icaltimezone*)t.zone));
-    else
-        mTimezone.AssignLiteral("floating");
+    mTimezone.Assign(icaltimezone_get_tzid((icaltimezone*)t.zone));
 
     // reconstruct nativetime
-    //
-    // Gross hack alert: the reason that we muck with mIsDate here is
-    // because we don't want icaltime_as_timet_with_zone() to force the
-    // hours/mins/seconds to UTC-based 0: since we're not moving the 
-    // existing date to UTC, but merely representing it a UTC-based way.
-    if (mIsDate) {
-        icalt->is_date = 0;
-    }
     time_t tt = icaltime_as_timet_with_zone(*icalt, icaltimezone_get_utc_timezone());
-    if (mIsDate) {
-        icalt->is_date = 1;
-    }
     PRInt64 temp, million;
     LL_I2L(million, PR_USEC_PER_SEC);
     LL_I2L(temp, tt);
@@ -569,9 +412,6 @@ calDateTime::FromIcalTime(icaltimetype *icalt)
 NS_IMETHODIMP
 calDateTime::Compare(calIDateTime *aOther, PRInt32 *aResult)
 {
-    if (!aOther)
-        return NS_ERROR_INVALID_ARG;
-
     PRBool otherIsDate = PR_FALSE;
     aOther->GetIsDate(&otherIsDate);
 
@@ -579,48 +419,10 @@ calDateTime::Compare(calIDateTime *aOther, PRInt32 *aResult)
     ToIcalTime(&a);
     aOther->ToIcalTime(&b);
 
-    if (mIsDate || otherIsDate) {
-        icaltimezone *tz;
-        nsresult rv = GetIcalTZ(mTimezone, &tz);
-        if (NS_FAILED(rv))
-            return calIErrors::INVALID_TIMEZONE;
-
-        *aResult = icaltime_compare_date_only(a, b, tz);
-    } else {
+    if (mIsDate || otherIsDate)
+        *aResult = icaltime_compare_date_only(a,b);
+    else
         *aResult = icaltime_compare(a, b);
-    }
-
-    return NS_OK;
-}
-
-nsresult
-calDateTime::GetIcalTZ(const nsACString& tzid, struct _icaltimezone **tzp)
-{
-    if (tzid.IsEmpty()) {
-        return NS_ERROR_INVALID_ARG;
-    }
-
-    if (tzid.EqualsLiteral("floating")) {
-        *tzp = nsnull;
-        return NS_OK;
-    }
-
-    if (tzid.EqualsLiteral("UTC") || tzid.EqualsLiteral("utc")) {
-        *tzp = icaltimezone_get_utc_timezone();
-        return NS_OK;
-    }
-
-    nsCOMPtr<calIICSService> ics = do_GetService(kCalICSService);
-    nsCOMPtr<calIIcalComponent> tz;
-
-    nsresult rv = ics->GetTimezone(tzid, getter_AddRefs(tz));
-    if (NS_FAILED(rv) || !tz)
-        return NS_ERROR_INVALID_ARG;
-
-    if (tzp) {
-        icalcomponent *zonecomp = tz->GetIcalComponent();
-        *tzp = icalcomponent_get_timezone(zonecomp, nsPromiseFlatCString(tzid).get());
-    }
 
     return NS_OK;
 }
@@ -667,15 +469,11 @@ calDateTime::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
             LL_DIV(tmp, mNativeTime, thousand);
             LL_L2D(msec, tmp);
 
-            JSObject *obj;
-            if (mTimezone.EqualsLiteral("floating"))
-                obj = ::js_NewDateObject(cx, mYear, mMonth, mDay, mHour, mMinute, mSecond);
-            else
-                obj = ::js_NewDateObjectMsec(cx, msec);
+            JSObject *obj = ::js_NewDateObjectMsec(cx, msec);
 
             *vp = OBJECT_TO_JSVAL(obj);
             *_retval = PR_TRUE;
-            return NS_SUCCESS_I_DID_SOMETHING;
+            return NS_OK;
         }
     }
 
@@ -696,7 +494,7 @@ calDateTime::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
             JSObject *dobj;
             if (!JSVAL_IS_OBJECT(*vp) ||
                 !js_DateIsValid(cx, (dobj = JSVAL_TO_OBJECT(*vp)))) {
-                mIsValid = PR_FALSE;
+                mValid = PR_FALSE;
             } else {
                 jsdouble utcMsec = js_DateGetMsecSinceEpoch(cx, dobj);
                 PRTime utcTime, thousands;
@@ -704,16 +502,26 @@ calDateTime::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
                 LL_I2L(thousands, 1000);
                 LL_MUL(utcTime, utcTime, thousands);
 
-                nsresult rv = SetNativeTime(utcTime);
-                if (NS_SUCCEEDED(rv)) {
-                    mIsValid = PR_TRUE;
+                mIsUtc = PR_TRUE;
+
+                jsval tzoffsetval;
+                if (!JS_CallFunctionName(cx, dobj, "getTimezoneOffset", 0, nsnull, &tzoffsetval)) {
+                    mValid = PR_FALSE;
                 } else {
-                    mIsValid = PR_FALSE;
+                    JS_ValueToECMAInt32(cx, tzoffsetval, (int32*)&mTimezoneOffset);
+                    mTimezone.AssignLiteral("");
+                    nsresult rv = SetNativeTime(utcTime);
+
+                    if (NS_FAILED(rv)) {
+                        mValid = PR_FALSE;
+                    } else {
+                        mValid = PR_TRUE;
+                    }
                 }
             }
 
             *_retval = PR_TRUE;
-            return NS_SUCCESS_I_DID_SOMETHING;
+            return NS_OK;
         }
     }
     *_retval = PR_TRUE;
@@ -853,28 +661,3 @@ calDateTime::Mark(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-/* PRBool equality(in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal val); */
-NS_IMETHODIMP
-calDateTime::Equality(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                      JSObject *obj, jsval val, PRBool *_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* JSObjectPtr outerObject(in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj); */
-NS_IMETHODIMP
-calDateTime::OuterObject(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, JSObject **_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* JSObjectPtr innerObject(in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj); */
-NS_IMETHODIMP
-calDateTime::InnerObject(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, JSObject **_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-

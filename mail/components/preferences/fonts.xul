@@ -1,29 +1,27 @@
 <?xml version="1.0"?>
 
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-#
+# 
 # The Original Code is the Thunderbird Preferences System.
-#
-# The Initial Developer of the Original Code is
-# Scott MacGregor.
+# 
+# The Initial Developer of the Original Code is Scott MacGregor.
 # Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   Scott MacGregor <mscott@mozilla.org>
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -35,7 +33,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 <?xml-stylesheet href="chrome://global/skin/"?>
@@ -48,21 +46,16 @@
 <prefwindow id="FontsDialog" type="child"
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             title="&fontsDialog.title;"
-#ifdef XP_UNIX
-#ifdef XP_MACOSX
-            style="width: &window.macWidth; !important;">
-#else
-            style="width: &window.unixWidth; !important;">
-#endif
-#else
-            style="width: &window.width; !important;">
-#endif
-            dlgbuttons="accept,cancel">
+            dlgbuttons="accept,cancel"
+            style="width: 39em !important;">
 
   <prefpane id="FontsDialogPane">
   
     <preferences id="fontPreferences">
       <preference id="font.language.group"  name="font.language.group"  type="wstring"/>
+      <preference id="browser.display.screen_resolution"
+                  name="browser.display.screen_resolution"
+                  type="int"/>
       <preference id="browser.display.use_document_fonts"
                   name="browser.display.use_document_fonts"
                   type="int"/>
@@ -78,7 +71,7 @@
         <hbox align="center">
           <label value="&language.label;" accesskey="&language.accesskey;" control="selectLangs"/>
         </hbox>
-        <menulist id="selectLangs" onsyncfrompreference="return gFontsDialog.readFontLanguageGroup();"
+        <menulist id="selectLangs" onpreferenceread="return gFontsDialog.readFontLanguageGroup();"
                   preference="font.language.group">
           <menupopup>
             <menuitem value="x-western" label="&font.langGroup.latin1;"/>
@@ -179,7 +172,7 @@
               <label accesskey="&serif.accesskey;" control="serif">&serif.label;</label>
             </hbox>
             <menulist id="serif" flex="1" style="width: 0px;"
-                      onsyncfrompreference="return gFontsDialog.readFontSelection(document.getElementById('serif'));"/>
+                      onpreferenceread="return gFontsDialog.readFontSelection(document.getElementById('serif'));"/>
             <spacer/>
           </row>
           <row align="center">
@@ -187,7 +180,7 @@
               <label accesskey="&sans-serif.accesskey;" control="sans-serif">&sans-serif.label;</label>
             </hbox>
             <menulist id="sans-serif" flex="1" style="width: 0px;"
-                      onsyncfrompreference="return gFontsDialog.readFontSelection(document.getElementById('sans-serif'));"/>
+                      onpreferenceread="return gFontsDialog.readFontSelection(document.getElementById('sans-serif'));"/>
             <spacer/>
           </row>
           <row align="center">
@@ -195,7 +188,7 @@
               <label accesskey="&monospace.accesskey;" control="monospace">&monospace.label;</label>
             </hbox>
             <menulist id="monospace" flex="1" style="width: 0px;" crop="right"
-                      onsyncfrompreference="return gFontsDialog.readFontSelection(document.getElementById('monospace'));"/>
+                      onpreferenceread="return gFontsDialog.readFontSelection(document.getElementById('monospace'));"/>
             <hbox align="center" pack="end">
               <label>&sizes.label;</label>
             </hbox> 
@@ -236,6 +229,27 @@
       <separator class="thin"/>
 
       <hbox flex="1">
+        <hbox align="center" pack="end">
+          <label accesskey="&resolution.accesskey;" control="screenResolution">&resolution.label;</label>
+          <menulist id="screenResolution" 
+                    oncommand="gFontsDialog.changeScreenResolution(this)"
+                    preference="browser.display.screen_resolution"
+                    onpreferenceread="return gFontsDialog.readScreenResolution();">
+            <menupopup>
+              <menuitem id="otherResolution" value="72"/>
+              <menuitem id="defaultResolution" value="96"/>
+#ifdef XP_UNIX
+#ifndef XP_MACOSX
+              <menuitem id="systemResolution" value="0" label="&resolution.system.label;"/>
+#endif
+#endif
+              <menuseparator id="resolutionSeparator"/>
+              <menuitem id="userResolution" hidden="true"/>
+              <menuitem id="chooseUserResolution" value="choose" label="&resolution.other;"/>
+            </menupopup>
+          </menulist>
+        </hbox>
+
         <spacer flex="1"/>
         <hbox align="center" pack="end">
           <label accesskey="&minSize.accesskey;" control="minSize">&minSize.label;</label>
@@ -265,8 +279,8 @@
         <checkbox id="useDocumentFonts" 
                   label="&useDocumentFonts.label;" accesskey="&useDocumentFonts.accesskey;"
                   preference="browser.display.use_document_fonts"
-                  onsyncfrompreference="return gFontsDialog.readUseDocumentFonts();"
-                  onsynctopreference="return gFontsDialog.writeUseDocumentFonts();"/>
+                  onpreferenceread="return gFontsDialog.readUseDocumentFonts();"
+                  onpreferencewrite="return gFontsDialog.writeUseDocumentFonts();"/>
       </hbox>
     </groupbox>
     <separator/>

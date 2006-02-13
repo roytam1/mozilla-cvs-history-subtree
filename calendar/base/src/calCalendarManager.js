@@ -58,7 +58,6 @@ function calCalendarManager() {
     this.wrappedJSObject = this;
     this.initDB();
     this.mCache = {};
-    this.setUpReadOnlyObservers();
 }
 
 function makeURI(uriString)
@@ -67,33 +66,8 @@ function makeURI(uriString)
     return ioservice.newURI(uriString, null, null);
 }
 
-var calCalendarManagerClassInfo = {
-    getInterfaces: function (count) {
-        var ifaces = [
-            Components.interfaces.nsISupports,
-            Components.interfaces.calICalendarManager,
-            Components.interfaces.nsIClassInfo
-        ];
-        count.value = ifaces.length;
-        return ifaces;
-    },
-
-    getHelperForLanguage: function (language) {
-        return null;
-    },
-
-    contractID: "@mozilla.org/calendar/manager;1",
-    classDescription: "Calendar Manager",
-    classID: Components.ID("{f42585e7-e736-4600-985d-9624c1c51992}"),
-    implementationLanguage: Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
-    flags: 0
-};
-
 calCalendarManager.prototype = {
     QueryInterface: function (aIID) {
-        if (aIID.equals(Components.interfaces.nsIClassInfo))
-            return calCalendarManagerClassInfo;
-
         if (!aIID.equals(Components.interfaces.nsISupports) &&
             !aIID.equals(Components.interfaces.calICalendarManager))
         {
@@ -103,32 +77,14 @@ calCalendarManager.prototype = {
         return this;
     },
 
-    // When a calendar fails, its onError doesn't point back to the calendar.
-    // Therefore, we add a new announcer for each calendar to tell the user that
-    // a specific calendar has failed.  The calendar itself is responsible for
-    // putting itself in readonly mode.
-    setUpReadOnlyObservers: function() {
-        var calendars = this.getCalendars({});
-        for each(calendar in calendars) {
-            var newObserver = new errorAnnouncer(calendar);
-            calendar.addObserver(newObserver.observer);
-        }
-    },
-
     initDB: function() {
-        var sqlTables = { cal_calendars: "id INTEGER PRIMARY KEY, type STRING, uri STRING",
-                          cal_calendars_prefs: "id INTEGER PRIMARY KEY, calendar INTEGER, name STRING, value STRING"
+        var sqlTables = { cal_calendars: "id INTEGER PRIMARY KEY, name STRING, type STRING, uri STRING",
+                          cal_calendars_prefs: "id INTEGER PRIMARY KEY, calendar INTERGER, name STRING, value STRING"
         };
 
         var dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
 
-	if ( "getProfileStorage" in dbService ) {
-	  // 1.8 branch
-	  this.mDB = dbService.getProfileStorage("profile");
-	} else {
-	  // trunk 
-	  this.mDB = dbService.openSpecialDatabase("profile");
-	}
+        this.mDB = dbService.getProfileStorage("profile");
 
         for (table in sqlTables) {
             try {
@@ -144,12 +100,12 @@ calCalendarManager.prototype = {
 
         this.mFindCalendar = createStatement (
             this.mDB,
-            "SELECT id FROM cal_calendars WHERE type = :type AND uri = :uri");
+            "SELECT id FROM cal_calendars WHERE name = :name AND type = :type AND uri = :uri");
 
         this.mRegisterCalendar = createStatement (
             this.mDB,
-            "INSERT INTO cal_calendars (type, uri) " +
-            "VALUES (:type, :uri)"
+            "INSERT INTO cal_calendars (name, type, uri) " +
+            "VALUES (:name, :type, :uri)"
             );
 
         this.mUnregisterCalendar = createStatement (
@@ -170,9 +126,6 @@ calCalendarManager.prototype = {
             "INSERT INTO cal_calendars_prefs (calendar, name, value) " +
             "VALUES (:calendar, :name, :value)");
 
-        this.mDeletePrefs = createStatement (
-            this.mDB,
-            "DELETE FROM cal_calendars_prefs WHERE calendar = :calendar");
 
     },
 
@@ -180,6 +133,7 @@ calCalendarManager.prototype = {
         var stmt = this.mFindCalendar;
         stmt.reset();
         var pp = stmt.params;
+        pp.name = calendar.name;
         pp.type = calendar.type;
         pp.uri = calendar.uri.spec;
 
@@ -190,36 +144,25 @@ calCalendarManager.prototype = {
         stmt.reset();
         return id;
     },
-    
-    notifyObservers: function(functionName, args) {
-        function notify(obs) {
-            try { obs[functionName].apply(obs, args);  }
-            catch (e) { }
-        }
-        this.mObservers.forEach(notify);
-    },
+
 
     /**
      * calICalendarManager interface
      */
-    createCalendar: function(type, uri) {
+    createCalendar: function(name, type, uri) {
         var calendar = Components.classes["@mozilla.org/calendar/calendar;1?type=" + type].createInstance(Components.interfaces.calICalendar);
+        calendar.name = name;
         calendar.uri = uri;
         return calendar;
     },
 
     registerCalendar: function(calendar) {
         // bail if this calendar (or one that looks identical to it) is already registered
-        if (this.findCalendarID(calendar) > 0) {
-            dump ("registerCalendar: calendar already registered\n");
+        if (this.findCalendarID(calendar) > 0)
             throw Components.results.NS_ERROR_FAILURE;
-        }
-
-        // Add an observer to track readonly-mode triggers
-        var newObserver = new errorAnnouncer(calendar);
-        calendar.addObserver(newObserver.observer);
 
         var pp = this.mRegisterCalendar.params;
+        pp.name = calendar.name;
         pp.type = calendar.type;
         pp.uri = calendar.uri.spec;
 
@@ -228,34 +171,19 @@ calCalendarManager.prototype = {
         //dump("adding [" + this.mDB.lastInsertRowID + "]\n");
         //this.mCache[this.mDB.lastInsertRowID] = calendar;
         this.mCache[this.findCalendarID(calendar)] = calendar;
-
-        this.notifyObservers("onCalendarRegistered", [calendar]);
     },
 
     unregisterCalendar: function(calendar) {
-        this.notifyObservers("onCalendarUnregistering", [calendar]);
-
-        var calendarID = this.findCalendarID(calendar);
-
         var pp = this.mUnregisterCalendar.params;
-        pp.id = calendarID;
+        pp.id = this.findCalendarID(calendar);
         this.mUnregisterCalendar.step();
         this.mUnregisterCalendar.reset();
-
-        // delete prefs for the calendar too
-        pp = this.mDeletePrefs.params;
-        pp.calendar = calendarID;
-        this.mDeletePrefs.step();
-        this.mDeletePrefs.reset();
-
-        delete this.mCache[calendarID];
     },
 
     deleteCalendar: function(calendar) {
         /* check to see if calendar is unregistered first... */
         /* delete the calendar for good */
-        
-        this.notifyObservers("onCalendarDeleting", [calendar]);
+
     },
 
     getCalendars: function(count) {
@@ -264,37 +192,21 @@ calCalendarManager.prototype = {
         var stmt = this.mSelectCalendars;
         stmt.reset();
 
-        var newCalendarData = [];
-
         while (stmt.step()) {
             var id = stmt.row.id;
-            if (!(id in this.mCache)) {
-                newCalendarData.push ({id: id, type: stmt.row.type, uri: stmt.row.uri });
+            if (!this.mCache[id]) {
+                this.mCache[id] = this.createCalendar(stmt.row.name, stmt.row.type, makeURI(stmt.row.uri));
             }
+            calendars.push(this.mCache[id]);
         }
+
         stmt.reset();
-
-        for each (var caldata in newCalendarData) {
-            try {
-                this.mCache[caldata.id] = this.createCalendar(caldata.type, makeURI(caldata.uri));
-            } catch (e) {
-                dump("Can't create calendar for " + caldata.id + " (" + caldata.type + ", " + 
-                     caldata.uri + "): " + e + "\n");
-                continue;
-            }
-        }
-
-        for each (var cal in this.mCache)
-            calendars.push (cal);
 
         count.value = calendars.length;
         return calendars;
     },
 
     getCalendarPref: function(calendar, name) {
-        // pref names must be lower case
-        name = name.toLowerCase();
-
         var stmt = this.mGetPref;
         stmt.reset();
         var pp = stmt.params;
@@ -310,16 +222,12 @@ calCalendarManager.prototype = {
     },
 
     setCalendarPref: function(calendar, name, value) {
-        // pref names must be lower case
-        name = name.toLowerCase();
-
         var calendarID = this.findCalendarID(calendar);
 
         this.mDB.beginTransaction();
 
         var pp = this.mDeletePref.params;
         pp.calendar = calendarID;
-        pp.name = name;
         this.mDeletePref.step();
         this.mDeletePref.reset();
 
@@ -331,93 +239,14 @@ calCalendarManager.prototype = {
         this.mInsertPref.reset();
 
         this.mDB.commitTransaction();
-
-        this.notifyObservers("onCalendarPrefSet", [calendar, name, value])
     },
 
     deleteCalendarPref: function(calendar, name) {
-        // pref names must be lower case
-        name = name.toLowerCase();
-
-        this.notifyObservers("onCalendarPrefDeleting", [calendar, name]);
-
         var calendarID = this.findCalendarID(calendar);
 
         var pp = this.mDeletePref.params;
         pp.calendar = calendarID;
-        pp.name = name;
         this.mDeletePref.step();
         this.mDeletePref.reset();
-    },
-
-    mObservers: Array(),
-    addObserver: function(aObserver) {
-        if (this.mObservers.indexOf(aObserver) != -1)
-            return;
-
-        this.mObservers.push(aObserver);
-    },
-
-    removeObserver: function(aObserver) {
-        function notThis(v) {
-            return v != aObserver;
-        }
-        
-        this.mObservers = this.mObservers.filter(notThis);
     }
 };
-
-// This is a prototype object for announcing the fact that a calendar error has
-// happened and that the calendar has therefore been put in readOnly mode.  We
-// implement a new one of these for each calendar registered to the calmgr.
-function errorAnnouncer(calendar) {
-    this.calendar = calendar;
-    // We compare this to determine if the state actually changed.
-    this.storedReadOnly = calendar.readOnly;
-    var announcer = this;
-    this.observer = {
-        onStartBatch: function() {},
-        onEndBatch: function() {},
-        onLoad: function() {},
-        onAddItem: function(aItem) {},
-        onModifyItem: function(aNewItem, aOldItem) {},
-        onDeleteItem: function(aDeletedItem) {},
-        onAlarm: function(aAlarmItem) {},
-        onError: function(aErrNo, aMessage) {
-            announcer.announceError(aErrNo, aMessage);
-        }
-    }
-}
-
-errorAnnouncer.prototype.announceError = function(aErrNo, aMessage) {
-    var paramBlock = Components.classes["@mozilla.org/embedcomp/dialogparam;1"]
-                               .createInstance(Components.interfaces.nsIDialogParamBlock);
-    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                        .getService(Components.interfaces.nsIStringBundleService);
-    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
-    var errMsg;
-    paramBlock.SetNumberStrings(3);
-    if (!this.storedReadOnly && this.calendar.readOnly) {
-        // Major errors change the calendar to readOnly
-        errMsg = props.formatStringFromName("readOnlyMode", [this.calendar.name], 1);
-    } else if (!this.storedReadOnly && !this.calendar.readOnly) {
-        // Minor errors don't, but still tell the user something went wrong
-        errMsg = props.formatStringFromName("minorError", [this.calendar.name], 1);
-    } else {
-        // The calendar was already in readOnly mode, but still tell the user
-        errMsg = props.formatStringFromName("stillReadOnlyError", [this.calendar.name], 1);
-    }
-    paramBlock.SetString(0, errMsg);
-    paramBlock.SetString(1, "0x"+aErrNo.toString(16));
-    paramBlock.SetString(2, aMessage);
-
-    this.storedReadOnly = this.calendar.readOnly;
-
-    var wWatcher = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(Components.interfaces.nsIWindowWatcher);
-    wWatcher.openWindow(null,
-                        "chrome://calendar/content/calErrorPrompt.xul",
-                        "_blank",
-                        "chrome,dialog=yes",
-                        paramBlock);
-}

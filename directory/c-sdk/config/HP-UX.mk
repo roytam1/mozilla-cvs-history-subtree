@@ -1,50 +1,43 @@
 # 
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# The contents of this file are subject to the Mozilla Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/MPL/
 # 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
-# http://www.mozilla.org/MPL/
-# 
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
 # 
 # The Original Code is the Netscape Portable Runtime (NSPR).
 # 
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-2000
-# the Initial Developer. All Rights Reserved.
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation.  Portions created by Netscape are 
+# Copyright (C) 1998-2000 Netscape Communications Corporation.  All
+# Rights Reserved.
 # 
 # Contributor(s):
 # 
-# Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
+# Alternatively, the contents of this file may be used under the
+# terms of the GNU General Public License Version 2 or later (the
+# "GPL"), in which case the provisions of the GPL are applicable 
+# instead of those above.  If you wish to allow use of your 
+# version of this file only under the terms of the GPL and not to
+# allow others to use your version of this file under the MPL,
+# indicate your decision by deleting the provisions above and
+# replace them with the notice and other provisions required by
+# the GPL.  If you do not delete the provisions above, a recipient
+# may use your version of this file under either the MPL or the
+# GPL.
 # 
-# ***** END LICENSE BLOCK ***** 
 
 #
 # Config stuff for HP-UX
 #
 
 include $(MOD_DEPTH)/config/UNIX.mk
-ifeq ($(OS_TEST),ia64)
-DLL_SUFFIX	= so
-else
+
 DLL_SUFFIX	= sl
-endif
 
 ifeq ($(NS_USE_GCC), 1)
 	CC			        = gcc
@@ -54,11 +47,7 @@ ifeq ($(NS_USE_GCC), 1)
 else
 	CC				= cc -Ae
 	CCC			        = CC -ext
-ifeq ($(OS_RELEASE),B.11.23)
-	OS_CFLAGS           = +Olit=all
-else
 	OS_CFLAGS           = +ESlit
-endif
 endif
 
 RANLIB			= echo
@@ -84,7 +73,7 @@ endif
 ifeq (,$(filter-out B.10.10 B.10.20,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_INT_LOCALTIME_R
 endif
-ifeq (,$(filter-out B.10.30 B.11.00 B.11.23,$(OS_RELEASE)))
+ifeq (,$(filter-out B.10.30 B.11.00,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_POINTER_LOCALTIME_R
 endif
 
@@ -144,16 +133,6 @@ endif
 
 # 11.00 is similar to 10.30.
 ifeq ($(OS_RELEASE),B.11.00)
-MODERN_HPUX=1
-endif
-ifeq ($(OS_RELEASE),B.11.11)
-MODERN_HPUX=1
-endif
-ifeq ($(OS_RELEASE),B.11.23)
-MODERN_HPUX=1
-endif
-
-ifdef MODERN_HPUX
 	ifneq ($(NS_USE_GCC), 1)
 		CCC			        = /opt/aCC/bin/aCC -ext
 		ifeq ($(USE_64),1)
@@ -169,30 +148,6 @@ endif
 		endif
 	endif
 OS_CFLAGS		+= -DHPUX10 -DHPUX11 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T
-ifeq ($(HAVE_CCONF), 1)
-DEFAULT_IMPL_STRATEGY =
-else
-DEFAULT_IMPL_STRATEGY = _PTH
-endif
-endif
-
-# 11.23 is similar to 11.00.
-ifeq ($(OS_RELEASE),B.11.23)
-      ifneq ($(NS_USE_GCC), 1)
-              CCC                             = /opt/aCC/bin/aCC -AP -ext
-              ifeq ($(USE_64),1)
-                      OS_CFLAGS       += +DD64
-                      #COMPILER_TAG    = _64
-              else
-                      OS_CFLAGS       += +DD32
-ifeq ($(HAVE_CCONF), 1)
-                      COMPILER_TAG    =
-else
-                      COMPILER_TAG    = _32
-endif
-              endif
-      endif
-OS_CFLAGS               += -DHPUX10 -DHPUX11 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T
 ifeq ($(HAVE_CCONF), 1)
 DEFAULT_IMPL_STRATEGY =
 else

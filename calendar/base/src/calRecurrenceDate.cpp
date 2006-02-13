@@ -48,7 +48,7 @@ extern "C" {
     #include "ical.h"
 }
 
-NS_IMPL_ISUPPORTS2_CI(calRecurrenceDate, calIRecurrenceItem, calIRecurrenceDate)
+NS_IMPL_ISUPPORTS2(calRecurrenceDate, calIRecurrenceItem, calIRecurrenceDate)
 
 calRecurrenceDate::calRecurrenceDate()
     : mImmutable(PR_FALSE),
@@ -112,15 +112,6 @@ calRecurrenceDate::SetIsNegative(PRBool aIsNegative)
     return NS_OK;
 }
 
-/* readonly attribute boolean isFinite; */
-NS_IMETHODIMP
-calRecurrenceDate::GetIsFinite(PRBool *_retval)
-{
-    NS_ENSURE_ARG_POINTER(_retval);
-    *_retval = PR_TRUE;
-    return NS_OK;
-}
-
 NS_IMETHODIMP
 calRecurrenceDate::GetDate(calIDateTime **aDate)
 {
@@ -175,7 +166,7 @@ calRecurrenceDate::GetOccurrences(calIDateTime *aStartTime,
 
     if (mDate) {
         if (NS_SUCCEEDED(mDate->Compare(aRangeStart, &r1)) && r1 >= 0 &&
-            NS_SUCCEEDED(mDate->Compare(aRangeEnd, &r2)) && r2 < 0)
+            NS_SUCCEEDED(mDate->Compare(aRangeEnd, &r2)) && r2 <= 0)
         {
             calIDateTime **dates = (calIDateTime **) nsMemory::Alloc(sizeof(calIDateTime*));
             NS_ADDREF (dates[0] = mDate);

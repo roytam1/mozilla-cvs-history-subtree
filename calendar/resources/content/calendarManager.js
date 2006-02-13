@@ -36,7 +36,9 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+include('chrome://calendar/content/jslib/io/io.js');
+include('chrome://calendar/content/jslib/rdf/rdf.js');
+include('chrome://calendar/content/jslib/rdf/rdfFile.js');
 var gNextSubNodeToRefresh=0;
 var gModifiedTime = new Array();
 //var gModifiedTimeRemote = new Array(); 
@@ -959,11 +961,7 @@ calendarManager.prototype.getRemoteCalendarText = function calMan_getRemoteCalen
    var myInstance = Components.classes["@mozilla.org/network/stream-loader;1"].createInstance(Components.interfaces.nsIStreamLoader);
    dump( "init channel, \nChannel is "+Channel+"\nURL is "+Channel.URI.spec+"\n" );
    window.setCursor( "wait" );
-   try {
-     myInstance.init( Channel, Listener, null );
-   } catch (e) {
-     window.setCursor( "auto" );
-   }
+   myInstance.init( Channel, Listener, null );
 }
 
 calendarManager.prototype.getProfileDirectory = function calMan_getProfileDirectory()
@@ -1112,7 +1110,7 @@ function makeURLFromPath( path ) {
 }
 
 function refreshView() {
-  refreshEventTree();
+  refreshEventTree( getAndSetEventTable() );
   refreshToDoTree( false );
   gCalendarWindow.currentView.refreshEvents();
 }

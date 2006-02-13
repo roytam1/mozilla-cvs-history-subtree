@@ -74,6 +74,7 @@ var accountManagerDataSource;
 var folderDataSource;
 
 var accountCentralBox = null;
+var gSearchBox = null;
 var gAccountCentralLoaded = false;
 var gFakeAccountPageLoaded = false;
 //End progress and Status variables
@@ -204,6 +205,7 @@ function CreateMailWindowGlobals()
   folderDataSource         = Components.classes[folderDSContractID].getService();
 
   accountCentralBox = document.getElementById("accountCentralBox");
+  gSearchBox = document.getElementById("searchBox");
 }
 
 function InitMsgWindow()
@@ -302,7 +304,7 @@ nsMsgStatusFeedback.prototype =
         this.statusTextFld.label = status;
       }
     },
-  setOverLink : function(link, context)
+  setOverLink : function(link)
     {
       this.ensureStatusFields();
       this.statusTextFld.label = link;
@@ -493,18 +495,7 @@ function loadStartPage()
     var startpageenabled = pref.getBoolPref("mailnews.start_page.enabled");
     if (startpageenabled) 
     {
-      
       var startpage = pref.getComplexValue("mailnews.start_page.url", Components.interfaces.nsIPrefLocalizedString).data;
-
-      // Some users have our old default start page
-      // showing up as a user pref instead of a default pref. If this is the case, clear the user pref by hand 
-      // and re-read it again so we get the correct default start page.
-      if (startpage == "chrome://messenger/locale/start.html")
-      {
-        pref.clearUserPref("mailnews.start_page.url");
-        startpage = pref.getComplexValue("mailnews.start_page.url", Components.interfaces.nsIPrefLocalizedString).data;
-      }
-
       if (startpage != "") 
       {
         GetMessagePaneFrame().location.href = startpage;
@@ -540,7 +531,7 @@ function ShowingAccountCentral()
                                                Components.interfaces.nsIPrefLocalizedString).data;
         GetMessagePane().collapsed = true;
         document.getElementById("threadpane-splitter").collapsed = true;
-        document.getElementById("key_toggleMessagePane").setAttribute("disabled", "true");
+        gSearchBox.collapsed = true;
 
         window.frames["accountCentralPane"].location.href = acctCentralPage;
         
@@ -565,7 +556,6 @@ function HidingAccountCentral()
     {
         dump("Error hiding AccountCentral page -> " + ex + "\n");
     }
-    document.getElementById("key_toggleMessagePane").removeAttribute("disabled");
     gAccountCentralLoaded = false;
 }
 
@@ -577,6 +567,7 @@ function ShowThreadPane()
 
 function ShowingThreadPane()
 {
+    gSearchBox.collapsed = false;
     var threadPaneSplitter = document.getElementById("threadpane-splitter");
     threadPaneSplitter.collapsed = false;
     GetMessagePane().collapsed =

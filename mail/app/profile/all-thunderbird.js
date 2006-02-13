@@ -45,6 +45,7 @@ pref("browser.chromeURL", "chrome://messenger/content/messengercompose/messenger
 pref("mail.biff.animate_dock_icon", false);
 #endif
 
+pref("app.extensions.version", "1.0+");
 pref("update.app.enabled", true); // Whether or not app updates are enabled 
 pref("update.app.url", "chrome://mozapps/locale/update/update.properties");	
 pref("update.extensions.enabled", true);
@@ -72,18 +73,14 @@ pref("app.update.mode", 1);
 // If set to true, the Update Service will present no UI for any event.
 pref("app.update.silent", false);
 
-// Update service URL:
-pref("app.update.url", "https://aus2.mozilla.org/update/1/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/update.xml");
-pref("app.update.vendorName.override", "Mozilla");
-
+// Default service URL for testing.
+pref("app.update.url", "chrome://mozapps/locale/update/updates.properties");
 // URL user can browse to manually if for some reason all update installation
-// attempts fail.  TODO: Change this URL
-pref("app.update.url.manual", "http://www.mozilla.org/products/thunderbird/");
-// A default value for the "More information about this update" link
-// supplied in the "An update is available" page of the update wizard. 
-pref("app.update.url.details", "chrome://messenger-region/locale/region.properties");
-// User-settable override to app.update.url for testing purposes.
-//pref("app.update.url.override", "");
+// attempts fail.
+pref("app.update.url.manual", "chrome://mozapps/locale/update/updates.properties");
+// User-settable update preference that overrides app.update.url for testing 
+// purposes.
+pref("app.update.url.override", "chrome://mozapps/locale/update/updates.properties");
 
 // Interval: Time between checks for a new version (in seconds)
 //           default=1 day
@@ -96,7 +93,7 @@ pref("app.update.nagTimer.download", 86400);
 pref("app.update.nagTimer.restart", 1800);
 // Interval: When all registered timers should be checked (in milliseconds)
 //           default=5 seconds
-pref("app.update.timer", 600000);
+pref("app.update.timer", 5000);
 
 // Whether or not we show a dialog box informing the user that the update was
 // successfully applied. This is off in Firefox by default since we show a 
@@ -200,7 +197,6 @@ pref("mail.trusteddomains", "");
 // hidden pref for changing how we present attachments in the message pane
 pref("mailnews.attachments.display.largeView", false); 
 pref("mail.pane_config.dynamic",            0);
-pref("mailnews.reuse_thread_window2",     true);
 pref("mailnews.display.sanitizeJunkMail", true);
 pref("mail.standalone", true); 
 pref("editor.singleLine.pasteNewlines", 4);  // substitute commas for new lines in single line text boxes
@@ -211,6 +207,12 @@ pref("mailnews.headers.minNumHeaders", 0); // 0 means we ignore this pref
 
 pref("mail.compose.dontWarnMail2Newsgroup", false);
 
+pref("messenger.throbber.url","chrome://messenger-region/locale/region.properties");
+pref("mailnews.release_notes.url","chrome://messenger-region/locale/region.properties");
+pref("mailnews.hints_and_tips.url","chrome://messenger-region/locale/region.properties");
+pref("compose.throbber.url","chrome://messenger-region/locale/region.properties");
+pref("addressbook.throbber.url","chrome://messenger-region/locale/region.properties");
+
 pref("network.image.imageBehavior", 2);
 pref("network.cookie.cookieBehavior", 3); // 0-Accept, 1-dontAcceptForeign, 2-dontUse, 3-p3p
 
@@ -218,11 +220,17 @@ pref("network.cookie.cookieBehavior", 3); // 0-Accept, 1-dontAcceptForeign, 2-do
 // End seamonkey suite mailnews.js pref overrides
 ///////////////////////////////////////////////////////////////// 
 
-// whether to check if we are the default mail, news or feed client
-// on startup. 
+#ifdef HAVE_SHELL_SERVICE
+// whether to check if we're the default mail client on startup
 pref("mail.checkDefaultMail", true);
+// whether to check if we're the default news client on startup
 pref("mail.checkDefaultNews", false);
+#ifdef XP_MACOSX
+// whether to check if we're the the default RSS/Atom client on startup
+// (Mac only)
 pref("mail.checkDefaultFeed", false);
+#endif
+#endif
 
 /////////////////////////////////////////////////////////////////
 // Overrides for generic app behavior from the seamonkey suite's all.js
@@ -286,11 +294,6 @@ pref("network.protocol-handler.warn-external.ftp", false);
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
 
-pref("security.warn_entering_secure.show_once", false);
-pref("security.warn_entering_weak.show_once", false);
-pref("security.warn_leaving_secure.show_once", false);
-pref("security.warn_viewing_mixed.show_once", false);
-
 pref("general.config.obscure_value", 0); // for MCD .cfg files
 
 pref("xpinstall.dialog.confirm", "chrome://mozapps/content/xpinstall/xpinstallConfirm.xul");
@@ -321,8 +324,6 @@ pref("browser.startup.autoload_homepage",   true);
 
 pref("browser.cache.memory.capacity",       4096);
 
-pref("browser.send_pings", false);
-
 pref("browser.urlbar.autoFill", false);
 pref("browser.urlbar.showPopup", true);
 pref("browser.urlbar.showSearch", true);
@@ -336,20 +337,16 @@ pref("browser.chrome.toolbar_tips",         true);
 pref("browser.chrome.toolbar_style",        2);
 
 pref("browser.xul.error_pages.enabled", true);
-pref("mail.attachment.store.version", 0);
 
-// Attachment download manager settings
+// Dialog modality issues
+pref("browser.show_about_as_stupid_modal_window", false);
+
+pref("browser.download.progressDnldDialog.keepAlive", true); // keep the dnload progress dialog up after dnload is complete
+pref("browser.download.progressDnldDialog.enable_launch_reveal_buttons", true);
 pref("browser.download.useDownloadDir", false);
 pref("browser.download.folderList", 0);
-pref("browser.download.manager.showAlertOnComplete", false);
-pref("browser.download.manager.showAlertInterval", 2000);
-pref("browser.download.manager.retention", 1);
-pref("browser.download.manager.showWhenStarting", true);
-pref("browser.download.manager.useWindow", true);
-pref("browser.download.manager.closeWhenDone", false);
-pref("browser.download.manager.openDelay", 0);
-pref("browser.download.manager.focusWhenStarting", false);
-pref("browser.download.manager.flashCount", 2);
+pref("browser.download.autoDownload", false);
+pref("browser.download.lastLocation", false);
 
 // various default search settings
 pref("browser.search.defaulturl", "chrome://navigator-region/locale/region.properties");

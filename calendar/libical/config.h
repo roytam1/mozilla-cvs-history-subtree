@@ -63,8 +63,10 @@
 /* Define if we want _REENTRANT */
 /* #undef ICAL_REENTRANT */
 
-/* Define to terminate lines with "\n" instead of "\r\n" */
-#undef ICAL_UNIX_NEWLINE
+/* Define to terminate lines with "
+" instead of "
+" */
+#define ICAL_UNIX_NEWLINE 1
 
 /* Define to 1 if you DO NOT WANT to see deprecated messages */
 #define NO_WARN_DEPRECATED 1

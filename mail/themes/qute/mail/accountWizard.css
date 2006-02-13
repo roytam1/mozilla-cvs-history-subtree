@@ -47,16 +47,16 @@
 
 .awIdentityLabel {
   width: 8em; 
-  -moz-margin-start: 5px;
+  margin-left: 5px;
 }
 
 #fullName {
-  -moz-margin-end: 15px;
+  margin-right: 15px;
 }
 .serverLabel {
   width: 8em;
 }
 
 .serverDataBox {
-  -moz-margin-start: 15px;
+  margin-left: 15px;
 }

@@ -37,44 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const kCalRecurrenceInfoContractID = "@mozilla.org/calendar/recurrence-info;1";
-const kCalIRecurrenceInfo = Components.interfaces.calIRecurrenceInfo;
-
-const kCalRecurrenceRuleContractID = "@mozilla.org/calendar/recurrence-rule;1";
-const kCalIRecurrenceRule = Components.interfaces.calIRecurrenceRule;
-
-const kCalRecurrenceDateSetContractID = "@mozilla.org/calendar/recurrence-date-set;1";
-const kCalIRecurrenceDateSet = Components.interfaces.calIRecurrenceDateSet;
-
-const kCalRecurrenceDateContractID = "@mozilla.org/calendar/recurrence-date;1";
-const kCalIRecurrenceDate = Components.interfaces.calIRecurrenceDate;
-
-/* Constructor helpers, lazily initialized to avoid registration races. */
-var CalRecurrenceInfo = null;
-var CalRecurrenceRule = null;
-var CalRecurrenceDateSet = null;
-var CalRecurrenceDate = null;
-var CalDateTime = null;
-var CalDuration = null;
-var CalAttendee = null;
-
-var componentInitRun = false;
-function initBaseComponent()
-{
-    CalRecurrenceInfo = new Components.Constructor(kCalRecurrenceInfoContractID, kCalIRecurrenceInfo);
-    CalRecurrenceRule = new Components.Constructor(kCalRecurrenceRuleContractID, kCalIRecurrenceRule);
-    CalRecurrenceDateSet = new Components.Constructor(kCalRecurrenceDateSetContractID, kCalIRecurrenceDateSet);
-    CalRecurrenceDate = new Components.Constructor(kCalRecurrenceDateContractID, kCalIRecurrenceDate);
-
-    CalDateTime = new Components.Constructor("@mozilla.org/calendar/datetime;1",
-                                             Components.interfaces.calIDateTime);
-    CalDuration = new Components.Constructor("@mozilla.org/calendar/duration;1",
-                                             Components.interfaces.calIDateTime);
-    CalAttendee = new Components.Constructor("@mozilla.org/calendar/attendee;1",
-                                             Components.interfaces.calIAttendee);
-}
-
-
 /* Update these in calBaseCID.h */
 const componentData =
     [
@@ -82,19 +44,14 @@ const componentData =
     {cid: null,
      contractid: null,
      script: "calItemBase.js",
-     constructor: null},
+     constructor: null,
+     onComponentLoad: "onCalItemBaseLoad()"},
 
     {cid: Components.ID("{f42585e7-e736-4600-985d-9624c1c51992}"),
      contractid: "@mozilla.org/calendar/manager;1",
      script: "calCalendarManager.js",
      constructor: "calCalendarManager",
      onComponentLoad: "onCalCalendarManagerLoad()"},
-
-    {cid: Components.ID("{7a9200dd-6a64-4fff-a798-c5802186e2cc}"),
-     contractid: "@mozilla.org/calendar/alarm-service;1",
-     script: "calAlarmService.js",
-     constructor: "calAlarmService",
-     service: true},
 
     {cid: Components.ID("{974339d5-ab86-4491-aaaf-2b2ca177c12b}"),
      contractid: "@mozilla.org/calendar/event;1",
@@ -106,6 +63,11 @@ const componentData =
      script: "calTodo.js",
      constructor: "calTodo"},
 
+    {cid: Components.ID("{bad672b3-30b8-4ecd-8075-7153313d1f2c}"),
+     contractid: "@mozilla.org/calendar/item-occurrence;1",
+     script: null,
+     constructor: "calItemOccurrence"},
+
     {cid: Components.ID("{5c8dcaa3-170c-4a73-8142-d531156f664d}"),
      contractid: "@mozilla.org/calendar/attendee;1",
      script: "calAttendee.js",
@@ -114,22 +76,7 @@ const componentData =
     {cid: Components.ID("{5f76b352-ab75-4c2b-82c9-9206dbbf8571}"),
      contractid: "@mozilla.org/calendar/attachment;1",
      script: "calAttachment.js",
-     constructor: "calAttachment"},
-
-    {cid: Components.ID("{04027036-5884-4a30-b4af-f2cad79f6edf}"),
-     contractid: "@mozilla.org/calendar/recurrence-info;1",
-     script: "calRecurrenceInfo.js",
-     constructor: "calRecurrenceInfo"},
-
-    {cid: Components.ID("{4123da9a-f047-42da-a7d0-cc4175b9f36a}"),
-     contractid: "@mozilla.org/calendar/datetime-formatter;1",
-     script: "calDateTimeFormatter.js",
-     constructor: "calDateTimeFormatter"},
-
-    {cid: Components.ID("{6877bbdd-f336-46f5-98ce-fe86d0285cc1}"),
-     contractid: "@mozilla.org/calendar/weektitle-service;1",
-     script: "calWeekTitleService.js",
-     constructor: "calWeekTitleService"}
+     constructor: "calAttachment"}
     ];
 
 var calItemModule = {
@@ -151,8 +98,8 @@ var calItemModule = {
         var dirsvc = Components.classes[dirsvcContractID].getService(propsIID);
         var iosvc = Components.classes[iosvcContractID].getService(iosvcIID);
 
-        // We expect to find the subscripts in our directory.
-        var appdir = __LOCATION__.parent;
+        // NS_XPCOM_COMPONENT_DIR
+        var appdir = dirsvc.get("ComsD", Components.interfaces.nsIFile);
 
         for (var i = 0; i < componentData.length; i++) {
             var scriptName = componentData[i].script;
@@ -162,13 +109,8 @@ var calItemModule = {
             var f = appdir.clone();
             f.append(scriptName);
 
-            try {
-                var fileurl = iosvc.newFileURI(f);
-                loader.loadSubScript(fileurl.spec, null);
-            } catch (e) {
-                dump("Error while loading " + fileurl.spec + "\n");
-                throw e;
-            }
+            var fileurl = iosvc.newFileURI(f);
+            loader.loadSubScript(fileurl.spec, null);
         }
 
         this.mScriptsLoaded = true;
@@ -192,14 +134,8 @@ var calItemModule = {
                                             type);
 
             if (comp.category) {
-                var contractid;
-                if (comp.service)
-                    contractid = "service," + comp.contractid;
-                else
-                    contractid = comp.contractid;
                 catman.addCategoryEntry(comp.category, comp.categoryEntry,
-                                        contractid, true, true);
-                dump("registering for category stuff\n");
+                                        comp.contractid, true, true);
             }
         }
     },
@@ -229,11 +165,6 @@ var calItemModule = {
 
         if (!this.mScriptsLoaded)
             this.loadScripts();
-
-        if (!componentInitRun) {
-            initBaseComponent();
-            componentInitRun = true;
-        }
 
         for (var i = 0; i < componentData.length; i++) {
             if (cid.equals(componentData[i].cid)) {

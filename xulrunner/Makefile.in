@@ -43,12 +43,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = \
-	setup \
-	stub \
-	app \
-	examples \
-	$(NULL)
+DIRS = stub app examples
 
 ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_INSTALLER

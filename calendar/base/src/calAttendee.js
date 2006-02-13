@@ -42,34 +42,8 @@ function calAttendee() {
         createInstance(Components.interfaces.nsIWritablePropertyBag);
 }
 
-var calAttendeeClassInfo = {
-    getInterfaces: function (count) {
-        var ifaces = [
-            Components.interfaces.nsISupports,
-            Components.interfaces.calIAttendee,
-            Components.interfaces.nsIClassInfo
-        ];
-        count.value = ifaces.length;
-        return ifaces;
-    },
-
-    getHelperForLanguage: function (language) {
-        return null;
-    },
-
-    contractID: "@mozilla.org/calendar/attendee;1",
-    classDescription: "Calendar Attendee",
-    classID: Components.ID("{5c8dcaa3-170c-4a73-8142-d531156f664d}"),
-    implementationLanguage: Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
-    flags: 0
-};
-
-
 calAttendee.prototype = {
     QueryInterface: function (aIID) {
-        if (aIID.equals(Components.interfaces.nsIClassInfo))
-            return calAttendeeClassInfo;
-
         if (!aIID.equals(Components.interfaces.nsISupports) &&
             !aIID.equals(Components.interfaces.calIAttendee))
         {
@@ -112,7 +86,7 @@ calAttendee.prototype = {
     // icalatt is a calIcalProperty of type attendee
     set icalProperty (icalatt) {
         this.modify();
-        this.id = icalatt.valueAsIcalString;
+        this.id = icalatt.stringValue;
         var promotedProps = { };
         for (var i = 0; i < this.icalAttendeePropMap.length; i++) {
             var prop = this.icalAttendeePropMap[i];
@@ -137,7 +111,7 @@ calAttendee.prototype = {
         var icalatt = icssvc.createIcalProperty("ATTENDEE");
         if (!this.id)
             throw Components.results.NS_ERROR_NOT_INITIALIZED;
-        icalatt.valueAsIcalString = this.id;
+        icalatt.stringValue = this.id;
         for (var i = 0; i < this.icalAttendeePropMap.length; i++) {
             var prop = this.icalAttendeePropMap[i];
             if (this[prop.cal])

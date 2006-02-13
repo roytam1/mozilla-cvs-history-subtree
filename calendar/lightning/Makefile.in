@@ -45,32 +45,8 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= lightning
 
 export XPI_NAME	= lightning
-DIST_FILES	= chrome.manifest install.rdf
+XPI_INSTALL_EXTRAS = $(srcdir)/chrome.manifest
 XPI_PKGNAME	= lightning
-
-DIRS		= ../../db/sqlite3/src ../../storage \
-		  ../../extensions/xmlextras         \
-		  ../../extensions/webdav            \
-                  ../libical ../base ../providers    \
-                  ../import-export                   \
-                  components                         \
-		  $(NULL)
-
-# Select a theme from which to pull our skin goodness
-# OS X: pinstripe
-# Others: winstripe
-
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-THEME=pinstripe
-else
-THEME=winstripe
-endif
-
-DEFINES += -DTHEME=$(THEME)
-
-DEFINES += -DTHUNDERBIRD_VERSION=$(THUNDERBIRD_VERSION)
-DEFINES += -DFIREFOX_VERSION=$(FIREFOX_VERSION)
-
-PREF_JS_EXPORTS = $(srcdir)/content/lightning.js
+DIRS		= ../../db/sqlite3/src ../../storage ../libical ../base ../providers
 
 include $(topsrcdir)/config/rules.mk

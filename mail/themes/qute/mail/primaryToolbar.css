@@ -56,6 +56,19 @@ toolbar[mode="full"] .toolbarbutton-1 {
   min-width: 47px;
 }
 
+toolbar[mode="icons"] .toolbarbutton-text {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-icon {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-text {
+  padding: 0 !important;
+  margin: 3px 5px !important;
+}
+
 #button-getmsg {
   -moz-image-region: rect(0px 24px 24px 0px);
 }
@@ -156,7 +169,11 @@ toolbar[mode="full"] .toolbarbutton-1 {
   -moz-image-region: rect(0px 216px 24px 192px);
 }
 
-#button-print:hover {
+#button-print[buttonover] {
+  -moz-image-region: rect(24px 216px 48px 192px);
+}
+
+#button-print[buttondown] {
   -moz-image-region: rect(24px 216px 48px 192px);
 }
 
@@ -180,7 +197,11 @@ toolbar[mode="full"] .toolbarbutton-1 {
   -moz-image-region: rect(0px 264px 24px 240px);
 }
 
-#button-file:hover,
+#button-file:hover {
+  -moz-image-region: rect(24px 264px 48px 240px);
+} 
+
+#button-file:hover:active,
 #button-file[open] {
   -moz-image-region: rect(24px 264px 48px 240px);
 } 
@@ -189,27 +210,27 @@ toolbar[mode="full"] .toolbarbutton-1 {
   -moz-image-region: rect(48px 264px 72px 240px) !important;
 } 
 
-#button-next, #button-previous[chromedir="rtl"] {
+#button-next {
   -moz-image-region: rect(0px 288px 24px 264px);
 }
 
-#button-next:hover, #button-previous:hover[chromedir="rtl"]{
+#button-next:hover {
   -moz-image-region: rect(24px 288px 48px 264px);
 } 
 
-#button-next[disabled], #button-previous[chromedir="rtl"][disabled] {
+#button-next[disabled] {
   -moz-image-region: rect(48px 288px 72px 264px) !important;
 } 
 
-#button-previous, #button-next[chromedir="rtl"] {
+#button-previous {
   -moz-image-region: rect(0px 312px 24px 288px);
 }
 
-#button-previous:hover, #button-next:hover[chromedir="rtl"]{
+#button-previous:hover {
   -moz-image-region: rect(24px 312px 48px 288px);
 } 
 
-#button-previous[disabled], #button-next[chromedir="rtl"][disabled] {
+#button-previous[disabled] {
   -moz-image-region: rect(48px 312px 72px 288px) !important;
 } 
 
@@ -217,7 +238,11 @@ toolbar[mode="full"] .toolbarbutton-1 {
   -moz-image-region: rect(0px 336px 24px 312px);
 }
 
-#button-mark:hover {
+#button-mark[buttonover] {
+  -moz-image-region: rect(24px 336px 48px 312px);
+} 
+
+#button-mark[buttondown] {
   -moz-image-region: rect(24px 336px 48px 312px);
 } 
 
@@ -332,7 +357,11 @@ toolbar[iconsize="small"] #button-print {
   -moz-image-region: rect(0px 144px 16px 128px);
 }
 
-toolbar[iconsize="small"] #button-print:hover {
+toolbar[iconsize="small"] #button-print[buttonover] {
+  -moz-image-region: rect(16px 144px 32px 128px);
+}
+
+toolbar[iconsize="small"] #button-print[buttondown] {
   -moz-image-region: rect(16px 144px 32px 128px);
 }
 
@@ -356,7 +385,11 @@ toolbar[iconsize="small"] #button-file {
   -moz-image-region: rect(0px 176px 16px 160px);
 }
 
-toolbar[iconsize="small"] #button-file:hover,
+toolbar[iconsize="small"] #button-file:hover {
+  -moz-image-region: rect(16px 176px 32px 160px);
+} 
+
+toolbar[iconsize="small"] #button-file:hover:active,
 toolbar[iconsize="small"] #button-file[open] {
   -moz-image-region: rect(16px 176px 32px 160px);
 } 
@@ -377,18 +410,6 @@ toolbar[iconsize="small"] #button-next[disabled] {
   -moz-image-region: rect(32px 192px 48px 176px) !important;
 } 
 
-toolbar[iconsize="small"] #button-next[chromedir="rtl"] {
-  -moz-image-region: rect(0px 208px 16px 192px);
-}
-
-toolbar[iconsize="small"] #button-next:hover[chromedir="rtl"] {
-  -moz-image-region: rect(16px 208px 32px 192px);
-} 
-
-toolbar[iconsize="small"] #button-next[chromedir="rtl"][disabled] {
-  -moz-image-region: rect(32px 208px 48px 192px) !important;
-} 
-
 toolbar[iconsize="small"] #button-previous {
   -moz-image-region: rect(0px 208px 16px 192px);
 }
@@ -399,18 +420,6 @@ toolbar[iconsize="small"] #button-previous:hover {
 
 toolbar[iconsize="small"] #button-previous[disabled] {
   -moz-image-region: rect(32px 208px 48px 192px) !important;
-} 
-
-toolbar[iconsize="small"] #button-previous[chromedir="rtl"] {
-  -moz-image-region: rect(0px 192px 16px 176px);
-}
-
-toolbar[iconsize="small"] #button-previous:hover[chromedir="rtl"] {
-  -moz-image-region: rect(16px 192px 32px 176px);
-} 
-
-toolbar[iconsize="small"] #button-previous[chromedir="rtl"][disabled] {
-  -moz-image-region: rect(32px 192px 48px 176px) !important;
 } 
 
 toolbar[iconsize="small"] #button-mark {
@@ -454,6 +463,6 @@ toolbar[iconsize="small"] #button-mark[disabled] {
 }
 
 #phishingBarImage {
-/* for now, temporarily use the alert icon until we can get a new one */
-  list-style-image: url("chrome://global/skin/icons/Warning.png"); 
+/* for now, temporarily copy the remote image icon until we can get a new one */
+  list-style-image: url("chrome://messenger/skin/icons/remote-blocked.png"); 
 }

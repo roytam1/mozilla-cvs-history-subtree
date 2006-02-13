@@ -61,7 +61,6 @@ defaults/pref/*
 greprefs/*
 defaults/messenger/mailViews.dat
 defaults/messenger/SpamAssassin.sfd
-defaults/messenger/SpamPal.sfd
 defaults/profile/localstore.rdf
 defaults/profile/mimeTypes.rdf
 defaults/profile/US/localstore.rdf
@@ -70,7 +69,6 @@ defaults/isp/US/movemail.rdf
 defaults/isp/movemail.rdf
 defaults/autoconfig/platform.js
 defaults/autoconfig/prefcalls.js
-updater.ini
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; App extensions to Mail
@@ -93,7 +91,8 @@ components/libwalletviewers.so
 ; download progress
 components/nsProgressDialog.js
 components/nsHelperAppDlg.js
-components/downloads.xpt
+components/nsDownloadProgressListener.js
+components/downloadmanager.xpt
 
 ; spellchecker (may not be present)
 components/libmyspell.so
@@ -189,6 +188,7 @@ components/xultmpl.xpt
 components/xuldoc.xpt
 
 ;;libmoz_art_lgpl.so
+;;res/dtd/xhtml11.dtd
 components/libgklayout.so                   
 components/layout_base.xpt              
 components/layout_printing.xpt              
@@ -296,8 +296,10 @@ components/txtsvc.xpt
 
 ; netwerk
 components/libnecko.so
+components/libnecko2.so
 components/necko.xpt                    
 components/necko_about.xpt              
+components/necko_data.xpt               
 components/necko_dns.xpt                
 components/necko_http.xpt               
 components/necko_res.xpt                
@@ -321,8 +323,6 @@ libnss3.so
 libsmime3.so
 libsoftokn3.chk
 libsoftokn3.so
-libfreebl3.chk
-libfreebl3.so
 libssl3.so
 libnssckbi.so
 components/libmsgsmime.so
@@ -370,7 +370,7 @@ components/libfileview.so
 ; Optional - only if you need plugin support
 ;components/libgkplugin.so
 ;components/plugin.xpt
-;components/pluginGlue.js
+
 
 ; wallet
 ; Optional - only if you need password persistence
@@ -384,8 +384,6 @@ components/libfileview.so
 ;;components/nsHelperAppDlg.js
 ;;components/nsDownloadProgressListener.js
 
-; updater
-updater
 
 ; xmlextras, optional for XMLHttpRequest support
 components/libxmlextras.so
@@ -400,8 +398,8 @@ res/charsetalias.properties
 res/langGroups.properties
 res/language.properties
 ;res/wincharset.properties
+res/builtin/*
 res/entityTables/*
-res/dtd/xhtml11.dtd
 
 ; editor resource files
 res/EditorOverride.css
@@ -455,6 +453,7 @@ components/filepicker.xpt
 ;;res/arrowd.gif
 ;;res/loading-image.gif
 ;;res/broken-image.gif
+;;res/builtin/*
 ;;res/entityTables/html40Special.properties
 ;;res/entityTables/htmlEntityVersion.properties
 ;;res/entityTables/html40Latin1.properties

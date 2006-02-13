@@ -483,14 +483,20 @@ var DefaultController =
 			case "cmd_delete":
          // if the user deletes a message before its mark as read timer goes off, we should mark it as read
          // this ensures that we clear the biff indicator from the system tray when the user deletes the new message
-        if (gMarkViewedMessageAsReadTimer)
+        if (gMarkViewedMessageAsReadTimer) 
+        {
           MarkCurrentMessageAsRead();
+          ClearPendingReadTimer();
+        }
         SetNextMessageAfterDelete();
         gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
 				break;
 			case "cmd_shiftDelete":
         if (gMarkViewedMessageAsReadTimer)
+        {
           MarkCurrentMessageAsRead();
+          ClearPendingReadTimer();
+        }
         SetNextMessageAfterDelete();
         gDBView.doCommand(nsMsgViewCommandType.deleteNoTrash);
 				break;
@@ -639,7 +645,7 @@ var DefaultController =
         MsgApplyFilters(null);
         return;
       case "cmd_runJunkControls":
-        filterFolderForJunk();
+        analyzeFolderForJunk();
         return;
       case "cmd_deleteJunk":
         deleteJunkInFolder();

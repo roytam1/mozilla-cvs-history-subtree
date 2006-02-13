@@ -71,7 +71,7 @@ extern "C" {
 #define NO_WARN_ICAL_MALFORMEDDATA_ERROR_HACK 1
 
 /* Define to terminate lines with n instead of rn */
-#undef ICAL_UNIX_NEWLINE
+#define ICAL_UNIX_NEWLINE 1
 
 /* Define if we have pthread. */
 #define HAVE_PTHREAD 

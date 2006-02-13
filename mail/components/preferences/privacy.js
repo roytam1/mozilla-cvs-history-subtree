@@ -1,27 +1,25 @@
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-#
+# 
 # The Original Code is the Thunderbird Preferences System.
-#
-# The Initial Developer of the Original Code is
-# Scott MacGregor.
+# 
+# The Initial Developer of the Original Code is Scott MacGregor.
 # Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   Scott MacGregor <mscott@mozilla.org>
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -33,7 +31,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 var gPrivacyPane = {
@@ -48,10 +46,6 @@ var gPrivacyPane = {
     // Update the MP buttons
     this.updateMasterPasswordButton();
 
-    // build the local address book menu list. We do this by hand instead of using the xul template
-    // builder because of Bug #285076, 
-    this.createLocalDirectoriesList();
-
     var preference = document.getElementById("mail.preferences.privacy.selectedTabIndex");
     if (preference.value)
       document.getElementById("privacyPrefs").selectedIndex = preference.value;
@@ -61,46 +55,9 @@ var gPrivacyPane = {
   tabSelectionChanged: function ()
   {
     if (this.mInitialized)
-      document.getElementById("mail.preferences.privacy.selectedTabIndex")
-              .valueFromPreferences = document.getElementById("privacyPrefs").selectedIndex;
-  },
-
-  createLocalDirectoriesList: function () 
-  {
-    var abPopup = document.getElementById("whitelist-menupopup");
-
-    if (abPopup) 
-      this.loadLocalDirectories(abPopup);
-  },
-
-  loadLocalDirectories: function (aPopup)
-  {
-    var rdfService = Components.classes["@mozilla.org/rdf/rdf-service;1"]
-                     .getService(Components.interfaces.nsIRDFService);
-
-    var parentDir = rdfService.GetResource("moz-abdirectory://").QueryInterface(Components.interfaces.nsIAbDirectory);
-    var enumerator = parentDir.childNodes;
-    var preference = document.getElementById("mailnews.message_display.disable_remote_images.whiteListAbURI");
-
-    if (enumerator)
     {
-      while (enumerator.hasMoreElements())
-      {
-        var addrbook = enumerator.getNext();
-        if (addrbook instanceof Components.interfaces.nsIAbDirectory && !addrbook.isRemote && !addrbook.isMailList)
-        {
-          var abURI = addrbook.directoryProperties.URI;
-          item = document.createElement("menuitem");
-          item.setAttribute("label", addrbook.dirName);
-          item.setAttribute("value", abURI);
-          aPopup.appendChild(item);   
-          if (preference.value == abURI)
-          {
-            aPopup.parentNode.value = abURI;
-            aPopup.selectedItem = item;
-          }
-        }
-      }
+      var preference = document.getElementById("mail.preferences.privacy.selectedTabIndex");
+      preference.valueFromPreferences = document.getElementById("privacyPrefs").selectedIndex;
     }
   },
 
@@ -153,10 +110,11 @@ var gPrivacyPane = {
                  status == nsIPKCS11Slot.SLOT_READY;
 
       var bundle = document.getElementById("bundlePreferences");
-      document.getElementById("setMasterPassword").label =
-        bundle.getString(noMP ? "setMasterPassword" : "changeMasterPassword");
+      var button = document.getElementById("setMasterPassword");
+      button.label = bundle.getString(noMP ? "setMasterPassword" : "changeMasterPassword");
       
-      document.getElementById("removeMasterPassword").disabled = noMP;
+      var removeButton = document.getElementById("removeMasterPassword");
+      removeButton.disabled = noMP;
     }
   },
 
@@ -182,13 +140,13 @@ var gPrivacyPane = {
 
   showCertificates: function ()
   {
-    document.documentElement.openWindow("mozilla:certmanager", "chrome://pippki/content/certManager.xul",
+    document.documentElement.openSubDialog("chrome://pippki/content/certManager.xul",
                                         "width=600,height=400", null);
   },
   
   showCRLs: function ()
   {
-    document.documentElement.openWindow("Mozilla:CRLManager", "chrome://pippki/content/crlManager.xul",
+    document.documentElement.openSubDialog("chrome://pippki/content/crlManager.xul",
                                         "width=600,height=400", null);
   },
   
@@ -200,7 +158,7 @@ var gPrivacyPane = {
   
   showSecurityDevices: function ()
   {
-    document.documentElement.openWindow("mozilla:devicemanager", "chrome://pippki/content/device_manager.xul",
+    document.documentElement.openSubDialog("chrome://pippki/content/device_manager.xul",
                                         "width=600,height=400", null);
-  }
+  },
 };

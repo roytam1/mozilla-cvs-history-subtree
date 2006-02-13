@@ -66,9 +66,9 @@ var FeedCache =
 
   normalizeHost: function (aUrl)
   {
-    var ioService = Components.classes["@mozilla.org/network/io-service;1"].
-                    createInstance(Components.interfaces.nsIIOService);
-    var normalizedUrl = ioService.newURI(aUrl, null, null);
+    normalizedUrl = Components.classes["@mozilla.org/network/standard-url;1"].
+                    createInstance(Components.interfaces.nsIURI);
+    normalizedUrl.spec = aUrl;    
     normalizedUrl.host = normalizedUrl.host.toLowerCase();
     return normalizedUrl.spec;
   }
@@ -206,13 +206,7 @@ Feed.prototype =
     if (feed.downloadCallback) 
     {
       // if the http status code is a 304, then the feed has not been modified since we last downloaded it.
-      var error = kNewsBlogRequestFailure;
-      try
-      {
-        if (request.status == 304)
-          error = kNewsBlogNoNewItems;
-      } catch (ex) {}
-      feed.downloadCallback.downloaded(feed, error);
+      feed.downloadCallback.downloaded(feed, request.status == 304 ? kNewsBlogNoNewItems : kNewsBlogRequestFailure);
     }
     
     FeedCache.removeFeed(url);
@@ -223,7 +217,7 @@ Feed.prototype =
     if (aFeed && aFeed.downloadCallback)
     {
       if (aFeed.downloadCallback)
-        aFeed.downloadCallback.downloaded(aFeed, aFeed.request && aFeed.request.status == 304 ? kNewsBlogNoNewItems : kNewsBlogInvalidFeed);
+        aFeed.downloadCallback.downloaded(aFeed, aFeed.request.status == 304 ? kNewsBlogNoNewItems : kNewsBlogInvalidFeed);
       FeedCache.removeFeed(aFeed.url);
     }
   },

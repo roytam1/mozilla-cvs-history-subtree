@@ -1,27 +1,25 @@
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-#
+# 
 # The Original Code is the Thunderbird Preferences System.
-#
-# The Initial Developer of the Original Code is
-# Ben Goodger.
+# 
+# The Initial Developer of the Original Code is Ben Goodger.
 # Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   Scott MacGregor <mscott@mozilla.org>
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -33,7 +31,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 const kDefaultFontType          = "font.default.%LANG%";
@@ -140,5 +138,83 @@ var gFontsDialog = {
   {
     var useDocumentFonts = document.getElementById("useDocumentFonts");
     return useDocumentFonts.checked ? 1 : 0;
+  },
+
+  readScreenResolution: function ()
+  {
+    // Initialize the display names of the default values the first time
+    // the preference is read. We can NOT do this in the init function since
+    // that is called after preference loading. 
+    var defaultResolution = document.getElementById("defaultResolution");
+    if (defaultResolution.label == "") {
+      var bundlePreferences = document.getElementById("bundlePreferences");
+      var otherResolution = document.getElementById("otherResolution");
+      otherResolution.label = bundlePreferences.getFormattedString("fontScalingResolutionFormat",
+                                                                  [otherResolution.getAttribute("value")]);
+      defaultResolution.label = bundlePreferences.getFormattedString("fontScalingResolutionFormat",
+                                                                    [defaultResolution.getAttribute("value")]);
+    }
+    return undefined;
+  },
+
+  changeScreenResolution: function (aMenulist)
+  {
+    var userResolution = document.getElementById("userResolution");
+    var screenResolution = document.getElementById("screenResolution");
+    var lastSelected = screenResolution.getElementsByAttribute("lastSelected", "true")
+    if (lastSelected.length > 0) 
+      lastSelected = lastSelected[0];
+    else {
+      var preference = document.getElementById("browser.display.screen_resolution");
+      lastSelected = screenResolution.getElementsByAttribute("value", preference.value);
+      if (lastSelected.length > 0)
+        lastSelected = lastSelected[0];
+      else
+        lastSelected = document.getElementById("defaultResolution");
+    }
+
+    if (aMenulist.selectedItem.value == "choose") {
+      var rv = { newdpi: -1 };
+      document.documentElement.openSubDialog("chrome://mozapps/content/preferences/fontscaling.xul",
+                                             "", rv);
+      if (rv.newdpi != -1) {
+        this._setResolution(rv.newdpi);
+        lastSelected.removeAttribute("lastSelected");
+        screenResolution.selectedItem.setAttribute("lastSelected", "true");
+      }
+      else
+        screenResolution.selectedItem = lastSelected;
+    }
+    else if (!(screenResolution.value == userResolution.value)) {
+      // User has selected one of the hard-coded resolutions
+      userResolution.hidden = true;
+      lastSelected.removeAttribute("lastSelected");
+      screenResolution.selectedItem.setAttribute("lastSelected", "true");
+    }
+  },
+
+  _setResolution: function (aResolution)
+  {
+    // Given a number, if it's equal to a hard-coded resolution we use that,
+    // otherwise we set the userResolution field.
+    var screenResolution = document.getElementById("screenResolution");
+    var userResolution = document.getElementById("userResolution");
+
+    var items = screenResolution.getElementsByAttribute("value", aResolution);
+    if (items[0]) {
+      // If it's one of the hard-coded values, we'll select it directly 
+      screenResolution.selectedItem = items[0];
+      userResolution.hidden = true;
+    }   
+    else {
+      // Otherwise we need to set up the userResolution field
+      var bundlePreferences = document.getElementById("bundlePreferences");
+      var label = bundlePreferences.getFormattedString("fontScalingResolutionFormat", 
+                                                       [aResolution]);
+      userResolution.value = aResolution;
+      userResolution.label = label;
+      userResolution.hidden = false;
+      screenResolution.selectedItem = userResolution;
+    }
   }
 };

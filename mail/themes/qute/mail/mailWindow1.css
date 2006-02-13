@@ -43,29 +43,160 @@
 
 @import url("chrome://messenger/skin/");
 @import url("chrome://messenger/skin/primaryToolbar.css");
-@import url("chrome://global/skin/toolbar.css");
 @import url("chrome://messenger/skin/folderMenus.css");
-@import url("chrome://messenger/skin/folderPane.css");
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
-
-/* Don't use the listbox appearance as that gives us a blue-grey top border
-   that collides with the primary toolbar border */
-#threadTree, #folderTree {
-  -moz-appearance:  none;
-  background-color: -moz-Field;
-  color: -moz-FieldText;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-right-colors: ThreeDHighlight ThreeDLightShadow;
-  border-left: 1px solid;
-  border-right: 1px solid;
-  border-bottom: 1px solid;
-}
 
 #mailContent {
   -moz-appearance: toolbox;
   background-color: -moz-Dialog;
+}
+
+/* ::::: Folder Pane ::::: */
+
+treechildren::-moz-tree-image(folderNameCol) {
+  margin-right: 2px;
+  list-style-image: url("chrome://messenger/skin/icons/folder-closed.png");
+}
+
+
+treechildren::-moz-tree-image(folderNameCol, selected, open) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-open.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, selected, open, newMessages-true) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-new-open.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, newMessages-true) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-new-closed.png");
+}
+
+/* ..... Inbox ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Inbox) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-inbox.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Inbox, newMessages-true) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-inbox-new.png");
+}
+
+/* ..... Sent ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Sent) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-sent.png");
+}
+
+/* ..... Unsent ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Unsent Messages) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-outbox.png");
+}
+
+/* ..... Drafts ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Drafts) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-draft.png");
+}
+
+/* ..... Templates ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Templates) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-template.png");
+}
+
+/* ..... Junk ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Junk) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-junk.png");
+}
+
+/* ..... Trash ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Trash) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-trash.png");
+}
+
+/* ..... Servers  ..... */
+
+treechildren::-moz-tree-image(folderNameCol, isServer-true) {
+  list-style-image: url("chrome://messenger/skin/icons/server-mail.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, biffState-NewMail, isServer-true) {
+  list-style-image: url("chrome://messenger/skin/icons/server-mail-new.png");
+}
+
+treechildren::-moz-tree-cell-text(folderNameCol, newMessages-true),
+treechildren::-moz-tree-cell-text(folderNameCol, specialFolder-Inbox, newMessages-true) {
+  font-weight: bold;
+}
+
+/* Disable rules for special shared folder artwork until we actually have new artwork for these icons */
+
+/* treechildren::-moz-tree-image(folderNameCol, imapShared-true) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-share.gif");
+}
+
+*/
+
+/* ..... Server Folders ..... */
+
+treechildren::-moz-tree-image(folderNameCol, isServer-true, serverType-pop3, isSecure-true) {
+  list-style-image: url("chrome://messenger/skin/icons/server-remote-lock.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, isServer-true, serverType-imap, isSecure-true) {
+  list-style-image: url("chrome://messenger/skin/icons/server-remote-lock.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, biffState-NewMail, isServer-true, isSecure-true) {
+  list-style-image: url("chrome://messenger/skin/icons/server-remote-lock-new.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, isServer-true, serverType-none) {
+  list-style-image: url("chrome://messenger/skin/icons/server-local.png");
+}
+
+/* ..... News Folders ..... */
+
+treechildren::-moz-tree-image(folderNameCol, serverType-nntp) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-newsgroup.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, isServer-true, serverType-nntp) {
+  list-style-image: url("chrome://messenger/skin/icons/server-news.png");
+}
+
+treechildren::-moz-tree-image(folderNameCol, isServer-true, serverType-nntp, isSecure-true) {
+  list-style-image: url("chrome://messenger/skin/icons/server-news-lock.png");
+}
+
+/* ..... Saved Search Folder ..... */
+
+treechildren::-moz-tree-image(folderNameCol, specialFolder-Virtual) {
+  list-style-image: url("chrome://messenger/skin/icons/folder-search.png");
+}
+
+/* ::::: All Servers ::::: */
+
+treechildren::-moz-tree-cell-text(closed, subfoldersHaveUnreadMessages-true) {
+  font-weight: bold;
+}
+
+treechildren::-moz-tree-cell-text(folderNameCol, isServer-true),
+treechildren::-moz-tree-cell-text(hasUnreadMessages-true) {
+  font-weight: bold;
+}
+
+treechildren::-moz-tree-cell-text(folderNameCol, noSelect-true) {
+  color: gray;
+  font-style: italic;
+}
+
+.tree-folder-checkbox {
+  list-style-image: none;
 }
 
 #folderUnreadCol,
@@ -84,7 +215,7 @@
 treechildren::-moz-tree-row(dummy)  {
   background-color:  #F0F0F0;
   margin-bottom: 1px;
-  -moz-padding-start: 2px;
+  padding-left: 2px;
 }
 
 treechildren::-moz-tree-row(dummy, selected) {
@@ -124,7 +255,8 @@ treechildren::-moz-tree-cell-text(container, closed, hasUnread, read) {
 
 treecol.threadColumnHeader {
   list-style-image: url("chrome://messenger/skin/icons/thread-col.png");
-  -moz-padding-end: 3px; 
+
+  padding-right: 3px; 
 }
 
 treecol.threadColumnHeader[sortDirection="ascending"]  {
@@ -155,7 +287,7 @@ treechildren::-moz-tree-image(threadCol, container, hasUnread, open) {
 
 treecol.readColumnHeader {
   list-style-image: url("chrome://messenger/skin/icons/readcol.png");
-  -moz-padding-end: 5px;
+  padding-right: 5px;
   padding-bottom: 5px;
 }
 
@@ -175,7 +307,7 @@ treechildren::-moz-tree-image(unreadButtonColHeader, unread) {
 
 treecol.attachmentColumnHeader {
   list-style-image: url("chrome://messenger/skin/icons/attachment-col.png");
-  -moz-padding-end: 5px; 
+  padding-right: 5px; 
 }
 
 treechildren::-moz-tree-image(attachmentCol, attach) {
@@ -186,7 +318,7 @@ treechildren::-moz-tree-image(attachmentCol, attach) {
 
 treecol.flagColumnHeader {
   list-style-image: url("chrome://messenger/skin/icons/flag-col.png");
-  -moz-padding-end: 5px; 
+  padding-right: 5px; 
 }
 
 treechildren::-moz-tree-image(flaggedCol) {
@@ -205,13 +337,13 @@ treechildren::-moz-tree-image(flaggedCol, flagged) {
 
 treecol.junkStatusHeader {
   list-style-image: url("chrome://messenger/skin/icons/junk-col.png");
-  -moz-padding-end: 5px; 
+  padding-right: 5px; 
 }
 
 /* "unknown" now looks like "not junk".  see bug #182386 */
 treechildren::-moz-tree-image(junkStatusCol) {
   list-style-image: url("chrome://messenger/skin/icons/readmail.gif");
-  -moz-padding-start: 0px;
+  padding-left: 0px;
 }
 
 treechildren::-moz-tree-image(junkStatusCol, junk) {
@@ -224,12 +356,12 @@ treechildren::-moz-tree-image(junkStatusCol, dummy) {
 
 treechildren::-moz-tree-image(junkStatusCol, notjunk) {
   list-style-image: url("chrome://messenger/skin/icons/readmail.gif");
-  -moz-padding-start: 0px;
+  padding-left: 0px;
 }
 /* ..... subject column ..... */
 
 treechildren::-moz-tree-image(subjectCol) {
-  -moz-margin-end: 2px;
+  margin-right: 2px;
   list-style-image: url("chrome://messenger/skin/icons/message-mail.png ");
 }
 
@@ -355,49 +487,49 @@ treechildren::-moz-tree-image(news, threadCol, container, ignore, open) {
 treechildren::-moz-tree-cell-text(lc-FFFFFF) {
   color: #FFFFFF
 }
-treechildren::-moz-tree-row(lc-FFFFFF, selected, focus) {
+treechildren::-moz-tree-row(lc-FFFFFF, selected) {
   background-color: #FFFFFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-CCCCCC) {
   color: #CCCCCC
 }
-treechildren::-moz-tree-row(lc-CCCCCC, selected, focus) {
+treechildren::-moz-tree-row(lc-CCCCCC, selected) {
   background-color: #CCCCCC;
 }
 
 treechildren::-moz-tree-cell-text(lc-C0C0C0) {
   color: #C0C0C0
 }
-treechildren::-moz-tree-row(lc-C0C0C0, selected, focus) {
+treechildren::-moz-tree-row(lc-C0C0C0, selected) {
   background-color: #C0C0C0;
 }
 
 treechildren::-moz-tree-cell-text(lc-999999) {
   color: #999999
 }
-treechildren::-moz-tree-row(lc-999999, selected, focus) {
+treechildren::-moz-tree-row(lc-999999, selected) {
   background-color: #999999;
 }
 
 treechildren::-moz-tree-cell-text(lc-666666) {
   color: #666666
 }
-treechildren::-moz-tree-row(lc-666666, selected, focus) {
+treechildren::-moz-tree-row(lc-666666, selected) {
   background-color: #666666;
 }
 
 treechildren::-moz-tree-cell-text(lc-333333) {
   color: #333333
 }
-treechildren::-moz-tree-row(lc-333333, selected, focus) {
+treechildren::-moz-tree-row(lc-333333, selected) {
   background-color: #333333;
 }
 
 treechildren::-moz-tree-cell-text(lc-000000) {
   color: #000000
 }
-treechildren::-moz-tree-row(lc-000000, selected, focus) {
+treechildren::-moz-tree-row(lc-000000, selected) {
   background-color: #000000;
 }
 
@@ -405,49 +537,49 @@ treechildren::-moz-tree-row(lc-000000, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-FFCCCC) {
   color: #FFCCCC
 }
-treechildren::-moz-tree-row(lc-FFCCCC, selected, focus) {
+treechildren::-moz-tree-row(lc-FFCCCC, selected) {
   background-color: #FFCCCC;
 }
 
 treechildren::-moz-tree-cell-text(lc-FF6666) {
   color: #FF6666
 }
-treechildren::-moz-tree-row(lc-FF6666, selected, focus) {
+treechildren::-moz-tree-row(lc-FF6666, selected) {
   background-color: #FF6666;
 }
 
 treechildren::-moz-tree-cell-text(lc-FF0000) {
   color: #FF0000
 }
-treechildren::-moz-tree-row(lc-FF0000, selected, focus) {
+treechildren::-moz-tree-row(lc-FF0000, selected) {
   background-color: #FF0000;
 }
 
 treechildren::-moz-tree-cell-text(lc-CC0000) {
   color: #CC0000
 }
-treechildren::-moz-tree-row(lc-CC0000, selected, focus) {
+treechildren::-moz-tree-row(lc-CC0000, selected) {
   background-color: #CC0000;
 }
 
 treechildren::-moz-tree-cell-text(lc-990000) {
   color: #990000
 }
-treechildren::-moz-tree-row(lc-990000, selected, focus) {
+treechildren::-moz-tree-row(lc-990000, selected) {
   background-color: #990000;
 }
 
 treechildren::-moz-tree-cell-text(lc-660000) {
   color: #660000
 }
-treechildren::-moz-tree-row(lc-660000, selected, focus) {
+treechildren::-moz-tree-row(lc-660000, selected) {
   background-color: #660000;
 }
 
 treechildren::-moz-tree-cell-text(lc-330000) {
   color: #330000
 }
-treechildren::-moz-tree-row(lc-330000, selected, focus) {
+treechildren::-moz-tree-row(lc-330000, selected) {
   background-color: #330000;
 }
 
@@ -455,49 +587,49 @@ treechildren::-moz-tree-row(lc-330000, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-FFCC99) {
   color: #FFCC99
 }
-treechildren::-moz-tree-row(lc-FFCC99, selected, focus) {
+treechildren::-moz-tree-row(lc-FFCC99, selected) {
   background-color: #FFCC99;
 }
 
 treechildren::-moz-tree-cell-text(lc-FF9966) {
   color: #FF9966
 }
-treechildren::-moz-tree-row(lc-FF9966, selected, focus) {
+treechildren::-moz-tree-row(lc-FF9966, selected) {
   background-color: #FF9966;
 }
 
 treechildren::-moz-tree-cell-text(lc-FF9900) {
   color: #FF9900
 }
-treechildren::-moz-tree-row(lc-FF9900, selected, focus) {
+treechildren::-moz-tree-row(lc-FF9900, selected) {
   background-color: #FF9900;
 }
 
 treechildren::-moz-tree-cell-text(lc-FF6600) {
   color: #FF6600
 }
-treechildren::-moz-tree-row(lc-FF6600, selected, focus) {
+treechildren::-moz-tree-row(lc-FF6600, selected) {
   background-color: #FF6600;
 }
 
 treechildren::-moz-tree-cell-text(lc-CC6600) {
   color: #CC6600
 }
-treechildren::-moz-tree-row(lc-CC6600, selected, focus) {
+treechildren::-moz-tree-row(lc-CC6600, selected) {
   background-color: #CC6600;
 }
 
 treechildren::-moz-tree-cell-text(lc-993300) {
   color: #993300
 }
-treechildren::-moz-tree-row(lc-993300, selected, focus) {
+treechildren::-moz-tree-row(lc-993300, selected) {
   background-color: #993300;
 }
 
 treechildren::-moz-tree-cell-text(lc-663300) {
   color: #663300
 }
-treechildren::-moz-tree-row(lc-663300, selected, focus) {
+treechildren::-moz-tree-row(lc-663300, selected) {
   background-color: #663300;
 }
 
@@ -505,49 +637,49 @@ treechildren::-moz-tree-row(lc-663300, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-FFFF99) {
   color: #FFFF99
 }
-treechildren::-moz-tree-row(lc-FFFF99, selected, focus) {
+treechildren::-moz-tree-row(lc-FFFF99, selected) {
   background-color: #FFFF99;
 }
 
 treechildren::-moz-tree-cell-text(lc-FFFF66) {
   color: #FFFF66
 }
-treechildren::-moz-tree-row(lc-FFFF66, selected, focus) {
+treechildren::-moz-tree-row(lc-FFFF66, selected) {
   background-color: #FFFF66;
 }
 
 treechildren::-moz-tree-cell-text(lc-FFCC66) {
   color: #FFCC66
 }
-treechildren::-moz-tree-row(lc-FFCC66, selected, focus) {
+treechildren::-moz-tree-row(lc-FFCC66, selected) {
   background-color: #FFCC66;
 }
 
 treechildren::-moz-tree-cell-text(lc-FFCC33) {
   color: #FFCC33
 }
-treechildren::-moz-tree-row(lc-FFCC33, selected, focus) {
+treechildren::-moz-tree-row(lc-FFCC33, selected) {
   background-color: #FFCC33;
 }
 
 treechildren::-moz-tree-cell-text(lc-CC9933) {
   color: #CC9933
 }
-treechildren::-moz-tree-row(lc-CC9933, selected, focus) {
+treechildren::-moz-tree-row(lc-CC9933, selected) {
   background-color: #CC9933;
 }
 
 treechildren::-moz-tree-cell-text(lc-996633) {
   color: #996633
 }
-treechildren::-moz-tree-row(lc-996633, selected, focus) {
+treechildren::-moz-tree-row(lc-996633, selected) {
   background-color: #996633;
 }
 
 treechildren::-moz-tree-cell-text(lc-663333) {
   color: #663333
 }
-treechildren::-moz-tree-row(lc-663333, selected, focus) {
+treechildren::-moz-tree-row(lc-663333, selected) {
   background-color: #663333;
 }
 
@@ -555,49 +687,49 @@ treechildren::-moz-tree-row(lc-663333, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-FFFFCC) {
   color: #FFFFCC
 }
-treechildren::-moz-tree-row(lc-FFFFCC, selected, focus) {
+treechildren::-moz-tree-row(lc-FFFFCC, selected) {
   background-color: #FFFFCC;
 }
 
 treechildren::-moz-tree-cell-text(lc-FFFF33) {
   color: #FFFF33
 }
-treechildren::-moz-tree-row(lc-FFFF33, selected, focus) {
+treechildren::-moz-tree-row(lc-FFFF33, selected) {
   background-color: #FFFF33;
 }
 
 treechildren::-moz-tree-cell-text(lc-FFFF00) {
   color: #FFFF00
 }
-treechildren::-moz-tree-row(lc-FFFF00, selected, focus) {
+treechildren::-moz-tree-row(lc-FFFF00, selected) {
   background-color: #FFFF00;
 }
 
 treechildren::-moz-tree-cell-text(lc-FFCC00) {
   color: #FFCC00
 }
-treechildren::-moz-tree-row(lc-FFCC00, selected, focus) {
+treechildren::-moz-tree-row(lc-FFCC00, selected) {
   background-color: #FFCC00;
 }
 
 treechildren::-moz-tree-cell-text(lc-999900) {
   color: #999900
 }
-treechildren::-moz-tree-row(lc-999900, selected, focus) {
+treechildren::-moz-tree-row(lc-999900, selected) {
   background-color: #999900;
 }
 
 treechildren::-moz-tree-cell-text(lc-666600) {
   color: #666600
 }
-treechildren::-moz-tree-row(lc-666600, selected, focus) {
+treechildren::-moz-tree-row(lc-666600, selected) {
   background-color: #666600;
 }
 
 treechildren::-moz-tree-cell-text(lc-333300) {
   color: #333300
 }
-treechildren::-moz-tree-row(lc-333300, selected, focus) {
+treechildren::-moz-tree-row(lc-333300, selected) {
   background-color: #333300;
 }
 
@@ -605,49 +737,49 @@ treechildren::-moz-tree-row(lc-333300, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-99FF99) {
   color: #99FF99
 }
-treechildren::-moz-tree-row(lc-99FF99, selected, focus) {
+treechildren::-moz-tree-row(lc-99FF99, selected) {
   background-color: #99FF99;
 }
 
 treechildren::-moz-tree-cell-text(lc-66FF99) {
   color: #66FF99
 }
-treechildren::-moz-tree-row(lc-66FF99, selected, focus) {
+treechildren::-moz-tree-row(lc-66FF99, selected) {
   background-color: #66FF99;
 }
 
 treechildren::-moz-tree-cell-text(lc-33FF33) {
   color: #33FF33
 }
-treechildren::-moz-tree-row(lc-33FF33, selected, focus) {
+treechildren::-moz-tree-row(lc-33FF33, selected) {
   background-color: #33FF33;
 }
 
 treechildren::-moz-tree-cell-text(lc-33CC00) {
   color: #33CC00
 }
-treechildren::-moz-tree-row(lc-33CC00, selected, focus) {
+treechildren::-moz-tree-row(lc-33CC00, selected) {
   background-color: #33CC00;
 }
 
 treechildren::-moz-tree-cell-text(lc-009900) {
   color: #009900
 }
-treechildren::-moz-tree-row(lc-009900, selected, focus) {
+treechildren::-moz-tree-row(lc-009900, selected) {
   background-color: #009900;
 }
 
 treechildren::-moz-tree-cell-text(lc-006600) {
   color: #006600
 }
-treechildren::-moz-tree-row(lc-006600, selected, focus) {
+treechildren::-moz-tree-row(lc-006600, selected) {
   background-color: #006600;
 }
 
 treechildren::-moz-tree-cell-text(lc-003300) {
   color: #003300
 }
-treechildren::-moz-tree-row(lc-003300, selected, focus) {
+treechildren::-moz-tree-row(lc-003300, selected) {
   background-color: #003300;
 }
 
@@ -655,49 +787,49 @@ treechildren::-moz-tree-row(lc-003300, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-99FFFF) {
   color: #99FFFF
 }
-treechildren::-moz-tree-row(lc-99FFFF, selected, focus) {
+treechildren::-moz-tree-row(lc-99FFFF, selected) {
   background-color: #99FFFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-33FFFF) {
   color: #33FFFF
 }
-treechildren::-moz-tree-row(lc-33FFFF, selected, focus) {
+treechildren::-moz-tree-row(lc-33FFFF, selected) {
   background-color: #33FFFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-66CCCC) {
   color: #66CCCC
 }
-treechildren::-moz-tree-row(lc-66CCCC, selected, focus) {
+treechildren::-moz-tree-row(lc-66CCCC, selected) {
   background-color: #66CCCC;
 }
 
 treechildren::-moz-tree-cell-text(lc-00CCCC) {
   color: #00CCCC
 }
-treechildren::-moz-tree-row(lc-00CCCC, selected, focus) {
+treechildren::-moz-tree-row(lc-00CCCC, selected) {
   background-color: #00CCCC;
 }
 
 treechildren::-moz-tree-cell-text(lc-339999) {
   color: #339999
 }
-treechildren::-moz-tree-row(lc-339999, selected, focus) {
+treechildren::-moz-tree-row(lc-339999, selected) {
   background-color: #339999;
 }
 
 treechildren::-moz-tree-cell-text(lc-336666) {
   color: #336666
 }
-treechildren::-moz-tree-row(lc-336666, selected, focus) {
+treechildren::-moz-tree-row(lc-336666, selected) {
   background-color: #336666;
 }
 
 treechildren::-moz-tree-cell-text(lc-003333) {
   color: #003333
 }
-treechildren::-moz-tree-row(lc-003333, selected, focus) {
+treechildren::-moz-tree-row(lc-003333, selected) {
   background-color: #003333;
 }
 
@@ -705,49 +837,49 @@ treechildren::-moz-tree-row(lc-003333, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-CCFFFF) {
   color: #CCFFFF
 }
-treechildren::-moz-tree-row(lc-CCFFFF, selected, focus) {
+treechildren::-moz-tree-row(lc-CCFFFF, selected) {
   background-color: #CCFFFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-66FFFF) {
   color: #66FFFF
 }
-treechildren::-moz-tree-row(lc-66FFFF, selected, focus) {
+treechildren::-moz-tree-row(lc-66FFFF, selected) {
   background-color: #66FFFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-33CCFF) {
   color: #33CCFF
 }
-treechildren::-moz-tree-row(lc-33CCFF, selected, focus) {
+treechildren::-moz-tree-row(lc-33CCFF, selected) {
   background-color: #33CCFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-3366FF) {
   color: #3366FF
 }
-treechildren::-moz-tree-row(lc-3366FF, selected, focus) {
+treechildren::-moz-tree-row(lc-3366FF, selected) {
   background-color: #3366FF;
 }
 
 treechildren::-moz-tree-cell-text(lc-3333FF) {
   color: #3333FF
 }
-treechildren::-moz-tree-row(lc-3333FF, selected, focus) {
+treechildren::-moz-tree-row(lc-3333FF, selected) {
   background-color: #3333FF;
 }
 
 treechildren::-moz-tree-cell-text(lc-000099) {
   color: #000099
 }
-treechildren::-moz-tree-row(lc-000099, selected, focus) {
+treechildren::-moz-tree-row(lc-000099, selected) {
   background-color: #000099;
 }
 
 treechildren::-moz-tree-cell-text(lc-000066) {
   color: #000066
 }
-treechildren::-moz-tree-row(lc-000066, selected, focus) {
+treechildren::-moz-tree-row(lc-000066, selected) {
   background-color: #000066;
 }
 
@@ -755,49 +887,49 @@ treechildren::-moz-tree-row(lc-000066, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-CCCCFF) {
   color: #CCCCFF
 }
-treechildren::-moz-tree-row(lc-CCCCFF, selected, focus) {
+treechildren::-moz-tree-row(lc-CCCCFF, selected) {
   background-color: #CCCCFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-9999FF) {
   color: #9999FF
 }
-treechildren::-moz-tree-row(lc-9999FF, selected, focus) {
+treechildren::-moz-tree-row(lc-9999FF, selected) {
   background-color: #9999FF;
 }
 
 treechildren::-moz-tree-cell-text(lc-6666CC) {
   color: #6666CC
 }
-treechildren::-moz-tree-row(lc-6666CC, selected, focus) {
+treechildren::-moz-tree-row(lc-6666CC, selected) {
   background-color: #6666CC;
 }
 
 treechildren::-moz-tree-cell-text(lc-6633FF) {
   color: #6633FF
 }
-treechildren::-moz-tree-row(lc-6633FF, selected, focus) {
+treechildren::-moz-tree-row(lc-6633FF, selected) {
   background-color: #6633FF;
 }
 
 treechildren::-moz-tree-cell-text(lc-6600CC) {
   color: #6600CC
 }
-treechildren::-moz-tree-row(lc-6600CC, selected, focus) {
+treechildren::-moz-tree-row(lc-6600CC, selected) {
   background-color: #6600CC;
 }
 
 treechildren::-moz-tree-cell-text(lc-333399) {
   color: #333399
 }
-treechildren::-moz-tree-row(lc-333399, selected, focus) {
+treechildren::-moz-tree-row(lc-333399, selected) {
   background-color: #333399;
 }
 
 treechildren::-moz-tree-cell-text(lc-330099) {
   color: #330099
 }
-treechildren::-moz-tree-row(lc-330099, selected, focus) {
+treechildren::-moz-tree-row(lc-330099, selected) {
   background-color: #330099;
 }
 
@@ -805,57 +937,57 @@ treechildren::-moz-tree-row(lc-330099, selected, focus) {
 treechildren::-moz-tree-cell-text(lc-FFCCFF) {
   color: #FFCCFF
 }
-treechildren::-moz-tree-row(lc-FFCCFF, selected, focus) {
+treechildren::-moz-tree-row(lc-FFCCFF, selected) {
   background-color: #FFCCFF;
 }
 
 treechildren::-moz-tree-cell-text(lc-FF99FF) {
   color: #FF99FF
 }
-treechildren::-moz-tree-row(lc-FF99FF, selected, focus) {
+treechildren::-moz-tree-row(lc-FF99FF, selected) {
   background-color: #FF99FF;
 }
 
 treechildren::-moz-tree-cell-text(lc-CC66CC) {
   color: #CC66CC
 }
-treechildren::-moz-tree-row(lc-CC66CC, selected, focus) {
+treechildren::-moz-tree-row(lc-CC66CC, selected) {
   background-color: #CC66CC;
 }
 
 treechildren::-moz-tree-cell-text(lc-CC33CC) {
   color: #CC33CC
 }
-treechildren::-moz-tree-row(lc-CC33CC, selected, focus) {
+treechildren::-moz-tree-row(lc-CC33CC, selected) {
   background-color: #CC33CC;
 }
 
 treechildren::-moz-tree-cell-text(lc-993399) {
   color: #993399
 }
-treechildren::-moz-tree-row(lc-993399, selected, focus) {
+treechildren::-moz-tree-row(lc-993399, selected) {
   background-color: #993399;
 }
 
 treechildren::-moz-tree-cell-text(lc-663366) {
   color: #663366
 }
-treechildren::-moz-tree-row(lc-663366, selected, focus) {
+treechildren::-moz-tree-row(lc-663366, selected) {
   background-color: #663366;
 }
 
 treechildren::-moz-tree-cell-text(lc-330033) {
   color: #330033
 }
-treechildren::-moz-tree-row(lc-330033, selected, focus) {
+treechildren::-moz-tree-row(lc-330033, selected) {
   background-color: #330033;
 }
 
 
-treechildren::-moz-tree-cell-text(lc-white, selected, focus) {
+treechildren::-moz-tree-cell-text(lc-white, selected) {
   color: #FFFFFF
 }
-treechildren::-moz-tree-cell-text(lc-black, selected, focus) {
+treechildren::-moz-tree-cell-text(lc-black, selected) {
   color: #000000
 }
 
@@ -872,10 +1004,15 @@ treechildren::-moz-tree-cell-text(lc-black, selected, focus) {
 /* ..... folder pane adjustments ..... */
 
 #folderPaneHeader {
+  height: 29px;
+  border-bottom: none;
+  border-top: none;
+  background-color: transparent;
+  border-top: 1px solid ThreeDHighlight;
 }
 
 #folderpane-title {
-  -moz-padding-start: 4px;
+  padding-left: 4px;
 }
 
 /* ::::: border adjustments for focus ring and joined splitters ::::: */
@@ -883,7 +1020,11 @@ treechildren::-moz-tree-cell-text(lc-black, selected, focus) {
 /* ..... splitter adjustments ..... */
 
 #folderpane_splitter {
+  border-top: 1px solid ThreeDHighlight;
+  border-left: none;
   border-right: none;
+  border-bottom: none;
+  background-color: transparent;
 }
 
 #gray_vertical_splitter,
@@ -907,8 +1048,14 @@ treechildren::-moz-tree-cell-text(lc-black, selected, focus) {
   border-bottom: 0px;
 }
 
-/* ..... update notifications ..... */
+/* ..... smart update statusbar panel ..... */
 
-#checkForUpdates[loading="true"] {
-  list-style-image: url("chrome://global/skin/throbber/Throbber-small.gif");
+#statusbar-updates[updateCount="0"]{
+  visibility: collapse; 
+}
+
+#searchBox {
+  border-top: 1px solid ThreeDHighlight;
+  height: 30px;
+  background-color: transparent;
 }

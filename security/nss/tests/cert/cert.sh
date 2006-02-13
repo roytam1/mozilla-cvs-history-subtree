@@ -148,7 +148,7 @@ crlu()
 {
     echo "$SCRIPTNAME: ${CU_ACTION} --------------------------"
     
-    CRLUTIL="crlutil -q"
+    CRLUTIL=crlutil
     echo "$CRLUTIL $*"
     $CRLUTIL $*
     RET=$?
@@ -651,79 +651,8 @@ MODSCRIPT
   fi
 }
 
-############################## cert_extensions ###############################
-# local shell function to test cert extensions generation.
-##############################################################################
 
-checkRes()
-{
-    res=$1
-    filterList=$2
-    
-    [ $res -ne 0 ] && return 1
-
-    for fl in `echo $filterList | tr \| ' '`; do
-        fl="`echo $fl | tr _ ' '`"
-        expStat=0
-        if [ X`echo "$fl" | cut -c 1` = 'X!' ]; then
-            expStat=1
-            fl=`echo $fl | tr -d '!'`
-        fi
-        certutil -d ${CERT_EXTENSIONS_DIR} -L -n $CERTNAME | grep "$fl" >/dev/null 2>&1
-        [ $? -ne $expStat ] && return 1
-    done
-    return 0
-}
-
-
-cert_extensions()
-{
-
-    CERTNAME=TestExt
-    cert_create_cert ${CERT_EXTENSIONS_DIR} $CERTNAME 90 ${D_CERT_EXTENSTIONS}
-    TARG_FILE=${CERT_EXTENSIONS_DIR}/test.args
-
-    CU_SUBJECT="CN=$CERTNAME, E=${CERTNAME}@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
-
-    count=0
-    while read arg opt filterList; do
-        if [ X"`echo $arg | cut -c 1`" = "X#" ]; then
-            continue
-        fi
-        if [ X"`echo $arg | cut -c 1`" = "X!" ]; then
-            testName="$filterList"
-            continue
-        fi
-        if [ X"$arg" = "X=" ]; then
-            count=`expr $count + 1`
-            echo "#################################################"
-            CU_ACTION="Testing $testName"
-            certutil -d ${CERT_EXTENSIONS_DIR} -D -n $CERTNAME
-            echo certutil -d ${CERT_EXTENSIONS_DIR} -S -n $CERTNAME -t "u,u,u" \
-                -s "${CU_SUBJECT}" -x -f ${R_PWFILE} -z "${R_NOISE_FILE}" -$opt < $TARG_FILE
-            certutil -d ${CERT_EXTENSIONS_DIR} -S -n $CERTNAME -t "u,u,u" -o /tmp/cert \
-                -s "${CU_SUBJECT}" -x -f ${R_PWFILE} -z "${R_NOISE_FILE}" -$opt < $TARG_FILE
-            ret=$?  
-            echo "certutil options:"
-            cat $TARG_FILE
-            checkRes $ret "$filterList"
-            RET=$?
-            if [ "$RET" -ne 0 ]; then
-                CERTFAILED=$RET
-                html_failed "<TR><TD>${CU_ACTION} ($RET) " 
-                cert_log "ERROR: ${CU_ACTION} failed $RET"
-            else
-                html_passed "<TR><TD>${CU_ACTION}"
-            fi
-            rm -f $TARG_FILE
-        else
-            echo $arg >> $TARG_FILE
-        fi
-    done < ${QADIR}/cert/certext.txt
-}
-
-
-############################## cert_crl_ssl ############################
+############################## cert_stresscerts ################################
 # local shell function to generate certs and crls for SSL tests
 ########################################################################
 cert_crl_ssl()
@@ -763,7 +692,7 @@ cert_crl_ssl()
 update=$CRLUPDATE
 addcert ${CRL_GRP_1_BEGIN}-${CRL_GRP_END_} $CRL_GRP_DATE
 addext reasonCode 0 4
-addext issuerAltNames 0 "rfc822Name:caemail@ca.com|dnsName:ca.com|directoryName:CN=NSS Test CA,O=BOGUS NSS,L=Mountain View,ST=California,C=US|URI:http://ca.com|ipAddress:192.168.0.1|registerID=reg CA"
+addext issuerAltNames 0 "rfc822Name:caemail@ca.com|dnsName:ca.com|x400Address:x400Address|directoryName:CN=NSS Test CA,O=BOGUS NSS,L=Mountain View,ST=California,C=US|URI:http://ca.com|ipAddress:192.168.0.1|registerID=reg CA"
 EOF_CRLINI
 # This extension should be added to the list, but currently nss has bug
 #addext authKeyId 0 "CN=NSS Test CA,O=BOGUS NSS,L=Mountain View,ST=California,C=US" 1
@@ -867,7 +796,6 @@ cert_extended_ssl
 cert_ssl 
 cert_smime_client        
 cert_fips
-cert_extensions
 cert_crl_ssl
 if [ -n "$DO_DIST_ST" -a "$DO_DIST_ST" = "TRUE" ] ; then
     cert_stresscerts 

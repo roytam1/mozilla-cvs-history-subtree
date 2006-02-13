@@ -51,4 +51,3 @@ CSRCS = \
 REQUIRES = dbm seccmd
 
 PROGRAM = dbck
-USE_STATIC_LIBS = 1

@@ -1,28 +1,26 @@
 <?xml version="1.0"?>
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-#
-# The Original Code is the Thunderbird Preferences System.
-#
-# The Initial Developer of the Original Code is
-# Scott MacGregor.
+# 
+# The Original Code is the Thunderbird Preferences System. 
+# 
+# The Initial Developer of the Original Code is Scott MacGregor.
 # Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   Scott MacGregor <mscott@mozilla.org
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -34,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 <!DOCTYPE overlay [
@@ -53,11 +51,8 @@
     <preferences>
       <preference id="mail.checkDefaultMail"
                   name="mail.checkDefaultMail"
-#ifdef XP_WIN
                   onchange="return gGeneralPane.onWriteDefaultMailPref();"
-#endif
                   type="bool"/>
-#ifdef XP_WIN
       <preference id="mail.checkDefaultNews"
                   name="mail.checkDefaultNews"
                   onchange="return gGeneralPane.onWriteDefaultNewsPref();"
@@ -66,7 +61,6 @@
                   name="mail.checkDefaultFeed"
                   onchange="return gGeneralPane.onWriteDefaultFeed();"
                   type="bool"/>
-#endif
       <preference id="mail.pane_config.dynamic" name="mail.pane_config.dynamic" type="int"/>
       <preference id="mailnews.reuse_message_window" name="mailnews.reuse_message_window" type="bool"/>
       <preference id="mailnews.start_page.enabled" name="mailnews.start_page.enabled" type="bool"/>
@@ -77,6 +71,9 @@
       <preference id="mail.biff.animate_dock_icon" name="mail.biff.animate_dock_icon" type="bool"/>
 #endif
     </preferences>
+    
+    <stringbundle id="mapiBundle" src="chrome://messenger-mapi/locale/mapi.properties"/>
+    <stringbundle id="brandBundle" src="chrome://branding/locale/brand.properties"/>
 
     <groupbox align="start" id="defaultClientBox">
       <caption label="&generalSettings.caption;"/>
@@ -98,17 +95,32 @@
       </hbox>
 #endif
 
-#ifdef HAVE_SHELL_SERVICE
-      <hbox flex="1" align="center">
-        <checkbox id="checkDefaultMail"
-                  preference="mail.checkDefaultMail"
-                  label="&checkDefaultMailClient.label;"
-                  accesskey="&checkDefaultMailClient.accesskey;"
-                  flex="1"/>
-        <button label="&defaultClientAdvanced.label;"
-                accesskey="&defaultClientAdvanced.accesskey;"
-                oncommand="gGeneralPane.openDefaultClientDialog()"/>
-      </hbox>
+#ifdef MOZ_WIDGET_GTK2
+      <vbox align="left">
+        <label value="&whenStartingCheck.label;"/>
+        <grid flex="1" style="margin-left: 20px;">
+          <columns>
+            <column/>
+            <column flex="1" align="left"/>
+          </columns>
+          <rows>
+            <row>
+              <checkbox id="checkDefaultMail" preference="mail.checkDefaultMail"
+                        label="&mailApplication.label;"
+                        accesskey="&checkDefaultMail.accesskey;"/>
+              <button label="&checkNow.label;" accesskey="&checkMailNow.accesskey;"
+                       oncommand="gGeneralPane.checkDefaultMailNow(false)"/>
+            </row>
+            <row>
+              <checkbox id="checkDefaultNews" preference="mail.checkDefaultNews"
+                        label="&newsApplication.label;"
+                        accesskey="&checkDefaultNews.accesskey;"/>
+              <button label="&checkNow.label;" accesskey="&checkNewsNow.accesskey;"
+                      oncommand="gGeneralPane.checkDefaultMailNow(true)"/>
+            </row>
+          </rows>
+        </grid>
+      </vbox>
 #endif
     </groupbox>
 
@@ -166,7 +178,7 @@
     <groupbox>
       <caption label="&connectionsInfo.caption;"/>
       <hbox align="center">
-        <description flex="1" control="catProxiesButton">&proxiesInfo.label;</description>
+        <description flex="1">&proxiesInfo.label;</description>
         <button id="catProxiesButton" label="&showConnections.label;" 
                 accesskey="&showConnections.accesskey;" 
                 oncommand="gGeneralPane.showConnections();"/>

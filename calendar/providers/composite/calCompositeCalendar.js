@@ -42,65 +42,7 @@
 
 const calIOperationListener = Components.interfaces.calIOperationListener;
 
-function calCompositeCalendarObserverHelper (compCalendar) {
-    this.compCalendar = compCalendar;
-}
-
-calCompositeCalendarObserverHelper.prototype = {
-    QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.calIObserver) &&
-            !aIID.equals(Components.interfaces.nsISupports))
-        {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-
-        return this;
-    },
-
-    // We could actually reach up into our caller for method name
-    // and arguments, but it hardly seems worth it.
-    notifyObservers: function(method, args) {
-        this.compCalendar.mObservers.forEach(function (o) {
-            try { o[method].apply(o, args); }
-            catch (e) { }
-        });
-    },
-    
-    onStartBatch: function() {
-        this.notifyObservers("onStartBatch");
-    },
-
-    onEndBatch: function() {
-        this.notifyObservers("onEndBatch");
-    },
-
-    onLoad: function() {
-        this.notifyObservers("onLoad");
-    },
-
-    onAddItem: function(aItem) {
-        this.notifyObservers("onAddItem", arguments);
-    },
-
-    onModifyItem: function(aNewItem, aOldItem) {
-        this.notifyObservers("onModifyItem", arguments);
-    },
-
-    onDeleteItem: function(aDeletedItem) {
-        this.notifyObservers("onDeleteItem", arguments);
-    },
-
-    onAlarm: function(aAlarmItem) {
-        this.notifyObservers("onAlarm", arguments);
-    },
-
-    onError: function(aErrNo, aMessage) {
-        this.notifyObservers("onError", arguments);
-    }
-};
-
 function calCompositeCalendar () {
-    this.mObserverHelper = new calCompositeCalendarObserverHelper(this);
     this.wrappedJSObject = this;
 }
 
@@ -131,91 +73,44 @@ calCompositeCalendar.prototype = {
 
     mCalendars: Array(),
     mDefaultCalendar: null,
-    mPrefPrefix: null,
-    mDefaultPref: null,
-    mActivePref: null,
-    _mCalMgr: null,
-    get mCalMgr () {
-        if (!this._mCalMgr) {
-            this._mCalMgr = Components.
-                classes["@mozilla.org/calendar/manager;1"].
-                getService(Components.interfaces.calICalendarManager);
-        }
-        return this._mCalMgr;
-    },
-    
-    set prefPrefix (aPrefPrefix) {
-        if (this.mPrefPrefix) {
-            this.mCalendars.forEach(this.removeCalendar, this);
-        }
-        this.mPrefPrefix = aPrefPrefix;
-        this.mActivePref = aPrefPrefix + "-in-composite";
-        this.mDefaultPref = aPrefPrefix + "-default";
-        var mgr = this.mCalMgr;
-        var cals = mgr.getCalendars({});
-
-        cals.forEach(function (c) {
-            if (mgr.getCalendarPref(c, this.mActivePref))
-                this.addCalendar(c);
-            if (mgr.getCalendarPref(c, this.mDefaultPref))
-                this.setDefaultCalendar(c, false);
-        }, this);
-    },
-
-    get prefPrefix () {
-        return this.mPrefPrefix;
-    },
 
     addCalendar: function (aCalendar) {
         // check if the calendar already exists
-        for each (cal in this.mCalendars) {
-            if (aCalendar.uri.equals(cal.uri)) {
+        for (cal in this.mCalendars) {
+            if (cal.uri == aCalendar.uri) {
                 // throw exception if calendar already exists?
                 return;
             }
         }
 
-        // add our observer helper
-        aCalendar.addObserver(this.mObserverHelper);
-
         this.mCalendars.push(aCalendar);
-        if (this.mPrefPrefix) {
-            this.mCalMgr.setCalendarPref(aCalendar, this.mActivePref,
-                                         "true");
-        }
-        this.notifyObservers("onCalendarAdded", [aCalendar]);
+
+        this.observeCalendarAdded(aCalendar);
 
         // if we have no default calendar, we need one here
-        if (this.mDefaultCalendar == null)
-            this.setDefaultCalendar(aCalendar, false);
+        if (this.mDefaultCalendar == null) {
+            this.mDefaultCalendar = aCalendar;
+            this.observeDefaultCalendarChanged(aCalendar);
+        }
     },
 
     removeCalendar: function (aServer) {
         var newCalendars = Array();
         var calToRemove = null;
-        for each (cal in this.mCalendars) {
-            if (!aServer.equals(cal.uri))
+        for (cal in this.mCalendars) {
+            if (cal.uri != aServer)
                 newCalendars.push(cal);
             else
                 calToRemove = cal;
         }
+        this.mCalendars = newCalendars;
 
-        if (calToRemove) {
-            this.mCalendars = newCalendars;
-            if (this.mPrefPrefix) {
-                this.mCalMgr.deleteCalendarPref(calToRemove,
-                                                this.mActivePref);
-                this.mCalMgr.deleteCalendarPref(calToRemove,
-                                                this.mDefaultPref);
-            }   
-            calToRemove.removeObserver(this.mObserverHelper);
-            this.notifyObservers("onCalendarRemoved", [calToRemove]);
-        }
+        this.observeCalendarRemoved(calToRemove);
     },
 
     getCalendar: function (aServer) {
-        for each (cal in this.mCalendars) {
-            if (aServer.equals(cal.uri))
+        for (cal in this.mCalendars) {
+            if (cal.uri == aServer)
                 return cal;
         }
 
@@ -224,7 +119,6 @@ calCompositeCalendar.prototype = {
 
     get calendars() {
         // return a nsISimpleEnumerator of this array.  This sucks.
-        // XXX make this an array, like the calendar manager?
         return null;
     },
 
@@ -232,21 +126,11 @@ calCompositeCalendar.prototype = {
         return this.mDefaultCalendar;
     },
 
-    setDefaultCalendar: function (cal, usePref) {
-        if (this.mDefaultCalendar == cal) // .equals(uri) ??
-            return;
-        if (usePref && this.mPrefPrefix) {
-            this.mCalMgr.deleteCalendarPref(this.mDefaultCalendar,
-                                            this.mDefaultPref);
-            this.mCalMgr.setCalendarPref(cal, this.mDefaultPref,
-                                         "true");
-        }
-        this.mDefaultCalendar = cal;
-        this.notifyObservers("onDefaultCalendarChanged", [cal]);
-    },
-
     set defaultCalendar(v) {
-        this.setDefaultCalendar(v, true);
+        if (this.mDefaultCalendar != v) {
+            this.mDefaultCalendar = v;
+            this.observeDefaultCalendarChanged (v);
+        }
     },
 
     //
@@ -267,62 +151,60 @@ calCompositeCalendar.prototype = {
         throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
     },
 
-    get readOnly() { 
-        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-    },
-    set readOnly(bool) {
-        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-    },
-
-    // void addObserver( in calIObserver observer );
+    // void addObserver( in calIObserver observer, in unsigned long aItemFilter );
     mCompositeObservers: Array(),
-    mObservers: Array(),
-    addObserver: function (aObserver) {
+    addObserver: function (aObserver, aItemFilter) {
         const calICompositeObserver = Components.interfaces.calICompositeObserver;
         if (aObserver instanceof calICompositeObserver) {
-            if (this.mCompositeObservers.indexOf(aObserver) == -1) {
-                var compobs = aObserver.QueryInterface (calICompositeObserver);
-                this.mCompositeObservers.push(compobs);
+            var compobs = aObserver.QueryInterface (calICompositeObserver);
+            for (var i = 0; i < this.mCompositeObservers.length; i++) {
+                if (this.mCompositeObservers[i] == aObserver)
+                    return;
             }
+            this.mCompositeObservers.push(compobs);
         }
 
-        if (this.mObservers.indexOf(aObserver) == -1)
-            this.mObservers.push(aObserver);
+        for (cal in this.mCalendars) {
+            this.mCalendars[cal].addObserver(aObserver, aItemFilter);
+        }
     },
 
     // void removeObserver( in calIObserver observer );
     removeObserver: function (aObserver) {
         const calICompositeObserver = Components.interfaces.calICompositeObserver;
-        if (aObserver instanceof calICompositeObserver)
-            this.mCompositeObservers = this.mCompositeObservers.filter( function (v) { return v != aObserver; } );
+        var compobs = aObserver.QueryInterface (calICompositeObserver);
+        if (compobs) {
+            var newCompObs = Array ();
+            for (var i = 0; i < this.mCompositeObservers.length; i++) {
+                if (this.mCompositeObservers[i] != compobs)
+                    newCompObs.push(this.mCompositeObservers[i]);
+            }
+            this.mCompositeObservers = newCompObs;
+        }
 
-        this.mObservers = this.mObservers.filter( function (v) { return v != aObserver; } );
-    },
-
-    refresh: function() {
-        for each (cal in this.mCalendars) {
-            try { cal.refresh(); } catch (e) { }
+        for (cal in this.mCalendars) {
+            this.mCalendars[cal].removeObserver(aObserver);
         }
     },
 
-    // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
-    modifyItem: function (aNewItem, aOldItem, aListener) {
-        if (aNewItem.calendar == null) {
+    // void modifyItem( in calIItemBase aItem, in calIOperationListener aListener );
+    modifyItem: function (aItem, aListener) {
+        if (aItem.parent == null) {
             // XXX Can't modify item with NULL parent
             throw Components.results.NS_ERROR_FAILURE;
         }
 
-        aNewItem.calendar.modifyItem (aNewItem, aOldItem, aListener);
+        aItem.parent.modifyItem (aItem, aListener);
     },
 
     // void deleteItem( in string id, in calIOperationListener aListener );
     deleteItem: function (aItem, aListener) {
-        if (aItem.calendar == null) {
+        if (aItem.parent == null) {
             // XXX Can't delete item with NULL parent
             throw Components.results.NS_ERROR_FAILURE;
         }
 
-        aItem.calendar.deleteItem (aItem, aListener);
+        aItem.parent.deleteItem (aItem, aListener);
     },
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
@@ -333,7 +215,7 @@ calCompositeCalendar.prototype = {
     // void getItem( in string aId, in calIOperationListener aListener );
     getItem: function (aId, aListener) {
         var cmpListener = new calCompositeGetListenerHelper(this.mCalendars.length, aListener);
-        for each (cal in this.mCalendars) {
+        for (cal in this.mCalendars) {
             cal.getItem (aId, cmpListener);
         }
     },
@@ -342,39 +224,28 @@ calCompositeCalendar.prototype = {
     //                in calIDateTime aRangeStart, in calIDateTime aRangeEnd,
     //                in calIOperationListener aListener );
     getItems: function (aItemFilter, aCount, aRangeStart, aRangeEnd, aListener) {
-        // If there are no calendars, then we just call onOperationComplete
-        if (this.mCalendars.length == 0) {
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_OK,
-                                           calIOperationListener.GET,
-                                           null,
-                                           null);
-            return;
-        }
-
         var cmpListener = new calCompositeGetListenerHelper(this.mCalendars.length, aListener, aCount);
         for (cal in this.mCalendars) {
             this.mCalendars[cal].getItems (aItemFilter, aCount, aRangeStart, aRangeEnd, cmpListener);
         }
     },
 
-    startBatch: function ()
-    {
-        this.notifyObservers("onStartBatch");
-    },
-    endBatch: function ()
-    {
-        this.notifyObservers("onEndBatch");
-    },
-
     //
     // observer helpers
     //
-    notifyObservers: function(method, args) {
-        this.mCompositeObservers.forEach(function (o) {
-            try { o[method].apply(o, args); }
-            catch (e) { }
-        });
+    observeCalendarAdded: function (aCalendar) {
+        for (obs in this.mCompositeObservers)
+            obs.onCalendarAdded (aCalendar);
+    },
+
+    observeCalendarRemoved: function (aCalendar) {
+        for (obs in this.mCompositeObservers)
+            obs.onCalendarRemoved (aCalendar);
+    },
+
+    observeDefaultCalendarChanged: function (aCalendar) {
+        for (obs in this.mCompositeObservers)
+            obs.onDefaultCalendarChanged (aCalendar);
     }
 };
 
@@ -413,10 +284,7 @@ calCompositeGetListenerHelper.prototype = {
         if (!Components.isSuccessCode(aStatus)) {
             // proxy this to a onGetResult
             // XXX - do we want to give the real calendar? or this?
-            // XXX - get rid of iid param
-            this.mRealListener.onGetResult (aCalendar, aStatus, 
-                                            Components.interfaces.nsISupports,
-                                            aDetail, 0, []);
+            this.mRealListener.onGetResult (aCalendar, aStatus, null, aDetail, 0, []);
         }
 
         this.mReceivedCompletes++;

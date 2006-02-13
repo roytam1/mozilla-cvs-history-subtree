@@ -311,8 +311,7 @@ function fillFolderPaneContextMenu()
   ShowMenuItem("folderPaneContext-emptyTrash", (numSelected <= 1) && (specialFolder == 'Trash'));
   EnableMenuItem("folderPaneContext-emptyTrash", true);
 
-  var showSendUnsentMessages = (numSelected <= 1) 
-    && (specialFolder == 'Unsent Messages' || specialFolder == 'Unsent');
+  var showSendUnsentMessages = (numSelected <= 1) && (specialFolder == 'Unsent Messages');
   ShowMenuItem("folderPaneContext-sendUnsentMessages", showSendUnsentMessages);
   if (showSendUnsentMessages) {
     EnableMenuItem("folderPaneContext-sendUnsentMessages", IsSendUnsentMsgsEnabled(folderResource));

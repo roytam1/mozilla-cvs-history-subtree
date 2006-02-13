@@ -1,3 +1,12 @@
+function upgradeCleanup()
+{
+  deleteThisFile("Program",    "zlib.dll");
+  deleteThisFile("Program",    "component.reg");
+  deleteThisFile("Components", "compreg.dat");
+  deleteThisFile("Components", "xpti.dat");
+  deleteThisFile("Components", "xptitemp.dat");
+}
+
 // main
 var srDest;
 var err;
@@ -29,6 +38,7 @@ if(verifyDiskSpace(fProgram, srDest))
 {
   setPackageFolder(fProgram);
 
+  upgradeCleanup();
   err = addDirectory("",
                      "$Version$",
                      "bin",              // dir name in jar to extract 

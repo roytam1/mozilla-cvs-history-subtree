@@ -106,10 +106,9 @@
  *        q, DSA_SUBPRIME_LEN bytes
  * Output: xj, DSA_SUBPRIME_LEN bytes
  */
-SECStatus
-FIPS186Change_ReduceModQForDSA(const unsigned char *w,
-                               const unsigned char *q,
-                               unsigned char *xj)
+static SECStatus
+dsa_reduce_mod_q(const unsigned char *w, const unsigned char *q,
+    unsigned char *xj)
 {
     mp_int W, Q, Xj;
     mp_err err;
@@ -182,28 +181,15 @@ freeRNGContext()
 }
 
 /*
- * The core of Algorithm 1 of FIPS 186-2 Change Notice 1,
- * separated from alg_fips186_2_cn_1 as a standalone function
- * for FIPS algorithm testing.
- *
- * Parameters:
- *   XKEY [input/output]: the state of the RNG (seed-key)
- *   XSEEDj [input]: optional user input (seed)
- *   x_j [output]: output of the RNG
- *
- * Return value:
- * This function usually returns SECSuccess.  The only reason
- * this function returns SECFailure is that XSEEDj equals
- * XKEY, including the intermediate XKEY value between the two
- * iterations.  (This test is actually a FIPS 140-2 requirement
- * and not required for FIPS algorithm testing, but it is too
- * hard to separate from this function.)  If this function fails,
- * XKEY is not updated, but some data may have been written to
- * x_j, which should be ignored.
+ * Implementation of Algorithm 1 of FIPS 186-2 Change Notice 1,
+ * hereinafter called alg_cn_1().  It is assumed a lock for the global
+ * rng context has already been acquired.
+ * Calling this function with XSEEDj == NULL is equivalent to saying there
+ * is no optional user input, which is further equivalent to saying that
+ * the optional user input is 0.
  */
-SECStatus
-FIPS186Change_GenerateX(unsigned char *XKEY, const unsigned char *XSEEDj,
-                        unsigned char *x_j)
+static SECStatus
+alg_fips186_2_cn_1(RNGContext *rng, const unsigned char *XSEEDj)
 {
     /* SHA1 context for G(t, XVAL) function */
     SHA1Context sha1cx;
@@ -213,6 +199,8 @@ FIPS186Change_GenerateX(unsigned char *XKEY, const unsigned char *XSEEDj,
     PRUint8 *XKEY_new;
     /* input to hash function */
     PRUint8 XVAL[BSIZE];
+    /* store a copy of the output to compare with the previous output */
+    PRUint8 x_j[2*GSIZE];
     /* used by ADD_B_BIT macros */
     int k, carry;
     /* store the output of G(t, XVAL) in the rightmost GSIZE bytes */
@@ -221,6 +209,11 @@ FIPS186Change_GenerateX(unsigned char *XKEY, const unsigned char *XSEEDj,
     unsigned int len;
     SECStatus rv = SECSuccess;
 
+    if (!rng->isValid) {
+	/* RNG has alread entered an invalid state. */
+	PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
+	return SECFailure;
+    }
 #if GSIZE < BSIZE
     /* zero the leftmost bytes so we can pass it to ADD_B_BIT_PLUS_CARRY */
     memset(w_i, 0, BSIZE - GSIZE);
@@ -231,15 +224,15 @@ FIPS186Change_GenerateX(unsigned char *XKEY, const unsigned char *XSEEDj,
      * <Step 3.1> XSEEDj is optional user input
      */ 
     for (i = 0; i < 2; i++) {
-	/* only update XKEY when both iterations have been completed */
+	/* only update rng->XKEY when both iterations have been completed */
 	if (i == 0) {
 	    /* for iteration 0 */
-	    XKEY_old = XKEY;
+	    XKEY_old = rng->XKEY;
 	    XKEY_new = XKEY_1;
 	} else {
 	    /* for iteration 1 */
 	    XKEY_old = XKEY_1;
-	    XKEY_new = XKEY;
+	    XKEY_new = rng->XKEY;
 	}
 	/* 
 	 * <Step 3.2a> XVAL = (XKEY + XSEEDj) mod 2^b
@@ -277,39 +270,6 @@ FIPS186Change_GenerateX(unsigned char *XKEY, const unsigned char *XSEEDj,
 	 */
 	memcpy(&x_j[i*GSIZE], &w_i[BSIZE - GSIZE], GSIZE);
     }
-
-done:
-    /* housekeeping */
-    memset(&w_i[BSIZE - GSIZE], 0, GSIZE);
-    memset(XVAL, 0, BSIZE);
-    memset(XKEY_1, 0, BSIZE);
-    return rv;
-}
-
-/*
- * Implementation of Algorithm 1 of FIPS 186-2 Change Notice 1,
- * hereinafter called alg_cn_1().  It is assumed a lock for the global
- * rng context has already been acquired.
- * Calling this function with XSEEDj == NULL is equivalent to saying there
- * is no optional user input, which is further equivalent to saying that
- * the optional user input is 0.
- */
-static SECStatus
-alg_fips186_2_cn_1(RNGContext *rng, const unsigned char *XSEEDj)
-{
-    /* store a copy of the output to compare with the previous output */
-    PRUint8 x_j[2*GSIZE];
-    SECStatus rv;
-
-    if (!rng->isValid) {
-	/* RNG has alread entered an invalid state. */
-	PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
-	return SECFailure;
-    }
-    rv = FIPS186Change_GenerateX(rng->XKEY, XSEEDj, x_j);
-    if (rv != SECSuccess) {
-	goto done;
-    }
     /*     [FIPS 140-2] verify output does not match previous output */
     if (memcmp(x_j, rng->Xj, 2*GSIZE) == 0) {
 	/* failed FIPS 140-2 continuous RNG test.  RNG now invalid. */
@@ -325,7 +285,10 @@ alg_fips186_2_cn_1(RNGContext *rng, const unsigned char *XSEEDj)
 
 done:
     /* housekeeping */
+    memset(&w_i[BSIZE - GSIZE], 0, GSIZE);
     memset(x_j, 0, 2*GSIZE);
+    memset(XVAL, 0, BSIZE);
+    memset(XKEY_1, 0, BSIZE);
     return rv;
 }
 
@@ -618,6 +581,6 @@ DSA_GenerateGlobalRandomBytes(void *dest, size_t len, const unsigned char *q)
     if (rv != SECSuccess) {
 	return rv;
     }
-    FIPS186Change_ReduceModQForDSA(w, q, (unsigned char *)dest);
+    dsa_reduce_mod_q(w, q, (unsigned char *)dest);
     return rv;
 }

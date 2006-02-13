@@ -68,8 +68,6 @@ var MigrationWizard = {
       nothing.hidden = false;      
     }
 	
-    this.onImportSourcePageShow();
-	
     // Behavior alert! If we were given a migrator already, then we are going to perform migration
     // with that migrator, skip the wizard screen where we show all of the migration sources and 
     // jump right into migration.
@@ -100,7 +98,7 @@ var MigrationWizard = {
   // 1 - Import Source
   onImportSourcePageShow: function ()
   {
-    this._wiz.canRewind = false;
+    document.documentElement.getButton("back").disabled = true;
     
     // Figure out what source apps are are available to import from:
     var group = document.getElementById("importSourceGroup");
@@ -249,15 +247,15 @@ var MigrationWizard = {
       }
     }
 
-    this._wiz.canAdvance = oneChecked;
+    this._wiz.getButton("next").disabled = !oneChecked;
   },
   
   // 4 - Migrating
   onMigratingPageShow: function ()
   {
     this._wiz.getButton("cancel").disabled = true;
-    this._wiz.canRewind = false;
-    this._wiz.canAdvance = false;
+    this._wiz.getButton("back").disabled = true;
+    this._wiz.getButton("next").disabled = true;
     
     // When automigrating, show all of the data that can be received from this source.
     if (this._autoMigrate)
@@ -320,13 +318,12 @@ var MigrationWizard = {
       dump("*** done\n");
       if (this._autoMigrate) {
         // We're done now.
-        this._wiz.canAdvance = true;
         this._wiz.advance();
         setTimeout("close()", 5000);
       }
       else {
-        this._wiz.canAdvance = true;
         var nextButton = this._wiz.getButton("next");
+        nextButton.disabled = false;
         nextButton.click();
       }
       break;
@@ -339,7 +336,8 @@ var MigrationWizard = {
   onDonePageShow: function ()
   {
     this._wiz.getButton("cancel").disabled = true;
-    this._wiz.canRewind = false;
+    this._wiz.getButton("back").disabled = true;
+    this._wiz.getButton("finish").disabled = false;
     this._listItems("doneItems");
   }
 };

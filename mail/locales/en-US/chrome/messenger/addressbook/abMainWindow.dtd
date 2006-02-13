@@ -87,6 +87,8 @@
 <!ENTITY viewToolbarsMenu.accesskey                     "T"> 
 <!ENTITY showAbToolbarCmd.label                         "Address Book Toolbar">
 <!ENTITY showAbToolbarCmd.accesskey                     "o">
+<!ENTITY showSearchToolbarCmd.label                     "Search Bar">
+<!ENTITY showSearchToolbarCmd.accesskey                 "e">
 <!ENTITY showTaskbarCmd.label                           "Status Bar">
 <!ENTITY showTaskbarCmd.accesskey                       "S">
 <!ENTITY customizeToolbar.label                         "Customize...">
@@ -163,9 +165,13 @@
 <!-- Search Bar -->
 <!ENTITY SearchNameOrEmail.label                        "Name or Email">
 <!ENTITY SearchNameOrEmail.accesskey                    "N">
+<!ENTITY clearButton.label                              "Clear">
+<!ENTITY clearButton.accesskey                          "C">
+<!ENTITY clearButton.tooltip                            "Clear the search criteria and show all entries">
+<!ENTITY advancedButton.label                           "Advanced...">
+<!ENTITY advancedButton.accesskey                       "A">
 <!ENTITY advancedButton.tooltip                         "Advanced address search">
 <!ENTITY quickSearchCmd.key                             "k">
-<!ENTITY searchItem.title "Quick Search">
 
 <!-- Results Pane -->
 <!ENTITY GeneratedName.label                            "Name">
@@ -232,7 +238,7 @@
 
 <!--  Mac OS X Window Menu -->
 <!ENTITY windowMenu.label "Window">
-<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY minimizeWindow.key "m">
+<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY bringAllToFront.label "Bring All to Front">
 <!ENTITY zoomWindow.label "Zoom">

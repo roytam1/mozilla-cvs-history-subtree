@@ -122,7 +122,7 @@ function LoadMessageByUri(uri)
 
 function setTitleFromFolder(msgfolder, subject)
 {
-    var wintype = document.documentElement.getAttribute('windowtype');
+    var wintype = document.firstChild.getAttribute('windowtype');
     var title; 
 
     // If we are showing the mail:3pane. Never include the subject of the selected
@@ -621,7 +621,8 @@ function ConvertSortTypeToColumnID(sortKey)
       columnID = "threadCol";
       break;
     case nsMsgViewSortType.byId:
-      columnID = "idCol";
+      // there is no orderReceivedCol, so return null
+      columnID = null;
       break;
     case nsMsgViewSortType.byJunkStatus:
       columnID = "junkStatusCol";
@@ -851,7 +852,6 @@ function FolderPaneSelectionChange()
                   var dbFolderInfo = msgDatabase.dBFolderInfo;
                   sortType = dbFolderInfo.sortType;
                   sortOrder = dbFolderInfo.sortOrder;
-                  viewFlags = dbFolderInfo.viewFlags;
                   if (folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
                   {
                     viewType = nsMsgViewType.eShowQuickSearchResults;

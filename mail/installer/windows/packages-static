@@ -8,6 +8,7 @@
 bin\chrome\@AB_CD@.jar
 bin\chrome\@AB_CD@.manifest
 bin\chrome\mail-locales.manifest
+bin\defaults\messenger\mailViews.dat
 
 [xpcom]
 bin\xpcom.dll
@@ -45,7 +46,6 @@ bin\components\newsblog.js
 ; Optional Talkback
 [talkback]
 bin\extensions\talkback@mozilla.org\install.rdf
-bin\extensions\talkback@mozilla.org\chrome.manifest
 bin\extensions\talkback@mozilla.org\components\qfaservices.dll
 bin\extensions\talkback@mozilla.org\components\qfaservices.xpt
 bin\extensions\talkback@mozilla.org\components\BrandRes.dll
@@ -66,7 +66,6 @@ bin\README.txt
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Mail Specific Files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-bin\defaults\messenger\mailViews.dat
 bin\defaults\messenger\SpamAssassin.sfd
 bin\defaults\messenger\SpamPal.sfd
 bin\defaults\profile\localstore.rdf
@@ -150,9 +149,10 @@ bin\components\wallet.xpt
 bin\components\signonviewer.xpt 
 
 ; download progress
-bin\components\nsHelperAppDlg.js
 bin\components\nsProgressDialog.js
-bin\components\downloads.xpt
+bin\components\nsHelperAppDlg.js
+bin\components\nsDownloadProgressListener.js
+bin\components\downloadmanager.xpt
 
 ; spellchecker (may not be present)
 bin\components\myspell.dll
@@ -270,6 +270,7 @@ bin\components\txtsvc.xpt
 
 ; netwerk
 bin\components\necko.xpt                               
+bin\components\necko_data.xpt               
 bin\components\necko_dns.xpt                
 bin\components\necko_http.xpt               
 bin\components\necko_res.xpt                
@@ -297,8 +298,6 @@ bin\nss3.dll
 bin\smime3.dll
 bin\softokn3.chk
 bin\softokn3.dll
-bin\freebl3.chk
-bin\freebl3.dll
 bin\ssl3.dll
 bin\nssckbi.dll
 
@@ -327,7 +326,6 @@ bin\AccessibleMarshal.dll
 bin\components\lwbrk.xpt
 bin\components\nsCloseAllWindows.js
 bin\components\winhooks.xpt
-bin\components\pluginGlue.js
 
 bin\res\hiddenWindow.html
 bin\res\ua.css
@@ -371,7 +369,3 @@ bin\components\dom_svg.xpt
 
 ; [Updater]
 bin\updater.exe
-
-; [Uninstaller]
-bin\uninstall\uninstall.exe
-bin\uninstall\uninstall.ini

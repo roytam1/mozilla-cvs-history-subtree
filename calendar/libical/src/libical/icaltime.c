@@ -45,7 +45,7 @@
 #include "icalvalue.h"
 
 #ifdef WIN32
-#include <windows.h>
+#include <Windows.h>
 
 #define snprintf      _snprintf
 #define strcasecmp    stricmp
@@ -733,13 +733,13 @@ int icaltime_compare(const struct icaltimetype a_in, const struct icaltimetype b
  */
 
 int
-icaltime_compare_date_only(const struct icaltimetype a_in, const struct icaltimetype b_in, icaltimezone *tz)
+icaltime_compare_date_only(const struct icaltimetype a_in, const struct icaltimetype b_in)
 {
     int retval;
     struct icaltimetype a, b;
 
-    a = icaltime_convert_to_zone(a_in, tz);
-    b = icaltime_convert_to_zone(b_in, tz);
+    a = icaltime_convert_to_zone(a_in, icaltimezone_get_utc_timezone());
+    b = icaltime_convert_to_zone(b_in, icaltimezone_get_utc_timezone());
 
     if (a.year > b.year)
 	retval = 1;

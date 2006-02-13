@@ -48,7 +48,6 @@
 #include "secdig.h"
 #include "prtime.h"
 #include "ec.h"
-#include "keyi.h"
 
 const SEC_ASN1Template CERT_SubjectPublicKeyInfoTemplate[] = {
     { SEC_ASN1_SEQUENCE,
@@ -940,11 +939,13 @@ done:
 }
 
 
-/* Function used to make an oid tag to a key type */
+/* Function used to determine what kind of cert we are dealing with. */
 KeyType 
-seckey_GetKeyType (SECOidTag tag) {
+CERT_GetCertKeyType (CERTSubjectPublicKeyInfo *spki) {
+    int tag;
     KeyType keyType;
 
+    tag = SECOID_GetAlgorithmTag(&spki->algorithm);
     switch (tag) {
       case SEC_OID_X500_RSA_ENCRYPTION:
       case SEC_OID_PKCS1_RSA_ENCRYPTION:
@@ -973,13 +974,6 @@ seckey_GetKeyType (SECOidTag tag) {
 	keyType = nullKey;
     }
     return keyType;
-}
-
-/* Function used to determine what kind of cert we are dealing with. */
-KeyType 
-CERT_GetCertKeyType (CERTSubjectPublicKeyInfo *spki) 
-{
-    return seckey_GetKeyType(SECOID_GetAlgorithmTag(&spki->algorithm));
 }
 
 static SECKEYPublicKey *
@@ -1296,10 +1290,9 @@ SECKEY_ECParamsToKeySize(const SECItem *encodedParams)
 
 /* returns key strength in bytes (not bits) */
 unsigned
-SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk)
+SECKEY_PublicKeyStrength(SECKEYPublicKey *pubk)
 {
     unsigned char b0;
-    unsigned size;
 
     /* interpret modulus length as key strength... in
      * fortezza that's the public key length */
@@ -1320,8 +1313,11 @@ SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk)
 	return PR_MAX(pubk->u.fortezza.KEAKey.len, pubk->u.fortezza.DSSKey.len);
     case ecKey:
 	/* Get the key size in bits and adjust */
-	size =	SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
-	return (size + 7)/8;
+	if (pubk->u.ec.size == 0) {
+	    pubk->u.ec.size = 
+		SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
+	} 
+	return (pubk->u.ec.size + 7)/8;
     default:
 	break;
     }
@@ -1330,9 +1326,8 @@ SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk)
 
 /* returns key strength in bits */
 unsigned
-SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk)
+SECKEY_PublicKeyStrengthInBits(SECKEYPublicKey *pubk)
 {
-    unsigned size;
     switch (pubk->keyType) {
     case rsaKey:
     case dsaKey:
@@ -1340,8 +1335,11 @@ SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk)
     case fortezzaKey:
 	return SECKEY_PublicKeyStrength(pubk) * 8; /* 1 byte = 8 bits */
     case ecKey:
-	size = SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
-	return size;
+	if (pubk->u.ec.size == 0) {
+	    pubk->u.ec.size = 
+		SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
+	} 
+	return pubk->u.ec.size;
     default:
 	break;
     }
@@ -1349,7 +1347,7 @@ SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk)
 }
 
 SECKEYPrivateKey *
-SECKEY_CopyPrivateKey(const SECKEYPrivateKey *privk)
+SECKEY_CopyPrivateKey(SECKEYPrivateKey *privk)
 {
     SECKEYPrivateKey *copyk;
     PRArenaPool *arena;
@@ -1395,7 +1393,7 @@ fail:
 }
 
 SECKEYPublicKey *
-SECKEY_CopyPublicKey(const SECKEYPublicKey *pubk)
+SECKEY_CopyPublicKey(SECKEYPublicKey *pubk)
 {
     SECKEYPublicKey *copyk;
     PRArenaPool *arena;
@@ -1946,8 +1944,8 @@ SECKEY_ConvertAndDecodePublicKeyAndChallenge(char *pkacstr, char *challenge,
     /* check the signature */
     sig = sd.signature;
     DER_ConvertBitString(&sig);
-    rv = VFY_VerifyDataWithAlgorithmID(sd.data.data, sd.data.len, pubKey, &sig,
-			&(sd.signatureAlgorithm), NULL, wincx);
+    rv = VFY_VerifyData(sd.data.data, sd.data.len, pubKey, &sig,
+			SECOID_GetAlgorithmTag(&(sd.signatureAlgorithm)), wincx);
     if ( rv != SECSuccess ) {
 	goto loser;
     }

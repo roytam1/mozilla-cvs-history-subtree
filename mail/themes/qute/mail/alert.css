@@ -52,8 +52,8 @@
 
 .alertImageBox 
 {
-  -moz-margin-start: 4px;
-  -moz-margin-end: 6px;
+  margin-left: 4px;
+  margin-right: 6px;
   min-height: 46px;
 }
 
@@ -64,7 +64,7 @@
 
 .alertText 
 {
-  -moz-margin-end: 6px;
+  margin-right: 6px;
 }
 
 .alertText[clickable="true"] 
@@ -80,6 +80,6 @@
 
 .alertTextBox
 {
-  -moz-padding-end: 10px;
+  padding-right: 10px;
   padding-top: 5px;
 }

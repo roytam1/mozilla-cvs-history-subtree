@@ -64,5 +64,5 @@ function manageSubscriptions()
     lastSubscriptionWindow.focus();
   else 
     window.openDialog("chrome://messenger-newsblog/content/feed-subscriptions.xul", "",
-                      "centerscreen,chrome,dialog=no,resizable", { server: gIncomingServer});
+                      "centerscreen,resizable=yes", { server: gIncomingServer});
 }

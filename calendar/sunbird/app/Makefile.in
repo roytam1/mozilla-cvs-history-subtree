@@ -50,6 +50,8 @@ DIRS		= profile/extensions profile
 
 PREF_JS_EXPORTS = $(srcdir)/profile/sunbird.js
 
+DEFINES += -DAB_CD=$(AB_CD)
+
 ifeq ($(USE_SHORT_LIBNAME), 1)
 PROGRAM = sunbird$(BIN_SUFFIX)
 else
@@ -67,28 +69,18 @@ CPPSRCS = nsCalendarApp.cpp
 
 LOCAL_INCLUDES += -I$(topsrcdir)/toolkit/xre
 
-ifdef MOZILLA_1_8_BRANCH
-LIBS += $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
-else
 ifdef BUILD_STATIC_LIBS
 STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
-LIBS += $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
-else
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-LIBS += $(DIST)/bin/XUL
-else
-EXTRA_DSO_LIBS += xul
-endif
-endif
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 TK_LIBS := -framework Cocoa $(TK_LIBS)
 endif
 
-LIBS += \
+LIBS = \
 	$(STATIC_COMPONENTS_LINKER_PATH) \
 	$(EXTRA_DSO_LIBS) \
+	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
 	$(MOZ_JS_LIBS) \
 	$(XPCOM_LIBS) \
 	$(NSPR_LIBS) \
@@ -176,7 +168,7 @@ include $(topsrcdir)/config/static-rules.mk
 endif
 
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
-DEFINES += -DAPP_VERSION="$(APP_VERSION)"
+DEFINES += -DAPP_VERSION=\"$(APP_VERSION)\"
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
@@ -250,6 +242,9 @@ install::
 	$(SYSINSTALL) $(IFLAGS1) $(DIST)/branding/default.xpm $(DESTDIR)$(mozappdir)/icons
 endif
 
+export:: brand.dtd.in
+	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) $^ > brand.dtd
+
 export::
 ifndef MOZ_USE_OFFICIAL_BRANDING
 	$(NSINSTALL) -D $(DIST)/branding
@@ -265,9 +260,9 @@ ifeq ($(MOZ_WIDGET_TOOLKIT),gtk2)
 	cp $(srcdir)/default.xpm   $(DIST)/branding/default.xpm	
 endif
 ifeq ($(OS_ARCH),OS2)
-	cp $(srcdir)/sunbird-os2.ico  $(DIST)/branding/sunbird.ico
-	cp $(srcdir)/sunbird-os2.ico  $(DIST)/branding/app.ico
-	cp $(srcdir)/sunbird-os2.ico  $(DIST)/branding/document.ico
+	cp $(srcdir)/sunbird.ico   $(DIST)/branding/sunbird.ico
+	cp $(srcdir)/sunbird.ico   $(DIST)/branding/app.ico
+	cp $(srcdir)/sunbird.ico  $(DIST)/branding/document.ico
 endif
 endif
 
@@ -287,7 +282,7 @@ libs:: $(PROGRAM)
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	-cp -L $(DIST)/bin/mangle $(DIST)/bin/shlibsign $(DIST)/$(APP_NAME).app/Contents/MacOS
 	cp -RL $(DIST)/branding/sunbird.icns $(DIST)/$(APP_NAME).app/Contents/Resources/sunbird.icns
-	echo -n APPLMOZC > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
+	echo -n APPLMOZB > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
 #       remove CVS dirs from packaged app
 	find $(DIST)/$(APP_NAME).app -type d -name "CVS" -prune -exec rm -rf {} \;
 

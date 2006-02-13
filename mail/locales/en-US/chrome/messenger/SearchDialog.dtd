@@ -23,11 +23,11 @@
 <!ENTITY goToFolderButton.label      "Open Message Folder">
 <!ENTITY goToFolderButton.accesskey  "r">
 <!ENTITY saveAsVFButton.label        "Save as Search Folder">
-<!ENTITY saveAsVFButton.accesskey    "v">
+<!ENTITY saveAsVFButton.accesskey    "a">
 
 <!-- for ABSearchDialog.xul -->
 <!ENTITY abSearchHeading.label       "Search in:">
-<!ENTITY abSearchHeading.accesskey   "h">
+<!ENTITY abSearchHeading.accesskey   "S">
 <!ENTITY propertiesButton.label      "Properties">
 <!ENTITY propertiesButton.accesskey  "P">
 <!ENTITY composeButton.label         "Write">

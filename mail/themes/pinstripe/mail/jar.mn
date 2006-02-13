@@ -1,4 +1,5 @@
 classic.jar:
+     skin/classic/global/preview.png                  
      skin/classic/global/tree/treetwisty.png                        (icons/treetwisty.png) 
      skin/classic/global/tree/treetwisty-open.png                   (icons/treetwisty-open.png) 
 % skin messenger classic/1.0 %skin/classic/messenger/
@@ -16,7 +17,6 @@ classic.jar:
      skin/classic/messenger/searchBox.css
      skin/classic/messenger/junkMail.css
      skin/classic/messenger/folderMenus.css
-     skin/classic/messenger/folderPane.css
      skin/classic/messenger/subscribe.css
      skin/classic/messenger/virtualFolderListDialog.css
      skin/classic/messenger/searchDialog.css
@@ -85,9 +85,9 @@ classic.jar:
      skin/classic/messenger/preferences/preferences.css             (preferences/preferences.css)
      skin/classic/messenger/preferences/mail-options.png            (preferences/mail-options.png)
      skin/classic/messenger/smime/msgCompSMIMEOverlay.css           (smime/msgCompSMIMEOverlay.css)
-     skin/classic/messenger/smime/msgHdrViewSMIMEOverlay.css        (smime/msgHdrViewSMIMEOverlay.css)
-     skin/classic/messenger/smime/msgReadSMIMEOverlay.css           (smime/msgReadSMIMEOverlay.css)
-     skin/classic/messenger/smime/msgReadSecurityInfo.css            (smime/msgReadSecurityInfo.css)
+     skin/classic/messenger/smime/msgCompSMIMEOverlay.css           (smime/msgHdrViewSMIMEOverlay.css)
+     skin/classic/messenger/smime/msgCompSMIMEOverlay.css           (smime/msgReadSMIMEOverlay.css)
+     skin/classic/messenger/smime/msgCompSMIMEOverlay.css           (smime/msgReadSecurityInfo.css)
      skin/classic/messenger/smime/certFetchingStatus.css            (smime/certFetchingStatus.css)
      skin/classic/messenger/smime/icons/smbtn1.gif                  (smime/smbtn1.gif)
      skin/classic/messenger/smime/icons/sbSignOk.gif                (smime/sbSignOk.gif)
@@ -106,7 +106,6 @@ classic.jar:
      skin/classic/messenger/icons/search-bar-background.png         (icons/search-bar-background.png)
      skin/classic/messenger/icons/Search-bar.png                    (icons/Search-bar.png)
      skin/classic/messenger/icons/attach.png                        (icons/attach.png)
-     skin/classic/messenger/icons/message-mail-attach-del.gif       (icons/message-mail-attach-del.gif)
      skin/classic/messenger/icons/attachment-col.png                (icons/attachment-col.png)
      skin/classic/messenger/icons/attachment-selected.png           (icons/attachment-selected.png)
      skin/classic/messenger/icons/attachment.png                    (icons/attachment.png)
@@ -222,5 +221,3 @@ classic.jar:
      skin/classic/communicator/icons/smileys/smiley-innocent.png    (icons/smiley-innocent.png)
      skin/classic/communicator/icons/smileys/smiley-cry.png         (icons/smiley-cry.png)
      skin/classic/communicator/icons/smileys/smiley-sealed.png      (icons/smiley-sealed.png)
-     preview.png
-     icon.png

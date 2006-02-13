@@ -65,7 +65,6 @@ const kQuickSearchSender = 1;
 const kQuickSearchSenderOrSubject = 2;
 const kQuickSearchBody = 3;
 const kQuickSearchHighlight = 4;
-const kQuickSearchRecipient = 5;
 
 var gFinder = Components.classes["@mozilla.org/embedcomp/rangefind;1"].createInstance()
                         .QueryInterface(Components.interfaces.nsIFind);
@@ -110,10 +109,11 @@ var gSearchNotificationListener =
         statusFeedback.showProgress(0);
         gStatusBar.setAttribute("mode","normal");
         gSearchInProgress = false;
+        viewDebug("gSearchInput = " + gSearchInput.value + "\n");
 
         // ### TODO need to find out if there's quick search within a virtual folder.
         if (gCurrentVirtualFolderUri &&
-         (!gSearchInput || gSearchInput.value == "" || gSearchInput.showingSearchCriteria))
+         (gSearchInput.value == "" || gSearchInput.showingSearchCriteria))
         {
           var vFolder = GetMsgFolderFromUri(gCurrentVirtualFolderUri, false);
           var dbFolderInfo = vFolder.getMsgDatabase(msgWindow).dBFolderInfo;
@@ -188,7 +188,7 @@ function createQuickSearchView()
       var saveViewSearchListener = gDBView.QueryInterface(Components.interfaces.nsIMsgSearchNotify);
       gSearchSession.unregisterListener(saveViewSearchListener);
     }
-    CreateDBView(gDBView.msgFolder, (gXFVirtualFolderTerms) ? nsMsgViewType.eShowVirtualFolderResults : nsMsgViewType.eShowQuickSearchResults, gDBView.viewFlags, gDBView.sortType, gDBView.sortOrder);
+    CreateDBView(gDBView.msgFolder, (gXFVirtualFolderTerms) ? nsMsgViewType.eShowVirtualFolderResults : nsMsgViewType.eShowQuickSearchResults, nsMsgViewFlagsType.kNone, gDBView.sortType, gDBView.sortOrder);
   }
 }
 
@@ -216,11 +216,12 @@ function initializeSearchBar()
 
 function onEnterInSearchBar()
 {
-   if (!gSearchInput || gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
+  viewDebug ("onEnterInSearchBar gSearchInput.value = " + gSearchInput.value + " showing criteria = " + gSearchInput.showingSearchCriteria +"\n");
+   if (gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
    {
-     if (gSearchInput && gSearchInput.searchMode == kQuickSearchHighlight)
+     if (gSearchInput.searchMode == kQuickSearchHighlight)
        removeHighlighting();
-   
+     
      if (gDBView.viewType == nsMsgViewType.eShowQuickSearchResults 
         || gDBView.viewType == nsMsgViewType.eShowVirtualFolderResults)
      {
@@ -241,9 +242,8 @@ function onEnterInSearchBar()
      else if (gPreQuickSearchView && !gDefaultSearchViewTerms)// may be a quick search from a cross-folder virtual folder
       restorePreSearchView();
      
-     if (gSearchInput)
-       gSearchInput.showingSearchCriteria = true;
-   
+     gSearchInput.showingSearchCriteria = true;
+     
      gQSViewIsDirty = false;
      return;
    }
@@ -364,8 +364,6 @@ function createSearchTermsWithList(aTermsArray)
   var selectedFolder = GetThreadPaneFolder();
   var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                   .getService(Components.interfaces.nsIIOService);
-  
-  var termsArray = aTermsArray.QueryInterface(Components.interfaces.nsISupportsArray);
 
   if (gXFVirtualFolderTerms)
   {
@@ -381,35 +379,26 @@ function createSearchTermsWithList(aTermsArray)
         var realFolderRes = GetResourceFromUri(srchFolderUriArray[i]);
         var realFolder = realFolderRes.QueryInterface(Components.interfaces.nsIMsgFolder);
         if (!realFolder.isServer)
-          gSearchSession.addScopeTerm(getScopeToUse(termsArray, realFolder, ioService.offline), realFolder);
+          gSearchSession.addScopeTerm(gSearchInput.searchMode == kQuickSearchBody && 
+                              !ioService.offline && 
+                              realFolder.server.type == 'imap' ? nsMsgSearchScope.onlineMail : nsMsgSearchScope.offlineMail, 
+                              realFolder);
       }
     }
   }
   else
   {
     viewDebug ("in createSearchTermsWithList, adding scope term for selected folder\n");
-    gSearchSession.addScopeTerm(getScopeToUse(termsArray, selectedFolder, ioService.offline), selectedFolder);
+    gSearchSession.addScopeTerm(gSearchInput.searchMode == kQuickSearchBody && 
+                              !ioService.offline && 
+                              selectedFolder.server.type == 'imap' ? nsMsgSearchScope.onlineMail : nsMsgSearchScope.offlineMail, 
+                              selectedFolder);
   }
-
   // add each item in termsArray to the search session
+
+  var termsArray = aTermsArray.QueryInterface(Components.interfaces.nsISupportsArray);
   for (var i = 0; i < termsArray.Count(); i++)
     gSearchSession.appendTerm(termsArray.GetElementAt(i).QueryInterface(Components.interfaces.nsIMsgSearchTerm));
-}
-
-function getScopeToUse(aTermsArray, aFolderToSearch, aIsOffline)
-{
-  if (aIsOffline || aFolderToSearch.server.type != 'imap')
-    return nsMsgSearchScope.offlineMail;
-
-  var scopeToUse = gSearchInput && gSearchInput.searchMode == kQuickSearchBody && !gSearchInput.showingSearchCriteria
-                   ? nsMsgSearchScope.onlineMail : nsMsgSearchScope.offlineMail;
-
-  // it's possible one of our search terms may require us to use an online mail scope (such as imap body searches)
-  for (var i = 0; scopeToUse != nsMsgSearchScope.onlineMail && i < aTermsArray.Count(); i++)
-    if (aTermsArray.GetElementAt(i).QueryInterface(Components.interfaces.nsIMsgSearchTerm).attrib == nsMsgSearchAttrib.Body)
-      scopeToUse = nsMsgSearchScope.onlineMail;
-  
-  return scopeToUse;
 }
 
 function createSearchTerms()
@@ -477,19 +466,6 @@ function createSearchTerms()
         value.str = termList[i];
         term.value = value;
         term.attrib = searchAttrib;
-        term.op = nsMsgSearchOp.Contains; 
-        term.booleanAnd = false;
-        searchTermsArray.AppendElement(term);
-      }
-
-      // create, fill, and append the recipient
-      if (gSearchInput.searchMode == kQuickSearchRecipient)
-      {
-        term = gSearchSession.createTerm();
-        value = term.value;
-        value.str = termList[i];
-        term.value = value;
-        term.attrib = nsMsgSearchAttrib.ToOrCC;
         term.op = nsMsgSearchOp.Contains; 
         term.booleanAnd = false;
         searchTermsArray.AppendElement(term);
@@ -634,7 +610,7 @@ function ClearQSIfNecessary()
 {
   GetSearchInput();
 
-  if (!gSearchInput || gSearchInput.value == "")
+  if (gSearchInput.value == "")
     return;
 
   Search("");
@@ -644,8 +620,7 @@ function ClearQSIfNecessary()
 // of a quick search view...
 function clearQuickSearchAfterFolderChange()
 {
-  if (gSearchInput)
-    gSearchInput.setSearchCriteriaText();
+  gSearchInput.setSearchCriteriaText();
 }
 
 function Search(str)
@@ -687,7 +662,7 @@ function onQuickSearchNewMsgLoaded()
   // re-highlight this new message.
   // Optimization: We'll special case Message Body quick searches and highlight those as well as find in message
   // searches.
-  if (gSearchInput && (gSearchInput.searchMode == kQuickSearchHighlight || gSearchInput.searchMode == kQuickSearchBody)
+  if ( (gSearchInput.searchMode == kQuickSearchHighlight || gSearchInput.searchMode == kQuickSearchBody)
        && gSearchInput.value && !gSearchInput.showingSearchCriteria)
   {
     highlightMessage(false);

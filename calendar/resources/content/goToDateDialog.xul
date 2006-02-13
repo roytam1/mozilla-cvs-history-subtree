@@ -38,7 +38,7 @@
 <?xml-stylesheet type="text/css"
  href="chrome://global/skin/global.css" ?>
 <?xml-stylesheet type="text/css"
- href="chrome://calendar/content/datetimepickers/datetimepickers.css" ?>
+ href="chrome://calendar/content/datetimepickers/datepicker.css" ?>
 
 <?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
 
@@ -79,7 +79,7 @@
 
   <!-- dialog-box: from dialogOverlay.xul -->
 
-  <hbox align="center">
+  <hbox>
     <description>&calendar.flat.topbar.choosedate;</description>
     <datepicker id="datepicker"/>
   </hbox>

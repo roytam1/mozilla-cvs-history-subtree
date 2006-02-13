@@ -1,28 +1,26 @@
 # -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-#
+# 
 # The Original Code is the Thunderbird Preferences System.
-#
-# The Initial Developer of the Original Code is
-# Ben Goodger.
+# 
+# The Initial Developer of the Original Code is Ben Goodger.
 # Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   Ben Goodger <ben@mozilla.org>
 #   Scott MacGregor <mscott@mozilla.org>
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -34,18 +32,13 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 var gConnectionsDialog = {
   beforeAccept: function ()
   {
     var proxyTypePref = document.getElementById("network.proxy.type");
-    if (proxyTypePref.value == 2) {
-      this.doAutoconfigURLFixup();
-      return true;
-    }
-
     if (proxyTypePref.value != 1)
       return true;
 
@@ -65,7 +58,6 @@ var gConnectionsDialog = {
         proxyPortPref.value = httpProxyPortPref.value;
       }
     }
-
     return true;
   },
   
@@ -155,15 +147,17 @@ var gConnectionsDialog = {
     pps.configureFromPAC(autoURL.value);
   },
   
-  doAutoconfigURLFixup: function ()
+  writeAutoconfigURL: function ()
   {
     var autoURL = document.getElementById("networkProxyAutoconfigURL");
-    var autoURLPref = document.getElementById("network.proxy.autoconfig_url");
     var URIFixup = Components.classes["@mozilla.org/docshell/urifixup;1"]
                              .getService(Components.interfaces.nsIURIFixup);
     try {
-      autoURLPref.value = autoURL.value = URIFixup.createFixupURI(autoURL.value, 0).spec;
-    } catch(ex) {}
+      return URIFixup.createFixupURI(autoURL.value, 0).spec;
+    }
+    catch(ex) {
+    }
+    return undefined;
   },
   
   readHTTPProxyServer: function ()

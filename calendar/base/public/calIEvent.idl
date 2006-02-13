@@ -38,8 +38,6 @@
 
 #include "calIItemBase.idl"
 
-interface calIDuration;
-
 //
 // calIEvent
 //
@@ -70,6 +68,11 @@ interface calIEvent : calIItemBase
    * The duration of the event.
    * equal to endDate - startDate
    */
-  readonly attribute calIDuration duration;
+  readonly attribute calIDateTime duration;
 
+  /**
+   * Indicates if the event is an all-day event.
+   * All-day event have isDate in startDate and endDate set to true.
+   */
+  attribute boolean isAllDay;
 };

@@ -51,12 +51,33 @@
 * NOTES
 *   Code for the calendar's print dialog.
 *
+*  Invoke this dialog to print a Calendar as follows:
+*  args = new Object();
+*  args.eventSource = youreventsource;
+*  args.selectedEvents=currently selected events
+*  args.selectedDate=currently selected date
+*  args.weeksInView=multiweek how many weeks to show
+*  args.prevWeeksInView=previous weeks to show in view
+*  args.startOfWeek=zero based day to start the week
+*  calendar.openDialog("chrome://calendar/content/eventDialog.xul", "printdialog", "chrome,titlebar.modal", args );
+*
 * IMPLEMENTATION NOTES
 **********
 */
 
+/*-----------------------------------------------------------------
+ *   W I N D O W      V A R I A B L E S
+ */
+
+var selectedEvents; // selected events send by opener
+var selectedDate; // current selected date sent by opener
+
+var gCategoryManager; // for future
+gCalendarWindow = window.opener.gCalendarWindow ;
+var gStartDate = new Date( );
+
+var gArgs;
 var gPrintSettings = null;
-var gCalendarWindow = window.opener.gCalendarWindow;
 
 /*-----------------------------------------------------------------
  *   W I N D O W      F U N C T I O N S
@@ -68,15 +89,17 @@ var gCalendarWindow = window.opener.gCalendarWindow;
 
 function loadCalendarPrintDialog()
 {
+  // load up the sent arguments.
+
+  gArgs = window.arguments[0];
+  gStartDate = gArgs.selectedDate ;
+  gSelectedEvents = gArgs.selectedEvents ;
   // set the date to the currently selected date
-  document.getElementById( "start-date-picker" ).value = gCalendarWindow.currentView.selectedDate;
-  document.getElementById( "end-date-picker" ).value = gCalendarWindow.currentView.selectedDate;
+  document.getElementById( "start-date-picker" ).value = selectedDate;
 
   // start focus on title
-  var firstFocus = document.getElementById( "title-field" ).focus();
-
-  if (gCalendarWindow.EventSelection.selectedEvents.length == 0)
-    document.getElementById("list").setAttribute("disabled", true);
+  var firstFocus = document.getElementById( "title-field" );
+  firstFocus.focus();
 
   opener.setCursor( "auto" );
   
@@ -85,71 +108,67 @@ function loadCalendarPrintDialog()
 
 
 function printCalendar() {
+  var caltype=document.getElementById("view-field");
+  if (caltype.value == '')
+    caltype.value='month';
 
-  var ccalendar = getDisplayComposite();
-  var listener = {
-    mEventArray: new Array(),
+  var printFunction;
+  var printFunctionArg = gStartDate ;
 
-    onOperationComplete: function (aCalendar, aStatus, aOperationType, aId, aDateTime) {
-      printInitWindow(listener.mEventArray); 
-    },
-
-    onGetResult: function (aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
-      for (var i = 0; i < aCount; i++) {
-        listener.mEventArray.push(aItems[i]);
-      }
-    }
-  };
-
-  var filter = ccalendar.ITEM_FILTER_TYPE_EVENT | 
-               ccalendar.ITEM_FILTER_CLASS_OCCURRENCES;
-
-  switch( document.getElementById("view-field").value )
+  switch( caltype.value )
   {
-    case 'currentview':
-    case '': //just in case
-      var displayStart = gCalendarWindow.currentView.displayStartDate;
-      var displayEnd = gCalendarWindow.currentView.displayEndDate;
-
-      //multiweek and month views call their display range something else
-      if(!displayStart) {
-        displayStart = gCalendarWindow.currentView.firstDateOfView;
-        displayEnd = gCalendarWindow.currentView.endExDateOfView;
-      }
-      ccalendar.getItems(filter, 0, jsDateToDateTime(displayStart), jsDateToDateTime(displayEnd), listener);
-      break;
+    case 'month' :
+      printFunction = "printMonthView" ;
+      break ;
     case 'list' :
-      printInitWindow(gCalendarWindow.EventSelection.selectedEvents);
-      break;
-    case 'custom' :
-      var start = document.getElementById("start-date-picker").value;
-      var end = document.getElementById("end-date-picker").value;
-      ccalendar.getItems(filter, 0, jsDateToDateTime(start), jsDateToDateTime(end), listener);
+      printFunction = "printEventArray" ;
+      printFunctionArg = gSelectedEvents ;
+      break ;
+    case 'day' :
+      printFunction = "printDayView" ;
+      break ;
+    case 'week' :
+      printFunction = "printWeekView" ;
+      break ;
+    case 'multiweek' :
+      printFunction = "printMultiWeekView" ;
       break ;
     default :
-      dump("Error : no case in printDialog.js::printCalendar()");
+      alert("Error : no case in printDialog.js::printCalendar()");
+      return false ;
   }
+  printInitWindow(printFunction,printFunctionArg)
+  return true ;
 }
 
-function printInitWindow(eventList)
+function printInitWindow(printFunction,printFunctionArg)
 {
-  var args = new Object();
-  args.title = document.getElementById("title-field").value;
-  args.showprivate = document.getElementById("private-checkbox");
-  args.eventList = eventList;
+  var mytitle=document.getElementById("title-field").value;
+  var showprivate=document.getElementById("private-checkbox");
 
-  window.openDialog("chrome://calendar/content/calPrintEngine.xul",
+  printwindow=window.openDialog("chrome://calendar/content/calPrintEngine.xul",
 				"CalendarPrintWindow",
 				"chrome,dialog=no,all,centerscreen",
-				args);
+				printFunction,printFunctionArg,mytitle,showprivate,gArgs,gCalendarWindow );
+  // to set the title of the page
+//  printwindow.title = printwindow.name ; 
+  return printwindow ;
 }
 
 /*-----------------------------------------------------------------
  *   Called when a datepicker is finished, and a date was picked.
  */
 
-function onDatePick()
+function onDatePick( datepicker )
 {
-  radioGroupSelectItem("view-field", "custom-range");
+  var ThisDate = new Date( datepicker.value);
+
+  if( datepicker.id == "start-date-picker" )
+  {
+    gStartDate.setMonth( ThisDate.getMonth() );
+    gStartDate.setDate( ThisDate.getDate() );
+    gStartDate.setFullYear( ThisDate.getFullYear() );
+  }
+
 }
 

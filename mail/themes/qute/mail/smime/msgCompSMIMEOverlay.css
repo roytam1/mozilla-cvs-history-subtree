@@ -47,7 +47,11 @@
   -moz-image-region: rect(0px 120px 24px 96px);
 }
 
-#button-security:hover {
+#button-security[buttonover] {
+  -moz-image-region: rect(24px 120px 48px 96px);
+} 
+
+#button-security[buttondown] {
   -moz-image-region: rect(24px 120px 48px 96px);
 } 
 

@@ -44,8 +44,8 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS    = compose preferences addrbook migration
 
-ifneq (,$(filter gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
-DIRS += shell
+ifeq ($(MOZ_WIDGET_TOOLKIT), gtk2)
+DIRS += gnome
 endif
 
 DIRS += build

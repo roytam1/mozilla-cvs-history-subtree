@@ -134,12 +134,6 @@ function AddressBookMenuListChange()
   }
 }
 
-function AbPanelOnComposerClose()
-{
-  CloseAbView();
-  gSearchInput.value = "";
-}
-
 function AbPanelLoad() 
 {
   InitCommonJS();
@@ -152,12 +146,9 @@ function AbPanelLoad()
   // selected directory's name is modified
   var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
   // this listener only cares when a directory is removed or modified
-  addrbookSession.addAddressBookListener(
-    gAddressBookPanelAbListener,
-    Components.interfaces.nsIAddrBookSession.directoryRemoved |
-    Components.interfaces.nsIAddrBookSession.changed);
+  addrbookSession.addAddressBookListener(gAddressBookPanelAbListener,
+                  Components.interfaces.nsIAbListener.directoryRemoved | Components.interfaces.nsIAbListener.changed);
 
-  parent.document.getElementById("msgcomposeWindow").addEventListener('compose-window-close', AbPanelOnComposerClose, true);
   gSearchInput = document.getElementById("searchInput");
 }
 

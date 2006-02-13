@@ -46,7 +46,6 @@
 
 
 var gOnOkFunction;   // function to be called when user clicks OK
-var gPublishObject;
 
 /*-----------------------------------------------------------------
 *   W I N D O W      F U N C T I O N S
@@ -66,13 +65,12 @@ function loadCalendarPublishDialog()
    
    if( args.publishObject )
    {
-      gPublishObject = args.publishObject;
-      if ( args.publishObject.remotePath )
-          document.getElementById( "publish-remotePath-textbox" ).value = args.publishObject.remotePath;
+      document.getElementById( "publish-remotePath-textbox" ).value = args.publishObject.remotePath;
    }
    else
    {
-      gPublishObject = new Object();
+      //get default values from the prefs
+      document.getElementById( "publish-remotePath-textbox" ).value = opener.getCharPref( opener.gCalendarWindow.calendarPreferences.calendarPref, "publish.path", "" );
    }
    document.getElementById( "calendar-publishwindow" ).getButton( "accept" ).setAttribute( "label", publishButtonLabel );   
    
@@ -90,12 +88,16 @@ function loadCalendarPublishDialog()
 
 function onOKCommand()
 {
-   gPublishObject.remotePath = document.getElementById( "publish-remotePath-textbox" ).value;
+   var CalendarPublishObject = new Object();
 
+   CalendarPublishObject.remotePath = document.getElementById( "publish-remotePath-textbox" ).value;
+
+   document.getElementById( "publish-progressmeter" ).setAttribute( "mode", "undetermined" );
    // call caller's on OK function
-   gOnOkFunction(gPublishObject, progressDialog);
+   gOnOkFunction( CalendarPublishObject );
    document.getElementById( "calendar-publishwindow" ).getButton( "accept" ).setAttribute( "label", closeButtonLabel );   
-   document.getElementById( "calendar-publishwindow" ).setAttribute( "ondialogaccept", "closeDialog()" );
+   document.getElementById( "calendar-publishwindow" ).getButton( "accept" ).setAttribute( "oncommand", "closeDialog()" );   
+   document.getElementById( "publish-progressmeter" ).setAttribute( "mode", "determined" );
    return( false );
 }
 
@@ -113,13 +115,3 @@ function closeDialog( )
    self.close( );
 }
 
-var progressDialog = {
-    onStartUpload: function() {
-        document.getElementById( "publish-progressmeter" ).setAttribute( "mode", "undetermined" );
-    },
-    
-    onStopUpload: function() {
-        document.getElementById( "publish-progressmeter" ).setAttribute( "mode", "determined" );
-    }
-};
-progressDialog.wrappedJSObject = progressDialog;

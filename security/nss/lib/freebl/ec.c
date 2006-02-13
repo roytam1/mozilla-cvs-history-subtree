@@ -53,7 +53,7 @@
 PRBool
 ec_point_at_infinity(SECItem *pointP)
 {
-    unsigned int i;
+    int i;
 
     for (i = 1; i < pointP->len; i++) {
 	if (pointP->data[i] != 0x00) return PR_FALSE;
@@ -612,53 +612,34 @@ ECDSA_SignDigestWithSeed(ECPrivateKey *key, SECItem *signature,
     mp_int n;
     mp_err err = MP_OKAY;
     ECParams *ecParams = NULL;
-    SECItem localDigest;
     SECItem kGpoint = { siBuffer, NULL, 0};
-    int flen = 0;    /* length in bytes of the field size */
-    unsigned olen;   /* length in bytes of the base point order */
+    int len = 0;
 
 #if EC_DEBUG
     char mpstr[256];
 #endif
 
+    /* Check args */
+    if (!key || !signature || !digest || !kb || (kblen < 0) ||
+	(digest->len != SHA1_LENGTH)) {
+	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	goto cleanup;
+    }
+
+    ecParams = &(key->ecParams);
+    len = (ecParams->fieldID.size + 7) >> 3;  
+    if (signature->len < 2*len) {
+	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	goto cleanup;
+    }
+
     /* Initialize MPI integers. */
-    /* must happen before the first potential call to cleanup */
     MP_DIGITS(&x1) = 0;
     MP_DIGITS(&d) = 0;
     MP_DIGITS(&k) = 0;
     MP_DIGITS(&r) = 0;
     MP_DIGITS(&s) = 0;
     MP_DIGITS(&n) = 0;
-
-    /* Check args */
-    if (!key || !signature || !digest || !kb || (kblen < 0)) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	goto cleanup;
-    }
-
-    ecParams = &(key->ecParams);
-    flen = (ecParams->fieldID.size + 7) >> 3;
-    /*
-     * FIXME: temporary workaround until we change PK11_SignatureLen
-     * to use the length of the base point order.
-     */
-#if 0
-    olen = ecParams->order.len;  
-#else
-    olen = flen;  
-#endif
-    if (signature->len < 2*olen) {
-	PORT_SetError(SEC_ERROR_OUTPUT_LEN);
-	goto cleanup;
-    }
-
-    /* In the definition of EC signing, digests are truncated
-     * to the length of the EC base point order */
-    localDigest = *digest;
-    if (localDigest.len > olen) {
-	localDigest.len = olen;
-    }
-
     CHECK_MPI_OK( mp_init(&x1) );
     CHECK_MPI_OK( mp_init(&d) );
     CHECK_MPI_OK( mp_init(&k) );
@@ -687,8 +668,8 @@ ECDSA_SignDigestWithSeed(ECPrivateKey *key, SECItem *signature,
     **
     ** Compute kG
     */
-    kGpoint.len = 2*flen + 1;
-    kGpoint.data = PORT_Alloc(2*flen + 1);
+    kGpoint.len = 2*len + 1;
+    kGpoint.data = PORT_Alloc(2*len + 1);
     if ((kGpoint.data == NULL) ||
 	(ec_points_mul(ecParams, &k, NULL, NULL, &kGpoint)
 	    != SECSuccess))
@@ -700,7 +681,7 @@ ECDSA_SignDigestWithSeed(ECPrivateKey *key, SECItem *signature,
     ** Extract the x co-ordinate of kG into x1
     */
     CHECK_MPI_OK( mp_read_unsigned_octets(&x1, kGpoint.data + 1, 
-	                                  (mp_size) flen) );
+	                                  (mp_size) len) );
 
     /* 
     ** ANSI X9.62, Section 5.3.3, Step 2
@@ -722,9 +703,9 @@ ECDSA_SignDigestWithSeed(ECPrivateKey *key, SECItem *signature,
     /*                                  
     ** ANSI X9.62, Section 5.3.3, Step 4
     **
-    ** s = (k**-1 * (HASH(M) + d*r)) mod n 
+    ** s = (k**-1 * (SHA1(M) + d*r)) mod n 
     */
-    SECITEM_TO_MPINT(localDigest, &s);        /* s = HASH(M)     */
+    SECITEM_TO_MPINT(*digest, &s);        /* s = SHA1(M)     */
 
 #if EC_DEBUG
     mp_todecimal(&n, mpstr);
@@ -767,9 +748,9 @@ ECDSA_SignDigestWithSeed(ECPrivateKey *key, SECItem *signature,
     **
     ** Signature is tuple (r, s)
     */
-    CHECK_MPI_OK( mp_to_fixlen_octets(&r, signature->data, olen) );
-    CHECK_MPI_OK( mp_to_fixlen_octets(&s, signature->data + olen, olen) );
-    signature->len = 2*olen;
+    CHECK_MPI_OK( mp_to_fixlen_octets(&r, signature->data, len) );
+    CHECK_MPI_OK( mp_to_fixlen_octets(&s, signature->data + len, len) );
+    signature->len = 2*len;
 
     rv = SECSuccess;
     err = MP_OKAY;
@@ -782,7 +763,7 @@ cleanup:
     mp_clear(&n);
 
     if (kGpoint.data) {
-	PORT_ZFree(kGpoint.data, 2*flen + 1);
+	PORT_ZFree(kGpoint.data, 2*len + 1);
     }
 
     if (err) {
@@ -874,71 +855,75 @@ ECDSA_VerifyDigest(ECPublicKey *key, const SECItem *signature,
 #ifdef NSS_ENABLE_ECC
     mp_int r_, s_;           /* tuple (r', s') is received signature) */
     mp_int c, u1, u2, v;     /* intermediate values used in verification */
-    mp_int x1;
+    mp_int x1, y1;
+    mp_int x2, y2;
     mp_int n;
     mp_err err = MP_OKAY;
+    PRArenaPool *arena = NULL;
     ECParams *ecParams = NULL;
-    SECItem localDigest;
+    SECItem pointA = { siBuffer, NULL, 0 };
+    SECItem pointB = { siBuffer, NULL, 0 };
     SECItem pointC = { siBuffer, NULL, 0 };
-    int slen;       /* length in bytes of a half signature (r or s) */
-    int flen;       /* length in bytes of the field size */
-    unsigned olen;  /* length in bytes of the base point order */
+    int len;
 
 #if EC_DEBUG
     char mpstr[256];
     printf("ECDSA verification called\n");
 #endif
 
+    /* Check args */
+    if (!key || !signature || !digest ||
+	(digest->len != SHA1_LENGTH)) {
+	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	goto cleanup;
+    }
+
+    ecParams = &(key->ecParams);
+    len = (ecParams->fieldID.size + 7) >> 3;  
+    if (signature->len < 2*len) {
+	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	goto cleanup;
+    }
+
+    /* Initialize an arena for pointA, pointB and pointC */
+    if ((arena = PORT_NewArena(NSS_FREEBL_DEFAULT_CHUNKSIZE)) == NULL)
+	goto cleanup;
+
+    SECITEM_AllocItem(arena, &pointA, 2*len + 1);
+    SECITEM_AllocItem(arena, &pointB, 2*len + 1);
+    SECITEM_AllocItem(arena, &pointC, 2*len + 1);
+    if (pointA.data == NULL || pointB.data == NULL || pointC.data == NULL)
+	goto cleanup;
+
     /* Initialize MPI integers. */
-    /* must happen before the first potential call to cleanup */
     MP_DIGITS(&r_) = 0;
     MP_DIGITS(&s_) = 0;
     MP_DIGITS(&c) = 0;
     MP_DIGITS(&u1) = 0;
     MP_DIGITS(&u2) = 0;
     MP_DIGITS(&x1) = 0;
+    MP_DIGITS(&y1) = 0;
+    MP_DIGITS(&x2) = 0;
+    MP_DIGITS(&y2) = 0;
     MP_DIGITS(&v)  = 0;
     MP_DIGITS(&n)  = 0;
-
-    /* Check args */
-    if (!key || !signature || !digest) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	goto cleanup;
-    }
-
-    if (signature->len == 0 || signature->len%2 != 0) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	goto cleanup;
-    }
-    slen = signature->len/2;
-    ecParams = &(key->ecParams);
-    flen = (ecParams->fieldID.size + 7) >> 3;  
-    olen = ecParams->order.len;  
-
-    /* truncate digest to the length of the base point order */
-    localDigest = *digest;
-    if (localDigest.len > olen) {
-	localDigest.len = olen;
-    }
-
-    SECITEM_AllocItem(NULL, &pointC, 2*flen + 1);
-    if (pointC.data == NULL)
-	goto cleanup;
-
     CHECK_MPI_OK( mp_init(&r_) );
     CHECK_MPI_OK( mp_init(&s_) );
     CHECK_MPI_OK( mp_init(&c)  );
     CHECK_MPI_OK( mp_init(&u1) );
     CHECK_MPI_OK( mp_init(&u2) );
     CHECK_MPI_OK( mp_init(&x1)  );
+    CHECK_MPI_OK( mp_init(&y1)  );
+    CHECK_MPI_OK( mp_init(&x2)  );
+    CHECK_MPI_OK( mp_init(&y2)  );
     CHECK_MPI_OK( mp_init(&v)  );
     CHECK_MPI_OK( mp_init(&n)  );
 
     /*
     ** Convert received signature (r', s') into MPI integers.
     */
-    CHECK_MPI_OK( mp_read_unsigned_octets(&r_, signature->data, slen) );
-    CHECK_MPI_OK( mp_read_unsigned_octets(&s_, signature->data + slen, slen) );
+    CHECK_MPI_OK( mp_read_unsigned_octets(&r_, signature->data, len) );
+    CHECK_MPI_OK( mp_read_unsigned_octets(&s_, signature->data + len, len) );
                                           
     /* 
     ** ANSI X9.62, Section 5.4.2, Steps 1 and 2
@@ -947,10 +932,8 @@ ECDSA_VerifyDigest(ECPublicKey *key, const SECItem *signature,
     */
     SECITEM_TO_MPINT(ecParams->order, &n);
     if (mp_cmp_z(&r_) <= 0 || mp_cmp_z(&s_) <= 0 ||
-        mp_cmp(&r_, &n) >= 0 || mp_cmp(&s_, &n) >= 0) {
-	PORT_SetError(SEC_ERROR_BAD_SIGNATURE);
+        mp_cmp(&r_, &n) >= 0 || mp_cmp(&s_, &n) >= 0)
 	goto cleanup; /* will return rv == SECFailure */
-    }
 
     /*
     ** ANSI X9.62, Section 5.4.2, Step 3
@@ -962,9 +945,9 @@ ECDSA_VerifyDigest(ECPublicKey *key, const SECItem *signature,
     /*
     ** ANSI X9.62, Section 5.4.2, Step 4
     **
-    ** u1 = ((HASH(M')) * c) mod n
+    ** u1 = ((SHA1(M')) * c) mod n
     */
-    SECITEM_TO_MPINT(localDigest, &u1);         /* u1 = HASH(M')     */
+    SECITEM_TO_MPINT(*digest, &u1);         /* u1 = SHA1(M')     */
 
 #if EC_DEBUG
     mp_todecimal(&r_, mpstr);
@@ -993,18 +976,13 @@ ECDSA_VerifyDigest(ECPublicKey *key, const SECItem *signature,
     ** Here, A = u1.G     B = u2.Q    and   C = A + B
     ** If the result, C, is the point at infinity, reject the signature
     */
-    if (ec_points_mul(ecParams, &u1, &u2, &key->publicValue, &pointC)
-	!= SECSuccess) {
-	rv = SECFailure;
-	goto cleanup;
-    }
-    if (ec_point_at_infinity(&pointC)) {
-	PORT_SetError(SEC_ERROR_BAD_SIGNATURE);
-	rv = SECFailure;
-	goto cleanup;
+	if ((ec_points_mul(ecParams, &u1, &u2, &key->publicValue, &pointC) == SECFailure) ||
+	ec_point_at_infinity(&pointC)) {
+	    rv = SECFailure;
+	    goto cleanup;
     }
 
-    CHECK_MPI_OK( mp_read_unsigned_octets(&x1, pointC.data + 1, flen) );
+    CHECK_MPI_OK( mp_read_unsigned_octets(&x1, pointC.data + 1, len) );
 
     /*
     ** ANSI X9.62, Section 5.4.4, Step 2
@@ -1050,10 +1028,13 @@ cleanup:
     mp_clear(&u1);
     mp_clear(&u2);
     mp_clear(&x1);
+    mp_clear(&y1);
+    mp_clear(&x2);
+    mp_clear(&y2);
     mp_clear(&v);
     mp_clear(&n);
 
-    if (pointC.data) SECITEM_FreeItem(&pointC, PR_FALSE);
+    if (arena) PORT_FreeArena(arena, PR_TRUE);	
     if (err) {
 	MP_TO_SEC_ERROR(err);
 	rv = SECFailure;

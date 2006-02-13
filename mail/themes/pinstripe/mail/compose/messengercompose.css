@@ -41,7 +41,6 @@
   ======================================================================= */
 
 @import url("chrome://messenger/skin/");
-@import url("chrome://global/skin/toolbar.css");
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
@@ -71,6 +70,19 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 	-moz-box-orient: vertical !important;
 	padding: 0px;
 	margin: 0px;
+}
+
+toolbar[mode="icons"] .toolbarbutton-text {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-icon {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-text {
+  padding: 0 !important;
+  margin: 3px 5px !important;
 }
 
 #button-send {
@@ -117,8 +129,7 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 128px 32px 96px);
 }
 
-#button-attach:hover:active,
-#button-attach[open="true"] {
+#button-attach[buttondown="true"], #button-attach[open="true"] {
   -moz-image-region: rect(32px 128px 64px 96px);
 } 
 
@@ -131,8 +142,7 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 192px 32px 160px);
 }
 
-#button-save:hover:active,
-#button-save[open="true"] {
+#button-save[buttondown="true"], #button-save[open="true"] {
   -moz-image-region: rect(32px 192px 64px 160px);
 } 
 
@@ -158,7 +168,7 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 256px 32px 224px);
 }
 
-#cut-button:hover:active {
+#cut-button:active {
   -moz-image-region: rect(32px 256px 64px 224px);
 }
 
@@ -171,7 +181,7 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 288px 32px 256px);
 }
 
-#copy-button:hover:active {
+#copy-button:active {
   -moz-image-region: rect(32px 288px 64px 256px);
 }
 
@@ -184,7 +194,7 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 320px 32px 288px);
 }
 
-#paste-button:hover:active {
+#paste-button:active {
   -moz-image-region: rect(32px 320px 64px 288px);
 }
 
@@ -242,8 +252,7 @@ toolbar[iconsize="small"] #button-attach {
   -moz-image-region: rect(0px 96px 24px 72px);
 }
 
-toolbar[iconsize="small"] #button-attach:hover:active,
-toolbar[iconsize="small"] #button-attach[open="true"] {
+toolbar[iconsize="small"] #button-attach[buttondown="true"], toolbar[iconsize="small"] #button-attach[open="true"] {
   -moz-image-region: rect(24px 96px 48px 72px);
 } 
 
@@ -256,8 +265,7 @@ toolbar[iconsize="small"] #button-save {
   -moz-image-region: rect(0px 144px 24px 120px);
 }
 
-toolbar[iconsize="small"] #button-save:hover:active,
-toolbar[iconsize="small"] #button-save[open="true"] {
+toolbar[iconsize="small"] #button-save[buttondown="true"], toolbar[iconsize="small"] #button-save[open="true"] {
   -moz-image-region: rect(24px 144px 48px 120px);
 } 
 
@@ -283,7 +291,7 @@ toolbar[iconsize="small"] #cut-button {
   -moz-image-region: rect(0px 192px 24px 168px);
 }
 
-toolbar[iconsize="small"] #cut-button:hover:active {
+toolbar[iconsize="small"] #cut-button:active {
   -moz-image-region: rect(24px 192px 48px 168px);
 }
 
@@ -296,7 +304,7 @@ toolbar[iconsize="small"] #copy-button {
   -moz-image-region: rect(0px 216px 24px 192px);
 }
 
-toolbar[iconsize="small"] #copy-button:hover:active {
+toolbar[iconsize="small"] #copy-button:active {
   -moz-image-region: rect(24px 216px 48px 192px);
 }
 
@@ -309,7 +317,7 @@ toolbar[iconsize="small"] #paste-button {
   -moz-image-region: rect(0px 240px 24px 216px);
 }
 
-toolbar[iconsize="small"] #paste-button:hover:active {
+toolbar[iconsize="small"] #paste-button:active {
   -moz-image-region: rect(24px 240px 48px 216px);
 }
 
@@ -373,6 +381,19 @@ treechildren::-moz-tree-image(remote-abook) {
 treechildren::-moz-tree-image(remote-err) {
   margin: 2px -3px 2px 2px;
   list-style-image: url("chrome://messenger/skin/addressbook/icons/remote-addrbook-error.png");
+}
+
+.identity-menulist {
+  -moz-binding: url(chrome://messenger/content/messengercompose/mailComposeBindings.xml#fromMenuList);
+}
+
+.identity-popup-item {                                                                               
+  -moz-binding: url(chrome://messenger/content/messengercompose/mailComposeBindings.xml#fromMenuitem);
+}     
+
+.composemenu-text-2 {
+  font-style: italic;
+  color: GrayText;
 }
 
 /* ::::: addressing widget ::::: */

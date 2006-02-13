@@ -46,18 +46,11 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= calbase
 XPIDL_MODULE	= calbase
 
-XPIDLSRCS	= calIAlarmService.idl \
-		  calIAttachment.idl \
+XPIDLSRCS	= calIAttachment.idl \
 		  calIAttendee.idl   \
 		  calICalendar.idl   \
 		  calICalendarManager.idl \
-		  calICalendarProvider.idl \
-		  calICalendarView.idl \
-		  calICalendarViewController.idl \
 		  calIDateTime.idl   \
-		  calIDecoratedView.idl   \
-		  calIDuration.idl   \
-		  calIErrors.idl     \
 		  calIEvent.idl      \
 		  calIICSService.idl \
 		  calIItemBase.idl   \
@@ -66,10 +59,7 @@ XPIDLSRCS	= calIAlarmService.idl \
 		  calIRecurrenceDateSet.idl \
 		  calIRecurrenceItem.idl \
 		  calIRecurrenceRule.idl \
-		  calIImportExport.idl \
 		  calITodo.idl       \
-		  calIDateTimeFormatter.idl \
-		  calIWeekTitleService.idl \
 		  $(NULL)
 
 EXPORTS		= calBaseCID.h

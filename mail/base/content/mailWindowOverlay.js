@@ -192,11 +192,6 @@ function view_init()
     threads_menuitem.setAttribute("disabled", gAccountCentralLoaded);
   }
 
-  // hide the views menu item if the user doesn't have the views toolbar button visible
-  viewsToolbarButton = document.getElementById("mailviews-container");
-  if (!viewsToolbarButton)
-    document.getElementById('viewMessageViewMenu').collapsed = true;
-
   // Initialize the View Attachment Inline menu
   var viewAttachmentInline = pref.getBoolPref("mail.inline_attachments");
   document.getElementById("viewAttachmentsInlineMenuitem").setAttribute("checked", viewAttachmentInline ? "true" : "false");
@@ -350,7 +345,7 @@ function viewRefreshCustomMailViews(aCurrentViewValue)
   for (i = 0; i < numItems; i++)
   {
     var newMenuItem = document.createElement("menuitem");
-    newMenuItem.setAttribute("label", mailViewList.getMailViewAt(i).prettyName);
+    newMenuItem.setAttribute("label", mailViewList.getMailViewAt(i).mailViewName);
     newMenuItem.setAttribute("userdefined", "true");
     var oncommandStr = "ViewMessagesBy('userdefinedview" + (kLastDefaultViewIndex + i) + "');";  
     newMenuItem.setAttribute("oncommand", oncommandStr);
@@ -372,11 +367,8 @@ function viewRefreshCustomMailViews(aCurrentViewValue)
 function ViewMessagesBy(id)
 {
   var viewPicker = document.getElementById('viewPicker');
-  if (viewPicker)
-  {
-    viewPicker.selectedItem = document.getElementById(id);
-    viewChange(viewPicker, viewPicker.value);
-  }
+  viewPicker.selectedItem = document.getElementById(id);
+  viewChange(viewPicker, viewPicker.value);
 }
 
 function InitMessageMenu()
@@ -548,8 +540,32 @@ function InitMessageLabel(menuType)
 
     try
     {
+        var msgFolder = GetLoadedMsgFolder();
+        var msgDatabase = msgFolder.getMsgDatabase(msgWindow);
+        var numSelected = GetNumSelectedMessages();
+        var indices = GetSelectedIndices(gDBView);
         var isChecked = true;
-        var checkedLabel = gDBView.hdrForFirstSelectedMessage.label;
+        var checkedLabel;
+        var msgKey;
+
+        if (numSelected > 0) {
+            msgKey = gDBView.getKeyAt(indices[0]);
+            checkedLabel = msgDatabase.GetMsgHdrForKey(msgKey).label;
+            if (numSelected > 1) {
+                for (var i = 1; i < indices.length; i++)
+                {
+                    msgKey = gDBView.getKeyAt(indices[i]);
+                    if (msgDatabase.GetMsgHdrForKey(msgKey).label == checkedLabel) {
+                        continue;
+                    }
+                    isChecked = false;
+                    break;
+                }
+            }
+        }
+        else {
+            isChecked = false;
+        }
     }
     catch(ex)
     {
@@ -766,22 +782,14 @@ function MsgGetMessagesForAllServers(defaultServer)
             var protocolinfo = Components.classes["@mozilla.org/messenger/protocol/info;1?type=" + currentServer.type].getService(Components.interfaces.nsIMsgProtocolInfo);
             if (protocolinfo.canLoginAtStartUp && currentServer.loginAtStartUp)
             {
-                if (defaultServer && defaultServer.equals(currentServer) && 
-                  !defaultServer.isDeferredTo &&
-                  defaultServer.rootFolder == defaultServer.rootMsgFolder)
-                {
-                    dump(currentServer.serverURI + "...skipping, already opened\n");
-                }
-                else if (currentServer.type == "pop3" && currentServer.downloadOnBiff)
-                {
-                    CoalesceGetMsgsForPop3ServersByDestFolder(currentServer, pop3DownloadServersArray, localFoldersToDownloadTo);
-                    pop3Server = currentServer.QueryInterface(Components.interfaces.nsIPop3IncomingServer);
-                }
-                else
-                {		 
-                    // Check to see if there are new messages on the server
-                    currentServer.PerformBiff(msgWindow);
-                }
+                 if (currentServer.type == "pop3" && currentServer.downloadOnBiff)
+                 {
+                   CoalesceGetMsgsForPop3ServersByDestFolder(currentServer, pop3DownloadServersArray, localFoldersToDownloadTo);
+                   pop3Server = currentServer.QueryInterface(Components.interfaces.nsIPop3IncomingServer);
+                 }
+                 else
+                 // Check to see if there are new messages on the server
+                   currentServer.PerformBiff(msgWindow);
             }
         }
         for (var i = 0; i < pop3DownloadServersArray.length; i++)
@@ -917,17 +925,12 @@ function MsgNewMessage(event)
 function MsgReplyMessage(event)
 {
   var loadedFolder = GetLoadedMsgFolder();
-  if (loadedFolder)
-  {
-    var server = loadedFolder.server;
+  var server = loadedFolder.server;
 
-    if(server && server.type == "nntp")
-    {
-      MsgReplyGroup(event);
-      return;
-    }
-  }
-  MsgReplySender(event);
+  if(server && server.type == "nntp")
+    MsgReplyGroup(event);
+  else
+    MsgReplySender(event);
 }
 
 function MsgReplySender(event)
@@ -957,9 +960,10 @@ function MsgReplyToAllMessage(event)
   var loadedFolder = GetLoadedMsgFolder();
   var messageArray = GetSelectedMessages();
 
-  ComposeMessage(msgComposeType.ReplyAll, 
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);
+  if (event && event.shiftKey)
+    ComposeMessage(msgComposeType.ReplyAll, msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
+  else
+    ComposeMessage(msgComposeType.ReplyAll, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
 function MsgForwardMessage(event)
@@ -1262,9 +1266,9 @@ function MsgOpenFromFile()
    }
 
    var uri = fp.fileURL;
-   uri.query = "type=application/x-message-display";
+   uri.query = "type=x-message-display";
 
-  window.openDialog( "chrome://messenger/content/messageWindow.xul", "_blank", "all,chrome,dialog=no,status,toolbar", uri, null, null );
+  MsgOpenNewWindowForMessage(uri, null);
 }
 
 function MsgOpenNewWindowForMessage(messageUri, folderUri)
@@ -1349,7 +1353,6 @@ function MsgDownloadSelected()
 
 function MsgMarkThreadAsRead()
 {
-  ClearPendingReadTimer();
   gDBView.doCommand(nsMsgViewCommandType.markThreadRead);
 }
 
@@ -2119,7 +2122,7 @@ function HandleJunkStatusChanged(folder)
   // this might be the stand alone window, open to a message that was
   // and attachment (or on disk), in which case, we want to ignore it.
   var loadedMessage = GetLoadedMessage();
-  if (loadedMessage && (!(/type=application\/x-message-display/.test(loadedMessage))) && IsCurrentLoadedFolder(folder))
+  if (loadedMessage && (!(/type=x-message-display/.test(loadedMessage))) && IsCurrentLoadedFolder(folder))
   {
     // if multiple message are selected
     // and we change the junk status
@@ -2144,9 +2147,8 @@ function HandleJunkStatusChanged(folder)
         var sanitizeJunkMail = gPrefBranch.getBoolPref("mailnews.display.sanitizeJunkMail");
         if (changedJunkStatus && sanitizeJunkMail) // only bother doing this if we are modifying the html for junk mail....
         {
-          var loadedFolder = GetLoadedMsgFolder();
-          var moveJunkMail = (loadedFolder && loadedFolder.server && loadedFolder.server.spamSettings) ?
-	                     loadedFolder.server.spamSettings.manualMark : false;
+          var folder = GetLoadedMsgFolder();
+          var moveJunkMail = (folder && folder.server && folder.server.spamSettings) ? folder.server.spamSettings.manualMark : false;
 
           var junkScore = msgHdr.getStringProperty("junkscore"); 
           var isJunk = ((junkScore != "") && (junkScore != "0"));
@@ -2201,7 +2203,7 @@ var gMessageNotificationBar =
   setPhishingMsg: function(aUrl)
   {
     var msgURI = GetLoadedMessage();
-    if (msgURI && !(/type=application\/x-message-display/.test(msgURI)))
+    if (msgURI && !(/type=x-message-display/.test(msgURI)))
     {
       var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
       // if we've explicitly marked this message as not being an email scam, then don't
@@ -2242,7 +2244,7 @@ function LoadMsgWithRemoteContent()
   var msgURI = GetLoadedMessage();
   var msgHdr = null;
     
-  if (msgURI && !(/type=application\/x-message-display/.test(msgURI)))
+  if (msgURI && !(/type=x-message-display/.test(msgURI)))
   {
     msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
     if (msgHdr)
@@ -2262,7 +2264,7 @@ function MsgIsNotAScam()
   var msgURI = GetLoadedMessage();
   var msgHdr = null;
     
-  if (msgURI && !(/type=application\/x-message-display/.test(msgURI)))
+  if (msgURI && !(/type=x-message-display/.test(msgURI)))
   {
     msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
     if (msgHdr)
@@ -2275,7 +2277,6 @@ function MsgIsNotAScam()
 
 function MarkCurrentMessageAsRead()
 {
-  ClearPendingReadTimer();
   gDBView.doCommand(nsMsgViewCommandType.markMessagesRead);
 }
 
@@ -2314,14 +2315,9 @@ function OnMsgLoaded(aUrl)
     // if the user clicks on another message then that message stays selected
     // and the selection does not "snap back" to the message chosen by
     // SetNextMessageAfterDelete() when the operation completes (bug 243532).
-    // But the just loaded message might be getting deleted, if the user
-    // deletes it before the message is loaded (bug 183394)
-    var treeSelection = GetThreadTree().view.selection;
+    gNextMessageViewIndexAfterDelete = -2;
 
-    if (treeSelection.currentIndex != gSelectedIndexWhenDeleting)
-      gNextMessageViewIndexAfterDelete = -2;
-
-    if (!(/type=application\/x-message-display/.test(msgURI)))
+    if (!(/type=x-message-display/.test(msgURI)))
       msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
      
     gMessageNotificationBar.setJunkMsg(msgHdr);
@@ -2333,12 +2329,9 @@ function OnMsgLoaded(aUrl)
 
     if (msgHdr && !msgHdr.isRead)
     {
-      var wintype = document.documentElement.getAttribute('windowtype');
+      var wintype = document.firstChild.getAttribute('windowtype');
       if (markReadOnADelay && wintype == "mail:3pane") // only use the timer if viewing using the 3-pane preview pane and the user has set the pref
-      {
-        ClearPendingReadTimer();
         gMarkViewedMessageAsReadTimer = setTimeout(MarkCurrentMessageAsRead, gPrefBranch.getIntPref("mailnews.mark_message_read.delay.interval") * 1000);
-      }
       else
         MarkCurrentMessageAsRead();
     }
@@ -2383,7 +2376,7 @@ function OnMsgLoaded(aUrl)
 
         res = outputPFC.copyMessages(currentMsgFolder, messages, false /*isMove*/, msgWindow /* nsIMsgWindow */, null /* listener */, false /* isFolder */, false /*allowUndo*/ );
       }
-   }
+     }
 }
 
 //
@@ -2410,7 +2403,7 @@ function HandleMDNResponse(aUrl)
   if (SelectedMessagesAreJunk())
     return;
 
-  var msgHdr = messenger.msgHdrFromURI(msgURI);
+  var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
   var mimeHdr;
 
   try {
@@ -2537,79 +2530,12 @@ function OpenOrFocusWindow(args, windowType, chromeURL)
     window.openDialog(chromeURL, "", "chrome,resizable,status,centerscreen,dialog=no", args);
 }
 
-/**
- * Opens the update manager and checks for updates to the application.
- */
 
-function checkForUpdates()
+function loadThrobberUrl(urlPref)
 {
-  var um = 
-      Components.classes["@mozilla.org/updates/update-manager;1"].
-      getService(Components.interfaces.nsIUpdateManager);
-  var prompter = 
-      Components.classes["@mozilla.org/updates/update-prompt;1"].
-      createInstance(Components.interfaces.nsIUpdatePrompt);
-
-  // If there's an update ready to be applied, show the "Update Downloaded"
-  // UI instead and let the user know they have to restart the application for
-  // the changes to be applied. 
-  if (um.activeUpdate && um.activeUpdate.state == "pending")
-    prompter.showUpdateDownloaded(um.activeUpdate);
-  else
-  prompter.checkForUpdates();
-}
-
-function buildHelpMenu()
-{
-  var updates = 
-      Components.classes["@mozilla.org/updates/update-service;1"].
-      getService(Components.interfaces.nsIApplicationUpdateService);
-  var um = 
-      Components.classes["@mozilla.org/updates/update-manager;1"].
-      getService(Components.interfaces.nsIUpdateManager);
-  
-  // Disable the UI if the update enabled pref has been locked by the
-  // administrator or if we cannot update for some other reason 
-  var checkForUpdates = document.getElementById("checkForUpdates");
-  var canUpdate = updates.canUpdate;
-  checkForUpdates.setAttribute("disabled", !canUpdate);
-  if (!canUpdate)
-    return;
-
-  if (!gMessengerBundle)
-    gMessengerBundle = document.getElementById("bundle_messenger");
-  
-  var activeUpdate = um.activeUpdate;
-  
-  // If there's an active update, substitute its name into the label
-  // we show for this item, otherwise display a generic label.
-  function getStringWithUpdateName(key) {
-    if (activeUpdate && activeUpdate.name)
-      return gMessengerBundle.getFormattedString(key, [activeUpdate.name]);
-    return gMessengerBundle.getString(key + "Fallback");
-    }
-  
-  // By default, show "Check for Updates..."
-  var key = "default";
-  if (activeUpdate) {
-    switch (activeUpdate.state) {
-    case "downloading":
-      // If we're downloading an update at present, show the text:
-      // "Downloading Firefox x.x..." otherwise we're paused, and show
-      // "Resume Downloading Firefox x.x..."
-      key = updates.isDownloading ? "downloading" : "resume";
-      break;
-    case "pending":
-      // If we're waiting for the user to restart, show: "Apply Downloaded
-      // Updates Now..."
-      key = "pending";
-      break;
-    }
-  }
-
-  checkForUpdates.label = getStringWithUpdateName("updatesItem_" + key);
-  if (um.activeUpdate && updates.isDownloading)
-    checkForUpdates.setAttribute("loading", "true");
-  else
-    checkForUpdates.removeAttribute("loading");
+    var url;
+    try {
+        url = gPrefBranch.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+        messenger.launchExternalURL(url);  
+    } catch (ex) {}
 }

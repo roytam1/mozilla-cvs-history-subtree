@@ -64,10 +64,10 @@ function isMsgEmailScam(aUrl)
   // loop through all of the link nodes in the message's DOM, looking for phishing URLs...
   var msgDocument = document.getElementById('messagepane').contentDocument;
 
-  // examine all links...
-  var linkNodes = msgDocument.links;
-  for (var index = 0; index < linkNodes.length && !isEmailScam; index++)
-    isEmailScam = isPhishingURL(linkNodes[index], true);
+  // examine all anchor tags...
+  var anchorNodes = msgDocument.getElementsByTagName("a");
+  for (var index = 0; index < anchorNodes.length && !isEmailScam; index++)
+    isEmailScam = isPhishingURL(anchorNodes[index], true);
 
   // if an e-mail contains a form element, then assume the message is a phishing attack.
   // Legitimate sites should not be using forms inside of e-mail.
@@ -92,23 +92,12 @@ function isPhishingURL(aLinkNode, aSilentMode)
 
   var phishingType = kPhishingNotSuspicious;
   var href = aLinkNode.href;
-  if(!href) 
-    return false;
-  
   var linkTextURL = {};
   var unobscuredHostName = {};
   var isPhishingURL = false;
 
   var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
-  var hrefURL;
-  // make sure relative link urls don't make us bail out
-  try {
-    hrefURL = ioService.newURI(href, null, null);
-  }
-  catch(ex) 
-  { 
-    return false;
-  }
+  hrefURL  = ioService.newURI(href, null, null);
   
   // only check for phishing urls if the url is an http or https link. 
   // this prevents us from flagging imap and other internally handled urls
@@ -158,9 +147,7 @@ function misMatchedHostWithLinkText(aLinkNode, aHrefURL, aLinkTextURL)
 function hostNameIsIPAddress(aHostName, aUnobscuredHostName)
 {
   // TODO: Add Support for IPv6
-
-  var index;
-
+  
   // scammers frequently obscure the IP address by encoding each component as octal, hex
   // or in some cases a mix match of each. The IP address could also be represented as a DWORD.
 
@@ -173,6 +160,7 @@ function hostNameIsIPAddress(aHostName, aUnobscuredHostName)
   {
     // Convert to a binary to test for possible DWORD.
     var binaryDword = parseInt(aHostName).toString(2);
+    
     if (isNaN(binaryDword))
       return false;
 
@@ -185,16 +173,16 @@ function hostNameIsIPAddress(aHostName, aUnobscuredHostName)
   }
   else
   {
-    for (index = 0; index < ipComponents.length; ++index)
+    for (var index = 0; index < ipComponents.length; index++)
     {
-      // by leaving the radix parameter blank, we can handle IP addresses
-      // where one component is hex, another is octal, etc.
+      // by leaving the radix parameter blank, we can handle IP addresses 
+      //where one component is hex, another is octal, etc. 
       ipComponents[index] = parseInt(ipComponents[index]); 
     }
   }
 
   // make sure each part of the IP address is in fact a number
-  for (index = 0; index < ipComponents.length; ++index)
+  for (var index = 0; index < ipComponents.length; index++)
     if (isNaN(ipComponents[index])) // if any part of the IP address is not a number, then we can safely return
       return false;
 
@@ -223,7 +211,7 @@ function isIPv4HostName(aHostName)
 // returns true if the user confirms the URL is a scam
 function confirmSuspiciousURL(aPhishingType, aSuspiciousHostName)
 {
-  var brandShortName = gBrandBundle.getString("brandShortName");
+  var brandShortName = gBrandBundle.getString("brandRealShortName");
   var titleMsg = gMessengerBundle.getString("confirmPhishingTitle");
   var dialogMsg;
 

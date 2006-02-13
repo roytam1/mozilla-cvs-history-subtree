@@ -49,7 +49,6 @@ const MESSAGE_TEMPLATE = "\n\
 <html>\n\
   <head>\n\
     <title>%TITLE%</title>\n\
-    <base href=\"%BASE%\">\n\
     <style type=\"text/css\">\n\
       %STYLE%\n\
     </style>\n\
@@ -107,8 +106,6 @@ function FeedItem()
 
 FeedItem.prototype = 
 {
-  isStoredWithId: false, // we currently only do this for IETF Atom. RSS2 with GUIDs should do this as well.
-  xmlContentBase: null, // only for IETF Atom
   id: null,
   feed: null,
   description: null,
@@ -159,38 +156,37 @@ FeedItem.prototype =
     return messageID;
   },
 
-  get itemUniqueURI()
-  {
-    var theURI;
-    if(this.isStoredWithId && this.id)
-      theURI = "urn:" + this.id;
-    else
-      theURI = this.mURL || ("urn:" + this.id);
-    return theURI;
-  },
-
-  get contentBase()
-  {
-    if(this.xmlContentBase)
-      return this.xmlContentBase
-    else
-      return this.mURL;
-  },
-
   store: function() 
   {
     this.mUnicodeConverter.charset = this.characterSet;
+
+    try 
+    {
+      if (this.title)
+        this.title = this.mUnicodeConverter.ConvertToUnicode(this.title);
+    } catch (ex) {}
+
+    try 
+    {
+      if (this.description)
+        this.description =  this.mUnicodeConverter.ConvertToUnicode(this.description);
+    } catch (ex) {}
 
     if (this.isStored()) 
       debug(this.identity + " already stored; ignoring");
     else if (this.content) 
     {
+      try 
+      {
+        this.content = this.mUnicodeConverter.ConvertToUnicode(this.content);
+      } 
+      catch (ex) {}
+
       debug(this.identity + " has content; storing");
       var content = MESSAGE_TEMPLATE;
       content = content.replace(/%CONTENT_TEMPLATE%/, LOCAL_CONTENT_TEMPLATE);
       content = content.replace(/%STYLE%/, LOCAL_STYLE);
       content = content.replace(/%TITLE%/, this.title);
-      content = content.replace(/%BASE%/, this.contentBase); 
       content = content.replace(/%URL%/g, this.mURL);
       content = content.replace(/%CONTENT%/, this.content);
       this.content = content; // XXX store it elsewhere, f.e. this.page
@@ -205,7 +201,6 @@ FeedItem.prototype =
       var content = MESSAGE_TEMPLATE;
       content = content.replace(/%CONTENT_TEMPLATE%/, LOCAL_CONTENT_TEMPLATE);
       content = content.replace(/%STYLE%/, LOCAL_STYLE);
-      content = content.replace(/%BASE%/, this.contentBase); 
       content = content.replace(/%TITLE%/, this.title);
       content = content.replace(/%URL%/g, this.mURL);
       content = content.replace(/%CONTENT%/, this.content);
@@ -220,7 +215,6 @@ FeedItem.prototype =
       content = content.replace(/%CONTENT_TEMPLATE%/, REMOTE_CONTENT_TEMPLATE);
       content = content.replace(/%STYLE%/, REMOTE_STYLE);
       content = content.replace(/%TITLE%/, this.title);
-      content = content.replace(/%BASE%/, this.contentBase); 
       content = content.replace(/%URL%/g, this.mURL);
       content = content.replace(/%DESCRIPTION%/, this.description || this.title);
       this.content = content; // XXX store it elsewhere, f.e. this.page
@@ -248,7 +242,7 @@ FeedItem.prototype =
     }
 
     var ds = getItemsDS(server);
-    var itemURI = this.itemUniqueURI;
+    var itemURI = this.mURL || ("urn:" + this.id);
     var itemResource = rdf.GetResource(itemURI);
 
     var downloaded = ds.GetTarget(itemResource, FZ_STORED, true);
@@ -258,8 +252,8 @@ FeedItem.prototype =
       // See Bug #258465 for more details
       itemURI = itemURI.replace(/&lt;/g, '<');
       itemURI = itemURI.replace(/&gt;/g, '>');
+      itemURI = itemURI.replace(/&amp;/g, '&');
       itemURI = itemURI.replace(/&quot;/g, '"');
-      itemURI = itemURI.replace(/&amp;/g, '&');     
 
       debug('Failed to find item, trying entity replacement version: '  + itemURI);
       itemResource = rdf.GetResource(itemURI);
@@ -285,9 +279,7 @@ FeedItem.prototype =
   {
     debug("validating " + this.mURL);
     var ds = getItemsDS(this.feed.server);
-
-    var itemURI = this.itemUniqueURI;
-    var resource = rdf.GetResource(itemURI);
+    var resource = rdf.GetResource(this.mURL || ("urn:" + this.id));
     
     if (!ds.HasAssertion(resource, FZ_FEED, rdf.GetResource(this.feed.url), true))
       ds.Assert(resource, FZ_FEED, rdf.GetResource(this.feed.url), true);
@@ -304,8 +296,25 @@ FeedItem.prototype =
   markStored: function() 
   {
     var ds = getItemsDS(this.feed.server);
-    var itemURI = this.itemUniqueURI;
-    var resource = rdf.GetResource(itemURI);
+    var resource = rdf.GetResource(this.mURL || ("urn:" + this.id));
+   
+    if (!ds.HasAssertion(resource, FZ_FEED, rdf.GetResource(this.feed.url), true))
+      ds.Assert(resource, FZ_FEED, rdf.GetResource(this.feed.url), true);
+    
+    var currentValue;
+    if (ds.hasArcOut(resource, FZ_STORED)) 
+    {
+      currentValue = ds.GetTarget(resource, FZ_STORED, true);
+      ds.Change(resource, FZ_STORED, currentValue, RDF_LITERAL_TRUE);
+    }
+    else 
+      ds.Assert(resource, FZ_STORED, RDF_LITERAL_TRUE, true);
+  },
+
+  markStored: function() 
+  {
+    var ds = getItemsDS(this.feed.server);
+    var resource = rdf.GetResource(this.mURL || ("urn:" + this.id));
    
     if (!ds.HasAssertion(resource, FZ_FEED, rdf.GetResource(this.feed.url), true))
       ds.Assert(resource, FZ_FEED, rdf.GetResource(this.feed.url), true);
@@ -359,8 +368,8 @@ FeedItem.prototype =
     // Convert these to their unencoded state. i.e. &amp; becomes '&'
     title = title.replace(/&lt;/g, '<');
     title = title.replace(/&gt;/g, '>');
-    title = title.replace(/&quot;/g, '"');
     title = title.replace(/&amp;/g, '&');
+    title = title.replace(/&quot;/g, '"');
   
     // Compress white space in the subject to make it look better.
     title = title.replace(/[\t\r\n]+/g, " ");
@@ -402,7 +411,7 @@ FeedItem.prototype =
       var boundaryID = source.length + this.enclosure.mLength;
       source += 'Content-Type: multipart/mixed;\n boundary="' + ENCLOSURE_HEADER_BOUNDARY_PREFIX + boundaryID + '"' + '\n\n' +
                 'This is a multi-part message in MIME format.\n' + ENCLOSURE_BOUNDARY_PREFIX + boundaryID + '\n' +
-                'Content-Type: text/html; charset=' + this.characterSet + '\n' +
+                'Content-Type: text/html; charset=' + + this.characterSet + '\n' +
                 'Content-Transfer-Encoding: 8bit\n' + 
                 this.content;
       source += this.enclosure.convertToAttachment(boundaryID);
@@ -467,4 +476,86 @@ FeedEnclosure.prototype =
   }
 };
 
+function W3CToIETFDate(dateString) {
+  // Converts a W3C-DTF (subset of ISO 8601) date string to an IETF date string.
+  // W3C-DTF is described in this note: http://www.w3.org/TR/NOTE-datetime
+  // IETF is obtained via the Date object's toUTCString() method.  The object's
+  // toString() method is insufficient because it spells out timezones on Win32
+  // (f.e. "Pacific Standard Time" instead of "PST"), which Mail doesn't grok.
+  // For info, see http://lxr.mozilla.org/mozilla/source/js/src/jsdate.c#1526.
 
+  var parts = dateString.match(/(\d\d\d\d)(-(\d\d))?(-(\d\d))?(T(\d\d):(\d\d)(:(\d\d)(\.(\d+))?)?(Z|([+-])(\d\d):(\d\d))?)?/);
+  debug("date parts: " + parts);
+
+  // Here's an example of a W3C-DTF date string and what .match returns for it.
+  //  date: 2003-05-30T11:18:50.345-08:00
+  //  date.match returns array values:
+  //   0: 2003-05-30T11:18:50-08:00,
+  //   1: 2003,
+  //   2: -05,
+  //   3: 05,
+  //   4: -30,
+  //   5: 30,
+  //   6: T11:18:50-08:00,
+  //   7: 11,
+  //   8: 18,
+  //   9: :50,
+  //   10: 50,
+  //   11: .345,
+  //   12: 345,
+  //   13: -08:00,
+  //   14: -,
+  //   15: 08,
+  //   16: 00
+
+  // Create a Date object from the date parts.  Note that the Date object
+  // apparently can't deal with empty string parameters in lieu of numbers,
+  // so optional values (like hours, minutes, seconds, and milliseconds)
+  // must be forced to be numbers.
+  var date = new Date(parts[1], parts[3]-1, parts[5], parts[7] || 0,
+                      parts[8] || 0, parts[10] || 0, parts[12] || 0);
+
+  // We now have a value that the Date object thinks is in the local timezone
+  // but which actually represents the date/time in the remote timezone
+  // (f.e. the value was "10:00 EST", and we have converted it to "10:00 PST"
+  // instead of "07:00 PST").  We need to correct that.  To do so, we're going
+  // to add the offset between the remote timezone and UTC (to convert the value
+  // to UTC), then add the offset between UTC and the local timezone (to convert
+  // the value to the local timezone).
+
+  // Ironically, W3C-DTF gives us the offset between UTC and the remote timezone
+  // rather than the other way around, while the getTimezoneOffset() method
+  // of a Date object gives us the offset between the local timezone and UTC
+  // rather than the other way around.  Both of these are the additive inverse
+  // (i.e. -x for x) of what we want, so we have to invert them to use them
+  // by multipying by -1
+  // (f.e. if "the offset between UTC and the remote timezone" is -5 hours,
+  // then "the offset between the remote timezone and UTC" is -5*-1 = 5 hours).
+
+  // Note that if the timezone portion of the date/time string is absent
+  // (which violates W3C-DTF, although ISO 8601 allows it), we assume the value
+  // to be in UTC.
+
+  // The offset between the remote timezone and UTC in milliseconds.
+  var remoteToUTCOffset = 0;
+  if (parts[13] && parts[13] != "Z") {
+    var direction = (parts[14] == "+" ? 1 : -1);
+    if (parts[15])
+      remoteToUTCOffset += direction * parts[15] * HOURS_TO_MILLISECONDS;
+    if (parts[16])
+      remoteToUTCOffset += direction * parts[16] * MINUTES_TO_MILLISECONDS;
+  }
+  remoteToUTCOffset = remoteToUTCOffset * -1; // invert it
+  debug("date remote to UTC offset: " + remoteToUTCOffset);
+
+  // The offset between UTC and the local timezone in milliseconds.
+  var UTCToLocalOffset = date.getTimezoneOffset() * MINUTES_TO_MILLISECONDS;
+  UTCToLocalOffset = UTCToLocalOffset * -1; // invert it
+  debug("date UTC to local offset: " + UTCToLocalOffset);
+
+  date.setTime(date.getTime() + remoteToUTCOffset + UTCToLocalOffset);
+
+  debug("date string: " + date.toUTCString());
+
+  return date.toUTCString();
+}

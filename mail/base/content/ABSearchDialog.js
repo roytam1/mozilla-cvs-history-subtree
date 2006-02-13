@@ -56,20 +56,16 @@ var gRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Compo
 
 var gSearchAbViewListener = {
   onSelectionChanged: function() {
-    UpdateCardView();
   },
   onCountChanged: function(total) {
-    var statusText;
-    switch (total) {
-      case 0:
-        statusText = gAddressBookBundle.getString("noMatchFound");
-        break;
-      case 1:
-        statusText = gAddressBookBundle.getString("matchFound");
-        break;
-      default:
-        statusText = gAddressBookBundle.getFormattedString("matchesFound", [total]);
-        break;
+    if (total == 0)
+      var statusText = gAddressBookBundle.getString("noMatchFound");
+    else
+    {
+      if (total == 1)
+        var statusText = gAddressBookBundle.getString("matchFound");
+      else  
+        var statusText = gAddressBookBundle.getFormattedString("matchesFound", [total]);
     }
     gStatusText.setAttribute("label", statusText);
   }
@@ -81,8 +77,6 @@ function searchOnLoad()
   initializeSearchWindowWidgets();
 
   gSearchBundle = document.getElementById("bundle_search");
-  gSearchStopButton.setAttribute("label", gSearchBundle.getString("labelForSearchButton"));
-  gSearchStopButton.setAttribute("accesskey", gSearchBundle.getString("accesskeyForSearchButton"));
   gAddressBookBundle = document.getElementById("bundle_addressBook");
   gSearchSession = Components.classes[searchSessionContractID].createInstance(Components.interfaces.nsIMsgSearchSession);
 
@@ -101,7 +95,7 @@ function searchOnLoad()
   abList = document.getElementById("abPopup");
   gAbResultsTree = document.getElementById("abResultsTree");
 
-  onMore(null);
+  onMore(null, 0);
 }
 
 function searchOnUnload()

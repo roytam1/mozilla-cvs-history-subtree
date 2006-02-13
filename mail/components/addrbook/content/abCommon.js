@@ -23,7 +23,6 @@
 #
 # Contributor(s):
 #   Seth Spitzer <sspitzer@netscape.com>
-#   Mark Banner <mark@standard8.demon.co.uk>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -661,10 +660,8 @@ function DirPaneSelectionChange()
 {
   // clear out the search box when changing folders...
   onClearSearch();
-  if (dirTree && dirTree.view.selection && dirTree.view.selection.count == 1) {
-    gPreviousDirTreeIndex = dirTree.currentIndex;
+  if (dirTree && dirTree.view.selection && dirTree.view.selection.count == 1)
     ChangeDirectoryByURI(GetSelectedDirectory());
-  }
 }
 
 function GetAbResultsBoxObject()
@@ -1041,8 +1038,9 @@ var gQuickSearchFocusEl = null;
 
 function onClearSearch()
 {
-  if (gSearchInput && !gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
+  if (!gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
   {
+//     gQuickSearchFocusEl = gLastFocusedElement;  //save of the last focused element so that focus can be restored
      onAbClearSearch();
      // this needs to be on a timer otherwise we end up messing up the focus while the Search("") is still happening
      setTimeout("restoreSearchFocusAfterClear();", 0); 

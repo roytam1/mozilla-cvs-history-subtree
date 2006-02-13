@@ -46,9 +46,11 @@
 #include "nsString.h"
 #include "nsITimer.h"
 
-#include "nsIPrefBranch.h"
+#include "nsIPref.h"
 
 class nsIFile;
+class nsIPrefBranch;
+class nsIPrefService;
 class nsIFileSpec;
 class nsFileSpec;
 
@@ -106,7 +108,7 @@ private:
   PRInt64 mMaxProgress;
   PRInt64 mCurrentProgress;
   
-  nsCOMPtr<nsIPrefBranch> mPrefs;
+  nsCOMPtr<nsIPref> mPrefs;
   nsCOMPtr<nsILocalFile> m_prefsFile;
 protected:
   nsresult ProcessPrefsCallback(const char* oldProfilePathStr, const char * newProfilePathStr);

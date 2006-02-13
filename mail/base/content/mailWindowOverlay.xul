@@ -43,15 +43,13 @@
 <?xul-overlay href="chrome://messenger/content/mailWindowExtrasOverlay.xul"?>
 
 <!DOCTYPE overlay [
-  <!ENTITY % globalDTD SYSTEM "chrome://global/locale/global.dtd">
-  %globalDTD;
-  <!ENTITY % messengerDTD SYSTEM "chrome://messenger/locale/messenger.dtd">
-  %messengerDTD;
-  <!ENTITY % contentAreaCommandsDTD SYSTEM "chrome://communicator/locale/contentAreaCommands.dtd">
-  %contentAreaCommandsDTD;
-  <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
-  %brandDTD;
-]>
+<!ENTITY % messengerDTD SYSTEM "chrome://messenger/locale/messenger.dtd" >
+%messengerDTD;
+<!ENTITY % contentAreaCommandsDTD SYSTEM "chrome://communicator/locale/contentAreaCommands.dtd" >
+%contentAreaCommandsDTD;
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd" >
+%brandDTD;
+]>  
 
 <overlay
   xmlns:nc="http://home.netscape.com/NC-rdf#"
@@ -306,7 +304,7 @@
 #endif
 
 <keyset id="mailKeys">
-  <key id="space" key=" " modifiers="shift any" oncommand="SpaceHit(event);"/>
+  <key id="space" key=" " oncommand="SpaceHit(event)"/>
 
   <!-- File Menu -->
   <key id="key_close"/>
@@ -330,7 +328,6 @@
   <key id="key_selectThread" key="&selectThreadCmd.key;"             oncommand="goDoCommand('cmd_selectThread');" modifiers="accel, shift"/>
   
   <key id="key_toggleRead" key="&markAsReadCmd.key;"                 oncommand="goDoCommand('cmd_markAsRead');"/>
-  <key id="key_toggleFlagged" key="&markFlaggedCmd.key;"             oncommand="goDoCommand('cmd_markAsFlagged');"/>
   <key id="key_markJunk" key="&markAsJunkCmd.key;"                   oncommand="goDoCommand('cmd_markAsJunk');"/>
   <key id="key_markNotJunk" key="&markAsNotJunkCmd.key;"             oncommand="goDoCommand('cmd_markAsNotJunk');"
        modifiers="shift"/>
@@ -348,9 +345,7 @@
   <key id="key_nextMsg" key="&nextMsgCmd.key;"                       oncommand="goDoCommand('cmd_nextMsg')"/>
   <key id="key_nextUnreadMsg" key="&nextUnreadMsgCmd.key;"           oncommand="goDoCommand('cmd_nextUnreadMsg')"/>
   <key id="key_expandAllThreads" key="&expandAllThreadsCmd.key;"     oncommand="goDoCommand('cmd_expandAllThreads')"/>
-  <key key="&expandAllThreadsCmd.key;" modifiers="shift"             oncommand="goDoCommand('cmd_expandAllThreads')"/>
   <key id="key_collapseAllThreads" key="&collapseAllThreadsCmd.key;" oncommand="goDoCommand('cmd_collapseAllThreads')"/>
-  <key key="&collapseAllThreadsCmd.key;" modifiers="shift"           oncommand="goDoCommand('cmd_collapseAllThreads')"/>
   <key id="key_nextUnreadThread" key="&nextUnreadThreadCmd.key;"     oncommand="goDoCommand('cmd_nextUnreadThread')"/>
   <key id="key_previousMsg" key="&previousMsgCmd.key;"               oncommand="goDoCommand('cmd_previousMsg')"/>
   <key id="key_previousUnreadMsg" key="&previousUnreadMsgCmd.key;"   oncommand="goDoCommand('cmd_previousUnreadMsg')"/>
@@ -384,11 +379,8 @@
 
   <keyset id="viewZoomKeys">
     <key id="key_textZoomReduce" key="&textZoomReduceCmd.commandkey;" command="cmd_textZoomReduce"  modifiers="accel"/>
-    <key key="&textZoomReduceCmd.commandkey;" command="cmd_textZoomReduce"  modifiers="accel shift"/>
     <key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;" command="cmd_textZoomEnlarge" modifiers="accel"/>
-    <key key="&textZoomEnlargeCmd.commandkey;" command="cmd_textZoomEnlarge" modifiers="accel shift"/>
     <key key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
-    <key key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel shift"/>
     <key id="key_textZoomReset"   key="&textZoomResetCmd.commandkey;"    command="cmd_textZoomReset"   modifiers="accel"/>
   </keyset>
 
@@ -422,7 +414,7 @@
 #ifdef XP_MACOSX
   <!-- Mac Window and Help menu keys -->
   <key id="key_minimizeWindow" command="minimizeWindow" key="&minimizeWindow.key;" modifiers="accel"/>
-  <key id="key_macHelp" key="&hintsAndTipsMac.commandkey;" oncommand="openRegionURL('mailnews.hints_and_tips.url');" modifiers="accel"/>
+  <key id="key_macHelp" key="&hintsAndTipsMac.commandkey;" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');" modifiers="accel"/>
 #endif
 </keyset>
 
@@ -1062,13 +1054,8 @@
 
 <toolbox id="mail-toolbox" class="toolbox-top" mode="full">  
   <!-- Menu -->
-  <toolbar type="menubar" id="mail-toolbar-menubar2" class="chromeclass-menubar" customizable="true"           
-#ifdef XP_MACOSX
-           defaultset="menubar-items"
-#else
-          defaultset="menubar-items,spring,throbber-box"
-#endif
-          context="toolbar-context-menu" mode="icons">
+  <toolbar type="menubar" id="mail-toolbar-menubar" class="chromeclass-menubar" customizable="true"
+           context="toolbar-context-menu" defaultset="menubar-items" mode="icons">
     <toolbaritem id="menubar-items" align="center">
       <menubar id="mail-menubar" style="border:0px;padding:0px;margin:0px;-moz-appearance:none">
         <!-- File -->
@@ -1207,7 +1194,7 @@
 #ifdef XP_UNIX
 #ifndef XP_MACOSX
       <menuitem id="menu_accountmgr" label="&accountManagerCmd.label;" accesskey="&accountManagerCmdUnix.accesskey;" oncommand="MsgAccountManager(null);"/>
-      <menuitem id="menu_preferences" oncommand="openOptionsDialog()"/>
+      <menuitem id="menu_preferences" oncommand="openOptionsDialog('mailnews', 'chrome://messenger/content/pref-mailnews.xul','mailnews')"/>
 #endif
 #endif
       </menupopup>
@@ -1222,7 +1209,13 @@
                type="checkbox"
                label="&showMessengerToolbarCmd.label;"
                accesskey="&showMessengerToolbarCmd.accesskey;"
-               oncommand="onViewToolbarCommand('mail-bar2', 'menu_showMessengerToolbar');"
+               oncommand="onViewToolbarCommand('mail-bar', 'menu_showMessengerToolbar');"
+               checked="true"/>
+              <menuitem id="menu_showSearchToolbar"
+               type="checkbox"
+               label="&showSearchToolbarCmd.label;"
+               accesskey="&showSearchToolbarCmd.accesskey;"
+               oncommand="goToggleToolbar('searchBox', 'menu_showSearchToolbar'); SearchBarToggled();"
                checked="true"/>
               <menuitem type="checkbox" id="menu_showTaskbar"/>              
               <menuseparator/>
@@ -1266,11 +1259,7 @@
               <menuseparator/>
               <menuitem id="sortThreaded" type="radio" name="threaded" label="&sortThreaded.label;" accesskey="&sortThreaded.accesskey;" oncommand="MsgSortThreaded();"/>
               <menuitem id="sortUnthreaded" type="radio" name="threaded" label="&sortUnthreaded.label;" accesskey="&sortUnthreaded.accesskey;" oncommand="MsgSortUnthreaded();"/>
-              <menuitem id="groupBySort" type="radio" name="group" label="&groupBySort.label;" accesskey="&groupBySort.accesskey;" oncommand="MsgGroupBySort();"
-#ifndef XP_MACOSX
-                        key="key_groupBySort"
-#endif
-              />
+              <menuitem id="groupBySort" type="radio" name="group" key="key_groupBySort" label="&groupBySort.label;" accesskey="&groupBySort.accesskey;" oncommand="MsgGroupBySort();"/>
             </menupopup>
           </menu>
 
@@ -1362,37 +1351,17 @@
           <menupopup  onpopupshowing="InitGoMessagesMenu();">
           <menu id="goNextMenu" label="&nextMenu.label;" accesskey="&nextMenu.accesskey;">
             <menupopup>
-              <menuitem label="&nextMsgCmd.label;" accesskey="&nextMsgCmd.accesskey;" observes="cmd_nextMsg"
-#ifndef XP_MACOSX
-                        key="key_nextMsg"
-#endif
-              />
-              <menuitem label="&nextUnreadMsgCmd.label;" accesskey="&nextUnreadMsgCmd.accesskey;" observes="cmd_nextUnreadMsg"
-#ifndef XP_MACOSX
-                        key="key_nextUnreadMsg"
-#endif
-              />
+              <menuitem label="&nextMsgCmd.label;" key="key_nextMsg" accesskey="&nextMsgCmd.accesskey;" observes="cmd_nextMsg"/>
+              <menuitem label="&nextUnreadMsgCmd.label;" key="key_nextUnreadMsg" accesskey="&nextUnreadMsgCmd.accesskey;" observes="cmd_nextUnreadMsg"/>
               <menuitem label="&nextFlaggedMsgCmd.label;" accesskey="&nextFlaggedMsgCmd.accesskey;" observes="cmd_nextFlaggedMsg"/>
               <menuseparator/>
-              <menuitem label="&nextUnreadThread.label;" accesskey="&nextUnreadThreadCmd.accesskey;" observes="cmd_nextUnreadThread"
-#ifndef XP_MACOSX
-                        key="key_nextUnreadThread"
-#endif
-              />
+              <menuitem label="&nextUnreadThread.label;" key="key_nextUnreadThread" accesskey="&nextUnreadThreadCmd.accesskey;" observes="cmd_nextUnreadThread"/>
             </menupopup>
           </menu>
           <menu id="goPreviousMenu" label="&prevMenu.label;" accesskey="&prevMenu.accesskey;">
             <menupopup>
-              <menuitem label="&prevMsgCmd.label;" accesskey="&previousMsgCmd.accesskey;" observes="cmd_previousMsg"
-#ifndef XP_MACOSX
-                        key="key_previousMsg"
-#endif
-              />
-              <menuitem label="&prevUnreadMsgCmd.label;" accesskey="&previousUnreadMsgCmd.accesskey;" observes="cmd_previousUnreadMsg"
-#ifndef XP_MACOSX
-                        key="key_previousUnreadMsg"
-#endif
-              />
+              <menuitem label="&prevMsgCmd.label;" key="key_previousMsg" accesskey="&previousMsgCmd.accesskey;" observes="cmd_previousMsg"/>
+              <menuitem label="&prevUnreadMsgCmd.label;" key="key_previousUnreadMsg" accesskey="&previousUnreadMsgCmd.accesskey;" observes="cmd_previousUnreadMsg"/>
               <menuitem label="&prevFlaggedMsgCmd.label;" accesskey="&previousFlaggedMsgCmd.accesskey;" observes="cmd_previousFlaggedMsg"/>
             </menupopup>
           </menu>
@@ -1618,40 +1587,17 @@
         </menu>
         <menu id="markMenu" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
           <menupopup onpopupshowing="InitMessageMark()">
-            <menuitem type="checkbox" id="markReadMenuItem" label="&markAsReadCmd.label;" accesskey="&markAsReadCmd.accesskey;" observes="cmd_markAsRead"
-#ifndef XP_MACOSX
-                      key="key_toggleRead"
-#endif
-              />
-            <menuitem label="&markThreadAsReadCmd.label;" accesskey="&markThreadAsReadCmd.accesskey;" observes="cmd_markThreadAsRead"
-#ifndef XP_MACOSX
-                      key="key_markThreadAsRead"
-#endif
-              />
-            <menuitem label="&markReadByDateCmd.label;" accesskey="&markReadByDateCmd.accesskey;" command="cmd_markReadByDate"
-#ifndef XP_MACOSX
-                      key="key_markReadByDate"
-#endif
-              />
+            <menuitem type="checkbox" key="key_toggleRead" id="markReadMenuItem" label="&markAsReadCmd.label;" accesskey="&markAsReadCmd.accesskey;" observes="cmd_markAsRead"/>
+            <menuitem label="&markThreadAsReadCmd.label;" key="key_markThreadAsRead" accesskey="&markThreadAsReadCmd.accesskey;" observes="cmd_markThreadAsRead"/>
+            <menuitem label="&markReadByDateCmd.label;" key="key_markReadByDate" accesskey="&markReadByDateCmd.accesskey;" command="cmd_markReadByDate"/>
             <menuitem label="&markAllReadCmd.label;" key="key_markAllRead" accesskey="&markAllReadCmd.accesskey;" observes="cmd_markAllRead"/>
             <menuseparator/>
-            <menuitem id="markFlaggedMenuItem" 
-                      type="checkbox" 
-                      label="&markFlaggedCmd.label;" 
-                      accesskey="&markFlaggedCmd.accesskey;" 
-                      observes="cmd_markAsFlagged"
-#ifndef XP_MACOSX
-                      key="key_toggleFlagged"
-#endif
-              />
+            <menuitem type="checkbox" id="markFlaggedMenuItem" label="&markFlaggedCmd.label;" accesskey="&markFlaggedCmd.accesskey;" observes="cmd_markAsFlagged"/>
             <menuseparator/>
             <menuitem label="&markAsJunkCmd.label;" 
-                      accesskey="&markAsJunkCmd.accesskey;" 
-                      observes="cmd_markAsJunk"
-#ifndef XP_MACOSX
                       key="key_markJunk"
-#endif
-              />
+                      accesskey="&markAsJunkCmd.accesskey;" 
+                      observes="cmd_markAsJunk"/>
             <menuitem label="&markAsNotJunkCmd.label;"
                       key="key_markNotJunk" 
                       accesskey="&markAsNotJunkCmd.accesskey;" 
@@ -1719,12 +1665,12 @@
 #ifndef XP_UNIX
         <menuseparator id="prefSep"/>
         <menuitem id="menu_accountmgr" label="&accountManagerCmd.label;" accesskey="&accountManagerCmd.accesskey;" oncommand="MsgAccountManager(null);"/>
-        <menuitem id="menu_preferences" oncommand="openOptionsDialog()"/>
+        <menuitem id="menu_preferences" oncommand="openOptionsDialog('mailnews', 'chrome://messenger/content/pref-mailnews.xul','mailnews')"/>
 #else
 #ifdef XP_MACOSX
         <menuseparator id="prefSep"/>
         <menuitem id="menu_accountmgr" label="&accountManagerCmd.label;" accesskey="&accountManagerCmd.accesskey;" oncommand="MsgAccountManager(null);"/>
-        <menuitem id="menu_preferences" oncommand="openOptionsDialog()"/>
+        <menuitem id="menu_preferences" oncommand="openOptionsDialog('mailnews', 'chrome://messenger/content/pref-mailnews.xul','mailnews')"/>
 #endif
 #endif
        </menupopup>
@@ -1747,6 +1693,8 @@
             <menuitem command="minimizeWindow" key="key_minimizeWindow"/>
             <menuitem command="zoomWindow"/>
             <menuseparator/>
+            <menuitem label="&bringAllToFront.label;" disabled="true"/>
+            <menuseparator/>
               <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic"/>
               <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
             <menuseparator id="sep-window-list"/>  
@@ -1755,26 +1703,18 @@
 #endif
       
       <!-- Help -->  
-      <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;" onpopupshowing="buildHelpMenu();">
+      <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
         <menupopup id="menu_HelpPopup">
 #ifdef XP_MACOSX
-          <menuitem id="hintsAndTips" label="&hintsAndTips.label;" key="key_macHelp" oncommand="openRegionURL('mailnews.hints_and_tips.url');"/>
-          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="openRegionURL('releaseNotesURL');"/>
+          <menuitem id="hintsAndTips" label="&hintsAndTips.label;" key="key_macHelp" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
+          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
 #else
-          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="openRegionURL('releaseNotesURL');"/>
-          <menuitem id="hintsAndTips" accesskey="&hintsAndTips.accesskey;" label="&hintsAndTips.label;" oncommand="openRegionURL('mailnews.hints_and_tips.url');"/>
+          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
+          <menuitem id="hintsAndTips" accesskey="&hintsAndTips.accesskey;" label="&hintsAndTips.label;" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
 #endif
           <menuseparator id="menu_HelpAboutSeparator"/>
-          <menuitem id="checkForUpdates" accesskey="&updateCmd.accesskey;" class="menuitem-iconic"
-                    label="&updateCmd.label;" oncommand="checkForUpdates();"/>
-#ifndef XP_MACOSX
-          <menuseparator/>
-#endif
           <menuitem id="aboutName" accesskey="&aboutCmd.accesskey;"
                     label="&aboutCmd.label;"
-#ifdef XP_MACOSX
-                    hidden="true"
-#endif
                     oncommand="openAboutDialog();"/>
         </menupopup>
       </menu>
@@ -1883,8 +1823,8 @@
         <menupopup/>
       </toolbarbutton>
       
-      <toolbarbutton class="toolbarbutton-1" id="button-previous" label="&previousButton.label;" chromedir="&locale.dir;" oncommand="goDoCommand('button_previous')" tooltiptext="&previousButton.tooltip;" observes="button_previous"/>      
-      <toolbarbutton class="toolbarbutton-1" id="button-next"     label="&nextButton.label;" chromedir="&locale.dir;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-previous" label="&previousButton.label;" oncommand="goDoCommand('button_previous')" tooltiptext="&previousButton.tooltip;" observes="button_previous"/>      
+      <toolbarbutton class="toolbarbutton-1" id="button-next"     label="&nextButton.label;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
 
       <toolbaritem id="button-junk">       
         <deck id="junk-deck" observes="button_junk">
@@ -1930,78 +1870,73 @@
       <toolbarbutton id="button-address" class="toolbarbutton-1" label="&addressBookButton.label;" oncommand="toAddressBook();" tooltiptext="&addressBookButton.tooltip;"/>
 
       <toolbaritem id="throbber-box" title="&throbberItem.title;" align="center" pack="center">
-        <button id="navigator-throbber" oncommand="openRegionURL('messenger.throbber.url')" tooltiptext="&throbber.tooltip;"/>
+        <button id="navigator-throbber" oncommand="loadThrobberUrl('messenger.throbber.url')" tooltiptext="&throbber.tooltip;"/>
       </toolbaritem>
 
       <toolbarbutton class="toolbarbutton-1" id="button-stop" label="&stopButton.label;" tooltiptext="&stopButton.tooltip;" command="cmd_stop"/>
-
-      <toolbaritem id="search-container" title="&searchItem.title;" align="center" class="chromeclass-toolbar-additional">
-        <textbox id="searchInput" flex="1" onfocus="onSearchInputFocus(event);" onclick="onSearchInputClick(event);" 
-                 onmousedown="onSearchInputMousedown(event);" onblur="onSearchInputBlur(event);"
-                 oninput="onSearchInput(false);" onkeypress="onSearchKeyPress(event);">
-          <button id="quick-search-button" type="menu">
-            <menupopup id="quick-search-menupopup" value="2" persist="value" onpopupshowing="InitQuickSearchPopup();" popupalign="topleft" popupanchor="bottomleft">
-              <menuitem value="0" label="&searchSubjectMenu.label;" type="radio"  
-                        oncommand="changeQuickSearchMode(this)"/>
-              <menuitem value="1" label="&searchSenderMenu.label;" type="radio" 
-                        oncommand="changeQuickSearchMode(this)" />
-              <menuitem value="2" label="&searchSubjectOrSenderMenu.label;" type="radio" 
-                        checked="true" oncommand="changeQuickSearchMode(this)"/>
-              <menuitem value="5" label="&searchRecipient.label;" type="radio" 
-                        oncommand="changeQuickSearchMode(this)"/>
-              <menuitem value="3" label="&searchMessageBody.label;" type="radio" 
-                        oncommand="changeQuickSearchMode(this)"/>
-              <menuitem value="4" label="&findInMessageMenu.label;" type="radio" 
-                        oncommand="changeQuickSearchMode(this)"/>
-              <menuseparator/>
-              <!-- if the value for the save as virtual folder menu changes, please update the 
-                   vk_down key handler in searchbar.xml
-              -->
-              <menuitem value="5" id="quickSearchSaveAsVirtualFolder" label="&saveAsVirtualFolderMenu.label;" 
-                        oncommand="saveViewAsVirtualFolder()"/>
-            </menupopup>
-          </button>
-        </textbox>
-      </toolbaritem>
-
-      <toolbaritem id="mailviews-container" title="&mailViewsToolbarItem.title;" align="center" class="chromeclass-toolbar-additional">
-        <label value="&viewPicker.label;" control="viewPicker"  accesskey="&viewPicker.accesskey;"/>
-        <menulist id="viewPicker" oncreate="FillLabelValues();" oncommand="viewChange(this, this.value);">
-          <menupopup id="viewPickerPopup">
-            <menuitem value="0" id="viewPickerAll" label="&viewPickerAll.label;"/>
-            <menuitem value="1" id="viewPickerUnread" label="&viewPickerUnread.label;"/>
-            <menuseparator/>
-            <menuitem value="2" id="labelMenuItem1"/>
-            <menuitem value="3" id="labelMenuItem2"/>
-            <menuitem value="4" id="labelMenuItem3"/>
-            <menuitem value="5" id="labelMenuItem4"/>
-            <menuitem value="6" id="labelMenuItem5"/>
-            <menuseparator id="lastDefaultView"/>
-            <menuseparator id="createCustomViewSeparator"/>
-            <menuitem id="saveAsVirtualFolder" value="7" label="&viewPickerSaveAsVirtualFolder.label;"/>
-            <menuitem id="createCustomView" value="8" label="&viewPickerCustomView.label;"/>
-          </menupopup>
-        </menulist>
-      </toolbaritem>
   </toolbarpalette>
-  
-  <!-- If changes are made to the default set of toolbar buttons, you may need to rev the id
-       of mail-bar in order to force the new default items to show up for users who customized their toolbar
-       in earlier versions. Bumping the id means users will have to re-customize their toolbar!
-  -->
-  <toolbar id="mail-bar2" class="toolbar-primary chromeclass-toolbar"
+
+  <toolbar id="mail-bar" class="toolbar-primary chromeclass-toolbar"
            toolbarname="Mail" 
            fullscreentoolbar="true" mode="full"
            customizable="true"
            context="toolbar-context-menu"
 #ifdef XP_MACOSX
-           defaultset="button-getmsg,button-newmsg,button-address,spacer,button-reply,button-replyall,button-forward,spacer,button-delete,button-junk,spacer,button-print,button-stop,spring,search-container,throbber-box">
+           defaultset="button-getmsg,button-newmsg,button-address,spacer,button-reply,button-replyall,button-forward,spacer,button-delete,button-junk,spacer,button-print,button-stop,spring,throbber-box">
 #else
-           defaultset="button-getmsg,button-newmsg,button-address,separator,button-reply,button-replyall,button-forward,separator,button-delete,button-junk,separator,button-print,button-stop,spring,search-container">
+           defaultset="button-getmsg,button-newmsg,button-address,separator,button-reply,button-replyall,button-forward,separator,button-delete,button-junk,separator,button-print,button-stop,spring,throbber-box">
 #endif
   </toolbar>
   <toolbarset id="customToolbars" context="toolbar-context-menu"/>
 </toolbox>
+
+<hbox id="searchBox" persist="collapsed" align="center">
+  <label value="&viewPicker.label;" control="viewPicker"  accesskey="&viewPicker.accesskey;"/>
+  <menulist id="viewPicker" oncreate="FillLabelValues();" oncommand="viewChange(this, this.value);">
+    <menupopup id="viewPickerPopup">
+      <menuitem value="0" id="viewPickerAll" label="&viewPickerAll.label;"/>
+      <menuitem value="1" id="viewPickerUnread" label="&viewPickerUnread.label;"/>
+      <menuseparator/>
+      <menuitem value="2" id="labelMenuItem1"/>
+      <menuitem value="3" id="labelMenuItem2"/>
+      <menuitem value="4" id="labelMenuItem3"/>
+      <menuitem value="5" id="labelMenuItem4"/>
+      <menuitem value="6" id="labelMenuItem5"/>
+      <menuseparator/>
+      <menuitem id="saveAsVirtualFolder" value="7" label="&viewPickerSaveAsVirtualFolder.label;"/>
+      <menuseparator id="lastDefaultView"/>
+      <menuseparator id="createCustomViewSeparator"/>
+      <menuitem id="createCustomView" value="8" label="&viewPickerCustomView.label;"/>
+    </menupopup>
+  </menulist>
+  
+  <spring flex="4"/>
+
+  <textbox id="searchInput" flex="1" onfocus="onSearchInputFocus(event);" onclick="onSearchInputClick(event);" 
+           onmousedown="onSearchInputMousedown(event);" onblur="onSearchInputBlur(event);"
+           oninput="onSearchInput(false);" onkeypress="onSearchKeyPress(event);">
+    <button id="quick-search-button" type="menu">
+      <menupopup id="quick-search-menupopup" value="2" persist="value" onpopupshowing="InitQuickSearchPopup();" popupalign="topleft" popupanchor="bottomleft">
+        <menuitem value="0" label="&searchSubjectMenu.label;" type="radio"  
+                  oncommand="changeQuickSearchMode(this)"/>
+        <menuitem value="1" label="&searchSenderMenu.label;" type="radio" 
+                  oncommand="changeQuickSearchMode(this)" />
+        <menuitem value="2" label="&searchSubjectOrSenderMenu.label;" type="radio" 
+                  checked="true" oncommand="changeQuickSearchMode(this)"/>
+        <menuitem value="3" label="&searchMessageBody.label;" type="radio" 
+                  oncommand="changeQuickSearchMode(this)"/>
+        <menuitem value="4" label="&findInMessageMenu.label;" type="radio" 
+                  oncommand="changeQuickSearchMode(this)"/>
+        <menuseparator/>
+        <!-- if the value for the save as virtual folder menu changes, please update the 
+             vk_down key handler in searchbar.xml
+        -->
+        <menuitem value="5" id="quickSearchSaveAsVirtualFolder" label="&saveAsVirtualFolderMenu.label;" 
+                  oncommand="saveViewAsVirtualFolder()"/>
+      </menupopup>
+    </button>
+  </textbox>
+</hbox>
 
 <!-- The msgNotificationBar appears on top of the message and displays 
      information like: junk, contains remote images, or is a suspected phishing URL 
@@ -2013,7 +1948,7 @@
     <image id="junkBarImage"/>
     <description flex="1" class="msgNotificationBarText">&junkBarMessage.label;</description>
     <spacer flex="1"/>
-    <button label="&junkBarButton.label;" oncommand="JunkSelectedMessages(false);"/>
+    <button label="&notJunkButton.label;" oncommand="JunkSelectedMessages(false);"/>
   </hbox>
 
   <hbox id="remoteContentBar" class="msgNotificationBar" align="center">

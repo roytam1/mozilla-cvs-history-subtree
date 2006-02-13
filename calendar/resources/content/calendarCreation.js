@@ -1,5 +1,4 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * ***** BEGIN LICENSE BLOCK *****
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -12,11 +11,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Calendar Code.
+ * The Original Code is OEone Calendar Code, released October 31st, 2001.
  *
  * The Initial Developer of the Original Code is
- * Michiel van Leeuwen <mvl@exedo.nl>.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * OEone Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,104 +34,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-function checkRequired() {
-    var canAdvance = true;
-    var curPage = document.getElementById('calendar-wizard').currentPage;
-    if (curPage) {
-        var eList = curPage.getElementsByAttribute('required', 'true');
-        for (var i = 0; i < eList.length && canAdvance; ++i) {
-            canAdvance = (eList[i].value != "");
-        }
-        if (canAdvance && document.getElementById("calendar-uri").value)
-            canAdvance = checkURL();
-        document.getElementById('calendar-wizard').canAdvance = canAdvance;
-    }
-}
-
-function onInitialAdvance() {
-    var type = document.getElementById('calendar-type').selectedItem.value;
-    var page = document.getElementsByAttribute('pageid', 'initialPage')[0];
-    if (type == 'local')
-        page.next = 'customizePage';
-    else
-        page.next = 'locationPage';
-}
-
-function doCreateCalendar()
+function doCreateWizardFinish()
 {
     var cal_name = document.getElementById("calendar-name").value;
-    var cal_color = document.getElementById('calendar-color').color;
-    var type = document.getElementById('calendar-type').selectedItem.value;
-    var provider;
-    var uri;
-    if (type == 'local') {
-        provider = 'storage';
-        uri = 'moz-profile-calendar://?id=2';
-    } else {
-        uri = document.getElementById("calendar-uri").value;
-        var format = document.getElementById('calendar-format').selectedItem.value;
-        if (format == 'webdav')
-            provider = 'ics';
-        else
-            provider = 'caldav';
-    }
-        
+    var uri = document.getElementById("calendar-uri").value;
+    var sel_item=document.getElementById("initial-radiogroup").selectedItem;
+    var type = sel_item.value;
+
+    dump(cal_name + " (" + type + "): " + uri + "\n");
+
     var calManager = getCalendarManager();
-    var cals = calManager.getCalendars({});
-    do {
-        var already = cals.filter(function (c) { return c.uri.spec == uri; })
-        if (already.length) {
-            if (type != 'local') {
-                // signalError("Already have calendar at this URI.");
-                Components.utils.reportError("Already have calendar with URI " + uri);
-                return false;
-            }
-            uri = uri.replace(/id=(\d+)/,
-                              function (s, id) { return "id=" + (Number(id) + 1); });
-        }
-    } while (already.length);
-
-    dump(cal_name + "\n");
-    dump(cal_color + "\n");
-    dump(uri + "\n");
-    dump(provider + "\n");
-
     try {
-        var newCalendar = calManager.createCalendar(provider, makeURL(uri));
+        var newCalendar = calManager.createCalendar(cal_name, type, makeURL(uri));
     } catch (ex) {
         dump(ex);
         return false;
     }
     calManager.registerCalendar(newCalendar);
-    
-    newCalendar.name = cal_name;
 
-    calManager.setCalendarPref(newCalendar, 'color', cal_color);
+    if ("arguments" in window)
+        window.arguments[0](newCalendar);
 
-    return true;
-}
-
-function initNameFromURI() {
-    var path = document.getElementById("calendar-uri").value;
-    var nameField = document.getElementById("calendar-name");
-    if (!path || nameField.value)
-        return;
-
-    var fullPathRegex = new RegExp("([^/:]+)[.]ics$");
-    var captures = path.match(fullPathRegex);
-    if (captures && captures.length >= 1) {
-        nameField.value = captures[1];
-    }
-}
-
-//Don't let the wizard advance if the URL isn't valid, since the calendar
-//creation will fail.
-function checkURL() {
-    try {
-        makeURL(document.getElementById("calendar-uri").value);
-    }
-    catch (ex) {
-        return false;
-    }
     return true;
 }

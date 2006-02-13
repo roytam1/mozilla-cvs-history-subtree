@@ -825,7 +825,8 @@ NewDBCertEntry(SECItem *derCert, char *nickname,
 	goto loser;
     }
 	
-    entry = PORT_ArenaZNew(arena, certDBEntryCert);
+    entry = (certDBEntryCert *)PORT_ArenaZAlloc(arena, sizeof(certDBEntryCert));
+
     if ( entry == NULL ) {
 	goto loser;
     }
@@ -1055,7 +1056,7 @@ CreateCertEntry(void)
 	return entry;
     }
 
-    return PORT_ZNew(certDBEntryCert);
+    return PORT_ZAlloc(sizeof(certDBEntryCert));
 }
 
 static void
@@ -1244,7 +1245,9 @@ NewDBCrlEntry(SECItem *derCrl, char * url, certDBEntryType crlType, int flags)
 	goto loser;
     }
 	
-    entry = PORT_ArenaZNew(arena, certDBEntryRevocation);
+    entry = (certDBEntryRevocation*)
+			PORT_ArenaZAlloc(arena, sizeof(certDBEntryRevocation));
+
     if ( entry == NULL ) {
 	goto loser;
     }
@@ -1454,6 +1457,7 @@ EncodeDBNicknameEntry(certDBEntryNickname *entry, PRArenaPool *arena,
     
     dbitem->data = (unsigned char *)PORT_ArenaAlloc(arena, dbitem->len);
     if ( dbitem->data == NULL) {
+	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	goto loser;
     }
     
@@ -2872,7 +2876,8 @@ ReadDBVersionEntry(NSSLOWCERTCertDBHandle *handle)
 	goto loser;
     }
     
-    entry = PORT_ArenaZNew(arena, certDBEntryVersion);
+    entry = (certDBEntryVersion *)PORT_ArenaAlloc(arena,
+						sizeof(certDBEntryVersion));
     if ( entry == NULL ) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	goto loser;
@@ -3844,8 +3849,6 @@ UpdateV5DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
     
     updatehandle.permCertDB = updatedb;
     updatehandle.dbMon = PZ_NewMonitor(nssILockCertDB);
-    updatehandle.dbVerify = 0;
-    updatehandle.ref      = 1; /* prevent premature close */
     
     rv = nsslowcert_TraversePermCerts(&updatehandle, updateV5Callback,
 			       (void *)handle);
@@ -4295,8 +4298,7 @@ nsslowcert_TraverseDBEntries(NSSLOWCERTCertDBHandle *handle,
 	    keybuf = (unsigned char *)key.data;
 	    keyitem.data = &keybuf[SEC_DB_KEY_HEADER_LEN];
             keyitem.type = siBuffer;
-	    /* type should equal keybuf[0].  */
-
+	    
 	    rv = (* callback)(&dataitem, &keyitem, type, udata);
 	    if ( rv != SECSuccess ) {
 		return(rv);
@@ -4350,7 +4352,7 @@ CreateTrust(void)
 	return trust;
     }
 
-    return PORT_ZNew(NSSLOWCERTTrust);
+    return PORT_ZAlloc(sizeof(NSSLOWCERTTrust));
 }
 
 static void
@@ -5077,7 +5079,7 @@ nsslowcert_CreateCert(void)
     if (cert) {
 	return cert;
     }
-    return PORT_ZNew(NSSLOWCERTCertificate);
+    return (NSSLOWCERTCertificate *) PORT_ZAlloc(sizeof(NSSLOWCERTCertificate));
 }
 
 static void
@@ -5103,9 +5105,6 @@ nsslowcert_DestroyTrust(NSSLOWCERTTrust *trust)
 
     if ( entry ) {
 	DestroyDBEntry((certDBEntry *)entry);
-    }
-    if (trust->dbhandle) {
-	sftk_freeCertDB(trust->dbhandle);
     }
     pkcs11_freeStaticData(trust->dbKey.data,trust->dbKeySpace);
     PORT_Memset(trust, 0, sizeof(*trust));
@@ -5367,79 +5366,5 @@ nsslowcert_DestroyGlobalLocks(void)
 	PZ_DestroyLock(certTrustLock);
 	certTrustLock = NULL;
     }
-}
-
-certDBEntry *
-nsslowcert_DecodeAnyDBEntry(SECItem *dbData, SECItem *dbKey, 
-                 certDBEntryType entryType, void *pdata)
-{
-    PLArenaPool *arena = NULL;
-    certDBEntry *entry;
-    SECStatus rv;
-    SECItem dbEntry;
-
-
-    if ((dbData->len < SEC_DB_ENTRY_HEADER_LEN) || (dbKey->len == 0)) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	goto loser;
-    }
-    dbEntry.data = &dbData->data[SEC_DB_ENTRY_HEADER_LEN];
-    dbEntry.len  = dbData->len - SEC_DB_ENTRY_HEADER_LEN;
-
-    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    if (arena == NULL) {
-	goto loser;
-    }
-    entry = PORT_ArenaZNew(arena, certDBEntry);
-    if (!entry)
-    	goto loser;
-
-    entry->common.version = (unsigned int)dbData->data[0];
-    entry->common.flags   = (unsigned int)dbData->data[2];
-    entry->common.type    = entryType;
-    entry->common.arena   = arena;
-
-    switch (entryType) {
-    case certDBEntryTypeContentVersion: /* This type appears to be unused */
-    case certDBEntryTypeVersion:        /* This type has only the common hdr */
-	rv = SECSuccess;
-    	break;
-
-    case certDBEntryTypeSubject:
-	rv = DecodeDBSubjectEntry(&entry->subject, &dbEntry, dbKey);
-    	break;
-
-    case certDBEntryTypeNickname:
-	rv = DecodeDBNicknameEntry(&entry->nickname, &dbEntry,
-                                   (char *)dbKey->data);
-    	break;
-
-    /* smime profiles need entries created after the certs have
-     * been imported, loop over them in a second run */
-    case certDBEntryTypeSMimeProfile:
-	rv = DecodeDBSMimeEntry(&entry->smime, &dbEntry, (char *)dbKey->data);
-	break;
-
-    case certDBEntryTypeCert:
-	rv = DecodeDBCertEntry(&entry->cert, &dbEntry);
-	break;
-
-    case certDBEntryTypeKeyRevocation:
-    case certDBEntryTypeRevocation:
-	rv = DecodeDBCrlEntry(&entry->revocation, &dbEntry);
-	break;
-
-    default:
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	rv = SECFailure;
-    }
-
-    if (rv == SECSuccess)
-	return entry;
-
-loser:
-    if (arena)
-	PORT_FreeArena(arena, PR_FALSE);
-    return NULL;
 }
 

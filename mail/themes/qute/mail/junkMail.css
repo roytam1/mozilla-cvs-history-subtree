@@ -49,7 +49,7 @@
 /* ::::: account manager :::::: */
 
 .specialFolderPickerGrid {
-  -moz-margin-start: 20px;
+  margin-left: 20px;
 }
 
 /* XXX: would be nice to find a common place for this XXX */

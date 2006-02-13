@@ -112,12 +112,12 @@
     <listbox id="addressingWidget" style="height: 15em;" onclick="awClickEmptySpace(event.target, true)">
       <listitem class="addressingWidgetItem">
         <listcell class="addressingWidgetCell">
-          <textbox id="addressCol1#1" class="plain textbox-addressingWidget uri-element"
+          <textbox id="addressCol1#1" class="plain textbox-addressingWidget"
                    type="autocomplete" allowevents="true" flex="1"
                    searchSessions="addrbook" timeout="300" maxrows="4" 
                    autoFill="true" autoFillAfterMatch="true" forceComplete="true"
                    minResultsForPopup="3"
-                   ontextentered="awRecipientTextCommand(eventParam, this)"
+                   ontextcommand="awRecipientTextCommand(eventParam, this)"
                    oninput="setupLdapAutocompleteSession();"
                    onkeypress="handleKeyPress(this, event);"
                    onkeydown="awRecipientKeyDown(event, this);"

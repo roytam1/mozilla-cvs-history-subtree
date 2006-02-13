@@ -103,7 +103,7 @@ function getBestIdentity(identities, optionalHint)
     var tempID;
     for (id = 0; id < identities.Count(); id++) { 
       tempID = identities.GetElementAt(id).QueryInterface(Components.interfaces.nsIMsgIdentity);
-      if (optionalHint.indexOf(tempID.email.toLowerCase()) >= 0) {
+      if (optionalHint.search(tempID.email.toLowerCase()) >= 0) {
         identity = tempID;
         break;
       }
@@ -167,81 +167,80 @@ function GetNextNMessages(folder)
 	}
 }
 
-
 // type is a nsIMsgCompType and format is a nsIMsgCompFormat
 function ComposeMessage(type, format, folder, messageArray) 
 {
-  var msgComposeType = Components.interfaces.nsIMsgCompType;
-  var identity = null;
-  var newsgroup = null;
-  var server;
+	var msgComposeType = Components.interfaces.nsIMsgCompType;
+	var identity = null;
+	var newsgroup = null;
+	var server;
 
-  //dump("ComposeMessage folder="+folder+"\n");
-  try 
-  {
-    if (folder)
-    {
-      // get the incoming server associated with this uri
-      server = folder.server;
+	//dump("ComposeMessage folder="+folder+"\n");
+	try 
+	{
+		if(folder)
+		{
+			// get the incoming server associated with this uri
+			server = folder.server;
 
-      // if they hit new or reply and they are reading a newsgroup
-      // turn this into a new post or a reply to group.
+			// if they hit new or reply and they are reading a newsgroup
+			// turn this into a new post or a reply to group.
       if (!folder.isServer && server.type == "nntp" && type == msgComposeType.New)
-      {
+			{
         type = msgComposeType.NewsPost;
         newsgroup = folder.folderURL;
-      }
+			}
 
       identity = getIdentityForServer(server);
       // dump("identity = " + identity + "\n");
-    }
-  }
-  catch (ex) 
-  {
-    dump("failed to get an identity to pre-select: " + ex + "\n");
-  }
+		}
+	}
+	catch (ex) 
+	{
+        	dump("failed to get an identity to pre-select: " + ex + "\n");
+	}
 
-  //dump("\nComposeMessage from XUL: " + identity + "\n");
-  var uri = null;
+	//dump("\nComposeMessage from XUL: " + identity + "\n");
+	var uri = null;
 
-  if (! msgComposeService)
-  {
-    dump("### msgComposeService is invalid\n");
-    return;
-  }
+	if (! msgComposeService)
+	{
+		dump("### msgComposeService is invalid\n");
+		return;
+	}
 	
-  if (type == msgComposeType.New) //new message
-  {
-    //dump("OpenComposeWindow with " + identity + "\n");
+	if (type == msgComposeType.New) //new message
+	{
+		//dump("OpenComposeWindow with " + identity + "\n");
 
     // if the addressbook sidebar panel is open and has focus, get
     // the selected addresses from it
     if (document.commandDispatcher.focusedWindow.document.documentElement.hasAttribute("selectedaddresses"))
       NewMessageToSelectedAddresses(type, format, identity);
+
     else
       msgComposeService.OpenComposeWindow(null, null, type, format, identity, msgWindow);
-    return;
-  }
+		return;
+	}
   else if (type == msgComposeType.NewsPost) 
-  {
-    //dump("OpenComposeWindow with " + identity + " and " + newsgroup + "\n");
-    msgComposeService.OpenComposeWindow(null, newsgroup, type, format, identity, msgWindow);
-    return;
-  }
+	{
+		//dump("OpenComposeWindow with " + identity + " and " + newsgroup + "\n");
+		msgComposeService.OpenComposeWindow(null, newsgroup, type, format, identity, msgWindow);
+		return;
+	}
 		
-  messenger.SetWindow(window, msgWindow);
-		  
-  var object = null;
-  
-  if (messageArray && messageArray.length > 0)
-  {
-    uri = "";
-    for (var i = 0; i < messageArray.length; i ++)
-    {	
-      var messageUri = messageArray[i];
+	messenger.SetWindow(window, msgWindow);
+			
+	var object = null;
+	
+	if (messageArray && messageArray.length > 0)
+	{
+		uri = "";
+		for (var i = 0; i < messageArray.length; i ++)
+		{	
+			var messageUri = messageArray[i];
 
-      var hdr = messenger.msgHdrFromURI(messageUri);
-      // if we treat reply from sent specially, do we check for that folder flag here?
+      var hdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
       var hintForIdentity = (type == msgComposeType.Template) ? hdr.author : hdr.recipients + hdr.ccList;
       var accountKey = hdr.accountKey;
       if (accountKey.length > 0)
@@ -255,31 +254,31 @@ function ComposeMessage(type, format, folder, messageArray)
         identity = getIdentityForServer(server, hintForIdentity);
 
       var messageID = hdr.messageId;
-      var messageIDScheme = messageID ? messageID.split(":")[0] : "";
-      if (messageIDScheme && (messageIDScheme == 'http' || messageIDScheme == 'https') &&  "openComposeWindowForRSSArticle" in this) 
+      var messageIDScheme = messageID.split(":")[0];
+      if ((messageIDScheme == 'http' || messageIDScheme == 'https') &&  "openComposeWindowForRSSArticle" in this) 
         openComposeWindowForRSSArticle(messageID, hdr, type); 
-      else if (type == msgComposeType.Reply || type == msgComposeType.ReplyAll || type == msgComposeType.ForwardInline ||
-                type == msgComposeType.ReplyToGroup || type == msgComposeType.ReplyToSender || 
-                type == msgComposeType.ReplyToSenderAndGroup ||
-                type == msgComposeType.Template || type == msgComposeType.Draft)
-      {
-        msgComposeService.OpenComposeWindow(null, messageUri, type, format, identity, msgWindow);
+      else	if (type == msgComposeType.Reply || type == msgComposeType.ReplyAll || type == msgComposeType.ForwardInline ||
+				type == msgComposeType.ReplyToGroup || type == msgComposeType.ReplyToSender || 
+				type == msgComposeType.ReplyToSenderAndGroup ||
+				type == msgComposeType.Template || type == msgComposeType.Draft)
+			{
+				msgComposeService.OpenComposeWindow(null, messageUri, type, format, identity, msgWindow);
         //limit the number of new compose windows to 8. Why 8? I like that number :-)
         if (i == 7)
           break;
-      }
-      else
-      {
-        if (i) 
-          uri += ","
-        uri += messageUri;
-      }
-    }
-    if (type == msgComposeType.ForwardAsAttachment && uri)
-      msgComposeService.OpenComposeWindow(null, uri, type, format, identity, msgWindow);
-  }
-  else
-    dump("### nodeList is invalid\n");
+			}
+			else
+			{
+				if (i) 
+					uri += ","
+				uri += messageUri;
+			}
+		}
+		if (type == msgComposeType.ForwardAsAttachment && uri)
+			msgComposeService.OpenComposeWindow(null, uri, type, format, identity, msgWindow);
+	}
+	else
+		dump("### nodeList is invalid\n");
 }
 
 function NewMessageToSelectedAddresses(type, format, identity) {
@@ -445,7 +444,6 @@ function SaveAsTemplate(uri, folder)
 
 function MarkSelectedMessagesRead(markRead)
 {
-  ClearPendingReadTimer();
   gDBView.doCommand(markRead ? nsMsgViewCommandType.markMessagesRead : nsMsgViewCommandType.markMessagesUnread);
 }
 
@@ -521,188 +519,131 @@ const nsIJunkMailPlugin = Components.interfaces.nsIJunkMailPlugin;
 const nsIMsgDBHdr = Components.interfaces.nsIMsgDBHdr;
 
 var gJunkmailComponent;
+var gJunkKeys = [];
+var gJunkTargetFolder;
 
-/**
- * Determines the actions that should be carried out on the messages
- * that are being marked as junk.
- *
- * @param aView
- *        the current message view
- * @param aIndices
- *        the indices of the messages being marked as junk.
- *
- * @return an object with two properties: 'markRead' (boolean) indicating
- *         whether the messages should be marked as read, and 'junkTargetFolder'
- *         (nsIMsgFolder) specifying where the messages should be moved, or
- *         null if they should not be moved.
- */
-function determineActionsForJunkMsgs(aView, aIndices)
+function saveJunkMsgForAction(aServer, aMsgURI, aClassification)
 {
-  var actions = { markRead: false, junkTargetFolder: null };
-
-  // we use some arbitrary message to determine the
-  // message server
-  var msgURI = aView.getURIForViewIndex(aIndices[0]);
-  var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
-  var server = msgHdr.folder.server;
-
-  var spamSettings = server.spamSettings;
-
-  // note we will do moves/marking as read even if the spam
-  // feature is disabled, since the user has asked to use it
-  // despite the disabling
-
-  // note also that we will only act on messages which
-  // _the_current_run_ of the classifier has classified as
-  // junk, rather than on all junk messages in the folder
-
-  actions.markRead = spamSettings.markAsReadOnSpam;
-  actions.junkTargetFolder = null;
-
-  // move only when the corresponding setting is activated
-  // and the currently viewed folder is not the junk folder.
-  if (spamSettings.moveOnSpam && !(msgHdr.folder.flags & MSG_FOLDER_FLAG_JUNK))
-  {
-    var spamFolderURI = spamSettings.spamFolderURI;
-    if (!spamFolderURI)
-    {
-      // XXX TODO
-      // we should use nsIPromptService to inform the user of the problem,
-      // e.g. when the junk folder was accidentally deleted.
-      dump('determineActionsForJunkMsgs: no spam folder found, not moving.');
-    }
-    else
-    {
-      actions.junkTargetFolder = GetMsgFolderFromUri(spamFolderURI);
-    }
-  }
+  // we only care when the message gets marked as junk
+  if (aClassification == nsIJunkMailPlugin.GOOD)
+    return;
+ 
+  var spamSettings = aServer.spamSettings
+ 
+  // if the spam feature is disabled,
+  // or if the move functionality is turned off, bail out.
+  // the user could still run the JMC manually,
+  // but let's not move in that scenario
+  if (!spamSettings.level || !spamSettings.moveOnSpam)
+    return;   
   
-  return actions;
+  var msgHdr = messenger.messageServiceFromURI(aMsgURI).messageURIToMsgHdr(aMsgURI);
+  
+  // don't move if we are already in the junk folder
+  if (msgHdr.folder.flags & MSG_FOLDER_FLAG_JUNK)
+    return;
+ 
+  var spamFolderURI = spamSettings.spamFolderURI;
+  if (!spamFolderURI)
+    return;
+  
+  var spamFolder = GetMsgFolderFromUri(spamFolderURI);
+
+  if (spamFolder) 
+  {
+    gJunkKeys[gJunkKeys.length] = msgHdr.messageKey;
+    gJunkTargetFolder = spamFolder;
+  }
 }
 
-function performActionsOnJunkMsgs(aIndices)
+function performActionOnJunkMsgs()
 {
-  if (!aIndices.length)
+  if (!gJunkKeys.length)
+  {
+    gJunkTargetFolder = [];
     return;
+  }
+
+  var indices = new Array(gJunkKeys.length);
+  for (var i=0;i<gJunkKeys.length;i++)
+    indices[i] = gDBView.findIndexFromKey(gJunkKeys[i], true /* expand */);
 
   var treeView = gDBView.QueryInterface(Components.interfaces.nsITreeView);
-
   var treeSelection = treeView.selection;
   treeSelection.clearSelection();
    
   // select the messages
-  for (i=0;i<aIndices.length;i++)
-    treeSelection.rangedSelect(aIndices[i], aIndices[i], true /* augment */);
+  for (i=0;i<indices.length;i++)
+    treeSelection.rangedSelect(indices[i], indices[i], true /* augment */);
 
-  var actionParams = determineActionsForJunkMsgs(treeView, aIndices);
-  if (actionParams.markRead)
-    MarkSelectedMessagesRead(true);
-
-  if (actionParams.junkTargetFolder)
-  {
-    SetNextMessageAfterDelete();  
-    gDBView.doCommandWithFolder(nsMsgViewCommandType.moveMessages, actionParams.junkTargetFolder);
-  }
-  treeSelection.clearSelection();
+  SetNextMessageAfterDelete();  
+  gDBView.doCommandWithFolder(nsMsgViewCommandType.moveMessages, gJunkTargetFolder);
+  
+  gJunkKeys = [];
+  gJunkTargetFolder = null;
 }
 
 function getJunkmailComponent()
 {
-  if (!gJunkmailComponent) {
-    gJunkmailComponent = Components.classes[NS_BAYESIANFILTER_CONTRACTID].getService(nsIJunkMailPlugin);
-  }
+    if (!gJunkmailComponent) {
+        gJunkmailComponent = Components.classes[NS_BAYESIANFILTER_CONTRACTID].getService(nsIJunkMailPlugin);
+    }
 }
 
-/**
- * Helper object for filterFolderForJunk() storing the list of pending messages
- * to process and the indices of messages classified as junk.
- */
-var gMessageClassificator =
+function analyze(aMsgHdr, aNextFunction)
 {
-  junkMsgIndices: null,
-  messages: null,
-  pendingMessageCount: 0,
+    var listener = {
+        onMessageClassified: function(aMsgURI, aClassification)
+        {
+            // XXX todo
+            // update status bar, or a progress dialog
+            // running junk mail controls manually, on a large folder
+            // can take a while, and the user doesn't know when we are done.
+            dump(aMsgURI + ' is ' 
+                 + (aClassification == nsIJunkMailPlugin.JUNK
+                    ? 'JUNK' : 'GOOD') + '\n');
+            // XXX TODO, make the cut off 50, like in nsMsgSearchTerm.cpp
+            var score = 
+                aClassification == nsIJunkMailPlugin.JUNK ? "100" : "0";
 
-  init: function()
-  {
-    this.junkMsgIndices = new Array();
-    this.messages = new Object();
-    this.pendingMessageCount = 0;
-  },
+            // set these props via the db (instead of the message header
+            // directly) so that the nsMsgDBView knows to update the UI
+            //
+            var db = aMsgHdr.folder.getMsgDatabase(msgWindow);
+            db.setStringProperty(aMsgHdr.messageKey, "junkscore", score);
+            db.setStringProperty(aMsgHdr.messageKey, "junkscoreorigin", 
+                                 "plugin");
+            saveJunkMsgForAction(aMsgHdr.folder.server, aMsgURI, aClassification);
+            aNextFunction();
+        }
+    };
 
-  /**
-   * Starts the message classification process for a message. If the message
-   * sender's address is in the address book specified by aWhiteListDirectory,
-   * the message is skipped.
-   *
-   * @param aMsgHdr
-   *        The header of the message to classify.
-   * @param aMsgIndex
-   *        The message's index inside the folder.
-   * @param aWhiteListDirectory
-   *        The addressbook (nsIAbMDBDirectory) to use as a whitelist, or null
-   *        if no whitelisting should be done.
-   */
-  analyzeMessage: function(aMsgHdr, aMsgIndex, aWhiteListDirectory)
-  {
-    // if a whitelist addressbook was specified, check if the email address is in it
-    if (aWhiteListDirectory)
+    // if we are whitelisting, check if the email address is in the whitelist addressbook.
+    var spamSettings = aMsgHdr.folder.server.spamSettings;
+    if (spamSettings.useWhiteList && spamSettings.whiteListAbURI)
     {
+      var whiteListDirectory = RDF.GetResource(spamSettings.whiteListAbURI).QueryInterface(Components.interfaces.nsIAbMDBDirectory);
       var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
       var authorEmailAddress = headerParser.extractHeaderAddressMailboxes(null, aMsgHdr.author);
-      if (aWhiteListDirectory.hasCardForEmailAddress(authorEmailAddress))
+      if (whiteListDirectory.hasCardForEmailAddress(authorEmailAddress))
+      {
         // skip over this message, like we do on incoming mail
         // the difference is it could be marked as junk from previous analysis
         // or from being manually marked by the user.
+        aNextFunction();
         return;
+      }
     }
 
     var messageURI = aMsgHdr.folder.generateMessageURI(aMsgHdr.messageKey)
         + "?fetchCompleteMessage=true";
-    this.messages[messageURI] = {hdr: aMsgHdr, index: aMsgIndex};
-    this.pendingMessageCount++;
-
-    gJunkmailComponent.classifyMessage(messageURI, msgWindow, this);
-  },
-
-  onMessageClassified: function(aClassifiedMsgURI, aClassification)
-  {
-    // XXX TODO
-    // update status bar, or a progress dialog
-    // running junk mail controls manually, on a large folder
-    // can take a while, and the user doesn't know when we are done.
-    
-    // XXX TODO
-    // make the cut off 50, like in nsMsgSearchTerm.cpp
-
-    var score = 
-      aClassification == nsIJunkMailPlugin.JUNK ? "100" : "0";
-
-    // set these props via the db (instead of the message header
-    // directly) so that the nsMsgDBView knows to update the UI
-    //
-    var msgHdr = this.messages[aClassifiedMsgURI].hdr;
-    var db = msgHdr.folder.getMsgDatabase(msgWindow);
-    db.setStringProperty(msgHdr.messageKey, "junkscore", score);
-    db.setStringProperty(msgHdr.messageKey, "junkscoreorigin", "plugin");
-
-    if (aClassification == nsIJunkMailPlugin.JUNK)
-      this.junkMsgIndices.push(this.messages[aClassifiedMsgURI].index);
-
-    this.pendingMessageCount--;
-    if (this.pendingMessageCount == 0)
-    {
-      performActionsOnJunkMsgs(this.junkMsgIndices);
-    }
-  }
+    gJunkmailComponent.classifyMessage(messageURI, msgWindow, listener);
 }
 
-function filterFolderForJunk()
+function analyzeFolderForJunk()
 {
   MsgJunkMailInfo(true);
   var view = GetDBView();
-
-  getJunkmailComponent();
 
   // need to expand all threads, so we analyze everything
   view.doCommand(nsMsgViewCommandType.expandAll);
@@ -712,51 +653,48 @@ function filterFolderForJunk()
   if (!count)
     return;
 
-  // retrieve server and its spam settings via the header of an arbitrary message
-  var tmpMsgURI = view.getURIForViewIndex(0);
-  var tmpMsgHdr = messenger.messageServiceFromURI(tmpMsgURI).messageURIToMsgHdr(tmpMsgURI);
-  var spamSettings = tmpMsgHdr.folder.server.spamSettings;
-
-  // if enabled in the spam settings, retrieve whitelist addressbook
-  var whiteListDirectory = null;
-  if (spamSettings.useWhiteList && spamSettings.whiteListAbURI)
-    whiteListDirectory = RDF.GetResource(spamSettings.whiteListAbURI).QueryInterface(Components.interfaces.nsIAbMDBDirectory);
-
-  gMessageClassificator.init();
-
+  var messages = new Array(count)
   for (var i = 0; i < count; i++) {
     try
     {
-      var msgURI = view.getURIForViewIndex(i);
+      messages[i] = view.getURIForViewIndex(i);
     }
-    catch (ex)
-    {
-      // blow off errors here - dummy headers will fail
-      var msgURI = null;
-    }
-    if (msgURI)
-    {
-      var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
-      gMessageClassificator.analyzeMessage(msgHdr, i, whiteListDirectory);
-    }
+    catch (ex) {} // blow off errors here - dummy headers will fail
   }
+  analyzeMessages(messages);
+}
+
+// not used yet, but soon
+function analyzeMessagesForJunk()
+{
+  var messages = GetSelectedMessages();
+  analyzeMessages(messages);
+}
+
+function analyzeMessages(messages)
+{
+  function processNext()
+  {
+    if (counter < messages.length) 
+    {
+      var messageUri = messages[counter];
+      var message = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
+      ++counter;
+      analyze(message, processNext);
+     }
+     else 
+       performActionOnJunkMsgs();
+  }
+
+  getJunkmailComponent();
+  var counter = 0;
+  processNext();
 }
 
 function JunkSelectedMessages(setAsJunk)
 {
   MsgJunkMailInfo(true);
-
-  // When the user explicitly marks a message as junk, we can mark it as read,
-  // too. This is independent of the "markAsReadOnSpam" pref, which applies
-  // only to automatically-classified messages.
-  // Note that this behaviour should match the one in the back end for marking
-  // as junk via clicking the 'junk' column.
-  
-  if (setAsJunk && pref.getBoolPref("mailnews.ui.junk.manualMarkAsJunkMarksRead"))
-    MarkSelectedMessagesRead(true);
-
-  gDBView.doCommand(setAsJunk ? nsMsgViewCommandType.junk
-                              : nsMsgViewCommandType.unjunk);
+  gDBView.doCommand(setAsJunk ? nsMsgViewCommandType.junk : nsMsgViewCommandType.unjunk);
 }
 
 function deleteJunkInFolder()

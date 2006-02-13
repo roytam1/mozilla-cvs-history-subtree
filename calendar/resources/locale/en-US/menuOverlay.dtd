@@ -53,15 +53,11 @@
 <!ENTITY calendar.new.server.key                "L">
 <!ENTITY calendar.new.server.accesskey          "l">
 
-<!ENTITY calendar.new.journal.label              "New Journal Item...">
-<!ENTITY calendar.new.journal.key                "J">
-<!ENTITY calendar.new.journal.accesskey          "j">
-
 <!ENTITY calendar.open.file.label               "Open Calendar File…">
 <!ENTITY calendar.open.file.key                 "O">
 <!ENTITY calendar.open.file.accesskey           "O">
 
-<!ENTITY event.edit.event                       "Edit Selection...">
+<!ENTITY event.edit.event                       "Edit…">
 <!ENTITY event.edit.event.key                   "E">
 <!ENTITY event.edit.event.accesskey             "E">
 
@@ -71,11 +67,11 @@
 <!ENTITY event.delete.tasks                     "Delete Selected Tasks">
 <!ENTITY event.delete.tasks.accesskey           "T">
 
-<!ENTITY event.mail.event                       "Mail Selection...">
+<!ENTITY event.mail.event                       "Mail Selected Events…">
 <!ENTITY event.mail.event.key                   "M">
 <!ENTITY event.mail.event.accesskey             "M">
 
-<!ENTITY calendar.print.label                   "Print...">
+<!ENTITY calendar.print.label                   "Print Active Calendars…">
 <!ENTITY calendar.print.key                     "P">
 <!ENTITY calendar.print.accesskey               "P">
 
@@ -92,7 +88,7 @@
 <!ENTITY calendar.wizard.label                  "Launch Wizard…">
 <!ENTITY calendar.wizard.accesskey              "W">
 
-<!ENTITY calendar.export.label                  "Export Selection...">
+<!ENTITY calendar.export.label                  "Export Selected Events…">
 <!ENTITY calendar.export.accesskey              "E">
 
 <!ENTITY calendar.subscribe.label               "Subscribe to Remote Calendar…">
@@ -102,22 +98,11 @@
 <!ENTITY calendar.reloadserver.key              "R">
 <!ENTITY calendar.reloadserver.accesskey        "R">
 
-<!ENTITY calendar.publish.label                 "Publish...">
+<!ENTITY calendar.publish.label                 "Publish Selected Events…">
 <!ENTITY calendar.publish.accesskey             "b">
-
-<!ENTITY calendar.quit.label                    "Quit">
-<!ENTITY calendar.quit.accesskey                "Q">
 
 <!ENTITY calendar.about.label                   "About Calendar">
 <!ENTITY calendar.about.accesskey               "C">
-
-<!ENTITY calendar.undo.label                    "Undo">
-<!ENTITY calendar.undo.key                      "Z">
-<!ENTITY calendar.undo.accesskey                "u">
-
-<!ENTITY calendar.redo.label                    "Redo">
-<!ENTITY calendar.redo.key                      "Y">
-<!ENTITY calendar.redo.accesskey                "r">
 
 <!ENTITY calendar.cut.label                     "Cut">
 <!ENTITY calendar.cut.key                       "X">
@@ -135,52 +120,16 @@
 <!ENTITY calendar.selectall.key                 "A">
 <!ENTITY calendar.selectall.accesskey           "A">
 
-<!ENTITY toolbarsMenu.label                     "Toolbars">
-<!ENTITY toolbarsMenu.accesskey                 "T">
-
-<!ENTITY calendar.toolbar.label                 "Calendar Toolbar">
-
-<!ENTITY calendar.menu.customize.label          "Customize...">
-<!ENTITY calendar.menu.customize.accesskey      "C">
-
 <!ENTITY calendar.preferences.label             "Preferences…">
 <!ENTITY calendar.preferences.accesskey         "e">
-
-<!ENTITY showSearchToolbarCmd.label             "Search Bar">
-<!ENTITY showSearchToolbarCmd.accesskey         "S">
-
-<!ENTITY showStatusBarCmd.label                 "Status Bar">
-<!ENTITY showStatusBarCmd.accesskey             "B">
-
-<!ENTITY showTaskBoxCmd.label                   "Task List">
-<!ENTITY showTaskBoxCmd.accesskey               "L">
-
-<!ENTITY calendar.displaytodos.checkbox.label       "Show Tasks in Calendar">
-<!ENTITY calendar.displaytodos.checkbox.accesskey   "T">
-
-<!ENTITY calendar.menu.numberofweeks.label      "Multiweek View Size">
-<!ENTITY calendar.menu.numberofweeks.2          "Two Weeks">
-<!ENTITY calendar.menu.numberofweeks.3          "Three Weeks">
-<!ENTITY calendar.menu.numberofweeks.4          "Four Weeks">
-<!ENTITY calendar.menu.numberofweeks.5          "Five Weeks">
-<!ENTITY calendar.menu.numberofweeks.6          "Six Weeks">
-
-<!ENTITY calendar.fullscreen.label              "Full Screen">
-<!ENTITY calendar.fullscreen.accesskey          "F">
-
-<!ENTITY calendar.extensions.label              "Extensions">
-<!ENTITY calendar.extensions.accesskey          "E">
-
-<!ENTITY calendar.themes.label                  "Themes">
-<!ENTITY calendar.themes.accesskey              "T">
 
 <!ENTITY goMenu.label                           "Go">
 <!ENTITY goMenu.accesskey                       "G">
 
-<!ENTITY goTodayCmd.label                       "Today">
+<!ENTITY goTodayCmd.label                       "Go to Today">
 <!ENTITY goTodayCmd.accesskey                   "T">
 
-<!ENTITY goDateCmd.label                        "Date…">
+<!ENTITY goDateCmd.label                        "Go to Date">
 <!ENTITY goDateCmd.accesskey                    "D">
 
 <!ENTITY goPreviousCmd.label                    "Previous">
@@ -219,10 +168,8 @@
 
 <!ENTITY editMenu.label                         "Edit">
 <!ENTITY editMenu.accesskey                     "E">
-<!ENTITY optionsCmd.label                       "Options…">
-<!ENTITY optionsCmd.accesskey                   "O">
-<!ENTITY preferencesCmd.label                   "Preferences">
-<!ENTITY preferencesCmd.accesskey               "n">
+<!ENTITY preferencesCmd.label                   "Options…">
+<!ENTITY preferencesCmd.accesskey               "O">
 
 <!ENTITY viewMenu.label                         "View">
 <!ENTITY viewMenu.accesskey                     "V">

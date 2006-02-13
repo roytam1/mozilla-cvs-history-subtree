@@ -50,7 +50,9 @@ pref("xpinstall.dialog.progress.chrome", "chrome://mozapps/content/extensions/ex
 pref("xpinstall.dialog.progress.type.skin", "Extension:Manager-themes");
 pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager-extensions");
 
-#expand pref("app.extensions.version", "__APP_VERSION__");
+pref("app.extensions.version", 
+#expand __APP_VERSION__
+);
 
 pref("update.app.enabled", false);
 pref("update.app.url", "chrome://mozapps/locale/update/update.properties");
@@ -61,11 +63,7 @@ pref("update.app.updateURL", "");
 pref("update.extensions.enabled", false);
 pref("update.extensions.wsdl", "chrome://mozapps/locale/extensions/extensions.properties");
 pref("extensions.getMoreExtensionsURL", "chrome://mozapps/locale/extensions/extensions.properties");
-pref("extensions.update.url", "chrome://mozapps/locale/extensions/extensions.properties");
 pref("extensions.getMoreThemesURL", "chrome://mozapps/locale/extensions/extensions.properties");
-
-pref("extensions.dss.enabled", false);    // Dynamic Skin Switching
-
 // Automatically download and install updates to themes and extensions.
 pref("update.extensions.autoUpdate", false);
 
@@ -83,7 +81,10 @@ pref("update.extensions.count", 0);
 
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 pref("general.useragent.contentlocale", "chrome://browser-region/locale/region.properties");
-#expand pref("general.useragent.extra.sunbird", "Mozilla Sunbird/__APP_VERSION__");
+pref("general.useragent.vendor", "Mozilla Sunbird");
+pref("general.useragent.vendorSub",
+#expand __APP_VERSION__
+);
 
 // Scripts & Windows prefs
 pref("dom.disable_open_during_load",        true);
@@ -105,7 +106,6 @@ pref("intl.charset.detector", "chrome://global/locale/intl.properties");
 pref("intl.charset.default",  "chrome://global-platform/locale/intl.properties");
 pref("font.language.group", "chrome://global/locale/intl.properties");
 pref("intl.menuitems.alwaysappendaccesskeys","chrome://global/locale/intl.properties");
-pref("intl.menuitems.insertseparatorbeforeaccesskeys","chrome://global/locale/intl.properties");
 
 // 0=lines, 1=pages, 2=history , 3=text size
 pref("mousewheel.withcontrolkey.action",3);

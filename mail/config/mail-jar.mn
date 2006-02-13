@@ -108,7 +108,8 @@ content/global/printPageSetup.js,                     toolkit/content/global/pri
 content/global/printPageSetup.xul,                    toolkit/content/global/printPageSetup.xul
 content/global/printjoboptions.js,		      toolkit/content/global/printjoboptions.js
 content/global/printjoboptions.xul,		      toolkit/content/global/printjoboptions.xul
-content/global/license.html,                          toolkit/content/global/license.html
+content/global/MPL-1.1.html,                          toolkit/content/global/MPL-1.1.html
+content/global/NPL-1.1.html,                          toolkit/content/global/NPL-1.1.html
 content/global/customizeToolbar.xul,                  toolkit/content/global/customizeToolbar.xul
 content/global/customizeToolbar.js,                   toolkit/content/global/customizeToolbar.js
 content/global/customizeToolbar.css,                  toolkit/content/global/customizeToolbar.css
@@ -128,7 +129,6 @@ content/global/XPCNativeWrapper.js,                   toolkit/content/global/XPC
 content/global/fontpackage.xul,                       toolkit/content/global/fontpackage.xul
 content/global/fontpackage.js,                        toolkit/content/global/fontpackage.js
 content/global/alerts,                                toolkit/content/global/alerts
-content/global/platformHTMLBindings.xml,              toolkit/content/global/platformHTMLBindings.xml
 
 #from mozapps
 content/mozapps/downloads,                            toolkit/content/mozapps/downloads

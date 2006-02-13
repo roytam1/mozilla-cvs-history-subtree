@@ -49,6 +49,7 @@
 |   longer term, this code will be restructured to make it more reusable.      |
 ------------------------------------------------------------------------------*/
 
+const kMailToLength = 7;
 
 function nsContextMenu( xulMenu ) {
     this.target         = null;
@@ -56,7 +57,6 @@ function nsContextMenu( xulMenu ) {
     this.popupURL       = null;
     this.onTextInput    = false;
     this.onImage        = false;
-    this.onLoadedImage  = false;
     this.onLink         = false;
     this.onMailtoLink   = false;
     this.onSaveableLink = false;
@@ -133,7 +133,7 @@ nsContextMenu.prototype = {
         this.showItem( "context-savelink", this.onSaveableLink );
 
         // Save image depends on whether there is one.
-        this.showItem( "context-saveimage", this.onLoadedImage );
+        this.showItem( "context-saveimage", this.onImage );
         
         this.showItem( "context-sendimage", this.onImage );
     },
@@ -147,11 +147,11 @@ nsContextMenu.prototype = {
         this.showItem( "context-sep-properties", !( this.inDirList || this.isTextSelected || this.onTextInput ) );
         // Set As Wallpaper depends on whether an image was clicked on, and only works on Windows.
         var isWin = navigator.appVersion.indexOf("Windows") != -1;
-        this.showItem( "context-setWallpaper", isWin && this.onLoadedImage );
+        this.showItem( "context-setWallpaper", isWin && this.onImage );
 
         this.showItem( "context-sep-image", this.onImage );
 
-        if( isWin && this.onLoadedImage )
+        if( isWin && this.onImage )
             // Disable the Set As Wallpaper menu item if we're still trying to load the image
           this.setItemAttr( "context-setWallpaper", "disabled", (("complete" in this.target) && !this.target.complete) ? "true" : null );
 
@@ -242,7 +242,6 @@ nsContextMenu.prototype = {
         }
         // Initialize contextual info.
         this.onImage    = false;
-        this.onLoadedImage = false;
         this.onStandaloneImage = false;
         this.onMetaDataItem = false;
         this.onTextInput = false;
@@ -258,21 +257,20 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-            if ( this.target instanceof Components.interfaces.nsIImageLoadingContent && this.target.currentURI  ) {
+             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent &&
+                  this.target.currentURI != null ) {
                 this.onImage = true;
-                var request = this.target.getRequest( Components.interfaces.nsIImageLoadingContent.CURRENT_REQUEST );
-                if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
-                    this.onLoadedImage = true;
                 this.imageURL = this.target.currentURI.spec;
 
-                if ( this.target.ownerDocument instanceof ImageDocument )
-                   this.onStandaloneImage = true;
-            } else if ( this.target instanceof HTMLInputElement) {
+                var documentType = window._content.document.contentType;
+                if ( documentType.substr(0,6) == "image/" )
+                    this.onStandaloneImage = true;
+             } else if ( this.target.localName.toUpperCase() == "INPUT") {
                type = this.target.getAttribute("type");
                this.onTextInput = this.isTargetATextBox(this.target);
-            } else if ( this.target instanceof HTMLTextAreaElement ) {
+            } else if ( this.target.localName.toUpperCase() == "TEXTAREA" ) {
                  this.onTextInput = true;
-            } else if ( this.target instanceof HTMLHtmlElement ) {
+            } else if ( this.target.localName.toUpperCase() == "HTML" ) {
                // pages with multiple <body>s are lame. we'll teach them a lesson.
                var bodyElt = this.target.ownerDocument.getElementsByTagName("body")[0];
                if ( bodyElt ) {
@@ -339,11 +337,13 @@ nsContextMenu.prototype = {
         var elem = this.target;
         while ( elem ) {
             if ( elem.nodeType == Node.ELEMENT_NODE ) {
+                var localname = elem.localName.toUpperCase();
+                
                 // Link?
                 if ( !this.onLink && 
-                    ( (elem instanceof HTMLAnchorElement && elem.href) ||
-                      elem instanceof HTMLAreaElement ||
-                      elem instanceof HTMLLinkElement ||
+                    ( (localname === "A" && elem.href) ||
+                      localname === "AREA" ||
+                      localname === "LINK" ||
                       elem.getAttributeNS( "http://www.w3.org/1999/xlink", "type") == "simple" ) ) {
                     // Clicked on a link.
                     this.onLink = true;
@@ -365,12 +365,14 @@ nsContextMenu.prototype = {
                 if ( !this.onMetaDataItem ) {
                     // We currently display metadata on anything which fits
                     // the below test.
-                    if ( ( elem instanceof HTMLQuoteElement && elem.cite)    ||
-                         ( elem instanceof HTMLTableElement && elem.summary) ||
-                         ( elem instanceof HTMLModElement &&
-                             ( elem.cite || elem.dateTime ) )                ||
-                         ( elem instanceof HTMLElement &&
-                             ( elem.title || elem.lang ) ) ) {
+                    if ( ( localname === "BLOCKQUOTE" && 'cite' in elem && elem.cite)  ||
+                         ( localname === "Q" && 'cite' in elem && elem.cite)           ||
+                         ( localname === "TABLE" && 'summary' in elem && elem.summary) ||
+                         ( ( localname === "INS" || localname === "DEL" ) &&
+                           ( ( 'cite' in elem && elem.cite ) ||
+                             ( 'dateTime' in elem && elem.dateTime ) ) )               ||
+                         ( 'title' in elem && elem.title )                             ||
+                         ( 'lang' in elem && elem.lang ) ) {
                         this.onMetaDataItem = true;
                     }
                 }
@@ -514,7 +516,7 @@ nsContextMenu.prototype = {
         // when there is one
         var reference = null;
         if (context == "selection")
-          reference = focusedWindow.getSelection();
+          reference = focusedWindow.__proto__.getSelection.call(focusedWindow);
         else if (context == "mathml")
           reference = this.target;
         else
@@ -570,17 +572,14 @@ nsContextMenu.prototype = {
         // Copy the comma-separated list of email addresses only.
         // There are other ways of embedding email addresses in a mailto:
         // link, but such complex parsing is beyond us.
-        
-        const kMailToLength = 7; // length of "mailto:"
-
         var url = this.linkURL();
         var qmark = url.indexOf( "?" );
         var addresses;
         
-        if ( qmark > kMailToLength ) {
-            addresses = url.substring( kMailToLength, qmark );
+        if ( qmark > 7 ) {                   // 7 == length of "mailto:"
+            addresses = url.substring( 7, qmark );
         } else {
-            addresses = url.substr( kMailToLength );
+            addresses = url.substr( 7 );
         }
 
         // Let's try to unescape it using a character set
@@ -603,7 +602,7 @@ nsContextMenu.prototype = {
       var docshell = document.getElementById( "content" ).webNavigation;
       BookmarksUtils.addBookmark( docshell.currentURI.spec,
                                   docshell.document.title,
-                                  docshell.document.characterSet,
+                                  docshell.document.charset,
                                   false );
     },
     addBookmarkForFrame : function() {
@@ -614,7 +613,7 @@ nsContextMenu.prototype = {
         title = uri;
       BookmarksUtils.addBookmark( uri,
                                   title,
-                                  doc.characterSet,
+                                  doc.charset,
                                   false );
     },
     // Open Metadata window for node
@@ -745,7 +744,7 @@ nsContextMenu.prototype = {
     
     searchSelected : function() {
         var focusedWindow = document.commandDispatcher.focusedWindow;
-        var searchStr = focusedWindow.getSelection();;
+        var searchStr = focusedWindow.__proto__.getSelection.call(focusedWindow);
         searchStr = searchStr.toString();
         searchStr = searchStr.replace( /^\s+/, "" );
         searchStr = searchStr.replace(/(\n|\r|\t)+/g, " ");
@@ -773,12 +772,29 @@ nsContextMenu.prototype = {
     },
     isTargetATextBox : function ( node )
     {
-      if (node instanceof HTMLInputElement)
-        return (node.type == "text" || node.type == "password")
+      if (node.nodeType != Node.ELEMENT_NODE)
+        return false;
 
-      return (node instanceof HTMLTextAreaElement);
+      if (node.localName.toUpperCase() == "INPUT") {
+        var attrib = "";
+        var type = node.getAttribute("type");
+
+        if (type)
+          attrib = type.toUpperCase();
+
+        return( (attrib != "IMAGE") &&
+                (attrib != "CHECKBOX") &&
+                (attrib != "RADIO") &&
+                (attrib != "SUBMIT") &&
+                (attrib != "RESET") &&
+                (attrib != "HIDDEN") &&
+                (attrib != "RESET") &&
+                (attrib != "BUTTON") );
+      } else  {
+        return(node.localName.toUpperCase() == "TEXTAREA");
+      }
     },
-
+    
     // Determines whether or not the separator with the specified ID should be 
     // shown or not by determining if there are any non-hidden items between it
     // and the previous separator. 

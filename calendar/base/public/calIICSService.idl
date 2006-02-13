@@ -43,11 +43,8 @@
 
 interface calIItemBase;
 interface calIDateTime;
-interface calIDuration;
 
 interface calIIcalProperty;
-interface nsIUTF8StringEnumerator;
-interface nsIInputStream;
 
 [ptr] native icalpropertyptr(struct icalproperty_impl);
 [ptr] native icalcomponentptr(struct icalcomponent_impl);
@@ -60,7 +57,7 @@ interface nsIInputStream;
  * general, you want to do as little manipulation of your FooContainers as
  * possible while iterating over them.
  */
-[scriptable,uuid(c4637c40-3c4c-4ecd-b802-8b5b46bdf5a4)]
+[scriptable,uuid(4d7e456b-cfd0-4ebf-8794-c57789dafdc3)]
 interface calIIcalComponent : nsISupports
 {
     /**
@@ -111,7 +108,6 @@ interface calIIcalComponent : nsISupports
 
     attribute calIDateTime startTime;
     attribute calIDateTime endTime;
-    readonly attribute calIDuration duration;
     attribute calIDateTime dueTime;
     attribute calIDateTime stampTime;
 
@@ -120,18 +116,6 @@ interface calIIcalComponent : nsISupports
     attribute calIDateTime lastModified;
 
     AUTF8String serializeToICS();
-
-    /**
-     * Serializes this component (and subcomponents) directly to an
-     * input stream.  Typically used for performance to avoid
-     * unnecessary conversions and XPConnect traversals.
-     * 
-     * @result     an input stream which can be read to get the serialized
-     *             version of this component, encoded in UTF-8.  Implements
-     *             nsISeekableStream so that it can be used with
-     *             nsIUploadChannel.
-     */
-    nsIInputStream serializeToICSStream();
 
     void addSubcomponent(in calIIcalComponent comp);
     void removeSubcomponent(in calIIcalComponent comp);
@@ -170,19 +154,7 @@ interface calIIcalComponent : nsISupports
 [scriptable,uuid(17349a10-5d80-47fa-9bea-f22957357675)]
 interface calIIcalProperty : nsISupports
 {
-    /**
-     * The value of the property as string.
-     * The exception for properties of TEXT or X- type, those will be unescaped
-     * when getting, and also expects an unescaped string when setting.
-     * Datetime, numeric and other non-text types are represented as ical string
-     */
-    attribute AUTF8String value;
-
-    /**
-     * The value of the property in (escaped) ical format.
-     */
-    attribute AUTF8String valueAsIcalString;
-
+    attribute AUTF8String stringValue;
     // XXX attribute AUTF8String stringValueWithParams; ?
     readonly attribute AUTF8String propertyName;
 
@@ -220,6 +192,4 @@ interface calIICSService : nsISupports
     calIIcalComponent getTimezone(in AUTF8String tzid);
     AUTF8String getTimezoneLatitude(in AUTF8String tzid);
     AUTF8String getTimezoneLongitude(in AUTF8String tzid);
-
-    readonly attribute nsIUTF8StringEnumerator timezoneIds;
 };

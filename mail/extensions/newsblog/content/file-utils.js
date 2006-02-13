@@ -155,9 +155,7 @@ function futils_nosepicker(initialPath, typeList, attribs)
                     picker.appendFilters(FILTER_XUL);
                     break;
                 case "$opml":
-                    var newsBlogBundle = document.getElementById("bundle_newsblog");
-                    picker.appendFilter(
-                      newsBlogBundle.getString("subscribe-OPMLExportOPMLFilesFilterText"), "*.opml");
+                    picker.appendFilter('OPML Files', '*.opml');
                     break;
 
                 default:

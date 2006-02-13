@@ -41,7 +41,7 @@
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
-#mail-bar2 {
+#mail-bar {
 	border-bottom: 1px solid #9F9F9F;
 }
 
@@ -63,11 +63,25 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 	margin: 0px;
 }
 
+
+toolbar[mode="icons"] .toolbarbutton-text {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-icon {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-text {
+  padding: 0 !important;
+  margin: 3px 5px !important;
+}
+
 #button-getmsg {
   -moz-image-region: rect(0px 32px 32px 0px);
 }
 
-#button-getmsg:hover:active {
+#button-getmsg[buttondown], #button-getmsg:hover:active {
   -moz-image-region: rect(32px 32px 64px 0px);
 } 
 
@@ -163,8 +177,7 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 288px 32px 256px);
 }
 
-#button-print:hover:active,
-#button-print[open="true"] {
+#button-print[buttondown], #button-print[open="true"] {
   -moz-image-region: rect(32px 288px 64px 256px);
 }
 
@@ -192,7 +205,11 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 	display: none;
 }
 
-#button-file:hover:active,
+#button-file:hover:active {
+  -moz-image-region: rect(32px 352px 64px 320px);
+} 
+
+#button-file[buttondown],
 #button-file[open] {
   -moz-image-region: rect(32px 352px 64px 320px);
 } 
@@ -229,7 +246,10 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
   -moz-image-region: rect(0px 448px 32px 416px);
 }
 
-#button-mark:hover:active,
+#button-mark[buttondown] {
+  -moz-image-region: rect(32px 448px 64px 416px);
+}
+
 #button-mark[open="true"] {
   -moz-image-region: rect(32px 448px 64px 416px);
 }
@@ -248,7 +268,7 @@ toolbar[iconsize="small"] #button-getmsg {
   -moz-image-region: rect(0px 24px 24px 0px);
 }
 
-toolbar[iconsize="small"] #button-getmsg:hover:active {
+toolbar[iconsize="small"] #button-getmsg[buttondown], toolbar[iconsize="small"] #button-getmsg:active {
   -moz-image-region: rect(24px 24px 48px 0px);
 } 
 
@@ -260,7 +280,7 @@ toolbar[iconsize="small"] #button-newmsg {
   -moz-image-region: rect(0px 48px 24px 24px);
 }
 
-toolbar[iconsize="small"] #button-newmsg:hover:active {
+toolbar[iconsize="small"] #button-newmsg:active {
   -moz-image-region: rect(24px 48px 48px 24px);
 } 
 
@@ -272,7 +292,7 @@ toolbar[iconsize="small"] #button-address {
   -moz-image-region: rect(0px 72px 24px 48px);
 }
 
-toolbar[iconsize="small"] #button-address:hover:active {
+toolbar[iconsize="small"] #button-address:active {
   -moz-image-region: rect(24px 72px 48px 48px);
 } 
 
@@ -284,7 +304,7 @@ toolbar[iconsize="small"] #button-reply {
   -moz-image-region: rect(0px 96px 24px 72px);
 }
 
-toolbar[iconsize="small"] #button-reply:hover:active {
+toolbar[iconsize="small"] #button-reply:active {
   -moz-image-region: rect(24px 96px 48px 72px);
 } 
 
@@ -296,7 +316,7 @@ toolbar[iconsize="small"] #button-replyall {
   -moz-image-region: rect(0px 120px 24px 96px);
 }
 
-toolbar[iconsize="small"] #button-replyall:hover:active {
+toolbar[iconsize="small"] #button-replyall:active {
   -moz-image-region: rect(24px 120px 48px 96px);
 } 
 
@@ -308,7 +328,7 @@ toolbar[iconsize="small"] #button-forward {
   -moz-image-region: rect(0px 144px 24px 120px);
 }
 
-toolbar[iconsize="small"] #button-forward:hover:active {
+toolbar[iconsize="small"] #button-forward:active {
   -moz-image-region: rect(24px 144px 48px 120px);
 } 
 
@@ -320,7 +340,7 @@ toolbar[iconsize="small"] #button-delete {
   -moz-image-region: rect(0px 168px 24px 144px);
 }
 
-toolbar[iconsize="small"] #button-delete:hover:active {
+toolbar[iconsize="small"] #button-delete:active {
   -moz-image-region: rect(24px 168px 48px 144px);
 } 
 
@@ -332,7 +352,7 @@ toolbar[iconsize="small"] .junk-button {
   -moz-image-region: rect(0px 192px 24px 168px);
 }
 
-toolbar[iconsize="small"] .junk-button:hover:active {
+toolbar[iconsize="small"] .junk-button:active {
   -moz-image-region: rect(24px 192px 48px 168px);
 }
 
@@ -344,8 +364,7 @@ toolbar[iconsize="small"] #button-print {
   -moz-image-region: rect(0px 216px 24px 192px);
 }
 
-toolbar[iconsize="small"] #button-print:hover:active,
-toolbar[iconsize="small"] #button-print[open] {
+toolbar[iconsize="small"] #button-print[buttondown], toolbar[iconsize="small"] #button-print[open] {
   -moz-image-region: rect(24px 216px 48px 192px);
 }
 
@@ -357,7 +376,7 @@ toolbar[iconsize="small"] #button-stop {
   -moz-image-region: rect(0px 240px 24px 216px);
 }
 
-toolbar[iconsize="small"] #button-stop:hover:active {
+toolbar[iconsize="small"] #button-stop:active {
   -moz-image-region: rect(24px 240px 48px 216px);
 } 
 
@@ -369,8 +388,7 @@ toolbar[iconsize="small"] #button-file {
   -moz-image-region: rect(0px 264px 24px 240px);
 }
 
-toolbar[iconsize="small"] #button-file:hover:active,
-toolbar[iconsize="small"] #button-file[open] {
+toolbar[iconsize="small"] #button-file[buttondown], toolbar[iconsize="small"] #button-file[open] {
   -moz-image-region: rect(24px 264px 48px 240px);
 } 
 
@@ -382,8 +400,7 @@ toolbar[iconsize="small"] #button-mark {
   -moz-image-region: rect(0px 288px 24px 264px);
 }
 
-toolbar[iconsize="small"] #button-mark:hover:active,
-toolbar[iconsize="small"] #button-mark[open] {
+toolbar[iconsize="small"] #button-mark[buttondown], toolbar[iconsize="small"] #button-mark[open] {
   -moz-image-region: rect(24px 288px 48px 264px);
 } 
 
@@ -395,7 +412,7 @@ toolbar[iconsize="small"] #button-previous {
   -moz-image-region: rect(0px 314px 24px 288px);
 }
 
-toolbar[iconsize="small"] #button-previous:hover:active {
+toolbar[iconsize="small"] #button-previous:active {
   -moz-image-region: rect(24px 314px 48px 288px);
 } 
 
@@ -407,7 +424,7 @@ toolbar[iconsize="small"] #button-next {
   -moz-image-region: rect(0px 340px 24px 314px);
 }
 
-toolbar[iconsize="small"] #button-next:hover:active {
+toolbar[iconsize="small"] #button-next:active {
   -moz-image-region: rect(24px 340px 48px 314px);
 } 
 

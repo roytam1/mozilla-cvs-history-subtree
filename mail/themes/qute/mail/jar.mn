@@ -18,14 +18,12 @@ classic.jar:
     skin/classic/messenger/searchBox.css
     skin/classic/messenger/junkMail.css
     skin/classic/messenger/folderMenus.css
-    skin/classic/messenger/folderPane.css
     skin/classic/messenger/subscribe.css
     skin/classic/messenger/virtualFolderListDialog.css
     skin/classic/messenger/searchDialog.css
     skin/classic/messenger/msgSelectOffline.css
     skin/classic/messenger/filterDialog.css
-    skin/classic/messenger/dialogs.css
-    skin/classic/messenger/newmailalert.css
+    skin/classic/messenger/dialogs.css 
     skin/classic/messenger/addressbook/addressbook.css          (addrbook/addressbook.css)
     skin/classic/messenger/addressbook/abContactsPanel.css      (addrbook/abContactsPanel.css)
     skin/classic/messenger/addressbook/cardDialog.css           (addrbook/cardDialog.css)
@@ -161,5 +159,5 @@ classic.jar:
     skin/classic/messenger/accountcentral/manage-imap.png       (accountcentral/manage-imap.png) 
     skin/classic/messenger/accountcentral/manage-newsgroups.png (accountcentral/manage-newsgroups.png)
     skin/classic/messenger/accountcentral/manage-rss.png        (accountcentral/manage-rss.png)
-    icon.png
-    preview.png
+    ./preview.png
+    ./icon.png 

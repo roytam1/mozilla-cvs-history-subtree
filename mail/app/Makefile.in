@@ -52,7 +52,6 @@ DIRS		= profile
 
 PREF_JS_EXPORTS = \
     $(srcdir)/profile/all-thunderbird.js \
-    $(srcdir)/profile/channel-prefs.js \
     $(NULL)
 
 ifeq ($(USE_SHORT_LIBNAME), 1)
@@ -63,30 +62,23 @@ endif
 
 REQUIRES = \
 	xpcom \
-	xulapp \
 	$(NULL)
+
+LOCAL_INCLUDES = -I$(topsrcdir)/toolkit/xre
 
 CPPSRCS = nsMailApp.cpp
 
-LOCAL_INCLUDES += -I$(topsrcdir)/toolkit/xre
-
 ifdef BUILD_STATIC_LIBS
 STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
-LIBS += $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
-else
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-LIBS += $(DIST)/bin/XUL
-else
-EXTRA_DSO_LIBS += xul
-endif
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 TK_LIBS := -framework Cocoa $(TK_LIBS)
 endif
 
-LIBS += \
+LIBS = \
 	$(STATIC_COMPONENTS_LINKER_PATH) \
+	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
 	$(MOZ_JS_LIBS) \
 	$(EXTRA_DSO_LIBS) \
 	$(XPCOM_LIBS) \
@@ -144,12 +136,6 @@ RCFLAGS += -DMOZ_THUNDERBIRD --include-dir $(srcdir)
 endif
 ifdef BUILD_STATIC_LIBS
 RCFLAGS += -DMOZ_STATIC_BUILD
-endif
-endif
-
-ifeq ($(OS_ARCH),BeOS)
-ifdef BUILD_STATIC_LIBS
-OS_LIBS += -ltracker -lgame
 endif
 endif
 
@@ -240,10 +226,6 @@ ifeq ($(OS_ARCH),WINNT)
 endif
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 	cp $(srcdir)/macbuild/thunderbird.icns  $(DIST)/branding/thunderbird.icns
-	cp $(srcdir)/macbuild/dsstore $(DIST)/branding/dsstore
-	cp $(srcdir)/macbuild/background.png $(DIST)/branding/background.png
-	cp $(srcdir)/macbuild/disk.icns $(DIST)/branding/disk.icns
-	cp $(srcdir)/macbuild/license.r $(DIST)/branding/license.r
 endif
 ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
 	cp $(srcdir)/mozicon16.xpm $(DIST)/branding/mozicon16.xpm
@@ -269,7 +251,7 @@ install:: thunderbird
 	$(SYSINSTALL) $< $(DESTDIR)$(bindir)
 
 GARBAGE += thunderbird
-GARBAGE += $(addprefix $(DIST)/bin/defaults/pref/, all.js all-thunderbird.js channel-prefs.js mailnews.js)
+GARBAGE += $(addprefix $(DIST)/bin/defaults/pref/, all.js all-thunderbird.js mailnews.js)
 endif
 
 ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))

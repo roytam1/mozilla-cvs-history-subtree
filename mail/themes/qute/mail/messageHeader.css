@@ -69,10 +69,7 @@
   -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
   background-color: -moz-Field;
   color: -moz-FieldText;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  -moz-margin-start: 15px;
-  -moz-margin-end: 30px;
+  margin: 5px 30px 5px 15px;
 }
 
 /* XXX: Move all of the description attributes to the toolkit */
@@ -107,7 +104,8 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 
 .attachmentBox 
 {
-  width: 15em;
+  min-width: 15em;
+  text-align: left;
 }
 
 .attachmentBox[largeView="true"]
@@ -177,7 +175,7 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 }
 
 .emailDisplayImage {
-  -moz-padding-start: 2px;
+  padding-left: 2px;
   -moz-box-pack: end;
 }
  
@@ -185,7 +183,7 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 
 .addresstwisty {
 
-  -moz-padding-end: 5px;
+  padding-right: 5px;
 
   padding-top: 4px;
   list-style-image: url("chrome://global/skin/tree/twisty-clsd.png");

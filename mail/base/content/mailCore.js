@@ -69,14 +69,6 @@ function MailToolboxCustomizeDone(aToolboxChanged)
   if (document.getElementById("button-file"))
     SetupMoveCopyMenus('button-file', accountManagerDataSource, folderDataSource);
 
-  // make sure the mail views search box is initialized
-  if (document.getElementById("mailviews-container"))
-    viewPickerOnLoad();
- 
-  gSearchInput = null;
-  if (document.getElementById("search-container"))
-    GetSearchInput();
-
   var customizePopup = document.getElementById("CustomizeMailToolbar");
   customizePopup.removeAttribute("disabled");
 
@@ -146,8 +138,7 @@ function CheckOnline()
   return true; 
 }
 
-// aPaneID
-function openOptionsDialog(aPaneID, aTabID)
+function openOptionsDialog(containerID, paneURL, itemID)
 {
   var prefsService = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService).getBranch(null)
   var instantApply = prefsService.getBoolPref("browser.preferences.instantApply");
@@ -158,20 +149,9 @@ function openOptionsDialog(aPaneID, aTabID)
   
   var win = wm.getMostRecentWindow("Mail:Preferences");
   if (win)
-  {
     win.focus();
-    if (aPaneID)
-    {
-      var pane = win.document.getElementById(aPaneID);
-      win.document.documentElement.showPane(pane);
-      
-      // I don't know how to support aTabID for an arbitrary panel when the dialog is already open
-      // This is complicated because showPane is asynchronous (it could trigger a dynamic overlay)
-      // so our tab element may not be accessible right away...
-    }
-  }
   else 
-    openDialog("chrome://messenger/content/preferences/preferences.xul","Preferences", features, aPaneID, aTabID);
+    openDialog("chrome://messenger/content/preferences/preferences.xul","Preferences", features);
 }
 
 function openExtensions(aOpenMode)
@@ -272,32 +252,4 @@ function openAboutDialog()
 #else
   window.openDialog("chrome://messenger/content/aboutDialog.xul", "About", "modal,centerscreen,chrome,resizable=no");
 #endif
-}
-
-/**
- * Opens region specific web pages for the application like the release notes, the help site, etc. 
- *   aResourceName --> the string resource ID in region.properties to load. 
- */
-function openRegionURL(aResourceName)
-{
-  var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
-                          .getService(Components.interfaces.nsIXULAppInfo);
-  try {
-    var strBundleService = Components.classes["@mozilla.org/intl/stringbundle;1"].getService(Components.interfaces.nsIStringBundleService);
-    var regionBundle = strBundleService.createBundle("chrome://messenger-region/locale/region.properties");
-    // the release notes are special and need to be formatted with the app version
-    var urlToOpen;
-    if (aResourceName == "releaseNotesURL")
-      urlToOpen = regionBundle.formatStringFromName(aResourceName, [appInfo.version], 1);
-    else
-      urlToOpen = regionBundle.GetStringFromName(aResourceName);
-      
-    var uri = Components.classes["@mozilla.org/network/io-service;1"]
-              .getService(Components.interfaces.nsIIOService)
-              .newURI(urlToOpen, null, null);
-
-    var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
-                      .getService(Components.interfaces.nsIExternalProtocolService);
-    protocolSvc.loadUrl(uri);
-  } catch (ex) {}
 }

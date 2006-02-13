@@ -104,6 +104,8 @@
 <!-- View Menu -->
 <!ENTITY showMessengerToolbarCmd.label "Mail Toolbar">
 <!ENTITY showMessengerToolbarCmd.accesskey "o">
+<!ENTITY showSearchToolbarCmd.label "Search Bar">
+<!ENTITY showSearchToolbarCmd.accesskey	"e">
 <!ENTITY customizeToolbar.label "Customize...">
 <!ENTITY customizeToolbar.accesskey "C">
 
@@ -162,8 +164,8 @@
 <!ENTITY msgsMenu.label "Messages">
 <!ENTITY msgsMenu.accesskey "M">
 <!ENTITY viewAll.label "All">
-<!ENTITY viewAll.accesskey "A">
 <!ENTITY viewUnread.label "Unread">
+<!ENTITY viewAll.accesskey "A">
 <!ENTITY viewUnread.accesskey "U">
 <!ENTITY viewCustomView.label "Customize...">
 <!ENTITY viewCustomView.accesskey "C">
@@ -227,6 +229,7 @@
 <!-- Search Menu -->
 <!ENTITY searchMenu.label "Search">
 <!ENTITY searchMenu.accesskey "S">
+
 
 <!ENTITY find.label "Find">
 <!ENTITY find.accesskey "F">
@@ -361,7 +364,6 @@
 <!ENTITY markAllReadCmd.key "c">
 <!ENTITY markFlaggedCmd.label "Flag">
 <!ENTITY markFlaggedCmd.accesskey "F">
-<!ENTITY markFlaggedCmd.key "i">
 <!ENTITY markAsJunkCmd.label "As Junk">
 <!ENTITY markAsJunkCmd.accesskey "J">
 <!ENTITY markAsJunkCmd.key "j">
@@ -410,8 +412,8 @@
 <!ENTITY hintsAndTips.label "&brandFullName; Help">
 <!ENTITY hintsAndTipsMac.commandkey "?">
 <!ENTITY hintsAndTips.accesskey "h">
-<!ENTITY updateCmd.label      "Check for Updates...">
 <!ENTITY updateCmd.accesskey  "o">
+<!ENTITY updateCmd.label      "Check for Updates...">
 <!ENTITY aboutCmd.label "About &brandFullName;">
 <!ENTITY aboutCmd.accesskey "A">
 
@@ -433,8 +435,6 @@
 <!ENTITY junkButton.label "Junk">
 <!ENTITY notJunkButton.label "Not Junk">
 <!ENTITY addressBookButton.label "Address Book">
-<!ENTITY searchItem.title "Quick Search">
-<!ENTITY mailViewsToolbarItem.title "Mail Views">
 
 <!-- Mail Toolbar Tooltips-->
 <!ENTITY advancedButton.tooltip "Advanced message search">
@@ -499,7 +499,7 @@
 <!ENTITY viewPickerAll.label "All">
 <!ENTITY viewPickerUnread.label "Unread">
 <!ENTITY viewPickerCustomView.label "Customize...">
-<!ENTITY viewPickerSaveAsVirtualFolder.label "Save View as a Folder...">
+<!ENTITY viewPickerSaveAsVirtualFolder.label "Save Search as a Folder...">
 <!ENTITY SearchNameOrEmail.label "Name or Email contains:">
 <!ENTITY SearchNameOrEmail.accesskey "N">
 <!ENTITY clearButton.label "Clear">
@@ -596,11 +596,11 @@
 <!ENTITY remoteContentMessage.label "To protect your privacy, &brandShortName; has blocked remote images in this message.">
 <!ENTITY loadRemoteContentButton.label "Show Images">
 
-<!-- Phishing Bar -->
+<!-- Phshing bar Bar -->
 <!ENTITY phishingBarMessage.label "&brandShortName; thinks this message might be an email scam.">
 <!ENTITY removePhishingBarButton.label "Not a Scam">
 
-<!-- Quick Search Bar -->
+<!-- Search Bar -->
 <!ENTITY quickSearchCmd.key "k">
 
 <!-- Message Header Context Menu -->
@@ -621,7 +621,7 @@
 <!ENTITY totalCountText.label " Total: ">
 
 <!--  Mac OS X Window Menu -->
-<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY minimizeWindow.key "m">
+<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY bringAllToFront.label "Bring All to Front">
 <!ENTITY zoomWindow.label "Zoom">

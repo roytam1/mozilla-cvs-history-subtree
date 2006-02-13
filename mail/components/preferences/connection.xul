@@ -1,30 +1,28 @@
 <?xml version="1.0"?>
 
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-#
+# 
 # The Original Code is the Thunderbird Preferences System.
-#
-# The Initial Developer of the Original Code is
-# Ben Goodger.
+# 
+# The Initial Developer of the Original Code is Ben Goodger.
 # Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   Ben Goodger <ben@mozilla.org>
 #   Scott MacGregor <mscott@mozilla.org>
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -36,7 +34,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 <!DOCTYPE prefwindow SYSTEM "chrome://messenger/locale/preferences/connection.dtd">
@@ -48,7 +46,7 @@
             title="&connectionsDialog.title;"
             dlgbuttons="accept,cancel"
             onbeforeaccept="return gConnectionsDialog.beforeAccept();"
-            style="width: &window.width; !important;">
+            style="width: 37em !important;">
 
   <prefpane id="ConnectionsDialogPane">
     <preferences>
@@ -82,7 +80,7 @@
       <caption label="&proxyTitle.label;"/>
 
       <radiogroup id="networkProxyType" preference="network.proxy.type"
-                  onsyncfrompreference="return gConnectionsDialog.readProxyType();">
+                  onpreferenceread="return gConnectionsDialog.readProxyType();">
         <radio value="0" label="&directTypeRadio.label;" accesskey="&directTypeRadio.accesskey;"/>
         <radio value="4" label="&WPADTypeRadio.label;" accesskey="&WPADTypeRadio.accesskey;"/>
         <radio value="1" label="&manualTypeRadio.label;" accesskey="&manualTypeRadio.accesskey;"/>
@@ -98,10 +96,10 @@
               </hbox>
               <hbox align="center">
                 <textbox id="networkProxyHTTP" flex="1"
-                         preference="network.proxy.http" onsyncfrompreference="return gConnectionsDialog.readHTTPProxyServer();"/>
+                         preference="network.proxy.http" onpreferenceread="return gConnectionsDialog.readHTTPProxyServer();"/>
                 <label value="&port.label;" accesskey="&HTTPport.accesskey;" control="networkProxyHTTP_Port"/>
                 <textbox id="networkProxyHTTP_Port" size="5"
-                         preference="network.proxy.http_port" onsyncfrompreference="return gConnectionsDialog.readHTTPProxyPort();"/>
+                         preference="network.proxy.http_port" onpreferenceread="return gConnectionsDialog.readHTTPProxyPort();"/>
               </hbox>
             </row>
             <row>
@@ -109,7 +107,7 @@
               <hbox>
                 <checkbox id="shareAllProxies" label="&shareproxy.label;" accesskey="&shareproxy.accesskey;"
                           preference="network.proxy.share_proxy_settings"
-                          onsyncfrompreference="return gConnectionsDialog.updateProtocolPrefs();"/>
+                          onpreferenceread="return gConnectionsDialog.updateProtocolPrefs();"/>
               </hbox>
             </row>
             <row align="center">
@@ -118,10 +116,10 @@
               </hbox>
               <hbox align="center">
                 <textbox id="networkProxySSL" flex="1" preference="network.proxy.ssl"
-                         onsyncfrompreference="return gConnectionsDialog.readProxyProtocolPref('ssl', false);"/>
+                         onpreferenceread="return gConnectionsDialog.readProxyProtocolPref('ssl', false);"/>
                 <label value="&port.label;" accesskey="&SSLport.accesskey;" control="networkProxySSL_Port"/>
                 <textbox id="networkProxySSL_Port" size="5" preference="network.proxy.ssl_port"
-                         onsyncfrompreference="return gConnectionsDialog.readProxyProtocolPref('ssl', true);"/>
+                         onpreferenceread="return gConnectionsDialog.readProxyProtocolPref('ssl', true);"/>
               </hbox>
             </row>
             <row align="center">
@@ -130,10 +128,10 @@
               </hbox>
               <hbox align="center">
                 <textbox id="networkProxySOCKS" flex="1" preference="network.proxy.socks"
-                         onsyncfrompreference="return gConnectionsDialog.readProxyProtocolPref('socks', false);"/>
+                         onpreferenceread="return gConnectionsDialog.readProxyProtocolPref('socks', false);"/>
                 <label value="&port.label;" accesskey="&SOCKSport.accesskey;" control="networkProxySOCKS_Port"/>
                 <textbox id="networkProxySOCKS_Port" size="5" preference="network.proxy.socks_port"
-                         onsyncfrompreference="return gConnectionsDialog.readProxyProtocolPref('socks', true);"/>
+                         onpreferenceread="return gConnectionsDialog.readProxyProtocolPref('socks', true);"/>
               </hbox>
             </row>
             <row>
@@ -159,7 +157,8 @@
         </grid>
         <radio value="2" label="&autoTypeRadio.label;" accesskey="&autoTypeRadio.accesskey;"/>
         <hbox class="indent" flex="1" align="center">
-          <textbox id="networkProxyAutoconfigURL" flex="1" preference="network.proxy.autoconfig_url"/>
+          <textbox id="networkProxyAutoconfigURL" flex="1" preference="network.proxy.autoconfig_url"
+                   onpreferencewrite="return gConnectionsDialog.writeAutoconfigURL();"/>
           <button id="autoReload" label="&reload.label;" accesskey="&reload.accesskey;"
                   oncommand="gConnectionsDialog.reloadPAC();" 
                   preference="pref.advanced.proxies.disable_button.reload"/>

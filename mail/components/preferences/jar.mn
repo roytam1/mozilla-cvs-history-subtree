@@ -30,10 +30,6 @@ messenger.jar:
 *   content/messenger/preferences/fonts.xul
 *   content/messenger/preferences/notifications.xul
 *   content/messenger/preferences/notifications.js
-#ifdef HAVE_SHELL_SERVICE
-*   content/messenger/preferences/defaultClient.xul
-*   content/messenger/preferences/defaultClient.js
-#endif
 *   content/messenger/AccountManager.xul                            (/mailnews/base/prefs/resources/content/AccountManager.xul)
     content/messenger/AccountManager.js                             (/mailnews/base/prefs/resources/content/AccountManager.js)
     content/messenger/am-main.xul                                   (/mailnews/base/prefs/resources/content/am-main.xul)
@@ -41,7 +37,6 @@ messenger.jar:
     content/messenger/am-help.js                                    (/mailnews/base/prefs/resources/content/am-help.js)
     content/messenger/am-server.xul                                 (/mailnews/base/prefs/resources/content/am-server.xul)
     content/messenger/am-serverwithnoidentities.xul                 (/mailnews/base/prefs/resources/content/am-serverwithnoidentities.xul)
-    content/messenger/am-serverwithnoidentities.js                  (/mailnews/base/prefs/resources/content/am-serverwithnoidentities.js)
     content/messenger/am-server.js                                  (/mailnews/base/prefs/resources/content/am-server.js)
     content/messenger/am-server-top.xul                             (/mailnews/base/prefs/resources/content/am-server-top.xul)
     content/messenger/am-copies.xul                                 (/mailnews/base/prefs/resources/content/am-copies.xul)
@@ -49,7 +44,7 @@ messenger.jar:
     content/messenger/am-offline.xul                                (/mailnews/base/prefs/resources/content/am-offline.xul)
     content/messenger/am-offline.js                                 (/mailnews/base/prefs/resources/content/am-offline.js)
     content/messenger/am-addressing.xul                             (/mailnews/base/prefs/resources/content/am-addressing.xul)
-*   content/messenger/am-addressingOverlay.xul                      (/mailnews/base/prefs/resources/content/am-addressingOverlay.xul)
+    content/messenger/am-addressingOverlay.xul                      (/mailnews/base/prefs/resources/content/am-addressingOverlay.xul)
     content/messenger/am-addressing.js                              (/mailnews/base/prefs/resources/content/am-addressing.js)
     content/messenger/am-server-advanced.xul                        (/mailnews/base/prefs/resources/content/am-server-advanced.xul)
     content/messenger/am-server-advanced.js                         (/mailnews/base/prefs/resources/content/am-server-advanced.js)

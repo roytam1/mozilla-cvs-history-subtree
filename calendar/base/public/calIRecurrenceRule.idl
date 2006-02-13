@@ -42,6 +42,7 @@
 
 interface calIItemBase;
 interface calIDateTime;
+interface calIItemOccurrence;
 
 // an interface implementing a RRULE
 

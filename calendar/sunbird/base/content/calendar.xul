@@ -45,17 +45,16 @@
 <!-- Style sheets -->
 
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?> 
-<?xml-stylesheet href="chrome://global/skin/toolbar.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://calendar/skin/calendar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/minimonth.css" type="text/css"?>
 
-<?xml-stylesheet href="chrome://calendar/content/calendar-multiday-view.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-month-view.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-decorated-views.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-view-core.css" type="text/css"?>
-
 <!-- Overlays -->
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
+
+<?xul-overlay href="chrome://calendar/content/dayView.xul"?>
+<?xul-overlay href="chrome://calendar/content/weekView.xul"?>
+<?xul-overlay href="chrome://calendar/content/monthView.xul"?>
+<?xul-overlay href="chrome://calendar/content/multiweekView.xul"?>
 
 <!-- All DTD information is stored in a separate file so that it can be shared by
      hiddenWindow.xul. -->
@@ -132,16 +131,34 @@
             accesskey="&calendar.context.gototoday.accesskey;"
             observes="go_today_command"/>
   <menuseparator/>
+  <menuitem label="&calendar.context.dayview.label;"
+            accesskey="&calendar.context.dayview.accesskey;"
+            observes="day_view_command"/>
+  <menuitem label="&calendar.context.weekview.label;"
+            accesskey="&calendar.context.weekview.accesskey;"
+            observes="week_view_command"/>
+  <menuitem label="&calendar.context.monthview.label;"
+            accesskey="&calendar.context.monthview.accesskey;"
+            observes="month_view_command"/>
+  <menuitem label="&calendar.context.multiweekview.label;"
+            accesskey="&calendar.context.multiweekview.accesskey;"
+            observes="multiweek_view_command"/>
+
+  <menuseparator/>
   <menuitem id="only-workday-checkbox-2"
             type="checkbox"
             label="&calendar.onlyworkday.checkbox.label;"
             accesskey="&calendar.onlyworkday.checkbox.accesskey;"
-            observes="toggle_workdays_only"/>
+            oncommand="changeOnlyWorkdayCheckbox(2);"
+            persist="checked"
+            disabled="true"/>
   <menuitem id="display-todo-inview-checkbox-2"
             type="checkbox"
             label="&calendar.displaytodos.checkbox.label;"
             accesskey="&calendar.displaytodos.checkbox.accesskey;"
-            observes="toggle_tasks_in_view"/>
+            oncommand="changeDisplayToDoInViewCheckbox(2);"
+            persist="checked"
+            disabled="true"/>
 
   <menuseparator/>
   <menuitem label="&calendar.context.emailevent.label;"
@@ -154,10 +171,9 @@
   <menuitem label="&calendar.context.newtodo.label;"
             accesskey="&calendar.context.newtodo.accesskey;"
             observes="new_todo_command"/>
-  <menuitem id="task-context-menu-modify"
-            label="&calendar.context.modifytask.label;"
-            accesskey="&calendar.context.modifytask.accesskey;"
-            oncommand="modifyTaskFromContext()"/>
+  <!--
+  Currently no way to get the item that we clicked on originally 
+  <menuitem label="&calendar.context.modifytask.label;" accesskey="&calendar.context.modifytask.accesskey;" observes="modify_todo_command"/>-->
   <menuitem label="&calendar.context.deletetask.label;"
             accesskey="&calendar.context.deletetask.accesskey;"
             observes="delete_todo_command"/>
@@ -221,25 +237,20 @@
 </popup>
 
 <!-- CALENDAR LIST CONTEXT MENU -->
-<popup id="calendarlist-context-menu" onpopupshowing="checkCalListTarget()">
+<popup id="calendarlist-context-menu">
   <menuitem label="&calendar.context.newserver.label;"
-            id="calpopup-new"
             accesskey="&calendar.context.newserver.accesskey;"
-            observes="new_calendar_command"/>
+            observes="new_local_calendar_command"/>
   <menuitem label="&calendar.context.editserver.label;"
-            id="calpopup-edit"
             accesskey="&calendar.context.editserver.accesskey;"
-            observes="edit_calendar_command"/>
+            observes="edit_local_calendar_command"/>
   <menuitem label="&calendar.context.deleteserver.label;"
-            id="calpopup-delete"
             accesskey="&calendar.context.deleteserver.accesskey;"
-            observes="delete_calendar_command"/>
+            observes="delete_server_command"/>
   <menuitem label="&calendar.context.reloadserver.label;"
-            id="calpopup-reload"
             accesskey="&calendar.context.reloadserver.accesskey;"
             observes="reload_remote_calendars"/>
   <menuitem label="&calendar.context.publish.label;"
-            id="calpopup-publish"
             accesskey="&calendar.context.publish.accesskey;"
             observes="publish_calendar"/>
 </popup>
@@ -282,29 +293,21 @@
                    observes="delete_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-day-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.dayview.button.label;"
                    tooltiptext="&calendar.dayview.button.tooltip;"
                    observes="day_view_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-week-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.weekview.button.label;"
                    tooltiptext="&calendar.weekview.button.tooltip;"
                    observes="week_view_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-multiweek-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.multiweekview.button.label;"
                    tooltiptext="&calendar.multiweekview.button.tooltip;"
                    observes="multiweek_view_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-month-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.monthview.button.label;"
                    tooltiptext="&calendar.monthview.button.tooltip;"
                    observes="month_view_command"/>
@@ -343,7 +346,7 @@
                    id="calendar-subscribe-button"
                    label="&calendar.subscribe.button.label;"
                    tooltiptext="&calendar.subscribe.button.tooltip;"
-                   observes="new_calendar_command"/>
+                   observes="new_server_command"/>
 
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-publish-button"
@@ -395,7 +398,7 @@
   </toolbarpalette>
   <toolbar class="toolbar-primary chromeclass-toolbar" id="calendar-bar"
            iconsize="big"
-           defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-event-button,calendar-delete-event-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,spring,throbber-box"
+           defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-event-button,calendar-delete-event-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,spring,throbber-box"
            customizable="true" mode="full"
            toolbarname="&calendar.maintoolbar.name;" accesskey="&calendar.maintoolbar.accesskey;"
            context="toolbar-context-menu"/>
@@ -403,37 +406,32 @@
 </toolbox>
 
 <!-- tooltips to show cropped text behave as a titletip: don't hide until mouse moved away -->
-<tooltip id="eventTreeTooltip"
-         onpopupshowing="return onMouseOverEventTree( this, event )"
+<tooltip id="eventTreeListTooltip"
+         onpopupshowing="changeToolTipTextForEvent( event );return( checkTooltip( event ) );"
          noautohide="true"/>
 
-<tooltip id="taskTreeTooltip"
-         onpopupshowing="return onMouseOverTaskTree( this, event )"
+<tooltip id="eventTooltip"
          noautohide="true"/>
 
-<tooltip id="itemTooltip"
+<tooltip id="taskTooltip"
+         onpopupshowing="changeToolTipTextForToDo( event );return( checkTooltip( event ) );"
          noautohide="true"/>
 
 <!-- V I S I B L E  C O N T E N T  -->
 
 <vbox id="calendar-top-box"
       flex="1"
-      context="context-menu">
-
-<!--Bug 306877: Removed drag and drop support for 0.3a1.  Reimplement this!
-<vbox id="calendar-top-box"
-      flex="1"
       context="context-menu"
       ondraggesture="nsDragAndDrop.startDrag(event,calendarManagerDNDObserver);"
       ondragover="nsDragAndDrop.dragOver(event,calendarManagerDNDObserver)"
-      ondragdrop="nsDragAndDrop.drop(event,calendarManagerDNDObserver)">-->
+      ondragdrop="nsDragAndDrop.drop(event,calendarManagerDNDObserver)">
 
   <!-- Calendar Controls-->
  
   <hbox id="calendar-content-box" flex="1">
 
     <vbox id="left-hand-content" persist="width">
-      <tabbox id="tablist" persist="selectedIndex">
+      <tabbox id="tablist">
         <tabs>
           <tab label="&calendar.calendartab.label;"/>
           <tab label="&calendar.listofcalendarstab.label;"/>
@@ -453,13 +451,33 @@
           <tabpanel>
             <!--<vbox id="left-hand-above-splitter" flex="1">-->
             <listbox id="list-calendars-listbox" class="unifinder-tree-class" flex="1" 
-                     contextmenu="calendarlist-context-menu"
-                     ondblclick="calendarListboxDoubleClick(event)">
+                     contextmenu="calendarlist-context-menu" datasources="rdf:null" ref="urn:calendarcontainer">
+              <listhead>
+                <listheader flex="1" crop="end" label="&calendar.calendarlistbox.label;"/>
+                <listheader/>
+              </listhead>
               <listcols>
-                <listcol/>
-                <listcol/>
                 <listcol flex="1"/>
+                <listcol/>
               </listcols>
+              <template>
+                <rule>   
+                  <listitem uri="rdf:*" 
+                            calendarPath="rdf:http://home.netscape.com/NC-rdf#path"
+                            onclick="switchCalendar( event );">
+                    <listcell class="calendar-list-item-class"
+                              label="rdf:http://home.netscape.com/NC-rdf#name"
+                              flex="1"
+                              type="checkbox"
+                              checked="rdf:http://home.netscape.com/NC-rdf#active"/>
+                    <!-- If you add something between the above listcell and this listcell,
+                         or between the next listcell and the image tag, you have to modify calendarManager.js -->
+                    <listcell>
+                      <image class="calendar-list-item-class"/>
+                    </listcell>
+                  </listitem>
+                </rule>
+              </template>
             </listbox>
             <!--</vbox>-->
           </tabpanel>
@@ -525,27 +543,9 @@
                        persist="hidden ordinal width sortDirection sortActive" 
                        hidden="true"
                        flex="1" label="&calendar.unifinder.tree.categories.label;"/>
-              <splitter class="tree-splitter"/>
-              <treecol id="unifinder-todo-tree-col-location"
-                       persist="hidden ordinal width sortDirection sortActive" 
-                       flex="1"
-                       hidden="true"
-                       label="&calendar.unifinder.tree.location.label;"/>
-              <splitter class="tree-splitter"/>
-              <treecol id="unifinder-todo-tree-col-status"
-                       persist="hidden ordinal width sortDirection sortActive" 
-                       flex="1"
-                       hidden="true"
-                       label="&calendar.unifinder.tree.status.label;"/>
-              <splitter class="tree-splitter"/>
-              <treecol id="unifinder-todo-tree-col-calendarname"
-                       persist="hidden ordinal width sortDirection sortActive" 
-                       flex="1"
-                       hidden="true"
-                       label="&calendar.unifinder.tree.calendarname.label;"/>
             </treecols>
          
-            <treechildren tooltip="taskTreeTooltip"
+            <treechildren tooltip="taskTooltip"
                           onmousedown="unifinderMouseDownToDo( event )"/>
           </tree>
         </vbox>
@@ -630,15 +630,15 @@
                      flex="1"
                      hidden="true"
                      label="&calendar.unifinder.tree.status.label;"/>
-            <treecol id="unifinder-search-results-tree-col-calendarname"
+            <treecol id="unifinder-search-results-tree-col-filename"
                      persist="hidden ordinal width sortDirection sortActive" 
                      flex="1"
                      hidden="true"
-                     label="&calendar.unifinder.tree.calendarname.label;"/>
+                     label="&calendar.unifinder.tree.filename.label;"/>
           </treecols>
 
           <!-- on mousedown here happens before onclick above -->
-          <treechildren tooltip="eventTreeTooltip" 
+          <treechildren tooltip="eventTreeListTooltip" 
                         onkeypress="if (event.keyCode == 13) unifinderEditCommand();"
                         ondragover="return( false );"  
                         ondblclick="unifinderDoubleClickEvent( event )"
@@ -651,16 +651,22 @@
         <grippy class="sidebar-splitter-grippy"/>
       </splitter>
 
-      <deck id="view-deck" flex="1" persist="selectedIndex">
-          <calendar-decorated-day-view id="day-view" flex="1" 
-                                       context="context-menu"/>
-          <calendar-decorated-week-view id="week-view" flex="1" 
-                                        context="context-menu"/>
-          <calendar-decorated-multiweek-view id="multiweek-view" flex="1" 
-                                             context="context-menu"/>
-          <calendar-decorated-month-view id="month-view" flex="1" 
-                                         context="context-menu"/>
-      </deck>
+      <!-- Begin Day/Month/Week Deck -->
+      <deck id="calendar-deck" persist="selectedIndex" flex="1">
+
+        <!-- Calendar Month View -->
+        <vbox id="month-view-box"/>
+
+        <!-- Calendar Week View -->
+        <vbox id="week-view-box"/>
+
+        <!-- Calendar Day View -->
+        <vbox id="day-view-box"/>
+                      
+        <!-- Calendar Near Future View -->
+        <vbox id="multiweek-view-box"/>
+
+      </deck>  <!-- End: Day/Month/Week Deck -->
 
     </vbox>
   </hbox> <!-- End: box with unifinder on left, calendar on right -->

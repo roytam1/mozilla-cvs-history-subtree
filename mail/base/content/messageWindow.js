@@ -253,7 +253,6 @@ function OnLoadMessageWindow()
 function delayedOnLoadMessageWindow()
 {
   HideMenus();
-  HideToolbarButtons();
   ShowMenus();
   AddMailOfflineObserver();
   CreateMailWindowGlobals();
@@ -288,7 +287,7 @@ function delayedOnLoadMessageWindow()
         messageUri = window.arguments[0];
         if (messageUri instanceof Components.interfaces.nsIURI)
         {
-          loadCustomMessage = /type=application\/x-message-display/.test(messageUri.spec);
+          loadCustomMessage = /type=x-message-display/.test(messageUri.spec);
           gCurrentMessageUri = messageUri.spec;
           if (messageUri instanceof Components.interfaces.nsIMsgMailNewsUrl)
             folder = messageUri.folder;
@@ -415,9 +414,14 @@ function CreateView(originalView)
 function extractMsgKeyFromURI()
 {
   var msgKey = -1;
-  var msgHdr =   messenger.msgHdrFromURI(gCurrentMessageUri);
-  if (msgHdr)
-    msgKey = msgHdr.messageKey;
+  var msgService = messenger.messageServiceFromURI(gCurrentMessageUri);
+  if (msgService)
+  {
+    var msgHdr = msgService.messageURIToMsgHdr(gCurrentMessageUri);
+    if (msgHdr)
+      msgKey = msgHdr.messageKey;
+  }
+
   return msgKey;
 }
 
@@ -428,25 +432,15 @@ function ShowMenus()
     openMail3Pane_menuitem.removeAttribute("hidden");
 }
 
-// Toolbar buttons like quick search and mail views should be hidden for the message window
-function HideToolbarButtons()
-{
-  // How can we remove these two items from the palette as well? 
-  var mailToolbar = document.getElementById('mail-bar2');
-  if (mailToolbar)
-  {
-    var defaultSet = mailToolbar.getAttribute("defaultset");
-    defaultSet = defaultSet.replace(/search-container/i, "");
-    defaultSet = defaultSet.replace(/mailviews-container/i, "");
-    mailToolbar.setAttribute('defaultset', defaultSet);
-  }
-}
-
 function HideMenus()
 {
 	var message_menuitem=document.getElementById('menu_showMessage');
 	if (message_menuitem)
 		message_menuitem.setAttribute("hidden", "true");
+
+	var showSearchToolbar = document.getElementById('menu_showSearchToolbar');
+	if (showSearchToolbar)
+		showSearchToolbar.setAttribute("hidden", "true");
 
 	var showSearch_showMessage_Separator = document.getElementById('menu_showSearch_showMessage_Separator');
 	if (showSearch_showMessage_Separator)
@@ -588,9 +582,10 @@ function GetSelectedIndices(dbView)
 
 function GetLoadedMsgFolder()
 {
-  return (gCurrentFolderUri)
-    ? RDF.GetResource(gCurrentFolderUri).QueryInterface(Components.interfaces.nsIMsgFolder)
-    : null;
+	if (gCurrentFolderUri)
+		return RDF.GetResource(gCurrentFolderUri).QueryInterface(Components.interfaces.nsIMsgFolder);
+	else
+    return null;
 }
 
 function GetSelectedFolderURI()
@@ -687,7 +682,7 @@ function RerootFolderForStandAlone(uri)
 
 function GetMsgHdrFromUri(messageUri)
 {
-  return messenger.msgHdrFromURI(messageUri);
+  return messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
 }
 
 function SelectMessage(messageUri)
@@ -730,6 +725,17 @@ var MessageWindowController =
   {
     switch ( command )
     {
+      case "cmd_reply":
+      case "button_reply":
+      case "cmd_replySender":
+      case "cmd_replyGroup":
+      case "cmd_replyall":
+      case "button_replyall":
+      case "cmd_forward":
+      case "button_forward":
+      case "cmd_forwardInline":
+      case "cmd_forwardAttachment":
+      case "cmd_editAsNew":
       case "cmd_delete":
       case "cmd_undo":
       case "cmd_redo":
@@ -773,17 +779,6 @@ var MessageWindowController =
       case "cmd_previousFlaggedMsg":
         return !(gDBView.keyForFirstSelectedMessage == nsMsgKey_None);
 
-      case "cmd_reply":
-      case "button_reply":
-      case "cmd_replySender":
-      case "cmd_replyGroup":
-      case "cmd_replyall":
-      case "button_replyall":
-      case "cmd_forward":
-      case "button_forward":
-      case "cmd_forwardInline":
-      case "cmd_forwardAttachment":
-      case "cmd_editAsNew":
       case "cmd_getNextNMessages":
       case "cmd_find":
       case "cmd_findAgain":

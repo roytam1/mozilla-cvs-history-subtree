@@ -63,8 +63,12 @@ listbox {
   padding-top: 2px;
 }
 
-.search-menulist, .search-value-menulist {
+menulist {
   width: 12em;
+}
+
+menulist > menupopup > menuitem {
+  padding-right: 2px;
 }
 
 textbox {
@@ -76,14 +80,3 @@ textbox {
   min-height:1px;
 }
 
-.filler {
-  -moz-padding-end: 22px;
-}
-
-.ruleactionitem {
-  min-width: 20em;
-}
-
-.ruleaction-type {
-  min-width: 15em;
-}
