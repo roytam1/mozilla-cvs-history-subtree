@@ -582,7 +582,6 @@ ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
 /* internal_sortcmp_proc - Wrapper to call a PERL cmp function */
 static
 int
-LDAP_CALL
 internal_sortcmp_proc(const char *s1, const char *s2)
 {
   int count;
