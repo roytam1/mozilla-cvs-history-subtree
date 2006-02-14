@@ -1089,19 +1089,23 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   // First reflow the caption.  nsHTMLReflowState takes care of making
   // side captions small.
   nsHTMLReflowMetrics captionMet;
+  nsSize captionSize;
   nsMargin captionMargin, captionMarginNoAuto;
   if (mCaptionFrame &&
       (reflowAllKids || (mCaptionFrame->GetStateBits() &
                          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)))) {
     nsReflowStatus capStatus; // don't let the caption cause incomplete
+    nsMargin ignorePadding;
     rv = OuterReflowChild(aPresContext, mCaptionFrame, aOuterRS,
-                          captionMet, aOuterRS.computedWidth, captionSize,
+                          captionMet, aOuterRS.mComputedWidth, captionSize,
                           captionMargin, captionMarginNoAuto,
                           ignorePadding, capStatus);
     if (NS_FAILED(rv)) return rv;
+  } else {
+    // XXX set captionMargin, captionMarginNoAuto, captionSize, etc.
   }
 
-  nscoord innerAvailWidth = aOuterRS.computedWidth;
+  nscoord innerAvailWidth = aOuterRS.mComputedWidth;
   if (captionSide == NS_SIDE_LEFT || captionSide == NS_SIDE_RIGHT)
     // If side is left/right then we know we have a caption and we
     // reflowed it.
@@ -1110,13 +1114,16 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   // Then, now that we know how much to reduce the width of the inner
   // table to account for side captions, reflow the inner table.
   nsHTMLReflowMetrics innerMet;
-  nsMargin innerMargin, innerMarginNoAuto;
+  nsSize innerSize;
+  nsMargin innerMargin, innerMarginNoAuto, innerPadding;
   if (reflowAllKids || (mInnerTableFrame->GetStateBits() &
                         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
     rv = OuterReflowChild(aPresContext, mInnerTableFrame, aOuterRS, innerMet,
                           innerAvailWidth, innerSize, innerMargin,
                           innerMarginNoAuto, innerPadding, aStatus);
     if (NS_FAILED(rv)) return rv;
+  } else {
+    // XXX set captionMargin, captionMarginNoAuto, innerPadding, innerSize, etc.
   }
 
   nsSize   containSize = GetContainingBlockSize(aOuterRS);
@@ -1126,7 +1133,6 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
 
   if (mCaptionFrame) {
     nsPoint captionOrigin;
-
     GetCaptionOrigin(aPresContext, captionSide, containSize, innerSize, 
                      innerMargin, captionSize, captionMargin, captionOrigin);
     FinishReflowChild(mCaptionFrame, aPresContext, nsnull, captionMet,
@@ -1135,9 +1141,9 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   // XXX If the height is constrained then we need to check whether
   // everything still fits...
 
+  nsPoint innerOrigin;
   GetInnerOrigin(aPresContext, captionSide, containSize, captionSize, 
                  captionMargin, innerSize, innerMargin, innerOrigin);
-
   FinishReflowChild(mInnerTableFrame, aPresContext, nsnull, innerMet,
                     innerOrigin.x, innerOrigin.y, 0);
 
