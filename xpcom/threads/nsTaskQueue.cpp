@@ -113,6 +113,7 @@ nsTaskQueue::PutTask(nsIRunnable *runnable)
     if (rv) {
       task.swap(mTail->mTasks[mOffsetTail]);
       ++mOffsetTail;
+      mon.Notify();
     }
   }
   return rv;

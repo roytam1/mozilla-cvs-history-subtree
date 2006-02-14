@@ -95,43 +95,10 @@ TestThreads()
         return rv;
     }
 
-#if 0
-    PRThreadScope scope;
-    rv = runner->GetScope(&scope);
-    if (NS_FAILED(rv)) {
-        printf("runner already exited\n");        
-    }
-#endif
-
     rv = runner->Shutdown();     // wait for the runner to die before quitting
     if (NS_FAILED(rv)) {
         printf("join failed\n");        
     }
-
-#if 0
-    rv = runner->GetScope(&scope);      // this should fail after Join
-    if (NS_SUCCEEDED(rv)) {
-        printf("get scope failed\n");        
-    }
-
-    rv = runner->Interrupt();   // this should fail after Join
-    if (NS_SUCCEEDED(rv)) {
-        printf("interrupt failed\n");        
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    // try an unjoinable thread 
-    rv = NS_NewThread(getter_AddRefs(runner), new nsRunner(1));
-    if (NS_FAILED(rv)) {
-        printf("failed to create thread\n");
-        return rv;
-    }
-
-    rv = runner->Join();     // wait for the runner to die before quitting
-    if (NS_SUCCEEDED(rv)) {
-        printf("shouldn't have been able to join an unjoinable thread\n");        
-    }
-#endif
 
     PR_Sleep(PR_MillisecondsToInterval(100));       // hopefully the runner will quit here
 

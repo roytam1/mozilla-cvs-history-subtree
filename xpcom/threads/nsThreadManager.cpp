@@ -109,6 +109,9 @@ nsThreadManager::Shutdown()
     if (!isMainThread)
       thread->Shutdown();
   }
+
+  // Remove the TLS entry for the main thread.
+  PR_SetThreadPrivate(mCurThreadIndex, nsnull);
 }
 
 NS_IMETHODIMP
