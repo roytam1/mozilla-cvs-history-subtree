@@ -27,16 +27,25 @@ HelperAppDlg.prototype = {
 
         const prefSvcContractID = "@mozilla.org/preferences-service;1";
         const prefSvcIID = Components.interfaces.nsIPrefService;
+        const nsIFile = Components.interfaces.nsIFile;
+
+        var folderDirFile = Components.classes["@mozilla.org/file/local;1"].createInstance(nsIFile);
+
         var branch = Components.classes[prefSvcContractID].getService(prefSvcIID)
                                                           .getBranch("browser.download.");
         var dir = null;
 
         const nsILocalFile = Components.interfaces.nsILocalFile;
         const kDownloadDirPref = "dir";
-
         // Try and pull in download directory pref
         try {
-            dir = branch.getComplexValue(kDownloadDirPref, nsILocalFile);
+
+            var dirStringPath=branch.getCharPref(kDownloadDirPref);
+            var localFileDir = folderDirFile.QueryInterface(nsILocalFile);
+            dir = localFileDir.initWithPath(dirStringPath);
+
+            //dir = branch.getComplexValue(kDownloadDirPref, nsILocalFile);
+            
         } catch (e) { }
 
         if (dir && dir.exists())
