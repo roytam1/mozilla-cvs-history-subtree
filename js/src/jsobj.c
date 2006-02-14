@@ -1280,6 +1280,7 @@ obj_watch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSObject *funobj;
     JSFunction *fun;
+    JSStackFrame *caller;
     jsval userid, value;
     jsid propid;
     uintN attrs;
@@ -1291,8 +1292,15 @@ obj_watch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         if (!fun)
             return JS_FALSE;
         funobj = fun->object;
+        caller = JS_GetScriptedCaller(cx, cx->fp);
+        if (caller &&
+            !js_CheckPrincipalsAccess(cx, funobj,
+                                      caller->script->principals,
+                                      JS_GetFunctionName(fun))) {
+            return JS_FALSE;
+        }
+        argv[1] = OBJECT_TO_JSVAL(funobj);
     }
-    argv[1] = OBJECT_TO_JSVAL(funobj);
 
     /* Compute the unique int/atom symbol id needed by js_LookupProperty. */
     userid = argv[0];
