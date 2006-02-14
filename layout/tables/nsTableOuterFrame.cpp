@@ -215,6 +215,7 @@ nsTableOuterFrame::AppendFrames(nsIAtom*        aListName,
   if (nsLayoutAtoms::captionList == aListName) {
     mCaptionFrames.AppendFrames(this, aFrameList);
     mCaptionFrame = mCaptionFrames.FirstChild();
+    rv = NS_OK;
 
     // Reflow the new caption frame. It's already marked dirty, so
     // just tell the pres shell.
@@ -237,8 +238,9 @@ nsTableOuterFrame::InsertFrames(nsIAtom*        aListName,
 {
   nsresult rv;
   if (nsLayoutAtoms::captionList == aListName) {
-    rv = mCaptionFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
+    mCaptionFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
     mCaptionFrame = mCaptionFrames.FirstChild();
+    rv = NS_OK;
   }
   else {
     NS_PRECONDITION(!aPrevFrame, "invalid previous frame");
@@ -410,7 +412,7 @@ nsTableOuterFrame::GetMargin(nsPresContext*           aPresContext,
   // create and init the child reflow state
   nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame,
                             nsSize(aAvailWidth, aOuterRS.availableHeight),
-                            eReflowReason_Resize, PR_FALSE);
+                            PR_FALSE);
   InitChildReflowState(*aPresContext, childRS);
 
   aMargin = childRS.mComputedMargin;
@@ -1142,7 +1144,7 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   } else {
     innerSize = mInnerTableFrame->GetSize();
     GetMargin(aPresContext, aOuterRS, mCaptionFrame, aOuterRS.mComputedWidth,
-              innerSize);
+              innerMargin);
   }
 
   nsSize   containSize = GetContainingBlockSize(aOuterRS);
