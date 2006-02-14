@@ -528,6 +528,7 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
 
   switch(aVerb) {
     case eLinkVerb_New:
+      NS_ASSERTION(target.IsEmpty(), "Losing window name information");
       target.AssignLiteral("_blank");
       // Fall into replace case
     case eLinkVerb_Undefined:

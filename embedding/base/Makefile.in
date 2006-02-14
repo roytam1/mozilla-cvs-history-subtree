@@ -76,6 +76,7 @@ SDK_LIBRARY     =                        \
 
 XPIDLSRCS	    = \
                 nsIWindowCreator2.idl \
+                nsIWindowProvider.idl \
                 $(NULL)
 
 CPPSRCS         = \
