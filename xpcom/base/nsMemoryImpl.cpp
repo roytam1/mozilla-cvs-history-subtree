@@ -37,8 +37,8 @@
 
 #include "nsXPCOM.h"
 #include "nsMemoryImpl.h"
+#include "nsThreadManager.h"
 
-#include "nsIEventQueueService.h"
 #include "nsIObserverService.h"
 #include "nsIRunnable.h"
 #include "nsIServiceManager.h"
@@ -46,7 +46,7 @@
 #include "nsIThread.h"
 
 #include "prmem.h"
-#include "plevent.h"
+#include "prcvar.h"
 
 #include "nsAlgorithm.h"
 #include "nsAutoLock.h"
@@ -237,20 +237,7 @@ nsMemoryImpl::FlushMemory(const PRUnichar* aReason, PRBool aImmediate)
         // They've asked us to run the flusher *immediately*. We've
         // got to be on the UI main thread for us to be able to do
         // that...are we?
-        PRBool isOnUIThread = PR_FALSE;
-
-        nsCOMPtr<nsIThread> main;
-        rv = nsIThread::GetMainThread(getter_AddRefs(main));
-        if (NS_SUCCEEDED(rv)) {
-            nsCOMPtr<nsIThread> current;
-            rv = nsIThread::GetCurrent(getter_AddRefs(current));
-            if (NS_SUCCEEDED(rv)) {
-                if (current == main)
-                    isOnUIThread = PR_TRUE;
-            }
-        }
-
-        if (! isOnUIThread) {
+        if (!nsThreadManager::IsMainThread()) {
             NS_ERROR("can't synchronously flush memory: not on UI thread");
             return NS_ERROR_FAILURE;
         }
@@ -272,16 +259,11 @@ nsMemoryImpl::FlushMemory(const PRUnichar* aReason, PRBool aImmediate)
         rv = RunFlushers(aReason);
     }
     else {
-        nsCOMPtr<nsIEventQueueService> eqs = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-        if (eqs) {
-            nsCOMPtr<nsIEventQueue> eq;
-            rv = eqs->GetThreadEventQueue(NS_UI_THREAD, getter_AddRefs(eq));
-            if (NS_SUCCEEDED(rv)) {
-                PL_InitEvent(&sFlushEvent.mEvent, this, HandleFlushEvent, DestroyFlushEvent);
-                sFlushEvent.mReason = aReason;
-
-                rv = eq->PostEvent(NS_REINTERPRET_CAST(PLEvent*, &sFlushEvent));
-            }
+        nsCOMPtr<nsIThread> thread;
+        nsThreadManager::get()->GetMainThread(getter_AddRefs(thread));
+        if (thread) {
+            sFlushEvent.mReason = aReason;
+            rv = thread->Dispatch(&sFlushEvent, NS_DISPATCH_NORMAL);
         }
     }
 
@@ -305,19 +287,16 @@ nsMemoryImpl::RunFlushers(const PRUnichar* aReason)
     return NS_OK;
 }
 
-void*
-nsMemoryImpl::HandleFlushEvent(PLEvent* aEvent)
-{
-    FlushEvent* event = NS_REINTERPRET_CAST(FlushEvent*, aEvent);
+// XXX need NS_IMPL_STATIC_ADDREF/RELEASE
+NS_IMETHODIMP_(nsrefcnt) nsMemoryImpl::FlushEvent::AddRef() { return 2; }
+NS_IMETHODIMP_(nsrefcnt) nsMemoryImpl::FlushEvent::Release() { return 1; }
+NS_IMPL_QUERY_INTERFACE1(nsMemoryImpl::FlushEvent, nsIRunnable)
 
-    sGlobalMemory.RunFlushers(event->mReason);
-    return 0;
-}
-
-void
-nsMemoryImpl::DestroyFlushEvent(PLEvent* aEvent)
+NS_IMETHODIMP
+nsMemoryImpl::FlushEvent::Run()
 {
-    // no-op, since mEvent is a member of nsMemoryImpl
+    sGlobalMemory.RunFlushers(mReason);
+    return NS_OK;
 }
 
 PRLock*
@@ -421,10 +400,8 @@ MemoryFlusher::Init()
     sCVar = PR_NewCondVar(sLock);
     if (!sCVar) return NS_ERROR_FAILURE;
 
-    return NS_NewThread(&sThread,
-                        this,
-                        0, /* XXX use default stack size? */
-                        PR_JOINABLE_THREAD);
+    return nsThreadManager::NewThread(NS_LITERAL_CSTRING("xpcom.memoryflusher"),
+                                      this, &sThread);
 }
 
 void
@@ -438,7 +415,7 @@ MemoryFlusher::StopAndJoin()
         }
 
         if (sThread)
-            sThread->Join();
+            sThread->Shutdown();
     }
 
     NS_IF_RELEASE(sThread);

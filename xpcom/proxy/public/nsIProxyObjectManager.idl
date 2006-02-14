@@ -36,23 +36,27 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+
 #include "nsISupports.idl"
-interface nsIEventQueue;
+
+interface nsIDispatchTarget;
 
 /**
  * See http://www.mozilla.org/projects/xpcom/Proxies.html
  */
 
-[scriptable, uuid(eea90d43-b059-11d2-915e-c12b696c9333)]
+[scriptable, uuid(ee8ce1e3-0319-4bd9-8f70-7258b21c7733)]
 interface nsIProxyObjectManager : nsISupports 
 {
     /**
      * Constants for proxyType
      */
+
     /**
      * Synchronous: Block until result available, like function call.
      */
     const long INVOKE_SYNC   = 0x0001; 
+
     /**
      * Asynchronous: Return without waiting for result.
      * (Warning: do not pass &pointers into stack when using this flag.)
@@ -64,20 +68,11 @@ interface nsIProxyObjectManager : nsISupports
      */
     const long FORCE_PROXY_CREATION = 0x0004;
 
-
-    void getProxyForObject(in nsIEventQueue destQueue, 
+    void getProxyForObject(in nsIDispatchTarget target, 
                            in nsIIDRef iid, 
                            in nsISupports object, 
                            in PRInt32 proxyType,
                            [iid_is(iid),retval] out nsQIResult result);
-    
-    void getProxy(in nsIEventQueue destQueue, 
-                  in nsIIDRef cid, 
-                  in nsISupports aOuter,
-                  in nsIIDRef iid,
-                  in PRInt32 proxyType,
-                  [iid_is(iid),retval] out nsQIResult result);
-                                        
 };
 
 
@@ -102,7 +97,7 @@ interface nsIProxyObjectManager : nsISupports
  * readable.
  */
 extern NS_COM nsresult
-NS_GetProxyForObject(nsIEventQueue *destQueue, 
+NS_GetProxyForObject(nsIDispatchTarget *target, 
                      REFNSIID aIID, 
                      nsISupports* aObj, 
                      PRInt32 proxyType, 

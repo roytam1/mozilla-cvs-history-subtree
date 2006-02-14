@@ -35,23 +35,22 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __nsProxyEvent_h_
-#define __nsProxyEvent_h_
+#ifndef nsProxyEvent_h__
+#define nsProxyEvent_h__
 
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsIFactory.h"
+#include "nsIDispatchTarget.h"
 
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
-#include "plevent.h"
 #include "prtypes.h"
 #include "xptcall.h"
 #include "xptinfo.h"
     
 class nsProxyObjectCallInfo;
+class nsIRunnable;
 
 #define PROXY_SYNC    0x0001  // acts just like a function call.
 #define PROXY_ASYNC   0x0002  // fire and forget.  This will return immediately and you will lose all return information.
@@ -85,15 +84,16 @@ class nsProxyObjectCallInfo;
 //  change your interface, or contact me about this feature request.
 
 
-
-
 class nsProxyObject
 {
 public:
-    nsProxyObject(nsIEventQueue *destQueue, PRInt32 proxyType, nsISupports *realObject,
-		nsIEventQueueService* eventQService);
-    nsProxyObject(nsIEventQueue *destQueue, PRInt32 proxyType, const nsCID &aClass,  
-		nsISupports *aDelegate,  const nsIID &aIID, nsIEventQueueService* eventQService);
+    nsProxyObject(nsIDispatchTarget *destQueue, PRInt32 proxyType,
+                  nsISupports *realObject);
+                  /* XXX
+    nsProxyObject(nsIDispatchTarget *destQueue, PRInt32 proxyType,
+                  const nsCID &aClass, nsISupports *aDelegate,
+                  const nsIID &aIID);
+                  */
 
     void AddRef();
     void Release();
@@ -107,7 +107,7 @@ public:
     
     nsresult            PostAndWait(nsProxyObjectCallInfo *proxyInfo);
     nsISupports*        GetRealObject() const { return mRealObject; }
-    nsIEventQueue*      GetQueue() const { return mDestQueue; }
+    nsIDispatchTarget*  GetTarget() const { return mTarget; }
     PRInt32             GetProxyType() const { return mProxyType; }
 
     friend class nsProxyEventObject;
@@ -117,17 +117,15 @@ private:
 
     PRInt32                   mProxyType;
     
-    nsCOMPtr<nsIEventQueue>   mDestQueue;        /* destination queue */
+    nsCOMPtr<nsIDispatchTarget> mTarget;         /* dispatch target */
     
     nsCOMPtr<nsISupports>     mRealObject;       /* the non-proxy object that this event is referring to. 
                                                     This is a strong ref. */
-    nsCOMPtr<nsIEventQueueService> mEventQService;
 
     nsresult convertMiniVariantToVariant(nsXPTMethodInfo   * methodInfo, 
                                          nsXPTCMiniVariant * params, 
                                          nsXPTCVariant     **fullParam, 
                                          uint8 *paramCount);
-
 };
 
 
@@ -140,14 +138,14 @@ public:
                           PRUint32 methodIndex, 
                           nsXPTCVariant* parameterList, 
                           PRUint32 parameterCount, 
-                          PLEvent *event);
+                          nsIRunnable *event);
 
     ~nsProxyObjectCallInfo();
 
     PRUint32            GetMethodIndex() const { return mMethodIndex; }
     nsXPTCVariant*      GetParameterList() const { return mParameterList; }
     PRUint32            GetParameterCount() const { return mParameterCount; }
-    PLEvent*            GetPLEvent() const { return mEvent; }
+    nsIRunnable*        GetEvent() const { return mEvent; }
     nsresult            GetResult() const { return mResult; }
     nsProxyObject*      GetProxyObject() const { return mOwner; }
     
@@ -155,10 +153,10 @@ public:
     void                SetCompleted();
     void                PostCompleted();
 
-    void                SetResult(nsresult rv) {mResult = rv; }
+    void                SetResult(nsresult rv) { mResult = rv; }
     
-    nsIEventQueue*      GetCallersQueue();
-    void                SetCallersQueue(nsIEventQueue* queue);
+    nsIDispatchTarget*  GetCallersTarget();
+    void                SetCallersTarget(nsIDispatchTarget* target);
 
 private:
     
@@ -167,19 +165,16 @@ private:
     PRUint32         mMethodIndex;               /* which method to be called? */
     nsXPTCVariant   *mParameterList;             /* marshalled in parameter buffer */
     PRUint32         mParameterCount;            /* number of params */
-    PLEvent         *mEvent;                     /* the current plevent */       
+    nsIRunnable     *mEvent;                     /* the current runnable */
     PRInt32          mCompleted;                 /* is true when the method has been called. */
        
-    nsCOMPtr<nsIEventQueue>  mCallersEventQ;     /* this is the eventQ that we must post a message back to 
-                                                    when we are done invoking the method (only PROXY_SYNC). 
-                                                  */
+    nsCOMPtr<nsIDispatchTarget> mCallersTarget;  /* this is the dispatch target that we must post a message back to 
+                                                    when we are done invoking the method (only PROXY_SYNC). */
 
     nsRefPtr<nsProxyObject>   mOwner;            /* this is the strong referenced nsProxyObject */
    
     void RefCountInInterfacePointers(PRBool addRef);
     void CopyStrings(PRBool copy);
-
 };
 
-
-#endif
+#endif  // nsProxyEvent_h__

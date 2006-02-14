@@ -36,51 +36,63 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#ifndef nsThreadManager_h__
+#define nsThreadManager_h__
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+#include "nsIThreadManager.h"
+#include "nsIThread.h"
+#include "nsInterfaceHashtable.h"
+
+class nsIRunnable;
+
+class nsThreadManager : public nsIThreadManager
 {
-  /**
-   * Returns the name of the thread.
-   */
-  readonly attribute ACString name;
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSITHREADMANAGER
 
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
-   
-  /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
-   */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  static nsThreadManager *get() {
+    return &sInstance;
+  }
+
+  nsresult Init();
+
+  // Shutdown all threads.  This function should only be called on the main
+  // thread of the application process.
+  void Shutdown();
+
+  static PRBool IsMainThread() {
+    PRBool result;
+    get()->IsMainThread(&result);
+    return result;
+  }
+
+  static nsresult NewThread(const nsACString &name, nsIRunnable *runnable,
+                            nsIThread **result) {
+    nsresult rv = get()->NewThread(name, result);
+    if (NS_SUCCEEDED(rv))
+      rv = (*result)->Dispatch(runnable, NS_DISPATCH_NORMAL);
+    return rv;
+  }
+
+private:
+  nsThreadManager() : mCurThreadIndex(0) {}
+  ~nsThreadManager() {}
+  
+  static nsThreadManager sInstance;
+
+  nsInterfaceHashtableMT<nsCStringHashKey, nsIThread> mThreads;
+  PRUintn mCurThreadIndex;  // thread-local-storage index
 };
 
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
+#define NS_THREADMANAGER_CLASSNAME "nsThreadManager"
+#define NS_THREADMANAGER_CONTRACTID "@mozilla.org/thread-manager;1"
+#define NS_THREADMANAGER_CID                       \
+{ /* 7a4204c6-e45a-4c37-8ebb-6709a22c917c */       \
+  0x7a4204c6,                                      \
+  0xe45a,                                          \
+  0x4c37,                                          \
+  {0x8e, 0xbb, 0x67, 0x09, 0xa2, 0x2c, 0x91, 0x7c} \
 }
-%}
+
+#endif  // nsThreadManager_h__

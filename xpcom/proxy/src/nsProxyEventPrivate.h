@@ -36,20 +36,19 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __nsProxyEventPrivate_h_
-#define __nsProxyEventPrivate_h_
+#ifndef nsProxyEventPrivate_h__
+#define nsProxyEventPrivate_h__
 
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsIFactory.h"
 #include "nsHashtable.h"
 
-#include "plevent.h"
 #include "xptcall.h"    // defines nsXPTCVariant
-#include "nsIEventQueue.h"
 
 #include "nsProxyEvent.h"
 #include "nsIProxyObjectManager.h"
+#include "prmon.h"
 
 class nsProxyEventObject;
 class nsProxyEventClass;
@@ -113,7 +112,7 @@ public:
 
     NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXYEVENT_OBJECT_IID)
     
-    static nsProxyEventObject* GetNewOrUsedProxy(nsIEventQueue *destQueue,
+    static nsProxyEventObject* GetNewOrUsedProxy(nsIDispatchTarget *target,
                                                  PRInt32 proxyType,
                                                  nsISupports *aObj,
                                                  REFNSIID aIID);
@@ -126,17 +125,16 @@ public:
 
 
     nsProxyEventClass*    GetClass()           const { return mClass; }
-    nsIEventQueue*        GetQueue()           const { return (mProxyObject ? mProxyObject->GetQueue()     : nsnull);}
+    nsIDispatchTarget*    GetTarget()          const { return (mProxyObject ? mProxyObject->GetTarget()    : nsnull);}
     nsISupports*          GetRealObject()      const { return (mProxyObject ? mProxyObject->GetRealObject(): nsnull);}
     PRInt32               GetProxyType()       const { return (mProxyObject ? mProxyObject->GetProxyType() : nsnull);} 
 
     nsProxyEventObject();
-    nsProxyEventObject(nsIEventQueue *destQueue,
+    nsProxyEventObject(nsIDispatchTarget *target,
                        PRInt32 proxyType,
                        nsISupports* aObj,
                        nsProxyEventClass* aClass,
-                       nsProxyEventObject* root,
-                       nsIEventQueueService* eventQService);
+                       nsProxyEventObject* root);
     
     nsProxyEventObject*   LockedFind(REFNSIID aIID);
 
@@ -199,4 +197,4 @@ private:
 };
 
 
-#endif
+#endif  // nsProxyEventPrivate_h__

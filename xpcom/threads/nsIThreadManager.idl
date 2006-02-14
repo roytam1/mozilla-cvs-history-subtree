@@ -36,51 +36,48 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#include "nsISupports.idl"
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+interface nsIThread;
+
+[scriptable, uuid(056216f5-8803-46b4-9199-d95bc1f0446f)]
+interface nsIThreadManager : nsISupports
 {
   /**
-   * Returns the name of the thread.
+   * Create a new named thread (a global, user PRThread).  The name
+   * must be unique.
    */
-  readonly attribute ACString name;
-
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
+  nsIThread newThread(in ACString name);
    
   /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
+   * Find a named thread.
    */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  nsIThread getThread(in ACString name);
+
+  /**
+   * Get the main thread.
+   */
+  nsIThread getMainThread();
+
+  /**
+   * Get the current thread.
+   */
+  nsIThread getCurrentThread();
+   
+  /**
+   * Set an external nsIThread instance (or null) as the nsIThread for the
+   * current thread.  If a nsIThread is already associated with the calling
+   * thread, then this function will replace it with the given nsIThread.  If
+   * the given nsIThread is non-null, then its name attribute must be unique.
+   * Its name may be equal to the name of the nsIThread being replaced.  This
+   * method returns the nsIThread that was replaced by this method call or null
+   * if there was no previous nsIThread associated with the current thread.
+   */
+  nsIThread setCurrentThread(in nsIThread thread);
+
+  /**
+   * This method returns true if the calling thread is the main thread of the
+   * application process.
+   */
+  boolean isMainThread();
 };
-
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
-}
-%}

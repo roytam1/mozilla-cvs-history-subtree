@@ -39,8 +39,8 @@
 #define nsMemoryImpl_h__
 
 #include "nsIMemory.h"
+#include "nsIRunnable.h"
 #include "prlock.h"
-#include "plevent.h"
 
 // nsMemoryImpl is a static object. We can do this because it doesn't have
 // a constructor/destructor or any instance members. Please don't add
@@ -64,14 +64,13 @@ public:
     NS_HIDDEN_(nsresult) FlushMemory(const PRUnichar* aReason, PRBool aImmediate);
 
 protected:
-    struct FlushEvent {
-        PLEvent mEvent;
+    struct FlushEvent : public nsIRunnable {
+        NS_DECL_ISUPPORTS_INHERITED
+        NS_DECL_NSIRUNNABLE
         const PRUnichar* mReason;
     };
 
     NS_HIDDEN_(nsresult) RunFlushers(const PRUnichar* aReason);
-    static NS_HIDDEN_(void*) PR_CALLBACK HandleFlushEvent(PLEvent* aEvent);
-    static NS_HIDDEN_(void)  PR_CALLBACK DestroyFlushEvent(PLEvent* aEvent);
 
     static PRLock* sFlushLock;
     static PRBool  sIsFlushing;

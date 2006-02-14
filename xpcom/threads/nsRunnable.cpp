@@ -36,51 +36,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#include "nsRunnable.h"
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsRunnable, nsIRunnable)
+  
+NS_IMETHODIMP
+nsRunnable::Run()
 {
-  /**
-   * Returns the name of the thread.
-   */
-  readonly attribute ACString name;
-
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
-   
-  /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
-   */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
-};
-
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
+  // Do nothing
+  return NS_OK;
 }
-%}

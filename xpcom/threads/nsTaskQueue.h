@@ -36,51 +36,61 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#ifndef nsTaskQueue_h__
+#define nsTaskQueue_h__
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+#include "prmon.h"
+#include "nsIRunnable.h"
+
+// A threadsafe FIFO task queue...
+class nsTaskQueue
 {
-  /**
-   * Returns the name of the thread.
-   */
-  readonly attribute ACString name;
+public:
+  nsTaskQueue();
+  ~nsTaskQueue();
 
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
-   
-  /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
-   */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  // This method adds a new task on the pending task queue.
+  PRBool PutTask(nsIRunnable *runnable);
+
+  // This method returns true if there is a pending task.
+  PRBool HasPendingTask() {
+    return GetPendingTask(PR_FALSE, nsnull);
+  }
+
+  // This method returns the next pending task or null.
+  PRBool GetPendingTask(nsIRunnable **runnable) {
+    return GetPendingTask(PR_FALSE, runnable);
+  }
+
+  // This method waits for and returns the next pending task.
+  PRBool WaitPendingTask(nsIRunnable **runnable) {
+    return GetPendingTask(PR_TRUE, runnable);
+  }
+
+private:
+
+  PRBool GetPendingTask(PRBool wait, nsIRunnable **runnable);
+
+  PRBool IsEmpty() {
+    return !mHead || (mHead == mTail && mOffsetHead == mOffsetTail);
+  }
+
+  enum { TASKS_PER_PAGE = 15 };
+
+  struct Page {
+    struct Page *mNext;
+    nsIRunnable *mTasks[TASKS_PER_PAGE];
+
+    Page() : mNext(nsnull) {}
+  };
+
+  PRMonitor *mMonitor;
+
+  Page *mHead;
+  Page *mTail;
+
+  PRUint16 mOffsetHead;  // offset into mHead where next item is removed
+  PRUint16 mOffsetTail;  // offset into mTail where next item is added
 };
 
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
-}
-%}
+#endif  // nsTaskQueue_h__

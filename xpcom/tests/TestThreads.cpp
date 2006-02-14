@@ -38,6 +38,7 @@
 
 #include "nsIThread.h"
 #include "nsIRunnable.h"
+#include "nsThreadManager.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "nspr.h"
@@ -51,7 +52,7 @@ public:
 
     NS_IMETHOD Run() {
         nsCOMPtr<nsIThread> thread;
-        nsresult rv = nsIThread::GetCurrent(getter_AddRefs(thread));
+        nsresult rv = nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
         if (NS_FAILED(rv)) {
             printf("failed to get current thread\n");
             return rv;
@@ -80,30 +81,34 @@ TestThreads()
     nsresult rv;
 
     nsCOMPtr<nsIThread> runner;
-    rv = NS_NewThread(getter_AddRefs(runner), new nsRunner(0), 0, PR_JOINABLE_THREAD);
+    rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("TestThreads"),
+                                    new nsRunner(0), getter_AddRefs(runner));
     if (NS_FAILED(rv)) {
         printf("failed to create thread\n");
         return rv;
     }
 
     nsCOMPtr<nsIThread> thread;
-    rv = nsIThread::GetCurrent(getter_AddRefs(thread));
+    rv = nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
     if (NS_FAILED(rv)) {
         printf("failed to get current thread\n");
         return rv;
     }
 
+#if 0
     PRThreadScope scope;
     rv = runner->GetScope(&scope);
     if (NS_FAILED(rv)) {
         printf("runner already exited\n");        
     }
+#endif
 
-    rv = runner->Join();     // wait for the runner to die before quitting
+    rv = runner->Shutdown();     // wait for the runner to die before quitting
     if (NS_FAILED(rv)) {
         printf("join failed\n");        
     }
 
+#if 0
     rv = runner->GetScope(&scope);      // this should fail after Join
     if (NS_SUCCEEDED(rv)) {
         printf("get scope failed\n");        
@@ -126,6 +131,7 @@ TestThreads()
     if (NS_SUCCEEDED(rv)) {
         printf("shouldn't have been able to join an unjoinable thread\n");        
     }
+#endif
 
     PR_Sleep(PR_MillisecondsToInterval(100));       // hopefully the runner will quit here
 
@@ -181,15 +187,16 @@ static int Stress(int loops, int threads)
         
         for (k = 0; k < threads; k++) {
             nsCOMPtr<nsIThread> t;
-            nsresult rv = NS_NewThread(getter_AddRefs(t), 
-                                       new nsStressRunner(k),
-                                       0, PR_JOINABLE_THREAD);
+            nsCString name("thread:");
+            name.AppendInt(k);
+            nsresult rv = nsThreadManager::NewThread(name, new nsStressRunner(k),
+                                                     getter_AddRefs(t));
             NS_ASSERTION(NS_SUCCEEDED(rv), "can't create thread");
             NS_ADDREF(array[k] = t);
         }
 
         for (k = threads-1; k >= 0; k--) {
-            array[k]->Join();
+            array[k]->Shutdown();
             NS_RELEASE(array[k]);    
         }
         delete [] array;

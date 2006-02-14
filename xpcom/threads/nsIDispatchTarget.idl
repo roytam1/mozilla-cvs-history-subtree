@@ -36,51 +36,34 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#include "nsISupports.idl"
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+interface nsIRunnable;
+
+[scriptable, uuid(4e8febe4-6631-49dc-8ac9-308c1cb9b09c)]
+interface nsIDispatchTarget : nsISupports
 {
   /**
-   * Returns the name of the thread.
+   * Dispatch a task to the target.  This function may be called from any
+   * thread.  If flags specifies DISPATCH_SYNC, then the dispatch method
+   * will not return until the task has been run.  NOTE: Calling dispatch
+   * with DISPATCH_SYNC, may have the side-effect of running other tasks
+   * on the current thread while waiting for the given task to run to
+   * completion.  This function is re-entrant.
    */
-  readonly attribute ACString name;
-
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
+  void dispatch(in nsIRunnable task, in unsigned long flags);
+  const unsigned long DISPATCH_NORMAL = 0;
+  const unsigned long DISPATCH_SYNC   = 1;
    
   /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
+   * Returns true if tasks dispatched to this target will run on the
+   * current thread (i.e., the thread calling this method).
    */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  boolean isOnCurrentThread();
 };
 
 %{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
-}
+// convenient aliases:
+#define NS_DISPATCH_NORMAL nsIDispatchTarget::DISPATCH_NORMAL
+#define NS_DISPATCH_SYNC   nsIDispatchTarget::DISPATCH_SYNC
 %}

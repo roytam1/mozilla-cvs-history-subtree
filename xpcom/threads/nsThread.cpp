@@ -1,4 +1,5 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,18 +13,18 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Mozilla code.
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998
+ * The Initial Developer of the Original Code is Google Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -36,450 +37,428 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsThread.h"
-#include "prmem.h"
-#include "prlog.h"
+#include "nsThreadManager.h"
+#include "nsRunnable.h"
 #include "nsAutoLock.h"
+#include "nsAutoPtr.h"
+#include "nsCOMPtr.h"
 
-PRUintn nsThread::kIThreadSelfIndex = 0;
-static nsIThread *gMainThread = 0;
+NS_DECL_CI_INTERFACE_GETTER(nsThread)
 
-#if defined(PR_LOGGING)
-//
-// Log module for nsIThread logging...
-//
-// To enable logging (see prlog.h for full details):
-//
-//    set NSPR_LOG_MODULES=nsIThread:5
-//    set NSPR_LOG_FILE=nspr.log
-//
-// this enables PR_LOG_DEBUG level information and places all output in
-// the file nspr.log
-//
-// gSocketLog is defined in nsSocketTransport.cpp
-//
-PRLogModuleInfo* nsIThreadLog = nsnull;
+//-----------------------------------------------------------------------------
+// Because we do not have our own nsIFactory, we have to implement nsIClassInfo
+// somewhat manually.
 
-#endif /* PR_LOGGING */
+class nsThreadClassInfo : public nsIClassInfo {
+public:
+  NS_DECL_ISUPPORTS_INHERITED  // no mRefCnt
+  NS_DECL_NSICLASSINFO
 
-////////////////////////////////////////////////////////////////////////////////
+  nsThreadClassInfo() {}
+};
 
-nsThread::nsThread()
-    : mThread(nsnull), mDead(PR_FALSE), mStartLock(nsnull)
+static nsThreadClassInfo sThreadClassInfo;
+
+NS_IMETHODIMP_(nsrefcnt) nsThreadClassInfo::AddRef() { return 2; }
+NS_IMETHODIMP_(nsrefcnt) nsThreadClassInfo::Release() { return 1; }
+NS_IMPL_QUERY_INTERFACE1(nsThreadClassInfo, nsIClassInfo)
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetInterfaces(PRUint32 *count, nsIID ***array)
 {
-#if defined(PR_LOGGING)
-    //
-    // Initialize the global PRLogModule for nsIThread logging 
-    // if necessary...
-    //
-    if (nsIThreadLog == nsnull) {
-        nsIThreadLog = PR_NewLogModule("nsIThread");
-    }
-#endif /* PR_LOGGING */
+  return NS_CI_INTERFACE_GETTER_NAME(nsThread)(count, array);
+}
 
-    // enforce matching of constants to enums in prthread.h
-    NS_ASSERTION(int(nsIThread::PRIORITY_LOW)     == int(PR_PRIORITY_LOW) &&
-                 int(nsIThread::PRIORITY_NORMAL)  == int(PRIORITY_NORMAL) &&
-                 int(nsIThread::PRIORITY_HIGH)    == int(PRIORITY_HIGH) &&
-                 int(nsIThread::PRIORITY_URGENT)  == int(PRIORITY_URGENT) &&
-                 int(nsIThread::SCOPE_LOCAL)      == int(PR_LOCAL_THREAD) &&
-                 int(nsIThread::SCOPE_GLOBAL)     == int(PR_GLOBAL_THREAD) &&
-                 int(nsIThread::STATE_JOINABLE)   == int(PR_JOINABLE_THREAD) &&
-                 int(nsIThread::STATE_UNJOINABLE) == int(PR_UNJOINABLE_THREAD),
-                 "Bad constant in nsIThread!");
+NS_IMETHODIMP
+nsThreadClassInfo::GetHelperForLanguage(PRUint32 lang, nsISupports **result)
+{
+  *result = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetContractID(char **result)
+{
+  *result = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetClassDescription(char **result)
+{
+  *result = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetClassID(nsCID **result)
+{
+  *result = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetImplementationLanguage(PRUint32 *result)
+{
+  *result = nsIProgrammingLanguage::CPLUSPLUS;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetFlags(PRUint32 *result)
+{
+  *result = THREADSAFE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadClassInfo::GetClassIDNoAlloc(nsCID *result)
+{
+  return NS_ERROR_NOT_AVAILABLE;
+}
+
+//-----------------------------------------------------------------------------
+
+NS_IMPL_THREADSAFE_ADDREF(nsThread)
+NS_IMPL_THREADSAFE_RELEASE(nsThread)
+NS_INTERFACE_MAP_BEGIN(nsThread)
+  NS_INTERFACE_MAP_ENTRY(nsIThread)
+  NS_INTERFACE_MAP_ENTRY(nsIThreadInternal)
+  NS_INTERFACE_MAP_ENTRY(nsIDispatchTarget)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsPriority)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIThread)
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
+    foundInterface = NS_STATIC_CAST(nsIClassInfo*, &sThreadClassInfo);
+  } else
+NS_INTERFACE_MAP_END
+NS_IMPL_CI_INTERFACE_GETTER4(nsThread, nsIThread, nsIThreadInternal,
+                             nsIDispatchTarget, nsISupportsPriority)
+
+//-----------------------------------------------------------------------------
+
+class nsThreadShutdownTask : public nsRunnable {
+public:
+  nsThreadShutdownTask(nsThread *thr)
+    : mThread(thr) {
+  } 
+
+  NS_IMETHODIMP Run() {
+    mThread->mActive = PR_FALSE;
+    return NS_OK;
+  }
+
+private:
+  nsRefPtr<nsThread> mThread;
+};
+
+//-----------------------------------------------------------------------------
+
+class nsThreadSyncDispatch : public nsRunnable {
+public:
+  nsThreadSyncDispatch(nsIRunnable *task)
+    : mSyncTask(task) {
+  }
+
+  NS_IMETHODIMP Run() {
+    mSyncTask->Run();
+    mSyncTask = nsnull;
+    return NS_OK;
+  }
+
+  PRBool IsPending() {
+    return mSyncTask != nsnull;
+  }
+
+private:
+  nsCOMPtr<nsIRunnable> mSyncTask;
+};
+
+//-----------------------------------------------------------------------------
+
+// This class is used to convey initialization info to the newly created thread.
+class nsThreadStartInfo {
+private:
+  PRInt32 mRefCnt;
+
+  ~nsThreadStartInfo() {
+    nsAutoMonitor::DestroyMonitor(mMon);
+  }
+public:
+  PRMonitor *mMon;
+  nsThread  *mThread;
+  PRBool     mInitialized;
+
+  nsThreadStartInfo(nsThread *thr)
+    : mRefCnt(0)
+    , mMon(nsAutoMonitor::NewMonitor("nsThreadStartInfo"))
+    , mThread(thr)
+    , mInitialized(PR_FALSE) {
+  }
+
+  void AddRef() {
+    PR_AtomicIncrement(&mRefCnt);
+  }
+
+  void Release() {
+    if (PR_AtomicDecrement(&mRefCnt) == 0)
+      delete this;
+  }
+};
+
+//-----------------------------------------------------------------------------
+
+/*static*/ void
+nsThread::ThreadFunc(void *arg)
+{
+  nsThreadStartInfo *si = NS_STATIC_CAST(nsThreadStartInfo *, arg);
+
+  nsThread *self = si->mThread;
+  NS_ADDREF(self);
+
+  // Inform the ThreadManager
+  nsThreadManager::get()->SetCurrentThread(self, nsnull);
+
+  // Unblock nsThread::Init
+  {
+    nsAutoMonitor mon(si->mMon);
+    si->mInitialized = PR_TRUE;
+    mon.Notify();
+  }
+  NS_RELEASE(si);
+
+  // Now, process incoming tasks...
+  while (self->mActive)
+    self->RunNextTask(nsIThread::RUN_NORMAL);
+
+  NS_RELEASE(self);
+
+  // Inform the threadmanager that this thread is going away
+  nsThreadManager::get()->SetCurrentThread(nsnull, nsnull);
+}
+
+//-----------------------------------------------------------------------------
+
+nsThread::nsThread(const nsACString &name)
+  : mObserverLock(PR_NewLock())
+  , mName(name)
+{
 }
 
 nsThread::~nsThread()
 {
-    if (mStartLock)
-        PR_DestroyLock(mStartLock);
-
-    PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-           ("nsIThread %p destroyed\n", this));
-
-    // This code used to free the nsIThreadLog loginfo stuff
-    // Don't do that; loginfo structures are owned by nspr
-    // and would be freed if we ever called PR_Cleanup()
-    // see bug 142072
+  PR_DestroyLock(mObserverLock);
 }
-
-void
-nsThread::Main(void* arg)
-{
-    nsThread* self = (nsThread*)arg;
-
-    self->WaitUntilReadyToStartMain();
-
-    nsresult rv = NS_OK;
-    rv = self->RegisterThreadSelf();
-    NS_ASSERTION(rv == NS_OK, "failed to set thread self");
-
-    PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-           ("nsIThread %p start run %p\n", self, self->mRunnable.get()));
-    rv = self->mRunnable->Run();
-    NS_ASSERTION(NS_SUCCEEDED(rv), "runnable failed");
-
-#ifdef DEBUG
-    // Because a thread can die after gMainThread dies and takes nsIThreadLog with it,
-    // we need to check for it being null so that we don't crash on shutdown.
-    if (nsIThreadLog) {
-        PRThreadState state;
-        rv = self->GetState(&state);
-        PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-               ("nsIThread %p end run %p\n", self, self->mRunnable.get()));
-    }
-#endif
-
-    // explicitly drop the runnable now in case there are circular references
-    // between it and the thread object
-    self->mRunnable = nsnull;
-}
-
-void
-nsThread::Exit(void* arg)
-{
-    nsThread* self = (nsThread*)arg;
-
-    if (self->mDead) {
-        NS_ERROR("attempt to Exit() thread twice");
-        return;
-    }
-
-    self->mDead = PR_TRUE;
-
-#if defined(PR_LOGGING)
-    if (nsIThreadLog) {
-        PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-               ("nsIThread %p exited\n", self));
-    }
-#endif
-    NS_RELEASE(self);
-}
-
-NS_METHOD
-nsThread::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
-{
-    nsThread* thread = new nsThread();
-    if (!thread) return NS_ERROR_OUT_OF_MEMORY;
-    nsresult rv = thread->QueryInterface(aIID, aResult);
-    if (NS_FAILED(rv)) delete thread;
-    return rv;
-}
-
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsThread, nsIThread)
-
-NS_IMETHODIMP
-nsThread::Join()
-{
-    // don't check for mDead here because nspr calls Exit (cleaning up
-    // thread-local storage) before they let us join with the thread
-
-    PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-           ("nsIThread %p start join\n", this));
-    if (!mThread)
-        return NS_ERROR_NOT_INITIALIZED;
-    PRStatus status = PR_JoinThread(mThread);
-    // XXX can't use NS_RELEASE here because the macro wants to set
-    // this to null (bad c++)
-    PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-           ("nsIThread %p end join\n", this));
-    if (status != PR_SUCCESS)
-        return NS_ERROR_FAILURE;
-
-    NS_RELEASE_THIS();   // most likely the final release of this thread 
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::GetPriority(PRThreadPriority *result)
-{
-    if (mDead)
-        return NS_ERROR_FAILURE;
-    if (!mThread)
-        return NS_ERROR_NOT_INITIALIZED;
-    *result = PR_GetThreadPriority(mThread);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::SetPriority(PRThreadPriority value)
-{
-    if (mDead)
-        return NS_ERROR_FAILURE;
-    if (!mThread)
-        return NS_ERROR_NOT_INITIALIZED;
-    PR_SetThreadPriority(mThread, value);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::Interrupt()
-{
-    if (mDead)
-        return NS_ERROR_FAILURE;
-    if (!mThread)
-        return NS_ERROR_NOT_INITIALIZED;
-    PRStatus status = PR_Interrupt(mThread);
-    return status == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP
-nsThread::GetScope(PRThreadScope *result)
-{
-    if (mDead)
-        return NS_ERROR_FAILURE;
-    if (!mThread)
-        return NS_ERROR_NOT_INITIALIZED;
-    *result = PR_GetThreadScope(mThread);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::GetState(PRThreadState *result)
-{
-    if (mDead)
-        return NS_ERROR_FAILURE;
-    if (!mThread)
-        return NS_ERROR_NOT_INITIALIZED;
-    *result = PR_GetThreadState(mThread);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::GetPRThread(PRThread* *result)
-{
-    if (mDead) {
-        *result = nsnull;
-        return NS_ERROR_FAILURE;
-    }    
-    *result = mThread;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::Init(nsIRunnable* runnable,
-               PRUint32 stackSize,
-               PRThreadPriority priority,
-               PRThreadScope scope,
-               PRThreadState state)
-{
-    NS_ENSURE_ARG_POINTER(runnable);
-    if (mRunnable)
-        return NS_ERROR_ALREADY_INITIALIZED;
-
-    mRunnable = runnable;
-
-    if (mStartLock)
-        return NS_ERROR_ALREADY_INITIALIZED;
-
-    mStartLock = PR_NewLock();
-    if (mStartLock == nsnull) {
-        mRunnable = nsnull;
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    NS_ADDREF_THIS();       // released in nsThread::Exit
-    if (state == PR_JOINABLE_THREAD)
-        NS_ADDREF_THIS();   // released in nsThread::Join
-
-    PR_Lock(mStartLock);
-    mDead = PR_FALSE;
-    mThread = PR_CreateThread(PR_USER_THREAD, Main, this,
-                              priority, scope, state, stackSize);
-    /* As soon as we PR_Unlock(mStartLock), if mThread was successfully 
-     * created, it could run and exit very quickly. In which case, it 
-     * would null mThread and therefore if we check if (mThread) we could 
-     * confuse a successfully created, yet already exited thread with
-     * OOM - failure to create the thread. So instead we store a local thr 
-     * which we check to see if we really failed to create the thread.
-     */
-    PRThread *thr = mThread;
-    PR_Unlock(mStartLock);
-
-    if (thr == nsnull) {
-        mDead = PR_TRUE;         // otherwise cleared in nsThread::Exit
-        mRunnable = nsnull;      // otherwise cleared in nsThread::Main(when done)
-        PR_DestroyLock(mStartLock);
-        mStartLock = nsnull;
-        NS_RELEASE_THIS();       // otherwise released in nsThread::Exit
-        if (state == PR_JOINABLE_THREAD)
-            NS_RELEASE_THIS();   // otherwise released in nsThread::Join
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    PR_LOG(nsIThreadLog, PR_LOG_DEBUG,
-           ("nsIThread %p created\n", this));
-
-    return NS_OK;
-}
-
-/* readonly attribute nsIThread currentThread; */
-NS_IMETHODIMP 
-nsThread::GetCurrentThread(nsIThread * *aCurrentThread)
-{
-    return GetIThread(PR_GetCurrentThread(), aCurrentThread);
-}
-
-/* void sleep (in PRUint32 msec); */
-NS_IMETHODIMP 
-nsThread::Sleep(PRUint32 msec)
-{
-    if (PR_GetCurrentThread() != mThread)
-        return NS_ERROR_FAILURE;
-    
-    if (PR_Sleep(PR_MillisecondsToInterval(msec)) != PR_SUCCESS)
-        return NS_ERROR_FAILURE;
-
-    return NS_OK;
-}
-
-NS_COM nsresult
-NS_NewThread(nsIThread* *result, 
-             nsIRunnable* runnable,
-             PRUint32 stackSize,
-             PRThreadState state,
-             PRThreadPriority priority,
-             PRThreadScope scope)
-{
-    nsresult rv;
-    nsThread* thread = new nsThread();
-    if (thread == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(thread);
-
-    rv = thread->Init(runnable, stackSize, priority, scope, state);
-    if (NS_FAILED(rv)) {
-        NS_RELEASE(thread);
-        return rv;
-    }
-
-    *result = thread;
-    return NS_OK;
-}
-
-NS_COM nsresult
-NS_NewThread(nsIThread* *result, 
-             PRUint32 stackSize,
-             PRThreadState state,
-             PRThreadPriority priority,
-             PRThreadScope scope)
-{
-    nsThread* thread = new nsThread();
-    if (thread == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(thread);
-    *result = thread;
-    return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 
 nsresult
-nsThread::RegisterThreadSelf()
+nsThread::Init()
 {
-    PRStatus status;
+  // spawn thread and wait until it is fully setup
+  nsThreadStartInfo *si = new nsThreadStartInfo(this);
+  if (!si)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(si);
 
-    if (kIThreadSelfIndex == 0) {
-        status = PR_NewThreadPrivateIndex(&kIThreadSelfIndex, Exit);
-        if (status != PR_SUCCESS) return NS_ERROR_FAILURE;
-    }
+  mActive = PR_TRUE;
+  mThread = PR_CreateThread(PR_USER_THREAD, ThreadFunc, si, PR_PRIORITY_NORMAL,
+                            PR_GLOBAL_THREAD, PR_JOINABLE_THREAD, 0);
+  if (!mThread) {
+    NS_RELEASE(si);
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
 
-    status = PR_SetThreadPrivate(kIThreadSelfIndex, this);
-    if (status != PR_SUCCESS) return NS_ERROR_FAILURE;
+  // Wait for thread to call ThreadManager::SetCurrentThread
+  {
+    nsAutoMonitor mon(si->mMon);
+    while (!si->mInitialized)
+      mon.Wait();
+  }
 
-    return NS_OK;
+  NS_RELEASE(si);
+  return NS_OK;
 }
 
-void 
-nsThread::WaitUntilReadyToStartMain()
+nsresult
+nsThread::InitCurrentThread()
 {
-    PR_Lock(mStartLock);
-    PR_Unlock(mStartLock);
-    PR_DestroyLock(mStartLock);
-    mStartLock = nsnull;
+  mActive = PR_TRUE;
+  mThread = PR_GetCurrentThread();
+
+  nsThreadManager::get()->SetCurrentThread(this, nsnull);
+  return NS_OK;
 }
 
-NS_COM nsresult
-nsIThread::GetCurrent(nsIThread* *result)
+PRBool
+nsThread::PutTask(nsIRunnable *task, PRUint32 dispatchFlags)
 {
-    return GetIThread(PR_GetCurrentThread(), result);
+  PRBool rv = mTasks.PutTask(task);
+  if (!rv)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIThreadObserver> obs;
+  {
+    nsAutoLock lock(mObserverLock);
+    obs = mObserver;
+  }
+  if (obs)
+    obs->OnNewTask(this, dispatchFlags);
+
+  return PR_TRUE;
 }
 
-NS_COM nsresult
-nsIThread::GetIThread(PRThread* prthread, nsIThread* *result)
+NS_IMETHODIMP
+nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
 {
-    PRStatus status;
-    nsThread* thread;
+  NS_ENSURE_STATE(mThread);
 
-    if (nsThread::kIThreadSelfIndex == 0) {
-        status = PR_NewThreadPrivateIndex(&nsThread::kIThreadSelfIndex, nsThread::Exit);
-        if (status != PR_SUCCESS) return NS_ERROR_FAILURE;
-    }
+  if (flags == DISPATCH_NORMAL) {
+    PutTask(runnable, flags);
+  } else if (flags & DISPATCH_SYNC) {
+    nsCOMPtr<nsIThread> thread;
+    nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
+    NS_ENSURE_STATE(thread);
 
-    thread = (nsThread*)PR_GetThreadPrivate(nsThread::kIThreadSelfIndex);
-    if (thread == nsnull) {
-        // if the current thread doesn't have an nsIThread associated
-        // with it, make one
-        thread = new nsThread();
-        if (thread == nsnull)
-            return NS_ERROR_OUT_OF_MEMORY;
-        NS_ADDREF(thread);      // released by Exit
-        thread->SetPRThread(prthread);
-        nsresult rv = thread->RegisterThreadSelf();
-        if (NS_FAILED(rv)) return rv;
-    }
-    NS_ADDREF(thread);
-    *result = thread;
-    return NS_OK;
+    nsRefPtr<nsThreadSyncDispatch> task = new nsThreadSyncDispatch(runnable);
+    PutTask(task, flags);
+
+    while (task->IsPending())
+      thread->RunNextTask(nsIThread::RUN_NORMAL);
+  }
+  return NS_OK;
 }
 
-NS_COM nsresult
-nsIThread::SetMainThread()
+NS_IMETHODIMP
+nsThread::IsOnCurrentThread(PRBool *result)
 {
-    // strictly speaking, it could be set twice. but practically speaking,
-    // it's almost certainly an error if it is
-    if (gMainThread != 0) {
-        NS_ERROR("Setting main thread twice?");
-        return NS_ERROR_FAILURE;
-    }
-    return GetCurrent(&gMainThread);
+  *result = (PR_GetCurrentThread() == mThread);
+  return NS_OK;
 }
 
-NS_COM nsresult
-nsIThread::GetMainThread(nsIThread **result)
+NS_IMETHODIMP
+nsThread::GetName(nsACString &result)
 {
-    NS_ASSERTION(result, "bad result pointer");
-    if (gMainThread == 0)
-        return NS_ERROR_FAILURE;
-    *result = gMainThread;
-    NS_ADDREF(gMainThread);
-    return NS_OK;
+  result = mName;  // no need to lock since this never changes
+  return NS_OK;
 }
 
-NS_COM PRBool
-nsIThread::IsMainThread()
-{
-    if (gMainThread == 0)
-        return PR_TRUE;
-    
-    PRThread *theMainThread;
-    gMainThread->GetPRThread(&theMainThread);
-    return theMainThread == PR_GetCurrentThread();
-}
-
-void 
+NS_IMETHODIMP
 nsThread::Shutdown()
 {
-    if (gMainThread) {
-        // XXX nspr doesn't seem to be calling the main thread's destructor
-        // callback, so let's help it out:
-        nsThread::Exit(NS_STATIC_CAST(nsThread*, gMainThread));
-        nsrefcnt cnt;
-        NS_RELEASE2(gMainThread, cnt);
-        NS_WARN_IF_FALSE(cnt == 0, "Main thread being held past XPCOM shutdown.");
-        gMainThread = nsnull;
-        
-        kIThreadSelfIndex = 0;
-    }
+  NS_ENSURE_STATE(mThread);
+  NS_ENSURE_STATE(PR_GetCurrentThread() != mThread);
+
+  // shutdown task queue
+  nsCOMPtr<nsIRunnable> task = new nsThreadShutdownTask(this);
+  if (!task)
+    return NS_ERROR_OUT_OF_MEMORY;
+  PutTask(task, NS_DISPATCH_NORMAL);
+
+  // XXX we could still end up with other tasks being added after the shutdown task
+
+  PR_JoinThread(mThread);
+  mThread = nsnull;
+  return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+NS_IMETHODIMP
+nsThread::RunNextTask(PRUint32 flags)
+{
+  NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
+  NS_ENSURE_STATE(mActive);
+  NS_ENSURE_ARG(flags == RUN_NORMAL || flags == RUN_NO_WAIT);
+
+  nsCOMPtr<nsIThreadObserver> obs;
+  {
+    nsAutoLock lock(mObserverLock);
+    obs = mObserver;
+  }
+
+  if (obs)
+    obs->OnBeforeRunNextTask(this, flags);
+
+  nsCOMPtr<nsIRunnable> task; 
+  if (flags == RUN_NORMAL) {
+    if (obs)
+      obs->OnWaitNextTask(this, flags);
+    mTasks.WaitPendingTask(getter_AddRefs(task));
+  } else {
+    mTasks.GetPendingTask(getter_AddRefs(task));
+  }
+
+  nsresult rv = NS_OK;
+
+  if (task) {
+    task->Run();
+  } else if (flags & RUN_NO_WAIT) {
+    rv = NS_BASE_STREAM_WOULD_BLOCK;
+  }
+
+  if (obs)
+    obs->OnAfterRunNextTask(this, flags, rv);
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsThread::GetPriority(PRInt32 *priority)
+{
+  *priority = mPriority;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::SetPriority(PRInt32 priority)
+{
+  NS_ENSURE_STATE(mThread);
+
+  // NSPR defines the following four thread priorities:
+  //   PR_PRIORITY_LOW
+  //   PR_PRIORITY_NORMAL
+  //   PR_PRIORITY_HIGH
+  //   PR_PRIORITY_URGENT
+  // We map the priority values defined on nsISupportsPriority to these values.
+
+  mPriority = priority;
+
+  PRThreadPriority pri;
+  if (mPriority <= PRIORITY_HIGHEST) {
+    pri = PR_PRIORITY_URGENT;
+  } else if (mPriority < PRIORITY_NORMAL) {
+    pri = PR_PRIORITY_HIGH;
+  } else if (mPriority > PRIORITY_NORMAL) {
+    pri = PR_PRIORITY_LOW;
+  } else {
+    pri = PR_PRIORITY_NORMAL;
+  }
+  PR_SetThreadPriority(mThread, pri);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::AdjustPriority(PRInt32 delta)
+{
+  return SetPriority(mPriority + delta);
+}
+
+NS_IMETHODIMP
+nsThread::GetObserver(nsIThreadObserver **obs)
+{
+  nsAutoLock lock(mObserverLock);
+  NS_ADDREF(*obs = mObserver);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::SetObserver(nsIThreadObserver *obs)
+{
+  nsAutoLock lock(mObserverLock);
+  mObserver = obs;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::HasPendingTask(PRBool *result)
+{
+  *result = mTasks.HasPendingTask();
+  return NS_OK;
+}

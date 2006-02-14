@@ -36,51 +36,82 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#include "nsTaskQueue.h"
+#include "nsAutoLock.h"
+#include "nsCOMPtr.h"
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+nsTaskQueue::nsTaskQueue()
+  : mMonitor(nsAutoMonitor::NewMonitor("TaskQueue"))
+  , mHead(nsnull)
+  , mTail(nsnull)
+  , mOffsetHead(0)
+  , mOffsetTail(0)
 {
-  /**
-   * Returns the name of the thread.
-   */
-  readonly attribute ACString name;
+}
 
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
-   
-  /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
-   */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
-};
-
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
+nsTaskQueue::~nsTaskQueue()
 {
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
+  nsAutoMonitor::DestroyMonitor(mMonitor);
+}
 
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
+PRBool
+nsTaskQueue::GetPendingTask(PRBool wait, nsIRunnable **result)
+{
+  nsAutoMonitor mon(mMonitor);
 
+  while (IsEmpty()) {
+    if (!wait) {
+      if (result)
+        *result = nsnull;
+      return PR_FALSE;
+    }
+    mon.Wait();
+  }
+
+  if (result)
+    *result = mHead->mTasks[mOffsetHead++];
+
+  // Check if mHead points to empty Page
+  if (mOffsetHead == TASKS_PER_PAGE) {
+    Page *dead = mHead;
+    mHead = mHead->mNext;
+    delete dead;
+    mOffsetHead = 0;
+  }
+
+  return PR_TRUE;
+}
+
+PRBool
+nsTaskQueue::PutTask(nsIRunnable *runnable)
+{
+  // Avoid calling AddRef+Release while holding our monitor.
+  nsCOMPtr<nsIRunnable> task(runnable);
+  PRBool rv = PR_TRUE;
+  {
+    nsAutoMonitor mon(mMonitor);
+
+    if (!mHead) {
+      mHead = new Page();
+      if (!mHead) {
+        rv = PR_FALSE;
+      } else {
+        mTail = mHead;
+        mOffsetHead = 0;
+        mOffsetTail = 0;
+      }
+    } else if (mOffsetTail == TASKS_PER_PAGE) {
+      Page *page = new Page();
+      if (!page) {
+        rv = PR_FALSE;
+      } else {
+        mTail->mNext = page;
+        mTail = page;
+        mOffsetTail = 0;
+      }
+    }
+    if (rv)
+      task.swap(mTail->mTasks[mOffsetTail++]);
+  }
   return rv;
 }
-%}

@@ -1,4 +1,5 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,18 +13,18 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Mozilla code.
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998
+ * The Initial Developer of the Original Code is Google Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -33,60 +34,53 @@
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
- * ***** END LICENSE BLOCK *****
- * This Original Code has been modified by IBM Corporation.
- * Modifications made by IBM described herein are
- * Copyright (c) International Business Machines
- * Corporation, 2000
- *
- * Modifications to Mozilla code or documentation
- * identified per MPL Section 3.3
- *
- * Date             Modified by     Description of modification
- * 04/20/2000       IBM Corp.      Added PR_CALLBACK for Optlink use in OS2
- */
+ * ***** END LICENSE BLOCK ***** */
 
 #ifndef nsThread_h__
 #define nsThread_h__
 
-#include "nsIRunnable.h"
-#include "nsIThread.h"
+#include "nsIThreadInternal.h"
+#include "nsISupportsPriority.h"
+#include "nsTaskQueue.h"
+#include "nsString.h"
 #include "nsCOMPtr.h"
 
-class nsThread : public nsIThread 
+// A native thread
+class nsThread : public nsIThreadInternal, public nsISupportsPriority
 {
 public:
-    NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDISPATCHTARGET
+  NS_DECL_NSITHREAD
+  NS_DECL_NSITHREADINTERNAL
+  NS_DECL_NSISUPPORTSPRIORITY
 
-    // nsIThread methods:
-    NS_DECL_NSITHREAD
- 
-    // nsThread methods:
-    nsThread();
+  nsThread(const nsACString &name);
 
-    nsresult RegisterThreadSelf();
-    void SetPRThread(PRThread* thread) { mThread = thread; }
-    void WaitUntilReadyToStartMain();
+  // Initialize this as a wrapper for a new PRThread.
+  nsresult Init();
 
-    static void PR_CALLBACK Main(void* arg);
-    static void PR_CALLBACK Exit(void* arg);
-    static void PR_CALLBACK Shutdown();
-
-    static PRUintn kIThreadSelfIndex;
-
-    static NS_METHOD
-    Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
+  // Initialize this as a wrapper for the current PRThread.
+  nsresult InitCurrentThread();
 
 private:
-    ~nsThread();
+  friend class nsThreadShutdownTask;
 
-protected:
-    PRThread*                   mThread;
-    nsCOMPtr<nsIRunnable>       mRunnable;
-    PRBool                      mDead;
-    PRLock*                     mStartLock;
+  ~nsThread();
+
+  PR_STATIC_CALLBACK(void) ThreadFunc(void *arg);
+
+  // Wrapper for nsTaskQueue::PutTask
+  PRBool PutTask(nsIRunnable *task, PRUint32 dispatchFlags);
+
+  PRLock                     *mObserverLock;
+  nsCOMPtr<nsIThreadObserver> mObserver;
+
+  nsTaskQueue mTasks;
+  nsCString   mName;
+  PRInt32     mPriority;
+  PRThread   *mThread;
+  PRIntn      mActive;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-
-#endif // nsThread_h__
+#endif  // nsThread_h__

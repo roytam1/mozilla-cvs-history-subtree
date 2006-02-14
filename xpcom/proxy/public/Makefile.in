@@ -55,9 +55,9 @@ EXPORTS		= \
 		nsProxiedService.h \
 		$(NULL)
 
-XPIDLSRCS	= nsIProxyCreateInstance.idl \
-                  nsIProxyObjectManager.idl  \
-                  $(NULL)
+XPIDLSRCS	= \
+		nsIProxyObjectManager.idl  \
+		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
