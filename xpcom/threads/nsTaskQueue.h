@@ -39,6 +39,7 @@
 #ifndef nsTaskQueue_h__
 #define nsTaskQueue_h__
 
+#include <stdlib.h>
 #include "prmon.h"
 #include "nsIRunnable.h"
 
@@ -83,6 +84,14 @@ private:
 
     Page() : mNext(nsnull) {}
   };
+
+  static Page *NewPage() {
+    return NS_STATIC_CAST(Page *, calloc(1, sizeof(Page)));
+  }
+
+  static void FreePage(Page *p) {
+    free(p);
+  }
 
   PRMonitor *mMonitor;
 

@@ -176,33 +176,33 @@ private:
 //-----------------------------------------------------------------------------
 
 // This class is used to convey initialization info to the newly created thread.
-class nsThreadStartInfo {
-private:
-  PRInt32 mRefCnt;
-
-  ~nsThreadStartInfo() {
-    nsAutoMonitor::DestroyMonitor(mMon);
-  }
+class nsThreadStartup : public nsRunnable {
 public:
-  PRMonitor *mMon;
-  nsThread  *mThread;
-  PRBool     mInitialized;
-
-  nsThreadStartInfo(nsThread *thr)
-    : mRefCnt(0)
-    , mMon(nsAutoMonitor::NewMonitor("nsThreadStartInfo"))
-    , mThread(thr)
+  nsThreadStartup()
+    : mMon(nsAutoMonitor::NewMonitor("xpcom.threadstartup"))
     , mInitialized(PR_FALSE) {
   }
 
-  void AddRef() {
-    PR_AtomicIncrement(&mRefCnt);
+  NS_IMETHOD Run() {
+    nsAutoMonitor mon(mMon);
+    mInitialized = PR_TRUE;
+    mon.Notify();
+    return NS_OK;
   }
 
-  void Release() {
-    if (PR_AtomicDecrement(&mRefCnt) == 0)
-      delete this;
+  void Wait() {
+    nsAutoMonitor mon(mMon);
+    while (!mInitialized)
+      mon.Wait();
   }
+
+private:
+  virtual ~nsThreadStartup() {
+    nsAutoMonitor::DestroyMonitor(mMon);
+  }
+
+  PRMonitor *mMon;
+  PRBool     mInitialized;
 };
 
 //-----------------------------------------------------------------------------
@@ -210,21 +210,18 @@ public:
 /*static*/ void
 nsThread::ThreadFunc(void *arg)
 {
-  nsThreadStartInfo *si = NS_STATIC_CAST(nsThreadStartInfo *, arg);
-
-  nsThread *self = si->mThread;
-  NS_ADDREF(self);
+  nsThread *self = NS_STATIC_CAST(nsThread *, arg);  // strong reference
 
   // Inform the ThreadManager
   nsThreadManager::get()->SetCurrentThread(self, nsnull);
 
-  // Unblock nsThread::Init
-  {
-    nsAutoMonitor mon(si->mMon);
-    si->mInitialized = PR_TRUE;
-    mon.Notify();
+  nsCOMPtr<nsIRunnable> task;
+  self->mTasks.WaitPendingTask(getter_AddRefs(task));
+  if (!task) {
+    NS_NOTREACHED("WaitPendingTask failed");
+    return;
   }
-  NS_RELEASE(si);
+  task->Run();  // unblocks nsThread::Init
 
   // Now, process incoming tasks...
   while (self->mActive)
@@ -253,27 +250,31 @@ nsresult
 nsThread::Init()
 {
   // spawn thread and wait until it is fully setup
-  nsThreadStartInfo *si = new nsThreadStartInfo(this);
-  if (!si)
+ 
+  nsRefPtr<nsThreadStartup> startup = new nsThreadStartup();
+  if (!startup)
     return NS_ERROR_OUT_OF_MEMORY;
-  NS_ADDREF(si);
 
+  NS_ADDREF_THIS();
+ 
   mActive = PR_TRUE;
-  mThread = PR_CreateThread(PR_USER_THREAD, ThreadFunc, si, PR_PRIORITY_NORMAL,
-                            PR_GLOBAL_THREAD, PR_JOINABLE_THREAD, 0);
+  mThread = PR_CreateThread(PR_USER_THREAD, ThreadFunc, this,
+                            PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
+                            PR_JOINABLE_THREAD, 0);
   if (!mThread) {
-    NS_RELEASE(si);
+    NS_RELEASE_THIS();
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  // Wait for thread to call ThreadManager::SetCurrentThread
-  {
-    nsAutoMonitor mon(si->mMon);
-    while (!si->mInitialized)
-      mon.Wait();
-  }
+  // ThreadFunc will wait for this task to be run before it tries to access
+  // mThread.  By delaying insertion of this task into the queue, we ensure
+  // that mThread is set properly.
+  mTasks.PutTask(startup);
 
-  NS_RELEASE(si);
+  // Wait for thread to call ThreadManager::SetCurrentThread, which completes
+  // initialization of ThreadFunc.
+  startup->Wait();
+
   return NS_OK;
 }
 

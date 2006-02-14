@@ -41,7 +41,7 @@
 #include "nsCOMPtr.h"
 
 nsTaskQueue::nsTaskQueue()
-  : mMonitor(nsAutoMonitor::NewMonitor("TaskQueue"))
+  : mMonitor(nsAutoMonitor::NewMonitor("xpcom.taskqueue"))
   , mHead(nsnull)
   , mTail(nsnull)
   , mOffsetHead(0)
@@ -75,7 +75,7 @@ nsTaskQueue::GetPendingTask(PRBool wait, nsIRunnable **result)
   if (mOffsetHead == TASKS_PER_PAGE) {
     Page *dead = mHead;
     mHead = mHead->mNext;
-    delete dead;
+    FreePage(dead);
     mOffsetHead = 0;
   }
 
@@ -92,7 +92,7 @@ nsTaskQueue::PutTask(nsIRunnable *runnable)
     nsAutoMonitor mon(mMonitor);
 
     if (!mHead) {
-      mHead = new Page();
+      mHead = NewPage();
       if (!mHead) {
         rv = PR_FALSE;
       } else {
@@ -101,7 +101,7 @@ nsTaskQueue::PutTask(nsIRunnable *runnable)
         mOffsetTail = 0;
       }
     } else if (mOffsetTail == TASKS_PER_PAGE) {
-      Page *page = new Page();
+      Page *page = NewPage();
       if (!page) {
         rv = PR_FALSE;
       } else {
@@ -110,8 +110,10 @@ nsTaskQueue::PutTask(nsIRunnable *runnable)
         mOffsetTail = 0;
       }
     }
-    if (rv)
-      task.swap(mTail->mTasks[mOffsetTail++]);
+    if (rv) {
+      task.swap(mTail->mTasks[mOffsetTail]);
+      ++mOffsetTail;
+    }
   }
   return rv;
 }
