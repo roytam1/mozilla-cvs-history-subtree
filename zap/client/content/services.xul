@@ -333,6 +333,17 @@
         </info>      
       </igroup>
       <igroup>
+        <checkbox type="zap-formwidget" label="Match REGISTER contact address by grid only" 
+                  id="urn:mozilla:zap:register_grid_only_match"/>
+        <info>
+          <description>
+          Some services (e.g. Wengo) send REGISTER responses with contact addresses
+          that have an incorrect host part.
+          This option provides a workaround for this behaviour.
+          </description>
+        </info>      
+      </igroup>
+      <igroup>
         <groupbox flex="1">
           <caption><label value="UA Contact Address"/></caption>
           <radiogroup type="zap-formwidget" id="urn:mozilla:zap:ua_contact_address_type">

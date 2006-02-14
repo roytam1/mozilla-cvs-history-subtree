@@ -454,7 +454,11 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "true");
 Service.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "");
 // whether or not the top (loose) route header should be removed from
 // (non-dialog) requests:
-Service.rdfLiteralAttrib("urn:mozilla:zap:elide_destination_route_header", "true");
+Service.rdfLiteralAttrib("urn:mozilla:zap:elide_destination_route_header", "false");
+// whether or not to match contact addresses in REGISTER responses
+// solely by grid (needed for Wengo compatibility):
+Service.rdfLiteralAttrib("urn:mozilla:zap:register_grid_only_match", "false");
+
 
 Service.fun(
   function getStunServer() {
@@ -1458,6 +1462,7 @@ Registration.fun(
       var contacts = response.getHeaders("Contact", {});
       var contactHeader;
       var myURI = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader).address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+      var omitURICheck = this.group.identity.service["urn:mozilla:zap:register_grid_only_match"];
       var foreignContacts = [];
       for (var i=0,l=contacts.length; i<l; ++i) {
         var c = contacts[i].QueryInterface(Components.interfaces.zapISipContactHeader);
@@ -1466,7 +1471,7 @@ Registration.fun(
           // make sure the uri & grids match:
           // XXX the third term is only necessary because our uri
           // comparsion doesn't compare uri parameters yet
-          if (uri.equals(myURI) &&
+          if ((omitURICheck || uri.equals(myURI)) &&
               uri.hasURIParameter("grid") &&
               uri.getURIParameter("grid") == this.group.identity.grid) {
             if (contactHeader) {
