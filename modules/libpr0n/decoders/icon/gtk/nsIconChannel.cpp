@@ -63,7 +63,7 @@ extern "C" {
 #include "nsEscape.h"
 #include "nsNetUtil.h"
 #include "nsIURL.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 
 #include "nsIconChannel.h"
 
@@ -117,9 +117,11 @@ moz_gdk_pixbuf_to_channel(GdkPixbuf* aPixbuf, nsIURI *aURI,
 
   nsresult rv;
   nsCOMPtr<nsIInputStream> stream;
-  rv = NS_NewByteInputStream(getter_AddRefs(stream), (char*)buf, buf_size, 
-                             NS_ASSIGNMENT_ADOPT);
+  rv = NS_NewByteInputStream(getter_AddRefs(stream), (char*)buf, buf_size);
   NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIStringInputStream> sstream = do_QueryInterface(stream);
+  sstream->AdoptData((char*)buf, buf_size); // previous call was |ShareData|
 
   rv = NS_NewInputStreamChannel(aChannel, aURI, stream,
                                 NS_LITERAL_CSTRING("image/icon"));
