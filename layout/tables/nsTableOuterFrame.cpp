@@ -1049,21 +1049,6 @@ nsTableOuterFrame::UpdateReflowMetrics(PRUint8              aCaptionSide,
   FinishAndStoreOverflow(&aMet);
 }
 
-static PRBool
-IsPctHeight(nsIFrame* aFrame)
-{
-  if (aFrame) {
-    const nsStylePosition* position = aFrame->GetStylePosition();
-    if (eStyleUnit_Percent == position->mHeight.GetUnit()) {
-      float percent = position->mHeight.GetPercentValue();
-      if (percent > 0.0f) {
-        return PR_TRUE;
-      }
-    }
-  }
-  return PR_FALSE;
-}
-
 NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
                                     nsHTMLReflowMetrics&     aDesiredSize,
                                     const nsHTMLReflowState& aOuterRS,
@@ -1104,6 +1089,7 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   // First reflow the caption.  nsHTMLReflowState takes care of making
   // side captions small.
   nsHTMLReflowMetrics captionMet;
+  nsMargin captionMargin, captionMarginNoAuto;
   if (mCaptionFrame &&
       (reflowAllKids || (mCaptionFrame->GetStateBits() &
                          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)))) {
@@ -1124,11 +1110,12 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   // Then, now that we know how much to reduce the width of the inner
   // table to account for side captions, reflow the inner table.
   nsHTMLReflowMetrics innerMet;
+  nsMargin innerMargin, innerMarginNoAuto;
   if (reflowAllKids || (mInnerTableFrame->GetStateBits() &
                         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
     rv = OuterReflowChild(aPresContext, mInnerTableFrame, aOuterRS, innerMet,
-                          innerAvailWidth, innerSize, innerMargin, innerMarginNoAuto,
-                          innerPadding, aOuterRS.reason, aStatus);
+                          innerAvailWidth, innerSize, innerMargin,
+                          innerMarginNoAuto, innerPadding, aStatus);
     if (NS_FAILED(rv)) return rv;
   }
 
