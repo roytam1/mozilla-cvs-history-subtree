@@ -260,8 +260,7 @@ protected:
                             nsMargin&        aInnerMargin,
                             nsPoint&         aOrigin);
   
-  // reflow the child (caption or innertable frame),aMarginNoAuto is aMargin, 
-  // but with auto margins set to 0 
+  // reflow the child (caption or innertable frame)
   NS_IMETHOD OuterReflowChild(nsPresContext*           aPresContext,
                               nsIFrame*                 aChildFrame,
                               const nsHTMLReflowState&  aOuterRS,
@@ -269,20 +268,15 @@ protected:
                               nscoord                   aAvailWidth,
                               nsSize&                   aDesiredSize,
                               nsMargin&                 aMargin,
-                              nsMargin&                 aMarginNoAuto,
                               nsMargin&                 aPadding,
                               nsReflowStatus&           aStatus);
 
-  // Set the reflow metrics,  aInnerMarginNoAuto is  aInnerMargin, but with 
-  // auto margins set to 0
-  // aCaptionMargionNoAuto is aCaptionMargin, but with auto margins set to 0
+  // Set the reflow metrics
   void UpdateReflowMetrics(PRUint8              aCaptionSide,
                            nsHTMLReflowMetrics& aMet,
                            const nsMargin&      aInnerMargin,
-                           const nsMargin&      aInnerMarginNoAuto,
                            const nsMargin&      aInnerPadding,
                            const nsMargin&      aCaptionMargin,
-                           const nsMargin&      aCaptionMargionNoAuto,
                            const nscoord        aAvailWidth);
 
   void InvalidateDamage(PRUint8         aCaptionSide,
