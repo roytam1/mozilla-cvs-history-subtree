@@ -376,8 +376,11 @@ args_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         break;
 
       default:
-        if ((uintN)slot < MAXARGS(fp) && !ArgWasDeleted(cx, fp, slot))
+        if (fp->fun->script &&
+            (uintN)slot < MAXARGS(fp) &&
+            !ArgWasDeleted(cx, fp, slot)) {
             fp->argv[slot] = *vp;
+        }
         break;
     }
     return JS_TRUE;
@@ -946,15 +949,12 @@ fun_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
       default:
         /* XXX fun[0] and fun.arguments[0] are equivalent. */
-        if (fp && fp->fun &&
-            fp->fun->script &&
-            (uintN)slot < fp->fun->nargs) {
+        if (fp && fp->fun && (uintN)slot < fp->fun->nargs)
 #if defined _MSC_VER &&_MSC_VER <= 800
           /* MSVC1.5 coredumps */
           if (bogus == *vp)
 #endif
             *vp = fp->argv[slot];
-        }
         break;
     }
 
