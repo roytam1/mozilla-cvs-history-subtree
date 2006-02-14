@@ -750,7 +750,9 @@
 
             function setFocus(element) {
               document.commandDispatcher.suppressFocusScroll = true;
-              if (element instanceof NSHTMLElement || 
+
+              if (element instanceof Window ||
+                  element instanceof NSHTMLElement || 
                   element instanceof XULElement) {
                 element.focus();
               }
