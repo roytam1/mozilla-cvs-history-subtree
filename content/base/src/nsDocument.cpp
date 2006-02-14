@@ -3197,7 +3197,8 @@ nsDocument::SetTitle(const nsAString& aTitle)
 NS_IMETHODIMP
 nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
 {
-  NS_ENSURE_ARG(aElement);
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aElement));
+  NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
   
   nsresult rv;
 
@@ -3226,7 +3227,6 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
   nsCOMPtr<nsIAtom> tag;
   nsCOMPtr<nsIXBLService> xblService =
            do_GetService("@mozilla.org/xbl;1", &rv);
-  nsCOMPtr<nsIContent> content(do_QueryInterface(aElement));
   xblService->ResolveTag(content, &namespaceID, getter_AddRefs(tag));
 
   nsCAutoString contractID("@mozilla.org/layout/xul-boxobject");
