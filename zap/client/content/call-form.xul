@@ -55,7 +55,7 @@
     }
 
     function cmdHangup() {
-      wCall.dialog.createNonInviteRequestClient("BYE").sendRequest();
+      wCall.dialog.createNonInviteRequestClient("BYE").sendRequest(null);
     }
 
     function cmdReject() {

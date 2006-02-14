@@ -1195,12 +1195,11 @@ Registration.fun(
                                                     this.outboundRoute.length,
                                                     this.group.identity.getRCFlags());
     var me = this;
-    rc.listener = {
+    var listener = {
       notifyResponseReceived : function resolveUAContactByOPTIONS_response(_rc,
                                                                            dialog,
                                                                            response,
                                                                            flow) {
-        rc.listener = null;
         if (response.statusCode == "408") {
           // the request didn't make it. -> reschedule in 10s
           me._warning("failed to reach host. rescheduling in 10s.");
@@ -1212,14 +1211,13 @@ Registration.fun(
         me.UAContactAddressResolved = true;
       }
     };
-    rc.sendRequest();
+    rc.sendRequest(listener);
   });
 
 Registration.fun(
   function proceedWithRegistration() {
     this._initRC();
-    this.registrationRC.listener = this;
-    this.registrationRC.sendRequest();
+    this.registrationRC.sendRequest(this);
   });
 
 Registration.fun(
@@ -1323,16 +1321,15 @@ Registration.fun(
     this._unmonitorFlow();
 
     if (this.registrationRC) {
-      if (this.registrationRC.listener) {
+      if (this.registrationRC.active) {
         // We are currently waiting for a registration to complete.
         // XXX what we want to do is cancel the RC.
-        this.registrationRC.listener = null;
       }
       else if (this.registered) {
         // XXX maybe we shouldn't send unregistrations.
         var contactHeader = this.registrationRC.request.getTopContactHeader();
         contactHeader.setParameter("expires", "0");
-        this.registrationRC.sendRequest();
+        this.registrationRC.sendRequest(null);
       }
       delete this.registrationRC;
     }
@@ -1424,15 +1421,14 @@ Registration.fun(
           
     if (response.statusCode[0] == "1")
       return; // just a provisional response
-    rc.listener = null;
+
     if ((response.statusCode == "401" ||
          response.statusCode == "407") &&
         wSipStack.authentication.addAuthorizationHeaders(this.group.identity,
                                                          response,
                                                          rc.request)) {
       // retry with credentials:
-      rc.listener = this;
-      rc.sendRequest();
+      rc.sendRequest(this);
       return;
     }
     else if (response.statusCode == "423") {
@@ -1453,8 +1449,7 @@ Registration.fun(
         contactHeader.removeParameter("expires");
       }
       // retry the ammended request:
-      rc.listener = this;
-      rc.sendRequest();
+      rc.sendRequest(this);
       return;
     }
     else if (response.statusCode[0] == "2") {
@@ -1521,8 +1516,7 @@ Registration.fun(
             // The new service route has a first hop that is different
             // to the one we were using.
             // Send the request again using the updated route:
-            this.registrationRC.listener = this;
-            this.registrationRC.sendRequest();
+            this.registrationRC.sendRequest(this);
             return;
           }
           
@@ -1559,9 +1553,8 @@ Registration.fun(
 // refresh the registration:
 Registration.fun(
   function refreshRegistration() {
-    this.registrationRC.listener = this;
     try {
-      this.registrationRC.sendRequest();
+      this.registrationRC.sendRequest(this);
     } catch(e) {
       // the rc might still be busy with the last request.
       this._warning("racing registrations");
@@ -2307,12 +2300,11 @@ OutboundCall.fun(
                                                     [], 0,
                                                     this.identity.getRCFlags());
     var me = this;
-    rc.listener = {
+    var listener = {
       notifyResponseReceived : function resolveRoutingInfoByOPTIONS_response(_rc,
                                                                              dialog,
                                                                              response,
                                                                              flow) {
-        rc.listener = null;
         if (response.statusCode == "408") {
           // the request didn't make it. give up.
           me["urn:mozilla:zap:status"] = "Destination can't be reached";
@@ -2340,7 +2332,7 @@ OutboundCall.fun(
         me.RoutingInfoResolved = true;
       }
     };
-    rc.sendRequest();
+    rc.sendRequest(listener);
   });
 
 OutboundCall.fun(
@@ -2430,7 +2422,7 @@ OutboundCallHandler.fun(
       // we already have a dialog. this must be a subsequent dialog
       // from a forking proxy. send a bye immediately:
       // XXX probably not a good idea to do this before sending the ack
-      dialog.createNonInviteRequestClient("BYE").sendRequest();
+      dialog.createNonInviteRequestClient("BYE").sendRequest(null);
       return ackTemplate;
     }
 
@@ -2450,7 +2442,7 @@ OutboundCallHandler.fun(
       
       // send a BYE:
       // XXX need a way to send ACK first
-      dialog.createNonInviteRequestClient("BYE").sendRequest();
+      dialog.createNonInviteRequestClient("BYE").sendRequest(null);
       return ackTemplate;
     }
 
@@ -2465,7 +2457,7 @@ OutboundCallHandler.fun(
       
       // send a BYE:
       // XXX need a way to send ACK first
-      dialog.createNonInviteRequestClient("BYE").sendRequest();
+      dialog.createNonInviteRequestClient("BYE").sendRequest(null);
 
       return ackTemplate;
     }

@@ -40,6 +40,7 @@ interface zapISipNonInviteRCListener;
 interface zapISipAddress;
 interface zapISipDialog;
 interface zapISipRequest;
+interface zapISipResponse;
 
 /**
  * \ingroup SIP_UA_LAYER
@@ -53,16 +54,12 @@ interface zapISipNonInviteRC : nsISupports
    * calling sendRequest().
    */
   attribute zapISipRequest request;
-  
-  /**
-   * A listener receiving notifications of received responses. The
-   * request client user must remove the listener by setting this
-   * attribute to null once they are finished with the request
-   * client. This is important to prevent leaks due to circular
-   * references.
-   */
-  attribute zapISipNonInviteRCListener listener;
 
+  /**
+   * Last response received by this RC.
+   */
+  readonly attribute zapISipResponse response;
+  
   /**
    * The dialog associated with this request. Will be null if this is
    * a request outside of a dialog.
@@ -80,5 +77,20 @@ interface zapISipNonInviteRC : nsISupports
    * 8.1.3.5). For request within a dialog, CSeq will be set to the
    * incremented local sequence number.
    */
-  void sendRequest();
+  void sendRequest(in zapISipNonInviteRCListener listener);
+
+  /**
+   * True if a request has been send and no final response has been received.
+   */
+  readonly attribute boolean active;
+
+  /**
+   * Create a dialog based on the request and response.
+   * This must only be called after the request has been sent and a
+   * suitable response received and only if there isn't a dialog
+   * associated with this RC already.
+   *
+   * Will return null if the RC hasn't received a suitable reply yet.
+   */
+  zapISipDialog createDialog();
 };

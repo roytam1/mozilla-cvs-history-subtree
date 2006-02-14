@@ -55,11 +55,13 @@ interface zapISipMessage;
 /**
  * \defgroup SIP_MODULE ZAP SIP module
  *
- * The ZAP SIP module implements a UA Stack compliant with the following
- * specifications:
+ * The ZAP SIP module implements an <b>RFC3261</b> UA stack.
+ * In addition the following specifications are supported:
  *
- * -  <b>RFC3261</b>: SIP: Session Initiation Protocol
+ * -  <b>RFC3327</b>: Non-Adjacent Contacts ('Path' header)
  * -  <b>RFC3581</b>: Symmetric Response Routing
+ * -  <b>RFC3608</b>: Service Route Discovery ('Service-Route' header)
+ * -  <b>RFC3265</b>: Event Notifications
  * 
  * The main entry point into the \ref SIP_MODULE is the zapISipUAStack interface.
  *

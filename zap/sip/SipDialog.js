@@ -156,6 +156,20 @@ SipDialog.obj("listener", null);
 //  attribute zapISipRequestHandler requestHandler;
 SipDialog.obj("requestHandler", null);
 
+//  void terminateDialog();
+SipDialog.fun(
+  function terminateDialog() {
+    this._dump("Dialog terminated");
+    this.stack.unregisterDialog(this);
+    this.changeState("TERMINATED");
+    if (this.listener) {
+      this.listener.notifyDialogTerminated(this);
+      this.listener = null;
+    }
+    else
+      this._warning("Dialog "+this.dialogID+" ("+this.currentState+") terminated but no listener. Backtrace: "+this._backtrace());
+  });    
+
 //  zapISipNonInviteRC createNonInviteRequestClient(in ACString method);
 SipDialog.fun(
   function createNonInviteRequestClient(method) {

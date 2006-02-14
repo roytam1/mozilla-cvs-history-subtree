@@ -53,6 +53,11 @@ interface zapISipDialog : nsISupports
   attribute zapISipRequestHandler requestHandler;
 
   /**
+   * Terminate this dialog.
+   */
+  void terminateDialog();
+  
+  /**
    * Obtain a request client object for transactionally sending a
    * NON-INVITE request within this dialog. The
    * zapISipNonInviteRC::request attribute will be initialized with a

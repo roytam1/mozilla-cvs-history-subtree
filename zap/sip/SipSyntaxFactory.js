@@ -127,6 +127,9 @@ var PATTERN_TEXT_UTF8_TRIM = PATTERN_TEXT_UTF8char+
 // rfc3261 'token'
 var PATTERN_TOKEN = "[A-Za-z0-9\\-.!%*_+`'~]+";
 
+// rfc3265 'token-nodot'
+var PATTERN_TOKEN_NODOT = "[A-Za-z0-9\\-!%*_+`'~]+";
+
 // rfc3261 'word'
 var PATTERN_WORD = "[A-Za-z0-9\\-.!%*_+`'~()<>:\\\\\"/\\[\\]?{}]+";
 
@@ -285,6 +288,10 @@ var PATTERN_REASON_PHRASE = "(?:"+PATTERN_RESERVED+"|["+
 
 // (token / quoted-string)
 var PATTERN_AUTH_VALUE = "(?:"+PATTERN_TOKEN+"|"+PATTERN_QUOTED_STRING+")";
+
+// rfc3265 'event-type'
+var PATTERN_EVENTTYPE = "(?:"+PATTERN_TOKEN_NODOT+"(?:\\."+
+                        PATTERN_TOKEN_NODOT+")*)";
 
 //----------------------------------------------------------------------
 // Regexps used for testing or parsing SIP elements:
@@ -496,6 +503,21 @@ var REGEXP_TEXT_UTF8_TRIM = new RegExp("^(?:"+PATTERN_TEXT_UTF8_TRIM+")?$");
 // matches (server-val *(LWS server-val)):
 // XXX implement the proper parsing here
 var REGEXP_SERVER_VALS = new RegExp("^.*$");
+
+// matches an RFC3265 'event-type':
+var REGEXP_EVENTTYPE = new RegExp("^"+PATTERN_EVENTTYPE+"$");
+
+// parses an RFC3265 Event header into (eventtype,
+// event-params[unparsed]):
+var REGEXP_EVENT_HEADER_VALUE = new RegExp("^("+PATTERN_EVENTTYPE+")"+
+                                           "("+PATTERN_SEMI+
+                                           PATTERN_ANYTHING+"*)?$");
+
+// parses an RFC3265 Subscription-State header into (substate,
+// subexp-params[unparsed]):
+var REGEXP_SUBSTATE_HEADER_VALUE = new RegExp("^("+PATTERN_TOKEN+")"+
+                                              "("+PATTERN_SEMI+
+                                              PATTERN_ANYTHING+"*)?$");
 
 //----------------------------------------------------------------------
 // Tokenizers to be applied repeatedly to input:
@@ -2078,6 +2100,146 @@ SipUserAgentHeader.fun(
   });
 
 
+////////////////////////////////////////////////////////////////////////
+// Class SipEventHeader : RFC3265 'Event' header
+
+var SipEventHeader = makeClass("SipEventHeader", SipHeader);
+SipEventHeader.addInterfaces(Components.interfaces.zapISipEventHeader);
+SipEventHeader.setAliases("Event", "o");
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipEventHeader.fun(
+  function serialize() {
+    var rv = "";
+    rv += this.name + ": ";
+    rv += this._eventType;
+    rv += this._serializeParameters();
+    return rv;
+  });
+
+//----------------------------------------------------------------------
+// zapISipEventHeader implementation
+
+// attribute ACString eventType;
+SipEventHeader.parsedAttrib("eventType", REGEXP_EVENTTYPE, null);
+
+// ACString getParameter(in ACString name);
+// boolean hasParameter(in ACString name);
+// void setParameter(in ACString name, in ACString value);
+// void removeParameter(in ACString name);
+// void getParameterNames(out unsigned long count,
+//                        [retval, array, size_is(count)] out string names);
+SipEventHeader.parsedHash(
+  "Parameter",
+  SERIALIZER_PARAMS,
+  TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  REGEXP_TOKEN,
+  REGEXP_GEN_VALUE,
+  { "$id" : REGEXP_TOKEN });
+
+//----------------------------------------------------------------------
+
+SipEventHeader.fun(
+  function deserialize(name, data) {
+    // parse into (eventtype, event-params[unparsed])
+    var matches = REGEXP_EVENT_HEADER_VALUE(data);
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Event header ("+data+")");
+
+    this._eventType = matches[1];
+    this._deserializeParameters(matches[2]);
+  });
+
+
+////////////////////////////////////////////////////////////////////////
+// Class SipAllowEventsHeader : RFC3265 'Allow-Events' header
+
+var SipAllowEventsHeader = makeClass("SipAllowEventsHeader", SipHeader);
+SipAllowEventsHeader.addInterfaces(Components.interfaces.zapISipAllowEventsHeader);
+SipAllowEventsHeader.setAliases("Allow-Events", "u");
+SipAllowEventsHeader.metaobj("isCommaSeparatedList", true);
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipAllowEventsHeader.fun(
+  function serialize() {
+    return this.name + ": " + this._eventType;
+  });
+
+//----------------------------------------------------------------------
+// zapISipAllowEventsHeader implementation
+
+// attribute ACString eventType;
+SipAllowEventsHeader.parsedAttrib("eventType", REGEXP_EVENTTYPE, null);
+
+//----------------------------------------------------------------------
+
+SipAllowEventsHeader.fun(
+  function deserialize(name, data) {
+    this.eventType = data;
+  });
+
+
+////////////////////////////////////////////////////////////////////////
+// Class SipSubscriptionStateHeader: RFC3265 'Subscription-State'
+
+var SipSubscriptionStateHeader = makeClass("SipSubscriptionStateHeader",
+                                           SipHeader);
+SipSubscriptionStateHeader.addInterfaces(Components.interfaces.zapISipSubscriptionStateHeader);
+SipSubscriptionStateHeader.setAliases("Subscription-State");
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipSubscriptionStateHeader.fun(
+  function serialize() {
+    var rv = "";
+    rv += this.name + ": ";
+    rv += this._subState;
+    rv += this._serializeParameters();
+    return rv;
+  });
+
+//----------------------------------------------------------------------
+// zapISipSubscriptionStateHeader implementation
+
+// attribute ACString subState;
+SipSubscriptionStateHeader.parsedAttrib("subState", REGEXP_TOKEN, null);
+
+// ACString getParameter(in ACString name);
+// boolean hasParameter(in ACString name);
+// void setParameter(in ACString name, in ACString value);
+// void removeParameter(in ACString name);
+// void getParameterNames(out unsigned long count,
+//                        [retval, array, size_is(count)] out string names);
+SipSubscriptionStateHeader.parsedHash(
+  "Parameter",
+  SERIALIZER_PARAMS,
+  TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  REGEXP_TOKEN,
+  REGEXP_GEN_VALUE,
+  { "$reason" : REGEXP_TOKEN,
+    "$expires" : REGEXP_DELTA_SECONDS,
+    "$retry-after" : REGEXP_DELTA_SECONDS  });
+
+//----------------------------------------------------------------------
+
+SipSubscriptionStateHeader.fun(
+  function deserialize(name, data) {
+    // parse into (substate, subexp-params[unparsed])
+    var matches = REGEXP_SUBSTATE_HEADER_VALUE(data);
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Subscription-State header ("+data+")");
+
+    this._subState = matches[1];
+    this._deserializeParameters(matches[2]);
+  });
+
 
 ////////////////////////////////////////////////////////////////////////
 // Class SipUnknownHeader : header class used for header types unknown
@@ -2108,7 +2270,6 @@ SipUnknownHeader.fun(
     this.name = name;
     this._value = utf8ToUnicode(data);
   });
-
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -2711,7 +2872,7 @@ SipSyntaxFactory.fun(
     return h;
   });
 
-// hash of RFC3261 status code -> reason phrase
+// hash of RFC3261/3265 status code -> reason phrase
 var ReasonPhraseHash = {
   "$100" : "Trying",
   "$180" : "Ringing",
@@ -2719,6 +2880,7 @@ var ReasonPhraseHash = {
   "$182" : "Queued",
   "$183" : "Session Progress",
   "$200" : "OK",
+  "$202" : "Accepted", // RFC3265
   "$300" : "Multiple Choices",
   "$301" : "Moved Permanently",
   "$302" : "Moved Temporarily",
@@ -2750,6 +2912,7 @@ var ReasonPhraseHash = {
   "$486" : "Busy Here",
   "$487" : "Request Terminated",
   "$488" : "Not Acceptable Here",
+  "$489" : "Bad Event",
   "$491" : "Request Pending",
   "$493" : "Undecipherable",
   "$500" : "Server Internal Error",

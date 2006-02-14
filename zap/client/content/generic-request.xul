@@ -81,7 +81,7 @@
 
     function sendRequest() {
       if (!wRC) return;
-      wRC.listener = {
+      var listener = {
         triedCredentials : false,
         notifyResponseReceived : function(rc, dialog, response, flow) {
           if (document) {
@@ -98,7 +98,7 @@
                                         response,
                                         rc.request)) {
               //this.triedCredentials = true;
-              rc.sendRequest();
+              rc.sendRequest(this);
             } 
           }
         }
@@ -108,12 +108,11 @@
       requestTxt = requestTxt.replace(/\n/g, "\r\n");
 
       wRC.request = parent.wSipStack.syntaxFactory.deserializeMessage(requestTxt);
-      wRC.sendRequest();
+      wRC.sendRequest(listener);
     }
 
     function cleanup() {
       if (wRC) {
-        wRC.listener = null;
         wRC = null;
       }
     }

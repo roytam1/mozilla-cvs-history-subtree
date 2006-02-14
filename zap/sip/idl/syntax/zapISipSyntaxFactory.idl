@@ -62,13 +62,14 @@ interface zapISipAllowHeader;
  *
  * The main entry point into the ZAP SIP syntax layer is the
  * zapISipSyntaxFactory interface: an API for parsing, serializing and
- * constructing SIP message objects with lazy header parsing.  In
+ * constructing SIP message objects with lazy header parsing. In
  * addition to the headers defined in RFC3261, the syntax layer can
  * handle generic headers (zapISipUnknownHeader) as well as extension
  * headers from the following specifications:
  *
  * - RFC3327: 'Path' header
  * - RFC3608: 'Service-Route' header
+ * - RFC3265: 'Event', 'Allow-Events', 'Subscription-State' headers
  *
  * 
  */
@@ -219,7 +220,8 @@ interface zapISipSyntaxFactory : nsISupports
   zapISipAllowHeader createAllowHeader(in ACString method);
 
   /**
-   * Get the standard RFC3261 reason phrase for the given status code
+   * Get the standard RFC3261 or RFC3265 reason phrase for the given
+   * status code
    */
   ACString getStandardReasonPhrase(in ACString statusCode);
 };

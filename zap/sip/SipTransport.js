@@ -770,7 +770,6 @@ OptionsMonitorScheduler.fun(
 OptionsMonitorScheduler.fun(
   function terminate() {
     this.Terminated = true;
-    this.rc.listener = null;
   });
 
 OptionsMonitorScheduler.fun(
@@ -780,8 +779,7 @@ OptionsMonitorScheduler.fun(
 
 OptionsMonitorScheduler.fun(
   function sendRequest() {
-    this.rc.listener = this;
-    this.rc.sendRequest();
+    this.rc.sendRequest(this);
   });
 
 // zapISipNonInviteRCListener

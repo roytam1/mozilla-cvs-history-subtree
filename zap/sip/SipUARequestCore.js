@@ -87,8 +87,8 @@ SipNonInviteRC.fun(
 //  readonly attribute zapISipRequest request;
 SipNonInviteRC.obj("request", null);
 
-//  attribute zapISipNonInviteRCListener listener;
-SipNonInviteRC.obj("listener", null);
+//  readonly attribute zapISipResponse response;
+SipNonInviteRC.obj("response", null);
 
 //  readonly attribute zapISipDialog dialog;
 SipNonInviteRC.obj("dialog", null);
@@ -96,12 +96,14 @@ SipNonInviteRC.obj("dialog", null);
 //  void sendRequest();
 SipNonInviteRC.statefun(
   "INITIALIZED",
-  function sendRequest() {
+  function sendRequest(listener) {
+    this._listener = listener;
+    this.active = true;
     // If this is a BYE request terminate our associated dialog *now*:
     if (this.dialog &&
         this.request.method == "BYE" &&
         this.dialog.dialogState != "TERMINATED") {
-      this.dialog.terminate();
+      this.dialog.terminateDialog();
     }
 
     // Figure out our destination uri (rfc3261 8.1.2):
@@ -141,6 +143,16 @@ SipNonInviteRC.statefun(
                                                  this);
   });
 
+//  readonly attribute boolean active;
+SipNonInviteRC.obj("active", false);
+
+//  zapISipDialog createDialog();
+SipNonInviteRC.fun(
+  function createDialog() {
+    if (!this.response) return null;
+    return this.stack.createDialogUAC(this.currentRequest, this.response);
+  });
+
 //----------------------------------------------------------------------
 // zapISipResolveListener
 
@@ -160,11 +172,15 @@ SipNonInviteRC.statefun(
     if (!this._destinationIterator.hasMore()) {
       this.changeState("INITIALIZED");
       
-      if (this.listener) {
-        // generate a 408 (Request Timeout) to hand to the listener
-        // (RFC3261 8.1.3.1):
-        var r = this.stack.formulateResponse("408", this.request, this._ToTag);
-        this.listener.notifyResponseReceived(this, this.dialog, r, null);
+      // generate a 408 (Request Timeout)
+      // (RFC3261 8.1.3.1):
+      this.response = this.stack.formulateResponse("408", this.request, this._ToTag);
+      this.active = false;
+      
+      if (this._listener) {
+        var l = this._listener;
+        this._listener = null;
+        l.notifyResponseReceived(this, this.dialog, this.response, null);
       }
       return;
     }
@@ -199,16 +215,22 @@ SipNonInviteRC.statefun(
   "CALLING",
   function handleFailureResponse(response, flow) {
     this.changeState("INITIALIZED");
-    if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
+    this.response = response;
+    this.active = false;
+    if (this._listener) {
+      var l = this._listener;
+      this._listener = null;
+      l.notifyResponseReceived(this, this.dialog, this.response, flow);
+    }
   });
 
 //  void handleProvisionalResponse(in zapISipResponse response, in zapISipFlow flow);
 SipNonInviteRC.statefun(
   "CALLING",
   function handleProvisionalResponse(response, flow) {
-    if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
+    this.response = response;
+    if (this._listener)
+      this._listener.notifyResponseReceived(this, this.dialog, this.response, flow);
     // stay in CALLING state
   });
 
@@ -217,9 +239,13 @@ SipNonInviteRC.statefun(
   "CALLING",
   function handleSuccessResponse(response, flow) {
     this.changeState("INITIALIZED");
-    
-    if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
+    this.response = response;
+    this.active = false;
+    if (this._listener) {
+      var l = this._listener;
+      this._listener = null;
+      l.notifyResponseReceived(this, this.dialog, this.response, flow);
+    }
   });
 
 //  void handleTimeout();
@@ -553,7 +579,7 @@ SipInviteRC.fun(
     this.spawnedDialogs.forEach(
       function(d) {
         if (d.dialogState == "EARLY")
-          d.terminate();
+          d.terminateDialog();
         d.pendingInviteRC = null;
       });
     // remove ourselves as pending invite from initial dialog (if this
@@ -760,7 +786,7 @@ SipNonInviteRS.fun(
     // dialog:
     if (this.dialog && this.request.method == "BYE" &&
         this.dialog.dialogState != "TERMINATED")
-      this.dialog.terminate();
+      this.dialog.terminateDialog();
 
     this.changeState("TERMINATED");
 
@@ -857,7 +883,7 @@ SipInviteRS.statefun(
     }
     else if (response.statusCode[0] != "1") {
       if (this.dialog)
-        this.dialog.terminate();
+        this.dialog.terminateDialog();
       this.terminate();
     }
     return this.dialog;
@@ -931,7 +957,7 @@ SipInviteRS.fun(
     if (this.dialog) {
       // terminate early dialogs:
       if (this.dialog.dialogState == "EARLY")
-        this.dialog.terminate();
+        this.dialog.terminateDialog();
       this.dialog.pendingInviteRS = null;
     }
     this._dump("terminated");
