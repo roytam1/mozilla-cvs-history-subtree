@@ -102,7 +102,7 @@
 #include "nsDocShellTransferableHooks.h"
 #include "nsIAuthPromptProvider.h"
 #include "nsISecureBrowserUI.h"
-#include "nsDocShellLoadtypes.h"
+#include "nsDocShellLoadTypes.h"
 
 /* internally used ViewMode types */
 enum ViewMode {
