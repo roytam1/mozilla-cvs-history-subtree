@@ -268,14 +268,12 @@ protected:
                               nscoord                   aAvailWidth,
                               nsSize&                   aDesiredSize,
                               nsMargin&                 aMargin,
-                              nsMargin&                 aPadding,
                               nsReflowStatus&           aStatus);
 
   // Set the reflow metrics
   void UpdateReflowMetrics(PRUint8              aCaptionSide,
                            nsHTMLReflowMetrics& aMet,
                            const nsMargin&      aInnerMargin,
-                           const nsMargin&      aInnerPadding,
                            const nsMargin&      aCaptionMargin,
                            const nscoord        aAvailWidth);
 
@@ -285,6 +283,14 @@ protected:
                         PRBool          aCaptionChanged,
                         nsRect*         aOldOverflowArea);
   
+  // Get the margin.  aMarginNoAuto is aMargin, but with auto 
+  // margins set to 0
+  void GetMargin(nsPresContext*           aPresContext,
+                 const nsHTMLReflowState& aOuterRS,
+                 nsIFrame*                aChildFrame,
+                 nscoord                  aAvailableWidth,
+                 nsMargin&                aMargin);
+
 private:
   // used to keep track of this frame's children. They are redundant with mFrames, but more convient
   nsTableFrame* mInnerTableFrame; 
