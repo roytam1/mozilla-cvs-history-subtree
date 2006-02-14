@@ -410,6 +410,7 @@ nsTableOuterFrame::GetMargin(nsPresContext*           aPresContext,
   // will not be computed at this time.
 
   // create and init the child reflow state
+  // XXX We really shouldn't construct a reflow state to do this.
   nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame,
                             nsSize(aAvailWidth, aOuterRS.availableHeight),
                             PR_FALSE);
