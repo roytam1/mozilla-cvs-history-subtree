@@ -2,6 +2,7 @@ xpconnect
 nsUConvModule
 nsI18nModule
 necko_core_and_primary_protocols
+necko_secondary_protocols
 nsJarModule
 nsPrefModule
 nsSecurityManagerModule
