@@ -146,16 +146,16 @@
                   </menupopup>
                 </menu>
                 <menuitem id="toggle_taskbar" label="&taskbarCmd.label;" accesskey="&taskbarCmd.accesskey;" type="checkbox" command="cmd_toggleTaskbar" checked="true" />
-#ifndef MOZ_PLACES
                 <menu id="viewSidebarMenuMenu"
                       label="&viewSidebarMenu.label;"
                       accesskey="&viewSidebarMenu.accesskey;">
                   <menupopup id="viewSidebarMenu">
+#ifndef MOZ_PLACES
                     <menuitem key="viewBookmarksSidebarKb" observes="viewBookmarksSidebar" accesskey="&bookmarksSidebarCmd.accesskey;"/>
                     <menuitem key="key_gotoHistory" observes="viewHistorySidebar" accesskey="&historySidebarCmd.accesskey;"/>
+#endif
                   </menupopup>
                 </menu>
-#endif
                 <menuseparator/>
                 <menuitem label="&stopCmd.label;"
                           accesskey="&stopCmd.accesskey;"
