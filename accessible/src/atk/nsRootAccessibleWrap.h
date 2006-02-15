@@ -58,6 +58,7 @@ public:
 
     NS_IMETHOD GetParent(nsIAccessible **  aParent);
     NS_IMETHOD GetRole(PRUint32 *aRole);
+    NS_IMETHOD GetExtState(PRUint32 *aState);
 };
 
 #endif   /* __NS_ROOT_ACCESSIBLE_WRAP_H__ */

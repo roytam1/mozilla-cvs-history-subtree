@@ -40,6 +40,9 @@
 #include "nsMai.h"
 #include "nsRootAccessibleWrap.h"
 #include "nsAppRootAccessible.h"
+#include "nsIDOMWindow.h"
+#include "nsPIDOMWindow.h"
+#include "nsIFocusController.h"
 
 nsRootAccessibleWrap::nsRootAccessibleWrap(nsIDOMNode *aDOMNode,
                                            nsIWeakReference* aShell):
@@ -76,5 +79,24 @@ NS_IMETHODIMP nsRootAccessibleWrap::GetParent(nsIAccessible **  aParent)
 NS_IMETHODIMP nsRootAccessibleWrap::GetRole(PRUint32 *_retval)
 {
     *_retval = ROLE_FRAME;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsRootAccessibleWrap::GetExtState(PRUint32 *aState)
+{
+    nsAccessibleWrap::GetExtState(aState);
+    
+    nsCOMPtr<nsIDOMWindow> domWin;
+    GetWindow(getter_AddRefs(domWin));
+    nsCOMPtr<nsPIDOMWindow> privateDOMWindow(do_QueryInterface(domWin));
+    if (privateDOMWindow) {
+        nsIFocusController *focusController =
+            privateDOMWindow->GetRootFocusController();
+        PRBool isActive = PR_FALSE;
+        focusController->GetActive(&isActive);
+        if (isActive) {
+            *aState |= EXT_STATE_ACTIVE;
+        }
+    }
     return NS_OK;
 }
