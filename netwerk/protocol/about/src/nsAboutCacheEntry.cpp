@@ -64,7 +64,7 @@ NS_IMPL_ISUPPORTS4(nsAboutCacheEntry,
 NS_IMETHODIMP
 nsAboutCacheEntry::NewChannel(nsIURI *aURI, nsIChannel **result)
 {
-    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(aURI);
     nsresult rv;
 
     nsCOMPtr<nsIChannel> chan;
