@@ -79,7 +79,6 @@ nsTableCellFrame::nsTableCellFrame()
   SetNeedSpecialReflow(PR_FALSE);
   SetHadSpecialReflow(PR_FALSE);
   SetHasPctOverHeight(PR_FALSE);
-  SetNeedPass2Reflow(PR_TRUE);
 
 #ifdef DEBUG_TABLE_REFLOW_TIMING
   mTimer = new nsReflowTimer(this);
@@ -826,24 +825,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   // mIPercentHeightObserver is for non table related frames inside cells in quirks mode
   kidReflowState.mPercentHeightObserver = (eCompatibility_NavQuirks == compatMode) ? (nsIPercentHeightObserver *)this : nsnull;
 
-  // Assume the inner child will stay positioned exactly where it is. Later in
-  // VerticallyAlignChild() we'll move it if it turns out to be wrong. This
-  // avoids excessive movement and is more stable
-  nsPoint kidOrigin;
-  if (isStyleChanged || 
-      (eReflowReason_Initial == aReflowState.reason) ||
-      (eReflowReason_StyleChange == aReflowState.reason)) {
-    kidOrigin.MoveTo(leftInset, topInset);
-  } else {
-    // handle percent padding-left which was 0 during initial reflow
-    if (eStyleUnit_Percent == aReflowState.mStylePadding->mPadding.GetLeftUnit()) {
-      nsRect kidRect = firstKid->GetRect();
-      // only move in the x direction for the same reason as above
-      kidOrigin.MoveTo(leftInset, kidRect.y);
-      firstKid->SetPosition(nsPoint(leftInset, kidRect.y));
-    }
-    kidOrigin = firstKid->GetPosition();
-  }
+  nsPoint kidOrigin(leftInset, topInset);
 
 #if defined DEBUG_TABLE_REFLOW_TIMING
   nsTableFrame::DebugReflow(firstKid, (nsHTMLReflowState&)kidReflowState);
@@ -1007,14 +989,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 #if defined DEBUG_TABLE_REFLOW_TIMING
   nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState, &aDesiredSize, aStatus);
 #endif
-
-  if (NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth) {
-    SetNeedPass2Reflow(PR_TRUE);
-  }
-  else if ((eReflowReason_Initial == aReflowState.reason) || 
-           (eReflowReason_Resize  == aReflowState.reason)) { 
-    SetNeedPass2Reflow(PR_FALSE);
-  }
 
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;

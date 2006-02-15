@@ -1790,14 +1790,15 @@ nsTableFrame::IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowSta
 }
 
 /******************************************************************************************
- * During the initial reflow the table reflows each child with an unconstrained avail width
- * to get its max element width and maximum width. This is referred to as the pass 1 reflow.
+ * Before reflow, intrinsic width calculation is done using GetMinWidth
+ * and GetPrefWidth.  This used to be known as pass 1 reflow.
  *
- * After the 1st pass reflow, the table determines the column widths using BalanceColumnWidths()
+ * After the intrinsic width calculation, the table determines the
+ * column widths using BalanceColumnWidths() and
  * then reflows each child again with a constrained avail width. This reflow is referred to
  * as the pass 2 reflow. 
  *
- * A special height reflow (pass 3 reflow) can occur during an intitial or resize reflow
+ * A special height reflow (pass 3 reflow) can occur during an initial or resize reflow
  * if (a) a row group, row, cell, or a frame inside a cell has a percent height but no computed 
  * height or (b) in paginated mode, a table has a height. (a) supports percent nested tables 
  * contained inside cells whose heights aren't known until after the pass 2 reflow. (b) is 
@@ -1859,6 +1860,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // If this is a special height reflow, set our desired size to what is was previously and return
   // if we will be getting another special height reflow. In paginated mode, SetNeedSpecialReflow(PR_TRUE) 
   // may not have been called if reflow was a result of having a height on the containing table
+  // XXXldb Set aStatus or other members of aDesiredSize?
   if (IsPrematureSpecialHeightReflow(aReflowState, mRect, NeedSpecialReflow() || isPaginated, aDesiredSize)) 
     return NS_OK;
 
