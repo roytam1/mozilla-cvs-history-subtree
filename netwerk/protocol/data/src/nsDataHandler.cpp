@@ -117,7 +117,7 @@ nsDataHandler::NewURI(const nsACString &aSpec,
 NS_IMETHODIMP
 nsDataHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 {
-    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(url);
     nsresult rv;
     
     nsDataChannel* channel;
