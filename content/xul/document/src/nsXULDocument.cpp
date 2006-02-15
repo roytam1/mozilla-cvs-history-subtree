@@ -3183,15 +3183,7 @@ nsXULDocument::ResumeWalk()
     // XXXldb This is where we should really be setting the chromehidden
     // attribute.
 
-    PRBool didInitialReflow = PR_TRUE;
-    nsIPresShell *shell = GetShellAt(0);
-    if (shell)
-        shell->GetDidInitialReflow(&didInitialReflow);
-
-    if (!didInitialReflow) {
-        // Everything after this point we only want to do once we're
-        // certain that we've been embedded in a presentation shell.
-
+    if (!mDocumentLoaded) {
         nsAutoString title;
         mRootContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::title, title);
         SetTitle(title);
@@ -3225,6 +3217,8 @@ nsXULDocument::ResumeWalk()
         // See below for detail.
         if (mPendingOverlayLoadNotifications.IsInitialized())
             mPendingOverlayLoadNotifications.Enumerate(FirePendingMergeNotification, (void*)&mOverlayLoadObservers);
+
+        mDocumentLoaded = PR_TRUE;
     }
     else {
         if (mOverlayLoadObservers.IsInitialized()) {
