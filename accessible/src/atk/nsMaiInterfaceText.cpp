@@ -358,7 +358,7 @@ getCharacterExtentsCB(AtkText *aText, gint aOffset,
     nsCOMPtr<nsIAccessibleText> accText;
     accWrap->QueryInterface(NS_GET_IID(nsIAccessibleText),
                             getter_AddRefs(accText));
-    if (accText)
+    if (!accText)
         return;
 
     PRInt32 extY = 0, extX = 0;
