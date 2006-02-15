@@ -633,7 +633,7 @@ function ConvertSortTypeToColumnID(sortKey)
 	    break;
     default:
       dump("unsupported sort key: " + sortKey + "\n");
-      columnID = null;
+      columnID = "dateCol";
       break;
   }
   return columnID;
@@ -910,8 +910,7 @@ function FolderPaneSelectionChange()
                 gPreQuickSearchView.close();
                 gPreQuickSearchView = null;  
               }
-              
-              clearQuickSearchAfterFolderChange();
+              ClearQSIfNecessary();
             }
             ClearMessagePane();
 
