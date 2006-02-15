@@ -62,6 +62,7 @@
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 #include "nsINameSpaceManager.h"
+#include "nsLayoutUtils.h"
 
 
 //TABLECELL SELECTION
@@ -653,24 +654,47 @@ PRInt32 nsTableCellFrame::GetColSpan()
   return colSpan;
 }
 
+/* virtual */ nscoord
+nsTableCellFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
+
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                                                mFrames.FirstChild(),
+                                                nsLayoutUtils::MIN_WIDTH);
+  nsCOMPtr<nsIDeviceContext> dc;
+  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+  result = nsTableFrame::RoundToPixel(result, dc->DevUnitsToTwips());
+
+  return 0;
+}
+
+/* virtual */ nscoord
+nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
+
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                                                mFrames.FirstChild(),
+                                                nsLayoutUtils::PREF_WIDTH);
+  nsCOMPtr<nsIDeviceContext> dc;
+  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+  result = nsTableFrame::RoundToPixel(result, dc->DevUnitsToTwips());
+
+  return 0;
+}
+
 #ifdef DEBUG
 #define PROBABLY_TOO_LARGE 1000000
 static
 void DebugCheckChildSize(nsIFrame*            aChild, 
                          nsHTMLReflowMetrics& aMet, 
-                         nsSize&              aAvailSize,
-                         PRBool               aIsPass2Reflow)
+                         nsSize&              aAvailSize)
 {
-  if (aIsPass2Reflow) {
-    if ((aMet.width < 0) || (aMet.width > PROBABLY_TOO_LARGE)) {
-      printf("WARNING: cell content %p has large width %d \n", aChild, aMet.width);
-    }
-  }
-  if (aMet.mComputeMEW) {
-    nscoord tmp = aMet.mMaxElementWidth;
-    if ((tmp < 0) || (tmp > PROBABLY_TOO_LARGE)) {
-      printf("WARNING: cell content %p has large max element width %d \n", aChild, tmp);
-    }
+  if ((aMet.width < 0) || (aMet.width > PROBABLY_TOO_LARGE)) {
+    printf("WARNING: cell content %p has large width %d \n", aChild, aMet.width);
   }
 }
 #endif
@@ -714,7 +738,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
                                    const nsHTMLReflowState& aReflowState,
                                    nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableCellFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableCellFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 #if defined DEBUG_TABLE_REFLOW_TIMING
   nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState);
@@ -735,11 +759,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 
   // this should probably be cached somewhere
   nsCompatibility compatMode = aPresContext->CompatibilityMode();
-
-  // Initialize out parameter
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = 0;
-  }
 
   aStatus = NS_FRAME_COMPLETE;
   nsSize availSize(aReflowState.availableWidth, availHeight);
@@ -768,31 +787,12 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   if (NS_UNCONSTRAINEDSIZE!=availSize.height)
     availSize.height -= topInset+bottomInset;
 
-  PRBool  isStyleChanged = PR_FALSE;
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    // if the path has a reflow command then the cell must be the target of a style change 
-    nsHTMLReflowCommand* command = aReflowState.path->mReflowCommand;
-    if (command) {
-      // if there are other reflow commands targeted at the cell's block, these will
-      // be subsumed by the style change reflow
-      nsReflowType type;
-      command->GetType(type);
-      if (eReflowType_StyleChanged == type) {
-        isStyleChanged = PR_TRUE;
-      }
-      else NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
-    }
-    // else the reflow command will be passed down to the child
-  }
-
   // Try to reflow the child into the available space. It might not
   // fit or might need continuing.
   if (availSize.height < 0)
     availSize.height = 1;
 
-  nsHTMLReflowMetrics kidSize(NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth ||
-                              aDesiredSize.mComputeMEW,
-                              aDesiredSize.mFlags);
+  nsHTMLReflowMetrics kidSize(aDesiredSize.mFlags);
   kidSize.width=kidSize.height=kidSize.ascent=kidSize.descent=0;
   SetPriorAvailWidth(aReflowState.availableWidth);
   nsIFrame* firstKid = mFrames.FirstChild();
@@ -816,10 +816,8 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     SetHasPctOverHeight(PR_FALSE);
   }
 
-  // If it was a style change targeted at us, then reflow the child with a style change reason
-  nsReflowReason reason = aReflowState.reason;
+  // If it was a style change targeted at us, then
   if (isStyleChanged) {
-    reason = eReflowReason_StyleChange;
     // the following could be optimized with a fair amount of effort
     tableFrame->SetNeedStrategyInit(PR_TRUE);
   }
@@ -863,7 +861,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 #endif
 
 #ifdef NS_DEBUG
-  DebugCheckChildSize(firstKid, kidSize, availSize, (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth));
+  DebugCheckChildSize(firstKid, kidSize, availSize);
 #endif
 
   // 0 dimensioned cells need to be treated specially in Standard/NavQuirks mode 
@@ -977,26 +975,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   aDesiredSize.descent += kidSize.descent;
   
   // the overflow area will be computed when the child will be vertically aligned
-
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth =
-      PR_MAX(smallestMinWidth, kidSize.mMaxElementWidth);
-    if (NS_UNCONSTRAINEDSIZE != aDesiredSize.mMaxElementWidth) {
-      aDesiredSize.mMaxElementWidth = nsTableFrame::RoundToPixel(
-                  aDesiredSize.mMaxElementWidth + leftInset + rightInset, p2t);
-    }
-  }
-  if (aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aDesiredSize.mMaximumWidth = kidSize.mMaximumWidth;
-    if (NS_UNCONSTRAINEDSIZE != aDesiredSize.mMaximumWidth) {
-      aDesiredSize.mMaximumWidth += leftInset + rightInset;
-      aDesiredSize.mMaximumWidth = nsTableFrame::RoundToPixel(aDesiredSize.mMaximumWidth, p2t);
-    }
-    // make sure the preferred width is at least as big as the max element width
-    if (aDesiredSize.mComputeMEW) {
-      aDesiredSize.mMaximumWidth = PR_MAX(aDesiredSize.mMaximumWidth, aDesiredSize.mMaxElementWidth);
-    }
-  }
 
   if (aReflowState.mFlags.mSpecialHeightReflow) {
     if (aDesiredSize.height > mRect.height) {
