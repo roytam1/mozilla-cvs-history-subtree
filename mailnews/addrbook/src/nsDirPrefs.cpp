@@ -2693,6 +2693,14 @@ char *DIR_CreateServerPrefName (DIR_Server *server, char *name)
         leafName = nsCRT::strdup(name);
 	else
 		leafName = dir_ConvertDescriptionToPrefName (server);
+
+  if (!leafName || !*leafName)
+  {
+    // we need to handle this in case the description has no alphanumeric chars
+    // it's very common for cjk users
+    leafName = nsCRT::strdup("_nonascii");
+  }
+
 	if (leafName)
 	{
 		PRInt32 uniqueIDCnt = 0;
@@ -2722,6 +2730,13 @@ char *DIR_CreateServerPrefName (DIR_Server *server, char *name)
 
             NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(prefCount, children);
 		} /* while we don't have a unique name */
+
+    // fallback to "user_directory_N" form if we failed to verify
+    if (!isUnique && prefName)
+    {
+      PR_smprintf_free(prefName);
+      prefName = nsnull;
+    }
 
 		PR_Free(leafName);
 
