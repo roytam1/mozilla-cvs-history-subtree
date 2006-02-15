@@ -181,4 +181,14 @@
 { 0xb9, 0xb8, 0xc8, 0x11, 0x75, 0x95, 0x51, 0x99 } }
 #define NS_HASH_PROPERTY_BAG_CONTRACTID "@mozilla.org/hash-property-bag;1"
 
+/**
+ * Implementation of nsIThreadManager
+ */
+#define NS_THREADMANAGER_CONTRACTID "@mozilla.org/thread-manager;1"
+
+/**
+ * Implementation of nsIThreadPool
+ */
+#define NS_THREADPOOL_CONTRACTID "@mozilla.org/thread-pool;1"
+
 #endif

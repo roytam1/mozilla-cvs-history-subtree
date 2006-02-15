@@ -72,6 +72,7 @@
 #include "nsGenericFactory.h"
 
 #include "nsThreadManager.h"
+#include "nsThreadPool.h"
 
 #include "nsIProxyObjectManager.h"
 #include "nsProxyEventPrivate.h"  // access to the impl of nsProxyObjectManager for the generic factory registration.
@@ -226,7 +227,9 @@ nsThreadManagerGetSingleton(nsISupports* outer,
     return nsThreadManager::get()->QueryInterface(aIID, aInstancePtr);
 }
 NS_DECL_CLASSINFO(nsThreadManager)
-NS_DECL_CLASSINFO(nsThread)
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsThreadPool)
+NS_DECL_CLASSINFO(nsThreadPool)
 
 static NS_METHOD
 nsXPTIInterfaceInfoManagerGetSingleton(nsISupports* outer,
@@ -399,6 +402,8 @@ static const nsModuleComponentInfo components[] = {
     COMPONENT_CI_FLAGS(THREADMANAGER, nsThreadManagerGetSingleton,
                        nsThreadManager,
                        nsIClassInfo::THREADSAFE | nsIClassInfo::SINGLETON),
+    COMPONENT_CI_FLAGS(THREADPOOL, nsThreadPoolConstructor,
+                       nsThreadPool, nsIClassInfo::THREADSAFE),
 
     COMPONENT_CI_FLAGS(STRINGINPUTSTREAM, nsStringInputStreamConstructor,
                        nsStringInputStream, nsIClassInfo::THREADSAFE),

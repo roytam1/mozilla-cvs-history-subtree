@@ -36,52 +36,47 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#ifndef nsThreadPool_h__
+#define nsThreadPool_h__
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+#include "nsIThreadPool.h"
+#include "nsIThread.h"
+#include "nsIRunnable.h"
+#include "nsTaskQueue.h"
+#include "nsCOMArray.h"
+
+class nsThreadPool : public nsIThreadPool, public nsIRunnable
 {
-  /**
-   * Returns the name of the thread, which may be empty if this thread is
-   * anonymous.
-   */
-  readonly attribute ACString name;
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDISPATCHTARGET
+  NS_DECL_NSITHREADPOOL
+  NS_DECL_NSIRUNNABLE
 
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
-   */
-  void shutdown();
-   
-  /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
-   */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  nsThreadPool();
+
+private:
+  ~nsThreadPool();
+
+  nsresult PutTask(nsIRunnable *task);
+
+  nsCOMArray<nsIThread> mThreads;
+  nsTaskQueue           mTasks;
+  PRUint32              mThreadLimit;
+  PRUint32              mIdleThreadLimit;
+  PRUint32              mIdleThreadTimeout;
+  PRUint32              mIdleCount;
+  PRBool                mShutdown;
 };
 
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
+#define NS_THREADPOOL_CLASSNAME "nsThreadPool"
+#define NS_THREADPOOL_CID                          \
+{ /* 547ec2a8-315e-4ec4-888e-6e4264fe90eb */       \
+  0x547ec2a8,                                      \
+  0x315e,                                          \
+  0x4ec4,                                          \
+  {0x88, 0x8e, 0x6e, 0x42, 0x64, 0xfe, 0x90, 0xeb} \
 }
-%}
+
+
+#endif  // nsThreadPool_h__

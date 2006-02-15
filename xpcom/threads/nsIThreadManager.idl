@@ -44,8 +44,10 @@ interface nsIThread;
 interface nsIThreadManager : nsISupports
 {
   /**
-   * Create a new named thread (a global, user PRThread).  The name
-   * must be unique.
+   * Create a new named thread (a global, user PRThread).  If the name is
+   * non-empty, then the name of the thread must be unique.  Specifying an
+   * empty name results in an anonymous thread that cannot be found later on
+   * using the getThread method.
    */
   nsIThread newThread(in ACString name);
    

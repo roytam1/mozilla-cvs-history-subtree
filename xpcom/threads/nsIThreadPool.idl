@@ -38,50 +38,36 @@
 
 #include "nsIDispatchTarget.idl"
 
-[scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+/**
+ * An interface to a thread pool.  A thread pool creates a limited number of
+ * anonymous (unnamed) worker threads.  A task dispatched to the thread pool
+ * will be run on the next available worker thread.
+ */
+[scriptable, uuid(394c29f0-225f-487f-86d3-4c259da76cab)]
+interface nsIThreadPool : nsIDispatchTarget
 {
   /**
-   * Returns the name of the thread, which may be empty if this thread is
-   * anonymous.
-   */
-  readonly attribute ACString name;
-
-  /**
-   * Shutdown the thread.  This method may not be executed from the thread
-   * itself.  Instead, it is meant to be executed from another thread (usually
-   * the thread that created this thread).  When this function returns, the
-   * thread will be shutdown, and it will no longer be possible to dispatch
-   * tasks to the thread.
+   * Shutdown the thread pool.  This method may not be executed from any thread
+   * in the thread pool.  Instead, it is meant to be executed from another
+   * thread (usually the thread that created this thread pool).  When this
+   * function returns, the thread pool and all of its threads will be shutdown,
+   * and it will no longer be possible to dispatch tasks to the thread pool.
    */
   void shutdown();
-   
+
   /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
+   * Get/set the maximum number of threads allowed at one time in this pool.
+   */ 
+  attribute unsigned long threadLimit;
+
+  /**
+   * Get/set the maximum number of idle threads kept alive.
    */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  attribute unsigned long idleThreadLimit;
+
+  /**
+   * Get/set the amount of time in milliseconds before an idle thread is
+   * destroyed.
+   */
+  attribute unsigned long idleThreadTimeout;
 };
-
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
-}
-%}

@@ -62,6 +62,7 @@ CPPSRCS		= \
 		nsRunnable.cpp \
 		nsThread.cpp \
 		nsThreadManager.cpp \
+		nsThreadPool.cpp \
 		nsProcessCommon.cpp \
 		nsTimerImpl.cpp \
 		TimerThread.cpp \
@@ -79,6 +80,7 @@ XPIDLSRCS	= \
 		nsIThread.idl \
 		nsIThreadInternal.idl \
 		nsIThreadManager.idl \
+		nsIThreadPool.idl \
 		nsITimer.idl \
 		nsITimerInternal.idl \
 		nsITimerManager.idl \

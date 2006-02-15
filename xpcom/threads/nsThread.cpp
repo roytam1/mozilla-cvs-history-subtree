@@ -38,7 +38,6 @@
 
 #include "nsThread.h"
 #include "nsThreadManager.h"
-#include "nsRunnable.h"
 #include "nsAutoLock.h"
 #include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
@@ -149,28 +148,6 @@ public:
 
 private:
   nsRefPtr<nsThread> mThread;
-};
-
-//-----------------------------------------------------------------------------
-
-class nsThreadSyncDispatch : public nsRunnable {
-public:
-  nsThreadSyncDispatch(nsIRunnable *task)
-    : mSyncTask(task) {
-  }
-
-  NS_IMETHODIMP Run() {
-    mSyncTask->Run();
-    mSyncTask = nsnull;
-    return NS_OK;
-  }
-
-  PRBool IsPending() {
-    return mSyncTask != nsnull;
-  }
-
-private:
-  nsCOMPtr<nsIRunnable> mSyncTask;
 };
 
 //-----------------------------------------------------------------------------

@@ -42,6 +42,7 @@
 #include "nsIThreadInternal.h"
 #include "nsISupportsPriority.h"
 #include "nsTaskQueue.h"
+#include "nsRunnable.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
 
@@ -81,6 +82,28 @@ private:
   PRInt32     mPriority;
   PRThread   *mThread;
   PRIntn      mActive;
+};
+
+//-----------------------------------------------------------------------------
+
+class nsThreadSyncDispatch : public nsRunnable {
+public:
+  nsThreadSyncDispatch(nsIRunnable *task)
+    : mSyncTask(task) {
+  }
+
+  NS_IMETHODIMP Run() {
+    mSyncTask->Run();
+    mSyncTask = nsnull;
+    return NS_OK;
+  }
+
+  PRBool IsPending() {
+    return mSyncTask != nsnull;
+  }
+
+private:
+  nsCOMPtr<nsIRunnable> mSyncTask;
 };
 
 #endif  // nsThread_h__

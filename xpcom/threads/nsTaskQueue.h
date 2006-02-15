@@ -68,6 +68,11 @@ public:
     return GetPendingTask(PR_TRUE, runnable);
   }
 
+  // Expose the task queue's monitor for "power users"
+  PRMonitor *Monitor() {
+    return mMonitor;
+  }
+
 private:
 
   PRBool GetPendingTask(PRBool wait, nsIRunnable **runnable);

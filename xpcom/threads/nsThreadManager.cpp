@@ -141,6 +141,10 @@ nsThreadManager::NewThread(const nsACString &name, nsIThread **result)
 NS_IMETHODIMP
 nsThreadManager::GetThread(const nsACString &name, nsIThread **result)
 {
+  if (name.IsEmpty()) {
+    *result = nsnull;
+    return NS_OK;
+  }
   mThreads.Get(name, result);
   return NS_OK;
 }
@@ -174,21 +178,22 @@ nsThreadManager::SetCurrentThread(nsIThread *thread, nsIThread **result)
   nsCString name;
   if (thread) {
     thread->GetName(name);
+    if (!name.IsEmpty()) {
+      // make sure thread name is unique
+      nsCOMPtr<nsIThread> temp;
+      GetThread(name, getter_AddRefs(temp));
 
-    // make sure thread name is unique
-    nsCOMPtr<nsIThread> temp;
-    GetThread(name, getter_AddRefs(temp));
-
-    if (temp && temp != curr) {
-      NS_NOTREACHED("thread name is not unique");
-      return NS_ERROR_INVALID_ARG;
+      if (temp && temp != curr) {
+        NS_NOTREACHED("thread name is not unique");
+        return NS_ERROR_INVALID_ARG;
+      }
+      mThreads.Put(name, thread);
     }
-    mThreads.Put(name, thread);
-
     NS_ADDREF(thread);  // for TLS entry
   } else {
     curr->GetName(name);
-    mThreads.Remove(name);
+    if (!name.IsEmpty())
+      mThreads.Remove(name);
   }
 
   // write thread local storage
