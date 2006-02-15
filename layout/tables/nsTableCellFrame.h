@@ -238,9 +238,16 @@ public:
   PRBool GetContentEmpty();
   void SetContentEmpty(PRBool aContentEmpty);
 
+  // A flag indicating that we've scheduled a special height reflow but
+  // not done it yet.
   PRBool NeedSpecialReflow();
   void SetNeedSpecialReflow(PRBool aContentEmpty);
 
+  // A flag indicating that we have had a special height reflow since
+  // the last complete reflow (i.e., one where this frame was
+  // NS_FRAME_IS_DIRTY).  We track this because it means that any time
+  // we reflow some but not all of our descendants, we have to assume
+  // that we need to schedule another special height reflow.
   PRBool HadSpecialReflow();
   void SetHadSpecialReflow(PRBool aValue);
 

@@ -799,8 +799,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 
   nscoord computedPaginatedHeight = 0;
 
-  if (aReflowState.mFlags.mSpecialHeightReflow || 
-      (HadSpecialReflow() && (eReflowReason_Incremental == aReflowState.reason))) {
+  if (aReflowState.mFlags.mSpecialHeightReflow) {
     ((nsHTMLReflowState&)aReflowState).mComputedHeight = mRect.height - topInset - bottomInset;
     DISPLAY_REFLOW_CHANGE();
   }
@@ -813,6 +812,12 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   }      
   else {
     SetHasPctOverHeight(PR_FALSE);
+  }
+
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
+    // If we're reflowing everything, then we'll find out if we need
+    // to re-set this.
+    SetHadSpecialReflow(PR_FALSE);
   }
 
   // If it was a style change targeted at us, then
@@ -971,16 +976,10 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     SetHadSpecialReflow(PR_TRUE);
   }
   else if (HadSpecialReflow()) {
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      // with an unconstrained height, if the block height value hasn't changed, 
-      // use the last height of the cell.
-      if ((NS_UNCONSTRAINEDSIZE == aReflowState.availableHeight) && 
-          (GetLastBlockHeight() == priorBlockHeight)) {
-        aDesiredSize.height = mRect.height;
-      }
-    }
-    // XXX should probably call SetHadSpecialReflow(PR_FALSE) when things change so that
-    // nothing inside the cell has a percent height, but it is not easy determining this 
+    // If this is not a special reflow, but we've had one before (and
+    // this frame wasn't dirty, i.e., a descendant was and not
+    // everything was reflowed), then request a special reflow.
+    nsTableFrame::RequestSpecialReflow(aReflowState);
   }
 
   // remember the desired size for this reflow
