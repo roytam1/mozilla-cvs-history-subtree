@@ -544,7 +544,6 @@ function ShowingAccountCentral()
                                                Components.interfaces.nsIPrefLocalizedString).data;
         GetMessagePane().collapsed = true;
         document.getElementById("threadpane-splitter").collapsed = true;
-        gSearchBox.collapsed = true;
 
         window.frames["accountCentralPane"].location.href = acctCentralPage;
         
