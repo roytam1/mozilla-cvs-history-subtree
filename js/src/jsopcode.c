@@ -1945,7 +1945,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 jsbytecode *pc2;
                 ptrdiff_t jmplen, off, off2;
                 jsint j, n, low, high;
-                TableEntry *table;
+                TableEntry *table, pivot;
 
                 sn = js_GetSrcNote(jp->script, pc);
                 JS_ASSERT(sn && SN_TYPE(sn) == SRC_SWITCH);
@@ -1988,7 +1988,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         }
                         pc2 += jmplen;
                     }
-                    js_HeapSort(table, (size_t) j, sizeof(TableEntry),
+                    js_HeapSort(table, (size_t) j, &pivot, sizeof(TableEntry),
                                 CompareOffsets, NULL);
                 }
 
