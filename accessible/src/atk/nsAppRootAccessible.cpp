@@ -604,6 +604,11 @@ NS_IMETHODIMP nsAppRootAccessible::GetRole(PRUint32 *aRole)
     return NS_OK;
 }
 
+NS_IMETHODIMP nsAppRootAccessible::GetFinalRole(PRUint32 *aFinalRole)
+{
+    return GetRole(aFinalRole);
+}
+
 NS_IMETHODIMP nsAppRootAccessible::GetParent(nsIAccessible **  aParent)
 {
     *aParent = nsnull;
