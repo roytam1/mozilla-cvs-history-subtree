@@ -131,7 +131,7 @@ NS_IMETHODIMP
 nsGopherHandler::NewProxiedChannel(nsIURI* url, nsIProxyInfo* proxyInfo,
                                    nsIChannel* *result)
 {
-    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(url);
     nsGopherChannel *chan = new nsGopherChannel();
     if (!chan)
         return NS_ERROR_OUT_OF_MEMORY;
