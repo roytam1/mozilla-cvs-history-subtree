@@ -1456,6 +1456,7 @@ static JSBool
 fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval fval, *sp, *oldsp;
+    JSObject *tmp;
     void *mark;
     uintN i;
     JSStackFrame *fp;
@@ -1474,8 +1475,9 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 
     if (argc == 0) {
-        /* Call fun with its parent as the 'this' parameter if no args. */
-        obj = OBJ_GET_PARENT(cx, obj);
+        /* Call fun with its global object as the 'this' param if no args. */
+        while ((tmp = OBJ_GET_PARENT(cx, obj)) != NULL)
+            obj = tmp;
     } else {
         /* Otherwise convert the first arg to 'this' and skip over it. */
         if (!js_ValueToObject(cx, argv[0], &obj))
