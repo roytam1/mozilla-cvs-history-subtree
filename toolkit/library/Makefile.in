@@ -85,7 +85,12 @@ CPPSRCS += dlldeps-zlib.cpp
 DEFINES += -DZLIB_INTERNAL
 endif
 
-LOCAL_INCLUDES += -I$(topsrcdir)/widget/src/windows
+LOCAL_INCLUDES += \
+	-I$(topsrcdir)/widget/src/windows \
+	-I$(topsrcdir)/widget/src/build \
+	$(NULL)
+
+RESFILE = xulrunner.res
 endif
 
 ifeq ($(OS_ARCH),WINNT)
