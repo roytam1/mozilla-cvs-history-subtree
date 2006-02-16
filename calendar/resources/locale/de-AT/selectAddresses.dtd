@@ -19,7 +19,6 @@
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
-   -   Robert Kaiser <KaiRo@KaiRo.at>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,6 +33,8 @@
    - the terms of any one of the MPL, the GPL or the LGPL.
    -
    - ***** END LICENSE BLOCK ***** -->
+
+<!-- Select addresses for mail message dialog -->
 <!ENTITY ab-selectAddressesDialog.title "Internet Appliance Dialog - Adressen wählen">
 <!ENTITY ab-selectAddressesDialogHeader.label "Adressen auswählen">
 <!ENTITY ab-selectAddressesDialogLookIn.label "Suchen in:">
@@ -48,7 +49,7 @@
 <!ENTITY ab-selectAddressesDialogAddressTo.label "Nachricht adressieren an:">
 <!ENTITY ab-selectAddressesDialogPrefixTo.label "An:">
 <!ENTITY ab-selectAddressesDialogPrefixCc.label "CC:">
-<!ENTITY ab-selectAddressesDialogPrefixBcc.label "BCC:">
+<!ENTITY ab-selectAddressesDialogPrefixBcc.label "BCC: ">
 <!ENTITY ab-selectAddressesDialogNoEmailMessage.label "Keine E-Mail-Adresse">
 <!ENTITY ab-selectAddressesDialogInvite.label "Einladen">
 <!ENTITY ab-selectAddressesDialogUninvite.label "Entfernen">

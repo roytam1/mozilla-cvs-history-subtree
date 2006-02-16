@@ -11,16 +11,17 @@
    - for the specific language governing rights and limitations under the
    - License.
    -
-   - The Original Code is mozilla.org code.
+   - The Original Code is OEone Calendar Code, released October 31st, 2001.
    -
    - The Initial Developer of the Original Code is
-   - the Mozilla Organization.
-   - Portions created by the Initial Developer are Copyright (C) 1998-2002
+   - OEone Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 2001
    - the Initial Developer. All Rights Reserved.
    -
-   - Contributor(s):
-   -   Robert Kaiser <KaiRo@KaiRo.at>
-   -   Matthew Willis <mattwillis@gmail.com>
+   - Contributor(s): Garth Smedley <garths@oeone.com>
+   -                 Mike Potter <mikep@oeone.com>
+   -                 Chris Charabaruk <coldacid@meldstar.com>
+   -                 Matthew Willis <mattwillis@gmail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,23 +41,27 @@
 <!ENTITY event.menu.title                       "Ereignis">
 <!ENTITY eventMenuCmd.accesskey                 "r">
 
-<!ENTITY event.new.event                        "Neues Ereignis…">
+<!ENTITY event.new.event                        "Neues Ereignis...">
 <!ENTITY event.new.event.key                    "N">
 <!ENTITY event.new.event.accesskey              "N">
 
-<!ENTITY event.new.todo                         "Neue Aufgabe…">
+<!ENTITY event.new.todo                         "Neue Aufgabe...">
 <!ENTITY event.new.todo.key                     "T">
 <!ENTITY event.new.todo.accesskey               "f">
 
-<!ENTITY calendar.new.server.label              "Neue Kalenderdatei…">
+<!ENTITY calendar.new.server.label              "Neue Kalenderdatei...">
 <!ENTITY calendar.new.server.key                "L">
 <!ENTITY calendar.new.server.accesskey          "l">
 
-<!ENTITY calendar.open.file.label               "Kalenderdatei öffnen…">
-<!ENTITY calendar.open.file.key                 "O">
-<!ENTITY calendar.open.file.accesskey           "O">
+<!ENTITY calendar.new.journal.label              "Neuer Journal-Eintrag...">
+<!ENTITY calendar.new.journal.key                "J">
+<!ENTITY calendar.new.journal.accesskey          "J">
 
-<!ENTITY event.edit.event                       "Bearbeiten…">
+<!ENTITY calendar.open.file.label               "Kalenderdatei öffnen...">
+<!ENTITY calendar.open.file.key                 "O">
+<!ENTITY calendar.open.file.accesskey           "ö">
+
+<!ENTITY event.edit.event                       "Auswahl bearbeiten...">
 <!ENTITY event.edit.event.key                   "E">
 <!ENTITY event.edit.event.accesskey             "e">
 
@@ -66,11 +71,11 @@
 <!ENTITY event.delete.tasks                     "Gewählte Aufgaben löschen">
 <!ENTITY event.delete.tasks.accesskey           "A">
 
-<!ENTITY event.mail.event                       "Ausgewählte Ereignisse per E-Mail…">
+<!ENTITY event.mail.event                       "Auswahl per E-Mail versenden...">
 <!ENTITY event.mail.event.key                   "M">
 <!ENTITY event.mail.event.accesskey             "M">
 
-<!ENTITY calendar.print.label                   "Aktive Kalender drucken...">
+<!ENTITY calendar.print.label                   "Drucken...">
 <!ENTITY calendar.print.key                     "P">
 <!ENTITY calendar.print.accesskey               "D">
 
@@ -84,7 +89,7 @@
 <!ENTITY calendar.import.key                    "I">
 <!ENTITY calendar.import.accesskey              "I">
 
-<!ENTITY calendar.wizard.label                  "Assistenten starten…">
+<!ENTITY calendar.wizard.label                  "Assistenten starten...">
 <!ENTITY calendar.wizard.accesskey              "A">
 
 <!ENTITY calendar.export.label                  "Ausgewählte Ereignisse exportieren...">
@@ -95,13 +100,24 @@
 
 <!ENTITY calendar.reloadserver.label            "Entfernte Kalender neu laden">
 <!ENTITY calendar.reloadserver.key              "R">
-<!ENTITY calendar.reloadserver.accesskey        "R">
+<!ENTITY calendar.reloadserver.accesskey        "t">
 
-<!ENTITY calendar.publish.label                 "Gewählte Ereignisse publizieren...">
+<!ENTITY calendar.publish.label                 "Publizieren...">
 <!ENTITY calendar.publish.accesskey             "p">
+
+<!ENTITY calendar.quit.label                    "Beenden">
+<!ENTITY calendar.quit.accesskey                "e">
 
 <!ENTITY calendar.about.label                   "Über Kalender">
 <!ENTITY calendar.about.accesskey               "b">
+
+<!ENTITY calendar.undo.label                    "Rückgängig">
+<!ENTITY calendar.undo.key                      "Z">
+<!ENTITY calendar.undo.accesskey                "R">
+
+<!ENTITY calendar.redo.label                    "Wiederholen">
+<!ENTITY calendar.redo.key                      "Y">
+<!ENTITY calendar.redo.accesskey                "W">
 
 <!ENTITY calendar.cut.label                     "Ausschneiden">
 <!ENTITY calendar.cut.key                       "X">
@@ -115,20 +131,56 @@
 <!ENTITY calendar.paste.key                     "V">
 <!ENTITY calendar.paste.accesskey               "E">
 
-<!ENTITY calendar.selectall.label               "Alles Auswählen">
+<!ENTITY calendar.selectall.label               "Alles auswählen">
 <!ENTITY calendar.selectall.key                 "A">
 <!ENTITY calendar.selectall.accesskey           "u">
+
+<!ENTITY toolbarsMenu.label                     "Symbolleisten">
+<!ENTITY toolbarsMenu.accesskey                 "y">
+
+<!ENTITY calendar.toolbar.label                 "Kalender-Symbolleiste">
+
+<!ENTITY calendar.menu.customize.label          "Anpassen...">
+<!ENTITY calendar.menu.customize.accesskey      "A">
 
 <!ENTITY calendar.preferences.label             "Einstellungen...">
 <!ENTITY calendar.preferences.accesskey         "n">
 
+<!ENTITY showSearchToolbarCmd.label             "Suchleiste">
+<!ENTITY showSearchToolbarCmd.accesskey         "S">
+
+<!ENTITY showStatusBarCmd.label                 "Statusleiste">
+<!ENTITY showStatusBarCmd.accesskey             "t">
+
+<!ENTITY showTaskBoxCmd.label                   "Task-Liste">
+<!ENTITY showTaskBoxCmd.accesskey               "L">
+
+<!ENTITY calendar.displaytodos.checkbox.label       "Aufgaben im Kalender anzeigen">
+<!ENTITY calendar.displaytodos.checkbox.accesskey   "A">
+
+<!ENTITY calendar.menu.numberofweeks.label      "Mehrwochen-Ansicht-Größe">
+<!ENTITY calendar.menu.numberofweeks.2          "Zwei Wochen">
+<!ENTITY calendar.menu.numberofweeks.3          "Drei Wochen">
+<!ENTITY calendar.menu.numberofweeks.4          "Vier Wochen">
+<!ENTITY calendar.menu.numberofweeks.5          "Fünf Wochen">
+<!ENTITY calendar.menu.numberofweeks.6          "Sechs Wochen">
+
+<!ENTITY calendar.fullscreen.label              "Vollbild">
+<!ENTITY calendar.fullscreen.accesskey          "V">
+
+<!ENTITY calendar.extensions.label              "Erweiterungen">
+<!ENTITY calendar.extensions.accesskey          "E">
+
+<!ENTITY calendar.themes.label                  "Themes">
+<!ENTITY calendar.themes.accesskey              "T">
+
 <!ENTITY goMenu.label                           "Gehe">
 <!ENTITY goMenu.accesskey                       "G">
 
-<!ENTITY goTodayCmd.label                       "Zu Heute gehen">
+<!ENTITY goTodayCmd.label                       "Heute">
 <!ENTITY goTodayCmd.accesskey                   "H">
 
-<!ENTITY goDateCmd.label                        "Zu Datum gehen">
+<!ENTITY goDateCmd.label                        "Datum...">
 <!ENTITY goDateCmd.accesskey                    "D">
 
 <!ENTITY goPreviousCmd.label                    "Vorheriges">
@@ -167,6 +219,8 @@
 
 <!ENTITY editMenu.label                         "Bearbeiten">
 <!ENTITY editMenu.accesskey                     "e">
+<!ENTITY optionsCmd.label                       "">
+<!ENTITY optionsCmd.accesskey                   "">
 <!ENTITY preferencesCmd.label                   "Optionen...">
 <!ENTITY preferencesCmd.accesskey               "O">
 

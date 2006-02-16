@@ -11,11 +11,10 @@
    - for the specific language governing rights and limitations under the
    - License.
    -
-   - The Original Code is mozilla.org code.
+   - The Original Code is Mozilla Calendar Code.
    -
-   - The Initial Developer of the Original Code is
-   - the Mozilla Organization.
-   - Portions created by the Initial Developer are Copyright (C) 1998-2002
+   - The Initial Developer of the Original Code is Simon Paquet.
+   - Portions created by the Initial Developer are Copyright (C) 2005
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
@@ -34,6 +33,21 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!ENTITY calendarCmd.label  "Kalender">
-<!ENTITY calendarCmd.accesskey  "K">
-<!ENTITY calendarCmd.commandkey "8">
+<!ENTITY wizard.title             "Neuen Kalender erstellen" >
+<!ENTITY wizard.label             "Einen neuen Kalender erstellen" >
+<!ENTITY wizard.description       "Ort Ihres Kalenders feststellen" >
+
+<!ENTITY initialpage.description    "Ihr Kalender kann auf Ihrem Computer oder auf einem Server gespeichert werden, sodass Sie von anderen Orten darauf zugreifen können bzw. ihn mit Freunden oder Arbeitskollegen gemeinsam verwenden können." >
+<!ENTITY initialpage.local.label    "Lokal" >
+<!ENTITY initialpage.remote.label   "Entfernt" >
+
+<!ENTITY locationpage.description         "Geben Sie die benötigten Informationen an, um auf Ihren entfernten Kalender zuzugreifen" >
+<!ENTITY locationpage.login.description   "Optional: Geben Sie Benutzernamen und Passwort an" >
+<!ENTITY locationpage.username.label      "Benutzername:" >
+<!ENTITY locationpage.password.label      "Passwort:" >
+
+<!ENTITY custompage.shortdescription  "Ihren Kalender anpassen" >
+<!ENTITY custompage.longdescription   "Sie können Ihrem Kalender einen Spitznacmen geben und Ereignisse von diesem Kalender einfärben" >
+
+<!ENTITY finishpage.shortdescription  "Kalender erstellt" >
+<!ENTITY finishpage.longdescription   "Ihre Kalender wurde erstellt" >

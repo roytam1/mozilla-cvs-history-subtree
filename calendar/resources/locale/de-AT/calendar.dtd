@@ -11,15 +11,20 @@
    - for the specific language governing rights and limitations under the
    - License.
    -
-   - The Original Code is mozilla.org code.
+   - The Original Code is OEone Calendar Code, released October 31st, 2001.
    -
    - The Initial Developer of the Original Code is
-   - the Mozilla Organization.
-   - Portions created by the Initial Developer are Copyright (C) 1998-2002
+   - OEone Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 2001
    - the Initial Developer. All Rights Reserved.
    -
-   - Contributor(s):
-   -   Robert Kaiser <KaiRo@KaiRo.at>
+   - Contributor(s): Garth Smedley <garths@oeone.com>
+   -                 Mike Potter <mikep@oeone.com>
+   -                 Chris Charabaruk <coldacid@meldstar.com>
+   -                 ArentJan Banck <ajbanck@planet.nl>
+   -                 Eric Belhaire <belhaire@ief.u-psud.fr>
+   -                 Matthew Willis <mattwillis@gmail.com>
+   -                 Simon Paquet <bugzilla@babylonsounds.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,6 +52,16 @@
 <!ENTITY alarm.units.hours.singular    "Stunde" >
 <!ENTITY alarm.units.days.singular     "Tag" >
 
+<!ENTITY alarm.start.warning     "" >
+<!ENTITY alarm.due.warning     "" >
+
+<!ENTITY repeat.units.occurence.both         "" >
+
+<!ENTITY repeat.units.days.both         "Tag(e)" >
+<!ENTITY repeat.units.weeks.both        "Woche(n)" >
+<!ENTITY repeat.units.months.both       "Monat(e)" >
+<!ENTITY repeat.units.years.both        "Jahr(e)" >
+
 
 <!ENTITY repeat.units.days     "Tage" >
 <!ENTITY repeat.units.weeks    "Wochen" >
@@ -58,7 +73,7 @@
 <!ENTITY repeat.units.months.singular   "Monat" >
 <!ENTITY repeat.units.years.singular    "Jahr" >
 
-<!ENTITY priority.level.none              "Keine">
+<!ENTITY priority.level.none              "Nicht angegeben">
 <!ENTITY priority.level.none.accesskey    "K">
 <!ENTITY priority.level.low               "Niedrig">
 <!ENTITY priority.level.low.accesskey     "N">
@@ -72,54 +87,109 @@
 <!ENTITY newevent.start.label        "Beginn" >
 <!ENTITY newevent.date.label         "Datum" >
 <!ENTITY newevent.startdate.label    "Beginn" >
+<!ENTITY newevent.from.label         "Von" >
+<!ENTITY newevent.to.label           "An" >
 <!ENTITY newevent.enddate.label      "Ende" >
-<!ENTITY newevent.end.label          "Ende" >
-<!ENTITY newevent.alldayevent.label  "Dieses Ereignis dauert den ganzen Tag." >
-<!ENTITY newevent.description.label  "Bemerkung" >
+<!ENTITY newevent.set.label          "setzen..." >
+<!ENTITY newevent.settings.label     "Allgemeine Einstellungen" >
+<!ENTITY newevent.none.label         "keine" >
+<!ENTITY newevent.custom.label       "Benutzerdefiniert..." >
+<!ENTITY newevent.alldayevent.label  "Ganztägig" >
+<!ENTITY newevent.description.label  "Beschreibung" >
 <!ENTITY newevent.uri.label          "URL" >
 <!ENTITY newevent.uri.visit.label    "Gehe zu URL" >
+<!ENTITY newevent.before.label       "vor" >
+<!ENTITY newevent.after.label        "nach" >
 <!ENTITY newevent.private.label      "Privat" >
+<!ENTITY newevent.privacy.label      "Datenschutz" >
 <!ENTITY newevent.private.note       "Dieses Ereignis ist privat." >
+<!ENTITY newevent.public.label       "Öffentlich" >
+<!ENTITY newevent.confidential.label "Vertraulich" >
 <!ENTITY newevent.alarm.label        "Alarm" >
-<!ENTITY newevent.server.label       "Kalender-Datei" >
+<!ENTITY newevent.server.label       "Kalender" >
 <!ENTITY newevent.invite.label       "Einladen" >
+<!ENTITY newevent.details.label      "Details" >
 <!ENTITY newevent.email.label        "Alarm per E-Mail senden an..." >
-<!ENTITY newevent.beforealarm.label  "bevor das Ereignis startet" >
-<!ENTITY newevent.beforealarmends.label  "bevor das Ereignis endet" >
+<!ENTITY newevent.beforealarm.label  "bevor dieses Ereignis" >
+<!ENTITY newevent.begin.label        "beginnt" >
+<!ENTITY newevent.end.label          "endet" >
+<!ENTITY newevent.isdue.label        "fällig ist" >
 <!ENTITY newevent.repeat.label       "Wiederhole jeden" >
+<!ENTITY newevent.repeat.label2      "Wiederholen" >
 <!ENTITY newevent.until.label        "Bis" >
 <!ENTITY newevent.forever.label      "Immer" >
 <!ENTITY newevent.numberoftimes.label "Wie oft" >
 <!ENTITY newevent.category.label      "Kategorie" >
-<!ENTITY newevent.exceptions.caption "Ausnahmen">
+<!ENTITY newevent.popup.label         "PopUp" >
+<!ENTITY newevent.popupsound.label    "PopUp &amp; Klang" >
+<!ENTITY newevent.sendmail.label      "E-Mail senden an:" >
+<!ENTITY newevent.exceptions.caption  "Ausnahmen">
 <!ENTITY newevent.addexceptions.label "Ausnahme hinzufügen">
 <!ENTITY newevent.deleteexceptions.label "Ausnahme entfernen">
 <!ENTITY newevent.endtime.warning    "Ihr Beginn ist nach dem Ende.">
 <!ENTITY newevent.enddate.warning    "Ihre Beginnzeit ist nach Ihrer Endzeit.">
 <!ENTITY newevent.repeatdate.tooltip    "Wählen Sie einen Endzeitpunkt" >
 <!ENTITY newevent.recurend.warning    "Ihre Wiederholen-Bis-Zeit ist vor Ihrer Endzeit.">
+<!ENTITY newevent.15minutes.before.label        "15 Minuten vor" >
+<!ENTITY newevent.30minutes.before.label        "30 Minuten vor" >
+<!ENTITY newevent.recurnumberoftimes.warning    "Sie müssen angeben, wie oft wiederholt werden soll.">
+<!ENTITY newevent.readonly.item.warning    "Dieser Eintrag stammt aus einem schreibgeschützten Kalender.">
+<!ENTITY newevent.readonly.cal.warning    "Dieser Kalender ist schreibgeschützt.">
+<!ENTITY newevent.recurinterval.warning    "Sie müssen angeben, wie lange werden soll.">
 <!ENTITY newevent.endtime.tooltip    "Wählen Sie einen Endzeitpunkt für dieses Ereignis" >
-<!ENTITY newevent.starttimeerror.alertmessage "Ihr Ereignis kann nicht enden bevor es begonnen hat. Bitte korrigieren Sie den Beginn oder das Ende." >
+<!ENTITY newevent.starttimeerror.alertmessage "Ihr Ereignis kann nicht enden bevor es begonnen hat. Bitte korrigieren Sie den Begin oder das Ende." >
 <!ENTITY newevent.recurendtimeerror.alertmessage "Ihre Ereignis-Wiederholungszeit kann nicht vor dem Ereignisende sein. Bitte beheben Sie das Problem, oder schalten Sie die Wiederhoung ab." >
-<!ENTITY newevent.newevent.tab.label "Ereignis" >
-<!ENTITY newevent.recurrence.tab.label "Wiederholung" >
-<!ENTITY newevent.contacts.tab.label "Kontakte" >
-<!ENTITY newevent.files.tab.label "Dateien" >
+<!ENTITY newevent.general.tab.label         "Allgemein" >
+
+<!ENTITY newevent.recurrence.tab.label      "Wiederholung" >
+<!ENTITY newevent.recurrence.title          "Wiederholung bearbeiten" >
+<!ENTITY newevent.recurrence.remove.label   "Entfernen" >
+<!ENTITY newevent.recurrence.occurs.label   "Wiederholt sich" >
+<!ENTITY newevent.recurrence.day.label      "täglich" >
+<!ENTITY newevent.recurrence.week.label     "wöchentlich" >
+<!ENTITY newevent.recurrence.month.label    "monatlich" >
+<!ENTITY newevent.recurrence.year.label     "jählich" >
+<!ENTITY newevent.recurrence.on.label       "Am:" >
+<!ENTITY newevent.recurrence.every.label    "Alle" >
+<!ENTITY newevent.repeat.first.label        "Jede(n) erste(n)" >
+<!ENTITY newevent.repeat.second.label       "Jede(n) zweite(n)" >
+<!ENTITY newevent.repeat.third.label        "Jede(n) dritte(n)" >
+<!ENTITY newevent.repeat.fourth.label       "Jede(n) vierte(n)" >
+<!ENTITY newevent.repeat.fifth.label        "Jede(n) fünfte(n)" >
+<!ENTITY newevent.repeat.last.label         "Jede(n) letzte(n)" >
+<!ENTITY newevent.repeat.onthe.label        "Wiederholen am" >
+<!ENTITY newevent.repeat.forever.label      "Unendlich oft wiederholen" >
+<!ENTITY newevent.repeat.for.label          "Wiederholen bis" >
+<!ENTITY newevent.repeat.until.label        "Wiederholen bis" >
+<!ENTITY newevent.recurrence.exceptions.label    "Ausnahmen:" >
+
+<!ENTITY newevent.attendees.tab.label       "Teilnehmer" >
+<!ENTITY newevent.attendees.label           "Teilnehmer" >
+<!ENTITY calendar.edit.attendees            "" >
+<!ENTITY newevent.attachments.tab.label     "Attachments" >
+<!ENTITY newevent.advanced.tab.label        "Erweitert" >
+<!ENTITY newevent.completed.label           "Abgeschlossen" >
 <!ENTITY newevent.status.label "Status" >
 <!ENTITY newevent.status.longlabel "Ereignis-Status">
 <!ENTITY newevent.status.needsaction.label "Benötigt Eingriff" >
 <!ENTITY newevent.status.inprogress.label  "In Arbeit" >
-<!ENTITY newevent.status.completed.label   "Abgeschlossen" >
+<!ENTITY newevent.status.completed.label   "Abgeschlossen am" >
 <!ENTITY newevent.status.cancelled.label   "Abgebrochen" >
 <!ENTITY newevent.status.tentative.label   "Vorläufig" >
 <!ENTITY newevent.status.confirmed.label   "Bestätigt" >
+<!ENTITY newevent.itemType.label            "Eintragstyp" >
+<!ENTITY newevent.itemType.event.label      "Ereignis" >
+<!ENTITY newevent.itemType.todo.label       "Aufgabe" >
+<!ENTITY newevent.itemType.journal.label    "Journal" >
+<!ENTITY newevent.add.contact.label         "Hinzufügen" >
+<!ENTITY newevent.attach.file.label         "Datei anhängen..." >
 
 <!ENTITY newevent.advanced.repeat.dayofmonth.label "Am x-ten Tag des Monats">
 <!ENTITY newevent.advanced.repeat.dayofweek.label "4. Donnerstag des Monats">
 <!ENTITY newevent.advanced.repeat.lastdayofweek.label "Letzter Donnerstag des Monats">
 <!ENTITY newevent.advanced.repeat.ofthemonth.label " des Monats">
 
-<!ENTITY newevent.advanced.repeat.onthe.label "Am">
+<!ENTITY newevent.advanced.repeat.onthe.label "Am ">
 <!ENTITY newevent.advanced.repeat.last.label "Letzten">
 <!ENTITY newevent.advanced.repeat.first.label "Ersten">
 <!ENTITY newevent.advanced.repeat.second.label "Zweiten">
@@ -130,7 +200,6 @@
 <!ENTITY newevent.advanced.repeat.third.extension ".">
 <!ENTITY newevent.advanced.repeat.nth.extension ".">
 
-<!ENTITY newevent.choosefile.label "Datei auswählen">
 <!ENTITY newevent.removeselectedfile.label "Gewählte Datei entfernen">
 
 <!ENTITY newtodo.completed.label "Abgeschlossen">
@@ -142,7 +211,7 @@
 <!ENTITY newtodo.starttime.warning "Ihr Beginn ist nach dem Ende.">
 <!ENTITY newtodo.cancelled.label "Abgebrochen">
 <!ENTITY newtodo.status.label "Status">
-<!ENTITY newtodo.beforealarm.label  "before die Aufgabe beginnt" >
+<!ENTITY newtodo.beforealarm.label  "before die Aufgabe" >
 <!ENTITY newtodo.beforealarmends.label  "bevor die Aufgabe zu erledigen ist" >
 <!ENTITY newtodo.newtodo.tab.label "Aufgabe" >
 <!ENTITY newtodo.status.longlabel "Aufgaben-Status">
@@ -158,8 +227,8 @@
 
 <!ENTITY event.title.alarm         "Alarm" >
 <!ENTITY event.title.new         "Neues Ereignis" >
+<!ENTITY event.title.label       "Eintrag bearbeiten" >
 <!ENTITY event.title.edit        "Ereignis bearbeiten" >
-<!ENTITY event.title.heading        "Kalender-Alarm" >
 
 <!ENTITY onthe-text            "Am ">
 <!ENTITY last-text             "Letzten ">
@@ -196,7 +265,7 @@
 <!ENTITY calendar.tools.modify.tooltip         "Ereignis ändern" >
 
 <!ENTITY calendar.newtask.button.tooltip          "Neue Aufgabe erstellen" >
-<!ENTITY calendar.newevent.button.tooltip         "Neues Kalender-Ereignis erstellen" >
+<!ENTITY calendar.newevent.button.tooltip         "Neues Ereignis erstellen" >
 <!ENTITY calendar.delete.button.tooltip           "Ausgewähltes Ereigniss löschen" >
 <!ENTITY calendar.edit.button.tooltip             "Ausgewähltes Ereignis bearbeiten" >
 
@@ -205,9 +274,12 @@
 <!ENTITY calendar.unifinder.todoitems.label       "Aufgaben" >
 <!ENTITY calendar.unifinder.hidecompletedtodos.label "Abgeschlossene Aufgaben verstecken">
 
-<!ENTITY calendar.calendartab.label "Kalender">
+<!ENTITY calendar.calendartab.label "Datum">
 <!ENTITY calendar.listofcalendarstab.label "Kalenderliste">
-<!ENTITY calendar.gototoday.button.label        "Zu 'Heute' springen" >
+<!ENTITY calendar.gototoday.button.label        "Zu Heute wechseln" >
+
+<!ENTITY calendar.more.label "">
+<!ENTITY calendar.less.label "">
 
 <!ENTITY calendar.calendarlistbox.label "Kalenderliste">
 
@@ -223,18 +295,18 @@
 <!ENTITY calendar.events.filter.next31Days.label "Ereignisse in den nächsten 31 Tagen">
 <!ENTITY calendar.events.filter.thisCalendarMonth.label "Ereignisse in diesem Kalendermonat">
 
-<!ENTITY calendar.unifinder.tree.done.label          "Erledigt">
+<!ENTITY calendar.unifinder.tree.done.label          "Fertig">
 <!ENTITY calendar.unifinder.tree.priority.label      "Priorität">
 <!ENTITY calendar.unifinder.tree.title.label         "Titel">
 <!ENTITY calendar.unifinder.tree.percentcomplete.label "&#037; fertig">
 <!ENTITY calendar.unifinder.tree.startdate.label     "Beginn">
 <!ENTITY calendar.unifinder.tree.enddate.label       "Ende">
 <!ENTITY calendar.unifinder.tree.duedate.label       "fällig">
-<!ENTITY calendar.unifinder.tree.completeddate.label "Beendet">
+<!ENTITY calendar.unifinder.tree.completeddate.label "Abgeschlossen">
 <!ENTITY calendar.unifinder.tree.categories.label    "Kategorie">
 <!ENTITY calendar.unifinder.tree.location.label    "Ort">
 <!ENTITY calendar.unifinder.tree.status.label    "Status">
-<!ENTITY calendar.unifinder.tree.calendarname.label    "Kalender-Name">
+<!ENTITY calendar.unifinder.tree.calendarname.label    "Kalendername">
 
 <!ENTITY calendar.gototoday.button.tooltip        "Zu Heute wechseln" >
 <!ENTITY calendar.choosedate.button.tooltip       "Datum zum Anzeigen wählen" >
@@ -325,7 +397,7 @@
 <!ENTITY statusText.label            "Dokument: Fertig">
 
 <!-- Window Title -->
-<!ENTITY window.title            "Mozilla-Kalender">
+<!ENTITY window.title            "Mozilla Kalender">
 
 <!-- customizable toolbars -->
 <!ENTITY calendar.context.customize.label             "Anpassen...">
@@ -344,10 +416,14 @@
 <!ENTITY calendar.context.modifyevent.accesskey       "B">
 <!ENTITY calendar.context.modifytask.label            "Aufgabe bearbeiten...">
 <!ENTITY calendar.context.modifytask.accesskey        "B">
+<!ENTITY calendar.context.modifyitem.label            "Eintrag bearbeiten">
+<!ENTITY calendar.context.modifyitem.accesskey        "E">
 <!ENTITY calendar.context.deleteevent.label           "Lösche ausgewähltes Ereignis">
 <!ENTITY calendar.context.deleteevent.accesskey       "L">
 <!ENTITY calendar.context.deletetask.label            "Aufgabe löschen">
 <!ENTITY calendar.context.deletetask.accesskey        "L">
+<!ENTITY calendar.context.deleteitem.label            "Eintrag löschen">
+<!ENTITY calendar.context.deleteitem.accesskey        "l">
 <!ENTITY calendar.context.cutevent.label              "Ausschneiden">
 <!ENTITY calendar.context.cutevent.accesskey          "A">
 <!ENTITY calendar.context.copyevent.label             "Kopieren">
@@ -418,6 +494,9 @@
 <!ENTITY calendar.alarm.editevent.label             "Ereignis bearbeiten" >
 <!ENTITY calendar.alarm.acknowledgeall.label        "Alle Alarm-Meldungen bestätigen" >
 <!ENTITY calendar.alarm.snooze.label                "Pause" >
+<!ENTITY calendar.alarm.title.label                "Kalenderalarm" >
+<!ENTITY calendar.alarm.dismiss.label               "Aufgeben" >
+<!ENTITY calendar.alarm.dismissall.label            "Alle aufgeben" >
 
 
 <!-- Calendar Server Dialog -->
@@ -433,9 +512,17 @@
 <!ENTITY calendar.local.calendar.dialog.help.label  "Verwenden Sie dies, um anzugeben, wo auf Ihrem Computer die Kalenderdatei gespeichert wird. Dies ist optional.">
 <!ENTITY calendar.local.calendar.dialog.optional.label "Diese optionalen Einstellungen werden verwendet, wenn Sie diesen Kalender auf einer entfernten Adresse publizieren.">
 
-<!-- Calendar Coloring -->
-<!ENTITY calendar.server.dialog.color.label "Farben:">
+<!-- Calendar Properties -->
+<!ENTITY calendarproperties.color.label    "Farbe:">
+<!ENTITY calendarproperties.webdav.label   "WebDAV">
+<!ENTITY calendarproperties.caldav.label   "CalDAV">
+<!ENTITY calendarproperties.format.label   "Format:">
+<!ENTITY calendarproperties.location.label "Adresse:">
+<!ENTITY calendarproperties.name.label     "Name:">
+<!ENTITY calendarproperties.readonly.label "Schreibgeschützt">
 
+<!-- Sunbird Help -->
+<!ENTITY calendar.help.label               "Hilfe-Inhalt">
 
 <!-- Calendar Publish Dialog -->
 <!ENTITY calendar.publish.dialog.title              "Kalender veröffentlichen">
@@ -480,9 +567,18 @@
 <!ENTITY calendar.print.window.title "Einen Kalender drucken">
 <!ENTITY calendar.print.selectoptions.label "Wählen Sie Ihre Optionen unten und verwenden Sie OK zum Drucken">
 <!ENTITY calendar.print.selectviews.label "Wählen Sie die zu druckende Ansicht">
+<!ENTITY calendar.print.currentview.label "Alle Ereignisse in der aktuellen Ansicht auflisten">
 <!ENTITY calendar.print.listselected.label "Gewählte Ereignisse auflisten">
+<!ENTITY calendar.print.custom.label "Ereignisse auflisten zwischen:">
 <!ENTITY calendar.print.onlyitemsstatus.label "Nur Elemente mit folgendem Status drucken:">
 <!ENTITY calendar.print.onlyitemscategory.label "Nur Elemente mit folgender Kategorie drucken:">
+
+<!-- Error reporting -->
+<!ENTITY calendar.error.detail "Details...">
+<!ENTITY calendar.error.number "Fehlernummer:">
+<!ENTITY calendar.error.description "Beschreibung:">
+<!ENTITY calendar.error.title "Ein Fehler ist aufgetreten">
+
 
 <!-- LOCALIZATION NOTE (mainWindow.title): DONT_TRANSLATE -->
 <!ENTITY mainWindow.title "&brandFullName;">
@@ -491,3 +587,9 @@
 <!-- LOCALIZATION NOTE (mainWindow.titlemodifiermenuseparator): DONT_TRANSLATE -->
 <!ENTITY mainWindow.titlemodifiermenuseparator " - ">
 
+<!-- Temporary, until brand.dtd works again. bug 272643 -->
+<!ENTITY  lang.version          "1.7a">
+<!ENTITY  brandShortName        "Sunbird">
+<!ENTITY  brandFullName         "Mozilla Sunbird">
+<!ENTITY  vendorShortName       "Mozilla">
+<!ENTITY  releaseURL            "http://www.mozilla.org/projects/calendar">

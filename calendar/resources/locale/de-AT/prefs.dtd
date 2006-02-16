@@ -11,15 +11,16 @@
    - for the specific language governing rights and limitations under the
    - License.
    -
-   - The Original Code is mozilla.org code.
+   - The Original Code is OEone Calendar Code, released October 31st, 2001.
    -
    - The Initial Developer of the Original Code is
-   - the Mozilla Organization.
-   - Portions created by the Initial Developer are Copyright (C) 1998-2002
+   - OEone Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 2001
    - the Initial Developer. All Rights Reserved.
    -
-   - Contributor(s):
-   -   Robert Kaiser <KaiRo@KaiRo.at>
+   - Contributor(s): Mike Potter <mikep@oeone.com>
+   -                 ArentJan Banck <ajbanck@planet.nl>
+   -                 Eric Belhaire <belhaire@ief.u-psud.fr>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,13 +45,21 @@
 <!ENTITY calendar.views.label       "Ansichten">
 <!ENTITY calendar.timezone.label    "Meine Zeitzone">
 
-<!ENTITY prefWindow.title            "Kalender-Optionen">
+<!ENTITY prefWindow.title            "Optionen">
 <!ENTITY prefWindow.size             "width: 52.3em; height: 41em;">
 <!ENTITY prefWindow.category         "Kategorie">
 
 <!ENTITY pref.mainbox.label         "Allgemeine Einstellungen" >
 <!ENTITY pref.alarmgoesoff.label "Wenn ein Alarm ausgelöst wird:">
 <!ENTITY pref.playasound  "Einen Klang abspielen" >
+<!ENTITY pref.preview.label "Vorschau" >
+
+#ifdef MOZ_SUNBIRD
+<!ENTITY pref.showConnections.label      "">
+<!ENTITY pref.showConnections.accesskey  "">
+<!ENTITY pref.proxiesInfo.label          "">
+<!ENTITY pref.connectionsInfo.caption    "">
+#endif
 
 <!ENTITY pref.alarmbox.label    "Alarme" >
 <!ENTITY pref.showalarmbox    "Eine Alarmnachricht anzeigen" >
@@ -115,7 +124,7 @@
 <!ENTITY pref.calendar.view.weekview.caption "Wochenansicht">
 <!ENTITY pref.calendar.view.weekanddayview.caption "Wochen- und Tagesansichten">
 <!ENTITY pref.calendar.view.monthview.caption "Monatsansicht">
-<!ENTITY pref.calendar.view.multiweekview.caption "Mehrwochen-Ansicht">
+<!ENTITY pref.calendar.view.multiweekview.caption "Mehrwochenansicht">
 
 <!ENTITY pref.calendar.view.restrict.label "Ansichten beschränken auf">
 <!ENTITY pref.calendar.view.starttime.label "Beginnzeit:">
@@ -123,23 +132,24 @@
 
 <!ENTITY pref.categories.label   "Kategorien" >
 
-<!ENTITY pref.categories.help.description   "Verwenden Sie ein Komma zwischen allen Kategorien, die Sie hinzufügen wollen.">
-
 <!ENTITY pref.categories.add.title    "Kategorie hinzufügen">
-<!ENTITY pref.categories.add.prompt   "Geben Sie den Namen der Kategorie ein">
 <!ENTITY pref.categories.edit.title   "Kategorie bearbeiten">
-
+<!ENTITY pref.categories.name.label   "Name">
+<!ENTITY pref.categories.color.label  "Farbe">
+<!ENTITY pref.categories.usecolor.label   "Farbe verwenden">
+<!ENTITY pref.categories.none.label   "(keine)">
+<!ENTITY pref.categories.overwrite  "Eine Kategorie mit diesem Namen existiert bereits. \n Wollen Sie diese überschrieben?">
+<!ENTITY pref.categories.overwrite.title  "Warnung: Doppelter Name">
+<!ENTITY pref.categories.noBlankCategories  "Sie müssen einen Kategorienamen eingeben.">
 
 <!ENTITY pref.reloadonlaunch       "Entfernte Kalender beim Start neu laden">
-
-<!ENTITY pref.publish.caption        "Publizierungseinstellungen">
-<!ENTITY pref.publish.path.label     "Standardname für entfernte Datei">
 
 <!ENTITY pref.minutes.label "Minuten">
 
 <!-- Calendar Timezone preferences information -->
 <!ENTITY pref.calendar.timezone.label "Meine Zeitzone">
 <!ENTITY pref.calendar.timezone.caption "Zeitzone">
+<!ENTITY pref.calendar.timezone.shortdescription "Dies macht noch nichts.">
 <!ENTITY pref.calendar.timezone.description "Zeitzonen-ID ist (Kontinent oder Ozean)/(Größte Stadt in der legalen Zeitzonen-Region).">
 <!ENTITY pref.defaultzone.label     "Standard-Zeitzone:" >
 
