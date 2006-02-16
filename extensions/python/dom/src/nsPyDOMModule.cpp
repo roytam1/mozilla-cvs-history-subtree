@@ -464,6 +464,21 @@ static PyObject *PyMakeArray(PyObject *self, PyObject *args)
      return PyObject_FromNSInterface(array, NS_GET_IID(nsIArray));
 }
 
+static PyObject *PyMakeDOMObject(PyObject *self, PyObject *args)
+{
+     PyObject *ob, *obContext;
+     if (!PyArg_ParseTuple(args, "OO:MakeDOMObject", &obContext, &ob))
+         return NULL;
+
+     nsCOMPtr<nsISupports> sup;
+     if (!Py_nsISupports::InterfaceFromPyObject(ob, NS_GET_IID(nsISupports),
+                                                getter_AddRefs(sup),
+                                                PR_FALSE, PR_FALSE))
+          return NULL;
+
+     return PyObject_FromNSDOMInterface(obContext, sup, NS_GET_IID(nsISupports));
+}
+
 static struct PyMethodDef methods[]=
 {
     {"JSExec", PyJSExec, 1},
@@ -475,6 +490,7 @@ static struct PyMethodDef methods[]=
     {"SetTimeoutOrInterval", PySetTimeoutOrInterval, 1},
     {"ClearTimeoutOrInterval", PyClearTimeoutOrInterval, 1},
     {"MakeArray", PyMakeArray, 1},
+    {"MakeDOMObject", PyMakeDOMObject, 1},
     { NULL }
 };
 
