@@ -56,7 +56,6 @@
 #endif
 
 #include "nsAutoLock.h"
-#include "nsIEventQueue.h"
 #include "nsIObserverService.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
@@ -64,6 +63,7 @@
 #include "nsILocalFile.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsThreadUtils.h"
 #include "nsVoidArray.h"
 #include "nsDeleteDir.h"
 #include <math.h>  // for log()
@@ -526,13 +526,6 @@ nsCacheService::Init()
     nsresult rv = mActiveEntries.Init();
     if (NS_FAILED(rv)) return rv;
     
-    // get references to services we'll be using frequently
-    mEventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    
-    mProxyObjectManager = do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
     // create profile/preference observer
     mObserver = new nsCacheProfilePrefObserver();
     if (!mObserver)  return NS_ERROR_OUT_OF_MEMORY;
@@ -644,9 +637,10 @@ nsCacheService::EvictEntriesForClient(const char *          clientID,
         // We use an async proxy, since this it's not important whether this
         // notification happens before or after the actual eviction.
 
+        nsCOMPtr<nsIThread> thread = do_GetMainThread();
+
         nsCOMPtr<nsIObserverService> obsProxy;
-        NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
-                             NS_GET_IID(nsIObserverService),
+        NS_GetProxyForObject(thread, NS_GET_IID(nsIObserverService),
                              obsSvc, PROXY_ASYNC, getter_AddRefs(obsProxy));
 
         if (obsProxy) {
@@ -849,7 +843,7 @@ nsCacheService::CreateRequest(nsCacheSession *   session,
     if (!listener)  return NS_OK;  // we're sync, we're done.
 
     // get the nsIEventQueue for the request's thread
-    (*request)->mThread = PR_GetCurrentThread();
+    (*request)->mThread = do_GetCurrentThread();
     
     return NS_OK;
 }
@@ -865,14 +859,12 @@ nsCacheService::NotifyListener(nsCacheRequest *          request,
 
     nsCOMPtr<nsICacheListener> listenerProxy;
     NS_ASSERTION(request->mThread, "no thread set in async request!");
-    nsCOMPtr<nsIEventQueue> eventQ;
-    mEventQService->GetThreadEventQueue(request->mThread,
-                                        getter_AddRefs(eventQ));
-    rv = mProxyObjectManager->GetProxyForObject(eventQ,
-                                                NS_GET_IID(nsICacheListener),
-                                                request->mListener,
-                                                PROXY_ASYNC|PROXY_ALWAYS,
-                                                getter_AddRefs(listenerProxy));
+
+    rv = NS_GetProxyForObject(request->mThread,
+                              NS_GET_IID(nsICacheListener),
+                              request->mListener,
+                              PROXY_ASYNC|PROXY_ALWAYS,
+                              getter_AddRefs(listenerProxy));
     if (NS_FAILED(rv)) return rv;
 
     return listenerProxy->OnCacheEntryAvailable(descriptor, accessGranted, error);
@@ -1172,45 +1164,6 @@ nsCacheService::DoomEntry_Internal(nsCacheEntry * entry)
 }
 
 
-static void* PR_CALLBACK
-EventHandler(PLEvent *self)
-{
-    nsISupports * object = (nsISupports *)PL_GetEventOwner(self);
-    NS_RELEASE(object);
-    return 0;
-}
-
-
-static void PR_CALLBACK
-DestroyHandler(PLEvent *self)
-{
-    delete self;
-}
-
-
-void
-nsCacheService::ProxyObjectRelease(nsISupports * object, PRThread * thread)
-{
-    NS_ASSERTION(gService, "nsCacheService not initialized");
-    NS_ASSERTION(thread, "no thread");
-    // XXX if thread == current thread, we could avoid posting an event,
-    // XXX by add this object to a queue and release it when the cache service is unlocked.
-    
-    nsCOMPtr<nsIEventQueue> eventQ;
-    gService->mEventQService->GetThreadEventQueue(thread, getter_AddRefs(eventQ));
-    NS_ASSERTION(eventQ, "no event queue for thread");
-    if (!eventQ)  return;
-    
-    PLEvent * event = new PLEvent;
-    if (!event) {
-        NS_WARNING("failed to allocate a PLEvent.");
-        return;
-    }
-    PL_InitEvent(event, object, EventHandler, DestroyHandler);
-    eventQ->PostEvent(event);
-}
-
-
 void
 nsCacheService::OnProfileShutdown(PRBool cleanse)
 {
@@ -1407,7 +1360,7 @@ nsCacheService::ServiceLock()
 nsresult
 nsCacheService::SetCacheElement(nsCacheEntry * entry, nsISupports * element)
 {
-    entry->SetThread(PR_GetCurrentThread());
+    entry->SetThread();
     entry->SetData(element);
     entry->TouchData();
     return NS_OK;

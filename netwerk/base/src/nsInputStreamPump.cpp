@@ -42,7 +42,7 @@
 #include "nsISeekableStream.h"
 #include "nsITransport.h"
 #include "nsNetUtil.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsCOMPtr.h"
 #include "prlog.h"
 
@@ -87,7 +87,7 @@ nsInputStreamPump::EnsureWaiting()
     // on only one thread.
 
     if (!mWaiting) {
-        nsresult rv = mAsyncStream->AsyncWait(this, 0, 0, mEventQ);
+        nsresult rv = mAsyncStream->AsyncWait(this, 0, 0, mTargetThread);
         if (NS_FAILED(rv)) {
             NS_ERROR("AsyncWait failed");
             return rv;
@@ -291,7 +291,7 @@ nsInputStreamPump::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 
     // grab event queue (we must do this here by contract, since all notifications
     // must go to the thread which called AsyncRead)
-    rv = NS_GetCurrentEventQ(getter_AddRefs(mEventQ));
+    mTargetThread = do_GetCurrentThread();
     if (NS_FAILED(rv)) return rv;
 
     rv = EnsureWaiting();
@@ -505,7 +505,7 @@ nsInputStreamPump::OnStateStop()
         mAsyncStream->Close();
 
     mAsyncStream = 0;
-    mEventQ = 0;
+    mTargetThread = 0;
     mIsPending = PR_FALSE;
 
     mListener->OnStopRequest(this, mListenerContext, mStatus);

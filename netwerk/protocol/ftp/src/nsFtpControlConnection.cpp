@@ -44,7 +44,7 @@
 #include "nsISocketTransportService.h"
 #include "nsISocketTransport.h"
 #include "nsNetUtil.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsCRT.h"
 
 
@@ -108,10 +108,10 @@ nsFtpControlConnection::Connect(nsIProxyInfo* proxyInfo,
 
         // proxy transport events back to current thread
         if (eventSink) {
-            nsCOMPtr<nsIEventQueue> eventQ;
-            rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+            nsCOMPtr<nsIThread> thread;
+            rv = NS_GetCurrentThread(getter_AddRefs(thread));
             if (NS_SUCCEEDED(rv))
-                mCPipe->SetEventSink(eventSink, eventQ);
+                mCPipe->SetEventSink(eventSink, thread);
         }
 
         // open buffered, blocking output stream to socket.  so long as commands

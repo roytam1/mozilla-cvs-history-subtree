@@ -370,11 +370,11 @@ nsDNSService::Shutdown()
 }
 
 NS_IMETHODIMP
-nsDNSService::AsyncResolve(const nsACString &hostname,
-                           PRUint32          flags,
-                           nsIDNSListener   *listener,
-                           nsIEventTarget   *eventTarget,
-                           nsICancelable   **result)
+nsDNSService::AsyncResolve(const nsACString  &hostname,
+                           PRUint32           flags,
+                           nsIDNSListener    *listener,
+                           nsIDispatchTarget *target,
+                           nsICancelable    **result)
 {
     // grab reference to global host resolver and IDN service.  beware
     // simultaneous shutdown!!
@@ -397,10 +397,8 @@ nsDNSService::AsyncResolve(const nsACString &hostname,
     }
 
     nsCOMPtr<nsIDNSListener> listenerProxy;
-    nsCOMPtr<nsIEventQueue> eventQ = do_QueryInterface(eventTarget);
-    // TODO(darin): make XPCOM proxies support any nsIEventTarget impl
-    if (eventQ) {
-        rv = NS_GetProxyForObject(eventQ,
+    if (target) {
+        rv = NS_GetProxyForObject(target,
                                   NS_GET_IID(nsIDNSListener),
                                   listener,
                                   PROXY_ASYNC | PROXY_ALWAYS,

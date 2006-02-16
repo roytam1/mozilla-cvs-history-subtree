@@ -43,11 +43,11 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIChannelEventSink.h"
 #include "nsIProxyAutoConfig.h"
+#include "nsIRunnable.h"
 #include "nsIURI.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "prclist.h"
-#include "plevent.h"
 
 /**
  * This class defines a callback interface used by AsyncGetProxyForURI.
@@ -74,6 +74,7 @@ public:
 class nsPACMan : public nsIStreamLoaderObserver
                , public nsIInterfaceRequestor
                , public nsIChannelEventSink
+               , public nsIRunnable
 {
 public:
   NS_DECL_ISUPPORTS
@@ -132,6 +133,7 @@ private:
   NS_DECL_NSISTREAMLOADEROBSERVER
   NS_DECL_NSIINTERFACEREQUESTOR
   NS_DECL_NSICHANNELEVENTSINK
+  NS_DECL_NSIRUNNABLE
 
   ~nsPACMan();
 
@@ -163,16 +165,18 @@ private:
   /**
    * Event fu for calling StartLoading asynchronously.
    */
+  /*XXX
   PR_STATIC_CALLBACK(void *) LoadEvent_Handle(PLEvent *);
   PR_STATIC_CALLBACK(void) LoadEvent_Destroy(PLEvent *);
+  */
 
 private:
   nsCOMPtr<nsIProxyAutoConfig> mPAC;
   nsCOMPtr<nsIURI>             mPACURI;
   PRCList                      mPendingQ;
   nsCOMPtr<nsIStreamLoader>    mLoader;
-  PLEvent                     *mLoadEvent;
-  PRBool                       mShutdown;
+  PRPackedBool                 mLoadPending;
+  PRPackedBool                 mShutdown;
 };
 
 #endif  // nsPACMan_h__

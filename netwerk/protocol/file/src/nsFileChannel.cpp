@@ -40,7 +40,7 @@
 #include "nsFileChannel.h"
 #include "nsBaseContentStream.h"
 #include "nsDirectoryIndexStream.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsTransportUtils.h"
 #include "nsStreamUtils.h"
 #include "nsURLHelper.h"
@@ -54,7 +54,7 @@
 
 //-----------------------------------------------------------------------------
 
-class nsFileCopyEvent : public PLEvent {
+class nsFileCopyEvent : public nsRunnable {
 public:
   nsFileCopyEvent(nsIOutputStream *dest, nsIInputStream *source, PRInt64 len)
     : mDest(dest)
@@ -62,7 +62,6 @@ public:
     , mLen(len)
     , mStatus(NS_OK)
     , mInterruptStatus(NS_OK) {
-    PL_InitEvent(this, nsnull, HandleEvent, DestroyEvent);
   }
 
   // Read the current status of the file copy operation.
@@ -75,7 +74,7 @@ public:
   // callback is dispatched when the file copy completes.
   nsresult Dispatch(nsIOutputStreamCallback *callback,
                     nsITransportEventSink *sink,
-                    nsIEventTarget *target);
+                    nsIDispatchTarget *target);
 
   // Call this method to interrupt a file copy operation that is occuring on
   // a background thread.  The status parameter passed to this function must
@@ -85,18 +84,12 @@ public:
     mInterruptStatus = status;
   }
 
+  NS_IMETHOD Run() {
+    DoCopy();
+    return NS_OK;
+  }
+
 private:
-
-  PR_STATIC_CALLBACK(void *) HandleEvent(PLEvent *ev) {
-    nsFileCopyEvent *f = NS_STATIC_CAST(nsFileCopyEvent *, ev);
-    f->DoCopy();
-    return nsnull;
-  }
-
-  PR_STATIC_CALLBACK(void) DestroyEvent(PLEvent *ev) {
-    // nothing to do
-  }
-
   nsCOMPtr<nsIOutputStreamCallback> mCallback;
   nsCOMPtr<nsITransportEventSink> mSink;
   nsCOMPtr<nsIOutputStream> mDest;
@@ -158,7 +151,7 @@ nsFileCopyEvent::DoCopy()
 nsresult
 nsFileCopyEvent::Dispatch(nsIOutputStreamCallback *callback,
                           nsITransportEventSink *sink,
-                          nsIEventTarget *target)
+                          nsIDispatchTarget *target)
 {
   // Use the supplied event target for all asynchronous operations.
 
@@ -173,15 +166,13 @@ nsFileCopyEvent::Dispatch(nsIOutputStreamCallback *callback,
   if (NS_FAILED(rv))
     return rv;
 
-  // PostEvent to I/O thread...
-  nsCOMPtr<nsIEventTarget> pool =
-      do_GetService(NS_IOTHREADPOOL_CONTRACTID, &rv);
+  // Dispatch ourselves to I/O thread pool...
+  nsCOMPtr<nsIDispatchTarget> pool =
+      do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
   if (NS_FAILED(rv))
     return rv;
 
-  // We don't have to call PL_DestroyEvent here if PostEvent fails because of
-  // the way we are allocated.
-  return pool->PostEvent(this);
+  return pool->Dispatch(this, NS_DISPATCH_NORMAL);
 }
 
 //-----------------------------------------------------------------------------
@@ -208,7 +199,7 @@ public:
   NS_IMETHODIMP ReadSegments(nsWriteSegmentFun fun, void *closure,
                              PRUint32 count, PRUint32 *result);
   NS_IMETHODIMP AsyncWait(nsIInputStreamCallback *callback, PRUint32 flags,
-                          PRUint32 count, nsIEventTarget *target);
+                          PRUint32 count, nsIDispatchTarget *target);
 
 private:
   nsFileCopyEvent mCopyEvent;
@@ -245,7 +236,7 @@ nsFileUploadContentStream::ReadSegments(nsWriteSegmentFun fun, void *closure,
 NS_IMETHODIMP
 nsFileUploadContentStream::AsyncWait(nsIInputStreamCallback *callback,
                                      PRUint32 flags, PRUint32 count,
-                                     nsIEventTarget *target)
+                                     nsIDispatchTarget *target)
 {
   nsresult rv = nsBaseContentStream::AsyncWait(callback, flags, count, target);
   if (NS_FAILED(rv) || IsClosed())

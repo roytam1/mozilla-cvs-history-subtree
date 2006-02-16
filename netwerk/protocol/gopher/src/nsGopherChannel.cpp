@@ -49,7 +49,8 @@
 #include "nsIStringBundle.h"
 #include "nsITXTToHTMLConv.h"
 #include "nsIPrompt.h"
-#include "nsEventQueueUtils.h"
+#include "nsServiceManagerUtils.h"
+#include "nsThreadUtils.h"
 #include "nsMimeTypes.h"
 #include "nsNetCID.h"
 #include "nsCOMPtr.h"
@@ -80,14 +81,14 @@ public:
                             PRUint32 count, PRUint32 *result);
     NS_IMETHOD CloseWithStatus(nsresult status);
     NS_IMETHOD AsyncWait(nsIInputStreamCallback *callback, PRUint32 flags,
-                         PRUint32 count, nsIEventTarget *target);
+                         PRUint32 count, nsIDispatchTarget *target);
 
     nsGopherContentStream(nsGopherChannel *channel)
         : nsBaseContentStream(PR_TRUE)  // non-blocking
         , mChannel(channel) {
     }
 
-    nsresult OpenSocket(nsIEventTarget *target);
+    nsresult OpenSocket(nsIDispatchTarget *target);
     nsresult OnSocketWritable();
     nsresult ParseTypeAndSelector(char &type, nsCString &selector);
     nsresult PromptForQueryString(nsCString &result);
@@ -143,7 +144,7 @@ nsGopherContentStream::CloseWithStatus(nsresult status)
 
 NS_IMETHODIMP
 nsGopherContentStream::AsyncWait(nsIInputStreamCallback *callback, PRUint32 flags,
-                                 PRUint32 count, nsIEventTarget *target)
+                                 PRUint32 count, nsIDispatchTarget *target)
 {
     nsresult rv = nsBaseContentStream::AsyncWait(callback, flags, count, target);
     if (NS_FAILED(rv) && IsClosed())
@@ -184,7 +185,7 @@ nsGopherContentStream::OnOutputStreamReady(nsIAsyncOutputStream *stream)
 }
 
 nsresult
-nsGopherContentStream::OpenSocket(nsIEventTarget *target)
+nsGopherContentStream::OpenSocket(nsIDispatchTarget *target)
 {
     // This function is called to get things started.
     //

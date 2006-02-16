@@ -43,11 +43,12 @@
 #include "nsHttpTransaction.h"
 #include "nsHttpRequestHead.h"
 #include "nsHttpAuthCache.h"
-#include "nsXPIDLString.h"
+#include "nsHashPropertyBag.h"
+#include "nsThreadUtils.h"
+#include "nsString.h"
+#include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
 #include "nsInt64.h"
-
-#include "nsHashPropertyBag.h"
 
 #include "nsIHttpChannel.h"
 #include "nsIHttpChannelInternal.h"
@@ -141,9 +142,17 @@ private:
     //
     // AsyncCall may be used to call a member function asynchronously.
     //
-    struct nsAsyncCallEvent : PLEvent
+    class nsAsyncCallEvent : public nsRunnable
     {
-        nsAsyncCallback mFuncPtr;
+    public:
+        nsAsyncCallEvent(nsHttpChannel *obj, nsAsyncCallback func)
+            : mObj(obj), mFuncPtr(func) {}
+
+        NS_IMETHOD Run();
+
+    private:
+        nsRefPtr<nsHttpChannel> mObj;
+        nsAsyncCallback         mFuncPtr;
     };
 
     nsresult AsyncCall(nsAsyncCallback funcPtr);
@@ -206,9 +215,6 @@ private:
     void     ClearPasswordManagerEntry(const char *scheme, const char *host, PRInt32 port, const char *realm, const PRUnichar *user);
     nsresult DoAuthRetry(nsAHttpConnection *);
 
-    static void *PR_CALLBACK AsyncCall_EventHandlerFunc(PLEvent *);
-    static void  PR_CALLBACK AsyncCall_EventCleanupFunc(PLEvent *);
-
 private:
     nsCOMPtr<nsIURI>                  mOriginalURI;
     nsCOMPtr<nsIURI>                  mURI;
@@ -218,11 +224,11 @@ private:
     nsCOMPtr<nsILoadGroup>            mLoadGroup;
     nsCOMPtr<nsISupports>             mOwner;
     nsCOMPtr<nsIInterfaceRequestor>   mCallbacks;
+    nsCOMPtr<nsIThread>               mThread;
     nsCOMPtr<nsIProgressEventSink>    mProgressSink;
     nsCOMPtr<nsIInputStream>          mUploadStream;
     nsCOMPtr<nsIURI>                  mReferrer;
     nsCOMPtr<nsISupports>             mSecurityInfo;
-    nsCOMPtr<nsIEventQueue>           mEventQ;
     nsCOMPtr<nsICancelable>           mProxyRequest;
 
     nsHttpRequestHead                 mRequestHead;

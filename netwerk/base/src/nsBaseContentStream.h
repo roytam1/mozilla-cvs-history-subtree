@@ -39,7 +39,7 @@
 #define nsBaseContentStream_h__
 
 #include "nsIAsyncInputStream.h"
-#include "nsIEventTarget.h"
+#include "nsIDispatchTarget.h"
 #include "nsCOMPtr.h"
 
 //-----------------------------------------------------------------------------
@@ -84,8 +84,8 @@ public:
   // Called to test if the stream has a pending callback.
   PRBool HasPendingCallback() { return mCallback != nsnull; }
 
-  // The current event target (may be null) for the pending callback if any.
-  nsIEventTarget *CallbackTarget() { return mCallbackTarget; }
+  // The current dispatch target (may be null) for the pending callback if any.
+  nsIDispatchTarget *CallbackTarget() { return mCallbackTarget; }
 
   // Called to dispatch a pending callback.  If there is no pending callback,
   // then this function does nothing.  Pass true to this function to cause the
@@ -98,7 +98,7 @@ public:
 
 private:
   nsCOMPtr<nsIInputStreamCallback> mCallback;
-  nsCOMPtr<nsIEventTarget>         mCallbackTarget;
+  nsCOMPtr<nsIDispatchTarget>      mCallbackTarget;
   nsresult                         mStatus;
   PRPackedBool                     mNonBlocking;
 };

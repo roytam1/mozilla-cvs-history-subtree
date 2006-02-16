@@ -70,7 +70,7 @@
 #include "nsIPrefBranch.h"
 #include "nsMimeTypes.h"
 #include "nsIStringBundle.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsChannelProperties.h"
 
 #include "nsICacheEntryDescriptor.h"
@@ -1866,13 +1866,13 @@ nsFtpState::R_pasv() {
         mWaitingForDConn = PR_TRUE;
 
         // hook ourself up as a proxy for status notifications
-        nsCOMPtr<nsIEventQueue> eventQ;
-        rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+        nsCOMPtr<nsIThread> thread;
+        rv = NS_GetCurrentThread(getter_AddRefs(thread));
         if (NS_FAILED(rv)){
             LOG(("(%x) NS_GetCurrentEventQ failed (rv=%x)\n", this, rv));
             return FTP_ERROR;
         }
-        rv = mDPipe->SetEventSink(NS_STATIC_CAST(nsITransportEventSink*, mDRequestForwarder), eventQ);
+        rv = mDPipe->SetEventSink(NS_STATIC_CAST(nsITransportEventSink*, mDRequestForwarder), thread);
         if (NS_FAILED(rv)){
             LOG(("(%x) forwarder->SetEventSink failed (rv=%x)\n", this, rv));
             return FTP_ERROR;
@@ -1892,14 +1892,14 @@ nsFtpState::R_pasv() {
             // perform the data copy on the socket transport thread.  we do this
             // because "output" is a socket output stream, so the result is that
             // all work will be done on the socket transport thread.
-            nsCOMPtr<nsIEventTarget> stEventTarget = do_GetService(kSocketTransportServiceCID, &rv);
+            nsCOMPtr<nsIDispatchTarget> stTarget = do_GetService(kSocketTransportServiceCID, &rv);
             if (NS_FAILED(rv)) return FTP_ERROR;
             
             nsCOMPtr<nsIAsyncStreamCopier> copier;
             rv = NS_NewAsyncStreamCopier(getter_AddRefs(copier),
                                          mWriteStream,
                                          output,
-                                         stEventTarget,
+                                         stTarget,
                                          PR_TRUE,   // mWriteStream is buffered
                                          PR_FALSE); // output is NOT buffered
             if (NS_FAILED(rv)) return FTP_ERROR;
@@ -2423,8 +2423,7 @@ nsFtpState::StopProcessing()
         nsCOMPtr<nsIRequestObserver> asyncObserver;
 
         NS_NewRequestObserverProxy(getter_AddRefs(asyncObserver), 
-                                   mChannel,
-                                   NS_CURRENT_EVENTQ);
+                                   mChannel, nsnull);
         if(asyncObserver) {
             (void) asyncObserver->OnStartRequest(this, nsnull);
             (void) asyncObserver->OnStopRequest(this, nsnull, broadcastErrorCode);

@@ -52,7 +52,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsISocketTransportService.h"
 #include "nsITransport.h"
-#include "nsIEventQueue.h"
+#include "nsIDispatchTarget.h"
 
 //-----------------------------------------------------------------------------
 
@@ -92,8 +92,8 @@ public:
     //        the request body (POST or PUT data stream)
     // @param reqBodyIncludesHeaders
     //        fun stuff to support NPAPI plugins.
-    // @param eventQ
-    //        the event queue were notifications should be sent.
+    // @param target
+    //        the dispatch target were notifications should be sent.
     // @param callbacks
     //        the notification callbacks to be given to PSM.
     // @param responseBody
@@ -106,7 +106,7 @@ public:
                   nsHttpRequestHead     *reqHeaders,
                   nsIInputStream        *reqBody,
                   PRBool                 reqBodyIncludesHeaders,
-                  nsIEventQueue         *consumerEventQ,
+                  nsIDispatchTarget     *consumerTarget,
                   nsIInterfaceRequestor *callbacks,
                   nsITransportEventSink *eventsink,
                   nsIAsyncInputStream  **responseBody);
@@ -119,7 +119,7 @@ public:
     nsISupports           *SecurityInfo()   { return mSecurityInfo; }
 
     nsIInterfaceRequestor *Callbacks()      { return mCallbacks; } 
-    nsIEventQueue         *ConsumerEventQ() { return mConsumerEventQ; }
+    nsIDispatchTarget     *ConsumerTarget() { return mConsumerTarget; }
     nsAHttpConnection     *Connection()     { return mConnection; }
 
     // Called to take ownership of the response headers; the transaction
@@ -146,10 +146,10 @@ private:
     nsresult ProcessData(char *, PRUint32, PRUint32 *);
     void     DeleteSelfOnConsumerThread();
 
+    /*XXX
     static void *PR_CALLBACK TransportStatus_Handler(PLEvent *);
     static void  PR_CALLBACK TransportStatus_Cleanup(PLEvent *);
-    static void *PR_CALLBACK DeleteThis_Handler(PLEvent *);
-    static void  PR_CALLBACK DeleteThis_Cleanup(PLEvent *);
+    */
 
     static NS_METHOD ReadRequestSegment(nsIInputStream *, void *, const char *,
                                         PRUint32, PRUint32, PRUint32 *);
@@ -159,7 +159,7 @@ private:
 private:
     nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
     nsCOMPtr<nsITransportEventSink> mTransportSink;
-    nsCOMPtr<nsIEventQueue>         mConsumerEventQ;
+    nsCOMPtr<nsIDispatchTarget>     mConsumerTarget;
     nsCOMPtr<nsISupports>           mSecurityInfo;
     nsCOMPtr<nsIAsyncInputStream>   mPipeIn;
     nsCOMPtr<nsIAsyncOutputStream>  mPipeOut;

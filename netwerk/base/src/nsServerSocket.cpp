@@ -52,47 +52,32 @@ static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
 typedef void (nsServerSocket:: *nsServerSocketFunc)(void);
 
-struct nsServerSocketEvent : PLEvent
+class nsServerSocketEvent : public nsRunnable
 {
+public:
   nsServerSocketEvent(nsServerSocket *s, nsServerSocketFunc f)
-    : func(f)
-  {
-    NS_ADDREF(s);
-    PL_InitEvent(this, s, EventHandler, EventCleanup);
-  }
+    : mServerSocket(s)
+    , mFunc(f)
+  {}
 
-  PR_STATIC_CALLBACK(void *)
-  EventHandler(PLEvent *ev)
+  NS_IMETHOD Run()
   {
-    nsServerSocket *s = (nsServerSocket *) ev->owner;
-    nsServerSocketEvent *event = (nsServerSocketEvent *) ev;
-    nsServerSocketFunc func = event->func;
-    (s->*func)();
+    (mServerSocket->*mFunc)();
     return nsnull;
   }
 
-  PR_STATIC_CALLBACK(void)
-  EventCleanup(PLEvent *ev)
-  {
-    nsServerSocket *s = (nsServerSocket *) ev->owner;
-    NS_RELEASE(s);
-    delete (nsServerSocketEvent *) ev;
-  }
-
-  nsServerSocketFunc func;
+  nsRefPtr<nsServerSocket> mServerSocket;
+  nsServerSocketFunc       mFunc;
 };
 
 static nsresult
 PostEvent(nsServerSocket *s, nsServerSocketFunc func)
 {
-  nsServerSocketEvent *ev = new nsServerSocketEvent(s, func);
+  nsRefPtr<nsServerSocketEvent> ev = new nsServerSocketEvent(s, func);
   if (!ev)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  nsresult rv = gSocketTransportService->PostEvent(ev);
-  if (NS_FAILED(rv))
-    PL_DestroyEvent(ev);
-  return rv;
+  return gSocketTransportService->Dispatch(ev, NS_DISPATCH_NORMAL);
 }
 
 //-----------------------------------------------------------------------------
@@ -182,16 +167,14 @@ nsServerSocket::TryAttach()
   //
   if (!gSocketTransportService->CanAttachSocket())
   {
-    PLEvent *event = new nsServerSocketEvent(this, &nsServerSocket::OnMsgAttach);
+    nsCOMPtr<nsIRunnable> event =
+        new nsServerSocketEvent(this, &nsServerSocket::OnMsgAttach);
     if (!event)
       return NS_ERROR_OUT_OF_MEMORY;
 
     nsresult rv = gSocketTransportService->NotifyWhenCanAttachSocket(event);
     if (NS_FAILED(rv))
-    {
-      PL_DestroyEvent(event);
       return rv;
-    }
   }
 
   //
@@ -399,8 +382,9 @@ nsServerSocket::AsyncListen(nsIServerSocketListener *aListener)
   NS_ENSURE_TRUE(mFD, NS_ERROR_NOT_INITIALIZED);
   NS_ENSURE_TRUE(mListener == nsnull, NS_ERROR_IN_PROGRESS);
   {
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
     nsAutoLock lock(mLock);
-    nsresult rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+    nsresult rv = NS_GetProxyForObject(thread,
                                        NS_GET_IID(nsIServerSocketListener),
                                        aListener,
                                        PROXY_ASYNC | PROXY_ALWAYS,

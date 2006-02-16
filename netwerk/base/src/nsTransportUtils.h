@@ -55,7 +55,7 @@
 NS_HIDDEN_(nsresult)
 net_NewTransportEventSinkProxy(nsITransportEventSink **aResult,
                                nsITransportEventSink *aSink,
-                               nsIEventTarget *aTarget,
+                               nsIDispatchTarget *aTarget,
                                PRBool aCoalesceAllEvents = PR_FALSE);
 
 #endif // nsTransportUtils_h__

@@ -368,7 +368,7 @@ inline nsresult
 NS_NewAsyncStreamCopier(nsIAsyncStreamCopier **result,
                         nsIInputStream        *source,
                         nsIOutputStream       *sink,
-                        nsIEventTarget        *target,
+                        nsIDispatchTarget     *target,
                         PRBool                 sourceBuffered = PR_TRUE,
                         PRBool                 sinkBuffered = PR_TRUE,
                         PRUint32               chunkSize = 0)
@@ -533,13 +533,13 @@ NS_ImplementChannelOpen(nsIChannel      *channel,
 inline nsresult
 NS_NewRequestObserverProxy(nsIRequestObserver **result,
                            nsIRequestObserver  *observer,
-                           nsIEventQueue       *eventQ = nsnull)
+                           nsIDispatchTarget   *target = nsnull)
 {
     nsresult rv;
     nsCOMPtr<nsIRequestObserverProxy> proxy =
         do_CreateInstance(NS_REQUESTOBSERVERPROXY_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv)) {
-        rv = proxy->Init(observer, eventQ);
+        rv = proxy->Init(observer, target);
         if (NS_SUCCEEDED(rv))
             NS_ADDREF(*result = proxy);  // cannot use nsCOMPtr::swap
     }
@@ -558,22 +558,6 @@ NS_NewSimpleStreamListener(nsIStreamListener **result,
         rv = listener->Init(sink, observer);
         if (NS_SUCCEEDED(rv))
             NS_ADDREF(*result = listener);  // cannot use nsCOMPtr::swap
-    }
-    return rv;
-}
-
-inline nsresult
-NS_NewAsyncStreamListener(nsIStreamListener **result,
-                          nsIStreamListener  *receiver,
-                          nsIEventQueue      *eventQ)
-{
-    nsresult rv;
-    nsCOMPtr<nsIAsyncStreamListener> lsnr =
-        do_CreateInstance(NS_ASYNCSTREAMLISTENER_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv)) {
-        rv = lsnr->Init(receiver, eventQ);
-        if (NS_SUCCEEDED(rv))
-            NS_ADDREF(*result = lsnr);  // cannot use nsCOMPtr::swap
     }
     return rv;
 }

@@ -37,10 +37,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsPACMan.h"
+#include "nsThreadUtils.h"
 #include "nsIDNSService.h"
 #include "nsIDNSListener.h"
 #include "nsICancelable.h"
-#include "nsEventQueueUtils.h"
 #include "nsNetUtil.h"
 #include "nsAutoLock.h"
 #include "nsAutoPtr.h"
@@ -97,12 +97,12 @@ PendingPACQuery::Start()
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIEventQueue> eventQ;
-  rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+  nsCOMPtr<nsIThread> thread;
+  rv = NS_GetCurrentThread(getter_AddRefs(thread));
   if (NS_FAILED(rv))
     return rv;
 
-  rv = dns->AsyncResolve(host, 0, this, eventQ, getter_AddRefs(mDNSRequest));
+  rv = dns->AsyncResolve(host, 0, this, thread, getter_AddRefs(mDNSRequest));
   if (NS_FAILED(rv))
     NS_WARNING("DNS AsyncResolve failed");
 
@@ -152,7 +152,7 @@ PendingPACQuery::OnLookupComplete(nsICancelable *request,
 //-----------------------------------------------------------------------------
 
 nsPACMan::nsPACMan()
-  : mLoadEvent(nsnull)
+  : mLoadPending(PR_FALSE)
   , mShutdown(PR_FALSE)
 {
   PR_INIT_CLIST(&mPendingQ);
@@ -226,6 +226,7 @@ nsPACMan::AsyncGetProxyForURI(nsIURI *uri, nsPACManCallback *callback)
   return rv;
 }
 
+/*
 void *PR_CALLBACK
 nsPACMan::LoadEvent_Handle(PLEvent *ev)
 {
@@ -240,6 +241,15 @@ nsPACMan::LoadEvent_Destroy(PLEvent *ev)
   self->mLoadEvent = nsnull;
   self->Release();
   delete ev;
+}
+*/
+
+NS_IMETHODIMP
+nsPACMan::Run()
+{
+  mLoadPending = PR_FALSE;
+  StartLoading();
+  return NS_OK;
 }
 
 nsresult
@@ -257,20 +267,13 @@ nsPACMan::LoadPACFromURI(nsIURI *pacURI)
   // But, we need to flag ourselves as loading, so that we queue up any PAC
   // queries the enter between now and when we actually load the PAC file.
 
-  if (!mLoadEvent) {
-    mLoadEvent = new PLEvent;
-    if (!mLoadEvent)
-      return NS_ERROR_OUT_OF_MEMORY;
-
-    NS_ADDREF_THIS();
-    PL_InitEvent(mLoadEvent, this, LoadEvent_Handle, LoadEvent_Destroy);
-
-    nsCOMPtr<nsIEventQueue> eventQ;
-    nsresult rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-    if (NS_FAILED(rv) || NS_FAILED(rv = eventQ->PostEvent(mLoadEvent))) {
-      PL_DestroyEvent(mLoadEvent);
+  if (!mLoadPending) {
+    nsCOMPtr<nsIThread> thread;
+    nsresult rv = NS_GetCurrentThread(getter_AddRefs(thread));
+    if (NS_FAILED(rv) ||
+        NS_FAILED(rv = thread->Dispatch(this, NS_DISPATCH_NORMAL)))
       return rv;
-    }
+    mLoadPending = PR_TRUE;
   }
 
   CancelExistingLoad();

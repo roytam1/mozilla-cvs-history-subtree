@@ -52,7 +52,7 @@
 #include "nsITransport.h"
 #include "nsIRunnable.h"
 #include "nsIProxyObjectManager.h"
-#include "nsIEventTarget.h"
+#include "nsIDispatchTarget.h"
 
 //-----------------------------------------------------------------------------
 // nsInputStreamTransport
@@ -119,8 +119,8 @@ nsInputStreamTransport::OpenInputStream(PRUint32 flags,
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
     nsresult rv;
-    nsCOMPtr<nsIEventTarget> target =
-            do_GetService(NS_IOTHREADPOOL_CONTRACTID, &rv);
+    nsCOMPtr<nsIDispatchTarget> target =
+            do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     // XXX if the caller requests an unbuffered stream, then perhaps
@@ -172,7 +172,7 @@ nsInputStreamTransport::Close(nsresult reason)
 
 NS_IMETHODIMP
 nsInputStreamTransport::SetEventSink(nsITransportEventSink *sink,
-                                     nsIEventTarget *target)
+                                     nsIDispatchTarget *target)
 {
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
@@ -332,8 +332,8 @@ nsOutputStreamTransport::OpenOutputStream(PRUint32 flags,
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
     nsresult rv;
-    nsCOMPtr<nsIEventTarget> target =
-            do_GetService(NS_IOTHREADPOOL_CONTRACTID, &rv);
+    nsCOMPtr<nsIDispatchTarget> target =
+            do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     // XXX if the caller requests an unbuffered stream, then perhaps
@@ -374,7 +374,7 @@ nsOutputStreamTransport::Close(nsresult reason)
 
 NS_IMETHODIMP
 nsOutputStreamTransport::SetEventSink(nsITransportEventSink *sink,
-                                      nsIEventTarget *target)
+                                      nsIDispatchTarget *target)
 {
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
@@ -468,7 +468,44 @@ nsOutputStreamTransport::IsNonBlocking(PRBool *result)
 // nsStreamTransportService
 //-----------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsStreamTransportService, nsIStreamTransportService)
+nsStreamTransportService::~nsStreamTransportService()
+{
+    if (mPool) {
+        mPool->Shutdown();
+        mPool = nsnull;
+    }
+}
+
+nsresult
+nsStreamTransportService::Init()
+{
+    mPool = do_CreateInstance(NS_THREADPOOL_CONTRACTID);
+    NS_ENSURE_STATE(mPool);
+
+    // Configure the pool
+    mPool->SetThreadLimit(4);
+    mPool->SetIdleThreadLimit(1);
+    mPool->SetIdleThreadTimeout(PR_SecondsToInterval(60));
+    return NS_OK;
+}
+
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsStreamTransportService,
+                              nsIStreamTransportService,
+                              nsIDispatchTarget)
+
+NS_IMETHODIMP
+nsStreamTransportService::Dispatch(nsIRunnable *task, PRUint32 flags)
+{
+    NS_ENSURE_TRUE(mPool, NS_ERROR_NOT_INITIALIZED);
+    return mPool->Dispatch(task, flags);
+}
+
+NS_IMETHODIMP
+nsStreamTransportService::IsOnCurrentThread(PRBool *result)
+{
+    NS_ENSURE_TRUE(mPool, NS_ERROR_NOT_INITIALIZED);
+    return mPool->IsOnCurrentThread(result);
+}
 
 NS_IMETHODIMP
 nsStreamTransportService::CreateInputTransport(nsIInputStream *stream,

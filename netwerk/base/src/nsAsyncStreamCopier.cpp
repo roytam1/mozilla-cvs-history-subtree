@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsAsyncStreamCopier.h"
+#include "nsIDispatchTarget.h"
 #include "nsStreamUtils.h"
 #include "nsNetSegmentUtils.h"
 #include "nsNetUtil.h"
@@ -220,7 +221,7 @@ nsAsyncStreamCopier::SetLoadGroup(nsILoadGroup *aLoadGroup)
 NS_IMETHODIMP
 nsAsyncStreamCopier::Init(nsIInputStream *source,
                           nsIOutputStream *sink,
-                          nsIEventTarget *target,
+                          nsIDispatchTarget *target,
                           PRBool sourceBuffered,
                           PRBool sinkBuffered,
                           PRUint32 chunkSize)
@@ -245,7 +246,7 @@ nsAsyncStreamCopier::Init(nsIInputStream *source,
         mTarget = target;
     else {
         nsresult rv;
-        mTarget = do_GetService(NS_IOTHREADPOOL_CONTRACTID, &rv);
+        mTarget = do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
         if (NS_FAILED(rv)) return rv;
     }
     return NS_OK;

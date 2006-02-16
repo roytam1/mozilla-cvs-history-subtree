@@ -43,7 +43,6 @@
 #include "nsXPIDLString.h"
 #include "nsIProxyAutoConfig.h"
 #include "nsAutoLock.h"
-#include "nsEventQueueUtils.h"
 #include "nsIIOService.h"
 #include "nsIObserverService.h"
 #include "nsIProtocolHandler.h"
@@ -53,11 +52,11 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch2.h"
 #include "nsReadableUtils.h"
+#include "nsThreadUtils.h"
 #include "nsString.h"
 #include "nsNetUtil.h"
 #include "nsCRT.h"
 #include "prnetdb.h"
-#include "nsEventQueueUtils.h"
 #include "nsPACMan.h"
 
 //----------------------------------------------------------------------------
@@ -79,7 +78,7 @@ struct nsProtocolInfo {
 
 //----------------------------------------------------------------------------
 
-class nsAsyncResolveRequest : public PLEvent
+class nsAsyncResolveRequest : public nsIRunnable
                             , public nsPACManCallback 
                             , public nsICancelable
 {
@@ -95,13 +94,19 @@ public:
         , mCallback(callback)
     {
         NS_ASSERTION(mCallback, "null callback");
-        PL_InitEvent(this, nsnull, HandleEvent, CleanupEvent);
     }
 
     void SetResult(nsresult status, nsIProxyInfo *pi)
     {
         mStatus = status;
         mProxyInfo = pi;
+    }
+
+    NS_IMETHOD Run()
+    {
+        if (mCallback)
+            DoCallback();
+        return NS_OK;
     }
 
     NS_IMETHOD Cancel(nsresult reason)
@@ -121,17 +126,14 @@ public:
         if (mDispatched)  // Only need to dispatch once
             return NS_OK;
 
-        nsCOMPtr<nsIEventQueue> eventQ;
-        nsresult rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+        nsCOMPtr<nsIThread> thread;
+        nsresult rv = NS_GetCurrentThread(getter_AddRefs(thread));
         if (NS_FAILED(rv))
             NS_WARNING("could not get current event queue");
         else {
-            NS_ADDREF_THIS();
-            rv = eventQ->PostEvent(this);
-            if (NS_FAILED(rv)) {
+            rv = thread->Dispatch(this, NS_DISPATCH_NORMAL);
+            if (NS_FAILED(rv))
                 NS_WARNING("unable to dispatch callback event");
-                PL_DestroyEvent(this);
-            }
             else {
                 mDispatched = PR_TRUE;
                 return NS_OK;
@@ -182,22 +184,6 @@ private:
 
         mCallback->OnProxyAvailable(this, mURI, mProxyInfo, mStatus);
         mCallback = nsnull;  // in case the callback holds an owning ref to us
-    }
-
-    PR_STATIC_CALLBACK(void *) HandleEvent(PLEvent *ev)
-    {
-        nsAsyncResolveRequest *self =
-                NS_STATIC_CAST(nsAsyncResolveRequest *, ev);
-        if (self->mCallback)
-            self->DoCallback();
-        return nsnull;
-    }
-
-    PR_STATIC_CALLBACK(void) CleanupEvent(PLEvent *ev)
-    {
-        nsAsyncResolveRequest *self =
-                NS_STATIC_CAST(nsAsyncResolveRequest *, ev);
-        NS_RELEASE(self);  // balance AddRef in DispatchCallback
     }
 
 private:

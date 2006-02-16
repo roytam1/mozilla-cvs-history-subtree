@@ -40,6 +40,7 @@
 #include "nsFTPChannel.h"
 #include "nsIStreamListener.h"
 #include "nsIServiceManager.h"
+#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 #include "nsIProxyObjectManager.h"
@@ -357,12 +358,14 @@ nsFTPChannel::GetFTPEventSink(nsCOMPtr<nsIFTPEventSink> &aResult)
     if (!mFTPEventSink) {
         nsCOMPtr<nsIFTPEventSink> ftpSink;
         GetCallback(ftpSink);
-        if (ftpSink)
-            NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+        if (ftpSink) {
+            nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+            NS_GetProxyForObject(thread,
                                  NS_GET_IID(nsIFTPEventSink),
                                  ftpSink,
                                  PROXY_ASYNC | PROXY_ALWAYS,
                                  getter_AddRefs(mFTPEventSink));
+        }
     }
     aResult = mFTPEventSink;
 }
@@ -375,12 +378,14 @@ nsFTPChannel::InitProgressSink()
     // to worry about some weird re-entrancy scenario.
     nsCOMPtr<nsIProgressEventSink> progressSink;
     NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup, progressSink);
-    if (progressSink)
-        NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+    if (progressSink) {
+        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+        NS_GetProxyForObject(thread,
                              NS_GET_IID(nsIProgressEventSink),
                              progressSink,
                              PROXY_ASYNC | PROXY_ALWAYS,
                              getter_AddRefs(mProgressSink));
+    }
 }
 
 nsresult 

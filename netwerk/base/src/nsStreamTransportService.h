@@ -36,13 +36,24 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsIStreamTransportService.h"
+#include "nsIDispatchTarget.h"
+#include "nsIThreadPool.h"
+#include "nsCOMPtr.h"
 
 class nsStreamTransportService : public nsIStreamTransportService
+                               , public nsIDispatchTarget 
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISTREAMTRANSPORTSERVICE
+    NS_DECL_NSIDISPATCHTARGET
+
+    nsresult Init();
 
     nsStreamTransportService() {}
-    virtual ~nsStreamTransportService() {}
+
+private:
+    ~nsStreamTransportService();
+
+    nsCOMPtr<nsIThreadPool> mPool;
 };
