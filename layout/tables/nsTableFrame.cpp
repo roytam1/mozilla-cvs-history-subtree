@@ -87,8 +87,6 @@ struct nsTableReflowState {
   // the real reflow state
   const nsHTMLReflowState& reflowState;
 
-  nsReflowReason reason;
-
   // The table's available size 
   nsSize availSize;
 
@@ -107,22 +105,18 @@ struct nsTableReflowState {
   nsTableReflowState(nsPresContext&          aPresContext,
                      const nsHTMLReflowState& aReflowState,
                      nsTableFrame&            aTableFrame,
-                     nsReflowReason           aReason,
                      nscoord                  aAvailWidth,
                      nscoord                  aAvailHeight)
     : reflowState(aReflowState)
   {
-    Init(aPresContext, aTableFrame, aReason, aAvailWidth, aAvailHeight);
+    Init(aPresContext, aTableFrame, aAvailWidth, aAvailHeight);
   }
 
   void Init(nsPresContext& aPresContext,
             nsTableFrame&   aTableFrame,
-            nsReflowReason  aReason,
             nscoord         aAvailWidth,
             nscoord         aAvailHeight)
   {
-    reason = aReason;
-
     nsTableFrame* table = (nsTableFrame*)aTableFrame.GetFirstInFlow();
     nsMargin borderPadding = table->GetChildAreaOffset(&reflowState);
     nscoord cellSpacingX = table->GetCellSpacingX();
@@ -153,7 +147,7 @@ struct nsTableReflowState {
                      nsTableFrame&            aTableFrame)
     : reflowState(aReflowState)
   {
-    Init(aPresContext, aTableFrame, aReflowState.reason, aReflowState.availableWidth, aReflowState.availableHeight);
+    Init(aPresContext, aTableFrame, aReflowState.availableWidth, aReflowState.availableHeight);
   }
 
 };
@@ -344,7 +338,8 @@ nsTableFrame::AppendDirtyReflowCommand(nsIFrame* aFrame)
 {
   aFrame->AddStateBits(NS_FRAME_IS_DIRTY);  // mark the table frame as dirty
 
-  return aPresShell->FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
+  return aFrame->GetPresContext()->PresShell()->
+    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 }
 
 // Make sure any views are positioned properly
@@ -1880,7 +1875,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
                                const nsHTMLReflowState& aReflowState,
                                nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 #if defined DEBUG_TABLE_REFLOW_TIMING
   nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState);
