@@ -26,12 +26,23 @@ logger = logging.getLogger("xpcom.nsdom")
 
 # XUL Elements don't expose the XBL implemented interfaces via classinfo.
 # So we cheat :)
+# Most support nsIAccessibleProvider - don't list that!
+# Although this sucks for now, if you strike something that isn't listed,
+# just have your code do:
+#    import nsdom.context
+#    xei = nsdom.context.xul_element_interfaces
+#    # flag for manual inspection should a future version include it
+#    if 'somewidget' in xei: raise RuntimeError, "already here!?"
+#    xei['somewidget'] = [...]
+
 xul_element_interfaces = {
     # tagName:      [IID, ...]
     'textbox':      [components.interfaces.nsIDOMXULTextBoxElement],
     'button':       [components.interfaces.nsIDOMXULButtonElement],
     'checkbox':     [components.interfaces.nsIDOMXULCheckboxElement],
     'image':        [components.interfaces.nsIDOMXULImageElement],
+    'tree':         [components.interfaces.nsIDOMXULTreeElement,
+                     components.interfaces.nsIDOMXULMultiSelectControlElement],
 }
 
 def dump(fmt, *args):
@@ -50,7 +61,8 @@ def dump(fmt, *args):
 # The event listener class we attach to an object for addEventListener
 class EventListener:
     _com_interfaces_ = components.interfaces.nsIDOMEventListener
-    def __init__(self, evt_name, handler, globs = None):
+    def __init__(self, context, evt_name, handler, globs = None):
+        self.context = context
         if callable(handler):
             self.func = handler
         else:
@@ -64,15 +76,25 @@ class EventListener:
                                              "inline event '%s'" % evt_name,
                                              func_name,
                                              arg_names)
+            # Could use globs here, but should not be necessary - all we
+            # are doing is getting the function object from it.
             g = {}
             exec co in g
             self.func = g[func_name]
-        self.globals = globs or globals()
+        self.globals = globs
 
     def handleEvent(self, event):
         # Although handler is already a function object, we must re-bind to
         # new globals
-        f = new.function(self.func.func_code, self.globals, self.func.func_name)
+        if self.globals is not None:
+            f = new.function(self.func.func_code, self.globals, self.func.func_name)
+        else:
+            f = self.func
+        # Convert the raw pyxpcom object to a magic _nsdom one, that
+        # knows how to remember expandos etc based on context (ie, winds
+        # up calling back into MakeInterfaceResult().
+        event = _nsdom.MakeDOMObject(self.context, event)
+        
         args = (event,)
         # We support having less args declared than supplied, a-la JS.
         # (This can only happen when passed a function object - we always
@@ -89,7 +111,8 @@ class WrappedNative(Component):
     """
     def __init__(self, context, obj, iid):
         # Store our context - but our context doesn't keep a reference
-        # to us until we call _remember_object() on the context.
+        # to us until someone calls self._remember_object() on the context -
+        # which sets up all kinds of cycles!
         self.__dict__['_context_'] = context
         # We store expandos in a seperate dict rather than directly in our
         # __dict__.  No real need for this other than to prevent these
@@ -161,9 +184,15 @@ class WrappedNative(Component):
         # nsIDOMEventListener interfaces.
         logger.debug("addEventListener for %r, event=%r, handler=%r, cap=%s",
                      self, event, handler, useCapture)
+
         if not hasattr(handler, "handleEvent"): # may already be a handler instance.
-            # Wrap it in our instance, which knows how to convert
-            handler = EventListener(event, handler, self._expandos_)
+            # Wrap it in our instance, which knows how to convert strings and
+            # function objects.
+            # Unlike JS, we always want to execute in the context of our
+            # "window" (which the user sees very much like a "module")
+            ns = self._context_.globalNamespace
+            ns = ns.get("_inner_", ns) # If available, use inner!
+            handler = EventListener(self._context_, event, handler, ns)
 
         base = self.__getattr__('addEventListener')
         base(event, handler, useCapture)
@@ -186,8 +215,7 @@ class WrappedNativeGlobal(WrappedNative):
         args = _nsdom.MakeArray(args)
         ret = svc.openWindow(self._comobj_, url, name, features, args)
         # and re-wrap in one of our "dom" objects
-        return self._context_.MakeInterfaceResult(ret._comobj_,
-                                            components.interfaces.nsIDOMWindow)
+        return _nsdom.MakeDOMObject(self._context_, ret)
 
     # window.open and window.openDialog seem identical except for *args???
     open = openDialog
@@ -255,6 +283,12 @@ class ScriptContext:
                 klass = WrappedNative
             return klass(self, object, iid)
 
+    # Called whenever this object must be "permanently" attached to the
+    # context.  Typically this means an attribute or event handler
+    # has been set on the object, which should "persist" while the context
+    # is alive (ie, future requests to getElementById(), for example, must
+    # return the same underlying object, with event handlers and properties
+    # still in-place.
     def _remember_object(self, object):
         # You must only try and remember a wrapped object.
         # Once an object has been wrapped once, all further requests must
@@ -345,17 +379,10 @@ class ScriptContext:
         assert len(globalObject._expandos_)==0, \
                "already initialized this global?"
         ns = globalObject.__dict__['_expandos_'] = globalNamespace
-        # Do an optimized 'setattr' for the global
         self._remember_object(globalObject)
-        ns['this'] = globalObject
-        # How is this magic supposed to work?  What others are there?
         ns['window'] = globalObject
         # we can't fetch 'document' and stash it now - there may not be one
         # at this instant (ie, it may be in the process of being attached)
-#        try:
-#            ns['document'] = globalObject.document
-#        except AttributeError:
-#            logger.warning("'this' object has no document global")
         # Poke some other utilities etc into the namespace.
         ns['dump'] = dump
 
@@ -433,9 +460,9 @@ class ScriptContext:
             logger.debug("%s.BindCompiledEventHandler (%s=%r) on target %s in scope %s",
                          self, name, handler, target, id(scope))
         # Keeps a ref to both the target and handler.
+        self._remember_object(target)
         ns = target._expandos_
         ns[name] = handler
-        self._remember_object(target)
 
     def GetBoundEventHandler(self, target, scope, name):
         if __debug__:
