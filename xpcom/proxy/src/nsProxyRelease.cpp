@@ -37,7 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsProxyRelease.h"
-#include "nsRunnable.h"
+#include "nsThreadUtils.h"
 #include "nsAutoPtr.h"
 
 class nsProxyReleaseEvent : public nsRunnable

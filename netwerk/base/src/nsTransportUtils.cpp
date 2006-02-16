@@ -36,9 +36,8 @@
 
 #include "nsTransportUtils.h"
 #include "nsITransport.h"
-#include "nsIDispatchTarget.h"
 #include "nsProxyRelease.h"
-#include "nsRunnable.h"
+#include "nsThreadUtils.h"
 #include "nsAutoLock.h"
 #include "nsAutoPtr.h"
 #include "nsCOMPtr.h"

@@ -54,7 +54,6 @@
 #include "nsISafeOutputStream.h"
 #include "nsIStreamListener.h"
 #include "nsIRequestObserverProxy.h"
-#include "nsIStreamListenerProxy.h" // XXX for nsIAsyncStreamListener
 #include "nsISimpleStreamListener.h"
 #include "nsILoadGroup.h"
 #include "nsIInterfaceRequestor.h"
