@@ -1679,7 +1679,7 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 
 #error WRITE ME
 
-  return 0;
+  return result;
 }
 
 /* virtual */ nscoord
@@ -1690,7 +1690,7 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
 #error WRITE ME
 
-  return 0;
+  return result;
 }
 
 

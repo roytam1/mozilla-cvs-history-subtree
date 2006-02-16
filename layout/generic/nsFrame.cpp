@@ -2239,7 +2239,7 @@ nsFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 #endif
   nscoord result = 0;
   DISPLAY_MIN_WIDTH(this, result);
-  return 0;
+  return result;
 }
 
 /* virtual */ nscoord
@@ -2253,7 +2253,7 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 #endif
   nscoord result = 0;
   DISPLAY_PREF_WIDTH(this, result);
-  return 0;
+  return result;
 }
 
 /* virtual */ void
