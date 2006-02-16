@@ -55,6 +55,7 @@
 #include "nsIDOMCryptoDialogs.h"
 #include "nsIFormSigningDialog.h"
 #include "nsIProxyObjectManager.h"
+#include "nsIJSContextStack.h"
 #include "jsapi.h"
 #include "jsdbgapi.h"
 #include <ctype.h>
@@ -1130,7 +1131,7 @@ nsSetDSASignNonRepudiation(CRMFCertRequest *crmfReq)
 static nsresult
 nsSetKeyUsageExtension(CRMFCertRequest *crmfReq, nsKeyGenType keyGenType)
 {
-  nsresult rv;
+  nsresult rv = NS_OK;
 
   switch (keyGenType) {
   case rsaDualUse:
@@ -1801,15 +1802,23 @@ nsCryptoRunnable::Run()
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
 
+  // make sure the right context is on the stack. must not return w/out popping
+  nsCOMPtr<nsIJSContextStack> stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1"));
+  if (!stack || NS_FAILED(stack->Push(cx))) {
+    return NS_ERROR_FAILURE;
+  }
+
   jsval retval;
   if (JS_EvaluateScriptForPrincipals(cx, m_args->m_scope, principals,
                                      m_args->m_jsCallback, 
                                      strlen(m_args->m_jsCallback),
                                      nsnull, 0,
                                      &retval) != JS_TRUE) {
-    return NS_ERROR_FAILURE;
+    rv = NS_ERROR_FAILURE;
   }
-  return NS_OK;
+
+  stack->Pop(nsnull);
+  return rv;
 }
 
 //Quick helper function to check if a newly issued cert
