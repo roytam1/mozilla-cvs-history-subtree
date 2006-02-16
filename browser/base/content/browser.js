@@ -833,8 +833,8 @@ function delayedStartup()
     gURLBar.addEventListener("dragdrop", URLBarOnDrop, true);
 
   // loads the services
-  initServices();
 #ifndef MOZ_PLACES
+  initServices();
   initBMService();
 #endif
   gBrowser.addEventListener("pageshow", function(evt) { setTimeout(pageShowEventHandlers, 0, evt); }, true);
@@ -851,8 +851,8 @@ function delayedStartup()
 
   // add bookmark options to context menu for tabs
   addBookmarkMenuitems();
-  // now load bookmarks
 #ifndef MOZ_PLACES
+  // now load bookmarks
   BMSVC.readBookmarks();
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
@@ -861,14 +861,12 @@ function delayedStartup()
     document.getElementById("bookmarks-chevron").ref = btf;
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
   }
+  window.addEventListener("resize", BookmarksToolbar.resizeFunc, false);
+  document.getElementById("PersonalToolbar")
+          .controllers.appendController(BookmarksMenuController);
 #else
   var bookmarksBar = document.getElementById("bookmarksBarContent");
   bookmarksBar.init();
-#endif
-  window.addEventListener("resize", BookmarksToolbar.resizeFunc, false);
-#ifndef MOZ_PLACES
-  document.getElementById("PersonalToolbar")
-          .controllers.appendController(BookmarksMenuController);
 #endif
 
   // called when we go into full screen, even if it is
@@ -985,6 +983,7 @@ function BrowserShutdown()
   } catch (ex) {
   }
 
+#ifndef MOZ_PLACES
   try {
     document.getElementById("PersonalToolbar")
             .controllers.removeController(BookmarksMenuController);
@@ -998,6 +997,7 @@ function BrowserShutdown()
     } catch (ex) {
     }
   }
+#endif
 
   try {
     var pbi = gPrefService.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
@@ -1087,8 +1087,8 @@ function nonBrowserWindowStartup()
 function nonBrowserWindowDelayedStartup()
 {
   // loads the services
-  initServices();
 #ifndef MOZ_PLACES
+  initServices();
   initBMService();
 #endif
 
@@ -1587,6 +1587,7 @@ function addBookmarkAs(aBrowser, aBookmarkAllTabs, aIsWebPanel)
 
 function addBookmarkForTabBrowser(aTabBrowser, aBookmarkAllTabs, aSelect)
 {
+#ifndef MOZ_PLACES
   var tabsInfo = [];
   var currentTabInfo = { name: "", url: "", charset: null };
 
@@ -1618,10 +1619,14 @@ function addBookmarkForTabBrowser(aTabBrowser, aBookmarkAllTabs, aSelect)
   dialogArgs.objGroup = tabsInfo;
   openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
              BROWSER_ADD_BM_FEATURES, dialogArgs);
+#else
+      dump("*** IMPLEMENT ME\n");
+#endif
 }
 
 function addBookmarkForBrowser(aDocShell, aIsWebPanel)
 {
+#ifndef MOZ_PLACES
   // Bug 52536: We obtain the URL and title from the nsIWebNavigation
   // associated with a <browser/> rather than from a DOMWindow.
   // This is because when a full page plugin is loaded, there is
@@ -1639,6 +1644,9 @@ function addBookmarkForBrowser(aDocShell, aIsWebPanel)
     title = url;
   }
   BookmarksUtils.addBookmark(url, title, charSet, aIsWebPanel, description);
+#else
+      dump("*** IMPLEMENT ME\n");
+#endif
 }
 
 function openLocation()
@@ -2609,8 +2617,12 @@ var bookmarksButtonObserver = {
         name: split[1],
         url: url
       }
+#ifndef MOZ_PLACES
       openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
                  BROWSER_ADD_BM_FEATURES, dialogArgs);
+#else
+      dump("*** IMPLEMENT ME");
+#endif
     }
   },
 
@@ -3111,10 +3123,10 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
       document.getElementById("Browser:Reload").getAttribute("disabled") == "true";
   }
 
+#ifndef MOZ_PLACES
   // fix up the personal toolbar folder
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
-#ifndef MOZ_PLACES
     var btf = BMSVC.getBookmarksToolbarFolder().Value;
     var btchevron = document.getElementById("bookmarks-chevron");
     bt.ref = btf;
@@ -3128,12 +3140,12 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
     bt.builder.rebuild();
     btchevron.builder.rebuild();
-#endif
 
     // fake a resize; this function takes care of flowing bookmarks
     // from the bar to the overflow item
     BookmarksToolbar.resizeFunc(null);
   }
+#endif
 
   // XXX Shouldn't have to do this, but I do
   window.focus();
@@ -3407,8 +3419,10 @@ nsBrowserStatusHandler.prototype =
           var browser = gBrowser.mCurrentBrowser;
           if (!gBrowser.mTabbedMode && !browser.mIconURL)
             gBrowser.useDefaultIcon(gBrowser.mCurrentTab);
+#ifndef MOZ_PLACES
           if (browser.mIconURL)
             BookmarksUtils.loadFavIcon(browser.currentURI.spec, browser.mIconURL);
+#endif
         }
       }
 
@@ -4665,12 +4679,17 @@ nsContextMenu.prototype = {
     },
     addBookmark : function() {
       var docshell = document.getElementById( "content" ).webNavigation;
+#ifndef MOZ_PLACES
       BookmarksUtils.addBookmark( docshell.currentURI.spec,
                                   docshell.document.title,
                                   docshell.document.charset,
                                   BookmarksUtils.getDescriptionFromDocument(docshell.document));
+#else
+      dump("*** IMPLEMENT ME\n");
+#endif
     },
     addBookmarkForFrame : function() {
+#ifndef MOZ_PLACES
       var doc = this.target.ownerDocument;
       var uri = doc.location.href;
       var title = doc.title;
@@ -4678,6 +4697,9 @@ nsContextMenu.prototype = {
       if ( !title )
         title = uri;
       BookmarksUtils.addBookmark(uri, title, doc.charset, description);
+#else
+      dump("*** IMPLEMENT ME\n");
+#endif
     },
     // Open Metadata window for node
     showMetadata : function () {
@@ -5013,9 +5035,13 @@ function asyncOpenWebPanel(event)
            url: wrapper.href,
            bWebPanel: true
          }
+#ifndef MOZ_PLACES
          openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
                     BROWSER_ADD_BM_FEATURES, dialogArgs);
          event.preventDefault();
+#else
+         dump("*** IMPLEMENT ME");
+#endif
          return false;
        }
        else if (target == "_search") {
@@ -5750,6 +5776,7 @@ function AddKeywordForSearchField()
   else
     spec += "?" + formData.join("&");
 
+#ifndef MOZ_PLACES
   var dialogArgs = {
     name: "",
     url: spec,
@@ -5762,6 +5789,9 @@ function AddKeywordForSearchField()
   }
   openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
              BROWSER_ADD_BM_FEATURES, dialogArgs);
+#else
+  dump("*** IMPLEMENT ME\n");
+#endif
 }
 
 function SwitchDocumentDirection(aWindow) {
@@ -6034,8 +6064,12 @@ var FeedHandler = {
   addLiveBookmark: function(url) {
     var doc = gBrowser.selectedBrowser.contentDocument;
     var title = doc.title;
+#ifndef MOZ_PLACES
     var description = BookmarksUtils.getDescriptionFromDocument(doc);
     BookmarksUtils.addLivemark(doc.baseURI, url, title, description);
+#else
+      dump("*** IMPLEMENT ME\n");
+#endif
   },
 
   /**
