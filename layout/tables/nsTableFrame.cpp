@@ -1664,6 +1664,36 @@ ProcessRowInserted(nsTableFrame&   aTableFrame,
   }
 }
 
+/* virtual */ void
+nsTableFrame::MarkIntrinsicWidthsDirty()
+{
+  // the following could be optimized with a fair amount of effort
+  SetNeedStrategyInit(PR_TRUE);
+}
+
+/* virtual */ nscoord
+nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
+
+#error WRITE ME
+
+  return 0;
+}
+
+/* virtual */ nscoord
+nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
+
+#error WRITE ME
+
+  return 0;
+}
+
+
 // Return true if aStylePosition has a pct height
 static PRBool 
 IsPctStyleHeight(const nsStylePosition* aStylePosition)

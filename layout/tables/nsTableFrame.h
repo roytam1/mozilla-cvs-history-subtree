@@ -334,6 +334,11 @@ public:
                          PRBool aSelected,
                          nsSpread aSpread);
 
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
+  // XXXldb REWRITE THIS COMMENT!
   /** inner tables are reflowed in two steps.
     * <pre>
     * if mFirstPassValid is false, this is our first time through since content was last changed

@@ -819,12 +819,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     SetHadSpecialReflow(PR_FALSE);
   }
 
-  // If it was a style change targeted at us, then
-  if (isStyleChanged) {
-    // the following could be optimized with a fair amount of effort
-    tableFrame->SetNeedStrategyInit(PR_TRUE);
-  }
-
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid,
                                    availSize);
   // mIPercentHeightObserver is for non table related frames inside cells in quirks mode
@@ -839,7 +833,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   ReflowChild(firstKid, aPresContext, kidSize, kidReflowState,
               kidOrigin.x, kidOrigin.y, 0, aStatus);
   SetLastBlockHeight(kidSize.height);
-  if (isStyleChanged) {
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     Invalidate(GetOverflowRect(), PR_FALSE);
   }
 
@@ -971,7 +965,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     // If this is not a special reflow, but we've had one before (and
     // this frame wasn't dirty, i.e., a descendant was and not
     // everything was reflowed), then request a special reflow.
-    nsTableFrame::RequestSpecialReflow(aReflowState);
+    nsTableFrame::RequestSpecialHeightReflow(aReflowState);
   }
 
   // remember the desired size for this reflow
