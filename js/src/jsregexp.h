@@ -78,8 +78,8 @@ typedef struct RECharSet {
     union {
         uint8 *bits;
         struct {
-            uint16 startIndex;
-            uint16 length;
+            size_t startIndex;
+            size_t length;
         } src;
     } u;
 } RECharSet;
