@@ -662,11 +662,12 @@ nsTableCellFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                                                 mFrames.FirstChild(),
                                                 nsLayoutUtils::MIN_WIDTH,
-                                                nsLayoutUtil:::CONTENT |
-                                                  nsLayoutUtils::PADDING);
+                                                nsLayoutUtils::IntrinsicWidthPart(
+                                                  nsLayoutUtils::CONTENT |
+                                                  nsLayoutUtils::PADDING));
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  float p2t = dc->DevUnitsToTwips()
+  float p2t = dc->DevUnitsToTwips();
 
   nsMargin border;
   GetBorderWidth(p2t, border);
@@ -686,11 +687,12 @@ nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                                                 mFrames.FirstChild(),
                                                 nsLayoutUtils::PREF_WIDTH,
-                                                nsLayoutUtil:::CONTENT |
-                                                  nsLayoutUtils::PADDING);
+                                                nsLayoutUtils::IntrinsicWidthPart(
+                                                  nsLayoutUtils::CONTENT |
+                                                  nsLayoutUtils::PADDING));
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  float p2t = dc->DevUnitsToTwips()
+  float p2t = dc->DevUnitsToTwips();
 
   nsMargin border;
   GetBorderWidth(p2t, border);
