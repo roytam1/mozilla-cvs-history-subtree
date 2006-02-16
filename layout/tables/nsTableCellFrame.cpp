@@ -661,12 +661,20 @@ nsTableCellFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 
   result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                                                 mFrames.FirstChild(),
-                                                nsLayoutUtils::MIN_WIDTH);
+                                                nsLayoutUtils::MIN_WIDTH,
+                                                nsLayoutUtil:::CONTENT |
+                                                  nsLayoutUtils::PADDING);
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  result = nsTableFrame::RoundToPixel(result, dc->DevUnitsToTwips());
+  float p2t = dc->DevUnitsToTwips()
 
-  return 0;
+  nsMargin border;
+  GetBorderWidth(p2t, border);
+  result += border.LeftRight();
+
+  result = nsTableFrame::RoundToPixel(result, p2t);
+
+  return result;
 }
 
 /* virtual */ nscoord
@@ -677,12 +685,20 @@ nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
   result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                                                 mFrames.FirstChild(),
-                                                nsLayoutUtils::PREF_WIDTH);
+                                                nsLayoutUtils::PREF_WIDTH,
+                                                nsLayoutUtil:::CONTENT |
+                                                  nsLayoutUtils::PADDING);
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  result = nsTableFrame::RoundToPixel(result, dc->DevUnitsToTwips());
+  float p2t = dc->DevUnitsToTwips()
 
-  return 0;
+  nsMargin border;
+  GetBorderWidth(p2t, border);
+  result += border.LeftRight();
+
+  result = nsTableFrame::RoundToPixel(result, p2t);
+
+  return result;
 }
 
 #ifdef DEBUG
