@@ -771,7 +771,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   nsMargin borderPadding = aReflowState.mComputedPadding;
   nsMargin border;
   GetBorderWidth(p2t, border);
-  if ((NS_UNCONSTRAINEDSIZE == availSize.width) || !noBorderBeforeReflow) {
+  if (!noBorderBeforeReflow) {
     borderPadding += border;
   }
   
@@ -781,8 +781,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   nscoord leftInset   = borderPadding.left;
 
   // reduce available space by insets, if we're in a constrained situation
-  if (NS_UNCONSTRAINEDSIZE!=availSize.width)
-    availSize.width -= leftInset+rightInset;
+  availSize.width -= leftInset+rightInset;
   if (NS_UNCONSTRAINEDSIZE!=availSize.height)
     availSize.height -= topInset+bottomInset;
 
@@ -826,7 +825,8 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     tableFrame->SetNeedStrategyInit(PR_TRUE);
   }
 
-  nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid, availSize, reason);
+  nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid,
+                                   availSize);
   // mIPercentHeightObserver is for non table related frames inside cells in quirks mode
   kidReflowState.mPercentHeightObserver = (eCompatibility_NavQuirks == compatMode) ? (nsIPercentHeightObserver *)this : nsnull;
 
@@ -855,18 +855,10 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   // see testcase "emptyCells.html"
   if ((0 == kidSize.width) || (0 == kidSize.height)) { // XXX why was this &&
     SetContentEmpty(PR_TRUE);
-    if (NS_UNCONSTRAINEDSIZE == kidReflowState.availableWidth &&
-        GetStyleTableBorder()->mEmptyCells != NS_STYLE_TABLE_EMPTY_CELLS_SHOW) {
-      // need to reduce the insets by border if the cell is empty
-      leftInset   -= border.left;
-      rightInset  -= border.right;
-      topInset    -= border.top;
-      bottomInset -= border.bottom;
-    }
   }
   else {
     SetContentEmpty(PR_FALSE);
-    if ((eReflowReason_Incremental == aReflowState.reason) && noBorderBeforeReflow) {
+    if (noBorderBeforeReflow) {
       // need to consider borders, since they were factored out above
       leftInset   += border.left;
       rightInset  += border.right;
