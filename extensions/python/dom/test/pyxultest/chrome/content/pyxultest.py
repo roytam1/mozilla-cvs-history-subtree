@@ -36,7 +36,7 @@ def on_timer(max):
     timer_count += 1
     if timer_count >= max:
         write("Stopping the image timer (but clicking it will still change it)")
-        this.clearTimeout(timer_id)
+        window.clearTimeout(timer_id)
         time_id = None
 
 # An event function to handle onload - but hooked up manually rather than via
@@ -49,12 +49,26 @@ def do_load():
 
     # hook up a click event using addEventListener
     button = document.getElementById("but_dialog")
+    # Note the handler code is executed in the global scope of the targer, *not* the window.
+    # Therefore objects in the global namespace must be prefixed with "window"
     button.addEventListener('click', 'write("hello from the click event for the dialog button")', False)
+
+    # Test 'expandos' - set a custom attribute on a node, and check that
+    # when a click event fires on it, the value is still there.
+    button = document.getElementById("some-button")
+    button.custom_value = "Python"
+    # The event-handler.
+    def check_expando(event):
+        write("The custom value is %s", event.target.custom_value)
+        if event.target.custom_value != "Python":
+            write("but it is wrong!!!")
+
+    button.addEventListener('click', check_expando, False)
 
     # And a 2 second 'interval' timer to change the image.
     global timer_id
     assert timer_id is None, "Already have a timer - event fired twice??"
-    timer_id = this.setInterval(on_timer, 2000, 10)
+    timer_id = window.setInterval(on_timer, 2000, 10)
 
 # Add an event listener as a function
 window.addEventListener('load', do_load, False)

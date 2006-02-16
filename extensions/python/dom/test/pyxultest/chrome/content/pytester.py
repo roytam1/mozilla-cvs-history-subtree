@@ -24,7 +24,7 @@ close_on_success = True
 # Utility functions
 # Write something to the textbox - eg, error or trace messages.
 def write( msg, *args):
-    tb = this.document.getElementById("output-box")
+    tb = document.getElementById("output-box")
     tb.value = tb.value + (msg % args) + "\n"
 
 def success():
@@ -197,7 +197,7 @@ def do_onload(event):
     # the test to run.
     tests = find_tests()
     func_name = None
-    if len(this.arguments)==1 and not this.arguments[0]:
+    if len(window.arguments)==1 and not window.arguments[0]:
         try:
             # This is an embedding component - it may not always be there.
             contract_id = "@mozilla.org/app-startup/commandLineService;1"
@@ -215,8 +215,8 @@ def do_onload(event):
             close_on_success = False
         except xpcom.COMException:
             write("No command-line service - can't check for cmdline test")
-    elif len(this.arguments) and this.arguments[0]:
-        func_name = this.arguments[0]
+    elif len(window.arguments) and window.arguments[0]:
+        func_name = window.arguments[0]
 
     func = None
     if func_name:
@@ -234,7 +234,7 @@ def do_onload(event):
         func = random.choice(tests.values())
         write("Running random test '%s'" % (func.func_name,))
 
-    if len(this.arguments)>1 and this.arguments[1]=="-k":
+    if len(window.arguments)>1 and window.arguments[1]=="-k":
         close_on_success = False
     if func:
         write("%s: %s" % (func.__name__, func.__doc__ or func.__name__))

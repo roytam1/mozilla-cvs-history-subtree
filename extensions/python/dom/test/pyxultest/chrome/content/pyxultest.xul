@@ -17,11 +17,11 @@
   <script>
     <![CDATA[
 
-dump("Scrollbar visible = %s", this.scrollbars.visible)
-dump("Window location is %s", this.window.location.href)
+dump("Scrollbar visible = %s", window.scrollbars.visible)
+dump("Window location is %s", window.location.href)
 
 #promptService =  xpcom.components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(xpcom.components.interfaces.nsIPromptService)
-#promptService.alert(this.window, "title", "Hello from Python");
+#promptService.alert(window, "title", "Hello from Python");
 
     ]]>
   </script>

@@ -15,7 +15,7 @@ so 'ondialogaccept' handler does not execute Python
   <script>
     <![CDATA[
 
-dump("Dialog location is %s\n", this.window.location.href)
+dump("Dialog location is %s\n", window.location.href)
 
     ]]>
   </script>
