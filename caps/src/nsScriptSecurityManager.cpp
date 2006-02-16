@@ -1555,6 +1555,13 @@ nsScriptSecurityManager::CanExecuteScripts(JSContext* cx,
     //-- See if the current window allows JS execution
     nsIScriptContext *scriptContext = GetScriptContext(cx);
     if (!scriptContext) return NS_ERROR_FAILURE;
+
+    if (!scriptContext->GetScriptsEnabled()) {
+        // No scripting on this context, folks
+        *result = PR_FALSE;
+        return NS_OK;
+    }
+    
     nsIScriptGlobalObject *globalObject = scriptContext->GetGlobalObject();
     if (!globalObject) return NS_ERROR_FAILURE;
 
