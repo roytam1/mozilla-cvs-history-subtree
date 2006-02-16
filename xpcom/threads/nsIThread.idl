@@ -68,20 +68,3 @@ interface nsIThread : nsIDispatchTarget
   const unsigned long RUN_NORMAL  = 0;
   const unsigned long RUN_NO_WAIT = 1;
 };
-
-%{C++
-// Run all pending tasks for a given thread before returning.
-static inline nsresult
-NS_RunPendingTasks(nsIThread *thread)
-{
-  nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
-  return rv;
-}
-%}

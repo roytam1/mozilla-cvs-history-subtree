@@ -57,7 +57,6 @@
 #include "nspr.h"
 #include "nscore.h"
 #include "nsCOMPtr.h"
-#include "nsIEventQueueService.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
@@ -97,13 +96,11 @@ static PRLogModuleInfo *gTestLog = nsnull;
 #endif
 #define LOG(args) PR_LOG(gTestLog, PR_LOG_DEBUG, args)
 
-static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 
 //static PRTime gElapsedTime; // enable when we time it...
 static int gKeepRunning = 0;
 static PRBool gVerbose = PR_FALSE;
-static nsIEventQueue* gEventQ = nsnull;
 static PRBool gAskUserForInput = PR_FALSE;
 static PRBool gResume = PR_FALSE;
 static PRUint64 gStartAt = 0;
@@ -491,29 +488,6 @@ InputTestConsumer::OnDataAvailable(nsIRequest *request,
   return NS_OK;
 }
 
-PR_STATIC_CALLBACK(void) DecrementDestroyHandler(PLEvent *self) 
-{
-    PR_Free(self);
-}
-
-
-PR_STATIC_CALLBACK(void*) DecrementEventHandler(PLEvent *self) 
-{
-    gKeepRunning--;
-    return nsnull;
-}
-
-void FireDecrement()
-{
-    PLEvent *event = PR_NEW(PLEvent);
-    PL_InitEvent(event, 
-               nsnull,
-               DecrementEventHandler,
-               DecrementDestroyHandler);
-
-    gEventQ->PostEvent(event);
-}
-
 NS_IMETHODIMP
 InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
                                  nsresult aStatus)
@@ -559,7 +533,8 @@ InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
     LOG(("\nFinished loading: UNKNOWN URL. Status Code: %x\n", aStatus));
   }
 
-  FireDecrement();
+  if (--gKeepRunning == 0)
+    QuitPumpingEvents();
   return NS_OK;
 }
 
@@ -695,7 +670,7 @@ nsresult StartLoadingURL(const char* aUrlString)
                                  info);
 
         if (NS_SUCCEEDED(rv)) {
-            gKeepRunning += 1;
+            gKeepRunning++;
         }
         else {
             LOG(("ERROR: AsyncOpen failed [rv=%x]\n", rv));
@@ -818,13 +793,6 @@ main(int argc, char* argv[])
     if (NS_FAILED(rv)) return rv;
 
     {
-        // Create the Event Queue for this thread...
-        nsCOMPtr<nsIEventQueueService> eventQService =
-                 do_GetService(kEventQueueServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
-
         int i;
         LOG(("Trying to load:\n"));
         for (i=1; i<argc; i++) {
@@ -864,12 +832,8 @@ main(int argc, char* argv[])
             LOG(("\t%s\n", argv[i]));
             rv = StartLoadingURL(argv[i]);
         }
-      // Enter the message pump to allow the URL load to proceed.
-        while ( gKeepRunning ) {
-            PLEvent *gEvent;
-            gEventQ->WaitForEvent(&gEvent);
-            gEventQ->HandleEvent(gEvent);
-        }
+        // Enter the message pump to allow the URL load to proceed.
+        PumpEvents();
     } // this scopes the nsCOMPtrs
     // no nsCOMPtrs are allowed to be alive when you call NS_ShutdownXPCOM
     NS_ShutdownXPCOM(nsnull);

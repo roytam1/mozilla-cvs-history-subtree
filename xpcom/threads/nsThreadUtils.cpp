@@ -36,25 +36,51 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsRunnable_h__
-#define nsRunnable_h__
+#include "nsThreadUtils.h"
+#include "nsThreadManager.h"
 
-#include "nsIRunnable.h"
-
-// This class is designed to be subclassed.
-
-class nsRunnable : public nsIRunnable
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsRunnable, nsIRunnable)
+  
+NS_IMETHODIMP
+nsRunnable::Run()
 {
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIRUNNABLE
+  // Do nothing
+  return NS_OK;
+}
 
-  nsRunnable() {
-  }
+//-----------------------------------------------------------------------------
 
-protected:
-  virtual ~nsRunnable() {
-  }
-};
+NS_COM NS_METHOD
+NS_NewThread(const nsACString &name, nsIRunnable *runnable, nsIThread **result)
+{
+  nsresult rv = nsThreadManager::get()->nsThreadManager::NewThread(name, result);
+  if (NS_SUCCEEDED(rv))
+    rv = (*result)->Dispatch(runnable, NS_DISPATCH_NORMAL);
+  return rv;
+}
 
-#endif  // nsRunnable_h__
+NS_COM NS_METHOD
+NS_GetCurrentThread(nsIThread **result)
+{
+  return nsThreadManager::get()->nsThreadManager::GetCurrentThread(result);
+}
+
+NS_COM NS_METHOD
+NS_GetMainThread(nsIThread **result)
+{
+  return nsThreadManager::get()->nsThreadManager::GetCurrentThread(result);
+}
+
+NS_COM NS_METHOD
+NS_GetThread(const nsACString &name, nsIThread **result)
+{
+  return nsThreadManager::get()->nsThreadManager::GetThread(name, result);
+}
+
+NS_COM PRBool
+NS_IsMainThread()
+{
+  PRBool result = PR_FALSE;
+  nsThreadManager::get()->nsThreadManager::IsMainThread(&result);
+  return result;
+}

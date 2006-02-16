@@ -46,7 +46,7 @@
 #include "nsIServiceManager.h"
 #include "nsIProxyObjectManager.h"
 #include "nsSupportsArray.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 
 #include "nsConsoleService.h"
 #include "nsConsoleMessage.h"
@@ -324,8 +324,7 @@ nsConsoleService::GetProxyForListener(nsIConsoleListener* aListener,
      * Would it be better to catch that case and leave the listener unproxied?
      */
 
-    nsCOMPtr<nsIThread> thread;
-    nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
 
     rv = proxyManager->GetProxyForObject(thread,
                                          NS_GET_IID(nsIConsoleListener),

@@ -341,7 +341,6 @@ NS_IMETHODIMP
 nsThread::RunNextTask(PRUint32 flags)
 {
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
-  NS_ENSURE_STATE(mActive);
   NS_ENSURE_ARG(flags == RUN_NORMAL || flags == RUN_NO_WAIT);
 
   nsCOMPtr<nsIThreadObserver> obs;
@@ -354,7 +353,7 @@ nsThread::RunNextTask(PRUint32 flags)
     obs->OnBeforeRunNextTask(this, flags);
 
   nsCOMPtr<nsIRunnable> task; 
-  if (flags == RUN_NORMAL) {
+  if (flags == RUN_NORMAL && mActive) {
     if (obs)
       obs->OnWaitNextTask(this, flags);
     mTasks.WaitPendingTask(getter_AddRefs(task));
@@ -368,6 +367,8 @@ nsThread::RunNextTask(PRUint32 flags)
     task->Run();
   } else if (flags & RUN_NO_WAIT) {
     rv = NS_BASE_STREAM_WOULD_BLOCK;
+  } else {
+    rv = NS_ERROR_UNEXPECTED;
   }
 
   if (obs)

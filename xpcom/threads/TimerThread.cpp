@@ -42,7 +42,7 @@
 #include "TimerThread.h"
 
 #include "nsAutoLock.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 #include "pratom.h"
 
 #include "nsIObserverService.h"
@@ -111,8 +111,7 @@ nsresult TimerThread::Init()
 
     if (NS_SUCCEEDED(rv)) {
       // We hold on to mThread to keep the thread alive.
-      rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("xpcom.timer"), this,
-                                      getter_AddRefs(mThread));
+      rv = NS_NewThread("xpcom.timer", this, getter_AddRefs(mThread));
       if (NS_FAILED(rv)) {
         mThread = nsnull;
       }

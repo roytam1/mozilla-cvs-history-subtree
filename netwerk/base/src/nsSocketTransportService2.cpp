@@ -497,9 +497,7 @@ nsSocketTransportService::Run()
 
     for (;;) {
         // process all pending tasks
-        do {
-            rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);
-        } while (rv != NS_BASE_STREAM_WOULD_BLOCK);
+        NS_RunPendingTasks(thread);
 
         // now that our task queue is empty, check to see if we should exit
         {
@@ -523,9 +521,7 @@ nsSocketTransportService::Run()
 
     // Final pass over the event queue. This makes sure that events posted by
     // socket detach handlers get processed.
-    do {
-        rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);
-    } while (rv != NS_BASE_STREAM_WOULD_BLOCK);
+    NS_RunPendingTasks(thread);
 
     gSocketThread = nsnull;
 

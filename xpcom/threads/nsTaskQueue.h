@@ -44,7 +44,7 @@
 #include "nsIRunnable.h"
 
 // A threadsafe FIFO task queue...
-class nsTaskQueue
+class NS_COM nsTaskQueue
 {
 public:
   nsTaskQueue();

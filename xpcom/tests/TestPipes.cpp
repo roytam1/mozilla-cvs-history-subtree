@@ -41,7 +41,7 @@
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIServiceManager.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 #include "prprf.h"
 #include "prinrval.h"
 #include "plstr.h"
@@ -135,8 +135,7 @@ TestPipe(nsIInputStream* in, nsIOutputStream* out)
     if (receiver == nsnull) return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(receiver);
 
-    rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("TestPipe"),
-                                    receiver, &thread);
+    rv = NS_NewThread("TestPipe", receiver, &thread);
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 total = 0;
@@ -249,8 +248,7 @@ TestShortWrites(nsIInputStream* in, nsIOutputStream* out)
     if (receiver == nsnull) return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(receiver);
 
-    rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("TestShortWrites"),
-                                    receiver, &thread);
+    rv = NS_NewThread("TestShortWrites", receiver, &thread);
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 total = 0;
@@ -475,8 +473,7 @@ TestChainedPipes()
     if (pump == nsnull) return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(pump);
 
-    rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("TestChainedPipes.pump"),
-                                    pump, &thread);
+    rv = NS_NewThread("TestChainedPipes.pump", pump, &thread);
     if (NS_FAILED(rv)) return rv;
 
     nsIThread* receiverThread;
@@ -484,8 +481,7 @@ TestChainedPipes()
     if (receiver == nsnull) return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(receiver);
 
-    rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("TestChainedPipes.receiver"),
-                                    receiver, &receiverThread);
+    rv = NS_NewThread("TestChainedPipes.receiver", receiver, &receiverThread);
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 total = 0;

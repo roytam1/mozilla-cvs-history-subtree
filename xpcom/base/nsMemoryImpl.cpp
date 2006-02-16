@@ -37,13 +37,11 @@
 
 #include "nsXPCOM.h"
 #include "nsMemoryImpl.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 
 #include "nsIObserverService.h"
-#include "nsIRunnable.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
-#include "nsIThread.h"
 
 #include "prmem.h"
 #include "prcvar.h"
@@ -237,7 +235,7 @@ nsMemoryImpl::FlushMemory(const PRUnichar* aReason, PRBool aImmediate)
         // They've asked us to run the flusher *immediately*. We've
         // got to be on the UI main thread for us to be able to do
         // that...are we?
-        if (!nsThreadManager::IsMainThread()) {
+        if (!NS_IsMainThread()) {
             NS_ERROR("can't synchronously flush memory: not on UI thread");
             return NS_ERROR_FAILURE;
         }
@@ -259,8 +257,7 @@ nsMemoryImpl::FlushMemory(const PRUnichar* aReason, PRBool aImmediate)
         rv = RunFlushers(aReason);
     }
     else {
-        nsCOMPtr<nsIThread> thread;
-        nsThreadManager::get()->GetMainThread(getter_AddRefs(thread));
+        nsCOMPtr<nsIThread> thread = do_GetMainThread();
         if (thread) {
             sFlushEvent.mReason = aReason;
             rv = thread->Dispatch(&sFlushEvent, NS_DISPATCH_NORMAL);
@@ -400,8 +397,7 @@ MemoryFlusher::Init()
     sCVar = PR_NewCondVar(sLock);
     if (!sCVar) return NS_ERROR_FAILURE;
 
-    return nsThreadManager::NewThread(NS_LITERAL_CSTRING("xpcom.memoryflusher"),
-                                      this, &sThread);
+    return NS_NewThread("xpcom.memoryflusher", this, &sThread);
 }
 
 void

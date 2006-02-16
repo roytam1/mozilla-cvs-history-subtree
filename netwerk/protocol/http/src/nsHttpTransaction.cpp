@@ -132,7 +132,6 @@ nsHttpTransaction::nsHttpTransaction()
     , mRestartCount(0)
     , mCaps(0)
     , mClosed(PR_FALSE)
-    , mDestroying(PR_FALSE)
     , mConnected(PR_FALSE)
     , mHaveStatusLine(PR_FALSE)
     , mHaveAllHeaders(PR_FALSE)
@@ -939,9 +938,6 @@ nsHttpTransaction::DeleteSelfOnConsumerThread()
 {
     LOG(("nsHttpTransaction::DeleteSelfOnConsumerThread [this=%x]\n", this));
     
-    NS_ASSERTION(!mDestroying, "deleting self again");
-    mDestroying = PR_TRUE;
-
     PRBool val;
     if (NS_SUCCEEDED(mConsumerTarget->IsOnCurrentThread(&val)) && val)
         delete this;

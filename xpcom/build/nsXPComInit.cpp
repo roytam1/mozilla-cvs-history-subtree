@@ -705,6 +705,13 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
         if (thread)
             NS_RunPendingTasks(thread);
 
+        // Shutdown the timer thread and all timers that might still be alive before
+        // shutting down the component manager
+        nsTimerImpl::Shutdown();
+
+        if (thread)
+            NS_RunPendingTasks(thread);
+
         nsThreadManager::get()->Shutdown();
 
         if (thread)
@@ -766,10 +773,6 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 #ifdef XP_UNIX
     NS_ShutdownNativeCharsetUtils();
 #endif
-
-    // Shutdown the timer thread and all timers that might still be alive before
-    // shutting down the component manager
-    nsTimerImpl::Shutdown();
 
     // Shutdown xpcom. This will release all loaders and cause others holding
     // a refcount to the component manager to release it.

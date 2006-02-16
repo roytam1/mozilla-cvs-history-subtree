@@ -59,12 +59,12 @@ interface nsIThreadManager : nsISupports
   /**
    * Get the main thread.
    */
-  nsIThread getMainThread();
+  readonly attribute nsIThread mainThread;
 
   /**
    * Get the current thread.
    */
-  nsIThread getCurrentThread();
+  readonly attribute nsIThread currentThread;
    
   /**
    * Set an external nsIThread instance (or null) as the nsIThread for the

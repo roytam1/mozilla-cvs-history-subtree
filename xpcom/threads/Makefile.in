@@ -59,7 +59,7 @@ CPPSRCS		= \
 		nsAutoLock.cpp \
 		nsTaskQueue.cpp \
 		nsEnvironment.cpp \
-		nsRunnable.cpp \
+		nsThreadUtils.cpp \
 		nsThread.cpp \
 		nsThreadManager.cpp \
 		nsThreadPool.cpp \
@@ -71,8 +71,8 @@ CPPSRCS		= \
 EXPORTS		= \
 		nsAutoLock.h \
 		nsProcess.h \
-		nsRunnable.h \
-		nsThreadManager.h \
+		nsThreadUtils.h \
+		nsTaskQueue.h \
 		$(NULL)
 
 XPIDLSRCS	= \

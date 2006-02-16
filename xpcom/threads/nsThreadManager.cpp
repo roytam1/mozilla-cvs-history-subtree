@@ -92,7 +92,7 @@ nsThreadManager::Init()
 void
 nsThreadManager::Shutdown()
 {
-  NS_ASSERTION(IsMainThread(), "shutdown not called from main thread");
+  NS_ASSERTION(NS_IsMainThread(), "shutdown not called from main thread");
 
   // We move the threads from the hashtable to a list, so that we avoid
   // holding the hashtable lock while calling nsIThread::Shutdown.

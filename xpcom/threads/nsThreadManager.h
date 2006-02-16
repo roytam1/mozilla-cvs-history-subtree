@@ -61,20 +61,6 @@ public:
   // thread of the application process.
   void Shutdown();
 
-  static PRBool IsMainThread() {
-    PRBool result;
-    get()->IsMainThread(&result);
-    return result;
-  }
-
-  static nsresult NewThread(const nsACString &name, nsIRunnable *runnable,
-                            nsIThread **result) {
-    nsresult rv = get()->NewThread(name, result);
-    if (NS_SUCCEEDED(rv))
-      rv = (*result)->Dispatch(runnable, NS_DISPATCH_NORMAL);
-    return rv;
-  }
-
 private:
   nsThreadManager() : mCurThreadIndex(0) {}
   ~nsThreadManager() {}

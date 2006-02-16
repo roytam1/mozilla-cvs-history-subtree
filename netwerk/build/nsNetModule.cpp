@@ -79,7 +79,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDNSService, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsProtocolProxyService, Init)
 
 #include "nsStreamTransportService.h"
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsStreamTransportService)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsStreamTransportService, Init)
 
 #include "nsSocketTransportService2.h"
 #undef LOG

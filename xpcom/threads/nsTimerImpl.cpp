@@ -44,7 +44,7 @@
 #include "nsAutoPtr.h"
 #include "nsVoidArray.h"
 #include "nsThreadManager.h"
-#include "nsRunnable.h"
+#include "nsThreadUtils.h"
 #include "prmem.h"
 
 static PRInt32          gGenerator = 0;
@@ -603,7 +603,7 @@ nsresult nsTimerManager::AddIdleTimer(nsITimer* timer)
 
 NS_IMETHODIMP nsTimerManager::FireNextIdleTimer()
 {
-  if (!gFireOnIdle || !nsThreadManager::IsMainThread()) {
+  if (!gFireOnIdle || !NS_IsMainThread()) {
     return NS_OK;
   }
 

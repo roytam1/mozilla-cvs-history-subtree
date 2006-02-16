@@ -36,9 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIThread.h"
-#include "nsIRunnable.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "nspr.h"
@@ -52,7 +50,7 @@ public:
 
     NS_IMETHOD Run() {
         nsCOMPtr<nsIThread> thread;
-        nsresult rv = nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
+        nsresult rv = NS_GetCurrentThread(getter_AddRefs(thread));
         if (NS_FAILED(rv)) {
             printf("failed to get current thread\n");
             return rv;
@@ -81,15 +79,14 @@ TestThreads()
     nsresult rv;
 
     nsCOMPtr<nsIThread> runner;
-    rv = nsThreadManager::NewThread(NS_LITERAL_CSTRING("TestThreads"),
-                                    new nsRunner(0), getter_AddRefs(runner));
+    rv = NS_NewThread("TestThreads", new nsRunner(0), getter_AddRefs(runner));
     if (NS_FAILED(rv)) {
         printf("failed to create thread\n");
         return rv;
     }
 
     nsCOMPtr<nsIThread> thread;
-    rv = nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
+    rv = NS_GetCurrentThread(getter_AddRefs(thread));
     if (NS_FAILED(rv)) {
         printf("failed to get current thread\n");
         return rv;
@@ -154,10 +151,7 @@ static int Stress(int loops, int threads)
         
         for (k = 0; k < threads; k++) {
             nsCOMPtr<nsIThread> t;
-            nsCString name("thread:");
-            name.AppendInt(k);
-            nsresult rv = nsThreadManager::NewThread(name, new nsStressRunner(k),
-                                                     getter_AddRefs(t));
+            nsresult rv = NS_NewThread("", new nsStressRunner(k), getter_AddRefs(t));
             NS_ASSERTION(NS_SUCCEEDED(rv), "can't create thread");
             NS_ADDREF(array[k] = t);
         }

@@ -105,7 +105,7 @@ public:
     virtual ~nsCacheProfilePrefObserver() {}
     
     nsresult        Install();
-    nsresult        Remove();
+    void            Remove();
     nsresult        ReadPrefs(nsIPrefBranch* branch);
     
     PRBool          DiskCacheEnabled();
@@ -189,46 +189,31 @@ nsCacheProfilePrefObserver::Install()
 }
 
 
-nsresult
+void
 nsCacheProfilePrefObserver::Remove()
 {
-    nsresult rv, rv2 = NS_OK;
-
     // remove Observer Service observers
-    nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1", &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = observerService->RemoveObserver(this, "profile-before-change");
-    if (NS_FAILED(rv)) rv2 = rv;
-    
-    rv = observerService->RemoveObserver(this, "profile-after-change");
-    if (NS_FAILED(rv)) rv2 = rv;
-
-    rv = observerService->RemoveObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
-    if (NS_FAILED(rv)) rv2 = rv;
-
+    nsCOMPtr<nsIObserverService> obs =
+            do_GetService("@mozilla.org/observer-service;1");
+    if (obs) {
+        obs->RemoveObserver(this, "profile-before-change");
+        obs->RemoveObserver(this, "profile-after-change");
+        obs->RemoveObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
+    }
 
     // remove Pref Service observers
-    nsCOMPtr<nsIPrefBranch2> prefInternal = do_GetService(NS_PREFSERVICE_CONTRACTID);
+    nsCOMPtr<nsIPrefBranch2> prefs =
+           do_GetService(NS_PREFSERVICE_CONTRACTID);
+    if (prefs) {
+        // remove Disk cache pref observers
+        prefs->RemoveObserver(DISK_CACHE_ENABLE_PREF, this);
+        prefs->RemoveObserver(DISK_CACHE_CAPACITY_PREF, this);
+        prefs->RemoveObserver(DISK_CACHE_DIR_PREF, this);
 
-    // remove Disk cache pref observers
-    rv  = prefInternal->RemoveObserver(DISK_CACHE_ENABLE_PREF, this);
-    if (NS_FAILED(rv)) rv2 = rv;
-
-    rv  = prefInternal->RemoveObserver(DISK_CACHE_CAPACITY_PREF, this);
-    if (NS_FAILED(rv)) rv2 = rv;
-
-    rv  = prefInternal->RemoveObserver(DISK_CACHE_DIR_PREF, this);
-    if (NS_FAILED(rv)) rv2 = rv;
-    
-    // remove Memory cache pref observers
-    rv = prefInternal->RemoveObserver(MEMORY_CACHE_ENABLE_PREF, this);
-    if (NS_FAILED(rv)) rv2 = rv;
-
-    rv = prefInternal->RemoveObserver(MEMORY_CACHE_CAPACITY_PREF, this);
-    // if (NS_FAILED(rv)) rv2 = rv;
-
-    return NS_SUCCEEDED(rv) ? rv2 : rv;
+        // remove Memory cache pref observers
+        prefs->RemoveObserver(MEMORY_CACHE_ENABLE_PREF, this);
+        prefs->RemoveObserver(MEMORY_CACHE_CAPACITY_PREF, this);
+    }
 }
 
 

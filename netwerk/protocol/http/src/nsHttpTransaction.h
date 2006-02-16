@@ -192,7 +192,6 @@ private:
 
     // state flags
     PRUint32                        mClosed             : 1;
-    PRUint32                        mDestroying         : 1;
     PRUint32                        mConnected          : 1;
     PRUint32                        mHaveStatusLine     : 1;
     PRUint32                        mHaveAllHeaders     : 1;

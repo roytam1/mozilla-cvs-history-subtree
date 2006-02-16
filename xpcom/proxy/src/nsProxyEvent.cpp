@@ -53,7 +53,6 @@
 #include "nsProxyEvent.h"
 #include "nsProxyEventPrivate.h"
 #include "nsIProxyObjectManager.h"
-#include "nsRunnable.h"
 #include "nsCRT.h"
 
 #include "pratom.h"
@@ -62,7 +61,7 @@
 
 #include "nsIComponentManager.h"
 #include "nsMemory.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 
 #include "nsIAtom.h"  //hack!  Need a way to define a component as threadsafe (ie. sta).
 
@@ -204,8 +203,6 @@ nsProxyObjectCallInfo::~nsProxyObjectCallInfo()
         CopyStrings(PR_FALSE);
 
     mOwner = nsnull;
-    
-    PR_FREEIF(mEvent);
     
     if (mParameterList)  
         free((void*) mParameterList);
@@ -456,8 +453,7 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     PRBool eventLoopCreated = PR_FALSE;
     nsresult rv; 
 
-    nsCOMPtr<nsIThread> thread;
-    nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
     if (!thread)
     {
         // XXX create a nsIThread wrapper for this thread.

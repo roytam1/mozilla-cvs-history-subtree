@@ -326,11 +326,13 @@ nsDNSService::Init()
             return NS_ERROR_OUT_OF_MEMORY;
 
         // register as prefs observer
-        prefs->AddObserver(kPrefDnsCacheEntries, this, PR_FALSE);
-        prefs->AddObserver(kPrefDnsCacheExpiration, this, PR_FALSE);
-        prefs->AddObserver(kPrefEnableIDN, this, PR_FALSE);
-        prefs->AddObserver(kPrefIPv4OnlyDomains, this, PR_FALSE);
-        prefs->AddObserver(kPrefDisableIPv6, this, PR_FALSE);
+        if (prefs) {
+            prefs->AddObserver(kPrefDnsCacheEntries, this, PR_FALSE);
+            prefs->AddObserver(kPrefDnsCacheExpiration, this, PR_FALSE);
+            prefs->AddObserver(kPrefEnableIDN, this, PR_FALSE);
+            prefs->AddObserver(kPrefIPv4OnlyDomains, this, PR_FALSE);
+            prefs->AddObserver(kPrefDisableIPv6, this, PR_FALSE);
+        }
     }
 
     // we have to null out mIDN since we might be getting re-initialized

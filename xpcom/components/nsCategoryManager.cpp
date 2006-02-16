@@ -59,7 +59,7 @@
 #include "nsQuickSort.h"
 #include "nsEnumeratorUtils.h"
 #include "nsIProxyObjectManager.h"
-#include "nsThreadManager.h"
+#include "nsThreadUtils.h"
 
 class nsIComponentLoaderManager;
 
@@ -545,8 +545,7 @@ nsCategoryManager::NotifyObservers( const char *aTopic,
   if (!observerService)
     return;
 
-  nsCOMPtr<nsIThread> mainThread;
-  nsThreadManager::get()->GetMainThread(getter_AddRefs(mainThread));
+  nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
 
   nsCOMPtr<nsIObserverService> obsProxy;
   NS_GetProxyForObject(mainThread,

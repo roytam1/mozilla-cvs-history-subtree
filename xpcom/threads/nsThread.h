@@ -42,7 +42,7 @@
 #include "nsIThreadInternal.h"
 #include "nsISupportsPriority.h"
 #include "nsTaskQueue.h"
-#include "nsRunnable.h"
+#include "nsThreadUtils.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
 
