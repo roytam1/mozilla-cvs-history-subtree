@@ -285,13 +285,10 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
   minTableWidth += mCellSpacingTotal;
 
   // if the max width available is less than the min content width for fixed table, we're done
-  if (!tableIsAutoWidth && (maxWidth < minTableWidth)) {
-    return BCW_Wrapup(aReflowState, this, mTableFrame, nsnull);
-  }
-
   // if the max width available is less than the min content width for auto table
   // that had no % cells/cols, we're done
-  if (tableIsAutoWidth && (maxWidth < minTableWidth) && (0 == perAdjTableWidth)) {
+  if (maxWidth < minTableWidth &&
+      (!tableIsAutoWidth || 0 == perAdjTableWidth)) {
     return BCW_Wrapup(aReflowState, this, mTableFrame, nsnull);
   }
 
