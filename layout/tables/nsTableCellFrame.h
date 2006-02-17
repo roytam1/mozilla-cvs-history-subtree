@@ -319,13 +319,6 @@ protected:
   nscoord      mDesiredAscent;        // the last desired ascent
   nscoord      mMaximumWidth;         // the last preferred width
   nscoord      mPass1MaxElementWidth; // the last max element width
-
-public:
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsReflowTimer* mTimer;
-  nsReflowTimer* mBlockTimer;
-#endif
 };
 
 inline nscoord nsTableCellFrame::GetPriorAvailWidth()

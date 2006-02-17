@@ -61,97 +61,6 @@ struct nsStylePosition;
 
 enum nsPixelRound {eAlwaysRoundUp=0, eAlwaysRoundDown, eRoundUpIfHalfOrMore};
 
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-#ifdef WIN32
-#include <windows.h>
-#endif
-class nsReflowTimer
-{
-public:
-  nsReflowTimer(nsIFrame* aFrame) {
-    mFrame = aFrame;
-    mNextSibling = nsnull;
-    mFrameType = aFrame->GetType();
-    NS_IF_ADDREF(mFrameType);
-    mReflowType = -1;
-		Reset();
-	}
-
-  void Destroy() {
-    PRInt32 numChildren = mChildren.Count();
-    for (PRInt32 childX = 0; childX < numChildren; childX++) {
-      ((nsReflowTimer*)mChildren.ElementAt(childX))->Destroy();
-    }
-    NS_IF_RELEASE(mFrameType);
-    if (mNextSibling) { // table frames have 3 auxillary timers
-      delete mNextSibling->mNextSibling->mNextSibling;
-      delete mNextSibling->mNextSibling;
-      delete mNextSibling;
-    }
-    delete this;
-  }
-
-  void Print(PRUint32 aIndent,
-             char*    aHeader = 0)  {
-		if (aHeader) {
-	    printf("%s", aHeader);
-		}
-    printf(" elapsed=%d numStarts=%d \n", Elapsed(), mNumStarts);	  
-  }
-
-  PRUint32 Elapsed() {
-    return mTotalTime;
-	}
-
-  void Reset() {
-		mTotalTime = mNumStarts = 0;
-    mStarted = PR_FALSE;
-	}
-
-  void Start() {
-    NS_ASSERTION(!mStarted, "started timer without stopping");
-#ifdef WIN32
-    mStartTime = GetTickCount();
-#else
-    mStartTime = 0;
-#endif
-    mStarted = PR_TRUE;
-    mNumStarts++;
-	}
-
-  void Stop() {
-    NS_ASSERTION(mStarted, "stopped timer without starting");
-		mTotalTime += GetTickCount() - mStartTime;
-    mStarted = PR_FALSE;
-	}
-  PRUint32        mTotalTime;
-  PRUint32        mStartTime;
-  PRUint32        mNumStarts;
-  PRBool          mStarted;
-  const nsIFrame* mFrame;
-  nsIAtom*        mFrameType; // needed for frame summary timer
-  nsReflowReason  mReason;
-  nsVoidArray     mChildren;
-  PRInt32         mCount;
-  // reflow state/reflow metrics data
-  nscoord         mAvailWidth;
-  nscoord         mComputedWidth;
-  nscoord         mComputedHeight;
-  nscoord         mMaxElementWidth;
-  nscoord         mMaxWidth; // preferred width
-  nscoord         mDesiredWidth;
-  nscoord         mDesiredHeight;        
-  nsReflowStatus  mStatus;
-  nsReflowTimer*  mNextSibling;
-  PRInt32         mReflowType;
-
-private:
-  ~nsReflowTimer() {}
-
-};
-
-#endif
-
 /**
  * Child list name indices
  * @see #GetAdditionalChildListName()
@@ -889,25 +798,6 @@ protected:
   nscoord                 mMinWidth;       // XXX could store as PRUint16 with pixels
   nscoord                 mDesiredWidth;   // XXX could store as PRUint16 with pixels
   nscoord                 mPreferredWidth; // XXX could store as PRUint16 with pixels
-
-
-  // DEBUG REFLOW 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-public:
-  static void DebugReflow(nsIFrame*            aFrame, 
-                          nsHTMLReflowState&   aReflowState, 
-                          nsHTMLReflowMetrics* aMetrics = nsnull,
-                          nsReflowStatus       aStatus  = NS_FRAME_COMPLETE);
-
-  static void DebugReflowDone(nsIFrame* aFrame);
-
-  enum nsMethod {eInit=0, eBalanceCols, eNonPctCols, eNonPctColspans, ePctCols};
-  static void DebugTimeMethod(nsMethod           aMethod,
-                              nsTableFrame&      aFrame,
-                              nsHTMLReflowState& aReflowState,
-                              PRBool             aStart);
-  nsReflowTimer* mTimer;
-#endif
 };
 
 

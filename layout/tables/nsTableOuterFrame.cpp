@@ -97,16 +97,10 @@ NS_IMPL_RELEASE_INHERITED(nsTableOuterFrame, nsHTMLContainerFrame)
 
 nsTableOuterFrame::nsTableOuterFrame()
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  mTimer = new nsReflowTimer(this);
-#endif
 }
 
 nsTableOuterFrame::~nsTableOuterFrame()
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflowDone(this);
-#endif
 }
 
 nsresult nsTableOuterFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
@@ -1072,9 +1066,6 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsTableOuterFrame");
   DISPLAY_REFLOW(aPresContext, this, aOuterRS, aDesiredSize, aStatus);
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aOuterRS);
-#endif
 
   nsresult rv = NS_OK;
   PRUint8 captionSide = GetCaptionSide();
@@ -1179,9 +1170,6 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   aDesiredSize.ascent  = mInnerTableFrame->GetAscent();
   aDesiredSize.descent = aDesiredSize.height - aDesiredSize.ascent;
 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aOuterRS, &aDesiredSize, aStatus);
-#endif
   NS_FRAME_SET_TRUNCATION(aStatus, aOuterRS, aDesiredSize);
   return rv;
 }

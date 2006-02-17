@@ -126,9 +126,6 @@ BasicTableLayoutStrategy::~BasicTableLayoutStrategy()
 
 PRBool BasicTableLayoutStrategy::Initialize(const nsHTMLReflowState& aReflowState)
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eInit, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_TRUE);
-#endif
   ContinuingFrameCheck();
 
   PRBool result = PR_TRUE;
@@ -162,9 +159,6 @@ PRBool BasicTableLayoutStrategy::Initialize(const nsHTMLReflowState& aReflowStat
 
   mTableFrame->SetNeedStrategyInit(PR_FALSE);
 
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eInit, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_FALSE);
-#endif
   return result;
 }
 
@@ -183,9 +177,6 @@ PRBool BCW_Wrapup(const nsHTMLReflowState&  aReflowState,
     delete [] aAllocTypes;
 #ifdef DEBUG_TABLE_STRATEGY
   printf("BalanceColumnWidths ex \n"); aTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
-#endif
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eBalanceCols, *aTableFrame, (nsHTMLReflowState&)aReflowState, PR_FALSE);
 #endif
   return PR_TRUE;
 }
@@ -210,9 +201,6 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
 {
 #ifdef DEBUG_TABLE_STRATEGY
   printf("BalanceColumnWidths en count=%d \n", gsDebugCount++); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
-#endif
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eBalanceCols, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_TRUE);
 #endif
   float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
@@ -586,9 +574,6 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
                                                      float                    aPixelToTwips,
                                                      PRBool*                  aHasPctCol)
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eNonPctColspans, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_TRUE);
-#endif
   PRInt32 numCols = mTableFrame->GetColCount();
   PRInt32 numEffCols = mTableFrame->GetEffectiveColCount();
   // zero out prior ADJ values 
@@ -669,9 +654,6 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
     }
   }
   delete [] cellInfo;
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eNonPctColspans, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_FALSE);
-#endif
 }
 
 #ifdef DEBUG
@@ -984,9 +966,6 @@ PRBool
 BasicTableLayoutStrategy::AssignNonPctColumnWidths(nscoord                  aMaxWidth,
                                                    const nsHTMLReflowState& aReflowState)
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eNonPctCols, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_TRUE);
-#endif
 #ifdef DEBUG_TABLE_STRATEGY
   printf("AssignNonPctColWidths en max=%d count=%d \n", aMaxWidth, gsDebugCount++); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
 #endif
@@ -1177,9 +1156,6 @@ BasicTableLayoutStrategy::AssignNonPctColumnWidths(nscoord                  aMax
 #ifdef DEBUG_TABLE_STRATEGY
   printf("AssignNonPctColWidths ex\n"); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
 #endif
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::eNonPctCols, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_FALSE);
-#endif
   return hasPctCol;
 }
 
@@ -1208,23 +1184,6 @@ BasicTableLayoutStrategy::ReduceOverSpecifiedPctCols(nscoord aExcess)
     aExcess -= reduction;
   }
 }
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-nscoord WrapupAssignPctColumnWidths(nsTableFrame*            aTableFrame,
-                                    const nsHTMLReflowState& aReflowState,
-                                    nscoord                  aValue) 
-{
-  nsTableFrame::DebugTimeMethod(nsTableFrame::ePctCols, *aTableFrame, (nsHTMLReflowState&)aReflowState, PR_FALSE);
-  return aValue;
-}
-#else
-inline nscoord WrapupAssignPctColumnWidths(nsTableFrame*            aTableFrame,
-                                           const nsHTMLReflowState& aReflowState,
-                                           nscoord                  aValue) 
-{
-  return aValue;
-}
-#endif
 
 nscoord 
 BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
@@ -1361,9 +1320,6 @@ BasicTableLayoutStrategy::AssignPctColumnWidths(const nsHTMLReflowState& aReflow
                                                 PRBool                   aTableIsAutoWidth,
                                                 float                    aPixelToTwips)
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugTimeMethod(nsTableFrame::ePctCols, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_TRUE);
-#endif
   mTableFrame->SetHasCellSpanningPctCol(PR_FALSE); // this gets refigured below
   PRInt32 numRows = mTableFrame->GetRowCount();
   PRInt32 numCols = mTableFrame->GetColCount(); // consider cols at end without orig cells 
@@ -1635,7 +1591,7 @@ BasicTableLayoutStrategy::AssignPctColumnWidths(const nsHTMLReflowState& aReflow
 
   // adjust the basis to include table border, padding and cell spacing
   basis += borderPadding.left + borderPadding.right + mCellSpacingTotal;
-  return WrapupAssignPctColumnWidths(mTableFrame, aReflowState, basis); 
+  return basis; 
 }
 
 

@@ -46,9 +46,6 @@
 class nsTableFrame;
 class nsTableRowFrame;
 class nsTableCellFrame;
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-class nsReflowTimer;
-#endif
 
 struct nsRowGroupReflowState {
   const nsHTMLReflowState& reflowState;  // Our reflow state
@@ -372,11 +369,6 @@ public:
   void   SetHasStyleHeight(PRBool aValue);
   PRBool NeedSpecialReflow() const;
   void   SetNeedSpecialReflow(PRBool aValue);
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-public:
-  nsReflowTimer* mTimer;
-#endif
 };
 
 

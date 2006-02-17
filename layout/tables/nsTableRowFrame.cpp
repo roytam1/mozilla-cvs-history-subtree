@@ -169,16 +169,10 @@ nsTableRowFrame::nsTableRowFrame()
 {
   mBits.mRowIndex = mBits.mFirstInserted = 0;
   ResetHeight(0);
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  mTimer = new nsReflowTimer(this);
-#endif
 }
 
 nsTableRowFrame::~nsTableRowFrame()
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflowDone(this);
-#endif
 }
 
 NS_IMETHODIMP
@@ -1410,9 +1404,6 @@ nsTableRowFrame::Reflow(nsPresContext*          aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsTableRowFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState);
-#endif
   nsresult rv = NS_OK;
 
   nsTableFrame* tableFrame = nsnull;
@@ -1456,9 +1447,6 @@ nsTableRowFrame::Reflow(nsPresContext*          aPresContext,
     SetNeedSpecialReflow(PR_FALSE);
   }
 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState, &aDesiredSize, aStatus);
-#endif
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return rv;
 }

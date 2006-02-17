@@ -42,10 +42,6 @@
 #include "nsBlockFrame.h"
 #include "nsITableLayout.h"
 
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-class nsReflowTimer;
-#endif
-
 struct nsStyleTable;
 class nsTableFrame;
 
@@ -296,11 +292,6 @@ private:
   nsTableFrame* mInnerTableFrame; 
   nsFrameList   mCaptionFrames;
   nsIFrame*     mCaptionFrame;
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-public:
-  nsReflowTimer* mTimer;
-#endif
 };
 
 inline PRIntn nsTableOuterFrame::GetSkipSides() const
