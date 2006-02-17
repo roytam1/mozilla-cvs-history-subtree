@@ -39,20 +39,29 @@
 #define nsAppShell_h__
 
 #include "nsIAppShell.h"
+#include "nsIThreadInternal.h"
+#include "nsITimerManager.h"
+#include "nsCOMPtr.h"
 
 /**
  * Native Win32 Application shell wrapper
  */
-
-class nsAppShell : public nsIAppShell
+class nsAppShell : public nsIAppShell, public nsIThreadObserver
 {
-  public:
-                            nsAppShell(); 
-    virtual                 ~nsAppShell();
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIAPPSHELL
+  NS_DECL_NSITHREADOBSERVER
 
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIAPPSHELL
+  nsAppShell() {}
+
+  static void FavorPerformanceHint(PRBool favorPerformanceOverEventStarvation,
+                                   PRUint32 starvationDelay);
+
+private:
+  ~nsAppShell() {}
+
+  nsCOMPtr<nsITimerManager> mTimerManager;
 };
 
 #endif // nsAppShell_h__
-
