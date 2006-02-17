@@ -299,7 +299,7 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
       return NS_ERROR_FAILURE;
   }
 
-  nsPresContext* presContext = presShell->GetPresContext();
+  nsRefPtr<nsPresContext> presContext = presShell->GetPresContext();
 
   if (!presContext)
     return NS_ERROR_FAILURE;
@@ -351,7 +351,7 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
                                     aIsFirstVisiblePreferred, 
                                     !aIsFirstVisiblePreferred || mStartFindRange,
                                     getter_AddRefs(presShell),
-                                    &presContext))) {
+                                    getter_AddRefs(presContext)))) {
     return NS_ERROR_FAILURE;
   }
 
@@ -497,7 +497,7 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
                                         aIsRepeatingSameChar,
                                         aIsFirstVisiblePreferred, PR_FALSE,
                                         getter_AddRefs(presShell),
-                                        &presContext))) {
+                                        getter_AddRefs(presContext)))) {
         continue;
       }
 
@@ -582,8 +582,8 @@ nsTypeAheadFind::GetSearchContainers(nsISupports *aContainer,
   nsCOMPtr<nsIPresShell> presShell;
   docShell->GetPresShell(getter_AddRefs(presShell));
 
-  nsPresContext* presContext;
-  docShell->GetPresContext(&presContext);
+  nsRefPtr<nsPresContext> presContext;
+  docShell->GetPresContext(getter_AddRefs(presContext));
 
   if (!presShell || !presContext)
     return NS_ERROR_FAILURE;
