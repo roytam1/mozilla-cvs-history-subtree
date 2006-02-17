@@ -61,7 +61,7 @@ else
 LIBXUL_LIBRARY = 1
 endif
 
-ifeq ($(OS_ARCH),WINNT)
+ifneq (,$(filter WINCE WINNT,$(OS_ARCH)))
 EXTRA_DSO_LIBS = gkgfx
 PLATFORM = win
 endif

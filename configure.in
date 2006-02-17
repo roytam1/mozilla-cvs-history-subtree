@@ -4122,10 +4122,13 @@ MOZ_XPFE_COMPONENTS=1
 MOZ_XPINSTALL=1
 MOZ_XTF=1
 MOZ_XUL=1
+NS_PRINTING=1
+NECKO_PROTOCOLS_DEFAULT="about data file ftp gopher http keyword res viewsource"
 NECKO_COOKIES=1
 NECKO_DISK_CACHE=1
 NECKO_SMALL_BUFFERS=
 SUNCTL=
+JS_STATIC_BUILD=
 
 case "$target_os" in
     msvc*|mks*|cygwin*|mingw*)
@@ -4187,7 +4190,7 @@ minimo)
   MOZ_COMPOSER=
   MOZ_ENABLE_POSTSCRIPT=
   MOZ_EXTENSIONS_DEFAULT=" cookie xmlextras transformiix spatialnavigation permissions"
-  MOZ_IMG_DECODERS_DEFAULT="png gif jpeg"
+  MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp"
   MOZ_IMG_ENCODERS_DEFAULT=
   MOZ_IMG_ENCODERS=
   MOZ_INSTALLER=
@@ -4213,7 +4216,8 @@ minimo)
   MOZ_XPINSTALL=
   MOZ_XTF=
   MOZ_XUL_APP=1
-  NECKO_PROTOCOLS_DEFAULT="about data http file res"
+  NECKO_PROTOCOLS_DEFAULT="about data http file res keyword"
+  NECKO_SMALL_BUFFERS=1
   NS_DISABLE_LOGGING=1
   NS_PRINTING=
   MOZ_WEBSERVICES=
@@ -6607,7 +6611,6 @@ dnl ========================================================
 dnl
 dnl option to disable various necko protocols
 dnl
-NECKO_PROTOCOLS_DEFAULT="about data file ftp gopher http keyword res viewsource"
 MOZ_ARG_ENABLE_STRING(necko-protocols,
 [  --enable-necko-protocols[={http,ftp,default,all,none}]
                           Enable/disable specific protocol handlers],
@@ -6813,6 +6816,7 @@ AC_SUBST(LDAP_LIBS)
 AC_SUBST(LIBICONV)
 AC_SUBST(MOZ_PLACES)
 AC_SUBST(MOZ_STORAGE)
+AC_SUBST(NS_PRINTING)
 
 AC_SUBST(MOZ_JAVAXPCOM)
 AC_SUBST(JAVA_INCLUDE_PATH)
@@ -7059,8 +7063,6 @@ fi
 AC_SUBST(MOZ_MOVEMAIL)
 
 AC_DEFINE(JS_THREADSAFE)
-AC_DEFINE(NS_PRINT_PREVIEW)
-AC_DEFINE(NS_PRINTING)
 
 if test "$MOZ_DEBUG"; then
     AC_DEFINE(MOZ_REFLOW_PERF)

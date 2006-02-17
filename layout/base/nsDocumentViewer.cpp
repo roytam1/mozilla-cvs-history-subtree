@@ -132,6 +132,11 @@
 // Printing
 #include "nsIWebBrowserPrint.h"
 
+#include "imgIContainer.h" // image animation mode constants
+
+#include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
+
 //--------------------------
 // Printing Include
 //---------------------------
@@ -162,16 +167,9 @@ static const char sPrintOptionsContractID[]         = "@mozilla.org/gfx/printset
 #include "nsIDOMHTMLObjectElement.h"
 #include "nsIPluginDocument.h"
 
-// Print Preview
-#include "imgIContainer.h" // image animation mode constants
-
 // Print Progress
 #include "nsIPrintProgress.h"
 #include "nsIPrintProgressParams.h"
-
-// Print error dialog
-#include "nsIPrompt.h"
-#include "nsIWindowWatcher.h"
 
 // Printing 
 #include "nsPrintEngine.h"
@@ -2465,8 +2463,12 @@ DocumentViewerImpl::Print(PRBool            aSilent,
 NS_IMETHODIMP 
 DocumentViewerImpl::PrintWithParent(nsIDOMWindowInternal *aParentWin, nsIPrintSettings *aThePrintSettings, nsIWebProgressListener *aWPListener)
 {
+#ifdef NS_PRINTING
   mDialogParentWin = aParentWin;
   return Print(aThePrintSettings, aWPListener);
+#else
+  return NS_ERROR_FAILURE;
+#endif
 }
 
 // nsIContentViewerFile interface

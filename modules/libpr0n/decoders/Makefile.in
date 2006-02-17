@@ -46,7 +46,7 @@ ifneq (,$(filter icon,$(MOZ_IMG_DECODERS)))
 ifdef MOZ_ENABLE_GNOMEUI
 TOOL_DIRS = icon/gtk icon
 endif
-ifeq ($(OS_ARCH),WINNT)
+ifneq (,$(filter WINCE WINNT,$(OS_ARCH)))
 DIRS = icon/win icon
 endif
 ifeq ($(OS_ARCH),OS2)
