@@ -839,7 +839,7 @@ var PlacesController = {
     // Set the sort order of the results
     newOptions.sortingMode = sortingMode;
     
-    // Reload the view. 
+    // Reload the view 
     view.load(newQueries, newOptions);
   },
   
@@ -919,6 +919,7 @@ var PlacesController = {
     options.sortingMode = sortingMode;
     query.annotation = annotation;
     this.groupableView.load([query], options);
+    LOG("CS: " + this._hist.queriesToQueryString([query], 1, options));
   },
   
   /**

@@ -52,6 +52,5 @@
                    label="&feed.subscribe.label;" 
                    tooltiptext="&feed.subscribe.tooltip;"/>
   </toolbarpalette>
-
 </overlay>
 
