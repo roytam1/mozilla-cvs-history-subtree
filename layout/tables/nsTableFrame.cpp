@@ -1668,6 +1668,10 @@ nsTableFrame::MarkIntrinsicWidthsDirty()
 /* virtual */ nscoord
 nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  if (mPrevInFlow)
+    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+             GetMinWidth(aRenderingContext);
+
   nscoord result = 0;
   DISPLAY_MIN_WIDTH(this, result);
 
@@ -1679,6 +1683,10 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  if (mPrevInFlow)
+    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+             GetPrefWidth(aRenderingContext);
+
   nscoord result = 0;
   DISPLAY_PREF_WIDTH(this, result);
 
@@ -1942,8 +1950,10 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       break;
   }
 
-  if (GetStateBits() & NS_FRAME_IS_DIRTY)
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
+    // XXXldb What if we're not the first-in-flow?
     SetNeedStrategyBalance(PR_TRUE); 
+  }
 
   if (NS_FAILED(rv)) return rv;
 
