@@ -1304,11 +1304,17 @@ var PlacesController = {
   /**
    * Get a TransferDataSet containing the content of the selection that can be
    * dropped elsewhere. 
+   * @param   dragAction
+   *          The action to happen when dragging, i.e. copy
    * @returns A TransferDataSet object that can be dragged and dropped 
    *          elsewhere.
    */
-  getTransferData: function PC_getTransferData() {
-    var nodes = this._activeView.getCopyableSelection();
+  getTransferData: function PC_getTransferData(dragAction) {
+    var nodes = null;
+    if (dragAction == Ci.nsIDragService.DRAGDROP_ACTION_COPY)
+      nodes = this._activeView.getCopyableSelection();
+    else
+      nodes = this._activeView.getDragableSelection();
     var dataSet = new TransferDataSet();
     for (var i = 0; i < nodes.length; ++i) {
       var node = nodes[i];
@@ -1450,9 +1456,14 @@ var PlacesController = {
  */
 var PlacesControllerDragHelper = {
   /**
+   * DOM Element currently being dragged over
+   */
+  currentDropTarget: null,
+   
+  /**
    * @returns The current active drag session. Returns null if there is none.
    */
-  _getSession: function VO__getSession() {
+  getSession: function VO__getSession() {
     var dragService = 
         Cc["@mozilla.org/widget/dragservice;1"].
         getService(Ci.nsIDragService);
@@ -1475,7 +1486,7 @@ var PlacesControllerDragHelper = {
         !PlacesController.nodeIsFolder(parent))
       return false;
   
-    var session = this._getSession();
+    var session = this.getSession();
     if (session) {
       if (orientation != NHRVO.DROP_ON)
         var types = view.supportedDropTypes;
@@ -1530,7 +1541,7 @@ var PlacesControllerDragHelper = {
    */
   onDrop: function PCDH_onDrop(sourceView, targetView, insertionPoint, 
                                visibleInsertCount) {
-    var session = this._getSession();
+    var session = this.getSession();
     var copy = session.dragAction & Ci.nsIDragService.DRAGDROP_ACTION_COPY;
     var transactions = [];
     var xferable = this._initTransferable(targetView, 
