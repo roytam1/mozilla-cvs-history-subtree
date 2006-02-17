@@ -175,9 +175,6 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
                         nsMargin*       aPadding)
 {
   mCompactMarginWidth = 0;
-#ifdef DEBUG
-  mDebugHook = nsnull;
-#endif
 
   mStylePosition = frame->GetStylePosition();
   mStyleDisplay = frame->GetStyleDisplay();

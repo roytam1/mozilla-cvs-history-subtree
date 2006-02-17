@@ -248,11 +248,6 @@ struct nsHTMLReflowState {
   nscoord mRightEdge;
 #endif
 
-#ifdef DEBUG
-  // hook for attaching debug info (e.g. tables may attach a timer during reflow)
-  void* mDebugHook;
-#endif
-
   // Note: The copy constructor is written by the compiler automatically. You
   // can use that and then override specific values if you want, or you can
   // call Init as desired...
