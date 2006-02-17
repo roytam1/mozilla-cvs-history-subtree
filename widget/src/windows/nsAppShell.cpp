@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Michael Lowe <michael.lowe@bigfoot.com>
+ *   Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -52,7 +53,7 @@
 NS_IMPL_ISUPPORTS2(nsAppShell, nsIAppShell, nsIThreadObserver)
 
 // XXX why is this not a member variable?
-static int gKeepGoing = 1;
+static PRBool gKeepGoing;
 
 #if 0
 UINT _pr_PostEventMsgId;
@@ -348,6 +349,14 @@ nsAppShell::FavorPerformanceHint(PRBool favorPerformanceOverEventStarvation,
 
 NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
 {
+  // Configure ourselves as an observer for the current thread:
+
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ENSURE_STATE(thread);
+
+  nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(thread);
+  NS_ENSURE_STATE(threadInt);
+  threadInt->SetObserver(this);
   return NS_OK;
 }
 
@@ -384,6 +393,18 @@ static BOOL PeekKeyAndIMEMessage(LPMSG msg, HWND hwnd)
 
 NS_IMETHODIMP nsAppShell::Run(void)
 {
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ENSURE_STATE(thread);
+
+  gKeepGoing = PR_TRUE;
+  while (gKeepGoing)
+    thread->RunNextTask(nsIThread::RUN_NORMAL);
+
+  NS_RunPendingTasks(thread);
+  return NS_OK;
+}
+
+#if 0
   NS_ADDREF_THIS();
   MSG  msg;
   int  keepGoing = 1;
@@ -438,6 +459,7 @@ NS_IMETHODIMP nsAppShell::Run(void)
   Release();
   return msg.wParam;
 }
+#endif
 
 NS_IMETHODIMP nsAppShell::Spinup(void)
 {
@@ -520,7 +542,7 @@ NS_IMETHODIMP nsAppShell::Exit(void)
   // Also, set a global flag, just in case someone eats the WM_QUIT message.
   // see bug #54725.
   //
-  gKeepGoing = 0;
+  gKeepGoing = PR_FALSE;
   return NS_OK;
 }
 
