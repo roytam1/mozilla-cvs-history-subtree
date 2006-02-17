@@ -168,9 +168,7 @@ void BasicTableLayoutStrategy::ContinuingFrameCheck()
                "never ever call me on a continuing frame!");
 }
 
-PRBool BCW_Wrapup(const nsHTMLReflowState&  aReflowState,
-                  BasicTableLayoutStrategy* aStrategy, 
-                  nsTableFrame*             aTableFrame, 
+PRBool BCW_Wrapup(nsTableFrame*             aTableFrame, 
                   PRInt32*                  aAllocTypes)
 {
   if (aAllocTypes)
@@ -277,7 +275,7 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
   // that had no % cells/cols, we're done
   if (maxWidth < minTableWidth &&
       (!tableIsAutoWidth || 0 == perAdjTableWidth)) {
-    return BCW_Wrapup(aReflowState, this, mTableFrame, nsnull);
+    return BCW_Wrapup(mTableFrame, nsnull);
   }
 
   // the following are of size NUM_WIDTHS, but only MIN_CON, DES_CON, FIX, FIX_ADJ, PCT
@@ -310,7 +308,7 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
     }
     else {
       AllocateConstrained(maxWidth - totalAllocated, PCT, PR_FALSE, allocTypes, p2t);
-      return BCW_Wrapup(aReflowState, this, mTableFrame, allocTypes);
+      return BCW_Wrapup(mTableFrame, allocTypes);
     }
   }
   // allocate FIX cols
@@ -321,7 +319,7 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
     }
     else {
       AllocateConstrained(maxWidth - totalAllocated, FIX, PR_TRUE, allocTypes, p2t);
-      return BCW_Wrapup(aReflowState, this, mTableFrame, allocTypes);
+      return BCW_Wrapup(mTableFrame, allocTypes);
     }
   }
   // allocate fixed adjusted cols
@@ -332,7 +330,7 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
     }
     else {
       AllocateConstrained(maxWidth - totalAllocated, FIX_ADJ, PR_TRUE, allocTypes, p2t);
-      return BCW_Wrapup(aReflowState, this, mTableFrame, allocTypes);
+      return BCW_Wrapup(mTableFrame, allocTypes);
     }
   }
 
@@ -345,13 +343,13 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
     }
     else {
       AllocateConstrained(maxWidth - totalAllocated, DES_CON, PR_TRUE, allocTypes, p2t);
-      return BCW_Wrapup(aReflowState, this, mTableFrame, allocTypes);
+      return BCW_Wrapup(mTableFrame, allocTypes);
     }
   }
 
   // if this is a nested non auto table and pass1 reflow, we are done
   if ((maxWidth == NS_UNCONSTRAINEDSIZE) && (!tableIsAutoWidth))  {
-    return BCW_Wrapup(aReflowState, this, mTableFrame, allocTypes);
+    return BCW_Wrapup(mTableFrame, allocTypes);
   }
 
   // allocate the rest to auto columns, with some exceptions
@@ -372,7 +370,7 @@ BasicTableLayoutStrategy::BalanceColumnWidths(const nsHTMLReflowState& aReflowSt
     }
   }
 
-  return BCW_Wrapup(aReflowState, this, mTableFrame, allocTypes);
+  return BCW_Wrapup(mTableFrame, allocTypes);
 }
 
 nscoord GetColWidth(nsTableColFrame* aColFrame,
