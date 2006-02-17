@@ -284,9 +284,7 @@ protected:
   //
   // Constants
   //
-  nsCOMPtr<nsIPrefService> gPrefService;
-  nsCOMPtr<nsIPrefBranch> gPrefBranch;
-  nsCOMPtr<nsIObserverService> gObserverService;
+  nsCOMPtr<nsIPrefBranch> mPrefBranch; // MAY BE NULL when we are shutting down
   nsDataHashtable<nsStringHashKey, int> gExpandedItems;
 
   //
