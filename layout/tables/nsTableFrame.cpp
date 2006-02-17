@@ -1923,23 +1923,22 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   switch (aReflowState.reason) {
     case eReflowReason_Initial: 
     case eReflowReason_StyleChange: {
-        if (!mPrevInFlow) { // only do pass1 on a first in flow
-          if (IsAutoLayout()) {     
+      if (!mPrevInFlow) { // only do pass1 on a first in flow
+        if (IsAutoLayout()) {     
 #error "Pass 1 reflow must be moved out of Reflow"
-            // only do pass1 reflow on an auto layout table
-            nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
-                                           aReflowState.reason,
-                                           NS_UNCONSTRAINEDSIZE,
-                                           NS_UNCONSTRAINEDSIZE);
-            // reflow the children
-            nsIFrame *lastReflowed;
-            nsRect overflowArea;
-            ReflowChildren(reflowState, !HaveReflowedColGroups(),
-                           PR_FALSE, aStatus, lastReflowed,
-                           overflowArea);
-          }
-          mTableLayoutStrategy->Initialize(aReflowState);
+          // only do pass1 reflow on an auto layout table
+          nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
+                                         aReflowState.reason,
+                                         NS_UNCONSTRAINEDSIZE,
+                                         NS_UNCONSTRAINEDSIZE);
+          // reflow the children
+          nsIFrame *lastReflowed;
+          nsRect overflowArea;
+          ReflowChildren(reflowState, !HaveReflowedColGroups(),
+                         PR_FALSE, aStatus, lastReflowed,
+                         overflowArea);
         }
+        mTableLayoutStrategy->Initialize(aReflowState);
       }
       break; 
     }
