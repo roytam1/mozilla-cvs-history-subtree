@@ -72,7 +72,7 @@
 #include "nsIObserverService.h"
 #include "nsGUIEvent.h"
 #include "nsScriptNameSpaceManager.h"
-#include "nsIThread.h"
+#include "nsThreadUtils.h"
 #include "nsITimer.h"
 #include "nsDOMClassInfo.h"
 #include "nsIAtom.h"
@@ -141,8 +141,6 @@ static const char kJSRuntimeServiceContractID[] =
 
 static const char kDOMStringBundleURL[] =
   "chrome://global/locale/dom/dom.properties";
-
-static PRThread *gDOMThread;
 
 static JSGCCallback gOldJSGCCallback;
 
@@ -2201,7 +2199,7 @@ DOMGCCallback(JSContext *cx, JSGCStatus status)
 {
   JSBool result = gOldJSGCCallback ? gOldJSGCCallback(cx, status) : JS_TRUE;
 
-  if (status == JSGC_BEGIN && PR_GetCurrentThread() != gDOMThread)
+  if (status == JSGC_BEGIN && !NS_IsMainThread())
     return JS_FALSE;
 
   // XPCJSRuntime::GCCallback does marking from the JSGC_MARK_END callback.
@@ -2225,7 +2223,6 @@ nsJSEnvironment::Startup()
   gNameSpaceManager = nsnull;
   sRuntimeService = nsnull;
   sRuntime = nsnull;
-  gDOMThread = nsnull;
   gOldJSGCCallback = nsnull;
   sIsInitialized = PR_FALSE;
   sDidShutdown = PR_FALSE;
@@ -2296,18 +2293,9 @@ nsJSEnvironment::Init()
   rv = sRuntimeService->GetRuntime(&sRuntime);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  gDOMThread = PR_GetCurrentThread();
-
 #ifdef DEBUG
   // Let's make sure that our main thread is the same as the xpcom main thread.
-  {
-    nsCOMPtr<nsIThread> t;
-    PRThread* mainThread;
-    rv = nsIThread::GetMainThread(getter_AddRefs(t));
-    NS_ASSERTION(NS_SUCCEEDED(rv) && t, "bad");
-    rv = t->GetPRThread(&mainThread);
-    NS_ASSERTION(NS_SUCCEEDED(rv) && mainThread == gDOMThread, "bad");
-  }
+  NS_ASSERTION(NS_IsMainThread(), "bad");
 #endif
 
   NS_ASSERTION(!gOldJSGCCallback,
