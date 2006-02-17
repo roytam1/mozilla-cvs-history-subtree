@@ -678,7 +678,9 @@ nsMenuBarFrame::HideChain()
     mRecentRollupMenu = mCurrentMenu;
   }
 
-  SetActive(PR_FALSE);
+  if (mIsActive) {
+    ToggleMenuActiveState();
+  }
 
   return NS_OK;
 }
