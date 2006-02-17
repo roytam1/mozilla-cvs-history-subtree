@@ -55,7 +55,6 @@
 #include "nsIWebNavigationInfo.h"
 
 // Util headers
-#include "plevent.h"
 #include "prlog.h"
 
 #include "nsAutoPtr.h"
@@ -63,9 +62,9 @@
 #include "nsContentPolicyUtils.h"
 #include "nsContentUtils.h"
 #include "nsDocShellCID.h"
-#include "nsEventQueueUtils.h"
 #include "nsHTMLAtoms.h"
 #include "nsLayoutAtoms.h"
+#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 
 // Concrete classes
@@ -82,20 +81,12 @@ static PRLogModuleInfo* gObjectLog = PR_NewLogModule("objlc");
 #define LOG(args) PR_LOG(gObjectLog, PR_LOG_DEBUG, args)
 #define LOG_ENABLED() PR_LOG_TEST(gObjectLog, PR_LOG_DEBUG)
 
-PR_BEGIN_EXTERN_C
-/* Note that these typedefs declare functions, not pointer to
-   functions.  That's the only way in which they differ from
-   PLHandleEventProc and PLDestroyEventProc. */
-typedef void*
-(PR_CALLBACK EventHandlerFunc)(PLEvent* self);
-typedef void
-(PR_CALLBACK EventDestructorFunc)(PLEvent* self);
-PR_END_EXTERN_C
-
-struct nsAsyncInstantiateEvent : public PLEvent {
+class nsAsyncInstantiateEvent : public nsRunnable {
+public:
   // This stores both the content and the frame so that Instantiate calls can be
   // avoided if the frame changed in the meantime.
   // (the content is stored implicitly as the owner)
+  nsObjectLoadingContent *mContent;
   nsIObjectFrame*         mFrame;
   nsCString               mContentType;
   nsCOMPtr<nsIURI>        mURI;
@@ -104,106 +95,79 @@ struct nsAsyncInstantiateEvent : public PLEvent {
                           nsIObjectFrame* aFrame,
                           const nsCString& aType,
                           nsIURI* aURI)
-    : mFrame(aFrame), mContentType(aType), mURI(aURI)
+    : mContent(aContent), mFrame(aFrame), mContentType(aType), mURI(aURI)
   {
-    NS_ADDREF(NS_STATIC_CAST(nsIObjectLoadingContent*, aContent));
-    PL_InitEvent(this, aContent, nsAsyncInstantiateEvent::HandleEvent,
-                 nsAsyncInstantiateEvent::CleanupEvent);
+    NS_STATIC_CAST(nsIObjectLoadingContent *, mContent)->AddRef();
   }
 
   ~nsAsyncInstantiateEvent()
   {
-    nsIObjectLoadingContent* con = NS_STATIC_CAST(nsIObjectLoadingContent*,
-                                                  PL_GetEventOwner(this));
-    NS_RELEASE(con);
+    NS_STATIC_CAST(nsIObjectLoadingContent *, mContent)->Release();
   }
 
-  static EventHandlerFunc HandleEvent;
-  static EventDestructorFunc CleanupEvent;
+  NS_IMETHOD Run();
 };
 
-/* static */ void* PR_CALLBACK
-nsAsyncInstantiateEvent::HandleEvent(PLEvent* event)
+NS_IMETHODIMP
+nsAsyncInstantiateEvent::Run()
 {
-  nsAsyncInstantiateEvent* ev = NS_STATIC_CAST(nsAsyncInstantiateEvent*,
-                                               event);
-  nsObjectLoadingContent* con = NS_STATIC_CAST(nsObjectLoadingContent*,
-                                               PL_GetEventOwner(event));
+  // Check if we've been "revoked"
+  if (mContent->mPendingInstantiateEvent != this)
+    return NS_OK;
+  mContent->mPendingInstantiateEvent = nsnull;
+
   // Make sure that we still have the right frame (NOTE: we don't need to check
   // the type here - GetFrame() only returns object frames, and that means we're
   // a plugin)
   // Also make sure that we still refer to the same data.
-  if (con->GetFrame() == ev->mFrame &&
-      con->mURI == ev->mURI &&
-      con->mContentType.Equals(ev->mContentType)) {
+  if (mContent->GetFrame() == mFrame &&
+      mContent->mURI == mURI &&
+      mContent->mContentType.Equals(mContentType)) {
     if (LOG_ENABLED()) {
       nsCAutoString spec;
-      if (ev->mURI) {
-        ev->mURI->GetSpec(spec);
+      if (mURI) {
+        mURI->GetSpec(spec);
       }
       LOG(("OBJLC [%p]: Handling Instantiate event: Type=<%s> URI=%p<%s>\n",
-           con, ev->mContentType.get(), ev->mURI.get(), spec.get()));
+           mContent, mContentType.get(), mURI.get(), spec.get()));
     }
 
-    nsresult rv = con->Instantiate(ev->mContentType, ev->mURI);
+    nsresult rv = mContent->Instantiate(mContentType, mURI);
     if (NS_FAILED(rv)) {
-      con->Fallback(PR_TRUE);
+      mContent->Fallback(PR_TRUE);
     }
   } else {
-    LOG(("OBJLC [%p]: Discarding event, data changed\n", con));
+    LOG(("OBJLC [%p]: Discarding event, data changed\n", mContent));
   }
-  return nsnull;
-}
 
-/* static */ void PR_CALLBACK
-nsAsyncInstantiateEvent::CleanupEvent(PLEvent* event)
-{
-  nsAsyncInstantiateEvent* ev = NS_STATIC_CAST(nsAsyncInstantiateEvent*,
-                                               event);
-  delete ev;
+  return NS_OK;
 }
 
 /**
- * A PLEvent for firing PluginNotFound DOM Events.
+ * A task for firing PluginNotFound DOM Events.
  */
-struct nsPluginNotFoundEvent : public PLEvent {
+class nsPluginNotFoundEvent : public nsRunnable {
+public:
+  nsCOMPtr<nsIContent> mContent;
+
   nsPluginNotFoundEvent(nsIContent* aContent)
-  {
-    NS_ADDREF(aContent);
-    PL_InitEvent(this, aContent, nsPluginNotFoundEvent::HandleEvent,
-                 nsPluginNotFoundEvent::CleanupEvent);
-  }
+    : mContent(aContent)
+  {}
 
-  ~nsPluginNotFoundEvent()
-  {
-    nsIContent* con = NS_STATIC_CAST(nsIContent*, PL_GetEventOwner(this));
-    NS_RELEASE(con);
-  }
+  ~nsPluginNotFoundEvent() {}
 
-  static EventHandlerFunc HandleEvent;
-  static EventDestructorFunc CleanupEvent;
+  NS_IMETHOD Run();
 };
 
-/* static */ void* PR_CALLBACK
-nsPluginNotFoundEvent::HandleEvent(PLEvent* event)
+NS_IMETHODIMP
+nsPluginNotFoundEvent::Run()
 {
-  nsIContent* con = NS_STATIC_CAST(nsIContent*, PL_GetEventOwner(event));
-
-  LOG(("OBJLC []: Firing plugin not found event for content %p\n", con));
-  nsContentUtils::DispatchTrustedEvent(con->GetDocument(), con,
+  LOG(("OBJLC []: Firing plugin not found event for content %p\n", mContent));
+  nsContentUtils::DispatchTrustedEvent(mContent->GetDocument(), mContent,
                                        NS_LITERAL_STRING("PluginNotFound"),
                                        PR_TRUE, PR_TRUE);
-  return nsnull;
+  return NS_OK;
 }
-
-/* static */ void PR_CALLBACK
-nsPluginNotFoundEvent::CleanupEvent(PLEvent* event)
-{
-  nsPluginNotFoundEvent* ev = NS_STATIC_CAST(nsPluginNotFoundEvent*,
-                                             event);
-  delete ev;
-}
-
 
 class AutoNotifier {
   public:
@@ -542,11 +506,9 @@ nsObjectLoadingContent::EnsureInstantiation(nsIPluginInstance** aInstance)
   if (frame) {
     // If we have a frame, we may have pending instantiate events; revoke
     // them.
-    nsCOMPtr<nsIEventQueue> eventQ;
-    NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-    if (eventQ) {
-      LOG(("OBJLC [%p]: Revoking events\n", this));
-      eventQ->RevokeEvents(this);
+    if (mPendingInstantiateEvent) {
+      LOG(("OBJLC [%p]: Revoking pending instantiate event\n", this));
+      mPendingInstantiateEvent = nsnull;
     }
   } else {
     // mInstantiating is true if we're in LoadObject; we shouldn't
@@ -600,7 +562,8 @@ nsObjectLoadingContent::HasNewFrame(nsIObjectFrame* aFrame)
 {
   LOG(("OBJLC [%p]: Got frame %p (mInstantiating=%i)\n", this, aFrame,
        mInstantiating));
-  if (!mInstantiating && aFrame && mType == eType_Plugin) {
+  if (!mInstantiating && aFrame && mType == eType_Plugin &&
+      !mPendingInstantiateEvent) {
     // Asynchronously call Instantiate
     // This can go away once plugin loading moves to content
     // This must be done asynchronously to ensure that the frame is correctly
@@ -613,23 +576,22 @@ nsObjectLoadingContent::HasNewFrame(nsIObjectFrame* aFrame)
       return NS_OK;
     }
 
-    nsCOMPtr<nsIEventQueue> eventQ;
-    NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-    if (!eventQ) {
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+    if (!thread) {
       return NS_ERROR_UNEXPECTED;
     }
 
-    nsAsyncInstantiateEvent* ev = new nsAsyncInstantiateEvent(this, aFrame,
-                                                              mContentType,
-                                                              mURI);
-    if (!ev) {
+    mPendingInstantiateEvent = new nsAsyncInstantiateEvent(this, aFrame,
+                                                           mContentType, mURI);
+    if (!mPendingInstantiateEvent) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    LOG(("                 posting event\n"));
-    nsresult rv = eventQ->PostEvent(ev);
+    LOG(("                 dispatching event\n"));
+    nsresult rv = thread->Dispatch(mPendingInstantiateEvent, NS_DISPATCH_NORMAL);
     if (NS_FAILED(rv)) {
-      PL_DestroyEvent(ev);
+      NS_NOTREACHED("failed to dispatch nsAsyncInstantiateEvent");
+      mPendingInstantiateEvent = nsnull;  // break cycle
     }
   }
   return NS_OK;
@@ -751,13 +713,9 @@ nsObjectLoadingContent::LoadObject(nsIURI* aURI,
   }
 
   // Need to revoke any potentially pending instantiate events
-  if (mType == eType_Plugin) {
-    nsCOMPtr<nsIEventQueue> eventQ;
-    NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-    if (eventQ) {
-      LOG(("OBJLC [%p]: Revoking events\n", this));
-      eventQ->RevokeEvents(this);
-    }
+  if (mType == eType_Plugin && mPendingInstantiateEvent) {
+    LOG(("OBJLC [%p]: Revoking pending instantiate event\n", this));
+    mPendingInstantiateEvent = nsnull;
   }
 
   AutoNotifier notifier(this, aNotify);
@@ -1195,22 +1153,21 @@ nsObjectLoadingContent::NotifyStateChanged(ObjectType aOldType,
 /* static */ void
 nsObjectLoadingContent::FirePluginNotFound(nsIContent* thisContent)
 {
-  nsCOMPtr<nsIEventQueue> eventQ;
-  NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-  if (!eventQ) {
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  if (!thread) {
     return;
   }
 
-  nsPluginNotFoundEvent* ev = new nsPluginNotFoundEvent(thisContent);
+  nsCOMPtr<nsIRunnable> ev = new nsPluginNotFoundEvent(thisContent);
   if (!ev) {
     return;
   }
 
-  LOG(("OBJLC []: Posting PluginNotFound event for content %p\n",
+  LOG(("OBJLC []: Dispatching PluginNotFound event for content %p\n",
        thisContent));
-  nsresult rv = eventQ->PostEvent(ev);
+  nsresult rv = thread->Dispatch(ev, NS_DISPATCH_NORMAL);
   if (NS_FAILED(rv)) {
-    PL_DestroyEvent(ev);
+    NS_NOTREACHED("failed to dispatch PluginNotFound event");
   }
 }
 

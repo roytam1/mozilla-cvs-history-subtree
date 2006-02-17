@@ -39,7 +39,7 @@
 #define nsPLDOMEvent_h___
 
 #include "nsCOMPtr.h"
-#include "plevent.h"
+#include "nsThreadUtils.h"
 #include "nsIDOMNode.h"
 #include "nsString.h"
 /**
@@ -49,19 +49,17 @@
  * the wrong time, in order to avoid resulting instability.
  */
  
-struct nsPLDOMEvent : public PLEvent {
+class nsPLDOMEvent : public nsRunnable {
+public:
   nsPLDOMEvent (nsIDOMNode *aEventNode, const nsAString& aEventType)
     : mEventNode(aEventNode), mEventType(aEventType)
   { }
  
-  void HandleEvent();
+  NS_IMETHOD Run();
   nsresult PostDOMEvent();
 
   nsCOMPtr<nsIDOMNode> mEventNode;
   nsString mEventType;
 };
-
-static void* PR_CALLBACK HandlePLDOMEvent(PLEvent* aEvent);
-static void PR_CALLBACK DestroyPLDOMEvent(PLEvent* aEvent);
 
 #endif

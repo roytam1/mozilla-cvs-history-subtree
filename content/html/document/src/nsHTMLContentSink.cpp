@@ -118,7 +118,6 @@
 #include "nsIPrompt.h"
 #include "nsLayoutCID.h"
 #include "nsIDocShellTreeItem.h"
-#include "plevent.h"
 
 #include "nsEscape.h"
 #include "nsIElementObserver.h"
@@ -2311,7 +2310,7 @@ HTMLContentSink::DidBuildModel(void)
   if (mFlags & NS_SINK_FLAG_DYNAMIC_LOWER_VALUE) {
     // Reset the performance hint which was set to FALSE
     // when NS_SINK_FLAG_DYNAMIC_LOWER_VALUE was set. 
-    PL_FavorPerformanceHint(PR_TRUE , 0);
+    // XXX PL_FavorPerformanceHint(PR_TRUE , 0);
   }
 
   if (mFlags & NS_SINK_FLAG_CAN_INTERRUPT_PARSER) {
@@ -3433,7 +3432,7 @@ HTMLContentSink::DidProcessAToken(void)
           // Set the performance hint to prevent event starvation when
           // dispatching PLEvents. This improves application responsiveness 
           // during page loads.
-          PL_FavorPerformanceHint(PR_FALSE, 0);
+          // XXX PL_FavorPerformanceHint(PR_FALSE, 0);
         }
 
       } else {
@@ -3443,7 +3442,7 @@ HTMLContentSink::DidProcessAToken(void)
           // to favor overall page load speed over responsiveness.
           mFlags &= ~NS_SINK_FLAG_DYNAMIC_LOWER_VALUE;
           // Reset the hint that to favoring performance for PLEvent dispatch.
-          PL_FavorPerformanceHint(PR_TRUE, 0);
+          // XXX PL_FavorPerformanceHint(PR_TRUE, 0);
         }
 
       }

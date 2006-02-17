@@ -769,9 +769,9 @@ protected:
 private:
   nsresult IsAllowedAsChild(PRUint16 aNodeType, nsIContent* aRefContent);
 
+  friend class nsUnblockOnloadEvent;
+
   void PostUnblockOnloadEvent();
-  static EventHandlerFunc HandleOnloadBlockerEvent;
-  static EventDestructorFunc DestroyOnloadBlockerEvent;
   void DoUnblockOnload();
 
   // These are not implemented and not supported.

@@ -50,9 +50,7 @@
 #include "imgIContainer.h"
 #include "gfxIImageFrame.h"
 #include "imgILoader.h"
-#include "plevent.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
+#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 
 #include "nsPresContext.h"
@@ -712,7 +710,7 @@ nsImageLoadingContent::StringToURI(const nsAString& aSpec,
  */
 MOZ_DECL_CTOR_COUNTER(ImageEvent)
 
-class ImageEvent : public PLEvent
+class ImageEvent : public nsRunnable
 {
 public:
   ImageEvent(nsPresContext* aPresContext, nsIContent* aContent,
@@ -726,8 +724,11 @@ public:
   }
   ~ImageEvent()
   {
+    mDocument->UnblockOnload(PR_TRUE);
     MOZ_COUNT_DTOR(ImageEvent);
   }
+
+  NS_IMETHOD Run();
   
   nsCOMPtr<nsPresContext> mPresContext;
   nsCOMPtr<nsIContent> mContent;
@@ -738,33 +739,22 @@ public:
   nsCOMPtr<nsIDocument> mDocument;
 };
 
-PR_STATIC_CALLBACK(void*)
-HandleImagePLEvent(PLEvent* aEvent)
+NS_IMETHODIMP
+ImageEvent::Run()
 {
-  ImageEvent* evt = NS_STATIC_CAST(ImageEvent*, aEvent);
   nsEventStatus estatus = nsEventStatus_eIgnore;
   PRUint32 eventMsg;
 
-  if (evt->mMessage.EqualsLiteral("load")) {
+  if (mMessage.EqualsLiteral("load")) {
     eventMsg = NS_IMAGE_LOAD;
   } else {
     eventMsg = NS_IMAGE_ERROR;
   }
 
   nsEvent event(PR_TRUE, eventMsg);
-  evt->mContent->HandleDOMEvent(evt->mPresContext, &event, nsnull,
-                                NS_EVENT_FLAG_INIT, &estatus);
-
-  return nsnull;
-}
-
-PR_STATIC_CALLBACK(void)
-DestroyImagePLEvent(PLEvent* aEvent)
-{
-  ImageEvent* evt = NS_STATIC_CAST(ImageEvent*, aEvent);
-  evt->mDocument->UnblockOnload(PR_TRUE);
-
-  delete evt;
+  mContent->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT,
+                           &estatus);
+  return NS_OK;
 }
 
 nsresult
@@ -779,13 +769,11 @@ nsImageLoadingContent::FireEvent(const nsAString& aEventType)
     // no use to fire events if there is no document....
     return NS_OK;
   }                                                                             
-  nsCOMPtr<nsIEventQueue> eventQ;
+
   // Use the UI thread event queue (though we should not be getting called from
   // off the UI thread in any case....)
-  nsresult rv = nsContentUtils::EventQueueService()->
-    GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                         getter_AddRefs(eventQ));
-  NS_ENSURE_TRUE(eventQ, rv);
+  nsCOMPtr<nsIThread> thread = do_GetMainThread();
+  NS_ENSURE_STATE(thread);
 
   nsIPresShell *shell = document->GetShellAt(0);
   NS_ENSURE_TRUE(shell, NS_ERROR_FAILURE);
@@ -795,21 +783,13 @@ nsImageLoadingContent::FireEvent(const nsAString& aEventType)
 
   nsCOMPtr<nsIContent> ourContent = do_QueryInterface(this);
   
-  ImageEvent* evt = new ImageEvent(presContext, ourContent, aEventType, document);
-
+  nsCOMPtr<nsIRunnable> evt =
+      new ImageEvent(presContext, ourContent, aEventType, document);
   NS_ENSURE_TRUE(evt, NS_ERROR_OUT_OF_MEMORY);
-
-  PL_InitEvent(evt, this, ::HandleImagePLEvent, ::DestroyImagePLEvent);
 
   // Block onload for our event.  Since we unblock in the event destructor, we
   // want to block now, even if posting will fail.
   document->BlockOnload();
   
-  rv = eventQ->PostEvent(evt);
-
-  if (NS_FAILED(rv)) {
-    PL_DestroyEvent(evt);
-  }
-
-  return rv;
+  return thread->Dispatch(evt, NS_DISPATCH_NORMAL);
 }
