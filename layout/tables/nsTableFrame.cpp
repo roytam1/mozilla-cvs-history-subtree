@@ -197,7 +197,6 @@ nsTableFrame::nsTableFrame()
     mTableLayoutStrategy(nsnull),
     mPreferredWidth(0)
 {
-  mBits.mHadInitialReflow       = PR_FALSE;
   mBits.mHaveReflowedColGroups  = PR_FALSE;
   mBits.mNeedStrategyInit       = PR_TRUE;
   mBits.mNeedStrategyBalance    = PR_TRUE;
@@ -1908,8 +1907,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
   aDesiredSize.width = aReflowState.availableWidth;
 
-  nsReflowReason nextReason = aReflowState.reason;
-
   // Check for an overflow list, and append any row group frames being pushed
   MoveOverflowToChildList(aPresContext);
 
@@ -1918,13 +1915,9 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   switch (aReflowState.reason) {
     case eReflowReason_Initial: 
     case eReflowReason_StyleChange: {
-      if ((eReflowReason_Initial == aReflowState.reason) && HadInitialReflow()) {
-        // XXX this could be an assertion and the if removed
-        NS_WARNING("table initial reflow called twice");
-      }
-      else {
         if (!mPrevInFlow) { // only do pass1 on a first in flow
           if (IsAutoLayout()) {     
+#error "Pass 1 reflow must be moved out of Reflow"
             // only do pass1 reflow on an auto layout table
             nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
                                            aReflowState.reason,
@@ -1940,35 +1933,17 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
           mTableLayoutStrategy->Initialize(aReflowState);
         }
       }
-      SetHadInitialReflow(PR_TRUE);
-      if (!mPrevInFlow) {
-        SetNeedStrategyBalance(PR_TRUE); // force a balance and then a pass2 reflow 
-        if ((nextReason != eReflowReason_StyleChange) || IsAutoLayout()) 
-          nextReason = eReflowReason_Resize;
-      }
-      else {
-        nextReason = eReflowReason_Initial;
-      }
       break; 
     }
     case eReflowReason_Incremental:
-      NS_ASSERTION(HadInitialReflow(), "intial reflow not called");
       rv = IncrementalReflow(aReflowState, aStatus);
-      nextReason = eReflowReason_Resize;
       break;
-    case eReflowReason_Resize:
-      // do the resize reflow below
-      if (!HadInitialReflow()) {
-        NS_ASSERTION(HadInitialReflow(), "intial reflow not called");
-        nextReason = eReflowReason_Initial;
-      }
-      if (NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth)
-        NS_WARNING("this reflow doesn't do anything");
-      SetNeedStrategyBalance(PR_TRUE); 
-      break; 
     default:
       break;
   }
+
+  if (GetStateBits() & NS_FRAME_IS_DIRTY)
+    SetNeedStrategyBalance(PR_TRUE); 
 
   if (NS_FAILED(rv)) return rv;
 
@@ -2002,15 +1977,18 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       nscoord availHeight = (willInitiateSpecialReflow)
                             ? NS_UNCONSTRAINEDSIZE : aReflowState.availableHeight;
 
-      ReflowTable(aDesiredSize, aReflowState, availHeight, nextReason, 
+      ReflowTable(aDesiredSize, aReflowState, availHeight,
                   lastChildReflowed, balanced, aStatus);
-      nextReason = eReflowReason_Resize;
       reflowedChildren = PR_TRUE;
     }
     // reevaluate special height reflow conditions
     if ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) &&
         (aReflowState.mFlags.mSpecialHeightReflow || !NeedSpecialReflow()) &&
         NS_FRAME_IS_COMPLETE(aStatus)) {
+      // XXXldb Mark DIRTY?  This used to always be a resize, but it's
+      // a resize for height, and the new resize optimizations may cause
+      // skipping (although why wouldn't they have before?).
+
       // distribute extra vertical space to rows
       CalcDesiredHeight(aReflowState, aDesiredSize); 
       ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
@@ -2020,7 +1998,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
       ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
       ReflowTable(aDesiredSize, aReflowState, aReflowState.availableHeight, 
-                  nextReason, lastChildReflowed, balanced, aStatus);
+                  lastChildReflowed, balanced, aStatus);
       // restore the previous special height reflow initiator
       ((nsHTMLReflowState&)aReflowState).mPercentHeightReflowInitiator = specialReflowInitiator;
       // XXX We should call SetInitiatedSpecialReflow(PR_FALSE) at some point, but it is difficult to tell when
@@ -2137,7 +2115,6 @@ nsresult
 nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                           const nsHTMLReflowState& aReflowState,
                           nscoord                  aAvailHeight,
-                          nsReflowReason           aReason,
                           nsIFrame*&               aLastChildReflowed,
                           PRBool&                  aDidBalance,
                           nsReflowStatus&          aStatus)
@@ -2162,7 +2139,7 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   // Constrain our reflow width to the computed table width (of the 1st in flow).
   // and our reflow height to our avail height minus border, padding, cellspacing
   aDesiredSize.width = GetDesiredWidth();
-  nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this, aReason, 
+  nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this,
                                  aDesiredSize.width, aAvailHeight);
   ReflowChildren(reflowState, haveReflowedColGroups, PR_FALSE,
                  aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);

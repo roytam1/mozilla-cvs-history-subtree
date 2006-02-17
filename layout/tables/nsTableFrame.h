@@ -785,9 +785,6 @@ protected:
 
   void ExpandBCDamageArea(nsRect& aRect) const;
 
-  PRBool HadInitialReflow() const;
-  void SetHadInitialReflow(PRBool aValue);
-
   void SetColumnDimensions(nscoord         aHeight,
                            const nsMargin& aReflowState);
 
@@ -868,7 +865,6 @@ protected:
   nsAutoVoidArray mColFrames;  
 
   struct TableBits {
-    PRUint32 mHadInitialReflow:1;      // has initial reflow happened
     PRUint32 mHaveReflowedColGroups:1; // have the col groups gotten their initial reflow
     PRUint32 mNeedStrategyBalance:1;   // does the strategy needs to balance the table
     PRUint32 mNeedStrategyInit:1;      // does the strategy needs to be initialized and then balance the table
@@ -920,16 +916,6 @@ inline PRBool nsTableFrame::IsRowGroup(PRInt32 aDisplayType) const
   return PRBool((NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == aDisplayType) ||
                 (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == aDisplayType) ||
                 (NS_STYLE_DISPLAY_TABLE_ROW_GROUP    == aDisplayType));
-}
-
-inline void nsTableFrame::SetHadInitialReflow(PRBool aValue)
-{
-  mBits.mHadInitialReflow = aValue;
-}
-
-inline PRBool nsTableFrame::HadInitialReflow() const
-{
-  return (PRBool)mBits.mHadInitialReflow;
 }
 
 inline void nsTableFrame::SetHaveReflowedColGroups(PRBool aValue)
