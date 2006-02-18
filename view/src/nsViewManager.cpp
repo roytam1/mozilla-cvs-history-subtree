@@ -53,8 +53,6 @@
 #include "nsISupportsArray.h"
 #include "nsICompositeListener.h"
 #include "nsCOMPtr.h"
-#include "nsIEventQueue.h"
-#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsGUIEvent.h"
 #include "nsIPrefBranch.h"
@@ -64,6 +62,7 @@
 #include "nsScrollPortView.h"
 #include "nsHashtable.h"
 #include "nsCOMArray.h"
+#include "nsThreadUtils.h"
 
 #ifdef MOZ_CAIRO_GFX
 #include "gfxContext.h"
@@ -72,7 +71,6 @@
 static NS_DEFINE_IID(kBlenderCID, NS_BLENDER_CID);
 static NS_DEFINE_IID(kRegionCID, NS_REGION_CID);
 static NS_DEFINE_IID(kRenderingContextCID, NS_RENDERING_CONTEXT_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 #define ARENA_ALLOCATE(var, pool, type) \
     {void *_tmp_; PL_ARENA_ALLOCATE(_tmp_, pool, sizeof(type)); \
@@ -103,46 +101,32 @@ static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 //-------------- Begin Invalidate Event Definition ------------------------
 
-struct nsViewManagerEvent : public PLEvent {
-  nsViewManagerEvent(nsViewManager* aViewManager);
-  
-  virtual void HandleEvent() = 0;
-  
-  nsViewManager* ViewManager() {
-    // |owner| is a weak pointer, but the view manager will destroy any
-    // pending invalidate events in it's destructor.
-    return NS_STATIC_CAST(nsViewManager*, owner);
+class nsViewManagerEvent : public nsRunnable {
+public:
+  nsViewManagerEvent(nsViewManager* aViewManager)
+    : mViewManager(aViewManager) {
+    // mViewManager is a weak pointer, but the view manager will destroy any
+    // pending events in it's destructor.
+    NS_ASSERTION(aViewManager, "null parameter");
   }
+  
+  void Revoke() {
+    mViewManager = nsnull; 
+  }
+
+protected:
+  nsViewManager *mViewManager;
 };
 
-static void* PR_CALLBACK HandlePLEvent(PLEvent* aEvent)
-{
-  NS_ASSERTION(nsnull != aEvent,"Event is null");
-  nsViewManagerEvent *event = NS_STATIC_CAST(nsViewManagerEvent*, aEvent);
-
-  event->HandleEvent();
-  return nsnull;
-}
-
-static void PR_CALLBACK DestroyPLEvent(PLEvent* aEvent)
-{
-  NS_ASSERTION(nsnull != aEvent,"Event is null");
-  nsViewManagerEvent *event = NS_STATIC_CAST(nsViewManagerEvent*, aEvent);
-  delete event;
-}
-
-nsViewManagerEvent::nsViewManagerEvent(nsViewManager* aViewManager)
-{
-  NS_ASSERTION(aViewManager, "null parameter");  
-  PL_InitEvent(this, aViewManager, ::HandlePLEvent, ::DestroyPLEvent);  
-}
-
-struct nsInvalidateEvent : public nsViewManagerEvent {
+class nsInvalidateEvent : public nsViewManagerEvent {
+public:
   nsInvalidateEvent(nsViewManager* aViewManager)
     : nsViewManagerEvent(aViewManager) { }
 
-  virtual void HandleEvent() {
-    ViewManager()->ProcessInvalidateEvent();
+  NS_IMETHOD Run() {
+    if (mViewManager)
+      mViewManager->ProcessInvalidateEvent(this);
+    return NS_OK;
   }
 };
 
@@ -169,16 +153,23 @@ void
 nsViewManager::PostInvalidateEvent()
 {
   NS_ASSERTION(IsRootVM(), "Caller screwed up");
-  
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  mEventQueueService->GetSpecialEventQueue(
-    nsIEventQueueService::UI_THREAD_EVENT_QUEUE, getter_AddRefs(eventQueue));
-  NS_ASSERTION(nsnull != eventQueue, "Event queue is null");
 
-  if (eventQueue != mInvalidateEventQueue) {
-    nsInvalidateEvent* ev = new nsInvalidateEvent(this);
-    eventQueue->PostEvent(ev);
-    mInvalidateEventQueue = eventQueue;
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  if (!thread)
+    return;
+
+  if (!mInvalidateEventPending) {
+    nsCOMPtr<nsIRunnable> ev = new nsInvalidateEvent(this);
+
+    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
+      NS_NOTREACHED("failed to dispatch nsSynthMouseMoveEvent");
+      return;
+    }
+
+    // keep weak ref to event so we can revoke it
+    mPendingEvents.AppendElement(ev);
+
+    mInvalidateEventPending = PR_TRUE;
   }
 }
 
@@ -195,6 +186,8 @@ nsViewManager::nsViewManager()
   : mMouseLocation(NSCOORD_NONE, NSCOORD_NONE)
   , mDelayedResize(NSCOORD_NONE, NSCOORD_NONE)
   , mRootViewManager(this)
+  , mSynthMouseMoveEventPending(PR_FALSE)
+  , mInvalidateEventPending(PR_FALSE)
 {
   if (gViewManagers == nsnull) {
     NS_ASSERTION(mVMCount == 0, "View Manager count is incorrect");
@@ -229,21 +222,20 @@ nsViewManager::~nsViewManager()
     mRootView = nsnull;
   }
 
-  // Make sure to RevokeEvents for all viewmanagers, since some events
+  // Make sure to revoke pending events for all viewmanagers, since some events
   // are posted by a non-root viewmanager.
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                           getter_AddRefs(eventQueue));
-  NS_ASSERTION(eventQueue, "Event queue is null"); 
-  eventQueue->RevokeEvents(this);
+  for (PRInt32 i = 0; i < mPendingEvents.Count(); ++i) {
+    NS_STATIC_CAST(nsViewManagerEvent *, mPendingEvents[i])->Revoke();
+  }
+  mPendingEvents.Clear();
   
   if (!IsRootVM()) {
     // We have a strong ref to mRootViewManager
     NS_RELEASE(mRootViewManager);
   }
   
-  mInvalidateEventQueue = nsnull;  
-  mSynthMouseMoveEventQueue = nsnull;  
+  mInvalidateEventPending = PR_FALSE;  
+  mSynthMouseMoveEventPending = PR_FALSE;  
 
   mRootScrollable = nsnull;
 
@@ -335,11 +327,6 @@ NS_IMETHODIMP nsViewManager::Init(nsIDeviceContext* aContext)
   mMouseGrabber = nsnull;
   mKeyGrabber = nsnull;
 
-  if (nsnull == mEventQueueService) {
-    mEventQueueService = do_GetService(kEventQueueServiceCID);
-    NS_ASSERTION(mEventQueueService, "couldn't get event queue service");
-  }
-  
   return NS_OK;
 }
 
@@ -2860,7 +2847,7 @@ nsViewManager::FlushPendingInvalidates()
 }
 
 void
-nsViewManager::ProcessInvalidateEvent()
+nsViewManager::ProcessInvalidateEvent(nsInvalidateEvent *ev)
 {
   NS_ASSERTION(IsRootVM(),
                "Incorrectly targeted invalidate event");
@@ -2870,7 +2857,8 @@ nsViewManager::ProcessInvalidateEvent()
   if (processEvent) {
     FlushPendingInvalidates();
   }
-  mInvalidateEventQueue = nsnull;
+  mInvalidateEventPending = PR_FALSE;
+  mPendingEvents.RemoveElement(ev);
   if (!processEvent) {
     // We didn't actually process this event... post a new one
     PostInvalidateEvent();
@@ -2899,17 +2887,20 @@ nsViewManager::GetLastUserEventTime(PRUint32& aTime)
   return NS_OK;
 }
 
-struct nsSynthMouseMoveEvent : public nsViewManagerEvent {
+class nsSynthMouseMoveEvent : public nsViewManagerEvent {
+public:
   nsSynthMouseMoveEvent(nsViewManager *aViewManager, PRBool aFromScroll)
     : nsViewManagerEvent(aViewManager),
       mFromScroll(aFromScroll)
-  {
+  { }
+
+  NS_IMETHOD Run() {
+    if (mViewManager)
+      mViewManager->ProcessSynthMouseMoveEvent(this, mFromScroll);
+    return NS_OK;
   }
 
-  virtual void HandleEvent() {
-    ViewManager()->ProcessSynthMouseMoveEvent(mFromScroll);
-  }
-
+private:
   PRBool mFromScroll;
 };
 
@@ -2919,15 +2910,21 @@ nsViewManager::SynthesizeMouseMove(PRBool aFromScroll)
   if (mMouseLocation == nsPoint(NSCOORD_NONE, NSCOORD_NONE))
     return NS_OK;
 
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  mEventQueueService->GetSpecialEventQueue(
-    nsIEventQueueService::UI_THREAD_EVENT_QUEUE, getter_AddRefs(eventQueue));
-  NS_ASSERTION(nsnull != eventQueue, "Event queue is null");
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ENSURE_STATE(thread);
 
-  if (eventQueue != mSynthMouseMoveEventQueue) {
-    nsSynthMouseMoveEvent *ev = new nsSynthMouseMoveEvent(this, aFromScroll);
-    eventQueue->PostEvent(ev);
-    mSynthMouseMoveEventQueue = eventQueue;
+  if (!mSynthMouseMoveEventPending) {
+    nsCOMPtr<nsIRunnable> ev = new nsSynthMouseMoveEvent(this, aFromScroll);
+
+    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
+      NS_NOTREACHED("failed to dispatch nsSynthMouseMoveEvent");
+      return NS_ERROR_UNEXPECTED;
+    }
+
+    // keep weak ref to event so we can revoke it
+    mPendingEvents.AppendElement(ev);
+
+    mSynthMouseMoveEventPending = PR_TRUE;
   }
 
   return NS_OK;
@@ -2961,15 +2958,17 @@ static nsView* FindFloatingViewContaining(nsView* aView, nsPoint aPt)
 }
 
 void
-nsViewManager::ProcessSynthMouseMoveEvent(PRBool aFromScroll)
+nsViewManager::ProcessSynthMouseMoveEvent(nsSynthMouseMoveEvent *ev, PRBool aFromScroll)
 {
+  mPendingEvents.RemoveElement(ev);
+
   // allow new event to be posted while handling this one only if the
   // source of the event is a scroll (to prevent infinite reflow loops)
   if (aFromScroll)
-    mSynthMouseMoveEventQueue = nsnull;
+    mSynthMouseMoveEventPending = PR_FALSE;
 
   if (mMouseLocation == nsPoint(NSCOORD_NONE, NSCOORD_NONE) || !mRootView) {
-    mSynthMouseMoveEventQueue = nsnull;
+    mSynthMouseMoveEventPending = PR_FALSE;
     return;
   }
 
@@ -3006,7 +3005,7 @@ nsViewManager::ProcessSynthMouseMoveEvent(PRBool aFromScroll)
   view->GetViewManager()->DispatchEvent(&event, &status);
 
   if (!aFromScroll)
-    mSynthMouseMoveEventQueue = nsnull;
+    mSynthMouseMoveEventPending = PR_FALSE;
 }
 
 void

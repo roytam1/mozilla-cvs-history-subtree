@@ -48,8 +48,6 @@
 #include "nsIScrollableView.h"
 #include "nsIRegion.h"
 #include "nsIBlender.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
 #include "nsView.h"
 
 class nsIRegion;
@@ -246,7 +244,7 @@ public:
   NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor);
   NS_IMETHOD GetDefaultBackgroundColor(nscolor* aColor);
   NS_IMETHOD GetLastUserEventTime(PRUint32& aTime);
-  void ProcessInvalidateEvent();
+  void ProcessInvalidateEvent(class nsInvalidateEvent *);
   static PRInt32 GetViewManagerCount();
   static const nsVoidArray* GetViewManagerArray();
   static PRUint32 gLastUserEventTime;
@@ -266,7 +264,7 @@ public:
                                nsRectVisibility *aRectVisibility);
 
   NS_IMETHOD SynthesizeMouseMove(PRBool aFromScroll);
-  void ProcessSynthMouseMoveEvent(PRBool aFromScroll);
+  void ProcessSynthMouseMoveEvent(class nsSynthMouseMoveEvent *, PRBool aFromScroll);
 
   /* Update the cached RootViewManager pointer on this view manager. */
   void InvalidateHierarchy();
@@ -541,8 +539,8 @@ private:
   // mRootViewManager is a strong ref unless it equals |this|.  It's
   // never null (if we have no ancestors, it will be |this|).
   nsViewManager     *mRootViewManager;
-  nsCOMPtr<nsIEventQueueService>  mEventQueueService;
-  nsCOMPtr<nsIEventQueue>         mSynthMouseMoveEventQueue;
+  nsVoidArray       mPendingEvents; // pending event objects
+  PRPackedBool      mSynthMouseMoveEventPending;
   PRPackedBool      mAllowDoubleBuffering;
 
   // The following members should not be accessed directly except by
@@ -557,7 +555,7 @@ private:
   PRInt32           mUpdateBatchCnt;
   PRUint32          mUpdateBatchFlags;
   PRInt32           mScrollCnt;
-  nsCOMPtr<nsIEventQueue>         mInvalidateEventQueue;
+  PRPackedBool      mInvalidateEventPending;
   // Use IsRefreshEnabled() to check the value of mRefreshEnabled.
   PRPackedBool      mRefreshEnabled;
   // Use IsPainting() and SetPainting() to access mPainting.
