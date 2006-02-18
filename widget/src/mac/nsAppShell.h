@@ -50,6 +50,7 @@
 #include "nsIAppShell.h"
 #include "nsCOMPtr.h"
 #include "nsIToolkit.h"
+#include "nsIThreadInternal.h"
 
 #include <memory>
 
@@ -57,16 +58,18 @@ using std::auto_ptr;
 
 class nsMacMessagePump;
 
-class nsAppShell : public nsIAppShell
+class nsAppShell : public nsIAppShell, public nsIThreadObserver
 {
   public:
     nsAppShell();
-    virtual ~nsAppShell();
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIAPPSHELL
+    NS_DECL_NSITHREADOBSERVER
   
   private:
+    ~nsAppShell() {}
+
     nsCOMPtr<nsIToolkit>           mToolkit;
     auto_ptr<nsMacMessagePump>     mMacPump;
     PRBool                         mExitCalled;

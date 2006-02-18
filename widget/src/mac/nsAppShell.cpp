@@ -1,4 +1,5 @@
 /* -*- Mode: c++; tab-width: 2; indent-tabs-mode: nil; -*- */
+/* vim:set ts=2 sw=2 sts=2 ci et: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -47,7 +48,7 @@
 #include "nsAppShell.h"
 #include "nsIAppShell.h"
 
-#include "nsIEventQueueService.h"
+#include "nsThreadUtils.h"
 #include "nsIServiceManager.h"
 #include "nsIWidget.h"
 #include "nsMacMessagePump.h"
@@ -69,7 +70,8 @@ PRBool nsAppShell::mInitializedToolbox = PR_FALSE;
 // nsISupports implementation macro
 //
 //-------------------------------------------------------------------------
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShell, nsIAppShell)
+// XXX does this need to be threadsafe?
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsAppShell, nsIAppShell, nsIThreadObserver)
 
 //-------------------------------------------------------------------------
 //
@@ -79,6 +81,14 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShell, nsIAppShell)
 
 NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
 {
+  // Configure ourselves as an observer for the current thread:
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ENSURE_STATE(thread);
+
+  nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(thread);
+  NS_ENSURE_STATE(threadInt);
+  threadInt->SetObserver(this);
+
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
    return rv;
@@ -99,6 +109,21 @@ NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsAppShell::Run(void)
 {
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ENSURE_STATE(thread);
+
+  nsToolkit::AppInForeground();
+
+  mExitCalled = PR_FALSE;
+  while (!mExitCalled)
+    thread->RunNextTask(nsIThread::RUN_NORMAL);
+
+  NS_RunPendingTasks(thread);
+
+  NS_RELEASE_THIS();  // hack: see below
+  return NS_OK;
+
+#if 0
 	if (!mMacPump.get())
 		return NS_ERROR_NOT_INITIALIZED;
 
@@ -113,6 +138,7 @@ NS_IMETHODIMP nsAppShell::Run(void)
 	}
 
   return NS_OK;
+#endif
 }
 
 //-------------------------------------------------------------------------
@@ -122,18 +148,20 @@ NS_IMETHODIMP nsAppShell::Run(void)
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsAppShell::Exit(void)
 {
-	if (mMacPump.get())
-	{
-		Spindown();
-		mExitCalled = PR_TRUE;
-		++mRefCnt;			// hack: since the applications are likely to delete us
-										// after calling this method (see nsViewerApp::Exit()),
-										// we temporarily bump the refCnt to let the message pump
-										// exit properly. The object will delete itself afterwards.
-	}
+  if (!mMacPump.get())
+    return NS_OK;
+
+  Spindown();
+  mExitCalled = PR_TRUE;
+
+  NS_ADDREF_THIS(); // hack: since the applications are likely to delete us
+                    // after calling this method (see nsViewerApp::Exit()),
+                    // we temporarily bump the refCnt to let the message pump
+                    // exit properly. The object will delete itself afterwards.
 	return NS_OK;
 }
 
+#if 0
 //-------------------------------------------------------------------------
 //
 // respond to notifications that an event queue has come or gone
@@ -143,6 +171,7 @@ NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aLis
 { // unnecessary; handled elsewhere
   return NS_OK;
 }
+#endif
 
 //-------------------------------------------------------------------------
 //
@@ -151,12 +180,10 @@ NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aLis
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsAppShell::Spinup(void)
 {
-	if (mMacPump.get())
-	{
-		mMacPump->StartRunning();
-		return NS_OK;
-	}
-	return NS_ERROR_NOT_INITIALIZED;
+  NS_ENSURE_TRUE(mMacPump.get(), NS_ERROR_NOT_INITIALIZED);
+
+	mMacPump->StartRunning();
+	return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -184,15 +211,7 @@ nsAppShell::nsAppShell()
   mExitCalled = PR_FALSE;
 }
 
-//-------------------------------------------------------------------------
-//
-// nsAppShell destructor
-//
-//-------------------------------------------------------------------------
-nsAppShell::~nsAppShell()
-{
-}
-
+#if 0
 NS_METHOD
 nsAppShell::GetNativeEvent(PRBool &aRealEvent, void *&aEvent)
 {
@@ -214,4 +233,120 @@ nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
 
 	mMacPump->DispatchEvent(aRealEvent, (EventRecord *) aEvent);
 	return NS_OK;
+}
+#endif
+
+//-------------------------------------------------------------------------
+//
+// Thread observer methods
+//
+//-------------------------------------------------------------------------
+
+#if 0
+#if defined(XP_MACOSX)
+#if defined(MOZ_WIDGET_COCOA)
+#include <CoreFoundation/CoreFoundation.h>
+#define MAC_USE_CFRUNLOOPSOURCE
+#elif defined(TARGET_CARBON)
+/* #include <CarbonEvents.h> */
+/* #define MAC_USE_CARBON_EVENT */
+#include <CoreFoundation/CoreFoundation.h>
+#define MAC_USE_CFRUNLOOPSOURCE
+#endif
+#endif
+
+#if defined(MAC_USE_CFRUNLOOPSOURCE)
+    CFRunLoopSourceRef  mRunLoopSource;
+    CFRunLoopRef        mMainRunLoop;
+#elif defined(MAC_USE_CARBON_EVENT)
+    EventHandlerUPP     eventHandlerUPP;
+    EventHandlerRef     eventHandlerRef;
+#endif
+
+static void _md_CreateEventQueue( PLEventQueue *eventQueue )
+{
+#if defined(MAC_USE_CFRUNLOOPSOURCE)
+    CFRunLoopSourceContext sourceContext = { 0 };
+    sourceContext.version = 0;
+    sourceContext.info = (void*)eventQueue;
+    sourceContext.perform = _md_EventReceiverProc;
+
+    /* make a run loop source */
+    eventQueue->mRunLoopSource = CFRunLoopSourceCreate(kCFAllocatorDefault, 0 /* order */, &sourceContext);
+    PR_ASSERT(eventQueue->mRunLoopSource);
+    
+    eventQueue->mMainRunLoop = CFRunLoopGetCurrent();
+    CFRetain(eventQueue->mMainRunLoop);
+    
+    /* and add it to the run loop */
+    CFRunLoopAddSource(eventQueue->mMainRunLoop, eventQueue->mRunLoopSource, kCFRunLoopCommonModes);
+
+#elif defined(MAC_USE_CARBON_EVENT)
+    eventQueue->eventHandlerUPP = NewEventHandlerUPP(_md_EventReceiverProc);
+    PR_ASSERT(eventQueue->eventHandlerUPP);
+    if (eventQueue->eventHandlerUPP)
+    {
+      EventTypeSpec     eventType;
+
+      eventType.eventClass = kEventClassPL;
+      eventType.eventKind  = kEventProcessPLEvents;
+
+      InstallApplicationEventHandler(eventQueue->eventHandlerUPP, 1, &eventType,
+                                     eventQueue, &eventQueue->eventHandlerRef);
+      PR_ASSERT(eventQueue->eventHandlerRef);
+    }
+#endif
+} /* end _md_CreateEventQueue() */
+
+static PRStatus
+_pl_NativeNotify(PLEventQueue* self)
+{
+#if defined(MAC_USE_CFRUNLOOPSOURCE)
+  	CFRunLoopSourceSignal(self->mRunLoopSource);
+  	CFRunLoopWakeUp(self->mMainRunLoop);
+#elif defined(MAC_USE_CARBON_EVENT)
+    OSErr err;
+    EventRef newEvent;
+    if (CreateEvent(NULL, kEventClassPL, kEventProcessPLEvents,
+                    0, kEventAttributeNone, &newEvent) != noErr)
+        return PR_FAILURE;
+    err = SetEventParameter(newEvent, kEventParamPLEventQueue,
+                            typeUInt32, sizeof(PREventQueue*), &self);
+    if (err == noErr) {
+        err = PostEventToQueue(GetMainEventQueue(), newEvent, kEventPriorityLow);
+        ReleaseEvent(newEvent);
+    }
+    if (err != noErr)
+        return PR_FAILURE;
+#endif
+    return PR_SUCCESS;
+}
+#endif
+
+NS_IMETHODIMP nsAppShell::OnNewTask(nsIThreadInternal *thr, PRUint32 flags)
+{
+  // post a message to the native event queue...
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsAppShell::OnBeforeRunNextTask(nsIThreadInternal *thr,
+                                              PRUint32 flags)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsAppShell::OnAfterRunNextTask(nsIThreadInternal *thr,
+                                             PRUint32 flags,
+                                             nsresult status)
+{
+  // process any pending native events...
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsAppShell::OnWaitNextTask(nsIThreadInternal *thr,
+                                         PRUint32 flags)
+{
+  // while (!thr->HasPendingTask())
+  //   wait for and process native events
+  return NS_OK;
 }

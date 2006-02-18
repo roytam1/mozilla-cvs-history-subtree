@@ -57,7 +57,6 @@
 
 #include "nsRepeater.h"
 
-#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 
 #include "prthread.h"
