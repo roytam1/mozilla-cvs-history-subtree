@@ -65,8 +65,7 @@
                 label="&copyCmd.label;"
                 accesskey="&copyCmd.accesskey;"
                 command="cmd_copy"
-                disabled="true"
-                />
+                disabled="true"/>
       <menuitem id="context-selectall"
                 label="&selectAllCmd.label;"
                 accesskey="&selectAllCmd.accesskey;"
