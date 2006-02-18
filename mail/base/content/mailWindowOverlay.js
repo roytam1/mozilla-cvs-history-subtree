@@ -2326,7 +2326,11 @@ function OnMsgLoaded(aUrl)
     // if the user clicks on another message then that message stays selected
     // and the selection does not "snap back" to the message chosen by
     // SetNextMessageAfterDelete() when the operation completes (bug 243532).
-    gNextMessageViewIndexAfterDelete = -2;
+    // But the just loaded message might be getting deleted, if the user
+    // deletes it before the message is loaded (bug 183394)
+    var wintype = document.documentElement.getAttribute('windowtype');
+    if (wintype == "mail:messageWindow" || GetThreadTree().view.selection.currentIndex != gSelectedIndexWhenDeleting)
+      gNextMessageViewIndexAfterDelete = -2;
 
     if (!(/type=application\/x-message-display/.test(msgURI)))
       msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
@@ -2340,7 +2344,6 @@ function OnMsgLoaded(aUrl)
 
     if (msgHdr && !msgHdr.isRead)
     {
-      var wintype = document.firstChild.getAttribute('windowtype');
       if (markReadOnADelay && wintype == "mail:3pane") // only use the timer if viewing using the 3-pane preview pane and the user has set the pref
       {
         ClearPendingReadTimer();
