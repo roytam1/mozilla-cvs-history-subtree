@@ -1681,7 +1681,7 @@ sub run_all_tests {
     unlink("$binary_dir/components/compreg.dat") or warn "$binary_dir/components/compreg.dat not removed\n";
     if($Settings::RegxpcomTest) {
         my $args;
-        if ($Settings::ProductName =~ /^(Firefox|Thunderbird|SeaMonkey)$/) {
+        if ($Settings::ProductName =~ /^(Firefox|Thunderbird)$/) {
             $args = [$binary, "-register"];
         } else {
             $args = ["$binary_dir/regxpcom"];
