@@ -965,7 +965,7 @@ BasicTableLayoutStrategy::AssignNonPctColumnWidths(nscoord                  aMax
                                                    const nsHTMLReflowState& aReflowState)
 {
 #ifdef DEBUG_TABLE_STRATEGY
-  printf("AssignNonPctColWidths en max=%d count=%d \n", aMaxWidth, gsDebugCount++); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
+  printf("AssignNonPctColumnWidths en max=%d count=%d \n", aMaxWidth, gsDebugCount++); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
 #endif
   PRInt32 numRows = mTableFrame->GetRowCount();
   PRInt32 numCols = mTableFrame->GetColCount();
@@ -1152,7 +1152,7 @@ BasicTableLayoutStrategy::AssignNonPctColumnWidths(nscoord                  aMax
   }
 
 #ifdef DEBUG_TABLE_STRATEGY
-  printf("AssignNonPctColWidths ex\n"); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
+  printf("AssignNonPctColumnWidths ex\n"); mTableFrame->Dump(PR_FALSE, PR_TRUE, PR_FALSE);
 #endif
   return hasPctCol;
 }
