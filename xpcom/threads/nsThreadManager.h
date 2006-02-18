@@ -62,13 +62,14 @@ public:
   void Shutdown();
 
 private:
-  nsThreadManager() : mCurThreadIndex(0) {}
+  nsThreadManager() : mCurThreadIndex(0), mMainPRThread(nsnull) {}
   ~nsThreadManager() {}
   
   static nsThreadManager sInstance;
 
   nsInterfaceHashtableMT<nsCStringHashKey, nsIThread> mThreads;
   PRUintn mCurThreadIndex;  // thread-local-storage index
+  PRThread *mMainPRThread;
 };
 
 #define NS_THREADMANAGER_CLASSNAME "nsThreadManager"

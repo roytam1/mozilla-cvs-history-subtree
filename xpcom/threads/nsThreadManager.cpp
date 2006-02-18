@@ -86,6 +86,7 @@ nsThreadManager::Init()
     return NS_ERROR_OUT_OF_MEMORY;
   mainThread->InitCurrentThread();
 
+  mMainPRThread = mainThread->mThread;
   return NS_OK;
 }
 
@@ -210,9 +211,6 @@ nsThreadManager::SetCurrentThread(nsIThread *thread, nsIThread **result)
 NS_IMETHODIMP
 nsThreadManager::IsMainThread(PRBool *result)
 {
-  nsCOMPtr<nsIThread> mainThread;
-  GetMainThread(getter_AddRefs(mainThread));
-  NS_ENSURE_STATE(mainThread);
-
-  return mainThread->IsOnCurrentThread(result);
+  *result = (PR_GetCurrentThread() == mMainPRThread);
+  return NS_OK;
 }
