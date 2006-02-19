@@ -42,7 +42,8 @@ EXPORTED_SYMBOLS = [ "getUIEventQ",
                      "makeOneShotTimer",
                      "resetOneShotTimer",
                      "schedule",
-                     "schedulePeriodic"];
+                     "schedulePeriodic",
+                     "callAsync"];
 
 // object to hold module's documentation:
 var _doc_ = {};
@@ -115,4 +116,21 @@ function schedulePeriodic(fct, period) {
                          period,
                          this.Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
   return timer;
+}
+
+
+// Call 'fct' asynchronously:
+function callAsync(fct) {
+  schedule(fct, 0);
+//   // XXX we *really* want a new method on nsIEventTarget for posting
+//   // from JS here. setTimeout is not a good idea, since, among other
+//   // things, it sets up a 10ms timer even if the timeout value is 0ms.
+//   // This means that there is the potential for race conditions - the
+//   // call is not guaranteed to be the next one in the queue.
+//   var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+//                      .getService(Components.interfaces.nsIWindowMediator);
+//   var enumerator = wm.getEnumerator(null);
+//   var retval = [];
+//   if (!enumerator.hasMoreElements()) return; // can't post
+//   enumerator.getNext().setTimeout(fct, 0);
 }

@@ -58,6 +58,7 @@
     <command id="cmd_exit" oncommand="cmdExit()"/>
     <command id="cmd_about" oncommand="cmdAbout()"/>
     <command id="cmd_generic_request" oncommand="cmdGenericRequest()"/>
+    <command id="cmd_subscribe_request" oncommand="cmdSubscribeRequest()"/>
   </commandset>
 
   <toolbox>
@@ -84,6 +85,9 @@
           <menuitem label="Send generic request..."
                     accesskey="g"
                     command="cmd_generic_request" />
+          <menuitem label="Send SUBSCRIBE request..."
+                    accesskey="s"
+                    command="cmd_subscribe_request" />
         </menupopup>
       </menu>
       <menu label="Help"

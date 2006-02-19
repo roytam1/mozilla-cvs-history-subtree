@@ -238,6 +238,29 @@ SipUAStack.fun(
     return rc;
   });
 
+//   zapISipSubscribeRC createSubscribeRequestClient(in zapISipAddress ToAddress,
+//                                                   in zapISipAddress FromAddress,
+//                                                   in zapISipAddress contactAddress,
+//                                                   in ACString eventType,
+//                                                   [array, size_is(count)]
+//                                                   in zapISipAddress routeset,
+//                                                   in unsigned long count,
+//                                                   in unsigned long rcFlags);
+SipUAStack.fun(
+  function createSubscribeRequestClient(ToAddress, FromAddress,
+                                        contactAddress, eventType,
+                                        routeset, count, rcFlags) {
+    var rc = SipSubscribeRC.instantiate();
+    var request = this.formulateGenericRequest("SUBSCRIBE", ToAddress.uri,
+                                               ToAddress, FromAddress,
+                                               routeset, count);
+    // add mandatory Contact header (RFC3265 7.1):
+    request.appendHeader(gSyntaxFactory.createContactHeader(contactAddress));
+    // add mandatory Event header (RFC3265 3.1.2, 7.1):
+    request.appendHeader(gSyntaxFactory.deserializeHeader("Event", eventType));
+    rc.init(this, request, rcFlags);
+    return rc;
+  });
 
 SipUAStack.fun(
   function formulateResponse(statusCode, request, toTag) {
@@ -399,6 +422,10 @@ SipUAStack.fun(
           // The dialog does not exist. Reject with a 481
           // (Call/Transaction Does Not Exist). (RFC3261 12.2.2)
           // But only if it's not an ACK!
+
+          this._dump("no dialog found for "+constructServerDialogID(message));
+          this._dump("dialog pool:");
+          hashmap(this.dialogPool, function(n, o) { this._dump(n); });
           
           var response = this.formulateResponse("481", message, null);
           this.sendTransactionalResponse(response, message);
@@ -466,8 +493,11 @@ SipUAStack.fun(
       }
       else if (method == "BYE") {
         // RFC3261 15.1.2
-        if (rs.dialog)
+        if (rs.dialog) {
           response = rs.formulateResponse("200");
+          if (rs.dialog.dialogState != "TERMINATED")
+            rs.dialog.terminateDialog();
+        }
         else {
           this._dump("BYE request with dialog id "+
                      constructServerDialogID(rs.request)+
@@ -541,7 +571,13 @@ SipUAStack.fun(
 SipUAStack.fun(
   function createDialogUAS(request, response) {
     var dialog = SipDialog.instantiate();
-    dialog.initUAS(this, request, response);
+    try {
+      dialog.initUAS(this, request, response);
+    }
+    catch(e) {
+      this._dump("Error creating dialog: "+e);
+      return null;
+    }
     return dialog;
   });
 
@@ -549,7 +585,13 @@ SipUAStack.fun(
 SipUAStack.fun(
   function createDialogUAC(request, response) {
     var dialog = SipDialog.instantiate();
-    dialog.initUAC(this, request, response);
+    try {
+      dialog.initUAC(this, request, response);
+    }
+    catch(e) {
+      this._dump("Error creating dialog: "+e);
+      return null;
+    }
     return dialog;
   });
 

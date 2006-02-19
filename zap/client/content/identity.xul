@@ -120,13 +120,16 @@
           flags="dont-buid-content"
           ref="urn:mozilla:zap:root">
       <template>
-        <rule><!-- NON-REGISTERED IDENTITY -->
-          <conditions>
-            <content uri="?dummy"/>
-            <member container="?dummy" child="?node"/>
+        <query>
+            <content uri="?uri"/>
+            <member container="?uri" child="?node"/>
             <triple subject="?node"
                     predicate="urn:mozilla:zap:registration_status"
-                    object=""/>                
+                    object="?obj"/> 
+        </query>
+        <rule><!-- NON-REGISTERED IDENTITY -->
+          <conditions>
+            <where subject="?obj" rel="equals" value=""/>
           </conditions>
           <action>
             <groupbox flex="1" uri="?node">
@@ -141,11 +144,7 @@
         </rule>
         <rule><!-- REGISTERED IDENTITY -->
           <conditions>
-            <content uri="?dummy"/>
-            <member container="?dummy" child="?node"/>
-            <triple subject="?node"
-                    predicate="urn:mozilla:zap:registration_status"
-                    object="registered"/>                
+            <where subject="?obj" rel="equals" value="registered"/>
           </conditions>
           <action>
             <groupbox flex="1" uri="?node">
@@ -160,11 +159,7 @@
         </rule>
         <rule><!-- REGISTERING IDENTITY -->
           <conditions>
-            <content uri="?dummy"/>
-            <member container="?dummy" child="?node"/>
-            <triple subject="?node"
-                    predicate="urn:mozilla:zap:registration_status"
-                    object="registering"/>   
+            <where subject="?obj" rel="equals" value="registering"/>
           </conditions>
           <action>
             <groupbox flex="1" uri="?node">

@@ -11,33 +11,35 @@ MODULE       = zap_sip
 XPIDL_MODULE = zap_sip
 
 XPIDLSRCS = \
-	zapISipConnection.idl \
-	zapISipFlow.idl \
-	zapISipFlowMonitor.idl \
-	zapISipTransceiver.idl \
-	zapISipListeningSocket.idl \
-	zapISipUAStack.idl \
-	zapISipTransport.idl \
-	zapISipTransactionManager.idl \
-	zapISipServerTransaction.idl \
-	zapISipServerTransactionUser.idl \
+	zapISipAuthentication.idl \
 	zapISipClientTransactionUser.idl \
-	zapISipEndpoint.idl \
-	zapISipResolveListener.idl \
-	zapISipResolver.idl \
+	zapISipConnection.idl \
 	zapISipDialog.idl \
 	zapISipDialogListener.idl \
-	zapISipRequestHandler.idl \
-	zapISipNonInviteRC.idl \
-	zapISipNonInviteRCListener.idl \
-	zapISipNonInviteRS.idl \
-	zapISipNonInviteRSListener.idl \
+	zapISipEndpoint.idl \
+	zapISipFlow.idl \
+	zapISipFlowMonitor.idl \
 	zapISipInviteRC.idl \
 	zapISipInviteRCListener.idl \
 	zapISipInviteRS.idl \
 	zapISipInviteRSListener.idl \
 	zapISipInviteResponseHandler.idl \
-	zapISipAuthentication.idl \
+	zapISipListeningSocket.idl \
+	zapISipNonInviteRC.idl \
+	zapISipNonInviteRCListener.idl \
+	zapISipNonInviteRS.idl \
+	zapISipNonInviteRSListener.idl \
+	zapISipRequestHandler.idl \
+	zapISipResolveListener.idl \
+	zapISipResolver.idl \
+	zapISipServerTransaction.idl \
+	zapISipServerTransactionUser.idl \
+	zapISipSubscribeRC.idl \
+	zapISipSubscribeResponseHandler.idl \
+	zapISipTransactionManager.idl \
+	zapISipTransceiver.idl \
+	zapISipTransport.idl \
+	zapISipUAStack.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

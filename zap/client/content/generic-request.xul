@@ -40,10 +40,11 @@
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <page id="zap_generic_request"
-        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        xmlns:html="http://www.w3.org/1999/xhtml"
-        onload="initPage()"
-        onunload="cleanup()">
+      class="zap-form"
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      onload="initPage()"
+      onunload="cleanup()">
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
@@ -56,8 +57,6 @@
     }    
 
     function generateTemplate() {
-      if (wRC)
-        wRC.listener = null;
       // try to parse address:
       var address;
       try {
@@ -92,14 +91,17 @@
           if (!this.triedCredentials &&
               (response.statusCode == "401" ||
                response.statusCode == "407")) {
-            // retry with credentials:
-            if (parent.wSipStack.authentication.
-                addAuthorizationHeaders(parent.wCurrentIdentity,
-                                        response,
-                                        rc.request)) {
-              //this.triedCredentials = true;
-              rc.sendRequest(this);
-            } 
+            // retry asynchronously with credentials:
+            var handler = this;
+            parent.callAsync(function () {
+                        if (parent.wSipStack.authentication.
+                            addAuthorizationHeaders(parent.wCurrentIdentity,
+                                                    response,
+                                                    rc.request)) {
+                          //this.triedCredentials = true;
+                          rc.sendRequest(handler);
+                        }
+                      });
           }
         }
       };
@@ -121,8 +123,8 @@
   </script>
 
 
-  <vbox id="module_page" flex="1">
-    <label class="titlebox" value="Send Generic Non-Invite Request"/>
+  <vbox class="zap-form-body">
+    <label class="zap-form-title" value="Send Generic Non-Invite Request"/>
     <label value="Remote party:"/>
     <textbox id="remote" value="sip:613@fwd.pulver.com"/>
     <label value="Method:"/>

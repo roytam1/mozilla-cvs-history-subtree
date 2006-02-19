@@ -205,18 +205,18 @@ SipInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
+            t.TU.handleProvisionalResponse(r, flow);
           t.changeState(t.Proceeding);
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
+            t.TU.handleSuccessResponse(r, flow);
           t.changeState(t.Terminated);
           break;
         default: // 300 - 699
           t.sendACK(r);
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
+            t.TU.handleFailureResponse(r, flow);
           t.changeState(t.Completed);
           break;
       }
@@ -233,7 +233,7 @@ SipInviteClientTransaction.obj(
       else if (timer == t.timerB) {
         t._dump("Timer B fired.");
         if (t.TU)
-          callAsync(function() { t.TU.handleTimeout(); });
+          t.TU.handleTimeout();
         t.changeState(t.Terminated);
       }
     }
@@ -258,17 +258,17 @@ SipInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
+            t.TU.handleProvisionalResponse(r, flow);
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
+            t.TU.handleSuccessResponse(r, flow);
           t.changeState(t.Terminated);
           break;
         default: // 300 - 699
           t.sendACK(r);
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
+            t.TU.handleFailureResponse(r, flow);
           t.changeState(t.Completed);
           break;
       }
@@ -397,17 +397,17 @@ SipNonInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
+            t.TU.handleProvisionalResponse(r, flow);
           t.changeState(t.Proceeding);
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
+            t.TU.handleSuccessResponse(r, flow);
           t.changeState(t.Completed);
           break;
         default: // 300 - 699
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
+            t.TU.handleFailureResponse(r, flow);
           t.changeState(t.Completed);
           break;
       }
@@ -425,7 +425,7 @@ SipNonInviteClientTransaction.obj(
       else if (timer == t.timerF) {
         t._dump("Timer F fired.");
         if (t.TU)
-          callAsync(function() { t.TU.handleTimeout(); });
+          t.TU.handleTimeout();
         t.changeState(t.Terminated);
       }
     }
@@ -445,16 +445,16 @@ SipNonInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
+            t.TU.handleProvisionalResponse(r, flow);
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
+            t.TU.handleSuccessResponse(r, flow);
           t.changeState(t.Completed);
           break;
         default: // 300 - 699
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
+            t.TU.handleFailureResponse(r, flow);
           t.changeState(t.Completed);
           break;
       }
@@ -472,7 +472,7 @@ SipNonInviteClientTransaction.obj(
       else if (timer == t.timerF) {
         t._dump("Timer F fired.");
         if (t.TU)
-          callAsync(function() { t.TU.handleTimeout(); });
+          t.TU.handleTimeout();
         t.changeState(t.Terminated);
       }
     }
@@ -693,7 +693,7 @@ SipInviteServerTransaction.obj(
       else if (timer == t.timerH) {
         t._dump("Timer H fired.");
         if (t.TU)
-          callAsync(function() { t.TU.handleTimeout(t); });
+          t.TU.handleTimeout(t);
         t.changeState(t.Terminated);
       }
       
@@ -748,7 +748,7 @@ SipInviteServerTransaction.obj(
       log(t._name_+": TERMINATED");
       t._dump("Entering 'Terminated' state");
       if (t.TU)
-        callAsync(function() { t.TU.transactionTerminated(t); });
+        t.TU.transactionTerminated(t);
       
       // remove transaction from pool:
       t.manager.unregisterServerTransaction(t);
@@ -895,7 +895,7 @@ SipNonInviteServerTransaction.obj(
       log(t._name_+": TERMINATED");
       t._dump("Entering 'Terminated' state");
       if (t.TU)
-        callAsync(function() { t.TU.transactionTerminated(t); });
+        t.TU.transactionTerminated(t);
       
       // remove transaction from pool:
       t.manager.unregisterServerTransaction(t);

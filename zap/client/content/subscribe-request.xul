@@ -1,0 +1,274 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2006
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<page id="zap_subscribe_request"
+      class="zap-form"
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      onload="initPage()"
+      onunload="cleanup()">
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wRC, wDialog, wContactAddress;
+    var request, log, remote, evt;
+    var connected_chrome, unconnected_chrome;
+    function initPage() {
+      document.getElementById("remote").value = parent.wCurrentIdentity["http://home.netscape.com/NC-rdf#Name"];
+      request = document.getElementById("request");
+      log = document.getElementById("log");
+      remote = document.getElementById("remote");
+      evt = document.getElementById("event");
+      connected_chrome = document.getElementById("connected-chrome");
+      unconnected_chrome = document.getElementById("unconnected-chrome");
+    }    
+
+    function generateTemplate() {
+      wContactAddress = parent.wCurrentIdentity.getRoutingInfo() ? 
+                        parent.wCurrentIdentity.getRoutingInfo().contact :
+                        parent.wCurrentIdentity.getUAContactAddress();
+
+      // try to parse remote address:
+      var address;
+      try {
+        address = remote.value;
+        address = parent.wSipStack.syntaxFactory.deserializeAddress(address);
+      } catch(e) {
+        alert("Invalid address: "+address+"\n");
+        return;
+      }
+
+      var route = parent.wCurrentIdentity.getRoutingInfo() ? parent.wCurrentIdentity.getRoutingInfo().routeset : [];
+
+      wRC = parent.wSipStack.createSubscribeRequestClient(address, 
+                                                          parent.wCurrentIdentity.getFromAddress(),
+                                                          wContactAddress,
+                                                          evt.value,
+                                                          route,
+                                                          route.length,
+                                                          parent.wCurrentIdentity.getRCFlags());
+      request.value = wRC.request.serialize();
+    }
+
+    function generateInDialogTemplate() {
+      if (!wDialog) {
+        alert("No dialog!");
+        return;
+      }
+      wRC = wDialog.createNonInviteRequestClient("SUBSCRIBE");
+      wRC.request.appendHeader(parent.wSipStack.syntaxFactory.createContactHeader(wContactAddress));
+      wRC.request.appendHeader(parent.wSipStack.syntaxFactory.deserializeHeader("Event", evt.value));
+      request.value = wRC.request.serialize();
+    }
+
+    function sendInitialRequest() {
+      if (!wRC) {
+        alert("Generate a request first!");
+        return;
+      }
+      var handler = {
+        handleResponse : function(rc, response) {
+          if (document) {
+            log.value = log.value += "Response received:\n"+
+                        response.serialize();
+            // update the request field, so that we get the updated CSeq, etc:
+            if (!wDialog)
+              request.value = rc.request.serialize();
+            // else... we are done with the out-of-dialog request
+          }
+          if (response.statusCode == "401" ||
+              response.statusCode == "407") {
+            // retry with credentials:
+            var handler = this; 
+            parent.callAsync(function() {
+                        if (parent.wSipStack.authentication.
+                          addAuthorizationHeaders(parent.wCurrentIdentity,
+                                                  response,
+                                                  rc.request)) {
+                          log.value = log.value + "Resending with credentials\n";
+                          rc.sendSubscribe(handler);
+                        } 
+                      });
+          }
+        },
+        handleNewDialog : function(rc, dialog, message) {
+          log.value = log.value + "Dialog established\n";
+          wDialog = dialog;
+          unconnected_chrome.hidden = true;
+          connected_chrome.hidden = false;
+          request.value = "";
+          wRC = null;
+
+          dialog.listener = {
+            notifyDialogTerminated : function(dialog) {
+              if (document) {
+                log.value = log.value += "Dialog terminated\n";
+                 connected_chrome.hidden = true;
+              }
+            }
+          };
+
+          dialog.requestHandler = {
+            handleNonInviteRequest : function(rs) {
+              log.value = log.value + "In-dialog request received:\n"+
+                          rs.request.serialize();
+              if (rs.request.method == "NOTIFY") {
+                log.value = log.value + "Sending 200\n";
+                rs.sendResponse(rs.formulateResponse("200"));
+                return true;
+              }
+              log.value + "Not handling request\n";
+              return false;
+            },
+            handleInviteRequest : function(rs) {
+              log.value = log.value + "In-dialog invite received. Not handling\n";
+              return false;
+            }
+          };
+        }
+      };
+      var requestTxt = request.value;
+      requestTxt = requestTxt.replace(/\r/g, "");
+      requestTxt = requestTxt.replace(/\n/g, "\r\n");
+      try {
+      wRC.request = parent.wSipStack.syntaxFactory.deserializeMessage(requestTxt);
+      }
+      catch(e) {
+        alert("Error parsing request:\n"+e);
+        return;
+      }
+      log.value = log.value + "Sending initial SUBSCRIBE...\n";
+      wRC.sendSubscribe(handler);
+    }
+
+    function sendInDialogRequest() {
+      if (!wRC) {
+        alert("Generate a request first");
+        return;
+      }
+      var listener = {
+        notifyResponseReceived : function(rc, dialog, response, flow) {
+          if (document) {
+            log.value = log.value += "Response received:\n"+
+                        response.serialize();
+            // update the request field, so that we get the updated CSeq, etc:
+            request.value = rc.request.serialize();
+          }
+          if (response.statusCode == "401" ||
+              response.statusCode == "407") {
+            // retry with credentials:
+            var handler = this; 
+            parent.callAsync(function() {
+                        if (parent.wSipStack.authentication.
+                          addAuthorizationHeaders(parent.wCurrentIdentity,
+                                                  response,
+                                                  rc.request)) {
+                          log.value = log.value + "Resending with credentials\n";
+                          rc.sendSubscribe(handler);
+                        } 
+                      });
+          }
+          
+        }};
+
+      var requestTxt = request.value;
+      requestTxt = requestTxt.replace(/\r/g, "");
+      requestTxt = requestTxt.replace(/\n/g, "\r\n");
+      try {
+      wRC.request = parent.wSipStack.syntaxFactory.deserializeMessage(requestTxt);
+      }
+      catch(e) {
+        alert("Error parsing request:\n"+e);
+        return;
+      }
+      log.value = log.value + "Sending in-dialog request...\n";
+      wRC.sendRequest(listener);
+    }
+
+    function cleanup() {
+      terminateDialog();
+      if (wRC) {
+        wRC = null;
+      }
+    }
+
+    function terminateDialog() {
+      if (!wDialog) return;
+      wDialog.terminateDialog();
+      wDialog = null;
+    }
+
+  ]]>
+  </script>
+
+
+  <vbox class="zap-form-body" flex="1">
+    <label class="zap-form-title" value="SUBSCRIBE Request Tester"/>
+    <vbox id="unconnected-chrome">
+      <label value="Remote party:"/>
+      <textbox id="remote" />
+      <label value="Event:"/>
+      <textbox id="event" value="presence"/>
+      <hbox>
+        <spacer flex="1"/>
+        <button label="Generate template" oncommand="generateTemplate()"/>
+        <button label="Send request" oncommand="sendInitialRequest()"/>
+      </hbox>
+    </vbox>
+    <vbox id="connected-chrome" hidden="true">
+      <hbox>
+        <spacer flex="1"/>
+        <button label="Generate in-dialog request template" oncommand="generateInDialogTemplate();"/>
+        <button label="Send in-dialog request" oncommand="sendInDialogRequest()"/>
+        <button label="Terminate dialog" oncommand="terminateDialog();"/>
+      </hbox>
+    </vbox>
+    <label value="Request (click 'generate' button for template, then maybe edit, then send):"/>
+    <textbox id="request"
+             multiline="true" rows="8" />
+    <label value="Log:"/>
+    <textbox id="log" class="ro_modulefield"
+             multiline="true" flex="1" /> 
+  </vbox>
+</page>

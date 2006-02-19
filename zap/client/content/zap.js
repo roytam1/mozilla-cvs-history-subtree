@@ -266,6 +266,11 @@ function cmdGenericRequest() {
   loadPage("chrome://zap/content/generic-request.xul", false);
 }
 
+function cmdSubscribeRequest() {
+  loadPage("chrome://zap/content/subscribe-request.xul", false);
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 // Interaction pane:
 
@@ -1426,13 +1431,30 @@ Registration.fun(
     if (response.statusCode[0] == "1")
       return; // just a provisional response
 
-    if ((response.statusCode == "401" ||
-         response.statusCode == "407") &&
-        wSipStack.authentication.addAuthorizationHeaders(this.group.identity,
-                                                         response,
-                                                         rc.request)) {
-      // retry with credentials:
-      rc.sendRequest(this);
+    if (response.statusCode == "401" ||
+        response.statusCode == "407") {
+      // try to obtain new credentials. we need to do this
+      // asynchronously, because it might require user intervention:
+      var me = this;
+      callAsync(function() {
+                  if (wSipStack.authentication.addAuthorizationHeaders(me.group.identity,
+                                                                       response,
+                                                                       rc.request)) {
+                    // retry with credentials:
+                    rc.sendRequest(me);
+                    return;
+                  }
+                  else {
+                    me.registered = false;
+                    me.contactHeader = null;
+                    me.gruu = null;
+                    ++me.failureCount;
+                    me.setForeignRegistrations([]);
+                    me._unmonitorFlow();
+                    // let our registration group handle recovery:
+                    me.group.notifyRegistrationFailure(me);
+                  }
+                });
       return;
     }
     else if (response.statusCode == "423") {
@@ -2428,6 +2450,7 @@ OutboundCallHandler.fun(
       // from a forking proxy. send a bye immediately:
       // XXX probably not a good idea to do this before sending the ack
       dialog.createNonInviteRequestClient("BYE").sendRequest(null);
+      dialog.terminateDialog();
       return ackTemplate;
     }
 
@@ -2448,6 +2471,7 @@ OutboundCallHandler.fun(
       // send a BYE:
       // XXX need a way to send ACK first
       dialog.createNonInviteRequestClient("BYE").sendRequest(null);
+      dialog.terminateDialog();
       return ackTemplate;
     }
 
@@ -2463,6 +2487,7 @@ OutboundCallHandler.fun(
       // send a BYE:
       // XXX need a way to send ACK first
       dialog.createNonInviteRequestClient("BYE").sendRequest(null);
+      dialog.terminateDialog();
 
       return ackTemplate;
     }
@@ -2489,13 +2514,18 @@ OutboundCallHandler.fun(
     }
     else if (response.statusCode == "401" ||
              response.statusCode == "407") {
-      if (wSipStack.authentication.
-          addAuthorizationHeaders(wCurrentIdentity,
-                                  response,
-                                  rc.request)) {
-        // we've got new credentials -> retry
-        rc.sendInvite(this);
-      }
+      // try to obtain new credentials. we need to do this
+      // asynchronously, because it might require user intervention:
+      var handler = this;
+      callAsync(function() {
+                  if (wSipStack.authentication.
+                      addAuthorizationHeaders(wCurrentIdentity,
+                                              response,
+                                              rc.request)) {
+                    // we've got new credentials -> retry
+                    rc.sendInvite(handler);
+                  }
+                });
     }
 //     else if (response.statusCode == "301" ||
 //              ...) {

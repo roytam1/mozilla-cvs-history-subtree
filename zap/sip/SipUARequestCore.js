@@ -43,6 +43,7 @@
 debug("*** loading SipUARequestCore\n");
 
 EXPORTED_SYMBOLS = [ "SipNonInviteRC",
+                     "SipSubscribeRC",
                      "SipInviteRC",
                      "SipNonInviteRS",
                      "SipInviteRS"];
@@ -99,12 +100,6 @@ SipNonInviteRC.statefun(
   function sendRequest(listener) {
     this._listener = listener;
     this.active = true;
-    // If this is a BYE request terminate our associated dialog *now*:
-    if (this.dialog &&
-        this.request.method == "BYE" &&
-        this.dialog.dialogState != "TERMINATED") {
-      this.dialog.terminateDialog();
-    }
 
     // Figure out our destination uri (rfc3261 8.1.2):
     // If we have the top route is a loose router it will be our
@@ -689,6 +684,88 @@ SipInviteRC.fun(
 
 
 ////////////////////////////////////////////////////////////////////////
+// SipSubscribeRC
+// request client for sending out-of-dialog SUBSCRIBE requests (RFC3265)
+// INITIALIZED --> CALLING --> WAITING --> TERMINATED
+
+var SipSubscribeRC = makeClass("SipSubscribeRC", SupportsImpl, StateMachine);
+SipSubscribeRC.addInterfaces(Components.interfaces.zapISipSubscribeRC,
+                             Components.interfaces.zapISipNonInviteRCListener);
+
+SipSubscribeRC.fun(
+  function init(stack, request, flags) {
+    this.stack = stack;
+    // we leverage SipNonInviteRC:
+    this.rc = SipNonInviteRC.instantiate();
+    this.rc.init(stack, null, request, flags);
+
+    this.changeState("INITIALIZED");
+  });
+
+//----------------------------------------------------------------------
+// zapISipSubscribeRC
+
+//  attribute zapISipRequest request;
+SipSubscribeRC.gettersetter(
+  "request",
+  function get_request() { return this.rc.request; },
+  function set_request(r) { this.rc.request = r; });
+
+//  void sendSubscribe(in zapISipSubscribeResponseHandler rh);
+SipSubscribeRC.statefun(
+  "INITIALIZED",
+  function sendSubscribe(handler) {
+    this._handler = handler;
+    this.changeState("CALLING");
+    this.rc.sendRequest(this);
+  });
+
+//  void stopWaitingForDialogs();
+SipSubscribeRC.statefun(
+  "WAITING",
+  function stopWaitingForDialogs() {
+    this.state = "TERMINATED";
+  });
+
+//----------------------------------------------------------------------
+// zapISipNonInviteRCListener
+
+//   void notifyResponseReceived(in zapISipNonInviteRC requestClient,
+//                               in zapISipDialog dialog,
+//                               in zapISipResponse response,
+//                               in zapISipFlow flow);  
+SipSubscribeRC.fun(
+  function notifyResponseReceived(rc, dialog, response, flow) {
+    if (response.statusCode[0] == "2" && this.currentState != "TERMINATED") {
+      // check if we have a dialog already:
+      var dialog = this.stack.findDialog(constructClientDialogID(response));
+      if (!dialog) {
+        this.changeState("WAITING");
+        dialog = this.stack.createDialogUAC(this.rc.request, response);
+        if (dialog) {
+          if (this._handler)
+            this._handler.handleNewDialog(this, dialog, response);
+        }
+        else {
+          // the response was not acceptable for creating a dialog
+          // (e.g. missing contact header in the case of wengo)
+          this._dump("error creating dialog with: \n"+
+                     response.serialize());
+          // XXX maybe we should pass the error to our handler
+          // somehow
+        }
+      }
+    }
+    else if (response.statusCode[0] != "1") {
+      this.changeState("INITIALIZED");
+    }
+    
+    if (this._handler)
+      this._handler.handleResponse(this, response);
+  });
+
+
+////////////////////////////////////////////////////////////////////////
 // SipNonInviteRS
 // request server for receiving non-invite requests
 // INITIALIZED --> RESPONDING --> TERMINATED
@@ -782,12 +859,6 @@ SipNonInviteRS.fun(
 
 SipNonInviteRS.fun(
   function terminate() {
-    // if this was a BYE request, we need to terminate our associated
-    // dialog:
-    if (this.dialog && this.request.method == "BYE" &&
-        this.dialog.dialogState != "TERMINATED")
-      this.dialog.terminateDialog();
-
     this.changeState("TERMINATED");
 
     if (this.listener) {

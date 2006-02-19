@@ -349,19 +349,6 @@ SipDialog.statefun(
   });
 
 SipDialog.fun(
-  function terminate() {
-    this._dump("Dialog terminated");
-    this.stack.unregisterDialog(this);
-    this.changeState("TERMINATED");
-    if (this.listener) {
-      this.listener.notifyDialogTerminated(this);
-      this.listener = null;
-    }
-    else
-      this._warning("Dialog "+this.dialogID+" ("+this.currentState+") terminated but no listener. Backtrace: "+this._backtrace());
-  });
-
-SipDialog.fun(
   function formulateACK() {
     return this.formulateGenericRequest("ACK");
   });
