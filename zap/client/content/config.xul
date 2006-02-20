@@ -422,19 +422,22 @@
           </irow>
         </rows>
       </grid>
-      <igroup>
-        <checkbox type="zap-formwidget" label="Use short branch parameters"
-                  id="urn:mozilla:zap:short_branch_parameters"/>
-        <info>
-          <description>
-            By default, zap uses UUIDs (RFC4122) in transaction branch parameters to 
-            guarantee uniqueness across space and time as required by RFC3261. The
-            resulting branch parameters are 39 characters long, which some endpoints
-            have trouble processing. When this option is checked, zap will use 32 bit
-            branch parameters instead.
-          </description>
-        </info>
-      </igroup>
+      <groupbox flex="1">
+        <caption><label value="Compatibility"/></caption>
+        <igroup>
+          <checkbox type="zap-formwidget" label="Use short branch parameters"
+                    id="urn:mozilla:zap:short_branch_parameters"/>
+          <info>
+            <description>
+              By default, zap uses UUIDs (RFC4122) in transaction branch parameters to 
+              guarantee uniqueness across space and time as required by RFC3261. The
+              resulting branch parameters are 39 characters long, which some endpoints
+              have trouble processing. When this option is checked, zap will use 32 bit
+              branch parameters instead.
+            </description>
+          </info>
+        </igroup>
+      </groupbox>
       <button label="Configure SIP Services..." oncommand="configureServices()"/>
     </cgroup>
 

@@ -300,7 +300,7 @@
               Optional address of STUN server to use for STUN requests made for
               this service (e.g. to resolve the UA Contact Address, see below).
               If this field is empty, zap will use attempt to use the home domain 
-              name of this service instead.
+              name of this service instead when a STUN server is required.
               </description>
             </info>
           </irow>
@@ -316,32 +316,6 @@
           that used for STUN monitored flows (see <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a>).
           </description>
         </info>
-      </igroup>
-      <igroup>
-        <checkbox type="zap-formwidget" label="Elide destination route header" 
-                  id="urn:mozilla:zap:elide_destination_route_header"/>
-        <info>
-          <description>
-          Zap uses preloaded routes to set the first hop destination of outbound packets.
-          This means that outgoing requests outside of a dialog will contain a top Route 
-          header that is identical to the first hop. While this behavior is compliant to 
-          RFC3261, some registrars get confused by it and end up forwarding the request 
-          to themselves over and over until the Max-Forwards count is exhausted. 
-          To fix these buggy registrars, setting this checkbox will instruct zap to remove 
-          the top Route header of outgoing outside-of-dialog requests.
-          </description>
-        </info>      
-      </igroup>
-      <igroup>
-        <checkbox type="zap-formwidget" label="Match REGISTER contact address by grid only" 
-                  id="urn:mozilla:zap:register_grid_only_match"/>
-        <info>
-          <description>
-          Some services (e.g. Wengo) send REGISTER responses with contact addresses
-          that have an incorrect host part.
-          This option provides a workaround for this behaviour.
-          </description>
-        </info>      
       </igroup>
       <igroup>
         <groupbox flex="1">
@@ -375,6 +349,35 @@
           </description>
         </info>
       </igroup>
+      <groupbox flex="1">
+        <caption><label value="Compatibility"/></caption>      
+        <igroup>
+          <checkbox type="zap-formwidget" label="Elide destination route header" 
+                    id="urn:mozilla:zap:elide_destination_route_header"/>
+          <info>
+            <description>
+            Zap uses preloaded routes to set the first hop destination of outbound packets.
+            This means that outgoing requests outside of a dialog will contain a top Route 
+            header that is identical to the first hop. While this behavior is compliant to 
+            RFC3261, some registrars get confused by it and end up forwarding the request 
+            to themselves over and over until the Max-Forwards count is exhausted. 
+            To fix these buggy registrars, setting this checkbox will instruct zap to remove 
+            the top Route header of outgoing outside-of-dialog requests.
+            </description>
+          </info>      
+        </igroup>
+        <igroup>
+          <checkbox type="zap-formwidget" label="Match REGISTER contact address by grid only" 
+                    id="urn:mozilla:zap:register_grid_only_match"/>
+          <info>
+            <description>
+            Some services (e.g. Wengo) send REGISTER responses with contact addresses
+            that have an incorrect host part.
+            This option provides a workaround for this behaviour.
+            </description>
+          </info>      
+        </igroup>
+      </groupbox>
     </vbox>
   </vbox>
   </vbox>
