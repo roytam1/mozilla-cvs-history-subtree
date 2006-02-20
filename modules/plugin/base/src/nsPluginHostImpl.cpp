@@ -968,6 +968,7 @@ public:
     } else {
       NS_WARNING("missing library from nsPluginUnloadEvent");
     }
+    return NS_OK;
   }
 
   PRLibrary* mLibrary;
