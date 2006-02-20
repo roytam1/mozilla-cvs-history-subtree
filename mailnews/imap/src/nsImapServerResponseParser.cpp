@@ -2847,7 +2847,8 @@ void nsImapServerResponseParser::quota_data()
     do
     {
       AdvanceToNextToken();
-      quotaroot.Adopt(CreateAstring());
+      if (!fAtEndOfLine)
+        quotaroot.Adopt(CreateAstring());
     }
     while (ContinueParse() && !fAtEndOfLine);
   }
