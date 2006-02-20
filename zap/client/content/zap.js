@@ -2516,14 +2516,19 @@ OutboundCallHandler.fun(
              response.statusCode == "407") {
       // try to obtain new credentials. we need to do this
       // asynchronously, because it might require user intervention:
-      var handler = this;
+      var me = this;
       callAsync(function() {
                   if (wSipStack.authentication.
                       addAuthorizationHeaders(wCurrentIdentity,
                                               response,
                                               rc.request)) {
                     // we've got new credentials -> retry
-                    rc.sendInvite(handler);
+                    rc.sendInvite(me);
+                  }
+                  else {
+                    me.call["urn:mozilla:zap:status"] = "Cancelled";
+                    me.call.ringback.play("");
+                    me.terminate();
                   }
                 });
     }
