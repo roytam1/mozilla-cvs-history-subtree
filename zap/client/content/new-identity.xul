@@ -71,7 +71,8 @@
     function commit() {
       // add new identity to identities datasource:
       wIdentity.createFromDocument(document);
-      parent.registerIdentity(wIdentity);
+      if (wIdentity["urn:mozilla:zap:automatic_registration"] == "true")
+        parent.registerIdentity(wIdentity);
       parent.selectSidebarNode(wIdentity.resource.Value);
     }
 
