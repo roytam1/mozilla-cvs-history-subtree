@@ -151,6 +151,14 @@
 #define XREMOTE_MODULES
 #endif
 
+#ifdef MOZ_PLACES
+#define PLACES_MODULES \
+    MODULE(mozStorageModule)
+#else
+#define PLACES_MODULES \
+    MODULE(nsMorkModule)                     \
+#endif    
+
 #define XUL_MODULES                          \
     MODULE(xpcomObsoleteModule)              \
     MODULE(xpconnect)                        \
@@ -183,11 +191,11 @@
     MODULE(nsTransactionManagerModule)       \
     MODULE(nsComposerModule)                 \
     MODULE(nsChromeModule)                   \
-    MODULE(nsMorkModule)                     \
     MODULE(nsFindComponent)                  \
     MODULE(application)                      \
     MODULE(Apprunner)                        \
     MODULE(CommandLineModule)                \
+    PLACES_MODULES                           \
     MODULE(nsToolkitCompsModule)             \
     XREMOTE_MODULES                          \
     MODULE(nsSoftwareUpdate)                 \

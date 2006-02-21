@@ -131,7 +131,6 @@ COMPONENT_LIBS += \
 	txmgr \
 	composer \
 	chrome \
-	mork \
 	mozfind \
 	appcomps \
 	commandlines \
@@ -139,6 +138,15 @@ COMPONENT_LIBS += \
 	xpinstall \
 	jsd \
 	$(NULL)
+
+ifdef MOZ_PLACES
+COMPONENT_LIBS += storagecomps
+STATIC_LIBS += morkreader_s
+else
+COMPONENT_LIBS += \
+	mork \
+	$(NULL)
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 COMPONENT_LIBS += intlcmpt
