@@ -127,7 +127,13 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
 #ifdef DEBUG_afri_zmk
   printf("(audioin using device %d)", mInputDevice);
 #endif
-  return mStreamParameters.InitWithProperties(node_pars);
+  if (NS_FAILED(mStreamParameters.InitWithProperties(node_pars)))
+    return NS_ERROR_FAILURE;
+
+  // XXX shall we start playing now or later??
+  Play();
+  
+  return NS_OK;
 }
 
 /* void removedFromGraph (in zapIMediaGraph graph); */
