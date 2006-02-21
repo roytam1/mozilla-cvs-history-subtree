@@ -1336,10 +1336,26 @@ Registration.fun(
         // XXX what we want to do is cancel the RC.
       }
       else if (this.registered) {
-        // XXX maybe we shouldn't send unregistrations.
         var contactHeader = this.registrationRC.request.getTopContactHeader();
         contactHeader.setParameter("expires", "0");
-        this.registrationRC.sendRequest(null);
+        var me = this;
+        var listener = {
+          notifyResponseReceived : function(rc, dialog, response, flow) {
+            if (response.statusCode == "401" ||
+                response.statusCode == "407") {
+              callAsync(function() {
+                          if (wSipStack.authentication.
+                              addAuthorizationHeaders(me.group.identity,
+                                                      response,
+                                                      rc.request)) {
+                                // retry with credentials:
+                                rc.sendRequest(listener);
+                          }
+                        });
+            }
+          }
+        };
+        this.registrationRC.sendRequest(listener);
       }
       delete this.registrationRC;
     }
@@ -2065,7 +2081,7 @@ function initSipStack() {
                  makePropertyBag({$instance_id:wConfig["urn:mozilla:zap:instance_id"],
                                   $port_base:wConfig["urn:mozilla:zap:sip_port_base"],
                                      $short_branch_parameters:(wConfig["urn:mozilla:zap:short_branch_parameters"]=="true"),
-                                  $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
+                                  $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE,NOTIFY",
                                   $extensions: "path,gruu", // path: RFC3327, gruu: draft-ietf-sip-gruu-05.txt
                                   $user_agent: wUserAgent
                                  }));
