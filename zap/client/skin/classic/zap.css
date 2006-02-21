@@ -55,13 +55,29 @@
   font-size: 11px !important;
 }
 
-#menubar, #menubar > menu, statusbarpanel { 
+#main_toolbox { 
   -moz-appearance: none !important;
-  background-color: #b9b9b9;
+  border: none !important;
+  background-image: url("chrome://zap/skin/gradient1.png") !important;
+  background-repeat: repeat-x !important;
+}
+
+statusbarpanel { 
+  -moz-appearance: none !important;
+  background-color: #c5c5c5;
   color: #000000;
   font-size: inherit;
   border: none;
 }
+
+#menubar, #menubar > menu { 
+  -moz-appearance: none !important;
+  background-color: transparent;
+  color: #000000;
+  font-size: inherit;
+  border: none;
+}
+
 
 statusbar { 
   -moz-appearance: none !important;
@@ -75,7 +91,7 @@ statusbar {
   padding-left: 4px;
   padding-right: 4px;
   -moz-appearance: none !important;
-  background-color: #b9b9b9;
+  background-color: transparent;
   color: #000000;
   border: none;
   border-bottom: 1px solid #7a7a7a;

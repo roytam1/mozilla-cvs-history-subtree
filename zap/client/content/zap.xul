@@ -61,7 +61,7 @@
     <command id="cmd_subscribe_request" oncommand="cmdSubscribeRequest()"/>
   </commandset>
 
-  <toolbox>
+  <toolbox id="main_toolbox">
     <!-- Main menu bar -->
     <menubar id="menubar">
       <menu label="File"
