@@ -182,6 +182,22 @@
       <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="Synchronous audio i/o interface"
+                      id="urn:mozilla:zap:sync_audio_interface"/>
+            <info>
+              <description>
+              Selects between a synchronous or asynchronous audio interface.
+              A synchronous audio interface attempts to write and read from 
+              the audio hardware simultaneously. This can e.g. provide better 
+              echo cancellation performance, but might lead to choppy audio 
+              under some circumstances (e.g. on Windows XP when other 
+              applications are using the audio hardware).              
+              <html:br/>Changes to this field will take effect after a restart.
+              </description>
+            </info>
+          </igroup>
           <irow>
             <label control="urn:mozilla:zap:audioio_latency" value="Audio IO latency (ms):"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:audioio_latency"
@@ -192,6 +208,9 @@
                 audio hardware. Must be between 20ms and 10000ms. 
                 Set to a higher value if you experience choppy audio 
                 that can't be traced to network problems.                 
+                <html:br/>For a synchronous audio i/o interface, this value 
+                will likely need to be higher (maybe 2x) as for an 
+                asynchronous one.
                 <html:br/>This setting should be coordinated with the acoustic
                 echo cancellation window offset setting.
                 <html:br/>Changes to this field will take effect after a restart.

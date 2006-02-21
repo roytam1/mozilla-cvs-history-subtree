@@ -325,7 +325,8 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:short_branch_parameters", "true");
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
 
-Config.rdfLiteralAttrib("urn:mozilla:zap:audioio_latency", "160");
+Config.rdfLiteralAttrib("urn:mozilla:zap:sync_audio_interface", "false");
+Config.rdfLiteralAttrib("urn:mozilla:zap:audioio_latency", "80");
 Config.rdfLiteralAttrib("urn:mozilla:zap:aec", "false");
 Config.rdfLiteralAttrib("urn:mozilla:zap:aec_2_stage", "false");
 Config.rdfLiteralAttrib("urn:mozilla:zap:aec_window_offset", "160");
@@ -1870,9 +1871,19 @@ var wMediaPipeline = {
       // well-known media graph instance:
       this.mediagraph = Components.classes["@mozilla.org/zap/mediagraph;1"].getService(Components.interfaces.zapIMediaGraph);
 
-      // 8000Hz, 20ms, 1 channel audio pipe:      
-      this.audioio = this.mediagraph.addNode("audioio",
-                                             PB({$buffers:parseFloat(wConfig["urn:mozilla:zap:audioio_latency"])/20}));
+      // 8000Hz, 20ms, 1 channel audio pipe:
+      if (wConfig["urn:mozilla:zap:sync_audio_interface"]=="true") {
+        this.audioio = this.mediagraph.addNode("audioio",
+                                               PB({$buffers:parseFloat(wConfig["urn:mozilla:zap:audioio_latency"])/20}));
+      }
+      else {
+        this.audioin = this.mediagraph.addNode("audioin",
+                                               PB({$buffers:parseFloat(wConfig["urn:mozilla:zap:audioio_latency"])/20}));
+        this.audioout = this.mediagraph.addNode("audioout",
+                                                PB({$buffers:parseFloat(wConfig["urn:mozilla:zap:audioio_latency"])/20}));
+        this.echotap = this.mediagraph.addNode("stream-tap", null);
+      }
+      
       this.asplitter = this.mediagraph.addNode("splitter", null);
       this.amixer = this.mediagraph.addNode("audio-mixer", null);
       this.echoBuf = this.mediagraph.addNode("buffer",
@@ -1895,19 +1906,38 @@ var wMediaPipeline = {
              $dereverb_decay: wConfig["urn:mozilla:zap:dereverb_decay"]
            }));
 
-      // output pipe:
-      this.mediagraph.connect(this.amixer, null,
-                              this.audioio, null);
-      this.mediagraph.connect(this.audioio, PB({$name:"monitor"}),
-                              this.echoBuf, null);
+      if (wConfig["urn:mozilla:zap:sync_audio_interface"]=="true") {
+        // output pipe:
+        this.mediagraph.connect(this.amixer, null,
+                                this.audioio, null);
+        this.mediagraph.connect(this.audioio, PB({$name:"monitor"}),
+                                this.echoBuf, null);
+        
+        // input pipe:
+        this.mediagraph.connect(this.audioio, PB({$name:"ain"}),
+                                this.dsp, PB({$name:"input"}));
+        this.mediagraph.connect(this.echoBuf, null,
+                                this.dsp, PB({$name:"echo"}));
+        this.mediagraph.connect(this.dsp, null,
+                                this.asplitter, null);
+      }
+      else {
+        // output pipe:
+        this.mediagraph.connect(this.amixer, null,
+                                this.echotap, null);
+        this.mediagraph.connect(this.echotap, PB({$type:"master"}),
+                                this.audioout, null);
+        this.mediagraph.connect(this.echotap, PB({$type:"tap"}),
+                                this.echoBuf, null);
 
-      // input pipe:
-      this.mediagraph.connect(this.audioio, PB({$name:"ain"}),
-                              this.dsp, PB({$name:"input"}));
-      this.mediagraph.connect(this.echoBuf, null,
-                              this.dsp, PB({$name:"echo"}));
-      this.mediagraph.connect(this.dsp, null,
-                              this.asplitter, null);
+        // input pipe:
+        this.mediagraph.connect(this.audioin, null,
+                                this.dsp, PB({$name:"input"}));
+        this.mediagraph.connect(this.echoBuf, null,
+                                this.dsp, PB({$name:"echo"}));
+        this.mediagraph.connect(this.dsp, null,
+                                this.asplitter, null);
+      }
       
       this.mediagraph.setAlias("ain", this.asplitter);
       this.mediagraph.setAlias("aout", this.amixer);
