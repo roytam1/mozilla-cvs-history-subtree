@@ -156,7 +156,7 @@
     MODULE(mozStorageModule)
 #else
 #define PLACES_MODULES \
-    MODULE(nsMorkModule)                     \
+    MODULE(nsMorkModule)
 #endif    
 
 #define XUL_MODULES                          \
