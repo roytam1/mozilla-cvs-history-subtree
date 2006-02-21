@@ -239,12 +239,20 @@
       wDialog = null;
     }
 
+    function reset() {
+      parent.loadPage("chrome://zap/content/subscribe-request.xul", true);
+    }
+
   ]]>
   </script>
 
 
   <vbox class="zap-form-body" flex="1">
-    <label class="zap-form-title" value="SUBSCRIBE Request Tester"/>
+    <hbox class="zap-form-title-box">
+      <label value="SUBSCRIBE Request Tester"/>
+      <spacer flex="1"/>
+      <button label="Reset form" oncommand="reset()"/>
+    </hbox>
     <vbox id="unconnected-chrome">
       <label value="Remote party:"/>
       <textbox id="remote" />
