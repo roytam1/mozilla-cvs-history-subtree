@@ -45,6 +45,7 @@
 #include "prtime.h"
 #include "prinrval.h"
 #include "nsVoidArray.h"
+#include "nsTWeakRef.h"
 #include "nsIScrollableView.h"
 #include "nsIRegion.h"
 #include "nsIBlender.h"
@@ -58,6 +59,8 @@ struct DisplayZTreeNode;
 class BlendingBuffers;
 struct PLArenaPool;
 class nsHashtable;
+
+typedef nsTWeakRef<class nsViewManager> nsViewManagerWeakRef;
 
 //Uncomment the following line to enable generation of viewmanager performance data.
 #ifdef MOZ_PERF_METRICS
@@ -244,7 +247,7 @@ public:
   NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor);
   NS_IMETHOD GetDefaultBackgroundColor(nscolor* aColor);
   NS_IMETHOD GetLastUserEventTime(PRUint32& aTime);
-  void ProcessInvalidateEvent(class nsInvalidateEvent *);
+  void ProcessInvalidateEvent();
   static PRInt32 GetViewManagerCount();
   static const nsVoidArray* GetViewManagerArray();
   static PRUint32 gLastUserEventTime;
@@ -264,7 +267,7 @@ public:
                                nsRectVisibility *aRectVisibility);
 
   NS_IMETHOD SynthesizeMouseMove(PRBool aFromScroll);
-  void ProcessSynthMouseMoveEvent(class nsSynthMouseMoveEvent *, PRBool aFromScroll);
+  void ProcessSynthMouseMoveEvent(PRBool aFromScroll);
 
   /* Update the cached RootViewManager pointer on this view manager. */
   void InvalidateHierarchy();
@@ -450,6 +453,13 @@ private:
     RootViewManager()->mPainting = aPainting;
   }
 
+  PRBool EnsureWeakRef() {
+    if (mWeakRef.get())
+      return PR_TRUE;
+    mWeakRef = this;
+    return mWeakRef.get() != nsnull;
+  }
+
 public: // NOT in nsIViewManager, so private to the view module
   nsView* GetRootView() const { return mRootView; }
   nsView* GetMouseEventGrabber() const {
@@ -539,7 +549,7 @@ private:
   // mRootViewManager is a strong ref unless it equals |this|.  It's
   // never null (if we have no ancestors, it will be |this|).
   nsViewManager     *mRootViewManager;
-  nsVoidArray       mPendingEvents; // pending event objects
+  nsViewManagerWeakRef mWeakRef;  // weak ref to self (used by event dispatch)
   PRPackedBool      mSynthMouseMoveEventPending;
   PRPackedBool      mAllowDoubleBuffering;
 
