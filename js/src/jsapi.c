@@ -2001,6 +2001,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 {
     JSAtom *atom;
     JSObject *proto, *ctor;
+    JSTempValueRooter tvr;
     jsval cval, rval;
     JSBool named;
     JSFunction *fun;
@@ -2015,8 +2016,8 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
     if (!proto)
         return NULL;
 
-    if (!js_EnterLocalRootScope(cx))
-        goto bad2;
+    /* After this point, control must exit via label bad or out. */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(proto), &tvr);
 
     if (!constructor) {
         /* Lacking a constructor, name the prototype (e.g., Math). */
@@ -2078,17 +2079,16 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
         (static_fs && !JS_DefineFunctions(cx, ctor, static_fs))) {
         goto bad;
     }
-    js_LeaveLocalRootScope(cx);
+
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
     return proto;
 
 bad:
-    js_LeaveLocalRootScope(cx);
     if (named)
         (void) OBJ_DELETE_PROPERTY(cx, obj, ATOM_TO_JSID(atom), &rval);
-
-bad2:
-    cx->newborn[GCX_OBJECT] = NULL;
-    return NULL;
+    proto = NULL;
+    goto out;
 }
 
 #ifdef JS_THREADSAFE
