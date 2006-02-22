@@ -520,8 +520,7 @@ const gXPInstallObserver = {
     var tabbrowser = getBrowser();
     for (var i = 0; i < tabbrowser.browsers.length; ++i) {
       var browser = tabbrowser.getBrowserAtIndex(i);
-      var shell = this._findChildShell(browser.docShell, aDocShell);
-      if (shell)
+      if (this._findChildShell(browser.docShell, aDocShell))
         return browser;
     }
     return null;
