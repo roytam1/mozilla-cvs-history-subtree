@@ -39,6 +39,10 @@
 #ifndef nsTWeakRef_h__
 #define nsTWeakRef_h__
 
+#ifndef nsDebug_h___
+#include "nsDebug.h"
+#endif
+
 /**
  * A weak reference class for use with generic C++ objects.
  */
@@ -66,7 +70,7 @@ public:
    * Construct from another weak reference object.
    */
   explicit
-  nsTWeakRef(nsTWeakRef<Type> &other) : mRef(other.mRef) {
+  nsTWeakRef(const nsTWeakRef<Type> &other) : mRef(other.mRef) {
     if (mRef)
       mRef->AddRef();
   }
@@ -121,6 +125,23 @@ public:
       obj = nsnull;
     }
     return obj;
+  }
+
+  /**
+   * Allow |*this| to be treated as a |Type*| for convenience.
+   */
+  operator Type *() const {
+    return get();
+  }
+
+  /**
+   * Allow |*this| to be treated as a |Type*| for convenience.  Use with
+   * caution since this method will crash if the referenced object is null.
+   */
+  Type *operator->() const {
+    NS_ASSERTION(mRef && mRef->mObj,
+        "You can't dereference a null weak reference with operator->().");
+    return get();
   }
 
 private:
