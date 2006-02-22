@@ -495,6 +495,7 @@ SrcList *sqlite3SrcListDup(SrcList *p){
     pNewItem->zAlias = sqliteStrDup(pOldItem->zAlias);
     pNewItem->jointype = pOldItem->jointype;
     pNewItem->iCursor = pOldItem->iCursor;
+    pNewItem->isPopulated = pOldItem->isPopulated;
     pTab = pNewItem->pTab = pOldItem->pTab;
     if( pTab ){
       pTab->nRef++;

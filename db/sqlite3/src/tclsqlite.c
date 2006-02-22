@@ -1116,7 +1116,8 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       if( i+1!=nCol ){
         char *zErr;
         zErr = malloc(200 + strlen(zFile));
-        sprintf(zErr,"Error: %s line %d: expected %d columns of data but found %d",
+        sprintf(zErr,
+           "Error: %s line %d: expected %d columns of data but found %d",
            zFile, lineno, nCol, i+1);
         Tcl_AppendResult(interp, zErr, 0);
         free(zErr);

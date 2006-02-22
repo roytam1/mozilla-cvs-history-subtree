@@ -494,7 +494,7 @@ void sqlite3Update(
   if( db->flags & SQLITE_CountRows && !pParse->trigStack && pParse->nested==0 ){
     sqlite3VdbeAddOp(v, OP_Callback, 1, 0);
     sqlite3VdbeSetNumCols(v, 1);
-    sqlite3VdbeSetColName(v, 0, "rows updated", P3_STATIC);
+    sqlite3VdbeSetColName(v, 0, COLNAME_NAME, "rows updated", P3_STATIC);
   }
 
 update_cleanup:

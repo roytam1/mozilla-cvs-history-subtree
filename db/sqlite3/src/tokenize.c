@@ -261,6 +261,7 @@ static int getToken(const unsigned char *z, int *tokenType){
 #ifndef SQLITE_OMIT_TCL_VARIABLE
     case '$':
 #endif
+    case '@':  /* For compatibility with MS SQL Server */
     case ':': {
       int n = 0;
       *tokenType = TK_VARIABLE;

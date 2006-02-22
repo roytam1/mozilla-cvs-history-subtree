@@ -343,7 +343,7 @@ void sqlite3DeleteFrom(
   if( db->flags & SQLITE_CountRows && pParse->nested==0 && !pParse->trigStack ){
     sqlite3VdbeAddOp(v, OP_Callback, 1, 0);
     sqlite3VdbeSetNumCols(v, 1);
-    sqlite3VdbeSetColName(v, 0, "rows deleted", P3_STATIC);
+    sqlite3VdbeSetColName(v, 0, COLNAME_NAME, "rows deleted", P3_STATIC);
   }
 
 delete_from_cleanup:
