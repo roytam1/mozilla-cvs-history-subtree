@@ -108,10 +108,10 @@ nsAppStartup::Init()
   nsresult rv;
 
   // Create widget application shell
-  mAppShell = do_CreateInstance(kAppShellCID, &rv);
+  mAppShell = do_GetService(kAppShellCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = mAppShell->Create(nsnull, nsnull);
+  rv = mAppShell->Init(nsnull, nsnull);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // listen to EventQueues' comings and goings. do this after the appshell
