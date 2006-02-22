@@ -71,13 +71,13 @@
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "nsThreadUtils.h"
 
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsIWidget.h"
-#include "plevent.h"
 #include "plstr.h"
 
 #include "nsIAppStartup.h"
@@ -139,7 +139,14 @@ class PageCycler : public nsIObserver {
 public:
   NS_DECL_ISUPPORTS
 
-  PLEvent mEvent;
+  struct PageCyclerEvent : public nsRunnable {
+    PageCyclerEvent(PageCycler *pc) : mPageCycler(pc) {}
+    NS_IMETHOD Run() {
+      mPageCycler->DoCycle();
+      return NS_OK;
+    }
+    nsRefPtr<PageCycler> mPageCycler;
+  };
 
   PageCycler(nsBrowserInstance* appCore, const char *aTimeoutValue = nsnull, const char *aWaitValue = nsnull)
     : mAppCore(appCore), mBuffer(nsnull), mCursor(nsnull), mTimeoutValue(0), mWaitValue(1 /*sec*/) { 
@@ -226,8 +233,9 @@ public:
       nsCOMPtr<nsIProxyObjectManager> pIProxyObjectManager = 
                do_GetService(kProxyObjectManagerCID, &rv);
       if(NS_FAILED(rv)) return rv;
+      nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
       nsCOMPtr<nsIAppStartup> appStartupProxy;
-      rv = pIProxyObjectManager->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIAppStartup),
+      rv = pIProxyObjectManager->GetProxyForObject(thread, NS_GET_IID(nsIAppStartup),
                                                    appStartup, PROXY_ASYNC | PROXY_ALWAYS,
                                                    getter_AddRefs(appStartupProxy));
 
@@ -268,22 +276,13 @@ public:
         // otherwise we'll run the risk of confusing the docshell
         // (which notifies observers before propagating the
         // DocumentEndLoad up to parent docshells).
-        nsCOMPtr<nsIEventQueueService> eqs
-          = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID);
-
+        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
         rv = NS_ERROR_FAILURE;
 
-        if (eqs) {
-          nsCOMPtr<nsIEventQueue> eq;
-          eqs->ResolveEventQueue(NS_UI_THREAD_EVENTQ, getter_AddRefs(eq));
-          if (eq) {
-            rv = eq->InitEvent(&mEvent, this, HandleAsyncLoadEvent,
-                               DestroyAsyncLoadEvent);
-
-            if (NS_SUCCEEDED(rv)) {
-              rv = eq->PostEvent(&mEvent);
-            }
-          }
+        if (thread) {
+          nsCOMPtr<nsIRunnable> ev = new PageCyclerEvent(this);
+          if (ev)
+            rv = thread->Dispatch(ev, NS_DISPATCH_NORMAL);
         }
 
         if (NS_FAILED(rv)) {
@@ -299,26 +298,18 @@ public:
     return rv;
   }
 
-  static void* PR_CALLBACK
-  HandleAsyncLoadEvent(PLEvent* aEvent)
+  void DoCycle()
   {
-    // This is the callback that actually loads the page
-    PageCycler* self = NS_STATIC_CAST(PageCycler*, PL_GetEventOwner(aEvent));
-
     // load the URL
-    const PRUnichar* url = self->mLastRequest.get();
+    const PRUnichar* url = mLastRequest.get();
     printf("########## PageCycler starting: %s\n", NS_ConvertUTF16toUTF8(url).get());
 
-    self->mIntervalTime = PR_IntervalNow();
-    self->mAppCore->LoadUrl(url);
+    mIntervalTime = PR_IntervalNow();
+    mAppCore->LoadUrl(url);
 
     // start new timer
-    self->StartTimer();
-    return nsnull;
+    StartTimer();
   }
-
-  static void PR_CALLBACK
-  DestroyAsyncLoadEvent(PLEvent* aEvent) { /*no-op*/ }
 
   const nsAutoString &GetLastRequest( void )
   { 
