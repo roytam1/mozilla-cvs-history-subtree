@@ -115,3 +115,8 @@ endif
 #
 MOZILLA_CLIENT	= 1
 VPATH		= $(srcdir)
+
+NEXT_ROOT	= @NEXT_ROOT@
+ifdef NEXT_ROOT
+export NEXT_ROOT
+endif
