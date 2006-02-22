@@ -5890,6 +5890,11 @@ nsCSSFrameConstructor::ConstructXULFrame(nsFrameConstructorState& aState,
   PRBool isXULNS = (aNameSpaceID == kNameSpaceID_XUL);
   PRBool isXULDisplay = IsXULDisplayType(display);
 
+  // don't apply xul display types to tag based frames
+  if (isXULDisplay && !isXULNS) {
+    isXULDisplay = !IsSpecialContent(aContent, aTag, aNameSpaceID);
+  }
+ 
   if (isXULNS || isXULDisplay) {
     PRBool mayBeScrollable = PR_FALSE;
 
