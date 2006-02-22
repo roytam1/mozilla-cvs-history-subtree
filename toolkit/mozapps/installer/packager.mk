@@ -101,6 +101,7 @@ else
 _APPNAME	= $(MOZ_APP_DISPLAYNAME).app
 endif
 endif
+_BINPATH	= /$(_APPNAME)/Contents/MacOS
 PKG_SUFFIX	= .dmg
 PKG_DMG_FLAGS	=
 ifneq (,$(MOZ_PKG_MAC_DSSTORE))
@@ -161,9 +162,9 @@ SIGN_NSS		= @echo signing nss libraries;
 
 SIGN_CMD	= $(DIST)/bin/run-mozilla.sh $(DIST)/bin/shlibsign -v -i
 
-SOFTOKN		= $(DIST)/$(MOZ_PKG_APPNAME)/$(DLL_PREFIX)softokn3$(DLL_SUFFIX)
-FREEBL_HYBRID	= $(DIST)/$(MOZ_PKG_APPNAME)/$(DLL_PREFIX)freebl_hybrid_3$(DLL_SUFFIX)
-FREEBL_PURE	= $(DIST)/$(MOZ_PKG_APPNAME)/$(DLL_PREFIX)freebl_pure32_3$(DLL_SUFFIX)
+SOFTOKN		= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)softokn3$(DLL_SUFFIX)
+FREEBL_HYBRID	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_hybrid_3$(DLL_SUFFIX)
+FREEBL_PURE	= $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)/$(DLL_PREFIX)freebl_pure32_3$(DLL_SUFFIX)
 
 SIGN_NSS	+= $(SIGN_CMD) $(SOFTOKN); \
         if test -f $(FREEBL_HYBRID); then $(SIGN_CMD) $(FREEBL_HYBRID); fi; \
@@ -293,16 +294,11 @@ ifndef PKG_SKIP_STRIP
 	$(SIGN_NSS)
 endif
 	@echo "Removing unpackaged files..."
-ifeq ($(MOZ_PKG_FORMAT),DMG)
-	cd $(DIST)/$(MOZ_PKG_APPNAME)/$(_APPNAME)/Contents/MacOS; rm -rf $(NO_PKG_FILES)
-ifdef MOZ_PKG_REMOVALS
-	$(SYSINSTALL) $(MOZ_PKG_REMOVALS_GEN) $(DIST)/$(MOZ_PKG_APPNAME)/$(_APPNAME)/Contents/MacOS
-endif # MOZ_PKG_REMOVALS
-else
-	cd $(DIST)/$(MOZ_PKG_APPNAME); rm -rf $(NO_PKG_FILES)
-ifdef MOZ_PKG_REMOVALS
-	$(SYSINSTALL) $(MOZ_PKG_REMOVALS_GEN) $(DIST)/$(MOZ_PKG_APPNAME)
-endif # MOZ_PKG_REMOVALS
+ifdef NO_PKG_FILES
+	cd $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH); rm -rf $(NO_PKG_FILES)
 endif
+ifdef MOZ_PKG_REMOVALS
+	$(SYSINSTALL) $(MOZ_PKG_REMOVALS_GEN) $(DIST)/$(MOZ_PKG_APPNAME)$(_BINPATH)
+endif # MOZ_PKG_REMOVALS
 	@echo "Compressing..."
 	cd $(DIST); $(MAKE_PACKAGE)
