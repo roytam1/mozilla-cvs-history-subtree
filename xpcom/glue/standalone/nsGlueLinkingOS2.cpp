@@ -120,9 +120,9 @@ XPCOMGlueLoad(const char *xpcomFile)
 
             XPCOMGlueLoadDependentLibs(xpcomDir, ReadDependentCB);
 
-            sprintf(lastSlash, "\\" XUL_DLL);
+            snprintf(lastSlash, MAXPATHLEN - strlen(xpcomDir), "\\" XUL_DLL);
 
-	    DosLoadModule(pszError, _MAX_PATH, xpcomDir, &sXULLibrary);
+            DosLoadModule(pszError, _MAX_PATH, xpcomDir, &sXULLibrary);
         }
     }
 
