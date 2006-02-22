@@ -96,46 +96,22 @@
 #include "nsIFontMetrics.h"
 #endif
 
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-
-class RedisplayTextEvent : public PLEvent
+class RedisplayTextEvent : public nsRunnable
 {
 public:
-  RedisplayTextEvent(nsComboboxControlFrame* aComboboxControlFrame);
+  RedisplayTextEvent(const nsComboboxControlFrameWeakRef &aControlFrame)
+    : mControlFrame(aControlFrame) {}
 
-  void HandleEvent()
+  NS_IMETHOD Run()
   {
-    NS_STATIC_CAST(nsComboboxControlFrame*, owner) ->
-      HandleRedisplayTextEvent();
+    if (mControlFrame)
+      mControlFrame->HandleRedisplayTextEvent();
+    return NS_OK;
   }
+
+private:
+  nsComboboxControlFrameWeakRef mControlFrame;
 };
-
-PR_STATIC_CALLBACK(void*)
-HandleRedisplayTextPLEvent(PLEvent* aEvent)
-{
-  NS_ASSERTION(nsnull != aEvent, "Event is null");
-  RedisplayTextEvent* event = NS_STATIC_CAST(RedisplayTextEvent*, aEvent);
-
-  event->HandleEvent();
-
-  return nsnull;
-}
-
-PR_STATIC_CALLBACK(void)
-DestroyRedisplayTextPLEvent(PLEvent* aEvent)
-{
-  NS_ASSERTION(nsnull != aEvent, "Event is null");
-  RedisplayTextEvent* event = NS_STATIC_CAST(RedisplayTextEvent*, aEvent);
-
-  delete event;
-}
-
-RedisplayTextEvent::RedisplayTextEvent(nsComboboxControlFrame* aComboboxControlFrame)
-{
-  PL_InitEvent(this, aComboboxControlFrame,
-               ::HandleRedisplayTextPLEvent,
-               ::DestroyRedisplayTextPLEvent);
-}
 
 class nsPresState;
 
@@ -415,8 +391,6 @@ nsComboboxControlFrame::Init(nsPresContext*  aPresContext,
               nsStyleContext*  aContext,
               nsIFrame*        aPrevInFlow)
 {
-  mEventQueueService = do_GetService(kEventQueueServiceCID);
-  
   return nsAreaFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
 }
 
@@ -1629,34 +1603,32 @@ nsComboboxControlFrame::RedisplayText(PRInt32 aIndex)
 
   // Send reflow command because the new text maybe larger
   nsresult rv = NS_OK;
-  if (mDisplayContent && mEventQueueService) {
+  if (mDisplayContent) {
     // Don't call ActuallyDisplayText(PR_TRUE) directly here since that
     // could cause recursive frame construction. See bug 283117 and the comment in
     // HandleRedisplayTextEvent() below.
-    nsCOMPtr<nsIEventQueue> eventQueue;
-    rv = mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                                  getter_AddRefs(eventQueue));
-    if (eventQueue) {
-      RedisplayTextEvent* event = new RedisplayTextEvent(this);
-      if (event) {
-        // Revoke outstanding events to avoid out-of-order events which could mean
-        // displaying the wrong text.
-        if (mRedisplayTextEventPosted) {
-          eventQueue->RevokeEvents(this);
-          mRedisplayTextEventPosted = PR_FALSE;
-        }
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+    NS_ENSURE_STATE(thread);
 
-        rv = eventQueue->PostEvent(event);
+    nsCOMPtr<nsIRunnable> event = new RedisplayTextEvent(mWeakSelf);
+    NS_ENSURE_TRUE(event, NS_ERROR_OUT_OF_MEMORY);
 
-        if (NS_SUCCEEDED(rv)) {
-          mRedisplayTextEventPosted = PR_TRUE;
-        } else {
-          PL_DestroyEvent(event);
-        }
-      } else {
-        rv = NS_ERROR_OUT_OF_MEMORY;
-      }
+    // Revoke outstanding events to avoid out-of-order events which could mean
+    // displaying the wrong text.
+    if (mRedisplayTextEventPosted) {
+      mWeakSelf.forget();
+      mRedisplayTextEventPosted = PR_FALSE;
     }
+
+    if (!mWeakSelf) {
+      mWeakSelf = this;
+      if (!mWeakSelf)
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    rv = thread->Dispatch(event, NS_DISPATCH_NORMAL);
+    if (NS_SUCCEEDED(rv))
+      mRedisplayTextEventPosted = PR_TRUE;
   }
   return rv;
 }
@@ -1988,14 +1960,7 @@ NS_IMETHODIMP
 nsComboboxControlFrame::Destroy(nsPresContext* aPresContext)
 {
   // Revoke queued RedisplayTextEvents
-  if (mEventQueueService) {
-    nsCOMPtr<nsIEventQueue> eventQueue;
-    mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                             getter_AddRefs(eventQueue));
-    if (eventQueue) {
-      eventQueue->RevokeEvents(this);
-    }
-  }
+  mWeakSelf.forget();
 
   nsFormControlFrame::RegUnRegAccessKey(GetPresContext(), NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
 

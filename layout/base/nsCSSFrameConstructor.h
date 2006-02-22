@@ -44,9 +44,8 @@
 #include "nsCounterManager.h"
 #include "nsDataHashtable.h"
 #include "nsHashKeys.h"
-#include "plevent.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
+#include "nsThreadUtils.h"
+#include "nsTWeakRef.h"
 
 class nsIDocument;
 struct nsFrameItems;
@@ -64,6 +63,8 @@ class nsPresContext;
 class nsStyleChangeList;
 class nsIFrame;
 
+typedef nsTWeakRef<class nsCSSFrameConstructor> nsCSSFrameConstructorWeakRef;
+
 struct nsFindFrameHint
 {
   nsIFrame *mPrimaryFrameForPrevSibling;  // weak ref to the primary frame for the content for which we need a frame
@@ -77,7 +78,7 @@ class nsCSSFrameConstructor
 {
 public:
   nsCSSFrameConstructor(nsIDocument *aDocument, nsIPresShell* aPresShell);
-  ~nsCSSFrameConstructor(void) {}
+  ~nsCSSFrameConstructor(void) { }
 
   // Maintain global objects - gXBLService
   static nsIXBLService * GetXBLService();
@@ -1006,17 +1007,14 @@ public:
   struct RestyleEvent;
   friend struct RestyleEvent;
 
-  struct RestyleEvent : public PLEvent {
-    RestyleEvent(nsCSSFrameConstructor* aConstructor);
-    ~RestyleEvent() { }
-    void HandleEvent();
+  struct RestyleEvent : public nsRunnable {
+    RestyleEvent(const nsCSSFrameConstructorWeakRef &aConstructor);
+    NS_IMETHOD Run();
+    nsCSSFrameConstructorWeakRef mConstructor;
   };
 
   friend class nsFrameConstructorState;
 
-protected:
-  nsCOMPtr<nsIEventQueue>        mRestyleEventQueue;
-  
 private:
 #ifdef ACCESSIBILITY
   // If the frame is visible, return the frame type
@@ -1045,10 +1043,11 @@ private:
   PRUint16            mUpdateCount;
   PRPackedBool        mQuotesDirty;
   PRPackedBool        mCountersDirty;
+  PRPackedBool        mRestyleEventPending;
+
+  nsCSSFrameConstructorWeakRef mWeakSelf;
 
   nsCOMPtr<nsILayoutHistoryState> mTempFrameTreeState;
-
-  nsCOMPtr<nsIEventQueueService> mEventQueueService;
 
   nsDataHashtable<nsISupportsHashKey, RestyleData> mPendingRestyles;
 

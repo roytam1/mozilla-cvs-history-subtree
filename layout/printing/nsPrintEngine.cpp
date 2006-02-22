@@ -64,10 +64,8 @@ static const char sPrintSettingsServiceContractID[] = "@mozilla.org/gfx/printset
 static const char sPrintOptionsContractID[]         = "@mozilla.org/gfx/printsettings-service;1";
 
 // Printing Events
-#include "nsIEventQueue.h"
-#include "nsIEventQueueService.h"
-#include "nsEventQueueUtils.h"
 #include "nsPrintPreviewListener.h"
+#include "nsThreadUtils.h"
 
 // Printing
 #include "nsIWebBrowserPrint.h"
@@ -161,9 +159,6 @@ static const char kPrintingPromptService[] = "@mozilla.org/embedcomp/printingpro
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIContentViewerContainer.h"
 #include "nsIContentViewer.h"
-
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
 
 #include "nsPIDOMWindow.h"
 #include "nsIFocusController.h"
@@ -4408,52 +4403,36 @@ nsPrintEngine::Observe(nsISupports *aSubject, const char *aTopic, const PRUnicha
 //---------------------------------------------------------------
 //-- PLEvent Notification
 //---------------------------------------------------------------
-PR_STATIC_CALLBACK(void*) HandlePLEvent(PLEvent* aEvent)
-{
-  nsIDocumentViewerPrint *docViewerPrint = (nsIDocumentViewerPrint*)PL_GetEventOwner(aEvent);
-
-  NS_ASSERTION(docViewerPrint, "The event owner is null.");
-  if (docViewerPrint) {
-    docViewerPrint->OnDonePrinting();
+class nsPrintCompletionEvent : public nsRunnable {
+public:
+  nsPrintCompletionEvent(nsIDocumentViewerPrint *docViewerPrint)
+    : mDocViewerPrint(docViewerPrint) {
+    NS_ASSERTION(mDocViewerPrint, "mDocViewerPrint is null.");
   }
 
-  return nsnull;
-}
+  NS_IMETHOD Run() {
+    if (mDocViewerPrint)
+      mDocViewerPrint->OnDonePrinting();
+    return NS_OK;
+  }
 
-//------------------------------------------------------------------------
-PR_STATIC_CALLBACK(void) DestroyPLEvent(PLEvent* aEvent)
-{
-  nsIDocumentViewerPrint *docViewerPrint = (nsIDocumentViewerPrint*)PL_GetEventOwner(aEvent);
-  NS_IF_RELEASE(docViewerPrint);
+private:
+  nsCOMPtr<nsIDocumentViewerPrint> mDocViewerPrint;
+};
 
-  delete aEvent;
-}
 //-----------------------------------------------------------
 void
 nsPrintEngine::FirePrintCompletionEvent()
 {
-  static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
 
-  nsCOMPtr<nsIEventQueueService> event_service = do_GetService(kEventQueueServiceCID);
-
-  if (!event_service) 
+  if (!thread) 
   {
-    NS_WARNING("Failed to get event queue service");
+    NS_WARNING("Failed to get current thread");
     return;
   }
 
-  nsCOMPtr<nsIEventQueue> event_queue;
-
-  event_service->GetThreadEventQueue(NS_CURRENT_THREAD,
-                                     getter_AddRefs(event_queue));
-
-  if (!event_queue) 
-  {
-    NS_WARNING("Failed to get event queue from service");
-    return;
-  }
-
-  PLEvent *event = new PLEvent;
+  nsCOMPtr<nsIRunnable> event = new nsPrintCompletionEvent(mDocViewerPrint);
 
   if (!event) 
   {
@@ -4461,13 +4440,8 @@ nsPrintEngine::FirePrintCompletionEvent()
     return;
   }
 
-  PL_InitEvent(event, mDocViewerPrint, ::HandlePLEvent, ::DestroyPLEvent);
-
-  // The event owns the docviewer pointer now.
-  NS_ADDREF(mDocViewerPrint);
-
-  event_queue->PostEvent(event);
-  return;
+  if (NS_FAILED(thread->Dispatch(event, NS_DISPATCH_NORMAL)))
+    NS_WARNING("failed to dispatch print completion event");
 }
 
 //---------------------------------------------------------------

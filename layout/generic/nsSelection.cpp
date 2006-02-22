@@ -81,6 +81,8 @@ static NS_DEFINE_CID(kFrameTraversalCID, NS_FRAMETRAVERSAL_CID);
 #include "nsIDOMText.h"
 
 #include "nsContentUtils.h"
+#include "nsThreadUtils.h"
+#include "nsTWeakRef.h"
 
 //included for desired x position;
 #include "nsPresContext.h"
@@ -94,8 +96,6 @@ static NS_DEFINE_CID(kFrameTraversalCID, NS_FRAMETRAVERSAL_CID);
 #include "nsIDeviceContext.h"
 #include "nsITimer.h"
 #include "nsIServiceManager.h"
-#include "nsIEventQueue.h"
-#include "nsIEventQueueService.h"
 
 // notifications
 #include "nsIDOMDocument.h"
@@ -182,6 +182,8 @@ struct CachedOffsetForFrame {
   PRInt32      mLastContentOffset;      // store last content offset
   PRPackedBool mCanCacheFrameOffset;    // cached frame offset is valid?
 };
+
+typedef nsTWeakRef<class nsTypedSelection> nsTypedSelectionWeakRef;
 
 class nsTypedSelection : public nsISelection,
                          public nsISelectionPrivate,
@@ -281,9 +283,9 @@ private:
   SelectionType mType;//type of this nsTypedSelection;
   nsAutoScrollTimer *mAutoScrollTimer; // timer for autoscrolling.
   nsCOMArray<nsISelectionListener> mSelectionListeners;
-  PRBool mTrueDirection;
-  nsCOMPtr<nsIEventQueue> mEventQueue;
-  PRBool mScrollEventPosted;
+  PRPackedBool mTrueDirection;
+  PRPackedBool mScrollEventPosted;
+  nsTypedSelectionWeakRef mWeakSelf;
   CachedOffsetForFrame *mCachedOffsetForFrame;
 };
 
@@ -4273,10 +4275,7 @@ nsTypedSelection::~nsTypedSelection()
     NS_RELEASE(mAutoScrollTimer);
   }
 
-  if (mEventQueue && mScrollEventPosted) {
-    mEventQueue->RevokeEvents(this);
-    mScrollEventPosted = PR_FALSE;
-  }
+  mWeakSelf.forget();
 
   delete mCachedOffsetForFrame;
 }
@@ -7068,88 +7067,61 @@ nsTypedSelection::ScrollRectIntoView(nsIScrollableView *aScrollableView,
   return rv;
 }
 
-static void* PR_CALLBACK HandlePLEvent(PLEvent* aEvent);
-static void PR_CALLBACK DestroyPLEvent(PLEvent* aEvent);
-
-struct nsScrollSelectionIntoViewEvent : public PLEvent {
-  nsScrollSelectionIntoViewEvent(nsTypedSelection *aTypedSelection, SelectionRegion aRegion) {
-    if (!aTypedSelection)
-      return;
-
-    mTypedSelection = aTypedSelection;
-    mRegion = aRegion;
-
-    PL_InitEvent(this, aTypedSelection, ::HandlePLEvent, ::DestroyPLEvent);
+struct nsScrollSelectionIntoViewEvent : public nsRunnable {
+  nsScrollSelectionIntoViewEvent(const nsTypedSelectionWeakRef &aTypedSelection,
+                                 SelectionRegion aRegion) 
+      : mTypedSelection(aTypedSelection),
+        mRegion(aRegion) {
+    NS_ASSERTION(aTypedSelection, "null parameter");
   }
 
-  ~nsScrollSelectionIntoViewEvent() {}
+  NS_IMETHOD Run() {
+    nsTypedSelection *sel = mTypedSelection.get();
+    if (!sel)
+      return NS_OK;  // event revoked
 
-  void HandleEvent() {
-    mTypedSelection->mScrollEventPosted = PR_FALSE;
-
-    if (!mTypedSelection)
-      return;
-
-    mTypedSelection->ScrollIntoView(mRegion, PR_TRUE);
+    sel->mScrollEventPosted = PR_FALSE;
+    sel->ScrollIntoView(mRegion, PR_TRUE);
+    return NS_OK;
   }
 
-  nsTypedSelection *mTypedSelection;
-  SelectionRegion   mRegion;
+  nsTypedSelectionWeakRef mTypedSelection;
+  SelectionRegion         mRegion;
 };
-
-static void* PR_CALLBACK HandlePLEvent(PLEvent* aEvent)
-{
-  nsScrollSelectionIntoViewEvent* event =
-    NS_STATIC_CAST(nsScrollSelectionIntoViewEvent*, aEvent);
-  NS_ASSERTION(nsnull != event,"Event is null");
-  event->HandleEvent();
-  return nsnull;
-}
-
-static void PR_CALLBACK DestroyPLEvent(PLEvent* aEvent)
-{
-  nsScrollSelectionIntoViewEvent* event =
-    NS_STATIC_CAST(nsScrollSelectionIntoViewEvent*, aEvent);
-  NS_ASSERTION(nsnull != event,"Event is null");
-  delete event;
-}
 
 nsresult
 nsTypedSelection::PostScrollSelectionIntoViewEvent(SelectionRegion aRegion)
 {
-  static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ENSURE_STATE(thread);
 
-  if (!mEventQueue) {
-    nsresult rv;
+  if (mScrollEventPosted) {
+    // We've already posted an event, revoke it and
+    // place a new one at the end of the queue to make
+    // sure that any new pending reflow events are processed
+    // before we scroll. This will insure that we scroll
+    // to the correct place on screen.
 
-    // Cache the event queue of the current UI thread
-    nsCOMPtr<nsIEventQueueService> eventService = do_GetService(kEventQueueServiceCID, &rv);
-    if (NS_SUCCEEDED(rv) && (nsnull != eventService)) {  // XXX this implies that the UI is the current thread.
-      rv = eventService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(mEventQueue));
-    }
+    mWeakSelf.forget();
+    mScrollEventPosted = PR_FALSE;
   }
 
-  if (mEventQueue) {
-    if (mScrollEventPosted) {
-      // We've already posted an event, revoke it and
-      // place a new one at the end of the queue to make
-      // sure that any new pending reflow events are processed
-      // before we scroll. This will insure that we scroll
-      // to the correct place on screen.
-
-      mEventQueue->RevokeEvents(this);
-      mScrollEventPosted = PR_FALSE;
-    }
-
-    nsScrollSelectionIntoViewEvent *ev = new nsScrollSelectionIntoViewEvent(this, aRegion);
-    if (ev) {
-      mEventQueue->PostEvent(ev);
-      mScrollEventPosted = PR_TRUE;
-      return NS_OK;
-    }
+  if (!mWeakSelf) {
+    mWeakSelf = this;
+    if (!mWeakSelf)
+      return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIRunnable> ev =
+      new nsScrollSelectionIntoViewEvent(mWeakSelf, aRegion);
+  if (!ev)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL)))
+    return NS_ERROR_UNEXPECTED;
+
+  mScrollEventPosted = PR_TRUE;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

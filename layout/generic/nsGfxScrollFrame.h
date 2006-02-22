@@ -44,7 +44,7 @@
 #include "nsIScrollPositionListener.h"
 #include "nsIStatefulFrame.h"
 #include "nsGUIEvent.h"
-#include "nsIEventQueue.h"
+#include "nsTWeakRef.h"
 
 class nsISupportsArray;
 class nsIScrollableView;
@@ -56,6 +56,8 @@ class nsIDocument;
 class nsIScrollFrameInternal;
 class nsPresState;
 struct ScrollReflowState;
+
+typedef nsTWeakRef<class nsGfxScrollFrameInner> nsGfxScrollFrameInnerWeakRef;
 
 class nsGfxScrollFrameInner : public nsIScrollPositionListener {
 public:
@@ -133,7 +135,7 @@ public:
                         const nsRect& aOldScrollArea,
                         const nsRect& aScrollArea);
 
-  nsCOMPtr<nsIEventQueue> mScrollEventQueue;
+  nsGfxScrollFrameInnerWeakRef mWeakSelf;
   nsIScrollableView* mScrollableView;
   nsIBox* mHScrollbarBox;
   nsIBox* mVScrollbarBox;
@@ -170,6 +172,7 @@ public:
   // which overflow states have changed.
   PRPackedBool mHorizontalOverflow:1;
   PRPackedBool mVerticalOverflow:1;
+  PRPackedBool mScrollEventPending:1;
 };
 
 /**

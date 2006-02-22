@@ -71,7 +71,6 @@
 #include "nsContentCreatorFunctions.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIPresShell.h"
-#include "nsIEventQueueService.h"
 #include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsPresState.h"
@@ -81,8 +80,7 @@
 #include "nsIAccessibilityService.h"
 #endif
 #include "nsDisplayList.h"
-
-static const char kEventQueueServiceCID[] = NS_EVENTQUEUESERVICE_CONTRACTID;
+#include "nsThreadUtils.h"
 
 //----------------------------------------------------------------------
 
@@ -1339,9 +1337,8 @@ nsGfxScrollFrameInner::nsGfxScrollFrameInner(nsContainerFrame* aOuter, PRBool aI
 
 nsGfxScrollFrameInner::~nsGfxScrollFrameInner()
 {
-  if (mScrollEventQueue) {
-    mScrollEventQueue->RevokeEvents(this);
-  }
+  // "revoke" any pending events
+  mWeakSelf.forget();
 }
 
 NS_IMETHODIMP_(nsrefcnt) nsGfxScrollFrameInner::AddRef(void)
@@ -1844,24 +1841,24 @@ void nsGfxScrollFrameInner::CurPosAttributeChanged(nsIContent* aContent, PRInt32
 }
 
 /* ============= Scroll events ========== */
-PR_STATIC_CALLBACK(void*) HandleScrollEvent(PLEvent* aEvent)
-{
-  NS_ASSERTION(nsnull != aEvent,"Event is null");
-  nsGfxScrollFrameInner* inner = NS_STATIC_CAST(nsGfxScrollFrameInner*, aEvent->owner);
-  inner->FireScrollEvent();
-  return nsnull;
-}
 
-PR_STATIC_CALLBACK(void) DestroyScrollEvent(PLEvent* aEvent)
-{
-  NS_ASSERTION(nsnull != aEvent,"Event is null");
-  delete aEvent;
-}
+class nsGfxScrollEvent : public nsRunnable {
+public:
+  nsGfxScrollEvent(const nsGfxScrollFrameInnerWeakRef &inner)
+    : mInner(inner) {}
+  NS_IMETHOD Run() {
+    if (mInner)
+      mInner->FireScrollEvent();
+    return NS_OK;
+  }
+private:
+  nsGfxScrollFrameInnerWeakRef mInner;
+};
 
 void
 nsGfxScrollFrameInner::FireScrollEvent()
 {
-  mScrollEventQueue = nsnull;
+  mScrollEventPending = PR_FALSE;
 
   nsScrollbarEvent event(PR_TRUE, NS_SCROLL_EVENT, nsnull);
   nsEventStatus status = nsEventStatus_eIgnore;
@@ -1884,26 +1881,27 @@ nsGfxScrollFrameInner::FireScrollEvent()
 void
 nsGfxScrollFrameInner::PostScrollEvent()
 {
-  nsCOMPtr<nsIEventQueueService> service = do_GetService(kEventQueueServiceCID);
-  NS_ASSERTION(service, "No event service");
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  service->GetSpecialEventQueue(
-    nsIEventQueueService::UI_THREAD_EVENT_QUEUE, getter_AddRefs(eventQueue));
-  NS_ASSERTION(eventQueue, "Event queue is null");
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ASSERTION(thread, "no thread object for the current thread");
 
-  if (eventQueue == mScrollEventQueue)
+  if (mScrollEventPending)
     return;
-    
-  PLEvent* ev = new PLEvent;
-  if (!ev)
-    return;
-  PL_InitEvent(ev, this, ::HandleScrollEvent, ::DestroyScrollEvent);  
 
-  if (mScrollEventQueue) {
-    mScrollEventQueue->RevokeEvents(this);
+  if (!mWeakSelf) {
+    mWeakSelf = this;
+    if (!mWeakSelf)
+      return;  // out of memory
   }
-  eventQueue->PostEvent(ev);
-  mScrollEventQueue = eventQueue;
+
+  nsCOMPtr<nsIRunnable> ev = new nsGfxScrollEvent(mWeakSelf);
+  if (!ev)
+    return;  // out of memory
+
+  if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
+    NS_NOTREACHED("failed to dispatch scroll event");
+  } else {
+    mScrollEventPending = PR_TRUE;
+  }
 }
 
 void

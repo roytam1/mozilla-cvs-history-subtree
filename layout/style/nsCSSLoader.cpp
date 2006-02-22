@@ -74,9 +74,7 @@
 #include "nsICSSLoader.h"
 #include "nsICSSParser.h"
 #include "nsICSSImportRule.h"
-#include "plevent.h"
-#include "nsIEventQueue.h"
-#include "nsIEventQueueService.h"
+#include "nsThreadUtils.h"
 #include "nsHTMLAtoms.h"
 
 #ifdef MOZ_XUL
@@ -235,6 +233,14 @@ SheetLoadData::~SheetLoadData()
   NS_RELEASE(mLoader);
   NS_IF_RELEASE(mParentData);
   NS_IF_RELEASE(mNext);
+}
+
+NS_IMETHODIMP
+SheetLoadData::Run()
+{
+  mLoader->HandleLoadEvent(this);
+  mLoader->DestroyLoadEvent(this);
+  return NS_OK;
 }
 
 /*************************
@@ -1920,11 +1926,7 @@ CSSLoaderImpl::InternalLoadNonDocumentSheet(nsIURI* aURL,
   return rv;
 }
 
-PR_BEGIN_EXTERN_C
-PR_STATIC_CALLBACK(void*) HandleStyleSheetLoadedEvent(PLEvent* aEvent);
-PR_STATIC_CALLBACK(void) DestroyStyleSheetLoadedEvent(PLEvent* aEvent);
-PR_END_EXTERN_C
-
+#if 0
 PR_STATIC_CALLBACK(void*)
 HandleStyleSheetLoadedEvent(PLEvent* aEvent)
 {
@@ -1939,6 +1941,7 @@ DestroyStyleSheetLoadedEvent(PLEvent* aEvent)
   SheetLoadData* data = NS_STATIC_CAST(SheetLoadData*, aEvent);
   data->mLoader->DestroyLoadEvent(data);
 }
+#endif
 
 nsresult
 CSSLoaderImpl::PostLoadEvent(nsIURI* aURI,
@@ -1953,13 +1956,10 @@ CSSLoaderImpl::PostLoadEvent(nsIURI* aURI,
   // observer, since we may need to unblock the parser
   // NS_PRECONDITION(aObserver, "Must have observer");
 
-  nsCOMPtr<nsIEventQueue> eventQ;
-  nsresult rv = nsContentUtils::EventQueueService()->
-    GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                         getter_AddRefs(eventQ));
-  NS_ENSURE_TRUE(eventQ, rv);
+  nsCOMPtr<nsIThread> thread = do_GetMainThread();
+  NS_ENSURE_STATE(thread);
 
-  SheetLoadData* evt =
+  SheetLoadData *evt =
     new SheetLoadData(this, EmptyString(), // title doesn't matter here
                       aParserToUnblock,
                       aURI,
@@ -1971,9 +1971,6 @@ CSSLoaderImpl::PostLoadEvent(nsIURI* aURI,
 
   NS_ADDREF(evt);
 
-  PL_InitEvent(evt, this, ::HandleStyleSheetLoadedEvent,
-               ::DestroyStyleSheetLoadedEvent);
-
   // We'll unblock onload when we destroy the event, so make sure to block it
   // now.  We unblock from destruction, not firing, just in case events get
   // revoked for some reason.
@@ -1982,13 +1979,13 @@ CSSLoaderImpl::PostLoadEvent(nsIURI* aURI,
   }
   
   if (!mPostedEvents.AppendElement(evt)) {
-    PL_DestroyEvent(evt);
+    NS_RELEASE(evt);
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  rv = eventQ->PostEvent(evt);
+  nsresult rv = thread->Dispatch(evt, NS_DISPATCH_NORMAL);
   if (NS_FAILED(rv)) {
-    PL_DestroyEvent(evt);
+    DestroyLoadEvent(evt);
   } else {
     // We want to notify the observer for this data.  We didn't want to set
     // this earlier, since we would have returned an error _and_ notified.

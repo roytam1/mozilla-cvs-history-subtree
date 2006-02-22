@@ -116,8 +116,6 @@
 #include "nsImageFrame.h"
 #include "nsIObjectLoadingContent.h"
 
-static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
-
 #include "nsIDOMWindowInternal.h"
 #include "nsIMenuFrame.h"
 
@@ -1926,6 +1924,7 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument,
   , mUpdateCount(0)
   , mQuotesDirty(PR_FALSE)
   , mCountersDirty(PR_FALSE)
+  , mRestyleEventPending(PR_FALSE)
 {
   if (!gGotXBLFormPrefs) {
     gGotXBLFormPrefs = PR_TRUE;
@@ -1939,9 +1938,6 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument,
     // now what?
   }
 
-  // XXXbz this should be in Init() or something!
-  mEventQueueService = do_GetService(kEventQueueServiceCID);
-  
 #ifdef DEBUG
   static PRBool gFirstTime = PR_TRUE;
   if (gFirstTime) {
@@ -10877,11 +10873,7 @@ nsCSSFrameConstructor::WillDestroyFrameTree()
   mCounterManager.Clear();
 
   // Cancel all pending reresolves
-  mRestyleEventQueue = nsnull;
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                           getter_AddRefs(eventQueue));
-  eventQueue->RevokeEvents(this);
+  mWeakSelf.forget();
 }
 
 //STATIC
@@ -13512,6 +13504,12 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
     // Nothing to do here
     return;
   }
+
+  if (!mWeakSelf) {
+    mWeakSelf = this;
+    if (!mWeakSelf)
+      return;  // out of memory
+  }
   
   RestyleData existingData;
   existingData.mRestyleHint = nsReStyleHint(0);
@@ -13524,24 +13522,23 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
 
   mPendingRestyles.Put(aContent, existingData);
     
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                           getter_AddRefs(eventQueue));
-    
-  if (eventQueue != mRestyleEventQueue) {
-    RestyleEvent* ev = new RestyleEvent(this);
-    if (NS_FAILED(eventQueue->PostEvent(ev))) {
-      PL_DestroyEvent(ev);
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  if (!mRestyleEventPending) {
+    nsCOMPtr<nsIRunnable> ev = new RestyleEvent(mWeakSelf);
+    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
+      NS_NOTREACHED("failed to dispatch restyle event");
       // XXXbz and what?
     } else {
-      mRestyleEventQueue = eventQueue;
+      mRestyleEventPending = PR_TRUE;
     }
   }
 }
 
-void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
-  nsCSSFrameConstructor* constructor =
-    NS_STATIC_CAST(nsCSSFrameConstructor*, owner);
+NS_IMETHODIMP nsCSSFrameConstructor::RestyleEvent::Run() {
+  nsCSSFrameConstructor* constructor = mConstructor;
+  if (!constructor)
+    return NS_OK;  // event was revoked
+
   nsIViewManager* viewManager =
     constructor->mPresShell->GetViewManager();
   NS_ASSERTION(viewManager, "Must have view manager for update");
@@ -13555,33 +13552,19 @@ void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
 
   // Make sure that any restyles that happen from now on will go into
   // a new event.
-  constructor->mRestyleEventQueue = nsnull;
+  constructor->mRestyleEventPending = PR_FALSE;
 
   constructor->ProcessPendingRestyles();
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
+
+  return NS_OK;
 }
 
-PR_STATIC_CALLBACK(void*)
-HandleRestyleEvent(PLEvent* aEvent)
-{
-  nsCSSFrameConstructor::RestyleEvent* evt =
-    NS_STATIC_CAST(nsCSSFrameConstructor::RestyleEvent*, aEvent);
-  evt->HandleEvent();
-  return nsnull;
-}
-
-PR_STATIC_CALLBACK(void)
-DestroyRestyleEvent(PLEvent* aEvent)
-{
-  delete NS_STATIC_CAST(nsCSSFrameConstructor::RestyleEvent*, aEvent);
-}
-
-nsCSSFrameConstructor::RestyleEvent::RestyleEvent(nsCSSFrameConstructor* aConstructor)
+nsCSSFrameConstructor::RestyleEvent::RestyleEvent(
+                              const nsCSSFrameConstructorWeakRef &aConstructor)
+  : mConstructor(aConstructor)
 {
   NS_PRECONDITION(aConstructor, "Must have a constructor!");
-
-  PL_InitEvent(this, aConstructor,
-               ::HandleRestyleEvent, ::DestroyRestyleEvent);
 }
 
 nsresult
