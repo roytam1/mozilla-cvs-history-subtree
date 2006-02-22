@@ -541,6 +541,7 @@ void sqlite3AlterBeginAddColumn(Parse *pParse, SrcList *pSrc){
   for(i=0; i<pNew->nCol; i++){
     Column *pCol = &pNew->aCol[i];
     pCol->zName = sqliteStrDup(pCol->zName);
+    pCol->zColl = 0;
     pCol->zType = 0;
     pCol->pDflt = 0;
   }

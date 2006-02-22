@@ -99,7 +99,7 @@ int sqlite3pager_stmt_rollback(Pager*);
 void sqlite3pager_dont_rollback(void*);
 void sqlite3pager_dont_write(Pager*, Pgno);
 int *sqlite3pager_stats(Pager*);
-void sqlite3pager_set_safety_level(Pager*,int);
+void sqlite3pager_set_safety_level(Pager*,int,int);
 const char *sqlite3pager_filename(Pager*);
 const char *sqlite3pager_dirname(Pager*);
 const char *sqlite3pager_journalname(Pager*);
