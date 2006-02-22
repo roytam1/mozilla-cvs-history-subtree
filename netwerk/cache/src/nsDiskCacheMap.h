@@ -358,6 +358,14 @@ struct nsDiskCacheHeader {
         mEntryCount  = ::PR_htonl(mEntryCount);
         mIsDirty     = ::PR_htonl(mIsDirty);
         mRecordCount = ::PR_htonl(mRecordCount);
+
+#ifdef XP_MACOSX
+        // Mac-only on the 1.8.0 branch, see bug 325765
+        for (PRUint32 i = 0; i < kBuckets ; i++) {
+            mEvictionRank[i] = ::PR_htonl(mEvictionRank[i]);
+            mBucketUsage[i]  = ::PR_htonl(mBucketUsage[i]);
+        }
+#endif
 #endif
     }
     
@@ -369,6 +377,14 @@ struct nsDiskCacheHeader {
         mEntryCount  = ::PR_ntohl(mEntryCount);
         mIsDirty     = ::PR_ntohl(mIsDirty);
         mRecordCount = ::PR_ntohl(mRecordCount);
+
+#ifdef XP_MACOSX
+        // Mac-only on the 1.8.0 branch, see bug 325765
+        for (PRUint32 i = 0; i < kBuckets ; i++) {
+            mEvictionRank[i] = ::PR_ntohl(mEvictionRank[i]);
+            mBucketUsage[i]  = ::PR_ntohl(mBucketUsage[i]);
+        }
+#endif
 #endif
     }
 };
