@@ -53,7 +53,6 @@
 #ifdef XP_OS2
 #include "private/pprthred.h"
 #endif
-#include "plevent.h"
 #include "prmem.h"
 #include "prnetdb.h"
 #include "prprf.h"
@@ -72,7 +71,6 @@
 #include "nsIContentHandler.h"
 #include "nsIDialogParamBlock.h"
 #include "nsIDOMWindow.h"
-#include "nsIEventQueueService.h"
 #include "nsIExtensionManager.h"
 #include "nsIFastLoadService.h" // for PLATFORM_FASL_SUFFIX
 #include "nsIGenericFactory.h"
@@ -538,7 +536,6 @@ public:
   nsresult Initialize();
   nsresult DoAutoreg();
   nsresult RegisterProfileService(nsIToolkitProfileService* aProfileService);
-  nsresult InitEventQueue();
   nsresult SetWindowCreator(nsINativeAppSupport* native);
 
 private:
@@ -631,21 +628,6 @@ ScopedXPCOMStartup::RegisterProfileService(nsIToolkitProfileService* aProfileSer
                               "Toolkit Profile Service",
                               NS_PROFILESERVICE_CONTRACTID,
                               factory);
-}
-
-nsresult
-ScopedXPCOMStartup::InitEventQueue()
-{
-  NS_TIMELINE_ENTER("init event service");
-  nsresult rv;
-
-  nsCOMPtr<nsIEventQueueService> eventQService(do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = eventQService->CreateThreadEventQueue();
-  NS_TIMELINE_LEAVE("init event service");
-
-  return rv;
 }
 
 nsresult
@@ -1249,7 +1231,6 @@ ProfileLockedDialog(nsILocalFile* aProfileDir, nsILocalFile* aProfileLocalDir,
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = xpcom.DoAutoreg();
-  rv |= xpcom.InitEventQueue();
   rv |= xpcom.SetWindowCreator(aNative);
   NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
@@ -1326,7 +1307,6 @@ ShowProfileManager(nsIToolkitProfileService* aProfileSvc,
 
     rv = xpcom.RegisterProfileService(aProfileSvc);
     rv |= xpcom.DoAutoreg();
-    rv |= xpcom.InitEventQueue();
     rv |= xpcom.SetWindowCreator(aNative);
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
@@ -2182,7 +2162,6 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
       rv = xpcom.Initialize();
       NS_ENSURE_SUCCESS(rv, 1); 
       rv = xpcom.DoAutoreg();
-      rv |= xpcom.InitEventQueue();
       rv |= xpcom.SetWindowCreator(nativeApp);
       NS_ENSURE_SUCCESS(rv, 1);
 
