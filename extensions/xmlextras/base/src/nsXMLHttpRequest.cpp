@@ -50,6 +50,7 @@
 #include "nsIURI.h"
 #include "nsILoadGroup.h"
 #include "nsNetUtil.h"
+#include "nsThreadUtils.h"
 #include "nsIUploadChannel.h"
 #include "nsIDOMSerializer.h"
 #include "nsXPCOM.h"
@@ -85,7 +86,6 @@ static const char* kLoadAsData = "loadAsData";
 static NS_DEFINE_CID(kCharsetAliasCID, NS_CHARSETALIAS_CID);
 static NS_DEFINE_CID(kIDOMDOMImplementationCID, NS_DOM_IMPLEMENTATION_CID);
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 // State
 #define XML_HTTP_REQUEST_UNINITIALIZED  (1 << 0)  // 0
@@ -1567,17 +1567,12 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   // Reset responseXML
   mDocument = nsnull;
 
-  nsCOMPtr<nsIEventQueue> modalEventQueue;
+  nsCOMPtr<nsIThread> thread;
 
   if (!(mState & XML_HTTP_REQUEST_ASYNC)) {
-    if(!mEventQService) {
-      mEventQService = do_GetService(kEventQueueServiceCID, &rv);
-      NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
-    }
-
     mState |= XML_HTTP_REQUEST_SYNCLOOPING;
 
-    rv = mEventQService->PushThreadEventQueue(getter_AddRefs(modalEventQueue));
+    rv = NS_GetCurrentThread(getter_AddRefs(thread));
     if (NS_FAILED(rv)) {
       return rv;
     }
@@ -1630,30 +1625,20 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   rv = mChannel->AsyncOpen(listener, nsnull);
 
   if (NS_FAILED(rv)) {
-    if (modalEventQueue) {
-      mEventQService->PopThreadEventQueue(modalEventQueue);
-    }
     return rv;
   }
 
   // If we're synchronous, spin an event loop here and wait
   if (!(mState & XML_HTTP_REQUEST_ASYNC)) {
-    while (mState & XML_HTTP_REQUEST_SYNCLOOPING) {
-      modalEventQueue->ProcessPendingEvents();
-
-      // Be sure not to busy wait! (see bug 273578)
-      if (mState & XML_HTTP_REQUEST_SYNCLOOPING)
-        PR_Sleep(PR_MillisecondsToInterval(10));
-    }
-
-    mEventQService->PopThreadEventQueue(modalEventQueue);
+    while (NS_SUCCEEDED(rv) && mState & XML_HTTP_REQUEST_SYNCLOOPING)
+      rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
   }
 
   if (!mChannel) {
     return NS_ERROR_FAILURE;
   }
 
-  return NS_OK;
+  return rv;
 }
 
 /* void setRequestHeader (in AUTF8String header, in AUTF8String value); */
