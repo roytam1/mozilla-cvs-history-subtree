@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* vim:expandtab:shiftwidth=4:tabstop=4:
- */
+/* -*- Mode: c++; tab-width: 2; indent-tabs-mode: nil; -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -16,9 +14,10 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is Christopher Blizzard
- * <blizzard@mozilla.org>.  Portions created by the Initial Developer
- * are Copyright (C) 2001 the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
  *
@@ -36,28 +35,29 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsAppShell_h__
-#define nsAppShell_h__
+#ifndef nsBaseAppShell_h__
+#define nsBaseAppShell_h__
 
-#include "nsBaseAppShell.h"
-#include "nsCOMPtr.h"
+#include "nsIAppShell.h"
+#include "nsIThreadInternal.h"
 
-class nsAppShell : public nsBaseAppShell {
+/**
+ * A singleton that manages the UI thread's event queue.  Subclass this class
+ * to enable platform-specific event queue support.
+ */
+class nsBaseAppShell : public nsIAppShell, public nsIThreadObserver
+{
 public:
-    nsAppShell() : mInitialized(PR_FALSE) {}
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIAPPSHELL
+  NS_DECL_NSITHREADOBSERVER
 
-    // nsIAppShell overrides:
-    NS_IMETHOD Init(int *argc, char **argv);
+  nsBaseAppShell() : mKeepGoing(0) {}
 
-    // nsIThreadObserver overrides:
-    NS_IMETHOD OnNewTask(nsIThreadInternal *thread, PRUint32 flags);
-    NS_IMETHOD OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags);
+protected:
+  virtual ~nsBaseAppShell() {}
 
-private:
-    virtual ~nsAppShell() {}
-
-    int mPipeFDs[2];
-    PRBool mInitialized;
+  PRInt32 mKeepGoing;
 };
 
-#endif /* nsAppShell_h__ */
+#endif // nsBaseAppShell_h__
