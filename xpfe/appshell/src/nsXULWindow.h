@@ -55,7 +55,6 @@
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDOMWindowInternal.h"
-#include "nsIEventQueueService.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIWidget.h"
@@ -178,22 +177,6 @@ public:
 public:
    nsAutoString id; // The identifier of the content shell
    nsWeakPtr child; // content shell (weak reference to nsIDocShellTreeItem)
-};
-
-// nsEventQueueStack
-// a little utility object to push an event queue and pop it when it
-// goes out of scope. should probably be in a file of utility functions.
-class nsEventQueueStack
-{
-public:
-   nsEventQueueStack();
-   ~nsEventQueueStack();
-
-   nsresult Success();
-
-protected:
-   nsCOMPtr<nsIEventQueueService>   mService;
-   nsCOMPtr<nsIEventQueue>          mQueue;
 };
 
 #endif /* nsXULWindow_h__ */
