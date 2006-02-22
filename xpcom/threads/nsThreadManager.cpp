@@ -59,6 +59,21 @@ AppendAndRemoveThread(const nsACString &key, nsCOMPtr<nsIThread> &thread,
   return PL_DHASH_REMOVE;
 }
 
+// FindMatchingThread treats (*arg) as a PRThread.  When it finds a matching
+// nsIThread, it stores a pointer to the nsIThread in (*arg) and then returns.
+// The resulting nsIThread is not addref'd.
+PR_STATIC_CALLBACK(PLDHashOperator)
+FindMatchingThread(const nsACString &key, nsIThread *thread, void *arg)
+{
+  PRThread *prthread;
+  thread->GetPRThread(&prthread);
+  if (*((PRThread **) arg) == prthread) {
+    *((nsIThread **) arg) = thread;
+    return PL_DHASH_STOP;
+  }
+  return PL_DHASH_NEXT;
+}
+
 //-----------------------------------------------------------------------------
 
 nsThreadManager nsThreadManager::sInstance;
@@ -86,7 +101,7 @@ nsThreadManager::Init()
     return NS_ERROR_OUT_OF_MEMORY;
   mainThread->InitCurrentThread();
 
-  mMainPRThread = mainThread->mThread;
+  mainThread->GetPRThread(&mMainPRThread);
   return NS_OK;
 }
 
@@ -147,6 +162,26 @@ nsThreadManager::GetThread(const nsACString &name, nsIThread **result)
     return NS_OK;
   }
   mThreads.Get(name, result);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThreadManager::GetThreadFromPRThread(PRThread *thread, nsIThread **result)
+{
+  if (thread == mMainPRThread)
+    return GetMainThread(result);
+
+  // FindMatchingThread treats *arg as a PRThread.  When it finds a matching
+  // nsIThread, it stores a pointer to the nsIThread in *arg.
+  void *ptr = thread;
+  mThreads.EnumerateRead(FindMatchingThread, &ptr);
+
+  if (ptr == thread) {
+    *result = nsnull;
+  } else {
+    NS_ADDREF(*result = NS_STATIC_CAST(nsIThread *, ptr));
+  }
+
   return NS_OK;
 }
 

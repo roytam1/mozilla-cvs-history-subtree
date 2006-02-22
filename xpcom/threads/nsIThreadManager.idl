@@ -38,6 +38,8 @@
 
 #include "nsISupports.idl"
 
+[ptr] native PRThread(PRThread);
+
 interface nsIThread;
 
 [scriptable, uuid(056216f5-8803-46b4-9199-d95bc1f0446f)]
@@ -55,6 +57,12 @@ interface nsIThreadManager : nsISupports
    * Find a named thread.
    */
   nsIThread getThread(in ACString name);
+
+  /**
+   * Get the nsIThread object (if any) corresponding to the given PRThread.
+   * This method returns null if there is no corresponding nsIThread.
+   */
+  [noscript] nsIThread getThreadFromPRThread(in PRThread thread);
 
   /**
    * Get the main thread.

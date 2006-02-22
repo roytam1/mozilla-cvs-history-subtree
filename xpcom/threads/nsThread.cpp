@@ -293,7 +293,7 @@ nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
   } else if (flags & DISPATCH_SYNC) {
     nsCOMPtr<nsIThread> thread;
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
-    NS_ENSURE_STATE(thread);
+    NS_ENSURE_STATE(thread);  // XXX we need to handle this case!
 
     nsRefPtr<nsThreadSyncDispatch> task = new nsThreadSyncDispatch(runnable);
     PutTask(task, flags);
@@ -315,6 +315,13 @@ NS_IMETHODIMP
 nsThread::GetName(nsACString &result)
 {
   result = mName;  // no need to lock since this never changes
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::GetPRThread(PRThread **result)
+{
+  *result = mThread;
   return NS_OK;
 }
 

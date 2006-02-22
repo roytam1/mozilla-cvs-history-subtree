@@ -38,6 +38,8 @@
 
 #include "nsIDispatchTarget.idl"
 
+[ptr] native PRThread(PRThread);
+
 [scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
 interface nsIThread : nsIDispatchTarget
 {
@@ -46,6 +48,11 @@ interface nsIThread : nsIDispatchTarget
    * anonymous.
    */
   readonly attribute ACString name;
+
+  /**
+   * Returns the NSPR thread object corresponding to this nsIThread.
+   */
+  [noscript] PRThread getPRThread();
 
   /**
    * Shutdown the thread.  This method may not be executed from the thread

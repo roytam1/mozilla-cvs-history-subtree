@@ -66,7 +66,6 @@ public:
 
 private:
   friend class nsThreadShutdownTask;
-  friend class nsThreadManager;
 
   ~nsThread();
 
