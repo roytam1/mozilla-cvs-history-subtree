@@ -64,6 +64,7 @@
 #include "nsNSSCertHelper.h"
 #include "nsISupportsPrimitives.h"
 #include "nsUnicharUtils.h"
+#include "nsThreadUtils.h"
 
 #include "nspr.h"
 extern "C" {
@@ -217,8 +218,9 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
     return NS_ERROR_FAILURE;
   }
   
+  nsCOMPtr<nsIThread> thread = do_GetMainThread();
   nsCOMPtr<nsIX509Cert> x509Proxy;
-  proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+  proxyman->GetProxyForObject( thread,
                                nsIX509Cert::GetIID(),
                                NS_STATIC_CAST(nsIX509Cert*, this),
                                PROXY_SYNC | PROXY_ALWAYS,
@@ -265,7 +267,8 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
       nsCOMPtr<nsIX509CertValidity> originalValidity;
       rv = x509Proxy->GetValidity(getter_AddRefs(originalValidity));
       if (NS_SUCCEEDED(rv) && originalValidity) {
-        proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+        nsCOMPtr<nsIThread> thread = do_GetMainThread();
+        proxyman->GetProxyForObject( thread,
                                      nsIX509CertValidity::GetIID(),
                                      originalValidity,
                                      PROXY_SYNC | PROXY_ALWAYS,

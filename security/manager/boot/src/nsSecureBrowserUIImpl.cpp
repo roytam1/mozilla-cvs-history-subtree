@@ -76,6 +76,7 @@
 #include "nsIFormSubmitObserver.h"
 #include "nsISecurityWarningDialogs.h"
 #include "nsIProxyObjectManager.h"
+#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 #include "nsCRT.h"
 
@@ -1407,8 +1408,11 @@ GetNSSDialogs(nsISecurityWarningDialogs **result)
   if (!proxyman)
     return NS_ERROR_FAILURE;
 
+  nsCOMPtr<nsIThread> thread = do_GetMainThread();
+  NS_ENSURE_STATE(thread);
+
   nsCOMPtr<nsISupports> proxiedResult;
-  proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+  proxyman->GetProxyForObject(thread,
                               NS_GET_IID(nsISecurityWarningDialogs),
                               my_result, PROXY_SYNC,
                               getter_AddRefs(proxiedResult));

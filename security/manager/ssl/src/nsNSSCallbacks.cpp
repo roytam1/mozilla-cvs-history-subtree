@@ -54,6 +54,7 @@
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsCRT.h"
 #include "nsNSSShutDown.h"
+#include "nsThreadUtils.h"
 
 #include "ssl.h"
 #include "cert.h"
@@ -157,8 +158,11 @@ PK11PasswordPrompt(PK11SlotInfo* slot, PRBool retry, void* arg) {
   nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
   if (!proxyman) return nsnull;
 
+  nsCOMPtr<nsIThread> thread = do_GetMainThread();
+  NS_ENSURE_TRUE(thread, nsnull);
+
   nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-  proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+  proxyman->GetProxyForObject(thread,
                               NS_GET_IID(nsIInterfaceRequestor),
                               ir,
                               PROXY_SYNC,
@@ -172,8 +176,8 @@ PK11PasswordPrompt(PK11SlotInfo* slot, PRBool retry, void* arg) {
   }
 
   // Finally, get a proxy for the nsIPrompt
-  proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
-	                      NS_GET_IID(nsIPrompt),
+  proxyman->GetProxyForObject(thread,
+                              NS_GET_IID(nsIPrompt),
                               prompt,
                               PROXY_SYNC,
                               getter_AddRefs(proxyPrompt));
