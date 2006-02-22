@@ -49,7 +49,8 @@ exit_status=0
 for t in $dir/test_*.js
 do
     echo -n "$t: "
-    $bin/xpcshell -f $dir/head.js -f $t -f $dir/tail.js 2> $t.log 1>&2
+    $bin/xpcshell -f $dir/head.js -f $dir/head_http_server.js -f $t \
+                  -f $dir/tail.js 2> $t.log 1>&2
     if [ `grep -c '\*\*\* PASS' $t.log` = 0 ]
     then
         echo "FAIL (see $t.log)"

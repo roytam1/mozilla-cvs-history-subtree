@@ -1000,14 +1000,10 @@ nsHttpChannel::ReplaceWithProxy(nsIProxyInfo *pi)
         return rv;
 
     // Inform consumers about this fake redirect
-    nsCOMPtr<nsIChannelEventSink> channelEventSink;
-    GetCallback(channelEventSink);
-    if (channelEventSink) {
-        PRUint32 flags = nsIChannelEventSink::REDIRECT_INTERNAL;
-        rv = channelEventSink->OnChannelRedirect(this, newChannel, flags);
-        if (NS_FAILED(rv))
-            return rv;
-    }
+    PRUint32 flags = nsIChannelEventSink::REDIRECT_INTERNAL;
+    rv = gHttpHandler->OnChannelRedirect(this, newChannel, flags);
+    if (NS_FAILED(rv))
+        return rv;
 
     // open new channel
     rv = newChannel->AsyncOpen(mListener, mListenerContext);
@@ -2080,23 +2076,22 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
     if (NS_FAILED(rv)) return rv;
 
     // call out to the event sink to notify it of this redirection.
+    PRUint32 redirectFlags;
+    if (redirectType == 301) // Moved Permanently
+        redirectFlags = nsIChannelEventSink::REDIRECT_PERMANENT;
+    else
+        redirectFlags = nsIChannelEventSink::REDIRECT_TEMPORARY;
+    rv = gHttpHandler->OnChannelRedirect(this, newChannel, redirectFlags);
+    if (NS_FAILED(rv))
+        return rv;
+
+    // And now, the deprecated way
     nsCOMPtr<nsIHttpEventSink> httpEventSink;
     GetCallback(httpEventSink);
     if (httpEventSink) {
         // NOTE: nsIHttpEventSink is only used for compatibility with pre-1.8
         // versions.
         rv = httpEventSink->OnRedirect(this, newChannel);
-        if (NS_FAILED(rv)) return rv;
-    }
-    nsCOMPtr<nsIChannelEventSink> channelEventSink;
-    GetCallback(channelEventSink);
-    if (channelEventSink) {
-        PRUint32 flags;
-        if (redirectType == 301) // Moved Permanently
-            flags = nsIChannelEventSink::REDIRECT_PERMANENT;
-        else
-            flags = nsIChannelEventSink::REDIRECT_TEMPORARY;
-        rv = channelEventSink->OnChannelRedirect(this, newChannel, flags);
         if (NS_FAILED(rv)) return rv;
     }
     // XXX we used to talk directly with the script security manager, but that
