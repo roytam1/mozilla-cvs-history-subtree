@@ -134,6 +134,7 @@ static const nsModuleComponentInfo gComponents[] = {
 #ifdef MOZ_XUL
   { "Dialog ParamBlock", NS_DIALOGPARAMBLOCK_CID, NS_DIALOGPARAMBLOCK_CONTRACTID, nsDialogParamBlockConstructor },
   { "Prompt Service", NS_PROMPTSERVICE_CID, NS_PROMPTSERVICE_CONTRACTID, nsPromptServiceConstructor },
+   { "Nonblocking Alert Service", NS_PROMPTSERVICE_CID, NS_NONBLOCKINGALERTSERVICE_CONTRACTID, nsPromptServiceConstructor },
   { "JS Console Service", NS_JSCONSOLESERVICE_CID, NS_JSCONSOLESERVICE_CONTRACTID, nsJSConsoleServiceConstructor },
 #ifndef WINCE
   { "Printing Prompt Service", NS_PRINTINGPROMPTSERVICE_CID, NS_PRINTINGPROMPTSERVICE_CONTRACTID, nsPrintingPromptServiceConstructor },
