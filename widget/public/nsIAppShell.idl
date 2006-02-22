@@ -40,47 +40,40 @@
 #include "nsISupports.idl"
 
 native int(int);
-[ptr] native UndefinednsIWidget(nsIWidget);
-[ref] native PRBoolRef(PRBool);
-[ref] native voidPtrRef(void *);
-
-%{ C++
-/**
- * Flags for the getNativeData function.
- * See GetNativeData()
- */
-#define NS_NATIVE_SHELL   0
-
-class nsIWidget;
-%}
-
 
 [uuid(3785230a-da91-4eaa-8a25-56acc7ff35d0)]
 interface nsIAppShell : nsISupports
 {
   /**
-   * Creates an application shell
+   * Initializes the application shell.
    */ 
-  void Create(inout int argc, inout string argv);
+  void init(inout int argc, inout string argv);
 
   /**
-   * Enter an event loop.
-   * Don't leave until application exits.
+   * Enter an event loop.  Don't leave until exit() is called.
    */
-  void Run();
-
-  /**
-   * Prepare to process events. 
-   */
-  void Spinup();
-
-  /**
-   * Prepare to stop processing events.  
-   */
-  void Spindown();
+  void run();
 
   /**
    * Exit the handle event loop
    */
-  void Exit();
+  void exit();
+
+  /**
+   * Give hint to native event queue notification mechanism. If the native
+   * platform needs to tradeoff performance vs. native event starvation this
+   * hint tells the native dispatch code which to favor.  The default is to
+   * prevent event starvation.
+   *
+   * Calls to this function may be nested. When the number of calls that pass
+   * PR_TRUE is subtracted from the number of calls that pass PR_FALSE is
+   * greater than 0, performance is given precedence over preventing event
+   * starvation.
+   *
+   * The starvationDelay arg is only used when favorPerfOverStarvation is
+   * PR_FALSE. It is the amount of time in milliseconds to wait before the
+   * PR_FALSE actually takes effect.
+   */
+  void favorPerformanceHint(in boolean favorPerfOverStarvation,
+                            in unsigned long starvationDelay);
 };
