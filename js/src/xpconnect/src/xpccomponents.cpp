@@ -2256,9 +2256,12 @@ nsXPCComponents_utils_Sandbox::CallOrConstruct(nsIXPConnectWrappedNative *wrappe
     if (!tempcx)
         return ThrowAndFail(NS_ERROR_OUT_OF_MEMORY, cx, _retval);
 
+    AutoJSRequestWithNoCallContext req(tempcx);
     JSObject *sandbox = JS_NewObject(tempcx, &SandboxClass, nsnull, nsnull);
     if (!sandbox)
         return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
+
+    JS_SetGlobalObject(tempcx, sandbox);
 
     // Make sure to set up principals on the sandbox before initing classes
     nsIScriptObjectPrincipal *sop = nsnull;
@@ -2415,7 +2418,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         return NS_ERROR_FAILURE;
     }
 
-    JSContext *sandcx = JS_NewContext(JS_GetRuntime(cx), 1024);
+    XPCAutoJSContext sandcx(JS_NewContext(JS_GetRuntime(cx), 1024), false);
     if(!sandcx) {
         JS_ReportError(cx, "Can't prepare context for evalInSandbox");
         JSPRINCIPALS_DROP(cx, jsPrincipals);
@@ -2432,7 +2435,6 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
             JS_ReportError(cx,
                     "Unable to initialize XPConnect with the sandbox context");
             JSPRINCIPALS_DROP(cx, jsPrincipals);
-            JS_DestroyContextNoGC(sandcx);
             return NS_ERROR_FAILURE;
         }
 
@@ -2449,7 +2451,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
     JSStackFrame frame;
     memset(&frame, 0, sizeof frame);
 
-    sandcx->fp = &frame;
+    NS_STATIC_CAST(JSContext *, sandcx)->fp = &frame;
 
     // Get the current source info from xpc. Use the codebase as a fallback,
     // though.
@@ -2467,14 +2469,17 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         }
     }
 
+    AutoJSRequestWithNoCallContext req(sandcx);
     if (!JS_EvaluateUCScriptForPrincipals(sandcx, sandbox, jsPrincipals,
                                           NS_REINTERPRET_CAST(const jschar *,
                                               PromiseFlatString(source).get()),
                                           source.Length(), filename.get(),
                                           lineNo, rval)) {
-
         jsval exn;
         if (JS_GetPendingException(sandcx, &exn)) {
+            AutoJSSuspendRequestWithNoCallContext sus(sandcx);
+            AutoJSRequestWithNoCallContext cxreq(cx);
+
             JS_SetPendingException(cx, exn);
             cc->SetExceptionWasThrown(PR_TRUE);
         } else {
@@ -2488,7 +2493,6 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         stack->Pop(nsnull);
     }
 
-    JS_DestroyContextNoGC(sandcx);
     JSPRINCIPALS_DROP(cx, jsPrincipals);
     return rv;
 #endif /* !XPCONNECT_STANDALONE */
