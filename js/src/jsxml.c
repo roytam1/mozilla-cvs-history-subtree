@@ -1225,7 +1225,12 @@ XMLArrayTruncate(JSContext *cx, JSXMLArray *array, uint32 length)
 #define XMLARRAY_HAS_MEMBER(a,e,f)  (XMLArrayFindMember(a, (void *)(e), f) != \
                                      XML_NOT_FOUND)
 #define XMLARRAY_MEMBER(a,i,t)      ((t *) (a)->vector[i])
-#define XMLARRAY_SET_MEMBER(a,i,e)  ((a)->vector[i] = (void *)(e))
+#define XMLARRAY_SET_MEMBER(a,i,e)                                            \
+    JS_BEGIN_MACRO                                                            \
+      if ((a)->length <= (i))                                                 \
+          (a)->length = (i) + 1;                                              \
+      ((a)->vector[i] = (void *)(e));                                         \
+    JS_END_MACRO
 #define XMLARRAY_ADD_MEMBER(x,a,i,e)XMLArrayAddMember(x, a, i, (void *)(e))
 #define XMLARRAY_INSERT(x,a,i,n)    XMLArrayInsert(x, a, i, n)
 #define XMLARRAY_APPEND(x,a,e)      XMLARRAY_ADD_MEMBER(x, a, (a)->length, (e))
@@ -1489,8 +1494,10 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
         xml = ParseNodeToXML(cx, pn2, inScopeNSes, flags);
         if (!xml)
             goto fail;
-        flags &= ~XSF_PRECOMPILED_ROOT;
+        if (js_PushLocalRoot(cx, cx->localRootStack, (jsval)xml) < 0)
+            goto fail;
 
+        flags &= ~XSF_PRECOMPILED_ROOT;
         n = pn->pn_count;
         JS_ASSERT(n >= 2);
         n -= 2;
@@ -1517,10 +1524,8 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
                 continue;
             }
 
-            if (!kid) {
-                xml->xml_kids.length = i;
+            if (!kid)
                 goto fail;
-            }
 
             /* Store kid in xml right away, to protect it from GC. */
             XMLARRAY_SET_MEMBER(&xml->xml_kids, i, kid);
@@ -1538,7 +1543,6 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
         }
 
         JS_ASSERT(i == n);
-        xml->xml_kids.length = n;
         if (n < pn->pn_count - 2)
             XMLArrayTrim(&xml->xml_kids);
         XMLARRAY_TRUNCATE(cx, inScopeNSes, length);
@@ -1571,16 +1575,13 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
                 continue;
             }
 
-            if (!kid) {
-                xml->xml_kids.length = i;
+            if (!kid)
                 goto fail;
-            }
 
             XMLARRAY_SET_MEMBER(&xml->xml_kids, i, kid);
             ++i;
         }
 
-        xml->xml_kids.length = n;
         if (n < pn->pn_count)
             XMLArrayTrim(&xml->xml_kids);
         break;
@@ -1589,7 +1590,7 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
       case TOK_XMLPTAGC:
         length = inScopeNSes->length;
         pn2 = pn->pn_head;
-        JS_ASSERT(pn2->pn_type = TOK_XMLNAME);
+        JS_ASSERT(pn2->pn_type == TOK_XMLNAME);
         if (pn2->pn_arity == PN_LIST)
             goto syntax;
 
@@ -1738,18 +1739,14 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
             JS_ASSERT(pn2->pn_type == TOK_XMLATTR);
 
             attr = js_NewXML(cx, JSXML_CLASS_ATTRIBUTE);
-            if (!attr) {
-                xml->xml_attrs.length = i;
+            if (!attr)
                 goto fail;
-            }
 
             XMLARRAY_SET_MEMBER(&xml->xml_attrs, i, attr);
             attr->parent = xml;
             attr->name = qn;
             attr->xml_value = ATOM_TO_STRING(pn2->pn_atom);
         }
-
-        xml->xml_attrs.length = n;
 
         /* Point tag closes its own namespace scope. */
         if (pn->pn_type == TOK_XMLPTAGC)
@@ -3168,7 +3165,6 @@ Append(JSContext *cx, JSXML *list, JSXML *xml)
             kid = XMLARRAY_MEMBER(&xml->xml_kids, j, JSXML);
             XMLARRAY_SET_MEMBER(&list->xml_kids, i + j, kid);
         }
-        list->xml_kids.length = k;
         return JS_TRUE;
     }
 
@@ -3261,12 +3257,12 @@ DeepCopySetInLRS(JSContext *cx, JSXMLArray *from, JSXMLArray *to, JSXML *parent,
             kid2->xml_value = str;
         }
 
-        XMLARRAY_SET_MEMBER(to, j++, kid2);
+        XMLARRAY_SET_MEMBER(to, j, kid2);
+        ++j;
         if (parent->xml_class != JSXML_CLASS_LIST)
             kid2->parent = parent;
     }
 
-    to->length = j;
     if (j < n)
         XMLArrayTrim(to);
     return JS_TRUE;
@@ -3324,7 +3320,6 @@ DeepCopyInLRS(JSContext *cx, JSXML *xml, uintN flags)
                 }
                 XMLARRAY_SET_MEMBER(&copy->xml_namespaces, i, ns2);
             }
-            copy->xml_namespaces.length = n;
 
             ok = DeepCopySetInLRS(cx, &xml->xml_attrs, &copy->xml_attrs, copy,
                                   0);
@@ -4345,7 +4340,6 @@ PutProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                     kid2 = XMLARRAY_MEMBER(&vxml->xml_kids, k, JSXML);
                     XMLARRAY_SET_MEMBER(&copy->xml_kids, k, kid2);
                 }
-                copy->xml_kids.length = n;
 
                 JS_ASSERT(parent != xml);
                 if (parent) {
@@ -6154,7 +6148,6 @@ xml_namespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             XMLARRAY_SET_MEMBER(&inScopeNSes, i, ns);
         }
 
-        inScopeNSes.length = i;
         ns = ok ? GetNamespace(cx, xml->name, &inScopeNSes) : NULL;
         XMLArrayFinish(cx, &inScopeNSes);
         if (!ns)
