@@ -314,7 +314,7 @@ initOptions(int aArgCount, char **aArgArray)
     }
 
     /*
-     ** initalize the categories
+     ** initialize the categories
      */
     initCategories(&globals);
 
