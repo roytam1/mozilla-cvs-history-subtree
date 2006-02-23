@@ -450,31 +450,8 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     if (proxyInfo == nsnull)
         return NS_ERROR_NULL_POINTER;
     
-    PRBool eventLoopCreated = PR_FALSE;
-    nsresult rv; 
-
     nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    if (!thread)
-    {
-        // XXX create a nsIThread wrapper for this thread.
-
-        /*
-        static int sWrapperCount = 0;
-        nsCString name;
-        name.AssignLiteral("xpcom.proxy-");
-        name.AppendInt(sDummyCount++);
-
-        nsThread *dummy = new nsThread(name);
-        if (!dummy)
-            return NS_ERROR_OUT_OF_MEMORY;
-        dummy->InitCurrentThread();
-        
-        thread = dummy;
-        */
-    }
-
-    if (NS_FAILED(rv))
-        return rv;
+    NS_ENSURE_STATE(thread);
     
     proxyInfo->SetCallersTarget(thread);
 
@@ -484,19 +461,16 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     
     mTarget->Dispatch(event, NS_DISPATCH_NORMAL);
 
+    // TODO(darin): Layer a custom nsIThread implementation on top of the
+    //              current thread to limit event processing to only proxy
+    //              events.  Add support for sequencing.
+
+    nsresult rv;
     while (!proxyInfo->GetCompleted())
     {
         rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
         if (NS_FAILED(rv)) break;
     }  
-
-    /*
-    if (eventLoopCreated)
-    {
-         mEventQService->DestroyThreadEventQueue();
-         eventQ = 0;
-    }
-    */
     
     return rv;
 }
