@@ -55,6 +55,7 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
+#include "nsThreadUtils.h"
 
 #include "nsNetUtil.h"
 
@@ -110,7 +111,6 @@
 #include <windows.h>
 #endif
 
-static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
@@ -189,9 +189,11 @@ nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
 
     // Failure is an option, and will occur in the stub installer.
 
+    nsCOMPtr<nsIThread> thread = do_GetMainThread();
+
     NS_WITH_ALWAYS_PROXIED_SERVICE(CHROMEREG_IFACE, cr,
                                    NS_CHROMEREGISTRY_CONTRACTID,
-                                   NS_UI_THREAD_EVENTQ, &rv);
+                                   thread, &rv);
     if (NS_SUCCEEDED(rv)) {
       mChromeRegistry = cr;
 
@@ -211,7 +213,7 @@ nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
 #ifdef MOZ_XUL_APP
     NS_WITH_ALWAYS_PROXIED_SERVICE(nsIExtensionManager, em,
                                    "@mozilla.org/extensions/manager;1",
-                                   NS_UI_THREAD_EVENTQ, &rv);
+                                   thread, &rv);
     if (NS_SUCCEEDED(rv))
       mExtensionManager = em;
 
@@ -264,12 +266,14 @@ nsInstall::nsInstall(nsIZipReader * theJARFile)
 
     su->Release();
 
+    nsCOMPtr<nsIThread> thread = do_GetMainThread();
+
     // get the resourced xpinstall string bundle
     mStringBundle = nsnull;
     NS_WITH_PROXIED_SERVICE( nsIStringBundleService,
                              service,
                              kStringBundleServiceCID,
-                             NS_UI_THREAD_EVENTQ,
+                             thread,
                              &rv );
 
     if (NS_SUCCEEDED(rv) && service)
@@ -1220,7 +1224,6 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
     nsCOMPtr<nsIFile> resFile;
     nsIURI *url = nsnull;
     nsIStringBundleService* service = nsnull;
-    nsIEventQueueService* pEventQueueService = nsnull;
     nsIStringBundle* bundle = nsnull;
     nsCOMPtr<nsISimpleEnumerator> propEnum;
     jsval v = JSVAL_NULL;
@@ -1245,13 +1248,6 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
 
     // initialize string bundle and related services
     ret = CallGetService(kStringBundleServiceCID, &service);
-    if (NS_FAILED(ret))
-        goto cleanup;
-    ret = CallGetService(kEventQueueServiceCID, &pEventQueueService);
-    if (NS_FAILED(ret))
-        goto cleanup;
-    ret = pEventQueueService->CreateThreadEventQueue();
-    NS_RELEASE(pEventQueueService);
     if (NS_FAILED(ret))
         goto cleanup;
 
@@ -1410,8 +1406,9 @@ nsPIXPIProxy* nsInstall::GetUIThreadProxy()
                  do_GetService(kProxyObjectManagerCID, &rv);
         if (NS_SUCCEEDED(rv))
         {
+            nsCOMPtr<nsIThread> thread = do_GetMainThread();
             nsCOMPtr<nsPIXPIProxy> tmp(do_QueryInterface(new nsXPIProxy()));
-            rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsPIXPIProxy),
+            rv = pmgr->GetProxyForObject( thread, NS_GET_IID(nsPIXPIProxy),
                     tmp, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(mUIThreadProxy) );
         }
     }
