@@ -50,11 +50,6 @@
 #include "nsWidgetsCID.h"
 #include "aimm.h"
 
-NS_IMPL_ISUPPORTS2(nsAppShell, nsIAppShell, nsIThreadObserver)
-
-// XXX why is this not a member variable?
-static PRBool gKeepGoing;
-
 #if 0
 UINT _pr_PostEventMsgId;
 static char *_pr_eventWindowClass = "XPCOM:EventWindow";
@@ -73,6 +68,88 @@ static PRBool   _md_WasPaintPending = PR_FALSE;
 static PRUint32 _md_PaintTime = 0;
 /* last mouse location */
 static POINT    _md_LastMousePos;
+
+LRESULT CALLBACK
+_md_EventReceiverProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    if (_pr_PostEventMsgId == uMsg )
+    {
+        PREventQueue *queue = (PREventQueue *)lParam;
+        queue->removeMsg = PR_FALSE;
+        PL_ProcessPendingEvents(queue);
+        queue->removeMsg = PR_TRUE;
+        return TRUE;
+    }
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+/*
+** _md_CreateEventQueue() -- ModelDependent initializer
+*/
+static void _md_CreateEventQueue( PLEventQueue *eventQueue )
+{
+    WNDCLASS wc;
+    HANDLE h = GetModuleHandle(NULL);
+
+    /*
+    ** If this is the first call to PL_InitializeEventsLib(),
+    ** make the call to InitWinEventLib() to create the initLock.
+    **
+    ** Then lock the initializer lock to insure that
+    ** we have exclusive control over the initialization sequence.
+    **
+    */
+
+
+    /* Register the windows message for XPCOM Event notification */
+    _pr_PostEventMsgId = RegisterWindowMessage("XPCOM_PostEvent");
+
+    /* Register the class for the event receiver window */
+    if (!GetClassInfo(h, _pr_eventWindowClass, &wc)) {
+        wc.style         = 0;
+        wc.lpfnWndProc   = _md_EventReceiverProc;
+        wc.cbClsExtra    = 0;
+        wc.cbWndExtra    = 0;
+        wc.hInstance     = h;
+        wc.hIcon         = NULL;
+        wc.hCursor       = NULL;
+        wc.hbrBackground = (HBRUSH) NULL;
+        wc.lpszMenuName  = (LPCSTR) NULL;
+        wc.lpszClassName = _pr_eventWindowClass;
+        RegisterClass(&wc);
+    }
+
+    /* Create the event receiver window */
+    eventQueue->eventReceiverWindow = CreateWindow(_pr_eventWindowClass,
+                                        "XPCOM:EventReceiver",
+                                            0, 0, 0, 10, 10,
+                                            NULL, NULL, h,
+                                            NULL);
+    PR_ASSERT(eventQueue->eventReceiverWindow);
+    /* Set a property which can be used to retrieve the event queue
+     * within the _md_TimerProc callback
+     */
+    SetProp(eventQueue->eventReceiverWindow,
+            _md_GetEventQueuePropName(), (HANDLE)eventQueue);
+
+    return;
+} /* end _md_CreateEventQueue() */
+
+static void
+_pl_CleanupNativeNotifier(PLEventQueue* self)
+{
+    if (self->timerSet) {
+        KillTimer(self->eventReceiverWindow, TIMER_ID);
+        self->timerSet = PR_FALSE;
+    }
+    RemoveProp(self->eventReceiverWindow, _md_GetEventQueuePropName());
+
+    /* DestroyWindow doesn't do anything when called from a non ui thread.  Since 
+     * self->eventReceiverWindow was created on the ui thread, it must be destroyed
+     * on the ui thread.
+     */
+    SendMessage(self->eventReceiverWindow, WM_CLOSE, 0, 0);
+}
 
 /*******************************************************************************
  * Timer callback function. Timers are used on WIN32 instead of APP events
@@ -335,10 +412,20 @@ PL_FavorPerformanceHint(PRBool favorPerformanceOverEventStarvation,
 }
 #endif
 
-/*static*/ void
-nsAppShell::FavorPerformanceHint(PRBool favorPerformanceOverEventStarvation,
+NS_IMETHODIMP
+nsAppShell::Init(int *argc, char **argv)
+{
+  mMainThreadId = GetCurrentThreadId();
+  mMsgId = RegisterWindowMessage("nsAppShell_Dispatch");
+
+  return nsBaseAppShell::Init(argc, argv);
+}
+
+NS_IMETHODIMP
+nsAppShell::FavorPerformanceHint(PRBool favorPerfOverStarvation,
                                  PRUint32 starvationDelay)
 {
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -346,19 +433,6 @@ nsAppShell::FavorPerformanceHint(PRBool favorPerformanceOverEventStarvation,
 // Create the application shell
 //
 //-------------------------------------------------------------------------
-
-NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
-{
-  // Configure ourselves as an observer for the current thread:
-
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
-  nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(thread);
-  NS_ENSURE_STATE(threadInt);
-  threadInt->SetObserver(this);
-  return NS_OK;
-}
 
 //-------------------------------------------------------------------------
 //
@@ -388,20 +462,6 @@ static BOOL PeekKeyAndIMEMessage(LPMSG msg, HWND hwnd)
   }
 
   return false;
-}
-
-
-NS_IMETHODIMP nsAppShell::Run(void)
-{
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
-  gKeepGoing = PR_TRUE;
-  while (gKeepGoing)
-    thread->RunNextTask(nsIThread::RUN_NORMAL);
-
-  NS_RunPendingTasks(thread);
-  return NS_OK;
 }
 
 #if 0
@@ -460,16 +520,6 @@ NS_IMETHODIMP nsAppShell::Run(void)
   return msg.wParam;
 }
 #endif
-
-NS_IMETHODIMP nsAppShell::Spinup(void)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsAppShell::Spindown(void)
-{
-  return NS_OK;
-}
 
 #if 0
 NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aListen)
@@ -530,52 +580,73 @@ nsresult nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
 #endif
 
 //-------------------------------------------------------------------------
-//
-// Exit a message handler loop
-//
-//-------------------------------------------------------------------------
+// nsIThreadObserver methods:
 
-NS_IMETHODIMP nsAppShell::Exit(void)
-{
-  PostQuitMessage(0);
-  //
-  // Also, set a global flag, just in case someone eats the WM_QUIT message.
-  // see bug #54725.
-  //
-  gKeepGoing = PR_FALSE;
-  return NS_OK;
-}
-
-//-------------------------------------------------------------------------
-//
-// Thread observer methods
-//
-//-------------------------------------------------------------------------
-
-NS_IMETHODIMP nsAppShell::OnNewTask(nsIThreadInternal *thr, PRUint32 flags)
+NS_IMETHODIMP
+nsAppShell::OnNewTask(nsIThreadInternal *thr, PRUint32 flags)
 {
   // post a message to the native event queue...
+  PostThreadMessage(mMainThreadId, mMsgId, 0, 0);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAppShell::OnBeforeRunNextTask(nsIThreadInternal *thr,
-                                              PRUint32 flags)
+NS_IMETHODIMP
+nsAppShell::OnBeforeRunNextTask(nsIThreadInternal *thr, PRUint32 flags)
 {
+  // maybe process any pending native events... (gives high priority to native events)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAppShell::OnAfterRunNextTask(nsIThreadInternal *thr,
-                                             PRUint32 flags,
-                                             nsresult status)
+NS_IMETHODIMP
+nsAppShell::OnAfterRunNextTask(nsIThreadInternal *thr, PRUint32 flags,
+                               nsresult status)
 {
-  // process any pending native events...
+  // maybe process any pending native events... (gives high priority to native events)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAppShell::OnWaitNextTask(nsIThreadInternal *thr,
-                                         PRUint32 flags)
+NS_IMETHODIMP
+nsAppShell::OnWaitNextTask(nsIThreadInternal *thr, PRUint32 flags)
 {
-  // while (!thr->HasPendingTask())
-  //   wait for and process native events
+  // XXX needs to respond to FavorPerformanceHint
+
+  nsCOMPtr<nsITimerManager> timerMgr;
+
+  PRBool val;
+  while (NS_SUCCEEDED(thr->HasPendingTask(&val)) && !val) {
+    MSG msg;
+
+    bool gotMessage = false;
+
+    if (!timerMgr) {
+      timerMgr = do_GetService("@mozilla.org/timer/manager;1");
+      NS_ENSURE_STATE(timerMgr);
+    }
+
+    do {
+      // Give priority to system messages (in particular keyboard, mouse,
+      // timer, and paint messages).
+      if (PeekKeyAndIMEMessage(&msg, NULL) ||
+          nsToolkit::mPeekMessage(&msg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE) || 
+          nsToolkit::mPeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+        gotMessage = true;
+      } else {
+        PRBool hasTimers;
+        timerMgr->HasIdleTimers(&hasTimers);
+        if (hasTimers) {
+          do {
+            timerMgr->FireNextIdleTimer();
+            timerMgr->HasIdleTimers(&hasTimers);
+          } while (hasTimers && !nsToolkit::mPeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE));
+        } else {
+          // Block and wait for any posted application message
+          ::WaitMessage();
+        }
+      }
+    } while (!gotMessage);
+
+    TranslateMessage(&msg);
+    nsToolkit::mDispatchMessage(&msg);
+  }
   return NS_OK;
 }

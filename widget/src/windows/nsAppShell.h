@@ -38,30 +38,36 @@
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include "nsIAppShell.h"
-#include "nsIThreadInternal.h"
+#include "nsBaseAppShell.h"
 #include "nsITimerManager.h"
 #include "nsCOMPtr.h"
 
 /**
  * Native Win32 Application shell wrapper
  */
-class nsAppShell : public nsIAppShell, public nsIThreadObserver
+class nsAppShell : public nsBaseAppShell
 {
 public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIAPPSHELL
-  NS_DECL_NSITHREADOBSERVER
+  nsAppShell() : mMainThreadId(0), mMsgId(0) {}
 
-  nsAppShell() {}
+  // nsIAppShell overrides:
+  NS_IMETHOD Init(int *argc, char **argv);
+  NS_IMETHOD FavorPerformanceHint(PRBool perfOverStarvation,
+                                  PRUint32 starvationDelay);
 
-  static void FavorPerformanceHint(PRBool favorPerformanceOverEventStarvation,
-                                   PRUint32 starvationDelay);
+  // nsIThreadObserver overrides:
+  NS_IMETHOD OnNewTask(nsIThreadInternal *thread, PRUint32 flags);
+  NS_IMETHOD OnBeforeRunNextTask(nsIThreadInternal *thread, PRUint32 flags);
+  NS_IMETHOD OnAfterRunNextTask(nsIThreadInternal *thread, PRUint32 flags,
+                                nsresult status);
+  NS_IMETHOD OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags);
 
 private:
-  ~nsAppShell() {}
+  virtual ~nsAppShell() {}
 
   nsCOMPtr<nsITimerManager> mTimerManager;
+  PRUint32 mMainThreadId;
+  PRUint32 mMsgId;
 };
 
 #endif // nsAppShell_h__
