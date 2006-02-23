@@ -483,6 +483,7 @@ NS_INTERFACE_MAP_BEGIN(nsXULDocument)
     NS_INTERFACE_MAP_ENTRY(nsIXULDocument)
     NS_INTERFACE_MAP_ENTRY(nsIDOMXULDocument)
     NS_INTERFACE_MAP_ENTRY(nsIStreamLoaderObserver)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMXULDocument2)
     NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULDocument)
 NS_INTERFACE_MAP_END_INHERITING(nsXMLDocument)
 
@@ -1699,14 +1700,8 @@ nsXULDocument::GetHeight(PRInt32* aHeight)
 NS_IMETHODIMP
 nsXULDocument::GetPopupNode(nsIDOMNode** aNode)
 {
-    nsresult rv;
-
-    // get focus controller
-    nsCOMPtr<nsIFocusController> focusController;
-    GetFocusController(getter_AddRefs(focusController));
-    NS_ENSURE_TRUE(focusController, NS_ERROR_FAILURE);
-    // get popup node
-    rv = focusController->GetPopupNode(aNode); // addref happens here
+    // Get popup node.
+    nsresult rv = TrustedGetPopupNode(aNode); // addref happens here
 
     if (NS_SUCCEEDED(rv) && *aNode && !nsContentUtils::CanCallerAccess(*aNode)) {
         NS_RELEASE(*aNode);
@@ -1714,6 +1709,18 @@ nsXULDocument::GetPopupNode(nsIDOMNode** aNode)
     }
 
     return rv;
+}
+
+NS_IMETHODIMP
+nsXULDocument::TrustedGetPopupNode(nsIDOMNode** aNode)
+{
+    // Get the focus controller.
+    nsCOMPtr<nsIFocusController> focusController;
+    GetFocusController(getter_AddRefs(focusController));
+    NS_ENSURE_TRUE(focusController, NS_ERROR_FAILURE);
+
+    // Get the popup node.
+    return focusController->GetPopupNode(aNode); // addref happens here
 }
 
 NS_IMETHODIMP
@@ -1739,6 +1746,13 @@ nsXULDocument::GetTooltipNode(nsIDOMNode** aNode)
     }
     *aNode = mTooltipNode;
     NS_IF_ADDREF(*aNode);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULDocument::TrustedGetTooltipNode(nsIDOMNode** aNode)
+{
+    NS_IF_ADDREF(*aNode = mTooltipNode);
     return NS_OK;
 }
 
