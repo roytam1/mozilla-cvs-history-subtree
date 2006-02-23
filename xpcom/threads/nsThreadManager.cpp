@@ -130,6 +130,35 @@ nsThreadManager::Shutdown()
   PR_SetThreadPrivate(mCurThreadIndex, nsnull);
 }
 
+nsresult
+nsThreadManager::SetupCurrentThread(nsIThread *thread, nsIThread *previous)
+{
+  nsCString name;
+  if (thread) {
+    thread->GetName(name);
+    if (!name.IsEmpty()) {
+      // make sure thread name is unique
+      nsCOMPtr<nsIThread> temp;
+      GetThread(name, getter_AddRefs(temp));
+
+      if (temp && temp != previous) {
+        NS_NOTREACHED("thread name is not unique");
+        return NS_ERROR_INVALID_ARG;
+      }
+      mThreads.Put(name, thread);
+    }
+    NS_ADDREF(thread);  // for TLS entry
+  } else if (previous) {
+    previous->GetName(name);
+    if (!name.IsEmpty())
+      mThreads.Remove(name);
+  }
+
+  // write thread local storage
+  PR_SetThreadPrivate(mCurThreadIndex, thread);
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsThreadManager::NewThread(const nsACString &name, nsIThread **result)
 {
@@ -170,6 +199,9 @@ nsThreadManager::GetThreadFromPRThread(PRThread *thread, nsIThread **result)
 {
   if (thread == mMainPRThread)
     return GetMainThread(result);
+  
+  // O(n) search algorithm, but that should be okay.  We don't expect this
+  // API to be used much.
 
   // FindMatchingThread treats *arg as a PRThread.  When it finds a matching
   // nsIThread, it stores a pointer to the nsIThread in *arg.
@@ -197,10 +229,15 @@ nsThreadManager::GetCurrentThread(nsIThread **result)
 {
   // read thread local storage
   void *data = PR_GetThreadPrivate(mCurThreadIndex);
-  if (!data) {
-    *result = nsnull;
-  } else {
+  if (data) {
     NS_ADDREF(*result = NS_STATIC_CAST(nsIThread *, data)); 
+  } else {
+    // OK, that's fine.  We'll dynamically create one :-)
+    nsRefPtr<nsThread> thread = new nsThread(EmptyCString());
+    if (!thread)
+      return NS_ERROR_OUT_OF_MEMORY;
+    thread->InitCurrentThread();
+    NS_ADDREF(*result = thread);
   }
   return NS_OK;
 }
@@ -208,36 +245,16 @@ nsThreadManager::GetCurrentThread(nsIThread **result)
 NS_IMETHODIMP
 nsThreadManager::SetCurrentThread(nsIThread *thread, nsIThread **result)
 {
-  nsCOMPtr<nsIThread> curr;
-  GetCurrentThread(getter_AddRefs(curr));
+  nsCOMPtr<nsIThread> prev;
+  GetCurrentThread(getter_AddRefs(prev));
 
-  nsCString name;
-  if (thread) {
-    thread->GetName(name);
-    if (!name.IsEmpty()) {
-      // make sure thread name is unique
-      nsCOMPtr<nsIThread> temp;
-      GetThread(name, getter_AddRefs(temp));
-
-      if (temp && temp != curr) {
-        NS_NOTREACHED("thread name is not unique");
-        return NS_ERROR_INVALID_ARG;
-      }
-      mThreads.Put(name, thread);
-    }
-    NS_ADDREF(thread);  // for TLS entry
-  } else {
-    curr->GetName(name);
-    if (!name.IsEmpty())
-      mThreads.Remove(name);
-  }
-
-  // write thread local storage
-  PR_SetThreadPrivate(mCurThreadIndex, thread);
+  nsresult rv = SetupCurrentThread(thread, prev);
+  if (NS_FAILED(rv))
+    return rv;
 
   if (result) {
     *result = nsnull;
-    curr.swap(*result);
+    prev.swap(*result);
   }
 
   return NS_OK;

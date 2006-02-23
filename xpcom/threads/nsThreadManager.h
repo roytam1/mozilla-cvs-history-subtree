@@ -61,6 +61,12 @@ public:
   // thread of the application process.
   void Shutdown();
 
+  // Establishes |current| as the nsIThread for the calling thread.  The
+  // caller should pass a pointer to the previous nsIThread if any.  If
+  // |current| is null, then this method has the effect of unregistering
+  // the nsIThread associated with the calling thread.
+  nsresult SetupCurrentThread(nsIThread *current, nsIThread *previous);
+
 private:
   nsThreadManager() : mCurThreadIndex(0), mMainPRThread(nsnull) {}
   ~nsThreadManager() {}

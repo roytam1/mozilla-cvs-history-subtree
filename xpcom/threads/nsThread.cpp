@@ -261,7 +261,7 @@ nsThread::InitCurrentThread()
   mActive = PR_TRUE;
   mThread = PR_GetCurrentThread();
 
-  nsThreadManager::get()->SetCurrentThread(this, nsnull);
+  nsThreadManager::get()->SetupCurrentThread(this, nsnull);
   return NS_OK;
 }
 

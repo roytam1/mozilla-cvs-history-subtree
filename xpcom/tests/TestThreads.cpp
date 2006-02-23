@@ -78,8 +78,12 @@ TestThreads()
 {
     nsresult rv;
 
+    nsCOMPtr<nsIRunnable> task = new nsRunner(0);
+    if (!task)
+        return NS_ERROR_OUT_OF_MEMORY;
+
     nsCOMPtr<nsIThread> runner;
-    rv = NS_NewThread("TestThreads", new nsRunner(0), getter_AddRefs(runner));
+    rv = NS_NewThread("TestThreads", task, getter_AddRefs(runner));
     if (NS_FAILED(rv)) {
         printf("failed to create thread\n");
         return rv;
