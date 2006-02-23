@@ -280,7 +280,8 @@ function onLoadPageInfo()
   gStrings.mediaInput = theBundle.getString("mediaInput");
 
   var docTitle = "";
-  if ("arguments" in window && window.arguments.length >= 1 && window.arguments[0] && window.arguments[0].doc)
+  if ("arguments" in window && window.arguments.length >= 1 &&
+       window.arguments[0] && window.arguments[0].doc)
   {
     theWindow = null;
     theDocument = window.arguments[0].doc;
