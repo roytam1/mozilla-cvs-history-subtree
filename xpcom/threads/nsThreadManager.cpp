@@ -261,7 +261,7 @@ nsThreadManager::SetCurrentThread(nsIThread *thread, nsIThread **result)
 }
 
 NS_IMETHODIMP
-nsThreadManager::IsMainThread(PRBool *result)
+nsThreadManager::GetIsMainThread(PRBool *result)
 {
   *result = (PR_GetCurrentThread() == mMainPRThread);
   return NS_OK;

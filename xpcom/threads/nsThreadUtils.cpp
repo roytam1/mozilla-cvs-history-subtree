@@ -81,6 +81,6 @@ NS_COM PRBool
 NS_IsMainThread()
 {
   PRBool result = PR_FALSE;
-  nsThreadManager::get()->nsThreadManager::IsMainThread(&result);
+  nsThreadManager::get()->nsThreadManager::GetIsMainThread(&result);
   return result;
 }
