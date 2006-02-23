@@ -1606,6 +1606,9 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
     if (modalEventQueue) {
       mEventQService->PopThreadEventQueue(modalEventQueue);
     }
+
+    // Drop our ref to the channel to avoid cycles
+    mChannel = nsnull;
     return rv;
   }
 
