@@ -1604,6 +1604,33 @@ endif
 
 ifneq ($(XPI_PKGNAME),)
 libs realchrome::
+ifdef STRIP_XPI
+	@echo "Stripping $(XPI_PKGNAME) package directory..."
+	@echo $(FINAL_TARGET)
+	@cd $(FINAL_TARGET) && find . ! -type d \
+			! -name "*.js" \
+			! -name "*.xpt" \
+			! -name "*.gif" \
+			! -name "*.jpg" \
+			! -name "*.png" \
+			! -name "*.xpm" \
+			! -name "*.txt" \
+			! -name "*.rdf" \
+			! -name "*.sh" \
+			! -name "*.properties" \
+			! -name "*.dtd" \
+			! -name "*.html" \
+			! -name "*.xul" \
+			! -name "*.css" \
+			! -name "*.xml" \
+			! -name "*.jar" \
+			! -name "*.dat" \
+			! -name "*.tbl" \
+			! -name "*.src" \
+			! -name "*.reg" \
+			$(PLATFORM_EXCLUDE_LIST) \
+			-exec $(STRIP) $(STRIP_FLAGS) {} >/dev/null 2>&1 \;
+endif
 	@echo "Packaging $(XPI_PKGNAME).xpi..."
 	cd $(FINAL_TARGET) && $(ZIP) -qr ../$(XPI_PKGNAME).xpi *
 endif
