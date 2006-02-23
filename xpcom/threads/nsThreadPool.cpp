@@ -43,6 +43,12 @@
 #include "nsAutoPtr.h"
 #include "nsAutoLock.h"
 #include "prinrval.h"
+#include "prlog.h"
+
+#ifdef PR_LOGGING
+static PRLogModuleInfo *sLog = PR_NewLogModule("nsThreadPool");
+#endif
+#define LOG(args) PR_LOG(sLog, PR_LOG_DEBUG, args)
 
 // DESIGN:
 //  o  Allocate anonymous threads.
@@ -82,6 +88,11 @@ nsThreadPool::PutTask(nsIRunnable *task)
   PRBool spawnThread = PR_FALSE;
   {
     nsAutoMonitor mon(mTasks.Monitor());
+
+    LOG(("THRD-P(%p) put [%d %d %d]\n", this, mIdleCount, mThreads.Count(),
+         mThreadLimit));
+    NS_ASSERTION(mIdleCount <= (PRUint32) mThreads.Count(), "oops");
+
     // Make sure we have a thread to service this task.
     if (mIdleCount == 0 && mThreads.Count() < (PRInt32) mThreadLimit)
       spawnThread = PR_TRUE;
@@ -89,6 +100,7 @@ nsThreadPool::PutTask(nsIRunnable *task)
     mTasks.PutTask(task);
   }
 
+  LOG(("THRD-P(%p) put [spawn=%d]\n", this, spawnThread));
   if (!spawnThread)
     return NS_OK;
 
@@ -105,6 +117,7 @@ nsThreadPool::PutTask(nsIRunnable *task)
       killThread = PR_TRUE;  // okay, we don't need this thread anymore
     }
   }
+  LOG(("THRD-P(%p) put [%p kill=%d]\n", this, thread.get(), killThread));
   if (killThread) {
     thread->Shutdown();
   } else {
@@ -117,6 +130,8 @@ nsThreadPool::PutTask(nsIRunnable *task)
 NS_IMETHODIMP
 nsThreadPool::Run()
 {
+  LOG(("THRD-P(%p) enter\n", this));
+
   nsCOMPtr<nsIThread> current;
   nsThreadManager::get()->GetCurrentThread(getter_AddRefs(current));
 
@@ -138,10 +153,8 @@ nsThreadPool::Run()
         } else {
           if (wasIdle) {
             // if too many idle threads or idle for too long, then bail.
-            if (mIdleCount > mIdleThreadLimit || (now - idleSince) > timeout) {
-              --mIdleCount;
+            if (mIdleCount > mIdleThreadLimit || (now - idleSince) > timeout)
               exitThread = PR_TRUE;
-            }
           } else {
             // if would be too many idle threads...
             if (mIdleCount == mIdleThreadLimit) {
@@ -155,24 +168,34 @@ nsThreadPool::Run()
         }
 
         if (exitThread) {
+          if (wasIdle)
+            --mIdleCount;
           mThreads.RemoveObject(current);
         } else {
-          mon.Wait(timeout - (now - idleSince));
+          PRIntervalTime delta = timeout - (now - idleSince);
+          LOG(("THRD-P(%p) waiting [%d]\n", this, delta));
+          mon.Wait(delta);
         }
+      } else if (wasIdle) {
+        wasIdle = PR_FALSE;
+        --mIdleCount;
       }
     }
     if (task) {
-      wasIdle = PR_FALSE;
+      LOG(("THRD-P(%p) running [%p]\n", this, task.get()));
       task->Run();
     }
   } while (!exitThread);
 
+  LOG(("THRD-P(%p) leave\n", this));
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsThreadPool::Dispatch(nsIRunnable *task, PRUint32 flags)
 {
+  LOG(("THRD-P(%p) dispatch [%p %x]\n", this, task, flags));
+
   NS_ENSURE_STATE(!mShutdown);
 
   if (flags == DISPATCH_NORMAL) {

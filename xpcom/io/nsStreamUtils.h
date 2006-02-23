@@ -54,12 +54,12 @@ class nsIDispatchTarget;
  * the proxy object is destroyed on.
  *
  * This function is designed to be used to implement AsyncWait when the
- * aEventTarget parameter is non-null.
+ * aTarget parameter is non-null.
  */
 extern NS_COM nsresult
 NS_NewInputStreamReadyEvent(nsIInputStreamCallback **aEvent,
                             nsIInputStreamCallback  *aNotify,
-                            nsIDispatchTarget       *aEventTarget);
+                            nsIDispatchTarget       *aTarget);
 
 /**
  * A "one-shot" proxy of the OnOutputStreamReady callback.  The resulting
@@ -69,12 +69,12 @@ NS_NewInputStreamReadyEvent(nsIInputStreamCallback **aEvent,
  * the proxy object is destroyed on.
  *
  * This function is designed to be used to implement AsyncWait when the
- * aEventTarget parameter is non-null.
+ * aTarget parameter is non-null.
  */
 extern NS_COM nsresult
 NS_NewOutputStreamReadyEvent(nsIOutputStreamCallback **aEvent,
                              nsIOutputStreamCallback  *aNotify,
-                             nsIDispatchTarget        *aEventTarget);
+                             nsIDispatchTarget        *aTarget);
 
 /* ------------------------------------------------------------------------- */
 
@@ -102,7 +102,7 @@ typedef void (* nsAsyncCopyCallbackFun)(void *closure, nsresult status);
 extern NS_COM nsresult
 NS_AsyncCopy(nsIInputStream         *aSource,
              nsIOutputStream        *aSink,
-             nsIDispatchTarget      *aEventTarget,
+             nsIDispatchTarget      *aTarget,
              nsAsyncCopyMode         aMode = NS_ASYNCCOPY_VIA_READSEGMENTS,
              PRUint32                aChunkSize = 4096,
              nsAsyncCopyCallbackFun  aCallbackFun = nsnull,

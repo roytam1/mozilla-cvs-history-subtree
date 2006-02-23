@@ -292,7 +292,7 @@ nsThread::PutTask(nsIRunnable *task, PRUint32 dispatchFlags)
 NS_IMETHODIMP
 nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
 {
-  LOG(("nsThread(%p) Dispatch [%p %x]\n", this, runnable, flags));
+  LOG(("THRD(%p) Dispatch [%p %x]\n", this, runnable, flags));
 
   NS_ENSURE_STATE(mThread);
 
@@ -355,7 +355,7 @@ nsThread::Shutdown()
 NS_IMETHODIMP
 nsThread::RunNextTask(PRUint32 flags)
 {
-  LOG(("nsThread(%p) RunNextTask [%x]\n", this, flags));
+  LOG(("THRD(%p) RunNextTask [%x]\n", this, flags));
 
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
   NS_ENSURE_ARG(flags == RUN_NORMAL || flags == RUN_NO_WAIT);
@@ -381,7 +381,7 @@ nsThread::RunNextTask(PRUint32 flags)
   nsresult rv = NS_OK;
 
   if (task) {
-    LOG(("nsThread(%p) running [%p]\n", this, task.get()));
+    LOG(("THRD(%p) running [%p]\n", this, task.get()));
     task->Run();
   } else if (flags & RUN_NO_WAIT) {
     rv = NS_BASE_STREAM_WOULD_BLOCK;

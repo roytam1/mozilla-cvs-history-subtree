@@ -86,8 +86,8 @@ interface nsIThreadManager : nsISupports
   nsIThread setCurrentThread(in nsIThread thread);
 
   /**
-   * This method returns true if the calling thread is the main thread of the
+   * This attribute is true if the calling thread is the main thread of the
    * application process.
    */
-  boolean isMainThread();
+  readonly attribute boolean isMainThread;
 };
