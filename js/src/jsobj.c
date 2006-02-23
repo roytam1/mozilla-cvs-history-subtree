@@ -1262,10 +1262,9 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
      * caller's principals has access to scopeobj.
      */
     ok = js_CheckPrincipalsAccess(cx, scopeobj, principals, js_eval_str);
-    if (!ok)
-        goto out;
+    if (ok)
+        ok = js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
 
-    ok = js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
     JS_DestroyScript(cx, script);
 
 out:
@@ -2278,7 +2277,7 @@ js_FreeSlot(JSContext *cx, JSObject *obj, uint32 slot)
 #if JS_BUG_EMPTY_INDEX_ZERO
 #define CHECK_FOR_EMPTY_INDEX(id)                                             \
     JS_BEGIN_MACRO                                                            \
-        if (JSSTRING_LENGTH(_str) == 0)                                       \
+        if (JSSTRING_LENGTH(str_) == 0)                                       \
             id = JSVAL_ZERO;                                                  \
     JS_END_MACRO
 #else
