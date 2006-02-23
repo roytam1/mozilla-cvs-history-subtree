@@ -341,7 +341,12 @@ js_InitGC(JSRuntime *rt, uint32 maxbytes)
         return JS_FALSE;
     }
     rt->gcLocksHash = NULL;     /* create lazily */
-    rt->gcMaxBytes = maxbytes;
+
+    /*
+     * Separate gcMaxMallocBytes from gcMaxBytes but initialize to maxbytes
+     * for default backward API compatibility.
+     */
+    rt->gcMaxBytes = rt->gcMaxMallocBytes = maxbytes;
     return JS_TRUE;
 }
 
@@ -587,7 +592,7 @@ retry:
         METER(rt->gcStats.recycle[i]++);
     } else {
         if (rt->gcBytes < rt->gcMaxBytes &&
-            (tried_gc || rt->gcMallocBytes < rt->gcMaxBytes))
+            (tried_gc || rt->gcMallocBytes < rt->gcMaxMallocBytes))
         {
             /*
              * Inline form of JS_ARENA_ALLOCATE adapted to truncate the current
