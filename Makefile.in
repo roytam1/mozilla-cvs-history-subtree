@@ -430,6 +430,11 @@ tier_99_dirs += \
 	$(NULL)
 endif
 
+# This should be built last, after all IDL files in the tree have been processed
+ifdef MOZ_JAVAXPCOM
+tier_99_dirs += extensions/java/xpcom/interfaces
+endif
+
 else
 
 # Standalone build
