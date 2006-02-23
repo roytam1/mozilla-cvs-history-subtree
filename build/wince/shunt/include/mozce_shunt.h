@@ -701,10 +701,10 @@
 #endif
 #define OleSetClipboard          mozce_OleSetClipboard
 
-#ifdef AlphaBlend
-#undef AlphaBlend
-#endif
-#define AlphaBlend mozce_AlphaBlend
+//#ifdef AlphaBlend
+//#undef AlphaBlend
+//#endif
+//#define AlphaBlend mozce_AlphaBlend
 
 // From win32a.cpp
 

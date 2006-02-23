@@ -11,7 +11,7 @@
 #define WCE_INC   "c:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Pocket PC SDK/Include/Armv4i/"
 #define WCE_LIB   "c:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Pocket PC SDK/Lib/ARMV4I/"
 
-#define SHUNT_LIB TOPSRCDIR "/build/wince/shunt/build/static/ARMV4Rel/"
+#define SHUNT_LIB TOPSRCDIR "/build/wince/shunt/build/vs8/"
 #define SHUNT_INC TOPSRCDIR "/build/wince/shunt/include/"
 
 #define ASM_PATH WCE_BIN "armasm.exe"

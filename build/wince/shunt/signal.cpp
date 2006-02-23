@@ -56,7 +56,6 @@ static void defaultSighandler(int inSignal)
     mozce_abort();
 }
 
-
 MOZCE_SHUNT_API int mozce_raise(int inSignal)
 {
     MOZCE_PRECHECK
