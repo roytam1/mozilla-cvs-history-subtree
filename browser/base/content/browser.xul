@@ -221,7 +221,7 @@
                              this.parentNode.selectedIndex = 0;"
                     tooltiptext="&proxyIcon.tooltip;"/>
           </deck>
-          <hbox>
+          <hbox id="urlbar-icons">
             <button type="menu"
                     style="-moz-user-focus: none"
                     class="plain"
