@@ -198,14 +198,13 @@
           if (response.statusCode == "401" ||
               response.statusCode == "407") {
             // retry with credentials:
-            var handler = this; 
             parent.callAsync(function() {
                         if (parent.wSipStack.authentication.
                           addAuthorizationHeaders(parent.wCurrentIdentity,
                                                   response,
                                                   rc.request)) {
                           log.value = log.value + "Resending with credentials\n";
-                          rc.sendSubscribe(handler);
+                          rc.sendRequest(listener);
                         } 
                       });
           }

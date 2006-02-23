@@ -5,10 +5,9 @@
 
   <rdf:Bag rdf:about="urn:mozilla:zap:sidebar">
     <rdf:li rdf:resource="urn:mozilla:zap:home"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:friends"/>
     <rdf:li rdf:resource="urn:mozilla:zap:recent_calls_node"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:identities"/>
     <rdf:li rdf:resource="urn:mozilla:zap:config"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:contact_node"/>
   </rdf:Bag>
 
   <rdf:Description rdf:about="urn:mozilla:zap:home">
@@ -16,13 +15,6 @@
     <zap:nodetype>home</zap:nodetype>
     <zap:sidebarindex>0100</zap:sidebarindex>
     <zap:chromepage>chrome://zap/content/home.xul</zap:chromepage>
-  </rdf:Description>
-
-  <rdf:Description rdf:about="urn:mozilla:zap:friends">
-    <NC:Name>Contacts</NC:Name> 
-    <zap:nodetype>contacts</zap:nodetype>
-    <zap:sidebarindex>0110</zap:sidebarindex>
-    <zap:chromepage>chrome://zap/content/contacts.xul</zap:chromepage>
   </rdf:Description>
 
   <rdf:Description rdf:about="urn:mozilla:zap:recent_calls_node">
@@ -56,11 +48,11 @@
     <zap:chromepage>chrome://zap/content/calls.xul?filter=dialled</zap:chromepage>
   </rdf:Description>
 
-  <rdf:Description rdf:about="urn:mozilla:zap:identities">
-    <NC:Name>Identities</NC:Name> 
-    <zap:nodetype>identities</zap:nodetype>
+  <rdf:Description rdf:about="urn:mozilla:zap:contact_node">
+    <NC:Name>Contacts</NC:Name> 
+    <zap:nodetype>contacts</zap:nodetype>
     <zap:sidebarindex>0130</zap:sidebarindex>
-    <zap:chromepage>chrome://zap/content/identities.xul</zap:chromepage>
+    <zap:chromepage>chrome://zap/content/contacts.xul</zap:chromepage>
   </rdf:Description>
 
   <rdf:Description rdf:about="urn:mozilla:zap:config">

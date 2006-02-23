@@ -107,6 +107,16 @@
           </description>
         </info>
       </igroup>
+      <igroup>
+        <checkbox type="zap-formwidget" label="Watch contacts' presence" 
+                  id="urn:mozilla:zap:watch_contact_presence"/>
+        <info>
+          <description>
+            If checked, zap will attempt to subscribe to the presence status 
+            of contacts associated with this identity.
+          </description>
+        </info>
+      </igroup>
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>

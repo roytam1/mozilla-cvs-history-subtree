@@ -58,6 +58,14 @@ var gRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Compo
 
 var PersistentRDFObject = makeClass("PersistentRDFObject", ErrorReporter);
 
+// initHook will be called when the object is constructed (from
+// initWithResource, createNew, or createFromDocument):
+PersistentRDFObject.obj("initHook", null);
+
+// removeHook will be called when the object is removed from all
+// datasources (from remove):
+PersistentRDFObject.obj("removeHook", null);
+
 // Hash of datasources where assertions for this resource will live.
 // This will typically be bound by a subclass. Most persistent
 // objects should have at least the default datasource 'default'.
@@ -134,7 +142,7 @@ PersistentRDFObject.metafun(
       });
   });
 
-// add a resource attribute:
+// Add a resource attribute:
 PersistentRDFObject.metafun(
   function rdfResourceAttrib(_name, _defval, _datasourceid) {
     if (!_datasourceid) _datasourceid = "default";
@@ -237,6 +245,23 @@ PersistentRDFObject.metafun(
                                  dsid:_dsid});
   });
 
+PersistentRDFObject.fun(
+  function addAssertion(name, val, dsid) {
+    this.datasources[dsid].Assert(this.resource,
+                                  gRDF.GetResource(name),
+                                  val,
+                                  true);
+  });
+
+PersistentRDFObject.fun(
+  function removeAssertion(name, val, dsid) {
+    this.datasources[dsid].Unassert(this.resource,
+                                    gRDF.GetResource(name),
+                                    val,
+                                    true);
+  });
+
+
 // helper to assert all arcs in
 PersistentRDFObject.fun(
   function _assertArcsIn() {
@@ -280,6 +305,12 @@ PersistentRDFObject.fun(
       }
       this._executeTriggers(a, val);
     }
+
+    if (this.initHook)
+      this.initHook();
+    
+    if (this.autoflush)
+      this.flush();
   });
 
 // create a new resource.
@@ -304,6 +335,10 @@ PersistentRDFObject.fun(
       this.datasources[a.dsid].Assert(this.resource, prop, val, true);
       this._executeTriggers(a, val);
     }
+    
+    if (this.initHook)
+      this.initHook();
+    
     if (this.autoflush)
       this.flush();
   });
@@ -331,6 +366,10 @@ PersistentRDFObject.fun(
       this.datasources[a.dsid].Assert(this.resource, prop, val, true);
       this._executeTriggers(a, val);
     }
+
+    if (this.initHook)
+      this.initHook();
+
     if (this.autoflush)
       this.flush();
   });
@@ -453,6 +492,9 @@ PersistentRDFObject.fun(
         }
       }
     }
+    if (this.removeHook)
+      this.removeHook();
+    
     if (this.autoflush)
       this.flush();
     this.resource = null;

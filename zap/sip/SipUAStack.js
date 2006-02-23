@@ -425,7 +425,8 @@ SipUAStack.fun(
 
           this._dump("no dialog found for "+constructServerDialogID(message));
           this._dump("dialog pool:");
-          hashmap(this.dialogPool, function(n, o) { this._dump(n); });
+          me = this;
+          hashmap(this.dialogPool, function(n, o) { me._dump(n); });
           
           var response = this.formulateResponse("481", message, null);
           this.sendTransactionalResponse(response, message);

@@ -56,8 +56,11 @@
     var wCurrentContact;
 
     function initPage() {
-      widgetStateChanged = formWidgetStateChanged;
+      var identitiesList = document.getElementById("identities_list_popup");
+      identitiesList.database.AddDataSource(parent.wIdentitiesDS);
+      identitiesList.builder.rebuild();
 
+      widgetStateChanged = formWidgetStateChanged;
       wContactsTree = document.getElementById("contacts");
       wContactBox = document.getElementById("contact-box");
       wCallInteractionState = document.getElementById("call-interaction-state");
@@ -87,8 +90,7 @@
         wContactBox.hidden = true;
         return;
       }
-      wCurrentContact = parent.Contact.instantiate();
-      wCurrentContact.initWithResource(resource);
+      wCurrentContact = parent.getContact(resource.Value);
       wCurrentContact.fillDocument(document);
       wContactBox.hidden = false;
     }
@@ -129,6 +131,7 @@
       else {
         // we're adding a new record
         wCurrentContact.createFromDocument(document);
+        parent.wContacts[wCurrentContact.resource.Value] = wCurrentContact;
         // select newly created contact:
         selectResource(wContactsTree, wCurrentContact.resource);
       }
@@ -236,17 +239,41 @@
               </description>
             </info>
           </irow>
+          <irow>
+            <label control="urn:mozilla:zap:associated_identity" value="Associated identity:"/>
+            <menulist type="zap-formwidget" 
+                      id="urn:mozilla:zap:associated_identity">
+              <menupopup id="identities_list_popup"
+                         datasources="rdf:null"
+                         ref="urn:mozilla:zap:identities">
+                <template>
+                  <rule>
+                    <conditions>
+                      <content uri="?container"/>
+                      <member container="?container" child="?identity"/>
+                    </conditions>
+                    <bindings>
+                      <binding subject="?identity"
+                              predicate="http://home.netscape.com/NC-rdf#Name"
+                              object="?name"/>
+                    </bindings>
+                    <action>
+                      <menuitem uri="?identity" 
+                                value="?identity" label="?name"/>
+                    </action>
+                  </rule>
+                </template>
+                <menuitem/>
+              </menupopup>
+            </menulist>
+            <info>
+              <description>
+              ...
+              </description>
+            </info>
+          </irow>
         </rows>
       </grid>
-      <igroup>
-        <checkbox type="zap-formwidget" label="Display in sidebar" 
-                  id="urn:mozilla:zap:isfriend"/>
-        <info>
-          <description>
-          If checked, this contact will be displayed in the sidebar for quick access and, in a future zap release, for displaying presence information.
-          </description>
-        </info>
-      </igroup>
       <igroup orient="vertical">
         <label control="urn:mozilla:zap:notes" value="Notes:"/>
         <textbox type="zap-formwidget" id="urn:mozilla:zap:notes" multiline="true" rows="8" flex="1"/>

@@ -48,6 +48,9 @@
         onunload="windowClose();"
         xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
+  <!-- Overlays -->
+  <?xul-overlay href="chrome://zap/content/sidebar.xul"?>
+
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
   <script type="application/x-javascript" src="chrome://zap/content/zap.js"/>
@@ -151,75 +154,13 @@
   <vbox id="alertbar"/>
   <!-- Main content box -->
   <hbox flex="1">
-    <vbox id="box_sidebar"  minwidth="100" width="200" persist="width">
-      <tree id="sidebar-tree" 
-            flex="1" hidecolumnpicker="true" 
-            seltype="single"
-            datasources="rdf:null"
-            ref="urn:mozilla:zap:sidebar"
-            onselect="sidebarSelectionChange()"
-            containment="urn:mozilla:zap:foreign-registration"
-            coalesceduplicatearcs="false"
-            flags="dont-build-content">
-        <treecols>
-          <treecol id="sidebar_col_name" primary="true" 
-                   hideheader="true" flex="1" 
-                   sortActive="true"
-                   sortDirection="ascending"
-                   sort="?sidebarindex" />
-        </treecols>
-        <template>
-          <rule><!-- GENERIC SIDEBAR NODE -->
-            <conditions>
-              <content uri="?container"/>
-              <member container="?container" child="?node"/>
-            </conditions>
-            <bindings>
-              <binding subject="?node"
-                       predicate="http://home.netscape.com/NC-rdf#Name"
-                       object="?name"/>
-              <binding subject="?node"
-                       predicate="urn:mozilla:zap:nodetype"
-                       object="?nodetype"/>
-              <binding subject="?node"
-                       predicate="urn:mozilla:zap:registration_status"
-                       object="?registration_status"/>
-              <binding subject="?node"
-                       predicate="urn:mozilla:zap:active"
-                       object="?active"/>
-              <binding subject="?node"
-                       predicate="urn:mozilla:zap:sidebarindex"
-                       object="?sidebarindex"/>
-              <binding subject="?node"
-                       predicate="urn:mozilla:zap:direction"
-                       object="?direction"/>
-              <binding subject="?node"
-                       predicate="urn:mozilla:zap:status"
-                       object="?status"/>
-            </bindings>
-            <action>
-              <treechildren>
-                <treeitem uri="?node">
-                  <treerow properties="active-?active">
-                    <treecell label="?name"
-                              properties="nodetype-?nodetype registration_status-?registration_status direction-?direction status-?status" />
-                  </treerow>
-                </treeitem>
-              </treechildren>
-            </action>
-          </rule>
-        </template>
-      </tree>
-    </vbox>
-
+  <vbox id="zap-sidebar"/>
   <splitter id="sidebar-splitter" collapse="before" persist="state"/>
-
     <vbox flex="1">
       <box id="box_interact" flex="2" minwidth="200" minheight="200">
         <iframe id="interactpane" flex="1"  src="about:blank" />
       </box>
     </vbox>
-
   </hbox>
 
   <statusbar>

@@ -302,10 +302,6 @@ statusbar {
   list-style-image: url("chrome://zap/skin/home.png");
 }
 
-#sidebar-tree > treechildren::-moz-tree-image(nodetype-identities) {
-  list-style-image: url("chrome://zap/skin/accounts.png");
-}
-
 #sidebar-tree > treechildren::-moz-tree-image(nodetype-identity) {
   list-style-image: url("chrome://zap/skin/account.png");
 }
@@ -348,6 +344,14 @@ statusbar {
 
 #sidebar-tree > treechildren::-moz-tree-image(nodetype-contact) {
   list-style-image: url("chrome://zap/skin/contact.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-contact, status-online) {
+  list-style-image: url("chrome://zap/skin/contact-online.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-contact, status-offline) {
+  list-style-image: url("chrome://zap/skin/contact-offline.png");
 }
 
 /* current call styles */

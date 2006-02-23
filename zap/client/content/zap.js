@@ -77,9 +77,6 @@ var wPasswordManagerInt;
 var wContactsDS;
 // all contacts live in the urn:mozilla:zap:contacts sequence:
 var wContactsContainer;
-// ... those displayed in the sidebar are also pointed to from the
-// urn:mozilla:zap:friends sequence:
-var wFriendsContainer;
 
 var wCallsDS;
 var wCallsContainer;
@@ -544,12 +541,18 @@ function initIdentities() {
   wCurrentIdentity = getIdentity(wConfig["urn:mozilla:zap:identity"]);
   currentIdentityUpdated();
 
-  // register all identities that want automatic registration:
+  // initialize identities:
+  // just creating an identity object will automatically insert it
+  // into the sidebar
   var identity_resources = wIdentitiesContainer.GetElements();
   while (identity_resources.hasMoreElements()) {
     var identity = getIdentity(identity_resources.getNext().QueryInterface(Components.interfaces.nsIRDFResource).Value);
+    // register identities that want automatic registration:
     if (identity["urn:mozilla:zap:automatic_registration"]=="true")
       registerIdentity(identity);
+    // give the identity a chance to be registered, then in 4 seconds
+    // start watching presence:
+    identity.scheduleUpdateFriends();
   }
 }
 
@@ -598,10 +601,11 @@ Identity.prototype.datasources["default"] = wIdentitiesDS;
 Identity.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
 Identity.addInMemoryDS("ephemeral");
 
-Identity.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
-                           "urn:mozilla:zap:identities");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
-                          "chrome://zap/content/identity.xul");
+                          "chrome://zap/content/identity.xul",
+                          "global-ephemeral");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:sidebarindex", "0115",
+                          "global-ephemeral"); 
 Identity.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "sip:thisis@anonymous.invalid");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
@@ -611,6 +615,8 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "true");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
                           "urn:mozilla:zap:automatic_service");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:watch_contact_presence",
+                          "true");
 // registration_status: "registered"|"registering"|""
 Identity.rdfLiteralAttrib("urn:mozilla:zap:registration_status",
                           "", "global-ephemeral");
@@ -621,6 +627,18 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:registration_status",
 Identity.rdfPointerAttrib("urn:mozilla:zap:root",
                           "urn:mozilla:zap:current-identity",
                           "ephemeral");
+
+// Automatically add/remove identities to/from the sidebar:
+Identity.fun(
+  function initHook() {
+    wEphemeralSidebarContainer.AppendElement(this.resource);
+  });
+
+Identity.fun(
+  function removeHook() {
+    // XXX this should be done automatically by PersistentRDFObject
+//    wEphemeralSidebarContainer.RemoveElement(this.resource, false);
+  });
 
 // make sure that we re-resolve the service when certain attributes change:
 Identity.rdfAttribTrigger(
@@ -771,6 +789,31 @@ Identity.fun(
     return true;
   });
 
+Identity.fun(
+  function scheduleUpdateFriends() {
+    // schedule an update in 4 s:
+    var me = this;
+    schedule(function() {me.updateFriends();}, 4000);
+  });
+
+Identity.fun(
+  function updateFriends() {
+    var friendsResource = wRDF.GetResource("urn:mozilla:zap:friends");
+    var friends = this.datasources["default"].GetTargets(this.resource,
+                                                         friendsResource,
+                                                         true);
+    var watchPresence = this["urn:mozilla:zap:watch_contact_presence"] == "true";
+    while (friends.hasMoreElements()) {
+      var contact = getContact(friends.getNext().QueryInterface(Components.interfaces.nsIRDFResource).Value);
+      if (watchPresence) {
+        contact.watchPresence(this);
+      }
+      else {
+        contact.unwatchPresence();
+      }
+    }
+  });
+
 // Return user part of the AOR (or empty string if the AOR can't
 // be parsed)
 Identity.fun(
@@ -852,7 +895,9 @@ Identity.fun(
   });
 
 // Returns a structure with routing information for non-REGISTER
-// requests:
+// requests. This will return null if the identity is not registered.
+// Instead of calling this method, clients should construct a
+// RoutingInfoResolver.
 // {
 //   contact (zapISipAddress)        : the contact address for INVITEs etc.
 //                                     it might be a gruu.
@@ -928,6 +973,190 @@ Identity.getter(
     return this._service;
   });
 
+////////////////////////////////////////////////////////////////////////
+// RoutingInfo resolver:
+
+var RoutingInfoResolver = makeClass("RoutingInfoResolver", ErrorReporter);
+
+RoutingInfoResolver.fun(
+  function resolveAsync(toAddress, identity, listener) {
+    // first let's see if the identity provides routing info:
+    var routingInfo = identity.getRoutingInfo();
+    if (routingInfo) {
+      // all done!
+      callAsync(function() {
+                  listener.routingInfoResolved(routingInfo);
+                });
+    }
+    else {
+      var rc = wSipStack.createNonInviteRequestClient(toAddress,
+                                                      identity.getFromAddress(),
+                                                      "OPTIONS",
+                                                      [], 0,
+                                                      identity.getRCFlags());
+      var handler = {
+        notifyResponseReceived : function routingInfoResolver_response(_rc,
+                                                                       dialog,
+                                                                       response,
+                                                                       flow) {
+          if (response.statusCode == "408") {
+            // the request didn't make it. give up.
+            listener.routingInfoResolved(null);
+          }
+          else {
+            // any response will do:
+            // synthesize contact address from identity's UAContactAddress:
+            var addr = identity.getUAContactAddress();
+            var uri = addr.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+            var via = response.getTopViaHeader();
+            if (via) {
+              if (via.hasParameter("received")) {
+                uri.host = via.getParameter("received");
+              }
+              if (via.hasParameter("rport")) {
+                uri.port = via.getParameter("rport");
+              }
+            }
+            listener.routingInfoResolved({ contact: addr,
+                                           directContact: addr,
+                                           routeset: [] });
+          }
+        }
+      };
+      rc.sendRequest(handler);
+    }
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Subscriptions:
+
+var Subscription = makeClass("Subscription", ErrorReporter);
+
+// to be provided by sub-class:
+Subscription.obj("notify", null);
+
+Subscription.fun(
+  function subscribe(toAddr, event, identity) {
+    this.toAddr = toAddr;
+    this.event = event;
+    this.identity = identity;
+    RoutingInfoResolver.instantiate().resolveAsync(toAddr, identity, this);
+    // we'll continue in routingInfoResolved()
+  });
+
+Subscription.fun(
+  function routingInfoResolved(routingInfo) {
+    if (this.terminated) return;
+    this.routingInfo = routingInfo;
+    if (!routingInfo) return; // no point in continuing
+    var me = this;
+    
+    var handler = {
+      handleResponse : function(rc, response) {
+        if (me.terminated) return;
+        if (response.statusCode == "401" ||
+            response.statusCode == "407") {
+          // retry with credentials:
+          var handler = this;
+          callAsync(function() {
+                      if (me.terminated) return;
+                      if (wSipStack.authentication.
+                          addAuthorizationHeaders(me.identity,
+                                                  response,
+                                                  rc.request)) {
+                        rc.sendSubscribe(handler);
+                      }
+                    });
+        }
+        else if (response.statusCode[0] != "2") {
+          // try again in a minute:
+          schedule(function() {rc.sendSubscribe(handler);}, 60000);
+        }
+      },
+      handleNewDialog : function(rc, dialog, message) {
+        rc.stopWaitingForDialogs();
+        me.dialog = dialog;        
+        if (me.terminated) {
+          me._refresh(true);
+          return;
+        }
+        dialog.requestHandler = {
+          handleNonInviteRequest : function(rs) {
+            if (!me.terminated && rs.request.method == "NOTIFY") {
+              var response = rs.formulateResponse("200");
+              response.appendHeader(wSipStack.syntaxFactory.createContactHeader(me.routingInfo.contact));
+              rs.sendResponse(response);
+              if (me.notify)
+                me.notify(rs.request);
+              return true;
+            }
+            return false;
+          }
+        };
+        //XXX handle dialog-establishing NOTIFY
+        var expiresHeader = message.getTopHeader("Expires");
+        if (expiresHeader) {
+          expires = expiresHeader.QueryInterface(Components.interfaces.zapISipExpiresHeader).deltaSeconds;
+          if (expires > 0)
+            schedule(me._refresh(false), expires*1000/0.9);
+        }
+      }
+    };
+
+    var rc = wSipStack.createSubscribeRequestClient(this.toAddr,
+                                                    this.identity.getFromAddress(),
+                                                    this.routingInfo.contact,
+                                                    this.event,
+                                                    this.routingInfo.routeset,
+                                                    this.routingInfo.routeset.length,
+                                                    this.identity.getRCFlags());
+    rc.sendSubscribe(handler);
+  });
+
+Subscription.fun(
+  function terminate() {
+    this.terminated = true;
+    this._refresh(true);
+  });
+
+Subscription.fun(
+  function _refresh(shutdown) {
+    if (!this.dialog) return;
+    var rc = this.dialog.createNonInviteRequestClient("SUBSCRIBE");
+    rc.request.appendHeader(wSipStack.syntaxFactory.createContactHeader(this.routingInfo.contact));
+    rc.request.appendHeader(wSipStack.syntaxFactory.deserializeHeader("Event", this.event));
+    if (shutdown)
+      rc.request.appendHeader(wSipStack.syntaxFactory.deserializeHeader("Expires", "0"));
+    var me = this;
+    var listener = {
+      notifyResponseReceived : function(rc, dialog, response, flow) {
+        if (response.statusCode == "401" ||
+            response.statusCode == "407") {
+          // retry with credentials:
+          callAsync(function() {
+                      if (wSipStack.authentication.addAuthorizationHeaders(
+                            this.identity, response, rc.request)) {
+                        rc.sendSubscribe(listener);
+                      }
+                    });
+        }
+        else if (response.statusCode[0] == "2") {
+          var expiresHeader = response.getTopHeader("Expires");
+          if (expiresHeader) {
+            expires = expiresHeader.QueryInterface(Components.interfaces.zapISipExpiresHeader).deltaSeconds;
+            if (expires > 0)
+              schedule(me._refresh(false), expires*1000/0.9);
+          }          
+        }
+      }
+    };
+    rc.sendRequest(listener);
+    if (shutdown) {
+      this.dialog.terminateDialog();
+      delete this.dialog;
+    }
+  });
+
 
 ////////////////////////////////////////////////////////////////////////
 // Registration:
@@ -943,6 +1172,7 @@ var wRegistrations = {};
 
 // set up or refresh a registration group for the given identity
 function registerIdentity(identity) {
+  identity.scheduleUpdateFriends();
   warning("registering "+identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
   var registrationGroup = wRegistrations[identity.resource.Value];
   if (registrationGroup) {
@@ -1678,13 +1908,10 @@ ForeignRegistration.rdfPointerAttrib("urn:mozilla:zap:root",
 
 ForeignRegistration.spec(
   function createNew(identity, contact) {
-    // clone arcsIn array and add a dynamic instance-specific pointer attrib:
-    this._arcsIn = arrayclone(this._arcsIn);
-    this._arcsIn.push({subject: identity.resource.Value,
-                       predicate: "urn:mozilla:zap:foreign-registration",
-                       dsid:"default"});
-    
     this._ForeignRegistration_createNew(true);
+    
+    identity.addAssertion("urn:mozilla:zap:foreign-registration",
+                          this.resource, "global-ephemeral");
     
     if (contact.address.displayName) {
       this["http://home.netscape.com/NC-rdf#Name"] = contact.address.displayName;
@@ -1695,42 +1922,59 @@ ForeignRegistration.spec(
     this["urn:mozilla:zap:contact"] = contact.serialize();
     this["urn:mozilla:zap:aor"] = identity["http://home.netscape.com/NC-rdf#Name"];
     wForeignRegistrations[this.resource.Value] = this;
+    
   });
 
-ForeignRegistration.spec(
-  function remove() {
+ForeignRegistration.fun(
+  function removeHook() {
     delete wForeignRegistrations[this.resource.Value];
-    this._ForeignRegistration_remove();
   });
 
 ////////////////////////////////////////////////////////////////////////
 // Contacts:
+
+// pool of contacts, indexed by resource id:
+var wContacts = {};
+
+function getContact(resourceID) {
+  var contact = wContacts[resourceID];
+  if (!contact) {
+    contact = Contact.instantiate();
+    contact.initWithResource(wRDF.GetResource(resourceID));
+    wContacts[resourceID] = contact;
+  }
+  return contact;
+}
+
 
 function initContacts() {
   wContactsContainer = Components.classes["@mozilla.org/rdf/container;1"].
     createInstance(Components.interfaces.nsIRDFContainer);
   wContactsContainer.Init(wContactsDS,
                           wRDF.GetResource("urn:mozilla:zap:contacts"));
-  wFriendsContainer = Components.classes["@mozilla.org/rdf/container;1"].
-    createInstance(Components.interfaces.nsIRDFContainer);
-  wFriendsContainer.Init(wContactsDS,
-                         wRDF.GetResource("urn:mozilla:zap:friends"));
 }
 
 var Contact = makeClass("Contact", PersistentRDFObject);
 
 Contact.prototype.datasources["default"] = wContactsDS;
+// we add the identities datasource, so that our references from
+// urn:mozilla:zap:friends get deleted when a contact is removed:
+Contact.prototype.datasources["identities"] = wIdentitiesDS;
 
-Contact.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
-                          "urn:mozilla:zap:friends");
+Contact.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
+
 Contact.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
                          "chrome://zap/content/contacts.xul");
 Contact.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
 Contact.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "contact");
 Contact.rdfLiteralAttrib("urn:mozilla:zap:sip_uri", "");
 Contact.rdfLiteralAttrib("urn:mozilla:zap:notes", "");
-// if isfriend is true, the contact will be displayed in the sidebar:
-Contact.rdfLiteralAttrib("urn:mozilla:zap:isfriend", "true");
+Contact.rdfResourceAttrib("urn:mozilla:zap:associated_identity",
+                          "urn:mozilla:zap:initial_identity");
+// status: online|offline|unknown
+Contact.rdfResourceAttrib("urn:mozilla:zap:status",
+                          "unknown",
+                          "global-ephemeral");
 
 Contact.spec(
   function createFromDocument(doc) {
@@ -1738,35 +1982,102 @@ Contact.spec(
     // changes get flushed as well:
     this.autoflush = false;
     this._Contact_createFromDocument(doc);
-    this.autoflush = true;
-    
-    // Append to contacts:
     wContactsContainer.AppendElement(this.resource);
-    // ... and if it's a friend, to the friends list as well:
-    if (this["urn:mozilla:zap:isfriend"] == "true")
-      wFriendsContainer.AppendElement(this.resource);
-
+    this.autoflush = true;
     this.flush();
+    
+    var identity = getIdentity(this["urn:mozilla:zap:associated_identity"]);
+    identity.addAssertion("urn:mozilla:zap:friends",
+                          this.resource,
+                          "default");
+    identity.flush();
+    if (identity["urn:mozilla:zap:watch_contact_presence"])
+      this.watchPresence(identity);
+    
+    // XXX hack: make sure the twisty is updated:
+    openSidebarContainer(identity.resource);
   });
 
 Contact.spec(
   function updateFromDocument(doc) {
-    // Temporarily defer flushing until later, so that the container
-    // changes get flushed as well:
-    this.autoflush = false;
+    var old_identity = null;
+    try {
+      old_identity = getIdentity(this["urn:mozilla:zap:associated_identity"]);
+      // XXX hack: we open the (old) sidebar container to ensure its
+      // twisty gets updated:
+      openSidebarContainer(old_identity.resource);
+    }
+    catch(e) {}
+    
     this._Contact_updateFromDocument(doc);
-    this.autoflush = true;
-    // add/remove from friends container:
-    var index = wFriendsContainer.IndexOf(this.resource);
-    if (this["urn:mozilla:zap:isfriend"] == "true") {
-      if (index == -1)
-        wFriendsContainer.AppendElement(this.resource);
+    var identity = getIdentity(this["urn:mozilla:zap:associated_identity"]);
+    if (old_identity != identity) {
+      if (old_identity) {
+        old_identity.removeAssertion("urn:mozilla:zap:friends",
+                                     this.resource,
+                                     "default");
+        old_identity.flush();
+        this.unwatchPresence();
+      }
+      identity.addAssertion("urn:mozilla:zap:friends",
+                            this.resource,
+                            "default");
+      identity.flush();
+      
+      if (identity["urn:mozilla:zap:watch_contact_presence"])
+        this.watchPresence(identity);
+      
+      // XXX hack: make sure the twisty is updated:
+      openSidebarContainer(identity.resource);
     }
-    else {
-      if (index != -1)
-        wFriendsContainer.RemoveElementAt(index, true);
+  });
+
+Contact.spec(
+  function remove() {
+    this.unwatchPresence();
+    this._Contact_remove();
+  });
+
+// try to parse our address into a sip syntax object:
+Contact.fun(
+  function getAddress() {
+    var address = null;
+    try {
+      var uri = wSipStack.syntaxFactory.deserializeURI(this["urn:mozilla:zap:sip_uri"]);
+      address = wSipStack.syntaxFactory.createAddress(this["http://home.netscape.com/NC-rdf#Name"], uri);
+    } catch(e) {
+      this._dump("error creating address for contact "+this);
     }
-    this.flush();
+    return address;
+  });
+
+// watch presence or update subscription
+Contact.fun(
+  function watchPresence(identity) {
+    var me = this;
+    this.presenceSubscription = Subscription.instantiate();
+    this.presenceSubscription.notify = function(message) {
+      if (/<basic>open/(message.body))
+        me["urn:mozilla:zap:status"] = "online";
+      else if (/<basic>closed/(message.body))
+        me["urn:mozilla:zap:status"] = "offline";
+      else
+        me["urn:mozilla:zap:status"] = "unknown";
+    }
+    var address = this.getAddress();
+    if (!address) return; // no point in proceeding
+    this.presenceSubscription.subscribe(address,
+                                        "presence",
+                                        identity);
+  });
+
+// remove presence subscription; revert to 'unknown' status
+Contact.fun(
+  function unwatchPresence() {
+    if (!this.presenceSubscription) return;    
+    this.presenceSubscription.terminate();
+    delete this.presenceSubscription;
+    this["urn:mozilla:zap:status"] = "unknown";
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1813,6 +2124,13 @@ function initSidebar() {
 function getSelectedSidebarResource()
 {
   return getSelectedResource(wSidebarTree);
+}
+
+function openSidebarContainer(resource) {
+  var index = wSidebarTree.builder.getIndexOfResource(resource);
+  if (index < 0) return;
+  if (!wSidebarTree.builder.isContainerOpen(index))
+    wSidebarTree.builder.toggleOpenState(index);
 }
 
 function getSidebarResourceAttrib(source, attrib) {

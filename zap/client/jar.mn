@@ -1,5 +1,6 @@
 zap.jar:
   content/zap/zap.xul                (content/zap.xul)
+  content/zap/sidebar.xul            (content/sidebar.xul)
   content/zap/zap.js                 (content/zap.js)
   content/zap/about.xul              (content/about.xul)
   content/zap/chromeUtils.js         (content/chromeUtils.js)
@@ -43,6 +44,8 @@ classic.jar:
   skin/classic/zap/logs.png          (skin/classic/logs.png)
   skin/classic/zap/contacts.png      (skin/classic/contacts.png)
   skin/classic/zap/contact.png       (skin/classic/contact.png)
+  skin/classic/zap/contact-online.png       (skin/classic/contact-online.png)
+  skin/classic/zap/contact-offline.png       (skin/classic/contact-offline.png)
   skin/classic/zap/section_up_hl.png (skin/classic/section_up_hl.png)
   skin/classic/zap/section_down.png  (skin/classic/section_down.png)
   skin/classic/zap/section_down_disabled.png    (skin/classic/section_down_disabled.png)
