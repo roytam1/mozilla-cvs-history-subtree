@@ -672,7 +672,9 @@ int main(int argc, char *argv[])
 #endif
   
   CreateSplashScreen();
-  
+
+  //  MessageBox(0, "a", "a", MB_APPLMODAL);
+
 #ifdef _BUILD_STATIC_BIN
   NS_InitEmbedding(nsnull, nsnull, kPStaticModules, kStaticModuleCount);
 #else
