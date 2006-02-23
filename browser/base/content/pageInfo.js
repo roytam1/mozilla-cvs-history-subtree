@@ -315,7 +315,8 @@ function onLoadPageInfo()
 
   /* Select the requested tab, if the name is specified */
   var tabControl = document.getElementById("tabbox");
-  if ("arguments" in window && window.arguments.length >= 1 && window.arguments[0] && window.arguments[0].initialTab)
+  if ("arguments" in window && window.arguments.length >= 1 &&
+       window.arguments[0] && window.arguments[0].initialTab)
   {
     var tab = document.getElementById(window.arguments[0].initialTab);
     if (tab)
