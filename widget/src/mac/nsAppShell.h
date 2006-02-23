@@ -47,10 +47,9 @@
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include "nsIAppShell.h"
+#include "nsBaseAppShell.h"
 #include "nsCOMPtr.h"
 #include "nsIToolkit.h"
-#include "nsIThreadInternal.h"
 
 #include <memory>
 
@@ -58,14 +57,20 @@ using std::auto_ptr;
 
 class nsMacMessagePump;
 
-class nsAppShell : public nsIAppShell, public nsIThreadObserver
+class nsAppShell : public nsBaseAppShell
 {
   public:
     nsAppShell();
 
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIAPPSHELL
-    NS_DECL_NSITHREADOBSERVER
+    // nsIAppShell overrides:
+    NS_IMETHOD Init(int *argc, char **argv);
+
+    // nsIThreadObserver overrides:
+    NS_IMETHOD OnNewTask(nsIThreadInternal *thread, PRUint32 flags);
+    NS_IMETHOD OnBeforeRunNextTask(nsIThreadInternal *thread, PRUint32 flags);
+    NS_IMETHOD OnAfterRunNextTask(nsIThreadInternal *thread, PRUint32 flags,
+                                  nsresult status);
+    NS_IMETHOD OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags);
   
   private:
     ~nsAppShell() {}

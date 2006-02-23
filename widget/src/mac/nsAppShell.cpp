@@ -67,28 +67,12 @@ PRBool nsAppShell::mInitializedToolbox = PR_FALSE;
 
 //-------------------------------------------------------------------------
 //
-// nsISupports implementation macro
-//
-//-------------------------------------------------------------------------
-// XXX does this need to be threadsafe?
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsAppShell, nsIAppShell, nsIThreadObserver)
-
-//-------------------------------------------------------------------------
-//
 // Create the application shell
 //
 //-------------------------------------------------------------------------
 
-NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
+NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
 {
-  // Configure ourselves as an observer for the current thread:
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
-  nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(thread);
-  NS_ENSURE_STATE(threadInt);
-  threadInt->SetObserver(this);
-
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
    return rv;
@@ -99,9 +83,10 @@ NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
   if (!mMacPump.get() || ! nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
 
-  return NS_OK;
+  return nsBaseAppShell::Init(argc, argv);;
 }
 
+#if 0
 //-------------------------------------------------------------------------
 //
 // Enter a message handler loop
@@ -160,6 +145,7 @@ NS_IMETHODIMP nsAppShell::Exit(void)
                     // exit properly. The object will delete itself afterwards.
 	return NS_OK;
 }
+#endif
 
 #if 0
 //-------------------------------------------------------------------------
@@ -173,6 +159,7 @@ NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aLis
 }
 #endif
 
+#if 0
 //-------------------------------------------------------------------------
 //
 // Prepare to process events
@@ -197,6 +184,7 @@ NS_IMETHODIMP nsAppShell::Spindown(void)
 		mMacPump->StopRunning();
 	return NS_OK;
 }
+#endif
 
 //-------------------------------------------------------------------------
 //
