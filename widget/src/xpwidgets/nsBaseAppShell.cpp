@@ -40,7 +40,9 @@
 #include "nsBaseAppShell.h"
 #include "nsThreadUtils.h"
 
-NS_IMPL_ISUPPORTS2(nsBaseAppShell, nsIAppShell, nsIThreadObserver)
+// Must be threadsafe since nsIThreadObserver::OnNewTask may be called from
+// any background thread.
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsBaseAppShell, nsIAppShell, nsIThreadObserver)
 
 //-------------------------------------------------------------------------
 // nsIAppShell methods:

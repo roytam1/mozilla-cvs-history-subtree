@@ -41,6 +41,12 @@
 #include "nsAutoLock.h"
 #include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
+#include "prlog.h"
+
+#ifdef PR_LOGGING
+static PRLogModuleInfo *sLog = PR_NewLogModule("nsThread");
+#endif
+#define LOG(args) PR_LOG(sLog, PR_LOG_DEBUG, args)
 
 NS_DECL_CI_INTERFACE_GETTER(nsThread)
 
@@ -286,6 +292,8 @@ nsThread::PutTask(nsIRunnable *task, PRUint32 dispatchFlags)
 NS_IMETHODIMP
 nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
 {
+  LOG(("nsThread(%p) Dispatch [%p %x]\n", this, runnable, flags));
+
   NS_ENSURE_STATE(mThread);
 
   if (flags == DISPATCH_NORMAL) {
@@ -293,7 +301,7 @@ nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
   } else if (flags & DISPATCH_SYNC) {
     nsCOMPtr<nsIThread> thread;
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
-    NS_ENSURE_STATE(thread);  // XXX we need to handle this case!
+    NS_ENSURE_STATE(thread);
 
     nsRefPtr<nsThreadSyncDispatch> task = new nsThreadSyncDispatch(runnable);
     PutTask(task, flags);
@@ -347,6 +355,8 @@ nsThread::Shutdown()
 NS_IMETHODIMP
 nsThread::RunNextTask(PRUint32 flags)
 {
+  LOG(("nsThread(%p) RunNextTask [%x]\n", this, flags));
+
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
   NS_ENSURE_ARG(flags == RUN_NORMAL || flags == RUN_NO_WAIT);
 
@@ -371,6 +381,7 @@ nsThread::RunNextTask(PRUint32 flags)
   nsresult rv = NS_OK;
 
   if (task) {
+    LOG(("nsThread(%p) running [%p]\n", this, task.get()));
     task->Run();
   } else if (flags & RUN_NO_WAIT) {
     rv = NS_BASE_STREAM_WOULD_BLOCK;
