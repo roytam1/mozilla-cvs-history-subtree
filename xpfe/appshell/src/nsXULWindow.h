@@ -92,7 +92,7 @@ public:
    NS_DECL_NSIXULWINDOW
    NS_DECL_NSIBASEWINDOW
 
-   NS_DECLARE_STATIC_IID_ACCESSOR(NS_XULWINDOW_IMPL_CID)
+   NS_DEFINE_STATIC_IID_ACCESSOR(NS_XULWINDOW_IMPL_CID)
 
    void LockUntilChromeLoad() { mLockedUntilChromeLoad = PR_TRUE; }
    PRBool IsLocked() const { return mLockedUntilChromeLoad; }
@@ -181,8 +181,6 @@ protected:
 
    nsCOMArray<nsIWeakReference> mTargetableShells; // targetable shells only
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsXULWindow, NS_XULWINDOW_IMPL_CID)
 
 // nsContentShellInfo
 // Used (in an nsVoidArray) to map shell IDs to nsIDocShellTreeItems.
