@@ -403,6 +403,7 @@
     <menupopup id="bookmarksMenuPopup" type="places" context="placesContext">
       <menuitem label="&addCurPageAsCmd.label;" 
                 command="Browser:AddBookmarkAs" key="addBookmarkAsKb"/>
+      <!-- XXXben - this should move to the end of the list -->
       <menuitem label="&manBookmarksCmd.label;" 
                 command="Browser:ShowBookmarks" key="manBookmarkKb"/>
       <menuseparator builder="start"/>
