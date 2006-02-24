@@ -250,6 +250,9 @@ public:
   **/
 
   void AddScale(float ptX, float ptY);
+
+private:
+  nscoord ToCoordRound(float aCoord);
 };
 
 #endif

@@ -433,7 +433,12 @@ void nsTransform2D :: TransformCoord(nscoord *ptX, nscoord *ptY)
 
     case MG_2DSCALE | MG_2DTRANSLATION:
       *ptX = NSToCoordRound(*ptX * m00 + m20);
+
+#if defined(_MSC_VER) && _MSC_VER < 1300
+      *ptY = ToCoordRound(*ptY * m11 + m21);
+#else
       *ptY = NSToCoordRound(*ptY * m11 + m21);
+#endif
       break;
 
     default:
@@ -575,3 +580,9 @@ void nsTransform2D :: AddScale(float ptX, float ptY)
 
   type |= MG_2DSCALE;
 }
+
+nscoord nsTransform2D::ToCoordRound(float aCoord)
+{
+  return NSToCoordRound(aCoord);
+}
+
