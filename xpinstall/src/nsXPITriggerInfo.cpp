@@ -257,6 +257,11 @@ static void* handleTriggerEvent(XPITriggerEvent* event)
                              event->status );
     if ( args )
     {
+        // This code is all in a JS request, and here we're about to
+        // push the context onto the context stack and also push
+        // arguments. Be very very sure that no early returns creep in
+        // here w/o doing the proper cleanup!
+
         const char *errorStr = nsnull;
 
         nsCOMPtr<nsIJSContextStack> stack =
