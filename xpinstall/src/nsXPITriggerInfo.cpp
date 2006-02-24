@@ -257,6 +257,8 @@ static void* handleTriggerEvent(XPITriggerEvent* event)
                              event->status );
     if ( args )
     {
+        const char *errorStr = nsnull;
+
         nsCOMPtr<nsIJSContextStack> stack =
             do_GetService("@mozilla.org/js/xpc/ContextStack;1");
         if (stack)
@@ -267,33 +269,43 @@ static void* handleTriggerEvent(XPITriggerEvent* event)
         
         if (!secman)
         {
-            JS_ReportError(event->cx, "Could not get script security manager service");
-            return 0;
+            errorStr = "Could not get script security manager service";
         }
 
         nsCOMPtr<nsIPrincipal> principal;
-        secman->GetSubjectPrincipal(getter_AddRefs(principal));
-        if (!principal)
+        if (!errorStr)
         {
-            JS_ReportError(event->cx, "Could not get principal from script security manager");
-            return 0;
+            secman->GetSubjectPrincipal(getter_AddRefs(principal));
+            if (!principal)
+            {
+                errorStr = "Could not get principal from script security manager";
+            }
         }
 
-        PRBool equals = PR_FALSE;
-        principal->Equals(event->princ, &equals);
-
-        if (!equals)
+        if (!errorStr)
         {
-            JS_ReportError(event->cx, "Principal of callback context is different then InstallTriggers");
-            return 0;
+            PRBool equals = PR_FALSE;
+            principal->Equals(event->princ, &equals);
+
+            if (!equals)
+            {
+                errorStr = "Principal of callback context is different than InstallTriggers";
+            }
         }
 
-        JS_CallFunctionValue( event->cx,
-                              JSVAL_TO_OBJECT(event->global),
-                              event->cbval,
-                              2,
-                              args,
-                              &ret );
+        if (errorStr)
+        {
+            JS_ReportError(event->cx, errorStr);
+        }
+        else
+        {
+            JS_CallFunctionValue(event->cx,
+                                 JSVAL_TO_OBJECT(event->global),
+                                 event->cbval,
+                                 2,
+                                 args,
+                                 &ret);
+        }
 
         if (stack)
             stack->Pop(nsnull);
