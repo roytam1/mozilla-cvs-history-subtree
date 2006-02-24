@@ -38,7 +38,7 @@
 #ifndef nsProxyRelease_h_
 #define nsProxyRelease_h__
 
-#include "nsIDispatchTarget.h"
+#include "nsIEventTarget.h"
 #include "pratom.h"
 #include "prmem.h"
 
@@ -56,6 +56,6 @@
  *        the release will happen when that PLEvent is handled.
  */
 NS_COM nsresult NS_ProxyRelease
-    (nsIDispatchTarget *target, nsISupports *doomed, PRBool alwaysProxy=PR_FALSE);
+    (nsIEventTarget *target, nsISupports *doomed, PRBool alwaysProxy=PR_FALSE);
 
 #endif

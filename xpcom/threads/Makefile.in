@@ -57,7 +57,7 @@ REQUIRES	= string \
 
 CPPSRCS		= \
 		nsAutoLock.cpp \
-		nsTaskQueue.cpp \
+		nsEventQueue.cpp \
 		nsEnvironment.cpp \
 		nsThreadUtils.cpp \
 		nsThread.cpp \
@@ -72,11 +72,11 @@ EXPORTS		= \
 		nsAutoLock.h \
 		nsProcess.h \
 		nsThreadUtils.h \
-		nsTaskQueue.h \
+		nsEventQueue.h \
 		$(NULL)
 
 XPIDLSRCS	= \
-		nsIDispatchTarget.idl \
+		nsIEventTarget.idl \
 		nsIThread.idl \
 		nsIThreadInternal.idl \
 		nsIThreadManager.idl \

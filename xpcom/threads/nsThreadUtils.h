@@ -229,16 +229,13 @@ do_GetThread(const char *name) {
  * Run all pending tasks for a given thread before returning.
  */
 inline NS_METHOD
-NS_RunPendingTasks(nsIThread *thread)
+NS_ProcessPendingEvents(nsIThread *thread)
 {
   nsresult rv;
-  do {
-    rv = thread->RunNextTask(nsIThread::RUN_NO_WAIT);  
-  } while (NS_SUCCEEDED(rv));
-
-  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
-    rv = NS_OK;
-
+  PRBool val;
+  while (NS_SUCCEEDED(thread->HasPendingEvents(&val)) && val) {
+    rv = thread->ProcessNextEvent();
+  }
   return rv;
 }
 

@@ -53,8 +53,8 @@ static PRLogModuleInfo *sLog = PR_NewLogModule("nsThreadPool");
 // DESIGN:
 //  o  Allocate anonymous threads.
 //  o  Use nsThreadPool::Run as the main routine for each thread.
-//  o  Each thread waits on the task queue's monitor, checking for
-//     pending tasks and rescheduling itself as an idle thread.
+//  o  Each thread waits on the event queue's monitor, checking for
+//     pending events and rescheduling itself as an idle thread.
 
 #define DEFAULT_THREAD_LIMIT 4
 #define DEFAULT_IDLE_THREAD_LIMIT 1
@@ -62,9 +62,9 @@ static PRLogModuleInfo *sLog = PR_NewLogModule("nsThreadPool");
 
 NS_IMPL_THREADSAFE_ADDREF(nsThreadPool)
 NS_IMPL_THREADSAFE_RELEASE(nsThreadPool)
-NS_IMPL_QUERY_INTERFACE3_CI(nsThreadPool, nsIThreadPool, nsIDispatchTarget,
+NS_IMPL_QUERY_INTERFACE3_CI(nsThreadPool, nsIThreadPool, nsIEventTarget,
                             nsIRunnable)
-NS_IMPL_CI_INTERFACE_GETTER2(nsThreadPool, nsIThreadPool, nsIDispatchTarget)
+NS_IMPL_CI_INTERFACE_GETTER2(nsThreadPool, nsIThreadPool, nsIEventTarget)
 
 nsThreadPool::nsThreadPool()
   : mThreadLimit(DEFAULT_THREAD_LIMIT)
@@ -81,23 +81,23 @@ nsThreadPool::~nsThreadPool()
 }
 
 nsresult
-nsThreadPool::PutTask(nsIRunnable *task)
+nsThreadPool::PutEvent(nsIRunnable *event)
 {
-  // Avoid spawning a new thread while holding the task queue lock...
+  // Avoid spawning a new thread while holding the event queue lock...
  
   PRBool spawnThread = PR_FALSE;
   {
-    nsAutoMonitor mon(mTasks.Monitor());
+    nsAutoMonitor mon(mEvents.Monitor());
 
     LOG(("THRD-P(%p) put [%d %d %d]\n", this, mIdleCount, mThreads.Count(),
          mThreadLimit));
     NS_ASSERTION(mIdleCount <= (PRUint32) mThreads.Count(), "oops");
 
-    // Make sure we have a thread to service this task.
+    // Make sure we have a thread to service this event.
     if (mIdleCount == 0 && mThreads.Count() < (PRInt32) mThreadLimit)
       spawnThread = PR_TRUE;
 
-    mTasks.PutTask(task);
+    mEvents.PutEvent(event);
   }
 
   LOG(("THRD-P(%p) put [spawn=%d]\n", this, spawnThread));
@@ -110,7 +110,7 @@ nsThreadPool::PutTask(nsIRunnable *task)
 
   PRBool killThread = PR_FALSE;
   {
-    nsAutoMonitor mon(mTasks.Monitor());
+    nsAutoMonitor mon(mEvents.Monitor());
     if (mThreads.Count() < (PRInt32) mThreadLimit) {
       mThreads.AppendObject(thread);
     } else {
@@ -140,10 +140,10 @@ nsThreadPool::Run()
   PRIntervalTime idleSince;
 
   do {
-    nsCOMPtr<nsIRunnable> task;
+    nsCOMPtr<nsIRunnable> event;
     {
-      nsAutoMonitor mon(mTasks.Monitor());
-      if (!mTasks.GetPendingTask(getter_AddRefs(task))) {
+      nsAutoMonitor mon(mEvents.Monitor());
+      if (!mEvents.GetPendingEvent(getter_AddRefs(event))) {
         PRIntervalTime now     = PR_IntervalNow();
         PRIntervalTime timeout = PR_MillisecondsToInterval(mIdleThreadTimeout);
 
@@ -181,9 +181,9 @@ nsThreadPool::Run()
         --mIdleCount;
       }
     }
-    if (task) {
-      LOG(("THRD-P(%p) running [%p]\n", this, task.get()));
-      task->Run();
+    if (event) {
+      LOG(("THRD-P(%p) running [%p]\n", this, event.get()));
+      event->Run();
     }
   } while (!exitThread);
 
@@ -192,24 +192,24 @@ nsThreadPool::Run()
 }
 
 NS_IMETHODIMP
-nsThreadPool::Dispatch(nsIRunnable *task, PRUint32 flags)
+nsThreadPool::Dispatch(nsIRunnable *event, PRUint32 flags)
 {
-  LOG(("THRD-P(%p) dispatch [%p %x]\n", this, task, flags));
+  LOG(("THRD-P(%p) dispatch [%p %x]\n", this, event, flags));
 
   NS_ENSURE_STATE(!mShutdown);
 
   if (flags == DISPATCH_NORMAL) {
-    PutTask(task);
+    PutEvent(event);
   } else if (flags & DISPATCH_SYNC) {
     nsCOMPtr<nsIThread> thread;
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
     NS_ENSURE_STATE(thread);
 
-    nsRefPtr<nsThreadSyncDispatch> wrapper = new nsThreadSyncDispatch(task);
-    PutTask(wrapper);
+    nsRefPtr<nsThreadSyncDispatch> wrapper = new nsThreadSyncDispatch(event);
+    PutEvent(wrapper);
 
     while (wrapper->IsPending())
-      thread->RunNextTask(nsIThread::RUN_NORMAL);
+      thread->ProcessNextEvent();
   }
   return NS_OK;
 }
@@ -226,14 +226,14 @@ nsThreadPool::Shutdown()
 {
   nsCOMArray<nsIThread> threads;
   {
-    nsAutoMonitor mon(mTasks.Monitor());
+    nsAutoMonitor mon(mEvents.Monitor());
     mShutdown = PR_TRUE;
     mon.NotifyAll();
 
     threads.AppendObjects(mThreads);
   }
 
-  // It's important that we shutdown the threads while outside the task queue
+  // It's important that we shutdown the threads while outside the event queue
   // monitor.  Otherwise, we could end up dead-locking.  The threads will take
   // care of removing themselves from mThreads as they exit.
 
@@ -253,7 +253,7 @@ nsThreadPool::GetThreadLimit(PRUint32 *value)
 NS_IMETHODIMP
 nsThreadPool::SetThreadLimit(PRUint32 value)
 {
-  nsAutoMonitor mon(mTasks.Monitor());
+  nsAutoMonitor mon(mEvents.Monitor());
   mThreadLimit = value;
   if (mIdleThreadLimit > mThreadLimit)
     mIdleThreadLimit = mThreadLimit;
@@ -271,7 +271,7 @@ nsThreadPool::GetIdleThreadLimit(PRUint32 *value)
 NS_IMETHODIMP
 nsThreadPool::SetIdleThreadLimit(PRUint32 value)
 {
-  nsAutoMonitor mon(mTasks.Monitor());
+  nsAutoMonitor mon(mEvents.Monitor());
   mIdleThreadLimit = value;
   mon.NotifyAll();  // wake up threads so they observe this change
   return NS_OK;
@@ -287,7 +287,7 @@ nsThreadPool::GetIdleThreadTimeout(PRUint32 *value)
 NS_IMETHODIMP
 nsThreadPool::SetIdleThreadTimeout(PRUint32 value)
 {
-  nsAutoMonitor mon(mTasks.Monitor());
+  nsAutoMonitor mon(mEvents.Monitor());
   mIdleThreadTimeout = value;
   mon.NotifyAll();  // wake up threads so they observe this change
   return NS_OK;

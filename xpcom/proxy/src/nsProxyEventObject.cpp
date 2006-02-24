@@ -165,7 +165,7 @@ nsProxyEventObject::DebugDump(const char * message, PRUint32 hashKey)
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 nsProxyEventObject* 
-nsProxyEventObject::GetNewOrUsedProxy(nsIDispatchTarget *target,
+nsProxyEventObject::GetNewOrUsedProxy(nsIEventTarget *target,
                                       PRInt32 proxyType, 
                                       nsISupports *aObj,
                                       REFNSIID aIID)
@@ -394,7 +394,7 @@ nsProxyEventObject::nsProxyEventObject()
      NS_WARNING("This constructor should never be called");
 }
 
-nsProxyEventObject::nsProxyEventObject(nsIDispatchTarget *target,
+nsProxyEventObject::nsProxyEventObject(nsIEventTarget *target,
                                        PRInt32 proxyType,
                                        nsISupports* aObj,
                                        nsProxyEventClass* aClass,

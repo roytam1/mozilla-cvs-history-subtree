@@ -54,7 +54,8 @@ interface nsIThreadManager : nsISupports
   nsIThread newThread(in ACString name);
    
   /**
-   * Find a named thread.
+   * Find a named thread.  If no thread exists with the given name, then null
+   * is returned.
    */
   nsIThread getThread(in ACString name);
 

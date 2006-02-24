@@ -1,3 +1,5 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,14 +13,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla.
+ * The Original Code is Mozilla code.
  *
- * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by IBM Corporation are Copyright (C) 2003
- * IBM Corporation. All Rights Reserved.
+ * The Initial Developer of the Original Code is Google Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2006
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   IBM Corp.
+ *  Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,32 +38,33 @@
 
 #include "nsISupports.idl"
 
-%{C++
-#include "plevent.h"
-%}
+interface nsIRunnable;
 
-[ptr] native PLEventPtr(PLEvent);
-
-/**
- * nsIEventTarget
- *
- * This interface is used to dispatch events to a particular thread.  In many
- * cases the event target also supports nsIEventQueue.
- */
-[scriptable, uuid(ea99ad5b-cc67-4efb-97c9-2ef620a59f2a)]
+[scriptable, uuid(4e8febe4-6631-49dc-8ac9-308c1cb9b09c)]
 interface nsIEventTarget : nsISupports
 {
-    /**
-     * Method for posting an asynchronous event to the event target.  If this
-     * method succeeds, then the event will be dispatched on the target thread.
-     *
-     * @param aEvent
-     *        The event to dispatched.
-     */
-    [noscript] void postEvent(in PLEventPtr aEvent);
-
-    /**
-     * This method returns true if the event target is the current thread.
-     */
-    boolean isOnCurrentThread();
+  /**
+   * Dispatch an event to the event target.  This function may be called from
+   * any thread.  If flags specifies DISPATCH_SYNC, then the dispatch method
+   * will not return until the event has been run.
+   *
+   * NOTE: Calling dispatch with DISPATCH_SYNC may have the side-effect of
+   * processing other events on the current thread while waiting for the given
+   * event to be processed.  This method is thread-safe and re-entrant.
+   */
+  void dispatch(in nsIRunnable event, in unsigned long flags);
+  const unsigned long DISPATCH_NORMAL = 0;
+  const unsigned long DISPATCH_SYNC   = 1;
+   
+  /**
+   * Returns true if events dispatched to this event target will run on the
+   * current thread (i.e., the thread calling this method).
+   */
+  boolean isOnCurrentThread();
 };
+
+%{C++
+// convenient aliases:
+#define NS_DISPATCH_NORMAL nsIEventTarget::DISPATCH_NORMAL
+#define NS_DISPATCH_SYNC   nsIEventTarget::DISPATCH_SYNC
+%}

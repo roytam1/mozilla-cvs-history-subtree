@@ -41,7 +41,7 @@
 
 #include "nsIThreadInternal.h"
 #include "nsISupportsPriority.h"
-#include "nsTaskQueue.h"
+#include "nsEventQueue.h"
 #include "nsThreadUtils.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
@@ -51,7 +51,7 @@ class nsThread : public nsIThreadInternal, public nsISupportsPriority
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIDISPATCHTARGET
+  NS_DECL_NSIEVENTTARGET
   NS_DECL_NSITHREAD
   NS_DECL_NSITHREADINTERNAL
   NS_DECL_NSISUPPORTSPRIORITY
@@ -65,23 +65,23 @@ public:
   nsresult InitCurrentThread();
 
 private:
-  friend class nsThreadShutdownTask;
+  friend class nsThreadShutdownEvent;
 
   ~nsThread();
 
   PR_STATIC_CALLBACK(void) ThreadFunc(void *arg);
 
-  // Wrapper for nsTaskQueue::PutTask
-  PRBool PutTask(nsIRunnable *task, PRUint32 dispatchFlags);
+  // Wrapper for nsEventQueue::PutEvent
+  PRBool PutEvent(nsIRunnable *event, PRUint32 dispatchFlags);
 
   PRLock                     *mObserverLock;
   nsCOMPtr<nsIThreadObserver> mObserver;
 
-  nsTaskQueue mTasks;
-  nsCString   mName;
-  PRInt32     mPriority;
-  PRThread   *mThread;
-  PRIntn      mActive;
+  nsEventQueue mEvents;
+  nsCString    mName;
+  PRInt32      mPriority;
+  PRThread    *mThread;
+  PRIntn       mActive;
 };
 
 //-----------------------------------------------------------------------------

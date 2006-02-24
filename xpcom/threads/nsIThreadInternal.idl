@@ -51,11 +51,6 @@ interface nsIThreadInternal : nsIThread
    * The consumer's thread observer.
    */
   attribute nsIThreadObserver observer;
-
-  /**
-   * This method returns true if there is a pending task for this thread.
-   */
-  boolean hasPendingTask();
 };
 
 /**
@@ -92,23 +87,22 @@ interface nsIThreadObserver : nsISupports
    * This method is called whenever a new task is added to the thread.  This
    * method may be called from any thread.
    */
-  void onNewTask(in nsIThreadInternal thread,
-                 in unsigned long dispatchFlags);
+  void onDispatchEvent(in nsIThreadInternal thread,
+                       in unsigned long dispatchFlags);
 
   /**
    * This method is called (from nsIThread.runNextTask) before a task is
    * processed.  This method is only called on the target thread.
    */
-  void onBeforeRunNextTask(in nsIThreadInternal thread,
-                           in unsigned long runFlags);
+  void onEnterProcessNextEvent(in nsIThreadInternal thread,
+                               in boolean mayWait);
 
   /**
    * This method is called (from nsIThread.runNextTask) after a task is
    * processed.  This method is only called on the target thread.
    */
-  void onAfterRunNextTask(in nsIThreadInternal thread,
-                          in unsigned long runFlags,
-                          in nsresult status);
+  void onLeaveProcessNextEvent(in nsIThreadInternal thread,
+                               in nsresult status);
 
   /**
    * This method is called (from nsIThread.runNextTask) when it may wait for a
@@ -116,6 +110,6 @@ interface nsIThreadObserver : nsISupports
    * already be available when this method is called.  This method is only
    * called on the target thread.
    */
-  void onWaitNextTask(in nsIThreadInternal thread,
-                      in unsigned long runFlags);
+//  void onWaitNextTask(in nsIThreadInternal thread,
+//                      in unsigned long runFlags);
 };

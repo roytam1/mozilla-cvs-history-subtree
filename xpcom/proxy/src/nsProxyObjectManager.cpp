@@ -169,7 +169,7 @@ nsProxyObjectManager::Create(nsISupports* outer, const nsIID& aIID,
 }
 
 NS_IMETHODIMP 
-nsProxyObjectManager::GetProxyForObject(nsIDispatchTarget* aTarget, 
+nsProxyObjectManager::GetProxyForObject(nsIEventTarget* aTarget, 
                                         REFNSIID aIID, 
                                         nsISupports* aObj, 
                                         PRInt32 proxyType, 
@@ -282,7 +282,7 @@ nsProxyObjectManager::GetProxy(  nsIEventQueue *destQueue,
  * readable.
  */
 NS_COM nsresult
-NS_GetProxyForObject(nsIDispatchTarget *target, 
+NS_GetProxyForObject(nsIEventTarget *target, 
                      REFNSIID aIID, 
                      nsISupports* aObj, 
                      PRInt32 proxyType, 

@@ -36,12 +36,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#include "nsIEventTarget.idl"
 
 [ptr] native PRThread(PRThread);
 
 [scriptable, uuid(9c889946-a73a-4af3-ae9a-ea64f7d4e3ca)]
-interface nsIThread : nsIDispatchTarget
+interface nsIThread : nsIEventTarget
 {
   /**
    * Returns the name of the thread, which may be empty if this thread is
@@ -63,20 +63,15 @@ interface nsIThread : nsIDispatchTarget
    */
   void shutdown();
 
-  /*
-  boolean hasEvents();
-  void processNextEvent();
-  */
-   
   /**
-   * Run the next task assigned to this thread.  This function should block
-   * execution of the current thread until a task is available and run.
-   * This function is re-entrant but may only be called if this thread is the 
-   * current thread.
-   * @throws NS_BASE_STREAM_WOULD_BLOCK if RUN_NO_WAIT is specified and there
-   * were no tasks to run.
+   * Returns true if this thread has one or more pending events.
    */
-  void runNextTask(in unsigned long flags);
-  const unsigned long RUN_NORMAL  = 0;
-  const unsigned long RUN_NO_WAIT = 1;
+  boolean hasPendingEvents();
+
+  /**
+   * Process the next event.  If there are no pending events, then this method
+   * will wait until an event is dispatched to this thread.  This method is
+   * re-entrant but may only be called if this thread is the current thread.
+   */
+  void processNextEvent();
 };

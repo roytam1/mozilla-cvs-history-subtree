@@ -58,7 +58,7 @@ private:
 };
 
 NS_COM nsresult
-NS_ProxyRelease(nsIDispatchTarget *target, nsISupports *doomed,
+NS_ProxyRelease(nsIEventTarget *target, nsISupports *doomed,
                 PRBool alwaysProxy)
 {
     nsresult rv;

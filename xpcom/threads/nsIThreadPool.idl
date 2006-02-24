@@ -36,15 +36,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIDispatchTarget.idl"
+#include "nsIEventTarget.idl"
 
 /**
  * An interface to a thread pool.  A thread pool creates a limited number of
- * anonymous (unnamed) worker threads.  A task dispatched to the thread pool
+ * anonymous (unnamed) worker threads.  An event dispatched to the thread pool
  * will be run on the next available worker thread.
  */
 [scriptable, uuid(394c29f0-225f-487f-86d3-4c259da76cab)]
-interface nsIThreadPool : nsIDispatchTarget
+interface nsIThreadPool : nsIEventTarget
 {
   /**
    * Shutdown the thread pool.  This method may not be executed from any thread

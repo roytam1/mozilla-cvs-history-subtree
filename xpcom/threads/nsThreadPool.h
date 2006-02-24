@@ -42,14 +42,14 @@
 #include "nsIThreadPool.h"
 #include "nsIThread.h"
 #include "nsIRunnable.h"
-#include "nsTaskQueue.h"
+#include "nsEventQueue.h"
 #include "nsCOMArray.h"
 
 class nsThreadPool : public nsIThreadPool, public nsIRunnable
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIDISPATCHTARGET
+  NS_DECL_NSIEVENTTARGET
   NS_DECL_NSITHREADPOOL
   NS_DECL_NSIRUNNABLE
 
@@ -58,10 +58,10 @@ public:
 private:
   ~nsThreadPool();
 
-  nsresult PutTask(nsIRunnable *task);
+  nsresult PutEvent(nsIRunnable *event);
 
   nsCOMArray<nsIThread> mThreads;
-  nsTaskQueue           mTasks;
+  nsEventQueue          mEvents;
   PRUint32              mThreadLimit;
   PRUint32              mIdleThreadLimit;
   PRUint32              mIdleThreadTimeout;
@@ -77,6 +77,5 @@ private:
   0x4ec4,                                          \
   {0x88, 0x8e, 0x6e, 0x42, 0x64, 0xfe, 0x90, 0xeb} \
 }
-
 
 #endif  // nsThreadPool_h__

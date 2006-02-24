@@ -129,7 +129,7 @@ NS_IMPL_THREADSAFE_RELEASE(nsThread)
 NS_INTERFACE_MAP_BEGIN(nsThread)
   NS_INTERFACE_MAP_ENTRY(nsIThread)
   NS_INTERFACE_MAP_ENTRY(nsIThreadInternal)
-  NS_INTERFACE_MAP_ENTRY(nsIDispatchTarget)
+  NS_INTERFACE_MAP_ENTRY(nsIEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsISupportsPriority)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIThread)
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
@@ -137,13 +137,13 @@ NS_INTERFACE_MAP_BEGIN(nsThread)
   } else
 NS_INTERFACE_MAP_END
 NS_IMPL_CI_INTERFACE_GETTER4(nsThread, nsIThread, nsIThreadInternal,
-                             nsIDispatchTarget, nsISupportsPriority)
+                             nsIEventTarget, nsISupportsPriority)
 
 //-----------------------------------------------------------------------------
 
-class nsThreadShutdownTask : public nsRunnable {
+class nsThreadShutdownEvent : public nsRunnable {
 public:
-  nsThreadShutdownTask(nsThread *thr)
+  nsThreadShutdownEvent(nsThread *thr)
     : mThread(thr) {
   } 
 
@@ -198,17 +198,17 @@ nsThread::ThreadFunc(void *arg)
   // Inform the ThreadManager
   nsThreadManager::get()->SetCurrentThread(self, nsnull);
 
-  nsCOMPtr<nsIRunnable> task;
-  self->mTasks.WaitPendingTask(getter_AddRefs(task));
-  if (!task) {
-    NS_NOTREACHED("WaitPendingTask failed");
+  nsCOMPtr<nsIRunnable> event;
+  self->mEvents.WaitPendingEvent(getter_AddRefs(event));
+  if (!event) {
+    NS_NOTREACHED("WaitPendingEvent failed");
     return;
   }
-  task->Run();  // unblocks nsThread::Init
+  event->Run();  // unblocks nsThread::Init
 
-  // Now, process incoming tasks...
+  // Now, process incoming events...
   while (self->mActive)
-    self->RunNextTask(nsIThread::RUN_NORMAL);
+    self->ProcessNextEvent();
 
   NS_RELEASE(self);
 
@@ -249,10 +249,10 @@ nsThread::Init()
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  // ThreadFunc will wait for this task to be run before it tries to access
-  // mThread.  By delaying insertion of this task into the queue, we ensure
+  // ThreadFunc will wait for this event to be run before it tries to access
+  // mThread.  By delaying insertion of this event into the queue, we ensure
   // that mThread is set properly.
-  mTasks.PutTask(startup);
+  mEvents.PutEvent(startup);
 
   // Wait for thread to call ThreadManager::SetCurrentThread, which completes
   // initialization of ThreadFunc.
@@ -272,9 +272,9 @@ nsThread::InitCurrentThread()
 }
 
 PRBool
-nsThread::PutTask(nsIRunnable *task, PRUint32 dispatchFlags)
+nsThread::PutEvent(nsIRunnable *event, PRUint32 dispatchFlags)
 {
-  PRBool rv = mTasks.PutTask(task);
+  PRBool rv = mEvents.PutEvent(event);
   if (!rv)
     return PR_FALSE;
 
@@ -284,7 +284,7 @@ nsThread::PutTask(nsIRunnable *task, PRUint32 dispatchFlags)
     obs = mObserver;
   }
   if (obs)
-    obs->OnNewTask(this, dispatchFlags);
+    obs->OnDispatchEvent(this, dispatchFlags);
 
   return PR_TRUE;
 }
@@ -297,17 +297,17 @@ nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
   NS_ENSURE_STATE(mThread);
 
   if (flags == DISPATCH_NORMAL) {
-    PutTask(runnable, flags);
+    PutEvent(runnable, flags);
   } else if (flags & DISPATCH_SYNC) {
     nsCOMPtr<nsIThread> thread;
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
     NS_ENSURE_STATE(thread);
 
-    nsRefPtr<nsThreadSyncDispatch> task = new nsThreadSyncDispatch(runnable);
-    PutTask(task, flags);
+    nsRefPtr<nsThreadSyncDispatch> event = new nsThreadSyncDispatch(runnable);
+    PutEvent(event, flags);
 
-    while (task->IsPending())
-      thread->RunNextTask(nsIThread::RUN_NORMAL);
+    while (event->IsPending())
+      thread->ProcessNextEvent();
   }
   return NS_OK;
 }
@@ -339,13 +339,13 @@ nsThread::Shutdown()
   NS_ENSURE_STATE(mThread);
   NS_ENSURE_STATE(PR_GetCurrentThread() != mThread);
 
-  // shutdown task queue
-  nsCOMPtr<nsIRunnable> task = new nsThreadShutdownTask(this);
-  if (!task)
+  // shutdown event queue
+  nsCOMPtr<nsIRunnable> event = new nsThreadShutdownEvent(this);
+  if (!event)
     return NS_ERROR_OUT_OF_MEMORY;
-  PutTask(task, NS_DISPATCH_NORMAL);
+  PutEvent(event, NS_DISPATCH_NORMAL);
 
-  // XXX we could still end up with other tasks being added after the shutdown task
+  // XXX we could still end up with other events being added after the shutdown task
 
   PR_JoinThread(mThread);
   mThread = nsnull;
@@ -353,12 +353,11 @@ nsThread::Shutdown()
 }
 
 NS_IMETHODIMP
-nsThread::RunNextTask(PRUint32 flags)
+nsThread::ProcessNextEvent()
 {
-  LOG(("THRD(%p) RunNextTask [%x]\n", this, flags));
+  LOG(("THRD(%p) ProcessNextEvent\n", this));
 
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
-  NS_ENSURE_ARG(flags == RUN_NORMAL || flags == RUN_NO_WAIT);
 
   nsCOMPtr<nsIThreadObserver> obs;
   {
@@ -367,30 +366,24 @@ nsThread::RunNextTask(PRUint32 flags)
   }
 
   if (obs)
-    obs->OnBeforeRunNextTask(this, flags);
+    obs->OnEnterProcessNextEvent(this, mActive);
 
-  nsCOMPtr<nsIRunnable> task; 
-  if (flags == RUN_NORMAL && mActive) {
-    if (obs)
-      obs->OnWaitNextTask(this, flags);
-    mTasks.WaitPendingTask(getter_AddRefs(task));
-  } else {
-    mTasks.GetPendingTask(getter_AddRefs(task));
-  }
+  // If we are shutting down, then do not wait for new events.
+  nsCOMPtr<nsIRunnable> event; 
+  mEvents.GetEvent(mActive, getter_AddRefs(event));
 
   nsresult rv = NS_OK;
 
-  if (task) {
-    LOG(("THRD(%p) running [%p]\n", this, task.get()));
-    task->Run();
-  } else if (flags & RUN_NO_WAIT) {
-    rv = NS_BASE_STREAM_WOULD_BLOCK;
+  if (event) {
+    LOG(("THRD(%p) running [%p]\n", this, event.get()));
+    event->Run();
   } else {
-    rv = NS_ERROR_UNEXPECTED;
+    NS_ASSERTION(!mActive, "This should only happen when shutting down");
+    rv = NS_ERROR_ABORT;
   }
 
   if (obs)
-    obs->OnAfterRunNextTask(this, flags, rv);
+    obs->OnLeaveProcessNextEvent(this, rv);
 
   return rv;
 }
@@ -454,8 +447,8 @@ nsThread::SetObserver(nsIThreadObserver *obs)
 }
 
 NS_IMETHODIMP
-nsThread::HasPendingTask(PRBool *result)
+nsThread::HasPendingEvents(PRBool *result)
 {
-  *result = mTasks.HasPendingTask();
+  *result = mEvents.HasPendingEvent();
   return NS_OK;
 }

@@ -112,7 +112,7 @@ public:
 
     NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXYEVENT_OBJECT_IID)
     
-    static nsProxyEventObject* GetNewOrUsedProxy(nsIDispatchTarget *target,
+    static nsProxyEventObject* GetNewOrUsedProxy(nsIEventTarget *target,
                                                  PRInt32 proxyType,
                                                  nsISupports *aObj,
                                                  REFNSIID aIID);
@@ -125,12 +125,12 @@ public:
 
 
     nsProxyEventClass*    GetClass()           const { return mClass; }
-    nsIDispatchTarget*    GetTarget()          const { return (mProxyObject ? mProxyObject->GetTarget()    : nsnull);}
+    nsIEventTarget*       GetTarget()          const { return (mProxyObject ? mProxyObject->GetTarget()    : nsnull);}
     nsISupports*          GetRealObject()      const { return (mProxyObject ? mProxyObject->GetRealObject(): nsnull);}
     PRInt32               GetProxyType()       const { return (mProxyObject ? mProxyObject->GetProxyType() : nsnull);} 
 
     nsProxyEventObject();
-    nsProxyEventObject(nsIDispatchTarget *target,
+    nsProxyEventObject(nsIEventTarget *target,
                        PRInt32 proxyType,
                        nsISupports* aObj,
                        nsProxyEventClass* aClass,

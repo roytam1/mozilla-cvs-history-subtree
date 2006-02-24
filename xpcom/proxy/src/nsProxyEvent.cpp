@@ -339,19 +339,19 @@ nsProxyObjectCallInfo::PostCompleted()
     }
 }
   
-nsIDispatchTarget*      
+nsIEventTarget*      
 nsProxyObjectCallInfo::GetCallersTarget() 
 { 
     return mCallersTarget;
 }
 
 void
-nsProxyObjectCallInfo::SetCallersTarget(nsIDispatchTarget* target)
+nsProxyObjectCallInfo::SetCallersTarget(nsIEventTarget* target)
 {
     mCallersTarget = target;
 }   
 
-nsProxyObject::nsProxyObject(nsIDispatchTarget *target, PRInt32 proxyType,
+nsProxyObject::nsProxyObject(nsIEventTarget *target, PRInt32 proxyType,
                              nsISupports *realObject)
 {
     mRealObject      = realObject;
@@ -436,7 +436,7 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     nsresult rv;
     while (!proxyInfo->GetCompleted())
     {
-        rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+        rv = thread->ProcessNextEvent();
         if (NS_FAILED(rv))
             break;
     }  

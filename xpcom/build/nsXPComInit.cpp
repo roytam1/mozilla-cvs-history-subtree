@@ -695,7 +695,7 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
         }
 
         if (thread)
-            NS_RunPendingTasks(thread);
+            NS_ProcessPendingEvents(thread);
 
         if (observerService)
             (void) observerService->
@@ -703,19 +703,19 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
                                 nsnull);
 
         if (thread)
-            NS_RunPendingTasks(thread);
+            NS_ProcessPendingEvents(thread);
 
         // Shutdown the timer thread and all timers that might still be alive before
         // shutting down the component manager
         nsTimerImpl::Shutdown();
 
         if (thread)
-            NS_RunPendingTasks(thread);
+            NS_ProcessPendingEvents(thread);
 
         nsThreadManager::get()->Shutdown();
 
         if (thread)
-            NS_RunPendingTasks(thread);
+            NS_ProcessPendingEvents(thread);
 
         // We save the "xpcom-shutdown-loaders" observers to notify after
         // the observerservice is gone.

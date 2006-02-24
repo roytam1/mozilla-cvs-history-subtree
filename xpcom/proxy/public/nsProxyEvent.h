@@ -43,7 +43,7 @@
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsIFactory.h"
-#include "nsIDispatchTarget.h"
+#include "nsIEventTarget.h"
 
 #include "prtypes.h"
 #include "xptcall.h"
@@ -87,13 +87,8 @@ class nsIRunnable;
 class nsProxyObject
 {
 public:
-    nsProxyObject(nsIDispatchTarget *destQueue, PRInt32 proxyType,
+    nsProxyObject(nsIEventTarget *destQueue, PRInt32 proxyType,
                   nsISupports *realObject);
-                  /* XXX
-    nsProxyObject(nsIDispatchTarget *destQueue, PRInt32 proxyType,
-                  const nsCID &aClass, nsISupports *aDelegate,
-                  const nsIID &aIID);
-                  */
 
     void AddRef();
     void Release();
@@ -107,7 +102,7 @@ public:
     
     nsresult            PostAndWait(nsProxyObjectCallInfo *proxyInfo);
     nsISupports*        GetRealObject() const { return mRealObject; }
-    nsIDispatchTarget*  GetTarget() const { return mTarget; }
+    nsIEventTarget*     GetTarget() const { return mTarget; }
     PRInt32             GetProxyType() const { return mProxyType; }
 
     friend class nsProxyEventObject;
@@ -117,7 +112,7 @@ private:
 
     PRInt32                   mProxyType;
     
-    nsCOMPtr<nsIDispatchTarget> mTarget;         /* dispatch target */
+    nsCOMPtr<nsIEventTarget>  mTarget;           /* event target */
     
     nsCOMPtr<nsISupports>     mRealObject;       /* the non-proxy object that this event is referring to. 
                                                     This is a strong ref. */
@@ -155,8 +150,8 @@ public:
 
     void                SetResult(nsresult rv) { mResult = rv; }
     
-    nsIDispatchTarget*  GetCallersTarget();
-    void                SetCallersTarget(nsIDispatchTarget* target);
+    nsIEventTarget*     GetCallersTarget();
+    void                SetCallersTarget(nsIEventTarget* target);
 
 private:
     
@@ -168,7 +163,7 @@ private:
     nsIRunnable     *mEvent;                     /* the current runnable */
     PRInt32          mCompleted;                 /* is true when the method has been called. */
        
-    nsCOMPtr<nsIDispatchTarget> mCallersTarget;  /* this is the dispatch target that we must post a message back to 
+    nsCOMPtr<nsIEventTarget> mCallersTarget;     /* this is the dispatch target that we must post a message back to 
                                                     when we are done invoking the method (only PROXY_SYNC). */
 
     nsRefPtr<nsProxyObject>   mOwner;            /* this is the strong referenced nsProxyObject */
