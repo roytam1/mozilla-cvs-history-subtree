@@ -40,6 +40,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifdef MOZ_LOGGING
+// so we can get logging even in release builds (but only for some things)
+#define FORCE_PR_LOG 1
+#endif
+
 #include "nsIBrowserDOMWindow.h"
 #include "nsIComponentManager.h"
 #include "nsIContent.h"
@@ -202,7 +207,10 @@ static PRBool gValidateOrigin = (PRBool)0xffffffff;
 #define NS_ERROR_DOCUMENT_IS_PRINTMODE  NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_GENERAL,2001)
 
 #ifdef PR_LOGGING
+#ifdef DEBUG
 static PRLogModuleInfo* gDocShellLog;
+#endif
+static PRLogModuleInfo* gDocShellLeakLog;
 #endif
 
 //*****************************************************************************
@@ -274,8 +282,14 @@ nsDocShell::nsDocShell():
     }
 
 #ifdef PR_LOGGING
+#ifdef DEBUG
     if (! gDocShellLog)
         gDocShellLog = PR_NewLogModule("nsDocShell");
+#endif
+    if (nsnull == gDocShellLeakLog)
+        gDocShellLeakLog = PR_NewLogModule("nsDocShellLeak");
+    if (gDocShellLeakLog)
+        PR_LOG(gDocShellLeakLog, PR_LOG_DEBUG, ("DOCSHELL %p created\n", this));
 #endif
 }
 
@@ -290,6 +304,11 @@ nsDocShell::~nsDocShell()
     if (--gDocShellCount == 0) {
         NS_IF_RELEASE(sURIFixup);
     }
+
+#ifdef PR_LOGGING
+    if (gDocShellLeakLog)
+        PR_LOG(gDocShellLeakLog, PR_LOG_DEBUG, ("DOCSHELL %p destroyed\n", this));
+#endif
 }
 
 nsresult
@@ -628,7 +647,7 @@ nsDocShell::LoadURI(nsIURI * aURI,
         aLoadInfo->GetSendReferrer(&sendReferrer);
     }
 
-#ifdef PR_LOGGING
+#if defined(PR_LOGGING) && defined(DEBUG)
     if (PR_LOG_TEST(gDocShellLog, PR_LOG_DEBUG)) {
         nsCAutoString uristr;
         aURI->GetAsciiSpec(uristr);
@@ -733,8 +752,10 @@ nsDocShell::LoadURI(nsIURI * aURI,
     } // !shEntry
 
     if (shEntry) {
+#ifdef DEBUG
         PR_LOG(gDocShellLog, PR_LOG_DEBUG,
               ("nsDocShell[%p]: loading from session history", this));
+#endif
 
         rv = LoadHistoryEntry(shEntry, loadType);
     }
@@ -1365,6 +1386,15 @@ PRBool
 nsDocShell::SetCurrentURI(nsIURI *aURI, nsIRequest *aRequest,
                           PRBool aFireOnLocationChange)
 {
+#ifdef PR_LOGGING
+    if (gDocShellLeakLog && PR_LOG_TEST(gDocShellLeakLog, PR_LOG_DEBUG)) {
+        nsCAutoString spec;
+        if (aURI)
+            aURI->GetSpec(spec);
+        PR_LogPrint("DOCSHELL %p SetCurrentURI %s\n", this, spec.get());
+    }
+#endif
+
     // We don't want to send a location change when we're displaying an error
     // page, and we don't want to change our idea of "current URI" either
     if (mLoadType == LOAD_ERROR_PAGE) {
@@ -3075,7 +3105,7 @@ nsDocShell::LoadErrorPage(nsIURI *aURI, const PRUnichar *aURL,
                           const PRUnichar *aDescription,
                           nsIChannel* aFailedChannel)
 {
-#ifdef PR_LOGGING
+#if defined(PR_LOGGING) && defined(DEBUG)
     if (PR_LOG_TEST(gDocShellLog, PR_LOG_DEBUG)) {
         nsCAutoString spec;
         aURI->GetSpec(spec);
@@ -6173,6 +6203,15 @@ nsDocShell::InternalLoad(nsIURI * aURI,
                          nsIRequest** aRequest)
 {
     nsresult rv = NS_OK;
+
+#ifdef PR_LOGGING
+    if (gDocShellLeakLog && PR_LOG_TEST(gDocShellLeakLog, PR_LOG_DEBUG)) {
+        nsCAutoString spec;
+        if (aURI)
+            aURI->GetSpec(spec);
+        PR_LogPrint("DOCSHELL %p InternalLoad %s\n", this, spec.get());
+    }
+#endif
     
     // Initialize aDocShell/aRequest
     if (aDocShell) {
@@ -7209,7 +7248,7 @@ nsDocShell::OnNewURI(nsIURI * aURI, nsIChannel * aChannel,
                      PRBool aAddToGlobalHistory)
 {
     NS_ASSERTION(aURI, "uri is null");
-#ifdef PR_LOGGING
+#if defined(PR_LOGGING) && defined(DEBUG)
     if (PR_LOG_TEST(gDocShellLog, PR_LOG_DEBUG)) {
         nsCAutoString spec;
         aURI->GetSpec(spec);
@@ -7270,9 +7309,11 @@ nsDocShell::OnNewURI(nsIURI * aURI, nsIChannel * aChannel,
     if (mCurrentURI)
         aURI->Equals(mCurrentURI, &equalUri);
 
+#ifdef DEBUG
     PR_LOG(gDocShellLog, PR_LOG_DEBUG,
            ("  shAvailable=%i updateHistory=%i equalURI=%i\n",
             shAvailable, updateHistory, equalUri));
+#endif
 
     /* If the url to be loaded is the same as the one already there,
      * and the original loadType is LOAD_NORMAL, LOAD_LINK, or
@@ -7431,7 +7472,7 @@ nsresult
 nsDocShell::AddToSessionHistory(nsIURI * aURI,
                                 nsIChannel * aChannel, nsISHEntry ** aNewEntry)
 {
-#ifdef PR_LOGGING
+#if defined(PR_LOGGING) && defined(DEBUG)
     if (PR_LOG_TEST(gDocShellLog, PR_LOG_DEBUG)) {
         nsCAutoString spec;
         aURI->GetSpec(spec);
