@@ -36,6 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsIProxyObjectManager.h"
 #include "nsThreadPool.h"
 #include "nsThreadManager.h"
 #include "nsThread.h"
@@ -127,6 +128,26 @@ nsThreadPool::PutEvent(nsIRunnable *event)
   return NS_OK;
 }
 
+void
+nsThreadPool::ShutdownThread(nsIThread *thread)
+{
+  LOG(("THRD-P(%p) shutdown async [%p]\n", this, thread));
+
+  // This method is responsible for calling Shutdown on the thread.  This must
+  // be done from the main thread of the application.
+
+  NS_ASSERTION(!NS_IsMainThread(), "wrong thread");
+
+  nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
+
+  nsCOMPtr<nsIThread> doomed;
+  NS_GetProxyForObject(mainThread, NS_GET_IID(nsIThread), thread,
+                       PROXY_ASYNC, getter_AddRefs(doomed));
+  NS_ASSERTION(doomed, "failed to construct proxy");
+  if (doomed)
+    doomed->Shutdown();
+}
+
 NS_IMETHODIMP
 nsThreadPool::Run()
 {
@@ -186,6 +207,8 @@ nsThreadPool::Run()
       event->Run();
     }
   } while (!exitThread);
+
+  ShutdownThread(current);
 
   LOG(("THRD-P(%p) leave\n", this));
   return NS_OK;

@@ -36,7 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsIPipe.h"
-#include "nsIDispatchTarget.h"
+#include "nsIEventTarget.h"
 #include "nsISeekableStream.h"
 #include "nsSegmentedBuffer.h"
 #include "nsStreamUtils.h"
@@ -801,7 +801,7 @@ NS_IMETHODIMP
 nsPipeInputStream::AsyncWait(nsIInputStreamCallback *callback,
                              PRUint32 flags,
                              PRUint32 requestedCount,
-                             nsIDispatchTarget *target)
+                             nsIEventTarget *target)
 {
     LOG(("III AsyncWait [this=%x]\n", this));
 
@@ -1172,7 +1172,7 @@ NS_IMETHODIMP
 nsPipeOutputStream::AsyncWait(nsIOutputStreamCallback *callback,
                               PRUint32 flags,
                               PRUint32 requestedCount,
-                              nsIDispatchTarget *target)
+                              nsIEventTarget *target)
 {
     LOG(("OOO AsyncWait [this=%x]\n", this));
 

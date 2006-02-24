@@ -68,7 +68,7 @@ NS_GetCurrentThread(nsIThread **result)
 NS_COM NS_METHOD
 NS_GetMainThread(nsIThread **result)
 {
-  return nsThreadManager::get()->nsThreadManager::GetCurrentThread(result);
+  return nsThreadManager::get()->nsThreadManager::GetMainThread(result);
 }
 
 NS_COM NS_METHOD

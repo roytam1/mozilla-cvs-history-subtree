@@ -44,7 +44,7 @@ class nsIInputStream;
 class nsIOutputStream;
 class nsIInputStreamCallback;
 class nsIOutputStreamCallback;
-class nsIDispatchTarget;
+class nsIEventTarget;
 
 /**
  * A "one-shot" proxy of the OnInputStreamReady callback.  The resulting
@@ -59,7 +59,7 @@ class nsIDispatchTarget;
 extern NS_COM nsresult
 NS_NewInputStreamReadyEvent(nsIInputStreamCallback **aEvent,
                             nsIInputStreamCallback  *aNotify,
-                            nsIDispatchTarget       *aTarget);
+                            nsIEventTarget          *aTarget);
 
 /**
  * A "one-shot" proxy of the OnOutputStreamReady callback.  The resulting
@@ -74,7 +74,7 @@ NS_NewInputStreamReadyEvent(nsIInputStreamCallback **aEvent,
 extern NS_COM nsresult
 NS_NewOutputStreamReadyEvent(nsIOutputStreamCallback **aEvent,
                              nsIOutputStreamCallback  *aNotify,
-                             nsIDispatchTarget        *aTarget);
+                             nsIEventTarget           *aTarget);
 
 /* ------------------------------------------------------------------------- */
 
@@ -102,7 +102,7 @@ typedef void (* nsAsyncCopyCallbackFun)(void *closure, nsresult status);
 extern NS_COM nsresult
 NS_AsyncCopy(nsIInputStream         *aSource,
              nsIOutputStream        *aSink,
-             nsIDispatchTarget      *aTarget,
+             nsIEventTarget         *aTarget,
              nsAsyncCopyMode         aMode = NS_ASYNCCOPY_VIA_READSEGMENTS,
              PRUint32                aChunkSize = 4096,
              nsAsyncCopyCallbackFun  aCallbackFun = nsnull,

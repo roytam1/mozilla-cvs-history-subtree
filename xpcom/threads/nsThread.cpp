@@ -336,7 +336,12 @@ nsThread::GetPRThread(PRThread **result)
 NS_IMETHODIMP
 nsThread::Shutdown()
 {
-  NS_ENSURE_STATE(mThread);
+  LOG(("THRD(%p) shutdown\n", this));
+
+  // Maybe we are already shutdown.
+  if (!mThread)
+    return NS_OK;
+
   NS_ENSURE_STATE(PR_GetCurrentThread() != mThread);
 
   // shutdown event queue

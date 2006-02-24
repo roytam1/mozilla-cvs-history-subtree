@@ -39,7 +39,7 @@
 #include "nsStreamUtils.h"
 #include "nsCOMPtr.h"
 #include "nsIPipe.h"
-#include "nsIDispatchTarget.h"
+#include "nsIEventTarget.h"
 #include "nsIRunnable.h"
 #include "nsAutoLock.h"
 #include "nsString.h"
@@ -53,7 +53,7 @@ public:
     NS_DECL_ISUPPORTS
 
     nsInputStreamReadyEvent(nsIInputStreamCallback *callback,
-                            nsIDispatchTarget *target)
+                            nsIEventTarget *target)
         : mCallback(callback)
         , mTarget(target)
     {
@@ -116,7 +116,7 @@ public:
 private:
     nsCOMPtr<nsIAsyncInputStream>    mStream;
     nsCOMPtr<nsIInputStreamCallback> mCallback;
-    nsCOMPtr<nsIDispatchTarget>      mTarget;
+    nsCOMPtr<nsIEventTarget>         mTarget;
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsInputStreamReadyEvent, nsIRunnable,
@@ -131,7 +131,7 @@ public:
     NS_DECL_ISUPPORTS
 
     nsOutputStreamReadyEvent(nsIOutputStreamCallback *callback,
-                             nsIDispatchTarget *target)
+                             nsIEventTarget *target)
         : mCallback(callback)
         , mTarget(target)
     {
@@ -194,7 +194,7 @@ public:
 private:
     nsCOMPtr<nsIAsyncOutputStream>    mStream;
     nsCOMPtr<nsIOutputStreamCallback> mCallback;
-    nsCOMPtr<nsIDispatchTarget>       mTarget;
+    nsCOMPtr<nsIEventTarget>          mTarget;
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsOutputStreamReadyEvent, nsIRunnable,
@@ -205,7 +205,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsOutputStreamReadyEvent, nsIRunnable,
 NS_COM nsresult
 NS_NewInputStreamReadyEvent(nsIInputStreamCallback **event,
                             nsIInputStreamCallback *callback,
-                            nsIDispatchTarget *target)
+                            nsIEventTarget *target)
 {
     nsInputStreamReadyEvent *ev = new nsInputStreamReadyEvent(callback, target);
     if (!ev)
@@ -217,7 +217,7 @@ NS_NewInputStreamReadyEvent(nsIInputStreamCallback **event,
 NS_COM nsresult
 NS_NewOutputStreamReadyEvent(nsIOutputStreamCallback **event,
                              nsIOutputStreamCallback *callback,
-                             nsIDispatchTarget *target)
+                             nsIEventTarget *target)
 {
     nsOutputStreamReadyEvent *ev = new nsOutputStreamReadyEvent(callback, target);
     if (!ev)
@@ -257,7 +257,7 @@ public:
     // kick off the async copy...
     nsresult Start(nsIInputStream *source,
                    nsIOutputStream *sink,
-                   nsIDispatchTarget *target,
+                   nsIEventTarget *target,
                    nsAsyncCopyCallbackFun callback,
                    void *closure,
                    PRUint32 chunksize)
@@ -408,7 +408,7 @@ protected:
     nsCOMPtr<nsIOutputStream>      mSink;
     nsCOMPtr<nsIAsyncInputStream>  mAsyncSource;
     nsCOMPtr<nsIAsyncOutputStream> mAsyncSink;
-    nsCOMPtr<nsIDispatchTarget>    mTarget;
+    nsCOMPtr<nsIEventTarget>       mTarget;
     PRLock                        *mLock;
     nsAsyncCopyCallbackFun         mCallback;
     void                          *mClosure;
@@ -513,7 +513,7 @@ public:
 NS_COM nsresult
 NS_AsyncCopy(nsIInputStream         *source,
              nsIOutputStream        *sink,
-             nsIDispatchTarget      *target,
+             nsIEventTarget         *target,
              nsAsyncCopyMode         mode,
              PRUint32                chunkSize,
              nsAsyncCopyCallbackFun  callback,

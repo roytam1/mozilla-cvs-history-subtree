@@ -178,8 +178,6 @@ nsProxyObjectManager::GetProxyForObject(nsIEventTarget* aTarget,
     NS_ENSURE_ARG_POINTER(aTarget);
     NS_ENSURE_ARG_POINTER(aObj);
 
-    nsresult rv;
-
     *aProxyObject = nsnull;
 
     // check to see if the target is on our thread.  If so, just return the
@@ -202,77 +200,6 @@ nsProxyObjectManager::GetProxyForObject(nsIEventTarget* aTarget,
         
     return NS_OK;
 }
-
-
-#if 0
-NS_IMETHODIMP 
-nsProxyObjectManager::GetProxy(  nsIEventQueue *destQueue, 
-                                 const nsCID &aClass, 
-                                 nsISupports *aDelegate, 
-                                 const nsIID &aIID, 
-                                 PRInt32 proxyType, 
-                                 void** aProxyObject)
-{
-    if (!aProxyObject) return NS_ERROR_NULL_POINTER;
-    *aProxyObject = nsnull;
-    
-    // 1. Create a proxy for creating an instance on another thread.
-
-    nsIProxyCreateInstance* ciProxy = nsnull;
-
-    nsProxyCreateInstance* ciObject = new nsProxyCreateInstance(); 
-    
-    if (ciObject == nsnull)
-        return NS_ERROR_NULL_POINTER;
-
-    NS_ADDREF(ciObject);
-    
-    nsresult rv = GetProxyForObject(destQueue, 
-                                    NS_GET_IID(nsIProxyCreateInstance), 
-                                    ciObject, 
-                                    PROXY_SYNC, 
-                                    (void**)&ciProxy);
-    
-    if (NS_FAILED(rv))
-    {
-        NS_RELEASE(ciObject);
-        return rv;
-    }
-        
-    // 2. now create a new instance of the request object via our proxy.
-
-    nsISupports* aObj;
-
-    rv = ciProxy->CreateInstanceByIID(aClass, 
-                                      aDelegate, 
-                                      aIID, 
-                                      (void**)&aObj);
-
-    
-    // 3.  Delete the create instance proxy and its real object.
-    
-    NS_RELEASE(ciProxy);
-    NS_RELEASE(ciObject);
-
-    // 4.  Check to see if creating the requested instance failed.
-    if ( NS_FAILED(rv))
-    {
-        return rv;
-    }
-
-    // 5.  Now create a proxy object for the requested object.
-
-    rv = GetProxyForObject(destQueue, aIID, aObj, proxyType, aProxyObject);
-
-    // 6. release ownership of aObj so that aProxyObject owns it.
-    
-    NS_RELEASE(aObj);
-
-    // 7. return the error returned from GetProxyForObject.  Either way, we our out of here.
-
-    return rv;   
-}
-#endif
 
 /**
  * Helper function for code that already has a link-time dependency on

@@ -58,6 +58,7 @@ public:
 private:
   ~nsThreadPool();
 
+  void ShutdownThread(nsIThread *thread);
   nsresult PutEvent(nsIRunnable *event);
 
   nsCOMArray<nsIThread> mThreads;

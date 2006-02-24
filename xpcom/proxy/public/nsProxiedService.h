@@ -96,7 +96,7 @@ class nsProxiedService
 {
 public:
     nsProxiedService(const nsCID &aClass, const nsIID &aIID, 
-                     nsIDispatchTarget* aTarget, PRBool always, nsresult* rv)
+                     nsIEventTarget* aTarget, PRBool always, nsresult* rv)
     {
         nsCOMPtr<nsISupports> svc = do_GetService(aClass, rv);
         if (NS_SUCCEEDED(*rv))
@@ -104,7 +104,7 @@ public:
     }
 
     nsProxiedService(const char* aContractID, const nsIID &aIID, 
-                     nsIDispatchTarget* aTarget, PRBool always, nsresult* rv)
+                     nsIEventTarget* aTarget, PRBool always, nsresult* rv)
     {
         nsCOMPtr<nsISupports> svc = do_GetService(aContractID, rv);
         if (NS_SUCCEEDED(*rv))
@@ -119,7 +119,7 @@ public:
 private:
 
     void InitProxy(nsISupports *aObj, const nsIID &aIID,
-                   nsIDispatchTarget* aTarget, PRBool always, nsresult*rv)
+                   nsIEventTarget* aTarget, PRBool always, nsresult*rv)
     {
         PRInt32 proxyType = PROXY_SYNC;
         if (always)

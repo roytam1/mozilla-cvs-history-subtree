@@ -38,7 +38,7 @@
 #include "nsIInputStream.idl"
 
 interface nsIInputStreamCallback;
-interface nsIDispatchTarget;
+interface nsIEventTarget;
 
 /**
  * If an input stream is non-blocking, it may return NS_BASE_STREAM_WOULD_BLOCK
@@ -108,7 +108,7 @@ interface nsIAsyncInputStream : nsIInputStream
     void asyncWait(in nsIInputStreamCallback aCallback,
                    in unsigned long aFlags,
                    in unsigned long aRequestedCount,
-                   in nsIDispatchTarget aDispatchTarget);
+                   in nsIEventTarget aEventTarget);
 
     /**
      * If passed to asyncWait, this flag overrides the default behavior,

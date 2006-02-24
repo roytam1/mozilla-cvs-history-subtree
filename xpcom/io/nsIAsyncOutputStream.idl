@@ -38,7 +38,7 @@
 #include "nsIOutputStream.idl"
 
 interface nsIOutputStreamCallback;
-interface nsIDispatchTarget;
+interface nsIEventTarget;
 
 /**
  * If an output stream is non-blocking, it may return NS_BASE_STREAM_WOULD_BLOCK
@@ -99,7 +99,7 @@ interface nsIAsyncOutputStream : nsIOutputStream
      *        Wait until at least this many bytes can be written.  This is only
      *        a suggestion to the underlying stream; it may be ignored.  The
      *        caller may pass zero to indicate no preference.
-     * @param aDispatchTarget
+     * @param aEventTarget
      *        Specify NULL to receive notification on ANY thread (possibly even
      *        recursively on the calling thread -- i.e., synchronously), or
      *        specify that the notification be delivered to a specific event
@@ -108,7 +108,7 @@ interface nsIAsyncOutputStream : nsIOutputStream
     void asyncWait(in nsIOutputStreamCallback aCallback,
                    in unsigned long aFlags,
                    in unsigned long aRequestedCount,
-                   in nsIDispatchTarget aDispatchTarget);
+                   in nsIEventTarget aEventTarget);
 
     /**
      * If passed to asyncWait, this flag overrides the default behavior,
