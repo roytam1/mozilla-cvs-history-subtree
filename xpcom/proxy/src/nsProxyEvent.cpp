@@ -359,23 +359,6 @@ nsProxyObject::nsProxyObject(nsIDispatchTarget *target, PRInt32 proxyType,
     mProxyType       = proxyType;
 }
 
-#if 0
-nsProxyObject::nsProxyObject(nsIDispatchTarget *target, PRInt32 proxyType,
-                             const nsCID &aClass, nsISupports *aDelegate,
-                             const nsIID &aIID)
-{
-    nsCOMPtr<nsIComponentManager> compMgr;
-    NS_GetComponentManager(getter_AddRefs(compMgr));
-    compMgr->CreateInstance(aClass, 
-                            aDelegate,
-                            aIID,
-                            getter_AddRefs(mRealObject));
-
-    mTarget       = do_QueryInterface(destQueue);
-    mProxyType       = proxyType;
-}
-#endif
-
 nsProxyObject::~nsProxyObject()
 {   
     // I am worried about order of destruction here.  
@@ -384,7 +367,6 @@ nsProxyObject::~nsProxyObject()
     mRealObject = 0;
     mTarget  = 0;
 }
-
 
 void
 nsProxyObject::AddRef()
@@ -417,20 +399,6 @@ nsProxyObject::Release(void)
         // need to do something special here so that
         // the real object will always be deleted on
         // the correct thread..
-
-        /*
-        PLEvent *event = PR_NEW(PLEvent);
-        if (event == nsnull)
-        {
-        NS_ASSERTION(0, "Could not create a plevent. Leaking nsProxyObject!");
-        return;  // if this happens we are going to leak.
-        }
-
-        PL_InitEvent(event, 
-        this,
-        ProxyDestructorEventHandler,
-        ProxyDestructorDestroyHandler);  
-        */
 
         nsCOMPtr<nsIRunnable> event = new nsProxyDestructorEvent(this);
         if (event == nsnull)
@@ -469,7 +437,8 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     while (!proxyInfo->GetCompleted())
     {
         rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
-        if (NS_FAILED(rv)) break;
+        if (NS_FAILED(rv))
+            break;
     }  
     
     return rv;
@@ -551,15 +520,6 @@ nsProxyObject::Post( PRUint32 methodIndex,
         return rv;
     }
 
-    /*
-    PLEvent *event = PR_NEW(PLEvent);
-    
-    if (event == nsnull) {
-        if (fullParam) 
-            free(fullParam);
-        return NS_ERROR_OUT_OF_MEMORY;   
-    }
-*/
     nsRefPtr<nsProxyCallEvent> event = new nsProxyCallEvent();
     if (!event) {
         if (fullParam) 

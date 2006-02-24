@@ -105,7 +105,7 @@ extern NS_COM NS_METHOD
 NS_GetThread(const nsACString &name, nsIThread **result);
 
 /**
- * Equivalent to nsIThreadManager::IsMainThread.
+ * Equivalent to nsIThreadManager::GetIsMainThread.
  */
 extern NS_COM PRBool
 NS_IsMainThread();
@@ -170,7 +170,7 @@ NS_IsMainThread() {
   nsCOMPtr<nsIThreadManager> mgr =
       do_GetService(NS_THREADMANAGER_CONTRACTID);
   if (mgr)
-    mgr->IsMainThread(&result);
+    mgr->GetIsMainThread(&result);
   return result;
 }
 

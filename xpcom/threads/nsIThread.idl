@@ -62,6 +62,11 @@ interface nsIThread : nsIDispatchTarget
    * tasks to the thread.
    */
   void shutdown();
+
+  /*
+  boolean hasEvents();
+  void processNextEvent();
+  */
    
   /**
    * Run the next task assigned to this thread.  This function should block

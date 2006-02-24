@@ -73,6 +73,12 @@ interface nsIThreadManager : nsISupports
    * Get the current thread.
    */
   readonly attribute nsIThread currentThread;
+
+  /**
+   * This attribute is true if the calling thread is the main thread of the
+   * application process.
+   */
+  readonly attribute boolean isMainThread;
    
   /**
    * Set an external nsIThread instance (or null) as the nsIThread for the
@@ -84,10 +90,4 @@ interface nsIThreadManager : nsISupports
    * if there was no previous nsIThread associated with the current thread.
    */
   nsIThread setCurrentThread(in nsIThread thread);
-
-  /**
-   * This attribute is true if the calling thread is the main thread of the
-   * application process.
-   */
-  readonly attribute boolean isMainThread;
 };
