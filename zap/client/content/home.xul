@@ -67,6 +67,10 @@
 
   <vbox flex="1" style="background-color:white;">
     <label class="zap-form-title" value="&zap.title;"/>
+
+    <button label="Create new identity" oncommand="parent.loadPage('chrome://zap/content/new-identity.xul')"/>
+    <button label="Manage contacts" oncommand="parent.loadPage('chrome://zap/content/contacts.xul')"/>
+
     <hbox flex="1" style="padding:5px; overflow: -moz-scrollbars-vertical;">
     <description style="font-size:11px;">
       <html:h3>Welcome to zap! - the Open Source Mozilla SIP Client.</html:h3>
