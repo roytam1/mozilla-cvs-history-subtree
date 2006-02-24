@@ -8,8 +8,16 @@ toolbar[printpreview="true"] {
   -moz-binding: url("chrome://global/content/printPreviewBindings.xml#printpreviewtoolbar");
 }
 
-#noPreviewAvailable 
-{
+#noPreviewAvailable {
   background-color: white !important;
   font-size: 12px !important;
+}
+
+#bookmarksBarContent {
+  -moz-binding: url("chrome://browser/content/places/toolbar.xml#places-bar");
+  overflow: hidden;
+}
+
+menupopup[type="places"] {
+  -moz-binding: url("chrome://browser/content/places/menu.xml#places-menupopup");
 }
