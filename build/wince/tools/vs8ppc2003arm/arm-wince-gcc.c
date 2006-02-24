@@ -34,8 +34,8 @@ main(int argc, char **argv)
   args[i++] = "/GS-";                  // disable security checks
   args[i++] = "/GR-";                  // disable C++ RTTI
 
-  //  args[i++] = "/fp:fast";
-  args[i++] = "/fp:precise";
+  args[i++] = "/fp:fast";
+  //args[i++] = "/fp:precise";
 
   startOfArgvs = i;
   
