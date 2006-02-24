@@ -1145,7 +1145,7 @@ Subscription.fun(
           if (expiresHeader) {
             expires = expiresHeader.QueryInterface(Components.interfaces.zapISipExpiresHeader).deltaSeconds;
             if (expires > 0)
-              schedule(me._refresh(false), expires*1000/0.9);
+              schedule(function() {me._refresh(false);}, expires*1000/0.9);
           }          
         }
       }
