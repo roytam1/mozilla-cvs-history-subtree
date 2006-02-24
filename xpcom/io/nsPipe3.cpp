@@ -661,14 +661,15 @@ nsPipeInputStream::OnInputException(nsresult reason, nsPipeEvents &events)
 NS_IMETHODIMP_(nsrefcnt)
 nsPipeInputStream::AddRef(void)
 {
-    ++mReaderRefCnt;
+    PR_AtomicIncrement((PRInt32*)&mReaderRefCnt);
     return mPipe->AddRef();
 }
 
 NS_IMETHODIMP_(nsrefcnt)
 nsPipeInputStream::Release(void)
 {
-    if (--mReaderRefCnt == 0)
+    nsrefcnt count = PR_AtomicDecrement((PRInt32 *)&mReaderRefCnt);
+    if (count == 0)
         Close();
     return mPipe->Release();
 }
@@ -1017,14 +1018,15 @@ nsPipeOutputStream::OnOutputException(nsresult reason, nsPipeEvents &events)
 NS_IMETHODIMP_(nsrefcnt)
 nsPipeOutputStream::AddRef()
 {
-    mWriterRefCnt++;
+    PR_AtomicIncrement((PRInt32*)&mWriterRefCnt);
     return mPipe->AddRef();
 }
 
 NS_IMETHODIMP_(nsrefcnt)
 nsPipeOutputStream::Release()
 {
-    if (--mWriterRefCnt == 0)
+    nsrefcnt count = PR_AtomicDecrement((PRInt32 *)&mWriterRefCnt);
+    if (count == 0)
         Close();
     return mPipe->Release();
 }
