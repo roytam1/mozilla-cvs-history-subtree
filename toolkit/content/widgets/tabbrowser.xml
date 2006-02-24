@@ -660,7 +660,7 @@
                 // non-HTML/XUL elements have no blur method, see bug 323805
                 this.mCurrentBrowser.focusedElement = null;
               }
-              this.mCurrentBrowser.setAttribute("type", "content");
+              this.mCurrentBrowser.setAttribute("type", "content-targetable");
             }
             
             var updatePageReport = false;
@@ -1053,7 +1053,7 @@
 
             var b = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
                                              "browser");
-            b.setAttribute("type", "content");
+            b.setAttribute("type", "content-targetable");
             b.setAttribute("message", "true");
             b.setAttribute("contextmenu", this.getAttribute("contentcontextmenu"));
             b.setAttribute("tooltip", this.getAttribute("contenttooltip"));
@@ -1241,7 +1241,7 @@
             oldBrowser.removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
 
             // We are no longer the primary content area.
-            oldBrowser.setAttribute("type", "content");
+            oldBrowser.setAttribute("type", "content-targetable");
 
             // Now select the new tab before nuking the old one.
             var currentIndex = this.mTabContainer.selectedIndex;
