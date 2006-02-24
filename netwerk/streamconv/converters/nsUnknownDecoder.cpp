@@ -358,8 +358,8 @@ void nsUnknownDecoder::DetermineContentType(nsIRequest* aRequest)
       NS_ASSERTION(sSnifferEntries[i].mMimeType ||
                    sSnifferEntries[i].mContentTypeSniffer,
                    "Must have either a type string or a function to set the type");
-      NS_ASSERTION(!sSnifferEntries[i].mMimeType ||
-                   !sSnifferEntries[i].mContentTypeSniffer,
+      NS_ASSERTION(sSnifferEntries[i].mMimeType == nsnull ||
+                   sSnifferEntries[i].mContentTypeSniffer == nsnull,
                    "Both at type string and a type sniffing function set;"
                    " using type string");
       if (sSnifferEntries[i].mMimeType) {
