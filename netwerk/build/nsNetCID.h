@@ -733,6 +733,14 @@
     { 0xa6, 0x18, 0x00, 0x10, 0xa4, 0x01, 0xeb, 0x10 } \
 }
 
+/**
+ * General-purpose content sniffer component. Use with CreateInstance.
+ *
+ * Implements nsIContentSniffer_MOZILLA_1_8_BRANCH
+ */
+#define NS_GENERIC_CONTENT_SNIFFER \
+    "@mozilla.org/network/content-sniffer;1"
+
 /******************************************************************************
  * netwerk/streamconv classes
  */

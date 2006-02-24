@@ -40,6 +40,7 @@
 
 #include "nsIStreamConverter.h"
 #include "nsIChannel.h"
+#include "nsIContentSniffer.h"
 
 #include "nsCOMPtr.h"
 #include "nsString.h"
@@ -54,6 +55,7 @@
 
 
 class nsUnknownDecoder : public nsIStreamConverter
+                       , public nsIContentSniffer_MOZILLA_1_8_BRANCH
 {
 public:
   // nsISupports methods
@@ -67,6 +69,9 @@ public:
 
   // nsIRequestObserver methods
   NS_DECL_NSIREQUESTOBSERVER
+
+  // nsIContentSniffer methods
+  NS_DECL_NSICONTENTSNIFFER_MOZILLA_1_8_BRANCH
 
   nsUnknownDecoder();
 

@@ -101,7 +101,8 @@ NS_INTERFACE_MAP_BEGIN(nsUnknownDecoder)
    NS_INTERFACE_MAP_ENTRY(nsIStreamConverter)
    NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
    NS_INTERFACE_MAP_ENTRY(nsIRequestObserver)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
+   NS_INTERFACE_MAP_ENTRY(nsIContentSniffer_MOZILLA_1_8_BRANCH)
+   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStreamListener)
 NS_INTERFACE_MAP_END
 
 
@@ -260,6 +261,28 @@ nsUnknownDecoder::OnStopRequest(nsIRequest* request, nsISupports *aCtxt,
   return rv;
 }
 
+// ----
+//
+// nsIContentSniffer methods...
+//
+// ----
+NS_IMETHODIMP
+nsUnknownDecoder::GetMIMETypeFromContent(nsIRequest* aRequest,
+                                         const PRUint8* aData,
+                                         PRUint32 aLength,
+                                         nsACString& type)
+{
+  mBuffer = NS_CONST_CAST(char*, NS_REINTERPRET_CAST(const char*, aData));
+  mBufferLen = aLength;
+  DetermineContentType(aRequest);
+  mBuffer = nsnull;
+  mBufferLen = 0;
+  type.Assign(mContentType);
+  mContentType.Truncate();
+  return NS_OK;
+}
+
+
 // Actual sniffing code
 
 PRBool nsUnknownDecoder::AllowSniffing(nsIRequest* aRequest)
@@ -394,12 +417,24 @@ PRBool nsUnknownDecoder::TryContentSniffers(nsIRequest* aRequest)
       continue;
     }
 
-    nsCOMPtr<nsIContentSniffer> sniffer(do_GetService(contractid.get()));
+    nsCOMPtr<nsISupports> sniffer(do_GetService(contractid.get()));
     if (!sniffer) {
       continue;
     }
 
-    rv = sniffer->GetMIMETypeFromContent((const PRUint8*)mBuffer, mBufferLen, mContentType);
+    nsCOMPtr<nsIContentSniffer> sniffer1(do_QueryInterface(sniffer));
+    nsCOMPtr<nsIContentSniffer_MOZILLA_1_8_BRANCH> sniffer2 =
+      do_QueryInterface(sniffer);
+    if (sniffer2) {
+      rv = sniffer2->GetMIMETypeFromContent(aRequest, (const PRUint8*)mBuffer,
+                                            mBufferLen, mContentType);
+    } else if (sniffer1) {
+      rv = sniffer1->GetMIMETypeFromContent((const PRUint8*)mBuffer,
+                                            mBufferLen, mContentType);
+    } else {
+      continue;
+    }
+
     if (NS_SUCCEEDED(rv)) {
       return PR_TRUE;
     }
