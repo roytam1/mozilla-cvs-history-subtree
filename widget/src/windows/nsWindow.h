@@ -443,6 +443,7 @@ protected:
   static void             RegisterSpecialDropdownHooks();
   static void             UnregisterSpecialDropdownHooks();
 
+  static void             PostSleepWakeNotification(const char* aNotification);
 #endif
   static BOOL             DealWithPopups (HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inLParam, LRESULT* outResult);
 
