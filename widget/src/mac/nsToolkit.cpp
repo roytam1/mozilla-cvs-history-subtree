@@ -47,7 +47,6 @@
 #include "nsIEventSink.h"
 
 #include "nsIServiceManager.h"
-#include "nsIThreadInternal.h"
 #include "nsThreadUtils.h"
 #include "nsGfxCIID.h"
 #include "nsIPref.h"
@@ -113,11 +112,9 @@ PRBool nsMacNSPREventQueueHandler::EventsArePending()
   PRBool   pendingEvents = PR_FALSE;
 
   nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (thread) {
-    nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(thread);
-    if (threadInt)
-      threadInt->HasPendingTask(&pendingEvents);
-  }
+  if (thread)
+    thread->HasPendingEvents(&pendingEvents);
+
   return pendingEvents;
 }
 
@@ -129,7 +126,7 @@ void nsMacNSPREventQueueHandler::ProcessPLEventQueue()
 {
   nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
   if (thread)
-    NS_RunPendingTasks(thread);
+    NS_ProcessPendingEvents(thread);
 }
 
 
