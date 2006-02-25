@@ -42,7 +42,7 @@
 #include "nsPISocketTransportService.h"
 #include "nsIThreadInternal.h"
 #include "nsThreadUtils.h"
-#include "nsTaskQueue.h"
+#include "nsEventQueue.h"
 #include "nsCOMPtr.h"
 #include "pldhash.h"
 #include "prinrval.h"
@@ -125,7 +125,7 @@ public:
 //-----------------------------------------------------------------------------
 
 class nsSocketTransportService : public nsPISocketTransportService
-                               , public nsIDispatchTarget
+                               , public nsIEventTarget
                                , public nsIThreadObserver
                                , public nsIRunnable
 {
@@ -133,7 +133,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSPISOCKETTRANSPORTSERVICE
     NS_DECL_NSISOCKETTRANSPORTSERVICE
-    NS_DECL_NSIDISPATCHTARGET
+    NS_DECL_NSIEVENTTARGET
     NS_DECL_NSITHREADOBSERVER
     NS_DECL_NSIRUNNABLE
 
@@ -246,7 +246,7 @@ private:
     // pending socket queue - see NotifyWhenCanAttachSocket
     //-------------------------------------------------------------------------
 
-    nsTaskQueue mPendingSocketQ; // queue of nsIRunnable objects
+    nsEventQueue mPendingSocketQ; // queue of nsIRunnable objects
 };
 
 extern nsSocketTransportService *gSocketTransportService;

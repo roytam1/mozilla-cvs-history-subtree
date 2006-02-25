@@ -62,7 +62,7 @@ nsSyncStreamListener::WaitForData()
     mKeepWaiting = PR_TRUE;
 
     while (mKeepWaiting) {
-        rv = mThread->RunNextTask(nsIThread::RUN_NORMAL);
+        rv = mThread->ProcessNextEvent();
         if (NS_FAILED(rv)) return rv;
     }
 

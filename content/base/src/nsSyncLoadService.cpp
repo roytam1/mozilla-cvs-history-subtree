@@ -422,7 +422,7 @@ nsSyncLoader::PushAsyncStream(nsIStreamListener* aListener)
         // process events until we're finished.
         mLoading = PR_TRUE;
         while (mLoading && NS_SUCCEEDED(rv))
-          rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+          rv = thread->ProcessNextEvent();
     }
     
     return rv;

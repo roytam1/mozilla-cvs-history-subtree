@@ -262,7 +262,7 @@ PageGrabber::Grab(const nsCString& aURL)
   // Enter the message pump to allow the URL load to proceed.
   nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
   while ( !copier->IsDone() ) {
-    rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+    rv = thread->ProcessNextEvent();
     if (NS_FAILED(rv))
       break;
   }

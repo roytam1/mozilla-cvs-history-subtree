@@ -394,7 +394,7 @@ NS_IMETHODIMP nsXULWindow::ShowModal()
   nsresult rv = NS_OK;
   if (stack && NS_SUCCEEDED(stack->Push(nsnull))) {
     while (NS_SUCCEEDED(rv) && mContinueModalLoop)
-      rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+      rv = thread->ProcessNextEvent();
     JSContext* cx;
     stack->Pop(&cx);
     NS_ASSERTION(cx == nsnull, "JSContextStack mismatch");
@@ -1771,7 +1771,7 @@ NS_IMETHODIMP nsXULWindow::CreateNewContentWindow(PRInt32 aChromeFlags,
   if (stack && NS_SUCCEEDED(stack->Push(nsnull))) {
     nsresult looprv = NS_OK;
     while (NS_SUCCEEDED(looprv) && xulWin->IsLocked())
-      looprv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+      looprv = thread->ProcessNextEvent();
     JSContext *cx;
     stack->Pop(&cx);
     NS_ASSERTION(cx == nsnull, "JSContextStack mismatch");

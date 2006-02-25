@@ -371,7 +371,7 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
   // document object.  That event may have already fired.
 
   while (NS_SUCCEEDED(rv) && mLoopingForSyncLoad) {
-    rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+    rv = thread->ProcessNextEvent();
   }
 
   *_retval = domDocument;

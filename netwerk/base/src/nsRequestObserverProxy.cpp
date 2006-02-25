@@ -223,7 +223,7 @@ nsRequestObserverProxy::OnStopRequest(nsIRequest *request,
 
 NS_IMETHODIMP
 nsRequestObserverProxy::Init(nsIRequestObserver *observer,
-                             nsIDispatchTarget *target)
+                             nsIEventTarget *target)
 {
     NS_ENSURE_ARG_POINTER(observer);
 

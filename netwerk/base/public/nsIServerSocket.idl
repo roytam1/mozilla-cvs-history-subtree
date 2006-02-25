@@ -103,8 +103,7 @@ interface nsIServerSocket : nsISupports
      * asynchronously listen for and accept client connections.  The listener
      * will be notified once for each client connection that is accepted.  The
      * listener's onSocketAccepted method will be called on the same thread
-     * that called asyncListen (the calling thread must have a
-     * nsIDispatchTarget).
+     * that called asyncListen (the calling thread must have a nsIEventTarget).
      *
      * The listener will be passed a reference to an already connected socket
      * transport (nsISocketTransport).  See below for more details.

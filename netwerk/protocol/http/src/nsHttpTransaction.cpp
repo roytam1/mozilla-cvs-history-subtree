@@ -165,7 +165,7 @@ nsHttpTransaction::Init(PRUint8 caps,
                         nsHttpRequestHead *requestHead,
                         nsIInputStream *requestBody,
                         PRBool requestBodyHasHeaders,
-                        nsIDispatchTarget *target,
+                        nsIEventTarget *target,
                         nsIInterfaceRequestor *callbacks,
                         nsITransportEventSink *eventsink,
                         nsIAsyncInputStream **responseBody)
@@ -392,7 +392,7 @@ nsHttpTransaction::ReadSegments(nsAHttpSegmentReader *reader,
         nsCOMPtr<nsIAsyncInputStream> asyncIn =
                 do_QueryInterface(mRequestStream);
         if (asyncIn) {
-            nsCOMPtr<nsIDispatchTarget> target;
+            nsCOMPtr<nsIEventTarget> target;
             gHttpHandler->GetSocketThreadTarget(getter_AddRefs(target));
             if (target)
                 asyncIn->AsyncWait(this, 0, 0, target);
@@ -456,7 +456,7 @@ nsHttpTransaction::WriteSegments(nsAHttpSegmentWriter *writer,
     // if pipe would block then we need to AsyncWait on it.  have callback
     // occur on socket thread so we stay synchronized.
     if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-        nsCOMPtr<nsIDispatchTarget> target;
+        nsCOMPtr<nsIEventTarget> target;
         gHttpHandler->GetSocketThreadTarget(getter_AddRefs(target));
         if (target)
             mPipeOut->AsyncWait(this, 0, 0, target);

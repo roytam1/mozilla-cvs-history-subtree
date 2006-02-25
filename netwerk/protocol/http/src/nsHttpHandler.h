@@ -160,7 +160,7 @@ public:
         return mConnMgr->ProcessPendingQ(cinfo);
     }
 
-    nsresult GetSocketThreadTarget(nsIDispatchTarget **target)
+    nsresult GetSocketThreadTarget(nsIEventTarget **target)
     {
         return mConnMgr->GetSocketThreadTarget(target);
     }

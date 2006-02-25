@@ -52,7 +52,6 @@
 #include "nsITransport.h"
 #include "nsIRunnable.h"
 #include "nsIProxyObjectManager.h"
-#include "nsIDispatchTarget.h"
 
 //-----------------------------------------------------------------------------
 // nsInputStreamTransport
@@ -119,7 +118,7 @@ nsInputStreamTransport::OpenInputStream(PRUint32 flags,
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
     nsresult rv;
-    nsCOMPtr<nsIDispatchTarget> target =
+    nsCOMPtr<nsIEventTarget> target =
             do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -172,7 +171,7 @@ nsInputStreamTransport::Close(nsresult reason)
 
 NS_IMETHODIMP
 nsInputStreamTransport::SetEventSink(nsITransportEventSink *sink,
-                                     nsIDispatchTarget *target)
+                                     nsIEventTarget *target)
 {
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
@@ -332,7 +331,7 @@ nsOutputStreamTransport::OpenOutputStream(PRUint32 flags,
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
     nsresult rv;
-    nsCOMPtr<nsIDispatchTarget> target =
+    nsCOMPtr<nsIEventTarget> target =
             do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -374,7 +373,7 @@ nsOutputStreamTransport::Close(nsresult reason)
 
 NS_IMETHODIMP
 nsOutputStreamTransport::SetEventSink(nsITransportEventSink *sink,
-                                      nsIDispatchTarget *target)
+                                      nsIEventTarget *target)
 {
     NS_ENSURE_TRUE(!mInProgress, NS_ERROR_IN_PROGRESS);
 
@@ -491,7 +490,7 @@ nsStreamTransportService::Init()
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsStreamTransportService,
                               nsIStreamTransportService,
-                              nsIDispatchTarget)
+                              nsIEventTarget)
 
 NS_IMETHODIMP
 nsStreamTransportService::Dispatch(nsIRunnable *task, PRUint32 flags)

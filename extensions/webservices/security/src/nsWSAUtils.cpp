@@ -245,7 +245,7 @@ nsWSAUtils::GetOfficialHostName(nsIURI* aServiceURI,
                          listener, thread, getter_AddRefs(dummy));
   
   while (NS_SUCCEEDED(rv) && !listener->mLookupFinished)
-    rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+    rv = thread->ProcessNextEvent();
 
   aResult.Assign(listener->mOfficialHostName);
   return rv;

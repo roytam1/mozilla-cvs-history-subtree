@@ -52,7 +52,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsISocketTransportService.h"
 #include "nsITransport.h"
-#include "nsIDispatchTarget.h"
+#include "nsIEventTarget.h"
 
 //-----------------------------------------------------------------------------
 
@@ -106,7 +106,7 @@ public:
                   nsHttpRequestHead     *reqHeaders,
                   nsIInputStream        *reqBody,
                   PRBool                 reqBodyIncludesHeaders,
-                  nsIDispatchTarget     *consumerTarget,
+                  nsIEventTarget        *consumerTarget,
                   nsIInterfaceRequestor *callbacks,
                   nsITransportEventSink *eventsink,
                   nsIAsyncInputStream  **responseBody);
@@ -119,7 +119,7 @@ public:
     nsISupports           *SecurityInfo()   { return mSecurityInfo; }
 
     nsIInterfaceRequestor *Callbacks()      { return mCallbacks; } 
-    nsIDispatchTarget     *ConsumerTarget() { return mConsumerTarget; }
+    nsIEventTarget        *ConsumerTarget() { return mConsumerTarget; }
     nsAHttpConnection     *Connection()     { return mConnection; }
 
     // Called to take ownership of the response headers; the transaction
@@ -159,7 +159,7 @@ private:
 private:
     nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
     nsCOMPtr<nsITransportEventSink> mTransportSink;
-    nsCOMPtr<nsIDispatchTarget>     mConsumerTarget;
+    nsCOMPtr<nsIEventTarget>        mConsumerTarget;
     nsCOMPtr<nsISupports>           mSecurityInfo;
     nsCOMPtr<nsIAsyncInputStream>   mPipeIn;
     nsCOMPtr<nsIAsyncOutputStream>  mPipeOut;

@@ -81,14 +81,14 @@ public:
                             PRUint32 count, PRUint32 *result);
     NS_IMETHOD CloseWithStatus(nsresult status);
     NS_IMETHOD AsyncWait(nsIInputStreamCallback *callback, PRUint32 flags,
-                         PRUint32 count, nsIDispatchTarget *target);
+                         PRUint32 count, nsIEventTarget *target);
 
     nsGopherContentStream(nsGopherChannel *channel)
         : nsBaseContentStream(PR_TRUE)  // non-blocking
         , mChannel(channel) {
     }
 
-    nsresult OpenSocket(nsIDispatchTarget *target);
+    nsresult OpenSocket(nsIEventTarget *target);
     nsresult OnSocketWritable();
     nsresult ParseTypeAndSelector(char &type, nsCString &selector);
     nsresult PromptForQueryString(nsCString &result);
@@ -144,7 +144,7 @@ nsGopherContentStream::CloseWithStatus(nsresult status)
 
 NS_IMETHODIMP
 nsGopherContentStream::AsyncWait(nsIInputStreamCallback *callback, PRUint32 flags,
-                                 PRUint32 count, nsIDispatchTarget *target)
+                                 PRUint32 count, nsIEventTarget *target)
 {
     nsresult rv = nsBaseContentStream::AsyncWait(callback, flags, count, target);
     if (NS_FAILED(rv) && IsClosed())
@@ -185,7 +185,7 @@ nsGopherContentStream::OnOutputStreamReady(nsIAsyncOutputStream *stream)
 }
 
 nsresult
-nsGopherContentStream::OpenSocket(nsIDispatchTarget *target)
+nsGopherContentStream::OpenSocket(nsIEventTarget *target)
 {
     // This function is called to get things started.
     //

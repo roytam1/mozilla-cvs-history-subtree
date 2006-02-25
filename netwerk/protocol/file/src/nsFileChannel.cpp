@@ -74,7 +74,7 @@ public:
   // callback is dispatched when the file copy completes.
   nsresult Dispatch(nsIOutputStreamCallback *callback,
                     nsITransportEventSink *sink,
-                    nsIDispatchTarget *target);
+                    nsIEventTarget *target);
 
   // Call this method to interrupt a file copy operation that is occuring on
   // a background thread.  The status parameter passed to this function must
@@ -151,7 +151,7 @@ nsFileCopyEvent::DoCopy()
 nsresult
 nsFileCopyEvent::Dispatch(nsIOutputStreamCallback *callback,
                           nsITransportEventSink *sink,
-                          nsIDispatchTarget *target)
+                          nsIEventTarget *target)
 {
   // Use the supplied event target for all asynchronous operations.
 
@@ -167,7 +167,7 @@ nsFileCopyEvent::Dispatch(nsIOutputStreamCallback *callback,
     return rv;
 
   // Dispatch ourselves to I/O thread pool...
-  nsCOMPtr<nsIDispatchTarget> pool =
+  nsCOMPtr<nsIEventTarget> pool =
       do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
   if (NS_FAILED(rv))
     return rv;
@@ -199,7 +199,7 @@ public:
   NS_IMETHODIMP ReadSegments(nsWriteSegmentFun fun, void *closure,
                              PRUint32 count, PRUint32 *result);
   NS_IMETHODIMP AsyncWait(nsIInputStreamCallback *callback, PRUint32 flags,
-                          PRUint32 count, nsIDispatchTarget *target);
+                          PRUint32 count, nsIEventTarget *target);
 
 private:
   nsFileCopyEvent mCopyEvent;
@@ -236,7 +236,7 @@ nsFileUploadContentStream::ReadSegments(nsWriteSegmentFun fun, void *closure,
 NS_IMETHODIMP
 nsFileUploadContentStream::AsyncWait(nsIInputStreamCallback *callback,
                                      PRUint32 flags, PRUint32 count,
-                                     nsIDispatchTarget *target)
+                                     nsIEventTarget *target)
 {
   nsresult rv = nsBaseContentStream::AsyncWait(callback, flags, count, target);
   if (NS_FAILED(rv) || IsClosed())

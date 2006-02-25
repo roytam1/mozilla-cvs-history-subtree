@@ -1631,7 +1631,7 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   // If we're synchronous, spin an event loop here and wait
   if (!(mState & XML_HTTP_REQUEST_ASYNC)) {
     while (NS_SUCCEEDED(rv) && mState & XML_HTTP_REQUEST_SYNCLOOPING)
-      rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+      rv = thread->ProcessNextEvent();
   }
 
   if (!mChannel) {

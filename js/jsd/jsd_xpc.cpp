@@ -2955,7 +2955,7 @@ jsdService::EnterNestedEventLoop (jsdINestCallback *callback, PRUint32 *_rval)
         }
         
         while (NS_SUCCEEDED(rv) && mNestedLoopLevel >= nestLevel)
-            rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+            rv = thread->ProcessNextEvent();
 
         JSContext* cx;
         stack->Pop(&cx);

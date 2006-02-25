@@ -69,9 +69,9 @@ nsBaseAppShell::Run(void)
 
   ++mKeepGoing;
   while (mKeepGoing)
-    thread->RunNextTask(nsIThread::RUN_NORMAL);
+    thread->ProcessNextEvent();
 
-  NS_RunPendingTasks(thread);
+  NS_ProcessPendingEvents(thread);
   return NS_OK;
 }
 
@@ -95,26 +95,21 @@ nsBaseAppShell::FavorPerformanceHint(PRBool favorPerfOverStarvation,
 // nsIThreadObserver methods:
 
 NS_IMETHODIMP
-nsBaseAppShell::OnNewTask(nsIThreadInternal *thr, PRUint32 flags)
+nsBaseAppShell::OnDispatchEvent(nsIThreadInternal *thr, PRUint32 flags)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsBaseAppShell::OnBeforeRunNextTask(nsIThreadInternal *thr, PRUint32 flags)
+nsBaseAppShell::OnEnterProcessNextEvent(nsIThreadInternal *thr,
+                                        PRBool mayWait)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsBaseAppShell::OnAfterRunNextTask(nsIThreadInternal *thr, PRUint32 flags,
-                                   nsresult status)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBaseAppShell::OnWaitNextTask(nsIThreadInternal *thr, PRUint32 flags)
+nsBaseAppShell::OnLeaveProcessNextEvent(nsIThreadInternal *thr,
+                                        nsresult status)
 {
   return NS_OK;
 }

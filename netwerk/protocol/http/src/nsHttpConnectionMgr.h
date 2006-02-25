@@ -114,7 +114,7 @@ public:
 
     // called to get a reference to the socket transport service.  the socket
     // transport service is not available when the connection manager is down.
-    nsresult GetSocketThreadTarget(nsIDispatchTarget **);
+    nsresult GetSocketThreadTarget(nsIEventTarget **);
 
     // called when a connection is done processing a transaction.  if the 
     // connection can be reused then it will be added to the idle list, else
@@ -188,7 +188,7 @@ private:
 
     PRInt32                      mRef;
     PRMonitor                   *mMonitor;
-    nsCOMPtr<nsIDispatchTarget>  mSocketThreadTarget;
+    nsCOMPtr<nsIEventTarget>     mSocketThreadTarget;
 
     // connection limits
     PRUint16 mMaxConns;

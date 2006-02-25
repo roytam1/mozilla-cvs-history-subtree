@@ -59,14 +59,14 @@ public:
     nsIRequestObserver *Observer() { return mObserver; }
 
     nsresult FireEvent(nsARequestObserverEvent *);
-    nsIDispatchTarget *Target() { return mTarget; } // debugging aid
-    void SetTarget(nsIDispatchTarget *target) { mTarget = target; }
+    nsIEventTarget *Target() { return mTarget; } // debugging aid
+    void SetTarget(nsIEventTarget *target) { mTarget = target; }
 
 protected:
     virtual ~nsRequestObserverProxy();
 
     nsCOMPtr<nsIRequestObserver> mObserver;
-    nsCOMPtr<nsIDispatchTarget>  mTarget;
+    nsCOMPtr<nsIEventTarget>     mTarget;
 
     friend class nsOnStartRequestEvent;
     friend class nsOnStopRequestEvent;

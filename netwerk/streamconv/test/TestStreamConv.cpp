@@ -274,7 +274,7 @@ main(int argc, char* argv[])
 
         // Enter the message pump to allow the URL load to proceed.
         while ( gKeepRunning ) {
-            rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+            rv = thread->ProcessNextEvent();
             if (NS_FAILED(rv))
                 break;
         }

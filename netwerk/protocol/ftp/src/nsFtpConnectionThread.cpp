@@ -1892,7 +1892,7 @@ nsFtpState::R_pasv() {
             // perform the data copy on the socket transport thread.  we do this
             // because "output" is a socket output stream, so the result is that
             // all work will be done on the socket transport thread.
-            nsCOMPtr<nsIDispatchTarget> stTarget = do_GetService(kSocketTransportServiceCID, &rv);
+            nsCOMPtr<nsIEventTarget> stTarget = do_GetService(kSocketTransportServiceCID, &rv);
             if (NS_FAILED(rv)) return FTP_ERROR;
             
             nsCOMPtr<nsIAsyncStreamCopier> copier;

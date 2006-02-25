@@ -64,9 +64,9 @@ static void PumpEvents()
 
   gKeepPumpingEvents = PR_TRUE;
   while (gKeepPumpingEvents)
-    thread->RunNextTask(nsIThread::RUN_NORMAL);
+    thread->ProcessNextEvent();
 
-  NS_RunPendingTasks(thread);
+  NS_ProcessPendingEvents(thread);
 }
 
 static void QuitPumpingEvents()

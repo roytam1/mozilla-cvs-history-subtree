@@ -38,7 +38,7 @@
 #include "nsXPCOM.h"
 #include "nsIServiceManager.h"
 #include "nsServiceManagerUtils.h"
-#include "nsIDispatchTarget.h"
+#include "nsIEventTarget.h"
 #include "nsCOMPtr.h"
 #include "nsNetCID.h"
 #include "prlog.h"
@@ -70,7 +70,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsIOEvent, nsIRunnable)
 static nsresult RunTest()
 {
     nsresult rv;
-    nsCOMPtr<nsIDispatchTarget> target =
+    nsCOMPtr<nsIEventTarget> target =
         do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv))
         return rv;

@@ -368,7 +368,7 @@ nsresult nsAutoConfig::downloadAutoConfig()
         */
         
         while (!mLoaded) {
-            rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+            rv = thread->ProcessNextEvent();
             if (NS_FAILED(rv))
                 return rv;
         }

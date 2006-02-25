@@ -513,7 +513,7 @@ nsXMLDocument::Load(const nsAString& aUrl, PRBool *aReturn)
 
     mLoopingForSyncLoad = PR_TRUE;
     while (mLoopingForSyncLoad && NS_SUCCEEDED(rv)) {
-      rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+      rv = thread->ProcessNextEvent();
     }
 
     // We set return to true unless there was a parsing error

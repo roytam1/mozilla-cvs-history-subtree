@@ -399,7 +399,7 @@ NS_IMETHODIMP
 nsSocketInputStream::AsyncWait(nsIInputStreamCallback *callback,
                                PRUint32 flags,
                                PRUint32 amount,
-                               nsIDispatchTarget *target)
+                               nsIEventTarget *target)
 {
     LOG(("nsSocketInputStream::AsyncWait [this=%x]\n", this));
 
@@ -630,7 +630,7 @@ NS_IMETHODIMP
 nsSocketOutputStream::AsyncWait(nsIOutputStreamCallback *callback,
                                 PRUint32 flags,
                                 PRUint32 amount,
-                                nsIDispatchTarget *target)
+                                nsIEventTarget *target)
 {
     LOG(("nsSocketOutputStream::AsyncWait [this=%x]\n", this));
 
@@ -1693,7 +1693,7 @@ nsSocketTransport::SetSecurityCallbacks(nsIInterfaceRequestor *callbacks)
 
 NS_IMETHODIMP
 nsSocketTransport::SetEventSink(nsITransportEventSink *sink,
-                                nsIDispatchTarget *target)
+                                nsIEventTarget *target)
 {
     nsCOMPtr<nsITransportEventSink> temp;
     if (target) {

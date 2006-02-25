@@ -38,7 +38,7 @@
 
 #include "nsIRequestObserver.idl"
 
-interface nsIDispatchTarget;
+interface nsIEventTarget;
 
 /**
  * A request observer proxy is used to ship data over to another thread
@@ -55,8 +55,8 @@ interface nsIRequestObserverProxy : nsIRequestObserver
      * Initializes an nsIRequestObserverProxy.
      *
      * @param observer - receives observer notifications on the other thread
-     * @param target - may be NULL indicating the calling thread's dispatch target
+     * @param target - may be NULL indicating the calling thread's event target
      */
     void init(in nsIRequestObserver observer,
-              in nsIDispatchTarget eventQ);
+              in nsIEventTarget target);
 };

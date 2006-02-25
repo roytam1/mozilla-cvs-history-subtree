@@ -39,7 +39,7 @@
 #include "nsISupports.idl"
 
 interface nsICancelable;
-interface nsIDispatchTarget;
+interface nsIEventTarget;
 interface nsIDNSRecord;
 interface nsIDNSListener;
 
@@ -60,7 +60,7 @@ interface nsIDNSService : nsISupports
      *        the listener to be notified when the result is available.
      * @param aListenerTarget
      *        optional parameter (may be null).  if non-null, this parameter
-     *        specifies the nsIDispatchTarget of the thread on which the
+     *        specifies the nsIEventTarget of the thread on which the
      *        listener's onLookupComplete should be called.  however, if this
      *        parameter is null, then onLookupComplete will be called on an
      *        unspecified thread (possibly recursively).
@@ -70,7 +70,7 @@ interface nsIDNSService : nsISupports
     nsICancelable asyncResolve(in AUTF8String       aHostName,
                                in unsigned long     aFlags,
                                in nsIDNSListener    aListener,
-                               in nsIDispatchTarget aListenerTarget);
+                               in nsIEventTarget    aListenerTarget);
 
     /**
      * called to synchronously resolve a hostname.  warning this method may

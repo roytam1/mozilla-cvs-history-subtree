@@ -135,7 +135,7 @@ static const char* const gStateStrings[] = {
 /********************************
  * SheetLoadData implementation *
  ********************************/
-NS_IMPL_ISUPPORTS1(SheetLoadData, nsIUnicharStreamLoaderObserver)
+NS_IMPL_ISUPPORTS2(SheetLoadData, nsIUnicharStreamLoaderObserver, nsIRunnable)
 
 SheetLoadData::SheetLoadData(CSSLoaderImpl* aLoader,
                              const nsSubstring& aTitle,

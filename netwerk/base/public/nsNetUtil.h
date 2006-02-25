@@ -367,7 +367,7 @@ inline nsresult
 NS_NewAsyncStreamCopier(nsIAsyncStreamCopier **result,
                         nsIInputStream        *source,
                         nsIOutputStream       *sink,
-                        nsIDispatchTarget     *target,
+                        nsIEventTarget        *target,
                         PRBool                 sourceBuffered = PR_TRUE,
                         PRBool                 sinkBuffered = PR_TRUE,
                         PRUint32               chunkSize = 0)
@@ -532,7 +532,7 @@ NS_ImplementChannelOpen(nsIChannel      *channel,
 inline nsresult
 NS_NewRequestObserverProxy(nsIRequestObserver **result,
                            nsIRequestObserver  *observer,
-                           nsIDispatchTarget   *target = nsnull)
+                           nsIEventTarget      *target = nsnull)
 {
     nsresult rv;
     nsCOMPtr<nsIRequestObserverProxy> proxy =

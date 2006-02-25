@@ -53,7 +53,7 @@ public:
     NS_DECL_NSITRANSPORTEVENTSINK
 
     nsTransportEventSinkProxy(nsITransportEventSink *sink,
-                              nsIDispatchTarget *target,
+                              nsIEventTarget *target,
                               PRBool coalesceAll)
         : mSink(sink)
         , mTarget(target)
@@ -75,7 +75,7 @@ public:
     }
 
     nsITransportEventSink           *mSink;
-    nsCOMPtr<nsIDispatchTarget>      mTarget;
+    nsCOMPtr<nsIEventTarget>         mTarget;
     PRLock                          *mLock;
     nsTransportStatusEvent          *mLastEvent;
     PRBool                           mCoalesceAll;
@@ -166,7 +166,7 @@ nsTransportEventSinkProxy::OnTransportStatus(nsITransport *transport,
 nsresult
 net_NewTransportEventSinkProxy(nsITransportEventSink **result,
                                nsITransportEventSink *sink,
-                               nsIDispatchTarget *target,
+                               nsIEventTarget *target,
                                PRBool coalesceAll)
 {
     *result = new nsTransportEventSinkProxy(sink, target, coalesceAll);

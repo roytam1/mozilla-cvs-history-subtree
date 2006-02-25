@@ -97,12 +97,12 @@ nsSocketTransportService::~nsSocketTransportService()
 // event queue (any thread)
 
 NS_IMETHODIMP
-nsSocketTransportService::Dispatch(nsIRunnable *task, PRUint32 flags)
+nsSocketTransportService::Dispatch(nsIRunnable *event, PRUint32 flags)
 {
-    LOG(("STS dispatch [%p]\n", task));
+    LOG(("STS dispatch [%p]\n", event));
 
     NS_ENSURE_TRUE(mThread, NS_ERROR_NOT_INITIALIZED);
-    return mThread->Dispatch(task, flags);
+    return mThread->Dispatch(event, flags);
 }
 
 NS_IMETHODIMP
@@ -127,7 +127,7 @@ nsSocketTransportService::NotifyWhenCanAttachSocket(nsIRunnable *event)
         return Dispatch(event, NS_DISPATCH_NORMAL);
     }
 
-    mPendingSocketQ.PutTask(event);
+    mPendingSocketQ.PutEvent(event);
     return NS_OK;
 }
 
@@ -173,11 +173,10 @@ nsSocketTransportService::DetachSocket(SocketContext *sock)
     //
     // notify the first element on the pending socket queue...
     //
-    //if (!PR_CLIST_IS_EMPTY(&mPendingSocketQ)) {
-    nsCOMPtr<nsIRunnable> task;
-    if (mPendingSocketQ.GetPendingTask(getter_AddRefs(task))) {
-        // move task from pending queue to dispatch queue
-        return Dispatch(task, NS_DISPATCH_NORMAL);
+    nsCOMPtr<nsIRunnable> event;
+    if (mPendingSocketQ.GetPendingEvent(getter_AddRefs(event))) {
+        // move event from pending queue to dispatch queue
+        return Dispatch(event, NS_DISPATCH_NORMAL);
     }
     return NS_OK;
 }
@@ -335,7 +334,7 @@ nsSocketTransportService::Poll(PRBool wait, PRUint32 *interval)
 
 NS_IMPL_THREADSAFE_ISUPPORTS5(nsSocketTransportService,
                               nsISocketTransportService,
-                              nsIDispatchTarget,
+                              nsIEventTarget,
                               nsIThreadObserver,
                               nsIRunnable,
                               nsPISocketTransportService)
@@ -445,7 +444,7 @@ nsSocketTransportService::SetAutodialEnabled(PRBool value)
 }
 
 NS_IMETHODIMP
-nsSocketTransportService::OnNewTask(nsIThreadInternal *thread, PRUint32 flags)
+nsSocketTransportService::OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags)
 {
     if (mThreadEvent)
         PR_SetPollableEvent(mThreadEvent);
@@ -453,27 +452,22 @@ nsSocketTransportService::OnNewTask(nsIThreadInternal *thread, PRUint32 flags)
 }
 
 NS_IMETHODIMP
-nsSocketTransportService::OnBeforeRunNextTask(nsIThreadInternal *thread,
-                                              PRUint32 flags)
+nsSocketTransportService::OnEnterProcessNextEvent(nsIThreadInternal *thread,
+                                                  PRBool mayWait)
 {
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransportService::OnAfterRunNextTask(nsIThreadInternal *thread,
-                                             PRUint32 flags, nsresult status)
-{
+    // Favor processing existing sockets before other events.
     DoPollIteration(PR_FALSE);
+
+    PRBool val;
+    while (mayWait && NS_SUCCEEDED(thread->HasPendingEvents(&val)) && !val)
+        DoPollIteration(PR_TRUE);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSocketTransportService::OnWaitNextTask(nsIThreadInternal *thread,
-                                         PRUint32 flags)
+nsSocketTransportService::OnLeaveProcessNextEvent(nsIThreadInternal *thread,
+                                                  nsresult status)
 {
-    PRBool val;
-    while (NS_SUCCEEDED(thread->HasPendingTask(&val)) && !val)
-        DoPollIteration(PR_TRUE);
     return NS_OK;
 }
 
@@ -488,26 +482,25 @@ nsSocketTransportService::Run()
     mPollList[0].fd = mThreadEvent;
     mPollList[0].in_flags = PR_POLL_READ;
 
-    nsresult rv;
     nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
 
-    // hook ourselves up to observe task processing for this thread
+    // hook ourselves up to observe event processing for this thread
     nsCOMPtr<nsIThreadInternal> threadInternal = do_QueryInterface(mThread);
     threadInternal->SetObserver(this);
 
     for (;;) {
-        // process all pending tasks
-        NS_RunPendingTasks(thread);
+        // process all pending events
+        NS_ProcessPendingEvents(thread);
 
-        // now that our task queue is empty, check to see if we should exit
+        // now that our event queue is empty, check to see if we should exit
         {
             nsAutoLock lock(mLock);
             if (mShuttingDown)
                 break;
         }
 
-        // wait for and process the next pending task
-        thread->RunNextTask(nsIThread::RUN_NORMAL);
+        // wait for and process the next pending event
+        thread->ProcessNextEvent();
     }
 
     LOG(("STS shutting down thread\n"));
@@ -521,7 +514,7 @@ nsSocketTransportService::Run()
 
     // Final pass over the event queue. This makes sure that events posted by
     // socket detach handlers get processed.
-    NS_RunPendingTasks(thread);
+    NS_ProcessPendingEvents(thread);
 
     gSocketThread = nsnull;
 

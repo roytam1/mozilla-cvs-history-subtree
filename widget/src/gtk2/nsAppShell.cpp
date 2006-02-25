@@ -75,17 +75,19 @@ nsAppShell::Init(int *argc, char **argv)
 }
 
 NS_IMETHODIMP
-nsAppShell::OnNewTask(nsIThreadInternal *thread, PRUint32 flags)
+nsAppShell::OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags)
 {
     g_main_context_wakeup(NULL);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsAppShell::OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags)
+nsAppShell::OnEnterProcessNextEvent(nsIThreadInternal *thread, PRBool mayWait)
 {
     PRBool val;
-    while (NS_SUCCEEDED(thread->HasPendingTask(&val)) && !val)
-        g_main_context_iteration(NULL, TRUE);
+    while (NS_SUCCEEDED(thread->HasPendingEvents(&val)) && !val) {
+        if (!g_main_context_iteration(NULL, mayWait) && !mayWait)
+            break;
+    }
     return NS_OK;
 }

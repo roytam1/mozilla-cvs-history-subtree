@@ -385,12 +385,12 @@ static void PR_CALLBACK EventLoop( void *arg )
 
     while ( PR_SUCCESS == PR_Sleep( PR_MillisecondsToInterval(1)) )
     {
-        rv = gEventThread->RunNextTask(nsIThread::RUN_NORMAL);
+        rv = gEventThread->ProcessNextEvent();
         if (NS_FAILED(rv))
             return;
     }
 
-    NS_RunPendingTasks(gEventThread);
+    NS_ProcessPendingEvents(gEventThread);
 
     printf("Closing down Event Thread.\n");
     NS_RELEASE(gEventThread);

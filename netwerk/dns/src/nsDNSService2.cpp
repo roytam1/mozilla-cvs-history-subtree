@@ -375,7 +375,7 @@ NS_IMETHODIMP
 nsDNSService::AsyncResolve(const nsACString  &hostname,
                            PRUint32           flags,
                            nsIDNSListener    *listener,
-                           nsIDispatchTarget *target,
+                           nsIEventTarget    *target,
                            nsICancelable    **result)
 {
     // grab reference to global host resolver and IDN service.  beware

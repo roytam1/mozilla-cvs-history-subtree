@@ -40,7 +40,7 @@
 interface nsIInputStream;
 interface nsIOutputStream;
 interface nsITransportEventSink;
-interface nsIDispatchTarget;
+interface nsIEventTarget;
 
 /**
  * nsITransport
@@ -149,13 +149,13 @@ interface nsITransport : nsISupports
      *
      * @param aSink
      *        receives transport layer notifications
-     * @param aDispatchTarget
-     *        indicates the dispatch target to which the notifications should
+     * @param aEventTarget
+     *        indicates the event target to which the notifications should
      *        be delivered.  if NULL, then the notifications may occur on
      *        any thread.
      */
     void setEventSink(in nsITransportEventSink aSink,
-                      in nsIDispatchTarget aDispatchTarget); 
+                      in nsIEventTarget aEventTarget); 
     
     /**
      * Generic nsITransportEventSink status codes.  nsITransport

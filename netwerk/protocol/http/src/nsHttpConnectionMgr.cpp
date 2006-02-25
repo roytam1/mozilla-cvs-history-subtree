@@ -106,7 +106,7 @@ nsHttpConnectionMgr::Init(PRUint16 maxConns,
     LOG(("nsHttpConnectionMgr::Init\n"));
 
     nsresult rv;
-    nsCOMPtr<nsIDispatchTarget> sts = do_GetService(kSocketTransportServiceCID, &rv);
+    nsCOMPtr<nsIEventTarget> sts = do_GetService(kSocketTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsAutoMonitor mon(mMonitor);
@@ -222,7 +222,7 @@ nsHttpConnectionMgr::PruneDeadConnections()
 }
 
 nsresult
-nsHttpConnectionMgr::GetSocketThreadTarget(nsIDispatchTarget **target)
+nsHttpConnectionMgr::GetSocketThreadTarget(nsIEventTarget **target)
 {
     nsAutoMonitor mon(mMonitor);
     NS_IF_ADDREF(*target = mSocketThreadTarget);

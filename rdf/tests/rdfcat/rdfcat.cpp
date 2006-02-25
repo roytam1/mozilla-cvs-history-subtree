@@ -169,7 +169,7 @@ main(int argc, char** argv)
     nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
     PRBool done = PR_FALSE;
     while (!done) {
-        rv = thread->RunNextTask(nsIThread::RUN_NORMAL);
+        rv = thread->ProcessNextEvent();
         if (NS_FAILED(rv))
             return rv;
         remote->GetLoaded(&done);

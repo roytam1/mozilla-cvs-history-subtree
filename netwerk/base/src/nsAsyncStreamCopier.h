@@ -74,7 +74,7 @@ private:
     nsCOMPtr<nsIRequestObserver>   mObserver;
     nsCOMPtr<nsISupports>          mObserverContext;
 
-    nsCOMPtr<nsIDispatchTarget>    mTarget;
+    nsCOMPtr<nsIEventTarget>       mTarget;
 
     PRLock                        *mLock;
 

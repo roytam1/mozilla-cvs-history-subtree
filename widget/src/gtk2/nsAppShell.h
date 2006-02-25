@@ -50,8 +50,9 @@ public:
     NS_IMETHOD Init(int *argc, char **argv);
 
     // nsIThreadObserver overrides:
-    NS_IMETHOD OnNewTask(nsIThreadInternal *thread, PRUint32 flags);
-    NS_IMETHOD OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags);
+    NS_IMETHOD OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags);
+    NS_IMETHOD OnEnterProcessNextEvent(nsIThreadInternal *thread,
+                                       PRBool mayWait);
 
 private:
     virtual ~nsAppShell() {}
