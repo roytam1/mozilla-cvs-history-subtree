@@ -270,8 +270,6 @@ pref("dom.disable_window_status_change",          true);
 pref("dom.disable_window_move_resize",            false);
 // prevent JS from monkeying with window focus, etc
 pref("dom.disable_window_flip",                   false);
- 
-pref("browser.trim_user_and_password",            true);
 
 // popups.policy 1=allow,2=reject
 pref("privacy.popups.policy",               1);
@@ -295,7 +293,6 @@ pref("network.proxy.share_proxy_settings",  false); // use the same proxy settin
 
 pref("network.cookie.cookieBehavior",       0); // cookies enabled
 pref("network.cookie.enableForCurrentSessionOnly", false);
-pref("network.cookie.denyRemovedCookies", false);
 
 // l12n and i18n
 pref("intl.accept_languages", "chrome://global/locale/intl.properties");
