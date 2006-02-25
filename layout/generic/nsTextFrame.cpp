@@ -3880,11 +3880,6 @@ nsTextFrame::GetPosition(nsPresContext*  aPresContext,
       // no need to worry about justification, that's always on the slow path
       PrepareUnicodeText(tx, &indexBuffer, &paintBuffer, &textLength);
 
-      if (textLength <=0) {
-        //invalid frame to get position on
-        return NS_ERROR_FAILURE;
-      }
-
       nsPoint origin;
       nsIView * view;
       GetOffsetFromView(origin, &view);
@@ -3910,7 +3905,11 @@ nsTextFrame::GetPosition(nsPresContext*  aPresContext,
         }
       }
 
-      if (!outofstylehandled) //then we need to track based on the X coord only
+      if (textLength <= 0) {
+        aContentOffset = mContentOffset;
+        aContentOffsetEnd = aContentOffset;
+      }
+      else if (!outofstylehandled) //then we need to track based on the X coord only
       {
 //END STYLE IF
         PRInt32* ip = indexBuffer.mBuffer;

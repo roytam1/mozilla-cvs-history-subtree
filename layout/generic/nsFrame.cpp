@@ -3336,14 +3336,11 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsPresContext* aPresContext,
         if (!resultFrame->HasView())
         {
           rect = resultFrame->GetRect();
-          if (!rect.width || !rect.height)
-            result = NS_ERROR_FAILURE;
-          else
-            result = resultFrame->GetContentAndOffsetsFromPoint(context,point,
-                                          getter_AddRefs(aPos->mResultContent),
-                                          aPos->mContentOffset,
-                                          aPos->mContentOffsetEnd,
-                                          aPos->mPreferLeft);
+          result = resultFrame->GetContentAndOffsetsFromPoint(context,point,
+                                        getter_AddRefs(aPos->mResultContent),
+                                        aPos->mContentOffset,
+                                        aPos->mContentOffsetEnd,
+                                        aPos->mPreferLeft);
           if (NS_SUCCEEDED(result))
           {
             PRBool selectable;
