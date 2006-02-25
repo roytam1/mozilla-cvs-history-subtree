@@ -554,6 +554,7 @@ function ShowingAccountCentral()
                                                Components.interfaces.nsIPrefLocalizedString).data;
         GetMessagePane().collapsed = true;
         document.getElementById("threadpane-splitter").collapsed = true;
+        document.getElementById("key_toggleMessagePane").setAttribute("disabled", "true");
 
         window.frames["accountCentralPane"].location.href = acctCentralPage;
         
@@ -578,6 +579,7 @@ function HidingAccountCentral()
     {
         dump("Error hiding AccountCentral page -> " + ex + "\n");
     }
+    document.getElementById("key_toggleMessagePane").removeAttribute("disabled");
     gAccountCentralLoaded = false;
 }
 
