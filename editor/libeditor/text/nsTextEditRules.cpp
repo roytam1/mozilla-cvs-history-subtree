@@ -778,7 +778,15 @@ nsTextEditRules::WillInsertText(PRInt32          aAction,
     outString->Assign(tString);
 
     if (curNode) 
+    {
       aSelection->Collapse(curNode, curOffset);
+      
+      // Make the caret attach to the inserted text, unless this text ends with a LF, 
+      // in which case make the caret attach to the next line.
+      PRBool endsWithLF = !tString.IsEmpty() && tString.get()[tString.Length() - 1] == nsCRT::LF;
+      nsCOMPtr<nsISelectionPrivate>selPrivate(do_QueryInterface(aSelection));
+      selPrivate->SetInterlinePosition(endsWithLF);
+    }
   }
   return res;
 }
