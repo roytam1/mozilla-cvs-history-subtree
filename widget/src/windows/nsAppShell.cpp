@@ -613,7 +613,7 @@ nsAppShell::OnWaitNextTask(nsIThreadInternal *thr, PRUint32 flags)
   nsCOMPtr<nsITimerManager> timerMgr;
 
   PRBool val;
-  while (NS_SUCCEEDED(thr->HasPendingTask(&val)) && !val) {
+  while (NS_SUCCEEDED(thr->HasPendingEvents(&val)) && !val) {
     MSG msg;
 
     bool gotMessage = false;

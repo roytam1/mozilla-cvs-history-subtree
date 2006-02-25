@@ -3986,7 +3986,7 @@ void nsWindow::DispatchPendingEvents()
   // notification because the timer message will not appear in the
   // native msg queue until 10ms after the event is posted. Which is too late.
   nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_RunPendingTasks(thread);
+  NS_ProcessPendingEvents(thread);
 
   // Quickly check to see if there are any
   // paint events pending.
