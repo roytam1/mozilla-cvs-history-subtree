@@ -2999,6 +2999,38 @@
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
+		0FF288540961EDDD007527B4 = {
+			isa = PBXFileReference;
+			lastKnownFileType = "compiled.mach-o.dylib";
+			name = libfreebl3.dylib;
+			path = ../dist/Embed/libfreebl3.dylib;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		0FF288550961EDDD007527B4 = {
+			fileRef = 0FF288540961EDDD007527B4;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		0FF288560961EDDD007527B4 = {
+			fileRef = 0FF288540961EDDD007527B4;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		0FF2885A0961EE00007527B4 = {
+			fileRef = 0FF288540961EDDD007527B4;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		0FF2885D0961EE2A007527B4 = {
+			fileRef = 0FF288540961EDDD007527B4;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		0FFE0A7E079B147F00966027 = {
 			isa = PBXFileReference;
 			lastKnownFileType = image.tiff;
@@ -6542,6 +6574,7 @@
 				3F44AD5C05BDFB9F00CB4B08,
 				3F44AD5D05BDFB9F00CB4B08,
 				3F44AD5E05BDFB9F00CB4B08,
+				0FF2885A0961EE00007527B4,
 				3F44AD5F05BDFB9F00CB4B08,
 			);
 			isa = PBXCopyFilesBuildPhase;
@@ -6773,6 +6806,7 @@
 				3F44AD8505BDFB9F00CB4B08,
 				3FECC8E605D1FE800068E7ED,
 				34884A36074F7C5D000EA76B,
+				0FF288560961EDDD007527B4,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -10301,6 +10335,7 @@
 				3F44AF7705BDFBA000CB4B08,
 				3F44AF7805BDFBA000CB4B08,
 				3F44AF7905BDFBA000CB4B08,
+				0FF2885D0961EE2A007527B4,
 				3F44AF7A05BDFBA000CB4B08,
 			);
 			isa = PBXCopyFilesBuildPhase;
@@ -10561,6 +10596,7 @@
 				34884A37074F7C5D000EA76B,
 				0F518835088593F30091F3FB,
 				4DC28F5E099184B80081939B,
+				0FF288550961EDDD007527B4,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -15072,8 +15108,9 @@
 				F5247C320228B91F013DD99A,
 				F5247C330228B91F013DD99A,
 				F5247C340228B91F013DD99A,
-				F5247C350228B91F013DD99A,
 				F5247C360228B91F013DD99A,
+				F5247C350228B91F013DD99A,
+				0FF288540961EDDD007527B4,
 			);
 			isa = PBXGroup;
 			name = "Executable Level";
