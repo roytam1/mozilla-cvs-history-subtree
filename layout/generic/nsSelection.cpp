@@ -7394,6 +7394,11 @@ nsTypedSelection::SelectionLanguageChange(PRBool aLangRTL)
     else
       shell->SetCaretBidiLevel(levelAfter);
   }
+  
+  // The caret might have moved, so invalidate the desired X position
+  // for future usages of up-arrow or down-arrow
+  mFrameSelection->InvalidateDesiredX();
+  
   return NS_OK;
 }
 
