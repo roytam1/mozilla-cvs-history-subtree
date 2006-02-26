@@ -40,7 +40,6 @@
 
 #include "nsIMemory.h"
 #include "nsIRunnable.h"
-#include "prlock.h"
 
 // nsMemoryImpl is a static object. We can do this because it doesn't have
 // a constructor/destructor or any instance members. Please don't add
@@ -56,8 +55,7 @@ public:
 
     NS_DECL_NSIMEMORY
 
-    static NS_HIDDEN_(nsresult) Startup();
-    static NS_HIDDEN_(void)     Shutdown();
+    static NS_HIDDEN_(void) InitFlusher();
     static NS_METHOD Create(nsISupports* outer,
                             const nsIID& aIID, void **aResult);
 
@@ -72,9 +70,7 @@ protected:
 
     NS_HIDDEN_(nsresult) RunFlushers(const PRUnichar* aReason);
 
-    static PRLock* sFlushLock;
-    static PRBool  sIsFlushing;
-
+    static PRInt32    sIsFlushing;
     static FlushEvent sFlushEvent;
 };
 

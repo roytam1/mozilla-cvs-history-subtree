@@ -495,10 +495,6 @@ NS_InitXPCOM3(nsIServiceManager* *result,
     rv = nsTimerImpl::Startup();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // Startup the memory manager
-    rv = nsMemoryImpl::Startup();
-    if (NS_FAILED(rv)) return rv;
-
 #ifndef WINCE
     // If the locale hasn't already been setup by our embedder,
     // get us out of the "C" locale and into the system 
@@ -634,6 +630,9 @@ NS_InitXPCOM3(nsIServiceManager* *result,
     // add any services listed in the "xpcom-directory-providers" category
     // to the directory service.
     nsDirectoryService::gService->RegisterCategoryProviders();
+
+    // Initialize memory flusher
+    nsMemoryImpl::InitFlusher();
 
     // Notify observers of xpcom autoregistration start
     NS_CreateServicesFromCategory(NS_XPCOM_STARTUP_OBSERVER_ID, 
@@ -804,7 +803,6 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
     ShutdownSpecialSystemDirectory();
 
     EmptyEnumeratorImpl::Shutdown();
-    nsMemoryImpl::Shutdown();
 
     NS_PurgeAtomTable();
 
