@@ -58,6 +58,8 @@
 #include "nsIMarkupDocumentViewer.h"
 #include "nsINodeInfo.h"
 #include "nsHTMLTokens.h"
+#include "nsIAppShell.h"
+#include "nsWidgetsCID.h"
 #include "nsCRT.h"
 #include "prtime.h"
 #include "prlog.h"
@@ -123,6 +125,17 @@
 #include "nsIElementObserver.h"
 #include "nsNodeInfoManager.h"
 #include "nsContentCreatorFunctions.h"
+
+//----------------------------------------------------------------------
+
+static void
+FavorPerformanceHint(PRBool perfOverStarvation, PRUint32 starvationDelay)
+{
+  static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
+  nsCOMPtr<nsIAppShell> appShell = do_GetService(kAppShellCID);
+  if (appShell)
+    appShell->FavorPerformanceHint(perfOverStarvation, starvationDelay);
+}
 
 //----------------------------------------------------------------------
 
@@ -2310,7 +2323,7 @@ HTMLContentSink::DidBuildModel(void)
   if (mFlags & NS_SINK_FLAG_DYNAMIC_LOWER_VALUE) {
     // Reset the performance hint which was set to FALSE
     // when NS_SINK_FLAG_DYNAMIC_LOWER_VALUE was set. 
-    // XXX PL_FavorPerformanceHint(PR_TRUE , 0);
+    FavorPerformanceHint(PR_TRUE , 0);
   }
 
   if (mFlags & NS_SINK_FLAG_CAN_INTERRUPT_PARSER) {
@@ -3432,7 +3445,7 @@ HTMLContentSink::DidProcessAToken(void)
           // Set the performance hint to prevent event starvation when
           // dispatching PLEvents. This improves application responsiveness 
           // during page loads.
-          // XXX PL_FavorPerformanceHint(PR_FALSE, 0);
+          FavorPerformanceHint(PR_FALSE, 0);
         }
 
       } else {
@@ -3442,7 +3455,7 @@ HTMLContentSink::DidProcessAToken(void)
           // to favor overall page load speed over responsiveness.
           mFlags &= ~NS_SINK_FLAG_DYNAMIC_LOWER_VALUE;
           // Reset the hint that to favoring performance for PLEvent dispatch.
-          // XXX PL_FavorPerformanceHint(PR_TRUE, 0);
+          FavorPerformanceHint(PR_TRUE, 0);
         }
 
       }

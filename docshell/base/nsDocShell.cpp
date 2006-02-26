@@ -94,6 +94,8 @@
 #include "nsIPrefBranch2.h"
 #include "nsIWritablePropertyBag2.h"
 #include "nsObserverService.h"
+#include "nsIAppShell.h"
+#include "nsWidgetsCID.h"
 
 // we want to explore making the document own the load group
 // so we can associate the document URI with the load group.
@@ -175,6 +177,7 @@ static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
 static NS_DEFINE_CID(kDocumentCharsetInfoCID, NS_DOCUMENTCHARSETINFO_CID);
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
+static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 
 #if defined(DEBUG_bryner) || defined(DEBUG_chb)
 //#define DEBUG_DOCSHELL_FOCUS
@@ -214,6 +217,14 @@ static PRLogModuleInfo* gDocShellLog;
 #endif
 static PRLogModuleInfo* gDocShellLeakLog;
 #endif
+
+static void
+FavorPerformanceHint(PRBool perfOverStarvation, PRUint32 starvationDelay)
+{
+    nsCOMPtr<nsIAppShell> appShell = do_GetService(kAppShellCID);
+    if (appShell)
+        appShell->FavorPerformanceHint(perfOverStarvation, starvationDelay);
+}
 
 //*****************************************************************************
 //***    nsDocShellFocusController
@@ -4683,7 +4694,7 @@ nsDocShell::EndPageLoad(nsIWebProgress * aProgress,
         // over performance
         if (--gNumberOfDocumentsLoading == 0) {
           // Hint to use normal native event dispatch priorities 
-          // XXX PL_FavorPerformanceHint(PR_FALSE, NS_EVENT_STARVATION_DELAY_HINT);
+          FavorPerformanceHint(PR_FALSE, NS_EVENT_STARVATION_DELAY_HINT);
         }
     }
     /* Check if the httpChannel has any cache-control related response headers,
@@ -5372,7 +5383,7 @@ nsDocShell::RestoreFromHistory()
     // Tell the event loop to favor plevents over user events, see comments
     // in CreateContentViewer.
     if (++gNumberOfDocumentsLoading == 1)
-        // XXX PL_FavorPerformanceHint(PR_TRUE, NS_EVENT_STARVATION_DELAY_HINT);
+        FavorPerformanceHint(PR_TRUE, NS_EVENT_STARVATION_DELAY_HINT);
 
 
     if (oldMUDV && newMUDV)
@@ -5615,7 +5626,7 @@ nsDocShell::CreateContentViewer(const char *aContentType,
       // Hint to favor performance for the plevent notification mechanism.
       // We want the pages to load as fast as possible even if its means 
       // native messages might be starved.
-      // XXX PL_FavorPerformanceHint(PR_TRUE, NS_EVENT_STARVATION_DELAY_HINT);
+      FavorPerformanceHint(PR_TRUE, NS_EVENT_STARVATION_DELAY_HINT);
     }
 
     if (onLocationChangeNeeded) {
