@@ -167,14 +167,12 @@ nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow,
   if (NS_FAILED(rv)) return rv;
 
   // Disable JavaScript in this document:
-  nsCOMPtr<nsIScriptGlobalObject> sgo (do_QueryInterface(aWindow));
-  if (sgo)
-  {
-    nsIScriptContext *scriptContext = sgo->GetContext();
-    if (scriptContext)
-    {
-      scriptContext->SetScriptsEnabled(PR_FALSE, PR_TRUE);
-    }
+  PRBool scriptsEnabled;
+  rv = docShell->GetAllowJavascript(&scriptsEnabled);
+  if (NS_FAILED(rv)) return rv;
+  if (scriptsEnabled) {
+    rv = docShell->SetAllowJavascript(PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
   }
 
   // Always remove existing editor
