@@ -238,6 +238,7 @@ var gComposeRecyclingListener = {
     }
 
     //Reset editor
+    InlineSpellChecker.Init(GetCurrentEditor(), false); // unregister inline spell checking listeners and release the spell checker
     EditorResetFontAndColorAttributes();
     EditorCleanup();
 
@@ -3547,6 +3548,5 @@ function InitEditor()
   var editor = GetCurrentEditor();
   gMsgCompose.initEditor(editor, window.content);
   InlineSpellChecker.Init(editor, sPrefs.getBoolPref("mail.spellcheck.inline"));
-  InlineSpellChecker.checkDocument(window.content.document);
 }
 
