@@ -22,8 +22,8 @@ main(int argc, char **argv)
 
   args[i++] = "shunt.lib";
 
-  args[i++] = "/subsystem:\"WINDOWSCE,5.01\"";
-  args[i++] = "/MACHINE:THUMB";
+  args[i++] = "/subsystem:\"WINDOWSCE,4.20\"";
+  args[i++] = "/MACHINE:ARM";
 
   args[i++] = "-OPT:REF";
   args[i++] = "-OPT:ICF";

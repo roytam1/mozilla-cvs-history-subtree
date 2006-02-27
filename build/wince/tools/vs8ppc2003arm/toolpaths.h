@@ -7,9 +7,8 @@
 #endif
 
 #define WCE_BIN   "c:/Program Files/Microsoft Visual Studio 8/VC/ce/bin/x86_arm/"
-
-#define WCE_INC   "c:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Pocket PC SDK/Include/Armv4i/"
-#define WCE_LIB   "c:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Pocket PC SDK/Lib/ARMV4I/"
+#define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Include/"
+#define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Lib/armv4/"
 
 #define SHUNT_LIB TOPSRCDIR "/build/wince/shunt/build/vs8/"
 #define SHUNT_INC TOPSRCDIR "/build/wince/shunt/include/"

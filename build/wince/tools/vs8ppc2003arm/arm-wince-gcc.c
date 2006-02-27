@@ -18,11 +18,15 @@ main(int argc, char **argv)
 
   args[i++] = "/DMOZCE_STATIC_BUILD";
 
+  args[i++] = "/D_WIN32_WCE=420";
+  args[i++] = "/DUNDER_CE=420";
+  args[i++] = "/DWIN32_PLATFORM_PSPC=400"; 
+  //  args[i++] = "/D_WIN32_WCE=501";
+  //  args[i++] = "/DUNDER_CE=501";
+  //  args[i++] = "/DWIN32_PLATFORM_WFSP";
+
   args[i++] = "/DARM";
   args[i++] = "/DWINCE";
-  args[i++] = "/D_WIN32_WCE=501";
-  args[i++] = "/DUNDER_CE=501";
-  args[i++] = "/DWIN32_PLATFORM_WFSP";
   args[i++] = "/D_ARM_";
 
   //  args[i++] = "/DDEPRECATE_SUPPORTED";
@@ -36,6 +40,8 @@ main(int argc, char **argv)
 
   args[i++] = "/fp:fast";
   //args[i++] = "/fp:precise";
+
+  args[i++] = "/QRarch4";
 
   startOfArgvs = i;
   
@@ -74,8 +80,8 @@ main(int argc, char **argv)
 
     args[i++] = "-ENTRY:mainACRTStartup";
 
-    args[i++] = "/SUBSYSTEM:WINDOWSCE,5.01";
-    args[i++] = "/MACHINE:THUMB";
+    args[i++] = "/SUBSYSTEM:WINDOWSCE,4.20";
+    args[i++] = "/MACHINE:ARM";
 
     args[i++] = "-LIBPATH:\"" WCE_LIB "\"";
     args[i++] = "-LIBPATH:\"" SHUNT_LIB "\"";
