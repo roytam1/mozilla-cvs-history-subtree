@@ -320,8 +320,10 @@ nsMathMLmfencedFrame::doReflow(nsPresContext*          aPresContext,
     fm->GetMaxDescent(aDesiredSize.descent);
   }
   while (childFrame) {
+    nsReflowReason reason = (childFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW)
+      ? eReflowReason_Initial : aReflowState.reason;
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
-                                       childFrame, availSize);
+                                       childFrame, availSize, reason);
     rv = mathMLFrame->ReflowChild(childFrame, aPresContext, childDesiredSize,
                                   childReflowState, childStatus);
     //NS_ASSERTION(NS_FRAME_IS_COMPLETE(childStatus), "bad status");
