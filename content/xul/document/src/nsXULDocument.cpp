@@ -149,6 +149,7 @@ const nsForwardReference::Phase nsForwardReference::kPasses[] = {
     nsForwardReference::eDone
 };
 
+const PRUint32 kMaxAttrNameLength = 512;
 const PRUint32 kMaxAttributeLength = 4096;
 
 //----------------------------------------------------------------------
@@ -1524,6 +1525,14 @@ nsXULDocument::Persist(nsIContent* aElement, PRInt32 aNameSpaceID,
     rv = aAttribute->GetUTF8String(&attrstr);
     if (NS_FAILED(rv)) return rv;
 
+    // Don't bother with unreasonable attributes. We clamp long values,
+    // but truncating attribute names turns it into a different attribute
+    // so there's no point in persisting anything at all
+    if (!attrstr || strlen(attrstr) > kMaxAttrNameLength) {
+        NS_WARNING("Can't persist, Attribute name too long");
+        return NS_ERROR_ILLEGAL_VALUE;
+    }
+
     nsCOMPtr<nsIRDFResource> attr;
     rv = gRDFService->GetResource(nsDependentCString(attrstr),
                                   getter_AddRefs(attr));
@@ -1537,8 +1546,10 @@ nsXULDocument::Persist(nsIContent* aElement, PRInt32 aNameSpaceID,
     // prevent over-long attributes that choke the parser (bug 319846)
     // (can't simply Truncate without testing, it's implemented
     // using SetLength and will grow a short string)
-    if (valuestr.Length() > kMaxAttributeLength)
+    if (valuestr.Length() > kMaxAttributeLength) {
+        NS_WARNING("Truncating persisted attribute value");
         valuestr.Truncate(kMaxAttributeLength);
+    }
 
     PRBool novalue = (rv != NS_CONTENT_ATTR_HAS_VALUE);
 
