@@ -40,6 +40,7 @@
 
 #include "nsIAppShell.h"
 #include "nsIThreadInternal.h"
+#include "prinrval.h"
 
 /**
  * A singleton that manages the UI thread's event queue.  Subclass this class
@@ -52,12 +53,28 @@ public:
   NS_DECL_NSIAPPSHELL
   NS_DECL_NSITHREADOBSERVER
 
-  nsBaseAppShell() : mKeepGoing(0) {}
+  nsBaseAppShell()
+    : mKeepGoing(0)
+    , mFavorPerf(0)
+    , mStarvationDelay(0)
+    , mSwitchTime(0)
+  {}
 
 protected:
   virtual ~nsBaseAppShell() {}
 
+  /**
+   * Implemented by subclasses.  Process the next native event.  Only wait for
+   * the next native event if mayWait is true.  Return true if a native event
+   * was processed.
+   */
+  virtual PRBool ProcessNextNativeEvent(PRBool mayWait) = 0;
+
+protected:
   PRInt32 mKeepGoing;
+  PRInt32 mFavorPerf;
+  PRIntervalTime mStarvationDelay;
+  PRIntervalTime mSwitchTime;
 };
 
 #endif // nsBaseAppShell_h__

@@ -40,6 +40,11 @@
 #include "nsBaseAppShell.h"
 #include "nsThreadUtils.h"
 
+// When processing the next thread event, the appshell may process native
+// events (if not in performance mode), which can result in suppressing the
+// next thread event for at most this many ticks:
+#define THREAD_EVENT_STARVATION_LIMIT PR_MillisecondsToInterval(20)
+
 // Must be threadsafe since nsIThreadObserver::OnNewTask may be called from
 // any background thread.
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsBaseAppShell, nsIAppShell, nsIThreadObserver)
@@ -88,6 +93,13 @@ NS_IMETHODIMP
 nsBaseAppShell::FavorPerformanceHint(PRBool favorPerfOverStarvation,
                                      PRUint32 starvationDelay)
 {
+  mStarvationDelay = PR_MillisecondsToInterval(starvationDelay);
+  if (favorPerfOverStarvation) {
+    ++mFavorPerf;
+  } else {
+    --mFavorPerf;
+    mSwitchTime = PR_IntervalNow();
+  }
   return NS_OK;
 }
 
@@ -104,6 +116,23 @@ NS_IMETHODIMP
 nsBaseAppShell::OnEnterProcessNextEvent(nsIThreadInternal *thr,
                                         PRBool mayWait)
 {
+  if (mFavorPerf <= 0) {
+    PRIntervalTime start = PR_IntervalNow();
+    if (start > mSwitchTime + mStarvationDelay) {
+      // Favor pending native events
+      PRIntervalTime limit = THREAD_EVENT_STARVATION_LIMIT;
+      PRBool keepGoing;
+      do {
+        keepGoing = ProcessNextNativeEvent(PR_FALSE);
+      } while (keepGoing && (PR_IntervalNow() - start) < limit);
+    }
+  }
+
+  PRBool val;
+  while (NS_SUCCEEDED(thr->HasPendingEvents(&val)) && !val) {
+    if (!ProcessNextNativeEvent(mayWait) && !mayWait)
+      break;
+  }
   return NS_OK;
 }
 

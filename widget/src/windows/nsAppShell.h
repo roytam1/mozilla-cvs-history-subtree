@@ -52,15 +52,12 @@ public:
 
   // nsIAppShell overrides:
   NS_IMETHOD Init(int *argc, char **argv);
-  NS_IMETHOD FavorPerformanceHint(PRBool perfOverStarvation,
-                                  PRUint32 starvationDelay);
 
   // nsIThreadObserver overrides:
-  NS_IMETHOD OnNewTask(nsIThreadInternal *thread, PRUint32 flags);
-  NS_IMETHOD OnBeforeRunNextTask(nsIThreadInternal *thread, PRUint32 flags);
-  NS_IMETHOD OnAfterRunNextTask(nsIThreadInternal *thread, PRUint32 flags,
-                                nsresult status);
-  NS_IMETHOD OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags);
+  NS_IMETHOD OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags);
+
+  // nsBaseAppShell overrides:
+  PRBool ProcessNextNativeEvent(PRBool mayWait);
 
 private:
   virtual ~nsAppShell() {}

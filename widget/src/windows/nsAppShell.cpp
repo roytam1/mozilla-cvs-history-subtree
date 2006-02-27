@@ -421,13 +421,6 @@ nsAppShell::Init(int *argc, char **argv)
   return nsBaseAppShell::Init(argc, argv);
 }
 
-NS_IMETHODIMP
-nsAppShell::FavorPerformanceHint(PRBool favorPerfOverStarvation,
-                                 PRUint32 starvationDelay)
-{
-  return NS_OK;
-}
-
 //-------------------------------------------------------------------------
 //
 // Create the application shell
@@ -583,70 +576,35 @@ nsresult nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
 // nsIThreadObserver methods:
 
 NS_IMETHODIMP
-nsAppShell::OnNewTask(nsIThreadInternal *thr, PRUint32 flags)
+nsAppShell::OnDispatchEvent(nsIThreadInternal *thr, PRUint32 flags)
 {
   // post a message to the native event queue...
   PostThreadMessage(mMainThreadId, mMsgId, 0, 0);
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsAppShell::OnBeforeRunNextTask(nsIThreadInternal *thr, PRUint32 flags)
+PRBool
+nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
-  // maybe process any pending native events... (gives high priority to native events)
-  return NS_OK;
-}
+  // XXX process idle timers
 
-NS_IMETHODIMP
-nsAppShell::OnAfterRunNextTask(nsIThreadInternal *thr, PRUint32 flags,
-                               nsresult status)
-{
-  // maybe process any pending native events... (gives high priority to native events)
-  return NS_OK;
-}
+  PRBool gotMessage = PR_FALSE;
 
-NS_IMETHODIMP
-nsAppShell::OnWaitNextTask(nsIThreadInternal *thr, PRUint32 flags)
-{
-  // XXX needs to respond to FavorPerformanceHint
-
-  nsCOMPtr<nsITimerManager> timerMgr;
-
-  PRBool val;
-  while (NS_SUCCEEDED(thr->HasPendingEvents(&val)) && !val) {
+  do {
     MSG msg;
-
-    bool gotMessage = false;
-
-    if (!timerMgr) {
-      timerMgr = do_GetService("@mozilla.org/timer/manager;1");
-      NS_ENSURE_STATE(timerMgr);
+    // Give priority to system messages (in particular keyboard, mouse, timer,
+    // and paint messages).
+    if (PeekKeyAndIMEMessage(&msg, NULL) ||
+        nsToolkit::mPeekMessage(&msg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE) || 
+        nsToolkit::mPeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+      gotMessage = PR_TRUE;
+      TranslateMessage(&msg);
+      nsToolkit::mDispatchMessage(&msg);
+    } else if (mayWait) {
+      // Block and wait for any posted application message
+      ::WaitMessage();
     }
+  } while (!gotMessage && mayWait);
 
-    do {
-      // Give priority to system messages (in particular keyboard, mouse,
-      // timer, and paint messages).
-      if (PeekKeyAndIMEMessage(&msg, NULL) ||
-          nsToolkit::mPeekMessage(&msg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE) || 
-          nsToolkit::mPeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-        gotMessage = true;
-      } else {
-        PRBool hasTimers;
-        timerMgr->HasIdleTimers(&hasTimers);
-        if (hasTimers) {
-          do {
-            timerMgr->FireNextIdleTimer();
-            timerMgr->HasIdleTimers(&hasTimers);
-          } while (hasTimers && !nsToolkit::mPeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE));
-        } else {
-          // Block and wait for any posted application message
-          ::WaitMessage();
-        }
-      }
-    } while (!gotMessage);
-
-    TranslateMessage(&msg);
-    nsToolkit::mDispatchMessage(&msg);
-  }
-  return NS_OK;
+  return gotMessage;
 }
