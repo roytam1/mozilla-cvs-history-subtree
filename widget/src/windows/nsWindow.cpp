@@ -106,6 +106,11 @@
 #include <imm.h>
 #include "aimm.h"
 
+#include <pbt.h>
+#ifndef PBT_APMRESUMEAUTOMATIC
+#define PBT_APMRESUMEAUTOMATIC 0x0012
+#endif
+
 #include "nsNativeDragTarget.h"
 #include "nsIRollupListener.h"
 #include "nsIMenuRollup.h"
