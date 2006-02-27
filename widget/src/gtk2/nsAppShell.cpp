@@ -81,13 +81,8 @@ nsAppShell::OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags)
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsAppShell::OnEnterProcessNextEvent(nsIThreadInternal *thread, PRBool mayWait)
+PRBool
+nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
-    PRBool val;
-    while (NS_SUCCEEDED(thread->HasPendingEvents(&val)) && !val) {
-        if (!g_main_context_iteration(NULL, mayWait) && !mayWait)
-            break;
-    }
-    return NS_OK;
+    return g_main_context_iteration(NULL, mayWait);
 }

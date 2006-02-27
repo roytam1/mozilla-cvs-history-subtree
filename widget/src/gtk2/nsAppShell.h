@@ -51,8 +51,9 @@ public:
 
     // nsIThreadObserver overrides:
     NS_IMETHOD OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags);
-    NS_IMETHOD OnEnterProcessNextEvent(nsIThreadInternal *thread,
-                                       PRBool mayWait);
+
+    // nsBaseAppShell overrides:
+    PRBool ProcessNextNativeEvent(PRBool mayWait);
 
 private:
     virtual ~nsAppShell() {}
