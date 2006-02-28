@@ -201,14 +201,8 @@ case "$target" in
     echo -----------------------------------------------------------------------------
     echo Building Windows CE Shunt Library and Tool Chain
     echo -----------------------------------------------------------------------------
-    `$srcdir/build/cygwin-wrapper evc $srcdir/build/wince/shunt/build/shunt.vcw /MAKE ALL > shunt.out <<\EOF`
-    cat shunt.out
-    rm shunt.out
-    $srcdir/build/wince/tools/topsrcdir.h
 
-    `$srcdir/build/cygwin-wrapper evc $srcdir/build/wince/shunt/build/static/static.vcw /MAKE ALL > shunt.out <<\EOF`
-    cat shunt.out
-    rm shunt.out
+    `$srcdir/build/cygwin-wrapper devenv $srcdir/build/wince/shunt/build/vs8/mozce_shunt_static.vcproj /MAKE`
 
     echo -n "#define TOPSRCDIR \"" > $srcdir/build/wince/tools/topsrcdir.h
     `$srcdir/build/cygwin-wrapper echo -n $_topsrcdir >> $srcdir/build/wince/tools/topsrcdir.h`
@@ -371,6 +365,30 @@ fi
 dnl Special win32 checks
 dnl ========================================================
 case "$target" in
+*-wince)
+    WINVER=400
+    ;;
+*)
+    WINVER=500
+    ;;
+esac
+
+MOZ_ARG_WITH_STRING(windows-version,
+[  --with-windows-version=400|500  Minimum Windows version to support
+                                  400: Windows 95; 500: Windows 2000],
+  WINVER=$withval)
+
+case "$WINVER" in
+400|500)
+    ;;
+
+*)
+    AC_MSG_ERROR([Invalid value --with-windows-version, must be 400 or 500]);
+    ;;
+
+esac
+
+case "$target" in
 *-cygwin*|*-mingw*|*-msvc*|*-mks*|*-wince)
     if test "$GCC" != "yes"; then
         # Check to see if we are really running in a msvc environemnt
@@ -420,6 +438,11 @@ case "$target" in
         else
             AC_MSG_ERROR([This version of the MSVC compiler, $CC_VERSION , is unsupported.])
         fi
+
+        _MOZ_RTTI_FLAGS_ON='-GR'
+        _MOZ_RTTI_FLAGS_OFF='-GR-'
+        _MOZ_EXCEPTIONS_FLAGS_ON='-EHsc'
+        _MOZ_EXCEPTIONS_FLAGS_OFF=''
 
         if test -n "$WIN32_REDIST_DIR"; then
             WIN32_REDIST_DIR=`cd "$WIN32_REDIST_DIR" && pwd`
@@ -508,6 +531,9 @@ case "$target" in
             AC_MSG_ERROR([windres version $WINDRES_VERSION or higher is required to build.])
         fi
     fi # !GNU_CC
+
+    AC_DEFINE_UNQUOTED(WINVER,0x$WINVER)
+    AC_DEFINE_UNQUOTED(_WIN32_WINNT,0x$WINVER)
     ;;
 esac
 
@@ -1107,7 +1133,7 @@ case "$OS_TEST" in
     CPU_ARCH=x86
     ;;
 
-powerpc*)
+powerpc* | ppc)
     CPU_ARCH=ppc
     ;;
 
@@ -1634,7 +1660,8 @@ case "$target" in
     XPCOM_FROZEN_LDOPTS='$(LIBXUL_DIST)/lib/xpcom.lib'
     ZIP=zip
     LIBIDL_CFLAGS="-I$MOZ_TOOLS_DIR/include ${GLIB_CFLAGS}"
-    LIBIDL_LIBS="$MOZ_TOOLS_DIR/lib/libidl-0.6.lib $MOZ_TOOLS_DIR/lib/glib-1.2.lib"
+    LIBIDL_LIBS="$MOZ_TOOLS_DIR/lib/libidl-0.6_s.lib $MOZ_TOOLS_DIR/lib/glib-1.2_s.lib"
+    STATIC_LIBIDL=1
 
     AC_DEFINE(HAVE_SNPRINTF)
     AC_DEFINE(_WINDOWS)
@@ -1643,7 +1670,6 @@ case "$target" in
     AC_DEFINE(XP_WIN)
     AC_DEFINE(XP_WIN32)
     AC_DEFINE(HW_THREADS)
-    AC_DEFINE_UNQUOTED(WINVER,0x400)
     AC_DEFINE(STDC_HEADERS)
     AC_DEFINE(NEW_H, <new>)
     AC_DEFINE(WIN32_LEAN_AND_MEAN)
@@ -1735,8 +1761,6 @@ case "$target" in
     AC_DEFINE(XP_WIN)
     AC_DEFINE(XP_WIN32)
     AC_DEFINE(HW_THREADS)
-    AC_DEFINE_UNQUOTED(WINVER,0x500)
-    AC_DEFINE_UNQUOTED(_WIN32_WINNT,0x500)
     AC_DEFINE(STDC_HEADERS)
     AC_DEFINE(NEW_H, <new>)
     AC_DEFINE(WIN32_LEAN_AND_MEAN)
@@ -3876,16 +3900,6 @@ fi
 
 fi # SKIP_LIBRARY_CHECKS
 
-dnl check whether to enable canvas
-dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(canvas,
-[  --enable-canvas          Enable html:canvas feature],
-    MOZ_ENABLE_CANVAS=1,
-    MOZ_ENABLE_CANVAS= )
-if test "$MOZ_ENABLE_CANVAS"; then
-    AC_DEFINE(MOZ_ENABLE_CANVAS)
-fi
-
 dnl check whether to enable glitz
 dnl ========================================================
 MOZ_ARG_ENABLE_BOOL(glitz,
@@ -4176,8 +4190,6 @@ AC_SUBST(GTK_CONFIG)
 AC_SUBST(TK_CFLAGS)
 AC_SUBST(TK_LIBS)
 
-AC_SUBST(MOZ_ENABLE_CANVAS)
-
 AC_SUBST(MOZ_ENABLE_GTK)
 AC_SUBST(MOZ_ENABLE_XLIB)
 AC_SUBST(MOZ_ENABLE_GTK2)
@@ -4230,6 +4242,7 @@ MOZ_ACTIVEX_SCRIPTING_SUPPORT=
 MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
+MOZ_ENABLE_CANVAS=1
 MOZ_ENABLE_LIBXUL=
 MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind spellcheck gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm icon"
@@ -4269,6 +4282,7 @@ MOZ_REFLOW_PERF=
 MOZ_REORDER=
 MOZ_SINGLE_PROFILE=
 MOZ_STATIC_MAIL_BUILD=
+MOZ_SVG=1
 MOZ_SVG_FOREIGNOBJECT=$MOZ_ENABLE_CAIRO_GFX
 MOZ_TIMELINE=
 MOZ_UI_LOCALE=en-US
@@ -4355,6 +4369,7 @@ minimo)
   MOZ_ACTIVEX_SCRIPTING_SUPPORT=
   MOZ_APP_VERSION=`cat $topsrcdir/minimo/config/version.txt`
   MOZ_COMPOSER=
+  MOZ_ENABLE_CANVAS=
   MOZ_ENABLE_POSTSCRIPT=
   MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc spatialnavigation permissions"
   MOZ_IMG_DECODERS_DEFAULT="png gif jpeg"
@@ -4375,6 +4390,7 @@ minimo)
   MOZ_PROFILELOCKING=
   MOZ_PROFILESHARING=
   MOZ_SINGLE_PROFILE=1
+  MOZ_SVG=
   MOZ_UNIVERSALCHARDET=
   MOZ_UPDATER=
   MOZ_USE_NATIVE_UCONV=1
@@ -4405,11 +4421,13 @@ mail)
   MOZ_OJI=
   NECKO_DISK_CACHE=
   NECKO_PROTOCOLS_DEFAULT="http file viewsource res data"
+  MOZ_ENABLE_CANVAS=
   MOZ_IMG_DECODERS_DEFAULT=`echo "$MOZ_IMG_DECODERS_DEFAULT" | sed "s/ xbm//"`
   MOZ_MAIL_NEWS=1
   MOZ_LDAP_XPCOM=1
   MOZ_STATIC_MAIL_BUILD=1
   MOZ_COMPOSER=1
+  MOZ_SVG=
   MOZ_APP_VERSION=$THUNDERBIRD_VERSION
   MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck"
   AC_DEFINE(MOZ_THUNDERBIRD)
@@ -5387,6 +5405,18 @@ if test "$MOZ_MATHML"; then
 fi
 
 dnl ========================================================
+dnl Canvas
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(canvas,
+[  --enable-canvas          Enable html:canvas feature],
+    MOZ_ENABLE_CANVAS=1,
+    MOZ_ENABLE_CANVAS= )
+if test "$MOZ_ENABLE_CANVAS"; then
+    AC_DEFINE(MOZ_ENABLE_CANVAS)
+fi
+AC_SUBST(MOZ_ENABLE_CANVAS)
+
+dnl ========================================================
 dnl SVG
 dnl ========================================================
 MOZ_ARG_ENABLE_BOOL(svg,
@@ -5450,7 +5480,11 @@ if test "$MOZ_SVG_FOREIGNOBJECT"; then
   if test -z "$MOZ_ENABLE_CAIRO_GFX"; then
     AC_MSG_ERROR([<foreignobject> requires cairo gfx])
   else
-    AC_DEFINE(MOZ_SVG_FOREIGNOBJECT)
+    if test "$MOZ_SVG"; then
+      AC_DEFINE(MOZ_SVG_FOREIGNOBJECT)
+    else
+      MOZ_SVG_FOREIGNOBEJCT=
+    fi
   fi
 fi
 
