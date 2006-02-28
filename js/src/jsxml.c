@@ -3588,11 +3588,7 @@ Replace(JSContext *cx, JSXML *xml, jsval id, jsval v);
 static JSBool
 CheckCycle(JSContext *cx, JSXML *xml, JSXML *kid)
 {
-    if (kid->xml_class == JSXML_CLASS_LIST) {
-        JS_ASSERT(kid->xml_kids.length <= 1);
-        if (kid->xml_kids.length != 0)
-            kid = XMLARRAY_MEMBER(&kid->xml_kids, 0, JSXML);
-    }
+    JS_ASSERT(kid->xml_class != JSXML_CLASS_LIST);
 
     do {
         if (xml == kid) {
@@ -3627,8 +3623,6 @@ Insert(JSContext *cx, JSXML *xml, jsval id, jsval v)
         vobj = JSVAL_TO_OBJECT(v);
         if (OBJECT_IS_XML(cx, vobj)) {
             vxml = (JSXML *) JS_GetPrivate(cx, vobj);
-            if (!CheckCycle(cx, xml, vxml))
-                return JS_FALSE;
             if (vxml->xml_class == JSXML_CLASS_LIST)
                 n = vxml->xml_kids.length;
         }
@@ -3643,6 +3637,8 @@ Insert(JSContext *cx, JSXML *xml, jsval id, jsval v)
     if (vxml && vxml->xml_class == JSXML_CLASS_LIST) {
         for (j = 0; j < n; j++) {
             kid = XMLARRAY_MEMBER(&vxml->xml_kids, j, JSXML);
+            if (!CheckCycle(cx, xml, kid))
+                return JS_FALSE;
             kid->parent = xml;
             XMLARRAY_SET_MEMBER(&xml->xml_kids, i + j, kid);
 
