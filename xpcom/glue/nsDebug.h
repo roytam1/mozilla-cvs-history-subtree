@@ -121,7 +121,7 @@ PR_END_EXTERN_C
 #define NS_WARN_IF_FALSE(_expr,_msg)                          \
   PR_BEGIN_MACRO                                              \
     if (!(_expr)) {                                           \
-      NSGlue_Assertion(_msg, #_expr, __FILE__, __LINE__);     \
+      NSGlue_Warning(_msg, __FILE__, __LINE__);               \
     }                                                         \
   PR_END_MACRO
 
