@@ -5330,9 +5330,14 @@ nsCSSFrameConstructor::ConstructTextFrame(nsFrameConstructorState& aState,
 
 #ifdef MOZ_SVG
   nsresult rv;
-  nsCOMPtr<nsISVGTextContainerFrame> svg_parent = do_QueryInterface(aParentFrame);
-  if (svg_parent)
+
+  if (aParentFrame->IsFrameOfType(nsIFrame::eSVG)) {
+    nsCOMPtr<nsISVGTextContainerFrame> svg_parent = do_QueryInterface(aParentFrame);
+    if (!svg_parent) {
+      return NS_OK;
+    }
     rv = NS_NewSVGGlyphFrame(mPresShell, aContent, aParentFrame, &newFrame);
+  }
   else
     rv = NS_NewTextFrame(mPresShell, &newFrame);
 #else
@@ -7729,6 +7734,19 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsFrameConstructorState& aState,
     return ConstructTextFrame(aState, aContent, adjParentFrame, styleContext,
                               *frameItems, pseudoParent);
 
+#ifdef MOZ_SVG
+  // Don't create frames for non-SVG children of SVG elements
+  if (aNameSpaceID != kNameSpaceID_SVG &&
+      aParentFrame &&
+      aParentFrame->IsFrameOfType(nsIFrame::eSVG)
+#ifdef MOZ_SVG_FOREIGNOBJECT
+      && !aParentFrame->IsFrameOfType(nsIFrame::eSVGForeignObject)
+#endif
+      ) {
+    return NS_OK;
+  }
+#endif
+ 
   // Style resolution can normally happen lazily.  However, getting the
   // Visibility struct can cause |SetBidiEnabled| to be called on the
   // pres context, and this needs to happen before we start reflow, so

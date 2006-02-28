@@ -192,6 +192,11 @@ nsSVGGenericContainerFrame::GetType() const
   return nsLayoutAtoms::svgGenericContainerFrame;
 }
 
+PRBool
+nsSVGGenericContainerFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eSVG);
+}
 
 //----------------------------------------------------------------------
 // nsISVGChildFrame methods

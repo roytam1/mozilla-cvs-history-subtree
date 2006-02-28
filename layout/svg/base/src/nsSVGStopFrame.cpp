@@ -68,6 +68,7 @@ class nsSVGStopFrame : public nsSVGStopFrameBase,
    * @see nsLayoutAtoms::svgStopFrame
    */
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -132,6 +133,12 @@ nsIAtom *
 nsSVGStopFrame::GetType() const
 {
   return nsLayoutAtoms::svgStopFrame;
+}
+
+PRBool
+nsSVGStopFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eSVG);
 }
 
 NS_IMETHODIMP
