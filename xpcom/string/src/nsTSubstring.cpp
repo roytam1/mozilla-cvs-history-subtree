@@ -287,7 +287,7 @@ void
 nsTSubstring_CharT::Assign( const char_type* data, size_type length )
   {
       // unfortunately, some callers pass null :-(
-    if (!data || length == 0)
+    if (!data)
       {
         Truncate();
         return;
