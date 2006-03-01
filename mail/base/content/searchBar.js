@@ -307,7 +307,9 @@ function restorePreSearchView()
     gPreQuickSearchView = null;    
   }
   else //create default view type
+  {
     CreateDBView(folder, nsMsgViewType.eShowAllThreads, viewFlags, sortType, sortOrder);
+  }
 
   RerootThreadPane();
    
@@ -555,40 +557,61 @@ function onSearchInputFocus(event)
     gSearchInput.showingSearchCriteria = false;
   }
   
-  if (gIgnoreFocus)
+  if (gIgnoreFocus) // got focus via mouse click, don't need to anything else
     gIgnoreFocus = false;
   else
+  {
     gSearchInput.select();
+    gQuickSearchFocusEl = gSearchInput;   // only important that this be non-null
+  }
 }
 
 function onSearchInputMousedown(event)
 {
+  GetSearchInput();
   if (gSearchInput.hasAttribute("focused")) 
+  {
     gIgnoreClick = true;
+
+    // already focused, don't need to restore focus elsewhere (if the Clear button was clicked)
+    // ##HACK## Need to check 'clearButtonHidden' because the field is blurred when it has
+    // focus and the hidden button is clicked, in which case we want to perform the normal
+    // onBlur function.
+    gQuickSearchFocusEl = gSearchInput.clearButtonHidden ? gSearchInput : null;
+  }
   else 
   {
     gIgnoreFocus = true;
     gIgnoreClick = false;
-    gSearchInput.setSelectionRange(0, 0);
 
-    // save the last focused element so that focus can be restored (if the Close button was clicked)
+    // save the last focused element so that focus can be restored (if the Clear button was clicked)
     gQuickSearchFocusEl = gLastFocusedElement;
   }
+  // (if Clear button was clicked, onClearSearch() is called before onSearchInputClick())
 }
 
 
 function onSearchInputClick(event)
 {
-  if (!gIgnoreClick && gSearchInput.selectionStart == gSearchInput.selectionEnd)
-    gSearchInput.select();
+  if (!gIgnoreClick)
+  {
+    gQuickSearchFocusEl = null; // ##HACK## avoid onSearchInputBlur() side effects
+    gSearchInput.select();      // ## triggers onSearchInputBlur(), but focus returns to field
+  }
+  if (!gQuickSearchFocusEl)
+    gQuickSearchFocusEl = gSearchInput;   // mousedown wasn't on Clear button
 }
 
 function onSearchInputBlur(event)
 { 
-  if (gQuickSearchFocusEl) // ignore the blur if we are in the middle of processing the clear button
+  if (!gQuickSearchFocusEl) // ignore the blur if we are in the middle of processing the clear button
     return;
 
+  gQuickSearchFocusEl = null;
   if (!gSearchInput.value)
+    gSearchInput.showingSearchCriteria = true;
+
+  if (gSearchInput.showingSearchCriteria)
     gSearchInput.setSearchCriteriaText();
 }
 
@@ -621,8 +644,9 @@ function onClearSearch()
   if (!gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
   {
     Search("");
+    gIgnoreClick = true;
     // this needs to be on a timer otherwise we end up messing up the focus while the Search("") is still happening
-    if (gQuickSearchFocusEl)
+    if (gQuickSearchFocusEl) // set in onSearchInputMouseDown
       setTimeout("restoreSearchFocusAfterClear();", 0); 
   }
 }
@@ -630,10 +654,7 @@ function onClearSearch()
 function restoreSearchFocusAfterClear()
 {
   if (gQuickSearchFocusEl)
-  {
     gQuickSearchFocusEl.focus();
-    gQuickSearchFocusEl = null;
-  }
 }
 
 // called from commandglue.js in cases where the view is being changed and QS
@@ -670,7 +691,7 @@ function loadVirtualFolder()
   // as the value for the virtual folder being searched, then ViewChangeByValue
   // fails to change the view because it thinks the view is already correctly loaded.
   // so set gCurrentViewValue back to All. 
-  gCurrentViewValue = 0; 
+  gCurrentViewValue = 0;
   onEnterInSearchBar();
 }
 
