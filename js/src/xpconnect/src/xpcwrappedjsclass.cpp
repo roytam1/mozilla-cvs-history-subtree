@@ -1337,6 +1337,9 @@ pre_call_clean_up:
     // Make sure "this" doesn't get deleted during this call.
     nsCOMPtr<nsIXPCWrappedJSClass> kungFuDeathGrip(this);
 
+    result = JSVAL_NULL;
+    AUTO_MARK_JSVAL(ccx, &result);
+
     if(!readyToDoTheCall)
         goto done;
 
