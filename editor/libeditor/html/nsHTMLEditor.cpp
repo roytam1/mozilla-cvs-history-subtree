@@ -1804,6 +1804,13 @@ nsHTMLEditor::RebuildDocumentFromSource(const nsAString& aSourceString)
       res = LoadHTML(body + aSourceString);
     if (NS_FAILED(res)) return res;
 
+    nsCOMPtr<nsIDOMElement> divElement;
+    res = CreateElementWithDefaults(NS_LITERAL_STRING("div"), getter_AddRefs(divElement));
+    if (NS_FAILED(res)) return res;
+
+    res = CloneAttributes(bodyElement, divElement);
+    if (NS_FAILED(res)) return res;
+
     return BeginningOfDocument();
   }
 
