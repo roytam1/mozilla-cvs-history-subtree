@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -5669,7 +5670,7 @@ nsTypedSelection::Collapse(nsIDOMNode* aParentNode, PRInt32 aOffset)
 
     const char *tagString;
     content->Tag()->GetUTF8String(&tagString);
-    printf ("Sel. Collapse to %p %s %d\n", content, tagString, aOffset);
+    printf ("Sel. Collapse to %p %s %d\n", content.get(), tagString, aOffset);
   }
   else {
     printf ("Sel. Collapse set to null parent.\n");
@@ -6457,7 +6458,7 @@ nsTypedSelection::Extend(nsIDOMNode* aParentNode, PRInt32 aOffset)
 
     const char *tagString;
     content->Tag()->GetUTF8String(&tagString);
-    printf ("Sel. Extend to %p %s %d\n", content, tagString, aOffset);
+    printf ("Sel. Extend to %p %s %d\n", content.get(), tagString, aOffset);
   }
   else {
     printf ("Sel. Extend set to null parent.\n");
