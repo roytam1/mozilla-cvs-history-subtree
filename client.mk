@@ -349,6 +349,10 @@ BOOTSTRAP_macbrowser :=                         \
   mozilla/camino/config/mozconfig               \
   $(NULL)
 
+MODULES_NS_zap :=                               \
+  $(MODULES_NS_toolkit)                         \
+  $(NULL)
+
 MODULES_zap :=                                  \
   $(MODULES_xulrunner)                          \
   mozilla/zap                                   \
@@ -358,7 +362,10 @@ LOCALES_zap :=                                  \
   $(LOCALES_xulrunner)                          \
   $(NULL)
 
-BOOTSTRAP_zap := mozilla/zap/config/mozconfig
+BOOTSTRAP_zap :=                                \
+  $(BOOTSTRAP_toolkit)                          \
+  mozilla/zap/config/mozconfig                  \
+  $(NULL)
 
 
 MODULES_all :=                                  \
