@@ -500,6 +500,8 @@ CHBrowserListener::SetTitle(const PRUnichar * aTitle)
 }
 
 /* [noscript] readonly attribute voidPtr siteWindow; */
+// We return the CHBrowserView here, which isn't a window, but allows callers
+// to tell which tab something is coming from.
 NS_IMETHODIMP 
 CHBrowserListener::GetSiteWindow(void * *aSiteWindow)
 {
@@ -509,12 +511,10 @@ CHBrowserListener::GetSiteWindow(void * *aSiteWindow)
     return NS_ERROR_FAILURE;
   }
 
-  NSWindow* window = [mView getNativeWindow];
-  if (!window) {
+  if (!mView)
     return NS_ERROR_FAILURE;
-  }
 
-  *aSiteWindow = (void*)window;
+  *aSiteWindow = (void*)mView;
 
   return NS_OK;
 }

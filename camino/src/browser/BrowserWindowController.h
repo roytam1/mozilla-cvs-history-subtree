@@ -291,6 +291,9 @@ typedef enum
 
 - (void)closeBrowserWindow:(BrowserWrapper*)inBrowser;
 
+- (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser;
+- (void)didDismissPromptForBrowser:(BrowserWrapper*)inBrowser;
+
 -(void)autosaveWindowFrame;
 -(void)disableAutosave;
 -(void)disableLoadPage;

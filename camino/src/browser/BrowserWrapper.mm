@@ -651,6 +651,26 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [mWindowController closeBrowserWindow:self];
 }
 
+//
+// willShowPrompt
+//
+// Called before a prompt is shown for the contained view
+// 
+- (void)willShowPrompt
+{
+  [[mWindow delegate] willShowPromptForBrowser:self];
+}
+
+//
+// didDismissPrompt
+//
+// Called after a prompt is shown for the contained view
+//
+- (void)didDismissPrompt
+{
+  [[mWindow delegate] didDismissPromptForBrowser:self];
+}
+
 - (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString
 {
   *outTitle = *outHrefString = nil;

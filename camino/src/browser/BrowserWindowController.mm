@@ -350,6 +350,8 @@ static NSArray* sToolbarDefaults = nil;
 -(void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
 - (BOOL)isPageTextFieldFocused;
 
+- (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper;
+
 // create back/forward session history menus on toolbar button
 - (IBAction)backMenu:(id)inSender;
 - (IBAction)forwardMenu:(id)inSender;
@@ -1267,6 +1269,18 @@ static NSArray* sToolbarDefaults = nil;
 
 #pragma mark -
 
+- (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper
+{
+  NSEnumerator* tabsEnum = [[mTabBrowser tabViewItems] objectEnumerator];
+  id curTabItem;
+  while ((curTabItem = [tabsEnum nextObject]))
+  {
+    if ([curTabItem isKindOfClass:[BrowserTabViewItem class]] && ([(BrowserTabViewItem*)curTabItem view] == inWrapper))
+      return curTabItem;
+  }
+  return nil;
+}
+
 - (void)loadingStarted
 {
   [self startThrobber];
@@ -2179,6 +2193,19 @@ static NSArray* sToolbarDefaults = nil;
   if (siteIconImage == nil)
     siteIconImage = [NSImage imageNamed:@"globe_ico"];
 	[mProxyIcon setImage:siteIconImage];
+}
+
+- (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser
+{
+  // bring the tab to the front (for security reasons)
+  BrowserTabViewItem* tabItem = [self tabForBrowser:inBrowser];
+  [mTabBrowser selectTabViewItem:tabItem];
+  // force a display, so that the tab view redraws before the sheet is shown
+  [mTabBrowser display];
+}
+
+- (void)didDismissPromptForBrowser:(BrowserWrapper*)inBrowser
+{
 }
 
 //
