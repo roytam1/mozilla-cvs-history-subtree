@@ -142,7 +142,7 @@ NS_IMETHODIMP nsTestXPCFoo2::Test(PRInt32 p1, PRInt32 p2, PRInt32* retval)
 
     nsCOMPtr<nsITestProxy> proxyObject;
     manager->GetProxyForObject((nsIThread*)p1, NS_GET_IID(nsITestProxy),
-                               this, PROXY_SYNC, (void**)&proxyObject);
+                               this, NS_PROXY_SYNC, (void**)&proxyObject);
     proxyObject->Test3(nsnull, nsnull);
     
     printf("Deleting Proxy Object\n");
@@ -197,9 +197,9 @@ void TestCase_TwoClassesOneInterface(void *arg)
     PR_ASSERT(foo2);
     
     
-    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
     
-    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo2, PROXY_SYNC, (void**)&proxyObject2);
+    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo2, NS_PROXY_SYNC, (void**)&proxyObject2);
 
     
     
@@ -260,7 +260,7 @@ void TestCase_NestedLoop(void *arg)
     PR_ASSERT(foo);
     
     
-    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
     
     if (proxyObject)
     {
@@ -307,7 +307,7 @@ void TestCase_nsISupports(void *arg)
     
     PR_ASSERT(foo);
 
-     manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+     manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
     
     if (proxyObject != nsnull)
     {   
@@ -368,7 +368,7 @@ static void PR_CALLBACK EventLoop( void *arg )
     
     PR_ASSERT(foo);
 
-    manager->GetProxyForObject(gEventThread, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(gEventThread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
 
     PRInt32 a;
     proxyObject->Test(1, 2, &a);

@@ -4424,23 +4424,8 @@ private:
 void
 nsPrintEngine::FirePrintCompletionEvent()
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-
-  if (!thread) 
-  {
-    NS_WARNING("Failed to get current thread");
-    return;
-  }
-
   nsCOMPtr<nsIRunnable> event = new nsPrintCompletionEvent(mDocViewerPrint);
-
-  if (!event) 
-  {
-    NS_WARNING("Out of memory?");
-    return;
-  }
-
-  if (NS_FAILED(thread->Dispatch(event, NS_DISPATCH_NORMAL)))
+  if (NS_FAILED(NS_DispatchToCurrentThread(event)))
     NS_WARNING("failed to dispatch print completion event");
 }
 

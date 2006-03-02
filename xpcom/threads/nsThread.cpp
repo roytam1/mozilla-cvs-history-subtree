@@ -290,24 +290,26 @@ nsThread::PutEvent(nsIRunnable *event, PRUint32 dispatchFlags)
 }
 
 NS_IMETHODIMP
-nsThread::Dispatch(nsIRunnable *runnable, PRUint32 flags)
+nsThread::Dispatch(nsIRunnable *event, PRUint32 flags)
 {
-  LOG(("THRD(%p) Dispatch [%p %x]\n", this, runnable, flags));
+  LOG(("THRD(%p) Dispatch [%p %x]\n", this, event, flags));
 
+  NS_ENSURE_ARG_POINTER(event);
   NS_ENSURE_STATE(mThread);
 
-  if (flags == DISPATCH_NORMAL) {
-    PutEvent(runnable, flags);
-  } else if (flags & DISPATCH_SYNC) {
+  if (flags & DISPATCH_SYNC) {
     nsCOMPtr<nsIThread> thread;
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
     NS_ENSURE_STATE(thread);
 
-    nsRefPtr<nsThreadSyncDispatch> event = new nsThreadSyncDispatch(runnable);
+    nsRefPtr<nsThreadSyncDispatch> event = new nsThreadSyncDispatch(event);
     PutEvent(event, flags);
 
     while (event->IsPending())
       thread->ProcessNextEvent();
+  } else {
+    NS_ASSERTION(flags == NS_DISPATCH_NORMAL, "unexpected dispatch flags");
+    PutEvent(event, flags);
   }
   return NS_OK;
 }

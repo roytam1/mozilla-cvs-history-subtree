@@ -7092,9 +7092,6 @@ struct nsScrollSelectionIntoViewEvent : public nsRunnable {
 nsresult
 nsTypedSelection::PostScrollSelectionIntoViewEvent(SelectionRegion aRegion)
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
   if (mScrollEventPosted) {
     // We've already posted an event, revoke it and
     // place a new one at the end of the queue to make
@@ -7114,10 +7111,7 @@ nsTypedSelection::PostScrollSelectionIntoViewEvent(SelectionRegion aRegion)
 
   nsCOMPtr<nsIRunnable> ev =
       new nsScrollSelectionIntoViewEvent(mWeakSelf, aRegion);
-  if (!ev)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL)))
+  if (NS_FAILED(NS_DispatchToCurrentThread(ev)))
     return NS_ERROR_UNEXPECTED;
 
   mScrollEventPosted = PR_TRUE;

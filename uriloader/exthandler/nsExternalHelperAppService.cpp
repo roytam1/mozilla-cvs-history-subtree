@@ -1094,14 +1094,8 @@ class nsExternalLoadRequest : public nsRunnable {
 
 NS_IMETHODIMP nsExternalHelperAppService::LoadURI(nsIURI * aURL, nsIPrompt * aPrompt)
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
   nsCOMPtr<nsIRunnable> event = new nsExternalLoadRequest(aURL, aPrompt);
-  if (!event)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  return thread->Dispatch(event, NS_DISPATCH_NORMAL);
+  return NS_DispatchToCurrentThread(event);
 }
 
 // helper routines used by LoadURI to check whether we're allowed

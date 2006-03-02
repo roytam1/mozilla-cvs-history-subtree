@@ -78,12 +78,12 @@ TestThreads()
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRunnable> task = new nsRunner(0);
-    if (!task)
+    nsCOMPtr<nsIRunnable> event = new nsRunner(0);
+    if (!event)
         return NS_ERROR_OUT_OF_MEMORY;
 
     nsCOMPtr<nsIThread> runner;
-    rv = NS_NewThread("TestThreads", task, getter_AddRefs(runner));
+    rv = NS_NewThread(getter_AddRefs(runner), event, "TestThreads");
     if (NS_FAILED(rv)) {
         printf("failed to create thread\n");
         return rv;
@@ -155,7 +155,7 @@ static int Stress(int loops, int threads)
         
         for (k = 0; k < threads; k++) {
             nsCOMPtr<nsIThread> t;
-            nsresult rv = NS_NewThread("", new nsStressRunner(k), getter_AddRefs(t));
+            nsresult rv = NS_NewThread(getter_AddRefs(t), new nsStressRunner(k));
             NS_ASSERTION(NS_SUCCEEDED(rv), "can't create thread");
             NS_ADDREF(array[k] = t);
         }

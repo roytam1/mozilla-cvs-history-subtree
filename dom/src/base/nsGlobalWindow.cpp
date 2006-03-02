@@ -4334,21 +4334,11 @@ public:
   NS_IMETHOD Run() {
     if (mWindow)
       mWindow->ReallyCloseWindow();
+    return NS_OK;
   }
-
-  nsresult PostCloseEvent();
 
   nsRefPtr<nsGlobalWindow> mWindow;
 };
-
-nsresult
-nsCloseEvent::PostCloseEvent()
-{
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
-  return thread->Dispatch(this, NS_DISPATCH_NORMAL);
-}
 
 NS_IMETHODIMP
 nsGlobalWindow::Close()
@@ -4486,10 +4476,7 @@ nsGlobalWindow::Close()
   rv = NS_ERROR_FAILURE;
   if (!IsCallerChrome()) {
     nsRefPtr<nsCloseEvent> ev = new nsCloseEvent(this);
-
-    if (ev) {
-      rv = ev->PostCloseEvent();
-    } else rv = NS_ERROR_OUT_OF_MEMORY;
+    rv = NS_DispatchToCurrentThread(ev);
   }
   
   if (NS_FAILED(rv)) {

@@ -158,14 +158,11 @@ PK11PasswordPrompt(PK11SlotInfo* slot, PRBool retry, void* arg) {
   nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
   if (!proxyman) return nsnull;
 
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  NS_ENSURE_TRUE(thread, nsnull);
-
   nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-  proxyman->GetProxyForObject(thread,
+  proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                               NS_GET_IID(nsIInterfaceRequestor),
                               ir,
-                              PROXY_SYNC,
+                              NS_PROXY_SYNC,
                               getter_AddRefs(proxiedCallbacks));
 
   // Get the desired interface
@@ -176,10 +173,10 @@ PK11PasswordPrompt(PK11SlotInfo* slot, PRBool retry, void* arg) {
   }
 
   // Finally, get a proxy for the nsIPrompt
-  proxyman->GetProxyForObject(thread,
+  proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                               NS_GET_IID(nsIPrompt),
                               prompt,
-                              PROXY_SYNC,
+                              NS_PROXY_SYNC,
                               getter_AddRefs(proxyPrompt));
 
 

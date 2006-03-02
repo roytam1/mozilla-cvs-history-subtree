@@ -311,23 +311,13 @@ nsAppStartup::Quit(PRUint32 aMode)
       // no matter what, make sure we send the exit event.  If
       // worst comes to worst, we'll do a leaky shutdown but we WILL
       // shut down. Well, assuming that all *this* stuff works ;-).
-      nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-      if (thread) {
-        nsCOMPtr<nsIRunnable> event = new nsAppExitEvent(this);
-        if (event) {
-          rv = thread->Dispatch(event, NS_DISPATCH_NORMAL);
-          if (NS_SUCCEEDED(rv)) {
-            postedExitEvent = PR_TRUE;
-          }
-          else {
-            NS_WARNING("failed to dispatch nsAppExitEvent");
-          }
-        }
-        else {
-          rv = NS_ERROR_OUT_OF_MEMORY;
-        }
-      } else {
-        rv = NS_ERROR_UNEXPECTED;
+      nsCOMPtr<nsIRunnable> event = new nsAppExitEvent(this);
+      rv = NS_DispatchToCurrentThread(event);
+      if (NS_SUCCEEDED(rv)) {
+        postedExitEvent = PR_TRUE;
+      }
+      else {
+        NS_WARNING("failed to dispatch nsAppExitEvent");
       }
     }
   }

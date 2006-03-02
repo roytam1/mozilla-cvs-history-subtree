@@ -1956,9 +1956,6 @@ CSSLoaderImpl::PostLoadEvent(nsIURI* aURI,
   // observer, since we may need to unblock the parser
   // NS_PRECONDITION(aObserver, "Must have observer");
 
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  NS_ENSURE_STATE(thread);
-
   SheetLoadData *evt =
     new SheetLoadData(this, EmptyString(), // title doesn't matter here
                       aParserToUnblock,
@@ -1983,8 +1980,9 @@ CSSLoaderImpl::PostLoadEvent(nsIURI* aURI,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  nsresult rv = thread->Dispatch(evt, NS_DISPATCH_NORMAL);
+  nsresult rv = NS_DispatchToCurrentThread(evt);
   if (NS_FAILED(rv)) {
+    NS_WARNING("failed to dispatch stylesheet load event");
     DestroyLoadEvent(evt);
   } else {
     // We want to notify the observer for this data.  We didn't want to set

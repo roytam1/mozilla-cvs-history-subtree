@@ -352,7 +352,7 @@ void nsXPITriggerInfo::SendStatus(const PRUnichar* URL, PRInt32 status)
             // JSContext from dying before we handle this event.
             event->ref      = mGlobalWrapper;
 
-            mThread->Dispatch(event, NS_DISPATCH_NORMAL);
+            rv = mThread->Dispatch(event, NS_DISPATCH_NORMAL);
         }
         else
             rv = NS_ERROR_OUT_OF_MEMORY;
@@ -361,6 +361,7 @@ void nsXPITriggerInfo::SendStatus(const PRUnichar* URL, PRInt32 status)
         {
             // couldn't get event queue -- maybe window is gone or
             // some similarly catastrophic occurrance
+            NS_WARNING("failed to dispatch XPITriggerEvent");
         }
     }
 }

@@ -6368,8 +6368,6 @@ ReflowEvent::ReflowEvent(const PresShellWeakRef &aPresShell)
 void
 PresShell::PostReflowEvent()
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-
   if (!mReflowEventPending && !mIsDestroying &&
       !mIsReflowing && mReflowCommands.Count() > 0) {
     if (!mWeakSelf) {
@@ -6378,8 +6376,8 @@ PresShell::PostReflowEvent()
         return;  // OOM
     }
     nsCOMPtr<nsIRunnable> ev = new ReflowEvent(mWeakSelf);
-    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
-      NS_ERROR("failed to dispatch reflow event");
+    if (NS_FAILED(NS_DispatchToCurrentThread(ev))) {
+      NS_WARNING("failed to dispatch reflow event");
     }
     else {
       mReflowEventPending = PR_TRUE;

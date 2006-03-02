@@ -148,29 +148,14 @@ nsImageBoxFrameEvent::Run()
 // is loaded from the netswork the notifications come back
 // asynchronously.
 
-void
+static void
 FireDOMEvent(nsIContent* aContent, PRUint32 aMessage)
 {
   NS_ASSERTION(aMessage == NS_IMAGE_LOAD || aMessage == NS_IMAGE_ERROR,
                "invalid message");
 
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (!thread) {
-    NS_WARNING("Failed to get the current thread");
-
-    return;
-  }
-
   nsCOMPtr<nsIRunnable> event = new nsImageBoxFrameEvent(aContent, aMessage);
-  if (!event) {
-    // Out of memory, but none of our callers care, so just warn and
-    // don't fire the event
-    NS_WARNING("Out of memory?");
-
-    return;
-  }
-
-  if (NS_FAILED(thread->Dispatch(event, NS_DISPATCH_NORMAL)))
+  if (NS_FAILED(NS_DispatchToCurrentThread(event)))
     NS_WARNING("failed to dispatch image event");
 }
 

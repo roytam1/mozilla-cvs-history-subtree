@@ -305,13 +305,8 @@ nsParser::PostContinueEvent()
     // If this flag isn't set, then there shouldn't be a live continue event!
     NS_ASSERTION(!mContinueEvent, "bad");
 
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    NS_ENSURE_STATE(thread);
-
     mContinueEvent = new nsParserContinueEvent(this);
-    NS_ENSURE_TRUE(mContinueEvent, NS_ERROR_OUT_OF_MEMORY);
-
-    if (NS_FAILED(thread->Dispatch(mContinueEvent, NS_DISPATCH_NORMAL))) {
+    if (NS_FAILED(NS_DispatchToCurrentThread(mContinueEvent))) {
         NS_ERROR("failed to dispatch parser continuation event");
         mContinueEvent = nsnull;
     } else {

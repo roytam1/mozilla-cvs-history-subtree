@@ -51,11 +51,11 @@ nsRunnable::Run()
 //-----------------------------------------------------------------------------
 
 NS_COM NS_METHOD
-NS_NewThread(const nsACString &name, nsIRunnable *runnable, nsIThread **result)
+NS_NewThread(nsIThread **result, nsIRunnable *event, const nsACString &name)
 {
   nsresult rv = nsThreadManager::get()->nsThreadManager::NewThread(name, result);
-  if (NS_SUCCEEDED(rv))
-    rv = (*result)->Dispatch(runnable, NS_DISPATCH_NORMAL);
+  if (NS_SUCCEEDED(rv) && event)
+    rv = (*result)->Dispatch(event, NS_DISPATCH_NORMAL);
   return rv;
 }
 
@@ -72,7 +72,7 @@ NS_GetMainThread(nsIThread **result)
 }
 
 NS_COM NS_METHOD
-NS_GetThread(const nsACString &name, nsIThread **result)
+NS_GetThread(nsIThread **result, const nsACString &name)
 {
   return nsThreadManager::get()->nsThreadManager::GetThread(name, result);
 }
@@ -83,4 +83,49 @@ NS_IsMainThread()
   PRBool result = PR_FALSE;
   nsThreadManager::get()->nsThreadManager::GetIsMainThread(&result);
   return result;
+}
+
+NS_COM NS_METHOD
+NS_DispatchToCurrentThread(nsIRunnable *event)
+{
+  nsCOMPtr<nsIThread> thread;
+  nsresult rv = nsThreadManager::get()->
+      nsThreadManager::GetCurrentThread(getter_AddRefs(thread));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return thread->Dispatch(event, NS_DISPATCH_NORMAL);
+}
+
+NS_COM NS_METHOD
+NS_DispatchToMainThread(nsIRunnable *event, PRUint32 dispatchFlags)
+{
+  nsCOMPtr<nsIThread> thread;
+  nsresult rv = nsThreadManager::get()->
+      nsThreadManager::GetMainThread(getter_AddRefs(thread));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return thread->Dispatch(event, dispatchFlags);
+}
+
+NS_COM NS_METHOD
+NS_ProcessPendingEvents(nsIThread *thread, PRIntervalTime timeout)
+{
+  PRIntervalTime start = PR_IntervalNow();
+
+  nsCOMPtr<nsIThread> current;
+  if (!thread) {
+    current = do_GetCurrentThread();
+    thread = current.get();
+  }
+
+  nsresult rv;
+  PRBool val;
+  while (NS_SUCCEEDED(thread->HasPendingEvents(&val)) && val) {
+    rv = thread->ProcessNextEvent();
+    if (NS_FAILED(rv))
+      break;
+    if (PR_IntervalNow() - start > timeout)
+      break;
+  }
+  return rv;
 }

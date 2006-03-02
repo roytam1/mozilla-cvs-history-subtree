@@ -111,7 +111,7 @@ nsresult TimerThread::Init()
 
     if (NS_SUCCEEDED(rv)) {
       // We hold on to mThread to keep the thread alive.
-      rv = NS_NewThread("xpcom.timer", this, getter_AddRefs(mThread));
+      rv = NS_NewThread(getter_AddRefs(mThread), this, "xpcom.timer");
       if (NS_FAILED(rv)) {
         mThread = nsnull;
       }

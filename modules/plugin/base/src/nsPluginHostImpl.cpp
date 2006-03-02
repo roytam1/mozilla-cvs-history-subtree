@@ -977,12 +977,9 @@ public:
 // unload plugin asynchronously if possible, otherwise just unload now
 nsresult PostPluginUnloadEvent(PRLibrary* aLibrary)
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (thread) {
-    nsCOMPtr<nsIRunnable> ev = new nsPluginUnloadEvent(aLibrary);
-    if (ev && NS_SUCCEEDED(thread->Dispatch(ev, NS_DISPATCH_NORMAL)))
-      return NS_OK;
-  }
+  nsCOMPtr<nsIRunnable> ev = new nsPluginUnloadEvent(aLibrary);
+  if (ev && NS_SUCCEEDED(NS_DispatchToCurrentThread(ev)))
+    return NS_OK;
 
   // failure case
   NS_TRY_SAFE_CALL_VOID(PR_UnloadLibrary(aLibrary), nsnull, nsnull);
@@ -2711,12 +2708,9 @@ nsresult nsPluginHostImpl::ReloadPlugins(PRBool reloadPages)
       instsToReload &&
       NS_SUCCEEDED(instsToReload->Count(&c)) &&
       c > 0) {
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    if (thread) {
-      nsCOMPtr<nsIRunnable> ev = new nsPluginDocReframeEvent(instsToReload);
-      if (ev)
-        thread->Dispatch(ev, NS_DISPATCH_NORMAL);
-    }
+    nsCOMPtr<nsIRunnable> ev = new nsPluginDocReframeEvent(instsToReload);
+    if (ev)
+      NS_DispatchToCurrentThread(ev);
   }
 
   PLUGIN_LOG(PLUGIN_LOG_NORMAL,

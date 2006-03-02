@@ -62,6 +62,7 @@
 #include "nsReadableUtils.h"
 #include "nsHashSets.h"
 #include "nsCRT.h"
+#include "nsAutoPtr.h"
 #include "nsPrintfCString.h"
 #include "nsNSSShutDown.h"
 #include "nsNSSCertHelper.h"
@@ -263,14 +264,11 @@ nsNSSSocketInfo::SetNotificationCallbacks(nsIInterfaceRequestor* aCallbacks)
   if (!proxyman) 
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  NS_ENSURE_STATE(thread);
-
   nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-  proxyman->GetProxyForObject(thread,
+  proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                               NS_GET_IID(nsIInterfaceRequestor),
                               NS_STATIC_CAST(nsIInterfaceRequestor*,aCallbacks),
-                              PROXY_SYNC,
+                              NS_PROXY_SYNC,
                               getter_AddRefs(proxiedCallbacks));
 
   mCallbacks = proxiedCallbacks;
@@ -447,14 +445,11 @@ displayAlert(nsAFlatString &formattedString, nsNSSSocketInfo *infoObject)
      if (!proxyman) 
        return NS_ERROR_FAILURE;
 
-     nsCOMPtr<nsIThread> thread = do_GetMainThread();
-     NS_ENSURE_STATE(thread);
- 
      nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-     proxyman->GetProxyForObject(thread,
+     proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                                  NS_GET_IID(nsIInterfaceRequestor),
                                  NS_STATIC_CAST(nsIInterfaceRequestor*,infoObject),
-                                 PROXY_SYNC,
+                                 NS_PROXY_SYNC,
                                  getter_AddRefs(proxiedCallbacks));
 
      nsCOMPtr<nsIPrompt> prompt (do_GetInterface(proxiedCallbacks));
@@ -464,10 +459,10 @@ displayAlert(nsAFlatString &formattedString, nsNSSSocketInfo *infoObject)
 
      nsCOMPtr<nsIPrompt> proxyPrompt;
      // Finally, get a proxy for the nsIPrompt
-     proxyman->GetProxyForObject(thread,
+     proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                                  NS_GET_IID(nsIPrompt),
                                  prompt,
-                                 PROXY_SYNC,
+                                 NS_PROXY_SYNC,
                                  getter_AddRefs(proxyPrompt));
      proxyPrompt->Alert(nsnull, formattedString.get());
      return NS_OK;
@@ -1275,11 +1270,10 @@ nsContinueDespiteCertError(nsNSSSocketInfo  *infoObject,
   if (callbacks) {
     nsCOMPtr<nsIBadCertListener> handler = do_GetInterface(callbacks);
     if (handler) {
-      nsCOMPtr<nsIThread> thread = do_GetMainThread();
-      NS_GetProxyForObject(thread,
+      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                            NS_GET_IID(nsIBadCertListener),
                            handler,
-                           PROXY_SYNC,
+                           NS_PROXY_SYNC,
                            (void**)&badCertHandler);
     }
   }

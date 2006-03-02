@@ -5277,20 +5277,13 @@ private:
 void
 nsDocument::PostUnblockOnloadEvent()
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (!thread) {
-    return;
-  }
-  
   nsCOMPtr<nsIRunnable> evt = new nsUnblockOnloadEvent(this);
-  if (!evt) {
-    return;
-  }
-
-  nsresult rv = thread->Dispatch(evt, NS_DISPATCH_NORMAL);
+  nsresult rv = NS_DispatchToCurrentThread(evt);
   if (NS_SUCCEEDED(rv)) {
     // Stabilize block count so we don't post more events while this one is up
     ++mOnloadBlockCount;
+  } else {
+    NS_WARNING("failed to dispatch nsUnblockOnloadEvent");
   }
 }
 

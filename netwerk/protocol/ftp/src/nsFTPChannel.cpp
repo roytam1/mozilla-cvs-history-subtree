@@ -359,11 +359,10 @@ nsFTPChannel::GetFTPEventSink(nsCOMPtr<nsIFTPEventSink> &aResult)
         nsCOMPtr<nsIFTPEventSink> ftpSink;
         GetCallback(ftpSink);
         if (ftpSink) {
-            nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-            NS_GetProxyForObject(thread,
+            NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
                                  NS_GET_IID(nsIFTPEventSink),
                                  ftpSink,
-                                 PROXY_ASYNC | PROXY_ALWAYS,
+                                 NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
                                  getter_AddRefs(mFTPEventSink));
         }
     }
@@ -379,11 +378,10 @@ nsFTPChannel::InitProgressSink()
     nsCOMPtr<nsIProgressEventSink> progressSink;
     NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup, progressSink);
     if (progressSink) {
-        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-        NS_GetProxyForObject(thread,
+        NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
                              NS_GET_IID(nsIProgressEventSink),
                              progressSink,
-                             PROXY_ASYNC | PROXY_ALWAYS,
+                             NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
                              getter_AddRefs(mProgressSink));
     }
 }

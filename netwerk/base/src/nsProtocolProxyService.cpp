@@ -126,18 +126,12 @@ public:
         if (mDispatched)  // Only need to dispatch once
             return NS_OK;
 
-        nsCOMPtr<nsIThread> thread;
-        nsresult rv = NS_GetCurrentThread(getter_AddRefs(thread));
+        nsresult rv = NS_DispatchToCurrentThread(this);
         if (NS_FAILED(rv))
-            NS_WARNING("could not get current event queue");
+            NS_WARNING("unable to dispatch callback event");
         else {
-            rv = thread->Dispatch(this, NS_DISPATCH_NORMAL);
-            if (NS_FAILED(rv))
-                NS_WARNING("unable to dispatch callback event");
-            else {
-                mDispatched = PR_TRUE;
-                return NS_OK;
-            }
+            mDispatched = PR_TRUE;
+            return NS_OK;
         }
 
         mCallback = nsnull;  // break possible reference cycle

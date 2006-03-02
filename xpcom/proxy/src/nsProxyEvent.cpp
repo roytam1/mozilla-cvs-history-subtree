@@ -102,7 +102,7 @@ public:
         if (proxyObject == nsnull)
             return NS_OK;
  
-        if (proxyObject->GetProxyType() & PROXY_ASYNC)
+        if (proxyObject->GetProxyType() & NS_PROXY_ASYNC)
         {        
             delete mInfo;
         }
@@ -191,7 +191,7 @@ nsProxyObjectCallInfo::nsProxyObjectCallInfo(nsProxyObject* owner,
     mOwner            = owner;
     
     RefCountInInterfacePointers(PR_TRUE);
-    if (mOwner->GetProxyType() & PROXY_ASYNC)
+    if (mOwner->GetProxyType() & NS_PROXY_ASYNC)
         CopyStrings(PR_TRUE);
 }
 
@@ -199,7 +199,7 @@ nsProxyObjectCallInfo::nsProxyObjectCallInfo(nsProxyObject* owner,
 nsProxyObjectCallInfo::~nsProxyObjectCallInfo()
 {
     RefCountInInterfacePointers(PR_FALSE);
-    if (mOwner->GetProxyType() & PROXY_ASYNC)
+    if (mOwner->GetProxyType() & NS_PROXY_ASYNC)
         CopyStrings(PR_FALSE);
 
     mOwner = nsnull;
@@ -465,7 +465,7 @@ nsProxyObject::convertMiniVariantToVariant(nsXPTMethodInfo *methodInfo,
     for (int i = 0; i < paramCount; i++)
     {
         const nsXPTParamInfo& paramInfo = methodInfo->GetParam(i);
-        if ((mProxyType & PROXY_ASYNC) && paramInfo.IsDipper())
+        if ((mProxyType & NS_PROXY_ASYNC) && paramInfo.IsDipper())
         {
             NS_WARNING("Async proxying of out parameters is not supported"); 
             return NS_ERROR_PROXY_INVALID_OUT_PARAMETER;
@@ -504,7 +504,7 @@ nsProxyObject::Post( PRUint32 methodIndex,
     // (methodIndex == 0), or it is a sync proxy and this code is running on the same thread
     // as the destination dispatch target.
     if ( (methodIndex == 0) ||
-         (mProxyType & PROXY_SYNC && 
+         (mProxyType & NS_PROXY_SYNC && 
           NS_SUCCEEDED(mTarget->IsOnCurrentThread(&callDirectly)) &&
           callDirectly))
     {
@@ -543,7 +543,7 @@ nsProxyObject::Post( PRUint32 methodIndex,
 
     event->SetInfo(proxyInfo);
 
-    if (mProxyType & PROXY_SYNC)
+    if (mProxyType & NS_PROXY_SYNC)
     {
         rv = PostAndWait(proxyInfo);
         
@@ -553,7 +553,7 @@ nsProxyObject::Post( PRUint32 methodIndex,
         return rv;
     }
     
-    if (mProxyType & PROXY_ASYNC)
+    if (mProxyType & NS_PROXY_ASYNC)
     {
         mTarget->Dispatch(event, NS_DISPATCH_NORMAL);
         return NS_OK;

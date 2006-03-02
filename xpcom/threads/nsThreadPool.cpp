@@ -138,14 +138,14 @@ nsThreadPool::ShutdownThread(nsIThread *thread)
 
   NS_ASSERTION(!NS_IsMainThread(), "wrong thread");
 
-  nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
-
   nsCOMPtr<nsIThread> doomed;
-  NS_GetProxyForObject(mainThread, NS_GET_IID(nsIThread), thread,
-                       PROXY_ASYNC, getter_AddRefs(doomed));
-  NS_ASSERTION(doomed, "failed to construct proxy");
-  if (doomed)
+  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD, NS_GET_IID(nsIThread), thread,
+                       NS_PROXY_ASYNC, getter_AddRefs(doomed));
+  if (doomed) {
     doomed->Shutdown();
+  } else {
+    NS_WARNING("failed to construct proxy to main thread");
+  }
 }
 
 NS_IMETHODIMP
@@ -221,9 +221,7 @@ nsThreadPool::Dispatch(nsIRunnable *event, PRUint32 flags)
 
   NS_ENSURE_STATE(!mShutdown);
 
-  if (flags == DISPATCH_NORMAL) {
-    PutEvent(event);
-  } else if (flags & DISPATCH_SYNC) {
+  if (flags & DISPATCH_SYNC) {
     nsCOMPtr<nsIThread> thread;
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
     NS_ENSURE_STATE(thread);
@@ -233,6 +231,9 @@ nsThreadPool::Dispatch(nsIRunnable *event, PRUint32 flags)
 
     while (wrapper->IsPending())
       thread->ProcessNextEvent();
+  } else {
+    NS_ASSERTION(flags == NS_DISPATCH_NORMAL, "unexpected dispatch flags");
+    PutEvent(event);
   }
   return NS_OK;
 }

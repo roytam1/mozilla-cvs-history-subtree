@@ -852,11 +852,10 @@ nsPKCS12Blob::handleError(int myerr)
   if (wwatch) {
     wwatch->GetNewPrompter(0, getter_AddRefs(errPrompt));
     if (errPrompt) {
-      nsCOMPtr<nsIThread> thread = do_GetMainThread();
       nsCOMPtr<nsIPrompt> proxyPrompt;
-      proxyman->GetProxyForObject(thread, NS_GET_IID(nsIPrompt),
-                                  errPrompt, PROXY_SYNC, 
-                                  getter_AddRefs(proxyPrompt));
+      proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                  NS_GET_IID(nsIPrompt), errPrompt,
+                                  NS_PROXY_SYNC, getter_AddRefs(proxyPrompt));
       if (!proxyPrompt) return PR_FALSE;
     } else {
       return PR_FALSE;

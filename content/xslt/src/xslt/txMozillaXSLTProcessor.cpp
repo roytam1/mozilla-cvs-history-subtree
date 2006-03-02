@@ -351,13 +351,11 @@ txMozillaXSLTProcessor::DoTransform()
     NS_ENSURE_TRUE(mSource, NS_ERROR_UNEXPECTED);
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_UNEXPECTED);
     NS_ASSERTION(mObserver, "no observer");
+    NS_ASSERTION(NS_IsMainThread(), "should only be on main thread");
 
     nsresult rv;
     nsCOMPtr<nsIDocument> document = do_QueryInterface(mSource, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIThread> thread = do_GetMainThread();
-    NS_ENSURE_STATE(thread);
 
     nsCOMPtr<nsIRunnable> event = new nsTransformBlockerEvent(this);
     if (!event) {
@@ -366,7 +364,7 @@ txMozillaXSLTProcessor::DoTransform()
 
     document->BlockOnload();
 
-    rv = thread->Dispatch(event, NS_DISPATCH_NORMAL);
+    rv = NS_DispatchToCurrentThread(event);
     if (NS_FAILED(rv)) {
         // XXX Maybe we should just display the source document in this case?
         //     Also, set up context information, see bug 204655.

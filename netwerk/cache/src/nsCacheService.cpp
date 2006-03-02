@@ -622,11 +622,10 @@ nsCacheService::EvictEntriesForClient(const char *          clientID,
         // We use an async proxy, since this it's not important whether this
         // notification happens before or after the actual eviction.
 
-        nsCOMPtr<nsIThread> thread = do_GetMainThread();
-
         nsCOMPtr<nsIObserverService> obsProxy;
-        NS_GetProxyForObject(thread, NS_GET_IID(nsIObserverService),
-                             obsSvc, PROXY_ASYNC, getter_AddRefs(obsProxy));
+        NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                             NS_GET_IID(nsIObserverService), obsSvc,
+                             NS_PROXY_ASYNC, getter_AddRefs(obsProxy));
 
         if (obsProxy) {
             obsProxy->NotifyObservers(this,
@@ -848,7 +847,7 @@ nsCacheService::NotifyListener(nsCacheRequest *          request,
     rv = NS_GetProxyForObject(request->mThread,
                               NS_GET_IID(nsICacheListener),
                               request->mListener,
-                              PROXY_ASYNC|PROXY_ALWAYS,
+                              NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
                               getter_AddRefs(listenerProxy));
     if (NS_FAILED(rv)) return rv;
 

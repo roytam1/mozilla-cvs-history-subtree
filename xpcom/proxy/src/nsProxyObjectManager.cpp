@@ -50,6 +50,7 @@
 #include "nsProxyEvent.h"
 #include "nsIProxyObjectManager.h"
 #include "nsProxyEventPrivate.h"
+#include "nsThreadUtils.h"
 
 #include "nsIProxyCreateInstance.h"
 
@@ -59,50 +60,6 @@
 
 #include "nsIThread.h"
 
-
-#if 0
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-
-/***************************************************************************/
-/* nsProxyCreateInstance                                                   */
-/* This private class will allow us to create Instances on another thread  */
-/***************************************************************************/
-class nsProxyCreateInstance : public nsIProxyCreateInstance
-{
-    NS_DECL_ISUPPORTS
-    NS_IMETHOD CreateInstanceByIID(const nsIID & cid, nsISupports *aOuter, const nsIID & iid, void * *result);
-    NS_IMETHOD CreateInstanceByContractID(const char *aContractID, nsISupports *aOuter, const nsIID & iid, void * *result);
-
-    nsProxyCreateInstance()
-    {
-        NS_GetComponentManager(getter_AddRefs(mCompMgr));
-        NS_ASSERTION(mCompMgr, "no component manager");
-    }
-
-private:
-
-    nsCOMPtr<nsIComponentManager> mCompMgr;
-};
-
-NS_IMPL_ISUPPORTS1(nsProxyCreateInstance, nsIProxyCreateInstance)
-
-NS_IMETHODIMP nsProxyCreateInstance::CreateInstanceByIID(const nsIID & cid, nsISupports *aOuter, const nsIID & iid, void * *result)
-{
-    return mCompMgr->CreateInstance(cid, 
-                                    aOuter,
-                                    iid,
-                                    result);
-}
-
-
-NS_IMETHODIMP nsProxyCreateInstance::CreateInstanceByContractID(const char *aContractID, nsISupports *aOuter, const nsIID & iid, void * *result)
-{
-    return mCompMgr->CreateInstanceByContractID(aContractID, 
-                                                aOuter,
-                                                iid,
-                                                result);
-}
-#endif
 
 /////////////////////////////////////////////////////////////////////////
 // nsProxyObjectManager
@@ -180,10 +137,16 @@ nsProxyObjectManager::GetProxyForObject(nsIEventTarget* aTarget,
 
     *aProxyObject = nsnull;
 
+    nsCOMPtr<nsIThread> currentThread;
+    if (!aTarget) {
+      currentThread = do_GetCurrentThread();
+      aTarget = currentThread.get();
+    }
+
     // check to see if the target is on our thread.  If so, just return the
     // real object.
     
-    if (!(proxyType & PROXY_ASYNC) && !(proxyType & PROXY_ALWAYS))
+    if (!(proxyType & NS_PROXY_ASYNC) && !(proxyType & NS_PROXY_ALWAYS))
     {
         PRBool result;
         aTarget->IsOnCurrentThread(&result);
@@ -218,6 +181,12 @@ NS_GetProxyForObject(nsIEventTarget *target,
     static NS_DEFINE_CID(proxyObjMgrCID, NS_PROXYEVENT_MANAGER_CID);
 
     nsresult rv;
+
+    nsCOMPtr<nsIThread> mainThread;
+    if (target == NS_PROXY_TO_MAIN_THREAD) {
+      mainThread = do_GetMainThread();
+      target = mainThread.get();
+    }
 
     // get the proxy object manager
     //

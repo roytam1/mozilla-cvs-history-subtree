@@ -1607,8 +1607,6 @@ nsComboboxControlFrame::RedisplayText(PRInt32 aIndex)
     // Don't call ActuallyDisplayText(PR_TRUE) directly here since that
     // could cause recursive frame construction. See bug 283117 and the comment in
     // HandleRedisplayTextEvent() below.
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    NS_ENSURE_STATE(thread);
 
     nsCOMPtr<nsIRunnable> event = new RedisplayTextEvent(mWeakSelf);
     NS_ENSURE_TRUE(event, NS_ERROR_OUT_OF_MEMORY);
@@ -1626,7 +1624,7 @@ nsComboboxControlFrame::RedisplayText(PRInt32 aIndex)
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    rv = thread->Dispatch(event, NS_DISPATCH_NORMAL);
+    rv = NS_DispatchToCurrentThread(event);
     if (NS_SUCCEEDED(rv))
       mRedisplayTextEventPosted = PR_TRUE;
   }

@@ -50,6 +50,7 @@
 #include "nsProxyInfo.h"
 #include "nsNetCID.h"
 #include "nsAutoLock.h"
+#include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
 #include "netCore.h"
 #include "nsInt64.h"

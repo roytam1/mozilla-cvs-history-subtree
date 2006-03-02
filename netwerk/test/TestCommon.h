@@ -37,6 +37,7 @@
 #ifndef TestCommon_h__
 #define TestCommon_h__
 
+#include <stdlib.h>
 #include "nsThreadUtils.h"
 
 inline int test_common_init(int *argc, char ***argv)
@@ -73,9 +74,8 @@ static void QuitPumpingEvents()
 {
   // Dispatch a task that toggles gKeepPumpingEvents so that we flush all
   // of the pending tasks before exiting from PumpEvents.
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  nsCOMPtr<nsIRunnable> task = new nsQuitPumpingEvent();
-  thread->Dispatch(task, NS_DISPATCH_NORMAL);
+  nsCOMPtr<nsIRunnable> event = new nsQuitPumpingEvent();
+  NS_DispatchToMainThread(event);
 }
 
 #endif

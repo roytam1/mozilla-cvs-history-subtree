@@ -770,10 +770,8 @@ nsImageLoadingContent::FireEvent(const nsAString& aEventType)
     return NS_OK;
   }                                                                             
 
-  // Use the UI thread event queue (though we should not be getting called from
-  // off the UI thread in any case....)
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  NS_ENSURE_STATE(thread);
+  // We should not be getting called from off the UI thread...
+  NS_ASSERTION(NS_IsMainThread(), "should be on the main thread");
 
   nsIPresShell *shell = document->GetShellAt(0);
   NS_ENSURE_TRUE(shell, NS_ERROR_FAILURE);
@@ -791,5 +789,5 @@ nsImageLoadingContent::FireEvent(const nsAString& aEventType)
   // want to block now, even if posting will fail.
   document->BlockOnload();
   
-  return thread->Dispatch(evt, NS_DISPATCH_NORMAL);
+  return NS_DispatchToCurrentThread(evt);
 }

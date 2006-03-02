@@ -52,13 +52,9 @@
 class nsProxyObjectCallInfo;
 class nsIRunnable;
 
-#define PROXY_SYNC    0x0001  // acts just like a function call.
-#define PROXY_ASYNC   0x0002  // fire and forget.  This will return immediately and you will lose all return information.
-#define PROXY_ALWAYS  0x0004   // ignore check to see if the eventQ is on the same thread as the caller, and alway return a proxied object.
-
 //#define AUTOPROXIFICATION
 
-// WARNING about PROXY_ASYNC:  
+// WARNING about NS_PROXY_ASYNC:  
 //
 // If the calling thread goes away, any function which accesses the calling stack 
 // will blow up.
@@ -164,7 +160,7 @@ private:
     PRInt32          mCompleted;                 /* is true when the method has been called. */
        
     nsCOMPtr<nsIEventTarget> mCallersTarget;     /* this is the dispatch target that we must post a message back to 
-                                                    when we are done invoking the method (only PROXY_SYNC). */
+                                                    when we are done invoking the method (only NS_PROXY_SYNC). */
 
     nsRefPtr<nsProxyObject>   mOwner;            /* this is the strong referenced nsProxyObject */
    

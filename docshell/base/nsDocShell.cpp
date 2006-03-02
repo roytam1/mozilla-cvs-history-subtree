@@ -5156,18 +5156,13 @@ nsDocShell::RestorePresentation(nsISHEntry *aSHEntry, PRBool *aRestoring)
     // to the event loop.  This mimics the way it is called by nsIChannel
     // implementations.
 
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    NS_ENSURE_TRUE(thread, NS_ERROR_UNEXPECTED);
-
     if (!mWeakSelf) {
         mWeakSelf = this;
         NS_ENSURE_TRUE(mWeakSelf, NS_ERROR_OUT_OF_MEMORY);
     }
 
     nsCOMPtr<nsIRunnable> evt = new RestorePresentationEvent(mWeakSelf);
-    NS_ENSURE_TRUE(evt, NS_ERROR_OUT_OF_MEMORY);
-
-    nsresult rv = thread->Dispatch(evt, NS_DISPATCH_NORMAL);
+    nsresult rv = NS_DispatchToCurrentThread(evt);
     if (NS_SUCCEEDED(rv)) {
         // The rest of the restore processing will happen on our PLEvent
         // callback.

@@ -13522,11 +13522,10 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
 
   mPendingRestyles.Put(aContent, existingData);
     
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
   if (!mRestyleEventPending) {
     nsCOMPtr<nsIRunnable> ev = new RestyleEvent(mWeakSelf);
-    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
-      NS_NOTREACHED("failed to dispatch restyle event");
+    if (NS_FAILED(NS_DispatchToCurrentThread(ev))) {
+      NS_WARNING("failed to dispatch restyle event");
       // XXXbz and what?
     } else {
       mRestyleEventPending = PR_TRUE;

@@ -1406,10 +1406,11 @@ nsPIXPIProxy* nsInstall::GetUIThreadProxy()
                  do_GetService(kProxyObjectManagerCID, &rv);
         if (NS_SUCCEEDED(rv))
         {
-            nsCOMPtr<nsIThread> thread = do_GetMainThread();
             nsCOMPtr<nsPIXPIProxy> tmp(do_QueryInterface(new nsXPIProxy()));
-            rv = pmgr->GetProxyForObject( thread, NS_GET_IID(nsPIXPIProxy),
-                    tmp, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(mUIThreadProxy) );
+            rv = pmgr->GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
+                                          NS_GET_IID(nsPIXPIProxy), tmp,
+                                          NS_PROXY_SYNC | NS_PROXY_ALWAYS,
+                                          getter_AddRefs(mUIThreadProxy) );
         }
     }
 

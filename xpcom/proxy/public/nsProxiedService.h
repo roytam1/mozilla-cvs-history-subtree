@@ -59,7 +59,7 @@
 //      nsIMyService pIProxiedObject = NULL;
 //      rv = pIProxyObjectManager->GetProxyForObject(pIDispatchTarget, 
 //                                                   NS_GET_IID(nsIMyService), 
-//                                                   pIMyService, PROXY_SYNC,
+//                                                   pIMyService, NS_PROXY_SYNC,
 //                                                   (void**)&pIProxiedObject);
 //      pIProxiedObject->DoIt(...);  // Executed on same thread as pIProxyQueue
 //      ...
@@ -121,9 +121,9 @@ private:
     void InitProxy(nsISupports *aObj, const nsIID &aIID,
                    nsIEventTarget* aTarget, PRBool always, nsresult*rv)
     {
-        PRInt32 proxyType = PROXY_SYNC;
+        PRInt32 proxyType = NS_PROXY_SYNC;
         if (always)
-            proxyType |= PROXY_ALWAYS;
+            proxyType |= NS_PROXY_ALWAYS;
 
         *rv = NS_GetProxyForObject(aTarget, 
                                    aIID, 

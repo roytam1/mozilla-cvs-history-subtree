@@ -382,12 +382,11 @@ nsServerSocket::AsyncListen(nsIServerSocketListener *aListener)
   NS_ENSURE_TRUE(mFD, NS_ERROR_NOT_INITIALIZED);
   NS_ENSURE_TRUE(mListener == nsnull, NS_ERROR_IN_PROGRESS);
   {
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
     nsAutoLock lock(mLock);
-    nsresult rv = NS_GetProxyForObject(thread,
+    nsresult rv = NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
                                        NS_GET_IID(nsIServerSocketListener),
                                        aListener,
-                                       PROXY_ASYNC | PROXY_ALWAYS,
+                                       NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
                                        getter_AddRefs(mListener));
     if (NS_FAILED(rv))
       return rv;

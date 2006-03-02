@@ -44,7 +44,6 @@
 #include "nsNSSComponent.h"
 #include "nsNSSCallbacks.h"
 #include "nsNSSIOLayer.h"
-#include "nsNSSEvent.h"
 
 #include "nsNetUtil.h"
 #include "nsAppDirectoryServiceDefs.h"
@@ -78,6 +77,7 @@
 #include "nsIDOMSmartCardEvent.h"
 #include "nsIDOMCrypto.h"
 #include "nsThreadUtils.h"
+#include "nsAutoPtr.h"
 #include "nsCRT.h"
 #include "nsCRLInfo.h"
 
@@ -334,7 +334,7 @@ nsNSSComponent::PostEvent(const nsAString &eventType,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  return nsNSSEventPostToUIThread(runnable);
+  return NS_DispatchToMainThread(runnable);
 }
 
 
@@ -898,7 +898,7 @@ nsNSSComponent::PostCRLImportEvent(const nsCSubstring &urlString,
     return NS_ERROR_OUT_OF_MEMORY;
 
   //Get a handle to the ui thread
-  return nsNSSEventPostToUIThread(event);
+  return NS_DispatchToMainThread(event);
 }
 
 nsresult
@@ -1950,10 +1950,11 @@ void nsNSSComponent::ShowAlert(AlertIdentifier ai)
         PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get proxy manager\n"));
       }
       else {
-        nsCOMPtr<nsIThread> thread = do_GetMainThread();
         nsCOMPtr<nsIPrompt> proxyPrompt;
-        proxyman->GetProxyForObject(thread, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+        proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                    NS_GET_IID(nsIPrompt),
+                                    prompter, NS_PROXY_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) {
           PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get proxy for nsIPrompt\n"));
         }
@@ -2202,10 +2203,11 @@ NS_IMETHODIMP PipUIContext::GetInterface(const nsIID & uuid, void * *result)
     if (wwatch) {
       wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
       if (prompter) {
-        nsCOMPtr<nsIThread> thread = do_GetMainThread();
         nsCOMPtr<nsIPrompt> proxyPrompt;
-        proxyman->GetProxyForObject(thread, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+        proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                    NS_GET_IID(nsIPrompt),
+                                    prompter, NS_PROXY_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);
@@ -2232,9 +2234,8 @@ getNSSDialogs(void **_result, REFNSIID aIID, const char *contract)
   if (NS_FAILED(rv))
     return rv;
  
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  rv = proxyman->GetProxyForObject(thread,
-                                   aIID, svc, PROXY_SYNC,
+  rv = proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                   aIID, svc, NS_PROXY_SYNC,
                                    _result);
   return rv;
 }

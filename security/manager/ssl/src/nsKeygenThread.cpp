@@ -154,12 +154,11 @@ nsresult nsKeygenThread::StartKeyGeneration(nsIObserver* aObserver)
   if (!proxyman)
     return NS_OK;
 
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
   nsCOMPtr<nsIObserver> obs;
-  proxyman->GetProxyForObject( thread,
+  proxyman->GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
                                NS_GET_IID(nsIObserver),
                                aObserver,
-                               PROXY_SYNC | PROXY_ALWAYS,
+                               NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                                getter_AddRefs(obs));
 
   PR_Lock(mutex);

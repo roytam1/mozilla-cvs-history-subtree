@@ -71,8 +71,5 @@ NS_IMETHODIMP nsPLDOMEvent::Run()
 
 nsresult nsPLDOMEvent::PostDOMEvent()
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
-  return thread->Dispatch(this, NS_DISPATCH_NORMAL);
+  return NS_DispatchToCurrentThread(this);
 }

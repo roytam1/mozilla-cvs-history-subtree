@@ -68,6 +68,9 @@ interface nsIProxyObjectManager : nsISupports
      */
     const long FORCE_PROXY_CREATION = 0x0004;
 
+    /**
+     * If target is null, then the current thread is used as the target.
+     */
     void getProxyForObject(in nsIEventTarget target, 
                            in nsIIDRef iid, 
                            in nsISupports object, 
@@ -77,8 +80,6 @@ interface nsIProxyObjectManager : nsISupports
 
 
 %{C++
-#include "nsProxyEvent.h"
-
 #define NS_XPCOMPROXY_CONTRACTID "@mozilla.org/xpcomproxy;1"
 #define NS_XPCOMPROXY_CLASSNAME "XPCom Proxy"
 
@@ -87,7 +88,24 @@ interface nsIProxyObjectManager : nsISupports
   0xb059, 										 \
   0x11d2,						                 \
  {0x91, 0x5e, 0xc1, 0x2b, 0x69, 0x6c, 0x93, 0x33}\
-} 
+}
+
+// convenience macros
+#define NS_PROXY_SYNC    nsIProxyObjectManager::INVOKE_SYNC
+#define NS_PROXY_ASYNC   nsIProxyObjectManager::INVOKE_ASYNC
+#define NS_PROXY_ALWAYS  nsIProxyObjectManager::FORCE_PROXY_CREATION
+
+/**
+ * Pass this value as the target to NS_GetProxyForObject to specify the current
+ * thread as the target for the proxy object.
+ */
+#define NS_PROXY_TO_CURRENT_THREAD  ((nsIEventTarget *) 0)
+
+/**
+ * Pass this value as the target to NS_GetProxyForObject to specify the main
+ * thread as the target for the proxy object.
+ */
+#define NS_PROXY_TO_MAIN_THREAD  ((nsIEventTarget *) 1)
 
 /**
  * Helper function for code that already has a link-time dependency on

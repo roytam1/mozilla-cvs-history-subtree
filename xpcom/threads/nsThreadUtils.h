@@ -42,85 +42,175 @@
 #include "nsIRunnable.h"
 #include "nsIThread.h"
 #include "nsCOMPtr.h"
-#include "nsStringGlue.h"
-
-class nsIThread;
-
-//-----------------------------------------------------------------------------
-// This class is designed to be subclassed.
+#include "prinrval.h"
 
 #ifdef MOZILLA_INTERNAL_API
-#undef  IMETHOD_VISIBILITY
-#define IMETHOD_VISIBILITY NS_VISIBILITY_DEFAULT
+# include "nsString.h"
+# define NS_THREADUTILS_METHOD_(x) extern NS_COM NS_METHOD_(x)
+#else
+# include "nsXPCOMCID.h"
+# include "nsStringAPI.h"
+# include "nsIThreadManager.h"
+# include "nsServiceManagerUtils.h"
+# define NS_THREADUTILS_METHOD_(x) inline NS_METHOD_(x)
+#endif
+#define NS_THREADUTILS_METHOD NS_THREADUTILS_METHOD_(nsresult)
 
-class NS_COM nsRunnable : public nsIRunnable
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIRUNNABLE
-
-  nsRunnable() {
-  }
-
-protected:
-  virtual ~nsRunnable() {
-  }
-};
-
-#undef  IMETHOD_VISIBILITY
-#define IMETHOD_VISIBILITY NS_VISIBILITY_HIDDEN
+class nsIThread;
 
 //-----------------------------------------------------------------------------
 // These methods are alternatives to the methods on nsIThreadManager, provided
 // for convenience.
 
 /**
- * Create a new thread, and optionally provide an initial task for the thread.
- * @param name
- *        The name of the thread (may be empty).
- * @param runnable
- *        The initial task to run on this thread.
+ * Create a new thread, and optionally provide an initial event for the thread.
+ *
  * @param result
- *        The resulting thread.
+ *        The resulting nsIThread object.
+ * @param event
+ *        The initial event to run on this thread.  This parameter can be null.
+ * @param name
+ *        The name of the thread, which must be unique, or the empty string to
+ *        create an anonymous thread.
  */
-extern NS_COM NS_METHOD
-NS_NewThread(const nsACString &name, nsIRunnable *runnable, nsIThread **result);
+NS_THREADUTILS_METHOD
+NS_NewThread(nsIThread **result, nsIRunnable *event = nsnull,
+             const nsACString &name = EmptyCString());
 
 /**
- * Equivalent to nsIThreadManager::GetCurrentThread.
+ * Get a reference to the current thread.
+ *
+ * @param result
+ *        The resulting nsIThread object.
  */
-extern NS_COM NS_METHOD
+NS_THREADUTILS_METHOD
 NS_GetCurrentThread(nsIThread **result);
 
 /**
- * Equivalent to nsIThreadManager::GetMainThread.
+ * Get a reference to the main thread.
+ *
+ * @param result
+ *        The resulting nsIThread object.
  */
-extern NS_COM NS_METHOD
+NS_THREADUTILS_METHOD
 NS_GetMainThread(nsIThread **result);
 
 /**
- * Equivalent to nsIThreadManager::GetThread.
+ * Get a reference to the thread with the given name.
+ *
+ * @param result
+ *        The resulting nsIThread object.
  */
-extern NS_COM NS_METHOD
-NS_GetThread(const nsACString &name, nsIThread **result);
+NS_THREADUTILS_METHOD
+NS_GetThread(nsIThread **result, const nsACString &name);
 
 /**
- * Equivalent to nsIThreadManager::GetIsMainThread.
+ * Test to see if the current thread is the main thread.
+ *
+ * @returns PR_TRUE if the current thread is the main thread, and PR_FALSE
+ * otherwise.
  */
-extern NS_COM PRBool
+NS_THREADUTILS_METHOD_(PRBool)
 NS_IsMainThread();
 
-#else   // MOZILLA_INTERNAL_API
-#include "nsXPCOMCID.h"
-#include "nsIThreadManager.h"
-#include "nsServiceManagerUtils.h"
+/**
+ * Dispatch the given event to the current thread.
+ *
+ * @param event
+ *        The event to dispatch.
+ */
+NS_THREADUTILS_METHOD
+NS_DispatchToCurrentThread(nsIRunnable *event);
 
 /**
- * XPCOM glue compatible versions
+ * Dispatch the given event to the main thread.
+ *
+ * @param event
+ *        The event to dispatch.
+ * @param dispatchFlags
+ *        The flags to pass to the main thread's dispatch method.
  */
+NS_THREADUTILS_METHOD
+NS_DispatchToMainThread(nsIRunnable *event,
+                        PRUint32 dispatchFlags = NS_DISPATCH_NORMAL);
+
+/**
+ * Process all pending events for the given thread before returning.  This
+ * method simply calls ProcessNextEvent on the thread while HasPendingEvents
+ * continues to return true and the time spent in NS_ProcessPendingEvents
+ * does not exceed the given timeout value.
+ *
+ * @param thread
+ *        The thread object for which to process pending events.  If null,
+ *        then events will be processed for the current thread.
+ * @param timeout
+ *        The maximum number of milliseconds to spend processing pending
+ *        events.  Events are not pre-empted to honor this timeout.  Rather,
+ *        the timeout value is simply used to determine whether or not to
+ *        process another event.  Pass PR_INTERVAL_NO_TIMEOUT to specify no
+ *        timeout.
+ */
+NS_THREADUTILS_METHOD
+NS_ProcessPendingEvents(nsIThread *thread,
+                        PRIntervalTime timeout = PR_INTERVAL_NO_TIMEOUT);
+
+//-----------------------------------------------------------------------------
+
+/**
+ * Variant on NS_NewThread.
+ */
+inline NS_METHOD
+NS_NewThread(nsIThread **result, nsIRunnable *event, const char *name) {
+  NS_ASSERTION(name, "thread name must not be null");
+  return NS_NewThread(result, event, nsDependentCString(name));
+}
+
+/**
+ * Variant on NS_GetThread.
+ */
+inline NS_METHOD
+NS_GetThread(nsIThread **result, const char *name) {
+  NS_ASSERTION(name, "thread name must not be null");
+  return NS_GetThread(result, nsDependentCString(name));
+}
+
+//-----------------------------------------------------------------------------
+// Helpers that work with nsCOMPtr:
+
+inline already_AddRefed<nsIThread>
+do_GetCurrentThread() {
+  nsIThread *thread = nsnull;
+  NS_GetCurrentThread(&thread);
+  return already_AddRefed<nsIThread>(thread);
+}
+
+inline already_AddRefed<nsIThread>
+do_GetMainThread() {
+  nsIThread *thread = nsnull;
+  NS_GetMainThread(&thread);
+  return already_AddRefed<nsIThread>(thread);
+}
+
+inline already_AddRefed<nsIThread>
+do_GetThread(const nsACString &name) {
+  nsIThread *thread = nsnull;
+  NS_GetThread(&thread, name);
+  return already_AddRefed<nsIThread>(thread);
+}
+
+inline already_AddRefed<nsIThread>
+do_GetThread(const char *name) {
+  nsIThread *thread = nsnull;
+  NS_GetThread(&thread, name);
+  return already_AddRefed<nsIThread>(thread);
+}
+
+//-----------------------------------------------------------------------------
+
+#ifndef MOZILLA_INTERNAL_API
 
 inline NS_METHOD
-NS_NewThread(const nsACString &name, nsIRunnable *runnable, nsIThread **result) {
+NS_NewThread(nsIThread **result, nsIRunnable *event, const nsACString &name) {
   nsresult rv;
   nsCOMPtr<nsIThreadManager> mgr =
       do_GetService(NS_THREADMANAGER_CONTRACTID, &rv);
@@ -129,8 +219,8 @@ NS_NewThread(const nsACString &name, nsIRunnable *runnable, nsIThread **result) 
   rv = mgr->NewThread(name, result);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (runnable)
-    rv = (*result)->Dispatch(runnable, NS_DISPATCH_NORMAL);
+  if (event)
+    rv = (*result)->Dispatch(event, NS_DISPATCH_NORMAL);
   return rv;
 }
 
@@ -155,7 +245,7 @@ NS_GetMainThread(nsIThread **result) {
 }
 
 inline NS_METHOD
-NS_GetThread(const nsACString &name, nsIThread **result) {
+NS_GetThread(nsIThread **result, const nsACString &name) {
   nsresult rv;
   nsCOMPtr<nsIThreadManager> mgr =
       do_GetService(NS_THREADMANAGER_CONTRACTID, &rv);
@@ -174,69 +264,74 @@ NS_IsMainThread() {
   return result;
 }
 
-
-#endif  // MOZILLA_INTERNAL_API
-
-/**
- * Variant on NS_NewThread.
- */
 inline NS_METHOD
-NS_NewThread(const char *name, nsIRunnable *runnable, nsIThread **result) {
-  return NS_NewThread(nsDependentCString(name), runnable, result);
-}
-
-/**
- * Variant on NS_GetThread.
- */
-inline NS_METHOD
-NS_GetThread(const char *name, nsIThread **result) {
-  return NS_GetThread(nsDependentCString(name), result);
-}
-
-/**
- * Helpers that work with nsCOMPtr.
- */
-
-inline already_AddRefed<nsIThread>
-do_GetCurrentThread() {
-  nsIThread *thread = nsnull;
-  NS_GetCurrentThread(&thread);
-  return already_AddRefed<nsIThread>(thread);
-}
-
-inline already_AddRefed<nsIThread>
-do_GetMainThread() {
-  nsIThread *thread = nsnull;
-  NS_GetMainThread(&thread);
-  return already_AddRefed<nsIThread>(thread);
-}
-
-inline already_AddRefed<nsIThread>
-do_GetThread(const nsACString &name) {
-  nsIThread *thread = nsnull;
-  NS_GetThread(name, &thread);
-  return already_AddRefed<nsIThread>(thread);
-}
-
-inline already_AddRefed<nsIThread>
-do_GetThread(const char *name) {
-  nsIThread *thread = nsnull;
-  NS_GetThread(name, &thread);
-  return already_AddRefed<nsIThread>(thread);
-}
-
-/**
- * Run all pending tasks for a given thread before returning.
- */
-inline NS_METHOD
-NS_ProcessPendingEvents(nsIThread *thread)
+NS_DispatchToCurrentThread(nsIRunnable *event)
 {
+  nsCOMPtr<nsIThread> thread;
+  nsresult rv = NS_GetCurrentThread(getter_AddRefs(thread));
+  if (NS_FAILED(rv))
+    return rv;
+  return thread->Dispatch(event, NS_DISPATCH_NORMAL);
+}
+
+inline NS_METHOD
+NS_DispatchToMainThread(nsIRunnable *event, PRUint32 dispatchFlags)
+{
+  nsCOMPtr<nsIThread> thread;
+  nsresult rv = NS_GetMainThread(getter_AddRefs(thread));
+  if (NS_FAILED(rv))
+    return rv;
+  return thread->Dispatch(event, dispatchFlags);
+}
+
+inline NS_METHOD
+NS_ProcessPendingEvents(nsIThread *thread, PRIntervalTime timeout)
+{
+  PRIntervalTime start = PR_IntervalNow();
+
+  nsCOMPtr<nsIThread> current;
+  if (!thread) {
+    current = do_GetCurrentThread();
+    thread = current.get();
+  }
+
   nsresult rv;
   PRBool val;
   while (NS_SUCCEEDED(thread->HasPendingEvents(&val)) && val) {
     rv = thread->ProcessNextEvent();
+    if (NS_FAILED(rv))
+      break;
+    if (PR_IntervalNow() - start > timeout)
+      break;
   }
   return rv;
 }
+
+#else  // MOZILLA_INTERNAL_API
+
+//-----------------------------------------------------------------------------
+// This class is designed to be subclassed.
+
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_DEFAULT
+
+class NS_COM nsRunnable : public nsIRunnable
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIRUNNABLE
+
+  nsRunnable() {
+  }
+
+protected:
+  virtual ~nsRunnable() {
+  }
+};
+
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_HIDDEN
+
+#endif  // MOZILLA_INTERNAL_API
 
 #endif  // nsThreadUtils_h__

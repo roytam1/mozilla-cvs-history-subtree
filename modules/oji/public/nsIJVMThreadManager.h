@@ -127,4 +127,10 @@ public:
 
 NS_DEFINE_STATIC_IID_ACCESSOR(nsIJVMThreadManager, NS_IJVMTHREADMANAGER_IID)
 
+#ifndef NS_OJI_IMPL
+// For backwards compatibility:
+typedef nsIJVMThreadManager nsIThreadManager;
+#define NS_ITHREADMANAGER_IID NS_IJVMTHREADMANAGER_IID
+#endif
+
 #endif /* nsIJVMThreadManager_h___ */

@@ -364,7 +364,7 @@ nsSocketTransportService::Init()
                 "running socket transport thread without a pollable event");
     }
 
-    nsresult rv = NS_NewThread("net.socket", this, &mThread);
+    nsresult rv = NS_NewThread(&mThread, this, "net.socket");
     if (NS_FAILED(rv)) return rv;
 
     mInitialized = PR_TRUE;

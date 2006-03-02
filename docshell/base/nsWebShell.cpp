@@ -621,15 +621,10 @@ nsWebShell::OnLinkClick(nsIContent* aContent,
                         nsIInputStream* aPostDataStream,
                         nsIInputStream* aHeadersDataStream)
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
   nsCOMPtr<nsIRunnable> ev =
       new OnLinkClickEvent(this, aContent, aVerb, aURI, aTargetSpec,
                            aPostDataStream, aHeadersDataStream);
-  NS_ENSURE_TRUE(ev, NS_ERROR_OUT_OF_MEMORY);
-
-  return thread->Dispatch(ev, NS_DISPATCH_NORMAL);
+  return NS_DispatchToCurrentThread(ev);
 }
 
 NS_IMETHODIMP

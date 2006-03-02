@@ -309,27 +309,14 @@ nsresult
 nsConsoleService::GetProxyForListener(nsIConsoleListener* aListener,
                                       nsIConsoleListener** aProxy)
 {
-    nsresult rv;
-    *aProxy = nsnull;
-
-    nsCOMPtr<nsIProxyObjectManager> proxyManager =
-        (do_GetService(NS_XPCOMPROXY_CONTRACTID));
-
-    if (proxyManager == nsnull)
-        return NS_ERROR_NOT_AVAILABLE;
-
     /*
      * NOTE this will fail if the calling thread doesn't have an eventQ.
      *
      * Would it be better to catch that case and leave the listener unproxied?
      */
-
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-
-    rv = proxyManager->GetProxyForObject(thread,
-                                         NS_GET_IID(nsIConsoleListener),
-                                         aListener,
-                                         PROXY_ASYNC | PROXY_ALWAYS,
-                                         (void**) aProxy);
-    return rv;
+    return NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
+                                NS_GET_IID(nsIConsoleListener),
+                                aListener,
+                                NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
+                                (void**) aProxy);
 }

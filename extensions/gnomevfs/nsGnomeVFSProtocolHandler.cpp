@@ -306,10 +306,6 @@ AuthCallback(gconstpointer in,
   // Need to proxy this callback over to the main thread.  Synchronous dispatch
   // is required in order to provide data to the GnomeVFS callback.
 
-  nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
-  if (!mainThread)
-    return;
-
   nsRefPtr<nsGnomeVFSAuthCallbackEvent> ev = new nsGnomeVFSAuthCallbackEvent();
   if (!ev)
     return;  // OOM
@@ -320,7 +316,7 @@ AuthCallback(gconstpointer in,
   ev->out_size = out_size;
   ev->callback_data = callback_data;
 
-  mainThread->Dispatch(ev, NS_DISPATCH_SYNC);
+  NS_DispatchToMainThread(ev, NS_DISPATCH_SYNC);
 }
 
 //-----------------------------------------------------------------------------
@@ -631,9 +627,6 @@ nsGnomeVFSInputStream::SetContentTypeOfChannel(const char *contentType)
   // released asynchronously as well.  We trust the ordering of the main
   // thread's event queue to protect us against memory corruption.
 
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  NS_ENSURE_STATE(thread);
-
   nsresult rv;
   nsCOMPtr<nsIRunnable> ev =
       new nsGnomeVFSSetContentTypeEvent(mChannel, contentType);
@@ -643,7 +636,7 @@ nsGnomeVFSInputStream::SetContentTypeOfChannel(const char *contentType)
   }
   else
   {
-    rv = thread->Dispatch(ev, NS_DISPATCH_NORMAL);
+    rv = NS_DispatchToMainThread(ev);
   }
   return rv;
 }

@@ -69,6 +69,7 @@
 #include "nsIWebBrowserChrome.h"
 #include "nsIWindowWatcher.h"
 #include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
 #include "nsThreadUtils.h"
@@ -108,7 +109,6 @@
 
 /* Define Class IDs */
 static NS_DEFINE_CID(kPrefServiceCID,           NS_PREF_CID);
-static NS_DEFINE_CID(kProxyObjectManagerCID,    NS_PROXYEVENT_MANAGER_CID);
 
 #ifdef DEBUG                                                           
 static int APP_DEBUG = 0; // Set to 1 in debugger to turn on debugging.
@@ -129,7 +129,6 @@ const char *kIgnoreOverrideMilestone = "ignore";
 //*****************************************************************************
 
 #ifdef ENABLE_PAGE_CYCLER
-#include "nsIProxyObjectManager.h"
 #include "nsITimer.h"
 
 static void TimesUp(nsITimer *aTimer, void *aClosure);
@@ -230,14 +229,11 @@ public:
       nsCOMPtr<nsIAppStartup> appStartup = 
                do_GetService(NS_APPSTARTUP_CONTRACTID, &rv);
       if(NS_FAILED(rv)) return rv;
-      nsCOMPtr<nsIProxyObjectManager> pIProxyObjectManager = 
-               do_GetService(kProxyObjectManagerCID, &rv);
-      if(NS_FAILED(rv)) return rv;
-      nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
       nsCOMPtr<nsIAppStartup> appStartupProxy;
-      rv = pIProxyObjectManager->GetProxyForObject(thread, NS_GET_IID(nsIAppStartup),
-                                                   appStartup, PROXY_ASYNC | PROXY_ALWAYS,
-                                                   getter_AddRefs(appStartupProxy));
+      rv = NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
+                                NS_GET_IID(nsIAppStartup), appStartup,
+                                NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
+                                getter_AddRefs(appStartupProxy));
 
       (void)appStartupProxy->Quit(nsIAppStartup::eAttemptQuit);
       return NS_ERROR_FAILURE;
@@ -276,14 +272,9 @@ public:
         // otherwise we'll run the risk of confusing the docshell
         // (which notifies observers before propagating the
         // DocumentEndLoad up to parent docshells).
-        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-        rv = NS_ERROR_FAILURE;
-
-        if (thread) {
-          nsCOMPtr<nsIRunnable> ev = new PageCyclerEvent(this);
-          if (ev)
-            rv = thread->Dispatch(ev, NS_DISPATCH_NORMAL);
-        }
+        nsCOMPtr<nsIRunnable> ev = new PageCyclerEvent(this);
+        if (ev)
+          rv = NS_DispatchToCurrentThread(ev);
 
         if (NS_FAILED(rv)) {
           printf("######### PageCycler couldn't asynchronously load: %s\n", NS_ConvertUTF16toUTF8(mLastRequest).get());

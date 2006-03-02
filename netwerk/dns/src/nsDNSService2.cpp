@@ -403,7 +403,7 @@ nsDNSService::AsyncResolve(const nsACString  &hostname,
         rv = NS_GetProxyForObject(target,
                                   NS_GET_IID(nsIDNSListener),
                                   listener,
-                                  PROXY_ASYNC | PROXY_ALWAYS,
+                                  NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
                                   getter_AddRefs(listenerProxy));
         if (NS_FAILED(rv)) return rv;
         listener = listenerProxy;

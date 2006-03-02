@@ -114,8 +114,6 @@ protected:
     nsCOMPtr<nsISupports>       mOwner;
     nsresult                    mStatus;
 
-    nsresult PostLoadEvent();
-
 #ifdef PR_LOGGING
     static PRLogModuleInfo* gLog;
 #endif
@@ -223,7 +221,7 @@ nsCachedChromeChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
     // Queue an event to ourselves to let the stack unwind before
     // calling OnStartRequest(). This allows embedding to occur
     // before we fire OnStopRequest().
-    rv = PostLoadEvent();
+    rv = NS_DispatchToCurrentThread(this);
     if (NS_FAILED(rv))
         return rv;
 
@@ -345,15 +343,6 @@ nsCachedChromeChannel::SetContentLength(PRInt32 aContentLength)
 {
     NS_NOTREACHED("nsCachedChromeChannel::SetContentLength");
     return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-nsresult
-nsCachedChromeChannel::PostLoadEvent()
-{
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    NS_ENSURE_STATE(thread);
-
-    return thread->Dispatch(this, NS_DISPATCH_NORMAL);
 }
 
 NS_IMETHODIMP

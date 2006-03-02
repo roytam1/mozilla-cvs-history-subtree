@@ -711,18 +711,10 @@ nsSHEntry::DocumentMutated()
 
   // Release the reference to the contentviewer asynchronously so that the
   // document doesn't get nuked mid-mutation.
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (!thread) {
-    return;
-  }
 
   nsCOMPtr<nsIRunnable> evt =
       new DestroyViewerEvent(mContentViewer, mDocument);
-  if (!evt) {
-    return;
-  }
-
-  nsresult rv = thread->Dispatch(evt, NS_DISPATCH_NORMAL);
+  nsresult rv = NS_DispatchToCurrentThread(evt);
   if (NS_FAILED(rv)) {
     NS_WARNING("failed to dispatch DestroyViewerEvent");
   }

@@ -1881,9 +1881,6 @@ nsGfxScrollFrameInner::FireScrollEvent()
 void
 nsGfxScrollFrameInner::PostScrollEvent()
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ASSERTION(thread, "no thread object for the current thread");
-
   if (mScrollEventPending)
     return;
 
@@ -1894,11 +1891,8 @@ nsGfxScrollFrameInner::PostScrollEvent()
   }
 
   nsCOMPtr<nsIRunnable> ev = new nsGfxScrollEvent(mWeakSelf);
-  if (!ev)
-    return;  // out of memory
-
-  if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
-    NS_NOTREACHED("failed to dispatch scroll event");
+  if (NS_FAILED(NS_DispatchToCurrentThread(ev))) {
+    NS_WARNING("failed to dispatch scroll event");
   } else {
     mScrollEventPending = PR_TRUE;
   }

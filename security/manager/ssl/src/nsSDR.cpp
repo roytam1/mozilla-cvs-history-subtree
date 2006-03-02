@@ -103,10 +103,11 @@ NS_IMETHODIMP nsSDRContext::GetInterface(const nsIID & uuid, void * *result)
     if (wwatch) {
       wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
       if (prompter) {
-        nsCOMPtr<nsIThread> thread = do_GetMainThread();
         nsCOMPtr<nsIPrompt> proxyPrompt;
-        proxyman->GetProxyForObject(thread, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+        proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                    NS_GET_IID(nsIPrompt),
+                                    prompter, NS_PROXY_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);

@@ -162,7 +162,8 @@ public:
 NS_IMETHODIMP
 nsPluginNotFoundEvent::Run()
 {
-  LOG(("OBJLC []: Firing plugin not found event for content %p\n", mContent));
+  LOG(("OBJLC []: Firing plugin not found event for content %p\n",
+       mContent.get()));
   nsContentUtils::DispatchTrustedEvent(mContent->GetDocument(), mContent,
                                        NS_LITERAL_STRING("PluginNotFound"),
                                        PR_TRUE, PR_TRUE);
@@ -576,11 +577,6 @@ nsObjectLoadingContent::HasNewFrame(nsIObjectFrame* aFrame)
       return NS_OK;
     }
 
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    if (!thread) {
-      return NS_ERROR_UNEXPECTED;
-    }
-
     mPendingInstantiateEvent = new nsAsyncInstantiateEvent(this, aFrame,
                                                            mContentType, mURI);
     if (!mPendingInstantiateEvent) {
@@ -588,7 +584,7 @@ nsObjectLoadingContent::HasNewFrame(nsIObjectFrame* aFrame)
     }
 
     LOG(("                 dispatching event\n"));
-    nsresult rv = thread->Dispatch(mPendingInstantiateEvent, NS_DISPATCH_NORMAL);
+    nsresult rv = NS_DispatchToCurrentThread(mPendingInstantiateEvent);
     if (NS_FAILED(rv)) {
       NS_NOTREACHED("failed to dispatch nsAsyncInstantiateEvent");
       mPendingInstantiateEvent = nsnull;  // break cycle
@@ -1153,21 +1149,13 @@ nsObjectLoadingContent::NotifyStateChanged(ObjectType aOldType,
 /* static */ void
 nsObjectLoadingContent::FirePluginNotFound(nsIContent* thisContent)
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (!thread) {
-    return;
-  }
-
-  nsCOMPtr<nsIRunnable> ev = new nsPluginNotFoundEvent(thisContent);
-  if (!ev) {
-    return;
-  }
-
   LOG(("OBJLC []: Dispatching PluginNotFound event for content %p\n",
        thisContent));
-  nsresult rv = thread->Dispatch(ev, NS_DISPATCH_NORMAL);
+
+  nsCOMPtr<nsIRunnable> ev = new nsPluginNotFoundEvent(thisContent);
+  nsresult rv = NS_DispatchToCurrentThread(ev);
   if (NS_FAILED(rv)) {
-    NS_NOTREACHED("failed to dispatch PluginNotFound event");
+    NS_WARNING("failed to dispatch nsPluginNotFoundEvent");
   }
 }
 
@@ -1180,8 +1168,8 @@ nsObjectLoadingContent::GetTypeOfContent(const nsCString& aMIMEType)
     return eType_Image;
   }
 
-  PRBool isSVG = aMIMEType.LowerCaseEqualsLiteral("image/svg+xml");
 #ifdef MOZ_SVG
+  PRBool isSVG = aMIMEType.LowerCaseEqualsLiteral("image/svg+xml");
   PRBool supportedSVG = isSVG && (caps & eSupportSVG);
 #else
   PRBool supportedSVG = PR_FALSE;

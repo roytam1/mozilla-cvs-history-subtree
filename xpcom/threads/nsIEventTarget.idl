@@ -51,6 +51,8 @@ interface nsIEventTarget : nsISupports
    * NOTE: Calling dispatch with DISPATCH_SYNC may have the side-effect of
    * processing other events on the current thread while waiting for the given
    * event to be processed.  This method is thread-safe and re-entrant.
+   * 
+   * @throws NS_ERROR_INVALID_ARG if event is null.
    */
   void dispatch(in nsIRunnable event, in unsigned long flags);
   const unsigned long DISPATCH_NORMAL = 0;

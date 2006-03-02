@@ -238,11 +238,8 @@ nsMemoryImpl::FlushMemory(const PRUnichar* aReason, PRBool aImmediate)
         rv = RunFlushers(aReason);
     }
     else {
-        nsCOMPtr<nsIThread> thread = do_GetMainThread();
-        if (thread) {
-            sFlushEvent.mReason = aReason;
-            rv = thread->Dispatch(&sFlushEvent, NS_DISPATCH_NORMAL);
-        }
+        sFlushEvent.mReason = aReason;
+        rv = NS_DispatchToMainThread(&sFlushEvent, NS_DISPATCH_NORMAL);
     }
 
     return rv;

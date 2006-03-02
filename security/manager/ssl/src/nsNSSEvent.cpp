@@ -45,6 +45,5 @@
 nsresult
 nsNSSEventPostToUIThread(nsIRunnable *event)
 {
-  nsCOMPtr<nsIThread> uiThread = do_GetMainThread();
-  return uiThread->Dispatch(event, NS_DISPATCH_NORMAL);
+  return NS_DispatchToMainThread(event);
 }

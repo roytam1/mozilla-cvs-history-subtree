@@ -44,7 +44,6 @@
 #include "nsIDOMPkcs11.h"
 #include "nsIRunnable.h"
 #include "nsString.h"
-#include "nsNSSEvent.h"
 #include "jsapi.h"
 #include "nsIPrincipal.h"
 

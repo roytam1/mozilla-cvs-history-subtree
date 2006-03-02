@@ -545,13 +545,11 @@ nsCategoryManager::NotifyObservers( const char *aTopic,
   if (!observerService)
     return;
 
-  nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
-
   nsCOMPtr<nsIObserverService> obsProxy;
-  NS_GetProxyForObject(mainThread,
+  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                        NS_GET_IID(nsIObserverService),
                        observerService,
-                       PROXY_ASYNC,
+                       NS_PROXY_ASYNC,
                        getter_AddRefs(obsProxy));
   if (!obsProxy)
     return;

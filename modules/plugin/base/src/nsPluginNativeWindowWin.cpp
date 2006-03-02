@@ -169,13 +169,10 @@ static PRBool ProcessFlashMessageDelayed(nsPluginNativeWindowWin * aWin,
     return PR_FALSE; // no need to delay
 
   // do stuff
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (thread) {
-    nsCOMPtr<nsIRunnable> pwe = aWin->GetPluginWindowEvent(hWnd, msg, wParam, lParam);
-    if (pwe) {
-      thread->Dispatch(pwe, NS_DISPATCH_NORMAL);
-      return PR_TRUE;  
-    }
+  nsCOMPtr<nsIRunnable> pwe = aWin->GetPluginWindowEvent(hWnd, msg, wParam, lParam);
+  if (pwe) {
+    NS_DispatchToCurrentThread(pwe);
+    return PR_TRUE;  
   }
   return PR_FALSE;
 }
@@ -367,13 +364,10 @@ static LRESULT CALLBACK PluginWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
     // code will pop any popup state pushed by this plugin on
     // destruction.
 
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    if (thread) {
-      nsCOMPtr<nsIRunnable> event =
-          new nsDelayedPopupsEnabledEvent(instInternal);
-      if (event) {
-        thread->Dispatch(event, NS_DISPATCH_NORMAL);
-      }
+    nsCOMPtr<nsIRunnable> event =
+        new nsDelayedPopupsEnabledEvent(instInternal);
+    if (event) {
+      NS_DispatchToCurrentThread(event);
     }
   }
 

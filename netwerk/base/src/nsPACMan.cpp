@@ -268,10 +268,8 @@ nsPACMan::LoadPACFromURI(nsIURI *pacURI)
   // queries the enter between now and when we actually load the PAC file.
 
   if (!mLoadPending) {
-    nsCOMPtr<nsIThread> thread;
-    nsresult rv = NS_GetCurrentThread(getter_AddRefs(thread));
-    if (NS_FAILED(rv) ||
-        NS_FAILED(rv = thread->Dispatch(this, NS_DISPATCH_NORMAL)))
+    nsresult rv;
+    if (NS_FAILED(rv = NS_DispatchToCurrentThread(this)))
       return rv;
     mLoadPending = PR_TRUE;
   }

@@ -549,11 +549,10 @@ NS_IMETHODIMP nsXPInstallManager::Observe( nsISupports *aSubject,
                             do_GetService(kProxyObjectManagerCID, &rv);
                 if (pmgr)
                 {
-                    nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
-                    rv = pmgr->GetProxyForObject( mainThread,
+                    rv = pmgr->GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
                                                   NS_GET_IID(nsIXPIProgressDialog),
                                                   dlg,
-                                                  PROXY_SYNC | PROXY_ALWAYS,
+                                                  NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                                                   getter_AddRefs(mDlg) );
                 }
             }

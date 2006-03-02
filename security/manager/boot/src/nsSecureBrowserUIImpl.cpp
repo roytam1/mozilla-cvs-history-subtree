@@ -1408,13 +1408,10 @@ GetNSSDialogs(nsISecurityWarningDialogs **result)
   if (!proxyman)
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIThread> thread = do_GetMainThread();
-  NS_ENSURE_STATE(thread);
-
   nsCOMPtr<nsISupports> proxiedResult;
-  proxyman->GetProxyForObject(thread,
+  proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                               NS_GET_IID(nsISecurityWarningDialogs),
-                              my_result, PROXY_SYNC,
+                              my_result, NS_PROXY_SYNC,
                               getter_AddRefs(proxiedResult));
 
   if (!proxiedResult) {

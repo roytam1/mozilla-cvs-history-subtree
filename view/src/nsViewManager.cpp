@@ -153,18 +153,13 @@ nsViewManager::PostInvalidateEvent()
   if (!EnsureWeakRef())
     return;  // out of memory
 
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  if (!thread)
-    return;
-
   if (!mInvalidateEventPending) {
     nsCOMPtr<nsIRunnable> ev = new nsInvalidateEvent(mWeakRef);
-
-    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
-      NS_NOTREACHED("failed to dispatch nsSynthMouseMoveEvent");
-      return;
+    if (NS_FAILED(NS_DispatchToCurrentThread(ev))) {
+      NS_WARNING("failed to dispatch nsSynthMouseMoveEvent");
+    } else {
+      mInvalidateEventPending = PR_TRUE;
     }
-    mInvalidateEventPending = PR_TRUE;
   }
 }
 
@@ -2905,15 +2900,12 @@ nsViewManager::SynthesizeMouseMove(PRBool aFromScroll)
   if (!EnsureWeakRef())
     return NS_ERROR_OUT_OF_MEMORY;
 
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
   if (!mSynthMouseMoveEventPending) {
     nsCOMPtr<nsIRunnable> ev =
         new nsSynthMouseMoveEvent(mWeakRef, aFromScroll);
 
-    if (NS_FAILED(thread->Dispatch(ev, NS_DISPATCH_NORMAL))) {
-      NS_NOTREACHED("failed to dispatch nsSynthMouseMoveEvent");
+    if (NS_FAILED(NS_DispatchToCurrentThread(ev))) {
+      NS_WARNING("failed to dispatch nsSynthMouseMoveEvent");
       return NS_ERROR_UNEXPECTED;
     }
 
