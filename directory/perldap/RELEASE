@@ -4,7 +4,7 @@
 #                                                                           #
 #############################################################################
 
-VERSION 1.5 - Dec 2004
+VERSION 1.5 - Feb 2006
 ======================
 
 This is an update release, with a few goals:
@@ -14,6 +14,9 @@ This is an update release, with a few goals:
    - Fully support Perl 5.005 and later
    - Added "hash" style prototypes to all class methods that takes more
      than one argument
+
+Many, many thanks to Rich Megginson for taking charge of the (broken) build
+and configuration process.
 
 
 New functionality
