@@ -758,10 +758,10 @@ real_checkout:
 	cvs_co $(CVSCO_LDAPCSDK); \
 	cvs_co $(CVSCO_LAYOUT); \
 	$(CHECKOUT_MODULES_NS); \
-	$(CHECKOUT_MODULES) \
-	$(CHECKOUT_LOCALES); \
 	echo '$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
-	$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk;
+	$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk; \
+	$(CHECKOUT_MODULES) \
+	$(CHECKOUT_LOCALES);
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
