@@ -49,6 +49,8 @@
 #include "nsDownloadProxy.h"
 #endif
 
+#include "nsTypeAheadFind.h"
+
 #ifndef MOZ_THUNDERBIRD
 #include "nsDocShellCID.h"
 #include "nsAutoCompleteController.h"
@@ -67,7 +69,6 @@
 #endif
 #include "nsPasswordManager.h"
 #include "nsSingleSignonPrompt.h"
-#include "nsTypeAheadFind.h"
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
@@ -84,13 +85,14 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
 #endif
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsTypeAheadFind)
+
 #ifndef MOZ_THUNDERBIRD
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
 #ifdef MOZ_MORK
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
 #endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteSimpleResult)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsTypeAheadFind)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsFormHistory, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFormFillController)
 #if defined(MOZ_STORAGE) && defined(MOZ_MORKREADER)
@@ -142,6 +144,9 @@ static const nsModuleComponentInfo components[] =
     NS_TRANSFER_CONTRACTID,
     nsDownloadProxyConstructor },
 #endif
+  { "TypeAheadFind Component", NS_TYPEAHEADFIND_CID,
+    NS_TYPEAHEADFIND_CONTRACTID, nsTypeAheadFindConstructor
+  },
 #ifndef MOZ_THUNDERBIRD
   { "AutoComplete Controller",
     NS_AUTOCOMPLETECONTROLLER_CID, 
@@ -159,7 +164,7 @@ static const nsModuleComponentInfo components[] =
     NS_AUTOCOMPLETEMDBRESULT_CONTRACTID,
     nsAutoCompleteMdbResultConstructor },
 #endif
-  
+
   { "HTML Form History",
     NS_FORMHISTORY_CID, 
     NS_FORMHISTORY_CONTRACTID,
@@ -210,11 +215,7 @@ static const nsModuleComponentInfo components[] =
   { "Single Signon Prompt",
     NS_SINGLE_SIGNON_PROMPT_CID,
     "@mozilla.org/wallet/single-sign-on-prompt;1",
-    nsSingleSignonPromptConstructor },
-  
-  { "TypeAheadFind Component", NS_TYPEAHEADFIND_CID,
-    NS_TYPEAHEADFIND_CONTRACTID, nsTypeAheadFindConstructor
-  },
+    nsSingleSignonPromptConstructor }, 
 #endif
 };
 
