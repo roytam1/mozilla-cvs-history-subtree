@@ -1440,13 +1440,8 @@ function BrowserHomeClick(aEvent)
   case "tabshifted":
   case "tab":
     urls = homePage.split("|");
-    var firstTabAdded = gBrowser.addTab(urls[0]);
-    for (var i = 1; i < urls.length; ++i)
-      gBrowser.addTab(urls[i]);
-    if ((where == "tab") ^ getBoolPref("browser.tabs.loadBookmarksInBackground", false)) {
-      gBrowser.selectedTab = firstTabAdded;
-      content.focus();
-    }
+    var loadInBackground = getBoolPref("browser.tabs.loadBookmarksInBackground", false);
+    gBrowser.loadTabs(urls, loadInBackground);
     break;
   case "window":
     OpenBrowserWindow();
@@ -1464,16 +1459,12 @@ function loadOneOrMoreURIs(aURIString)
     return;
   }
 #endif
-  var urls = aURIString.split("|");
-  loadURI(urls[0]);
-  for (var i = 1; i < urls.length; ++i) {
-    // addTab throws for certain malformed URIs
-    // catch this so we don't hork startup.
-    try {
-      gBrowser.addTab(urls[i]);
-    } catch (ex) {
-      // do nothing
-    }
+  // This function throws for certain malformed URIs, so use exception handling
+  // so that we don't disrupt startup
+  try {
+    gBrowser.loadTabs(aURIString.split("|"), false, true);
+  } 
+  catch (e) {
   }
 }
 
@@ -1686,7 +1677,7 @@ function openLocationCallback()
 
 function BrowserOpenTab()
 {
-  gBrowser.selectedTab = gBrowser.addTab('about:blank');
+  gBrowser.loadOneTab("about:blank", null, null, null, false);
   if (gURLBar)
     setTimeout(function() { gURLBar.focus(); }, 0);
 }
@@ -1709,7 +1700,7 @@ function delayedOpenWindow(chrome, flags, href, postData)
    the URI kicked off before becoming the active content area. */
 function delayedOpenTab(aUrl, aReferrer, aCharset, aPostData)
 {
-  setTimeout(function(aTabElt) { gBrowser.selectedTab = aTabElt; }, 0, gBrowser.addTab(aUrl, aReferrer, aCharset, aPostData));
+  gBrowser.loadOneTab(aUrl, aReferrer, aCharset, aPostData, false);
 }
 
 function BrowserOpenFileWindow()
@@ -1796,8 +1787,7 @@ function BrowserLoadURL(aTriggeringEvent, aPostData)
       aTriggeringEvent.altKey) {
     handleURLBarRevert();
     content.focus();
-    var t = gBrowser.addTab(url, null, null, aPostData); // open link in new tab
-    gBrowser.selectedTab = t;
+    gBrowser.loadOneTab(url, null, null, aPostData, false);
     gURLBar.value = url;
     aTriggeringEvent.preventDefault();
     aTriggeringEvent.preventBubble();
@@ -1820,8 +1810,8 @@ function SearchLoadURL(aURL, aInNewTab)
 
   if (gBrowser.localName == "tabbrowser" && aInNewTab) {
     content.focus();
-    var t = gBrowser.addTab(aURL, null); // open link in new tab
-    gBrowser.selectedTab = t;
+    // Modal action, remember last viewed tab
+    gBrowser.loadOneTab(aURL, null, null, null, false);
     if (gURLBar)
       gURLBar.value = aURL;
   }
@@ -3753,9 +3743,8 @@ nsBrowserAccess.prototype =
         newWindow = openDialog(getBrowserURL(), "_blank", "all,dialog=no", url);
         break;
       case nsCI.nsIBrowserDOMWindow.OPEN_NEWTAB :
-        var newTab = gBrowser.addTab("about:blank");
-        if (!gPrefService.getBoolPref("browser.tabs.loadDivertedInBackground"))
-          gBrowser.selectedTab = newTab;
+        var loadInBackground = gPrefService.getBoolPref("browser.tabs.loadDivertedInBackground");
+        var newTab = gBrowser.loadOneTab("about:blank", null, null, null, loadInBackground);
         newWindow = gBrowser.getBrowserForTab(newTab).docShell
                             .QueryInterface(nsCI.nsIInterfaceRequestor)
                             .getInterface(nsCI.nsIDOMWindow);

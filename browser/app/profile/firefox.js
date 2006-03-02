@@ -229,7 +229,7 @@ pref("browser.sessionhistory.max_entries", 50);
 pref("browser.link.open_external", 3);
 
 // handle links targeting new windows
-pref("browser.link.open_newwindow", 2);
+pref("browser.link.open_newwindow", 3);
 
 // 0: no restrictions - divert everything
 // 1: don't divert window.open at all
@@ -243,6 +243,15 @@ pref("browser.tabs.opentabfor.middleclick", true);
 pref("browser.tabs.opentabfor.urlbar", true);
 pref("browser.tabs.loadDivertedInBackground", false);
 pref("browser.tabs.loadBookmarksInBackground", false);
+pref("browser.tabs.tabClipWidth", 140);
+pref("browser.tabs.disableBackgroundClose", false);
+
+// When tabs opened by links in other tabs via a combination of 
+// browser.link.open_newwindow being set to 3 and target="_blank" etc are
+// closed:
+// true   return to the tab that opened this tab (its owner)
+// false  return to the adjacent tab (old default)
+pref("browser.tabs.selectOwnerOnClose", true);
 
 // Smart Browsing prefs
 pref("browser.related.enabled", true);
