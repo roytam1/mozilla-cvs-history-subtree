@@ -172,7 +172,10 @@ protected:
   nsISVGFilterFrame *mFilter;
 
   PRPackedBool mPropagateTransform;
-  PRPackedBool mIsDirty;
+  PRBool IsDirty() {
+      return (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0;
+  }
+
 };
 
 #endif

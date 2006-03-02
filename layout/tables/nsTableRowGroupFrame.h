@@ -46,16 +46,11 @@
 class nsTableFrame;
 class nsTableRowFrame;
 class nsTableCellFrame;
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-class nsReflowTimer;
-#endif
 
 struct nsRowGroupReflowState {
   const nsHTMLReflowState& reflowState;  // Our reflow state
 
   nsTableFrame* tableFrame;
-
-  nsReflowReason reason;
 
   // The available size (computed from the parent)
   nsSize availSize;
@@ -69,7 +64,6 @@ struct nsRowGroupReflowState {
   {
     availSize.width  = reflowState.availableWidth;
     availSize.height = reflowState.availableHeight;
-    reason = reflowState.reason;
     y = 0;  
   }
 
@@ -360,11 +354,6 @@ public:
   void   SetHasStyleHeight(PRBool aValue);
   PRBool NeedSpecialReflow() const;
   void   SetNeedSpecialReflow(PRBool aValue);
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-public:
-  nsReflowTimer* mTimer;
-#endif
 };
 
 

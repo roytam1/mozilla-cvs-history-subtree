@@ -62,7 +62,6 @@
 #include "nsIView.h"
 #include "nsHTMLAtoms.h"
 #include "nsCSSAnonBoxes.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDeviceContext.h"
 #include "nsIPresShell.h"
@@ -70,7 +69,6 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMHTMLBodyElement.h"
 #include "nsIScrollableFrame.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsFrameManager.h"
 #include "nsCSSRendering.h"
 #include "nsLayoutErrors.h"
@@ -87,8 +85,6 @@ struct nsTableReflowState {
 
   // the real reflow state
   const nsHTMLReflowState& reflowState;
-
-  nsReflowReason reason;
 
   // The table's available size 
   nsSize availSize;
@@ -108,22 +104,18 @@ struct nsTableReflowState {
   nsTableReflowState(nsPresContext&          aPresContext,
                      const nsHTMLReflowState& aReflowState,
                      nsTableFrame&            aTableFrame,
-                     nsReflowReason           aReason,
                      nscoord                  aAvailWidth,
                      nscoord                  aAvailHeight)
     : reflowState(aReflowState)
   {
-    Init(aPresContext, aTableFrame, aReason, aAvailWidth, aAvailHeight);
+    Init(aPresContext, aTableFrame, aAvailWidth, aAvailHeight);
   }
 
   void Init(nsPresContext& aPresContext,
             nsTableFrame&   aTableFrame,
-            nsReflowReason  aReason,
             nscoord         aAvailWidth,
             nscoord         aAvailHeight)
   {
-    reason = aReason;
-
     nsTableFrame* table = (nsTableFrame*)aTableFrame.GetFirstInFlow();
     nsMargin borderPadding = table->GetChildAreaOffset(&reflowState);
     nscoord cellSpacingX = table->GetCellSpacingX();
@@ -154,7 +146,7 @@ struct nsTableReflowState {
                      nsTableFrame&            aTableFrame)
     : reflowState(aReflowState)
   {
-    Init(aPresContext, aTableFrame, aReflowState.reason, aReflowState.availableWidth, aReflowState.availableHeight);
+    Init(aPresContext, aTableFrame, aReflowState.availableWidth, aReflowState.availableHeight);
   }
 
 };
@@ -162,9 +154,6 @@ struct nsTableReflowState {
 /********************************************************************************
  ** nsTableFrame                                                               **
  ********************************************************************************/
-#if defined DEBUG_TABLE_REFLOW_TIMING
-static PRInt32 gRflCount = 0;
-#endif
 
 struct BCPropertyData
 {
@@ -204,27 +193,12 @@ nsTableFrame::nsTableFrame()
     mTableLayoutStrategy(nsnull),
     mPreferredWidth(0)
 {
-  mBits.mHadInitialReflow       = PR_FALSE;
   mBits.mHaveReflowedColGroups  = PR_FALSE;
   mBits.mNeedStrategyInit       = PR_TRUE;
   mBits.mNeedStrategyBalance    = PR_TRUE;
   mBits.mCellSpansPctCol        = PR_FALSE;
   mBits.mNeedToCalcBCBorders    = PR_FALSE;
   mBits.mIsBorderCollapse       = PR_FALSE;
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  mTimer = new nsReflowTimer(this);
-  nsReflowTimer* timer = new nsReflowTimer(this);
-  mTimer->mNextSibling = timer;
-  timer = new nsReflowTimer(this);
-  mTimer->mNextSibling->mNextSibling = timer;
-  timer = new nsReflowTimer(this);
-  mTimer->mNextSibling->mNextSibling->mNextSibling = timer;
-  timer = new nsReflowTimer(this);
-  mTimer->mNextSibling->mNextSibling->mNextSibling->mNextSibling = timer;
-  timer = new nsReflowTimer(this);
-  mTimer->mNextSibling->mNextSibling->mNextSibling->mNextSibling->mNextSibling = timer;
-#endif
 }
 
 NS_IMPL_ADDREF_INHERITED(nsTableFrame, nsHTMLContainerFrame)
@@ -299,9 +273,6 @@ nsTableFrame::~nsTableFrame()
     delete mTableLayoutStrategy;
     mTableLayoutStrategy = nsnull;
   }
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflowDone(this);
-#endif
 }
 
 NS_IMETHODIMP
@@ -346,7 +317,7 @@ nsTableFrame::AppendDirtyReflowCommand(nsIFrame* aFrame)
   aFrame->AddStateBits(NS_FRAME_IS_DIRTY);  // mark the table frame as dirty
 
   return aFrame->GetPresContext()->PresShell()->
-          AppendReflowCommand(aFrame, eReflowType_ReflowDirty, nsnull);
+    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 }
 
 // Make sure any views are positioned properly
@@ -1696,6 +1667,44 @@ ProcessRowInserted(nsTableFrame&   aTableFrame,
   }
 }
 
+/* virtual */ void
+nsTableFrame::MarkIntrinsicWidthsDirty()
+{
+  // the following could be optimized with a fair amount of effort
+  SetNeedStrategyInit(PR_TRUE);
+}
+
+/* virtual */ nscoord
+nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (mPrevInFlow)
+    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+             GetMinWidth(aRenderingContext);
+
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
+
+#error WRITE ME
+
+  return result;
+}
+
+/* virtual */ nscoord
+nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (mPrevInFlow)
+    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+             GetPrefWidth(aRenderingContext);
+
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
+
+#error WRITE ME
+
+  return result;
+}
+
+
 // Return true if aStylePosition has a pct height
 static PRBool 
 IsPctStyleHeight(const nsStylePosition* aStylePosition)
@@ -1822,14 +1831,15 @@ nsTableFrame::IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowSta
 }
 
 /******************************************************************************************
- * During the initial reflow the table reflows each child with an unconstrained avail width
- * to get its max element width and maximum width. This is referred to as the pass 1 reflow.
+ * Before reflow, intrinsic width calculation is done using GetMinWidth
+ * and GetPrefWidth.  This used to be known as pass 1 reflow.
  *
- * After the 1st pass reflow, the table determines the column widths using BalanceColumnWidths()
+ * After the intrinsic width calculation, the table determines the
+ * column widths using BalanceColumnWidths() and
  * then reflows each child again with a constrained avail width. This reflow is referred to
  * as the pass 2 reflow. 
  *
- * A special height reflow (pass 3 reflow) can occur during an intitial or resize reflow
+ * A special height reflow (pass 3 reflow) can occur during an initial or resize reflow
  * if (a) a row group, row, cell, or a frame inside a cell has a percent height but no computed 
  * height or (b) in paginated mode, a table has a height. (a) supports percent nested tables 
  * contained inside cells whose heights aren't known until after the pass 2 reflow. (b) is 
@@ -1881,16 +1891,14 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
                                const nsHTMLReflowState& aReflowState,
                                nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState);
-#endif
   PRBool isPaginated = aPresContext->IsPaginated();
 
   // If this is a special height reflow, set our desired size to what is was previously and return
   // if we will be getting another special height reflow. In paginated mode, SetNeedSpecialReflow(PR_TRUE) 
   // may not have been called if reflow was a result of having a height on the containing table
+  // XXXldb Set aStatus or other members of aDesiredSize?
   if (IsPrematureSpecialHeightReflow(aReflowState, mRect, NeedSpecialReflow() || isPaginated, aDesiredSize)) 
     return NS_OK;
 
@@ -1913,8 +1921,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
   aDesiredSize.width = aReflowState.availableWidth;
 
-  nsReflowReason nextReason = aReflowState.reason;
-
   // Check for an overflow list, and append any row group frames being pushed
   MoveOverflowToChildList(aPresContext);
 
@@ -1923,56 +1929,35 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   switch (aReflowState.reason) {
     case eReflowReason_Initial: 
     case eReflowReason_StyleChange: {
-      if ((eReflowReason_Initial == aReflowState.reason) && HadInitialReflow()) {
-        // XXX this could be an assertion and the if removed
-        NS_WARNING("table initial reflow called twice");
-      }
-      else {
-        if (!GetPrevInFlow()) { // only do pass1 on a first in flow
-          if (IsAutoLayout()) {     
-            // only do pass1 reflow on an auto layout table
-            nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
-                                           aReflowState.reason,
-                                           NS_UNCONSTRAINEDSIZE,
-                                           NS_UNCONSTRAINEDSIZE);
-            // reflow the children
-            nsIFrame *lastReflowed;
-            nsRect overflowArea;
-            ReflowChildren(reflowState, !HaveReflowedColGroups(),
-                           PR_FALSE, aStatus, lastReflowed,
-                           overflowArea);
-          }
-          mTableLayoutStrategy->Initialize(aReflowState);
+      if (!GetPrevInFlow()) { // only do pass1 on a first in flow
+        if (IsAutoLayout()) {     
+#error "Pass 1 reflow must be moved out of Reflow"
+          // only do pass1 reflow on an auto layout table
+          nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
+                                         aReflowState.reason,
+                                         NS_UNCONSTRAINEDSIZE,
+                                         NS_UNCONSTRAINEDSIZE);
+          // reflow the children
+          nsIFrame *lastReflowed;
+          nsRect overflowArea;
+          ReflowChildren(reflowState, !HaveReflowedColGroups(),
+                         PR_FALSE, aStatus, lastReflowed,
+                         overflowArea);
         }
-      }
-      SetHadInitialReflow(PR_TRUE);
-      if (!GetPrevInFlow()) {
-        SetNeedStrategyBalance(PR_TRUE); // force a balance and then a pass2 reflow 
-        if ((nextReason != eReflowReason_StyleChange) || IsAutoLayout()) 
-          nextReason = eReflowReason_Resize;
-      }
-      else {
-        nextReason = eReflowReason_Initial;
+        mTableLayoutStrategy->Initialize(aReflowState);
       }
       break; 
     }
     case eReflowReason_Incremental:
-      NS_ASSERTION(HadInitialReflow(), "intial reflow not called");
       rv = IncrementalReflow(aReflowState, aStatus);
-      nextReason = eReflowReason_Resize;
       break;
-    case eReflowReason_Resize:
-      // do the resize reflow below
-      if (!HadInitialReflow()) {
-        NS_ASSERTION(HadInitialReflow(), "intial reflow not called");
-        nextReason = eReflowReason_Initial;
-      }
-      if (NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth)
-        NS_WARNING("this reflow doesn't do anything");
-      SetNeedStrategyBalance(PR_TRUE); 
-      break; 
     default:
       break;
+  }
+
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
+    // XXXldb What if we're not the first-in-flow?
+    SetNeedStrategyBalance(PR_TRUE); 
   }
 
   if (NS_FAILED(rv)) return rv;
@@ -2007,15 +1992,18 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       nscoord availHeight = (willInitiateSpecialReflow)
                             ? NS_UNCONSTRAINEDSIZE : aReflowState.availableHeight;
 
-      ReflowTable(aDesiredSize, aReflowState, availHeight, nextReason, 
+      ReflowTable(aDesiredSize, aReflowState, availHeight,
                   lastChildReflowed, balanced, aStatus);
-      nextReason = eReflowReason_Resize;
       reflowedChildren = PR_TRUE;
     }
     // reevaluate special height reflow conditions
     if ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) &&
         (aReflowState.mFlags.mSpecialHeightReflow || !NeedSpecialReflow()) &&
         NS_FRAME_IS_COMPLETE(aStatus)) {
+      // XXXldb Mark DIRTY?  This used to always be a resize, but it's
+      // a resize for height, and the new resize optimizations may cause
+      // skipping (although why wouldn't they have before?).
+
       // distribute extra vertical space to rows
       CalcDesiredHeight(aReflowState, aDesiredSize); 
       ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
@@ -2025,7 +2013,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
       ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
       ReflowTable(aDesiredSize, aReflowState, aReflowState.availableHeight, 
-                  nextReason, lastChildReflowed, balanced, aStatus);
+                  lastChildReflowed, balanced, aStatus);
       // restore the previous special height reflow initiator
       ((nsHTMLReflowState&)aReflowState).mPercentHeightReflowInitiator = specialReflowInitiator;
       // XXX We should call SetInitiatedSpecialReflow(PR_FALSE) at some point, but it is difficult to tell when
@@ -2044,9 +2032,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   else if (aReflowState.mFlags.mSpecialHeightReflow) {
     aDesiredSize.width  = mRect.width;
     aDesiredSize.height = mRect.height;
-#if defined DEBUG_TABLE_REFLOW_TIMING
-    nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState, &aDesiredSize, aStatus);
-#endif
     SetNeedSpecialReflow(PR_FALSE);
     SetNeedToInitiateSpecialReflow(PR_FALSE);
     return NS_OK;
@@ -2110,9 +2095,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
     SetNeedSpecialReflow(PR_FALSE);
     SetNeedToInitiateSpecialReflow(PR_FALSE);
   }
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState, &aDesiredSize, aStatus);
-#endif
 
   // If we reflowed all the rows, then invalidate the largest possible area that either the
   // table occupied before this reflow or will occupy after.
@@ -2142,7 +2124,6 @@ nsresult
 nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                           const nsHTMLReflowState& aReflowState,
                           nscoord                  aAvailHeight,
-                          nsReflowReason           aReason,
                           nsIFrame*&               aLastChildReflowed,
                           PRBool&                  aDidBalance,
                           nsReflowStatus&          aStatus)
@@ -2167,7 +2148,7 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   // Constrain our reflow width to the computed table width (of the 1st in flow).
   // and our reflow height to our avail height minus border, padding, cellspacing
   aDesiredSize.width = GetDesiredWidth();
-  nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this, aReason, 
+  nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this,
                                  aDesiredSize.width, aAvailHeight);
   ReflowChildren(reflowState, haveReflowedColGroups, PR_FALSE,
                  aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);
@@ -7268,10 +7249,6 @@ nsTableFrame::PaintBCBorders(nsIRenderingContext& aRenderingContext,
   delete [] verInfo;
 }
 
-/********************************************************************************
- ** DEBUG_TABLE_REFLOW_TIMING                                                  **
- ********************************************************************************/
-
 #ifdef DEBUG
 
 static PRBool 
@@ -7299,287 +7276,6 @@ GetFrameTypeName(nsIAtom* aFrameType,
   return isTable;
 }
 #endif
-
-#if defined DEBUG_TABLE_REFLOW_TIMING
-
-#define INDENT_PER_LEVEL 1
-
-void PrettyUC(nscoord aSize,
-              char*   aBuf)
-{
-  if (NS_UNCONSTRAINEDSIZE == aSize) {
-    strcpy(aBuf, "UC");
-  }
-  else {
-    sprintf(aBuf, "%d", aSize);
-  }
-}
-
-nsReflowTimer* GetFrameTimer(nsIFrame* aFrame,
-                             nsIAtom*  aFrameType)
-{
-  if (nsLayoutAtoms::tableOuterFrame == aFrameType) 
-    return ((nsTableOuterFrame*)aFrame)->mTimer;
-  else if (nsLayoutAtoms::tableFrame == aFrameType) 
-    return ((nsTableFrame*)aFrame)->mTimer;
-  else if (nsLayoutAtoms::tableRowGroupFrame == aFrameType) 
-    return ((nsTableRowGroupFrame*)aFrame)->mTimer;
-  else if (nsLayoutAtoms::tableRowFrame == aFrameType) 
-    return ((nsTableRowFrame*)aFrame)->mTimer;
-  else if (IS_TABLE_CELL(aFrameType)) 
-    return ((nsTableCellFrame*)aFrame)->mTimer;
-  else if (nsLayoutAtoms::blockFrame == aFrameType) { 
-    nsIFrame* parentFrame = aFrame->GetParent();
-    if (IS_TABLE_CELL(parentFrame->GetType())) {
-      nsTableCellFrame* cellFrame = (nsTableCellFrame*)parentFrame;
-      // fix up the block timer, which may be referring to the cell
-      if (cellFrame->mBlockTimer->mFrame == parentFrame) {
-        cellFrame->mBlockTimer->mFrame = aFrame;
-        NS_IF_RELEASE(cellFrame->mBlockTimer->mFrameType);
-        cellFrame->mBlockTimer->mFrameType = nsLayoutAtoms::blockFrame;
-        NS_ADDREF(cellFrame->mBlockTimer->mFrameType);
-      }
-      return cellFrame->mBlockTimer;
-    }
-  }
-  return nsnull;
-}
-
-void DebugReflowPrintAuxTimer(char*          aMes, 
-                              nsReflowTimer* aTimer)
-{
-  if (aTimer->mNumStarts > 0) {
-    printf("%s %dms", aMes, aTimer->Elapsed());
-    if (aTimer->mNumStarts > 1) {
-      printf(" times=%d", aTimer->mNumStarts);
-    }
-  }
-}
-
-void DebugReflowPrint(nsReflowTimer& aTimer,
-                      PRUint32       aLevel,
-                      PRBool         aSummary)
-{
-  // set up the indentation
-  char indentChar[128];
-  PRInt32 indent = INDENT_PER_LEVEL * aLevel;
-  memset (indentChar, ' ', indent);
-  indentChar[indent] = 0;
-
-  // get the frame type
-  char fName[128];
-  PRBool isTable = GetFrameTypeName(aTimer.mFrameType, fName);
-
-  // print the timer
-  printf("\n%s%s %dms %p", indentChar, fName, aTimer.Elapsed(), aTimer.mFrame);
-  if (aSummary) {
-    printf(" times=%d", aTimer.mNumStarts);
-    if (isTable) {
-      printf("\n%s", indentChar);
-      DebugReflowPrintAuxTimer("init", aTimer.mNextSibling);
-      DebugReflowPrintAuxTimer(" balanceCols", aTimer.mNextSibling->mNextSibling);
-      DebugReflowPrintAuxTimer(" nonPctCols", aTimer.mNextSibling->mNextSibling->mNextSibling);
-      DebugReflowPrintAuxTimer(" nonPctColspans", aTimer.mNextSibling->mNextSibling->mNextSibling->mNextSibling);
-      DebugReflowPrintAuxTimer(" pctCols", aTimer.mNextSibling->mNextSibling->mNextSibling->mNextSibling->mNextSibling);
-    }
-  }
-  else {
-    char avWidth[16];
-    char avHeight[16];
-    char compWidth[16];
-    char compHeight[16];
-    char desWidth[16];
-    char desHeight[16];
-    PrettyUC(aTimer.mAvailWidth, avWidth);
-    PrettyUC(aTimer.mAvailWidth, avHeight);
-    PrettyUC(aTimer.mComputedWidth, compWidth);
-    PrettyUC(aTimer.mComputedHeight, compHeight);
-    PrettyUC(aTimer.mDesiredWidth, desWidth);
-    PrettyUC(aTimer.mDesiredHeight, desHeight);
-    printf(" r=%d", aTimer.mReason); 
-    if (aTimer.mReflowType >= 0) {
-      printf(",%d", aTimer.mReflowType);
-    }
-    printf(" a=%s,%s c=%s,%s d=%s,%s", avWidth, avHeight, compWidth, compHeight, desWidth, desHeight); 
-    if (aTimer.mMaxElementWidth >= 0) {
-      PrettyUC(aTimer.mMaxElementWidth, avWidth);
-      printf(" me=%s", avWidth);
-    }
-    if (aTimer.mMaxWidth >= 0) {
-      PrettyUC(aTimer.mMaxWidth, avWidth);
-      printf(" m=%s", avWidth);
-    }
-    if (NS_FRAME_IS_NOT_COMPLETE(aTimer.mStatus)) {
-      printf(" status=%d", aTimer.mStatus);
-    }
-    printf(" cnt=%d", aTimer.mCount);
-    if (isTable) {
-      printf("\n%s", indentChar);
-      DebugReflowPrintAuxTimer("init", aTimer.mNextSibling);
-      DebugReflowPrintAuxTimer(" balanceCols", aTimer.mNextSibling->mNextSibling);
-      DebugReflowPrintAuxTimer(" nonPctCols", aTimer.mNextSibling->mNextSibling->mNextSibling);
-      DebugReflowPrintAuxTimer(" nonPctColspans", aTimer.mNextSibling->mNextSibling->mNextSibling->mNextSibling);
-      DebugReflowPrintAuxTimer(" pctCols", aTimer.mNextSibling->mNextSibling->mNextSibling->mNextSibling->mNextSibling);
-    }
-  }
-  // print the timer's children
-  nsVoidArray& children = aTimer.mChildren;
-  PRInt32 numChildren = children.Count();
-  for (PRInt32 childX = 0; childX < numChildren; childX++) {
-    nsReflowTimer* child = (nsReflowTimer*)children.ElementAt(childX);
-    if (child) {
-      DebugReflowPrint(*child, aLevel + 1, aSummary);
-    }
-    else NS_ASSERTION(PR_FALSE, "bad DebugTimeReflow");
-  }
-}
-
-void nsTableFrame::DebugReflow(nsIFrame*            aFrame,
-                               nsHTMLReflowState&   aState,
-                               nsHTMLReflowMetrics* aMetrics,
-                               nsReflowStatus       aStatus)
-{
-#ifdef DEBUG_TABLE_REFLOW_TIMING_DETAIL
-  // get the parent timer 
-  const nsHTMLReflowState* parentRS = aState.parentReflowState;
-  nsReflowTimer* parentTimer = nsnull;
-  while (parentRS) {
-    parentTimer = (nsReflowTimer *)parentRS->mDebugHook;
-    if (parentTimer) break;
-    parentRS = parentRS->parentReflowState;
-  }
-#endif
-  // get the frame summary timer
-  nsIAtom* frameType = aFrame->GetType();
-  nsReflowTimer* frameTimer = GetFrameTimer(aFrame, frameType);
-  if (!frameTimer) {NS_ASSERTION(PR_FALSE, "no frame timer");return;}
-  if (!aMetrics) { // start
-#ifdef DEBUG_TABLE_REFLOW_TIMING_DETAIL
-    // create the reflow timer
-    nsReflowTimer* timer = new nsReflowTimer(aFrame);
-    // create the aux table timers if they don't exist
-    if ((nsLayoutAtoms::tableFrame == frameType) && !timer->mNextSibling) {
-      timer->mNextSibling = new nsReflowTimer(aFrame);
-      timer->mNextSibling->mNextSibling = new nsReflowTimer(aFrame);
-      timer->mNextSibling->mNextSibling->mNextSibling = new nsReflowTimer(aFrame);
-      timer->mNextSibling->mNextSibling->mNextSibling->NextSibling = new nsReflowTimer(aFrame);
-      timer->mNextSibling->mNextSibling->mNextSibling->NextSibling->mNextSibling = new nsReflowTimer(aFrame);
-    }
-    timer->mReason = aState.reason;
-    timer->mAvailWidth = aState.availableWidth;
-    timer->mComputedWidth = aState.mComputedWidth;
-    timer->mComputedHeight = aState.mComputedHeight;
-    timer->mCount = gRflCount++; 
-    nsHTMLReflowCommand* reflowCommand = aState.reflowCommand;
-    if (reflowCommand) {
-      timer->mReflowType = reflowType->Type();
-    }
-    timer->Start();
-    aState.mDebugHook = timer;
-    if (parentTimer) {
-      parentTimer->mChildren.AppendElement(timer);
-    }
-#endif
-    // start the frame summary timer
-    frameTimer->Start();
-  }
-  else {
-#ifdef DEBUG_TABLE_REFLOW_TIMING_DETAIL
-    // stop the reflow timer
-    nsReflowTimer* timer = (nsReflowTimer *)aState.mDebugHook; 
-    if (timer) {
-      timer->Stop();
-      timer->mDesiredWidth  = aMetrics->width;
-      timer->mDesiredHeight = aMetrics->height;
-      timer->mMaxElementWidth = (aMetrics->mComputeMEW) 
-        ? aMetrics->mMaxElementWidth : -1;
-      timer->mMaxWidth = (aMetrics->mFlags & NS_REFLOW_CALC_MAX_WIDTH) 
-        ? aMetrics->mMaximumWidth : -1;
-      timer->mStatus = aStatus;
-    }
-    else {NS_ASSERTION(PR_FALSE, "bad DebugTimeReflow");return;}
-    // stop the frame summary timer
-#endif
-    frameTimer->Stop();
-#ifdef DEBUG_TABLE_REFLOW_TIMING_DETAIL
-    if (!parentTimer) {
-      // print out all of the reflow timers
-      DebugReflowPrint(*timer, 0, PR_FALSE);
-      timer->Destroy();
-    }
-#endif
-  }
-}
-
-void nsTableFrame::DebugTimeMethod(nsMethod           aMethod,
-                                   nsTableFrame&      aFrame,
-                                   nsHTMLReflowState& aState,
-                                   PRBool             aStart)
-{
-  nsReflowTimer* baseTimer = (nsReflowTimer*)aState.mDebugHook;
-  nsReflowTimer* timer;
-  PRInt32 offset = aMethod;
-  PRInt32 idx;
-  if (aStart) {
-#ifdef DEBUG_TABLE_REFLOW_TIMING_DETAIL
-    timer = baseTimer;
-    for (idx = 0; idx <= offset; idx++) {
-      timer = timer->mNextSibling;
-    }
-    timer->Start();
-#endif
-    timer = aFrame.mTimer;
-    for (idx = 0; idx <= offset; idx++) {
-      timer = timer->mNextSibling;
-    }
-    timer->Start();
-  }
-  else {
-#ifdef DEBUG_TABLE_REFLOW_TIMING_DETAIL
-    timer = baseTimer;
-    for (idx = 0; idx <= offset; idx++) {
-      timer = timer->mNextSibling;
-    }
-    timer->Stop();
-#endif
-    timer = aFrame.mTimer;
-    for (idx = 0; idx <= offset; idx++) {
-      timer = timer->mNextSibling;
-    }
-    timer->Stop();
-  }
-}
-
-void nsTableFrame::DebugReflowDone(nsIFrame* aFrame)
-{
-  // get the timer of aFrame
-  nsReflowTimer* thisTimer = GetFrameTimer(aFrame, aFrame->GetType());
-
-  // get the nearest ancestor frame with a timer
-  nsReflowTimer* ancestorTimer;
-  nsIFrame* ancestorFrame = aFrame->GetParent();
-  while (ancestorFrame) {
-    ancestorTimer = GetFrameTimer(ancestorFrame, ancestorFrame->GetType());
-    if (ancestorTimer) break;
-    ancestorFrame = ancestorFrame->GetParent();
-  }
-  if (ancestorTimer) { // add this timer to its parent
-    ancestorTimer->mChildren.AppendElement(thisTimer);
-    if (IS_TABLE_CELL(aFrame->GetType())) {
-      // add the cell block timer as a child of the cell timer
-      nsTableCellFrame* cellFrame = (nsTableCellFrame*)aFrame;
-      cellFrame->mTimer->mChildren.AppendElement(cellFrame->mBlockTimer);
-    }
-  }
-  else { // print out all of the frame timers
-    printf("\n\nSUMMARY OF REFLOW BY FRAME\n");
-    DebugReflowPrint(*thisTimer, 0, PR_TRUE);
-    thisTimer->Destroy();
-  }
-}
-
-#endif //DEBUG_TABLE_REFLOW_TIMING
-
 
 PRBool nsTableFrame::RowHasSpanningCells(PRInt32 aRowIndex, PRInt32 aNumEffCols)
 {

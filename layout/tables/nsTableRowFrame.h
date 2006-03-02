@@ -45,10 +45,6 @@ class  nsTableFrame;
 class  nsTableCellFrame;
 struct nsTableCellReflowState;
 
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-class nsReflowTimer;
-#endif
-
 #define NS_ROW_NEED_SPECIAL_REFLOW          0x20000000
 #define NS_TABLE_ROW_HAS_UNPAGINATED_HEIGHT 0x40000000
 // This is also used on rows, from nsTableRowGroupFrame.h
@@ -330,11 +326,6 @@ private:
   BCPixelSize mRightContBorderWidth;
   BCPixelSize mTopContBorderWidth;
   BCPixelSize mLeftContBorderWidth;
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-public:
-  nsReflowTimer* mTimer;
-#endif
 };
 
 inline PRInt32 nsTableRowFrame::GetRowIndex() const

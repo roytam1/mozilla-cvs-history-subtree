@@ -98,6 +98,8 @@ public:
   NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
                               const nsRect&           aDirtyRect,
                               const nsDisplayListSet& aLists);
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -163,6 +165,7 @@ protected:
 
   virtual ~nsImageFrame();
 
+  void EnsureIntrinsicSize(nsPresContext* aPresContext);
   virtual void GetDesiredSize(nsPresContext* aPresContext,
                               const nsHTMLReflowState& aReflowState,
                               nsHTMLReflowMetrics& aDesiredSize);

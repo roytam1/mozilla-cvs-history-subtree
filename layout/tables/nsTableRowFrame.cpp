@@ -46,7 +46,6 @@
 #include "nsTableFrame.h"
 #include "nsTableCellFrame.h"
 #include "nsIView.h"
-#include "nsReflowPath.h"
 #include "nsCSSRendering.h"
 #include "nsLayoutAtoms.h"
 #include "nsHTMLParts.h"
@@ -170,16 +169,10 @@ nsTableRowFrame::nsTableRowFrame()
 {
   mBits.mRowIndex = mBits.mFirstInserted = 0;
   ResetHeight(0);
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  mTimer = new nsReflowTimer(this);
-#endif
 }
 
 nsTableRowFrame::~nsTableRowFrame()
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflowDone(this);
-#endif
 }
 
 NS_IMETHODIMP
@@ -922,8 +915,8 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
             (cellDesiredSize.width > cellFrame->GetPriorAvailWidth()) ||
             (eReflowReason_StyleChange == aReflowState.reason)        ||
             isPaginated                                               ||
-            (cellFrame->NeedPass2Reflow() &&
-             NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth)     ||
+            (cellFrame->GetStateBits() &
+             (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))       ||
             (aReflowState.mFlags.mSpecialHeightReflow && cellFrame->NeedSpecialReflow()) ||
             (!aReflowState.mFlags.mSpecialHeightReflow && cellFrame->HadSpecialReflow()) ||
             HasPctHeight()                                            ||
@@ -1391,9 +1384,6 @@ nsTableRowFrame::Reflow(nsPresContext*          aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsTableRowFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState);
-#endif
   nsresult rv = NS_OK;
 
   nsTableFrame* tableFrame = nsnull;
@@ -1437,9 +1427,6 @@ nsTableRowFrame::Reflow(nsPresContext*          aPresContext,
     SetNeedSpecialReflow(PR_FALSE);
   }
 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState, &aDesiredSize, aStatus);
-#endif
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return rv;
 }

@@ -62,7 +62,6 @@
 #include "nsFormControlFrame.h"
 #include "nsFrameManager.h"
 #include "nsINameSpaceManager.h"
-#include "nsReflowPath.h"
 #include "nsIServiceManager.h"
 #include "nsIDOMHTMLButtonElement.h"
 #include "nsIDOMHTMLInputElement.h"

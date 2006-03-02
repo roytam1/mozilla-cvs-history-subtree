@@ -48,7 +48,6 @@
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 #include "nsLayoutAtoms.h"
-#include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsStyleSet.h"
 #include "nsContentUtils.h"

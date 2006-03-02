@@ -41,7 +41,6 @@
 #include "nsTableFrame.h"
 #include "nsTableRowGroupFrame.h"
 #include "nsTablePainter.h"
-#include "nsReflowPath.h"
 #include "nsStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
@@ -63,6 +62,7 @@
 #include "nsIDOMNode.h"
 #include "nsINameSpaceManager.h"
 #include "nsDisplayList.h"
+#include "nsLayoutUtils.h"
 
 //TABLECELL SELECTION
 #include "nsIFrameSelection.h"
@@ -78,19 +78,10 @@ nsTableCellFrame::nsTableCellFrame()
   SetNeedSpecialReflow(PR_FALSE);
   SetHadSpecialReflow(PR_FALSE);
   SetHasPctOverHeight(PR_FALSE);
-  SetNeedPass2Reflow(PR_TRUE);
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  mTimer = new nsReflowTimer(this);
-  mBlockTimer = new nsReflowTimer(this);
-#endif
 }
 
 nsTableCellFrame::~nsTableCellFrame()
 {
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflowDone(this);
-#endif
 }
 
 nsTableCellFrame*  
@@ -684,24 +675,65 @@ PRInt32 nsTableCellFrame::GetColSpan()
   return colSpan;
 }
 
+/* virtual */ nscoord
+nsTableCellFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
+
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                                                mFrames.FirstChild(),
+                                                nsLayoutUtils::MIN_WIDTH,
+                                                nsLayoutUtils::IntrinsicWidthPart(
+                                                  nsLayoutUtils::CONTENT |
+                                                  nsLayoutUtils::PADDING));
+  nsCOMPtr<nsIDeviceContext> dc;
+  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+  float p2t = dc->DevUnitsToTwips();
+
+  nsMargin border;
+  GetBorderWidth(p2t, border);
+  result += border.LeftRight();
+
+  result = nsTableFrame::RoundToPixel(result, p2t);
+
+  return result;
+}
+
+/* virtual */ nscoord
+nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
+
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                                                mFrames.FirstChild(),
+                                                nsLayoutUtils::PREF_WIDTH,
+                                                nsLayoutUtils::IntrinsicWidthPart(
+                                                  nsLayoutUtils::CONTENT |
+                                                  nsLayoutUtils::PADDING));
+  nsCOMPtr<nsIDeviceContext> dc;
+  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+  float p2t = dc->DevUnitsToTwips();
+
+  nsMargin border;
+  GetBorderWidth(p2t, border);
+  result += border.LeftRight();
+
+  result = nsTableFrame::RoundToPixel(result, p2t);
+
+  return result;
+}
+
 #ifdef DEBUG
 #define PROBABLY_TOO_LARGE 1000000
 static
 void DebugCheckChildSize(nsIFrame*            aChild, 
                          nsHTMLReflowMetrics& aMet, 
-                         nsSize&              aAvailSize,
-                         PRBool               aIsPass2Reflow)
+                         nsSize&              aAvailSize)
 {
-  if (aIsPass2Reflow) {
-    if ((aMet.width < 0) || (aMet.width > PROBABLY_TOO_LARGE)) {
-      printf("WARNING: cell content %p has large width %d \n", aChild, aMet.width);
-    }
-  }
-  if (aMet.mComputeMEW) {
-    nscoord tmp = aMet.mMaxElementWidth;
-    if ((tmp < 0) || (tmp > PROBABLY_TOO_LARGE)) {
-      printf("WARNING: cell content %p has large max element width %d \n", aChild, tmp);
-    }
+  if ((aMet.width < 0) || (aMet.width > PROBABLY_TOO_LARGE)) {
+    printf("WARNING: cell content %p has large width %d \n", aChild, aMet.width);
   }
 }
 #endif
@@ -745,11 +777,8 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
                                    const nsHTMLReflowState& aReflowState,
                                    nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableCellFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableCellFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState);
-#endif
   GET_PIXELS_TO_TWIPS(aPresContext, p2t);
 
   // work around pixel rounding errors, round down to ensure we don't exceed the avail height in
@@ -767,11 +796,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   // this should probably be cached somewhere
   nsCompatibility compatMode = aPresContext->CompatibilityMode();
 
-  // Initialize out parameter
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = 0;
-  }
-
   aStatus = NS_FRAME_COMPLETE;
   nsSize availSize(aReflowState.availableWidth, availHeight);
 
@@ -784,7 +808,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   nsMargin borderPadding = aReflowState.mComputedPadding;
   nsMargin border;
   GetBorderWidth(p2t, border);
-  if ((NS_UNCONSTRAINEDSIZE == availSize.width) || !noBorderBeforeReflow) {
+  if (!noBorderBeforeReflow) {
     borderPadding += border;
   }
   
@@ -794,36 +818,16 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   nscoord leftInset   = borderPadding.left;
 
   // reduce available space by insets, if we're in a constrained situation
-  if (NS_UNCONSTRAINEDSIZE!=availSize.width)
-    availSize.width -= leftInset+rightInset;
+  availSize.width -= leftInset+rightInset;
   if (NS_UNCONSTRAINEDSIZE!=availSize.height)
     availSize.height -= topInset+bottomInset;
-
-  PRBool  isStyleChanged = PR_FALSE;
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    // if the path has a reflow command then the cell must be the target of a style change 
-    nsHTMLReflowCommand* command = aReflowState.path->mReflowCommand;
-    if (command) {
-      // if there are other reflow commands targeted at the cell's block, these will
-      // be subsumed by the style change reflow
-      nsReflowType type;
-      command->GetType(type);
-      if (eReflowType_StyleChanged == type) {
-        isStyleChanged = PR_TRUE;
-      }
-      else NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
-    }
-    // else the reflow command will be passed down to the child
-  }
 
   // Try to reflow the child into the available space. It might not
   // fit or might need continuing.
   if (availSize.height < 0)
     availSize.height = 1;
 
-  nsHTMLReflowMetrics kidSize(NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth ||
-                              aDesiredSize.mComputeMEW,
-                              aDesiredSize.mFlags);
+  nsHTMLReflowMetrics kidSize(aDesiredSize.mFlags);
   kidSize.width=kidSize.height=kidSize.ascent=kidSize.descent=0;
   SetPriorAvailWidth(aReflowState.availableWidth);
   nsIFrame* firstKid = mFrames.FirstChild();
@@ -831,8 +835,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 
   nscoord computedPaginatedHeight = 0;
 
-  if (aReflowState.mFlags.mSpecialHeightReflow || 
-      (HadSpecialReflow() && (eReflowReason_Incremental == aReflowState.reason))) {
+  if (aReflowState.mFlags.mSpecialHeightReflow) {
     ((nsHTMLReflowState&)aReflowState).mComputedHeight = mRect.height - topInset - bottomInset;
     DISPLAY_REFLOW_CHANGE();
   }
@@ -847,75 +850,42 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     SetHasPctOverHeight(PR_FALSE);
   }
 
-  // If it was a style change targeted at us, then reflow the child with a style change reason
-  nsReflowReason reason = aReflowState.reason;
-  if (isStyleChanged) {
-    reason = eReflowReason_StyleChange;
-    // the following could be optimized with a fair amount of effort
-    tableFrame->SetNeedStrategyInit(PR_TRUE);
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
+    // If we're reflowing everything, then we'll find out if we need
+    // to re-set this.
+    SetHadSpecialReflow(PR_FALSE);
   }
 
-  nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid, availSize, reason);
+  nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid,
+                                   availSize);
   // mIPercentHeightObserver is for non table related frames inside cells in quirks mode
   kidReflowState.mPercentHeightObserver = (eCompatibility_NavQuirks == compatMode) ? (nsIPercentHeightObserver *)this : nsnull;
 
-  // Assume the inner child will stay positioned exactly where it is. Later in
-  // VerticallyAlignChild() we'll move it if it turns out to be wrong. This
-  // avoids excessive movement and is more stable
-  nsPoint kidOrigin;
-  if (isStyleChanged || 
-      (eReflowReason_Initial == aReflowState.reason) ||
-      (eReflowReason_StyleChange == aReflowState.reason)) {
-    kidOrigin.MoveTo(leftInset, topInset);
-  } else {
-    // handle percent padding-left which was 0 during initial reflow
-    if (eStyleUnit_Percent == aReflowState.mStylePadding->mPadding.GetLeftUnit()) {
-      nsRect kidRect = firstKid->GetRect();
-      // only move in the x direction for the same reason as above
-      kidOrigin.MoveTo(leftInset, kidRect.y);
-      firstKid->SetPosition(nsPoint(leftInset, kidRect.y));
-    }
-    kidOrigin = firstKid->GetPosition();
-  }
+  nsPoint kidOrigin(leftInset, topInset);
   nsPoint collapsedOffset;
   GetCollapseOffset(collapsedOffset);
   kidOrigin += collapsedOffset;
 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(firstKid, (nsHTMLReflowState&)kidReflowState);
-#endif
   nscoord priorBlockHeight = GetLastBlockHeight();
   ReflowChild(firstKid, aPresContext, kidSize, kidReflowState,
               kidOrigin.x, kidOrigin.y, 0, aStatus);
   SetLastBlockHeight(kidSize.height);
-  if (isStyleChanged) {
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     Invalidate(GetOverflowRect(), PR_FALSE);
   }
 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(firstKid, (nsHTMLReflowState&)kidReflowState, &kidSize, aStatus);
-#endif
-
 #ifdef NS_DEBUG
-  DebugCheckChildSize(firstKid, kidSize, availSize, (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth));
+  DebugCheckChildSize(firstKid, kidSize, availSize);
 #endif
 
   // 0 dimensioned cells need to be treated specially in Standard/NavQuirks mode 
   // see testcase "emptyCells.html"
   if ((0 == kidSize.width) || (0 == kidSize.height)) { // XXX why was this &&
     SetContentEmpty(PR_TRUE);
-    if (NS_UNCONSTRAINEDSIZE == kidReflowState.availableWidth &&
-        GetStyleTableBorder()->mEmptyCells != NS_STYLE_TABLE_EMPTY_CELLS_SHOW) {
-      // need to reduce the insets by border if the cell is empty
-      leftInset   -= border.left;
-      rightInset  -= border.right;
-      topInset    -= border.top;
-      bottomInset -= border.bottom;
-    }
   }
   else {
     SetContentEmpty(PR_FALSE);
-    if ((eReflowReason_Incremental == aReflowState.reason) && noBorderBeforeReflow) {
+    if (noBorderBeforeReflow) {
       // need to consider borders, since they were factored out above
       leftInset   += border.left;
       rightInset  += border.right;
@@ -1013,26 +983,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   
   // the overflow area will be computed when the child will be vertically aligned
 
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth =
-      PR_MAX(smallestMinWidth, kidSize.mMaxElementWidth);
-    if (NS_UNCONSTRAINEDSIZE != aDesiredSize.mMaxElementWidth) {
-      aDesiredSize.mMaxElementWidth = nsTableFrame::RoundToPixel(
-                  aDesiredSize.mMaxElementWidth + leftInset + rightInset, p2t);
-    }
-  }
-  if (aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aDesiredSize.mMaximumWidth = kidSize.mMaximumWidth;
-    if (NS_UNCONSTRAINEDSIZE != aDesiredSize.mMaximumWidth) {
-      aDesiredSize.mMaximumWidth += leftInset + rightInset;
-      aDesiredSize.mMaximumWidth = nsTableFrame::RoundToPixel(aDesiredSize.mMaximumWidth, p2t);
-    }
-    // make sure the preferred width is at least as big as the max element width
-    if (aDesiredSize.mComputeMEW) {
-      aDesiredSize.mMaximumWidth = PR_MAX(aDesiredSize.mMaximumWidth, aDesiredSize.mMaxElementWidth);
-    }
-  }
-
   if (aReflowState.mFlags.mSpecialHeightReflow) {
     if (aDesiredSize.height > mRect.height) {
       // set a bit indicating that the pct height contents exceeded 
@@ -1046,32 +996,14 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     SetHadSpecialReflow(PR_TRUE);
   }
   else if (HadSpecialReflow()) {
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      // with an unconstrained height, if the block height value hasn't changed, 
-      // use the last height of the cell.
-      if ((NS_UNCONSTRAINEDSIZE == aReflowState.availableHeight) && 
-          (GetLastBlockHeight() == priorBlockHeight)) {
-        aDesiredSize.height = mRect.height;
-      }
-    }
-    // XXX should probably call SetHadSpecialReflow(PR_FALSE) when things change so that
-    // nothing inside the cell has a percent height, but it is not easy determining this 
+    // If this is not a special reflow, but we've had one before (and
+    // this frame wasn't dirty, i.e., a descendant was and not
+    // everything was reflowed), then request a special reflow.
+    nsTableFrame::RequestSpecialHeightReflow(aReflowState);
   }
 
   // remember the desired size for this reflow
   SetDesiredSize(aDesiredSize);
-
-#if defined DEBUG_TABLE_REFLOW_TIMING
-  nsTableFrame::DebugReflow(this, (nsHTMLReflowState&)aReflowState, &aDesiredSize, aStatus);
-#endif
-
-  if (NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth) {
-    SetNeedPass2Reflow(PR_TRUE);
-  }
-  else if ((eReflowReason_Initial == aReflowState.reason) || 
-           (eReflowReason_Resize  == aReflowState.reason)) { 
-    SetNeedPass2Reflow(PR_FALSE);
-  }
 
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;

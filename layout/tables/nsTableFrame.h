@@ -61,97 +61,6 @@ struct nsStylePosition;
 
 enum nsPixelRound {eAlwaysRoundUp=0, eAlwaysRoundDown, eRoundUpIfHalfOrMore};
 
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-#ifdef WIN32
-#include <windows.h>
-#endif
-class nsReflowTimer
-{
-public:
-  nsReflowTimer(nsIFrame* aFrame) {
-    mFrame = aFrame;
-    mNextSibling = nsnull;
-    mFrameType = aFrame->GetType();
-    NS_IF_ADDREF(mFrameType);
-    mReflowType = -1;
-		Reset();
-	}
-
-  void Destroy() {
-    PRInt32 numChildren = mChildren.Count();
-    for (PRInt32 childX = 0; childX < numChildren; childX++) {
-      ((nsReflowTimer*)mChildren.ElementAt(childX))->Destroy();
-    }
-    NS_IF_RELEASE(mFrameType);
-    if (mNextSibling) { // table frames have 3 auxillary timers
-      delete mNextSibling->mNextSibling->mNextSibling;
-      delete mNextSibling->mNextSibling;
-      delete mNextSibling;
-    }
-    delete this;
-  }
-
-  void Print(PRUint32 aIndent,
-             char*    aHeader = 0)  {
-		if (aHeader) {
-	    printf("%s", aHeader);
-		}
-    printf(" elapsed=%d numStarts=%d \n", Elapsed(), mNumStarts);	  
-  }
-
-  PRUint32 Elapsed() {
-    return mTotalTime;
-	}
-
-  void Reset() {
-		mTotalTime = mNumStarts = 0;
-    mStarted = PR_FALSE;
-	}
-
-  void Start() {
-    NS_ASSERTION(!mStarted, "started timer without stopping");
-#ifdef WIN32
-    mStartTime = GetTickCount();
-#else
-    mStartTime = 0;
-#endif
-    mStarted = PR_TRUE;
-    mNumStarts++;
-	}
-
-  void Stop() {
-    NS_ASSERTION(mStarted, "stopped timer without starting");
-		mTotalTime += GetTickCount() - mStartTime;
-    mStarted = PR_FALSE;
-	}
-  PRUint32        mTotalTime;
-  PRUint32        mStartTime;
-  PRUint32        mNumStarts;
-  PRBool          mStarted;
-  const nsIFrame* mFrame;
-  nsIAtom*        mFrameType; // needed for frame summary timer
-  nsReflowReason  mReason;
-  nsVoidArray     mChildren;
-  PRInt32         mCount;
-  // reflow state/reflow metrics data
-  nscoord         mAvailWidth;
-  nscoord         mComputedWidth;
-  nscoord         mComputedHeight;
-  nscoord         mMaxElementWidth;
-  nscoord         mMaxWidth; // preferred width
-  nscoord         mDesiredWidth;
-  nscoord         mDesiredHeight;        
-  nsReflowStatus  mStatus;
-  nsReflowTimer*  mNextSibling;
-  PRInt32         mReflowType;
-
-private:
-  ~nsReflowTimer() {}
-
-};
-
-#endif
-
 /**
  * Child list name indices
  * @see #GetAdditionalChildListName()
@@ -342,6 +251,11 @@ public:
                          PRBool aSelected,
                          nsSpread aSpread);
 
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
+  // XXXldb REWRITE THIS COMMENT!
   /** inner tables are reflowed in two steps.
     * <pre>
     * if mFirstPassValid is false, this is our first time through since content was last changed
@@ -367,7 +281,6 @@ public:
   nsresult ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                        const nsHTMLReflowState& aReflowState,
                        nscoord                  aAvailHeight,
-                       nsReflowReason           aReason,
                        nsIFrame*&               aLastChildReflowed,
                        PRBool&                  aDidBalance,
                        nsReflowStatus&          aStatus);
@@ -789,9 +702,6 @@ protected:
 
   void ExpandBCDamageArea(nsRect& aRect) const;
 
-  PRBool HadInitialReflow() const;
-  void SetHadInitialReflow(PRBool aValue);
-
   void SetColumnDimensions(nscoord         aHeight,
                            const nsMargin& aReflowState);
 
@@ -872,7 +782,6 @@ protected:
   nsAutoVoidArray mColFrames;  
 
   struct TableBits {
-    PRUint32 mHadInitialReflow:1;      // has initial reflow happened
     PRUint32 mHaveReflowedColGroups:1; // have the col groups gotten their initial reflow
     PRUint32 mNeedStrategyBalance:1;   // does the strategy needs to balance the table
     PRUint32 mNeedStrategyInit:1;      // does the strategy needs to be initialized and then balance the table
@@ -897,25 +806,6 @@ protected:
   nscoord                 mMinWidth;       // XXX could store as PRUint16 with pixels
   nscoord                 mDesiredWidth;   // XXX could store as PRUint16 with pixels
   nscoord                 mPreferredWidth; // XXX could store as PRUint16 with pixels
-
-
-  // DEBUG REFLOW 
-#if defined DEBUG_TABLE_REFLOW_TIMING
-public:
-  static void DebugReflow(nsIFrame*            aFrame, 
-                          nsHTMLReflowState&   aReflowState, 
-                          nsHTMLReflowMetrics* aMetrics = nsnull,
-                          nsReflowStatus       aStatus  = NS_FRAME_COMPLETE);
-
-  static void DebugReflowDone(nsIFrame* aFrame);
-
-  enum nsMethod {eInit=0, eBalanceCols, eNonPctCols, eNonPctColspans, ePctCols};
-  static void DebugTimeMethod(nsMethod           aMethod,
-                              nsTableFrame&      aFrame,
-                              nsHTMLReflowState& aReflowState,
-                              PRBool             aStart);
-  nsReflowTimer* mTimer;
-#endif
 };
 
 
@@ -924,16 +814,6 @@ inline PRBool nsTableFrame::IsRowGroup(PRInt32 aDisplayType) const
   return PRBool((NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == aDisplayType) ||
                 (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == aDisplayType) ||
                 (NS_STYLE_DISPLAY_TABLE_ROW_GROUP    == aDisplayType));
-}
-
-inline void nsTableFrame::SetHadInitialReflow(PRBool aValue)
-{
-  mBits.mHadInitialReflow = aValue;
-}
-
-inline PRBool nsTableFrame::HadInitialReflow() const
-{
-  return (PRBool)mBits.mHadInitialReflow;
 }
 
 inline void nsTableFrame::SetHaveReflowedColGroups(PRBool aValue)

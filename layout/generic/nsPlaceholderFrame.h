@@ -60,6 +60,10 @@ public:
   void       SetOutOfFlowFrame(nsIFrame* aFrame) {mOutOfFlowFrame = aFrame;}
 
   // nsIHTMLReflow overrides
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineMinWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlinePrefWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
