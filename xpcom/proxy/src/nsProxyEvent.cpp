@@ -73,20 +73,44 @@
 #define nsAUTF8String nsACString
 #define nsUTF8String nsCString
 
-/*
-static void* PR_CALLBACK EventHandler(PLEvent *self);
-static void  PR_CALLBACK DestroyHandler(PLEvent *self);
-static void* PR_CALLBACK CompletedEventHandler(PLEvent *self);
-static void PR_CALLBACK CompletedDestroyHandler(PLEvent *self) ;
-static void* PR_CALLBACK ProxyDestructorEventHandler(PLEvent *self);
-static void PR_CALLBACK ProxyDestructorDestroyHandler(PLEvent *self) ;
-*/
+//-----------------------------------------------------------------------------
 
-class nsProxyCallEvent : public nsRunnable
+#define NS_PROXYEVENT_IID                             \
+{ /* 9a24dc5e-2b42-4a5a-aeca-37b8c8fd8ccd */          \
+    0x9a24dc5e,                                       \
+    0x2b42,                                           \
+    0x4a5a,                                           \
+    {0xae, 0xca, 0x37, 0xb8, 0xc8, 0xfd, 0x8c, 0xcd}  \
+}
+
+class nsProxyEvent : public nsIRunnable
 {
 public:
-    nsProxyCallEvent()
-        : mInfo(nsnull)
+    NS_DECL_ISUPPORTS
+    NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXYEVENT_IID) 
+
+    nsProxyEvent(PRUint32 sequenceNumber)
+        : mSequenceNumber(sequenceNumber)
+    {}
+
+    PRUint32 SequenceNumber() const {
+        return mSequenceNumber;
+    }
+
+private:
+    PRUint32 mSequenceNumber;
+};
+NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyEvent, NS_PROXYEVENT_IID)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsProxyEvent, nsProxyEvent, nsIRunnable)
+
+//-----------------------------------------------------------------------------
+
+class nsProxyCallEvent : public nsProxyEvent
+{
+public:
+    nsProxyCallEvent(PRUint32 sequenceNumber)
+        : nsProxyEvent(sequenceNumber)
+        , mInfo(nsnull)
     {}
 
     void SetInfo(nsProxyObjectCallInfo *info)
@@ -108,7 +132,7 @@ public:
         }
         else
         {
-            mInfo->PostCompleted();
+            mInfo->PostCompleted(SequenceNumber());
         }
         return NS_OK;
     }
@@ -135,11 +159,13 @@ private:
     nsProxyObjectCallInfo *mInfo;
 };
 
-class nsProxyCallCompletedEvent : public nsRunnable
+class nsProxyCallCompletedEvent : public nsProxyEvent
 {
 public:
-    nsProxyCallCompletedEvent(nsProxyObjectCallInfo *info)
-        : mInfo(info)
+    nsProxyCallCompletedEvent(nsProxyObjectCallInfo *info,
+                              PRUint32 sequenceNumber)
+        : nsProxyEvent(sequenceNumber)
+        , mInfo(info)
     {}
 
     NS_IMETHOD Run()
@@ -322,11 +348,12 @@ nsProxyObjectCallInfo::SetCompleted()
 }
 
 void                
-nsProxyObjectCallInfo::PostCompleted()
+nsProxyObjectCallInfo::PostCompleted(PRUint32 sequenceNumber)
 {
     if (mCallersTarget)
     {
-        nsCOMPtr<nsIRunnable> event = new nsProxyCallCompletedEvent(this);
+        nsCOMPtr<nsIRunnable> event =
+                new nsProxyCallCompletedEvent(this, sequenceNumber);
         // XXX check for out-of-memory!
         // XXX dispatch sync will spin the current thread's event queue, which
         //     may not be what we want!
@@ -520,7 +547,12 @@ nsProxyObject::Post( PRUint32 methodIndex,
         return rv;
     }
 
-    nsRefPtr<nsProxyCallEvent> event = new nsProxyCallEvent();
+    PRUint32 sequenceNumber = 0;
+    if (mProxyType & NS_PROXY_SYNC) {
+        // XXX get sequence number
+    }
+
+    nsRefPtr<nsProxyCallEvent> event = new nsProxyCallEvent(sequenceNumber);
     if (!event) {
         if (fullParam) 
             free(fullParam);

@@ -666,8 +666,9 @@ NS_InitXPCOM3(nsIServiceManager* *result,
 EXPORT_XPCOM_API(nsresult)
 NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 {
-    nsresult rv;
+    NS_ENSURE_STATE(NS_IsMainThread());
 
+    nsresult rv;
     nsCOMPtr<nsISimpleEnumerator> moduleLoaders;
 
     // Notify observers of xpcom shutting down
@@ -675,8 +676,7 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
         // Block it so that the COMPtr will get deleted before we hit
         // servicemanager shutdown
 
-        nsCOMPtr<nsIThread> thread;
-        nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
+        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
 
         nsCOMPtr<nsIObserverService> observerService =
                  do_GetService("@mozilla.org/observer-service;1");
@@ -711,6 +711,9 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
         if (thread)
             NS_ProcessPendingEvents(thread);
 
+        // Shutdown all remaining threads.  This method does not return until
+        // all threads created using the thread manager (with the exception of
+        // the main thread) have exited.
         nsThreadManager::get()->Shutdown();
 
         if (thread)

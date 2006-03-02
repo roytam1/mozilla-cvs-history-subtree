@@ -52,8 +52,6 @@
 #include "nsProxyEventPrivate.h"
 #include "nsThreadUtils.h"
 
-#include "nsIProxyCreateInstance.h"
-
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
