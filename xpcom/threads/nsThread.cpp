@@ -267,8 +267,7 @@ nsThread::InitCurrentThread()
   mActive = PR_TRUE;
   mThread = PR_GetCurrentThread();
 
-  nsThreadManager::get()->SetupCurrentThread(this, nsnull);
-  return NS_OK;
+  return nsThreadManager::get()->SetupCurrentThread(this, nsnull);
 }
 
 PRBool

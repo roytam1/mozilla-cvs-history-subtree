@@ -254,7 +254,7 @@ NS_GetThread(nsIThread **result, const nsACString &name) {
   return mgr->GetThread(name, result);
 }
 
-inline PRBool
+inline NS_METHOD_(PRBool)
 NS_IsMainThread() {
   PRBool result = PR_FALSE;
   nsCOMPtr<nsIThreadManager> mgr =

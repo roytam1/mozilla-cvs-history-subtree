@@ -77,7 +77,7 @@ NS_GetThread(nsIThread **result, const nsACString &name)
   return nsThreadManager::get()->nsThreadManager::GetThread(name, result);
 }
 
-NS_COM PRBool
+NS_COM NS_METHOD_(PRBool)
 NS_IsMainThread()
 {
   PRBool result = PR_FALSE;
