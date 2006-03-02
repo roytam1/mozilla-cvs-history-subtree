@@ -835,8 +835,10 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
     for (SignonDataEntry* e = hashEnt->head; e; e = e->next) {
       
       nsCOMPtr<nsISupports> foundNode;
-      form->ResolveName(e->userField, getter_AddRefs(foundNode));
-      temp = do_QueryInterface(foundNode);
+      if (!(e->userField).IsEmpty()) {
+        form->ResolveName(e->userField, getter_AddRefs(foundNode));
+        temp = do_QueryInterface(foundNode);
+      }
 
       nsAutoString oldUserValue;
 
@@ -847,16 +849,15 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
 
         temp->GetValue(oldUserValue);
         userField = temp;
-      } else {
-        continue;
       }
 
       if (!(e->passField).IsEmpty()) {
         form->ResolveName(e->passField, getter_AddRefs(foundNode));
         temp = do_QueryInterface(foundNode);
       }
-      else {
-        // No password field name was supplied, try to locate one in the form.
+      else if (userField) {
+        // No password field name was supplied, try to locate one in the form,
+        // but only if we have a username field.
         nsCOMPtr<nsIFormControl> fc(do_QueryInterface(foundNode));
         PRInt32 index = -1;
         form->IndexOfControl(fc, &index);
@@ -925,7 +926,7 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
         }
       }
 
-      if (firstMatch && !attachedToInput) {
+      if (firstMatch && userField && !attachedToInput) {
         // We've found more than one possible signon for this form.
 
         // Listen for blur and autocomplete events on the username field so
@@ -942,16 +943,18 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
     if (firstMatch && !attachedToInput) {
       nsAutoString buffer;
 
-      if (NS_FAILED(DecryptData(firstMatch->userValue, buffer)))
-        goto done;
+      if (userField) {
+        if (NS_FAILED(DecryptData(firstMatch->userValue, buffer)))
+          goto done;
 
-      userField->SetValue(buffer);
+        userField->SetValue(buffer);
+        AttachToInput(userField);
+      }
 
       if (NS_FAILED(DecryptData(firstMatch->passValue, buffer)))
         goto done;
 
       passField->SetValue(buffer);
-      AttachToInput(userField);
     }
   }
 
