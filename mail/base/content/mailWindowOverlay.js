@@ -1374,14 +1374,14 @@ function MsgViewPageSource()
 
 function MsgFind()
 {
-  gFindBar.onFindCmd();
+  onFindCmd();
 }
 function MsgFindAgain(reverse)
 {
   if (reverse)
-    gFindBar.onFindPreviousCmd();
+    onFindPreviousCmd();
   else
-    gFindBar.onFindAgainCmd();
+    onFindAgainCmd();
 }
 
 function MsgCanFindAgain()
