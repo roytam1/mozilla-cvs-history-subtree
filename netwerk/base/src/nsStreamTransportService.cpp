@@ -51,7 +51,7 @@
 #include "nsIPipe.h"
 #include "nsITransport.h"
 #include "nsIRunnable.h"
-#include "nsIProxyObjectManager.h"
+#include "nsIObserverService.h"
 
 //-----------------------------------------------------------------------------
 // nsInputStreamTransport
@@ -469,10 +469,7 @@ nsOutputStreamTransport::IsNonBlocking(PRBool *result)
 
 nsStreamTransportService::~nsStreamTransportService()
 {
-    if (mPool) {
-        mPool->Shutdown();
-        mPool = nsnull;
-    }
+    NS_ASSERTION(!mPool, "thread pool wasn't shutdown");
 }
 
 nsresult
@@ -485,12 +482,18 @@ nsStreamTransportService::Init()
     mPool->SetThreadLimit(4);
     mPool->SetIdleThreadLimit(1);
     mPool->SetIdleThreadTimeout(PR_SecondsToInterval(60));
+
+    nsCOMPtr<nsIObserverService> obsSvc =
+            do_GetService("@mozilla.org/observer-service;1");
+    if (obsSvc)
+        obsSvc->AddObserver(this, "xpcom-shutdown-threads", PR_FALSE);
     return NS_OK;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsStreamTransportService,
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsStreamTransportService,
                               nsIStreamTransportService,
-                              nsIEventTarget)
+                              nsIEventTarget,
+                              nsIObserver)
 
 NS_IMETHODIMP
 nsStreamTransportService::Dispatch(nsIRunnable *task, PRUint32 flags)
@@ -534,4 +537,17 @@ nsStreamTransportService::CreateOutputTransport(nsIOutputStream *stream,
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(*result = trans);
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamTransportService::Observe(nsISupports *subject, const char *topic,
+                                  const PRUnichar *data)
+{
+  NS_ASSERTION(strcmp(topic, "xpcom-shutdown-threads") == 0, "oops");
+
+  if (mPool) {
+    mPool->Shutdown();
+    mPool = nsnull;
+  }
+  return NS_OK;
 }
