@@ -3593,7 +3593,6 @@ nsBrowserStatusHandler.prototype =
     if (findField && gFindMode != FIND_NORMAL) {
       // Close the Find toolbar if we're in old-style TAF mode
       closeFindBar();
-      gBackProtectBuffer = 0;
     }
 
     //fix bug 253793 - turn off highlight when page changes
