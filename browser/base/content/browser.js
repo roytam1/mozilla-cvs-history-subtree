@@ -6065,7 +6065,7 @@ var FeedHandler = {
   /**
    * Locate the shell that has a specified document loaded in it. 
    * @param   doc
-   *          The document that contains the feed
+   *          The document to find a shell for.
    * @returns The doc shell that contains the specified document.
    */
   _getContentShell: function(doc) {
@@ -6171,8 +6171,11 @@ var FeedHandler = {
       browserForLink.feeds = feeds;
       if (browserForLink == gBrowser || browserForLink == gBrowser.mCurrentBrowser) {
         var feedButton = document.getElementById("feed-button");
-        if (feedButton)
+        if (feedButton) {
           feedButton.setAttribute("feeds", "true");
+          feedButton.setAttribute("tooltiptext", 
+                                  gNavigatorBundle.getString("feedHasFeeds"));
+        }
       }
     }
   }
