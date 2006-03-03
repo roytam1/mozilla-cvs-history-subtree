@@ -868,6 +868,7 @@ function delayedStartup()
   document.getElementById("PersonalToolbar")
           .controllers.appendController(BookmarksMenuController);
 #else
+  // XXXben - move this to the toolbar constructor if there is no performance penalty! (Ts/Txul)
   var bookmarksBar = document.getElementById("bookmarksBarContent");
   bookmarksBar.init();
 #endif
@@ -5760,34 +5761,37 @@ function AddKeywordForSearchField()
                 && (node.form.enctype == "application/x-www-form-urlencoded" ||
                     node.form.enctype == ""));
 
-  var e, type, postData;
-  var formData = new Array();
+  var el, type;
+  var formData = [];
 
   for (var i=0; i < node.form.elements.length; i++) {
-    e = node.form.elements[i];
+    el = node.form.elements[i];
 
-    if (!e.type) // happens with fieldsets
+    if (!el.type) // happens with fieldsets
       continue;
 
-    if (e == node) {
-      formData.push((isURLEncoded) ? escapeNameValuePair(e.name, "%s", true) :
-                                     escapeNameValuePair(e.name, "", false) + "%s");
+    if (el == node) {
+      formData.push((isURLEncoded) ? escapeNameValuePair(el.name, "%s", true) :
+                                     // Don't escape "%s", just append
+                                     escapeNameValuePair(el.name, "", false) + "%s");
       continue;
     }
 
-    type = e.type.toLowerCase();
+    type = el.type.toLowerCase();
     
     if ((type == "text" || type == "hidden" || type == "textarea") ||
-        ((type == "checkbox" || type == "radio") && e.checked)) {
-      formData.push(escapeNameValuePair(e.name, e.value, isURLEncoded));
-    } else if (e instanceof HTMLSelectElement && e.selectedIndex >= 0) {
-      for (var j=0; j < e.options.length; j++) {
-        if (e.options[j].selected)
-          formData.push(escapeNameValuePair(e.name, e.options[j].value,
+        ((type == "checkbox" || type == "radio") && el.checked)) {
+      formData.push(escapeNameValuePair(el.name, el.value, isURLEncoded));
+    } else if (el instanceof HTMLSelectElement && el.selectedIndex >= 0) {
+      for (var j=0; j < el.options.length; j++) {
+        if (el.options[j].selected)
+          formData.push(escapeNameValuePair(el.name, el.options[j].value,
                                             isURLEncoded));
       }
     }
   }
+
+  var postData;
 
   if (isURLEncoded)
     postData = formData.join("&");
