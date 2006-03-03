@@ -240,7 +240,6 @@ pref("browser.link.open_newwindow.restriction", 2);
 pref("browser.tabs.loadInBackground", true);
 pref("browser.tabs.loadFolderAndReplace", true);
 pref("browser.tabs.opentabfor.middleclick", true);
-pref("browser.tabs.opentabfor.urlbar", true);
 pref("browser.tabs.loadDivertedInBackground", false);
 pref("browser.tabs.loadBookmarksInBackground", false);
 pref("browser.tabs.tabClipWidth", 140);
