@@ -4855,18 +4855,16 @@ MOZ_ARG_ENABLE_BOOL(native-uconv,
 [  --enable-native-uconv   Enable iconv support],
     MOZ_USE_NATIVE_UCONV=1,
     MOZ_USE_NATIVE_UCONV= )
+if test "$OS_ARCH" == "WINCE"; then
+    echo "*** Native UCONV support has been disabled on WINDOWS CE"
+    MOZ_USE_NATIVE_UCONV=
+fi
 if test "$MOZ_USE_NATIVE_UCONV"; then
     AC_DEFINE(MOZ_USE_NATIVE_UCONV)
 fi
 if test "$OS_ARCH" != "WINCE" -a "$MOZ_USE_NATIVE_UCONV" -a "$ac_cv_func_iconv" != "yes"; then
     AC_MSG_ERROR([iconv() not found.  Cannot enable native uconv support.])
 fi
-
-if test "$OS_ARCH" == "WINCE"; then
-    echo "*** Native UCONV support has been disabled on WINDOWS CE"
-    MOZ_USE_NATIVE_UCONV=
-fi
-
 
 dnl ========================================================
 dnl Libeditor can be build as plaintext-only,
