@@ -1034,7 +1034,7 @@ PRBool
 nsXULElement::IsNativeAnonymous() const
 {
     // XXX Workaround for bug 280541, wallpaper for bug 326644
-    return NodeInfo()->Equals(nsXULAtoms::popupgroup) &&
+    return Tag() == nsXULAtoms::popupgroup &&
            nsGenericElement::IsNativeAnonymous();
 }
 
