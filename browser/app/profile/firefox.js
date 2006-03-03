@@ -270,7 +270,7 @@ pref("dom.disable_window_status_change",          true);
 // allow JS to move and resize existing windows
 pref("dom.disable_window_move_resize",            false);
 // prevent JS from monkeying with window focus, etc
-pref("dom.disable_window_flip",                   false);
+pref("dom.disable_window_flip",                   true);
 
 // popups.policy 1=allow,2=reject
 pref("privacy.popups.policy",               1);
