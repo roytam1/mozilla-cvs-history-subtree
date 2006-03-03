@@ -2230,7 +2230,8 @@ nsTreeBodyFrame::PaintTreeBody(nsIRenderingContext& aRenderingContext,
   if (oldPageCount != mPageLength || mHorzWidth != CalcHorzWidth()) {
     // Schedule a ResizeReflow that will update our info properly.
     AddStateBits(NS_FRAME_IS_DIRTY);
-    aPresContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eResize);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eResize);
   }
   #ifdef DEBUG
   PRInt32 rowCount = mRowCount;

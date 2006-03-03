@@ -983,7 +983,7 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
     aMetrics.descent = aMetrics.height - aMetrics.ascent;
     
     // Whether or not we're complete hasn't changed
-    aStatus = (nsnull != mNextInFlow) ? NS_FRAME_NOT_COMPLETE : NS_FRAME_COMPLETE;
+    aStatus = (nsnull != GetNextInFlow()) ? NS_FRAME_NOT_COMPLETE : NS_FRAME_COMPLETE;
   }
 
   ComputeCombinedArea(aReflowState, aMetrics);

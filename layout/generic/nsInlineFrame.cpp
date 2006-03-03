@@ -182,7 +182,6 @@ nsInlineFrame::AppendFrames(nsIAtom*        aListName,
     mFrames.AppendFrames(this, aFrameList);
 
     // Ask the parent frame to reflow me.
-<<<<<<< nsInlineFrame.cpp
 #ifdef IBMBIDI
     if (nsnull == aListName)
 #endif
@@ -310,7 +309,7 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
                                       InlineIntrinsicWidthData *aData,
                                       nsLayoutUtils::IntrinsicWidthType aType)
 {
-  if (mPrevInFlow)
+  if (GetPrevInFlow())
     return; // Already added.
 
   NS_PRECONDITION(aType == nsLayoutUtils::MIN_WIDTH ||
@@ -334,7 +333,7 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
     GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
 
   for (nsInlineFrame *nif = this; nif;
-       nif = (nsInlineFrame*) nif->mNextInFlow) {
+       nif = (nsInlineFrame*) nif->GetNextInFlow()) {
     for (nsIFrame *kid = nif->mFrames.FirstChild(); kid;
          kid = kid->GetNextSibling()) {
       if (aType == nsLayoutUtils::MIN_WIDTH)
