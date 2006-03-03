@@ -50,7 +50,7 @@ public:
     NS_IMETHOD Init(int *argc, char **argv);
 
     // nsIThreadObserver overrides:
-    NS_IMETHOD OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags);
+    NS_IMETHOD OnDispatchedEvent(nsIThreadInternal *thread);
 
     // nsBaseAppShell overrides:
     PRBool ProcessNextNativeEvent(PRBool mayWait);

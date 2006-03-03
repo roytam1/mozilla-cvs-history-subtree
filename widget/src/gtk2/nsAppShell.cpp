@@ -75,7 +75,7 @@ nsAppShell::Init(int *argc, char **argv)
 }
 
 NS_IMETHODIMP
-nsAppShell::OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags)
+nsAppShell::OnDispatchedEvent(nsIThreadInternal *thread)
 {
     g_main_context_wakeup(NULL);
     return NS_OK;

@@ -444,7 +444,7 @@ nsSocketTransportService::SetAutodialEnabled(PRBool value)
 }
 
 NS_IMETHODIMP
-nsSocketTransportService::OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags)
+nsSocketTransportService::OnDispatchedEvent(nsIThreadInternal *thread)
 {
     if (mThreadEvent)
         PR_SetPollableEvent(mThreadEvent);
@@ -452,8 +452,8 @@ nsSocketTransportService::OnDispatchEvent(nsIThreadInternal *thread, PRUint32 fl
 }
 
 NS_IMETHODIMP
-nsSocketTransportService::OnEnterProcessNextEvent(nsIThreadInternal *thread,
-                                                  PRBool mayWait)
+nsSocketTransportService::OnProcessNextEvent(nsIThreadInternal *thread,
+                                             PRBool mayWait)
 {
     // Favor processing existing sockets before other events.
     DoPollIteration(PR_FALSE);
@@ -461,13 +461,7 @@ nsSocketTransportService::OnEnterProcessNextEvent(nsIThreadInternal *thread,
     PRBool val;
     while (mayWait && NS_SUCCEEDED(thread->HasPendingEvents(&val)) && !val)
         DoPollIteration(PR_TRUE);
-    return NS_OK;
-}
 
-NS_IMETHODIMP
-nsSocketTransportService::OnLeaveProcessNextEvent(nsIThreadInternal *thread,
-                                                  nsresult status)
-{
     return NS_OK;
 }
 
@@ -485,8 +479,8 @@ nsSocketTransportService::Run()
     nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
 
     // hook ourselves up to observe event processing for this thread
-    nsCOMPtr<nsIThreadInternal> threadInternal = do_QueryInterface(mThread);
-    threadInternal->SetObserver(this);
+    nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(mThread);
+    threadInt->SetObserver(this);
 
     for (;;) {
         // process all pending events

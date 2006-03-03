@@ -107,14 +107,14 @@ nsBaseAppShell::FavorPerformanceHint(PRBool favorPerfOverStarvation,
 // nsIThreadObserver methods:
 
 NS_IMETHODIMP
-nsBaseAppShell::OnDispatchEvent(nsIThreadInternal *thr, PRUint32 flags)
+nsBaseAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsBaseAppShell::OnEnterProcessNextEvent(nsIThreadInternal *thr,
-                                        PRBool mayWait)
+nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr,
+                                   PRBool mayWait)
 {
   if (mFavorPerf <= 0) {
     PRIntervalTime start = PR_IntervalNow();
@@ -133,12 +133,5 @@ nsBaseAppShell::OnEnterProcessNextEvent(nsIThreadInternal *thr,
     if (!ProcessNextNativeEvent(mayWait) && !mayWait)
       break;
   }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBaseAppShell::OnLeaveProcessNextEvent(nsIThreadInternal *thr,
-                                        nsresult status)
-{
   return NS_OK;
 }
