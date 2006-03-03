@@ -71,8 +71,15 @@ private:
 
   PR_STATIC_CALLBACK(void) ThreadFunc(void *arg);
 
+  // Helper
+  already_AddRefed<nsIThreadObserver> GetObserver() {
+    nsIThreadObserver *obs;
+    nsThread::GetObserver(&obs);
+    return already_AddRefed<nsIThreadObserver>(obs);
+  }
+
   // Wrapper for nsEventQueue::PutEvent
-  PRBool PutEvent(nsIRunnable *event, PRUint32 dispatchFlags);
+  PRBool PutEvent(nsIRunnable *event);
 
   PRLock                     *mObserverLock;
   nsCOMPtr<nsIThreadObserver> mObserver;

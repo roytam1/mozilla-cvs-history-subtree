@@ -59,11 +59,19 @@
 #include "prmem.h"
 #include "xptcall.h"
 
+#include "nsXPCOMCID.h"
+#include "nsServiceManagerUtils.h"
 #include "nsIComponentManager.h"
-#include "nsMemory.h"
+#include "nsIThreadInternal.h"
 #include "nsThreadUtils.h"
+#include "nsEventQueue.h"
+#include "nsMemory.h"
 
-#include "nsIAtom.h"  //hack!  Need a way to define a component as threadsafe (ie. sta).
+#include "prlog.h"
+#ifdef PR_LOGGING
+static PRLogModuleInfo *sLog = PR_NewLogModule("xpcomproxy");
+#endif
+#define LOG(args) PR_LOG(sLog, PR_LOG_DEBUG, args)
 
 /**
  * Map the nsAUTF8String, nsUTF8String classes to the nsACString and
@@ -86,31 +94,12 @@
 class nsProxyEvent : public nsIRunnable
 {
 public:
-    NS_DECL_ISUPPORTS
     NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXYEVENT_IID) 
+    NS_DECL_ISUPPORTS
 
-    nsProxyEvent(PRUint32 sequenceNumber)
-        : mSequenceNumber(sequenceNumber)
-    {}
-
-    PRUint32 SequenceNumber() const {
-        return mSequenceNumber;
-    }
-
-private:
-    PRUint32 mSequenceNumber;
-};
-NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyEvent, NS_PROXYEVENT_IID)
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsProxyEvent, nsProxyEvent, nsIRunnable)
-
-//-----------------------------------------------------------------------------
-
-class nsProxyCallEvent : public nsProxyEvent
-{
-public:
-    nsProxyCallEvent(PRUint32 sequenceNumber)
-        : nsProxyEvent(sequenceNumber)
-        , mInfo(nsnull)
+    nsProxyEvent(nsProxyObjectCallInfo *info = nsnull)
+        : mInfo(info)
+        , mHasRun(PR_FALSE)
     {}
 
     void SetInfo(nsProxyObjectCallInfo *info)
@@ -118,27 +107,82 @@ public:
         mInfo = info;
     }
 
+    PRBool IsSyncProxyEvent()
+    {
+        return mInfo->GetProxyObject()->GetProxyType() & NS_PROXY_SYNC;
+    }
+
+    PRBool HasRun()
+    {
+        return mHasRun;
+    }
+
+protected:
     NS_IMETHOD Run()
     {
-        Invoke();
+        mHasRun = PR_TRUE;
+        return NS_OK;
+    }
 
-        nsProxyObject *proxyObject = mInfo->GetProxyObject();
-        if (proxyObject == nsnull)
-            return NS_OK;
- 
-        if (proxyObject->GetProxyType() & NS_PROXY_ASYNC)
-        {        
+    nsProxyObjectCallInfo *mInfo;
+    PRPackedBool mHasRun;
+};
+NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyEvent, NS_PROXYEVENT_IID)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsProxyEvent, nsProxyEvent, nsIRunnable)
+
+//-----------------------------------------------------------------------------
+
+class nsProxyThreadFilter : public nsIThreadEventFilter
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSITHREADEVENTFILTER
+};
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsProxyThreadFilter, nsIThreadEventFilter)
+
+NS_IMETHODIMP
+nsProxyThreadFilter::AcceptEvent(nsIRunnable *event, PRBool *result)
+{
+    LOG(("PROXY(%p): filter event [%p]\n", this, event));
+
+    // If we encounter one of our proxy events that is for a synchronous method
+    // call, then we want to put it in our event queue for processing.  Else,
+    // we want to allow the event to be dispatched to the thread's event queue
+    // for processing later once we complete the current sync method call.
+    
+    nsCOMPtr<nsProxyEvent> pe = do_QueryInterface(event);
+    *result = (pe && pe->IsSyncProxyEvent());
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+class nsProxyCallEvent : public nsProxyEvent
+{
+public:
+    nsProxyCallEvent()
+        : nsProxyEvent()
+    {}
+
+    NS_IMETHOD Run()
+    {
+        nsProxyEvent::Run();
+
+        Invoke();
+        if (IsSyncProxyEvent()) {
+            mInfo->PostCompleted();
+        } else {
             delete mInfo;
-        }
-        else
-        {
-            mInfo->PostCompleted(SequenceNumber());
+            mInfo = nsnull;
         }
         return NS_OK;
     }
 
     void Invoke()
     {
+        LOG(("PROXY(%p): Invoke\n", this));
+
         nsProxyObject *proxyObject = mInfo->GetProxyObject();
         if (proxyObject)
         {
@@ -154,29 +198,27 @@ public:
             mInfo->SetResult(NS_ERROR_OUT_OF_MEMORY);
         }
     }
-
-private:
-    nsProxyObjectCallInfo *mInfo;
 };
+
+//-----------------------------------------------------------------------------
 
 class nsProxyCallCompletedEvent : public nsProxyEvent
 {
 public:
-    nsProxyCallCompletedEvent(nsProxyObjectCallInfo *info,
-                              PRUint32 sequenceNumber)
-        : nsProxyEvent(sequenceNumber)
-        , mInfo(info)
+    nsProxyCallCompletedEvent(nsProxyObjectCallInfo *info)
+        : nsProxyEvent(info)
     {}
 
     NS_IMETHOD Run()
     {
+        nsProxyEvent::Run();
+
         mInfo->SetCompleted();
         return NS_OK;
     }
-
-private:
-    nsProxyObjectCallInfo *mInfo;
 };
+
+//-----------------------------------------------------------------------------
 
 class nsProxyDestructorEvent : public nsRunnable
 {
@@ -194,6 +236,8 @@ public:
 private:
     nsProxyObject *mDoomed;
 };
+
+//-----------------------------------------------------------------------------
 
 nsProxyObjectCallInfo::nsProxyObjectCallInfo(nsProxyObject* owner,
                                              nsXPTMethodInfo *methodInfo,
@@ -344,20 +388,23 @@ nsProxyObjectCallInfo::GetCompleted()
 void
 nsProxyObjectCallInfo::SetCompleted()
 {
+    LOG(("PROXY(%p): SetCompleted\n", this));
     PR_AtomicSet(&mCompleted, 1);
 }
 
 void                
-nsProxyObjectCallInfo::PostCompleted(PRUint32 sequenceNumber)
+nsProxyObjectCallInfo::PostCompleted()
 {
+    LOG(("PROXY(%p): PostCompleted\n", this));
+
     if (mCallersTarget)
     {
         nsCOMPtr<nsIRunnable> event =
-                new nsProxyCallCompletedEvent(this, sequenceNumber);
+                new nsProxyCallCompletedEvent(this);
         // XXX check for out-of-memory!
         // XXX dispatch sync will spin the current thread's event queue, which
         //     may not be what we want!
-        mCallersTarget->Dispatch(event, NS_DISPATCH_SYNC);
+        mCallersTarget->Dispatch(event, NS_DISPATCH_NORMAL);
     }
     else
     {
@@ -442,32 +489,39 @@ nsProxyObject::Release(void)
 nsresult
 nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
 {
-    if (proxyInfo == nsnull)
-        return NS_ERROR_NULL_POINTER;
-    
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    NS_ENSURE_STATE(thread);
-    
-    proxyInfo->SetCallersTarget(thread);
+    LOG(("PROXY(%p): PostAndWait enter [%p]\n", this, proxyInfo));
+
+    NS_ENSURE_ARG_POINTER(proxyInfo);
 
     nsIRunnable* event = proxyInfo->GetEvent();
     if (!event)
         return NS_ERROR_NULL_POINTER;
+
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+    nsCOMPtr<nsIThreadInternal> threadInt = do_QueryInterface(thread);
+    NS_ENSURE_STATE(threadInt);
+
+    // Install thread filter to limit event processing only to subclasses of
+    // nsProxyEvent.  XXX Add support for sequencing?
+    nsRefPtr<nsProxyThreadFilter> filter = new nsProxyThreadFilter();
+    if (!filter)
+        return NS_ERROR_OUT_OF_MEMORY;
+    threadInt->PushEventQueue(filter);
+
+    proxyInfo->SetCallersTarget(thread);
     
     mTarget->Dispatch(event, NS_DISPATCH_NORMAL);
 
-    // TODO(darin): Layer a custom nsIThread implementation on top of the
-    //              current thread to limit event processing to only proxy
-    //              events.  Add support for sequencing.
-
-    nsresult rv;
-    while (!proxyInfo->GetCompleted())
-    {
+    nsresult rv = NS_OK;
+    while (!proxyInfo->GetCompleted()) {
         rv = thread->ProcessNextEvent();
         if (NS_FAILED(rv))
             break;
-    }  
-    
+    }
+
+    threadInt->PopEventQueue();
+
+    LOG(("PROXY(%p): PostAndWait exit [%p %x]\n", this, proxyInfo, rv));
     return rv;
 }
         
@@ -547,12 +601,7 @@ nsProxyObject::Post( PRUint32 methodIndex,
         return rv;
     }
 
-    PRUint32 sequenceNumber = 0;
-    if (mProxyType & NS_PROXY_SYNC) {
-        // XXX get sequence number
-    }
-
-    nsRefPtr<nsProxyCallEvent> event = new nsProxyCallEvent(sequenceNumber);
+    nsRefPtr<nsProxyCallEvent> event = new nsProxyCallEvent();
     if (!event) {
         if (fullParam) 
             free(fullParam);

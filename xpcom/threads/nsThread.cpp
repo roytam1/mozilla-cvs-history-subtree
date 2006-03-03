@@ -194,9 +194,10 @@ private:
 nsThread::ThreadFunc(void *arg)
 {
   nsThread *self = NS_STATIC_CAST(nsThread *, arg);  // strong reference
+  self->mThread = PR_GetCurrentThread();
 
   // Inform the ThreadManager
-  nsThreadManager::get()->SetCurrentThread(self, nsnull);
+  nsThreadManager::get()->SetupCurrentThread(self, nsnull);
 
   nsCOMPtr<nsIRunnable> event;
   self->mEvents.WaitPendingEvent(getter_AddRefs(event));
@@ -210,10 +211,10 @@ nsThread::ThreadFunc(void *arg)
   while (self->mActive)
     self->ProcessNextEvent();
 
-  NS_RELEASE(self);
-
   // Inform the threadmanager that this thread is going away
-  nsThreadManager::get()->SetCurrentThread(nsnull, nsnull);
+  nsThreadManager::get()->SetupCurrentThread(nsnull, self);
+
+  NS_RELEASE(self);
 }
 
 //-----------------------------------------------------------------------------
@@ -241,10 +242,12 @@ nsThread::Init()
   NS_ADDREF_THIS();
  
   mActive = PR_TRUE;
-  mThread = PR_CreateThread(PR_USER_THREAD, ThreadFunc, this,
-                            PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
-                            PR_JOINABLE_THREAD, 0);
-  if (!mThread) {
+
+  // ThreadFunc is responsible for setting mThread
+  PRThread *thr = PR_CreateThread(PR_USER_THREAD, ThreadFunc, this,
+                                  PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
+                                  PR_JOINABLE_THREAD, 0);
+  if (!thr) {
     NS_RELEASE_THIS();
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -271,22 +274,21 @@ nsThread::InitCurrentThread()
 }
 
 PRBool
-nsThread::PutEvent(nsIRunnable *event, PRUint32 dispatchFlags)
+nsThread::PutEvent(nsIRunnable *event)
 {
   PRBool rv = mEvents.PutEvent(event);
   if (!rv)
     return PR_FALSE;
 
-  nsCOMPtr<nsIThreadObserver> obs;
-  {
-    nsAutoLock lock(mObserverLock);
-    obs = mObserver;
-  }
+  nsCOMPtr<nsIThreadObserver> obs = GetObserver();
   if (obs)
-    obs->OnDispatchEvent(this, dispatchFlags);
+    obs->OnDispatchedEvent(this);
 
   return PR_TRUE;
 }
+
+//-----------------------------------------------------------------------------
+// nsIEventTarget
 
 NS_IMETHODIMP
 nsThread::Dispatch(nsIRunnable *event, PRUint32 flags)
@@ -301,14 +303,18 @@ nsThread::Dispatch(nsIRunnable *event, PRUint32 flags)
     nsThreadManager::get()->GetCurrentThread(getter_AddRefs(thread));
     NS_ENSURE_STATE(thread);
 
-    nsRefPtr<nsThreadSyncDispatch> event = new nsThreadSyncDispatch(event);
-    PutEvent(event, flags);
+    // XXX we should be able to do something better here... we should
+    //     be able to monitor the slot occupied by this event and use
+    //     that to tell us when the event has been processed.
+ 
+    nsRefPtr<nsThreadSyncDispatch> wrapper = new nsThreadSyncDispatch(event);
+    PutEvent(wrapper);
 
-    while (event->IsPending())
+    while (wrapper->IsPending())
       thread->ProcessNextEvent();
   } else {
     NS_ASSERTION(flags == NS_DISPATCH_NORMAL, "unexpected dispatch flags");
-    PutEvent(event, flags);
+    PutEvent(event);
   }
   return NS_OK;
 }
@@ -319,6 +325,9 @@ nsThread::IsOnCurrentThread(PRBool *result)
   *result = (PR_GetCurrentThread() == mThread);
   return NS_OK;
 }
+
+//-----------------------------------------------------------------------------
+// nsIThread
 
 NS_IMETHODIMP
 nsThread::GetName(nsACString &result)
@@ -349,12 +358,19 @@ nsThread::Shutdown()
   nsCOMPtr<nsIRunnable> event = new nsThreadShutdownEvent(this);
   if (!event)
     return NS_ERROR_OUT_OF_MEMORY;
-  PutEvent(event, NS_DISPATCH_NORMAL);
+  PutEvent(event);
 
   // XXX we could still end up with other events being added after the shutdown task
 
   PR_JoinThread(mThread);
   mThread = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::HasPendingEvents(PRBool *result)
+{
+  *result = mEvents.HasPendingEvent();
   return NS_OK;
 }
 
@@ -365,34 +381,30 @@ nsThread::ProcessNextEvent()
 
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
 
-  nsCOMPtr<nsIThreadObserver> obs;
-  {
-    nsAutoLock lock(mObserverLock);
-    obs = mObserver;
-  }
+  nsresult rv;
 
+  nsCOMPtr<nsIThreadObserver> obs = GetObserver();
   if (obs)
-    obs->OnEnterProcessNextEvent(this, mActive);
+    obs->OnProcessNextEvent(this, mActive);
 
   // If we are shutting down, then do not wait for new events.
   nsCOMPtr<nsIRunnable> event; 
   mEvents.GetEvent(mActive, getter_AddRefs(event));
 
-  nsresult rv = NS_OK;
-
   if (event) {
     LOG(("THRD(%p) running [%p]\n", this, event.get()));
     event->Run();
+    rv = NS_OK;
   } else {
     NS_ASSERTION(!mActive, "This should only happen when shutting down");
     rv = NS_ERROR_ABORT;
   }
 
-  if (obs)
-    obs->OnLeaveProcessNextEvent(this, rv);
-
   return rv;
 }
+
+//-----------------------------------------------------------------------------
+// nsISupportsPriority
 
 NS_IMETHODIMP
 nsThread::GetPriority(PRInt32 *priority)
@@ -436,25 +448,35 @@ nsThread::AdjustPriority(PRInt32 delta)
   return SetPriority(mPriority + delta);
 }
 
+//-----------------------------------------------------------------------------
+// nsIThreadInternal
+
 NS_IMETHODIMP
 nsThread::GetObserver(nsIThreadObserver **obs)
 {
   nsAutoLock lock(mObserverLock);
-  NS_ADDREF(*obs = mObserver);
+  NS_IF_ADDREF(*obs = mObserver);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsThread::SetObserver(nsIThreadObserver *obs)
 {
+  NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
+
   nsAutoLock lock(mObserverLock);
   mObserver = obs;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsThread::HasPendingEvents(PRBool *result)
+nsThread::PushEventQueue(nsIThreadEventFilter *filter)
 {
-  *result = mEvents.HasPendingEvent();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsThread::PopEventQueue()
+{
   return NS_OK;
 }

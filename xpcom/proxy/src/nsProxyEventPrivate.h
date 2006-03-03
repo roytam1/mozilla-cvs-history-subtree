@@ -168,11 +168,9 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyEventObject, NS_PROXYEVENT_OBJECT_IID)
 class nsProxyObjectManager: public nsIProxyObjectManager
 {
 public:
-
     NS_DECL_ISUPPORTS
     NS_DECL_NSIPROXYOBJECTMANAGER
         
-    
     static NS_METHOD Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
     
     nsProxyObjectManager();

@@ -50,28 +50,12 @@ ReleaseObject(void *data)
 }
 
 PR_STATIC_CALLBACK(PLDHashOperator)
-AppendAndRemoveThread(const nsACString &key, nsCOMPtr<nsIThread> &thread,
-                      void *arg)
+AppendAndRemoveThread(const void *key, nsCOMPtr<nsIThread> &thread, void *arg)
 {
   nsCOMArray<nsIThread> *threads =
       NS_STATIC_CAST(nsCOMArray<nsIThread> *, arg);
   threads->AppendObject(thread);
   return PL_DHASH_REMOVE;
-}
-
-// FindMatchingThread treats (*arg) as a PRThread.  When it finds a matching
-// nsIThread, it stores a pointer to the nsIThread in (*arg) and then returns.
-// The resulting nsIThread is not addref'd.
-PR_STATIC_CALLBACK(PLDHashOperator)
-FindMatchingThread(const nsACString &key, nsIThread *thread, void *arg)
-{
-  PRThread *prthread;
-  thread->GetPRThread(&prthread);
-  if (*((PRThread **) arg) == prthread) {
-    *((nsIThread **) arg) = thread;
-    return PL_DHASH_STOP;
-  }
-  return PL_DHASH_NEXT;
 }
 
 //-----------------------------------------------------------------------------
@@ -89,7 +73,7 @@ NS_IMPL_CI_INTERFACE_GETTER1(nsThreadManager, nsIThreadManager)
 nsresult
 nsThreadManager::Init()
 {
-  if (!mThreads.Init())
+  if (!mThreadsByName.Init() || !mThreadsByPRThread.Init())
     return NS_ERROR_OUT_OF_MEMORY;
 
   if (PR_NewThreadPrivateIndex(&mCurThreadIndex, ReleaseObject) == PR_FAILURE)
@@ -114,7 +98,8 @@ nsThreadManager::Shutdown()
   // holding the hashtable lock while calling nsIThread::Shutdown.
 
   nsCOMArray<nsIThread> threads;
-  mThreads.Enumerate(AppendAndRemoveThread, &threads);
+  mThreadsByPRThread.Enumerate(AppendAndRemoveThread, &threads);
+  mThreadsByName.Clear();
 
   // Shutdown all background threads.
   for (PRInt32 i = 0; i < threads.Count(); ++i) {
@@ -145,13 +130,34 @@ nsThreadManager::SetupCurrentThread(nsIThread *thread, nsIThread *previous)
         NS_NOTREACHED("thread name is not unique");
         return NS_ERROR_INVALID_ARG;
       }
-      mThreads.Put(name, thread);
+      mThreadsByName.Put(name, thread);
     }
+
+    PRThread *prthread = nsnull;
+    thread->GetPRThread(&prthread);
+    NS_ASSERTION(prthread, "no prthread");
+
+#ifdef DEBUG
+    if (previous) {
+      PRThread *prthreadPrev = nsnull;
+      previous->GetPRThread(&prthreadPrev);
+      NS_ASSERTION(prthreadPrev, "no previous prthread");
+      NS_ASSERTION(prthread == prthreadPrev, "prthread changed");
+    }
+#endif
+
+    mThreadsByPRThread.Put(prthread, thread);
+
     NS_ADDREF(thread);  // for TLS entry
   } else if (previous) {
     previous->GetName(name);
     if (!name.IsEmpty())
-      mThreads.Remove(name);
+      mThreadsByName.Remove(name);
+
+    PRThread *prthread = nsnull;
+    previous->GetPRThread(&prthread);
+    NS_ASSERTION(prthread, "no prthread");
+    mThreadsByPRThread.Remove(prthread);
   }
 
   // write thread local storage
@@ -190,37 +196,22 @@ nsThreadManager::GetThread(const nsACString &name, nsIThread **result)
     *result = nsnull;
     return NS_OK;
   }
-  mThreads.Get(name, result);
+  mThreadsByName.Get(name, result);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsThreadManager::GetThreadFromPRThread(PRThread *thread, nsIThread **result)
 {
-  if (thread == mMainPRThread)
-    return GetMainThread(result);
-  
-  // O(n) search algorithm, but that should be okay.  We don't expect this
-  // API to be used much.
-
-  // FindMatchingThread treats *arg as a PRThread.  When it finds a matching
-  // nsIThread, it stores a pointer to the nsIThread in *arg.
-  void *ptr = thread;
-  mThreads.EnumerateRead(FindMatchingThread, &ptr);
-
-  if (ptr == thread) {
-    *result = nsnull;
-  } else {
-    NS_ADDREF(*result = NS_STATIC_CAST(nsIThread *, ptr));
-  }
-
+  NS_ENSURE_ARG_POINTER(thread);
+  mThreadsByPRThread.Get(thread, result);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsThreadManager::GetMainThread(nsIThread **result)
 {
-  mThreads.Get(NS_LITERAL_CSTRING("main"), result);
+  mThreadsByPRThread.Get(mMainPRThread, result);
   return NS_OK;
 }
 
@@ -242,6 +233,7 @@ nsThreadManager::GetCurrentThread(nsIThread **result)
   return NS_OK;
 }
 
+#if 0
 NS_IMETHODIMP
 nsThreadManager::SetCurrentThread(nsIThread *thread, nsIThread **result)
 {
@@ -259,6 +251,7 @@ nsThreadManager::SetCurrentThread(nsIThread *thread, nsIThread **result)
 
   return NS_OK;
 }
+#endif
 
 NS_IMETHODIMP
 nsThreadManager::GetIsMainThread(PRBool *result)

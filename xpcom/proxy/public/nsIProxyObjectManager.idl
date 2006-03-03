@@ -107,6 +107,7 @@ interface nsIProxyObjectManager : nsISupports
  */
 #define NS_PROXY_TO_MAIN_THREAD  ((nsIEventTarget *) 1)
 
+#ifdef MOZILLA_INTERNAL_API
 /**
  * Helper function for code that already has a link-time dependency on
  * libxpcom and needs to get proxies in a bunch of different places.
@@ -120,4 +121,5 @@ NS_GetProxyForObject(nsIEventTarget *target,
                      nsISupports* aObj, 
                      PRInt32 proxyType, 
                      void** aProxyObject);
+#endif
 %}

@@ -142,7 +142,7 @@ public:
     
     PRBool              GetCompleted();
     void                SetCompleted();
-    void                PostCompleted(PRUint32 sequenceNumber);
+    void                PostCompleted();
 
     void                SetResult(nsresult rv) { mResult = rv; }
     
