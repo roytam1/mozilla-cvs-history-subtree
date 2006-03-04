@@ -72,6 +72,7 @@
 #include "nsInt64.h"
 #include "nsIVariant.h"
 #include "nsChannelProperties.h"
+#include "nsIOService.h"
 
 // True if the local cache should be bypassed when processing a request.
 #define BYPASS_LOCAL_CACHE(loadFlags) \
@@ -654,8 +655,8 @@ nsHttpChannel::SetupTransaction()
                             getter_AddRefs(responseStream));
     if (NS_FAILED(rv)) return rv;
 
-    rv = NS_NewInputStreamPump(getter_AddRefs(mTransactionPump),
-                               responseStream);
+    rv = nsInputStreamPump::Create(getter_AddRefs(mTransactionPump),
+                                   responseStream);
     return rv;
 }
 
@@ -718,6 +719,25 @@ nsHttpChannel::ApplyContentConversions()
     }
 }
 
+static void
+CallTypeSniffers(void *aClosure, const PRUint8 *aData, PRUint32 aCount)
+{
+  nsIChannel *chan = NS_STATIC_CAST(nsIChannel*, aClosure);
+
+  const nsCOMArray<nsIContentSniffer_MOZILLA_1_8_BRANCH>& sniffers =
+    gIOService->GetContentSniffers();
+  PRUint32 length = sniffers.Count();
+  for (PRUint32 i = 0; i < length; ++i) {
+    nsCAutoString newType;
+    nsresult rv =
+      sniffers[i]->GetMIMETypeFromContent(chan, aData, aCount, newType);
+    if (NS_SUCCEEDED(rv) && !newType.IsEmpty()) {
+      chan->SetContentType(newType);
+      break;
+    }
+  }
+}
+
 nsresult
 nsHttpChannel::CallOnStartRequest()
 {
@@ -754,7 +774,18 @@ nsHttpChannel::CallOnStartRequest()
     if (mResponseHead)
         SetPropertyAsInt64(NS_CHANNEL_PROP_CONTENT_LENGTH,
                            mResponseHead->ContentLength());
-    
+
+    // Allow consumers to override our content type
+    if ((mLoadFlags & LOAD_CALL_CONTENT_SNIFFERS) &&
+        gIOService->GetContentSniffers().Count() != 0) {
+        if (mTransactionPump)
+            mTransactionPump->PeekStream(CallTypeSniffers,
+                                         NS_STATIC_CAST(nsIChannel*, this));
+        else
+            mCachePump->PeekStream(CallTypeSniffers,
+                                   NS_STATIC_CAST(nsIChannel*, this));
+    }
+
     LOG(("  calling mListener->OnStartRequest\n"));
     nsresult rv = mListener->OnStartRequest(this, mListenerContext);
     if (NS_FAILED(rv)) return rv;
@@ -1688,9 +1719,9 @@ nsHttpChannel::ReadFromCache()
     rv = mCacheEntry->OpenInputStream(0, getter_AddRefs(stream));
     if (NS_FAILED(rv)) return rv;
 
-    rv = NS_NewInputStreamPump(getter_AddRefs(mCachePump),
-                               stream, nsInt64(-1), nsInt64(-1), 0, 0,
-                               PR_TRUE);
+    rv = nsInputStreamPump::Create(getter_AddRefs(mCachePump),
+                                   stream, nsInt64(-1), nsInt64(-1), 0, 0,
+                                   PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     return mCachePump->AsyncRead(this, mListenerContext);
@@ -3988,6 +4019,12 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 
     LOG(("nsHttpChannel::OnStartRequest [this=%x request=%x status=%x]\n",
         this, request, mStatus));
+
+    // Make sure things are what we expect them to be...
+    NS_ASSERTION(request == mCachePump || request == mTransactionPump,
+                 "Unexpected request");
+    NS_ASSERTION(!mTransactionPump || request == mTransactionPump,
+                 "If we have a txn pump, request must be it");
 
     // don't enter this block if we're reading from the cache...
     if (NS_SUCCEEDED(mStatus) && !mCachePump && mTransaction) {
