@@ -50,7 +50,8 @@ interface nsIThreadInternal : nsIThread
 {
   /**
    * Get/set the current thread observer (may be null).  This attribute may be
-   * accessed from any thread.
+   * read from any thread, but must only be set on the thread corresponding to
+   * this thread object.
    */
   attribute nsIThreadObserver observer;
 
@@ -65,7 +66,8 @@ interface nsIThreadInternal : nsIThread
   void pushEventQueue(in nsIThreadEventFilter filter);
 
   /**
-   * Revert a call to PushEventQueue.
+   * Revert a call to PushEventQueue.  When an event queue is popped, any
+   * events remaining in the queue are appended to the elder queue.
    */
   void popEventQueue();
 };
@@ -122,5 +124,11 @@ interface nsIThreadObserver : nsISupports
 [scriptable, uuid(a0605c0b-17f5-4681-b8cd-a1cd75d42559)]
 interface nsIThreadEventFilter : nsISupports
 {
-  boolean acceptEvent(in nsIRunnable event);
+  /**
+   * This method is called to determine whether or not an event may be accepted
+   * by a "nested" event queue (see nsIThreadInternal::PushEventQueue).
+   *
+   * WARNING: This method must not make any calls on the thread object.
+   */
+  [notxpcom] boolean AcceptEvent(in nsIRunnable event);
 };

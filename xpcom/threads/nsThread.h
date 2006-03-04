@@ -44,7 +44,7 @@
 #include "nsEventQueue.h"
 #include "nsThreadUtils.h"
 #include "nsString.h"
-#include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 
 // A native thread
 class nsThread : public nsIThreadInternal, public nsISupportsPriority
@@ -78,17 +78,45 @@ private:
     return already_AddRefed<nsIThreadObserver>(obs);
   }
 
-  // Wrapper for nsEventQueue::PutEvent
+  // Wrappers for event queue methods:
+  PRBool GetEvent(PRBool mayWait, nsIRunnable **event) {
+    return mEvents->GetEvent(mayWait, event);
+  }
   PRBool PutEvent(nsIRunnable *event);
 
-  PRLock                     *mObserverLock;
+  // Wrapper for nsEventQueue that supports chaining.
+  struct nsChainedEventQueue {
+    struct nsChainedEventQueue *mNext;
+    nsCOMPtr<nsIThreadEventFilter> mFilter;
+    nsEventQueue mQueue;
+
+    nsChainedEventQueue(nsIThreadEventFilter *filter = nsnull)
+      : mNext(nsnull), mFilter(filter) {
+    }
+
+    PRBool GetEvent(PRBool mayWait, nsIRunnable **event) {
+      return mQueue.GetEvent(mayWait, event);
+    }
+
+    PRBool PutEvent(nsIRunnable *event);
+  };
+
+  // This lock protects access to mObserver and mEvents.  Both of those fields
+  // are only modified on the thread itself (never from another thread).  This
+  // means that we can avoid holding the lock while using mObserver and mEvents
+  // on the thread itself.  When calling PutEvent on mEvents, we have to hold
+  // the lock to synchronize with PopEventQueue.
+  PRLock *mLock;
+
   nsCOMPtr<nsIThreadObserver> mObserver;
 
-  nsEventQueue mEvents;
-  nsCString    mName;
-  PRInt32      mPriority;
-  PRThread    *mThread;
-  PRIntn       mActive;
+  nsChainedEventQueue *mEvents;   // never null
+  nsChainedEventQueue  mEventsRoot;
+
+  nsCString  mName;
+  PRInt32    mPriority;
+  PRThread  *mThread;
+  PRIntn     mActive;
 };
 
 //-----------------------------------------------------------------------------

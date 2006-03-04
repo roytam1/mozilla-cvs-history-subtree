@@ -199,10 +199,10 @@ nsThread::ThreadFunc(void *arg)
   // Inform the ThreadManager
   nsThreadManager::get()->SetupCurrentThread(self, nsnull);
 
+  // Wait for and process startup event
   nsCOMPtr<nsIRunnable> event;
-  self->mEvents.WaitPendingEvent(getter_AddRefs(event));
-  if (!event) {
-    NS_NOTREACHED("WaitPendingEvent failed");
+  if (!self->GetEvent(PR_TRUE, getter_AddRefs(event))) {
+    NS_WARNING("failed waiting for thread startup event");
     return;
   }
   event->Run();  // unblocks nsThread::Init
@@ -220,14 +220,15 @@ nsThread::ThreadFunc(void *arg)
 //-----------------------------------------------------------------------------
 
 nsThread::nsThread(const nsACString &name)
-  : mObserverLock(PR_NewLock())
+  : mLock(PR_NewLock())
+  , mEvents(&mEventsRoot)
   , mName(name)
 {
 }
 
 nsThread::~nsThread()
 {
-  PR_DestroyLock(mObserverLock);
+  PR_DestroyLock(mLock);
 }
 
 nsresult
@@ -255,7 +256,10 @@ nsThread::Init()
   // ThreadFunc will wait for this event to be run before it tries to access
   // mThread.  By delaying insertion of this event into the queue, we ensure
   // that mThread is set properly.
-  mEvents.PutEvent(startup);
+  {
+    nsAutoLock lock(mLock);
+    mEvents->PutEvent(startup);
+  }
 
   // Wait for thread to call ThreadManager::SetCurrentThread, which completes
   // initialization of ThreadFunc.
@@ -276,7 +280,11 @@ nsThread::InitCurrentThread()
 PRBool
 nsThread::PutEvent(nsIRunnable *event)
 {
-  PRBool rv = mEvents.PutEvent(event);
+  PRBool rv;
+  {
+    nsAutoLock lock(mLock);
+    rv = mEvents->PutEvent(event);
+  }
   if (!rv)
     return PR_FALSE;
 
@@ -370,7 +378,9 @@ nsThread::Shutdown()
 NS_IMETHODIMP
 nsThread::HasPendingEvents(PRBool *result)
 {
-  *result = mEvents.HasPendingEvent();
+  NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
+
+  *result = mEvents->GetEvent(PR_FALSE, nsnull);
   return NS_OK;
 }
 
@@ -383,13 +393,13 @@ nsThread::ProcessNextEvent()
 
   nsresult rv;
 
-  nsCOMPtr<nsIThreadObserver> obs = GetObserver();
+  nsCOMPtr<nsIThreadObserver> obs = mObserver;
   if (obs)
     obs->OnProcessNextEvent(this, mActive);
 
   // If we are shutting down, then do not wait for new events.
   nsCOMPtr<nsIRunnable> event; 
-  mEvents.GetEvent(mActive, getter_AddRefs(event));
+  mEvents->GetEvent(mActive, getter_AddRefs(event));
 
   if (event) {
     LOG(("THRD(%p) running [%p]\n", this, event.get()));
@@ -454,7 +464,7 @@ nsThread::AdjustPriority(PRInt32 delta)
 NS_IMETHODIMP
 nsThread::GetObserver(nsIThreadObserver **obs)
 {
-  nsAutoLock lock(mObserverLock);
+  nsAutoLock lock(mLock);
   NS_IF_ADDREF(*obs = mObserver);
   return NS_OK;
 }
@@ -464,7 +474,7 @@ nsThread::SetObserver(nsIThreadObserver *obs)
 {
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
 
-  nsAutoLock lock(mObserverLock);
+  nsAutoLock lock(mLock);
   mObserver = obs;
   return NS_OK;
 }
@@ -472,11 +482,42 @@ nsThread::SetObserver(nsIThreadObserver *obs)
 NS_IMETHODIMP
 nsThread::PushEventQueue(nsIThreadEventFilter *filter)
 {
+  nsChainedEventQueue *queue = new nsChainedEventQueue(filter);
+  if (!queue)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  nsAutoLock lock(mLock);
+  queue->mNext = mEvents;
+  mEvents = queue;
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsThread::PopEventQueue()
 {
+  nsAutoLock lock(mLock);
+
+  // Make sure we do not pop too many!
+  NS_ENSURE_STATE(mEvents != &mEventsRoot);
+
+  nsChainedEventQueue *queue = mEvents;
+  mEvents = mEvents->mNext;
+
+  nsCOMPtr<nsIRunnable> event;
+  while (queue->GetEvent(PR_FALSE, getter_AddRefs(event)))
+    mEvents->PutEvent(event);
+  
   return NS_OK;
+}
+
+PRBool
+nsThread::nsChainedEventQueue::PutEvent(nsIRunnable *event)
+{
+  PRBool val;
+  if (!mFilter || mFilter->AcceptEvent(event)) {
+    val = mQueue.PutEvent(event);
+  } else {
+    val = mNext->PutEvent(event);
+  }
+  return val;
 }

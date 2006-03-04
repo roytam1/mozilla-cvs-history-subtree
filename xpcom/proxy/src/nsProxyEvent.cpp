@@ -141,8 +141,8 @@ public:
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsProxyThreadFilter, nsIThreadEventFilter)
 
-NS_IMETHODIMP
-nsProxyThreadFilter::AcceptEvent(nsIRunnable *event, PRBool *result)
+NS_IMETHODIMP_(PRBool)
+nsProxyThreadFilter::AcceptEvent(nsIRunnable *event)
 {
     LOG(("PROXY(%p): filter event [%p]\n", this, event));
 
@@ -152,8 +152,7 @@ nsProxyThreadFilter::AcceptEvent(nsIRunnable *event, PRBool *result)
     // for processing later once we complete the current sync method call.
     
     nsCOMPtr<nsProxyEvent> pe = do_QueryInterface(event);
-    *result = (pe && pe->IsSyncProxyEvent());
-    return NS_OK;
+    return pe && pe->IsSyncProxyEvent();
 }
 
 //-----------------------------------------------------------------------------
