@@ -244,6 +244,7 @@ MODULES_browser :=                              \
   mozilla/browser                               \
   mozilla/other-licenses/branding/firefox       \
   mozilla/other-licenses/7zstub/firefox         \
+  mozilla/themes                                \
   $(NULL)
 
 LOCALES_browser :=                              \
@@ -342,6 +343,7 @@ MODULES_NS_macbrowser :=                        \
 MODULES_macbrowser :=                           \
   $(MODULES_core)                               \
   mozilla/camino                                \
+  mozilla/themes                                \
   $(NULL)
 
 BOOTSTRAP_macbrowser :=                         \
