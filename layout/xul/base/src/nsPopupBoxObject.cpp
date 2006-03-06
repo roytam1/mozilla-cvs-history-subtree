@@ -103,8 +103,13 @@ nsPopupBoxObject::HidePopup()
   nsIFrame* ourFrame = GetFrame();
   if (!ourFrame)
     return NS_OK;
+
+  nsCOMPtr<nsIPresShell> shell = GetPresShell();
+  if (!shell) {
+    return NS_OK;
+  }
   
-  nsIFrame* rootFrame = mPresShell->FrameManager()->GetRootFrame();
+  nsIFrame* rootFrame = shell->FrameManager()->GetRootFrame();
   if (!rootFrame)
     return NS_OK;
 
@@ -138,7 +143,12 @@ nsPopupBoxObject::ShowPopup(nsIDOMElement* aSrcContent,
                             const PRUnichar *aPopupType, const PRUnichar *anAnchorAlignment, 
                             const PRUnichar *aPopupAlignment)
 {
-  nsIFrame* rootFrame = mPresShell->FrameManager()->GetRootFrame();
+  nsCOMPtr<nsIPresShell> shell = GetPresShell();
+  if (!shell) {
+    return NS_OK;
+  }
+  
+  nsIFrame* rootFrame = shell->FrameManager()->GetRootFrame();
   if (!rootFrame)
     return NS_OK;
 
