@@ -1378,7 +1378,26 @@ function BrowserBack(aEvent, aIgnoreAlt)
 
 function BrowserHandleBackspace()
 {
-  BrowserBack();
+  switch (gPrefService.getIntPref("browser.backspace_action")) {
+  case 0:
+    BrowserBack();
+    break;
+  case 1:
+    goDoCommand("cmd_scrollPageUp");
+    break;
+  }
+}
+
+function BrowserHandleShiftBackspace()
+{
+  switch (gPrefService.getIntPref("browser.backspace_action")) {
+  case 0:
+    BrowserForward();
+    break;
+  case 1:
+    goDoCommand("cmd_scrollPageDown");
+    break;
+  }
 }
 
 function BrowserBackMenu(event)
