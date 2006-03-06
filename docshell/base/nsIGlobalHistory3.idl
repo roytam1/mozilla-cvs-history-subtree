@@ -43,7 +43,7 @@ interface nsIChannel;
 /**
  * Provides information about global history to gecko, extending GlobalHistory2
  */
-[scriptable, uuid(40e9613e-1742-4b4d-a858-053e6237d04d)]
+[scriptable, uuid(24306852-c60e-49c3-a455-90f6747118ba)]
 interface nsIGlobalHistory3 : nsIGlobalHistory2
 {
   /**
@@ -60,12 +60,23 @@ interface nsIGlobalHistory3 : nsIGlobalHistory2
    *
    * For implementors of nsIGlobalHistory3: The history implementation is
    * responsible for sending NS_LINK_VISITED_EVENT_TOPIC to observers for
-   * redirect pages. This will be sent by the docshell for all non-redirect
-   * pages (see nsDocShell::AddToGlobalHistory).
+   * redirect pages. This notification must be sent for history consumers for
+   * all non-redirect pages.
    *
-   * This function takes the same arguments as
-   * nsIChannelEventSink::OnChannelRedirect
+   * @param aToplevel whether the URI is loaded in a top-level window.  If
+   *        false, the load is in a subframe.
+   *
+   * The other params to this function are the same as those for
+   * nsIChannelEventSink::OnChannelRedirect.
+   *
+   * Note: Implementors who wish to implement this interface but rely on
+   * nsIGlobalHistory2.addURI for redirect processing may throw
+   * NS_ERROR_NOT_IMPLEMENTED from this method.  If they do so, then callers
+   * must call nsIGlobalHistory2.addURI upon getting the
+   * NS_ERROR_NOT_IMPLEMENTED result.
    */
-  void addToplevelRedirect(in nsIChannel aOldChannel, in nsIChannel aNewChannel,
-                           in PRInt32 aFlags);
+  void addDocumentRedirect(in nsIChannel aOldChannel,
+                           in nsIChannel aNewChannel,
+                           in PRInt32 aFlags,
+                           in boolean aTopLevel);
 };
