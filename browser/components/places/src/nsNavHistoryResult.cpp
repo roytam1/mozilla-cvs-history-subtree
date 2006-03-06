@@ -2148,7 +2148,7 @@ nsNavHistoryQueryResultNode::OnTitleChanged(nsIURI* aURI,
 
 // nsNavHistoryQueryResultNode::OnDeleteURI
 //
-//    Here, we can always live update by just deleting all occurances of
+//    Here, we can always live update by just deleting all occurrences of
 //    the given URI.
 
 NS_IMETHODIMP
