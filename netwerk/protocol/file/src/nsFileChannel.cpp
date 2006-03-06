@@ -144,8 +144,10 @@ nsFileCopyEvent::DoCopy()
   mDest->Close();
 
   // Notify completion
-  if (mCallback)
+  if (mCallback) {
     mCallback->OnOutputStreamReady(nsnull);
+    mCallback = nsnull;
+  }
 }
 
 nsresult
@@ -192,8 +194,12 @@ public:
                             PRInt64 len,
                             nsITransportEventSink *sink)
     : nsBaseContentStream(nonBlocking)
-    , mCopyEvent(dest, source, len)
+    , mCopyEvent(new nsFileCopyEvent(dest, source, len))
     , mSink(sink) {
+  }
+
+  PRBool IsInitialized() {
+    return mCopyEvent != nsnull;
   }
 
   NS_IMETHODIMP ReadSegments(nsWriteSegmentFun fun, void *closure,
@@ -202,7 +208,7 @@ public:
                           PRUint32 count, nsIEventTarget *target);
 
 private:
-  nsFileCopyEvent mCopyEvent;
+  nsRefPtr<nsFileCopyEvent> mCopyEvent;
   nsCOMPtr<nsITransportEventSink> mSink;
 };
 
@@ -227,8 +233,8 @@ nsFileUploadContentStream::ReadSegments(nsWriteSegmentFun fun, void *closure,
   }
 
   // Perform copy synchronously, and then close out the stream.
-  mCopyEvent.DoCopy();
-  nsresult status = mCopyEvent.Status();
+  mCopyEvent->DoCopy();
+  nsresult status = mCopyEvent->Status();
   CloseWithStatus(NS_FAILED(status) ? status : NS_BASE_STREAM_CLOSED);
   return status;
 }
@@ -243,7 +249,7 @@ nsFileUploadContentStream::AsyncWait(nsIInputStreamCallback *callback,
     return rv;
 
   if (IsNonBlocking())
-    mCopyEvent.Dispatch(this, mSink, target);
+    mCopyEvent->Dispatch(this, mSink, target);
 
   return NS_OK;
 }
@@ -252,7 +258,7 @@ NS_IMETHODIMP
 nsFileUploadContentStream::OnOutputStreamReady(nsIAsyncOutputStream *unused)
 {
   // This method is being called to indicate that we are done copying.
-  nsresult status = mCopyEvent.Status();
+  nsresult status = mCopyEvent->Status();
 
   CloseWithStatus(NS_FAILED(status) ? status : NS_BASE_STREAM_CLOSED);
   return NS_OK;
@@ -317,10 +323,12 @@ nsFileChannel::OpenContentStream(PRBool async, nsIInputStream **result)
     if (NS_FAILED(rv))
       return rv;
 
-    stream = new nsFileUploadContentStream(async, fileStream, mUploadStream,
-                                           mUploadLength, this);
-    if (!stream)
+    nsFileUploadContentStream *uploadStream =
+        new nsFileUploadContentStream(async, fileStream, mUploadStream,
+                                      mUploadLength, this);
+    if (!uploadStream || !uploadStream->IsInitialized())
       return NS_ERROR_OUT_OF_MEMORY;
+    stream = uploadStream;
 
     SetContentLength64(0);
 
