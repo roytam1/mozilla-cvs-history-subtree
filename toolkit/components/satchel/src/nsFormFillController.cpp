@@ -486,14 +486,14 @@ nsFormFillController::StartSearch(const nsAString &aSearchString, const nsAStrin
                                   nsIAutoCompleteResult *aPreviousResult, nsIAutoCompleteObserver *aListener)
 {
   nsCOMPtr<nsIAutoCompleteResult> result;
-  nsCOMPtr<nsIAutoCompleteMdbResult> mdbResult = do_QueryInterface(aPreviousResult);
+  nsCOMPtr<nsIAutoCompleteMdbResult2> mdbResult = do_QueryInterface(aPreviousResult);
 
   nsPasswordManager* passMgr = nsPasswordManager::GetInstance();
   if (!passMgr)
     return NS_ERROR_OUT_OF_MEMORY;
 
   // Only hand off a previous result to the password manager if it's
-  // a password manager result (i.e. not an nsIAutoCompleteMdbResult).
+  // a password manager result (i.e. not an nsIAutoCompleteMdbResult2).
 
   if (!passMgr->AutoCompleteSearch(aSearchString,
                                    mdbResult ? nsnull : aPreviousResult,

@@ -69,7 +69,7 @@ public:
   static void ReleaseInstance(void);
 
   nsresult AutoCompleteSearch(const nsAString &aInputName, const nsAString &aInputValue,
-                              nsIAutoCompleteMdbResult *aPrevResult, nsIAutoCompleteResult **aNewResult);
+                              nsIAutoCompleteMdbResult2 *aPrevResult, nsIAutoCompleteResult **aNewResult);
 
   static mdb_column kToken_ValueColumn;
   static mdb_column kToken_NameColumn;
@@ -98,6 +98,10 @@ protected:
 
   nsresult RemoveEntriesInternal(const nsAString *aName);
 
+  nsresult InitByteOrder(PRBool aForce);
+  nsresult GetByteOrder(nsAString& aByteOrder);
+  nsresult SaveByteOrder(const nsAString& aByteOrder);
+
   static PRBool FormHistoryEnabled();
 
   static nsFormHistory *gFormHistory;
@@ -111,10 +115,13 @@ protected:
   nsIMdbStore* mStore;
   nsIMdbTable* mTable;
   PRInt64 mFileSizeOnDisk;
+  nsCOMPtr<nsIMdbRow> mMetaRow;
+  PRPackedBool mReverseByteOrder;
   
   // database tokens
   mdb_scope kToken_RowScope;
   mdb_kind kToken_Kind;
+  mdb_column kToken_ByteOrder;
 };
 
 #endif // __nsFormHistory__
