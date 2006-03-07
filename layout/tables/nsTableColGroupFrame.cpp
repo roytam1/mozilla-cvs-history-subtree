@@ -355,20 +355,13 @@ NS_METHOD nsTableColGroupFrame::Reflow(nsPresContext*          aPresContext,
   }
   // for every content child that (is a column thingy and does not already have a frame)
   // create a frame and adjust it's style
-  nsIFrame* kidFrame = nsnull;
   
-  
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    rv = IncrementalReflow(aDesiredSize, aReflowState, aStatus);
-  }
-
-  for (kidFrame = mFrames.FirstChild(); kidFrame;
+  for (nsIFrame *kidFrame = mFrames.FirstChild(); kidFrame;
        kidFrame = kidFrame->GetNextSibling()) {
     // Give the child frame a chance to reflow, even though we know it'll have 0 size
-    nsHTMLReflowMetrics kidSize(nsnull);
-    // XXX Use a valid reason...
+    nsHTMLReflowMetrics kidSize;
     nsHTMLReflowState kidReflowState(aPresContext, aReflowState, kidFrame,
-                                     nsSize(0,0), eReflowReason_Initial);
+                                     nsSize(0,0));
 
     nsReflowStatus status;
     ReflowChild(kidFrame, aPresContext, kidSize, kidReflowState, 0, 0, 0, status);
@@ -379,42 +372,8 @@ NS_METHOD nsTableColGroupFrame::Reflow(nsPresContext*          aPresContext,
   aDesiredSize.height=0;
   aDesiredSize.ascent=aDesiredSize.height;
   aDesiredSize.descent=0;
-  if (aDesiredSize.mComputeMEW)
-  {
-    aDesiredSize.mMaxElementWidth=0;
-  }
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-  return rv;
-}
-
-NS_METHOD nsTableColGroupFrame::IR_TargetIsChild(nsHTMLReflowMetrics&     aDesiredSize,
-                                                 const nsHTMLReflowState& aReflowState,
-                                                 nsReflowStatus&          aStatus,
-                                                 nsIFrame *               aNextFrame)
-{
-  nsresult rv;
- 
-  // Pass along the reflow command
-  nsHTMLReflowMetrics desiredSize(nsnull);
-  nsPresContext* presContext = GetPresContext();
-  nsHTMLReflowState kidReflowState(presContext, aReflowState, aNextFrame,
-                                   nsSize(aReflowState.availableWidth,
-                                          aReflowState.availableHeight));
-  rv = ReflowChild(aNextFrame, presContext, desiredSize, kidReflowState, 0, 0, 0, aStatus);
-  aNextFrame->DidReflow(presContext, nsnull, NS_FRAME_REFLOW_FINISHED);
-  if (NS_FAILED(rv))
-    return rv;
-
-  nsTableFrame *tableFrame=nsnull;
-  rv = nsTableFrame::GetTableFrame(this, tableFrame);
-  if (tableFrame) {
-    // compare the new col count to the old col count.  
-    // If they are the same, we just need to rebalance column widths
-    // If they differ, we need to fix up other column groups and the column cache
-    // XXX for now assume the worse
-    tableFrame->SetNeedStrategyInit(PR_TRUE);
-  }
   return rv;
 }
 
