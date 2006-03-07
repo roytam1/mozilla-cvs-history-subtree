@@ -72,6 +72,7 @@
 */
 
 #include "nsCOMPtr.h"
+#include "nsInterfaceHashtable.h"
 #include "nsIContentSink.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
@@ -187,6 +188,7 @@ public:
 
     static nsIAtom* kAboutAtom;
     static nsIAtom* kIdAtom;
+    static nsIAtom* kNodeIdAtom;
     static nsIAtom* kAboutEachAtom;
     static nsIAtom* kResourceAtom;
     static nsIAtom* kRDFAtom;
@@ -254,6 +256,9 @@ protected:
     // The datasource in which we're assigning assertions
     nsCOMPtr<nsIRDFDataSource> mDataSource;
 
+    // A hash of all the node IDs referred to
+    nsInterfaceHashtable<nsStringHashKey, nsIRDFResource> mNodeIDMap;
+
     // The current state of the content sink
     RDFContentSinkState mState;
     RDFContentSinkParseMode mParseMode;
@@ -288,6 +293,7 @@ nsIRDFResource* RDFContentSinkImpl::kRDF_nextVal;
 
 nsIAtom* RDFContentSinkImpl::kAboutAtom;
 nsIAtom* RDFContentSinkImpl::kIdAtom;
+nsIAtom* RDFContentSinkImpl::kNodeIdAtom;
 nsIAtom* RDFContentSinkImpl::kAboutEachAtom;
 nsIAtom* RDFContentSinkImpl::kResourceAtom;
 nsIAtom* RDFContentSinkImpl::kRDFAtom;
@@ -303,6 +309,7 @@ nsIAtom* RDFContentSinkImpl::kParseTypeAtom;
 static const nsStaticAtom rdf_atoms[] = {
     { "about", &RDFContentSinkImpl::kAboutAtom },
     { "ID", &RDFContentSinkImpl::kIdAtom },
+    { "nodeID", &RDFContentSinkImpl::kNodeIdAtom },
     { "aboutEach", &RDFContentSinkImpl::kAboutEachAtom },
     { "resource", &RDFContentSinkImpl::kResourceAtom },
     { "RDF", &RDFContentSinkImpl::kRDFAtom },
@@ -348,6 +355,8 @@ RDFContentSinkImpl::RDFContentSinkImpl()
 
         NS_RegisterStaticAtoms(rdf_atoms, NS_ARRAY_LENGTH(rdf_atoms));
     }
+
+    mNodeIDMap.Init();
 
 #ifdef PR_LOGGING
     if (! gLog)
@@ -838,6 +847,8 @@ RDFContentSinkImpl::GetIdAboutAttribute(const PRUnichar** aAttributes,
     rv = mDocumentURL->GetSpec(docURI);
     if (NS_FAILED(rv)) return rv;
 
+    nsAutoString nodeID;
+
     nsCOMPtr<nsIAtom> localName;
     for (; *aAttributes; aAttributes += 2) {
         const nsDependentSubstring& nameSpaceURI =
@@ -886,6 +897,9 @@ RDFContentSinkImpl::GetIdAboutAttribute(const PRUnichar** aAttributes,
 
             return gRDFService->GetUnicodeResource(name, aResource);
         }
+        else if (localName == kNodeIdAtom) {
+            nodeID.Assign(aAttributes[1]);
+        }
         else if (localName == kAboutEachAtom) {
             // XXX we don't deal with aboutEach...
             //PR_LOG(gLog, PR_LOG_WARNING,
@@ -898,7 +912,20 @@ RDFContentSinkImpl::GetIdAboutAttribute(const PRUnichar** aAttributes,
     if (aIsAnonymous)
         *aIsAnonymous = PR_TRUE;
 
-    rv = gRDFService->GetAnonymousResource(aResource);
+    // If nodeID is present, check if we already know about it. If we've seen
+    // the nodeID before, use the same resource, otherwise generate a new one.
+    if (!nodeID.IsEmpty()) {
+        mNodeIDMap.Get(nodeID,aResource);
+
+        if (!*aResource) {
+            rv = gRDFService->GetAnonymousResource(aResource);
+            mNodeIDMap.Put(nodeID,*aResource);
+        }
+    }
+    else {
+        rv = gRDFService->GetAnonymousResource(aResource);
+    }
+
     return rv;
 }
 
@@ -907,6 +934,9 @@ RDFContentSinkImpl::GetResourceAttribute(const PRUnichar** aAttributes,
                                          nsIRDFResource** aResource)
 {
   nsCOMPtr<nsIAtom> localName;
+
+  nsAutoString nodeID;
+
   for (; *aAttributes; aAttributes += 2) {
       const nsDependentSubstring& nameSpaceURI =
           SplitExpatName(aAttributes[0], getter_AddRefs(localName));
@@ -935,7 +965,23 @@ RDFContentSinkImpl::GetResourceAttribute(const PRUnichar** aAttributes,
 
           return gRDFService->GetUnicodeResource(uri, aResource);
       }
+      else if (localName == kNodeIdAtom) {
+          nodeID.Assign(aAttributes[1]);
+      }
   }
+
+  // If nodeID is present, check if we already know about it. If we've seen
+  // the nodeID before, use the same resource, otherwise generate a new one.
+  if (!nodeID.IsEmpty()) {
+      mNodeIDMap.Get(nodeID,aResource);
+
+      if (!*aResource) {
+          mNodeIDMap.Put(nodeID,*aResource);
+          return gRDFService->GetAnonymousResource(aResource);
+      }
+      return NS_OK;
+  }
+
   return NS_ERROR_FAILURE;
 }
 
@@ -957,11 +1003,11 @@ RDFContentSinkImpl::AddProperties(const PRUnichar** aAttributes,
         continue;
       }
 
-      // skip `about', `ID', and `resource' attributes (either with or
+      // skip `about', `ID', `resource', and 'nodeID' attributes (either with or
       // without the `rdf:' prefix); these are all "special" and
       // should've been dealt with by the caller.
       if (localName == kAboutAtom || localName == kIdAtom ||
-          localName == kResourceAtom) {
+          localName == kResourceAtom || localName == kNodeIdAtom) {
           if (nameSpaceURI.IsEmpty() ||
               nameSpaceURI.EqualsLiteral(RDF_NAMESPACE_URI))
               continue;
