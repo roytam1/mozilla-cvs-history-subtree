@@ -46,6 +46,23 @@
 - (IBAction)hitButton2:(id)sender;
 - (IBAction)hitButton3:(id)sender;
 
+// This is a version of [NSApp runModalForWindow:(relativeToWindow:)] that does three
+// things:
+// 
+//  1. It verifies that inParentWindow is a valid window to show a sheet on
+//     (i.e. that it's not nil, is visible, and doesn't already have a sheet).
+//
+//  2. It doesn't show inWindow as a sheet if there is already a modal (non-sheet)
+//     dialog on the screen, because that fubars AppKit.
+// 
+//  3. It does some JS context stack magic that pushes a "native code" security principle
+//     ("trust label") so that Gecko knows we're running native code, and not calling
+//     from JS. This is important, because we can remain on the stack while PLEvents
+//     are being handled in the sheet's event loop, and those PLEvents can cause
+//     code to run that is sensitive to the security context. See bug 179307 for details.
+// 
++ (int)safeRunModalForWindow:(NSWindow*)inWindow relativeToWindow:(NSWindow*)inParentWindow;
+
 - (void)alert:(NSWindow*)parent title:(NSString*)title text:(NSString*)text;
 - (void)alertCheck:(NSWindow*)parent title:(NSString*)title text:(NSString*)text checkMsg:(NSString*)checkMsg checkValue:(BOOL*)checkValue;
 
