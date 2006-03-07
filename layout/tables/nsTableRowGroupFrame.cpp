@@ -272,6 +272,7 @@ nsTableRowGroupFrame::InitChildReflowState(nsPresContext&    aPresContext,
 
 // Reflow the frames we've already created. If aDirtyOnly is set then only
 // reflow dirty frames. This assumes that all of the dirty frames are contiguous.
+// ... it is currently used only for eReflowType_ReflowDirty reflows
 NS_METHOD 
 nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
                                      nsHTMLReflowMetrics&   aDesiredSize,
@@ -321,33 +322,15 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       nsSize kidAvailSize(aReflowState.availSize);
       if (0 >= kidAvailSize.height)
         kidAvailSize.height = 1;      // XXX: HaCk - we don't handle negative heights yet
-      nsHTMLReflowMetrics desiredSize(aDesiredSize.mComputeMEW);
+      nsHTMLReflowMetrics desiredSize;
       desiredSize.width = desiredSize.height = desiredSize.ascent = desiredSize.descent = 0;
   
       // Reflow the child into the available space, giving it as much height as
       // it wants. We'll deal with splitting later after we've computed the row
       // heights, taking into account cells with row spans...
       kidAvailSize.height = NS_UNCONSTRAINEDSIZE;
-      // If the incremental reflow command is a StyleChanged reflow and
-      // it's target is the current frame, then make sure we send
-      // StyleChange reflow reasons down to the children so that they
-      // don't over-optimize their reflow.
-      nsReflowReason reason = aReflowState.reason;
-      if (eReflowReason_Incremental == aReflowState.reason) {
-        nsHTMLReflowCommand* command = aReflowState.reflowState.path->mReflowCommand;
-        if (command) {
-          nsReflowType type;
-          command->GetType(type);
-          if (eReflowType_StyleChanged == type) {
-            reason = eReflowReason_StyleChange;
-          }
-        }
-      }
-      if (kidFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW) {
-        reason = eReflowReason_Initial;
-      }
       nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState, kidFrame,
-                                       kidAvailSize, reason);
+                                       kidAvailSize);
       InitChildReflowState(*aPresContext, borderCollapse, p2t, kidReflowState);
      
       // If this isn't the first row, then we can't be at the top of the page
@@ -993,8 +976,9 @@ nsTableRowGroupFrame::SplitRowGroup(nsPresContext*          aPresContext,
         // don't let the available height exceed what CalculateRowHeights set for it
         availSize.height = PR_MIN(availSize.height, rowRect.height);
 
-        nsHTMLReflowState rowReflowState(aPresContext, aReflowState, rowFrame, availSize, 
-                                         eReflowReason_Resize);
+        nsHTMLReflowState rowReflowState(aPresContext, aReflowState,
+                                         rowFrame, availSize);
+                                         
         InitChildReflowState(*aPresContext, borderCollapse, p2t, rowReflowState);
         rowReflowState.mFlags.mIsTopOfPage = isTopOfPage; // set top of page
         nsHTMLReflowMetrics rowMetrics(PR_FALSE);
@@ -1171,7 +1155,7 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
                              const nsHTMLReflowState& aReflowState,
                              nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableRowGroupFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableRowGroupFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   nsresult rv = NS_OK;
@@ -1212,23 +1196,14 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
     aDesiredSize.height = state.y;
 
     // shrink wrap rows to height of tallest cell in that row
-    PRBool isTableUnconstrainedReflow = 
-      (NS_UNCONSTRAINEDSIZE == aReflowState.parentReflowState->availableWidth);
 
-    // Avoid calling CalculateRowHeights. We can avoid it if the table is going to be
-    // doing a pass 2 reflow. In the case where the table is getting an unconstrained
-    // reflow, then we need to do this because the table will skip the pass 2 reflow,
-    // but we need to correctly calculate the row group height and we can't if there
-    // are row spans unless we do this step
     if (aReflowState.mFlags.mSpecialHeightReflow) {
       DidResizeRows(aReflowState, aDesiredSize);
       if (isPaginated) {
         CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
       }
     }
-    else if ((eReflowReason_Initial != aReflowState.reason) || 
-             isTableUnconstrainedReflow                     ||
-             isPaginated) {
+    else {
       CalculateRowHeights(aPresContext, aDesiredSize, aReflowState);
       haveDesiredHeight = PR_TRUE;
     }
@@ -1426,29 +1401,12 @@ nsTableRowGroupFrame::IR_TargetIsMe(nsPresContext*        aPresContext,
   nsReflowType type;
   aReflowState.reflowState.path->mReflowCommand->GetType(type);
 
-  switch (type) {
-    case eReflowType_ReflowDirty: {
-      nsRowGroupReflowState state(aReflowState);
-      state.reason = eReflowReason_Resize;
-      // Reflow the dirty child frames. Typically this is newly added frames.
-      nsTableRowFrame* firstRowReflowed;
-      rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                          nsnull, PR_TRUE, &firstRowReflowed);
-      CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState, firstRowReflowed);
-      break;
-    }
-    case eReflowType_StyleChanged :
-      rv = IR_StyleChanged(aPresContext, aDesiredSize, aReflowState, aStatus);
-      break;
-    case eReflowType_ContentChanged :
-      NS_ASSERTION(PR_FALSE, "illegal reflow type: ContentChanged");
-      rv = NS_ERROR_ILLEGAL_VALUE;
-      break; 
-    default:
-      NS_NOTYETIMPLEMENTED("unexpected reflow command type");
-      rv = NS_ERROR_NOT_IMPLEMENTED;
-      break;
-  }
+  nsRowGroupReflowState state(aReflowState);
+  nsTableRowFrame* firstRowReflowed;
+  rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
+                      nsnull, type != eReflowType_StyleChanged,
+                      &firstRowReflowed);
+  CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState, firstRowReflowed);
 
   // XXX If we have a next-in-flow, then we're not complete
   if (GetNextInFlow()) {
@@ -1691,25 +1649,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
     aStatus = NS_FRAME_NOT_COMPLETE;
   }
 
-  return rv;
-}
-
-NS_METHOD 
-nsTableRowGroupFrame::IR_StyleChanged(nsPresContext*        aPresContext,
-                                      nsHTMLReflowMetrics&   aDesiredSize,
-                                      nsRowGroupReflowState& aReflowState,
-                                      nsReflowStatus&        aStatus)
-{
-  nsresult rv = NS_OK;
-  // we presume that all the easy optimizations were done in the nsHTMLStyleSheet before we were called here
-  // XXX: we can optimize this when we know which style attribute changed
-  aReflowState.tableFrame->SetNeedStrategyInit(PR_TRUE);
-  nsRowGroupReflowState state(aReflowState);
-  nsTableRowFrame* firstRowReflowed;
-  rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                          nsnull, PR_FALSE, &firstRowReflowed);
-  CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState, firstRowReflowed);
-      
   return rv;
 }
 

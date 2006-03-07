@@ -256,34 +256,6 @@ protected:
                      nsHTMLReflowMetrics&     aDesiredSize,
                      nsTableRowFrame*         aStartRowFrameIn = nsnull);
 
-  /** Incremental Reflow attempts to do column balancing with the minimum number of reflow
-    * commands to child elements.  This is done by processing the reflow command,
-    * rebalancing column widths (if necessary), then comparing the resulting column widths
-    * to the prior column widths and reflowing only those cells that require a reflow.
-    *
-    * @see Reflow
-    */
-  NS_IMETHOD IncrementalReflow(nsPresContext*        aPresContext,
-                               nsHTMLReflowMetrics&   aDesiredSize,
-                               nsRowGroupReflowState& aReflowState,
-                               nsReflowStatus&        aStatus);
-
-  NS_IMETHOD IR_TargetIsChild(nsPresContext*        aPresContext,
-                              nsHTMLReflowMetrics&   aDesiredSize,
-                              nsRowGroupReflowState& aReflowState,
-                              nsReflowStatus&        aStatus,
-                              nsIFrame*              aNextFrame);
-
-  NS_IMETHOD IR_TargetIsMe(nsPresContext*        aPresContext,
-                           nsHTMLReflowMetrics&   aDesiredSize,
-                           nsRowGroupReflowState& aReflowState,
-                           nsReflowStatus&        aStatus);
-
-  NS_IMETHOD IR_StyleChanged(nsPresContext*        aPresContext,
-                             nsHTMLReflowMetrics&   aDesiredSize,
-                             nsRowGroupReflowState& aReflowState,
-                             nsReflowStatus&        aStatus);
-
   nsresult AdjustSiblingsAfterReflow(nsRowGroupReflowState& aReflowState,
                                      nsIFrame*              aKidFrame,
                                      nscoord                aDeltaY);
