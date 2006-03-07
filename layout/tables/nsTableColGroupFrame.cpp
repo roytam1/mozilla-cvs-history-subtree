@@ -339,7 +339,7 @@ NS_METHOD nsTableColGroupFrame::Reflow(nsPresContext*          aPresContext,
                                        const nsHTMLReflowState& aReflowState,
                                        nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableColGroupFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableColGroupFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   NS_ASSERTION(nsnull!=mContent, "bad state -- null content for frame");
   nsresult rv=NS_OK;
@@ -385,66 +385,6 @@ NS_METHOD nsTableColGroupFrame::Reflow(nsPresContext*          aPresContext,
   }
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-  return rv;
-}
-
-NS_METHOD nsTableColGroupFrame::IncrementalReflow(nsHTMLReflowMetrics&     aDesiredSize,
-                                                  const nsHTMLReflowState& aReflowState,
-                                                  nsReflowStatus&          aStatus)
-{
-
-  // the col group is a target if its path has a reflow command
-  nsHTMLReflowCommand* command = aReflowState.path->mReflowCommand;
-  if (command)
-    IR_TargetIsMe(aDesiredSize, aReflowState, aStatus);
-
-  // see if the chidren are targets as well
-  nsReflowPath::iterator iter = aReflowState.path->FirstChild();
-  nsReflowPath::iterator end  = aReflowState.path->EndChildren();
-  for (; iter != end; ++iter)
-    IR_TargetIsChild(aDesiredSize, aReflowState, aStatus, *iter);
-
-  return NS_OK;
-}
-
-NS_METHOD nsTableColGroupFrame::IR_TargetIsMe(nsHTMLReflowMetrics&     aDesiredSize,
-                                              const nsHTMLReflowState& aReflowState,
-                                              nsReflowStatus&          aStatus)
-{
-  nsresult rv = NS_OK;
-  aStatus = NS_FRAME_COMPLETE;
-  switch (aReflowState.path->mReflowCommand->Type())
-  {
-  case eReflowType_StyleChanged :
-    rv = IR_StyleChanged(aDesiredSize, aReflowState, aStatus);
-    break;
-
-  case eReflowType_ContentChanged :
-    NS_ASSERTION(PR_FALSE, "illegal reflow type: ContentChanged");
-    rv = NS_ERROR_ILLEGAL_VALUE;
-    break;
-  
-  default:
-    NS_NOTYETIMPLEMENTED("unexpected reflow command type");
-    rv = NS_ERROR_NOT_IMPLEMENTED;
-    break;
-  }
-
-  return rv;
-}
-
-NS_METHOD nsTableColGroupFrame::IR_StyleChanged(nsHTMLReflowMetrics&     aDesiredSize,
-                                                const nsHTMLReflowState& aReflowState,
-                                                nsReflowStatus&          aStatus)
-{
-  nsresult rv = NS_OK;
-  // we presume that all the easy optimizations were done in the nsHTMLStyleSheet before we were called here
-  // XXX: we can optimize this when we know which style attribute changed
-  nsTableFrame* tableFrame = nsnull;
-  rv = nsTableFrame::GetTableFrame(this, tableFrame);
-  if (tableFrame)  {
-    tableFrame->SetNeedStrategyInit(PR_TRUE);
-  }
   return rv;
 }
 

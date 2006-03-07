@@ -248,24 +248,6 @@ protected:
   /** implement abstract method on nsHTMLContainerFrame */
   virtual PRIntn GetSkipSides() const;
 
-  NS_IMETHOD IncrementalReflow(nsHTMLReflowMetrics&     aDesiredSize,
-                               const nsHTMLReflowState& aReflowState,
-                               nsReflowStatus&          aStatus);
-
-  NS_IMETHOD IR_TargetIsMe(nsHTMLReflowMetrics&     aDesiredSize,
-                           const nsHTMLReflowState& aReflowState,
-                           nsReflowStatus&          aStatus);
-
-  NS_IMETHOD IR_StyleChanged(nsHTMLReflowMetrics&     aDesiredSize,
-                             const nsHTMLReflowState& aReflowState,
-                             nsReflowStatus&          aStatus);
-
-
-  NS_IMETHOD IR_TargetIsChild(nsHTMLReflowMetrics&     aDesiredSize,
-                              const nsHTMLReflowState& aReflowState,
-                              nsReflowStatus&          aStatus,
-                              nsIFrame *               aNextFrame);
-
   // data members
   PRInt32 mColCount;
   // the starting column index this col group represents. Must be >= 0. 
