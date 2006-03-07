@@ -250,38 +250,6 @@ protected:
   /** implement abstract method on nsHTMLContainerFrame */
   virtual PRIntn GetSkipSides() const;
 
-  /** Incremental Reflow attempts to do column balancing with the minimum number of reflow
-    * commands to child elements.  This is done by processing the reflow command,
-    * rebalancing column widths (if necessary), then comparing the resulting column widths
-    * to the prior column widths and reflowing only those cells that require a reflow.
-    *
-    * @see Reflow
-    */
-  NS_IMETHOD IncrementalReflow(nsPresContext*          aPresContext,
-                               nsHTMLReflowMetrics&     aDesiredSize,
-                               const nsHTMLReflowState& aReflowState,
-                               nsTableFrame&            aTableFrame,
-                               nsReflowStatus&          aStatus);
-
-  NS_IMETHOD IR_TargetIsChild(nsPresContext*          aPresContext,
-                              nsHTMLReflowMetrics&     aDesiredSize,
-                              const nsHTMLReflowState& aReflowState,
-                              nsTableFrame&            aTableFrame,
-                              nsReflowStatus&          aStatus,
-                              nsIFrame*                aNextFrame);
-
-  NS_IMETHOD IR_TargetIsMe(nsPresContext*          aPresContext,
-                           nsHTMLReflowMetrics&     aDesiredSize,
-                           const nsHTMLReflowState& aReflowState,
-                           nsTableFrame&            aTableFrame,
-                           nsReflowStatus&          aStatus);
-
-  NS_IMETHOD IR_StyleChanged(nsPresContext*          aPresContext,
-                             nsHTMLReflowMetrics&     aDesiredSize,
-                             const nsHTMLReflowState& aReflowState,
-                             nsTableFrame&            aTableFrame,
-                             nsReflowStatus&          aStatus);
-
   // row-specific methods
 
   nscoord ComputeCellXOffset(const nsHTMLReflowState& aState,
@@ -295,8 +263,7 @@ protected:
                             nsHTMLReflowMetrics&     aDesiredSize,
                             const nsHTMLReflowState& aReflowState,
                             nsTableFrame&            aTableFrame,
-                            nsReflowStatus&          aStatus,
-                            PRBool                   aDirtyOnly = PR_FALSE);
+                            nsReflowStatus&          aStatus);
 
 private:
   struct RowBits {
