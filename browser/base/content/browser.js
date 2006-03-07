@@ -6624,7 +6624,7 @@ var BookmarksEventHandler = {
     // close the menus.
     if (event.target.localName == "menu" ||
         event.target.localName == "menuitem") {
-      var node = event.target;
+      var node = event.target.parentNode;
       while (node && 
              (node.localName == "menu" || 
               node.localName == "menupopup")) {
