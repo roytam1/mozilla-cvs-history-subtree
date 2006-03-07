@@ -835,7 +835,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
   nscoord x = 0; // running total of children x offset
 
   PRBool isAutoLayout = aTableFrame.IsAutoLayout();
-  PRBool needToNotifyTable = PR_TRUE;
   nscoord paginatedHeight = 0;
 
   // Reflow each of our existing cell frames
@@ -908,29 +907,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
             HasPctHeight()) {
           // Reflow the cell to fit the available width, height
           nsSize  kidAvailSize(availColWidth, aReflowState.availableHeight);
-          PRBool cellToWatch = PR_FALSE;
-          // If it's a dirty frame, then check whether it's the initial reflow
-          if (kidFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW) {
-            cellToWatch = PR_TRUE;
-          }
-          else if (eReflowReason_StyleChange == aReflowState.reason) {
-            cellToWatch = PR_TRUE;
-          }
-          else if (notifyStyleChange) {
-            cellToWatch = PR_TRUE;
-          }
-          if (cellToWatch) {
-            if (!tablePrevInFlow && isAutoLayout) {
-              // request the maximum width if availWidth is constrained
-              // XXX we could just do this always, but blocks have some problems
-              if (NS_UNCONSTRAINEDSIZE != availCellWidth) {
-                desiredSize.mFlags |= NS_REFLOW_CALC_MAX_WIDTH; 
-              }
-            }
-            else {
-              cellToWatch = PR_FALSE;
-            }
-          }
   
           nscoord oldMaxWidth     = cellFrame->GetMaximumWidth();
           nscoord oldMaxElemWidth = cellFrame->GetPass1MaxElementWidth();
@@ -944,24 +920,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
           rv = ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState,
                            x, 0, 0, status);
 
-          if (cellToWatch) { 
-            nscoord maxWidth = (NS_UNCONSTRAINEDSIZE == availCellWidth) 
-                                ? desiredSize.width : desiredSize.mMaximumWidth;
-            // save the max element width and max width
-            if (desiredSize.mComputeMEW) {
-              cellFrame->SetPass1MaxElementWidth(desiredSize.width, desiredSize.mMaxElementWidth);
-              if (desiredSize.mMaxElementWidth > desiredSize.width) {
-                desiredSize.width = desiredSize.mMaxElementWidth;
-              }
-            }
-            cellFrame->SetMaximumWidth(maxWidth);
-          }
-
           // allow the table to determine if/how the table needs to be rebalanced
-          if (cellToWatch && needToNotifyTable) {
-            needToNotifyTable = !aTableFrame.CellChangedWidth(*cellFrame, oldMaxWidth, oldMaxElemWidth);
-          }
-
           // If any of the cells are not complete, then we're not complete
           if (NS_FRAME_IS_NOT_COMPLETE(status)) {
             aStatus = NS_FRAME_NOT_COMPLETE;
