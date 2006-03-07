@@ -2770,6 +2770,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
       GetGettingNewMessages(&gettingNewMessages);
       if (gettingNewMessages)
         ProgressStatus(aProtocol,IMAP_NO_NEW_MESSAGES, nsnull);
+      SetPerformingBiff(PR_FALSE);
     }
   }
   
@@ -5355,6 +5356,9 @@ nsImapMailFolder::HeaderFetchCompleted(nsIImapProtocol* aProtocol)
   if (!filtersRun && m_performingBiff && mDatabase && numNewBiffMsgs > 0 && 
       (!pendingMoves || !ShowPreviewText()))
   {
+    if (!pendingMoves)
+      SetHasNewMessages(PR_TRUE);
+
     // If we are performing biff for this folder, tell the
     // stand-alone biff about the new high water mark
     // We must ensure that the server knows that we are performing biff.
