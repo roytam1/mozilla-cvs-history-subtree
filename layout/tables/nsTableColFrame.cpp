@@ -133,7 +133,7 @@ NS_METHOD nsTableColFrame::Reflow(nsPresContext*          aPresContext,
                                   const nsHTMLReflowState& aReflowState,
                                   nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableColFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableColFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   aDesiredSize.width=0;
   aDesiredSize.height=0;
@@ -145,10 +145,6 @@ NS_METHOD nsTableColFrame::Reflow(nsPresContext*          aPresContext,
     if (tableFrame)  {
       tableFrame->SetNeedToCollapseColumns(PR_TRUE);
     }    
-  }
-  if (aDesiredSize.mComputeMEW)
-  {
-    aDesiredSize.mMaxElementWidth=0;
   }
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
