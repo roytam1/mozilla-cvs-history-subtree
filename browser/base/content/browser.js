@@ -6399,7 +6399,7 @@ var PlacesBrowserShim = {
                       "bookmarkproperties",
                       "width=600,height=400,chrome,dependent,modal,resizable",
                       this._currentURI, PlacesController);
-  },
+  }
 };
 
 
@@ -6598,7 +6598,7 @@ var HistoryMenu = {
     var globalHistory = Components.classes["@mozilla.org/browser/global-history;2"]
                                   .getService(Components.interfaces.nsIBrowserHistory);
     globalHistory.removeAllPages();
-  },
+  }
 };
 
 /*
