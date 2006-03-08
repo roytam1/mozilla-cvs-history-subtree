@@ -289,11 +289,14 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
 
   nscoord cellSpacingY = tableFrame->GetCellSpacingY();
 
+  // XXXldb Should we really be checking this rather than available height?
+  // (Think about multi-column layout!)
   PRBool isPaginated = aPresContext->IsPaginated();
 
   // Amount to slide children that we don't reflow.
   nscoord deltaY = 0;
   PRBool haveRow = PR_FALSE;
+  PRBool needToCalcRowHeights = aReflowState.ShouldReflowAllKids();
 
   for (nsIFrame* kidFrame = mFrames.FirstChild(); kidFrame;
        kidFrame = kidFrame->GetNextSibling()) {
@@ -365,6 +368,20 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
 
   if (haveRow)
     aReflowState.y -= cellSpacingY;
+
+  // Return our desired rect
+  aDesiredSize.width = aReflowState.availableWidth;
+  aDesiredSize.height = state.y;
+
+  if (aReflowState.mFlags.mSpecialHeightReflow) {
+    DidResizeRows(aReflowState, aDesiredSize);
+    if (isPaginated) {
+      CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
+    }
+  }
+  else {
+    CalculateRowHeights(aPresContext, aDesiredSize, aReflowState);
+  }
 
   return rv;
 }
@@ -1112,7 +1129,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
     nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
 
   nsRowGroupReflowState state(aReflowState, tableFrame);
-  PRBool haveDesiredHeight = PR_FALSE;
   const nsStyleVisibility* groupVis = GetStyleVisibility();
   PRBool collapseGroup = (NS_STYLE_VISIBILITY_COLLAPSE == groupVis->mVisible);
   if (collapseGroup) {
@@ -1126,23 +1142,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
   PRBool splitDueToPageBreak = PR_FALSE;
   rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
                       &splitDueToPageBreak);
-
-  // Return our desired rect
-  aDesiredSize.width = aReflowState.availableWidth;
-  aDesiredSize.height = state.y;
-
-  // shrink wrap rows to height of tallest cell in that row
-
-  if (aReflowState.mFlags.mSpecialHeightReflow) {
-    DidResizeRows(aReflowState, aDesiredSize);
-    if (isPaginated) {
-      CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
-    }
-  }
-  else {
-    CalculateRowHeights(aPresContext, aDesiredSize, aReflowState);
-    haveDesiredHeight = PR_TRUE;
-  }
 
   // See if all the frames fit
   if ((NS_FRAME_NOT_COMPLETE == aStatus) || splitDueToPageBreak || 
@@ -1358,12 +1357,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
                                        nsIFrame*              aNextFrame)
 
 {
-  // See if the table needs a reflow (e.g., if the column widths have
-  // changed). If so, just return and don't bother adjusting the rows
-  // that follow
-  if (!aReflowState.tableFrame->NeedsReflow(aReflowState.reflowState)) {
-    // Only call CalculateRowHeights() if necessary since it can be expensive
-    PRBool needToCalcRowHeights = PR_FALSE; 
     if (IsSimpleRowFrame(aReflowState.tableFrame, aNextFrame)) {
       // See if the row changed height
       if (oldKidSize.height != desiredSize.height) {
@@ -1373,8 +1366,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
         if (aReflowState.tableFrame->IsAutoHeight()) {
           // Because other cells in the row may need to be aligned differently,
           // repaint the entire row
-          // XXX Improve this so the row knows it should bitblt (or repaint) those
-          // cells that change position...
           Invalidate(kidRect);
           
           // Invalidate the area we're offseting. Note that we only repaint within
@@ -1403,7 +1394,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
       nsRect  dirtyRect(0, 0, mRect.width, mRect.height);
       Invalidate(dirtyRect);
     }
-  }
 }
 
 nsIAtom*
