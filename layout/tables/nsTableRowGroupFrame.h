@@ -256,13 +256,10 @@ protected:
                      nsHTMLReflowMetrics&     aDesiredSize,
                      nsTableRowFrame*         aStartRowFrameIn = nsnull);
 
-  nsresult AdjustSiblingsAfterReflow(nsRowGroupReflowState& aReflowState,
-                                     nsIFrame*              aKidFrame,
-                                     nscoord                aDeltaY);
+  void SlideChild(nsRowGroupReflowState& aReflowState,
+                  nsIFrame*              aKidFrame,
+                  nscoord                aDeltaY);
   
-  nsresult RecoverState(nsRowGroupReflowState& aReflowState,
-                        nsIFrame*              aKidFrame);
-
   /**
    * Reflow the frames we've already created
    *
@@ -276,7 +273,6 @@ protected:
                            nsRowGroupReflowState& aReflowState,
                            nsReflowStatus&        aStatus,
                            nsTableRowFrame*       aStartFrame,
-                           PRBool                 aDirtyOnly,
                            nsTableRowFrame**      aFirstRowReflowed   = nsnull,
                            PRBool*                aPageBreakBeforeEnd = nsnull);
 

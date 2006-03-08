@@ -270,19 +270,16 @@ nsTableRowGroupFrame::InitChildReflowState(nsPresContext&    aPresContext,
   aReflowState.Init(&aPresContext, -1, -1, pCollapseBorder, &padding);
 }
 
-// Reflow the frames we've already created. If aDirtyOnly is set then only
-// reflow dirty frames. This assumes that all of the dirty frames are contiguous.
-// ... it is currently used only for eReflowType_ReflowDirty reflows
 NS_METHOD 
 nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
                                      nsHTMLReflowMetrics&   aDesiredSize,
                                      nsRowGroupReflowState& aReflowState,
                                      nsReflowStatus&        aStatus,
                                      nsTableRowFrame*       aStartFrame,
-                                     PRBool                 aDirtyOnly,
                                      nsTableRowFrame**      aFirstRowReflowed,
                                      PRBool*                aPageBreakBeforeEnd)
 {
+#error Merge the logic in IR_TargetIsChild into this!
   if (aPageBreakBeforeEnd) 
     *aPageBreakBeforeEnd = PR_FALSE;
 
@@ -299,26 +296,25 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
   if (aFirstRowReflowed) {
     *aFirstRowReflowed = nsnull;
   }
-  nsIFrame* lastReflowedRow = nsnull;
-  PRBool    adjustSiblings  = PR_TRUE;
   nsIFrame* kidFrame = (aStartFrame) ? aStartFrame : mFrames.FirstChild();
 
+  // Amount to slide children that we don't reflow.
+  nscoord deltaY = 0;
+
   for ( ; kidFrame; kidFrame = kidFrame->GetNextSibling()) {
-    // See if we should only reflow the dirty child frames
-    PRBool doReflowChild = PR_TRUE;
-    if (aDirtyOnly && ((kidFrame->GetStateBits() & NS_FRAME_IS_DIRTY) == 0)) {
-      doReflowChild = PR_FALSE;
-    }
-    nsIAtom* kidType = kidFrame->GetType();
-    if (aReflowState.reflowState.mFlags.mSpecialHeightReflow) {
-      if (!isPaginated && (nsLayoutAtoms::tableRowFrame == kidType &&
-                           !((nsTableRowFrame*)kidFrame)->NeedSpecialReflow())) {
-        doReflowChild = PR_FALSE;
-      }
+    if (kidFrame->GetType() != nsLayoutAtoms::tableRowFrame) {
+      // XXXldb nsCSSFrameConstructor needs to enforce this!
+      NS_NOTREACHED("yikes, a non-row child");
+      continue;
     }
 
     // Reflow the row frame
-    if (doReflowChild) {
+    if ((aReflowState.ShouldReflowAllKids() ||
+         (kidFrame->GetStateBits() &
+          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) &&
+        !(aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
+          !isPaginated &&
+          !((nsTableRowFrame*)kidFrame)->NeedSpecialReflow())) {
       nsSize kidAvailSize(aReflowState.availSize);
       if (0 >= kidAvailSize.height)
         kidAvailSize.height = 1;      // XXX: HaCk - we don't handle negative heights yet
@@ -344,44 +340,34 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       // Place the child
       PlaceChild(aPresContext, aReflowState, kidFrame, desiredSize);
       aReflowState.y += cellSpacingY;
-      lastReflowedRow = kidFrame;
 
       if (aFirstRowReflowed && !*aFirstRowReflowed) { 
-        if (nsLayoutAtoms::tableRowFrame == kidType) {
-          *aFirstRowReflowed = (nsTableRowFrame*)kidFrame;
-        }
+        *aFirstRowReflowed = (nsTableRowFrame*)kidFrame;
       }
-      if (isPaginated && aPageBreakBeforeEnd && !*aPageBreakBeforeEnd && 
-          (nsLayoutAtoms::tableRowFrame == kidType)) {
+      if (isPaginated && aPageBreakBeforeEnd && !*aPageBreakBeforeEnd) {
         nsTableRowFrame* nextRow = ((nsTableRowFrame*)kidFrame)->GetNextRow();
         if (nextRow) {
           *aPageBreakBeforeEnd = nsTableFrame::PageBreakAfter(*kidFrame, nextRow);
         }
       }
-    } else {
-      // were done reflowing, so see if we need to reposition the rows that follow
-      if (lastReflowedRow) { 
-        if (tableFrame->NeedsReflow(aReflowState.reflowState)) {
-          adjustSiblings = PR_FALSE;
-          break; // don't bother if the table will reflow everything.
-        }
+      nsIFrame* nextRow = kidFrame->GetNextSibling();
+      if (nextRow) {
+        deltaY = cellSpacingY + kidFrame->GetRect().YMost() -
+                   nextRow->GetPosition().y;
       }
+    } else {
+      if (deltaY != 0)
+        SlideChild(aReflowState, kidFrame, deltaY);
+
       // Adjust the running y-offset so we know where the next row should be placed
-      aReflowState.y += kidFrame->GetSize().height + cellSpacingY;
+      nscoord height = kidFrame->GetSize().height + cellSpacingY;
+      aReflowState.y += height;
+
+      if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
+        aReflowState.availSize.height -= height;
+      }
     }
     ConsiderChildOverflow(aDesiredSize.mOverflowArea, kidFrame);
-  }
-
-  // adjust the rows after the ones that were reflowed
-  if (lastReflowedRow && adjustSiblings) {
-    nsIFrame* nextRow = lastReflowedRow->GetNextSibling();
-    if (nextRow) {
-      nscoord deltaY = cellSpacingY + lastReflowedRow->GetRect().YMost()
-        - nextRow->GetPosition().y;
-      if (deltaY != 0) {
-        AdjustSiblingsAfterReflow(aReflowState, lastReflowedRow, deltaY);
-      }
-    }
   }
 
   if (aReflowState.reflowState.mFlags.mSpecialHeightReflow) {
@@ -760,38 +746,28 @@ nsTableRowGroupFrame::CalculateRowHeights(nsPresContext*          aPresContext,
 }
 
 
-// Called by IR_TargetIsChild() to adjust the sibling frames that follow
-// after an incremental reflow of aKidFrame.
+// Move a child that was skipped during an incremental reflow.
 // This function is not used for paginated mode so we don't need to deal
 // with continuing frames, and it's only called if aKidFrame has no
 // cells that span into it and no cells that span across it. That way
 // we don't have to deal with rowspans
-nsresult
-nsTableRowGroupFrame::AdjustSiblingsAfterReflow(nsRowGroupReflowState& aReflowState,
-                                                nsIFrame*              aKidFrame,
-                                                nscoord                aDeltaY)
+// XXX Is it still true that it's not used for paginated mode?
+void
+nsTableRowGroupFrame::SlideChild(nsRowGroupReflowState& aReflowState,
+                                 nsIFrame*              aKidFrame,
+                                 nscoord                aDeltaY)
 {
   NS_PRECONDITION(NS_UNCONSTRAINEDSIZE == aReflowState.reflowState.availableHeight,
                   "we're not in galley mode");
-  nsIFrame* lastKidFrame = aKidFrame;
 
-  // Move the frames that follow aKidFrame by aDeltaY 
-  for (nsIFrame* kidFrame = aKidFrame->GetNextSibling(); kidFrame;
-       kidFrame = kidFrame->GetNextSibling()) {
-    // Move the frame if we need to
-    if (aDeltaY != 0) {
-      kidFrame->SetPosition(kidFrame->GetPosition() + nsPoint(0, aDeltaY));
-      nsTableFrame::RePositionViews(kidFrame);
-    }
-
-    // Remember the last frame
-    lastKidFrame = kidFrame;
+  // Move the frame if we need to
+  if (aDeltaY != 0) {
+    aKidFrame->SetPosition(aKidFrame->GetPosition() + nsPoint(0, aDeltaY));
+    nsTableFrame::RePositionViews(aKidFrame);
   }
 
   // Update our running y-offset to reflect the bottommost child
-  aReflowState.y = lastKidFrame->GetRect().YMost();
-
-  return NS_OK;
+  aReflowState.y = aKidFrame->GetRect().YMost();
 }
 
 // Create a continuing frame, add it to the child list, and then push it
@@ -1189,7 +1165,7 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
     // Reflow the existing frames. 
     PRBool splitDueToPageBreak = PR_FALSE;
     rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                        nsnull, PR_FALSE, nsnull, &splitDueToPageBreak);
+                        nsnull, nsnull, &splitDueToPageBreak);
   
     // Return our desired rect
     aDesiredSize.width = aReflowState.availableWidth;
@@ -1239,32 +1215,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
   FinishAndStoreOverflow(&aDesiredSize);
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return rv;
-}
-
-
-NS_METHOD 
-nsTableRowGroupFrame::IncrementalReflow(nsPresContext*        aPresContext,
-                                        nsHTMLReflowMetrics&   aDesiredSize,
-                                        nsRowGroupReflowState& aReflowState,
-                                        nsReflowStatus&        aStatus)
-{
-  // the row group is a target if its path has a reflow command
-  nsHTMLReflowCommand* command = aReflowState.reflowState.path->mReflowCommand;
-  if (command)
-    IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
-
-  // see if the chidren are targets as well
-  // XXXwaterson Note that this will cause us to RecoverState (which
-  // is O(n) in the number of child rows) once for each reflow
-  // target. It'd probably be better to invert the loops; i.e., walk
-  // the rows, checking each to see if it's an IR target (which could
-  // be done in O(1) if we do hashing in the reflow path).
-  nsReflowPath::iterator iter = aReflowState.reflowState.path->FirstChild();
-  nsReflowPath::iterator end = aReflowState.reflowState.path->EndChildren();
-  for (; iter != end; ++iter)
-    IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, *iter);
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1398,14 +1348,11 @@ nsTableRowGroupFrame::IR_TargetIsMe(nsPresContext*        aPresContext,
                                     nsReflowStatus&        aStatus)
 {
   nsresult rv = NS_FRAME_COMPLETE;
-  nsReflowType type;
-  aReflowState.reflowState.path->mReflowCommand->GetType(type);
 
   nsRowGroupReflowState state(aReflowState);
   nsTableRowFrame* firstRowReflowed;
   rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                      nsnull, type != eReflowType_StyleChanged,
-                      &firstRowReflowed);
+                      nsnull, &firstRowReflowed);
   CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState, firstRowReflowed);
 
   // XXX If we have a next-in-flow, then we're not complete
@@ -1466,36 +1413,6 @@ nsTableRowGroupFrame::GetHeightOfRows()
   }
 
   return height;
-}
-
-// Recovers the reflow state to what it should be if aKidFrame is about
-// to be reflowed. Restores availSize, y
-nsresult
-nsTableRowGroupFrame::RecoverState(nsRowGroupReflowState& aReflowState,
-                                   nsIFrame*              aKidFrame)
-{
-  nsTableFrame* tableFrame = nsnull;
-  nsTableFrame::GetTableFrame(this, tableFrame);
-  nscoord cellSpacingY = tableFrame->GetCellSpacingY();
-
-  aReflowState.y = 0;
-
-  // Walk the list of children up to aKidFrame
-  for (nsIFrame* frame = mFrames.FirstChild(); frame && (frame != aKidFrame);
-       frame = frame->GetNextSibling()) {
-    if (frame->GetType() == nsLayoutAtoms::tableRowFrame) {
-      // Update the running y-offset
-      nsSize kidSize = frame->GetSize();
-      aReflowState.y += kidSize.height + cellSpacingY;
-
-      // If our height is constrained then update the available height
-      if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
-        aReflowState.availSize.height -= kidSize.height;
-      }
-    }
-  }
-
-  return NS_OK;
 }
 
 PRBool
