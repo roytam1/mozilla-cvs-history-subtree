@@ -18,12 +18,15 @@ main(int argc, char **argv)
 
   args[i++] = "/DMOZCE_STATIC_BUILD";
 
+  #ifdef WM50
+  args[i++] = "/D_WIN32_WCE=501";
+  args[i++] = "/DUNDER_CE=501";
+  args[i++] = "/DWIN32_PLATFORM_WFSP";
+  #else
   args[i++] = "/D_WIN32_WCE=420";
   args[i++] = "/DUNDER_CE=420";
   args[i++] = "/DWIN32_PLATFORM_PSPC=400"; 
-  //  args[i++] = "/D_WIN32_WCE=501";
-  //  args[i++] = "/DUNDER_CE=501";
-  //  args[i++] = "/DWIN32_PLATFORM_WFSP";
+  #endif
 
   args[i++] = "/DARM";
   args[i++] = "/DWINCE";
@@ -79,12 +82,17 @@ main(int argc, char **argv)
     args[i++] = "/link";
 
     args[i++] = "-ENTRY:mainACRTStartup";
-
-    args[i++] = "/SUBSYSTEM:WINDOWSCE,4.20";
+  #ifdef WM50
+  args[i++] = "/subsystem:\"WINDOWSCE,5.01\"";
+  #else
+  args[i++] = "/subsystem:\"WINDOWSCE,4.20\"";
     args[i++] = "/MACHINE:ARM";
+  #endif
 
     args[i++] = "-LIBPATH:\"" WCE_LIB "\"";
     args[i++] = "-LIBPATH:\"" SHUNT_LIB "\"";
+    args[i++] = "-LIBPATH:\"c:/Program Files/Microsoft Visual Studio 8/VC/ce/lib/armv4i/\"";
+
     args[i++] = "shunt.lib";
     args[i++] = "winsock.lib"; 
     args[i++] = "corelibc.lib";
@@ -93,8 +101,12 @@ main(int argc, char **argv)
     args[i++] = "-OPT:REF";
     args[i++] = "-OPT:ICF";
 
+
     args[i++] = "-NODEFAULTLIB:LIBC";
-    args[i++] = "-NODEFAULTLIB:OLDNAMES.lib";
+	  args[i++] = "-NODEFAULTLIB:OLDNAMES";
+	  args[i++] = "-NODEFAULTLIB:LIBCMT";
+	  args[i++] = "-NODEFAULTLIB:LIBCMTD";
+
 
   }
   args[i] = NULL;

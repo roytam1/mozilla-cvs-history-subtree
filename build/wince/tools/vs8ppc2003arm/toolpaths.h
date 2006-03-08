@@ -7,8 +7,27 @@
 #endif
 
 #define WCE_BIN   "c:/Program Files/Microsoft Visual Studio 8/VC/ce/bin/x86_arm/"
+#ifdef WM50
+
+#ifdef SMARTPHONE
+
+#define WCE_INC   "C:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Smartphone SDK/Include/ARMV4I"
+#define WCE_LIB	  "C:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Smartphone SDK/Lib/ARMV4I"
+
+#else  //Smartphone
+#define WCE_INC   "C:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Pocket PC SDK/Include/ARMV4I"
+#define WCE_LIB	  "C:/Program Files/Windows CE Tools/wce500/Windows Mobile 5.0 Pocket PC SDK/Lib/ARMV4I"
+#endif  //WM50
+#else
+#if SMARTPHONE
+#define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/Smartphone2003/Include/"
+#define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/Smartphone2003/Lib/armv4/"
+#else  //Smartphone
 #define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Include/"
 #define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Lib/armv4/"
+#endif  //Smartphone
+#endif //WM50
+
 
 #define SHUNT_LIB TOPSRCDIR "/build/wince/shunt/build/vs8/"
 #define SHUNT_INC TOPSRCDIR "/build/wince/shunt/include/"

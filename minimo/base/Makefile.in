@@ -82,6 +82,7 @@ REQUIRES	= xpcom					 \
 		      appcomps				 \
 		      phone					 \
 		      js					 \
+			  imglib2                \
 		      $(NULL)
 
 CPPSRCS	    = Minimo.cpp		  \
@@ -115,7 +116,7 @@ include $(topsrcdir)/config/config.mk
 
 ifdef WINCE
 LOCAL_INCLUDES	+= -I$(srcdir)/wince
-OS_LIBS += $(call EXPAND_LIBNAME, aygshell cellcore commdlg uuid ole32 oleaut32 ws2 Ccrtrtti)
+OS_LIBS += $(call EXPAND_LIBNAME, aygshell cellcore uuid ole32 oleaut32 ws2 Ccrtrtti)
 endif
 
 
