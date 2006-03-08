@@ -289,7 +289,6 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
                                      nsReflowStatus&        aStatus,
                                      PRBool*                aPageBreakBeforeEnd)
 {
-#error Merge the logic in IR_TargetIsChild into this!
   if (aPageBreakBeforeEnd) 
     *aPageBreakBeforeEnd = PR_FALSE;
 
@@ -306,7 +305,8 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
   PRBool isPaginated = aPresContext->IsPaginated();
 
   PRBool haveRow = PR_FALSE;
-  PRBool needToCalcRowHeights = aReflowState.reflowState.ShouldReflowAllKids();
+  PRBool reflowAllKids = aReflowState.reflowState.ShouldReflowAllKids();
+  PRBool needToCalcRowHeights = reflowAllKids;
 
   for (nsIFrame* kidFrame = mFrames.FirstChild(); kidFrame;
        kidFrame = kidFrame->GetNextSibling()) {
@@ -319,12 +319,14 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
     haveRow = PR_TRUE;
 
     // Reflow the row frame
-    if ((aReflowState.reflowState.ShouldReflowAllKids() ||
+    if ((reflowAllKids ||
          (kidFrame->GetStateBits() &
           (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) &&
         !(aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
           !isPaginated &&
           !((nsTableRowFrame*)kidFrame)->NeedSpecialReflow())) {
+      nsSize oldKidSize = kidFrame->GetSize();
+
       // XXXldb We used to only pass aDesiredSize.mFlags through for the
       // incremental reflow codepath.
       nsHTMLReflowMetrics desiredSize(aDesiredSize.mFlags);
@@ -349,6 +351,36 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       // Place the child
       PlaceChild(aPresContext, aReflowState, kidFrame, desiredSize);
       aReflowState.y += cellSpacingY;
+
+      if (!reflowAllKids) {
+        if (IsSimpleRowFrame(aReflowState.tableFrame, kidFrame)) {
+          // See if the row changed height
+          if (oldKidSize.height != desiredSize.height) {
+            // Inform the row of its new height.
+            ((nsTableRowFrame*)kidFrame)->DidResize(aReflowState.reflowState);
+            // the overflow area may have changed inflate the overflow area
+            if (aReflowState.tableFrame->IsAutoHeight()) {
+              // Because other cells in the row may need to be aligned
+              // differently, repaint the entire row
+              nsRect kidRect(0, aReflowState.y,
+                             desiredSize.width, desiredSize.height);
+              Invalidate(kidRect);
+              
+              // Invalidate the area we're offseting. Note that we only
+              // repaint within our existing frame bounds.
+              if (kidRect.YMost() < mRect.height) {
+                nsRect  dirtyRect(0, kidRect.YMost(),
+                                  mRect.width, mRect.height - kidRect.YMost());
+                Invalidate(dirtyRect);
+              }
+            }
+            else needToCalcRowHeights = PR_TRUE;
+          }
+        } else {
+          if (!desiredSize.mNothingChanged) // mNothingChanges currently only works when a cell is the target
+            needToCalcRowHeights = PR_TRUE;
+        }
+      }
 
       if (isPaginated && aPageBreakBeforeEnd && !*aPageBreakBeforeEnd) {
         nsTableRowFrame* nextRow = ((nsTableRowFrame*)kidFrame)->GetNextRow();
@@ -383,8 +415,15 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
     }
   }
-  else {
+  else if (needToCalcRowHeights) {
     CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState);
+    if (!reflowAllKids) {
+      // Because we don't know what changed repaint everything.
+      // XXX We should change CalculateRowHeights() to return the bounding
+      // rect of what changed. Or whether anything moved or changed size...
+      nsRect  dirtyRect(0, 0, mRect.width, mRect.height);
+      Invalidate(dirtyRect);
+    }
   }
 
   return rv;
@@ -1336,53 +1375,6 @@ nsTableRowGroupFrame::IsSimpleRowFrame(nsTableFrame* aTableFrame,
   }
 
   return PR_FALSE;
-}
-
-NS_METHOD 
-nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
-                                       nsHTMLReflowMetrics&   aDesiredSize,
-                                       nsRowGroupReflowState& aReflowState,
-                                       nsReflowStatus&        aStatus,
-                                       nsIFrame*              aNextFrame)
-
-{
-    if (IsSimpleRowFrame(aReflowState.tableFrame, aNextFrame)) {
-      // See if the row changed height
-      if (oldKidSize.height != desiredSize.height) {
-        // Inform the row of its new height.
-        ((nsTableRowFrame*)aNextFrame)->DidResize(aReflowState.reflowState);
-        // the overflow area may have changed inflate the overflow area
-        if (aReflowState.tableFrame->IsAutoHeight()) {
-          // Because other cells in the row may need to be aligned differently,
-          // repaint the entire row
-          Invalidate(kidRect);
-          
-          // Invalidate the area we're offseting. Note that we only repaint within
-          // our existing frame bounds.
-          // XXX It would be better to bitblt the row frames and not repaint,
-          // but we don't have such a view manager function yet...
-          if (kidRect.YMost() < mRect.height) {
-            nsRect  dirtyRect(0, kidRect.YMost(),
-                              mRect.width, mRect.height - kidRect.YMost());
-            Invalidate(dirtyRect);
-          }
-        }
-        else needToCalcRowHeights = PR_TRUE;
-      }
-    } else {
-      if (!desiredSize.mNothingChanged) // mNothingChanges currently only works when a cell is the target
-        needToCalcRowHeights = PR_TRUE;
-    }
-    if (needToCalcRowHeights) {
-      // Now recalculate the row heights
-      CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState);
-      
-      // Because we don't know what changed repaint everything.
-      // XXX We should change CalculateRowHeights() to return the bounding
-      // rect of what changed. Or whether anything moved or changed size...
-      nsRect  dirtyRect(0, 0, mRect.width, mRect.height);
-      Invalidate(dirtyRect);
-    }
 }
 
 nsIAtom*
