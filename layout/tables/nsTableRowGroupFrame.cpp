@@ -1310,21 +1310,6 @@ nsTableRowGroupFrame::RemoveFrame(nsIAtom*        aListName,
   return NS_OK;
 }
 
-NS_METHOD 
-nsTableRowGroupFrame::IR_TargetIsMe(nsPresContext*        aPresContext,
-                                    nsHTMLReflowMetrics&   aDesiredSize,
-                                    nsRowGroupReflowState& aReflowState,
-                                    nsReflowStatus&        aStatus)
-{
-  nsresult rv = NS_FRAME_COMPLETE;
-
-  nsRowGroupReflowState state(aReflowState);
-  rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus);
-  CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState);
-
-  return rv;
-}
-
 nscoord 
 nsTableRowGroupFrame::GetHeightBasis(const nsHTMLReflowState& aReflowState)
 {
