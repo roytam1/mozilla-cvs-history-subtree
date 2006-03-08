@@ -249,12 +249,10 @@ protected:
 
   void CalculateRowHeights(nsPresContext*          aPresContext, 
                            nsHTMLReflowMetrics&     aDesiredSize,
-                           const nsHTMLReflowState& aReflowState,
-                           nsTableRowFrame*         aStartRowFrameIn = nsnull);
+                           const nsHTMLReflowState& aReflowState);
 
   void DidResizeRows(const nsHTMLReflowState& aReflowState,
-                     nsHTMLReflowMetrics&     aDesiredSize,
-                     nsTableRowFrame*         aStartRowFrameIn = nsnull);
+                     nsHTMLReflowMetrics&     aDesiredSize);
 
   void SlideChild(nsRowGroupReflowState& aReflowState,
                   nsIFrame*              aKidFrame,
@@ -272,7 +270,6 @@ protected:
                            nsHTMLReflowMetrics&   aDesiredSize,
                            nsRowGroupReflowState& aReflowState,
                            nsReflowStatus&        aStatus,
-                           nsTableRowFrame**      aFirstRowReflowed   = nsnull,
                            PRBool*                aPageBreakBeforeEnd = nsnull);
 
   nsresult SplitRowGroup(nsPresContext*          aPresContext,
