@@ -3758,6 +3758,7 @@ nsTableFrame::CellChangedWidth(const nsTableCellFrame& aCellFrame,
                                nscoord                 aPrevCellMax,
                                PRBool                  aCellWasDestroyed)
 {
+#error "This should go away."
   if (NeedStrategyInit() || !IsAutoLayout()) {
     // if the strategy needs to be initialized, all of the col info will be updated later
     // fixed layout tables do not cause any rebalancing
