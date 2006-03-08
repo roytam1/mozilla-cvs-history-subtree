@@ -1158,6 +1158,13 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
       ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = specialReflow;
     }
   }
+
+  // If we have a next-in-flow, then we're not complete
+  // XXXldb This used to be done only for the incremental reflow codepath.
+  if (GetNextInFlow()) {
+    aStatus = NS_FRAME_NOT_COMPLETE;
+  }
+
   SetHasStyleHeight((NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) &&
                     (aReflowState.mComputedHeight > 0)); 
   
@@ -1315,10 +1322,6 @@ nsTableRowGroupFrame::IR_TargetIsMe(nsPresContext*        aPresContext,
   rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus);
   CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState);
 
-  // XXX If we have a next-in-flow, then we're not complete
-  if (GetNextInFlow()) {
-    aStatus = NS_FRAME_NOT_COMPLETE;
-  }
   return rv;
 }
 
@@ -1521,10 +1524,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
   
   // Return our desired width
   //aDesiredSize.width = aReflowState.reflowState.availableWidth;
-
-  if (GetNextInFlow()) {
-    aStatus = NS_FRAME_NOT_COMPLETE;
-  }
 
   return rv;
 }
