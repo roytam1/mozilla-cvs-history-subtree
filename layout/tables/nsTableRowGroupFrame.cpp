@@ -308,7 +308,7 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
     }
 
     // Reflow the row frame
-    if ((aReflowState.ShouldReflowAllKids() ||
+    if ((aReflowState.reflowState.ShouldReflowAllKids() ||
          (kidFrame->GetStateBits() &
           (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) &&
         !(aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
