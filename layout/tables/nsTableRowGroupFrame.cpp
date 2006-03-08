@@ -293,6 +293,7 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
 
   // Amount to slide children that we don't reflow.
   nscoord deltaY = 0;
+  PRBool haveRow = PR_FALSE;
 
   for (nsIFrame* kidFrame = mFrames.FirstChild(); kidFrame;
        kidFrame = kidFrame->GetNextSibling()) {
@@ -301,6 +302,8 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       NS_NOTREACHED("yikes, a non-row child");
       continue;
     }
+
+    haveRow = PR_TRUE;
 
     // Reflow the row frame
     if ((aReflowState.reflowState.ShouldReflowAllKids() ||
@@ -359,6 +362,9 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
     }
     ConsiderChildOverflow(aDesiredSize.mOverflowArea, kidFrame);
   }
+
+  if (haveRow)
+    aReflowState.y -= cellSpacingY;
 
   if (aReflowState.reflowState.mFlags.mSpecialHeightReflow) {
     aDesiredSize.height = mRect.height;
@@ -1173,10 +1179,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
 
   // just set our width to what was available. The table will calculate the width and not use our value.
   aDesiredSize.width = aReflowState.availableWidth;
-  if (!haveDesiredHeight) {
-    // calculate the height based on the rect of the last row
-    aDesiredSize.height = GetHeightOfRows();
-  }
 
   aDesiredSize.mOverflowArea.UnionRect(aDesiredSize.mOverflowArea, nsRect(0, 0, aDesiredSize.width,
 	                                                                      aDesiredSize.height)); 
@@ -1336,32 +1338,6 @@ nsTableRowGroupFrame::GetHeightBasis(const nsHTMLReflowState& aReflowState)
   return result;
 }
 
-nscoord 
-nsTableRowGroupFrame::GetHeightOfRows()
-{
-  nsTableFrame* tableFrame = nsnull;
-  nsTableFrame::GetTableFrame(this, tableFrame);
-  if (!tableFrame) return 0;
-
-  nscoord height = 0;
-
-  // enumerate the rows and total their heights
-  nsIFrame* rowFrame = GetFirstChild(nsnull);
-  PRInt32 numRows = 0;
-  while (rowFrame) {
-    if (NS_STYLE_DISPLAY_TABLE_ROW == rowFrame->GetStyleDisplay()->mDisplay) {
-      height += rowFrame->GetSize().height;
-      numRows++;
-    }
-    GetNextFrame(rowFrame, &rowFrame);
-  }
-  if (numRows > 1) {
-    height += (numRows - 1) * tableFrame->GetCellSpacingY(); // add in cell spacing
-  }
-
-  return height;
-}
-
 PRBool
 nsTableRowGroupFrame::IsSimpleRowFrame(nsTableFrame* aTableFrame,
                                        nsIFrame*     aFrame)
@@ -1411,12 +1387,7 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
     PRBool needToCalcRowHeights = PR_FALSE; 
     if (IsSimpleRowFrame(aReflowState.tableFrame, aNextFrame)) {
       // See if the row changed height
-      if (oldKidSize.height == desiredSize.height) {
-        // We don't need to do any painting. The row frame has made sure that
-        // the cell is properly positioned, and done any necessary repainting.
-        // Just calculate our desired height
-        aDesiredSize.height = GetLastRowSibling(mFrames.FirstChild())->GetRect().YMost();
-      } else {
+      if (oldKidSize.height != desiredSize.height) {
         // Inform the row of its new height.
         ((nsTableRowFrame*)aNextFrame)->DidResize(aReflowState.reflowState);
         // the overflow area may have changed inflate the overflow area
@@ -1436,11 +1407,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
                               mRect.width, mRect.height - kidRect.YMost());
             Invalidate(dirtyRect);
           }
-
-          // Adjust the frames that follow
-          AdjustSiblingsAfterReflow(aReflowState, aNextFrame,
-                                    desiredSize.height - oldKidSize.height);
-          aDesiredSize.height = aReflowState.y;
         }
         else needToCalcRowHeights = PR_TRUE;
       }
@@ -1452,11 +1418,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
       else needToCalcRowHeights = PR_TRUE;
     }
     if (needToCalcRowHeights) {
-      // Adjust the frames that follow... 
-      // XXX is this needed since CalculateRowHeights will be called?
-      //AdjustSiblingsAfterReflow(aPresContext, aReflowState, aNextFrame,
-      //                          desiredSize.height - oldKidSize.height);
-    
       // Now recalculate the row heights
       CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState);
       
@@ -1465,13 +1426,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
       // rect of what changed. Or whether anything moved or changed size...
       nsRect  dirtyRect(0, 0, mRect.width, mRect.height);
       Invalidate(dirtyRect);
-    }
-    else {
-      // need to recover the  OverflowArea
-      for (nsTableRowFrame* rowFrame = GetFirstRow(); rowFrame; rowFrame = rowFrame->GetNextRow()) {
-        ConsiderChildOverflow(aDesiredSize.mOverflowArea, rowFrame);
-      }
-      FinishAndStoreOverflow(&aDesiredSize);
     }
   }
   

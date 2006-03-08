@@ -181,7 +181,6 @@ public:
   /**
    * Get the total height of all the row rects
    */
-  nscoord GetHeightOfRows();
   nscoord GetHeightBasis(const nsHTMLReflowState& aReflowState);
   
   nsMargin* GetBCBorderWidth(float     aPixelsToTwips,
