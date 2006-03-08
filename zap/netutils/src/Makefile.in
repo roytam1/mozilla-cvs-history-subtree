@@ -5,17 +5,18 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= stun
-XPIDL_MODULE    = stun
-LIBRARY_NAME	= stun
+MODULE		= zap_netutils
+XPIDL_MODULE    = zap_netutils
+LIBRARY_NAME	= zap_netutils
 EXPORT_LIBRARY	= 1
 IS_COMPONENT	= 1
-MODULE_NAME	= stun
+MODULE_NAME	= zap_netutils
 MOZILLA_INTERNAL_API = 1
 
 REQUIRES	= \
 		xpcom \
 		string \
+		necko \
 		zap_base \
 		$(NULL)
 

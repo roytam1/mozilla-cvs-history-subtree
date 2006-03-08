@@ -40,6 +40,8 @@
 #include "zapIStunResolver.h"
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
+#include "nsIDNSService.h"
+#include "nsIDNSRecord.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapNetUtils
@@ -55,8 +57,8 @@ zapNetUtils::~zapNetUtils()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapNetUtils)
-NS_IMPL_RELEASE(zapNetUtils)
+NS_IMPL_THREADSAFE_ADDREF(zapNetUtils)
+NS_IMPL_THREADSAFE_RELEASE(zapNetUtils)
 
 NS_INTERFACE_MAP_BEGIN(zapNetUtils)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapINetUtils)
@@ -154,7 +156,28 @@ zapNetUtils::SnoopStunPacket(const nsACString & buffer, PRInt32 *_retval)
 NS_IMETHODIMP
 zapNetUtils::ResolveMappedAddress(zapIStunAddressResolveListener *listener, const nsACString & stunServer)
 {
+  // XXX THE STUN-RESOLVER IS NOT THREADSAFE
+  
   nsCOMPtr<zapIStunResolver> resolver = do_CreateInstance("@mozilla.org/zap/stun-resolver;1");
   if (!resolver) return NS_ERROR_FAILURE;
   return resolver->ResolveMappedAddress(listener, stunServer);
+}
+
+/* ACString getPrimaryHostAddress(); */
+NS_IMETHODIMP
+zapNetUtils::GetPrimaryHostAddress(nsACString & retval)
+{
+  nsCOMPtr<nsIDNSService> dnsService = do_GetService("@mozilla.org/network/dns-service;1");
+  nsCString hostName;
+  dnsService->GetMyHostName(hostName);
+  nsCOMPtr<nsIDNSRecord> dnsRecord;
+  if (NS_SUCCEEDED(dnsService->Resolve(hostName, 0,
+                                       getter_AddRefs(dnsRecord))) &&
+      dnsRecord) {
+    dnsRecord->GetNextAddrAsString(retval);
+  }
+  else {
+    retval = NS_LITERAL_CSTRING("127.0.0.1");
+  }
+  return NS_OK;
 }
