@@ -366,9 +366,6 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
   if (haveRow)
     aReflowState.y -= cellSpacingY;
 
-  if (aReflowState.reflowState.mFlags.mSpecialHeightReflow) {
-    aDesiredSize.height = mRect.height;
-  }
   return rv;
 }
 
