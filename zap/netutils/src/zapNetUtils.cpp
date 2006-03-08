@@ -163,6 +163,19 @@ zapNetUtils::ResolveMappedAddress(zapIStunAddressResolveListener *listener, cons
   return resolver->ResolveMappedAddress(listener, stunServer);
 }
 
+
+#ifdef XP_UNIX
+#include <stdio.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <net/if.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
+
 /* ACString getPrimaryHostAddress(); */
 NS_IMETHODIMP
 zapNetUtils::GetPrimaryHostAddress(nsACString & retval)
@@ -179,5 +192,22 @@ zapNetUtils::GetPrimaryHostAddress(nsACString & retval)
   else {
     retval = NS_LITERAL_CSTRING("127.0.0.1");
   }
+
+#ifdef XP_UNIX
+  if (retval == NS_LITERAL_CSTRING("127.0.0.1")) {
+    struct ifreq ifr;
+    struct sockaddr_in *sin = (struct sockaddr_in*) &ifr.ifr_addr;
+    memset(&ifr, 0, sizeof(ifr));
+    int sfd;
+    if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) >= 0 ) {
+      strcpy(ifr.ifr_name, "eth0");
+      sin->sin_family = AF_INET;
+      if (ioctl(sfd, SIOCGIFADDR, &ifr) == 0) {
+        retval = inet_ntoa(sin->sin_addr);
+      }
+    }
+  }
+#endif
+  
   return NS_OK;
 }
