@@ -94,6 +94,8 @@ const componentData =
      contractid: "@mozilla.org/calendar/alarm-service;1",
      script: "calAlarmService.js",
      constructor: "calAlarmService",
+     category: "app-startup",
+     categoryEntry: "alarm-service-startup",
      service: true},
 
     {cid: Components.ID("{974339d5-ab86-4491-aaaf-2b2ca177c12b}"),
@@ -119,17 +121,7 @@ const componentData =
     {cid: Components.ID("{04027036-5884-4a30-b4af-f2cad79f6edf}"),
      contractid: "@mozilla.org/calendar/recurrence-info;1",
      script: "calRecurrenceInfo.js",
-     constructor: "calRecurrenceInfo"},
-
-    {cid: Components.ID("{4123da9a-f047-42da-a7d0-cc4175b9f36a}"),
-     contractid: "@mozilla.org/calendar/datetime-formatter;1",
-     script: "calDateTimeFormatter.js",
-     constructor: "calDateTimeFormatter"},
-
-    {cid: Components.ID("{6877bbdd-f336-46f5-98ce-fe86d0285cc1}"),
-     contractid: "@mozilla.org/calendar/weektitle-service;1",
-     script: "calWeekTitleService.js",
-     constructor: "calWeekTitleService"}
+     constructor: "calRecurrenceInfo"}
     ];
 
 var calItemModule = {

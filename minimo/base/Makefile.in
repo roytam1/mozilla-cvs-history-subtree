@@ -54,8 +54,6 @@ PROGRAM		= minimo$(BIN_SUFFIX)
 MODULE		= minimo
 
 REQUIRES	= xpcom					 \
-		      browser                \
-		      history                \
 		      appshell				 \
 		      string				 \
 		      embed_base			 \
@@ -76,12 +74,11 @@ REQUIRES	= xpcom					 \
 		      profdirserviceprovider \
 		      pref					 \
 		      pipnss                 \
-			  pipboot                \
 		      intl                   \
 		      embedcomponents		 \
 		      appcomps				 \
 		      phone					 \
-		      $(NULL)
+		      $(NULL)				 \
 
 CPPSRCS	    = Minimo.cpp		  \
 		      WindowCreator.cpp	  \
@@ -92,21 +89,24 @@ CPPSRCS	    = Minimo.cpp		  \
 
 # this should move into the toolkit!
 LOCAL_INCLUDES	= -I$(srcdir) -I$(topsrcdir)/xpfe/browser/src/
-CPPSRCS    += nsBrowserStatusFilter.cpp nsBrowserInstance.cpp
+CPPSRCS    += nsBrowserStatusFilter.cpp
 
 ifdef WINCE
 RCINCLUDE  = wince/SplashScreen.rc
 endif
 
-LIBS =
+EXTRA_DSO_LIBS	= embed_base_s profdirserviceprovider_s
 
-ifndef WINCE
-LIBS	  += $(NSPR_LIBS)
-endif
+LIBS	  = $(EXTRA_DSO_LIBS)       \
+			$(MOZ_UNICHARUTIL_LIBS)	\
+			$(XPCOM_LIBS)			\
+			$(NSPR_LIBS)			\
+			$(MOZ_JS_LIBS)			\
+			$(NULL)
 
 ifdef MOZ_ENABLE_GTK2
-LIBS	 += $(XLDFLAGS)	 \
-		 	$(XLIBS)	 \
+LIBS	 += $(XLDFLAGS)	\
+		 	$(XLIBS)	\
 			$(NULL)
 endif
 
@@ -114,7 +114,7 @@ include $(topsrcdir)/config/config.mk
 
 ifdef WINCE
 LOCAL_INCLUDES	+= -I$(srcdir)/wince
-OS_LIBS += $(call EXPAND_LIBNAME, aygshell cellcore commdlg uuid ole32 oleaut32 ws2)
+OS_LIBS += $(call EXPAND_LIBNAME, aygshell cellcore uuid ole32 oleaut32)
 endif
 
 
@@ -157,25 +157,10 @@ ifdef BUILD_STATIC_LIBS
 include $(topsrcdir)/config/static-rules.mk
 endif
 
-
-# MSVC '-Gy' cc flag and '/OPT:REF' linker flag cause JS_GetArgument and
-# JS_GetLocalVariable to be folded to the same address by the linker, 
-# leading to a crash on startup. See bug 151066. So, in optimized builds,
-# add the /OPT:NOICF flag, which turns off 'identical COMDAT folding'.
-#
-# N.B.: 'identical COMDAT folding' that folds functions whose addresses
-# are taken violates the ISO C and C++ standards.
-# (same as in mozilla/js/src/Makefile.in)
-ifdef WINCE
-LDFLAGS         += -OPT:NOICF
-endif
-
 export::
 	$(NSINSTALL) $(topsrcdir)/xpfe/browser/src/nsBrowserStatusFilter.cpp .
-	$(NSINSTALL) $(topsrcdir)/xpfe/browser/src/nsBrowserInstance.cpp .
 
-
-GARBAGE += nsBrowserStatusFilter.cpp nsBrowserInstance.cpp
+GARBAGE += nsBrowserStatusFilter.cpp
 
 ifdef WINCE
 package::

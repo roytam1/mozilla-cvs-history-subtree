@@ -37,7 +37,6 @@
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$SkipCheckout      = 0;      # Use to debug build process without checking out new source.
 #$BuildLocales      = 0;      # Do l10n packaging?
 
 # Tests
@@ -66,7 +65,6 @@
 #$StartupPerformanceTest   = 0;  # Ts
 
 #$TestsPhoneHome           = 0;  # Should test report back to server?
-#$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -177,16 +175,13 @@
 
 # Release build options
 #$ReleaseBuild  = 1;
-#$clean_objdir = 1; # remove objdir when starting release cycle?
-#$clean_srcdir = 1; # remove srcdir when starting release cycle?
 #$shiptalkback  = 1;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-#$ReleaseGroup = ''; # group to set uploaded files to
 #$build_hour    = "8";
 #$package_creation_path = "/xpinstall/packager";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
-#$ssh_version   = "2";
+#$ssh_version   = "1";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";

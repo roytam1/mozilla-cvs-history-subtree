@@ -40,7 +40,6 @@
 
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/datetimepickers.css" ?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-event-dialog.css" type="text/css"?>
 
 <!DOCTYPE dialog
 [
@@ -85,20 +84,12 @@
 
         <row>
           <spacer/>
-          <label id="repeat-interval-warning"
-                 class="warning-text-class"
-                 value="&newevent.recurinterval.warning;"
-                 hidden="true"/>
-        </row>
-
-        <row>
-          <spacer/>
           <deck id="period-deck">
 
             <!-- Daily -->
             <hbox align="top">
               <label value="&newevent.recurrence.every.label;"/>
-              <textbox id="daily-days" value="1" size="3" oninput="validateIntegers(event); updateAccept();"/>
+              <textbox id="daily-days" size="3" oninput="validateIntegers(event);"/>
               <label value="&repeat.units.days;"/>
               <spacer flex="1"/>
             </hbox>
@@ -134,13 +125,13 @@
 
               <hbox>
                 <label value="&newevent.repeat.onthe.label;"/>
-                <textbox value="10,23,29" size="8"/>
+                <textbox value="10,23,29" size="3"/>
               </hbox>
             </vbox>
 
             <hbox align="top">
               <label value="&newevent.recurrence.every.label;"/>
-              <textbox id="yearly-years" value="1" size="3" oninput="validateIntegers(event); updateAccept()"/>
+              <textbox id="yearly-years" size="3" oninput="validateIntegers(event);"/>
               <label value="&repeat.units.years;"/>
               <spacer flex="1"/>
             </hbox>
@@ -168,22 +159,20 @@
           </row>
           <row>
             <radio label="&newevent.repeat.for.label;" value="ntimes"/>
-            <hbox align="center">
-              <textbox id="repeat-ntimes-count" size="3" value="5" oninput="validateIntegers(event); updateAccept();"/>
+            <hbox>
+              <textbox id="repeat-ntimes-count" size="3" oninput="validateIntegers(event);"/>
               <spacer flex="0.5"/>
-              <label value="&repeat.units.occurence.both;"/>
+              <menulist id="repeat-ntimes-units">
+                <menupopup>
+                  <menuitem label="&repeat.units.days.both;"/>
+                  <menuitem label="&repeat.units.weeks.both;"/>
+                  <menuitem label="&repeat.units.months.both;"/>
+                  <menuitem label="&repeat.units.years.both;"/>
+                </menupopup>
+              </menulist>
               <spacer flex="1"/>
             </hbox>
           </row>
-
-          <row>
-            <spacer/>
-            <label id="repeat-numberoftimes-warning"
-                   class="warning-text-class"
-                   value="&newevent.recurnumberoftimes.warning;"
-                   hidden="true"/>
-          </row>
-
           <row>
             <radio label="&newevent.repeat.until.label;" value="until"/>
             <hbox>
@@ -204,8 +193,6 @@
     <hbox align="center">
       <listbox id="recurrence-exceptions-listbox" rows="8" flex="1"/>
       <vbox align="top">
-        <datepicker id="exdate-picker"/>
-        <button label="&newevent.addexceptions.label;" oncommand="addException()"/>
         <button label="&newevent.recurrence.remove.label;" oncommand="removeSelectedException();"/>
       </vbox>
     </hbox>

@@ -56,7 +56,7 @@
         persist="screenX screenY"
         buttons="accept"
         buttonlabelaccept="&calendar.alarm.dismissall.label;"
-        onunload="return onDismissAll();"
+        ondialogaccept="return onDismissAll();"
         width="400"
         height="200">
 

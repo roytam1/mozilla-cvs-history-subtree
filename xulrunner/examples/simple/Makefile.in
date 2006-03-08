@@ -49,6 +49,7 @@ DIRS		= components
 
 PREF_JS_EXPORTS	= $(srcdir)/simple-prefs.js
 DIST_FILES	= application.ini
+DIST_CHROME_FILES = chrome.manifest
 
 ifneq (,$(filter windows,$(MOZ_WIDGET_TOOLKIT)))
 ICONS		= icons/simple.ico

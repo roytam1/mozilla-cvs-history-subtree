@@ -11,20 +11,7 @@ function ltnSelectedCalendar()
 
 function ltnDeleteSelectedCalendar()
 {
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService); 
-
-    var result = {}; 
-    var calendarBundle = document.getElementById("bundle_calendar");
-    var calendar = ltnSelectedCalendar();
-    var ok = promptService.confirm(
-        window,
-        calendarBundle.getString("unsubscribeCalendarTitle"),
-        calendarBundle.getFormattedString("unsubscribeCalendarMessage",[calendar.name]),
-        result);
-   
-    if (ok) {
-        ltnRemoveCalendar(calendar);
-    }
+    ltnRemoveCalendar(ltnSelectedCalendar());
 }
 
 function ltnEditSelectedCalendar()
@@ -66,12 +53,7 @@ function ltnMinimonthPick(minimonth)
     cdt = cdt.getInTimezone(calendarDefaultTimezone());
     cdt.isDate = true;
 
-    if (document.getElementById("displayDeck").selectedPanel != 
-        document.getElementById("calendar-view-box")) {
-        showCalendarView('month');
-    }
-
-    currentView().goToDay(cdt);
+    showCalendar(cdt);
 }
 
 function ltnOnLoad(event)
@@ -102,15 +84,19 @@ function ltnOnLoad(event)
     pb2.addObserver("calendar.", ltnPrefObserver, false);
     ltnPrefObserver.observe(null, null, "");
 
-    // fire up the alarm service
-    var alarmSvc = Components.classes["@mozilla.org/calendar/alarm-service;1"]
-                   .getService(Components.interfaces.calIAlarmService);
-    alarmSvc.timezone = calendarDefaultTimezone();
-    alarmSvc.startup();
-
     // Add an unload function to the window so we don't leak the pref observer
     document.getElementById("messengerWindow")
             .addEventListener("unload", ltnFinish, false);
+
+    // Set up the multiday-view to start/end at the correct hours, since this
+    // doesn't persist between startups.  (Fails if pref undefined)
+    try {
+        var sHour = rootPrefBranch.getIntPref("calendar.view.defaultstarthour");
+        var eHour = rootPrefBranch.getIntPref("calendar.view.defaultendhour");
+        document.getElementById("calendar-multiday-view")
+                .setStartEndMinutes(sHour*60, eHour*60);
+    }
+    catch(ex) {}
 
     return;
 }
@@ -121,7 +107,7 @@ function currentView()
     return calendarViewBox.selectedPanel;
 }
 
-function showCalendarView(type)
+function showCalendar(aDate1, aDate2)
 {
     // If we got this call while a mail-view is being shown, we need to
     // hide all of the mail stuff so we have room to display the calendar
@@ -129,59 +115,69 @@ function showCalendarView(type)
     if (calendarViewBox.style.visibility == "collapse") {
         collapseElement(GetMessagePane());
         collapseElement(document.getElementById("threadpane-splitter"));
-        var searchBox = findMailSearchBox();
-        if (searchBox) {
-            collapseElement(searchBox);
-        }
+        collapseElement(gSearchBox);
         uncollapseElement(calendarViewBox);
-
-        // Thunderbird is smart.  It won't reload the message list if the user
-        // clicks the same folder that's already selected.  Therefore, we need
-        // to not only remove the tree selection (so clicking triggers an event)
-        // but also reset some of TB's internal variables.
-        var treeSel = document.getElementById("folderTree").view.selection;
-        treeSel.selectEventsSuppressed = true;
-        treeSel.clearSelection();
-        treeSel.selectEventsSuppressed = false;
-        gMsgFolderSelected = null;
-        msgWindow.openFolder = null;
     }
 
-    document.getElementById("displayDeck").selectedPanel =  calendarViewBox;
+    var view = currentView();
+
+    if (view.displayCalendar != getCompositeCalendar()) {
+        view.displayCalendar = getCompositeCalendar();
+        view.controller = ltnCalendarViewController;
+    }
+
+    if (aDate1 && !aDate2)
+        view.showDate(aDate1);
+    else if (aDate1 && aDate2)
+        view.setDateRange(aDate1, aDate2);
+
+    document.getElementById("displayDeck").selectedPanel =
+        document.getElementById("calendar-view-box");
+}
+
+function switchView(type) {
     var calendarViewBox = document.getElementById("calendar-view-box");
 
-    var selectedDay;
-    try {
-        var selectedDay = calendarViewBox.selectedPanel.selectedDay;
-    } catch(ex) {} // This dies if no view has even been chosen this session
+    var monthView = document.getElementById("calendar-month-view");
+    var multidayView = document.getElementById("calendar-multiday-view");
+
+    var selectedDay = calendarViewBox.selectedPanel.selectedDay;
 
     if (!selectedDay)
         selectedDay = today();
 
-    calendarViewBox.selectedPanel = document.getElementById(type+"-view");
-    var view = calendarViewBox.selectedPanel;
+    var d1, d2;
 
-    if (view.displayCalendar != getCompositeCalendar()) {
-        view.displayCalendar = getCompositeCalendar();
-        view.timezone = calendarDefaultTimezone();
-        view.controller = ltnCalendarViewController;
+    switch (type) {
+    case "month": {
+        d1 = selectedDay;
+        calendarViewBox.selectedPanel = monthView;
+    }
+        break;
+    case "week": {
+        d1 = selectedDay.startOfWeek;
+        d2 = selectedDay.endOfWeek;
+        calendarViewBox.selectedPanel = multidayView;
+    }
+        break;
+    case "day":
+    default: {
+        d1 = selectedDay;
+        d2 = selectedDay;
+        calendarViewBox.selectedPanel = multidayView;
+    }
+        break;
     }
 
-    view.goToDay(selectedDay);
+    showCalendar(d1, d2);
 
     // Set the labels for the context-menu
     var nextCommand = document.getElementById("context_next");
     nextCommand.setAttribute("label", nextCommand.getAttribute("label-"+type));
     var previousCommand = document.getElementById("context_previous")
     previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
-}
 
-function goToToday()
-{
-    // set the current date in the minimonth control;
-    // note, that the current view in the calendar-view-box is automatically updated
-    var currentDay = today();
-    document.getElementById("ltnMinimonth").value = currentDay.jsDate;
+    calendarViewBox.selectedPanel.selectedDay = selectedDay;
 }
 
 function selectedCalendarPane(event)
@@ -194,7 +190,7 @@ function selectedCalendarPane(event)
 
     deck.selectedPanel = document.getElementById("calendar-view-box");
 
-    showCalendarView('week');
+    switchView('week');
 }
 
 function LtnObserveDisplayDeckChange(event)
@@ -211,21 +207,20 @@ function LtnObserveDisplayDeckChange(event)
     try { id = deck.selectedPanel.id } catch (e) { }
 
     // Now we're switching back to the mail view, so put everything back that
-    // we collapsed in showCalendarView()
+    // we collapsed in switchView()
     if (id != "calendar-view-box") {
         collapseElement(document.getElementById("calendar-view-box"));
         uncollapseElement(GetMessagePane());
         uncollapseElement(document.getElementById("threadpane-splitter"));
-        var searchBox = findMailSearchBox();
-        if (searchBox) {
-            uncollapseElement(searchBox);
-        }
+        uncollapseElement(gSearchBox);
     }
 }
 
 function ltnPublishCalendar()
 {
-    publishEntireCalendar(ltnSelectedCalendar());
+    currentCalendar = ltnSelectedCalendar();
+
+    openDialog("chrome://calendar/content/calendar-publish-dialog.xul", "caPublishEvents", "chrome,titlebar,modal", currentCalendar);
 }
 
 function ltnFinish() {
@@ -256,29 +251,22 @@ var ltnPrefObserver =
    rootPrefBranch: null,
    observe: function(aSubject, aTopic, aPrefName)
    {
+       switch (aPrefName) {
+           case "calendar.view.defaultstarthour":
+           case "calendar.view.defaultendhour":
+               var sHour = this.rootPrefBranch.getIntPref
+                               ("calendar.view.defaultstarthour");
+               var eHour = this.rootPrefBranch.getIntPref
+                                ("calendar.view.defaultendhour");
+               document.getElementById("calendar-multiday-view")
+                       .setStartEndMinutes(sHour*60, eHour*60);
+               break;
+       }
    }
 }
 
 function onMouseOverItem(event) {
 //set the item's context-menu text here
-}
-
-// After 1.5 was released, the search box was moved into an optional toolbar
-// item, with a different ID.  This function keeps us compatible with both.
-function findMailSearchBox() {
-    var tb15Box = document.getElementById("searchBox");
-    if (tb15Box) {
-        return tb15Box;
-    }
-
-    var tb2Box = document.getElementById("searchInput");
-    if (tb2Box) {
-        return tb2Box;
-    }
-
-    // In later versions, it's possible that a user removed the search box from
-    // the toolbar.
-    return null;
 }
 
 document.getElementById("displayDeck").

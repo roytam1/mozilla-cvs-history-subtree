@@ -52,8 +52,6 @@
 
 <?xml-stylesheet href="chrome://calendar/content/calendar-multiday-view.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/calendar-month-view.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-decorated-views.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-view-core.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/minimonth.css" type="text/css"?>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
@@ -61,8 +59,6 @@
 <script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendarCreation.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-item-editing.js"/>
-<script type="application/x-javascript" src="chrome://calendar/content/import-export.js"/>
-<script type="application/x-javascript" src="chrome://calendar/content/publish.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/lightning-utils.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/calendar-management.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/messenger-overlay-sidebar.js"/>
@@ -73,15 +69,10 @@
 <window id="messengerWindow">
   <commandset id="calendar_commands">
     <command id="publish_calendar" oncommand="ltnPublishCalendar()"/>
-    <command id="import_command" oncommand="loadEventsFromFile()"/>
-    <command id="export_command" oncommand="exportEntireCalendar()"/>
   </commandset>
-
   <popupset>
     <popup id="calendartree-context-menu" onpopupshowing="return true;">
       <menuitem label="&calendar.publish.label;" observes="publish_calendar"/>
-      <menuitem label="&calendar.import.into.label;" oncommand="loadEventsFromFile(ltnSelectedCalendar())"/>
-      <menuitem label="&calendar.export.specific.calendar;" oncommand="exportEntireCalendar(ltnSelectedCalendar())"/>
     </popup>
     <popup id="calendar-view-context-menu" onpopupshowing="return true;">
       <!-- These labels are set dynamically, based on the current view -->
@@ -159,15 +150,12 @@
 
 <deck id="displayDeck">
   <deck flex="1" id="calendar-view-box">
-    <calendar-decorated-day-view id="day-view" flex="1"
-                                 context="calendar-view-context-menu"
-                                 item-context="calendar-item-context-menu"/>
-    <calendar-decorated-week-view id="week-view" flex="1"
-                                  context="calendar-view-context-menu"
-                                  item-context="calendar-item-context-menu"/>
-    <calendar-decorated-month-view id="month-view" flex="1"
-                                   context="calendar-view-context-menu"
-                                   item-context="calendar-item-context-menu"/>
+    <calendar-month-view id="calendar-month-view" flex="1" 
+                         context="calendar-view-context-menu"
+                         item-context="calendar-item-context-menu"/>
+    <calendar-multiday-view orient="vertical" id="calendar-multiday-view" flex="1"
+                            context="calendar-view-context-menu"
+                            item-context="calendar-item-context-menu"/>
   </deck>
 </deck>
 </overlay>

@@ -80,8 +80,6 @@
 #include "nsITimer.h"
 
 
-static PRBool gUseSoftwareKeyboard;
-
 #ifdef WINCE
 
 #include "keybd.h"
@@ -342,6 +340,9 @@ private:
   ~nsSoftKeyBoard();
   PRBool ShouldOpenKeyboardFor(nsIDOMEvent* aEvent);
 
+  void CloseSIP();
+  void OpenSIP();
+
   nsCOMPtr<nsIDOMWindow> mTopWindow;
   class nsSoftKeyBoardService* mService;
 
@@ -349,7 +350,7 @@ private:
   {
     eNumbers = 0,
     eLowerCase = 1,
-    eUpperCase = 2
+    eUpperCase = 2,
   };
 
   PRUint32 mUsage; 
@@ -371,10 +372,7 @@ public:
 
   nsCOMArray<nsSoftKeyBoard> mObjects;
 
-  static void CloseSIP();
-  static void OpenSIP();
-
-  void HandlePref(const char* pref, nsIPrefBranch2* prefBranch);
+  PRBool mUseSoftwareKeyboard;
 };
 
 NS_INTERFACE_MAP_BEGIN(nsSoftKeyBoard)
@@ -394,8 +392,6 @@ nsSoftKeyBoard::nsSoftKeyBoard(nsSoftKeyBoardService* aService)
   mCurrentDigit = 0;
   mCurrentDigitCount = 0;
   mUsage = eLowerCase;
-
-  nsSoftKeyBoardService::CloseSIP();
 }
 
 nsSoftKeyBoard::~nsSoftKeyBoard()
@@ -448,7 +444,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
 
   nsAutoString eventType;
   aEvent->GetType(eventType);
-
+  
   if (eventType.EqualsLiteral("keypress"))
   {
     PRUint32 keyCode;
@@ -462,7 +458,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
     
     if (keyCode == nsIDOMKeyEvent::DOM_VK_RETURN && controlType != NS_FORM_TEXTAREA)
     {
-      nsSoftKeyBoardService::CloseSIP();
+      CloseSIP();
     }
 
 #ifdef WINCE
@@ -563,75 +559,55 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
     return NS_OK;
   }
 
-  if (eventType.EqualsLiteral("click"))
-  {
-    nsSoftKeyBoardService::OpenSIP();
-    return NS_OK;
-  }
-
-  PRBool popupConditions = PR_FALSE;
-  nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(mTopWindow);
-  if (!privateWindow)
-    return NS_OK;
-
-  nsIDOMWindowInternal *rootWindow = privateWindow->GetPrivateRoot();
-  if (!rootWindow)
-    return NS_OK;
-
-  nsCOMPtr<nsIDOMWindow> windowContent;
-  rootWindow->GetContent(getter_AddRefs(windowContent));
-  privateWindow = do_QueryInterface(windowContent);
-
-  if (privateWindow)
-    popupConditions = privateWindow->IsLoadingOrRunningTimeout();
-  
   if (eventType.EqualsLiteral("focus"))
-  {
-    //    if (popupConditions == PR_FALSE)
-    nsSoftKeyBoardService::OpenSIP();
-  }
+    OpenSIP();
   else
-    nsSoftKeyBoardService::CloseSIP();
+    CloseSIP();
   
   return NS_OK;
 }
 
 void
-nsSoftKeyBoardService::OpenSIP()
+nsSoftKeyBoard::OpenSIP()
 {
-  if (!gUseSoftwareKeyboard)
+  // It is okay to CloseSip if there is a hardware keyboard
+  // present, but it isn't nice to use a software keyboard
+  // when a hardware one is present.
+
+  if (!mService->mUseSoftwareKeyboard)
     return;
 
 #ifdef WINCE
+  if (IsSmartphone())
+    return;
+
   HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
+  if (hWndSIP)
+    ::ShowWindow( hWndSIP, SW_SHOW);
+
+  hWndSIP = ::FindWindow( _T( "MS_SIPBUTTON" ), NULL );
   if (hWndSIP)
     ::ShowWindow( hWndSIP, SW_SHOW);
 
   SHSipPreference(NULL, SIP_UP);
 
-  //  SHFullScreen(GetForegroundWindow(), SHFS_SHOWSIPBUTTON);
-
-  // keep the sip button hidden!
-  
-  hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
-  if (hWndSIP) 
-  {
-    ShowWindow( hWndSIP, SW_HIDE );
-    SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-  }
+  SHFullScreen(GetForegroundWindow(), SHFS_SHOWSIPBUTTON);
 
 #endif
 }
 
 void
-nsSoftKeyBoardService::CloseSIP()
+nsSoftKeyBoard::CloseSIP()
 {
 #ifdef WINCE
+  if (IsSmartphone())
+    return;
 
   HWND hWndSIP = FindWindow( _T( "SipWndClass" ), NULL );
   if (hWndSIP)
   {
     ShowWindow( hWndSIP, SW_HIDE );
+    SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
   }
 
   hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
@@ -694,7 +670,6 @@ nsSoftKeyBoard::Init(nsIDOMWindow *aWindow)
   receiver->AddEventListener(NS_LITERAL_STRING("blur"), this, PR_TRUE);
   receiver->AddEventListener(NS_LITERAL_STRING("keypress"), this, PR_TRUE);
 
-  receiver->AddEventListener(NS_LITERAL_STRING("click"), this, PR_TRUE);
   
   return NS_OK;
 }
@@ -714,9 +689,7 @@ nsSoftKeyBoard::Shutdown()
 
   receiver->RemoveEventListener(NS_LITERAL_STRING("focus"), this, PR_TRUE);
   receiver->RemoveEventListener(NS_LITERAL_STRING("blur"), this, PR_TRUE);
-  receiver->RemoveEventListener(NS_LITERAL_STRING("keypress"), this, PR_TRUE);
-  receiver->RemoveEventListener(NS_LITERAL_STRING("click"), this, PR_TRUE);
-
+  
   mTopWindow = nsnull;
 
   return NS_OK;
@@ -731,7 +704,7 @@ nsSoftKeyBoard::GetAttachedWindow(nsIDOMWindow * *aAttachedWindow)
 
 nsSoftKeyBoardService::nsSoftKeyBoardService()  
 {
-  gUseSoftwareKeyboard = PR_FALSE;
+  mUseSoftwareKeyboard = PR_TRUE;
 }  
 
 nsSoftKeyBoardService::~nsSoftKeyBoardService()  
@@ -739,23 +712,6 @@ nsSoftKeyBoardService::~nsSoftKeyBoardService()
 }  
 
 NS_IMPL_ISUPPORTS1(nsSoftKeyBoardService, nsIObserver)
-
-void
-nsSoftKeyBoardService::HandlePref(const char* pref, nsIPrefBranch2* prefBranch)
-{
-  if (!strcmp(pref, "skey.enabled"))
-  {
-    PRBool enabled;
-    prefBranch->GetBoolPref(pref, &enabled);
-    
-    gUseSoftwareKeyboard = enabled;
-    
-    if (gUseSoftwareKeyboard)
-      nsSoftKeyBoardService::OpenSIP();
-    else
-      nsSoftKeyBoardService::CloseSIP();
-  }
-}
 
 NS_IMETHODIMP
 nsSoftKeyBoardService::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
@@ -811,18 +767,23 @@ nsSoftKeyBoardService::Observe(nsISupports *aSubject, const char *aTopic, const 
     
     prefBranch->AddObserver("skey.", this, PR_FALSE);
 
-    HandlePref("skey.enabled", prefBranch);
     return NS_OK;
   }
 
   if (!strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) 
   {
-    nsCOMPtr<nsIPrefBranch2> prefBranch = do_QueryInterface(aSubject);
+    nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(aSubject);
     nsXPIDLCString cstr;
     
-    const char* pref = NS_ConvertUTF16toUTF8(aData).get();
+    const char* pref = NS_ConvertUCS2toUTF8(aData).get();
+    
+    if (!strcmp(pref, "skey.enabled"))
+    {
+      PRBool enabled;
+      prefBranch->GetBoolPref(pref, &enabled);
 
-    HandlePref(pref, prefBranch);
+      mUseSoftwareKeyboard = enabled;
+    }
     return NS_OK;
   }
   return NS_OK;
@@ -919,6 +880,7 @@ static const nsModuleComponentInfo components[] =
     SoftKeyBoardServiceRegistration,
     SoftKeyBoardServiceUnregistration
   }
+  
 };
 
 NS_IMPL_NSGETMODULE(SoftKeyBoardModule, components)

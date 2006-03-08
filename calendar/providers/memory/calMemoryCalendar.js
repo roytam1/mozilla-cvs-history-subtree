@@ -142,12 +142,6 @@ calMemoryCalendar.prototype = {
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
-        var newItem = aItem.clone();
-        return this.adoptItem(newItem, aListener);
-    },
-    
-    // void adoptItem( in calIItemBase aItem, in calIOperationListener aListener );
-    adoptItem: function (aItem, aListener) {
         if (this.readOnly) 
             throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (aItem.id == null && aItem.isMutable)
@@ -174,20 +168,21 @@ calMemoryCalendar.prototype = {
             return;
         }
 
-        aItem.calendar = this.calendarToReturn;
-        aItem.generation = 1;
-        aItem.makeImmutable();
-        this.mItems[aItem.id] = aItem;
+        var newItem = aItem.clone();
+        newItem.calendar = this.calendarToReturn;
+        newItem.generation = 1;
+        newItem.makeImmutable();
+        this.mItems[newItem.id] = newItem;
 
         // notify the listener
         if (aListener)
             aListener.onOperationComplete (this.calendarToReturn,
                                            Components.results.NS_OK,
                                            aListener.ADD,
-                                           aItem.id,
-                                           aItem);
+                                           newItem.id,
+                                           newItem);
         // notify observers
-        this.observeAddItem(aItem);
+        this.observeAddItem(newItem);
     },
 
     // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
@@ -218,13 +213,7 @@ calMemoryCalendar.prototype = {
                                                "item ID mismatch between old and new items");
             return;
         }
-        
-        if (aNewItem.parentItem != aNewItem) {
-            aNewItem.parentItem.recurrenceInfo.modifyException(aNewItem);
-            aNewItem = aNewItem.parentItem;
-        }
-        aOldItem = aOldItem.parentItem;
-        
+
         if (aOldItem != this.mItems[aOldItem.id]) {
             if (aListener)
                 aListener.onOperationComplete (this.calendarToReturn,
@@ -354,6 +343,7 @@ calMemoryCalendar.prototype = {
         const calIItemBase = Components.interfaces.calIItemBase;
         const calIEvent = Components.interfaces.calIEvent;
         const calITodo = Components.interfaces.calITodo;
+        const calIItemOccurrence = Components.interfaces.calIItemOccurrence;
         const calIRecurrenceInfo = Components.interfaces.calIRecurrenceInfo;
 
         var itemsFound = Array();
@@ -423,9 +413,9 @@ calMemoryCalendar.prototype = {
                                : END_OF_TIME);
             } else if (wantTodos && (item instanceof calITodo)) {
                 // if it's a todo, also filter based on completeness
-                if (item.isCompleted && !itemCompletedFilter)
+                if (item.percentComplete == 100 && !itemCompletedFilter)
                     continue;
-                else if (item.isCompleted && !itemNotCompletedFilter)
+                else if (item.percentComplete < 100 && !itemNotCompletedFilter)
                     continue;
 
                 itemEndTime = itemStartTime = 

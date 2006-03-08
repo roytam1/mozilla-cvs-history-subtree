@@ -50,31 +50,23 @@ include $(topsrcdir)/toolkit/mozapps/installer/package-name.mk
 STAGE_DIR	= $(DIST)/update
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-ifdef UNIVERSAL_BINARY
-PACKAGE_DIR	= $(DIST)/universal/$(MOZ_PKG_APPNAME)/$(MOZ_APP_DISPLAYNAME).app
-else
 PACKAGE_DIR	= $(DIST)/$(MOZ_PKG_APPNAME)/$(MOZ_APP_DISPLAYNAME).app
-endif
 else
 PACKAGE_DIR	= $(DIST)/$(MOZ_PKG_APPNAME)
 endif
-
-MAR_BIN	= $(DIST)/host/bin/mar$(HOST_BIN_SUFFIX)
-MBSDIFF_BIN	= $(DIST)/host/bin/mbsdiff$(HOST_BIN_SUFFIX)
 
 full-update:: complete-patch
 
 complete-patch::
 	mkdir -p $(STAGE_DIR)
-	MAR=$(MAR_BIN) \
+	MAR=$(DIST)/host/bin/mar \
 	  $(srcdir)/make_full_update.sh \
 	  "$(STAGE_DIR)/$(PKG_BASENAME).complete.mar" \
 	  "$(PACKAGE_DIR)"
 
 partial-patch::
 	mkdir -p $(STAGE_DIR)
-	MAR=$(MAR_BIN) \
-	MBSDIFF=$(MBSDIFF_BIN) \
+	MAR=$(DIST)/host/bin/mar \
 	  $(srcdir)/make_incremental_update.sh \
 	  "$(STAGE_DIR)/$(PKG_BASENAME).partial.$(SRC_BUILD_ID)-$(DST_BUILD_ID).mar" \
 	  "$(SRC_BUILD)" \

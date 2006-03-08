@@ -37,15 +37,8 @@ manifest="$workdir/update.manifest"
 targetfiles="update.manifest"
 
 # Generate a list of all files in the target directory.
-pushd "$targetdir"
-if test $? -ne 0 ; then
-  exit 1
-fi
-
-list=$(list_files)
+list=$(cd "$targetdir" && list_files)
 eval "files=($list)"
-
-popd
 
 mkdir -p "$workdir"
 > $manifest

@@ -249,7 +249,7 @@ interface calIDateTime : nsISupports
    * This object as either an iCalendar DATE or DATETIME string, as
    * appropriate.
    */
-  attribute ACString icalString;
+  readonly attribute ACString icalString;
 
   /* JS only:
    * // Setting jsDate via a JavaScript Date object will set

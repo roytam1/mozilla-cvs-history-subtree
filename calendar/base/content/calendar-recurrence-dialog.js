@@ -45,15 +45,12 @@ function onLoad()
     window.originalRecurrenceInfo = args.recurrenceInfo;
 
     window.removedExceptions = [];
-    window.addedExceptions = [];
 
     loadDialog();
 
     updateDeck();
 
     updateDuration();
-
-    updateAccept();
 
     opener.setCursor("auto");
 
@@ -78,11 +75,6 @@ function onCancel()
 
 function loadDialog()
 {
-    /* Set a starting value for the exceptions picker */
-    var item = window.calendarEvent;
-    var date = item.startDate || item.entryDate || item.dueDate;
-    document.getElementById("exdate-picker").value = date.jsDate;
-
     if (!window.originalRecurrenceInfo)
         return;
 
@@ -125,23 +117,14 @@ function loadDialog()
             }
 
             /* load up the duration of the event radiogroup */
-            if (rule.isByCount) {
-                if (rule.count == -1) {
-                    setElementValue("recurrence-duration", "forever");
-                } else {
-                    setElementValue("recurrence-duration", "ntimes");
-                    setElementValue("repeat-ntimes-count", rule.count );
-                }
+            if (rule.count == -1) {
+                setElementValue("recurrence-duration", "forever");
+            } else if (rule.isByCount) {
+                setElementValue("recurrence-duration", "ntimes");
+                setElementValue("repeat-ntimes-count", rule.count );
             } else {
-                var endDate = rule.endDate;
-                if (!endDate) {
-                    setElementValue("recurrence-duration", "forever");
-                } else {
-                    // convert the datetime from UTC to localtime.
-                    endDate = endDate.getInTimezone(calendarDefaultTimezone());
-                    setElementValue("recurrence-duration", "until");
-                    setElementValue("repeat-until-date", endDate.jsDate);
-                }
+                setElementValue("recurrence-duration", "until");
+                setElementValue("repeat-until-date", rule.endDate.jsDate); // XXX getInTimezone()
             }        
         }
     }
@@ -188,6 +171,8 @@ function saveDialog()
     case 0:
         recRule.type = "DAILY";
         var ndays = Number(getElementValue("daily-days"));
+        if (ndays == "")
+            ndays = 1;
         recRule.interval = ndays;
         break;
     case 1:
@@ -226,16 +211,7 @@ function saveDialog()
         recRule.count = Math.max(1, getElementValue("repeat-ntimes-count"));
         break;
     case "until":
-        // get the datetime from the control (which is in localtime),
-        // set the time to 23:59:99 and convert that to UTC time.
-        var endDate = getElementValue("repeat-until-date")
-        endDate.setHours(23);
-        endDate.setMinutes(59);
-        endDate.setSeconds(59);
-        endDate.setMilliseconds(999);
-        endDate = jsDateToDateTime(endDate);
-        endDate.normalize();
-        recRule.endDate = endDate;
+        recRule.endDate = jsDateToDateTime(getElementValue("repeat-until-date"));
         break;
     }
 
@@ -245,14 +221,6 @@ function saveDialog()
         recurrenceInfo.restoreOccurrenceAt(date);
     }
 
-    var exceptionsBox = document.getElementById("recurrence-exceptions-listbox");
-    for each (var ex in window.addedExceptions) {
-        var dateitem = new calRecurrenceDate();
-        dateitem.isNegative = true;
-        dateitem.date = ex;
-        recurrenceInfo.appendRecurrenceItem(dateitem);
-    }
-
     return recurrenceInfo;
 }
 
@@ -260,8 +228,6 @@ function saveDialog()
 function updateDeck()
 {
     document.getElementById("period-deck").selectedIndex = Number(getElementValue("period-list"));
-
-    updateAccept();
 }
 
 function updateDuration()
@@ -272,8 +238,10 @@ function updateDuration()
 
     if (durationSelection == "ntimes") {
         setElementValue("repeat-ntimes-count", false, "disabled");
+        setElementValue("repeat-ntimes-units", false, "disabled");
     } else {
         setElementValue("repeat-ntimes-count", "true", "disabled");
+        setElementValue("repeat-ntimes-units", "true", "disabled");
     }
 
     if (durationSelection == "until") {
@@ -283,79 +251,11 @@ function updateDuration()
     }
 }
 
-function updateAccept()
-{
-    var acceptButton = document.getElementById("calendar-recurrence-dialog").getButton("accept");
-    acceptButton.removeAttribute("disabled", "true");
-    document.getElementById("repeat-interval-warning").setAttribute("hidden", true);
-    document.getElementById("repeat-numberoftimes-warning").setAttribute("hidden", true);
-
-    switch (Number(getElementValue("period-list"))) {
-    case 0: // daily
-        var ndays = Number(getElementValue("daily-days"));
-        if (ndays == "" || ndays < 1) {
-            document.getElementById("repeat-interval-warning").removeAttribute("hidden");
-            acceptButton.setAttribute("disabled", "true");
-        }
-        break;
-    case 3: // yearly
-        var nyears = Number(getElementValue("yearly-years"));
-        if (nyears == "" || nyears < 1) {
-            document.getElementById("repeat-interval-warning").removeAttribute("hidden");
-            acceptButton.setAttribute("disabled", "true");
-        }
-        break;
-    }
-
-    if (document.getElementById("recurrence-duration").selectedItem.value == "ntimes") {
-        var ntimes = getElementValue("repeat-ntimes-count");
-        if (ntimes == "" || ntimes < 1) {
-            document.getElementById("repeat-numberoftimes-warning").removeAttribute("hidden");
-            acceptButton.setAttribute("disabled", "true");
-        }
-    }
-
-    this.sizeToContent();
-}
-
-function addException() {
-    var jsDate = document.getElementById("exdate-picker").value;
-    var exDate = jsDateToDateTime(jsDate);
-    exDate.isDate = true;
-    if (window.calendarEvent.startDate) {
-        exDate.timezone = window.calendarEvent.startDate.timezone;
-    } else if (window.calendarEvent.entryDate) {
-        exDate.timezone = window.calendarEvent.entryDate.timezone;
-    } else {
-        exDate.timezone = window.calendarEvent.dueDate.timezone;
-    }
-
-    window.addedExceptions.push(exDate);
-
-    var exBox = document.getElementById("recurrence-exceptions-listbox");
-    var exItem = exBox.appendItem(exDate.toString());
-    exItem.date = exDate;
-
-    this.sizeToContent();
-}
-
 function removeSelectedException()
 {
     var exceptionList = document.getElementById("recurrence-exceptions-listbox");
     var item = exceptionList.selectedItem;
-
-    var addedRecently = false;
-    for (var ii in window.addedExceptions) {
-        if (window.addedExceptions[ii].compare(item.date) == 0) {
-            window.addedExceptions.splice(ii, 1);
-            addedRecently = true;
-            break;
-        }
-    }
-
-    if (!addedRecently) {
-        window.removedExceptions.push(item.date);
-    }
+    window.removedExceptions.push(item.date);
     exceptionList.removeItemAt(exceptionList.getIndexOfItem(item));
 }
 

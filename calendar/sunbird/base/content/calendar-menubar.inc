@@ -183,15 +183,6 @@
                      label="&calendar.selectall.label;"
                      accesskey="&calendar.selectall.accesskey;"
                      observes="select_all_command"/>
-#ifdef XP_UNIX
-#ifndef XP_MACOSX
-           <menuseparator/>
-           <menuitem id="menu_preferences_unix"
-                     label="&preferencesCmd.label;"
-                     accesskey="&preferencesCmd.accesskey;"
-                     oncommand="openPreferences();"/>
-#endif
-#endif
          </menupopup>
        </menu>
 
@@ -241,28 +232,28 @@
            <menuseparator/>
            <menuitem id="calendar-view-menu-day"
                      type="radio"
-                     name="calendarMenuViews"
+                     name="viewGroup"
                      key="view_day_key"
                      label="&calendar.flat.topbar.dayview;"
                      accesskey="&calendar.dayview.accesskey;"
                      observes="day_view_command"/>
            <menuitem id="calendar-view-menu-week"
                      type="radio"
-                     name="calendarMenuViews"
+                     name="viewGroup"
                      key="view_week_key"
                      label="&calendar.flat.topbar.weekview;"
                      accesskey="&calendar.weekview.accesskey;"
                      observes="week_view_command"/>
            <menuitem id="calendar-view-menu-multiweek"
                      type="radio"
-                     name="calendarMenuViews"
+                     name="viewGroup"
                      key="view_multiweek_key"
                      label="&calendar.flat.topbar.multiweekview;"
                      accesskey="&calendar.multiweekview.accesskey;"
                      observes="multiweek_view_command"/>
            <menuitem id="calendar-view-menu-month"
                      type="radio"
-                     name="calendarMenuViews"
+                     name="viewGroup"
                      key="view_month_key"
                      label="&calendar.flat.topbar.monthview;"
                      accesskey="&calendar.monthview.accesskey;"
@@ -366,21 +357,12 @@
                      oncommand="toJavaScriptConsole();"/>
 <!-- The ids of the following menuseparator and menuitem must remain as they are to be
    - automatically hidden on Mac OS X - See mozilla/widget/src/mac/nsMenuBarX.cpp -->
-#ifndef XP_UNIX
            <menuseparator id="menu_PrefsSeparator"/>
                <menuitem id="menu_preferences"
-                         label="&optionsCmd.label;"
-                         accesskey="&optionsCmd.accesskey;"
+                         label="&preferencesCmd.label;"
+                         accesskey="&preferencesCmd.accesskey;"
                          oncommand="openPreferences();"/>
-#endif
-#ifdef XP_MACOSX
-# -- ifdef UNIX also covers Mac OS X, so we have to explicitly enable this menuitem
-           <menuseparator id="menu_PrefsSeparator"/>
-               <menuitem id="menu_preferences"
-                         label="&optionsCmd.label;"
-                         accesskey="&optionsCmd.accesskey;"
-                         oncommand="openPreferences();"/>
-#endif
+
          </menupopup>
        </menu>
 
@@ -424,7 +406,7 @@
              label="&helpMenu.label;"
              accesskey="&helpMenu.accesskey;">
          <menupopup id="menu_HelpPopup">
-           <!-- XXX lilmatt: Finish this!  oncommand="openTopWin('&helpURL;');" -->
+           <!-- XXX lilmatt: Finish/localize this!  oncommand="openTopWin('&helpURL;');" -->
            <menuitem label="&calendar.help.label;"
                      disabled="true"/>
            <menuitem accesskey="&releaseCmd.accesskey;"

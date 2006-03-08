@@ -16,13 +16,11 @@
  *
  * The Initial Developer of the Original Code is
  *  Oracle Corporation
- * Portions created by the Initial Developer are Copyright (C) 2005, 2006
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
- *   Joey Minta <jminta@gmail.com>
- *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -348,12 +346,6 @@ calStorageCalendar.prototype = {
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
-        var newItem = aItem.clone();
-        return this.adoptItem(newItem, aListener);
-    },
-
-    // void adoptItem( in calIItemBase aItem, in calIOperationListener aListener );
-    adoptItem: function (aItem, aListener) {
         if (this.readOnly) 
             throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         // Ensure that we're looking at the base item
@@ -380,22 +372,23 @@ calStorageCalendar.prototype = {
             }
         }
 
-        aItem.calendar = this;
-        aItem.generation = 1;
-        aItem.makeImmutable();
+        var newItem = aItem.clone();
+        newItem.calendar = this;
+        newItem.generation = 1;
+        newItem.makeImmutable();
 
-        this.flushItem (aItem, null);
+        this.flushItem (newItem, null);
 
         // notify the listener
         if (aListener)
             aListener.onOperationComplete (this,
                                            Components.results.NS_OK,
                                            aListener.ADD,
-                                           aItem.id,
-                                           aItem);
+                                           newItem.id,
+                                           newItem);
 
         // notify observers
-        this.observeAddItem(aItem);
+        this.observeAddItem(newItem);
     },
 
     // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
@@ -730,9 +723,15 @@ calStorageCalendar.prototype = {
                 var item = this.getTodoFromRow(row, flags);
                 flags = flags.value;
 
-                if (!item.isCompleted && !wantNotCompletedItems)
+                var itemIsCompleted = false;
+                if (item.percentComplete == 100 ||
+                    item.completedDate != null ||
+                    item.ical_status == kCalITodo.CAL_TODO_STATUS_COMPLETED)
+                    itemIsCompleted = true;
+
+                if (!itemIsCompleted && !wantNotCompletedItems)
                     continue;
-                if (item.isCompleted && !wantCompletedItems)
+                if (itemIsCompleted && !wantCompletedItems)
                     continue;
 
                 var completed = 
@@ -747,7 +746,7 @@ calStorageCalendar.prototype = {
                 sp = this.mSelectTodosWithRecurrence.params;
                 sp.cal_id = this.mCalId;
                 while (this.mSelectTodosWithRecurrence.step()) {
-                    var row = this.mSelectTodosWithRecurrence.row;
+                    var row = this.mSelectTodosByRange.row;
                     // did we already deal with this todo id?
                     if (handledRecurringTodos[row.id] == true)
                         continue;
@@ -853,42 +852,26 @@ calStorageCalendar.prototype = {
         this.mDB.executeSimpleSQL("INSERT INTO cal_calendar_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
     },
 
-    DB_SCHEMA_VERSION: 5,
-
-    /** 
-     * @return      db schema version
-     * @exception   various, depending on error
-     */
-    getVersion: function calStorageGetVersion() {
+    // check db version
+    DB_SCHEMA_VERSION: 4,
+    versionCheck: function () {
+        var version = -1;
         var selectSchemaVersion;
-        var version = null;
 
         try {
-            selectSchemaVersion = createStatement(this.mDB, 
-                                  "SELECT version FROM " +
-                                  "cal_calendar_schema_version LIMIT 1");
+            selectSchemaVersion = createStatement (this.mDB, "SELECT version FROM cal_calendar_schema_version LIMIT 1");
             if (selectSchemaVersion.step()) {
                 version = selectSchemaVersion.row.version;
             }
+        } catch (e) {
+            // either the cal_calendar_schema_version table is not
+            // found, or something else happened
+            version = -1;
+        }
+        if (selectSchemaVersion)
             selectSchemaVersion.reset();
 
-            if (version !== null) {
-                // This is the only place to leave this function gracefully.
-                return version;
-            }
-        } catch (e) {
-            if (selectSchemaVersion) {
-                selectSchemaVersion.reset();
-            }
-            dump ("++++++++++++ calStorageGetVersion() error: " +
-                  this.mDB.lastErrorString + "\n");
-            Components.utils.reportError("Error getting storage calendar " +
-                                         "schema version! DB Error: " + 
-                                         this.mDB.lastErrorString);
-            throw e;
-        }
-
-        throw "cal_calendar_schema_version SELECT returned no results";
+        return version;
     },
 
     upgradeDB: function (oldVersion) {
@@ -983,37 +966,7 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion == 4 && this.DB_SCHEMA_VERSION >= 5) {
-            dump ("**** Upgrading schema from 4 -> 5\n");
-
-            this.mDB.beginTransaction();
-            try {
-                // the change between 4 and 5 is the addition of alarm_offset
-                // and alarm_last_ack columns.  The alarm_time column is not
-                // used in this version, but will likely return in future versions
-                // so it is not being removed
-                addColumn(this.mDB, "cal_events", "alarm_offset", "INTEGER");
-                addColumn(this.mDB, "cal_events", "alarm_related", "INTEGER");
-                addColumn(this.mDB, "cal_events", "alarm_last_ack", "INTEGER");
-
-                addColumn(this.mDB, "cal_todos", "alarm_offset", "INTEGER");
-                addColumn(this.mDB, "cal_todos", "alarm_related", "INTEGER");
-                addColumn(this.mDB, "cal_todos", "alarm_last_ack", "INTEGER");
-
-                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 5;");
-                this.mDB.commitTransaction();
-                oldVersion = 5;
-            } catch (e) {
-                dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.utils.reportError("Upgrade failed! DB Error: " +
-                                             this.mDB.lastErrorString);
-                this.mDB.rollbackTransaction();
-                throw e;
-            }
-        }
-
-
-        if (oldVersion != 5) {
+        if (oldVersion != 4) {
             dump ("#######!!!!! calStorageCalendar Schema Update failed -- db version: " + oldVersion + " this version: " + this.DB_SCHEMA_VERSION + "\n");
             throw Components.results.NS_ERROR_FAILURE;
         }
@@ -1023,17 +976,12 @@ calStorageCalendar.prototype = {
     // assumes mDB is valid
 
     initDB: function () {
-        if (!this.mDB.tableExists("cal_calendar_schema_version")) {
-            dump("*** cal_calendar_schema_version not found; " +
-		 "initializing storage provider tables\n");
+        var version = this.versionCheck();
+        dump ("*** Calendar schema version is: " + version + "\n");
+        if (version == -1) {
             this.initDBSchema();
-        } else {
-            var version = this.getVersion();
-            dump ("*** Calendar schema version is: " + version + "\n");
-
-            if (version != this.DB_SCHEMA_VERSION) {
-                this.upgradeDB(version);
-            }
+        } else if (version != this.DB_SCHEMA_VERSION) {
+            this.upgradeDB(version);
         }
 
         this.mSelectEvent = createStatement (
@@ -1151,13 +1099,11 @@ calStorageCalendar.prototype = {
             "  (cal_id, id, time_created, last_modified, " +
             "   title, priority, privacy, ical_status, flags, " +
             "   event_start, event_start_tz, event_end, event_end_tz, event_stamp, " +
-            "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz, " +
-            "   alarm_offset, alarm_related, alarm_last_ack) " +
+            "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz) " +
             "VALUES (:cal_id, :id, :time_created, :last_modified, " +
             "        :title, :priority, :privacy, :ical_status, :flags, " +
             "        :event_start, :event_start_tz, :event_end, :event_end_tz, :event_stamp, " +
-            "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz," + 
-            "        :alarm_offset, :alarm_related, :alarm_last_ack)"
+            "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz)"
             );
 
         this.mInsertTodo = createStatement (
@@ -1167,14 +1113,12 @@ calStorageCalendar.prototype = {
             "   title, priority, privacy, ical_status, flags, " +
             "   todo_entry, todo_entry_tz, todo_due, todo_due_tz, todo_completed, " +
             "   todo_completed_tz, todo_complete, " +
-            "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz, " +
-            "   alarm_offset, alarm_related, alarm_last_ack)" +
+            "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz) " +
             "VALUES (:cal_id, :id, :time_created, :last_modified, " +
             "        :title, :priority, :privacy, :ical_status, :flags, " +
             "        :todo_entry, :todo_entry_tz, :todo_due, :todo_due_tz, " +
             "        :todo_completed, :todo_completed_tz, :todo_complete, " +
-            "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz," + 
-            "        :alarm_offset, :alarm_related, :alarm_last_ack)"
+            "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz)"
             );
         this.mInsertProperty = createStatement (
             this.mDB,
@@ -1240,49 +1184,8 @@ calStorageCalendar.prototype = {
         if (row.ical_status)
             item.status = row.ical_status;
 
-        if (row.alarm_time) {
-            // Old (schema version 4) data, need to convert this nicely to the
-            // new alarm interface.  Eventually, we're going to want to be able
-            // to deal with both types of data in a calIAlarm interface, but
-            // not yet.  Leaving this column around though may help ease that
-            // transition in the future.
-            var alarmTime = newDateTime(row.alarm_time, row.alarm_time_tz);
-            var time;
-            var related = item.ALARM_RELATED_START;
-            if (item instanceof Components.interfaces.calIEvent) {
-                time = newDateTime(row.event_start, row.event_start_tz);
-            } else { //tasks
-                if (row.todo_entry) {
-                    time = newDateTime(row.todo_entry, row.todo_entry_tz);
-                } else if (row.todo_due) {
-                    related = item.ALARM_RELATED_END;
-                    time = newDateTime(row.todo_due, row.todo_due_tz);
-                }
-            }
-            if (time) {
-                var duration = alarmTime.subtractDate(time);
-                item.alarmOffset = duration;
-                item.alarmRelated = related;
-            } else {
-                Components.utils.reportError("WARNING! Couldn't do alarm conversion for item:"+
-                                             item.title+','+item.id+"!\n");
-            }
-        }
-
-        // Alarm offset could be 0, but this is ok, so compare with null
-        if (row.alarm_offset != null) {
-            var duration = Components.classes["@mozilla.org/calendar/duration;1"]
-                                     .createInstance(Components.interfaces.calIDuration);
-            duration.inSeconds = row.alarm_offset;
-            duration.normalize();
-
-            item.alarmOffset = duration;
-            item.alarmRelated = row.alarm_related;
-            if (row.alarm_last_ack) {
-                // alarm acks are always in utc
-                item.alarmLastAck = newDateTime(row.alarm_last_ack, "UTC");
-            }
-        }
+        if (row.alarm_time)
+            item.alarmTime = newDateTime(row.alarm_time, row.alarm_time_tz);
 
         if (row.recurrence_id)
             item.recurrenceId = newDateTime(row.recurrence_id, row.recurrence_id_tz);
@@ -1686,19 +1589,15 @@ calStorageCalendar.prototype = {
         if (!item.parentItem)
             ip.event_stamp = item.stampTime.nativeTime;
 
-        if (item.alarmOffset) {
-            ip.alarm_offset = item.alarmOffset.inSeconds;
-            ip.alarm_related = item.alarmRelated;
-            if (item.alarmLastAck) {
-                ip.alarm_last_ack = item.alarmLastAck.nativeTime;
-            }
-        }
+        if (tmp = item.getUnproxiedProperty("ALARMTIME"))
+            this.setDateParamHelper(ip, "alarm_time", tmp);
     },
 
     writeAttendees: function (item, olditem) {
         // XXX how does this work for proxy stuffs?
         var attendees = item.getAttendees({});
         if (attendees && attendees.length > 0) {
+            flags |= CAL_ITEM_FLAG_HAS_ATTENDEES;
             for each (var att in attendees) {
                 var ap = this.mInsertAttendee.params;
                 ap.item_id = item.id;
@@ -1955,10 +1854,7 @@ var sqlTables = {
     "	event_stamp	INTEGER," +
     /*  alarm time */
     "	alarm_time	INTEGER," +
-    "	alarm_time_tz	VARCHAR," +
-    "	alarm_offset	INTEGER," +
-    "	alarm_related	INTEGER," +
-    "	alarm_last_ack	INTEGER" +
+    "	alarm_time_tz	VARCHAR" +
     "",
 
   cal_todos:
@@ -1995,10 +1891,7 @@ var sqlTables = {
     "	todo_complete	INTEGER," +
     /*  alarm time */
     "	alarm_time	INTEGER," +
-    "	alarm_time_tz	VARCHAR," +
-    "	alarm_offset	INTEGER," +
-    "	alarm_related	INTEGER," +
-    "	alarm_last_ack	INTEGER" +
+    "	alarm_time_tz	VARCHAR" +
     "",
 
   cal_attendees:

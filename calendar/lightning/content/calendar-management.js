@@ -40,7 +40,7 @@ function updateStyleSheetForCalendar(aCalendar)
     var color = getCalendarManager().getCalendarPref(aCalendar, 'color');
     // This color looks nice with the gripbars, etc.
     if (!color)
-        color = "#A8C2E1";
+        color = "#4e84c2";
     
     rule.style.backgroundColor = color;
     rule.style.color = getContrastingTextColor(color);
@@ -49,52 +49,14 @@ function updateStyleSheetForCalendar(aCalendar)
 function addCalendarToTree(aCalendar)
 {
     var boxobj = document.getElementById("calendarTree").treeBoxObject;
-
-    // XXXdmose in theory, we should be able to do something along the lines
-    //
-    // var calendarRow = getCalendars().indexOf(aCalendar);
-    // boxobj.rowCountChanged(calendarRow, 1);
-    //
-    // Unfortunately, the indexOf in that statement will currently fail
-    // since it's not possible to compare "interface pointers" for identity
-    // because of XPConnect wrapping vagaries.  Bug 325650 covers fixing
-    // this the right way.  But for now...
-
-    // trigger tree redraw by signalizing that a line was added at the top of
-    // the list
-    // a perfect solution would just invalidate the affected lines
-    boxobj.rowCountChanged(0, 1);
-    
-    // as this might lead to situations where nothing has to be changed visually
-    // the whole view should be invalidated (note that we're pretending to
-    // change line 0 only)
-    boxobj.invalidate();
-    
+    boxobj.rowCountChanged(getCalendars().indexOf(aCalendar), 1);
     updateStyleSheetForCalendar(aCalendar);
 }
 
 function removeCalendarFromTree(aCalendar)
 {
     var boxobj = document.getElementById("calendarTree").treeBoxObject;
-
-    // XXXdmose in theory, we should be able to do something along the lines
-    //
-    // boxobj.rowCountChanged(getCalendars().indexOf(aCalendar), -1);
-    //
-    // Unfortunately, the indexOf in that statement will currently fail
-    // since it's not possible to compare "interface pointers" for identity
-    // because of XPConnect wrapping vagaries.  Bug 325650 covers fixing this
-    // the right way.  But for now...
-
-    // trigger tree redraw by signalizing that a line was removed from the
-    // top of the list
-    // a perfect solution would just invalidate the affected lines
-    boxobj.rowCountChanged(0, -1);
-
-    // as this might lead to situations where nothing has to be changed visually
-    // the whole view should be invalidated (note that we're pretending to
-    // change line 0 only)
-    boxobj.invalidate();
+    boxobj.rowCountChanged(getCalendars().indexOf(aCalendar), -1);
 }
 
 var ltnCalendarManagerObserver = {
@@ -109,17 +71,14 @@ var ltnCalendarManagerObserver = {
 
     onCalendarRegistered: function(aCalendar) {
         addCalendarToTree(aCalendar);
-        getCompositeCalendar().addCalendar(aCalendar);
     },
 
     onCalendarUnregistering: function(aCalendar) {
         removeCalendarFromTree(aCalendar);
-        getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
     onCalendarDeleting: function(aCalendar) {
         removeCalendarFromTree(aCalendar); // XXX what else?
-        getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
     onCalendarPrefSet: function(aCalendar, aName, aValue) {
@@ -198,7 +157,7 @@ var ltnCalendarViewController = {
             aCalendar.addItem(event, null);
         } else {
             // default pop up the dialog
-            var date = document.getElementById("calendar-view-box").selectedPanel.selectedDay.clone();
+            var date = document.getElementById("calendar-view-box").selectedPanel.selectedDay;
             date.isDate = false;
             createEventWithDialog(aCalendar, date, date);
         }
@@ -207,40 +166,25 @@ var ltnCalendarViewController = {
     modifyOccurrence: function (aOccurrence, aNewStartTime, aNewEndTime) {
         // if we can modify this thing directly (e.g. just the time changed),
         // then do so; otherwise pop up the dialog
-        var itemToEdit = getOccurrenceOrParent(aOccurrence);
         if (aNewStartTime && aNewEndTime && !aNewStartTime.isDate && !aNewEndTime.isDate) {
-        
-            var instance = itemToEdit.clone();
-
-            // if we're about to modify the parentItem, we need to account
-            // for the possibility that the item passed as argument was
-            // some other ocurrence, but the user said she would like to
-            // modify all ocurrences instead.
-            if (instance.parentItem == instance) {
-
-                var startDiff = instance.startDate.subtractDate(aOccurrence.startDate);
-                aNewStartTime.addDuration(startDiff);
-                var endDiff = instance.endDate.subtractDate(aOccurrence.endDate);
-                aNewEndTime.addDuration(endDiff);
-            }
+            var instance = aOccurrence.clone();
 
             instance.startDate = aNewStartTime;
             instance.endDate = aNewEndTime;
 
-            instance.calendar.modifyItem(instance, itemToEdit, null);
+            instance.calendar.modifyItem(instance, aOccurrence, null);
         } else {
-            modifyEventWithDialog(itemToEdit);
+            modifyEventWithDialog(aOccurrence);
         }
     },
 
     deleteOccurrence: function (aOccurrence) {
-        var itemToDelete = getOccurrenceOrParent(aOccurrence);
-        if (itemToDelete.parentItem != itemToDelete) {
-            var event = itemToDelete.parentItem.clone();
-            event.recurrenceInfo.removeOccurrenceAt(itemToDelete.recurrenceId);
-            event.calendar.modifyItem(event, itemToDelete.parentItem, null);
+        if (aOccurrence.parentItem != aOccurrence) {
+            var event = aOccurrence.parentItem.clone();
+            event.recurrenceInfo.removeOccurrenceAt(aOccurrence.recurrenceId);
+            event.calendar.modifyItem(event, aOccurrence, null);
         } else {
-            aOccurrence.calendar.deleteItem(itemToDelete, null);
+            aOccurrence.calendar.deleteItem(aOccurrence, null);
         }
     }
 };
@@ -269,16 +213,9 @@ function getCalendarManager()
     }
 
     if (activeCalendarManager.getCalendars({}).length == 0) {
-        var homeCalendar = activeCalendarManager.createCalendar("storage", 
-                           makeURL("moz-profile-calendar://"));
+        var homeCalendar = activeCalendarManager.createCalendar("storage", makeURL("moz-profile-calendar://"));
         activeCalendarManager.registerCalendar(homeCalendar);
-
-        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                            .getService(
-                             Components.interfaces.nsIStringBundleService);
-        var props = sbs.createBundle(
-                    "chrome://calendar/locale/calendar.properties");
-        homeCalendar.name = props.GetStringFromName("homeCalendarName");
+        homeCalendar.name = "Home";
 
         var composite = getCompositeCalendar();
         composite.addCalendar(homeCalendar);

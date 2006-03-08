@@ -42,28 +42,27 @@ function getAlarmService()
     return Components.classes["@mozilla.org/calendar/alarm-service;1"].getService(CI.calIAlarmService);
 }
 
+var gAlarmWindow = null;
+
 var alarmServiceObserver = {
     onAlarm: function(event) {
-        var wmediator = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                                  .getService(Components.interfaces.nsIWindowMediator);
 
-        var calAlarmWindow = wmediator.getMostRecentWindow("calendarAlarmWindow");
-        if (!calAlarmWindow) {
+        if (!gAlarmWindow) {
             var windowWatcher = Components.classes["@mozilla.org/embedcomp/window-watcher;1"].getService(CI.nsIWindowWatcher);
-            calAlarmWindow = windowWatcher.openWindow(null,
+            gAlarmWindow = windowWatcher.openWindow(null,
                                                     "chrome://calendar/content/calendar-alarm-dialog.xul",
                                                     "_blank",
                                                     "chrome,dialog=yes,all",
                                                     null);
         }
 
-        if ("addAlarm" in calAlarmWindow) {
-            calAlarmWindow.addAlarm(event);
+        if ("addAlarm" in gAlarmWindow) {
+            gAlarmWindow.addAlarm(event);
         } else {
             var addAlarm = function() {
-                calAlarmWindow.addAlarm(event);
+                gAlarmWindow.addAlarm(event);
             }
-            calAlarmWindow.addEventListener("load", addAlarm, false);
+            gAlarmWindow.addEventListener("load", addAlarm, false);
         }
     }
 };

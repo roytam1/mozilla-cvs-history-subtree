@@ -72,24 +72,18 @@
   <!-- defined in minimo/content/bindings/preferences.css and preferences.xml -->  
 
   <preferenceset id="prefsInstance" >
-      <preferenceitem preftype="string"  id="browser.startup.homepage" name="browserStartupHomepage" />
-      <preferenceitem preftype="int"     id="permissions.default.image" name="enableImages" />
-      <preferenceitem preftype="bool"    id="ssr.enabled" name="ssr"/>
-      <preferenceitem preftype="bool"    id="skey.enabled" name="skey" />
-      <preferenceitem preftype="bool"    id="config.wince.dumpJSConsole" name="dumpJS" />
-      <preferenceitem preftype="int"     id="network.proxy.type" name="UseProxy" />
-      <preferenceitem preftype="string"  id="network.proxy.http" name="networkProxyHTTP" />
-      <preferenceitem preftype="int"     id="network.proxy.http_port" name="networkProxyHTTP_Port" />
-      <preferenceitem preftype="bool"    id="browser.cache.disk.enable" name="useDiskCache" />
-      <!--
-      <preferenceitem preftype="string"  id="browser.cache.disk.parent_directory" name="storeCacheStorageCard" />
-      -->
-      <preferenceitem preftype="bool"    id="network.prefetch-next" name="enablePreFetching" />
-      <preferenceitem preftype="int"     id="browser.cache.disk.capacity" name="cacheSizeField" />
-      <preferenceitem preftype="file"    id="browser.download.dir" name="downloadDir" />
-      <preferenceitem preftype="bool"    id="browser.download.progressDnlgDialog.dontAskForLaunch" name="dontAskForLaunch" />
+      <preferenceitem name="browserStartupHomepage" />
+      <preferenceitem name="enableImages" />
+      <preferenceitem name="ssr"/>
+      <preferenceitem name="sitessr" />
+      <preferenceitem name="skey" />
+      <preferenceitem name="dumpJS" />
+      <preferenceitem name="UseProxy" />
+      <preferenceitem name="networkProxyHTTP" />
+      <preferenceitem name="networkProxyHTTP_Port" />
+      <preferenceitem name="browserDisplayZoomUI"/>
+      <preferenceitem name="browserDisplayZoomContent"/> 
   </preferenceset>
-  
 
   <command id="cmd_PrefOkay"      oncommand="PrefOkay()" />
   <command id="cmd_PrefCancel"    oncommand="PrefCancel();" />
@@ -106,8 +100,8 @@
       <!-- For the OKAY CANCEL buttons --> 
 
       <toolbar id="dialog-bar">
-        <toolbarbutton tabindex="8" accessrule="pref-bar"  accessfocus="advanced-pane" id="okay-button"  command="cmd_PrefOkay"><label class='dialog-button' value="&okayButton.label;" /></toolbarbutton>  
-        <toolbarbutton tabindex="9" accessrule="pref-bar"  accessfocus="advanced-pane" id="cancel-button"  command="cmd_PrefCancel"><label class='dialog-button' value="&cancelButton.label;" /></toolbarbutton>  
+        <toolbarbutton tabindex="8" accessrule="pref-bar" onfocus="show('summary-pane',this )" accessfocus="advanced-pane" id="okay-button"  command="cmd_PrefOkay"><label class='dialog-button' value="&okayButton.label;" /></toolbarbutton>  
+        <toolbarbutton tabindex="9" accessrule="pref-bar" onfocus="show('summary-pane',this )" accessfocus="advanced-pane" id="cancel-button"  command="cmd_PrefCancel"><label class='dialog-button' value="&cancelButton.label;" /></toolbarbutton>  
       </toolbar>
     </hbox>
     
@@ -119,7 +113,9 @@
     <!-- =================================================== -->
     
     <box id="pref-panes" flex="1">  
+
     </box>
 
   </vbox>
+
 </window>

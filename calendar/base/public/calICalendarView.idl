@@ -16,12 +16,11 @@
  *
  * The Initial Developer of the Original Code is
  *   Oracle Corporation
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
- *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,13 +44,6 @@ interface calIDateTime;
 interface calICalendarViewController;
 interface calIItemBase;
 
-/**
- * An interface for view widgets containing calendaring data.
- *
- * @note Code that implements this interface is intended to be pure
- * widgetry and thus not have any preference dependencies.
- * Preferences and pref observers should live in the decorated views.
- */
 [scriptable, uuid(3e567ccb-2ecf-4f59-b7ca-bf42b0fbf24a)]
 interface calICalendarView : nsISupports
 {
@@ -129,10 +121,4 @@ interface calICalendarView : nsISupports
    * Get or set the selected day.
    */
   attribute calIDateTime selectedDay;
-
-  /**
-   * Get or set the timezone that the view's elements should be displayed in.
-   * Setting this does not refresh the view.
-   */
-  attribute AUTF8String timezone;
 };

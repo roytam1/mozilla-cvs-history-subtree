@@ -48,7 +48,7 @@
              <xul:vbox anonid="main-box" flex="1">
                 <xul:calendar-navigation-buttons anonid="nav-control"/>
                 <xul:box style="overflow: auto;" flex="1">
-                    <xul:calendar-month-view anonid="view-element" flex="1" xbl:inherits="context,item-context"/>
+                    <xul:calendar-month-view anonid="view-element" flex="1" xbl:inherits="context"/>
                 </xul:box>
             </xul:vbox>
         </content>
@@ -77,8 +77,7 @@
                 <parameter name="aDate"/>
                 <body><![CDATA[
                     var viewElement = document.getAnonymousElementByAttribute(this, "anonid", "view-element");
-                    viewElement.showFullMonth = false;
-                    viewElement.tasksInView = this.mTasksInView;
+		    viewElement.tasksInView = this.mTasksInView;
 
                     // Set up the preferences we're going to need to read
                     var prefService = Components.classes[
@@ -122,7 +121,7 @@
                     if (this.mWorkdaysOnly) {
                         this.removeNonWorkdays();
                     }
-                    viewElement.selectedDay = aDate.getInTimezone(viewElement.timezone);
+                    viewElement.selectedDay = aDate;
                     this.setNavLabels(aDate);
                 ]]></body>
             </method>
@@ -140,28 +139,24 @@
                 <parameter name="aDate"/>
                 <body><![CDATA[
                     var nameArray = new Array();
-                    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                                        .getService(Components.interfaces.nsIStringBundleService);
-                    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
-
-                    const weekFormatter = Components.classes["@mozilla.org/calendar/weektitle-service;1"]
-                                          .getService(Components.interfaces.calIWeekTitleService);
                     for (var i = -2; i < 3; i++) {
                         var date = aDate.clone();
                         // Add/subtract I number of weeks
                         date.day = aDate.day + i*7;
                         date.normalize();
 
-                        var weekno1 = weekFormatter.getWeekTitle(date);
+                        //XXX This isn't quite right, but it's close.  We need
+                        //    to get some better dateUtils into calDateTime
+                        var weekno1 = Math.floor ((date.yearday - date.weekday) / 7);
 
                         // We'd show several weeks.  Now get the week-number of the
                         // last week that would be shown if the user clicked the label
                         date.day += 7*this.mWeeksInView;
                         date.normalize();
-                        var weekno2 = weekFormatter.getWeekTitle(date);
+                        var weekno2 = Math.floor ((date.yearday - date.weekday) / 7);
 
-                        var weekTitle = props.formatStringFromName('WeeksTitle', [weekno1, weekno2], 2);
-                        nameArray.push(weekTitle);
+                        //XXX l10n love needed
+                        nameArray.push("Week " + weekno1 + '-' + weekno2);
                     }
                     document.getAnonymousElementByAttribute(this, "anonid", "nav-control").setNames(nameArray);
                 ]]></body>

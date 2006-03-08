@@ -51,7 +51,6 @@
 <?xml-stylesheet href="chrome://calendar/content/calendar-multiday-view.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/calendar-month-view.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/calendar-decorated-views.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-view-core.css" type="text/css"?>
 
 <!-- Overlays -->
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
@@ -84,10 +83,10 @@
   <broadcaster id="is_editable" hidden="false"/>
 </broadcasterset> 
 <commandset id="calendar_commands">
-  <command id="new_command" oncommand="newEvent()"/>
+  <command id="new_command" oncommand="newEventCommand( event )"/>
   <command id="delete_command" oncommand="deleteEventCommand( )" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="delete_command_no_confirm" oncommand="deleteEventCommand( true )" disabled="true" disabledwhennoeventsselected="true"/>
-  <command id="modify_command" oncommand="editEvent()" disabled="true" disabledwhennoeventsselected="true"/>
+  <command id="modify_command" oncommand="editEventCommand()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="send_event_command" oncommand="sendEvent()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="print_command" oncommand="print()"/>
   <command id="undo_command" oncommand="undo()" disabled="true"/>
@@ -97,12 +96,11 @@
   <command id="paste_command" oncommand="pasteFromClipboard()"/>
   <command id="select_all_command" oncommand="selectAllEvents()"/>
 
-  <command id="new_todo_command" oncommand="newToDo()"/>
-  <command id="modify_todo_command" oncommand="editToDo()"/>
+  <command id="new_todo_command" oncommand="newToDoCommand()"/>
+  <command id="modify_todo_command" oncommand="modifyToDoCommand( event )"/>
   <command id="delete_todo_command" oncommand="deleteToDoCommand()" disabled="true"/>
 
   <command id="new_calendar_command" oncommand="newCalendarDialog()"/>
-  <command id="open_local_calendar_command" oncommand="openLocalCalendar()"/>
   <command id="edit_calendar_command" oncommand="editCalendarDialog(event)"/>
   <command id="delete_calendar_command" oncommand="deleteCalendar(event)"/>
 
@@ -111,16 +109,16 @@
   <command id="go_today_command" oncommand="gCalendarWindow.goToToday()"/>
   <command id="go_date_command" oncommand="gCalendarWindow.pickAndGoToDate()"/>
 
-  <command id="day_view_command"  oncommand="gCalendarWindow.switchToDayView()"/>
-  <command id="week_view_command"  oncommand="gCalendarWindow.switchToWeekView()"/>
-  <command id="month_view_command" oncommand="gCalendarWindow.switchToMonthView()"/>
-  <command id="multiweek_view_command" oncommand="gCalendarWindow.switchToMultiweekView()"/>
+  <command id="day_view_command"  oncommand="gCalendarWindow.switchToDayView()" disabled="true"/>
+  <command id="week_view_command"  oncommand="gCalendarWindow.switchToWeekView()" disabled="true"/>
+  <command id="month_view_command" oncommand="gCalendarWindow.switchToMonthView()" disabled="true"/>
+  <command id="multiweek_view_command" oncommand="gCalendarWindow.switchToMultiweekView()" disabled="false"/>
 
   <command id="import_command" oncommand="loadEventsFromFile()"/>
   <command id="export_command" oncommand="saveEventsToFile(gCalendarWindow.EventSelection.selectedEvents)" disabled="true" disabledwhennoeventsselected="true"/>
 
   <command id="reload_remote_calendars" oncommand="reloadCalendars()"/>
-  <command id="publish_calendar" oncommand="publishEntireCalendar(getDefaultCalendar())"/>
+  <command id="publish_calendar" oncommand="publishEntireCalendar()"/>
   <command id="publish_events_command" oncommand="publishCalendarData()" disabled="true" disabledwhennoeventsselected="true"/>
 
   <command id="toggle_tasks_in_view" 
@@ -230,7 +228,6 @@
 
 <script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar.js"/>
-<script type="application/x-javascript" src="chrome://calendar/content/calendar-item-editing.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendarSelection.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendarWindow.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/mouseoverPreviews.js"/>
@@ -297,6 +294,20 @@
   <menuitem label="&calendar.context.gototoday.label;"
             accesskey="&calendar.context.gototoday.accesskey;"
             observes="go_today_command"/>
+  <menuseparator/>
+  <menuitem label="&calendar.context.dayview.label;"
+            accesskey="&calendar.context.dayview.accesskey;"
+            observes="day_view_command"/>
+  <menuitem label="&calendar.context.weekview.label;"
+            accesskey="&calendar.context.weekview.accesskey;"
+            observes="week_view_command"/>
+  <menuitem label="&calendar.context.monthview.label;"
+            accesskey="&calendar.context.monthview.accesskey;"
+            observes="month_view_command"/>
+  <menuitem label="&calendar.context.multiweekview.label;"
+            accesskey="&calendar.context.multiweekview.accesskey;"
+            observes="multiweek_view_command"/>
+
   <menuseparator/>
   <menuitem id="only-workday-checkbox-2"
             type="checkbox"
@@ -408,12 +419,6 @@
             id="calpopup-publish"
             accesskey="&calendar.context.publish.accesskey;"
             observes="publish_calendar"/>
-  <menuitem label="&calendar.import.into.label;"
-            id="calpopup-import"
-            oncommand="loadEventsFromFile(getSelectedCalendarOrNull())"/>
-  <menuitem label="&calendar.export.calendar;"
-            id="calpopup-export"
-            oncommand="exportEntireCalendar(getSelectedCalendarOrNull())"/>
 </popup>
 
 <commandset id="commands"/>
@@ -447,29 +452,21 @@
     <toolbarseparator class="toolbarseparator-primary"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-day-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.dayview.button.label;"
                    tooltiptext="&calendar.dayview.button.tooltip;"
                    observes="day_view_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-week-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.weekview.button.label;"
                    tooltiptext="&calendar.weekview.button.tooltip;"
                    observes="week_view_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-multiweek-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.multiweekview.button.label;"
                    tooltiptext="&calendar.multiweekview.button.tooltip;"
                    observes="multiweek_view_command"/>
     <toolbarbutton class="toolbarbutton-1"
                    id="calendar-month-view-button"
-                   type="radio"
-                   group="calendarViews"
                    label="&calendar.monthview.button.label;"
                    tooltiptext="&calendar.monthview.button.tooltip;"
                    observes="month_view_command"/>

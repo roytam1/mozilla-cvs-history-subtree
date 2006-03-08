@@ -78,8 +78,8 @@
                                               tabindex="11" 
                                               onfocus="prefFocus('ssrimage-box')" onblur="prefBlur('ssrimage-box')"
                                               label="&imagesCheckbox.label;"
-                                              preference="permissions.default.image" prefvalue=""
-                                              onsyncfrompreference="readEnableImagesPref();"  prefuitype="bool"
+                                              preference="permissions.default.image" preftype="int" prefvalue=""
+                                              onsyncfrompreference="readEnableImagesPref();"
                                               onsynctopreference="writeEnableImagesPref();" 
                                               onclick="syncPref(this)" 
                                               />
@@ -88,12 +88,55 @@
                                               onfocus="prefFocus('ssrimage-box')" onblur="prefBlur('ssrimage-box')"
                                               tabindex="12" 
                                               label="&useSSRCheckbox.label;"
-                                              preference="ssr.enabled" 
+                                              preference="ssr.enabled" preftype="bool"
                                               onclick="syncPref(this)" 
                                               />
     
+                                <checkbox id="sitessr" 
+                                              onfocus="prefFocus('ssrimage-box')" onblur="prefBlur('ssrimage-box')"
+                                              tabindex="13" 
+                                              label="&usesiteSSRCheckbox.label;"
+                                              preference="ssr.site.enabled" preftype="bool"
+                                              onclick="syncPref(this)" 
+                                              />
                             </vbox>
     				    </groupbox>
+    				    <groupbox class='box-prefgroupitem' id='zoom-box' >
+                            <caption label="&zoom.label;"/>
+                            
+                            <grid class="box-prefpadding" >
+                              <columns>
+                                <column flex="1"/>
+                                <column />
+                              </columns>
+                              <rows>
+                               <row>
+
+                                    <label value="&zoomui.label;" />
+                                    <textbox id="browserDisplayZoomUI" size="5" tabindex="14"
+                                             onfocus="prefFocus('zoom-box')" onblur="prefBlur('zoom-box')"
+                                             style="margin:3px ! important;" 
+                                             preference="browser.display.zoomui" preftype="int" 
+                                             onchange="syncPref(this)" 
+                                             />
+
+                               </row>
+                               <row>    
+
+                                    <label value="&zoomcontent.label;" />
+                                    <textbox id="browserDisplayZoomContent" size="5" tabindex="15" accessrule="general-pane"
+                                             onfocus="prefFocus('zoom-box')" onblur="prefBlur('zoom-box')"
+                                             style="margin:3px ! important;" 
+                                             onchange="syncPref(this)"
+                                             preference="browser.display.zoomcontent"
+                                             preftype="int"
+                                             />
+                                             
+                               </row>
+                              </rows>
+                            </grid>
+                            
+                        </groupbox>
                     </vbox>
                 </hbox>
             </groupbox> 

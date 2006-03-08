@@ -182,12 +182,6 @@ calDavCalendar.prototype = {
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
-        var newItem = aItem.clone();
-        return this.adoptItem(newItem, aListener);
-    },
-
-    // void adoptItem( in calIItemBase aItem, in calIOperationListener aListener );
-    adoptItem: function (aItem, aListener) {
         if (this.readOnly) {
             throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         }
@@ -247,8 +241,8 @@ calDavCalendar.prototype = {
                     aListener.onOperationComplete(thisCalendar,
                                                   retVal,
                                                   aListener.ADD,
-                                                  aItem.id,
-                                                  aItem);
+                                                  newItem.id,
+                                                  newItem);
                 } catch (ex) {
                     debug("addItem's onOperationComplete threw an exception "
                           + ex + "; ignoring\n");
@@ -257,23 +251,24 @@ calDavCalendar.prototype = {
 
             // notify observers
             if (Components.isSuccessCode(retVal)) {
-                thisCalendar.observeAddItem(aItem);
+                thisCalendar.observeAddItem(newItem);
             }
         }
   
-        aItem.calendar = this;
-        aItem.generation = 1;
-        aItem.setProperty("X-MOZ-LOCATIONURI", itemUri.spec);
-        aItem.makeImmutable();
+        var newItem = aItem.clone();
+        newItem.calendar = this;
+        newItem.generation = 1;
+        newItem.setProperty("locationURI", itemUri.spec);
+        newItem.makeImmutable();
 
-        debug("icalString = " + aItem.icalString + "\n");
+        debug("icalString = " + newItem.icalString + "\n");
 
         // XXX use if not exists
         // do WebDAV put
         var webSvc = Components.classes['@mozilla.org/webdav/service;1']
             .getService(Components.interfaces.nsIWebDAVService);
         webSvc.putFromString(eventResource, "text/calendar", 
-                             aItem.icalString, listener, null);
+                             newItem.icalString, listener, null);
 
         return;
     },
@@ -306,8 +301,8 @@ calDavCalendar.prototype = {
 
         var eventUri = this.mCalendarUri.clone();
         try {
-            eventUri.spec = aNewItem.getProperty("X-MOZ-LOCATIONURI");
-            debug("using X-MOZ-LOCATIONURI: " + eventUri.spec + "\n");
+            eventUri.spec = aNewItem.getProperty("locationURI");
+            debug("using locationURI: " + eventUri.spec + "\n");
         } catch (ex) {
             // XXX how are we REALLY supposed to figure this out?
             eventUri.spec = eventUri.spec + aNewItem.id + ".ics";
@@ -555,8 +550,8 @@ calDavCalendar.prototype = {
                 item.calendar = thisCalendar;
 
                 // save the location name in case we need to modify
-                item.setProperty("X-MOZ-LOCATIONURI", aResource.spec);
-                debug("X-MOZ-LOCATIONURI = " + aResource.spec + "\n");
+                item.setProperty("locationURI", aResource.spec);
+                debug("locationURI = " + aResource.spec + "\n");
                 item.makeImmutable();
 
                 // figure out what type of item to return

@@ -6,7 +6,7 @@ function rssfetch(refTab,targetDoc, targetElement) {
 
 	var testLoad=new blenderObject();
 	//testLoad.xmlSet("http://rss.slashdot.org/Slashdot/slashdot");
-      testLoad.xmlSet("http://del.icio.us/rss/tag/"+gRSSTag);
+    testLoad.xmlSet("http://del.icio.us/rss/tag/"+gRSSTag);
 	
 	//testLoad.xslSet("chrome://minimo/content/rssview/rss_template.xml");
 
@@ -24,20 +24,6 @@ function rssfetch(refTab,targetDoc, targetElement) {
 
 }
 
-
-function rssfetchpage(targetDoc, targetElement) {
-
-
-	var testLoad=new blenderObject();
-	testLoad.xmlSet(document.location.search.split("?url=")[1]);
-	testLoad.xslSet("rss_template_html.xml");
-	testLoad.setTargetDocument(targetDoc);
-	testLoad.setTargetElement(targetElement);
-	testLoad.run();
-
-}
-
-
 ////
 /// loads the XSL style and data-source and mix them into a new doc. 
 //
@@ -45,8 +31,6 @@ function rssfetchpage(targetDoc, targetElement) {
 function blenderObject() {
 	this.xmlRef=document.implementation.createDocument("","",null);
 	this.xslRef=document.implementation.createDocument("http://www.w3.org/1999/XSL/Transform","stylesheet",null);
-
-
 
 	this.xmlUrl="";
 	this.xslUrl="";
@@ -68,6 +52,7 @@ blenderObject.prototype.xmlLoaded = function () {
 	this.xmlLoadedState=true;
 	//serialXML=new XMLSerializer();
 	//alert(serialXML.serializeToString(this.xmlRef));
+	
 	this.apply();
 }
 
@@ -94,6 +79,7 @@ blenderObject.prototype.setTargetElement = function (targetEle) {
 
 blenderObject.prototype.apply = function () {
 	if(this.xmlLoadedState&&this.xslLoadedState) {
+		
 		var xsltProcessor = new XSLTProcessor();
 		var htmlFragment=null;
 		try {
@@ -101,40 +87,28 @@ blenderObject.prototype.apply = function () {
 			htmlFragment = xsltProcessor.transformToFragment(this.xmlRef, this.targetDocument);
 		} catch (e) {
 		}
-        this.targetElement.appendChild(htmlFragment.firstChild);
+            this.targetElement.appendChild(htmlFragment.firstChild);
+		//this.targetElement.setAttribute("test");
 
-        /*
-         * Updates the page title if pagetitle generated ID exists. 
-         * Check the rss_*.xml templates for additional details..
-         */
-        if(document.getElementById("pagetitle")) {
-          document.title=document.getElementById("pagetitle").innerHTML;
-        }
+
+/* has to be the actual browser */
+
+		this.refTab.setAttribute("image","chrome://minimo/skin/rssfavicon.png");
+		this.refTab.label="SB: "+gRSSTag;
+
 	}
 }
 
 blenderObject.prototype.run = function () {
 	try {
-		//this.xmlRef.load(this.xmlUrl);
-
-		req = new XMLHttpRequest();
-		req.open('GET', this.xmlUrl, false); 
-		req.send(null);
-		if(req.status == 200) {
-			this.xmlRef=req.responseXML;
-			this.xmlLoadedState=true;
-
-		}
-
-
+		this.xmlRef.load(this.xmlUrl);
 	} catch (e) {
-		alert(e);
 	}
 	try {
 		this.xslRef.load(this.xslUrl);
 	} catch (e) {
-		alert(e);
 	}
 
 }
+
 

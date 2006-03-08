@@ -36,17 +36,14 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsRegisterGRE.h"
-#include "nsXPCOMGlue.h"
 
-#include "nsXPCOM.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 
 #include "nsBuildID.h"
 #include "nsAppRunner.h" // for MAXPATHLEN
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsINIParser.h"
-#include "nsCOMPtr.h"
 
 #include "prio.h"
 #include "prprf.h"
@@ -84,8 +81,7 @@ private:
 };
 
 static PRBool
-MakeConfFile(const char *regfile, const nsCString &greHome,
-             const GREProperty *aProperties, PRUint32 aPropertiesLen)
+MakeConfFile(const char *regfile, const nsCString &greHome)
 {
   // If the file exists, don't create it again!
   if (access(regfile, R_OK) == 0)
@@ -110,12 +106,6 @@ MakeConfFile(const char *regfile, const nsCString &greHome,
     if (PR_Write(fd, greHome.get(), greHome.Length()) != greHome.Length())
       ok = PR_FALSE;
 
-    for (PRUint32 i = 0; i < aPropertiesLen; ++i) {
-      if (PR_fprintf(fd, "\n%s=%s",
-                     aProperties[i].property, aProperties[i].value) <= 0)
-        ok = PR_FALSE;
-    }
-
     PR_Write(fd, "\n", 1);
   }
 
@@ -127,8 +117,7 @@ MakeConfFile(const char *regfile, const nsCString &greHome,
 
 
 PRBool
-RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
-                  const GREProperty *aProperties, PRUint32 aPropertiesLen)
+RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation)
 {
   // Register ourself in /etc/gre.d or ~/.gre.d/ and record what key we created
   // for future unregistration.
@@ -145,7 +134,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
     PR_snprintf(root, MAXPATHLEN, "%s/.gre.d", home);
   }
 
-  nsCString greHome;
+  nsCAutoString greHome;
   rv = aLocation->GetNativePath(greHome);
   if (NS_FAILED(rv))
     return rv;
@@ -199,7 +188,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
   }
 
   PR_snprintf(regfile, MAXPATHLEN, "%s/%s.conf", root, kGREBuildID);
-  if (MakeConfFile(regfile, greHome, aProperties, aPropertiesLen)) {
+  if (MakeConfFile(regfile, greHome)) {
     PR_Write(fd, kGREBuildID, sizeof(kGREBuildID) - 1);
     return PR_TRUE;
   }
@@ -210,7 +199,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
 
     PR_snprintf(regfile, MAXPATHLEN, "%s/%s.conf", root, buildID);
 
-    if (MakeConfFile(regfile, greHome, aProperties, aPropertiesLen)) {
+    if (MakeConfFile(regfile, greHome)) {
       PR_Write(fd, buildID, strlen(buildID));
       return PR_TRUE;
     }

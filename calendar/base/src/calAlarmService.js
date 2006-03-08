@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Stuart Parmenter <stuart.parmenter@oracle.com>
- *   Joey Minta <jminta@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -69,6 +68,22 @@ function jsDateToFloatingDateTime(date)
     return newDate;
 }
 
+/*
+var testalarmnumber = 0;
+function testAlarm(name) {
+    this.title = name;
+    this.alarmTime = jsDateToDateTime(new Date());
+    this.alarmTime.second += 5;
+    this.alarmTime.normalize();
+    this.calendar = new Object();
+    this.calendar.suppressAlarms = false;
+    this.id = testalarmnumber++;
+}
+testAlarm.prototype = {
+};
+*/
+
+
 function calAlarmService() {
     this.wrappedJSObject = this;
 
@@ -79,14 +94,14 @@ function calAlarmService() {
         onEndBatch: function() { },
         onLoad: function() { },
         onAddItem: function(aItem) {
-            if (aItem.alarmOffset)
-                this.alarmService.addAlarm(aItem);
+            if (aItem.alarmTime)
+                this.alarmService.addAlarm(aItem, false);
         },
         onModifyItem: function(aNewItem, aOldItem) {
             this.alarmService.removeAlarm(aOldItem);
 
-            if (aNewItem.alarmOffset)
-                this.alarmService.addAlarm(aNewItem);
+            if (aNewItem.alarmTime)
+                this.alarmService.addAlarm(aNewItem, false);
         },
         onDeleteItem: function(aDeletedItem) {
             this.alarmService.removeAlarm(aDeletedItem);
@@ -135,6 +150,7 @@ var calAlarmServiceClassInfo = {
 };
 
 calAlarmService.prototype = {
+    mRangeStart: null,
     mRangeEnd: null,
     mEvents: {},
     mObservers: [],
@@ -158,8 +174,13 @@ calAlarmService.prototype = {
 
     /* nsIObserver */
     observe: function (subject, topic, data) {
+        observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+
+        if (topic == "app-startup") {
+            observerService.addObserver(this, "profile-after-change", false);
+            observerService.addObserver(this, "xpcom-shutdown", false);
+        }
         if (topic == "profile-after-change") {
-            this.shutdown();
             this.startup();
         }
         if (topic == "xpcom-shutdown") {
@@ -168,33 +189,12 @@ calAlarmService.prototype = {
     },
 
     /* calIAlarmService APIs */
-    mTimezone: null,
-    get timezone() {
-        return this.mTimezone;
-    },
-
-    set timezone(aTimezone) {
-        this.mTimezone = aTimezone;
-    },
-
     snoozeEvent: function(event, duration) {
         /* modify the event for a new alarm time */
-        var newEvent = event.clone();
         var alarmTime = jsDateToDateTime((new Date())).getInTimezone("UTC");
-
-        // Set the last acknowledged time to now.
-        newEvent.alarmLastAck = alarmTime;
         alarmTime.addDuration(duration);
-
-        var datetime;
-        if (newEvent.alarmRelated == newEvent.ALARM_RELATED_START) {
-            datetime = newEvent.startDate || newEvent.entryDate;
-        } else {
-            datetime = newEvent.endDate || newEvent.dueDate;
-        }
-
-        var duration = datetime.subtractDate(alarmTime);
-        newEvent.alarmOffset = duration;
+        newEvent = event.clone();
+        newEvent.alarmTime = alarmTime;
         // calling modifyItem will cause us to get the right callback
         // and update the alarm properly
         newEvent.calendar.modifyItem(newEvent, event, null);
@@ -231,25 +231,8 @@ calAlarmService.prototype = {
         if (this.mStarted)
             return;
 
-        if (!this.mTimezone) {
-            throw Components.results.NS_ERROR_NOT_INITIALIZED;
-        }
-
         dump("Starting calendar alarm service\n");
-
-        var observerSvc = Components.classes["@mozilla.org/observer-service;1"]
-                          .getService
-                          (Components.interfaces.nsIObserverService);
-
-        observerSvc.addObserver(this, "profile-after-change", false);
-        observerSvc.addObserver(this, "xpcom-shutdown", false);
-
-        /* Tell people that we're alive so they can start monitoring alarms.
-         * Make sure to do this before calling findAlarms().
-         */
-        this.notifier = Components.classes["@mozilla.org/embedcomp/appstartup-notifier;1"].getService(Components.interfaces.nsIObserver);
-        var notifier = this.notifier;
-        notifier.observe(null, "alarm-service-startup", null);
+        this.mStarted = true;
 
         this.calendarManager = Components.classes["@mozilla.org/calendar/manager;1"].getService(Components.interfaces.calICalendarManager);
         var calendarManager = this.calendarManager;
@@ -272,7 +255,16 @@ calAlarmService.prototype = {
 
         this.mUpdateTimer = newTimerWithCallback(timerCallback, kHoursBetweenUpdates * 3600000, true);
 
-        this.mStarted = true;
+        /* tell people that we're alive so they can start monitoring alarms */
+        this.notifier = Components.classes["@mozilla.org/embedcomp/appstartup-notifier;1"].getService(Components.interfaces.nsIObserver);
+        var notifier = this.notifier;
+        notifier.observe(null, "alarm-service-startup", null);
+
+
+        /* Test Code
+        this.addAlarm(new testAlarm("Meeting with Mr. T"));
+        this.addAlarm(new testAlarm("Blah blah"));
+        */
     },
 
     shutdown: function() {
@@ -300,14 +292,8 @@ calAlarmService.prototype = {
 
         this.calendarManager = null;
         this.notifier = null;
+        this.mRangeStart = null;
         this.mRangeEnd = null;
-
-        var observerSvc = Components.classes["@mozilla.org/observer-service;1"]
-                          .getService
-                          (Components.interfaces.nsIObserverService);
-
-        observerSvc.removeObserver(this, "profile-after-change");
-        observerSvc.removeObserver(this, "xpcom-shutdown");
 
         this.mStarted = false;
     },
@@ -321,36 +307,20 @@ calAlarmService.prototype = {
         calendar.removeObserver(this.calendarObserver);
     },
 
-    addAlarm: function(aItem) {
-        var alarmTime;
-        if (aItem.alarmRelated == aItem.ALARM_RELATED_START) {
-            alarmTime = aItem.startDate || aItem.entryDate;
-        } else {
-            alarmTime = aItem.endDate || aItem.dueDate;
-        }
+    addAlarm: function(aItem, skipCheck, alarmTime) {
+        // if aItem.alarmTime >= 'now' && aItem.alarmTime <= gAlarmEndTime
+        if (!alarmTime)
+            alarmTime = aItem.alarmTime.getInTimezone("UTC");
 
-        alarmTime = alarmTime.clone();
-
-        // Handle all day events.  This is kinda weird, because they don't have
-        // a well defined startTime.  We just consider the start/end to be 
-        // midnight in the user's timezone.
-        if (alarmTime.isDate) {
-            alarmTime = alarmTime.getInTimezone(this.mTimezone);
-            alarmTime.isDate = false;
-        }
-
-        alarmTime.addDuration(aItem.alarmOffset);
-        alarmTime = alarmTime.getInTimezone("UTC");
-dump("considering alarm for item:"+aItem.title+'\n offset:'+aItem.alarmOffset+', which makes alarm time:'+alarmTime+'\n');
         var now;
         // XXX When the item is floating, should use the default timezone
         // from the prefs, instead of the javascript timezone (which is what
         // jsDateToFloatingDateTime uses)
-        if (alarmTime.timezone == "floating")
+        if (aItem.alarmTime.timezone == "floating")
             now = jsDateToFloatingDateTime((new Date()));
         else
             now = jsDateToDateTime((new Date())).getInTimezone("UTC");
-dump("now is "+now+'\n');
+
         var callbackObj = {
             alarmService: this,
             item: aItem,
@@ -360,31 +330,11 @@ dump("now is "+now+'\n');
             }
         };
 
-        if (alarmTime.compare(now) >= 0) {
-dump("alarm is in the future\n");
-            // We assume that future alarms haven't been acknowledged
-
+        if ((alarmTime.compare(now) >= 0 && alarmTime.compare(this.mRangeEnd) <= 0) || skipCheck) {
             // delay is in msec, so don't forget to multiply
             var timeout = alarmTime.subtractDate(now).inSeconds * 1000;
-
-            var timeUntilRefresh = this.mRangeEnd.subtractDate(now).inSeconds * 1000;
-            if (timeUntilRefresh < timeout) {
-dump("alarm is too late\n");
-                // we'll get this alarm later.  No sense in keeping an extra timeout
-                return;
-            }
-
             this.mEvents[aItem.id] = newTimerWithCallback(callbackObj, timeout, false);
-            dump("adding alarm timeout (" + timeout + ") for " + aItem + "\n");
-        } else {
-            // This alarm is in the past.  See if it has been previously ack'd
-            if (aItem.alarmLastAck && aItem.alarmLastAck.compare(alarmTime) >= 0) {
-dump(aItem.title+' - alarm previously ackd\n');
-                return;
-            } else { // Fire!
-dump("alarm is in the past, and unack'd, firing now!\n");
-                this.alarmFired(aItem);
-            }
+            dump("adding alarm timeout (" + timeout + ") for " + aItem + " at " + aItem.alarmTime + "\n");
         }
     },
 
@@ -396,6 +346,14 @@ dump("alarm is in the past, and unack'd, firing now!\n");
     },
 
     findAlarms: function() {
+        if (this.mEvents.length > 0) {
+            // This may happen if an alarm is snoozed over the time range mark
+            var err = new Error();
+            var debug = Components.classes["@mozilla.org/xpcom/debug;1"].getService(Components.interfaces.nsIDebug);
+            debug.warning("mEvents.length should always be 0 when we enter findAlarms",
+                          err.fileName, err.lineNumber);
+        }
+
         var getListener = {
             alarmService: this,
             onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
@@ -403,43 +361,27 @@ dump("alarm is in the past, and unack'd, firing now!\n");
             onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
                 for (var i = 0; i < aCount; ++i) {
                     var item = aItems[i];
-                    if (item.alarmOffset) {
-                        this.alarmService.addAlarm(item);
+                    if (item.alarmTime) {
+                        this.alarmService.addAlarm(item, false);
                     }
                 }
             }
         };
 
-        var now = jsDateToDateTime((new Date())).getInTimezone("UTC");
+        // figure out the 'now' and 6 hours from now and look for events 
+        // between then with alarms
+        this.mRangeStart = jsDateToDateTime((new Date())).getInTimezone("UTC");
 
-        var start;
-        if (!this.mRangeEnd) {
-            // This is our first search for alarms.  We're going to look for
-            // alarms +/- 1 month from now.  If someone sets an alarm more than
-            // a month ahead of an event, or doesn't start Sunbird/Lightning
-            // for a month, they'll miss some, but that's a slim chance
-            start = now.clone();
-            start.month -= 1;
-            start.normalize();
-        } else {
-            // This is a subsequent search, so we got all the past alarms before
-            start = this.mRangeEnd.clone();
-        }
-        var until = now.clone();
-        until.month += 1;
+        var until = this.mRangeStart.clone();
+        until.hour += kHoursBetweenUpdates;
         until.normalize();
-
-        // We don't set timers for every future alarm, only those within 6 hours
-        var end = now.clone();
-        end.hour += kHoursBetweenUpdates;
-        end.normalize();
-        this.mRangeEnd = end.getInTimezone("UTC");
+        this.mRangeEnd = until.getInTimezone("UTC");
 
         var calendarManager = this.calendarManager;
         var calendars = calendarManager.getCalendars({});
         for each(var calendar in calendars) {
-            calendar.getItems(calendar.ITEM_FILTER_TYPE_ALL | calendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                              0, start, until, getListener);
+            calendar.getItems(calendar.ITEM_FILTER_TYPE_EVENT,
+                              0, this.mRangeStart, this.mRangeEnd, getListener);
         }
     },
 

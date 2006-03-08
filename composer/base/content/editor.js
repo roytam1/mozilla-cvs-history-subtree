@@ -384,7 +384,7 @@ var gEditorDocumentObserver =
           if (!editor && editorStatus == nsIEditingSession.eEditorOK)
           {
             dump("\n ****** NO EDITOR BUT NO EDITOR ERROR REPORTED ******* \n\n");
-            editorStatus = nsIEditingSession.eEditorErrorUnknown;
+            editorStatus = nsIEditingSession.eEditorErrorUnkown;
           }
 
           switch (editorStatus)
@@ -395,7 +395,7 @@ var gEditorDocumentObserver =
             case nsIEditingSession.eEditorErrorCantEditMimeType:
               errorStringId = "CantEditMimeTypeMsg";
               break;
-            case nsIEditingSession.eEditorErrorUnknown:
+            case nsIEditingSession.eEditorErrorUnkown:
               errorStringId = "CantEditDocumentMsg";
               break;
             // Note that for "eEditorErrorFileNotFound, 

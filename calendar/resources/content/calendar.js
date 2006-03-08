@@ -122,12 +122,6 @@ function calendarInit()
 
    initCalendarManager();
 
-   // fire up the alarm service
-   var alarmSvc = Components.classes["@mozilla.org/calendar/alarm-service;1"]
-                  .getService(Components.interfaces.calIAlarmService);
-   alarmSvc.timezone = calendarDefaultTimezone();
-   alarmSvc.startup();
-
    if (("arguments" in window) && (window.arguments.length) &&
        (typeof(window.arguments[0]) == "object") &&
        ("channel" in window.arguments[0]) ) {
@@ -193,16 +187,31 @@ function calendarFinish()
 
 function launchPreferences()
 {
-    var applicationName="";
-    if (Components.classes["@mozilla.org/xre/app-info;1"]) {
-        var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
-                      .getService(Components.interfaces.nsIXULAppInfo);
-        applicationName = appInfo.name;
-    }
-    if (applicationName == "SeaMonkey" || applicationName == "")
+    var applicationName = navigator.vendor;
+    if (applicationName == "Mozilla" || applicationName == "Firebird" || applicationName == "")
         goPreferences( "calendarPanel", "chrome://calendar/content/pref/calendarPref.xul", "calendarPanel" );
     else
         window.openDialog("chrome://calendar/content/pref/prefBird.xul", "PrefWindow", "chrome,titlebar,resizable,modal");
+}
+
+/** 
+* Called when the new event button is clicked
+*/
+var gNewDateVariable = null;
+
+function newEventCommand( event )
+{
+   newEvent();
+}
+
+
+/** 
+* Called when the new task button is clicked
+*/
+
+function newToDoCommand()
+{
+  newToDo( null, null ); // new task button defaults to undated todo
 }
 
 function newCalendarDialog()
@@ -237,24 +246,12 @@ function checkCalListTarget() {
 
 function deleteCalendar(event)
 {
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService); 
-
-    var result = {}; 
-    var calendarBundle = document.getElementById("bundle_calendar");
-    var calendar = document.popupNode.calendar;
-    var ok = promptService.confirm(
-        window,
-        calendarBundle.getString("unsubscribeCalendarTitle"),
-        calendarBundle.getFormattedString("unsubscribeCalendarMessage",[calendar.name]),
-        result);
-   
-    if (ok) {
-        getDisplayComposite().removeCalendar(calendar.uri);
-        var calMgr = getCalendarManager();
-        calMgr.unregisterCalendar(calendar);
-        // Delete file?
-        //calMgr.deleteCalendar(cal);
-    }
+    var cal = document.popupNode.calendar
+    getDisplayComposite().removeCalendar(cal.uri);
+    var calMgr = getCalendarManager();
+    calMgr.unregisterCalendar(cal);
+    // Delete file?
+    //calMgr.deleteCalendar(cal);
 }
 
 /** 
@@ -288,16 +285,12 @@ function newEvent(startDate, endDate, allDay)
    var alarmsBranch = prefService.getBranch("calendar.alarms.");
 
    if (alarmsBranch.getIntPref("onforevents") == 1) {
-       var alarmOffset = Components.classes["@mozilla.org/calendar/duration;1"]
-                                   .createInstance(Components.interfaces.calIDuration);
-       try {
-           var units = alarmsBranch.getCharPref("eventalarmunit");
-           alarmOffset[units] = alarmsBranch.getIntPref("eventalarmlen");
-       } catch(ex) {
-           alarmOffset.minutes = 15;
-       }
-       calendarEvent.alarmOffset = alarmOffset;
-       calendarEvent.alarmRelated = calendarEvent.ALARM_RELATED_START;
+       // alarmTime doesn't matter, it just can't be null
+       calendarEvent.alarmTime = createDateTime();
+
+       calendarEvent.setProperty("alarmUnits", alarmsBranch.getCharPref("eventalarmunit"));
+       calendarEvent.setProperty("alarmLength", alarmsBranch.getIntPref("eventalarmlen"));
+       calendarEvent.setProperty("alarmRelation", "START");
    }
 
    if (allDay)
@@ -305,7 +298,7 @@ function newEvent(startDate, endDate, allDay)
 
    var calendar = getSelectedCalendarOrNull();
 
-   createEventWithDialog(calendar, null, null, null, calendarEvent);
+   editNewEvent( calendarEvent, calendar );
 }
 
 /*
@@ -329,25 +322,22 @@ function newToDo ( startDate, dueDate )
    var alarmsBranch = prefService.getBranch("calendar.alarms.");
 
    if (alarmsBranch.getIntPref("onfortodos") == 1) {
+       // alarmTime doesn't matter, it just can't be null
+       calendarToDo.alarmTime = createDateTime();
+
        // You can't have an alarm if the entryDate doesn't exist.
        if (!calendarToDo.entryDate)
            calendarToDo.entryDate = jsDateToDateTime(
                                     gCalendarWindow.currentView.getNewEventDate());
-       var alarmOffset = Components.classes["@mozilla.org/calendar/duration;1"]
-                                   .createInstance(Components.interfaces.calIDuration);
-       try {
-           var units = alarmsBranch.getCharPref("todoalarmunit");
-           alarmOffset[units] = alarmsBranch.getIntPref("todoalarmlen");
-       } catch(ex) {
-           alarmOffset.minutes = 15;
-       }
-       calendarToDo.alarmOffset = alarmOffset;
-       calendarToDo.alarmRelated = calendarToDo.ALARM_RELATED_START;
+
+       calendarToDo.setProperty("alarmUnits", alarmsBranch.getCharPref("todoalarmunit"));
+       calendarToDo.setProperty("alarmLength", alarmsBranch.getIntPref("todoalarmlen"));
+       calendarToDo.setProperty("alarmRelation", "START");
    }
 
     var calendar = getSelectedCalendarOrNull();
     
-    createTodoWithDialog(calendar, null, null, calendarToDo);
+    editNewToDo(calendarToDo, calendar);
 }
 
 /**
@@ -365,10 +355,132 @@ function getSelectedCalendarOrNull()
 }
 
 /**
+* Launch the event dialog to edit a new (created, imported, or pasted) event.
+* 'calendar' is a calICalendar object.
+* When the user clicks OK "addEventDialogResponse" is called
+*/
+
+function editNewEvent( calendarEvent, calendar )
+{
+  openEventDialog(calendarEvent,
+                  "new",
+                  self.addEventDialogResponse,
+                  calendar);
+}
+
+/**
+* Launch the todo dialog to edit a new (created, imported, or pasted) ToDo.
+* 'calendar' is a calICalendar object.
+* When the user clicks OK "addToDoDialogResponse" is called
+*/
+function editNewToDo( calendarToDo, calendar )
+{
+  openEventDialog(calendarToDo,
+                  "new",
+                  self.addToDoDialogResponse,
+                  calendar);
+}
+
+/** 
+* Called when the user clicks OK in the new event dialog
+* 'calendar' is a calICalendar object.
+*
+* Updates the data source.  The unifinder views and the calendar views will be
+* notified of the change through their respective observers.
+*/
+
+function addEventDialogResponse( calendarEvent, calendar )
+{
+   saveItem( calendarEvent, calendar, "addEvent" );
+}
+
+
+/** 
+* Called when the user clicks OK in the new to do item dialog
+* 'calendar' is a calICalendar object.
+*/
+
+function addToDoDialogResponse( calendarToDo, calendar )
+{
+    addEventDialogResponse(calendarToDo, calendar);
+}
+
+
+/** 
+* Helper function to launch the event dialog to edit an event.
+* When the user clicks OK "modifyEventDialogResponse" is called
+*/
+
+function editEvent( calendarEvent )
+{
+  openEventDialog(calendarEvent,
+                  "edit",
+                  self.modifyEventDialogResponse,
+                  null);
+}
+
+function editToDo( calendarTodo )
+{
+  openEventDialog(calendarTodo,
+                  "edit",
+                  self.modifyEventDialogResponse,
+                  null);
+}
+   
+/** 
+* Called when the user clicks OK in the edit event dialog
+* 'calendar' is a calICalendar object.
+*
+* Update the data source, the unifinder views and the calendar views will be
+* notified of the change through their respective observers
+*/
+
+function modifyEventDialogResponse( calendarEvent, calendar, originalEvent )
+{
+   saveItem( calendarEvent, calendar, "modifyEvent", originalEvent );
+}
+
+
+/** 
+* Called when the user clicks OK in the edit event dialog
+* 'calendar' is a calICalendar object.
+*
+* Update the data source, the unifinder views and the calendar views will be
+* notified of the change through their respective observers
+*/
+
+function modifyToDoDialogResponse( calendarToDo, calendar, originalToDo )
+{
+    modifyEventDialogResponse(calendarToDo, calendar, originalToDo);
+}
+
+
+/** PRIVATE: open event dialog in mode, and call onOk if ok is clicked.
+    'mode' is "new" or "edit".
+    'calendar' is default calICalendar, typically from getSelectedCalendarOrNull
+ **/
+function openEventDialog(calendarEvent, mode, onOk, calendar)
+{
+  // set up a bunch of args to pass to the dialog
+  var args = new Object();
+  args.calendarEvent = calendarEvent;
+  args.mode = mode;
+  args.onOk = onOk;
+
+  if( calendar )
+    args.calendar = calendar;
+
+  // wait cursor will revert to auto in eventDialog.js loadCalendarEventDialog
+  window.setCursor( "wait" );
+  // open the dialog modally
+  openDialog("chrome://calendar/content/eventDialog.xul", "caEditEvent", "chrome,titlebar,modal", args );
+}
+
+/**
 *  This is called from the unifinder's edit command
 */
 
-function editEvent()
+function editEventCommand()
 {
    if( gCalendarWindow.EventSelection.selectedEvents.length == 1 )
    {
@@ -376,17 +488,32 @@ function editEvent()
 
       if( calendarEvent != null )
       {
-         modifyEventWithDialog(getOccurrenceOrParent(calendarEvent));
+         editEvent( calendarEvent.parentItem );
       }
    }
 }
 
-function editToDo(task) {
-    if (!task)
-        return;
 
-    modifyEventWithDialog(getOccurrenceOrParent(task));
+//originalEvent is the item before edits were committed, 
+//used to check if there were external changes for shared calendar
+function saveItem( calendarEvent, calendar, functionToRun, originalEvent )
+{
+    dump(functionToRun + " " + calendarEvent.title + "\n");
+
+    if (functionToRun == 'addEvent') {
+        doTransaction('add', calendarEvent, calendar, null, null);
+    } else if (functionToRun == 'modifyEvent') {
+        // compare cal.uri because there may be multiple instances of
+        // calICalendar or uri for the same spec, and those instances are
+        // not ==.
+        if (!originalEvent.calendar || 
+            (originalEvent.calendar.uri.equals(calendar.uri)))
+            doTransaction('modify', calendarEvent, calendar, originalEvent, null);
+        else
+            doTransaction('move', calendarEvent, calendar, originalEvent, null);
+    }
 }
+
 
 /**
 *  This is called from the unifinder's delete command
@@ -399,14 +526,7 @@ function deleteItems( SelectedItems, DoNotConfirm )
 
     startBatchTransaction();
     for (i in SelectedItems) {
-        var aOccurrence = SelectedItems[i];
-        if (aOccurrence.parentItem != aOccurrence) {
-            var event = aOccurrence.parentItem.clone();
-            event.recurrenceInfo.removeOccurrenceAt(aOccurrence.recurrenceId);
-            doTransaction('modify', event, event.calendar, aOccurrence.parentItem, null);
-        } else {
-            doTransaction('delete', aOccurrence, aOccurrence.calendar, null, null);
-        }
+        doTransaction('delete', SelectedItems[i], SelectedItems[i].calendar, null, null);
     }
     endBatchTransaction();
 }
@@ -773,36 +893,4 @@ calTransaction.prototype = {
         // No support for merging
         return false;
     }
-}
-
-function openLocalCalendar() {
-
-    const nsIFilePicker = Components.interfaces.nsIFilePicker;
-    var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
-    fp.init(window, gCalendarBundle.getString("Open"), nsIFilePicker.modeOpen);
-    fp.appendFilter(gCalendarBundle.getString("filterCalendar"), "*.ics");
-    fp.appendFilters(nsIFilePicker.filterAll);
- 
-    if (fp.show() != nsIFilePicker.returnOK) {
-        return;
-    }	
-    
-    var url = fp.fileURL.spec;
-    var calMgr = getCalendarManager();
-    var composite = getDisplayComposite();
-    var openCalendar = calMgr.createCalendar("ics", makeURL(url));
-    calMgr.registerCalendar(openCalendar);
-     
-    // Strip ".ics" from filename for use as calendar name, taken from calendarCreation.js
-    var fullPathRegex = new RegExp("([^/:]+)[.]ics$");
-    var prettyName = url.match(fullPathRegex);
-    var name;
-        
-    if (prettyName && prettyName.length >= 1) {
-        name = prettyName[1];
-    } else {
-        name = gCalendarBundle.getString("untitledCalendarName");
-    }
-        
-    openCalendar.name = name;
 }

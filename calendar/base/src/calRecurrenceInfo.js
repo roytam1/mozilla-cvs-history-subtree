@@ -135,10 +135,6 @@ calRecurrenceInfo.prototype = {
             throw Components.results.NS_ERROR_OBJECT_IS_IMMUTABLE;
 
         this.mBaseItem = value;
-        // patch exception's parentItem:
-        for each (exitem in this.mExceptions) {
-            exitem.item.parentItem = value;
-        }
     },
 
     mRecurrenceItems: null,
@@ -185,7 +181,7 @@ calRecurrenceInfo.prototype = {
         if (!this.mBaseItem)
             throw Components.results.NS_ERROR_NOT_INITIALIZED;
 
-        if (aIndex < 0 || aIndex >= this.mRecurrenceItems.length)
+        if (aIndex < 0 || aIndex >= mRecurrenceItems.length)
             throw Components.results.NS_ERROR_INVALID_ARG;
 
         return this.mRecurrenceItems[aIndex];
@@ -221,15 +217,8 @@ calRecurrenceInfo.prototype = {
         if (this.mImmutable)
             throw Components.results.NS_ERROR_OBJECT_IS_IMMUTABLE;
 
-        // Because xpcom objects can be wrapped in various ways, testing for
-        // mere == sometimes returns false even when it should be true.  Use
-        // the interface pointer returned by sip to avoid that problem.
-        var sip1 = Components.classes["@mozilla.org/supports-interface-pointer;1"]
-                            .createInstance(Components.interfaces.nsISupportsInterfacePointer);
-        sip1.data = aItem;
-        sip1.dataIID = Components.interfaces.calIRecurrenceItem;
         for (var i = 0; i < this.mRecurrenceItems.length; i++) {
-            if (this.mRecurrenceItems[i] == sip1.data) {
+            if (this.mRecurrenceItems[i] == aItem) {
                 this.deleteRecurrenceItemAt(i);
                 return;
             }
@@ -339,8 +328,55 @@ calRecurrenceInfo.prototype = {
 
         var startDate = this.mBaseItem.recurrenceStartDate;
         var dates = [];
-        
-        // toss in exceptions first:
+
+        for each (ritem in this.mRecurrenceItems) {
+            var cur_dates;
+
+            // if both range start and end are specified, we ask for all of the occurrences,
+            // to make sure we catch all possible exceptions.  If aRangeEnd isn't specified,
+            // then we have to ask for aMaxCount, and hope for the best.
+            if (aRangeStart && aRangeEnd)
+                cur_dates = ritem.getOccurrences(startDate, aRangeStart, aRangeEnd, 0, {});
+            else
+                cur_dates = ritem.getOccurrences(startDate, aRangeStart, aRangeEnd, aMaxCount, {});
+
+            if (cur_dates.length == 0)
+                continue;
+
+            if (ritem.isNegative) {
+                // if this is negative, we look for any of the given dates
+                // in the existing set, and remove them if they're
+                // present.
+
+                // XXX: i'm pretty sure negative dates can't really have exceptions
+                // (like, you can't make a date "real" by defining an RECURRENCE-ID which
+                // is an EXDATE, and then giving it a real DTSTART) -- so we don't
+                // check exceptions here
+                cur_dates.forEach (function (dateToRemove) {
+                                       dates = dates.filter(function (d) { return d.compare(dateToRemove) != 0; });
+                                   });
+            } else {
+                // if positive, we just add these date to the existing set,
+                // but only if they're not already there
+                var datesToAdd = [];
+                var rinfo = this;
+                cur_dates.forEach (function (dateToAdd) {
+                                       if (!dates.some(function (d) { return d.compare(dateToAdd) == 0; })) {
+                                           if (aIncludeExceptions && rinfo.mExceptions)
+                                           {
+                                               // only add if there's no exception for this;
+                                               // we'll test all exception dates later on
+                                               if (!rinfo.getExceptionFor(dateToAdd, false))
+                                                   dates.push(dateToAdd);
+                                           } else {
+                                               dates.push(dateToAdd);
+                                           }
+                                       }
+                                   });
+            }
+        }
+
+        // Now toss in exceptions into this list; we just scan them all.
         if (aIncludeExceptions && this.mExceptions) {
             this.mExceptions.forEach(function(ex) {
                                          var dtstart = ex.item.getProperty("DTSTART");
@@ -375,53 +411,6 @@ calRecurrenceInfo.prototype = {
                                              return;
                                          }
                                      });
-        }
-
-        // apply positive items before negative:
-        var sortedRecurrenceItems = [];
-        for each ( var ritem in this.mRecurrenceItems ) {
-            if (ritem.isNegative)
-                sortedRecurrenceItems.push(ritem);
-            else
-                sortedRecurrenceItems.unshift(ritem);
-        }
-        for each (ritem in sortedRecurrenceItems) {
-            var cur_dates;
-
-            // if both range start and end are specified, we ask for all of the occurrences,
-            // to make sure we catch all possible exceptions.  If aRangeEnd isn't specified,
-            // then we have to ask for aMaxCount, and hope for the best.
-            if (aRangeStart && aRangeEnd)
-                cur_dates = ritem.getOccurrences(startDate, aRangeStart, aRangeEnd, 0, {});
-            else
-                cur_dates = ritem.getOccurrences(startDate, aRangeStart, aRangeEnd, aMaxCount, {});
-
-            if (cur_dates.length == 0)
-                continue;
-
-            if (ritem.isNegative) {
-                // if this is negative, we look for any of the given dates
-                // in the existing set, and remove them if they're
-                // present.
-
-                // XXX: i'm pretty sure negative dates can't really have exceptions
-                // (like, you can't make a date "real" by defining an RECURRENCE-ID which
-                // is an EXDATE, and then giving it a real DTSTART) -- so we don't
-                // check exceptions here
-                cur_dates.forEach (function (dateToRemove) {
-                                       dates = dates.filter(function (d) { return d.compare(dateToRemove) != 0; });
-                                   });
-            } else {
-                // if positive, we just add these date to the existing set,
-                // but only if they're not already there
-                var datesToAdd = [];
-                var rinfo = this;
-                cur_dates.forEach (function (dateToAdd) {
-                                       if (!dates.some(function (d) { return d.compare(dateToAdd) == 0; })) {
-                                           dates.push(dateToAdd);
-                                       }
-                                   });
-            }
         }
 
         // now sort the list
@@ -499,9 +488,7 @@ calRecurrenceInfo.prototype = {
         d.isNegative = true;
         d.date = aRecurrenceId.clone();
 
-        this.removeExceptionFor(d.date);
-
-        this.appendRecurrenceItem(d);
+        return this.appendRecurrenceItem(d);
     },
 
     restoreOccurrenceAt: function (aRecurrenceId) {
@@ -673,54 +660,4 @@ calRecurrenceInfo.prototype = {
         aCount.value = ids.length;
         return ids;
     },
-    
-    // changing the startdate of an item needs to take exceptions into account.
-    // in case we're about to modify a parentItem (aka 'folded' item), we need
-    // to modify the recurrenceId's of all possibly existing exceptions as well.
-    onStartDateChange: function (aNewStartTime, aOldStartTime) {
-    
-        // convert both dates to UTC since subtractDate is not timezone aware.
-        aOldStartTime = aOldStartTime.getInTimezone("UTC");
-        aNewStartTime = aNewStartTime.getInTimezone("UTC");
-        var timeDiff = aNewStartTime.subtractDate(aOldStartTime);
-        var exceptions = this.getExceptionIds({});
-        var modifiedExceptions = [];
-        for each (var exid in exceptions) {
-            var ex = this.getExceptionFor(exid, false);
-            if (ex) {
-                if (!ex.isMutable) {
-                    ex = ex.cloneShallow(this.item);
-                }
-                ex.recurrenceId.addDuration(timeDiff);
-                ex.recurrenceId.normalize();
-                
-                modifiedExceptions.push(ex);
-                this.removeExceptionFor(exid);
-            }
-        }
-        for each (var modifiedEx in modifiedExceptions) {
-            this.modifyException(modifiedEx);
-        }
-
-        // also take RDATE's and EXDATE's into account.
-        const kCalIRecurrenceDate = Components.interfaces.calIRecurrenceDate;
-        const kCalIRecurrenceDateSet = Components.interfaces.calIRecurrenceDateSet;
-        var ritems = this.getRecurrenceItems({});
-        for (var i in ritems) {
-            var ritem = ritems[i];
-            if (ritem instanceof kCalIRecurrenceDate) {
-                ritem = ritem.QueryInterface(kCalIRecurrenceDate);
-                ritem.date.addDuration(timeDiff);
-                ritem.date.normalize();
-            } else if (ritem instanceof kCalIRecurrenceDateSet) {
-                ritem = ritem.QueryInterface(kCalIRecurrenceDateSet);
-                var rdates = ritem.getDates({});
-                for each (var date in rdates) {
-                    date.addDuration(timeDiff);
-                    date.normalize();
-                }
-                ritem.setDates(rdates.length,rdates);
-            }
-        }
-    }
 };

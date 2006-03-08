@@ -18,7 +18,7 @@ notice() {
 }
 
 get_file_size() {
-  info=($(ls -ln "$1"))
+  info=($(ls -l "$1"))
   echo ${info[4]}
 }
 
@@ -49,14 +49,11 @@ make_add_instruction() {
 make_patch_instruction() {
   f="$1"
   is_extension=$(echo "$f" | grep -c 'extensions/.*/')
-  is_search_plugin=$(echo "$f" | grep -c 'searchplugins/.*')
   if [ $is_extension = "1" ]; then
     # Use the subdirectory of the extensions folder as the file to test
     # before performing this add instruction.
     testdir=$(echo "$f" | sed 's/\(extensions\/[^\/]*\)\/.*/\1/')
     echo "patch-if \"$testdir\" \"$f.patch\" \"$f\""
-  elif [ $is_search_plugin = "1" ]; then
-    echo "patch-if \"$f\" \"$f.patch\" \"$f\""
   else
     echo "patch \"$f.patch\" \"$f\""
   fi
@@ -98,6 +95,5 @@ list_files() {
   find . -type f \
     ! -name "channel-prefs.js" \
     ! -name "update.manifest" \
-    | sed 's/\.\/\(.*\)/"\1"/' \
-    | sort
+    | sed 's/\.\/\(.*\)/"\1"/'
 }

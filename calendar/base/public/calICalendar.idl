@@ -111,10 +111,8 @@ interface calICalendar : nsISupports
   const unsigned long ITEM_FILTER_ALL_ITEMS = 0xFFFF;
 
   /** 
-   * If set, return calIItemBase occurrences for all the appropriate instances,
-   * as determined by an item's recurrenceInfo.  All of these occurrences will
-   * have their parentItem set to the recurrence parent.  If not set, will 
-   * return only calIItemBase parent items.
+   * If set, return calIItemOccurence items, otherwise return subclasses of
+   * calIItemBase.
    */
   const unsigned long ITEM_FILTER_CLASS_OCCURRENCES = 1 << 16;
 
@@ -153,16 +151,6 @@ interface calICalendar : nsISupports
    * existing item.
    */
   void addItem( in calIItemBase aItem, in calIOperationListener aListener );
-
-  /**
-   * adoptItem adds the given calIItemBase to the calendar, but doesn't
-   * clone it. It adopts the item as-is. This is generally for use in
-   * performance-critical situations where there is no danger of the caller
-   * using the item after making the call.
-   *
-   * @see addItem
-   */
-  void adoptItem( in calIItemBase aItem, in calIOperationListener aListener );
 
   /**
    * modifyItem takes a modified mutable item and modifies the
@@ -415,7 +403,7 @@ interface calIOperationListener : nsISupports
                            in string aId,
                            in nsIVariant aDetail);
   const unsigned long ADD = 1;
-  const unsigned long MODIFY = 2;
+  const unsigned long MOVE = 2;
   const unsigned long DELETE = 3;
   const unsigned long GET = 4;
 

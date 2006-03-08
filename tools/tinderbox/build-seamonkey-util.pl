@@ -113,7 +113,6 @@ sub ParseArgs {
         $args->{ReportStatus} = 0, next if $arg eq '--noreport';
         $args->{ReportFinalStatus} = 0, next if $arg eq '--nofinalreport';
         $args->{RunMozillaTests} = 0, next if $arg eq '--notest';
-        $args->{ConfigureOnly} = 1, next if $arg eq '--configureonly';
         $args->{TestOnly} = 1, next if $arg eq '--testonly';
         $args->{BuildOnce} = 1, next if $arg eq '--once';
         $args->{UseTimeStamp} = 0, next if $arg eq '--notimestamp';
@@ -438,7 +437,7 @@ sub SetupPath {
     }
 
     if ($Settings::OS eq 'Darwin') {
-        $ENV{PATH} = "/sw/bin:/bin:/usr/bin:$ENV{PATH}";
+        $ENV{PATH} = "/bin:/usr/bin:/sw/bin:$ENV{PATH}";
         $Settings::ConfigureEnvArgs = 'CC=cc CXX=c++';
         $Settings::Compiler = 'cc';
         $Settings::mail = '/usr/bin/mail';
@@ -447,21 +446,11 @@ sub SetupPath {
         # There should be a way of auto-detecting this, for now
         # you have to match BuildDebug and --enable-optimize, 
         # --disable-debug to make things work here.
-
-        $Settings::DistBin = "dist/";
-
-        # Deal with the most common case first.
-        if ($Settings::ProductName ne 'XULRunner') {
-            $Settings::DistBin .= "$Settings::ProductName";
-            if ($Settings::BuildDebug) {
-                $Settings::DistBin .= "Debug";
-            }
-            $Settings::DistBin .= ".app/Contents/MacOS";
+        if ($Settings::BuildDebug) {
+            $Settings::DistBin = "dist/".$Settings::ProductName."Debug.app/Contents/MacOS";
         } else {
-            # XULRunner needs a special output path on MacOS,
-            # and the path doesn't change based on debug settings.
-             $Settings::DistBin .= "XUL.framework/Versions/Current";
-       }
+            $Settings::DistBin = "dist/".$Settings::ProductName.".app/Contents/MacOS";
+        }
     }
 
     if ($Settings::OS eq 'FreeBSD') {
@@ -678,7 +667,7 @@ sub encode_log {
     if($Settings::LogEncoding eq 'base64') {
         eval "use MIME::Base64 ();";
         while(read($input_file, $buf, 60*57)) {
-            print $output_file &MIME::Base64::encode($buf);
+            print $output_file MIME::Base64::encode($buf);
         }
     }
     elsif($Settings::LogEncoding eq 'uuencode') {
@@ -840,7 +829,7 @@ sub BuildIt {
             my $time_str = POSIX::strftime("%m/%d/%Y %H:%M +0000", gmtime($start_time));
 
             # Global, sorry.  Tests need this, it's everywhere.
-            # Switch to format the graph server uses, to be consistent.
+            # Switch to format the graph server uses, to be consistant.
             $co_time_str = POSIX::strftime("%Y:%m:%d:%H:%M:%S", localtime($start_time));
 
             $ENV{MOZ_CO_DATE} = "$time_str";
@@ -899,18 +888,14 @@ sub BuildIt {
         # Allow skipping of mozilla phase.
         unless ($Settings::SkipMozilla) {
           
-          # Allow skipping of checkout
-          unless ($Settings::SkipCheckout) {
+          # Make sure we have an up-to-date $Settings::moz_client_mk
           
-            # Make sure we have an up-to-date $Settings::moz_client_mk
+          # Set CVSROOT here.  We should only need to checkout a new
+          # version of $Settings::moz_client_mk once; we might have 
+          # more than one cvs tree so set CVSROOT here to avoid confusion.
+          $ENV{CVSROOT} = $Settings::moz_cvsroot;
             
-            # Set CVSROOT here.  We should only need to checkout a new
-            # version of $Settings::moz_client_mk once; we might have 
-            # more than one cvs tree so set CVSROOT here to avoid confusion.
-            $ENV{CVSROOT} = $Settings::moz_cvsroot;
-              
-            run_shell_command("$Settings::CVS $cvsco $TreeSpecific::name/$Settings::moz_client_mk $TreeSpecific::extrafiles");
-          }
+          run_shell_command("$Settings::CVS $cvsco $TreeSpecific::name/$Settings::moz_client_mk $TreeSpecific::extrafiles");
           
           # Create toplevel source directory.
           chdir $Settings::Topsrcdir or die "chdir $Settings::Topsrcdir: $!\n";
@@ -939,41 +924,37 @@ sub BuildIt {
 
             my $status = 0;
 
-            # Allow skipping of checkout
-            unless ($Settings::SkipCheckout) {
-
-              # Pull using separate step so that we can timeout if necessary
-              my $make_co = "$Settings::Make -f $Settings::moz_client_mk " .
-                  "$TreeSpecific::checkout_target";
-              if ($Settings::FastUpdate) {
+            # Pull using separate step so that we can timeout if necessary
+            my $make_co = "$Settings::Make -f $Settings::moz_client_mk " .
+                "$TreeSpecific::checkout_target";
+            if ($Settings::FastUpdate) {
                 $make_co = "$Settings::Make -f $Settings::moz_client_mk fast-update";
-              }
-  
-              # Run the checkout command.
-              if ($build_status ne 'busted') {
+            }
+
+            # Run the checkout command.
+            if ($build_status ne 'busted') {
                 $status = run_shell_command_with_timeout("$make_co", 
-                                           $Settings::CVSCheckoutTimeout);
+                                         $Settings::CVSCheckoutTimeout);
                 if ($status->{exit_value} != 0) {
-                  $build_status = 'busted';
-                  if ($status->{timed_out}) {
-                    print_log "Error: CVS checkout timed out.\n";
-                    # Need to figure out how to kill rogue cvs processes
-                    my $_cvs_pid=`ps -u $ENV{USER} | grep cvs`;
-                    $_cvs_pid =~ s/[a-zA-Z]*\s*(\d+).*/$1/;
-                    chomp($_cvs_pid);
-                    if ("$_cvs_pid" eq "" ) {
-                      print_log "Cannot find cvs process to kill.\n";
+                    $build_status = 'busted';
+                    if ($status->{timed_out}) {
+                        print_log "Error: CVS checkout timed out.\n";
+                        # Need to figure out how to kill rogue cvs processes
+                        my $_cvs_pid=`ps -u $ENV{USER} | grep cvs`;
+                        $_cvs_pid =~ s/[a-zA-Z]*\s*(\d+).*/$1/;
+                        chomp($_cvs_pid);
+                        if ("$_cvs_pid" eq "" ) {
+                            print_log "Cannot find cvs process to kill.\n";
+                        } else {
+                            print "cvs pid $_cvs_pid\n";
+                            kill_process($_cvs_pid);
+                        }
                     } else {
-                      print_log "cvs pid $_cvs_pid\n";
-                      kill_process($_cvs_pid);
+                        print_log "Error: CVS checkout failed.\n";
                     }
-                  } else {
-                    print_log "Error: CVS checkout failed.\n";
-                  }
                 } else {
-                  $build_status = 'success';
+                    $build_status = 'success';
                 }
-              }
             }
 
             # Build up initial make command.
@@ -995,15 +976,10 @@ sub BuildIt {
 
             # Run the build target.
             if ($build_status ne 'busted') {
-                my $buildTarget = $TreeSpecific::build_target;
-                if ($Settings::ConfigureOnly) {
-                    $buildTarget = "configure";
-                }
-
-                $status = run_shell_command "$make $buildTarget";
+                $status = run_shell_command "$make $TreeSpecific::build_target";
                 if ($status != 0) {
                     $build_status = 'busted';
-                } elsif (!$Settings::ConfigureOnly && !BinaryExists($full_binary_name)) {
+                } elsif (not BinaryExists($full_binary_name)) {
                     print_log "Error: binary not found: $binary_basename\n";
                     $build_status = 'busted';
                 } else {
@@ -1103,10 +1079,6 @@ sub create_profile {
 # Find mozilla profile.
 sub get_profile_dir {
     my $build_dir = shift;
-    my $profile_product_name = $Settings::ProductName;
-
-    $profile_product_name = "Mozilla" if ($profile_product_name eq "SeaMonkey");
-
     my $profile_dir;
 
     # XXXldb Many of these codepaths look like they won't actually return
@@ -1119,46 +1091,43 @@ sub get_profile_dir {
         if ($Settings::OS =~ /^WIN9/) { # 98 [but what does uname say on Me?]
             $profile_dir = $ENV{winbootdir} || $ENV{windir} || "C:\\WINDOWS";
             $profile_dir .= "\\Application Data";
-        } elsif ($Settings::OS =~ /^WINNT/) { # NT 4, 2K, XP
-            # try %APPDATA% first as it works even on localized OS versions
-            if ($ENV{APPDATA}) {
-                $profile_dir = $ENV{APPDATA};
-            }
-            elsif ($ENV{USERPROFILE}) {
-                # afaict, %USERPROFILE% should always be there, NT 4.0 and up
+        } elsif ($Settings::OS =~ /^WINNT/) { # NT 4, 2K, XP(?)
+            # afaict, %USERPROFILE% should always be there, NT 4.0 and up
+            if ($ENV{USERPROFILE}) {
                 $profile_dir = $ENV{USERPROFILE} . "\\Application Data";
-            } else { # prepare to fail
-                $profile_dir = "C:\\_UNKNOWN_";
+            } else { # use %APPDATA% as a fallback (or prepare to fail)
+                $profile_dir = $ENV{APPDATA} || "C:\\_UNKNOWN_";
             }
         }
         if ($Settings::VendorName) {
           $profile_dir .= "\\$Settings::VendorName";
         }
-        $profile_dir .= "\\$profile_product_name\\Profiles\\";
+        $profile_dir .= "\\$Settings::ProductName\\Profiles\\";
         $profile_dir =~ s|\\|/|g;
         ($profile_dir) = <"$profile_dir*$Settings::MozProfileName*">;
     } elsif ($Settings::OS eq "BeOS") {
         $profile_dir = "/boot/home/config/settings/Mozilla/$Settings::MozProfileName";
     } elsif ($Settings::OS eq "Darwin") {
         # This is ifdef'd in nsXREDirProvider.cpp
-        if ($profile_product_name eq 'Thunderbird') {
-            $profile_dir = "$ENV{HOME}/Library/$profile_product_name/Profiles";
+        if ($Settings::ProductName eq 'Thunderbird') {
+            $profile_dir = "$ENV{HOME}/Library/$Settings::ProductName/Profiles";
             ($profile_dir) = <$profile_dir/*.$Settings::MozProfileName>;
-        } elsif ($profile_product_name eq 'Firefox') {
-            $profile_dir = "$ENV{HOME}/Library/Application Support/$profile_product_name/Profiles";
+        } elsif ($Settings::ProductName eq 'Firefox') {
+            $profile_dir = "$ENV{HOME}/Library/Application Support/$Settings::ProductName/Profiles";
             ($profile_dir) = <"$profile_dir/*$Settings::MozProfileName*">;
         } else { # Mozilla's Profiles/profilename/salt
-            $profile_dir = "$ENV{HOME}/Library/$profile_product_name/Profiles/$Settings::MozProfileName/";
+            $profile_dir = "$ENV{HOME}/Library/$Settings::ProductName/Profiles/$Settings::MozProfileName/";
         }
     } else {
         # *nix
         if ($Settings::VendorName) {
-          $profile_dir = "$build_dir/.".lc($Settings::VendorName)."/".lc($profile_product_name)."/";
-        } else {
-          $profile_dir = "$build_dir/." . lc($profile_product_name) . "/";
+          $profile_dir = "$build_dir/.".lc($Settings::VendorName)."/".lc($Settings::ProductName)."/";
+          ($profile_dir) = <$profile_dir . "*" . $Settings::MozProfileName . "*">;
         }
-
-        ($profile_dir) = <$profile_dir . "*" . $Settings::MozProfileName . "*">;
+        else {
+          $profile_dir = "$build_dir/." . lc($Settings::ProductName) . "/";
+          ($profile_dir) = <$profile_dir*$Settings::MozProfileName*>;
+        }
     }
 
     return $profile_dir;
@@ -1397,12 +1366,7 @@ sub fork_and_log {
         if ($Settings::ResetHomeDirForTests) {
             $ENV{HOME} = $home if ($Settings::OS ne "BeOS");
         }
-
-        # Set XRE_NO_WINDOWS_CRASH_DIALOG to disable showing
-        # the windows crash dialog in case the child process
-        # crashes
-        $ENV{XRE_NO_WINDOWS_CRASH_DIALOG} = 1;
-
+            
         # Explicitly set cwd to home dir.
         chdir $home or die "chdir($home): $!\n";
 
@@ -1531,59 +1495,6 @@ sub print_test_errors {
     }
 }
 
-sub get_graph_tbox_name {
-  if ($Settings::GraphNameOverride ne '') {
-    return $Settings::GraphNameOverride;
-  }
-
-  my $name = ::hostname();
-  if ($Settings::BuildTag ne '') {
-    $name .= '_' . $Settings::BuildTag;
-  }
-  return $name;
-}
-
-sub print_log_test_result {
-  my ($test_name, $test_title, $num_result, $units, $print_name, $print_result) = @_;
-
-  print_log "\nTinderboxPrint:";
-  if ($Settings::TestsPhoneHome) {
-    my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
-    print_log "<a title=\"$test_title\" href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $test_name . "&units=$units&tbox=" . get_graph_tbox_name() . "&autoscale=1&days=7&avg=1&showpoint=$time,$num_result\">";
-  } else {
-    print_log "<abbr title=\"$test_title\">";
-  }
-  print_log $print_name;
-  if (!$Settings::TestsPhoneHome) {
-    print_log "</abbr>";
-  }
-  print_log ':' . $print_result;
-  if ($Settings::TestsPhoneHome) {
-    print_log "</a>";
-  }
-  print_log "\n";
-
-}
-
-sub print_log_test_result_ms {
-  my ($test_name, $test_title, $result, $print_name) = @_;
-  print_log_test_result($test_name, $test_title, $result, 'ms',
-                        $print_name, $result . 'ms');
-}
-
-sub print_log_test_result_bytes {
-  my ($test_name, $test_title, $result, $print_name, $sig_figs) = @_;
-
-  print_log_test_result($test_name, $test_title, $result, 'bytes',
-                        $print_name, PrintSize($result, $sig_figs) . 'B');
-}
-
-sub print_log_test_result_count {
-  my ($test_name, $test_title, $result, $print_name, $sig_figs) = @_;
-  print_log_test_result($test_name, $test_title, $result, 'count',
-                        $print_name, PrintSize($result, $sig_figs));
-}
-
 
 # Report test results back to a server.
 # Netscape-internal now, will push to mozilla.org, ask
@@ -1599,12 +1510,11 @@ sub print_log_test_result_count {
 # perl-libwww-perl-5.53-3.noarch.rpm
 #
 sub send_results_to_server {
-    my ($value, $raw_data, $testname) = @_;
+    my ($value, $raw_data, $testname, $tbox) = @_;
 
     # Prepend raw data with cvs checkout date, performance
     # Use MOZ_CO_DATE, but with same graph/collect.cgi format. (server)
     my $data_plus_co_time = "MOZ_CO_DATE=$co_time_str\t$raw_data";
-    my $tbox = get_graph_tbox_name();
 
     my $tmpurl = "http://$Settings::results_server/graph/collect.cgi";
     $tmpurl .= "?value=$value&data=$data_plus_co_time&testname=$testname&tbox=$tbox";
@@ -1631,8 +1541,8 @@ sub send_results_to_server {
             warn "Failed to submit startup results: $@";
             print_log "send_results_to_server() failed.\n";
         } else {
-            print_log "Results submitted to server: \n" .
-              $res->status_line . "\n" . $res->content . "\n";
+            print "Results submitted to server: \n",
+            $res->status_line, "\n", $res->content, "\n";
             print_log "send_results_to_server() succeeded.\n";
         }
     }
@@ -1686,7 +1596,7 @@ sub run_all_tests {
         } else {
             $args = ["$binary_dir/regxpcom"];
         }
-        AliveTest("regxpcom", $binary_dir, $args,
+        AliveTest("regxpcom", $build_dir, $args,
                   $Settings::RegxpcomTestTimeout);
     }
 
@@ -1789,8 +1699,7 @@ sub run_all_tests {
            $Settings::MailBloatTest          or
            $Settings::QATest                 or
            $Settings::BloatTest2             or
-           $Settings::BloatTest              or
-           $Settings::RenderPerformanceTest) {
+           $Settings::BloatTest) {
             
             # Chances are we will be timing these tests.  Bring gettime() into memory
             # by calling it once, before any tests run.
@@ -1803,15 +1712,6 @@ sub run_all_tests {
             # Set security prefs to allow us to close our own window,
             # pageloader test (and possibly other tests) needs this on.
             set_pref($pref_file, 'dom.allow_scripts_to_close_windows', 'true');
-
-            # Set security prefs to allow us to resize our windows.
-            # DHTML and Tgfx perf tests (and possibly other tests) need this off.
-            set_pref($pref_file, 'dom.disable_window_flip', 'false');
-
-            # Set prefs to allow us to move, resize, and raise/lower the
-            # current window. Tgfx needs this.
-            set_pref($pref_file, 'dom.disable_window_flip', 'false');
-            set_pref($pref_file, 'dom.disable_window_move_resize', 'false');
 
             # Suppress firefox's popup blocking
             if ($Settings::BinaryName =~ /^firefox/) {
@@ -1834,7 +1734,7 @@ sub run_all_tests {
     # Assume that we want to test modern skin for all tests.
     #
     if ($pref_file && $test_result eq 'success' and $Settings::UseMozillaProfile) { #XXX lame
-        if (system("\\grep -s general.skins.selectedSkin \"$pref_file\" > /dev/null")) {
+        if (system("\\grep -s general.skins.selectedSkin $pref_file > /dev/null")) {
             print_log "Setting general.skins.selectedSkin to modern/1.0\n";
             open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
             print PREFS "user_pref(\"general.skins.selectedSkin\", \"modern/1.0\");\n";
@@ -2037,16 +1937,22 @@ sub run_all_tests {
         if($open_time) {
             $test_result = 'success';
             
-            print_log_test_result_ms('xulwinopen',
-                                     'Best nav open time of 9 runs',
-                                     $open_time, 'Txul');
+            my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
+
+            print_log 'TinderboxPrint:';
+            print_log "<a title=\"Best nav open time of 9 runs\" href=\"http://$Settings::results_server/graph/query.cgi?testname=xulwinopen&tbox=" .
+                    ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$open_time\">" if ($Settings::TestsPhoneHome);
+            print_log 'Txul:' . $open_time . 'ms';
+            print_log '</a>' if ($Settings::TestsPhoneHome);
+            print_log "\n";
 
             # Pull out samples data from log.
             my $raw_data = extract_token_from_file($binary_log, "openingTimes", "=");
             chomp($raw_data);
 
             if($Settings::TestsPhoneHome) {
-                send_results_to_server($open_time, $raw_data, "xulwinopen");
+                send_results_to_server($open_time, $raw_data,
+                                       "xulwinopen", ::hostname());
             }
         } else {
             $test_result = 'testfailed';
@@ -2075,54 +1981,19 @@ sub run_all_tests {
                                             $app_args,
                                             "file://$startup_build_dir/../startup-test.html");
     }
-
-    if ($Settings::NeckoUnitTest and $test_result eq 'success') {
-        $test_result = FileBasedTest("Necko unit tests",
-                                     $build_dir, $binary_dir,
-                                     ["necko_unit_tests/test_all.sh"],
-                                     $Settings::NeckoUnitTestTimeout,
-                                     "FAIL", 0, 0);
-    }
-
-    # run Trender
-    if ($Settings::RenderPerformanceTest and $test_result eq 'success') {
-      # Trender wants to be run in offline mode
-      set_pref($pref_file, 'browser.offline', 'true');
-
-      # And needs popups suppressed, because some sites have popups
-      if ($Settings::BinaryName =~ /^firefox/) {
-        set_pref($pref_file, 'privacy.popups.firstTime', 'true');
-        set_pref($pref_file, 'privacy.popups.showBrowserMessage', 'false');
-        set_pref($pref_file, 'dom.disable_open_during_load', 'true');
-      }
-
-      $test_result = RenderPerformanceTest("RenderPerformanceTest",
-                                           $build_dir, $binary_dir,
-                                           [$binary, "-P", $Settings::MozProfileName]);
-
-      # Undo pref changes
-      set_pref($pref_file, 'browser.offline', 'false');
-      if ($Settings::BinaryName =~ /^firefox/) {
-        set_pref($pref_file, 'privacy.popups.firstTime', 'false');
-        set_pref($pref_file, 'privacy.popups.showBrowserMessage', 'true');
-        set_pref($pref_file, 'dom.disable_open_during_load', 'false');
-      }
-    }
-
     return $test_result;
 }
 
 sub set_pref {
     my ($pref_file, $pref, $value) = @_;
-    # Make sure we get rid of whatever value was there,
-    # to allow for resetting prefs
-    system ("\\grep -v \\\"$pref\\\" '$pref_file' > '$pref_file.new'");
-    File::Copy::move("$pref_file.new", "$pref_file") or die("move: $!\n");
-
-    print_log "Setting $pref to $value\n";
-    open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
-    print PREFS "user_pref(\"$pref\", $value);\n";
-    close PREFS;
+    if (system("\\grep -s $pref $pref_file > /dev/null")) {
+        print_log "Setting $pref to $value\n";
+        open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
+        print PREFS "user_pref(\"$pref\", $value);\n";
+        close PREFS;
+    } else {
+        print_log "Already set $pref\n";
+    }
 }
 
 
@@ -2311,21 +2182,25 @@ sub LayoutPerformanceTest {
     }
     
     if($layout_test_result eq 'success') {
+      my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
+
       my $tp_prefix = "";
       if($Settings::BinaryName eq "TestGtkEmbed") {
         $tp_prefix = "m";
       }
       
-      print_log_test_result_ms('pageload',
-                               'Avg of the median per url pageload time',
-                               $layout_time, 'Tp');
+      print_log "TinderboxPrint:";
+      print_log "<a title=\"Avg of the median per url pageload time\" href=\"http://$Settings::results_server/graph/query.cgi?testname=pageload&tbox=" .  ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$layout_time\">" if ($Settings::TestsPhoneHome); 
+      print_log $tp_prefix . "Tp:$layout_time" . "ms";
+      print_log "</a>" if ($Settings::TestsPhoneHome);
+      print_log "\n";
       
       # Pull out detail data from log.
       my $raw_data = extract_token_from_file($binary_log, "_x_x_mozilla_page_load_details", ",");
       chomp($raw_data);
       
       if($Settings::TestsPhoneHome) {
-        send_results_to_server($layout_time, $raw_data, "pageload");
+        send_results_to_server($layout_time, $raw_data, "pageload", ::hostname());
       }
     }
 
@@ -2358,101 +2233,22 @@ sub DHTMLPerformanceTest {
     }
     
     if($dhtml_test_result eq 'success') {
-      print_log_test_result_ms('dhtml', 'DHTML time',
-                               $dhtml_time, 'Tdhtml');
+      my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
+
       if ($Settings::TestsPhoneHome) {
-        send_results_to_server($dhtml_time, "--", "dhtml");
+        print_log "TinderboxPrint:" .
+          "<a title=\"DHTML time\" href=\"http://$Settings::results_server/graph/query.cgi?testname=dhtml&tbox=" .
+          ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$dhtml_time\">Tdhtml:" . $dhtml_time . "ms</a>\n";
+        send_results_to_server($dhtml_time, "--", "dhtml", ::hostname());
+      } else {
+        print_log "TinderboxPrint:" .
+          "<abbr title=\"DHTML time\">Tdhtml:" . $dhtml_time . "ms</abbr>\n";
       }      
     }
 
     return $dhtml_test_result;
 }
 
-
-#
-# Trender test
-#
-
-sub RenderPerformanceTest {
-  my ($test_name, $build_dir, $binary_dir, $args) = @_;
-  my $render_test_result;
-  my $render_time;
-  my $render_gfx_time;
-  my $render_details;
-  my $binary_log = "$build_dir/$test_name.log";
-  my $url;
-
-  # Find Trender.xml
-  if (-f "/cygdrive/c/builds/tinderbox/Trender/Trender.xml") {
-    $url = "file:///C:/builds/tinderbox/Trender/Trender.xml#tinderbox=1";
-  } elsif (-f "/builds/tinderbox/Trender/Trender.xml") {
-    $url = "file:///builds/tinderbox/Trender/Trender.xml#tinderbox=1";
-  } else {
-    print_log "TinderboxPrint:Trender:[NOTFOUND]\n";
-    return 'testfailed';
-  }
-
-  # Settle OS.
-  run_system_cmd("sync; sleep 5", 35);
-
-  $render_test_result = FileBasedTest($test_name, $build_dir, $binary_dir,
-                                      [@$args, $url],
-                                      $Settings::RenderTestTimeout,
-                                      "_x_x_mozilla_trender", 1, 1);
-
-  # double check to make sure the test didn't really succeed
-  # even though the scripts think it failed.  Prevents various breakage
-  # (e.g. when a timeout happens on the mac, killing the process returns
-  # a bogus result code).  FileBasedTest checks the status code
-  # before the token
-  my $found_token = file_has_token($binary_log, "_x_x_mozilla_trender");
-  if ($found_token) {
-    $render_test_result = 'success';
-  }
-
-  if ($render_test_result eq 'testfailed') {
-    print_log "TinderboxPrint:Trender:[FAILED]\n";
-    return 'testfailed';
-  }
-
-  $render_time = extract_token_from_file($binary_log, "_x_x_mozilla_trender", ",");
-  if ($render_time) {
-    chomp($render_time);
-    my @times = split(',', $render_time);
-    $render_time = $times[0];
-  }
-  $render_time =~ s/[\r\n]//g;
-
-  $render_gfx_time = extract_token_from_file($binary_log, "_x_x_mozilla_trender_gfx", ",");
-  if ($render_gfx_time) {
-    chomp($render_gfx_time);
-    my @times = split(',', $render_gfx_time);
-    $render_gfx_time = $times[0];
-  }
-  $render_gfx_time =~ s/[\r\n]//g;
-
-  if (!$render_time || !$render_gfx_time) {
-    print_log "TinderboxPrint:Trender:[FAILED]\n";
-    return 'testfailed';
-  }
-
-  print_log_test_result_ms('render', 'Avg page render time in ms',
-                           $render_time, 'Tr');
-
-  print_log_test_result_ms('rendergfx', 'Avg gfx render time in ms',
-                           $render_gfx_time, 'Tgfx');
-
-  if($Settings::TestsPhoneHome) {
-    # Pull out detail data from log; this includes results for all sets
-    my $raw_data = extract_token_from_file($binary_log, "_x_x_mozilla_trender_details", ",");
-    chomp($raw_data);
-
-    send_results_to_server($render_time, $raw_data, "render");
-    send_results_to_server($render_gfx_time, $raw_data, "rendergfx");
-  }
-
-  return 'success';
-}
 
 #
 # Codesize test.  Needs:  cvs checkout mozilla/tools/codesighs
@@ -2549,12 +2345,14 @@ sub CodesizeTest {
     #
     my $z_data = extract_token_from_file("$build_dir/$test_log", "__codesize", ":");
     chomp($z_data);
-    print_log_test_result_bytes($graphName,
-                                "$testNameString: Code + data size of all shared libs & executables",
-                                $z_data, $zee, 4);
-
+    my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
+    my $z_data_string = PrintSize($z_data,4);
+    print_log "TinderboxPrint:" .
+      "<a title=\"$testNameString: Code + data size of all shared libs & executables\" href=\"http://$Settings::results_server/graph/query.cgi?testname=$graphName&tbox=" .
+        ::hostname() . "&autoscale=1&units=bytes&days=7&avg=0&showpoint=$time,$z_data\">$zee:$z_data_string" . "B</a>\n";
+    
     if($Settings::TestsPhoneHome) {
-      send_results_to_server($z_data, "--", $graphName);
+      send_results_to_server($z_data, "--", $graphName, ::hostname());
     }
     
     my $zdiff_data = extract_token_from_file("$build_dir/$test_log", "__codesizeDiff", ":");
@@ -2724,13 +2522,19 @@ sub StartupPerformanceTest {
       $ts_prefix = "m";
     }
 
-    print_log_test_result_ms('startup', 'Best startup time out of 10 startups',
-                             $min_startuptime, $ts_prefix . 'Ts');
+    my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
+    print_log "\n\nTinderboxPrint:";
+    print_log "<a title=\"Best startup time out of 10 startups\"href=\"http://$Settings::results_server/graph/query.cgi?testname=startup&tbox="
+      . ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$min_startuptime\">" if ($Settings::TestsPhoneHome);
+    print_log $ts_prefix . 'Ts:' . $min_startuptime . 'ms';
+    print_log '</a>' if ($Settings::TestsPhoneHome);
+    print_log "\n\n";
     
     # Report data back to server
     if($Settings::TestsPhoneHome) {
       print_log "phonehome = 1\n";
-      send_results_to_server($min_startuptime, $times_string, "startup");
+      send_results_to_server($min_startuptime, $times_string,
+                             "startup", ::hostname());
     } 
   }
 
@@ -2861,13 +2665,15 @@ sub BloatTest {
       $embed_prefix = "m";
     }
 
-    print_log_test_result_bytes($leaks_testname, $leaks_testname_label, 
-                                $leaks,
-                                $label_prefix . $embed_prefix . 'RLk', 3);
-
     if($Settings::TestsPhoneHome) {
+        # Generate and print tbox output strings for leak, bloat.
+        my $leaks_string = "\n\nTinderboxPrint:<a title=\"" . $leaks_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $leaks_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $label_prefix . $embed_prefix . "RLk:" . PrintSize($leaks,3) . "B</a>\n\n";
+        print_log $leaks_string;
+
         # Report numbers to server.
-        send_results_to_server($leaks, "--", $leaks_testname);
+        send_results_to_server($leaks, "--", $leaks_testname, ::hostname() );
+    } else {
+        print_log "TinderboxPrint:" . $label_prefix . $embed_prefix . "RLk:<a title=\"" . $leaks_testname_label . "\">" . PrintSize($leaks,3) . "B</a>\n\n";
     }
 
     return 'success';
@@ -3078,27 +2884,28 @@ sub BloatTest2 {
       $embed_prefix = "m";
     }
 
-    my $leaks_testname       = "trace_malloc_leaks";
-    print_log_test_result_bytes($leaks_testname, $leaks_testname_label,
-                                $newstats->{'leaks'},
-                                $embed_prefix . 'Lk', 3);
+    if($Settings::TestsPhoneHome) {
+        my $leaks_testname       = "trace_malloc_leaks";
+        my $leaks_string = "\n\nTinderboxPrint:<a title=\"" . $leaks_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $leaks_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $embed_prefix . "Lk:" . PrintSize($newstats->{'leaks'},3) . "B</a>\n\n";
+        print_log $leaks_string;
 
-    my $maxheap_testname       = "trace_malloc_maxheap";
-    print_log_test_result_bytes($maxheap_testname,
-                                $maxheap_testname_label,
-                                $newstats->{'mhs'},
-                                $embed_prefix . 'MH', 3);
+        my $maxheap_testname       = "trace_malloc_maxheap";
+        my $maxheap_string = "\n\nTinderboxPrint:<a title=\"" . $maxheap_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $maxheap_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $embed_prefix . "MH:" . PrintSize($newstats->{'mhs'},3) . "B</a>\n\n";
+        print_log $maxheap_string;
 
-    my $allocs_testname       = "trace_malloc_allocs";
-    print_log_test_result_count($allocs_testname, $allocs_testname_label,
-                                $newstats->{'allocs'},
-                                $embed_prefix . 'A', 3);
+        my $allocs_testname       = "trace_malloc_allocs";
+        my $allocs_string = "\n\nTinderboxPrint:<a title=\"" . $allocs_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $allocs_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $embed_prefix . "A:" . PrintSize($newstats->{'allocs'},3) . "</a>\n\n";
+        print_log $allocs_string;
 
-    if ($Settings::TestsPhoneHome) {
         # Send results to server.
-        send_results_to_server($newstats->{'leaks'},  "--", $leaks_testname);
-        send_results_to_server($newstats->{'mhs'},    "--", $maxheap_testname);
-        send_results_to_server($newstats->{'allocs'}, "--", $allocs_testname);
+        send_results_to_server($newstats->{'leaks'},  "--", $leaks_testname,   ::hostname() );
+        send_results_to_server($newstats->{'mhs'},    "--", $maxheap_testname, ::hostname() );
+        send_results_to_server($newstats->{'allocs'}, "--", $allocs_testname,  ::hostname() );
+
+    } else {
+        print_log "TinderboxPrint:<abbr title=\"$leaks_testname_label\">Lk</abbr>:" . PrintSize($newstats->{'leaks'},3) . "B\n";
+        print_log "TinderboxPrint:<abbr title=\"$maxheap_testname_label\">MH</abbr>:" . PrintSize($newstats->{'mhs'},3) . "B\n";
+        print_log "TinderboxPrint:<abbr title=\"$allocs_testname_label\">A</abbr>:" . PrintSize($newstats->{'allocs'},3) . "\n";
     }
 
     if (-e $old_sdleak_log && -e $sdleak_log) {

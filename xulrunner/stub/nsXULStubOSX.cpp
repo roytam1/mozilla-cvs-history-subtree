@@ -41,6 +41,7 @@
 #include <CFBundle.h>
 #include <Processes.h>
 
+#include "nsBuildID.h"
 #include "nsXPCOMGlue.h"
 #include "nsINIParser.h"
 

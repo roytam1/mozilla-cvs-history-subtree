@@ -101,6 +101,7 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
 		                   void *wincx)
 {
     SECStatus        rv;
+    SECOidTag        algid;
     SECItem          sig;
 
     if ( !pubKey || !sd ) {
@@ -113,8 +114,9 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
     /* convert sig->len from bit counts to byte count. */
     DER_ConvertBitString(&sig);
 
-    rv = VFY_VerifyDataWithAlgorithmID(sd->data.data, sd->data.len, pubKey, 
-			&sig, &sd->signatureAlgorithm, NULL, wincx);
+    algid = SECOID_GetAlgorithmTag(&sd->signatureAlgorithm);
+    rv = VFY_VerifyData(sd->data.data, sd->data.len, pubKey, &sig,
+			algid, wincx);
 
     return rv ? SECFailure : SECSuccess;
 }
@@ -727,13 +729,6 @@ cert_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 	    namesCount += subjectNameListLen;
 	    namesList = cert_CombineNamesLists(namesList, subjectNameList);
 	}
-
-        /* check if the cert has an unsupported critical extension */
-	if ( subjectCert->options.bits.hasUnsupportedCriticalExt ) {
-	    PORT_SetError(SEC_ERROR_UNKNOWN_CRITICAL_EXTENSION);
-	    LOG_ERROR_OR_EXIT(log,subjectCert,count,0);
-	}
-
 	/* find the certificate of the issuer */
 	issuerCert = CERT_FindCertIssuer(subjectCert, t, certUsage);
 	if ( ! issuerCert ) {

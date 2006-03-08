@@ -21,7 +21,6 @@
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
-   -   Dan Mosedale <dan.mosedale@oracle.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,84 +46,14 @@
     <binding id="calendar-decorated-week-view" extends="chrome://calendar/content/calendar-decorated-base.xml#calendar-decorated-base-view">
         <content>
              <xul:vbox anonid="main-box" flex="1">
-                <xul:calendar-navigation-buttons anonid="nav-control"/>
+                <xul:calendar-navigation-buttons anonid="nav-control" flex="1"/>
                 <xul:box style="overflow: auto;" flex="1">
-                    <xul:calendar-multiday-view anonid="view-element" flex="1" orient="vertical" xbl:inherits="context,item-context"/>
+                    <xul:calendar-multiday-view anonid="view-element" flex="1" orient="vertical" xbl:inherits="context"/>
                 </xul:box>
             </xul:vbox>
         </content>
 
         <implementation implements="calIDecoratedView">
-	    <constructor><![CDATA[
-                var pb2 = Components.classes
-                          ["@mozilla.org/preferences-service;1"]
-                          .getService(Components.interfaces.nsIPrefBranch2);
-
-                // get default start/end times from prefs and set on the
-                // view.  if we hit an error (eg because sunbird's pref
-                // infrastructure hasn't created the pref yet), the
-                // defaults will do
-                try {
-                    this.mStartMin = pb2.getIntPref(
-                                     "calendar.view.defaultstarthour") * 60;
-                    this.mEndMin = pb2.getIntPref(
-                                   "calendar.view.defaultendhour") * 60;
-                } catch (ex) {
-                }
-
-                var viewElement = document.getAnonymousElementByAttribute(
-                                  this, "anonid", "view-element");
-                viewElement.setStartEndMinutes(this.mStartMin,
-                                               this.mEndMin);
-
-                // add a preference observer to monitor changes
-                pb2.addObserver("calendar.view.", this.mPrefObserver, false);
-                return;
-            ]]></constructor>
-
-            <destructor><![CDATA[
-                var pb2 = Components.classes
-                          ["@mozilla.org/preferences-service;1"]
-                          .getService(Components.interfaces.nsIPrefBranch2);
-                pb2.removeObserver("calendar.view.", this.mPrefObserver);
-                return;
-            ]]></destructor>
-
-            <field name="mStartMin">8 * 60</field>
-            <field name="mEndMin">17 * 60</field>
-
-            <field name="mPrefObserver"><![CDATA[
-            ({ calView: this,
-               observe: function calDecWeekViewPrefChange(subj, topic, pref) {
-
-                   subj.QueryInterface(Components.interfaces.nsIPrefBranch2);
-
-                   switch (pref) {
-
-                   case "calendar.view.defaultstarthour":
-                       this.calView.mStartMin = subj.getIntPref(pref) * 60;
-                       var viewElem = document.getAnonymousElementByAttribute(
-                                      this.calView, "anonid", "view-element");
-                       viewElem.setStartEndMinutes(this.calView.mStartMin,
-                                                   this.calView.mEndMin);
-		       break;
-
-                   case "calendar.view.defaultendhour":
-                       this.calView.mEndMin = subj.getIntPref(pref) * 60;
-                       viewElem = document.getAnonymousElementByAttribute(
-                                  this.calView, "anonid", "view-element");
-                       viewElem.setStartEndMinutes(this.calView.mStartMin, 
-                                                   this.calView.mEndMin);
-		       break;
-
-                   default:
-                       break;
-                   }
-                   return;
-               }
-            })
-	    ]]></field>
-
             <property name="observerID">
                 <getter><![CDATA[
                     return "week-view-observer";
@@ -163,7 +92,7 @@
 
                     document.getAnonymousElementByAttribute(this, "anonid", "view-element").setDateRange(d1, d2);
 
-                    viewElement.selectedDay = aDate.getInTimezone(viewElement.timezone);
+                    viewElement.selectedDay = aDate;
                     if (this.mWorkdaysOnly) {
                         this.removeNonWorkdays();
                     }
@@ -183,23 +112,18 @@
                 <parameter name="aDate"/>
                 <body><![CDATA[
                     var nameArray = new Array();
-                    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                                        .getService(Components.interfaces.nsIStringBundleService);
-                    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
                     for (var i = -2; i < 3; i++) {
                         var date = aDate.clone();
                         // Add/subtract i number of weeks
                         date.day = aDate.day + i*7;
                         date.normalize();
 
-                        var weekformatter =
-                            Components.classes["@mozilla.org/calendar/weektitle-service;1"]
-                                      .getService(Components.interfaces.calIWeekTitleService);
-                        var weekno = weekformatter.getWeekTitle(date);
+                        //XXX This isn't quite right, but it's close.  We need
+                        //    to get some better dateUtils into calDateTime
+                        var weekno = Math.floor ((date.yearday - date.weekday) / 7);
 
-                        var weekTitle = 
-                            props.formatStringFromName('WeekTitle', [weekno], 1);
-                        nameArray.push(weekTitle);
+                        //XXX l10n love needed
+                        nameArray.push("Week " + weekno);
                     }
                     document.getAnonymousElementByAttribute(this, "anonid", "nav-control").setNames(nameArray);
                 ]]></body>

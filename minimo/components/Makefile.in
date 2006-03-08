@@ -43,8 +43,4 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS = phone softkb ssr device
 
-ifdef WINCE
-DIRS += ssl
-endif
-
 include $(topsrcdir)/config/rules.mk

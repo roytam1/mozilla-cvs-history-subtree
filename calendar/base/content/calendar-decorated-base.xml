@@ -46,7 +46,6 @@
     <binding id="calendar-navigation-buttons">
         <content>
             <xul:hbox anonid="controls-box" flex="1">
-                <xul:spacer flex="1"/>
                 <xul:vbox class="previous-button-box">
                     <xul:spacer flex="1" />
                     <xul:image direction="prev"
@@ -82,7 +81,6 @@
                                onclick="moveView(1)"/>
                     <xul:spacer flex="1" />
                 </xul:vbox>
-                <xul:spacer flex="1"/>
             </xul:hbox>
         </content>
 
@@ -132,12 +130,6 @@
                 ]]></setter>
             </property>
 
-            <property name="selectedItem">
-                <getter><![CDATA[
-                    return document.getAnonymousElementByAttribute(this, "anonid", "view-element").selectedItem;
-                ]]></getter>
-            </property>
-
             <property name="selectedDay">
                 <getter><![CDATA[
                     return document.getAnonymousElementByAttribute(this, "anonid", "view-element").selectedDay;
@@ -168,15 +160,6 @@
                 ]]></getter>
                 <setter><![CDATA[
                     document.getAnonymousElementByAttribute(this, "anonid", "view-element").displayCalendar = val;
-                ]]></setter>
-            </property>
-
-            <property name="timezone">
-                <getter><![CDATA[
-                    return document.getAnonymousElementByAttribute(this, "anonid", "view-element").timezone;
-                ]]></getter>
-                <setter><![CDATA[
-                    document.getAnonymousElementByAttribute(this, "anonid", "view-element").timezone = val;
                 ]]></setter>
             </property>
 

@@ -56,17 +56,11 @@ interface calIAttendee : nsISupports
   attribute AUTF8String commonName;
   attribute boolean     rsvp;
 
-  /** 
-   * If true, indicates that this is not a standard attendee, but rather this
-   * icalProperty corresponds to the organizer of the event (rfc2445 Sec 4.8.4.3)
-   */
-  attribute boolean isOrganizer;
-
   /**
    * CHAIR
-   * REQ-PARTICIPANT
-   * OPT-PARTICIPANT
-   * NON-PARTICIPANT
+   * REQUIRED_PARTICIPANT
+   * OPTIONAL_PARTICIPANT
+   * NON_PARTICIPANT
    */
   attribute AUTF8String    role;
 
@@ -77,7 +71,7 @@ interface calIAttendee : nsISupports
    * TENTATIVE
    * DELEGATED
    * COMPLETED
-   * IN-PROCESS
+   * INPROCESS
    */
   attribute AUTF8String    participationStatus;
 

@@ -50,9 +50,8 @@
 #include "nsIXULAppInstall.h"
 #include "nsCOMPtr.h"
 #include "nsMemory.h"
+#include "nsNativeCharsetUtils.h"
 #include "nsBuildID.h"
-#include "nsStringAPI.h"
-#include "nsServiceManagerUtils.h"
 #include "plstr.h"
 #include "prprf.h"
 #include "prenv.h"
@@ -141,12 +140,6 @@ static PRBool CheckMaxVersion(const char *versionStr)
 
 /**
  * Parse application data.
- *
- * @returns 0, if the application initialization file was parsed successfully
- *            and an appropriate Gecko runtime was found.
- *          1, if the ini file was missing required fields or an appropriate
- *            Gecko runtime wasn't found.
- *          2, if the specified ini file could not be read.
  */
 static int LoadAppData(const char* appDataFile, nsXREAppData* aResult,
                        nsCString& vendor, nsCString& name, nsCString& version,
@@ -179,7 +172,7 @@ static int LoadAppData(const char* appDataFile, nsXREAppData* aResult,
   // TODO: If these version checks fail, then look for a compatible XULRunner
   //       version on the system, and launch it instead.
 
-  nsCString gkVersion;
+  nsCAutoString gkVersion;
   rv = parser.GetString("Gecko", "MinVersion", gkVersion);
 
   if (NS_FAILED(rv) || !CheckMinVersion(gkVersion.get())) {
@@ -317,7 +310,7 @@ InstallXULApp(nsIFile* aXULRunnerDir,
 {
   nsCOMPtr<nsILocalFile> appLocation;
   nsCOMPtr<nsILocalFile> installTo;
-  nsString leafName;
+  nsAutoString leafName;
 
   nsresult rv = XRE_GetFileFromPath(aAppLocation, getter_AddRefs(appLocation));
   if (NS_FAILED(rv))
@@ -330,8 +323,7 @@ InstallXULApp(nsIFile* aXULRunnerDir,
   }
 
   if (aLeafName)
-    NS_CStringToUTF16(nsDependentCString(aLeafName),
-                      NS_CSTRING_ENCODING_NATIVE_FILESYSTEM, leafName);
+    NS_CopyNativeToUnicode(nsDependentCString(aLeafName), leafName);
 
   rv = NS_InitXPCOM2(nsnull, aXULRunnerDir, nsnull);
   if (NS_FAILED(rv))
@@ -356,13 +348,6 @@ InstallXULApp(nsIFile* aXULRunnerDir,
 
   return 0;
 }
-
-static const GREProperty kGREProperties[] = {
-  { "xulrunner", "true" }
-#ifdef MOZ_JAVAXPCOM
-  , { "javaxpcom", "1" }
-#endif
-};
 
 int main(int argc, char* argv[])
 {
@@ -394,9 +379,7 @@ int main(int argc, char* argv[])
       if (NS_FAILED(rv))
         return 2;
 
-      return RegisterXULRunner(registerGlobal, regDir,
-                               kGREProperties,
-                               NS_ARRAY_LENGTH(kGREProperties)) ? 0 : 2;
+      return RegisterXULRunner(registerGlobal, regDir) ? 0 : 2;
     }
 
     registerGlobal = IsArg(argv[1], "unregister-global");
@@ -422,16 +405,11 @@ int main(int argc, char* argv[])
       }
 
       char path[MAXPATHLEN];
-      static const GREVersionRange vr = {
+      const GREVersionRange vr = {
         argv[2], PR_TRUE,
         argv[2], PR_TRUE
       };
-      static const GREProperty kProperties[] = {
-        { "xulrunner", "true" }
-      };
-
-      nsresult rv = GRE_GetGREPathWithProperties(&vr, 1, kProperties,
-                                                 NS_ARRAY_LENGTH(kProperties),
+      nsresult rv = GRE_GetGREPathWithProperties(&vr, 1, nsnull, 0,
                                                  path, sizeof(path));
       if (NS_FAILED(rv))
         return 1;
@@ -511,7 +489,7 @@ int main(int argc, char* argv[])
     PR_SetEnv(kAppEnv);
   }
 
-  nsCString vendor, name, version, buildID, appID, copyright;
+  nsCAutoString vendor, name, version, buildID, appID, copyright;
 
   nsXREAppData appData = { sizeof(nsXREAppData), 0 };
 
@@ -519,10 +497,6 @@ int main(int argc, char* argv[])
                        vendor, name, version, buildID, appID, copyright);
   if (!rv)
     rv = XRE_main(argc, argv, &appData);
-  else if (rv == 2)
-    Output(PR_TRUE, "Error: Unrecognized option specified or couldn't read "
-                    "the application initialization file.\n\n"
-                    "Try `" XULRUNNER_PROGNAME " --help' for more information.\n");
 
   NS_IF_RELEASE(appData.directory);
 

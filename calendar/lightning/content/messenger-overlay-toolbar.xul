@@ -40,34 +40,23 @@
    - ***** END LICENSE BLOCK ***** -->
 
 <?xml-stylesheet href="chrome://calendar/skin/calendar-toolbar.css" type="text/css"?>
-<?xml-stylesheet href="chrome://lightning/skin/lightning.css" type="text/css"?>
 
 <!DOCTYPE overlay 
 [
   <!ENTITY % dtd1 SYSTEM "chrome://lightning/locale/lightning.dtd" > %dtd1;
   <!ENTITY % dtd2 SYSTEM "chrome://calendar/locale/calendar.dtd" > %dtd2;
-  <!ENTITY % dtd3 SYSTEM "chrome://calendar/locale/menuOverlay.dtd" > %dtd3;
 ]>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-  <stringbundleset id="stringbundleset">
-    <stringbundle id="bundle_calendar" src="chrome://calendar/locale/calendar.properties"/>
-  </stringbundleset>
-
   <script type="application/x-javascript" 
           src="chrome://calendar/content/calendar-item-editing.js"/>
-  <script type="application/x-javascript" 
-          src="chrome://lightning/content/calendar-management.js"/>
 
   <menupopup id="menu_NewPopup">
-    <menuseparator />
-    <menuitem id="ltnNewEvent" label="&lightning.menupopup.new.event.label;" 
+    <menuitem id="ltnNewEvent" label="&event.title.new;" 
               oncommand="createEventWithDialog(ltnSelectedCalendar());"/>
-    <menuitem id="ltnNewTask" label="&lightning.menupopup.new.task.label;" 
+    <menuitem id="ltnNewTask" label="&todo.title.new;" 
               oncommand="createTodoWithDialog(ltnSelectedCalendar());"/>
-    <menuitem id="ltnNewCalendar" label="&lightning.menupopup.new.calendar.label;" 
-              oncommand="ltnNewCalendar();"/>
   </menupopup>
 
   <menubar id="mail-menubar">
@@ -76,25 +65,13 @@
       <menupopup id="ltncalendarMenuPopup">
         <menuitem id="ltnChangeViewDay" 
                   label="&lightning.toolbar.dayview.label;" 
-                  oncommand="showCalendarView('day')"/>
+                  oncommand="switchView('day')"/>
         <menuitem id="ltnChangeViewWeek" 
                   label="&lightning.toolbar.weekview.label;" 
-                  oncommand="showCalendarView('week')"/>
+                  oncommand="switchView('week')"/>
         <menuitem id="ltnChangeViewMonth" 
                   label="&lightning.toolbar.monthview.label;" 
-                  oncommand="showCalendarView('month')"/>
-        <menuseparator/>
-        <menuitem id="ltnGoToToday" 
-                  label="&calendar.context.gototoday.label;" 
-                  oncommand="goToToday()"/>
-        <menuseparator/>
-        <menuitem id="calendar-import-menu"
-                  label="&calendar.import.calendar;"
-                  accesskey="&calendar.import.accesskey;"
-                  observes="import_command"/>
-        <menuitem id="calendar-export-menu"
-                  label="&calendar.export.calendar;"
-                  observes="export_command"/>
+                  oncommand="switchView('month')"/>
       </menupopup>
     </menu>
   </menubar>
@@ -114,22 +91,17 @@
                    class="cal-toolbarbutton-1" 
                    label="&calendar.weekview.button.label;" 
                    tooltiptext="&calendar.weekview.button.tooltip;" 
-                   oncommand="showCalendarView('week')"/>
+                   oncommand="switchView('week')"/>
     <toolbarbutton id="calendar-month-view-button" 
                    class="cal-toolbarbutton-1" 
                    label="&calendar.monthview.button.label;" 
                    tooltiptext="&calendar.monthview.button.tooltip;" 
-                   oncommand="showCalendarView('month')"/>
+                   oncommand="switchView('month')"/>
     <toolbarbutton id="calendar-day-view-button" 
                    class="cal-toolbarbutton-1" 
                    label="&calendar.dayview.button.label;" 
                    tooltiptext="&calendar.dayview.button.tooltip;" 
-                   oncommand="showCalendarView('day')"/>
-    <toolbarbutton id="calendar-go-to-today-button" 
-                   class="cal-toolbarbutton-1" 
-                   label="&calendar.gototoday.button.label;" 
-                   tooltiptext="&calendar.gototoday.button.tooltip;" 
-                   oncommand="goToToday()"/>
+                   oncommand="switchView('day')"/>
   </toolbarpalette>
 
 </overlay>

@@ -1189,7 +1189,7 @@ function getAddressBookDatabase( bookId )
 
 /***** initializeContactsArray
 * METHODS
-*   initializeContactsArray:    initializes the contacts with any
+*   initializeContactsArray:    initalizes the contacts with any
 *                               existing contacts attached to the
 *                               event  
 *

@@ -40,14 +40,12 @@
 
 #include "nscore.h"
 class nsIFile;
-struct GREProperty;
 
 /**
  * @return PR_TRUE on success
  */
 NS_HIDDEN_(PRBool)
-RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
-                  const GREProperty *aProperties, PRUint32 aPropertiesLen);
+RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation);
 
 NS_HIDDEN_(void)
 UnregisterXULRunner(PRBool aUnregisterGlobally, nsIFile* aLocation);

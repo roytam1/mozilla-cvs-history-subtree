@@ -15,20 +15,13 @@
 <!-- Privacy pane -->
 
 <!ENTITY sanitizeButton.label        "Sanitize All">
-<!ENTITY sanitizeBookmarks.label     "Delete all Bookmarks">
 
 <!-- ConnectionsDialogPane --> 
 
-<!ENTITY networkCaption.label        "Network">
 <!ENTITY proxyCaption.label          "HTTP Proxy Settings">
 <!ENTITY useproxyCheckbox.label      "Use Proxy">
 <!ENTITY proxyPortCaption.label      "Port">
 <!ENTITY proxyURL.label              "URL">
-
-<!ENTITY downloadMediaCaption.label  "Download Media">
-<!ENTITY useDownloadDir.label        "Use Download Folder">
-<!ENTITY dontAskForLaunch.label      "Enable Automatic File Save">
-<!ENTITY setSaveDirectory.label      "Set Save Directory">
 
 <!-- Home pane --> 
 
@@ -49,11 +42,6 @@
 <!ENTITY miscCaption.label           "Random Settings">
 <!ENTITY useSWKeyboard.label         "Use Software Keyboard">
 <!ENTITY dumpJSConsole.label         "Dump JS console at shutdown">
-<!ENTITY useDiskCache.label          "Use Disk Cache">
-<!ENTITY storeCacheStorageCard.label "Store Cache on Storage Card">
-<!ENTITY enablePreFetching.label     "Enable Pre-Fetching">
-<!ENTITY cacheSettings.label         "Cache">
-<!ENTITY cacheSize.label             "Cache Size (KB)">
 
 <!-- Summary Pane -->
 

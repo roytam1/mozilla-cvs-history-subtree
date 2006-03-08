@@ -56,91 +56,41 @@
           flex="1"
           collapsed="true"  >
           
-          <groupbox flex="1" class="box-floatoptions scrolling">
-
-            <caption label="&networkCaption.label;"/>
-
-            <vbox class="box-prefpadding" flex="1">  
-
-              <groupbox class='box-prefgroupitem' >
-
-                <caption label="&proxyCaption.label;"/>
- 
-                <vbox class="box-prefpadding">
-
+        <groupbox flex="1" class="box-floatoptions scrolling">
+            <caption label="&proxyCaption.label;"/>
+            <vbox class="box-prefpadding" flex="1">
+            
                 <checkbox id="UseProxy" tabindex="50"
                           label="&useproxyCheckbox.label;"
                           preference="network.proxy.type" 
                           onclick="syncPref(this)" 
-                          onsyncfrompreference="readProxyPref();" prefuitype="bool" 
+                          onsyncfrompreference="readProxyPref();"
                           onsynctopreference="writeProxyPref();"
                           />
 
-                       <grid>
-                         <columns>
-                           <column flex="1"/>
-                           <column flex="1"/>
-                         </columns>
-                         <rows>
-                           <row>
-                             <label value="&proxyURL.label;"></label>
-                             <label value="&proxyPortCaption.label;" />
-                           </row>
-                           <row>
-                             <textbox onchange="syncPref(this)"  tabindex="51"
+				
+                <groupbox class='box-prefgroupitem' >
+                    <caption label="&proxyURL.label; and &proxyPortCaption.label;"/>
+                    <hbox flex="1">
+                        <textbox onchange="syncPref(this)"  tabindex="51"
                                  flex="1" 
                                  style="margin:3px ! important;" 
                                  id="networkProxyHTTP"
                                  preference="network.proxy.http"
                                  />
                                  
-                             <textbox onchange="syncPref(this)" 
+                        <textbox onchange="syncPref(this)" 
                                  id="networkProxyHTTP_Port"  tabindex="52"
                                  size="5"  
                                  style="margin:3px ! important;"  
                                  preference="network.proxy.http_port" accessrule="connection-pane"
-                                 />    
-
-                           </row>
-                         </rows>
-                       </grid>
-                </vbox>
-              </groupbox>
-
-              <groupbox class='box-prefgroupitem' >
-
-                <caption label="&downloadMediaCaption.label;"/>
-
-                  <vbox class="box-prefpadding">
-
-                    <checkbox id="dontAskForLaunch" tabindex="53"
-	                              label="&dontAskForLaunch.label;"
-	                              preference="browser.download.progressDnlgDialog.dontAskForLaunch" 
-	                              onclick="syncPref(this)" />
-
-                    <hbox flex="1">
-
-                      <box onchange="syncPref(this)"  
-                                 id="downloadDir" onreadpref="downloadSetTextbox();" 
-                                 preference="browser.download.dir"
-                                 />          
-
-			    <textbox id="downloadDirDisplay" disabled="true"
-                               style="margin:3px ! important;"
-                               tabindex="54"
-                               flex="1" />                                          
-
-                      <button id="chooseFolderButton" tabindex="55"
-			                        class='box-prefgroupitem'
-			                        label="&setSaveDirectory.label;"
-			                        oncommand="syncPref(document.getElementById('downloadDir'));downloadChooseFolder();"/>
-
+                                 />              
+                                           
                     </hbox>		
-                  </vbox>
-              </groupbox>
+                </groupbox>
             </vbox>
         </groupbox>
     </hbox>
-</box>
 
+</box>
 </overlay>

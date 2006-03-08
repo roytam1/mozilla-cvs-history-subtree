@@ -30,19 +30,10 @@ $ReportStatus      = 1;      # Send results to server, or not
 $ReportFinalStatus = 1;      # Finer control over $ReportStatus.
 $UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 $BuildOnce         = 0;      # Build once, don't send results to server
-$ConfigureOnly     = 0;      # Configure, but do not build.
 $TestOnly          = 0;      # Only run tests, don't pull/build
 $BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 $SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-$SkipCheckout      = 0;      # Use to debug build process without checking out new source.
 $BuildLocales      = 0;      # Do l10n packaging?
-
-# Only used when $BuildLocales = 1
-%WGetFiles         = ();  # Pull files from the web, URL => Location
-$WGetTimeout       = 360; # Wget timeout, in seconds
-$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
-                          # which builds the "installers-<locale>" target.
-                          # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
 
 # Tests
 $CleanProfile             = 0;
@@ -68,15 +59,12 @@ $DHTMLPerformanceTest     = 0;  # Tdhtml
 $QATest                   = 0;  
 $XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
-$NeckoUnitTest            = 0;
-$RenderPerformanceTest    = 0;  # Tgfx
 @CompareLocaleDirs        = (); # Run compare-locales test on these directories
 # ("network","dom","toolkit","security/manager");
 $CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
                                 # aviary directory structure?
 
 $TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -110,9 +98,8 @@ $DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 $QATestTimeout                    = 1200;   # entire test, seconds
 $LayoutPerformanceTestPageTimeout = 30000; # each page, ms
 $StartupPerformanceTestTimeout    = 15;    # seconds
-$NeckoUnitTestTimeout             = 30;    # seconds
 $XULWindowOpenTestTimeout	      = 150;   # seconds
-$RenderTestTimeout                = 1800;  # seconds
+
 
 $MozConfigFileName = 'mozconfig';
 
@@ -176,7 +163,7 @@ $BinaryName = 'mozilla-bin';
 #
 # For embedding app, use:
 $EmbedBinaryName = 'TestGtkEmbed';
-$EmbedDistDir    = 'dist/bin';
+$EmbedDistDir    = 'dist/bin'
 
 
 $ShellOverride = ''; # Only used if the default shell is too stupid
@@ -188,17 +175,14 @@ $ShellOverride = '';
 
 # Release build options
 $ReleaseBuild  = 1;
-$clean_objdir = 1; # remove objdir when starting release cycle?
-$clean_srcdir = 1; # remove srcdir when starting release cycle?
 $LocaleProduct = "browser";
 $shiptalkback  = 1;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 $build_hour    = "8";
 $package_creation_path = "/xpinstall/packager";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
-$ssh_version   = "2";
+$ssh_version   = "1";
 $ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
@@ -211,15 +195,6 @@ $stub_installer = 1;
 $sea_installer = 1;
 $archive       = 0;
 $push_raw_xpis = 1;
-$update_package = 0;
-#$update_product = "Firefox";
-#$update_version = "trunk";
-#$update_platform = "WINNT_x86-msvc";
-#$update_hash = "md5";
-#$update_filehost = "ftp.mozilla.org";
-#$update_appv = "1.0+";
-#$update_extv = "1.0+";
-#$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before

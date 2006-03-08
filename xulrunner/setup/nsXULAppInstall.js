@@ -1,6 +1,4 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-#filter substitution
-#if 0
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,7 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-#endif
 
 const nsIFile             = Components.interfaces.nsIFile;
 const nsIINIParser        = Components.interfaces.nsIINIParser;
@@ -247,8 +244,7 @@ const AppInstall = {
       aDirectory = Components.classes["@mozilla.org/file/local;1"].
         createInstance(nsILocalFile);
       aDirectory.initWithPath("/usr/lib");
-      if (vendor)
-        aDirectory.append(vendor.toLowerCase());
+      aDirectory.append(vendor.toLowerCase());
 #endif
 #endif
     }
@@ -342,11 +338,7 @@ const AppInstall = {
     extractor.copyTo(aDirectory);
 #else
     extractor.copyTo(aDirectory);
-
-    var xulrunnerBinary = getDirectoryKey("XCurProcD");
-    xulrunnerBinary.append("xulrunner-stub@BIN_SUFFIX@");
-
-    xulrunnerBinary.copyTo(aDirectory, appName.toLowerCase() + "@BIN_SUFFIX@");
+    // Need to copy the XULRunner stub (which doesn't exist yet)
 #endif
   }
 };

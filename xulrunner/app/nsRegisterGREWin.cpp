@@ -37,15 +37,12 @@
 
 #include "nsRegisterGRE.h"
 
-#include "nsXPCOM.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 
 #include "nsBuildID.h"
 #include "nsAppRunner.h" // for MAXPATHLEN
-#include "nsStringAPI.h"
-#include "nsXPCOMGlue.h"
-#include "nsCOMPtr.h"
+#include "nsString.h"
 
 #include "prio.h"
 
@@ -56,8 +53,7 @@ static const char kRegFileGlobal[] = "global.reginfo";
 static const char kRegFileUser[] = "user.reginfo";
 
 static nsresult
-MakeVersionKey(HKEY root, const char* keyname, const nsCString &grehome,
-               const GREProperty *aProperties, PRUint32 aPropertiesLen)
+MakeVersionKey(HKEY root, const char* keyname, const nsCAutoString &grehome)
 {
   HKEY  subkey;
   DWORD disp;
@@ -70,34 +66,23 @@ MakeVersionKey(HKEY root, const char* keyname, const nsCString &grehome,
     return NS_ERROR_FAILURE;
   }
 
-  PRBool failed = PR_FALSE;
-  failed |= ::RegSetValueEx(subkey, "Version", NULL, REG_SZ,
-                            (BYTE*) GRE_BUILD_ID,
-                            sizeof(GRE_BUILD_ID) - 1) != ERROR_SUCCESS;
-  failed |= ::RegSetValueEx(subkey, "GreHome", NULL, REG_SZ,
-                            (BYTE*) grehome.get(),
-                            grehome.Length()) != ERROR_SUCCESS;
-
-  for (PRUint32 i = 0; i < aPropertiesLen; ++i) {
-    failed |= ::RegSetValueEx(subkey, aProperties[i].property, NULL, REG_SZ,
-                              (BYTE*) aProperties[i].value,
-                              strlen(aProperties[i].value)) != ERROR_SUCCESS;
+  if (::RegSetValueEx(subkey, "Version", NULL, REG_SZ, (BYTE*) GRE_BUILD_ID,
+                      sizeof(GRE_BUILD_ID) - 1) == ERROR_SUCCESS &&
+      ::RegSetValueEx(subkey, "GreHome", NULL, REG_SZ, (BYTE*) grehome.get(),
+                      grehome.Length()) == ERROR_SUCCESS) {
+    ::RegCloseKey(subkey);
+    return NS_OK;
   }
 
+  // we created a key but couldn't fill it properly: delete it
   ::RegCloseKey(subkey);
+  ::RegDeleteKey(root, keyname);
 
-  if (failed) {
-    // we created a key but couldn't fill it properly: delete it
-    ::RegDeleteKey(root, keyname);
-    return NS_ERROR_FAILURE;
-  }
-
-  return NS_OK;
+  return NS_ERROR_FAILURE;
 }
 
 int
-RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
-                  const GREProperty *aProperties, PRUint32 aPropertiesLen)
+RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation)
 {
   // Register ourself in the windows registry, and record what key we created
   // for future unregistration.
@@ -106,7 +91,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
   PRBool irv;
   int i;
 
-  nsCString greHome;
+  nsCAutoString greHome;
   rv = aLocation->GetNativePath(greHome);
   if (NS_FAILED(rv))
     return rv;
@@ -172,7 +157,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
   }
 
   strcpy(keyName, GRE_BUILD_ID);
-  rv = MakeVersionKey(rootKey, keyName, greHome, aProperties, aPropertiesLen);
+  rv = MakeVersionKey(rootKey, keyName, greHome);
   if (NS_SUCCEEDED(rv)) {
     PR_Write(fd, keyName, strlen(keyName));
     irv = PR_TRUE;
@@ -181,8 +166,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
   
   for (i = 0; i < 1000; ++i) {
     sprintf(keyName, GRE_BUILD_ID "_%i", i);
-    rv = MakeVersionKey(rootKey, keyName, greHome,
-                        aProperties, aPropertiesLen);
+    rv = MakeVersionKey(rootKey, keyName, greHome);
     if (NS_SUCCEEDED(rv)) {
       PR_Write(fd, keyName, strlen(keyName));
       irv = PR_TRUE;

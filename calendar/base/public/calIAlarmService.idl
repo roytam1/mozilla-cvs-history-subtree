@@ -38,7 +38,7 @@
 #include "nsISupports.idl"
 
 interface calIItemBase;
-interface calIDuration;
+interface calIDateTime;
 
 [scriptable,uuid(c9c97643-db45-4790-9441-05384ae5c272)]
 interface calIAlarmServiceObserver : nsISupports
@@ -50,23 +50,6 @@ interface calIAlarmServiceObserver : nsISupports
 [scriptable,uuid(03669cf3-bf4f-4692-97a1-cca891964a1d)]
 interface calIAlarmService : nsISupports
 {
-  /**
-   * This is the timezone that all-day events will be converted to in order to
-   * determine when their alarms should fire.
-   */
-  attribute AUTF8String timezone;
-
-  /**
-   * Cause the alarm service to start up, create a list of upcoming
-   * alarms in all registered calendars, add observers to watch for
-   * calendar registration and unregistration, and setup a timer to
-   * maintain that list and fire alarms.
-   *
-   * @note Will throw NS_ERROR_NOT_INITIALIZED if you have not previously set
-   *       the timezone attribute.
-   */
-  void startup();
-
   /* add and remove observers that will be notified when an
      alarm has gone off.  It is up to the application to display
      the alarm.
@@ -83,6 +66,6 @@ interface calIAlarmService : nsISupports
      This will cause an event to be scheduled even if it was not
      previously scheduled.
   */
-  void snoozeEvent(in calIItemBase item, in calIDuration duration);
+  void snoozeEvent(in calIItemBase item, in calIDateTime duration);
 };
 

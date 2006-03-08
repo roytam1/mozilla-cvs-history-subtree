@@ -21,6 +21,7 @@ rm -f minimo.tar.gz
 echo Copying over files from OBJDIR
 
 mkdir minimo
+cp -pRL bin/libmozjs.so                                    minimo
 cp -pRL bin/minimo                                         minimo
 cp -pRL bin/libnspr4.so                                    minimo
 cp -pRL bin/libplc4.so                                     minimo
@@ -33,8 +34,6 @@ cp -pRL bin/libnssckbi.so                                  minimo
 cp -pRL bin/libsmime3.so                                   minimo
 cp -pRL bin/libsoftokn3.so                                 minimo
 cp -pRL bin/libsoftokn3.chk                                minimo
-cp -pRL bin/libfreebl3.so                                  minimo
-cp -pRL bin/libfreebl3.chk                                 minimo
 cp -pRL bin/libssl3.so                                   minimo
 
 
@@ -62,6 +61,7 @@ cp -pRL bin/components/nsHelperAppDlg.js                   minimo/components
 cp -pRL bin/components/nsProgressDialog.js                 minimo/components
 
 cp -pRL bin/components/nsDictionary.js                     minimo/components
+cp -pRL bin/components/nsInterfaceInfoToIDL.js             minimo/components
 cp -pRL bin/components/nsXmlRpcClient.js                   minimo/components
 
 cp -pRL bin/extensions/spatial-navigation@extensions.mozilla.org/components/* minimo/components

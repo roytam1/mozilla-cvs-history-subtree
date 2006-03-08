@@ -51,7 +51,3 @@ function collapseElement(element) {
 function uncollapseElement(element) {
     element.style.visibility = "";
 }
-
-// These are simply placeholder functions until Lightning gets real undo/redo
-function startBatchTransaction() {}
-function endBatchTransaction() {}

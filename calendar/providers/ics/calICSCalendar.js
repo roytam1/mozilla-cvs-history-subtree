@@ -125,24 +125,12 @@ calICSCalendar.prototype = {
         this.mUri = aUri;
         this.mMemoryCalendar.uri = this.mUri;
 
-        // Use the ioservice, to create a channel, which makes finding the
-        // right hooks to use easier.
-        var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                                  .getService(Components.interfaces.nsIIOService);
-        var channel = ioService.newChannelFromURI(fixupUri(this.mUri));
-
-        if (channel instanceof Components.interfaces.nsIHttpChannel) {
-            this.mHooks = new httpHooks();
-        } else {
-            this.mHooks = new dummyHooks();
-        }
-
         this.refresh();
     },
 
     refresh: function() {
         // Lock other changes to the item list.
-        this.lock();
+        this.locked = true;
         // set to prevent writing after loading, without any changes
         this.loading = true;
 
@@ -153,396 +141,22 @@ calICSCalendar.prototype = {
         channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
         channel.notificationCallbacks = this;
 
-        // Allow the hook to do its work, like a performing a quick check to
-        // see if the remote file really changed. Might save a lot of time
-        this.mHooks.onBeforeGet(channel);
-
         var streamLoader = Components.classes["@mozilla.org/network/stream-loader;1"]
                                      .createInstance(Components.interfaces.nsIStreamLoader);
         try {
             streamLoader.init(channel, this, this);
         } catch(e) {
             // File not found: a new calendar. No problem.
-            this.unlock();
+            this.mObserver.onEndBatch();
+            this.mObserver.onLoad();
+            this.locked = false;
+            this.processQueue();
         }
     },
 
     calendarPromotedProps: {
         "PRODID": true,
         "VERSION": true
-    },
-
-    // nsIStreamLoaderObserver impl
-    // Listener for download. Parse the downloaded file
-
-    onStreamComplete: function(loader, ctxt, status, resultLength, result)
-    {
-        // No need to do anything if there was no result
-        if (!resultLength) {
-            this.unlock();
-            return;
-        }
-        
-        // Allow the hook to get needed data (like an etag) of the channel
-        var cont = this.mHooks.onAfterGet();
-        if (!cont) {
-            this.unlock();
-            return;
-        }
-
-        // Create a new calendar, to get rid of all the old events
-        this.mMemoryCalendar = Components.classes["@mozilla.org/calendar/calendar;1?type=memory"]
-                                         .createInstance(Components.interfaces.calICalendar);
-        this.mMemoryCalendar.uri = this.mUri;
-        this.mMemoryCalendar.wrappedJSObject.calendarToReturn = this;
-        this.mMemoryCalendar.addObserver(this.mObserver);
-
-        this.mObserver.onStartBatch();
-
-        // This conversion is needed, because the stream only knows about
-        // byte arrays, not about strings or encodings. The array of bytes
-        // need to be interpreted as utf8 and put into a javascript string.
-        var unicodeConverter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
-                                         .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-        // ics files are always utf8
-        unicodeConverter.charset = "UTF-8";
-        var str;
-        try {
-            str = unicodeConverter.convertFromByteArray(result, result.length);
-        } catch(e) {
-            this.mObserver.onError(e.result, e.toString());
-        }
-
-        // Wrap parsing in a try block. Will ignore errors. That's a good thing
-        // for non-existing or empty files, but not good for invalid files.
-        // That's why we put them in readOnly mode
-        try {
-            var rootComp = this.mICSService.parseICS(str);
-
-            var calComp;
-            // libical returns the vcalendar component if there is just
-            // one vcalendar. If there are multiple vcalendars, it returns
-            // an xroot component, with those vcalendar childs. We need to
-            // handle both.
-            if (rootComp.componentType == 'VCALENDAR') {
-                calComp = rootComp;
-            } else {
-                calComp = rootComp.getFirstSubcomponent('VCALENDAR');
-            }
-
-            var unexpandedItems = [];
-            var uid2parent = {};
-            var excItems = [];
-            
-            while (calComp) {
-                // Get unknown properties
-                var prop = calComp.getFirstProperty("ANY");
-                while (prop) {
-                    if (!this.calendarPromotedProps[prop.propertyName]) {
-                        this.unmappedProperties.push(prop);
-                        dump(prop.propertyName+"\n");
-                    }
-                    prop = calComp.getNextProperty("ANY");
-                }
-
-                var subComp = calComp.getFirstSubcomponent("ANY");
-                while (subComp) {
-                    // Place each subcomp in a try block, to hopefully get as
-                    // much of a bad calendar as possible
-                    try {
-                        var item = null;
-                        switch (subComp.componentType) {
-                        case "VEVENT":
-                            item = Components.classes["@mozilla.org/calendar/event;1"]
-                                             .createInstance(Components.interfaces.calIEvent);
-                            break;
-                        case "VTODO":
-                            item = Components.classes["@mozilla.org/calendar/todo;1"]
-                                             .createInstance(Components.interfaces.calITodo);
-                            break;
-                        case "VTIMEZONE":
-                            // this should already be attached to the relevant
-                            // events in the calendar, so there's no need to
-                            // do anything with it here.
-                            break;
-                        default:
-                            this.unmappedComponents.push(subComp);
-                            dump(subComp.componentType+"\n");
-                        }
-                        if (item != null) {
-                            item.icalComponent = subComp;
-                            var rid = item.recurrenceId;
-                            if (rid == null) {
-                                unexpandedItems.push( item );
-                                if (item.recurrenceInfo != null)
-                                    uid2parent[item.id] = item;
-                            }
-                            else {
-                                item.calendar = this;
-                                // force no recurrence info:
-                                item.recurrenceInfo = null;
-                                excItems.push(item);
-                            }
-                        }
-                            
-                    }
-                    catch(ex) { 
-                        this.mObserver.onError(ex.result, ex.toString());
-                    }
-                    subComp = calComp.getNextSubcomponent("ANY");
-                }
-                calComp = rootComp.getNextSubcomponent('VCALENDAR');
-            }
-            
-            // tag "exceptions", i.e. items with rid:
-            for each (var item in excItems) {
-                var parent = uid2parent[item.id];
-                if (parent == null) {
-                    debug( "no parent item for rid=" + item.recurrenceId );
-                }
-                else {
-                    item.parentItem = parent;
-                    parent.recurrenceInfo.modifyException(item);
-                }
-            }
-            
-            for each (var item in unexpandedItems) {
-                this.mMemoryCalendar.adoptItem(item, null);
-            }
-            
-        } catch(e) {
-            dump("Parsing the file failed:"+e+"\n");
-            this.mObserver.onError(e.result, e.toString());
-        }
-        this.mObserver.onEndBatch();
-        this.mObserver.onLoad();
-        this.unlock();
-    },
-
-    writeICS: function () {
-        this.lock();
-
-        if (!this.mUri)
-            throw Components.results.NS_ERROR_FAILURE;
-
-        // makeBackup will call doWriteICS
-        this.makeBackup(this.doWriteICS);
-    },
-
-    doWriteICS: function () {
-        var savedthis = this;
-        var listener =
-        {
-            onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail)
-            {
-                try  {
-                    // All events are returned. Now set up a channel and a
-                    // streamloader to upload.  onStopRequest will be called
-                    // once the write has finished
-                    var ioService = Components.classes
-                        ["@mozilla.org/network/io-service;1"]
-                        .getService(Components.interfaces.nsIIOService);
-                    var channel = ioService.newChannelFromURI(
-                        fixupUri(savedthis.mUri));
-
-                    // Allow the hook to add things to the channel, like a
-                    // header that checks etags
-                    savedthis.mHooks.onBeforePut(channel);
-
-                    channel.notificationCallbacks = savedthis;
-                    var uploadChannel = channel.QueryInterface(
-                        Components.interfaces.nsIUploadChannel);
-
-                    // do the actual serialization
-                    var icsStream = calComp.serializeToICSStream();
-
-                    uploadChannel.setUploadStream(icsStream, "text/calendar",
-                                                  -1);
-
-                    channel.asyncOpen(savedthis, savedthis);
-                } catch (ex) {
-                    savedthis.mObserver.onError(
-                        ex.result, "The calendar could not be saved; there " +
-                        "was a failure: 0x" + ex.result.toString(16));
-                }
-
-                return;
-            },
-            onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems)
-            {
-                for (var i=0; i<aCount; i++) {
-                    var item = aItems[i];
-                    calComp.addSubcomponent(item.icalComponent);
-                    var rec = item.recurrenceInfo;
-                    if (rec != null) {
-                        var exceptions = rec.getExceptionIds({});
-                        for each ( var exid in exceptions ) {
-                            var ex = rec.getExceptionFor(exid, false);
-                            if (ex != null) {
-                                calComp.addSubcomponent(ex.icalComponent);
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        var calComp = this.mICSService.createIcalComponent("VCALENDAR");
-        calComp.version = "2.0";
-        calComp.prodid = "-//Mozilla.org/NONSGML Mozilla Calendar V1.1//EN";
-
-        var i;
-        for (i in this.unmappedComponents) {
-             dump("Adding a "+this.unmappedComponents[i].componentType+"\n");
-             calComp.addSubcomponent(this.unmappedComponents[i]);
-        }
-        for (i in this.unmappedProperties) {
-             dump("Adding "+this.unmappedProperties[i].propertyName+"\n");
-             calComp.addProperty(this.unmappedProperties[i]);
-        }
-
-        this.getItems(calICalendar.ITEM_FILTER_TYPE_ALL | calICalendar.ITEM_FILTER_COMPLETED_ALL,
-                      0, null, null, listener);
-    },
-
-    // nsIStreamListener impl
-    // For after publishing. Do error checks here
-    onStartRequest: function(request, ctxt) {},
-    onDataAvailable: function(request, ctxt, inStream, sourceOffset, count) {},
-    onStopRequest: function(request, ctxt, status, errorMsg)
-    {
-        ctxt = ctxt.wrappedJSObject;
-        var channel;
-        try {
-            channel = request.QueryInterface(Components.interfaces.nsIHttpChannel);
-            dump(channel.requestSucceeded+"\n");
-        } catch(e) {
-        }
-
-        if (channel && !channel.requestSucceeded) {
-            ctxt.mObserver.onError(channel.requestSucceeded,
-                                   "Publishing the calendar file failed\n" +
-                                       "Status code: "+channel.responseStatus+": "+channel.responseStatusText+"\n");
-        }
-
-        else if (!channel && !Components.isSuccessCode(request.status)) {
-            ctxt.mObserver.onError(request.status,
-                                   "Publishing the calendar file failed\n" +
-                                       "Status code: "+request.status.toString(16)+"\n");
-        }
-
-        // Allow the hook to grab data of the channel, like the new etag
-        ctxt.mHooks.onAfterPut(channel);
-
-        ctxt.unlock();
-    },
-
-    addObserver: function (aObserver) {
-        this.mObserver.addObserver(aObserver);
-    },
-    removeObserver: function (aObserver) {
-        this.mObserver.removeObserver(aObserver);
-    },
-
-    // Always use the queue, just to reduce the amount of places where
-    // this.mMemoryCalendar.addItem() and friends are called. less
-    // copied code.
-    addItem: function (aItem, aListener) {
-        if (this.readOnly) 
-            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
-        this.queue.push({action:'add', item:aItem, listener:aListener});
-        this.processQueue();
-    },
-
-    modifyItem: function (aNewItem, aOldItem, aListener) {
-        if (this.readOnly) 
-            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
-        this.queue.push({action:'modify', oldItem: aOldItem,
-                         newItem: aNewItem, listener:aListener});
-        this.processQueue();
-    },
-
-    deleteItem: function (aItem, aListener) {
-        if (this.readOnly) 
-            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
-        this.queue.push({action:'delete', item:aItem, listener:aListener});
-        this.processQueue();
-    },
-
-    getItem: function (aId, aListener) {
-        return this.mMemoryCalendar.getItem(aId, aListener);
-    },
-
-    getItems: function (aItemFilter, aCount,
-                        aRangeStart, aRangeEnd, aListener)
-    {
-        return this.mMemoryCalendar.getItems(aItemFilter, aCount,
-                                             aRangeStart, aRangeEnd,
-                                             aListener);
-    },
-
-    processQueue: function ()
-    {
-        if (this.isLocked())
-            return;
-        var a;
-        var hasItems = this.queue.length;
-        while ((a = this.queue.shift())) {
-            switch (a.action) {
-                case 'add':
-                    this.mMemoryCalendar.addItem(a.item, a.listener);
-                    break;
-                case 'modify':
-                    this.mMemoryCalendar.modifyItem(a.newItem, a.oldItem,
-                                                    a.listener);
-                    break;
-                case 'delete':
-                    this.mMemoryCalendar.deleteItem(a.item, a.listener);
-                    break;
-            }
-        }
-        if (hasItems)
-            this.writeICS();
-    },
-
-    lock: function () {
-        this.locked = true;
-    },
-
-    unlock: function () {
-        this.locked = false;
-        this.processQueue();
-    },
-    
-    isLocked: function () {
-        return this.locked;
-    },
-
-    startBatch: function ()
-    {
-        this.mObserver.onStartBatch();
-    },
-    endBatch: function ()
-    {
-        this.mObserver.onEndBatch();
-    },
-
-    // nsIInterfaceRequestor impl
-    getInterface: function(iid, instance) {
-        if (iid.equals(Components.interfaces.nsIAuthPrompt)) {
-            // use the window watcher service to get a nsIAuthPrompt impl
-            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(Components.interfaces.nsIWindowWatcher)
-                             .getNewAuthPrompter(null);
-        }
-        else if (iid.equals(Components.interfaces.nsIPrompt)) {
-            // use the window watcher service to get a nsIPrompt impl
-            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(Components.interfaces.nsIWindowWatcher)
-                             .getNewPrompter(null);
-        }
-        Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
-        return null;
     },
 
     /**
@@ -554,14 +168,9 @@ calICSCalendar.prototype = {
      * file each day, for 3 days. That way, even if the user doesn't notice
      * the remote calendar has become corrupted, he will still loose max 1
      * day of work.
-     * After the back up is finished, will call aCallback.
-     *
-     * @param aCallback
-     *           Function that will be calles after the backup is finished.
-     *           will be called in the original context in which makeBackup
-     *           was called
+     * After the back up is finished, will call doWriteICS.
      */
-    makeBackup: function(aCallback) {
+    makeBackup: function() {
         // Uses |pseudoID|, an id of the calendar, defined below
         function makeName(type) {
             return 'calBackupData_'+pseudoID+'_'+type+'.ics';
@@ -671,7 +280,7 @@ calICSCalendar.prototype = {
             // Backup dir wasn't found. Likely because we are running in
             // xpcshell. Don't die, but continue the upload.
             dump("Backup failed, no backupdir:"+e+"\n");
-            aCallback.call(this);
+            this.doWriteICS();
             return;
         }
 
@@ -685,7 +294,7 @@ calICSCalendar.prototype = {
             // calendarmgr not found. Likely because we are running in
             // xpcshell. Don't die, but continue the upload.
             dump("Backup failed, no calendarmanager:"+e+"\n");
-            aCallback.call(this);
+            this.doWriteICS();
             return;
         }
 
@@ -727,7 +336,7 @@ calICSCalendar.prototype = {
         var downloader = Components.classes["@mozilla.org/network/downloader;1"]
                                    .createInstance(CI.nsIDownloader);
 
-        var savedthis = this;
+        var provider = this;
         var listener = {
             onDownloadComplete: function(downloader, request, ctxt, status, result) {
                 if (doInitialBackup)
@@ -735,7 +344,7 @@ calICSCalendar.prototype = {
                 if (doDailyBackup)
                     copyToOverwriting(result, backupDir, dailyBackupFileName);
 
-                aCallback.call(savedthis);
+                provider.doWriteICS();
             },
         }
 
@@ -746,11 +355,309 @@ calICSCalendar.prototype = {
             // For local files, asyncOpen throws on new (calendar) files
             // No problem, go and upload something
             dump("Backup failed in asyncOpen:"+e+"\n");
-            aCallback.call(this);
+            this.doWriteICS();
             return;
         }
 
         return;
+    },
+
+    // nsIStreamLoaderObserver impl
+    // Listener for download. Parse the downloaded file
+
+    onStreamComplete: function(loader, ctxt, status, resultLength, result)
+    {
+        // Create a new calendar, to get rid of all the old events
+        this.mMemoryCalendar = Components.classes["@mozilla.org/calendar/calendar;1?type=memory"]
+                                         .createInstance(Components.interfaces.calICalendar);
+        this.mMemoryCalendar.uri = this.mUri;
+        this.mMemoryCalendar.wrappedJSObject.calendarToReturn = this;
+        this.mMemoryCalendar.addObserver(this.mObserver);
+
+        this.mObserver.onStartBatch();
+
+        // This conversion is needed, because the stream only knows about
+        // byte arrays, not about strings or encodings. The array of bytes
+        // need to be interpreted as utf8 and put into a javascript string.
+        var unicodeConverter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
+                                         .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
+        // ics files are always utf8
+        unicodeConverter.charset = "UTF-8";
+        var str;
+        try {
+            str = unicodeConverter.convertFromByteArray(result, result.length);
+        } catch(e) {
+            this.mObserver.onError(e.result, e.toString());
+        }
+
+        // Wrap parsing in a try block. Will ignore errors. That's a good thing
+        // for non-existing or empty files, but not good for invalid files.
+        // That's why we put them in readOnly mode
+        try {
+            var rootComp = this.mICSService.parseICS(str);
+
+            var calComp;
+            // libical returns the vcalendar component if there is just
+            // one vcalendar. If there are multiple vcalendars, it returns
+            // an xroot component, with those vcalendar childs. We need to
+            // handle both.
+            if (rootComp.componentType == 'VCALENDAR') {
+                calComp = rootComp;
+            } else {
+                calComp = rootComp.getFirstSubcomponent('VCALENDAR');
+            }
+
+            while (calComp) {
+                // Get unknown properties
+                var prop = calComp.getFirstProperty("ANY");
+                while (prop) {
+                    if (!this.calendarPromotedProps[prop.propertyName]) {
+                        this.unmappedProperties.push(prop);
+                        dump(prop.propertyName+"\n");
+                    }
+                    prop = calComp.getNextProperty("ANY");
+                }
+
+                var subComp = calComp.getFirstSubcomponent("ANY");
+                while (subComp) {
+                    // Place each subcomp in a try block, to hopefully get as
+                    // much of a bad calendar as possible
+                    try {
+                        switch (subComp.componentType) {
+                        case "VEVENT":
+                            var event = Components.classes["@mozilla.org/calendar/event;1"]
+                                                  .createInstance(Components.interfaces.calIEvent);
+                            event.icalComponent = subComp;
+                            this.mMemoryCalendar.addItem(event, null);
+                            break;
+                        case "VTODO":
+                            var todo = Components.classes["@mozilla.org/calendar/todo;1"]
+                                                 .createInstance(Components.interfaces.calITodo);
+                            todo.icalComponent = subComp;
+                            this.mMemoryCalendar.addItem(todo, null);
+                            break;
+
+                        case "VTIMEZONE":
+                            // this should already be attached to the relevant
+                            // events in the calendar, so there's no need to
+                            // do anything with it here.
+                            break;
+
+                        default:
+                            this.unmappedComponents.push(subComp);
+                            dump(subComp.componentType+"\n");
+                        }
+                    }
+                    catch(ex) { 
+                        this.mObserver.onError(ex.result, ex.toString());
+                    }
+                    subComp = calComp.getNextSubcomponent("ANY");
+                }
+                calComp = rootComp.getNextSubcomponent('VCALENDAR');
+            }
+        } catch(e) {
+            dump("Parsing the file failed:"+e+"\n");
+            this.mObserver.onError(e.result, e.toString());
+        }
+
+        this.mObserver.onEndBatch();
+        this.mObserver.onLoad();
+        this.locked = false;
+        this.processQueue();
+    },
+
+    writeICS: function () {
+        this.locked = true;
+
+        if (!this.mUri)
+            throw Components.results.NS_ERROR_FAILURE;
+
+        // makeBackup will call doWriteICS
+        this.makeBackup();
+    },
+
+    doWriteICS: function () {
+        var savedthis = this;
+        var listener =
+        {
+            onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail)
+            {
+                try  {
+                    // All events are returned. Now set up a channel and a
+                    // streamloader to upload.  onStopRequest will be called
+                    // once the write has finished
+                    var ioService = Components.classes
+                        ["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+                    var channel = ioService.newChannelFromURI(
+                        fixupUri(savedthis.mUri));
+                    channel.notificationCallbacks = savedthis;
+                    var uploadChannel = channel.QueryInterface(
+                        Components.interfaces.nsIUploadChannel);
+
+                    // do the actual serialization
+                    var icsStream = calComp.serializeToICSStream();
+
+                    uploadChannel.setUploadStream(icsStream, "text/calendar",
+                                                  -1);
+
+                    channel.asyncOpen(savedthis, savedthis);
+                } catch (ex) {
+                    savedthis.mObserver.onError(
+                        ex.result, "The calendar could not be saved; there " +
+                        "was a failure: 0x" + ex.result.toString(16));
+                }
+
+                return;
+            },
+            onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems)
+            {
+                for (var i=0; i<aCount; i++) {
+                    calComp.addSubcomponent(aItems[i].icalComponent);
+                }
+            }
+        };
+
+        var calComp = this.mICSService.createIcalComponent("VCALENDAR");
+        calComp.version = "2.0";
+        calComp.prodid = "-//Mozilla.org/NONSGML Mozilla Calendar V1.0//EN";
+
+        var i;
+        for (i in this.unmappedComponents) {
+             dump("Adding a "+this.unmappedComponents[i].componentType+"\n");
+             calComp.addSubcomponent(this.unmappedComponents[i]);
+        }
+        for (i in this.unmappedProperties) {
+             dump("Adding "+this.unmappedProperties[i].propertyName+"\n");
+             calComp.addProperty(this.unmappedProperties[i]);
+        }
+
+        this.getItems(calICalendar.ITEM_FILTER_TYPE_ALL | calICalendar.ITEM_FILTER_COMPLETED_ALL,
+                      0, null, null, listener);
+    },
+
+    // nsIStreamListener impl
+    // For after publishing. Do error checks here
+    onStartRequest: function(request, ctxt) {},
+    onDataAvailable: function(request, ctxt, inStream, sourceOffset, count) {},
+    onStopRequest: function(request, ctxt, status, errorMsg)
+    {
+        ctxt = ctxt.wrappedJSObject;
+        var channel;
+        try {
+            channel = request.QueryInterface(Components.interfaces.nsIHttpChannel);
+            dump(channel.requestSucceeded+"\n");
+        } catch(e) {
+        }
+
+        if (channel && !channel.requestSucceeded) {
+            ctxt.mObserver.onError(channel.requestSucceeded,
+                                   "Publishing the calendar file failed\n" +
+                                       "Status code: "+channel.responseStatus+": "+channel.responseStatusText+"\n");
+        }
+
+        else if (!channel && !Components.isSuccessCode(request.status)) {
+            ctxt.mObserver.onError(request.status,
+                                   "Publishing the calendar file failed\n" +
+                                       "Status code: "+request.status.toString(16)+"\n");
+        }
+        ctxt.locked = false;
+        ctxt.processQueue();
+    },
+
+    addObserver: function (aObserver) {
+        this.mObserver.addObserver(aObserver);
+    },
+    removeObserver: function (aObserver) {
+        this.mObserver.removeObserver(aObserver);
+    },
+
+    // Always use the queue, just to reduce the amount of places where
+    // this.mMemoryCalendar.addItem() and friends are called. less
+    // copied code.
+    addItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        this.queue.push({action:'add', item:aItem, listener:aListener});
+        this.processQueue();
+    },
+
+    modifyItem: function (aNewItem, aOldItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        this.queue.push({action:'modify', oldItem: aOldItem,
+                         newItem: aNewItem, listener:aListener});
+        this.processQueue();
+    },
+
+    deleteItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        this.queue.push({action:'delete', item:aItem, listener:aListener});
+        this.processQueue();
+    },
+
+    getItem: function (aId, aListener) {
+        return this.mMemoryCalendar.getItem(aId, aListener);
+    },
+
+    getItems: function (aItemFilter, aCount,
+                        aRangeStart, aRangeEnd, aListener)
+    {
+        return this.mMemoryCalendar.getItems(aItemFilter, aCount,
+                                             aRangeStart, aRangeEnd,
+                                             aListener);
+    },
+
+    processQueue: function ()
+    {
+        if (this.locked)
+            return;
+        var a;
+        var hasItems = this.queue.length;
+        while ((a = this.queue.shift())) {
+            switch (a.action) {
+                case 'add':
+                    this.mMemoryCalendar.addItem(a.item, a.listener);
+                    break;
+                case 'modify':
+                    this.mMemoryCalendar.modifyItem(a.newItem, a.oldItem,
+                                                    a.listener);
+                    break;
+                case 'delete':
+                    this.mMemoryCalendar.deleteItem(a.item, a.listener);
+                    break;
+            }
+        }
+        if (hasItems)
+            this.writeICS();
+    },
+
+    startBatch: function ()
+    {
+        this.mObserver.onStartBatch();
+    },
+    endBatch: function ()
+    {
+        this.mObserver.onEndBatch();
+    },
+
+    // nsIInterfaceRequestor impl
+    getInterface: function(iid, instance) {
+        if (iid.equals(Components.interfaces.nsIAuthPrompt)) {
+            // use the window watcher service to get a nsIAuthPrompt impl
+            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(Components.interfaces.nsIWindowWatcher)
+                             .getNewAuthPrompter(null);
+        }
+        else if (iid.equals(Components.interfaces.nsIPrompt)) {
+            // use the window watcher service to get a nsIPrompt impl
+            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(Components.interfaces.nsIWindowWatcher)
+                             .getNewPrompter(null);
+        }
+        Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
+        return null;
     }
 };
 
@@ -840,149 +747,6 @@ calICSObserver.prototype = {
                 newObservers.push(obs);
         }
         this.mObservers = newObservers;
-    }
-};
-
-/***************************
- * Transport Abstraction Hooks
- *
- * Those hooks provide a way to do checks before or after publishing an
- * ics file. The main use will be to check etags (or some other way to check
- * for remote changes) to protect remote changes from being overwritten.
- *
- * Different protocols need different checks (webdav can do etag, but
- * local files need last-modified stamps), hence different hooks for each
- * types
- */
-
-// dummyHooks are for transport types that don't have hooks of their own.
-// Also serves as poor-mans interface definition.
-function dummyHooks() {
-}
-
-dummyHooks.prototype = {
-    onBeforeGet: function(aChannel) {
-        return true;
-    },
-    
-    /**
-     * @return
-     *     a boolean, false if the previous data should be used (the datastore
-     *     didn't change, there might be no data in this GET), true in all
-     *     other cases
-     */
-    onAfterGet: function() {
-        return true;
-    },
-
-    onBeforePut: function(aChannel) {
-        return true;
-    },
-    
-    onAfterPut: function(aChannel) {
-        return true;
-    },
-}
-
-function httpHooks() {
-    this.mChannel = null;
-}
-
-httpHooks.prototype = {
-    onBeforeGet: function(aChannel) {
-        this.mChannel = aChannel;
-        if (this.mEtag) {
-            var httpchannel = aChannel.QueryInterface(Components.interfaces.nsIHttpChannel);
-            // Somehow the webdav header 'If' doesn't work on apache when
-            // passing in a Not, so use the http version here.
-            httpchannel.setRequestHeader("If-None-Match", this.mEtag, false);
-        }
-
-        return true;
-    },
-    
-    onAfterGet: function() {
-        var httpchannel = this.mChannel.QueryInterface(Components.interfaces.nsIHttpChannel);
-
-        // 304: Not Modified
-        // Can use the old data, so tell the caller that it can skip parsing.
-        if (httpchannel.responseStatus == 304)
-            return false;
-
-        // 404: Not Found
-        // This is a new calendar. Shouldn't try to parse it. But it also
-        // isn't a failure, so don't throw.
-        if (httpchannel.responseStatus == 404)
-            return false;
-
-        try {
-            this.mEtag = httpchannel.getResponseHeader("ETag");
-        } catch(e) {
-            // No etag header. Now what?
-            this.mEtag = null;
-        }
-        this.mChannel = null;
-        return true;
-    },
-
-    onBeforePut: function(aChannel) {
-        if (this.mEtag) {
-            var httpchannel = aChannel.QueryInterface(Components.interfaces.nsIHttpChannel);
-
-            // Apache doesn't work correctly with if-match on a PUT method,
-            // so use the webdav header
-            httpchannel.setRequestHeader("If", '(['+this.mEtag+'])', false);
-        }
-        return true;
-    },
-    
-    onAfterPut: function(aChannel) {
-        var httpchannel = aChannel.QueryInterface(Components.interfaces.nsIHttpChannel);
-        try {
-            this.mEtag = httpchannel.getResponseHeader("ETag");
-        } catch(e) {
-            // There was no ETag header on the response. This means that
-            // putting is not atomic. This is bad. Race conditions can happen,
-            // because there is a time in which we don't know the right
-            // etag.
-            // Try to do the best we can, by immediatly getting the etag.
-            var res = new WebDavResource(aChannel.URI);
-            var webSvc = Components.classes['@mozilla.org/webdav/service;1']
-                                   .getService(Components.interfaces.nsIWebDAVService);
-            // The namespace is 'DAV:', not just 'DAV'.
-            webSvc.getResourceProperties(res, 1, ['DAV: getetag'], false,
-                                         this, null);
-        }
-        return true;
-    },
-
-    onOperationComplete: function(aStatusCode, aResource, aOperation, aClosure) {
-    },
-
-    onOperationDetail: function(aStatusCode, aResource, aOperation, aDetail, aClosure) {
-        var props = aDetail.QueryInterface(Components.interfaces.nsIProperties);
-        try {
-            this.mEtag = props.get('DAV: getetag', Components.interfaces.nsISupportsString).toString();
-        } catch(e) {
-            // No etag header. Now what?
-            this.mEtag = null;
-        }
-    },
-}
-
-function WebDavResource(url) {
-    this.mResourceURL = url;
-}
-
-WebDavResource.prototype = {
-    mResourceURL: {},
-    get resourceURL() { return this.mResourceURL; },
-    QueryInterface: function(iid) {
-        if (iid.equals(CI.nsIWebDAVResource) ||
-            iid.equals(CI.nsISupports)) {
-            return this;
-        }
-        throw Components.interfaces.NS_NO_INTERFACE;
     }
 };
 

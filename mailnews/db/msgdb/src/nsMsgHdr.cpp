@@ -797,27 +797,17 @@ const char *nsMsgHdr::GetPrevReference(const char *prevRef, nsCString &reference
 
 PRBool nsMsgHdr::IsParentOf(nsIMsgDBHdr *possibleChild)
 {
-  PRUint16 referenceToCheck = 0;
-  possibleChild->GetNumReferences(&referenceToCheck);
+  PRUint16 numReferences = 0;
+  possibleChild->GetNumReferences(&numReferences);
   nsCAutoString reference;
   nsXPIDLCString messageId;
   
   GetMessageId(getter_Copies(messageId));
-  while (referenceToCheck > 0)
+  if (numReferences > 0)
   {
-    possibleChild->GetStringReference(referenceToCheck - 1, reference);
+    possibleChild->GetStringReference(numReferences - 1, reference);
     
-    if (reference.Equals(messageId))
-      return PR_TRUE;
-    // if reference didn't match, check if this ref is for a non-existent
-    // header. If it is, continue looking at ancestors.
-    nsCOMPtr <nsIMsgDBHdr> refHdr;
-    if (!m_mdb)
-      break;
-    (void) m_mdb->GetMsgHdrForMessageID(reference.get(), getter_AddRefs(refHdr));
-    if (refHdr)
-      break;
-    referenceToCheck--;
+    return (reference.Equals(messageId));
   }
   return PR_FALSE;
 }

@@ -67,10 +67,6 @@
 
 #include "keydbi.h" 
 
-#ifdef DEBUG
-#include "cdbhdl.h"
-#endif
-
 #ifdef NSS_ENABLE_ECC
 extern SECStatus EC_FillParams(PRArenaPool *arena, 
     const SECItem *encodedParams, ECParams *params);
@@ -81,7 +77,7 @@ extern SECStatus EC_FillParams(PRArenaPool *arena,
  */
 
 /* The next three strings must be exactly 32 characters long */
-static char *manufacturerID      = "Mozilla Foundation              ";
+static char *manufacturerID      = "mozilla.org                     ";
 static char manufacturerID_space[33];
 static char *libraryDescription  = "NSS Internal Crypto Services    ";
 static char libraryDescription_space[33];
@@ -1956,10 +1952,7 @@ NSSLOWKEYPublicKey *sftk_GetPubKey(SFTKObject *object,CK_KEY_TYPE key_type,
 	 * based on the encoded params
 	 */
 	if (EC_FillParams(arena, &pubKey->u.ec.ecParams.DEREncoding,
-		    &pubKey->u.ec.ecParams) != SECSuccess) {
-	    crv = CKR_DOMAIN_PARAMS_INVALID;
-	    break;
-	}
+	    &pubKey->u.ec.ecParams) != SECSuccess) break;
 	    
 	crv = sftk_Attribute2SSecItem(arena,&pubKey->u.ec.publicValue,
 	                              object,CKA_EC_POINT);
@@ -2084,10 +2077,7 @@ sftk_mkPrivKey(SFTKObject *object, CK_KEY_TYPE key_type, CK_RV *crvp)
 	 * based on the encoded params
 	 */
 	if (EC_FillParams(arena, &privKey->u.ec.ecParams.DEREncoding,
-		    &privKey->u.ec.ecParams) != SECSuccess) {
-	    crv = CKR_DOMAIN_PARAMS_INVALID;
-	    break;
-	}
+	    &privKey->u.ec.ecParams) != SECSuccess) break;
 	crv = sftk_Attribute2SSecItem(arena,&privKey->u.ec.privateValue,
 							object,CKA_VALUE);
 	if (crv != CKR_OK) break;
@@ -2766,11 +2756,9 @@ sftk_DBShutdown(SFTKSlot *slot)
     slot->keyDB = NULL;
     PZ_Unlock(slot->slotLock);
     if (certHandle) {
-	PORT_Assert(certHandle->ref == 1 || slot->slotID > FIPS_SLOT_ID);
 	sftk_freeCertDB(certHandle);
     }
     if (keyHandle) {
-	PORT_Assert(keyHandle->ref == 1 || slot->slotID > FIPS_SLOT_ID);
 	sftk_freeKeyDB(keyHandle);
     }
 }

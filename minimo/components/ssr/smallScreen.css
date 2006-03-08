@@ -10,7 +10,7 @@ html * {
 
 /* for all elements but the root element and the body, let's */
 /* cancel all annoying document's settings */
-html *:not(select):not(option):not(optgroup) {
+html * {
   /* first cancel all size settings */
   width: auto ! important;
   height: auto ! important;
@@ -44,8 +44,10 @@ html table,html tbody,html thead,html tfoot,html tr,html td,html th,html col,htm
   display: block ! important;
 }
 
-html img[width="1"], html img[height="1"] {
+html img[width="1"], html img[height="1"],html img[width="468"],html  img[height="600"] {
   /* let's get rid of 1 pixel wide/high images */
+  /* and of std formats of ads ; current ads formats are */
+  /* too big for small screens */
   display: none ! important;
 }
 
@@ -72,3 +74,24 @@ html a {
 html img[src*="spacer"] {
   display: none ! important;
 } 
+
+
+
+
+html *:focus
+{
+  -moz-outline: 3px solid #FFFF00  !important;
+  -moz-outline-offset: 1px         !important;
+  -moz-outline-radius: 3px         !important;
+}
+
+html textarea:focus,html  button:focus,html  select:focus,html  input:focus
+{
+  -moz-outline-offset: -1px        !important;
+}
+
+html input[type="radio"]:focus
+{
+  -moz-outline-radius: 8px        !important;
+  -moz-outline-offset: 0px         !important;
+}

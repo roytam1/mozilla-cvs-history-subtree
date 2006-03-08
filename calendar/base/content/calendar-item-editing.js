@@ -37,21 +37,10 @@
 
 
 /* all params are optional */
-function createEventWithDialog(calendar, startDate, endDate, summary, event)
+function createEventWithDialog(calendar, startDate, endDate, summary)
 {
     const kDefaultTimezone = calendarDefaultTimezone();
-
-
-    var onNewEvent = function(event, calendar, originalEvent) {
-        calendar.addItem(event, null);
-    }
-
-    if (event) {
-        openEventDialog(event, calendar, "new", onNewEvent);
-        return;
-    }
-    
-    event = createEvent();
+    var event = createEvent();
 
     if (!startDate) {
         startDate = jsDateToDateTime(new Date());
@@ -95,23 +84,17 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
     if (summary)
         event.title = summary;
 
+    var onNewEvent = function(event, calendar, originalEvent) {
+        calendar.addItem(event, null);
+    }
+
     openEventDialog(event, calendar, "new", onNewEvent);
 }
 
-function createTodoWithDialog(calendar, dueDate, summary, todo)
+function createTodoWithDialog(calendar, dueDate, summary)
 {
     const kDefaultTimezone = calendarDefaultTimezone();
-
-    var onNewItem = function(item, calendar, originalItem) {
-        calendar.addItem(item, null);
-    }
-
-    if (todo) {
-        openEventDialog(todo, calendar, "new", onNewItem);
-        return;
-    }
-
-    todo = createToDo();
+    var todo = createToDo();
 
     if (calendar) {
         todo.calendar = calendar;
@@ -161,52 +144,7 @@ function openEventDialog(calendarItem, calendar, mode, callback)
     window.setCursor("wait");
 
     // open the dialog modally
-    openDialog("chrome://calendar/content/calendar-event-dialog.xul", "_blank",
-               "chrome,titlebar,modal,resizable", args);
+    openDialog("chrome://calendar/content/calendar-event-dialog.xul", "_blank", "chrome,titlebar,modal", args);
+    //openDialog("chrome://calendar/content/eventDialog.xul", "_blank", "chrome,titlebar,modal", args);
 }
 
-// When editing a single instance of a recurring event, we need to figure out
-// whether the user wants to edit all instances, or just this one.  This
-// function prompts this question (if the item is actually an instance of a
-// recurring event) and returns the appropriate item that should be modified.
-function getOccurrenceOrParent(occurrence) {
-    // Check if this actually is an instance of a recurring event
-    if (occurrence == occurrence.parentItem) {
-        return occurrence;
-    }
-
-    // if the user wants to edit an occurrence which is already
-    // an exception, always edit this single item.
-    var parentItem = occurrence.parentItem;
-    var rec = parentItem.recurrenceInfo;
-    if (rec) {
-        var exceptions = rec.getExceptionIds({});
-        if (exceptions.some(function (exid) {
-                                return exid.compare(occurrence.recurrenceId) == 0;
-                            })) {
-            return occurrence;
-        }
-    }
-
-    var promptService = 
-             Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                       .getService(Components.interfaces.nsIPromptService);
-    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                        .getService(Components.interfaces.nsIStringBundleService);
-    var props =  sbs.createBundle("chrome://calendar/locale/calendar.properties");
-
-    var promptTitle = props.GetStringFromName("editRecurTitle");
-    var promptMessage = props.GetStringFromName("editRecurMessage");
-    var buttonLabel1 = props.GetStringFromName("editRecurAll");
-    var buttonLabel2 = props.GetStringFromName("editRecurSingle");
-
-    var flags = promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0 +
-                promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_1;
-
-    if (promptService.confirmEx(null, promptTitle, promptMessage, flags, 
-                                buttonLabel1, buttonLabel2, null, null, {})) {
-        return occurrence;
-    } else {
-        return occurrence.parentItem;
-    }
-}

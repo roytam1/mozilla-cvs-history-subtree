@@ -44,7 +44,6 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch2.h"
 #include "nsICategoryManager.h"
-#include "nsIObserverService.h"
 
 #include "string.h"
 #include "nsNetUtil.h"
@@ -69,10 +68,11 @@ public:
   nsCOMPtr<nsIStyleSheetService> m_sss;
 
   PRBool mUsingSSR;
+  PRBool mUsingSiteSSR;
 };
 
 nsSSRSupport::nsSSRSupport()  
-  : mUsingSSR(PR_FALSE)
+  : mUsingSiteSSR(PR_FALSE), mUsingSSR(PR_FALSE)
 {
   m_sss = do_GetService("@mozilla.org/content/style-sheet-service;1");
 }  
@@ -128,13 +128,6 @@ nsSSRSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar
     NS_ENSURE_SUCCESS(rv, rv);
     
     prefBranch->AddObserver("ssr.", this, PR_FALSE);
-    prefBranch->GetBoolPref("ssr.enabled", &mUsingSSR);
-
-
-    nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1", &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    observerService->AddObserver(this, "loading-domain", PR_FALSE);
 
     return NS_OK;
   }
@@ -144,42 +137,25 @@ nsSSRSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar
     nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(aSubject);
     nsXPIDLCString cstr;
     
-    const char* pref = NS_ConvertUTF16toUTF8(aData).get();
+    const char* pref = NS_ConvertUCS2toUTF8(aData).get();
     
     if (!strcmp(pref, "ssr.enabled"))
     {
-      prefBranch->GetBoolPref(pref, &mUsingSSR);
+      PRBool enabled;
+      prefBranch->GetBoolPref(pref, &enabled);
 
-      return NS_OK;
-    }
-  }
-
-  if (!strcmp(aTopic, "loading-domain")) 
-  {
-    if (!mUsingSSR)
-    {
-      SetSSREnabled(PR_FALSE);
-      SetSiteSSREnabled(PR_FALSE);
+      SetSSREnabled(enabled);
       return NS_OK;
     }
 
-    const char* domain = NS_ConvertUTF16toUTF8(aData).get();
-    
-    if (!strcmp(domain, "maps.google.com") ||
-        !strcmp(domain, "slashdot.org") ||
-        !strcmp(domain, "www.digg.com") ||
-        !strcmp(domain, "weblogs.mozillazine.org") ||
-        !strcmp(domain, "forums.mozillazine.org") )
+    if (!strcmp(pref, "ssr.site.enabled"))
     {
-      SetSSREnabled(PR_FALSE);
-      SetSiteSSREnabled(PR_TRUE);
+      PRBool enabled;
+      prefBranch->GetBoolPref(pref, &enabled);
+
+      SetSiteSSREnabled(enabled);
+      return NS_OK;
     }
-    else
-    {
-      SetSSREnabled(PR_TRUE);
-      SetSiteSSREnabled(PR_FALSE);
-    }
-    return NS_OK;
   }
   return NS_OK;
 }

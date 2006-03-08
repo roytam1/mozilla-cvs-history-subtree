@@ -52,11 +52,6 @@
 <!ENTITY alarm.units.hours.singular    "heure" >
 <!ENTITY alarm.units.days.singular     "jour" >
 
-<!ENTITY alarm.start.warning   "Cette alarme nécessite une date de début" >
-<!ENTITY alarm.due.warning     "Cette alarme nécessite une date de fin" >
-
-<!ENTITY repeat.units.occurence.both         "occurrence(s)" >
-
 <!ENTITY repeat.units.days.both         "Jour(s)" >
 <!ENTITY repeat.units.weeks.both        "Semaine(s)" >
 <!ENTITY repeat.units.months.both       "Mois" >
@@ -90,7 +85,7 @@
 <!ENTITY newevent.from.label         "Du" >
 <!ENTITY newevent.to.label           "Au" >
 <!ENTITY newevent.enddate.label      "Fin" >
-<!ENTITY newevent.set.label          "Définir la fréquence…" >
+<!ENTITY newevent.set.label          "définir…" >
 <!ENTITY newevent.settings.label     "Paramètres généraux" >
 <!ENTITY newevent.none.label         "aucun" >
 <!ENTITY newevent.custom.label       "Personnaliser…" >
@@ -165,7 +160,6 @@
 
 <!ENTITY newevent.attendees.tab.label "Participants" >
 <!ENTITY newevent.attendees.label     "Participants" >
-<!ENTITY calendar.edit.attendees      "Modifier les participants" >
 <!ENTITY newevent.attachments.tab.label "Fichiers joints" >
 <!ENTITY newevent.advanced.tab.label        "Avancé" >
 <!ENTITY newevent.completed.label           "Terminé" >
@@ -278,9 +272,6 @@
 <!ENTITY calendar.listofcalendarstab.label "Agendas">
 <!ENTITY calendar.gototoday.button.label "Aujourd'hui">
 
-<!ENTITY calendar.more.label "Plus">
-<!ENTITY calendar.less.label "Moins">
-
 <!ENTITY calendar.calendarlistbox.label "Agendas">
 
 <!ENTITY calendar.events.filter.all.label "Tous les événements">
@@ -339,11 +330,6 @@
 <!ENTITY calendar.copy.button.label             "Copier" >
 <!ENTITY calendar.paste.button.label            "Coller" >
 <!ENTITY calendar.print.button.label            "Imprimer" >
-
-<!ENTITY calendar.import.into.label              "Importer dans…" >
-<!ENTITY calendar.export.specific.calendar       "Exporter l'agenda" >
-<!ENTITY calendar.import.calendar                "Importer…" >
-<!ENTITY calendar.export.calendar                "Exporter l'agenda…" >
 
 <!ENTITY calendar.import.button.tooltip            "Importer : Importer des événements à partir d'un fichier local." >
 <!ENTITY calendar.export.button.tooltip            "Exporter : Exporter des événements vers un fichier local." >

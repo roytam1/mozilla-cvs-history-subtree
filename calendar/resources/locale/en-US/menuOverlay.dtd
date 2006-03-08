@@ -219,10 +219,8 @@
 
 <!ENTITY editMenu.label                         "Edit">
 <!ENTITY editMenu.accesskey                     "E">
-<!ENTITY optionsCmd.label                       "Options…">
-<!ENTITY optionsCmd.accesskey                   "O">
-<!ENTITY preferencesCmd.label                   "Preferences">
-<!ENTITY preferencesCmd.accesskey               "n">
+<!ENTITY preferencesCmd.label                   "Options…">
+<!ENTITY preferencesCmd.accesskey               "O">
 
 <!ENTITY viewMenu.label                         "View">
 <!ENTITY viewMenu.accesskey                     "V">

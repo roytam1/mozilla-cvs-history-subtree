@@ -43,15 +43,11 @@
 #include "nsStaticComponents.h"
 #endif
 
-#include "nsISecurityWarningDialogs.h"
-
 #define MINIMO_PROPERTIES_URL "chrome://minimo/locale/minimo.properties"
 
 // Global variables
-
 const static char* start_url = "chrome://minimo/content/minimo.xul";
 
-//const static char* start_url = "http://www.mozilla.org";
 //const static char* start_url = "http://www.meer.net/~dougt/test.html";
 //const static char* start_url = "resource://gre/res/start.html";
 //const static char* start_url = "resource://gre/res/1.html";
@@ -252,7 +248,6 @@ nsFullScreen::GetChromeItems(nsISimpleEnumerator **_retval)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-#ifndef WINCE
 
 class nsBadCertListener : public nsIBadCertListener
 {
@@ -295,17 +290,9 @@ nsBadCertListener::ConfirmUnknownIssuer(nsIInterfaceRequestor *socketInfo, nsIX5
   bundle->GetStringFromName(NS_LITERAL_STRING("confirmUnknownIssuer").get(), getter_Copies(message));
   bundle->GetStringFromName(NS_LITERAL_STRING("securityWarningTitle").get(), getter_Copies(title));
 
-  nsCOMPtr<nsIWindowWatcher> wwatcher = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
-  if (!wwatcher)
-    return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsIDOMWindow> parent;
-  if (!parent)
-    wwatcher->GetActiveWindow(getter_AddRefs(parent));
-
   PRBool result;
   nsCOMPtr<nsIPromptService> dlgService(do_GetService(NS_PROMPTSERVICE_CONTRACTID));
-  dlgService->Confirm(parent, title, message, &result);
+  dlgService->Confirm(nsnull, title, message, &result);
 
   *_retval = result;
 
@@ -333,17 +320,9 @@ nsBadCertListener::ConfirmMismatchDomain(nsIInterfaceRequestor *socketInfo, cons
   bundle->GetStringFromName(NS_LITERAL_STRING("confirmMismatch").get(), getter_Copies(message));
   bundle->GetStringFromName(NS_LITERAL_STRING("securityWarningTitle").get(), getter_Copies(title));
 
-  nsCOMPtr<nsIWindowWatcher> wwatcher = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
-  if (!wwatcher)
-    return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsIDOMWindow> parent;
-  if (!parent)
-    wwatcher->GetActiveWindow(getter_AddRefs(parent));
-
   PRBool result;
   nsCOMPtr<nsIPromptService> dlgService(do_GetService(NS_PROMPTSERVICE_CONTRACTID));
-  dlgService->Confirm(parent, title, message, &result);
+  dlgService->Confirm(nsnull, title, message, &result);
 
   *_retval = result;
 
@@ -368,17 +347,9 @@ nsBadCertListener::ConfirmCertExpired(nsIInterfaceRequestor *socketInfo, nsIX509
   bundle->GetStringFromName(NS_LITERAL_STRING("confirmCertExpired").get(), getter_Copies(message));
   bundle->GetStringFromName(NS_LITERAL_STRING("securityWarningTitle").get(), getter_Copies(title));
 
-  nsCOMPtr<nsIWindowWatcher> wwatcher = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
-  if (!wwatcher)
-    return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsIDOMWindow> parent;
-  if (!parent)
-    wwatcher->GetActiveWindow(getter_AddRefs(parent));
-
   PRBool result;
   nsCOMPtr<nsIPromptService> dlgService(do_GetService(NS_PROMPTSERVICE_CONTRACTID));
-  dlgService->Confirm(parent, title, message, &result);
+  dlgService->Confirm(nsnull, title, message, &result);
 
   *_retval = result;
 
@@ -390,75 +361,6 @@ nsBadCertListener::NotifyCrlNextupdate(nsIInterfaceRequestor *socketInfo, const 
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
-#endif
-
-
-#ifdef WINCE
-
-class nsSecurityWarningDialogs : public nsISecurityWarningDialogs
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSISECURITYWARNINGDIALOGS
-
-  nsSecurityWarningDialogs();
-
-private:
-  ~nsSecurityWarningDialogs();
-};
-
-NS_IMPL_ISUPPORTS1(nsSecurityWarningDialogs, nsISecurityWarningDialogs)
-
-nsSecurityWarningDialogs::nsSecurityWarningDialogs()
-{
-}
-
-nsSecurityWarningDialogs::~nsSecurityWarningDialogs()
-{
-}
-
-NS_IMETHODIMP
-nsSecurityWarningDialogs::ConfirmEnteringSecure(nsIInterfaceRequestor *ctx, PRBool *_retval)
-{
-  *_retval = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSecurityWarningDialogs::ConfirmEnteringWeak(nsIInterfaceRequestor *ctx, PRBool *_retval)
-{
-  *_retval = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSecurityWarningDialogs::ConfirmLeavingSecure(nsIInterfaceRequestor *ctx, PRBool *_retval)
-{
-  *_retval = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSecurityWarningDialogs::ConfirmMixedMode(nsIInterfaceRequestor *ctx, PRBool *_retval)
-{
-  *_retval = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSecurityWarningDialogs::ConfirmPostToInsecure(nsIInterfaceRequestor *ctx, PRBool *_retval)
-{
-  *_retval = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSecurityWarningDialogs::ConfirmPostToInsecureFromSecure(nsIInterfaceRequestor *ctx, PRBool *_retval)
-{
-  *_retval = PR_TRUE;
-  return NS_OK;
-}
-#endif
 
 
 nsresult StartupProfile()
@@ -495,7 +397,6 @@ void DoPreferences()
         return;
 
     prefBranch->SetIntPref("snav.keyCode.modifier", 0);
-    prefBranch->SetBoolPref("snav.enabled", true);
 }
 
 #define NS_FULLSCREEN_CID                          \
@@ -514,28 +415,10 @@ void DoPreferences()
   {0xbf, 0x12, 0x45, 0x81, 0xa0, 0x3f, 0x96, 0x6e} \
 }
 
-#define NS_SECURITYWARNINGDIALOGS_CID              \
-{ /* 8d995d4f-adcc-4159-b7f1-e94af72eeb88 */       \
-  0x8d995d4f,                                      \
-  0xadcc,                                          \
-  0x4159,                                          \
-  {0xb7, 0xf1, 0xe9, 0x4a, 0xf7, 0x2e, 0xeb, 0x88} \
-}
- 
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsBrowserInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBrowserStatusFilter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFullScreen)
-
-#ifndef WINCE
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBadCertListener)
-#endif
-
-#ifdef WINCE
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsSecurityWarningDialogs)
-#endif
-
-
 
 static const nsModuleComponentInfo defaultAppComps[] = {
   {
@@ -545,12 +428,6 @@ static const nsModuleComponentInfo defaultAppComps[] = {
      nsBrowserStatusFilterConstructor
   },
 
-  { "nsBrowserInstance",
-    NS_BROWSERINSTANCE_CID,
-    NS_BROWSERINSTANCE_CONTRACTID,
-    nsBrowserInstanceConstructor
-  },
-  
   {
      "FullScreen",
      NS_FULLSCREEN_CID,
@@ -558,23 +435,12 @@ static const nsModuleComponentInfo defaultAppComps[] = {
      nsFullScreenConstructor
   },
 
-#ifndef WINCE
   {
      "Bad Cert Dialogs",
      NS_BADCERTLISTENER_CID,
      NS_BADCERTLISTENER_CONTRACTID,
      nsBadCertListenerConstructor
   },
-#endif
-
-#ifdef WINCE
-   {
-     "PSM Security Warnings",
-     NS_SECURITYWARNINGDIALOGS_CID,
-     NS_SECURITYWARNINGDIALOGS_CONTRACTID,
-     nsSecurityWarningDialogsConstructor
-   },
-#endif
 };
 
 void OverrideComponents()
@@ -633,23 +499,17 @@ typedef struct _library
 
 _library Libraries[] =
 {
-  {  L"schannel.dll",    NULL },
+    {  L"nss3.dll",       NULL },
+    {  L"softokn3.dll",   NULL },
+    {  L"nssckbi.dll",    NULL },
+    {  L"ssl3.dll",       NULL },
   {  NULL, NULL },
 };
 
 void LoadKnownLibs()
 {
-  for (int i=0; Libraries[i].name; i++) 
-  {
+  for (int i=0; Libraries[i].name; i++)
     Libraries[i].module = LoadLibraryW(Libraries[i].name);
-    if (!Libraries[i].module)
-    {
-      MessageBox(0, 
-                 "Preload library failed to load.", 
-                 "Lib Load Failed", 
-                 MB_APPLMODAL);
-    }
-  }
 }
 
 void UnloadKnownLibs()
@@ -666,12 +526,12 @@ int main(int argc, char *argv[])
   gtk_set_locale();
   gtk_init(&argc, &argv);
 #endif
-
+  
+  CreateSplashScreen();
+  
 #ifdef HACKY_PRE_LOAD_LIBRARY
   LoadKnownLibs();
 #endif
-  
-  CreateSplashScreen();
   
 #ifdef _BUILD_STATIC_BIN
   NS_InitEmbedding(nsnull, nsnull, kPStaticModules, kStaticModuleCount);
@@ -740,7 +600,7 @@ int main(int argc, char *argv[])
   prefBranch = 0;
 
   if (dumpJSConsole)
-    WriteConsoleLog();
+      WriteConsoleLog();
 
   // Close down Embedding APIs
   NS_TermEmbedding();

@@ -37,7 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-
 /* XUL zoom in sync with pref service 
  * and also WARNING, this assumes styleSheets[1] and cssRules [1] is: 
  * defined in minimo.css and is: 
@@ -49,49 +48,6 @@
  */
 
 function syncUIZoom() {
-  try
-  {
     var currentUILevel=gPref.getIntPref("browser.display.zoomui");
     document.styleSheets[1].cssRules[1].style.fontSize=currentUILevel+"px";
-  }
-  catch (e) {}
-}
-
-
-/* All these Bookmarks  to be renamed to Bookmarks*Stuff function name space */ 
-
-function loadBookmarks(storeStr) {
-
-	var aDOMParser = new DOMParser();
-	
-	if(storeStr) {
-		gBookmarksDoc = aDOMParser.parseFromString(storeStr,"text/xml");
-	}
-	
-	if(storeStr&&gBookmarksDoc&&gBookmarksDoc.firstChild&&gBookmarksDoc.firstChild.nodeName=="bm") {
-		refreshBookmarks();
-	} else {
-		var bookmarkEmpty="<bm></bm>";
-		gPref.setCharPref("browser.bookmark.store",bookmarkEmpty);
-
-		gBookmarksDoc = aDOMParser.parseFromString(bookmarkEmpty,"text/xml");
-		refreshBookmarks();	
-	}
-}
-
-function refreshBookmarks() {
-	if(gBookmarksDoc.getElementsByTagName("li").length>0) {
-		document.getElementById("command_BrowserBookmark").hidden=false;
-	} 
-}
-
-function storeBookmarks() {
-	var bmSerializer = new XMLSerializer();
-	var encodedList=bmSerializer.serializeToString(gBookmarksDoc)
-      gPref.setCharPref("browser.bookmark.store",encodedList);
-}
-
-function BookmarksDeleteAllAndSync() {
-    var bookmarkEmpty="<bm></bm>";
-    gPref.setCharPref("browser.bookmark.store",bookmarkEmpty);
 }

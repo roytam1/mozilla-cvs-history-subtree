@@ -44,8 +44,7 @@ sub LoadConfig() {
         close CONFIG;
 
         package Settings;
-        eval $config or 
-            die "Malformed multi-config.pl: $@\n";
+        eval $config;
 
     } else {
         warn "Error: Need tinderbox config file, multi-config.pl\n";
@@ -57,27 +56,27 @@ sub LoadConfig() {
 sub Run() {
     my $start_time = time();
     OUTER: while (1) {
+        # $BuildSleep is the minimum amount of time a build is allowed to take.
+        # It prevents sending too many messages to the tinderbox server when
+        # something is broken.
         foreach my $treeentry (@{$Settings::Tinderboxes}) {
-            my $multidir = getcwd();
+	    my $multidir = getcwd();
             chdir($treeentry->{tree}) or
                 die "Tree $treeentry->{tree} does not exist";
             system("./build-seamonkey.pl --once $treeentry->{args}");
             chdir($multidir);
 
-            # We sleep 15 seconds to open up a window for stopping a build.
-            sleep 15;
+	    # We sleep 15 seconds to open up a window for stopping a build.
+	    sleep 15;
 
-            # Provide a fall-over technique that stops the multi-tinderbox
-            # script once the current build cycle has completed.
-            if ( -e "fall-over" ) {
-                system("mv fall-over fall-over.$$.done");
-                last OUTER;
-            }
+	    # Provide a fall-over technique that stops the multi-tinderbox
+	    # script once the current build cycle has completed.
+	    if ( -e "fall-over" ) {
+		system("mv fall-over fall-over.$$.done");
+		last OUTER;
+	    }
         }
 
-        # $BuildSleep is the minimum amount of time a build is allowed to take.
-        # It prevents sending too many messages to the tinderbox server when
-        # something is broken.
         my $sleep_time = ($Settings::BuildSleep * 60) - (time() - $start_time);
         if ($sleep_time > 0) {
             print "\n\nSleeping $sleep_time seconds ...\n";

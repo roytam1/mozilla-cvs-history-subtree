@@ -21,8 +21,20 @@ rm -f minimo.zip
 echo Copying over files from OBJDIR
 
 mkdir minimo
+cp -a bin/js3250.dll                                     minimo
 cp -a bin/minimo.exe                                     minimo
 cp -a bin/minimo_runner.exe                              minimo
+cp -a bin/nspr4.dll                                      minimo
+cp -a bin/plc4.dll                                       minimo
+cp -a bin/plds4.dll                                      minimo
+cp -a bin/xpcom.dll                                      minimo
+cp -a bin/xpcom_core.dll                                 minimo
+
+cp -a bin/nss3.dll                                       minimo
+cp -a bin/nssckbi.dll                                    minimo
+cp -a bin/softokn3.dll                                   minimo
+cp -a bin/ssl3.dll                                       minimo
+
 
 mkdir -p minimo/chrome
 
@@ -39,6 +51,18 @@ cp -a bin/chrome/toolkit.jar                             minimo/chrome
 cp -a bin/chrome/toolkit.manifest                        minimo/chrome
 
 mkdir -p minimo/components
+
+cp -a bin/components/nsDictionary.js                     minimo/components
+cp -a bin/components/nsInterfaceInfoToIDL.js             minimo/components
+cp -a bin/components/nsXmlRpcClient.js                   minimo/components
+
+cp -a bin/components/pipboot.dll                         minimo/components
+cp -a bin/components/pipnss.dll                          minimo/components
+
+cp -a bin/components/t8iix.dll                           minimo/components
+cp -a bin/components/websrvcs.dll                        minimo/components
+cp -a bin/components/xmlextra.dll                        minimo/components
+cp -a bin/components/gkplugin.dll                        minimo/components
 
 cp -a bin/extensions/spatial-navigation@extensions.mozilla.org/components/* minimo/components
 
@@ -60,28 +84,20 @@ echo Chewing on chrome
 
 cd minimo/chrome
 
-unzip toolkit.jar
-rm -rf toolkit.jar
-rm -rf content/passwordmgr
-rm -rf content/mozapps
-rm -rf content/help
-zip -0 -r toolkit.jar content
-rm -rf content
-
 unzip classic.jar
 rm -rf classic.jar
 rm -rf skin/classic/communicator
 rm -rf skin/classic/editor
 rm -rf skin/classic/messenger
 rm -rf skin/classic/navigator
-zip -0 -r classic.jar skin
+zip -r classic.jar skin
 rm -rf skin
 
 unzip en-US.jar
 rm -rf en-US.jar
 rm -rf locale/en-US/communicator
 rm -rf locale/en-US/navigator
-zip -0 -r en-US.jar locale
+zip -r en-US.jar locale
 rm -rf locale
 
 echo Copying over customized files
@@ -91,13 +107,10 @@ popd
 pushd $SRCDIR
 
 cp -a ../customization/all.js                             $OBJDIR/dist/minimo/greprefs
-cp -a ../customization/HelperAppDlg.js                    $OBJDIR/dist/minimo/components
 
-cat ../customization/ua.css.additions >> $OBJDIR/dist/minimo/res/ua.css
+echo Copying ARM shunt lib.  Adjust if you are not building ARM
 
-#echo Copying ARM shunt lib.  Adjust if you are not building ARM
-#
-#cp -a ../../build/wince/shunt/build/ARMV4Rel/shunt.dll $OBJDIR/dist/minimo
+cp -a ../../build/wince/shunt/build/ARMV4Rel/shunt.dll $OBJDIR/dist/minimo
 
 popd
 

@@ -50,8 +50,6 @@ interface calICalendar;
 
 interface calIDateTime;
 
-interface calIDuration;
-
 interface calIRecurrenceInfo;
 
 interface calIAttendee;
@@ -78,16 +76,6 @@ interface calIItemBase : nsISupports
   // clone always returns a mutable event
   calIItemBase clone();
 
-  /**
-   * Checks whether the argument object refers the same calendar item as
-   * this one, by testing both the id and recurrenceId property.  This 
-   *
-   * @arg aItem     the item to compare against this one
-   *
-   * @return        true if both ids match, false otherwise
-   */
-  boolean hasSameIds(in calIItemBase aItem);
-  
   //
   // the generation number of this item; 0 means
   // that it's never been stored in a store
@@ -132,40 +120,16 @@ interface calIItemBase : nsISupports
   attribute calIIcalComponent icalComponent;
 
   //
-  // alarms
+  // alarms; alarmTime is null if there is no
+  // alarm set.
   //
-
-  /**
-   * The amount of time from the date (specified by alarmRelated) to offset
-   * the alarm's firing time by
-   */
-  attribute calIDuration alarmOffset;
-
-  /**
-   * One of the ALARM_RELATED constants below.  
-   */
-  attribute unsigned long alarmRelated;
-
-  /**
-   * Corresponds to an alarmOffset that should be based off of the startDate or
-   * entryDate (for events and tasks, respectively)
-   */
-  const unsigned long ALARM_RELATED_START = 0;
-
-  /**
-   * Corresponds to an alarmOffset that should be based off of the endDate or
-   * dueDate (for events and tasks, respectively)
-   */
-  const unsigned long ALARM_RELATED_END = 1;
-
-  // The last time this alarm was fired and acknowledged by the user
-  attribute calIDateTime alarmLastAck;
+  attribute calIDateTime alarmTime;
 
   //
   // recurrence
   //
   attribute calIRecurrenceInfo recurrenceInfo;
-  readonly attribute calIDateTime recurrenceStartDate;
+  attribute calIDateTime recurrenceStartDate;
 
   // attachments
   // array of nsIMsgAttachment
@@ -273,8 +237,6 @@ interface calIItemBase : nsISupports
   /**
    * The recurrence ID, a.k.a. DTSTART-of-calculated-occurrence,
    * or null if this isn't an occurrence.
-   * Be conservative about setting this. It isn't marked as such, but
-   * consider it as readonly.
    */
   attribute calIDateTime recurrenceId;
 

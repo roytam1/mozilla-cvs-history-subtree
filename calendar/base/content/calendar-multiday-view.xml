@@ -23,8 +23,6 @@
    -
    - Contributor(s):
    -   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
-   -   Thomas Benisch <thomas.benisch@sun.com>
-   -   Dan Mosedale <dan.mosedale@oracle.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -95,9 +93,9 @@
         <parameter name="aStartMin"/>
         <parameter name="aEndMin"/>
         <body><![CDATA[
-          if (aStartMin < 0 || aStartMin > aEndMin)
+	  if (aStartMin < 0 || aStartMin > aEndMin)
               throw Components.results.NS_ERROR_INVALID_ARG;
-          if (aEndMin < 0 || aEndMin > 24*60)
+          if (aEndMin < 0 || aEndMin >= 24*60)
               throw Components.results.NS_ERROR_INVALID_ARG;
 
           if (this.mStartMin != aStartMin ||
@@ -381,9 +379,9 @@
         <parameter name="aStartMin"/>
         <parameter name="aEndMin"/>
         <body><![CDATA[
-          if (aStartMin < 0 || aStartMin > aEndMin)
+	  if (aStartMin < 0 || aStartMin > aEndMin)
               throw Components.results.NS_ERROR_INVALID_ARG;
-          if (aEndMin < 0 || aEndMin > 24*60)
+          if (aEndMin < 0 || aEndMin >= 24*60)
               throw Components.results.NS_ERROR_INVALID_ARG;
 
           if (this.mStartMin != aStartMin ||
@@ -515,54 +513,20 @@
         ]]></body>
       </method>
 
-      <!-- NOTE: This function may not return the true start and end time
-                 of an occurrence if that occurrence starts or ends on a day
-                 different than the day of this column -->
       <method name="getStartEndMinutesForOccurrence">
         <parameter name="aOccurrence"/>
         <body><![CDATA[
            var stdate = aOccurrence.startDate;
            var enddate = aOccurrence.endDate;
 
-           if (stdate.timezone != this.mTimezone) {
+           if (stdate.timezone != this.mTimezone)
                stdate = stdate.getInTimezone (this.mTimezone);
-           }
 
-           if (enddate.timezone != this.mTimezone) {
+           if (enddate.timezone != this.mTimezone)
                enddate = enddate.getInTimezone (this.mTimezone);
-           }
 
-           var startHour   = stdate.hour;
-           var startMinute = stdate.minute;
-           var endHour   = enddate.hour;
-           var endMinute = enddate.minute;
-
-           // Handle cases where an event begins or ends on a day other than this
-           if (stdate.compare(this.mDate) == -1) {
-               startHour = 0;
-               startMinute = 0;
-           }
-           if (enddate.compare(this.mDate) == 1) {
-               endHour = 24;
-               endMinute = 0;
-           }
-
-           return { start: startHour * 60 + startMinute,
-                    end:   endHour   * 60 + endMinute };
-        ]]></body>
-      </method>
-
-      <method name="createChunk">
-        <parameter name="aOccurrence"/>
-        <body><![CDATA[
-           var mins = this.getStartEndMinutesForOccurrence(aOccurrence);
-
-           var chunk = {
-               startMinute: mins.start,
-               endMinute: mins.end,
-               event: aOccurrence
-           };
-           return chunk;
+           return { start: stdate.hour * 60 + stdate.minute,
+                    end: enddate.hour * 60 + enddate.minute };
         ]]></body>
       </method>
 
@@ -571,7 +535,13 @@
         <body><![CDATA[
            this.internalDeleteEvent(aOccurrence);
 
-           var chunk = this.createChunk(aOccurrence);
+           var mins = this.getStartEndMinutesForOccurrence(aOccurrence);
+
+           var chunk = {
+               startMinute: mins.start,
+               endMinute: mins.end,
+               event: aOccurrence
+           };
            this.mEvents.push(chunk);
            this.relayout();
         ]]></body>
@@ -684,6 +654,24 @@
                       chunkBox.setAttribute("context", this.getAttribute("item-context") || this.getAttribute("context"));
                       chunkBox.setAttribute("style", "min-width: 1px; min-height: 1px;");
                       chunkBox.setAttribute("orient", orient);
+                      // chunkBox.setAttribute("style", "background: #eeeeff; padding: 0px 1px 0px 1px");
+
+                      // chunkBox.setAttribute("flex", "1");
+
+                      chunkBox.setAttribute("tooltip", "itemTooltip");
+
+                      var categoriesSelectorList = "";
+                      if (chunk.event.event.getProperty("CATEGORIES") != null) {
+                        var categoriesList = chunk.event.event.getProperty("CATEGORIES").split(",");
+                        for (var i = 0; i < categoriesList.length; i++ ) {
+                          // Remove illegal chars.
+                          categoriesList[i] = categoriesList[i].replace(' ','_');
+                          categoriesList[i] = categoriesList[i].toLowerCase();
+                        }
+                        categorySelectorList = categoriesList.join(" ");
+                      }
+                      chunkBox.setAttribute("item-category", categoriesSelectorList);
+
                       if (orient == "vertical")
                           chunkBox.setAttribute("height", duration * this.mPixPerMin);
                       else
@@ -694,6 +682,7 @@
                       chunkBox.calendarView = this.calendarView;
                       chunkBox.occurrence = chunk.event.event;
                       chunkBox.parentColumn = this;
+                      chunkBox.setAttribute("item-calendar", chunk.event.event.calendar.uri.spec);
 
                       chunk.event.eventbox = chunkBox;
                   } else {
@@ -1180,7 +1169,7 @@
     </implementation>
 
     <handlers>
-      <handler event="dblclick" button="0"><![CDATA[
+      <handler event="dblclick"><![CDATA[
         if (this.calendarView.controller) {
             this.calendarView.controller.createNewEvent();
         }
@@ -1227,97 +1216,10 @@
     </handlers>
   </binding>
 
-  <binding id="calendar-header-container">
-    <content>
-      <xul:vbox xbl:inherits="selected" anonid="thebox" flex="1" class="calendar-vent-column-header"/>
-    </content>
-
-    <implementation>
-      <field name="mItemBoxes">null</field>
-      <field name="mDate">null</field>
-      <field name="mCalendarView">null</field>
-
-      <constructor><![CDATA[
-        this.mItemBoxes = new Array();
-      ]]></constructor>
-
-      <property name="mainbox">
-        <getter><![CDATA[
-          return document.getAnonymousElementByAttribute(this, 'anonid', 'thebox');
-        ]]></getter>
-      </property>
-
-      <property name="date">
-        <getter><![CDATA[
-          return this.mDate;
-        ]]></getter>
-        <setter><![CDATA[
-          this.mDate = val;
-        ]]></setter>
-      </property>
-
-      <property name="calendarView">
-        <getter><![CDATA[
-          return this.mCalendarView;
-        ]]></getter>
-        <setter><![CDATA[
-          this.mCalendarView = val;
-        ]]></setter>
-      </property>
-
-      <method name="addEvent">
-        <parameter name="aItem"/>
-        <body><![CDATA[
-          function createXULElement(el) {
-            return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-          var itemBox = createXULElement("calendar-editable-item");
-
-          this.mainbox.appendChild(itemBox);
-          itemBox.calendarView = this.calendarView;
-          itemBox.occurrence = aItem;
-
-          this.mItemBoxes.push(itemBox);
-        ]]></body>
-      </method>
-
-      <method name="deleteEvent">
-        <parameter name="aItem"/>
-        <body><![CDATA[
-          for (var i in this.mItemBoxes) {
-            if (this.mItemBoxes[i].occurrence.id == aItem.id) {
-              this.mainbox.removeChild(this.mItemBoxes[i]);
-              this.mItemBoxes.splice(i, 1);
-            }
-          }
-        ]]></body>
-      </method>
-
-      <method name="selectOccurrence">
-        <parameter name="aItem"/>
-        <body><![CDATA[
-          for each (itemBox in this.mItemBoxes) {
-            if (aItem && itemBox.occurrence.id == aItem.id) {
-              itemBox.selected = true;
-            } else {
-              itemBox.selected = false;
-            }
-          }
-        ]]></body>
-      </method>
-    </implementation>
-
-    <handlers>
-      <handler event="dblclick" button="0"><![CDATA[
-        this.calendarView.controller.createNewEvent();
-      ]]></handler>
-    </handlers>
-  </binding>
-
   <!--
      -  An individual event box, to be inserted into a column.
     -->
-  <binding id="calendar-event-box" extends="chrome://calendar/content/calendar-view-core.xml#calendar-editable-item">
+  <binding id="calendar-event-box">
 
     <content>
       <xul:box anonid="eventbox" xbl:inherits="orient,width,height" flex="1">
@@ -1353,7 +1255,13 @@
       ]]></constructor>
 
       <!-- fields -->
+      <field name="mOccurrence">null</field>
       <field name="mParentColumn">null</field>
+      <field name="mCalendarView">null</field>
+      <field name="mSelected">null</field>
+      <property name="calendarView"
+        onget="return this.mCalendarView;"
+        onset="return (this.mCalendarView = val);" />
 
       <!-- methods/properties -->
       <method name="setAttribute">
@@ -1386,6 +1294,48 @@
         ]]></body>
       </method>
 
+      <property name="eventNameLabel" readonly="true"
+        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name');"/>
+      <property name="eventNameTextbox" readonly="true"
+        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name-textbox');"/>
+      <property name="eventNameInput" readonly="true"
+        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name-textbox').inputField;"/>
+
+      <property name="occurrence">
+        <getter><![CDATA[
+          return this.mOccurrence;
+        ]]></getter>
+        <setter><![CDATA[
+          this.mOccurrence = val;
+          var evl = this.eventNameLabel;
+
+          while (evl.firstChild)
+              evl.removeChild(evl.firstChild);
+
+          if (val && val != "")
+              evl.appendChild(document.createTextNode(val.title));
+          else
+              evl.appendChild(document.createTextNode("Untitled Event"));
+          return val;
+        ]]></setter>
+      </property>
+
+      <property name="selected">
+        <getter><![CDATA[
+          return this.mSelected;
+        ]]></getter>
+        <setter><![CDATA[
+          if (val && !this.mSelected) {
+              this.mSelected = true;
+              this.setAttribute("selected", "true");
+          } else if (!val && this.mSelected) {
+              this.mSelected = null;
+              this.removeAttribute("selected");
+          }
+          return val;
+        ]]></setter>
+      </property>
+
       <property name="parentColumn"
         onget="return this.mParentColumn;"
         onset="return (this.mParentColumn = val);"/>
@@ -1395,10 +1345,88 @@
 
       <property name="endMinute" readonly="true"
         onget="if (!this.mOccurrence) return 0; return this.mOccurrence.endDate.hour * 60 + this.mOccurrence.endDate.minute"/>
+
+      <method name="startEditing">
+        <body><![CDATA[
+          this.editingTimer = null;
+          this.mOriginalTextLabel = this.mOccurrence.title;
+
+          this.eventNameLabel.setAttribute("hidden", "true");
+
+          this.mEditing = true;
+
+          this.eventNameTextbox.value = this.mOriginalTextLabel;
+          this.eventNameTextbox.removeAttribute("hidden");
+          if (this.calendarView)
+              this.calendarView.activeInPlaceEdit = true;
+          this.eventNameInput.focus();
+          this.eventNameInput.select();
+        ]]></body>
+      </method>
+
+      <method name="stopEditing">
+        <parameter name="saveChanges"/>
+        <body><![CDATA[
+          this.mEditing = false;
+
+          if (this.calendarView)
+              this.calendarView.activeInPlaceEdit = false;
+
+          if (!saveChanges) {
+              this.eventNameTextbox.setAttribute("hidden", "true");
+              this.eventNameLabel.removeAttribute("hidden");
+              return;
+          }
+
+          if (this.eventNameTextbox.value != this.mOriginalTextLabel) {
+              var clone = this.mOccurrence.clone();
+              clone.title = this.eventNameTextbox.value;
+              clone.calendar.modifyItem(clone, this.mOccurrence, null);
+
+              // Note that as soon as we do the modifyItem, this element ceases to exist,
+              // so don't bother trying to modify anything further here! ('this' exists,
+              // because it's being kept alive, but our child content etc. is all gone)
+          }
+        ]]></body>
+      </method>
     </implementation>
 
     <handlers>
-      <handler event="mousedown" button="0"><![CDATA[
+      <handler event="click"><![CDATA[
+        var evTime = Date.now();
+        if (this.mMouseDownTime && (evTime - this.mMouseDownTime > 1000)) {
+            // not even a click!
+            return;
+        }
+
+        // start 'single click edit' timeout
+        if (this.selected) {
+            var self = this;
+            if (this.editingTimer) {
+                clearTimeout(this.editingTimer);
+            }
+            this.editingTimer = setTimeout(function () { self.startEditing(); }, 350);
+        } else {
+            this.calendarView.selectedItem = this.mOccurrence;
+        }
+      ]]></handler>
+
+      <handler event="dblclick"><![CDATA[
+        event.stopPropagation();
+
+        // stop 'single click edit' timeout (if started)
+        if (this.editingTimer) {
+            clearTimeout(this.editingTimer);
+            this.editingTimer = null;
+        }
+
+        if (this.calendarView.controller && this.mOccurrence) {
+            var occurrence = (event.ctrlKey) ? this.mOccurrence.parentItem : this.mOccurrence;
+            this.calendarView.controller.modifyOccurrence(occurrence);
+        }
+      ]]></handler>
+
+      <handler event="mousedown"><![CDATA[
         event.preventBubble();
 
         if (this.mEditing)
@@ -1407,6 +1435,7 @@
         this.mInMouseDown = true;
         this.mMouseX = event.screenX;
         this.mMouseY = event.screenY;
+        this.mMouseDownTime = Date.now();
       ]]></handler>
 
       <handler event="mousemove"><![CDATA[
@@ -1456,10 +1485,8 @@
         <!-- this thing is tricky; its width/height need to be programatically set based on the orientation -->
         <xul:box anonid="labelbox">
           <xul:box anonid="labeltimespacer">
-           <!-- XXX R button commented out until bug 322124 fixed
             <xul:button style="min-width: 10px; padding: 1px; background: red;" label="R"
              oncommand="var e=this.parentNode.parentNode.parentNode.parentNode; if (e.orient == 'horizontal') e.orient = 'vertical'; else e.orient = 'horizontal';" align="center"/>
-           -->    
           </xul:box>
           <xul:box anonid="labeldaybox" flex="1" equalsize="always" />
         </xul:box>
@@ -1536,12 +1563,9 @@
       <field name="mSelectedItem">null</field>
       <field name="mSelectedDayCol">null</field>
 
-      <field name="mDefaultStartMin">8*60</field>
-      <field name="mDefaultEndMin">20*60</field>
       <field name="mStartMin">8*60</field>
       <field name="mEndMin">20*60</field>
       <field name="mTasksInView">true</field>
-      <field name="mTimezone">"UTC"</field>
 
       <field name="mSelectionObserver"><![CDATA[
       ({  calView: this,
@@ -1549,14 +1573,9 @@
 	       // The selection manager should be smart enough to only call this
 	       // when the selection really did change, so just do it.
                if (this.calView.mSelectedItem) {
-                   var cols = this.calView.findColumnsForItem(this.calView.mSelectedItem);
-                   for each (col in cols) {
-                       if (!this.calView.mSelectedItem.startDate.isDate) {
-                           col.column.selectOccurrence(null);
-                       } else {
-                           col.header.selectOccurrence(null);
-                       }
-                   }
+                   var col = this.calView.findColumnForItem(this.calView.mSelectedItem);
+                   if (col) 
+                       col.column.selectOccurrence(null);
                }
                this.calView.mSelectedItem = itemSelectionArray[0];
                if (!this.calView.mSelectedItem)
@@ -1565,14 +1584,9 @@
                    this.calView.showDate(this.calView.mSelectedItem.startDate);
                if (this.calView.mSelectedItem.entryDate)
                    this.calView.showDate(this.calView.mSelectedItem.entryDate);
-               var cols = this.calView.findColumnsForItem(this.calView.mSelectedItem);
-               for each (col in cols) {
-                   if (!this.calView.mSelectedItem.startDate.isDate) {
-                       col.column.selectOccurrence(this.calView.mSelectedItem);
-                   } else {
-                       col.header.selectOccurrence(this.calView.mSelectedItem);
-                   }
-               }
+               var col = this.calView.findColumnForItem(this.calView.mSelectedItem);
+               if (col) 
+                   col.column.selectOccurrence(this.calView.mSelectedItem);
           }
       })
       ]]></field>
@@ -1618,13 +1632,6 @@
                 for each (var occ in occs) {
                     this.calView.doAddEvent(occ);
                 }
-
-                var chunks = this.calView.createChunksForNonDateItems(occs);
-                if (this.calView.readjustStartEndMinutes(chunks, false)) {
-                    this.calView.propagateStartEndMinutes();
-                }
-
-                return;
             },
             onModifyItem: function onModifyItem(aNewItem, aOldItem) {
                 //dump ("++ ModifyItem\n");
@@ -1648,8 +1655,6 @@
                 for each (var occ in occs) {
                     this.calView.doAddEvent(occ);
                 }
-
-                this.calView.readjust();
             },
             onDeleteItem: function onDeleteItem(aItem) {
                 //dump ("++ DeleteItem\n");
@@ -1662,8 +1667,6 @@
                 for each (var occ in occs) {
                     this.calView.doDeleteEvent(occ);
                 }
-
-                this.calView.readjust();
             },
             //XXXvv Alarm could, in theory, flash the event or something
             onAlarm: function onAlarm(aAlarmItem) { },
@@ -1707,12 +1710,6 @@
                                aCount, aItems) {
               if (!Components.isSuccessCode(aStatus))
                   return;
-
-              var chunks = this.calView.createChunksForNonDateItems(aItems);
-
-              if (this.calView.readjustStartEndMinutes(chunks, false)) {
-                  this.calView.propagateStartEndMinutes();
-              }
 
               for each (var item in aItems) {
                   this.calView.doAddEvent(item);
@@ -1787,21 +1784,11 @@
         ]]></setter>
       </property>
 
-      <property name="timezone">
-        <getter><![CDATA[
-          return this.mTimezone;
-        ]]></getter>
-        <setter><![CDATA[
-          this.mTimezone = val;
-          return val;
-        ]]></setter>
-      </property>
-
 
       <method name="showDate">
         <parameter name="aDate"/>
         <body><![CDATA[
-          var targetDate = aDate.getInTimezone(this.mTimezone);
+          var targetDate = aDate.clone();
           targetDate.isDate = true;
 
           if (this.mStartDate && this.mEndDate) {
@@ -1824,7 +1811,7 @@
             this.setDateRange(aDate.startOfWeek, aDate.endOfWeek);
           }
 
-          this.selectedDay = targetDate;
+          this.selectedDay = aDate;
         ]]></body>
       </method>
 
@@ -1834,13 +1821,9 @@
         <body><![CDATA[
           //dump ("setDateRange\n");
           this.mDateList = null;
-
-          this.mStartDate = aStartDate.getInTimezone(this.mTimezone);
-          this.mStartDate.isDate = true;
+          this.mStartDate = aStartDate.clone();
           this.mStartDate.makeImmutable();
-
-          this.mEndDate = aEndDate.getInTimezone(this.mTimezone);
-          this.mEndDate.isDate = true;
+          this.mEndDate = aEndDate.clone();
           this.mEndDate.makeImmutable();
 
           // this function needs to be smarter, and needs to compare
@@ -1943,25 +1926,18 @@
         <setter><![CDATA[
           if (this.mSelectedItem != val) {
               if (this.mSelectedItem) {
-                  var cols = this.findColumnsForItem(this.mSelectedItem);
-                  for each (col in cols) {
-                      col.header.selectOccurrence(null);
+                  var col = this.findColumnForItem(this.mSelectedItem);
+                  if (col) {
                       col.column.selectOccurrence(null);
+                  } else {
+                      dump ("Thought I had a selected occurrence (id: " + this.mSelectedItem.id + "), but couldn't find a column for it!\n");
                   }
               }
 
               if (val) {
-                  var cols = this.findColumnsForItem(val);
-                  if (cols.length > 0) {
-                      var start = val.startDate;
-                      for each (col in cols) {
-                          if(start.isDate) {
-                              col.header.selectOccurrence(val);
-                          }
-                          else {
-                              col.column.selectOccurrence(val);
-                          }
-                      }
+                  var col = this.findColumnForItem(val);
+                  if (col) {
+                      col.column.selectOccurrence(val);
                       if(this.mController.selectionManager)
                           this.mController.selectionManager.replaceSelection(val);
                   } else {
@@ -1969,10 +1945,8 @@
                   }
               }
 
-              this.mSelectedItem = val;
+              return (this.mSelectedItem = val);
           }
-
-          return val;
         ]]></setter>
       </property>
 
@@ -2019,17 +1993,14 @@
 	<parameter name="aStartMin"/>
         <parameter name="aEndMin"/>
         <body><![CDATA[
-          if (aStartMin < 0 || aStartMin > aEndMin)
+	  if (aStartMin < 0 || aStartMin > aEndMin)
               throw Components.results.NS_ERROR_INVALID_ARG;
-          if (aEndMin < 0 || aEndMin > 24*60)
+          if (aEndMin < 0 || aEndMin >= 24*60)
               throw Components.results.NS_ERROR_INVALID_ARG;
 
-          if (this.mDefaultStartMin != aStartMin || 
-              this.mDefaultEndMin != aEndMin || 
-              this.mStartMin != aStartMin || this.mEndMin != aEndMin)
+          if (this.mStartMin != aStartMin ||
+              this.mEndMin != aEndMin)
           {
-              this.mDefaultStartMin = aStartMin;
-              this.mDefaultEndMin = aEndMin;
               this.mStartMin = aStartMin;
               this.mEndMin = aEndMin;
 
@@ -2144,12 +2115,7 @@
           if (!this.startDate || !this.endDate)
             return;
 
-          // we're throwing out all the events and starting over, we
-          // should reset to the default size
-          this.mStartMin = this.mDefaultStartMin;
-          this.mEndMin = this.mDefaultEndMin;
-
-          // recreate our columns
+          // recreate our columns as necessary
           this.relayout();
 
           if (!this.mCalendar)
@@ -2240,11 +2206,11 @@
               dayEventsBox.date = d;
               dayEventsBox.calendarView = this;
 
-              var dayHeaderBox = createXULElement("calendar-header-container");
+              var dayHeaderBox = createXULElement("box");
+              dayHeaderBox.setAttribute("class", "calendar-event-column-header");
               dayHeaderBox.setAttribute("flex", "1");
               headerdaybox.appendChild(dayHeaderBox);
 
-              dayHeaderBox.calendarView = this;
               dayHeaderBox.setAttribute("orient", orient);
 
               var labelbox = createXULElement("box");
@@ -2259,13 +2225,13 @@
               label.setAttribute("class", "calendar-day-label-date");
               labelbox.appendChild(label);
 
-              var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                                  .getService(Components.interfaces.nsIStringBundleService);
-              var props = sbs.createBundle("chrome://calendar/locale/dateFormat.properties");
+              // XXX Localize me, get me out of here
+              var dayNames = [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ];
+              var dayNamesShort = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ];
 
               label = createXULElement("label");
               //label.setAttribute("flex", "1");
-              label.setAttribute("value", props.GetStringFromName("day."+ (d.weekday+1)+ ".Mmm"));
+              label.setAttribute("value", dayNamesShort[d.weekday]);
               label.setAttribute("class", "calendar-day-label-name");
               labelbox.appendChild(label);
               
@@ -2275,7 +2241,6 @@
               // they're likely to be immutable.
               var d2 = d.clone();
               d2.isDate = true;
-              d2.makeImmutable();
 
               this.mDateColumns.push ( { date: d2, column: dayEventsBox, header: dayHeaderBox } );
           }
@@ -2285,27 +2250,6 @@
           for each (col in this.mDateColumns) {
                col.column.endLayoutBatchChange();
           }
-        ]]></body>
-      </method>
-
-      <method name="propagateStartEndMinutes">
-        <body><![CDATA[
-          // update timebar
-          var timebar = document.getAnonymousElementByAttribute(this, 
-                                                                "anonid",
-                                                                "timebar");
-          timebar.setStartEndMinutes(this.mStartMin, this.mEndMin);
-
-          // fix pixels-per-minute
-          this.onResize();
-
-          for each (var d in this.mDateColumns) {
-              // each of these calls will cause the column in question
-              // to call relayout on itself
-              d.column.setStartEndMinutes(this.mStartMin, this.mEndMin);
-          }
-
-          return;
         ]]></body>
       </method>
 
@@ -2321,39 +2265,20 @@
       </method>
 
 
-      <method name="findColumnsForItem">
+      <method name="findColumnForItem">
         <parameter name="aItem"/>
         <body><![CDATA[
-          var columns = new Array();
+          var estart;
+          if(aItem.startDate) 
+              estart = aItem.startDate;
+          //XXX This isn't really good yet.  It may need to be changed once
+          //    tasks are fully implemented.
+          if(aItem.entryDate)
+              estart = aItem.entryDate;
+          if(!estart)
+              return null;
 
-          // We don't support tasks here, yet
-          if (!(aItem instanceof Components.interfaces.calIEvent))
-              return columns;
-          var tz = this.mDateColumns[0].date.timezone;
-
-          // Note that these may be dates or datetimes
-          var targetDate = aItem.startDate.getInTimezone(tz);
-          var finishDate = aItem.endDate.getInTimezone(tz);
-
-          if (!targetDate.isDate) {
-            // Set the time to 00:00 so that we get all the boxes
-            targetDate.hour = 0;
-            targetDate.minute = 0;
-            targetDate.second = 0;
-          }
-
-          while (targetDate.compare(finishDate) == -1) {
-            var col = this.findColumnForDate(targetDate);
-
-            // This might not exist if the event spans the view start or end
-            if (col) {
-                columns.push(col);
-            }
-            targetDate.day += 1;
-            targetDate.normalize();
-          }
-
-          return columns;
+          return this.findColumnForDate(estart);
         ]]></body>
       </method>
 
@@ -2381,20 +2306,18 @@
         <parameter name="aEvent"/>
         <body><![CDATA[
           //dump ("++ doAddevent\n");
-          var cols = this.findColumnsForItem(aEvent);
-          if (!cols.length)
+          var col = this.findColumnForItem(aEvent);
+          if (!col)
               return;
 
-          for each (col in cols) {
-              var column = col.column;
-              var header = col.header;
+          var column = col.column;
+          var header = col.header;
 
-              var estart = aEvent.startDate;
-              if (estart.isDate) {
-                  header.addEvent(aEvent);
-              } else {
-                  column.addEvent(aEvent);
-              }
+          var estart = aEvent.startDate;
+          if (estart.isDate) {
+              // add it to header
+          } else {
+              column.addEvent(aEvent);
           }
         ]]></body>
       </method>
@@ -2402,20 +2325,18 @@
       <method name="doDeleteEvent">
         <parameter name="aEvent"/>
         <body><![CDATA[
-          var cols = this.findColumnsForItem(aEvent);
-          if (!cols.length)
+          var col = this.findColumnForItem(aEvent);
+          if (!col)
               return;
 
-          for each (col in cols) {
-              var column = col.column;
-              var header = col.header;
+          var column = col.column;
+          var header = col.header;
 
-              var estart = aEvent.startDate;
-              if (estart.isDate) {
-                  header.deleteEvent(aEvent);
-              } else {
-                  column.deleteEvent(aEvent);
-              }
+          var estart = aEvent.startDate;
+          if (estart.isDate) {
+              // remove from header
+          } else {
+              column.deleteEvent(aEvent);
           }
         ]]></body>
       </method>
@@ -2428,140 +2349,6 @@
 
           for each (var col in this.mDateColumns) {
               col.column.pixelsPerMinute = pixPerMin;
-          }
-        ]]></body>
-      </method>
-
-      <method name="readjustStartEndMinutes">
-        <parameter name="aChunks"/>
-        <parameter name="aIsAllChunks"/>
-        <body><![CDATA[
-          var hasChanged = false;
-          const MINS_PER_HOUR = 60;
-          const DAY_START_MIN = 0 * MINS_PER_HOUR;
-          const DAY_END_MIN = 24 * MINS_PER_HOUR;
-
-          // Start at the existing boundaries if aIsAllChunks is set,
-          // since in that case, we know that the boundaries will only
-          // be expanding.  Otherwise, start at the defaults.
-          var earliestChunkStartMin = 
-              (aIsAllChunks ? this.mDefaultStartMin : this.mStartMin);
-          var latestChunkEndMin = 
-              (aIsAllChunks ? this.mDefaultEndMin : this.mEndMin);
-
-          for each (var chunk in aChunks) {
-
-              if (chunk.startMinute < earliestChunkStartMin) {
-                  earliestChunkStartMin = chunk.startMinute;
-              }
-
-              if (chunk.endMinute > latestChunkEndMin) {
-                  latestChunkEndMin = chunk.endMinute;
-              }
-
-              // break, if the start and end time match the day range
-              if (earliestChunkStartMin <= DAY_START_MIN
-                  && latestChunkEndMin >= DAY_END_MIN) {
-                  break;
-              }
-          }
-
-          // round down
-          if (earliestChunkStartMin % MINS_PER_HOUR) {
-              earliestChunkStartMin -= (earliestChunkStartMin % MINS_PER_HOUR);
-          }
-
-          // round up
-          if (latestChunkEndMin % MINS_PER_HOUR) {
-              latestChunkEndMin += MINS_PER_HOUR - 
-                                 (latestChunkEndMin % MINS_PER_HOUR);
-          }
-
-          // The only reason try/catch is necessary here is to work
-          // around XBL lossage.  Without it, control never makes it
-          // through the try block, even though no exception is ever thrown!
-          try {
-              if (aIsAllChunks) {
-                  // Since we've looked at all the in-view chunks,
-                  // it's safe to either shrink or expand the time shown.
-                  // Shrinking might be necessary when switching
-                  // weeks, or if an event has been deleted, moved or
-                  // shrunk out of the "non-default" area.
-                  if (this.mStartMin != earliestChunkStartMin) {
-                      this.mStartMin = earliestChunkStartMin;
-                      hasChanged = true;
-                  }
-                  if (this.mEndMin != latestChunkEndMin) {
-                      this.mEndMin = latestChunkEndMin;
-                      hasChanged = true;
-                  }
-              } else {
-                  // here we are doing incremental adjustment, so we 
-                  // can only expand the time shown, never shrink it
-                  if (this.mStartMin > earliestChunkStartMin) {
-                      this.mStartMin = earliestChunkStartMin;
-                      hasChanged = true;
-                  } 
-                  if (this.mEndMin < latestChunkEndMin) {
-                      this.mEndMin = latestChunkEndMin;
-                      hasChanged = true;
-                  }
-              }
-          } catch (e) {
-              Components.utils.reportError("Unexpected exception in "
-              + "readjustStartEndMinutes: " + e);
-              throw e;
-          }
-          return hasChanged;
-        ]]></body>
-      </method>
-
-      <method name="createChunksForNonDateItems">
-        <parameter name="aItems"/>
-        <body><![CDATA[
-
-          var chunks = new Array();
-          for each (var item in aItems) {
-              if (item.startDate.isDate) {
-                  continue;
-              }
-
-              var cols = this.findColumnsForItem(item);
-              if (!cols.length) {
-                  continue;
-              }
-
-              // add a chunk for each date that has one
-              for each (var col in cols) {
-                  chunks.push(col.column.createChunk(item));
-              }
-          }
-
-          return chunks;
-        ]]></body>
-      </method>
-
-
-      <method name="getAllChunks">
-        <body><![CDATA[
-          var chunks = new Array();
-          for each (var col in this.mDateColumns) {
-              for each (var chunk in col.column.mEvents) {
-                  chunks.push(chunk);
-              }
-          }
-          return chunks;
-        ]]></body>
-      </method>
-
-      <method name="readjust">
-        <body><![CDATA[
-          if (this.readjustStartEndMinutes(this.getAllChunks(), true)) {
-              var selectedDay = this.selectedDay;
-              this.propagateStartEndMinutes();
-              if (selectedDay) {
-                  this.selectedDay = selectedDay;
-              }
           }
         ]]></body>
       </method>

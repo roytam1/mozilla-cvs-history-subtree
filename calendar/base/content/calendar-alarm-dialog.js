@@ -40,10 +40,7 @@ function addAlarm(event)
 
   var alarmWidget = document.createElement("calendar-alarm-widget");
   alarmWidget.setAttribute("title", event.title);
-  var time = event.startDate || event.entryDate || event.dueDate;
-  var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
-                                .getService(Components.interfaces.calIDateTimeFormatter);
-  alarmWidget.setAttribute("time", dateFormatter.formatDateTime(time));
+  alarmWidget.setAttribute("time", event.alarmTime.toString());
   alarmWidget.setAttribute("location", event.getProperty("LOCATION"));
   alarmWidget.addEventListener("snooze", onSnoozeAlarm, false);
   alarmWidget.addEventListener("dismiss", onDismissAlarm, false);
@@ -57,41 +54,23 @@ function addAlarm(event)
    var playSound = calendarPrefs.getBoolPref("alarms.playsound");
    if (playSound) {
      try {
-       var soundURL = calendarPrefs.getCharPref("alarms.soundURL");
-       var sound = Components.classes["@mozilla.org/sound;1"]
-                             .createInstance(Components.interfaces.nsISound);
-       if (soundURL && soundURL.length && soundURL.length > 0) {
-         soundURL = makeURL(soundURL);
-         sound.init();
-         sound.play(soundURL);
-       } else {
-         sound.init();
-         sound.beep();
-       }
+       var soundURL = makeURL(calendarPrefs.getCharPref("alarms.soundURL"));
+       var sound = Components.classes["@mozilla.org/sound;1"].createInstance(Components.interfaces.nsISound);
+       sound.init();
+       sound.play(soundURL);
      } catch (ex) {
        dump("unable to play sound...\n" + ex + "\n");
      }
    }
 }
 
+function removeAlarm(event)
+{
+
+}
+
 function onDismissAll()
 {
-  var now = Components.classes["@mozilla.org/calendar/datetime;1"]
-                      .createInstance(Components.interfaces.calIDateTime);
-  now.jsDate = new Date();
-  now = now.getInTimezone("UTC");
-  var box = document.getElementById("alarmlist");
-  for each (kid in box.childNodes) {
-    if (!kid.item) {
-        continue;
-    }
-    // We want the parent item, otherwise we're going to accidentally create an
-    // exception.  We've relnoted (for 0.1) the slightly odd behavior this can
-    // cause if you move an event after dismissing an alarm
-    var item = kid.item.parentItem.clone();
-    item.alarmLastAck = now;
-    item.calendar.modifyItem(item, kid.item, null);
-  }
   return true;
 }
 
@@ -102,39 +81,20 @@ function onSnoozeAlarm(event)
 
   var alarmService = Components.classes["@mozilla.org/calendar/alarm-service;1"].getService(Components.interfaces.calIAlarmService);
   
-  var duration = Components.classes["@mozilla.org/calendar/duration;1"]
-                 .createInstance(Components.interfaces.calIDuration);
-  //XXX figure out a nice UI way to offer other length options
-  duration.minutes = 5;
+  var duration = Components.classes["@mozilla.org/calendar/datetime;1"].createInstance(Components.interfaces.calIDateTime);
+  duration.minute = 5;
+  duration.normalize()
 
   alarmService.snoozeEvent(alarmWidget.item, duration);
 
-  var parent = alarmWidget.parentNode;
-  parent.removeChild(alarmWidget);
-  if (!parent.hasChildNodes()) {
-    // If this was the last alarm, close the window.
-    window.close();
-  }
+  alarmWidget.parentNode.removeChild(alarmWidget);
 }
 
 function onDismissAlarm(event)
 {
+  // everything is just visual at this point. we don't need to do anything special.
   var alarmWidget = event.target;
-  var now = Components.classes["@mozilla.org/calendar/datetime;1"]
-                      .createInstance(Components.interfaces.calIDateTime);
-  now.jsDate = new Date();
-  now = now.getInTimezone("UTC");
-  var item = alarmWidget.item.clone();
-  item.alarmLastAck = now;
-  item.calendar.modifyItem(item, alarmWidget.item, null);
-
-  var parent = alarmWidget.parentNode;
-  parent.removeChild(alarmWidget);
-
-  if (!parent.hasChildNodes()) {
-    // If this was the last alarm, close the window.
-    window.close();
-  }
+  alarmWidget.parentNode.removeChild(alarmWidget);
 
 }
 

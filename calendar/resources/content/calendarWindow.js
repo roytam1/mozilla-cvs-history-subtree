@@ -56,38 +56,36 @@ calViewController.prototype.createNewEvent = function (aCalendar, aStartTime, aE
         event.startDate = aStartTime;
         event.endDate = aEndTime;
         //var bundle = srGetStrBundle("chrome://calendar/locale/calendar.properties");
-        //var newEventTitle = bundle.GetStringFromName("newEvent");
-        var newEventTitle = "New Event";
-        event.title = newEventTitle;
+        //var newEvent = bundle.GetStringFromName("newEvent");
+        var newEvent = "New Event";
+        event.title = newEvent;
         doTransaction('add', event, aCalendar, null, null);
     } else if (aStartTime && aStartTime.isDate) {
         var event = createEvent();
         event.startDate = aStartTime;
         doTransaction('add', event, aCalendar, null, null);
     } else {
-        newEvent();
+        newEventCommand();
     }
 }
 
 calViewController.prototype.modifyOccurrence = function (aOccurrence, aNewStartTime, aNewEndTime) {
     if (aNewStartTime && aNewEndTime && !aNewStartTime.isDate 
         && !aNewEndTime.isDate) {
-        var itemToEdit = getOccurrenceOrParent(aOccurrence);
-        var instance = itemToEdit.clone();
+        var instance = aOccurrence.clone();
         instance.startDate = aNewStartTime;
         instance.endDate = aNewEndTime;
-        doTransaction('modify', instance, instance.calendar, itemToEdit, null);
+        doTransaction('modify', instance, instance.calendar, aOccurrence, null);
     } else {
-        editEvent();
+        editEventCommand();
     }
 }
 
 calViewController.prototype.deleteOccurrence = function (aOccurrence) {
-    var itemToDelete = getOccurrenceOrParent(aOccurrence);
-    if (itemToDelete.parentItem != itemToDelete) {
-        var event = itemToDelete.parentItem.clone();
-        event.recurrenceInfo.removeOccurrenceAt(itemToDelete.recurrenceId);
-        doTransaction('modify', event, event.calendar, itemToDelete.parentItem, null);
+    if (aOccurrence.parentItem != aOccurrence) {
+        var event = aOccurrence.parentItem.clone();
+        event.recurrenceInfo.removeOccurrenceAt(aOccurrence.recurrenceId);
+        doTransaction('modify', event, event.calendar, aOccurrence.parentItem, null);
     } else {
         doTransaction('delete', aOccurrence, aOccurrence.calendar, null, null);
     }
@@ -205,11 +203,10 @@ function CalendarWindow( )
 
 CalendarWindow.prototype.switchToDayView = function calWin_switchToDayView( )
 {
-    document.getElementById("month_view_command").removeAttribute("checked");
-    document.getElementById("multiweek_view_command").removeAttribute("checked");
-    document.getElementById("week_view_command").removeAttribute("checked");
-    document.getElementById("day_view_command").setAttribute("checked", true);
-    document.getElementById("menu-numberofweeks-inview").setAttribute("disabled", true);
+    document.getElementById("day_view_command").setAttribute("disabled", true);
+    document.getElementById("week_view_command").removeAttribute("disabled");
+    document.getElementById("multiweek_view_command").removeAttribute("disabled");
+    document.getElementById("month_view_command").removeAttribute("disabled");
     this.switchToView('day-view');
 }
 
@@ -221,11 +218,10 @@ CalendarWindow.prototype.switchToDayView = function calWin_switchToDayView( )
 
 CalendarWindow.prototype.switchToWeekView = function calWin_switchToWeekView( )
 {
-    document.getElementById("month_view_command").removeAttribute("checked");
-    document.getElementById("multiweek_view_command").removeAttribute("checked");
-    document.getElementById("day_view_command").removeAttribute("checked");
-    document.getElementById("week_view_command").setAttribute("checked", true);
-    document.getElementById("menu-numberofweeks-inview").setAttribute("disabled", true);
+    document.getElementById("day_view_command").removeAttribute("disabled");
+    document.getElementById("week_view_command").setAttribute("disabled", true);
+    document.getElementById("multiweek_view_command").removeAttribute("disabled");
+    document.getElementById("month_view_command").removeAttribute("disabled");
     this.switchToView('week-view');
 }
 
@@ -237,11 +233,10 @@ CalendarWindow.prototype.switchToWeekView = function calWin_switchToWeekView( )
 
 CalendarWindow.prototype.switchToMonthView = function calWin_switchToMonthView( )
 {
-    document.getElementById("week_view_command").removeAttribute("checked");
-    document.getElementById("multiweek_view_command").removeAttribute("checked");
-    document.getElementById("day_view_command").removeAttribute("checked");
-    document.getElementById("month_view_command").setAttribute("checked", true);
-    document.getElementById("menu-numberofweeks-inview").setAttribute("disabled", true);
+    document.getElementById("day_view_command").removeAttribute("disabled");
+    document.getElementById("week_view_command").removeAttribute("disabled");
+    document.getElementById("multiweek_view_command").removeAttribute("disabled");
+    document.getElementById("month_view_command").setAttribute("disabled", true);
     this.switchToView('month-view');
 }
 
@@ -252,11 +247,10 @@ CalendarWindow.prototype.switchToMonthView = function calWin_switchToMonthView( 
 
 CalendarWindow.prototype.switchToMultiweekView = function calWin_switchToMultiweekView( )
 {
-    document.getElementById("month_view_command").removeAttribute("checked");
-    document.getElementById("week_view_command").removeAttribute("checked");
-    document.getElementById("day_view_command").removeAttribute("checked");
-    document.getElementById("multiweek_view_command").setAttribute("checked", true);
-    document.getElementById("menu-numberofweeks-inview").removeAttribute("disabled");
+    document.getElementById("day_view_command").removeAttribute("disabled");
+    document.getElementById("week_view_command").removeAttribute("disabled");
+    document.getElementById("multiweek_view_command").setAttribute("disabled", true);
+    document.getElementById("month_view_command").removeAttribute("disabled");
     this.switchToView('multiweek-view');
 }
 
@@ -352,7 +346,6 @@ CalendarWindow.prototype.switchToView = function calWin_switchToView( newView )
     if (viewElement.displayCalendar != getDisplayComposite()) {
         viewElement.controller = gViewController;
         viewElement.displayCalendar = getDisplayComposite();
-        viewElement.timezone = calendarDefaultTimezone();
         this.EventSelection.addObserver(viewElement.selectionObserver);
     }
 
