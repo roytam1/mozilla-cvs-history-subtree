@@ -1358,19 +1358,6 @@ nsTableRowGroupFrame::IsSimpleRowFrame(nsTableFrame* aTableFrame,
   return PR_FALSE;
 }
 
-nsIFrame*
-GetLastRowSibling(nsIFrame* aRowFrame)
-{
-  nsIFrame* lastRowFrame = nsnull;
-  for (nsIFrame* lastFrame = aRowFrame; lastFrame;
-       lastFrame = lastFrame->GetNextSibling()) {
-    if (nsLayoutAtoms::tableRowFrame == lastFrame->GetType()) {
-      lastRowFrame = lastFrame;
-    }
-  }
-  return lastRowFrame;
-}
-
 NS_METHOD 
 nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
                                        nsHTMLReflowMetrics&   aDesiredSize,
@@ -1411,11 +1398,8 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
         else needToCalcRowHeights = PR_TRUE;
       }
     } else {
-      if (desiredSize.mNothingChanged) { // mNothingChanges currently only works when a cell is the target
-        // the cell frame did not change size. Just calculate our desired height
-        aDesiredSize.height = GetLastRowSibling(mFrames.FirstChild())->GetRect().YMost();
-      } 
-      else needToCalcRowHeights = PR_TRUE;
+      if (!desiredSize.mNothingChanged) // mNothingChanges currently only works when a cell is the target
+        needToCalcRowHeights = PR_TRUE;
     }
     if (needToCalcRowHeights) {
       // Now recalculate the row heights
@@ -1428,11 +1412,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
       Invalidate(dirtyRect);
     }
   }
-  
-  // Return our desired width
-  //aDesiredSize.width = aReflowState.reflowState.availableWidth;
-
-  return rv;
 }
 
 nsIAtom*
