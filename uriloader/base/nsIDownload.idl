@@ -104,6 +104,15 @@ interface nsIDownload : nsITransfer {
     readonly attribute nsIMIMEInfo MIMEInfo;
 };
 
+[scriptable, uuid(ff76f0c7-caaf-4e64-8896-154348322696)]
+interface nsIDownload_MOZILLA_1_8_BRANCH : nsIDownload {
+
+    /**
+     * The speed of the transfer in bytes/sec.
+     */
+    readonly attribute double speed;
+};
+
 %{C++
 // {E3FA9D0A-1DD1-11B2-BDEF-8C720B597445}
 #define NS_DOWNLOAD_CID \

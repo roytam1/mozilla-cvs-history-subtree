@@ -105,7 +105,7 @@ private:
   friend class nsDownload;
 };
 
-class nsDownload : public nsIDownload,
+class nsDownload : public nsIDownload_MOZILLA_1_8_BRANCH,
                    public nsIObserver
 {
 public:
@@ -113,6 +113,7 @@ public:
   NS_DECL_NSIWEBPROGRESSLISTENER2
   NS_DECL_NSITRANSFER
   NS_DECL_NSIDOWNLOAD
+  NS_DECL_NSIDOWNLOAD_MOZILLA_1_8_BRANCH
   NS_DECL_NSIOBSERVER
   NS_DECL_ISUPPORTS
 
@@ -138,8 +139,8 @@ public:
   }
 
   struct TransferInformation {
-    PRInt32 mCurrBytes, mMaxBytes;
-    TransferInformation(PRInt32 aCurr, PRInt32 aMax) :
+    PRUint64 mCurrBytes, mMaxBytes;
+    TransferInformation(PRUint64 aCurr, PRUint64 aMax) :
       mCurrBytes(aCurr),
       mMaxBytes(aMax)
       {}
@@ -159,6 +160,7 @@ public:
   }
   void SetStartTime(PRInt64 aStartTime) {
     mStartTime = aStartTime;
+    mLastUpdate = aStartTime;
   }
 private:
   nsDownloadManager* mDownloadManager;
@@ -179,6 +181,7 @@ private:
   PRUint64 mMaxBytes;
   PRTime mStartTime;
   PRTime mLastUpdate;
+  double mSpeed;
 };
 
 #endif

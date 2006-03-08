@@ -1601,6 +1601,10 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
 {
   NS_PRECONDITION(request, "OnStartRequest without request?");
 
+  // Set mTimeDownloadStarted here as the download has already started and
+  // we want to record the start time before showing the filepicker.
+  mTimeDownloadStarted = PR_Now();
+
   mRequest = request;
 
   nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
@@ -1679,8 +1683,6 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
 
     encChannel->SetApplyConversion( applyConversion );
   }
-
-  mTimeDownloadStarted = PR_Now();
 
   // now that the temp file is set up, find out if we need to invoke a dialog
   // asking the user what they want us to do with this content...
