@@ -309,16 +309,15 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
         !(aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
           !isPaginated &&
           !((nsTableRowFrame*)kidFrame)->NeedSpecialReflow())) {
-      nsSize kidAvailSize(aReflowState.availSize);
-      if (0 >= kidAvailSize.height)
-        kidAvailSize.height = 1;      // XXX: HaCk - we don't handle negative heights yet
-      nsHTMLReflowMetrics desiredSize;
+      // XXXldb We used to only pass aDesiredSize.mFlags through for the
+      // incremental reflow codepath.
+      nsHTMLReflowMetrics desiredSize(aDesiredSize.mFlags);
       desiredSize.width = desiredSize.height = desiredSize.ascent = desiredSize.descent = 0;
   
       // Reflow the child into the available space, giving it as much height as
       // it wants. We'll deal with splitting later after we've computed the row
       // heights, taking into account cells with row spans...
-      kidAvailSize.height = NS_UNCONSTRAINEDSIZE;
+      nsSize kidAvailSize(aReflowState.availSize.width, NS_UNCONSTRAINEDSIZE);
       nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState, kidFrame,
                                        kidAvailSize);
       InitChildReflowState(*aPresContext, borderCollapse, p2t, kidReflowState);
@@ -1404,37 +1403,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
                                        nsIFrame*              aNextFrame)
 
 {
-  nsresult rv;
-  
-  nsTableFrame* tableFrame = nsnull; 
-  nsTableFrame::GetTableFrame(this, tableFrame); if (!tableFrame) ABORT1(NS_ERROR_NULL_POINTER);
-  GET_PIXELS_TO_TWIPS(aPresContext, p2t);
-
-  // Recover the state as if aNextFrame is about to be reflowed
-  RecoverState(aReflowState, aNextFrame);
-
-  // Remember the old rect
-  nsSize oldKidSize = aNextFrame->GetSize();
-
-  // Reflow the child giving it as much room as it wants. We'll deal with
-  // splitting later after final determination of rows heights taking into
-  // account cells with row spans...
-  nsSize            kidAvailSize(aReflowState.availSize.width, NS_UNCONSTRAINEDSIZE);
-  nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState, aNextFrame, 
-                                   kidAvailSize, aReflowState.reason);
-  InitChildReflowState(*aPresContext, tableFrame->IsBorderCollapse(), p2t, kidReflowState);
-
-  nsHTMLReflowMetrics desiredSize(aDesiredSize.mComputeMEW,
-                                  aDesiredSize.mFlags);
-
-  // Pass along the reflow command
-  rv = ReflowChild(aNextFrame, aPresContext, desiredSize, kidReflowState,
-                   0, aReflowState.y, 0, aStatus);
-
-  // Place the row frame
-  nsRect  kidRect(0, aReflowState.y, desiredSize.width, desiredSize.height);
-  PlaceChild(aPresContext, aReflowState, aNextFrame, desiredSize);
-
   // See if the table needs a reflow (e.g., if the column widths have
   // changed). If so, just return and don't bother adjusting the rows
   // that follow
