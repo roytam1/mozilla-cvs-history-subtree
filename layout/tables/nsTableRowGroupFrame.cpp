@@ -1119,46 +1119,41 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
     tableFrame->SetNeedToCollapseRows(PR_TRUE);
   }
 
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    rv = IncrementalReflow(aPresContext, aDesiredSize, state, aStatus);
-  } 
-  else { 
-    // Check for an overflow list
-    MoveOverflowToChildList(aPresContext);
-  
-    // Reflow the existing frames. 
-    PRBool splitDueToPageBreak = PR_FALSE;
-    rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                        &splitDueToPageBreak);
-  
-    // Return our desired rect
-    aDesiredSize.width = aReflowState.availableWidth;
-    aDesiredSize.height = state.y;
+  // Check for an overflow list
+  MoveOverflowToChildList(aPresContext);
 
-    // shrink wrap rows to height of tallest cell in that row
+  // Reflow the existing frames. 
+  PRBool splitDueToPageBreak = PR_FALSE;
+  rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
+                      &splitDueToPageBreak);
 
-    if (aReflowState.mFlags.mSpecialHeightReflow) {
-      DidResizeRows(aReflowState, aDesiredSize);
-      if (isPaginated) {
-        CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
-      }
+  // Return our desired rect
+  aDesiredSize.width = aReflowState.availableWidth;
+  aDesiredSize.height = state.y;
+
+  // shrink wrap rows to height of tallest cell in that row
+
+  if (aReflowState.mFlags.mSpecialHeightReflow) {
+    DidResizeRows(aReflowState, aDesiredSize);
+    if (isPaginated) {
+      CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
     }
-    else {
-      CalculateRowHeights(aPresContext, aDesiredSize, aReflowState);
-      haveDesiredHeight = PR_TRUE;
-    }
+  }
+  else {
+    CalculateRowHeights(aPresContext, aDesiredSize, aReflowState);
+    haveDesiredHeight = PR_TRUE;
+  }
 
-    // See if all the frames fit
-    if ((NS_FRAME_NOT_COMPLETE == aStatus) || splitDueToPageBreak || 
-        (aDesiredSize.height > aReflowState.availableHeight)) {
-      // Nope, find a place to split the row group 
-      PRBool specialReflow = (PRBool)aReflowState.mFlags.mSpecialHeightReflow;
-      ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_FALSE;
+  // See if all the frames fit
+  if ((NS_FRAME_NOT_COMPLETE == aStatus) || splitDueToPageBreak || 
+      (aDesiredSize.height > aReflowState.availableHeight)) {
+    // Nope, find a place to split the row group 
+    PRBool specialReflow = (PRBool)aReflowState.mFlags.mSpecialHeightReflow;
+    ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_FALSE;
 
-      SplitRowGroup(aPresContext, aDesiredSize, aReflowState, tableFrame, aStatus);
+    SplitRowGroup(aPresContext, aDesiredSize, aReflowState, tableFrame, aStatus);
 
-      ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = specialReflow;
-    }
+    ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = specialReflow;
   }
 
   // If we have a next-in-flow, then we're not complete
