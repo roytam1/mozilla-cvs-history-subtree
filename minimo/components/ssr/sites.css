@@ -1,6 +1,0 @@
- @-moz-document domain(maps.google.com)
- {
- div#map           { margin-left: 0 ! important;}
- div#panel         { display: none  ! important;}
- table#headertitle { display: none  ! important;}
- }
