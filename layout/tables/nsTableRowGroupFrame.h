@@ -254,8 +254,7 @@ protected:
                      nsHTMLReflowMetrics&     aDesiredSize);
 
   void SlideChild(nsRowGroupReflowState& aReflowState,
-                  nsIFrame*              aKidFrame,
-                  nscoord                aDeltaY);
+                  nsIFrame*              aKidFrame);
   
   /**
    * Reflow the frames we've already created

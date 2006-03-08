@@ -270,6 +270,18 @@ nsTableRowGroupFrame::InitChildReflowState(nsPresContext&    aPresContext,
   aReflowState.Init(&aPresContext, -1, -1, pCollapseBorder, &padding);
 }
 
+static void
+CacheRowHeightsForPrinting(nsPresContext*  aPresContext,
+                           nsTableRowFrame* aFirstRow)
+{
+  for (nsTableRowFrame* row = aFirstRow; row; row = row->GetNextRow()) {
+    if (!row->GetPrevInFlow()) {
+      row->SetHasUnpaginatedHeight(PR_TRUE);
+      row->SetUnpaginatedHeight(aPresContext, row->GetSize().height);
+    }
+  }
+}
+
 NS_METHOD 
 nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
                                      nsHTMLReflowMetrics&   aDesiredSize,
@@ -293,10 +305,8 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
   // (Think about multi-column layout!)
   PRBool isPaginated = aPresContext->IsPaginated();
 
-  // Amount to slide children that we don't reflow.
-  nscoord deltaY = 0;
   PRBool haveRow = PR_FALSE;
-  PRBool needToCalcRowHeights = aReflowState.ShouldReflowAllKids();
+  PRBool needToCalcRowHeights = aReflowState.reflowState.ShouldReflowAllKids();
 
   for (nsIFrame* kidFrame = mFrames.FirstChild(); kidFrame;
        kidFrame = kidFrame->GetNextSibling()) {
@@ -346,14 +356,8 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
           *aPageBreakBeforeEnd = nsTableFrame::PageBreakAfter(*kidFrame, nextRow);
         }
       }
-      nsIFrame* nextRow = kidFrame->GetNextSibling();
-      if (nextRow) {
-        deltaY = cellSpacingY + kidFrame->GetRect().YMost() -
-                   nextRow->GetPosition().y;
-      }
     } else {
-      if (deltaY != 0)
-        SlideChild(aReflowState, kidFrame, deltaY);
+      SlideChild(aReflowState, kidFrame);
 
       // Adjust the running y-offset so we know where the next row should be placed
       nscoord height = kidFrame->GetSize().height + cellSpacingY;
@@ -370,17 +374,17 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
     aReflowState.y -= cellSpacingY;
 
   // Return our desired rect
-  aDesiredSize.width = aReflowState.availableWidth;
-  aDesiredSize.height = state.y;
+  aDesiredSize.width = aReflowState.reflowState.availableWidth;
+  aDesiredSize.height = aReflowState.y;
 
-  if (aReflowState.mFlags.mSpecialHeightReflow) {
-    DidResizeRows(aReflowState, aDesiredSize);
+  if (aReflowState.reflowState.mFlags.mSpecialHeightReflow) {
+    DidResizeRows(aReflowState.reflowState, aDesiredSize);
     if (isPaginated) {
       CacheRowHeightsForPrinting(aPresContext, GetFirstRow());
     }
   }
   else {
-    CalculateRowHeights(aPresContext, aDesiredSize, aReflowState);
+    CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState);
   }
 
   return rv;
@@ -434,18 +438,6 @@ nsTableRowGroupFrame::DidResizeRows(const nsHTMLReflowState& aReflowState,
        rowFrame; rowFrame = rowFrame->GetNextRow()) {
     rowFrame->DidResize(aReflowState);
     ConsiderChildOverflow(aDesiredSize.mOverflowArea, rowFrame);
-  }
-}
-
-static void
-CacheRowHeightsForPrinting(nsPresContext*  aPresContext,
-                           nsTableRowFrame* aFirstRow)
-{
-  for (nsTableRowFrame* row = aFirstRow; row; row = row->GetNextRow()) {
-    if (!row->GetPrevInFlow()) {
-      row->SetHasUnpaginatedHeight(PR_TRUE);
-      row->SetUnpaginatedHeight(aPresContext, row->GetSize().height);
-    }
   }
 }
 
@@ -735,20 +727,19 @@ nsTableRowGroupFrame::CalculateRowHeights(nsPresContext*          aPresContext,
 // XXX Is it still true that it's not used for paginated mode?
 void
 nsTableRowGroupFrame::SlideChild(nsRowGroupReflowState& aReflowState,
-                                 nsIFrame*              aKidFrame,
-                                 nscoord                aDeltaY)
+                                 nsIFrame*              aKidFrame)
 {
   NS_PRECONDITION(NS_UNCONSTRAINEDSIZE == aReflowState.reflowState.availableHeight,
                   "we're not in galley mode");
 
   // Move the frame if we need to
-  if (aDeltaY != 0) {
-    aKidFrame->SetPosition(aKidFrame->GetPosition() + nsPoint(0, aDeltaY));
+  nsPoint oldPosition = aKidFrame->GetPosition();
+  nsPoint newPosition = oldPosition;
+  newPosition.y = aReflowState.y;
+  if (oldPosition.y != newPosition.y) {
+    aKidFrame->SetPosition(newPosition);
     nsTableFrame::RePositionViews(aKidFrame);
   }
-
-  // Update our running y-offset to reflect the bottommost child
-  aReflowState.y = aKidFrame->GetRect().YMost();
 }
 
 // Create a continuing frame, add it to the child list, and then push it
@@ -1118,8 +1109,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
   nsresult rv = NS_OK;
   aStatus     = NS_FRAME_COMPLETE;
         
-  PRBool isPaginated = aPresContext->IsPaginated();
-
   nsTableFrame* tableFrame = nsnull;
   rv = nsTableFrame::GetTableFrame(this, tableFrame);
   if (!tableFrame) return NS_ERROR_NULL_POINTER;
