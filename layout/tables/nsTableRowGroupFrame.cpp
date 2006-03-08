@@ -275,7 +275,6 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
                                      nsHTMLReflowMetrics&   aDesiredSize,
                                      nsRowGroupReflowState& aReflowState,
                                      nsReflowStatus&        aStatus,
-                                     nsTableRowFrame*       aStartFrame,
                                      nsTableRowFrame**      aFirstRowReflowed,
                                      PRBool*                aPageBreakBeforeEnd)
 {
@@ -296,12 +295,12 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
   if (aFirstRowReflowed) {
     *aFirstRowReflowed = nsnull;
   }
-  nsIFrame* kidFrame = (aStartFrame) ? aStartFrame : mFrames.FirstChild();
-
+  
   // Amount to slide children that we don't reflow.
   nscoord deltaY = 0;
 
-  for ( ; kidFrame; kidFrame = kidFrame->GetNextSibling()) {
+  for (nsIFrame* kidFrame = mFrames.FirstChild(); kidFrame;
+       kidFrame = kidFrame->GetNextSibling()) {
     if (kidFrame->GetType() != nsLayoutAtoms::tableRowFrame) {
       // XXXldb nsCSSFrameConstructor needs to enforce this!
       NS_NOTREACHED("yikes, a non-row child");
@@ -1165,7 +1164,7 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
     // Reflow the existing frames. 
     PRBool splitDueToPageBreak = PR_FALSE;
     rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                        nsnull, nsnull, &splitDueToPageBreak);
+                        nsnull, &splitDueToPageBreak);
   
     // Return our desired rect
     aDesiredSize.width = aReflowState.availableWidth;
@@ -1352,7 +1351,7 @@ nsTableRowGroupFrame::IR_TargetIsMe(nsPresContext*        aPresContext,
   nsRowGroupReflowState state(aReflowState);
   nsTableRowFrame* firstRowReflowed;
   rv = ReflowChildren(aPresContext, aDesiredSize, state, aStatus,
-                      nsnull, &firstRowReflowed);
+                      &firstRowReflowed);
   CalculateRowHeights(aPresContext, aDesiredSize, aReflowState.reflowState, firstRowReflowed);
 
   // XXX If we have a next-in-flow, then we're not complete

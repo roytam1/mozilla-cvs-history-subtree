@@ -272,7 +272,6 @@ protected:
                            nsHTMLReflowMetrics&   aDesiredSize,
                            nsRowGroupReflowState& aReflowState,
                            nsReflowStatus&        aStatus,
-                           nsTableRowFrame*       aStartFrame,
                            nsTableRowFrame**      aFirstRowReflowed   = nsnull,
                            PRBool*                aPageBreakBeforeEnd = nsnull);
 
