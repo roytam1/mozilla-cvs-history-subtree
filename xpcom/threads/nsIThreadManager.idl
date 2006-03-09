@@ -80,18 +80,4 @@ interface nsIThreadManager : nsISupports
    * application process.
    */
   readonly attribute boolean isMainThread;
-   
-  /**
-   * Set an external nsIThread instance (or null) as the nsIThread for the
-   * current thread.  If a nsIThread is already associated with the calling
-   * thread, then this function will replace it with the given nsIThread.  If
-   * the given nsIThread is non-null, then its name attribute must be unique.
-   * Its name may be equal to the name of the nsIThread being replaced.  This
-   * method returns the nsIThread that was replaced by this method call or null
-   * if there was no previous nsIThread associated with the current thread.
-   *
-   * XXX We might want something else here.  This allows the current nsIThread
-   *     to change, and that may freak out some consumers.
-   */
-  // XXX nsIThread setCurrentThread(in nsIThread thread);
 };
