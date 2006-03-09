@@ -223,6 +223,10 @@ nsThread::nsThread(const nsACString &name)
   : mLock(PR_NewLock())
   , mEvents(&mEventsRoot)
   , mName(name)
+  , mPriority(PRIORITY_NORMAL)
+  , mThread(nsnull)
+  , mActive(PR_FALSE)
+  , mInProcessNextEvent(PR_FALSE)
 {
 }
 
@@ -387,7 +391,7 @@ nsThread::HasPendingEvents(PRBool *result)
 NS_IMETHODIMP
 nsThread::ProcessNextEvent()
 {
-  LOG(("THRD(%p) ProcessNextEvent\n", this));
+  LOG(("THRD(%p) ProcessNextEvent [%u]\n", this, PRBool(mInProcessNextEvent)));
 
   NS_ENSURE_STATE(PR_GetCurrentThread() == mThread);
 
@@ -395,7 +399,7 @@ nsThread::ProcessNextEvent()
 
   nsCOMPtr<nsIThreadObserver> obs = mObserver;
   if (obs)
-    obs->OnProcessNextEvent(this, mActive);
+    obs->OnProcessNextEvent(this, mActive, mInProcessNextEvent);
 
   // If we are shutting down, then do not wait for new events.
   nsCOMPtr<nsIRunnable> event; 
@@ -403,7 +407,9 @@ nsThread::ProcessNextEvent()
 
   if (event) {
     LOG(("THRD(%p) running [%p]\n", this, event.get()));
+    mInProcessNextEvent = PR_TRUE;
     event->Run();
+    mInProcessNextEvent = PR_FALSE;
     rv = NS_OK;
   } else {
     NS_ASSERTION(!mActive, "This should only happen when shutting down");

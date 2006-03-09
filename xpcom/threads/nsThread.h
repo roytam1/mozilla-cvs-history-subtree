@@ -113,10 +113,11 @@ private:
   nsChainedEventQueue *mEvents;   // never null
   nsChainedEventQueue  mEventsRoot;
 
-  nsCString  mName;
-  PRInt32    mPriority;
-  PRThread  *mThread;
-  PRIntn     mActive;
+  nsCString     mName;
+  PRInt32       mPriority;
+  PRThread     *mThread;
+  PRPackedBool  mActive;
+  PRPackedBool  mInProcessNextEvent;
 };
 
 //-----------------------------------------------------------------------------

@@ -117,8 +117,11 @@ interface nsIThreadObserver : nsISupports
    * @param mayWait
    *        Indicates whether or not the method is allowed to block the calling
    *        thread.  For example, this parameter is false during thread shutdown.
+   * @param isNested
+   *        Indicated if ProcessNextEvent is being called recursively or not.
    */
-  void onProcessNextEvent(in nsIThreadInternal thread, in boolean mayWait);
+  void onProcessNextEvent(in nsIThreadInternal thread, in boolean mayWait,
+                          in boolean isNested);
 };
 
 [scriptable, uuid(a0605c0b-17f5-4681-b8cd-a1cd75d42559)]

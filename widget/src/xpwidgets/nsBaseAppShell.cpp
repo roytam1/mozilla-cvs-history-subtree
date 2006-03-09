@@ -113,8 +113,8 @@ nsBaseAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 }
 
 NS_IMETHODIMP
-nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr,
-                                   PRBool mayWait)
+nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
+                                   PRBool isNested)
 {
   if (mFavorPerf <= 0) {
     PRIntervalTime start = PR_IntervalNow();
