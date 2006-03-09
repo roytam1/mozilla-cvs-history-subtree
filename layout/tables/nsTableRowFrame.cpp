@@ -354,7 +354,7 @@ nsTableRowFrame::DidResize(const nsHTMLReflowState& aReflowState)
         // is changing. Why is the 'if' stmt above commented out?
         cellFrame->SetSize(nsSize(cellFrame->GetSize().width, cellHeight));
         // realign cell content based on the new height
-        /*nsHTMLReflowMetrics desiredSize(nsnull);
+        /*nsHTMLReflowMetrics desiredSize;
         nsHTMLReflowState kidReflowState(aPresContext, aReflowState,
                                          cellFrame,
                                          nsSize(cellFrameSize.width, cellHeight),
