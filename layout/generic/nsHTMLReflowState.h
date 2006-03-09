@@ -130,11 +130,11 @@ struct nsHTMLReflowState {
   // A value of NS_UNCONSTRAINEDSIZE for the available height means
   // you can choose whatever size you want. In galley mode the
   // available height is always NS_UNCONSTRAINEDSIZE, and only page
-  // mode involves a constrained height. The element's the top border
-  // and padding, and content, must fit. If the element is complete
-  // after reflow then its bottom border, padding and margin (and
-  // similar for its complete ancestors) will need to fit in this
-  // height.
+  // mode or multi-column layout involves a constrained height. The
+  // element's the top border and padding, and content, must fit. If the
+  // element is complete after reflow then its bottom border, padding
+  // and margin (and similar for its complete ancestors) will need to
+  // fit in this height.
   nscoord              availableHeight;
 
   // rendering context to use for measurement
