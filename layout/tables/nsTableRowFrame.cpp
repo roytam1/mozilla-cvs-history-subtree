@@ -804,6 +804,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
   GET_PIXELS_TO_TWIPS(aPresContext, p2t);
   PRBool borderCollapse = (((nsTableFrame*)aTableFrame.GetFirstInFlow())->IsBorderCollapse());
 
+  // XXXldb Should we be checking constrained height instead?
   PRBool isPaginated = aPresContext->IsPaginated();
 
   nsresult rv = NS_OK;
@@ -838,6 +839,8 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       continue;
     }
 
+    nsTableCellFrame* cellFrame = NS_STATIC_CAST(nsTableCellFrame*, kidFrame);
+
     // See if we should only reflow the dirty child frames
     PRBool doReflowChild = PR_TRUE;
     if (!aReflowState.ShouldReflowAllKids() &&
@@ -848,12 +851,12 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
     else if ((NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)) {
       // We don't reflow a rowspan >1 cell here with a constrained height. 
       // That happens in nsTableRowGroupFrame::SplitSpanningCells.
-      if (aTableFrame.GetEffectiveRowSpan((nsTableCellFrame&)*kidFrame) > 1) {
+      if (aTableFrame.GetEffectiveRowSpan(*cellFrame) > 1) {
         doReflowChild = PR_FALSE;
       }
     }
     if (aReflowState.mFlags.mSpecialHeightReflow) {
-      if (!isPaginated && !((nsTableCellFrame*)kidFrame)->NeedSpecialReflow()) {
+      if (!isPaginated && !cellFrame->NeedSpecialReflow()) {
         kidFrame = iter.Next(); 
         continue;
       }
@@ -861,7 +864,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
 
     // Reflow the child frame
     if (doReflowChild) {
-      nsTableCellFrame* cellFrame = (nsTableCellFrame*)kidFrame;
       PRInt32 cellColIndex;
       cellFrame->GetColIndex(cellColIndex);
       cellColSpan = aTableFrame.GetEffectiveColSpan(*cellFrame);
@@ -971,6 +973,10 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
     else {
       // we need to account for the cell's width even if it isn't reflowed
       x += kidFrame->GetSize().width;
+
+      if (kidFrame->GetNextInFlow()) {
+        aStatus = NS_FRAME_NOT_COMPLETE;
+      }
     }
     ConsiderChildOverflow(aDesiredSize.mOverflowArea, kidFrame);
     x += cellSpacingX;
