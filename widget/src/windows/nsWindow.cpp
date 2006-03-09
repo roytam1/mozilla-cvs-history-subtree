@@ -56,7 +56,6 @@
 #endif
 
 #include "nsWindow.h"
-#include "plevent.h"
 #include "nsIAppShell.h"
 #include "nsIFontMetrics.h"
 #include "nsIFontEnumerator.h"
@@ -70,7 +69,7 @@
 #include "nsIScreenManager.h"
 #include "nsRect.h"
 #include "nsTransform2D.h"
-#include "nsIEventQueue.h"
+#include "nsThreadUtils.h"
 #include "nsIObserverService.h"
 #include "imgIContainer.h"
 #include "gfxIImageFrame.h"
@@ -3970,9 +3969,9 @@ BOOL CALLBACK nsWindow::DispatchStarvedPaints(HWND aWnd, LPARAM aMsg)
 // Check for pending paints and dispatch any pending paint
 // messages for any nsIWidget which is a descendant of the
 // top-level window that *this* window is embedded within.
-// Also dispatch pending PL_Events to avoid PL_EventQueue starvation.
-// Note: We do not dispatch pending paint messages for non
-// nsIWidget managed windows.
+// Also dispatch pending tasks to avoid starvation (see
+// nsAppShell.cpp). Note: We do not dispatch pending paint
+// messages for non nsIWidget managed windows.
 
 void nsWindow::DispatchPendingEvents()
 {
@@ -3984,12 +3983,8 @@ void nsWindow::DispatchPendingEvents()
   // dispatching the native WM_TIMER event that is used for PL_Event
   // notification because the timer message will not appear in the
   // native msg queue until 10ms after the event is posted. Which is too late.
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  nsToolkit *toolkit = NS_STATIC_CAST(nsToolkit *, mToolkit);
-  eventQueue = toolkit->GetEventQueue();
-  if (eventQueue) {
-    eventQueue->ProcessPendingEvents();
-  }
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+  NS_ProcessPendingEvents(thread);
 
   // Quickly check to see if there are any
   // paint events pending.

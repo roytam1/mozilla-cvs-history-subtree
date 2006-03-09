@@ -56,7 +56,6 @@
 #include "nspr.h"
 #include "jsapi.h"
 
-#include "nsIEventQueueService.h"
 #include "nsIEnumerator.h"
 #include "nsIZipReader.h"
 #include "nsIJSRuntimeService.h"
@@ -75,7 +74,6 @@
 #include "nsIExtensionManager.h"
 
 static NS_DEFINE_CID(kSoftwareUpdateCID,  NS_SoftwareUpdate_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 extern JSObject *InitXPInstallObjects(JSContext *jscontext, JSObject *global, 
                                       nsIFile* jarfile, const PRUnichar* url, 
@@ -465,16 +463,6 @@ extern "C" void RunInstallOnThread(void *data)
     PRInt32     finalStatus;
 
     nsCOMPtr<nsIXPIListener> listener;
-
-    // lets set up an eventQ so that our xpcom/proxies will not have to:
-    nsCOMPtr<nsIEventQueue> eventQ;
-    nsCOMPtr<nsIEventQueueService> eventQService =
-             do_GetService(kEventQueueServiceCID, &rv);
-    if (NS_SUCCEEDED(rv))
-    {
-        eventQService->CreateMonitoredThreadEventQueue();
-        eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(eventQ));
-    }
 
     nsCOMPtr<nsISoftwareUpdate> softwareUpdate =
              do_GetService(kSoftwareUpdateCID, &rv);

@@ -49,12 +49,12 @@
 #include "nsIOutputStream.h"
 #include "jsapi.h"
 #include "prthread.h"
-#include "plevent.h"
 #include "nsIXPConnect.h"
 #include "nsICryptoHash.h"
 #include "nsIPrincipal.h"
+#include "nsThreadUtils.h"
 
-struct XPITriggerEvent : public PLEvent {
+struct XPITriggerEvent : public nsRunnable {
     nsString    URL;
     PRInt32     status;
     JSContext*  cx;
@@ -62,9 +62,10 @@ struct XPITriggerEvent : public PLEvent {
     jsval       cbval;
     nsCOMPtr<nsISupports> ref;
     nsCOMPtr<nsIPrincipal> princ;
+
+    virtual ~XPITriggerEvent();
+    NS_IMETHOD Run();
 };
-
-
 
 class nsXPITriggerItem
 {
@@ -134,7 +135,7 @@ class nsXPITriggerInfo
     JSContext   *mCx;
     nsCOMPtr<nsIXPConnectJSObjectHolder> mGlobalWrapper;
     jsval       mCbval;
-    PRThread*   mThread;
+    nsCOMPtr<nsIThread> mThread;
 
     nsCOMPtr<nsIPrincipal>      mPrincipal;
 

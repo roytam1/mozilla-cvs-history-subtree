@@ -231,7 +231,7 @@
 
 #include "mozStorageService.h"
 #include "nsAutoLock.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsIRunnable.h"
 #include "nsIThread.h"
 #include "nsMemory.h"
@@ -447,12 +447,12 @@ public:
 
     // this will delay processing the release of the storage service until we
     // get to the main thread.
-    nsCOMPtr<nsIEventQueue> eventQueue;
-    nsresult rv = NS_GetMainEventQ(getter_AddRefs(eventQueue));
+    nsCOMPtr<nsIThread> mainThread;
+    nsresult rv = NS_GetMainThread(getter_AddRefs(mainThread));
     if (NS_SUCCEEDED(rv)) {
       mozIStorageService* service = nsnull;
       mStorageService.swap(service);
-      NS_ProxyRelease(eventQueue, service);
+      NS_ProxyRelease(mainThread, service);
     } else {
       NS_NOTREACHED("No event queue");
     }

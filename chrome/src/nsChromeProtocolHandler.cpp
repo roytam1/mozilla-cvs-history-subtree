@@ -47,12 +47,10 @@
 #include "nsCOMPtr.h"
 #include "nsContentCID.h"
 #include "nsCRT.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsIChannel.h"
 #include "nsIChromeRegistry.h"
 #include "nsIComponentManager.h"
-#include "nsIEventQueue.h"
-#include "nsIEventQueueService.h"
 #include "nsIFastLoadService.h"
 #include "nsIFile.h"
 #include "nsIFileURL.h"
@@ -103,7 +101,7 @@ static NS_DEFINE_CID(kXULPrototypeCacheCID,      NS_XULPROTOTYPECACHE_CID);
 //
 #define LOG(args) PR_LOG(gLog, PR_LOG_DEBUG, args)
 
-class nsCachedChromeChannel : public nsIChannel
+class nsCachedChromeChannel : public nsIChannel, public nsIRunnable
 {
 protected:
     ~nsCachedChromeChannel();
@@ -115,12 +113,6 @@ protected:
     nsLoadFlags                 mLoadFlags;
     nsCOMPtr<nsISupports>       mOwner;
     nsresult                    mStatus;
-
-    static NS_HIDDEN_(nsresult)
-    PostLoadEvent(nsCachedChromeChannel* aChannel, PLHandleEventProc aHandler);
-
-    static void* PR_CALLBACK HandleLoadEvent(PLEvent* aEvent);
-    static void PR_CALLBACK DestroyLoadEvent(PLEvent* aEvent);
 
 #ifdef PR_LOGGING
     static PRLogModuleInfo* gLog;
@@ -143,18 +135,21 @@ public:
     NS_IMETHOD GetLoadFlags(nsLoadFlags *);
     NS_IMETHOD SetLoadFlags(nsLoadFlags);
 
-// nsIChannel
+    // nsIChannel
     NS_DECL_NSICHANNEL
 
+    // nsIRunnable 
+    NS_DECL_NSIRUNNABLE
 };
 
 #ifdef PR_LOGGING
 PRLogModuleInfo* nsCachedChromeChannel::gLog;
 #endif
 
-NS_IMPL_ISUPPORTS2(nsCachedChromeChannel,
+NS_IMPL_ISUPPORTS3(nsCachedChromeChannel,
                    nsIChannel,
-                   nsIRequest)
+                   nsIRequest,
+                   nsIRunnable)
 
 nsCachedChromeChannel::nsCachedChromeChannel(nsIURI* aURI)
     : mURI(aURI)
@@ -226,7 +221,7 @@ nsCachedChromeChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
     // Queue an event to ourselves to let the stack unwind before
     // calling OnStartRequest(). This allows embedding to occur
     // before we fire OnStopRequest().
-    rv = PostLoadEvent(this, HandleLoadEvent);
+    rv = NS_DispatchToCurrentThread(this);
     if (NS_FAILED(rv))
         return rv;
 
@@ -350,78 +345,44 @@ nsCachedChromeChannel::SetContentLength(PRInt32 aContentLength)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-nsresult
-nsCachedChromeChannel::PostLoadEvent(nsCachedChromeChannel* aChannel,
-                                     PLHandleEventProc aHandler)
-{
-    nsCOMPtr<nsIEventQueue> queue;
-    nsresult rv = NS_GetCurrentEventQ(getter_AddRefs(queue));
-    if (NS_FAILED(rv))
-        return rv;
-
-    PLEvent* event = new PLEvent;
-    if (! event)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    PL_InitEvent(event,
-                 aChannel,
-                 aHandler,
-                 DestroyLoadEvent);
-    NS_ADDREF(aChannel);
-
-    rv = queue->PostEvent(event);
-    if (NS_FAILED(rv))
-        PL_DestroyEvent(event);
-    return rv;
-}
-
-void* PR_CALLBACK
-nsCachedChromeChannel::HandleLoadEvent(PLEvent* aEvent)
+NS_IMETHODIMP
+nsCachedChromeChannel::Run()
 {
     // Fire the OnStartRequest() for the cached chrome channel, then
-    // queue another event to trigger the OnStopRequest()...
-    nsCachedChromeChannel* channel = (nsCachedChromeChannel*) aEvent->owner;
+    // trigger the OnStopRequest()...
 
     // If the load has been cancelled, then just bail now. We won't
     // send On[Start|Stop]Request().
-    if (NS_FAILED(channel->mStatus))
+    if (NS_FAILED(mStatus))
         return nsnull;
 
     LOG(("nsCachedChromeChannel[%p]: firing OnStartRequest for %p",
-        channel, channel->mListener.get()));
+        this, mListener.get()));
 
-    (void) channel->mListener->OnStartRequest(channel, channel->mContext);
+    (void) mListener->OnStartRequest(this, mContext);
 
     LOG(("nsCachedChromeChannel[%p]: firing OnStopRequest for %p",
-        channel, channel->mListener.get()));
+        this, mListener.get()));
 
-    (void) channel->mListener->OnStopRequest(channel, channel->mContext,
-                                             channel->mStatus);
+    (void) mListener->OnStopRequest(this, mContext, mStatus);
 
-    if (channel->mLoadGroup) {
+    if (mLoadGroup) {
         LOG(("nsCachedChromeChannel[%p]: removing self from load group %p",
-            channel, channel->mLoadGroup.get()));
+            this, mLoadGroup.get()));
 
-        (void) channel->mLoadGroup->RemoveRequest(channel, nsnull, channel->mStatus);
+        (void) mLoadGroup->RemoveRequest(this, nsnull, mStatus);
     }
 
-    channel->mListener = nsnull;
-    channel->mContext  = nsnull;
+    mListener = nsnull;
+    mContext  = nsnull;
 
     return nsnull;
 }
 
-void PR_CALLBACK
-nsCachedChromeChannel::DestroyLoadEvent(PLEvent* aEvent)
-{
-    nsCachedChromeChannel* channel = (nsCachedChromeChannel*) aEvent->owner;
-    NS_RELEASE(channel);
-    delete aEvent;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsChromeProtocolHandler, nsIProtocolHandler, nsISupportsWeakReference)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsChromeProtocolHandler, nsIProtocolHandler,
+                              nsISupportsWeakReference)
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIProtocolHandler methods:

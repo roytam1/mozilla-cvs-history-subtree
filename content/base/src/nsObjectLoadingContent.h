@@ -45,6 +45,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIChannelEventSink.h"
 #include "nsIObjectLoadingContent.h"
+#include "nsIRunnable.h"
 
 #include "nsWeakReference.h"
 
@@ -300,6 +301,11 @@ class nsObjectLoadingContent : public nsImageLoadingContent
      * Frame loader, for content documents we load.
      */
     nsCOMPtr<nsIFrameLoader>    mFrameLoader;
+
+    /**
+     * A pending nsAsyncInstantiateEvent (may be null).
+     */
+    nsCOMPtr<nsIRunnable>       mPendingInstantiateEvent;
 
     /**
      * The content type of the resource we were last asked to load.

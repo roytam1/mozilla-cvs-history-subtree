@@ -85,6 +85,7 @@ EXPORTS		= \
 		nsTHashtable.h \
 		nsVoidArray.h \
 		nsTArray.h \
+		nsTWeakRef.h \
 		$(NULL)
 
 SDK_HEADERS     = \

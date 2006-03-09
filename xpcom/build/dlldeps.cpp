@@ -45,7 +45,6 @@
 #include "nsIAtom.h"
 #include "nsFixedSizeAllocator.h"
 #include "nsRecyclingAllocator.h"
-#include "nsIThread.h"
 #include "nsDeque.h"
 #include "nsTraceRefcnt.h"
 #include "nsTraceRefcntImpl.h"
@@ -140,7 +139,6 @@ void XXXNeverCalled()
     a.Init(0, 0, 0, 0, 0);
     a.Alloc(0);
     a.Free(0, 0);
-    nsIThread::GetCurrent(nsnull);
     nsDeque d(nsnull);
     nsDequeIterator di(d);
     nsTraceRefcnt::LogAddCOMPtr(nsnull, nsnull);

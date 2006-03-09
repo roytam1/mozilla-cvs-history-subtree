@@ -38,21 +38,33 @@
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include "nsIAppShell.h"
+#include "nsBaseAppShell.h"
+#include "nsITimerManager.h"
+#include "nsCOMPtr.h"
 
 /**
  * Native Win32 Application shell wrapper
  */
-
-class nsAppShell : public nsIAppShell
+class nsAppShell : public nsBaseAppShell
 {
-  public:
-                            nsAppShell(); 
-    virtual                 ~nsAppShell();
+public:
+  nsAppShell() : mMainThreadId(0), mMsgId(0) {}
 
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIAPPSHELL
+  // nsIAppShell overrides:
+  NS_IMETHOD Init(int *argc, char **argv);
+
+  // nsIThreadObserver overrides:
+  NS_IMETHOD OnDispatchEvent(nsIThreadInternal *thread, PRUint32 flags);
+
+  // nsBaseAppShell overrides:
+  PRBool ProcessNextNativeEvent(PRBool mayWait);
+
+private:
+  virtual ~nsAppShell() {}
+
+  nsCOMPtr<nsITimerManager> mTimerManager;
+  PRUint32 mMainThreadId;
+  PRUint32 mMsgId;
 };
 
 #endif // nsAppShell_h__
-

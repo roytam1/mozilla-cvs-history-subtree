@@ -45,11 +45,10 @@
 #include "prtime.h"
 #include "prinrval.h"
 #include "nsVoidArray.h"
+#include "nsTWeakRef.h"
 #include "nsIScrollableView.h"
 #include "nsIRegion.h"
 #include "nsIBlender.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
 #include "nsView.h"
 
 class nsIRegion;
@@ -60,6 +59,8 @@ struct DisplayZTreeNode;
 class BlendingBuffers;
 struct PLArenaPool;
 class nsHashtable;
+
+typedef nsTWeakRef<class nsViewManager> nsViewManagerWeakRef;
 
 //Uncomment the following line to enable generation of viewmanager performance data.
 #ifdef MOZ_PERF_METRICS
@@ -452,6 +453,13 @@ private:
     RootViewManager()->mPainting = aPainting;
   }
 
+  PRBool EnsureWeakRef() {
+    if (mWeakRef.get())
+      return PR_TRUE;
+    mWeakRef = this;
+    return mWeakRef.get() != nsnull;
+  }
+
 public: // NOT in nsIViewManager, so private to the view module
   nsView* GetRootView() const { return mRootView; }
   nsView* GetMouseEventGrabber() const {
@@ -541,8 +549,8 @@ private:
   // mRootViewManager is a strong ref unless it equals |this|.  It's
   // never null (if we have no ancestors, it will be |this|).
   nsViewManager     *mRootViewManager;
-  nsCOMPtr<nsIEventQueueService>  mEventQueueService;
-  nsCOMPtr<nsIEventQueue>         mSynthMouseMoveEventQueue;
+  nsViewManagerWeakRef mWeakRef;  // weak ref to self (used by event dispatch)
+  PRPackedBool      mSynthMouseMoveEventPending;
   PRPackedBool      mAllowDoubleBuffering;
 
   // The following members should not be accessed directly except by
@@ -557,7 +565,7 @@ private:
   PRInt32           mUpdateBatchCnt;
   PRUint32          mUpdateBatchFlags;
   PRInt32           mScrollCnt;
-  nsCOMPtr<nsIEventQueue>         mInvalidateEventQueue;
+  PRPackedBool      mInvalidateEventPending;
   // Use IsRefreshEnabled() to check the value of mRefreshEnabled.
   PRPackedBool      mRefreshEnabled;
   // Use IsPainting() and SetPainting() to access mPainting.

@@ -39,23 +39,27 @@
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include "nsIAppShell.h"
-#include "nsIEventQueue.h"
+#include "nsBaseAppShell.h"
 #include "nsCOMPtr.h"
 
-class nsAppShell : public nsIAppShell {
+class nsAppShell : public nsBaseAppShell {
 public:
+    nsAppShell() : mInitialized(PR_FALSE) {}
 
-    nsAppShell();
-    virtual ~nsAppShell();
+    // nsIAppShell overrides:
+    NS_IMETHOD Init(int *argc, char **argv);
 
-    static void ReleaseGlobals();
+    // nsIThreadObserver overrides:
+    NS_IMETHOD OnDispatchedEvent(nsIThreadInternal *thread);
 
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIAPPSHELL
+    // nsBaseAppShell overrides:
+    PRBool ProcessNextNativeEvent(PRBool mayWait);
 
 private:
-    nsCOMPtr<nsIEventQueue> mEventQueue;
+    virtual ~nsAppShell() {}
+
+    int mPipeFDs[2];
+    PRBool mInitialized;
 };
 
 #endif /* nsAppShell_h__ */

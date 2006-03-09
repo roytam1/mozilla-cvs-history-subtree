@@ -47,6 +47,7 @@
 #include "nsIWindowWatcher.h"
 #include "nsIPrompt.h"
 #include "nsProxiedService.h"
+#include "nsThreadUtils.h"
 
 #include "nsNSSComponent.h"
 #include "nsNSSHelper.h"
@@ -852,9 +853,9 @@ nsPKCS12Blob::handleError(int myerr)
     wwatch->GetNewPrompter(0, getter_AddRefs(errPrompt));
     if (errPrompt) {
       nsCOMPtr<nsIPrompt> proxyPrompt;
-      proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                  errPrompt, PROXY_SYNC, 
-                                  getter_AddRefs(proxyPrompt));
+      proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                  NS_GET_IID(nsIPrompt), errPrompt,
+                                  NS_PROXY_SYNC, getter_AddRefs(proxyPrompt));
       if (!proxyPrompt) return PR_FALSE;
     } else {
       return PR_FALSE;

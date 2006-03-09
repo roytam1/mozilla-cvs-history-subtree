@@ -41,6 +41,9 @@
 #include "nsMemory.h"
 #include "nsString.h"
 #include "nsReadableUtils.h"
+#include "nsIRunnable.h"
+#include "nsIThread.h"
+#include "nsIThreadManager.h"
 #include "nsIDOMWindow.h"
 #include "nsIEmbeddingSiteWindow.h"
 #include "nsIFactory.h"
@@ -52,10 +55,6 @@
 #include "nsPrintProgressParams.h"
 #include "nsPrintDialogUtil.h"
 #include "PrintProgressDialog.h"
-
-// For PLEvent
-#include "nsIEventQueueService.h"
-#include "plevent.h"
 
 static HINSTANCE gInstance;
 
@@ -102,11 +101,6 @@ private:
   nsCOMPtr<nsIObserver>            mObserver;
   CPrintProgressDialog* m_PPDlg;
 };
-
-// Define PL Callback Functions
-static void* PR_CALLBACK HandlePLEvent(PLEvent* aEvent);
-static void PR_CALLBACK DestroyPLEvent(PLEvent* aEvent);
-
 
 //*****************************************************************************
 
@@ -167,33 +161,55 @@ CPrintingPromptService::ShowPrintDialog(nsIDOMWindow *parent, nsIWebBrowserPrint
     }
 }
 
+//------------------------------------------------------------------------
+class NotifyObserverEvent : public nsIRunnable {
+public:
+  NS_DECL_ISUPPORTS
+
+  NotifyObserverEvent(CPrintingPromptService *pps)
+    : mPPS(pps) {
+    NS_ASSERTION(mPPS, "null parameter");
+    NS_ADDREF(mPPS);
+  }
+
+  ~NotifyObserverEvent() {
+    NS_RELEASE(mPPS);
+  }
+
+  NS_IMETHOD Run() {
+    mPPS->NotifyObserver();
+    return NS_OK;
+  }
+
+private:
+  CPrintingPromptService *mPPS;
+};
+NS_IMPL_ISUPPORTS1(NotifyObserverEvent, nsIRunnable)
 
 //-----------------------------------------------------------
 PRBool
 CPrintingPromptService::FirePauseEvent()
 {
-  static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+  nsCOMPtr<nsIThreadManager> thread_mgr =
+      do_GetService(NS_THREADMANAGER_CONTRACTID);
 
-  nsCOMPtr<nsIEventQueueService> event_service = do_GetService(kEventQueueServiceCID);
-
-  if (!event_service) 
+  if (!thread_mgr) 
   {
-    NS_WARNING("Failed to get event queue service");
+    NS_WARNING("Failed to get thread manager");
     return PR_FALSE;
   }
 
-  nsCOMPtr<nsIEventQueue> event_queue;
+  nsCOMPtr<nsIThread> thread;
 
-  event_service->GetThreadEventQueue(NS_CURRENT_THREAD,
-                                     getter_AddRefs(event_queue));
+  thread_mgr->GetCurrentThread(getter_AddRefs(thread));
 
-  if (!event_queue) 
+  if (!thread) 
   {
-    NS_WARNING("Failed to get event queue from service");
+    NS_WARNING("Failed to get current thread from thread manager");
     return PR_FALSE;
   }
 
-  PLEvent *event = new PLEvent;
+  nsCOMPtr<nsIRunnable> event = new NotifyObserverEvent(this);
 
   if (!event) 
   {
@@ -201,12 +217,7 @@ CPrintingPromptService::FirePauseEvent()
     return PR_FALSE;
   }
 
-  PL_InitEvent(event, this, ::HandlePLEvent, ::DestroyPLEvent);
-
-  // The event owns the content pointer now.
-  NS_ADDREF_THIS();
-
-  event_queue->PostEvent(event);
+  thread->Dispatch(event, NS_DISPATCH_NORMAL);
   return PR_TRUE;
 }
 
@@ -274,27 +285,6 @@ void CPrintingPromptService::NotifyObserver()
   if (mObserver) {
     mObserver->Observe(nsnull, nsnull, nsnull);
   }
-}
-
-//------------------------------------------------------------------------
-void* PR_CALLBACK HandlePLEvent(PLEvent* aEvent)
-{
-  CPrintingPromptService *printingPromptService = (CPrintingPromptService*)PL_GetEventOwner(aEvent);
-
-  NS_ASSERTION(printingPromptService, "The event owner is null.");
-  if (printingPromptService) {
-    printingPromptService->NotifyObserver();
-  }
-  return nsnull;
-}
-
-//------------------------------------------------------------------------
-void PR_CALLBACK DestroyPLEvent(PLEvent* aEvent)
-{
-  CPrintingPromptService *printingPromptService = (CPrintingPromptService*)PL_GetEventOwner(aEvent);
-  NS_IF_RELEASE(printingPromptService);
-
-  delete aEvent;
 }
 
 //////////////////////////////////////////////////////////////////////

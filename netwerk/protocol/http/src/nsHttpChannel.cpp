@@ -292,48 +292,18 @@ nsHttpChannel::Init(nsIURI *uri,
 nsresult
 nsHttpChannel::AsyncCall(nsAsyncCallback funcPtr)
 {
-    nsresult rv;
-
-    nsAsyncCallEvent *event = new nsAsyncCallEvent;
+    nsCOMPtr<nsIRunnable> event = new nsAsyncCallEvent(this, funcPtr);
     if (!event)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    event->mFuncPtr = funcPtr;
-
-    NS_ADDREF_THIS();
-
-    PL_InitEvent(event, this,
-                 nsHttpChannel::AsyncCall_EventHandlerFunc,
-                 nsHttpChannel::AsyncCall_EventCleanupFunc);
-
-    rv = mEventQ->PostEvent(event);
-    if (NS_FAILED(rv)) {
-        PL_DestroyEvent(event);
-        NS_RELEASE_THIS();
-    }
-    return rv;
+    return mThread->Dispatch(event, NS_DISPATCH_NORMAL);
 }
 
-void *PR_CALLBACK
-nsHttpChannel::AsyncCall_EventHandlerFunc(PLEvent *ev)
+NS_IMETHODIMP
+nsHttpChannel::nsAsyncCallEvent::Run()
 {
-    nsHttpChannel *chan =
-        NS_STATIC_CAST(nsHttpChannel *, PL_GetEventOwner(ev));
-
-    nsAsyncCallEvent *ace = (nsAsyncCallEvent *) ev;
-    nsAsyncCallback funcPtr = ace->mFuncPtr;
-
-    if (chan) {
-        (chan->*funcPtr)();
-        NS_RELEASE(chan);
-    }
-    return nsnull;
-}
-
-void PR_CALLBACK
-nsHttpChannel::AsyncCall_EventCleanupFunc(PLEvent *ev)
-{
-    delete (nsAsyncCallEvent *) ev;
+    (mObj->*mFuncPtr)();
+    return NS_OK;
 }
 
 nsresult
@@ -427,7 +397,7 @@ nsHttpChannel::AsyncAbort(nsresult status)
 
     // create a proxy for the listener..
     nsCOMPtr<nsIRequestObserver> observer;
-    NS_NewRequestObserverProxy(getter_AddRefs(observer), mListener, mEventQ);
+    NS_NewRequestObserverProxy(getter_AddRefs(observer), mListener, mThread);
     if (observer) {
         observer->OnStartRequest(this, mListenerContext);
         observer->OnStopRequest(this, mListenerContext, mStatus);
@@ -642,7 +612,7 @@ nsHttpChannel::SetupTransaction()
     nsCOMPtr<nsIAsyncInputStream> responseStream;
     rv = mTransaction->Init(mCaps, mConnectionInfo, &mRequestHead,
                             mUploadStream, mUploadStreamHasHeaders,
-                            mEventQ, callbacks, this,
+                            mThread, callbacks, this,
                             getter_AddRefs(responseStream));
     if (NS_FAILED(rv)) return rv;
 
@@ -3353,11 +3323,10 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 
     nsresult rv;
 
-    // we want to grab a reference to the calling thread's event queue at
-    // this point.  we will proxy all events back to the current thread via
-    // this event queue.
-    if (!mEventQ) {
-        rv = gHttpHandler->GetCurrentEventQ(getter_AddRefs(mEventQ));
+    // we want to grab a reference to the calling thread at this point.  we
+    // will proxy all events back to this thread.
+    if (!mThread) {
+        rv = NS_GetCurrentThread(getter_AddRefs(mThread));
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -4158,7 +4127,7 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
 
     mCallbacks = nsnull;
     mProgressSink = nsnull;
-    mEventQ = nsnull;
+    mThread = nsnull;
     
     return NS_OK;
 }

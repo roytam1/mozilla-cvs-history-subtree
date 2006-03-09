@@ -38,7 +38,7 @@
 #ifndef nsImapProxyEvent_h__
 #define nsImapProxyEvent_h__
 
-#include "plevent.h"
+#include "nsThreadUtils.h"
 #include "prthread.h"
 #include "nsISupports.h"
 #include "nsIURL.h"
@@ -50,35 +50,31 @@
 #include "nsIImapUrl.h"
 #include "nsIImapMailFolderSink.h"
 #include "nsIMsgFolder.h" // TO include biffState enum. Change to bool later...
-
-
 #include "nsCOMPtr.h"
+
 class nsImapProxyBase
 {
 public:
     nsImapProxyBase(nsIImapProtocol* aProtocol,
-                    nsIEventQueue* aEventQ,
+                    nsIEventTarget* aEventTarget,
                     PRThread* aThread);
     virtual ~nsImapProxyBase();
 
-    nsIEventQueue* m_eventQueue;
+    nsIEventTarget* m_eventTarget;
     PRThread* m_thread;
     nsIImapProtocol* m_protocol;
 };
 
 /* ******* Imap Base Event struct ******** */
-struct nsImapEvent : public PLEvent
+struct nsImapEvent : public nsRunnable
 {
   nsImapEvent();
 	virtual ~nsImapEvent();
 	virtual void InitEvent();
 
-	NS_IMETHOD HandleEvent() = 0;
-	void PostEvent(nsIEventQueue* aEventQ);
+	void PostEvent(nsIEventTarget* aTarget);
   virtual void SetNotifyCompletion(PRBool notifyCompletion);
   
-	static void* PR_CALLBACK imap_event_handler(PLEvent* aEvent);
-	static void PR_CALLBACK imap_event_destructor(PLEvent *aEvent);
   PRBool m_notifyCompletion;
 };
 

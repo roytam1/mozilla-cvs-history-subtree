@@ -44,6 +44,7 @@
 #include "nsNSSCertificateDB.h"
 #include "nsPKCS12Blob.h"
 #include "nsPK11TokenDB.h"
+#include "nsThreadUtils.h"
 #include "nsIServiceManager.h"
 #include "nsIMemory.h"
 #include "nsCRT.h"
@@ -1625,7 +1626,7 @@ nsCrypto::GenerateCRMFRequest(nsIDOMCRMFObject** aReturn)
   if (!cryptoRunnable)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  nsresult rv = nsNSSEventPostToUIEventQueue(cryptoRunnable);
+  nsresult rv = NS_DispatchToMainThread(cryptoRunnable);
   if (NS_FAILED(rv))
     delete cryptoRunnable;
 
@@ -2017,7 +2018,7 @@ nsCrypto::ImportUserCertificates(const nsAString& aNickname,
     // memory on the way out.
     certArr = nsnull;
 
-    rv = nsNSSEventPostToUIEventQueue(p12Runnable);
+    rv = NS_DispatchToMainThread(p12Runnable);
     if (NS_FAILED(rv))
       goto loser;
   }
@@ -2202,9 +2203,9 @@ nsCrypto::SignText(const nsAString& aStringToSign, const nsAString& aCaOption,
   }
 
   nsCOMPtr<nsIFormSigningDialog> proxied_fsd;
-  nsresult rv = proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+  nsresult rv = proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                                             NS_GET_IID(nsIFormSigningDialog), 
-                                            fsd, PROXY_SYNC,
+                                            fsd, NS_PROXY_SYNC,
                                             getter_AddRefs(proxied_fsd));
   if (NS_FAILED(rv)) {
     aResult.Append(internalError);

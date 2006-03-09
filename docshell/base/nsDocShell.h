@@ -72,6 +72,7 @@
 #include "nsPoint.h" // mCurrent/mDefaultScrollbarPreferences
 #include "nsString.h"
 #include "nsAutoPtr.h"
+#include "nsTWeakRef.h"
 
 // Threshold value in ms for META refresh based redirects
 #define REFRESH_REDIRECT_TIMER 15000
@@ -104,6 +105,8 @@
 #include "nsISecureBrowserUI.h"
 #include "nsIObserver.h"
 #include "nsDocShellLoadTypes.h"
+
+typedef nsTWeakRef<class nsDocShell> nsDocShellWeakRef;
 
 /* load commands were moved to nsIDocShell.h */
 /* load types were moved to nsDocShellLoadTypes.h */
@@ -541,6 +544,11 @@ protected:
     // Reference to the SHEntry for this docshell until the page is loaded
     // Somebody give me better name
     nsCOMPtr<nsISHEntry>       mLSHE;
+
+    // Holds a weak reference to ourselves that RestorePresentationEvent objects
+    // will use to reference us.  We can sever this weak ref at any time to
+    // effectively "revoke" any pending RestorePresentationEvent objects.
+    nsDocShellWeakRef          mWeakSelf;
 
     // Index into the SHTransaction list, indicating the previous and current
     // transaction at the time that this DocShell begins to load

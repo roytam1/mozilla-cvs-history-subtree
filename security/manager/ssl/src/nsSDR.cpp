@@ -44,7 +44,7 @@
 #include "nsMemory.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
-#include "nsISupports.h"
+#include "nsThreadUtils.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIServiceManager.h"
@@ -104,8 +104,10 @@ NS_IMETHODIMP nsSDRContext::GetInterface(const nsIID & uuid, void * *result)
       wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
       if (prompter) {
         nsCOMPtr<nsIPrompt> proxyPrompt;
-        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+        proxyman->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                                    NS_GET_IID(nsIPrompt),
+                                    prompter, NS_PROXY_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);

@@ -40,15 +40,9 @@
 #define NSS_EVENT_
 
 #include "nsIRunnable.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
-
-
-//Grab the UI event queue so that we can post some events to it.
-already_AddRefed<nsIEventQueue> nsNSSEventGetUIEventQueue();
 
 // post something to it
-nsresult nsNSSEventPostToUIEventQueue(nsIRunnable *event);
+nsresult nsNSSEventPostToUIThread(nsIRunnable *event);
 
 #endif
 

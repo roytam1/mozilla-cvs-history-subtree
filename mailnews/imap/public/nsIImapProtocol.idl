@@ -41,7 +41,7 @@
 interface nsIUrlListener;
 interface nsIURI;
 interface nsIImapUrl;
-interface nsIEventQueue;
+interface nsIEventTarget;
 interface nsIImapProtocol;
 interface nsIImapIncomingServer;
 interface nsISupportsArray;
@@ -79,7 +79,7 @@ interface nsIImapProtocol : nsISupports {
 	// protocol data. The protocol also needs a host session list.
 	/////////////////////////////////////////////////////////////////////////
 	void Initialize(in nsIImapHostSessionList aHostSessionList, in nsIImapIncomingServer aServer, 
-                  in nsIEventQueue aSinkEventQueue) ;
+                  in nsIEventTarget aSinkEventTarget) ;
 
 	void NotifyHdrsToDownload(out unsigned long keys, in unsigned long keyCount);
 	void NotifyBodysToDownload(out unsigned long keys, in unsigned long count);

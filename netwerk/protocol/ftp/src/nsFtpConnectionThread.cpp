@@ -56,7 +56,7 @@
 #include "nsEscape.h"
 #include "nsMimeTypes.h"
 #include "nsNetUtil.h"
-#include "nsEventQueueUtils.h"
+#include "nsThreadUtils.h"
 #include "nsStreamUtils.h"
 #include "nsIURL.h"
 #include "nsISocketTransport.h"
@@ -1445,11 +1445,10 @@ nsFtpState::R_pasv() {
         LOG(("FTP:(%x) created DT (%s:%x)\n", this, hostStr, port));
         
         // hook ourself up as a proxy for status notifications
-        nsCOMPtr<nsIEventQueue> eventQ;
-        rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-        NS_ENSURE_SUCCESS(rv, FTP_ERROR);
+        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+        NS_ENSURE_TRUE(thread, FTP_ERROR);
 
-        rv = mDataTransport->SetEventSink(this, eventQ);
+        rv = mDataTransport->SetEventSink(this, thread);
         NS_ENSURE_SUCCESS(rv, FTP_ERROR);
 
         if (mAction == PUT) {
@@ -1623,11 +1622,10 @@ nsFtpState::OpenCacheDataStream()
                               getter_AddRefs(transport));
     NS_ENSURE_STATE(transport);
 
-    nsCOMPtr<nsIEventQueue> eventQ;
-    NS_GetCurrentEventQ(getter_AddRefs(eventQ));
-    NS_ENSURE_STATE(eventQ);
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+    NS_ENSURE_STATE(thread);
 
-    nsresult rv = transport->SetEventSink(this, eventQ);
+    nsresult rv = transport->SetEventSink(this, thread);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Open a non-blocking, buffered input stream...

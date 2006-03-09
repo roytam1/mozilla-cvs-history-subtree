@@ -64,6 +64,7 @@
 #include "nsNSSCertHelper.h"
 #include "nsISupportsPrimitives.h"
 #include "nsUnicharUtils.h"
+#include "nsThreadUtils.h"
 
 #include "nspr.h"
 extern "C" {
@@ -218,10 +219,10 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
   }
   
   nsCOMPtr<nsIX509Cert> x509Proxy;
-  proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+  proxyman->GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
                                nsIX509Cert::GetIID(),
                                NS_STATIC_CAST(nsIX509Cert*, this),
-                               PROXY_SYNC | PROXY_ALWAYS,
+                               NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                                getter_AddRefs(x509Proxy));
 
   if (!x509Proxy) {
@@ -265,10 +266,10 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
       nsCOMPtr<nsIX509CertValidity> originalValidity;
       rv = x509Proxy->GetValidity(getter_AddRefs(originalValidity));
       if (NS_SUCCEEDED(rv) && originalValidity) {
-        proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+        proxyman->GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
                                      nsIX509CertValidity::GetIID(),
                                      originalValidity,
-                                     PROXY_SYNC | PROXY_ALWAYS,
+                                     NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                                      getter_AddRefs(validity));
       }
 

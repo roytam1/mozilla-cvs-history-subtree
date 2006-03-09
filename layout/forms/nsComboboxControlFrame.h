@@ -64,6 +64,7 @@
 #include "nsIScrollableViewProvider.h"
 #include "nsIStatefulFrame.h"
 #include "nsIDOMMouseListener.h"
+#include "nsTWeakRef.h"
 
 class nsIView;
 class nsStyleContext;
@@ -75,6 +76,8 @@ class nsIScrollableView;
  * @see #GetAdditionalChildListName()
  */
 #define NS_COMBO_FRAME_POPUP_LIST_INDEX   (NS_BLOCK_FRAME_ABSOLUTE_LIST_INDEX + 1)
+
+typedef nsTWeakRef<class nsComboboxControlFrame> nsComboboxControlFrameWeakRef;
 
 class nsComboboxControlFrame : public nsAreaFrame,
                                public nsIFormControlFrame,
@@ -259,6 +262,8 @@ protected:
   PRPackedBool          mInRedisplayText;
   PRPackedBool          mRedisplayTextEventPosted;
 
+  nsComboboxControlFrameWeakRef mWeakSelf;
+
   PRInt32               mRecentSelectedIndex;
   PRInt32               mDisplayedIndex;
   nsString              mDisplayedOptionText;
@@ -266,8 +271,6 @@ protected:
   // make someone to listen to the button. If its programmatically pressed by someone like Accessibility
   // then open or close the combo box.
   nsCOMPtr<nsIDOMMouseListener> mButtonListener;
-
-  nsCOMPtr<nsIEventQueueService> mEventQueueService;
 
   // static class data member for Bug 32920
   // only one control can be focused at a time

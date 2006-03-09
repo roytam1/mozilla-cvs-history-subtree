@@ -573,16 +573,14 @@ EmbedPrivate::PushStartup(void)
     // XXX create offscreen window for appshell service?
     // XXX remove X prop from offscreen window?
 
-    nsCOMPtr<nsIAppShell> appShell;
-    appShell = do_CreateInstance(kAppShellCID);
+    nsCOMPtr<nsIAppShell> appShell = do_GetService(kAppShellCID);
     if (!appShell) {
       NS_WARNING("Failed to create appshell in EmbedPrivate::PushStartup!\n");
       return;
     }
     sAppShell = appShell.get();
     NS_ADDREF(sAppShell);
-    sAppShell->Create(0, nsnull);
-    sAppShell->Spinup();
+    sAppShell->Init(0, nsnull);
   }
 }
 
@@ -604,7 +602,6 @@ EmbedPrivate::PopStartup(void)
 
     if (sAppShell) {
       // Shutdown the appshell service.
-      sAppShell->Spindown();
       NS_RELEASE(sAppShell);
       sAppShell = 0;
     }

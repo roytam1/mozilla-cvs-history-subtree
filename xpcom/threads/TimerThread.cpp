@@ -42,6 +42,7 @@
 #include "TimerThread.h"
 
 #include "nsAutoLock.h"
+#include "nsThreadUtils.h"
 #include "pratom.h"
 
 #include "nsIObserverService.h"
@@ -105,29 +106,19 @@ nsresult TimerThread::Init()
 
   if (PR_AtomicSet(&mInitInProgress, 1) == 0) {
     nsresult rv;
+    nsCOMPtr<nsIObserverService> observerService
+      (do_GetService("@mozilla.org/observer-service;1", &rv));
 
-    mEventQueueService = do_GetService("@mozilla.org/event-queue-service;1", &rv);
     if (NS_SUCCEEDED(rv)) {
-      nsCOMPtr<nsIObserverService> observerService
-        (do_GetService("@mozilla.org/observer-service;1", &rv));
-
-      if (NS_SUCCEEDED(rv)) {
-        // We hold on to mThread to keep the thread alive.
-        rv = NS_NewThread(getter_AddRefs(mThread),
-                          NS_STATIC_CAST(nsIRunnable*, this),
-                          0,
-                          PR_JOINABLE_THREAD,
-                          PR_PRIORITY_NORMAL,
-                          PR_GLOBAL_THREAD);
-
-        if (NS_FAILED(rv)) {
-          mThread = nsnull;
-        }
-        else {
-          // We'll be released at xpcom shutdown
-          observerService->AddObserver(this, "sleep_notification", PR_FALSE);
-          observerService->AddObserver(this, "wake_notification", PR_FALSE);
-        }
+      // We hold on to mThread to keep the thread alive.
+      rv = NS_NewThread(getter_AddRefs(mThread), this, "xpcom.timer");
+      if (NS_FAILED(rv)) {
+        mThread = nsnull;
+      }
+      else {
+        // We'll be released at xpcom shutdown
+        observerService->AddObserver(this, "sleep_notification", PR_FALSE);
+        observerService->AddObserver(this, "wake_notification", PR_FALSE);
       }
     }
 
@@ -171,7 +162,7 @@ nsresult TimerThread::Shutdown()
     }
   }
 
-  mThread->Join();    // wait for the thread to die
+  mThread->Shutdown();    // wait for the thread to die
   return NS_OK;
 }
 

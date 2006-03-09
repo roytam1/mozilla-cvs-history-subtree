@@ -89,8 +89,6 @@
 static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
-#include "nsIEventQueueService.h"
-
 #define PREF_XPINSTALL_ENABLED                "xpinstall.enabled"
 #define PREF_XPINSTALL_CONFIRM_DLG            "xpinstall.dialog.confirm"
 #define PREF_XPINSTALL_STATUS_DLG_SKIN        "xpinstall.dialog.progress.skin"
@@ -551,10 +549,10 @@ NS_IMETHODIMP nsXPInstallManager::Observe( nsISupports *aSubject,
                             do_GetService(kProxyObjectManagerCID, &rv);
                 if (pmgr)
                 {
-                    rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+                    rv = pmgr->GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
                                                   NS_GET_IID(nsIXPIProgressDialog),
                                                   dlg,
-                                                  PROXY_SYNC | PROXY_ALWAYS,
+                                                  NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                                                   getter_AddRefs(mDlg) );
                 }
             }

@@ -51,13 +51,13 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMEventReceiver.h"
-#include "nsIEventQueueService.h"
 #include "nsIJSContextStack.h"
 #include "nsIPrivateDOMImplementation.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsContentCID.h"
 #include "nsContentUtils.h"
+#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 #include "nsIHttpChannel.h"
 #include "nsIScriptLoader.h"
@@ -409,42 +409,24 @@ nsSyncLoader::LoadDocument(nsIChannel* aChannel,
 nsresult
 nsSyncLoader::PushAsyncStream(nsIStreamListener* aListener)
 {
-    nsresult rv = NS_OK;
-
-    // Set up a new eventqueue
-    nsCOMPtr<nsIEventQueueService> service = 
-        do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIEventQueue> currentThreadQ;
-    rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
-    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+    NS_ENSURE_STATE(thread);
 
     // Hook us up to listen to redirects and the like
     mChannel->SetNotificationCallbacks(this);
 
     // Start reading from the channel
-    rv = mChannel->AsyncOpen(aListener, nsnull);
+    nsresult rv = mChannel->AsyncOpen(aListener, nsnull);
 
     if (NS_SUCCEEDED(rv)) {
-        mLoading = PR_TRUE;
-
         // process events until we're finished.
-        PLEvent *event;
-        while (mLoading && NS_SUCCEEDED(rv)) {
-            rv = currentThreadQ->WaitForEvent(&event);
-            NS_ASSERTION(NS_SUCCEEDED(rv), ": currentThreadQ->WaitForEvent failed...\n");
-            if (NS_SUCCEEDED(rv)) {
-                rv = currentThreadQ->HandleEvent(event);
-                NS_ASSERTION(NS_SUCCEEDED(rv), ": currentThreadQ->HandleEvent failed...\n");
-            }
-        }
+        mLoading = PR_TRUE;
+        while (mLoading && NS_SUCCEEDED(rv))
+            rv = thread->ProcessNextEvent();
     }
 
     // Note that if AsyncOpen failed that's ok -- the only caller of
     // this method nulls out mChannel immediately after we return.
-
-    service->PopThreadEventQueue(currentThreadQ);
     
     return rv;
 }
