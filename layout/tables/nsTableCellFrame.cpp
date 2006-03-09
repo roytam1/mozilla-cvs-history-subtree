@@ -207,23 +207,6 @@ nsTableCellFrame::AttributeChanged(PRInt32         aNameSpaceID,
   return NS_OK;
 }
 
-void nsTableCellFrame::SetPass1MaxElementWidth(nscoord aMaxWidth,
-                                               nscoord aMaxElementWidth)
-{ 
-  nscoord maxElemWidth = aMaxElementWidth;
-  if (eCompatibility_NavQuirks == GetPresContext()->CompatibilityMode()) {
-    // check for fixed width and not nowrap and not pre
-    const nsStylePosition* stylePosition = GetStylePosition();
-    if (stylePosition->mWidth.GetUnit() == eStyleUnit_Coord) {
-      if (GetContent()->HasAttr(kNameSpaceID_None, nsHTMLAtoms::nowrap)) {
-        // set the max element size to the value of the fixed width (NAV/IE quirk)
-        maxElemWidth = NS_MAX(maxElemWidth, stylePosition->mWidth.GetCoordValue());
-      }
-    }
-  }
-  mPass1MaxElementWidth = maxElemWidth;
-}
-
 NS_IMETHODIMP
 nsTableCellFrame::AppendFrames(nsIAtom*        aListName,
                                nsIFrame*       aFrameList)
