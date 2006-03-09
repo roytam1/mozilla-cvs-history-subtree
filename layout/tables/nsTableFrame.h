@@ -957,27 +957,18 @@ nsTableFrame::GetContinuousLeftBCBorderWidth(float aPixelsToTwips) const
   return BC_BORDER_RIGHT_HALF_COORD(aPixelsToTwips, mBits.mLeftContBCBorder);
 }
 
-enum nsTableIteration {
-  eTableLTR = 0,
-  eTableRTL = 1,
-  eTableDIR = 2
-};
-
 class nsTableIterator
 {
 public:
-  nsTableIterator(nsIFrame&        aSource,
-                  nsTableIteration aType);
-  nsTableIterator(nsFrameList&     aSource,
-                  nsTableIteration aType);
+  nsTableIterator(nsIFrame& aSource);
+  nsTableIterator(nsFrameList& aSource);
   nsIFrame* First();
   nsIFrame* Next();
   PRBool    IsLeftToRight();
   PRInt32   Count();
 
 protected:
-  void Init(nsIFrame*        aFirstChild,
-            nsTableIteration aType);
+  void Init(nsIFrame* aFirstChild);
   PRBool    mLeftToRight;
   nsIFrame* mFirstListChild;
   nsIFrame* mFirstChild;

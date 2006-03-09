@@ -332,7 +332,7 @@ nsTableRowFrame::DidResize(const nsHTMLReflowState& aReflowState)
   nsTableFrame::GetTableFrame(this, tableFrame);
   if (!tableFrame) return;
   
-  nsTableIterator iter(*this, eTableDIR);
+  nsTableIterator iter(*this);
   nsIFrame* childFrame = iter.First();
   
   nsHTMLReflowMetrics desiredSize(PR_FALSE);
@@ -410,7 +410,7 @@ nscoord nsTableRowFrame::GetAscent()
   // bppppppppppppppppb
   // bbbbbbbbbbbbbbbbbb
 
-  nsTableIterator iter(*this, eTableDIR);
+  nsTableIterator iter(*this);
   nsIFrame* childFrame = iter.First();
   nscoord ascent = 0;
    while (childFrame) {
@@ -811,9 +811,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
   nscoord cellSpacingX = aTableFrame.GetCellSpacingX();
   PRInt32 cellColSpan = 1;  // must be defined here so it's set properly for non-cell kids
   
-  nsTableIteration dir = (aReflowState.availableWidth == NS_UNCONSTRAINEDSIZE)
-                         ? eTableLTR : eTableDIR;
-  nsTableIterator iter(*this, dir);
+  nsTableIterator iter(*this);
   // remember the col index of the previous cell to handle rowspans into this row
   PRInt32 firstPrevColIndex = (iter.IsLeftToRight()) ? -1 : aTableFrame.GetColCount();
   PRInt32 prevColIndex  = firstPrevColIndex;

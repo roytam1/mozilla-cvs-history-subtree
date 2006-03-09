@@ -2407,7 +2407,7 @@ NS_METHOD nsTableFrame::AdjustForCollapsingCols(nsHTMLReflowMetrics& aDesiredSiz
   SetNeedToCollapseColumns(PR_FALSE);
  
   PRInt32 numRows = cellMap->GetRowCount();
-  nsTableIterator groupIter(mColGroups, eTableDIR);
+  nsTableIterator groupIter(mColGroups);
   nsIFrame* groupFrame = groupIter.First(); 
   nscoord cellSpacingX = GetCellSpacingX();
   nscoord xOffset = 0;
@@ -2421,7 +2421,7 @@ NS_METHOD nsTableFrame::AdjustForCollapsingCols(nsHTMLReflowMetrics& aDesiredSiz
     if (collapseGroup) {
       SetNeedToCollapseColumns(PR_TRUE);
     }
-    nsTableIterator colIter(*groupFrame, eTableDIR);
+    nsTableIterator colIter(*groupFrame);
     nsIFrame* colFrame = colIter.First();
     // iterate over the cols in the col group
     while (nsnull != colFrame) {
@@ -4400,44 +4400,41 @@ nsTableFrame::Dump(PRBool          aDumpRows,
 #endif
 
 // nsTableIterator
-nsTableIterator::nsTableIterator(nsIFrame&        aSource,
-                                 nsTableIteration aType)
+nsTableIterator::nsTableIterator(nsIFrame& aSource)
 {
   nsIFrame* firstChild = aSource.GetFirstChild(nsnull);
-  Init(firstChild, aType);
+  Init(firstChild);
 }
 
-nsTableIterator::nsTableIterator(nsFrameList&     aSource,
-                                 nsTableIteration aType)
+nsTableIterator::nsTableIterator(nsFrameList& aSource)
 {
   nsIFrame* firstChild = aSource.FirstChild();
-  Init(firstChild, aType);
+  Init(firstChild);
 }
 
-void nsTableIterator::Init(nsIFrame*        aFirstChild,
-                           nsTableIteration aType)
+void nsTableIterator::Init(nsIFrame* aFirstChild)
 {
   mFirstListChild = aFirstChild;
   mFirstChild     = aFirstChild;
   mCurrentChild   = nsnull;
-  mLeftToRight    = (eTableRTL == aType) ? PR_FALSE : PR_TRUE; 
+  mLeftToRight    = PR_TRUE;
   mCount          = -1;
 
   if (!mFirstChild) {
     return;
   }
-  if (eTableDIR == aType) {
-    nsTableFrame* table = nsnull;
-    nsresult rv = nsTableFrame::GetTableFrame(mFirstChild, table);
-    if (NS_SUCCEEDED(rv) && (table != nsnull)) {
-      mLeftToRight = (NS_STYLE_DIRECTION_LTR ==
-                      table->GetStyleVisibility()->mDirection);
-    }
-    else {
-      NS_ASSERTION(PR_FALSE, "source of table iterator is not part of a table");
-      return;
-    }
+
+  nsTableFrame* table = nsnull;
+  nsresult rv = nsTableFrame::GetTableFrame(mFirstChild, table);
+  if (NS_SUCCEEDED(rv) && (table != nsnull)) {
+    mLeftToRight = (NS_STYLE_DIRECTION_LTR ==
+                    table->GetStyleVisibility()->mDirection);
   }
+  else {
+    NS_NOTREACHED("source of table iterator is not part of a table");
+    return;
+  }
+
   if (!mLeftToRight) {
     mCount = 0;
     nsIFrame* nextChild = mFirstChild->GetNextSibling();
