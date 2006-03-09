@@ -130,7 +130,6 @@ nsProxyObjectManager::GetProxyForObject(nsIEventTarget* aTarget,
                                         PRInt32 proxyType, 
                                         void** aProxyObject)
 {
-    NS_ENSURE_ARG_POINTER(aTarget);
     NS_ENSURE_ARG_POINTER(aObj);
 
     *aProxyObject = nsnull;
