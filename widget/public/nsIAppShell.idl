@@ -63,7 +63,7 @@ interface nsIAppShell : nsISupports
    * Give hint to native event queue notification mechanism. If the native
    * platform needs to tradeoff performance vs. native event starvation this
    * hint tells the native dispatch code which to favor.  The default is to
-   * prevent event starvation.
+   * prevent native event starvation.
    *
    * Calls to this function may be nested. When the number of calls that pass
    * PR_TRUE is subtracted from the number of calls that pass PR_FALSE is
