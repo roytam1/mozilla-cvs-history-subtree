@@ -165,7 +165,7 @@ printf("\n");
   aDesiredSize.mBoundingMetrics.Clear();
 
   // ask our children to compute their bounding metrics
-  nsHTMLReflowMetrics childDesiredSize(aDesiredSize.mComputeMEW,
+  nsHTMLReflowMetrics childDesiredSize(
                       aDesiredSize.mFlags | NS_REFLOW_CALC_BOUNDING_METRICS);
   nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
   PRInt32 count = 0;
@@ -242,7 +242,7 @@ nsMathMLTokenFrame::Place(nsIRenderingContext& aRenderingContext,
     nsIFrame* childFrame = GetFirstChild(nsnull);
     while (childFrame) {
       nsRect rect = childFrame->GetRect();
-      nsHTMLReflowMetrics childSize(nsnull);
+      nsHTMLReflowMetrics childSize;
       childSize.width = rect.width;
       childSize.height = aDesiredSize.height; //rect.height;
 

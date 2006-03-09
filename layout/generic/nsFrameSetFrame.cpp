@@ -863,7 +863,7 @@ nsHTMLFramesetFrame::ReflowPlaceChild(nsIFrame*                aChild,
 {
   // reflow the child
   nsHTMLReflowState  reflowState(aPresContext, aReflowState, aChild, aSize);
-  nsHTMLReflowMetrics metrics(nsnull);
+  nsHTMLReflowMetrics metrics;
   metrics.width = aSize.width;
   metrics.height= aSize.height;
   nsReflowStatus status;

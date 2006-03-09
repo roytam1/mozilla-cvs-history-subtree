@@ -2936,7 +2936,7 @@ nsTableFrame::IR_TargetIsChild(nsTableReflowState&  aReflowState,
   nsRect oldKidRect = aNextFrame->GetRect();
 
   // Pass along the reflow command, don't request a max element size, rows will do that
-  nsHTMLReflowMetrics desiredSize(PR_FALSE);
+  nsHTMLReflowMetrics desiredSize;
 
   nsSize kidAvailSize(aReflowState.availSize);
   nsPresContext* presContext = GetPresContext();
@@ -3181,7 +3181,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         }
       }
 
-      nsHTMLReflowMetrics desiredSize(PR_FALSE);
+      nsHTMLReflowMetrics desiredSize;
       desiredSize.width = desiredSize.height = desiredSize.ascent = desiredSize.descent = 0;
   
       if (childX < numRowGroups) {  
@@ -3322,7 +3322,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   
   // if required, give the colgroups their initial reflows
   if (aDoColGroups) {
-    nsHTMLReflowMetrics kidMet(PR_FALSE);
+    nsHTMLReflowMetrics kidMet;
     for (nsIFrame* kidFrame = mColGroups.FirstChild(); kidFrame;
          kidFrame = kidFrame->GetNextSibling()) {
       nsHTMLReflowState kidReflowState(presContext, aReflowState.reflowState, kidFrame,
@@ -3500,7 +3500,7 @@ void ResizeCells(nsTableFrame&            aTableFrame,
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
   aTableFrame.OrderRowGroups(rowGroups, numRowGroups, nsnull);
-  nsHTMLReflowMetrics tableDesiredSize(PR_FALSE);
+  nsHTMLReflowMetrics tableDesiredSize;
   nsRect tableRect = aTableFrame.GetRect();
   tableDesiredSize.width = tableRect.width;
   tableDesiredSize.height = tableRect.height;
@@ -3511,7 +3511,7 @@ void ResizeCells(nsTableFrame&            aTableFrame,
     nsTableRowGroupFrame* rgFrame = aTableFrame.GetRowGroupFrame((nsIFrame*)rowGroups.ElementAt(rgX));
    
     nsRect rowGroupRect = rgFrame->GetRect();
-    nsHTMLReflowMetrics groupDesiredSize(PR_FALSE);
+    nsHTMLReflowMetrics groupDesiredSize;
     groupDesiredSize.width = rowGroupRect.width;
     groupDesiredSize.height = rowGroupRect.height;
     groupDesiredSize.mOverflowArea = nsRect(0, 0, groupDesiredSize.width,

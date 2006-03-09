@@ -763,7 +763,7 @@ nsSVGForeignObjectFrame::DoReflow()
   // create a new reflow state, setting our max size to (width,height):
   nsHTMLReflowState reflowState(presContext, this,
                                 renderingContext, size);
-  nsHTMLReflowMetrics desiredSize(nsnull);
+  nsHTMLReflowMetrics desiredSize;
   nsReflowStatus status;
   
   WillReflow(presContext);

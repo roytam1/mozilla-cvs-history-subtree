@@ -5747,7 +5747,7 @@ nsFrame::DoLayout(nsBoxLayoutState& aState)
 
   nsIRenderingContext* rendContext = aState.GetRenderingContext();
   nsPresContext* presContext = aState.PresContext();
-  nsHTMLReflowMetrics desiredSize(PR_FALSE);
+  nsHTMLReflowMetrics desiredSize;
   nsresult rv = NS_OK;
  
   if (rendContext) {

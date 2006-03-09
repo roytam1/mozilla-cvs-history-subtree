@@ -481,7 +481,7 @@ CanvasFrame::Reflow(nsPresContext*          aPresContext,
   aStatus = NS_FRAME_COMPLETE;
 
   // Reflow our one and only child frame
-  nsHTMLReflowMetrics kidDesiredSize(nsnull);
+  nsHTMLReflowMetrics kidDesiredSize;
   if (mFrames.IsEmpty()) {
     // We have no child frame, so return an empty size
     aDesiredSize.width = aDesiredSize.height = 0;

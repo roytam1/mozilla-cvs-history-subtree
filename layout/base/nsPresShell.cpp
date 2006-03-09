@@ -2475,7 +2475,7 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
 #endif
     nsRect                bounds = mPresContext->GetVisibleArea();
     nsSize                maxSize(bounds.width, bounds.height);
-    nsHTMLReflowMetrics   desiredSize(nsnull);
+    nsHTMLReflowMetrics   desiredSize;
     nsReflowStatus        status;
     nsIRenderingContext*  rcx = nsnull;
 
@@ -2624,7 +2624,7 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
 #endif
     nsRect                bounds = mPresContext->GetVisibleArea();
     nsSize                maxSize(bounds.width, bounds.height);
-    nsHTMLReflowMetrics   desiredSize(nsnull);
+    nsHTMLReflowMetrics   desiredSize;
     nsReflowStatus        status;
     nsIRenderingContext*  rcx = nsnull;
 
@@ -3066,7 +3066,7 @@ PresShell::StyleChangeReflow()
 #endif
     nsRect                bounds = mPresContext->GetVisibleArea();
     nsSize                maxSize(bounds.width, bounds.height);
-    nsHTMLReflowMetrics   desiredSize(nsnull);
+    nsHTMLReflowMetrics   desiredSize;
     nsReflowStatus        status;
     nsIRenderingContext*  rcx = nsnull;
 
@@ -6133,7 +6133,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
   MOZ_TIMER_START(mReflowWatch);  
 
   if (0 != mDirtyRoots.Count()) {
-    nsHTMLReflowMetrics   desiredSize(nsnull);
+    nsHTMLReflowMetrics   desiredSize;
     nsIRenderingContext*  rcx;
     nsIFrame*             rootFrame = FrameManager()->GetRootFrame();
     nsSize          maxSize = rootFrame->GetSize();

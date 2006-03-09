@@ -349,7 +349,7 @@ nsSimplePageSequenceFrame::Reflow(nsPresContext*          aPresContext,
   SetPageSizes(pageSize, margin);
 
   // Tile the pages vertically
-  nsHTMLReflowMetrics kidSize(nsnull);
+  nsHTMLReflowMetrics kidSize;
   for (nsIFrame* kidFrame = mFrames.FirstChild(); nsnull != kidFrame; ) {
     // Reflow the page
     // The availableHeight always comes in NS_UNCONSTRAINEDSIZE, so we need to check

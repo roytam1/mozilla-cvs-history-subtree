@@ -767,7 +767,7 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   firstPassState.availableWidth  = NS_UNCONSTRAINEDSIZE;
   firstPassState.availableHeight = NS_UNCONSTRAINEDSIZE;
  
-  nsHTMLReflowMetrics  scrolledAreaDesiredSize(PR_TRUE);
+  nsHTMLReflowMetrics scrolledAreaDesiredSize;
 
 
   if (eReflowReason_Incremental == aReflowState.reason) {

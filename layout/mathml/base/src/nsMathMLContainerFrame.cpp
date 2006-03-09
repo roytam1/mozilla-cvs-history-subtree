@@ -218,7 +218,7 @@ nsMathMLContainerFrame::GetPreferredStretchSize(nsIRenderingContext& aRenderingC
   }
   else if (aOptions & STRETCH_CONSIDER_EMBELLISHMENTS) {
     // compute our up-to-date size using Place()
-    nsHTMLReflowMetrics metrics(nsnull);
+    nsHTMLReflowMetrics metrics;
     Place(aRenderingContext, PR_FALSE, metrics);
     aPreferredStretchSize = metrics.mBoundingMetrics;
   }
@@ -1050,7 +1050,7 @@ printf("\n");
 
   nsReflowStatus childStatus;
   nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
-  nsHTMLReflowMetrics childDesiredSize(aDesiredSize.mComputeMEW,
+  nsHTMLReflowMetrics childDesiredSize(
                       aDesiredSize.mFlags | NS_REFLOW_CALC_BOUNDING_METRICS);
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
@@ -1309,7 +1309,7 @@ nsMathMLContainerFrame::Place(nsIRenderingContext& aRenderingContext,
   PRInt32 count = 0;
   PRInt32 carrySpace = 0;
   eMathMLFrameType fromFrameType = eMathMLFrameType_UNKNOWN;
-  nsHTMLReflowMetrics childSize (nsnull);
+  nsHTMLReflowMetrics childSize;
   nsBoundingMetrics bmChild;
   nscoord leftCorrection = 0, italicCorrection = 0;
   nsIAtom* prevFrameType = nsnull;

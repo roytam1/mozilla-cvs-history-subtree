@@ -608,7 +608,7 @@ void nsTableCellFrame::VerticallyAlignChild(const nsHTMLReflowState& aReflowStat
   kidYTop = PR_MAX(0, kidYTop);
 
   firstKid->SetPosition(nsPoint(kidRect.x, kidYTop));
-  nsHTMLReflowMetrics desiredSize(PR_FALSE);
+  nsHTMLReflowMetrics desiredSize;
   desiredSize.width = mRect.width;
   desiredSize.height = mRect.height;
   GetSelfOverflow(desiredSize.mOverflowArea);

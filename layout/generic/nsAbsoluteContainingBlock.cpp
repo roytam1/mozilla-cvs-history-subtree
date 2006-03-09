@@ -335,7 +335,7 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
   // Get the border values
   const nsMargin& border = aReflowState.mStyleBorder->GetBorder();
 
-  nsHTMLReflowMetrics kidDesiredSize(nsnull);
+  nsHTMLReflowMetrics kidDesiredSize;
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, aKidFrame,
                                    nsSize(aReflowState.mComputedWidth,
                                           NS_UNCONSTRAINEDSIZE),

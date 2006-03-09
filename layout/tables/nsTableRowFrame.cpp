@@ -335,7 +335,7 @@ nsTableRowFrame::DidResize(const nsHTMLReflowState& aReflowState)
   nsTableIterator iter(*this);
   nsIFrame* childFrame = iter.First();
   
-  nsHTMLReflowMetrics desiredSize(PR_FALSE);
+  nsHTMLReflowMetrics desiredSize;
   desiredSize.width = mRect.width;
   desiredSize.height = mRect.height;
   desiredSize.mOverflowArea = nsRect(0, 0, desiredSize.width,
@@ -830,7 +830,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       nsTableCellReflowState kidReflowState(aPresContext, aReflowState,
                                             kidFrame, nsSize(0,0));
       InitChildReflowState(*aPresContext, nsSize(0,0), PR_FALSE, p2t, kidReflowState);
-      nsHTMLReflowMetrics desiredSize(PR_FALSE);
+      nsHTMLReflowMetrics desiredSize;
       nsReflowStatus  status;
       ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState, 0, 0, 0, status);
       kidFrame->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
@@ -879,10 +879,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
 
       // remember the rightmost (ltr) or leftmost (rtl) column this cell spans into
       prevColIndex = (iter.IsLeftToRight()) ? cellColIndex + (cellColSpan - 1) : cellColIndex;
-      // always request MEW. Since we may turn MEW on for selected cells during incremental
-      // reflow, we need to request MEW *now* so that those incremental reflows will be
-      // able to build on existing MEW data in the children.
-      nsHTMLReflowMetrics desiredSize(PR_TRUE);
+      nsHTMLReflowMetrics desiredSize;
 
       // If the avail width is not the same as last time we reflowed the cell or
       // the cell wants to be bigger than what was available last time or
@@ -1082,7 +1079,7 @@ nsTableRowFrame::ReflowCellFrame(nsPresContext*          aPresContext,
                                          aCellFrame, availSize);
   InitChildReflowState(*aPresContext, availSize, borderCollapse, p2t, cellReflowState);
 
-  nsHTMLReflowMetrics desiredSize(PR_FALSE);
+  nsHTMLReflowMetrics desiredSize;
 
   ReflowChild(aCellFrame, aPresContext, desiredSize, cellReflowState,
               0, 0, NS_FRAME_NO_MOVE_FRAME, aStatus);

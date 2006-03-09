@@ -862,7 +862,7 @@ nsComboboxControlFrame::ReflowCombobox(nsPresContext *         aPresContext,
   /////////////////////////////////////////////////////////
   // The DisplayFrame is a Block frame containing a TextFrame
   // and it is completely anonymous, so we must manually reflow it
-  nsHTMLReflowMetrics txtKidSize(PR_TRUE);
+  nsHTMLReflowMetrics txtKidSize;
   nsSize txtAvailSize(dispWidth - aBtnWidth, dispHeight);
   nsHTMLReflowState   txtKidReflowState(aPresContext, aReflowState, aDisplayFrame, txtAvailSize, reason);
 
@@ -1117,7 +1117,7 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
   
   // set up a new reflow state for use throughout
   nsHTMLReflowState firstPassState(aReflowState);
-  nsHTMLReflowMetrics dropdownDesiredSize(nsnull);
+  nsHTMLReflowMetrics dropdownDesiredSize;
 
   // Check to see if this a fully unconstrained reflow
   PRBool fullyUnconstrained = firstPassState.mComputedWidth == NS_UNCONSTRAINEDSIZE;

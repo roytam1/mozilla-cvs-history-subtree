@@ -968,7 +968,7 @@ nsTableRowGroupFrame::SplitRowGroup(nsPresContext*          aPresContext,
                                          
         InitChildReflowState(*aPresContext, borderCollapse, p2t, rowReflowState);
         rowReflowState.mFlags.mIsTopOfPage = isTopOfPage; // set top of page
-        nsHTMLReflowMetrics rowMetrics(PR_FALSE);
+        nsHTMLReflowMetrics rowMetrics;
 
         // Reflow the cell with the constrained height. A cell with rowspan >1 will get this
         // reflow later during SplitSpanningCells.

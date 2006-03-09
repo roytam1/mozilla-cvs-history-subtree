@@ -420,7 +420,7 @@ nsFieldSetFrame::Reflow(nsPresContext*           aPresContext,
       legendReflowState.mComputedWidth = NS_INTRINSICSIZE;
       legendReflowState.mComputedHeight = NS_INTRINSICSIZE;
 
-      nsHTMLReflowMetrics legendDesiredSize(0,0);
+      nsHTMLReflowMetrics legendDesiredSize;
 
       ReflowChild(mLegendFrame, aPresContext, legendDesiredSize, legendReflowState,
                   0, 0, NS_FRAME_NO_MOVE_FRAME, aStatus);
@@ -485,7 +485,7 @@ nsFieldSetFrame::Reflow(nsPresContext*           aPresContext,
       nsHTMLReflowState kidReflowState(aPresContext, aReflowState, mContentFrame,
                                        availSize, reason);
 
-      nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
+      nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mFlags);
       // Reflow the frame
       ReflowChild(mContentFrame, aPresContext, kidDesiredSize, kidReflowState,
                   borderPadding.left + kidReflowState.mComputedMargin.left,

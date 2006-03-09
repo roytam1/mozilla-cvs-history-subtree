@@ -2000,7 +2000,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
 
   // Handle an odd-ball case: a list-item with no lines
   if (mBullet && HaveOutsideBullet() && mLines.empty()) {
-    nsHTMLReflowMetrics metrics(nsnull);
+    nsHTMLReflowMetrics metrics;
     ReflowBullet(aState, metrics);
 
     // There are no lines so we have to fake up some y motion so that
@@ -3018,7 +3018,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
              ((0 == mLines.front()->mBounds.height) &&
               (aLine == begin_lines().next())))) {
           // Reflow the bullet
-          nsHTMLReflowMetrics metrics(nsnull);
+          nsHTMLReflowMetrics metrics;
           ReflowBullet(aState, metrics);
           
           // Doing the alignment using |mAscent| will also cater for bullets
@@ -3704,7 +3704,7 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
   PRBool addedBullet = PR_FALSE;
   if (mBullet && HaveOutsideBullet() && (aLine == mLines.front()) &&
       (!aLineLayout.IsZeroHeight() || (aLine == mLines.back()))) {
-    nsHTMLReflowMetrics metrics(nsnull);
+    nsHTMLReflowMetrics metrics;
     ReflowBullet(aState, metrics);
     aLineLayout.AddBulletFrame(mBullet, metrics);
     addedBullet = PR_TRUE;

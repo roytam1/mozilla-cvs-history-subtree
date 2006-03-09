@@ -276,8 +276,8 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
   ////////////////////////////////////
   // Get the children's desired sizes
   nsBoundingMetrics bmNum, bmDen;
-  nsHTMLReflowMetrics sizeNum (nsnull);
-  nsHTMLReflowMetrics sizeDen (nsnull);
+  nsHTMLReflowMetrics sizeNum;
+  nsHTMLReflowMetrics sizeDen;
   nsIFrame* frameDen = nsnull;
   nsIFrame* frameNum = mFrames.FirstChild();
   if (frameNum) 
