@@ -42,11 +42,16 @@
 #include "nsThreadUtils.h"
 #include "nsIDOMNode.h"
 #include "nsString.h"
+
 /**
  * Use nsPLDOMEvent to fire a DOM event that requires safe a stable DOM.
  * For example, you may need to fire an event from within layout, but
  * want to ensure that the event handler doesn't mutate the DOM at
  * the wrong time, in order to avoid resulting instability.
+ *
+ * TODO: This should be renamed nsAsyncDOMEvent or something that does
+ *       not include the substring "PL" that refers to the old PLEvent
+ *       structure used with the old eventing system.
  */
  
 class nsPLDOMEvent : public nsRunnable {
