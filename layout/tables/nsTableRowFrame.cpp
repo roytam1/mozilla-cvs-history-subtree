@@ -898,12 +898,26 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
           (!aReflowState.mFlags.mSpecialHeightReflow && cellFrame->HadSpecialReflow()) ||
           HasPctHeight()) {
         // Reflow the cell to fit the available width, height
+        // XXX The old IR_ChildIsDirty code used availCellWidth here.
         nsSize  kidAvailSize(availColWidth, aReflowState.availableHeight);
+
+        // If the table will intialize the strategy (and balance) or
+        // balance, make the computed width unconstrained. This avoids
+        // having the cell block compute a bogus max width which will
+        // bias the balancing. Leave the avail width alone, since it is
+        // a best guess.  After the table balances, the cell will get
+        // reflowed with the correct computed width.
+        PRBool resetComputedWidth = !aReflowState.ShouldReflowAllKids() &&
+          (aTableFrame.NeedStrategyInit() || aTableFrame.NeedStrategyBalance());
+
+        if (resetComputedWidth)
+          cellFrame->SetNeedPass2Reflow(PR_TRUE);
 
         // Reflow the child
         nsTableCellReflowState kidReflowState(aPresContext, aReflowState, 
                                               kidFrame, kidAvailSize);
-        InitChildReflowState(*aPresContext, kidAvailSize, borderCollapse, p2t, kidReflowState);
+        InitChildReflowState(*aPresContext, kidAvailSize, borderCollapse, p2t,
+                             kidReflowState, resetComputedWidth);
 
         nsReflowStatus status;
         rv = ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState,
@@ -915,7 +929,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
           aStatus = NS_FRAME_NOT_COMPLETE;
         }
       }
-      else { 
+      else {
         desiredSize.width = cellDesiredSize.width;
         desiredSize.height = cellDesiredSize.height;
         nsRect *overflowArea =
