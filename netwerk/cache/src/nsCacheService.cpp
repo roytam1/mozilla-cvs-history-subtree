@@ -832,7 +832,7 @@ nsCacheService::CreateRequest(nsCacheSession *   session,
 
     if (!listener)  return NS_OK;  // we're sync, we're done.
 
-    // get the nsIEventQueue for the request's thread
+    // get the request's thread
     (*request)->mThread = do_GetCurrentThread();
     
     return NS_OK;
