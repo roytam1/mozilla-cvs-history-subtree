@@ -30,3 +30,4 @@ SSRModule
 nsNativeSSLModule
 nsCookieModule
 nsPermissionsModule
+DeviceSupportModule
