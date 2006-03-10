@@ -98,6 +98,8 @@ TimerThread::InitLocks()
 
 nsresult TimerThread::Init()
 {
+  PR_LOG(gTimerLog, PR_LOG_DEBUG, ("TimerThread::Init [%d]\n", mInitialized));
+
   if (mInitialized) {
     if (!mThread)
       return NS_ERROR_FAILURE;
@@ -154,6 +156,8 @@ nsresult TimerThread::Init()
 
 nsresult TimerThread::Shutdown()
 {
+  PR_LOG(gTimerLog, PR_LOG_DEBUG, ("TimerThread::Shutdown begin\n"));
+
   if (!mThread)
     return NS_ERROR_NOT_INITIALIZED;
 
@@ -174,6 +178,8 @@ nsresult TimerThread::Shutdown()
   }
 
   mThread->Shutdown();    // wait for the thread to die
+
+  PR_LOG(gTimerLog, PR_LOG_DEBUG, ("TimerThread::Shutdown end\n"));
   return NS_OK;
 }
 
@@ -224,11 +230,9 @@ void TimerThread::UpdateFilter(PRUint32 aDelay, PRIntervalTime aTimeout,
   }
 
 #ifdef DEBUG_TIMERS
-  if (PR_LOG_TEST(gTimerLog, PR_LOG_DEBUG)) {
-    PR_LOG(gTimerLog, PR_LOG_DEBUG,
-           ("UpdateFilter: smoothSlack = %g, filterLength = %u\n",
-            smoothSlack, filterLength));
-  }
+  PR_LOG(gTimerLog, PR_LOG_DEBUG,
+         ("UpdateFilter: smoothSlack = %g, filterLength = %u\n",
+          smoothSlack, filterLength));
 #endif
 }
 

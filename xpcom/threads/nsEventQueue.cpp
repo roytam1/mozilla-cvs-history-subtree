@@ -39,6 +39,12 @@
 #include "nsEventQueue.h"
 #include "nsAutoLock.h"
 #include "nsCOMPtr.h"
+#include "prlog.h"
+
+#ifdef PR_LOGGING
+static PRLogModuleInfo *sLog = PR_NewLogModule("nsEventQueue");
+#endif
+#define LOG(args) PR_LOG(sLog, PR_LOG_DEBUG, args)
 
 nsEventQueue::nsEventQueue()
   : mMonitor(nsAutoMonitor::NewMonitor("xpcom.eventqueue"))
@@ -65,7 +71,9 @@ nsEventQueue::GetEvent(PRBool mayWait, nsIRunnable **result)
         *result = nsnull;
       return PR_FALSE;
     }
+    LOG(("EVENTQ(%p): wait begin\n", this)); 
     mon.Wait();
+    LOG(("EVENTQ(%p): wait end\n", this)); 
   }
 
   if (result)
@@ -113,6 +121,7 @@ nsEventQueue::PutEvent(nsIRunnable *runnable)
     if (rv) {
       event.swap(mTail->mEvents[mOffsetTail]);
       ++mOffsetTail;
+      LOG(("EVENTQ(%p): notify\n", this)); 
       mon.NotifyAll();
     }
   }

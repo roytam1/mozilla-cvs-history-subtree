@@ -116,8 +116,8 @@ private:
   nsCString     mName;
   PRInt32       mPriority;
   PRThread     *mThread;
-  PRPackedBool  mActive;
-  PRPackedBool  mInProcessNextEvent;
+  PRBool        mActive;
+  PRUint32      mRunningEvent;  // counter
 };
 
 //-----------------------------------------------------------------------------
