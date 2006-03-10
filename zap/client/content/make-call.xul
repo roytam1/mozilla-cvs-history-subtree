@@ -40,10 +40,10 @@
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <page id="zap_make_call"
-        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        xmlns:html="http://www.w3.org/1999/xhtml"
-        xonload="initPage()"
-        xonunload="cleanup()">
+      class="zap-form"
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      onload="initPage()">
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
@@ -51,7 +51,6 @@
   <script type="application/x-javascript">
   <![CDATA[
     var wRemoteAddress;
-//    var wOptionsRS;
 
     function initPage() {
       // try to parse the url_field into a sip address:
@@ -75,45 +74,48 @@
       // fill in remote party:
       document.getElementById("urn:mozilla:zap:remote").value = wRemoteAddress.serialize();
 
-//      // kick off an async OPTIONS request:
-//      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;
-//      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress,
-//                                                                 parent.wCurrentIdentity.getFromAddress(), 
-//                                                                 "OPTIONS",
-//                                                                 route,
-//                                                                 route.length,
-//                                                                 parent.wCurrentIdentity.getRCFlags());
-//      wOptionsRS.listener = {
-//        notifyResponseReceived : function(rc, dialog, response, flow) {
-//          if (document)
-//            document.getElementById("options_result").value = response.serialize();
-//        }
-//      }
-//      // XXX
-//      // wOptionsRS.sendRequest(0);
-//
       // focus call button, so that the user just needs to press enter:
       document.getElementById("call_button").focus();
+
+      // install RadioStateChange listener for updating the offer ui
+      // dynamically:
+      document.getElementById("exchange_type").addEventListener(
+        'RadioStateChange', 
+        function (ev) {
+          var hide = (ev.originalTarget.value == "offerIn200");
+          document.getElementById("media_offer").setAttribute("hidden", hide);
+
+        },
+        true);
+
     }    
 
-    function cleanup() {
-      dump("cleanup make-call.xul:"+wRemoteAddress.serialize()+"\n");
-//      wOptionsRS.listener = null;
-    }
-
     function call() {
+      var offerIn200 = document.getElementById("offerIn200").selected;
+      var codecs;
+      if (offerIn200)
+        codecs = ["PCMU", "PCMA", "speex", "telephone-event"];
+      else {
+        codecs = [];
+        for (var c in {"PCMU":1, "PCMA":1, "speex":1, "telephone-event":1}) {
+          if (document.getElementById(c).checked)
+            codecs.push(c);
+        }
+      }
       var oc = parent.OutboundCall.instantiate();
       oc.createFromDocument(document);
       // start the ball rolling:
-      oc.makeCall(wRemoteAddress, parent.wCurrentIdentity);
+      oc.makeCall(wRemoteAddress, parent.wCurrentIdentity, codecs, offerIn200);
       parent.loadPage("chrome://zap/content/call.xul?resource="+escape(oc.resource.Value));
     }
   ]]>
   </script>
 
+  <vbox class="zap-form-body">
 
-  <vbox id="module_page" flex="1">
-    <label class="titlebox" value="Make Outgoing Call"/>
+    <hbox class="zap-form-title-box">
+      <label value="Make outgoing call"/>
+    </hbox>
     <deck id="content_deck">
       <vbox>
         <description>
@@ -126,34 +128,24 @@
 
       <vbox>
         <label value="Remote party:"/>
-        <textbox id="urn:mozilla:zap:remote" class="ro_modulefield"/>
-        <cgroup id="capabilities_cgroup" 
-                title="Remote party capabilities" 
-                closed="true"
-                persist="closed">
-          <label value="OPTIONS request on remote party yields:"/>
-          <textbox id="options_result" class="ro_modulefield" 
-                   multiline="true" rows="7" 
-                   value="zap! is currently trying to contact the remote party. You should see a response here shortly. You can start the call to the remote party at any time by pressing the 'call' key."/>
-        </cgroup>
- 
-        <cgroup id="mediaoffer_cgroup" title="Media Offer" closed="true" persist="closed">
-          <hbox>
-            <vbox flex="1">
-              <checkbox label="Enable Speex Codec" checked="true"/>
-              <checkbox label="Enable iLBC Codec"/>
-              <checkbox label="Enable G.711 Codec"/>
-            </vbox>
-            <vbox flex="1">
-              <cgroup title="Speex Settings" closed="true"/>
-              <cgroup title="iLBC Settings" closed="true"/>
-              <cgroup title="G.711 Settings" closed="true"/>
-            </vbox>
-          </hbox>
-        </cgroup>
-
+        <textbox id="urn:mozilla:zap:remote" readonly="true"/>
         <label value="Subject:"/>
         <textbox id="urn:mozilla:zap:subject"/>
+        <cgroup title="Session" closed="false" persist="closed">
+          <radiogroup id="exchange_type">
+            <radio id="offerIn200" label="Let other party make offer" value="offerIn200"/>
+            <radio label="Provide media offer" selected="true" value="offerInInvite"/>
+          </radiogroup>
+          <groupbox id="media_offer" flex="1" disabled="true">
+            <caption><label value="Media Offer"/></caption>
+            <label value="Audio" style="font-weight:bold;"/>
+            <checkbox label="Enable PCMU Codec" id="PCMU" checked="true"/>
+            <checkbox label="Enable PCMA Codec" id="PCMA" checked="true"/>
+            <checkbox label="Enable Speex Codec" id="speex" checked="true"/>
+            <checkbox label="Enable Telephone-Events (DTMF)" id="telephone-event" checked="true"/>
+          </groupbox>
+        </cgroup>
+
 
         <hbox>
           <spacer flex="1"/>

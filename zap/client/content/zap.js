@@ -236,27 +236,7 @@ function cmdExit() {
 }
 
 function cmdGo() {
-  // temporarily kickstart call directly:
-  try {
-    var address = wURLField.value;
-    if (!/sip:/.test(address))
-      address = "sip:"+address;
-    var remoteAddress = parent.wSipStack.syntaxFactory.deserializeAddress(address);
-  } catch(e) {
-    // by default make-call.xul displays the error page, 
-    // so let's show it:
-    loadPage("chrome://zap/content/make-call.xul", true);
-    return;
-  }
-
-  var oc = OutboundCall.instantiate();
-  oc.createNew(true);
-  oc["urn:mozilla:zap:remote"] = remoteAddress.serialize();
-  // start the ball rolling:
-  oc.makeCall(remoteAddress, wCurrentIdentity);
-  parent.loadPage("chrome://zap/content/call.xul?resource="+escape(oc.resource.Value));
-
-  
+  loadPage("chrome://zap/content/make-call.xul", true);
 }
 
 function cmdGenericRequest() {
@@ -2663,9 +2643,11 @@ OutboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "outbound");
 OutboundCall.addCondition("RoutingInfoResolved");
 
 OutboundCall.fun(
-  function makeCall(toAddress, identity) {
+  function makeCall(toAddress, identity, codecs, offerIn200) {
     this.toAddress = toAddress;
     this.identity = identity;
+    this.codecs = codecs;
+    this.offerIn200 = offerIn200;
 
     this.ringback = Ringback.instantiate();
     this.ringback.play(wConfig["urn:mozilla:zap:dialtone"]);
@@ -2766,10 +2748,14 @@ OutboundCall.fun(
                            connectionAddress,
                            this.callPipe.callAudioIn,
                            this.callPipe.callAudioOut,
-                           this.callPipe.callTEventIn);
-    var offer = this.mediasession.generateSDPOffer();
-
-    rc.request.setContent("application", "sdp", offer.serialize());
+                           this.callPipe.callTEventIn,
+                           this.codecs,
+                           this.codecs.length);
+    if (!this.offerIn200) {
+      var offer = this.mediasession.generateSDPOffer();
+      rc.request.setContent("application", "sdp", offer.serialize());
+    }
+    
     rc.sendInvite(this.callHandler);
   });
 
@@ -2823,7 +2809,7 @@ OutboundCallHandler.fun(
     this.call.dialog = dialog;
     this.call.dialog.listener = this.call;
     
-    // try to parse answer:
+    // try to parse other party's session description:
     var sd;
     try {
       sd = wSdpService.deserializeSessionDescription(response.body);
@@ -2839,9 +2825,15 @@ OutboundCallHandler.fun(
       return ackTemplate;
     }
 
-    // we've got a parsed answer; process it:
+    // we've got a parsed session description; process it:
     try {
-      this.call.mediasession.processSDPAnswer(sd);
+      if (this.call.offerIn200) {
+        var answer = this.call.mediasession.processSDPOffer(sd);
+        // append answer to ACK:
+        ackTemplate.setContent("application", "sdp", answer.serialize());
+      }
+      else
+        this.call.mediasession.processSDPAnswer(sd);
     }
     catch(e) {
       // XXX add verbose error
@@ -3020,37 +3012,47 @@ InboundCallHandler.fun(
       return;
     }
 
-    // check if there is a media offer in the request:
-    // XXXif (){}
+    // create and initialize a mediasession:
+    this.call.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"]
+      .createInstance(Components.interfaces.zapIMediaSession);
     
-    // parse offer; check if it's acceptable:
-    try {
-      var offer = wSdpService.deserializeSessionDescription(rs.request.body);
-      this.call.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"]
-        .createInstance(Components.interfaces.zapIMediaSession);
-
-      // infer connectionAddress as best we can (this will yield our
-      // public NAT address if the identity is registered:
-      var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
-        
-      // initialize a mediasession:
-      this.call.mediasession.init("zap",
-                                  connectionAddress,
-                                  connectionAddress,
-                                  this.call.callPipe.callAudioIn,
-                                  this.call.callPipe.callAudioOut,
-                                  this.call.callPipe.callTEventIn);
-      this.answer = this.call.mediasession.processSDPOffer(offer);
+    // infer connectionAddress as best we can (this will yield our
+    // public NAT address if the identity is registered:
+    var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+    
+    var codecs = ["PCMU", "PCMA", "speex", "telephone-event"];
+    
+    this.call.mediasession.init("zap",
+                                connectionAddress,
+                                connectionAddress,
+                                this.call.callPipe.callAudioIn,
+                                this.call.callPipe.callAudioOut,
+                                this.call.callPipe.callTEventIn,
+                                codecs, codecs.length);
+    
+    // check if there is a media offer in the request:
+    if (!rs.request.body.length) {
+      // no. we provide the offer in our 200 answer.
+      this.offerIn200 = true;
+      this.offer = this.call.mediasession.generateSDPOffer();
     }
-    catch(e) {
-      // Session negotiation failed.
-      // Send 488 (Not acceptable) (RFC3261 13.3.1.3)
-      // XXX set a Warning header
-      this._respond("488");
-      return;
+    else {
+      // parse offer; check if it's acceptable:
+      try {
+        var offer = wSdpService.deserializeSessionDescription(rs.request.body);
+        this.answer = this.call.mediasession.processSDPOffer(offer);
+      }
+      catch(e) {
+        // Session negotiation failed.
+        // Send 488 (Not acceptable) (RFC3261 13.3.1.3)
+        // XXX set a Warning header
+        this._respond("488");
+        return;
+      }
     }
 
-    // the offer is acceptable; we have an answer at hand. alert the user:
+    // the offer is acceptable; we have an offer/answer at hand. alert
+    // the user:
     this._respond("180");
     this.alertUser();
   });
@@ -3155,10 +3157,15 @@ InboundCallHandler.fun(
     // formulate accepting response:
     var resp = this.rs.formulateResponse("200", this.routingInfo.contact);
     // append session description:
-    resp.setContent("application", "sdp", this.answer.serialize());
+    if (this.offerIn200)
+      resp.setContent("application", "sdp", this.offer.serialize());
+    else {
+      resp.setContent("application", "sdp", this.answer.serialize());
+      this.call.mediasession.startSession();
+    }
+    
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
     this.unalertUser();
-    this.call.mediasession.startSession();
     this.call.dialog = this.rs.sendResponse(resp);
     this.call.dialog.listener = this.call;    
     this.call["urn:mozilla:zap:session-running"] = "true";
@@ -3199,6 +3206,19 @@ InboundCallHandler.fun(
 InboundCallHandler.fun(
   function notifyACKReceived(rs, ack) {
     this.unalertUser();
+    if (this.offerIn200) {
+      try {
+        var sd = wSdpService.deserializeSessionDescription(ack.body);
+        this.call.mediasession.processSDPAnswer(sd);
+        this.call.mediasession.startSession();
+      }
+      catch(e) {
+        //XXX
+        this.call["urn:mozilla:zap:status"] = "Confirmed without SDP Answer!";
+        return;
+      }
+    }
+
     this.call["urn:mozilla:zap:status"] = "Confirmed";
   });
 

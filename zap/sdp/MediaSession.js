@@ -86,7 +86,8 @@ MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
 //            in ACString callTEventIn);
 MediaSession.fun(
   function init(originUsername, originAddress, connectionAddress,
-                callAudioIn, callAudioOut, callTEventIn) {
+                callAudioIn, callAudioOut, callTEventIn,
+                codecs, codec_count) {
     this.originUsername = originUsername;
     this.originAddress = originAddress;
     this.connectionAddress = connectionAddress;
@@ -257,11 +258,23 @@ MediaSession.fun(
     };
     
     //--------------------------------------------------
-    this.supportedRTPAVPFormats = [PCMUFormatDescriptor,
-                                   PCMAFormatDescriptor,
-                                   SpeexFormatDescriptor,
-                                   TEventFormatDescriptor];
-
+    this.supportedRTPAVPFormats = [];
+    for (var i=0; i < codec_count; ++i) {
+      switch(codecs[i]) {
+        case "PCMU":
+          this.supportedRTPAVPFormats.push(PCMUFormatDescriptor);
+          break;
+        case "PCMA":
+          this.supportedRTPAVPFormats.push(PCMAFormatDescriptor);
+          break;
+        case "speex":
+          this.supportedRTPAVPFormats.push(SpeexFormatDescriptor);
+          break;
+        case "telephone-event":
+          this.supportedRTPAVPFormats.push(TEventFormatDescriptor);
+          break;
+      }
+    }
     
     // We use getService here to retrieve the global media graph that
     // should have been set up by our client application:

@@ -38,6 +38,9 @@
 
 interface zapISdpSessionDescription;
 
+/**
+ * XXX This will change when we support several concurrent media streams
+ */
 [scriptable, uuid(af83aea5-6268-47a7-97e8-5252e1cd379b)]
 interface zapIMediaSession : nsISupports
 {
@@ -46,7 +49,9 @@ interface zapIMediaSession : nsISupports
             in ACString connectionAddress,
             in ACString callAudioIn,
             in ACString callAudioOut,
-            in ACString callTEventIn);
+            in ACString callTEventIn,
+            [array, size_is(codec_count)] in string codecs,
+            in unsigned long codec_count);
   
   zapISdpSessionDescription generateSDPOffer();
   
