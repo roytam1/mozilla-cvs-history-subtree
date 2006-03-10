@@ -2031,7 +2031,12 @@ nsresult nsParseNewMailState::EndMsgDownload()
         PRUint32 folderFlags;
         m_filterTargetFolders[index]->GetFlags(&folderFlags);
         if (! (folderFlags & (MSG_FOLDER_FLAG_TRASH | MSG_FOLDER_FLAG_INBOX)))
-          m_filterTargetFolders[index]->SetMsgDatabase(nsnull);
+        {
+          PRBool filtersRun;
+          m_filterTargetFolders[index]->CallFilterPlugins(nsnull, &filtersRun);
+          if (!filtersRun)
+            m_filterTargetFolders[index]->SetMsgDatabase(nsnull);
+        }
       }
     }
   }
@@ -2230,8 +2235,8 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   }
   if (movedMsgIsNew)
     destIFolder->SetHasNewMessages(PR_TRUE);
-
-  m_filterTargetFolders.AppendObject(destIFolder);
+  if (m_filterTargetFolders.IndexOf(destIFolder) == kNotFound)
+    m_filterTargetFolders.AppendObject(destIFolder);
   m_inboxFileStream->close();
 
   nsresult truncRet = m_inboxFileSpec.Truncate(m_curHdrOffset);
