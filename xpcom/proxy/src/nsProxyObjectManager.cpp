@@ -134,10 +134,14 @@ nsProxyObjectManager::GetProxyForObject(nsIEventTarget* aTarget,
 
     *aProxyObject = nsnull;
 
-    nsCOMPtr<nsIThread> currentThread;
-    if (!aTarget) {
-      currentThread = do_GetCurrentThread();
-      aTarget = currentThread.get();
+    // handle special values
+    nsCOMPtr<nsIThread> thread;
+    if (aTarget == NS_PROXY_TO_CURRENT_THREAD) {
+      thread = do_GetCurrentThread();
+      aTarget = thread.get();
+    } else if (aTarget == NS_PROXY_TO_MAIN_THREAD) {
+      thread = do_GetMainThread();
+      aTarget = thread.get();
     }
 
     // check to see if the target is on our thread.  If so, just return the
@@ -178,12 +182,6 @@ NS_GetProxyForObject(nsIEventTarget *target,
     static NS_DEFINE_CID(proxyObjMgrCID, NS_PROXYEVENT_MANAGER_CID);
 
     nsresult rv;
-
-    nsCOMPtr<nsIThread> mainThread;
-    if (target == NS_PROXY_TO_MAIN_THREAD) {
-      mainThread = do_GetMainThread();
-      target = mainThread.get();
-    }
 
     // get the proxy object manager
     //
