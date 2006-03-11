@@ -128,6 +128,10 @@ nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
     }
   }
 
+  // NOTE: When mFavorPerf > 0, we may end up starving the native event queue.
+  //       We should probably keep track of how much time we spend away from
+  //       the native event queue, so we can service it periodically.
+
   PRBool val;
   while (NS_SUCCEEDED(thr->HasPendingEvents(&val)) && !val) {
     // If we have been asked to exit from Run, then we should not wait for
