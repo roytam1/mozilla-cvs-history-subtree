@@ -49,7 +49,6 @@
 #include "nsThreadUtils.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 
 //**********************************************************************
@@ -199,7 +198,7 @@ FlushEventQueue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
   nsJSSh* shell;
   if (!GetJSShGlobal(cx, obj, &shell)) return JS_FALSE;
 
-  NS_ProcessPendingEvents();
+  NS_ProcessPendingEvents(nsnull);
            
   return JS_TRUE;
 }
@@ -460,14 +459,11 @@ NS_IMETHODIMP nsJSSh::Run()
 {
   nsCOMPtr<nsIJSSh> proxied_shell;
   if (!NS_IsMainThread()) {
-    nsCOMPtr<nsIProxyObjectManager> proxyObjMgr =
-      do_GetService(kProxyObjectManagerCID);
-    NS_ASSERTION(proxyObjMgr, "no proxy object manager!");
-    proxyObjMgr->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                                   NS_GET_IID(nsIJSSh),
-                                   (nsIJSSh*)this,
-                                   NS_PROXY_SYNC,
-                                   getter_AddRefs(proxied_shell));
+    NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                         NS_GET_IID(nsIJSSh),
+                         (nsIJSSh*)this,
+                         NS_PROXY_SYNC,
+                         getter_AddRefs(proxied_shell));
   }
   else {
 #ifdef DEBUG
@@ -517,6 +513,19 @@ NS_IMETHODIMP nsJSSh::Run()
   }
   
   proxied_shell->Cleanup();
+
+  if (!NS_IsMainThread()) {
+    // Shutdown the current thread, which must be done from the main thread.
+    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+    nsCOMPtr<nsIThread> proxied_thread;
+    NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                         NS_GET_IID(nsIThread),
+                         thread.get(),
+                         NS_PROXY_ASYNC,
+                         getter_AddRefs(proxied_thread));
+    if (proxied_thread)
+      proxied_thread->Shutdown();
+  }
   return NS_OK;
 }
 
