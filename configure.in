@@ -4855,7 +4855,8 @@ MOZ_ARG_ENABLE_BOOL(native-uconv,
 [  --enable-native-uconv   Enable iconv support],
     MOZ_USE_NATIVE_UCONV=1,
     MOZ_USE_NATIVE_UCONV= )
-if test "$OS_ARCH" == "WINCE"; then
+
+if test "$OS_ARCH" = "WINCE"; then
     echo "*** Native UCONV support has been disabled on WINDOWS CE"
     MOZ_USE_NATIVE_UCONV=
 fi
