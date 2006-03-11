@@ -41,17 +41,14 @@
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
 #include "nsIProxyObjectManager.h"
-#include "nsIEventQueueService.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsDependentString.h"
 #include "nsIIOService.h"
 #include "nsNetCID.h"
 #include "nsIChannel.h"
-#include "nsIThread.h"
-#include "nsIEventQueueService.h"
+#include "nsThreadUtils.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 
@@ -202,20 +199,7 @@ FlushEventQueue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
   nsJSSh* shell;
   if (!GetJSShGlobal(cx, obj, &shell)) return JS_FALSE;
 
-  nsCOMPtr<nsIEventQueueService> pEventQService = 
-    do_GetService(kEventQueueServiceCID);
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
-                                      getter_AddRefs(eventQueue));
-  PRBool avail;
-  while(NS_SUCCEEDED(eventQueue->EventAvailable(avail)) && avail) {
-#ifdef DEBUG
-    printf(".");
-#endif
-    PLEvent *ev;
-    eventQueue->GetEvent(&ev);
-    eventQueue->HandleEvent(ev);
-  }
+  NS_ProcessPendingEvents();
            
   return JS_TRUE;
 }
@@ -226,28 +210,15 @@ Suspend(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
   nsJSSh* shell;
   if (!GetJSShGlobal(cx, obj, &shell)) return JS_FALSE;
 
-  nsCOMPtr<nsIEventQueueService> pEventQService = 
-    do_GetService(kEventQueueServiceCID);
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
-                                      getter_AddRefs(eventQueue));
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+
   PR_AtomicIncrement(&shell->mSuspendCount);
   
-  PLEvent *ev;
-  while(shell->mSuspendCount) {
+  while (shell->mSuspendCount) {
 #ifdef DEBUG
     printf("|");
 #endif
-
-//    eventQueue->ProcessPendingEvents();
-//    XXX We can't use ProcessPendingEvents() here, because the JSSh
-//    itself gets called from an AppShell's call to
-//    ProcessPendingEvents() (via a proxy-event) and
-//    ProcessPendingEvents() guards against recursive entry. We have
-//    to pump events manually:
-    
-    eventQueue->WaitForEvent(&ev);
-    eventQueue->HandleEvent(ev);
+    thread->ProcessNextEvent();
   }
            
   return JS_TRUE;
@@ -488,22 +459,14 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP nsJSSh::Run()
 {
   nsCOMPtr<nsIJSSh> proxied_shell;
-  nsCOMPtr<nsIEventQueueService> eventQService = 
-    do_GetService(kEventQueueServiceCID);
-  nsCOMPtr<nsIEventQueue> currentEventQ;
-  eventQService->GetSpecialEventQueue(nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE,
-                                      getter_AddRefs(currentEventQ));
-  nsCOMPtr<nsIEventQueue> mainEventQ;
-  eventQService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                      getter_AddRefs(mainEventQ));
-  if (!SameCOMIdentity(mainEventQ, currentEventQ)) {
+  if (!NS_IsMainThread()) {
     nsCOMPtr<nsIProxyObjectManager> proxyObjMgr =
       do_GetService(kProxyObjectManagerCID);
     NS_ASSERTION(proxyObjMgr, "no proxy object manager!");
-    proxyObjMgr->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+    proxyObjMgr->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                                    NS_GET_IID(nsIJSSh),
                                    (nsIJSSh*)this,
-                                   PROXY_SYNC,
+                                   NS_PROXY_SYNC,
                                    getter_AddRefs(proxied_shell));
   }
   else {
