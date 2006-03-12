@@ -377,8 +377,7 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
             else needToCalcRowHeights = PR_TRUE;
           }
         } else {
-          if (!desiredSize.mNothingChanged) // mNothingChanges currently only works when a cell is the target
-            needToCalcRowHeights = PR_TRUE;
+          needToCalcRowHeights = PR_TRUE;
         }
       }
 
