@@ -792,7 +792,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
                                 nsTableFrame&            aTableFrame,
                                 nsReflowStatus&          aStatus)
 {
-#error Need to put some of what was in IR_TargetIsChild in this method!
   aStatus = NS_FRAME_COMPLETE;
 
   GET_PIXELS_TO_TWIPS(aPresContext, p2t);

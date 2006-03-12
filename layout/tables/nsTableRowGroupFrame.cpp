@@ -354,28 +354,26 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
 
       if (!reflowAllKids) {
         if (IsSimpleRowFrame(aReflowState.tableFrame, kidFrame)) {
-          // See if the row changed height
-          if (oldKidSize.height != desiredSize.height) {
-            // Inform the row of its new height.
-            ((nsTableRowFrame*)kidFrame)->DidResize(aReflowState.reflowState);
-            // the overflow area may have changed inflate the overflow area
-            if (aReflowState.tableFrame->IsAutoHeight()) {
-              // Because other cells in the row may need to be aligned
-              // differently, repaint the entire row
-              nsRect kidRect(0, aReflowState.y,
-                             desiredSize.width, desiredSize.height);
-              Invalidate(kidRect);
-              
-              // Invalidate the area we're offseting. Note that we only
-              // repaint within our existing frame bounds.
-              if (kidRect.YMost() < mRect.height) {
-                nsRect  dirtyRect(0, kidRect.YMost(),
-                                  mRect.width, mRect.height - kidRect.YMost());
-                Invalidate(dirtyRect);
-              }
+          // Inform the row of its new height.
+          ((nsTableRowFrame*)kidFrame)->DidResize(aReflowState.reflowState);
+          // the overflow area may have changed inflate the overflow area
+          if (aReflowState.tableFrame->IsAutoHeight()) {
+            // Because other cells in the row may need to be aligned
+            // differently, repaint the entire row
+            nsRect kidRect(0, aReflowState.y,
+                           desiredSize.width, desiredSize.height);
+            Invalidate(kidRect);
+            
+            // Invalidate the area we're offseting. Note that we only
+            // repaint within our existing frame bounds.
+            if (kidRect.YMost() < mRect.height) {
+              nsRect  dirtyRect(0, kidRect.YMost(),
+                                mRect.width, mRect.height - kidRect.YMost());
+              Invalidate(dirtyRect);
             }
-            else needToCalcRowHeights = PR_TRUE;
           }
+          else if (oldKidSize.height != desiredSize.height)
+            needToCalcRowHeights = PR_TRUE;
         } else {
           needToCalcRowHeights = PR_TRUE;
         }
