@@ -66,6 +66,19 @@ toolbar[type="menubar"], menubar {
   border-top: 0px !important;
 }
 
+toolbar[mode="icons"] .toolbarbutton-text {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-icon {
+  display: none;
+}
+
+toolbar[mode="text"] .toolbarbutton-text {
+  padding: 0 !important;
+  margin: 3px 5px !important;
+}
+
 /* ::::: toolbar decorations ::::: */
 
 toolbarseparator {
