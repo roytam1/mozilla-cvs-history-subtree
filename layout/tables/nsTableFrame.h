@@ -502,8 +502,7 @@ protected:
                            PRBool               aDirtyOnly,
                            nsReflowStatus&      aStatus,
                            nsIFrame*&           aLastChildReflowed,
-                           nsRect&              aOverflowArea,
-                           PRBool*              aReflowedAtLeastOne = nsnull);
+                           nsRect&              aOverflowArea);
 // begin incremental reflow methods
   
   /** Incremental Reflow attempts to do column balancing with the minimum number of reflow

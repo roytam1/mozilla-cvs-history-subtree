@@ -2707,14 +2707,9 @@ nsTableFrame::IR_TargetIsMe(nsTableReflowState&  aReflowState,
       nsTableReflowState reflowState(*GetPresContext(), aReflowState.reflowState, *this, eReflowReason_Initial,
                                      aReflowState.availSize.width, aReflowState.availSize.height); 
       nsIFrame* lastReflowed;
-      PRBool reflowedAtLeastOne; 
       nsRect overflowArea;
       ReflowChildren(reflowState, PR_FALSE, PR_TRUE, aStatus,
-                     lastReflowed, overflowArea, &reflowedAtLeastOne);
-      if (!reflowedAtLeastOne)
-        // XXX For now assume the worse
-        SetNeedStrategyInit(PR_TRUE);
-      }
+                     lastReflowed, overflowArea);
       break;
     default:
       NS_NOTYETIMPLEMENTED("unexpected reflow command type");
@@ -3125,8 +3120,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
                              PRBool              aDirtyOnly,
                              nsReflowStatus&     aStatus,
                              nsIFrame*&          aLastChildReflowed,
-                             nsRect&             aOverflowArea,
-                             PRBool*             aReflowedAtLeastOne)
+                             nsRect&             aOverflowArea)
 {
   aStatus = NS_FRAME_COMPLETE;
   aLastChildReflowed = nsnull;
@@ -3349,9 +3343,6 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     }
   }
 
-  if (aReflowedAtLeastOne) {
-    *aReflowedAtLeastOne = haveReflowedRowGroup;
-  }
   return rv;
 }
 
