@@ -71,7 +71,7 @@
 
 nsTableCellFrame::nsTableCellFrame()
 {
-  mBits.mColIndex  = 0;
+  mColIndex = 0;
   mPriorAvailWidth = 0;
 
   SetContentEmpty(PR_FALSE);
@@ -188,7 +188,7 @@ nsTableCellFrame::GetColIndex(PRInt32 &aColIndex) const
     return ((nsTableCellFrame*)GetFirstInFlow())->GetColIndex(aColIndex);
   }
   else {
-    aColIndex = mBits.mColIndex;
+    aColIndex = mColIndex;
     return  NS_OK;
   }
 }
@@ -234,7 +234,7 @@ nsTableCellFrame::RemoveFrame(nsIAtom*        aListName,
 
 void nsTableCellFrame::SetColIndex(PRInt32 aColIndex)
 {  
-  mBits.mColIndex = aColIndex;
+  mColIndex = aColIndex;
 }
 
 
@@ -849,10 +849,8 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   GetCollapseOffset(collapsedOffset);
   kidOrigin += collapsedOffset;
 
-  nscoord priorBlockHeight = GetLastBlockHeight();
   ReflowChild(firstKid, aPresContext, kidSize, kidReflowState,
               kidOrigin.x, kidOrigin.y, 0, aStatus);
-  SetLastBlockHeight(kidSize.height);
   if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     Invalidate(GetOverflowRect(), PR_FALSE);
   }
@@ -1038,7 +1036,7 @@ nsTableCellFrame::GetCellIndexes(PRInt32 &aRowIndex, PRInt32 &aColIndex)
     aColIndex = 0;
     return res;
   }
-  aColIndex = mBits.mColIndex;
+  aColIndex = mColIndex;
   return  NS_OK;
 }
 

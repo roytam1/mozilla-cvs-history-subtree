@@ -234,9 +234,6 @@ public:
   PRBool HasPctOverHeight();
   void SetHasPctOverHeight(PRBool aValue);
 
-  nscoord GetLastBlockHeight();
-  void    SetLastBlockHeight(nscoord aValue);
-
   // The collapse offset is (0,0) except for cells originating in a row/col which is collapsed
   void    SetCollapseOffsetX(nscoord aXOffset);
   void    SetCollapseOffsetY(nscoord aYOffset);
@@ -287,11 +284,7 @@ protected:
 
   friend class nsTableRowFrame;
 
-  struct Bits {
-    PRUint32 mColIndex:15;     
-    PRUint32 mLastBlockHeight:17;
-  } mBits;
-  PRInt32      mColIndex;             // the starting column for this cell 
+  PRUint32     mColIndex;             // the starting column for this cell 
 
   nscoord      mPriorAvailWidth;      // the avail width during the last reflow
   nsSize       mDesiredSize;          // the last desired width & height
@@ -375,16 +368,6 @@ inline void nsTableCellFrame::SetHasPctOverHeight(PRBool aValue)
   } else {
     mState &= ~NS_TABLE_CELL_HAS_PCT_OVER_HEIGHT;
   }
-}
-
-inline nscoord nsTableCellFrame::GetLastBlockHeight()
-{
-  return (nscoord)mBits.mLastBlockHeight;
-}
-
-inline void nsTableCellFrame::SetLastBlockHeight(nscoord aValue)
-{
-  mBits.mLastBlockHeight = aValue;
 }
 
 // nsBCTableCellFrame
