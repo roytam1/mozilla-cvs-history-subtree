@@ -165,9 +165,6 @@ struct nsHTMLReflowMetrics {
 
   PRUint32 mFlags;
  
-  // used by tables to optimize common cases
-  PRPackedBool mNothingChanged;
-
   // XXXldb Should |aFlags| generally be passed from parent to child?
   // Some places do it, and some don't.  |aFlags| should perhaps go away
   // entirely.
@@ -177,7 +174,6 @@ struct nsHTMLReflowMetrics {
     mOverflowArea.y = 0;
     mOverflowArea.width = 0;
     mOverflowArea.height = 0;
-    mNothingChanged = PR_FALSE;
 #ifdef MOZ_MATHML
     mBoundingMetrics.Clear();
 #endif
@@ -197,7 +193,6 @@ struct nsHTMLReflowMetrics {
     mOverflowArea.y = aOther.mOverflowArea.y;
     mOverflowArea.width = aOther.mOverflowArea.width;
     mOverflowArea.height = aOther.mOverflowArea.height;
-    mNothingChanged = aOther.mNothingChanged;
 #ifdef MOZ_MATHML
     mBoundingMetrics = aOther.mBoundingMetrics;
 #endif
