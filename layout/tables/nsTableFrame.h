@@ -636,16 +636,6 @@ public:
   // which spans into the next col
   PRBool ColHasSpanningCells(PRInt32 aColIndex);
 
-  // Allows rows to notify the table of additions or changes to a cell's width
-  // The table uses this to update the appropriate column widths and to decide 
-  // whether to reinitialize (and then rebalance) or rebalance the table. If the 
-  // most extreme measure results (e.g. reinitialize) then PR_TRUE is returned 
-  // indicating that further calls are not going to accomplish anyting.
-  PRBool CellChangedWidth(const nsTableCellFrame& aCellFrame,
-                          nscoord                 aPrevMinWidth,
-                          nscoord                 aPrevMaxWidth,
-                          PRBool                  aCellWasDestroyed = PR_FALSE);
- 
 protected:
 
   PRBool HaveReflowedColGroups() const;
