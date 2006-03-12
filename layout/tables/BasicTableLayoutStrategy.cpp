@@ -603,17 +603,17 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
 
     for (PRInt32 i = 0; i < spannedRows; i++) {
       const CellInfo *inf = &cellInfo[i];
-      const nsTableCellFrame* cellFrame = inf->cellFrame;
+      nsTableCellFrame* cellFrame = inf->cellFrame;
 
       const PRInt32 colSpan = PR_MIN(inf->colSpan, numEffCols - colX);
       // set MIN_ADJ, DES_ADJ, FIX_ADJ
       for (PRInt32 widthX = 0; widthX < NUM_MAJOR_WIDTHS; widthX++) {
         nscoord cellWidth = 0;
         if (MIN_CON == widthX) {
-          cellWidth = cellFrame->GetPass1MaxElementWidth();
+          cellWidth = cellFrame->GetMinWidth(aReflowState.rendContext);
         }
         else if (DES_CON == widthX) {
-          cellWidth = cellFrame->GetMaximumWidth();
+          cellWidth = cellFrame->GetPrefWidth(aReflowState.rendContext);
         }
         else { // FIX width
           // see if the cell has a style width specified
@@ -623,7 +623,9 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
             nsMargin borderPadding = nsTableFrame::GetBorderPadding(nsSize(aReflowState.mComputedWidth, 0),
                                                                     aPixelToTwips, cellFrame);
             cellWidth = cellPosition->mWidth.GetCoordValue() + borderPadding.left + borderPadding.right;
-            cellWidth = PR_MAX(cellWidth, cellFrame->GetPass1MaxElementWidth());
+            nscoord minWidth = 
+              cellFrame->GetMinWidth(aReflowState.rendContext);
+            cellWidth = PR_MAX(cellWidth, minWidth);
           }
         }
 
@@ -1013,8 +1015,10 @@ BasicTableLayoutStrategy::AssignNonPctColumnWidths(nscoord                  aMax
           continue;
         }
         // these values include borders and padding
-        minWidth = PR_MAX(minWidth, cellFrame->GetPass1MaxElementWidth());
-        nscoord cellDesWidth = cellFrame->GetMaximumWidth();
+        nscoord cellMinWidth = cellFrame->GetMinWidth(aReflowState.rendContext);
+        minWidth = PR_MAX(minWidth, cellMinWidth);
+        nscoord cellDesWidth =
+          cellFrame->GetPrefWidth(aReflowState.rendContext);
         if (cellDesWidth > desWidth) {
           desContributor = cellFrame;
           desWidth = cellDesWidth;
@@ -1236,7 +1240,9 @@ BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowS
             rawPctValues[colX + spanX] = PR_MAX(rawPctValues[colX + spanX], spanPct);
           }
           // consider the cell's preferred width 
-          cellDesWidth = PR_MAX(cellDesWidth, cellFrame->GetMaximumWidth());
+          nscoord prefWidth =
+            cellFrame->GetPrefWidth(aReflowState.rendContext);
+          cellDesWidth = PR_MAX(cellDesWidth, prefWidth);
           nscoord colBasis = nsTableFrame::RoundToPixel(NSToCoordRound((float)cellDesWidth / percent), pixelToTwips);
           maxColBasis = PR_MAX(maxColBasis, colBasis);
         }
