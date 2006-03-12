@@ -61,8 +61,7 @@ struct nsTableCellReflowState : public nsHTMLReflowState
                          nsIFrame*                aFrame,
                          const nsSize&            aAvailableSpace);
 
-  void FixUp(const nsSize& aAvailSpace,
-             PRBool        aResetComputedWidth);
+  void FixUp(const nsSize& aAvailSpace);
 };
 
 nsTableCellReflowState::nsTableCellReflowState(nsPresContext*          aPresContext,
@@ -73,23 +72,19 @@ nsTableCellReflowState::nsTableCellReflowState(nsPresContext*          aPresCont
 {
 }
 
-void nsTableCellReflowState::FixUp(const nsSize& aAvailSpace,
-                                   PRBool        aResetComputedWidth)
+void nsTableCellReflowState::FixUp(const nsSize& aAvailSpace)
 {
   // fix the mComputed values during a pass 2 reflow since the cell can be a percentage base
-  if (NS_UNCONSTRAINEDSIZE != aAvailSpace.width) {
-    if (aResetComputedWidth) {
-      mComputedWidth = NS_UNCONSTRAINEDSIZE;
-    }
-    else if (NS_UNCONSTRAINEDSIZE != mComputedWidth) {
-      mComputedWidth = aAvailSpace.width - mComputedBorderPadding.left - mComputedBorderPadding.right;
-      mComputedWidth = PR_MAX(0, mComputedWidth);
-    }
-    if (NS_UNCONSTRAINEDSIZE != mComputedHeight) {
-      if (NS_UNCONSTRAINEDSIZE != aAvailSpace.height) {
-        mComputedHeight = aAvailSpace.height - mComputedBorderPadding.top - mComputedBorderPadding.bottom;
-        mComputedHeight = PR_MAX(0, mComputedHeight);
-      }
+  NS_ASSERTION(NS_UNCONSTRAINEDSIZE != aAvailSpace.width,
+               "unconstrained available width in reflow");
+  if (NS_UNCONSTRAINEDSIZE != mComputedWidth) {
+    mComputedWidth = aAvailSpace.width - mComputedBorderPadding.left - mComputedBorderPadding.right;
+    mComputedWidth = PR_MAX(0, mComputedWidth);
+  }
+  if (NS_UNCONSTRAINEDSIZE != mComputedHeight) {
+    if (NS_UNCONSTRAINEDSIZE != aAvailSpace.height) {
+      mComputedHeight = aAvailSpace.height - mComputedBorderPadding.top - mComputedBorderPadding.bottom;
+      mComputedHeight = PR_MAX(0, mComputedHeight);
     }
   }
 }
@@ -99,8 +94,7 @@ nsTableRowFrame::InitChildReflowState(nsPresContext&         aPresContext,
                                       const nsSize&           aAvailSize,
                                       PRBool                  aBorderCollapse,
                                       float                   aPixelsToTwips,
-                                      nsTableCellReflowState& aReflowState,
-                                      PRBool                  aResetComputedWidth)
+                                      nsTableCellReflowState& aReflowState)
 {
   nsMargin collapseBorder;
   nsMargin* pCollapseBorder = nsnull;
@@ -112,7 +106,7 @@ nsTableRowFrame::InitChildReflowState(nsPresContext&         aPresContext,
     }
   }
   aReflowState.Init(&aPresContext, -1, -1, pCollapseBorder);
-  aReflowState.FixUp(aAvailSize, aResetComputedWidth);
+  aReflowState.FixUp(aAvailSize);
 }
 
 void 
@@ -901,23 +895,11 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
         // XXX The old IR_ChildIsDirty code used availCellWidth here.
         nsSize  kidAvailSize(availColWidth, aReflowState.availableHeight);
 
-        // If the table will intialize the strategy (and balance) or
-        // balance, make the computed width unconstrained. This avoids
-        // having the cell block compute a bogus max width which will
-        // bias the balancing. Leave the avail width alone, since it is
-        // a best guess.  After the table balances, the cell will get
-        // reflowed with the correct computed width.
-        PRBool resetComputedWidth = !aReflowState.ShouldReflowAllKids() &&
-          (aTableFrame.NeedStrategyInit() || aTableFrame.NeedStrategyBalance());
-
-        if (resetComputedWidth)
-          cellFrame->SetNeedPass2Reflow(PR_TRUE);
-
         // Reflow the child
         nsTableCellReflowState kidReflowState(aPresContext, aReflowState, 
                                               kidFrame, kidAvailSize);
         InitChildReflowState(*aPresContext, kidAvailSize, borderCollapse, p2t,
-                             kidReflowState, resetComputedWidth);
+                             kidReflowState);
 
         nsReflowStatus status;
         rv = ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState,
