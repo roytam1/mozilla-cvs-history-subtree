@@ -504,39 +504,6 @@ protected:
                            nsIFrame*&           aLastChildReflowed,
                            nsRect&              aOverflowArea);
 // begin incremental reflow methods
-  
-  /** Incremental Reflow attempts to do column balancing with the minimum number of reflow
-    * commands to child elements.  This is done by processing the reflow command,
-    * rebalancing column widths (if necessary), then comparing the resulting column widths
-    * to the prior column widths and reflowing only those cells that require a reflow.
-    * All incremental reflows go through this method.
-    *
-    * @see Reflow
-    */
-  NS_IMETHOD IncrementalReflow(const nsHTMLReflowState& aReflowState,
-                               nsReflowStatus&          aStatus);
-
-  /** process an incremental reflow command targeted at a child of this frame. 
-    * @param aNextFrame  the next frame in the reflow target chain
-    * @see nsIFrameReflow::Reflow
-    */
-  NS_IMETHOD IR_TargetIsChild(nsTableReflowState&   aReflowStatet,
-                              nsReflowStatus&       aStatus,
-                              nsIFrame*             aNextFrame);
-
-  /** process an incremental reflow command targeted at this frame. 
-    * @see nsIFrameReflow::Reflow
-    */
-  NS_IMETHOD IR_TargetIsMe(nsTableReflowState&  aReflowState,
-                           nsReflowStatus&      aStatus);
-
-  /** process a style changed notification.
-    * @see nsIFrameReflow::Reflow
-    * TODO: needs to be optimized for which attribute was actually changed.
-    */
-  NS_IMETHOD IR_StyleChanged(nsTableReflowState&  aReflowState,
-                             nsReflowStatus&      aStatus);
-  
   NS_IMETHOD AdjustSiblingsAfterReflow(nsTableReflowState& aReflowState,
                                        nsIFrame*           aKidFrame,
                                        nscoord             aDeltaY);
