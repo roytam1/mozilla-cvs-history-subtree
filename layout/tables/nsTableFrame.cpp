@@ -3712,35 +3712,6 @@ nsTableFrame::DistributeHeightToRows(const nsHTMLReflowState& aReflowState,
   ResizeCells(*this, aReflowState);
 }
 
-static void
-UpdateCol(nsTableFrame&           aTableFrame,
-          nsTableColFrame&        aColFrame,
-          const nsTableCellFrame& aCellFrame,
-          nscoord                 aColMaxWidth,
-          PRBool                  aColMaxGetsBigger)
-{
-  if (aColMaxGetsBigger) {
-    // update the columns's new min width
-    aColFrame.SetWidth(DES_CON, aColMaxWidth);
-  }
-  else {
-    // determine the new max width
-    PRInt32 numRows = aTableFrame.GetRowCount();
-    PRInt32 colIndex = aColFrame.GetColIndex();
-    PRBool originates;
-    PRInt32 colSpan;
-    nscoord maxWidth = 0;
-    for (PRInt32 rowX = 0; rowX < numRows; rowX++) {
-      nsTableCellFrame* cellFrame = aTableFrame.GetCellInfoAt(rowX, colIndex, &originates, &colSpan);
-      if (cellFrame && originates && (1 == colSpan)) {
-        maxWidth = PR_MAX(maxWidth, cellFrame->GetMaximumWidth());
-      }
-    }
-    // update the columns's new max width
-    aColFrame.SetWidth(DES_CON, maxWidth);
-  }
-}
-
 PRBool 
 nsTableFrame::IsPctHeight(nsStyleContext* aStyleContext) 
 {
