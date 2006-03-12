@@ -2710,6 +2710,7 @@ nsTableFrame::IR_TargetIsMe(nsTableReflowState&  aReflowState,
       nsRect overflowArea;
       ReflowChildren(reflowState, PR_FALSE, PR_TRUE, aStatus,
                      lastReflowed, overflowArea);
+      }
       break;
     default:
       NS_NOTYETIMPLEMENTED("unexpected reflow command type");
