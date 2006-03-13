@@ -2694,42 +2694,15 @@ nsTableFrame::IR_TargetIsMe(nsTableReflowState&  aReflowState,
   nsresult rv = NS_OK;
   aStatus = NS_FRAME_COMPLETE;
 
-  switch (aReflowState.reflowState.path->mReflowCommand->Type()) {
-    case eReflowType_StyleChanged :
-      rv = IR_StyleChanged(aReflowState, aStatus);
-      break;
-    case eReflowType_ContentChanged :
-      NS_ASSERTION(PR_FALSE, "illegal reflow type: ContentChanged");
-      rv = NS_ERROR_ILLEGAL_VALUE;
-      break;
-    case eReflowType_ReflowDirty: {
-      // reflow the dirty children
-      nsTableReflowState reflowState(*GetPresContext(), aReflowState.reflowState, *this, eReflowReason_Initial,
-                                     aReflowState.availSize.width, aReflowState.availSize.height); 
-      nsIFrame* lastReflowed;
-      nsRect overflowArea;
-      ReflowChildren(reflowState, PR_FALSE, PR_TRUE, aStatus,
-                     lastReflowed, overflowArea);
-      }
-      break;
-    default:
-      NS_NOTYETIMPLEMENTED("unexpected reflow command type");
-      rv = NS_ERROR_NOT_IMPLEMENTED;
-      break;
-  }
-
-  return rv;
-}
-
-NS_METHOD nsTableFrame::IR_StyleChanged(nsTableReflowState&  aReflowState,
-                                        nsReflowStatus&      aStatus)
-{
-  nsTableReflowState reflowState(*GetPresContext(), aReflowState.reflowState, *this, eReflowReason_StyleChange,
-                                 aReflowState.availSize.width, aReflowState.availSize.height); 
+  nsTableReflowState reflowState(*GetPresContext(), aReflowState.reflowState,
+                                 *this, aReflowState.availSize.width,
+                                 aReflowState.availSize.height); 
   nsIFrame* lastReflowed;
   nsRect overflowArea;
-  nsresult rv = ReflowChildren(reflowState, PR_FALSE, PR_FALSE, aStatus, lastReflowed, overflowArea);
-  SetNeedStrategyInit(PR_TRUE);
+  rv = ReflowChildren(reflowState, PR_FALSE,
+                      !aReflowState.ShouldReflowAllKids(),
+                      aStatus, lastReflowed, overflowArea);
+
   return rv;
 }
 
