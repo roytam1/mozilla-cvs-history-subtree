@@ -741,6 +741,7 @@ nsTableCellMap* nsTableFrame::GetCellMap() const
 
 nscoord nsTableFrame::GetMinWidth() const
 {
+#error This should go away
   nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
   if (this == firstInFlow) {
     return mMinWidth;
@@ -752,6 +753,7 @@ nscoord nsTableFrame::GetMinWidth() const
 
 nscoord nsTableFrame::GetDesiredWidth() const
 {
+#error This should go away, maybe?
   nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
   if (this == firstInFlow) {
     return mDesiredWidth;
@@ -763,6 +765,7 @@ nscoord nsTableFrame::GetDesiredWidth() const
 
 nscoord nsTableFrame::GetPreferredWidth() const
 {
+#error This should go away
   nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
   if (this == firstInFlow) {
     return mPreferredWidth;
