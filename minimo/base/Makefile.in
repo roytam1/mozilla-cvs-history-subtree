@@ -112,6 +112,11 @@ LIBS	 += $(XLDFLAGS)	 \
 			$(NULL)
 endif
 
+ifdef MOZ_ENABLE_XFT
+LIBS     += $(MOZ_XFT_LIBS) \
+	        $(NULL)
+endif
+
 include $(topsrcdir)/config/config.mk
 
 ifdef WINCE
