@@ -498,11 +498,16 @@ public:
 protected:
 
   NS_METHOD ReflowChildren(nsTableReflowState&  aReflowState,
-                           PRBool               aDoColGroups,
                            PRBool               aDirtyOnly,
                            nsReflowStatus&      aStatus,
                            nsIFrame*&           aLastChildReflowed,
                            nsRect&              aOverflowArea);
+
+  // This calls the col group and column reflow methods, which do two things:
+  //  (1) set all the dimensions to 0
+  //  (2) notify the table about colgroups or columns with hidden visibility
+  void ReflowColGroups();
+
 // begin incremental reflow methods
   NS_IMETHOD AdjustSiblingsAfterReflow(nsTableReflowState& aReflowState,
                                        nsIFrame*           aKidFrame,

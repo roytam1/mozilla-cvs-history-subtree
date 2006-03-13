@@ -1684,6 +1684,8 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nscoord result = 0;
   DISPLAY_MIN_WIDTH(this, result);
 
+  ReflowColGroups();
+
 #error WRITE ME
 
   return result;
@@ -1698,6 +1700,8 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
   nscoord result = 0;
   DISPLAY_PREF_WIDTH(this, result);
+
+  ReflowColGroups();
 
 #error WRITE ME
 
@@ -1940,8 +1944,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
           // reflow the children
           nsIFrame *lastReflowed;
           nsRect overflowArea;
-          ReflowChildren(reflowState, !HaveReflowedColGroups(),
-                         PR_FALSE, aStatus, lastReflowed,
+          ReflowChildren(reflowState, PR_FALSE, aStatus, lastReflowed,
                          overflowArea);
         }
         mTableLayoutStrategy->Initialize(aReflowState);
@@ -2132,7 +2135,6 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   aDidBalance = PR_FALSE;
   aLastChildReflowed = nsnull;
 
-  PRBool haveReflowedColGroups = PR_TRUE;
   if (!GetPrevInFlow()) {
     if (NeedStrategyInit()) {
       mTableLayoutStrategy->Initialize(aReflowState);
@@ -2143,15 +2145,16 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
       BalanceColumnWidths(aReflowState);
       aDidBalance = PR_TRUE;
     }
-    haveReflowedColGroups = HaveReflowedColGroups();
   }
   // Constrain our reflow width to the computed table width (of the 1st in flow).
   // and our reflow height to our avail height minus border, padding, cellspacing
   aDesiredSize.width = GetDesiredWidth();
   nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this,
                                  aDesiredSize.width, aAvailHeight);
-  ReflowChildren(reflowState, haveReflowedColGroups, PR_FALSE,
+  ReflowChildren(reflowState, PR_FALSE,
                  aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);
+
+  ReflowColGroups();
 
   if (eReflowReason_Resize == aReflowState.reason) {
     if (!DidResizeReflow()) {
@@ -2699,7 +2702,7 @@ nsTableFrame::IR_TargetIsMe(nsTableReflowState&  aReflowState,
                                  aReflowState.availSize.height); 
   nsIFrame* lastReflowed;
   nsRect overflowArea;
-  rv = ReflowChildren(reflowState, PR_FALSE,
+  rv = ReflowChildren(reflowState,
                       !aReflowState.ShouldReflowAllKids(),
                       aStatus, lastReflowed, overflowArea);
 
@@ -3090,7 +3093,6 @@ IsRepeatable(nsTableRowGroupFrame& aHeaderOrFooter,
 // update aReflowMetrics a aStatus
 NS_METHOD 
 nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
-                             PRBool              aDoColGroups,
                              PRBool              aDirtyOnly,
                              nsReflowStatus&     aStatus,
                              nsIFrame*&          aLastChildReflowed,
@@ -3288,20 +3290,6 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     ConsiderChildOverflow(aOverflowArea, kidFrame);
   }
   
-  // if required, give the colgroups their initial reflows
-  if (aDoColGroups) {
-    nsHTMLReflowMetrics kidMet;
-    for (nsIFrame* kidFrame = mColGroups.FirstChild(); kidFrame;
-         kidFrame = kidFrame->GetNextSibling()) {
-      nsHTMLReflowState kidReflowState(presContext, aReflowState.reflowState, kidFrame,
-                                       aReflowState.availSize, aReflowState.reason);
-      nsReflowStatus cgStatus;
-      ReflowChild(kidFrame, presContext, kidMet, kidReflowState, 0, 0, 0, cgStatus);
-      FinishReflowChild(kidFrame, presContext, nsnull, kidMet, 0, 0, 0);
-    }
-    SetHaveReflowedColGroups(PR_TRUE);
-  }
-
   // set the repeatablility of headers and footers in the original table during its first reflow
   // the repeatability of header and footers on continued tables is handled when they are created
   if (isPaginated && !GetPrevInFlow() && (NS_UNCONSTRAINEDSIZE == aReflowState.availSize.height)) {
@@ -3318,6 +3306,24 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   }
 
   return rv;
+}
+
+void
+nsTableFrame::ReflowColGroups()
+{
+  if (!GetPrevInFlow() && !HaveReflowedColGroups()) {
+    nsHTMLReflowMetrics kidMet;
+    for (nsIFrame* kidFrame = mColGroups.FirstChild(); kidFrame;
+         kidFrame = kidFrame->GetNextSibling()) {
+      // The column groups don't care about dimensions or reflow states.
+      nsHTMLReflowState kidReflowState(presContext, kidFrame, nsSize(0,0));
+      nsReflowStatus cgStatus;
+      ReflowChild(kidFrame, presContext, kidMet, kidReflowState, 0, 0, 0,
+                  cgStatus);
+      FinishReflowChild(kidFrame, presContext, nsnull, kidMet, 0, 0, 0);
+    }
+    SetHaveReflowedColGroups(PR_TRUE);
+  }
 }
 
 /**
