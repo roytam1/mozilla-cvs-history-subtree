@@ -113,6 +113,8 @@
           var page = this.wizardPages[val];
           this._pageStack[this._pageStack.length-1] = page;
           this.currentPage = page;
+
+          return val;
         ]]>
         </setter>
       </property>
