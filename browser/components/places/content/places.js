@@ -804,17 +804,21 @@ var ViewMenu = {
    *          null if the caller should just append to the popup.
    */
   _clean: function VM__clean(popup, startID, endID) {
+    if (endID) 
+      NS_ASSERT(startID, "meaningless to have valid endID and null startID");
     if (startID) {
       var startElement = document.getElementById(startID);
-      ASSERT(startElement.parentNode == popup, "startElement is not in popup");
-      ASSERT(startElement, 
-             "startID does not correspond to an existing element");
+      NS_ASSERT(startElement.parentNode == 
+                popup, "startElement is not in popup");
+      NS_ASSERT(startElement, 
+                "startID does not correspond to an existing element");
       var endElement = null;
       if (endID) {
         endElement = document.getElementById(endID);
-        ASSERT(endElement.parentNode == popup, "endElement is not in popup");
-        ASSERT(endElement, 
-               "endID does not correspond to an existing element");
+        NS_ASSERT(endElement.parentNode == popup, 
+                  "endElement is not in popup");
+        NS_ASSERT(endElement, 
+                  "endID does not correspond to an existing element");
       }
       while (startElement.nextSibling != endElement)
         popup.removeChild(startElement.nextSibling);
@@ -918,7 +922,8 @@ var ViewMenu = {
     const PREFIX = "menucol_";
     var columnID = element.id.substr(PREFIX.length, element.id.length);
     var column = document.getElementById(columnID);
-    ASSERT(column, "menu item for column that doesn't exist?! id = " + element.id);
+    NS_ASSERT(column, 
+              "menu item for column that doesn't exist?! id = " + element.id);
 
     var splitter = column.nextSibling;
     if (splitter && splitter.localName != "splitter")
