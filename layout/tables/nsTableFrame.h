@@ -508,14 +508,6 @@ protected:
   //  (2) notify the table about colgroups or columns with hidden visibility
   void ReflowColGroups();
 
-// begin incremental reflow methods
-  NS_IMETHOD AdjustSiblingsAfterReflow(nsTableReflowState& aReflowState,
-                                       nsIFrame*           aKidFrame,
-                                       nscoord             aDeltaY);
-  
-  nsresult RecoverState(nsTableReflowState& aReflowState,
-                        nsIFrame*           aKidFrame);
-
   NS_METHOD CollapseRowGroupIfNecessary(nsIFrame* aRowGroupFrame,
                                         const nscoord& aYTotalOffset,
                                         nscoord& aYGroupOffset, PRInt32& aRowX);
@@ -523,8 +515,6 @@ protected:
   NS_METHOD AdjustForCollapsingRows(nsHTMLReflowMetrics&  aDesiredSize);
 
   NS_METHOD AdjustForCollapsingCols(nsHTMLReflowMetrics&  aDesiredSize);
-  // end incremental reflow methods
-
 
   // WIDTH AND HEIGHT CALCULATION
 
