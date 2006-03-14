@@ -2664,22 +2664,6 @@ nsTableFrame::RemoveFrame(nsIAtom*        aListName,
   return NS_OK;
 }
 
-NS_METHOD 
-nsTableFrame::IncrementalReflow(const nsHTMLReflowState& aReflowState,
-                                nsReflowStatus&          aStatus)
-{
-  nsTableReflowState state(*GetPresContext(), aReflowState, *this,
-                           lastWidth, aReflowState.availableHeight); 
-
-  // see if the chidren are targets as well
-  nsReflowPath::iterator iter = aReflowState.path->FirstChild();
-  nsReflowPath::iterator end  = aReflowState.path->EndChildren();
-  for (; iter != end; ++iter)
-    IR_TargetIsChild(state, aStatus, *iter);
-
-  return NS_OK;
-}
-
 static void
 DivideBCBorderSize(nscoord  aPixelSize,
                    nscoord& aSmallHalf,
