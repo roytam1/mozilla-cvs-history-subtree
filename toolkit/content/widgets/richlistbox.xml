@@ -435,7 +435,7 @@
 
             if (!this.suppressOnSelect) {
               var event = document.createEvent("Events");
-              event.initEvent("select", true, true);
+              event.initEvent("select", false, true);
               this.dispatchEvent(event);
 
               // if we have controllers, notify the command dispatcher
