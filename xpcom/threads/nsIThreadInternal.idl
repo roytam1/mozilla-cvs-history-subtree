@@ -62,6 +62,10 @@ interface nsIThreadInternal : nsIThread
    * the given filter.  If the filter is null, then new events are accepted.
    * Calls to PushEventQueue may be nested and must each be paired with a call
    * to PopEventQueue in order to restore the original state of the thread.
+   *
+   * @param filter
+   *        The thread event filter to apply to dispatched events, or null to
+   *        accept all dispatched events.
    */
   void pushEventQueue(in nsIThreadEventFilter filter);
 
@@ -82,11 +86,12 @@ interface nsIThreadInternal : nsIThread
  *     onDispatchedEvent(thread) {
  *       NativeQueue.signal();
  *     }
- *     onProcessNextEvent(thread, mayWait) {
- *       NativeQueue.processPendingEvents();
- *       while (mayWait && !thread.hasPendingTask()) {
+ *     onProcessNextEvent(thread, mayWait, recursionDepth) {
+ *       if (NativeQueue.hasNextEvent())
+ *         NativeQueue.processNextEvent();
+ *       while (mayWait && !thread.hasPendingEvent()) {
  *         NativeQueue.wait();
- *         NativeQueue.processPendingEvents();
+ *         NativeQueue.processNextEvent();
  *       }
  *     }
  *   };

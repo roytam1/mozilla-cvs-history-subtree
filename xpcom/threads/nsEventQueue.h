@@ -87,6 +87,8 @@ private:
 
   enum { EVENTS_PER_PAGE = 15 };
 
+  // Page objects are linked together to form a simple deque.
+
   struct Page {
     struct Page *mNext;
     nsIRunnable *mEvents[EVENTS_PER_PAGE];
