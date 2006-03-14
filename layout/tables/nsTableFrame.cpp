@@ -1518,67 +1518,6 @@ PRBool nsTableFrame::NeedsReflow(const nsHTMLReflowState& aReflowState)
   return result;
 }
 
-// Called by IR_TargetIsChild() after an incremental reflow of
-// aKidFrame. Only called if we don't need a full reflow, e.g., the
-// column widths haven't changed. Not used for paginated mode, so
-// we don't need to worry about split row group frames
-//
-// Slides all the row groups following aKidFrame by the specified
-// amount
-nsresult 
-nsTableFrame::AdjustSiblingsAfterReflow(nsTableReflowState& aReflowState,
-                                        nsIFrame*           aKidFrame,
-                                        nscoord             aDeltaY)
-{
-  NS_PRECONDITION(NS_UNCONSTRAINEDSIZE == aReflowState.reflowState.availableHeight,
-                  "we're not in galley mode");
-
-  nscoord yInvalid = NS_UNCONSTRAINEDSIZE;
-
-  // Get the ordered children and find aKidFrame in the list
-  nsAutoVoidArray rowGroups;
-  PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups);
-  PRUint32 changeIndex;
-  for (changeIndex = 0; changeIndex < numRowGroups; changeIndex++) {
-    if (aKidFrame == rowGroups.ElementAt(changeIndex)) {
-      break;
-    }
-  }
-  changeIndex++; // set it to the next sibling
-
-  for (PRUint32 rgX = changeIndex; rgX < numRowGroups; rgX++) {
-    nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(rgX);
-    // Move the frames that follow aKidFrame by aDeltaY, and update the running
-    // y-offset
-    nsTableRowGroupFrame* rgFrame = GetRowGroupFrame(kidFrame);
-    if (!rgFrame) continue; // skip foreign frames
-
-    // Get the frame's bounding rect
-    nsRect kidRect = kidFrame->GetRect();
-    yInvalid = PR_MIN(yInvalid, kidRect.y);
-  
-    // Adjust the running y-offset
-    aReflowState.y += kidRect.height;
- 
-    // Adjust the y-origin if its position actually changed
-    if (aDeltaY != 0) {
-      kidRect.y += aDeltaY;
-      kidFrame->SetPosition(nsPoint(kidRect.x, kidRect.y));
-      RePositionViews(kidFrame);
-    }
-  }
-  
-  // Invalidate the area we offset.
-  if (NS_UNCONSTRAINEDSIZE != yInvalid) {
-    nsRect  dirtyRect(0, yInvalid, mRect.width, mRect.height - yInvalid);
-    // XXX what if some of the cells have outlines?
-    Invalidate(dirtyRect);
-  }
-
-  return NS_OK;
-}
-
 void
 nsTableFrame::SetColumnDimensions(nscoord         aHeight,
                                   const nsMargin& aBorderPadding)
@@ -3139,6 +3078,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         Invalidate(kidRect); // invalidate the old position
         kidRect.y = aReflowState.y;
         kidFrame->SetRect(kidRect);        // move to the new position
+        RePositionViews(kidFrame);
         Invalidate(kidRect); // invalidate the new position
       }
       nscoord heightDelta = cellSpacingY + kidRect.height;
