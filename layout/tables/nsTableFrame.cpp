@@ -2762,53 +2762,6 @@ nsTableFrame::GetContentAreaOffset(const nsHTMLReflowState* aReflowState) const
   return offset;
 }
 
-// Recovers the reflow state to what it should be if aKidFrame is about to be 
-// reflowed. Restores y, and availSize.height (if
-// the height is constrained)
-nsresult
-nsTableFrame::RecoverState(nsTableReflowState& aReflowState,
-                           nsIFrame*           aKidFrame)
-{
-  nsMargin borderPadding = GetChildAreaOffset(&aReflowState.reflowState);
-  aReflowState.y = borderPadding.top;
-
-  nscoord cellSpacingY = GetCellSpacingY();
-  // Get the ordered children and find aKidFrame in the list
-  nsAutoVoidArray rowGroups;
-  PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups);
-  
-  // Walk the list of children looking for aKidFrame
-  for (PRUint32 childX = 0; childX < numRowGroups; childX++) {
-    nsIFrame* childFrame = (nsIFrame*)rowGroups.ElementAt(childX);
-    nsTableRowGroupFrame* rgFrame = GetRowGroupFrame(childFrame);
-    if (!rgFrame) continue; // skip foreign frame types
-   
-    // If this is a footer row group, remember it
-    const nsStyleDisplay* display = rgFrame->GetStyleDisplay();
-
-    aReflowState.y += cellSpacingY;
-    
-    // See if this is the frame we're looking for
-    if (childFrame == aKidFrame) {
-      break;
-    }
-
-    // Get the frame's height
-    nsSize kidSize = childFrame->GetSize();
-    
-    // If our height is constrained then update the available height. Do
-    // this for all frames including the footer frame
-    if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
-      aReflowState.availSize.height -= kidSize.height;
-    }
-
-    aReflowState.y += kidSize.height;
-  }
-
-  return NS_OK;
-}
-
 void
 nsTableFrame::InitChildReflowState(nsHTMLReflowState& aReflowState)                                    
 {
@@ -3188,7 +3141,13 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         kidFrame->SetRect(kidRect);        // move to the new position
         Invalidate(kidRect); // invalidate the new position
       }
-      aReflowState.y += cellSpacingY + kidRect.height;
+      nscoord heightDelta = cellSpacingY + kidRect.height;
+      aReflowState.y += heightDelta;
+
+      // If our height is constrained then update the available height.
+      if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
+        aReflowState.availSize.height -= heightDelta;
+      }
     }
     ConsiderChildOverflow(aOverflowArea, kidFrame);
   }
