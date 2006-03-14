@@ -1416,7 +1416,7 @@
                 // Only capture clicks on tabbox.xml's <spacer>
                 aEvent.originalTarget.localName == "spacer") {
               var e = document.createEvent("Events");
-              e.initEvent("NewTab", false, true);
+              e.initEvent("NewTab", true, true);
               this.dispatchEvent(e);
             }
           ]]>
