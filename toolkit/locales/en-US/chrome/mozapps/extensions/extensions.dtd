@@ -44,15 +44,13 @@
 <!ENTITY cmd.moveUp.accesskey             "p">
 <!ENTITY cmd.moveDn.label                 "Move Down">
 <!ENTITY cmd.moveDn.accesskey             "w">
-<!ENTITY cmd.showFolder.label             "Show Item Contents...">
-<!ENTITY cmd.showFolder.accesskey         "C">
 
 <!-- Extension Items -->
 <!ENTITY options.tooltip                  "Options">
 <!ENTITY optionsUnix.tooltip              "Preferences">
 <!ENTITY about.tooltip                    "About">
 <!ENTITY homepage.tooltip                 "Home Page">
-
+<!ENTITY moreInfo.label                   "More Information">
 <!ENTITY installNow.label                 "Update Now">
 
 <!ENTITY getMoreExtensions.label          "Get More Extensions">
