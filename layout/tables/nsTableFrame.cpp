@@ -3071,7 +3071,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
   PRBool haveReflowedRowGroup = PR_FALSE;
   PRBool pageBreak = PR_FALSE;
-  for (PRUint32 childX = 0; ((PRInt32)childX) < rowGroups.Count(); childX++) {
+  for (PRUint32 childX = 0; childX < numRowGroups; childX++) {
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
     // Get the frame state bits
     // See if we should only reflow the dirty child frames
@@ -3109,128 +3109,126 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
       nsHTMLReflowMetrics desiredSize;
       desiredSize.width = desiredSize.height = desiredSize.ascent = desiredSize.descent = 0;
   
-      if (childX < numRowGroups) {  
-        // Reflow the child into the available space
-        nsHTMLReflowState  kidReflowState(presContext, aReflowState.reflowState, kidFrame, 
-                                          kidAvailSize, aReflowState.reason);
-        InitChildReflowState(kidReflowState);
-        // XXX fix up bad mComputedWidth for scroll frame
-        kidReflowState.mComputedWidth = PR_MAX(kidReflowState.mComputedWidth, 0);
-  
-        // If this isn't the first row group, then we can't be at the top of the page
-        if (childX > 0) {
-          kidReflowState.mFlags.mIsTopOfPage = PR_FALSE;
-        }
-        aReflowState.y += cellSpacingY;
-        if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
-          aReflowState.availSize.height -= cellSpacingY;
-        }
-        // record the presence of a next in flow, it might get destroyed so we
-        // need to reorder the row group array
-        nsIFrame* kidNextInFlow = kidFrame->GetNextInFlow();
-        PRBool reorder = PR_FALSE;
-        if (kidFrame->GetNextInFlow())
-          reorder = PR_TRUE;
-      
-        rv = ReflowChild(kidFrame, presContext, desiredSize, kidReflowState,
-                         aReflowState.x, aReflowState.y, 0, aStatus);
-        haveReflowedRowGroup = PR_TRUE;
+      // Reflow the child into the available space
+      nsHTMLReflowState  kidReflowState(presContext, aReflowState.reflowState, kidFrame, 
+                                        kidAvailSize, aReflowState.reason);
+      InitChildReflowState(kidReflowState);
+      // XXX fix up bad mComputedWidth for scroll frame
+      kidReflowState.mComputedWidth = PR_MAX(kidReflowState.mComputedWidth, 0);
 
-        if (reorder) {
-          // reorder row groups the reflow may have changed the nextinflows
-          OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
-          for (childX = 0; childX < numRowGroups; childX++) {
-            if (kidFrame == (nsIFrame*)rowGroups.ElementAt(childX))
-              break;
-          }
-        }
-        // see if the rowgroup did not fit on this page might be pushed on
-        // the next page
-        if (NS_FRAME_IS_COMPLETE(aStatus) && isPaginated &&
-            (NS_UNCONSTRAINEDSIZE != kidReflowState.availableHeight) &&
-            kidReflowState.availableHeight < desiredSize.height) {
-          // if we are on top of the page place with dataloss
-          if (kidReflowState.mFlags.mIsTopOfPage) {
-            if (childX+1 < numRowGroups) {
-              nsIFrame* nextRowGroupFrame = (nsIFrame*) rowGroups.ElementAt(childX +1);
-              if (nextRowGroupFrame) {
-                PlaceChild(aReflowState, kidFrame, desiredSize);
-                aStatus = NS_FRAME_NOT_COMPLETE;
-                PushChildren(rowGroups, childX + 1);
-                aLastChildReflowed = kidFrame;
-                break;
-              }
-            }
-          }
-          else { // we are not on top, push this rowgroup onto the next page
-            if (prevKidFrame) { // we had a rowgroup before so push this
-              aStatus = NS_FRAME_NOT_COMPLETE;
-              PushChildren(rowGroups, childX);
-              aLastChildReflowed = prevKidFrame;
-              break;
-            }
-          }
-        }
+      // If this isn't the first row group, then we can't be at the top of the page
+      if (childX > 0) {
+        kidReflowState.mFlags.mIsTopOfPage = PR_FALSE;
+      }
+      aReflowState.y += cellSpacingY;
+      if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
+        aReflowState.availSize.height -= cellSpacingY;
+      }
+      // record the presence of a next in flow, it might get destroyed so we
+      // need to reorder the row group array
+      nsIFrame* kidNextInFlow = kidFrame->GetNextInFlow();
+      PRBool reorder = PR_FALSE;
+      if (kidFrame->GetNextInFlow())
+        reorder = PR_TRUE;
+    
+      rv = ReflowChild(kidFrame, presContext, desiredSize, kidReflowState,
+                       aReflowState.x, aReflowState.y, 0, aStatus);
+      haveReflowedRowGroup = PR_TRUE;
 
-        aLastChildReflowed   = kidFrame;
-
-        pageBreak = PR_FALSE;
-        // see if there is a page break after this row group or before the next one
-        if (NS_FRAME_IS_COMPLETE(aStatus) && isPaginated && 
-            (NS_UNCONSTRAINEDSIZE != kidReflowState.availableHeight)) {
-          nsIFrame* nextKid = (childX + 1 < numRowGroups) ? (nsIFrame*)rowGroups.ElementAt(childX + 1) : nsnull;
-          pageBreak = PageBreakAfter(*kidFrame, nextKid);
-        }
-
-        // Place the child
-        PlaceChild(aReflowState, kidFrame, desiredSize);
-  
-        // Remember where we just were in case we end up pushing children
-        prevKidFrame = kidFrame;
- 
-        // Special handling for incomplete children
-        if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {         
-          kidNextInFlow = kidFrame->GetNextInFlow();
-          if (!kidNextInFlow) {
-            // The child doesn't have a next-in-flow so create a continuing
-            // frame. This hooks the child into the flow
-            nsIFrame*     continuingFrame;
-
-            presContext->PresShell()->FrameConstructor()->
-              CreateContinuingFrame(presContext, kidFrame, this,
-                                    &continuingFrame);
-  
-            // Add the continuing frame to the sibling list
-            continuingFrame->SetNextSibling(kidFrame->GetNextSibling());
-            kidFrame->SetNextSibling(continuingFrame);
-            // Update rowGroups with the new rowgroup, just as it
-            // would have been if we had called OrderRowGroups
-            // again. Note that rowGroups doesn't get used again after
-            // we PushChildren below, anyway.
-            rowGroups.InsertElementAt(continuingFrame, childX + 1);
-          }
-          // We've used up all of our available space so push the remaining
-          // children to the next-in-flow
-          nsIFrame* nextSibling = kidFrame->GetNextSibling();
-          if (nsnull != nextSibling) {
-            PushChildren(rowGroups, childX + 1);
-          }
-          if (repeatedFooter) {
-            kidAvailSize.height = repeatedFooterHeight;
-            nsHTMLReflowState footerReflowState(presContext, aReflowState.reflowState, repeatedFooter, 
-                                                kidAvailSize, aReflowState.reason);
-            InitChildReflowState(footerReflowState);
-            aReflowState.y += cellSpacingY;
-            nsReflowStatus footerStatus;
-            rv = ReflowChild(repeatedFooter, presContext, desiredSize, footerReflowState,
-                             aReflowState.x, aReflowState.y, 0, footerStatus);
-            PlaceChild(aReflowState, repeatedFooter, desiredSize);
-          }
-          break;
+      if (reorder) {
+        // reorder row groups the reflow may have changed the nextinflows
+        OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
+        for (childX = 0; childX < numRowGroups; childX++) {
+          if (kidFrame == (nsIFrame*)rowGroups.ElementAt(childX))
+            break;
         }
       }
+      // see if the rowgroup did not fit on this page might be pushed on
+      // the next page
+      if (NS_FRAME_IS_COMPLETE(aStatus) && isPaginated &&
+          (NS_UNCONSTRAINEDSIZE != kidReflowState.availableHeight) &&
+          kidReflowState.availableHeight < desiredSize.height) {
+        // if we are on top of the page place with dataloss
+        if (kidReflowState.mFlags.mIsTopOfPage) {
+          if (childX+1 < numRowGroups) {
+            nsIFrame* nextRowGroupFrame = (nsIFrame*) rowGroups.ElementAt(childX +1);
+            if (nextRowGroupFrame) {
+              PlaceChild(aReflowState, kidFrame, desiredSize);
+              aStatus = NS_FRAME_NOT_COMPLETE;
+              PushChildren(rowGroups, childX + 1);
+              aLastChildReflowed = kidFrame;
+              break;
+            }
+          }
+        }
+        else { // we are not on top, push this rowgroup onto the next page
+          if (prevKidFrame) { // we had a rowgroup before so push this
+            aStatus = NS_FRAME_NOT_COMPLETE;
+            PushChildren(rowGroups, childX);
+            aLastChildReflowed = prevKidFrame;
+            break;
+          }
+        }
+      }
+
+      aLastChildReflowed   = kidFrame;
+
+      pageBreak = PR_FALSE;
+      // see if there is a page break after this row group or before the next one
+      if (NS_FRAME_IS_COMPLETE(aStatus) && isPaginated && 
+          (NS_UNCONSTRAINEDSIZE != kidReflowState.availableHeight)) {
+        nsIFrame* nextKid = (childX + 1 < numRowGroups) ? (nsIFrame*)rowGroups.ElementAt(childX + 1) : nsnull;
+        pageBreak = PageBreakAfter(*kidFrame, nextKid);
+      }
+
+      // Place the child
+      PlaceChild(aReflowState, kidFrame, desiredSize);
+
+      // Remember where we just were in case we end up pushing children
+      prevKidFrame = kidFrame;
+
+      // Special handling for incomplete children
+      if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {         
+        kidNextInFlow = kidFrame->GetNextInFlow();
+        if (!kidNextInFlow) {
+          // The child doesn't have a next-in-flow so create a continuing
+          // frame. This hooks the child into the flow
+          nsIFrame*     continuingFrame;
+
+          presContext->PresShell()->FrameConstructor()->
+            CreateContinuingFrame(presContext, kidFrame, this,
+                                  &continuingFrame);
+
+          // Add the continuing frame to the sibling list
+          continuingFrame->SetNextSibling(kidFrame->GetNextSibling());
+          kidFrame->SetNextSibling(continuingFrame);
+          // Update rowGroups with the new rowgroup, just as it
+          // would have been if we had called OrderRowGroups
+          // again. Note that rowGroups doesn't get used again after
+          // we PushChildren below, anyway.
+          rowGroups.InsertElementAt(continuingFrame, childX + 1);
+        }
+        // We've used up all of our available space so push the remaining
+        // children to the next-in-flow
+        nsIFrame* nextSibling = kidFrame->GetNextSibling();
+        if (nsnull != nextSibling) {
+          PushChildren(rowGroups, childX + 1);
+        }
+        if (repeatedFooter) {
+          kidAvailSize.height = repeatedFooterHeight;
+          nsHTMLReflowState footerReflowState(presContext, aReflowState.reflowState, repeatedFooter, 
+                                              kidAvailSize, aReflowState.reason);
+          InitChildReflowState(footerReflowState);
+          aReflowState.y += cellSpacingY;
+          nsReflowStatus footerStatus;
+          rv = ReflowChild(repeatedFooter, presContext, desiredSize, footerReflowState,
+                           aReflowState.x, aReflowState.y, 0, footerStatus);
+          PlaceChild(aReflowState, repeatedFooter, desiredSize);
+        }
+        break;
+      }
     }
-    else if (childX < numRowGroups) { // it is a row group but isn't being reflowed
+    else { // it isn't being reflowed
       nsRect kidRect = kidFrame->GetRect();
       if (haveReflowedRowGroup) { 
         if (kidRect.y != aReflowState.y) {
