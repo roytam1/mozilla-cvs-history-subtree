@@ -2668,13 +2668,6 @@ NS_METHOD
 nsTableFrame::IncrementalReflow(const nsHTMLReflowState& aReflowState,
                                 nsReflowStatus&          aStatus)
 {
-  // Constrain our reflow width to the computed table width. Note: this is
-  // based on the width of the first-in-flow
-  PRInt32 lastWidth = mRect.width;
-  if (GetPrevInFlow()) {
-    nsTableFrame* table = (nsTableFrame*)GetFirstInFlow();
-    lastWidth = table->mRect.width;
-  }
   nsTableReflowState state(*GetPresContext(), aReflowState, *this,
                            lastWidth, aReflowState.availableHeight); 
 
