@@ -1941,7 +1941,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 #error "Pass 1 reflow must be moved out of Reflow"
           // only do pass1 reflow on an auto layout table
           nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
-                                         aReflowState.reason,
                                          NS_UNCONSTRAINEDSIZE,
                                          NS_UNCONSTRAINEDSIZE);
           // reflow the children
@@ -2154,7 +2153,7 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   aDesiredSize.width = GetDesiredWidth();
   nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this,
                                  aDesiredSize.width, aAvailHeight);
-  ReflowChildren(reflowState, PR_FALSE,
+  ReflowChildren(reflowState, !aReflowState.ShouldReflowAllKids(),
                  aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);
 
   ReflowColGroups();
@@ -2676,13 +2675,8 @@ nsTableFrame::IncrementalReflow(const nsHTMLReflowState& aReflowState,
     nsTableFrame* table = (nsTableFrame*)GetFirstInFlow();
     lastWidth = table->mRect.width;
   }
-  nsTableReflowState state(*GetPresContext(), aReflowState, *this, eReflowReason_Incremental,
+  nsTableReflowState state(*GetPresContext(), aReflowState, *this,
                            lastWidth, aReflowState.availableHeight); 
-
-  // the table is a target if its path has a reflow command
-  nsHTMLReflowCommand* command = aReflowState.path->mReflowCommand;
-  if (command)
-    IR_TargetIsMe(state, aStatus);
 
   // see if the chidren are targets as well
   nsReflowPath::iterator iter = aReflowState.path->FirstChild();
@@ -2691,25 +2685,6 @@ nsTableFrame::IncrementalReflow(const nsHTMLReflowState& aReflowState,
     IR_TargetIsChild(state, aStatus, *iter);
 
   return NS_OK;
-}
-
-NS_METHOD 
-nsTableFrame::IR_TargetIsMe(nsTableReflowState&  aReflowState,
-                            nsReflowStatus&      aStatus)
-{
-  nsresult rv = NS_OK;
-  aStatus = NS_FRAME_COMPLETE;
-
-  nsTableReflowState reflowState(*GetPresContext(), aReflowState.reflowState,
-                                 *this, aReflowState.availSize.width,
-                                 aReflowState.availSize.height); 
-  nsIFrame* lastReflowed;
-  nsRect overflowArea;
-  rv = ReflowChildren(reflowState,
-                      !aReflowState.ShouldReflowAllKids(),
-                      aStatus, lastReflowed, overflowArea);
-
-  return rv;
 }
 
 static void
