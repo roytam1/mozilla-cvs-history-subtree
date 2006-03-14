@@ -453,12 +453,12 @@ nsSocketTransportService::OnDispatchedEvent(nsIThreadInternal *thread)
 
 NS_IMETHODIMP
 nsSocketTransportService::OnProcessNextEvent(nsIThreadInternal *thread,
-                                             PRBool mayWait, PRBool isNested)
+                                             PRBool mayWait, PRUint32 depth)
 {
     // DoPollIteration doesn't support being called recursively.  This case
     // should only happen when someone (e.g., PSM) is issuing a synchronous
     // proxy call from this thread to the main thread.
-    if (isNested)
+    if (depth > 1)
         return NS_OK;
 
     // Favor processing existing sockets before other events.
