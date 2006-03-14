@@ -283,9 +283,8 @@ nsTableCellMap::GetMapFor(nsTableRowGroupFrame& aRowGroup)
     nsAutoVoidArray rowGroups;
     PRUint32 numRowGroups;
     nsTableRowGroupFrame *thead, *tfoot;
-    nsIFrame *ignore;
     // find the original header/footer 
-    fifTable->OrderRowGroups(rowGroups, numRowGroups, &ignore, &thead, &tfoot);
+    fifTable->OrderRowGroups(rowGroups, numRowGroups, &thead, &tfoot);
 
     const nsStyleDisplay* display = aRowGroup.GetStyleDisplay();
     nsTableRowGroupFrame* rgOrig = 

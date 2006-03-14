@@ -95,12 +95,6 @@ struct nsTableReflowState {
   // Running y-offset
   nscoord y;
 
-  // Pointer to the footer in the table
-  nsIFrame* footerFrame;
-
-  // The first body section row group frame, i.e. not a header or footer
-  nsIFrame* firstBodySection;
-
   nsTableReflowState(nsPresContext&          aPresContext,
                      const nsHTMLReflowState& aReflowState,
                      nsTableFrame&            aTableFrame,
@@ -136,9 +130,6 @@ struct nsTableReflowState {
                           + (2 * table->GetCellSpacingY());
       availSize.height = PR_MAX(0, availSize.height);
     }
-
-    footerFrame      = nsnull;
-    firstBodySection = nsnull;
   }
 
   nsTableReflowState(nsPresContext&          aPresContext,
@@ -601,7 +592,7 @@ void nsTableFrame::AdjustRowIndices(PRInt32         aRowIndex,
   // whose index is >= aRowIndex.
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  OrderRowGroups(rowGroups, numRowGroups);
 
   for (PRUint32 rgX = 0; rgX < numRowGroups; rgX++) {
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(rgX);
@@ -1547,7 +1538,7 @@ nsTableFrame::AdjustSiblingsAfterReflow(nsTableReflowState& aReflowState,
   // Get the ordered children and find aKidFrame in the list
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  OrderRowGroups(rowGroups, numRowGroups);
   PRUint32 changeIndex;
   for (changeIndex = 0; changeIndex < numRowGroups; changeIndex++) {
     if (aKidFrame == rowGroups.ElementAt(changeIndex)) {
@@ -2772,7 +2763,7 @@ nsTableFrame::GetContentAreaOffset(const nsHTMLReflowState* aReflowState) const
 }
 
 // Recovers the reflow state to what it should be if aKidFrame is about to be 
-// reflowed. Restores y, footerFrame, firstBodySection and availSize.height (if
+// reflowed. Restores y, and availSize.height (if
 // the height is constrained)
 nsresult
 nsTableFrame::RecoverState(nsTableReflowState& aReflowState,
@@ -2785,7 +2776,7 @@ nsTableFrame::RecoverState(nsTableReflowState& aReflowState,
   // Get the ordered children and find aKidFrame in the list
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection);
+  OrderRowGroups(rowGroups, numRowGroups);
   
   // Walk the list of children looking for aKidFrame
   for (PRUint32 childX = 0; childX < numRowGroups; childX++) {
@@ -2936,30 +2927,11 @@ void nsTableFrame::PlaceChild(nsTableReflowState&  aReflowState,
   if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
     aReflowState.availSize.height -= aKidDesiredSize.height;
   }
-
-  const nsStyleDisplay* childDisplay = aKidFrame->GetStyleDisplay();
-
-  // We only allow a single footer frame, and the footer frame must occur before
-  // any body section row groups
-  if ((NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == childDisplay->mDisplay) &&
-      !aReflowState.footerFrame && !aReflowState.firstBodySection) {
-    aReflowState.footerFrame = aKidFrame;
-  }
-  else if (aReflowState.footerFrame) {
-    // put the non footer where the footer was
-    nsPoint origin = aReflowState.footerFrame->GetPosition();
-    aKidFrame->SetPosition(origin);
-
-    // put the footer below the non footer
-    origin.y = aReflowState.y - aReflowState.footerFrame->GetSize().height;
-    aReflowState.footerFrame->SetPosition(origin);
-  }
 }
 
 void
 nsTableFrame::OrderRowGroups(nsVoidArray&           aChildren,
                              PRUint32&              aNumRowGroups,
-                             nsIFrame**             aFirstBody,
                              nsTableRowGroupFrame** aHead,
                              nsTableRowGroupFrame** aFoot) const
 {
@@ -2967,7 +2939,6 @@ nsTableFrame::OrderRowGroups(nsVoidArray&           aChildren,
   nsIFrame* head = nsnull;
   nsIFrame* foot = nsnull;
   // initialize out parameters, if present
-  if (aFirstBody) *aFirstBody = nsnull;
   if (aHead)      *aHead      = nsnull;
   if (aFoot)      *aFoot      = nsnull;
   
@@ -3002,9 +2973,6 @@ nsTableFrame::OrderRowGroups(nsVoidArray&           aChildren,
         break;
       default:
         aChildren.AppendElement(kidFrame);
-        if (aFirstBody && !*aFirstBody) {
-          *aFirstBody = kidFrame;
-        }
       }
     }
     else {
@@ -3068,7 +3036,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
   nsTableRowGroupFrame *thead, *tfoot;
-  OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
+  OrderRowGroups(rowGroups, numRowGroups, &thead, &tfoot);
   PRBool pageBreak = PR_FALSE;
   for (PRUint32 childX = 0; childX < numRowGroups; childX++) {
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
@@ -3135,7 +3103,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
 
       if (reorder) {
         // reorder row groups the reflow may have changed the nextinflows
-        OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
+        OrderRowGroups(rowGroups, numRowGroups, &thead, &tfoot);
         for (childX = 0; childX < numRowGroups; childX++) {
           if (kidFrame == (nsIFrame*)rowGroups.ElementAt(childX))
             break;
@@ -3365,7 +3333,7 @@ nsTableFrame::CalcDesiredHeight(const nsHTMLReflowState& aReflowState, nsHTMLRef
   // get the natural height based on the last child's (row group or scroll frame) rect
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  OrderRowGroups(rowGroups, numRowGroups);
   if (numRowGroups <= 0) {
     // tables can be used as rectangular items without content
     nscoord tableSpecifiedHeight = CalcBorderBoxHeight(aReflowState);
@@ -3419,7 +3387,7 @@ void ResizeCells(nsTableFrame&            aTableFrame,
 {
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
-  aTableFrame.OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  aTableFrame.OrderRowGroups(rowGroups, numRowGroups);
   nsHTMLReflowMetrics tableDesiredSize;
   nsRect tableRect = aTableFrame.GetRect();
   tableDesiredSize.width = tableRect.width;
@@ -3466,7 +3434,7 @@ nsTableFrame::DistributeHeightToRows(const nsHTMLReflowState& aReflowState,
   
   nsVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  OrderRowGroups(rowGroups, numRowGroups);
 
   nscoord amountUsed = 0;
   // distribute space to each pct height row whose row group doesn't have a computed 
@@ -4537,7 +4505,7 @@ BCMapCellIterator::BCMapCellIterator(nsTableFrame& aTableFrame,
 
   // Get the ordered row groups 
   PRUint32 numRowGroups;
-  aTableFrame.OrderRowGroups(mRowGroups, numRowGroups, nsnull);
+  aTableFrame.OrderRowGroups(mRowGroups, numRowGroups);
 
   mAtEnd = PR_TRUE; // gets reset when First() is called
 }
@@ -5413,7 +5381,7 @@ nsTableFrame::ExpandBCDamageArea(nsRect& aRect) const
     // Get the ordered row groups 
     PRUint32 numRowGroups;
     nsVoidArray rowGroups;
-    OrderRowGroups(rowGroups, numRowGroups, nsnull);
+    OrderRowGroups(rowGroups, numRowGroups);
     for (PRUint32 rgX = 0; rgX < numRowGroups; rgX++) {
       nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(rgX);
       nsTableRowGroupFrame* rgFrame = GetRowGroupFrame(kidFrame); if (!rgFrame) ABORT0();
@@ -6213,7 +6181,7 @@ BCMapBorderIterator::Reset(nsTableFrame&         aTable,
 
   // Get the ordered row groups 
   PRUint32 numRowGroups;
-  table->OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  table->OrderRowGroups(rowGroups, numRowGroups);
 }
 
 void 
@@ -6632,7 +6600,7 @@ nsTableFrame::PaintBCBorders(nsIRenderingContext& aRenderingContext,
 
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, nsnull);
+  OrderRowGroups(rowGroups, numRowGroups);
   PRBool done = PR_FALSE;
   PRBool haveIntersect = PR_FALSE;
   nsTableRowGroupFrame* inFlowRG  = nsnull;

@@ -575,7 +575,6 @@ public:
   // and put the non row group frames at the end. Also return the number of row group frames.
   void OrderRowGroups(nsVoidArray&           aChildren,
                       PRUint32&              aNumRowGroups,
-                      nsIFrame**             aFirstBody = nsnull,
                       nsTableRowGroupFrame** aHead      = nsnull,
                       nsTableRowGroupFrame** aFoot      = nsnull) const;
 
