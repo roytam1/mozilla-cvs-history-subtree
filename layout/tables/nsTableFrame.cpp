@@ -3069,7 +3069,6 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   PRUint32 numRowGroups;
   nsTableRowGroupFrame *thead, *tfoot;
   OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
-  PRBool haveReflowedRowGroup = PR_FALSE;
   PRBool pageBreak = PR_FALSE;
   for (PRUint32 childX = 0; childX < numRowGroups; childX++) {
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
@@ -3133,7 +3132,6 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     
       rv = ReflowChild(kidFrame, presContext, desiredSize, kidReflowState,
                        aReflowState.x, aReflowState.y, 0, aStatus);
-      haveReflowedRowGroup = PR_TRUE;
 
       if (reorder) {
         // reorder row groups the reflow may have changed the nextinflows
@@ -3230,13 +3228,11 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     }
     else { // it isn't being reflowed
       nsRect kidRect = kidFrame->GetRect();
-      if (haveReflowedRowGroup) { 
-        if (kidRect.y != aReflowState.y) {
-          Invalidate(kidRect); // invalidate the old position
-          kidRect.y = aReflowState.y;
-          kidFrame->SetRect(kidRect);        // move to the new position
-          Invalidate(kidRect); // invalidate the new position
-        }
+      if (kidRect.y != aReflowState.y) {
+        Invalidate(kidRect); // invalidate the old position
+        kidRect.y = aReflowState.y;
+        kidFrame->SetRect(kidRect);        // move to the new position
+        Invalidate(kidRect); // invalidate the new position
       }
       aReflowState.y += cellSpacingY + kidRect.height;
     }
