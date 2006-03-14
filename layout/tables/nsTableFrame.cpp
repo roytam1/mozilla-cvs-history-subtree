@@ -2787,17 +2787,6 @@ nsTableFrame::RecoverState(nsTableReflowState& aReflowState,
     // If this is a footer row group, remember it
     const nsStyleDisplay* display = rgFrame->GetStyleDisplay();
 
-    // We only allow a single footer frame
-    if ((NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == display->mDisplay) &&
-        !aReflowState.footerFrame) {
-      aReflowState.footerFrame = childFrame;    
-    }
-    else {
-      if ((NS_STYLE_DISPLAY_TABLE_ROW_GROUP == display->mDisplay) &&
-          !aReflowState.firstBodySection) {
-        aReflowState.firstBodySection = childFrame;
-      }
-    }
     aReflowState.y += cellSpacingY;
     
     // See if this is the frame we're looking for
@@ -2814,10 +2803,7 @@ nsTableFrame::RecoverState(nsTableReflowState& aReflowState,
       aReflowState.availSize.height -= kidSize.height;
     }
 
-    // Update the running y-offset. Don't do this for the footer frame
-    if (childFrame != aReflowState.footerFrame) {
-      aReflowState.y += kidSize.height;
-    }
+    aReflowState.y += kidSize.height;
   }
 
   return NS_OK;
