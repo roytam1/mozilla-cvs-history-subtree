@@ -1610,7 +1610,7 @@ nsTableFrame::MarkIntrinsicWidthsDirty()
 /* virtual */ nscoord
 nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (mPrevInFlow)
+  if (GetPrevInFlow())
     return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
              GetMinWidth(aRenderingContext);
 
@@ -1627,7 +1627,7 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (mPrevInFlow)
+  if (GetPrevInFlow())
     return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
              GetPrefWidth(aRenderingContext);
 
