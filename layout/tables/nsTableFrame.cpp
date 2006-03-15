@@ -2718,37 +2718,6 @@ nsTableFrame::InitChildReflowState(nsHTMLReflowState& aReflowState)
   aReflowState.Init(presContext, -1, -1, pCollapseBorder, &padding);
 }
 
-NS_METHOD 
-nsTableFrame::IR_TargetIsChild(nsTableReflowState&  aReflowState,
-                               nsReflowStatus&      aStatus,
-                               nsIFrame*            aNextFrame)
-
-{
-  // Remember the old rect
-  nsRect oldKidRect = aNextFrame->GetRect();
-
-  // ...
-
-  nsRect  kidRect(aReflowState.x, aReflowState.y, desiredSize.width, desiredSize.height);
-
-  // If the column width info is valid, then adjust the row group frames
-  // that follow. Otherwise, return and we'll recompute the column widths
-  // and reflow all the row group frames
-  if (!NeedsReflow(aReflowState.reflowState)) {
-    // If the row group frame changed height, then damage the horizontal strip
-    // that was either added or went away
-    if (desiredSize.height != oldKidRect.height) {
-      nsRect dirtyRect;
-      dirtyRect.x = 0;
-      dirtyRect.y = PR_MIN(oldKidRect.YMost(), kidRect.YMost());
-      dirtyRect.width = mRect.width;
-      dirtyRect.height = PR_MAX(oldKidRect.YMost(), kidRect.YMost()) - dirtyRect.y;
-      Invalidate(dirtyRect);
-    }
-  }
-  return rv;
-}
-
 // Position and size aKidFrame and update our reflow state. The origin of
 // aKidRect is relative to the upper-left origin of our frame
 void nsTableFrame::PlaceChild(nsTableReflowState&  aReflowState,
@@ -2913,6 +2882,8 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         }
       }
 
+      nsRect oldKidRect = kidFrame->GetRect();
+
       nsHTMLReflowMetrics desiredSize;
       desiredSize.width = desiredSize.height = desiredSize.ascent = desiredSize.descent = 0;
   
@@ -2940,6 +2911,30 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     
       rv = ReflowChild(kidFrame, presContext, desiredSize, kidReflowState,
                        aReflowState.x, aReflowState.y, 0, aStatus);
+
+
+      // If the column width info is valid, then adjust the row group frames
+      // that follow. Otherwise, return and we'll recompute the column widths
+      // and reflow all the row group frames
+      if (aDirtyOnly && !NeedsReflow(aReflowState.reflowState)) {
+        nsRect  newKidRect(aReflowState.x, aReflowState.y, desiredSize.width, desiredSize.height);
+        if (newKidRect.y != oldKidRect.y) {
+          // If the row group frame moved due to a prior row group
+          // changing size, invalidate everything, just like the sliding
+          // case below.
+          Invalidate(oldKidRect);
+          Invalidate(newKidRect);
+        } else if (newKidRect.height != oldKidRect.height) {
+          // If the row group frame changed height, then damage the
+          // horizontal strip that was either added or went away
+          nsRect dirtyRect;
+          dirtyRect.x = 0;
+          dirtyRect.y = PR_MIN(oldKidRect.YMost(), newKidRect.YMost());
+          dirtyRect.width = mRect.width;
+          dirtyRect.height = PR_MAX(oldKidRect.YMost(), newKidRect.YMost()) - dirtyRect.y;
+          Invalidate(dirtyRect);
+        }
+      }
 
       if (reorder) {
         // reorder row groups the reflow may have changed the nextinflows
