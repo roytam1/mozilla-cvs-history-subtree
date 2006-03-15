@@ -1876,7 +1876,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   if (NS_FAILED(rv)) return rv;
 
   PRBool haveDesiredHeight = PR_FALSE;
-  PRBool balanced          = PR_FALSE;
   PRBool reflowedChildren  = PR_FALSE;
 
   // Reflow the entire table (pass 2 and possibly pass 3). This phase is necessary during a 
@@ -1906,7 +1905,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
                             ? NS_UNCONSTRAINEDSIZE : aReflowState.availableHeight;
 
       ReflowTable(aDesiredSize, aReflowState, availHeight,
-                  lastChildReflowed, balanced, aStatus);
+                  lastChildReflowed, aStatus);
       reflowedChildren = PR_TRUE;
     }
     // reevaluate special height reflow conditions
@@ -1926,7 +1925,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
       ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
       ReflowTable(aDesiredSize, aReflowState, aReflowState.availableHeight, 
-                  lastChildReflowed, balanced, aStatus);
+                  lastChildReflowed, aStatus);
       // restore the previous special height reflow initiator
       ((nsHTMLReflowState&)aReflowState).mPercentHeightReflowInitiator = specialReflowInitiator;
       // XXX We should call SetInitiatedSpecialReflow(PR_FALSE) at some point, but it is difficult to tell when
@@ -1967,33 +1966,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
     AdjustForCollapsingCols(aDesiredSize);
   }
 
-  // See if we need to calc max elem and/or preferred widths. This isn't done on 
-  // continuations or if we have balanced (since it was done then) 
-  if ((aDesiredSize.mComputeMEW || (aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH)) &&
-      !GetPrevInFlow() && !balanced) {
-    // Since the calculation has some cost, avoid doing it for an unconstrained initial 
-    // reflow (it was done when the strategy was initialized in pass 1 above) and most
-    // unconstrained resize reflows. XXX The latter optimization could be a problem if the
-    // parent of a nested table starts doing unconstrained resize reflows to get max elem/preferred 
-    if ((NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth) ||
-        (eReflowReason_Incremental == aReflowState.reason)    || 
-        (eReflowReason_StyleChange == aReflowState.reason)    ||
-        ((eReflowReason_Resize == aReflowState.reason) &&
-         HasPctCol() && IsAutoWidth())) {
-      nscoord minWidth, prefWidth;
-      CalcMinAndPreferredWidths(aReflowState, PR_TRUE, minWidth, prefWidth);
-      SetMinWidth(minWidth);
-      SetPreferredWidth(prefWidth);
-    }
-  }
-  // See if we need to return our max element size
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth  = GetMinWidth();
-  }
-  // See if we need to return our maximum width
-  if (aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aDesiredSize.mMaximumWidth = GetPreferredWidth();
-  }
   // make sure the table overflow area does include the table rect.
   nsRect tableRect(0, 0, aDesiredSize.width, aDesiredSize.height) ;
   
@@ -2038,18 +2010,14 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                           const nsHTMLReflowState& aReflowState,
                           nscoord                  aAvailHeight,
                           nsIFrame*&               aLastChildReflowed,
-                          PRBool&                  aDidBalance,
                           nsReflowStatus&          aStatus)
 {
   nsresult rv = NS_OK;
-  aDidBalance = PR_FALSE;
   aLastChildReflowed = nsnull;
 
   if (!GetPrevInFlow()) {
     if (NeedStrategyInit() || NeedStrategyBalance()) {
       BalanceColumnWidths(aReflowState);
-      aDidBalance = PR_TRUE;
-
       SetDesiredWidth(CalcDesiredWidth(aReflowState));          
     }
   }

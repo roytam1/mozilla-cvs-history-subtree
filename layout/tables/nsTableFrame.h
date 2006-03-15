@@ -280,7 +280,6 @@ public:
                        const nsHTMLReflowState& aReflowState,
                        nscoord                  aAvailHeight,
                        nsIFrame*&               aLastChildReflowed,
-                       PRBool&                  aDidBalance,
                        nsReflowStatus&          aStatus);
 
   static nsMargin GetBorderPadding(const nsHTMLReflowState& aReflowState,
