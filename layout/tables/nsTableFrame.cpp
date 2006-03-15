@@ -1593,6 +1593,7 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 
   ReflowColGroups(aRenderingContext);
 
+#error Should we care about NeedStrategyBalance?  If not, we should call something smaller.
   if (NeedStrategyInit() || NeedStrategyBalance()) {
     BalanceColumnWidths(aRenderingContext);
   }
@@ -1611,6 +1612,7 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
   ReflowColGroups(aRenderingContext);
 
+#error Should we care about NeedStrategyBalance?  If not, we should call something smaller.
   if (NeedStrategyInit() || NeedStrategyBalance()) {
     BalanceColumnWidths(aRenderingContext);
   }
