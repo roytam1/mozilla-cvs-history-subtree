@@ -268,10 +268,8 @@ public:
     *     use column widths to Reflow cells
     * </pre>
     *
-    * @see ResizeReflowPass1
-    * @see ResizeReflowPass2
     * @see BalanceColumnWidths
-    * @see nsIFrameReflow::Reflow
+    * @see nsIFrame::Reflow
     */
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -477,18 +475,6 @@ protected:
   virtual PRBool ParentDisablesSelection() const; //override default behavior
 
 public:
-  /** first pass of ResizeReflow.  
-    * lays out all table content with aMaxSize(NS_UNCONSTRAINEDSIZE,NS_UNCONSTRAINEDSIZE) and
-    * a true mComputeMEW so we get all the metrics we need to do column balancing.
-    * Pass 1 only needs to be executed once no matter how many times the table is resized, 
-    * as long as content and style don't change.  This is managed in the member variable mFirstPassIsValid.
-    * The layout information for each cell is cached in mColumLayoutData.
-    * Incremental layout can take advantage of aStartingFrame to pick up where a previous
-    * ResizeReflowPass1 left off.
-    *
-    * @see nsIFrameReflow::Reflow
-    */
-
   /** do I need to do a reflow? */
   virtual PRBool NeedsReflow(const nsHTMLReflowState& aReflowState);
 
@@ -600,9 +586,6 @@ protected:
 
   PRBool HaveReflowedColGroups() const;
   void   SetHaveReflowedColGroups(PRBool aValue);
-
-  PRBool DidResizeReflow() const;
-  void   SetResizeReflow(PRBool aValue);
 
 public:
   PRBool NeedStrategyInit() const;
@@ -737,7 +720,6 @@ protected:
     PRUint32 mNeedStrategyInit:1;      // does the strategy needs to be initialized and then balance the table
     PRUint32 mHasPctCol:1;             // does any cell or col have a pct width
     PRUint32 mCellSpansPctCol:1;       // does any cell span a col with a pct width (or containing a cell with a pct width)
-    PRUint32 mDidResizeReflow:1;       // did a resize reflow happen (indicating pass 2)
     PRUint32 mIsBorderCollapse:1;      // border collapsing model vs. separate model
     PRUint32 mRowInserted:1;
     PRUint32 mNeedSpecialReflow:1;

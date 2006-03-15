@@ -2087,12 +2087,6 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                  aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);
 
   ReflowColGroups(aReflowState.rendContext);
-
-  if (eReflowReason_Resize == aReflowState.reason) {
-    if (!DidResizeReflow()) {
-      SetResizeReflow(PR_TRUE);
-    }
-  }  
   return rv;
 }
 
@@ -3482,20 +3476,6 @@ PRBool nsTableFrame::NeedStrategyInit() const
   nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
   NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
   return (PRBool)firstInFlow->mBits.mNeedStrategyInit;
-}
-
-void nsTableFrame::SetResizeReflow(PRBool aValue)
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
-  firstInFlow->mBits.mDidResizeReflow = aValue;
-}
-
-PRBool nsTableFrame::DidResizeReflow() const
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
-  return (PRBool)firstInFlow->mBits.mDidResizeReflow;
 }
 
 PRInt32 nsTableFrame::GetColumnWidth(PRInt32 aColIndex)
