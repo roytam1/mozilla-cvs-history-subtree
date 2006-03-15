@@ -671,8 +671,12 @@ public: /* ----- Cell Map public methods ----- */
   /** returns PR_TRUE if table-layout:auto  */
   virtual PRBool IsAutoLayout();
 
+  void    SetMinWidth(nscoord aWidth);
+  
   nscoord GetDesiredWidth() const;
   void    SetDesiredWidth(nscoord aWidth);
+
+  void    SetPreferredWidth(nscoord aWidth); 
   
   /*---------------- nsITableLayout methods ------------------------*/
   
@@ -842,9 +846,19 @@ inline nsVoidArray& nsTableFrame::GetColCache()
   return mColFrames;
 }
 
+inline void nsTableFrame::SetMinWidth(nscoord aWidth)
+{
+  mMinWidth = aWidth;
+}
+
 inline void nsTableFrame::SetDesiredWidth(nscoord aWidth)
 {
   mDesiredWidth = aWidth;
+}
+
+inline void nsTableFrame::SetPreferredWidth(nscoord aWidth)
+{
+  mPreferredWidth = aWidth;
 }
 
 inline PRBool nsTableFrame::IsBorderCollapse() const
