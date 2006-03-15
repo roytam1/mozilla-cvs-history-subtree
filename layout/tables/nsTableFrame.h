@@ -506,7 +506,7 @@ protected:
   // This calls the col group and column reflow methods, which do two things:
   //  (1) set all the dimensions to 0
   //  (2) notify the table about colgroups or columns with hidden visibility
-  void ReflowColGroups();
+  void ReflowColGroups(nsIRenderingContext* aRenderingContext);
 
   NS_METHOD CollapseRowGroupIfNecessary(nsIFrame* aRowGroupFrame,
                                         const nscoord& aYTotalOffset,

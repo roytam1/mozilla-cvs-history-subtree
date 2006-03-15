@@ -1617,7 +1617,7 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nscoord result = 0;
   DISPLAY_MIN_WIDTH(this, result);
 
-  ReflowColGroups();
+  ReflowColGroups(aRenderingContext);
 
 #error WRITE ME
 
@@ -1634,7 +1634,7 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nscoord result = 0;
   DISPLAY_PREF_WIDTH(this, result);
 
-  ReflowColGroups();
+  ReflowColGroups(aRenderingContext);
 
 #error WRITE ME
 
@@ -2086,7 +2086,7 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   ReflowChildren(reflowState, !aReflowState.ShouldReflowAllKids(),
                  aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);
 
-  ReflowColGroups();
+  ReflowColGroups(aReflowState.rendContext);
 
   if (eReflowReason_Resize == aReflowState.reason) {
     if (!DidResizeReflow()) {
@@ -2888,8 +2888,8 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
       desiredSize.width = desiredSize.height = desiredSize.ascent = desiredSize.descent = 0;
   
       // Reflow the child into the available space
-      nsHTMLReflowState  kidReflowState(presContext, aReflowState.reflowState, kidFrame, 
-                                        kidAvailSize, aReflowState.reason);
+      nsHTMLReflowState kidReflowState(presContext, aReflowState.reflowState,
+                                       kidFrame, kidAvailSize);
       InitChildReflowState(kidReflowState);
       // XXX fix up bad mComputedWidth for scroll frame
       kidReflowState.mComputedWidth = PR_MAX(kidReflowState.mComputedWidth, 0);
@@ -3017,8 +3017,9 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         }
         if (repeatedFooter) {
           kidAvailSize.height = repeatedFooterHeight;
-          nsHTMLReflowState footerReflowState(presContext, aReflowState.reflowState, repeatedFooter, 
-                                              kidAvailSize, aReflowState.reason);
+          nsHTMLReflowState footerReflowState(presContext,
+                                              aReflowState.reflowState,
+                                              repeatedFooter, kidAvailSize);
           InitChildReflowState(footerReflowState);
           aReflowState.y += cellSpacingY;
           nsReflowStatus footerStatus;
@@ -3068,14 +3069,16 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
 }
 
 void
-nsTableFrame::ReflowColGroups()
+nsTableFrame::ReflowColGroups(nsIRenderingContext *aRenderingContext)
 {
   if (!GetPrevInFlow() && !HaveReflowedColGroups()) {
     nsHTMLReflowMetrics kidMet;
+    nsPresContext *presContext = GetPresContext();
     for (nsIFrame* kidFrame = mColGroups.FirstChild(); kidFrame;
          kidFrame = kidFrame->GetNextSibling()) {
       // The column groups don't care about dimensions or reflow states.
-      nsHTMLReflowState kidReflowState(presContext, kidFrame, nsSize(0,0));
+      nsHTMLReflowState kidReflowState(presContext, kidFrame,
+                                       aRenderingContext, nsSize(0,0));
       nsReflowStatus cgStatus;
       ReflowChild(kidFrame, presContext, kidMet, kidReflowState, 0, 0, 0,
                   cgStatus);
