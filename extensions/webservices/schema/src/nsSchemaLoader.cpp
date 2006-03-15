@@ -2058,7 +2058,9 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
 
         return rv;
       }
-      
+
+      nsCOMPtr<nsISchemaComplexType> complexBaseType(do_QueryInterface(baseType));
+
       if (tagName == nsSchemaAtoms::sRestriction_atom) {
         *aDerivation = nsISchemaComplexType::DERIVATION_RESTRICTION_COMPLEX;
         rv = ProcessComplexTypeBody(aErrorHandler, aSchema, childElement,
@@ -2069,7 +2071,6 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
         
         nsCOMPtr<nsISchemaModelGroup> sequence;
         nsSchemaModelGroup* sequenceInst = nsnull;
-        nsCOMPtr<nsISchemaComplexType> complexBaseType(do_QueryInterface(baseType));
         if (complexBaseType) {
           // XXX Should really be cloning
           nsCOMPtr<nsISchemaModelGroup> baseGroup;
@@ -2145,43 +2146,6 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
             }
             
             aComplexType->SetModelGroup(sequence);
-          }            
-          
-          
-          // Copy over the attributes from the base type
-          // XXX Should really be cloning
-          PRUint32 attrIndex, attrCount;
-          complexBaseType->GetAttributeCount(&attrCount);
-          
-          for (attrIndex = 0; attrIndex < attrCount; attrIndex++) {
-            nsCOMPtr<nsISchemaAttributeComponent> attribute;
-            
-            rv = complexBaseType->GetAttributeByIndex(attrIndex,
-                                                      getter_AddRefs(attribute));
-            if (NS_FAILED(rv)) {
-              nsAutoString errorMsg;
-              errorMsg.AppendLiteral("Failure processing schema, cannot clone ");
-              errorMsg.AppendLiteral("attributes from base type \"");
-              errorMsg.Append(baseStr);
-              errorMsg.AppendLiteral("\"");
-
-              NS_SCHEMALOADER_FIRE_ERROR(rv, errorMsg);
-
-              return rv;
-            }
-
-            rv = aComplexType->AddAttribute(attribute);
-            if (NS_FAILED(rv)) {
-              nsAutoString errorMsg;
-              errorMsg.AppendLiteral("Failure processing schema, cannot clone ");
-              errorMsg.AppendLiteral("attributes from base type \"");
-              errorMsg.Append(baseStr);
-              errorMsg.AppendLiteral("\"");
-
-              NS_SCHEMALOADER_FIRE_ERROR(rv, errorMsg);
-
-              return rv;
-            }
           }
         }
         
@@ -2202,6 +2166,45 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
           *aContentModel = explicitContent;
         }
       }
+
+      // Copy over the attributes from the base type
+      // XXX Should really be cloning
+      if (complexBaseType) {
+        PRUint32 attrIndex, attrCount;
+        complexBaseType->GetAttributeCount(&attrCount);
+
+        for (attrIndex = 0; attrIndex < attrCount; attrIndex++) {
+          nsCOMPtr<nsISchemaAttributeComponent> attribute;
+
+          rv = complexBaseType->GetAttributeByIndex(attrIndex,
+                                                    getter_AddRefs(attribute));
+          if (NS_FAILED(rv)) {
+            nsAutoString errorMsg;
+            errorMsg.AppendLiteral("Failure processing schema, cannot clone ");
+            errorMsg.AppendLiteral("attributes from base type \"");
+            errorMsg.Append(baseStr);
+            errorMsg.AppendLiteral("\"");
+
+            NS_SCHEMALOADER_FIRE_ERROR(rv, errorMsg);
+
+            return rv;
+          }
+
+          rv = aComplexType->AddAttribute(attribute);
+          if (NS_FAILED(rv)) {
+            nsAutoString errorMsg;
+            errorMsg.AppendLiteral("Failure processing schema, cannot clone ");
+            errorMsg.AppendLiteral("attributes from base type \"");
+            errorMsg.Append(baseStr);
+            errorMsg.AppendLiteral("\"");
+
+            NS_SCHEMALOADER_FIRE_ERROR(rv, errorMsg);
+
+            return rv;
+          }
+        }
+      }
+
       break;
     }
   }
