@@ -671,14 +671,8 @@ public: /* ----- Cell Map public methods ----- */
   /** returns PR_TRUE if table-layout:auto  */
   virtual PRBool IsAutoLayout();
 
-  nscoord GetMinWidth() const;
-  void    SetMinWidth(nscoord aWidth);
-  
   nscoord GetDesiredWidth() const;
   void    SetDesiredWidth(nscoord aWidth);
-
-  nscoord GetPreferredWidth() const;
-  void    SetPreferredWidth(nscoord aWidth); 
   
   /*---------------- nsITableLayout methods ------------------------*/
   

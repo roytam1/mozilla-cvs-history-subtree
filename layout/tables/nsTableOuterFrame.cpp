@@ -521,7 +521,7 @@ nsTableOuterFrame::InvalidateDamage(PRUint8         aCaptionSide,
 /* virtual */ nscoord
 nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord width = ((nsTableFrame *)mInnerTableFrame)->GetMinWidth() + 
+  nscoord width = mInnerTableFrame->GetMinWidth(aRenderingContext) + 
                   nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                     mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
                     nsLayoutUtils::MARGIN);
@@ -550,7 +550,7 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nscoord maxWidth;
   DISPLAY_PREF_WIDTH(this, maxWidth);
 
-  maxWidth = ((nsTableFrame *)mInnerTableFrame)->GetPreferredWidth() + 
+  maxWidth = mInnerTableFrame->GetPrefWidth(aRenderingContext) + 
              nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
                nsLayoutUtils::MARGIN);

@@ -730,39 +730,14 @@ nsTableCellMap* nsTableFrame::GetCellMap() const
   }
 }
 
-nscoord nsTableFrame::GetMinWidth() const
-{
-#error This should go away
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  if (this == firstInFlow) {
-    return mMinWidth;
-  }
-  else {
-    return firstInFlow->GetMinWidth();
-  }
-}
-
 nscoord nsTableFrame::GetDesiredWidth() const
 {
-#error This should go away, maybe?
   nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
   if (this == firstInFlow) {
     return mDesiredWidth;
   }
   else {
     return firstInFlow->GetDesiredWidth();
-  }
-}
-
-nscoord nsTableFrame::GetPreferredWidth() const
-{
-#error This should go away
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  if (this == firstInFlow) {
-    return mPreferredWidth;
-  }
-  else {
-    return firstInFlow->GetPreferredWidth();
   }
 }
 
@@ -1614,14 +1589,15 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
     return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
              GetMinWidth(aRenderingContext);
 
-  nscoord result = 0;
-  DISPLAY_MIN_WIDTH(this, result);
+  DISPLAY_MIN_WIDTH(this, mMinWidth);
 
   ReflowColGroups(aRenderingContext);
 
-#error WRITE ME
+  if (NeedStrategyInit() || NeedStrategyBalance()) {
+    BalanceColumnWidths(aRenderingContext);
+  }
 
-  return result;
+  return mMinWidth;
 }
 
 /* virtual */ nscoord
@@ -1631,14 +1607,15 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
              GetPrefWidth(aRenderingContext);
 
-  nscoord result = 0;
-  DISPLAY_PREF_WIDTH(this, result);
+  DISPLAY_PREF_WIDTH(this, mPrefWidth);
 
   ReflowColGroups(aRenderingContext);
 
-#error WRITE ME
+  if (NeedStrategyInit() || NeedStrategyBalance()) {
+    BalanceColumnWidths(aRenderingContext);
+  }
 
-  return result;
+  return mPrefWidth;
 }
 
 
