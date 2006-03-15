@@ -842,19 +842,9 @@ inline nsVoidArray& nsTableFrame::GetColCache()
   return mColFrames;
 }
 
-inline void nsTableFrame::SetMinWidth(nscoord aWidth)
-{
-  mMinWidth = aWidth;
-}
-
 inline void nsTableFrame::SetDesiredWidth(nscoord aWidth)
 {
   mDesiredWidth = aWidth;
-}
-
-inline void nsTableFrame::SetPreferredWidth(nscoord aWidth)
-{
-  mPreferredWidth = aWidth;
 }
 
 inline PRBool nsTableFrame::IsBorderCollapse() const
