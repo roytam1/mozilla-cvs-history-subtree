@@ -2724,38 +2724,12 @@ nsTableFrame::IR_TargetIsChild(nsTableReflowState&  aReflowState,
                                nsIFrame*            aNextFrame)
 
 {
-  nsresult rv;
-  // Recover the state as if aNextFrame is about to be reflowed
-  RecoverState(aReflowState, aNextFrame);
-
   // Remember the old rect
   nsRect oldKidRect = aNextFrame->GetRect();
 
-  // Pass along the reflow command, don't request a max element size, rows will do that
-  nsHTMLReflowMetrics desiredSize;
+  // ...
 
-  nsSize kidAvailSize(aReflowState.availSize);
-  nsPresContext* presContext = GetPresContext();
-  nsHTMLReflowState kidReflowState(presContext, aReflowState.reflowState, aNextFrame, 
-                                   kidAvailSize, aReflowState.reason);
-  InitChildReflowState(kidReflowState);
-
-  rv = ReflowChild(aNextFrame, presContext, desiredSize, kidReflowState,
-                   aReflowState.x, aReflowState.y, 0, aStatus);
-
-  // Place the row group frame. Don't use PlaceChild(), because it moves
-  // the footer frame as well. We'll adjust the footer frame later on in
-  // AdjustSiblingsAfterReflow()
   nsRect  kidRect(aReflowState.x, aReflowState.y, desiredSize.width, desiredSize.height);
-  FinishReflowChild(aNextFrame, presContext, nsnull, desiredSize, aReflowState.x, aReflowState.y, 0);
-
-  // Adjust the running y-offset
-  aReflowState.y += desiredSize.height + GetCellSpacingY();
-
-  // If our height is constrained, then update the available height
-  if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
-    aReflowState.availSize.height -= desiredSize.height;
-  }
 
   // If the column width info is valid, then adjust the row group frames
   // that follow. Otherwise, return and we'll recompute the column widths
@@ -2771,18 +2745,6 @@ nsTableFrame::IR_TargetIsChild(nsTableReflowState&  aReflowState,
       dirtyRect.height = PR_MAX(oldKidRect.YMost(), kidRect.YMost()) - dirtyRect.y;
       Invalidate(dirtyRect);
     }
-
-    // Adjust the row groups that follow
-    AdjustSiblingsAfterReflow(aReflowState, aNextFrame, 
-                              desiredSize.height - oldKidRect.height);
-
-    // recover the overflow area from all children
-    desiredSize.mOverflowArea = nsRect(0, 0, desiredSize.width, desiredSize.height);
-    for (nsIFrame* kidFrame = mFrames.FirstChild(); kidFrame; kidFrame = kidFrame->GetNextSibling()) {
-      ConsiderChildOverflow(desiredSize.mOverflowArea, kidFrame);
-    }  
-    FinishAndStoreOverflow(&desiredSize.mOverflowArea,
-                           nsSize(desiredSize.width, desiredSize.height));
   }
   return rv;
 }
