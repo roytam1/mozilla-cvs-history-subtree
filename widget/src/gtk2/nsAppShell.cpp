@@ -39,6 +39,7 @@
 #include <glib/gmain.h>
 #include <glib/giochannel.h>
 #include <gdk/gdkwindow.h>
+#include "nsCommonWidget.h"
 #include "nsAppShell.h"
 #include "prlog.h"
 #include "prenv.h"
