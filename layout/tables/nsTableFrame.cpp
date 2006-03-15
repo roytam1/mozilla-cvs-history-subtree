@@ -2069,14 +2069,11 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   aLastChildReflowed = nsnull;
 
   if (!GetPrevInFlow()) {
-    if (NeedStrategyInit()) {
-      mTableLayoutStrategy->Initialize(aReflowState);
-      BalanceColumnWidths(aReflowState); 
-      aDidBalance = PR_TRUE;
-    }
-    if (NeedStrategyBalance()) {
+    if (NeedStrategyInit() || NeedStrategyBalance()) {
       BalanceColumnWidths(aReflowState);
       aDidBalance = PR_TRUE;
+
+      SetDesiredWidth(CalcDesiredWidth(aReflowState));          
     }
   }
   // Constrain our reflow width to the computed table width (of the 1st in flow).
@@ -3097,7 +3094,7 @@ void nsTableFrame::BalanceColumnWidths(const nsHTMLReflowState& aReflowState)
   // fixed-layout tables need to reinitialize the layout strategy. When there are scroll bars
   // reflow gets called twice and the 2nd time has the correct space available.
   // XXX this is very bad and needs to be changed
-  if (!IsAutoLayout()) {
+  if (!IsAutoLayout() || NeedStrategyInit()) {
     mTableLayoutStrategy->Initialize(aReflowState);
   }
 
@@ -3111,8 +3108,6 @@ void nsTableFrame::BalanceColumnWidths(const nsHTMLReflowState& aReflowState)
   nscoord minWidth, prefWidth;
   CalcMinAndPreferredWidths(aReflowState, PR_FALSE, minWidth, prefWidth);
   SetMinWidth(minWidth); 
-  nscoord desWidth = CalcDesiredWidth(aReflowState);
-  SetDesiredWidth(desWidth);          
   SetPreferredWidth(prefWidth); 
 
 }
