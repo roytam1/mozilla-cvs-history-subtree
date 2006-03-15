@@ -1892,6 +1892,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
   if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     // XXXldb What if we're not the first-in-flow?
+#error Is this too late now?
     SetNeedStrategyBalance(PR_TRUE); 
   }
 
