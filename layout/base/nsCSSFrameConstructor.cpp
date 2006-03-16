@@ -221,6 +221,8 @@ extern nsresult
 NS_NewSVGImageFrame(nsIPresShell *aPresShell, nsIContent *aContent, nsIFrame** newFrame);
 nsresult
 NS_NewSVGClipPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+nsresult
+NS_NewSVGTextPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
 #endif
 
 #include "nsIDocument.h"
@@ -7481,6 +7483,9 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsFrameConstructorState& aState,
   }
   else if (aTag == nsSVGAtoms::clipPath) {
     rv = NS_NewSVGClipPathFrame(mPresShell, aContent, &newFrame);
+  }
+  else if (aTag == nsSVGAtoms::textPath) {
+    rv = NS_NewSVGTextPathFrame(mPresShell, aContent, aParentFrame, &newFrame);
   }
   
   if (newFrame == nsnull) {

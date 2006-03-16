@@ -340,6 +340,10 @@ enum nsDOMClassInfoID {
 
   eDOMClassInfo_Constructor_id,
 
+#if defined(MOZ_SVG)
+  eDOMClassInfo_SVGTextPathElement_id,
+#endif
+
   // Define this near the end so that enabling/disabling foreignobject doesn't
   // break binary compatibility
 #if defined(MOZ_SVG) && defined(MOZ_SVG_FOREIGNOBJECT)

@@ -59,7 +59,7 @@ using namespace Gdiplus;
 #include "nsIDOMSVGRect.h"
 #include "nsSVGTypeCIDs.h"
 #include "nsIComponentManager.h"
-
+#include "nsISVGPathFlatten.h"
 
 /**
  * \addtogroup gdiplus_renderer GDI+ Rendering Engine
@@ -630,5 +630,53 @@ nsSVGGDIPlusPathGeometry::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
   *aBoundingBox = rect;
   NS_ADDREF(*aBoundingBox);
   
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGDIPlusPathGeometry::Flatten(nsSVGPathData **aData)
+{
+  *aData = nsnull;
+
+  GraphicsPath *path = GetPath();
+  if (!path)
+    return NS_ERROR_FAILURE;
+
+  PathData pdata;
+  path->Flatten();
+  path->GetPathData(&pdata);
+
+  *aData = new nsSVGPathData;
+
+  for (PRInt32 i = 0; i < pdata.Count; i++) {
+    switch (pdata.Types[i] & PathPointTypePathTypeMask) {
+    case PathPointTypeStart:
+      (*aData)->AddPoint(pdata.Points[i].X,
+                         pdata.Points[i].Y,
+                         NS_SVGPATHFLATTEN_MOVE);
+      break;
+    case PathPointTypeLine:
+      (*aData)->AddPoint(pdata.Points[i].X,
+                         pdata.Points[i].Y,
+                         NS_SVGPATHFLATTEN_LINE);
+      break;
+    default:
+      /* should never happen with a flattened path */
+      break;
+    }
+    
+    if ((pdata.Types[i] & PathPointTypeCloseSubpath) &&
+        (*aData)->count) {
+      /* find beginning of current subpath */
+      for (PRUint32 k = (*aData)->count - 1; k >= 0; k--)
+        if ((*aData)->type[k] == NS_SVGPATHFLATTEN_MOVE) {
+          (*aData)->AddPoint((*aData)->x[k],
+                             (*aData)->y[k],
+                             NS_SVGPATHFLATTEN_LINE);
+          break;
+        }
+    }
+  }
+
   return NS_OK;
 }

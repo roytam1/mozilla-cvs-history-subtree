@@ -81,9 +81,6 @@ public:
   // nsISVGRendererGlyphMetrics interface:
   NS_DECL_NSISVGRENDERERGLYPHMETRICS
 
-  NS_IMETHOD_(void) GetSubBoundingBox(PRUint32 charoffset, PRUint32 count,
-                                      nsIDOMSVGRect * *aBoundingBox);
-
   NS_IMETHOD_(void) SelectFont(cairo_t *ctx);
 
 private:
@@ -178,66 +175,6 @@ nsSVGCairoGlyphMetrics::GetAdvance(float *aAdvance)
 }
 
 
-// XXX
-NS_IMETHODIMP_(void)
-nsSVGCairoGlyphMetrics::GetSubBoundingBox(PRUint32 charoffset, PRUint32 count,
-                                          nsIDOMSVGRect * *aBoundingBox)
-{
-  *aBoundingBox = nsnull;
-
-  nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
-
-  NS_ASSERTION(rect, "could not create rect");
-  if (!rect) {
-    *aBoundingBox = NULL;
-    return;
-  }
-
-  cairo_text_extents_t extents;
-  memset(&mExtents, 0, sizeof(cairo_text_extents_t));
-
-  nsAutoString text;
-  mSource->GetCharacterData(text);
-  if (text.Length()) {
-    cairo_text_extents(mCT,
-                       NS_ConvertUCS2toUTF8(Substring(text,
-                                                      charoffset,
-                                                      count)).get(),
-                       &extents);
-  }
-  
-  rect->SetX(extents.x_bearing);
-  rect->SetY(extents.y_bearing);
-  rect->SetWidth(extents.width);
-  rect->SetHeight(extents.height);
-
-  *aBoundingBox = rect;
-  NS_ADDREF(*aBoundingBox);
-}
-
-
-/** Implements readonly attribute nsIDOMSVGRect #boundingBox; */
-NS_IMETHODIMP
-nsSVGCairoGlyphMetrics::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
-{
-  *aBoundingBox = nsnull;
-
-  nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
-
-  NS_ASSERTION(rect, "could not create rect");
-  if (!rect) return NS_ERROR_FAILURE;
-  
-  rect->SetX(mExtents.x_bearing);
-  rect->SetY(mExtents.y_bearing);
-  rect->SetWidth(mExtents.width);
-  rect->SetHeight(mExtents.height);
-
-  *aBoundingBox = rect;
-  NS_ADDREF(*aBoundingBox);
-  
-  return NS_OK;
-}
-
 /** Implements nsIDOMSVGRect getExtentOfChar(in unsigned long charnum); */
 NS_IMETHODIMP
 nsSVGCairoGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
@@ -270,6 +207,24 @@ nsSVGCairoGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retva
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsSVGCairoGlyphMetrics::GetAdvanceOfChar(PRUint32 charnum, float *advance)
+{
+  cairo_text_extents_t extent;
+
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+
+  SelectFont(mCT);
+  cairo_text_extents(mCT,
+                     NS_ConvertUCS2toUTF8(Substring(text, charnum, 1)).get(),
+                     &extent);
+
+  *advance = extent.x_advance;
+  
+  return NS_OK;
+}
+
 /** Implements boolean update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGCairoGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
@@ -288,15 +243,10 @@ nsSVGCairoGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 
   nsAutoString text;
   mSource->GetCharacterData(text);
-
-  if (!text.Length()) {
-    memset(&mExtents, 0, sizeof(cairo_text_extents_t));
-  } else {
-    cairo_text_extents(mCT, 
-                       NS_ConvertUCS2toUTF8(text).get(),
-                       &mExtents);
-  }
-
+  cairo_text_extents(mCT, 
+                     NS_ConvertUCS2toUTF8(text).get(),
+                     &mExtents);
+  
   return NS_OK;
 }
 

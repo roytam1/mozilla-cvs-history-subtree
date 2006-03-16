@@ -54,6 +54,9 @@
 #include "nsContentDLF.h"
 #include "nsContentUtils.h"
 #include "nsISVGRenderer.h"
+#include "nsIDOMSVGRect.h"
+#include "nsFrameList.h"
+#include "nsISVGChildFrame.h"
 
 #if defined(MOZ_SVG_RENDERER_GDIPLUS)
 #include <windows.h>
@@ -255,4 +258,56 @@ nsresult nsSVGUtils::GetPaintType(PRUint16 *aPaintType, const nsStyleSVGPaint& a
       return NS_ERROR_FAILURE;
   }
   return NS_OK;
+}
+
+nsresult
+nsSVGUtils::GetBBox(nsFrameList *aFrames, nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+
+  float minx, miny, maxx, maxy;
+  minx = miny = FLT_MAX;
+  maxx = maxy = -1.0 * FLT_MAX;
+
+  nsCOMPtr<nsIDOMSVGRect> unionRect;
+
+  nsIFrame* kid = aFrames->FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame), (void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsIDOMSVGRect> box;
+      SVGFrame->GetBBox(getter_AddRefs(box));
+
+      if (box) {
+        float bminx, bminy, bmaxx, bmaxy, width, height;
+        box->GetX(&bminx);
+        box->GetY(&bminy);
+        box->GetWidth(&width);
+        box->GetHeight(&height);
+        bmaxx = bminx+width;
+        bmaxy = bminy+height;
+
+        if (!unionRect)
+          unionRect = box;
+        minx = PR_MIN(minx, bminx);
+        miny = PR_MIN(miny, bminy);
+        maxx = PR_MAX(maxx, bmaxx);
+        maxy = PR_MAX(maxy, bmaxy);
+      }
+    }
+    kid = kid->GetNextSibling();
+  }
+
+  if (unionRect) {
+    unionRect->SetX(minx);
+    unionRect->SetY(miny);
+    unionRect->SetWidth(maxx - minx);
+    unionRect->SetHeight(maxy - miny);
+    *_retval = unionRect;
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  }
+
+  return NS_ERROR_FAILURE;
 }

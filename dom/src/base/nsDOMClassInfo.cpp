@@ -372,6 +372,7 @@
 #include "nsIDOMSVGSVGElement.h"
 #include "nsIDOMSVGSymbolElement.h"
 #include "nsIDOMSVGTextElement.h"
+#include "nsIDOMSVGTextPathElement.h"
 #include "nsIDOMSVGTitleElement.h"
 #include "nsIDOMSVGTransform.h"
 #include "nsIDOMSVGTransformable.h"
@@ -1031,6 +1032,11 @@ static nsDOMClassInfoData sClassInfoData[] = {
                              nsIXPCScriptable::WANT_POSTCREATE |
                              nsIXPCScriptable::WANT_CHECKACCESS |
                              nsIXPCScriptable::WANT_NEWRESOLVE))
+
+#if defined(MOZ_SVG)
+  NS_DEFINE_CLASSINFO_DATA(SVGTextPathElement, nsElementSH,
+                           ELEMENT_SCRIPTABLE_FLAGS)
+#endif
 
   // Define MOZ_SVG_FOREIGNOBJECT here so that when it gets switched on,
   // we preserve binary compatibility. New classes should be added
@@ -2772,6 +2778,16 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMCanvasPattern)
   DOM_CLASSINFO_MAP_END
 #endif // MOZ_ENABLE_CANVAS
+
+#if defined(MOZ_SVG)
+  DOM_CLASSINFO_MAP_BEGIN(SVGTextPathElement, nsIDOMSVGTextPathElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGTextContentElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGURIReference)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGStylable)
+    DOM_CLASSINFO_SVG_ELEMENT_MAP_ENTRIES
+  DOM_CLASSINFO_MAP_END
+#endif
 
 #if defined(MOZ_SVG) && defined(MOZ_SVG_FOREIGNOBJECT)
   DOM_CLASSINFO_MAP_BEGIN(SVGForeignObjectElement, nsIDOMSVGForeignObjectElement)

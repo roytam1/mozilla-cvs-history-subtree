@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,16 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla SVG Cairo Renderer project.
+ * The Original Code is the Mozilla SVG project.
  *
  * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * Portions created by the Initial Developer are Copyright (C) 2005
  * the Initial Developer. All Rights Reserved.
- *
- * Parts of this file contain code derived from the following files(s)
- * of the Mozilla SVG project (these parts are Copyright (C) by their
- * respective copyright-holders):
- *    layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphGeometry.cpp
  *
  * Contributor(s):
  *
@@ -39,31 +34,35 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __NS_ISVGCAIRO_GLYPHMETRICS_H__
-#define __NS_ISVGCAIRO_GLYPHMETRICS_H__
+#include "nsIDOMSVGTextContentElement.idl"
 
-#include "nsISVGRendererGlyphMetrics.h"
-#include <cairo.h>
+interface nsIDOMSVGAnimatedLength;
+interface nsIDOMSVGAnimatedEnumeration;
 
-#define NS_ISVGCAIROGLYPHMETRICS_IID \
-{ 0xabfddcf9, 0x7c92, 0x4b1d, { 0xbd, 0xbc, 0xac, 0xeb, 0x0d, 0x77, 0x8f, 0xc5 } }
-
-/**
- * \addtogroup gdiplus_renderer Cairo Rendering Engine
- * @{
- */
-
-/**
- * 'Private' rendering engine interface
- */
-class nsISVGCairoGlyphMetrics : public nsISVGRendererGlyphMetrics
+[scriptable, uuid(5c29a76c-3489-48fe-b9ea-ea0f5b196dff)]
+interface nsIDOMSVGTextPathElement
+  : nsIDOMSVGTextContentElement
+/*
+        The SVG DOM makes use of multiple interface inheritance.
+        Since XPCOM only supports single interface inheritance,
+        the best thing that we can do is to promise that whenever
+        an object implements _this_ interface it will also
+        implement the following interfaces. (We then have to QI to
+        hop between them.)
+        
+    nsIDOMSVGURIReference,
+*/
 {
-public:
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCAIROGLYPHMETRICS_IID)
+    // textPath Method Types
+    const unsigned short TEXTPATH_METHODTYPE_UNKNOWN  = 0;
+    const unsigned short TEXTPATH_METHODTYPE_ALIGN    = 1;
+    const unsigned short TEXTPATH_METHODTYPE_STRETCH  = 2;
+    // textPath Spacing Types
+    const unsigned short TEXTPATH_SPACINGTYPE_UNKNOWN = 0;
+    const unsigned short TEXTPATH_SPACINGTYPE_AUTO    = 1;
+    const unsigned short TEXTPATH_SPACINGTYPE_EXACT   = 2;
 
-  NS_IMETHOD_(void) SelectFont(cairo_t *ctx) = 0;
+    readonly attribute nsIDOMSVGAnimatedLength startOffset;
+    readonly attribute nsIDOMSVGAnimatedEnumeration method;
+    readonly attribute nsIDOMSVGAnimatedEnumeration spacing;
 };
-
-/** @} */
-
-#endif // __NS_ISVGCAIRO_GLYPHMETRICS_H__

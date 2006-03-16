@@ -64,6 +64,8 @@
 #include "nsSVGRect.h"
 #include "nsSVGMatrix.h"
 #include "nsLayoutAtoms.h"
+#include "nsISVGPathFlatten.h"
+#include "nsSVGUtils.h"
 
 typedef nsContainerFrame nsSVGTextFrameBase;
 
@@ -721,57 +723,8 @@ nsSVGTextFrame::SetMatrixPropagation(PRBool aPropagate)
 NS_IMETHODIMP
 nsSVGTextFrame::GetBBox(nsIDOMSVGRect **_retval)
 {
-  *_retval = nsnull;
-  
-  // iterate over all children and accumulate the bounding rect:
-  // this relies on the fact that children of <text> elements can't
-  // have individual transforms
-
   EnsureFragmentTreeUpToDate();
-  
-  float x1=0.0f, y1=0.0f, x2=0.0f, y2=0.0f;
-  PRBool bFirst=PR_TRUE;
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
-    if (SVGFrame) {
-      nsCOMPtr<nsIDOMSVGRect> r;
-      SVGFrame->GetBBox(getter_AddRefs(r));
-      if (!r) {
-        NS_WARNING("no bounding box");
-      } else {
-        float x,y,w,h;
-        r->GetX(&x);
-        r->GetY(&y);
-        r->GetWidth(&w);
-        r->GetHeight(&h);
-      
-        if (bFirst) {
-          bFirst = PR_FALSE;
-          x1 = x;
-          y1 = y;
-          x2 = x+w;
-          y2 = y+h;
-        }
-        else {
-          if (x<x1) x1 = x;
-          if (x+w>x2) x2 = x+w;
-          if (y<y1) y1 = y;
-          if (y+h>y2) y2 = y+h;
-        }
-      }
-    }
-    kid = kid->GetNextSibling();
-  }
-
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) {
-    NS_ERROR("null outerSVGFrame");
-    return NS_ERROR_FAILURE;
-  }
-
-  return NS_NewSVGRect(_retval, x1, y1, x2 - x1, y2 - y1);
+  return nsSVGUtils::GetBBox(&mFrames, _retval);
 }
 
 //----------------------------------------------------------------------
@@ -1013,7 +966,8 @@ nsSVGTextFrame::UpdateFragmentTree()
 }
 
 static void
-GetSingleValue(nsIDOMSVGLengthList *list, float *val)
+GetSingleValue(nsISVGGlyphFragmentLeaf *fragment,
+               nsIDOMSVGLengthList *list, float *val)
 {
   if (!list)
     return;
@@ -1028,6 +982,37 @@ GetSingleValue(nsIDOMSVGLengthList *list, float *val)
     nsCOMPtr<nsIDOMSVGLength> length;
     list->GetItem(0, getter_AddRefs(length));
     length->GetValue(val);
+
+    /* check for % sizing of textpath */
+    PRUint16 type;
+    length->GetUnitType(&type);
+    if (type == nsIDOMSVGLength::SVG_LENGTHTYPE_PERCENTAGE) {
+      nsIFrame *glyph;
+      CallQueryInterface(fragment, &glyph);
+
+      nsISVGPathFlatten *textPath = nsnull;
+      /* check if we're the child of a textPath */
+      for (nsIFrame *frame = glyph; frame != nsnull; frame = frame->GetParent())
+        if (frame->GetType() == nsLayoutAtoms::svgTextPathFrame) {
+          frame->QueryInterface(NS_GET_IID(nsISVGPathFlatten), 
+                                (void **)&textPath);
+          break;
+        }
+
+      if (textPath) {
+        nsSVGPathData *data;
+        textPath->GetFlattenedPath(&data, nsnull);
+
+        if (!data)
+          return;
+
+        float percent;
+        length->GetValueInSpecifiedUnits(&percent);
+
+        *val = data->Length()*percent/100.0f;
+        delete data;
+      }
+    }
   }
 }
 
@@ -1081,22 +1066,22 @@ nsSVGTextFrame::UpdateGlyphPositioning()
 
   {
     nsCOMPtr<nsIDOMSVGLengthList> list = GetX();
-    GetSingleValue(list, &x);
+    GetSingleValue(firstFragment, list, &x);
   }
   {
     nsCOMPtr<nsIDOMSVGLengthList> list = GetY();
-    GetSingleValue(list, &y);
+    GetSingleValue(firstFragment, list, &y);
   }
 
   // loop over chunks
   while (firstFragment) {
     {
       nsCOMPtr<nsIDOMSVGLengthList> list = firstFragment->GetX();
-      GetSingleValue(list, &x);
+      GetSingleValue(firstFragment, list, &x);
     }
     {
       nsCOMPtr<nsIDOMSVGLengthList> list = firstFragment->GetY();
-      GetSingleValue(list, &y);
+      GetSingleValue(firstFragment, list, &y);
     }
 
     // determine x offset based on text_anchor:
@@ -1115,7 +1100,7 @@ nsSVGTextFrame::UpdateGlyphPositioning()
 
         float advance, dx = 0.0f;
         nsCOMPtr<nsIDOMSVGLengthList> list = fragment->GetDx();
-        GetSingleValue(list, &dx);
+        GetSingleValue(fragment, list, &dx);
         metrics->GetAdvance(&advance);
         chunkLength += advance + dx;
         fragment = fragment->GetNextGlyphFragment();
@@ -1141,11 +1126,11 @@ nsSVGTextFrame::UpdateGlyphPositioning()
       metrics->GetBaselineOffset(baseline, &baseline_offset);
       {
         nsCOMPtr<nsIDOMSVGLengthList> list = fragment->GetDx();
-        GetSingleValue(list, &dx);
+        GetSingleValue(fragment, list, &dx);
       }
       {
         nsCOMPtr<nsIDOMSVGLengthList> list = fragment->GetDy();
-        GetSingleValue(list, &dy);
+        GetSingleValue(fragment, list, &dy);
       }
 
       fragment->SetGlyphPosition(x + dx, y + dy - baseline_offset);
