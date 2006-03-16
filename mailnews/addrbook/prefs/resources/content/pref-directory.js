@@ -5,7 +5,6 @@ var gCurrentDirectoryServerId = null;
 var gRefresh = false;
 var gNewServer = null;
 var gNewServerString = null;
-var gFromGlobalPref = false;
 var gUpdate = false;
 var gDeletedDirectories = new Array();
 var gLDAPPrefsService;
@@ -22,9 +21,8 @@ function initLDAPPrefsService()
 
 function onEditDirectories()
 {
-  var args = {fromGlobalPref: gFromGlobalPref};
   window.openDialog("chrome://messenger/content/addressbook/pref-editdirectories.xul",
-                    "editDirectories", "chrome,modal=yes,resizable=no", args);
+                    "editDirectories", "chrome,modal=yes,resizable=no", null);
   if (gRefresh)
   {
     var popup = document.getElementById("directoriesListPopup"); 
@@ -70,7 +68,6 @@ function enableAutocomplete()
   // if we do not have any directories disable the dropdown list box
   if (!gAvailDirectories || (gAvailDirectories.length < 1))
     directoriesList.setAttribute("disabled", true);
-  gFromGlobalPref = true;
   LoadDirectories(directoriesListPopup);
 }
 
@@ -98,12 +95,10 @@ function setupDirectoriesList()
     directoryServer = "";
   }
   directoriesList.value = directoryServer;
-  gFromGlobalPref = false;
 }
 
-function createDirectoriesList(flag) 
+function createDirectoriesList()
 {
-  gFromGlobalPref = flag;
   var directoriesListPopup = document.getElementById("directoriesListPopup");
 
   if (directoriesListPopup) {
@@ -120,7 +115,6 @@ function LoadDirectories(popup)
   var arrayOfDirectories;
   var position;
   var dirType;
-  var directoriesList;
   if (!gPrefInt) { 
     try {
       gPrefInt = Components.classes["@mozilla.org/preferences-service;1"]
@@ -176,57 +170,30 @@ function LoadDirectories(popup)
         }
       }
     }
-    var value;
-    if (popup && !gFromGlobalPref) 
+    if (popup)
     {
       // we are in mail/news Account settings
-      item=document.createElement("menuitem");
+      item = document.createElement("menuitem");
       var addressBookBundle = document.getElementById("bundle_addressBook");
       var directoryName = addressBookBundle.getString("directoriesListItemNone");
       item.setAttribute("label", directoryName);
       item.setAttribute("value", "");
       popup.appendChild(item);
-      if (gRefresh) {  
-      // gRefresh is true if user edits, removes or adds a directory.
-        directoriesList =  document.getElementById("directoriesList");
-        value = directoriesList.value;
-        directoriesList.selectedItem = null;
-        directoriesList.value = value;
-        if (!directoriesList.selectedItem)
-          directoriesList.value = "";
-      }
-    }
-    if (popup && gFromGlobalPref) {
-    // we are in global preferences-> Addressing pane.
-      directoriesList =  document.getElementById("directoriesList");
-      if (gRefresh) {
-        // gRefresh is true if user edits, removes or adds a directory.
-        value = directoriesList.value;
-        directoriesList.selectedItem = null;
-        directoriesList.value = value;
-        if (!directoriesList.selectedItem)
-          directoriesList.selectedIndex = 0;
-        if (!directoriesList.selectedItem) {
-          directoriesList.value = "";
+
+      // Now check what we are displaying is valid.
+      var directoriesList = document.getElementById("directoriesList");
+      var value = directoriesList.value;
+      directoriesList.selectedItem = null;
+      directoriesList.value = value;
+      if (!directoriesList.selectedItem) {
+        directoriesList.value = "";
+        // If we have no other directories, also disable the popup.
+        if (gAvailDirectories.length == 0)
           directoriesList.disabled = true;
-        }
-        else if (!gPrefInt.prefIsLocked("ldap_2.autoComplete.directoryServer"))
-          directoriesList.disabled = false;
-        return;
       }
-      var pref_string_title = "ldap_2.autoComplete.directoryServer";
-      try {
-        var directoryServer = gPrefInt.getCharPref(pref_string_title);
-        directoriesList.value = directoryServer;
-        if (!directoriesList.selectedItem)
-          directoriesList.selectedIndex = 0;
-        if (!directoriesList.selectedItem)
-          directoriesList.value = "";
-      }
-      catch (ex)
-      {
-        directoriesList.selectedItem = null;
-      }
+      // Only enable autocomplete if the pref isn't locked.
+      else if (!gPrefInt.prefIsLocked("ldap_2.autoComplete.directoryServer"))
+        directoriesList.disabled = false;
     }
   }
   }
@@ -235,7 +202,6 @@ function LoadDirectories(popup)
 function onInitEditDirectories()
 {
   var listbox = document.getElementById("directoriesList");
-  gFromGlobalPref = window.arguments[0].fromGlobalPref;
   LoadDirectoriesList(listbox);
   // If the pref is locked disable the "Add" button
   if (gPrefInt.prefIsLocked("ldap_2.disable_button_add"))
