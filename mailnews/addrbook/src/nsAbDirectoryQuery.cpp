@@ -249,15 +249,9 @@ nsAbDirectoryQueryPropertyValue::~nsAbDirectoryQueryPropertyValue()
 /* read only attribute string name; */
 NS_IMETHODIMP nsAbDirectoryQueryPropertyValue::GetName(char*  *aName)
 {
-    const char* value = mName.get ();
-
-    if (!value)
-        *aName = 0;
-    else
-        *aName = ToNewCString(mName);
+    *aName = mName.IsEmpty() ? 0 : ToNewCString(mName);
 
     return NS_OK;
-
 }
 
 /* read only attribute wstring value; */
@@ -388,12 +382,10 @@ nsresult nsAbDirectoryQuery::query (nsIAbDirectory* directory,
     nsIAbDirectoryQueryResultListener* listener,
     PRInt32* resultLimit)
 {
-    nsresult rv = NS_OK;
-
     if (*resultLimit == 0)
-        return rv;
+        return NS_OK;
 
-    rv = queryCards (directory, arguments, listener, resultLimit);
+    nsresult rv = queryCards (directory, arguments, listener, resultLimit);
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRBool doSubDirectories;
@@ -485,10 +477,8 @@ nsresult nsAbDirectoryQuery::matchCard (nsIAbCard* card,
     nsIAbDirectoryQueryResultListener* listener,
     PRInt32* resultLimit)
 {
-    nsresult rv = NS_OK;
-
     nsCOMPtr<nsISupports> supportsExpression;
-    rv = arguments->GetExpression (getter_AddRefs (supportsExpression));
+    nsresult rv = arguments->GetExpression (getter_AddRefs (supportsExpression));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIAbBooleanExpression> expression(do_QueryInterface(supportsExpression, &rv));
@@ -512,10 +502,8 @@ nsresult nsAbDirectoryQuery::matchCardExpression (nsIAbCard* card,
     nsIAbBooleanExpression* expression,
     PRBool* result)
 {
-    nsresult rv = NS_OK;
-
     nsAbBooleanOperationType operation;
-    rv = expression->GetOperation (&operation);
+    nsresult rv = expression->GetOperation (&operation);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsISupportsArray> childExpressions;
@@ -572,10 +560,8 @@ nsresult nsAbDirectoryQuery::matchCardCondition (nsIAbCard* card,
     nsIAbBooleanConditionString* condition,
     PRBool* matchFound)
 {
-    nsresult rv = NS_OK;
-
     nsAbBooleanConditionType conditionType;
-    rv = condition->GetCondition (&conditionType);
+    nsresult rv = condition->GetCondition (&conditionType);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsXPIDLCString name;
@@ -584,11 +570,8 @@ nsresult nsAbDirectoryQuery::matchCardCondition (nsIAbCard* card,
 
     if (name.Equals ("card:nsIAbCard"))
     {
-        if (conditionType == nsIAbBooleanConditionTypes::Exists)
-            *matchFound = PR_TRUE;
-        else
-            *matchFound = PR_FALSE;
-        return NS_OK;
+      *matchFound = (conditionType == nsIAbBooleanConditionTypes::Exists);
+      return NS_OK;
     }
 
     nsXPIDLString value;
@@ -597,12 +580,9 @@ nsresult nsAbDirectoryQuery::matchCardCondition (nsIAbCard* card,
 
     if (value.IsEmpty())
     {
-        if (conditionType == nsIAbBooleanConditionTypes::DoesNotExist)
-            *matchFound = PR_TRUE;
-        else
-            *matchFound = PR_FALSE;
-
-        return NS_OK;
+      *matchFound = (conditionType == nsIAbBooleanConditionTypes::DoesNotExist) ?
+          PR_TRUE : PR_FALSE;
+      return NS_OK;
     }
 
     nsXPIDLString matchValue;
@@ -724,8 +704,7 @@ nsresult nsAbDirectoryQuery::queryMatch (nsIAbCard* card,
         return NS_ERROR_OUT_OF_MEMORY;
     queryResult = _queryResult;
 
-    rv = listener->OnQueryItem (queryResult);
-    return rv;
+    return listener->OnQueryItem (queryResult);
 }
 
 nsresult nsAbDirectoryQuery::queryFinished (nsIAbDirectoryQueryArguments* arguments,
