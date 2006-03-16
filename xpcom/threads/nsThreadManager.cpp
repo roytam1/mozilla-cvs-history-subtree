@@ -169,6 +169,10 @@ NS_IMETHODIMP
 nsThreadManager::NewThread(const nsACString &name, nsIThread **result)
 {
   // make sure name is unique
+  if (!name.IsEmpty() && mThreadsByName.Get(name, nsnull)) {
+    NS_WARNING("Thread name is not unique");
+    return NS_ERROR_INVALID_ARG;
+  }
 
   nsThread *thr = new nsThread(name);
   if (!thr)

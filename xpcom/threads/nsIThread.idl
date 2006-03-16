@@ -42,11 +42,10 @@
 
 /**
  * This interface provides a high-level abstraction for an operating system
- * thread.  Threads may have a unique name, which can be used to lookup a
- * thread or to aid in the debugging of a call stack.
+ * thread.
  *
- * Threads also have a built-in event queue, and a thread is an event target
- * that can receive nsIRunnable objects (events) to be processed on the thread.
+ * Threads have a built-in event queue, and a thread is an event target that
+ * can receive nsIRunnable objects (events) to be processed on the thread.
  *
  * See nsIThreadManager for the API used to create and locate threads.
  */
@@ -54,13 +53,15 @@
 interface nsIThread : nsIEventTarget
 {
   /**
-   * @returns The name of the thread, which may be an empty string if this
-   * thread is anonymous.
+   * @return
+   *   The name of the thread, which may be an empty string if this thread is
+   *   anonymous.
    */
   readonly attribute ACString name;
 
   /**
-   * @returns The NSPR thread object corresponding to this nsIThread.
+   * @return
+   *   The NSPR thread object corresponding to this nsIThread.
    */
   [noscript] PRThread getPRThread();
 
@@ -71,9 +72,9 @@ interface nsIThread : nsIEventTarget
    * this function returns, the thread will be shutdown, and it will no longer
    * be possible to dispatch events to the thread.
    *
-   * @throws NS_ERROR_UNEXPECTED
-   *         Indicates that this method was erroneously called when this thread
-   *         was the current thread.
+   * @throw NS_ERROR_UNEXPECTED
+   *   Indicates that this method was erroneously called when this thread was
+   *   the current thread.
    */
   void shutdown();
 
@@ -81,11 +82,13 @@ interface nsIThread : nsIEventTarget
    * This method may be called to determine if there are any events ready to be
    * processed.  It may only be called when this thread is the current thread.
    *
-   * @returns "true" if this thread has one or more pending events.
+   * @return
+   *   A boolean value that if "true" indicates that this thread has one or
+   *   more pending events.
    *
-   * @throws NS_ERROR_UNEXPECTED
-   *         Indicates that this method was erroneously called when this thread
-   *         was not the current thread.
+   * @throw NS_ERROR_UNEXPECTED
+   *   Indicates that this method was erroneously called when this thread was
+   *   not the current thread.
    */
   boolean hasPendingEvents();
 
@@ -94,9 +97,9 @@ interface nsIThread : nsIEventTarget
    * will wait until an event is dispatched to this thread.  This method is
    * re-entrant but may only be called if this thread is the current thread.
    *
-   * @throws NS_ERROR_UNEXPECTED
-   *         Indicates that this method was erroneously called when this thread
-   *         was not the current thread.
+   * @throw NS_ERROR_UNEXPECTED
+   *   Indicates that this method was erroneously called when this thread was
+   *   not the current thread.
    */
   void processNextEvent();
 };

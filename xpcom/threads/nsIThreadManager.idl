@@ -42,6 +42,9 @@
 
 interface nsIThread;
 
+/**
+ * An interface for creating and locating nsIThread instances.
+ */
 [scriptable, uuid(056216f5-8803-46b4-9199-d95bc1f0446f)]
 interface nsIThreadManager : nsISupports
 {
@@ -50,20 +53,42 @@ interface nsIThreadManager : nsISupports
    * non-empty, then the name of the thread must be unique.  Specifying an
    * empty name results in an anonymous thread that cannot be found later on
    * using the getThread method.
+   *
+   * @param name
+   *   The name of the new thread or empty to create an anonymous thread.
+   *
+   * @return
+   *   The newly created nsIThread object.
+   *
+   * @throw NS_ERROR_INVALID_ARG
+   *   Indicates that the given name is not unique.
    */
   nsIThread newThread(in ACString name);
    
   /**
-   * Find a named thread.  If no thread exists with the given name, then null
-   * is returned.
+   * Find a named thread.
+   *
+   * @param name
+   *   The name of the nsIThread being requested.
+   *
+   * @return
+   *   The nsIThread object corresponding to the given name or null if no such
+   *   nsIThread exists.
    */
   nsIThread getThread(in ACString name);
 
   /**
    * Get the nsIThread object (if any) corresponding to the given PRThread.
    * This method returns null if there is no corresponding nsIThread.
+   *
+   * @param prthread
+   *   The PRThread of the nsIThread being requested.
+   *
+   * @return
+   *   The nsIThread object corresponding to the given PRThread or null if no
+   *   such nsIThread exists.
    */
-  [noscript] nsIThread getThreadFromPRThread(in PRThread thread);
+  [noscript] nsIThread getThreadFromPRThread(in PRThread prthread);
 
   /**
    * Get the main thread.
@@ -71,7 +96,9 @@ interface nsIThreadManager : nsISupports
   readonly attribute nsIThread mainThread;
 
   /**
-   * Get the current thread.
+   * Get the current thread.  If the calling thread does not already have a
+   * nsIThread associated with it, then a new anonymous nsIThread will be
+   * created and associated with the current PRThread.
    */
   readonly attribute nsIThread currentThread;
 

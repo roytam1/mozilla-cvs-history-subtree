@@ -66,12 +66,12 @@ class nsIThread;
  * Create a new thread, and optionally provide an initial event for the thread.
  *
  * @param result
- *        The resulting nsIThread object.
+ *   The resulting nsIThread object.
  * @param event
- *        The initial event to run on this thread.  This parameter can be null.
+ *   The initial event to run on this thread.  This parameter can be null.
  * @param name
- *        The name of the thread, which must be unique, or the empty string to
- *        create an anonymous thread.
+ *   The name of the thread, which must be unique, or the empty string to
+ *   create an anonymous thread.
  */
 NS_THREADUTILS_METHOD
 NS_NewThread(nsIThread **result, nsIRunnable *event = nsnull,
@@ -81,7 +81,7 @@ NS_NewThread(nsIThread **result, nsIRunnable *event = nsnull,
  * Get a reference to the current thread.
  *
  * @param result
- *        The resulting nsIThread object.
+ *   The resulting nsIThread object.
  */
 NS_THREADUTILS_METHOD
 NS_GetCurrentThread(nsIThread **result);
@@ -90,7 +90,7 @@ NS_GetCurrentThread(nsIThread **result);
  * Get a reference to the main thread.
  *
  * @param result
- *        The resulting nsIThread object.
+ *   The resulting nsIThread object.
  */
 NS_THREADUTILS_METHOD
 NS_GetMainThread(nsIThread **result);
@@ -99,7 +99,7 @@ NS_GetMainThread(nsIThread **result);
  * Get a reference to the thread with the given name.
  *
  * @param result
- *        The resulting nsIThread object.
+ *   The resulting nsIThread object.
  */
 NS_THREADUTILS_METHOD
 NS_GetThread(nsIThread **result, const nsACString &name);
@@ -117,7 +117,7 @@ NS_IsMainThread();
  * Dispatch the given event to the current thread.
  *
  * @param event
- *        The event to dispatch.
+ *   The event to dispatch.
  */
 NS_THREADUTILS_METHOD
 NS_DispatchToCurrentThread(nsIRunnable *event);
@@ -126,9 +126,9 @@ NS_DispatchToCurrentThread(nsIRunnable *event);
  * Dispatch the given event to the main thread.
  *
  * @param event
- *        The event to dispatch.
+ *   The event to dispatch.
  * @param dispatchFlags
- *        The flags to pass to the main thread's dispatch method.
+ *   The flags to pass to the main thread's dispatch method.
  */
 NS_THREADUTILS_METHOD
 NS_DispatchToMainThread(nsIRunnable *event,
@@ -141,14 +141,13 @@ NS_DispatchToMainThread(nsIRunnable *event,
  * does not exceed the given timeout value.
  *
  * @param thread
- *        The thread object for which to process pending events.  If null,
- *        then events will be processed for the current thread.
+ *   The thread object for which to process pending events.  If null, then
+ *   events will be processed for the current thread.
  * @param timeout
- *        The maximum number of milliseconds to spend processing pending
- *        events.  Events are not pre-empted to honor this timeout.  Rather,
- *        the timeout value is simply used to determine whether or not to
- *        process another event.  Pass PR_INTERVAL_NO_TIMEOUT to specify no
- *        timeout.
+ *   The maximum number of milliseconds to spend processing pending events.
+ *   Events are not pre-empted to honor this timeout.  Rather, the timeout
+ *   value is simply used to determine whether or not to process another event.
+ *   Pass PR_INTERVAL_NO_TIMEOUT to specify no timeout.
  */
 NS_THREADUTILS_METHOD
 NS_ProcessPendingEvents(nsIThread *thread,

@@ -44,23 +44,44 @@ interface nsIRunnable;
 interface nsIEventTarget : nsISupports
 {
   /**
-   * Dispatch an event to the event target.  This function may be called from
-   * any thread.  If flags specifies DISPATCH_SYNC, then the dispatch method
-   * will not return until the event has been run.
+   * Dispatch an event to this event target.  This function may be called from
+   * any thread, and it may be called re-entrantly.
    *
-   * NOTE: Calling dispatch with DISPATCH_SYNC may have the side-effect of
-   * processing other events on the current thread while waiting for the given
-   * event to be processed.  This method is thread-safe and re-entrant.
+   * @param event
+   *   The event to dispatch.
+   * @param flags
+   *   The flags modifying event dispatch.  The flags are described in detail
+   *   below.
    * 
-   * @throws NS_ERROR_INVALID_ARG if event is null.
+   * @throw NS_ERROR_INVALID_ARG
+   *   Indicates that event is null.
    */
   void dispatch(in nsIRunnable event, in unsigned long flags);
+
+  /**
+   * This flag specifies the default mode of event dispatch, whereby the event
+   * is simply queued for later processing.  When this flag is specified,
+   * dispatch returns immediately after the event is queued.
+   */
   const unsigned long DISPATCH_NORMAL = 0;
-  const unsigned long DISPATCH_SYNC   = 1;
+
+  /**
+   * This flag specifies the synchronous mode of event dispatch, in which the
+   * dispatch method does not return until the event has been processed.
+   *
+   * NOTE: passing this flag to dispatch may have the side-effect of causing
+   * other events on the current thread to be processed while waiting for the
+   * given event to be processed.
+   */
+  const unsigned long DISPATCH_SYNC = 1;
    
   /**
-   * Returns true if events dispatched to this event target will run on the
-   * current thread (i.e., the thread calling this method).
+   * Check to see if this event target is associated with the current thread.
+   *
+   * @return
+   *   A boolean value that if "true" indicates that events dispatched to this
+   *   event target will run on the current thread (i.e., the thread calling
+   *   this method).
    */
   boolean isOnCurrentThread();
 };
