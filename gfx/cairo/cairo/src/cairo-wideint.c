@@ -1,5 +1,4 @@
-/*
- * $Id$
+/* cairo - a vector graphics library with display and print output
  *
  * Copyright © 2004 Keith Packard
  *
