@@ -4206,7 +4206,7 @@ suite)
 
 browser)
   MOZ_APP_NAME=firefox
-  MOZ_APP_DISPLAYNAME=DeerPark
+  MOZ_APP_DISPLAYNAME=BonEcho
   MOZ_XUL_APP=1
   MOZ_PHOENIX=1
   MOZ_PLACES=1
