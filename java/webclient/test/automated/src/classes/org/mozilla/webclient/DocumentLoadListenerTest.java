@@ -335,7 +335,12 @@ public class DocumentLoadListenerTest extends WebclientTestCase {
 			    // do we have a URI entry?
 			    listenerResult.set(END_DOCUMENT_URI_IS_CORRECT,
 					       url.toString().equals(map.get("URI")));
-			    
+
+                            try {
+                                Thread.currentThread().sleep(2000);
+                            } catch (InterruptedException ex) {
+                                fail();
+                            }
 			    DocumentLoadListenerTest.keepWaiting = false;
 			    break;
 			}
@@ -430,6 +435,7 @@ public class DocumentLoadListenerTest extends WebclientTestCase {
 		    "http://localhost:5243/HistoryTest0.html");
 	methodToCheck.replace(0, methodToCheck.length(), "POST");
 
+        /******************
 	Robot robot = new Robot();
 	robot.mouseMove(IN_X, IN_Y);
 	robot.mousePress(InputEvent.BUTTON1_MASK);
@@ -468,7 +474,7 @@ public class DocumentLoadListenerTest extends WebclientTestCase {
 	// END_DOCUMENT_LOAD tests
 	assertTrue(listenerResult.get(END_DOCUMENT_URI_IS_CORRECT));
 	
-
+*******************/
 
 	eventRegistration.removeDocumentLoadListener(listener);
 
