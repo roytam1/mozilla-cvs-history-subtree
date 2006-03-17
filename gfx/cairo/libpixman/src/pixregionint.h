@@ -44,8 +44,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
 ******************************************************************/
-/* $Id$ */
-
 #ifndef _PIXREGIONINT_H_
 #define _PIXREGIONINT_H_
 

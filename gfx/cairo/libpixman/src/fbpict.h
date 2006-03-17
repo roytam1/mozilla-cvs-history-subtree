@@ -1,6 +1,4 @@
 /*
- * $Id$
- *
  * Copyright © 2000 Keith Packard
  *             2005 Lars Knoll & Zack Rusin, Trolltech
  *
