@@ -174,7 +174,7 @@
                 oncommand="AddKeywordForSearchField();"/>
       <menuitem id="context-searchselect"
                 accesskey="&search.accesskey;"
-                oncommand="OpenSearch('internet', gContextMenu.searchSelected(), true);"/>
+                oncommand="BrowserSearch.loadSearch(getBrowserSelection(), true);"/>
       <menuseparator id="frame-sep"/>
       <menu id="frame" label="&thisFrameMenu.label;" accesskey="&thisFrameMenu.accesskey;">
         <menupopup>
@@ -238,4 +238,3 @@
                 accesskey="&bidiSwitchPageDirectionItem.accesskey;"
                 oncommand="SwitchDocumentDirection(window.content);"/>
     </popup>
-
