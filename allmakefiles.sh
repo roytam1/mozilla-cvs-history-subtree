@@ -916,6 +916,7 @@ browser/components/migration/Makefile
 browser/components/migration/public/Makefile
 browser/components/migration/src/Makefile
 browser/components/preferences/Makefile
+browser/components/search/Makefile
 browser/components/sidebar/Makefile
 browser/components/sidebar/src/Makefile
 browser/components/shell/Makefile
@@ -937,6 +938,7 @@ browser/themes/winstripe/Makefile
 
 MAKEFILES_suite="
 suite/Makefile
+suite/app/Makefile
 suite/branding/Makefile
 suite/components/Makefile
 suite/components/xulappinfo/Makefile
@@ -1021,6 +1023,8 @@ toolkit/profile/src/Makefile
 toolkit/themes/Makefile
 toolkit/themes/gnomestripe/global/Makefile
 toolkit/themes/gnomestripe/Makefile
+toolkit/themes/pmstripe/global/Makefile
+toolkit/themes/pmstripe/Makefile
 toolkit/themes/pinstripe/communicator/Makefile
 toolkit/themes/pinstripe/Makefile
 toolkit/themes/pinstripe/global/Makefile
@@ -1515,6 +1519,11 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/reporter/Makefile
 	    extensions/reporter/locales/Makefile
             " ;;
+
+        safe-browsing ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/safe-browsing/Makefile
+            " ;;
+
         spellcheck ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/spellcheck/Makefile
             extensions/spellcheck/idl/Makefile
