@@ -13,7 +13,7 @@
 #define UNINST_RUNNING Mozilla Firefox is detected to be currently running.  Please quit Mozilla Firefox before continuing.  Click OK to exit Mozilla Firefox automatically and proceed with uninstallation.
 #define UNINST_SHUTDOWN Shutting down Mozilla Firefox.  Please wait...
 #else
-#define UNINST_RUNNING Bon Echo is detected to be currently running.  Please quit Deer Park Alpha 2 before continuing.  Click OK to exit Deer Park Alpha 2 automatically and proceed with uninstallation.
+#define UNINST_RUNNING Bon Echo is detected to be currently running.  Please quit Bon Echo before continuing.  Click OK to exit Bon Echo automatically and proceed with uninstallation.
 #define UNINST_SHUTDOWN Shutting down Bon Echo.  Please wait...
 #endif
 #define UNINST_FONT MS Sans Serif
