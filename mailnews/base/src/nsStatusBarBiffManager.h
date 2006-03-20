@@ -38,17 +38,18 @@
 #ifndef nsStatusBarBiffManager_h__
 #define nsStatusBarBiffManager_h__
 
-#include "nsIFolderListener.h"
+#include "nsIStatusBarBiffManager.h"
 
 #include "msgCore.h"
 #include "nsCOMPtr.h"
 #include "nsISound.h"
 
-class nsStatusBarBiffManager : public nsIFolderListener
+class nsStatusBarBiffManager : public nsIStatusBarBiffManager
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIFOLDERLISTENER
+  NS_DECL_NSISTATUSBARBIFFMANAGER
 
   nsStatusBarBiffManager(); 
   virtual ~nsStatusBarBiffManager();
@@ -56,9 +57,8 @@ public:
 
 private:
   PRBool   mInitialized;
-  PRUint32 mCurrentBiffState;
+  PRInt32  mCurrentBiffState;
   nsCOMPtr<nsISound> mSound;
-  nsresult PerformStatusBarBiff(PRUint32 newBiffFlag);
   nsresult PlayBiffSound();
 
 protected:
