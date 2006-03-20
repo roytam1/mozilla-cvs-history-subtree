@@ -1302,7 +1302,7 @@ RegistrationGroup.fun(
 RegistrationGroup.fun(
   function notifyRegistrationSuccess(registration) {
     if (this.unregistering) return;
-    this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" succeeded");
+    this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.regid+" succeeded");
     if (this.identity["urn:mozilla:zap:registration_status"] != "registered") {
       // mark our identity as registered:      
       this.identity["urn:mozilla:zap:registration_status"] = "registered";
@@ -1312,14 +1312,14 @@ RegistrationGroup.fun(
 RegistrationGroup.fun(
   function notifyRegistrationFailure(registration) {
     if (this.unregistering) return;
-    this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" has failed");
+    this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.regid+" has failed");
     this.recoverFromRegistrationFailure(registration);
   });
 
 RegistrationGroup.fun(
   function notifyFlowFailure(registration) {
     if (this.unregistering) return;
-    this._dump("Flow "+registration.flowid+" to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" has failed");
+    this._dump("Flow "+registration.regid+" to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" has failed");
     this.recoverFromRegistrationFailure(registration);
   });
 
@@ -1344,7 +1344,7 @@ RegistrationGroup.fun(
     var max_time = parseFloat(wConfig["urn:mozilla:zap:registration_recovery_max_time"]);
 
     var wait_time_ms = Math.min(max_time, base_time*Math.pow(2, registration.failureCount))*1000*(0.5+0.5*Math.random());
-    this._dump("reregistering "+this.identity["http://home.netscape.com/NC-rdf#Name"]+", flow "+registration.flowid+" in "+wait_time_ms+"ms");
+    this._dump("reregistering "+this.identity["http://home.netscape.com/NC-rdf#Name"]+", flow "+registration.regid+" in "+wait_time_ms+"ms");
     registration.scheduleRefresh(wait_time_ms);
   });
 
@@ -1389,10 +1389,10 @@ Registration.obj("defaultOutboundRoute", null);
 Registration.obj("outboundRoute", null);
 
 Registration.fun(
-  function init(group, route, flowid) {
-    this._dump("group="+group+", route="+route+", flowid="+flowid);
+  function init(group, route, regid) {
+    this._dump("group="+group+", route="+route+", regid="+regid);
     this.group = group;
-    this.flowid = flowid;
+    this.regid = regid;
     this.defaultOutboundRoute = route;
     this.outboundRoute = route;
     this.whenUAContactAddressResolved(this.proceedWithRegistration);
@@ -1529,7 +1529,7 @@ Registration.fun(
     
     // XXX if (use_outbound)
     contactHeader.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
-    contactHeader.setParameter("flow-id", this.flowid);
+    contactHeader.setParameter("reg-id", this.regid);
   });    
 
 Registration.fun(
