@@ -2,6 +2,7 @@ xpconnect
 uconv
 i18n
 necko
+necko2
 jar50
 pref
 caps
@@ -9,7 +10,6 @@ rdf
 htmlpars
 gfx_gtk
 imglib2
-gkplugin
 widget_gtk2
 gklayout
 docshell
@@ -20,17 +20,17 @@ txmgr
 nsappshell
 chrome
 mork
-toolkitcomps
-xmlextras
-websrvcs
-snav
-phone
+tkitcmps
+t8iix
+xmlextra
 softkey
 pipboot
 pipnss
-permissions
 snav
 phone
 softkey
+cookies
+perms
+devicesupport
 ssr
 
