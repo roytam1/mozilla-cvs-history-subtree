@@ -29,7 +29,6 @@ SoftKeyBoardModule
 nsPhoneSupportModule
 SpatialNavigationModule
 SSRModule
-nsNativeSSLModule
 nsCookieModule
 nsPermissionsModule
 DeviceSupportModule
