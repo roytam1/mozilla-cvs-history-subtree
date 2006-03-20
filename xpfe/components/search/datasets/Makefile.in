@@ -64,4 +64,4 @@ libs:: $(FILES)
 
 install:: $(FILES)
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/searchplugins
-#endif
+endif
