@@ -64,6 +64,21 @@ CPPSRCS     = \
               BrowserContainerImpl.cpp \
               $(NULL)
 
+FONTS       = \
+              Vera.ttf \
+              VeraBI.ttf \
+              VeraBd.ttf \
+              VeraIt.ttf \
+              VeraMoBI.ttf \
+              VeraMoBd.ttf \
+              VeraMoIt.ttf \
+              VeraMono.ttf \
+              VeraSe.ttf \
+              VeraSeBd.ttf \
+              $(NULL)
+
+FONT_TARGETS = $(addprefix $(FINAL_TARGET)/, $(FONTS))
+
 # SIMPLE_PROGRAMS = $(CPPSRCS:.cpp=)
 
 PROGRAM = membufEmbed
@@ -83,6 +98,21 @@ LIBS = \
 
 include $(topsrcdir)/config/config.mk
 include $(topsrcdir)/config/rules.mk
+
+# copy the font files over - this needs to change ultimately to either
+#   copy just to the objdir (not dist/bin) or better yet Freetype needs
+#   to look to the system fonts for it's info and we can remove this.
+export:: $(srcdir)/$(FONTS)
+	$(INSTALL) $^ $(FINAL_TARGET)
+
+clean::
+	rm -f $(FONT_TARGETS)
+	rm -f *.tga
+
+#   this copies to this dir in the objdir
+#	$(INSTALL) $^ .
+#   this copies to dist/bin:
+#	$(INSTALL) $^ $(FINAL_TARGET)
 
 # CXXFLAGS += $(MOZ_GTK_CFLAGS)
 
