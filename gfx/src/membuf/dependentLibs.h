@@ -1,0 +1,1 @@
+#define DEPENDENT_LIBS "libgkgfx.so", "libxpcom.so", "libplds4.so", "libplc4.so", "libnspr4.so", "libpthread.so", "libdl.so", "libmozjs.so", "libgkgfx.so", "libfreetype.so", "liballeg-4.0.3.so", "liballeg_unsharable.so", "libm.so", "libpthread.so", "libXxf86dga.so", "libXxf86vm.so", "libXext.so", "libX11.so", "libdl.so", 
