@@ -44,7 +44,9 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
+ifneq ($(MOZ_WIDGET_TOOLKIT),membuf)
 DIRS		= viewer
+endif
 
 include $(topsrcdir)/config/rules.mk
 

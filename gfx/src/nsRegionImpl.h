@@ -41,6 +41,8 @@
 #include "nsIRegion.h"
 #include "nsRegion.h"
 
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_DEFAULT
 
 class nsRegionImpl : public nsIRegion
 {
@@ -68,5 +70,8 @@ public:
   NS_IMETHOD GetRegionComplexity (nsRegionComplexity &aComplexity) const;
   NS_IMETHOD GetNumRects (PRUint32 *aRects) const;
 };
+
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_HIDDEN
 
 #endif

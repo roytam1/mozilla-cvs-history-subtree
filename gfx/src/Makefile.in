@@ -108,6 +108,9 @@ else
  endif
 
 endif
+ifdef MOZ_ENABLE_MEMBUF
+DIRS        += membuf
+endif
 
 CPPSRCS = \
         nsBlender.cpp \
@@ -129,13 +132,13 @@ ifeq (,$(filter windows,$(MOZ_WIDGET_TOOLKIT)))
 REQUIRES += uconv
 endif
 
-ifneq (,$(filter gtk gtk2 xlib os2,$(MOZ_WIDGET_TOOLKIT)))
+ifneq (,$(filter gtk gtk2 xlib os2 membuf,$(MOZ_WIDGET_TOOLKIT)))
 CPPSRCS += \
         nsRegionImpl.cpp \
         $(NULL)
 endif
 
-ifneq (,$(filter gtk gtk2 xlib beos windows os2,$(MOZ_WIDGET_TOOLKIT)))
+ifneq (,$(filter gtk gtk2 xlib beos windows os2 membuf,$(MOZ_WIDGET_TOOLKIT)))
 CPPSRCS += imgScaler.cpp
 endif
 

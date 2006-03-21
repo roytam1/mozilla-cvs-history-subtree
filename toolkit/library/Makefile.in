@@ -219,6 +219,10 @@ endif
 ifeq (qt,$(MOZ_WIDGET_TOOLKIT))
 COMPONENT_LIBS += widget_qt
 endif
+ifeq (membuf,$(MOZ_WIDGET_TOOLKIT))
+COMPONENT_LIBS += gfx_membuf widget_membuf
+EXTRA_DSO_LDOPTS += -lfreetype -L/builds/allegro-4.2.0/target/lib -lalleg-4.2.0 -lalleg_unsharable
+endif
 
 ifdef MOZ_ENABLE_CAIRO_GFX
 DEFINES += -DMOZ_ENABLE_CAIRO_GFX

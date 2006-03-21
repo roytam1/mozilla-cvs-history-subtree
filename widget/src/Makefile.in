@@ -94,5 +94,9 @@ ifdef MOZ_ENABLE_PHOTON
 DIRS		+= photon
 endif
 
+ifdef MOZ_ENABLE_MEMBUF
+DIRS		+= membuf
+endif
+
 include $(topsrcdir)/config/rules.mk
 

@@ -381,6 +381,14 @@ ifneq (,$(MOZ_ENABLE_GTK)$(MOZ_ENABLE_GTK2))
 tier_99_dirs	+= embedding/browser/gtk
 endif
 
+# membuf plugin
+ifdef MOZ_ENABLE_MEMBUF
+tier_99_dirs	+= embedding/browser/membuf
+ifneq (,$(ENABLE_TESTS))
+tier_99_dirs	+= embedding/browser/membuf/tests
+endif
+endif
+
 # viewer
 ifneq (,$(ENABLE_TESTS))
 ifndef MOZ_ENABLE_LIBXUL

@@ -120,16 +120,16 @@ BrowserWindow::Init( BrowserGlue *aOwner, PRInt32 aWidth, PRInt32 aHeight )
 NS_METHOD
 BrowserWindow::CreateWindow()
 {
-  printf("BrowserWindow::CreateWindow() - mWebBrowser:[%x]\n",&mWebBrowser);
+  printf("BrowserWindow::CreateWindow()\n");
   nsresult rv = NS_ERROR_FAILURE;
 
   // get a handle to the nsIBaseWindow interface
   mBaseWindow = do_QueryInterface( mWebBrowser, &rv );
-  NS_ENSURE_TRUE(mBaseWindow, NS_ERROR_FAILURE);
   if ( NS_FAILED(rv) || !mBaseWindow ) {
     printf("BrowserWindow::CreateWindow - failed to QI base window\n");
     return NS_ERROR_FAILURE;
   }
+  //printf("    -- mWebBrowser:[%x]\n",&mWebBrowser);
 
   // the width and height need to come from the embeddor so they
   //  match. Otherwise with the linear bitmap it doesn't work and we
@@ -140,6 +140,7 @@ BrowserWindow::CreateWindow()
   //   of all subsequent BITMAPS that get created. The window _should_
   //   be the parent window to all subsequent windows but that isn't
   //   clear from looking the code.
+  printf("getting to here\n");
   mBaseWindow->InitWindow( (void*)-1,         // pointer to a native window
                            nsnull,            // nsIWidget 
                            0,                 // X origin

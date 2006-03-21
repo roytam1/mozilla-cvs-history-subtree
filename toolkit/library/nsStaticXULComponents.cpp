@@ -105,6 +105,11 @@
 #  endif
 #endif
 
+#ifdef MOZ_WIDGET_MEMBUF
+#define GFX_MODULES MODULE(nsGfxMembufModule)
+#define WIDGET_MODULES MODULE(nsWidgetMembufModule)
+#endif
+
 #ifdef ICON_DECODER
 #define ICON_MODULE MODULE(nsIconDecoderModule)
 #else

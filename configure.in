@@ -2645,6 +2645,8 @@ dnl Xt is dependent upon SM as of X11R6
 dnl ========================================================
 if test "$no_x" = "yes"; then
     AC_DEFINE(NO_X11)
+    # Freetype isn't dependent on X.
+    AC_CHECK_FT2(6.1.0, [_HAVE_FREETYPE2=1], [_HAVE_FREETYPE2=])
 else
     AC_DEFINE_UNQUOTED(FUNCPROTO,15)
 	XLIBS="-lX11 $XLIBS"
@@ -3861,7 +3863,8 @@ MOZ_ARG_HEADER(Toolkit Options)
         -o "$_DEFAULT_TOOLKIT" = "windows" \
         -o "$_DEFAULT_TOOLKIT" = "cocoa" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-gtk2" \
-        -o "$_DEFAULT_TOOLKIT" = "cairo-xlib"
+        -o "$_DEFAULT_TOOLKIT" = "cairo-xlib" \
+        -o "$_DEFAULT_TOOLKIT" = "membuf"
     then
         dnl nglayout only supports building with one toolkit,
         dnl so ignore everything after the first comma (",").
@@ -3928,6 +3931,14 @@ photon)
 	MOZ_ENABLE_PHOTON=1
 	AC_DEFINE(MOZ_WIDGET_PHOTON)
     ;;
+
+membuf)
+    MOZ_ENABLE_MEMBUF=1
+    MOZ_ENABLE_FREETYPE2=1
+    MOZ_ENABLE_GLIB=1
+    AC_DEFINE(MOZ_WIDGET_MEMBUF)
+    ;;
+
 mac|cocoa)
     TK_LIBS='-framework Carbon'
     TK_CFLAGS="-I${MACOS_SDK_DIR}/Developer/Headers/FlatCarbon"
@@ -4076,6 +4087,7 @@ AC_SUBST(MOZ_ENABLE_PHOTON)
 AC_SUBST(MOZ_ENABLE_COCOA)
 AC_SUBST(MOZ_ENABLE_CAIRO_GFX)
 AC_SUBST(MOZ_ENABLE_XREMOTE)
+AC_SUBST(MOZ_ENABLE_MEMBUF)
 AC_SUBST(MOZ_GTK_CFLAGS)
 AC_SUBST(MOZ_GTK_LDFLAGS)
 AC_SUBST(MOZ_GTK2_CFLAGS)
@@ -4466,8 +4478,10 @@ MOZ_ARG_DISABLE_BOOL(freetype2,
     MOZ_ENABLE_FREETYPE2=,
     MOZ_ENABLE_FREETYPE2=1)
 
-if test "$MOZ_ENABLE_FREETYPE2" && test -z "$MOZ_X11" -o -z "$_HAVE_FREETYPE2"; then
-    AC_MSG_ERROR([Cannot enable FreeType2 support for non-X11 toolkits or if FreeType2 is not detected.])
+if test "$MOZ_ENABLE_FREETYPE2" && \
+   ( test -z "$_HAVE_FREETYPE2" || \ 
+     test -z "$MOZ_X11" -a -z "$MOZ_ENABLE_MEMBUF" ); then
+    AC_MSG_ERROR([Cannot enable FreeType2 support if FreeType2 is not detected or one of X11 or MEMBUF is enabled.])
 fi
 
 if test "$MOZ_ENABLE_FREETYPE2"; then
@@ -6417,7 +6431,7 @@ fi
 
 if test -z "$SKIP_PATH_CHECKS"; then
 if test -z "${GLIB_CFLAGS}" || test -z "${GLIB_LIBS}" ; then
-    if test "$MOZ_ENABLE_GTK2"; then
+    if test "$MOZ_ENABLE_GTK2" -o "$MOZ_ENABLE_GLIB"; then
         PKG_CHECK_MODULES(GLIB, glib-2.0 >= 1.3.7)
     else
         AM_PATH_GLIB(${GLIB_VERSION})

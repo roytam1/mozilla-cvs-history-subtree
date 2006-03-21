@@ -173,6 +173,7 @@ gfx/src/os2/Makefile
 gfx/src/xlibrgb/Makefile
 gfx/src/windows/Makefile
 gfx/src/cairo/Makefile
+gfx/src/membuf/Makefile
 gfx/tests/Makefile
 "
 
@@ -571,6 +572,8 @@ widget/src/windows/Makefile
 widget/src/xlibxtbin/Makefile
 widget/src/xpwidgets/Makefile
 widget/src/support/Makefile
+widget/src/membuf/Makefile
+widget/src/membuf/tests/Makefile
 "
 
 MAKEFILES_xpcom="
@@ -778,6 +781,9 @@ embedding/browser/gtk/tests/Makefile
 embedding/browser/qt/Makefile
 embedding/browser/qt/src/Makefile
 embedding/browser/qt/tests/Makefile
+embedding/browser/membuf/Makefile
+embedding/browser/membuf/src/Makefile
+embedding/browser/membuf/tests/Makefile
 embedding/browser/photon/Makefile
 embedding/browser/photon/src/Makefile
 embedding/browser/photon/tests/Makefile
