@@ -39,8 +39,6 @@
 #define nsAppShell_h__
 
 #include "nsBaseAppShell.h"
-#include "nsITimerManager.h"
-#include "nsCOMPtr.h"
 
 /**
  * Native Win32 Application shell wrapper
@@ -62,7 +60,6 @@ public:
 private:
   virtual ~nsAppShell() {}
 
-  nsCOMPtr<nsITimerManager> mTimerManager;
   PRUint32 mMainThreadId;
   PRUint32 mMsgId;
 };

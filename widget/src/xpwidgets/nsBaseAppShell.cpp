@@ -116,21 +116,24 @@ NS_IMETHODIMP
 nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
                                    PRUint32 recursionDepth)
 {
-  if (mFavorPerf <= 0) {
-    PRIntervalTime start = PR_IntervalNow();
-    if (start > mSwitchTime + mStarvationDelay) {
-      // Favor pending native events
-      PRIntervalTime limit = THREAD_EVENT_STARVATION_LIMIT;
-      PRBool keepGoing;
-      do {
-        keepGoing = ProcessNextNativeEvent(PR_FALSE);
-      } while (keepGoing && (PR_IntervalNow() - start) < limit);
+  PRIntervalTime start = PR_IntervalNow();
+  PRIntervalTime limit = THREAD_EVENT_STARVATION_LIMIT;
+
+  if (mFavorPerf <= 0 && start > mSwitchTime + mStarvationDelay) {
+    // Favor pending native events
+    PRIntervalTime now = start;
+    PRBool keepGoing;
+    do {
+      mLastNativeEventTime = now;
+      keepGoing = ProcessNextNativeEvent(PR_FALSE);
+    } while (keepGoing && ((now = PR_IntervalNow()) - start) < limit);
+  } else {
+    // Avoid starving native events completely when in performance mode
+    if (start - mLastNativeEventTime > limit) {
+      mLastNativeEventTime = start;
+      ProcessNextNativeEvent(PR_FALSE);
     }
   }
-
-  // NOTE: When mFavorPerf > 0, we may end up starving the native event queue.
-  //       We should probably keep track of how much time we spend away from
-  //       the native event queue, so we can service it periodically.
 
   PRBool val;
   while (NS_SUCCEEDED(thr->HasPendingEvents(&val)) && !val) {
@@ -144,6 +147,7 @@ nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
       nsCOMPtr<nsIRunnable> dummyEvent = new nsRunnable();
       thr->Dispatch(dummyEvent, NS_DISPATCH_NORMAL);
     }
+    mLastNativeEventTime = PR_IntervalNow();
     if (!ProcessNextNativeEvent(mayWait) && !mayWait)
       break;
   }

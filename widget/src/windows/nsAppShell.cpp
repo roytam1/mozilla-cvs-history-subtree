@@ -100,8 +100,6 @@ nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 PRBool
 nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
-  // XXX process idle timers
-
   PRBool gotMessage = PR_FALSE;
 
   do {

@@ -58,6 +58,7 @@ public:
     , mFavorPerf(0)
     , mStarvationDelay(0)
     , mSwitchTime(0)
+    , mLastNativeEventTime(0)
   {}
 
 protected:
@@ -75,6 +76,7 @@ protected:
   PRInt32 mFavorPerf;
   PRIntervalTime mStarvationDelay;
   PRIntervalTime mSwitchTime;
+  PRIntervalTime mLastNativeEventTime;
 };
 
 #endif // nsBaseAppShell_h__
