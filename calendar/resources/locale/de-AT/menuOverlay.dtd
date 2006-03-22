@@ -38,10 +38,10 @@
    - ***** END LICENSE BLOCK ***** -->
 
 <!-- Event Menu -->
-<!ENTITY event.menu.title                       "Ereignis">
+<!ENTITY event.menu.title                       "Termin">
 <!ENTITY eventMenuCmd.accesskey                 "r">
 
-<!ENTITY event.new.event                        "Neues Ereignis...">
+<!ENTITY event.new.event                        "Neuer Termin...">
 <!ENTITY event.new.event.key                    "N">
 <!ENTITY event.new.event.accesskey              "N">
 
@@ -65,7 +65,7 @@
 <!ENTITY event.edit.event.key                   "E">
 <!ENTITY event.edit.event.accesskey             "e">
 
-<!ENTITY event.delete.event                     "Gewählte Ereignisse löschen">
+<!ENTITY event.delete.event                     "Gewählte Termine löschen">
 <!ENTITY event.delete.event.accesskey           "L">
 
 <!ENTITY event.delete.tasks                     "Gewählte Aufgaben löschen">
@@ -219,10 +219,10 @@
 
 <!ENTITY editMenu.label                         "Bearbeiten">
 <!ENTITY editMenu.accesskey                     "e">
-<!ENTITY optionsCmd.label                       "">
-<!ENTITY optionsCmd.accesskey                   "">
-<!ENTITY preferencesCmd.label                   "Optionen...">
-<!ENTITY preferencesCmd.accesskey               "O">
+<!ENTITY optionsCmd.label                       "Optionen...">
+<!ENTITY optionsCmd.accesskey                   "O">
+<!ENTITY preferencesCmd.label                   "Einstellungen...">
+<!ENTITY preferencesCmd.accesskey               "i">
 
 <!ENTITY viewMenu.label                         "Ansicht">
 <!ENTITY viewMenu.accesskey                     "A">

@@ -66,18 +66,18 @@
 <!ENTITY pref.defaultemail.label "Standardadresse, an die Alarme gesendet werden:">
 <!ENTITY pref.defaulttext.label "Standardtext für Alarme:">
 <!ENTITY pref.missedalarms    "Versäumte Alarme anzeigen" >
-<!ENTITY pref.defalarm4events.label "Standard-Alarmeinstellung für Ereignisse:">
+<!ENTITY pref.defalarm4events.label "Standard-Alarmeinstellung für Termine:">
 <!ENTITY pref.defalarm4todos.label "Standard-Alarmeinstellung für Aufgaben:">
 <!ENTITY pref.alarm.on "Ein">
 <!ENTITY pref.alarm.off "Aus">
-<!ENTITY pref.defalarmlen4events.label "Alarm startet automatisch vor einem Ereignis:">
+<!ENTITY pref.defalarmlen4events.label "Alarm startet automatisch vor einem Termin:">
 <!ENTITY pref.defalarmlen4todos.label "Alarm startet automatisch vor einer Aufgabe:">
 
 <!ENTITY pref.dateformat.label      "Datums-Textformat:" >
 <!ENTITY pref.dateformat.long       "Lang" >
 <!ENTITY pref.dateformat.short      "Kurz"  >
 <!ENTITY pref.dateformat.storeingmt "Dates in Universal Time speichern" >
-<!ENTITY pref.defaultlength.label   "Standard-Ereignislänge:" >
+<!ENTITY pref.defaultlength.label   "Standard-Terminlänge:" >
 <!ENTITY pref.defaultsnoozelength.label   "Standard-Zeit bis Erinnerung:" >
 
 <!ENTITY pref.weekstarts.label     "Erster Tag der Woche:" >
@@ -93,7 +93,7 @@
 <!ENTITY pref.numberofweeks.6      "6 Wochen" >
 <!ENTITY pref.numberofpreviousweeks.label     "Anzahl der vergangenen Wochen:" >
 
-<!ENTITY pref.hour.help.description    "Übergangen, wenn Ereignisse außerhalb dieser Zeiten liegen" >
+<!ENTITY pref.hour.help.description    "Übergangen, wenn Termine außerhalb dieser Zeiten liegen" >
 <!ENTITY pref.hour.00    "00:00" >
 <!ENTITY pref.hour.01    "01:00" >
 <!ENTITY pref.hour.02    "02:00" >
