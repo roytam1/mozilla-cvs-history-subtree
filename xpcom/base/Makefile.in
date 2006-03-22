@@ -62,6 +62,7 @@ CPPSRCS		= \
 		nsMemoryImpl.cpp \
 		nsTraceRefcntImpl.cpp \
 		nsInterfaceRequestorAgg.cpp \
+		nsUUIDGenerator.cpp \
 		$(NULL)
 
 ifdef GC_LEAK_DETECTOR
@@ -122,6 +123,7 @@ XPIDLSRCS	= \
 		nsIException.idl \
 		nsIExceptionService.idl \
 		nsIVersionComparator.idl \
+		nsIUUIDGenerator.idl \
 		$(NULL)
 
 ifdef GC_LEAK_DETECTOR
