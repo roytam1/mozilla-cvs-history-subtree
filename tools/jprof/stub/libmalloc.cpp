@@ -51,7 +51,6 @@
 #include "jprof.h"
 #include <string.h>
 #include <errno.h>
-#include <setjmp.h>
 #include <dlfcn.h>
 
 
@@ -61,12 +60,6 @@ extern r_debug _r_debug;
 #else
 #include <link.h>
 #endif
-
-#ifdef NTO
-#define JB_BP 0x08
-#include <setjmp.h>
-#endif
-
 
 static int gLogFD = -1;
 static pthread_t main_thread;
@@ -78,13 +71,9 @@ static int enableRTCSignals(bool enable);
 //----------------------------------------------------------------------
 
 #if defined(i386) || defined(_i386)
-static void CrawlStack(malloc_log_entry* me, jmp_buf jb, char* first)
+static void CrawlStack(malloc_log_entry* me, void* frame_ptr, char* first)
 {
-#ifdef NTO
-  u_long* bp = (u_long*) (jb[0].__jmpbuf_un.__savearea[JB_BP]);
-#else
-  u_long* bp = (u_long*) (jb[0].__jmpbuf[JB_BP]);
-#endif
+  u_long* bp = (u_long*)frame_ptr;
   u_long numpcs = 0;
 
 #ifdef JPROF_PTHREAD_HACK
@@ -171,9 +160,7 @@ Log(u_long aTime, char *first)
 
   me.delTime = aTime;
 
-  jmp_buf jb;
-  setjmp(jb);
-  CrawlStack(&me, jb, first);
+  CrawlStack(&me, __builtin_frame_address(0), first);
 
 #ifndef NTO
   write(gLogFD, &me, offsetof(malloc_log_entry, pcs) + me.numpcs*sizeof(char*));
@@ -320,7 +307,7 @@ void *mystry)
         startSignalCounter(timerMiliSec);
 }
 
-void setupProfilingStuff(void)
+NS_EXPORT_(void) setupProfilingStuff(void)
 {
     static int gFirstTime = 1;
     if(gFirstTime && !(gFirstTime=0)) {
