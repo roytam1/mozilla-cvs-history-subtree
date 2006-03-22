@@ -55,8 +55,16 @@ PACKAGE_FILE = imgicon.pkg
 ifdef MOZ_ENABLE_GNOMEUI
 EXTRA_DSO_LDOPTS = $(MOZ_GNOMEUI_LIBS)
 PLATFORM = gtk
+ifdef MINIMO
+#On minimo, we do a static build which includes icon.  if
+#the target device does not have the required libraries to
+#support icon, you should disable icon support at build
+#time.
+LIBXUL_LIBRARY = 1
+else
 FORCE_SHARED_LIB = 1
 EXPORT_LIBRARY =
+endif
 else
 LIBXUL_LIBRARY = 1
 endif

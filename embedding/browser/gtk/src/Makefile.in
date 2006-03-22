@@ -132,6 +132,7 @@ ifdef BUILD_STATIC_LIBS
 # ``minimal'' embedding harness.
 ifdef MINIMO
 EMBED_MANIFEST=$(topsrcdir)/embedding/config/minimo-unix
+FINAL_LINK_LIBS=$(topsrcdir)/embedding/config/minimo-unix-libs
 else
 EMBED_MANIFEST=$(topsrcdir)/embedding/config/basebrowser-unix
 endif
