@@ -15,6 +15,7 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsComponentManagerUtils.h"
 #include "nsEmbedCID.h"
+#include "nsGUIEvent.h"
 #include "nsIComponentManager.h"
 #include "nsIDirectoryService.h"
 #include "nsIDocShell.h"
@@ -23,6 +24,7 @@
 #include "nsIPresShell.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
+#include "nsPresContext.h"
 #include "nsStringAPI.h"
 #include "nsWidgetsCID.h"
 #include "nsXULAppAPI.h"
@@ -376,9 +378,6 @@ BrowserGlue::UpdateBitmap()
 {
   printf("BrowserGlue::UpdateBitmap()\n");
   
-  allegro_errno = &errno;
-  char* filename_before = "browserglue_image.tga";
-  char* filename_after = "openpfc_browser_image_after.tga";
   BITMAP *bitmap = nsnull;
 
   // force the widget to paint before we capture the image and hand it off
@@ -392,6 +391,9 @@ BrowserGlue::UpdateBitmap()
 /*
   // XXXjgaunt - we'll be making this call a lot, so I think we can hold
   //             off with the dumpfiles
+  allegro_errno = &errno;
+  char* filename_before = "browserglue_image.tga";
+  char* filename_after = "openpfc_browser_image_after.tga";
   printf("   saving bitmap to '%s'\n", filename_before);
   //save_tga(ToNewCString(mFilename), bitmap, 0);
   save_tga(filename_before, bitmap, 0);
@@ -459,6 +461,42 @@ BrowserGlue::LoadURI(const char *aURI)
                     nsnull,                            // Referring URI
                     nsnull,                            // Post data
                     nsnull);                           // extra headers
+  return NS_OK;
+}
+
+nsresult
+BrowserGlue::SendKeyEvent(nsKeyEvent aKeyEvent)
+{
+  printf("BrowserGlue::SendKeyEvent()\n");
+  NS_ENSURE_TRUE(mWebBrowser, NS_ERROR_FAILURE);
+  nsresult rv = NS_OK;
+                                                                                
+  nsCOMPtr<nsIWidget> widget;
+  mBrowserWindow->GetWidget(getter_AddRefs(widget));
+  if (!widget)
+    return PR_FALSE;
+
+  // set the widget as the embeddor won't have that info.
+  aKeyEvent.widget = widget;
+
+  // Get the docShell for the currently loaded document
+  nsCOMPtr<nsIDocShell> docShell = do_GetInterface(mWebBrowser);
+  NS_ENSURE_TRUE(docShell, NS_ERROR_FAILURE);
+                                                                                
+  // Get the presShell from the docShell
+  nsCOMPtr<nsIPresShell> presShell;
+  docShell->GetPresShell(getter_AddRefs(presShell));
+  NS_ENSURE_TRUE(presShell, NS_ERROR_FAILURE);
+                                                                                
+  // Get the root view, or the "viewport view"
+  nsIViewManager *viewManager = presShell->GetViewManager();
+  NS_ENSURE_TRUE(viewManager, NS_ERROR_FAILURE);
+
+  nsEventStatus status;
+  rv = viewManager->DispatchEvent( &aKeyEvent, &status );
+  if (NS_FAILED(rv))
+    return PR_FALSE;
+
   return NS_OK;
 }
 

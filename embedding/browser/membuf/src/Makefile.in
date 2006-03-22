@@ -57,6 +57,7 @@ REQUIRES	 = \
                   embed_base \
                   gfx \
                   layout \
+                  locale \
                   nspr \
                   profdirserviceprovider \
                   string \

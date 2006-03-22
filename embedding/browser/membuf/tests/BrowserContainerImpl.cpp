@@ -2,6 +2,8 @@
 
 #include "BrowserContainerImpl.h"
 #include "nsString.h"
+#include "nsIDOMKeyEvent.h"
+#include "nsGUIEvent.h"
 
 BrowserContainerImpl::BrowserContainerImpl() : mBrowser(0),
                                                mBitmap(0),
@@ -120,6 +122,55 @@ BrowserContainerImpl::SetOutputFile(char *aFilename)
   mFilename = aFilename;
   mBrowser->SetOutputFile(aFilename);
   
+  return NS_OK;
+}
+
+nsresult
+BrowserContainerImpl::SendSpatNavDown()
+{
+  printf("BrowserContainerImpl[%x]::SendSpatNavDown()\n",this);
+
+  nsKeyEvent keyEvent( PR_TRUE, NS_KEY_PRESS, nsnull );
+  keyEvent.keyCode = nsIDOMKeyEvent::DOM_VK_DOWN;
+  keyEvent.charCode = 0;
+  keyEvent.isChar = PR_TRUE;
+  keyEvent.isShift = PR_TRUE;
+  keyEvent.isControl = 0;
+  keyEvent.isAlt = PR_TRUE;
+  keyEvent.isMeta = 0;
+  keyEvent.widget = nsnull;
+  keyEvent.nativeMsg = nsnull;
+  keyEvent.point.x = 0;
+  keyEvent.point.y = 0;
+  keyEvent.refPoint.x = 0;
+  keyEvent.refPoint.y = 0;
+  keyEvent.flags = 0;
+
+  mBrowser->SendKeyEvent(keyEvent);
+
+  mBrowser->BitmapUpdated();
+
+  return NS_OK;
+}
+
+nsresult
+BrowserContainerImpl::SendSpatNavUp()
+{
+  printf("BrowserContainerImpl[%x]::SendSpatNavUp()\n",this);
+  return NS_OK;
+}
+
+nsresult
+BrowserContainerImpl::SendSpatNavLeft()
+{
+  printf("BrowserContainerImpl[%x]::SendSpatNavLeft()\n",this);
+  return NS_OK;
+}
+
+nsresult
+BrowserContainerImpl::SendSpatNavRight()
+{
+  printf("BrowserContainerImpl[%x]::SendSpatNavRight()\n",this);
   return NS_OK;
 }
 

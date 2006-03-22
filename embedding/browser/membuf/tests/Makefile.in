@@ -47,6 +47,7 @@ MOZILLA_INTERNAL_API = 1
 
 REQUIRES    = \
               docshell \
+              dom \
               embed_base \
               gfx \
               membufembed \

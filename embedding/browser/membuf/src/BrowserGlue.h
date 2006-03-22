@@ -75,6 +75,11 @@ class BrowserGlue
     /**
      *
      */
+    nsresult SendKeyEvent(nsKeyEvent aKeyEvent);
+
+    /**
+     *
+     */
     nsresult Shutdown();
 
     /**

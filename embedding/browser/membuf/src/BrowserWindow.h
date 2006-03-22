@@ -44,6 +44,8 @@ public:
   NS_DECL_NSITOOLTIPLISTENER
   NS_DECL_NSIINTERFACEREQUESTOR
 
+  nsresult GetWidget(nsIWidget **aWidget);
+
 protected:
 
   nsresult GetView(nsIView **aView);

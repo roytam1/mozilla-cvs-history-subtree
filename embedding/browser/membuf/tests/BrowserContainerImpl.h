@@ -63,6 +63,11 @@ class BrowserContainerImpl : public BrowserContainer
     nsresult CreateBrowser();
     nsresult DumpBitmapToFile();
 
+    nsresult SendSpatNavDown();
+    nsresult SendSpatNavUp();
+    nsresult SendSpatNavLeft();
+    nsresult SendSpatNavRight();
+
   private:
 
     BrowserGlue     *mBrowser;

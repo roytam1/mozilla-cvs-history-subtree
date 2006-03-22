@@ -164,6 +164,18 @@ BrowserWindow::CreateWindow()
 }
 
 nsresult
+BrowserWindow::GetWidget(nsIWidget **aWidget)
+{
+  NS_ENSURE_ARG_POINTER(aWidget);
+  if (mWidget) {
+    *aWidget = mWidget;
+    NS_ADDREF(*aWidget);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+nsresult
 BrowserWindow::GetView(nsIView **aView)
 {
     nsIWebBrowser *aWebBrowser = mWebBrowser;
