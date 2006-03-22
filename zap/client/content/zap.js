@@ -48,7 +48,7 @@ Components.utils.importModule("gre:ArrayUtils.js");
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.2.2"; // String to be sent in User-Agent
+var wUserAgent = "zap/0.2.3"; // String to be sent in User-Agent
                               // header for SIP requests
 var wNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);

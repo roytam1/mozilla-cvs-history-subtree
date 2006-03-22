@@ -1,5 +1,5 @@
 pref("toolkit.defaultChromeURI", "chrome://zap/content/zap.xul");
-pref("general.useragent.extra.zap", "zap/0.2.2");
+pref("general.useragent.extra.zap", "zap/0.2.3");
 pref("signon.SignonFileName", "credentials.txt");
 pref("general.useragent.locale", "en-US");
 pref("browser.preferences.instantApply", false);
