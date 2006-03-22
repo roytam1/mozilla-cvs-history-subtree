@@ -51,11 +51,12 @@
 #include "nsCOMPtr.h"
 #include "nsIToolkit.h"
 
+#include <CoreFoundation/CoreFoundation.h>
 #include <memory>
 
-using std::auto_ptr;
+//using std::auto_ptr;
 
-class nsMacMessagePump;
+//class nsMacMessagePump;
 
 class nsAppShell : public nsBaseAppShell
 {
@@ -66,19 +67,16 @@ class nsAppShell : public nsBaseAppShell
     NS_IMETHOD Init(int *argc, char **argv);
 
     // nsIThreadObserver overrides:
-    NS_IMETHOD OnNewTask(nsIThreadInternal *thread, PRUint32 flags);
-    NS_IMETHOD OnBeforeRunNextTask(nsIThreadInternal *thread, PRUint32 flags);
-    NS_IMETHOD OnAfterRunNextTask(nsIThreadInternal *thread, PRUint32 flags,
-                                  nsresult status);
-    NS_IMETHOD OnWaitNextTask(nsIThreadInternal *thread, PRUint32 flags);
+    NS_IMETHOD OnDispatchedEvent(nsIThreadInternal *thread);
+
+    // nsBaseAppShell overrides:
+    PRBool ProcessNextNativeEvent(PRBool mayWait);
   
   private:
-    ~nsAppShell() {}
+    ~nsAppShell();
 
     nsCOMPtr<nsIToolkit>           mToolkit;
-    auto_ptr<nsMacMessagePump>     mMacPump;
-    PRBool                         mExitCalled;
-    static PRBool                  mInitializedToolbox;
+    CFRunLoopRef                   mRunLoop;
 };
 
 #endif // nsAppShell_h__

@@ -53,6 +53,7 @@
 #include "nsIWidget.h"
 #include "nsMacMessagePump.h"
 #include "nsToolkit.h"
+#include <CoreFoundation/CoreFoundation.h>
 #include <Quickdraw.h>
 #include <Fonts.h>
 #include <TextEdit.h>
@@ -62,14 +63,11 @@
 
 #include <stdlib.h>
 
-PRBool nsAppShell::mInitializedToolbox = PR_FALSE;
-
-
-//-------------------------------------------------------------------------
-//
-// Create the application shell
-//
-//-------------------------------------------------------------------------
+nsAppShell::~nsAppShell()
+{
+  if (mRunLoop)
+    CFRelease(mRunLoop);
+}
 
 NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
 {
@@ -77,13 +75,21 @@ NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
   if (NS_FAILED(rv))
    return rv;
 
+/*
   nsIToolkit* toolkit = mToolkit.get();
   mMacPump.reset(new nsMacMessagePump(static_cast<nsToolkit*>(toolkit)));
 
-  if (!mMacPump.get() || ! nsMacMemoryCushion::EnsureMemoryCushion())
+  if (!mMacPump.get() || !nsMacMemoryCushion::EnsureMemoryCushion())
+    return NS_ERROR_OUT_OF_MEMORY;
+*/
+
+  if (!nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
 
-  return nsBaseAppShell::Init(argc, argv);;
+  mRunLoop = CFRunLoopGetCurrent();
+  CFRetain(mRunLoop);
+  
+  return nsBaseAppShell::Init(argc, argv);
 }
 
 #if 0
@@ -194,9 +200,9 @@ NS_IMETHODIMP nsAppShell::Spindown(void)
 nsAppShell::nsAppShell()
 {
 
-  mInitializedToolbox = PR_TRUE;
-  mRefCnt = 0;
-  mExitCalled = PR_FALSE;
+  //mInitializedToolbox = PR_TRUE;
+  //mRefCnt = 0;
+  //mExitCalled = PR_FALSE;
 }
 
 #if 0
@@ -311,30 +317,42 @@ _pl_NativeNotify(PLEventQueue* self)
 }
 #endif
 
-NS_IMETHODIMP nsAppShell::OnNewTask(nsIThreadInternal *thr, PRUint32 flags)
+NS_IMETHODIMP nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 {
   // post a message to the native event queue...
+
+#if 0
+  OSErr err;
+  EventRef newEvent;
+  if (CreateEvent(NULL, kEventClassPL, kEventProcessPLEvents,
+                  0, kEventAttributeNone, &newEvent) != noErr)
+      return PR_FAILURE;
+    err = SetEventParameter(newEvent, kEventParamPLEventQueue,
+                            typeUInt32, sizeof(PREventQueue*), &self);
+    if (err == noErr) {
+        err = PostEventToQueue(GetMainEventQueue(), newEvent, kEventPriorityLow);
+        ReleaseEvent(newEvent);
+    }
+    if (err != noErr)
+        return PR_FAILURE;
+#endif
+
+  printf("--- nsAppShell::OnDispatchedEvent()\n");
+
+  CFRunLoopWakeUp(mRunLoop);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAppShell::OnBeforeRunNextTask(nsIThreadInternal *thr,
-                                              PRUint32 flags)
+PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
-  return NS_OK;
-}
+  printf("--- nsAppShell::ProcessNextNativeEvent(%d)\n", mayWait);
 
-NS_IMETHODIMP nsAppShell::OnAfterRunNextTask(nsIThreadInternal *thr,
-                                             PRUint32 flags,
-                                             nsresult status)
-{
-  // process any pending native events...
-  return NS_OK;
-}
+  CFTimeInterval interval = 0.0;
+  if (mayWait)
+    interval = 10.0;  // seconds
 
-NS_IMETHODIMP nsAppShell::OnWaitNextTask(nsIThreadInternal *thr,
-                                         PRUint32 flags)
-{
-  // while (!thr->HasPendingTask())
-  //   wait for and process native events
-  return NS_OK;
+  SInt32 rv = CFRunLoopRunInMode(kCFRunLoopDefaultMode, interval, true);
+  printf("--- CFRunLoopRunInMode returned [%x]\n", rv);
+
+  return rv == kCFRunLoopRunHandledSource;
 }
