@@ -1,4 +1,4 @@
-pref("general.useragent.extra.minimo", "Minimo/0.013");
+pref("general.useragent.extra.minimo", "Minimo/0.014");
 
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=");
@@ -93,12 +93,6 @@ pref("slider.snapMultiplier", 6);
 
 // option to choose plug-in finder
 pref("application.use_ns_plugin_finder", false);
-
-// URI fixup prefs
-pref("browser.fixup.alternate.enabled", true);
-pref("browser.fixup.alternate.prefix", "www.");
-pref("browser.fixup.alternate.suffix", ".com");
-pref("browser.fixup.hide_user_pass", true);
 
 // Default Capability Preferences: Security-Critical! 
 // Editing these may create a security risk - be sure you know what you're doing

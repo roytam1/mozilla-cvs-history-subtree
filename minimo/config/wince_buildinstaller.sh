@@ -35,7 +35,7 @@ pushd $INSTALL_DIST
 
 rm -f minimo.*.DAT minimo.*.cab minimo.log minimo_wince_setup.exe
 
-./cabwiz minimo.inf /err minimo.log /cpu 2577
+./cabwiz minimo.inf /err minimo.log
 
 cat minimo.log
 

@@ -9,7 +9,6 @@ InstallDir=%CE1%\%AppName%
 
 [DefaultInstall]
 CopyFiles=Files.minimo,Files.chrome,Files.components,Files.greprefs,Files.res,Files.res_dtd,Files.res_entityTables,Files.res_fonts
-
 CEShortcuts=Shortcuts
 
 [SourceDisksNames]
