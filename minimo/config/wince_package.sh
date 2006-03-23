@@ -56,36 +56,6 @@ echo Linking XPT files.
 
 host/bin/host_xpt_link minimo/components/all.xpt          bin/components/*.xpt
 
-echo Chewing on chrome
-
-cd minimo/chrome
-
-unzip toolkit.jar
-rm -rf toolkit.jar
-rm -rf content/passwordmgr
-rm -rf content/mozapps
-rm -rf content/help
-zip -0 -r toolkit.jar content
-rm -rf content
-
-unzip classic.jar
-rm -rf classic.jar
-rm -rf skin/classic/communicator
-rm -rf skin/classic/editor
-rm -rf skin/classic/messenger
-rm -rf skin/classic/navigator
-zip -0 -r classic.jar skin
-rm -rf skin
-
-unzip en-US.jar
-rm -rf en-US.jar
-rm -rf locale/en-US/communicator
-rm -rf locale/en-US/navigator
-zip -0 -r en-US.jar locale
-rm -rf locale
-
-echo Copying over customized files
-
 popd
 
 pushd $SRCDIR
