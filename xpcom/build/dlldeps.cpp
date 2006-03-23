@@ -126,6 +126,10 @@ void XXXNeverCalled()
     }
     NS_InputStreamIsBuffered(nsnull);
     NS_OutputStreamIsBuffered(nsnull);
+    NS_CopySegmentToStream(nsnull, nsnull, nsnull, 0, 0, nsnull);
+    NS_CopySegmentToBuffer(nsnull, nsnull, nsnull, 0, 0, nsnull);
+    NS_DiscardSegment(nsnull, nsnull, nsnull, 0, 0, nsnull);
+    NS_WriteSegmentThunk(nsnull, nsnull, nsnull, 0, 0, 0);
     PL_DHashStubEnumRemove(nsnull, nsnull, nsnull, nsnull);
     nsIDHashKey::HashKey(nsnull);
     nsFixedSizeAllocator a;
