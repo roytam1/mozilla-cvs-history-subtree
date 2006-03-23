@@ -51,14 +51,19 @@
 #include "nsCOMPtr.h"
 #include "nsIToolkit.h"
 
+#ifdef WNE_TRANSITION
+#include <Carbon/Carbon.h>
+#endif // WNE_TRANSITION
+
 #include <CoreFoundation/CoreFoundation.h>
 #include <memory>
 
-#if defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
+#if defined(WNE_TRANSITION) || \
+    defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
 using std::auto_ptr;
 
 class nsMacMessagePump;
-#endif
+#endif // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
 
 class nsAppShell : public nsBaseAppShell
 {
@@ -73,6 +78,11 @@ class nsAppShell : public nsBaseAppShell
 
     // nsBaseAppShell overrides:
     PRBool ProcessNextNativeEvent(PRBool mayWait);
+
+#ifdef WNE_TRANSITION
+    OSStatus WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
+                                       EventRef aEvent);
+#endif // WNE_TRANSITION
   
   private:
     ~nsAppShell();
@@ -80,11 +90,12 @@ class nsAppShell : public nsBaseAppShell
     nsCOMPtr<nsIToolkit>           mToolkit;
 #ifdef RUNLOOP_IS_CFRUNLOOP
     CFRunLoopRef                   mRunLoop;
-#endif
+#endif // RUNLOOP_IS_CFRUNLOOP
 
-#if defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
+#if defined(WNE_TRANSITION) || \
+    (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE))
     auto_ptr<nsMacMessagePump>     mMacPump;
-#endif
+#endif // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
 };
 
 #endif // nsAppShell_h__

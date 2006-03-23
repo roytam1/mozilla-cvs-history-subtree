@@ -21,6 +21,8 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Darin Fisher <darin@meer.net>
+ *   Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,10 +47,18 @@
 // interface may change, so this comment must be updated accordingly.)
 //
 
-#define RUNLOOP_IS_CARBON // RUNLOOP_IS_CARBON or RUNLOOP_IS_CFRUNLOOP
-#define RUNLOOP_USES_WNE // Define with RUNLOOP_IS_CARBON to attempt to
-                         // pick up EventRecords with WaitNextEvent and
-                         // process them via nsMacMessagePump
+// define RUNLOOP_IS_CARBON or RUNLOOP_IS_CFRUNLOOP
+#define RUNLOOP_IS_CARBON
+
+// define RUNLOOP_USES_WNE with RUNLOOP_IS_CARBON to attempt to pick up
+// EventRecords with WaitNextEvent and process them via nsMacMessagePump
+// #undef RUNLOOP_USES_WNE
+
+// define WNE_TRANSITION to bypass WaitNextEvent entirely and install
+// a Carbon event handler to dispatch events formerly handled by
+// WaitNextEvent.  The code is transitional in that it still converts to
+// old-old-style EventRecords and dispatches through the old mechanism.
+#define WNE_TRANSITION
 
 #if (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_IS_CFRUNLOOP)) || \
     (!defined(RUNLOOP_IS_CARBON) && !defined(RUNLOOP_IS_CFRUNLOOP))
@@ -85,14 +95,65 @@ static pascal OSStatus RunLoopEventHandler(EventHandlerCallRef aHandlerCallRef,
   ::QuitApplicationEventLoop();
   return noErr;
 }
-#endif
+
+DEFINE_ONE_SHOT_HANDLER_GETTER(RunLoopEventHandler)
+#endif // RUNLOOP_IS_CARBON
+
+#ifdef WNE_TRANSITION
+// This list encompasses all Carbon events that can be converted into
+// EventRecords.  Not all will necessarily be called; not all will necessarily
+// be handled.  Some items here may be redundant in that handlers are already
+// installed elsewhere.  This may need a good audit.
+static const EventTypeSpec kWNETransitionEventList[] = {
+  { kEventClassMouse,       kEventMouseDown },
+  { kEventClassMouse,       kEventMouseUp },
+  { kEventClassMouse,       kEventMouseMoved },
+  { kEventClassMouse,       kEventMouseDragged },
+  { kEventClassKeyboard,    kEventRawKeyDown },
+  { kEventClassKeyboard,    kEventRawKeyUp },
+  { kEventClassKeyboard,    kEventRawKeyRepeat },
+  { kEventClassWindow,      kEventWindowUpdate },
+  { kEventClassWindow,      kEventWindowActivated },
+  { kEventClassWindow,      kEventWindowDeactivated },
+  { kEventClassWindow,      kEventWindowCursorChange },
+  { kEventClassApplication, kEventAppActivated },
+  { kEventClassApplication, kEventAppDeactivated },
+  { kEventClassAppleEvent,  kEventAppleEvent },
+  { kEventClassControl,     kEventControlTrack },
+};
+
+static pascal OSStatus WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
+                                                 EventRef aEvent,
+                                                 void* aUserData)
+{
+  nsAppShell* self = (nsAppShell*)aUserData;
+  return self->WNETransitionEventHandler(aHandlerCallRef, aEvent);
+}
+
+DEFINE_ONE_SHOT_HANDLER_GETTER(WNETransitionEventHandler)
+
+OSStatus nsAppShell::WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
+                                               EventRef aEvent)
+{
+  EventRecord eventRecord;
+  ::ConvertEventRefToEventRecord(aEvent, &eventRecord);
+
+  PRBool handled = mMacPump->DispatchEvent(PR_TRUE, &eventRecord);
+
+  if (handled) {
+    return noErr;
+  }
+
+  return eventNotHandledErr;
+}
+#endif // WNE_TRANSITION
 
 nsAppShell::~nsAppShell()
 {
 #ifdef RUNLOOP_IS_CFRUNLOOP
   if (mRunLoop)
     CFRelease(mRunLoop);
-#endif
+#endif // RUNLOOP_IS_CFRUNLOOP
 }
 
 NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
@@ -101,29 +162,38 @@ NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
   if (NS_FAILED(rv))
    return rv;
 
-#if defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
+#if defined(WNE_TRANSITION) || \
+    (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE))
   nsIToolkit* toolkit = mToolkit.get();
   mMacPump.reset(new nsMacMessagePump(static_cast<nsToolkit*>(toolkit)));
 
   if (!mMacPump.get() || !nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
-#else
+#else // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
   if (!nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
-#endif
+#endif // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
 
 #ifdef RUNLOOP_IS_CFRUNLOOP
   mRunLoop = CFRunLoopGetCurrent();
   CFRetain(mRunLoop);
-#endif
+#endif // RUNLOOP_IS_CFRUNLOOP
 
 #ifdef RUNLOOP_IS_CARBON
-  ::InstallApplicationEventHandler(NewEventHandlerUPP(RunLoopEventHandler),
+  ::InstallApplicationEventHandler(GetRunLoopEventHandlerUPP(),
                                    GetEventTypeCount(kRunLoopEventList),
                                    kRunLoopEventList,
                                    NULL,
                                    NULL);
-#endif
+#endif // RUNLOOP_IS_CARBON
+
+#ifdef WNE_TRANSITION
+  ::InstallApplicationEventHandler(GetWNETransitionEventHandlerUPP(),
+                                   GetEventTypeCount(kWNETransitionEventList),
+                                   kWNETransitionEventList,
+                                   (void*)this,
+                                   NULL);
+#endif // WNE_TRANSITION
   
   return nsBaseAppShell::Init(argc, argv);
 }
@@ -377,7 +447,8 @@ NS_IMETHODIMP nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 
 #ifdef RUNLOOP_IS_CFRUNLOOP
   CFRunLoopWakeUp(mRunLoop);
-#endif
+#endif // RUNLOOP_IS_CFRUNLOOP
+
 #ifdef RUNLOOP_IS_CARBON
   // ::QuitApplicationEventLoop(); // doesn't work from non-main thread
   EventRef event;
@@ -386,7 +457,8 @@ NS_IMETHODIMP nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
   ::PostEventToQueue(::GetMainEventQueue(),
                      event,
                      kEventPriorityHigh);
-#endif
+#endif // RUNLOOP_IS_CARBON
+
   return NS_OK;
 }
 
@@ -418,7 +490,7 @@ PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
   printf("--- CFRunLoopRunInMode returned [%x]\n", rv);
 
   return rv == kCFRunLoopRunHandledSource;
-#endif
+#endif // RUNLOOP_IS_CFRUNLOOP
 
 #ifdef RUNLOOP_IS_CARBON
   if (!mayWait) {
@@ -435,21 +507,41 @@ PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
       ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
       ::ReleaseEvent(carbonEvent);
     }
-#else
-    // Alternate implementation.
-    if (::GetNumEventsInQueue(::GetCurrentEventQueue())) {
+
+    return ::GetNumEventsInQueue(carbonEventQueue);
+#else // !RUNLOOP_USES_WNE
+    // Alternate implementation.  This is broken because native events that
+    // depend on EventRecord processing (those that have not yet been
+    // converted to Carbon events) will only be processed in this mode,
+    // when mayWait is false.  They will not be processed when the event
+    // loop is being run by RunApplicationEventLoop(), when mayWait is true.
+    // Use WNE_TRANSITION instead to avoid this problem.
+    int eventsInQueue = ::GetNumEventsInQueue(::GetCurrentEventQueue());
+    if (eventsInQueue) {
+// nsMacMessagePump::mMouseRgn needs to be public to use this
+//      PRBool inForeground = nsToolkit::IsAppInForeground();
+//      RgnHandle mouseRgn = inForeground ? mMacPump->mMouseRgn : NULL;
+
+      ::SetEventMask(everyEvent);
+
       EventRecord eventRec;
+//      PRBool haveEvent = ::WaitNextEvent(everyEvent, &eventRec, 0, mMouseRgn);
       PRBool haveEvent = ::WaitNextEvent(everyEvent, &eventRec, 0, NULL);
 
+      eventsInQueue--;
+#ifndef WNE_TRANSITION
       mMacPump->DispatchEvent(haveEvent, &eventRec);
+#endif // !WNE_TRANSITION
     }
-#endif
+
+    return eventsInQueue;
+#endif // !RUNLOOP_USES_WNE
   }
   else {
     ::RunApplicationEventLoop();
   }
 
-  return PR_TRUE;
-#endif
+  return PR_FALSE;
+#endif // RUNLOOP_IS_CARBON
 
 }
