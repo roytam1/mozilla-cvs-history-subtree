@@ -1,4 +1,6 @@
 toolkit.jar:
+#ifndef MINIMO
 %   content passwordmgr %content/passwordmgr/ xpcnativewrappers=yes
 *   content/passwordmgr/passwordManager.xul (content/passwordManager.xul)
 *   content/passwordmgr/passwordManager.js  (content/passwordManager.js)
+#endif

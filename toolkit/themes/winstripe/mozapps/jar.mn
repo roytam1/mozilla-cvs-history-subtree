@@ -1,5 +1,6 @@
 classic.jar:
 % skin mozapps classic/1.0 %skin/classic/mozapps/
+#ifndef MINIMO
         skin/classic/mozapps/downloads/downloadIcon.png               (downloads/downloadIcon.png)
         skin/classic/mozapps/downloads/downloadCleanup.png            (downloads/downloadCleanup.png)
         skin/classic/mozapps/downloads/downloadCleanupDisabled.png    (downloads/downloadCleanupDisabled.png)
@@ -28,3 +29,4 @@ classic.jar:
         skin/classic/mozapps/update/updates.css                       (update/updates.css)
         skin/classic/mozapps/xpinstall/xpinstallConfirm.css           (xpinstall/xpinstallConfirm.css)
         skin/classic/mozapps/xpinstall/xpinstallItemGeneric.png       (xpinstall/xpinstallItemGeneric.png)
+#endif

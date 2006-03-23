@@ -7,7 +7,6 @@ classic.jar:
         skin/classic/global/checkbox.css
         skin/classic/global/colorpicker.css
         skin/classic/global/config.css
-        skin/classic/global/customizeToolbar.css
         skin/classic/global/dialog.css
         skin/classic/global/expander.css
         skin/classic/global/filepicker.css
@@ -22,9 +21,6 @@ classic.jar:
         skin/classic/global/menulist.css
         skin/classic/global/netError.css
         skin/classic/global/popup.css
-        skin/classic/global/preferences.css
-        skin/classic/global/printPageSetup.css
-        skin/classic/global/printPreview.css
         skin/classic/global/progressmeter.css
         skin/classic/global/radio.css
         skin/classic/global/richlistbox.css
@@ -41,7 +37,6 @@ classic.jar:
         skin/classic/global/toolbarbutton.css
         skin/classic/global/tree.css
         skin/classic/global/wizard.css
-        skin/classic/global/alerts/alert.css                        (alerts/alert.css)
         skin/classic/global/arrow/arrow-dn.gif                      (arrow/arrow-dn.gif)
         skin/classic/global/arrow/arrow-dn-dis.gif                  (arrow/arrow-dn-dis.gif)
         skin/classic/global/arrow/arrow-dn-hov.gif                  (arrow/arrow-dn-hov.gif)
@@ -63,13 +58,6 @@ classic.jar:
         skin/classic/global/arrow/arrow-up-sharp.gif                (arrow/arrow-up-sharp.gif)
         skin/classic/global/checkbox/cbox-check.gif                 (checkbox/cbox-check.gif)
         skin/classic/global/checkbox/cbox-check-dis.gif             (checkbox/cbox-check-dis.gif) 
-        skin/classic/global/console/console.css                     (console/console.css)
-        skin/classic/global/console/console-toolbar.png             (console/console-toolbar.png)        
-        skin/classic/global/console/bullet-question.png             (console/bullet-question.png)
-        skin/classic/global/console/bullet-warning.png              (console/bullet-warning.png)
-        skin/classic/global/console/bullet-error.png                (console/bullet-error.png)
-        skin/classic/global/console/console-error-caret.gif         (console/console-error-caret.gif)
-        skin/classic/global/console/console-error-dash.gif          (console/console-error-dash.gif)
         skin/classic/global/Filepicker.png                          (filepicker/Filepicker.png)
         skin/classic/global/icons/Close.gif                         (icons/Close.gif)
         skin/classic/global/icons/close.png                         (icons/close.png)
@@ -114,3 +102,18 @@ classic.jar:
         skin/classic/global/tree/twisty-open.png                    (tree/twisty-open.png)
         skin/classic/global/throbber/Throbber-small.gif             (throbber/Throbber-small.gif)
 	skin/classic/global/throbber/Throbber-small.png             (throbber/Throbber-small.png)
+#ifndef MINIMO
+        skin/classic/global/customizeToolbar.css
+        skin/classic/global/preferences.css
+        skin/classic/global/printPageSetup.css
+        skin/classic/global/printPreview.css
+        skin/classic/global/alerts/alert.css                        (alerts/alert.css)
+        skin/classic/global/console/console.css                     (console/console.css)
+        skin/classic/global/console/console-toolbar.png             (console/console-toolbar.png)        
+        skin/classic/global/console/bullet-question.png             (console/bullet-question.png)
+        skin/classic/global/console/bullet-warning.png              (console/bullet-warning.png)
+        skin/classic/global/console/bullet-error.png                (console/bullet-error.png)
+        skin/classic/global/console/console-error-caret.gif         (console/console-error-caret.gif)
+        skin/classic/global/console/console-error-dash.gif          (console/console-error-dash.gif)
+#endif
+
