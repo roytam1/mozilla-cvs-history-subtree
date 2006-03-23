@@ -54,9 +54,11 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <memory>
 
-//using std::auto_ptr;
+#if defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
+using std::auto_ptr;
 
-//class nsMacMessagePump;
+class nsMacMessagePump;
+#endif
 
 class nsAppShell : public nsBaseAppShell
 {
@@ -76,7 +78,13 @@ class nsAppShell : public nsBaseAppShell
     ~nsAppShell();
 
     nsCOMPtr<nsIToolkit>           mToolkit;
+#ifdef RUNLOOP_IS_CFRUNLOOP
     CFRunLoopRef                   mRunLoop;
+#endif
+
+#if defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
+    auto_ptr<nsMacMessagePump>     mMacPump;
+#endif
 };
 
 #endif // nsAppShell_h__

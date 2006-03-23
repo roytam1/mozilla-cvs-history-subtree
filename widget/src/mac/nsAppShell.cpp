@@ -45,6 +45,16 @@
 // interface may change, so this comment must be updated accordingly.)
 //
 
+#define RUNLOOP_IS_CARBON // RUNLOOP_IS_CARBON or RUNLOOP_IS_CFRUNLOOP
+#define RUNLOOP_USES_WNE // Define with RUNLOOP_IS_CARBON to attempt to
+                         // pick up EventRecords with WaitNextEvent and
+                         // process them via nsMacMessagePump
+
+#if (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_IS_CFRUNLOOP)) || \
+    (!defined(RUNLOOP_IS_CARBON) && !defined(RUNLOOP_IS_CFRUNLOOP))
+#error Exactly one of RUNLOOP_IS_CARBON and RUNLOOP_IS_CFRUNLOOP must be defined
+#endif
+
 #include "nsAppShell.h"
 #include "nsIAppShell.h"
 
@@ -58,10 +68,31 @@
 
 #include <stdlib.h>
 
+#ifdef RUNLOOP_IS_CARBON
+#define kEventClassMoz 'MOZZ'
+#define kEventMozLeaveRunLoop 'leev'
+
+static const EventTypeSpec kRunLoopEventList[] = {
+  { kEventClassMoz, kEventMozLeaveRunLoop },
+};
+
+static pascal OSStatus RunLoopEventHandler(EventHandlerCallRef aHandlerCallRef,
+                                           EventRef aEvent,
+                                           void* aUserData)
+{
+  // { kEventClassMoz, kEventMozLeaveRunLoop } is the only event that this
+  // handler will process
+  ::QuitApplicationEventLoop();
+  return noErr;
+}
+#endif
+
 nsAppShell::~nsAppShell()
 {
+#ifdef RUNLOOP_IS_CFRUNLOOP
   if (mRunLoop)
     CFRelease(mRunLoop);
+#endif
 }
 
 NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
@@ -70,19 +101,29 @@ NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
   if (NS_FAILED(rv))
    return rv;
 
-/*
+#if defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
   nsIToolkit* toolkit = mToolkit.get();
   mMacPump.reset(new nsMacMessagePump(static_cast<nsToolkit*>(toolkit)));
 
   if (!mMacPump.get() || !nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
-*/
-
+#else
   if (!nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
+#endif
 
+#ifdef RUNLOOP_IS_CFRUNLOOP
   mRunLoop = CFRunLoopGetCurrent();
   CFRetain(mRunLoop);
+#endif
+
+#ifdef RUNLOOP_IS_CARBON
+  ::InstallApplicationEventHandler(NewEventHandlerUPP(RunLoopEventHandler),
+                                   GetEventTypeCount(kRunLoopEventList),
+                                   kRunLoopEventList,
+                                   NULL,
+                                   NULL);
+#endif
   
   return nsBaseAppShell::Init(argc, argv);
 }
@@ -334,17 +375,34 @@ NS_IMETHODIMP nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 
   printf("--- nsAppShell::OnDispatchedEvent()\n");
 
+#ifdef RUNLOOP_IS_CFRUNLOOP
   CFRunLoopWakeUp(mRunLoop);
+#endif
+#ifdef RUNLOOP_IS_CARBON
+  // ::QuitApplicationEventLoop(); // doesn't work from non-main thread
+  EventRef event;
+  ::CreateEvent(NULL, kEventClassMoz, kEventMozLeaveRunLoop,
+                0, kEventAttributeNone, &event);
+  ::PostEventToQueue(::GetMainEventQueue(),
+                     event,
+                     kEventPriorityHigh);
+#endif
   return NS_OK;
 }
 
 PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
+  printf("--- nsAppShell::ProcessNextNativeEvent(%d)\n", mayWait);
+
+#ifdef RUNLOOP_IS_CFRUNLOOP
+  CFTimeInterval interval = 0.0;
+  if (mayWait)
+    interval = 10.0;  // seconds
+
   // @@@mm This is just here to prove that Carbon events are accumulating.
   // The real implementation should dispatch them from the run loop, it's
   // bad to dispatch them like this because the delay intervals in the run
   // loop dictate a delay in processing Carbon events.
-  EventRef carbonEvent;
   EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
   while (EventRef carbonEvent =
          ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
@@ -356,14 +414,42 @@ PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
     ::ReleaseEvent(carbonEvent);
   }
 
-  printf("--- nsAppShell::ProcessNextNativeEvent(%d)\n", mayWait);
-
-  CFTimeInterval interval = 0.0;
-  if (mayWait)
-    interval = 10.0;  // seconds
-
   SInt32 rv = CFRunLoopRunInMode(kCFRunLoopDefaultMode, interval, true);
   printf("--- CFRunLoopRunInMode returned [%x]\n", rv);
 
   return rv == kCFRunLoopRunHandledSource;
+#endif
+
+#ifdef RUNLOOP_IS_CARBON
+  if (!mayWait) {
+    // Only process one event (change |if| to |while| to process all pending
+    // native events)
+#ifndef RUNLOOP_USES_WNE
+    EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
+    if (EventRef carbonEvent =
+         ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
+                                            0,
+                                            NULL,
+                                            kEventQueueOptionsNone)) {
+      ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
+      ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
+      ::ReleaseEvent(carbonEvent);
+    }
+#else
+    // Alternate implementation.
+    if (::GetNumEventsInQueue(::GetCurrentEventQueue())) {
+      EventRecord eventRec;
+      PRBool haveEvent = ::WaitNextEvent(everyEvent, &eventRec, 0, NULL);
+
+      mMacPump->DispatchEvent(haveEvent, &eventRec);
+    }
+#endif
+  }
+  else {
+    ::RunApplicationEventLoop();
+  }
+
+  return PR_TRUE;
+#endif
+
 }
