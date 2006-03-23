@@ -53,13 +53,8 @@
 #include "nsIWidget.h"
 #include "nsMacMessagePump.h"
 #include "nsToolkit.h"
+#include <Carbon/Carbon.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include <Quickdraw.h>
-#include <Fonts.h>
-#include <TextEdit.h>
-#include <Dialogs.h>
-#include <Events.h>
-#include <Menus.h>
 
 #include <stdlib.h>
 
@@ -345,6 +340,22 @@ NS_IMETHODIMP nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 
 PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
+  // @@@mm This is just here to prove that Carbon events are accumulating.
+  // The real implementation should dispatch them from the run loop, it's
+  // bad to dispatch them like this because the delay intervals in the run
+  // loop dictate a delay in processing Carbon events.
+  EventRef carbonEvent;
+  EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
+  while (EventRef carbonEvent =
+         ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
+                                            0,
+                                            NULL,
+                                            kEventQueueOptionsNone)) {
+    ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
+    ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
+    ::ReleaseEvent(carbonEvent);
+  }
+
   printf("--- nsAppShell::ProcessNextNativeEvent(%d)\n", mayWait);
 
   CFTimeInterval interval = 0.0;
