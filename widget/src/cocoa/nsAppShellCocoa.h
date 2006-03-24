@@ -35,35 +35,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// 
-// nsAppShellCocoa
-//
-// This file contains the default interface of the application shell. Clients
-// may either use this implementation or write their own. If you write your
-// own, you must create a message sink to route events to. (The message sink
-// interface may change, so this comment must be updated accordingly.)
-//
-
 #ifndef nsAppShellCocoa_h__
 #define nsAppShellCocoa_h__
 
-#include "nsIAppShell.h"
+#include "nsBaseAppShell.h"
 
-
-class nsAppShellCocoa : public nsIAppShell
+class nsAppShellCocoa : public nsBaseAppShell
 {
-  public:
-    nsAppShellCocoa();
-    virtual ~nsAppShellCocoa();
+public:
+  nsAppShellCocoa();
 
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIAPPSHELL
-  
-  private:
-    NSAutoreleasePool *mainPool;
+  // nsIAppShell overrides
+  NS_IMETHOD Init(int* argc, char** argv);
+
+  // nsIThreadObserver overrides
+  NS_IMETHOD OnDispatchedEvent(nsIThreadInternal* thread);
+
+  // nsBaseAppShell overrides
+  PRBool ProcessNextNativeEvent(PRBool mayWait);
+
+private:
+  ~nsAppShellCocoa();
+
+  NSAutoreleasePool* mainPool;
 };
 
-
+@interface AppShell : NSApplication
+- (void)sendEvent:(NSEvent*)event;
+@end
 
 #endif // nsAppShellCocoa_h__
-

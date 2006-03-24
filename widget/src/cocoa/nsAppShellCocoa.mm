@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -35,48 +36,25 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// 
-// nsAppShellCocoa
-//
-// This file contains the default implementation of the application shell. Clients
-// may either use this implementation or write their own. If you write your
-// own, you must create a message sink to route events to. (The message sink
-// interface may change, so this comment must be updated accordingly.)
-//
-
-#undef DARWIN
 #import <Cocoa/Cocoa.h>
 
 #include "nsAppShellCocoa.h"
 #include "nsCOMPtr.h"
-#include "nsDirectoryServiceUtils.h"
 #include "nsIFile.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsString.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShellCocoa, nsIAppShell)
+#define AppDefinedEventLeaveRunLoop 0x4c76 // 'Lv'
 
-
-//-------------------------------------------------------------------------
-//
-// nsAppShellCocoa constructor
-//
-//-------------------------------------------------------------------------
 nsAppShellCocoa::nsAppShellCocoa()
 {
   mainPool = [[NSAutoreleasePool alloc] init];
 }
 
-//-------------------------------------------------------------------------
-//
-// nsAppShellCocoa destructor
-//
-//-------------------------------------------------------------------------
 nsAppShellCocoa::~nsAppShellCocoa()
 {
   [mainPool release];
 }
-
 
 //-------------------------------------------------------------------------
 //
@@ -89,7 +67,7 @@ nsAppShellCocoa::~nsAppShellCocoa()
 //-------------------------------------------------------------------------
 
 NS_IMETHODIMP
-nsAppShellCocoa::Create(int* argc, char ** argv)
+nsAppShellCocoa::Init(int* argc, char** argv)
 {
   // Get the path of the NIB file, which lives in the GRE location
   nsCOMPtr<nsIFile> nibFile;
@@ -103,104 +81,75 @@ nsAppShellCocoa::Create(int* argc, char ** argv)
   rv = nibFile->GetNativePath(nibPath);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // this call initializes NSApplication
+  // This call initializes NSApplication.  Initialize using AppShell,
+  // which provides local overrides.
   [NSBundle loadNibFile:
-    [NSString stringWithUTF8String:(const char*)nibPath.get()]
-    externalNameTable:
-      [NSDictionary dictionaryWithObject:
-        [NSApplication sharedApplication]
-        forKey:@"NSOwner"
-      ]
-    withZone:NSDefaultMallocZone()
-  ];
-	return NS_OK;
+                [NSString stringWithUTF8String:(const char*)nibPath.get()]
+      externalNameTable:
+                [NSDictionary dictionaryWithObject:[AppShell sharedApplication]
+                                            forKey:@"NSOwner"]
+               withZone:NSDefaultMallocZone()];
+
+  return nsBaseAppShell::Init(argc, argv);
 }
 
-
-//-------------------------------------------------------------------------
-//
-// Enter a message handler loop
-//
-//-------------------------------------------------------------------------
 NS_IMETHODIMP
-nsAppShellCocoa::Run(void)
+nsAppShellCocoa::OnDispatchedEvent(nsIThreadInternal* thr)
 {
-  [NSApp run];
+// @@@mm should this check [NSApp isRunning]?
+  // Not on the main thread, need an autorelease pool.
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  NSEvent* event = [NSEvent otherEventWithType:NSApplicationDefined
+                                      location:NSMakePoint(0, 0)
+                                 modifierFlags:0
+                                     timestamp:nil
+                                  windowNumber:0
+                                       context:nil
+                                       subtype:AppDefinedEventLeaveRunLoop
+                                         data1:0
+                                         data2:0];
+  [NSApp postEvent:event atStart:YES];
+  [pool release];
+
   return NS_OK;
 }
 
-
-//-------------------------------------------------------------------------
-//
-// Exit appshell
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP
-nsAppShellCocoa::Exit(void)
+PRBool
+nsAppShellCocoa::ProcessNextNativeEvent(PRBool mayWait)
 {
-  [NSApp stop:nil];
-	return NS_OK;
+  PRBool moreEventsWaiting = PR_FALSE;
+
+  if (!mayWait) {
+    if (NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask
+                                            untilDate:nil
+                                               inMode:NSDefaultRunLoopMode
+                                              dequeue:YES]) {
+      [NSApp sendEvent:event];
+    }
+
+    if ([NSApp nextEventMatchingMask:NSAnyEventMask
+                           untilDate:nil
+                              inMode:NSDefaultRunLoopMode
+                             dequeue:NO]) {
+      moreEventsWaiting = PR_TRUE;
+    }
+  }
+  else {
+    [NSApp run];
+  }
+
+  return moreEventsWaiting;
 }
 
-
-//-------------------------------------------------------------------------
-//
-// respond to notifications that an event queue has come or gone
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP
-nsAppShellCocoa::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aListen)
-{ 
-  // unnecessary; handled elsewhere
-  return NS_OK;
-}
-
-
-//-------------------------------------------------------------------------
-//
-// Prepare to process events
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP
-nsAppShellCocoa::Spinup(void)
+@implementation AppShell
+- (void)sendEvent:(NSEvent*)event
 {
-	return NS_OK;
+  if ([event type] == NSApplicationDefined &&
+      [event subtype] == AppDefinedEventLeaveRunLoop) {
+    [NSApp stop:self];
+  }
+  else {
+    [super sendEvent:event];
+  }
 }
-
-
-//-------------------------------------------------------------------------
-//
-// Stop being prepared to process events.
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP
-nsAppShellCocoa::Spindown(void)
-{
-	return NS_OK;
-}
-
-
-//
-// GetNativeEvent
-// DispatchNativeEvent
-//
-// These are generally used in the tight loop of a modal event loop. Cocoa
-// has other ways of dealing with this, perhaps those should be investigated
-// here.
-//
-
-NS_METHOD
-nsAppShellCocoa::GetNativeEvent(PRBool &aRealEvent, void *&aEvent)
-{
-  aEvent = [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:NSEventTrackingRunLoopMode dequeue:YES];
-  aRealEvent = (aEvent != nil);
-  return NS_OK;
-}
-
-NS_METHOD
-nsAppShellCocoa::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
-{
-  if (aRealEvent)
-    [NSApp sendEvent:(NSEvent*)aEvent];
-  return NS_OK;
-}
+@end

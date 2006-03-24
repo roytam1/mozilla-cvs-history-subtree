@@ -52,8 +52,6 @@
 #include "nsIRollupListener.h"
 #import  "nsChildView.h"
 
-#include "nsIEventQueueService.h"
-
 // Define Class IDs -- i hate having to do this
 static NS_DEFINE_CID(kCDragServiceCID,  NS_DRAGSERVICE_CID);
 
