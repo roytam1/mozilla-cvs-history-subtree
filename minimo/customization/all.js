@@ -668,4 +668,8 @@ pref("browser.bookmark.homebar","<bm><li iconsrc='chrome://minimo/skin/extension
 
 pref("browser.download.dir", "\\Storage Card");
 pref("browser.download.progressDnlgDialog.dontAskForLaunch", false);
+pref("browser.cache.disk.parent_directory","\\Storage Card");
+pref("browser.cache.disk.enable",false);
+
+
 
