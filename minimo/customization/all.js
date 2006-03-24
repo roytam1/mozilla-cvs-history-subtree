@@ -667,3 +667,5 @@ pref("browser.bookmark.store","<bm></bm>");
 pref("browser.bookmark.homebar","<bm><li iconsrc='chrome://minimo/skin/extensions/icon-star.png'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li iconsrc='chrome://minimo/skin/extensions/icon-google.png'>http://www.google.com/xhtml</li><li iconsrc='chrome://minimo/skin/extensions/icon-shopping.png'>http://www.yokel.com</li><li iconsrc='http://m.technorati.com/favicon.ico'>http://m.technorati.com/</li><li iconsrc='http://mobile.wunderground.com/favicon.ico'>http://mobile.wunderground.com/</li><li iconsrc='http://www.yelp.com/favicon.ico'>http://www.yelp.com</li></bm>");
 
 pref("browser.download.dir", "\\Storage Card");
+pref("browser.download.progressDnlgDialog.dontAskForLaunch", false);
+
