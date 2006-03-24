@@ -479,14 +479,17 @@ function CleanUpWebPage(webPage)
 //          true - All required data are present.
 function CheckCardRequiredDataPresence(doc)
 {
-  // Simple checks that the primary email could be of the form |user@host|.
+  // Bug 314995 We require at least one of the following fields to be
+  // filled in: email address, first name, last name, display name,
+  //            organisation (company name).
   var primaryEmail = doc.getElementById("PrimaryEmail");
   var primaryEmailValue = primaryEmail.value;
   var primaryEmailValueLength = primaryEmailValue.length;
-  var primaryEmailValueAtLastIndex = primaryEmailValue.lastIndexOf("@");
-  if (!((primaryEmailValueLength >= 3) &&
-        (primaryEmailValueAtLastIndex > 0) &&
-        (primaryEmailValueAtLastIndex < primaryEmailValueLength - 1)))
+  if (primaryEmailValueLength == 0 &&
+      doc.getElementById("FirstName").value.length == 0 &&
+      doc.getElementById("LastName").value.length == 0 &&
+      doc.getElementById("DisplayName").value.length == 0 &&
+      doc.getElementById("Company").value.length == 0)
   {
     Components
       .classes["@mozilla.org/embedcomp/prompt-service;1"]
@@ -495,6 +498,26 @@ function CheckCardRequiredDataPresence(doc)
         window,
         gAddressBookBundle.getString("cardRequiredDataMissingTitle"),
         gAddressBookBundle.getString("cardRequiredDataMissingMessage"));
+
+    return false;
+  }
+
+  // Simple checks that the primary email should be of the form |user@host|.
+  // Note: if the length of the primary email is 0 then we skip the check
+  // as some other field must have something as per the check above.
+  var primaryEmailValueAtLastIndex = primaryEmailValue.lastIndexOf("@");
+  if (!((primaryEmailValueLength == 0) ||
+        ((primaryEmailValueLength >= 3) &&
+         (primaryEmailValueAtLastIndex > 0) &&
+         (primaryEmailValueAtLastIndex < primaryEmailValueLength - 1))))
+  {
+    Components
+      .classes["@mozilla.org/embedcomp/prompt-service;1"]
+      .getService(Components.interfaces.nsIPromptService)
+      .alert(
+        window,
+        gAddressBookBundle.getString("incorrectEmailAddressFormatTitle"),
+        gAddressBookBundle.getString("incorrectEmailAddressFormatMessage"));
 
     // Focus the dialog field, to help the user.
     document.getElementById("abTabs").selectedIndex = 0;
