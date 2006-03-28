@@ -39,16 +39,9 @@
 
 #include "nsAppShell.h"
 #include "nsToolkit.h"
-#include "nsIWidget.h"
 #include "nsThreadUtils.h"
-#include "nsIServiceManager.h"
-#include <windows.h>
 
-// unknwn.h is needed to build with WIN32_LEAN_AND_MEAN
-#include <unknwn.h>
-
-#include "nsWidgetsCID.h"
-#include "aimm.h"
+static UINT sMsgId;
 
 //-------------------------------------------------------------------------
 
@@ -74,27 +67,65 @@ static BOOL PeekKeyAndIMEMessage(LPMSG msg, HWND hwnd)
   return false;
 }
 
-//-------------------------------------------------------------------------
-// nsIAppShell methods:
-
-NS_IMETHODIMP
-nsAppShell::Init(int *argc, char **argv)
+/*static*/ LRESULT CALLBACK
+nsAppShell::EventWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-  mMainThreadId = GetCurrentThreadId();
-  mMsgId = RegisterWindowMessage("nsAppShell_Dispatch");
-
-  return nsBaseAppShell::Init(argc, argv);
+  if (uMsg == sMsgId) {
+    nsAppShell *as = NS_REINTERPRET_CAST(nsAppShell *, lParam);
+    as->NativeEventCallback();
+    NS_RELEASE(as);
+    return TRUE;
+  }
+  return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-//-------------------------------------------------------------------------
-// nsIThreadObserver methods:
+nsAppShell::~nsAppShell()
+{
+  if (mEventWnd) {
+    // DestroyWindow doesn't do anything when called from a non UI thread.
+    // Since mEventWnd was created on the UI thread, it must be destroyed on
+    // the UI thread.
+    SendMessage(mEventWnd, WM_CLOSE, 0, 0);
+  }
+}
 
-NS_IMETHODIMP
-nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
+nsresult
+nsAppShell::Init()
+{
+  if (!sMsgId)
+    sMsgId = RegisterWindowMessage("nsAppShell:EventID");
+
+  WNDCLASS wc;
+  HINSTANCE module = GetModuleHandle(NULL);
+
+  const char *const kWindowClass = "nsAppShell:EventWindowClass";
+  if (!GetClassInfo(module, kWindowClass, &wc)) {
+    wc.style         = 0;
+    wc.lpfnWndProc   = EventWindowProc;
+    wc.cbClsExtra    = 0;
+    wc.cbWndExtra    = 0;
+    wc.hInstance     = module;
+    wc.hIcon         = NULL;
+    wc.hCursor       = NULL;
+    wc.hbrBackground = (HBRUSH) NULL;
+    wc.lpszMenuName  = (LPCSTR) NULL;
+    wc.lpszClassName = kWindowClass;
+    RegisterClass(&wc);
+  }
+
+  mEventWnd = CreateWindow(kWindowClass, "nsAppShell:EventWindow",
+                           0, 0, 0, 10, 10, NULL, NULL, module, NULL);
+  NS_ENSURE_STATE(mEventWnd);
+
+  return nsBaseAppShell::Init();
+}
+
+void
+nsAppShell::CallFromNativeEvent()
 {
   // post a message to the native event queue...
-  PostThreadMessage(mMainThreadId, mMsgId, 0, 0);
-  return NS_OK;
+  NS_ADDREF_THIS();
+  PostMessage(mEventWnd, sMsgId, 0, NS_REINTERPRET_CAST(LPARAM, this));
 }
 
 PRBool

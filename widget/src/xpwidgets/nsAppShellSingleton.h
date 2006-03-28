@@ -35,68 +35,64 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsBaseAppShell_h__
-#define nsBaseAppShell_h__
-
-#include "nsIAppShell.h"
-#include "nsIThreadInternal.h"
-#include "prinrval.h"
+#ifndef nsAppShellSingleton_h__
+#define nsAppShellSingleton_h__
 
 /**
- * A singleton that manages the UI thread's event queue.  Subclass this class
- * to enable platform-specific event queue support.
+ * This file is designed to be included into the file that provides the
+ * nsIModule implementation for a particular widget toolkit.
+ *
+ * The following functions are defined:
+ *   nsAppShellInit
+ *   nsAppShellShutdown
+ *   nsAppShellConstructor
+ *
+ * The nsAppShellInit function is designed to be used as a module constructor.
+ * If you already have a module constructor, then call nsAppShellInit from your
+ * module constructor.
+ *
+ * The nsAppShellShutdown function is designed to be used as a module
+ * destructor.  If you already have a module destructor, then call
+ * nsAppShellShutdown from your module destructor.
+ *
+ * The nsAppShellConstructor function is designed to be used as a factory
+ * method for the nsAppShell class.
  */
-class nsBaseAppShell : public nsIAppShell, public nsIThreadObserver
+
+static nsAppShell *sAppShell;
+
+PR_STATIC_CALLBACK(nsresult)
+nsAppShellInit(nsIModule *module)
 {
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIAPPSHELL
-  NS_DECL_NSITHREADOBSERVER
+  NS_ASSERTION(!sAppShell, "already initialized");
 
-  nsBaseAppShell();
+  sAppShell = new nsAppShell();
+  if (!sAppShell)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(sAppShell);
 
-protected:
-  virtual ~nsBaseAppShell() {}
+  nsresult rv = sAppShell->Init();
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(sAppShell);
+    return rv;
+  }
 
-  /**
-   * This method is called by subclasses when the app shell singleton is
-   * instantiated.
-   */
-  nsresult Init();
+  return NS_OK;
+}
 
-  /**
-   * Called by subclasses from a native event.  See CallFromNativeEvent.
-   */
-  void NativeEventCallback();
+PR_STATIC_CALLBACK(void)
+nsAppShellShutdown(nsIModule *module)
+{
+  NS_RELEASE(sAppShell);
+}
 
-  /**
-   * Implemented by subclasses.  Invoke NativeEventCallback from a native
-   * event.  This method may be called on any thread.
-   */
-  virtual void CallFromNativeEvent() = 0;
+static NS_METHOD
+nsAppShellConstructor(nsISupports *outer, const nsIID &iid, void **result)
+{
+  NS_ENSURE_TRUE(!outer, NS_ERROR_NO_AGGREGATION);
+  NS_ENSURE_TRUE(sAppShell, NS_ERROR_NOT_INITIALIZED);
 
-  /**
-   * Implemented by subclasses.  Process the next native event.  Only wait for
-   * the next native event if mayWait is true.  This method is only called on
-   * the main application thread.
-   *
-   * @param mayWait
-   *   If "true", then this method may wait if necessary for the next available
-   *   native event.  DispatchNativeEvent may be called to unblock a call to
-   *   ProcessNextNativeEvent that is waiting.
-   * @return
-   *   This method returns "true" if a native event was processed.
-   */
-  virtual PRBool ProcessNextNativeEvent(PRBool mayWait) = 0;
+  return sAppShell->QueryInterface(iid, result);
+}
 
-protected:
-  PRInt32 mFavorPerf;
-  PRInt32 mDispatchedUnblockEvent;
-  PRIntervalTime mStarvationDelay;
-  PRIntervalTime mSwitchTime;
-  PRIntervalTime mLastNativeEventTime;
-  PRPackedBool mRunWasCalled;
-  PRPackedBool mExiting;
-};
-
-#endif // nsBaseAppShell_h__
+#endif  // nsAppShellSingleton_h__

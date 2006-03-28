@@ -39,6 +39,7 @@
 #define nsAppShell_h__
 
 #include "nsBaseAppShell.h"
+#include <windows.h>
 
 /**
  * Native Win32 Application shell wrapper
@@ -46,22 +47,19 @@
 class nsAppShell : public nsBaseAppShell
 {
 public:
-  nsAppShell() : mMainThreadId(0), mMsgId(0) {}
+  nsAppShell() : mEventWnd(NULL) {}
 
-  // nsIAppShell overrides:
-  NS_IMETHOD Init(int *argc, char **argv);
+  nsresult Init();
 
-  // nsIThreadObserver overrides:
-  NS_IMETHOD OnDispatchedEvent(nsIThreadInternal *thread);
+protected:
+  virtual void CallFromNativeEvent();
+  virtual PRBool ProcessNextNativeEvent(PRBool mayWait);
+  virtual ~nsAppShell();
 
-  // nsBaseAppShell overrides:
-  PRBool ProcessNextNativeEvent(PRBool mayWait);
+  static LRESULT CALLBACK EventWindowProc(HWND, UINT, WPARAM, LPARAM);
 
-private:
-  virtual ~nsAppShell() {}
-
-  PRUint32 mMainThreadId;
-  PRUint32 mMsgId;
+protected:
+  HWND mEventWnd;
 };
 
 #endif // nsAppShell_h__

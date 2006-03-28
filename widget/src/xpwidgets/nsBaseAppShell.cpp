@@ -12,16 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Widget code.
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998
+ * The Initial Developer of the Original Code is Google Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Michael Lowe <michael.lowe@bigfoot.com>
- *   Darin Fisher <darin@meer.net>
+ *   Darin Fisher <darin@meer.net> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,15 +43,21 @@
 // next thread event for at most this many ticks:
 #define THREAD_EVENT_STARVATION_LIMIT PR_MillisecondsToInterval(20)
 
-// Must be threadsafe since nsIThreadObserver::OnNewTask may be called from
-// any background thread.
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsBaseAppShell, nsIAppShell, nsIThreadObserver)
 
-//-------------------------------------------------------------------------
-// nsIAppShell methods:
+nsBaseAppShell::nsBaseAppShell()
+  : mFavorPerf(0)
+  , mDispatchedUnblockEvent(PR_FALSE)
+  , mStarvationDelay(0)
+  , mSwitchTime(0)
+  , mLastNativeEventTime(0)
+  , mRunWasCalled(PR_FALSE)
+  , mExiting(PR_FALSE)
+{
+}
 
-NS_IMETHODIMP
-nsBaseAppShell::Init(int *argc, char **argv)
+nsresult
+nsBaseAppShell::Init()
 {
   // Configure ourselves as an observer for the current thread:
 
@@ -66,14 +70,46 @@ nsBaseAppShell::Init(int *argc, char **argv)
   return NS_OK;
 }
 
+void
+nsBaseAppShell::NativeEventCallback()
+{
+  PRInt32 numPending = PR_AtomicSet(&mDispatchedUnblockEvent, 0);
+  if (mRunWasCalled || numPending == 0)
+    return;
+
+  // nsBaseAppShell::Run is not being used to pump events, so this may be
+  // our only opportunity to process pending gecko events.
+
+  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+
+  PRIntervalTime start = PR_IntervalNow();
+  PRIntervalTime limit = THREAD_EVENT_STARVATION_LIMIT;
+
+  do {
+    if (!NS_HasPendingEvents(thread))
+      break;
+    thread->ProcessNextEvent();
+  } while ((PR_IntervalNow() - start) < limit && --numPending > 0);
+
+  // Continue processing pending events later (we don't want to starve the
+  // embedders event loop).
+  if (NS_HasPendingEvents(thread))
+    OnDispatchedEvent(nsnull);
+}
+
+//-------------------------------------------------------------------------
+// nsIAppShell methods:
+
 NS_IMETHODIMP
 nsBaseAppShell::Run(void)
 {
   nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
   NS_ENSURE_STATE(thread);
 
-  ++mKeepGoing;
-  while (mKeepGoing)
+  NS_ENSURE_STATE(!mRunWasCalled);  // should not call Run twice
+  mRunWasCalled = PR_TRUE;
+
+  while (!mExiting)
     thread->ProcessNextEvent();
 
   NS_ProcessPendingEvents(thread);
@@ -83,9 +119,7 @@ nsBaseAppShell::Run(void)
 NS_IMETHODIMP
 nsBaseAppShell::Exit(void)
 {
-  // Allow more calls to Exit than Run.
-  if (--mKeepGoing < 0)
-    mKeepGoing = 0;
+  mExiting = PR_TRUE;
   return NS_OK;
 }
 
@@ -106,12 +140,19 @@ nsBaseAppShell::FavorPerformanceHint(PRBool favorPerfOverStarvation,
 //-------------------------------------------------------------------------
 // nsIThreadObserver methods:
 
+// Called from any thread
 NS_IMETHODIMP
 nsBaseAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
 {
+  PRInt32 lastVal = PR_AtomicIncrement(&mDispatchedUnblockEvent);
+  if (lastVal > 1)
+    return NS_OK;
+    
+  CallFromNativeEvent();
   return NS_OK;
 }
 
+// Called from the main thread
 NS_IMETHODIMP
 nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
                                    PRUint32 recursionDepth)
@@ -135,21 +176,29 @@ nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
     }
   }
 
-  PRBool val;
-  while (NS_SUCCEEDED(thr->HasPendingEvents(&val)) && !val) {
+  // When mayWait is true, we need to make sure that there is an event in the
+  // thread's event queue before we return.  Otherwise, the thread will block
+  // on its event queue waiting for an event.
+  PRBool needEvent = mayWait;
+
+  while (!NS_HasPendingEvents(thr)) {
     // If we have been asked to exit from Run, then we should not wait for
     // events to process.  We also want to make sure that the thread event
     // queue does not block on its monitor, as it normally would do if it did
     // not have any pending events.  To avoid that, we simply insert a dummy
     // event into its queue during shutdown.
-    if (!mKeepGoing && mayWait) {
+    if (mRunWasCalled && mExiting && mayWait) {
       mayWait = PR_FALSE;
       nsCOMPtr<nsIRunnable> dummyEvent = new nsRunnable();
       thr->Dispatch(dummyEvent, NS_DISPATCH_NORMAL);
     }
     mLastNativeEventTime = PR_IntervalNow();
-    if (!ProcessNextNativeEvent(mayWait) && !mayWait)
+    if (!ProcessNextNativeEvent(mayWait) || !mayWait)
       break;
   }
+
+  NS_ASSERTION(!needEvent || NS_HasPendingEvents(thr),
+      "Will lock-up the UI thread");
+
   return NS_OK;
 }

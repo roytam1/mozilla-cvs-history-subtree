@@ -167,8 +167,6 @@ void nsBaseWidget::BaseCreate(nsIWidget *aParent,
     
   }
   
-  mAppShell = aAppShell;    // addrefs
-  
   // save the event callback function
   mEventCallback = aHandleEventFunction;
   
@@ -658,20 +656,6 @@ nsIDeviceContext* nsBaseWidget::GetDeviceContext()
   return mContext; 
 }
 
-//-------------------------------------------------------------------------
-//
-// Return the App Shell
-//
-//-------------------------------------------------------------------------
-
-nsIAppShell *nsBaseWidget::GetAppShell()
-{
-  nsIAppShell*  theAppShell = mAppShell;
-  NS_IF_ADDREF(theAppShell);
-  return theAppShell;
-}
-
-
 #ifdef MOZ_CAIRO_GFX
 //-------------------------------------------------------------------------
 //
@@ -700,7 +684,6 @@ void nsBaseWidget::OnDestroy()
   // release references to device context, toolkit, and app shell
   NS_IF_RELEASE(mContext);
   NS_IF_RELEASE(mToolkit);
-  mAppShell = nsnull;     // clear out nsCOMPtr
 }
 
 NS_METHOD nsBaseWidget::GetWindowClass(char *aClass)
