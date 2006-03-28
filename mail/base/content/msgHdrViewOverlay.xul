@@ -138,7 +138,7 @@
         <mail-emailheaderfield id="expandedfromBox" label="&fromField.label;" collapsed="true"/>
         <mail-emailheaderfield id="expandedsenderBox" label="&senderField.label;" collapsed="true"/>
         <mail-headerfield id="expandedorganizationBox" label="&organizationField.label;" collapsed="true"/>
-        <mail-emailheaderfield id="expandedreply-toBox" label="&replyToField.label;" collapsed="true"/>
+        <mail-multi-emailHeaderField id="expandedreply-toBox" label="&replyToField.label;" collapsed="true"/>
 
         <mail-headerfield keywordrelated="true" id="expandeddateBox" label="&dateField.label;" collapsed="true"/>
 
