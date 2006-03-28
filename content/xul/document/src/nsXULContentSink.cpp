@@ -1369,14 +1369,23 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
       }
       aAttributes += 2;
   }
-  // If we are not being loaded from chrome (eg, remote XUL), only allow
-  // JS (like nsJTMLContentSink.  We too need some way of extending the
-  // security model into other languages - but as of time of writing,
-  // Python is the only other language that works, and it has no "sandbox"
-  // model at all.)
-  if (!nsContentUtils::IsCallerChrome()) {
-    langID = nsIProgrammingLanguage::UNKNOWN;
-    NS_WARNING("Non JS language called from non chrome - ignored");
+  // Not all script languages have a "sandbox" concept.  At time of
+  // writing, Python is the only other language, and it does not.
+  // For such languages, neither any inline script nor remote script are
+  // safe to execute for untrusted sources.
+  // So for such languages, we only allow script when the document
+  // itself is from chrome.  We then don't bother to check the
+  // "src=" tag - we trust chrome to do the right thing.
+  // (See also similar code in nsScriptLoader.cpp)
+  if (langID != nsIProgrammingLanguage::UNKNOWN && 
+      langID != nsIProgrammingLanguage::JAVASCRIPT) {
+    PRBool isChrome;
+    if (!mDocumentURL ||
+        NS_FAILED(mDocumentURL->SchemeIs("chrome", &isChrome)) ||
+        !isChrome) {
+      langID = nsIProgrammingLanguage::UNKNOWN;
+      NS_WARNING("Non JS language called from non chrome - ignored");
+    }
   }
   // Don't process scripts that aren't known
   if (langID != nsIProgrammingLanguage::UNKNOWN) {

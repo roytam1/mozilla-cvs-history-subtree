@@ -527,10 +527,16 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
   // of checking the language is "safe".  Currently the only other language 
   // impl is Python, and that is *not* safe in untrusted code - so fixing 
   // this isn't a priority.!
-  if (typeID != nsIProgrammingLanguage::JAVASCRIPT &&
-      !nsContentUtils::IsCallerChrome()) {
-    NS_WARNING("Untrusted language called from non-chrome - ignored");
-    return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
+  // See also similar code in nsXULContentSink.cpp
+  if (typeID != nsIProgrammingLanguage::JAVASCRIPT) {
+    nsIURI *docURI = mDocument ? mDocument->GetDocumentURI() : nsnull;
+    PRBool isChrome;
+    if (!docURI ||
+        NS_FAILED(docURI->SchemeIs("chrome", &isChrome)) ||
+        !isChrome) {
+      NS_WARNING("Untrusted language called from non-chrome - ignored");
+      return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
+    }
   }
 
   nsCOMPtr<nsIContent> eltContent(do_QueryInterface(aElement));
