@@ -118,9 +118,8 @@ NS_ProcessPendingEvents(nsIThread *thread, PRIntervalTime timeout)
     thread = current.get();
   }
 
-  nsresult rv;
-  PRBool val;
-  while (NS_SUCCEEDED(thread->HasPendingEvents(&val)) && val) {
+  nsresult rv = NS_OK;
+  while (NS_HasPendingEvents(thread)) {
     rv = thread->ProcessNextEvent();
     if (NS_FAILED(rv))
       break;
