@@ -52,30 +52,19 @@ public:
   
   NS_DECL_ISUPPORTS
   NS_DECL_NSIPHONESUPPORT
-
+  
   nsPhoneSupport() {};
   ~nsPhoneSupport(){};
-
+  
 };
 
 NS_IMPL_ISUPPORTS1(nsPhoneSupport, nsIPhoneSupport)
 
-
-
-static char* normalizePhoneNumber(const char* inTelephoneNumber)
-{
-  return strdup(inTelephoneNumber);
-}
-
 NS_IMETHODIMP
-nsPhoneSupport::MakeCall(const char *telephoneNumber, const char *telephoneDescription)
+nsPhoneSupport::MakeCall(const PRUnichar *telephoneNumber, const PRUnichar *telephoneDescription)
 {
 #ifdef WINCE
   long result = -1;
-  char* normalizedNumber = normalizePhoneNumber(telephoneNumber);
-
-  if (!normalizedNumber)
-    return NS_ERROR_FAILURE;
   
   typedef LONG (*__PhoneMakeCall)(PHONEMAKECALLINFO *ppmci);
   
@@ -89,38 +78,28 @@ nsPhoneSupport::MakeCall(const char *telephoneNumber, const char *telephoneDescr
       PHONEMAKECALLINFO callInfo;
       callInfo.cbSize          = sizeof(PHONEMAKECALLINFO);
       callInfo.dwFlags         = PMCF_PROMPTBEFORECALLING;
-      callInfo.pszDestAddress  = NS_ConvertUTF8toUTF16(normalizedNumber).get();
+      callInfo.pszDestAddress  = telephoneNumber;
       callInfo.pszAppName      = nsnull;
-      callInfo.pszCalledParty  = NS_ConvertUTF8toUTF16(telephoneDescription).get();
+      callInfo.pszCalledParty  = telephoneDescription;
       callInfo.pszComment      = nsnull; 
       
       result = MakeCall(&callInfo);
     }
     FreeLibrary(hPhoneDLL);
   } 
-
-  free(normalizedNumber);
-
   return (result == 0) ? NS_OK : NS_ERROR_FAILURE;
-
+  
 #else
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 #endif
 }
 
 NS_IMETHODIMP 
-nsPhoneSupport::SendSMS(const char *smsDest, const char *smsMessage)
+nsPhoneSupport::SendSMS(const PRUnichar *smsDest, const PRUnichar *smsMessage)
 {
 #ifdef WINCE
-
   // wince -- this doesn't work yet.
-
-  char* normalizedNumber = normalizePhoneNumber(smsDest);
-
-  if (!normalizedNumber)
-    return NS_ERROR_FAILURE;
-
-  typedef HRESULT (*__SmsOpen)(const LPCTSTR ptsMessageProtocol,
+  typedef HRESULT (*__SmsOpen)(const LPCWSTR ptsMessageProtocol,
                                const DWORD dwMessageModes,
                                SMS_HANDLE* const psmshHandle,
                                HANDLE* const phMessageAvailableEvent);
@@ -136,69 +115,72 @@ nsPhoneSupport::SendSMS(const char *smsDest, const char *smsMessage)
                                       const SMS_DATA_ENCODING smsdeDataEncoding,
                                       const DWORD dwOptions,
                                       SMS_MESSAGE_ID * psmsmidMessageID);
-
+  
   typedef HRESULT (*__SmsClose)(const SMS_HANDLE smshHandle);
-
-
+  
   HMODULE hSmsDLL = LoadLibrary("sms.dll"); 
   if(hSmsDLL)
   {
-    __SmsOpen        Open  = (__SmsOpen) GetProcAddress(hSmsDLL, "SmsOpen");
-    __SmsSendMessage Send  = (__SmsSendMessage) GetProcAddress(hSmsDLL, "SmsSendMessage");
-    __SmsClose       Close = (__SmsClose) GetProcAddress(hSmsDLL, "SmsClose");
-      
-
+    __SmsOpen        smsOpen  = (__SmsOpen) GetProcAddress(hSmsDLL, "SmsOpen");
+    __SmsSendMessage smsSend  = (__SmsSendMessage) GetProcAddress(hSmsDLL, "SmsSendMessage");
+    __SmsClose       smsClose = (__SmsClose) GetProcAddress(hSmsDLL, "SmsClose");
+    
+    if (!smsOpen || !smsSend || !smsClose)
+      return NS_ERROR_NOT_AVAILABLE;
+    
     SMS_HANDLE smshHandle;
     SMS_ADDRESS smsaDestination;
     TEXT_PROVIDER_SPECIFIC_DATA tpsd;
     SMS_MESSAGE_ID smsmidMessageID = 0;
     
     // try to open an SMS Handle
-    HRESULT hr = SMS_E_INVALIDPROTOCOL;
-    hr = Open(SMS_MSGTYPE_TEXT, SMS_MODE_SEND, &smshHandle, NULL);
+    HRESULT hr = smsOpen(L"Microsoft Text SMS Protocol", SMS_MODE_SEND, &smshHandle, NULL);
     
     if (hr == SMS_E_INVALIDPROTOCOL)
+    {
       return NS_ERROR_NOT_AVAILABLE;
+    }
     
     if (hr != ERROR_SUCCESS)
+    {
       return NS_ERROR_FAILURE;
+    }
     
     // Create the destination address
     memset (&smsaDestination, 0, sizeof (smsaDestination));
     smsaDestination.smsatAddressType = SMSAT_INTERNATIONAL;
-    lstrcpy(smsaDestination.ptsAddress, normalizedNumber);
-    
-    free(normalizedNumber);
+    memcpy((void*) smsaDestination.ptsAddress, (void*) smsDest, 100);
     
     // Set up provider specific data
     tpsd.dwMessageOptions = PS_MESSAGE_OPTION_NONE;
-    tpsd.psMessageClass   = PS_MESSAGE_CLASS0;
-    tpsd.psReplaceOption  = PSRO_NONE;
+    tpsd.psMessageClass = PS_MESSAGE_CLASS1;
+    tpsd.psReplaceOption = PSRO_NONE;
+    tpsd.dwHeaderDataSize = 0;
     
     // Send the message, indicating success or failure
-    hr = Send(smshHandle,
-              NULL, 
-              &smsaDestination,
-              NULL,
-              (PBYTE) smsMessage, 
-              strlen(smsMessage)+1, 
-              (PBYTE) &tpsd, 
-              sizeof(TEXT_PROVIDER_SPECIFIC_DATA), /*12*/ 
-              SMSDE_OPTIMAL, 
-              SMS_OPTION_DELIVERY_NONE, 
-              &smsmidMessageID);
+    hr = smsSend(smshHandle,
+                 NULL, 
+                 &smsaDestination,
+                 NULL,
+                 (PBYTE) smsMessage, 
+                 wcslen(smsMessage) * sizeof (WCHAR), 
+                 (PBYTE) &tpsd, 
+                 sizeof(TEXT_PROVIDER_SPECIFIC_DATA), /*12*/ 
+                 SMSDE_OPTIMAL, 
+                 SMS_OPTION_DELIVERY_NONE, 
+                 &smsmidMessageID);
     
-    Close (smshHandle);
+    smsClose (smshHandle);
     
     if (hr == ERROR_SUCCESS)
       return NS_OK;
-
+    
     FreeLibrary(hSmsDLL);
   }
   return NS_ERROR_FAILURE;
-
+  
 #else
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 #endif
 }
 
@@ -207,9 +189,9 @@ nsPhoneSupport::SendSMS(const char *smsDest, const char *smsMessage)
 //  XPCOM REGISTRATION BELOW
 //------------------------------------------------------------------------------
 
-#define nsPhoneSupport_CID \
-{ 0x2a08c9e4, 0xf853, 0x4f02, \
-  {0x88, 0xd8, 0xd6, 0x2f, 0x27, 0xca, 0x06, 0x85} }
+#define nsPhoneSupport_CID                          \
+{ 0x2a08c9e4, 0xf853, 0x4f02,                       \
+{0x88, 0xd8, 0xd6, 0x2f, 0x27, 0xca, 0x06, 0x85} }
 
 #define nsPhoneSupport_ContractID "@mozilla.org/phone/support;1"
 

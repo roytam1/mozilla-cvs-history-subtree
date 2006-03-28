@@ -48,7 +48,7 @@ interface nsIPhoneSupport : nsISupports
    * @param telephoneDescription this is an optional
    * description of the telephone number.
    */
-  void makeCall(in string telephoneNumber, in string telephoneDescription);
+  void makeCall(in wstring telephoneNumber, in wstring telephoneDescription);
 
   /**
    * This method attempts to send a SMS message.
@@ -56,6 +56,6 @@ interface nsIPhoneSupport : nsISupports
    * @param smsDest this is the telephone or IP to send the sms message.
    * @param smsMessage this is the message to send.
    */
-  void sendSMS(in string smsDest, in string smsMessage);
+  void sendSMS(in wstring smsDest, in wstring smsMessage);
 
 };
