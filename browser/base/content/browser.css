@@ -13,3 +13,6 @@ toolbar[printpreview="true"] {
   font-size: 12px !important;
 }
 
+#PersonalToolbar > #bookmarksBarShowPlaces > .toolbarbutton-text {
+  visibility: collapse;
+}
