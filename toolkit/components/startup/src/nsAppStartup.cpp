@@ -111,9 +111,6 @@ nsAppStartup::Init()
   mAppShell = do_GetService(kAppShellCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = mAppShell->Init(nsnull, nsnull);
-  NS_ENSURE_SUCCESS(rv, rv);
-
   // listen to EventQueues' comings and goings. do this after the appshell
   // has been created, but after the event queue has been created. that
   // latter bit is unfortunate, but we deal with it.

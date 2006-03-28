@@ -45,11 +45,6 @@ native int(int);
 interface nsIAppShell : nsISupports
 {
   /**
-   * Initializes the application shell.
-   */ 
-  void init(inout int argc, inout string argv);
-
-  /**
    * Enter an event loop.  Don't leave until exit() is called.
    */
   void run();
