@@ -51,7 +51,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(mozStorageService, mozIStorageService, nsIObserver
 // XXX this sucks that we have to pull in nsIFile and all that
 // just to use NS_GetSpecialDirectory
 
-static const char* gQuitApplicationMessage = "quit-application";
+static const char* gShutdownMessage = "xpcom-shutdown-threads";
 
 mozStorageService::mozStorageService()
 {
@@ -76,7 +76,7 @@ mozStorageService::Init()
     rv = InitStorageAsyncIO();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = observerService->AddObserver(this, gQuitApplicationMessage, PR_FALSE);
+    rv = observerService->AddObserver(this, gShutdownMessage, PR_FALSE);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -147,7 +147,7 @@ mozStorageService::Observe(nsISupports *aSubject, const char *aTopic,
                            const PRUnichar *aData)
 {
     nsresult rv;
-    if (nsCRT::strcmp(aTopic, gQuitApplicationMessage) == 0) {
+    if (nsCRT::strcmp(aTopic, gShutdownMessage) == 0) {
         rv = FinishAsyncIO();
         NS_ENSURE_SUCCESS(rv, rv);
     }
