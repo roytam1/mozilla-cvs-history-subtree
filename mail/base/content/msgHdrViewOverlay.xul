@@ -132,10 +132,10 @@
     </grid>
 
     <!-- the message pane consists of 3 'boxes'. Box #2 is the expanded headers view (the default view) -->
-    <hbox id="expandedHeaderView" flex="1">
+    <hbox id="expandedHeaderView" class="header-part1 headerContainer" flex="1">
       <vbox id="expandedHeaders" flex="1">
         <mail-toggle-headerfield id="expandedsubjectBox" class="subjectvalue" label="&subjectField.label;" ontwistyclick="ToggleHeaderView();" collapsed="true"/>
-        <mail-emailHeaderField id="expandedfromBox" label="&fromField.label;" collapsed="true"/>
+        <mail-emailheaderfield id="expandedfromBox" label="&fromField.label;" collapsed="true"/>
 
         <mail-emailheaderfield id="expandedsenderBox" label="&senderField.label;" collapsed="true"/>
         <mail-headerfield id="expandedorganizationBox" label="&organizationField.label;" collapsed="true"/>
