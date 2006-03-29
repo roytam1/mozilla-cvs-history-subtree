@@ -102,7 +102,6 @@ PRUint32     EmbedPrivate::sWidgetCount = 0;
 
 char        *EmbedPrivate::sPath        = nsnull;
 char        *EmbedPrivate::sCompPath    = nsnull;
-nsIAppShell *EmbedPrivate::sAppShell    = nsnull;
 nsVoidArray *EmbedPrivate::sWindowList  = nsnull;
 nsILocalFile *EmbedPrivate::sProfileDir  = nsnull;
 nsISupports  *EmbedPrivate::sProfileLock = nsnull;
@@ -568,19 +567,6 @@ EmbedPrivate::PushStartup(void)
 
     rv = RegisterAppComponents();
     NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Warning: Failed to register app components.\n");
-
-    // XXX startup appshell service?
-    // XXX create offscreen window for appshell service?
-    // XXX remove X prop from offscreen window?
-
-    nsCOMPtr<nsIAppShell> appShell = do_GetService(kAppShellCID);
-    if (!appShell) {
-      NS_WARNING("Failed to create appshell in EmbedPrivate::PushStartup!\n");
-      return;
-    }
-    sAppShell = appShell.get();
-    NS_ADDREF(sAppShell);
-    sAppShell->Init(0, nsnull);
   }
 }
 
@@ -598,12 +584,6 @@ EmbedPrivate::PopStartup(void)
     if (sAppFileLocProvider) {
       NS_RELEASE(sAppFileLocProvider);
       sAppFileLocProvider = nsnull;
-    }
-
-    if (sAppShell) {
-      // Shutdown the appshell service.
-      NS_RELEASE(sAppShell);
-      sAppShell = 0;
     }
 
     // shut down XPCOM/Embedding

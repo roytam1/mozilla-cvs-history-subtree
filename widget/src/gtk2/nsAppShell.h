@@ -39,27 +39,28 @@
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
+#include <glib.h>
 #include "nsBaseAppShell.h"
 #include "nsCOMPtr.h"
 
 class nsAppShell : public nsBaseAppShell {
 public:
-    nsAppShell() : mInitialized(PR_FALSE) {}
-
-    // nsIAppShell overrides:
-    NS_IMETHOD Init(int *argc, char **argv);
-
-    // nsIThreadObserver overrides:
-    NS_IMETHOD OnDispatchedEvent(nsIThreadInternal *thread);
+    nsAppShell() : mTag(0) { memset(mPipeFDs, 0, sizeof(mPipeFDs)); }
 
     // nsBaseAppShell overrides:
-    PRBool ProcessNextNativeEvent(PRBool mayWait);
+    nsresult Init();
+    virtual void CallFromNativeEvent();
+    virtual PRBool ProcessNextNativeEvent(PRBool mayWait);
 
 private:
-    virtual ~nsAppShell() {}
+    virtual ~nsAppShell();
+
+    static gboolean EventProcessorCallback(GIOChannel *source,
+                                           GIOCondition condition,
+                                           gpointer data);
 
     int mPipeFDs[2];
-    PRBool mInitialized;
+    PRUintn mTag;
 };
 
 #endif /* nsAppShell_h__ */

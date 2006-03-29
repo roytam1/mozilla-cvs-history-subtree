@@ -40,6 +40,8 @@
 
 #include "nsIAppShell.h"
 #include "nsIThreadInternal.h"
+#include "nsIRunnable.h"
+#include "nsCOMPtr.h"
 #include "prinrval.h"
 
 /**
@@ -90,6 +92,7 @@ protected:
   virtual PRBool ProcessNextNativeEvent(PRBool mayWait) = 0;
 
 protected:
+  nsCOMPtr<nsIRunnable> mDummyEvent;
   PRInt32 mFavorPerf;
   PRInt32 mDispatchedUnblockEvent;
   PRIntervalTime mStarvationDelay;

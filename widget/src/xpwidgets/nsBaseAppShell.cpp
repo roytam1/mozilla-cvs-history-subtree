@@ -183,22 +183,23 @@ nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal *thr, PRBool mayWait,
 
   while (!NS_HasPendingEvents(thr)) {
     // If we have been asked to exit from Run, then we should not wait for
-    // events to process.  We also want to make sure that the thread event
-    // queue does not block on its monitor, as it normally would do if it did
-    // not have any pending events.  To avoid that, we simply insert a dummy
-    // event into its queue during shutdown.
-    if (mRunWasCalled && mExiting && mayWait) {
+    // events to process.  
+    if (mRunWasCalled && mExiting && mayWait)
       mayWait = PR_FALSE;
-      nsCOMPtr<nsIRunnable> dummyEvent = new nsRunnable();
-      thr->Dispatch(dummyEvent, NS_DISPATCH_NORMAL);
-    }
+
     mLastNativeEventTime = PR_IntervalNow();
     if (!ProcessNextNativeEvent(mayWait) || !mayWait)
       break;
   }
 
-  NS_ASSERTION(!needEvent || NS_HasPendingEvents(thr),
-      "Will lock-up the UI thread");
+  // Make sure that the thread event queue does not block on its monitor, as
+  // it normally would do if it did not have any pending events.  To avoid
+  // that, we simply insert a dummy event into its queue during shutdown.
+  if (needEvent && !NS_HasPendingEvents(thr)) {  
+    if (!mDummyEvent)
+      mDummyEvent = new nsRunnable();
+    thr->Dispatch(mDummyEvent, NS_DISPATCH_NORMAL);
+  }
 
   return NS_OK;
 }
