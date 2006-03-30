@@ -3969,22 +3969,13 @@ BOOL CALLBACK nsWindow::DispatchStarvedPaints(HWND aWnd, LPARAM aMsg)
 // Check for pending paints and dispatch any pending paint
 // messages for any nsIWidget which is a descendant of the
 // top-level window that *this* window is embedded within.
-// Also dispatch pending tasks to avoid starvation (see
-// nsAppShell.cpp). Note: We do not dispatch pending paint
-// messages for non nsIWidget managed windows.
+// 
+// Note: We do not dispatch pending paint messages for non
+// nsIWidget managed windows.
 
 void nsWindow::DispatchPendingEvents()
 {
   gLastInputEventTime = PR_IntervalToMicroseconds(PR_IntervalNow());
-
-  // Need to flush all pending PL_Events before
-  // painting to prevent reflow events from being starved.
-  // Note: Unfortunately, The flushing of PL_Events can not be done by
-  // dispatching the native WM_TIMER event that is used for PL_Event
-  // notification because the timer message will not appear in the
-  // native msg queue until 10ms after the event is posted. Which is too late.
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ProcessPendingEvents(thread);
 
   // Quickly check to see if there are any
   // paint events pending.
