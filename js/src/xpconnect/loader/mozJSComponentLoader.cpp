@@ -194,6 +194,42 @@ static JSFunctionSpec gSandboxFun[] = {
     {0}
 };
 
+class PrincipalHolder : public nsIScriptObjectPrincipal
+{
+public:
+    PrincipalHolder(nsIPrincipal *aPrincipal)
+        : mPrincipal(aPrincipal)
+    {
+        NS_ASSERTION(mPrincipal, "Don't pass me a null principal");
+    }
+    virtual ~PrincipalHolder()
+    {
+    }
+
+    NS_DECL_ISUPPORTS
+
+    NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete **aPrincipal);
+    NS_IMETHOD GetPrincipal(nsIPrincipal **aPrincipal);
+
+private:
+    nsCOMPtr<nsIPrincipal> mPrincipal;
+};
+
+NS_IMPL_ISUPPORTS1(PrincipalHolder, nsIScriptObjectPrincipal)
+
+NS_IMETHODIMP
+PrincipalHolder::GetPrincipalObsolete(nsIPrincipalObsolete **aPrincipal)
+{
+    return CallQueryInterface(mPrincipal, aPrincipal);
+}
+
+NS_IMETHODIMP
+PrincipalHolder::GetPrincipal(nsIPrincipal **aPrincipal)
+{
+    NS_ADDREF(*aPrincipal = mPrincipal);
+    return NS_OK;
+}
+
 JS_STATIC_DLL_CALLBACK(JSBool)
 sandbox_enumerate(JSContext *cx, JSObject *obj)
 {
@@ -207,10 +243,18 @@ sandbox_resolve(JSContext *cx, JSObject *obj, jsval id)
     return JS_ResolveStandardClass(cx, obj, id, &resolved);
 }
 
+JS_STATIC_DLL_CALLBACK(void)
+sandbox_finalize(JSContext *cx, JSObject *obj)
+{
+    nsIScriptObjectPrincipal *sop =
+        (nsIScriptObjectPrincipal *)JS_GetPrivate(cx, obj);
+    NS_IF_RELEASE(sop);
+}
+
 static JSClass js_SandboxClass = {
-    "Sandbox", 0,
+    "Sandbox", JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS,
     JS_PropertyStub,   JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    sandbox_enumerate, sandbox_resolve, JS_ConvertStub,  JS_FinalizeStub,
+    sandbox_enumerate, sandbox_resolve, JS_ConvertStub,  sandbox_finalize,
     JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
@@ -272,30 +316,58 @@ EvalInSandbox(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     NS_ConvertUCS2toUTF8 URL8((const PRUnichar *)URL);
-    nsCOMPtr<nsIURL> iURL;
-    nsCOMPtr<nsIStandardURL> stdUrl =
-        do_CreateInstance(kStandardURLContractID);
-    if (!stdUrl ||
-        NS_FAILED(stdUrl->Init(nsIStandardURL::URLTYPE_STANDARD, 80,
-                               URL8, nsnull, nsnull)) ||
-        !(iURL = do_QueryInterface(stdUrl))) {
-        JS_ReportError(cx, "Can't create URL for evalInSandbox");
-        return JS_FALSE;
+    nsIScriptObjectPrincipal *sop;
+
+    sop = (nsIScriptObjectPrincipal *)JS_GetPrivate(cx, sandbox);
+    if (!sop) {
+        nsCOMPtr<nsIURL> iURL;
+        nsCOMPtr<nsIStandardURL> stdUrl =
+            do_CreateInstance(kStandardURLContractID);
+        if (!stdUrl ||
+            NS_FAILED(stdUrl->Init(nsIStandardURL::URLTYPE_STANDARD, 80,
+                                   URL8, nsnull, nsnull)) ||
+            !(iURL = do_QueryInterface(stdUrl))) {
+            JS_ReportError(cx, "Can't create URL for evalInSandbox");
+            return JS_FALSE;
+        }
+        
+        nsCOMPtr<nsIPrincipal> principal;
+        nsCOMPtr<nsIScriptSecurityManager> secman = 
+            do_GetService(kScriptSecurityManagerContractID);
+        if (!secman ||
+            NS_FAILED(secman->GetCodebasePrincipal(iURL,
+                                                   getter_AddRefs(principal))) ||
+            !principal ||
+            NS_FAILED(principal->GetJSPrincipals(cx, &jsPrincipals)) ||
+            !jsPrincipals) {
+            JS_ReportError(cx, "Can't get principals for evalInSandbox");
+            return JS_FALSE;
+        }
+
+        sop = new PrincipalHolder(principal);
+        if (!sop) {
+            JS_ReportOutOfMemory(cx);
+            JSPRINCIPALS_DROP(cx, jsPrincipals);
+            return JS_FALSE;
+        }
+        NS_ADDREF(sop);
+
+        if (!JS_SetPrivate(cx, sandbox, sop)) {
+            NS_RELEASE(sop);
+            JSPRINCIPALS_DROP(cx, jsPrincipals);
+            return JS_FALSE;
+        }
+    } else {
+        nsCOMPtr<nsIPrincipal> principal;
+        sop->GetPrincipal(getter_AddRefs(principal));
+
+        if (NS_FAILED(principal->GetJSPrincipals(cx, &jsPrincipals)) ||
+            !jsPrincipals) {
+            JS_ReportError(cx, "Can't get principals for evalInSandbox");
+            return JS_FALSE;
+        }
     }
-    
-    nsCOMPtr<nsIPrincipal> principal;
-    nsCOMPtr<nsIScriptSecurityManager> secman = 
-        do_GetService(kScriptSecurityManagerContractID);
-    if (!secman ||
-        NS_FAILED(secman->GetCodebasePrincipal(iURL,
-                                               getter_AddRefs(principal))) ||
-        !principal ||
-        NS_FAILED(principal->GetJSPrincipals(cx, &jsPrincipals)) ||
-        !jsPrincipals) {
-        JS_ReportError(cx, "Can't get principals for evalInSandbox");
-        return JS_FALSE;
-    }
-    
+
     JSBool ok;
     JSContext *sandcx = JS_NewContext(JS_GetRuntime(cx), 8192);
     if (!sandcx) {
