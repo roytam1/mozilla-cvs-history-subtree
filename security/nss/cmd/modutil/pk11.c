@@ -141,11 +141,11 @@ ChkFipsMode(char *arg)
  */
 
 typedef struct {
-    const char *name;
-    const unsigned long mask;
+    char *name;
+    unsigned long mask;
 } MaskString;
 
-static const MaskString mechanismStrings[] = {
+static MaskString mechanismStrings[] = {
     {"RSA", PUBLIC_MECH_RSA_FLAG},
     {"DSA", PUBLIC_MECH_DSA_FLAG},
     {"RC2", PUBLIC_MECH_RC2_FLAG},
@@ -159,19 +159,16 @@ static const MaskString mechanismStrings[] = {
     {"MD2", PUBLIC_MECH_MD2_FLAG},
     {"SSL", PUBLIC_MECH_SSL_FLAG},
     {"TLS", PUBLIC_MECH_TLS_FLAG},
-    {"AES", PUBLIC_MECH_AES_FLAG},
-    {"SHA256", PUBLIC_MECH_SHA256_FLAG},
-    {"SHA512", PUBLIC_MECH_SHA512_FLAG},
     {"RANDOM", PUBLIC_MECH_RANDOM_FLAG},
     {"FRIENDLY", PUBLIC_MECH_FRIENDLY_FLAG}
 };
-static const int numMechanismStrings =
+static int numMechanismStrings =
     sizeof(mechanismStrings) / sizeof(mechanismStrings[0]);
 
-static const MaskString cipherStrings[] = {
+static MaskString cipherStrings[] = {
     {"FORTEZZA", PUBLIC_CIPHER_FORTEZZA_FLAG}
 };
-static const int numCipherStrings =
+static int numCipherStrings =
     sizeof(cipherStrings) / sizeof(cipherStrings[0]);
 
 /* Maximum length of a colon-separated list of all the strings in an 
@@ -189,7 +186,7 @@ static const int numCipherStrings =
  * elements is the number of elements in array.
  */
 static unsigned long
-getFlagsFromString(char *string, const MaskString array[], int elements)
+getFlagsFromString(char *string, MaskString array[], int elements)
 {
     unsigned long ret = 0;
     short i = 0;
@@ -242,7 +239,7 @@ getFlagsFromString(char *string, const MaskString array[], int elements)
  * if you need it permanently or you want to change it.
  */
 static char *
-getStringFromFlags(unsigned long flags, const MaskString array[], int elements)
+getStringFromFlags(unsigned long flags, MaskString array[], int elements)
 {
     static char buf[MAX_STRING_LIST_LEN];
     int i;

@@ -4759,8 +4759,6 @@ mp_to_unsigned_octets(const mp_int *mp, unsigned char *str, mp_size maxlen)
       str[pos++] = x;
     }
   }
-  if (!pos)
-    str[pos++] = 0;
   return pos;
 } /* end mp_to_unsigned_octets() */
 /* }}} */
@@ -4799,8 +4797,6 @@ mp_to_signed_octets(const mp_int *mp, unsigned char *str, mp_size maxlen)
       str[pos++] = x;
     }
   }
-  if (!pos)
-    str[pos++] = 0;
   return pos;
 } /* end mp_to_signed_octets() */
 /* }}} */
@@ -4836,8 +4832,6 @@ mp_to_fixlen_octets(const mp_int *mp, unsigned char *str, mp_size length)
       str[pos++] = x;
     }
   }
-  if (!pos)
-    str[pos++] = 0;
   return MP_OKAY;
 } /* end mp_to_fixlen_octets() */
 /* }}} */

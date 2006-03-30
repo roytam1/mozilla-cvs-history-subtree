@@ -246,6 +246,7 @@ ssl3_SendECDHClientKeyExchange(sslSocket * ss, SECKEYPublicKey * svrPubKey)
     CK_MECHANISM_TYPE	target;
     SECKEYPublicKey	*pubKey = NULL;		/* Ephemeral ECDH key */
     SECKEYPrivateKey	*privKey = NULL;	/* Ephemeral ECDH key */
+    CK_EC_KDF_TYPE	kdf;
 
     PORT_Assert( ss->opt.noLocks || ssl_HaveSSL3HandshakeLock(ss) );
     PORT_Assert( ss->opt.noLocks || ssl_HaveXmitBufLock(ss));
@@ -267,10 +268,19 @@ ssl3_SendECDHClientKeyExchange(sslSocket * ss, SECKEYPublicKey * svrPubKey)
     if (isTLS) target = CKM_TLS_MASTER_KEY_DERIVE_DH;
     else target = CKM_SSL3_MASTER_KEY_DERIVE_DH;
 
+    /* If field size is not more than 24 octets, then use SHA-1 hash of result;
+     * otherwise, use result (see section 4.8 of draft-ietf-tls-ecc-03.txt).
+     */
+    if ((pubKey->u.ec.publicValue.len - 1) / 2 <= 24) {
+	kdf = CKD_SHA1_KDF;
+    } else {
+	kdf = CKD_NULL;
+    }
+
     /*  Determine the PMS */
     pms = PK11_PubDeriveWithKDF(privKey, svrPubKey, PR_FALSE, NULL, NULL,
 			    CKM_ECDH1_DERIVE, target, CKA_DERIVE, 0,
-			    CKD_NULL, NULL, NULL);
+			    kdf, NULL, NULL);
 
     if (pms == NULL) {
 	ssl_MapLowLevelError(SSL_ERROR_CLIENT_KEY_EXCHANGE_FAILURE);
@@ -328,6 +338,7 @@ ssl3_HandleECDHClientKeyExchange(sslSocket *ss, SSL3Opaque *b,
     SECKEYPublicKey   clntPubKey;
     CK_MECHANISM_TYPE	target;
     PRBool isTLS;
+    CK_EC_KDF_TYPE	kdf;
 
     PORT_Assert( ss->opt.noLocks || ssl_HaveRecvBufLock(ss) );
     PORT_Assert( ss->opt.noLocks || ssl_HaveSSL3HandshakeLock(ss) );
@@ -350,10 +361,19 @@ ssl3_HandleECDHClientKeyExchange(sslSocket *ss, SSL3Opaque *b,
     if (isTLS) target = CKM_TLS_MASTER_KEY_DERIVE_DH;
     else target = CKM_SSL3_MASTER_KEY_DERIVE_DH;
 
+    /* If field size is not more than 24 octets, then use SHA-1 hash of result;
+     * otherwise, use result (see section 4.8 of draft-ietf-tls-ecc-03.txt).
+     */
+    if (srvrPubKey->u.ec.size <= 24 * 8) {
+	kdf = CKD_SHA1_KDF;
+    } else {
+	kdf = CKD_NULL;
+    }
+
     /*  Determine the PMS */
     pms = PK11_PubDeriveWithKDF(srvrPrivKey, &clntPubKey, PR_FALSE, NULL, NULL,
 			    CKM_ECDH1_DERIVE, target, CKA_DERIVE, 0,
-			    CKD_NULL, NULL, NULL);
+			    kdf, NULL, NULL);
 
     if (pms == NULL) {
 	/* last gasp.  */
@@ -374,7 +394,7 @@ ssl3_HandleECDHClientKeyExchange(sslSocket *ss, SSL3Opaque *b,
 /*
  * Creates the ephemeral public and private ECDH keys used by
  * server in ECDHE_RSA and ECDHE_ECDSA handshakes.
- * XXX For now, the elliptic curve is hardcoded to NIST P-256.
+ * XXX For now, the elliptic curve is hardcoded to NIST P-224.
  * We need an API to specify the curve. This won't be a real
  * issue until we further develop server-side support for ECC
  * cipher suites.
@@ -391,7 +411,7 @@ ssl3_CreateECDHEphemeralKeys(sslSocket *ss)
 	ssl3_FreeKeyPair(ss->ephemeralECDHKeyPair);
     ss->ephemeralECDHKeyPair = NULL;
 
-    if (ecName2params(NULL, ec_secp256r1, &ecParams) == SECFailure)
+    if (ecName2params(NULL, ec_secp224r1, &ecParams) == SECFailure)
 	return SECFailure;
     privKey = SECKEY_CreateECPrivateKey(&ecParams, &pubKey, NULL);    
     if (!privKey || !pubKey ||
@@ -425,7 +445,7 @@ ssl3_HandleECDHServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     /* XXX This works only for named curves, revisit this when
      * we support generic curves.
      */
-    ec_params.len = 3;
+    ec_params.len = 2;
     ec_params.data = paramBuf;
     rv = ssl3_ConsumeHandshake(ss, ec_params.data, ec_params.len, 
 			       &b, &length);
@@ -435,8 +455,7 @@ ssl3_HandleECDHServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 
     /* Fail if the curve is not a named curve */
     if ((ec_params.data[0] != ec_type_named) || 
-	(ec_params.data[1] != 0) ||
-	!supportedCurve(ec_params.data[2])) {
+	!supportedCurve(ec_params.data[1])) {
 	    errCode = SEC_ERROR_UNSUPPORTED_ELLIPTIC_CURVE;
 	    desc = handshake_failure;
 	    goto alert_loser;
@@ -507,7 +526,7 @@ ssl3_HandleECDHServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     peerKey->keyType               = ecKey;
 
     /* set up EC parameters in peerKey */
-    if (ecName2params(arena, ec_params.data[2], 
+    if (ecName2params(arena, ec_params.data[1], 
 	    &peerKey->u.ec.DEREncodedParams) != SECSuccess) {
 	/* we should never get here since we already 
 	 * checked that we are dealing with a supported curve
@@ -569,13 +588,12 @@ const ssl3KEADef *     kea_def     = ss->ssl3.hs.kea_def;
 	return SECFailure;
     }	
     
-    ec_params.len = 3;
+    ec_params.len = 2;
     ec_params.data = (unsigned char*)PORT_Alloc(ec_params.len);
     curve = params2ecName(&ecdhePub->u.ec.DEREncodedParams);
     if (curve != ec_noName) {
 	ec_params.data[0] = ec_type_named;
-	ec_params.data[1] = 0x00;
-	ec_params.data[2] = curve;
+	ec_params.data[1] = curve;
     } else {
 	PORT_SetError(SEC_ERROR_UNSUPPORTED_ELLIPTIC_CURVE);
 	goto loser;

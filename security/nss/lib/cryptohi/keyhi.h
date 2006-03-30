@@ -82,22 +82,22 @@ SECKEY_KEAParamCompare(CERTCertificate *cert1,CERTCertificate *cert2);
 /*
 ** Return the strength of the public key in bytes
 */
-extern unsigned SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk);
+extern unsigned SECKEY_PublicKeyStrength(SECKEYPublicKey *pubk);
 
 /*
 ** Return the strength of the public key in bits
 */
-extern unsigned SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk);
+extern unsigned SECKEY_PublicKeyStrengthInBits(SECKEYPublicKey *pubk);
 
 /*
 ** Make a copy of the private key "privKey"
 */
-extern SECKEYPrivateKey *SECKEY_CopyPrivateKey(const SECKEYPrivateKey *privKey);
+extern SECKEYPrivateKey *SECKEY_CopyPrivateKey(SECKEYPrivateKey *privKey);
 
 /*
 ** Make a copy of the public key "pubKey"
 */
-extern SECKEYPublicKey *SECKEY_CopyPublicKey(const SECKEYPublicKey *pubKey);
+extern SECKEYPublicKey *SECKEY_CopyPublicKey(SECKEYPublicKey *pubKey);
 
 /*
 ** Convert a private key "privateKey" into a public key
@@ -283,23 +283,7 @@ SECKEY_AddPublicKeyToListTail( SECKEYPublicKeyList *list,
 #define PUBKEY_LIST_NEXT(n) ((SECKEYPublicKeyListNode *)n->links.next)
 #define PUBKEY_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
 
-/*
- * Length in bits of the EC's field size.  This is also the length of
- * the x and y coordinates of EC points, such as EC public keys and
- * base points.
- *
- * Return 0 on failure (unknown EC domain parameters).
- */
 extern int SECKEY_ECParamsToKeySize(const SECItem *params);
-
-/*
- * Length in bits of the EC base point order, usually denoted n.  This
- * is also the length of EC private keys and ECDSA signature components
- * r and s.
- *
- * Return 0 on failure (unknown EC domain parameters).
- */
-extern int SECKEY_ECParamsToBasePointOrderLen(const SECItem *params);
 
 SEC_END_PROTOS
 

@@ -86,6 +86,27 @@ int ssl2CipherSuites[] = {
     SSL_EN_RC2_128_CBC_EXPORT40_WITH_MD5,       /* D */
     SSL_EN_DES_64_CBC_WITH_MD5,                 /* E */
     SSL_EN_DES_192_EDE3_CBC_WITH_MD5,           /* F */
+#ifdef NSS_ENABLE_ECC
+    /* NOTE: Since no new SSL2 ciphersuites are being 
+     * invented, and we've run out of lowercase letters
+     * for SSL3 ciphers, we use letters G and beyond
+     * for new SSL3 ciphers.
+     */
+    TLS_ECDH_ECDSA_WITH_NULL_SHA,       	/* G */
+    TLS_ECDH_ECDSA_WITH_RC4_128_SHA,       	/* H */
+    TLS_ECDH_ECDSA_WITH_DES_CBC_SHA,       	/* I */
+    TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,    	/* J */
+    TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,     	/* K */
+    TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,     	/* L */
+    TLS_ECDH_RSA_WITH_NULL_SHA,          	/* M */
+    TLS_ECDH_RSA_WITH_RC4_128_SHA,       	/* N */
+    TLS_ECDH_RSA_WITH_DES_CBC_SHA,       	/* O */
+    TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,      	/* P */
+    TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,       	/* Q */
+    TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,       	/* R */
+    TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,    	/* S */
+    TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,      	/* T */
+#endif /* NSS_ENABLE_ECC */
     0
 };
 
@@ -126,7 +147,7 @@ int ssl3CipherSuites[] = {
 
 static const char *cipherString;
 
-static PRInt32 certsTested;
+static int certsTested;
 static int MakeCertOK;
 static int NoReuse;
 static int fullhs = NO_FULLHS_PERCENTAGE; /* percentage of full handshakes to
@@ -272,7 +293,7 @@ mySSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
     /* invoke the "default" AuthCert handler. */
     rv = SSL_AuthCertificate(arg, fd, checkSig, isServer);
 
-    PR_AtomicIncrement(&certsTested);
+    ++certsTested;
     if (rv == SECSuccess) {
 	fputs("strsclnt: -- SSL: Server Certificate Validated.\n", stderr);
     }
@@ -446,8 +467,8 @@ launch_thread(
     void *	b,
     int         tid)
 {
-    PRUint32 i;
     perThread * slot;
+    int         i;
 
     PR_Lock(threadLock);
 
@@ -457,7 +478,6 @@ launch_thread(
         return SECFailure;
     }
 
-    i = numUsed;
     slot = &threads[numUsed++];
     slot->a = a;
     slot->b = b;
@@ -821,7 +841,7 @@ retry:
 	goto done;
     } else {
         if (ThrottleUp) {
-            PRTime now = PR_Now();
+            PRTime now;
             PR_Lock(threadLock);
             lastConnectSuccess = PR_MAX(now, lastConnectSuccess);
             PR_Unlock(threadLock);
@@ -1088,17 +1108,6 @@ StressClient_GetClientAuthData(void * arg,
     }
 }
 
-#define HEXCHAR_TO_INT(c, i) \
-    if (((c) >= '0') && ((c) <= '9')) { \
-	i = (c) - '0'; \
-    } else if (((c) >= 'a') && ((c) <= 'f')) { \
-	i = (c) - 'a' + 10; \
-    } else if (((c) >= 'A') && ((c) <= 'F')) { \
-	i = (c) - 'A' + 10; \
-    } else { \
-	Usage("strsclnt"); \
-    }
-
 void
 client_main(
     unsigned short      port, 
@@ -1130,33 +1139,14 @@ client_main(
         disableAllSSLCiphers();
 
         while (0 != (ndx = *cipherString++)) {
+            int *cptr;
             int  cipher;
 
-	    if (ndx == ':') {
-		int ctmp;
-
-		cipher = 0;
-		HEXCHAR_TO_INT(*cipherString, ctmp)
-		cipher |= (ctmp << 12);
-		cipherString++;
-		HEXCHAR_TO_INT(*cipherString, ctmp)
-		cipher |= (ctmp << 8);
-		cipherString++;
-		HEXCHAR_TO_INT(*cipherString, ctmp)
-		cipher |= (ctmp << 4);
-		cipherString++;
-		HEXCHAR_TO_INT(*cipherString, ctmp)
-		cipher |= ctmp;
-		cipherString++;
-	    } else {
-		const int *cptr;
-
-		if (! isalpha(ndx))
-		    Usage("strsclnt");
-		cptr = islower(ndx) ? ssl3CipherSuites : ssl2CipherSuites;
-		for (ndx &= 0x1f; (cipher = *cptr++) != 0 && --ndx > 0; ) 
-		    /* do nothing */;
-	    }
+            if (! isalpha(ndx))
+                Usage("strsclnt");
+            cptr = islower(ndx) ? ssl3CipherSuites : ssl2CipherSuites;
+            for (ndx &= 0x1f; (cipher = *cptr++) != 0 && --ndx > 0; )
+                /* do nothing */;
             if (cipher > 0) {
 		SECStatus rv;
                 rv = SSL_CipherPrefSetDefault(cipher, PR_TRUE);
@@ -1166,8 +1156,6 @@ client_main(
 			    cipher);
 		    exit(1);
 		}
-            } else {
-		Usage("strsclnt");
             }
         }
     }
@@ -1457,8 +1445,7 @@ main(int argc, char **argv)
     if (ssl3stats->hsh_sid_cache_hits + ssl3stats->hsh_sid_cache_misses +
         ssl3stats->hsh_sid_cache_not_ok == 0) {
 	/* presumably we were testing SSL2. */
-	printf("strsclnt: SSL2 - %d server certificates tested.\n",
-               certsTested);
+	printf("strsclnt: %d server certificates tested.\n", certsTested);
     } else {
 	printf(
 	"strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
@@ -1471,17 +1458,13 @@ main(int argc, char **argv)
 	exitVal = (ssl3stats->hsh_sid_cache_misses > 1) ||
                 (ssl3stats->hsh_sid_cache_not_ok != 0) ||
                 (certsTested > 1);
-    else {
-	printf("strsclnt: NoReuse - %d server certificates tested.\n",
-               certsTested);
+    else
 	exitVal = (ssl3stats->hsh_sid_cache_misses != connections) ||
                 (certsTested != connections);
-    }
 
     exitVal = ( exitVal || failed_already );
     SSL_ClearSessionCache();
     if (NSS_Shutdown() != SECSuccess) {
-        printf("strsclnt: NSS_Shutdown() failed.\n");
         exit(1);
     }
 

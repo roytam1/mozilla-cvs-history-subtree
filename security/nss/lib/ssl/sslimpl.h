@@ -170,7 +170,7 @@ typedef enum { SSLAppOpRead = 0,
 #define SSL3_MASTER_SECRET_LENGTH 48
 
 /* number of wrap mechanisms potentially used to wrap master secrets. */
-#define SSL_NUM_WRAP_MECHS              14
+#define SSL_NUM_WRAP_MECHS              13
 
 /* This makes the cert cache entry exactly 4k. */
 #define SSL_MAX_CACHED_CERT_LEN		4060
@@ -270,9 +270,9 @@ typedef struct {
 } ssl3CipherSuiteCfg;
 
 #ifdef NSS_ENABLE_ECC
-#define ssl_V3_SUITES_IMPLEMENTED 43
+#define ssl_V3_SUITES_IMPLEMENTED 40
 #else
-#define ssl_V3_SUITES_IMPLEMENTED 23
+#define ssl_V3_SUITES_IMPLEMENTED 26
 #endif /* NSS_ENABLE_ECC */
 
 typedef struct sslOptionsStr {
@@ -727,8 +727,8 @@ typedef struct {
 } SSL3Ciphertext;
 
 struct ssl3KeyPairStr {
-    SECKEYPrivateKey *    privKey;
-    SECKEYPublicKey *     pubKey;
+    SECKEYPrivateKey *    privKey;		/* RSA step down key */
+    SECKEYPublicKey *     pubKey;		/* RSA step down key */
     PRInt32               refCount;	/* use PR_Atomic calls for this. */
 };
 
@@ -1337,6 +1337,27 @@ extern void ssl_InitSymWrapKeysLock(void);
 extern int ssl_MapLowLevelError(int hiLevelError);
 
 extern PRUint32 ssl_Time(void);
+
+/* emulation of NSPR routines. */
+extern PRInt32 
+ssl_EmulateAcceptRead(	PRFileDesc *   sd, 
+			PRFileDesc **  nd,
+			PRNetAddr **   raddr, 
+			void *         buf, 
+			PRInt32        amount, 
+			PRIntervalTime timeout);
+extern PRInt32 
+ssl_EmulateTransmitFile(    PRFileDesc *        sd, 
+			    PRFileDesc *        fd,
+			    const void *        headers, 
+			    PRInt32             hlen, 
+			    PRTransmitFileFlags flags,
+			    PRIntervalTime      timeout);
+extern PRInt32 
+ssl_EmulateSendFile( PRFileDesc *        sd, 
+		     PRSendFileData *    sfd,
+                     PRTransmitFileFlags flags, 
+		     PRIntervalTime      timeout);
 
 
 SECStatus SSL_DisableDefaultExportCipherSuites(void);

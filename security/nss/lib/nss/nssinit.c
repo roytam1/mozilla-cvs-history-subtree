@@ -57,7 +57,6 @@
 #include "pki3hack.h"
 #include "certi.h"
 #include "secmodi.h"
-#include "ocspi.h"
 
 /*
  * On Windows nss3.dll needs to export the symbol 'mktemp' to be
@@ -412,20 +411,12 @@ nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
     char *lcertPrefix = NULL;
     char *lkeyPrefix = NULL;
     char *lsecmodName = NULL;
-    CERTCertificate dummyCert;
 
     if (nss_IsInitted) {
 	return SECSuccess;
     }
 
-    /* New option bits must not change the size of CERTCertificate. */
-    PORT_Assert(sizeof(dummyCert.options) == sizeof(void *));
-
     if (SECSuccess != InitCRLCache()) {
-        return SECFailure;
-    }
-    
-    if (SECSuccess != InitOCSPGlobal()) {
         return SECFailure;
     }
 

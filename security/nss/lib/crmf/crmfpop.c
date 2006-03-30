@@ -94,14 +94,35 @@ CRMF_CertReqMsgSetRAVerifiedPOP(CRMFCertReqMsg *inCertReqMsg)
 }
 
 SECOidTag
+crmf_map_keytag_to_signtag(SECOidTag inTag)
+{
+    switch (inTag) {
+    case SEC_OID_PKCS1_RSA_ENCRYPTION:
+        return SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION;
+    case SEC_OID_ANSIX9_DSA_SIGNATURE:
+    case SEC_OID_MISSI_KEA_DSS:
+    case SEC_OID_MISSI_DSS:
+        return SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST;
+    default:
+        /* Put this in here to kill warnings. */
+        break;
+    }
+    return inTag;
+}
+
+SECOidTag
 crmf_get_key_sign_tag(SECKEYPublicKey *inPubKey)
 {
-    /* maintain backward compatibility with older
-     * implementations */
-    if (inPubKey->keyType == rsaKey) {
-        return SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION;
+    CERTSubjectPublicKeyInfo *spki;
+    SECOidTag                 tag;
+
+    spki = SECKEY_CreateSubjectPublicKeyInfo(inPubKey);
+    if (spki == NULL) {
+        return SEC_OID_UNKNOWN;
     }
-    return SEC_GetSignatureAlgorithmOidTag(inPubKey->keyType, SEC_OID_UNKNOWN);
+    tag = SECOID_GetAlgorithmTag(&spki->algorithm);
+    SECKEY_DestroySubjectPublicKeyInfo(spki);
+    return crmf_map_keytag_to_signtag(tag);
 }
 
 SECAlgorithmID*

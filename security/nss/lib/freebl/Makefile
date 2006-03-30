@@ -98,7 +98,7 @@ ifdef NS_USE_GCC
     ASFILES  =
     DEFINES += -DMP_NO_MP_WORD -DMP_USE_UINT_DIGIT
 else
-    MPI_SRCS += mpi_x86_asm.c
+    ASFILES  = mpi_x86.asm
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE 
     DEFINES += -DMP_ASSEMBLY_DIV_2DX1D -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
     ifdef BUILD_OPT
@@ -110,6 +110,12 @@ endif
 ifeq ($(OS_TARGET),WINCE)
     DEFINES += -DMP_ARGCHK=0	# no assert in WinCE
     DEFINES += -DSHA_NO_LONG_LONG # avoid 64-bit arithmetic in SHA512
+endif
+
+ifdef XP_OS2_VACPP
+    ASFILES  = mpi_x86.asm
+    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE 
+    DEFINES += -DMP_ASSEMBLY_DIV_2DX1D -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
 endif
 
 ifeq ($(OS_TARGET),IRIX)
@@ -131,15 +137,12 @@ ifeq ($(CPU_ARCH),x86_64)
     ASFLAGS += -march=opteron -m64 -fPIC
     DEFINES += -DNSS_BEVAND_ARCFOUR -DMPI_AMD64 -DMP_ASSEMBLY_MULTIPLY
     DEFINES += -DNSS_USE_COMBA
-    DEFINES += -DMP_CHAR_STORE_SLOW -DMP_IS_LITTLE_ENDIAN
-    DEFINES += -DMPI_AMD64_ADD
     MPI_SRCS += mpi_amd64.c mp_comba.c
 endif
 ifeq ($(CPU_ARCH),x86)
     ASFILES  = mpi_x86.s
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE 
     DEFINES += -DMP_ASSEMBLY_DIV_2DX1D
-    DEFINES += -DMP_CHAR_STORE_SLOW -DMP_IS_LITTLE_ENDIAN
     # The floating point ECC code doesn't work on Linux x86 (bug 311432).
     #ECL_USE_FP = 1
 endif
@@ -183,17 +186,6 @@ endif
 endif
 endif
 endif
-endif
-
-# The blapi functions are defined not only in the freebl shared
-# libraries but also in the shared libraries linked with loader.c
-# (libsoftokn3.so and libssl3.so).  We need to use GNU ld's
-# -Bsymbolic option or the equivalent option for other linkers
-# to bind the blapi function references in FREEBLVector vector
-# (ldvector.c) to the blapi functions defined in the freebl
-# shared libraries.
-ifeq (,$(filter-out BSD_OS FreeBSD Linux NetBSD, $(OS_TARGET)))
-    MKSHLIB += -Wl,-Bsymbolic
 endif
 
 ifeq ($(OS_TARGET),SunOS)
@@ -292,7 +284,7 @@ ifeq ($(CPU_ARCH),sparc)
 	endif
     endif # NS_USE_GCC
 
-    ### set flags for both GCC and Sun cc
+    ### set MP_ flags for both GCC and Sun cc
     ifdef USE_ABI32_INT32
 	# this builds for Sparc v8 pure 32-bit architecture
 	DEFINES += -DMP_USE_UINT_DIGIT -DMP_ASSEMBLY_MULTIPLY
@@ -311,7 +303,6 @@ ifeq ($(CPU_ARCH),sparc)
 	ASFILES  = mpv_sparcv8.s montmulfv8.s
 	DEFINES  += -DMP_NO_MP_WORD -DMP_USE_UINT_DIGIT -DMP_ASSEMBLY_MULTIPLY
 	DEFINES  += -DMP_USING_MONT_MULF -DMP_MONT_USE_MP_MUL
-	ECL_USE_FP = 1
     endif
     ifdef USE_ABI64_INT
 	# this builds for Sparc v9a pure 64-bit architecture
@@ -324,9 +315,9 @@ ifeq ($(CPU_ARCH),sparc)
 	ASFILES   = mpv_sparcv9.s montmulfv9.s
 	DEFINES  += -DMP_NO_MP_WORD -DMP_USE_UINT_DIGIT -DMP_ASSEMBLY_MULTIPLY
 	DEFINES  += -DMP_USING_MONT_MULF -DMP_MONT_USE_MP_MUL
-	ECL_USE_FP = 1
     endif
 
+    ECL_USE_FP = 1
 else
     # Solaris for non-sparc family CPUs
     ifdef NS_USE_GCC
@@ -401,6 +392,7 @@ vpath %.h mpi ecl
 vpath %.c mpi ecl
 vpath %.S mpi ecl
 vpath %.s mpi ecl
+vpath %.asm mpi ecl
 INCLUDES += -Impi -Iecl
 
 
