@@ -84,7 +84,6 @@ tier_0_dirs = \
 #
 # tier 1 -  3rd party individual libraries
 #
-tier_1_dirs	+= dbm
 
 ifndef MOZ_NATIVE_JPEG
 tier_1_dirs	+= jpeg
@@ -104,10 +103,6 @@ tier_1_dirs += modules/libbz2
 tier_1_dirs += modules/libmar
 endif
 
-ifdef MOZ_SVG_RENDERER_LIBART
-tier_1_dirs	+= other-licenses/libart_lgpl
-endif
-
 #
 # tier 2 - base libraries
 # 
@@ -116,8 +111,12 @@ tier_2_dirs	= \
 		xpcom \
 		$(NULL)
 
+ifneq (,$(MOZ_NO_XPCOM_OBSOLETE)$(MOZ_XPINSTALL))
+tier_2_dirs += modules/libreg
+endif
+
 ifndef MOZ_NO_XPCOM_OBSOLETE
-tier_2_dirs += modules/libreg xpcom/obsolete
+tier_2_dirs += xpcom/obsolete
 endif
 
 ifdef NS_TRACE_MALLOC
@@ -389,6 +388,10 @@ endif
 
 ifdef MOZ_SUITE
 tier_99_dirs	+= suite
+# When Suite becomes a full MOZ_XUL_APP we can remove this ifdef
+ifdef MOZ_XUL_APP
+tier_99_dirs	+= themes
+endif
 endif
 
 ifdef MINIMO
@@ -396,9 +399,12 @@ tier_99_dirs	+= minimo
 endif
 
 ifdef MOZ_XUL_APP
+# XXX SUITE doesn't want to build the toolkit installer yet
+ifndef MOZ_SUITE
 ifdef MOZ_INSTALLER
 tier_99_dirs     +=  toolkit/mozapps/installer
 endif
+endif # MOZ_SUITE
 else
 ifneq (,$(MOZ_XPFE_COMPONENTS)$(MOZ_XUL))
 ifndef MINIMO
