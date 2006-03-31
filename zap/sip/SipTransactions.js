@@ -143,6 +143,7 @@ SipInviteClientTransaction.fun(
     this.endpoint = endpoint;
     this.TU = TU;
     this.periodicRefresh = refresh;
+    this.timers = {};
     
     // set initial state:
     this.changeState(this.Calling);
@@ -193,11 +194,11 @@ SipInviteClientTransaction.obj(
       t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint, null);
 
       // start timer 'B':
-      t.timerB = makeOneShotTimer(t, t.manager.T1 * 64);
+      t.timers.timerB = makeOneShotTimer(t, t.manager.T1 * 64);
       
       // start timer 'A' if transport is not reliable:
       if (t.endpoint.transport == "udp") {
-        t.timerA = makeOneShotTimer(t, t.manager.T1);
+        t.timers.timerA = makeOneShotTimer(t, t.manager.T1);
       }
     },
       
@@ -223,14 +224,14 @@ SipInviteClientTransaction.obj(
     },
 
     handleTimer : function handleTimer_Calling(t, timer) {
-      if (timer == t.timerA) {        
+      if (timer == t.timers.timerA) {        
         t._dump("Timer A fired. Resending Invite");
         // Resend INVITE:
         t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint, t.connection);
         // Reset A. Double interval:
-        resetOneShotTimer(t.timerA, t.timerA.delay * 2);
+        resetOneShotTimer(t.timers.timerA, t.timers.timerA.delay * 2);
       }
-      else if (timer == t.timerB) {
+      else if (timer == t.timers.timerB) {
         t._dump("Timer B fired.");
         if (t.TU)
           t.TU.handleTimeout();
@@ -251,7 +252,7 @@ SipInviteClientTransaction.obj(
 
       // start timer R if refreshing is requested:
       if (t.periodicRefresh)
-        t.timerR = makeOneShotTimer(t, t.manager.Trefresh);
+        t.timers.timerR = makeOneShotTimer(t, t.manager.Trefresh);
     },
       
       handleResponse : function handleResponse_Proceeding(t, r, flow) {
@@ -275,13 +276,13 @@ SipInviteClientTransaction.obj(
     },
 
     handleTimer : function handleTimer_Proceeding(t, timer) {
-      if (timer == t.timerR) {
+      if (timer == t.timers.timerR) {
         t._dump("Timer R fired. Resending Invite to refresh NAT binding");
         // Resend INVITE:
         t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint,
                                                t.connection);
         // Reset R:
-        resetOneShotTimer(t.timerR, t.timerR.delay);
+        resetOneShotTimer(t.timers.timerR, t.timers.timerR.delay);
       }
     }
   });
@@ -302,7 +303,7 @@ SipInviteClientTransaction.obj(
       }
       else {
         // start timer 'D' with an absolute value of 32 seconds:
-        t.timerD = makeOneShotTimer(t, 32000);
+        t.timers.timerD = makeOneShotTimer(t, 32000);
       }
     },
       
@@ -319,8 +320,8 @@ SipInviteClientTransaction.obj(
     },
 
     handleTimer : function handleTimer_Completed(t, timer) {
-      if (timer == t.timerD) {        
-        t._dump("Timer D fired after "+t.timerD.delay+" at "+Date());
+      if (timer == t.timers.timerD) {        
+        t._dump("Timer D fired after "+t.timers.timerD.delay+" at "+Date());
         t.changeState(t.Terminated);
       }
     }
@@ -337,6 +338,8 @@ SipInviteClientTransaction.obj(
       t._dump("Entering 'Terminated' state");
       // remove transaction from pool:
       t.manager.unregisterClientTransaction(t);
+      // the next line is important to prevent a COM reference cycle:
+      delete t.timers;
     }
   });
 
@@ -364,6 +367,7 @@ SipNonInviteClientTransaction.fun(
     this.transport = transport;
     this.endpoint = endpoint;
     this.TU = TU;
+    this.timers = {};
     
     // set initial state:
     this.changeState(this.Trying);
@@ -385,11 +389,11 @@ SipNonInviteClientTransaction.obj(
       t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint, null);
 
       // start timer 'F':
-      t.timerF = makeOneShotTimer(t, t.manager.T1 * 64);
+      t.timers.timerF = makeOneShotTimer(t, t.manager.T1 * 64);
 
       // start timer 'E':
       if (t.endpoint.transport == "udp") {
-        t.timerE = makeOneShotTimer(t, t.manager.T1);
+        t.timers.timerE = makeOneShotTimer(t, t.manager.T1);
       }
     },
 
@@ -414,7 +418,7 @@ SipNonInviteClientTransaction.obj(
     },
 
     handleTimer : function handleTimer_Trying(t, timer) {
-      if (timer == t.timerE) {
+      if (timer == t.timers.timerE) {
         t._dump("Timer E fired. Resend request");
         // Resend request:
         t.connection = t.transport.sendRequest(t.initialRequest,
@@ -422,7 +426,7 @@ SipNonInviteClientTransaction.obj(
         // Reset E to fire at min(old-delay*2, T2):
         resetOneShotTimer(timer, Math.min(timer.delay*2, t.manager.T2));
       }
-      else if (timer == t.timerF) {
+      else if (timer == t.timers.timerF) {
         t._dump("Timer F fired.");
         if (t.TU)
           t.TU.handleTimeout();
@@ -461,7 +465,7 @@ SipNonInviteClientTransaction.obj(
     },
 
     handleTimer : function handleTimer_Proceeding(t, timer) {
-      if (timer == t.timerE) {
+      if (timer == t.timers.timerE) {
         t._dump("Timer E fired. Resend request");
         // Resend request:
         t.connection = t.transport.sendRequest(t.initialRequest,
@@ -469,7 +473,7 @@ SipNonInviteClientTransaction.obj(
         // Reset E to fire at min(old-delay*2, T2):
         resetOneShotTimer(timer, Math.min(timer.delay*2, t.manager.T2));
       }
-      else if (timer == t.timerF) {
+      else if (timer == t.timers.timerF) {
         t._dump("Timer F fired.");
         if (t.TU)
           t.TU.handleTimeout();
@@ -493,7 +497,7 @@ SipNonInviteClientTransaction.obj(
       }
       else {
         // start timer 'K' with a value of T4:
-        t.timerK = makeOneShotTimer(t, t.manager.T4);
+        t.timers.timerK = makeOneShotTimer(t, t.manager.T4);
       }
     },
       
@@ -502,7 +506,7 @@ SipNonInviteClientTransaction.obj(
     },
 
     handleTimer : function handleTimer_Completed(t, timer) {
-      if (timer == t.timerK) {        
+      if (timer == t.timers.timerK) {        
         t._dump("Timer K fired");
         t.changeState(t.Terminated);
       }
@@ -519,6 +523,8 @@ SipNonInviteClientTransaction.obj(
       t._dump("Entering 'Terminated' state");
       // remove transaction from pool:
       t.manager.unregisterClientTransaction(t);
+      // the next line is important to prevent a COM reference cycle:
+      delete t.timers;
     }
   });
 
@@ -585,6 +591,7 @@ SipInviteServerTransaction.fun(
     this.manager = manager;
     this.transport = transport;
     this.TU = TU;
+    this.timers = {};
     
     // set initial state:
     this.changeState(this.Proceeding);
@@ -660,11 +667,11 @@ SipInviteServerTransaction.obj(
 
       // start timer 'G' if we have an unreliable protocol:
       if (!t.isReliableTransport) {
-        t.timerG = makeOneShotTimer(t, t.manager.T1);
+        t.timers.timerG = makeOneShotTimer(t, t.manager.T1);
       }
       
       // start timer 'H':
-      t.timerH = makeOneShotTimer(t, t.manager.T1 * 64);
+      t.timers.timerH = makeOneShotTimer(t, t.manager.T1 * 64);
     },
 
     handleRequest : function handleRequest_Completed(t, r) {
@@ -683,14 +690,14 @@ SipInviteServerTransaction.obj(
     },
 
     handleTimer : function handleTimer_Completed(t, timer) {
-      if (timer == t.timerG) {        
+      if (timer == t.timers.timerG) {        
         t._dump("Timer G fired. Resending response");
         // Resend response:
         t.transport.sendResponse(t.lastResponse, null);
         // Reset G to fire at min(old-delay*2, T2):
         resetOneShotTimer(timer, Math.min(timer.delay*2, t.manager.T2));
       }
-      else if (timer == t.timerH) {
+      else if (timer == t.timers.timerH) {
         t._dump("Timer H fired.");
         if (t.TU)
           t.TU.handleTimeout(t);
@@ -716,7 +723,7 @@ SipInviteServerTransaction.obj(
       }
       else {
         // start timer 'I' with a value of T4:
-        t.timerI = makeOneShotTimer(t, t.manager.T4);
+        t.timers.timerI = makeOneShotTimer(t, t.manager.T4);
       }      
     },
 
@@ -730,7 +737,7 @@ SipInviteServerTransaction.obj(
     },
 
     handleTimer : function handleTimer_Confirmed(t, timer) {
-      if (timer == t.timerI) {
+      if (timer == t.timers.timerI) {
         t._dump("Timer I fired.");
         t.changeState(t.Terminated);
       }
@@ -752,6 +759,8 @@ SipInviteServerTransaction.obj(
       
       // remove transaction from pool:
       t.manager.unregisterServerTransaction(t);
+      // the next line is important to prevent a COM reference cycle:
+      delete t.timers;
     }
   });
 
@@ -778,7 +787,8 @@ SipNonInviteServerTransaction.fun(
     this.manager = manager;
     this.transport = transport;
     this.TU = TU;
-
+    this.timers = {};
+    
     // set initial state:
     this.changeState(this.Trying);
 
@@ -867,7 +877,7 @@ SipNonInviteServerTransaction.obj(
       t._dump("Entering 'COMPLETED' state");
 
       // start timer 'J':
-      t.timerJ = makeOneShotTimer(t, t.manager.T1 * 64);
+      t.timers.timerJ = makeOneShotTimer(t, t.manager.T1 * 64);
     },
 
     handleRequest : function handleRequest_Completed(t, r) {
@@ -899,6 +909,8 @@ SipNonInviteServerTransaction.obj(
       
       // remove transaction from pool:
       t.manager.unregisterServerTransaction(t);
+      // the next line is important to prevent a COM reference cycle:
+      delete t.timers;
     }
   });
 

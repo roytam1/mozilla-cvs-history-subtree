@@ -884,6 +884,11 @@ Scheduler.fun(
     scheduleId = Components.utils.getObjectId(timer);
     this._activeSchedules[scheduleId] = [timer,
                                          Components.utils.getObjectId(method)];
+    
+    // this next line is important to prevent a COM reference cycle:
+    // (since timers don't clear their callback reference)
+    timer = null;
+    
     return scheduleId;
   });
 
