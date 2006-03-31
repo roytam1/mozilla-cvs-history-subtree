@@ -38,7 +38,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsAppShell2.h"
+#include "nsAppShell.h"
 #include "nsToolkit.h"
 
 /*static*/ void
