@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,68 +36,37 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// 
-// nsAppShell
-//
-// This file contains the default interface of the application shell. Clients
-// may either use this implementation or write their own. If you write your
-// own, you must create a message sink to route events to. (The message sink
-// interface may change, so this comment must be updated accordingly.)
-//
-
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include "nsBaseAppShell.h"
-#include "nsCOMPtr.h"
-#include "nsIToolkit.h"
-
-#ifdef WNE_TRANSITION
-#include <Carbon/Carbon.h>
-#endif // WNE_TRANSITION
-
 #include <CoreFoundation/CoreFoundation.h>
-#include <memory>
-
-#if defined(WNE_TRANSITION) || \
-    defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE)
-using std::auto_ptr;
-
-class nsMacMessagePump;
-#endif // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
+#include "nsIToolkit.h"
+#include "nsBaseAppShell.h"
+#include "nsMacMessagePump.h"
+#include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 
 class nsAppShell : public nsBaseAppShell
 {
-  public:
-    nsAppShell();
+public:
+  nsAppShell()
+  {}
 
-    // nsIAppShell overrides:
-    NS_IMETHOD Init(int *argc, char **argv);
+  nsresult Init();
 
-    // nsIThreadObserver overrides:
-    NS_IMETHOD OnDispatchedEvent(nsIThreadInternal *thread);
+protected:
+  virtual void CallFromNativeEvent();
+  virtual PRBool ProcessNextNativeEvent(PRBool mayWait);
+  virtual ~nsAppShell();
 
-    // nsBaseAppShell overrides:
-    PRBool ProcessNextNativeEvent(PRBool mayWait);
+  static void EventReceiverProc(void *info);
 
-#ifdef WNE_TRANSITION
-    OSStatus WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
-                                       EventRef aEvent);
-#endif // WNE_TRANSITION
-  
-  private:
-    ~nsAppShell();
+protected:
+  CFRunLoopSourceRef mRunLoopSource;
+  CFRunLoopRef mRunLoop;
 
-    nsCOMPtr<nsIToolkit>           mToolkit;
-#ifdef RUNLOOP_IS_CFRUNLOOP
-    CFRunLoopRef                   mRunLoop;
-#endif // RUNLOOP_IS_CFRUNLOOP
-
-#if defined(WNE_TRANSITION) || \
-    (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE))
-    auto_ptr<nsMacMessagePump>     mMacPump;
-#endif // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
+  nsCOMPtr<nsIToolkit> mToolkit;
+  nsAutoPtr<nsMacMessagePump> mMacPump;
 };
 
 #endif // nsAppShell_h__
-

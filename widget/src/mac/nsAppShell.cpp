@@ -38,510 +38,74 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// 
-// nsAppShell
-//
-// This file contains the default implementation of the application shell. Clients
-// may either use this implementation or write their own. If you write your
-// own, you must create a message sink to route events to. (The message sink
-// interface may change, so this comment must be updated accordingly.)
-//
-
-// define RUNLOOP_IS_CARBON or RUNLOOP_IS_CFRUNLOOP
-#define RUNLOOP_IS_CARBON
-
-// define RUNLOOP_USES_WNE with RUNLOOP_IS_CARBON to attempt to pick up
-// EventRecords with WaitNextEvent and process them via nsMacMessagePump
-// #undef RUNLOOP_USES_WNE
-
-// define WNE_TRANSITION to bypass WaitNextEvent entirely and install
-// a Carbon event handler to dispatch events formerly handled by
-// WaitNextEvent.  The code is transitional in that it still converts to
-// old-old-style EventRecords and dispatches through the old mechanism.
-#define WNE_TRANSITION
-
-#if (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_IS_CFRUNLOOP)) || \
-    (!defined(RUNLOOP_IS_CARBON) && !defined(RUNLOOP_IS_CFRUNLOOP))
-#error Exactly one of RUNLOOP_IS_CARBON and RUNLOOP_IS_CFRUNLOOP must be defined
-#endif
-
-#include "nsAppShell.h"
-#include "nsIAppShell.h"
-
-#include "nsThreadUtils.h"
-#include "nsIServiceManager.h"
-#include "nsIWidget.h"
-#include "nsMacMessagePump.h"
+#include "nsAppShell2.h"
 #include "nsToolkit.h"
-#include <Carbon/Carbon.h>
-#include <CoreFoundation/CoreFoundation.h>
 
-#include <stdlib.h>
-
-#ifdef RUNLOOP_IS_CARBON
-#define kEventClassMoz 'MOZZ'
-#define kEventMozLeaveRunLoop 'leev'
-
-static const EventTypeSpec kRunLoopEventList[] = {
-  { kEventClassMoz, kEventMozLeaveRunLoop },
-};
-
-static pascal OSStatus RunLoopEventHandler(EventHandlerCallRef aHandlerCallRef,
-                                           EventRef aEvent,
-                                           void* aUserData)
+/*static*/ void
+nsAppShell::EventReceiverProc(void *info)
 {
-  // { kEventClassMoz, kEventMozLeaveRunLoop } is the only event that this
-  // handler will process
-  ::QuitApplicationEventLoop();
-  return noErr;
+  nsAppShell *self = NS_STATIC_CAST(nsAppShell *, info);
+  self->NativeEventCallback();
+  NS_RELEASE(self);
 }
 
-DEFINE_ONE_SHOT_HANDLER_GETTER(RunLoopEventHandler)
-#endif // RUNLOOP_IS_CARBON
-
-#ifdef WNE_TRANSITION
-// This list encompasses all Carbon events that can be converted into
-// EventRecords.  Not all will necessarily be called; not all will necessarily
-// be handled.  Some items here may be redundant in that handlers are already
-// installed elsewhere.  This may need a good audit.
-static const EventTypeSpec kWNETransitionEventList[] = {
-  { kEventClassMouse,       kEventMouseDown },
-  { kEventClassMouse,       kEventMouseUp },
-  { kEventClassMouse,       kEventMouseMoved },
-  { kEventClassMouse,       kEventMouseDragged },
-  { kEventClassKeyboard,    kEventRawKeyDown },
-  { kEventClassKeyboard,    kEventRawKeyUp },
-  { kEventClassKeyboard,    kEventRawKeyRepeat },
-  { kEventClassWindow,      kEventWindowUpdate },
-  { kEventClassWindow,      kEventWindowActivated },
-  { kEventClassWindow,      kEventWindowDeactivated },
-  { kEventClassWindow,      kEventWindowCursorChange },
-  { kEventClassApplication, kEventAppActivated },
-  { kEventClassApplication, kEventAppDeactivated },
-  { kEventClassAppleEvent,  kEventAppleEvent },
-  { kEventClassControl,     kEventControlTrack },
-};
-
-static pascal OSStatus WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
-                                                 EventRef aEvent,
-                                                 void* aUserData)
-{
-  nsAppShell* self = (nsAppShell*)aUserData;
-  return self->WNETransitionEventHandler(aHandlerCallRef, aEvent);
-}
-
-DEFINE_ONE_SHOT_HANDLER_GETTER(WNETransitionEventHandler)
-
-OSStatus nsAppShell::WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
-                                               EventRef aEvent)
-{
-  EventRecord eventRecord;
-  ::ConvertEventRefToEventRecord(aEvent, &eventRecord);
-
-  PRBool handled = mMacPump->DispatchEvent(PR_TRUE, &eventRecord);
-
-  if (handled) {
-    return noErr;
-  }
-
-  return eventNotHandledErr;
-}
-#endif // WNE_TRANSITION
-
-nsAppShell::~nsAppShell()
-{
-#ifdef RUNLOOP_IS_CFRUNLOOP
-  if (mRunLoop)
-    CFRelease(mRunLoop);
-#endif // RUNLOOP_IS_CFRUNLOOP
-}
-
-NS_IMETHODIMP nsAppShell::Init(int* argc, char ** argv)
+nsresult
+nsAppShell::Init()
 {
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
-   return rv;
+    return rv;
 
-#if defined(WNE_TRANSITION) || \
-    (defined(RUNLOOP_IS_CARBON) && defined(RUNLOOP_USES_WNE))
-  nsIToolkit* toolkit = mToolkit.get();
-  mMacPump.reset(new nsMacMessagePump(static_cast<nsToolkit*>(toolkit)));
-
+  nsIToolkit *toolkit = mToolkit.get();
+  mMacPump = new nsMacMessagePump(static_cast<nsToolkit*>(toolkit));
   if (!mMacPump.get() || !nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
-#else // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
-  if (!nsMacMemoryCushion::EnsureMemoryCushion())
-    return NS_ERROR_OUT_OF_MEMORY;
-#endif // WNE_TRANSITION || (RUNLOOP_IS_CARBON && RUNLOOP_USES_WNE)
 
-#ifdef RUNLOOP_IS_CFRUNLOOP
+  // XXX Mark the pump as running (probably not correct for embedding)
+  mMacPump->StartRunning();
+
+  CFRunLoopSourceContext context = {0};
+  context.info = this;
+  context.perform = EventReceiverProc;
+  
+  mRunLoopSource = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
+  NS_ENSURE_STATE(mRunLoopSource);
+
   mRunLoop = CFRunLoopGetCurrent();
   CFRetain(mRunLoop);
-#endif // RUNLOOP_IS_CFRUNLOOP
 
-#ifdef RUNLOOP_IS_CARBON
-  ::InstallApplicationEventHandler(GetRunLoopEventHandlerUPP(),
-                                   GetEventTypeCount(kRunLoopEventList),
-                                   kRunLoopEventList,
-                                   NULL,
-                                   NULL);
-#endif // RUNLOOP_IS_CARBON
+  CFRunLoopAddSource(mRunLoop, mRunLoopSource, kCFRunLoopCommonModes);
 
-#ifdef WNE_TRANSITION
-  ::InstallApplicationEventHandler(GetWNETransitionEventHandlerUPP(),
-                                   GetEventTypeCount(kWNETransitionEventList),
-                                   kWNETransitionEventList,
-                                   (void*)this,
-                                   NULL);
-#endif // WNE_TRANSITION
-  
-  return nsBaseAppShell::Init(argc, argv);
+  return nsBaseAppShell::Init();
 }
 
-#if 0
-//-------------------------------------------------------------------------
-//
-// Enter a message handler loop
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Run(void)
+void
+nsAppShell::CallFromNativeEvent()
 {
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-  NS_ENSURE_STATE(thread);
-
-  nsToolkit::AppInForeground();
-
-  mExitCalled = PR_FALSE;
-  while (!mExitCalled)
-    thread->RunNextTask(nsIThread::RUN_NORMAL);
-
-  NS_RunPendingTasks(thread);
-
-  NS_RELEASE_THIS();  // hack: see below
-  return NS_OK;
-
-#if 0
-	if (!mMacPump.get())
-		return NS_ERROR_NOT_INITIALIZED;
-
-	mMacPump->StartRunning();
-	mMacPump->DoMessagePump();
-
-	if (mExitCalled)	// hack: see below
-	{
-		--mRefCnt;
-		if (mRefCnt == 0)
-			delete this;
-	}
-
-  return NS_OK;
-#endif
-}
-
-//-------------------------------------------------------------------------
-//
-// Exit appshell
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Exit(void)
-{
-  if (!mMacPump.get())
-    return NS_OK;
-
-  Spindown();
-  mExitCalled = PR_TRUE;
-
-  NS_ADDREF_THIS(); // hack: since the applications are likely to delete us
-                    // after calling this method (see nsViewerApp::Exit()),
-                    // we temporarily bump the refCnt to let the message pump
-                    // exit properly. The object will delete itself afterwards.
-	return NS_OK;
-}
-#endif
-
-#if 0
-//-------------------------------------------------------------------------
-//
-// respond to notifications that an event queue has come or gone
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aListen)
-{ // unnecessary; handled elsewhere
-  return NS_OK;
-}
-#endif
-
-#if 0
-//-------------------------------------------------------------------------
-//
-// Prepare to process events
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Spinup(void)
-{
-  NS_ENSURE_TRUE(mMacPump.get(), NS_ERROR_NOT_INITIALIZED);
-
-	mMacPump->StartRunning();
-	return NS_OK;
-}
-
-//-------------------------------------------------------------------------
-//
-// Stop being prepared to process events.
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Spindown(void)
-{
-	if (mMacPump.get())
-		mMacPump->StopRunning();
-	return NS_OK;
-}
-#endif
-
-//-------------------------------------------------------------------------
-//
-// nsAppShell constructor
-//
-//-------------------------------------------------------------------------
-nsAppShell::nsAppShell()
-{
-
-  //mInitializedToolbox = PR_TRUE;
-  //mRefCnt = 0;
-  //mExitCalled = PR_FALSE;
-}
-
-#if 0
-NS_METHOD
-nsAppShell::GetNativeEvent(PRBool &aRealEvent, void *&aEvent)
-{
-	static EventRecord	theEvent;	// icky icky static (can't really do any better)
-
-	if (!mMacPump.get())
-		return NS_ERROR_NOT_INITIALIZED;
-
-	aRealEvent = mMacPump->GetEvent(theEvent);
-	aEvent = &theEvent;
-	return NS_OK;
-}
-
-NS_METHOD
-nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
-{
-	if (!mMacPump.get())
-		return NS_ERROR_NOT_INITIALIZED;
-
-	mMacPump->DispatchEvent(aRealEvent, (EventRecord *) aEvent);
-	return NS_OK;
-}
-#endif
-
-//-------------------------------------------------------------------------
-//
-// Thread observer methods
-//
-//-------------------------------------------------------------------------
-
-#if 0
-#if defined(XP_MACOSX)
-#if defined(MOZ_WIDGET_COCOA)
-#include <CoreFoundation/CoreFoundation.h>
-#define MAC_USE_CFRUNLOOPSOURCE
-#elif defined(TARGET_CARBON)
-/* #include <CarbonEvents.h> */
-/* #define MAC_USE_CARBON_EVENT */
-#include <CoreFoundation/CoreFoundation.h>
-#define MAC_USE_CFRUNLOOPSOURCE
-#endif
-#endif
-
-#if defined(MAC_USE_CFRUNLOOPSOURCE)
-    CFRunLoopSourceRef  mRunLoopSource;
-    CFRunLoopRef        mMainRunLoop;
-#elif defined(MAC_USE_CARBON_EVENT)
-    EventHandlerUPP     eventHandlerUPP;
-    EventHandlerRef     eventHandlerRef;
-#endif
-
-static void _md_CreateEventQueue( PLEventQueue *eventQueue )
-{
-#if defined(MAC_USE_CFRUNLOOPSOURCE)
-    CFRunLoopSourceContext sourceContext = { 0 };
-    sourceContext.version = 0;
-    sourceContext.info = (void*)eventQueue;
-    sourceContext.perform = _md_EventReceiverProc;
-
-    /* make a run loop source */
-    eventQueue->mRunLoopSource = CFRunLoopSourceCreate(kCFAllocatorDefault, 0 /* order */, &sourceContext);
-    PR_ASSERT(eventQueue->mRunLoopSource);
-    
-    eventQueue->mMainRunLoop = CFRunLoopGetCurrent();
-    CFRetain(eventQueue->mMainRunLoop);
-    
-    /* and add it to the run loop */
-    CFRunLoopAddSource(eventQueue->mMainRunLoop, eventQueue->mRunLoopSource, kCFRunLoopCommonModes);
-
-#elif defined(MAC_USE_CARBON_EVENT)
-    eventQueue->eventHandlerUPP = NewEventHandlerUPP(_md_EventReceiverProc);
-    PR_ASSERT(eventQueue->eventHandlerUPP);
-    if (eventQueue->eventHandlerUPP)
-    {
-      EventTypeSpec     eventType;
-
-      eventType.eventClass = kEventClassPL;
-      eventType.eventKind  = kEventProcessPLEvents;
-
-      InstallApplicationEventHandler(eventQueue->eventHandlerUPP, 1, &eventType,
-                                     eventQueue, &eventQueue->eventHandlerRef);
-      PR_ASSERT(eventQueue->eventHandlerRef);
-    }
-#endif
-} /* end _md_CreateEventQueue() */
-
-static PRStatus
-_pl_NativeNotify(PLEventQueue* self)
-{
-#if defined(MAC_USE_CFRUNLOOPSOURCE)
-  	CFRunLoopSourceSignal(self->mRunLoopSource);
-  	CFRunLoopWakeUp(self->mMainRunLoop);
-#elif defined(MAC_USE_CARBON_EVENT)
-    OSErr err;
-    EventRef newEvent;
-    if (CreateEvent(NULL, kEventClassPL, kEventProcessPLEvents,
-                    0, kEventAttributeNone, &newEvent) != noErr)
-        return PR_FAILURE;
-    err = SetEventParameter(newEvent, kEventParamPLEventQueue,
-                            typeUInt32, sizeof(PREventQueue*), &self);
-    if (err == noErr) {
-        err = PostEventToQueue(GetMainEventQueue(), newEvent, kEventPriorityLow);
-        ReleaseEvent(newEvent);
-    }
-    if (err != noErr)
-        return PR_FAILURE;
-#endif
-    return PR_SUCCESS;
-}
-#endif
-
-NS_IMETHODIMP nsAppShell::OnDispatchedEvent(nsIThreadInternal *thr)
-{
-  // post a message to the native event queue...
-
-#if 0
-  OSErr err;
-  EventRef newEvent;
-  if (CreateEvent(NULL, kEventClassPL, kEventProcessPLEvents,
-                  0, kEventAttributeNone, &newEvent) != noErr)
-      return PR_FAILURE;
-    err = SetEventParameter(newEvent, kEventParamPLEventQueue,
-                            typeUInt32, sizeof(PREventQueue*), &self);
-    if (err == noErr) {
-        err = PostEventToQueue(GetMainEventQueue(), newEvent, kEventPriorityLow);
-        ReleaseEvent(newEvent);
-    }
-    if (err != noErr)
-        return PR_FAILURE;
-#endif
-
-  printf("--- nsAppShell::OnDispatchedEvent()\n");
-
-#ifdef RUNLOOP_IS_CFRUNLOOP
+  NS_ADDREF_THIS();
+  CFRunLoopSourceSignal(mRunLoopSource);
   CFRunLoopWakeUp(mRunLoop);
-#endif // RUNLOOP_IS_CFRUNLOOP
-
-#ifdef RUNLOOP_IS_CARBON
-  // ::QuitApplicationEventLoop(); // doesn't work from non-main thread
-  EventRef event;
-  ::CreateEvent(NULL, kEventClassMoz, kEventMozLeaveRunLoop,
-                0, kEventAttributeNone, &event);
-  ::PostEventToQueue(::GetMainEventQueue(),
-                     event,
-                     kEventPriorityHigh);
-#endif // RUNLOOP_IS_CARBON
-
-  return NS_OK;
 }
 
-PRBool nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
+PRBool
+nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
 {
-  printf("--- nsAppShell::ProcessNextNativeEvent(%d)\n", mayWait);
+  NS_ENSURE_STATE(mMacPump);
 
-#ifdef RUNLOOP_IS_CFRUNLOOP
-  CFTimeInterval interval = 0.0;
-  if (mayWait)
-    interval = 10.0;  // seconds
+  EventRecord event;
+  PRBool hasEvent = mMacPump->GetEvent(event, mayWait);
+  if (!hasEvent && !mayWait)
+    return PR_FALSE;
 
-  // @@@mm This is just here to prove that Carbon events are accumulating.
-  // The real implementation should dispatch them from the run loop, it's
-  // bad to dispatch them like this because the delay intervals in the run
-  // loop dictate a delay in processing Carbon events.
-  EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
-  while (EventRef carbonEvent =
-         ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
-                                            0,
-                                            NULL,
-                                            kEventQueueOptionsNone)) {
-    ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
-    ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
-    ::ReleaseEvent(carbonEvent);
+  mMacPump->DispatchEvent(hasEvent, &event);
+  return hasEvent;
+}
+
+nsAppShell::~nsAppShell()
+{
+  if (mRunLoopSource) {
+    CFRunLoopRemoveSource(mRunLoop, mRunLoopSource, kCFRunLoopCommonModes);
+    CFRelease(mRunLoopSource);
+    CFRelease(mRunLoop);
   }
-
-  SInt32 rv = CFRunLoopRunInMode(kCFRunLoopDefaultMode, interval, true);
-  printf("--- CFRunLoopRunInMode returned [%x]\n", rv);
-
-  return rv == kCFRunLoopRunHandledSource;
-#endif // RUNLOOP_IS_CFRUNLOOP
-
-#ifdef RUNLOOP_IS_CARBON
-  if (!mayWait) {
-    // Only process one event (change |if| to |while| to process all pending
-    // native events)
-#ifndef RUNLOOP_USES_WNE
-    EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
-    if (EventRef carbonEvent =
-         ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
-                                            0,
-                                            NULL,
-                                            kEventQueueOptionsNone)) {
-      ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
-      ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
-      ::ReleaseEvent(carbonEvent);
-    }
-
-    return ::GetNumEventsInQueue(carbonEventQueue);
-#else // !RUNLOOP_USES_WNE
-    // Alternate implementation.  This is broken because native events that
-    // depend on EventRecord processing (those that have not yet been
-    // converted to Carbon events) will only be processed in this mode,
-    // when mayWait is false.  They will not be processed when the event
-    // loop is being run by RunApplicationEventLoop(), when mayWait is true.
-    // Use WNE_TRANSITION instead to avoid this problem.
-    int eventsInQueue = ::GetNumEventsInQueue(::GetCurrentEventQueue());
-    if (eventsInQueue) {
-// nsMacMessagePump::mMouseRgn needs to be public to use this
-//      PRBool inForeground = nsToolkit::IsAppInForeground();
-//      RgnHandle mouseRgn = inForeground ? mMacPump->mMouseRgn : NULL;
-
-      ::SetEventMask(everyEvent);
-
-      EventRecord eventRec;
-//      PRBool haveEvent = ::WaitNextEvent(everyEvent, &eventRec, 0, mMouseRgn);
-      PRBool haveEvent = ::WaitNextEvent(everyEvent, &eventRec, 0, NULL);
-
-      eventsInQueue--;
-#ifndef WNE_TRANSITION
-      mMacPump->DispatchEvent(haveEvent, &eventRec);
-#endif // !WNE_TRANSITION
-    }
-
-    return eventsInQueue;
-#endif // !RUNLOOP_USES_WNE
-  }
-  else {
-    ::RunApplicationEventLoop();
-  }
-
-  return PR_FALSE;
-#endif // RUNLOOP_IS_CARBON
-
 }
