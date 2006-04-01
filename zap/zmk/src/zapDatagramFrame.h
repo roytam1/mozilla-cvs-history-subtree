@@ -68,7 +68,6 @@ public:
   //NS_IMETHOD GetData(nsACString & aData); see zapIMediaFrame
   NS_IMETHOD GetAddress(nsACString & aAddress);
   NS_IMETHOD GetPort(PRInt32 *aPort); 
-
   
   zapDatagramWrapperFrame();
   ~zapDatagramWrapperFrame();

@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,39 +34,34 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_RTPTRANSMITTER_H__
-#define __ZAP_RTPTRANSMITTER_H__
+#ifndef __ZAP_STUNFRAME_H__
+#define __ZAP_STUNFRAME_H__
 
-#include "zapFilterNode.h"
-#include "nsIWritablePropertyBag2.h"
-#include "nsString.h"
+#include "zapIStunMessage.h"
+#include "zapMediaFrame.h"
+#include "nsIUDPSocket.h"
 
-////////////////////////////////////////////////////////////////////////
-// zapRTPTransmitter
 
-// {C9A54262-F676-420A-90B4-3C92D7E2C456}
-#define ZAP_RTPTRANSMITTER_CID \
-  { 0xc9a54262, 0xf676, 0x420a, { 0x90, 0xb4, 0x3c, 0x92, 0xd7, 0xe2, 0xc4, 0x56 } }
-
-#define ZAP_RTPTRANSMITTER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "rtp-transmitter"
-
-class zapRTPTransmitter : public zapFilterNode
+class zapStunFrame : public zapIMediaFrame,
+                     public nsIDatagram
+                     // public zapIStunMessage by aggregation
 {
 public:
-  zapRTPTransmitter();
-  ~zapRTPTransmitter();
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIAFRAME
   
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+  // nsIDatagram:
+  //NS_IMETHOD GetData(nsACString & aData); see zapIMediaFrame
+  NS_IMETHOD GetAddress(nsACString & aAddress);
+  NS_IMETHOD GetPort(PRInt32 *aPort); 
 
-private:
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  PRBool Init(nsIDatagram* datagram, nsIPropertyBag2* streamInfo);
+
   nsCString mAddress;
-  PRUint16 mPort;
+  PRInt32 mPort;
+  nsCOMPtr<nsIPropertyBag2> mStreamInfo;
+private:
+  nsCOMPtr<nsISupports> mStunMessage; // aggregated STUN message
 };
 
-#endif // __ZAP_RTPTRANSMITTER_H__
+#endif // __ZAP_STUNFRAME_H__

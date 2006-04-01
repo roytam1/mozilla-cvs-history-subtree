@@ -505,22 +505,28 @@ MediaSession.fun(
     this.outboundMerger = this.mediaGraph.addNode("stream-merger", null);
     this.inboundMerger = this.mediaGraph.addNode("stream-merger", null);
     this.demuxer = this.mediaGraph.addNode("rtp-demuxer", null);
-    this.rtpsession = this.mediaGraph.addNode("rtp-session",
+    this.rtpsession = this.mediaGraph.addNode("rtp-session", null);
+
+    this.rtptransmitter = this.mediaGraph.addNode("rtp-transmitter",
                                               PB({$address:remoteHost,
-                                                  $rtp_port:remoteRTPPort,
-                                                  $rtcp_port:remoteRTCPPort}));
+                                                  $port:remoteRTPPort}));
+    this.rtpreceiver = this.mediaGraph.addNode("rtp-receiver", null);
     
     // encoder pipe:
     this.mediaGraph.connect(this.callAudioIn, null,
                             this.outboundSwitch, null);
     this.mediaGraph.connect(this.outboundMerger, null,
-                            this.rtpsession, PB({$name:"local-rtp"}));
-    this.mediaGraph.connect(this.rtpsession, PB({$name:"remote-rtp"}),
+                            this.rtpsession, PB({$name:"local2remote-rtp"}));
+    this.mediaGraph.connect(this.rtpsession, PB({$name:"local2remote-rtp"}),
+                            this.rtptransmitter, null);
+    this.mediaGraph.connect(this.rtptransmitter, null,
                             this.socketpair, PB({$name:"socket-a"}));
     // decoder pipe:
     this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
-                            this.rtpsession, PB({$name:"remote-rtp"}));
-    this.mediaGraph.connect(this.rtpsession, PB({$name:"local-rtp"}),
+                            this.rtpreceiver, null);
+    this.mediaGraph.connect(this.rtpreceiver, null,
+                            this.rtpsession, PB({$name:"remote2local-rtp"}));
+    this.mediaGraph.connect(this.rtpsession, PB({$name:"remote2local-rtp"}),
                             this.demuxer, null);
     this.mediaGraph.connect(this.inboundMerger, null, 
                             this.buf, null);

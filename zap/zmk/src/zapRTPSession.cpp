@@ -37,7 +37,133 @@
 #include "zapRTPSession.h"
 #include <stdlib.h> // for rand
 #include "zapIMediaGraph.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
 #include "nsHashPropertyBag.h"
+#include "zapIRTPFrame.h"
+
+////////////////////////////////////////////////////////////////////////
+// zapRTPSessionFilter
+
+class zapRTPSessionFilter : public zapIMediaSource,
+                            public zapIMediaSink
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPIMEDIASINK
+
+  typedef nsresult (zapRTPSession::*RTPSessionFilterFct)(zapIMediaFrame* in,
+                                                         zapIMediaFrame** out);
+  
+  zapRTPSessionFilter(zapRTPSession* parent, RTPSessionFilterFct fct);
+  ~zapRTPSessionFilter();
+
+  nsRefPtr<zapRTPSession> mParent;
+  RTPSessionFilterFct mFilterFct;
+
+  nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
+};
+
+zapRTPSessionFilter::zapRTPSessionFilter(zapRTPSession* parent,
+                                         RTPSessionFilterFct fct)
+{
+#ifdef DEBUG
+  printf("zapRTPSessionFilter::zapRTPSessionFilter()\n");
+#endif
+  mParent = parent;
+  mFilterFct = fct;
+}
+
+zapRTPSessionFilter::~zapRTPSessionFilter()
+{
+#ifdef DEBUG
+  printf("zapRTPSessionFilter::~zapRTPSessionFilter()\n");
+#endif
+}
+
+//----------------------------------------------------------------------
+// nsISupports methods:
+
+NS_IMPL_ADDREF(zapRTPSessionFilter)
+NS_IMPL_RELEASE(zapRTPSessionFilter)
+
+NS_INTERFACE_MAP_BEGIN(zapRTPSessionFilter)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
+NS_INTERFACE_MAP_END
+
+//----------------------------------------------------------------------
+// zapIMediaSource methods:
+
+/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+NS_IMETHODIMP
+zapRTPSessionFilter::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+{
+  NS_ASSERTION(!mOutput, "output end already connected");
+  mOutput = sink;
+  return NS_OK;
+}
+
+/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+NS_IMETHODIMP
+zapRTPSessionFilter::DisconnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+{
+  mOutput = nsnull;
+  return NS_OK;
+}
+
+/* zapIMediaFrame produceFrame (); */
+NS_IMETHODIMP
+zapRTPSessionFilter::ProduceFrame(zapIMediaFrame ** frame)
+{
+  *frame = nsnull;
+  
+  if (!mInput) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<zapIMediaFrame> input_frame;
+  if (NS_FAILED(mInput->ProduceFrame(getter_AddRefs(input_frame))))
+    return NS_ERROR_FAILURE;
+
+  return (mParent->*mFilterFct)(input_frame, frame);
+}
+
+//----------------------------------------------------------------------
+// zapIMediaSink methods:
+
+/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+NS_IMETHODIMP
+zapRTPSessionFilter::ConnectSource(zapIMediaSource *source, const nsACString & connection_id)
+{
+  NS_ASSERTION(!mInput, "input end already connected");
+  mInput = source;
+  return NS_OK;
+}
+
+/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+NS_IMETHODIMP
+zapRTPSessionFilter::DisconnectSource(zapIMediaSource *source, const nsACString & connection_id)
+{
+  mInput = nsnull;
+  return NS_OK;
+}
+
+/* void consumeFrame (in zapIMediaFrame frame); */
+NS_IMETHODIMP
+zapRTPSessionFilter::ConsumeFrame(zapIMediaFrame *frame)
+{
+  if (!mOutput) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<zapIMediaFrame> output_frame;
+  if (NS_FAILED((mParent->*mFilterFct)(frame, getter_AddRefs(output_frame))))
+    return NS_ERROR_FAILURE;
+
+  return mOutput->ConsumeFrame(output_frame);
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // zapRTPSession
@@ -51,7 +177,7 @@ zapRTPSession::zapRTPSession()
 
 zapRTPSession::~zapRTPSession()
 {
-  NS_ASSERTION(!mTransmitter && !mReceiver, "unclean shutdown");
+  NS_ASSERTION(!mLocal2RemoteRTP && !mRemote2LocalRTP, "unclean shutdown");
 #ifdef DEBUG_afri_zmk
   printf("zapRTPSession::~zapRTPSession()\n");
 #endif
@@ -78,56 +204,41 @@ zapRTPSession::AddedToGraph(zapIMediaGraph *graph,
                          nsIPropertyBag2* node_pars)
 {
   // unpack node parameters:
-  if (!node_pars) {
-    NS_ERROR("no node parameters");
-    return NS_ERROR_FAILURE;
-  }
+//   if (!node_pars) {
+//     NS_ERROR("no node parameters");
+//     return NS_ERROR_FAILURE;
+//   }
 
-  nsCString address;
-  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsACString(NS_LITERAL_STRING("address"),
-                                                     address),
-                    NS_ERROR_FAILURE);
-  
-  PRUint16 rtpPort, rtcpPort;
-  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("rtp_port"),
-                                                   &rtpPort),
-                    NS_ERROR_FAILURE);
-  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("rtcp_port"),
-                                                   &rtcpPort),
-                    NS_ERROR_FAILURE);
-  
-  // hook up transmitter:
-  nsCOMPtr<nsIWritablePropertyBag2> transmitter_pars;
-  NS_NewHashPropertyBag2(getter_AddRefs(transmitter_pars));
-  transmitter_pars->SetPropertyAsACString(NS_LITERAL_STRING("address"),
-                                          address);
-  transmitter_pars->SetPropertyAsUint16(NS_LITERAL_STRING("port"), rtpPort);
-  
-  NS_ENSURE_SUCCESS(graph->AddNode(NS_LITERAL_CSTRING("rtp-transmitter"),
-                                   transmitter_pars, mTransmitterID),
-                    NS_ERROR_FAILURE);
-  graph->GetNode(mTransmitterID, NS_GET_IID(zapIMediaNode), true,
-                 getter_AddRefs(mTransmitter));
-  if (!mTransmitter) {
-    NS_ERROR("transmitter doesn't implement required interface");
-    graph->RemoveNode(mTransmitterID);
-    return NS_ERROR_FAILURE;
-  }
+//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(
+//                       NS_LITERAL_STRING("SSRC"), &mSSRC),
+//                     NS_ERROR_FAILURE);
+    // XXX implement collision resolution (RFC3550)
+  mSSRC = rand();
 
-  // hook up receiver:
-  if (NS_FAILED(graph->AddNode(NS_LITERAL_CSTRING("rtp-receiver"),
-                               nsnull, mReceiverID))) {
-    graph->RemoveNode(mTransmitterID);
-    return NS_ERROR_FAILURE;
-  }
-  graph->GetNode(mReceiverID, NS_GET_IID(zapIMediaNode), true,
-                 getter_AddRefs(mReceiver));
-  if (!mReceiver) {
-    NS_ERROR("receiver doesn't implement required interface");
-    graph->RemoveNode(mReceiverID);
-    graph->RemoveNode(mTransmitterID);
-    return NS_ERROR_FAILURE;
-  }
+  // RFC3550 5.1:
+  // The initial value of the sequence number SHOULD be random
+  // (unpredictable) to make known-plaintext attacks on encryption
+  // more difficult, even if the source itself does not encrypt
+  // according to the method in Section 9.1, because the packets may
+  // flow through a translator that does.
+  mSequenceNumber = rand();
+  
+//   nsCString address;
+//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsACString(NS_LITERAL_STRING("address"),
+//                                                      address),
+//                     NS_ERROR_FAILURE);
+  
+//   PRUint16 rtpPort, rtcpPort;
+//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("rtp_port"),
+//                                                    &rtpPort),
+//                     NS_ERROR_FAILURE);
+//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("rtcp_port"),
+//                                                    &rtcpPort),
+//                     NS_ERROR_FAILURE);
+  
+  // construct our filters:
+  mLocal2RemoteRTP = new zapRTPSessionFilter(this, &zapRTPSession::FilterLocal2RemoteRTP);
+  mRemote2LocalRTP = new zapRTPSessionFilter(this, &zapRTPSession::FilterRemote2LocalRTP);
   
   return NS_OK;
 }
@@ -136,14 +247,8 @@ zapRTPSession::AddedToGraph(zapIMediaGraph *graph,
 NS_IMETHODIMP
 zapRTPSession::RemovedFromGraph(zapIMediaGraph *graph)
 {
-  if (mTransmitter) {
-    graph->RemoveNode(mTransmitterID);
-    mTransmitter = nsnull;
-  }
-  if (mReceiver) {
-    graph->RemoveNode(mReceiverID);
-    mReceiver = nsnull;
-  }
+  mLocal2RemoteRTP = nsnull;
+  mRemote2LocalRTP = nsnull;
   return NS_OK;
 }
 
@@ -151,9 +256,6 @@ zapRTPSession::RemovedFromGraph(zapIMediaGraph *graph)
 NS_IMETHODIMP
 zapRTPSession::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 {
-  NS_ASSERTION(mTransmitter, "uh-oh, no transmitter");
-  NS_ASSERTION(mReceiver, "uh-oh, no receiver");
-  
   // dispatch depending on source name given in source parameters
   if (!source_pars) {
     NS_ERROR("no source pars");
@@ -164,24 +266,26 @@ zapRTPSession::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval
   NS_ENSURE_SUCCESS(source_pars->GetPropertyAsACString(NS_LITERAL_STRING("name"), source_name),
                     NS_ERROR_FAILURE);
   
-  if (source_name == NS_LITERAL_CSTRING("remote-rtp")) {
-    return mTransmitter->GetSource(source_pars, _retval);
+  if (source_name == NS_LITERAL_CSTRING("remote2local-rtp")) {
+    *_retval = mRemote2LocalRTP;
   }
-  else if (source_name == NS_LITERAL_CSTRING("local-rtp")) {
-    return mReceiver->GetSource(source_pars, _retval);
+  else if (source_name == NS_LITERAL_CSTRING("local2remote-rtp")) {
+    *_retval = mLocal2RemoteRTP;
+  }
+  else {
+    *_retval = nsnull;
+    NS_ERROR("unknown source");
+    return NS_ERROR_FAILURE;
   }
 
-  NS_ERROR("unknown source");
-  return NS_ERROR_FAILURE;
+  NS_ADDREF(*_retval);
+  return NS_OK;
 }
 
 /* zapIMediaSink getSink (in nsIPropertyBag2 sink_pars); */
 NS_IMETHODIMP
 zapRTPSession::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 {
-  NS_ASSERTION(mTransmitter, "uh-oh, no transmitter");
-  NS_ASSERTION(mReceiver, "uh-oh, no receiver");
-
   // dispatch depending on source name given in sink parameters
   if (!sink_pars) {
     NS_ERROR("no sink pars");
@@ -192,15 +296,48 @@ zapRTPSession::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
   NS_ENSURE_SUCCESS(sink_pars->GetPropertyAsACString(NS_LITERAL_STRING("name"), sink_name),
                     NS_ERROR_FAILURE);
 
-  if (sink_name == NS_LITERAL_CSTRING("local-rtp")) {
-    return mTransmitter->GetSink(sink_pars, _retval);
+  if (sink_name == NS_LITERAL_CSTRING("local2remote-rtp")) {
+    *_retval = mLocal2RemoteRTP;
   }
-  else if (sink_name == NS_LITERAL_CSTRING("remote-rtp")) {
-    return mReceiver->GetSink(sink_pars, _retval);
+  else if (sink_name == NS_LITERAL_CSTRING("remote2local-rtp")) {
+    *_retval = mRemote2LocalRTP;
+  }
+  else {
+    *_retval = nsnull;
+    NS_ERROR("unknown sink");
+    return NS_ERROR_FAILURE;
   }
 
-  NS_ERROR("unknown sink");
-  return NS_ERROR_FAILURE;
+  NS_ADDREF(*_retval);
+  return NS_OK;
 }
 
+//----------------------------------------------------------------------
+//
 
+nsresult
+zapRTPSession::FilterLocal2RemoteRTP(zapIMediaFrame* in, zapIMediaFrame** out)
+{
+  nsCOMPtr<zapIRTPFrame> rtpFrame = do_QueryInterface(in);
+  if (!rtpFrame) {
+    NS_ERROR("unexpected frame");
+    *out = nsnull;
+    return NS_ERROR_FAILURE;
+  }
+
+  // set SSRC and sequence number:
+  rtpFrame->SetSSRC(mSSRC);
+  rtpFrame->SetSequenceNumber(mSequenceNumber++);
+  
+  *out = in;
+  NS_ADDREF(*out);
+  return NS_OK;
+}
+
+nsresult
+zapRTPSession::FilterRemote2LocalRTP(zapIMediaFrame* in, zapIMediaFrame** out)
+{
+  *out = in;
+  NS_ADDREF(*out);
+  return NS_OK;
+}

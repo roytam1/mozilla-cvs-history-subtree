@@ -177,6 +177,22 @@ zapIMediaFrame::data :
 |     event     |E|0|  volume   |          duration             |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+----------------------------------------------------------------------
+
+IX) stun
+--------
+
+A udp datagram containing a RFC3489 STUN request or response.
+
+Interfaces: zapIMediaFrame, 
+            zapIStunMessage (see zap/netutils/src/zapIStunMessage.idl),
+            nsIDatagram (see netwerk/base/public/nsIUDPSocket.idl)
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "stun"
+
+zapIMediaFrame::data :
+- same as zapIStunMessage::serialize()
 
 
 ======================================================================
@@ -332,9 +348,17 @@ Node parameters:
                           The socket will be closed on removal from 
                           the graph.
 - unsigned short "port" : local port of udp socket (default: 0)
-If both "socket" and "port" are given, "port" will be ignored.
-If neither "port" nor "socket" are given, the behaviour will be as 
-if a "port"==0 had been specified (allocate a random free port).
+- unsigned short "portbase" : bind to first available port >= portbase.
+- (XXX ACString "address" currently we bind to 0.0.0.0)
+
+If both "socket" and "port" or "portbase" are given, "port" and
+"portbase" will be ignored.
+
+If both "port" and "portbase" are given, "portbase" will be ignored.
+
+If neither "port", "portbase" or "socket" are given, the behaviour
+will be as if a "port"==0 had been specified (allocate a random free
+port).
 
 Input stream:
 datagram frames
@@ -525,39 +549,44 @@ audio/pcmu or audio/pcma frames (determined by node parameter)
 ---------------
 
 Maintains a unicast RTP session.
+RTP-session sets the SSRC and sequence number of outbound rtp frames
+and generates/processes RTCP.
 
 Node parameters:
-- ACString "address" : destination address for datagrams
-- unsigned short "rtp_port" : destination port for rtp datagrams
-- unsigned short "rtcp_port" : destination port for rtcp datagrams
+(XXX - unsigned long "SSRC" )
 
 Sinks: 3 
 
-ACString "name" == "local-rtp"   : outbound rtp frames   (neutral)
-ACString "name" == "remote-rtp"  : inbound rtp datagrams  (neutral)
-ACString "name" == "remote-rtcp" : inbound rtcp datagrams (neutral)
+ACString "name" == "local2remote-rtp"   : outbound rtp frames (neutral)
+ACString "name" == "remote2local-rtp"  : inbound rtp frames  (neutral)
+ACString "name" == "remote2local-rtcp" : inbound rtcp frames (neutral)
 
 Sources: 3 
 
-ACString "name" == "local-rtp"   : inbound rtp frames      (neutral)
-ACString "name" == "remote-rtp"  : outbound rtp datagrams (neutral)
-ACString "name" == "remote-rtcp" : outbound rtcp frames   (neutral)
+ACString "name" == "remote2local-rtp"   : inbound rtp frames (neutral)
+ACString "name" == "local2remote-rtp"  : outbound rtp frames (neutral)
+ACString "name" == "local2remote-rtcp" : outbound rtcp frames (neutral)
+
+Input streams:
+"local-rtp": rtp frames w/o ssrc or seq no.
+...XXX
+
+Output streams:
+"local2remote-rtp": rtp frames with ssrc and seq number set.
 
 ----------------------------------------------------------------------
 
 16) rtp-transmitter
 -------------------
 
-Filter for transmitting RTP packets. Used internally by rtp-session.
+Filter for transmitting RTP packets over UDP.
 
 Node parameters:
-(XXX - unsigned long "SSRC" )
 - ACString "address" : destination address for datagrams
 - unsigned short "port" : destination port for datagrams
 
 Input stream:
 rtp frames.
-rtp-transmitter will set SSRC and sequence number
 
 Output stream:
 datagram frames.
@@ -567,7 +596,7 @@ datagram frames.
 17) rtp-receiver
 ----------------
 
-Filter for receiving RTP datagrams. Used internally by rtp-session.
+Filter for receiving RTP datagrams. 
 
 Input stream:
 datagram frames
@@ -930,6 +959,10 @@ For each sampling period, the audioio node will call "consumeFrame" on
 the attached sink before calling "produceFrame" on the attached
 source.
 
+Note: Under some circumstances the combined audioio can lead to choppy
+audio (observed on Windows XP when other apps using the sound hardware
+are active).  In these cases using separate audioin/audioout might be
+better.
 
 Sinks: 1 (active)
 Sources: 2 (active)
@@ -965,3 +998,64 @@ audio/pcm frames with
 - double "frame_duration" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
+
+----------------------------------------------------------------------
+
+33) stun-client
+---------------
+
+Sinks: 1 (passive)
+Sources: 1 (active)
+
+Control interfaces: zapIStunClient
+
+Node parameters: - 
+
+Input stream: datagram frames | stun frames
+
+Output stream: datagram frames
+
+----------------------------------------------------------------------
+
+34) stun-server
+---------------
+
+Sinks: 1 (passive)
+Source: 1 (active)
+
+Control interfaces: zapIStunServer
+
+Node parameters:
+- ACString "source_addr" : Source address to insert into binding responses.
+                           (no default; mandatory)
+- unsigned short "source_port" : Source port to insert into binding 
+                                 responses. (no default; mandatory)
+
+Input stream: datagram frames | stun frames
+
+Output stream: datagram frames
+
+
+----------------------------------------------------------------------
+
+35) stun-demuxer
+----------------
+
+Dispatches input frames from one input to a stun server, stun client
+or other output, depending on the input frame.
+
+Sinks: 1 (passive)
+Sources: 3 (active)
+
+Source parameters:
+ACString "name" == "stun-req" : stun requests
+ACString "name" == "stun-res" : stun responses
+ACString "name" == "other" : other udp traffic
+
+Input stream:
+udp frames
+
+Output streams:
+stun frames ("stun-req"/"stun-res")
+udp frames ("other")
+

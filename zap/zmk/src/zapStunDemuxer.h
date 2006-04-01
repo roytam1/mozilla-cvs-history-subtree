@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,39 +34,51 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_RTPTRANSMITTER_H__
-#define __ZAP_RTPTRANSMITTER_H__
+#ifndef __ZAP_STUNDEMUXER_H__
+#define __ZAP_STUNDEMUXER_H__
 
-#include "zapFilterNode.h"
-#include "nsIWritablePropertyBag2.h"
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 #include "nsString.h"
+#include "zapIMediaFrame.h"
+#include "zapGenericSource.h"
+#include "zapINetUtils.h"
+#include "nsIWritablePropertyBag2.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapRTPTransmitter
+// zapSTUNDemuxer
 
-// {C9A54262-F676-420A-90B4-3C92D7E2C456}
-#define ZAP_RTPTRANSMITTER_CID \
-  { 0xc9a54262, 0xf676, 0x420a, { 0x90, 0xb4, 0x3c, 0x92, 0xd7, 0xe2, 0xc4, 0x56 } }
+// {B14E8B2D-A025-4200-B5F8-27DD2B861E17}
+#define ZAP_STUNDEMUXER_CID                             \
+  { 0xb14e8b2d, 0xa025, 0x4200, { 0xb5, 0xf8, 0x27, 0xdd, 0x2b, 0x86, 0x1e, 0x17 } }
 
-#define ZAP_RTPTRANSMITTER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "rtp-transmitter"
+#define ZAP_STUNDEMUXER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stun-demuxer"
 
-class zapRTPTransmitter : public zapFilterNode
+class zapStunDemuxer : public zapIMediaNode,
+                       public zapIMediaSink
 {
 public:
-  zapRTPTransmitter();
-  ~zapRTPTransmitter();
-  
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+  zapStunDemuxer();
+  ~zapStunDemuxer();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASINK
 
 private:
+  nsCOMPtr<zapINetUtils> mNetUtils;
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  nsCString mAddress;
-  PRUint16 mPort;
+  
+  // outputs:
+  nsRefPtr<zapGenericSource> mStunReqOutput;
+  nsRefPtr<zapGenericSource> mStunResOutput;
+  nsRefPtr<zapGenericSource> mOtherOutput;
+  
+  // input source:
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
-#endif // __ZAP_RTPTRANSMITTER_H__
+#endif // __ZAP_STUNDEMUXER_H__

@@ -40,7 +40,6 @@
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
-#include "stdio.h"
 #include "nsHashPropertyBag.h"
 #include "zapMediaUtils.h"
 
@@ -70,12 +69,6 @@ zapRTPTransmitter::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
     NS_ERROR("no node parameters");
     return NS_ERROR_FAILURE;
   }
-//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(
-//                       NS_LITERAL_STRING("SSRC"), &mSSRC),
-//                     NS_ERROR_FAILURE);
-    // XXX implement collision resolution (RFC3550)
-  mSSRC = rand();
-
 
   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsACString(
                       NS_LITERAL_STRING("address"), mAddress),
@@ -83,14 +76,6 @@ zapRTPTransmitter::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(
                       NS_LITERAL_STRING("port"), &mPort),
                     NS_ERROR_FAILURE);
-
-  // RFC3550 5.1:
-  // The initial value of the sequence number SHOULD be random
-  // (unpredictable) to make known-plaintext attacks on encryption
-  // more difficult, even if the source itself does not encrypt
-  // according to the method in Section 9.1, because the packets may
-  // flow through a translator that does.
-  mSequenceNumber = rand();
   
   return NS_OK;
 }
@@ -120,10 +105,6 @@ zapRTPTransmitter::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
     return NS_ERROR_FAILURE;
   }
 
-  // set SSRC and sequence number:
-  rtpFrame->SetSSRC(mSSRC);
-  rtpFrame->SetSequenceNumber(mSequenceNumber++);
-  
   // create datagram frame:
   zapDatagramFrame* frame = new zapDatagramFrame();
   frame->AddRef();

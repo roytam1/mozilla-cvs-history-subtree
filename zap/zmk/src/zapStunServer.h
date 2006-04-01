@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,39 +34,60 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_RTPTRANSMITTER_H__
-#define __ZAP_RTPTRANSMITTER_H__
+#ifndef __ZAP_STUNSERVER_H__
+#define __ZAP_STUNSERVER_H__
 
-#include "zapFilterNode.h"
-#include "nsIWritablePropertyBag2.h"
+#include "zapIStunServer.h"
+#include "zapIMediaNode.h"
+#include "zapIMediaSource.h"
+#include "zapIMediaSink.h"
+#include "zapIMediaGraph.h"
+#include "nsCOMPtr.h"
 #include "nsString.h"
+#include "nsICancelable.h"
+#include "zapIStunMessage.h"
+#include "nsIWritablePropertyBag2.h"
+#include "zapINetUtils.h"
+#include "nsClassHashtable.h"
+#include "zapIStunServerListener.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapRTPTransmitter
+// zapStunServer
 
-// {C9A54262-F676-420A-90B4-3C92D7E2C456}
-#define ZAP_RTPTRANSMITTER_CID \
-  { 0xc9a54262, 0xf676, 0x420a, { 0x90, 0xb4, 0x3c, 0x92, 0xd7, 0xe2, 0xc4, 0x56 } }
+// {7581EF4C-BA71-4454-AC1C-F999590D97AE}
+#define ZAP_STUNSERVER_CID                             \
+  { 0x7581ef4c, 0xba71, 0x4454, { 0xac, 0x1c, 0xf9, 0x99, 0x59, 0x0d, 0x97, 0xae } }
 
-#define ZAP_RTPTRANSMITTER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "rtp-transmitter"
+#define ZAP_STUNSERVER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stun-server"
 
-class zapRTPTransmitter : public zapFilterNode
+class zapStunServer : public zapIStunServer,
+                      public zapIMediaNode,
+                      public zapIMediaSource,
+                      public zapIMediaSink
 {
 public:
-  zapRTPTransmitter();
-  ~zapRTPTransmitter();
-  
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+  zapStunServer();
+  ~zapStunServer();
 
+  NS_DECL_ISUPPORTS
+  NS_DECL_ZAPISTUNSERVER
+  NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIASOURCE
+  NS_DECL_ZAPIMEDIASINK
+  
 private:
+  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapINetUtils> mNetUtils;
+  nsCOMPtr<zapIStunServerListener> mListener;
+  
+  nsCString mSourceAddress;
+  PRUint32 mSourcePort;
+
+  nsClassHashtable<nsCStringHashKey, nsCString> mAllowedClients;
+  
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  nsCString mAddress;
-  PRUint16 mPort;
+  nsCOMPtr<zapIMediaSink> mOutput;
+  nsCOMPtr<zapIMediaSource> mInput;
 };
 
-#endif // __ZAP_RTPTRANSMITTER_H__
+#endif // __ZAP_STUNSERVER_H__

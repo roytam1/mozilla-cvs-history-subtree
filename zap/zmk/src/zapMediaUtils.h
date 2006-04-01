@@ -34,6 +34,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef __ZAP_MEDIAUTILS_H__
+#define __ZAP_MEDIAUTILS_H__
+
+#include "nsHashPropertyBag.h"
 
 #define ZMK_VERIFY_STREAM_TYPE(streamInfo, type)      \
   if (!streamInfo) {                                  \
@@ -57,3 +61,5 @@
   streamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),    \
                                     NS_LITERAL_CSTRING(type));
 
+
+#endif // __ZAP_MEDIAUTILS_H__

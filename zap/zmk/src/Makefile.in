@@ -18,6 +18,7 @@ REQUIRES	= \
 		string \
 		necko \
 		zap_base \
+		zap_netutils \
 		portaudio_v18_1 \
 		$(NULL)
 
@@ -33,6 +34,7 @@ CPPSRCS		= \
 		zapDTMFGenerator.cpp \
 		zapDatagramFrame.cpp \
 		zapFilterNode.cpp \
+		zapGenericSource.cpp \
 		zapG711Decoder.cpp \
 		zapG711Encoder.cpp \
 		zapG711RTPDepacketizer.cpp \
@@ -59,6 +61,10 @@ CPPSRCS		= \
 		zapStreamSyncer.cpp \
 		zapStreamTap.cpp \
 		zapStreamUtils.cpp \
+		zapStunClient.cpp \
+		zapStunDemuxer.cpp \
+		zapStunFrame.cpp \
+		zapStunServer.cpp \
 		zapTEventRTPPacketizer.cpp \
 		zapTEventToTToneConverter.cpp \
 		zapTToneGenerator.cpp \
@@ -71,8 +77,8 @@ CPPSRCS		= \
 XPIDLSRCS	= \
 		zapIAudioDevice.idl \
 		zapIAudioDeviceManager.idl \
-		zapIAudioIn.idl \
 		zapIAudioIO.idl \
+		zapIAudioIn.idl \
 		zapIAudioOut.idl \
 		zapIAudioToneFrame.idl \
 		zapIDTMFGenerator.idl \
@@ -88,6 +94,10 @@ XPIDLSRCS	= \
 		zapISpeexDecoder.idl \
 		zapISpeexEncoder.idl \
 		zapIStreamSwitch.idl \
+		zapIStunClient.idl \
+		zapIStunClientListener.idl \
+		zapIStunServer.idl \
+		zapIStunServerListener.idl \
 		zapITToneGenerator.idl \
 		zapITelephoneEventFrame.idl \
 		zapIUDPSocket.idl \

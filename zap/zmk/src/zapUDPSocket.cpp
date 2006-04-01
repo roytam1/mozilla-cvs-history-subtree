@@ -47,7 +47,7 @@
 
 zapUDPSocket::zapUDPSocket()
 {
-#ifdef DEBUG_afri_zmk
+#ifdef DEBUG
   printf("zapUDPSocket::zapUDPSocket()\n");
 #endif
 }
@@ -55,7 +55,7 @@ zapUDPSocket::zapUDPSocket()
 zapUDPSocket::~zapUDPSocket()
 {
   NS_ASSERTION(!mSocket, "unclean shutdown");
-#ifdef DEBUG_afri_zmk
+#ifdef DEBUG
   printf("zapUDPSocket::~zapUDPSocket()\n");
 #endif
 }
@@ -96,14 +96,29 @@ zapUDPSocket::AddedToGraph(zapIMediaGraph *graph,
                                                      getter_AddRefs(mSocket)))
       || !mSocket) {
     PRUint16 port = 0;
-    node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("port"), &port);
+    PRUint32 max_port = 0;
+    if (NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("port"), &port))) {
+      max_port = port;
+    }
+    else if (NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("portbase"), &port))) {
+      max_port = 65535;
+    }
+      
     mSocket = do_CreateInstance(NS_UDPSOCKET_CONTRACTID);
     if (!mSocket) {
       NS_ERROR("failure creating socket");
       return NS_ERROR_FAILURE;
     }
-    
-    if (NS_FAILED(mSocket->Init(port))) {
+
+    PRUint32 p = port;
+    PRBool success = PR_FALSE;
+    for (/**/; p <= max_port; ++p) {
+      if (NS_SUCCEEDED(mSocket->Init(p))) {
+        success = PR_TRUE;
+        break;
+      }
+    }
+    if (!success) {
       NS_ERROR("port initialization failed");
       mSocket = nsnull;
       return NS_ERROR_FAILURE;

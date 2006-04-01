@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,39 +34,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_RTPTRANSMITTER_H__
-#define __ZAP_RTPTRANSMITTER_H__
-
-#include "zapFilterNode.h"
-#include "nsIWritablePropertyBag2.h"
-#include "nsString.h"
+#include "zapGenericSource.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapRTPTransmitter
+// zapGenericSource
 
-// {C9A54262-F676-420A-90B4-3C92D7E2C456}
-#define ZAP_RTPTRANSMITTER_CID \
-  { 0xc9a54262, 0xf676, 0x420a, { 0x90, 0xb4, 0x3c, 0x92, 0xd7, 0xe2, 0xc4, 0x56 } }
+//----------------------------------------------------------------------
+// nsISupports methods:
 
-#define ZAP_RTPTRANSMITTER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "rtp-transmitter"
+NS_IMPL_ADDREF(zapGenericSource)
+NS_IMPL_RELEASE(zapGenericSource)
 
-class zapRTPTransmitter : public zapFilterNode
+NS_INTERFACE_MAP_BEGIN(zapGenericSource)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+NS_INTERFACE_MAP_END
+
+//----------------------------------------------------------------------
+// zapIMediaSource methods:
+
+/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+NS_IMETHODIMP
+zapGenericSource::ConnectSink(zapIMediaSink *sink,
+                              const nsACString & connection_id)
 {
-public:
-  zapRTPTransmitter();
-  ~zapRTPTransmitter();
-  
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+  if (mOutput) {
+    NS_ERROR("output already connected");
+    return NS_ERROR_FAILURE;
+  }
+  mOutput = sink;
+  return NS_OK;
+}
 
-private:
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  nsCString mAddress;
-  PRUint16 mPort;
-};
+/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+NS_IMETHODIMP
+zapGenericSource::DisconnectSink(zapIMediaSink *sink,
+                                 const nsACString & connection_id)
+{
+  mOutput = nsnull;
+  return NS_OK;
+}
 
-#endif // __ZAP_RTPTRANSMITTER_H__
+/* zapIMediaFrame produceFrame (); */
+NS_IMETHODIMP
+zapGenericSource::ProduceFrame(zapIMediaFrame ** frame)
+{
+  *frame = nsnull;
+  NS_ERROR("Not a passive source! Maybe you need some buffering?");
+  return NS_ERROR_FAILURE;
+}

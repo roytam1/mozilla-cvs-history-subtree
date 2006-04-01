@@ -38,8 +38,11 @@
 #define __ZAP_RTPSESSION_H__
 
 #include "zapIMediaNode.h"
-#include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 #include "nsString.h"
+#include "zapIMediaFrame.h"
+
+class zapRTPSessionFilter;
 
 ////////////////////////////////////////////////////////////////////////
 // zapRTPSession
@@ -59,11 +62,15 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
 private:
+  nsresult FilterLocal2RemoteRTP(zapIMediaFrame* in, zapIMediaFrame** out);
+  nsresult FilterRemote2LocalRTP(zapIMediaFrame* in, zapIMediaFrame** out);
+  
   PRUint32 mSSRC;
-  nsCString mTransmitterID;
-  nsCString mReceiverID;
-  nsCOMPtr<zapIMediaNode> mTransmitter;
-  nsCOMPtr<zapIMediaNode> mReceiver;
+  PRUint16 mSequenceNumber;
+  
+  nsRefPtr<zapRTPSessionFilter> mLocal2RemoteRTP;
+  nsRefPtr<zapRTPSessionFilter> mRemote2LocalRTP;
+  //XXX rtcp
 };
 
 #endif // __ZAP_RTPSESSION_H__
