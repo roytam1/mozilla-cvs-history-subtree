@@ -3977,6 +3977,15 @@ void nsWindow::DispatchPendingEvents()
 {
   gLastInputEventTime = PR_IntervalToMicroseconds(PR_IntervalNow());
 
+  // We need to ensure that reflow events do not get starved.
+  // At the same time, we don't want to recurse through here
+  // as that would prevent us from dispatching starved paints.
+  static int recursionBlocker = 0;
+  if (recursionBlocker++ == 0) {
+    NS_ProcessPendingEvents(nsnull, PR_MillisecondsToInterval(100));
+    --recursionBlocker;
+  }
+
   // Quickly check to see if there are any
   // paint events pending.
   if (::GetQueueStatus(QS_PAINT)) {
