@@ -868,7 +868,7 @@ Scheduler.appendCtor(
     this.whenTerminated(this.cancelAllSchedules);
   });
 
-// schedules a call of 'method' (or updates the existing schedule)
+// schedules a call of 'method'
 Scheduler.fun(
   function schedule(method, interval, args) {
     var me = this;
