@@ -72,7 +72,7 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 zapNetUtils::CreateStunMessage(zapIStunMessage **_retval)
 {
-  zapStunMessage* message = new zapStunMessage();
+  zapStunMessage* message = new zapStunMessage(nsnull);
   if (!message) {
     *_retval = nsnull;
     return NS_ERROR_FAILURE;
@@ -91,7 +91,7 @@ zapNetUtils::DeserializeStunPacket(const nsACString & packet,
                                       zapIStunMessage **_retval)
 {
   *_retval = nsnull;
-  zapStunMessage* message = new zapStunMessage();
+  zapStunMessage* message = new zapStunMessage(nsnull);
   if (!message) {
     return NS_ERROR_FAILURE;
   }

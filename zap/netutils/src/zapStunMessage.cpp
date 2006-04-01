@@ -38,6 +38,8 @@
 #include "prnetdb.h"
 #include "prprf.h"
 #include <stdlib.h>
+#include "zapICryptoUtils.h"
+#include "nsIServiceManager.h"
 
 ////////////////////////////////////////////////////////////////////////
 // helpers
@@ -173,7 +175,7 @@ nsresult ParseAddressAttrib(PRNetAddr& addr, PRUint16* p, PRUint16 length)
 ////////////////////////////////////////////////////////////////////////
 // zapStunMessage
 
-zapStunMessage::zapStunMessage()
+zapStunMessage::zapStunMessage(nsISupports* outer)
     : mHasMappedAddressAttrib(PR_FALSE),
       mHasResponseAddressAttrib(PR_FALSE),
       mHasChangeRequestAttrib(PR_FALSE),
@@ -189,183 +191,25 @@ zapStunMessage::zapStunMessage()
       mHasXOROnlyAttrib(PR_FALSE),
       mHasServerAttrib(PR_FALSE)
 {
+#ifdef DEBUG
+  printf("zapStunMessage@%p::zapStunMessage(%p)\n", this, outer);
+#endif
+  NS_INIT_AGGREGATED(outer);
 }
 
 zapStunMessage::~zapStunMessage()
 {
+#ifdef DEBUG
+  printf("zapStunMessage@%p::~zapStunMessage()\n", this);
+#endif
 }
-
-nsresult
-zapStunMessage::Deserialize(const nsACString& packet,
-                            PRUint16** unknownAttribs,
-                            PRUint32* count)
-{
-  *count = 0;
-  *unknownAttribs = nsnull;
-  
-  PRUint32 l = packet.Length();
-  // we need at least a header:
-  if (l < 20) {
-#ifdef DEBUG
-    printf("zapStunMessage::Deserialize: message too short (%d)\n", l);
-#endif
-    return NS_ERROR_FAILURE;
-  }
-  // the length must be a multiple of 4:
-  if (l % 4) {
-#ifdef DEBUG
-    printf("zapStunMessage::Deserialize: message length (%d) not a multiple of 4\n", l);
-#endif
-    return NS_ERROR_FAILURE;
-  }
-  
-  nsACString::const_iterator iter;
-  packet.BeginReading(iter);
-  PRUint16* p = (PRUint16*)iter.get();
-  packet.EndReading(iter);
-  PRUint16* endp = (PRUint16*)iter.get();
-
-  nsresult rv = NS_OK;
-  
-  // Parse header:
-
-  // message type
-  rv = SetMessageType(PR_ntohs(p[0]));
-  NS_ENSURE_SUCCESS(rv, rv);
-  // check framing
-  if (l - 20 != PR_ntohs(p[1])) return NS_ERROR_FAILURE; 
-  // transaction id
-  memcpy(mTransactionID, p+2, 16);
-
-  // skip to end of 20 byte header:
-  p += 10;
-
-  // Parse attributes:
-  while (p < endp) {
-    PRUint16 type = PR_ntohs(*p++);
-    PRUint16 length = PR_ntohs(*p++);
-    if (length % 4) {
-#ifdef DEBUG
-      printf("zapStunMessage::Deserialize: attribute %d framing error (%d)\n", type, length);
-#endif
-      // attribute framing error
-      return NS_ERROR_FAILURE;
-    }
-    if (p+(length>>1) > endp) {
-#ifdef DEBUG
-      printf("zapStunMessage::Deserialize: message framing error\n");
-#endif
-      // message framing error
-      return NS_ERROR_FAILURE;
-    }
-    
-    switch (type) {
-      case 0x0001: // MAPPED-ADDRESS
-        mHasMappedAddressAttrib = PR_TRUE;
-        rv = ParseAddressAttrib(mMappedAddress, p, length);
-        NS_ENSURE_SUCCESS(rv, rv);
-        break;
-      case 0x0002: // RESPONSE-ADDRESS
-        mHasResponseAddressAttrib = PR_TRUE;
-        rv = ParseAddressAttrib(mResponseAddress, p, length);
-        NS_ENSURE_SUCCESS(rv, rv);
-        break;
-      case 0x0003: // CHANGE-REQUEST
-        if (length != 4) return NS_ERROR_FAILURE;
-        mHasChangeRequestAttrib = PR_TRUE;
-        {
-          PRUint16 flags = PR_ntohs(p[1]);
-          mChangeRequestChangeIP   = ((flags & 0x0004) == 0x0004);
-          mChangeRequestChangePort = ((flags & 0x0002) == 0x0002);
-        }
-        break;
-      case 0x0004: // SOURCE-ADDRESS
-        mHasSourceAddressAttrib = PR_TRUE;
-        rv = ParseAddressAttrib(mSourceAddress, p, length);
-        NS_ENSURE_SUCCESS(rv, rv);
-        break;
-      case 0x0005: // CHANGED-ADDRESS
-        mHasChangedAddressAttrib = PR_TRUE;
-        rv = ParseAddressAttrib(mChangedAddress, p, length);
-        NS_ENSURE_SUCCESS(rv, rv);
-        break;
-      case 0x0006: // USERNAME
-        mHasUsernameAttrib = PR_TRUE;
-        mUsername.Assign((char*)p, length);
-        break;
-      case 0x0007: // PASSWORD
-        mHasPasswordAttrib = PR_TRUE;
-        mPassword.Assign((char*)p, length);
-        break;
-      case 0x0008: // MESSAGE-INTEGRITY
-        break;
-      case 0x0009: // ERROR-CODE
-        mHasErrorCodeAttrib = PR_TRUE;
-        if (length < 4) return NS_ERROR_FAILURE;
-        mErrorCode = PR_ntohs(p[1]);
-        if (mErrorCode < 100 || mErrorCode > 699) return NS_ERROR_FAILURE;
-        mErrorCodeReasonPhrase.Assign((char*)(p+2), length-4);
-        break;
-      case 0x000a: // UNKNOWN-ATTRIBUTES
-        //XXX
-        break;
-      case 0x000b: // REFLECTED-FROM
-        mHasReflectedFromAttrib = PR_TRUE;
-        rv = ParseAddressAttrib(mReflectedFrom, p, length);
-        NS_ENSURE_SUCCESS(rv, rv);
-        break;
-      case 0x8020: // XOR-MAPPED-ADDRESS
-        mHasXORMappedAddressAttrib = PR_TRUE;
-        rv = ParseAddressAttrib(mXORMappedAddress, p, length);
-        NS_ENSURE_SUCCESS(rv, rv);
-        // port/ip & transactionID are stored in net order, so it's
-        // ok to xor on words:
-        mXORMappedAddress.inet.port ^= *(PRUint16*)mTransactionID;
-        if (mXORMappedAddress.raw.family == PR_AF_INET) {
-          // see comment above
-          mXORMappedAddress.inet.ip ^= *(PRUint32*)mTransactionID;
-        }
-        else {
-          // PR_AF_INET6
-          // see comment above
-          mXORMappedAddress.ipv6.ip.pr_s6_addr32[0] ^= ((PRUint32*)mTransactionID)[0];
-          mXORMappedAddress.ipv6.ip.pr_s6_addr32[1] ^= ((PRUint32*)mTransactionID)[1];
-          mXORMappedAddress.ipv6.ip.pr_s6_addr32[2] ^= ((PRUint32*)mTransactionID)[2];
-          mXORMappedAddress.ipv6.ip.pr_s6_addr32[3] ^= ((PRUint32*)mTransactionID)[3];
-        }
-        break;
-      case 0x0021: // XOR-ONLY
-        if (length != 0) return NS_ERROR_FAILURE;
-        mHasXOROnlyAttrib = PR_TRUE;
-        break;
-      case 0x8022: // SERVER
-        mHasServerAttrib = PR_TRUE;
-        mServer.Assign((char*)p, length);
-        break;
-      default:
-        if (type < 0x8000) {
-          // this is a mandatory attribute
-          // XXX enter type into unknownAttribs array
-        }
-        // otherwise -> ignore
-        break;
-    }
-    // skip on to next attrib:
-    p += (length >> 1);
-  }
-
-  return rv;
-}
-
 
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapStunMessage)
-NS_IMPL_RELEASE(zapStunMessage)
+NS_IMPL_AGGREGATED(zapStunMessage)
 
-NS_INTERFACE_MAP_BEGIN(zapStunMessage)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIStunMessage)
+NS_INTERFACE_MAP_BEGIN_AGGREGATED(zapStunMessage)
   NS_INTERFACE_MAP_ENTRY(zapIStunMessage)
 NS_INTERFACE_MAP_END
 
@@ -485,12 +329,182 @@ zapStunMessage::Serialize(nsACString & _retval)
 
   // MESSAGE-INTEGRITY NEEDS TO BE LAST:
   if (mHasMessageIntegrityAttrib) {
-    //XXX
+    AppendAttributeHeader(message, 0x0008, 20);
+    message += Substring((char*)mMessageIntegrity,
+                         (char*)mMessageIntegrity+20);
   }  
   
   _retval = message;
   
   return NS_OK;
+}
+
+/* void deserialize (in ACString packet, [array, size_is (count)] out unsigned short unknownAttribs, out unsigned long count); */
+nsresult
+zapStunMessage::Deserialize(const nsACString& packet,
+                            PRUint16** unknownAttribs,
+                            PRUint32* count)
+{
+  if (count)
+    *count = 0;
+  if (unknownAttribs)
+    *unknownAttribs = nsnull;
+  
+  PRUint32 l = packet.Length();
+  // we need at least a header:
+  if (l < 20) {
+#ifdef DEBUG
+    printf("zapStunMessage::Deserialize: message too short (%d)\n", l);
+#endif
+    return NS_ERROR_FAILURE;
+  }
+  // the length must be a multiple of 4:
+  if (l % 4) {
+#ifdef DEBUG
+    printf("zapStunMessage::Deserialize: message length (%d) not a multiple of 4\n", l);
+#endif
+    return NS_ERROR_FAILURE;
+  }
+  
+  nsACString::const_iterator iter;
+  packet.BeginReading(iter);
+  PRUint16* p = (PRUint16*)iter.get();
+  packet.EndReading(iter);
+  PRUint16* endp = (PRUint16*)iter.get();
+
+  nsresult rv = NS_OK;
+  
+  // Parse header:
+
+  // message type
+  rv = SetMessageType(PR_ntohs(p[0]));
+  NS_ENSURE_SUCCESS(rv, rv);
+  // check framing
+  if (l - 20 != PR_ntohs(p[1])) return NS_ERROR_FAILURE; 
+  // transaction id
+  memcpy(mTransactionID, p+2, 16);
+
+  // skip to end of 20 byte header:
+  p += 10;
+
+  // Parse attributes:
+  while (p < endp) {
+    PRUint16 type = PR_ntohs(*p++);
+    PRUint16 length = PR_ntohs(*p++);
+    if (length % 4) {
+#ifdef DEBUG
+      printf("zapStunMessage::Deserialize: attribute %d framing error (%d)\n", type, length);
+#endif
+      // attribute framing error
+      return NS_ERROR_FAILURE;
+    }
+    if (p+(length>>1) > endp) {
+#ifdef DEBUG
+      printf("zapStunMessage::Deserialize: message framing error\n");
+#endif
+      // message framing error
+      return NS_ERROR_FAILURE;
+    }
+    
+    switch (type) {
+      case 0x0001: // MAPPED-ADDRESS
+        mHasMappedAddressAttrib = PR_TRUE;
+        rv = ParseAddressAttrib(mMappedAddress, p, length);
+        NS_ENSURE_SUCCESS(rv, rv);
+        break;
+      case 0x0002: // RESPONSE-ADDRESS
+        mHasResponseAddressAttrib = PR_TRUE;
+        rv = ParseAddressAttrib(mResponseAddress, p, length);
+        NS_ENSURE_SUCCESS(rv, rv);
+        break;
+      case 0x0003: // CHANGE-REQUEST
+        if (length != 4) return NS_ERROR_FAILURE;
+        mHasChangeRequestAttrib = PR_TRUE;
+        {
+          PRUint16 flags = PR_ntohs(p[1]);
+          mChangeRequestChangeIP   = ((flags & 0x0004) == 0x0004);
+          mChangeRequestChangePort = ((flags & 0x0002) == 0x0002);
+        }
+        break;
+      case 0x0004: // SOURCE-ADDRESS
+        mHasSourceAddressAttrib = PR_TRUE;
+        rv = ParseAddressAttrib(mSourceAddress, p, length);
+        NS_ENSURE_SUCCESS(rv, rv);
+        break;
+      case 0x0005: // CHANGED-ADDRESS
+        mHasChangedAddressAttrib = PR_TRUE;
+        rv = ParseAddressAttrib(mChangedAddress, p, length);
+        NS_ENSURE_SUCCESS(rv, rv);
+        break;
+      case 0x0006: // USERNAME
+        mHasUsernameAttrib = PR_TRUE;
+        mUsername.Assign((char*)p, length);
+        break;
+      case 0x0007: // PASSWORD
+        mHasPasswordAttrib = PR_TRUE;
+        mPassword.Assign((char*)p, length);
+        break;
+      case 0x0008: // MESSAGE-INTEGRITY
+        if (length != 20) return NS_ERROR_FAILURE;
+        mHasMessageIntegrityAttrib = PR_TRUE;
+        memcpy(mMessageIntegrity, p, 20);
+        break;
+      case 0x0009: // ERROR-CODE
+        mHasErrorCodeAttrib = PR_TRUE;
+        if (length < 4) return NS_ERROR_FAILURE;
+        mErrorCode = PR_ntohs(p[1]);
+        if (mErrorCode < 100 || mErrorCode > 699) return NS_ERROR_FAILURE;
+        mErrorCodeReasonPhrase.Assign((char*)(p+2), length-4);
+        break;
+      case 0x000a: // UNKNOWN-ATTRIBUTES
+        //XXX
+        break;
+      case 0x000b: // REFLECTED-FROM
+        mHasReflectedFromAttrib = PR_TRUE;
+        rv = ParseAddressAttrib(mReflectedFrom, p, length);
+        NS_ENSURE_SUCCESS(rv, rv);
+        break;
+      case 0x8020: // XOR-MAPPED-ADDRESS
+        mHasXORMappedAddressAttrib = PR_TRUE;
+        rv = ParseAddressAttrib(mXORMappedAddress, p, length);
+        NS_ENSURE_SUCCESS(rv, rv);
+        // port/ip & transactionID are stored in net order, so it's
+        // ok to xor on words:
+        mXORMappedAddress.inet.port ^= *(PRUint16*)mTransactionID;
+        if (mXORMappedAddress.raw.family == PR_AF_INET) {
+          // see comment above
+          mXORMappedAddress.inet.ip ^= *(PRUint32*)mTransactionID;
+        }
+        else {
+          // PR_AF_INET6
+          // see comment above
+          mXORMappedAddress.ipv6.ip.pr_s6_addr32[0] ^= ((PRUint32*)mTransactionID)[0];
+          mXORMappedAddress.ipv6.ip.pr_s6_addr32[1] ^= ((PRUint32*)mTransactionID)[1];
+          mXORMappedAddress.ipv6.ip.pr_s6_addr32[2] ^= ((PRUint32*)mTransactionID)[2];
+          mXORMappedAddress.ipv6.ip.pr_s6_addr32[3] ^= ((PRUint32*)mTransactionID)[3];
+        }
+        break;
+      case 0x0021: // XOR-ONLY
+        if (length != 0) return NS_ERROR_FAILURE;
+        mHasXOROnlyAttrib = PR_TRUE;
+        break;
+      case 0x8022: // SERVER
+        mHasServerAttrib = PR_TRUE;
+        mServer.Assign((char*)p, length);
+        break;
+      default:
+        if (type < 0x8000) {
+          // this is a mandatory attribute
+          // XXX enter type into unknownAttribs array
+        }
+        // otherwise -> ignore
+        break;
+    }
+    // skip on to next attrib:
+    p += (length >> 1);
+  }
+
+  return rv;
 }
 
 /* attribute unsigned short messageType; */
@@ -643,7 +657,55 @@ zapStunMessage::SetMessageIntegrity(const nsACString & aMessageIntegrity)
     return NS_ERROR_FAILURE;
   nsACString::const_iterator p;
   aMessageIntegrity.BeginReading(p);
-  memcpy(mMessageIntegrity, p.get(), 16);
+  memcpy(mMessageIntegrity, p.get(), 20);
+  return NS_OK;
+}
+
+/* void generateMessageIntegrityAttrib (in ACString key); */
+NS_IMETHODIMP
+zapStunMessage::GenerateMessageIntegrityAttrib(const nsACString & key)
+{
+  mHasMessageIntegrityAttrib = PR_TRUE;
+  // serialize message (including old message integrity attrib, so
+  // that the header records the correct size):
+  nsCString message;
+  Serialize(message);
+  // now strip the old message integrity attrib:
+  message.SetLength(message.Length() - 24);
+
+  // compute new message integrity attrib:
+  nsCOMPtr<zapICryptoUtils> crypto = do_GetService("@mozilla.org/zap/cryptoutils;1");
+  nsCString mi;
+  crypto->ComputeSHA1HMAC(message, key, mi);
+  memcpy(mMessageIntegrity, mi.get(), 20);
+         
+  return NS_OK;
+}
+
+/* boolean checkMessageIntegrity (in ACString key); */
+NS_IMETHODIMP
+zapStunMessage::CheckMessageIntegrity(const nsACString & key, PRBool *_retval)
+{
+  *_retval = PR_FALSE;
+  
+  if (!mHasMessageIntegrityAttrib)
+    return NS_ERROR_FAILURE;
+
+  nsCString mi;
+  GetMessageIntegrity(mi);
+
+  // verify:
+  nsCString message;
+  Serialize(message);
+  message.SetLength(message.Length() - 24);
+  
+  // compute new message integrity attrib:
+  nsCOMPtr<zapICryptoUtils> crypto = do_GetService("@mozilla.org/zap/cryptoutils;1");
+  nsCString my_mi;
+  crypto->ComputeSHA1HMAC(message, key, my_mi);
+  if (mi == my_mi)
+    *_retval = PR_TRUE;
+  
   return NS_OK;
 }
 

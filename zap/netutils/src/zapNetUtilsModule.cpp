@@ -35,9 +35,13 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsIGenericFactory.h"
+#include "nsAgg.h"
 #include "zapNetUtils.h"
+#include "zapStunMessage.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapNetUtils)
+NS_GENERIC_AGGREGATED_CONSTRUCTOR(zapStunMessage)
+
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -45,6 +49,11 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_NETUTILS_CID,
     ZAP_NETUTILS_CONTRACTID,
     zapNetUtilsConstructor
+  },
+  { "Mozilla ZAP Stun Message",
+    ZAP_STUNMESSAGE_CID,
+    ZAP_STUNMESSAGE_CONTRACTID,
+    zapStunMessageConstructor
   }
 };
 

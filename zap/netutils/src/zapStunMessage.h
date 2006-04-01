@@ -40,18 +40,18 @@
 #include "zapIStunMessage.h"
 #include "nsString.h"
 #include "prio.h"
+#include "nsAgg.h"
+
+// aggregatable stun message object
 
 class zapStunMessage : public zapIStunMessage
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_AGGREGATED
   NS_DECL_ZAPISTUNMESSAGE
 
-  zapStunMessage();
+  zapStunMessage(nsISupports* outer);
   ~zapStunMessage();
-  nsresult Deserialize(const nsACString& packet,
-                       PRUint16** unknownAttribs,
-                       PRUint32* count);
   
 private:
   PRUint16 mMessageType;
