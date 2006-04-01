@@ -12,6 +12,7 @@ XPIDLSRCS = \
 	zapILoggingService.idl \
 	zapIVerboseErrorService.idl \
 	zapIUUIDGenerator.idl \
+	zapICryptoUtils.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
