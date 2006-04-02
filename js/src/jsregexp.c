@@ -1925,7 +1925,10 @@ js_NewRegExp(JSContext *cx, JSTokenStream *ts,
 
     state.context = cx;
     state.tokenStream = ts;
-    state.cpbegin = state.cp = JSSTRING_CHARS(str);
+    state.cp = js_UndependString(cx, str);
+    if (!state.cp)
+        goto out;
+    state.cpbegin = state.cp;
     state.cpend = state.cp + len;
     state.flags = flags;
     state.parenCount = 0;
