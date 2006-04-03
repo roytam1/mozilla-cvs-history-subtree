@@ -45,7 +45,8 @@
 #include "nsToolkit.h"
 #include "nsChildView.h"
 #include "nsCocoaWindow.h"
-#include "nsAppShellCocoa.h"
+#include "nsAppShell.h"
+#include "nsAppShellSingleton.h"
 #include "nsFilePicker.h"
 
 #include "nsMenuBarX.h"
@@ -72,7 +73,6 @@
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCocoaWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsChildView)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFilePicker)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppShellCocoa)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsToolkit)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLookAndFeel)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMenuBarX)
@@ -119,7 +119,7 @@ static const nsModuleComponentInfo gComponents[] =
   { "AppShell",
     NS_APPSHELL_CID,
     "@mozilla.org/widget/appshell/mac;1",
-    nsAppShellCocoaConstructor },
+    nsAppShellConstructor },
   { "Toolkit",
     NS_TOOLKIT_CID,
     "@mozilla.org/widget/toolkit/mac;1",
@@ -204,4 +204,5 @@ static const nsModuleComponentInfo gComponents[] =
     nsPrintSessionXConstructor },
 };
 
-NS_IMPL_NSGETMODULE(nsWidgetMacModule, gComponents)
+NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsWidgetMacModule, gComponents,
+                                   nsAppShellInit, nsAppShellShutdown)

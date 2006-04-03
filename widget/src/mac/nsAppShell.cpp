@@ -1,5 +1,4 @@
 /* -*- Mode: c++; tab-width: 2; indent-tabs-mode: nil; -*- */
-/* vim:set ts=2 sw=2 sts=2 ci et: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,20 +37,77 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsAppShell.h"
-#include "nsToolkit.h"
+/*
+ * Runs the main native Carbon run loop, interrupting it as needed to process
+ * Gecko events.
+ */
 
-/*static*/ void
-nsAppShell::EventReceiverProc(void *info)
+#include "nsAppShell.h"
+#include "nsIToolkit.h"
+#include "nsToolkit.h"
+#include "nsMacMessagePump.h"
+
+// kWNETransitionEventList
+//
+// This list encompasses all Carbon events that can be converted into
+// EventRecords.  Not all will necessarily be called; not all will necessarily
+// be handled.  Some items here may be redundant in that handlers are already
+// installed elsewhere.  This may need a good audit.
+//
+static const EventTypeSpec kWNETransitionEventList[] = {
+  { kEventClassMouse,       kEventMouseDown },
+  { kEventClassMouse,       kEventMouseUp },
+  { kEventClassMouse,       kEventMouseMoved },
+  { kEventClassMouse,       kEventMouseDragged },
+  { kEventClassKeyboard,    kEventRawKeyDown },
+  { kEventClassKeyboard,    kEventRawKeyUp },
+  { kEventClassKeyboard,    kEventRawKeyRepeat },
+  { kEventClassWindow,      kEventWindowUpdate },
+  { kEventClassWindow,      kEventWindowActivated },
+  { kEventClassWindow,      kEventWindowDeactivated },
+  { kEventClassWindow,      kEventWindowCursorChange },
+  { kEventClassApplication, kEventAppActivated },
+  { kEventClassApplication, kEventAppDeactivated },
+  { kEventClassAppleEvent,  kEventAppleEvent },
+  { kEventClassControl,     kEventControlTrack },
+};
+
+// nsAppShell implementation
+
+nsAppShell::nsAppShell()
+: mWNETransitionEventHandler(NULL)
+, mCFRunLoop(NULL)
+, mCFRunLoopSource(NULL)
 {
-  nsAppShell *self = NS_STATIC_CAST(nsAppShell *, info);
-  self->NativeEventCallback();
-  NS_RELEASE(self);
 }
 
+nsAppShell::~nsAppShell()
+{
+  if (mCFRunLoopSource) {
+    ::CFRunLoopRemoveSource(mCFRunLoop, mCFRunLoopSource,
+                            kCFRunLoopCommonModes);
+    ::CFRelease(mCFRunLoopSource);
+  }
+
+  if (mCFRunLoop)
+    ::CFRelease(mCFRunLoop);
+
+  if (mWNETransitionEventHandler)
+    ::RemoveEventHandler(mWNETransitionEventHandler);
+}
+
+// Init
+//
+// Set up the transitional WaitNextEvent handler and the CFRunLoopSource
+// used to interrupt the main Carbon event loop.
+//
+// public
 nsresult
 nsAppShell::Init()
 {
+  // The message pump is only used for its EventRecord dispatcher.  It is
+  // used by the transitional WaitNextEvent handler.
+
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
     return rv;
@@ -61,51 +117,134 @@ nsAppShell::Init()
   if (!mMacPump.get() || !nsMacMemoryCushion::EnsureMemoryCushion())
     return NS_ERROR_OUT_OF_MEMORY;
 
-  // XXX Mark the pump as running (probably not correct for embedding)
-  mMacPump->StartRunning();
+  OSStatus err = ::InstallApplicationEventHandler(
+                               ::NewEventHandlerUPP(WNETransitionEventHandler),
+                               GetEventTypeCount(kWNETransitionEventList),
+                               kWNETransitionEventList,
+                               (void*)this,
+                               &mWNETransitionEventHandler);
+  NS_ENSURE_TRUE(err == noErr, NS_ERROR_UNEXPECTED);
 
-  CFRunLoopSourceContext context = {0};
+  // Add a CFRunLoopSource to the main native run loop.  The source is
+  // responsible for interrupting the run loop when Gecko events are ready.
+
+  // Silly Carbon, why do you require a cast here?
+  mCFRunLoop = (CFRunLoopRef)::GetCFRunLoopFromEventLoop(::GetMainEventLoop());
+  NS_ENSURE_STATE(mCFRunLoop);
+  ::CFRetain(mCFRunLoop);
+
+  CFRunLoopSourceContext context;
+  bzero(&context, sizeof(context));
+  // context.version = 0;
   context.info = this;
-  context.perform = EventReceiverProc;
+  context.perform = ProcessGeckoEvents;
   
-  mRunLoopSource = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
-  NS_ENSURE_STATE(mRunLoopSource);
+  mCFRunLoopSource = ::CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
+  NS_ENSURE_STATE(mCFRunLoopSource);
 
-  mRunLoop = CFRunLoopGetCurrent();
-  CFRetain(mRunLoop);
-
-  CFRunLoopAddSource(mRunLoop, mRunLoopSource, kCFRunLoopCommonModes);
+  ::CFRunLoopAddSource(mCFRunLoop, mCFRunLoopSource, kCFRunLoopCommonModes);
 
   return nsBaseAppShell::Init();
 }
 
+// CallFromNativeEvent
+//
+// Called (possibly on a non-main thread) when Gecko has an event that
+// needs to be processed.  The Gecko event needs to be processed on the
+// main thread, so the native run loop must be interrupted.
+//
+// protected virtual
 void
 nsAppShell::CallFromNativeEvent()
 {
+  // This will invoke ProcessGeckoEvents on the main thread.
+
   NS_ADDREF_THIS();
-  CFRunLoopSourceSignal(mRunLoopSource);
-  CFRunLoopWakeUp(mRunLoop);
+  ::CFRunLoopSourceSignal(mCFRunLoopSource);
+  ::CFRunLoopWakeUp(mCFRunLoop);
 }
 
+// ProcessNextNativeEvent
+//
+// If aMayWait is false, process a single native event.  If it is true, run
+// the native run loop until stopped by ProcessGeckoEvents.
+//
+// Returns true if more events are waiting in the native event queue.
+//
+// protected virtual
 PRBool
-nsAppShell::ProcessNextNativeEvent(PRBool mayWait)
+nsAppShell::ProcessNextNativeEvent(PRBool aMayWait)
 {
-  NS_ENSURE_STATE(mMacPump);
+  EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
 
-  EventRecord event;
-  PRBool hasEvent = mMacPump->GetEvent(event, mayWait);
-  if (!hasEvent && !mayWait)
-    return PR_FALSE;
+  if (!aMayWait) {
+    // Only process a single event.
+    if (EventRef carbonEvent =
+         ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
+                                            0,
+                                            NULL,
+                                            kEventQueueOptionsNone)) {
+      ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
+      ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
+      ::ReleaseEvent(carbonEvent);
+    }
+  }
+  else {
+    // Run the loop until interrupted by ::QuitApplicationEventLoop().
+    ::RunApplicationEventLoop();
+  }
 
-  mMacPump->DispatchEvent(hasEvent, &event);
-  return hasEvent;
+  return ::GetNumEventsInQueue(carbonEventQueue);
 }
 
-nsAppShell::~nsAppShell()
+// ProcessGeckoEvents
+//
+// The "perform" target of mCFRunLoop, called when mCFRunLoopSource is
+// signalled from CallFromNativeEvent.
+//
+// Arrange for Gecko events to be processed.  They will either be processed
+// after the main run loop returns (if we own the run loop) or on
+// NativeEventCallback (if an embedder owns the loop).
+//
+// protected static
+void
+nsAppShell::ProcessGeckoEvents(void* aInfo)
 {
-  if (mRunLoopSource) {
-    CFRunLoopRemoveSource(mRunLoop, mRunLoopSource, kCFRunLoopCommonModes);
-    CFRelease(mRunLoopSource);
-    CFRelease(mRunLoop);
+  nsAppShell* self = NS_STATIC_CAST(nsAppShell*, aInfo);
+
+  if (self->mRunWasCalled) {
+    // We own the run loop.  Interrupt it.  It will be started again later
+    // (unless exiting) by nsBaseAppShell.  Trust me, I'm a doctor.
+    ::QuitApplicationEventLoop();
   }
+
+  self->NativeEventCallback();
+
+  NS_RELEASE(self);
+}
+
+// WNETransitionEventHandler
+//
+// Transitional WaitNextEvent handler.  Accepts Carbon events from
+// kWNETransitionEventList, converts them into EventRecords, and
+// dispatches them through the path they would have gone if they
+// had been received as EventRecords from WaitNextEvent.
+//
+// protected static
+pascal OSStatus
+nsAppShell::WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
+                                      EventRef            aEvent,
+                                      void*               aUserData)
+{
+  nsAppShell* self = NS_STATIC_CAST(nsAppShell*, aUserData);
+
+  EventRecord eventRecord;
+  ::ConvertEventRefToEventRecord(aEvent, &eventRecord);
+
+  PRBool handled = self->mMacPump->DispatchEvent(PR_TRUE, &eventRecord);
+
+  if (handled)
+    return noErr;
+
+  return eventNotHandledErr;
 }
