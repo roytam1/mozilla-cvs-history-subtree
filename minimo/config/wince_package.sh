@@ -56,9 +56,47 @@ echo Linking XPT files.
 
 host/bin/host_xpt_link minimo/components/all.xpt          bin/components/*.xpt
 
+
+
+echo Chewing on chrome
+
+cd minimo/chrome
+
+unzip toolkit.jar
+rm -rf toolkit.jar
+#perl $SRCDIR/../config/liceater.pl `find .`
+zip -r -9 toolkit.jar content
+rm -rf content
+
+unzip en-US.jar
+rm -rf en-US.jar
+#perl $SRCDIR/../config/liceater.pl `find .`
+zip -r -9 en-US.jar content
+rm -rf content
+
+unzip classic.jar
+rm -rf classic.jar
+#perl $SRCDIR/../config/liceater.pl `find .`
+zip -r -9 classic.jar skin
+rm -rf skin
+
+unzip en-US.jar
+rm -rf en-US.jar
+#perl $SRCDIR/../config/liceater.pl `find .`
+zip -r -9 en-US.jar locale
+rm -rf locale
+
+unzip minimo.jar
+rm -rf minimo.jar
+#perl $SRCDIR/../config/liceater.pl `find .`
+zip -r -9 minimo.jar skin locale branding content
+rm -rf skin locale branding content
+
 popd
 
 pushd $SRCDIR
+
+echo Copying over customized files
 
 cp -a ../customization/all.js                             $OBJDIR/dist/minimo/greprefs
 cp -a ../customization/HelperAppDlg.js                    $OBJDIR/dist/minimo/components
@@ -66,6 +104,9 @@ cp -a ../customization/HelperAppDlg.js                    $OBJDIR/dist/minimo/co
 cat ../customization/ua.css.additions >> $OBJDIR/dist/minimo/res/ua.css
 
 popd
+
+
+
 
 #pushd $OBJDIR/dist/minimo
 #
