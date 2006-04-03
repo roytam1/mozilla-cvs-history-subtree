@@ -121,10 +121,9 @@ private:
     void InitProxy(nsISupports *aObj, const nsIID &aIID,
                    nsIEventQueue* aEventQ, PRBool always, nsresult*rv)
     {
-        PRInt32 proxyType = PROXY_SYNC;
+        PRInt32 proxyType = nsIProxyObjectManager::INVOKE_SYNC;
         if (always)
-            proxyType |= PROXY_ALWAYS;
-
+            proxyType |= nsIProxyObjectManager::FORCE_PROXY_CREATION;
         *rv = NS_GetProxyForObject(aEventQ, 
                                    aIID, 
                                    aObj,

@@ -299,8 +299,8 @@ nsProxyEventObject::nsProxyEventObject(nsISomeInterface* aObj,
                                        nsProxyCanonicalObject* root)
     : mClass(aClass),
       mRoot(root),
-      mNext(nsnull),
-      mXPTCallStub(nsnull)
+      mXPTCStub(nsnull),
+      mNext(nsnull)
 {
 #ifdef DEBUG_xpcom_proxy
     DebugDump("Create", 0);
