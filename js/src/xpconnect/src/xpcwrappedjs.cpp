@@ -321,7 +321,8 @@ nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
                                nsXPCWrappedJSClass* aClass,
                                nsXPCWrappedJS* root,
                                nsISupports* aOuter)
-    : mJSObj(aJSObj),
+    : mXPTCStub(nsnull),
+      mJSObj(aJSObj),
       mClass(aClass),
       mRoot(root ? root : this),
       mNext(nsnull),
@@ -336,6 +337,8 @@ nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
     if(0 == (++count % interval))
         printf("//////// %d instances of nsXPCWrappedJS created\n", count);
 #endif
+
+    NS_GetXPTCallStub(GetClass()->GetIID(), this, &mXPTCStub);
 
     // intensionally do double addref - see Release().
     NS_ADDREF_THIS();
@@ -457,7 +460,7 @@ nsXPCWrappedJS::GetInterfaceInfo(nsIInterfaceInfo** info)
 
 NS_IMETHODIMP
 nsXPCWrappedJS::CallMethod(PRUint16 methodIndex,
-                           const nsXPTMethodInfo* info,
+                           const XPTMethodDescriptor* info,
                            nsXPTCMiniVariant* params)
 {
     if(!IsValid())

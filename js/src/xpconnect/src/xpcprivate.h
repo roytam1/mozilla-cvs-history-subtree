@@ -2156,7 +2156,7 @@ public:
     JSObject* GetRootJSObject(XPCCallContext& ccx, JSObject* aJSObj);
 
     NS_IMETHOD CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
-                          const nsXPTMethodInfo* info,
+                          const XPTMethodDescriptor* info,
                           nsXPTCMiniVariant* params);
 
     JSObject*  CallQueryInterfaceOnJSObject(XPCCallContext& ccx,
@@ -2192,7 +2192,7 @@ private:
     enum SizeMode {GET_SIZE, GET_LENGTH};
 
     JSBool GetArraySizeFromParam(JSContext* cx,
-                                 const nsXPTMethodInfo* method,
+                                 const XPTMethodDescriptor* method,
                                  const nsXPTParamInfo& param,
                                  uint16 methodIndex,
                                  uint8 paramIndex,
@@ -2201,7 +2201,7 @@ private:
                                  JSUint32* result);
 
     JSBool GetInterfaceTypeFromParam(JSContext* cx,
-                                     const nsXPTMethodInfo* method,
+                                     const XPTMethodDescriptor* method,
                                      const nsXPTParamInfo& param,
                                      uint16 methodIndex,
                                      const nsXPTType& type,
@@ -2228,7 +2228,7 @@ private:
 // nsXPCWrappedJS objects are chained together to represent the various
 // interface on the single underlying (possibly aggregate) JSObject.
 
-class nsXPCWrappedJS : public nsXPTCStubBase,
+class nsXPCWrappedJS : public nsIXPTCProxy,
                        public nsWeakRefToIXPConnectWrappedJS,
                        public nsSupportsWeakReference,
                        public nsIPropertyBag
@@ -2240,12 +2240,8 @@ public:
     //NS_DECL_NSISUPPORTSWEAKREFERENCE // methods also on nsIXPConnectWrappedJS
     NS_DECL_NSIPROPERTYBAG
 
-    // Note that both nsXPTCStubBase and nsIXPConnectWrappedJS declare
-    // GetInterfaceInfo methods with the same sig. So, the declaration
-    // for it here comes from the NS_DECL_NSIXPCONNECTWRAPPEDJS macro
-
     NS_IMETHOD CallMethod(PRUint16 methodIndex,
-                          const nsXPTMethodInfo* info,
+                          const XPTMethodDescriptor *info,
                           nsXPTCMiniVariant* params);
 
     /*
@@ -2261,6 +2257,7 @@ public:
                  nsISupports* aOuter,
                  nsXPCWrappedJS** wrapper);
 
+    nsISomeInterface* GetXPTCStub() { return mXPTCStub; }
     JSObject* GetJSObject() const {return mJSObj;}
     nsXPCWrappedJSClass*  GetClass() const {return mClass;}
     REFNSIID GetIID() const {return GetClass()->GetIID();}
@@ -2294,6 +2291,7 @@ protected:
                    nsISupports* aOuter);
 
 private:
+    nsISomeInterface* mXPTCStub;
     JSObject* mJSObj;
     nsXPCWrappedJSClass* mClass;
     nsXPCWrappedJS* mRoot;
@@ -2374,7 +2372,7 @@ private:
 class XPCConvert
 {
 public:
-    static JSBool IsMethodReflectable(const nsXPTMethodInfo& info);
+    static JSBool IsMethodReflectable(const XPTMethodDescriptor& info);
 
     static JSBool NativeData2JS(XPCCallContext& ccx, jsval* d, const void* s,
                                 const nsXPTType& type, const nsID* iid,
