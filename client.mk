@@ -361,10 +361,10 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_3_11_RTM
-LDAPCSDK_CO_TAG      = ldapcsdk_50_client_branch
+MOZ_CO_TAG           = BSMEDBERG_20060330_XPTCALL_BRANCH
+NSPR_CO_TAG          = BSMEDBERG_20060330_XPTCALL_BRANCH
+NSS_CO_TAG           = NSS_3_11_BRANCH
+LDAPCSDK_CO_TAG      = BSMEDBERG_20060330_XPTCALL_BRANCH
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
