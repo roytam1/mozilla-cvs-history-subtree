@@ -179,7 +179,8 @@ nsFtpChannel::GetFTPEventSink(nsCOMPtr<nsIFTPEventSink> &aResult)
             NS_GetProxyForObject(NS_CURRENT_EVENTQ,
                                  NS_GET_IID(nsIFTPEventSink),
                                  ftpSink,
-                                 PROXY_ASYNC | PROXY_ALWAYS,
+                                 nsIProxyObjectManager::INVOKE_ASYNC |
+                                 nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                  getter_AddRefs(mFTPEventSink));
     }
     aResult = mFTPEventSink;

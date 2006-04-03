@@ -39,6 +39,7 @@
 #include "nsIDNSRecord.h"
 #include "nsIDNSListener.h"
 #include "nsICancelable.h"
+#include "nsIEventQueue.h"
 #include "nsIProxyObjectManager.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
@@ -403,7 +404,8 @@ nsDNSService::AsyncResolve(const nsACString &hostname,
         rv = NS_GetProxyForObject(eventQ,
                                   NS_GET_IID(nsIDNSListener),
                                   listener,
-                                  PROXY_ASYNC | PROXY_ALWAYS,
+                                  nsIProxyObjectManager::INVOKE_ASYNC |
+                                  nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                   getter_AddRefs(listenerProxy));
         if (NS_FAILED(rv)) return rv;
         listener = listenerProxy;

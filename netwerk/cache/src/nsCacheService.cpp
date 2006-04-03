@@ -653,7 +653,8 @@ nsCacheService::EvictEntriesForClient(const char *          clientID,
         nsCOMPtr<nsIObserverService> obsProxy;
         NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                              NS_GET_IID(nsIObserverService),
-                             obsSvc, PROXY_ASYNC, getter_AddRefs(obsProxy));
+                             obsSvc, nsIProxyObjectManager::INVOKE_ASYNC,
+                             getter_AddRefs(obsProxy));
 
         if (obsProxy) {
             obsProxy->NotifyObservers(this,
@@ -874,11 +875,12 @@ nsCacheService::NotifyListener(nsCacheRequest *          request,
     nsCOMPtr<nsIEventQueue> eventQ;
     mEventQService->GetThreadEventQueue(request->mThread,
                                         getter_AddRefs(eventQ));
-    rv = mProxyObjectManager->GetProxyForObject(eventQ,
-                                                NS_GET_IID(nsICacheListener),
-                                                request->mListener,
-                                                PROXY_ASYNC|PROXY_ALWAYS,
-                                                getter_AddRefs(listenerProxy));
+    rv = mProxyObjectManager->
+        GetProxyForObject(eventQ, NS_GET_IID(nsICacheListener),
+                          request->mListener,
+                          nsIProxyObjectManager::INVOKE_ASYNC  |
+                          nsIProxyObjectManager::FORCE_PROXY_CREATION,
+                          getter_AddRefs(listenerProxy));
     if (NS_FAILED(rv)) return rv;
 
     return listenerProxy->OnCacheEntryAvailable(descriptor, accessGranted, error);

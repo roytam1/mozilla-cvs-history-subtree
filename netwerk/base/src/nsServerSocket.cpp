@@ -37,6 +37,7 @@
 
 #include "nsIProxyObjectManager.h"
 #include "nsIServiceManager.h"
+#include "nsIEventQueueService.h"
 #include "nsSocketTransport2.h"
 #include "nsServerSocket.h"
 #include "nsAutoLock.h"
@@ -403,7 +404,8 @@ nsServerSocket::AsyncListen(nsIServerSocketListener *aListener)
     nsresult rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
                                        NS_GET_IID(nsIServerSocketListener),
                                        aListener,
-                                       PROXY_ASYNC | PROXY_ALWAYS,
+                                       nsIProxyObjectManager::INVOKE_ASYNC |
+                                       nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                        getter_AddRefs(mListener));
     if (NS_FAILED(rv))
       return rv;

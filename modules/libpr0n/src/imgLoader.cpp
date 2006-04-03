@@ -44,6 +44,7 @@
 #include "nsNetUtil.h"
 #include "nsIHttpChannel.h"
 #include "nsICachingChannel.h"
+#include "nsIEventQueueService.h"
 #include "nsIProxyObjectManager.h"
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
