@@ -144,7 +144,8 @@ NS_IMETHODIMP nsTestXPCFoo2::Test(PRInt32 p1, PRInt32 p2, PRInt32* retval)
 
     nsCOMPtr<nsITestProxy> proxyObject;
     manager->GetProxyForObject((nsIEventQueue*)p1, NS_GET_IID(nsITestProxy),
-                               this, PROXY_SYNC, (void**)&proxyObject);
+                               this, nsIProxyObjectManager::INVOKE_SYNC,
+                               (void**)&proxyObject);
     proxyObject->Test3(nsnull, nsnull);
     
     printf("Deleting Proxy Object\n");
@@ -199,9 +200,13 @@ void TestCase_TwoClassesOneInterface(void *arg)
     PR_ASSERT(foo2);
     
     
-    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy),
+                               foo, nsIProxyObjectManager::INVOKE_SYNC,
+                               (void**)&proxyObject);
     
-    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo2, PROXY_SYNC, (void**)&proxyObject2);
+    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy),
+                               foo2, nsIProxyObjectManager::INVOKE_SYNC,
+                               (void**)&proxyObject2);
 
     
     
@@ -262,7 +267,9 @@ void TestCase_NestedLoop(void *arg)
     PR_ASSERT(foo);
     
     
-    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy),
+                               foo, nsIProxyObjectManager::INVOKE_SYNC,
+                               (void**)&proxyObject);
     
     if (proxyObject)
     {
@@ -318,12 +325,12 @@ void TestCase_2(void *arg)
     nsITestProxy         *proxyObject;
 
     manager->GetProxy(argsStruct->queue,
-                            NS_GET_IID(nsITestProxy),   // should be CID!
-                            nsnull, 
-                            NS_GET_IID(nsITestProxy), 
-                            PROXY_SYNC, 
-                            (void**)&proxyObject);
-    
+                      NS_GET_IID(nsITestProxy),   // should be CID!
+                      nsnull, 
+                      NS_GET_IID(nsITestProxy), 
+                      nsIProxyObjectManager::INVOKE_SYNC, 
+                      (void**)&proxyObject);
+
     if (proxyObject != nsnull)
     {
         NS_RELEASE(proxyObject);
@@ -347,7 +354,9 @@ void TestCase_nsISupports(void *arg)
     
     PR_ASSERT(foo);
 
-     manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+     manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy),
+                                foo, nsIProxyObjectManager::INVOKE_SYNC,
+                                (void**)&proxyObject);
     
     if (proxyObject != nsnull)
     {   
@@ -422,7 +431,9 @@ static void PR_CALLBACK EventLoop( void *arg )
     
     PR_ASSERT(foo);
 
-    manager->GetProxyForObject(gEventQueue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(gEventQueue, NS_GET_IID(nsITestProxy), foo,
+                               nsIProxyObjectManager::INVOKE_SYNC,
+                               (void**)&proxyObject);
 
     PRInt32 a;
     proxyObject->Test(1, 2, &a);
@@ -464,8 +475,10 @@ main(int argc, char **argv)
     if (argc > 1)
         numberOfThreads = atoi(argv[1]);
 
-    nsCOMPtr<nsIServiceManager> servMan;
-    NS_InitXPCOM2(getter_AddRefs(servMan), nsnull, nsnull);
+    nsIServiceManager* servMan = nsnull;
+    nsresult rv = NS_InitXPCOM2(&servMan, nsnull, nsnull);
+    NS_ENSURE_SUCCESS(rv, 1);
+
     nsCOMPtr<nsIComponentRegistrar> registrar = do_QueryInterface(servMan);
     NS_ASSERTION(registrar, "Null nsIComponentRegistrar");
     registrar->AutoRegister(nsnull);
@@ -525,10 +538,10 @@ main(int argc, char **argv)
 
     PR_Interrupt(aEventThread);
     PR_JoinThread(aEventThread);
-    
 
-    printf("Calling Cleanup.\n");
-    PR_Cleanup();
+    registrar = 0;
+
+    NS_ShutdownXPCOM(servMan);
 
     printf("Return zero.\n");
     return 0;

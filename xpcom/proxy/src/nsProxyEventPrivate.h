@@ -43,16 +43,28 @@
 #include "nsISupports.h"
 #include "nsIFactory.h"
 #include "nsHashtable.h"
+#include "nsIInterfaceInfo.h"
+#include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 
 #include "plevent.h"
 #include "xptcall.h"    // defines nsXPTCVariant
 #include "nsIEventQueue.h"
 
-#include "nsProxyEvent.h"
 #include "nsIProxyObjectManager.h"
 
 class nsProxyEventObject;
 class nsProxyEventClass;
+class nsProxyObjectCallInfo;
+
+#define NS_XPCOMPROXY_CLASSNAME "XPCom Proxy"
+
+#define NS_PROXYEVENT_MANAGER_CID                \
+{ 0xeea90d41, 									 \
+  0xb059, 										 \
+  0x11d2,						                 \
+ {0x91, 0x5e, 0xc1, 0x2b, 0x69, 0x6c, 0x93, 0x33}\
+} 
 
 #define NS_PROXYEVENT_CLASS_IID                  \
 { 0xeea90d42,                                    \
@@ -61,14 +73,10 @@ class nsProxyEventClass;
  {0x91, 0x5e, 0xc1, 0x2b, 0x69, 0x6c, 0x93, 0x33}\
 } 
 
-#define NS_PROXYEVENT_IDENTITY_CLASS_IID \
-{ 0xeea90d45, 0xb059, 0x11d2,                       \
-  { 0x91, 0x5e, 0xc1, 0x2b, 0x69, 0x6c, 0x93, 0x33 } }
-
-
-#define NS_PROXYEVENT_OBJECT_IID \
-{ 0xec373590, 0x9164, 0x11d3,    \
-{0x8c, 0x73, 0x00, 0x00, 0x64, 0x65, 0x73, 0x74} }
+// 4a9cdd77-4025-41f6-aacc-7811d7ae37da
+#define NS_PROXY_CANONICAL_OBJECT_IID \
+{ 0x4a9cdd77, 0x4025, 0x41f6,    \
+{0xaa, 0xcc, 0x78, 0x11, 0xd7, 0xae, 0x37, 0xda} }
 
 
 class nsProxyEventClass : public nsISupports
@@ -78,11 +86,6 @@ public:
     
     NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXYEVENT_CLASS_IID)
     static nsProxyEventClass* GetNewOrUsedClass(REFNSIID aIID);
-    
-    NS_IMETHOD DelegatedQueryInterface( nsProxyEventObject* self, 
-                                        REFNSIID aIID, 
-                                        void** aInstancePtr);
-
 
     nsIInterfaceInfo*        GetInterfaceInfo() const {return mInfo;}
     const nsIID&             GetProxiedIID()    const {return mIID; }
@@ -96,72 +99,204 @@ private:
     nsIID                      mIID;
     nsCOMPtr<nsIInterfaceInfo> mInfo;
     uint32*                    mDescriptors;
-
-    nsresult          CallQueryInterfaceOnProxy(nsProxyEventObject* self,
-                                                REFNSIID aIID, 
-                                                nsProxyEventObject** aInstancePtr);
 };
 
 NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyEventClass, NS_PROXYEVENT_CLASS_IID)
 
+class nsProxyCanonicalObject : public nsISupports
+{
+public:
+    NS_DECL_ISUPPORTS
 
-class nsProxyEventObject : public nsXPTCStubBase
+    NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXY_CANONICAL_OBJECT_IID)
+
+    nsProxyCanonicalObject(nsISupports* aObjectToProxy,
+                           nsIEventQueue* aDestQueue,
+                           PRInt32 aProxyType);
+
+private:
+    friend class nsProxyEventObject;
+    friend class nsProxyObjectManager;
+
+    // This destructor may only be called while holding the
+    // nsProxyObjectManager monitor.
+    ~nsProxyCanonicalObject();
+
+    void LockedRemoveProxy(nsProxyEventObject *proxy);
+
+    PRInt32                 mProxyType;
+    nsCOMPtr<nsISupports>   mProxiedObject;
+    nsCOMPtr<nsIEventQueue> mDestQueue;
+
+    // Threadsafe access to this singly-linked list is protected by
+    // the nsProxyObjectManager->GetMonitor monitor.
+    nsProxyEventObject    *mFirst;
+};
+
+NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyCanonicalObject,
+                              NS_PROXY_CANONICAL_OBJECT_IID)
+
+class nsProxyEventObject : public nsIXPTCProxy
 {
 public:
 
     NS_DECL_ISUPPORTS
 
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_PROXYEVENT_OBJECT_IID)
-    
-    static nsProxyEventObject* GetNewOrUsedProxy(nsIEventQueue *destQueue,
-                                                 PRInt32 proxyType,
-                                                 nsISupports *aObj,
-                                                 REFNSIID aIID);
-    
-    
-    NS_IMETHOD GetInterfaceInfo(nsIInterfaceInfo** info);
-
     // call this method and return result
-    NS_IMETHOD CallMethod(PRUint16 methodIndex, const nsXPTMethodInfo* info, nsXPTCMiniVariant* params);
+    NS_IMETHOD CallMethod(PRUint16 methodIndex,
+                          const XPTMethodDescriptor *info,
+                          nsXPTCMiniVariant* params);
 
+    const nsIID&       GetIID()   const { return mClass->GetIID(); }
+    nsProxyEventClass* GetClass() const { return mClass; }
+    nsIEventQueue*     GetQueue() const { return mRoot->mDestQueue; }
+    PRInt32            GetProxyType() const { return mRoot->mProxyType; }
+    nsISomeInterface*  GetRealInterface() const { return mRealInterface; }
 
-    nsProxyEventClass*    GetClass()           const { return mClass; }
-    nsIEventQueue*        GetQueue()           const { return (mProxyObject ? mProxyObject->GetQueue()     : nsnull);}
-    nsISupports*          GetRealObject()      const { return (mProxyObject ? mProxyObject->GetRealObject(): nsnull);}
-    PRInt32               GetProxyType()       const { return (mProxyObject ? mProxyObject->GetProxyType() : nsnull);} 
-
-    nsProxyEventObject();
-    nsProxyEventObject(nsIEventQueue *destQueue,
-                       PRInt32 proxyType,
-                       nsISupports* aObj,
+    nsProxyEventObject(nsISomeInterface* aObj,
                        nsProxyEventClass* aClass,
-                       nsProxyEventObject* root,
-                       nsIEventQueueService* eventQService);
-    
-    nsProxyEventObject*   LockedFind(REFNSIID aIID);
+                       nsProxyCanonicalObject* root);
 
 #ifdef DEBUG_xpcom_proxy
     void DebugDump(const char * message, PRUint32 hashKey);
 #endif
 
 private:
+    friend class nsProxyCanonicalObject;
+
+    nsresult            PostAndWait(nsProxyObjectCallInfo *proxyInfo);
+
+    nsresult convertMiniVariantToVariant(const XPTMethodDescriptor * methodInfo, 
+                                         nsXPTCMiniVariant * params, 
+                                         nsXPTCVariant     **fullParam, 
+                                         uint8 *paramCount);
+    // This destructor must only be called from within the manager monitor.
     ~nsProxyEventObject();
 
-protected:
-    void LockedRemoveProxy();
-
-protected:
     nsCOMPtr<nsProxyEventClass> mClass;
-    nsRefPtr<nsProxyObject>     mProxyObject;
+    nsISomeInterface*           mXPTCStub;
+
+    // the non-proxy interface that this proxy refers to. */
+    nsCOMPtr<nsISomeInterface>  mRealInterface;
 
     // Owning reference...
-    nsProxyEventObject *mRoot;
+    nsCOMPtr<nsProxyCanonicalObject> mRoot;
 
-    // Weak reference...
+    // Weak reference, managed by our canonical root
     nsProxyEventObject *mNext;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsProxyEventObject, NS_PROXYEVENT_OBJECT_IID)
+#define PROXY_SYNC    0x0001  // acts just like a function call.
+#define PROXY_ASYNC   0x0002  // fire and forget.  This will return immediately and you will lose all return information.
+#define PROXY_ALWAYS  0x0004   // ignore check to see if the eventQ is on the same thread as the caller, and alway return a proxied object.
+
+//#define AUTOPROXIFICATION
+
+// WARNING about PROXY_ASYNC:  
+//
+// If the calling thread goes away, any function which accesses the calling stack 
+// will blow up.
+//
+//  example:
+//
+//     myFoo->bar(&x)
+//
+//     ... thread goes away ...
+//
+//    bar(PRInt32 *x)
+//    {
+//         *x = 0;   <-----  You will blow up here.
+//
+//   
+//  So what gets saved?  
+//
+//  You can safely pass base types by value.  You can also pass interface pointers.
+//  I will make sure that the interface pointers are addrefed while they are being 
+//  proxied.  You can also pass string and wstring.  These I will copy and free.
+//
+//  I do **NOT** copy arrays or strings with size.  If you are using these either
+//  change your interface, or contact me about this feature request.
+
+class nsProxyObjectCallInfo
+{
+public:
+    
+    nsProxyObjectCallInfo(nsProxyEventObject* owner,
+                          const XPTMethodDescriptor *methodInfo,
+                          PRUint32 methodIndex, 
+                          nsXPTCVariant* parameterList, 
+                          PRUint32 parameterCount, 
+                          PLEvent *event);
+
+    ~nsProxyObjectCallInfo();
+
+    PRUint32            GetMethodIndex() const { return mMethodIndex; }
+    nsXPTCVariant*      GetParameterList() const { return mParameterList; }
+    PRUint32            GetParameterCount() const { return mParameterCount; }
+    PLEvent*            GetPLEvent() const { return mEvent; }
+    nsresult            GetResult() const { return mResult; }
+    nsProxyEventObject* GetProxyObject() const { return mOwner; }
+
+    PRBool              GetCompleted();
+    void                SetCompleted();
+    void                PostCompleted();
+
+    void                SetResult(nsresult rv) {mResult = rv; }
+    
+    nsIEventQueue*      GetCallersQueue();
+    void                SetCallersQueue(nsIEventQueue* queue);
+
+private:
+    
+    nsresult         mResult;                    /* this is the return result of the called function */
+    const XPTMethodDescriptor *mMethodInfo;
+    PRUint32         mMethodIndex;               /* which method to be called? */
+    nsXPTCVariant   *mParameterList;             /* marshalled in parameter buffer */
+    PRUint32         mParameterCount;            /* number of params */
+    PLEvent         *mEvent;                     /* the current plevent */       
+    PRInt32          mCompleted;                 /* is true when the method has been called. */
+       
+    nsCOMPtr<nsIEventQueue>  mCallersEventQ;     /* this is the eventQ that we must post a message back to 
+                                                    when we are done invoking the method (only PROXY_SYNC). 
+                                                  */
+
+    /* this is the strong referenced nsProxyObject */
+    nsRefPtr<nsProxyEventObject> mOwner;
+
+    void RefCountInInterfacePointers(PRBool addRef);
+    void CopyStrings(PRBool copy);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+class nsProxyEventKey : public nsHashKey
+{
+public:
+    nsProxyEventKey(void* rootObjectKey, void* destQueueKey, PRInt32 proxyType)
+        : mRootObjectKey(rootObjectKey), mDestQueueKey(destQueueKey), mProxyType(proxyType) {
+    }
+  
+    PRUint32 HashCode(void) const {
+        return NS_PTR_TO_INT32(mRootObjectKey) ^ 
+            NS_PTR_TO_INT32(mDestQueueKey) ^ mProxyType;
+    }
+
+    PRBool Equals(const nsHashKey *aKey) const {
+        const nsProxyEventKey* other = (const nsProxyEventKey*)aKey;
+        return mRootObjectKey == other->mRootObjectKey
+            && mDestQueueKey == other->mDestQueueKey
+            && mProxyType == other->mProxyType;
+    }
+
+    nsHashKey *Clone() const {
+        return new nsProxyEventKey(mRootObjectKey, mDestQueueKey, mProxyType);
+    }
+
+protected:
+    void*       mRootObjectKey;
+    void*       mDestQueueKey;
+    PRInt32     mProxyType;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsProxyObjectManager
@@ -192,6 +327,11 @@ public:
 private:
     ~nsProxyObjectManager();
 
+    static nsProxyEventObject* GetNewOrUsedProxy(nsIEventQueue *destQueue,
+                                                 PRInt32 proxyType,
+                                                 nsISupports *aObj,
+                                                 REFNSIID aIID);
+    
     static nsProxyObjectManager* mInstance;
     nsHashtable  mProxyObjectMap;
     nsHashtable  mProxyClassMap;

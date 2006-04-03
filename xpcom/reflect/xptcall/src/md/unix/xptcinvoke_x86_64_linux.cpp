@@ -131,8 +131,7 @@ invoke_copy_to_stack(PRUint64 * d, PRUint32 paramCount, nsXPTCVariant * s,
     }
 }
 
-extern "C"
-XPTC_PUBLIC_API(nsresult)
+EXPORT_XPCOM_API(nsresult)
 XPTC_InvokeByIndex(nsISupports * that, PRUint32 methodIndex,
                    PRUint32 paramCount, nsXPTCVariant * params)
 {

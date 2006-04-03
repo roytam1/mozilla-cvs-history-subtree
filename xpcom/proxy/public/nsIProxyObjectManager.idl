@@ -82,17 +82,7 @@ interface nsIProxyObjectManager : nsISupports
 
 
 %{C++
-#include "nsProxyEvent.h"
-
 #define NS_XPCOMPROXY_CONTRACTID "@mozilla.org/xpcomproxy;1"
-#define NS_XPCOMPROXY_CLASSNAME "XPCom Proxy"
-
-#define NS_PROXYEVENT_MANAGER_CID                \
-{ 0xeea90d41, 									 \
-  0xb059, 										 \
-  0x11d2,						                 \
- {0x91, 0x5e, 0xc1, 0x2b, 0x69, 0x6c, 0x93, 0x33}\
-} 
 
 /**
  * Helper function for code that already has a link-time dependency on

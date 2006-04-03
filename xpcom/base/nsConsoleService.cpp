@@ -45,6 +45,7 @@
 #include "nsMemory.h"
 #include "nsIServiceManager.h"
 #include "nsIProxyObjectManager.h"
+#include "nsIEventQueueService.h"
 #include "nsSupportsArray.h"
 
 #include "nsConsoleService.h"
@@ -326,7 +327,8 @@ nsConsoleService::GetProxyForListener(nsIConsoleListener* aListener,
     rv = proxyManager->GetProxyForObject(NS_CURRENT_EVENTQ,
                                          NS_GET_IID(nsIConsoleListener),
                                          aListener,
-                                         PROXY_ASYNC | PROXY_ALWAYS,
+                                         nsIProxyObjectManager::INVOKE_ASYNC |
+                                         nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                          (void**) aProxy);
     return rv;
 }

@@ -47,9 +47,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-#include "nsProxyEvent.h"
-#include "nsIProxyObjectManager.h"
 #include "nsProxyEventPrivate.h"
+#include "nsIProxyObjectManager.h"
 
 #include "nsIProxyCreateInstance.h"
 
@@ -59,7 +58,7 @@
 
 #include "nsIEventQueueService.h"
 #include "nsIThread.h"
-
+#include "nsAutoLock.h"
 
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
@@ -215,15 +214,102 @@ nsProxyObjectManager::GetProxyForObject(nsIEventQueue *destQueue,
         }
     }
     
-    // check to see if proxy is there or not.
-    *aProxyObject = nsProxyEventObject::GetNewOrUsedProxy(postQ, proxyType, aObj, aIID);
-    
-    if (*aProxyObject == nsnull)
-        return NS_ERROR_NO_INTERFACE; //fix error code?
-        
-    return NS_OK;   
-}   
+    if (!aObj)
+        return nsnull;
 
+    nsISupports* rawObject = aObj;
+
+    //
+    // make sure that the object pass in is not a proxy...
+    // if the object *is* a proxy, then be nice and build the proxy
+    // for the real object...
+    //
+    nsRefPtr<nsProxyCanonicalObject> identificationObject;
+    rv = rawObject->QueryInterface(NS_GET_IID(nsProxyCanonicalObject),
+                                   getter_AddRefs(identificationObject));
+    if (NS_SUCCEEDED(rv)) {
+        //
+        // ATTENTION!!!!
+        //
+        // If you are hitting any of the assertions in this block of code, 
+        // please contact dougt@netscape.com.
+        //
+
+        // if you hit this assertion, you might want to check out how 
+        // you are using proxies.  You shouldn't need to be creating
+        // a proxy from a proxy.  -- dougt@netscape.com
+        NS_ERROR("Someone is building a proxy from a proxy");
+        
+        // someone is asking us to create a proxy for a proxy.  Lets get
+        // the real object and build a proxy for that!
+        rawObject = identificationObject->mProxiedObject;
+    }
+
+    //
+    // Get the root nsISupports of the |real| object.
+    //
+    nsCOMPtr<nsISupports> rootObject;
+
+    rootObject = do_QueryInterface(rawObject, &rv);
+    if (NS_FAILED(rv) || !rootObject) {
+        NS_ASSERTION(NS_FAILED(rv), "where did my root object go!");
+        return nsnull;
+    }
+
+    // Get the root nsISupports of the event queue...  This is used later,
+    // as part of the hashtable key...
+    nsCOMPtr<nsISupports> destQRoot = do_QueryInterface(destQueue, &rv);
+    if (NS_FAILED(rv) || !destQRoot) {
+        return nsnull;
+    }
+
+    //
+    // Enter the proxy object creation lock.
+    //
+    // This lock protects thev linked list which chains proxies together 
+    // (ie. mRoot and mNext) and ensures that there is no hashtable contention
+    // between the time that a proxy is looked up (and not found) in the
+    // hashtable and then added...
+    //
+    nsProxyObjectManager *manager = nsProxyObjectManager::GetInstance();
+    if (!manager) {
+        return nsnull;
+    }
+
+    nsAutoMonitor mon(manager->GetMonitor());
+
+    // Get the hash table containing root proxy objects...
+    nsHashtable *realToProxyMap = manager->GetRealObjectToProxyObjectMap();
+    if (!realToProxyMap) {
+        return nsnull;
+    }
+
+    // Now, lookup the root nsISupports of the raw object in the hashtable
+    // The key consists of 3 pieces of information:
+    //    - root nsISupports of the raw object
+    //    - event queue of the current thread
+    //    - type of proxy being constructed...
+    //
+    nsProxyEventKey rootkey(rootObject.get(), destQRoot.get(), proxyType);
+
+    // find in our hash table 
+    nsProxyCanonicalObject *pco =
+        (nsProxyCanonicalObject*) realToProxyMap->Get(&rootkey);
+
+    if (!pco) {
+        pco = new nsProxyCanonicalObject(rootObject, destQueue, proxyType);
+        if (!pco)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        if (!realToProxyMap->Put(&rootkey, pco)) {
+            delete pco;
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+    }
+
+    // Ask the root proxy for the correct interface.
+    return pco->QueryInterface(aIID, aProxyObject);
+}
 
 NS_IMETHODIMP 
 nsProxyObjectManager::GetProxy(  nsIEventQueue *destQueue, 
