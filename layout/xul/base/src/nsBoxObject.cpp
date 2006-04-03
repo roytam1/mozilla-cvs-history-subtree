@@ -148,6 +148,7 @@ nsBoxObject::SetDocument(nsIDocument* aDocument)
   }
   else {
     mPresShell = nsnull;
+    mContent = nsnull;
   }
   return NS_OK;
 }
