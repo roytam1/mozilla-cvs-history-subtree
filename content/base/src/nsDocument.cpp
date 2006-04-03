@@ -3199,6 +3199,8 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
 {
   nsCOMPtr<nsIContent> content(do_QueryInterface(aElement));
   NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
+  NS_ENSURE_TRUE(content->GetCurrentDoc() == this,
+                 NS_ERROR_DOM_WRONG_DOCUMENT_ERR);
   
   nsresult rv;
 
