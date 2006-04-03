@@ -4747,10 +4747,11 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           break;
         }
       }
-#endif
+#else
       // check whether IME window do mouse operation
       if (IMEMouseHandling(NS_MOUSE_LEFT_BUTTON_DOWN, IMEMOUSE_LDOWN, lParam))
         break;
+#endif 
       result = DispatchMouseEvent(NS_MOUSE_LEFT_BUTTON_DOWN, wParam);
       DispatchPendingEvents();
     }
