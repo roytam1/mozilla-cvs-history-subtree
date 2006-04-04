@@ -96,7 +96,8 @@
 #endif
 
 // Stuff to implement file download dialog.
-#include "nsIProxyObjectManager.h" 
+#include "nsIProxyObjectManager.h"
+#include "nsIEventQueueService.h" 
 
 #include "nsXPFEComponentsCID.h"
 
@@ -108,7 +109,6 @@
 
 /* Define Class IDs */
 static NS_DEFINE_CID(kPrefServiceCID,           NS_PREF_CID);
-static NS_DEFINE_CID(kProxyObjectManagerCID,    NS_PROXYEVENT_MANAGER_CID);
 
 #ifdef DEBUG                                                           
 static int APP_DEBUG = 0; // Set to 1 in debugger to turn on debugging.
@@ -129,7 +129,6 @@ const char *kIgnoreOverrideMilestone = "ignore";
 //*****************************************************************************
 
 #ifdef ENABLE_PAGE_CYCLER
-#include "nsIProxyObjectManager.h"
 #include "nsITimer.h"
 
 static void TimesUp(nsITimer *aTimer, void *aClosure);
@@ -224,12 +223,15 @@ public:
                do_GetService(NS_APPSTARTUP_CONTRACTID, &rv);
       if(NS_FAILED(rv)) return rv;
       nsCOMPtr<nsIProxyObjectManager> pIProxyObjectManager = 
-               do_GetService(kProxyObjectManagerCID, &rv);
+               do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
       if(NS_FAILED(rv)) return rv;
       nsCOMPtr<nsIAppStartup> appStartupProxy;
-      rv = pIProxyObjectManager->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIAppStartup),
-                                                   appStartup, PROXY_ASYNC | PROXY_ALWAYS,
-                                                   getter_AddRefs(appStartupProxy));
+      rv = pIProxyObjectManager->
+        GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIAppStartup),
+                          appStartup,
+                          nsIProxyObjectManager::INVOKE_ASYNC |
+                          nsIProxyObjectManager::FORCE_PROXY_CREATION,
+                          getter_AddRefs(appStartupProxy));
 
       (void)appStartupProxy->Quit(nsIAppStartup::eAttemptQuit);
       return NS_ERROR_FAILURE;
