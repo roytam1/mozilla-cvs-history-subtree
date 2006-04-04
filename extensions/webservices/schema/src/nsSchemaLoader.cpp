@@ -2059,6 +2059,8 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
         return rv;
       }
       
+      nsCOMPtr<nsISchemaComplexType> complexBaseType(do_QueryInterface(baseType));
+
       if (tagName == nsSchemaAtoms::sRestriction_atom) {
         *aDerivation = nsISchemaComplexType::DERIVATION_RESTRICTION_COMPLEX;
         rv = ProcessComplexTypeBody(aErrorHandler, aSchema, childElement,
@@ -2069,7 +2071,6 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
         
         nsCOMPtr<nsISchemaModelGroup> sequence;
         nsSchemaModelGroup* sequenceInst = nsnull;
-        nsCOMPtr<nsISchemaComplexType> complexBaseType(do_QueryInterface(baseType));
         if (complexBaseType) {
           // XXX Should really be cloning
           nsCOMPtr<nsISchemaModelGroup> baseGroup;
@@ -2146,10 +2147,29 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
             
             aComplexType->SetModelGroup(sequence);
           }            
+        }
           
+        PRUint16 explicitContent;
+        rv = ProcessComplexTypeBody(aErrorHandler, aSchema, childElement,
+                                    aComplexType, sequenceInst,
+                                    &explicitContent);
+        if (NS_FAILED(rv)) {
+          return rv;
+        }
+        // If the explicit content is empty, get the content type
+        // from the base
+        if ((explicitContent == nsISchemaComplexType::CONTENT_MODEL_EMPTY) &&
+            complexBaseType) {
+          complexBaseType->GetContentModel(aContentModel);
+        }
+        else {
+          *aContentModel = explicitContent;
+        }
+      }
           
           // Copy over the attributes from the base type
           // XXX Should really be cloning
+      if (complexBaseType) {
           PRUint32 attrIndex, attrCount;
           complexBaseType->GetAttributeCount(&attrCount);
           
@@ -2185,23 +2205,7 @@ nsSchemaLoader::ProcessComplexContent(nsIWebServiceErrorHandler* aErrorHandler,
           }
         }
         
-        PRUint16 explicitContent;
-        rv = ProcessComplexTypeBody(aErrorHandler, aSchema, childElement,
-                                    aComplexType, sequenceInst,
-                                    &explicitContent);
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
-        // If the explicit content is empty, get the content type
-        // from the base
-        if ((explicitContent == nsISchemaComplexType::CONTENT_MODEL_EMPTY) &&
-            complexBaseType) {
-          complexBaseType->GetContentModel(aContentModel);
-        }
-        else {
-          *aContentModel = explicitContent;
-        }
-      }
+
       break;
     }
   }
