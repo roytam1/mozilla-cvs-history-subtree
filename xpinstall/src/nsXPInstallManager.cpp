@@ -86,7 +86,6 @@
 
 #include "nsEmbedCID.h"
 
-static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 #include "nsIEventQueueService.h"
@@ -548,14 +547,16 @@ NS_IMETHODIMP nsXPInstallManager::Observe( nsISupports *aSubject,
             {
                 // --- create and save a proxy for the dialog
                 nsCOMPtr<nsIProxyObjectManager> pmgr =
-                            do_GetService(kProxyObjectManagerCID, &rv);
+                  do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
                 if (pmgr)
                 {
-                    rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ,
-                                                  NS_GET_IID(nsIXPIProgressDialog),
-                                                  dlg,
-                                                  PROXY_SYNC | PROXY_ALWAYS,
-                                                  getter_AddRefs(mDlg) );
+                    rv = pmgr->GetProxyForObject(
+                                 NS_UI_THREAD_EVENTQ,
+                                 NS_GET_IID(nsIXPIProgressDialog),
+                                 dlg,
+                                 nsIProxyObjectManager::INVOKE_SYNC |
+                                 nsIProxyObjectManager::FORCE_PROXY_CREATION,
+                                 getter_AddRefs(mDlg));
                 }
             }
 

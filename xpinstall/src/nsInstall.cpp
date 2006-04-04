@@ -111,7 +111,6 @@
 #endif
 
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
@@ -1407,12 +1406,16 @@ nsPIXPIProxy* nsInstall::GetUIThreadProxy()
     {
         nsresult rv;
         nsCOMPtr<nsIProxyObjectManager> pmgr =
-                 do_GetService(kProxyObjectManagerCID, &rv);
+          do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
         if (NS_SUCCEEDED(rv))
         {
             nsCOMPtr<nsPIXPIProxy> tmp(do_QueryInterface(new nsXPIProxy()));
-            rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsPIXPIProxy),
-                    tmp, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(mUIThreadProxy) );
+            rv = pmgr->
+              GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsPIXPIProxy),
+                                tmp,
+                                nsIProxyObjectManager::INVOKE_SYNC |
+                                nsIProxyObjectManager::FORCE_PROXY_CREATION,
+                                getter_AddRefs(mUIThreadProxy));
         }
     }
 
