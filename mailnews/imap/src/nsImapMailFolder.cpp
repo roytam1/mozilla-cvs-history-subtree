@@ -765,7 +765,11 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
     selectFolder = PR_FALSE;
   }
   rv = GetDatabase(msgWindow);
-  
+  if (NS_FAILED(rv))
+  {
+    ThrowAlertMsg("errorGettingDB", msgWindow);
+    return rv;
+  }
   PRBool canOpenThisFolder = PR_TRUE;
   GetCanIOpenThisFolder(&canOpenThisFolder);
   
@@ -4776,6 +4780,7 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
 
    if (imapUrl)
    {
+        DisplayStatusMsg(imapUrl, NS_LITERAL_STRING("").get());
         nsImapAction imapAction = nsIImapUrl::nsImapTest;
         imapUrl->GetImapAction(&imapAction);
         if (imapAction == nsIImapUrl::nsImapMsgFetch || imapAction == nsIImapUrl::nsImapMsgDownloadForOffline)
