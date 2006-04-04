@@ -53,6 +53,7 @@
 #include "nsIBadCertListener.h"
 #include "nsNSSCertificate.h"
 #include "nsIProxyObjectManager.h"
+#include "nsIEventQueueService.h"
 #include "nsProxiedService.h"
 #include "nsIDateTimeFormat.h"
 #include "nsDateTimeFormatCID.h"
@@ -65,6 +66,7 @@
 #include "nsPrintfCString.h"
 #include "nsNSSShutDown.h"
 #include "nsNSSCertHelper.h"
+#include "nsAutoPtr.h"
 
 #include "ssl.h"
 #include "secerr.h"
@@ -266,7 +268,7 @@ nsNSSSocketInfo::SetNotificationCallbacks(nsIInterfaceRequestor* aCallbacks)
   proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
                               NS_GET_IID(nsIInterfaceRequestor),
                               NS_STATIC_CAST(nsIInterfaceRequestor*,aCallbacks),
-                              PROXY_SYNC,
+                              nsIProxyObjectManager::INVOKE_SYNC,
                               getter_AddRefs(proxiedCallbacks));
 
   mCallbacks = proxiedCallbacks;
@@ -447,7 +449,7 @@ displayAlert(nsAFlatString &formattedString, nsNSSSocketInfo *infoObject)
      proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
                                  NS_GET_IID(nsIInterfaceRequestor),
                                  NS_STATIC_CAST(nsIInterfaceRequestor*,infoObject),
-                                 PROXY_SYNC,
+                                 nsIProxyObjectManager::INVOKE_SYNC,
                                  getter_AddRefs(proxiedCallbacks));
 
      nsCOMPtr<nsIPrompt> prompt (do_GetInterface(proxiedCallbacks));
@@ -460,7 +462,7 @@ displayAlert(nsAFlatString &formattedString, nsNSSSocketInfo *infoObject)
      proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
                                  NS_GET_IID(nsIPrompt),
                                  prompt,
-                                 PROXY_SYNC,
+                                 nsIProxyObjectManager::INVOKE_SYNC,
                                  getter_AddRefs(proxyPrompt));
      proxyPrompt->Alert(nsnull, formattedString.get());
      return NS_OK;
@@ -1271,7 +1273,7 @@ nsContinueDespiteCertError(nsNSSSocketInfo  *infoObject,
       NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                            NS_GET_IID(nsIBadCertListener),
                            handler,
-                           PROXY_SYNC,
+                           nsIProxyObjectManager::INVOKE_SYNC,
                            (void**)&badCertHandler);
   }
   if (!badCertHandler) {

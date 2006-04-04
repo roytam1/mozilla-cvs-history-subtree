@@ -1976,7 +1976,9 @@ void nsNSSComponent::ShowAlert(AlertIdentifier ai)
       else {
         nsCOMPtr<nsIPrompt> proxyPrompt;
         proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+                                    prompter,
+                                    nsIProxyObjectManager::INVOKE_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) {
           PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get proxy for nsIPrompt\n"));
         }
@@ -2227,7 +2229,9 @@ NS_IMETHODIMP PipUIContext::GetInterface(const nsIID & uuid, void * *result)
       if (prompter) {
         nsCOMPtr<nsIPrompt> proxyPrompt;
         proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+                                    prompter,
+                                    nsIProxyObjectManager::INVOKE_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);
@@ -2255,7 +2259,8 @@ getNSSDialogs(void **_result, REFNSIID aIID, const char *contract)
     return rv;
  
   rv = proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
-                                   aIID, svc, PROXY_SYNC,
+                                   aIID, svc,
+                                   nsIProxyObjectManager::INVOKE_SYNC,
                                    _result);
   return rv;
 }

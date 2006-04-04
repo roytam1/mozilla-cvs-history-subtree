@@ -65,6 +65,7 @@
 #include "nsJSPrincipals.h"
 #include "nsIPrincipal.h"
 #include "nsXPIDLString.h"
+#include "nsAutoPtr.h"
 #include "nsIGenKeypairInfoDlg.h"
 #include "nsIDOMCryptoDialogs.h"
 #include "nsIFormSigningDialog.h"
@@ -2204,7 +2205,8 @@ nsCrypto::SignText(const nsAString& aStringToSign, const nsAString& aCaOption,
   nsCOMPtr<nsIFormSigningDialog> proxied_fsd;
   nsresult rv = proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
                                             NS_GET_IID(nsIFormSigningDialog), 
-                                            fsd, PROXY_SYNC,
+                                            fsd,
+                                            nsIProxyObjectManager::INVOKE_SYNC,
                                             getter_AddRefs(proxied_fsd));
   if (NS_FAILED(rv)) {
     aResult.Append(internalError);

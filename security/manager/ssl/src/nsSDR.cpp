@@ -51,6 +51,7 @@
 #include "nsIWindowWatcher.h"
 #include "nsIPrompt.h"
 #include "nsProxiedService.h"
+#include "nsIEventQueueService.h"
 #include "nsITokenPasswordDialogs.h"
 
 #include "nsISecretDecoderRing.h"
@@ -105,7 +106,9 @@ NS_IMETHODIMP nsSDRContext::GetInterface(const nsIID & uuid, void * *result)
       if (prompter) {
         nsCOMPtr<nsIPrompt> proxyPrompt;
         proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+                                    prompter,
+                                    nsIProxyObjectManager::INVOKE_SYNC,
+                                    getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);

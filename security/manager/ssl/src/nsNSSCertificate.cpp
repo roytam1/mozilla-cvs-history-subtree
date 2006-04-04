@@ -57,6 +57,7 @@
 #include "nsIURI.h"
 #include "nsTime.h"
 #include "nsIProxyObjectManager.h"
+#include "nsIEventQueueService.h"
 #include "nsCRT.h"
 #include "nsAutoLock.h"
 #include "nsUsageArrayHelper.h"
@@ -221,7 +222,8 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
   proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
                                nsIX509Cert::GetIID(),
                                NS_STATIC_CAST(nsIX509Cert*, this),
-                               PROXY_SYNC | PROXY_ALWAYS,
+                               nsIProxyObjectManager::INVOKE_SYNC |
+                               nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                getter_AddRefs(x509Proxy));
 
   if (!x509Proxy) {
@@ -268,7 +270,8 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
         proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
                                      nsIX509CertValidity::GetIID(),
                                      originalValidity,
-                                     PROXY_SYNC | PROXY_ALWAYS,
+                                     nsIProxyObjectManager::INVOKE_SYNC |
+                                     nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                      getter_AddRefs(validity));
       }
 

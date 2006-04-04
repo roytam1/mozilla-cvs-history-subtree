@@ -54,6 +54,8 @@
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsCRT.h"
 #include "nsNSSShutDown.h"
+#include "nsIProxyObjectManager.h"
+#include "nsIEventQueueService.h"
 
 #include "ssl.h"
 #include "cert.h"
@@ -154,14 +156,15 @@ PK11PasswordPrompt(PK11SlotInfo* slot, PRBool retry, void* arg) {
   // The interface requestor object may not be safe, so
   // proxy the call to get the nsIPrompt.
 
-  nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+  nsCOMPtr<nsIProxyObjectManager> proxyman =
+    do_GetService(NS_XPCOMPROXY_CONTRACTID);
   if (!proxyman) return nsnull;
 
   nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
   proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
                               NS_GET_IID(nsIInterfaceRequestor),
                               ir,
-                              PROXY_SYNC,
+                              nsIProxyObjectManager::INVOKE_SYNC,
                               getter_AddRefs(proxiedCallbacks));
 
   // Get the desired interface
@@ -173,9 +176,9 @@ PK11PasswordPrompt(PK11SlotInfo* slot, PRBool retry, void* arg) {
 
   // Finally, get a proxy for the nsIPrompt
   proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
-	                      NS_GET_IID(nsIPrompt),
+                              NS_GET_IID(nsIPrompt),
                               prompt,
-                              PROXY_SYNC,
+                              nsIProxyObjectManager::INVOKE_SYNC,
                               getter_AddRefs(proxyPrompt));
 
 

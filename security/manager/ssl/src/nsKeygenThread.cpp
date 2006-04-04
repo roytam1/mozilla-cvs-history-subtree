@@ -39,6 +39,7 @@
 #include "pk11func.h"
 #include "nsCOMPtr.h"
 #include "nsProxiedService.h"
+#include "nsIEventQueueService.h"
 #include "nsKeygenThread.h"
 #include "nsIObserver.h"
 #include "nsNSSShutDown.h"
@@ -157,7 +158,8 @@ nsresult nsKeygenThread::StartKeyGeneration(nsIObserver* aObserver)
   proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
                                NS_GET_IID(nsIObserver),
                                aObserver,
-                               PROXY_SYNC | PROXY_ALWAYS,
+                               nsIProxyObjectManager::INVOKE_SYNC |
+                               nsIProxyObjectManager::FORCE_PROXY_CREATION,
                                getter_AddRefs(obs));
 
   PR_Lock(mutex);

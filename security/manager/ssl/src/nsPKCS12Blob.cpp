@@ -64,6 +64,7 @@
 #include "nsCRT.h"
 #include "pk11func.h"
 #include "secerr.h"
+#include "nsIEventQueueService.h"
 
 #ifdef PR_LOGGING
 extern PRLogModuleInfo* gPIPNSSLog;
@@ -853,7 +854,8 @@ nsPKCS12Blob::handleError(int myerr)
     if (errPrompt) {
       nsCOMPtr<nsIPrompt> proxyPrompt;
       proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                  errPrompt, PROXY_SYNC, 
+                                  errPrompt,
+                                  nsIProxyObjectManager::INVOKE_SYNC, 
                                   getter_AddRefs(proxyPrompt));
       if (!proxyPrompt) return PR_FALSE;
     } else {
