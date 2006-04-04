@@ -223,7 +223,8 @@ nsProxyCanonicalObject::nsProxyCanonicalObject(nsISupports* aObjectToProxy,
                                                PRInt32 aProxyType) :
     mProxyType(aProxyType),
     mProxiedObject(aObjectToProxy),
-    mDestQueue(aDestQueue)
+    mDestQueue(aDestQueue),
+    mFirst(nsnull)
 {
     // Since the proxyobjectmanager is the only thing creating us, it should
     // always exist.
@@ -298,8 +299,9 @@ nsProxyEventObject::nsProxyEventObject(nsISomeInterface* aObj,
                                        nsProxyEventClass* aClass,
                                        nsProxyCanonicalObject* root)
     : mClass(aClass),
-      mRoot(root),
       mXPTCStub(nsnull),
+      mRealInterface(aObj),
+      mRoot(root),
       mNext(nsnull)
 {
 #ifdef DEBUG_xpcom_proxy

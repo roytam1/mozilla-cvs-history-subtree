@@ -258,7 +258,7 @@ nsProxyObjectManager::GetProxyForObject(nsIEventQueue *destQueue,
 
     // Get the root nsISupports of the event queue...  This is used later,
     // as part of the hashtable key...
-    nsCOMPtr<nsISupports> destQRoot = do_QueryInterface(destQueue, &rv);
+    nsCOMPtr<nsISupports> destQRoot = do_QueryInterface(postQ, &rv);
     if (NS_FAILED(rv) || !destQRoot) {
         return nsnull;
     }
@@ -297,14 +297,12 @@ nsProxyObjectManager::GetProxyForObject(nsIEventQueue *destQueue,
         (nsProxyCanonicalObject*) realToProxyMap->Get(&rootkey);
 
     if (!pco) {
-        pco = new nsProxyCanonicalObject(rootObject, destQueue, proxyType);
+        pco = new nsProxyCanonicalObject(rootObject, postQ, proxyType);
         if (!pco)
             return NS_ERROR_OUT_OF_MEMORY;
 
-        if (!realToProxyMap->Put(&rootkey, pco)) {
-            delete pco;
-            return NS_ERROR_OUT_OF_MEMORY;
-        }
+        realToProxyMap->Put(&rootkey, pco);
+        // No way to detect OOM :-(
     }
 
     // Ask the root proxy for the correct interface.
