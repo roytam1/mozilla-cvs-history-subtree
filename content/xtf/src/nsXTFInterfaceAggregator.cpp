@@ -41,6 +41,7 @@
 #include "nsIInterfaceInfo.h"
 #include "nsIInterfaceInfoManager.h"
 #include "nsServiceManagerUtils.h"
+#include "nsAutoPtr.h"
 #ifdef DEBUG
 #include <stdio.h>
 #endif
@@ -48,7 +49,7 @@
 ////////////////////////////////////////////////////////////////////////
 // nsXTFInterfaceAggregator class
 
-class nsXTFInterfaceAggregator : public nsXPTCStubBase
+class nsXTFInterfaceAggregator : public nsIXPTCProxy
 {
 protected:
   friend nsresult
@@ -66,17 +67,15 @@ public:
   // nsISupports interface
   NS_DECL_ISUPPORTS
   
-  // nsXPTCStubBase
-  NS_IMETHOD GetInterfaceInfo(nsIInterfaceInfo** info);
-
   NS_IMETHOD CallMethod(PRUint16 methodIndex,
-                        const nsXPTMethodInfo* info,
+                        const XPTMethodDescriptor* info,
                         nsXPTCMiniVariant* params);
 
 private:
   nsISupports *mInner;
   nsISupports *mOuter;
   nsIID mIID;
+  nsISomeInterface* mXPTCStub;
 };
 
 //----------------------------------------------------------------------
@@ -85,13 +84,15 @@ private:
 nsXTFInterfaceAggregator::nsXTFInterfaceAggregator(const nsIID& iid,
                                                    nsISupports* inner,
                                                    nsISupports* outer)
-    : mInner(inner), mOuter(outer), mIID(iid)
+  : mInner(inner), mOuter(outer), mIID(iid), mXPTCStub(nsnull)
 {
 #ifdef DEBUG
 //  printf("nsXTFInterfaceAggregator CTOR\n");
 #endif
   mInner->AddRef();
   mOuter->AddRef();
+
+  NS_GetXPTCallStub(iid, this, &mXPTCStub);
 }
 
 nsXTFInterfaceAggregator::~nsXTFInterfaceAggregator()
@@ -101,6 +102,9 @@ nsXTFInterfaceAggregator::~nsXTFInterfaceAggregator()
 #endif
   mInner->Release();
   mOuter->Release();
+
+  if (mXPTCStub)
+    NS_DestroyXPTCallStub(mXPTCStub);
 }
 
 nsresult
@@ -112,13 +116,12 @@ NS_NewXTFInterfaceAggregator(const nsIID& iid,
   if (!aResult)
     return NS_ERROR_NULL_POINTER;
 
-  nsXTFInterfaceAggregator* result = new nsXTFInterfaceAggregator(iid,inner,outer);
-  if (!result)
+  nsRefPtr<nsXTFInterfaceAggregator> result =
+    new nsXTFInterfaceAggregator(iid,inner,outer);
+  if (!result || result->mXPTCStub)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  NS_ADDREF(result);
-  *aResult = result;
-  return NS_OK;
+  return result->QueryInterface(iid, aResult);
 }
 
 //----------------------------------------------------------------------
@@ -131,7 +134,7 @@ NS_IMETHODIMP
 nsXTFInterfaceAggregator::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
   if(aIID.Equals(mIID)) {
-    *aInstancePtr = NS_STATIC_CAST(nsXPTCStubBase*, this);
+    *aInstancePtr = mXPTCStub;
     NS_ADDREF_THIS();
     return NS_OK;
   }
@@ -142,30 +145,19 @@ nsXTFInterfaceAggregator::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 // nsXPTCStubBase implementation
 
 NS_IMETHODIMP
-nsXTFInterfaceAggregator::GetInterfaceInfo(nsIInterfaceInfo** info)
-{
-  nsCOMPtr<nsIInterfaceInfoManager>
-    iim(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
-  NS_ASSERTION(iim, "could not get interface info manager");
-  return iim->GetInfoForIID( &mIID, info);
-}
-
-NS_IMETHODIMP
 nsXTFInterfaceAggregator::CallMethod(PRUint16 methodIndex,
-                                     const nsXPTMethodInfo* info,
+                                     const XPTMethodDescriptor *info,
                                      nsXPTCMiniVariant* params)
 {
-  if (methodIndex < 3) {
-    NS_ERROR("huh? indirect nsISupports method call unexpected on nsXTFInterfaceAggregator.");
-    return NS_ERROR_FAILURE;
-  }
+  NS_ASSERTION(methodIndex >= 3,
+               "huh? indirect nsISupports method call unexpected");
 
   // prepare args:
-  int paramCount = info->GetParamCount();
+  int paramCount = info->num_args;
   nsXPTCVariant* fullPars = paramCount ? new nsXPTCVariant[paramCount] : nsnull;
 
   for (int i=0; i<paramCount; ++i) {
-    const nsXPTParamInfo& paramInfo = info->GetParam(i);
+    const nsXPTParamInfo& paramInfo = info->params[i];
     PRUint8 flags = paramInfo.IsOut() ? nsXPTCVariant::PTR_IS_DATA : 0;
     fullPars[i].Init(params[i], paramInfo.GetType(), flags);
   }
