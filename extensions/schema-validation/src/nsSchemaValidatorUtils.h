@@ -42,6 +42,7 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsISchema.h"
+#include "nsIDOMNode.h"
 #include "nsCOMArray.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
@@ -82,7 +83,7 @@ struct nsSchemaGMonthDay {
 struct nsMonthShortHand {
   const char *number;
   const char *shortHand;
-};
+} ;
 
 const nsMonthShortHand monthShortHand[] = {
   { "01", "Jan" },
@@ -97,7 +98,7 @@ const nsMonthShortHand monthShortHand[] = {
   { "10", "Oct" },
   { "11", "Nov" },
   { "12", "Dec" }
-};
+} ;
 
 #define kREGEXP_CID "@mozilla.org/xmlextras/schemas/schemavalidatorregexp;1"
 
@@ -109,7 +110,7 @@ public:
   nsSchemaStringFacet() {
     isDefined = PR_FALSE;
   }
-};
+} ;
 
 class nsSchemaIntFacet
 {
@@ -120,7 +121,7 @@ public:
     isDefined = PR_FALSE;
     value = 0;
   }
-};
+} ;
 
 struct nsSchemaDerivedSimpleType {
   nsISchemaSimpleType* mBaseType;
@@ -143,7 +144,7 @@ struct nsSchemaDerivedSimpleType {
   nsSchemaIntFacet fractionDigits;
 
   nsStringArray enumerationList;
-};
+} ;
 
 struct nsSchemaDate {
   PRBool isNegative;
@@ -171,15 +172,13 @@ struct nsSchemaDateTime {
 class nsSchemaValidatorUtils
 {
 public:
-  static PRBool IsValidSchemaInteger(const nsAString & aNodeValue, long *aResult);
-  static PRBool IsValidSchemaInteger(const nsAString & aNodeValue,
-                                     PRBool aOverFlowCheck, long *aResult);
-  static PRBool IsValidSchemaInteger(const char* aString,
-                                     PRBool aOverFlowCheck, long *aResult);
+  static PRBool IsValidSchemaInteger(const nsAString & aNodeValue, long *aResult,
+                                     PRBool aOverFlowCheck = PR_FALSE);
+  static PRBool IsValidSchemaInteger(const char* aString, long *aResult,
+                                     PRBool aOverFlowCheck);
 
   static PRBool IsValidSchemaDouble(const nsAString & aNodeValue, double *aResult);
   static PRBool IsValidSchemaDouble(const char* aString, double *aResult);
-
 
   static PRBool ParseDateTime(const nsAString & aNodeValue,
                               nsSchemaDateTime *aResult);
@@ -192,7 +191,7 @@ public:
   static void GetMonthShorthand(PRUint8 aMonth, nsACString & aReturn);
 
   static int CompareDateTime(nsSchemaDateTime aDateTime1,
-                                     nsSchemaDateTime aDateTime2);
+                             nsSchemaDateTime aDateTime2);
   static int CompareDate(nsSchemaDate aDate1, nsSchemaDate aDate2);
   static int CompareTime(nsSchemaTime aTime1, nsSchemaTime aTime2);
 
@@ -230,6 +229,8 @@ public:
                                        nsSchemaDerivedSimpleType *aDerived);
   static void CopyDerivedSimpleType(nsSchemaDerivedSimpleType *aDerivedDest,
                                     nsSchemaDerivedSimpleType *aDerivedSrc);
+
+  static void SetToNullOrElement(nsIDOMNode *aNode, nsIDOMNode **aResultNode);
 private:
   nsSchemaValidatorUtils();
   ~nsSchemaValidatorUtils();

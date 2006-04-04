@@ -54,7 +54,6 @@
 #include <limits.h>
 #include "prlog.h"
 #include "prprf.h"
-#include "prtime.h"
 #include "prdtoa.h"
 
 #ifdef PR_LOGGING
@@ -68,26 +67,18 @@ PRLogModuleInfo *gSchemaValidationUtilsLog = PR_NewLogModule("schemaValidation")
 
 PRBool
 nsSchemaValidatorUtils::IsValidSchemaInteger(const nsAString & aNodeValue,
-                                             long *aResult)
-{
-  return IsValidSchemaInteger(aNodeValue, PR_FALSE, aResult);
-}
-
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaInteger(const nsAString & aNodeValue,
-                                             PRBool aOverFlowCheck,
-                                             long *aResult)
+                                             long *aResult, PRBool aOverFlowCheck)
 {
   return !aNodeValue.IsEmpty() &&
          IsValidSchemaInteger(NS_ConvertUTF16toUTF8(aNodeValue).get(),
-                              aOverFlowCheck, aResult);
+                              aResult, aOverFlowCheck);
 }
 
 // overloaded, for char* rather than nsAString
 PRBool
 nsSchemaValidatorUtils::IsValidSchemaInteger(const char* aString,
-                                             PRBool aOverFlowCheck,
-                                             long *aResult)
+                                             long *aResult,
+                                             PRBool aOverFlowCheck)
 {
   PRBool isValid = PR_FALSE;
 
@@ -209,10 +200,14 @@ nsSchemaValidatorUtils::ParseSchemaDate(const nsAString & aStrValue,
       case 0: {
         // year
         if (currentChar == '-') {
-          year.Assign(Substring(buffStart, --start));
-          state = 1;
-          buffLength = 0;
-          buffStart = ++start;
+          if (buffLength < 4) {
+            done = PR_TRUE;
+          } else {
+            year.Assign(Substring(buffStart, --start));
+            state = 1;
+            buffLength = 0;
+            buffStart = ++start;
+          }
         } else {
           // has to be a numerical character or else abort
           if ((currentChar > '9') || (currentChar < '0'))
@@ -227,7 +222,7 @@ nsSchemaValidatorUtils::ParseSchemaDate(const nsAString & aStrValue,
         if (buffLength > 2) {
           done = PR_TRUE;
         } else if (currentChar == '-') {
-          if (strcmp(month, "12") == 1) {
+          if (strcmp(month, "12") == 1 || buffLength < 2) {
             done = PR_TRUE;
           } else {
             state = 2;
@@ -250,7 +245,7 @@ nsSchemaValidatorUtils::ParseSchemaDate(const nsAString & aStrValue,
         if (buffLength > 2) {
           done = PR_TRUE;
         } else if (currentChar == 'T') {
-          if ((start == end) && (strcmp(day, "31") < 1))
+          if ((start == end) && (buffLength == 2) && (strcmp(day, "31") < 1))
             isValid = PR_TRUE;
           done = PR_TRUE;
         } else {
@@ -296,7 +291,6 @@ nsSchemaValidatorUtils::ParseSchemaDate(const nsAString & aStrValue,
 
   return isValid;
 }
-
 
 // parses a string as a schema time type and returns the parsed
 // hour/minute/second/fraction seconds as well as if its a valid
@@ -356,7 +350,7 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
         break;
       }
 
-      case 1 : {
+      case 1: {
         // minute
         if (buffLength > 2) {
           done = PR_TRUE;
@@ -380,16 +374,14 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
         break;
       }
 
-      case 2 : {
+      case 2: {
         // seconds
         if (buffLength > 2) {
           done = PR_TRUE;
         } else if (currentChar == 'Z') {
           // if its Z, has to be the last character
           if ((start == end) && (strcmp(second, "59") != 1)) {
-
             isValid = PR_TRUE;
-            //sprintf(rv_second, "%s", NS_ConvertUTF16toUTF8(Substring(buffStart, start)).get());
           }
           done = PR_TRUE;
           tzSign = currentChar;
@@ -424,7 +416,7 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
         break;
       }
 
-      case 3 : {
+      case 3: {
         // fractional seconds
 
         if (currentChar == 'Z') {
@@ -451,7 +443,7 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
         break;
       }
 
-      case 4 : {
+      case 4: {
         // timezone hh:mm
        if (buffStart.size_forward() == 5)
          isValid = ParseSchemaTimeZone(Substring(buffStart, end), timezoneHour,
@@ -462,6 +454,7 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
       }
     }
   }
+
   if (isValid) {
     char * pEnd;
 
@@ -740,7 +733,6 @@ nsSchemaValidatorUtils::AddTimeZoneToDateTime(nsSchemaDateTime aDateTime,
   }
 
   // day
-
   if (day == 0) {
     // if day is 0, go back a month and make sure we handle month 0 (ie back a year).
     month--;
@@ -767,8 +759,6 @@ nsSchemaValidatorUtils::AddTimeZoneToDateTime(nsSchemaDateTime aDateTime,
       maxDay = GetMaximumDayInMonthFor(month, year);
     }
   }
-
-  printf("\n ::: %u:%d:%d %d:%d:%d\n", year, month, day, hour, minute, second);
 
   aDestDateTime->date.year = year;
   aDestDateTime->date.month = month;
@@ -835,7 +825,7 @@ nsSchemaValidatorUtils::CompareGMonthDay(nsSchemaGMonthDay aMonthDay1,
     if (aMonthDay1.gDay.day > aMonthDay2.gDay.day)
       rv = 1;
     else if (aMonthDay1.gDay.day < aMonthDay2.gDay.day)
-      rv = -1;                
+      rv = -1;
     else
       rv = 0;
   }
@@ -1001,7 +991,7 @@ nsSchemaValidatorUtils::ParseSchemaDuration(const nsAString & aStrValue,
         switch (state) {
           case 0: {
             // years
-            if (!IsValidSchemaInteger(parseBuffer, PR_TRUE, &temp))
+            if (!IsValidSchemaInteger(parseBuffer, &temp, PR_TRUE))
               done = PR_TRUE;
             else
               year = temp;
@@ -1010,7 +1000,7 @@ nsSchemaValidatorUtils::ParseSchemaDuration(const nsAString & aStrValue,
 
           case 1: {
             // months
-            if (!IsValidSchemaInteger(parseBuffer, PR_TRUE, &temp))
+            if (!IsValidSchemaInteger(parseBuffer, &temp, PR_TRUE))
               done = PR_TRUE;
             else
               month = temp;
@@ -1019,7 +1009,7 @@ nsSchemaValidatorUtils::ParseSchemaDuration(const nsAString & aStrValue,
 
           case 2: {
             // days
-            if (!IsValidSchemaInteger(parseBuffer, PR_TRUE, &temp))
+            if (!IsValidSchemaInteger(parseBuffer, &temp, PR_TRUE))
               done = PR_TRUE;
             else
               day = temp;
@@ -1028,7 +1018,7 @@ nsSchemaValidatorUtils::ParseSchemaDuration(const nsAString & aStrValue,
 
           case 3: {
             // hours
-            if (!IsValidSchemaInteger(parseBuffer, PR_TRUE, &temp))
+            if (!IsValidSchemaInteger(parseBuffer, &temp, PR_TRUE))
               done = PR_TRUE;
             else
               hour = temp;
@@ -1037,7 +1027,7 @@ nsSchemaValidatorUtils::ParseSchemaDuration(const nsAString & aStrValue,
 
           case 4: {
             // minutes
-            if (!IsValidSchemaInteger(parseBuffer, PR_TRUE, &temp))
+            if (!IsValidSchemaInteger(parseBuffer, &temp, PR_TRUE))
               done = PR_TRUE;
             else
               minute = temp;
@@ -1056,7 +1046,7 @@ nsSchemaValidatorUtils::ParseSchemaDuration(const nsAString & aStrValue,
                 second = NS_STATIC_CAST(PRUint32, intpart);
               }
             } else {
-              if (!IsValidSchemaInteger(parseBuffer, PR_TRUE, &temp))
+              if (!IsValidSchemaInteger(parseBuffer, &temp, PR_TRUE))
                 done = PR_TRUE;
               else
                 second = temp;
@@ -1160,7 +1150,6 @@ nsSchemaValidatorUtils::CompareStrings(const nsAString & aString1,
   compareString2.Assign(Substring(start2, end2));
 
   // after removing leading 0s, check if they are the same
-
   if (compareString1.Equals(compareString2)) {
     return 0;
   }
@@ -1323,7 +1312,7 @@ nsSchemaValidatorUtils::AddDurationToDatetime(nsSchemaDateTime aDatetime,
   PRBool done = PR_FALSE;
   while (!done) {
     maxDay = GetMaximumDayInMonthFor(aResultDateTime->date.year,
-                                         aResultDateTime->date.month);
+                                     aResultDateTime->date.month);
     if (aResultDateTime->date.day < 1) {
       aResultDateTime->date.day +=
         GetMaximumDayInMonthFor(aResultDateTime->date.year,
@@ -1735,5 +1724,29 @@ nsSchemaValidatorUtils::CopyDerivedSimpleType(nsSchemaDerivedSimpleType *aDerive
   aDerivedDest->fractionDigits.isDefined = aDerivedSrc->fractionDigits.isDefined;
 
   aDerivedDest->enumerationList = aDerivedSrc->enumerationList;
+}
+
+// sets aResultNode to aNode, making sure it points to null or a dom element
+void
+nsSchemaValidatorUtils::SetToNullOrElement(nsIDOMNode *aNode,
+                                           nsIDOMNode **aResultNode)
+{
+  nsCOMPtr<nsIDOMNode> currentNode(aNode), tmpNode;
+
+  if (currentNode) {
+    PRUint16 nodeType;
+    currentNode->GetNodeType(&nodeType);
+
+    // if not an element node, skip
+    while (currentNode && nodeType != nsIDOMNode::ELEMENT_NODE) {
+      currentNode->GetNextSibling(getter_AddRefs(tmpNode));
+      currentNode = tmpNode;
+      if (currentNode)
+        currentNode->GetNodeType(&nodeType);
+    }
+
+    currentNode.swap(*aResultNode);
+
+  }
 }
 
