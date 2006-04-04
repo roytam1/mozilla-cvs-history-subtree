@@ -87,7 +87,7 @@ nsProxyObjectCallInfo::nsProxyObjectCallInfo( nsProxyEventObject* owner,
     mMethodIndex(methodIndex),
     mParameterList(parameterList),
     mParameterCount(parameterCount),
-    mEvent(mEvent),
+    mEvent(event),
     mCompleted(0),
     mOwner(owner)
 {
