@@ -238,11 +238,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = SEAMONKEY_1_0_1_BRANCH
-NSPR_CO_TAG          = SEAMONKEY_1_0_1_BRANCH
-NSS_CO_TAG           = SEAMONKEY_1_0_1_BRANCH
-LDAPCSDK_CO_TAG      = SEAMONKEY_1_0_1_BRANCH
-LOCALES_CO_TAG       = SEAMONKEY_1_0_1_BRANCH
+MOZ_CO_TAG           = SEAMONKEY_1_0_1_RELEASE
+NSPR_CO_TAG          = SEAMONKEY_1_0_1_RELEASE
+NSS_CO_TAG           = SEAMONKEY_1_0_1_RELEASE
+LDAPCSDK_CO_TAG      = SEAMONKEY_1_0_1_RELEASE
+LOCALES_CO_TAG       = SEAMONKEY_1_0_1_RELEASE
 
 BUILD_MODULES = all
 
