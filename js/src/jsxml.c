@@ -951,13 +951,6 @@ out:
 }
 
 static JSBool
-AnyName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    /* Return the one true AnyName instance. */
-    return js_GetAnyName(cx, rval);
-}
-
-static JSBool
 AttributeName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
               jsval *rval)
 {
@@ -1766,7 +1759,7 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
         qn = NULL;
         if (pn->pn_type == TOK_XMLCOMMENT) {
             if (flags & XSF_IGNORE_COMMENTS)
-                return PN2X_SKIP_CHILD;
+                goto skip_child;
             xml_class = JSXML_CLASS_COMMENT;
         } else if (pn->pn_type == TOK_XMLPI) {
             if (IS_XML(str)) {
@@ -1779,7 +1772,7 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
             }
 
             if (flags & XSF_IGNORE_PROCESSING_INSTRUCTIONS)
-                return PN2X_SKIP_CHILD;
+                goto skip_child;
 
             qn = ParseNodeToQName(cx, pn, inScopeNSes, JS_FALSE);
             if (!qn)
@@ -1811,6 +1804,10 @@ ParseNodeToXML(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
     if ((flags & XSF_PRECOMPILED_ROOT) && !js_GetXMLObject(cx, xml))
         return NULL;
     return xml;
+
+skip_child:
+    js_LeaveLocalRootScope(cx);
+    return PN2X_SKIP_CHILD;
 
 #undef PN2X_SKIP_CHILD
 
@@ -1885,7 +1882,7 @@ ParseXMLSource(JSContext *cx, JSString *src)
 {
     jsval nsval;
     JSXMLNamespace *ns;
-    size_t urilen, srclen, length, offset;
+    size_t urilen, srclen, length, offset, dstlen;
     jschar *chars;
     const jschar *srcp, *endp;
     void *mark;
@@ -1917,16 +1914,20 @@ ParseXMLSource(JSContext *cx, JSString *src)
     if (!chars)
         return NULL;
 
-    js_InflateStringToBuffer(chars, prefix, constrlen(prefix));
-    offset = constrlen(prefix);
+    dstlen = length;
+    js_InflateStringToBuffer(cx, prefix, constrlen(prefix), chars, &dstlen);
+    offset = dstlen;
     js_strncpy(chars + offset, JSSTRING_CHARS(ns->uri), urilen);
     offset += urilen;
-    js_InflateStringToBuffer(chars + offset, middle, constrlen(middle));
-    offset += constrlen(middle);
+    dstlen = length - offset + 1;
+    js_InflateStringToBuffer(cx, middle, constrlen(middle), chars + offset, &dstlen);
+    offset += dstlen;
     srcp = JSSTRING_CHARS(src);
     js_strncpy(chars + offset, srcp, srclen);
     offset += srclen;
-    js_InflateStringToBuffer(chars + offset, suffix, constrlen(suffix));
+    dstlen = length - offset + 1;
+    js_InflateStringToBuffer(cx, suffix, constrlen(suffix), chars + offset, &dstlen);
+    chars [offset + dstlen] = 0;
 
     mark = JS_ARENA_MARK(&cx->tempPool);
     ts = js_NewBufferTokenStream(cx, chars, length);
@@ -2936,6 +2937,7 @@ ToAttributeName(JSContext *cx, jsval v)
     JSObject *obj;
     JSClass *clasp;
     JSXMLQName *qn;
+    JSTempValueRooter tvr;
 
     if (JSVAL_IS_STRING(v)) {
         name = JSVAL_TO_STRING(v);
@@ -2976,7 +2978,16 @@ ToAttributeName(JSContext *cx, jsval v)
     qn = js_NewXMLQName(cx, uri, prefix, name);
     if (!qn)
         return NULL;
-    if (!js_GetAttributeNameObject(cx, qn))
+
+    /*
+     * Temp and local root scope APIs take GC-thing pointers tagged as jsvals
+     * and blindly untag.  Since qn is a GC-thing pointer, we can treat it as
+     * an object pointer.
+     */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(qn), &tvr);
+    obj = js_GetAttributeNameObject(cx, qn);
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    if (!obj)
         return NULL;
     return qn;
 }
@@ -3821,11 +3832,11 @@ DeleteProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
             if (xml->xml_class != JSXML_CLASS_ELEMENT)
                 goto out;
             array = &xml->xml_attrs;
+            length = array->length;
             matcher = MatchAttrName;
         } else {
             matcher = MatchElemName;
         }
-        length = array->length;
         if (length != 0) {
             deleteCount = 0;
             for (index = 0; index < length; index++) {
@@ -4590,6 +4601,7 @@ PutProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
         /* 12. */
         k = n = xml->xml_kids.length;
+        kid2 = NULL;
         while (k != 0) {
             --k;
             kid = XMLARRAY_MEMBER(&xml->xml_kids, k, JSXML);
@@ -4602,7 +4614,30 @@ PutProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                 ok = IndexToIdVal(cx, k, &id);
                 if (!ok)
                     goto out;
+                kid2 = kid;
             }
+        }
+
+        /*
+         * Erratum: ECMA-357 specified child insertion inconsistently:
+         * insertChildBefore and insertChildAfter insert an arbitrary XML
+         * instance, and therefore can create cycles, but appendChild as
+         * specified by the "Overview" of 13.4.4.3 calls [[DeepCopy]] on
+         * its argument.  But the "Semantics" in 13.4.4.3 do not include
+         * any [[DeepCopy]] call.
+         *
+         * Fixing this (https://bugzilla.mozilla.org/show_bug.cgi?id=312692)
+         * required adding cycle detection, and allowing duplicate kids to
+         * be created (see comment 6 in the bug).  Allowing duplicate kid
+         * references means the loop above will delete all but the lowest
+         * indexed reference, and each [[DeleteByIndex]] nulls the kid's
+         * parent.  Thus the need to restore parent here.  This is covered
+         * by https://bugzilla.mozilla.org/show_bug.cgi?id=327564.
+         */
+        if (kid2) {
+            JS_ASSERT(kid2->parent == xml || !kid2->parent);
+            if (!kid2->parent)
+                kid2->parent = xml;
         }
 
         /* 13. */
@@ -5475,13 +5510,12 @@ xml_attribute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
               jsval *rval)
 {
     JSXMLQName *qn;
-    jsval name;
 
     qn = ToAttributeName(cx, argv[0]);
     if (!qn)
         return JS_FALSE;
-    name = OBJECT_TO_JSVAL(qn->object);
-    return GetProperty(cx, obj, name, rval);
+    argv[0] = OBJECT_TO_JSVAL(qn->object);      /* local root */
+    return GetProperty(cx, obj, argv[0], rval);
 }
 
 /* XML and XMLList */
@@ -5491,13 +5525,18 @@ xml_attributes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 {
     jsval name;
     JSXMLQName *qn;
+    JSTempValueRooter tvr;
+    JSBool ok;
 
     name = ATOM_KEY(cx->runtime->atomState.starAtom);
     qn = ToAttributeName(cx, name);
     if (!qn)
         return JS_FALSE;
     name = OBJECT_TO_JSVAL(qn->object);
-    return GetProperty(cx, obj, name, rval);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, name, &tvr);
+    ok = GetProperty(cx, obj, name, rval);
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
 }
 
 /* XML and XMLList */
@@ -7412,8 +7451,11 @@ js_InitAttributeNameClass(JSContext *cx, JSObject *obj)
 JSObject *
 js_InitAnyNameClass(JSContext *cx, JSObject *obj)
 {
-    return JS_InitClass(cx, obj, NULL, &js_AnyNameClass, AnyName, 0,
-                        qname_props, qname_methods, NULL, NULL);
+    jsval v;
+
+    if (!js_GetAnyName(cx, &v))
+        return NULL;
+    return JSVAL_TO_OBJECT(v);
 }
 
 JSObject *
@@ -7538,6 +7580,14 @@ js_GetFunctionNamespace(JSContext *cx, jsval *vp)
         if (!obj)
             return JS_FALSE;
 
+        /*
+         * Avoid entraining any in-scope Object.prototype.  The loss of
+         * Namespace.prototype is not detectable, as there is no way to
+         * refer to this instance in scripts.  When used to qualify method
+         * names, its prefix and uri references are copied to the QName.
+         */
+        OBJ_SET_PROTO(cx, obj, NULL);
+        OBJ_SET_PARENT(cx, obj, NULL);
         rt->functionNamespaceObject = obj;
     }
     *vp = OBJECT_TO_JSVAL(obj);
@@ -7705,6 +7755,14 @@ js_ValueToXMLString(JSContext *cx, jsval v)
     return ToXMLString(cx, v);
 }
 
+static JSBool
+anyname_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                 jsval *rval)
+{
+    *rval = ATOM_KEY(cx->runtime->atomState.starAtom);
+    return JS_TRUE;
+}
+
 JSBool
 js_GetAnyName(JSContext *cx, jsval *vp)
 {
@@ -7729,6 +7787,17 @@ js_GetAnyName(JSContext *cx, jsval *vp)
         METER(xml_stats.qnameobj);
         METER(xml_stats.liveqnameobj);
 
+        /*
+         * Avoid entraining any in-scope Object.prototype.  This loses the
+         * default toString inheritance, but no big deal: we want a better
+         * custom one for clearer diagnostics.
+         */
+        if (!JS_DefineFunction(cx, obj, js_toString_str, anyname_toString,
+                               0, 0)) {
+            return JS_FALSE;
+        }
+        OBJ_SET_PROTO(cx, obj, NULL);
+        JS_ASSERT(!OBJ_GET_PARENT(cx, obj));
         rt->anynameObject = obj;
     }
     *vp = OBJECT_TO_JSVAL(obj);

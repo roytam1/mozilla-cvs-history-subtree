@@ -1195,7 +1195,12 @@ js_GetToken(JSContext *cx, JSTokenStream *ts)
             ADD_TO_TOKENBUF(c);
             while ((c = GetChar(ts)) != EOF && JS_ISXMLNAME(c)) {
                 if (c == ':') {
-                    if (sawColon || !JS_ISXMLNAME(PeekChar(ts))) {
+                    int nextc;
+
+                    if (sawColon ||
+                        (nextc = PeekChar(ts),
+                         ((ts->flags & TSF_XMLONLYMODE) || nextc != '{') &&
+                         !JS_ISXMLNAME(nextc))) {
                         js_ReportCompileErrorNumber(cx, ts,
                                                     JSREPORT_TS |
                                                     JSREPORT_ERROR,
@@ -1336,9 +1341,11 @@ retry:
             kw = ATOM_KEYWORD(atom);
             if (kw->tokentype == TOK_RESERVED) {
                 char buf[MAX_KEYWORD_LENGTH + 1];
-
-                js_DeflateStringToBuffer(buf, TOKENBUF_BASE(),
-                                              TOKENBUF_LENGTH());
+                size_t buflen = sizeof(buf) - 1;
+                if (!js_DeflateStringToBuffer(cx, TOKENBUF_BASE(), TOKENBUF_LENGTH(),
+                                                  buf, &buflen))
+                    goto error;
+                buf [buflen] = 0;
                 if (!js_ReportCompileErrorNumber(cx, ts,
                                                  JSREPORT_TS |
                                                  JSREPORT_WARNING |
@@ -1687,11 +1694,14 @@ retry:
                         cp[5] == '[') {
                         SkipChars(ts, 6);
                         while ((c = GetChar(ts)) != ']' ||
-                               !MatchChar(ts, ']')) {
+                               !PeekChars(ts, 2, cp) ||
+                               cp[0] != ']' ||
+                               cp[1] != '>') {
                             if (c == EOF)
                                 goto bad_xml_markup;
                             ADD_TO_TOKENBUF(c);
                         }
+                        GetChar(ts);            /* discard ] but not > */
                         tt = TOK_XMLCDATA;
                         tp->t_op = JSOP_XMLCDATA;
                         goto finish_xml_markup;

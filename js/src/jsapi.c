@@ -884,6 +884,10 @@ JS_YieldRequest(JSContext *cx)
     /* XXXbe give the GC or another request calling it a chance to run here?
              Assumes FIFO scheduling */
     JS_LOCK_GC(rt);
+    if (rt->gcThread != cx->thread) {
+        while (rt->gcLevel > 0)
+            JS_AWAIT_GC_DONE(rt);
+    }
     rt->requestCount++;
     JS_UNLOCK_GC(rt);
 }
@@ -1064,7 +1068,7 @@ JS_ToggleOptions(JSContext *cx, uint32 options)
 JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void)
 {
-    return "JavaScript-C 1.5 pre-release 6a 2004-06-09";
+    return "JavaScript-C 1.6 pre-release 1 2006-04-04";
 }
 
 
@@ -1465,7 +1469,7 @@ static JSIdArray *
 AddAtomToArray(JSContext *cx, JSAtom *atom, JSIdArray *ida, jsint *ip)
 {
     jsint i, length;
-    
+
     i = *ip;
     length = ida->length;
     if (i >= length) {
@@ -2001,6 +2005,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 {
     JSAtom *atom;
     JSObject *proto, *ctor;
+    JSTempValueRooter tvr;
     jsval cval, rval;
     JSBool named;
     JSFunction *fun;
@@ -2015,8 +2020,8 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
     if (!proto)
         return NULL;
 
-    if (!js_EnterLocalRootScope(cx))
-        goto bad2;
+    /* After this point, control must exit via label bad or out. */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(proto), &tvr);
 
     if (!constructor) {
         /* Lacking a constructor, name the prototype (e.g., Math). */
@@ -2078,17 +2083,16 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
         (static_fs && !JS_DefineFunctions(cx, ctor, static_fs))) {
         goto bad;
     }
-    js_LeaveLocalRootScope(cx);
+
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
     return proto;
 
 bad:
-    js_LeaveLocalRootScope(cx);
     if (named)
         (void) OBJ_DELETE_PROPERTY(cx, obj, ATOM_TO_JSID(atom), &rval);
-
-bad2:
-    cx->newborn[GCX_OBJECT] = NULL;
-    return NULL;
+    proto = NULL;
+    goto out;
 }
 
 #ifdef JS_THREADSAFE
@@ -2282,7 +2286,7 @@ JS_SealObject(JSContext *cx, JSObject *obj, JSBool deep)
     scope = js_GetMutableScope(cx, obj);
     if (scope)
         SCOPE_SET_SEALED(scope);
-    JS_UNLOCK_SCOPE(cx, scope);
+    JS_UNLOCK_OBJ(cx, obj);
     if (!scope)
         return JS_FALSE;
 
@@ -3187,7 +3191,7 @@ JS_NewPropertyIterator(JSContext *cx, JSObject *obj)
     void *pdata;
     jsint index;
     JSIdArray *ida;
-    
+
     CHECK_REQUEST(cx);
     iterobj = js_NewObject(cx, &prop_iter_class, NULL, obj);
     if (!iterobj)
@@ -3263,7 +3267,7 @@ JS_NextProperty(JSContext *cx, JSObject *iterobj, jsid *idp)
         ida = (JSIdArray *) JS_GetPrivate(cx, iterobj);
         JS_ASSERT(i <= ida->length);
         if (i == 0) {
-            *idp = JSVAL_VOID; 
+            *idp = JSVAL_VOID;
         } else {
             *idp = ida->vector[--i];
             OBJ_SET_SLOT(cx, iterobj, JSSLOT_ITER_INDEX, INT_TO_JSVAL(i));
@@ -3607,7 +3611,7 @@ JS_CompileScript(JSContext *cx, JSObject *obj,
     JSScript *script;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     script = JS_CompileUCScript(cx, obj, chars, length, filename, lineno);
@@ -3625,7 +3629,7 @@ JS_CompileScriptForPrincipals(JSContext *cx, JSObject *obj,
     JSScript *script;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     script = JS_CompileUCScriptForPrincipals(cx, obj, principals,
@@ -3694,7 +3698,7 @@ JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
     JSErrorReporter older;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_TRUE;
 
@@ -3817,7 +3821,7 @@ JS_CompileFunction(JSContext *cx, JSObject *obj, const char *name,
     JSFunction *fun;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     fun = JS_CompileUCFunction(cx, obj, name, nargs, argnames, chars, length,
@@ -3837,7 +3841,7 @@ JS_CompileFunctionForPrincipals(JSContext *cx, JSObject *obj,
     JSFunction *fun;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     fun = JS_CompileUCFunctionForPrincipals(cx, obj, principals, name,
@@ -4042,7 +4046,7 @@ JS_EvaluateScript(JSContext *cx, JSObject *obj,
     JSBool ok;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_FALSE;
     ok = JS_EvaluateUCScript(cx, obj, chars, length, filename, lineno, rval);
@@ -4061,7 +4065,7 @@ JS_EvaluateScriptForPrincipals(JSContext *cx, JSObject *obj,
     JSBool ok;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_FALSE;
     ok = JS_EvaluateUCScriptForPrincipals(cx, obj, principals, chars, length,
@@ -4145,7 +4149,7 @@ JS_CallFunctionName(JSContext *cx, JSObject *obj, const char *name, uintN argc,
         return JS_FALSE;
     ok = js_InternalCall(cx, obj, fval, argc, argv, rval);
     LAST_FRAME_CHECKS(cx, ok);
-    return JS_TRUE;
+    return ok;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -4211,15 +4215,16 @@ JS_NewString(JSContext *cx, char *bytes, size_t length)
 {
     jschar *chars;
     JSString *str;
+    size_t charsLength = length;
 
     CHECK_REQUEST(cx);
     /* Make a Unicode vector from the 8-bit char codes in bytes. */
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &charsLength);
     if (!chars)
         return NULL;
 
     /* Free chars (but not bytes, which caller frees on error) if we fail. */
-    str = js_NewString(cx, chars, length, 0);
+    str = js_NewString(cx, chars, charsLength, 0);
     if (!str) {
         JS_free(cx, chars);
         return NULL;
@@ -4238,7 +4243,7 @@ JS_NewStringCopyN(JSContext *cx, const char *s, size_t n)
     JSString *str;
 
     CHECK_REQUEST(cx);
-    js = js_InflateString(cx, s, n);
+    js = js_InflateString(cx, s, &n);
     if (!js)
         return NULL;
     str = js_NewString(cx, js, n, 0);
@@ -4258,7 +4263,7 @@ JS_NewStringCopyZ(JSContext *cx, const char *s)
     if (!s)
         return cx->runtime->emptyString;
     n = strlen(s);
-    js = js_InflateString(cx, s, n);
+    js = js_InflateString(cx, s, &n);
     if (!js)
         return NULL;
     str = js_NewString(cx, js, n, 0);
@@ -4402,6 +4407,30 @@ JS_MakeStringImmutable(JSContext *cx, JSString *str)
     return JS_TRUE;
 }
 
+JS_PUBLIC_API(JSBool)
+JS_EncodeCharacters(JSContext *cx, const jschar *src, size_t srclen, char *dst,
+                    size_t *dstlenp)
+{
+    return js_DeflateStringToBuffer(cx, src, srclen, dst, dstlenp);
+}
+
+JS_PUBLIC_API(JSBool)
+JS_DecodeBytes(JSContext *cx, const char *src, size_t srclen, jschar *dst,
+               size_t *dstlenp)
+{
+    return js_InflateStringToBuffer(cx, src, srclen, dst, dstlenp);
+}
+
+JS_PUBLIC_API(JSBool)
+JS_CStringsAreUTF8()
+{
+#ifdef JS_C_STRINGS_ARE_UTF8
+    return JS_TRUE;
+#else
+    return JS_FALSE;
+#endif
+}
+
 /************************************************************************/
 
 JS_PUBLIC_API(void)
@@ -4483,7 +4512,7 @@ JS_ReportErrorFlagsAndNumberUC(JSContext *cx, uintN flags,
 JS_PUBLIC_API(void)
 JS_ReportOutOfMemory(JSContext *cx)
 {
-    js_ReportOutOfMemory(cx, js_GetErrorMessage);
+    js_ReportOutOfMemory(cx);
 }
 
 JS_PUBLIC_API(JSErrorReporter)
@@ -4509,7 +4538,7 @@ JS_NewRegExpObject(JSContext *cx, char *bytes, size_t length, uintN flags)
     JSObject *obj;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     obj = js_NewRegExpObject(cx, NULL, chars, length, flags);
@@ -4637,8 +4666,21 @@ JS_PUBLIC_API(JSBool)
 JS_ReportPendingException(JSContext *cx)
 {
 #if JS_HAS_EXCEPTIONS
+    JSBool save, ok;
+
     CHECK_REQUEST(cx);
-    return js_ReportUncaughtException(cx);
+
+    /*
+     * Set cx->creatingException to suppress the standard error-to-exception
+     * conversion done by all {js,JS}_Report* functions except for OOM.  The
+     * cx->creatingException flag was added to suppress recursive divergence
+     * under js_ErrorToException, but it serves for our purposes here too.
+     */
+    save = cx->creatingException;
+    cx->creatingException = JS_TRUE;
+    ok = js_ReportUncaughtException(cx);
+    cx->creatingException = save;
+    return ok;
 #else
     return JS_TRUE;
 #endif

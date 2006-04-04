@@ -244,7 +244,13 @@ struct JSRuntime {
     const char          *decimalSeparator;
     const char          *numGrouping;
 
-    /* Weak references to lazily-created, well-known XML singletons. */
+    /*
+     * Weak references to lazily-created, well-known XML singletons.
+     *
+     * NB: Singleton objects must be carefully disconnected from the rest of
+     * the object graph usually associated with a JSContext's global object,
+     * including the set of standard class objects.  See jsxml.c for details.
+     */
     JSObject            *anynameObject;
     JSObject            *functionNamespaceObject;
 
@@ -355,6 +361,62 @@ typedef struct JSLocalRootStack {
 } JSLocalRootStack;
 
 #define JSLRS_NULL_MARK ((uint32) -1)
+
+typedef struct JSTempValueRooter JSTempValueRooter;
+
+/*
+ * If count is -1, then u.value contains the single value to root.  Otherwise
+ * u.array points to a stack-allocated vector of jsvals.  Note that the vector
+ * may have length 0 or 1 for full generality, so we need -1 to discriminate
+ * the union.
+ *
+ * If you need to protect a result value that flows out of a C function across
+ * several layers of other functions, use the js_LeaveLocalRootScopeWithResult
+ * internal API (see further below) instead.
+ */
+struct JSTempValueRooter {
+    JSTempValueRooter   *down;
+    jsint               count;
+    union {
+        jsval           value;
+        jsval           *array;
+    } u;
+};
+
+#define JS_PUSH_TEMP_ROOT_COMMON(cx,tvr)                                      \
+    JS_BEGIN_MACRO                                                            \
+        JS_ASSERT((cx)->tempValueRooters != (tvr));                           \
+        (tvr)->down = (cx)->tempValueRooters;                                 \
+        (cx)->tempValueRooters = (tvr);                                       \
+    JS_END_MACRO
+
+#define JS_PUSH_SINGLE_TEMP_ROOT(cx,val,tvr)                                  \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = -1;                                                    \
+        (tvr)->u.value = (val);                                               \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT(cx,cnt,arr,tvr)                                     \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = (cnt);                                                 \
+        (tvr)->u.array = (arr);                                               \
+    JS_END_MACRO
+
+#define JS_POP_TEMP_ROOT(cx,tvr)                                              \
+    JS_BEGIN_MACRO                                                            \
+        JS_ASSERT((cx)->tempValueRooters == (tvr));                           \
+        (cx)->tempValueRooters = (tvr)->down;                                 \
+    JS_END_MACRO
+
+#define JS_TEMP_ROOT_EVAL(cx,cnt,val,expr)                                    \
+    JS_BEGIN_MACRO                                                            \
+        JSTempValueRooter tvr;                                                \
+        JS_PUSH_TEMP_ROOT(cx, cnt, val, &tvr);                                \
+        (expr);                                                               \
+        JS_POP_TEMP_ROOT(cx, &tvr);                                           \
+    JS_END_MACRO
 
 struct JSContext {
     JSCList             links;
@@ -476,8 +538,11 @@ struct JSContext {
     /* PDL of stack headers describing stack slots not rooted by argv, etc. */
     JSStackHeader       *stackHeaders;
 
-    /* Optional stack of scoped local GC roots. */
+    /* Optional stack of heap-allocated scoped local GC roots. */
     JSLocalRootStack    *localRootStack;
+
+    /* Stack of thread-stack-allocated temporary GC roots. */
+    JSTempValueRooter   *tempValueRooters;
 };
 
 /*
@@ -629,7 +694,7 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
 #endif
 
 extern void
-js_ReportOutOfMemory(JSContext *cx, JSErrorCallback errorCallback);
+js_ReportOutOfMemory(JSContext *cx);
 
 /*
  * Report an exception using a previously composed JSErrorReport.

@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=80:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -712,14 +713,15 @@ ReportError(JSContext *cx, const char *message, JSErrorReport *reportp)
  * type message, and then hope the process ends swiftly.
  */
 void
-js_ReportOutOfMemory(JSContext *cx, JSErrorCallback callback)
+js_ReportOutOfMemory(JSContext *cx)
 {
     JSStackFrame *fp;
     JSErrorReport report;
     JSErrorReporter onError = cx->errorReporter;
 
     /* Get the message for this error, but we won't expand any arguments. */
-    const JSErrorFormatString *efs = callback(NULL, NULL, JSMSG_OUT_OF_MEMORY);
+    const JSErrorFormatString *efs = 
+        js_GetLocalizedErrorMessage(cx, NULL, NULL, JSMSG_OUT_OF_MEMORY);
     const char *msg = efs ? efs->format : "Out of memory";
 
     /* Fill out the report, but don't do anything that requires allocation. */
@@ -821,104 +823,112 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
     }
 
     *messagep = NULL;
-    if (callback) {
+
+    /* Most calls supply js_GetErrorMessage; if this is so, assume NULL. */
+    if (!callback || callback == js_GetErrorMessage)
+        efs = js_GetLocalizedErrorMessage(cx, userRef, NULL, errorNumber);
+    else
         efs = callback(userRef, NULL, errorNumber);
-        if (efs) {
-            size_t totalArgsLength = 0;
-            size_t argLengths[10]; /* only {0} thru {9} supported */
-            argCount = efs->argCount;
-            JS_ASSERT(argCount <= 10);
-            if (argCount > 0) {
-                /*
-                 * Gather the arguments into an array, and accumulate
-                 * their sizes. We allocate 1 more than necessary and
-                 * null it out to act as the caboose when we free the
-                 * pointers later.
-                 */
-                reportp->messageArgs = (const jschar **)
-                    JS_malloc(cx, sizeof(jschar *) * (argCount + 1));
-                if (!reportp->messageArgs)
-                    return JS_FALSE;
-                reportp->messageArgs[argCount] = NULL;
-                for (i = 0; i < argCount; i++) {
-                    if (charArgs) {
-                        char *charArg = va_arg(ap, char *);
-                        reportp->messageArgs[i]
-                            = js_InflateString(cx, charArg, strlen(charArg));
-                        if (!reportp->messageArgs[i])
-                            goto error;
-                    }
-                    else
-                        reportp->messageArgs[i] = va_arg(ap, jschar *);
-                    argLengths[i] = js_strlen(reportp->messageArgs[i]);
-                    totalArgsLength += argLengths[i];
-                }
-                /* NULL-terminate for easy copying. */
-                reportp->messageArgs[i] = NULL;
-            }
+    if (efs) {
+        size_t totalArgsLength = 0;
+        size_t argLengths[10]; /* only {0} thru {9} supported */
+        argCount = efs->argCount;
+        JS_ASSERT(argCount <= 10);
+        if (argCount > 0) {
             /*
-             * Parse the error format, substituting the argument X
-             * for {X} in the format.
+             * Gather the arguments into an array, and accumulate
+             * their sizes. We allocate 1 more than necessary and
+             * null it out to act as the caboose when we free the
+             * pointers later.
              */
-            if (argCount > 0) {
-                if (efs->format) {
-                    const char *fmt;
-                    const jschar *arg;
-                    jschar *out;
-                    int expandedArgs = 0;
-                    size_t expandedLength
-                        = strlen(efs->format)
-                            - (3 * argCount) /* exclude the {n} */
-                            + totalArgsLength;
-                    /*
-                     * Note - the above calculation assumes that each argument
-                     * is used once and only once in the expansion !!!
-                     */
-                    reportp->ucmessage = out = (jschar *)
-                        JS_malloc(cx, (expandedLength + 1) * sizeof(jschar));
-                    if (!out)
+            reportp->messageArgs = (const jschar **)
+                JS_malloc(cx, sizeof(jschar *) * (argCount + 1));
+            if (!reportp->messageArgs)
+                return JS_FALSE;
+            reportp->messageArgs[argCount] = NULL;
+            for (i = 0; i < argCount; i++) {
+                if (charArgs) {
+                    char *charArg = va_arg(ap, char *);
+                    size_t charArgLength = strlen(charArg);
+                    reportp->messageArgs[i]
+                        = js_InflateString(cx, charArg, &charArgLength);
+                    if (!reportp->messageArgs[i])
                         goto error;
-                    fmt = efs->format;
-                    while (*fmt) {
-                        if (*fmt == '{') {
-                            if (isdigit(fmt[1])) {
-                                int d = JS7_UNDEC(fmt[1]);
-                                JS_ASSERT(d < argCount);
-                                arg = reportp->messageArgs[d];
-                                js_strncpy(out, arg, argLengths[d]);
-                                out += argLengths[d];
-                                fmt += 3;
-                                expandedArgs++;
-                                continue;
-                            }
-                        }
-                        /*
-                         * is this kosher?
-                         */
-                        *out++ = (unsigned char)(*fmt++);
-                    }
-                    JS_ASSERT(expandedArgs == argCount);
-                    *out = 0;
-                    *messagep =
-                        js_DeflateString(cx, reportp->ucmessage,
-                                         (size_t)(out - reportp->ucmessage));
-                    if (!*messagep)
-                        goto error;
+                } else {
+                    reportp->messageArgs[i] = va_arg(ap, jschar *);
                 }
-            } else {
+                argLengths[i] = js_strlen(reportp->messageArgs[i]);
+                totalArgsLength += argLengths[i];
+            }
+            /* NULL-terminate for easy copying. */
+            reportp->messageArgs[i] = NULL;
+        }
+        /*
+         * Parse the error format, substituting the argument X
+         * for {X} in the format.
+         */
+        if (argCount > 0) {
+            if (efs->format) {
+                jschar *buffer, *fmt, *out;
+                int expandedArgs = 0;
+                size_t expandedLength;
+                size_t len = strlen(efs->format);
+
+                buffer = fmt = js_InflateString (cx, efs->format, &len);
+                if (!buffer)
+                    goto error;
+                expandedLength = len
+                                 - (3 * argCount)       /* exclude the {n} */
+                                 + totalArgsLength;
+
                 /*
-                 * Zero arguments: the format string (if it exists) is the
-                 * entire message.
-                 */
-                if (efs->format) {
-                    *messagep = JS_strdup(cx, efs->format);
-                    if (!*messagep)
-                        goto error;
-                    reportp->ucmessage
-                        = js_InflateString(cx, *messagep, strlen(*messagep));
-                    if (!reportp->ucmessage)
-                        goto error;
+                * Note - the above calculation assumes that each argument
+                * is used once and only once in the expansion !!!
+                */
+                reportp->ucmessage = out = (jschar *)
+                    JS_malloc(cx, (expandedLength + 1) * sizeof(jschar));
+                if (!out) {
+                    JS_free (cx, buffer);
+                    goto error;
                 }
+                while (*fmt) {
+                    if (*fmt == '{') {
+                        if (isdigit(fmt[1])) {
+                            int d = JS7_UNDEC(fmt[1]);
+                            JS_ASSERT(d < argCount);
+                            js_strncpy(out, reportp->messageArgs[d],
+                                       argLengths[d]);
+                            out += argLengths[d];
+                            fmt += 3;
+                            expandedArgs++;
+                            continue;
+                        }
+                    }
+                    *out++ = *fmt++;
+                }
+                JS_ASSERT(expandedArgs == argCount);
+                *out = 0;
+                JS_free (cx, buffer);
+                *messagep =
+                    js_DeflateString(cx, reportp->ucmessage,
+                                     (size_t)(out - reportp->ucmessage));
+                if (!*messagep)
+                    goto error;
+            }
+        } else {
+            /*
+             * Zero arguments: the format string (if it exists) is the
+             * entire message.
+             */
+            if (efs->format) {
+                size_t len;
+                *messagep = JS_strdup(cx, efs->format);
+                if (!*messagep)
+                    goto error;
+                len = strlen(*messagep);
+                reportp->ucmessage = js_InflateString(cx, *messagep, &len);
+                if (!reportp->ucmessage)
+                    goto error;
             }
         }
     }
@@ -992,9 +1002,15 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
     if (message)
         JS_free(cx, message);
     if (report.messageArgs) {
-        int i = 0;
-        while (report.messageArgs[i])
-            JS_free(cx, (void *)report.messageArgs[i++]);
+        /*
+         * js_ExpandErrorArguments owns its messageArgs only if it had to
+         * inflate the arguments (from regular |char *|s).
+         */
+        if (charArgs) {
+            int i = 0;
+            while (report.messageArgs[i])
+                JS_free(cx, (void *)report.messageArgs[i++]);
+        }
         JS_free(cx, (void *)report.messageArgs);
     }
     if (report.ucmessage)
@@ -1049,10 +1065,10 @@ void js_traceoff(JSContext *cx) { cx->tracefp = NULL; }
 JSErrorFormatString js_ErrorFormatString[JSErr_Limit] = {
 #if JS_HAS_DFLT_MSG_STRINGS
 #define MSG_DEF(name, number, count, exception, format) \
-    { format, count } ,
+    { format, count, exception } ,
 #else
 #define MSG_DEF(name, number, count, exception, format) \
-    { NULL, count } ,
+    { NULL, count, exception } ,
 #endif
 #include "js.msg"
 #undef MSG_DEF

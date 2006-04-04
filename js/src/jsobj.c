@@ -427,15 +427,15 @@ MarkSharpObjects(JSContext *cx, JSObject *obj, JSIdArray **idap)
             return NULL;
         }
 
-        /* 
+        /*
          * Increment map->depth to protect js_EnterSharpObject from reentering
          * itself badly.  Without this fix, if we reenter the basis case where
          * map->depth == 0, when unwinding the inner call we will destroy the
          * newly-created hash table and crash.
          */
-	++map->depth;
+        ++map->depth;
         ida = JS_Enumerate(cx, obj);
-	--map->depth;
+        --map->depth;
         if (!ida)
             return NULL;
 
@@ -568,7 +568,7 @@ js_EnterSharpObject(JSContext *cx, JSObject *obj, JSIdArray **idap,
         len = JS_snprintf(buf, sizeof buf, "#%u%c",
                           sharpid >> SHARP_ID_SHIFT,
                           (sharpid & SHARP_BIT) ? '#' : '=');
-        *sp = js_InflateString(cx, buf, len);
+        *sp = js_InflateString(cx, buf, &len);
         if (!*sp) {
             if (ida)
                 JS_DestroyIdArray(cx, ida);
@@ -2088,6 +2088,7 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
                    JSObject *parent, uintN argc, jsval *argv)
 {
     jsval cval, rval;
+    JSTempValueRooter tvr;
     JSObject *obj, *ctor;
 
     if (!js_FindConstructor(cx, parent, clasp->name, &cval))
@@ -2096,6 +2097,13 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
         js_ReportIsNotFunction(cx, &cval, JSV2F_CONSTRUCT | JSV2F_SEARCH_STACK);
         return NULL;
     }
+
+    /*
+     * Protect cval in case a crazy getter for .prototype uproots it.  After
+     * this point, all control flow must exit through label out with obj set.
+     */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, cval, &tvr);
+    obj = NULL;
 
     /*
      * If proto or parent are NULL, set them to Constructor.prototype and/or
@@ -2109,7 +2117,7 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
                               ATOM_TO_JSID(cx->runtime->atomState
                                            .classPrototypeAtom),
                               &rval)) {
-            return NULL;
+            goto out;
         }
         if (JSVAL_IS_OBJECT(rval))
             proto = JSVAL_TO_OBJECT(rval);
@@ -2117,14 +2125,19 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
 
     obj = js_NewObject(cx, clasp, proto, parent);
     if (!obj)
-        return NULL;
+        goto out;
 
-    if (!js_InternalConstruct(cx, obj, cval, argc, argv, &rval))
-        goto bad;
-    return JSVAL_IS_OBJECT(rval) ? JSVAL_TO_OBJECT(rval) : obj;
-bad:
-    cx->newborn[GCX_OBJECT] = NULL;
-    return NULL;
+    if (!js_InternalConstruct(cx, obj, cval, argc, argv, &rval)) {
+        cx->newborn[GCX_OBJECT] = NULL;
+        obj = NULL;
+        goto out;
+    }
+
+    if (!JSVAL_IS_PRIMITIVE(rval))
+        obj = JSVAL_TO_OBJECT(rval);
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return obj;
 }
 
 void
@@ -3005,8 +3018,25 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         if ((attrs & JSPROP_READONLY) ||
             (SCOPE_IS_SEALED(scope) && pobj == obj)) {
             JS_UNLOCK_SCOPE(cx, scope);
-            if ((attrs & JSPROP_READONLY) && JS_VERSION_IS_ECMA(cx))
-                return JS_TRUE;
+
+            /*
+             * Here, we'll either return true or goto read_only_error, which
+             * reports a strict warning or throws an error.  So we redefine
+             * the |flags| local variable to be JSREPORT_* flags to pass to
+             * JS_ReportErrorFlagsAndNumberUC at label read_only_error.  We
+             * must likewise re-task flags further below for the other 'goto
+             * read_only_error;' case.
+             */
+            flags = JSREPORT_ERROR;
+            if ((attrs & JSPROP_READONLY) && JS_VERSION_IS_ECMA(cx)) {
+                if (!JS_HAS_STRICT_OPTION(cx)) {
+                    /* Just return true per ECMA if not in strict mode. */
+                    return JS_TRUE;
+                }
+
+                /* Strict mode: report a read-only strict warning. */
+                flags = JSREPORT_STRICT | JSREPORT_WARNING;
+            }
             goto read_only_error;
         }
 
@@ -3053,8 +3083,10 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     }
 
     if (!sprop) {
-        if (SCOPE_IS_SEALED(OBJ_SCOPE(obj)) && OBJ_SCOPE(obj)->object == obj)
+        if (SCOPE_IS_SEALED(OBJ_SCOPE(obj)) && OBJ_SCOPE(obj)->object == obj) {
+            flags = JSREPORT_ERROR;
             goto read_only_error;
+        }
 
         /* Find or make a property descriptor with the right heritage. */
         JS_LOCK_OBJ(cx, obj);
@@ -3128,12 +3160,11 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
                                                JSDVG_IGNORE_STACK,
                                                ID_TO_VALUE(id),
                                                NULL);
-    if (str) {
-        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                             JSMSG_READ_ONLY,
-                             JS_GetStringBytes(str));
-    }
-    return JS_FALSE;
+    if (!str)
+        return JS_FALSE;
+    return JS_ReportErrorFlagsAndNumberUC(cx, flags, js_GetErrorMessage,
+                                          NULL, JSMSG_READ_ONLY,
+                                          JS_GetStringChars(str));
   }
 }
 

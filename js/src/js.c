@@ -548,12 +548,6 @@ Options(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static void
-my_LoadErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
-
-static void
-my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
-
 static JSBool
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
@@ -563,7 +557,6 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSScript *script;
     JSBool ok;
     jsval result;
-    JSErrorReporter older;
     uint32 oldopts;
 
     for (i = 0; i < argc; i++) {
@@ -573,7 +566,6 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         argv[i] = STRING_TO_JSVAL(str);
         filename = JS_GetStringBytes(str);
         errno = 0;
-        older = JS_SetErrorReporter(cx, my_LoadErrorReporter);
         oldopts = JS_GetOptions(cx);
         JS_SetOptions(cx, oldopts | JSOPTION_COMPILE_N_GO);
         script = JS_CompileFile(cx, obj, filename);
@@ -586,7 +578,6 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             JS_DestroyScript(cx, script);
         }
         JS_SetOptions(cx, oldopts);
-        JS_SetErrorReporter(cx, older);
         if (!ok)
             return JS_FALSE;
     }
@@ -1032,7 +1023,8 @@ Disassemble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             }
         }
 
-        js_Disassemble(cx, script, lines, stdout);
+        if (!js_Disassemble(cx, script, lines, stdout))
+            return JS_FALSE;
         SrcNotes(cx, script);
         TryNotes(cx, script);
     }
@@ -1564,6 +1556,54 @@ ToInt32(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_NewNumberValue(cx, i, rval);
 }
 
+static JSBool
+StringsAreUtf8(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+               jsval *rval)
+{
+    *rval = JS_CStringsAreUTF8() ? JSVAL_TRUE : JSVAL_FALSE;
+    return JS_TRUE;
+}
+
+static const char* badUtf8 = "...\xC0...";
+static const char* bigUtf8 = "...\xFB\xBF\xBF\xBF\xBF...";
+static const jschar badSurrogate[] = { 'A', 'B', 'C', 0xDEEE, 'D', 'E', 0 };
+
+static JSBool
+TestUtf8(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    intN mode = 1;
+    jschar chars[20];
+    size_t charsLength = 5;
+    char bytes[20];
+    size_t bytesLength = 20;
+    if (argc && !JS_ValueToInt32(cx, *argv, &mode))
+        return JS_FALSE;
+
+    /* The following throw errors if compiled with UTF-8. */
+    switch (mode) {
+      /* mode 1: malformed UTF-8 string. */
+      case 1: 
+        JS_NewStringCopyZ(cx, badUtf8); 
+        break;
+      /* mode 2: big UTF-8 character. */
+      case 2: 
+        JS_NewStringCopyZ(cx, bigUtf8); 
+        break;
+      /* mode 3: bad surrogate character. */
+      case 3: 
+        JS_EncodeCharacters(cx, badSurrogate, 6, bytes, &bytesLength); 
+        break;
+      /* mode 4: use a too small buffer. */
+      case 4: 
+        JS_DecodeBytes(cx, "1234567890", 10, chars, &charsLength); 
+        break;
+      default:
+        JS_ReportError(cx, "invalid mode parameter");
+        return JS_FALSE;
+    }
+    return !JS_IsExceptionPending (cx);
+}
+
 static JSFunctionSpec shell_functions[] = {
     {"version",         Version,        0},
     {"options",         Options,        0},
@@ -1577,6 +1617,8 @@ static JSFunctionSpec shell_functions[] = {
     {"untrap",          Untrap,         2},
     {"line2pc",         LineToPC,       0},
     {"pc2line",         PCToLine,       0},
+    {"stringsAreUtf8",  StringsAreUtf8, 0},
+    {"testUtf8",        TestUtf8,       1},
 #ifdef DEBUG
     {"dis",             Disassemble,    1},
     {"dissrc",          DisassWithSrc,  1},
@@ -1616,6 +1658,8 @@ static char *shell_help_messages[] = {
     "untrap(fun[, pc])      Remove a trap",
     "line2pc([fun,] line)   Map line number to PC",
     "pc2line(fun[, pc])     Map PC to line number",
+    "stringsAreUTF8()       Check if strings are UTF-8 encoded",
+    "testUTF8(mode)         Perform UTF-8 tests (modes are 1 to 4)",
 #ifdef DEBUG
     "dis([fun])             Disassemble functions into bytecodes",
     "dissrc([fun])          Disassemble functions with source lines",
@@ -1643,14 +1687,14 @@ static char *shell_help_messages[] = {
 static void
 ShowHelpHeader(void)
 {
-    fprintf(gOutFile, "%-9s %-22s %s\n", "Command", "Usage", "Description");
-    fprintf(gOutFile, "%-9s %-22s %s\n", "=======", "=====", "===========");
+    fprintf(gOutFile, "%-14s %-22s %s\n", "Command", "Usage", "Description");
+    fprintf(gOutFile, "%-14s %-22s %s\n", "=======", "=====", "===========");
 }
 
 static void
 ShowHelpForCommand(uintN n)
 {
-    fprintf(gOutFile, "%-9.9s %s\n", shell_functions[n].name, shell_help_messages[n]);
+    fprintf(gOutFile, "%-14.14s %s\n", shell_functions[n].name, shell_help_messages[n]);
 }
 
 static JSBool
@@ -1919,22 +1963,6 @@ my_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
     if ((errorNumber > 0) && (errorNumber < JSShellErr_Limit))
         return &jsShell_ErrorFormatString[errorNumber];
     return NULL;
-}
-
-static void
-my_LoadErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
-{
-    if (!report) {
-        fprintf(gErrFile, "%s\n", message);
-        return;
-    }
-
-    /* Ignore any exceptions */
-    if (JSREPORT_IS_EXCEPTION(report->flags))
-        return;
-
-    /* Otherwise, fall back to the ordinary error reporter. */
-    my_ErrorReporter(cx, message, report);
 }
 
 static void

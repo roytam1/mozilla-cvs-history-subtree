@@ -741,7 +741,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 {
     JSOp op, prevop;
     JSParseNode *pn, *body, *result;
-    JSAtom *funAtom, *argAtom;
+    JSAtom *funAtom, *objAtom, *argAtom;
     JSStackFrame *fp;
     JSObject *varobj, *pobj;
     JSAtomListElement *ale;
@@ -863,11 +863,26 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         fun->flags |= (op == JSOP_GETTER) ? JSPROP_GETTER : JSPROP_SETTER;
 #endif
 
+
     /*
      * Set interpreted early so js_EmitTree can test it to decide whether to
      * eliminate useless expressions.
      */
     fun->interpreted = JS_TRUE;
+
+    /*
+     * Atomize fun->object early to protect against a last-ditch GC under
+     * js_LookupHiddenProperty.
+     *
+     * Absent use of the new scoped local GC roots API around compiler calls,
+     * we need to atomize here to protect against a GC activation.  Atoms are
+     * protected from GC during compilation by the JS_FRIEND_API entry points
+     * in this file.  There doesn't seem to be any gain in switching from the
+     * atom-keeping method to the bulkier, slower scoped local roots method.
+     */
+    objAtom = js_AtomizeObject(cx, fun->object, 0);
+    if (!objAtom)
+        return NULL;
 
     /* Now parse formal argument list and compute fun->nargs. */
     MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_BEFORE_FORMAL);
@@ -996,17 +1011,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 #endif
         op = JSOP_NOP;
 
-    /*
-     * Absent use of the new scoped local GC roots API around compiler calls,
-     * we need to atomize here to protect against a GC activation.  Atoms are
-     * protected from GC during compilation by the JS_FRIEND_API entry points
-     * in this file.  There doesn't seem to be any gain in switching from the
-     * atom-keeping method to the bulkier, slower scoped local roots method.
-     */
-    pn->pn_funAtom = js_AtomizeObject(cx, fun->object, 0);
-    if (!pn->pn_funAtom)
-        return NULL;
-
+    pn->pn_funAtom = objAtom;
     pn->pn_op = op;
     pn->pn_body = body;
     pn->pn_flags = funtc.flags & (TCF_FUN_FLAGS | TCF_HAS_DEFXMLNS);
@@ -1576,10 +1581,19 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             stmtInfo.type = STMT_FOR_IN_LOOP;
 
             /* Check that the left side of the 'in' is valid. */
+            while (pn1->pn_type == TOK_RP)
+                pn1 = pn1->pn_kid;
             if ((pn1->pn_type == TOK_VAR)
                 ? (pn1->pn_count > 1 || pn1->pn_op == JSOP_DEFCONST)
                 : (pn1->pn_type != TOK_NAME &&
                    pn1->pn_type != TOK_DOT &&
+#if JS_HAS_LVALUE_RETURN
+                   pn1->pn_type != TOK_LP &&
+#endif
+#if JS_HAS_XML_SUPPORT
+                   (pn1->pn_type != TOK_UNARYOP ||
+                    pn1->pn_op != JSOP_XMLNAME) &&
+#endif
                    pn1->pn_type != TOK_LB)) {
                 js_ReportCompileErrorNumber(cx, ts,
                                             JSREPORT_TS | JSREPORT_ERROR,
@@ -1597,6 +1611,14 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                     pn1->pn_extra |= PNX_POPVAR;
             } else {
                 pn2 = pn1;
+#if JS_HAS_LVALUE_RETURN
+                if (pn2->pn_type == TOK_LP)
+                    pn2->pn_op = JSOP_SETCALL;
+#endif
+#if JS_HAS_XML_SUPPORT
+                if (pn2->pn_type == TOK_UNARYOP)
+                    pn2->pn_op = JSOP_BINDXMLNAME;
+#endif
             }
 
             /* Beware 'for (arguments in ...)' with or without a 'var'. */
@@ -2437,11 +2459,8 @@ AssignExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 #if JS_HAS_LVALUE_RETURN
       case TOK_LP:
-        if (pn2->pn_op == JSOP_CALL) {
-            pn2->pn_op = JSOP_SETCALL;
-            break;
-        }
-        /* FALL THROUGH */
+        pn2->pn_op = JSOP_SETCALL;
+        break;
 #endif
 #if JS_HAS_XML_SUPPORT
       case TOK_UNARYOP:
@@ -2896,7 +2915,9 @@ MemberExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         if (!pn)
             return NULL;
 
-        if (pn->pn_type == TOK_AT || pn->pn_type == TOK_DBLCOLON) {
+        if (pn->pn_type == TOK_ANYNAME ||
+            pn->pn_type == TOK_AT ||
+            pn->pn_type == TOK_DBLCOLON) {
             pn2 = NewOrRecycledNode(cx, tc);
             if (!pn2)
                 return NULL;
@@ -4336,6 +4357,8 @@ FoldXMLConstants(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
           case TOK_XMLSPACE:
           case TOK_XMLTEXT:
           case TOK_STRING:
+            if (pn->pn_arity == PN_LIST)
+                goto cantfold;
             str = ATOM_TO_STRING(pn2->pn_atom);
             break;
 
@@ -4358,6 +4381,7 @@ FoldXMLConstants(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
                 return JS_FALSE;
             break;
 
+          cantfold:
           default:
             JS_ASSERT(*pnp == pn1);
             if ((tt == TOK_XMLSTAGO || tt == TOK_XMLPTAGC) &&

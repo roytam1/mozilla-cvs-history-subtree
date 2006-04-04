@@ -333,10 +333,8 @@ js_InitGC(JSRuntime *rt, uint32 maxbytes)
     JS_ASSERT(GC_FLAGS_SIZE >= GC_PAGE_SIZE);
     JS_ASSERT(sizeof(JSStackHeader) >= 2 * sizeof(jsval));
 
-    for (i = 0; i < GC_NUM_FREELISTS; i++) {
-        JS_InitArenaPool(&rt->gcArenaPool[i], "gc-arena", GC_ARENA_SIZE,
-                         GC_FREELIST_NBYTES(i));
-    }
+    for (i = 0; i < GC_NUM_FREELISTS; i++)
+        JS_InitArenaPool(&rt->gcArenaPool[i], "gc-arena", GC_ARENA_SIZE, 1);
     if (!JS_DHashTableInit(&rt->gcRootsHash, JS_DHashGetStubOps(), NULL,
                            sizeof(JSGCRootHashEntry), GC_ROOTS_SIZE)) {
         rt->gcRootsHash.ops = NULL;
@@ -1530,6 +1528,7 @@ js_GC(JSContext *cx, uintN gcflags)
     JSStackFrame *fp, *chain;
     uintN i, depth, nslots, type;
     JSStackHeader *sh;
+    JSTempValueRooter *tvr;
     size_t nbytes, nflags;
     JSArena *a, **ap;
     uint8 flags, *flagp, *split;
@@ -1799,6 +1798,16 @@ restart:
 
         if (acx->localRootStack)
             js_MarkLocalRoots(cx, acx->localRootStack);
+        for (tvr = acx->tempValueRooters; tvr; tvr = tvr->down) {
+            if (tvr->count < 0) {
+                if (JSVAL_IS_GCTHING(tvr->u.value)) {
+                    GC_MARK(cx, JSVAL_TO_GCTHING(tvr->u.value), "tvr->u.value",
+                            NULL);
+                }
+            } else {
+                GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");
+            }
+        }
     }
 #ifdef DUMP_CALL_TABLE
     js_DumpCallTable(cx);

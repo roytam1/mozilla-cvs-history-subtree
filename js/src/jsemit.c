@@ -546,7 +546,7 @@ BuildSpanDepTable(JSContext *cx, JSCodeGenerator *cg)
     const JSCodeSpec *cs;
     ptrdiff_t len, off;
 
-    pc = CG_BASE(cg);
+    pc = CG_BASE(cg) + cg->spanDepTodo;
     end = CG_NEXT(cg);
     while (pc < end) {
         op = (JSOp)*pc;
@@ -611,6 +611,7 @@ BuildSpanDepTable(JSContext *cx, JSCodeGenerator *cg)
 #endif /* JS_HAS_SWITCH_STATEMENT */
         }
 
+        JS_ASSERT(len > 0);
         pc += len;
     }
 
@@ -1037,6 +1038,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
                 }
             }
         }
+        cg->main.lastNoteOffset += growth;
 
         /*
          * Fix try/catch notes (O(numTryNotes * log2(numSpanDeps)), but it's
@@ -1130,6 +1132,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
     FreeJumpTargets(cg, cg->jumpTargets);
     cg->jumpTargets = NULL;
     cg->numSpanDeps = cg->numJumpTargets = 0;
+    cg->spanDepTodo = CG_OFFSET(cg);
     return JS_TRUE;
 }
 
@@ -1644,17 +1647,19 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
     jsbytecode *pc;
 
     if (atomIndex >= JS_BIT(16)) {
-        mode = (js_CodeSpec[op].format & JOF_MODEMASK);
-        prefixOp = (mode == JOF_NAME)
-                   ? JSOP_FINDNAME
-                   : (mode == JOF_PROP)
-                   ? JSOP_LITERAL
-                   : JSOP_LITOPX;
-        off = js_EmitN(cx, cg, prefixOp, 3);
-        if (off < 0)
-            return JS_FALSE;
-        pc = CG_CODE(cg, off);
-        SET_LITERAL_INDEX(pc, atomIndex);
+        if (op != JSOP_SETNAME) {
+            mode = (js_CodeSpec[op].format & JOF_MODEMASK);
+            prefixOp = (mode == JOF_NAME)
+                       ? JSOP_FINDNAME
+                       : (mode == JOF_PROP)
+                       ? JSOP_LITERAL
+                       : JSOP_LITOPX;
+            off = js_EmitN(cx, cg, prefixOp, 3);
+            if (off < 0)
+                return JS_FALSE;
+            pc = CG_CODE(cg, off);
+            SET_LITERAL_INDEX(pc, atomIndex);
+        }
 
         switch (op) {
           case JSOP_DECNAME:    op = JSOP_DECELEM; break;
@@ -1673,6 +1678,7 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
           case JSOP_NAMEINC:    op = JSOP_ELEMINC; break;
           case JSOP_PROPDEC:    op = JSOP_ELEMDEC; break;
           case JSOP_PROPINC:    op = JSOP_ELEMINC; break;
+          case JSOP_BINDNAME:   return JS_TRUE;
           case JSOP_SETNAME:    op = JSOP_SETELEM; break;
           case JSOP_SETPROP:    op = JSOP_SETELEM; break;
           default:              JS_ASSERT(mode == 0); break;
@@ -2043,8 +2049,8 @@ CheckSideEffects(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
             }
         }
         pn2 = pn->pn_expr;
-        if (pn->pn_type == TOK_DOT && pn2->pn_type == TOK_NAME) {
-            if (!LookupArgOrVar(cx, tc, pn2))
+        if (pn->pn_type == TOK_DOT) {
+            if (pn2->pn_type == TOK_NAME && !LookupArgOrVar(cx, tc, pn2))
                 return JS_FALSE;
             if (!(pn2->pn_op == JSOP_ARGUMENTS &&
                   pn->pn_atom == cx->runtime->atomState.lengthAtom)) {
@@ -3261,6 +3267,12 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 }
                 /* FALL THROUGH */
 
+#if JS_HAS_XML_SUPPORT
+              case TOK_UNARYOP:
+#endif
+#if JS_HAS_LVALUE_RETURN
+              case TOK_LP:
+#endif
               case TOK_LB:
                 /*
                  * We separate the first/next bytecode from the enumerator
@@ -3285,6 +3297,27 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 beq = EmitJump(cx, cg, JSOP_IFEQ, 0);
                 if (beq < 0)
                     return JS_FALSE;
+
+#if JS_HAS_LVALUE_RETURN
+                if (pn3->pn_type == TOK_LP) {
+                    JS_ASSERT(pn3->pn_op == JSOP_SETCALL);
+                    if (!js_EmitTree(cx, cg, pn3))
+                        return JS_FALSE;
+                    if (!js_Emit1(cx, cg, JSOP_ENUMELEM))
+                        return JS_FALSE;
+                    break;
+                }
+#endif
+#if JS_HAS_XML_SUPPORT
+                if (pn3->pn_type == TOK_UNARYOP) {
+                    JS_ASSERT(pn3->pn_op == JSOP_BINDXMLNAME);
+                    if (!js_EmitTree(cx, cg, pn3))
+                        return JS_FALSE;
+                    if (!js_Emit1(cx, cg, JSOP_ENUMELEM))
+                        return JS_FALSE;
+                    break;
+                }
+#endif
 
                 /* Now that we're safely past the IFEQ, commit side effects. */
                 if (!EmitElemOp(cx, pn3, JSOP_ENUMELEM, cg))
@@ -4376,6 +4409,19 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
           default:
             JS_ASSERT(0);
         }
+
+        /*
+         * Allocate another stack slot for GC protection in case the initial
+         * value being post-incremented or -decremented is not a number, but
+         * converts to a jsdouble.  In the TOK_NAME cases, op has 0 operand
+         * uses and 1 definition, so we don't need an extra stack slot -- we
+         * can use the one allocated for the def.
+         */
+        if (pn2->pn_type != TOK_NAME &&
+            (js_CodeSpec[op].format & JOF_POST) &&
+            (uintN)cg->stackDepth == cg->maxStackDepth) {
+            ++cg->maxStackDepth;
+        }
         break;
 
       case TOK_DELETE:
@@ -4684,6 +4730,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
 #if JS_HAS_XML_SUPPORT
       case TOK_XMLATTR:
+      case TOK_XMLSPACE:
       case TOK_XMLTEXT:
       case TOK_XMLCDATA:
       case TOK_XMLCOMMENT:

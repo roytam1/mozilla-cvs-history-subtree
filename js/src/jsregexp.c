@@ -1925,7 +1925,10 @@ js_NewRegExp(JSContext *cx, JSTokenStream *ts,
 
     state.context = cx;
     state.tokenStream = ts;
-    state.cpbegin = state.cp = JSSTRING_CHARS(str);
+    state.cp = js_UndependString(cx, str);
+    if (!state.cp)
+        goto out;
+    state.cpbegin = state.cp;
     state.cpend = state.cp + len;
     state.flags = flags;
     state.parenCount = 0;
@@ -4110,6 +4113,7 @@ js_NewRegExpObject(JSContext *cx, JSTokenStream *ts,
     JSString *str;
     JSObject *obj;
     JSRegExp *re;
+    JSTempValueRooter tvr;
 
     str = js_NewStringCopyN(cx, chars, length, 0);
     if (!str)
@@ -4117,11 +4121,15 @@ js_NewRegExpObject(JSContext *cx, JSTokenStream *ts,
     re = js_NewRegExp(cx, ts,  str, flags, JS_FALSE);
     if (!re)
         return NULL;
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, STRING_TO_JSVAL(str), &tvr);
     obj = js_NewObject(cx, &js_RegExpClass, NULL, NULL);
-    if (!obj || !JS_SetPrivate(cx, obj, re) || !js_SetLastIndex(cx, obj, 0)) {
+    if (!obj || !JS_SetPrivate(cx, obj, re)) {
         js_DestroyRegExp(cx, re);
-        return NULL;
+        obj = NULL;
     }
+    if (obj && !js_SetLastIndex(cx, obj, 0))
+        obj = NULL;
+    JS_POP_TEMP_ROOT(cx, &tvr);
     return obj;
 }
 

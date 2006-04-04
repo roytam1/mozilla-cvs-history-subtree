@@ -122,7 +122,7 @@ GetJumpOffset(jsbytecode *pc, jsbytecode *pc2)
 
 #ifdef DEBUG
 
-JS_FRIEND_API(void)
+JS_FRIEND_API(JSBool)
 js_Disassemble(JSContext *cx, JSScript *script, JSBool lines, FILE *fp)
 {
     jsbytecode *pc, *end;
@@ -137,9 +137,10 @@ js_Disassemble(JSContext *cx, JSScript *script, JSBool lines, FILE *fp)
                               PTRDIFF(pc, script->code, jsbytecode),
                               lines, fp);
         if (!len)
-            return;
+            return JS_FALSE;
         pc += len;
     }
+    return JS_TRUE;
 }
 
 JS_FRIEND_API(uintN)
@@ -273,6 +274,48 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
         fprintf(fp, " %s", JS_GetStringBytes(str));
         break;
 #endif
+
+      case JOF_UINT24:
+        if (op == JSOP_FINDNAME) {
+            /* Special case to avoid a JOF_FINDNAME just for this op. */
+            atom = js_GetAtom(cx, &script->atomMap, GET_LITERAL_INDEX(pc));
+            str = js_ValueToSource(cx, ATOM_KEY(atom));
+            if (!str)
+                return 0;
+            fprintf(fp, " %s", JS_GetStringBytes(str));
+            break;
+        }
+
+        JS_ASSERT(op == JSOP_UINT24 || op == JSOP_LITERAL);
+        fprintf(fp, " %u", GET_LITERAL_INDEX(pc));
+        break;
+
+      case JOF_LITOPX:
+        atom = js_GetAtom(cx, &script->atomMap, GET_LITERAL_INDEX(pc));
+        str = js_ValueToSource(cx, ATOM_KEY(atom));
+        if (!str)
+            return 0;
+
+        /*
+         * Bytecode: JSOP_LITOPX <uint24> op [<varno> if JSOP_DEFLOCALFUN].
+         * Advance pc to point at op.
+         */
+        pc += 1 + LITERAL_INDEX_LEN;
+        op = *pc;
+        cs = &js_CodeSpec[op];
+        fprintf(fp, " %s op %s", JS_GetStringBytes(str), cs->name);
+#if JS_HAS_LEXICAL_CLOSURE
+        if ((cs->format & JOF_TYPEMASK) == JOF_INDEXCONST)
+            fprintf(fp, " %u", GET_VARNO(pc));
+#endif
+
+        /*
+         * Set len to advance pc to skip op and any other immediates (namely,
+         * <varno> if JSOP_DEFLOCALFUN).
+         */
+        JS_ASSERT(cs->length > ATOM_INDEX_LEN);
+        len = cs->length - ATOM_INDEX_LEN;
+        break;
 
       default: {
         char numBuf[12];
@@ -420,10 +463,30 @@ QuoteString(Sprinter *sp, JSString *str, jschar quote)
             break;
 
         /* Use js_EscapeMap, \u, or \x only if necessary. */
-        if ((u = js_strchr(js_EscapeMap, c)) != NULL)
+        if ((u = js_strchr(js_EscapeMap, c)) != NULL) {
             ok = Sprint(sp, "\\%c", (char)u[1]) >= 0;
-        else
+        } else {
+#ifdef JS_C_STRINGS_ARE_UTF8
+            /* If this is a surrogate pair, make sure to print the pair. */
+            if (c >= 0xD800 && c <= 0xDBFF) {
+                jschar buffer[3];
+                buffer[0] = c;
+                buffer[1] = *++t;
+                buffer[2] = 0;
+                if (t == z) {
+                    ok = JS_FALSE;
+                    break;
+                }
+                ok = Sprint(sp, "%hs", buffer) >= 0;
+            } else {
+                /* Print as UTF-8 string. */
+                ok = Sprint(sp, "%hc", c) >= 0;
+            }
+#else
+            /* Use \uXXXX or \xXX  if the string cannot be displayed as UTF-8. */
             ok = Sprint(sp, (c >> 8) ? "\\u%04X" : "\\x%02X", c) >= 0;
+#endif
+        }
         if (!ok)
             return NULL;
     }
@@ -813,20 +876,13 @@ GetSlotAtom(JSPrinter *jp, JSPropertyOp getter, uintN slot)
 static const char *
 VarPrefix(jssrcnote *sn)
 {
-    const char *kw;
-    static char buf[8];
-
-    kw = NULL;
     if (sn) {
         if (SN_TYPE(sn) == SRC_VAR)
-            kw = js_var_str;
-        else if (SN_TYPE(sn) == SRC_CONST)
-            kw = js_const_str;
+            return "var ";
+        if (SN_TYPE(sn) == SRC_CONST)
+            return "const ";
     }
-    if (!kw)
-        return "";
-    JS_snprintf(buf, sizeof buf, "%s ", kw);
-    return buf;
+    return "";
 }
 
 static JSBool
@@ -849,7 +905,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     JSString *str;
     JSBool ok;
 #if JS_HAS_XML_SUPPORT
-    JSBool inXML, quoteAttr;
+    JSBool foreach, inXML, quoteAttr;
 #else
 #define inXML JS_FALSE
 #endif
@@ -911,7 +967,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     sn = NULL;
     rval = NULL;
 #if JS_HAS_XML_SUPPORT
-    inXML = quoteAttr = JS_FALSE;
+    foreach = inXML = quoteAttr = JS_FALSE;
 #endif
 
     while (pc < endpc) {
@@ -1129,6 +1185,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         str = js_GetPrinterOutput(jp2);
                         if (str)
                             js_printf(jp, "%s\n", JS_GetStringBytes(str));
+                        else
+                            ok = JS_FALSE;
                     }
                     js_DestroyPrinter(jp2);
                     if (!ok)
@@ -1526,7 +1584,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               do_forinbody:
 #if JS_HAS_XML_SUPPORT
-                if (lastop == JSOP_FOREACH) {
+                if (foreach) {
+                    foreach = JS_FALSE;
                     js_printf(jp, "\tfor %s (%s%s",
                               js_each_str, VarPrefix(sn), lval);
                 } else
@@ -1538,10 +1597,10 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         return JS_FALSE;
                     RETRACT(&ss->sprinter, xval);
                     js_printf(jp, *lval ? ".%s" : "%s", xval);
-                } else if (xval) {
+                } else if (xval && *xval) {
                     js_printf(jp,
                               (js_CodeSpec[lastop].format & JOF_XMLNAME)
-                              ? ".%s%s"
+                              ? ".%s"
                               : "[%s]",
                               xval);
                 }
@@ -2337,6 +2396,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #if JS_HAS_LEXICAL_CLOSURE
               BEGIN_LITOPX_CASE(JSOP_CLOSURE)
                 JS_ASSERT(ATOM_IS_OBJECT(atom));
+                todo = -2;
                 goto do_function;
               END_LITOPX_CASE
 #endif
@@ -2589,12 +2649,16 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 inXML = JS_FALSE;
                 break;
 
+              case JSOP_FOREACH:
+                foreach = JS_TRUE;
+                todo = -2;
+                break;
+
               case JSOP_TOXML:
                 inXML = JS_FALSE;
-                /* fall through */
+                /* FALL THROUGH */
 
               case JSOP_XMLNAME:
-              case JSOP_FOREACH:
               case JSOP_FILTER:
                 /* Conversion and prefix ops do nothing in the decompiler. */
                 todo = -2;
@@ -3067,8 +3131,8 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
         }
         if (js_DecompileCode(jp, script, begin, len))
             name = js_GetPrinterOutput(jp);
+        js_DestroyPrinter(jp);
     }
-    js_DestroyPrinter(jp);
     if (tmp)
         JS_free(cx, tmp);
     return name;
