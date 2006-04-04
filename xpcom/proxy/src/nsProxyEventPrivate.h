@@ -173,14 +173,14 @@ private:
     // This destructor must only be called from within the manager monitor.
     ~nsProxyEventObject();
 
-    nsCOMPtr<nsProxyEventClass> mClass;
+    nsRefPtr<nsProxyEventClass> mClass;
     nsISomeInterface*           mXPTCStub;
 
     // the non-proxy interface that this proxy refers to. */
     nsCOMPtr<nsISomeInterface>  mRealInterface;
 
     // Owning reference...
-    nsCOMPtr<nsProxyCanonicalObject> mRoot;
+    nsRefPtr<nsProxyCanonicalObject> mRoot;
 
     // Weak reference, managed by our canonical root
     nsProxyEventObject *mNext;

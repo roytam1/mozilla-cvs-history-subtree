@@ -159,8 +159,6 @@ void XXXNeverCalled()
     PurePrintf(0);
 #endif
     XPTC_InvokeByIndex(nsnull, 0, 0, nsnull);
-    xptc_dummy();
-    xptc_dummy2();
     NS_NewGenericFactory(nsnull, nsnull);
     NS_NewGenericModule2(nsnull, nsnull);
     NS_GetWeakReference(nsnull);
