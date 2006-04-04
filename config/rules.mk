@@ -1549,6 +1549,7 @@ endif
 ifneq ($(XPI_PKGNAME),)
 libs realchrome::
 ifdef STRIP_XPI
+ifndef MOZ_DEBUG
 	@echo "Stripping $(XPI_PKGNAME) package directory..."
 	@echo $(FINAL_TARGET)
 	@cd $(FINAL_TARGET) && find . ! -type d \
@@ -1574,6 +1575,7 @@ ifdef STRIP_XPI
 			! -name "*.reg" \
 			$(PLATFORM_EXCLUDE_LIST) \
 			-exec $(STRIP) $(STRIP_FLAGS) {} >/dev/null 2>&1 \;
+endif
 endif
 	@echo "Packaging $(XPI_PKGNAME).xpi..."
 	cd $(FINAL_TARGET) && $(ZIP) -qr ../$(XPI_PKGNAME).xpi *
