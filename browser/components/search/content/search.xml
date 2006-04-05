@@ -81,24 +81,19 @@
     <implementation implements="nsIObserver">
 
       <constructor><![CDATA[
-        var os =
-               Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Components.interfaces.nsIObserverService);
-        os.addObserver(this, "browser-search-engine-modified", false);
-        os.addObserver(this, "browser-search-service", false);
-        
-        // Use the async init since we're loading on startup. We'll get
-        // notified via the "browser-search-service" observer above when the
-        // loading is done 
-        this.searchService.asyncInit();
+        setTimeout(function (a) { a.init(); }, 0, this);
       ]]></constructor>
 
-      <method name="_init">
+      <method name="init">
         <body><![CDATA[
           // Refresh the display (updating icon, etc)
           this.updateDisplay();
           this.populatePopup();
-          this._initialized = true;
+  
+          var os =
+                 Components.classes["@mozilla.org/observer-service;1"]
+                           .getService(Components.interfaces.nsIObserverService);
+          os.addObserver(this, "browser-search-engine-modified", false);
         ]]></body>
       </method>
 
@@ -106,7 +101,6 @@
         var os = Components.classes["@mozilla.org/observer-service;1"]
                    .getService(Components.interfaces.nsIObserverService);
         os.removeObserver(this, "browser-search-engine-modified");
-        os.removeObserver(this, "browser-search-service");
       ]]></destructor>
 
       <field name="_stringBundle">document.getAnonymousNodes(this)[0];</field>
@@ -117,7 +111,6 @@
                                                 "searchbar-popup");
       </field>
       <field name="_ss">null</field>
-      <field name="_initialized">false</field>
 
       <property name="currentEngine" onset="this.searchService.currentEngine = val;"
                                      onget="return this.searchService.currentEngine;"/>
@@ -155,24 +148,17 @@
         <parameter name="aTopic"/>
         <parameter name="aVerb"/>
         <body><![CDATA[
-          if (aTopic == "browser-search-engine-modified" && this._initialized)  {
-            switch (aVerb) {
-              case "engine-removed":
-              case "engine-added":
-              case "engine-changed":
-                // An engine was removed (or hidden), added, or an icon was
-                // changed, so rebuild the popup menu
-                this.populatePopup();
-                // Fall through
-              case "engine-current":
-                // The current engine was changed, so just update the displayed
-                // icon
-                this.updateDisplay();
-                break;
-            }
-          } else if (aTopic == "browser-search-service" &&
-                     aVerb  == "ready") {
-            this._init();
+          switch (aVerb) {
+            case "engine-removed":
+            case "engine-added":
+            case "engine-changed":
+              // An engine was removed (or hidden), added, or an icon was
+              // changed
+              this.populatePopup();
+              // Fall through
+            case "engine-current":
+              // The current engine was changed
+              this.updateDisplay();
           }
         ]]></body>
       </method>
