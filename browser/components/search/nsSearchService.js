@@ -40,6 +40,22 @@ const Ci = Components.interfaces;
 const Cc = Components.classes;
 const Cr = Components.results;
 
+const nsIBinaryInputStream = Ci.nsIBinaryInputStream;
+const nsIComponentRegistrar = Ci.nsIComponentRegistrar;
+const nsIDOMParser = Ci.nsIDOMParser;
+const nsIFile = Ci.nsIFile;
+const nsIFileInputStream = Ci.nsIFileInputStream;
+const nsIHttpChannel = Ci.nsIHttpChannel;
+const nsIIOService = Ci.nsIIOService;
+const nsILocalFile = Ci.nsILocalFile;
+const nsIObserverService = Ci.nsIObserverService;
+const nsIPrefBranch = Ci.nsIPrefBranch;
+const nsIPrefLocalizedString = Ci.nsIPrefLocalizedString;
+const nsIProperties = Ci.nsIProperties;
+const nsISearchEngine = Ci.nsISearchEngine;
+const nsISupports = Ci.nsISupports;
+const nsIURI = Ci.nsIURI;
+
 const PERMS_FILE      = 0644;
 const PERMS_DIRECTORY = 0755;
 
@@ -48,6 +64,9 @@ const MODE_WRONLY   = 0x02;
 const MODE_CREATE   = 0x08;
 const MODE_APPEND   = 0x10;
 const MODE_TRUNCATE = 0x20;
+
+const DIRECTORY_TYPE    = nsIFile.DIRECTORY_TYPE;
+const NORMAL_FILE_TYPE  = nsIFile.NORMAL_FILE_TYPE;
 
 const NS_APP_SEARCH_DIR_LIST = "SrchPluginsDL";
 const NS_APP_USER_SEARCH_DIR = "UsrSrchPlugns";
@@ -58,8 +77,21 @@ const SEARCH_ENGINE_TOPIC        = "browser-search-engine-modified";
 const SEARCH_ENGINE_REMOVED      = "engine-removed";
 const SEARCH_ENGINE_ADDED        = "engine-added";
 const SEARCH_ENGINE_CHANGED      = "engine-changed";
-const SEARCH_ENGINE_LOADED       = "engine-loaded";
 const SEARCH_ENGINE_CURRENT      = "engine-current";
+
+const SEARCH_SERVICE_TOPIC       = "browser-search-service";
+
+const SEARCH_SERVICE_READY               = "ready";
+const SEARCH_SERVICE_ENGINE_LOADED       = "engine-loaded";
+const SEARCH_SERVICE_ENGINE_LOADED_REMOTE   = "engine-loaded-uri";
+const SEARCH_SERVICE_ENGINE_LOAD_FAILED  = "engine-load-failed";
+
+const SEARCH_TYPE_MOZSEARCH   = nsISearchEngine.TYPE_MOZSEARCH;
+const SEARCH_TYPE_OPENSEARCH  = nsISearchEngine.TYPE_OPENSEARCH;
+const SEARCH_TYPE_SHERLOCK    = nsISearchEngine.TYPE_SHERLOCK;
+
+const SEARCH_DATA_XML   = nsISearchEngine.DATA_XML;
+const SEARCH_DATA_TEXT  = nsISearchEngine.DATA_TEXT;
 
 const XPCOM_SHUTDOWN_TOPIC       = "xpcom-shutdown";
 
@@ -108,9 +140,14 @@ const kIllegalWords = /(\{count\})|(\{startIndex\})|(\{startPage\})|(\{language\
 const kValidWords = /\{searchTerms\}/gi;
 const kUserDefined = "{searchTerms}";
 
-// Regular expression matching whitespace-only or commented out lines in a
-// Sherlock file.
-const kUselessLine = /^\s*($|#)/i;
+/**
+ * Returns true if aLine is a whitespace-only or commented out line.
+ */
+function isUseLessLine(aLine) {
+  return !/^\s*($|#)/i.test(aLine);
+}
+
+const kNewLines    = /(\r\n|\r|\n)/;
 
 /**
  * Used to determine whether an "input" line from a Sherlock file is a "user
@@ -126,7 +163,7 @@ const kIsUserInput = /(\s|["'=])user(\s|[>="'\/\\+]|$)/i;
  */
 function LOG(aText) {
   var prefB = Cc["@mozilla.org/preferences-service;1"].
-              getService(Ci.nsIPrefBranch);
+              getService(nsIPrefBranch);
   var shouldLog = false;
   try {
     shouldLog = prefB.getBoolPref(BROWSER_SEARCH_PREF + "log");
@@ -266,7 +303,7 @@ function iconLoadListener(aChannel, aEngine) {
   this._countRead = 0;
   this._channel = aChannel;
   this._bytes = [],
-  this._engine = aEngine.QueryInterface(Ci.nsISearchEngine);
+  this._engine = aEngine;
 }
 iconLoadListener.prototype = {
   _channel: null,
@@ -275,7 +312,7 @@ iconLoadListener.prototype = {
   _stream: null,
 
   QueryInterface: function SRCH_iconLoad_QI(aIID) {
-    if (aIID.equals(Ci.nsISupports)           ||
+    if (aIID.equals(nsISupports)              ||
         aIID.equals(Ci.nsIRequestObserver)    ||
         aIID.equals(Ci.nsIStreamListener)     ||
         aIID.equals(Ci.nsIChannelEventSink)   ||
@@ -293,12 +330,12 @@ iconLoadListener.prototype = {
   onStartRequest: function SRCH_iconLoadStartR(aRequest, aContext) {
     LOG("iconLoadListener: Starting icon request.");
     this._stream = Cc["@mozilla.org/binaryinputstream;1"].
-                   createInstance(Ci.nsIBinaryInputStream);
+                   createInstance(nsIBinaryInputStream);
   },
 
   onStopRequest: function SRCH_iconLoadStopR(aRequest, aContext, aStatusCode) {
     LOG("iconLoadListener: Stopping icon request.");
-    var httpChannel = this._channel.QueryInterface(Ci.nsIHttpChannel);
+    var httpChannel = this._channel.QueryInterface(nsIHttpChannel);
     if ((httpChannel && httpChannel.requestSucceeded) &&
         Components.isSuccessCode(aStatusCode)         &&
         this._countRead > 0) {
@@ -313,7 +350,7 @@ iconLoadListener.prototype = {
         // _onLoad is called.
         if (this._engine._file)
           this._engine._serializeToFile();
-        notifyAction(this._engine, SEARCH_ENGINE_CHANGED);
+        notifyForEngine(this._engine, SEARCH_ENGINE_CHANGED);
       }
     }
     this._channel = null;
@@ -396,7 +433,7 @@ function closeSafeOutputStream(aFOS) {
  */
 function makeURI(aURLSpec) {
   var ios = Cc["@mozilla.org/network/io-service;1"].
-            getService(Ci.nsIIOService);
+            getService(nsIIOService);
   try {
     return ios.newURI(aURLSpec, null, null);
   } catch (ex) { }
@@ -413,8 +450,8 @@ function getDir(aKey) {
   ENSURE_ARG(aKey, "getDir requires a directory key!");
 
   var fileLocator = Cc["@mozilla.org/file/directory_service;1"].
-                    getService(Ci.nsIProperties);
-  var dir = fileLocator.get(aKey, Ci.nsIFile);
+                    getService(nsIProperties);
+  var dir = fileLocator.get(aKey, nsIFile);
   return dir;
 }
 
@@ -478,10 +515,9 @@ function getCharSetFromCode(aCode) {
  */
 function getLocalizedPref(aPrefName, aDefault) {
   var prefB = Cc["@mozilla.org/preferences-service;1"].
-              getService(Ci.nsIPrefBranch);
-  const nsIPLS = Ci.nsIPrefLocalizedString;
+              getService(nsIPrefBranch);
   try {
-    return prefB.getComplexValue(aPrefName, nsIPLS).data;
+    return prefB.getComplexValue(aPrefName, nsIPrefLocalizedString).data;
   } catch (ex) {}
 
   return aDefault;
@@ -496,11 +532,11 @@ function getLocalizedPref(aPrefName, aDefault) {
  */
 function setLocalizedPref(aPrefName, aValue) {
   var prefB = Cc["@mozilla.org/preferences-service;1"].
-              getService(Ci.nsIPrefBranch);
+              getService(nsIPrefBranch);
   var pls = Cc["@mozilla.org/pref-localizedstring;1"].
-            createInstance(Ci.nsIPrefLocalizedString);
+            createInstance(nsIPrefLocalizedString);
   pls.data = aValue;
-  prefB.setComplexValue(aPrefName, Ci.nsIPrefLocalizedString, pls);
+  prefB.setComplexValue(aPrefName, nsIPrefLocalizedString, pls);
 }
 
 /**
@@ -512,7 +548,7 @@ function setLocalizedPref(aPrefName, aValue) {
  */
 function setBoolPref(aName, aVal) {
   var prefB = Cc["@mozilla.org/preferences-service;1"].
-              getService(Ci.nsIPrefBranch);
+              getService(nsIPrefBranch);
   prefB.setBoolPref(aName, aVal);
 }
 
@@ -524,7 +560,7 @@ function setBoolPref(aName, aVal) {
  */
 function getBoolPref(aName, aDefault) {
   var prefB = Cc["@mozilla.org/preferences-service;1"].
-              getService(Ci.nsIPrefBranch);
+              getService(nsIPrefBranch);
   try {
     return prefB.getBoolPref(aName);
   } catch (ex) {
@@ -547,8 +583,12 @@ function getSanitizedFile(aName) {
   var fileName = sanitizeName(aName) + "." + XML_FILE_EXT;
   var file = getDir(NS_APP_USER_SEARCH_DIR);
   file.append(fileName);
-  file.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, PERMS_FILE);
+  file.createUnique(NORMAL_FILE_TYPE, PERMS_FILE);
   return file;
+}
+
+function getBaseName(aFile) {
+f
 }
 
 /**
@@ -584,11 +624,31 @@ function sanitizeName(aName) {
  *
  * @see nsIBrowserSearchService.idl
  */
-function notifyAction(aEngine, aVerb) {
+function notifyForEngine(aEngine, aVerb) {
   var os = Cc["@mozilla.org/observer-service;1"].
-           getService(Ci.nsIObserverService);
-  LOG("NOTIFY: Engine: \"" + aEngine.name + "\"; Verb: \"" + aVerb + "\"");
+           getService(nsIObserverService);
+  LOG("notifyForEngine: Engine: \"" + aEngine.name + "\"; Verb: \"" + aVerb +
+      "\"");
   os.notifyObservers(aEngine, SEARCH_ENGINE_TOPIC, aVerb);
+}
+
+/**
+ * Notifies the search service when an engine is done loading or failed to
+ * load.
+ *
+ * @param aEngine
+ *        The nsISearchEngine object to which loaded or failed to load.
+ * @param aVerb
+ *        A verb describing the change.
+ *
+ * @see nsIBrowserSearchService.idl
+ */
+function notifySearchService(aEngine, aVerb) {
+  var os = Cc["@mozilla.org/observer-service;1"].
+           getService(nsIObserverService);
+  var name = aEngine ? aEngine.name : "<none>";
+  LOG("notifySearchService: Engine: \"" + name + "\"; Verb: " + aVerb);
+  os.notifyObservers(aEngine, SEARCH_SERVICE_TOPIC, aVerb);
 }
 
 /**
@@ -748,37 +808,33 @@ EngineURL.prototype = {
  * @param aIsReadOnly
  *        Boolean indicating whether the engine should be treated as read-only.
  *        Read only engines cannot be serialized to file.
+ * @param aNeedsConversion
+ *        Whether the engine should be converted once it is fully loaded.
  */
-function Engine(aLocation, aSourceDataType, aIsReadOnly) {
+function Engine(aLocation, aSourceDataType, aIsReadOnly, aNeedsConversion) {
   this._dataType = aSourceDataType;
   this._readOnly = aIsReadOnly;
   this._urls = [];
+  this._needsConversion = aNeedsConversion;
 
-  if (aLocation instanceof Ci.nsILocalFile) {
+  if (aLocation instanceof nsILocalFile) {
     ENSURE(aLocation.exists(),
            "Can't init an engine from a non-existent file!",
            Cr.NS_ERROR_FAILURE);
 
     // we already have a file (e.g. loading engines from disk)
     this._file = aLocation;
-    this._getData();
 
-    // parse the data and set up fields accordingly
-    this._init();
-  } else if (aLocation instanceof Ci.nsIURI) {
-    this._uri = aLocation;
+  } else if (aLocation instanceof nsIURI) {
     switch (aLocation.scheme) {
       case "https":
       case "http":
+      case "ftp":
       case "data":
       case "file":
       case "resource":
-        // we have a URI, and no file
-        this._getDataFromURI(aLocation);
+        this._uri = aLocation;
         break;
-      case "javascript":
-        // Passing a javascript URI to addEngine causes a crash (bug 328697).
-        // Fall through...
       default:
         ERROR("Invalid URI passed to the nsISearchEngine constructor",
               Cr.NS_ERROR_INVALID_ARG);
@@ -809,6 +865,8 @@ Engine.prototype = {
   _req: null,
   // The engine's name.
   _name: null,
+  // Whether the engine needs to be converted once loaded.
+  _needsConversion: false,
   // The engine type. See engine types (TYPE_) defined above.
   _type: null,
   // The name of the charset used to submit the search terms.
@@ -819,29 +877,77 @@ Engine.prototype = {
   _uri: null,
 
   /**
-   * Retrieves the data from the engine's file. If the engine's dataType is
-   * XML, the document element is placed in the engine's data field. For text
-   * engines, the data is just read directly from file and placed as an array
-   * of lines in the engine's data field.
+   * Retrieves the data from the engine's file and initializes the engine,
+   * asynchronously. If the engine's dataType is XML, the document element is
+   * placed in the engine's data field. For text engines, the data is just read
+   * directly from file and placed as an array of lines in the engine's data
+   * field.
    */
-  _getData: function SRCH_ENG_getData() {
+  _getDataFromFileAsync: function SRCH_ENG_getDataFromFileAsync() {
+    var ios = Cc["@mozilla.org/network/io-service;1"].
+              getService(nsIIOService);
+    var fileURI = ios.newFileURI(this._file);
+    var channel = ios.newChannelFromURI(fileURI);
+    var observer = {
+      onStreamComplete: function(aLoader, aEngine, aStatus, aLength,
+                                 aResult) {
+        var engine = aEngine.QueryInterface(nsISearchEngine)
+                            .wrappedJSObject;
+
+        switch (engine._dataType) {
+          case SEARCH_DATA_XML:
+            var domParser = Cc["@mozilla.org/xmlextras/domparser;1"].
+                            createInstance(nsIDOMParser);
+            var doc = domParser.parseFromBuffer(aResult, aResult.length,
+                                                "text/xml");
+            engine._data = doc.documentElement;
+            break;
+          case SEARCH_DATA_TEXT:
+            // Convert the byte array to a string, and split that into an array
+            // of lines
+            engine._data = String.fromCharCode.apply(null, aResult)
+                                              .split(kNewLines);
+
+            // Filter out comments and whitespace-only lines.
+            engine._data.filter(isUseLessLine);
+            break;
+        }
+
+        try {
+          engine._init();
+        } catch (ex) {
+          LOG("Error initing " + engine._location + ":\n" + ex);
+          notifySearchService({name: engine._location},
+                              SEARCH_SERVICE_ENGINE_LOAD_FAILED);
+          return;
+        }
+        // Notify the search service that the engine was loaded
+        notifySearchService(engine, SEARCH_SERVICE_ENGINE_LOADED);
+      }
+    };
+    var sl = Cc["@mozilla.org/network/stream-loader;1"].
+             createInstance(Ci.nsIStreamLoader);
+    sl.init(channel, observer, this);
+  },
+
+  _getDataFromFile: function SRCH_ENG_getDataFromFile() {
+
     var fileInStream = Cc["@mozilla.org/network/file-input-stream;1"].
-                       createInstance(Ci.nsIFileInputStream);
+                       createInstance(nsIFileInputStream);
 
     fileInStream.init(this._file, MODE_RDONLY, PERMS_FILE, false);
 
     switch (this._dataType) {
-      case Ci.nsISearchEngine.DATA_XML:
-
+      case SEARCH_DATA_XML:
         var domParser = Cc["@mozilla.org/xmlextras/domparser;1"].
-                        createInstance(Ci.nsIDOMParser);
+                        createInstance(nsIDOMParser);
         var doc = domParser.parseFromStream(fileInStream, "UTF-8",
                                             this._file.fileSize,
                                             "text/xml");
-
         this._data = doc.documentElement;
         break;
-      case Ci.nsISearchEngine.DATA_TEXT:
+
+      case SEARCH_DATA_TEXT:
         fileInStream.QueryInterface(Ci.nsILineInputStream);
 
         var line = { value: "" };
@@ -851,13 +957,13 @@ Engine.prototype = {
         do {
           more = fileInStream.readLine(line);
           // Filter out comments and whitespace-only lines
-          if (!(kUselessLine.test(line.value)))
+          if (!isUseLessLine(line.value))
             lines.push(line.value);
         } while (more);
 
         this._data = lines;
-
         break;
+
       default:
         ERROR("Bogus engine _dataType: \"" + this._dataType + "\"",
               Cr.NS_ERROR_UNEXPECTED);
@@ -867,20 +973,148 @@ Engine.prototype = {
   },
 
   /**
-   * Retrieves the engine data from a URI.
-   * @param   aURI
-   *          The URL to transfer from.
+   * Sets the .iconURI property of the engine.
+   *
+   *  @param aIconURL
+   *         A URI string pointing to the engine's icon. Must have a http[s] or
+   *         data scheme. Icons with HTTP[S] schemes will be downloaded and
+   *         converted to data URIs for storage in the engine XML files, if
+   *         the engine is not readonly.
    */
-  _getDataFromURI: function SRCH_ENG_getDataFromURI(aURI) {
-    ENSURE_ARG(aURI instanceof Ci.nsIURI, "Invalid URI for _getDataFromURI!");
+  _setIcon: function SRCH_ENG_setIcon(aIconURL) {
 
-    LOG("_getDataFromURI: Downloading engine from: \"" + aURI.spec + "\".");
+    var uri = makeURI(aIconURL);
+
+    // Ignore bad URIs
+    if (!uri)
+      return;
+
+    LOG("_setIcon: Setting icon url \"" + uri.spec + "\" for engine \""
+        + this.name + "\".");
+    // Only accept remote icons from http[s]
+    switch (uri.scheme) {
+      case "data":
+        this._iconURI = uri;
+        break;
+      case "http":
+      case "https":
+        // No use downloading the icon if the engine file is read-only
+        // XXX could store the data: URI in a pref... ew?
+        if (!this._readOnly) {
+          LOG("_setIcon: Downloading icon: \"" + uri.spec +
+              "\" for engine: \"" + this.name + "\"");
+          var ios = Cc["@mozilla.org/network/io-service;1"].
+                    getService(nsIIOService);
+          var chan = ios.newChannelFromURI(uri);
+          var listener = new iconLoadListener(chan, this);
+          chan.notificationCallbacks = listener;
+          chan.asyncOpen(listener, null);
+        }
+        break;
+    }
+  },
+
+  /**
+   * Initialize this Engine object from the collected data.
+   */
+  _init: function SRCH_ENG_init() {
+
+    ENSURE_WARN(this._data, "Can't init an engine with no data!",
+                Cr.NS_ERROR_UNEXPECTED);
+
+    // Find out what type of engine we are
+    switch (this._dataType) {
+      case SEARCH_DATA_XML:
+        if (checkNameSpace(this._data, [kMozSearchLocalName],
+            [kMozSearchNS_10])) {
+
+          LOG("_init: Initing MozSearch plugin from " + this._location);
+
+          this._type = SEARCH_TYPE_MOZSEARCH;
+          this._parseAsMozSearch();
+
+        } else if (checkNameSpace(this._data, [kOpenSearchLocalName],
+                   [kOpenSearchNS_11, kOpenSearchNS_10])) {
+
+          LOG("_init: Initing OpenSearch plugin from " + this._location);
+
+          this._type = SEARCH_TYPE_OPENSEARCH;
+          this._parseAsOpenSearch();
+
+        } else
+          ENSURE(false, this._location + " is not a valid search plugin.",
+                 Cr.NS_ERROR_FAILURE);
+
+        break;
+      case SEARCH_DATA_TEXT:
+        LOG("_init: Initing Sherlock plugin from " + this._location);
+
+        // the only text-based format we support is Sherlock
+        this._type = SEARCH_TYPE_SHERLOCK;
+        this._parseAsSherlock();
+    }
+
+    // If we don't yet have a file (i.e. we instantiated an engine object from
+    // passed in URL), get one now
+    if (!this._file)
+      this._file = getSanitizedFile(this.name);
+
+    // Generate a unique ID for this engine. Use the name of the engine, URI
+    // encoded because pref names can only contain certain characters
+    this._pref = BROWSER_SEARCH_PREF + "engine." +
+                 encodeURIComponent(this.name) + ".";
+  },
+
+  /**
+   * Initialize this Engine object from it's file.
+   *
+   * @param aLoadAsync
+   *        Boolean indicating whether or not to load the engine's data
+   *        asynchronously. When loading asynchronously, it is important to
+   *        note that the engine object will not necessarily be done it's
+   *        initialization when this function returns.
+   *
+   * @throws NS_ERROR_UNEXPECTED
+   *         If the engine doesn't have a file (i.e. wasn't created with an
+   *         aLocation of type nsILocalFile), or if the file doesn't exist.
+   */
+  _initFromFile: function SRCH_ENG_initFromFile(aLoadAsync) {
+    ENSURE_WARN(this._file && this._file.exists(),
+                "Can't initFromFile if the file doesn't exist!",
+                Cr.NS_ERROR_UNEXPECTED);
+
+    if (aLoadAsync) {
+      // Get the data asynchronously. The callback will call _init().
+      this._getDataFromFileAsync();
+    } else {
+      this._getDataFromFile();
+      try {
+        this._init();
+      } catch (ex) {
+        LOG("Error initing " + engine._location + ":\n" + ex);
+        throw Cr.NS_ERROR_FAILURE;
+      }
+    }
+  },
+
+  /**
+   * Initialize this Engine object from it's URI.
+   *
+   * @throws NS_ERROR_UNEXPECTED
+   *         If the engine doesn't have a URI (i.e. wasn't created with an
+   *         aLocation of type nsIURI), or if the engine's dataType is invalid.
+   */
+  _initFromURI: function SRCH_ENG_initFromURI() {
+    ENSURE_WARN(this._uri, "Can't initFromURI without a URI!",
+                Cr.NS_ERROR_UNEXPECTED);
+
+    LOG("_initFromURI: Downloading engine from: " + this._uri.spec);
     var mimeType = "";
     switch (this._dataType) {
-      case Ci.nsISearchEngine.DATA_XML:
+      case SEARCH_DATA_XML:
         mimeType = "text/xml";
         break;
-      case Ci.nsISearchEngine.DATA_TEXT:
+      case SEARCH_DATA_TEXT:
         mimeType = "text/plain";
         break;
       default:
@@ -890,7 +1124,7 @@ Engine.prototype = {
 
     this._req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
                 createInstance(Ci.nsIXMLHttpRequest);
-    this._req.open("GET", aURI.spec, true);
+    this._req.open("GET", this._uri.spec, true);
     this._req.overrideMimeType(mimeType);
     this._req.setRequestHeader("Cache-Control", "no-cache");
 
@@ -927,7 +1161,7 @@ Engine.prototype = {
    */
   _onLoad: function SRCH_ENG_onLoad(aEvent) {
 
-    var httpChannel = this._req.channel.QueryInterface(Ci.nsIHttpChannel);
+    var httpChannel = this._req.channel.QueryInterface(nsIHttpChannel);
     if (this._req.readyState != 4 || !httpChannel.requestSucceeded) {
       this._onError();
       LOG("_onLoad: Request for " + this._location + " failed!");
@@ -935,16 +1169,14 @@ Engine.prototype = {
     }
 
     switch (this._dataType) {
-      case Ci.nsISearchEngine.DATA_XML:
+      case SEARCH_DATA_XML:
         this._data = this._req.responseXML.documentElement;
         break;
-      case Ci.nsISearchEngine.DATA_TEXT:
-        this._data = this._req.responseText.split(/(\r\n|\n\r|\r|\n)/);
+      case SEARCH_DATA_TEXT:
+        this._data = this._req.responseText.split(kNewLines);
 
         // Filter out comments and whitespace-only lines.
-        this._data.filter(function (line) {
-                            return (!kUselessLine.test(line));
-                          });
+        this._data.filter(isUseLessLine);
         break;
       default:
         this._onError();
@@ -965,100 +1197,7 @@ Engine.prototype = {
     this._serializeToFile();
 
     // Notify the search service of the sucessful load
-    notifyAction(this, SEARCH_ENGINE_LOADED);
-  },
-
-  /**
-   * Sets the .iconURI property of the engine.
-   *
-   *  @param aIconURL
-   *         A URI string pointing to the engine's icon. Must have a http[s] or
-   *         data scheme. Icons with HTTP[S] schemes will be downloaded and
-   *         converted to data URIs for storage in the engine XML files, if
-   *         the engine is not readonly.
-   */
-  _setIcon: function SRCH_ENG_setIcon(aIconURL) {
-
-    var uri = makeURI(aIconURL);
-
-    // Ignore bad URIs
-    if (!uri)
-      return;
-
-    LOG("_setIcon: Setting icon url \"" + uri.spec + "\" for engine \""
-        + this.name + "\".");
-    // Only accept remote icons from http[s]
-    switch (uri.scheme) {
-      case "data":
-        this._iconURI = uri;
-        break;
-      case "http":
-      case "https":
-        // No use downloading the icon if the engine file is read-only
-        // XXX could store the data: URI in a pref... ew?
-        if (!this._readOnly) {
-          LOG("_setIcon: Downloading icon: \"" + uri.spec +
-              "\" for engine: \"" + this.name + "\"");
-          var ios = Cc["@mozilla.org/network/io-service;1"].
-                    getService(Ci.nsIIOService);
-          var chan = ios.newChannelFromURI(uri);
-          var listener = new iconLoadListener(chan, this);
-          chan.notificationCallbacks = listener;
-          chan.asyncOpen(listener, null);
-        }
-        break;
-    }
-  },
-
-  /**
-   * Initialize this Engine object from the collected data.
-   */
-  _init: function SRCH_ENG_init() {
-
-    ENSURE_WARN(this._data, "Can't init an engine with no data!",
-                Cr.NS_ERROR_UNEXPECTED);
-
-    // Find out what type of engine we are
-    switch (this._dataType) {
-      case Ci.nsISearchEngine.DATA_XML:
-        if (checkNameSpace(this._data, [kMozSearchLocalName],
-            [kMozSearchNS_10])) {
-
-          LOG("_init: Initing MozSearch plugin from " + this._location);
-
-          this._type = Ci.nsISearchEngine.TYPE_MOZSEARCH;
-          this._parseAsMozSearch();
-
-        } else if (checkNameSpace(this._data, [kOpenSearchLocalName],
-                   [kOpenSearchNS_11, kOpenSearchNS_10])) {
-
-          LOG("_init: Initing OpenSearch plugin from " + this._location);
-
-          this._type = Ci.nsISearchEngine.TYPE_OPENSEARCH;
-          this._parseAsOpenSearch();
-
-        } else
-          ENSURE(false, this._location + " is not a valid search plugin.",
-                 Cr.NS_ERROR_FAILURE);
-
-        break;
-      case Ci.nsISearchEngine.DATA_TEXT:
-        LOG("_init: Initing Sherlock plugin from " + this._location);
-
-        // the only text-based format we support is Sherlock
-        this._type = Ci.nsISearchEngine.TYPE_SHERLOCK;
-        this._parseAsSherlock();
-    }
-
-    // If we don't yet have a file (i.e. we instantiated an engine object from
-    // passed in URL), get one now
-    if (!this._file)
-      this._file = getSanitizedFile(this.name);
-
-    // Generate a unique ID for this engine. Use the name of the engine, URI
-    // encoded because pref names can only contain certain characters
-    this._pref = BROWSER_SEARCH_PREF + "engine." +
-                 encodeURIComponent(this.name) + ".";
+    notifySearchService(this, SEARCH_SERVICE_ENGINE_LOADED_REMOTE);
   },
 
   /**
@@ -1126,7 +1265,7 @@ Engine.prototype = {
    */
   _parseAsOpenSearch: function SRCH_ENG_parseAsOS() {
     var doc = this._data;
-    
+
     // Required elements
     var nameEl = doc.getElementsByTagName("ShortName")[0];
     ENSURE(nameEl, "_parseAsOpenSearch: No name!", Cr.NS_ERROR_FAILURE);
@@ -1438,7 +1577,7 @@ Engine.prototype = {
    */
   _serializeToElement: function SRCH_ENG_serializeToEl() {
     var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
-                 createInstance(Ci.nsIDOMParser);
+                 createInstance(nsIDOMParser);
 
     var doc = parser.parseFromString(EMPTY_DOC, "text/xml");
     docElem = doc.documentElement;
@@ -1538,7 +1677,7 @@ Engine.prototype = {
   set alias(val) {
     this._alias = val;
     setLocalizedPref(this._pref + "alias", val);
-    notifyAction(this, SEARCH_ENGINE_CHANGED);
+    notifyForEngine(this, SEARCH_ENGINE_CHANGED);
   },
 
   get description() {
@@ -1557,7 +1696,7 @@ Engine.prototype = {
     if (value != this._hidden) {
       setBoolPref(this._pref + "hidden", value);
       this._hidden = value;
-      notifyAction(this, SEARCH_ENGINE_CHANGED);
+      notifyForEngine(this, SEARCH_ENGINE_CHANGED);
     }
   },
 
@@ -1634,8 +1773,8 @@ Engine.prototype = {
 
   // nsISupports
   QueryInterface: function SRCH_ENG_QI(aIID) {
-    if (aIID.equals(Ci.nsISearchEngine) ||
-        aIID.equals(Ci.nsISupports))
+    if (aIID.equals(nsISearchEngine) ||
+        aIID.equals(nsISupports))
       return this;
     throw Cr.NS_ERROR_NO_INTERFACE;
   },
@@ -1660,7 +1799,7 @@ Submission.prototype = {
   },
   QueryInterface: function SRCH_SUBM_QI(aIID) {
     if (aIID.equals(Ci.nsISearchSubmission) ||
-        aIID.equals(Ci.nsISupports))
+        aIID.equals(nsISupports))
       return this;
     throw Cr.NS_ERROR_NO_INTERFACE;
   }
@@ -1668,12 +1807,54 @@ Submission.prototype = {
 
 // nsIBrowserSearchService
 function SearchService() {
-  this._init();
 }
 SearchService.prototype = {
+  _currentEngine: null,
+  _defaultEngine: null,
   _engines: { },
+  // The number of engines that we tried to load. Since engine loading is
+  // asynchronous, this will be compared with _processedFiles once loading is
+  // complete so we can tell whether the loading of all the files is complete.
+  _attemptedFiles: 0,
+  // The number of engines that we've either loaded or have processed and
+  // failed to load for whatever reason. This is compared to _attemptedFiles
+  // after every engine load so that we can keep track of whether loading of
+  // the engines is done, and fire the "READY" notification.
+  _processedFiles: 0,
+  // Whether or not we've already processed all files on disk.
+  // Note: this does not necessarily mean that all engines are loaded, since
+  // engine loading is asynchronous.
+  _allFilesProcessed: false,
+  // Whether or not the loading of all engines is complete.
+  _loadingComplete: false,
 
-  _init: function() {
+  asyncInit: function SRCH_SVC_asyncInit() {
+    if (this._loadingComplete) {
+      // Already loaded, just fire the notification
+      notifySearchService(null, SEARCH_SERVICE_READY);
+      return;
+    }
+
+    this._addObservers();
+
+    var fileLocator = Cc["@mozilla.org/file/directory_service;1"].
+                      getService(nsIProperties);
+    var locations = fileLocator.get(NS_APP_SEARCH_DIR_LIST,
+                                    Ci.nsISimpleEnumerator);
+
+    while (locations.hasMoreElements()) {
+      var location = locations.getNext().QueryInterface(nsIFile);
+      this._loadEngines(location, true);
+    }
+    this._allFilesProcessed = true;
+  },
+
+  init: function SRCH_SVC_init() {
+    if (this._loadingComplete) {
+      // Already loaded, just bail
+      return;
+    }
+
     this._addObservers();
 
     var fileLocator = Cc["@mozilla.org/file/directory_service;1"].
@@ -1683,16 +1864,13 @@ SearchService.prototype = {
 
     while (locations.hasMoreElements()) {
       var location = locations.getNext().QueryInterface(Ci.nsIFile);
-      this._loadEngines(location);
+      this._loadEngines(location, false);
     }
-
-    selectedEngineName = getLocalizedPref(BROWSER_SEARCH_PREF +
-                                          "selectedEngine");
-    this._currentEngine = this.getEngineByName(selectedEngineName) ||
-                          this.defaultEngine;
+    this._loadingComplete = true;
   },
 
-  _addEngineToStore: function SRCH_SVC_addEngineToStore(aEngine) {
+  _addEngineToStore: function SRCH_SVC_addEngineToStore(aEngine,
+                                                        aShouldNotify) {
     LOG("_addEngineToStore: Adding engine: \"" + aEngine.name + "\"");
     // XXX Prefer XML files?
     if (aEngine.name in this._engines) {
@@ -1703,68 +1881,68 @@ SearchService.prototype = {
       // added through a user action
     }
     this._engines[aEngine.name] = aEngine;
-    notifyAction(aEngine, SEARCH_ENGINE_ADDED);
+    if (aShouldNotify)
+      notifyForEngine(aEngine, SEARCH_ENGINE_ADDED);
   },
 
-  _loadEngines: function SRCH_SVC_loadEngines(aDir) {
+  _loadEngines: function SRCH_SVC_loadEngines(aDir, aLoadAsync) {
     LOG("_loadEngines: Searching in " + aDir.path + " for search engines.");
 
     // Check whether aDir is the user profile dir
     var isInProfile = aDir.equals(getDir(NS_APP_USER_SEARCH_DIR));
 
-    var files = aDir.directoryEntries;
+    var files = aDir.directoryEntries
+                    .QueryInterface(Ci.nsIDirectoryEnumerator);
     var ios = Cc["@mozilla.org/network/io-service;1"].
-              getService(Ci.nsIIOService);
+              getService(nsIIOService);
 
     while (files.hasMoreElements()) {
-      var file = files.getNext().QueryInterface(Ci.nsILocalFile);
+      var file = files.nextFile;
 
       // Ignore hidden and empty files, and directories
-      if (!file.isFile() || file.isHidden() || file.fileSize == 0)
+      if (file.fileSize == 0 || !file.isFile() || file.isHidden())
         continue;
 
       var fileURL = ios.newFileURI(file).QueryInterface(Ci.nsIURL);
       var fileExtension = fileURL.fileExtension.toLowerCase();
       var isWritable = isInProfile && file.isWritable();
-      var addedEngine = null;
+      var needsConversion = (fileExtension == SHERLOCK_FILE_EXT) && isWritable;
 
-      LOG("_loadEngines: Looking at file: \"" + fileURL.fileName + "\"");
+      LOG("_loadEngines: Attempting to load: " + file.path);
+
+      var dataType;
+      switch (fileExtension) {
+        case XML_FILE_EXT:
+          dataType = SEARCH_DATA_XML;
+          break;
+        case SHERLOCK_FILE_EXT:
+          dataType = SEARCH_DATA_TEXT;
+          break;
+        default:
+          // Not an engine
+          continue;
+      }
+
+      if (aLoadAsync) {
+        // Increment the "attempted loaded engines" count so that we can detect
+        // when we are done loading engines.
+        this._attemptedFiles++;
+      }
+
       try {
-        switch (fileExtension) {
-          case XML_FILE_EXT:
-            // Create a new engine object, readonly if it's not in the profile
-            addedEngine = new Engine(file, Ci.nsISearchEngine.DATA_XML,
-                                     !isWritable);
-            LOG("_loadEngines: Done loading engine: " + fileURL.fileName);
-            this._addEngineToStore(addedEngine);
-            break;
-          case SHERLOCK_FILE_EXT:
-            addedEngine = new Engine(file, Ci.nsISearchEngine.DATA_TEXT,
-                                     !isWritable);
-            if (isInProfile && file.isWritable()) {
-              // Convert engines in the profile to the new format
-              try {
-                this._convertSherlockFile(addedEngine, fileURL.fileBaseName);
-              } catch (ex) {
-                // If the engine couldn't be converted, mark it as read-only
-                addedEngine._readOnly = true;
-              }
-            } else {
-              // Try to find the engine's icon
-              var icon = this._findSherlockIcon(file, fileURL.fileBaseName);
-              if (icon)
-                addedEngine._iconURI = ios.newFileURI(icon);
-            }
-            this._addEngineToStore(addedEngine);
-            break;
-          default:
-            // Not an engine...
-            continue;
-        }
-      } catch (e) {
-        // skip...
-        LOG("_loadEngines: Failed to load search engine: \"" + fileURL.fileName
-            + "\". " + e);
+        var addedEngine = new Engine(file, dataType, !isWritable, needsConversion);
+        addedEngine._initFromFile(aLoadAsync);
+      } catch (ex) {
+        LOG("Failed to load engine " + file.path + ":\n" + ex);
+        // Decrement the attempted engine count
+        this._attemptedFiles--;
+        continue;
+      }
+
+      if (!aLoadAsync) {
+        // Add the engine to the store now, if it was loaded synchronously
+        this._addEngineToStore(addedEngine, false);
+        LOG("_loadEngines: Successfully loaded " + file.path + "\n");
       }
     }
   },
@@ -1782,36 +1960,6 @@ SearchService.prototype = {
    * @see nsIURL::fileBaseName
    */
   _convertSherlockFile: function SRCH_SVC_convertSherlock(aEngine, aBaseName) {
-    // See if it has a corresponding icon
-    try {
-      var icon = this._findSherlockIcon(aEngine._file, aBaseName);
-      if (icon && icon.fileSize < MAX_ICON_SIZE) {
-        // Use this as the engine's icon
-        var bStream = Cc["@mozilla.org/binaryinputstream;1"].
-                        createInstance(Ci.nsIBinaryInputStream);
-        var fileInStream = Cc["@mozilla.org/network/file-input-stream;1"].
-                           createInstance(Ci.nsIFileInputStream);
-
-        fileInStream.init(icon, MODE_RDONLY, PERMS_FILE, 0);
-        bStream.setInputStream(fileInStream);
-
-        var bytes = [];
-        while (bStream.available() != 0)
-          bytes = bytes.concat(bStream.readByteArray(bStream.available()));
-        bStream.close();
-
-        // Convert the byte array to a base64-encoded string
-        var str = b64(bytes);
-
-        aEngine._iconURI = makeURI(ICON_DATAURL_PREFIX + str);
-        LOG("_importSherlockEngine: Set sherlock iconURI to: \"" +
-            aEngine._iconURL + "\"");
-
-        // Delete the icon
-        icon.remove(false);
-      }
-    } catch (ex) { LOG("_convertSherlockFile: Error setting icon: " + ex); }
-
     var oldFile = aEngine._file;
 
     // Back up the old file
@@ -1819,14 +1967,14 @@ SearchService.prototype = {
       var backupDir = oldFile.parent;
       backupDir.append("searchplugins-backup");
       if (!backupDir.exists())
-        backupDir.create(Ci.nsIFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
+        backupDir.create(DIRECTORY_TYPE, PERMS_DIRECTORY);
 
       oldFile.copyTo(backupDir, null);
     } catch (ex) {
       // Just bail. Engines that can't be backed up won't be converted, but
       // engines that aren't converted are loaded as readonly.
-      LOG("_convertSherlockFile: Couldn't back up " + oldFile.path + ".");
-      return;
+      ENSURE(false, "_convertSherlockFile: Couldn't back up " + oldFile.path,
+             Cr.NS_ERROR_FAILURE);
     }
 
     // Rename the file, but don't clobber existing files
@@ -1836,12 +1984,51 @@ SearchService.prototype = {
     if (!newFile.exists())
       oldFile.moveTo(null, aBaseName + "." + XML_FILE_EXT);
     else {
-      newFile.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, PERMS_FILE);
+      newFile.createUnique(NORMAL_FILE_TYPE, PERMS_FILE);
       oldFile.moveTo(null, newFile.leafName);
     }
 
     // Write the converted engine to disk
     aEngine._serializeToFile();
+
+    // Change the engine's _type.
+    aEngine._type = SEARCH_TYPE_MOZSEARCH;
+
+    // Now that the original file is safely backed up, check for an icon.
+    // Failure here is unimportant - it might not have an icon.
+    try {
+      var icon = this._findSherlockIcon(aEngine._file, aBaseName);
+      if (!icon || icon.fileSize > MAX_ICON_SIZE)
+        return;
+
+      // Read in the icon and convert it to a data: URI
+      var bStream = Cc["@mozilla.org/binaryinputstream;1"].
+                      createInstance(nsIBinaryInputStream);
+      var fileInStream = Cc["@mozilla.org/network/file-input-stream;1"].
+                         createInstance(nsIFileInputStream);
+
+      fileInStream.init(icon, MODE_RDONLY, PERMS_FILE, 0);
+      bStream.setInputStream(fileInStream);
+
+      var bytes = [];
+      while (bStream.available() != 0)
+        bytes = bytes.concat(bStream.readByteArray(bStream.available()));
+      bStream.close();
+
+      // Convert the byte array to a base64-encoded string
+      var str = b64(bytes);
+
+      aEngine._iconURI = makeURI(ICON_DATAURL_PREFIX + str);
+      LOG("_importSherlockEngine: Set sherlock iconURI to: \"" +
+          aEngine._iconURL + "\"");
+
+      // Serialize the engine object to disk to save the icon we just added
+      aEngine._serializeToFile();
+
+      // Delete the icon now that it's been safely written to disk
+      icon.remove(false);
+
+    } catch (ex) { LOG("_convertSherlockFile: Error setting icon: " + ex); }
   },
 
   /**
@@ -1890,12 +2077,23 @@ SearchService.prototype = {
     }
 
     // No more sorted engines
+
+    // Array for the remaining engines, alphabetically sorted
+    var alphaEngines = [];
+
     for (engineName in this._engines) {
       engine = this._engines[engineName];
       if (!(engineName in addedEngines) && (aWithHidden || !engine.hidden))
-        engines.push(this._engines[engineName]);
+        alphaEngines.push(this._engines[engineName]);
     }
-    return engines;
+    alphaEngines = alphaEngines.sort(function (a, b) {
+                                       if (a.name < b.name)
+                                         return -1;
+                                       if (a.name > b.name)
+                                         return 1;
+                                       return 0;
+                                     });
+    return engines.concat(alphaEngines);
   },
 
   getEngines: function SRCH_SVC_getEngines(aCount) {
@@ -1935,17 +2133,18 @@ SearchService.prototype = {
     ENSURE(!this._engines[aName], "An engine with that name already exists!",
            Cr.NS_ERROR_FILE_ALREADY_EXISTS);
 
-    var engine = new Engine(getSanitizedFile(aName),
-                            Ci.nsISearchEngine.DATA_XML, false);
+    var engine = new Engine(getSanitizedFile(aName), SEARCH_DATA_XML, false,
+                            false);
     engine._initFromMetadata(aName, aIconURL, aAlias, aDescription,
                              aMethod, aTemplate);
-    this._addEngineToStore(engine);
+    this._addEngineToStore(engine, true);
   },
 
   addEngine: function SRCH_SVC_addEngine(aEngineURL, aType, aIconURL) {
     LOG("addEngine: Adding \"" + aEngineURL + "\".");
     try {
-      var engine = new Engine(makeURI(aEngineURL), aType, false);
+      var engine = new Engine(makeURI(aEngineURL), aType, false, false);
+      engine._initFromURI();
     } catch (ex) {
       LOG("addEngine: Error adding engine:\n" + ex);
       throw Cr.NS_ERROR_FAILURE;
@@ -1975,44 +2174,109 @@ SearchService.prototype = {
       engineToRemove._remove();
       // Remove the engine from the internal store
       delete this._engines[engineToRemove.name];
-      notifyAction(engineToRemove, SEARCH_ENGINE_REMOVED);
+      notifyForEngine(engineToRemove, SEARCH_ENGINE_REMOVED);
     }
   },
 
   get defaultEngine() {
-    const defPref = BROWSER_SEARCH_PREF + "defaultenginename";
-    // Get the default engine - this pref should always exist, but the engine
-    // might be hidden
-    this._defaultEngine = this.getEngineByName(getLocalizedPref(defPref, ""));
-    if (!this._defaultEngine || this._defaultEngine.hidden)
-      this._defaultEngine = this.getVisibleEngines({})[0] || null;
+    if (!this._defaultEngine || this._defaultEngine.hidden) {
+
+      // Make sure we have visible engines
+      var visibleEngines = this.getVisibleEngines({});
+      ENSURE(visibleEngines.length > 0, "No visible engines!",
+             Cr.NS_ERROR_FAILURE);
+
+      const pref = BROWSER_SEARCH_PREF + "defaultenginename";
+
+      // Get the default engine - this pref should always exist, but the engine
+      // might be hidden
+      this._defaultEngine = this.getEngineByName(getLocalizedPref(pref, ""));
+
+      // If it's hidden or wasn't found, use the first visible engine
+      if (!this._defaultEngine || this._defaultEngine.hidden)
+        this._defaultEngine = visibleEngines[0];
+    }
+
     return this._defaultEngine;
   },
 
   get currentEngine() {
+    if (!this._currentEngine) {
+      var selectedEngineName = getLocalizedPref(BROWSER_SEARCH_PREF +
+                                                "selectedEngine");
+      this._currentEngine = this.getEngineByName(selectedEngineName) ||
+                            this.defaultEngine;
+    }
+
     if (this._currentEngine.hidden)
       this._currentEngine = this.defaultEngine;
+
     return this._currentEngine;
   },
   set currentEngine(val) {
-    ENSURE_ARG(val.QueryInterface(Ci.nsISearchEngine),
-               "Invalid argument passed to currentEngine setter");
+    var engine = null;
+    try {
+      engine = val.QueryInterface(nsISearchEngine);
+    } catch (ex) { }
+    ENSURE_ARG(engine, "Invalid argument passed to currentEngine setter");
 
     this._currentEngine = this.getEngineByName(val.name) || this.defaultEngine;
     setLocalizedPref(BROWSER_SEARCH_PREF + "selectedEngine",
                      this._currentEngine.name);
-    notifyAction(this._currentEngine, SEARCH_ENGINE_CURRENT);
+    notifyForEngine(this._currentEngine, SEARCH_ENGINE_CURRENT);
   },
 
   // nsIObserver
   observe: function SRCH_SVC_observe(aEngine, aTopic, aVerb) {
+    var shouldNotify = false;
     switch (aTopic) {
-      case SEARCH_ENGINE_TOPIC:
-        if (aVerb == SEARCH_ENGINE_LOADED) {
-          var engine = aEngine.QueryInterface(Ci.nsISearchEngine);
-          LOG("nsISearchEngine::observe: Done installation of " + engine.name
-              + ".");
-          this._addEngineToStore(engine.wrappedJSObject);
+      case SEARCH_SERVICE_TOPIC:
+        switch (aVerb) {
+          case SEARCH_SERVICE_ENGINE_LOADED_REMOTE:
+            // We want to notify is this is an engine loaded from the web, but
+            // not if it's an engine from disk
+            shouldNotify = true;
+            // Fall through
+          case SEARCH_SERVICE_ENGINE_LOADED:
+            var engine = aEngine.QueryInterface(nsISearchEngine)
+                                .wrappedJSObject;
+            if (engine._needsConversion) {
+              var file = engine._file;
+              var ios = Cc["@mozilla.org/network/io-service;1"].
+                        getService(nsIIOService);
+              var fileBaseName = ios.newFileURI(file).QueryInterface(Ci.nsIURL)
+                                                     .fileBaseName;
+              try {
+                this._convertSherlockFile(engine, fileBaseName);
+              } catch (ex) {
+                LOG("_loadEngines: Failed to convert: " + file.path + "\n" + ex);
+                // The engine couldn't be converted, mark it as read-only
+                engine._readOnly = true;
+
+                // Look for an icon
+                var icon = this._findSherlockIcon(file, fileBaseName);
+                if (icon)
+                  addedEngine._iconURI = ios.newFileURI(icon);
+              }
+            }
+            LOG("nsISearchEngine::observe: Done installation of " + engine.name
+                + ".");
+            this._addEngineToStore(engine, shouldNotify);
+            // Fall through
+          case SEARCH_SERVICE_ENGINE_LOAD_FAILED:
+            this._processedFiles++;
+
+            if (!this._loadingComplete  &&
+                this._allFilesProcessed &&
+                this._processedFiles == this._attemptedFiles) {
+              // We're done loading all engines that we attempted to load (i.e.
+              // that were found in the engine locations). All loads have
+              // either failed or succeeded, so we can init the internal fields
+              this._loadingComplete = true;
+
+              // Let everyone know we're ready to be used
+              notifySearchService(null, SEARCH_SERVICE_READY);
+            }
         }
         break;
       case XPCOM_SHUTDOWN_TOPIC:
@@ -2023,50 +2287,61 @@ SearchService.prototype = {
 
   _addObservers: function SRCH_SVC_addObservers() {
     var os = Cc["@mozilla.org/observer-service;1"].
-             getService(Ci.nsIObserverService);
-    os.addObserver(this, SEARCH_ENGINE_TOPIC, false);
+             getService(nsIObserverService);
+    os.addObserver(this, SEARCH_SERVICE_TOPIC, false);
     os.addObserver(this, XPCOM_SHUTDOWN_TOPIC, false);
   },
 
   _removeObservers: function SRCH_SVC_removeObservers() {
     var os = Cc["@mozilla.org/observer-service;1"].
-             getService(Ci.nsIObserverService);
-    os.removeObserver(this, SEARCH_ENGINE_TOPIC);
+             getService(nsIObserverService);
+    os.removeObserver(this, SEARCH_SERVICE_TOPIC);
     os.removeObserver(this, XPCOM_SHUTDOWN_TOPIC);
   },
 
   QueryInterface: function SRCH_SVC_QI(aIID) {
     if (aIID.equals(Ci.nsIBrowserSearchService) ||
         aIID.equals(Ci.nsIObserver)             ||
-        aIID.equals(Ci.nsISupports))
+        aIID.equals(nsISupports))
       return this;
     throw Cr.NS_ERROR_NO_INTERFACE;
   }
 };
 
-var gModule = {
-  _classID: Components.ID("{7319788a-fe93-4db3-9f39-818cf08f4256}"),
-  _className: "Browser Search Service",
-  _contractID: "@mozilla.org/browser/search-service;1",
+const kClassID    = Components.ID("{7319788a-fe93-4db3-9f39-818cf08f4256}");
+const kClassName  = "Browser Search Service";
+const kContractID = "@mozilla.org/browser/search-service;1";
 
-  registerSelf: function (componentManager, fileSpec, location, type) {
-    componentManager.QueryInterface(Ci.nsIComponentRegistrar);
-    componentManager.registerFactoryLocation(this._classID,
-                                             this._className,
-                                             this._contractID,
-                                             fileSpec, location, type);
-  },
-
-  getClassObject: function (componentManager, cid, iid) {
-    if (!iid.equals(Ci.nsIFactory))
-      throw Cr.NS_ERROR_NOT_IMPLEMENTED;
-    return this;
-  },
-
+// nsIFactory
+const kFactory = {
   createInstance: function (outer, iid) {
     if (outer != null)
       throw Cr.NS_ERROR_NO_AGGREGATION;
     return (new SearchService()).QueryInterface(iid);
+  }
+};
+
+// nsIModule
+const gModule = {
+  registerSelf: function (componentManager, fileSpec, location, type) {
+    componentManager.QueryInterface(nsIComponentRegistrar);
+    componentManager.registerFactoryLocation(kClassID,
+                                             kClassName,
+                                             kContractID,
+                                             fileSpec, location, type);
+  },
+
+  unregisterSelf: function(componentManager, fileSpec, location) {
+    componentManager.QueryInterface(nsIComponentRegistrar);
+    componentManager.unregisterFactoryLocation(kClassID, fileSpec);
+  },
+
+  getClassObject: function (componentManager, cid, iid) {
+    if (!cid.equals(kClassID))
+      throw Cr.NS_ERROR_NO_INTERFACE;
+    if (!iid.equals(Ci.nsIFactory))
+      throw Cr.NS_ERROR_NOT_IMPLEMENTED;
+    return kFactory;
   },
 
   canUnload: function (componentManager) {

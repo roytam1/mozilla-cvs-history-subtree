@@ -134,7 +134,7 @@ interface nsISearchEngine : nsISupports
 
 };
 
-[scriptable, uuid(eaa8c60f-a0d7-4afe-b629-ab5ac9434298)]
+[scriptable, uuid(047b4ab0-3e9b-4cea-8bd8-c4ffc0a8462e)]
 interface nsIBrowserSearchService : nsISupports
 {
   /**
@@ -186,6 +186,21 @@ interface nsIBrowserSearchService : nsISupports
                             in AString description,
                             in AString method,
                             in AString url);
+
+  /**
+   * Initializes the search service asynchronously. Loads all saved engines
+   * from disk and notifies observers of SEARCH_SERVICE_TOPIC with the
+   * verb SEARCH_SERVICE_READY when done.
+   * The notification is sent even if the search service is already
+   * initialized.
+   */
+  void asyncInit();
+
+  /**
+   * Initializes the search service synchronously. Loads all saved engines from
+   * disk. Must be called before using the search service.
+   */
+  void init();
 
   /**
    * Returns an engine with the specified alias.
@@ -272,17 +287,41 @@ interface nsIBrowserSearchService : nsISupports
 #define SEARCH_ENGINE_ADDED        "engine-added"
 
 /**
+ * Sent when the "current" engine is changed.
+ */
+#define SEARCH_ENGINE_CURRENT      "engine-current";
+
+/**
+ * The observer topic to listen to for events related to the search service
+ * itself.
+ */
+#define SEARCH_SERVICE_TOPIC "browser-search-service"
+
+/**
+ * Sent when the search service has finished loading all engines.
+ */
+#define SEARCH_SERVICE_READY "ready";
+
+/**
+ * Sent when a search engine being loaded from a file is completely loaded.
+ * This is used internally by the search service as an indication of when the
+ * engine can be added to the internal store, and therefore should not be used
+ * to detect engine availability.
+ */
+#define SEARCH_SERVICE_ENGINE_LOADED        "engine-loaded"
+
+/**
  * Sent when a search engine being installed from a remote plugin description
  * file is completely loaded. This is used internally by the search service as
  * an indication of when the engine can be added to the internal store, and
  * therefore should not be used to detect engine availability. It is always
  * followed by an "added" notification.
  */
-#define SEARCH_ENGINE_LOADED       "engine-loaded"
+#define SEARCH_SERVICE_ENGINE_LOADED_REMOTE "engine-loaded-uri"
 
 /**
- * Sent when the "current" engine is changed.
+ * Sent to notify the search service that a search engine failed to load.
  */
-#define SEARCH_ENGINE_CURRENT      "engine-current";
+#define SEARCH_SERVICE_ENGINE_LOAD_FAILED   "engine-load-failed";
 
 %}

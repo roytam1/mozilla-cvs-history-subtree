@@ -2829,6 +2829,7 @@ const BrowserSearch = {
     } else {
       var ss = Cc["@mozilla.org/browser/search-service;1"].
                getService(Ci.nsIBrowserSearchService);
+      ss.init();
       var searchForm = ss.defaultEngine.searchForm;
       loadURI(searchForm, null, null);
     }
@@ -2848,6 +2849,7 @@ const BrowserSearch = {
   loadSearch: function BrowserSearch_search(searchText, useNewTab) {
     var ss = Cc["@mozilla.org/browser/search-service;1"].
              getService(Ci.nsIBrowserSearchService);
+    ss.init();
     var engine;
   
     // If the search bar is visible, use the current engine, otherwise, fall back
@@ -4873,11 +4875,14 @@ nsContextMenu.prototype = {
       if (selectedText.length > 15)
         selectedText = selectedText.substr(0,15) + "...";
 
+      var ss = Cc["@mozilla.org/browser/search-service;1"].
+               getService(Ci.nsIBrowserSearchService);
+      ss.init();
+
       // Use the current engine if the search bar is visible, the default
       // engine otherwise.
       var engineName = "";
-      var ss = Cc["@mozilla.org/browser/search-service;1"].
-               getService(Ci.nsIBrowserSearchService);
+
       if (BrowserSearch.getSearchBar())
         engineName = ss.currentEngine.name;
       else
