@@ -24,6 +24,7 @@
 # Contributor(s):
 #   Pierre Chanial (p_ch@verizon.net)
 #   Dean Tessman   (dean_tessman@hotmail.com)
+#   Masayuki Nakano (masayuki@d-toybox.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -567,6 +568,12 @@
             else {
               this.showPopup(document.documentElement, aX, aY, "popup", null, null);            
             }
+            this.enableRollup(false);
+            var controller =
+              this.mInput.controller.QueryInterface(Components.interfaces.
+                nsIAutoCompleteController_MOZILLA_1_8_BRANCH);
+            if (controller)
+              controller.attachRollupListener();
           }
         ]]></body>
       </method>
@@ -578,6 +585,11 @@
             document.popupNode = null;
 
             this.setAttribute("hidden", "true");
+            var controller =
+              this.mInput.controller.QueryInterface(Components.interfaces.
+                nsIAutoCompleteController_MOZILLA_1_8_BRANCH);
+            if (controller)
+              controller.detachRollupListener();
           }
         ]]></body>
       </method>

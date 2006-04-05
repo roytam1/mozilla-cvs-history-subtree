@@ -21,6 +21,7 @@
  * Contributor(s):
  *   Joe Hewitt <hewitt@netscape.com> (Original Author)
  *   Dean Tessman <dean_tessman@hotmail.com>
+ *   Masayuki Nakano <masayuki@d-toybox.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -152,4 +153,14 @@ interface nsIAutoCompleteController : nsISupports
    * Set the current search string, but don't start searching
    */
   void setSearchString(in AString aSearchString);
+};
+
+[scriptable, uuid(729CB096-D5F1-4fc4-97CD-4B86E6917F97)]
+interface nsIAutoCompleteController_MOZILLA_1_8_BRANCH : nsIAutoCompleteController
+{
+  /*
+   * Attach or Detach rollup-listener
+   */
+  void attachRollupListener();
+  void detachRollupListener();
 };

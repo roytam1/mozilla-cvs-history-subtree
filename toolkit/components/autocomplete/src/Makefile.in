@@ -53,6 +53,11 @@ REQUIRES =	xpcom \
 		dom \
 		layout \
 		unicharutil \
+		widget \
+		content \
+		view \
+		gfx \
+		locale \
 	 	$(NULL)
 
 CPPSRCS = nsAutoCompleteController.cpp \
