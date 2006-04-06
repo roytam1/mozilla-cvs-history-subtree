@@ -45,21 +45,19 @@
  * that was to overdo it a bit, when the code probably does not survive... (XXX)
  */
 void
-XPathCompilerException(const char *aMsg,
-                       nsAString  &aExpression,
-                       PRInt32     aOffset = -1,
-                       PRInt32     aLength = -1)
+XPathCompilerException(const char      *aMsg,
+                       const nsAString &aExpression,
+                       PRInt32         aOffset = -1,
+                       PRInt32         aLength = -1)
 {
   printf("XPathCompilerException: %s, %s [o: %d, l: %d]\n",
          aMsg,
-         NS_ConvertUCS2toUTF8(aExpression).get(), aOffset, aLength);
-         
+         NS_ConvertUTF16toUTF8(aExpression).get(), aOffset, aLength);
+
   printf("WARNING: Houston we have a problem, and unlike Apollo 13, we're not going to make it!\n");
   NS_ABORT();
 }
 
-
-MOZ_DECL_CTOR_COUNTER(nsXFormsXPathParser)
 
 nsXFormsXPathParser::nsXFormsXPathParser()
     : mUsesDynamicFunc(PR_FALSE), mHead(nsnull), mAnalyzeStackPointer(nsnull)
@@ -561,8 +559,7 @@ nsXFormsXPathParser::PathExpr()
       if (DoRelative()) {
         RelativeLocationPath();
       } else {
-        nsAutoString nullstr;
-        XPathCompilerException("After / in a filter expression it is required to have a reletive path expression", nullstr);
+        XPathCompilerException("After / in a filter expression it is required to have a reletive path expression", EmptyString());
       }
 
     }
@@ -858,7 +855,7 @@ nsXFormsXPathParser::Parse(const nsAString& aExpression)
 {
 #ifdef DEBUG_XF_PARSER
   printf("=====================================\n");
-  printf("Parsing: %s\n", NS_ConvertUCS2toUTF8(aExpression).get());
+  printf("Parsing: %s\n", NS_ConvertUTF16toUTF8(aExpression).get());
   printf("=====================================\n");
 #endif
 
@@ -917,6 +914,6 @@ void
 nsXFormsXPathParser::OutputSubExpression(PRInt32 aOffset, PRInt32 aEndOffset)
 {
   const nsDependentSubstring expr = Substring(mScanner.Expression(), aOffset, aEndOffset - aOffset);
-  printf("%s\n", NS_ConvertUCS2toUTF8(expr).get());
+  printf("%s\n", NS_ConvertUTF16toUTF8(expr).get());
 }
 #endif

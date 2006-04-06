@@ -225,12 +225,7 @@ nsXFormsItemSetElement::SelectItemByNode(nsIDOMNode *aNode,
 NS_IMETHODIMP
 nsXFormsItemSetElement::Bind()
 {
-  mModel = nsXFormsUtils::GetModel(mElement);
-  if (mModel) {
-    mModel->AddFormControl(this);
-  }
-
-  return NS_OK;
+  return BindToModel();
 }
 
 NS_IMETHODIMP
@@ -337,11 +332,11 @@ nsXFormsItemSetElement::Refresh()
     anonContent->AppendChild(itemNode, getter_AddRefs(tmpNode));
   }
 
-  // tell parent we appended a child
+  // refresh parent we
   if (parent) {
-    nsCOMPtr<nsIXTFElement> stub = do_QueryInterface(parent);
-    if (stub) {
-      stub->ChildAppended(parent);
+    nsCOMPtr<nsIXFormsControlBase> control = do_QueryInterface(parent);
+    if (control) {
+      control->Refresh();
     }
   }
 

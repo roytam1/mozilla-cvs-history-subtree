@@ -45,8 +45,6 @@
 //#define DEBUG_XF_ANALYZER
 #endif
 
-MOZ_DECL_CTOR_COUNTER(nsXFormsXPathAnalyzer)
-
 nsXFormsXPathAnalyzer::nsXFormsXPathAnalyzer(nsIXFormsXPathEvaluator  *aEvaluator,
                                              nsIDOMNode               *aResolver)
   : mEvaluator(aEvaluator), mResolver(aResolver)
@@ -66,7 +64,8 @@ nsXFormsXPathAnalyzer::Analyze(nsIDOMNode                *aContextNode,
                                const nsAString           *aExprString,
                                nsCOMArray<nsIDOMNode>    *aSet,
                                PRUint32                   aPosition,
-                               PRUint32                   aSize)
+                               PRUint32                   aSize,
+                               PRBool                     aIncludeRoot)
 {
   NS_ENSURE_ARG(aContextNode);
   NS_ENSURE_ARG(aNode);
@@ -82,11 +81,12 @@ nsXFormsXPathAnalyzer::Analyze(nsIDOMNode                *aContextNode,
 
 #ifdef DEBUG_XF_ANALYZER
   printf("=====================================\n");
-  printf("Analyzing: %s\n", NS_ConvertUCS2toUTF8(*mCurExprString).get());
+  printf("Analyzing: %s\n", NS_ConvertUTF16toUTF8(*mCurExprString).get());
   printf("=====================================\n");
 #endif
 
-  nsresult rv = AnalyzeRecursively(aContextNode, aNode->mChild, 0);
+  nsresult rv = AnalyzeRecursively(aContextNode, aNode->mChild, 0,
+                                   aIncludeRoot);
 #ifdef DEBUG_XF_ANALYZER
   printf("-------------------------------------\n");
 #endif
@@ -102,15 +102,18 @@ nsXFormsXPathAnalyzer::Analyze(nsIDOMNode                *aContextNode,
 nsresult
 nsXFormsXPathAnalyzer::AnalyzeRecursively(nsIDOMNode              *aContextNode,
                                           const nsXFormsXPathNode *aNode,
-                                          PRUint32                aIndent)
+                                          PRUint32                aIndent,
+                                          PRBool                  aCollect)
 {
   nsXFormsXPathNode* t;
   nsAutoString xp;
   nsresult rv;
   nsCOMPtr<nsIDOMXPathResult> result;
   nsCOMPtr<nsIDOMNode> node;
+#ifdef DEBUG_XF_ANALYZER
   char strbuf[100];
   char* strpos;
+#endif
 
 #ifdef DEBUG_beaufour_xxx
   printf("nsXFormsXPathParser::AnalyzeRecursively(%p)\n", (void*) aNode);
@@ -129,8 +132,6 @@ nsXFormsXPathAnalyzer::AnalyzeRecursively(nsIDOMNode              *aContextNode,
     }
 
     PRBool hasContinue = PR_FALSE;
-   strpos = strbuf;
-    *strpos = '\0';
     
     // hasContinue == whether we have a child with a mCon
     t = aNode->mChild;
@@ -140,6 +141,8 @@ nsXFormsXPathAnalyzer::AnalyzeRecursively(nsIDOMNode              *aContextNode,
     }
 
 #ifdef DEBUG_XF_ANALYZER
+    strpos = strbuf;
+    *strpos = '\0';
     for (PRUint32 j = 0; j < aIndent; ++j) {
       strpos += sprintf(strpos, "  ");
     }
@@ -214,13 +217,13 @@ nsXFormsXPathAnalyzer::AnalyzeRecursively(nsIDOMNode              *aContextNode,
 #ifdef DEBUG_XF_ANALYZER
       printf(strbuf);
 #endif
-      if (aNode->mChild || (!aNode->mChild && hasContinue)) {
+      if (!aCollect && (aNode->mChild || (!aNode->mChild && hasContinue))) {
 #ifdef DEBUG_XF_ANALYZER
-        printf("iterating '%s'\n", NS_ConvertUCS2toUTF8(xp).get());
+        printf("iterating '%s'\n", NS_ConvertUTF16toUTF8(xp).get());
 #endif
       } else {
 #ifdef DEBUG_XF_ANALYZER
-        printf("collecting '%s'\n", NS_ConvertUCS2toUTF8(xp).get());
+        printf("collecting '%s'\n", NS_ConvertUTF16toUTF8(xp).get());
 #endif
         mCurSet->AppendObject(node);
       }

@@ -12,14 +12,15 @@
    - for the specific language governing rights and limitations under the
    - License.
    -
-   - The Original Code is Mozilla XForms Support.
+   - The Original Code is Mozilla XForms code.
    -
    - The Initial Developer of the Original Code is
-   - IBM Corporation.
-   - Portions created by the Initial Developer are Copyright (C) 2005
+   - Alexander Surkov
+   - Portions created by the Initial Developer are Copyright (C) 2006
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
+   -  Alexander Surkov <surkov@dc.baikal.ru>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,20 +36,24 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<overlay id="XFormsContentPaneOverlay"
-         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:chrome="http://www.mozilla.org/rdf/chrome#">
 
-<prefwindow id="BrowserPreferences">
-  <prefpane id="paneContent">
+  <!-- List all the skins being supplied by this theme -->
+  <RDF:Seq about="urn:mozilla:skin:root">
+    <RDF:li resource="urn:mozilla:skin:classic/1.0" />
+  </RDF:Seq>
 
-    <preferences id="contentPreferences">
-      <preference id="xforms.crossdomain.enabled" name="xforms.crossdomain.enabled" type="bool"/>
-    </preferences>
+  <!-- Classic Information -->
+  <RDF:Description about="urn:mozilla:skin:classic/1.0">
+    <chrome:packages>
+      <RDF:Seq about="urn:mozilla:skin:classic/1.0:packages">
+        <RDF:li resource="urn:mozilla:skin:classic/1.0:xforms"/>
+      </RDF:Seq>
+    </chrome:packages>
+  </RDF:Description>
 
-    <stringbundle id="xforms-stringbundle" src="chrome://xforms/locale/xforms.properties"/>
-    <script type="application/x-javascript" src="chrome://xforms/content/xforms-prefs.js"/>
+  <RDF:Description about="urn:mozilla:skin:classic/1.0:xforms"
+#expand     chrome:skinVersion="__MOZILLA_SKIN_VERSION__"/>
 
-  </prefpane>
-</prefwindow>
-</overlay>
-
+</RDF:RDF>

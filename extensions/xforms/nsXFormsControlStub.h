@@ -89,6 +89,7 @@ public:
   NS_IMETHOD Bind();
   NS_IMETHOD TryFocus(PRBool* aOK);
   NS_IMETHOD IsEventTarget(PRBool *aOK);
+  NS_IMETHOD GetUsesModelBinding(PRBool *aRes);
 
   nsresult Create(nsIXTFElementWrapper *aWrapper);
   // for nsIXTFElement
@@ -140,6 +141,7 @@ public:
     kElementFlags(nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR),
     mHasParent(PR_FALSE),
     mPreventLoop(PR_FALSE),
+    mUsesModelBinding(PR_FALSE),
     mBindAttrsCount(0)
     {};
 
@@ -160,12 +162,17 @@ protected:
   nsCOMPtr<nsIDOMEventListener>       mEventListener;
 
   /** State that tells whether control has a parent or not */
-  PRBool                              mHasParent;
+  PRPackedBool                        mHasParent;
 
   /** State to prevent infinite loop when generating and handling xforms-next
    *  and xforms-previous events
    */
-  PRBool                              mPreventLoop;
+  PRPackedBool                        mPreventLoop;
+
+  /**
+   * Does the control use a model bind? That is, does it have a @bind.
+   */
+  PRPackedBool                        mUsesModelBinding;
 
   /**
    * Array of repeat-elements of which the control uses repeat-index.
@@ -204,11 +211,20 @@ protected:
   void ResetProperties();
 
   /**
+   * Checks whether an attribute is a binding attribute for the control. This
+   * should be overriden by controls that have "non-standard" binding
+   * attributes.
+   *
+   * @param aAttr        The attribute to check.
+   */
+  virtual PRBool IsBindingAttribute(const nsIAtom *aAttr) const;
+ 
+  /**
    * Causes Bind() and Refresh() to be called if aName is the atom of a
    * single node binding attribute for this control.  Called by AttributeSet
    * and AttributeRemoved.
    */
-  void MaybeBindAndRefresh(nsIAtom *aName);
+  void AfterSetAttribute(nsIAtom *aName);
 
   /**
    * Removes this control from its model's list of controls if a single node
@@ -218,10 +234,35 @@ protected:
    * @param aName  - atom of the attribute being changed
    * @param aValue - value that the attribute is being changed to.
    */
-  void MaybeRemoveFromModel(nsIAtom *aName, const nsAString &aValue); 
+  void BeforeSetAttribute(nsIAtom *aName, const nsAString &aValue);
 
   /** Removes the index change event listeners */
   void RemoveIndexListeners();
+
+  /**
+   * Binds the control to the model. Just sets mModel, and handle attaching to
+   * the model (including reattaching from any old model).
+   *
+   * @note It can also set the mBoundNode, but does not do a proper node
+   * binding, as in setting up dependencies, attaching index() listeners, etc.
+   *
+   * @param aSetBoundNode     Set mBoundNode too?
+   */
+  nsresult BindToModel(PRBool aSetBoundNode = PR_FALSE);
+
+  /**
+   * Forces a rebinding to the model.
+   */
+  nsresult ForceModelRebind();
+
+  /**
+   * Adds the form control to the model, if the model has changed.
+   *
+   * @param aOldModel         The previous model the control was bound to
+   * @param aParent           The parent XForms control
+   */
+  nsresult MaybeAddToModel(nsIModelElementPrivate *aOldModel,
+                           nsIXFormsControl       *aParent);
 };
 
 

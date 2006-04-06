@@ -90,6 +90,13 @@ public:
   void AddInstance(nsIInstanceElementPrivate *aInstance);
 
   /**
+   * Remove an instance element
+   *
+   * @param aInstance         The instance element
+   */
+  void RemoveInstance(nsIInstanceElementPrivate *aInstance);
+
+  /**
    * Get the instance document at a given index
    *
    * @note Does NOT addref the returned element!
@@ -107,6 +114,101 @@ public:
 protected:
   /** The array holding the instance elements */
   nsCOMArray<nsIInstanceElementPrivate>    mInstanceList;
+};
+
+/**
+ * A class for storing pointers to XForms controls added to an XForms
+ * model. Organized as a tree, with pointers to first child and next sibling.
+ *
+ * Notes:
+ * 1) The root node is special; only has children and a nsnull mNode.
+ * 2) All functions operate on the node they are called on, and its
+ * subtree. Functions will never go up (as in: nearer the root) in the tree.
+ */
+class nsXFormsControlListItem
+{
+  /** The XForms control itself */
+  nsCOMPtr<nsIXFormsControl>      mNode;
+
+  /** The next sibling of the node */
+  nsXFormsControlListItem        *mNextSibling;
+
+  /** The first child of the node */
+  nsXFormsControlListItem        *mFirstChild;
+
+public:
+  nsXFormsControlListItem(nsIXFormsControl* aControl);
+  ~nsXFormsControlListItem();
+  nsXFormsControlListItem(const nsXFormsControlListItem& aCopy);
+
+  /** Clear contents of current node, all siblings, and all children */
+  void Clear();
+
+  /**
+   * Remove a control from the current (sub-) tree. Will search from that node
+   * and down in the tree for the node.
+   *
+   * @param aControl     The control to remove
+   * @param aRemoved     Was the control found and removed?
+   */
+  nsresult RemoveControl(nsIXFormsControl *aControl, PRBool &aRemoved);
+
+  /**
+   * Add a control to the (sub-) tree as a child to the given |aParent|. If
+   * there is no |aParent|, it will insert it as a sibling to |this|. If
+   * |aParent| is not found, it will bail.
+   *
+   * @param aControl     The control to insert
+   * @param aParent      The (eventual) parent to insert it under
+   */
+  nsresult AddControl(nsIXFormsControl *aControl,
+                      nsIXFormsControl *aParent);
+
+  /**
+   * Find a control in the (sub-) tree.
+   *
+   * @param aControl     The control to find
+   */
+  nsXFormsControlListItem* FindControl(nsIXFormsControl *aControl);
+
+  /**
+   * Return the nsIXFormsControl that this node contains.
+   */
+  already_AddRefed<nsIXFormsControl> Control();
+
+  /** Return the first child of the node */
+  nsXFormsControlListItem* FirstChild() { return mFirstChild; };
+
+  /** Return the next sibling of the node */
+  nsXFormsControlListItem* NextSibling() { return mNextSibling; };
+
+  /**
+   * An iterator implementation for the class.
+   */
+  class iterator
+  {
+  private:
+    /** The control the iterator is currently pointing at */
+    nsXFormsControlListItem  *mCur;
+
+    /** A stack of non-visited nodes */
+    nsVoidArray               mStack;
+
+  public:
+    iterator();
+    iterator(const iterator&);
+    iterator operator=(nsXFormsControlListItem*);
+    bool operator!=(const nsXFormsControlListItem*);
+    iterator operator++();
+    nsXFormsControlListItem* operator*();
+  };
+  friend class nsXFormsControlListItem::iterator;
+
+  /** The begining position for the node (itself) */
+  nsXFormsControlListItem* begin();
+
+  /** The end position for the node (nsnull) */
+  nsXFormsControlListItem* end();
 };
 
 /**
@@ -167,12 +269,17 @@ public:
 
   static nsresult NeedsPostRefresh(nsIXFormsControl* aControl);
   static void CancelPostRefresh(nsIXFormsControl* aControl);
+
+  /**
+   * Returns the DOM element for the model.
+   */
+  already_AddRefed<nsIDOMElement> GetDOMElement();
+
 private:
 
   NS_HIDDEN_(already_AddRefed<nsIDOMDocument>)
     FindInstanceDocument(const nsAString &aID);
   NS_HIDDEN_(void)     Reset();
-  NS_HIDDEN_(void)     Ready();
   NS_HIDDEN_(void)     BackupOrRestoreInstanceData(PRBool restore);
 
   /** Initializes the MIPs on all form controls */
@@ -189,7 +296,8 @@ private:
                                    nsIDOMNode                *aContextNode,
                                    PRInt32                    aContextPosition,
                                    PRInt32                    aContextSize,
-                                   nsIDOMElement             *aBindElement);
+                                   nsIDOMElement             *aBindElement,
+                                   PRBool                     aIsOuter = PR_FALSE);
 
   NS_HIDDEN_(void)     RemoveModelFromDocument();
 
@@ -205,7 +313,7 @@ private:
    */
   NS_HIDDEN_(nsresult) SetStatesInternal(nsIXFormsControl *aControl,
                                          nsIDOMNode       *aNode,
-                                         PRBool            aAllStates = PR_FALSE);
+                                         PRBool            aDispatchEvents = PR_TRUE);
 
   /**
    * Sets the state of a specific state.
@@ -240,10 +348,16 @@ private:
    */
   NS_HIDDEN_(nsresult) HandleUnload(nsIDOMEvent *aEvent);
 
+  NS_HIDDEN_(nsresult) RefreshSubTree(nsXFormsControlListItem *aCurrent,
+                                      PRBool                   aForceRebind);
+
+  NS_HIDDEN_(nsresult) ValidateDocument(nsIDOMDocument *aInstanceDocument,
+                                        PRBool         *aResult);
+
   nsIDOMElement            *mElement;
   nsCOMPtr<nsISchemaLoader> mSchemas;
   nsStringArray             mPendingInlineSchemas;
-  nsVoidArray               mFormControls;
+  nsXFormsControlListItem   mFormControls;
 
   PRInt32 mSchemaCount;
   PRInt32 mSchemaTotal;
@@ -269,12 +383,17 @@ private:
   PRBool mInstancesInitialized;
 
   /**
+   * Indicates whether the model has handled the xforms-ready event
+   */
+  PRBool mReadyHandled;
+
+  /**
    * All instance documents contained by this model, including lazy-authored
    * instance documents.
    */
   nsRefPtr<nsXFormsModelInstanceDocuments> mInstanceDocuments;
 
-  /** Indicates whether the model's instance was built by lazy authoring */
+  // Indicates whether the model's instance was built by lazy authoring
   PRBool mLazyModel;
 
   /**
@@ -291,6 +410,12 @@ private:
    * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-p3ptype
    */
   nsClassHashtable<nsISupportsHashKey, nsString> mNodeToP3PType;
+
+  /**
+   * Indicates whether the model has handled the xforms-model-construct-done
+   * event
+   */
+  PRBool mConstructDoneHandled;
 };
 
 /**

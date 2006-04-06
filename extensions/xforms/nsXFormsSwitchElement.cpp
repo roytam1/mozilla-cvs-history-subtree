@@ -46,7 +46,6 @@
 // For focus control
 #include "nsPIDOMWindow.h"
 #include "nsIFocusController.h"
-#include "nsIScriptGlobalObject.h"
 
 #include "nsIXTFXMLVisualWrapper.h"
 
@@ -193,8 +192,10 @@ nsXFormsSwitchElement::Init(nsIDOMElement* aDeselected)
   nsCOMPtr<nsIDOMElement> firstCase = FindFirstSelectedCase(aDeselected);
   mSelected = firstCase;
   nsCOMPtr<nsIXFormsCaseElement> selected(do_QueryInterface(mSelected));
-  if (selected)
-    selected->SetSelected(PR_TRUE);
+  if (selected) {
+    nsresult rv = selected->SetSelected(PR_TRUE);
+    NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Failed to select case");
+  }
 }
 
 already_AddRefed<nsIDOMElement>
@@ -205,7 +206,7 @@ nsXFormsSwitchElement::FindFirstSelectedCase(nsIDOMElement* aDeselected)
   nsCOMPtr<nsIDOMElement> firstCase;
   while (child) {
     nsCOMPtr<nsIDOMElement> childElement(do_QueryInterface(child));
-    if (childElement  && childElement != aDeselected) {
+    if (childElement && childElement != aDeselected) {
       if (nsXFormsUtils::IsXFormsElement(child, NS_LITERAL_STRING("case"))) {
         if (!firstCase)
           firstCase = childElement;
@@ -230,6 +231,17 @@ nsXFormsSwitchElement::FindFirstSelectedCase(nsIDOMElement* aDeselected)
   NS_IF_ADDREF(result = firstCase);
   return result;
 }
+
+// nsIXFormsSwitchElement
+
+NS_IMETHODIMP
+nsXFormsSwitchElement::GetSelected(nsIDOMElement **aCase)
+{
+  NS_ENSURE_ARG_POINTER(aCase);
+  NS_IF_ADDREF(*aCase = mSelected);
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsXFormsSwitchElement::SetSelected(nsIDOMElement *aCase, PRBool aValue)
@@ -291,6 +303,8 @@ nsXFormsSwitchElement::SetSelected(nsIDOMElement *aCase, PRBool aValue)
   return NS_OK;
 }
 
+// nsXFormsSwitchElement
+
 void
 nsXFormsSwitchElement::SetFocus(nsIDOMElement* aDeselected,
                                nsIDOMElement* aSelected)
@@ -304,7 +318,7 @@ nsXFormsSwitchElement::SetFocus(nsIDOMElement* aDeselected,
   if (!doc)
     return;
 
-  nsCOMPtr<nsPIDOMWindow> win = do_QueryInterface(doc->GetScriptGlobalObject());
+  nsCOMPtr<nsPIDOMWindow> win = doc->GetWindow();
   if (!win)
     return;
 
@@ -378,6 +392,8 @@ nsXFormsSwitchElement::CaseChanged(nsIDOMNode* aCase, PRBool aRemoved)
     }
   }
 }
+
+// nsIXFormsControl
 
 NS_IMETHODIMP
 nsXFormsSwitchElement::IsEventTarget(PRBool *aOK)

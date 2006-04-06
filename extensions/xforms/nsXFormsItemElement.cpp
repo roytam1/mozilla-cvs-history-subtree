@@ -94,6 +94,7 @@ public:
   // nsIXFormsSelectChild
   NS_DECL_NSIXFORMSSELECTCHILD
 
+
 private:
   nsIDOMElement* mElement;
   PRBool         mDoneAddingChildren;
@@ -101,9 +102,6 @@ private:
   // If true, indicates that this item contains a xf:copy element (via
   // xf:itemset) rather than a xf:value element
   PRBool         mIsCopyItem;
-
-  // context node (used by itemset in select)
-  nsCOMPtr<nsIDOMElement>           mContextNode;
 };
 
 NS_IMPL_ISUPPORTS_INHERITED2(nsXFormsItemElement,

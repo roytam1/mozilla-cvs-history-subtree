@@ -102,19 +102,19 @@ NS_IMETHODIMP
 nsXFormsDelegateStub::Refresh()
 {
   if (mRepeatState == eType_Template)
-    return NS_OK;
+    return NS_OK_XFORMS_NOREFRESH;
 
   const nsVoidArray* list = nsPostRefresh::PostRefreshList();
   if (list && list->IndexOf(this) >= 0) {
     // This control will be refreshed later.
-    return NS_OK;
+    return NS_OK_XFORMS_NOREFRESH;
   }
 
   SetMozTypeAttribute();
 
   nsCOMPtr<nsIXFormsUIWidget> widget = do_QueryInterface(mElement);
   if (!widget)
-    return NS_OK;
+    return NS_ERROR_FAILURE;
 
   return widget->Refresh();
 }
@@ -190,9 +190,20 @@ nsXFormsDelegateStub::ReportError(const nsAString& aErrorMsg)
 NS_IMETHODIMP
 nsXFormsDelegateStub::WidgetAttached()
 {
-  if (UpdateRepeatState() != eType_Template)
-    nsXFormsModelElement::NeedsPostRefresh(this);
+  if (UpdateRepeatState() == eType_Template)
+    return NS_OK;
 
+  if (mBindAttrsCount) {
+    // If control is bounded to instance data then we should ask for refresh
+    // only when model is loaded entirely. The reason is control is refreshed
+    // by model when it get loaded.
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+    if (!nsXFormsUtils::IsDocumentReadyForBind(domDoc))
+      return NS_OK;
+  }
+
+  nsXFormsModelElement::NeedsPostRefresh(this);
   return NS_OK;
 }
 
@@ -210,6 +221,10 @@ nsXFormsDelegateStub::UpdateRepeatState()
       break;
     }
     if (nsXFormsUtils::IsXFormsElement(parent, NS_LITERAL_STRING("repeat"))) {
+      mRepeatState = eType_Template;
+      break;
+    }
+    if (nsXFormsUtils::IsXFormsElement(parent, NS_LITERAL_STRING("itemset"))) {
       mRepeatState = eType_Template;
       break;
     }

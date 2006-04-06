@@ -65,8 +65,6 @@ public:
   NS_IMETHOD ChildAppended(nsIDOMNode *aChild);
   NS_IMETHOD ChildRemoved(PRUint32 aIndex);
 
-  // nsIXFormsDelegate
-  NS_IMETHOD SetValue(const nsAString& aValue);
 #ifdef DEBUG_smaug
   virtual const char* Name() { return "select"; }
 #endif
@@ -106,31 +104,6 @@ NS_IMETHODIMP
 nsXFormsSelectElement::ChildRemoved(PRUint32 aIndex)
 {
   Refresh();
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXFormsSelectElement::SetValue(const nsAString& aValue)
-{
-  if (!mBoundNode || !mModel)
-    return NS_OK;
-
-  PRBool changed;
-  nsresult rv = mModel->SetNodeValue(mBoundNode, aValue, &changed);
-  NS_ENSURE_SUCCESS(rv, rv);
-  if (changed) {
-    nsCOMPtr<nsIDOMNode> model = do_QueryInterface(mModel);
-
-    if (model) {
-      rv = nsXFormsUtils::DispatchEvent(model, eEvent_Recalculate);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = nsXFormsUtils::DispatchEvent(model, eEvent_Revalidate);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = nsXFormsUtils::DispatchEvent(model, eEvent_Refresh);
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
-  }
-
   return NS_OK;
 }
 
