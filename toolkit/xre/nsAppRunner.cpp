@@ -24,6 +24,7 @@
  *   Benjamin Smedberg <benjamin@smedbergs.us>
  *   Ben Goodger <ben@mozilla.org>
  *   Fredrik Holmqvist <thesuckiestemail@yahoo.se>
+ *   Ben Turner <mozilla@songbirdnest.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -2066,8 +2067,29 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
 #endif
 
 #if defined(MOZ_UPDATER)
+  // If this is a XULRunner app then the updater needs to know the base
+  // directory that contains the application.ini file. This should be the
+  // parent of the xulrunner directory on Windows/Linux and it should be the
+  // Contents directory on MacOSX. Just in case someone packaged their app
+  // incorrectly we'll pass the directory here.
+  nsCOMPtr<nsIFile> greDir = dirProvider.GetAppDir();
+  NS_ENSURE_TRUE(greDir, 1);
+
+  nsCOMPtr<nsIFile> appDir;
+  PRBool dummy;
+  rv = dirProvider.GetFile("resource:app",
+                           &dummy,
+                           getter_AddRefs(appDir));
+  if (NS_FAILED(rv)) {
+    // This must not be a XULRunner app
+    appDir = greDir;
+  }
+
   // Check for and process any available updates
-  ProcessUpdates(dirProvider.GetAppDir(), gRestartArgc, gRestartArgv);
+  ProcessUpdates(greDir,
+                 appDir,
+                 gRestartArgc,
+                 gRestartArgv);
 #endif
 
   nsCOMPtr<nsIProfileLock> profileLock;
