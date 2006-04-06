@@ -1216,7 +1216,10 @@ MAKEFILES_libmar="
 "
 
 if test -n "$MOZ_UPDATE_PACKAGING"; then
-    MAKEFILES_update_packaging="tools/update-packaging/Makefile"
+    MAKEFILES_update_packaging="
+        tools/update-packaging/Makefile
+        other-licenses/bsdiff/Makefile
+    "
 fi
 
 if [ ! "$SYSTEM_PNG" ]; then
