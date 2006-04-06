@@ -1074,6 +1074,7 @@ XRE_GetBinaryPath(const char* argv0, nsILocalFile* *aResult)
 #elif defined(XP_UNIX)
   struct stat fileStat;
   char exePath[MAXPATHLEN];
+  char tmpPath[MAXPATHLEN];
 
   rv = NS_ERROR_FAILURE;
 
@@ -1116,8 +1117,8 @@ XRE_GetBinaryPath(const char* argv0, nsILocalFile* *aResult)
     char *newStr = pathdup;
     char *token;
     while ( (token = nsCRT::strtok(newStr, ":", &newStr)) ) {
-      sprintf(exePath, "%s/%s", token, argv0);
-      if (stat(exePath, &fileStat) == 0) {
+      sprintf(tmpPath, "%s/%s", token, argv0);
+      if (realpath(tmpPath, exePath) && stat(exePath, &fileStat) == 0) {
         found = PR_TRUE;
         break;
       }
