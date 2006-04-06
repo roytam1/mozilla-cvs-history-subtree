@@ -250,7 +250,7 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent ) {
+             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent && this.target.currentURI ) {
                 this.onImage = true;
                 var request = this.target.getRequest( Components.interfaces.nsIImageLoadingContent.CURRENT_REQUEST );
                 if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
