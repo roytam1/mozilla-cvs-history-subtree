@@ -49,7 +49,9 @@ LIBXUL_LIBRARY = 1
 
 ifeq ($(OS_ARCH)_$(GNU_CC), WINNT_)
 ifeq ($(MOZ_OPTIMIZE),1)
+ifeq (1200,$(_MSC_VER))
 USE_STATIC_VC71_LIB = 1
+endif
 endif
 endif
 
