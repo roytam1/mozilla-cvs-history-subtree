@@ -36,21 +36,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#include "nsIXFormsNSInstanceElement.idl" 
 
-interface nsIDOMDocument;
 interface nsIDOMElement;
 
 /**
- * Private interface implemented by the instance element.
+ * Private interface implemented by the \<instance/> element.
  */
-[uuid(debb24ef-7ba1-4e01-9f62-18106b25c993)]
-interface nsIInstanceElementPrivate : nsISupports
+[uuid(e9a975d7-616c-4c4b-9413-3aa8001cdb08)]
+interface nsIInstanceElementPrivate : nsIXFormsNSInstanceElement
 {
   /**
-   * The document which holds the live instance data.
+   * Set instance document.
    */
-  attribute nsIDOMDocument document;
+  void setInstanceDocument(in nsIDOMDocument document);
+
   readonly attribute nsIDOMElement element;
   void backupOriginalDocument();
   void restoreOriginalDocument();

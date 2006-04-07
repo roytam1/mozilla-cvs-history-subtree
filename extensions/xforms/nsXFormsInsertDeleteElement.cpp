@@ -41,6 +41,8 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMNodeList.h"
+#include "nsIXFormsRepeatElement.h"
+#include "nsIXFormsControl.h"
 
 #include "nsString.h"
 
@@ -48,6 +50,7 @@
 #include "nsXFormsActionModuleBase.h"
 #include "nsXFormsActionElement.h"
 #include "nsXFormsUtils.h"
+#include "nsIDOM3Node.h"
 
 #include "math.h"
 
@@ -65,14 +68,14 @@
  * @see http://www.w3.org/TR/xforms/slice4.html#evt-insert
  * @see https://bugzilla.mozilla.org/show_bug.cgi?id=280423
  *
- * @todo Any \<repeat\> elements need to set their repeat-indexes properly if
- * they are bound to the same nodeset. (XXX)
  */
 class nsXFormsInsertDeleteElement : public nsXFormsActionModuleBase
 {
 private:
   PRBool mIsInsert;
-  
+
+  nsresult RefreshRepeats(nsIDOMNode *aNode);
+
 public:
   NS_DECL_NSIXFORMSACTIONMODULEELEMENT
 
@@ -97,13 +100,15 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
   nsresult rv;
   nsCOMPtr<nsIModelElementPrivate> model;
   nsCOMPtr<nsIDOMXPathResult> nodeset;
+  PRBool usesModelBinding;
   rv = nsXFormsUtils::EvaluateNodeBinding(mElement,
-                                          0,
+                                          nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
                                           NS_LITERAL_STRING("nodeset"),
                                           EmptyString(),
                                           nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
                                           getter_AddRefs(model),
-                                          getter_AddRefs(nodeset));
+                                          getter_AddRefs(nodeset),
+                                          &usesModelBinding);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (!model || !nodeset)
@@ -169,7 +174,7 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
 #ifdef DEBUG_XF_INSERTDELETE
   if (mIsInsert) {
     printf("Will try to INSERT node _%s_ index %d (set size: %d)\n",
-           NS_ConvertUCS2toUTF8(position).get(),
+           NS_ConvertUTF16toUTF8(position).get(),
            atInt,
            setSize);
   } else {
@@ -198,7 +203,6 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
 
   nsCOMPtr<nsIDOMNode> resNode;
   if (mIsInsert) {
-    //
     // Get prototype and clone it (last member of nodeset)
     nsCOMPtr<nsIDOMNode> prototype;
     nodeset->SnapshotItem(setSize - 1, getter_AddRefs(prototype));
@@ -212,6 +216,11 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
                          location,
                          getter_AddRefs(resNode));
     NS_ENSURE_STATE(resNode);
+
+    // Set indexes for repeats
+    rv = RefreshRepeats(resNode);
+    NS_ENSURE_SUCCESS(rv, rv);
+
   } else {
     rv = parent->RemoveChild(location, getter_AddRefs(resNode));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -219,9 +228,6 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
 
   // Dispatch xforms-insert/delete event to the instance node we have modified
   // data for
-  nsCOMPtr<nsIDOMElement> modelElem = do_QueryInterface(model);
-  NS_ENSURE_STATE(modelElem);
-
   nsCOMPtr<nsIDOMNode> instNode;
   rv = nsXFormsUtils::GetInstanceNodeForData(resNode, getter_AddRefs(instNode));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -231,6 +237,8 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Dispatch refreshing events to the model
+  nsCOMPtr<nsIDOMElement> modelElem(do_QueryInterface(model));
+  NS_ASSERTION(modelElem, "Model not implementing nsIDOMElement?!");
   if (aParentAction) {
     aParentAction->SetRebuild(modelElem, PR_TRUE);
     aParentAction->SetRecalculate(modelElem, PR_TRUE);
@@ -245,6 +253,46 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
 
   return NS_OK;
 }
+
+
+nsresult
+nsXFormsInsertDeleteElement::RefreshRepeats(nsIDOMNode *aNode)
+{
+  // XXXbeaufour: only check repeats belonging to the same model...
+  // possibly use mFormControls? Should be quicker than searching through
+  // entire document!! mModel->GetControls("repeat"); Would also possibly
+  // save a QI?
+
+  nsCOMPtr<nsIDOMDocument> document;
+
+  nsresult rv = mElement->GetOwnerDocument(getter_AddRefs(document));
+  NS_ENSURE_STATE(document);
+
+  nsCOMPtr<nsIDOMNodeList> repeatNodes;
+  document->GetElementsByTagNameNS(NS_LITERAL_STRING(NS_NAMESPACE_XFORMS),
+                                   NS_LITERAL_STRING("repeat"),
+                                   getter_AddRefs(repeatNodes));
+  NS_ENSURE_STATE(repeatNodes);
+
+  // work over each node and if the node contains the inserted element
+  PRUint32 nodeCount;
+  rv = repeatNodes->GetLength(&nodeCount);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  for (PRUint32 node = 0; node < nodeCount; ++node) {
+    nsCOMPtr<nsIDOMNode> repeatNode;
+
+    rv = repeatNodes->Item(node, getter_AddRefs(repeatNode));
+    nsCOMPtr<nsIXFormsRepeatElement> repeatEl(do_QueryInterface(repeatNode));
+    NS_ENSURE_STATE(repeatEl);
+
+    rv = repeatEl->HandleNodeInsert(aNode);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  return NS_OK;
+}
+ 
 
 NS_HIDDEN_(nsresult)
 NS_NewXFormsInsertElement(nsIXTFElement **aResult)

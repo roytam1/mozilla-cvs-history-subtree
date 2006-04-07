@@ -121,7 +121,8 @@ nsXFormsUploadElement::Refresh()
   // type 'anyURI', 'base64Binary', or 'hexBinary'.
 
   nsresult rv = nsXFormsDelegateStub::Refresh();
-  NS_ENSURE_SUCCESS(rv, rv);
+  if (NS_FAILED(rv) || rv == NS_OK_XFORMS_NOREFRESH)
+    return rv;
 
   if (!mBoundNode)
     return NS_OK;
@@ -146,10 +147,12 @@ nsBoundType
 nsXFormsUploadElement::GetBoundType()
 {
   nsBoundType result = TYPE_DEFAULT;
+  if (!mModel)
+    return result;
 
   // get type bound to node
   nsAutoString type, nsuri;
-  nsresult rv = nsXFormsUtils::ParseTypeFromNode(mBoundNode, type, nsuri);
+  nsresult rv = mModel->GetTypeFromNode(mBoundNode, type, nsuri);
   if (NS_SUCCEEDED(rv) && nsuri.EqualsLiteral(NS_NAMESPACE_XML_SCHEMA)) {
     if (type.EqualsLiteral("anyURI")) {
       result = TYPE_ANYURI;

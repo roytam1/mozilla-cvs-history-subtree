@@ -72,14 +72,16 @@ XPI_PKGNAME            = xforms
 USE_EXTENSION_MANIFEST = 1
 NO_JAR_AUTO_REG        = 1
 INSTALL_EXTENSION_ID   = {cf2812dc-6a7c-4402-b639-4d277dac4c36}
-PACKAGE_VERSION        = 0.4
+PACKAGE_VERSION        = 0.5
 
 # We want to strip the XPI
 STRIP_XPI = 1
 
 XULAPP_DEFINES = \
 	-DFIREFOX_VERSION=$(FIREFOX_VERSION) \
-	-DMOZILLA_VERSION_U=$(MOZILLA_VERSION) \
+	-DMOZILLA_VERSION_U=$(MOZILLA_VERSION_U) \
+	-DSEAMONKEY_VERSION=$(SEAMONKEY_VERSION) \
+	-DBUILD_ID=$(BUILD_ID) \
 	-DPACKAGE_VERSION=$(PACKAGE_VERSION) \
 	-DID=${INSTALL_EXTENSION_ID} \
 	$(NULL)
@@ -117,8 +119,9 @@ REQUIRES	= \
 XPIDLSRCS	= \
 		nsIXFormsModelElement.idl \
 		nsIXFormsNSModelElement.idl \
-		nsIInstanceElementPrivate.idl \
 		nsIModelElementPrivate.idl \
+		nsIXFormsNSInstanceElement.idl \
+		nsIInstanceElementPrivate.idl \
 		nsIXFormsControl.idl \
 		nsIXFormsContextControl.idl \
 		nsIXFormsActionElement.idl \

@@ -47,7 +47,7 @@ interface nsIDOMNode;
  * Private interface implemented by the model element for other
  * elements to use.
  */
-[uuid(a6522c1a-a343-4b36-a130-75eb279a667a)]
+[uuid(d84caeb1-355f-48ff-9180-a45d8352d26a)]
 interface nsIModelElementPrivate : nsIXFormsModelElement
 {
   /**
@@ -55,7 +55,7 @@ interface nsIModelElementPrivate : nsIXFormsModelElement
    * this model.  These form controls will be refreshed when refresh() is
    * called on the model.
    */
-  void addFormControl(in nsIXFormsControl control);
+  void addFormControl(in nsIXFormsControl control, in nsIXFormsControl parent);
   void removeFormControl(in nsIXFormsControl control);
 
   /**
@@ -75,7 +75,7 @@ interface nsIModelElementPrivate : nsIXFormsModelElement
 
   /**
    * Notification that an instance element has started or finished loading
-   * its instance data.  Model contstruction cannot complete until all of
+   * its instance data.  Model construction cannot complete until all of
    * the instances have loaded their data.
    */
   void instanceLoadStarted();
@@ -139,7 +139,35 @@ interface nsIModelElementPrivate : nsIXFormsModelElement
   void addInstanceElement(in nsIInstanceElementPrivate aInstanceElement);
 
   /**
+   * Remove an instance element from the model's instance list
+   * @param aInstanceElement        The instance element to remove from the list
+   */
+  void removeInstanceElement(in nsIInstanceElementPrivate aInstanceElement);
+
+  /**
    * This attribute is set when the model's instance was lazy authored
    */
   readonly attribute boolean lazyAuthored;
+
+  /**
+   * This attribute is set when the model handled xforms-ready event
+   */
+  readonly attribute boolean isReady;
+
+  /**
+   * Retrieves the type for an instance data node
+   *
+   * @param aInstanceData     The instance data node
+   * @param aType             The type of the node
+   * @param aNSURI            The namespace of the type
+   */
+  void GetTypeFromNode(in nsIDOMNode aInstanceData, out AString aType,
+                       out AString aNSUri);
+
+  /**
+   * Notification that all of the external message loads have finished loading.
+   * Model contstruction cannot complete until all of the external messages
+   * have loaded their data.
+   */
+  void messageLoadFinished();
 };

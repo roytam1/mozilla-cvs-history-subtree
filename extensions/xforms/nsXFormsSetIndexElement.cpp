@@ -91,13 +91,15 @@ nsXFormsSetIndexElement::HandleAction(nsIDOMEvent            *aEvent,
   nsCOMPtr<nsIDOMXPathResult> result;
   // EvaluateNodeBinding uses @bind if @index is not present, but we have
   // checked that @index is present above
+  PRBool usesModelBinding;
   rv = nsXFormsUtils::EvaluateNodeBinding(mElement,
                                           0,
                                           indexStr,
                                           EmptyString(),
                                           nsIDOMXPathResult::NUMBER_TYPE,
                                           getter_AddRefs(model),
-                                          getter_AddRefs(result));
+                                          getter_AddRefs(result),
+                                          &usesModelBinding);
   NS_ENSURE_SUCCESS(rv, rv);
   if (!result) {
     nsXFormsUtils::ReportError(NS_LITERAL_STRING("indexEvalError"),
@@ -116,7 +118,7 @@ nsXFormsSetIndexElement::HandleAction(nsIDOMEvent            *aEvent,
 
 #ifdef DEBUG_XF_SETINDEX
   printf("<setindex>: Setting index '%s' to '%d'\n",
-         NS_ConvertUCS2toUTF8(id).get(),
+         NS_ConvertUTF16toUTF8(id).get(),
          indexInt);
 #endif  
   nsCOMPtr<nsIDOMElement> repeatElem;

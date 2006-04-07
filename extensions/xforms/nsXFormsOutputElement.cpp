@@ -61,6 +61,7 @@
 #include "nsXFormsAtoms.h"
 #include "nsXFormsUtils.h"
 #include "nsIXFormsUIWidget.h"
+#include "nsXFormsModelElement.h"
 
 
 /**
@@ -74,18 +75,25 @@ public:
   // nsIXFormsControl
   NS_IMETHOD Bind();
   NS_IMETHOD Refresh();
+  NS_IMETHOD GetBoundNode(nsIDOMNode **aBoundNode);
 
   // nsIXFormsDelegate
   NS_IMETHOD GetValue(nsAString& aValue); 
+  NS_IMETHOD GetHasBoundNode(PRBool *aHasBoundNode);
 
-  nsXFormsOutputElement() :
-    nsXFormsDelegateStub(NS_LITERAL_STRING("output")) {}
-
+  nsXFormsOutputElement();
 
 private:
-  PRBool   mHasBinding;
-  nsString mValue;
+  PRPackedBool   mHasBinding;
+  PRPackedBool   mValueIsDirty;
+  nsString       mValue;
 };
+
+nsXFormsOutputElement::nsXFormsOutputElement()
+  : nsXFormsDelegateStub(NS_LITERAL_STRING("output")),
+    mHasBinding(PR_FALSE), mValueIsDirty(PR_TRUE)
+{
+}
 
 // nsIXFormsControl
 
@@ -99,24 +107,39 @@ nsXFormsOutputElement::Bind()
 
   if (!mHasParent)
     return NS_OK;
-  
-  nsresult rv = mElement->HasAttribute(NS_LITERAL_STRING("ref"), &mHasBinding);
+
+  PRBool tmp;
+  nsresult rv = mElement->HasAttribute(NS_LITERAL_STRING("ref"), &tmp);
   NS_ENSURE_SUCCESS(rv, rv);
+  mHasBinding = tmp;
   if (!mHasBinding) {
-    rv = mElement->HasAttribute(NS_LITERAL_STRING("bind"), &mHasBinding);
+    rv = mElement->HasAttribute(NS_LITERAL_STRING("bind"), &tmp);
     NS_ENSURE_SUCCESS(rv, rv);
+    mHasBinding = tmp;
+
+    if (!mHasBinding) {
+      // If output only has a value attribute, it can't have a proper single
+      // node binding.  In an effort to streamline this a bit, we'll just bind
+      // to the model here and add output to the deferred bind list if
+      // necessary.  This should be all that we need from the services that
+      // ProcessNodeBinding provides.  ProcessNodeBinding is called during
+      // ::Refresh (via GetValue) so we just need a few things set up before
+      // ::Refresh gets called (usually right after ::Bind)
+  
+      nsCOMPtr<nsIDOMDocument> domDoc;
+      mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+      if (!nsXFormsUtils::IsDocumentReadyForBind(domDoc)) {
+        nsXFormsModelElement::DeferElementBind(domDoc, this);
+      }
+  
+      return BindToModel(PR_TRUE);
+    }
   }
 
   nsCOMPtr<nsIDOMXPathResult> result;
-  if (mHasBinding) {
-    rv = ProcessNodeBinding(NS_LITERAL_STRING("ref"),
-                            nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
-                            getter_AddRefs(result));
-  } else {
-    rv = ProcessNodeBinding(NS_LITERAL_STRING("value"),
-                            nsIDOMXPathResult::STRING_TYPE,
-                            getter_AddRefs(result));
-  }
+  rv = ProcessNodeBinding(NS_LITERAL_STRING("ref"),
+                          nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
+                          getter_AddRefs(result));
   
   if (NS_FAILED(rv)) {
     nsXFormsUtils::ReportError(NS_LITERAL_STRING("controlBindError"), mElement);
@@ -124,7 +147,12 @@ nsXFormsOutputElement::Bind()
   }
 
   if (result) {
-    result->GetSingleNodeValue(getter_AddRefs(mBoundNode));
+    if (mUsesModelBinding) {
+      // When bound via @bind, we'll get a snapshot back
+      result->SnapshotItem(0, getter_AddRefs(mBoundNode));
+    } else {
+      result->GetSingleNodeValue(getter_AddRefs(mBoundNode));
+    }
   }
 
   if (mBoundNode && mModel) {
@@ -137,43 +165,49 @@ nsXFormsOutputElement::Bind()
 NS_IMETHODIMP
 nsXFormsOutputElement::Refresh()
 {
-  if (mRepeatState == eType_Template)
-    return NS_OK;
+  mValueIsDirty = PR_TRUE;
+  return nsXFormsDelegateStub::Refresh();
+}
 
-  nsresult rv = NS_OK;
-  SetDOMStringToNull(mValue);
+NS_IMETHODIMP
+nsXFormsOutputElement::GetBoundNode(nsIDOMNode **aBoundNode)
+{
+  return mHasBinding ? nsXFormsDelegateStub::GetBoundNode(aBoundNode) : NS_OK;
+}
 
-  if (mModel) {
-    if (mHasBinding) {
-      if (mBoundNode) {
-        nsXFormsUtils::GetNodeValue(mBoundNode, mValue);
-      }
-    } else {
-      nsCOMPtr<nsIDOMXPathResult> result;
-      rv = ProcessNodeBinding(NS_LITERAL_STRING("value"),
-                              nsIDOMXPathResult::STRING_TYPE,
-                              getter_AddRefs(result));
-      NS_ENSURE_SUCCESS(rv, rv);
-  
-      if (result) {
-        rv = result->GetStringValue(mValue);
-        NS_ENSURE_SUCCESS(rv, rv);
-      }
-    }
-  }
-
-  SetMozTypeAttribute();
-
-  nsCOMPtr<nsIXFormsUIWidget> widget = do_QueryInterface(mElement);
-  if (widget)
-    widget->Refresh();
-
-  return rv;
+NS_IMETHODIMP
+nsXFormsOutputElement::GetHasBoundNode(PRBool *aHasBoundNode)
+{
+  NS_ENSURE_ARG_POINTER(aHasBoundNode);
+  *aHasBoundNode = (mBoundNode && mHasBinding) ? PR_TRUE : PR_FALSE;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsOutputElement::GetValue(nsAString& aValue)
 {
+  NS_ENSURE_STATE(mModel);
+
+  if (mValueIsDirty) {
+    if (mHasBinding) {
+      NS_ENSURE_STATE(mBoundNode);
+      nsXFormsUtils::GetNodeValue(mBoundNode, mValue);
+    } else {
+      nsCOMPtr<nsIDOMXPathResult> result;
+      nsresult rv = ProcessNodeBinding(NS_LITERAL_STRING("value"),
+                                       nsIDOMXPathResult::STRING_TYPE,
+                                       getter_AddRefs(result));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (result) {
+        SetDOMStringToNull(mValue);
+        rv = result->GetStringValue(mValue);
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
+    }
+    mValueIsDirty = PR_FALSE;
+  }
+
   aValue = mValue;
   return NS_OK;
 }
