@@ -143,8 +143,6 @@ nsAppStartup::Initialize(nsISupports *aNativeAppSupportOrSplashScreen)
     (do_GetService("@mozilla.org/observer-service;1", &rv));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  os->AddObserver(this, "nsIEventQueueActivated", PR_TRUE);
-  os->AddObserver(this, "nsIEventQueueDestroyed", PR_TRUE);
   os->AddObserver(this, "skin-selected", PR_TRUE);
   os->AddObserver(this, "locale-selected", PR_TRUE);
   os->AddObserver(this, "xpinstall-restart", PR_TRUE);
