@@ -65,5 +65,6 @@ minimo.jar:
 	skin/classic/minimo/extensions/icon-pan-toggle.png    (skin/extensions/icon-pan-toggle.png)
 	skin/classic/minimo/extensions/icon-urlbar.png    (skin/extensions/icon-urlbar.png)
 	skin/classic/minimo/extensions/icon-star.png    (skin/extensions/icon-star.png)
+	skin/classic/minimo/extensions/icon-cash.png    (skin/extensions/icon-cash.png)
     branding/locale/brand.dtd        (locale/en-US/brand.dtd)
     branding/locale/brand.properties (locale/en-US/brand.properties)
