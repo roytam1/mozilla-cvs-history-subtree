@@ -136,9 +136,6 @@ nsAppStartup::Initialize(nsISupports *aNativeAppSupportOrSplashScreen)
   mAppShell = do_GetService(kAppShellCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // listen to EventQueues' comings and goings. do this after the appshell
-  // has been created, but after the event queue has been created. that
-  // latter bit is unfortunate, but we deal with it.
   nsCOMPtr<nsIObserverService> os
     (do_GetService("@mozilla.org/observer-service;1", &rv));
   NS_ENSURE_SUCCESS(rv, rv);
