@@ -124,8 +124,16 @@ protected:
     typedef void (*LoadEventCallback)(nsCachedChromeChannel*);
 
     struct LoadEvent : nsRunnable {
+        LoadEvent(nsCachedChromeChannel *chan, LoadEventCallback callback)
+            : mChannel(chan), mCallback(callback) {}
+
         nsRefPtr<nsCachedChromeChannel> mChannel;
         LoadEventCallback mCallback;
+
+        NS_IMETHOD Run() {
+            mCallback(mChannel);
+            return NS_OK;
+        }
     };
 
     static nsresult
@@ -396,11 +404,9 @@ nsresult
 nsCachedChromeChannel::PostLoadEvent(nsCachedChromeChannel* aChannel,
                                      LoadEventCallback aCallback)
 {
-    nsRefPtr<LoadEvent> event = new LoadEvent;
+    nsCOMPtr<nsIRunnable> event = new LoadEvent(aChannel, aCallback);
     if (! event)
         return NS_ERROR_OUT_OF_MEMORY;
-    event->mChannel = aChannel;
-    event->mCallback = aCallback;
 
     return NS_DispatchToCurrentThread(event);
 }
