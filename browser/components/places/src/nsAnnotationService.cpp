@@ -222,8 +222,10 @@ nsAnnotationService::InitTables(mozIStorageConnection* aDBConn)
   }
 
   // this needs to happen after moz_anno_name gets created
-  if (migrateFromAlpha1)
-    return MigrateFromAlpha1(aDBConn);
+  if (migrateFromAlpha1) {
+    rv = MigrateFromAlpha1(aDBConn);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
   return NS_OK;
 }
 
