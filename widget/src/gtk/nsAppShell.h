@@ -45,7 +45,11 @@
 
 class nsAppShell : public nsBaseAppShell {
 public:
-    nsAppShell() : mTag(0) { memset(mPipeFDs, 0, sizeof(mPipeFDs)); }
+    nsAppShell()
+        : mTag(0), mRunningMain(0)
+    {
+        memset(mPipeFDs, 0, sizeof(mPipeFDs));
+    }
 
     // nsBaseAppShell overrides:
     nsresult Init();
@@ -61,6 +65,7 @@ private:
 
     int mPipeFDs[2];
     PRUintn mTag;
+    PRInt32 mRunningMain;
 };
 
 #endif /* nsAppShell_h__ */
