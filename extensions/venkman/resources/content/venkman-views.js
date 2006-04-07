@@ -3078,8 +3078,8 @@ console.views.source2.onCloseButton =
 function s2v_onclose(e)
 {
     var index = this.getIndexOfTab(e.target.parentNode);
-    this.removeSourceTabAtIndex(index);    
-    e.preventBubble()
+    this.removeSourceTabAtIndex(index);
+    e.stopPropagation();
 }
 
 console.views.source2.onTabClick =

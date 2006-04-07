@@ -1327,8 +1327,6 @@ function ctrlNumberTabSelection(event)
   }
 
   event.preventDefault();
-  event.preventBubble();
-  event.preventCapture();
   event.stopPropagation();
 }
 
@@ -1829,8 +1827,6 @@ function BrowserLoadURL(aTriggeringEvent, aPostData)
     gBrowser.loadOneTab(url, null, null, aPostData, false);
     gURLBar.value = url;
     aTriggeringEvent.preventDefault();
-    aTriggeringEvent.preventBubble();
-    aTriggeringEvent.preventCapture();
     aTriggeringEvent.stopPropagation();
   }
   else  
@@ -5194,13 +5190,13 @@ function handleLinkClick(event, href, linkNode)
       if (event.ctrlKey) {
 #endif
         openNewTabWith(href, docURL, null, event);
-        event.preventBubble();
+        event.stopPropagation();
         return true;
       }
                                                        // if left button clicked
       if (event.shiftKey) {
         openNewWindowWith(href, docURL, null);
-        event.preventBubble();
+        event.stopPropagation();
         return true;
       }
 
@@ -5223,7 +5219,7 @@ function handleLinkClick(event, href, linkNode)
         openNewTabWith(href, docURL, null, event);
       else
         openNewWindowWith(href, docURL, null);
-      event.preventBubble();
+      event.stopPropagation();
       return true;
   }
   return false;
@@ -5250,7 +5246,7 @@ function middleMousePaste(event)
              event,
              true /* ignore the fact this is a middle click */);
 
-  event.preventBubble();
+  event.stopPropagation();
 }
 
 function makeURLAbsolute( base, url )

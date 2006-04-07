@@ -2268,7 +2268,7 @@ function changeLanguage(event)
     InlineSpellChecker.checkDocument(window.content.document);
   }
 
-  event.preventBubble();
+  event.stopPropagation();
 }
 
 function ToggleReturnReceipt(target)

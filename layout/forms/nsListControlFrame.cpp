@@ -2478,13 +2478,7 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
     if (IsInDropDownMode()) {
       if (!IgnoreMouseEventForSelection(aMouseEvent)) {
         aMouseEvent->PreventDefault();
-
-        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-
-        if (nsevent) {
-          nsevent->PreventCapture();
-          nsevent->PreventBubble();
-        }
+        aMouseEvent->StopPropagation();
       } else {
         CaptureMouseEvents(GetPresContext(), PR_FALSE);
         return NS_OK;
@@ -2528,14 +2522,7 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
       IsOptionDisabled(selectedIndex, isDisabled);
       if (isDisabled) {
         aMouseEvent->PreventDefault();
-
-        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-
-        if (nsevent) {
-          nsevent->PreventCapture();
-          nsevent->PreventBubble();
-        }
-
+        aMouseEvent->StopPropagation();
         CaptureMouseEvents(GetPresContext(), PR_FALSE);
         return NS_ERROR_FAILURE;
       }
@@ -2764,13 +2751,7 @@ nsListControlFrame::MouseDown(nsIDOMEvent* aMouseEvent)
     if (IsInDropDownMode()) {
       if (!IgnoreMouseEventForSelection(aMouseEvent)) {
         aMouseEvent->PreventDefault();
-
-        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-
-        if (nsevent) {
-          nsevent->PreventCapture();
-          nsevent->PreventBubble();
-        }
+        aMouseEvent->StopPropagation();
       } else {
         return NS_OK;
       }

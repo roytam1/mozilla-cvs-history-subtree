@@ -553,13 +553,13 @@
       <handler event="underflow">
         <![CDATA[
           document.getAnonymousNodes(this)[1].collapsed = true;
-          event.preventBubble();
+          event.stopPropagation();
         ]]>
       </handler>
       <handler event="overflow">
         <![CDATA[
           document.getAnonymousNodes(this)[1].collapsed = false;
-          event.preventBubble();
+          event.stopPropagation();
         ]]>
       </handler>
     </handlers>
@@ -838,7 +838,7 @@
         <parameter name="aEvent"/>
         <body><![CDATA[
           // prevent click event from firing after column drag and drop
-          aEvent.preventBubble();
+          aEvent.stopPropagation();
           aEvent.preventDefault();
         ]]></body>        
       </method>

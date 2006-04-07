@@ -1638,14 +1638,8 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
           if (mType == NS_FORM_INPUT_BUTTON || 
               mType == NS_FORM_INPUT_RESET || 
               mType == NS_FORM_INPUT_SUBMIT ) {
-            nsCOMPtr<nsIDOMNSEvent> nsevent;
-
             if (aDOMEvent) {
-              nsevent = do_QueryInterface(*aDOMEvent);
-            }
-
-            if (nsevent) {
-              nsevent->PreventBubble();
+              (*aDOMEvent)->StopPropagation();
             } else {
               rv = NS_ERROR_FAILURE;
             }

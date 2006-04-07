@@ -3482,12 +3482,7 @@ nsresult nsPluginInstanceOwner::DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent)
       nsEventStatus rv = ProcessEvent(focusEvent);
       if (nsEventStatus_eConsumeNoDefault == rv) {
         aFocusEvent->PreventDefault();
-
-        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aFocusEvent));
-
-        if (nsevent) {
-          nsevent->PreventBubble();
-        }
+        aFocusEvent->StopPropagation();
       }
     }
     else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchFocusToPlugin failed, focusEvent null");   
@@ -3503,10 +3498,7 @@ nsresult nsPluginInstanceOwner::DragEnter(nsIDOMEvent* aMouseEvent)
   if (mInstance) {
     // Let the plugin handle drag events.
     aMouseEvent->PreventDefault();
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
+    aMouseEvent->StopPropagation();
   }
 
   return NS_OK;
@@ -3517,10 +3509,7 @@ nsresult nsPluginInstanceOwner::DragOver(nsIDOMEvent* aMouseEvent)
   if (mInstance) {
     // Let the plugin handle drag events.
     aMouseEvent->PreventDefault();
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
+    aMouseEvent->StopPropagation();
   }
 
   return NS_OK;
@@ -3531,10 +3520,7 @@ nsresult nsPluginInstanceOwner::DragExit(nsIDOMEvent* aMouseEvent)
   if (mInstance) {
     // Let the plugin handle drag events.
     aMouseEvent->PreventDefault();
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
+    aMouseEvent->StopPropagation();
   }
 
   return NS_OK;
@@ -3545,10 +3531,7 @@ nsresult nsPluginInstanceOwner::DragDrop(nsIDOMEvent* aMouseEvent)
   if (mInstance) {
     // Let the plugin handle drag events.
     aMouseEvent->PreventDefault();
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
+    aMouseEvent->StopPropagation();
   }
 
   return NS_OK;
@@ -3559,10 +3542,7 @@ nsresult nsPluginInstanceOwner::DragGesture(nsIDOMEvent* aMouseEvent)
   if (mInstance) {
     // Let the plugin handle drag events.
     aMouseEvent->PreventDefault();
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
+    aMouseEvent->StopPropagation();
   }
 
   return NS_OK;
@@ -3619,10 +3599,7 @@ nsresult nsPluginInstanceOwner::KeyPress(nsIDOMEvent* aKeyEvent)
     // If this event is going to the plugin, we want to kill it.
     // Not actually sending keypress to the plugin, since we didn't before.
     aKeyEvent->PreventDefault();
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
+    aKeyEvent->StopPropagation();
   }
   return NS_OK;
 #endif
@@ -3645,12 +3622,7 @@ nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
         nsEventStatus rv = ProcessEvent(*keyEvent);
         if (nsEventStatus_eConsumeNoDefault == rv) {
           aKeyEvent->PreventDefault();
-
-          nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
-
-          if (nsevent) {
-            nsevent->PreventBubble();
-          }
+          aKeyEvent->StopPropagation();
         }
       }
       else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchKeyToPlugin failed, keyEvent null");   
@@ -3787,12 +3759,7 @@ nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
       nsEventStatus rv = ProcessEvent(*mouseEvent);
       if (nsEventStatus_eConsumeNoDefault == rv) {
         aMouseEvent->PreventDefault();
-
-        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
-
-        if (nsevent) {
-          nsevent->PreventBubble();
-        }
+        aMouseEvent->StopPropagation();
       }
     }
     else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchMouseToPlugin failed, mouseEvent null");   

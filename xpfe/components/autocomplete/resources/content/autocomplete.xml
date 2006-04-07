@@ -944,7 +944,7 @@
           
           if (killEvent) {
             aEvent.preventDefault();
-            aEvent.preventBubble();
+            aEvent.stopPropagation();
           }
           
           return true;

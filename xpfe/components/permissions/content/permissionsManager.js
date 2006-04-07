@@ -386,7 +386,7 @@ function onReturnHit(event) {
       if (focusedElement.id == "permissionsTree")
         return;
       else {
-        event.preventBubble();
+        event.stopPropagation();
         if (focusedElement == addSiteBox.inputField) {
           var addSiteButton = document.getElementById("addSiteButton");
           addSiteButton.doCommand();
