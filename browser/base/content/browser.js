@@ -3791,11 +3791,14 @@ nsContextMenu.prototype = {
         // Remember the node that was clicked.
         this.target = node;
 
+        const nsIILC = Components.interfaces.nsIImageLoadingContent;
+        var request = null;
+
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent && this.target.currentURI ) {
+             if ( this.target instanceof nsIILC &&
+                  ((request = this.target.getRequest(nsIILC.CURRENT_REQUEST)) || this.target.imageBlocked) ) {
                 this.onImage = true;
-                var request = this.target.getRequest( Components.interfaces.nsIImageLoadingContent.CURRENT_REQUEST );
                 if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
                     this.onLoadedImage = true;
                 this.imageURL = this.target.src;
