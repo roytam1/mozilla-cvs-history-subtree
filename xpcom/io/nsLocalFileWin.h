@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -94,11 +94,12 @@ private:
     PRPackedBool mFollowSymlinks;   // should we follow symlinks when working on this file
     
     // this string will always be in native format!
-    nsCString mWorkingPath;
+    nsString mWorkingPath;
     
-    // this will be the resolved path of shortcuts, it will *NEVER* be returned to the user
-    nsCString mResolvedPath;
-    
+    // this will be the resolved path of shortcuts, it will *NEVER* 
+    // be returned to the user
+    nsString mResolvedPath;
+
     PRFileInfo64 mFileInfo64;
 
     void MakeDirty() { mDirty = PR_TRUE; }
@@ -106,12 +107,16 @@ private:
     nsresult ResolveAndStat();
     nsresult ResolveShortcut();
     
-    nsresult CopyMove(nsIFile *newParentDir, const nsACString &newName, PRBool followSymlinks, PRBool move);
-    nsresult CopySingleFile(nsIFile *source, nsIFile* dest, const nsACString &newName, PRBool followSymlinks, PRBool move);
+    nsresult CopyMove(nsIFile *newParentDir, const nsAString &newName,
+                      PRBool followSymlinks, PRBool move);
+    nsresult CopySingleFile(nsIFile *source, nsIFile* dest,
+                            const nsAString &newName,
+                            PRBool followSymlinks, PRBool move);
 
-    nsresult SetModDate(PRInt64 aLastModifiedTime, const char *filePath);
+    nsresult SetModDate(PRInt64 aLastModifiedTime, const PRUnichar *filePath);
     nsresult HasFileAttribute(DWORD fileAttrib, PRBool *_retval);
-    nsresult AppendNativeInternal(const nsAFlatCString &node, PRBool multipleComponents);
+    nsresult AppendInternal(const nsAFlatString &node,
+                            PRBool multipleComponents);
 };
 
 #endif
