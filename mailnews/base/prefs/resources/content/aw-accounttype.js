@@ -90,7 +90,7 @@ function setupWizardPanels() {
         wizardPanels = new Array("identitypage", "newsserver", "accnamepage");
 
       // Create a hash table of the panels to skip
-      skipArray  = skipPanels.split(",");
+      var skipArray = skipPanels.split(",");
       var skipHash = new Array();
       for (i = 0; i < skipArray.length; i++)
         skipHash[skipArray[i]] = skipArray[i];
@@ -103,13 +103,13 @@ function setupWizardPanels() {
         else
           i++;
       }
-     
+
       wizardPanels.push("done");
 
       // Set up order of panels
       for (i = 0; i < (wizardPanels.length-1); i++)
         setNextPage(wizardPanels[i], wizardPanels[i+1]);
-    
+
       // make the account type page go to the very first of our approved wizard panels...this is usually going to
       // be accounttype --> identitypage unless we were configured to skip the identity page
       setNextPage("accounttype",wizardPanels[0]);
@@ -119,7 +119,7 @@ function initializeIspData()
 {
     if (!document.getElementById("mailaccount").selected) {
       parent.SetCurrentAccountData(null);
-    }    
+    }
 
     // now reflect the datasource up into the parent
     var accountSelection = document.getElementById("acctyperadio");
@@ -127,7 +127,7 @@ function initializeIspData()
     var ispName = accountSelection.selectedItem.id;
 
     dump("initializing ISP data for " + ispName + "\n");
-    
+
     if (!ispName || ispName == "") return;
 
     parent.PrefillAccountForIsp(ispName);
