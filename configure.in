@@ -872,7 +872,7 @@ MOZ_XPCOM_OBSOLETE_LIBS='-L$(LIBXUL_DIST)/lib -lxpcom_compat'
 
 USE_DEPENDENT_LIBS=1
 
-_PLATFORM_DEFAULT_TOOLKIT=gtk2
+_PLATFORM_DEFAULT_TOOLKIT=cairo-gtk2
 MOZ_GFX_TOOLKIT='$(MOZ_WIDGET_TOOLKIT)'
 MOZ_WIDGET_TOOLKIT_LDFLAGS='-lwidget_$(MOZ_WIDGET_TOOLKIT)'
 MOZ_GFX_TOOLKIT_LDFLAGS='-lgfx_$(MOZ_GFX_TOOLKIT) $(MOZ_XLIBRGB_LDFLAGS)'
@@ -3988,6 +3988,7 @@ MOZ_ARG_HEADER(Toolkit Options)
         -o "$_DEFAULT_TOOLKIT" = "cocoa" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-windows" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-gtk2" \
+        -o "$_DEFAULT_TOOLKIT" = "cairo-beos" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-xlib" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-mac" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-cocoa"
@@ -3999,7 +4000,7 @@ MOZ_ARG_HEADER(Toolkit Options)
         if test "$no_x" != "yes"; then
             AC_MSG_ERROR([Toolkit must be xlib, gtk, gtk2 or qt.])
         else
-            AC_MSG_ERROR([Toolkit must be $_PLATFORM_DEFAULT_TOOLKIT.])
+            AC_MSG_ERROR([Toolkit must be $_PLATFORM_DEFAULT_TOOLKIT or cairo-$_PLATFORM_DEFAULT_TOOLKIT (if supported).])
         fi
     fi
 
@@ -4087,6 +4088,13 @@ cairo-gtk2)
     TK_CFLAGS='$(MOZ_GTK2_CFLAGS) $(MOZ_CAIRO_CFLAGS)'
     TK_LIBS='$(MOZ_GTK2_LIBS) $(MOZ_CAIRO_LIBS)'
     AC_DEFINE(MOZ_WIDGET_GTK2)
+    ;;
+cairo-beos)
+    MOZ_WIDGET_TOOLKIT=beos
+    MOZ_GFX_TOOLKIT=cairo
+    MOZ_ENABLE_CAIRO_GFX=1
+    TK_CFLAGS='$(MOZ_CAIRO_CFLAGS)'
+    TK_LIBS='$(MOZ_CAIRO_LIBS)'
     ;;
 cairo-xlib)
     MOZ_WIDGET_TOOLKIT=xlib
@@ -4274,7 +4282,7 @@ MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_CANVAS=1
 MOZ_ENABLE_LIBXUL=
-MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind spellcheck gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter safe-browsing"
+MOZ_EXTENSIONS_ALL=" cookie wallet xml-rpc help p3p venkman inspector irc typeaheadfind spellcheck gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter safe-browsing"
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm icon"
 MOZ_IMG_ENCODERS_DEFAULT="png jpeg"
 MOZ_IPCD=
@@ -4376,7 +4384,7 @@ suite)
   MOZ_SUITE=1
   MOZ_PROFILESHARING=
   MOZ_APP_VERSION=$SEAMONKEY_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind spellcheck gnomevfs sroaming permissions reporter"
+  MOZ_EXTENSIONS_DEFAULT=" cookie wallet xml-rpc help p3p venkman inspector irc typeaheadfind spellcheck gnomevfs sroaming permissions reporter"
   AC_DEFINE(MOZ_SUITE)
   ;;
 
@@ -4760,10 +4768,17 @@ then
         AC_MSG_WARN([Pango is required for cairo gfx builds, assuming --enable-pango])
         MOZ_ENABLE_PANGO=1
     fi
+fi
 
+if test "$MOZ_ENABLE_PANGO" && test "$MOZ_ENABLE_CAIRO_GFX"
+then
     AC_DEFINE(MOZ_ENABLE_PANGO)
     dnl PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.10.0 pangocairo >= 1.10.0)
-    PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.6.0 pangoft2 >= 1.6.0 pangoxft >= 1.6.0)
+    if test "$MOZ_X11"; then
+        PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.6.0 pangoft2 >= 1.6.0 pangoxft >= 1.6.0)
+    else
+        PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.6.0 pangoft2 >= 1.6.0)
+    fi
 
     AC_SUBST(MOZ_ENABLE_PANGO)
     AC_SUBST(MOZ_PANGO_CFLAGS)
@@ -5091,7 +5106,7 @@ MOZ_ARG_ENABLE_BOOL(native-uconv,
 if test "$MOZ_USE_NATIVE_UCONV"; then
     AC_DEFINE(MOZ_USE_NATIVE_UCONV)
 fi
-if test "$OS_ARCH" != "WINCE" -a "$MOZ_USE_NATIVE_UCONV" -a "$ac_cv_func_iconv" != "yes"; then
+if test "$OS_ARCH" != "WINCE" -a "$OS_ARCH" != "WINNT" -a "$MOZ_USE_NATIVE_UCONV" -a "$ac_cv_func_iconv" != "yes"; then
     AC_MSG_ERROR([iconv() not found.  Cannot enable native uconv support.])
 fi
 
@@ -6871,7 +6886,7 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
            fi
        fi
    else
-      PKG_CHECK_MODULES(CAIRO, cairo >= $CAIRO_VERSION)
+      PKG_CHECK_MODULES(CAIRO, cairo >= $CAIRO_VERSION freetype2 fontconfig)
       MOZ_CAIRO_CFLAGS=$CAIRO_CFLAGS
       MOZ_CAIRO_LIBS=$CAIRO_LIBS
    fi
@@ -7303,6 +7318,8 @@ AC_SUBST(MOZ_APP_VERSION)
 AC_SUBST(FIREFOX_VERSION)
 AC_SUBST(THUNDERBIRD_VERSION)
 AC_SUBST(SEAMONKEY_VERSION)
+
+AC_SUBST(MOZ_PKG_SPECIAL)
 
 AC_SUBST(MOZILLA_OFFICIAL)
 AC_SUBST(BUILD_OFFICIAL)

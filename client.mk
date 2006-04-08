@@ -213,11 +213,11 @@ BOOTSTRAP_toolkit :=                            \
   $(NULL)
 
 MODULES_NS_suite :=                             \
-  $(MODULES_NS_core)                            \
+  $(MODULES_NS_toolkit)                         \
   $(NULL)
 
 MODULES_suite :=                                \
-  $(MODULES_core)                               \
+  $(MODULES_toolkit)                            \
   mozilla/directory/xpcom                       \
   mozilla/mailnews                              \
   mozilla/themes                                \
@@ -225,11 +225,11 @@ MODULES_suite :=                                \
   $(NULL)
 
 LOCALES_suite :=                                \
-  $(LOCALES_core)                               \
+  $(LOCALES_toolkit)                            \
   $(NULL)
 
 BOOTSTRAP_suite :=                              \
-  $(BOOTSTRAP_core)                             \
+  $(BOOTSTRAP_toolkit)                          \
   $(NULL)
 
 MODULES_NS_browser :=                           \
@@ -388,8 +388,8 @@ MODULES_all :=                                  \
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_3_11_20060331_TAG
-LDAPCSDK_CO_TAG      = ldapcsdk_50_client_branch
+NSS_CO_TAG           = NSS_3_11_20060403_TAG
+LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
@@ -565,11 +565,11 @@ ifdef MOZ_CO_FLAGS
 endif
 NSS_CO_FLAGS := $(NSS_CO_FLAGS) $(if $(NSS_CO_TAG),-r $(NSS_CO_TAG),-A)
 
-# Cannot pull static tags by date
-ifneq (,$(findstring _RTM,$(NSS_CO_TAG))$(findstring _TAG,$(NSS_CO_TAG)))
-CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(NSS_CO_MODULE)
-else
+# Can only pull the tip or branch tags by date
+ifeq (,$(filter-out HEAD %BRANCH,$(NSS_CO_TAG)))
 CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO_MODULE)
+else
+CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(NSS_CO_MODULE)
 endif
 
 ####################################
