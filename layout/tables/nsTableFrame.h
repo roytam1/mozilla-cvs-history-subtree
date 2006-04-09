@@ -515,9 +515,7 @@ public:
   // calculate the minimum width to layout aFrame and its desired width 
   // including border and padding given its reflow state and column width information 
   void CalcMinAndPreferredWidths(const nsHTMLReflowState& aReflowState,
-                                 PRBool                   aCalcPrefWidthIfAutoWithPctCol,
-                                 nscoord&                 aMinWidth,
-                                 nscoord&                 aPreferredWidth);
+                                 PRBool                   aCalcPrefWidthIfAutoWithPctCol);
 protected:
 
   // calcs the width of the table according to the computed widths of each column.

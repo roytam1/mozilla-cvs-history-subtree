@@ -1593,8 +1593,8 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 
   ReflowColGroups(aRenderingContext);
 
-#error Should we care about NeedStrategyBalance?  If not, we should call something smaller.
-  if (NeedStrategyInit() || NeedStrategyBalance()) {
+  if (NeedStrategyInit()) {
+    mTableLayoutStrategy->Initialize(aRenderingContext);
     BalanceColumnWidths(aRenderingContext);
   }
 
@@ -1612,8 +1612,8 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
   ReflowColGroups(aRenderingContext);
 
-#error Should we care about NeedStrategyBalance?  If not, we should call something smaller.
-  if (NeedStrategyInit() || NeedStrategyBalance()) {
+  if (NeedStrategyInit()) {
+    mTableLayoutStrategy->Initialize(aRenderingContext);
     BalanceColumnWidths(aRenderingContext);
   }
 
@@ -2020,7 +2020,6 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   if (!GetPrevInFlow()) {
     if (NeedStrategyInit() || NeedStrategyBalance()) {
       BalanceColumnWidths(aReflowState);
-      SetDesiredWidth(CalcDesiredWidth(aReflowState));          
     }
   }
   // Constrain our reflow width to the computed table width (of the 1st in flow).
@@ -3052,10 +3051,8 @@ void nsTableFrame::BalanceColumnWidths(const nsHTMLReflowState& aReflowState)
   //Dump(PR_TRUE, PR_TRUE);
   SetNeedStrategyBalance(PR_FALSE);                    // we have just balanced
   // cache the min, desired, and preferred widths
-  nscoord minWidth, prefWidth;
-  CalcMinAndPreferredWidths(aReflowState, PR_FALSE, minWidth, prefWidth);
-  SetMinWidth(minWidth); 
-  SetPreferredWidth(prefWidth); 
+  CalcMinAndPreferredWidths(aReflowState, PR_FALSE);
+  SetDesiredWidth(CalcDesiredWidth(aReflowState));
 
 }
 
@@ -3722,11 +3719,10 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 
 void 
 nsTableFrame::CalcMinAndPreferredWidths(const           nsHTMLReflowState& aReflowState,
-                                        PRBool          aCalcPrefWidthIfAutoWithPctCol,
-                                        nscoord&        aMinWidth,
-                                        nscoord&        aPrefWidth) 
+                                        PRBool          aCalcPrefWidthIfAutoWithPctCol)
 {
-  aMinWidth = aPrefWidth = 0;
+  nscoord aMinWidth = 0;
+  nscoord aPrefWidth = 0;
 
   nscoord spacingX = GetCellSpacingX();
   PRInt32 numCols = GetColCount();
@@ -3778,6 +3774,9 @@ nsTableFrame::CalcMinAndPreferredWidths(const           nsHTMLReflowState& aRefl
       aPrefWidth = PR_MAX(aMinWidth, compWidth);
     }
   }
+
+  SetMinWidth(minWidth); 
+  SetPreferredWidth(prefWidth); 
 }
 
 
