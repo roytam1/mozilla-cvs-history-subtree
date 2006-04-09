@@ -146,14 +146,7 @@ PRBool BasicTableLayoutStrategy::Initialize(const nsHTMLReflowState& aReflowStat
   if (hasPctCol && mTableFrame->IsAutoWidth()) {
     prefWidth = CalcPctAdjTableWidth(aReflowState, boxWidth);
   }
-  // calc the desired width, considering if there is a specified width. 
-  // don't use nsTableFrame::CalcDesiredWidth because it is based on table column widths.
-  nscoord desWidth = (mTableFrame->IsAutoWidth()) ? PR_MIN(prefWidth, aReflowState.availableWidth)
-                                                  : prefWidth;
-  desWidth = PR_MAX(desWidth, minWidth);
-
   mTableFrame->SetMinWidth(minWidth);
-  mTableFrame->SetDesiredWidth(desWidth);
   mTableFrame->SetPreferredWidth(prefWidth);
 
   mTableFrame->SetNeedStrategyInit(PR_FALSE);
