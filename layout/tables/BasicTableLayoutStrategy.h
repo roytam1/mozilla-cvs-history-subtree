@@ -75,7 +75,7 @@ public:
     * in the table (content, structure, or style) 
 	   * @param aReflowState - the reflow state for mTableFrame
     */
-  virtual PRBool Initialize(const nsHTMLReflowState& aReflowState);
+  virtual PRBool Initialize(nsIRenderingContext* aRenderingContext);
 
   /** Called during resize reflow to determine the new column widths
 	   * @param aReflowState - the reflow state for mTableFrame
@@ -88,7 +88,7 @@ public:
     * @param aAvailWidth    - the available width for the table
     * @return               - the basis for percent calculations
     */
-  virtual nscoord CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
+  virtual nscoord CalcPctAdjTableWidth(nsIRenderingContext*     aRenderingContext,
                                        nscoord                  aAvailWidth);
 
   void Dump(PRInt32 aIndent);

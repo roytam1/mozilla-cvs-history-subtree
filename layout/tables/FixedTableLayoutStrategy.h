@@ -78,7 +78,7 @@ public:
     * @param aAvailWidth    - the available width for the table
     * @return               - the basis for percent calculations
     */
-  virtual nscoord CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
+  virtual nscoord CalcPctAdjTableWidth(nsIRenderingContext*     aRenderingContext,
                                        nscoord                  aAvailWidth) {return 0;};
 
 protected:

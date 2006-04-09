@@ -46,6 +46,7 @@ struct nsHTMLReflowState;
 struct nsMargin;
 class nsTableCellFrame;
 class nsStyleCoord;
+class nsIRenderingContext;
 
 class nsITableLayoutStrategy
 {
@@ -55,7 +56,7 @@ public:
   /** call once every time any table thing changes (content, structure, or style)
     * @param aReflowState - the reflow state for mTableFrame
     */
-  virtual PRBool Initialize(const nsHTMLReflowState& aReflowState)=0;
+  virtual PRBool Initialize(nsIRenderingContext* aRenderingContext)=0;
 
   /** assign widths for each column, taking into account the table content, the effective style, 
     * the layout constraints, and the compatibility mode.  Sets mColumnWidths as a side effect.
@@ -69,7 +70,7 @@ public:
     * @param aAvailWidth    - the available width for the table
     * @return               - the basis for percent calculations
     */
-  virtual nscoord CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
+  virtual nscoord CalcPctAdjTableWidth(nsIRenderingContext*     aRenderingContext,
                                        nscoord                  aAvailWidth)=0;
 };
 

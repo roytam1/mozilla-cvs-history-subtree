@@ -514,8 +514,7 @@ public:
   nscoord CalcBorderBoxHeight(const nsHTMLReflowState& aReflowState);
   // calculate the minimum width to layout aFrame and its desired width 
   // including border and padding given its reflow state and column width information 
-  void CalcMinAndPreferredWidths(const nsHTMLReflowState& aReflowState,
-                                 PRBool                   aCalcPrefWidthIfAutoWithPctCol);
+  void CalcMinAndPreferredWidths(nsIRenderingContext* aRenderingContext);
 protected:
 
   // calcs the width of the table according to the computed widths of each column.
@@ -730,6 +729,9 @@ protected:
   nsTableCellMap*         mCellMap;            // maintains the relationships between rows, cols, and cells
   nsITableLayoutStrategy* mTableLayoutStrategy;// the layout strategy for this frame
   nsFrameList             mColGroups;          // the list of colgroup frames
+  // XXXldb Make sure nothing depends on old behavior of mMinWidth and
+  // mPreferredWidth depending on specified width, or that they included
+  // border and padding.
   nscoord                 mMinWidth;       // XXX could store as PRUint16 with pixels
   nscoord                 mDesiredWidth;   // XXX could store as PRUint16 with pixels
   nscoord                 mPreferredWidth; // XXX could store as PRUint16 with pixels

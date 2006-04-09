@@ -1595,7 +1595,7 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 
   if (NeedStrategyInit()) {
     mTableLayoutStrategy->Initialize(aRenderingContext);
-    BalanceColumnWidths(aRenderingContext);
+    CalcMinAndPreferredWidths(aRenderingContext);
   }
 
   return mMinWidth;
@@ -1614,7 +1614,7 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
   if (NeedStrategyInit()) {
     mTableLayoutStrategy->Initialize(aRenderingContext);
-    BalanceColumnWidths(aRenderingContext);
+    CalcMinAndPreferredWidths(aRenderingContext);
   }
 
   return mPrefWidth;
@@ -1858,7 +1858,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
           ReflowChildren(reflowState, PR_FALSE, aStatus, lastReflowed,
                          overflowArea);
         }
-        mTableLayoutStrategy->Initialize(aReflowState);
+        mTableLayoutStrategy->Initialize(aReflowState.rendContext);
       }
       break; 
     }
@@ -3041,7 +3041,7 @@ void nsTableFrame::BalanceColumnWidths(const nsHTMLReflowState& aReflowState)
   // reflow gets called twice and the 2nd time has the correct space available.
   // XXX this is very bad and needs to be changed
   if (!IsAutoLayout() || NeedStrategyInit()) {
-    mTableLayoutStrategy->Initialize(aReflowState);
+    mTableLayoutStrategy->Initialize(aReflowState.rendContext);
   }
 
   // need to figure out the overall table width constraint
@@ -3051,7 +3051,7 @@ void nsTableFrame::BalanceColumnWidths(const nsHTMLReflowState& aReflowState)
   //Dump(PR_TRUE, PR_TRUE);
   SetNeedStrategyBalance(PR_FALSE);                    // we have just balanced
   // cache the min, desired, and preferred widths
-  CalcMinAndPreferredWidths(aReflowState, PR_FALSE);
+  CalcMinAndPreferredWidths(aReflowState.rendContext);
   SetDesiredWidth(CalcDesiredWidth(aReflowState));
 
 }
@@ -3718,8 +3718,7 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 
 
 void 
-nsTableFrame::CalcMinAndPreferredWidths(const           nsHTMLReflowState& aReflowState,
-                                        PRBool          aCalcPrefWidthIfAutoWithPctCol)
+nsTableFrame::CalcMinAndPreferredWidths(nsIRenderingContext* aRenderingContext)
 {
   nscoord aMinWidth = 0;
   nscoord aPrefWidth = 0;
@@ -3741,42 +3740,15 @@ nsTableFrame::CalcMinAndPreferredWidths(const           nsHTMLReflowState& aRefl
       aPrefWidth += spacingX;
     }
   }
-  // if it is not a degenerate table, add the last spacing on the right and the borderPadding
+  // if it is not a degenerate table, add the last spacing on the right
   if (numCols > 0) {
-    nsMargin childAreaOffset = GetChildAreaOffset( &aReflowState);
-    nscoord extra = spacingX + childAreaOffset.left + childAreaOffset.right;
-    aMinWidth  += extra;
-    aPrefWidth += extra;
+    aMinWidth  += spacingX;
+    aPrefWidth += spacingX;
   }
   aPrefWidth = PR_MAX(aMinWidth, aPrefWidth);
 
-  PRBool isPctWidth = PR_FALSE;
-  if (IsAutoWidth(&isPctWidth)) {
-    if (HasPctCol() && aCalcPrefWidthIfAutoWithPctCol && 
-        (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth)) {
-      // for an auto table with a pct cell, use the strategy's CalcPctAdjTableWidth
-      nscoord availWidth = CalcBorderBoxWidth(aReflowState);
-      availWidth = PR_MIN(availWidth, aReflowState.availableWidth);
-      if (mTableLayoutStrategy && IsAutoLayout()) {
-        aPrefWidth = mTableLayoutStrategy->CalcPctAdjTableWidth(aReflowState, availWidth);
-      }
-    }
-    if (0 == numCols) { // degenerate case
-      aMinWidth = aPrefWidth = 0;
-    }
-  }
-  else { // a specified fix width becomes the min or preferred width
-    nscoord compWidth = aReflowState.mComputedWidth;
-    if ((NS_UNCONSTRAINEDSIZE != compWidth) && (0 != compWidth) && !isPctWidth) {
-      nsMargin contentOffset = GetContentAreaOffset(&aReflowState);
-      compWidth += contentOffset.left + contentOffset.right;
-      aMinWidth = PR_MAX(aMinWidth, compWidth);
-      aPrefWidth = PR_MAX(aMinWidth, compWidth);
-    }
-  }
-
-  SetMinWidth(minWidth); 
-  SetPreferredWidth(prefWidth); 
+  SetMinWidth(aMinWidth); 
+  SetPreferredWidth(aPrefWidth); 
 }
 
 

@@ -45,6 +45,7 @@
 #include "nsTableCellFrame.h"
 #include "nsStyleConsts.h"
 #include "nsQuickSort.h"
+#include "nsLayoutUtils.h"
 
 
 #define ARENA_ALLOCATE(var, pool, num, type) \
@@ -123,7 +124,7 @@ BasicTableLayoutStrategy::~BasicTableLayoutStrategy()
   MOZ_COUNT_DTOR(BasicTableLayoutStrategy);
 }
 
-PRBool BasicTableLayoutStrategy::Initialize(const nsHTMLReflowState& aReflowState)
+PRBool BasicTableLayoutStrategy::Initialize(nsIRenderingContext* aRenderingContext)
 {
   ContinuingFrameCheck();
 
@@ -144,7 +145,7 @@ PRBool BasicTableLayoutStrategy::Initialize(const nsHTMLReflowState& aReflowStat
   nscoord minWidth, prefWidth;
   mTableFrame->CalcMinAndPreferredWidths(aReflowState, PR_FALSE, minWidth, prefWidth);
   if (hasPctCol && mTableFrame->IsAutoWidth()) {
-    prefWidth = CalcPctAdjTableWidth(aReflowState, boxWidth);
+    prefWidth = CalcPctAdjTableWidth(aRenderingContext, boxWidth);
   }
   mTableFrame->SetMinWidth(minWidth);
   mTableFrame->SetPreferredWidth(prefWidth);
@@ -1180,7 +1181,7 @@ BasicTableLayoutStrategy::ReduceOverSpecifiedPctCols(nscoord aExcess)
 }
 
 nscoord 
-BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
+BasicTableLayoutStrategy::CalcPctAdjTableWidth(nsIRenderingContext*     aRenderingContext,
                                                nscoord                  aAvailWidthIn)
 {
   NS_ASSERTION(mTableFrame->IsAutoWidth() && mTableFrame->HasPctCol(), "invalid call");
@@ -1200,11 +1201,16 @@ BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowS
     rawPctValues[colX] = 0.0f;
   }
 
-  nsMargin borderPadding = mTableFrame->GetContentAreaOffset(&aReflowState);
+  nscoord borderPadding =
+    nsLayoutUtils::IntrinsicForContainer(aRenderingContext, mTableFrame,
+      nsLayoutUtils::PREF_WIDTH /* doesn't matter */,
+      nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::BORDER |
+                                        nsLayoutUtils::PADDING));
+                            
   nscoord availWidth = aAvailWidthIn;
   if (NS_UNCONSTRAINEDSIZE != availWidth) {
     // adjust the avail width to exclude table border, padding and cell spacing
-    availWidth -= borderPadding.left + borderPadding.right + mCellSpacingTotal;
+    availWidth -= borderPadding + mCellSpacingTotal;
   }
 
   for (colX = 0; colX < numCols; colX++) { 
@@ -1234,7 +1240,7 @@ BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowS
           }
           // consider the cell's preferred width 
           nscoord prefWidth =
-            cellFrame->GetPrefWidth(aReflowState.rendContext);
+            cellFrame->GetPrefWidth(aRenderingContext);
           cellDesWidth = PR_MAX(cellDesWidth, prefWidth);
           nscoord colBasis = nsTableFrame::RoundToPixel(NSToCoordRound((float)cellDesWidth / percent), pixelToTwips);
           maxColBasis = PR_MAX(maxColBasis, colBasis);
@@ -1287,7 +1293,7 @@ BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowS
   }
   // If there is only one col and it is % based, it won't affect anything
   if ((1 == numCols) && (numCols == numPerCols)) {
-    return basis + borderPadding.left + borderPadding.right + mCellSpacingTotal;
+    return basis + borderPadding + mCellSpacingTotal;
   }
 
   // compute a basis considering total percentages and the desired width of everything else
@@ -1303,7 +1309,7 @@ BasicTableLayoutStrategy::CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowS
 
   if (NS_UNCONSTRAINEDSIZE != availWidth) {
     // add back the table border, padding and cell spacing
-    basis += borderPadding.left + borderPadding.right + mCellSpacingTotal;
+    basis += borderPadding + mCellSpacingTotal;
   }
 
   return basis;
@@ -1328,7 +1334,7 @@ BasicTableLayoutStrategy::AssignPctColumnWidths(const nsHTMLReflowState& aReflow
   // on percent cells/cols. This probably should only be a NavQuirks thing, since
   // a percentage based cell or column on an auto table should force the column to auto
   nscoord basis = (aTableIsAutoWidth) 
-                  ? CalcPctAdjTableWidth(aReflowState, aAvailWidth)
+                  ? CalcPctAdjTableWidth(aReflowState.rendContext, aAvailWidth)
                   : aAvailWidth;
 
   // adjust the basis to exclude table border, padding and cell spacing
