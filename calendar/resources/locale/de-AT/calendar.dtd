@@ -150,13 +150,7 @@
 <!ENTITY newevent.recurrence.month.label    "monatlich" >
 <!ENTITY newevent.recurrence.year.label     "jählich" >
 <!ENTITY newevent.recurrence.on.label       "Am:" >
-<!ENTITY newevent.recurrence.every.label    "Alle" >
-<!ENTITY newevent.repeat.first.label        "Jede(n) erste(n)" >
-<!ENTITY newevent.repeat.second.label       "Jede(n) zweite(n)" >
-<!ENTITY newevent.repeat.third.label        "Jede(n) dritte(n)" >
-<!ENTITY newevent.repeat.fourth.label       "Jede(n) vierte(n)" >
-<!ENTITY newevent.repeat.fifth.label        "Jede(n) fünfte(n)" >
-<!ENTITY newevent.repeat.last.label         "Jede(n) letzte(n)" >
+<!ENTITY newevent.recurrence.every.label    "Jeden:" >
 <!ENTITY newevent.repeat.onthe.label        "Wiederholen am" >
 <!ENTITY newevent.repeat.forever.label      "Unendlich oft wiederholen" >
 <!ENTITY newevent.repeat.for.label          "Wiederholen bis" >
@@ -177,28 +171,13 @@
 <!ENTITY newevent.status.cancelled.label   "Abgebrochen" >
 <!ENTITY newevent.status.tentative.label   "Vorläufig" >
 <!ENTITY newevent.status.confirmed.label   "Bestätigt" >
+<!ENTITY newevent.status.none.label        "Nicht angegeben" >
 <!ENTITY newevent.itemType.label            "Eintragstyp" >
 <!ENTITY newevent.itemType.event.label      "Termin" >
 <!ENTITY newevent.itemType.todo.label       "Aufgabe" >
 <!ENTITY newevent.itemType.journal.label    "Journal" >
 <!ENTITY newevent.add.contact.label         "Hinzufügen" >
 <!ENTITY newevent.attach.file.label         "Datei anhängen..." >
-
-<!ENTITY newevent.advanced.repeat.dayofmonth.label "Am x-ten Tag des Monats">
-<!ENTITY newevent.advanced.repeat.dayofweek.label "4. Donnerstag des Monats">
-<!ENTITY newevent.advanced.repeat.lastdayofweek.label "Letzter Donnerstag des Monats">
-<!ENTITY newevent.advanced.repeat.ofthemonth.label " des Monats">
-
-<!ENTITY newevent.advanced.repeat.onthe.label "Am ">
-<!ENTITY newevent.advanced.repeat.last.label "Letzten">
-<!ENTITY newevent.advanced.repeat.first.label "Ersten">
-<!ENTITY newevent.advanced.repeat.second.label "Zweiten">
-<!ENTITY newevent.advanced.repeat.third.label "Dritten">
-<!ENTITY newevent.advanced.repeat.fourth.label "Vierten">
-<!ENTITY newevent.advanced.repeat.first.extension ".">
-<!ENTITY newevent.advanced.repeat.second.extension ".">
-<!ENTITY newevent.advanced.repeat.third.extension ".">
-<!ENTITY newevent.advanced.repeat.nth.extension ".">
 
 <!ENTITY newevent.removeselectedfile.label "Gewählte Datei entfernen">
 
@@ -536,6 +515,9 @@
 <!ENTITY calendar.publish.close.button      "Schließen">
 
 <!ENTITY calendar.publish.example.url.description   "Etwas wie http://www.myserver.com/webdav/test.ics">
+
+<!-- Select Calendar Dialog -->
+<!ENTITY calendar.select.dialog.title    "Kalender auswählen">
 
 <!-- TRANSLATORS: this label must be short to keep a reasonable column width in the week view -->
 <!ENTITY allDayEvents.label "Ganztägige Termine">
