@@ -133,6 +133,11 @@ public:
                          PRBool aSelected,
                          nsSpread aSpread);
 
+  /**
+   * GetMinWidth and GetPrefWidth on nsTableCellFrame *do* include the
+   * padding and the necessary parts of the border, unlike for other
+   * frames!
+   */
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   NS_IMETHOD Reflow(nsPresContext*      aPresContext,
