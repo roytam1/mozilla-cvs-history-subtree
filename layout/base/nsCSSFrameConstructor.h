@@ -229,12 +229,10 @@ private:
                                     nsIFrame*                aParentFrame,
                                     nsIFrame**               aNewFrame);
 
-#ifdef CSS_TABLES
   nsresult ConstructDocElementTableFrame(nsIContent*            aDocElement,
                                          nsIFrame*              aParentFrame,
                                          nsIFrame**             aNewTableFrame,
                                          nsFrameConstructorState& aState);
-#endif
 
   /**
    * CreateAttributeContent creates a single content/frame combination for an
@@ -276,7 +274,6 @@ private:
                         nsIFrame*                      aFrameList,
                         nsIFrame*                      aAfterFrame);
 
-#ifdef CSS_TABLES
   // BEGIN TABLE SECTION
   /**
    * ConstructTableFrame will construct the outer and inner table frames and
@@ -469,7 +466,6 @@ private:
   const nsStyleDisplay* GetDisplay(nsIFrame* aFrame);
 
   // END TABLE SECTION
-#endif
 
 protected:
   static nsresult CreatePlaceholderFrameFor(nsIPresShell*    aPresShell, 
@@ -756,7 +752,6 @@ private:
 
   PRBool MaybeRecreateContainerForIBSplitterFrame(nsIFrame* aFrame, nsresult* aResult);
 
-#ifdef CSS_TABLES
   nsresult CreateContinuingOuterTableFrame(nsIPresShell*    aPresShell, 
                                            nsPresContext*  aPresContext,
                                            nsIFrame*        aFrame,
@@ -772,7 +767,6 @@ private:
                                       nsIContent*      aContent,
                                       nsStyleContext*  aStyleContext,
                                       nsIFrame**       aContinuingFrame);
-#endif
 
   //----------------------------------------
 
