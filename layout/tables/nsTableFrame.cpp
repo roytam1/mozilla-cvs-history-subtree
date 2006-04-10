@@ -185,8 +185,6 @@ nsTableFrame::nsTableFrame()
     mPreferredWidth(0)
 {
   mBits.mHaveReflowedColGroups  = PR_FALSE;
-  mBits.mNeedStrategyInit       = PR_TRUE;
-  mBits.mNeedStrategyBalance    = PR_TRUE;
   mBits.mCellSpansPctCol        = PR_FALSE;
   mBits.mNeedToCalcBCBorders    = PR_FALSE;
   mBits.mIsBorderCollapse       = PR_FALSE;
@@ -727,17 +725,6 @@ nsTableCellMap* nsTableFrame::GetCellMap() const
   }
   else {
     return firstInFlow->GetCellMap();
-  }
-}
-
-nscoord nsTableFrame::GetDesiredWidth() const
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  if (this == firstInFlow) {
-    return mDesiredWidth;
-  }
-  else {
-    return firstInFlow->GetDesiredWidth();
   }
 }
 
@@ -1578,46 +1565,26 @@ ProcessRowInserted(nsTableFrame&   aTableFrame,
 /* virtual */ void
 nsTableFrame::MarkIntrinsicWidthsDirty()
 {
-  // the following could be optimized with a fair amount of effort
-  SetNeedStrategyInit(PR_TRUE);
+  NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+    mTableLayoutStrategy->MarkIntrinsicWidthsDirty();
 }
 
 /* virtual */ nscoord
 nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (GetPrevInFlow())
-    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
-             GetMinWidth(aRenderingContext);
-
-  DISPLAY_MIN_WIDTH(this, mMinWidth);
-
   ReflowColGroups(aRenderingContext);
 
-  if (NeedStrategyInit()) {
-    mTableLayoutStrategy->Initialize(aRenderingContext);
-    CalcMinAndPreferredWidths(aRenderingContext);
-  }
-
-  return mMinWidth;
+  return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+    mTableLayoutStrategy->GetMinWidth(aRenderingContext);
 }
 
 /* virtual */ nscoord
 nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (GetPrevInFlow())
-    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
-             GetPrefWidth(aRenderingContext);
-
-  DISPLAY_PREF_WIDTH(this, mPrefWidth);
-
   ReflowColGroups(aRenderingContext);
 
-  if (NeedStrategyInit()) {
-    mTableLayoutStrategy->Initialize(aRenderingContext);
-    CalcMinAndPreferredWidths(aRenderingContext);
-  }
-
-  return mPrefWidth;
+  return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+    mTableLayoutStrategy->GetPrefWidth(aRenderingContext);
 }
 
 
@@ -3026,77 +2993,6 @@ nsTableFrame::ReflowColGroups(nsIRenderingContext *aRenderingContext)
   }
 }
 
-/**
-  Now I've got all the cells laid out in an infinite space.
-  For each column, use the min size for each cell in that column
-  along with the attributes of the table, column group, and column
-  to assign widths to each column.
-  */
-// use the cell map to determine which cell is in which column.
-void nsTableFrame::BalanceColumnWidths(const nsHTMLReflowState& aReflowState)
-{
-  NS_ASSERTION(!GetPrevInFlow(), "never ever call me on a continuing frame!");
-
-  // fixed-layout tables need to reinitialize the layout strategy. When there are scroll bars
-  // reflow gets called twice and the 2nd time has the correct space available.
-  // XXX this is very bad and needs to be changed
-  if (!IsAutoLayout() || NeedStrategyInit()) {
-    mTableLayoutStrategy->Initialize(aReflowState.rendContext);
-  }
-
-  // need to figure out the overall table width constraint
-  // default case, get 100% of available space
-
-  mTableLayoutStrategy->BalanceColumnWidths(aReflowState);
-  //Dump(PR_TRUE, PR_TRUE);
-  SetNeedStrategyBalance(PR_FALSE);                    // we have just balanced
-  // cache the min, desired, and preferred widths
-  CalcMinAndPreferredWidths(aReflowState.rendContext);
-  SetDesiredWidth(CalcDesiredWidth(aReflowState));
-
-}
-
-// This width is based on the column widths array of the table.
-// sum the width of each column and add in table insets
-nscoord 
-nsTableFrame::CalcDesiredWidth(const nsHTMLReflowState& aReflowState)
-{
-  NS_ASSERTION(!GetPrevInFlow(), "never ever call me on a continuing frame!");
-  nsTableCellMap* cellMap = GetCellMap();
-  if (!cellMap) {
-    NS_ASSERTION(PR_FALSE, "never ever call me until the cell map is built!");
-    return 0;
-  }
-
-  nscoord cellSpacing = GetCellSpacingX();
-  PRInt32 tableWidth  = 0;
-
-  PRInt32 numCols = GetColCount();
-  for (PRInt32 colIndex = 0; colIndex < numCols; colIndex++) {
-    nscoord totalColWidth = GetColumnWidth(colIndex);
-    if (GetNumCellsOriginatingInCol(colIndex) > 0) { // skip degenerate cols
-      totalColWidth += cellSpacing;           // add cell spacing to left of col
-    }
-    tableWidth += totalColWidth;
-  }
-
-  if (numCols > 0)
-    tableWidth += cellSpacing; // add last cellspacing
-
-  PRBool isPctWidth = PR_FALSE;
-  nscoord compWidth = aReflowState.mComputedWidth;
-  if (!IsAutoWidth(&isPctWidth) &&
-      (NS_UNCONSTRAINEDSIZE != compWidth) && !isPctWidth)
-    tableWidth = PR_MAX(tableWidth, compWidth);
-
-  // Add the width between the border edge and the child area
-  nsMargin childOffset = GetChildAreaOffset(&aReflowState);
-  tableWidth += childOffset.left + childOffset.right;
-
-  return tableWidth;
-}
-
-
 void 
 nsTableFrame::CalcDesiredHeight(const nsHTMLReflowState& aReflowState, nsHTMLReflowMetrics& aDesiredSize) 
 {
@@ -3388,34 +3284,6 @@ nsTableFrame::IsPctHeight(nsStyleContext* aStyleContext)
               aStyleContext->GetStylePosition()->mHeight.GetUnit());
   }
   return result;
-}
-
-void nsTableFrame::SetNeedStrategyBalance(PRBool aValue)
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
-  firstInFlow->mBits.mNeedStrategyBalance = aValue;
-}
-
-PRBool nsTableFrame::NeedStrategyBalance() const
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
-  return (PRBool)firstInFlow->mBits.mNeedStrategyBalance;
-}
-
-void nsTableFrame::SetNeedStrategyInit(PRBool aValue)
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
-  firstInFlow->mBits.mNeedStrategyInit = aValue;
-}
-
-PRBool nsTableFrame::NeedStrategyInit() const
-{
-  nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  NS_ASSERTION(firstInFlow, "illegal state -- no first in flow");
-  return (PRBool)firstInFlow->mBits.mNeedStrategyInit;
 }
 
 PRInt32 nsTableFrame::GetColumnWidth(PRInt32 aColIndex)

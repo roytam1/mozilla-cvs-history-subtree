@@ -268,7 +268,6 @@ public:
     *     use column widths to Reflow cells
     * </pre>
     *
-    * @see BalanceColumnWidths
     * @see nsIFrame::Reflow
     */
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
@@ -512,13 +511,7 @@ public:
   // calculate the computed height of aFrame including its border and padding given 
   // its reflow state.
   nscoord CalcBorderBoxHeight(const nsHTMLReflowState& aReflowState);
-  // calculate the minimum width to layout aFrame and its desired width 
-  // including border and padding given its reflow state and column width information 
-  void CalcMinAndPreferredWidths(nsIRenderingContext* aRenderingContext);
 protected:
-
-  // calcs the width of the table according to the computed widths of each column.
-  virtual PRInt32 CalcDesiredWidth(const nsHTMLReflowState& aReflowState);
 
   // update the  desired height of this table taking into account the current
   // reflow state, the table attributes and the content driven rowgroup heights
@@ -533,15 +526,6 @@ protected:
   void PlaceChild(nsTableReflowState&  aReflowState,
                   nsIFrame*            aKidFrame,
                   nsHTMLReflowMetrics& aKidDesiredSize);
-
-  /** assign widths for each column, taking into account the table content, the effective style, 
-    * the layout constraints, and the compatibility mode.  
-    * @param aTableStyle      the resolved style for the table
-    * @param aMaxSize         the height and width constraints
-    * @param aMaxElementSize  the min size of the largest indivisible object
-    */
-  virtual void BalanceColumnWidths(const nsHTMLReflowState& aReflowState);
-
 
   nsIFrame* GetFirstBodyRowGroupFrame();
   PRBool MoveOverflowToChildList(nsPresContext* aPresContext);
@@ -584,12 +568,6 @@ protected:
   void   SetHaveReflowedColGroups(PRBool aValue);
 
 public:
-  PRBool NeedStrategyInit() const;
-  void SetNeedStrategyInit(PRBool aValue);
-
-  PRBool NeedStrategyBalance() const;
-  void SetNeedStrategyBalance(PRBool aValue);
-
   PRBool IsBorderCollapse() const;
 
   PRBool NeedToCalcBCBorders() const;
@@ -667,13 +645,6 @@ public: /* ----- Cell Map public methods ----- */
   /** returns PR_TRUE if table-layout:auto  */
   virtual PRBool IsAutoLayout();
 
-  void    SetMinWidth(nscoord aWidth);
-  
-  nscoord GetDesiredWidth() const;
-  void    SetDesiredWidth(nscoord aWidth);
-
-  void    SetPreferredWidth(nscoord aWidth); 
-  
   /*---------------- nsITableLayout methods ------------------------*/
   
   /** Get the cell and associated data for a table cell from the frame's cellmap */
@@ -710,8 +681,6 @@ protected:
 
   struct TableBits {
     PRUint32 mHaveReflowedColGroups:1; // have the col groups gotten their initial reflow
-    PRUint32 mNeedStrategyBalance:1;   // does the strategy needs to balance the table
-    PRUint32 mNeedStrategyInit:1;      // does the strategy needs to be initialized and then balance the table
     PRUint32 mHasPctCol:1;             // does any cell or col have a pct width
     PRUint32 mCellSpansPctCol:1;       // does any cell span a col with a pct width (or containing a cell with a pct width)
     PRUint32 mIsBorderCollapse:1;      // border collapsing model vs. separate model
@@ -729,12 +698,6 @@ protected:
   nsTableCellMap*         mCellMap;            // maintains the relationships between rows, cols, and cells
   nsITableLayoutStrategy* mTableLayoutStrategy;// the layout strategy for this frame
   nsFrameList             mColGroups;          // the list of colgroup frames
-  // XXXldb Make sure nothing depends on old behavior of mMinWidth and
-  // mPreferredWidth depending on specified width, or that they included
-  // border and padding.
-  nscoord                 mMinWidth;       // XXX could store as PRUint16 with pixels
-  nscoord                 mDesiredWidth;   // XXX could store as PRUint16 with pixels
-  nscoord                 mPreferredWidth; // XXX could store as PRUint16 with pixels
 };
 
 
@@ -843,21 +806,6 @@ inline nsFrameList& nsTableFrame::GetColGroups()
 inline nsVoidArray& nsTableFrame::GetColCache()
 {
   return mColFrames;
-}
-
-inline void nsTableFrame::SetMinWidth(nscoord aWidth)
-{
-  mMinWidth = aWidth;
-}
-
-inline void nsTableFrame::SetDesiredWidth(nscoord aWidth)
-{
-  mDesiredWidth = aWidth;
-}
-
-inline void nsTableFrame::SetPreferredWidth(nscoord aWidth)
-{
-  mPreferredWidth = aWidth;
 }
 
 inline PRBool nsTableFrame::IsBorderCollapse() const
