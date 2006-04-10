@@ -3575,42 +3575,6 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 }
 #endif
 
-
-void 
-nsTableFrame::CalcMinAndPreferredWidths(nsIRenderingContext* aRenderingContext)
-{
-  nscoord aMinWidth = 0;
-  nscoord aPrefWidth = 0;
-
-  nscoord spacingX = GetCellSpacingX();
-  PRInt32 numCols = GetColCount();
-
-  for (PRInt32 colX = 0; colX < numCols; colX++) { 
-    nsTableColFrame* colFrame = GetColFrame(colX);
-    if (!colFrame) continue;
-    aMinWidth += colFrame->GetMinWidth();
-    nscoord width = colFrame->GetFixWidth();
-    if (width <= 0) {
-      width = colFrame->GetDesWidth();
-    }
-    aPrefWidth += width;
-    if (GetNumCellsOriginatingInCol(colX) > 0) {
-      aMinWidth  += spacingX;
-      aPrefWidth += spacingX;
-    }
-  }
-  // if it is not a degenerate table, add the last spacing on the right
-  if (numCols > 0) {
-    aMinWidth  += spacingX;
-    aPrefWidth += spacingX;
-  }
-  aPrefWidth = PR_MAX(aMinWidth, aPrefWidth);
-
-  SetMinWidth(aMinWidth); 
-  SetPreferredWidth(aPrefWidth); 
-}
-
-
 // Find the closet sibling before aPriorChildFrame (including aPriorChildFrame) that
 // is of type aChildType
 nsIFrame* 
