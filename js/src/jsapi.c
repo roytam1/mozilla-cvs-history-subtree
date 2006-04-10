@@ -1686,6 +1686,13 @@ JS_LeaveLocalRootScope(JSContext *cx)
 }
 
 JS_PUBLIC_API(void)
+JS_LeaveLocalRootScopeWithResult(JSContext *cx, jsval rval)
+{
+    CHECK_REQUEST(cx);
+    js_LeaveLocalRootScopeWithResult(cx, rval);
+}
+
+JS_PUBLIC_API(void)
 JS_ForgetLocalRoot(JSContext *cx, void *thing)
 {
     CHECK_REQUEST(cx);
