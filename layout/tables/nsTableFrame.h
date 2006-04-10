@@ -473,9 +473,6 @@ protected:
   virtual PRBool ParentDisablesSelection() const; //override default behavior
 
 public:
-  /** do I need to do a reflow? */
-  virtual PRBool NeedsReflow(const nsHTMLReflowState& aReflowState);
-
   PRBool IsRowInserted() const;
   void   SetRowInserted(PRBool aValue);
 
@@ -499,6 +496,11 @@ protected:
   NS_METHOD AdjustForCollapsingRows(nsHTMLReflowMetrics&  aDesiredSize);
 
   NS_METHOD AdjustForCollapsingCols(nsHTMLReflowMetrics&  aDesiredSize);
+
+  nsITableLayoutStrategy* LayoutStrategy() {
+    return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
+      mTableLayoutStrategy;
+  }
 
   // WIDTH AND HEIGHT CALCULATION
 

@@ -1461,25 +1461,6 @@ nsTableFrame::GetSkipSides() const
   return skip;
 }
 
-PRBool nsTableFrame::NeedsReflow(const nsHTMLReflowState& aReflowState)
-{
-  PRBool result = PR_TRUE;
-  if (!(GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
-    if (aReflowState.mFlags.mSpecialHeightReflow &&
-        !NeedSpecialReflow()                   &&
-        !NeedToInitiateSpecialReflow()) {
-      result = PR_FALSE;
-    }
-  }
-  else if ((eReflowReason_Incremental == aReflowState.reason) &&
-           (NS_UNCONSTRAINEDSIZE == aReflowState.availableHeight)) {
-    // It's an incremental reflow and we're in galley mode. Only
-    // do a full reflow if we need to.
-    result = NeedStrategyInit() || NeedStrategyBalance();
-  }
-  return result;
-}
-
 void
 nsTableFrame::SetColumnDimensions(nscoord         aHeight,
                                   const nsMargin& aBorderPadding)
@@ -1812,7 +1793,10 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // constrained initial reflow and other reflows which require either a strategy init or balance. 
   // This isn't done during an unconstrained reflow, because it will occur later when the parent 
   // reflows with a constrained width.
-  if (NeedsReflow(aReflowState) && (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth)) {
+  if ((GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
+      !aReflowState.mFlags.mSpecialHeightReflow ||
+      NeedSpecialReflow() ||
+      NeedToInitiateSpecialReflow()) {
     // see if an extra reflow will be necessary in pagination mode when there is a specified table height 
     if (isPaginated && !GetPrevInFlow() && (NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)) {
       nscoord tableSpecifiedHeight = CalcBorderBoxHeight(aReflowState);
@@ -2769,30 +2753,6 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     
       rv = ReflowChild(kidFrame, presContext, desiredSize, kidReflowState,
                        aReflowState.x, aReflowState.y, 0, aStatus);
-
-
-      // If the column width info is valid, then adjust the row group frames
-      // that follow. Otherwise, return and we'll recompute the column widths
-      // and reflow all the row group frames
-      if (aDirtyOnly && !NeedsReflow(aReflowState.reflowState)) {
-        nsRect  newKidRect(aReflowState.x, aReflowState.y, desiredSize.width, desiredSize.height);
-        if (newKidRect.y != oldKidRect.y) {
-          // If the row group frame moved due to a prior row group
-          // changing size, invalidate everything, just like the sliding
-          // case below.
-          Invalidate(oldKidRect);
-          Invalidate(newKidRect);
-        } else if (newKidRect.height != oldKidRect.height) {
-          // If the row group frame changed height, then damage the
-          // horizontal strip that was either added or went away
-          nsRect dirtyRect;
-          dirtyRect.x = 0;
-          dirtyRect.y = PR_MIN(oldKidRect.YMost(), newKidRect.YMost());
-          dirtyRect.width = mRect.width;
-          dirtyRect.height = PR_MAX(oldKidRect.YMost(), newKidRect.YMost()) - dirtyRect.y;
-          Invalidate(dirtyRect);
-        }
-      }
 
       if (reorder) {
         // reorder row groups the reflow may have changed the nextinflows
