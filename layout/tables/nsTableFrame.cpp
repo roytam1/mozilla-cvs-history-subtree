@@ -181,8 +181,7 @@ nsTableFrame::GetType() const
 nsTableFrame::nsTableFrame()
   : nsHTMLContainerFrame(),
     mCellMap(nsnull),
-    mTableLayoutStrategy(nsnull),
-    mPreferredWidth(0)
+    mTableLayoutStrategy(nsnull)
 {
   mBits.mHaveReflowedColGroups  = PR_FALSE;
   mBits.mCellSpansPctCol        = PR_FALSE;
@@ -241,9 +240,8 @@ nsTableFrame::Init(nsPresContext*  aPresContext,
   else {
     NS_ASSERTION(!mTableLayoutStrategy, "strategy was created before Init was called");
     // create the strategy
-    mTableLayoutStrategy = (IsAutoLayout()) ?
-      new BasicTableLayoutStrategy(this,
-                eCompatibility_NavQuirks == aPresContext->CompatibilityMode())
+    mTableLayoutStrategy = IsAutoLayout()
+      ? new BasicTableLayoutStrategy(this)
       : new FixedTableLayoutStrategy(this);
   }
 
@@ -437,9 +435,8 @@ void nsTableFrame::AttributeChangedFor(nsIFrame*       aFrame,
         cells.AppendElement(cellFrame);
         InsertCells(cells, rowIndex, colIndex - 1);
 
-        // XXX This could probably be optimized with some effort
-        SetNeedStrategyInit(PR_TRUE);
-        AppendDirtyReflowCommand(this);
+        GetPresContext()->PresShell()->FrameNeedsReflow(this,
+          nsIPresShell::eTreeChange);
       }
     }
   }
@@ -2371,8 +2368,8 @@ nsTableFrame::AppendFrames(nsIAtom*        aListName,
   printf("TableFrame::AppendFrames");
   Dump(PR_TRUE, PR_TRUE, PR_TRUE);
 #endif
-  SetNeedStrategyInit(PR_TRUE); // XXX assume the worse
-  AppendDirtyReflowCommand(this);
+  GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                  nsIPresShell::eTreeChange);
 
   return NS_OK;
 }
@@ -2408,7 +2405,6 @@ nsTableFrame::InsertFrames(nsIAtom*        aListName,
       }
     }
     InsertColGroups(startColIndex, aFrameList, lastFrame);
-    SetNeedStrategyInit(PR_TRUE);
   } else if (IsRowGroup(display->mDisplay)) {
     nsFrameList newList(aFrameList);
     nsIFrame* lastSibling = newList.LastChild();
@@ -2416,14 +2412,14 @@ nsTableFrame::InsertFrames(nsIAtom*        aListName,
     mFrames.InsertFrame(nsnull, aPrevFrame, aFrameList);
 
     InsertRowGroups(aFrameList, lastSibling);
-    SetNeedStrategyInit(PR_TRUE);
   } else {
     // Just insert the frame and don't worry about reflowing it
     mFrames.InsertFrame(nsnull, aPrevFrame, aFrameList);
     return NS_OK;
   }
 
-  AppendDirtyReflowCommand(this);
+  GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                  nsIPresShell::eTreeChange);
 
   return NS_OK;
 }
@@ -2458,9 +2454,6 @@ nsTableFrame::RemoveFrame(nsIAtom*        aListName,
                                eColAnonymousCell, PR_TRUE);
     }
 
-    // XXX This could probably be optimized with much effort
-    SetNeedStrategyInit(PR_TRUE);
-    AppendDirtyReflowCommand(this);
   } else {
     nsTableRowGroupFrame* rgFrame = GetRowGroupFrame(aOldFrame);
     if (rgFrame) {
@@ -2486,16 +2479,14 @@ nsTableFrame::RemoveFrame(nsIAtom*        aListName,
       AdjustRowIndices(startRowIndex, -numRows);
       // remove the row group frame from the sibling chain
       mFrames.DestroyFrame(GetPresContext(), aOldFrame);
-
-      // XXX This could probably be optimized with much effort
-      SetNeedStrategyInit(PR_TRUE);
-      AppendDirtyReflowCommand(this);
     } else {
       // Just remove the frame
       mFrames.DestroyFrame(GetPresContext(), aOldFrame);
       return NS_OK;
     }
   }
+  GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                  nsIPresShell::eTreeChange);
   return NS_OK;
 }
 
