@@ -104,7 +104,10 @@ private:
   NS_IMETHOD OnDeleteURI(nsIURI *aURI);                                 \
   NS_IMETHOD OnClearHistory();                                          \
   NS_IMETHOD OnPageChanged(nsIURI *aURI, PRUint32 aWhat,                \
-                           const nsAString &aValue);
+                           const nsAString &aValue);                    \
+  NS_IMETHOD OnPageExpired(nsIURI* aURI, PRTime aVisitTime,             \
+                           PRBool aWholeEntry);
+
 
 // nsNavHistoryResultNode
 //
