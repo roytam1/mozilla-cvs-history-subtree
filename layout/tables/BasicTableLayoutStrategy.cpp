@@ -88,7 +88,7 @@ BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 }
 
 /* virtual */ void
-BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
+BasicTableLayoutStrategy::CalcWidths(const nsHTMLReflowState& aReflowState)
 {
 }
 

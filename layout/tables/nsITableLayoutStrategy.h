@@ -65,10 +65,10 @@ public:
     virtual void MarkIntrinsicWidthsDirty() = 0;
 
     /**
-     * Compute final column widths based on the intrinsic width data and
-     * the available width.
+     * Compute final column and table widths based on the intrinsic
+     * width data and the available width.
      */
-    virtual void CalcColumnWidths(const nsHTMLReflowState& aReflowState) = 0;
+    virtual void CalcWidths(const nsHTMLReflowState& aReflowState) = 0;
 };
 
 #endif /* !defined(nsITableLayoutStrategy_h_) */
