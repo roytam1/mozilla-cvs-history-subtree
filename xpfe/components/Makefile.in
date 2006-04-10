@@ -35,10 +35,10 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH       = ../..
-topsrcdir   = @top_srcdir@
-srcdir      = @srcdir@
-VPATH       = @srcdir@
+DEPTH		= ../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -56,7 +56,6 @@ endif
 ifdef MOZ_SUNBIRD
 MOZ_HAVE_BROWSER=
 endif
-
 ifneq (,$(MOZ_PHOENIX)$(MOZ_XULRUNNER))
 # Firefox and XULRunner use this flag to suppress the distribution of chrome from
 # the jar.mn file that lives parallel to this Makefile. The jar.mn is responsible
@@ -64,79 +63,93 @@ ifneq (,$(MOZ_PHOENIX)$(MOZ_XULRUNNER))
 DEFINES += -DSUPPRESS_CHROME
 endif
 
-DIRS = \
-        find \
-        intl \
-        windowds \
-        $(NULL)
+ifndef MOZ_SUNBIRD
 
 ifdef MOZ_HAVE_BROWSER
-DIRS += \
-        directory \
-        resetPref \
-        killAll \
-        $(NULL)
+DIRS	= \
+			directory \
+			find \
+			intl \
+			resetPref \
+			killAll \
+			windowds \
+			$(NULL)
 
 TOOL_DIRS = \
-        filepicker \
-        $(NULL)
+			filepicker \
+			$(NULL)
 
 ifndef MOZ_PHOENIX
 ifndef MOZ_XULRUNNER
 DIRS += \
-        related \
-        prefwindow \
-        console \
-        updates \
-        autocomplete \
-        bookmarks \
-        download-manager \
-        history \
-        sidebar \
-        startup \
-        alerts \
-        extensions \
-        $(NULL)
+		related \
+		prefwindow \
+		console \
+		updates \
+		autocomplete \
+		bookmarks \
+		download-manager \
+		history \
+		sidebar \
+		startup \
+		alerts \
+		extensions \
+		$(NULL)
 endif
 endif
 
 ifeq ($(OS_ARCH),WINNT)
 ifndef MOZ_PHOENIX
 ifndef MOZ_XULRUNNER
-DIRS += urlwidget winhooks
+DIRS    += urlwidget winhooks
 endif
 endif
 endif
-
-# build should be last
-DIRS += build
 
 else
 # !MOZ_HAVE_BROWSER
+DIRS    = \
+          intl \
+          find \
+          filepicker \
+          autocomplete \
+          windowds \
+          console \
+	  download-manager \
+          history/public \
+          sidebar/public \
+          bookmarks/public \
+          $(NULL)
 
-DIRS += \
-        filepicker \
-        autocomplete \
-        console \
-        download-manager \
-        history/public \
-        sidebar/public \
-        bookmarks/public \
-        $(NULL)
+ifdef MOZ_HAVE_BROWSER
+DIRS  += alerts prefwindow
+endif
 
-ifeq ($(OS_ARCH),WINNT)
-DIRS += winhooks
+ifeq ($(OS_ARCH),WINNT) 
+DIRS    += winhooks
+endif
+
 endif
 
 ifndef MOZ_XUL_APP
 ifdef MOZ_ENABLE_XREMOTE
-TOOL_DIRS += xremote
+TOOL_DIRS	+= xremote
 endif
 endif
 
-# build2 should be last
-DIRS += build2
+ifdef MOZ_HAVE_BROWSER
+DIRS		+= build
+else
+DIRS		+= build2
+endif
 
+else
+# MOZ_SUNBIRD
+DIRS    = \
+                console \
+                filepicker \
+                $(NULL)
 endif
 
 include $(topsrcdir)/config/rules.mk
+
