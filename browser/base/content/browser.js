@@ -3791,16 +3791,11 @@ nsContextMenu.prototype = {
         // Remember the node that was clicked.
         this.target = node;
 
-        const nsIILC = Components.interfaces.nsIImageLoadingContent;
-        var request = null;
-
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target instanceof nsIILC &&
-                  ((request = this.target.getRequest(nsIILC.CURRENT_REQUEST)) || this.target.imageBlocked) ) {
+             if ( this.target instanceof HTMLImageElement ) {
                 this.onImage = true;
-                if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
-                    this.onLoadedImage = true;
+
                 this.imageURL = this.target.src;
                 // Look for image map.
                 var mapName = this.target.getAttribute( "usemap" );
@@ -3845,12 +3840,14 @@ nsContextMenu.prototype = {
                          this.objectIsImage( this.target ) ) {
                 // This is an image.
                 this.onImage = true;
+
                 // URL must be constructed.
                 this.imageURL = this.objectImageURL( this.target );
-             } else if ( this.target instanceof HTMLInputElement) {
+             } else if ( this.target instanceof HTMLInputElement ) {
                type = this.target.getAttribute("type");
-               if(type && type.toUpperCase() == "IMAGE") {
+               if (type && type.toUpperCase() == "IMAGE") {
                  this.onImage = true;
+                 
                  // Convert src attribute to absolute URL.
                  this.imageURL = makeURLAbsolute( this.target.baseURI,
                                                   this.target.src );
@@ -3906,6 +3903,14 @@ nsContextMenu.prototype = {
                     }
                 }
             }
+        }
+
+        const nsIILC = Components.interfaces.nsIImageLoadingContent;
+        if (this.onImage && (this.target instanceof nsIILC) &&
+            !this.target.imageBlocked) {
+          var request = this.target.getRequest(nsIILC.CURRENT_REQUEST);
+          if (request && (request.imageStatus & request.STATUS_SIZE_AVAILABLE))
+            this.onLoadedImage = true;
         }
 
         // We have meta data on images.
