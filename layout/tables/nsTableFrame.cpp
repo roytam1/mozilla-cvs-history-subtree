@@ -240,9 +240,12 @@ nsTableFrame::Init(nsPresContext*  aPresContext,
   else {
     NS_ASSERTION(!mTableLayoutStrategy, "strategy was created before Init was called");
     // create the strategy
-    mTableLayoutStrategy = IsAutoLayout()
-      ? new BasicTableLayoutStrategy(this)
-      : new FixedTableLayoutStrategy(this);
+    if (IsAutoLayout())
+      mTableLayoutStrategy = new BasicTableLayoutStrategy(this);
+    else
+      mTableLayoutStrategy = new FixedTableLayoutStrategy(this);
+    if (!mTableLayoutStrategy)
+      return NS_ERROR_OUT_OF_MEMORY;
   }
 
   return rv;
@@ -1461,7 +1464,7 @@ nsTableFrame::GetSkipSides() const
 PRBool nsTableFrame::NeedsReflow(const nsHTMLReflowState& aReflowState)
 {
   PRBool result = PR_TRUE;
-  if (eReflowReason_Resize == aReflowState.reason) {
+  if (!(GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
     if (aReflowState.mFlags.mSpecialHeightReflow &&
         !NeedSpecialReflow()                   &&
         !NeedToInitiateSpecialReflow()) {
