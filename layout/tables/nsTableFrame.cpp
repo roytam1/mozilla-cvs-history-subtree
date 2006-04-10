@@ -1574,8 +1574,7 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   ReflowColGroups(aRenderingContext);
 
-  return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
-    mTableLayoutStrategy->GetMinWidth(aRenderingContext);
+  return LayoutStrategy()->GetMinWidth(aRenderingContext);
 }
 
 /* virtual */ nscoord
@@ -1583,8 +1582,7 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   ReflowColGroups(aRenderingContext);
 
-  return NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
-    mTableLayoutStrategy->GetPrefWidth(aRenderingContext);
+  return LayoutStrategy()->GetPrefWidth(aRenderingContext);
 }
 
 
@@ -1948,9 +1946,7 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   aLastChildReflowed = nsnull;
 
   if (!GetPrevInFlow()) {
-    if (NeedStrategyInit() || NeedStrategyBalance()) {
-      BalanceColumnWidths(aReflowState);
-    }
+    mTableLayoutStrategy->CalcColumnWidths(aReflowState);
   }
   // Constrain our reflow width to the computed table width (of the 1st in flow).
   // and our reflow height to our avail height minus border, padding, cellspacing
@@ -3446,7 +3442,15 @@ nsTableFrame::GetTableFrame(nsIFrame*      aSourceFrame,
 PRBool 
 nsTableFrame::IsAutoWidth(PRBool* aIsPctWidth)
 {
-  return nsTableOuterFrame::IsAutoWidth(*this, aIsPctWidth);
+  const nsStyleCoord& width = GetStylePosition()->mWidth;
+
+  if (aIsPctWidth) {
+    // XXX The old code also made the return value true for 0%, but that
+    // seems silly.
+    *aIsPctWidth = width.GetUnit() == eStyleUnit_Percent &&
+                   width.GetPercentValue() > 0.0f;
+  }
+  return width.GetUnit() == eStyleUnit_Auto;
 }
 
 PRBool 
