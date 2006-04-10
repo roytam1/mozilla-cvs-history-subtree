@@ -45,6 +45,7 @@
 #define nsITableLayoutStrategy_h_
 
 #include "nscore.h"
+#include "nsCoord.h"
 
 class nsIRenderingContext;
 struct nsHTMLReflowState;

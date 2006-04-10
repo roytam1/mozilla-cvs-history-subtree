@@ -62,6 +62,8 @@ public:
 
 private:
     nsTableFrame *mTableFrame;
+    nscoord mMinWidth;
+    nscoord mPrefWidth;
 };
 
 #endif /* !defined(BasicTableLayoutStrategy_h_) */

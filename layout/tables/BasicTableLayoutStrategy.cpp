@@ -42,6 +42,7 @@
  */
 
 #include "BasicTableLayoutStrategy.h"
+#include "nsTableFrame.h"
 
 BasicTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
@@ -56,16 +57,34 @@ BasicTableLayoutStrategy::~BasicTableLayoutStrategy()
 /* virtual */ nscoord
 BasicTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 {
+    DISPLAY_MIN_WIDTH(mTableFrame, mMinWidth);
+    if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+        return mMinWidth;
+
+    // XXX WRITE ME!
+    mMinWidth = 0;
+
+    return mMinWidth;
 }
 
 /* virtual */ nscoord
 BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
 {
+    DISPLAY_MIN_WIDTH(mTableFrame, mPrefWidth);
+    if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+        return mPrefWidth;
+
+    // XXX WRITE ME!
+    mPrefWidth = 0;
+
+    return mPrefWidth;
 }
 
 /* virtual */ void
 BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
+    mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+    mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
 }
 
 /* virtual */ void

@@ -42,25 +42,32 @@
  */
 
 #include "FixedTableLayoutStrategy.h"
+#include "nsTableFrame.h"
 
-FixedTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
+FixedTableLayoutStrategy::FixedTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
 {
 }
 
 /* virtual */
-FixedTableLayoutStrategy::~BasicTableLayoutStrategy()
+FixedTableLayoutStrategy::~FixedTableLayoutStrategy()
 {
 }
 
 /* virtual */ nscoord
 FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 {
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(mTableFrame, result);
+  return result;
 }
 
 /* virtual */ nscoord
 FixedTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
 {
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(mTableFrame, result);
+  return result;
 }
 
 /* virtual */ void
