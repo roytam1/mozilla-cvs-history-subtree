@@ -386,7 +386,7 @@
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);"/>
 
   <!-- View Toggle Keys (F8/F9) -->
-  <key id="key_toggleMessagePane" keycode="VK_F8" oncommand="MsgToggleMessagePane();" observes="mailDisableKeys"/>
+  <key id="key_toggleMessagePane" keycode="VK_F8" oncommand="MsgToggleMessagePane();" disabled="true"/>
   <key id="key_toggleFolderPane" keycode="VK_F9" oncommand="MsgToggleSplitter('gray_vertical_splitter');" observes="mailDisableKeys"/>
 
   <!-- Label Keys -->
@@ -1919,7 +1919,7 @@
   </toolbar>
 </toolbox>
 
-<toolbar id="msgLocationToolbar" collapsed="true" persist="collapsed" grippytooltiptext="&locationToolbar.tooltip;">
+<toolbar id="msgLocationToolbar" collapsed="true" persist="collapsed" grippytooltiptext="&locationToolbar.tooltip;" tbalign="stretch">
   <hbox align="center" context="folderPaneContext">
     <image id="locationIcon" class="folderMenuItem"/>
     <menulist id="locationFolders" class="folderMenuItem"
@@ -1929,7 +1929,7 @@
     </menulist>
   </hbox>
 
-<hbox id="searchBox" persist="collapsed" align="center" flex="1">
+<hbox id="searchBox" align="center" flex="1">
   <label id="searchCriteria" value="&SearchSubjectOrSender.label;" control="searchInput" 
          accesskey="&SearchSubjectOrSender.accesskey;"/>
   <textbox id="searchInput" flex="1" onfocus="this.select();" onclick="this.select();" onkeypress="if (event.keyCode == KeyEvent.DOM_VK_RETURN) this.select();" oncommand="onEnterInSearchBar();" type="timed" timeout="800"/>
