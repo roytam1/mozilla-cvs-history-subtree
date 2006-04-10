@@ -199,14 +199,11 @@ nsTableRowFrame::AppendFrames(nsIAtom*        aListName,
     if (IS_TABLE_CELL(childFrame->GetType())) {
       // Add the cell to the cell map
       tableFrame->AppendCell((nsTableCellFrame&)*childFrame, GetRowIndex());
-      // XXX this could be optimized with some effort
-      tableFrame->SetNeedStrategyInit(PR_TRUE);
     }
   }
 
-  // Reflow the new frames. They're already marked dirty, so generate a reflow
-  // command that tells us to reflow our dirty child frames
-  tableFrame->AppendDirtyReflowCommand(this);
+  GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                  nsIPresShell::eTreeChange);
 
   return NS_OK;
 }
@@ -229,8 +226,6 @@ nsTableRowFrame::InsertFrames(nsIAtom*        aListName,
        childFrame = childFrame->GetNextSibling()) {
     if (IS_TABLE_CELL(childFrame->GetType())) {
       cellChildren.AppendElement(childFrame);
-      // XXX this could be optimized with some effort
-      tableFrame->SetNeedStrategyInit(PR_TRUE);
     }
   }
   // insert the cells into the cell map
@@ -243,9 +238,8 @@ nsTableRowFrame::InsertFrames(nsIAtom*        aListName,
   // Insert the frames in the frame list
   mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
   
-  // Reflow the new frames. They're already marked dirty, so generate a reflow
-  // command that tells us to reflow our dirty child frames
-  tableFrame->AppendDirtyReflowCommand(this);
+  GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                  nsIPresShell::eTreeChange);
 
   return NS_OK;
 }
@@ -264,18 +258,12 @@ nsTableRowFrame::RemoveFrame(nsIAtom*        aListName,
       cellFrame->GetColIndex(colIndex);
       // remove the cell from the cell map
       tableFrame->RemoveCell(cellFrame, GetRowIndex());
-      // XXX this could be optimized with some effort
-      tableFrame->SetNeedStrategyInit(PR_TRUE);
 
       // Remove the frame and destroy it
       mFrames.DestroyFrame(GetPresContext(), aOldFrame);
 
-      // XXX This could probably be optimized with much effort
-      tableFrame->SetNeedStrategyInit(PR_TRUE);
-      // Generate a reflow command so we reflow the table itself.
-      // Target the row so that it gets a dirty reflow before a resize reflow
-      // in case another cell gets added to the row during a reflow coallesce.
-      tableFrame->AppendDirtyReflowCommand(this);
+      GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                    nsIPresShell::eTreeChange);
     }
   }
 

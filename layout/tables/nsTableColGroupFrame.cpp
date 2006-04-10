@@ -252,11 +252,8 @@ nsTableColGroupFrame::InsertColsReflow(PRInt32         aColIndex,
   nsTableFrame::GetTableFrame(this, tableFrame);
   if (!tableFrame) return;
 
-  // XXX this could be optimized with much effort
-  tableFrame->SetNeedStrategyInit(PR_TRUE);
-
-  // Generate a reflow command so we reflow the table
-  nsTableFrame::AppendDirtyReflowCommand(tableFrame);
+  GetPresContext()->PresShell()->FrameNeedsReflow(tableFrame,
+                                                  nsIPresShell::eTreeChange);
 }
 
 void
@@ -286,10 +283,8 @@ nsTableColGroupFrame::RemoveChild(nsTableColFrame& aChild,
   nsTableFrame::GetTableFrame(this, tableFrame);
   if (!tableFrame) return;
 
-  // XXX this could be optimized with much effort
-  tableFrame->SetNeedStrategyInit(PR_TRUE);
-  // Generate a reflow command so we reflow the table
-  nsTableFrame::AppendDirtyReflowCommand(tableFrame);
+  GetPresContext()->PresShell()->FrameNeedsReflow(tableFrame,
+                                                  nsIPresShell::eTreeChange);
 }
 
 NS_IMETHODIMP
@@ -309,10 +304,8 @@ nsTableColGroupFrame::RemoveFrame(nsIAtom*        aListName,
 
     tableFrame->RemoveCol(this, colIndex, PR_TRUE, PR_TRUE);
 
-    // XXX This could probably be optimized with much effort
-    tableFrame->SetNeedStrategyInit(PR_TRUE);
-    // Generate a reflow command so we reflow the table
-    nsTableFrame::AppendDirtyReflowCommand(tableFrame);
+    GetPresContext()->PresShell()->FrameNeedsReflow(tableFrame,
+                                                    nsIPresShell::eTreeChange);
   }
   else {
     mFrames.DestroyFrame(GetPresContext(), aOldFrame);

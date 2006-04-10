@@ -1225,22 +1225,8 @@ nsTableRowGroupFrame::AppendFrames(nsIAtom*        aListName,
     nsTableFrame::GetTableFrame(this, tableFrame);
     if (tableFrame) {
       tableFrame->AppendRows(*this, rowIndex, rows);
-      // Reflow the new frames. They're already marked dirty, so generate a reflow
-      // command that tells us to reflow our dirty child frames
-      nsTableFrame::AppendDirtyReflowCommand(this);
-
-      if (tableFrame->RowIsSpannedInto(rowIndex, tableFrame->GetEffectiveColCount())) {
-        tableFrame->SetNeedStrategyInit(PR_TRUE);
-      }
-      else if (!tableFrame->IsAutoHeight()) {
-        // The table isn't auto height, so any previously reflowed rows
-        // it contains were already adjusted so that they take up all of
-        // the table's height. We need to trigger a strategy balance to
-        // ensure that all rows are resized properly during the dirty reflow we
-        // generated above.
-
-        tableFrame->SetNeedStrategyBalance(PR_TRUE);
-      }
+      GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                    nsIPresShell::eTreeChange);
     }
   }
 
@@ -1283,23 +1269,8 @@ nsTableRowGroupFrame::InsertFrames(nsIAtom*        aListName,
     PRInt32 rowIndex = (prevRow) ? prevRow->GetRowIndex() + 1 : startRowIndex;
     tableFrame->InsertRows(*this, rows, rowIndex, PR_TRUE);
 
-    // Reflow the new frames. They're already marked dirty, so generate a reflow
-    // command that tells us to reflow our dirty child frames
-    nsTableFrame::AppendDirtyReflowCommand(this);
-    PRInt32 numEffCols = tableFrame->GetEffectiveColCount();
-    if (tableFrame->RowIsSpannedInto(rowIndex, numEffCols) ||
-        tableFrame->RowHasSpanningCells(rowIndex + numRows - 1, numEffCols)) {
-      tableFrame->SetNeedStrategyInit(PR_TRUE);
-    }
-    else if (!tableFrame->IsAutoHeight()) {
-      // The table isn't auto height, so any previously reflowed rows
-      // it contains were already adjusted so that they take up all of
-      // the table's height. We need to trigger a strategy balance to
-      // ensure that all rows are resized properly during the dirty reflow we
-      // generated above.
-
-      tableFrame->SetNeedStrategyBalance(PR_TRUE);
-    }
+    GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                    nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -1315,11 +1286,8 @@ nsTableRowGroupFrame::RemoveFrame(nsIAtom*        aListName,
       // remove the rows from the table (and flag a rebalance)
       tableFrame->RemoveRows((nsTableRowFrame &)*aOldFrame, 1, PR_TRUE);
 
-      // XXX this could be optimized (see nsTableFrame::RemoveRows)
-      tableFrame->SetNeedStrategyInit(PR_TRUE);
-      // Because we haven't added any new frames we don't need to do a pass1
-      // reflow. Just generate a reflow command so we reflow the table 
-      nsTableFrame::AppendDirtyReflowCommand(this);
+      GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                    nsIPresShell::eTreeChange);
     }
   }
   mFrames.DestroyFrame(GetPresContext(), aOldFrame);
