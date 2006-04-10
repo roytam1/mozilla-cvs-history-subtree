@@ -280,13 +280,13 @@ function eventHandlerMenu(e) {
 /*
   if(e.charCode==109) {
   	document.getElementById("general-button").focus();
-    e.preventBubble();
+    e.stopPropagation();
   } 
 */
 
    if(e.keyCode==134 || e.keyCode==70) /*SoftKey1 or HWKey1*/ {
   	document.getElementById("general-button").focus();
-    e.preventBubble();
+    e.stopPropagation();
   } 
 
   var outnavTarget=document.commandDispatcher.focusedElement.getAttribute("accessrule");
@@ -302,7 +302,7 @@ function eventHandlerMenu(e) {
 
   }
   if(outnavTarget!="" && (e.keyCode==40||e.keyCode==38)) {
-      e.preventBubble();
+      e.stopPropagation();
       if(e.keyCode==40) {
         ruleElement=findRuleById(document.getElementById(outnavTarget).getAttribute("accessnextrule"),"accessnextrule");
       }
