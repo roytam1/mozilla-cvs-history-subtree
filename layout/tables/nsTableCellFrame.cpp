@@ -664,12 +664,17 @@ nsTableCellFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nscoord result = 0;
   DISPLAY_MIN_WIDTH(this, result);
 
-  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                                                mFrames.FirstChild(),
-                                                nsLayoutUtils::MIN_WIDTH,
-                                                nsLayoutUtils::IntrinsicWidthPart(
-                                                  nsLayoutUtils::CONTENT |
-                                                  nsLayoutUtils::PADDING));
+  nsIFrame *inner = mFrames.FirstChild();
+  result = inner->GetMinWidth(aRenderingContext);
+  // Content could break this by styling our internal anonymous boxes!
+  NS_ASSERTION(result ==
+               nsLayoutUtils::IntrinsicForContainer(aRenderingContext, inner,
+                                                    nsLayoutUtils::MIN_WIDTH),
+               "inner has style it should not have");
+  result += nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this,
+                                                 nsLayoutUtils::MIN_WIDTH,
+                                                 nsLayoutUtils::PADDING);
+
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
   float p2t = dc->DevUnitsToTwips();
@@ -689,12 +694,22 @@ nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nscoord result = 0;
   DISPLAY_PREF_WIDTH(this, result);
 
-  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                                                mFrames.FirstChild(),
-                                                nsLayoutUtils::PREF_WIDTH,
-                                                nsLayoutUtils::IntrinsicWidthPart(
-                                                  nsLayoutUtils::CONTENT |
-                                                  nsLayoutUtils::PADDING));
+  nsIFrame *inner = mFrames.FirstChild();
+  result = inner->GetPrefWidth(aRenderingContext);
+  // Content could break this by styling our internal anonymous boxes!
+  NS_ASSERTION(result ==
+               nsLayoutUtils::IntrinsicForContainer(aRenderingContext, inner,
+                                                    nsLayoutUtils::PREF_WIDTH),
+               "inner has style it should not have");
+
+  // XXXldb Adjust for width, *-width, specified on this, but not to
+  // smaller than GetMinWidth.
+
+  result += nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this,
+                                                 nsLayoutUtils::PREF_WIDTH,
+                                                 nsLayoutUtils::PADDING);
+
+
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
   float p2t = dc->DevUnitsToTwips();
