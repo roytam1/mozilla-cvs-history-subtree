@@ -1879,7 +1879,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
     return NS_OK;
   }
 
-  aDesiredSize.width = GetDesiredWidth();
+  aDesiredSize.width = aReflowState.mComputedWidth;
   if (!haveDesiredHeight) {
     CalcDesiredHeight(aReflowState, aDesiredSize); 
   }
@@ -1950,7 +1950,7 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
   }
   // Constrain our reflow width to the computed table width (of the 1st in flow).
   // and our reflow height to our avail height minus border, padding, cellspacing
-  aDesiredSize.width = GetDesiredWidth();
+  aDesiredSize.width = aReflowState.mComputedWidth;
   nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this,
                                  aDesiredSize.width, aAvailHeight);
   ReflowChildren(reflowState, !aReflowState.ShouldReflowAllKids(),
