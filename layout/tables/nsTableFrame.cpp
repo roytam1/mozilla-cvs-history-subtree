@@ -1807,43 +1807,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // Check for an overflow list, and append any row group frames being pushed
   MoveOverflowToChildList(aPresContext);
 
-  // Processes an initial (except when there is mPrevInFlow), incremental, or style 
-  // change reflow 1st. resize reflows are processed in the next phase.
-  switch (aReflowState.reason) {
-    case eReflowReason_Initial: 
-    case eReflowReason_StyleChange: {
-      if (!GetPrevInFlow()) { // only do pass1 on a first in flow
-        if (IsAutoLayout()) {     
-#error "Pass 1 reflow must be moved out of Reflow"
-          // only do pass1 reflow on an auto layout table
-          nsTableReflowState reflowState(*aPresContext, aReflowState, *this,
-                                         NS_UNCONSTRAINEDSIZE,
-                                         NS_UNCONSTRAINEDSIZE);
-          // reflow the children
-          nsIFrame *lastReflowed;
-          nsRect overflowArea;
-          ReflowChildren(reflowState, PR_FALSE, aStatus, lastReflowed,
-                         overflowArea);
-        }
-        mTableLayoutStrategy->Initialize(aReflowState.rendContext);
-      }
-      break; 
-    }
-    case eReflowReason_Incremental:
-      rv = IncrementalReflow(aReflowState, aStatus);
-      break;
-    default:
-      break;
-  }
-
-  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
-    // XXXldb What if we're not the first-in-flow?
-#error Is this too late now?
-    SetNeedStrategyBalance(PR_TRUE); 
-  }
-
-  if (NS_FAILED(rv)) return rv;
-
   PRBool haveDesiredHeight = PR_FALSE;
   PRBool reflowedChildren  = PR_FALSE;
 
