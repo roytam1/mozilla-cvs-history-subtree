@@ -1549,6 +1549,7 @@ nsXFormsModelElement::ValidateDocument(nsIDOMDocument *aInstanceDocument,
   nsCOMPtr<nsIDOMElement> element;
   nsresult rv = aInstanceDocument->GetDocumentElement(getter_AddRefs(element));
   NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_STATE(element);
 
   // get namespace from node
   nsAutoString nsuri;
