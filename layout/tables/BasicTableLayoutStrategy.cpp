@@ -164,42 +164,112 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     PRInt32 colCount = cellMap->GetColCount();
+    nscoord spacing = mTableFrame->GetCellSpacingX();
 
-    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
+    // XXX is |width| the right basis for percentage widths?
 
+    // Loop #1 over the columns, initially assigning them the larger of
+    // their percentage pref width or min width.
+    nscoord assigned = 0;
+    PRInt32 col;
+    for (col = 0; col < colCount; ++col) {
+        nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
+        nscoord min_width = colFrame->GetMinCoord();
+        nscoord val = PR_MAX(pct_width, min_width);
+        colFrame->SetFinalWidth(val);
+        assigned += val + spacing;
+    }
+    if (colCount > 0) {
+        assigned += spacing;
+    }
+
+    // Loop #2 over the columns:
+    // 1. If we have too little space, by shrinking the percentage width
+    //    columns based on how far they are above their min width.
+    // *  If we have extra space, give it all to the columns previously
+    //    given their min width:
+    //    2. in proportion to the difference between their min width and
+    //       pref width, or,
+    //    3. if those are all zero, in proportion to their min width, or,
+    //    4. if those are all zero, equally
+    enum Loop2Type {
+        SHRINK, GROW, ZOOM_GROW, EQUAL_GROW, NOOP
+    };
+
+    Loop2Type l2t;
+    if (assigned > width) {
+        if (assigned != mMinWidth)
+            l2t = SHRINK;
+        else
+            l2t = NOOP;
+    } else {
+        if (mPrefWidth != mMinWidth)
+            l2t = GROW;
+        else if (mMinWidth != 0)
+            l2t = ZOOM_GROW;
+        else if (colCount > 0)
+            l2t = EQUAL_GROW;
+        else
+            l2t = NOOP;
+    }
+ 
     // Hold previous to avoid accumulating rounding error.
     nscoord prev_x = 0, prev_x_round = 0;
+    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
     union {
         float f;
-        nscoord d;
-        nscoord e;
+        nscoord c;
     } u;
-    if (mPrefWidth != mMinWidth) {
-        u.f = float(width - mMinWidth) / float(mPrefWidth - mMinWidth);
-    } else if (mMinWidth != 0) {
-        u.d = width - mMinWidth;
-    } else if (colCount > 0) {
-        u.e = width / cellMap->GetColCount();
+    switch (l2t) {
+        case SHRINK: // u.f is negative
+            u.f = float(width - assigned) / float(assigned - mMinWidth);
+            break;
+        case GROW:
+            u.f = float(width - assigned) / float(mPrefWidth - assigned);
+            break;
+        case ZOOM_GROW:
+            u.c = width - assigned;
+            break;
+        case EQUAL_GROW:
+            u.c = width / cellMap->GetColCount();
+            break;
+        case NOOP:
+            break;
     }
 
-    // XXX This needs to consider percentage widths!
-
-    for (PRInt32 col = 0; col < colCount; ++col) {
+    for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
 
-        nscoord colWidth = colFrame->GetMinCoord();
-        if (mPrefWidth != mMinWidth) {
-            colWidth += nscoord(u.f * (colFrame->GetPrefCoord() -
-                                       colFrame->GetMinCoord()));
-        } else if (mMinWidth != 0) {
-            colWidth += u.d * colFrame->GetMinCoord() / mMinWidth;
-        } else {
-            colWidth += u.e;
-            NS_ASSERTION(colFrame->GetMinCoord() == 0, "yikes");
+        PRBool is_pct =
+            (colFrame->GetFinalWidth() != colFrame->GetMinCoord());
+        nscoord col_width = colFrame->GetFinalWidth();
+        switch (l2t) {
+            case SHRINK: // u.f is negative
+                if (is_pct)
+                    col_width += nscoord(u.f * (colFrame->GetFinalWidth() -
+                                                colFrame->GetMinCoord()));
+                break;
+            case GROW:
+                if (!is_pct)
+                    col_width += nscoord(u.f * (colFrame->GetPrefCoord() -
+                                                colFrame->GetMinCoord()));
+                break;
+            case ZOOM_GROW:
+                if (!is_pct)
+                    col_width += u.c * colFrame->GetMinCoord() / mMinWidth;
+                break;
+            case EQUAL_GROW:
+                if (!is_pct)
+                    col_width += u.c;
+                NS_ASSERTION(colFrame->GetMinCoord() == 0, "yikes");
+                break;
+            case NOOP:
+                break;
         }
 
-        nscoord new_x = prev_x + colWidth;
+        nscoord new_x = prev_x + col_width;
         nscoord new_x_round = nsTableFrame::RoundToPixel(new_x, p2t);
 
         colFrame->SetFinalWidth(new_x_round - prev_x_round);
