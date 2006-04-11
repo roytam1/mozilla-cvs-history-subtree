@@ -669,13 +669,11 @@ CalcAvailWidth(nsTableFrame&     aTableFrame,
 
   for (PRInt32 spanX = 0; spanX < colspan; spanX++) {
     nscoord colWidth = aTableFrame.GetColumnWidth(colIndex + spanX);
-    if (colWidth != WIDTH_NOT_SET) {
-      if (NS_UNCONSTRAINEDSIZE == aColAvailWidth) {
-        aColAvailWidth = colWidth; 
-      }
-      else {
-        aColAvailWidth += colWidth;
-      }
+    if (NS_UNCONSTRAINEDSIZE == aColAvailWidth) {
+      aColAvailWidth = colWidth; 
+    }
+    else {
+      aColAvailWidth += colWidth;
     }
     if ((spanX > 0) && (aTableFrame.GetNumCellsOriginatingInCol(colIndex + spanX) > 0)) {
       cellSpacing += aCellSpacingX;

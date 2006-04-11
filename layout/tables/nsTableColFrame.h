@@ -44,31 +44,6 @@
 class nsVoidArray;
 class nsTableCellFrame;
 
-// this is used to index arrays of widths in nsColFrame and to group important widths
-// for calculations. It is important that the order: min, desired, fixed be maintained
-// for each category (con, adj).
-#define WIDTH_NOT_SET   -1
-#define NUM_WIDTHS      10
-#define NUM_MAJOR_WIDTHS 3 // MIN, DES, FIX
-#define MIN_CON          0 // minimum width required of the content + padding
-#define DES_CON          1 // desired width of the content + padding
-#define FIX              2 // fixed width either from the content or cell, col, etc. + padding
-#define MIN_ADJ          3 // minimum width + padding due to col spans
-#define DES_ADJ          4 // desired width + padding due to col spans
-#define FIX_ADJ          5 // fixed width + padding due to col spans
-#define PCT              6 // percent width of cell or col 
-#define PCT_ADJ          7 // percent width of cell or col from percent colspan
-#define MIN_PRO          8 // desired width due to proportional <col>s or cols attribute
-#define FINAL            9 // width after the table has been balanced, considering all of the others
-
-enum nsColConstraint {
-  eNoConstraint          = 0,
-  ePixelConstraint       = 1,      // pixel width 
-  ePercentConstraint     = 2,      // percent width
-  eProportionConstraint  = 3,      // 1*, 2*, etc. cols attribute assigns 1*
-  e0ProportionConstraint = 4       // 0*, means to force to min width
-};
-
 enum nsTableColType {
   eColContent            = 0, // there is real col content associated   
   eColAnonymousCol       = 1, // the result of a span on a col
@@ -93,8 +68,6 @@ public:
     * @return           the frame that was created
     */
   friend nsIFrame* NS_NewTableColFrame(nsIPresShell* aPresShell);
-
-  nsStyleCoord GetStyleWidth() const;
 
   PRInt32 GetColIndex() const;
   
@@ -137,17 +110,6 @@ public:
   /** convenience method, calls into cellmap */
   nsVoidArray * GetCells();
 
-  nscoord GetWidth(PRUint32 aWidthType);
-  void    SetWidth(PRUint32 aWidthType,
-                   nscoord  aWidth);
-  nscoord GetMinWidth();
-  nscoord GetDesWidth();
-  nscoord GetFixWidth();
-  nscoord GetPctWidth();
-
-  void            SetConstraint(nsColConstraint aConstraint);
-  nsColConstraint GetConstraint() const;
-
   /** convenience method, calls into cellmap */
   PRInt32 Count() const;
 
@@ -178,6 +140,31 @@ public:
   void Dump(PRInt32 aIndent);
 #endif
 
+  void SetMinWidth(nscoord aMinWidth) {
+    mMinWidth = aMinWidth;
+  }
+  nscoord GetMinWidth() {
+    return mMinWidth;
+  }
+  void SetPrefWidth(nscoord aPrefWidth) {
+    mPrefWidth = aPrefWidth;
+  }
+  nscoord GetPrefWidth() {
+    return mPrefWidth;
+  }
+  void SetPrefPercent(float aPrefPercent) {
+    mPrefPercent = aPrefPercent;
+  }
+  float GetPrefPercent() {
+    return mPrefPercent;
+  }
+  void SetFinalWidth(nscoord aFinalWidth) {
+    mFinalWidth = aFinalWidth;
+  }
+  nscoord GetFinalWidth() {
+    return mFinalWidth;
+  }
+
 protected:
 
   nsTableColFrame();
@@ -194,10 +181,11 @@ protected:
   BCPixelSize mTopContBorderWidth;
   BCPixelSize mRightContBorderWidth;
   BCPixelSize mBottomContBorderWidth;
-  // Widths including MIN_CON, DES_CON, FIX_CON, MIN_ADJ, DES_ADJ, FIX_ADJ, PCT, PCT_ADJ, MIN_PRO, FINAL
-  // Widths including MIN_CON, DES_CON, FIX_CON, MIN_ADJ, DES_ADJ, FIX_ADJ, PCT, PCT_ADJ, MIN_PRO, FINAL
-  // XXX these could be stored as pixels and converted to twips for a savings of 10 x 2 bytes.
-  nscoord           mWidths[NUM_WIDTHS];
+
+  nscoord mMinWidth;
+  nscoord mPrefWidth;
+  float mPrefPercent;
+  nscoord mFinalWidth;
 };
 
 inline PRInt32 nsTableColFrame::GetColIndex() const

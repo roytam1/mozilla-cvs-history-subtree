@@ -3207,7 +3207,7 @@ PRInt32 nsTableFrame::GetColumnWidth(PRInt32 aColIndex)
   if (this == firstInFlow) {
     nsTableColFrame* colFrame = GetColFrame(aColIndex);
     if (colFrame) {
-      result = colFrame->GetWidth(FINAL);
+      result = colFrame->GetFinalWidth();
     }
   }
   else {
@@ -3225,7 +3225,7 @@ void nsTableFrame::SetColumnWidth(PRInt32 aColIndex, nscoord aWidth)
   if (this == firstInFlow) {
     nsTableColFrame* colFrame = GetColFrame(aColIndex);
     if (colFrame) {
-      colFrame->SetWidth(FINAL, aWidth);
+      colFrame->SetFinalWidth(aWidth);
     }
     else {
       NS_ASSERTION(PR_FALSE, "null col frame");
