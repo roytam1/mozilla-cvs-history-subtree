@@ -3505,6 +3505,31 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 }
 #endif
 
+void
+nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
+{
+  nsTableCellMap *cellMap = GetCellMap();
+  for (PRInt32 col = 0, col_end = cellMap->GetColCount();
+       col < col_end; ++col) {
+    nsTableColFrame *colFrame = GetColFrame(col);
+    colFrame->ResetMinCoord();
+    colFrame->ResetPrefCoord();
+    colFrame->ResetPrefPercent();
+
+    for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
+         row < row_end; ++row) {
+      PRBool originates;
+      PRInt32 colSpan;
+      nsTableCellFrame *cellFrame = cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
+
+      const nsStylePosition *pos = cellFrame->GetStylePosition();
+      nscoord cellMin = cellFrame->GetMinWidth(aRenderingContext);
+      nscoord cellPref = cellFrame->GetPrefWidth(aRenderingContext);
+
+    }
+  }
+}
+
 // Find the closet sibling before aPriorChildFrame (including aPriorChildFrame) that
 // is of type aChildType
 nsIFrame* 

@@ -140,24 +140,39 @@ public:
   void Dump(PRInt32 aIndent);
 #endif
 
-  void SetMinWidth(nscoord aMinWidth) {
-    mMinWidth = aMinWidth;
+  void ResetMinCoord() {
+    mMinCoord = 0;
   }
-  nscoord GetMinWidth() {
-    return mMinWidth;
+  void AddMinCoord(nscoord aMinCoord) {
+    if (aMinCoord > mMinCoord)
+      mMinCoord = aMinCoord;
   }
-  void SetPrefWidth(nscoord aPrefWidth) {
-    mPrefWidth = aPrefWidth;
+  nscoord GetMinCoord() {
+    return mMinCoord;
   }
-  nscoord GetPrefWidth() {
-    return mPrefWidth;
+
+  void ResetPrefCoord() {
+    mPrefCoord = 0;
   }
-  void SetPrefPercent(float aPrefPercent) {
-    mPrefPercent = aPrefPercent;
+  void AddPrefCoord(nscoord aPrefCoord) {
+    if (aPrefCoord > mPrefCoord)
+      mPrefCoord = aPrefCoord;
+  }
+  nscoord GetPrefCoord() {
+    return mPrefCoord;
+  }
+
+  void ResetPrefPercent() {
+    mPrefPercent = 0.0f;
+  }
+  void AddPrefPercent(float aPrefPercent) {
+    if (aPrefPercent > mPrefPercent)
+      mPrefPercent = aPrefPercent;
   }
   float GetPrefPercent() {
     return mPrefPercent;
   }
+
   void SetFinalWidth(nscoord aFinalWidth) {
     mFinalWidth = aFinalWidth;
   }
@@ -182,8 +197,8 @@ protected:
   BCPixelSize mRightContBorderWidth;
   BCPixelSize mBottomContBorderWidth;
 
-  nscoord mMinWidth;
-  nscoord mPrefWidth;
+  nscoord mMinCoord;
+  nscoord mPrefCoord;
   float mPrefPercent;
   nscoord mFinalWidth;
 };
