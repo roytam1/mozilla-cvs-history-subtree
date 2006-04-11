@@ -44,6 +44,7 @@
 #include "nsStyleContext.h"
 #include "nsIPercentHeightObserver.h"
 #include "nsLayoutAtoms.h"
+#include "nsLayoutUtils.h"
 
 class nsTableFrame;
 
@@ -133,13 +134,11 @@ public:
                          PRBool aSelected,
                          nsSpread aSpread);
 
-  /**
-   * GetMinWidth and GetPrefWidth on nsTableCellFrame *do* include the
-   * padding and the necessary parts of the border, unlike for other
-   * frames!
-   */
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  nscoord GetIntrinsicBorderPadding(nsIRenderingContext *aRenderingContext,
+                                    nsLayoutUtils::IntrinsicWidthType aType);
+
   NS_IMETHOD Reflow(nsPresContext*      aPresContext,
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,

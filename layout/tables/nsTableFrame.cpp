@@ -3508,13 +3508,21 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 void
 nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
 {
+  nsCOMPtr<nsIDeviceContext> dc;
+  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+  float p2t = dc->DevUnitsToTwips();
+
   nsTableCellMap *cellMap = GetCellMap();
+
   for (PRInt32 col = 0, col_end = cellMap->GetColCount();
        col < col_end; ++col) {
     nsTableColFrame *colFrame = GetColFrame(col);
     colFrame->ResetMinCoord();
     colFrame->ResetPrefCoord();
     colFrame->ResetPrefPercent();
+
+    // XXX Consider col frame!
+    // XXX Should it get Border/padding considered?
 
     for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
          row < row_end; ++row) {
@@ -3523,9 +3531,82 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       nsTableCellFrame *cellFrame = cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
 
       const nsStylePosition *pos = cellFrame->GetStylePosition();
-      nscoord cellMin = cellFrame->GetMinWidth(aRenderingContext);
-      nscoord cellPref = cellFrame->GetPrefWidth(aRenderingContext);
+      nscoord minCoord = cellFrame->GetMinWidth(aRenderingContext);
+      nscoord prefCoord = cellFrame->GetPrefWidth(aRenderingContext);
+      float prefPercent = 0.0f;
 
+      switch (pos->mWidth.GetUnit()) {
+        case eStyleUnit_Coord: {
+            nscoord w = pos->mWidth.GetCoordValue();
+            if (w > minCoord)
+              minCoord = w;
+            if (w < prefCoord)
+              prefCoord = w;
+          }
+          break;
+        case eStyleUnit_Percent: {
+            prefPercent = pos->mWidth.GetPercentValue();
+            prefCoord = minCoord;
+          }
+          break;
+        default:
+          break;
+      }
+
+      switch (pos->mMaxWidth.GetUnit()) {
+        case eStyleUnit_Coord: {
+            nscoord w = pos->mMaxWidth.GetCoordValue();
+            if (w < minCoord)
+              minCoord = w;
+            if (w < prefCoord)
+              prefCoord = w;
+          }
+          break;
+        case eStyleUnit_Percent: {
+            float p = pos->mMaxWidth.GetPercentValue();
+            if (p < prefPercent)
+              prefPercent = p;
+          }
+          break;
+        default:
+          break;
+      }
+
+      switch (pos->mMinWidth.GetUnit()) {
+        case eStyleUnit_Coord: {
+            nscoord w = pos->mMinWidth.GetCoordValue();
+            if (w > minCoord)
+              minCoord = w;
+            if (w > prefCoord)
+              prefCoord = w;
+          }
+          break;
+        case eStyleUnit_Percent: {
+            float p = pos->mMinWidth.GetPercentValue();
+            if (p > prefPercent)
+              prefPercent = p;
+          }
+          break;
+        default:
+          break;
+      }
+
+      minCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
+                                                    nsLayoutUtils::MIN_WIDTH);
+      prefCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
+                                                   nsLayoutUtils::PREF_WIDTH);
+
+      // XXX Rounding errors due to RoundToPixel below!
+      minCoord = minCoord / colSpan;
+      prefCoord = prefCoord / colSpan;
+      prefPercent = prefPercent / colSpan;
+
+      minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
+      prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
+
+      colFrame->AddMinCoord(minCoord);
+      colFrame->AddPrefCoord(prefCoord);
+      colFrame->AddPrefPercent(prefPercent);
     }
   }
 }

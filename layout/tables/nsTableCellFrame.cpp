@@ -665,26 +665,8 @@ nsTableCellFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   DISPLAY_MIN_WIDTH(this, result);
 
   nsIFrame *inner = mFrames.FirstChild();
-  result = inner->GetMinWidth(aRenderingContext);
-  // Content could break this by styling our internal anonymous boxes!
-  NS_ASSERTION(result ==
-               nsLayoutUtils::IntrinsicForContainer(aRenderingContext, inner,
-                                                    nsLayoutUtils::MIN_WIDTH),
-               "inner has style it should not have");
-  result += nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this,
-                                                 nsLayoutUtils::MIN_WIDTH,
-                                                 nsLayoutUtils::PADDING);
-
-  nsCOMPtr<nsIDeviceContext> dc;
-  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  float p2t = dc->DevUnitsToTwips();
-
-  nsMargin border;
-  GetBorderWidth(p2t, border);
-  result += border.LeftRight();
-
-  result = nsTableFrame::RoundToPixel(result, p2t);
-
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext, inner,
+                                                    nsLayoutUtils::MIN_WIDTH);
   return result;
 }
 
@@ -695,20 +677,18 @@ nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   DISPLAY_PREF_WIDTH(this, result);
 
   nsIFrame *inner = mFrames.FirstChild();
-  result = inner->GetPrefWidth(aRenderingContext);
-  // Content could break this by styling our internal anonymous boxes!
-  NS_ASSERTION(result ==
-               nsLayoutUtils::IntrinsicForContainer(aRenderingContext, inner,
-                                                    nsLayoutUtils::PREF_WIDTH),
-               "inner has style it should not have");
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext, inner,
+                                                nsLayoutUtils::PREF_WIDTH);
+  return result;
+}
 
-  // XXXldb Adjust for width, *-width, specified on this, but not to
-  // smaller than GetMinWidth.
-
-  result += nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this,
-                                                 nsLayoutUtils::PREF_WIDTH,
-                                                 nsLayoutUtils::PADDING);
-
+nscoord
+nsTableCellFrame::GetIntrinsicBorderPadding(nsIRenderingContext *aRenderingContext,
+                                            nsLayoutUtils::IntrinsicWidthType aType)
+{
+  nscoord result =
+    nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this, aType,
+                                         nsLayoutUtils::PADDING);
 
   nsCOMPtr<nsIDeviceContext> dc;
   aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
@@ -717,8 +697,6 @@ nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nsMargin border;
   GetBorderWidth(p2t, border);
   result += border.LeftRight();
-
-  result = nsTableFrame::RoundToPixel(result, p2t);
 
   return result;
 }
