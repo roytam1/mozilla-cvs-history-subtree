@@ -162,14 +162,19 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     nscoord spacing = mTableFrame->GetCellSpacingX();
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
+    nscoord min = mMinWidth;
+
     if (mTableFrame->IsBorderCollapse()) {
         // The border and padding that was subtracted by the reflow
         // state counts as part of the column widths.
         width += aReflowState.mComputedBorderPadding.LeftRight();
     } else {
         // border-spacing isn't part of the basis for percentages.
-        if (colCount > 0)
-            width -= spacing * (colCount + 1);
+        if (colCount > 0) {
+            nscoord subtract = spacing * (colCount + 1);
+            width -= subtract;
+            min -= subtract;
+        }
     }
 
     // XXX is |width| the right basis for percentage widths?
@@ -220,7 +225,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
 
     Loop2Type l2t;
     if (assigned > width) {
-        if (assigned != mMinWidth)
+        if (assigned != min)
             l2t = SHRINK;
         else
             l2t = NOOP;
@@ -246,7 +251,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     } u;
     switch (l2t) {
         case SHRINK: // u.f is negative
-            u.f = float(width - assigned) / float(assigned - mMinWidth);
+            u.f = float(width - assigned) / float(assigned - min);
             break;
         case GROW:
             u.f = float(width - assigned) / float(grow_basis);
