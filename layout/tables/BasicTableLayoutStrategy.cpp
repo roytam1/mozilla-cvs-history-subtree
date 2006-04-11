@@ -165,6 +165,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     PRInt32 colCount = cellMap->GetColCount();
     nscoord spacing = mTableFrame->GetCellSpacingX();
+    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
     // XXX is |width| the right basis for percentage widths?
 
@@ -172,6 +173,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     // their percentage pref width or min width.
     nscoord assigned = 0;
     nscoord grow_basis = 0;
+    nscoord zoom_basis = 0;
+    float pct_basis = 0.0f;
     PRInt32 col;
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
@@ -182,7 +185,12 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             val = pct_width;
         } else {
             val = min_width;
+        }
+        if (colFrame->GetPrefPercent() == 0.0f) {
             grow_basis += colFrame->GetPrefCoord() - min_width;
+            zoom_basis += min_width;
+        } else {
+            pct_basis += colFrame->GetPrefPercent();
         }
         colFrame->SetFinalWidth(val);
         assigned += val + spacing;
@@ -199,9 +207,11 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     //    2. in proportion to the difference between their min width and
     //       pref width, or,
     //    3. if those are all zero, in proportion to their min width, or,
-    //    4. if those are all zero, equally
+    //    4. if those are all zero, instead increase the percentage
+    //       width columns in proportion to their percentages
+    //    5. if there are no percentage width columns, equally
     enum Loop2Type {
-        SHRINK, GROW, ZOOM_GROW, EQUAL_GROW, NOOP
+        SHRINK, GROW, ZOOM_GROW, PCT_GROW, EQUAL_GROW, NOOP
     };
 
     Loop2Type l2t;
@@ -213,8 +223,10 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     } else {
         if (grow_basis > 0)
             l2t = GROW;
-        else if (mMinWidth != 0)
+        else if (zoom_basis > 0)
             l2t = ZOOM_GROW;
+        else if (pct_basis > 0.0f)
+            l2t = PCT_GROW;
         else if (colCount > 0)
             l2t = EQUAL_GROW;
         else
@@ -223,7 +235,6 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
  
     // Hold previous to avoid accumulating rounding error.
     nscoord prev_x = 0, prev_x_round = 0;
-    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
     union {
         float f;
@@ -237,7 +248,10 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             u.f = float(width - assigned) / float(grow_basis);
             break;
         case ZOOM_GROW:
-            u.c = width - assigned;
+            u.f = float(width - assigned) / float(zoom_basis);
+            break;
+        case PCT_GROW:
+            u.f = float(width - assigned) / float(pct_basis);
             break;
         case EQUAL_GROW:
             u.c = width / cellMap->GetColCount();
@@ -249,27 +263,27 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
 
-        PRBool is_pct =
-            (colFrame->GetFinalWidth() != colFrame->GetMinCoord());
         nscoord col_width = colFrame->GetFinalWidth();
         switch (l2t) {
             case SHRINK: // u.f is negative
-                if (is_pct)
-                    col_width += nscoord(u.f * (colFrame->GetFinalWidth() -
-                                                colFrame->GetMinCoord()));
+                col_width += nscoord(u.f * (colFrame->GetFinalWidth() -
+                                            colFrame->GetMinCoord()));
                 break;
             case GROW:
-                if (!is_pct)
+                if (colFrame->GetPrefPercent() == 0.0f)
                     col_width += nscoord(u.f * (colFrame->GetPrefCoord() -
                                                 colFrame->GetMinCoord()));
                 break;
             case ZOOM_GROW:
-                if (!is_pct)
-                    col_width += u.c * colFrame->GetMinCoord() / mMinWidth;
+                if (colFrame->GetPrefPercent() == 0.0f)
+                    col_width += nscoord(u.f * float(colFrame->GetMinCoord()));
+                break;
+            case PCT_GROW:
+                if (colFrame->GetPrefPercent() != 0.0f)
+                    col_width += nscoord(u.f * colFrame->GetPrefPercent());
                 break;
             case EQUAL_GROW:
-                if (!is_pct)
-                    col_width += u.c;
+                col_width += u.c;
                 NS_ASSERTION(colFrame->GetMinCoord() == 0, "yikes");
                 break;
             case NOOP:
