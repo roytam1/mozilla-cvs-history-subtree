@@ -228,9 +228,13 @@ nsTableFrame::Init(nsPresContext*  aPresContext,
   PRBool borderCollapse = (NS_STYLE_BORDER_COLLAPSE == tableStyle->mBorderCollapse);
   SetBorderCollapse(borderCollapse);
   // Create the cell map
-  // XXX Why do we do this for continuing frames?
-  mCellMap = new nsTableCellMap(*this, borderCollapse);
-  if (!mCellMap) return NS_ERROR_OUT_OF_MEMORY;
+  if (!aPrevInFlow) {
+    mCellMap = new nsTableCellMap(*this, borderCollapse);
+    if (!mCellMap)
+      return NS_ERROR_OUT_OF_MEMORY;
+  } else {
+    mCellMap = nsnull;
+  }
 
   if (aPrevInFlow) {
     // set my width, because all frames in a table flow are the same width and
@@ -447,28 +451,6 @@ void nsTableFrame::AttributeChangedFor(nsIFrame*       aFrame,
 
 
 /* ****** CellMap methods ******* */
-
-PRInt32 nsTableFrame::GetRowCount () const
-{
-  PRInt32 rowCount = 0;
-  nsTableCellMap *cellMap = GetCellMap();
-  NS_ASSERTION(nsnull!=cellMap, "GetRowCount null cellmap");
-  if (nsnull!=cellMap)
-    rowCount = cellMap->GetRowCount();
-  return rowCount;
-}
-
-/* return the col count including dead cols */
-PRInt32 nsTableFrame::GetColCount () const
-{
-  PRInt32 colCount = 0;
-  nsTableCellMap* cellMap = GetCellMap();
-  NS_ASSERTION(nsnull != cellMap, "GetColCount null cellmap");
-  if (nsnull != cellMap) {
-    colCount = cellMap->GetColCount();
-  }
-  return colCount;
-}
 
 /* return the effective col count */
 PRInt32 nsTableFrame::GetEffectiveColCount() const
@@ -720,12 +702,7 @@ void nsTableFrame::RemoveCol(nsTableColGroupFrame* aColGroupFrame,
 nsTableCellMap* nsTableFrame::GetCellMap() const
 {
   nsTableFrame* firstInFlow = (nsTableFrame *)GetFirstInFlow();
-  if (this == firstInFlow) {
-    return mCellMap;
-  }
-  else {
-    return firstInFlow->GetCellMap();
-  }
+  return firstInFlow->mCellMap;
 }
 
 // XXX this needs to be moved to nsCSSFrameConstructor
@@ -3829,15 +3806,6 @@ PRInt32 nsTableIterator::Count()
     }
   }
   return mCount;
-}
-
-nsTableCellFrame* nsTableFrame::GetCellInfoAt(PRInt32            aRowX, 
-                                              PRInt32            aColX, 
-                                              PRBool*            aOriginates, 
-                                              PRInt32*           aColSpan)
-{
-  nsTableCellMap* cellMap = GetCellMap();
-  return cellMap->GetCellInfoAt(aRowX, aColX, aOriginates, aColSpan);
 }
 
 /*------------------ nsITableLayout methods ------------------------------*/

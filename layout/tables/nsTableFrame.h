@@ -45,9 +45,8 @@
 #include "nsITableLayout.h"
 #include "nsTableColFrame.h"
 #include "nsTableColGroupFrame.h"
+#include "nsCellMap.h"
 
-class nsCellMap;
-class nsTableCellMap;
 class nsTableCellFrame;
 class nsTableColFrame;
 class nsTableRowGroupFrame;
@@ -435,7 +434,10 @@ public:
   nsTableCellFrame* GetCellInfoAt(PRInt32            aRowX, 
                                   PRInt32            aColX, 
                                   PRBool*            aOriginates = nsnull, 
-                                  PRInt32*           aColSpan = nsnull);
+                                  PRInt32*           aColSpan = nsnull)
+  {
+    return GetCellMap()->GetCellInfoAt(aRowX, aColX, aOriginates, aColSpan);
+  }
 
   PRInt32 GetNumCellsOriginatingInCol(PRInt32 aColIndex) const;
   PRInt32 GetNumCellsOriginatingInRow(PRInt32 aRowIndex) const;
@@ -626,15 +628,21 @@ public: /* ----- Cell Map public methods ----- */
   PRInt32 GetStartRowIndex(nsTableRowGroupFrame& aRowGroupFrame);
 
   /** returns the number of rows in this table.
-    * if mCellMap has been created, it is asked for the number of rows.<br>
-    * otherwise, the content is enumerated and the rows are counted.
     */
-  virtual PRInt32 GetRowCount() const;
+  PRInt32 GetRowCount () const
+  {
+    return GetCellMap()->GetRowCount();
+  }
 
   /** returns the number of columns in this table after redundant columns have been removed 
     */
-  virtual PRInt32 GetEffectiveColCount() const;
-  virtual PRInt32 GetColCount() const;
+  PRInt32 GetEffectiveColCount() const;
+
+  /* return the col count including dead cols */
+  PRInt32 GetColCount () const
+  {
+    return GetCellMap()->GetColCount();
+  }
 
   // return the last col index which isn't of type eColAnonymousCell
   PRInt32 GetIndexOfLastRealCol();
