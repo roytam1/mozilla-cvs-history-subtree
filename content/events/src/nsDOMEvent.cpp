@@ -54,6 +54,7 @@
 #include "nsContentUtils.h"
 #include "nsIURI.h"
 #include "nsIScriptSecurityManager.h"
+#include "nsIScriptError.h"
 
 static const char* const sEventNames[] = {
   "mousedown", "mouseup", "click", "dblclick", "mouseover",
@@ -350,9 +351,42 @@ nsDOMEvent::StopPropagation()
   return NS_OK;
 }
 
+static void
+ReportUseOfDeprecatedMethod(nsIDOMEvent* aDOMEvent, const char* aWarning)
+{
+  nsCOMPtr<nsIDocument> doc;
+  nsCOMPtr<nsIDOMEventTarget> target;
+  aDOMEvent->GetCurrentTarget(getter_AddRefs(target));
+  nsCOMPtr<nsIContent> content = do_QueryInterface(target);
+  if (content) {
+    doc = content->GetOwnerDoc();
+  } else {
+    doc = do_QueryInterface(target);
+    if (!doc) {
+      nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(target);
+      if (window) {
+        doc = do_QueryInterface(window->GetExtantDocument());
+      }
+    }
+  }
+
+  nsAutoString type;
+  aDOMEvent->GetType(type);
+  const PRUnichar *strings[] = { type.get() };
+  nsContentUtils::ReportToConsole(nsContentUtils::eDOM_PROPERTIES,
+                                  aWarning,
+                                  strings, NS_ARRAY_LENGTH(strings),
+                                  doc ? doc->GetDocumentURI() : nsnull,
+                                  EmptyString(), 0, 0,
+                                  nsIScriptError::warningFlag,
+                                  "DOM Events");
+}
+
 NS_IMETHODIMP
 nsDOMEvent::PreventBubble()
 {
+  ReportUseOfDeprecatedMethod(this, "UseOfPreventBubbleWarning");
+
   if (mEvent->flags & NS_EVENT_FLAG_BUBBLE || mEvent->flags & NS_EVENT_FLAG_INIT) {
     mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
   }
@@ -362,6 +396,8 @@ nsDOMEvent::PreventBubble()
 NS_IMETHODIMP
 nsDOMEvent::PreventCapture()
 {
+  ReportUseOfDeprecatedMethod(this, "UseOfPreventCaptureWarning");
+
   if (mEvent->flags & NS_EVENT_FLAG_CAPTURE) {
     mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
   }

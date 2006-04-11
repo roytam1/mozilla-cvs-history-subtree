@@ -64,7 +64,7 @@ interface nsIDOMJSWindow : nsISupports
   // it's implementation is a no-op
   void                      setResizable(in boolean resizable);
 
-  // These are 4.x event related methods.
+  // These are 4.x event related methods. Deprecated.
   void                      captureEvents(in long eventFlags);
   void                      releaseEvents(in long eventFlags);
   void                      routeEvent(in nsIDOMEvent evt);

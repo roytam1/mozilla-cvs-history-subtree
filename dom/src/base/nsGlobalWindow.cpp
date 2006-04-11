@@ -141,7 +141,7 @@
 #include "nsCSSProps.h"
 #include "nsIURIFixup.h"
 #include "nsCDefaultURIFixup.h"
-
+#include "nsIScriptError.h"
 #include "plbase64.h"
 
 #include "nsIPrintSettings.h"
@@ -3976,9 +3976,24 @@ nsGlobalWindow::SetResizable(PRBool aResizable)
   return NS_OK;
 }
 
+static void
+ReportUseOfDeprecatedMethod(nsGlobalWindow* aWindow, const char* aWarning)
+{
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(aWindow->GetExtantDocument());
+  nsContentUtils::ReportToConsole(nsContentUtils::eDOM_PROPERTIES,
+                                  aWarning,
+                                  nsnull, 0,
+                                  doc ? doc->GetDocumentURI() : nsnull,
+                                  EmptyString(), 0, 0,
+                                  nsIScriptError::warningFlag,
+                                  "DOM Events");
+}
+
 NS_IMETHODIMP
 nsGlobalWindow::CaptureEvents(PRInt32 aEventFlags)
 {
+  ReportUseOfDeprecatedMethod(this, "UseOfCaptureEventsWarning");
+
   nsCOMPtr<nsIEventListenerManager> manager;
 
   if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager)))) {
@@ -3992,6 +4007,8 @@ nsGlobalWindow::CaptureEvents(PRInt32 aEventFlags)
 NS_IMETHODIMP
 nsGlobalWindow::ReleaseEvents(PRInt32 aEventFlags)
 {
+  ReportUseOfDeprecatedMethod(this, "UseOfReleaseEventsWarning");
+
   nsCOMPtr<nsIEventListenerManager> manager;
 
   if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager)))) {
@@ -4005,7 +4022,7 @@ nsGlobalWindow::ReleaseEvents(PRInt32 aEventFlags)
 NS_IMETHODIMP
 nsGlobalWindow::RouteEvent(nsIDOMEvent* aEvt)
 {
-  //XXX Not the best solution -joki
+  ReportUseOfDeprecatedMethod(this, "UseOfRouteEventWarning");
   return NS_OK;
 }
 

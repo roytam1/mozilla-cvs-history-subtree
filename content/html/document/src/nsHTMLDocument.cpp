@@ -122,7 +122,7 @@
 #include "nsIJSContextStack.h"
 #include "nsIDocumentViewer.h"
 #include "nsIWyciwygChannel.h"
-
+#include "nsIScriptError.h"
 #include "nsIPrompt.h"
 //AHMED 12-2
 #include "nsBidiUtils.h"
@@ -2823,9 +2823,24 @@ nsHTMLDocument::GetSelection(nsAString& aReturn)
   return rv;
 }
 
+static void
+ReportUseOfDeprecatedMethod(nsHTMLDocument* aDoc, const char* aWarning)
+{
+  nsContentUtils::ReportToConsole(nsContentUtils::eDOM_PROPERTIES,
+                                  aWarning,
+                                  nsnull, 0,
+                                  NS_STATIC_CAST(nsIDocument*, aDoc)->
+                                    GetDocumentURI(),
+                                  EmptyString(), 0, 0,
+                                  nsIScriptError::warningFlag,
+                                  "DOM Events");
+}
+
 NS_IMETHODIMP
 nsHTMLDocument::CaptureEvents(PRInt32 aEventFlags)
 {
+  ReportUseOfDeprecatedMethod(this, "UseOfCaptureEventsWarning");
+
   nsIEventListenerManager *manager;
 
   if (NS_OK == GetListenerManager(&manager)) {
@@ -2840,6 +2855,8 @@ nsHTMLDocument::CaptureEvents(PRInt32 aEventFlags)
 NS_IMETHODIMP
 nsHTMLDocument::ReleaseEvents(PRInt32 aEventFlags)
 {
+  ReportUseOfDeprecatedMethod(this, "UseOfReleaseEventsWarning");
+
   nsIEventListenerManager *manager;
 
   if (NS_OK == GetListenerManager(&manager)) {
@@ -2854,7 +2871,7 @@ nsHTMLDocument::ReleaseEvents(PRInt32 aEventFlags)
 NS_IMETHODIMP
 nsHTMLDocument::RouteEvent(nsIDOMEvent* aEvt)
 {
-  //XXX Not the best solution -joki
+  ReportUseOfDeprecatedMethod(this, "UseOfRouteEventWarning");
   return NS_OK;
 }
 
