@@ -79,4 +79,3 @@ FixedTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
 {
 }
-

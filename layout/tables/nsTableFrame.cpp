@@ -63,7 +63,6 @@
 #include "nsHTMLAtoms.h"
 #include "nsCSSAnonBoxes.h"
 #include "nsLayoutAtoms.h"
-#include "nsIDeviceContext.h"
 #include "nsIPresShell.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMHTMLElement.h"
@@ -3485,13 +3484,7 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 void
 nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
 {
-  float p2t;
-  {
-    nsCOMPtr<nsIDeviceContext> dc;
-    aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-    p2t = dc->DevUnitsToTwips();
-  }
-
+  float p2t = GetPresContext()->ScaledPixelsToTwips();
   nsTableCellMap *cellMap = GetCellMap();
 
   for (PRInt32 col = 0, col_end = cellMap->GetColCount();

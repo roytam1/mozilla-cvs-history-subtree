@@ -690,9 +690,7 @@ nsTableCellFrame::GetIntrinsicBorderPadding(nsIRenderingContext *aRenderingConte
     nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this, aType,
                                          nsLayoutUtils::PADDING);
 
-  nsCOMPtr<nsIDeviceContext> dc;
-  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  float p2t = dc->DevUnitsToTwips();
+  float p2t = GetPresContext()->ScaledPixelsToTwips();
 
   nsMargin border;
   GetBorderWidth(p2t, border);

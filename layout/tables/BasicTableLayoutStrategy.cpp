@@ -100,7 +100,7 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     if (pref_pct > pref)
         pref = pref_pct;
 
-    float p2t = mTableFrame->GetPresContext()->PixelsToTwips();
+    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
     min = nsTableFrame::RoundToPixel(min, p2t);
     pref = nsTableFrame::RoundToPixel(pref, p2t);
 
@@ -141,7 +141,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     nscoord width = aReflowState.mComputedWidth;
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
 
-    float p2t = mTableFrame->GetPresContext()->PixelsToTwips();
+    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
     // Hold previous to avoid accumulating rounding error.
     nscoord prev_x = 0, prev_x_round = 0;

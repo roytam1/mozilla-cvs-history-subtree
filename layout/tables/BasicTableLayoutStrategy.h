@@ -61,6 +61,8 @@ public:
     virtual void CalcColumnWidths(const nsHTMLReflowState& aReflowState);
 
 private:
+    void ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext);
+
     nsTableFrame *mTableFrame;
     nscoord mMinWidth;
     nscoord mPrefWidth;
