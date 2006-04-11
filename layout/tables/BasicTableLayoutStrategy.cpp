@@ -110,7 +110,10 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
         pref = max_small_pct_pref;
 
     // Account for large percentages expanding the preferred width of
-    // themselves.
+    // themselves.  This needs to happen *after* accounting for small
+    // percentages; otherwise we'd need to iterate over the columns
+    // multiple times.  (I'm not entirely convinced that we don't need
+    // to even so, but it seems ok.)
     if (0.0f < pct_running_pct && pct_running_pct < 1.0f) {
         nscoord large_pct_pref = nscoord(float(pref - pct_running_nonpct) /
                                          (1.0f - pct_running_pct));
