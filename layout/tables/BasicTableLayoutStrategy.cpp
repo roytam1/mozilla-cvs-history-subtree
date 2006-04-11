@@ -80,34 +80,49 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     mTableFrame->ComputeColumnIntrinsicWidths(aRenderingContext);
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
-    nscoord min = 0, pref = 0, pref_pct = 0;
+    nscoord min = 0, pref = 0, max_small_pct_pref = 0, pct_running_nonpct = 0;
+    float pct_running_pct = 0.0f;
     PRInt32 colCount = cellMap->GetColCount();
+    nscoord spacing = mTableFrame->GetCellSpacingX();
 
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
-        min += colFrame->GetMinCoord();
-        pref += colFrame->GetPrefCoord();
+        min += colFrame->GetMinCoord() + spacing;
+        pref += colFrame->GetPrefCoord() + spacing;
 
         // Percentages are of the table, so we have to reverse them for
         // intrinsic widths.
         float p = colFrame->GetPrefPercent();
         if (0.0f < p && p < 1.0f) {
-            float new_pref_pct = colFrame->GetPrefCoord() / (1.0f - p);
-            if (new_pref_pct > pref_pct)
-                pref_pct = new_pref_pct;
+            nscoord new_small_pct_expand =
+                nscoord(float(colFrame->GetPrefCoord()) / p);
+            if (new_small_pct_expand > max_small_pct_pref) {
+                max_small_pct_pref = new_small_pct_expand;
+            }
+            pct_running_pct += p;
+            pct_running_nonpct += colFrame->GetPrefCoord();
         }
+    }
+
+    // Account for small percentages expanding the preferred width of
+    // *other* columns.
+    if (max_small_pct_pref > pref)
+        pref = max_small_pct_pref;
+
+    // Account for large percentages expanding the preferred width of
+    // themselves.
+    if (0.0f < pct_running_pct && pct_running_pct < 1.0f) {
+        nscoord large_pct_pref = nscoord(float(pref - pct_running_nonpct) /
+                                         (1.0f - pct_running_pct));
+        if (large_pct_pref > pref)
+            pref = large_pct_pref;
     }
 
     // XXX Should this go before or after the percent business?
     if (colCount > 0) {
-        nscoord spacing = mTableFrame->GetCellSpacingX();
-        spacing *= colCount + 1;
         pref += spacing;
         min += spacing;
     }
-
-    if (pref_pct > pref)
-        pref = pref_pct;
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
     min = nsTableFrame::RoundToPixel(min, p2t);
@@ -167,6 +182,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     } else if (colCount > 0) {
         u.e = width / cellMap->GetColCount();
     }
+
+    // XXX This needs to consider percentage widths!
 
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);

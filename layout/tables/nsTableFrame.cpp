@@ -3522,7 +3522,6 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
           break;
         case eStyleUnit_Percent: {
             prefPercent = pos->mWidth.GetPercentValue();
-            prefCoord = minCoord;
           }
           break;
         default:
