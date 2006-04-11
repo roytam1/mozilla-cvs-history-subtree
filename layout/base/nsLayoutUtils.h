@@ -422,7 +422,13 @@ public:
   enum IntrinsicWidthType { MIN_WIDTH, PREF_WIDTH };
   enum IntrinsicWidthPart {
     CONTENT = (1<<0), PADDING = (1<<1), BORDER = (1<<2), MARGIN = (1<<3),
-    ALL_PARTS = (CONTENT | PADDING | BORDER | MARGIN)
+
+    ALL_PARTS = (CONTENT | PADDING | BORDER | MARGIN),
+    CPB_PARTS = (CONTENT | PADDING | BORDER),
+    CP_PARTS = (CONTENT | PADDING),
+    PBM_PARTS = (PADDING | BORDER | MARGIN),
+    PB_PARTS = (PADDING | BORDER),
+    BM_PARTS = (BORDER | MARGIN)
   };
   static nscoord IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
                                        nsIFrame *aFrame,

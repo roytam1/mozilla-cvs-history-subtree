@@ -528,11 +528,8 @@ nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   if (width < tableMin)
     width = tableMin;
   nsLayoutUtils::IntrinsicWidthPart insetPart =
-    mInnerTableFrame->IsBorderCollapse()
-      ? nsLayoutUtils::MARGIN
-      : nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::PADDING |
-                                          nsLayoutUtils::BORDER |
-                                          nsLayoutUtils::MARGIN);
+    mInnerTableFrame->IsBorderCollapse() ? nsLayoutUtils::MARGIN
+                                         : nsLayoutUtils::PBM_PARTS;
   width += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
              mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
              insetPart);
@@ -568,11 +565,8 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   if (maxWidth < tableMin)
     maxWidth = tableMin;
   nsLayoutUtils::IntrinsicWidthPart insetPart =
-    mInnerTableFrame->IsBorderCollapse()
-      ? nsLayoutUtils::MARGIN
-      : nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::PADDING |
-                                          nsLayoutUtils::BORDER |
-                                          nsLayoutUtils::MARGIN);
+    mInnerTableFrame->IsBorderCollapse() ? nsLayoutUtils::MARGIN
+                                         : nsLayoutUtils::PBM_PARTS;
   maxWidth += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                 mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
                 insetPart);
