@@ -105,18 +105,6 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     min = nsTableFrame::RoundToPixel(min, p2t);
     pref = nsTableFrame::RoundToPixel(pref, p2t);
 
-    if (mTableFrame->IsBorderCollapse()) {
-        // subtract these so the caller can add them back again!
-        min -= nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                 mTableFrame, nsLayoutUtils::MIN_WIDTH,
-                 nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::BORDER |
-                                                   nsLayoutUtils::PADDING));
-        pref -= nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                  mTableFrame, nsLayoutUtils::PREF_WIDTH,
-                  nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::BORDER |
-                                                    nsLayoutUtils::PADDING));
-    }
-
     mMinWidth = min;
     mPrefWidth = pref;
 }

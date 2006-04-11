@@ -521,10 +521,21 @@ nsTableOuterFrame::InvalidateDamage(PRUint8         aCaptionSide,
 /* virtual */ nscoord
 nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord width = mInnerTableFrame->GetMinWidth(aRenderingContext) + 
-                  nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+  nscoord width = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                     mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
-                    nsLayoutUtils::MARGIN);
+                    nsLayoutUtils::CONTENT);
+  nscoord tableMin = mInnerTableFrame->GetMinWidth(aRenderingContext);
+  if (width < tableMin)
+    width = tableMin;
+  nsLayoutUtils::IntrinsicWidthPart insetPart =
+    mInnerTableFrame->IsBorderCollapse()
+      ? nsLayoutUtils::MARGIN
+      : nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::PADDING |
+                                          nsLayoutUtils::BORDER |
+                                          nsLayoutUtils::MARGIN);
+  width += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+             mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
+             insetPart);
   DISPLAY_MIN_WIDTH(this, width);
   if (mCaptionFrame) {
     nscoord capWidth =
@@ -550,10 +561,21 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nscoord maxWidth;
   DISPLAY_PREF_WIDTH(this, maxWidth);
 
-  maxWidth = mInnerTableFrame->GetPrefWidth(aRenderingContext) + 
-             nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+  maxWidth = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
-               nsLayoutUtils::MARGIN);
+               nsLayoutUtils::CONTENT);
+  nscoord tableMin = mInnerTableFrame->GetMinWidth(aRenderingContext);
+  if (maxWidth < tableMin)
+    maxWidth = tableMin;
+  nsLayoutUtils::IntrinsicWidthPart insetPart =
+    mInnerTableFrame->IsBorderCollapse()
+      ? nsLayoutUtils::MARGIN
+      : nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::PADDING |
+                                          nsLayoutUtils::BORDER |
+                                          nsLayoutUtils::MARGIN);
+  maxWidth += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
+                insetPart);
   if (mCaptionFrame) {
     PRUint8 captionSide = GetCaptionSide();
     switch(captionSide) {

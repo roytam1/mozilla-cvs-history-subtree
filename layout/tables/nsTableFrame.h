@@ -251,6 +251,8 @@ public:
                          nsSpread aSpread);
 
   virtual void MarkIntrinsicWidthsDirty();
+  // For border-collapse tables, the caller must not add padding and
+  // border to the results of these functions.
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
