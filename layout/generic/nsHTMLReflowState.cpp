@@ -129,7 +129,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
-  NS_ASSERTION(availableWidth != NS_UNCONSTRAINEDSIZE,
+  NS_ASSERTION(aAvailableSpace.width != NS_UNCONSTRAINEDSIZE,
                "shouldn't use unconstrained widths anymore");
 
   parentReflowState = &aParentReflowState;
