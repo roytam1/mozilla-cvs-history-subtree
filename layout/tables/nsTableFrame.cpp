@@ -3567,6 +3567,9 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
           break;
       }
 
+      // Add the cell-spacing (and take it off again below) so that we don't
+      // require extra room for the omitted cell-spacing of column-spanning
+      // cells.
       nscoord spacing = GetCellSpacingX();
       minCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
                                                     nsLayoutUtils::MIN_WIDTH) +
@@ -3580,7 +3583,9 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       prefCoord = prefCoord / colSpan;
       prefPercent = prefPercent / colSpan;
 
-      // XXX Should we really round *after* adding the spacing?
+      minCoord -= spacing;
+      prefCoord -= spacing;
+
       minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
       prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
 

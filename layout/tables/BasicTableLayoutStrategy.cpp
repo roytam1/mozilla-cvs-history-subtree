@@ -98,15 +98,16 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
         }
     }
 
-    if (pref_pct > pref)
-        pref = pref_pct;
-
     // XXX Should this go before or after the percent business?
     if (colCount > 0) {
         nscoord spacing = mTableFrame->GetCellSpacingX();
+        spacing *= colCount + 1;
         pref += spacing;
         min += spacing;
     }
+
+    if (pref_pct > pref)
+        pref = pref_pct;
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
     min = nsTableFrame::RoundToPixel(min, p2t);
