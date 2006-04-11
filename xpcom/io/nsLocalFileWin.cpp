@@ -2179,7 +2179,8 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
     ResolveAndStat();
 
     ULARGE_INTEGER liFreeBytesAvailableToCaller, liTotalNumberOfBytes;
-    if (nsWinAPIs::mGetDiskFreeSpaceEx(mResolvedPath.get(), 
+    if (nsWinAPIs::mGetDiskFreeSpaceEx &&
+        nsWinAPIs::mGetDiskFreeSpaceEx(mResolvedPath.get(), 
                                        &liFreeBytesAvailableToCaller, 
                                        &liTotalNumberOfBytes, 
                                        NULL))

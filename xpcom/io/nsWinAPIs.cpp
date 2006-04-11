@@ -327,6 +327,40 @@ BOOL WINAPI nsGetFileAttributesExW(LPCWSTR aPath, GET_FILEEX_INFO_LEVELS aLevel,
     return TRUE;
 }   
 
+BOOL WINAPI nsGetFileAttributesExW351(LPCWSTR aPath,
+                                      GET_FILEEX_INFO_LEVELS aLevel,
+                                      LPVOID aInfo)
+{
+    NS_ASSERTION(aLevel == GetFileExInfoStandard, "invalid level specified");
+    if (aLevel != GetFileExInfoStandard) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    // FindFirstFile expands wildcard characters so that we need to make
+    // sure that the path contains no wildcard.
+    if (NULL != wcspbrk(aPath, L"?*")) 
+        return FALSE;
+
+    WIN32_FIND_DATAW fdata;
+    HANDLE handle = FindFirstFileW(aPath, &fdata);
+    if (handle == INVALID_HANDLE_VALUE)
+        return FALSE;
+
+    WIN32_FILE_ATTRIBUTE_DATA *fadata = 
+        (WIN32_FILE_ATTRIBUTE_DATA *) aInfo;
+
+    fadata->dwFileAttributes = fdata.dwFileAttributes;
+    fadata->ftCreationTime = fdata.ftCreationTime;
+    fadata->ftLastAccessTime = fdata.ftLastAccessTime;
+    fadata->ftLastWriteTime = fdata.ftLastWriteTime;
+    fadata->nFileSizeHigh = fdata.nFileSizeHigh;
+    fadata->nFileSizeLow = fdata.nFileSizeLow;
+
+    FindClose(handle);
+    return TRUE;
+}   
+
 DWORD WINAPI nsGetShortPathNameW(LPCWSTR aLPath, LPWSTR aSPath, DWORD aLen)
 {
     if (!aLPath || !aSPath) {
@@ -640,12 +674,13 @@ nsWinAPIs::GlobalInit()
         if (shell32) 
             mSHGetPathFromIDList = (nsSHGetPathFromIDList)
                 GetProcAddress(shell32, "SHGetPathFromIDListW");
-        mGetFileAttributesEx = (nsGetFileAttributesEx)
-            GetProcAddress(kernel32, "GetFileAttributesExW");
+        NS_ASSERTION(mSHGetPathFromIDList, "failed to get proc. address");
         mGetDiskFreeSpaceEx = (nsGetDiskFreeSpaceEx)
             GetProcAddress(kernel32, "GetDiskFreeSpaceExW");
-        NS_ASSERTION(mSHGetPathFromIDList && mGetFileAttributesEx &&
-                     mGetDiskFreeSpaceEx, "failed to get proc. addresses");
+        mGetFileAttributesEx = (nsGetFileAttributesEx)
+            GetProcAddress(kernel32, "GetFileAttributesExW");
+        if (!mGetFileAttributesEx)
+            mGetFileAttributesEx = nsGetFileAttributesExW351;
     }
 
     return PR_TRUE;
