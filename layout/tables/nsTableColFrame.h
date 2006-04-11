@@ -113,8 +113,6 @@ public:
   /** convenience method, calls into cellmap */
   PRInt32 Count() const;
 
-  void ResetSizingInfo();
-
   nscoord GetLeftBorderWidth(float* aPixelsToTwips = nsnull);
   void    SetLeftBorderWidth(BCPixelSize aWidth);
   nscoord GetRightBorderWidth(float* aPixelsToTwips = nsnull);

@@ -57,7 +57,9 @@ nsTableColFrame::nsTableColFrame()
   : nsFrame()
 {
   SetColType(eColContent);
-  ResetSizingInfo();
+  ResetMinCoord();
+  ResetPrefCoord();
+  ResetPrefPercent();
 }
 
 nsTableColFrame::~nsTableColFrame()
@@ -93,11 +95,6 @@ void nsTableColFrame::SetContinuousBCBorderWidth(PRUint8     aForSide,
     default:
       NS_ERROR("invalid side arg");
   }
-}
-
-void nsTableColFrame::ResetSizingInfo()
-{
-  // XXX WRITE ME
 }
 
 NS_METHOD nsTableColFrame::Reflow(nsPresContext*          aPresContext,
