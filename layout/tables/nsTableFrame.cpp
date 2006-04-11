@@ -3502,6 +3502,8 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       PRBool originates;
       PRInt32 colSpan;
       nsTableCellFrame *cellFrame = cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
+      if (!cellFrame)
+        continue;
 
       const nsStylePosition *pos = cellFrame->GetStylePosition();
       nscoord minCoord = cellFrame->GetMinWidth(aRenderingContext);
