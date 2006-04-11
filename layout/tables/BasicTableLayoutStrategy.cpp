@@ -91,7 +91,7 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
         // intrinsic widths.
         float p = colFrame->GetPrefPercent();
         if (0.0f < p && p < 1.0f) {
-            nscoord new_pref_pct = colFrame->GetPrefCoord() / (1.0f - p);
+            float new_pref_pct = colFrame->GetPrefCoord() / (1.0f - p);
             if (new_pref_pct > pref_pct)
                 pref_pct = new_pref_pct;
         }
@@ -100,13 +100,7 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     if (pref_pct > pref)
         pref = pref_pct;
 
-    float p2t;
-    {
-        nsCOMPtr<nsIDeviceContext> dc;
-        aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-        p2t = dc->DevUnitsToTwips();
-    }
-
+    float p2t = mTableFrame->GetPresContext()->PixelsToTwips();
     min = nsTableFrame::RoundToPixel(min, p2t);
     pref = nsTableFrame::RoundToPixel(pref, p2t);
 
@@ -136,5 +130,56 @@ BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 /* virtual */ void
 BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
 {
-}
+    // XXX Is this needed?
+    NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
+                 (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN),
+                 "dirtyness out of sync");
+    if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+        ComputeIntrinsicWidths(aReflowState.rendContext);
 
+    // XXX Does mComputedWidth include border and padding?
+    nscoord width = aReflowState.mComputedWidth;
+    nsTableCellMap *cellMap = mTableFrame->GetCellMap();
+
+    float p2t = mTableFrame->GetPresContext()->PixelsToTwips();
+
+    // Hold previous to avoid accumulating rounding error.
+    nscoord prev_x = 0, prev_x_round = 0;
+
+    union {
+        float f;
+        nscoord d;
+        nscoord e;
+    } u;
+    if (mPrefWidth != mMinWidth) {
+        u.f = float(width - mMinWidth) / float(mPrefWidth - mMinWidth);
+    } else if (mMinWidth != 0) {
+        u.d = width - mMinWidth;
+    } else {
+        u.e = width / cellMap->GetColCount();
+    }
+
+    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
+         col < col_end; ++col) {
+        nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+
+        nscoord colWidth = colFrame->GetMinCoord();
+        if (mPrefWidth != mMinWidth) {
+            colWidth += nscoord(u.f * (colFrame->GetPrefCoord() -
+                                       colFrame->GetMinCoord()));
+        } else if (mMinWidth != 0) {
+            colWidth += u.d * colFrame->GetMinCoord() / mMinWidth;
+        } else {
+            colWidth += u.e;
+            NS_ASSERTION(colFrame->GetMinCoord() == 0, "yikes");
+        }
+
+        nscoord new_x = prev_x + colWidth;
+        nscoord new_x_round = nsTableFrame::RoundToPixel(new_x, p2t);
+
+        colFrame->SetFinalWidth(new_x_round - prev_x_round);
+
+        prev_x = new_x;
+        prev_x_round = new_x_round;
+    }
+}
