@@ -150,6 +150,10 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
+  /* needed only because we use Reflow in a hacky way, see
+     nsTableFrame::ReflowColGroups */
+  virtual PRBool IsContainingBlock() const;
+
   /**
    * Get the "type" of the frame
    *

@@ -370,6 +370,12 @@ NS_METHOD nsTableColGroupFrame::Reflow(nsPresContext*          aPresContext,
   return rv;
 }
 
+/* virtual */ PRBool
+nsTableColGroupFrame::IsContainingBlock() const
+{
+  return PR_TRUE;
+}
+
 nsTableColFrame * nsTableColGroupFrame::GetFirstColumn()
 {
   return GetNextColumn(nsnull);
