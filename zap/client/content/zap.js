@@ -239,6 +239,12 @@ function cmdGo() {
   loadPage("chrome://zap/content/make-call.xul", true);
 }
 
+function cmdDebugShell() {
+  window.open("chrome://zap/content/debug-shell.xul",
+              "",
+              "chrome,resizable");
+}
+
 function cmdGenericRequest() {
   loadPage("chrome://zap/content/generic-request.xul", false);
 }

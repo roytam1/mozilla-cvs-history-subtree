@@ -10,6 +10,8 @@ zap.jar:
   content/zap/identity.xul           (content/identity.xul)
   content/zap/identity-form.xul      (content/identity-form.xul)
   content/zap/logs.xul               (content/logs.xul)
+  content/zap/debug-shell.xul        (content/debug-shell.xul)
+  content/zap/debug-shell-init.js    (content/debug-shell-init.js)
   content/zap/home.xul               (content/home.xul)
   content/zap/contacts.xul           (content/contacts.xul)
 * content/zap/zap-widgets.xml        (content/zap-widgets.xml)

@@ -60,6 +60,7 @@
   <commandset>
     <command id="cmd_exit" oncommand="cmdExit()"/>
     <command id="cmd_about" oncommand="cmdAbout()"/>
+    <command id="cmd_debug_shell" oncommand="cmdDebugShell()"/>
     <command id="cmd_generic_request" oncommand="cmdGenericRequest()"/>
     <command id="cmd_subscribe_request" oncommand="cmdSubscribeRequest()"/>
   </commandset>
@@ -85,6 +86,9 @@
       <menu label="Tools"
             accesskey="T">
         <menupopup>
+          <menuitem label="Debug Shell..."
+                    accesskey="d"
+                    command="cmd_debug_shell" />
           <menuitem label="Send generic request..."
                     accesskey="g"
                     command="cmd_generic_request" />
