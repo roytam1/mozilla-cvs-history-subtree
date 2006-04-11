@@ -87,8 +87,8 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
 
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
-        min += colFrame->GetMinCoord() + spacing;
-        pref += colFrame->GetPrefCoord() + spacing;
+        min += colFrame->GetMinCoord();
+        pref += colFrame->GetPrefCoord();
 
         // Percentages are of the table, so we have to reverse them for
         // intrinsic widths.
@@ -118,10 +118,11 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
             pref = large_pct_pref;
     }
 
-    // XXX Should this go before or after the percent business?
+    // border-spacing isn't part of the basis for percentages
     if (colCount > 0) {
-        pref += spacing;
-        min += spacing;
+        nscoord add = spacing * (colCount + 1);
+        pref += add;
+        min += add;
     }
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
@@ -149,12 +150,6 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         return;
     mLastCalcWidth = width;
 
-    if (mTableFrame->IsBorderCollapse()) {
-        // The border and padding that was subtracted by the reflow
-        // state counts as part of the column widths.
-        width += aReflowState.mComputedBorderPadding.LeftRight();
-    }
-
     // XXX Is this needed?
     NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
                  (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN),
@@ -166,6 +161,16 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     PRInt32 colCount = cellMap->GetColCount();
     nscoord spacing = mTableFrame->GetCellSpacingX();
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
+
+    if (mTableFrame->IsBorderCollapse()) {
+        // The border and padding that was subtracted by the reflow
+        // state counts as part of the column widths.
+        width += aReflowState.mComputedBorderPadding.LeftRight();
+    } else {
+        // border-spacing isn't part of the basis for percentages.
+        if (colCount > 0)
+            width -= spacing * (colCount + 1);
+    }
 
     // XXX is |width| the right basis for percentage widths?
 
@@ -182,6 +187,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         nscoord min_width = colFrame->GetMinCoord();
         nscoord val;
         if (pct_width > min_width) {
+            // XXX Is it OK that pct_width isn't rounded to pixel?
+            // (What's the point anyway?)
             val = pct_width;
         } else {
             val = min_width;
@@ -193,10 +200,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             pct_basis += colFrame->GetPrefPercent();
         }
         colFrame->SetFinalWidth(val);
-        assigned += val + spacing;
-    }
-    if (colCount > 0) {
-        assigned += spacing;
+        assigned += val;
     }
 
     // Loop #2 over the columns:
@@ -266,21 +270,25 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         nscoord col_width = colFrame->GetFinalWidth();
         switch (l2t) {
             case SHRINK: // u.f is negative
-                col_width += nscoord(u.f * (colFrame->GetFinalWidth() -
-                                            colFrame->GetMinCoord()));
+                col_width += NSToCoordRound(u.f *
+                                            (colFrame->GetFinalWidth() -
+                                             colFrame->GetMinCoord()));
                 break;
             case GROW:
                 if (colFrame->GetPrefPercent() == 0.0f)
-                    col_width += nscoord(u.f * (colFrame->GetPrefCoord() -
-                                                colFrame->GetMinCoord()));
+                    col_width += NSToCoordRound(u.f *
+                                                (colFrame->GetPrefCoord() -
+                                                 colFrame->GetMinCoord()));
                 break;
             case ZOOM_GROW:
                 if (colFrame->GetPrefPercent() == 0.0f)
-                    col_width += nscoord(u.f * float(colFrame->GetMinCoord()));
+                    col_width += NSToCoordRound(u.f *
+                                                colFrame->GetMinCoord());
                 break;
             case PCT_GROW:
                 if (colFrame->GetPrefPercent() != 0.0f)
-                    col_width += nscoord(u.f * colFrame->GetPrefPercent());
+                    col_width += NSToCoordRound(u.f *
+                                                colFrame->GetPrefPercent());
                 break;
             case EQUAL_GROW:
                 col_width += u.c;
