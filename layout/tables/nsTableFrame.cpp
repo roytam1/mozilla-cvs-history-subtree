@@ -3568,10 +3568,13 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
           break;
       }
 
+      nscoord spacing = GetCellSpacingX();
       minCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
-                                                    nsLayoutUtils::MIN_WIDTH);
+                                                    nsLayoutUtils::MIN_WIDTH) +
+                  spacing;
       prefCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
-                                                   nsLayoutUtils::PREF_WIDTH);
+                                                   nsLayoutUtils::PREF_WIDTH) +
+                   spacing;
 
       // XXX Rounding errors due to RoundToPixel below!
       minCoord = minCoord / colSpan;

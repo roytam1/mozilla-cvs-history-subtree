@@ -81,9 +81,9 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     nscoord min = 0, pref = 0, pref_pct = 0;
+    PRInt32 colCount = cellMap->GetColCount();
 
-    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
-         col < col_end; ++col) {
+    for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
         min += colFrame->GetMinCoord();
         pref += colFrame->GetPrefCoord();
@@ -100,6 +100,13 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
 
     if (pref_pct > pref)
         pref = pref_pct;
+
+    // XXX Should this go before or after the percent business?
+    if (colCount > 0) {
+        nscoord spacing = mTableFrame->GetCellSpacingX();
+        pref += spacing;
+        min += spacing;
+    }
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
     min = nsTableFrame::RoundToPixel(min, p2t);
