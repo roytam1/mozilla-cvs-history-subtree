@@ -171,12 +171,19 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     // Loop #1 over the columns, initially assigning them the larger of
     // their percentage pref width or min width.
     nscoord assigned = 0;
+    nscoord grow_basis = 0;
     PRInt32 col;
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
         nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
         nscoord min_width = colFrame->GetMinCoord();
-        nscoord val = PR_MAX(pct_width, min_width);
+        nscoord val;
+        if (pct_width > min_width) {
+            val = pct_width;
+        } else {
+            val = min_width;
+            grow_basis += colFrame->GetPrefCoord() - min_width;
+        }
         colFrame->SetFinalWidth(val);
         assigned += val + spacing;
     }
@@ -204,7 +211,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         else
             l2t = NOOP;
     } else {
-        if (mPrefWidth != mMinWidth)
+        if (grow_basis > 0)
             l2t = GROW;
         else if (mMinWidth != 0)
             l2t = ZOOM_GROW;
@@ -227,7 +234,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             u.f = float(width - assigned) / float(assigned - mMinWidth);
             break;
         case GROW:
-            u.f = float(width - assigned) / float(mPrefWidth - assigned);
+            u.f = float(width - assigned) / float(grow_basis);
             break;
         case ZOOM_GROW:
             u.c = width - assigned;
