@@ -522,12 +522,9 @@ mozJSComponentLoader::LoadModule(nsILocalFile* aComponentFile,
 
     nsCAutoString path;
     aComponentFile->GetNativePath(path);
-    PLHashNumber hash = PL_HashString(path.get());
-    PLHashEntry **hep = PL_HashTableRawLookup(mModules, hash,
-                                              path.get());
-    PLHashEntry *he = *hep;
-    if (he) {
-        *aResult = NS_STATIC_CAST(nsIModule*, he->value);
+    nsIModule *module = (nsIModule*)PL_HashTableLookup(mModules, path.get());
+    if (module) {
+        *aResult = module;
         NS_ADDREF(*aResult);
         return NS_OK;
     }
@@ -624,7 +621,6 @@ mozJSComponentLoader::LoadModule(nsILocalFile* aComponentFile,
         return NS_ERROR_FAILURE;
     }
 
-    nsIModule *module;
     rv = xpc->WrapJS(cx, jsModuleObj, NS_GET_IID(nsIModule), (void**)&module);
     if (NS_FAILED(rv)) {
         /* XXX report error properly */
@@ -635,8 +631,7 @@ mozJSComponentLoader::LoadModule(nsILocalFile* aComponentFile,
     }
 
     /* we hand our reference to the hash table, it'll be released much later */
-    he = PL_HashTableRawAdd(mModules, hep, hash,
-                            nsCRT::strdup(path.get()), module);
+    PL_HashTableAdd(mModules, nsCRT::strdup(path.get()), module);
 
     NS_ADDREF(*aResult = module);
 
@@ -945,12 +940,10 @@ mozJSComponentLoader::GlobalForLocation(nsILocalFile *aComponent,
 
     nsCAutoString path;
     aComponent->GetNativePath(path);    
-    
-    PLHashNumber hash = PL_HashString(path.get());
-    PLHashEntry **hep = PL_HashTableRawLookup(mGlobals, hash, path.get());
-    PLHashEntry *he = *hep;
-    if (he) {
-        *aGlobal = NS_STATIC_CAST(JSObject*, he->value);
+
+    JSObject *global = (JSObject*)PL_HashTableLookup(mGlobals, path.get());
+    if (global) {
+        *aGlobal = global;
         return NS_OK;
     }
     
@@ -986,7 +979,6 @@ mozJSComponentLoader::GlobalForLocation(nsILocalFile *aComponent,
                                               getter_AddRefs(holder));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    JSObject *global;
     rv = holder->GetJSObject(&global);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1191,7 +1183,7 @@ mozJSComponentLoader::GlobalForLocation(nsILocalFile *aComponent,
 
     *aGlobal = global;
     
-    he = PL_HashTableRawAdd(mGlobals, hep, hash, location, global);
+    PLHashEntry *he = PL_HashTableAdd(mGlobals, location, global);
     JS_AddNamedRoot(cx, &he->value, location);
     return NS_OK;
 }
@@ -1276,7 +1268,7 @@ mozJSComponentLoader::ImportModule(const nsACString & registryLocation)
 
     jsval *retval = nsnull;
     cc->GetRetValPtr(&retval);
-    if (*retval)
+    if (retval)
         *retval = globalObj ? OBJECT_TO_JSVAL(globalObj) : JSVAL_NULL;
 
     return rv;
