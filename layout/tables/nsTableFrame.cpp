@@ -3517,8 +3517,7 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
             nscoord w = pos->mWidth.GetCoordValue();
             if (w > minCoord)
               minCoord = w;
-            if (w < prefCoord)
-              prefCoord = w;
+            prefCoord = minCoord;
           }
           break;
         case eStyleUnit_Percent: {
