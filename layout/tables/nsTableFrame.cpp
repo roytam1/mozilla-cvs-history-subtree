@@ -3485,9 +3485,12 @@ nsTableFrame::GetFrameName(nsAString& aResult) const
 void
 nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
 {
-  nsCOMPtr<nsIDeviceContext> dc;
-  aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-  float p2t = dc->DevUnitsToTwips();
+  float p2t;
+  {
+    nsCOMPtr<nsIDeviceContext> dc;
+    aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+    p2t = dc->DevUnitsToTwips();
+  }
 
   nsTableCellMap *cellMap = GetCellMap();
 
