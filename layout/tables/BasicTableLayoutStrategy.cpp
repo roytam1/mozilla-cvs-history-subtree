@@ -147,6 +147,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         ComputeIntrinsicWidths(aReflowState.rendContext);
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
+    PRInt32 colCount = cellMap->GetColCount();
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
@@ -162,12 +163,11 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         u.f = float(width - mMinWidth) / float(mPrefWidth - mMinWidth);
     } else if (mMinWidth != 0) {
         u.d = width - mMinWidth;
-    } else {
+    } else if (colCount > 0) {
         u.e = width / cellMap->GetColCount();
     }
 
-    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
-         col < col_end; ++col) {
+    for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
 
         nscoord colWidth = colFrame->GetMinCoord();
