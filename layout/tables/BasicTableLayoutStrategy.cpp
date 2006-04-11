@@ -120,12 +120,17 @@ BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 /* virtual */ void
 BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
 {
-    // XXX Does mComputedWidth include border and padding?
     nscoord width = aReflowState.mComputedWidth;
 
     if (mLastCalcWidth == width)
         return;
     mLastCalcWidth = width;
+
+    if (mTableFrame->IsBorderCollapse()) {
+        // The border and padding that was subtracted by the reflow
+        // state counts as part of the column widths.
+        width += aReflowState.mComputedBorderPadding.LeftRight();
+    }
 
     // XXX Is this needed?
     NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==

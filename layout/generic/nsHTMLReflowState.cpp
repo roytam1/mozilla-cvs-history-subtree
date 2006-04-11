@@ -1840,26 +1840,26 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       // for margin-left and margin-right become 0, and the sum of the
       // areas must equal the width of the content-area of the parent
       // element.
-      // tables act like replaced elements regarding mComputedWidth 
       nsIAtom* fType = frame->GetType();
-      if (nsLayoutAtoms::tableFrame == fType) {
-        // The width is shrink-to-fit
-        // XXX We need to subtract border and padding from available width.
-        nscoord prefWidth = frame->GetPrefWidth(rendContext);
-        if (prefWidth < availableWidth) {
-          mComputedWidth = prefWidth;
-        } else {
-          nscoord minWidth = frame->GetMinWidth(rendContext);
-          mComputedWidth = PR_MAX(minWidth, availableWidth);
-        }
-      } else if (nsLayoutAtoms::tableCaptionFrame == fType &&
-                 IsSideCaption(frame)) {
+      if (nsLayoutAtoms::tableCaptionFrame == fType &&
+          IsSideCaption(frame)) {
         mComputedWidth = frame->GetMinWidth(rendContext);
       } else {
-        mComputedWidth = availableWidth - mComputedMargin.left -
-          mComputedMargin.right - mComputedBorderPadding.left -
-          mComputedBorderPadding.right;
+        nscoord inset = mComputedMargin.LeftRight() +
+                        mComputedBorderPadding.LeftRight();
+        mComputedWidth = availableWidth - inset;
         mComputedWidth = PR_MAX(mComputedWidth, 0);
+
+        if (nsLayoutAtoms::tableFrame == fType) {
+          // The width is shrink-to-fit
+          nscoord prefWidth = frame->GetPrefWidth(rendContext);
+          if (prefWidth < mComputedWidth) {
+            mComputedWidth = prefWidth;
+          } else {
+            nscoord minWidth = frame->GetMinWidth(rendContext);
+            mComputedWidth = PR_MAX(minWidth, mComputedWidth);
+          }
+        }
       }
 
       AdjustComputedWidth(PR_FALSE);
