@@ -58,6 +58,22 @@ nsPlaceholderFrame::~nsPlaceholderFrame()
 {
 }
 
+/* virtual */ nscoord
+nsPlaceholderFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
+  return result;
+}
+
+/* virtual */ nscoord
+nsPlaceholderFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
+  return result;
+}
+
 /* virtual */ void
 nsPlaceholderFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                                       nsIFrame::InlineMinWidthData *aData)
