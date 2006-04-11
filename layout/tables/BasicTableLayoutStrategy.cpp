@@ -48,6 +48,7 @@
 BasicTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
 {
+    MarkIntrinsicWidthsDirty();
 }
 
 /* virtual */
@@ -125,11 +126,19 @@ BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
     mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
     mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+    mLastCalcWidth = nscoord_MIN;
 }
 
 /* virtual */ void
 BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
 {
+    // XXX Does mComputedWidth include border and padding?
+    nscoord width = aReflowState.mComputedWidth;
+
+    if (mLastCalcWidth == width)
+        return;
+    mLastCalcWidth = width;
+
     // XXX Is this needed?
     NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
                  (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN),
@@ -137,8 +146,6 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
         ComputeIntrinsicWidths(aReflowState.rendContext);
 
-    // XXX Does mComputedWidth include border and padding?
-    nscoord width = aReflowState.mComputedWidth;
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
