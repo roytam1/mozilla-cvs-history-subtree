@@ -43,6 +43,7 @@
 
 #include "BasicTableLayoutStrategy.h"
 #include "nsTableFrame.h"
+#include "nsLayoutUtils.h"
 
 BasicTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
@@ -58,26 +59,71 @@ BasicTableLayoutStrategy::~BasicTableLayoutStrategy()
 BasicTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 {
     DISPLAY_MIN_WIDTH(mTableFrame, mMinWidth);
-    if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
-        return mMinWidth;
-
-    // XXX WRITE ME!
-    mMinWidth = 0;
-
+    if (mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+        ComputeIntrinsicWidths(aRenderingContext);
     return mMinWidth;
 }
 
 /* virtual */ nscoord
 BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
 {
-    DISPLAY_MIN_WIDTH(mTableFrame, mPrefWidth);
-    if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
-        return mPrefWidth;
-
-    // XXX WRITE ME!
-    mPrefWidth = 0;
-
+    DISPLAY_PREF_WIDTH(mTableFrame, mPrefWidth);
+    if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+        ComputeIntrinsicWidths(aRenderingContext);
     return mPrefWidth;
+}
+
+void
+BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext)
+{
+    mTableFrame->ComputeColumnIntrinsicWidths(aRenderingContext);
+
+    nsTableCellMap *cellMap = mTableFrame->GetCellMap();
+    nscoord min = 0, pref = 0, pref_pct = 0;
+
+    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
+         col < col_end; ++col) {
+        nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        min += colFrame->GetMinCoord();
+        pref += colFrame->GetPrefCoord();
+
+        // Percentages are of the table, so we have to reverse them for
+        // intrinsic widths.
+        float p = colFrame->GetPrefPercent();
+        if (0.0f < p && p < 1.0f) {
+            nscoord new_pref_pct = colFrame->GetPrefCoord() / (1.0f - p);
+            if (new_pref_pct > pref_pct)
+                pref_pct = new_pref_pct;
+        }
+    }
+
+    if (pref_pct > pref)
+        pref = pref_pct;
+
+    float p2t;
+    {
+        nsCOMPtr<nsIDeviceContext> dc;
+        aRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
+        p2t = dc->DevUnitsToTwips();
+    }
+
+    min = nsTableFrame::RoundToPixel(min, p2t);
+    pref = nsTableFrame::RoundToPixel(pref, p2t);
+
+    if (mTableFrame->IsBorderCollapse()) {
+        // subtract these so the caller can add them back again!
+        min -= nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                 mTableFrame, nsLayoutUtils::MIN_WIDTH,
+                 nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::BORDER |
+                                                   nsLayoutUtils::PADDING));
+        pref -= nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                  mTableFrame, nsLayoutUtils::PREF_WIDTH,
+                  nsLayoutUtils::IntrinsicWidthPart(nsLayoutUtils::BORDER |
+                                                    nsLayoutUtils::PADDING));
+    }
+
+    mMinWidth = min;
+    mPrefWidth = pref;
 }
 
 /* virtual */ void
