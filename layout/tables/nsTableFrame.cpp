@@ -3581,6 +3581,7 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       prefCoord = prefCoord / colSpan;
       prefPercent = prefPercent / colSpan;
 
+      // XXX Should we really round *after* adding the spacing?
       minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
       prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
 
