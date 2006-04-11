@@ -400,6 +400,8 @@ nsSchemaValidator::ValidateSimpletype(const nsAString & aNodeValue,
                                       nsISchemaSimpleType *aSchemaSimpleType,
                                       PRBool *aResult)
 {
+  NS_ENSURE_ARG(aSchemaSimpleType);
+
   // get the simpletype type.
   PRUint16 simpleTypeValue;
   nsresult rv = aSchemaSimpleType->GetSimpleType(&simpleTypeValue);
@@ -4349,7 +4351,14 @@ nsSchemaValidator::ValidateSchemaAttribute(nsIDOMNode* aNode,
       // since we default to invalid.
       LOG(("        -- attribute prohibited!"));
     } else {
-      rv = ValidateSimpletype(attrValue, simpleType, &isValid);
+      if (simpleType) {
+        rv = ValidateSimpletype(attrValue, simpleType, &isValid);
+      } else {
+        // If no type exists (ergo no simpleType), we should use the
+        // simple ur-type definition (http://www.w3.org/TR/xmlschema-1/#simple-ur-type-itself)
+        // XXX: So for now, we default to true.
+        isValid = PR_TRUE;
+      }
     }
   }
 
