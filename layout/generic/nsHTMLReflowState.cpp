@@ -1842,9 +1842,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       // element.
       // tables act like replaced elements regarding mComputedWidth 
       nsIAtom* fType = frame->GetType();
-      if (nsLayoutAtoms::tableOuterFrame == fType) {
-        mComputedWidth = 0; // XXX temp fix for trees
-      } else if (nsLayoutAtoms::tableFrame == fType) {
+      if (nsLayoutAtoms::tableFrame == fType) {
         // The width is shrink-to-fit
         // XXX We need to subtract border and padding from available width.
         nscoord prefWidth = frame->GetPrefWidth(rendContext);
