@@ -2423,17 +2423,15 @@ nsCellMap::GetCellInfoAt(nsTableCellMap& aMap,
       cellFrame = data->GetCellFrame();
       if (aOriginates)
         *aOriginates = PR_TRUE;
-      if (cellFrame && aColSpan) {
-        PRInt32 initialColIndex;
-        cellFrame->GetColIndex(initialColIndex);
-        PRBool zeroSpan;
-        *aColSpan = GetEffectiveColSpan(aMap, aRowX, initialColIndex, zeroSpan);
-      }
     }
     else {
       cellFrame = GetCellFrame(aRowX, aColX, *data, PR_TRUE);
-      if (aColSpan)
-        *aColSpan = 0;
+    }
+    if (cellFrame && aColSpan) {
+      PRInt32 initialColIndex;
+      cellFrame->GetColIndex(initialColIndex);
+      PRBool zeroSpan;
+      *aColSpan = GetEffectiveColSpan(aMap, aRowX, initialColIndex, zeroSpan);
     }
   }
   return cellFrame;
