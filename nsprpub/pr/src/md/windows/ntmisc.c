@@ -319,6 +319,7 @@ PRProcess * _PR_CreateWindowsProcess(
         goto errorExit;
     }
 
+#ifndef WINCE
     /*
      * If attr->fdInheritBuffer is not NULL, we need to insert
      * it into the envp array, so envp cannot be NULL.
@@ -387,6 +388,7 @@ PRProcess * _PR_CreateWindowsProcess(
         }
         cwd = attr->currentDirectory;
     }
+#endif
 
     retVal = CreateProcess(NULL,
                            cmdLine,
@@ -597,9 +599,14 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
         flProtect = PAGE_READWRITE;
         fmap->md.dwAccess = FILE_MAP_WRITE;
     } else {
+#ifdef WINCE
+        // WINCE does not have MAP COPY
+      return PR_FAILURE;
+#else
         PR_ASSERT(fmap->prot == PR_PROT_WRITECOPY);
         flProtect = PAGE_WRITECOPY;
         fmap->md.dwAccess = FILE_MAP_COPY;
+#endif
     }
 
     fmap->md.hFileMap = CreateFileMapping(

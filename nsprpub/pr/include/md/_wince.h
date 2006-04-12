@@ -1,95 +1,71 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/* 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape Portable Runtime (NSPR).
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ *  Garrett Arch Blythe 01/15/2002
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
-#ifndef nspr_win95_defs_h___
-#define nspr_win95_defs_h___
-
-#include "prio.h"
+#ifndef nspr_wince_defs_h___
+#define nspr_wince_defs_h___
 
 #include <windows.h>
 #include <winsock.h>
-#include <errno.h>
+#include <winnt.h>
+#include <stdlib.h>
+
+#include "_win32_time.h"
+#include "_win32_unicode.h"
+
+#include "prio.h"
 
 /*
  * Internal configuration macros
  */
 
 #define PR_LINKER_ARCH      "win32"
-#define _PR_SI_SYSNAME        "WIN95"
-#define _PR_SI_ARCHITECTURE   "x86"    /* XXXMB hardcode for now */
+#define _PR_SI_SYSNAME        "WINCE"
+
+/*
+ * Hardcoded for now.
+ */
+#if defined(_X86_)
+#define _PR_SI_ARCHITECTURE   "x86"
+#elif defined(_ARM_)
+#define _PR_SI_ARCHITECTURE   "ARM"
+#else
+#define _PR_SI_ARCHITECTURE   "XX"
+#endif
 
 #define HAVE_DLL
 #undef  HAVE_THREAD_AFFINITY
-#define _PR_HAVE_GETADDRINFO
-#define _PR_INET6_PROBE
-#ifndef _PR_INET6
-#define AF_INET6 23
-/* newer ws2tcpip.h provides these */
-#ifndef AI_CANONNAME
-#define AI_CANONNAME 0x2
-struct addrinfo {
-    int ai_flags;
-    int ai_family;
-    int ai_socktype;
-    int ai_protocol;
-    size_t ai_addrlen;
-    char *ai_canonname;
-    struct sockaddr *ai_addr;
-    struct addrinfo *ai_next;
-};
-#endif
-#define _PR_HAVE_MD_SOCKADDR_IN6
-/* isomorphic to struct in6_addr on Windows */
-struct _md_in6_addr {
-    union {
-        PRUint8  _S6_u8[16];
-        PRUint16 _S6_u16[8];
-    } _S6_un;
-};
-/* isomorphic to struct sockaddr_in6 on Windows */
-struct _md_sockaddr_in6 {
-    PRInt16 sin6_family;
-    PRUint16 sin6_port;
-    PRUint32 sin6_flowinfo;
-    struct _md_in6_addr sin6_addr;
-    PRUint32 sin6_scope_id;
-};
-#endif
-#define _PR_HAVE_THREADSAFE_GETHOST
 #define _PR_HAVE_ATOMIC_OPS
 #define PR_HAVE_WIN32_NAMED_SHARED_MEMORY
 
@@ -113,114 +89,106 @@ typedef PRInt32	                PR_CONTEXT_TYPE[PR_NUM_GCREGS];
 #define _MD_MAGIC_CV        0x66666666
 
 struct _MDCPU {
-    int              unused;
+  int              unused;
 };
 
 struct _MDThread {
-    HANDLE           blocked_sema;      /* Threads block on this when waiting
-                                         * for IO or CondVar.
-                                         */
-    PRBool           inCVWaitQueue;     /* PR_TRUE if the thread is in the
-                                         * wait queue of some cond var.
-                                         * PR_FALSE otherwise.  */
-    HANDLE           handle;            /* Win32 thread handle */
-    PRUint32         id;
-    void            *sp;                /* only valid when suspended */
-    PRUint32         magic;             /* for debugging */
-    PR_CONTEXT_TYPE  gcContext;         /* Thread context for GC */
-    struct PRThread *prev, *next;       /* used by the cvar wait queue to
-                                         * chain the PRThread structures
-                                         * together */
-    void (*start)(void *);              /* used by _PR_MD_CREATE_THREAD to
-                                         * pass its 'start' argument to
-                                         * pr_root. */
+  HANDLE           blocked_sema;      /* Threads block on this when waiting
+                                       * for IO or CondVar.
+                                       */
+  PRBool           inCVWaitQueue;     /* PR_TRUE if the thread is in the
+                                       * wait queue of some cond var.
+                                       * PR_FALSE otherwise.  */
+  HANDLE           handle;            /* Win32 thread handle */
+  PRBool           noCloseHandle;     /* Whether or not to CloseHandle */
+  PRUint32         id;
+  void            *sp;                /* only valid when suspended */
+  PRUint32         magic;             /* for debugging */
+  PR_CONTEXT_TYPE  gcContext;         /* Thread context for GC */
+  struct PRThread *prev, *next;       /* used by the cvar wait queue to
+                                       * chain the PRThread structures
+                                       * together */
+  void (*start)(void *);              /* used by _PR_MD_CREATE_THREAD to
+                                       * pass its 'start' argument to
+                                       * pr_root. */
 };
 
 struct _MDThreadStack {
-    PRUint32           magic;          /* for debugging */
+  PRUint32           magic;          /* for debugging */
 };
 
 struct _MDSegment {
-    PRUint32           magic;          /* for debugging */
+  PRUint32           magic;          /* for debugging */
 };
 
 #undef PROFILE_LOCKS
 
 struct _MDDir {
-    HANDLE           d_hdl;
-    WIN32_FIND_DATA  d_entry;
-    PRBool           firstEntry;     /* Is this the entry returned
-                                      * by FindFirstFile()? */
-    PRUint32         magic;          /* for debugging */
+  HANDLE           d_hdl;
+  WIN32_FIND_DATAW d_entry;
+  CHAR             cFileNameA[ MAX_PATH ];
+  PRBool           firstEntry;     /* Is this the entry returned
+                                    * by FindFirstFile()? */
+  PRUint32         magic;          /* for debugging */
 };
-
-#ifdef MOZ_UNICODE
-struct _MDDirUTF16 {
-    HANDLE           d_hdl;
-    WIN32_FIND_DATAW d_entry;
-    PRBool           firstEntry;     /* Is this the entry returned
-                                      * by FindFirstFileW()? */
-    PRUint32         magic;          /* for debugging */
-};
-#endif /* MOZ_UNICODE */
 
 struct _MDCVar {
-    PRUint32 magic;
-    struct PRThread *waitHead, *waitTail;  /* the wait queue: a doubly-
-                                            * linked list of threads
-                                            * waiting on this condition
-                                            * variable */
-    PRIntn nwait;                          /* number of threads in the
-                                            * wait queue */
+  PRUint32 magic;
+  struct PRThread *waitHead, *waitTail;  /* the wait queue: a doubly-
+                                          * linked list of threads
+                                          * waiting on this condition
+                                          * variable */
+  PRIntn nwait;                          /* number of threads in the
+                                          * wait queue */
 };
 
 #define _MD_CV_NOTIFIED_LENGTH 6
 typedef struct _MDNotified _MDNotified;
 struct _MDNotified {
-    PRIntn length;                     /* # of used entries in this
-                                        * structure */
-    struct {
-        struct _MDCVar *cv;            /* the condition variable notified */
-        PRIntn times;                  /* and the number of times notified */
-        struct PRThread *notifyHead;   /* list of threads to wake up */
-    } cv[_MD_CV_NOTIFIED_LENGTH];
-    _MDNotified *link;                 /* link to another of these, or NULL */
+  PRIntn length;                     /* # of used entries in this
+                                      * structure */
+  struct {
+    struct _MDCVar *cv;            /* the condition variable notified */
+    PRIntn times;                  /* and the number of times notified */
+    struct PRThread *notifyHead;   /* list of threads to wake up */
+  } cv[_MD_CV_NOTIFIED_LENGTH];
+  _MDNotified *link;                 /* link to another of these, or NULL */
 };
 
 struct _MDLock {
-    CRITICAL_SECTION mutex;          /* this is recursive on NT */
-
-    /*
-     * When notifying cvars, there is no point in actually
-     * waking up the threads waiting on the cvars until we've
-     * released the lock.  So, we temporarily record the cvars.
-     * When doing an unlock, we'll then wake up the waiting threads.
-     */
-    struct _MDNotified notified;     /* array of conditions notified */
+  CRITICAL_SECTION mutex;          /* this is recursive on NT */
+  
+  /*
+   * When notifying cvars, there is no point in actually
+   * waking up the threads waiting on the cvars until we've
+   * released the lock.  So, we temporarily record the cvars.
+   * When doing an unlock, we'll then wake up the waiting threads.
+   */
+  struct _MDNotified notified;     /* array of conditions notified */
 #ifdef PROFILE_LOCKS
-    PRInt32 hitcount;
-    PRInt32 misscount;
+  PRInt32 hitcount;
+  PRInt32 misscount;
 #endif
 };
 
 struct _MDSemaphore {
-    HANDLE           sem;
+  HANDLE           sem;
 };
 
 struct _MDFileDesc {
-    PRInt32 osfd;    /* The osfd can come from one of three spaces:
-                      * - For stdin, stdout, and stderr, we are using
-                      *   the libc file handle (0, 1, 2), which is an int.
-                      * - For files and pipes, we are using Win32 HANDLE,
-                      *   which is a void*.
-                      * - For sockets, we are using Winsock SOCKET, which
-                      *   is a u_int.
-                      */
+  PRInt32 osfd;    /* The osfd can come from one of three spaces:
+                    * - For stdin, stdout, and stderr, we are using
+                    *   the libc file handle (0, 1, 2), which is an int.
+                    * - For files and pipes, we are using Win32 HANDLE,
+                    *   which is a void*.
+                    * - For sockets, we are using Winsock SOCKET, which
+                    *   is a u_int.
+                    */
 };
 
 struct _MDProcess {
-    HANDLE handle;
-    DWORD id;
+  HANDLE handle;
+  DWORD id;
 };
 
 /* --- Misc stuff --- */
@@ -231,13 +199,13 @@ struct _MDProcess {
 extern void _PR_NT_InitSids(void);
 extern void _PR_NT_FreeSids(void);
 extern PRStatus _PR_NT_MakeSecurityDescriptorACL(
-    PRIntn mode,
-    DWORD accessTable[],
-    PSECURITY_DESCRIPTOR *resultSD,
-    PACL *resultACL
-);
+                                                 PRIntn mode,
+                                                 DWORD accessTable[],
+                                                 PSECURITY_DESCRIPTOR *resultSD,
+                                                 PACL *resultACL
+                                                 );
 extern void _PR_NT_FreeSecurityDescriptorACL(
-    PSECURITY_DESCRIPTOR pSD, PACL pACL);
+                                             PSECURITY_DESCRIPTOR pSD, PACL pACL);
 
 /* --- IO stuff --- */
 
@@ -264,16 +232,6 @@ extern PRInt32 _MD_CloseFile(PRInt32 osfd);
 #define _MD_LOCKFILE                  _PR_MD_LOCKFILE
 #define _MD_TLOCKFILE                 _PR_MD_TLOCKFILE
 #define _MD_UNLOCKFILE                _PR_MD_UNLOCKFILE
-
-/* --- UTF16 IO stuff --- */
-extern PRBool _pr_useUnicode;
-#ifdef MOZ_UNICODE
-#define _MD_OPEN_FILE_UTF16           _PR_MD_OPEN_FILE_UTF16
-#define _MD_OPEN_DIR_UTF16            _PR_MD_OPEN_DIR_UTF16
-#define _MD_READ_DIR_UTF16            _PR_MD_READ_DIR_UTF16
-#define _MD_CLOSE_DIR_UTF16           _PR_MD_CLOSE_DIR_UTF16
-#define _MD_GETFILEINFO64_UTF16       _PR_MD_GETFILEINFO64_UTF16
-#endif /* MOZ_UNICODE */
 
 /* --- Socket IO stuff --- */
 #define _MD_EACCES                WSAEACCES
@@ -328,11 +286,11 @@ extern PRInt32 _MD_CloseSocket(PRInt32 osfd);
 #define _MD_ATOMIC_DECREMENT          _PR_MD_ATOMIC_DECREMENT
 #else /* non-x86 processors */
 #define _MD_ATOMIC_INCREMENT(x)       InterlockedIncrement((PLONG)x)
-//#if defined(WINCE)
-//#define _MD_ATOMIC_ADD(ptr,val)    (InterlockedExchange((PLONG)ptr, (*(PLONG)ptr) + (LONG)val) + val)
-//#else
+#if defined(WINCE)
+#define _MD_ATOMIC_ADD(ptr,val)    (InterlockedExchange((PLONG)ptr, (*(PLONG)ptr) + (LONG)val) + val)
+#else
 #define _MD_ATOMIC_ADD(ptr,val)    (InterlockedExchangeAdd((PLONG)ptr, (LONG)val) + val)
-//#endif
+#endif
 #define _MD_ATOMIC_DECREMENT(x)       InterlockedDecrement((PLONG)x)
 #endif /* x86 */
 #define _MD_ATOMIC_SET(x,y)           InterlockedExchange((PLONG)x, (LONG)y)
@@ -340,14 +298,14 @@ extern PRInt32 _MD_CloseSocket(PRInt32 osfd);
 #define _MD_INIT_IO                   _PR_MD_INIT_IO
 
 
-/* win95 doesn't have async IO */
+/* wince doesn't have async IO */
 #define _MD_SOCKET                    _PR_MD_SOCKET
 extern PRInt32 _MD_SocketAvailable(PRFileDesc *fd);
 #define _MD_SOCKETAVAILABLE           _MD_SocketAvailable
 #define _MD_PIPEAVAILABLE             _PR_MD_PIPEAVAILABLE
 #define _MD_CONNECT                   _PR_MD_CONNECT
 extern PRInt32 _MD_Accept(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
-        PRIntervalTime timeout);
+                          PRIntervalTime timeout);
 #define _MD_ACCEPT                    _MD_Accept
 #define _MD_BIND                      _PR_MD_BIND
 #define _MD_RECV                      _PR_MD_RECV
@@ -419,7 +377,7 @@ extern PRInt32 _MD_Accept(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
 #define _MD_NOTIFY_CV				  _PR_MD_NOTIFY_CV	
 #define _MD_NOTIFYALL_CV			  _PR_MD_NOTIFYALL_CV
 
-   /* XXXMB- the IOQ stuff is certainly not working correctly yet. */
+/* XXXMB- the IOQ stuff is certainly not working correctly yet. */
 // extern  struct _MDLock              _pr_ioq_lock;
 #define _MD_IOQ_LOCK()                
 #define _MD_IOQ_UNLOCK()              
@@ -442,11 +400,11 @@ struct PRProcessAttr;
 
 #define _MD_CREATE_PROCESS _PR_CreateWindowsProcess
 extern struct PRProcess * _PR_CreateWindowsProcess(
-    const char *path,
-    char *const *argv,
-    char *const *envp,
-    const struct PRProcessAttr *attr
-);
+                                                   const char *path,
+                                                   char *const *argv,
+                                                   char *const *envp,
+                                                   const struct PRProcessAttr *attr
+                                                   );
 
 #define _MD_DETACH_PROCESS _PR_DetachWindowsProcess
 extern PRStatus _PR_DetachWindowsProcess(struct PRProcess *process);
@@ -454,16 +412,13 @@ extern PRStatus _PR_DetachWindowsProcess(struct PRProcess *process);
 /* --- Wait for a child process to terminate --- */
 #define _MD_WAIT_PROCESS _PR_WaitWindowsProcess
 extern PRStatus _PR_WaitWindowsProcess(struct PRProcess *process, 
-    PRInt32 *exitCode);
+                                       PRInt32 *exitCode);
 
 #define _MD_KILL_PROCESS _PR_KillWindowsProcess
 extern PRStatus _PR_KillWindowsProcess(struct PRProcess *process);
 
 #define _MD_CLEANUP_BEFORE_EXIT           _PR_MD_CLEANUP_BEFORE_EXIT
-#define _MD_INIT_CONTEXT(_thread, _sp, _main, status) \
-    PR_BEGIN_MACRO \
-    *status = PR_TRUE; \
-    PR_END_MACRO
+#define _MD_INIT_CONTEXT
 #define _MD_SWITCH_CONTEXT
 #define _MD_RESTORE_CONTEXT
 
@@ -473,9 +428,6 @@ extern PRStatus _PR_KillWindowsProcess(struct PRProcess *process);
 #define _MD_INTERVAL_PER_SEC              _PR_MD_INTERVAL_PER_SEC
 #define _MD_INTERVAL_PER_MILLISEC()       (_PR_MD_INTERVAL_PER_SEC() / 1000)
 #define _MD_INTERVAL_PER_MICROSEC()       (_PR_MD_INTERVAL_PER_SEC() / 1000000)
-
-/* --- Time --- */
-extern void _PR_FileTimeToPRTime(const FILETIME *filetime, PRTime *prtm);
 
 /* --- Native-Thread Specific Definitions ------------------------------- */
 
@@ -523,8 +475,8 @@ extern DWORD _pr_currentCPUIndex;
 /* --- Memory-mapped files stuff --- */
 
 struct _MDFileMap {
-    HANDLE hFileMap;
-    DWORD dwAccess;
+  HANDLE hFileMap;
+  DWORD dwAccess;
 };
 
 extern PRStatus _MD_CreateFileMap(struct PRFileMap *fmap, PRInt64 size);
@@ -534,7 +486,7 @@ extern PRInt32 _MD_GetMemMapAlignment(void);
 #define _MD_GET_MEM_MAP_ALIGNMENT _MD_GetMemMapAlignment
 
 extern void * _MD_MemMap(struct PRFileMap *fmap, PRInt64 offset,
-        PRUint32 len);
+                         PRUint32 len);
 #define _MD_MEM_MAP _MD_MemMap
 
 extern PRStatus _MD_MemUnmap(void *addr, PRUint32 size);
@@ -551,4 +503,5 @@ extern PRStatus _MD_CloseFileMap(struct PRFileMap *fmap);
 #define _MD_CLOSE_SEMAPHORE           _PR_MD_CLOSE_SEMAPHORE
 #define _MD_DELETE_SEMAPHORE(name)    PR_SUCCESS  /* no op */
 
-#endif /* nspr_win32_defs_h___ */
+
+#endif /* nspr_wince_defs_h___ */

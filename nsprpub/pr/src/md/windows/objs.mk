@@ -51,7 +51,8 @@ CSRCS = ntmisc.c \
 	w32rng.c \
 	w32shm.c
 else
-ifeq ($(OS_TARGET),WIN95)
+#same as win16
+ifeq ($(OS_TARGET),WINCE) 
 CSRCS =	ntmisc.c \
 	ntsec.c \
 	ntsem.c \
@@ -82,7 +83,7 @@ CSRCS =	w16null.c \
 	w16callb.c \
 	ntinrval.c
 endif # win16
-endif # win95
+endif # win95 || wince
 endif # winnt
 
 CSRCS	+= $(PR_MD_CSRCS)

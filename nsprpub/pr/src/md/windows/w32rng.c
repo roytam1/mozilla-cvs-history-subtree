@@ -96,12 +96,13 @@ extern PRSize _PR_MD_GetRandomNoise( void *buf, PRSize size )
     if (size <= 0)
         return n;
 
+#ifndef WINCE
     // get the time in seconds since midnight Jan 1, 1970
     time(&sTime);
     nBytes = sizeof(sTime) > size ? size : sizeof(sTime);
     memcpy(((char *)buf) + n, &sTime, nBytes);
     n += nBytes;
-
+#endif
     return n;
 }
 

@@ -366,7 +366,7 @@ if test -n "$MOZ_DEBUG"; then
     beos*)
         DEFINES="$DEFINES -DDEBUG_${USER}"
         ;;
-    msvc*|mks*|cygwin*|mingw*|os2*)
+    msvc*|mks*|cygwin*|mingw*|os2*|wince*)
         DEFINES="$DEFINES -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
         ;;
     *) 
@@ -786,7 +786,7 @@ case "$host" in
 *-mingw*)
     NSINSTALL=nsinstall
     ;;
-*-cygwin*|*-msvc*|*-mks*)
+*-cygwin*|*-msvc*|*-mks*|*-wince*)
     NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
     if test `echo "${PATH}" | grep -c \;` = 0; then
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
@@ -1446,6 +1446,33 @@ tools are selected during the Xcode/Developer Tools installation.])
         ;;
     esac    
     ;;
+
+*-wince*)
+    AC_DEFINE(XP_PC)
+    AC_DEFINE(WIN32)
+    AC_DEFINE(WINCE)
+    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
+
+    AR='lib -NOLOGO -OUT:"$@"'
+    AR_FLAGS=
+
+    OBJ_SUFFIX=obj
+    LIB_SUFFIX=lib
+    DLL_SUFFIX=dll
+    MKSHLIB='$(LD) -DLL $(DSO_LDOPTS) -OUT:$@'
+
+    PR_MD_ARCH_DIR=windows
+    RESOLVE_LINK_SYMBOLS=1
+    DEFINES="$DEFINES -UWINNT"
+
+    MDCPUCFG_H=_wince.cfg
+    LIBNSPR='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+    LIBPLC='$(dist_libdir)/plc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+
+    DLLFLAGS='-OUT:"$@"'
+    _DEBUG_FLAGS=-Z7
+
+;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
     AC_DEFINE(XP_PC)
@@ -2554,7 +2581,7 @@ case "$target" in
         AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
     fi
     ;;
-*-mingw*|*-cygwin*|*-msvc*|*-mks*)
+*-mingw*|*-cygwin*|*-msvc*|*-mks*|*-wince*)
     dnl win32 does not use pthreads
     USE_PTHREADS=
     _PTHREAD_LDFLAGS=

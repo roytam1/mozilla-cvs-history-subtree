@@ -69,6 +69,7 @@ static struct {
  */
 void _PR_NT_InitSids(void)
 {
+#ifndef WINCE
     SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
     HANDLE hToken = NULL; /* initialized to an arbitrary value to
                            * silence a Purify UMR warning */
@@ -128,6 +129,7 @@ void _PR_NT_InitSids(void)
             0, 0, 0, 0, 0, 0, 0,
             &_pr_nt_sids.everyone);
     PR_ASSERT(rv != 0);
+#endif
 }
 
 /*
@@ -139,6 +141,7 @@ void _PR_NT_InitSids(void)
 void
 _PR_NT_FreeSids(void)
 {
+#ifndef WINCE
     if (_pr_nt_sids.owner) {
         PR_Free(_pr_nt_sids.owner);
     }
@@ -148,6 +151,7 @@ _PR_NT_FreeSids(void)
     if (_pr_nt_sids.everyone) {
         FreeSid(_pr_nt_sids.everyone);
     }
+#endif
 }
 
 /*
@@ -168,6 +172,10 @@ _PR_NT_MakeSecurityDescriptorACL(
     PSECURITY_DESCRIPTOR *resultSD,
     PACL *resultACL)
 {
+#ifdef WINCE
+  PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+ return PR_FAILURE;
+#else
     PSECURITY_DESCRIPTOR pSD = NULL;
     PACL pACL = NULL;
     DWORD cbACL;  /* size of ACL */
@@ -261,6 +269,7 @@ failed:
         PR_Free(pACL);
     }
     return PR_FAILURE;
+#endif
 }
 
 /*
@@ -270,10 +279,12 @@ failed:
 void
 _PR_NT_FreeSecurityDescriptorACL(PSECURITY_DESCRIPTOR pSD, PACL pACL)
 {
+#ifndef WINCE
     if (pSD) {
         PR_Free(pSD);
     }
     if (pACL) {
         PR_Free(pACL);
     }
+#endif
 }
