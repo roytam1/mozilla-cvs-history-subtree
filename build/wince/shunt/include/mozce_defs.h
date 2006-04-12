@@ -61,6 +61,11 @@
 
 #include <windows.h>
 
+#ifdef HINSTANCE_ERROR
+#undef HINSTANCE_ERROR
+#endif
+#define HINSTANCE_ERROR -1
+
 #if defined(min)
 #undef min
 #endif
@@ -367,6 +372,10 @@ struct mozce_stat
 #define stat mozce_stat
 #endif /* _STAT_DEFINED */
 
+#ifdef HANDLE_FLAG_INHERIT
+#undef HANDLE_FLAG_INHERIT
+#endif
+#define HANDLE_FLAG_INHERIT 0x00000001
 
 // From time.h
 
