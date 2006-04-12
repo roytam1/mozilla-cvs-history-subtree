@@ -27,7 +27,7 @@
  *   Dan Rosen <dr@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
+ * either of the GNU General Public License Version 2 or later (them "GPL"),
  * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -255,6 +255,7 @@ nsDocShell::nsDocShell():
     mCreatingDocument(PR_FALSE),
     mUseErrorPages(PR_FALSE),
     mAllowAuth(PR_TRUE),
+    mAllowKeywordFixup(PR_FALSE),
     mFiredUnloadEvent(PR_FALSE),
     mEODForCurrentDocument(PR_FALSE),
     mURIResultedInDocument(PR_FALSE),
@@ -799,6 +800,9 @@ nsDocShell::LoadURI(nsIURI * aURI,
 
         if (!sendReferrer)
             flags |= INTERNAL_LOAD_FLAGS_DONT_SEND_REFERRER;
+            
+        if (aLoadFlags & LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP)
+            flags |= INTERNAL_LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP;
 
         rv = InternalLoad(aURI,
                           referrer,
@@ -825,6 +829,8 @@ nsDocShell::LoadStream(nsIInputStream *aStream, nsIURI * aURI,
                        nsIDocShellLoadInfo * aLoadInfo)
 {
     NS_ENSURE_ARG(aStream);
+
+    mAllowKeywordSearchOnLoadFailure = PR_FALSE;
 
     // if the caller doesn't pass in a URI we need to create a dummy URI. necko
     // currently requires a URI in various places during the load. Some consumers
@@ -2743,8 +2749,11 @@ nsDocShell::LoadURI(const PRUnichar * aURI,
         rv = NS_NewURI(getter_AddRefs(uri), uriString);
     } else {
         // Call the fixup object
-        rv = sURIFixup->CreateFixupURI(NS_ConvertUCS2toUTF8(aURI),
-                                       nsIURIFixup::FIXUP_FLAG_ALLOW_KEYWORD_LOOKUP,
+        PRUint32 fixupFlags = 0;
+        if (aLoadFlags & LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP) {
+          fixupFlags |= nsIURIFixup::FIXUP_FLAG_ALLOW_KEYWORD_LOOKUP;
+        }
+        rv = sURIFixup->CreateFixupURI(NS_ConvertUTF16toUTF8(aURI), fixupFlags,
                                        getter_AddRefs(uri));
     }
 
@@ -2765,7 +2774,8 @@ nsDocShell::LoadURI(const PRUnichar * aURI,
     loadInfo->SetReferrer(aReferringURI);
     loadInfo->SetHeadersStream(aHeaderStream);
 
-    rv = LoadURI(uri, loadInfo, 0, PR_TRUE);
+    rv = LoadURI(uri, loadInfo,
+                 aLoadFlags & LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP, PR_TRUE);
     
     return rv;
 }
@@ -6268,6 +6278,8 @@ nsDocShell::InternalLoad(nsIURI * aURI,
         return rv;
     }
 
+    mAllowKeywordSearchOnLoadFailure =
+      (aFlags & INTERNAL_LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP) != 0;
     mURIResultedInDocument = PR_FALSE;  // reset the clock...
    
     //

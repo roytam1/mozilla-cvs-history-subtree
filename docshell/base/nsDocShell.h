@@ -465,6 +465,7 @@ protected:
     PRPackedBool               mCreatingDocument; // (should be) debugging only
     PRPackedBool               mUseErrorPages;
     PRPackedBool               mAllowAuth;
+    PRPackedBool               mAllowKeywordFixup;
 
     PRPackedBool               mFiredUnloadEvent;
 

@@ -1337,7 +1337,7 @@ var PlacesController = {
     if (node) {
       var browser = this._getBrowserWindow();
       if (browser) 
-        browser.openNewWindowWith(node.uri, null, null);
+        browser.openNewWindowWith(node.uri, null, null, false);
       else
         this._openBrowserWith(node.uri);
     }
@@ -1351,7 +1351,7 @@ var PlacesController = {
     if (node) {
       var browser = this._getBrowserWindow();
       if (browser)
-        browser.loadURI(node.uri, null, null);
+        browser.loadURI(node.uri, null, null, false);
       else
         this._openBrowserWith(node.uri);
     }
