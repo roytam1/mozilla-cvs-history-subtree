@@ -102,18 +102,12 @@ SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp )
         BITMAP bitmap;
         if ( GetObject( hbitmap, sizeof bitmap, &bitmap ) )
         {
-          int maxXMetric = SM_CXSCREEN;
-          int maxYMetric = SM_CYSCREEN;
-          
-          int x = (::GetSystemMetrics(maxXMetric) - bitmap.bmWidth  - 2)/2;
-          int y = (::GetSystemMetrics(maxYMetric) - bitmap.bmHeight - 2)/2; 
-          
           SetWindowPos( dlg,
                         NULL,
-                        x,
-                        y,
-                        bitmap.bmWidth  +2,
-                        bitmap.bmHeight +2,
+                        GetSystemMetrics(SM_CXSCREEN)/2 - bitmap.bmWidth/2,
+                        GetSystemMetrics(SM_CYSCREEN)/2 - bitmap.bmHeight/2,
+                        bitmap.bmWidth,
+                        bitmap.bmHeight,
                         SWP_NOZORDER );
           ShowWindow( dlg, SW_SHOW );
         }
