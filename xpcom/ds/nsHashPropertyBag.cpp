@@ -200,10 +200,9 @@ nsHashPropertyBag::GetEnumerator(nsISimpleEnumerator* *_retval)
 {
     nsresult rv;
 
-    nsCOMPtr<nsIMutableArray> propertyArray;
-    rv = NS_NewArray (getter_AddRefs(propertyArray));
-    if (NS_FAILED(rv))
-        return rv;
+    nsCOMPtr<nsIMutableArray> propertyArray = new nsArray();
+    if (!propertyArray)
+        return NS_ERROR_OUT_OF_MEMORY;
 
     mPropertyHash.EnumerateRead(PropertyHashToArrayFunc, propertyArray.get());
 
