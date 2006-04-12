@@ -830,7 +830,7 @@ nsDocShell::LoadStream(nsIInputStream *aStream, nsIURI * aURI,
 {
     NS_ENSURE_ARG(aStream);
 
-    mAllowKeywordSearchOnLoadFailure = PR_FALSE;
+    mAllowKeywordFixup = PR_FALSE;
 
     // if the caller doesn't pass in a URI we need to create a dummy URI. necko
     // currently requires a URI in various places during the load. Some consumers
@@ -6278,7 +6278,7 @@ nsDocShell::InternalLoad(nsIURI * aURI,
         return rv;
     }
 
-    mAllowKeywordSearchOnLoadFailure =
+    mAllowKeywordFixup =
       (aFlags & INTERNAL_LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP) != 0;
     mURIResultedInDocument = PR_FALSE;  // reset the clock...
    
