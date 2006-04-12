@@ -157,29 +157,22 @@
         <parameter name="aEvent"/>
         <body>
         <![CDATA[
-          function focusInit() {
-            // give focus to the first focusable element in the dialog
-            if (!document.commandDispatcher.focusedElement) {
-              document.commandDispatcher.advanceFocusIntoSubtree(document.documentElement);
-              var focusedElt = document.commandDispatcher.focusedElement;
-              if (focusedElt) {
-                if (focusedElt.localName == 'tab') {
-                  // Move focus into the tab
+          var focusInit = 
+            function() {
+              // give focus to the first focusable element in the dialog
+              if (!document.commandDispatcher.focusedElement) {
+                document.commandDispatcher.advanceFocusIntoSubtree(document.documentElement);
+                var focusedElt = document.commandDispatcher.focusedElement;
+                if (focusedElt && focusedElt.localName == 'tab') {
+                  // We don't want to focus on anonymous OK, Cancel, etc. buttons
                   document.commandDispatcher.advanceFocusIntoSubtree(focusedElt);
                   if (document.commandDispatcher.focusedElement.hasAttribute("dlgtype")) {
-                    // We don't want to focus on anonymous OK, Cancel, etc. buttons,
-                    // so return focus to the tab itself
+                    // Prefer to keep focus on label rather than focus a dialog button
                     focusedElt.focus();
                   }
-                } else {
-                  const dialog = document.documentElement;
-                  const defaultButton = dialog.getButton(dialog.defaultButton);
-                  if (focusedElt.hasAttribute("dlgtype") && focusedElt != defaultButton)
-                    defaultButton.focus();
                 }
               }
-            }
-          }
+            };
 
           // Give focus after onload completes, see bug 103197.
           setTimeout(focusInit, 0);
@@ -280,7 +273,6 @@
           if (aButtons) {
             // expect a comma delimited list of dlgtype values
             var list = aButtons.split(",");
-
             // mark shown dlgtypes as true
             var shown = { accept: false, cancel: false, help: false,
                           disclosure: false, extra1: false, extra2: false };
