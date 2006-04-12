@@ -129,9 +129,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
-  NS_ASSERTION(aAvailableSpace.width != NS_UNCONSTRAINEDSIZE,
-               "shouldn't use unconstrained widths anymore");
-
   parentReflowState = &aParentReflowState;
   frame = aFrame;
 
@@ -174,6 +171,9 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
                         nsMargin*       aBorder,
                         nsMargin*       aPadding)
 {
+  NS_ASSERTION(availableWidth != NS_UNCONSTRAINEDSIZE,
+               "shouldn't use unconstrained widths anymore");
+
   mStylePosition = frame->GetStylePosition();
   mStyleDisplay = frame->GetStyleDisplay();
   mStyleVisibility = frame->GetStyleVisibility();
@@ -189,6 +189,10 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
   mFlags.mIsResize = !(frame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
                      frame->GetSize().width !=
                        mComputedWidth + mComputedBorderPadding.LeftRight();
+
+  NS_ASSERTION(NS_FRAME_IS_REPLACED(mFrameType) ||
+               mComputedWidth != NS_UNCONSTRAINEDSIZE,
+               "shouldn't use unconstrained widths anymore");
 }
 
 void nsHTMLReflowState::InitCBReflowState()
