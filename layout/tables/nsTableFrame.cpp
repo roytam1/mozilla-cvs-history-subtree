@@ -303,16 +303,6 @@ nsTableFrame::RoundToPixel(nscoord       aValue,
   }
 }
 
-// Helper function which marks aFrame as dirty and generates a reflow command
-nsresult
-nsTableFrame::AppendDirtyReflowCommand(nsIFrame* aFrame)
-{
-  aFrame->AddStateBits(NS_FRAME_IS_DIRTY);  // mark the table frame as dirty
-
-  return aFrame->GetPresContext()->PresShell()->
-    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
-}
-
 // Make sure any views are positioned properly
 void
 nsTableFrame::RePositionViews(nsIFrame* aFrame)

@@ -133,8 +133,6 @@ public:
 
   virtual PRBool IsContainingBlock() const;
 
-  static nsresult AppendDirtyReflowCommand(nsIFrame* aFrame);
-
   static void RePositionViews(nsIFrame* aFrame);
 
   static PRBool PageBreakAfter(nsIFrame& aSourceFrame,
