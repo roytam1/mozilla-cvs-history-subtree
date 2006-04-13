@@ -3312,7 +3312,7 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
         !f->GetParent()) {
       // we've hit a reflow root or the root frame
       if (!wasDirty) {
-        NS_ASSERTION(mDirtyRoots.IndexOf(f) == -1, "ChildIsDirty lied");
+        NS_ASSERTION(mDirtyRoots.IndexOf(f) == -1, "wasDirty lied");
         mDirtyRoots.AppendElement(f);
       }
       break;
@@ -3320,8 +3320,8 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
 
     nsIFrame *child = f;
     f = f->GetParent();
-    wasDirty = (f->GetStateBits() & 
-                (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0);
+    wasDirty = ((f->GetStateBits() & 
+                 (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0);
     f->ChildIsDirty(child);
     NS_ASSERTION(f->GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN,
                  "ChildIsDirty didn't do its job");
