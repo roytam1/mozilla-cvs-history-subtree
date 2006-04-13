@@ -1514,11 +1514,16 @@ nsTableFrame::MarkIntrinsicWidthsDirty()
 {
   NS_STATIC_CAST(nsTableFrame*, GetFirstInFlow())->
     mTableLayoutStrategy->MarkIntrinsicWidthsDirty();
+
+  // XXXldb Call SetBCDamageArea?
 }
 
 /* virtual */ nscoord
 nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  if (NeedToCalcBCBorders())
+    CalcBCBorders();
+
   ReflowColGroups(aRenderingContext);
 
   return LayoutStrategy()->GetMinWidth(aRenderingContext);
@@ -1527,6 +1532,9 @@ nsTableFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  if (NeedToCalcBCBorders())
+    CalcBCBorders();
+
   ReflowColGroups(aRenderingContext);
 
   return LayoutStrategy()->GetPrefWidth(aRenderingContext);
@@ -2416,6 +2424,9 @@ DivideBCBorderSize(nscoord  aPixelSize,
 nsMargin
 nsTableFrame::GetBCBorder() const
 {
+  if (NeedToCalcBCBorders())
+    NS_CONST_CAST(nsTableFrame*, this)->CalcBCBorders();
+
   nsMargin border(0, 0, 0, 0);
   nsPresContext *presContext = GetPresContext();
   GET_PIXELS_TO_TWIPS(GetPresContext(), p2t);
@@ -2441,6 +2452,9 @@ nsTableFrame::GetBCBorder() const
 nsMargin
 nsTableFrame::GetBCMargin() const
 {
+  if (NeedToCalcBCBorders())
+    NS_CONST_CAST(nsTableFrame*, this)->CalcBCBorders();
+
   nsMargin overflow(0, 0, 0, 0);
   nsPresContext* presContext = GetPresContext();
   GET_PIXELS_TO_TWIPS(presContext, p2t);
@@ -5086,6 +5100,8 @@ LimitBorderWidth(PRUint16 aWidth)
 void 
 nsTableFrame::CalcBCBorders()
 {
+  NS_ASSERTION(IsBorderCollapse(),
+               "calling CalcBCBorders on separated-border table");
   nsTableCellMap* tableCellMap = GetCellMap(); if (!tableCellMap) ABORT0();
   PRInt32 numRows = GetRowCount();
   PRInt32 numCols = GetColCount();

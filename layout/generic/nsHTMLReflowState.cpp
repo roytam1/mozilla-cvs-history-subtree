@@ -49,6 +49,7 @@
 #include "nsBlockFrame.h"
 #include "nsLineBox.h"
 #include "nsImageFrame.h"
+#include "nsTableFrame.h"
 #include "nsIServiceManager.h"
 #include "nsIPercentHeightObserver.h"
 #include "nsContentUtils.h"
@@ -1624,6 +1625,19 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       mComputedBorderPadding = mStyleBorder->GetBorder();
     }
     mComputedBorderPadding += mComputedPadding;
+
+    if (frame->GetType() == nsLayoutAtoms::tableFrame) {
+      nsTableFrame *tableFrame = NS_STATIC_CAST(nsTableFrame*, frame);
+
+      if (tableFrame->IsBorderCollapse()) {
+        // border-collapsed tables don't use any of their padding, and
+        // only part of their border.  We need to do this here before we
+        // try to do anything like handling 'auto' widths,
+        // '-moz-box-sizing', or 'auto' margins.
+        mComputedPadding.SizeTo(0,0,0,0);
+        mComputedBorderPadding = tableFrame->GetBCMargin();
+      }
+    }
 
     nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
     nsStyleUnit heightUnit = mStylePosition->mHeight.GetUnit();

@@ -167,17 +167,11 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
 
     nscoord min = mMinWidth;
 
-    if (mTableFrame->IsBorderCollapse()) {
-        // The border and padding that was subtracted by the reflow
-        // state counts as part of the column widths.
-        width += aReflowState.mComputedBorderPadding.LeftRight();
-    } else {
-        // border-spacing isn't part of the basis for percentages.
-        if (colCount > 0) {
-            nscoord subtract = spacing * (colCount + 1);
-            width -= subtract;
-            min -= subtract;
-        }
+    // border-spacing isn't part of the basis for percentages.
+    if (colCount > 0) {
+        nscoord subtract = spacing * (colCount + 1);
+        width -= subtract;
+        min -= subtract;
     }
 
     // XXX is |width| the right basis for percentage widths?
