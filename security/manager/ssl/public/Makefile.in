@@ -62,6 +62,7 @@ SDK_XPIDLSRCS = \
 XPIDLSRCS = \
     nsIFormSigningDialog.idl \
     nsICertSelect.idl \
+    nsIX509Cert3.idl \
     nsIX509CertDB2.idl \
     nsIPKCS11Slot.idl \
     nsIPK11TokenDB.idl \
@@ -80,6 +81,7 @@ XPIDLSRCS = \
     nsICMSEncoder.idl \
     nsICMSMessageErrors.idl \
     nsICMSMessage.idl \
+    nsICMSMessage2.idl \
     nsINSSCertCache.idl \
     nsIOCSPResponder.idl \
     nsIPK11Token.idl \
