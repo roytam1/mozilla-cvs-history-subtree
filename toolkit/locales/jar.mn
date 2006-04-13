@@ -38,6 +38,9 @@
   locale/@AB_CD@/global-platform/mac/intl.properties          (%chrome/global-platform/mac/intl.properties)
   locale/@AB_CD@/global-platform/unix/intl.properties         (%chrome/global-platform/unix/intl.properties)
   locale/@AB_CD@/global-platform/win/intl.properties          (%chrome/global-platform/win/intl.properties)
+% locale passwordmgr @AB_CD@ %locale/@AB_CD@/passwordmgr/
+* locale/@AB_CD@/passwordmgr/passwordmgr.properties (%chrome/passwordmgr/passwordmgr.properties)
+* locale/@AB_CD@/passwordmgr/passwordManager.dtd    (%chrome/passwordmgr/passwordManager.dtd)
 #ifndef MINIMO
 + locale/@AB_CD@/global/charsetOverlay.dtd              (%chrome/global/charsetOverlay.dtd)
 * locale/@AB_CD@/global/contentAreaCommands.properties  (%chrome/global/contentAreaCommands.properties)
@@ -96,9 +99,6 @@
 % locale cookie @AB_CD@ %locale/@AB_CD@/cookie/
   locale/@AB_CD@/cookie/cookieAcceptDialog.dtd           (%chrome/cookie/cookieAcceptDialog.dtd)
   locale/@AB_CD@/cookie/cookieAcceptDialog.properties    (%chrome/cookie/cookieAcceptDialog.properties)
-% locale passwordmgr @AB_CD@ %locale/@AB_CD@/passwordmgr/
-* locale/@AB_CD@/passwordmgr/passwordmgr.properties (%chrome/passwordmgr/passwordmgr.properties)
-* locale/@AB_CD@/passwordmgr/passwordManager.dtd    (%chrome/passwordmgr/passwordManager.dtd)
 % locale autoconfig @AB_CD@ %locale/@AB_CD@/autoconfig/
   locale/@AB_CD@/autoconfig/autoconfig.properties   (%chrome/autoconfig/autoconfig.properties)
 % locale help @AB_CD@ %locale/@AB_CD@/help/
