@@ -169,6 +169,26 @@ function sanitizeBookmarks() {
     document.getElementById("bookmarksSanitize").disabled=true;
 }
 
+function loadHomePageOptions() {
+ var win;
+ var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                     .getService(Components.interfaces.nsIWindowMediator);
+ win = wm.getMostRecentWindow("navigator:browser");
+ if(!win) win = window.opener;
+ if (win) {
+   var homePageField = document.getElementById("browserStartupHomepage");
+   var newVal = "";
+   var tabbrowser = win.document.getElementById("content");
+   var l = tabbrowser.browsers.length;
+   for (var i = 0; i < l; i++) {
+     if (i)
+       newVal += "|";
+       newVal += tabbrowser.getBrowserAtIndex(i).webNavigation.currentURI.spec;
+   }
+   homePageField.value = newVal;
+  }
+}
+
 function downloadChooseFolder() {
 
   const nsILocalFile = Components.interfaces.nsILocalFile;
@@ -280,13 +300,13 @@ function eventHandlerMenu(e) {
 /*
   if(e.charCode==109) {
   	document.getElementById("general-button").focus();
-    e.stopPropagation();
+    e.preventBubble();
   } 
 */
 
    if(e.keyCode==134 || e.keyCode==70) /*SoftKey1 or HWKey1*/ {
   	document.getElementById("general-button").focus();
-    e.stopPropagation();
+    e.preventBubble();
   } 
 
   var outnavTarget=document.commandDispatcher.focusedElement.getAttribute("accessrule");
@@ -302,7 +322,7 @@ function eventHandlerMenu(e) {
 
   }
   if(outnavTarget!="" && (e.keyCode==40||e.keyCode==38)) {
-      e.stopPropagation();
+      e.preventBubble();
       if(e.keyCode==40) {
         ruleElement=findRuleById(document.getElementById(outnavTarget).getAttribute("accessnextrule"),"accessnextrule");
       }
