@@ -1906,22 +1906,9 @@ void
 nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
                                              nscoord aComputedWidth)
 {
-  // Because of the ugly way we do intrinsic sizing within Reflow, this method
-  // doesn't necessarily produce the right results.  The results will be
-  // adjusted in nsBlockReflowContext::AlignBlockHorizontally after reflow.
-  // The code for tables is particularly sensitive to regressions; the
-  // numerous |isTable| checks are technically incorrect, but necessary
-  // for basic testcases.
-
-  // We can only provide values for auto side margins in a constrained
-  // reflow. For unconstrained reflow there is no effective width to
-  // compute against...
-  if (NS_UNCONSTRAINEDSIZE == aComputedWidth ||
-      NS_UNCONSTRAINEDSIZE == aAvailWidth)
-  {
-    NS_NOTREACHED("this shouldn't happen anymore");
-    return;
-  }
+  NS_ASSERTION(NS_UNCONSTRAINEDSIZE != aComputedWidth &&
+               NS_UNCONSTRAINEDSIZE != aAvailWidth,
+               "this shouldn't happen anymore");
 
   nscoord sum = mComputedMargin.left + mComputedBorderPadding.left +
     aComputedWidth + mComputedBorderPadding.right + mComputedMargin.right;
