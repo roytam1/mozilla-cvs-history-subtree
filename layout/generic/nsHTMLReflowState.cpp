@@ -192,6 +192,7 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
                        mComputedWidth + mComputedBorderPadding.LeftRight();
 
   NS_ASSERTION(NS_FRAME_IS_REPLACED(mFrameType) ||
+               mFrameType == NS_CSS_FRAME_TYPE_INLINE ||
                mComputedWidth != NS_UNCONSTRAINEDSIZE,
                "shouldn't use unconstrained widths anymore");
 }
