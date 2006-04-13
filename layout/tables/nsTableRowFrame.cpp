@@ -202,6 +202,7 @@ nsTableRowFrame::AppendFrames(nsIAtom*        aListName,
     }
   }
 
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                   nsIPresShell::eTreeChange);
 
@@ -238,6 +239,7 @@ nsTableRowFrame::InsertFrames(nsIAtom*        aListName,
   // Insert the frames in the frame list
   mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
   
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                   nsIPresShell::eTreeChange);
 
@@ -262,6 +264,7 @@ nsTableRowFrame::RemoveFrame(nsIAtom*        aListName,
       // Remove the frame and destroy it
       mFrames.DestroyFrame(GetPresContext(), aOldFrame);
 
+      AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
       GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                     nsIPresShell::eTreeChange);
     }

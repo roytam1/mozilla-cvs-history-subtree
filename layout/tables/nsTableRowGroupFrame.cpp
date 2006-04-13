@@ -1224,6 +1224,7 @@ nsTableRowGroupFrame::AppendFrames(nsIAtom*        aListName,
     nsTableFrame::GetTableFrame(this, tableFrame);
     if (tableFrame) {
       tableFrame->AppendRows(*this, rowIndex, rows);
+      AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
       GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                     nsIPresShell::eTreeChange);
     }
@@ -1268,6 +1269,7 @@ nsTableRowGroupFrame::InsertFrames(nsIAtom*        aListName,
     PRInt32 rowIndex = (prevRow) ? prevRow->GetRowIndex() + 1 : startRowIndex;
     tableFrame->InsertRows(*this, rows, rowIndex, PR_TRUE);
 
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
     GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                     nsIPresShell::eTreeChange);
   }
@@ -1285,6 +1287,7 @@ nsTableRowGroupFrame::RemoveFrame(nsIAtom*        aListName,
       // remove the rows from the table (and flag a rebalance)
       tableFrame->RemoveRows((nsTableRowFrame &)*aOldFrame, 1, PR_TRUE);
 
+      AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
       GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                     nsIPresShell::eTreeChange);
     }

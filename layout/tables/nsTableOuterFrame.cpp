@@ -213,6 +213,7 @@ nsTableOuterFrame::AppendFrames(nsIAtom*        aListName,
 
     // Reflow the new caption frame. It's already marked dirty, so
     // just tell the pres shell.
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
     GetPresContext()->PresShell()->
       FrameNeedsReflow(mCaptionFrame, nsIPresShell::eTreeChange);
     

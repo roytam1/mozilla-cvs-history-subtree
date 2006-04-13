@@ -431,6 +431,9 @@ void nsTableFrame::AttributeChangedFor(nsIFrame*       aFrame,
         cells.AppendElement(cellFrame);
         InsertCells(cells, rowIndex, colIndex - 1);
 
+        AddStateBits(NS_FRAME_IS_DIRTY);
+        // XXX Should this use eStyleChange?  It currently doesn't need
+        // to, but it might given more optimization.
         GetPresContext()->PresShell()->FrameNeedsReflow(this,
           nsIPresShell::eTreeChange);
       }
@@ -2290,6 +2293,7 @@ nsTableFrame::AppendFrames(nsIAtom*        aListName,
   printf("TableFrame::AppendFrames");
   Dump(PR_TRUE, PR_TRUE, PR_TRUE);
 #endif
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                   nsIPresShell::eTreeChange);
 
@@ -2340,6 +2344,7 @@ nsTableFrame::InsertFrames(nsIAtom*        aListName,
     return NS_OK;
   }
 
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                   nsIPresShell::eTreeChange);
 
@@ -2407,6 +2412,7 @@ nsTableFrame::RemoveFrame(nsIAtom*        aListName,
       return NS_OK;
     }
   }
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                   nsIPresShell::eTreeChange);
   return NS_OK;
