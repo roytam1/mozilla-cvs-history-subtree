@@ -1131,8 +1131,8 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
     if (NS_FAILED(rv)) return rv;
   } else {
     innerSize = mInnerTableFrame->GetSize();
-    GetMargin(aPresContext, aOuterRS, mCaptionFrame, aOuterRS.mComputedWidth,
-              innerMargin);
+    GetMargin(aPresContext, aOuterRS, mInnerTableFrame,
+              aOuterRS.mComputedWidth, innerMargin);
   }
 
   nsSize   containSize = GetContainingBlockSize(aOuterRS);
