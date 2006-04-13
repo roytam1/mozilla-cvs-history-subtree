@@ -473,7 +473,7 @@
                   ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);"
                   onclick="return contentAreaClick(event, false);"
 #ifdef MOZ_PLACES
-                  onselect="BrowserController.onTabSwitch(event);"
+                  onselect="BrowserController.onEvent(BrowserController.EVENT_TABCHANGE);"
 #endif
                   />
     </vbox>
