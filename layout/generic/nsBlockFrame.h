@@ -197,7 +197,7 @@ public:
   // are non-decreasing.
   void SetupLineCursor();
 
-  virtual PRBool ChildIsDirty(nsIFrame* aChild);
+  virtual void ChildIsDirty(nsIFrame* aChild);
   virtual PRBool IsVisibleInSelection(nsISelection* aSelection);
 
   virtual PRBool IsEmpty();

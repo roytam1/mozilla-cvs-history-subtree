@@ -5602,7 +5602,7 @@ nsLineBox* nsBlockFrame::GetFirstLineContaining(nscoord y) {
   return cursor.get();
 }
 
-/* virtual */ PRBool
+/* virtual */ void
 nsBlockFrame::ChildIsDirty(nsIFrame* aChild)
 {
   // See if the child is absolutely positioned
@@ -5631,7 +5631,7 @@ nsBlockFrame::ChildIsDirty(nsIFrame* aChild)
       MarkLineDirty(fline);
   }
 
-  return nsBlockFrameSuper::ChildIsDirty(aChild);
+  nsBlockFrameSuper::ChildIsDirty(aChild);
 }
 
 //////////////////////////////////////////////////////////////////////

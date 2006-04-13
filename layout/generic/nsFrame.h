@@ -246,7 +246,7 @@ public:
   NS_IMETHOD  PeekOffsetParagraph(nsPresContext* aPresContext,
                                   nsPeekOffsetStruct *aPos);
   NS_IMETHOD  GetOffsets(PRInt32 &aStart, PRInt32 &aEnd) const;
-  virtual PRBool ChildIsDirty(nsIFrame* aChild);
+  virtual void ChildIsDirty(nsIFrame* aChild);
 
 #ifdef ACCESSIBILITY
   NS_IMETHOD  GetAccessible(nsIAccessible** aAccessible);

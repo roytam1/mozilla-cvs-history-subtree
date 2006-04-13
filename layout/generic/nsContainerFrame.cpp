@@ -227,13 +227,10 @@ nsContainerFrame::BuildDisplayListForNonBlockChildren(nsDisplayListBuilder*   aB
   return NS_OK;
 }
 
-/* virtual */ PRBool
+/* virtual */ void
 nsContainerFrame::ChildIsDirty(nsIFrame* aChild)
 {
-  PRBool result =
-    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0;
   AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-  return result;
 }
 
 PRBool

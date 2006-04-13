@@ -1463,16 +1463,8 @@ public:
    * has the NS_FRAME_IS_DIRTY *or* NS_FRAME_HAS_DIRTY_CHILDREN bit
    * set).  This should always set the NS_FRAME_HAS_DIRTY_CHILDREN on
    * the frame, and may do other work.
-   *
-   * @return PR_TRUE if the frame was already marked as dirty (i.e., the
-   *         caller does not need to continue making calls up the
-   *         ancestor chain)
-   *         PR_FALSE if the frame was not already marked as dirty
-   *         (which means it's the callers responsibility to call
-   *         this->GetParent()->ChildIsDirty() or add to the set of
-   *         reflow roots that need reflow)
    */
-  virtual PRBool ChildIsDirty(nsIFrame* aChild) = 0;
+  virtual void ChildIsDirty(nsIFrame* aChild) = 0;
 
   /**
    * Called to retrieve this frame's accessible.

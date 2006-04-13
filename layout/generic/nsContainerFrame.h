@@ -65,7 +65,7 @@ public:
   virtual nsIFrame* GetFirstChild(nsIAtom* aListName) const;
   virtual nsIAtom* GetAdditionalChildListName(PRInt32 aIndex) const;
   NS_IMETHOD Destroy(nsPresContext* aPresContext);
-  virtual PRBool ChildIsDirty(nsIFrame* aChild);
+  virtual void ChildIsDirty(nsIFrame* aChild);
 
   virtual PRBool IsLeaf() const;
   

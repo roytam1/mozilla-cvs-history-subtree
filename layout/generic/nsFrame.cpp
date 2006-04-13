@@ -4990,12 +4990,11 @@ nsIView* nsIFrame::GetClosestView(nsPoint* aOffset) const
 }
 
 
-/* virtual */ PRBool
+/* virtual */ void
 nsFrame::ChildIsDirty(nsIFrame* aChild)
 {
   NS_NOTREACHED("should never be called on a frame that doesn't inherit from "
                 "nsContainerFrame");
-  return PR_FALSE;
 }
 
 
