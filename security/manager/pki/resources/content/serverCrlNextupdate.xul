@@ -49,7 +49,6 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"      
   style="width: 30em;"
 #expand buttons="accept__HELP_BUTTON__"
-  defaultButton="accept"
   ondialoghelp="openHelp('exp_crl');"
   onload="onLoad();"
 >
