@@ -294,12 +294,15 @@ function AccountDataToPageData(accountData, pageData)
             setPageData(pageData, "server", "servertype", server.type);
             setPageData(pageData, "server", "hostname", server.hostName);
         }
+        setPageData(pageData, "accounttype", "otheraccount", false);
     }
     
     setPageData(pageData, "login", "username", server.username);
     setPageData(pageData, "login", "password", server.password);
     setPageData(pageData, "login", "rememberPassword", server.rememberPassword);
     setPageData(pageData, "accname", "prettyName", server.prettyName);
+    setPageData(pageData, "accname", "userset", false);
+    setPageData(pageData, "ispdata", "supplied", false);
     
     var identity;
     
@@ -628,7 +631,7 @@ function setupCopiesAndFoldersServer(account, accountIsDeferred)
       if (!am.localFoldersServer) 
       {
         dump("error!  we should have a local mail server at this point\n");
-        return;
+        return false;
       }
       copiesAndFoldersServer = am.localFoldersServer;
     }
@@ -929,6 +932,8 @@ function PrefillAccountForIsp(ispName)
     dump("PrefillAccountForISP: filling with " + ispData + "\n");
     SetCurrentAccountData(ispData);
     AccountDataToPageData(ispData, pageData);
+
+    setPageData(pageData, "ispdata", "supplied", true);
 }
 
 // does any cleanup work for the the account data
