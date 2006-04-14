@@ -52,7 +52,7 @@ class nsIMenu;
  * Native Motif MenuItem wrapper
  */
 
-class nsMenuItemX : public nsIMenuItem,
+class nsMenuItemX : public nsIMenuItem_MOZILLA_1_8_BRANCH,
                     public nsIMenuListener,
                     public nsIChangeObserver,
                     public nsSupportsWeakReference
@@ -85,7 +85,9 @@ public:
   NS_IMETHOD DoCommand();
   NS_IMETHOD SetModifiers(PRUint8 aModifiers);
   NS_IMETHOD GetModifiers(PRUint8 * aModifiers);
-    
+
+  NS_IMETHOD DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled);
+ 
   // nsIMenuListener interface
   nsEventStatus MenuItemSelected(const nsMenuEvent & aMenuEvent);
   nsEventStatus MenuSelected(const nsMenuEvent & aMenuEvent);

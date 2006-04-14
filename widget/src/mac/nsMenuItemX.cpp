@@ -54,6 +54,9 @@
 #include "nsIServiceManager.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsIPrivateDOMEvent.h"
+#include "nsIDOMEventReceiver.h"
+#include "nsIDOMDocumentEvent.h"
 
 #include "nsGUIEvent.h"
 
@@ -63,7 +66,7 @@ nsInstanceCounter   gMenuItemCounterX("nsMenuItemX");
 #endif
 
 
-NS_IMPL_ISUPPORTS4(nsMenuItemX, nsIMenuItem, nsIMenuListener, nsIChangeObserver, nsISupportsWeakReference)
+NS_IMPL_ISUPPORTS5(nsMenuItemX, nsIMenuItem, nsIMenuItem_MOZILLA_1_8_BRANCH, nsIMenuListener, nsIChangeObserver, nsISupportsWeakReference)
 
 //
 // nsMenuItemX constructor
@@ -272,8 +275,46 @@ NS_METHOD nsMenuItemX::DoCommand()
     return MenuHelpersX::DispatchCommandTo(mDocShellWeakRef, mContent);
 }
     
+NS_IMETHODIMP nsMenuItemX::DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled)
+{
+  if (!mContent)
+    return NS_ERROR_FAILURE;
+
+  // get owner document for content
+  nsCOMPtr<nsIDocument> parentDoc = mContent->GetOwnerDoc();
+  if (!parentDoc) {
+    NS_WARNING("Failed to get owner nsIDocument for menu item content");
+    return NS_ERROR_FAILURE;
+  }
+  
+  // get interface for creating DOM events from content owner document
+  nsCOMPtr<nsIDOMDocumentEvent> DOMEventFactory = do_QueryInterface(parentDoc);
+  if (!DOMEventFactory) {
+    NS_WARNING("Failed to QI parent nsIDocument to nsIDOMDocumentEvent");
+    return NS_ERROR_FAILURE;
+  }
+  
+  // create DOM event
+  nsCOMPtr<nsIDOMEvent> event;
+  DOMEventFactory->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
+  event->InitEvent(eventName, PR_TRUE, PR_TRUE);
+  
+  // mark DOM event as trusted
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+  privateEvent->SetTrusted(PR_TRUE);
+  
+  // send DOM event
+  nsCOMPtr<nsIDOMEventTarget> eventTarget = do_QueryInterface(mContent);
+  nsresult rv = eventTarget->DispatchEvent(event, preventDefaultCalled);
+  if (NS_FAILED(rv)) {
+    NS_WARNING("Failed to send DOM event via nsIDOMEventTarget");
+    return NS_ERROR_FAILURE;
+  }
+  
+  return NS_OK;
+}
    
-   //-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
 NS_METHOD nsMenuItemX::GetModifiers(PRUint8 * aModifiers) 
 {
     nsresult res = NS_OK;

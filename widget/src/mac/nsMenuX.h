@@ -70,7 +70,7 @@ public:
         
         ~nsInstanceCounter()
         {
-          printf("%s %ld\n", mDescription, mInstanceCount);
+          printf("%s %d\n", mDescription, mInstanceCount);
         }
 
         nsInstanceCounter& operator ++()          // prefix
