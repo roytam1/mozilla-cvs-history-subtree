@@ -671,5 +671,5 @@ pref("browser.download.progressDnlgDialog.dontAskForLaunch", false);
 pref("browser.cache.disk.parent_directory","\\Storage Card");
 pref("browser.cache.disk.enable",false);
 
-
-
+pref("signon.rememberSignons", true);
+pref("signon.SignonFileName", "signons.txt");
