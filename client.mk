@@ -238,11 +238,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = MOZILLA_1_8_0_BRANCH
-NSPR_CO_TAG          = MOZILLA_1_8_0_BRANCH
-NSS_CO_TAG           = MOZILLA_1_8_0_BRANCH
-LDAPCSDK_CO_TAG      = MOZILLA_1_8_0_BRANCH
-LOCALES_CO_TAG       = MOZILLA_1_8_0_BRANCH
+MOZ_CO_TAG           = CAMINO_1_0_1_MINIBRANCH
+NSPR_CO_TAG          = CAMINO_1_0_1_MINIBRANCH
+NSS_CO_TAG           = CAMINO_1_0_1_MINIBRANCH
+LDAPCSDK_CO_TAG      = CAMINO_1_0_1_MINIBRANCH
+LOCALES_CO_TAG       = CAMINO_1_0_1_MINIBRANCH
 
 BUILD_MODULES = all
 
