@@ -29,9 +29,8 @@ main(int argc, char **argv)
   args[i++] = "/MACHINE:ARM";
   #endif
 
-
-  args[i++] = "-OPT:REF";
-  args[i++] = "-OPT:ICF";
+  //  args[i++] = "-OPT:REF";
+  //  args[i++] = "-OPT:ICF";
 
   args[i++] = "/NODEFAULTLIB:LIBC";
   args[i++] = "/NODEFAULTLIB:OLDNAMES";

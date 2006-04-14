@@ -35,16 +35,14 @@ main(int argc, char **argv)
   //  args[i++] = "/DDEPRECATE_SUPPORTED";
   //  args[i++] = "/DSTDC_HEADERS";
 
-  args[i++] = "/Gy";  // For link warning LNK1166
+  //  args[i++] = "/Gy";  // For link warning LNK1166
 
   args[i++] = "/Zc:wchar_t-";          // 
   args[i++] = "/GS-";                  // disable security checks
   args[i++] = "/GR-";                  // disable C++ RTTI
 
-  args[i++] = "/fp:fast";
+  //  args[i++] = "/fp:fast";
   //args[i++] = "/fp:precise";
-
-  args[i++] = "/QRarch4";
 
   startOfArgvs = i;
   
@@ -98,14 +96,14 @@ main(int argc, char **argv)
     args[i++] = "corelibc.lib";
     args[i++] = "coredll.lib";
 
-    args[i++] = "-OPT:REF";
-    args[i++] = "-OPT:ICF";
+    //    args[i++] = "-OPT:REF";
+    //    args[i++] = "-OPT:ICF";
 
 
     args[i++] = "-NODEFAULTLIB:LIBC";
-	  args[i++] = "-NODEFAULTLIB:OLDNAMES";
-	  args[i++] = "-NODEFAULTLIB:LIBCMT";
-	  args[i++] = "-NODEFAULTLIB:LIBCMTD";
+    args[i++] = "-NODEFAULTLIB:OLDNAMES";
+    args[i++] = "-NODEFAULTLIB:LIBCMT";
+    args[i++] = "-NODEFAULTLIB:LIBCMTD";
 
 
   }
