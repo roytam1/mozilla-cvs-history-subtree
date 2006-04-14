@@ -132,10 +132,10 @@ function InitializeGlobalVariables()
   //This migrates the LDAPServer Preferences from 4.x to mozilla format.
   gLDAPPrefsService = Components.classes["@mozilla.org/ldapprefs-service;1"];
   if (gLDAPPrefsService) {
-      try {
-          gLDAPPrefsService = gLDAPPrefsService.getService().gLDAPPrefsService
-              .QueryInterface( Components.interfaces.nsILDAPPrefsService);
-      } catch (ex) {dump ("ERROR: Cannot get the LDAP prefs service\n" + ex + "\n");}
+    try {
+      gLDAPPrefsService = gLDAPPrefsService
+          .getService(Components.interfaces.nsILDAPPrefsService);
+    } catch (ex) {dump ("ERROR: Cannot get the LDAP prefs service\n" + ex + "\n");}
   }
 
   gMsgCompose = null;
@@ -166,8 +166,6 @@ function InitializeGlobalVariables()
   gLastWindowToHaveFocus = null;
   gReceiptOptionChanged = false;
   gAttachVCardOptionChanged = false;
-
-
 }
 InitializeGlobalVariables();
 
@@ -263,7 +261,7 @@ var gComposeRecyclingListener = {
   },
 
   onReopen: function(params) {
-    //Reset focus to avoid undesirable visual effect when reopening the winodw
+    // Reset focus to avoid undesirable visual effect when reopening the window
     var identityElement = document.getElementById("msgIdentity");
     if (identityElement)
       identityElement.focus();
@@ -369,7 +367,7 @@ var progressListener = {
         statusText = document.getElementById("statusText");
         if (statusText)
           statusText.setAttribute("label", aMessage);
-      } catch (ex) {};
+      } catch (ex) {}
     },
 
     onSecurityChange: function(aWebProgress, aRequest, state)
@@ -564,7 +562,6 @@ function GetSelectedMessages()
 
 function SetupCommandUpdateHandlers()
 {
-//  dump("SetupCommandUpdateHandlers\n");
   top.controllers.insertControllerAt(0, defaultController);
 }
 
@@ -585,33 +582,31 @@ function CommandUpdate_MsgCompose()
   updateComposeItems();
 }
 
-function updateComposeItems() {
+function updateComposeItems()
+{
   try {
+    // Edit Menu
+    goUpdateCommand("cmd_rewrap");
 
-  //Edit Menu
-  goUpdateCommand("cmd_rewrap");
+    // Insert Menu
+    if (gMsgCompose && gMsgCompose.composeHTML)
+    {
+      goUpdateCommand("cmd_renderedHTMLEnabler");
+      goUpdateCommand("cmd_decreaseFont");
+      goUpdateCommand("cmd_increaseFont");
+      goUpdateCommand("cmd_bold");
+      goUpdateCommand("cmd_italic");
+      goUpdateCommand("cmd_underline");
+      goUpdateCommand("cmd_ul");
+      goUpdateCommand("cmd_ol");
+      goUpdateCommand("cmd_indent");
+      goUpdateCommand("cmd_outdent");
+      goUpdateCommand("cmd_align");
+      goUpdateCommand("cmd_smiley");
+    }
 
-  //Insert Menu
-  if (gMsgCompose && gMsgCompose.composeHTML)
-  {
-    goUpdateCommand("cmd_renderedHTMLEnabler");
-    goUpdateCommand("cmd_decreaseFont");
-    goUpdateCommand("cmd_increaseFont");
-    goUpdateCommand("cmd_bold");
-    goUpdateCommand("cmd_italic");
-    goUpdateCommand("cmd_underline");
-    goUpdateCommand("cmd_ul");
-    goUpdateCommand("cmd_ol");
-    goUpdateCommand("cmd_indent");
-    goUpdateCommand("cmd_outdent");
-    goUpdateCommand("cmd_align");
-    goUpdateCommand("cmd_smiley");
-  }
-
-  //Options Menu
-  goUpdateCommand("cmd_spelling");
-
-
+    // Options Menu
+    goUpdateCommand("cmd_spelling");
   } catch(e) {}
 }
 
@@ -634,7 +629,8 @@ function openEditorContextMenu()
   updateEditItems();
 }
 
-function updateEditItems() {
+function updateEditItems()
+{
   goUpdateCommand("cmd_pasteNoFormatting");
   goUpdateCommand("cmd_pasteQuote");
   goUpdateCommand("cmd_delete");
@@ -792,13 +788,13 @@ function setupLdapAutocompleteSession()
     if (gLDAPSession) {
         LDAPSession = gLDAPSession;
     } else {
-        LDAPSession = Components.classes[
-            "@mozilla.org/autocompleteSession;1?type=ldap"];
+        LDAPSession = Components
+            .classes["@mozilla.org/autocompleteSession;1?type=ldap"];
         if (LDAPSession) {
-            try {
-                LDAPSession = LDAPSession.createInstance()
-                    .QueryInterface(Components.interfaces.nsILDAPAutoCompleteSession);
-            } catch (ex) {dump ("ERROR: Cannot get the LDAP autocomplete session\n" + ex + "\n");}
+          try {
+            LDAPSession = LDAPSession.createInstance()
+                .QueryInterface(Components.interfaces.nsILDAPAutoCompleteSession);
+          } catch (ex) {dump ("ERROR: Cannot get the LDAP autocomplete session\n" + ex + "\n");}
         }
     }
             
@@ -1217,20 +1213,20 @@ function ComposeStartup(recycled, aParams)
   else
     if (window.arguments && window.arguments[0]) {
       try {
-      if (window.arguments[0] instanceof Components.interfaces.nsIMsgComposeParams)
-        params = window.arguments[0];
-      else
-        params = handleMailtoArgs(window.arguments[0]);
+        if (window.arguments[0] instanceof Components.interfaces.nsIMsgComposeParams)
+          params = window.arguments[0];
+        else
+          params = handleMailtoArgs(window.arguments[0]);
       }
       catch(ex) { dump("ERROR with parameters: " + ex + "\n"); }
-      
-    // if still no dice, try and see if the params is an old fashioned list of string attributes
-    // XXX can we get rid of this yet? 
+
+      // if still no dice, try and see if the params is an old fashioned list of string attributes
+      // XXX can we get rid of this yet?
       if (!params)
-    {
+      {
         args = GetArgs(window.arguments[0]);
+      }
     }
-  }
 
   var identityList = document.getElementById("msgIdentity");
   var identityListPopup = document.getElementById("msgIdentityPopup");
@@ -1314,6 +1310,7 @@ function ComposeStartup(recycled, aParams)
         dump("Failed to get editor element!\n");
         return;
       }
+
       document.getElementById("returnReceiptMenu").setAttribute('checked', 
                                          gMsgCompose.compFields.returnReceipt);
       document.getElementById("cmd_attachVCard").setAttribute('checked', 
@@ -1330,7 +1327,11 @@ function ComposeStartup(recycled, aParams)
         } catch (e) { dump(" FAILED TO START EDITOR: "+e+"\n"); }
 
         // setEditorType MUST be call before setContentWindow
-        if (!gMsgCompose.composeHTML)
+        if (gMsgCompose.composeHTML)
+        {
+          initLocalFontFaceMenu(document.getElementById("FontFacePopup"));
+        }
+        else
         {
           //Remove HTML toolbar, format and insert menus as we are editing in plain text mode
           document.getElementById("outputFormatMenu").setAttribute("hidden", true);
@@ -1338,11 +1339,6 @@ function ComposeStartup(recycled, aParams)
           document.getElementById("formatMenu").setAttribute("hidden", true);
           document.getElementById("insertMenu").setAttribute("hidden", true);
           document.getElementById("menu_showFormatToolbar").setAttribute("hidden", true);
-        }
-        
-        if (gMsgCompose.composeHTML) {
-          var fontsList = document.getElementById("FontFacePopup");
-          initLocalFontFaceMenu(fontsList);
         }
 
         // Do setup common to Message Composer and Web Composer
@@ -1661,9 +1657,9 @@ function GenericSendMessage( msgType )
 
   if (gMsgCompose != null)
   {
-      var msgCompFields = gMsgCompose.compFields;
-      if (msgCompFields)
-      {
+    var msgCompFields = gMsgCompose.compFields;
+    if (msgCompFields)
+    {
       Recipients2CompFields(msgCompFields);
       var subject = document.getElementById("msgSubject").value;
       msgCompFields.subject = subject;
@@ -1676,9 +1672,10 @@ function GenericSendMessage( msgType )
       if (msgType == nsIMsgCompDeliverMode.Now || msgType == nsIMsgCompDeliverMode.Later)
       {
         //Do we need to check the spelling?
-        if (sPrefs.getBoolPref("mail.SpellCheckBeforeSend")){
-        //We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
-        //therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
+        if (sPrefs.getBoolPref("mail.SpellCheckBeforeSend"))
+        {
+          // We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
+          // therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
           window.content.focus();
           window.cancelSendMessage = false;
           try {
@@ -1690,27 +1687,26 @@ function GenericSendMessage( msgType )
             return;
         }
 
-        //Check if we have a subject, else ask user for confirmation
+        // Check if we have a subject, else ask user for confirmation
         if (subject == "")
         {
           if (gPromptService)
           {
             var result = {value:sComposeMsgsBundle.getString("defaultSubject")};
             if (gPromptService.prompt(
-                  window,
-                  sComposeMsgsBundle.getString("sendMsgTitle"),
-                  sComposeMsgsBundle.getString("subjectDlogMessage"),
-                  result,
-                  null,
-                  {value:0}
-               ))
-              {
-                msgCompFields.subject = result.value;
-                var subjectInputElem = document.getElementById("msgSubject");
-                subjectInputElem.value = result.value;
-              }
-              else
-                return;
+                    window,
+                    sComposeMsgsBundle.getString("sendMsgTitle"),
+                    sComposeMsgsBundle.getString("subjectDlogMessage"),
+                    result,
+                    null,
+                    {value:0}))
+            {
+              msgCompFields.subject = result.value;
+              var subjectInputElem = document.getElementById("msgSubject");
+              subjectInputElem.value = result.value;
+            }
+            else
+              return;
           }
         }
 
@@ -1739,11 +1735,11 @@ function GenericSendMessage( msgType )
           {
             var checkbox = {value:false};
             var okToProceed = gPromptService.confirmCheck(
-                              window,
-                              sComposeMsgsBundle.getString("sendMsgTitle"),
-                              sComposeMsgsBundle.getString("recipientDlogMessage"),
-                              sComposeMsgsBundle.getString("CheckMsg"),
-                              checkbox);
+                                  window,
+                                  sComposeMsgsBundle.getString("sendMsgTitle"),
+                                  sComposeMsgsBundle.getString("recipientDlogMessage"),
+                                  sComposeMsgsBundle.getString("CheckMsg"),
+                                  checkbox);
 
             if (!okToProceed)
               return;
@@ -1754,7 +1750,7 @@ function GenericSendMessage( msgType )
             } catch (ex) {}
           }
 
-          // remove newsgroups to prevent news_p to be set 
+          // remove newsgroups to prevent news_p to be set
           // in nsMsgComposeAndSend::DeliverMessage()
           msgCompFields.newsgroups = "";
         }
@@ -1769,15 +1765,15 @@ function GenericSendMessage( msgType )
 
         if (action == nsIMsgCompSendFormat.AskUser)
         {
-                    var recommAction = convert == nsIMsgCompConvertible.No
-                                   ? nsIMsgCompSendFormat.AskUser
-                                   : nsIMsgCompSendFormat.PlainText;
-                    var result2 = {action:recommAction,
-                                  convertible:convert,
-                                  abort:false};
-                    window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
-                                      "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
-                                      result2);
+          var recommAction = (convert == nsIMsgCompConvertible.No)
+                             ? nsIMsgCompSendFormat.AskUser
+                             : nsIMsgCompSendFormat.PlainText;
+          var result2 = {action:recommAction,
+                         convertible:convert,
+                         abort:false};
+          window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
+                            "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
+                            result2);
           if (result2.abort)
             return;
           action = result2.action;
@@ -1839,7 +1835,7 @@ function GenericSendMessage( msgType )
             case 1:  // send anyway
               msgCompFields.needToCheckCharset = false;
               break;
-            case 2:  // cancel 
+            case 2:  // cancel
               return;
           }
         }
@@ -1860,7 +1856,6 @@ function GenericSendMessage( msgType )
         }
         msgWindow.SetDOMWindow(window);
         msgWindow.rootDocShell.allowAuth = true;
-
         gMsgCompose.SendMsg(msgType, getCurrentIdentity(), currentAccountKey, msgWindow, progress);
       }
       catch (ex) {
@@ -1952,6 +1947,7 @@ function SaveAsFile(saveAs)
   dump("SaveAsFile from XUL\n");
   var subject = document.getElementById('msgSubject').value;
   GetCurrentEditor().setDocumentTitle(subject);
+
   if (gMsgCompose.bodyConvertible() == nsIMsgCompConvertible.Plain)
     SaveDocument(saveAs, false, "text/plain");
   else
@@ -1974,7 +1970,6 @@ function SaveAsTemplate()
   GenericSendMessage(nsIMsgCompDeliverMode.SaveAsTemplate);
   defaultSaveOperation = "template";
 }
-
 
 function MessageFcc(menuItem)
 {
@@ -2125,13 +2120,13 @@ function ToggleReturnReceipt(target)
 
 function ToggleAttachVCard(target)
 {
-    var msgCompFields = gMsgCompose.compFields;
-    if (msgCompFields)
-    {
-        msgCompFields.attachVCard = ! msgCompFields.attachVCard;
-        target.setAttribute('checked', msgCompFields.attachVCard);
-        gAttachVCardOptionChanged = true;
-    }
+  var msgCompFields = gMsgCompose.compFields;
+  if (msgCompFields)
+  {
+    msgCompFields.attachVCard = ! msgCompFields.attachVCard;
+    target.setAttribute('checked', msgCompFields.attachVCard);
+    gAttachVCardOptionChanged = true;
+  }
 }
 
 function queryISupportsArray(supportsArray, iid) {
@@ -2574,7 +2569,6 @@ function FocusOnFirstAttachment()
 function AttachmentElementHasItems()
 {
   var element = document.getElementById("attachmentBucket");
-
   return element ? element.childNodes.length : 0;
 }  
 
@@ -2614,7 +2608,7 @@ function DetermineHTMLAction(convertible)
 
         //Check newsgroups now...
         noHtmlnewsgroups = gMsgCompose.compFields.newsgroups;
-        
+
         if (noHtmlRecipients != "" || noHtmlnewsgroups != "")
         {
             if (convertible == nsIMsgCompConvertible.Plain)
@@ -2986,8 +2980,6 @@ function DisplaySaveFolderDlg(folderURI)
   return;
 }
 
-
-
 function SetMsgAddressingWidgetElementFocus()
 {
   var element = awGetInputElement(awGetNumberOfRecipients());
@@ -3148,9 +3140,9 @@ function SwitchElementFocus(event)
   }
 }
 
-function loadHTMLMsgPrefs() {
+function loadHTMLMsgPrefs()
+{
   var pref = GetPrefs();
-
   var fontFace;
   var fontSize;
   var textColor;
@@ -3164,7 +3156,7 @@ function loadHTMLMsgPrefs() {
   try { 
     fontSize = pref.getCharPref("msgcompose.font_size");
     EditorSetFontSize(fontSize);
-  } catch (e) {}  
+  } catch (e) {}
 
   var bodyElement = GetBodyElement();
 
@@ -3183,7 +3175,6 @@ function loadHTMLMsgPrefs() {
     document.getElementById("cmd_backgroundColor").setAttribute("state", bgColor);
     onBackgroundColorChange();
   } catch (e) {}
-
 }
 
 function AutoSave()

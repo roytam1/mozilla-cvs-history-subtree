@@ -74,6 +74,7 @@ var sNameProperty = null;
 var msgWindow = Components.classes["@mozilla.org/messenger/msgwindow;1"].createInstance();
 msgWindow = msgWindow.QueryInterface(Components.interfaces.nsIMsgWindow);
 
+
 /**
  * Global variables, need to be re-initialized every time mostly because we need to release them when the window close
  */
@@ -129,10 +130,13 @@ function InitializeGlobalVariables()
   gPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
   
   //This migrates the LDAPServer Preferences from 4.x to mozilla format.
-  try {
-      gLDAPPrefsService = Components.classes["@mozilla.org/ldapprefs-service;1"].getService();       
-      gLDAPPrefsService = gLDAPPrefsService.QueryInterface( Components.interfaces.nsILDAPPrefsService);                  
-  } catch (ex) {dump ("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
+  gLDAPPrefsService = Components.classes["@mozilla.org/ldapprefs-service;1"];
+  if (gLDAPPrefsService) {
+    try {
+      gLDAPPrefsService = gLDAPPrefsService
+          .getService(Components.interfaces.nsILDAPPrefsService);
+    } catch (ex) {dump ("ERROR: Cannot get the LDAP prefs service\n" + ex + "\n");}
+  }
 
   gMsgCompose = null;
   gWindowLocked = false;
@@ -186,7 +190,9 @@ function disableEditableFields()
   gMsgCompose.editor.flags |= nsIPlaintextEditorMail.eEditorReadonlyMask;
   var disableElements = document.getElementsByAttribute("disableonsend", "true");
   for (i=0;i<disableElements.length;i++)
+  {
     disableElements[i].setAttribute('disabled', 'true');
+  }
 }
 
 function enableEditableFields()
@@ -254,13 +260,13 @@ var gComposeRecyclingListener = {
   },
 
   onReopen: function(params) {
-    //Reset focus to avoid undesirable visual effect when reopening the winodw
+    // Reset focus to avoid undesirable visual effect when reopening the window
     var identityElement = document.getElementById("msgIdentity");
     if (identityElement)
       identityElement.focus();
 
     InitializeGlobalVariables();
-    ComposeStartup(true, params);    
+    ComposeStartup(true, params);
 
     var event = document.createEvent('Events');
     event.initEvent('compose-window-reopen', false, true);
@@ -366,7 +372,7 @@ var progressListener = {
         statusText = document.getElementById("statusText");
         if (statusText)
           statusText.setAttribute("label", aMessage);
-      } catch (ex) {};
+      } catch (ex) {}
     },
 
     onSecurityChange: function(aWebProgress, aRequest, state)
@@ -600,14 +606,13 @@ function CommandUpdate_MsgCompose()
   updateComposeItems();
 }
 
-function updateComposeItems() 
+function updateComposeItems()
 {
-  try 
-  {
-    //Edit Menu
+  try {
+    // Edit Menu
     goUpdateCommand("cmd_rewrap");
 
-    //Insert Menu
+    // Insert Menu
     if (gMsgCompose && gMsgCompose.composeHTML)
     {
       goUpdateCommand("cmd_renderedHTMLEnabler");
@@ -624,14 +629,13 @@ function updateComposeItems()
       goUpdateCommand("cmd_smiley");
     }
 
-    //Options Menu
+    // Options Menu
     goUpdateCommand("cmd_spelling");
     goUpdateCommand("cmd_quoteMessage");
-
   } catch(e) {}
 }
 
-function openEditorContextMenu() 
+function openEditorContextMenu()
 {
   // if we have a mispelled word, do one thing, otherwise show the usual context menu
   var spellCheckNoSuggestionsItem = document.getElementById('spellCheckNoSuggestions');
@@ -649,7 +653,7 @@ function openEditorContextMenu()
   updateEditItems();
 }
 
-function updateEditItems() 
+function updateEditItems()
 {
   goUpdateCommand("cmd_pasteNoFormatting");
   goUpdateCommand("cmd_pasteQuote");
@@ -661,10 +665,8 @@ function updateEditItems()
   goUpdateCommand("cmd_findPrev");
 }
 
-var messageComposeOfflineObserver = 
-{
-  observe: function(subject, topic, state) 
-  {
+var messageComposeOfflineObserver = {
+  observe: function(subject, topic, state) {
     // sanity checks
     if (topic != "network:offline-status-changed") return;
     if (state == "offline")
@@ -806,9 +808,14 @@ function setupLdapAutocompleteSession()
     if (gLDAPSession) {
         LDAPSession = gLDAPSession;
     } else {
-        LDAPSession = Components.classes[
-            "@mozilla.org/autocompleteSession;1?type=ldap"].createInstance()
-            .QueryInterface(Components.interfaces.nsILDAPAutoCompleteSession);
+        LDAPSession = Components
+            .classes["@mozilla.org/autocompleteSession;1?type=ldap"];
+        if (LDAPSession) {
+          try {
+            LDAPSession = LDAPSession.createInstance()
+                .QueryInterface(Components.interfaces.nsILDAPAutoCompleteSession);
+          } catch (ex) {dump ("ERROR: Cannot get the LDAP autocomplete session\n" + ex + "\n");}
+        }
     }
             
     if (autocompleteDirectory && !gIsOffline) { 
@@ -1183,6 +1190,7 @@ function ComposeFieldsReady(msgType)
   CompFields2Recipients(gMsgCompose.compFields, gMsgCompose.type);
   SetComposeWindowTitle();
 
+  // need timeout for reply to work
   if (gMsgCompose.composeHTML)
     setTimeout("loadHTMLMsgPrefs();", 0);
 
@@ -1214,23 +1222,23 @@ function ComposeStartup(recycled, aParams)
   
   if (aParams)
     params = aParams;
-  else if (window.arguments && window.arguments[0]) 
-  {
-    try 
-    {
-      if (window.arguments[0] instanceof Components.interfaces.nsIMsgComposeParams)
-        params = window.arguments[0];
-      else
-        params = handleMailtoArgs(window.arguments[0]);
+  else
+    if (window.arguments && window.arguments[0]) {
+      try {
+        if (window.arguments[0] instanceof Components.interfaces.nsIMsgComposeParams)
+          params = window.arguments[0];
+        else
+          params = handleMailtoArgs(window.arguments[0]);
+      }
+      catch(ex) { dump("ERROR with parameters: " + ex + "\n"); }
+
+      // if still no dice, try and see if the params is an old fashioned list of string attributes
+      // XXX can we get rid of this yet?
+      if (!params)
+      {
+        args = GetArgs(window.arguments[0]);
+      }
     }
-      
-    catch(ex) { dump("ERROR with parameters: " + ex + "\n"); }
-     
-    // if still no dice, try and see if the params is an old fashioned list of string attributes
-    // XXX can we get rid of this yet? 
-    if (!params)
-      args = GetArgs(window.arguments[0]);
-  }  
 
   var identityList = document.getElementById("msgIdentity");
   var identityListPopup = document.getElementById("msgIdentityPopup");
@@ -1331,7 +1339,11 @@ function ComposeStartup(recycled, aParams)
         } catch (e) { dump(" FAILED TO START EDITOR: "+e+"\n"); }
 
         // setEditorType MUST be call before setContentWindow
-        if (!gMsgCompose.composeHTML)
+        if (gMsgCompose.composeHTML)
+        {
+          initLocalFontFaceMenu(document.getElementById("FontFacePopup"));
+        }
+        else
         {
           //Remove HTML toolbar, format and insert menus as we are editing in plain text mode
           document.getElementById("outputFormatMenu").setAttribute("hidden", true);
@@ -1340,11 +1352,7 @@ function ComposeStartup(recycled, aParams)
           document.getElementById("insertMenu").setAttribute("hidden", true);
           document.getElementById("menu_showFormatToolbar").setAttribute("hidden", true);
         }
-        else //if (gMsgCompose.composeHTML) 
-        {
-           var fontsList = document.getElementById("FontFacePopup");
-           initLocalFontFaceMenu(fontsList);
-        }
+
         // Do setup common to Message Composer and Web Composer
         EditorSharedStartup();   
         initLanguageMenu();
@@ -1363,7 +1371,7 @@ function ComposeStartup(recycled, aParams)
               cleanBody = decodeURI(body);
             } catch(e) { cleanBody = body;}
 
-            // XXX : need html-escaping here
+            // XXX : need to do html-escaping here !
             msgCompFields.body = "<BR><A HREF=\"" + body + "\">" + cleanBody + "</A><BR>";
           }
           else
@@ -1709,10 +1717,10 @@ function GenericSendMessage( msgType )
       if (msgType == nsIMsgCompDeliverMode.Now || msgType == nsIMsgCompDeliverMode.Later)
       {
         //Do we need to check the spelling?
-        if (sPrefs.getBoolPref("mail.SpellCheckBeforeSend")) 
+        if (sPrefs.getBoolPref("mail.SpellCheckBeforeSend"))
         {
-          //We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
-          //therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
+          // We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
+          // therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
           window.content.focus();
           window.cancelSendMessage = false;
           try {
@@ -1722,112 +1730,113 @@ function GenericSendMessage( msgType )
           catch(ex){}
           if(window.cancelSendMessage)
             return;
-         }
+        }
 
-         //Check if we have a subject, else ask user for confirmation
-         if (subject == "")
-         {
-           if (gPromptService)
-           {            
-             var result = {value:sComposeMsgsBundle.getString("defaultSubject")};
-             if (gPromptService.prompt(
-                window,
-                sComposeMsgsBundle.getString("sendMsgTitle"),
-                sComposeMsgsBundle.getString("subjectDlogMessage"),
-                result,
-                null,
-                {value:0}))
-             {
-               msgCompFields.subject = result.value;
-               var subjectInputElem = document.getElementById("msgSubject");
-               subjectInputElem.value = result.value;
-             }
-             else
-               return;
-            }
-          }
-
-          // check if the user tries to send a message to a newsgroup through a mail account
-          var currentAccountKey = getCurrentAccountKey();
-          var account = gAccountManager.getAccount(currentAccountKey);
-          if (!account)
+        // Check if we have a subject, else ask user for confirmation
+        if (subject == "")
+        {
+          if (gPromptService)
           {
-            throw "UNEXPECTED: currentAccountKey '" + currentAccountKey +
-                "' has no matching account!";
-          }
-          var servertype = account.incomingServer.type;
-
-          if (servertype != "nntp" && msgCompFields.newsgroups != "")
-          {
-            // default to ask user if the pref is not set
-            var dontAskAgain = sPrefs.getBoolPref("mail.compose.dontWarnMail2Newsgroup");
-
-            if (!dontAskAgain)
+            var result = {value:sComposeMsgsBundle.getString("defaultSubject")};
+            if (gPromptService.prompt(
+                    window,
+                    sComposeMsgsBundle.getString("sendMsgTitle"),
+                    sComposeMsgsBundle.getString("subjectDlogMessage"),
+                    result,
+                    null,
+                    {value:0}))
             {
-              var checkbox = {value:false};
-              var okToProceed = gPromptService.confirmCheck(window,
-                                                            sComposeMsgsBundle.getString("sendMsgTitle"),
-                                                            sComposeMsgsBundle.getString("recipientDlogMessage"),
-                                                            sComposeMsgsBundle.getString("CheckMsg"), checkbox);
-
-              if (!okToProceed)
-                return;
-
-              if (checkbox.value)
-                sPrefs.setBoolPref(kDontAskAgainPref, true);
+              msgCompFields.subject = result.value;
+              var subjectInputElem = document.getElementById("msgSubject");
+              subjectInputElem.value = result.value;
             }
+            else
+              return;
+          }
+        }
 
-            // remove newsgroups to prevent news_p to be set 
-            // in nsMsgComposeAndSend::DeliverMessage()
-            msgCompFields.newsgroups = "";
+        // check if the user tries to send a message to a newsgroup through a mail account
+        var currentAccountKey = getCurrentAccountKey();
+        var account = gAccountManager.getAccount(currentAccountKey);
+        if (!account)
+        {
+          throw "UNEXPECTED: currentAccountKey '" + currentAccountKey +
+              "' has no matching account!";
+        }
+        var servertype = account.incomingServer.type;
+
+        if (servertype != "nntp" && msgCompFields.newsgroups != "")
+        {
+          // default to ask user if the pref is not set
+          var dontAskAgain = sPrefs.getBoolPref("mail.compose.dontWarnMail2Newsgroup");
+
+          if (!dontAskAgain)
+          {
+            var checkbox = {value:false};
+            var okToProceed = gPromptService.confirmCheck(
+                                  window,
+                                  sComposeMsgsBundle.getString("sendMsgTitle"),
+                                  sComposeMsgsBundle.getString("recipientDlogMessage"),
+                                  sComposeMsgsBundle.getString("CheckMsg"),
+                                  checkbox);
+
+            if (!okToProceed)
+              return;
+
+            if (checkbox.value)
+              sPrefs.setBoolPref(kDontAskAgainPref, true);
           }
 
-          // Before sending the message, check what to do with HTML message, eventually abort.
-          var convert = DetermineConvertibility();
-          var action = DetermineHTMLAction(convert);
-         // check if e-mail addresses are complete, in case user
-         // has turned off autocomplete to local domain.
-         if (!CheckValidEmailAddress(msgCompFields.to, msgCompFields.cc, msgCompFields.bcc))
+          // remove newsgroups to prevent news_p to be set
+          // in nsMsgComposeAndSend::DeliverMessage()
+          msgCompFields.newsgroups = "";
+        }
+
+        // Before sending the message, check what to do with HTML message, eventually abort.
+        var convert = DetermineConvertibility();
+        var action = DetermineHTMLAction(convert);
+        // check if e-mail addresses are complete, in case user
+        // has turned off autocomplete to local domain.
+        if (!CheckValidEmailAddress(msgCompFields.to, msgCompFields.cc, msgCompFields.bcc))
           return;
 
-          if (action == nsIMsgCompSendFormat.AskUser)
-          {
-            var recommAction = convert == nsIMsgCompConvertible.No
-                           ? nsIMsgCompSendFormat.AskUser
-                           : nsIMsgCompSendFormat.PlainText;
-            var result2 = {action:recommAction,
-                          convertible:convert,
-                          abort:false};
-            window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
-                              "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
-                              result2);
-            if (result2.abort)
-              return;
-            action = result2.action;
-          }
-          
-          // we will remember the users "send format" decision
-          // in the address collector code (see nsAbAddressCollecter::CollectAddress())
-          // by using msgCompFields.forcePlainText and msgCompFields.useMultipartAlternative
-          // to determine the nsIAbPreferMailFormat (unknown, plaintext, or html)
-          // if the user sends both, we remember html.
+        if (action == nsIMsgCompSendFormat.AskUser)
+        {
+          var recommAction = (convert == nsIMsgCompConvertible.No)
+                             ? nsIMsgCompSendFormat.AskUser
+                             : nsIMsgCompSendFormat.PlainText;
+          var result2 = {action:recommAction,
+                         convertible:convert,
+                         abort:false};
+          window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
+                            "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
+                            result2);
+          if (result2.abort)
+            return;
+          action = result2.action;
+        }
 
-          switch (action)
-          {
-            case nsIMsgCompSendFormat.PlainText:
-              msgCompFields.forcePlainText = true;
-              msgCompFields.useMultipartAlternative = false;
-              break;
-            case nsIMsgCompSendFormat.HTML:
-              msgCompFields.forcePlainText = false;
-              msgCompFields.useMultipartAlternative = false;
-              break;
-            case nsIMsgCompSendFormat.Both:
-              msgCompFields.forcePlainText = false;
-              msgCompFields.useMultipartAlternative = true;
-              break;
-             default: dump("\###SendMessage Error: invalid action value\n"); return;
-          }
+        // we will remember the users "send format" decision
+        // in the address collector code (see nsAbAddressCollecter::CollectAddress())
+        // by using msgCompFields.forcePlainText and msgCompFields.useMultipartAlternative
+        // to determine the nsIAbPreferMailFormat (unknown, plaintext, or html)
+        // if the user sends both, we remember html.
+        switch (action)
+        {
+          case nsIMsgCompSendFormat.PlainText:
+            msgCompFields.forcePlainText = true;
+            msgCompFields.useMultipartAlternative = false;
+            break;
+          case nsIMsgCompSendFormat.HTML:
+            msgCompFields.forcePlainText = false;
+            msgCompFields.useMultipartAlternative = false;
+            break;
+          case nsIMsgCompSendFormat.Both:
+            msgCompFields.forcePlainText = false;
+            msgCompFields.useMultipartAlternative = true;
+            break;
+           default: dump("\###SendMessage Error: invalid action value\n"); return;
+        }
       }
 
       // hook for extra compose pre-processing
@@ -1989,8 +1998,8 @@ function Save()
 function SaveAsFile(saveAs)
 {
   dump("SaveAsFile from XUL\n");
-  var subject = document.getElementById('msgSubject').value; 
-  GetCurrentEditor().setDocumentTitle(subject); 
+  var subject = document.getElementById('msgSubject').value;
+  GetCurrentEditor().setDocumentTitle(subject);
 
   if (gMsgCompose.bodyConvertible() == nsIMsgCompConvertible.Plain)
     SaveDocument(saveAs, false, "text/plain");
@@ -2014,7 +2023,6 @@ function SaveAsTemplate()
   GenericSendMessage(nsIMsgCompDeliverMode.SaveAsTemplate);
   defaultSaveOperation = "template";
 }
-
 
 function MessageFcc(menuItem)
 {
@@ -2128,7 +2136,7 @@ function SelectAddress()
 
 // walk through the recipients list and add them to the inline spell checker ignore list
 function addRecipientsToIgnoreList(aAddressesToAdd)
-{ 
+{
   if (InlineSpellChecker.inlineSpellChecker && InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
   {
     // break the list of potentially many recipients back into individual names
@@ -2584,7 +2592,6 @@ function AttachFile()
     var fileHandler = ioService.getProtocolHandler("file").QueryInterface(Components.interfaces.nsIFileProtocolHandler);
     var currentAttachment = fileHandler.getURLSpecFromFile(currentFile);
 
-
     if (!DuplicateFileCheck(currentAttachment)) {
       var attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"].createInstance(Components.interfaces.nsIMsgAttachment);
       attachment.url = currentAttachment;
@@ -2696,6 +2703,7 @@ function AttachPage()
       }
    }
 }
+
 function DuplicateFileCheck(FileUrl)
 {
   var bucket = document.getElementById('attachmentBucket');
@@ -3271,7 +3279,6 @@ var envelopeDragObserver = {
     }
 };
 
-
 function DisplaySaveFolderDlg(folderURI)
 {
   try{
@@ -3306,8 +3313,6 @@ function DisplaySaveFolderDlg(folderURI)
   }//if
   return;
 }
-
-
 
 function SetMsgAddressingWidgetTreeElementFocus()
 {
@@ -3484,7 +3489,6 @@ function toggleAddressPicker()
     sidebarBox.setAttribute("sidebarVisible", "false");
     elt.removeAttribute("checked");
   }
-
 }
 
 // public method called by the address picker sidebar
@@ -3493,7 +3497,7 @@ function AddRecipient(recipientType, address)
   awAddRecipient(recipientType, address);
 }
 
-function loadHTMLMsgPrefs() 
+function loadHTMLMsgPrefs()
 {
   var pref = GetPrefs();
   var fontFace;
@@ -3505,13 +3509,14 @@ function loadHTMLMsgPrefs()
     fontFace = pref.getCharPref("msgcompose.font_face");
     doStatefulCommand('cmd_fontFace', fontFace);
   } catch (e) {}
- 
+
   try { 
     fontSize = pref.getCharPref("msgcompose.font_size");
     EditorSetFontSize(fontSize);
-    } catch (e) {}  
-   
-  var bodyElement = GetBodyElement(); 
+  } catch (e) {}
+
+  var bodyElement = GetBodyElement();
+
   try { 
     textColor = pref.getCharPref("msgcompose.text_color");
     if (!bodyElement.getAttribute("text"))
@@ -3522,7 +3527,7 @@ function loadHTMLMsgPrefs()
     onFontColorChange();
     }
   } catch (e) {}
- 
+
   try { 
     bgColor = pref.getCharPref("msgcompose.background_color");
     if (!bodyElement.getAttribute("bgcolor"))
@@ -3550,4 +3555,3 @@ function InitEditor()
   gMsgCompose.initEditor(editor, window.content);
   InlineSpellChecker.Init(editor, sPrefs.getBoolPref("mail.spellcheck.inline"));
 }
-
