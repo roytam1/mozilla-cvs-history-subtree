@@ -22,6 +22,7 @@
 + locale/@AB_CD@/global/tabbrowser.dtd                  (%chrome/global/tabbrowser.dtd)
 + locale/@AB_CD@/global/tabbrowser.properties           (%chrome/global/tabbrowser.properties)
 + locale/@AB_CD@/global/tree.dtd                        (%chrome/global/tree.dtd)
++ locale/@AB_CD@/global/wizard.dtd                      (%chrome/global/wizard.dtd)
 + locale/@AB_CD@/global/textcontext.dtd                 (%chrome/global/textcontext.dtd)
   locale/@AB_CD@/global/nsHelperAppDlg.dtd              (%chrome/global/nsHelperAppDlg.dtd)
   locale/@AB_CD@/global/nsHelperAppDlg.properties       (%chrome/global/nsHelperAppDlg.properties)
