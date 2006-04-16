@@ -55,13 +55,7 @@ class nsITableLayoutStrategy
 public:
     virtual ~nsITableLayoutStrategy() {};
 
-    /** Implement nsIFrame::GetMinWidth for the table */
-    virtual nscoord GetMinWidth(nsIRenderingContext* aRenderingContext) = 0;
-
-    /** Implement nsIFrame::GetPrefWidth for the table */
-    virtual nscoord GetPrefWidth(nsIRenderingContext* aRenderingContext) = 0;
-
-    /** Implement nsIFrame::MarkIntrinsicWidthsDirty for the table */
+    /** Called from nsTableFrame::MarkIntrinsicWidthsDirty */
     virtual void MarkIntrinsicWidthsDirty() = 0;
 
     /**

@@ -253,6 +253,7 @@ public:
   // border to the results of these functions.
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  void ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext);
 
   // XXXldb REWRITE THIS COMMENT!
   /** inner tables are reflowed in two steps.
@@ -691,6 +692,8 @@ protected:
   void DumpRowGroup(nsIFrame* aChildFrame);
 #endif
   // DATA MEMBERS
+  nscoord mMinWidth;
+  nscoord mPrefWidth;
   nsAutoVoidArray mColFrames;  
 
   struct TableBits {

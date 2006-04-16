@@ -55,17 +55,11 @@ public:
     virtual ~BasicTableLayoutStrategy();
 
     // nsITableLayoutStrategy implementation
-    virtual nscoord GetMinWidth(nsIRenderingContext* aRenderingContext);
-    virtual nscoord GetPrefWidth(nsIRenderingContext* aRenderingContext);
     virtual void MarkIntrinsicWidthsDirty();
     virtual void CalcColumnWidths(const nsHTMLReflowState& aReflowState);
 
 private:
-    void ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext);
-
     nsTableFrame *mTableFrame;
-    nscoord mMinWidth;
-    nscoord mPrefWidth;
     nscoord mLastCalcWidth;
 };
 
