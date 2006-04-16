@@ -1092,6 +1092,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
       }
 
     } else {
+      // XXXldb Do tables come through this codepath?
       // Either 'left' or 'right' or both is 'auto'
       if (leftIsAuto && rightIsAuto) {
         // Use the 'direction' to dictate whether 'left' or 'right' is treated like
@@ -1742,6 +1743,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
           mComputedWidth = PR_MAX(minWidth, availWidth);
         }
       } else {
+        // XXXldb Do tables come through this codepath?
         ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
                                mStylePosition->mWidth, mComputedWidth);
       }
@@ -1872,6 +1874,9 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
         if (nsLayoutAtoms::tableFrame == fType) {
           // The width is shrink-to-fit
           nscoord prefWidth = frame->GetPrefWidth(rendContext);
+          NS_ASSERTION(NS_STATIC_CAST(nsTableFrame*, frame)->IsAutoLayout(),
+                       "auto widths should trigger auto layout, or otherwise "
+                       "we shouldn't use shrink-to-fit");
           if (prefWidth < mComputedWidth) {
             mComputedWidth = prefWidth;
           } else {
