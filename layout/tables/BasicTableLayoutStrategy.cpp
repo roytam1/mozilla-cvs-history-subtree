@@ -79,6 +79,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
 
     // border-spacing isn't part of the basis for percentages.
     if (colCount > 0) {
+        // XXX Should only add columns that have cells originating in them!
         nscoord subtract = spacing * (colCount + 1);
         width -= subtract;
         min -= subtract;
