@@ -48,6 +48,7 @@
 BasicTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
 {
+    MarkIntrinsicWidthsDirty();
 }
 
 /* virtual */
@@ -55,9 +56,91 @@ BasicTableLayoutStrategy::~BasicTableLayoutStrategy()
 {
 }
 
+/* virtual */ nscoord
+BasicTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
+{
+    DISPLAY_MIN_WIDTH(mTableFrame, mMinWidth);
+    if (mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+        ComputeIntrinsicWidths(aRenderingContext);
+    return mMinWidth;
+}
+
+/* virtual */ nscoord
+BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
+{
+    DISPLAY_PREF_WIDTH(mTableFrame, mPrefWidth);
+    if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+        ComputeIntrinsicWidths(aRenderingContext);
+    return mPrefWidth;
+}
+
+void
+BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext)
+{
+    mTableFrame->ComputeColumnIntrinsicWidths(aRenderingContext);
+
+    nsTableCellMap *cellMap = mTableFrame->GetCellMap();
+    nscoord min = 0, pref = 0, max_small_pct_pref = 0, pct_running_nonpct = 0;
+    float pct_running_pct = 0.0f;
+    PRInt32 colCount = cellMap->GetColCount();
+    nscoord spacing = mTableFrame->GetCellSpacingX();
+
+    for (PRInt32 col = 0; col < colCount; ++col) {
+        nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        min += colFrame->GetMinCoord();
+        pref += colFrame->GetPrefCoord();
+
+        // Percentages are of the table, so we have to reverse them for
+        // intrinsic widths.
+        float p = colFrame->GetPrefPercent();
+        if (0.0f < p && p < 1.0f) {
+            nscoord new_small_pct_expand =
+                nscoord(float(colFrame->GetPrefCoord()) / p);
+            if (new_small_pct_expand > max_small_pct_pref) {
+                max_small_pct_pref = new_small_pct_expand;
+            }
+            pct_running_pct += p;
+            pct_running_nonpct += colFrame->GetPrefCoord();
+        }
+    }
+
+    // Account for small percentages expanding the preferred width of
+    // *other* columns.
+    if (max_small_pct_pref > pref)
+        pref = max_small_pct_pref;
+
+    // Account for large percentages expanding the preferred width of
+    // themselves.  This needs to happen *after* accounting for small
+    // percentages; otherwise we'd need to iterate over the columns
+    // multiple times.  (I'm not entirely convinced that we don't need
+    // to even so, but it seems ok.)
+    if (0.0f < pct_running_pct && pct_running_pct < 1.0f) {
+        nscoord large_pct_pref = nscoord(float(pref - pct_running_nonpct) /
+                                         (1.0f - pct_running_pct));
+        if (large_pct_pref > pref)
+            pref = large_pct_pref;
+    }
+
+    // border-spacing isn't part of the basis for percentages
+    if (colCount > 0) {
+        nscoord add = spacing * (colCount + 1);
+        pref += add;
+        min += add;
+    }
+
+    float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
+    min = nsTableFrame::RoundToPixel(min, p2t);
+    pref = nsTableFrame::RoundToPixel(pref, p2t);
+
+    mMinWidth = min;
+    mPrefWidth = pref;
+}
+
 /* virtual */ void
 BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
+    mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+    mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
     mLastCalcWidth = nscoord_MIN;
 }
 
@@ -70,12 +153,19 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         return;
     mLastCalcWidth = width;
 
+    // XXX Is this needed?
+    NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
+                 (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN),
+                 "dirtyness out of sync");
+    if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+        ComputeIntrinsicWidths(aReflowState.rendContext);
+
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     PRInt32 colCount = cellMap->GetColCount();
     nscoord spacing = mTableFrame->GetCellSpacingX();
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
-    nscoord min = mTableFrame->GetMinWidth(aReflowState.rendContext);
+    nscoord min = mMinWidth;
 
     // border-spacing isn't part of the basis for percentages.
     if (colCount > 0) {

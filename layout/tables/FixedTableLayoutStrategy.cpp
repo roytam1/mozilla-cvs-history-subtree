@@ -54,6 +54,24 @@ FixedTableLayoutStrategy::~FixedTableLayoutStrategy()
 {
 }
 
+/* virtual */ nscoord
+FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
+{
+    nscoord result = 0;
+    DISPLAY_MIN_WIDTH(mTableFrame, result);
+    NS_NOTYETIMPLEMENTED("FixedTableLayoutStrategy");
+    return result;
+}
+
+/* virtual */ nscoord
+FixedTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
+{
+    nscoord result = 0;
+    DISPLAY_MIN_WIDTH(mTableFrame, result);
+    NS_NOTYETIMPLEMENTED("FixedTableLayoutStrategy");
+    return result;
+}
+
 /* virtual */ void
 FixedTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
@@ -62,5 +80,5 @@ FixedTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 /* virtual */ void
 FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
 {
-    NS_NOTYETIMPLEMENTED("write me");
+    NS_NOTYETIMPLEMENTED("FixedTableLayoutStrategy");
 }
