@@ -86,7 +86,7 @@ nsFilePickerConstructor(nsISupports *aOuter, REFNSIID aIID,
   }
 
   nsCOMPtr<nsIFilePicker> picker;
-  if (gtk_check_version(2,4,0) == NULL) {
+  if (gtk_check_version(2,6,3) == NULL) {
     picker = new nsFilePicker;
   } else {
     picker = do_CreateInstance(kXULFilePickerCID);
