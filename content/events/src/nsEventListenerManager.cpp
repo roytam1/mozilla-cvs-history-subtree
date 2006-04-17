@@ -1684,7 +1684,10 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
   if (NS_SUCCEEDED(result)) {
     nsCOMPtr<nsIPrivateDOMEvent> aPrivDOMEvent(do_QueryInterface(aDOMEvent));
     aPrivDOMEvent->SetCurrentTarget(aCurrentTarget);
-    result = aListenerStruct->mListener->HandleEvent(aDOMEvent);
+    // Hold a strong ref to the event listener so it won't die while
+    // handling the event.
+    nsCOMPtr<nsIDOMEventListener> listener = aListenerStruct->mListener;
+    result = listener->HandleEvent(aDOMEvent);
     aPrivDOMEvent->SetCurrentTarget(nsnull);
   }
 
