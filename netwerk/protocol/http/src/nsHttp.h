@@ -144,6 +144,15 @@ struct nsHttp
         return ResolveAtom(PromiseFlatCString(s).get());
     }
 
+    // returns true if the specified token [start,end) is valid per RFC 2616
+    // section 2.2
+    static PRBool IsValidToken(const char *start, const char *end);
+ 
+    static inline PRBool IsValidToken(const nsCString &s) {
+        const char *start = s.get();
+        return IsValidToken(start, start + s.Length());
+    }
+
     // This function parses a string containing a decimal-valued, non-negative
     // 64-bit integer.  If the value would exceed LL_MAXINT, then PR_FALSE is
     // returned.  Otherwise, this function returns PR_TRUE and stores the
