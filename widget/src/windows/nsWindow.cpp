@@ -206,7 +206,6 @@ static inline PRBool IsAlphaTranslucencySupported() { return pUpdateLayeredWindo
 
 #ifdef WINCE
 static PRBool gSoftKeyMenuBar = PR_FALSE;
-static PRBool gUseOkayButton  = PR_FALSE;
 static PRBool gOverrideHWKeys = PR_TRUE;
 
 typedef BOOL (__stdcall *UnregisterFunc1Proc)( UINT, UINT );
@@ -279,10 +278,15 @@ static void UnmapHardwareButtons()
   }
 }
 
-HWND CreateSoftKeyMenuBar(HWND wnd)
+void CreateSoftKeyMenuBar(HWND wnd)
 {
   if (!wnd)
-    return nsnull;
+    return;
+
+  static HWND gSoftKeyMenuBar = nsnull;
+
+  if (gSoftKeyMenuBar != nsnull)
+    return;
 
   SHMENUBARINFO mbi;
   ZeroMemory(&mbi, sizeof(SHMENUBARINFO));
@@ -297,7 +301,7 @@ HWND CreateSoftKeyMenuBar(HWND wnd)
   mbi.hInstRes   = GetModuleHandle(NULL);
   
   if (!SHCreateMenuBar(&mbi))
-    return nsnull;
+    return;
 
   SetWindowPos(mbi.hwndMB, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE);
 
@@ -314,7 +318,7 @@ HWND CreateSoftKeyMenuBar(HWND wnd)
               MAKELPARAM (SHMBOF_NODEFAULT | SHMBOF_NOTIFY, 
                           SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
 
-  return mbi.hwndMB;
+  gSoftKeyMenuBar = mbi.hwndMB;
 }
 
 #endif
@@ -1087,13 +1091,9 @@ nsWindow::nsWindow() : nsBaseWidget()
     prefs->GetBranch(0, getter_AddRefs(prefBranch));
     if (prefBranch)
     {
-      prefBranch->GetBoolPref("config.wince.useOKBtn", &gUseOkayButton);
       prefBranch->GetBoolPref("config.wince.overrideHWKeys", &gOverrideHWKeys);
     }
   }
-
-  mSoftKeyMenuBar = nsnull;
-
 #endif
 }
 
@@ -1151,9 +1151,6 @@ nsWindow::~nsWindow()
 
   NS_IF_RELEASE(mNativeDragTarget);
 
-#ifdef WINCE
-  // are we suppose to free mSoftKeyMenuBar.  MSDN isn't sure.
-#endif
 }
 
 
@@ -1748,10 +1745,11 @@ nsWindow::StandardWindowCreate(nsIWidget *aParent,
     }
   }
 #ifdef WINCE
-    if (mWindowType == eWindowType_dialog || mWindowType == eWindowType_toplevel )
-      mSoftKeyMenuBar = CreateSoftKeyMenuBar(mWnd);
-
-    MapHardwareButtons(mWnd);
+  
+  if (mWindowType == eWindowType_dialog || mWindowType == eWindowType_toplevel )
+    CreateSoftKeyMenuBar(mWnd);
+  
+  MapHardwareButtons(mWnd);
 #endif
 
   return NS_OK;
@@ -4366,13 +4364,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         result = DispatchWindowEvent(&event);
         NS_RELEASE(event.widget);
       }
-#ifdef WINCE
-      else if (gUseOkayButton && LOWORD(wParam) == IDOK)
-      {
-        PostMessage(mWnd, WM_CLOSE, 0, 0);
-        PostMessage(mWnd, WM_DESTROY, 0, 0);
-      }
-#endif
     }
     break;
 
@@ -5262,6 +5253,12 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       break;
 #endif
 
+
+#ifdef WINCE
+  case WM_HIBERNATE:        
+    nsMemory::HeapMinimize(PR_TRUE);
+    break;
+#endif
     default:
     {
       // Handle both flavors of mouse wheel events.
@@ -5477,14 +5474,15 @@ LPCWSTR nsWindow::WindowClassW()
     WNDCLASSW wc;
 
 //    wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-    wc.style         = CS_DBLCLKS;
     wc.lpfnWndProc   = nsWindow::DefaultWindowProc;
     wc.cbClsExtra    = 0;
     wc.cbWndExtra    = 0;
     wc.hInstance     = nsToolkit::mDllInstance;
 #ifdef WINCE
+    wc.style         = 0;
     wc.hIcon         = NULL;
 #else
+    wc.style         = CS_DBLCLKS;
     // XXX : we don't need LoadIconW for now (see bug 171349, comment 181)
     wc.hIcon         = ::LoadIcon(::GetModuleHandle(NULL), IDI_APPLICATION);
 #endif
@@ -5543,7 +5541,13 @@ LPCWSTR nsWindow::WindowPopupClassW()
 
   if (!nsWindow::sIsPopupClassRegistered) {
     WNDCLASSW wc;
-    wc.style         = CS_DBLCLKS | CS_XP_DROPSHADOW;
+
+#ifndef WINCE
+    wc.style = CS_DBLCLKS | CS_XP_DROPSHADOW;
+#else
+    wc.style = 0;
+#endif
+
     wc.lpfnWndProc   = nsWindow::DefaultWindowProc;
     wc.cbClsExtra    = 0;
     wc.cbWndExtra    = 0;
@@ -5561,9 +5565,11 @@ LPCWSTR nsWindow::WindowPopupClassW()
 
     nsWindow::sIsPopupClassRegistered = nsToolkit::mRegisterClass(&wc);
     if (!nsWindow::sIsPopupClassRegistered) {
+#ifndef WINCE
       // For older versions of Win32 (i.e., not XP), the registration will
       // fail, so we have to re-register without the CS_XP_DROPSHADOW flag.
       wc.style = CS_DBLCLKS;
+#endif
       nsWindow::sIsPopupClassRegistered = nsToolkit::mRegisterClass(&wc);
     }
   }
@@ -5711,35 +5717,6 @@ DWORD nsWindow::WindowStyle()
 //-------------------------------------------------------------------------
 DWORD nsWindow::WindowExStyle()
 {
-#ifdef WINCE
-
-  switch (mWindowType)
-  {
-    case eWindowType_child:
-      return 0;
-
-    case eWindowType_dialog:
-      return WS_EX_WINDOWEDGE | WS_EX_CAPTIONOKBTN;
-
-    case eWindowType_popup:
-      return WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
-
-    default:
-      NS_ASSERTION(0, "unknown border style");
-      // fall through
-
-    case eWindowType_toplevel:
-    case eWindowType_invisible:
-      {
-        if (gUseOkayButton)
-          return WS_EX_WINDOWEDGE | WS_EX_CAPTIONOKBTN;
-        
-        return WS_EX_WINDOWEDGE;      
-      }
-  }
-
-#else
-
   switch (mWindowType)
   {
     case eWindowType_child:
@@ -5759,7 +5736,6 @@ DWORD nsWindow::WindowExStyle()
     case eWindowType_invisible:
       return WS_EX_WINDOWEDGE;
   }
-#endif
 }
 
 
