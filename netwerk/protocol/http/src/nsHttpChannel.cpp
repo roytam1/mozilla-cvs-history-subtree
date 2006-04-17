@@ -160,7 +160,7 @@ nsHttpChannel::nsHttpChannel()
     , mRequestTime(0)
     , mProxyAuthContinuationState(nsnull)
     , mAuthContinuationState(nsnull)
-    , mStartPos(LL_MaxUint())
+    , mStartPos(LL_MAXUINT)
     , mRedirectionLimit(gHttpHandler->RedirectionLimit())
     , mIsPending(PR_FALSE)
     , mApplyConversion(PR_TRUE)
@@ -4370,7 +4370,7 @@ nsHttpChannel::GetEntityID(nsACString& aEntityID)
         return NS_ERROR_NOT_RESUMABLE;
     }
 
-    PRUint64 size = LL_MaxUint();
+    PRUint64 size = LL_MAXUINT;
     nsCAutoString etag, lastmod;
     if (mResponseHead) {
         size = mResponseHead->TotalEntitySize();

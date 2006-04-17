@@ -214,3 +214,22 @@ nsHttp::ResolveAtom(const char *str)
     stub->key = atom._val = heapAtom->value;
     return atom;
 }
+
+PRBool
+nsHttp::ParseInt64(const char *input, const char **next, PRInt64 *r)
+{
+    const char *start = input;
+    *r = 0;
+    while (*input >= '0' && *input <= '9') {
+        PRInt64 next = 10 * (*r) + (*input - '0');
+        if (next < *r) // overflow?
+            return PR_FALSE;
+        *r = next;
+      ++input;
+    }
+    if (input == start) // nothing parsed?
+        return PR_FALSE;
+    if (next)
+        *next = input;
+    return PR_TRUE;
+}
