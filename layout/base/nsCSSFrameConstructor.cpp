@@ -5231,9 +5231,9 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
   // positioned
   nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, PR_FALSE);
 
-  nsIFrame* areaFrame;
-  NS_NewAreaFrame(mPresShell, &areaFrame,
-                  NS_BLOCK_SPACE_MGR | NS_BLOCK_SHRINK_WRAP);
+  nsIFrame* areaFrame =
+    NS_NewAreaFrame(mPresShell,
+                    NS_BLOCK_SPACE_MGR | NS_BLOCK_SHRINK_WRAP | NS_BLOCK_MARGIN_ROOT);
 
   // Resolve style and initialize the frame
   nsRefPtr<nsStyleContext> styleContext;
