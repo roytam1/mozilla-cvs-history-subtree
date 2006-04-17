@@ -1,4 +1,4 @@
- /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+co /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 // vim:cindent:ts=2:et:sw=2:
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -456,6 +456,7 @@ GetFieldSetAreaFrame(nsIFrame* aFieldsetFrame)
 static inline PRBool
 IsFrameSpecial(nsIFrame* aFrame)
 {
+
   return (aFrame->GetStateBits() & NS_FRAME_IS_SPECIAL) != 0;
 }
 
@@ -5231,9 +5232,9 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
   // positioned
   nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, PR_FALSE);
 
-  nsIFrame* areaFrame =
-    NS_NewAreaFrame(mPresShell,
-                    NS_BLOCK_SPACE_MGR | NS_BLOCK_SHRINK_WRAP | NS_BLOCK_MARGIN_ROOT);
+  nsIFrame* areaFrame;
+  NS_NewAreaFrame(mPresShell, &areaFrame,
+                  NS_BLOCK_SPACE_MGR | NS_BLOCK_SHRINK_WRAP | NS_BLOCK_MARGIN_ROOT);
 
   // Resolve style and initialize the frame
   nsRefPtr<nsStyleContext> styleContext;
