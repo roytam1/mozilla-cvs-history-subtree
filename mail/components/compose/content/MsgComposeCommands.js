@@ -212,11 +212,14 @@ var gComposeRecyclingListener = {
     awResetAllRows();
     RemoveAllAttachments();
 
-    // We need to clear the identity popup menu in case the user will change them. It will be rebuilded later in ComposeStartup
+    // We need to clear the identity popup menu in case the user will change them. 
+    // It will be rebuilt later in ComposeStartup
     ClearIdentityListPopup(document.getElementById("msgIdentityPopup"));
  
     //Clear the subject
-    document.getElementById("msgSubject").value = "";
+    GetMsgSubjectElement().value = "";
+    // be sure to clear the transaction manager for the subject
+    GetMsgSubjectElement().editor.transactionManager.clear();
     SetComposeWindowTitle();
 
     SetContentAndBodyAsUnmodified();
@@ -1379,7 +1382,7 @@ function ComposeStartup(recycled, aParams)
         }
 
         var subjectValue = msgCompFields.subject;
-        document.getElementById("msgSubject").value = subjectValue;
+        GetMsgSubjectElement().value = subjectValue;
 
         var attachments = msgCompFields.attachmentsArray;
         if (attachments)
@@ -1710,7 +1713,7 @@ function GenericSendMessage( msgType )
     if (msgCompFields)
     {
       Recipients2CompFields(msgCompFields);
-      var subject = document.getElementById("msgSubject").value;
+      var subject = GetMsgSubjectElement().value;
       msgCompFields.subject = subject;
       Attachments2CompFields(msgCompFields);
 
@@ -1747,7 +1750,7 @@ function GenericSendMessage( msgType )
                     {value:0}))
             {
               msgCompFields.subject = result.value;
-              var subjectInputElem = document.getElementById("msgSubject");
+              var subjectInputElem = GetMsgSubjectElement();
               subjectInputElem.value = result.value;
             }
             else
@@ -1998,7 +2001,7 @@ function Save()
 function SaveAsFile(saveAs)
 {
   dump("SaveAsFile from XUL\n");
-  var subject = document.getElementById('msgSubject').value;
+  var subject = GetMsgSubjectElement().value;
   GetCurrentEditor().setDocumentTitle(subject);
 
   if (gMsgCompose.bodyConvertible() == nsIMsgCompConvertible.Plain)
@@ -2411,7 +2414,7 @@ function AdjustFocus()
   }
   else
   {
-      element = document.getElementById("msgSubject");
+      element = GetMsgSubjectElement();
       if (element.value == "") {
         //dump("XXX focus on subject\n");
         element.focus();
@@ -2425,7 +2428,7 @@ function AdjustFocus()
 
 function SetComposeWindowTitle()
 {
-  var newTitle = document.getElementById('msgSubject').value;
+  var newTitle = GetMsgSubjectElement().value;
 
   /* dump("newTitle = " + newTitle + "\n"); */
 
