@@ -3827,7 +3827,7 @@ nsSchemaValidator::ValidateComplexParticle(nsIDOMNode* aNode,
   rv = aSchemaParticle->GetMaxOccurs(&maxOccurs);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIDOMNode>leftOvers;
+  nsCOMPtr<nsIDOMNode> leftOvers, tmpNode;
 
   switch(particleType) {
     case nsISchemaParticle::PARTICLE_TYPE_ELEMENT: {
@@ -3844,7 +3844,9 @@ nsSchemaValidator::ValidateComplexParticle(nsIDOMNode* aNode,
 
         // if not an element node, skip
         if (nodeType != nsIDOMNode::ELEMENT_NODE) {
-          leftOvers->GetNextSibling(getter_AddRefs(leftOvers));
+          rv = leftOvers->GetNextSibling(getter_AddRefs(tmpNode));
+          NS_ENSURE_SUCCESS(rv, rv);
+          leftOvers = tmpNode;
           continue;
         }
 
@@ -3859,8 +3861,11 @@ nsSchemaValidator::ValidateComplexParticle(nsIDOMNode* aNode,
           NS_ENSURE_SUCCESS(rv, rv);
 
           // set rest to the next element if node is valid
-          if (isValid)
-            leftOvers->GetNextSibling(getter_AddRefs(leftOvers));
+          if (isValid) {
+            rv = leftOvers->GetNextSibling(getter_AddRefs(tmpNode));
+            NS_ENSURE_SUCCESS(rv, rv);
+            leftOvers = tmpNode;
+          }
 
           iterations++;
           done = !isValid;
@@ -4184,7 +4189,8 @@ nsSchemaValidator::ValidateComplexAll(nsIDOMNode* aStartNode,
   } else {
     // check if any of the particles didn't occur enough.  We already checked
     // if a particle is hit more than once
-    PRUint32 hits, particleMinOccurs, particleMaxOccurs;
+    PRUint32 hits = 0;
+    PRUint32 particleMinOccurs, particleMaxOccurs;
 
     for (PRUint32 i = 0; i < particleCount; ++i) {
       rv = aSchemaModelGroup->GetParticle(i, getter_AddRefs(particle));
