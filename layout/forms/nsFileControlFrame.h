@@ -170,6 +170,9 @@ public:
 
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
 
+  // We don't paint our background.
+  virtual PRBool CanPaintBackground() { return PR_FALSE; }
+
 protected:
   virtual PRIntn GetSkipSides() const;
 
