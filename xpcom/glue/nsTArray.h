@@ -527,6 +527,7 @@ class nsTArray : public nsTArray_base {
         for (; iter != end; ++iter) {
           elem_traits::Construct(iter);
         }
+        IncrementLength(newLen - oldLen);
       } else {
         RemoveElementsAt(newLen, oldLen - newLen);
       }
