@@ -1,4 +1,4 @@
-pref("general.useragent.extra.minimo", "Minimo/0.014");
+pref("general.useragent.extra.minimo", "Minimo/0.015");
 
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=");
