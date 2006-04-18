@@ -883,21 +883,23 @@ nsGenericElement::~nsGenericElement()
   }
 
   if (HasEventListenerManager()) {
-#ifdef DEBUG
-    {
-      EventListenerManagerMapEntry *entry =
-        NS_STATIC_CAST(EventListenerManagerMapEntry *,
-                       PL_DHashTableOperate(&sEventListenerManagersHash, this,
-                                            PL_DHASH_LOOKUP));
-
-      if (PL_DHASH_ENTRY_IS_FREE(entry)) {
-        NS_ERROR("Huh, our bit says we have a listener manager list, "
+    EventListenerManagerMapEntry *entry =
+      NS_STATIC_CAST(EventListenerManagerMapEntry *,
+                     PL_DHashTableOperate(&sEventListenerManagersHash, this,
+                                          PL_DHASH_LOOKUP));
+    NS_ASSERTION(!PL_DHASH_ENTRY_IS_FREE(entry),
+                 "Huh, our bit says we have a listener manager list, "
                  "but there's nothing in the hash!?!!");
+    if (PL_DHASH_ENTRY_IS_BUSY(entry)) {
+      nsCOMPtr<nsIEventListenerManager> listenerManager;
+      listenerManager.swap(entry->mListenerManager);
+      // Remove the entry and *then* do operations that could cause further
+      // modification of sEventListenerManagersHash.  See bug 334177.
+      PL_DHashTableRawRemove(&sEventListenerManagersHash, entry);
+      if (listenerManager) {
+        listenerManager->SetListenerTarget(nsnull);
       }
     }
-#endif
-
-    PL_DHashTableOperate(&sEventListenerManagersHash, this, PL_DHASH_REMOVE);
   }
 
   if (HasDOMSlots()) {
