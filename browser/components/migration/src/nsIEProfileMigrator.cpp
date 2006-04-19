@@ -103,6 +103,15 @@ const int sInitialCookieBufferSize = 1024; // but it can grow
 const int sUsernameLengthLimit     = 80;
 const int sHostnameLengthLimit     = 255;
 
+//*** Replacements for comsupp.lib calls used by pstorec.dll
+//***********************************************************************
+void  __stdcall _com_issue_error(HRESULT hr)
+{
+// XXX - Do nothing for now
+}
+
+//***********************************************************************
+
 //***********************************************************************
 //*** windows registry to mozilla prefs data type translation functions
 //***********************************************************************
@@ -564,7 +573,7 @@ nsIEProfileMigrator::CopyHistory(PRBool aReplace)
     if (SUCCEEDED(hr)) {
       STATURL statURL;
       ULONG fetched;
-      _bstr_t url, title;
+      _bstr_t url;
       nsCAutoString scheme;
       SYSTEMTIME st;
       PRBool validScheme = PR_FALSE;
