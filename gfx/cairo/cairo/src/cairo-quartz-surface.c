@@ -37,6 +37,12 @@
 #include "cairo-private.h"
 #include "cairo-quartz.h"
 
+/* kCGBitmapByteOrder32Host was introduced in the 10.4 SDK.  If the constant
+ * isn't available, use 0, corresponding to kCGBitmapByteOrderDefault. */
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4
+#define kCGBitmapByteOrder32Host 0
+#endif
+
 typedef struct cairo_quartz_surface {
     cairo_surface_t base;
 
@@ -111,7 +117,8 @@ _cairo_quartz_surface_acquire_source_image(void *abstract_surface,
                                      32,
                                      rowBytes,
                                      colorSpace,
-                                     kCGImageAlphaPremultipliedFirst,
+                                     kCGImageAlphaPremultipliedFirst |
+                                      kCGBitmapByteOrder32Host,
                                      dataProvider,
                                      NULL,
                                      false, kCGRenderingIntentDefault);
