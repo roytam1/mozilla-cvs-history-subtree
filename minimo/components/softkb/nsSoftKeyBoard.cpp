@@ -79,6 +79,7 @@
 
 #include "nsITimer.h"
 
+#include "nsISoftKeyBoard.h"
 
 static PRBool gUseSoftwareKeyboard;
 
@@ -360,7 +361,7 @@ private:
 };
 
 
-class nsSoftKeyBoardService: public nsIObserver 
+class nsSoftKeyBoardService: public nsIObserver, public nsISoftKeyBoard
 {
 public:  
   nsSoftKeyBoardService();  
@@ -368,6 +369,7 @@ public:
   
   NS_DECL_ISUPPORTS
   NS_DECL_NSIOBSERVER
+  NS_DECL_NSISOFTKEYBOARD
 
   nsCOMArray<nsSoftKeyBoard> mObjects;
 
@@ -647,6 +649,52 @@ nsSoftKeyBoardService::CloseSIP()
 #endif
 }
 
+
+
+NS_IMETHODIMP
+nsSoftKeyBoardService::GetWindowRect(PRInt32 *top, PRInt32 *bottom, PRInt32 *left, PRInt32 *right)
+{
+#ifdef WINCE
+  if (!top || !bottom || !left || !right)
+    return NS_ERROR_INVALID_ARG;
+
+  HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
+  if (!hWndSIP)
+    return NS_ERROR_NULL_POINTER;
+
+  RECT rect;
+  BOOL b = ::GetWindowRect(hWndSIP, &rect);
+  if (!b)
+    return NS_ERROR_UNEXPECTED;
+
+  *top = rect.top;
+  *bottom = rect.bottom;
+  *left = rect.left;
+  *right = rect.right;
+
+  return NS_OK;
+#endif
+
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsSoftKeyBoardService::SetWindowRect(PRInt32 top, PRInt32 bottom, PRInt32 left, PRInt32 right)
+{
+#ifdef WINCE
+  HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
+  if (!hWndSIP)
+    return NS_ERROR_NULL_POINTER;
+  
+  SetWindowPos(hWndSIP, HWND_TOP, left, top, right-left, bottom-top, SWP_SHOWWINDOW);
+  return NS_OK;
+#endif
+ 
+
+ return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 PRBool
 nsSoftKeyBoard::ShouldOpenKeyboardFor(nsIDOMEvent* aEvent)
 {
@@ -738,7 +786,7 @@ nsSoftKeyBoardService::~nsSoftKeyBoardService()
 {
 }  
 
-NS_IMPL_ISUPPORTS1(nsSoftKeyBoardService, nsIObserver)
+NS_IMPL_ISUPPORTS2(nsSoftKeyBoardService, nsIObserver, nsISoftKeyBoard)
 
 void
 nsSoftKeyBoardService::HandlePref(const char* pref, nsIPrefBranch2* prefBranch)
