@@ -105,6 +105,9 @@ nsObserverList::RemoveObserver(nsIObserver* anObserver)
     
     NS_ENSURE_ARG(anObserver);
 
+    // Prevent the observer from being destroyed while we're inside the lock.
+    nsCOMPtr<nsIObserver> kungFuDeathGrip(anObserver);
+
     nsAutoLock lock(mLock);
 
     if (!mObserverList)
