@@ -17,7 +17,7 @@ Bugzilla at https://bugzilla.mozilla.org/ for links to known bugs,
 bug-writing guidelines, and more. You can also get help with Bugzilla by
 pointing your IRC client to #mozillazine at irc.mozilla.org, OS/2 specific
 problems are discussed in #warpzilla and in the newsgroup
-netscape.public.mozilla.os2 on news.mozilla.org and other newsservers.
+mozilla.dev.ports.os2 on news.mozilla.org.
 
 
 ==========================================================================
