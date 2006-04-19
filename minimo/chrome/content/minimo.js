@@ -823,11 +823,11 @@ function urlbar() {
 
 /* Reset the text size */ 
 function BrowserResetZoomPlus() {
-  gBrowser.selectedBrowser.markupDocumentViewer.textZoom+= .25;
+  gBrowser.selectedBrowser.markupDocumentViewer.textZoom+= .1;
 }
 
 function BrowserResetZoomMinus() {
-  gBrowser.selectedBrowser.markupDocumentViewer.textZoom-= .25;
+  gBrowser.selectedBrowser.markupDocumentViewer.textZoom-= .1;
 }
 
 
