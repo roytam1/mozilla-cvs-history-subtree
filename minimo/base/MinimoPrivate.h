@@ -61,7 +61,6 @@
 #include "nsIAppStartupNotifier.h"
 #include "nsIBadCertListener.h"
 #include "nsIClipboardCommands.h"
-#include "nsICommandLineRunner.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIDOMWindow.h"
 #include "nsIEventQueueService.h"

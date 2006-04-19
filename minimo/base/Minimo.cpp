@@ -710,14 +710,6 @@ int main(int argc, char *argv[])
 		return 1;
   }
 
-  nsCOMPtr<nsICommandLineRunner> cmdLine = do_CreateInstance("@mozilla.org/toolkit/command-line;1");
-  
-  nsCOMPtr<nsIFile> workingDir;
-  NS_GetSpecialDirectory(NS_OS_CURRENT_WORKING_DIR, getter_AddRefs(workingDir));
-  
-  if (cmdLine)
-    cmdLine->Init(argc, argv, workingDir, nsICommandLine::STATE_INITIAL_LAUNCH);
-
   appShell->Create(nsnull, nsnull);
   
   ApplicationObserver *appObserver = new ApplicationObserver(appShell);
