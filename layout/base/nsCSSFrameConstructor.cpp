@@ -1694,8 +1694,7 @@ MoveChildrenTo(nsFrameManager*          aFrameManager,
     // anonymous block frame, but oddly they aren't -- need to
     // investigate that...)
     if (aNewParentSC)
-      aPresContext->FrameManager()->ReParentStyleContext(aFrameList,
-                                                         aNewParentSC);
+      aPresContext->FrameManager()->ReParentStyleContext(aFrameList);
 #endif
 
     aFrameList = aFrameList->GetNextSibling();
@@ -3798,8 +3797,7 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsFrameConstructorState& aState,
                       aNewFrame);
   // if the parent frame was anonymous then reparent the style context
   if (aIsPseudoParent) {
-    aState.mFrameManager->
-      ReParentStyleContext(aNewFrame, parentFrame->GetStyleContext());
+    aState.mFrameManager->ReParentStyleContext(aNewFrame);
   }
 
   // construct additional col frames if the col frame has a span > 1
@@ -12089,14 +12087,12 @@ nsCSSFrameConstructor::ProcessChildren(nsFrameConstructorState& aState,
 // Support for :first-line style
 
 static void
-ReparentFrame(nsPresContext* aPresContext,
+ReparentFrame(nsFrameManager* aFrameManager,
               nsIFrame* aNewParentFrame,
-              nsStyleContext* aParentStyleContext,
               nsIFrame* aFrame)
 {
   aFrame->SetParent(aNewParentFrame);
-  aPresContext->FrameManager()->ReParentStyleContext(aFrame,
-                                                     aParentStyleContext);
+  aFrameManager->ReParentStyleContext(aFrame);
 }
 
 // Special routine to handle placing a list of frames into a block
@@ -12162,8 +12158,10 @@ nsCSSFrameConstructor::WrapFramesInFirstLineFrame(
 
     // Give the inline frames to the lineFrame <b>after</b> reparenting them
     kid = firstInlineFrame;
+    NS_ASSERTION(lineFrame->GetStyleContext() == firstLineStyle,
+                 "Bogus style context on line frame");
     while (kid) {
-      ReparentFrame(aState.mPresContext, lineFrame, firstLineStyle, kid);
+      ReparentFrame(aState.mFrameManager, lineFrame, kid);
       kid = kid->GetNextSibling();
     }
     lineFrame->SetInitialChildList(aState.mPresContext, nsnull,
@@ -12204,7 +12202,6 @@ nsCSSFrameConstructor::AppendFirstLineFrames(
     return rv;
   }
   nsIFrame* lineFrame = lastBlockKid;
-  nsStyleContext* firstLineStyle = lineFrame->GetStyleContext();
 
   // Find the first and last inline frame in aFrameItems
   nsIFrame* kid = aFrameItems.childList;
@@ -12232,7 +12229,7 @@ nsCSSFrameConstructor::AppendFirstLineFrames(
   lastInlineFrame->SetNextSibling(nsnull);
   kid = firstInlineFrame;
   while (kid) {
-    ReparentFrame(aState.mPresContext, lineFrame, firstLineStyle, kid);
+    ReparentFrame(aState.mFrameManager, lineFrame, kid);
     kid = kid->GetNextSibling();
   }
   aState.mFrameManager->AppendFrames(lineFrame, nsnull, firstInlineFrame);
@@ -12274,12 +12271,10 @@ nsCSSFrameConstructor::InsertFirstLineFrames(
     if (firstBlockKid->GetType() == nsLayoutAtoms::lineFrame) {
       // We already have a first-line frame
       nsIFrame* lineFrame = firstBlockKid;
-      nsStyleContext* firstLineStyle = lineFrame->GetStyleContext();
 
       if (isInline) {
         // Easy case: the new inline frame will go into the lineFrame.
-        ReparentFrame(aState.mPresContext, lineFrame, firstLineStyle,
-                      newFrame);
+        ReparentFrame(aState.mFrameManager, lineFrame, newFrame);
         aState.mFrameManager->InsertFrames(lineFrame, nsnull, nsnull,
                                            newFrame);
 
@@ -12317,7 +12312,9 @@ nsCSSFrameConstructor::InsertFirstLineFrames(
 
           // Give the inline frames to the lineFrame <b>after</b>
           // reparenting them
-          ReparentFrame(aPresContext, lineFrame, firstLineStyle, newFrame);
+          NS_ASSERTION(lineFrame->GetStyleContext() == firstLineStyle,
+                       "Bogus style context on line frame");
+          ReparentFrame(aPresContext, lineFrame, newFrame);
           lineFrame->SetInitialChildList(aState.mPresContext, nsnull,
                                          newFrame);
         }
@@ -12376,8 +12373,7 @@ nsCSSFrameConstructor::InsertFirstLineFrames(
         else {
           // We got lucky: aPrevSibling was the last inline frame in
           // the line-frame.
-          ReparentFrame(aState.mPresContext, aBlockFrame, firstLineStyle,
-                        newFrame);
+          ReparentFrame(aState.mFrameManager, aBlockFrame, newFrame);
           aState.mFrameManager->InsertFrames(aBlockFrame, nsnull,
                                              prevSiblingParent, newFrame);
           aFrameItems.childList = nsnull;

@@ -884,14 +884,15 @@ NS_IMETHODIMP nsInlineFrame::GetAccessible(nsIAccessible** aAccessible)
 
 static void
 ReParentChildListStyle(nsPresContext* aPresContext,
-                       nsStyleContext* aParentStyleContext,
-                       nsFrameList& aFrameList)
+                       nsFrameList& aFrameList,
+                       nsIFrame* aParentFrame)
 {
   nsFrameManager *frameManager = aPresContext->FrameManager();
 
   for (nsIFrame* kid = aFrameList.FirstChild(); kid;
        kid = kid->GetNextSibling()) {
-    frameManager->ReParentStyleContext(kid, aParentStyleContext);
+    NS_ASSERTION(kid->GetParent() == aParentFrame, "Bogus parentage");
+    frameManager->ReParentStyleContext(kid);
   }
 }
 
@@ -947,7 +948,8 @@ nsFirstLineFrame::PullOneFrame(nsPresContext* aPresContext, InlineReflowState& i
   if (frame && !mPrevInFlow) {
     // We are a first-line frame. Fixup the child frames
     // style-context that we just pulled.
-    aPresContext->FrameManager()->ReParentStyleContext(frame, mStyleContext);
+    NS_ASSERTION(frame->GetParent() == this, "Incorrect parent?");
+    aPresContext->FrameManager()->ReParentStyleContext(frame);
   }
   return frame;
 }
@@ -970,7 +972,7 @@ nsFirstLineFrame::Reflow(nsPresContext* aPresContext,
       nsFrameList frames(prevOverflowFrames);
       
       mFrames.InsertFrames(this, nsnull, prevOverflowFrames);
-      ReParentChildListStyle(aPresContext, mStyleContext, frames);
+      ReParentChildListStyle(aPresContext, frames, this);
     }
   }
 
@@ -981,7 +983,7 @@ nsFirstLineFrame::Reflow(nsPresContext* aPresContext,
     nsFrameList frames(overflowFrames);
 
     mFrames.AppendFrames(nsnull, overflowFrames);
-    ReParentChildListStyle(aPresContext, mStyleContext, frames);
+    ReParentChildListStyle(aPresContext, frames, this);
   }
 
   // Set our own reflow state (additional state above and beyond
@@ -1042,7 +1044,7 @@ nsFirstLineFrame::Reflow(nsPresContext* aPresContext,
           SetStyleContext(aPresContext, newSC);
 
           // Re-resolve all children
-          ReParentChildListStyle(aPresContext, mStyleContext, mFrames);
+          ReParentChildListStyle(aPresContext, mFrames, this);
         }
       }
     }
