@@ -1163,6 +1163,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("9223372036854775807"),
                                  NS_LITERAL_STRING("-9223372036854775808"),
                                  nsnull, &isValid);
+      break;
     }
 
     /* http://www.w3.org/TR/xmlschema-2/#int */
@@ -1173,6 +1174,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("2147483647"),
                                  NS_LITERAL_STRING("-2147483648"),
                                  nsnull, &isValid);
+      break;
     }
 
     /* http://www.w3.org/TR/xmlschema-2/#short */
@@ -1183,6 +1185,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("32767"),
                                  NS_LITERAL_STRING("-32768"),
                                  nsnull, &isValid);
+      break;
     }
 
     /* http://www.w3.org/TR/xmlschema-2/#unsignedLong */
@@ -1193,6 +1196,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("18446744073709551615"),
                                  NS_LITERAL_STRING("0"),
                                  nsnull, &isValid);
+      break;
     }
 
     /* http://www.w3.org/TR/xmlschema-2/#unsignedInt */
@@ -1203,6 +1207,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("4294967295"),
                                  NS_LITERAL_STRING("0"),
                                  nsnull, &isValid);
+      break;
     }
 
     /* http://www.w3.org/TR/xmlschema-2/#unsignedShort */
@@ -1213,6 +1218,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("65535"),
                                  NS_LITERAL_STRING("0"),
                                  nsnull, &isValid);
+      break;
     }
 
     /* http://www.w3.org/TR/xmlschema-2/#unsignedByte */
@@ -1223,6 +1229,7 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
                                  NS_LITERAL_STRING("255"),
                                  NS_LITERAL_STRING("0"),
                                  nsnull, &isValid);
+      break;
     }
 
     case nsISchemaBuiltinType::BUILTIN_TYPE_BYTE: {
