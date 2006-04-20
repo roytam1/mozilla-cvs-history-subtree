@@ -3091,14 +3091,19 @@ nsObjectFrame::PluginNotAvailable(const char *aMimeType)
   // found event and mark this plugin as broken.
   if (!IsSupportedImage(type) &&
       !IsSupportedDocument(mContent, type)) {
-    FirePluginNotFoundEvent(mContent);
-
     mIsBrokenPlugin = PR_TRUE;
 
     mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
 
     GetParent()->ReflowDirtyChild(mContent->GetDocument()->GetShellAt(0),
                                   this);
+
+    // Make sure to fire the event AFTER we've finished touching out members.
+
+    // Hold a strong ref to our content across this event dispatch.
+    nsCOMPtr<nsIContent> kungFuDeathGrip(mContent);
+    
+    FirePluginNotFoundEvent(mContent);
   }
 }
 
