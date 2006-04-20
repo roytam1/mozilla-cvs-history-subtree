@@ -673,6 +673,13 @@ nsFileControlFrame::Paint(nsPresContext*      aPresContext,
                           nsFramePaintLayer    aWhichLayer,
                           PRUint32             aFlags)
 {
+  if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
+    // Our background is inherited to the text input.  And we never have
+    // padding or borders, per styles in forms.css.  So don't paint anything
+    // here -- doing it just makes us look ugly in some cases and has no effect
+    // in others.
+    return NS_OK;
+  }
   PRBool isVisible;
   if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && !isVisible) {
     return NS_OK;
