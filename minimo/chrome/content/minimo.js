@@ -639,7 +639,7 @@ function MiniNavShutdown()
 
 function loadURI(uri)
 {
-  gBrowser.webNavigation.loadURI(uri, nsIWebNavigation.LOAD_FLAGS_NONE, null, null, null);
+  gBrowser.webNavigation.loadURI(uri, nsIWebNavigation.LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP, null, null, null);
 }
 
 function BrowserHome()
