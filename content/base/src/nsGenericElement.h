@@ -228,9 +228,7 @@ public:
 
   ~EventListenerManagerMapEntry()
   {
-    if (mListenerManager) {
-      mListenerManager->SetListenerTarget(nsnull);
-    }
+    NS_ASSERTION(!mListenerManager, "caller must release and disconnect ELM");
   }
 
 private:
