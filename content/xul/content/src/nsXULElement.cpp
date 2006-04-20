@@ -1189,19 +1189,9 @@ nsXULElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
 
     nsMutationGuard::DidMutate();
 
-    nsCOMPtr<nsIContent> oldKid = mAttrsAndChildren.ChildAt(aIndex);
-    NS_ENSURE_TRUE(oldKid, NS_ERROR_FAILURE);
-
-    nsIDocument* doc = GetCurrentDoc();
-    mozAutoDocUpdate updateBatch(doc, UPDATE_CONTENT_MODEL, aNotify);
-
-    if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
-      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEREMOVED, oldKid);
-      mutation.mRelatedNode =
-          do_QueryInterface(NS_STATIC_CAST(nsIStyledContent*, this));
-
-      nsEventStatus status = nsEventStatus_eIgnore;
-      oldKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
+    nsCOMPtr<nsIContent> oldKid = mAttrsAndChildren.GetSafeChildAt(aIndex);
+    if (!oldKid) {
+      return NS_OK;
     }
 
     // On the removal of a <treeitem>, <treechildren>, or <treecell> element,
@@ -1265,11 +1255,7 @@ nsXULElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
       }
     }
 
-    mAttrsAndChildren.RemoveChildAt(aIndex);
-    //nsRange::OwnerChildRemoved(this, aIndex, oldKid);
-    if (aNotify && doc) {
-        doc->ContentRemoved(this, oldKid, aIndex);
-    }
+    rv = nsGenericElement::RemoveChildAt(aIndex, aNotify);
 
     if (newCurrentIndex == -2)
         controlElement->SetCurrentItem(nsnull);
@@ -1289,7 +1275,8 @@ nsXULElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
         }
     }
 
-    if (fireSelectionHandler && doc) {
+    nsIDocument* doc;
+    if (fireSelectionHandler && (doc = GetCurrentDoc())) {
       nsCOMPtr<nsIDOMDocumentEvent> docEvent(do_QueryInterface(doc));
       nsCOMPtr<nsIDOMEvent> event;
       docEvent->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
@@ -1307,11 +1294,7 @@ nsXULElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
       }
     }
 
-    // This will cause the script object to be unrooted for each
-    // element in the subtree.
-    oldKid->UnbindFromTree();
-
-    return NS_OK;
+    return rv;
 }
 
 void

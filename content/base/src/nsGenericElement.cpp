@@ -2841,7 +2841,9 @@ nsGenericElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
 nsresult
 nsGenericElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
 {
-  nsCOMPtr<nsIContent> oldKid = GetChildAt(aIndex);
+  nsCOMPtr<nsIContent> oldKid = mAttrsAndChildren.GetSafeChildAt(aIndex);
+  NS_ASSERTION(oldKid == GetChildAt(aIndex), "Unexpected child in RemoveChildAt");
+
   if (oldKid) {
     return doRemoveChildAt(aIndex, aNotify, oldKid, this, GetCurrentDoc(),
                            mAttrsAndChildren);
@@ -2935,16 +2937,15 @@ doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
   nsContentOrDocument container(aParent, aDocument);
   
   NS_PRECONDITION(aKid && aKid->GetParent() == aParent &&
-                  aKid == container.GetChildAt(aIndex), "Bogus aKid");
+                  aKid == container.GetChildAt(aIndex) &&
+                  container.IndexOf(aKid) == aIndex, "Bogus aKid");
 
   mozAutoDocUpdate updateBatch(aDocument, UPDATE_CONTENT_MODEL, aNotify);
 
-  PRBool hasListeners = 
-    aParent &&
-    nsGenericElement::HasMutationListeners(aParent,
-                                           NS_EVENT_BITS_MUTATION_NODEREMOVED);
+  nsMutationGuard guard;
 
-  if (hasListeners) {
+  if (aParent && nsGenericElement::HasMutationListeners(aParent,
+        NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
     nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEREMOVED, aKid);
     mutation.mRelatedNode = do_QueryInterface(aParent);
 
@@ -2953,32 +2954,36 @@ doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
                            NS_EVENT_FLAG_INIT, &status);
   }
 
-  // Someone may have removed the kid while that event was processing...
-  if (!hasListeners ||
-      (aKid->GetParent() == aParent &&
-       aKid == container.GetChildAt(aIndex))) {
-    if (aParent) {
-      nsRange::OwnerChildRemoved(aParent, aIndex, aKid);
+  // Someone may have removed the kid or any of its siblings while that event
+  // was processing.
+  if (guard.Mutated(0)) {
+    aIndex = container.IndexOf(aKid);
+    if (aIndex < 0) {
+      return NS_OK;
+    }
+  }
+
+  if (aParent && !aParent->IsContentOfType(nsIContent::eXUL)) {
+    nsRange::OwnerChildRemoved(aParent, aIndex, aKid);
+  }
+
+  // Note that SetRootContent already deals with unbinding, so if we plan to
+  // call it we shouldn't unbind ourselves.  It also deals with removing the
+  // node from the child array, but not with notifying, unfortunately.  So we
+  // have to call ContentRemoved ourselves after setting the root content.
+  if (!aParent && aKid->IsContentOfType(nsIContent::eELEMENT)) {
+    aDocument->SetRootContent(nsnull);
+    if (aNotify) {
+      aDocument->ContentRemoved(aParent, aKid, aIndex);
+    }
+  } else {
+    aChildArray.RemoveChildAt(aIndex);
+
+    if (aNotify && aDocument) {
+      aDocument->ContentRemoved(aParent, aKid, aIndex);
     }
 
-    // Note that SetRootContent already deals with unbinding, so if we plan to
-    // call it we shouldn't unbind ourselves.  It also deals with removing the
-    // node from the child array, but not with notifying, unfortunately.  So we
-    // have to call ContentRemoved ourselves after setting the root content.
-    if (!aParent && aKid->IsContentOfType(nsIContent::eELEMENT)) {
-      aDocument->SetRootContent(nsnull);
-      if (aNotify) {
-        aDocument->ContentRemoved(aParent, aKid, aIndex);
-      }
-    } else {
-      aChildArray.RemoveChildAt(aIndex);
-
-      if (aNotify && aDocument) {
-        aDocument->ContentRemoved(aParent, aKid, aIndex);
-      }
-    
-      aKid->UnbindFromTree();
-    }
+    aKid->UnbindFromTree();
   }
 
   return NS_OK;
