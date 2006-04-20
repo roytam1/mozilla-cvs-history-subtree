@@ -477,9 +477,11 @@ nsHTMLSelectElement::nsHTMLSelectElement(nsINodeInfo *aNodeInfo,
     mIsDoneAddingChildren(!aFromParser),
     mNonOptionChildren(0),
     mOptGroupCount(0),
-    mSelectedIndex(-1),
-    mRestoreState(nsnull)
+    mSelectedIndex(-1)
 {
+  // FIXME: Bug 328908, set mOptions in an Init function and get rid of null
+  // checks.
+
   // DoneAddingChildren() will be called later if it's from the parser,
   // otherwise it is
 }
@@ -745,7 +747,6 @@ nsHTMLSelectElement::InsertOptionsIntoListRecurse(nsIContent* aOptions,
 
   nsCOMPtr<nsIDOMHTMLOptionElement> optElement(do_QueryInterface(aOptions));
   if (optElement) {
-    NS_ASSERTION(optElement, "not a real option");
     nsresult rv = mOptions->InsertOptionAt(optElement, *aInsertIndex);
     NS_ENSURE_SUCCESS(rv, rv);
     (*aInsertIndex)++;
@@ -788,7 +789,6 @@ nsHTMLSelectElement::RemoveOptionsFromListRecurse(nsIContent* aOptions,
 
   nsCOMPtr<nsIDOMHTMLOptionElement> optElement(do_QueryInterface(aOptions));
   if (optElement) {
-    NS_ASSERTION(optElement, "not a real option");
     if (mOptions->ItemAsOption(aRemoveIndex) != optElement) {
       NS_ERROR("wrong option at index");
       return NS_ERROR_UNEXPECTED;
@@ -1712,6 +1712,7 @@ nsHTMLSelectElement::DoneAddingChildren()
   // content, restore the rest of the options proper-like
   if (mRestoreState) {
     RestoreStateTo(mRestoreState);
+    mRestoreState = nsnull;
   }
 
   // Notify the frame
@@ -1827,7 +1828,7 @@ nsHTMLSelectElement::HandleDOMEvent(nsPresContext* aPresContext,
 NS_IMETHODIMP
 nsHTMLSelectElement::SaveState()
 {
-  nsSelectState* state = new nsSelectState();
+  nsRefPtr<nsSelectState> state = new nsSelectState();
   if (!state) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -1855,8 +1856,6 @@ nsHTMLSelectElement::SaveState()
                                            state);
     NS_ASSERTION(NS_SUCCEEDED(rv), "selecteditems set failed!");
   }
-
-  NS_RELEASE(state);
 
   return rv;
 }
