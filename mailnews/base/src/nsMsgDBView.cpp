@@ -2896,8 +2896,11 @@ nsMsgDBView::PerformActionsOnJunkMsgs()
   if (movingJunkMessages) 
   {
     // tell the FE to call SetNextMessageAfterDelete() because a delete is coming
-    rv = mCommandUpdater->UpdateNextMessageAfterDelete();
-    NS_ENSURE_SUCCESS(rv,rv);
+    if (mCommandUpdater)
+    {
+      rv = mCommandUpdater->UpdateNextMessageAfterDelete();
+      NS_ENSURE_SUCCESS(rv,rv);
+    }
   
     NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
     if (junkTargetFolder) 
