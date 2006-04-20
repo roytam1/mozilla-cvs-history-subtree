@@ -105,8 +105,6 @@ nsDocAccessible::nsDocAccessible(nsIDOMNode *aDOMNode, nsIWeakReference* aShell)
     }
   }
   
-  PutCacheEntry(gGlobalDocAccessibleCache, mWeakShell, this);
-
   // XXX aaronl should we use an algorithm for the initial cache size?
   mAccessNodeCache.Init(kDefaultCacheSize);
 
@@ -439,6 +437,8 @@ NS_IMETHODIMP nsDocAccessible::GetParent(nsIAccessible **aParent)
 
 NS_IMETHODIMP nsDocAccessible::Init()
 {
+  PutCacheEntry(gGlobalDocAccessibleCache, mWeakShell, this);
+
   AddEventListeners();
 
   nsresult rv = nsBlockAccessible::Init();
