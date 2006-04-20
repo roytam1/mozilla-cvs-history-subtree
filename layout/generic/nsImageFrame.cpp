@@ -82,6 +82,7 @@
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 #include "nsGUIEvent.h"
+#include "nsStyleSet.h"
 
 #include "imgIContainer.h"
 #include "imgILoader.h"
