@@ -393,7 +393,6 @@ hr[size="1"] {
 }
 
 img[usemap], object[usemap] {
-  cursor: pointer;
   color: blue;
 }
 
