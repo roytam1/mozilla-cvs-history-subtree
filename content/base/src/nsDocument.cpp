@@ -738,15 +738,8 @@ nsDocument::~nsDocument()
   // This notification will occur only after the reference has
   // been dropped.
 
-  // if an observer removes itself, we're ok (not if it removes others though)
   PRInt32 indx;
-  for (indx = mObservers.Count() - 1; indx >= 0; --indx) {
-    // XXX Should this be a kungfudeathgrip?!!!!
-    nsIDocumentObserver* observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(indx));
-
-    observer->DocumentWillBeDestroyed(this);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(DocumentWillBeDestroyed, (this));
 
   mParentDocument = nsnull;
 
@@ -1843,14 +1836,7 @@ nsDocument::AddStyleSheet(nsIStyleSheet* aSheet)
     AddStyleSheetToStyleSets(aSheet);
   }
 
-  // if an observer removes itself, we're ok (not if it removes others though)
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->StyleSheetAdded(this, aSheet, PR_TRUE);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleSheetAdded, (this, aSheet, PR_TRUE));
 }
 
 void
@@ -1879,15 +1865,7 @@ nsDocument::RemoveStyleSheet(nsIStyleSheet* aSheet)
       RemoveStyleSheetFromStyleSets(aSheet);
     }
 
-    // if an observer removes itself, we're ok (not if it removes
-    // others though)
-
-    for (PRInt32 indx = mObservers.Count() - 1; indx >= 0; --indx) {
-      nsIDocumentObserver *observer =
-        NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(indx));
-
-      observer->StyleSheetRemoved(this, aSheet, PR_TRUE);
-    }
+    NS_DOCUMENT_NOTIFY_OBSERVERS(StyleSheetRemoved, (this, aSheet, PR_TRUE));
   }
 
   aSheet->SetOwningDocument(nsnull);
@@ -1897,15 +1875,7 @@ void
 nsDocument::UpdateStyleSheets(nsCOMArray<nsIStyleSheet>& aOldSheets,
                               nsCOMArray<nsIStyleSheet>& aNewSheets)
 {
-  // if an observer removes itself, we're ok (not if it removes
-  // others though)
-  PRInt32 obsIndx;
-  for (obsIndx = mObservers.Count() - 1; obsIndx >= 0; --obsIndx) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(obsIndx));
-
-    observer->BeginUpdate(this, UPDATE_STYLE);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(BeginUpdate, (this, UPDATE_STYLE));
 
   // XXX Need to set the sheet on the ownernode, if any
   NS_PRECONDITION(aOldSheets.Count() == aNewSheets.Count(),
@@ -1933,21 +1903,11 @@ nsDocument::UpdateStyleSheets(nsCOMArray<nsIStyleSheet>& aOldSheets,
         AddStyleSheetToStyleSets(newSheet);
       }
 
-      for (obsIndx = mObservers.Count() - 1; obsIndx >= 0; --obsIndx) {
-        nsIDocumentObserver *observer =
-          NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(obsIndx));
-        
-        observer->StyleSheetAdded(this, newSheet, PR_TRUE);
-      }
+      NS_DOCUMENT_NOTIFY_OBSERVERS(StyleSheetAdded, (this, newSheet, PR_TRUE));
     }
   }
 
-  for (obsIndx = mObservers.Count() - 1; obsIndx >= 0; --obsIndx) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(obsIndx));
-
-    observer->EndUpdate(this, UPDATE_STYLE);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(EndUpdate, (this, UPDATE_STYLE));
 }
 
 void
@@ -1965,15 +1925,7 @@ nsDocument::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex)
     AddStyleSheetToStyleSets(aSheet);
   }
 
-  // if an observer removes itself, we're ok (not if it removes others
-  // though)
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->StyleSheetAdded(this, aSheet, PR_TRUE);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleSheetAdded, (this, aSheet, PR_TRUE));
 }
 
 
@@ -1996,13 +1948,8 @@ nsDocument::SetStyleSheetApplicableState(nsIStyleSheet* aSheet,
   // that are children of sheets in our style set, as well as some
   // sheets for nsHTMLEditor.
 
-  PRInt32 indx;
-  // if an observer removes itself, we're ok (not if it removes others though)
-  for (indx = mObservers.Count() - 1; indx >= 0; --indx) {
-    nsIDocumentObserver* observer =
-      (nsIDocumentObserver*)mObservers.ElementAt(indx);
-    observer->StyleSheetApplicableStateChanged(this, aSheet, aApplicable);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleSheetApplicableStateChanged,
+                               (this, aSheet, aApplicable));
 }
 
 // These three functions are a lot like the implementation of the
@@ -2037,14 +1984,7 @@ nsDocument::AddCatalogStyleSheet(nsIStyleSheet* aSheet)
         AppendStyleSheet(nsStyleSet::eAgentSheet, aSheet);
   }
                                                                                 
-  // if an observer removes itself, we're ok (not if it removes others though)
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-                                                                                
-    observer->StyleSheetAdded(this, aSheet, PR_FALSE);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleSheetAdded, (this, aSheet, PR_FALSE));
 }
 
 void
@@ -2178,33 +2118,34 @@ nsDocument::RemoveObserver(nsIDocumentObserver* aObserver)
 }
 
 void
+nsDocument::CopyObserversTo(nsCOMArray<nsIDocumentObserver>& aDestination)
+{
+  PRInt32 count = mObservers.Count();
+  aDestination.SetCapacity(count);
+  // If we run out of memory, we just won't notify some of the observers.
+  for (PRInt32 i = 0; i < count; ++i) {
+    aDestination.AppendObject(
+      NS_STATIC_CAST(nsIDocumentObserver*,mObservers[i]));
+  }
+}
+
+
+void
 nsDocument::BeginUpdate(nsUpdateType aUpdateType)
 {
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
-    observer->BeginUpdate(this, aUpdateType);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(BeginUpdate, (this, aUpdateType));
 }
 
 void
 nsDocument::EndUpdate(nsUpdateType aUpdateType)
 {
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
-    observer->EndUpdate(this, aUpdateType);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(EndUpdate, (this, aUpdateType));
 }
 
 void
 nsDocument::BeginLoad()
 {
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
-    observer->BeginLoad(this);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(BeginLoad, (this));
 }
 
 static void
@@ -2345,11 +2286,8 @@ nsDocument::EndLoad()
   // Drop the ref to our parser, if any
   mParser = nsnull;
   
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer = (nsIDocumentObserver*)mObservers[i];
-    observer->EndLoad(this);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(EndLoad, (this));
+
   DispatchContentLoadedEvents();
 }
 
@@ -2358,26 +2296,15 @@ nsDocument::CharacterDataChanged(nsIContent* aContent, PRBool aAppend)
 {
   NS_ABORT_IF_FALSE(aContent, "Null content!");
 
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->CharacterDataChanged(this, aContent, aAppend);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(CharacterDataChanged, (this, aContent, aAppend));
 }
 
 void
 nsDocument::ContentStatesChanged(nsIContent* aContent1, nsIContent* aContent2,
                                  PRInt32 aStateMask)
 {
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->ContentStatesChanged(this, aContent1, aContent2, aStateMask);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(ContentStatesChanged,
+                               (this, aContent1, aContent2, aStateMask));
 }
 
 
@@ -2387,22 +2314,15 @@ nsDocument::ContentAppended(nsIContent* aContainer,
 {
   NS_ABORT_IF_FALSE(aContainer, "Null container!");
 
-  PRInt32 i;
-
   // XXXdwh There is a hacky ordering dependency between the binding
   // manager and the frame constructor that forces us to walk the
   // observer list in a forward order
-  for (i = 0; i < mObservers.Count(); i++) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->ContentAppended(this, aContainer, aNewIndexInContainer);
-    // Make sure that the observer didn't remove itself during the
-    // notification. If it did, update our index
-    if (i < mObservers.Count() &&
-        observer != (nsIDocumentObserver*)mObservers[i]) {
-      i--;
-    }
+  // XXXldb So one should notify the other rather than both being
+  // registered.
+  nsCOMArray<nsIDocumentObserver> observers;
+  CopyObserversTo(observers);
+  for (PRInt32 i = 0, i_end = observers.Count(); i < i_end; ++i) {
+    observers[i]->ContentAppended(this, aContainer, aNewIndexInContainer);
   }
 }
 
@@ -2412,21 +2332,15 @@ nsDocument::ContentInserted(nsIContent* aContainer, nsIContent* aChild,
 {
   NS_ABORT_IF_FALSE(aChild, "Null child!");
 
-  PRInt32 i;
   // XXXdwh There is a hacky ordering dependency between the binding manager
   // and the frame constructor that forces us to walk the observer list
   // in a forward order
-  for (i = 0; i < mObservers.Count(); i++) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->ContentInserted(this, aContainer, aChild, aIndexInContainer);
-    // Make sure that the observer didn't remove itself during the
-    // notification. If it did, update our index.
-    if (i < mObservers.Count() &&
-        observer != (nsIDocumentObserver*)mObservers[i]) {
-      i--;
-    }
+  // XXXldb So one should notify the other rather than both being
+  // registered.
+  nsCOMArray<nsIDocumentObserver> observers;
+  CopyObserversTo(observers);
+  for (PRInt32 i = 0, i_end = observers.Count(); i < i_end; ++i) {
+    observers[i]->ContentInserted(this, aContainer, aChild, aIndexInContainer);
   }
 }
 
@@ -2436,14 +2350,15 @@ nsDocument::ContentRemoved(nsIContent* aContainer, nsIContent* aChild,
 {
   NS_ABORT_IF_FALSE(aChild, "Null child!");
 
-  PRInt32 i;
   // XXXdwh There is a hacky ordering dependency between the binding
   // manager and the frame constructor that forces us to walk the
   // observer list in a reverse order
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver* observer = (nsIDocumentObserver*)mObservers[i];
-    observer->ContentRemoved(this, aContainer,
-                             aChild, aIndexInContainer);
+  // XXXldb So one should notify the other rather than both being
+  // registered.
+  nsCOMArray<nsIDocumentObserver> observers;
+  CopyObserversTo(observers);
+  for (PRInt32 i = observers.Count() - 1; i >= 0; --i) {
+    observers[i]->ContentRemoved(this, aContainer, aChild, aIndexInContainer);
   }
 }
 
@@ -2460,14 +2375,8 @@ nsDocument::AttributeChanged(nsIContent* aChild, PRInt32 aNameSpaceID,
 {
   NS_ABORT_IF_FALSE(aChild, "Null child!");
 
-  PRInt32 i;
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->AttributeChanged(this, aChild, aNameSpaceID,
-                               aAttribute, aModType);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(AttributeChanged, (this, aChild, aNameSpaceID,
+                                                  aAttribute, aModType));
 }
 
 
@@ -2476,45 +2385,25 @@ nsDocument::StyleRuleChanged(nsIStyleSheet* aStyleSheet,
                              nsIStyleRule* aOldStyleRule,
                              nsIStyleRule* aNewStyleRule)
 {
-  PRInt32 i;
-
-  // Loop backwards to handle observers removing themselves
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->StyleRuleChanged(this, aStyleSheet, aOldStyleRule, aNewStyleRule);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleRuleChanged,
+                               (this, aStyleSheet,
+                                aOldStyleRule, aNewStyleRule));
 }
 
 void
 nsDocument::StyleRuleAdded(nsIStyleSheet* aStyleSheet,
                            nsIStyleRule* aStyleRule)
 {
-  PRInt32 i;
-
-  // Loop backwards to handle observers removing themselves
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->StyleRuleAdded(this, aStyleSheet, aStyleRule);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleRuleAdded,
+                               (this, aStyleSheet, aStyleRule));
 }
 
 void
 nsDocument::StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
                              nsIStyleRule* aStyleRule)
 {
-  PRInt32 i;
-
-  // Loop backwards to handle observers removing themselves
-  for (i = mObservers.Count() - 1; i >= 0; --i) {
-    nsIDocumentObserver *observer =
-      NS_STATIC_CAST(nsIDocumentObserver *, mObservers.ElementAt(i));
-
-    observer->StyleRuleRemoved(this, aStyleSheet, aStyleRule);
-  }
+  NS_DOCUMENT_NOTIFY_OBSERVERS(StyleRuleRemoved,
+                               (this, aStyleSheet, aStyleRule));
 }
 
 
