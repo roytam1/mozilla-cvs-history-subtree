@@ -3265,7 +3265,14 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
     return rv;
   }
 
-  SetBoxObjectFor(aElement, boxObject);
+  if (!mBoxObjectTable) {
+    mBoxObjectTable = new nsSupportsHashtable(12);
+  }
+
+  if (mBoxObjectTable) {
+    nsISupportsKey key(aElement);
+    mBoxObjectTable->Put(&key, boxObject);
+  }
 
   *aResult = boxObject;
   NS_ADDREF(*aResult);
@@ -3276,23 +3283,20 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
 NS_IMETHODIMP
 nsDocument::SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject)
 {
+  if (aBoxObject) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
   if (!mBoxObjectTable) {
-    if (!aBoxObject)
-      return NS_OK;
-    mBoxObjectTable = new nsSupportsHashtable(12);
+    return NS_OK;
   }
 
   nsISupportsKey key(aElement);
-
-  if (aBoxObject) {
-    mBoxObjectTable->Put(&key, aBoxObject);
-  } else {
-    nsCOMPtr<nsISupports> supp;
-    mBoxObjectTable->Remove(&key, getter_AddRefs(supp));
-    nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(supp));
-    if (boxObject) {
-      boxObject->SetDocument(nsnull);
-    }
+  nsCOMPtr<nsISupports> supp;
+  mBoxObjectTable->Remove(&key, getter_AddRefs(supp));
+  nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(supp));
+  if (boxObject) {
+    boxObject->SetDocument(nsnull);
   }
 
   return NS_OK;
