@@ -1187,6 +1187,8 @@ nsXULElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
     nsresult rv = EnsureContentsGenerated();
     NS_ENSURE_SUCCESS(rv, rv);
 
+    nsMutationGuard::DidMutate();
+
     nsCOMPtr<nsIContent> oldKid = mAttrsAndChildren.ChildAt(aIndex);
     NS_ENSURE_TRUE(oldKid, NS_ERROR_FAILURE);
 
@@ -1247,7 +1249,7 @@ nsXULElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
         nsCOMPtr<nsIDOMXULSelectControlItemElement> curItem;
         controlElement->GetCurrentItem(getter_AddRefs(curItem));
         nsCOMPtr<nsIContent> curNode = do_QueryInterface(curItem);
-        if (curNode && isSelfOrAncestor(curNode, oldKid)) {
+        if (curNode && nsContentUtils::ContentIsDescendantOf(curNode, oldKid)) {
             // Current item going away
             nsCOMPtr<nsIBoxObject> box;
             controlElement->GetBoxObject(getter_AddRefs(box));
