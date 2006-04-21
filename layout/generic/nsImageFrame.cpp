@@ -1752,7 +1752,6 @@ nsImageFrame::GetCursor(const nsPoint& aPoint,
   if (nsnull != map) {
     nsPoint p;
     TranslateEventCoords(aPoint, p);
-    aCursor.mCursor = NS_STYLE_CURSOR_DEFAULT;
     if (map->IsInside(p.x, p.y)) {
       // Use style defined cursor if one is provided, otherwise when
       // the cursor style is "auto" we use the pointer cursor.
@@ -1760,6 +1759,10 @@ nsImageFrame::GetCursor(const nsPoint& aPoint,
       if (NS_STYLE_CURSOR_AUTO == aCursor.mCursor) {
         aCursor.mCursor = NS_STYLE_CURSOR_POINTER;
       }
+    } else {
+      aCursor.mCursor = NS_STYLE_CURSOR_DEFAULT;
+      aCursor.mHaveHotspot = PR_FALSE;
+      aCursor.mHotspotX = aCursor.mHotspotY = 0.0f;
     }
     return NS_OK;
   }
