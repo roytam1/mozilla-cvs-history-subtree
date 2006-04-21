@@ -351,7 +351,7 @@ nsSecureBrowserUIImpl::Notify(nsIContent* formNode,
   nsCOMPtr<nsIDocument> document = formNode->GetDocument();
   if (!document) return NS_OK;
 
-  nsIURI *formURL = document->GetBaseURI();
+  nsIURI *formURL = document->GetDocumentURI();
 
   nsCOMPtr<nsIDOMWindow> postingWindow =
     do_QueryInterface(document->GetWindow());
