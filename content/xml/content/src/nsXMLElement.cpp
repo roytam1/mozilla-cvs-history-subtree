@@ -247,28 +247,14 @@ nsXMLElement::MaybeTriggerAutoLink(nsIDocShell *aShell)
         }
 
         // base
-        nsCOMPtr<nsIURI> base = GetBaseURI();
-        if (!base)
-          break;
-
-        // href= ?
-        rv = nsGenericElement::GetAttr(kNameSpaceID_XLink, nsHTMLAtoms::href,
-                                       value);
-        if (rv == NS_CONTENT_ATTR_HAS_VALUE && !value.IsEmpty()) {
-          nsCOMPtr<nsIURI> uri;
-          rv = nsContentUtils::NewURIWithDocumentCharset(getter_AddRefs(uri),
-                                                         value,
-                                                         GetOwnerDoc(),
-                                                         base);
+        nsCOMPtr<nsIURI> uri = nsContentUtils::GetXLinkURI(this);
+        if (uri) {
+          nsCOMPtr<nsPresContext> pc;
+          rv = DocShellToPresContext(aShell, getter_AddRefs(pc));
           if (NS_SUCCEEDED(rv)) {
-            nsCOMPtr<nsPresContext> pc;
-            rv = DocShellToPresContext(aShell, getter_AddRefs(pc));
-            if (NS_SUCCEEDED(rv)) {
-              rv = TriggerLink(pc, verb, base, uri,
-                               EmptyString(), PR_TRUE, PR_FALSE);
+            rv = TriggerLink(pc, verb, uri, EmptyString(), PR_TRUE, PR_FALSE);
 
-              return SpecialAutoLoadReturn(rv,verb);
-            }
+            return SpecialAutoLoadReturn(rv, verb);
           }
         } // href
       }
@@ -336,8 +322,7 @@ nsXMLElement::HandleDOMEvent(nsPresContext* aPresContext,
             verb = eLinkVerb_Embed;
           }
 
-          nsCOMPtr<nsIURI> baseURI = GetBaseURI();
-          ret = TriggerLink(aPresContext, verb, baseURI, uri,
+          ret = TriggerLink(aPresContext, verb, uri,
                             EmptyString(), PR_TRUE, PR_TRUE);
 
           *aEventStatus = nsEventStatus_eConsumeDoDefault; 
@@ -379,23 +364,9 @@ nsXMLElement::HandleDOMEvent(nsPresContext* aPresContext,
 
     case NS_MOUSE_ENTER_SYNTH:
       {
-        nsAutoString href;
-        nsGenericElement::GetAttr(kNameSpaceID_XLink, nsHTMLAtoms::href,
-                                  href);
-        if (href.IsEmpty()) {
-          *aEventStatus = nsEventStatus_eConsumeDoDefault; 
-          break;
-        }
-
-        nsCOMPtr<nsIURI> baseURI = GetBaseURI();
-
-        nsCOMPtr<nsIURI> uri;
-        ret = nsContentUtils::NewURIWithDocumentCharset(getter_AddRefs(uri),
-                                                        href,
-                                                        document,
-                                                        baseURI);
-        if (NS_SUCCEEDED(ret)) {
-          ret = TriggerLink(aPresContext, eLinkVerb_Replace, baseURI, uri,
+        nsCOMPtr<nsIURI> uri = nsContentUtils::GetXLinkURI(this);
+        if (uri) {
+          ret = TriggerLink(aPresContext, eLinkVerb_Replace, uri,
                             EmptyString(), PR_FALSE, PR_TRUE);
         }
         

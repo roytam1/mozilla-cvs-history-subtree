@@ -345,7 +345,7 @@ nsXULContentUtils::MakeElementURI(nsIDocument* aDocument, const nsAString& aElem
         CopyUTF16toUTF8(aElementID, aURI);
     }
     else {
-        nsIURI *docURL = aDocument->GetBaseURI();
+        nsIURI *docURL = aDocument->GetDocumentURI();
 
         // XXX Urgh. This is so broken; I'd really just like to use
         // NS_MakeAbsolueURI(). Unfortunatly, doing that breaks
@@ -401,7 +401,7 @@ nsXULContentUtils::MakeElementID(nsIDocument* aDocument, const nsAString& aURI, 
     // Convert a URI into an element ID that can be accessed from the
     // DOM APIs.
     nsCAutoString spec;
-    aDocument->GetBaseURI()->GetSpec(spec);
+    aDocument->GetDocumentURI()->GetSpec(spec);
 
     // XXX FIX ME to not do a copy
     nsAutoString str(aURI);

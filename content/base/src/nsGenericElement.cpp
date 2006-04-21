@@ -3656,7 +3656,6 @@ nsGenericElement::LeaveLink(nsPresContext* aPresContext)
 nsresult
 nsGenericElement::TriggerLink(nsPresContext* aPresContext,
                               nsLinkVerb aVerb,
-                              nsIURI* aOriginURI,
                               nsIURI* aLinkURI,
                               const nsAFlatString& aTargetSpec,
                               PRBool aClick,
@@ -3664,6 +3663,13 @@ nsGenericElement::TriggerLink(nsPresContext* aPresContext,
 {
   NS_PRECONDITION(aLinkURI, "No link URI");
   nsresult rv = NS_OK;
+
+  nsIDocument* doc = GetOwnerDoc();
+  nsIURI* originURI = nsnull;
+  if (doc) {
+    originURI = doc->GetDocumentURI();
+  }
+  NS_ENSURE_TRUE(originURI, NS_ERROR_FAILURE);
 
   nsILinkHandler *handler = aPresContext->GetLinkHandler();
   if (!handler) return NS_OK;
@@ -3678,7 +3684,7 @@ nsGenericElement::TriggerLink(nsPresContext* aPresContext,
                       (PRUint32) nsIScriptSecurityManager::STANDARD :
                       (PRUint32) nsIScriptSecurityManager::DISALLOW_FROM_MAIL;
       proceed =
-        securityManager->CheckLoadURI(aOriginURI, aLinkURI, flag);
+        securityManager->CheckLoadURI(originURI, aLinkURI, flag);
     }
 
     // Only pass off the click event if the script security manager
