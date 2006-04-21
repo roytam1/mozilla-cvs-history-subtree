@@ -261,6 +261,22 @@ nsBrowserStatusHandler.prototype =
 
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
+    if (gContextMenu) {
+      // Optimise for the common case
+      if (aWebProgress.DOMWindow == content)
+        gContextMenu.menu.hidePopup();
+      else {
+        for (var contextWindow = gContextMenu.target.ownerDocument.defaultView;
+             contextWindow != contextWindow.parent;
+             contextWindow = contextWindow.parent) {
+          if (contextWindow == aWebProgress.DOMWindow) {
+            gContextMenu.menu.hidePopup();
+            break;
+          }
+        }
+      }
+    }
+
     // XXX temporary hack for bug 104532.
     // Depends heavily on setOverLink implementation
     if (!aRequest)
