@@ -1183,6 +1183,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
     JSContext *cx;
     JSFunction *fun;
     JSString *atomstr;
+    JSTempValueRooter tvr;
     uint32 flagsword;           /* originally only flags was JS_XDRUint8'd */
     char *propname;
     JSScopeProperty *sprop;
@@ -1190,6 +1191,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
     JSAtom *atom;
     uintN i, n, dupflag;
     uint32 type;
+    JSBool ok;
 #ifdef DEBUG
     uintN nvars = 0, nargs = 0;
 #endif
@@ -1219,12 +1221,16 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
         atomstr = NULL;
     }
 
+    /* From here on, control flow must flow through label out. */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(fun->object), &tvr);
+    ok = JS_TRUE;
+
     if (!JS_XDRStringOrNull(xdr, &atomstr) ||
         !JS_XDRUint16(xdr, &fun->nargs) ||
         !JS_XDRUint16(xdr, &fun->extra) ||
         !JS_XDRUint16(xdr, &fun->nvars) ||
         !JS_XDRUint32(xdr, &flagsword)) {
-        return JS_FALSE;
+        goto bad;
     }
 
     /* do arguments and local vars */
@@ -1244,7 +1250,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
                                        n * sizeof(JSScopeProperty *));
                 if (!spvec) {
                     JS_ReportOutOfMemory(cx);
-                    return JS_FALSE;
+                    goto bad;
                 }
             }
             scope = OBJ_SCOPE(fun->object);
@@ -1275,7 +1281,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
                     !JS_XDRCString(xdr, &propname)) {
                     if (mark)
                         JS_ARENA_RELEASE(&cx->tempPool, mark);
-                    return JS_FALSE;
+                    goto bad;
                 }
             }
             if (mark)
@@ -1289,7 +1295,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
                 if (!JS_XDRUint32(xdr, &type) ||
                     !JS_XDRUint32(xdr, &userid) ||
                     !JS_XDRCString(xdr, &propname)) {
-                    return JS_FALSE;
+                    goto bad;
                 }
                 JS_ASSERT(type == JSXDR_FUNARG || type == JSXDR_FUNVAR ||
                           type == JSXDR_FUNCONST);
@@ -1310,7 +1316,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
                 atom = js_Atomize(cx, propname, strlen(propname), 0);
                 JS_free(cx, propname);
                 if (!atom)
-                    return JS_FALSE;
+                    goto bad;
 
                 /* Flag duplicate argument if atom is bound in fun->object. */
                 dupflag = SCOPE_GET_PROPERTY(OBJ_SCOPE(fun->object),
@@ -1323,14 +1329,14 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
                                           attrs | JSPROP_SHARED,
                                           dupflag | SPROP_HAS_SHORTID,
                                           JSVAL_TO_INT(userid))) {
-                    return JS_FALSE;
+                    goto bad;
                 }
             }
         }
     }
 
     if (!js_XDRScript(xdr, &fun->u.script, NULL))
-        return JS_FALSE;
+        goto bad;
 
     if (xdr->mode == JSXDR_DECODE) {
         fun->interpreted = JS_TRUE;
@@ -1342,13 +1348,19 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
             /* XXX only if this was a top-level function! */
             fun->atom = js_AtomizeString(cx, atomstr, 0);
             if (!fun->atom)
-                return JS_FALSE;
+                goto bad;
         }
 
         js_CallNewScriptHook(cx, fun->u.script, fun);
     }
 
-    return JS_TRUE;
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
+
+bad:
+    ok = JS_FALSE;
+    goto out;
 }
 
 #else  /* !JS_HAS_XDR */
