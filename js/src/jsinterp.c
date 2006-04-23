@@ -3835,7 +3835,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                  * "RegExp" class in the global object, which could entail a
                  * JSNewResolveOp call.
                  */
-                SAVE_SP_AND_PC(fp);
+                SAVE_SP(fp);
 
                 /*
                  * If obj's parent is not obj2, we must clone obj so that it
