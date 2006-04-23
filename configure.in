@@ -1185,6 +1185,10 @@ if test "$GNU_CC"; then
     MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -Wl,-h,$@ -o $@'
     MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -Wl,-h,$@ -o $@'
     DSO_LDOPTS='-shared'
+    if test "$GCC_USE_GNU_LD"; then
+        # Don't allow undefined symbols in libraries
+        DSO_LDOPTS="$DSO_LDOPTS -Wl,-z,defs"
+    fi
     DSO_CFLAGS=''
     DSO_PIC_CFLAGS='-fPIC'
     _MOZ_RTTI_FLAGS_ON=${_COMPILER_PREFIX}-frtti
@@ -1211,7 +1215,13 @@ if test "$GNU_CC"; then
 else
     MKSHLIB='$(LD) $(DSO_LDOPTS) -h $@ -o $@'
     MKCSHLIB='$(LD) $(DSO_LDOPTS) -h $@ -o $@'
+
     DSO_LDOPTS='-shared'
+    if test "$GNU_LD"; then
+        # Don't allow undefined symbols in libraries
+        DSO_LDOPTS="$DSO_LDOPTS -z defs"
+    fi
+
     DSO_CFLAGS=''
     DSO_PIC_CFLAGS='-KPIC'
     _DEFINES_CFLAGS='$(ACDEFINES) -D_MOZILLA_CONFIG_H_ -DMOZILLA_CLIENT'
@@ -1367,6 +1377,7 @@ MOZILLA_VERSION=`$PERL $srcdir/config/milestone.pl -topsrcdir $srcdir`
 dnl Get version of various core apps from the version files.
 FIREFOX_VERSION=`cat $topsrcdir/browser/config/version.txt`
 THUNDERBIRD_VERSION=`cat $topsrcdir/mail/config/version.txt`
+SUNBIRD_VERSION=`cat $topsrcdir/calendar/sunbird/config/version.txt`
 SEAMONKEY_VERSION=`cat $topsrcdir/xpfe/bootstrap/version.txt`
 
 AC_DEFINE_UNQUOTED(MOZILLA_VERSION,"$MOZILLA_VERSION")
@@ -1723,6 +1734,8 @@ case "$target" in
         RC='$(WINDRES)'
         # Use temp file for windres (bug 213281)
         RCFLAGS='-O coff --use-temp-file'
+        # mingw doesn't require kernel32, user32, and advapi32 explicitly
+        LIBS="$LIBS -lgdi32 -lwinmm -lwsock32"
         MOZ_JPEG_LIBS='-L$(LIBXUL_DIST)/lib -ljpeg$(MOZ_BITS)$(VERSION_NUMBER)'
         MOZ_ZLIB_LIBS='-L$(LIBXUL_DIST)/lib -lmozz'
         MOZ_PNG_LIBS='-L$(LIBXUL_DIST)/lib -lpng'
@@ -2621,6 +2634,28 @@ EOF
                       rm -f conftest.[cs]
                     ])
       if test "$ac_cv_visibility_pragma" = "yes"; then
+        AC_CACHE_CHECK(For gcc visibility bug with class-level attributes (GCC bug 26905),
+                       ac_cv_have_visibility_class_bug,
+                       [cat > conftest.c <<EOF
+#pragma GCC visibility push(hidden)
+struct __attribute__ ((visibility ("default"))) TestStruct {
+  static void Init();
+};
+__attribute__ ((visibility ("default"))) void TestFunc() {
+  TestStruct::Init();
+}
+EOF
+                       ac_cv_have_visibility_class_bug=no
+                       if ! ${CXX-g++} ${CXXFLAGS} ${DSO_PIC_CFLAGS} ${DSO_LDOPTS} -S -o conftest.S conftest.c ; then
+                         ac_cv_have_visibility_class_bug=yes
+                       else
+                         if test `grep -c "@PLT" conftest.S` == 0; then
+                           ac_cv_have_visibility_class_bug=yes
+                         fi
+                       fi
+                       # rm -rf conftest.{c,S}
+                       ])
+
         AC_CACHE_CHECK(For x86_64 gcc visibility bug with builtins (GCC bug 20297),
                        ac_cv_have_visibility_builtin_bug,
                        [cat > conftest.c <<EOF
@@ -2635,12 +2670,13 @@ __attribute__ ((visibility ("default"))) void Func() {
 }
 EOF
                        ac_cv_have_visibility_builtin_bug=no
-                       if ! ${CC-cc} ${DSO_PIC_CFLAGS} ${DSO_LDOPTS} -O2 -o conftest.so conftest.c >/dev/null 2>&1; then
+                       if ! ${CC-cc} ${CFLAGS} ${DSO_PIC_CFLAGS} ${DSO_LDOPTS} -O2 -o conftest.so conftest.c >/dev/null 2>&1; then
                          ac_cv_have_visibility_builtin_bug=yes
                        fi
                        rm -f conftest.{c,so}
                        ])
-        if test "$ac_cv_have_visibility_builtin_bug" = "no"; then
+        if test "$ac_cv_have_visibility_builtin_bug" = "no" -a \
+                "$ac_cv_have_visibility_class_bug" = "no"; then
           VISIBILITY_FLAGS='-I$(DIST)/include/system_wrappers -include $(topsrcdir)/config/gcc_hidden.h'
           WRAP_SYSTEM_INCLUDES=1
         else
@@ -4529,6 +4565,7 @@ browser)
   MOZ_PHOENIX=1
   MOZ_PLACES=1
   MOZ_APP_VERSION=$FIREFOX_VERSION
+  MOZ_NO_XPCOM_OBSOLETE=1
   MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc inspector gnomevfs permissions reporter"
   AC_DEFINE(MOZ_PHOENIX)
   ;;
@@ -4585,7 +4622,7 @@ calendar)
   MOZ_UPDATER=1
   MOZ_SUNBIRD=1
   MOZ_CALENDAR=1
-  MOZ_APP_VERSION=`cat $topsrcdir/calendar/sunbird/config/version.txt`
+  MOZ_APP_VERSION=$SUNBIRD_VERSION
   MOZ_EXTENSIONS_DEFAULT=
   MOZ_UNIVERSALCHARDET=
   AC_DEFINE(MOZ_SUNBIRD)
@@ -6975,10 +7012,6 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
                    MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lmozglitzwgl"
                fi
            fi
-
-           if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
-               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lgdi32"
-           fi
        fi
    else
       PKG_CHECK_MODULES(CAIRO, cairo >= $CAIRO_VERSION freetype2 fontconfig)
@@ -7412,6 +7445,7 @@ AC_SUBST(MOZ_APP_DISPLAYNAME)
 AC_SUBST(MOZ_APP_VERSION)
 AC_SUBST(FIREFOX_VERSION)
 AC_SUBST(THUNDERBIRD_VERSION)
+AC_SUBST(SUNBIRD_VERSION)
 AC_SUBST(SEAMONKEY_VERSION)
 
 AC_SUBST(MOZ_PKG_SPECIAL)
@@ -7559,6 +7593,7 @@ if test "$MOZ_X11"; then
     AC_TRY_COMPILE([
         #include <stdio.h>
         #include <X11/Xlib.h>
+        #include <X11/Intrinsic.h>
     ],
     [
         Display *dpy = 0;
