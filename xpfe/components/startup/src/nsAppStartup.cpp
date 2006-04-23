@@ -585,6 +585,7 @@ nsAppStartup::CreateStartupState(PRInt32 aWindowWidth, PRInt32 aWindowHeight,
                                  PRBool *_retval)
 {
   NS_ENSURE_ARG_POINTER(_retval);
+  *_retval = PR_FALSE;
   nsresult rv;
   
   nsCOMPtr<nsIPrefService> prefService(do_GetService(NS_PREFSERVICE_CONTRACTID));
