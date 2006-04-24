@@ -22,6 +22,7 @@
  *
  * Contributor(s):
  *   Mike Shaver <shaver@off.net> (original author)
+ *   Gary van der Merwe <garyvdm@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,6 +44,7 @@
 #include "nsWebDAVServiceCID.h"
 
 #include "nsServiceManagerUtils.h"
+#include "nsIClassInfoImpl.h"
 
 #include "nsIHttpChannel.h"
 #include "nsIIOService.h"
@@ -62,6 +64,7 @@
 
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
+#include "nsContentCID.h"
 
 #include "nsIDOMParser.h"
 
@@ -78,6 +81,7 @@ public:
 protected:
     nsresult EnsureIOService();
     nsresult ChannelFromResource(nsIWebDAVResource *resource,
+                                 nsIInterfaceRequestor *notificationCallbacks,
                                  nsIHttpChannel** channel,
                                  nsIURI ** resourceURI = 0);
 
@@ -88,6 +92,7 @@ protected:
     nsresult PropfindInternal(nsIWebDAVResource *resource, PRUint32 propCount,
                               const char **properties, PRBool withDepth,
                               nsIWebDAVOperationListener *listener,
+                              nsIInterfaceRequestor *notificationCallbacks,
                               nsISupports *closure, PRBool namesOnly);
 
     nsresult SendDocumentToChannel(nsIDocument *doc, nsIHttpChannel *channel,
@@ -219,17 +224,21 @@ nsWebDAVService::CreatePropfindDocument(nsIURI *resourceURI,
 
     nsCOMPtr<nsIPrivateDOMImplementation> 
         privImpl(do_QueryInterface(implementation));
-    privImpl->Init(resourceURI);
+    // XXXbz I doubt this is right, but I have no idea what this code is doing
+    // or why it's creating documents without a useful principal... so I'm just
+    // going to make the fact that those documents have no principal very
+    // explicit, and if this causes issues then someone familiar with this code
+    // should figure out what principals this _should_ be using.
+    privImpl->Init(resourceURI, resourceURI, nsnull);
 
     nsCOMPtr<nsIDOMDocument> doc;
-    nsAutoString emptyString;
-    rv = implementation->CreateDocument(mDAVNSString, emptyString, nsnull,
+    rv = implementation->CreateDocument(mDAVNSString, EmptyString(), nsnull,
                                         getter_AddRefs(doc));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIDocument> baseDoc = do_QueryInterface(doc);
     baseDoc->SetXMLDeclaration(NS_LITERAL_STRING("1.0").get(),
-                               emptyString.get(), -1);
+                               EmptyString().get(), -1);
     baseDoc->SetDocumentURI(resourceURI);
 
     nsCOMPtr<nsIDOMElement> elt;
@@ -249,6 +258,7 @@ nsWebDAVService::CreatePropfindDocument(nsIURI *resourceURI,
 
 nsresult
 nsWebDAVService::ChannelFromResource(nsIWebDAVResource *aResource,
+                                     nsIInterfaceRequestor *notificationCallbacks,
                                      nsIHttpChannel **aChannel,
                                      nsIURI **aResourceURI)
 {
@@ -263,14 +273,17 @@ nsWebDAVService::ChannelFromResource(nsIWebDAVResource *aResource,
     rv = mIOService->NewChannelFromURI(resourceURL, getter_AddRefs(baseChannel));
     NS_ENSURE_SUCCESS(rv, rv);
 
+    rv = baseChannel->SetNotificationCallbacks(notificationCallbacks);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     nsLoadFlags loadFlags;
     rv = baseChannel->GetLoadFlags(&loadFlags);
     if (NS_SUCCEEDED(rv)) {
         rv = baseChannel->SetLoadFlags(loadFlags | 
                                        nsIRequest::VALIDATE_ALWAYS);
-        NS_WARN_IF_FALSE(NS_SUCCEEDED(rv),
-                         "nsWebDavService::ChannelFromResource(): "
-                         "Couldn't set loadflags on channel");
+        NS_ASSERTION(NS_SUCCEEDED(rv),
+                     "nsWebDavService::ChannelFromResource(): "
+                     "Couldn't set loadflags on channel");
     }
 
     rv = CallQueryInterface(baseChannel, aChannel);
@@ -300,6 +313,7 @@ nsWebDAVService::~nsWebDAVService()
 NS_IMETHODIMP
 nsWebDAVService::LockResources(PRUint32 count, nsIWebDAVResource **resources,
                                nsIWebDAVOperationListener *listener,
+                               nsIInterfaceRequestor *notificationCallbacks,
                                nsISupports *closure)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -308,6 +322,7 @@ nsWebDAVService::LockResources(PRUint32 count, nsIWebDAVResource **resources,
 NS_IMETHODIMP
 nsWebDAVService::UnlockResources(PRUint32 count, nsIWebDAVResource **resources,
                                  nsIWebDAVOperationListener *listener,
+                                 nsIInterfaceRequestor *notificationCallbacks,
                                  nsISupports *closure)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -317,10 +332,11 @@ NS_IMETHODIMP
 nsWebDAVService::GetResourcePropertyNames(nsIWebDAVResource *resource,
                                           PRBool withDepth,
                                           nsIWebDAVOperationListener *listener,
+                                          nsIInterfaceRequestor *notificationCallbacks,
                                           nsISupports *closure)
 {
     return PropfindInternal(resource, 0, nsnull, withDepth,
-                            listener, closure, PR_TRUE);
+                            listener, notificationCallbacks, closure, PR_TRUE);
 }
 
 NS_IMETHODIMP
@@ -329,10 +345,11 @@ nsWebDAVService::GetResourceProperties(nsIWebDAVResource *resource,
                                        const char **properties,
                                        PRBool withDepth,
                                        nsIWebDAVOperationListener *listener,
+                                       nsIInterfaceRequestor *notificationCallbacks,
                                        nsISupports *closure)
 {
     return PropfindInternal(resource, propCount, properties, withDepth,
-                            listener, closure, PR_FALSE);
+                            listener, notificationCallbacks, closure, PR_FALSE);
 }
 
 nsresult
@@ -341,6 +358,7 @@ nsWebDAVService::PropfindInternal(nsIWebDAVResource *resource,
                                   const char **properties,
                                   PRBool withDepth,
                                   nsIWebDAVOperationListener *listener,
+                                  nsIInterfaceRequestor *notificationCallbacks,
                                   nsISupports *closure,
                                   PRBool namesOnly)
 {
@@ -351,7 +369,7 @@ nsWebDAVService::PropfindInternal(nsIWebDAVResource *resource,
 
     nsCOMPtr<nsIURI> resourceURI;
     nsCOMPtr<nsIHttpChannel> channel;
-    rv = ChannelFromResource(resource, getter_AddRefs(channel),
+    rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel),
                              getter_AddRefs(resourceURI));
     if (NS_FAILED(rv))
         return rv;
@@ -437,17 +455,19 @@ nsWebDAVService::PropfindInternal(nsIWebDAVResource *resource,
 NS_IMETHODIMP
 nsWebDAVService::GetResourceOptions(nsIWebDAVResource *resource,
                                     nsIWebDAVOperationListener *listener,
+                                    nsIInterfaceRequestor *notificationCallbacks,
                                     nsISupports *closure)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebDAVService::Get(nsIWebDAVResource *resource, nsIStreamListener *listener)
+nsWebDAVService::Get(nsIWebDAVResource *resource, nsIStreamListener *listener,
+                     nsIInterfaceRequestor *notificationCallbacks)
 {
     nsresult rv;
     nsCOMPtr<nsIHttpChannel> channel;
-    rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     if (NS_FAILED(rv))
         return rv;
 
@@ -458,6 +478,7 @@ NS_IMETHODIMP
 nsWebDAVService::GetToOutputStream(nsIWebDAVResource *resource,
                                    nsIOutputStream *stream,
                                    nsIWebDAVOperationListener *listener,
+                                   nsIInterfaceRequestor *notificationCallbacks,
                                    nsISupports *closure)
 {
     nsCOMPtr<nsIRequestObserver> getObserver;
@@ -473,12 +494,13 @@ nsWebDAVService::GetToOutputStream(nsIWebDAVResource *resource,
                                     stream, getObserver);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    return Get(resource, streamListener);
+    return Get(resource, streamListener, notificationCallbacks);
 }
 
 NS_IMETHODIMP
 nsWebDAVService::GetToString(nsIWebDAVResource *resource,
                              nsIWebDAVOperationListener *listener,
+                             nsIInterfaceRequestor *notificationCallbacks,
                              nsISupports *closure)
 {
     nsCOMPtr<nsIStreamListener> getListener;
@@ -490,7 +512,7 @@ nsWebDAVService::GetToString(nsIWebDAVResource *resource,
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIHttpChannel> channel;
-    rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     NS_ENSURE_SUCCESS(rv, rv);
 
     return channel->AsyncOpen(getListener, channel);
@@ -500,11 +522,12 @@ NS_IMETHODIMP
 nsWebDAVService::Put(nsIWebDAVResource *resource,
                      const nsACString& contentType, nsIInputStream *data,
                      nsIWebDAVOperationListener *listener,
+                     nsIInterfaceRequestor *notificationCallbacks,
                      nsISupports *closure)
 {
     nsCOMPtr<nsIHttpChannel> channel;
 
-    nsresult rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    nsresult rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     NS_ENSURE_SUCCESS(rv, rv);
     
     nsCOMPtr<nsIUploadChannel> uploadChannel = do_QueryInterface(channel, &rv);
@@ -539,6 +562,7 @@ nsWebDAVService::PutFromString(nsIWebDAVResource *resource,
                                const nsACString& contentType,
                                const nsACString& data,
                                nsIWebDAVOperationListener *listener,
+                               nsIInterfaceRequestor *notificationCallbacks,
                                nsISupports *closure)
 {
     nsresult rv;
@@ -548,16 +572,18 @@ nsWebDAVService::PutFromString(nsIWebDAVResource *resource,
 
     dataStream->SetData(PromiseFlatCString(data).get(),
                         data.Length());
-    return Put(resource, contentType, dataStream, listener, closure);
+    return Put(resource, contentType, dataStream, listener, 
+               notificationCallbacks, closure);
 }
 
 NS_IMETHODIMP
 nsWebDAVService::Remove(nsIWebDAVResource *resource,
                         nsIWebDAVOperationListener *listener,
+                        nsIInterfaceRequestor *notificationCallbacks,
                         nsISupports *closure)
 {
     nsCOMPtr<nsIHttpChannel> channel;
-    nsresult rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    nsresult rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIStreamListener> streamListener;
@@ -584,10 +610,11 @@ nsWebDAVService::Remove(nsIWebDAVResource *resource,
 NS_IMETHODIMP
 nsWebDAVService::MakeCollection(nsIWebDAVResource *resource,
                                 nsIWebDAVOperationListener *listener,
+                                nsIInterfaceRequestor *notificationCallbacks,
                                 nsISupports *closure)
 {
     nsCOMPtr<nsIHttpChannel> channel;
-    nsresult rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    nsresult rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIStreamListener> streamListener;
@@ -616,10 +643,11 @@ nsWebDAVService::MoveTo(nsIWebDAVResource *resource,
                         const nsACString &destination,
                         PRBool overwrite,
                         nsIWebDAVOperationListener *listener,
+                        nsIInterfaceRequestor *notificationCallbacks,
                         nsISupports *closure)
 {
     nsCOMPtr<nsIHttpChannel> channel;
-    nsresult rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    nsresult rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIStreamListener> streamListener;
@@ -662,11 +690,12 @@ nsWebDAVService::CopyTo(nsIWebDAVResource *resource,
                         const nsACString &destination,
                         PRBool recursive, PRBool overwrite,
                         nsIWebDAVOperationListener *listener,
+                        nsIInterfaceRequestor *notificationCallbacks,
                         nsISupports *closure)
 
 {
     nsCOMPtr<nsIHttpChannel> channel;
-    nsresult rv = ChannelFromResource(resource, getter_AddRefs(channel));
+    nsresult rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIStreamListener> streamListener;
@@ -716,6 +745,7 @@ NS_IMETHODIMP
 nsWebDAVService::Report(nsIWebDAVResource *resource, nsIDOMDocument *query, 
                         PRBool withDepth, 
                         nsIWebDAVOperationListener *listener, 
+                        nsIInterfaceRequestor *notificationCallbacks,
                         nsISupports *closure)
 {
     nsresult rv;
@@ -729,7 +759,7 @@ nsWebDAVService::Report(nsIWebDAVResource *resource, nsIDOMDocument *query,
     
     nsCOMPtr<nsIURI> resourceURI;
     nsCOMPtr<nsIHttpChannel> channel;
-    rv = ChannelFromResource(resource, getter_AddRefs(channel),
+    rv = ChannelFromResource(resource, notificationCallbacks, getter_AddRefs(channel),
                              getter_AddRefs(resourceURI));
     if (NS_FAILED(rv))
         return rv;
