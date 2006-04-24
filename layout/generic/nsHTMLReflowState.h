@@ -264,7 +264,7 @@ struct nsHTMLReflowState {
                     nsIFrame*                aFrame,
                     const nsSize&            aAvailableSpace,
                     // These two are used by absolute positioning code
-                    // two override default containing block w & h:
+                    // to override default containing block w & h:
                     nscoord                  aContainingBlockWidth = -1,
                     nscoord                  aContainingBlockHeight = -1,
                     PRBool                   aInit = PR_TRUE);
