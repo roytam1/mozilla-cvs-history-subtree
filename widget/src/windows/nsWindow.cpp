@@ -4747,7 +4747,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 #ifdef ACCESSIBILITY
       if (nsWindow::gIsAccessibilityOn) {
         // Create it for the first time so that it can start firing events
-        GetRootAccessible();
+        nsCOMPtr<nsIAccessible> rootAccessible = GetRootAccessible();
       }
 #endif
       break;
@@ -5020,13 +5020,13 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       LRESULT lAcc = 0;
       IAccessible *msaaAccessible = NULL;
       if (lParam == OBJID_CLIENT) { // oleacc.dll will be loaded dynamically
-        nsIAccessible *rootAccessible = GetRootAccessible(); // Held by a11y cache
+        nsCOMPtr<nsIAccessible> rootAccessible = GetRootAccessible(); // Held by a11y cache
         if (rootAccessible) {
           rootAccessible->GetNativeInterface((void**)&msaaAccessible); // does an addref
         }
       }
       else if (lParam == OBJID_CARET) {  // each root accessible owns a caret accessible
-        nsIAccessible *rootAccessible = GetRootAccessible();  // Held by a11y cache
+        nsCOMPtr<nsIAccessible> rootAccessible = GetRootAccessible();  // Held by a11y cache
         nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(rootAccessible));
         if (accDoc) {
           nsCOMPtr<nsIAccessible> accessibleCaret;
@@ -7995,7 +7995,7 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
 
 
 #ifdef ACCESSIBILITY
-nsIAccessible* nsWindow::GetRootAccessible()
+already_AddRefed<nsIAccessible> nsWindow::GetRootAccessible()
 {
   nsWindow::gIsAccessibilityOn = TRUE;
 
