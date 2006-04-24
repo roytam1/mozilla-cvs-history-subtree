@@ -2338,7 +2338,10 @@ nsXULDocument::ApplyPersistentAttributes()
             continue;
 
         nsAutoString id;
-        nsXULContentUtils::MakeElementID(this, NS_ConvertASCIItoUCS2(uri), id);
+        nsXULContentUtils::MakeElementID(this, nsDependentCString(uri), id);
+
+        if (id.IsEmpty())
+            continue;
 
         // This will clear the array if there are no elements.
         GetElementsForID(id, elements);
