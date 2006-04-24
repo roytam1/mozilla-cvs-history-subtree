@@ -86,7 +86,7 @@
 #include "nsIDateTimeFormat.h"
 #include "nsDateTimeFormatCID.h"
 #include "nsIScriptableDateFormat.h"
-
+#include "nsIDOMXULElement.h"
 
 static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 static NS_DEFINE_CID(kRDFServiceCID,        NS_RDFSERVICE_CID);
@@ -239,6 +239,10 @@ nsXULContentUtils::GetElementRefResource(nsIContent* aElement, nsIRDFResource** 
     NS_ASSERTION(NS_SUCCEEDED(rv), "severe error retrieving attribute");
     if (NS_FAILED(rv)) return rv;
 
+    if (rv != NS_CONTENT_ATTR_HAS_VALUE) {
+        rv = aElement->GetAttr(kNameSpaceID_None, nsXULAtoms::id, uri);
+    }
+
     if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
         // We'll use rdf_MakeAbsolute() to translate this to a URL.
         nsCOMPtr<nsIDocument> doc = aElement->GetDocument();
@@ -255,7 +259,10 @@ nsXULContentUtils::GetElementRefResource(nsIContent* aElement, nsIRDFResource** 
         rv = gRDF->GetUnicodeResource(uri, aResult);
     }
     else {
-        rv = GetElementResource(aElement, aResult);
+        nsCOMPtr<nsIDOMXULElement> xulElem(do_QueryInterface(aElement, &rv));
+        if (xulElem) {
+            rv = xulElem->GetResource(aResult);
+        }
     }
 
     return rv;
