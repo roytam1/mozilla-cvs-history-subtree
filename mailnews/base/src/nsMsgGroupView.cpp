@@ -48,38 +48,14 @@
 #define MSGHDR_CACHE_MAX_SIZE         8192  // Max msghdr cache entries.
 #define MSGHDR_CACHE_DEFAULT_SIZE     100
 
-PRUnichar * nsMsgGroupView::kTodayString = nsnull;
-PRUnichar * nsMsgGroupView::kYesterdayString = nsnull;
-PRUnichar * nsMsgGroupView::kLastWeekString = nsnull;
-PRUnichar * nsMsgGroupView::kTwoWeeksAgoString = nsnull;
-PRUnichar * nsMsgGroupView::kOldMailString = nsnull;
-
 nsMsgGroupView::nsMsgGroupView()
 {
-  if (!kTodayString) 
-  {
-    // priority strings
-    kTodayString = GetString(NS_LITERAL_STRING("today").get());
-    kYesterdayString = GetString(NS_LITERAL_STRING("yesterday").get());
-    kLastWeekString = GetString(NS_LITERAL_STRING("lastWeek").get());
-    kTwoWeeksAgoString = GetString(NS_LITERAL_STRING("twoWeeksAgo").get());
-    kOldMailString = GetString(NS_LITERAL_STRING("older").get());
-  }
   m_dayChanged = PR_FALSE;
   m_lastCurExplodedTime.tm_mday = 0;
 }
 
 nsMsgGroupView::~nsMsgGroupView()
 {
-  // release our global strings
-  if (gInstanceCount <= 1) 
-  {
-    nsCRT::free(kTodayString);
-    nsCRT::free(kYesterdayString);
-    nsCRT::free(kLastWeekString);
-    nsCRT::free(kTwoWeeksAgoString);
-    nsCRT::free(kOldMailString);
-  }
 }
 
 NS_IMETHODIMP nsMsgGroupView::Open(nsIMsgFolder *aFolder, nsMsgViewSortTypeValue aSortType, nsMsgViewSortOrderValue aSortOrder, nsMsgViewFlagsTypeValue aViewFlags, PRInt32 *aCount)
@@ -638,19 +614,29 @@ NS_IMETHODIMP nsMsgGroupView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsA
           switch (((nsPRUint32Key *)hashKey)->GetValue())
           {
           case 1:
-            aValue.Assign(kTodayString);
+            if (!m_kTodayString.get())
+              m_kTodayString.Adopt(GetString(NS_LITERAL_STRING("today").get()));
+            aValue.Assign(m_kTodayString);
             break;
           case 2:
-            aValue.Assign(kYesterdayString);
+            if (!m_kYesterdayString.get())
+              m_kYesterdayString.Adopt(GetString(NS_LITERAL_STRING("yesterday").get()));
+            aValue.Assign(m_kYesterdayString);
             break;
           case 3:
-            aValue.Assign(kLastWeekString);
+            if (!m_kLastWeekString.get())
+              m_kLastWeekString.Adopt(GetString(NS_LITERAL_STRING("lastWeek").get()));
+            aValue.Assign(m_kLastWeekString);
             break;
           case 4:
-            aValue.Assign(kTwoWeeksAgoString);
+            if (!m_kTwoWeeksAgoString.get())
+              m_kTwoWeeksAgoString.Adopt(GetString(NS_LITERAL_STRING("twoWeeksAgo").get()));
+            aValue.Assign(m_kTwoWeeksAgoString);
             break;
           case 5:
-            aValue.Assign(kOldMailString);
+            if (!m_kOldMailString.get())
+              m_kOldMailString.Adopt(GetString(NS_LITERAL_STRING("older").get()));
+            aValue.Assign(m_kOldMailString);
             break;
           default:
             NS_ASSERTION(PR_FALSE, "bad age thread");
