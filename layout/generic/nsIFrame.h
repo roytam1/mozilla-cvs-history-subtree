@@ -1140,10 +1140,7 @@ public:
    * @param aReflowState information about your reflow including the reason
    *          for the reflow and the available space in which to lay out. Each
    *          dimension of the available space can either be constrained or
-   *          unconstrained (a value of NS_UNCONSTRAINEDSIZE). If constrained
-   *          you should choose a value that's less than or equal to the
-   *          constrained size. If unconstrained you can choose as
-   *          large a value as you like.
+   *          unconstrained (a value of NS_UNCONSTRAINEDSIZE).
    *
    *          Note that the available space can be negative. In this case you
    *          still must return an accurate desired size. If you're a container
