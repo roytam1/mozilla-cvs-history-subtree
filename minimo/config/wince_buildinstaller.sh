@@ -42,3 +42,4 @@ cat minimo.log
 ./ezsetup -l english -i minimo_installer.ini -r readme.txt -e eula.txt -o minimo_wince_setup.exe
 
 cp -a minimo_wince_setup.exe $OBJDIR/dist/
+cp -a minimo.CAB $OBJDIR/dist/
