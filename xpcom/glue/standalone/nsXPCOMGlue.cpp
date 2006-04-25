@@ -127,6 +127,8 @@ XPCOMGlueLoadDependentLibs(const char *xpcomDir, DependentLibsCallback cb)
                  xpcomDir, buffer);
         cb(buffer2);
     }
+
+    fclose(flist);
 }
 
 extern "C"
