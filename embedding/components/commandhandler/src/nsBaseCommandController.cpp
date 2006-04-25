@@ -55,7 +55,6 @@ NS_INTERFACE_MAP_BEGIN(nsBaseCommandController)
 NS_INTERFACE_MAP_END
 
 nsBaseCommandController::nsBaseCommandController()
-: mCommandContext(nsnull)
 {
 }
 
@@ -79,7 +78,7 @@ nsBaseCommandController::Init(nsIControllerCommandTable *aCommandTable)
 NS_IMETHODIMP
 nsBaseCommandController::SetCommandContext(nsISupports *aCommandContext)
 {
-  mCommandContext = aCommandContext;     // no addref  
+  mCommandContext = do_GetWeakReference(aCommandContext);
   return NS_OK;
 }
 
@@ -113,7 +112,8 @@ nsBaseCommandController::IsCommandEnabled(const char *aCommand,
 {
   NS_ENSURE_ARG_POINTER(aCommand);
   NS_ENSURE_ARG_POINTER(aResult);
-  return mCommandTable->IsCommandEnabled(aCommand, mCommandContext, aResult);
+  nsCOMPtr<nsISupports> context = do_QueryReferent(mCommandContext);
+  return mCommandTable->IsCommandEnabled(aCommand, context, aResult);
 }
 
 NS_IMETHODIMP
@@ -121,14 +121,16 @@ nsBaseCommandController::SupportsCommand(const char *aCommand, PRBool *aResult)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
   NS_ENSURE_ARG_POINTER(aResult);
-  return mCommandTable->SupportsCommand(aCommand, mCommandContext, aResult);
+  nsCOMPtr<nsISupports> context = do_QueryReferent(mCommandContext);
+  return mCommandTable->SupportsCommand(aCommand, context, aResult);
 }
 
 NS_IMETHODIMP
 nsBaseCommandController::DoCommand(const char *aCommand)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
-  return mCommandTable->DoCommand(aCommand, mCommandContext);
+  nsCOMPtr<nsISupports> context = do_QueryReferent(mCommandContext);
+  return mCommandTable->DoCommand(aCommand, context);
 }
 
 NS_IMETHODIMP
@@ -136,7 +138,8 @@ nsBaseCommandController::DoCommandWithParams(const char *aCommand,
                                              nsICommandParams *aParams)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
-  return mCommandTable->DoCommandParams(aCommand, aParams, mCommandContext);
+  nsCOMPtr<nsISupports> context = do_QueryReferent(mCommandContext);
+  return mCommandTable->DoCommandParams(aCommand, aParams, context);
 }
 
 NS_IMETHODIMP
@@ -144,7 +147,8 @@ nsBaseCommandController::GetCommandStateWithParams(const char *aCommand,
                                                    nsICommandParams *aParams)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
-  return mCommandTable->GetCommandState(aCommand, aParams, mCommandContext);
+  nsCOMPtr<nsISupports> context = do_QueryReferent(mCommandContext);
+  return mCommandTable->GetCommandState(aCommand, aParams, context);
 }
 
 NS_IMETHODIMP
