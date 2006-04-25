@@ -1,9 +1,0 @@
-comm.jar:
-#ifdef MOZ_XUL_APP
-#% content communicator %content/communicator/ xpcnativewrappers=yes
-% overlay chrome://communicator/content/tasksOverlay.xul chrome://communicator/content/emOverlay.xul
-#else
-#* content/communicator/contents.rdf                        (contents.rdf)
-#endif
-  content/communicator/emOverlay.xul
-  content/communicator/pref/pref-locales.xul               (pref/pref-locales.xul)
