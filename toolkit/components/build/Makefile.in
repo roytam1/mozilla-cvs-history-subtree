@@ -87,10 +87,18 @@ REQUIRES = 	\
 		unicharutil \
 		xuldoc \
 		alerts \
-		mork \
-		morkreader \
-		storage \
 		$(NULL)
+
+ifdef MOZ_STORAGE
+REQUIRES += storage
+else # MOZ_STORAGE
+ifdef MOZ_MORK
+REQUIRES += mork
+endif
+endif # MOZ_STORAGE
+ifdef MOZ_MORKREADER
+REQUIRES += morkreader
+endif
 
 EXPORTS = nsToolkitCompsCID.h
 

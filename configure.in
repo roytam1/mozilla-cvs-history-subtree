@@ -4229,7 +4229,7 @@ browser)
   MOZ_APP_DISPLAYNAME=BonEcho
   MOZ_XUL_APP=1
   MOZ_PHOENIX=1
-  MOZ_STORAGE=1
+  MOZ_PLACES=1
   MOZ_APP_VERSION=$FIREFOX_VERSION
   MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc xmlextras pref transformiix universalchardet webservices inspector gnomevfs auth permissions reporter"
   AC_DEFINE(MOZ_PHOENIX)
@@ -4333,7 +4333,7 @@ xulrunner)
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
   MOZ_JAVAXPCOM=1
-  MOZ_STORAGE=1
+#  MOZ_PLACES=1
   MOZ_EXTENSIONS_DEFAULT=" xml-rpc xmlextras pref transformiix universalchardet webservices gnomevfs auth"
   AC_DEFINE(MOZ_XULRUNNER)
   ;;
