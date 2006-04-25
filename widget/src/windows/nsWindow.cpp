@@ -72,6 +72,7 @@
 #include "nsColor.h"
 #include "nsTransform2D.h"
 #include "nsIEventQueue.h"
+#include "nsIObserverService.h"
 #include "imgIContainer.h"
 #include "gfxIImageFrame.h"
 #include "nsNativeCharsetUtils.h"
@@ -108,6 +109,11 @@
 
 #include <imm.h>
 #include "aimm.h"
+
+#include <pbt.h>
+#ifndef PBT_APMRESUMEAUTOMATIC
+#define PBT_APMRESUMEAUTOMATIC 0x0012
+#endif
 
 #include "nsNativeDragTarget.h"
 #include "nsIRollupListener.h"
@@ -4219,6 +4225,17 @@ void nsWindow::DispatchPendingEvents()
   }
 }
 
+#ifndef WINCE
+void nsWindow::PostSleepWakeNotification(const char* aNotification)
+{
+  nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
+  if (observerService)
+  {
+    observerService->NotifyObservers(nsnull, aNotification, nsnull);
+  }
+}
+#endif
+
 PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *aRetValue)
 {
   static UINT vkKeyCached = 0;              // caches VK code fon WM_KEYDOWN
@@ -4337,6 +4354,26 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       } //if (NS_SUCCEEDED(rv))
     }
     break;
+
+#ifndef WINCE
+    case WM_POWERBROADCAST:
+      // only hidden window handle this
+      // to prevent duplicate notification
+      if (mWindowType == eWindowType_invisible) {
+        switch (wParam)
+        {
+          case PBT_APMSUSPEND:
+            PostSleepWakeNotification("sleep_notification");
+            break;
+          case PBT_APMRESUMEAUTOMATIC:
+          case PBT_APMRESUMECRITICAL:
+          case PBT_APMRESUMESUSPEND:
+            PostSleepWakeNotification("wake_notification");
+            break;
+        }
+      }
+      break;
+#endif
 
     case WM_MOVE: // Window moved
     {
