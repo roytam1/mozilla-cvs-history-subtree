@@ -178,6 +178,11 @@ if [ -z "$MOZ_NO_REMOTE" ] && [ $# -lt 5 ]; then
           break
         fi
         ;;
+      -*)
+        # we don't recognize this flag, so bail
+        MOZ_NO_REMOTE=1
+        break
+        ;;
       *)
         if [ $i -eq $# ]; then
           # If this is the last command line argument and it doesn't begin with 
@@ -188,11 +193,6 @@ if [ -z "$MOZ_NO_REMOTE" ] && [ $# -lt 5 ]; then
           MOZ_NO_REMOTE=1
           break
         fi
-        ;;
-      -*)
-        # we don't recognize this flag, so bail
-        MOZ_NO_REMOTE=1
-        break
         ;;
     esac
     i=$(($i+1))
