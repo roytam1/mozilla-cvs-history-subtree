@@ -725,6 +725,7 @@ nsHandleSSLError(nsNSSSocketInfo *socketInfo, PRInt32 err)
     params[0] = hostNameU.get();
     nssComponent->PIPBundleFormatStringFromName("PeersCertBadSignature", 
                                                 params, 1, formattedString);
+    break;
 
   //A generic error handler for peer cert
   case SEC_ERROR_UNKNOWN_CERT:
