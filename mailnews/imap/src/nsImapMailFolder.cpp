@@ -753,6 +753,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
     selectFolder = PR_FALSE;
   }
   rv = GetDatabase(msgWindow);
+  NS_ENSURE_SUCCESS(rv, rv);
   
   PRBool canOpenThisFolder = PR_TRUE;
   GetCanIOpenThisFolder(&canOpenThisFolder);
