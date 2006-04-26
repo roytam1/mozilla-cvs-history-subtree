@@ -136,7 +136,6 @@ protected:
                             nsHTMLReflowMetrics& aDesiredSize,
                             const nsHTMLReflowState& aReflowState,
                             nsIFrame* aFirstKid,
-                            const nsSize& aAvailSize,
                             nsMargin aFocusPadding,
                             nsReflowStatus& aStatus);
 

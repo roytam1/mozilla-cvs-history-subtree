@@ -296,17 +296,11 @@ nsHTMLButtonControlFrame::Reflow(nsPresContext* aPresContext,
                 (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)),
                "Why are we reflowing?");
 
-  nsSize availSize(aReflowState.mComputedWidth, NS_INTRINSICSIZE);
-
-  // Indent the child inside us by the focus border. We must do this separate
-  // from the regular border.
   nsMargin focusPadding = mRenderer.GetAddedButtonBorderAndPadding();
-  availSize.width -= focusPadding.LeftRight();
-  availSize.width = PR_MAX(availSize.width,0);
   
   // Reflow the contents of the button.
   ReflowButtonContents(aPresContext, aDesiredSize, aReflowState, firstKid,
-                       availSize, focusPadding, aStatus);
+                       focusPadding, aStatus);
 
   aDesiredSize.width = aReflowState.mComputedWidth;
 
@@ -348,15 +342,40 @@ nsHTMLButtonControlFrame::ReflowButtonContents(nsPresContext* aPresContext,
                                                nsHTMLReflowMetrics& aDesiredSize,
                                                const nsHTMLReflowState& aReflowState,
                                                nsIFrame* aFirstKid,
-                                               const nsSize& aAvailSize,
                                                nsMargin aFocusPadding,
                                                nsReflowStatus& aStatus)
 {
+  nsSize availSize(aReflowState.mComputedWidth, NS_INTRINSICSIZE);
+
+  // Indent the child inside us by the focus border. We must do this separate
+  // from the regular border.
+  availSize.width -= aFocusPadding.LeftRight();
+  availSize.width = PR_MAX(availSize.width,0);
+  
+  // See whether out availSize's width is big enough.  If it's smaller than our
+  // intrinsic min width, that means that the kid wouldn't really fit; for a
+  // better look in such cases we adjust the available width and our left
+  // offset to allow the kid to spill left into our padding.
+  nscoord xoffset = aFocusPadding.left + aReflowState.mComputedBorderPadding.left;
+  nscoord extrawidth = GetMinWidth(aReflowState.rendContext) -
+    aReflowState.mComputedWidth;
+  if (extrawidth > 0) {
+    nscoord extraleft = extrawidth / 2;
+    nscoord extraright = extrawidth - extraleft;
+    NS_ASSERTION(extraright >=0, "How'd that happen?");
+    
+    // Do not allow the extras to be bigger than the relevant padding
+    extraleft = PR_MIN(extraleft, aReflowState.mComputedPadding.left);
+    extraright = PR_MIN(extraright, aReflowState.mComputedPadding.right);
+    xoffset -= extraleft;
+    availSize.width += extraleft + extraright;
+  }
+  
   nsHTMLReflowState reflowState(aPresContext, aReflowState, aFirstKid,
-                                aAvailSize);
+                                availSize);
 
   ReflowChild(aFirstKid, aPresContext, aDesiredSize, reflowState,
-              aFocusPadding.left + aReflowState.mComputedBorderPadding.left,
+              xoffset,
               aFocusPadding.top + aReflowState.mComputedBorderPadding.top,
               0, aStatus);
   
@@ -380,23 +399,6 @@ nsHTMLButtonControlFrame::ReflowButtonContents(nsPresContext* aPresContext,
   // Adjust the ascent by our offset (since we moved the child's
   // baseline by that much).
   aDesiredSize.ascent += yoff;
-  
-  // Place the child.  If we have a non-intrinsic width, we want to
-  // reduce the left padding as needed to try and fit the text in the
-  // button
-  nscoord xoffset = aFocusPadding.left + aReflowState.mComputedBorderPadding.left;
-  // First, how much did we "overflow"?  If our computed width is less than our
-  // intrinsic min width, then the kid isn't fitting and we need to adjust the
-  // x-position in an attempt to center it at the cost of our padding.
-  nscoord extrawidth = GetMinWidth(aReflowState.rendContext) -
-    aReflowState.mComputedWidth;
-  if (extrawidth > 0) {
-    // Split it evenly between right and left
-    extrawidth /= 2;
-    // But do not shoot out the left side of the button, please
-    extrawidth = PR_MIN(extrawidth, aReflowState.mComputedPadding.left);
-    xoffset -= extrawidth;
-  }
   
   // Place the child
   FinishReflowChild(aFirstKid, aPresContext, &reflowState, aDesiredSize,
