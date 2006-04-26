@@ -10,6 +10,7 @@ toolkit.jar:
 *+ content/global/commonDialog.js             (commonDialog.js)
 *+ content/global/commonDialog.xul            (commonDialog.xul)
 *+ content/global/globalOverlay.js            (globalOverlay.js)
+*+ content/global/inlineSpellCheckUI.js       (inlineSpellCheckUI.js)
 +  content/global/mozilla.xhtml               (mozilla.xhtml)
 *+ content/global/bindings/autocomplete.xml    (widgets/autocomplete.xml)
 *+ content/global/bindings/browser.xml         (widgets/browser.xml)

@@ -22,6 +22,7 @@
  * Contributor(s):
  *   David Hyatt <hyatt@netscape.com> (original author)
  *   Johnny Stenback <jst@netscape.com>
+ *   Brett Wilson <brettw@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -91,10 +92,34 @@ interface nsIDOMXULDocument : nsISupports
  * nsIDOMXULDocument interface on the branch. It provides non-scriptable
  * functions that don't do security checks to access the popup and tooltip
  * nodes.
+ *
+ * @status TEMPORARY
  */
 [uuid(87545e48-b966-4579-829a-ca01b0fca9b3)]
 interface nsIDOMXULDocument2 : nsIDOMXULDocument
 {
   nsIDOMNode trustedGetPopupNode();
   nsIDOMNode trustedGetTooltipNode();
+
+  attribute nsIDOMEvent trustedPopupEvent;
+};
+
+/**
+ * This interface adds the popup event for the inline spell checker on brach,
+ * because we can't change nsIDOMXULDoucument. We can't use nsIDOMXULDocument2
+ * because it isn't scriptable.
+ *
+ * @status TEMPORARY
+ */
+[scriptable, uuid(8cc6316d-ecbc-4c5f-8fda-28c91fb56e3d)]
+interface nsIDOMXULDocument_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * These attributes correspond to trustedGetPopupNode().rangeOffset and
+   * rangeParent. They will help you find where in the DOM the popup is
+   * happening. Can be accessed from chrome only, and only during a popup
+   * event. Accessing any other time will be an error.
+   */
+  readonly attribute nsIDOMNode popupRangeParent;
+  readonly attribute long popupRangeOffset;
 };

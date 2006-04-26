@@ -95,7 +95,7 @@ class nsIDOMEventReceiver;
  *  manager, event interfaces. the idea for the event interfaces is to have them 
  *  delegate the actual commands to the editor independent of the XPFE implementation.
  */
-class nsEditor : public nsIEditor,
+class nsEditor : public nsIEditor_MOZILLA_1_8_BRANCH,
                  public nsIEditorIMESupport,
                  public nsSupportsWeakReference,
                  public nsIPhonetic
@@ -146,6 +146,7 @@ public:
 
   /* ------------ nsIEditor methods -------------- */
   NS_DECL_NSIEDITOR
+  NS_DECL_NSIEDITOR_MOZILLA_1_8_BRANCH
   /* ------------ nsIEditorIMESupport methods -------------- */
   NS_DECL_NSIEDITORIMESUPPORT
   

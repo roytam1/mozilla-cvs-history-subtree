@@ -84,6 +84,7 @@ struct PRLogModuleInfo;
 class nsXULDocument : public nsXMLDocument,
                       public nsIXULDocument,
                       public nsIDOMXULDocument2,
+                      public nsIDOMXULDocument_MOZILLA_1_8_BRANCH,
                       public nsIStreamLoaderObserver
 {
 public:
@@ -163,6 +164,7 @@ public:
     // nsIDOMXULDocument interface
     NS_DECL_NSIDOMXULDOCUMENT
     NS_DECL_NSIDOMXULDOCUMENT2
+    NS_DECL_NSIDOMXULDOCUMENT_MOZILLA_1_8_BRANCH
 
     // nsIDOMNSDocument
     NS_IMETHOD GetContentType(nsAString& aContentType);

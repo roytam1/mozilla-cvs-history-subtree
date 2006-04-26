@@ -54,7 +54,7 @@ class nsPIDOMWindow;
 class nsIController;
 class nsIControllers;
 
-class nsFocusController : public nsIFocusController, 
+class nsFocusController : public nsIFocusController_MOZILLA_1_8_BRANCH,
                           public nsIDOMFocusListener,
                           public nsSupportsWeakReference
 {
@@ -86,6 +86,9 @@ public:
   NS_IMETHOD GetPopupNode(nsIDOMNode** aNode);
   NS_IMETHOD SetPopupNode(nsIDOMNode* aNode);
 
+  NS_IMETHOD GetPopupEvent(nsIDOMEvent** aEvent);
+  NS_IMETHOD SetPopupEvent(nsIDOMEvent* aEvent);
+
   NS_IMETHOD GetControllerForCommand(const char *aCommand, nsIController** aResult);
   NS_IMETHOD GetControllers(nsIControllers** aResult);
 
@@ -115,6 +118,7 @@ protected:
   nsCOMPtr<nsIDOMWindowInternal> mCurrentWindow; // [OWNER]
   nsCOMPtr<nsIDOMWindowInternal> mPreviousWindow; // [OWNER]
   nsCOMPtr<nsIDOMNode> mPopupNode; // [OWNER]
+  nsCOMPtr<nsIDOMEvent> mPopupEvent;
 
   PRUint32 mSuppressFocus;
   PRPackedBool mSuppressFocusScroll;

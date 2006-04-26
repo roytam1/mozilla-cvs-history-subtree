@@ -72,6 +72,7 @@
 #include "nsIScrollableView.h"
 #include "nsIContentViewer.h"
 #include "nsGUIEvent.h"
+#include "nsIDOMNSUIEvent.h"
 #include "nsIDOMXULElement.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsIRDFNode.h"
@@ -477,6 +478,7 @@ NS_INTERFACE_MAP_BEGIN(nsXULDocument)
     NS_INTERFACE_MAP_ENTRY(nsIDOMXULDocument)
     NS_INTERFACE_MAP_ENTRY(nsIStreamLoaderObserver)
     NS_INTERFACE_MAP_ENTRY(nsIDOMXULDocument2)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMXULDocument_MOZILLA_1_8_BRANCH)
     NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULDocument)
 NS_INTERFACE_MAP_END_INHERITING(nsXMLDocument)
 
@@ -1743,6 +1745,92 @@ nsXULDocument::SetPopupNode(nsIDOMNode* aNode)
     rv = focusController->SetPopupNode(aNode);
 
     return rv;
+}
+
+NS_IMETHODIMP
+nsXULDocument::GetTrustedPopupEvent(nsIDOMEvent** aEvent)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIFocusController> focusController;
+    GetFocusController(getter_AddRefs(focusController));
+    NS_ENSURE_TRUE(focusController, NS_ERROR_FAILURE);
+
+    nsCOMPtr<nsIFocusController_MOZILLA_1_8_BRANCH> focusControllerBranch =
+        do_QueryInterface(focusController, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = focusControllerBranch->GetPopupEvent(aEvent);
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsXULDocument::SetTrustedPopupEvent(nsIDOMEvent* aEvent)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIFocusController> focusController;
+    GetFocusController(getter_AddRefs(focusController));
+    NS_ENSURE_TRUE(focusController, NS_ERROR_FAILURE);
+
+    nsCOMPtr<nsIFocusController_MOZILLA_1_8_BRANCH> focusControllerBranch =
+        do_QueryInterface(focusController, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = focusControllerBranch->SetPopupEvent(aEvent);
+
+    return rv;
+}
+
+// Returns the rangeOffset element from the popupEvent. This is for chrome
+// callers only.
+NS_IMETHODIMP
+nsXULDocument::GetPopupRangeParent(nsIDOMNode** aRangeParent)
+{
+    NS_ENSURE_ARG_POINTER(aRangeParent);
+    *aRangeParent = nsnull;
+
+    nsCOMPtr<nsIDOMEvent> event;
+    nsresult rv = GetTrustedPopupEvent(getter_AddRefs(event));
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (! event)
+        return NS_ERROR_UNEXPECTED; // no event active
+
+    nsCOMPtr<nsIDOMNSUIEvent> uiEvent = do_QueryInterface(event, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = uiEvent->GetRangeParent(aRangeParent); // addrefs
+
+    if (NS_SUCCEEDED(rv) && *aRangeParent &&
+            !nsContentUtils::CanCallerAccess(*aRangeParent)) {
+        NS_RELEASE(*aRangeParent);
+        return NS_ERROR_DOM_SECURITY_ERR;
+    }
+    return rv;
+}
+
+// Returns the rangeOffset element from the popupEvent. We check the rangeParent
+// to determine if the caller has rights to access to the data.
+NS_IMETHODIMP
+nsXULDocument::GetPopupRangeOffset(PRInt32* aRangeOffset)
+{
+    NS_ENSURE_ARG_POINTER(aRangeOffset);
+
+    nsCOMPtr<nsIDOMEvent> event;
+    nsresult rv = GetTrustedPopupEvent(getter_AddRefs(event));
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (! event)
+        return NS_ERROR_UNEXPECTED; // no event active
+
+    nsCOMPtr<nsIDOMNSUIEvent> uiEvent = do_QueryInterface(event, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIDOMNode> parent;
+    rv = uiEvent->GetRangeParent(getter_AddRefs(parent));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (parent && !nsContentUtils::CanCallerAccess(parent))
+        return NS_ERROR_DOM_SECURITY_ERR;
+
+    return uiEvent->GetRangeOffset(aRangeOffset);
 }
 
 NS_IMETHODIMP

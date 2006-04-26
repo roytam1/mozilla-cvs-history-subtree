@@ -85,7 +85,8 @@ nsFocusController::~nsFocusController(void)
 {
 }
 
-NS_IMPL_ISUPPORTS4(nsFocusController, nsIFocusController, nsIDOMFocusListener,
+NS_IMPL_ISUPPORTS5(nsFocusController, nsIFocusController,
+                   nsIFocusController_MOZILLA_1_8_BRANCH, nsIDOMFocusListener,
                    nsIDOMEventListener, nsSupportsWeakReference)
 
 NS_IMETHODIMP
@@ -605,4 +606,17 @@ nsFocusController::SetPopupNode(nsIDOMNode* aNode)
   return NS_OK;
 }
 
-  
+NS_IMETHODIMP
+nsFocusController::GetPopupEvent(nsIDOMEvent** aEvent)
+{
+  *aEvent = mPopupEvent;
+  NS_IF_ADDREF(*aEvent);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFocusController::SetPopupEvent(nsIDOMEvent* aEvent)
+{
+  mPopupEvent = aEvent;
+  return NS_OK;
+}

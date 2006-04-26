@@ -543,3 +543,26 @@ interface nsIEditor  : nsISupports
   /* Run unit tests. Noop in optimized builds */
   void debugUnitTests(out long outNumTests, out long  outNumTestsFailed);
 };
+
+/**
+ * This enables optional lazy creation of the spellchecking object. On the
+ * trunk getInlineSpellChecker replaces the attribute inlineSpellChecker. Here,
+ * we support that on a special interface to avoid changing branch interfaces,
+ * and rename it to getInlineSpellCheckerOptionally to avoid conflicting with
+ * the automatically generated getter for the attribute.
+ *
+ * @status TEMPORARY
+ */
+[scriptable, uuid(60fbf998-e021-4f81-bdf0-749cc651e221)]
+interface nsIEditor_MOZILLA_1_8_BRANCH : nsIEditor
+{
+  /** Returns the inline spell checker associated with this object. The spell
+   * checker is lazily created, so this function may create the object for
+   * you during this call.
+   * @param  autoCreate  If true, this will create a spell checker object
+   *                     if one does not exist yet for this editor. If false
+   *                     and the object has not been created, this function
+   *                     WILL RETURN NULL.
+   */
+  nsIInlineSpellChecker getInlineSpellCheckerOptionally(in boolean autoCreate);
+};

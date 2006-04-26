@@ -250,7 +250,8 @@ nsEditor::~nsEditor()
   NS_IF_RELEASE(mViewManager);
 }
 
-NS_IMPL_ISUPPORTS4(nsEditor, nsIEditor, nsIEditorIMESupport, nsISupportsWeakReference, nsIPhonetic)
+NS_IMPL_ISUPPORTS5(nsEditor, nsIEditor, nsIEditor_MOZILLA_1_8_BRANCH,
+                   nsIEditorIMESupport, nsISupportsWeakReference, nsIPhonetic)
 
 #ifdef XP_MAC
 #pragma mark -
@@ -1294,6 +1295,24 @@ NS_IMETHODIMP nsEditor::GetInlineSpellChecker(nsIInlineSpellChecker ** aInlineSp
 
     rv = mInlineSpellChecker->Init(this);
     NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  NS_IF_ADDREF(*aInlineSpellChecker = mInlineSpellChecker);  
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsEditor::GetInlineSpellCheckerOptionally(PRBool autoCreate,
+                                  nsIInlineSpellChecker ** aInlineSpellChecker)
+ {
+   NS_ENSURE_ARG_POINTER(aInlineSpellChecker);
+   nsresult rv;
+ 
+  if (!mInlineSpellChecker && autoCreate) {
+     mInlineSpellChecker = do_CreateInstance(MOZ_INLINESPELLCHECKER_CONTRACTID, &rv);
+     NS_ENSURE_SUCCESS(rv, rv);
+ 
+     rv = mInlineSpellChecker->Init(this);
+     NS_ENSURE_SUCCESS(rv, rv);
   }
 
   NS_IF_ADDREF(*aInlineSpellChecker = mInlineSpellChecker);  

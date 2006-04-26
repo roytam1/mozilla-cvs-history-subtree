@@ -82,6 +82,10 @@ menubar > menu[open] {
   background-color: -moz-menuhover;
 }
 
+menuitem.spell-suggestion {
+  font-weight:bold;
+}
+
 /* ::::: menu/menuitems in menulist popups ::::: */
 
 .menulist-menupopup > menuitem,

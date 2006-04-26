@@ -276,15 +276,17 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
   // Get the document with the popup.
   nsCOMPtr<nsIContent> content = do_QueryInterface(mElement);
 
-  // Turn the document into a XUL document so we can use SetPopupNode.
-  nsCOMPtr<nsIDOMXULDocument> xulDocument = do_QueryInterface(content->GetDocument());
+  // Turn the document into a XUL document so we can use SetPopupNode
+  nsCOMPtr<nsIDOMXULDocument2> xulDocument = do_QueryInterface(content->GetDocument());
   if (!xulDocument) {
     NS_ERROR("Popup attached to an element that isn't in XUL!");
     return NS_ERROR_FAILURE;
   }
 
   // Store clicked-on node in xul document for context menus and menu popups.
+  // CLEAR THE POPUP EVENT BEFORE THIS FUNCTION EXITS
   xulDocument->SetPopupNode( targetNode );
+  xulDocument->SetTrustedPopupEvent( aMouseEvent );
 
   switch (popupType) {
     case eXULPopupType_popup:
@@ -310,6 +312,7 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
     aMouseEvent->PreventDefault();
     break;
   }
+  xulDocument->SetTrustedPopupEvent(nsnull);
   return NS_OK;
 }
 

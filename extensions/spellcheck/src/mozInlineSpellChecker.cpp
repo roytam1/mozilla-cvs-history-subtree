@@ -20,6 +20,7 @@
  *
  * Contributor(s): Neil Deakin (neil@mozdevgroup.com)
  *                 Scott MacGregor (mscott@mozilla.org)
+ *                 Brett Wilson <brettw@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -86,7 +87,11 @@ NS_INTERFACE_MAP_END
 
 NS_IMPL_ADDREF(mozInlineSpellChecker)
 NS_IMPL_RELEASE(mozInlineSpellChecker)
-                  
+
+mozInlineSpellChecker::SpellCheckingState
+  mozInlineSpellChecker::gCanEnableSpellChecking =
+  mozInlineSpellChecker::SpellCheck_Uninitialized;
+
 mozInlineSpellChecker::mozInlineSpellChecker():mNumWordsInSpellSelection(0), mMaxNumWordsInSpellSelection(250)
 {
   nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
@@ -116,6 +121,44 @@ mozInlineSpellChecker::Init(nsIEditor *aEditor)
 nsresult mozInlineSpellChecker::Cleanup()
 {
   return UnregisterEventListeners();
+}
+
+// mozInlineSpellChecker::CanEnableInlineSpellChecking
+//
+//    This function can be called to see if it seems likely that we can enable
+//    spellchecking before actually creating the InlineSpellChecking objects.
+//
+//    The problem is that we can't get the dictionary list without actually
+//    creating a whole bunch of spellchecking objects. This function tries to
+//    do that and caches the result so we don't have to keep allocating those
+//    objects if there are no dictionaries or spellchecking.
+//
+//    This caching will prevent adding dictionaries at runtime if we start out
+//    with no dictionaries! Installing dictionaries as extensions will require
+//    a restart anyway, so it shouldn't be a problem.
+
+PRBool mozInlineSpellChecker::CanEnableInlineSpellChecking() // static
+{
+  nsresult rv;
+  if (gCanEnableSpellChecking == SpellCheck_Uninitialized) {
+    gCanEnableSpellChecking = SpellCheck_NotAvailable;
+
+    nsCOMPtr<nsIEditorSpellCheck> spellchecker =
+      do_CreateInstance("@mozilla.org/editor/editorspellchecker;1", &rv);
+    NS_ENSURE_SUCCESS(rv, PR_FALSE);
+
+    PRBool canSpellCheck = PR_TRUE;
+    nsCOMPtr<nsIEditorSpellCheck_MOZILLA_1_8_BRANCH> spellcheckerBranch =
+      do_QueryInterface(spellchecker, &rv);
+    if (NS_SUCCEEDED(rv)) {
+      rv = spellcheckerBranch->CanSpellCheck(&canSpellCheck);
+      NS_ENSURE_SUCCESS(rv, PR_FALSE);
+    }
+
+    if (canSpellCheck)
+      gCanEnableSpellChecking = SpellCheck_Available;
+  }
+  return (gCanEnableSpellChecking == SpellCheck_Available);
 }
 
 // the inline spell checker listens to mouse events and keyboard navigation events
@@ -197,6 +240,9 @@ NS_IMETHODIMP mozInlineSpellChecker::SetEnableRealTimeSpell(PRBool aEnabled)
         RegisterEventListeners();
       }
     }
+
+    // spellcheck the current contents
+    res = SpellCheckRange(nsnull);
   }
   else 
   {
@@ -306,8 +352,11 @@ NS_IMETHODIMP mozInlineSpellChecker::SpellCheckAfterEditorChange(PRInt32 action,
       break;
 
     case kOpLoadHTML:
-      // XXX this should cause a spellcheck of the entire document
+    {
+      // spell check the entire document
+      SpellCheckRange(nsnull);
       break;
+    }
 
     case kOpInsertElement:
       PRBool iscollapsed;
@@ -343,6 +392,7 @@ NS_IMETHODIMP mozInlineSpellChecker::SpellCheckAfterEditorChange(PRInt32 action,
   return res;
 }
 
+// supply a NULL range and this will check the entire editor
 NS_IMETHODIMP mozInlineSpellChecker::SpellCheckRange(nsIDOMRange *aRange)
 {
   NS_ENSURE_TRUE(mSpellCheck, NS_ERROR_NOT_INITIALIZED);
@@ -353,7 +403,22 @@ NS_IMETHODIMP mozInlineSpellChecker::SpellCheckRange(nsIDOMRange *aRange)
 
   CleanupRangesInSelection(spellCheckSelection);
 
-  return SpellCheckRange(aRange,spellCheckSelection);
+  if(aRange) {
+    // use the given range
+    rv = SpellCheckRange(aRange, spellCheckSelection);
+  } else {
+    // use full range: SpellCheckBetweenNodes will do the somewhat complicated
+    // task of creating a range over the element we give it and call
+    // SpellCheckRange(range,selection) for us
+    nsCOMPtr<nsIEditor> editor (do_QueryReferent(mEditor));
+    if (!editor)
+      return NS_ERROR_NOT_INITIALIZED;
+    nsCOMPtr<nsIDOMElement> rootElem;
+    rv = editor->GetRootElement(getter_AddRefs(rootElem));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = SpellCheckBetweenNodes(rootElem, 0, rootElem, -1, spellCheckSelection);
+  }
+  return rv;
 }
 
 NS_IMETHODIMP mozInlineSpellChecker::GetMispelledWord(nsIDOMNode *aNode, PRInt32 aOffset, nsIDOMRange **newword)
@@ -645,6 +710,11 @@ mozInlineSpellChecker::SpellCheckBetweenNodes(nsIDOMNode *aStartNode,
     aEndOffset = childCount;
   }
 
+  // sometimes we are are requested to check an empty range (possibly an empty
+  // document). This will result in assertions later.
+  if (aStartNode == aEndNode && aStartOffset == aEndOffset)
+    return NS_OK;
+
   range->SetStart(aStartNode,aStartOffset);
 
   if (aEndOffset) 
@@ -765,6 +835,8 @@ nsresult mozInlineSpellChecker::GenerateRangeForSurroundingWord(nsIDOMNode * aNo
   textLength = text.Length();
   if (aOffset == -1 || aOffset >= textLength) 
     aOffset = textLength - 1;
+  if (aOffset < 0)
+    aOffset = 0;
 
   PRInt32 currentOffset = aOffset;
   if (currentOffset && textChars[currentOffset] == ' ')
@@ -1181,14 +1253,19 @@ nsresult mozInlineSpellChecker::HandleNavigationEvent(nsIDOMEvent * aEvent, PRBo
 {
   // get the current selection and compare it to the new selection.
   nsresult rv;
-  
+
   nsCOMPtr<nsIDOMNode> currentAnchorNode = mCurrentSelectionAnchorNode;
   PRInt32 currentAnchorOffset = mCurrentSelectionOffset;
 
   // now remember the new focus position resulting from the event
-  SaveCurrentSelectionPosition(); 
+  rv = SaveCurrentSelectionPosition();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  NS_ENSURE_TRUE(currentAnchorNode, NS_OK);
+  // No current selection (this can happen the first time you focus empty
+  // windows). Since we just called SaveCurrentSelectionPosition it will be
+  // initialized for next time.
+  if (! currentAnchorNode)
+    return NS_OK;
 
   // expand the old selection into a range for the nearest word boundary
   nsCOMPtr<nsIDOMRange> currentWordRange; 

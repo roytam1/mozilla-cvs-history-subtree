@@ -87,6 +87,19 @@ public:
   NS_IMETHOD ResetElementFocus() = 0;
 };
 
+// {884e474a-bb6b-4cbf-89ea-47e0ec1f67c3}
+#define NS_IFOCUSCONTROLLER_MOZILLA_1_8_BRANCH_IID \
+{ 0x884e474a, 0xbb6b, 0x4cbf, { 0x89, 0xea, 0x47, 0xe0, 0xec, 0x1f, 0x67, 0xc3 } }
+
+class nsIFocusController_MOZILLA_1_8_BRANCH : public nsIFocusController
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFOCUSCONTROLLER_MOZILLA_1_8_BRANCH_IID)
+
+  NS_IMETHOD GetPopupEvent(nsIDOMEvent** aEvent)=0;
+  NS_IMETHOD SetPopupEvent(nsIDOMEvent* aEvent)=0;
+};
+
 class nsFocusSuppressor {
 public:
   ~nsFocusSuppressor()
