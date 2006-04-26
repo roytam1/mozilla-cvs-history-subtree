@@ -72,6 +72,7 @@ static PRDescIdentity nsWINCESSLIOLayerIdentity;
 static PRIOMethods	  nsWINCESSLIOLayerMethods;
 
 
+#ifdef DEBUG
 void MessageBoxWSAError(const char * msg)
 {
     char buffer[100];
@@ -82,6 +83,7 @@ void MessageBoxWSAError(const char * msg)
     sprintf(buffer, "%s error is: %d", msg, error);
     MessageBox(0, buffer, buffer, MB_APPLMODAL  | MB_TOPMOST | MB_SETFOREGROUND);
 }
+#endif
 
 class nsWINCESSLSocketProvider : public nsISocketProvider
 {
@@ -201,7 +203,9 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
     
     if (!gSslCrackCertificate || !gSslFreeCertificate)
     {
+#ifdef DEBUG
       MessageBox(0, "Could not find the right stuff in the default security library", "schannel.dll", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return SSL_ERR_BAD_DATA;
     }
   }
@@ -296,7 +300,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
     SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); 
     if (!s)
     {
+#ifdef DEBUG
       MessageBox(0, "Failed to create a socket", "connect()", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return PR_FAILURE;
     }
 
@@ -307,7 +313,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
     DWORD error = setsockopt (s, SOL_SOCKET, SO_SECURE, (char *)&dwFlag, sizeof(dwFlag));
     if (error != 0)
     {
+#ifdef DEBUG
       MessageBox(0, "Failed to setsockopt", "connect()", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return PR_FAILURE;
     }
 
@@ -328,7 +336,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
                    NULL, 
                    NULL) )
     {
+#ifdef DEBUG
       MessageBox(0, "SO_SSL_SET_VALIDATE_CERT_HOOK", "connect()", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return PR_FAILURE;
     }
 
@@ -342,7 +352,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
     if (result == 0)
       return PR_SUCCESS;
 
+#ifdef DEBUG
     MessageBoxWSAError("connect()");
+#endif
 
     return PR_FAILURE;
 }
@@ -371,7 +383,9 @@ nsWINCESSLIOLayerClose(PRFileDesc *fd)
 static PRInt32 PR_CALLBACK
 nsWINCESSLIOLayerAvailable(PRFileDesc *fd)
 {
+#ifdef DEBUG
   MessageBox(0, "available.", "available.", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
   return 1;
 }
 
@@ -384,7 +398,9 @@ nsWINCESSLIOLayerRead(PRFileDesc* fd, void* buf, PRInt32 amount)
 
   WSASetLastError (0) ;  
   PRInt32 rv = recv(info->mSocket, (char*)buf, amount, 0);
+#ifdef DEBUG
   MessageBoxWSAError("read");
+#endif
 
   return rv;
 }
@@ -398,7 +414,9 @@ nsWINCESSLIOLayerWrite(PRFileDesc* fd, const void* buf, PRInt32 amount)
     
   WSASetLastError (0) ;  
   PRInt32 rv = send(info->mSocket, (char*)buf, amount, 0);
+#ifdef DEBUG
   MessageBoxWSAError("write");
+#endif
 
   return rv;
 }
@@ -469,7 +487,9 @@ nsWINCESSLSocketProvider::NewSocket(PRInt32 family,
   nsresult initrv = infoObject->Init(host, proxyHost, proxyPort);
   if (NS_FAILED(initrv))
   {
+#ifdef DEBUG
     MessageBox(0, "Can not create ssl socket.", "Can not create ssl socket.", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
     return NS_ERROR_FAILURE;
   }
 
