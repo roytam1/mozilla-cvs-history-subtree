@@ -1405,14 +1405,6 @@ nsBulletFrame::GetListItemText(const nsStyleList& aListStyle,
 #define MIN_BULLET_SIZE 1
 
 
-#define MINMAX(_value,_min,_max) \
-    ((_value) < (_min)           \
-     ? (_min)                    \
-     : ((_value) > (_max)        \
-        ? (_max)                 \
-        : (_value)))
-
-
 void
 nsBulletFrame::GetDesiredSize(nsPresContext*  aCX,
                               nsIRenderingContext *aRenderingContext,

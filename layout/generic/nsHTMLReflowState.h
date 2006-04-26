@@ -56,6 +56,14 @@ struct nsStylePadding;
 struct nsStyleText;
 struct nsHypotheticalBox;
 
+// We really want a PR_MINMAX to go along with PR_MIN/PR_MAX
+#define MINMAX(_value,_min,_max) \
+    ((_value) < (_min)           \
+     ? (_min)                    \
+     : ((_value) > (_max)        \
+        ? (_max)                 \
+        : (_value)))
+
 /**
  * Constant used to indicate an unconstrained size.
  *
@@ -79,22 +87,42 @@ typedef PRUint32  nsCSSFrameType;
  * Bit-flag that indicates whether the element is replaced. Applies to inline,
  * block-level, floating, and absolutely positioned elements
  */
-#define NS_CSS_FRAME_TYPE_REPLACED        0x8000
+#define NS_CSS_FRAME_TYPE_REPLACED                0x08000
+
+/**
+ * Bit-flag that indicates that the element is replaced and contains a block
+ * (eg some form controls).  Applies to inline, block-level, floating, and
+ * absolutely positioned elements.  Mutually exclusive with
+ * NS_CSS_FRAME_TYPE_REPLACED.
+ */
+#define NS_CSS_FRAME_TYPE_REPLACED_CONTAINS_BLOCK 0x10000
 
 /**
  * Helper macros for telling whether items are replaced
  */
-#define NS_FRAME_IS_REPLACED(_ft) \
+#define NS_FRAME_IS_REPLACED_NOBLOCK(_ft) \
   (NS_CSS_FRAME_TYPE_REPLACED == ((_ft) & NS_CSS_FRAME_TYPE_REPLACED))
+
+#define NS_FRAME_IS_REPLACED(_ft)            \
+  (NS_FRAME_IS_REPLACED_NOBLOCK(_ft) ||      \
+   NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(_ft))
 
 #define NS_FRAME_REPLACED(_ft) \
   (NS_CSS_FRAME_TYPE_REPLACED | (_ft))
 
+#define NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(_ft)         \
+  (NS_CSS_FRAME_TYPE_REPLACED_CONTAINS_BLOCK ==         \
+   ((_ft) & NS_CSS_FRAME_TYPE_REPLACED_CONTAINS_BLOCK))
+
+#define NS_FRAME_REPLACED_CONTAINS_BLOCK(_ft) \
+  (NS_CSS_FRAME_TYPE_REPLACED_CONTAINS_BLOCK | (_ft))
+
 /**
  * A macro to extract the type. Masks off the 'replaced' bit-flag
  */
-#define NS_FRAME_GET_TYPE(_ft) \
-  ((_ft) & ~NS_CSS_FRAME_TYPE_REPLACED)
+#define NS_FRAME_GET_TYPE(_ft)                           \
+  ((_ft) & ~(NS_CSS_FRAME_TYPE_REPLACED |                \
+             NS_CSS_FRAME_TYPE_REPLACED_CONTAINS_BLOCK))
 
 #define NS_INTRINSICSIZE    NS_UNCONSTRAINEDSIZE
 #define NS_AUTOHEIGHT       NS_UNCONSTRAINEDSIZE
@@ -419,6 +447,14 @@ protected:
   //   the width/height and it is removed due to box sizing) then it is driven to 0
   void AdjustComputedHeight(PRBool aAdjustForBoxSizing);
   void AdjustComputedWidth(PRBool aAdjustForBoxSizing);
+
+  // Calculate the shrink-wrap width if the available width is aAvailWidth.
+  // This method will set mComputedWidth to the result and call
+  // AdjustComputedWidth, passing PR_FALSE to it.  Note that the available
+  // width passed to this method should not have had the computed margin,
+  // border, and padding subtracted from it -- this method will handle that
+  // itself.
+  void ShrinkWidthToFit(nscoord aAvailWidth);
 
 #ifdef IBMBIDI
   /**

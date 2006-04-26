@@ -191,8 +191,9 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
                      frame->GetSize().width !=
                        mComputedWidth + mComputedBorderPadding.LeftRight();
 
-  NS_ASSERTION(NS_FRAME_IS_REPLACED(mFrameType) ||
-               mFrameType == NS_CSS_FRAME_TYPE_INLINE ||
+  NS_ASSERTION(NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType) ||
+               (mFrameType == NS_CSS_FRAME_TYPE_INLINE &&
+                !NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) ||
                mComputedWidth != NS_UNCONSTRAINEDSIZE,
                "shouldn't use unconstrained widths anymore");
 }
@@ -383,7 +384,9 @@ nsHTMLReflowState::InitFrameType()
   }
 
   // See if the frame is replaced
-  if (frame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
+  if (frame->IsFrameOfType(nsIFrame::eReplacedContainsBlock)) {
+    frameType = NS_FRAME_REPLACED_CONTAINS_BLOCK(frameType);
+  } else if (frame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
     frameType = NS_FRAME_REPLACED(frameType);
   }
 
@@ -1022,26 +1025,17 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     // is 'auto', but not all three. Examine the various combinations
     if (widthIsAuto) {
       nscoord availWidth = containingBlockWidth - mComputedOffsets.left -
-          mComputedMargin.left - mComputedBorderPadding.left -
-          mComputedBorderPadding.right -
-          mComputedMargin.right - mComputedOffsets.right;
+        mComputedOffsets.right;
       if (availWidth < 0)
         availWidth = 0;
 
       if (leftIsAuto || rightIsAuto) {
-        if (NS_FRAME_IS_REPLACED(mFrameType)) {
+        if (NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType)) {
           // For a replaced element we use the intrinsic size
           mComputedWidth = NS_INTRINSICSIZE;
         } else {
-          // The width is shrink-to-fit
-          nscoord prefWidth = frame->GetPrefWidth(rendContext);
-          if (prefWidth < availWidth) {
-            mComputedWidth = prefWidth;
-          } else {
-            nscoord minWidth = frame->GetMinWidth(rendContext);
-            mComputedWidth = PR_MAX(minWidth, availWidth);
-          }
-          AdjustComputedWidth(PR_FALSE);
+          // The width is shrink-to-fit.
+          ShrinkWidthToFit(availWidth);
         }
 
         if (leftIsAuto) {
@@ -1052,6 +1046,10 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
 
       } else {
         // Only 'width' is 'auto' so just solve for 'width'
+        availWidth = availWidth - mComputedMargin.LeftRight() -
+          mComputedBorderPadding.LeftRight();
+        availWidth = PR_MAX(availWidth, 0);
+
         mComputedWidth = availWidth;
 
         AdjustComputedWidth(PR_FALSE);
@@ -1651,7 +1649,9 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
         // this if clause enables %-height on replaced inline frames,
         // such as images.  See bug 54119.  The else clause "heightUnit = eStyleUnit_Auto;"
         // used to be called exclusively.
-        if (NS_FRAME_REPLACED(NS_CSS_FRAME_TYPE_INLINE) == mFrameType) {
+        if (NS_FRAME_REPLACED(NS_CSS_FRAME_TYPE_INLINE) == mFrameType ||
+            NS_FRAME_REPLACED_CONTAINS_BLOCK(
+                NS_CSS_FRAME_TYPE_INLINE) == mFrameType) {
           // Get the containing block reflow state
           NS_ASSERTION(nsnull != cbrs, "no containing block");
           // in quirks mode, get the cb height using the special quirk method
@@ -1697,19 +1697,25 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     ComputeMinMaxValues(aContainingBlockWidth, aContainingBlockHeight, cbrs);
 
     // Calculate the computed width and height. This varies by frame type
-    if ((NS_FRAME_REPLACED(NS_CSS_FRAME_TYPE_INLINE) == mFrameType) ||
-        (NS_FRAME_REPLACED(NS_CSS_FRAME_TYPE_FLOATING) == mFrameType)) {
+    if (NS_FRAME_REPLACED(mFrameType) &&
+        (NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_INLINE ||
+         NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_FLOATING)) {
       // Inline replaced element and floating replaced element are basically
       // treated the same. First calculate the computed width
       if (eStyleUnit_Auto == widthUnit) {
-        // A specified value of 'auto' uses the element's intrinsic width
-        mComputedWidth = NS_INTRINSICSIZE;
+        if (NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) {
+          // The width is shrink-to-fit
+          ShrinkWidthToFit(availableWidth);
+        } else {
+          // A specified value of 'auto' uses the element's intrinsic width
+          mComputedWidth = NS_INTRINSICSIZE;
+        }
       } else {
         ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
                                mStylePosition->mWidth, mComputedWidth);
-      }
 
-      AdjustComputedWidth(PR_TRUE);
+        AdjustComputedWidth(PR_TRUE);
+      }
 
       // Now calculate the computed height
       if (eStyleUnit_Auto == heightUnit) {
@@ -1728,28 +1734,17 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       if (eStyleUnit_Auto == widthUnit) {
         nscoord availWidth = ((eCompatibility_NavQuirks == aPresContext->CompatibilityMode())
                                ? availableWidth
-                               : aContainingBlockWidth) - 
-                             mComputedMargin.left -
-                             mComputedBorderPadding.left -
-                             mComputedBorderPadding.right -
-                             mComputedMargin.right;
-        if (availWidth < 0)
-          availWidth = 0;
-        nscoord prefWidth = frame->GetPrefWidth(rendContext);
-        if (prefWidth < availWidth) {
-          mComputedWidth = prefWidth;
-        } else {
-          nscoord minWidth = frame->GetMinWidth(rendContext);
-          mComputedWidth = PR_MAX(minWidth, availWidth);
-        }
+                               : aContainingBlockWidth);
+        // The width is shrink-to-fit.
+        ShrinkWidthToFit(availWidth);
       } else {
         // XXXldb Do tables come through this codepath?
         ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
                                mStylePosition->mWidth, mComputedWidth);
-      }
 
-      // Take into account minimum and maximum sizes
-      AdjustComputedWidth(eStyleUnit_Auto != widthUnit);
+        // Take into account minimum and maximum sizes
+        AdjustComputedWidth(PR_TRUE);
+      }
 
       // Now calculate the computed height
       if (eStyleUnit_Auto == heightUnit) {
@@ -1852,10 +1847,13 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
 {
   // Compute the content width
   if (eStyleUnit_Auto == aWidthUnit) {
-    if (NS_FRAME_IS_REPLACED(mFrameType)) {
+    if (NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType)) {
       // Block-level replaced element in the flow. A specified value of 
       // 'auto' uses the element's intrinsic width (CSS2 10.3.4)
       mComputedWidth = NS_INTRINSICSIZE;
+    } else if (NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) {
+      // Width is shrink-to-fit
+      ShrinkWidthToFit(availableWidth);
     } else {
       // Block-level non-replaced element in the flow. 'auto' values
       // for margin-left and margin-right become 0, and the sum of the
@@ -1865,28 +1863,24 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       if (nsLayoutAtoms::tableCaptionFrame == fType &&
           IsSideCaption(frame)) {
         mComputedWidth = frame->GetMinWidth(rendContext);
+        AdjustComputedWidth(PR_FALSE);
       } else {
-        nscoord inset = mComputedMargin.LeftRight() +
-                        mComputedBorderPadding.LeftRight();
-        mComputedWidth = availableWidth - inset;
-        mComputedWidth = PR_MAX(mComputedWidth, 0);
-
         if (nsLayoutAtoms::tableFrame == fType) {
           // The width is shrink-to-fit
-          nscoord prefWidth = frame->GetPrefWidth(rendContext);
           NS_ASSERTION(NS_STATIC_CAST(nsTableFrame*, frame)->IsAutoLayout(),
                        "auto widths should trigger auto layout, or otherwise "
                        "we shouldn't use shrink-to-fit");
-          if (prefWidth < mComputedWidth) {
-            mComputedWidth = prefWidth;
-          } else {
-            nscoord minWidth = frame->GetMinWidth(rendContext);
-            mComputedWidth = PR_MAX(minWidth, mComputedWidth);
-          }
+          ShrinkWidthToFit(availableWidth);
+        } else {
+          nscoord inset = mComputedMargin.LeftRight() +
+                          mComputedBorderPadding.LeftRight();
+          mComputedWidth = availableWidth - inset;
+          mComputedWidth = PR_MAX(mComputedWidth, 0);
+
+          AdjustComputedWidth(PR_FALSE);
         }
       }
 
-      AdjustComputedWidth(PR_FALSE);
       CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
     }
   } else {
@@ -2405,6 +2399,44 @@ void nsHTMLReflowState::AdjustComputedWidth(PRBool aAdjustForBoxSizing)
     // If it did go bozo because of too much border or padding, set to 0
     if(mComputedWidth < 0) mComputedWidth = 0;
   }
+}
+
+void
+nsHTMLReflowState::ShrinkWidthToFit(nscoord aAvailWidth)
+{
+  nscoord availWidth = aAvailWidth - mComputedMargin.LeftRight() -
+    mComputedBorderPadding.LeftRight();
+  availWidth = PR_MAX(availWidth, 0);
+  
+  nscoord prefWidth = frame->GetPrefWidth(rendContext);
+  if (prefWidth < availWidth) {
+    mComputedWidth = prefWidth;
+  } else {
+    nscoord minWidth = frame->GetMinWidth(rendContext);
+    mComputedWidth = PR_MAX(minWidth, availWidth);
+  }
+
+  NS_ASSERTION(mComputedWidth >= frame->GetMinWidth(rendContext),
+               "Frame returned a pref width that's less than min width?");
+
+  // What we have in mComputedWidth right now is the computed content width.
+  // Unfortunately, to do max-width and min-width comparisons correctly we have
+  // to adjust that for box-sizing as needed (that is, mComputedMaxWidth and
+  // mComputedMinWidth refer to different dimensions depending on the value of
+  // box-sizing).
+  switch (mStylePosition->mBoxSizing) {
+    case NS_STYLE_BOX_SIZING_PADDING:
+      mComputedWidth += mComputedPadding.LeftRight();
+      break;
+    case NS_STYLE_BOX_SIZING_BORDER:
+      mComputedWidth += mComputedBorderPadding.LeftRight();
+      break;
+    default:
+      break;
+  }
+
+  // Make sure AdjustComputedWidth undoes the above as needed.
+  AdjustComputedWidth(PR_TRUE);
 }
 
 #ifdef IBMBIDI

@@ -1301,7 +1301,10 @@ public:
   enum {
     eMathML =           1 << 0,
     eSVG =              1 << 1,
-    eSVGForeignObject = 1 << 2
+    eSVGForeignObject = 1 << 2,
+    eReplacedContainsBlock = 1 << 3  // Frame that contains a block but looks
+                                     // like a replaced element from the
+                                     // outside
   };
 
   /**

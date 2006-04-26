@@ -59,14 +59,6 @@ nsHTMLCanvasFrame::~nsHTMLCanvasFrame()
 {
 }
 
-// We really want a PR_MINMAX to go along with PR_MIN/PR_MAX
-#define MINMAX(_value,_min,_max) \
-    ((_value) < (_min)           \
-     ? (_min)                    \
-     : ((_value) > (_max)        \
-        ? (_max)                 \
-        : (_value)))
-
 /* virtual */ nscoord
 nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {

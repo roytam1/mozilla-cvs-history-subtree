@@ -674,14 +674,6 @@ nsImageFrame::FrameChanged(imgIContainer *aContainer,
   return NS_OK;
 }
 
-
-#define MINMAX(_value,_min,_max) \
-    ((_value) < (_min)           \
-     ? (_min)                    \
-     : ((_value) > (_max)        \
-        ? (_max)                 \
-        : (_value)))
-
 void
 nsImageFrame::EnsureIntrinsicSize(nsPresContext* aPresContext)
 {
