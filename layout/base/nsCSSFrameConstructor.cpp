@@ -2411,7 +2411,6 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsFrameConstructorState& aSta
   return PR_FALSE;
 }
 
-#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
                                         nsIContent*              aContent,
@@ -2448,6 +2447,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
       return rv;
     }
 
+#ifdef HTML_FORMS
     case NS_FORM_INPUT_CHECKBOX:
       if (gUseXBLForms)
         return NS_OK; // see comment above
@@ -2491,9 +2491,13 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
     default:
       NS_ASSERTION(0, "Unknown input type!");
       return NS_ERROR_INVALID_ARG;
+#else // HTML_FORMS
+    default:
+      *aFrame = nsnull;
+      return NS_OK;
+#endif // HTML_FORMS
   }
 }
-#endif
 
 nsresult
 nsCSSFrameConstructor::CreateHTMLImageFrame(nsIContent* aContent,
@@ -5118,11 +5122,9 @@ nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,
   if (nsHTMLAtoms::button == aTag) {
     buttonFrame = NS_NewHTMLButtonControlFrame(mPresShell);
   }
-#ifdef HTML_FORMS
   else {
     buttonFrame = NS_NewGfxButtonControlFrame(mPresShell);
   }
-#endif
   if (NS_UNLIKELY(!buttonFrame)) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -5696,7 +5698,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     newFrame = NS_NewWBRFrame(mPresShell);
     triedFrame = PR_TRUE;
   }
-#ifdef HTML_FORMS
   else if (nsHTMLAtoms::input == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
         ProcessPseudoFrames(aState, aFrameItems); 
@@ -5708,6 +5709,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
                           addedToFrameList, aFrameItems);  
     isReplaced = PR_TRUE;
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::textarea == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
