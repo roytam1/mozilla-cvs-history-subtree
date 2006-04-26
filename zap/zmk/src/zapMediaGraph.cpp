@@ -47,7 +47,7 @@
 // return a (nearly) threadsafe proxy.
 // If SAME_THREAD_MEDIA_GRAPH is set, the media graph will be created
 // on the calling thread. This might be useful for debugging
-//#define SAME_THREAD_MEDIA_GRAPH 1
+// #define SAME_THREAD_MEDIA_GRAPH 1
 
 
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
@@ -346,7 +346,7 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
   else
     return NS_GetProxyForObject(mEventQ, uuid, nd->node,
                                 PROXY_ASYNC | PROXY_ALWAYS |
-                                PROXY_AUTOPROXIFY | PROXY_ISUPPORTS,
+                                PROXY_AUTOPROXIFY /*| PROXY_ISUPPORTS*/,
                                 result);
 }
 
@@ -566,7 +566,8 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
   // Return a proxy for the media graph:
   rv = NS_GetProxyForObject(eventQ, aIID, mediaGraph,
                             PROXY_SYNC | PROXY_ALWAYS | PROXY_AUTOPROXIFY |
-                            PROXY_ISUPPORTS | PROXY_NESTED_QUEUES,
+                            PROXY_NESTED_QUEUES
+                            /* | PROXY_ISUPPORTS */,
                             result);
   if (NS_FAILED(rv)) {
     NS_ERROR("proxification failure. potential race condition.");
