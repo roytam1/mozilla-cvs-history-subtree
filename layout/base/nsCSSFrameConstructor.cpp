@@ -5100,6 +5100,7 @@ nsCSSFrameConstructor::ConstructCheckboxControlFrame(nsIFrame**      aNewFrame,
   }
   return NS_OK;
 }
+#endif
 
 nsresult
 nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,
@@ -5117,9 +5118,11 @@ nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,
   if (nsHTMLAtoms::button == aTag) {
     buttonFrame = NS_NewHTMLButtonControlFrame(mPresShell);
   }
+#ifdef HTML_FORMS
   else {
     buttonFrame = NS_NewGfxButtonControlFrame(mPresShell);
   }
+#endif
   if (NS_UNLIKELY(!buttonFrame)) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -5208,6 +5211,8 @@ nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,
 
   return NS_OK;  
 }
+
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::ConstructSelectFrame(nsFrameConstructorState& aState,
                                             nsIContent*              aContent,
@@ -5834,7 +5839,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     newFrame = NS_NewSpacerFrame(mPresShell);
     triedFrame = PR_TRUE;
   }
-#ifdef HTML_FORMS
   else if (nsHTMLAtoms::button == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -5852,6 +5856,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     addedToFrameList = PR_TRUE;
     isFloatContainer = PR_TRUE;
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::isindex == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems);

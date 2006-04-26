@@ -148,11 +148,9 @@ SHARED_LIBRARY_LIBS += \
 		$(NULL)
 endif
 
-ifdef HTML_FORMS
 SHARED_LIBRARY_LIBS += \
 		$(DIST)/lib/$(LIB_PREFIX)gkforms_s.$(LIB_SUFFIX) \
 		$(NULL)
-endif
 
 ifdef MOZ_XUL
 SHARED_LIBRARY_LIBS += \

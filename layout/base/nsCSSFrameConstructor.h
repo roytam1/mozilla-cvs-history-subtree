@@ -489,6 +489,7 @@ private:
   nsresult ConstructCheckboxControlFrame(nsIFrame**       aNewFrame,
                                          nsIContent*      aContent,
                                          nsStyleContext*  aStyleContext);
+#endif
   // ConstructButtonFrame puts the new frame in aFrameItems and
   // handles the kids of the button.
   nsresult ConstructButtonFrame(nsFrameConstructorState& aState,
@@ -500,6 +501,7 @@ private:
                                 const nsStyleDisplay*    aStyleDisplay,
                                 nsFrameItems&            aFrameItems);
 
+#ifdef HTML_FORMS
   // ConstructSelectFrame puts the new frame in aFrameItems and
   // handles the kids of the select.
   nsresult ConstructSelectFrame(nsFrameConstructorState& aState,
