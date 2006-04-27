@@ -2480,6 +2480,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
       return CreateHTMLImageFrame(aContent, aStyleContext,
                                   NS_NewImageControlFrame, aFrame);
 
+#endif // HTML_FORMS
     case NS_FORM_INPUT_TEXT:
     case NS_FORM_INPUT_PASSWORD:
     {
@@ -2487,7 +2488,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
       
       return NS_UNLIKELY(!*aFrame) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
     }
-
+#ifdef HTML_FORMS
     default:
       NS_ASSERTION(0, "Unknown input type!");
       return NS_ERROR_INVALID_ARG;
@@ -5709,7 +5710,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
                           addedToFrameList, aFrameItems);  
     isReplaced = PR_TRUE;
   }
-#ifdef HTML_FORMS
   else if (nsHTMLAtoms::textarea == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -5718,6 +5718,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     newFrame = NS_NewTextControlFrame(mPresShell);
     triedFrame = PR_TRUE;
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::select == aTag) {
     if (!gUseXBLForms) {
       if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {

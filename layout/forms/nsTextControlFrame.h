@@ -79,6 +79,8 @@ public:
 
   NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
+  virtual nscoord GetMinWidth(nsIRenderingContext* aRenderingContext);
+
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -102,6 +104,8 @@ public:
     return NS_OK;
   }
 #endif
+
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
   // from nsIAnonymousContentCreator
   NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
@@ -247,15 +251,11 @@ protected:
    */
   PRInt32 GetRows();
 
-  nsresult ReflowStandard(nsPresContext*          aPresContext,
-                          nsSize&                  aDesiredSize,
-                          const nsHTMLReflowState& aReflowState,
-                          nsReflowStatus&          aStatus);
-
-  nsresult CalculateSizeStandard(nsPresContext*       aPresContext,
-                                 const nsHTMLReflowState& aReflowState,
-                                 nsSize&               aDesiredSize,
-                                 nsSize&               aMinSize);
+  // Compute our intrinsic size.  This does not include any borders, paddings,
+  // etc.  Just the size of our actual area for the text (and the scrollbars,
+  // for <textarea>).
+  nsresult CalcIntrinsicSize(nsIRenderingContext* aRenderingContext,
+                             nsSize&              aIntrinsicSize);
 
   // nsIScrollableViewProvider
   virtual nsIScrollableView* GetScrollableView();
@@ -273,9 +273,6 @@ private:
 
 private:
   nsCOMPtr<nsIEditor> mEditor;
-
-  //cached sizes and states
-  nsSize       mSize;
 
   // these packed bools could instead use the high order bits on mState, saving 4 bytes 
   PRPackedBool mUseEditor;
