@@ -2078,6 +2078,7 @@ private:
     JSBool InitTearOffJSObject(XPCCallContext& ccx,
                                 XPCWrappedNativeTearOff* to);
 
+public:
     static nsresult GatherScriptableCreateInfo(
                         nsISupports* obj,
                         nsIClassInfo* classInfo,
@@ -2515,7 +2516,6 @@ private:
 
     static void BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz);
     static JSBool ThrowExceptionObject(JSContext* cx, nsIException* e);
-    static JSBool CheckForPendingException(nsresult result, XPCCallContext &ccx);
 
 private:
     static JSBool sVerbose;
