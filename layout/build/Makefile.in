@@ -120,6 +120,7 @@ EXPORTS		= \
 SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)gkbase_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkgeneric_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)gkforms_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkstyle_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gktable_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkxulbase_s.$(LIB_SUFFIX) \
@@ -147,10 +148,6 @@ SHARED_LIBRARY_LIBS += \
 		$(DIST)/lib/$(LIB_PREFIX)gkprinting_s.$(LIB_SUFFIX) \
 		$(NULL)
 endif
-
-SHARED_LIBRARY_LIBS += \
-		$(DIST)/lib/$(LIB_PREFIX)gkforms_s.$(LIB_SUFFIX) \
-		$(NULL)
 
 ifdef MOZ_XUL
 SHARED_LIBRARY_LIBS += \
