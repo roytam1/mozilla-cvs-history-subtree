@@ -4167,6 +4167,7 @@ MOZ_PYTHON_VER=
 MOZ_PYTHON_VER_DOTTED=
 MOZ_REFLOW_PERF=
 MOZ_REORDER=
+MOZ_SAFE_BROWSING=
 MOZ_SINGLE_PROFILE=
 MOZ_STATIC_COMPONENT_LIBS=
 MOZ_STATIC_MAIL_BUILD=
@@ -4267,6 +4268,7 @@ minimo)
   MOZ_SINGLE_PROFILE=1
   MOZ_UNIVERSALCHARDET=
   MOZ_UPDATER=
+  MOZ_URL_CLASSIFIER=
   MOZ_USE_NATIVE_UCONV=1
   MOZ_V1_STRING_ABI=
   MOZ_VIEW_SOURCE=
@@ -5373,6 +5375,34 @@ MOZ_ARG_ENABLE_BOOL(storage,
 if test -n "$MOZ_STORAGE"; then
     AC_DEFINE(MOZ_STORAGE)
 fi
+
+dnl ========================================================
+dnl = Enable safe browsing (anti-phishing)
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(safe-browsing,
+[  --enable-safe-browsing        Enable safe browsing (anti-phishing) implementation],
+    MOZ_SAFE_BROWSING=1,
+    MOZ_SAFE_BROWSING= )
+if test -n "$MOZ_SAFE_BROWSING"; then
+    AC_DEFINE(MOZ_SAFE_BROWSING)
+fi
+AC_SUBST(MOZ_SAFE_BROWSING)
+
+dnl ========================================================
+dnl = Enable url-classifier
+dnl ========================================================
+dnl Implicitly enabled by default if building with safe-browsing
+if test -n "$MOZ_SAFE_BROWSING"; then
+    MOZ_URL_CLASSIFIER=1
+fi
+MOZ_ARG_ENABLE_BOOL(url-classifier,
+[  --enable-url-classifier        Enable url classifier module],
+    MOZ_URL_CLASSIFIER=1,
+    MOZ_URL_CLASSIFIER= )
+if test -n "$MOZ_URL_CLASSIFIER"; then
+    AC_DEFINE(MOZ_URL_CLASSIFIER)
+fi
+AC_SUBST(MOZ_URL_CLASSIFIER)
 
 dnl ========================================================
 dnl = Enable Ultrasparc specific optimizations for JS
