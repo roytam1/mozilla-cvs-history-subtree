@@ -55,7 +55,7 @@ NS_INTERFACE_MAP_BEGIN(nsBaseCommandController)
 NS_INTERFACE_MAP_END
 
 nsBaseCommandController::nsBaseCommandController()
-: mCommandContext(nsnull)
+  : mCommandContextRawPtr(nsnull)
 {
 }
 
@@ -79,7 +79,21 @@ nsBaseCommandController::Init(nsIControllerCommandTable *aCommandTable)
 NS_IMETHODIMP
 nsBaseCommandController::SetCommandContext(nsISupports *aCommandContext)
 {
-  mCommandContext = aCommandContext;     // no addref  
+  mCommandContextWeakPtr = nsnull;
+  mCommandContextRawPtr = nsnull;
+
+  if (aCommandContext) {
+    nsCOMPtr<nsISupportsWeakReference> weak = do_QueryInterface(aCommandContext);
+    if (weak) {
+      nsresult rv =
+        weak->GetWeakReference(getter_AddRefs(mCommandContextWeakPtr));
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+      mCommandContextRawPtr = aCommandContext;
+    }
+  }
+
   return NS_OK;
 }
 
@@ -113,7 +127,14 @@ nsBaseCommandController::IsCommandEnabled(const char *aCommand,
 {
   NS_ENSURE_ARG_POINTER(aCommand);
   NS_ENSURE_ARG_POINTER(aResult);
-  return mCommandTable->IsCommandEnabled(aCommand, mCommandContext, aResult);
+
+  nsISupports* context = mCommandContextRawPtr;
+  nsCOMPtr<nsISupports> weak;
+  if (!context) {
+    weak = do_QueryReferent(mCommandContextWeakPtr);
+    context = weak;
+  }
+  return mCommandTable->IsCommandEnabled(aCommand, context, aResult);
 }
 
 NS_IMETHODIMP
@@ -121,14 +142,28 @@ nsBaseCommandController::SupportsCommand(const char *aCommand, PRBool *aResult)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
   NS_ENSURE_ARG_POINTER(aResult);
-  return mCommandTable->SupportsCommand(aCommand, mCommandContext, aResult);
+
+  nsISupports* context = mCommandContextRawPtr;
+  nsCOMPtr<nsISupports> weak;
+  if (!context) {
+    weak = do_QueryReferent(mCommandContextWeakPtr);
+    context = weak;
+  }
+  return mCommandTable->SupportsCommand(aCommand, context, aResult);
 }
 
 NS_IMETHODIMP
 nsBaseCommandController::DoCommand(const char *aCommand)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
-  return mCommandTable->DoCommand(aCommand, mCommandContext);
+
+  nsISupports* context = mCommandContextRawPtr;
+  nsCOMPtr<nsISupports> weak;
+  if (!context) {
+    weak = do_QueryReferent(mCommandContextWeakPtr);
+    context = weak;
+  }
+  return mCommandTable->DoCommand(aCommand, context);
 }
 
 NS_IMETHODIMP
@@ -136,7 +171,14 @@ nsBaseCommandController::DoCommandWithParams(const char *aCommand,
                                              nsICommandParams *aParams)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
-  return mCommandTable->DoCommandParams(aCommand, aParams, mCommandContext);
+
+  nsISupports* context = mCommandContextRawPtr;
+  nsCOMPtr<nsISupports> weak;
+  if (!context) {
+    weak = do_QueryReferent(mCommandContextWeakPtr);
+    context = weak;
+  }
+  return mCommandTable->DoCommandParams(aCommand, aParams, context);
 }
 
 NS_IMETHODIMP
@@ -144,7 +186,14 @@ nsBaseCommandController::GetCommandStateWithParams(const char *aCommand,
                                                    nsICommandParams *aParams)
 {
   NS_ENSURE_ARG_POINTER(aCommand);
-  return mCommandTable->GetCommandState(aCommand, aParams, mCommandContext);
+
+  nsISupports* context = mCommandContextRawPtr;
+  nsCOMPtr<nsISupports> weak;
+  if (!context) {
+    weak = do_QueryReferent(mCommandContextWeakPtr);
+    context = weak;
+  }
+  return mCommandTable->GetCommandState(aCommand, aParams, context);
 }
 
 NS_IMETHODIMP
