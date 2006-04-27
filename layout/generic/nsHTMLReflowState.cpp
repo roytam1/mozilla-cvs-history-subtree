@@ -1697,7 +1697,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     ComputeMinMaxValues(aContainingBlockWidth, aContainingBlockHeight, cbrs);
 
     // Calculate the computed width and height. This varies by frame type
-    if (NS_FRAME_REPLACED(mFrameType) &&
+    if (NS_FRAME_IS_REPLACED(mFrameType) &&
         (NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_INLINE ||
          NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_FLOATING)) {
       // Inline replaced element and floating replaced element are basically
