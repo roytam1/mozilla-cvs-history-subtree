@@ -255,6 +255,7 @@ LAYOUT_ATOM(embeddingLevel, "EmbeddingLevel")                  // PRUint8
 LAYOUT_ATOM(endsInDiacritic, "EndsInDiacritic")                // PRUint32
 LAYOUT_ATOM(nextBidi, "NextBidi")                              // nsIFrame*
 LAYOUT_ATOM(charType, "charType")                              // PRUint8
+LAYOUT_ATOM(scriptEnabledBeforePrintPreview, "scriptEnabledBeforePrintPreview") // PRBool
 
 #ifdef MOZ_SVG
   // Alphabetical list of SVG frame types
