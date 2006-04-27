@@ -93,6 +93,9 @@ struct RuleProcessorData {
   nsLinkState       mLinkState;     // if a link, this is the state, otherwise unknown
   PRInt32           mEventState;    // if content, eventStateMgr->GetContentState()
   PRInt32           mNameSpaceID;   // if content, content->GetNameSapce()
+  // mPreviousSiblingData and mParentData are always RuleProcessorData
+  // and never a derived class.  They are allocated lazily, when
+  // selectors require matching of prior siblings or ancestors.
   RuleProcessorData* mPreviousSiblingData;
   RuleProcessorData* mParentData;
 
