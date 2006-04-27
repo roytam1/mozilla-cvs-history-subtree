@@ -1884,6 +1884,10 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
     }
   } else {
+    if (frame->GetType() == nsLayoutAtoms::tableFrame) {
+      // XXX Tables don't go below their min width.
+      // But get 'box-sizing' right.
+    }
     ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
                            mStylePosition->mWidth, mComputedWidth);
 
