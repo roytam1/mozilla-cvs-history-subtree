@@ -109,6 +109,7 @@ CPPSRCS		= \
 		nsFormControlHelper.cpp \
 		nsGfxButtonControlFrame.cpp \
 		nsHTMLButtonControlFrame.cpp \
+		nsImageControlFrame.cpp \
 		nsTextControlFrame.cpp \
 		$(NULL)
 endif

@@ -2476,12 +2476,10 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
     case NS_FORM_INPUT_HIDDEN:
       return NS_OK; // this does not create a frame so it needs special handling
                     // in IsSpecialContent
-#ifdef HTML_FORMS
     case NS_FORM_INPUT_IMAGE:
       return CreateHTMLImageFrame(aContent, aStyleContext,
                                   NS_NewImageControlFrame, aFrame);
 
-#endif // HTML_FORMS
     case NS_FORM_INPUT_TEXT:
     case NS_FORM_INPUT_PASSWORD:
     {
