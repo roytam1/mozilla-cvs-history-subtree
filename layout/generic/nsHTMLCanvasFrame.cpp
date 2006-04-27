@@ -122,8 +122,8 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
     aMetrics.height = aReflowState.mComputedHeight;
 
   // clamp
-  aMetrics.height = MINMAX(aMetrics.height, aReflowState.mComputedMinHeight, aReflowState.mComputedMaxHeight);
-  aMetrics.width = MINMAX(aMetrics.width, aReflowState.mComputedMinWidth, aReflowState.mComputedMaxWidth);
+  aMetrics.height = NS_CSS_MINMAX(aMetrics.height, aReflowState.mComputedMinHeight, aReflowState.mComputedMaxHeight);
+  aMetrics.width = NS_CSS_MINMAX(aMetrics.width, aReflowState.mComputedMinWidth, aReflowState.mComputedMaxWidth);
 
   // stash this away so we can compute our inner area later
   mBorderPadding   = aReflowState.mComputedBorderPadding;

@@ -826,13 +826,13 @@ nsImageFrame::GetDesiredSize(nsPresContext* aPresContext,
 
       // 'auto' width, non-'auto' height
       // XXX nsHTMLReflowState should already ensure this
-      height = MINMAX(height, minHeight, maxHeight);
+      height = NS_CSS_MINMAX(height, minHeight, maxHeight);
       if (intrinsicHeight != 0) {
         width = intrinsicWidth * height / intrinsicHeight;
       } else {
         width = intrinsicWidth;
       }
-      width = MINMAX(width, minWidth, maxWidth);
+      width = NS_CSS_MINMAX(width, minWidth, maxWidth);
 
     }
   } else {
@@ -840,21 +840,21 @@ nsImageFrame::GetDesiredSize(nsPresContext* aPresContext,
 
       // non-'auto' width, 'auto' height
       // XXX nsHTMLReflowState should already ensure this
-      width = MINMAX(width, minWidth, maxWidth);
+      width = NS_CSS_MINMAX(width, minWidth, maxWidth);
       if (intrinsicWidth != 0) {
         height = intrinsicHeight * width / intrinsicWidth;
       } else {
         height = intrinsicHeight;
       }
-      height = MINMAX(height, minHeight, maxHeight);
+      height = NS_CSS_MINMAX(height, minHeight, maxHeight);
 
     } else {
 
       // non-'auto' width, non-'auto' height
       // XXX nsHTMLReflowState should already ensure this
-      height = MINMAX(height, minHeight, maxHeight);
+      height = NS_CSS_MINMAX(height, minHeight, maxHeight);
       // XXX nsHTMLReflowState should already ensure this
-      width = MINMAX(width, minWidth, maxWidth);
+      width = NS_CSS_MINMAX(width, minWidth, maxWidth);
 
     }
   }

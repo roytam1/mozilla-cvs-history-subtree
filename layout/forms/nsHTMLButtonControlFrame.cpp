@@ -320,9 +320,9 @@ nsHTMLButtonControlFrame::Reflow(nsPresContext* aPresContext,
 
   // XXXbz unless someone overrides that, of course!  We should really consider
   // exposing nsHTMLReflowState::AdjustComputed* or something.
-  aDesiredSize.height = MINMAX(aDesiredSize.height,
-                               aReflowState.mComputedMinHeight,
-                               aReflowState.mComputedMaxHeight);
+  aDesiredSize.height = NS_CSS_MINMAX(aDesiredSize.height,
+                                      aReflowState.mComputedMinHeight,
+                                      aReflowState.mComputedMaxHeight);
 
   aDesiredSize.ascent +=
     aReflowState.mComputedBorderPadding.top + focusPadding.top;

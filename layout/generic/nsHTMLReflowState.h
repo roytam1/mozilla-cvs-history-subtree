@@ -56,8 +56,7 @@ struct nsStylePadding;
 struct nsStyleText;
 struct nsHypotheticalBox;
 
-// We really want a PR_MINMAX to go along with PR_MIN/PR_MAX
-#define MINMAX(_value,_min,_max) \
+#define NS_CSS_MINMAX(_value,_min,_max) \
     ((_value) < (_min)           \
      ? (_min)                    \
      : ((_value) > (_max)        \
