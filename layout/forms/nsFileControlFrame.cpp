@@ -369,18 +369,24 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
   return NS_FAILED(result) ? result : NS_ERROR_FAILURE;
 }
 
+nscoord
+nsFileControlFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  // Our min width is our pref width
+  return GetPrefWidth(aRenderingContext);
+}
 
 NS_IMETHODIMP nsFileControlFrame::Reflow(nsPresContext*          aPresContext, 
                                          nsHTMLReflowMetrics&     aDesiredSize,
                                          const nsHTMLReflowState& aReflowState, 
                                          nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsFileControlFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsFileControlFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   aStatus = NS_FRAME_COMPLETE;
 
-  if (eReflowReason_Initial == aReflowState.reason) {
+  if (mState & NS_FRAME_FIRST_REFLOW) {
     mTextFrame = GetTextControlFrame(aPresContext, this);
     NS_ENSURE_TRUE(mTextFrame, NS_ERROR_UNEXPECTED);
     if (mCachedState) {
@@ -392,7 +398,10 @@ NS_IMETHODIMP nsFileControlFrame::Reflow(nsPresContext*          aPresContext,
 
   // The Areaframe takes care of all our reflow 
   // except for when style is used to change its size.
-  nsresult rv = nsAreaFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
+  // XXXbz do we care?  This setup just needs to die....  Leaving it
+  // in for now just because I don't want to regress things, but....
+  nsresult rv = nsAreaFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
+                                    aStatus);
   if (NS_SUCCEEDED(rv) && mTextFrame != nsnull) {
     const nsStyleVisibility* vis = GetStyleVisibility();
 
@@ -414,8 +423,7 @@ NS_IMETHODIMP nsFileControlFrame::Reflow(nsPresContext*          aPresContext,
         nsSize txtAvailSize(aReflowState.availableWidth, aDesiredSize.height);
         nsHTMLReflowState   txtKidReflowState(aPresContext,
                                               *aReflowState.parentReflowState,
-                                              this, txtAvailSize,
-                                              eReflowReason_Resize);
+                                              this, txtAvailSize);
         txtKidReflowState.mComputedHeight = aDesiredSize.height;
         rv = nsAreaFrame::WillReflow(aPresContext);
         NS_ASSERTION(NS_SUCCEEDED(rv), "Should have succeeded");
@@ -424,31 +432,12 @@ NS_IMETHODIMP nsFileControlFrame::Reflow(nsPresContext*          aPresContext,
         rv = nsAreaFrame::DidReflow(aPresContext, &txtKidReflowState, aStatus);
         NS_ASSERTION(NS_SUCCEEDED(rv), "Should have succeeded");
 
-        // If LTR then re-calc and set the correct rect
-        if (NS_STYLE_DIRECTION_RTL != vis->mDirection) {
-          // now adjust the frame positions
-          txtRect.y      = aReflowState.mComputedBorderPadding.top;
-          txtRect.height = aDesiredSize.height;
-          mTextFrame->SetRect(txtRect);
-        }
-        if (aDesiredSize.mComputeMEW) {
-           aDesiredSize.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-        }
-      }
-
-      // Do RTL positioning
-      // for some reason the areaframe does set the X coord of the rects correctly
-      // so we must redo them here
-      // and we must make sure the text field is the correct height
-      if (NS_STYLE_DIRECTION_RTL == vis->mDirection) {
-        buttonRect.x      = aReflowState.mComputedBorderPadding.left;
-        child->SetRect(buttonRect);
-        txtRect.x         = aDesiredSize.width - txtRect.width + aReflowState.mComputedBorderPadding.left;
+        // And now manually resize the frame...
+        txtRect           = mTextFrame->GetRect();
         txtRect.y         = aReflowState.mComputedBorderPadding.top;
         txtRect.height    = aDesiredSize.height;
         mTextFrame->SetRect(txtRect);
       }
-
     }
   }
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
@@ -629,4 +618,10 @@ nsFileControlFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
   }
 
   return DisplaySelectionOverlay(aBuilder, aLists);
+}
+
+PRBool
+nsFileControlFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
 }

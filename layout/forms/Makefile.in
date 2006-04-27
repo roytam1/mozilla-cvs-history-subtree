@@ -105,6 +105,7 @@ CPPSRCS		= \
 else
 CPPSRCS		= \
 		nsButtonFrameRenderer.cpp \
+		nsFileControlFrame.cpp \
 		nsFormControlHelper.cpp \
 		nsGfxButtonControlFrame.cpp \
 		nsHTMLButtonControlFrame.cpp \
