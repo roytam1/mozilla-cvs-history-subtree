@@ -60,15 +60,6 @@ public:
   nsIsIndexFrame();
   virtual ~nsIsIndexFrame();
 
-  // XXX Hack so we can squirrel away the pres context pointer for the KeyPress method
-  NS_IMETHOD Init(nsPresContext*  aPresContext,
-                  nsIContent*      aContent,
-                  nsIFrame*        aParent,
-                  nsStyleContext*  aContext,
-                  nsIFrame*        aPrevInFlow) {
-    return nsAreaFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
-  }
-
   /**
    * Processes a key pressed event
    * @param aKeyEvent @see nsIDOMEvent.h 
@@ -94,11 +85,8 @@ public:
   // nsIFormControlFrame
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  NS_IMETHOD Reflow(nsPresContext*          aCX,
-                    nsHTMLReflowMetrics&     aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&          aStatus);
-
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  
   virtual PRBool IsLeaf() const;
 
 #ifdef NS_DEBUG
@@ -110,6 +98,8 @@ public:
 
   void           SetFocus(PRBool aOn, PRBool aRepaint);
   void           ScrollIntoView(nsPresContext* aPresContext);
+
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
   // from nsIAnonymousContentCreator
   NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,

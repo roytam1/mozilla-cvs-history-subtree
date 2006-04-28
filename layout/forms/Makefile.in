@@ -111,6 +111,7 @@ CPPSRCS		= \
 		nsHTMLButtonControlFrame.cpp \
 		nsImageControlFrame.cpp \
 		nsTextControlFrame.cpp \
+		nsIsIndexFrame.cpp \
 		$(NULL)
 endif
 

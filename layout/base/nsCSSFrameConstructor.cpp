@@ -5858,7 +5858,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     addedToFrameList = PR_TRUE;
     isFloatContainer = PR_TRUE;
   }
-#ifdef HTML_FORMS
   else if (nsHTMLAtoms::isindex == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems);
@@ -5867,7 +5866,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     newFrame = NS_NewIsIndexFrame(mPresShell);
     triedFrame = PR_TRUE;
   }
-#endif
   else if (nsHTMLAtoms::canvas == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
