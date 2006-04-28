@@ -105,12 +105,14 @@ CPPSRCS		= \
 else
 CPPSRCS		= \
 		nsButtonFrameRenderer.cpp \
+		nsFieldSetFrame.cpp \
 		nsFileControlFrame.cpp \
 		nsFormControlHelper.cpp \
 		nsGfxButtonControlFrame.cpp \
+		nsTextControlFrame.cpp \
 		nsHTMLButtonControlFrame.cpp \
 		nsImageControlFrame.cpp \
-		nsTextControlFrame.cpp \
+		nsLegendFrame.cpp \
 		nsIsIndexFrame.cpp \
 		$(NULL)
 endif

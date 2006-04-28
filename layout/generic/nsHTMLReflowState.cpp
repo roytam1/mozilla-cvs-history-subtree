@@ -1806,14 +1806,25 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       InitAbsoluteConstraints(aPresContext, cbrs, aContainingBlockWidth,
                               aContainingBlockHeight);
     } else if (NS_CSS_FRAME_TYPE_INLINE == mFrameType) {
-      // Inline non-replaced elements do not have computed widths or heights
-      // XXX add this check to HaveFixedContentHeight/Width too
-      mComputedWidth = NS_UNCONSTRAINEDSIZE;
-      mComputedHeight = NS_UNCONSTRAINEDSIZE;
-      mComputedMargin.top = 0;
-      mComputedMargin.bottom = 0;
-      mComputedMinWidth = mComputedMinHeight = 0;
-      mComputedMaxWidth = mComputedMaxHeight = NS_UNCONSTRAINEDSIZE;
+      if (frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
+        // Inline fieldsets do shrink-to-fit width (no matter what the
+        // specified width) and auto height (no matter what the
+        // specified height).
+        // XXXbz this is just what we used to do...  It's not clear
+        // that we _want_ to be doing this.
+        ShrinkWidthToFit(availableWidth);
+
+        mComputedHeight = NS_INTRINSICSIZE;
+      } else {
+        // Inline non-replaced elements do not have computed widths or heights
+        // XXX add this check to HaveFixedContentHeight/Width too
+        mComputedWidth = NS_UNCONSTRAINEDSIZE;
+        mComputedHeight = NS_UNCONSTRAINEDSIZE;
+        mComputedMargin.top = 0;
+        mComputedMargin.bottom = 0;
+        mComputedMinWidth = mComputedMinHeight = 0;
+        mComputedMaxWidth = mComputedMaxHeight = NS_UNCONSTRAINEDSIZE;
+      }
     } else {
       ComputeBlockBoxData(aPresContext, cbrs, widthUnit, heightUnit,
                           aContainingBlockWidth,

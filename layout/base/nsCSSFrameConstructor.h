@@ -513,6 +513,7 @@ private:
                                 const nsStyleDisplay*    aStyleDisplay,
                                 PRBool&                  aFrameHasBeenInitialized,
                                 nsFrameItems&            aFrameItems);
+#endif // HTML_FORMS
 
   // ConstructFieldSetFrame puts the new frame in aFrameItems and
   // handles the kids of the fieldset
@@ -525,7 +526,6 @@ private:
                                   nsFrameItems&            aFrameItems,
                                   const nsStyleDisplay*    aStyleDisplay,
                                   PRBool&                  aFrameHasBeenInitialized);
-#endif
 
   nsresult ConstructTextFrame(nsFrameConstructorState& aState,
                               nsIContent*              aContent,

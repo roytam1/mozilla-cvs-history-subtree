@@ -5467,6 +5467,7 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsFrameConstructorState& aState,
                                      childItems.childList);
   return NS_OK;
 }
+#endif // HTML_FORMS
 
 nsresult
 nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
@@ -5575,7 +5576,6 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
 
   return NS_OK;
 }
-#endif
 
 nsresult
 nsCSSFrameConstructor::ConstructTextFrame(nsFrameConstructorState& aState,
@@ -5776,7 +5776,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
       triedFrame = PR_TRUE;
     }
   }
-#ifdef HTML_FORMS
   else if (nsHTMLAtoms::fieldset == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -5801,7 +5800,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
 
     isFloatContainer = PR_TRUE;
   }
-#endif
   else if (nsHTMLAtoms::frameset == aTag) {
     NS_ASSERTION(!display->IsAbsolutelyPositioned() && !display->IsFloating(),
                  "Framesets should not be positioned and should not float");
