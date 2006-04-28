@@ -335,10 +335,17 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
   // Get the border values
   const nsMargin& border = aReflowState.mStyleBorder->GetBorder();
 
+  nscoord availWidth = aContainingBlockWidth;
+  if (availWidth == -1) {
+    NS_ASSERTION(aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE,
+                 "Must have a useful width _somewhere_");
+    availWidth =
+      aReflowState.mComputedWidth + aReflowState.mComputedPadding.LeftRight();
+  }
+    
   nsHTMLReflowMetrics kidDesiredSize;
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, aKidFrame,
-                                   nsSize(aReflowState.mComputedWidth,
-                                          NS_UNCONSTRAINEDSIZE),
+                                   nsSize(availWidth, NS_UNCONSTRAINEDSIZE),
                                    aContainingBlockWidth,
                                    aContainingBlockHeight);
 
