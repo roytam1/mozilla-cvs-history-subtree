@@ -977,9 +977,37 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
 #endif
 
   nscoord result = 0;
+  nscoord padding = 0;
+  nscoord border = 0;
+
+  // Only needed if (aPart & Content), since box-sizing doesn't matter for the
+  // other cases.
+  const nsStylePosition *stylePos;
+
+  // Default to content box-sizing so we don't do extra work with padding and
+  // border if we don't have to.
+  PRUint8 boxSizing = NS_STYLE_BOX_SIZING_CONTENT;
 
   if (aPart & CONTENT) {
-    const nsStylePosition *stylePos = aFrame->GetStylePosition();
+    stylePos = aFrame->GetStylePosition();
+    boxSizing = stylePos->mBoxSizing;
+  }
+
+  nsStyleCoord tmp;
+
+  if ((aPart & PADDING) || boxSizing != NS_STYLE_BOX_SIZING_CONTENT) {
+    const nsStylePadding *stylePadding = aFrame->GetStylePadding();
+    padding += GetCoord(stylePadding->mPadding.GetLeft(tmp), 0);
+    padding += GetCoord(stylePadding->mPadding.GetRight(tmp), 0);
+  }
+
+  if ((aPart & BORDER) || border == NS_STYLE_BOX_SIZING_BORDER) {
+    const nsStyleBorder *styleBorder = aFrame->GetStyleBorder();
+    border += styleBorder->GetBorderWidth(NS_SIDE_LEFT);
+    border += styleBorder->GetBorderWidth(NS_SIDE_RIGHT);
+  }
+
+  if (aPart & CONTENT) {
     nscoord min = GetCoord(stylePos->mMinWidth, 0),
             max = GetCoord(stylePos->mMaxWidth, nscoord_MAX);
 
@@ -1003,6 +1031,18 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
         printf(" %s intrinsic width from frame is %d.\n",
                aType == MIN_WIDTH ? "min" : "pref", result);
 #endif
+        // Now adjust for the box-sizing, since min-width and
+        // max-width take it into account
+        switch (boxSizing) {
+          case NS_STYLE_BOX_SIZING_BORDER:
+            result += border;
+            // Fall through
+          case NS_STYLE_BOX_SIZING_PADDING:
+            result += padding;
+            break;
+          default:
+            break;
+        }
       }
 
       if (result > max)
@@ -1013,6 +1053,22 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
       // width is determined by 'max-width' and 'min-width'
       result = min;
     }
+
+    // Now deal with the box-sizing stuff, since we just want the
+    // content area width here
+    switch (boxSizing) {
+      case NS_STYLE_BOX_SIZING_BORDER:
+        result -= border;
+        // Fall through
+      case NS_STYLE_BOX_SIZING_PADDING:
+        result -= padding;
+        break;
+      default:
+        break;
+    }
+
+    result = PR_MAX(result, 0);
+    
 #ifdef DEBUG_INTRINSIC_WIDTH
     nsFrame::IndentBy(stdout, gNoiseIndent);
     NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
@@ -1021,18 +1077,12 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
 #endif
   }
 
-  nsStyleCoord tmp;
-
-  if (aPart & PADDING) {
-    const nsStylePadding *stylePadding = aFrame->GetStylePadding();
-    result += GetCoord(stylePadding->mPadding.GetLeft(tmp), 0);
-    result += GetCoord(stylePadding->mPadding.GetRight(tmp), 0);
+  if (aPart & BORDER) {
+    result += border;
   }
 
-  if (aPart & BORDER) {
-    const nsStyleBorder *styleBorder = aFrame->GetStyleBorder();
-    result += styleBorder->GetBorderWidth(NS_SIDE_LEFT);
-    result += styleBorder->GetBorderWidth(NS_SIDE_RIGHT);
+  if (aPart & PADDING) {
+    result += padding;
   }
 
   if (aPart & MARGIN) {
