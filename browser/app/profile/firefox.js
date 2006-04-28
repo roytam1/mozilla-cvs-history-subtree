@@ -443,3 +443,5 @@ pref("browser.backspace_action", 0);
 // 0 = spellcheck nothing, 1 = check multi-line controls, 2 = check multi/single line controls
 pref("layout.spellcheckDefault", 1);
 
+pref("view_source.editor.path", "");
+pref("view_source.editor.external", false);
