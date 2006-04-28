@@ -372,7 +372,7 @@ struct regEntry gRegEntries[] = {
     "Anchor Underline",
     "browser.underline_anchors",
     TranslateYNtoTF },
-  { "Software\\Microsoft\\Internet Explorer\\Main",
+  { 0,
     "Display Inline Images",
     "permissions.default.image",
     TranslateYNtoImageBehavior },
