@@ -240,70 +240,6 @@ nsHTMLReflowState::GetContainingBlockContentWidth(const nsHTMLReflowState* aRefl
   return rs->mComputedWidth;
 }
 
-nscoord
-nsHTMLReflowState::AdjustIntrinsicMinContentWidthForStyle(nscoord aWidth) const
-{
-  nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
-  if (eStyleUnit_Percent == widthUnit) {
-    aWidth = 0;
-  } else if (eStyleUnit_Coord == widthUnit) {
-    // Sometimes we can get an unconstrained size here because we're
-    // computing the maximum-width. Although it doesn't seem right
-    // for max-width computation to change our computed width.
-    if (NS_UNCONSTRAINEDSIZE != mComputedWidth) {
-      aWidth = mComputedWidth;
-    }
-  }
-
-  nsStyleUnit maxWidthUnit = mStylePosition->mMaxWidth.GetUnit();
-  if (eStyleUnit_Percent == maxWidthUnit) {
-    aWidth = 0;
-  } else if (eStyleUnit_Coord == maxWidthUnit) {
-    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != mComputedMaxWidth,
-                 "Should be a computed max-width here");
-    aWidth = PR_MIN(aWidth, mComputedMaxWidth);
-  }
-
-  nsStyleUnit minWidthUnit = mStylePosition->mMinWidth.GetUnit();
-  if (eStyleUnit_Coord == minWidthUnit) { 
-    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != mComputedMinWidth,
-                 "Should be a computed max-width here");
-    aWidth = PR_MAX(aWidth, mComputedMinWidth);
-  }
-  
-  return aWidth;
-}
-
-nscoord
-nsHTMLReflowState::AdjustIntrinsicContentWidthForStyle(nscoord aWidth) const
-{
-  nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
-  if (eStyleUnit_Coord == widthUnit) {
-    // Sometimes we can get an unconstrained size here because we're
-    // computing the maximum-width. Although it doesn't seem right
-    // for max-width computation to change our computed width.
-    if (NS_UNCONSTRAINEDSIZE != mComputedWidth) {
-      aWidth = mComputedWidth;
-    }
-  }
-
-  nsStyleUnit maxWidthUnit = mStylePosition->mMaxWidth.GetUnit();
-  if (eStyleUnit_Coord == maxWidthUnit) {
-    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != mComputedMaxWidth,
-                 "Should be a computed max-width here");
-    aWidth = PR_MIN(aWidth, mComputedMaxWidth);
-  }
-
-  nsStyleUnit minWidthUnit = mStylePosition->mMinWidth.GetUnit();
-  if (eStyleUnit_Coord == minWidthUnit) { 
-    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != mComputedMinWidth,
-                 "Should be a computed max-width here");
-    aWidth = PR_MAX(aWidth, mComputedMinWidth);
-  }
-  
-  return aWidth;
-}
-
 /* static */
 nsIFrame*
 nsHTMLReflowState::GetContainingBlockFor(const nsIFrame* aFrame)
@@ -1693,7 +1629,8 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       mComputedOffsets.SizeTo(0, 0, 0, 0);
     }
 
-    // Calculate the computed values for min and max properties
+    // Calculate the computed values for min and max properties.  Note that
+    // this MUST come after we've computed our border and padding.
     ComputeMinMaxValues(aContainingBlockWidth, aContainingBlockHeight, cbrs);
 
     // Calculate the computed width and height. This varies by frame type
