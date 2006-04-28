@@ -1884,10 +1884,6 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
     }
   } else {
-    if (frame->GetType() == nsLayoutAtoms::tableFrame) {
-      // XXX Tables don't go below their min width.
-      // But get 'box-sizing' right.
-    }
     ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
                            mStylePosition->mWidth, mComputedWidth);
 
@@ -2288,6 +2284,15 @@ nsHTMLReflowState::ComputeMinMaxValues(nscoord aContainingBlockWidth,
   nsStyleUnit minWidthUnit = mStylePosition->mMinWidth.GetUnit();
   ComputeHorizontalValue(aContainingBlockWidth, minWidthUnit,
                          mStylePosition->mMinWidth, mComputedMinWidth);
+
+  if (frame->GetType() == nsLayoutAtoms::tableFrame ||
+      frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
+    // Tables and fieldsets don't go below their intrinsic min width.
+    nscoord minwidth =
+      AdjustIntrinsicWidthForBoxSizing(frame->GetMinWidth(rendContext));
+    mComputedMinWidth = PR_MAX(mComputedMinWidth, minwidth);
+  }
+  
   nsStyleUnit maxWidthUnit = mStylePosition->mMaxWidth.GetUnit();
   if (eStyleUnit_Null == maxWidthUnit) {
     // Specified value of 'none'
@@ -2428,19 +2433,27 @@ nsHTMLReflowState::ShrinkWidthToFit(nscoord aAvailWidth)
   // to adjust that for box-sizing as needed (that is, mComputedMaxWidth and
   // mComputedMinWidth refer to different dimensions depending on the value of
   // box-sizing).
+  mComputedWidth = AdjustIntrinsicWidthForBoxSizing(mComputedWidth);
+
+  // Make sure AdjustComputedWidth undoes the above as needed.
+  AdjustComputedWidth(PR_TRUE);
+}
+
+nscoord
+nsHTMLReflowState::AdjustIntrinsicWidthForBoxSizing(nscoord aIntrinsicWidth)
+{
   switch (mStylePosition->mBoxSizing) {
     case NS_STYLE_BOX_SIZING_PADDING:
-      mComputedWidth += mComputedPadding.LeftRight();
+      aIntrinsicWidth += mComputedPadding.LeftRight();
       break;
     case NS_STYLE_BOX_SIZING_BORDER:
-      mComputedWidth += mComputedBorderPadding.LeftRight();
+      aIntrinsicWidth += mComputedBorderPadding.LeftRight();
       break;
     default:
       break;
   }
 
-  // Make sure AdjustComputedWidth undoes the above as needed.
-  AdjustComputedWidth(PR_TRUE);
+  return aIntrinsicWidth;
 }
 
 #ifdef IBMBIDI

@@ -455,6 +455,11 @@ protected:
   // itself.
   void ShrinkWidthToFit(nscoord aAvailWidth);
 
+  // AdjustIntrinsicWidthForBoxSizing takes an intrinsic width and returns a
+  // value that can be compared to the min and max computed widths, no matter
+  // what our box-sizing is.
+  nscoord AdjustIntrinsicWidthForBoxSizing(nscoord aIntrinsicWidth);
+  
 #ifdef IBMBIDI
   /**
    * Test whether the frame is a form control in a visual Bidi page.
