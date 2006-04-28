@@ -1739,6 +1739,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // may not have been called if reflow was a result of having a height on the containing table
   // XXXldb Set aStatus or other members of aDesiredSize?
   if (IsPrematureSpecialHeightReflow(aReflowState, mRect, NeedSpecialReflow() || isPaginated, aDesiredSize)) 
+    // XXXldb But dirty bits will be cleared!
     return NS_OK;
 
   aStatus = NS_FRAME_COMPLETE; 
@@ -1800,6 +1801,8 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       reflowedChildren = PR_TRUE;
     }
     // reevaluate special height reflow conditions
+    // XXXldb If these conditions are false, our dirty bits will still be
+    // cleared!
     if ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) &&
         (aReflowState.mFlags.mSpecialHeightReflow || !NeedSpecialReflow()) &&
         NS_FRAME_IS_COMPLETE(aStatus)) {
