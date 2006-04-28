@@ -899,7 +899,7 @@ protected:
 #ifdef ACCESSIBILITY
 NS_IMETHODIMP nsTextFrame::GetAccessible(nsIAccessible** aAccessible)
 {
-  if (mRect.width > 0 || mRect.height > 0) {
+  if (mRect.width > 0 || mRect.height > 0 || GetNextInFlow()) {
 
     nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
 
