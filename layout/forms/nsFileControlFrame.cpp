@@ -372,8 +372,12 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
 nscoord
 nsFileControlFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
+
   // Our min width is our pref width
-  return GetPrefWidth(aRenderingContext);
+  result = GetPrefWidth(aRenderingContext);
+  return result;
 }
 
 NS_IMETHODIMP nsFileControlFrame::Reflow(nsPresContext*          aPresContext, 
