@@ -241,6 +241,20 @@ interface nsIUpdate : nsISupports
 };
 
 /**
+ * A MOZILLA_1_8_BRANCH-specific interface that adds the 'channel' attribute
+ * to the nsIUpdate interface. This attribute has been added to nsIUpdate on
+ * the trunk.
+ */
+[scriptable, uuid(5b61356d-8411-48c0-863f-7b038eb0e4a8)]
+interface nsIUpdate_MOZILLA_1_8_BRANCH : nsIUpdate
+{
+  /**
+   * The channel used to retrieve this update from the Update Service.
+   */
+  attribute AString channel;
+};
+
+/**
  * An interface describing an object that listens to the progress of an update
  * check operation. This object is notified as the check continues, finishes
  * and if it has an error. 

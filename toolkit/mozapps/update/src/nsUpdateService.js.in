@@ -662,6 +662,7 @@ function Update(update) {
   this._patches = [];
   this.installDate = 0;
   this.isCompleteUpdate = false;
+  this.channel = "default";
 
   // Null <update>, assume this is a message container and do no 
   // further initialization
@@ -856,7 +857,8 @@ Update.prototype = {
    * See nsISupports.idl
    */
   QueryInterface: function(iid) {
-    if (!iid.equals(Components.interfaces.nsIUpdate) &&
+    if (!iid.equals(Components.interfaces.nsIUpdate_MOZILLA_1_8_BRANCH) &&
+        !iid.equals(Components.interfaces.nsIUpdate) &&
         !iid.equals(Components.interfaces.nsIPropertyBag) &&
         !iid.equals(Components.interfaces.nsIWritablePropertyBag) &&
         !iid.equals(Components.interfaces.nsISupports))
@@ -1519,14 +1521,16 @@ UpdateManager.prototype = {
    * See nsIUpdateService.idl
    */
   get activeUpdate() {
-    if (this._activeUpdate &&
-        this._activeUpdate.channel != getUpdateChannel()) {
-      // User switched channels, clear out any old active updates and remove
-      // partial downloads
-      this._activeUpdate = null;
+    if (this._activeUpdate) {
+      this._activeUpdate.QueryInterface(Components.interfaces.nsIUpdate_MOZILLA_1_8_BRANCH);
+      if (this._activeUpdate.channel != getUpdateChannel()) {
+        // User switched channels, clear out any old active updates and remove
+        // partial downloads
+        this._activeUpdate = null;
       
-      // Destroy the updates directory, since we're done with it.
-      cleanUpUpdatesDir();
+        // Destroy the updates directory, since we're done with it.
+        cleanUpUpdatesDir();
+      }
     }
     return this._activeUpdate;
   },
