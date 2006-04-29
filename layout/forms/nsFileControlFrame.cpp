@@ -68,7 +68,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsILocalFile.h"
-#include "nsIFileControlElement.h"
+#include "nsITextControlElement.h"
 #include "nsNodeInfoManager.h"
 #include "nsContentCreatorFunctions.h"
 #include "nsContentUtils.h"
@@ -94,7 +94,8 @@ NS_NewFileControlFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 
 nsFileControlFrame::nsFileControlFrame():
   mTextFrame(nsnull), 
-  mCachedState(nsnull)
+  mCachedState(nsnull),
+  mDidPreDestroy(PR_FALSE)
 {
     //Shrink the area around it's contents
   SetFlags(NS_BLOCK_SHRINK_WRAP);
@@ -114,11 +115,52 @@ nsFileControlFrame::~nsFileControlFrame()
   }
 }
 
+void
+nsFileControlFrame::PreDestroy(nsPresContext* aPresContext)
+{
+  // Toss the value into the control from the anonymous content, which is about
+  // to get lost.  Note that if the page is being torn down then the anonymous
+  // content may no longer have access to its frame.  But _we_ can access that
+  // frame.  So if it's there, get the value from the frame
+  if (mTextContent) {
+    nsAutoString value;
+    if (mTextFrame) {
+      // Second arg doesn't really matter here...
+      mTextFrame->GetValue(value, PR_TRUE);
+    } else {
+      // Get from the content
+      nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(mTextContent);
+      input->GetValue(value);
+    }
+
+    // Have it take the value, just like when input type=text goes away
+    nsCOMPtr<nsITextControlElement> fileInput = do_QueryInterface(mContent);
+    fileInput->TakeTextFrameValue(value);
+  }
+  mDidPreDestroy = PR_TRUE;
+}
+
 NS_IMETHODIMP
 nsFileControlFrame::Destroy(nsPresContext* aPresContext)
 {
+  if (!mDidPreDestroy) {
+    PreDestroy(aPresContext);
+  }
   mTextFrame = nsnull;
   return nsAreaFrame::Destroy(aPresContext);
+}
+
+void
+nsFileControlFrame::RemovedAsPrimaryFrame(nsPresContext* aPresContext)
+{
+  if (!mDidPreDestroy) {
+    PreDestroy(aPresContext);
+  }
+#ifdef DEBUG
+  else {
+    NS_ERROR("RemovedAsPrimaryFrame called after PreDestroy");
+  }
+#endif
 }
 
 NS_IMETHODIMP
@@ -144,14 +186,13 @@ nsFileControlFrame::CreateAnonymousContent(nsPresContext* aPresContext,
 
   if (mTextContent) {
     mTextContent->SetAttr(kNameSpaceID_None, nsHTMLAtoms::type, NS_LITERAL_STRING("text"), PR_FALSE);
-    nsCOMPtr<nsIFileControlElement> fileControl = do_QueryInterface(mContent);
     nsCOMPtr<nsIDOMHTMLInputElement> textControl = do_QueryInterface(mTextContent);
-    if (fileControl && fileContent && textControl) {
+    if (fileContent && textControl) {
       // Initialize value when we create the content in case the value was set
       // before we got here
       nsAutoString value;
       nsAutoString accessKey;
-      fileControl->GetFileName(value);
+      fileContent->GetValue(value);
       textControl->SetValue(value);
 
       PRInt32 tabIndex;
@@ -338,11 +379,6 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
     result = localFile->GetPath(unicodePath);
     if (!unicodePath.IsEmpty()) {
       mTextFrame->SetProperty(mPresContext, nsHTMLAtoms::value, unicodePath);
-      nsCOMPtr<nsIFileControlElement> fileControl = do_QueryInterface(mContent);
-      if (fileControl) {
-        fileControl->SetFileName(unicodePath, PR_FALSE);
-      }
-      
       // May need to fire an onchange here
       mTextFrame->CheckFireOnChange();
       return NS_OK;
@@ -600,7 +636,7 @@ NS_IMETHODIMP nsFileControlFrame::SetProperty(nsPresContext* aPresContext,
                                               const nsAString& aValue)
 {
   nsresult rv = NS_OK;
-  if (nsHTMLAtoms::value == aName || nsHTMLAtoms::filename == aName) {
+  if (nsHTMLAtoms::value == aName) {
     if (mTextFrame) {
       mTextFrame->SetValue(aValue);
     } else {
@@ -616,7 +652,7 @@ NS_IMETHODIMP nsFileControlFrame::GetProperty(nsIAtom* aName, nsAString& aValue)
 {
   aValue.Truncate();  // initialize out param
 
-  if (nsHTMLAtoms::value == aName || nsHTMLAtoms::filename == aName) {
+  if (nsHTMLAtoms::value == aName) {
     if (mTextFrame) {
       mTextFrame->GetValue(aValue, PR_FALSE);
     }
