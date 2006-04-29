@@ -1014,6 +1014,8 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
     if (min < max) {
       const nsStyleCoord &styleWidth = stylePos->mWidth;
       if (styleWidth.GetUnit() == eStyleUnit_Coord) {
+        // XXXbz for frames that override their CSS widths
+        // (e.g. tables) this gives the wrong answer.
         result = styleWidth.GetCoordValue();
       // XXX If it's a percent, should we use 0 for min-width?
       } else {
