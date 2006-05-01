@@ -2172,7 +2172,9 @@ var gMessageNotificationBar =
       isJunk = ((junkScore != "") && (junkScore != "0"));
     }
 
-    this.updateMsgNotificationBar (isJunk ? kMsgNotificationJunkBar : kMsgNotificationNoStatus);
+    // phishing scams take precedence over junk
+    if (this.mMsgNotificationBar.selectedIndex != kMsgNotificationPhishingBar && isJunk)
+      this.updateMsgNotificationBar (kMsgNotificationJunkBar);
 
     goUpdateCommand('button_junk');
 
@@ -2181,9 +2183,8 @@ var gMessageNotificationBar =
 
   setRemoteContentMsg: function (aMsgHdr)
   {  
-    // The phishing message and junk message takes precedence over the remote content msg
-    if (this.mMsgNotificationBar.selectedIndex != kMsgNotificationJunkBar && 
-        this.mMsgNotificationBar.selectedIndex != kMsgNotificationPhishingBar)
+    // phishing and junk messages take precedence over the remote content msg...
+    if (this.mMsgNotificationBar.selectedIndex == kMsgNotificationNoStatus)
       this.updateMsgNotificationBar(aMsgHdr && aMsgHdr.getUint32Property("remoteContentPolicy") == kBlockRemoteContent ? 
                                     kMsgNotificationRemoteImages : kMsgNotificationNoStatus);
   },
@@ -2201,9 +2202,8 @@ var gMessageNotificationBar =
         return; 
     }
 
-    // The Junk message takes precedence over the phishing message...so skip this step
-    // if the message is already marked as junk
-    if (this.mMsgNotificationBar.selectedIndex != kMsgNotificationJunkBar && isMsgEmailScam(aUrl))
+    // phishing scams take precedence over junk and remote images.
+    if (isMsgEmailScam(aUrl))
       this.updateMsgNotificationBar(kMsgNotificationPhishingBar);
   },
 
