@@ -479,7 +479,6 @@ protected:
 
 private:
 
-#ifdef HTML_FORMS
   // @param OUT aNewFrame the new radio control frame
   nsresult ConstructRadioControlFrame(nsIFrame**         aNewFrame,
                                       nsIContent*        aContent,
@@ -489,7 +488,6 @@ private:
   nsresult ConstructCheckboxControlFrame(nsIFrame**       aNewFrame,
                                          nsIContent*      aContent,
                                          nsStyleContext*  aStyleContext);
-#endif
   // ConstructButtonFrame puts the new frame in aFrameItems and
   // handles the kids of the button.
   nsresult ConstructButtonFrame(nsFrameConstructorState& aState,

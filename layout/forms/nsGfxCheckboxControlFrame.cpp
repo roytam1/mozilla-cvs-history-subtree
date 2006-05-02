@@ -286,24 +286,3 @@ nsGfxCheckboxControlFrame::GetCheckboxState ( )
   elem->GetChecked(&retval);
   return retval;
 }
-
-//------------------------------------------------------------
-// Extra Debug Methods
-//------------------------------------------------------------
-#ifdef DEBUG_rodsXXX
-NS_IMETHODIMP
-nsGfxCheckboxControlFrame::Reflow(nsPresContext*          aPresContext, 
-                                  nsHTMLReflowMetrics&     aDesiredSize,
-                                  const nsHTMLReflowState& aReflowState, 
-                                  nsReflowStatus&          aStatus)
-{
-  DO_GLOBAL_REFLOW_COUNT("nsGfxCheckboxControlFrame", aReflowState.reason);
-  DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-  nsresult rv = nsFormControlFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
-
-  COMPARE_QUIRK_SIZE("nsGfxCheckboxControlFrame", 13, 13) 
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-  return rv;
-}
-#endif
-

@@ -81,15 +81,11 @@ nsFormControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 
 void nsFormControlFrame::SetupCachedSizes(nsSize& aCacheSize,
                                           nscoord& aCachedAscent,
-                                          nscoord& aCachedMaxElementWidth,
                                           nsHTMLReflowMetrics& aDesiredSize)
 {
   aCacheSize.width  = aDesiredSize.width;
   aCacheSize.height = aDesiredSize.height;
   aCachedAscent = aDesiredSize.ascent;
-  if (aDesiredSize.mComputeMEW) {
-    aCachedMaxElementWidth  = aDesiredSize.mMaxElementWidth;
-  }
 }
 
 //------------------------------------------------------------
@@ -103,7 +99,7 @@ void nsFormControlFrame::SkipResizeReflow(nsSize& aCacheSize,
                                           PRBool& aBailOnWidth,
                                           PRBool& aBailOnHeight)
 {
-
+#ifdef HTML_FORMS
   if (aReflowState.reason == eReflowReason_Incremental ||
 #ifdef IBMBIDI
       aReflowState.reason == eReflowReason_StyleChange ||
@@ -211,25 +207,25 @@ void nsFormControlFrame::SkipResizeReflow(nsSize& aCacheSize,
       }
     }
   }
+#endif
 }
 
-void 
-nsFormControlFrame::GetDesiredSize(nsPresContext* aPresContext,
-                             const nsHTMLReflowState& aReflowState,
-                             nsHTMLReflowMetrics& aDesiredSize)
+nscoord
+nsFormControlFrame::GetIntrinsicWidth()
 {
-  // get the css size and let the frame use or override it
-  nsSize styleSize;
-  GetStyleSize(aPresContext, aReflowState, styleSize);
+  // Intrinsic width is 144 twips.  Why?  I have no idea; that's what
+  // it was before I touched this code, and the original checkin
+  // comment is not so helpful.
+  return 144;
+}
 
-  // subclasses should always override this method, but if not and no css, make it small
-  aDesiredSize.width  = (styleSize.width  > CSS_NOTSET) ? styleSize.width  : 144;
-  aDesiredSize.height = (styleSize.height > CSS_NOTSET) ? styleSize.height : 144;
-  aDesiredSize.ascent = aDesiredSize.height;
-  aDesiredSize.descent = 0;
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-  }
+nscoord
+nsFormControlFrame::GetIntrinsicHeight()
+{
+  // Intrinsic height is 144 twips.  Why?  I have no idea; that's what
+  // it was before I touched this code, and the original checkin
+  // comment is not so helpful.
+  return 144;
 }
 
 NS_IMETHODIMP
@@ -275,21 +271,15 @@ nsFormControlFrame::Reflow(nsPresContext*          aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsFormControlFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsFormControlFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
-  if (!mDidInit) {
+  if (mState & NS_FRAME_FIRST_REFLOW) {
     RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
-    mDidInit = PR_TRUE;
   }
 
-  nsresult rv = nsLeafFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
-
-  aStatus = NS_FRAME_COMPLETE;
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-  aDesiredSize.mOverflowArea = nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
-  FinishAndStoreOverflow(&aDesiredSize);
-  return rv;
+  return nsLeafFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
+                             aStatus);
 }
 
 nsresult
@@ -330,25 +320,6 @@ nsFormControlFrame::HandleEvent(nsPresContext* aPresContext,
     return nsFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 
   return NS_OK;
-}
-
-void 
-nsFormControlFrame::GetStyleSize(nsPresContext* aPresContext,
-                                 const nsHTMLReflowState& aReflowState,
-                                 nsSize& aSize)
-{
-  if (aReflowState.mComputedWidth != NS_INTRINSICSIZE) {
-    aSize.width = aReflowState.mComputedWidth;
-  }
-  else {
-    aSize.width = CSS_NOTSET;
-  }
-  if (aReflowState.mComputedHeight != NS_INTRINSICSIZE) {
-    aSize.height = aReflowState.mComputedHeight;
-  }
-  else {
-    aSize.height = CSS_NOTSET;
-  }
 }
 
 void

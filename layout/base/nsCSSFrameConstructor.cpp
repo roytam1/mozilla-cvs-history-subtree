@@ -76,9 +76,9 @@
 #include "nsIComboboxControlFrame.h"
 #include "nsIListControlFrame.h"
 #include "nsISelectControlFrame.h"
+#endif // HTML_FORMS
 #include "nsIRadioControlFrame.h"
 #include "nsICheckboxControlFrame.h"
-#endif
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsITextContent.h"
@@ -2447,7 +2447,6 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
       return rv;
     }
 
-#ifdef HTML_FORMS
     case NS_FORM_INPUT_CHECKBOX:
       if (gUseXBLForms)
         return NS_OK; // see comment above
@@ -2457,8 +2456,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
       if (gUseXBLForms)
         return NS_OK; // see comment above
       return ConstructRadioControlFrame(aFrame, aContent, aStyleContext);
-#endif // HTML_FORMS
-      
+
     case NS_FORM_INPUT_FILE:
     {
       *aFrame = NS_NewFileControlFrame(mPresShell);
@@ -2476,6 +2474,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
     case NS_FORM_INPUT_HIDDEN:
       return NS_OK; // this does not create a frame so it needs special handling
                     // in IsSpecialContent
+
     case NS_FORM_INPUT_IMAGE:
       return CreateHTMLImageFrame(aContent, aStyleContext,
                                   NS_NewImageControlFrame, aFrame);
@@ -2487,15 +2486,10 @@ nsCSSFrameConstructor::CreateInputFrame(nsFrameConstructorState& aState,
       
       return NS_UNLIKELY(!*aFrame) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
     }
-#ifdef HTML_FORMS
+
     default:
       NS_ASSERTION(0, "Unknown input type!");
       return NS_ERROR_INVALID_ARG;
-#else // HTML_FORMS
-    default:
-      *aFrame = nsnull;
-      return NS_OK;
-#endif // HTML_FORMS
   }
 }
 
@@ -5062,7 +5056,6 @@ nsCSSFrameConstructor::CreatePlaceholderFrameFor(nsIPresShell*    aPresShell,
   }
 }
 
-#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::ConstructRadioControlFrame(nsIFrame**      aNewFrame,
                                                   nsIContent*     aContent,
@@ -5104,7 +5097,6 @@ nsCSSFrameConstructor::ConstructCheckboxControlFrame(nsIFrame**      aNewFrame,
   }
   return NS_OK;
 }
-#endif
 
 nsresult
 nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,

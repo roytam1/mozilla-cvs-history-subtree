@@ -51,7 +51,6 @@ class nsPresContext;
 class nsStyleCoord;
 class nsStyleContext;
 
-#define CSS_NOTSET -1
 #define ATTR_NOTSET -1
 
 #define NS_STRING_TRUE   NS_LITERAL_STRING("1")
