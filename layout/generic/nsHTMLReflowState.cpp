@@ -1798,9 +1798,15 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
     if (NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType)) {
       // Block-level replaced element in the flow. A specified value of 
       // 'auto' uses the element's intrinsic width (CSS2 10.3.4)
+
+      // XXXbz this breaks auto margins on block-level replaced
+      // elements, since we never call CalculateBlockSideMargins()
       mComputedWidth = NS_INTRINSICSIZE;
     } else if (NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) {
       // Width is shrink-to-fit
+
+      // XXXbz this breaks auto margins on block-level replaced
+      // elements, since we never call CalculateBlockSideMargins()
       ShrinkWidthToFit(availableWidth);
     } else {
       // Block-level non-replaced element in the flow. 'auto' values
