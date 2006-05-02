@@ -51,6 +51,7 @@ DIRS =						\
 	stylesheets				\
 	views					\
 	css					\
+        sidebar                                 \
 	traversal				\
 	range					\
 	xbl					\
