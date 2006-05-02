@@ -1455,9 +1455,11 @@ nsGlobalHistory::HidePage(nsIURI *aURI)
 NS_IMETHODIMP
 nsGlobalHistory::MarkPageAsTyped(nsIURI *aURI)
 {
+  NS_ENSURE_ARG_POINTER(aURI);
   nsCAutoString spec;
   nsresult rv = aURI->GetSpec(spec);
-  if (NS_FAILED(rv)) return rv;
+  if (NS_FAILED(rv))
+    return rv;
   
   if (spec.Length() > HISTORY_URI_LENGTH_MAX)
      return NS_OK;
