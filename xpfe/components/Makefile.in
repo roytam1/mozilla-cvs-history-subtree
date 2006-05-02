@@ -119,7 +119,6 @@ DIRS += \
         autocomplete \
         console \
         history/public \
-        sidebar/public \
         bookmarks/public \
         $(NULL)
 
