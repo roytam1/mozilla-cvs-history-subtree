@@ -133,7 +133,10 @@ static void SwapSlashColon(char *s)
 nsresult
 net_GetURLSpecFromFile(nsIFile *aFile, nsACString &result)
 {
-  // NOTE: This is identical to the implementation in nsURLHelperUnix.cpp
+  // NOTE: This used to be identical to the implementation in 
+  // nsURLHelperUnix.cpp, but with bug 278161 fixed, it's now
+  // different because unlike on Unix, the file system charset 
+  // is always UTF-8  on OS X.
   
   nsresult rv;
   nsCAutoString ePath;
@@ -176,7 +179,8 @@ nsresult
 net_GetFileFromURLSpec(const nsACString &aURL, nsIFile **result)
 {
   // NOTE: See also the implementation in nsURLHelperUnix.cpp
-  // This matches it except for the HFS path handling.
+  // This matches it except for the HFS path handling and file
+  // system charset conversion.
 
   nsresult rv;
 
