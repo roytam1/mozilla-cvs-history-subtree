@@ -233,6 +233,13 @@ nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return result;
 }
 
+nscoord
+nsLeafBoxFrame::GetIntrinsicWidth()
+{
+  // No intrinsic width
+  return 0;
+}
+
 NS_IMETHODIMP
 nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,

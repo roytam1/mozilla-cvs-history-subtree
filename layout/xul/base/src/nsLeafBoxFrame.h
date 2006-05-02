@@ -104,9 +104,7 @@ protected:
   virtual void GetBoxName(nsAutoString& aName);
 #endif
 
-  virtual void GetDesiredSize(nsPresContext* aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics& aDesiredSize) {}
+  virtual nscoord GetIntrinsicWidth();
 
  nsLeafBoxFrame(nsIPresShell* aShell);
 

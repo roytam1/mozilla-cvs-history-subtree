@@ -157,9 +157,8 @@ public:
 protected:
   nsHTMLFramesetBorderFrame(PRInt32 aWidth, PRBool aVertical, PRBool aVisible);
   virtual ~nsHTMLFramesetBorderFrame();
-  virtual void GetDesiredSize(nsPresContext* aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics& aDesiredSize);
+  virtual nscoord GetIntrinsicWidth();
+
   PRInt32 mWidth;
   PRPackedBool mVertical;
   PRPackedBool mVisibility;
@@ -193,9 +192,8 @@ public:
 
 protected:
   virtual ~nsHTMLFramesetBlankFrame();
-  virtual void GetDesiredSize(nsPresContext*          aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics&     aDesiredSize);
+  virtual nscoord GetIntrinsicWidth();
+
   friend class nsHTMLFramesetFrame;
   friend class nsHTMLFrameset;
 };
@@ -1581,14 +1579,10 @@ nsHTMLFramesetBorderFrame::~nsHTMLFramesetBorderFrame()
   //printf("nsHTMLFramesetBorderFrame destructor %p \n", this);
 }
 
-void nsHTMLFramesetBorderFrame::GetDesiredSize(nsPresContext*          aPresContext,
-                                               const nsHTMLReflowState& aReflowState,
-                                               nsHTMLReflowMetrics&     aDesiredSize)
+nscoord nsHTMLFramesetBorderFrame::GetIntrinsicWidth()
 {
-  aDesiredSize.width   = aReflowState.availableWidth;
-  aDesiredSize.height  = aReflowState.availableHeight;
-  aDesiredSize.ascent  = aDesiredSize.width;
-  aDesiredSize.descent = 0;
+  // No intrinsic width
+  return 0;
 }
 
 void nsHTMLFramesetBorderFrame::SetVisibility(PRBool aVisibility)
@@ -1609,7 +1603,11 @@ nsHTMLFramesetBorderFrame::Reflow(nsPresContext*          aPresContext,
                                   nsReflowStatus&          aStatus)
 {
   DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBorderFrame");
-  GetDesiredSize(aPresContext, aReflowState, aDesiredSize);
+
+  // Override Reflow(), since we don't want to deal with what our
+  // computed values are.
+  SizeToAvailSize(aReflowState, aDesiredSize);
+
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
 }
@@ -1795,14 +1793,10 @@ nsHTMLFramesetBlankFrame::~nsHTMLFramesetBlankFrame()
   //printf("nsHTMLFramesetBlankFrame destructor %p \n", this);
 }
 
-void nsHTMLFramesetBlankFrame::GetDesiredSize(nsPresContext*          aPresContext,
-                                              const nsHTMLReflowState& aReflowState,
-                                              nsHTMLReflowMetrics&     aDesiredSize)
+nscoord nsHTMLFramesetBlankFrame::GetIntrinsicWidth()
 {
-  aDesiredSize.width   = aReflowState.availableWidth;
-  aDesiredSize.height  = aReflowState.availableHeight;
-  aDesiredSize.ascent  = aDesiredSize.width;
-  aDesiredSize.descent = 0;
+  // No intrinsic width
+  return 0;
 }
 
 NS_IMETHODIMP
@@ -1812,7 +1806,11 @@ nsHTMLFramesetBlankFrame::Reflow(nsPresContext*          aPresContext,
                                  nsReflowStatus&          aStatus)
 {
   DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBlankFrame");
-  GetDesiredSize(aPresContext, aReflowState, aDesiredSize);
+
+  // Override Reflow(), since we don't want to deal with what our
+  // computed values are.
+  SizeToAvailSize(aReflowState, aDesiredSize);
+
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
 }

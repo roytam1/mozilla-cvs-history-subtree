@@ -162,9 +162,9 @@ protected:
   nsresult ShowDocShell();
   nsresult CreateViewAndWidget(nsContentType aContentType);
 
-  virtual void GetDesiredSize(nsPresContext* aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics& aDesiredSize);
+  virtual nscoord GetIntrinsicWidth();
+  virtual nscoord GetIntrinsicHeight();
+
   virtual PRIntn GetSkipSides() const;
 
   nsCOMPtr<nsIFrameLoader> mFrameLoader;
@@ -321,36 +321,35 @@ nsSubDocumentFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
   return f->BuildDisplayListForStackingContext(aBuilder, dirty, aLists.Content());
 }
 
-void
-nsSubDocumentFrame::GetDesiredSize(nsPresContext* aPresContext,
-                                   const nsHTMLReflowState& aReflowState,
-                                   nsHTMLReflowMetrics& aDesiredSize)
+nscoord
+nsSubDocumentFrame::GetIntrinsicWidth()
+{
+  if (!IsInline()) {
+    return 0;  // <frame> has no useful intrinsic width
+  }
+
+  if (!mContent->IsContentOfType(nsIContent::eXUL)) {
+    return 0;  // <xul:iframe> also has no useful intrinsic width
+  }
+
+  // We must be an HTML <iframe>.  Default to a width of 300, for IE
+  // compat (and per CSS2.1 draft).
+  return NSIntPixelsToTwips(300, GetPresContext()->ScaledPixelsToTwips());
+}
+
+nscoord
+nsSubDocumentFrame::GetIntrinsicHeight()
 {
   // <frame> processing does not use this routine, only <iframe>
-  float p2t = 0;
-  if (!mContent->IsContentOfType(nsIContent::eXUL))
-    // If no width/height was specified, use 300/150.
-    // This is for compatibility with IE.
-    p2t = aPresContext->ScaledPixelsToTwips();
+  NS_ASSERTION(IsInline(), "Shouldn't have been called");
 
-  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedWidth) {
-    aDesiredSize.width = aReflowState.mComputedWidth;
+  if (mContent->IsContentOfType(nsIContent::eXUL)) {
+    return 0;
   }
-  else {
-    aDesiredSize.width = PR_MAX(PR_MIN(NSIntPixelsToTwips(300, p2t),
-                                       aReflowState.mComputedMaxWidth), 
-                                aReflowState.mComputedMinWidth);
-  }
-  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) {
-    aDesiredSize.height = aReflowState.mComputedHeight;
-  }
-  else {
-    aDesiredSize.height = PR_MAX(PR_MIN(NSIntPixelsToTwips(150, p2t),
-                                        aReflowState.mComputedMaxHeight),
-                                 aReflowState.mComputedMinHeight);
-  }
-  aDesiredSize.ascent = aDesiredSize.height;
-  aDesiredSize.descent = 0;
+
+  // Use 150px, for compatibility with IE, and per CSS2.1 draft.
+  return NSIntPixelsToTwips(150,
+                            GetPresContext()->ScaledPixelsToTwips());
 }
 
 #ifdef DEBUG
@@ -403,23 +402,25 @@ nsSubDocumentFrame::Reflow(nsPresContext*          aPresContext,
 
   aStatus = NS_FRAME_COMPLETE;
 
+  // "offset" is the offset of our content area from our frame's
+  // top-left corner.
+  nsPoint offset(0, 0);
+  
   if (IsInline()) {
-    GetDesiredSize(aPresContext, aReflowState, aDesiredSize); // IFRAME
+    // IFRAME
+    nsresult rv = nsLeafFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
+                                      aStatus);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    offset = nsPoint(aReflowState.mComputedBorderPadding.left,
+                     aReflowState.mComputedBorderPadding.top);
   } else {
-    aDesiredSize.width  = aReflowState.availableWidth; // FRAME
-    aDesiredSize.height = aReflowState.availableHeight;
+    // FRAME
+    SizeToAvailSize(aReflowState, aDesiredSize);
   }
 
   nsSize innerSize(aDesiredSize.width, aDesiredSize.height);
-  nsPoint offset(0, 0);
-  nsMargin border = aReflowState.mComputedBorderPadding;
 
-  if (IsInline()) {
-    offset = nsPoint(border.left, border.top);
-    aDesiredSize.width += border.left + border.right;
-    aDesiredSize.height += border.top + border.bottom;
-  }
-  
   // might not have an inner view yet during printing
   if (mInnerView) {
     nsIViewManager* vm = mInnerView->GetViewManager();
