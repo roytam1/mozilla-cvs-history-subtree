@@ -274,6 +274,7 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
   }
 
   if (!hasFill && !hasStroke) {
+    cairo_restore(ctx);
     delete [] cp;
     return NS_OK; // nothing to paint
   }
@@ -312,6 +313,9 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
   }
 
   if (hasStroke) {
+    if (!cp)
+      cairo_move_to(ctx, x, y);
+
     nscolor rgb;
     mSource->GetStrokePaint(&rgb);
     float opacity;
