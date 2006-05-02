@@ -4263,10 +4263,10 @@ nsGlobalHistory::AutoCompleteTypedSearch(nsIAutoCompleteMdbResult2 **aResult)
   result->SetTokens(kToken_URLColumn, nsIAutoCompleteMdbResult2::kCharType, kToken_NameColumn, nsIAutoCompleteMdbResult2::kUnicharType);
   result->SetReverseByteOrder(mReverseByteOrder);
 
-  nsIMdbRow *row = nsnull;
+  nsCOMPtr<nsIMdbRow> row;
   mdb_pos pos;
   do {
-    rowCursor->PrevRow(mEnv, &row, &pos);
+    rowCursor->PrevRow(mEnv, getter_AddRefs(row), &pos);
     if (!row) break;
     
     if (HasCell(mEnv, row, kToken_TypedColumn)) {
