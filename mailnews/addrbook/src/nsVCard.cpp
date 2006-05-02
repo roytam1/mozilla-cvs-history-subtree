@@ -950,8 +950,10 @@ static char * lexGetDataFromBase64()
 	    } else if ((c == ' ') || (c == '\t')) {
 		continue;
 	    } else { /* error condition */
-		PR_FREEIF (bytes);
-		PR_FREEIF(oldBytes);
+                if (bytes)
+		  PR_Free (bytes);
+                else if (oldBytes)
+		  PR_Free (oldBytes);
 		/* error recovery: skip until 2 adjacent newlines. */
 		DBG_(("db: invalid character 0x%x '%c'\n", c,c));
 		if (c != EOF)  {
@@ -987,7 +989,8 @@ static char * lexGetDataFromBase64()
 			bytes = (unsigned char*)PR_Realloc(bytes,bytesMax);
 			}
 			if (bytes == 0) {
-			mime_error("out of memory while processing BASE64 data\n");
+			  mime_error("out of memory while processing BASE64 data\n");
+                          break;
 			}
 		    }
 		if (bytes) {
