@@ -221,7 +221,10 @@ var InlineSpellCheckerUI = {
   {
     if (! this.mInlineSpellChecker || index < 0 || index >= this.mDictionaryNames.length)
       return;
-    this.mInlineSpellChecker.spellChecker.SetCurrentDictionary(this.mDictionaryNames[index]);
+    var spellchecker = this.mInlineSpellChecker.spellChecker;
+    spellchecker.QueryInterface(Components.interfaces.nsIEditorSpellCheck_MOZILLA_1_8_BRANCH);
+    spellchecker.SetCurrentDictionary(this.mDictionaryNames[index]);
+    spellchecker.saveDefaultDictionary();
     this.mInlineSpellChecker.spellCheckRange(null); // causes recheck
   },
 
