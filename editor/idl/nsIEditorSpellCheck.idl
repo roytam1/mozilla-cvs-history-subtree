@@ -180,12 +180,20 @@ interface nsIEditorSpellCheck : nsISupports
  * This contains enhancements made to this interface on the trunk. Here, it is
  * on a separate interface to avoid changing interfaces on the branch.
  */
-[scriptable, uuid(1cd276f4-2a99-46fb-b487-f0476afa0925)]
+[scriptable, uuid(0455cf88-c679-40c3-8e9f-ff4554ee9559)]
 interface nsIEditorSpellCheck_MOZILLA_1_8_BRANCH : nsIEditorSpellCheck
 {
- /**
+  /**
    * Returns true if we can enable spellchecking. If there are no available
    * dictionaries, this will return false.
    */
   boolean       CanSpellCheck();
+
+  /**
+   * Call to save the currently selected dictionary as the default. The
+   * function UninitSpellChecker will also do this, but that function may
+   * not be called in some situations. This function allows the caller to force
+   * the default right now.
+   */
+  void saveDefaultDictionary();
 };
