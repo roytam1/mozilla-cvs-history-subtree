@@ -77,6 +77,10 @@ ifdef MOZ_XPINSTALL
 DIRS +=	downloads
 endif
 
+ifdef MOZ_URL_CLASSIFIER
+DIRS += url-classifier
+endif
+
 DIRS += \
 	commandlines \
 	startup \
@@ -86,9 +90,5 @@ DIRS += \
 EXTRA_PP_COMPONENTS = nsDefaultCLH.js
 
 endif # MOZ_XUL_APP
-
-ifdef MOZ_URL_CLASSIFIER
-DIRS += url-classifier
-endif
 
 include $(topsrcdir)/config/rules.mk

@@ -179,6 +179,9 @@
     <command id="Browser:SearchHistory" oncommand="HistoryMenu.showPlacesSearch();"/>
 
 #endif
+#ifdef MOZ_SAFE_BROWSING
+#include ../../components/safebrowsing/content/commands.inc
+#endif
   </commandset>
 
 #ifdef MOZ_PLACES
