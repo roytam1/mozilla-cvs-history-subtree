@@ -6146,9 +6146,21 @@ var FeedHandler = {
     var feeds = harvestFeeds(feeds);
     if (feeds.length == 1) {
 #ifdef MOZ_PLACES
+#ifdef MOZ_FEEDS
+      // Just load the feed in the content area to either subscribe or show the
+      // preview UI
+      loadURI(feeds[0].href, null, null, false);
+#else
       PlacesCommandHook.addLiveBookmark(feeds[0].href);
+#endif
+#else
+#ifdef MOZ_FEEDS
+      // Just load the feed in the content area to either subscribe or show the
+      // preview UI
+      loadURI(feeds[0].href, null, null, false);
 #else
       this.addLiveBookmark(feeds[0].href);
+#endif
 #endif
       return false;
     }
@@ -6158,7 +6170,11 @@ var FeedHandler = {
       var feedInfo = feeds[i];
       var menuItem = document.createElement("menuitem");
       var baseTitle = feedInfo.title || feedInfo.href;
+#ifdef MOZ_FEEDS
+      var labelStr = gNavigatorBundle.getFormattedString("feedShowFeedNew", [baseTitle]);
+#else
       var labelStr = gNavigatorBundle.getFormattedString("feedShowFeed", [baseTitle]);
+#endif
       menuItem.setAttribute("label", labelStr);
       menuItem.setAttribute("feed", feedInfo.href);
       menuItem.setAttribute("tooltiptext", feedInfo.href);
@@ -6215,7 +6231,11 @@ var FeedHandler = {
     } else {
       feedButton.setAttribute("feeds", "true");
       feedButton.setAttribute("tooltiptext", 
+#ifdef MOZ_FEEDS
+                              gNavigatorBundle.getString("feedHasFeedsNew"));
+#else
                               gNavigatorBundle.getString("feedHasFeeds"));
+#endif
     }
   }, 
   
@@ -6277,7 +6297,11 @@ var FeedHandler = {
         if (feedButton) {
           feedButton.setAttribute("feeds", "true");
           feedButton.setAttribute("tooltiptext", 
+#ifdef MOZ_FEEDS
+                                  gNavigatorBundle.getString("feedHasFeedsNew"));
+#else
                                   gNavigatorBundle.getString("feedHasFeeds"));
+#endif
         }
       }
     }
