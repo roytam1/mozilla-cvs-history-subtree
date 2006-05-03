@@ -55,6 +55,7 @@
 #include "nsEscape.h"
 #include "nsLocalFolderSummarySpec.h"
 #include "nsMsgI18N.h"
+#include "nsNativeCharsetUtils.h"
 #include "nsIFileStream.h"
 #include "nsIChannel.h"
 #include "nsITransport.h"
@@ -3341,7 +3342,7 @@ NS_IMETHODIMP nsMsgDBFolder::Rename(const PRUnichar *aNewName, nsIMsgWindow *msg
   nsAutoString safeName(aNewName);
   NS_MsgHashIfNecessary(safeName);
   nsCAutoString newDiskName;
-  if (NS_FAILED(nsMsgI18NCopyUTF16ToNative(safeName, newDiskName)))
+  if (NS_FAILED(NS_CopyUnicodeToNative(safeName, newDiskName)))
     return NS_ERROR_FAILURE;
   
   nsXPIDLCString oldLeafName;

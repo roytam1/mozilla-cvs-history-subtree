@@ -117,6 +117,7 @@
 // compose
 #include "nsMsgCompCID.h"
 #include "nsMsgI18N.h"
+#include "nsNativeCharsetUtils.h"
 
 // draft/folders/sendlater/etc
 #include "nsIMsgCopyService.h"
@@ -235,7 +236,7 @@ nsresult ConvertAndSanitizeFileName(const char * displayName, PRUnichar ** unico
 
   if (result) {
     nsCAutoString nativeStr;
-    rv =  nsMsgI18NCopyUTF16ToNative(ucs2Str, nativeStr);
+    rv =  NS_CopyUnicodeToNative(ucs2Str, nativeStr);
     *result = ToNewCString(nativeStr);
   }
 
@@ -488,7 +489,8 @@ nsMessenger::PromptIfFileExists(nsFileSpec &fileSpec)
         PRBool dialogResult = PR_FALSE;
         nsXPIDLString errorMessage;
 
-        nsMsgI18NCopyNativeToUTF16(fileSpec.GetNativePathCString(), path);
+        NS_CopyNativeToUnicode(
+            nsDependentCString(fileSpec.GetNativePathCString()), path);
         const PRUnichar *pathFormatStrings[] = { path.get() };
 
         if (!mStringBundle)
