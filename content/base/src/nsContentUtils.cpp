@@ -638,6 +638,17 @@ nsContentUtils::CheckSameOrigin(nsIDOMNode *aTrustedNode,
     }
   }
 
+  if (!unTrustedPrincipal) {
+    unTrustedPrincipal = unTrustedDoc->GetPrincipal();
+
+    if (!unTrustedPrincipal) {
+      // If the trusted node doesn't have a principal we can't check
+      // security against it
+
+      return NS_ERROR_DOM_SECURITY_ERR;
+    }
+  }
+
   return sSecurityManager->CheckSameOriginPrincipal(trustedPrincipal,
                                                     unTrustedPrincipal);
 }
