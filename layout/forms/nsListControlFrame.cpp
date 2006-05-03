@@ -2633,21 +2633,7 @@ nsListControlFrame::FireMenuItemActiveEvent()
     return;
   }
 
-  nsCOMPtr<nsIDOMEvent> event;
-  nsCOMPtr<nsIEventListenerManager> manager;
-  mContent->GetListenerManager(getter_AddRefs(manager));
-  nsPresContext* presContext = GetPresContext();
-  if (manager &&
-      NS_SUCCEEDED(manager->CreateEvent(presContext, nsnull, NS_LITERAL_STRING("Events"), getter_AddRefs(event)))) {
-    event->InitEvent(NS_LITERAL_STRING("DOMMenuItemActive"), PR_TRUE, PR_TRUE);
-
-    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
-    privateEvent->SetTrusted(PR_TRUE);
-
-    PRBool defaultActionEnabled;
-    presContext->EventStateManager()->DispatchNewEvent(optionContent, event,
-                                                       &defaultActionEnabled);
-  }
+  FireDOMEvent(NS_LITERAL_STRING("DOMMenuItemActive"), optionContent);
 }
 #endif
 
