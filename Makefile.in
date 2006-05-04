@@ -166,6 +166,7 @@ tier_9_dirs	+= \
 		caps \
 		rdf \
 		parser/expat \
+		parser/xml \
 		parser/htmlparser \
 		gfx \
 		modules/libpr0n \
