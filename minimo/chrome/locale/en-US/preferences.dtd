@@ -36,7 +36,7 @@
 <!ENTITY zoom.label                  "Zoom Controls">
 <!ENTITY zoomui.label                "User Interface">
 <!ENTITY zoomcontent.label           "Site Content">
-<!ENTITY loadHomePageCurrent.label   "Use Home Pages">
+<!ENTITY loadHomePageCurrent.label   "Use Current Pages">
 <!ENTITY loadHomePageBlank.label     "Use Blank Page">
 
 <!-- System Integration --> 
