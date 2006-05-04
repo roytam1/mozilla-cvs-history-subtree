@@ -66,7 +66,11 @@
 
 #define MAX_BYTES 512
 
+#ifdef MOZILLA_1_8_BRANCH
+NS_IMPL_ISUPPORTS2(nsFeedSniffer, nsIContentSniffer_MOZILLA_1_8_BRANCH, nsIStreamListener)
+#else
 NS_IMPL_ISUPPORTS2(nsFeedSniffer, nsIContentSniffer, nsIStreamListener)
+#endif
 
 nsresult
 nsFeedSniffer::ConvertEncodedData(nsIRequest* request,
@@ -84,7 +88,7 @@ nsFeedSniffer::ConvertEncodedData(nsIRequest* request,
   httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("Content-Encoding"), 
                                  contentEncoding);
   if (!contentEncoding.IsEmpty()) {
-    nsCOMPtr<nsIStreamConverterService> converterService(do_GetService(NS_STREAMCONVERTERSERVICE_CONTRACTID));
+    nsCOMPtr<nsIStreamConverterService> converterService(do_GetService("@mozilla.org/streamConverters;1"));
     if (converterService) {
       ToLowerCase(contentEncoding);
 
