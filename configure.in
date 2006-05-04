@@ -4140,7 +4140,7 @@ MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_LIBXUL=
 MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
-MOZ_FEEDS=
+MOZ_FEEDS=1
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm"
 MOZ_IPCD=
 MOZ_JAVAXPCOM=
@@ -5354,12 +5354,12 @@ if test -n "$MOZ_PLACES"; then
 fi
 
 dnl ========================================================
-dnl = Enable feeds (new feed handling/processing)
+dnl = Disable feeds (new feed handling/processing) - Firefox
 dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(feeds,
-[  --enable-feeds        Enable in-page feed handling and processing],
-    MOZ_FEEDS=1,
-    MOZ_FEEDS= )
+MOZ_ARG_DISABLE_BOOL(feeds,
+[  --disable-feeds        Disable in-page feed handling and processing],
+    MOZ_FEEDS=,
+    MOZ_FEEDS=1 )
 if test -n "$MOZ_FEEDS"; then
     AC_DEFINE(MOZ_FEEDS)
 fi
