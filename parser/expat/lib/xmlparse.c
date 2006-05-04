@@ -1328,6 +1328,8 @@ XML_SetEndDoctypeDeclHandler(XML_Parser parser,
                              XML_EndDoctypeDeclHandler end) {
   endDoctypeDeclHandler = end;
 }
+#endif
+/* END MOZILLA CHANGE */
 
 void XMLCALL
 XML_SetUnparsedEntityDeclHandler(XML_Parser parser,
@@ -1352,6 +1354,9 @@ XML_SetNamespaceDeclHandler(XML_Parser parser,
   endNamespaceDeclHandler = end;
 }
 
+
+/* BEGIN MOZILLA CHANGE (unused API) */
+#if 0
 void XMLCALL
 XML_SetStartNamespaceDeclHandler(XML_Parser parser,
                                  XML_StartNamespaceDeclHandler start) {
