@@ -70,6 +70,7 @@
 #include "nsIWebNavigation.h"
 #include "nsIDocShell.h"
 #include "nsIContentViewer.h"
+#include "nsIStringStream.h"
 
 static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
@@ -303,9 +304,19 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         rv = NS_ERROR_DOM_RETVAL_UNDEFINED;
     }
     else {
-        // NS_NewStringInputStream calls ToNewCString
-        // XXXbe this should not decimate! pass back UCS-2 to necko
-        rv = NS_NewStringInputStream(getter_AddRefs(mInnerStream), result);
+        PRUint32 resultUTF8len;
+        char *resultUTF8 = ToNewUTF8String(result, &resultUTF8len);
+        if (resultUTF8) {
+            rv = NS_NewByteInputStream(getter_AddRefs(mInnerStream),
+                                       resultUTF8, resultUTF8len);
+            if (mInnerStream) {
+                nsCOMPtr<nsIStringInputStream> sis
+                    = do_QueryInterface(mInnerStream);
+                sis->AdoptData(resultUTF8, resultUTF8len); // Previous call was |ShareData|
+            }
+        }
+        else
+            rv = NS_ERROR_OUT_OF_MEMORY;
     }
     return rv;
 }
@@ -412,7 +423,8 @@ nsresult nsJSChannel::Init(nsIURI *aURI)
     // If the resultant script evaluation actually does return a value, we
     // treat it as html.
     rv = NS_NewInputStreamChannel(getter_AddRefs(channel), aURI, mIOThunk,
-                                  NS_LITERAL_CSTRING("text/html"));
+                                  NS_LITERAL_CSTRING("text/html"),
+                                  NS_LITERAL_CSTRING("UTF-8"));
     if (NS_FAILED(rv)) return rv;
 
     rv = mIOThunk->Init(aURI);
