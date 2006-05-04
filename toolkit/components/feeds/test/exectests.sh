@@ -1,4 +1,4 @@
-# ***** BEGIN LICENSE BLOCK ***** 
+# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
 # The contents of this file are subject to the Mozilla Public License Version
@@ -11,16 +11,14 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is the Mozilla Browser code.
+# The Original Code is Mozilla Feed Parser Unit Tests.
 #
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2003
+# The Initial Developer of the Original Code is Robert Sayre.
+#
+# Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#  Brian Ryner <bryner@brianryner.com>
-#  Benjamin Smedberg <benjamin@smedbergs.us>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,63 +34,8 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH   = ../..
-topsrcdir = @top_srcdir@
-srcdir    = @srcdir@
-VPATH   = @srcdir@
+export MOZILLA_FIVE_HOME=../../../../fb-debug/dist/bin
+export LD_LIBRARY_PATH=../../../../fb-debug/dist/bin
 
-include $(DEPTH)/config/autoconf.mk
-
-# These component dirs are built for all apps (including seamonkey)
-
-ifdef MOZ_ENABLE_XREMOTE
-DIRS += remote
-endif
-
-# These component dirs are built only for XUL apps
-
-ifdef MOZ_XUL_APP
-DIRS += \
-	alerts \
-	console \
-	filepicker \
-	typeaheadfind \
-	printing \
-	viewsource \
-	viewconfig \
-	$(NULL)
-
-ifndef MOZ_THUNDERBIRD
-DIRS +=	\
-	autocomplete \
-	cookie \
-	help \
-	history \
-	passwordmgr \
-	satchel \
-	$(NULL)
-endif # MOZ_THUNDERBIRD
-
-ifdef MOZ_FEEDS
-DIRS += feeds
-endif
-
-ifdef MOZ_XPINSTALL
-DIRS +=	downloads
-endif
-
-ifdef MOZ_URL_CLASSIFIER
-DIRS += url-classifier
-endif
-
-DIRS += \
-	commandlines \
-	startup \
-	build \
-	$(NULL)
-
-EXTRA_PP_COMPONENTS = nsDefaultCLH.js
-
-endif # MOZ_XUL_APP
-
-include $(topsrcdir)/config/rules.mk
+../../../../fb-debug/dist/bin/run-mozilla.sh ../../../../fb-debug/dist/bin/xpcshell ./shell.js
+#perl ../../../../../js/src/xpconnect/tests/idispatch/Tests/jsDriver.pl -e xpcshell  --shellpath=.. -k
