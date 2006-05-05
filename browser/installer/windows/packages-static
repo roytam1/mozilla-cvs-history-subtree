@@ -118,6 +118,7 @@ bin\components\layout_xul.xpt
 bin\components\layout_xul_tree.xpt
 bin\components\locale.xpt
 bin\components\lwbrk.xpt
+bin\components\microsummaries.xpt
 bin\components\migration.xpt
 bin\components\mimetype.xpt
 bin\components\mozbrwsr.xpt
@@ -203,6 +204,7 @@ bin\components\nsSidebar.js
 bin\components\nsXmlRpcClient.js
 bin\components\nsExtensionManager.js
 bin\components\nsUpdateService.js
+bin\components\nsMicrosummaryService.js
 bin\components\nsPostUpdateWin.js
 bin\components\extensions.xpt
 bin\components\update.xpt
