@@ -2331,9 +2331,10 @@ nsRenderingContextXlib::CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 a
 }
 
 NS_IMETHODIMP
-nsRenderingContextXlib::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+nsRenderingContextXlib::RetrieveCurrentNativeGraphicData(void ** ngd)
 {
   PR_LOG(RenderingContextXlibLM, PR_LOG_DEBUG, ("nsRenderingContextXlib::RetrieveCurrentNativeGraphicData()\n"));
+  *ngd = nsnull;
   return NS_OK;
 }
 
