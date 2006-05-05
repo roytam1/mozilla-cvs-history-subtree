@@ -43,9 +43,6 @@
 #include "nsPresContext.h"
 #include "nsIIOService.h"
 
-#include "gfxIImageFrame.h"
-#include "imgIContainer.h"
-
 nsresult NS_NewHTMLCanvasFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
 class nsHTMLCanvasFrame : public nsSplittableFrame
@@ -86,8 +83,6 @@ protected:
   virtual ~nsHTMLCanvasFrame();
 
   nscoord GetContinuationOffset(nscoord* aWidth = 0) const;
-
-  nsCOMPtr<imgIContainer> mImageContainer;
 
   nsMargin mBorderPadding;
   nsSize mCanvasSize;

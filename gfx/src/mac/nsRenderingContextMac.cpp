@@ -1359,7 +1359,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawString(const nsString& aString,
 #pragma mark -
 //------------------------------------------------------------------------
 
-NS_IMETHODIMP nsRenderingContextMac::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+NS_IMETHODIMP nsRenderingContextMac::RetrieveCurrentNativeGraphicData(void** ngd)
 {
   return NS_OK;
 }

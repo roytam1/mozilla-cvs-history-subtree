@@ -1413,8 +1413,15 @@ nsRenderingContextGTK::CopyOffScreenBits(nsIDrawingSurface* aSrcSurf,
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextGTK::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+NS_IMETHODIMP nsRenderingContextGTK::RetrieveCurrentNativeGraphicData(void** ngd)
 {
+  if (ngd) {
+    if (mSurface)
+      *ngd = (void*) mSurface->GetDrawable();
+    else
+      *ngd = nsnull;
+  }
+
   return NS_OK;
 }
 

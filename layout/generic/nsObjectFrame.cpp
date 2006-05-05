@@ -1941,7 +1941,7 @@ nsObjectFrame::Paint(nsPresContext*       aPresContext,
 
     // we need the native printer device context to pass to plugin
     // On Windows, this will be the HDC
-    PRUint32 pDC = 0;
+    void *pDC = 0;
     aRenderingContext.RetrieveCurrentNativeGraphicData(&pDC);
 
     if (!pDC)
@@ -1988,8 +1988,9 @@ nsObjectFrame::Paint(nsPresContext*       aPresContext,
         PRBool doupdatewindow = PR_FALSE;
 
         // check if we need to update hdc
-        PRUint32 hdc;
-        aRenderingContext.RetrieveCurrentNativeGraphicData(&hdc);
+        void *data;
+        aRenderingContext.RetrieveCurrentNativeGraphicData((void**)&data);
+        PRUint32 hdc = (PRUint32) data;
         if (NS_REINTERPRET_CAST(PRUint32, window->window) != hdc) {
           window->window = NS_REINTERPRET_CAST(nsPluginPort*, hdc);
           doupdatewindow = PR_TRUE;

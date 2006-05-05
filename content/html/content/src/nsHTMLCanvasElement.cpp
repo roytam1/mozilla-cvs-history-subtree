@@ -44,12 +44,18 @@
 #include "nsIFrame.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsDOMError.h"
 #include "nsNodeInfoManager.h"
+#include "plbase64.h"
+#include "nsNetUtil.h"
+#include "prmem.h"
+
+#include "nsIScriptSecurityManager.h"
+#include "nsIXPConnect.h"
+#include "jsapi.h"
 
 #include "nsICanvasElement.h"
-
-#include "gfxIImageFrame.h"
-#include "imgIContainer.h"
+#include "nsIRenderingContext.h"
 
 #include "nsICanvasRenderingContextInternal.h"
 
@@ -80,9 +86,12 @@ public:
   NS_DECL_NSIDOMHTMLCANVASELEMENT
 
   // nsICanvasElement
-  NS_IMETHOD GetCanvasImageContainer(imgIContainer **aImageContainer);
   NS_IMETHOD GetPrimaryCanvasFrame(nsIFrame **aFrame);
-  NS_IMETHOD UpdateImageFrame();
+  NS_IMETHOD GetSize(PRUint32 *width, PRUint32 *height);
+  NS_IMETHOD RenderContexts(nsIRenderingContext *ctx);
+  NS_IMETHOD RenderContextsToSurface(struct _cairo_surface *surf);
+  virtual PRBool IsWriteOnly();
+  virtual void SetWriteOnly();
 
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
   nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
@@ -101,14 +110,20 @@ public:
                            PRBool aNotify);
 protected:
   nsIntSize GetWidthHeight();
-  nsresult UpdateImageContainer(PRBool forceCreate);
   nsresult UpdateContext();
+  nsresult ToDataURLImpl(const nsAString& aMimeType,
+                         const nsAString& aEncoderOptions,
+                         nsAString& aDataURL);
 
   nsString mCurrentContextId;
   nsCOMPtr<nsICanvasRenderingContextInternal> mCurrentContext;
-
-  nsCOMPtr<imgIContainer> mImageContainer;
-  nsCOMPtr<gfxIImageFrame> mImageFrame;
+  
+public:
+  // Record whether this canvas should be write-only or not.
+  // We set this when script paints an image from a different origin.
+  // We also transitively set it when script paints a canvas which
+  // is itself write-only.
+  PRPackedBool             mWriteOnly;
 };
 
 nsGenericHTMLElement*
@@ -118,7 +133,7 @@ NS_NewHTMLCanvasElement(nsINodeInfo *aNodeInfo, PRBool aFromParser)
 }
 
 nsHTMLCanvasElement::nsHTMLCanvasElement(nsINodeInfo *aNodeInfo)
-  : nsGenericHTMLElement(aNodeInfo)
+  : nsGenericHTMLElement(aNodeInfo), mWriteOnly(PR_FALSE)
 {
 }
 
@@ -181,7 +196,7 @@ nsHTMLCanvasElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   if (NS_SUCCEEDED(rv) && mCurrentContext &&
       (aName == nsHTMLAtoms::width || aName == nsHTMLAtoms::height))
   {
-    rv = UpdateImageContainer(PR_FALSE);
+    rv = UpdateContext();
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
@@ -251,6 +266,167 @@ nsHTMLCanvasElement::ParseAttribute(nsIAtom* aAttribute,
   return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
+// nsHTMLCanvasElement::toDataURL
+
+NS_IMETHODIMP
+nsHTMLCanvasElement::ToDataURL(nsAString& aDataURL)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+  rv = nsContentUtils::XPConnect()->
+    GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!ncc)
+    return NS_ERROR_FAILURE;
+
+  JSContext *ctx = nsnull;
+
+  rv = ncc->GetJSContext(&ctx);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRUint32 argc;
+  jsval *argv = nsnull;
+
+  ncc->GetArgc(&argc);
+  ncc->GetArgvPtr(&argv);
+
+  if (mWriteOnly || argc >= 2) {
+    // do a trust check if this is a write-only canvas
+    // or if we're trying to use the 2-arg form
+    nsCOMPtr<nsIScriptSecurityManager> ssm =
+        do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+    if (!ssm)
+        return NS_ERROR_FAILURE;
+
+    PRBool isTrusted = PR_FALSE;
+    PRBool isChrome = PR_FALSE;
+    PRBool hasCap = PR_FALSE;
+
+    // The secman really should handle UniversalXPConnect case, since that
+    // should include UniversalBrowserRead... doesn't right now, though.
+    if ((NS_SUCCEEDED(ssm->SubjectPrincipalIsSystem(&isChrome)) && isChrome) ||
+        (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalBrowserRead", &hasCap)) && hasCap) ||
+        (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalXPConnect", &hasCap)) && hasCap))
+    {
+        isTrusted = PR_TRUE;
+    }
+
+    if (!isTrusted)
+      return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
+  // 0-arg case; convert to png
+  if (argc == 0) {
+    return ToDataURLImpl(NS_LITERAL_STRING("image/png"), EmptyString(), aDataURL);
+  }
+
+  // 1-arg case; convert to given mime type
+  if (argc == 1) {
+    if (!JSVAL_IS_STRING(argv[0]))
+      return NS_ERROR_DOM_SYNTAX_ERR;
+    JSString *type = JS_ValueToString(ctx, argv[0]);
+    return ToDataURLImpl (nsDependentString(NS_REINTERPRET_CAST(PRUnichar*,(JS_GetStringChars(type)))),
+                          EmptyString(), aDataURL);
+  }
+
+  // 2-arg case; trusted only (checked above), convert to mime type with params
+  if (argc == 2) {
+    if (!JSVAL_IS_STRING(argv[0]) && !JSVAL_IS_STRING(argv[1]))
+      return NS_ERROR_DOM_SYNTAX_ERR;
+
+    JSString *type, *params;
+    type = JS_ValueToString(ctx, argv[0]);
+    params = JS_ValueToString(ctx, argv[1]);
+
+    return ToDataURLImpl (nsDependentString(NS_REINTERPRET_CAST(PRUnichar*,JS_GetStringChars(type))),
+                          nsDependentString(NS_REINTERPRET_CAST(PRUnichar*,JS_GetStringChars(params))),
+                          aDataURL);
+  }
+
+  return NS_ERROR_DOM_SYNTAX_ERR;
+}
+
+
+// nsHTMLCanvasElement::toDataURLAs
+//
+// Native-callers only
+
+NS_IMETHODIMP
+nsHTMLCanvasElement::ToDataURLAs(const nsAString& aMimeType,
+                                 const nsAString& aEncoderOptions,
+                                 nsAString& aDataURL)
+{
+  return ToDataURLImpl(aMimeType, aEncoderOptions, aDataURL);
+}
+
+nsresult
+nsHTMLCanvasElement::ToDataURLImpl(const nsAString& aMimeType,
+                                   const nsAString& aEncoderOptions,
+                                   nsAString& aDataURL)
+{
+  nsresult rv;
+  
+  // We get an input stream from the context. If more than one context type
+  // is supported in the future, this will have to be changed to do the right
+  // thing. For now, just assume that the 2D context has all the goods.
+  nsCOMPtr<nsICanvasRenderingContextInternal> context;
+  rv = GetContext(NS_LITERAL_STRING("2d"), getter_AddRefs(context));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // get image bytes
+  nsCOMPtr<nsIInputStream> imgStream;
+  NS_ConvertUTF16toUTF8 aMimeType8(aMimeType);
+  rv = context->GetInputStream(aMimeType8, aEncoderOptions,
+                               getter_AddRefs(imgStream));
+  // XXX ERRMSG we need to report an error to developers here! (bug 329026)
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Generally, there will be only one chunk of data, and it will be available
+  // for us to read right away, so optimize this case.
+  PRUint32 bufSize;
+  rv = imgStream->Available(&bufSize);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // ...leave a little extra room so we can call read again and make sure we
+  // got everything. 16 bytes for better padding (maybe)
+  bufSize += 16;
+  PRUint32 imgSize = 0;
+  char* imgData = (char*)PR_Malloc(bufSize);
+  if (! imgData)
+    return NS_ERROR_OUT_OF_MEMORY;
+  PRUint32 numReadThisTime = 0;
+  while ((rv = imgStream->Read(&imgData[imgSize], bufSize - imgSize,
+                         &numReadThisTime)) == NS_OK && numReadThisTime > 0) {
+    imgSize += numReadThisTime;
+    if (imgSize == bufSize) {
+      // need a bigger buffer, just double
+      bufSize *= 2;
+      char* newImgData = (char*)PR_Realloc(imgData, bufSize);
+      if (! newImgData) {
+        PR_Free(imgData);
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+      imgData = newImgData;
+    }
+  }
+
+  // base 64, result will be NULL terminated
+  char* encodedImg = PL_Base64Encode(imgData, imgSize, nsnull);
+  PR_Free(imgData);
+  if (!encodedImg) // not sure why this would fail
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  // build data URL string
+  aDataURL = NS_LITERAL_STRING("data:") + aMimeType +
+    NS_LITERAL_STRING(";base64,") + NS_ConvertUTF8toUTF16(encodedImg);
+
+  PR_Free(encodedImg);
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsHTMLCanvasElement::GetContext(const nsAString& aContextId,
                                 nsISupports **aContext)
@@ -269,6 +445,7 @@ nsHTMLCanvasElement::GetContext(const nsAString& aContextId,
           (ctxId[i] != '-') &&
           (ctxId[i] != '_'))
       {
+        // XXX ERRMSG we need to report an error to developers here! (bug 329026)
         return NS_ERROR_INVALID_ARG;
       }
     }
@@ -280,12 +457,13 @@ nsHTMLCanvasElement::GetContext(const nsAString& aContextId,
     if (rv == NS_ERROR_OUT_OF_MEMORY)
       return NS_ERROR_OUT_OF_MEMORY;
     if (NS_FAILED(rv))
+      // XXX ERRMSG we need to report an error to developers here! (bug 329026)
       return NS_ERROR_INVALID_ARG;
 
     rv = mCurrentContext->SetCanvasElement(this);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = UpdateImageContainer(PR_TRUE);
+    rv = UpdateContext();
     NS_ENSURE_SUCCESS(rv, rv);
 
     mCurrentContextId.Assign(aContextId);
@@ -299,65 +477,15 @@ nsHTMLCanvasElement::GetContext(const nsAString& aContextId,
 }
 
 nsresult
-nsHTMLCanvasElement::UpdateImageContainer(PRBool forceCreate)
-{
-  nsresult rv = NS_OK;
-
-  // don't create if we don't already have one,
-  // and no frame or context has asked for one.
-  if (!forceCreate && !mImageFrame)
-    return NS_OK;
-
-  nsIntSize sz = GetWidthHeight();
-  PRInt32 w = 0, h = 0;
-
-  if (mImageFrame) {
-    mImageFrame->GetWidth(&w);
-    mImageFrame->GetHeight(&h);
-  }
-
-  if (sz.width != w || sz.height != h) {
-    mImageContainer = do_CreateInstance("@mozilla.org/image/container;1");
-    mImageContainer->Init(sz.width, sz.height, nsnull);
-
-    mImageFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-    if (!mImageFrame)
-      return NS_ERROR_FAILURE;
-
-#ifdef XP_WIN
-    rv = mImageFrame->Init(0, 0, sz.width, sz.height, gfxIFormats::BGR_A8, 24);
-#else
-    rv = mImageFrame->Init(0, 0, sz.width, sz.height, gfxIFormats::RGB_A8, 24);
-#endif
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    mImageContainer->AppendFrame(mImageFrame);
-  }
-
-  return UpdateContext();
-}
-
-nsresult
 nsHTMLCanvasElement::UpdateContext()
 {
-  if (mCurrentContext)
-    return mCurrentContext->SetTargetImageFrame(mImageFrame);
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTMLCanvasElement::GetCanvasImageContainer(imgIContainer **aImageContainer)
-{
-  nsresult rv;
-
-  if (!mImageContainer) {
-    rv = UpdateImageContainer(PR_TRUE);
-    NS_ENSURE_SUCCESS(rv, rv);
+  nsresult rv = NS_OK;
+  if (mCurrentContext) {
+    nsIntSize sz = GetWidthHeight();
+    rv = mCurrentContext->SetDimensions(sz.width, sz.height);
   }
 
-  NS_IF_ADDREF(*aImageContainer = mImageContainer);
-  return NS_OK;
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -368,10 +496,41 @@ nsHTMLCanvasElement::GetPrimaryCanvasFrame(nsIFrame **aFrame)
 }
 
 NS_IMETHODIMP
-nsHTMLCanvasElement::UpdateImageFrame()
+nsHTMLCanvasElement::GetSize(PRUint32 *width, PRUint32 *height)
 {
-  if (mCurrentContext)
-    return mCurrentContext->UpdateImageFrame();
+  nsIntSize sz = GetWidthHeight();
+  *width = sz.width;
+  *height = sz.height;
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLCanvasElement::RenderContexts(nsIRenderingContext *rc)
+{
+  if (!mCurrentContext)
+    return NS_OK;
+
+  return mCurrentContext->Render(rc);
+}
+
+NS_IMETHODIMP
+nsHTMLCanvasElement::RenderContextsToSurface(struct _cairo_surface *surf)
+{
+  if (!mCurrentContext)
+    return NS_OK;
+
+  return mCurrentContext->RenderToSurface(surf);
+}
+
+PRBool
+nsHTMLCanvasElement::IsWriteOnly()
+{
+  return mWriteOnly;
+}
+
+void
+nsHTMLCanvasElement::SetWriteOnly()
+{
+  mWriteOnly = PR_TRUE;
 }

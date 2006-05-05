@@ -2520,10 +2520,10 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsIDrawingSurface* aSrc
 }
 
 //~~~
-NS_IMETHODIMP nsRenderingContextWin::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+NS_IMETHODIMP nsRenderingContextWin::RetrieveCurrentNativeGraphicData(void** ngd)
 {
   if(ngd != nsnull)
-    *ngd = (PRUint32)mDC;
+    *ngd = (void*)mDC;
   return NS_OK;
 }
 

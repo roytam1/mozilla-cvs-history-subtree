@@ -702,7 +702,7 @@ public:
   NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags) = 0;
   //~~~
-  NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd) = 0;
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(void** ngd) = 0;
 
 
   /**

@@ -44,6 +44,8 @@
 #include "nsHTMLCanvasFrame.h"
 #include "nsICanvasElement.h"
 
+#include "nsTransform2D.h"
+
 nsresult
 NS_NewHTMLCanvasFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
@@ -90,20 +92,13 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
   nsCOMPtr<nsICanvasElement> canvas(do_QueryInterface(GetContent()));
   NS_ENSURE_TRUE(canvas, NS_ERROR_FAILURE);
 
-  nsresult rv = canvas->GetCanvasImageContainer(getter_AddRefs(mImageContainer));
+  PRUint32 w, h;
+  nsresult rv = canvas->GetSize (&w, &h);
   NS_ENSURE_SUCCESS(rv, rv);
 
   float p2t = GetPresContext()->PixelsToTwips();
 
-  if (mImageContainer) {
-    PRInt32 w, h;
-    mImageContainer->GetWidth(&w);
-    mImageContainer->GetHeight(&h);
-
-    mCanvasSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
-  } else {
-    mCanvasSize.SizeTo(0, 0);
-  }
+  mCanvasSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
   if (aReflowState.mComputedWidth == NS_INTRINSICSIZE)
     aMetrics.width = mCanvasSize.width;
@@ -190,7 +185,6 @@ nsHTMLCanvasFrame::Paint(nsPresContext*       aPresContext,
     // image frame
     nsCOMPtr<nsICanvasElement> canvas(do_QueryInterface(GetContent()));
     NS_ENSURE_TRUE(canvas, NS_ERROR_FAILURE);
-    NS_ENSURE_SUCCESS(canvas->UpdateImageFrame(), NS_ERROR_FAILURE);
 
     // from nsImageFrame
     // First paint background and borders, which should be in the
@@ -206,11 +200,38 @@ nsHTMLCanvasFrame::Paint(nsPresContext*       aPresContext,
       PaintSelf(aPresContext, aRenderingContext, aDirtyRect);
     }
 
-    if ((aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND) && mImageContainer) {
+    if (aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND) {
       nsRect inner = GetInnerArea();
-      nsRect src(0, 0, mCanvasSize.width, mCanvasSize.height);
 
-      aRenderingContext.DrawImage(mImageContainer, src, inner);
+      nsTransform2D *tx = nsnull;
+      aRenderingContext.GetCurrentTransform(tx);
+
+      float t2p = GetPresContext()->TwipsToPixels();
+      float p2t = GetPresContext()->PixelsToTwips();
+
+      if (inner.width != mCanvasSize.width ||
+          inner.height != mCanvasSize.height)
+      {
+        float sx = inner.width / (float) mCanvasSize.width;
+        float sy = inner.height / (float) mCanvasSize.height;
+
+        aRenderingContext.PushState();
+        aRenderingContext.Translate(inner.x, inner.y);
+        aRenderingContext.Scale(sx, sy);
+
+        canvas->RenderContexts(&aRenderingContext);
+
+        aRenderingContext.PopState();
+      } else {
+        //nsIRenderingContext::AutoPushTranslation(&aRenderingContext, px, py);
+
+        aRenderingContext.PushState();
+        aRenderingContext.Translate(inner.x, inner.y);
+
+        canvas->RenderContexts(&aRenderingContext);
+
+        aRenderingContext.PopState();
+      }
     }
   }
 
