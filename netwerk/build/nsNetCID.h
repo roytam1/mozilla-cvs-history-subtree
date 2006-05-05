@@ -755,6 +755,21 @@
 }
 
 /******************************************************************************
+ * netwerk/system classes
+ */
+
+// service implementing nsINetworkLinkService
+#define NS_NETWORK_LINK_SERVICE_CLASSNAME \
+    "Network Link Status"
+#define NS_NETWORK_LINK_SERVICE_CID                  \
+{ /* 75a500a2-0030-40f7-86f8-63f225b940ae */         \
+    0x75a500a2,                                      \
+    0x0030,                                          \
+    0x40f7,                                          \
+    {0x86, 0xf8, 0x63, 0xf2, 0x25, 0xb9, 0x40, 0xae} \
+}
+
+/******************************************************************************
  * Contracts that can be implemented by necko users.
  */
 
@@ -763,7 +778,7 @@
  * and monitored by IOService for automatic online/offline management.
  */
 #define NS_NETWORK_LINK_SERVICE_CONTRACTID \
-  "@mozilla.org/network/network-link-service;1"
+    "@mozilla.org/network/network-link-service;1"
 
 /******************************************************************************
  * Categories

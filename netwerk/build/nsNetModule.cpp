@@ -236,6 +236,13 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsIDNService, Init)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef XP_WIN
+#include "nsNotifyAddrListener.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNotifyAddrListener, Init)
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+
 #ifdef NECKO_PROTOCOL_ftp
 #include "nsFTPDirListingConv.h"
 nsresult NS_NewFTPDirListingConv(nsFTPDirListingConv** result);
@@ -1091,6 +1098,13 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
     },
 #endif
 
+#ifdef XP_WIN
+    { NS_NETWORK_LINK_SERVICE_CLASSNAME,
+      NS_NETWORK_LINK_SERVICE_CID,
+      NS_NETWORK_LINK_SERVICE_CONTRACTID,
+      nsNotifyAddrListenerConstructor
+    },
+#endif
 };
 
 NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(necko_core_and_primary_protocols,
