@@ -70,6 +70,9 @@
 #include "nsPasswordManager.h"
 #include "nsSingleSignonPrompt.h"
 #endif
+#ifdef MOZ_URL_CLASSIFIER
+#include "nsUrlClassifierDBService.h"
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -103,6 +106,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsGlobalHistory, Init)
 #endif
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsPasswordManager, nsPasswordManager::GetInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSingleSignonPrompt)
+#endif
+#ifdef MOZ_URL_CLASSIFIER
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsUrlClassifierDBService,
+                                         nsUrlClassifierDBService::GetInstance)
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
@@ -216,6 +223,12 @@ static const nsModuleComponentInfo components[] =
     NS_SINGLE_SIGNON_PROMPT_CID,
     "@mozilla.org/wallet/single-sign-on-prompt;1",
     nsSingleSignonPromptConstructor }, 
+#endif
+#ifdef MOZ_URL_CLASSIFIER
+  { "Url Classifier DB Service",
+    NS_URLCLASSIFIERDBSERVICE_CID,
+    NS_URLCLASSIFIERDBSERVICE_CONTRACTID,
+    nsUrlClassifierDBServiceConstructor },
 #endif
 };
 
