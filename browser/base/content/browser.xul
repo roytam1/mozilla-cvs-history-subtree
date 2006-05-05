@@ -44,7 +44,10 @@
 # ***** END LICENSE BLOCK *****
 
 <?xml-stylesheet href="chrome://browser/content/browser.css" type="text/css"?>
+
+#ifdef MOZ_PLACES
 <?xml-stylesheet href="chrome://browser/content/places/places.css" type="text/css"?>
+#endif
 
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?> 
 
