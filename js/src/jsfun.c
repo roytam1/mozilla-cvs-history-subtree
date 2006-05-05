@@ -1568,12 +1568,6 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     for (i = 0; i < argc; i++)
         *sp++ = argv[i];
 
-    obj = js_SafeComputeThis(cx, obj, sp - argc);
-    if (!obj) {
-        ok = JS_FALSE;
-        goto out;
-    }
-
     /* Lift current frame to include the args and do the call. */
     fp = cx->fp;
     oldsp = fp->sp;
@@ -1583,7 +1577,6 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     /* Store rval and pop stack back to our frame's sp. */
     *rval = fp->sp[-1];
     fp->sp = oldsp;
-out:
     js_FreeStack(cx, mark);
     return ok;
 }
@@ -1664,12 +1657,6 @@ fun_apply(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         if (!ok)
             goto out;
         sp++;
-    }
-
-    obj = js_SafeComputeThis(cx, obj, sp - argc);
-    if (!obj) {
-        ok = JS_FALSE;
-        goto out;
     }
 
     /* Lift current frame to include the args and do the call. */
