@@ -44,7 +44,7 @@
  * netwerk/base/ classes
  */
 
-// service implementing nsIIOService.
+// service implementing nsIIOService and nsIIOService2.
 #define NS_IOSERVICE_CLASSNAME \
     "nsIOService"
 #define NS_IOSERVICE_CONTRACTID \
@@ -753,6 +753,17 @@
     0x11d3,                                          \
     {0xa1, 0x6c, 0x00, 0x50, 0x04, 0x1c, 0xaf, 0x44} \
 }
+
+/******************************************************************************
+ * Contracts that can be implemented by necko users.
+ */
+
+/**
+ * This contract ID will be gotten as a service implementing nsINetworkLinkService
+ * and monitored by IOService for automatic online/offline management.
+ */
+#define NS_NETWORK_LINK_SERVICE_CONTRACTID \
+  "@mozilla.org/network/network-link-service;1"
 
 /******************************************************************************
  * Categories
