@@ -143,6 +143,10 @@ a[href] img {
   margin: 0 0 0 .6em;
 }
 
+.feedEntryContent {
+  font-size: 110%;
+}
+ 
 .link {
   color: #0000FF;
   text-decoration: underline;
@@ -153,3 +157,22 @@ a[href] img {
   color: #FF0000;
 }
 
+
+.plain {
+  -moz-appearance: none;
+  border: 0px;
+  margin: 0px;
+  padding: 0px;
+  background: none;
+}
+
+.plain > .button-box {
+  border: 1px solid transparent;
+  margin: 0px;
+  padding: 0px;
+  background: none;
+}
+
+.plain:focus > .button-box {
+  border: 1px dotted ThreeDDarkShadow;
+}
