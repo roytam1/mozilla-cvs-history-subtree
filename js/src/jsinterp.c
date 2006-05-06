@@ -487,8 +487,8 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, JSStackFrame *fp)
          * The alert should display "true".
          */
         JS_ASSERT(!(fp->flags & JSFRAME_CONSTRUCTING));
-        if (JSVAL_IS_PRIMITIVE(argv[-2]) ||
-            !OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(argv[-2]))) {
+        if (JSVAL_IS_PRIMITIVE(fp->argv[-2]) ||
+            !OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(fp->argv[-2]))) {
             thisp = cx->globalObject;
         } else {
             jsid id;
@@ -496,7 +496,7 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, JSStackFrame *fp)
             uintN attrs;
 
             /* Walk up the parent chain. */
-            thisp = JSVAL_TO_OBJECT(argv[-2]);
+            thisp = JSVAL_TO_OBJECT(fp->argv[-2]);
             id = ATOM_TO_JSID(cx->runtime->atomState.parentAtom);
             for (;;) {
                 if (!OBJ_CHECK_ACCESS(cx, thisp, id, JSACC_PARENT, &v, &attrs))
@@ -511,7 +511,7 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, JSStackFrame *fp)
         }
     }
     fp->thisp = thisp;
-    argv[-1] = OBJECT_TO_JSVAL(thisp);
+    fp->argv[-1] = OBJECT_TO_JSVAL(thisp);
     return JS_TRUE;
 }
 
