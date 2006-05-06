@@ -91,6 +91,7 @@ REQUIRES = 	\
 		morkreader \
 		storage \
 		url-classifier \
+		feeds \
 		$(NULL)
 
 EXPORTS = nsToolkitCompsCID.h
@@ -107,6 +108,7 @@ LOCAL_INCLUDES = \
 	-I$(srcdir)/../typeaheadfind/src \
 	-I$(srcdir)/../alerts/src \
 	-I$(srcdir)/../url-classifier/src \
+	-I$(srcdir)/../feeds/src \
 	$(NULL)
 
 SHARED_LIBRARY_LIBS = \
@@ -138,6 +140,10 @@ endif # MOZ_THUNDERBIRD
 
 ifdef MOZ_URL_CLASSIFIER
 SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)urlclassifier_s.$(LIB_SUFFIX)
+endif
+
+ifdef MOZ_FEEDS
+SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)feed_s.$(LIB_SUFFIX)
 endif
 
 EXTRA_DSO_LIBS = gkgfx

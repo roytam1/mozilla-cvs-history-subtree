@@ -73,7 +73,9 @@
 #ifdef MOZ_URL_CLASSIFIER
 #include "nsUrlClassifierDBService.h"
 #endif
-
+#ifdef MOZ_FEEDS
+#include "nsScriptableUnescapeHTML.h"
+#endif
 /////////////////////////////////////////////////////////////////////////////
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsAppStartup, Init)
@@ -111,7 +113,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsSingleSignonPrompt)
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsUrlClassifierDBService,
                                          nsUrlClassifierDBService::GetInstance)
 #endif
-
+#ifdef MOZ_FEEDS
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptableUnescapeHTML)
+#endif
 /////////////////////////////////////////////////////////////////////////////
 //// Module Destructor
 
@@ -229,6 +233,12 @@ static const nsModuleComponentInfo components[] =
     NS_URLCLASSIFIERDBSERVICE_CID,
     NS_URLCLASSIFIERDBSERVICE_CONTRACTID,
     nsUrlClassifierDBServiceConstructor },
+#endif
+#ifdef MOZ_FEEDS
+  { "Unescape HTML",
+    NS_SCRIPTABLEUNESCAPEHTML_CID,
+    NS_SCRIPTABLEUNESCAPEHTML_CONTRACTID,
+    nsScriptableUnescapeHTMLConstructor },
 #endif
 };
 
