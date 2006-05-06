@@ -166,15 +166,18 @@
         <body><![CDATA[
           if (aTopic == "browser-search-engine-modified") {
             switch (aVerb) {
+            case "engine-current":
+              // The current engine was changed.  Rebuilding the menu appears to
+              // confuse its idea of whether it should be open when it's just
+              // been clicked, so we force it to close now.
+              this._popup.hidePopup();
+              // Fall through.
             case "engine-removed":
             case "engine-added":
             case "engine-changed":
               // An engine was removed (or hidden) or added, or an icon was
-              // changed
+              // changed.
               this.rebuildPopup();
-              // Fall through
-            case "engine-current":
-              // The current engine was changed
               this.updateDisplay();
             }
           }
@@ -214,6 +217,11 @@
             menuitem.setAttribute("label", this._engines[i].name);
             menuitem.setAttribute("id", this._engines[i].name);
             menuitem.setAttribute("class", "menuitem-iconic searchbar-engine-menuitem");
+            // Since this menu is rebuilt by the observer method whenever a new
+            // engine is selected, the "selected" attribute does not need to be 
+            // explicitly cleared anywhere.
+            if (this._engines[i] == this.currentEngine)
+              menuitem.setAttribute("selected", "true");
             if (this._engines[i].iconURI)
               menuitem.setAttribute("src", this._engines[i].iconURI.spec);
             popup.insertBefore(menuitem, popup.firstChild);
