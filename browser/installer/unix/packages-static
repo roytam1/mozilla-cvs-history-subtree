@@ -205,6 +205,8 @@ bin/components/nsExtensionManager.js
 bin/components/nsUpdateService.js
 bin/components/extensions.xpt
 bin/components/update.xpt
+bin/components/nsSessionStore.js
+bin/components/sessionstore.xpt
 
 ; Kerberos NegotiateAuth
 bin/components/libauth.so

@@ -208,6 +208,8 @@ bin\components\nsMicrosummaryService.js
 bin\components\nsPostUpdateWin.js
 bin\components\extensions.xpt
 bin\components\update.xpt
+bin\components\nsSessionStore.js
+bin\components\sessionstore.xpt
 
 ; [Browser Chrome Files]
 bin\chrome\browser.jar
