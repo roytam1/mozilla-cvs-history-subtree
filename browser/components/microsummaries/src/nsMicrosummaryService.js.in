@@ -196,12 +196,12 @@ MicrosummaryService.prototype = {
       case "app-startup":
         var obs = Cc["@mozilla.org/observer-service;1"].
                   getService(Ci.nsIObserverService);
-        obs.addObserver(this, "profile-after-change", false);
+        obs.addObserver(this, "bookmarks-service-initialized", false);
         break;
-      case "profile-after-change":
+      case "bookmarks-service-initialized":
         var obs = Cc["@mozilla.org/observer-service;1"].
                   getService(Ci.nsIObserverService);
-        obs.removeObserver(this, "profile-after-change");
+        obs.removeObserver(this, "bookmarks-service-initialized");
         this._init();
         break;
       case "xpcom-shutdown":

@@ -1762,6 +1762,9 @@ nsBookmarksService::Init()
     rv = gRDF->RegisterDataSource(this, PR_FALSE);
     if (NS_FAILED(rv)) return rv;
 
+    // Let observers know the service has been successfully initialized.
+    observerService->NotifyObservers(nsnull, "bookmarks-service-initialized", nsnull);
+
     return NS_OK;
 }
 
