@@ -42,6 +42,9 @@
 #ifdef XP_WIN
 #define SHOW_ICONS
 #endif
+#ifdef XP_MACOSX
+#define SHOW_ICONS
+#endif
 #ifdef XP_BEOS
 #define SHOW_ICONS
 #endif
