@@ -65,6 +65,7 @@
 #include "nsIMIMEInfo.h"
 #include "nsITimer.h"
 #include "nsIAlertsService.h"
+#include "nsWeakReference.h"
 
 typedef PRInt16 DownloadState;
 typedef PRInt16 DownloadType;
@@ -74,7 +75,8 @@ class nsDownload;
 
 class nsDownloadManager : public nsIDownloadManager,
                           public nsIXPInstallManagerUI,
-                          public nsIObserver
+                          public nsIObserver,
+                          public nsSupportsWeakReference
 {
 public:
   NS_DECL_ISUPPORTS

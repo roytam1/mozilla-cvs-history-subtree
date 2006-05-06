@@ -131,7 +131,8 @@ GetFilePathFromURI(nsIURI *aURI, nsAString &aPath)
 ///////////////////////////////////////////////////////////////////////////////
 // nsDownloadManager
 
-NS_IMPL_ISUPPORTS3(nsDownloadManager, nsIDownloadManager, nsIXPInstallManagerUI, nsIObserver)
+NS_IMPL_ISUPPORTS4(nsDownloadManager, nsIDownloadManager, nsIXPInstallManagerUI, nsIObserver,
+                   nsISupportsWeakReference)
 
 nsDownloadManager::nsDownloadManager() : mBatches(0)
 {
@@ -235,9 +236,12 @@ nsDownloadManager::Init()
   // completely initialized), but the observerservice would still keep a reference
   // to us and notify us about shutdown, which may cause crashes.
   // failure to add an observer is not critical
-  gObserverService->AddObserver(this, "quit-application", PR_FALSE);
-  gObserverService->AddObserver(this, "quit-application-requested", PR_FALSE);
-  gObserverService->AddObserver(this, "offline-requested", PR_FALSE);
+  // Note also that we're assuming that the service manager will hold on
+  // to this object until after the "quit-application" notification so
+  // that we actually get notified.
+  gObserverService->AddObserver(this, "quit-application", PR_TRUE);
+  gObserverService->AddObserver(this, "quit-application-requested", PR_TRUE);
+  gObserverService->AddObserver(this, "offline-requested", PR_TRUE);
 
   return NS_OK;
 }
