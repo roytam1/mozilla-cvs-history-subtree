@@ -49,6 +49,7 @@
 #include "nsAutoPtr.h"
 #include "nsWeakReference.h"
 #include "nsHashtable.h"
+#include "nsDataHashtable.h"
 
 // Interfaces Needed
 #include "nsDOMWindowList.h"
@@ -89,6 +90,10 @@
 #include "nsSize.h"
 #include "mozFlushType.h"
 #include "prclist.h"
+#include "nsIObserver.h"
+#include "nsIDOMStorage.h"
+#include "nsIDOMStorageList.h"
+#include "nsIDOMStorageWindow.h"
 
 #define DEFAULT_HOME_PAGE "www.mozilla.org"
 #define PREF_BROWSER_STARTUP_HOMEPAGE "browser.startup.homepage"
@@ -137,8 +142,10 @@ class nsGlobalWindow : public nsPIDOMWindow,
                        public nsIDOM3EventTarget,
                        public nsIDOMNSEventTarget,
                        public nsIDOMViewCSS,
+                       public nsIDOMStorageWindow,
                        public nsSupportsWeakReference,
                        public nsIInterfaceRequestor,
+                       public nsIObserver,
                        public PRCListStr
 {
 public:
@@ -230,8 +237,14 @@ public:
   // nsIDOMAbstractView
   NS_DECL_NSIDOMABSTRACTVIEW
 
+  // nsIDOMStorageWindow
+  NS_DECL_NSIDOMSTORAGEWINDOW
+
   // nsIInterfaceRequestor
   NS_DECL_NSIINTERFACEREQUESTOR
+
+  // nsIObserver
+  NS_DECL_NSIOBSERVER
 
   // Object Management
   nsGlobalWindow(nsGlobalWindow *aOuterWindow);
@@ -495,6 +508,8 @@ protected:
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
 
+  nsCOMPtr<nsIDOMStorageList>   gGlobalStorageList;
+
   nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
 
   // These member variable are used only on inner windows.
@@ -507,6 +522,8 @@ protected:
   // These member variables are used on both inner and the outer windows.
   nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
   JSObject* mJSObject;
+
+  nsDataHashtable<nsStringHashKey, PRBool> *mPendingStorageEvents;
 
   friend class nsDOMScriptableHelper;
   friend class nsDOMWindowUtils;

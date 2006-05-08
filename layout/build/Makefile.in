@@ -136,6 +136,7 @@ SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)jsdombase_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)jsdomevents_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)jsurl_s.$(LIB_SUFFIX) \
+                $(DIST)/lib/$(LIB_PREFIX)jsdomstorage_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 ifdef MOZ_XUL

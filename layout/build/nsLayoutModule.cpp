@@ -191,6 +191,9 @@ NS_IMETHODIMP
 NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #endif
 
+NS_IMETHODIMP
+NS_NewDOMStorage(nsISupports* aOuter, REFNSIID aIID, void** aResult);
+
 PR_STATIC_CALLBACK(nsresult) Initialize(nsIModule* aSelf);
 static void Shutdown();
 
@@ -1330,7 +1333,12 @@ static const nsModuleComponentInfo gComponents[] = {
   { "Style sheet service",
     NS_STYLESHEETSERVICE_CID,
     NS_STYLESHEETSERVICE_CONTRACTID,
-    nsStyleSheetServiceConstructor }
+    nsStyleSheetServiceConstructor },
+
+  { "DOM Storage",
+    NS_DOMSTORAGE_CID,
+    "@mozilla.org/dom/storage;1",
+    NS_NewDOMStorage }
 };
 
 NS_IMPL_NSGETMODULE_WITH_CTOR(nsLayoutModule, gComponents, Initialize)
