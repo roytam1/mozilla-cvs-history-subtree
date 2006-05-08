@@ -4336,6 +4336,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
             /* Lookup id in order to check for redeclaration problems. */
             id = ATOM_TO_JSID(atom);
+            SAVE_SP(fp);
             ok = js_CheckRedeclaration(cx, obj, id, attrs, &obj2, &prop);
             if (!ok)
                 goto out;
@@ -4461,6 +4462,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
              * as well as multiple HTML script tags.
              */
             parent = fp->varobj;
+            SAVE_SP(fp);
             ok = js_CheckRedeclaration(cx, parent, id, attrs, NULL, NULL);
             if (ok) {
                 ok = OBJ_DEFINE_PROPERTY(cx, parent, id, rval,
