@@ -58,7 +58,6 @@
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
 #include "nsPrimitiveHelpers.h"
-#include "nsWatchTask.h"
 #include "nsLinebreakConverter.h"
 
 #include "nsIContent.h"
@@ -1096,16 +1095,12 @@ nsDragService::ExtractDataFromOS ( DragReference inDragRef, ItemReference inItem
 nsresult
 nsDragService::StartDragSession ( )
 {
-  nsWatchTask::GetTask().Suspend();
-  
   return nsBaseDragService::StartDragSession();
 }
 
 nsresult
 nsDragService::EndDragSession ( )
 {
-  nsWatchTask::GetTask().Resume();
-  
   return nsBaseDragService::EndDragSession();
 }
 

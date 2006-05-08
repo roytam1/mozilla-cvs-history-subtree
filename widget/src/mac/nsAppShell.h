@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,26 +36,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// 
-// nsAppShell
-//
-// This file contains the default interface of the application shell. Clients
-// may either use this implementation or write their own. If you write your
-// own, you must create a message sink to route events to. (The message sink
-// interface may change, so this comment must be updated accordingly.)
-//
+/*
+ * Runs the main native Carbon run loop.
+ */
 
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
 #include "nsIAppShell.h"
 #include "nsCOMPtr.h"
-#include "nsIToolkit.h"
 
-#include <memory>
-
-using std::auto_ptr;
-
+class nsIToolkit;
 class nsMacMessagePump;
 
 class nsAppShell : public nsIAppShell
@@ -65,13 +57,11 @@ class nsAppShell : public nsIAppShell
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIAPPSHELL
-  
-  private:
-    nsCOMPtr<nsIToolkit>           mToolkit;
-    auto_ptr<nsMacMessagePump>     mMacPump;
-    PRBool                         mExitCalled;
-    static PRBool                  mInitializedToolbox;
+
+  protected:
+    nsCOMPtr<nsIToolkit>     mToolkit;
+    static nsMacMessagePump* sMacPump;
+    static nsAppShell*       sMacPumpOwner;
 };
 
 #endif // nsAppShell_h__
-

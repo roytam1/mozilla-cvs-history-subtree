@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,189 +36,130 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// 
-// nsAppShell
-//
-// This file contains the default implementation of the application shell. Clients
-// may either use this implementation or write their own. If you write your
-// own, you must create a message sink to route events to. (The message sink
-// interface may change, so this comment must be updated accordingly.)
-//
+/*
+ * Runs the main native Carbon run loop.
+ */
 
 #include "nsAppShell.h"
-#include "nsIAppShell.h"
-
-#include "nsIEventQueueService.h"
-#include "nsIServiceManager.h"
-#include "nsIWidget.h"
-#include "nsMacMessagePump.h"
 #include "nsToolkit.h"
-#include <Quickdraw.h>
-#include <Fonts.h>
-#include <TextEdit.h>
-#include <Dialogs.h>
-#ifndef XP_MACOSX
-#include <Traps.h>
-#endif
-#include <Events.h>
-#include <Menus.h>
+#include "nsMacMessagePump.h"
 
-#include <stdlib.h>
+#include <Carbon/Carbon.h>
 
-#ifndef XP_MACOSX
-#include "macstdlibextras.h"
-#endif
-PRBool nsAppShell::mInitializedToolbox = PR_FALSE;
-
-
-//-------------------------------------------------------------------------
-//
-// nsISupports implementation macro
-//
-//-------------------------------------------------------------------------
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShell, nsIAppShell)
 
-//-------------------------------------------------------------------------
-//
-// Create the application shell
-//
-//-------------------------------------------------------------------------
+nsMacMessagePump* nsAppShell::sMacPump;
+nsAppShell* nsAppShell::sMacPumpOwner;
 
-NS_IMETHODIMP nsAppShell::Create(int* argc, char ** argv)
+nsAppShell::nsAppShell()
+{
+}
+
+nsAppShell::~nsAppShell()
+{
+  if (sMacPumpOwner == this) {
+    delete sMacPump;
+    sMacPump = NULL;
+  }
+}
+
+NS_IMETHODIMP
+nsAppShell::Create(int* argc, char** argv)
 {
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
    return rv;
 
   nsIToolkit* toolkit = mToolkit.get();
-  mMacPump.reset(new nsMacMessagePump(static_cast<nsToolkit*>(toolkit)));
 
-  if (!mMacPump.get() || ! nsMacMemoryCushion::EnsureMemoryCushion())
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  return NS_OK;
-}
-
-//-------------------------------------------------------------------------
-//
-// Enter a message handler loop
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Run(void)
-{
-	if (!mMacPump.get())
-		return NS_ERROR_NOT_INITIALIZED;
-
-	mMacPump->StartRunning();
-	mMacPump->DoMessagePump();
-
-	if (mExitCalled)	// hack: see below
-	{
-		--mRefCnt;
-		if (mRefCnt == 0)
-			delete this;
-	}
+  if (!sMacPump) {
+    sMacPump = new nsMacMessagePump(NS_STATIC_CAST(nsToolkit*, toolkit));
+    if (sMacPump)
+      sMacPumpOwner = this;
+    else
+      return NS_ERROR_OUT_OF_MEMORY;
+  }
 
   return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-//
-// Exit appshell
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Exit(void)
+NS_IMETHODIMP
+nsAppShell::Run()
 {
-	if (mMacPump.get())
-	{
-		Spindown();
-		mExitCalled = PR_TRUE;
-		++mRefCnt;			// hack: since the applications are likely to delete us
-										// after calling this method (see nsViewerApp::Exit()),
-										// we temporarily bump the refCnt to let the message pump
-										// exit properly. The object will delete itself afterwards.
-	}
-	return NS_OK;
-}
+  if (!sMacPump)
+    return NS_ERROR_NOT_INITIALIZED;
 
-//-------------------------------------------------------------------------
-//
-// respond to notifications that an event queue has come or gone
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue * aQueue, PRBool aListen)
-{ // unnecessary; handled elsewhere
+  PRBool wasProcessing = sMacPump->ProcessEvents(PR_TRUE);
+  ::RunApplicationEventLoop();
+  sMacPump->ProcessEvents(wasProcessing);
+
   return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-//
-// Prepare to process events
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Spinup(void)
+NS_IMETHODIMP
+nsAppShell::Exit()
 {
-	if (mMacPump.get())
-	{
-		mMacPump->StartRunning();
-		return NS_OK;
-	}
-	return NS_ERROR_NOT_INITIALIZED;
+  ::QuitApplicationEventLoop();
+  return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-//
-// Stop being prepared to process events.
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Spindown(void)
+NS_IMETHODIMP
+nsAppShell::Spinup()
 {
-	if (mMacPump.get())
-		mMacPump->StopRunning();
-	return NS_OK;
+  // Nothing to do
+  return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-//
-// nsAppShell constructor
-//
-//-------------------------------------------------------------------------
-nsAppShell::nsAppShell()
+NS_IMETHODIMP
+nsAppShell::Spindown()
 {
-
-  mInitializedToolbox = PR_TRUE;
-  mRefCnt = 0;
-  mExitCalled = PR_FALSE;
+  // Nothing to do
+  return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-//
-// nsAppShell destructor
-//
-//-------------------------------------------------------------------------
-nsAppShell::~nsAppShell()
+NS_IMETHODIMP
+nsAppShell::ListenToEventQueue(nsIEventQueue* aQueue, PRBool aListen)
 {
+  // Nothing to do
+  return NS_OK;
 }
 
-NS_METHOD
-nsAppShell::GetNativeEvent(PRBool &aRealEvent, void *&aEvent)
+NS_IMETHODIMP
+nsAppShell::GetNativeEvent(PRBool& aRealEvent, void*& aEvent)
 {
-	static EventRecord	theEvent;	// icky icky static (can't really do any better)
+  aRealEvent = PR_FALSE;
+  aEvent = nsnull;
 
-	if (!mMacPump.get())
-		return NS_ERROR_NOT_INITIALIZED;
+  EventRef carbonEvent;
+  OSStatus err =
+   ::ReceiveNextEvent(0, nsnull, 0.1, PR_TRUE, &carbonEvent);
+  if (err == noErr && carbonEvent) {
+    aRealEvent = PR_TRUE;
+    aEvent = carbonEvent;
+  }
 
-	aRealEvent = mMacPump->GetEvent(theEvent);
-	aEvent = &theEvent;
-	return NS_OK;
+  return NS_OK;
 }
 
-NS_METHOD
-nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
+NS_IMETHODIMP
+nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void* aEvent)
 {
-	if (!mMacPump.get())
-		return NS_ERROR_NOT_INITIALIZED;
+  if (aRealEvent) {
+    EventRef carbonEvent = NS_STATIC_CAST(EventRef, aEvent);
 
-	mMacPump->DispatchEvent(aRealEvent, (EventRecord *) aEvent);
-	return NS_OK;
+    if (!sMacPump)
+      return NS_ERROR_NOT_INITIALIZED;
+
+    PRBool wasProcessing = sMacPump->ProcessEvents(PR_TRUE);
+    ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
+    sMacPump->ProcessEvents(wasProcessing);
+
+    // This can be bad, but the only way DispatchNativeEvent is ever
+    // used, it's tightly coupled to GetNativeEvent and is only called
+    // once.  This is really the only good place to release it and
+    // avoid leaking.
+    ::ReleaseEvent(carbonEvent);
+  }
+
+  return NS_OK;
 }
