@@ -37,6 +37,7 @@
 #include "nsISupports.idl"
 
 interface zapIStunMessage;
+interface nsICancelable;
 
 /**
  * \ingroup ZMK_MODULE
@@ -53,5 +54,6 @@ interface zapIStunClientListener : nsISupports
    * cancelled by disconnecting the stun client or by a call to
    * zapIStunClient::cancelPendingRequest().
    */
-  void bindingRequestComplete(in zapIStunMessage finalMessage);
+  void bindingRequestComplete(in zapIStunMessage finalMessage,
+                              in nsICancelable request);
 };

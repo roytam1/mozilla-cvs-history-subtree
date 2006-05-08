@@ -194,7 +194,7 @@ zapStunBindingRequest::OnLookupComplete(nsICancelable *aRequest,
   mDNSRequest = nsnull;
   if (!aRecord) {
     if (mListener) {
-      mListener->BindingRequestComplete(nsnull);
+      mListener->BindingRequestComplete(nsnull, this);
       mListener = nsnull;
     }
     mStunRequest = nsnull;
@@ -230,7 +230,7 @@ zapStunBindingRequest::Notify(nsITimer *aTimer)
     // failure to get an answer from the server.
     mRetransmissionTimer = nsnull;
     if (mListener) {
-      mListener->BindingRequestComplete(nsnull);
+      mListener->BindingRequestComplete(nsnull, this);
       mListener = nsnull;
     }
     mStunRequest = nsnull;
@@ -267,7 +267,7 @@ zapStunBindingRequest::Cancel(nsresult aReason)
   else if (mRetransmissionTimer) {
     mRetransmissionTimer->Cancel();
     if (mListener) {
-      mListener->BindingRequestComplete(nsnull);
+      mListener->BindingRequestComplete(nsnull, this);
       mListener = nsnull;
     }
     mStunRequest = nsnull;
@@ -382,7 +382,7 @@ zapStunBindingRequest::ConsumeResponse(zapIStunMessage * message)
   mRetransmissionTimer->Cancel();
 
   if (mListener) {
-    mListener->BindingRequestComplete(message);
+    mListener->BindingRequestComplete(message, this);
     mListener = nsnull;
   }
   mStunRequest = nsnull;
