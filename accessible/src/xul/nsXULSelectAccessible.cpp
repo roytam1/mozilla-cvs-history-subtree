@@ -522,10 +522,13 @@ nsXULSelectableAccessible(aDOMNode, aShell)
 /** We are a combobox */
 NS_IMETHODIMP nsXULComboboxAccessible::GetRole(PRUint32 *aRole)
 {
-  nsAutoString boxName;
-  mDOMNode->GetNodeName(boxName);
-  *aRole = boxName.EqualsLiteral("autocomplete") ?
-           ROLE_AUTOCOMPLETE : ROLE_COMBOBOX;
+  nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
+  if (!content) {
+    return NS_ERROR_FAILURE;
+  }
+  nsAutoString type;
+  content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::type, type);
+  *aRole = type.EqualsLiteral("autocomplete") ? ROLE_AUTOCOMPLETE : ROLE_COMBOBOX;
   return NS_OK;
 }
 
