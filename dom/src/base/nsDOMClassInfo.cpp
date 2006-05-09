@@ -9505,10 +9505,10 @@ nsStorageSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
   nsCOMPtr<nsIDOMStorage> storage(do_QueryWrappedNative(wrapper));
   NS_ENSURE_TRUE(storage, NS_ERROR_UNEXPECTED);
 
-  JSString *key(::JS_ValueToString(cx, id));
+  JSString *key = ::JS_ValueToString(cx, id);
   NS_ENSURE_TRUE(key, NS_ERROR_UNEXPECTED);
 
-  JSString *value(::JS_ValueToString(cx, *vp));
+  JSString *value = ::JS_ValueToString(cx, *vp);
   NS_ENSURE_TRUE(value, NS_ERROR_UNEXPECTED);
 
   nsresult rv = storage->SetItem(nsDependentJSString(key),
@@ -9528,7 +9528,7 @@ nsStorageSH::DelProperty(nsIXPConnectWrappedNative *wrapper,
   nsCOMPtr<nsIDOMStorage> storage(do_QueryWrappedNative(wrapper));
   NS_ENSURE_TRUE(storage, NS_ERROR_UNEXPECTED);
 
-  JSString *key(::JS_ValueToString(cx, id));
+  JSString *key = ::JS_ValueToString(cx, id);
   NS_ENSURE_TRUE(key, NS_ERROR_UNEXPECTED);
 
   nsresult rv = storage->RemoveItem(nsDependentJSString(key));
