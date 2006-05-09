@@ -141,6 +141,7 @@ protected:
 
 class nsDocShell : public nsDocLoader,
                    public nsIDocShell,
+                   public nsIDocShell_MOZILLA_1_8_BRANCH,
                    public nsIDocShellTreeItem, 
                    public nsIDocShellTreeNode,
                    public nsIDocShellHistory,
@@ -168,6 +169,7 @@ public:
     NS_DECL_ISUPPORTS_INHERITED
 
     NS_DECL_NSIDOCSHELL
+    NS_DECL_NSIDOCSHELL_MOZILLA_1_8_BRANCH
     NS_DECL_NSIDOCSHELLTREEITEM
     NS_DECL_NSIDOCSHELLTREENODE
     NS_DECL_NSIDOCSHELLHISTORY

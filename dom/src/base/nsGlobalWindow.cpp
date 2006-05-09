@@ -5604,8 +5604,11 @@ nsGlobalWindow::GetSessionStorage(nsIDOMStorage ** aSessionStorage)
   nsresult rv = uri->GetAsciiHost(currentDomain);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  return GetDocShell()->GetSessionStorageForDomain(currentDomain,
-                                                   aSessionStorage);
+  nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> ds =
+    do_QueryInterface(GetDocShell());
+  NS_ENSURE_TRUE(ds, NS_ERROR_DOM_NOT_SUPPORTED_ERR);
+
+  return ds->GetSessionStorageForDomain(currentDomain, aSessionStorage);
 }
 
 NS_IMETHODIMP
@@ -6024,7 +6027,8 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
   // If the new window has the same domain as this window, the session
   // storage data for that domain, and only that domain, is copied over.
   nsGlobalWindow *opened = NS_STATIC_CAST(nsGlobalWindow *, *aReturn);
-  nsIDocShell* newDocShell = opened->GetDocShell();
+  nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> newDocShell =
+    do_QueryInterface(opened->GetDocShell());
   nsCOMPtr<nsIWebNavigation> thisWebNav(do_QueryInterface(GetDocShell()));
 
   if (newDocShell && thisWebNav) {
@@ -6043,8 +6047,8 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
       newURI->GetAsciiHost(newDomain);
       if (thisDomain.Equals(newDomain)) {
         nsCOMPtr<nsIDOMStorage> storage;
-        mDocShell->GetSessionStorageForDomain(thisDomain,
-                                              getter_AddRefs(storage));
+        newDocShell->GetSessionStorageForDomain(thisDomain,
+                                                getter_AddRefs(storage));
         if (storage) {
           nsCOMPtr<nsPIDOMStorage> piStorage = do_QueryInterface(storage);
           if (piStorage) {

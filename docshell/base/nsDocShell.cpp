@@ -379,6 +379,7 @@ NS_IMPL_RELEASE_INHERITED(nsDocShell, nsDocLoader)
 
 NS_INTERFACE_MAP_BEGIN(nsDocShell)
     NS_INTERFACE_MAP_ENTRY(nsIDocShell)
+    NS_INTERFACE_MAP_ENTRY(nsIDocShell_MOZILLA_1_8_BRANCH)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeItem)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeNode)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellHistory)
@@ -1667,7 +1668,8 @@ nsDocShell::GetSessionStorageForDomain(const nsACString& aDomain,
     if (!topItem)
         return NS_ERROR_FAILURE;
 
-    nsCOMPtr<nsIDocShell> topDocShell = do_QueryInterface(topItem);
+    nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> topDocShell =
+        do_QueryInterface(topItem);
     if (topDocShell != this)
         return topDocShell->GetSessionStorageForDomain(aDomain, aStorage);
     
@@ -1707,7 +1709,8 @@ nsDocShell::AddSessionStorage(const nsACString& aDomain,
         return rv;
 
     if (topItem) {
-        nsCOMPtr<nsIDocShell> topDocShell = do_QueryInterface(topItem);
+        nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> topDocShell =
+            do_QueryInterface(topItem);
         if (topDocShell == this) {
             if (!mStorages.Put(aDomain, aStorage))
                 return NS_ERROR_OUT_OF_MEMORY;
