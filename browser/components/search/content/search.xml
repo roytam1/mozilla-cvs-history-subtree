@@ -118,6 +118,10 @@
         var os = Components.classes["@mozilla.org/observer-service;1"]
                    .getService(Components.interfaces.nsIObserverService);
         os.removeObserver(this, "browser-search-engine-modified");
+
+        // Make sure to break the cycle from _texbox to us.  Otherwise we leak
+        // the world.
+        this._textbox.mController.input = null;
       ]]></destructor>
 
       <field name="_stringBundle">document.getAnonymousNodes(this)[0];</field>
