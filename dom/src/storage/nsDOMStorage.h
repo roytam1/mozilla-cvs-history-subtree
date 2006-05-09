@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -58,14 +58,9 @@ class nsDOMStorageItem;
 class nsSessionStorageEntry : public nsStringHashKey
 {
 public:
-  nsSessionStorageEntry(KeyTypePointer aStr) : nsStringHashKey(aStr)
-  {
-  }
-  nsSessionStorageEntry(const nsSessionStorageEntry& aToCopy)
-    : nsStringHashKey(aToCopy)
-  {
-    NS_ERROR("We're horked.");
-  }
+  nsSessionStorageEntry(KeyTypePointer aStr);
+  nsSessionStorageEntry(const nsSessionStorageEntry& aToCopy);
+  ~nsSessionStorageEntry();
 
   nsRefPtr<nsDOMStorageItem> mItem;
 };

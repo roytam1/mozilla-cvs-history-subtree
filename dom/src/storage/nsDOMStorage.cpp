@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -74,6 +74,21 @@ IsCallerSecure()
   nsresult rv = uri->SchemeIs("https", &isHttps);
 
   return NS_SUCCEEDED(rv) && isHttps;
+}
+
+nsSessionStorageEntry::nsSessionStorageEntry(KeyTypePointer aStr)
+  : nsStringHashKey(aStr), mItem(nsnull)
+{
+}
+
+nsSessionStorageEntry::nsSessionStorageEntry(const nsSessionStorageEntry& aToCopy)
+  : nsStringHashKey(aToCopy), mItem(nsnull)
+{
+  NS_ERROR("We're horked.");
+}
+
+nsSessionStorageEntry::~nsSessionStorageEntry()
+{
 }
 
 //

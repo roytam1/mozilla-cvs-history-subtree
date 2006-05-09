@@ -5769,9 +5769,10 @@ nsGlobalWindow::Observe(nsISupports *aSubject, const char *aTopic,
       return NS_OK;
     }
 
+    nsAutoString domain(someData);
+
     nsRefPtr<nsDOMStorageEvent> event =
-      new nsDOMStorageEvent(someData ? nsDependentString(someData) :
-                            EmptyString());
+      new nsDOMStorageEvent(domain);
     NS_ENSURE_TRUE(event, NS_ERROR_OUT_OF_MEMORY);
 
     rv = event->Init();
