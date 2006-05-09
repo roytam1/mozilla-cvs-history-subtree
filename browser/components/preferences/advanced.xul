@@ -95,6 +95,9 @@
       <preference id="security.disable_button.openDeviceManager"
                   name="security.disable_button.openDeviceManager"
                   type="bool"/>
+      <preference id="browser.safebrowsing.enabled"
+                  name="browser.safebrowsing.enabled"
+                  type="bool"/>
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/advanced.js"/>
@@ -105,6 +108,7 @@
         <tab label="&generalTab.label;" helpTopic="prefs-advanced-general"/>
         <tab label="&updateTab.label;" helpTopic="prefs-advanced-update"/>
         <tab label="&securityTab.label;" helpTopic="prefs-advanced-security"/>
+        <tab label="&safeBrowsingTab.label;"/>
       </tabs>
       <tabpanels flex="1">
         <tabpanel orient="vertical">
@@ -243,6 +247,14 @@
             </vbox>
 #endif
           </groupbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <label id="safe-pref">&safeBrowsing.label;</label>
+          <checkbox id="safe-active"
+                    class="indent"
+                    label="&safeBrowsingEnable.label;"
+                    accesskey="&safeBrowsingEnable.accesskey;"
+                    preference="browser.safebrowsing.enabled"/>
         </tabpanel>
       </tabpanels>
     </tabbox>   
