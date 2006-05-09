@@ -138,12 +138,7 @@ endif
 tier_9_dirs += \
 		js/src/xpconnect \
 		intl \
-		db \
 		$(NULL)
-
-ifdef MOZ_STORAGE
-tier_9_dirs += storage
-endif
 
 ifdef MOZ_ENABLE_XLIB
 tier_9_dirs	+= gfx/src/xlibrgb widget/src/xlibxtbin
@@ -227,6 +222,7 @@ tier_50_dirs	+= xpfe/bootstrap/appleevents
 endif
 
 tier_50_dirs	+= \
+	db \
 	xpfe \
 	toolkit/components \
 	$(NULL)
@@ -258,6 +254,10 @@ endif
 
 ifdef MOZ_JAVAXPCOM
 tier_50_dirs += extensions/java
+endif
+
+ifdef MOZ_STORAGE
+tier_50_dirs += storage
 endif
 
 ifdef MOZ_ENABLE_LIBXUL

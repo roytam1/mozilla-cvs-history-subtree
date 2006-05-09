@@ -92,9 +92,6 @@
 #include "nsIPrefService.h"
 #include "nsIWritablePropertyBag2.h"
 #include "nsObserverService.h"
-#include "nsContentUtils.h"
-#include "nsIDOMStorage.h"
-#include "nsPIDOMStorage.h"
 
 // we want to explore making the document own the load group
 // so we can associate the document URI with the load group.
@@ -330,9 +327,6 @@ nsDocShell::Init()
     rv = mContentListener->Init();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (!mStorages.Init())
-        return NS_ERROR_OUT_OF_MEMORY;
-
     // We want to hold a strong ref to the loadgroup, so it better hold a weak
     // ref to us...  use an InterfaceRequestorProxy to do this.
     nsCOMPtr<InterfaceRequestorProxy> proxy =
@@ -379,7 +373,6 @@ NS_IMPL_RELEASE_INHERITED(nsDocShell, nsDocLoader)
 
 NS_INTERFACE_MAP_BEGIN(nsDocShell)
     NS_INTERFACE_MAP_ENTRY(nsIDocShell)
-    NS_INTERFACE_MAP_ENTRY(nsIDocShell_MOZILLA_1_8_BRANCH)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeItem)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeNode)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellHistory)
@@ -1643,80 +1636,6 @@ nsDocShell::HistoryPurged(PRInt32 aNumEntries)
         nsCOMPtr<nsIDocShell> shell = do_QueryInterface(ChildAt(i));
         if (shell) {
             shell->HistoryPurged(aNumEntries);
-        }
-    }
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDocShell::GetSessionStorageForDomain(const nsACString& aDomain,
-                                       nsIDOMStorage** aStorage)
-{
-    NS_ENSURE_ARG_POINTER(aStorage);
-
-    *aStorage = nsnull;
-
-    if (aDomain.IsEmpty())
-        return NS_OK;
-
-    nsCOMPtr<nsIDocShellTreeItem> topItem;
-    nsresult rv = GetSameTypeRootTreeItem(getter_AddRefs(topItem));
-    if (NS_FAILED(rv))
-        return rv;
-
-    if (!topItem)
-        return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> topDocShell =
-        do_QueryInterface(topItem);
-    if (topDocShell != this)
-        return topDocShell->GetSessionStorageForDomain(aDomain, aStorage);
-    
-    if (!mStorages.Get(aDomain, aStorage)) {
-        nsCOMPtr<nsIDOMStorage> newstorage =
-            do_CreateInstance("@mozilla.org/dom/storage;1");
-        if (!newstorage)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        nsCOMPtr<nsPIDOMStorage> pistorage = do_QueryInterface(newstorage);
-        if (!pistorage)
-            return NS_ERROR_FAILURE;
-        pistorage->Init(NS_ConvertUTF8toUTF16(aDomain), PR_FALSE);
-
-        if (!mStorages.Put(aDomain, newstorage))
-            return NS_ERROR_OUT_OF_MEMORY;
-		
-        *aStorage = newstorage;
-        NS_ADDREF(*aStorage);
-    }
-
-    return NS_OK;
-}
-
-nsresult
-nsDocShell::AddSessionStorage(const nsACString& aDomain,
-                              nsIDOMStorage* aStorage)
-{
-    NS_ENSURE_ARG_POINTER(aStorage);
-
-    if (aDomain.IsEmpty())
-        return NS_OK;
-
-    nsCOMPtr<nsIDocShellTreeItem> topItem;
-    nsresult rv = GetSameTypeRootTreeItem(getter_AddRefs(topItem));
-    if (NS_FAILED(rv))
-        return rv;
-
-    if (topItem) {
-        nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> topDocShell =
-            do_QueryInterface(topItem);
-        if (topDocShell == this) {
-            if (!mStorages.Put(aDomain, aStorage))
-                return NS_ERROR_OUT_OF_MEMORY;
-        }
-        else {
-            return topDocShell->AddSessionStorage(aDomain, aStorage);
         }
     }
 

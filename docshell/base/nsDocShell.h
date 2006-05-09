@@ -49,7 +49,6 @@
 #include "nsIContentViewer.h"
 #include "nsIPrefBranch.h"
 #include "nsVoidArray.h"
-#include "nsInterfaceHashtable.h"
 #include "nsIScriptContext.h"
 #include "nsITimer.h"
 
@@ -141,7 +140,6 @@ protected:
 
 class nsDocShell : public nsDocLoader,
                    public nsIDocShell,
-                   public nsIDocShell_MOZILLA_1_8_BRANCH,
                    public nsIDocShellTreeItem, 
                    public nsIDocShellTreeNode,
                    public nsIDocShellHistory,
@@ -169,7 +167,6 @@ public:
     NS_DECL_ISUPPORTS_INHERITED
 
     NS_DECL_NSIDOCSHELL
-    NS_DECL_NSIDOCSHELL_MOZILLA_1_8_BRANCH
     NS_DECL_NSIDOCSHELLTREEITEM
     NS_DECL_NSIDOCSHELLTREENODE
     NS_DECL_NSIDOCSHELLHISTORY
@@ -533,9 +530,6 @@ protected:
     // Reference to the SHEntry for this docshell until the page is loaded
     // Somebody give me better name
     nsCOMPtr<nsISHEntry>       mLSHE;
-
-    // hash of session storages, keyed by domain
-    nsInterfaceHashtable<nsCStringHashKey, nsIDOMStorage> mStorages;
 
     // Index into the SHTransaction list, indicating the previous and current
     // transaction at the time that this DocShell begins to load

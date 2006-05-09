@@ -338,12 +338,6 @@ enum nsDOMClassInfoID {
   // PageTransition Events
   eDOMClassInfo_PageTransitionEvent_id,
 
-  // WhatWG WebApps Objects
-  eDOMClassInfo_Storage_id,
-  eDOMClassInfo_StorageList_id,
-  eDOMClassInfo_StorageItem_id,
-  eDOMClassInfo_StorageEvent_id,
-
   eDOMClassInfo_Constructor_id,
 
 #if defined(MOZ_SVG)
