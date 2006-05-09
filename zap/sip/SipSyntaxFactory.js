@@ -219,9 +219,12 @@ var PATTERN_PARAMCHAR = "(?:["+CHARSET_PARAM_UNRESERVED+
 var PATTERN_HEADERCHAR = "(?:[\\[\\]\\/?:+$]|["+CHARSET_UNRESERVED+"]|"+
                          PATTERN_ESCAPED+")";
 
-// rfc3261 'display-name'
-var PATTERN_DISPLAY_NAME = "(?:(?:"+PATTERN_TOKEN+PATTERN_LWS+")*|"+
+// rfc3261 'display-name' ammended to the BNF suggested in http://bugs.sipit.net/show_bug.cgi?id=727
+var PATTERN_DISPLAY_NAME = "(?:(?:"+PATTERN_TOKEN+
+                           "(?:"+PATTERN_LWS+PATTERN_TOKEN+")*)|"+
                            PATTERN_QUOTED_STRING+")";
+//var PATTERN_DISPLAY_NAME = "(?:(?:"+PATTERN_TOKEN+PATTERN_LWS+")*|"+
+//                           PATTERN_QUOTED_STRING+")";
 
 // ~ rfc3261 'uri-parameter'
 // XXX PATTERN_URI_PARAMETER matches uri-parameter, but doesn't check
