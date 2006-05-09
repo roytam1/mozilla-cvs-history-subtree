@@ -1896,6 +1896,7 @@
 				F6BD639A01B3131201A962F7,
 				F6BD639B01B3131201A962F7,
 				F6BD639C01B3131201A962F7,
+				3F200A830A1081B200A2C5A6,
 				F6BD639D01B3131201A962F7,
 				F6BD639D01B3131201A963F7,
 				F6BD639E01B3131201A962F7,
@@ -3613,6 +3614,26 @@
 			settings = {
 			};
 		};
+		3F200A830A1081B200A2C5A6 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = dom_storage.xpt;
+			path = ../dist/Embed/components/dom_storage.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		3F200A840A1081B200A2C5A6 = {
+			fileRef = 3F200A830A1081B200A2C5A6;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3F200A850A1081B200A2C5A6 = {
+			fileRef = 3F200A830A1081B200A2C5A6;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		3F22CC1303DF42A200026DCE = {
 			isa = PBXFileReference;
 			lastKnownFileType = text.xml;
@@ -4685,6 +4706,7 @@
 				0F557E5B09438AEC00EF68F6,
 				0E6A9883097DFF9A007962C1,
 				E4575BEE09CE16930060A9E7,
+				3F200A840A1081B200A2C5A6,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8602,6 +8624,7 @@
 				0F557E5A09438AEC00EF68F6,
 				4DD988E708EB7D3700AD0788,
 				E4575BEF09CE16930060A9E7,
+				3F200A850A1081B200A2C5A6,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
