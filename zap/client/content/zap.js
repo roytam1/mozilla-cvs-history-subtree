@@ -3066,7 +3066,7 @@ InboundCallHandler.fun(
 InboundCallHandler.fun(
   function alertUser() {
     // construct a new alert box:
-    this.alertBox = this.createAltertBox();
+    this.alertBox = this.createAlertBox();
     showAlert(this.alertBox);
 
     // start the ringer:
@@ -3085,7 +3085,7 @@ function createLabel(value) {
 }
 
 InboundCallHandler.fun(
-  function createAltertBox() {
+  function createAlertBox() {
     var me = this;
     var rv = document.createElement("groupbox");
     rv.setAttribute("class", "alertbox");
