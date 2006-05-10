@@ -4791,13 +4791,6 @@ nsBookmarksService::LoadBookmarks()
     printf("Finished reading in bookmarks.html  (%u microseconds)\n", loadTime32);
 #endif
 
-    // Let observers know the service has been successfully initialized.
-    nsCOMPtr<nsIObserverService> observerService = 
-             do_GetService("@mozilla.org/observer-service;1", &rv);
-    NS_ASSERTION(observerService, "Could not get observer service.");
-    if (observerService)
-      observerService->NotifyObservers(nsnull, "bookmarks-service-initialized", nsnull);
-
     return NS_OK;
 }
 
