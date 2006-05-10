@@ -12,6 +12,7 @@ MODULE       = zap_sdp
 EXTRA_PP_COMPONENTS = \
 	SdpService.js \
 	MediaSession.js \
+	zapICE.js \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
