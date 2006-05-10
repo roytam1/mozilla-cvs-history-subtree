@@ -292,3 +292,4 @@ MSG_DEF(JSMSG_BAD_ANON_GENERATOR_RETURN, 209, 1, JSEXN_TYPEERR, "anonymous gener
 MSG_DEF(JSMSG_NAME_AFTER_FOR_PAREN,   210, 0, JSEXN_SYNTAXERR, "missing name after for (")
 MSG_DEF(JSMSG_IN_AFTER_FOR_NAME,      211, 0, JSEXN_SYNTAXERR, "missing in after for")
 MSG_DEF(JSMSG_BAD_ITERATOR_RETURN,    212, 2, JSEXN_TYPEERR, "{0}.{1} returned a primitive value")
+MSG_DEF(JSMSG_KEYWORD_NOT_NS,         213, 0, JSEXN_SYNTAXERR, "keyword is used as namespace")
