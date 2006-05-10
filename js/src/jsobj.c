@@ -69,6 +69,10 @@
 
 #include "jsdbgapi.h"   /* whether or not JS_HAS_OBJ_WATCHPOINT */
 
+#if JS_HAS_GENERATORS
+#include "jsiter.h"
+#endif
+
 #if JS_HAS_XML_SUPPORT
 #include "jsxml.h"
 #endif
@@ -1181,7 +1185,9 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 #if JS_HAS_EVAL_THIS_SCOPE
         /* If obj.eval(str), emulate 'with (obj) eval(str)' in the caller. */
         if (indirectCall) {
-            callerScopeChain = caller->scopeChain;
+            callerScopeChain = js_GetScopeChain(cx, caller);
+            if (!callerScopeChain)
+                return JS_FALSE;
             OBJ_TO_INNER_OBJECT(cx, obj);
             if (!obj)
                 return JS_FALSE;
@@ -1193,8 +1199,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                     return JS_FALSE;
                 }
 
-                scopeobj = js_NewObject(cx, &js_WithClass, obj,
-                                        callerScopeChain);
+                scopeobj = js_NewWithObject(cx, obj, callerScopeChain, -1);
                 if (!scopeobj)
                     return JS_FALSE;
 
@@ -1214,8 +1219,13 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 #endif
 
         /* Compile using caller's current scope object. */
-        if (caller)
-            scopeobj = caller->scopeChain;
+        if (caller) {
+            scopeobj = js_GetScopeChain(cx, caller);
+            if (!scopeobj) {
+                ok = JS_FALSE;
+                goto out;
+            }
+        }
     }
 
     /* Ensure we compile this eval with the right object in the scope chain. */
@@ -1628,6 +1638,9 @@ static JSFunctionSpec object_methods[] = {
     {js_lookupGetter_str,         obj_lookupGetter,   1,0,0},
     {js_lookupSetter_str,         obj_lookupSetter,   1,0,0},
 #endif
+#if JS_HAS_GENERATORS
+    {js_iterator_str,             js_DefaultIterator, 0,0,0},
+#endif
     {0,0,0,0,0}
 };
 
@@ -1775,11 +1788,103 @@ with_getObjectOps(JSContext *cx, JSClass *clasp)
 
 JSClass js_WithClass = {
     "With",
-    JSCLASS_HAS_PRIVATE,
+    JSCLASS_HAS_PRIVATE | JSCLASS_HAS_RESERVED_SLOTS(1) | JSCLASS_IS_ANONYMOUS,
     JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
     JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   JS_FinalizeStub,
     with_getObjectOps,
     0,0,0,0,0,0,0
+};
+
+JSObject *
+js_NewWithObject(JSContext *cx, JSObject *proto, JSObject *parent, jsint depth)
+{
+    JSObject *obj;
+
+    obj = js_NewObject(cx, &js_WithClass, proto, parent);
+    if (!obj)
+        return NULL;
+    OBJ_SET_BLOCK_DEPTH(cx, obj, depth);
+    return obj;
+}
+
+JSObject *
+js_NewBlockObject(JSContext *cx)
+{
+    JSObject *obj;
+
+    /*
+     * Null obj's proto slot so that Object.prototype.* does not pollute block
+     * scopes.  Make sure obj has its own scope too, since clearing proto does
+     * not affect OBJ_SCOPE(obj).
+     */
+    obj = js_NewObject(cx, &js_BlockClass, NULL, NULL);
+    if (!obj || !js_GetMutableScope(cx, obj))
+        return NULL;
+    OBJ_SET_PROTO(cx, obj, NULL);
+    return obj;
+}
+    
+JSObject *
+js_CloneBlockObject(JSContext *cx, JSObject *proto, JSObject *parent,
+                    JSStackFrame *fp)
+{
+    JSObject *clone;
+    
+    clone = js_NewObject(cx, &js_BlockClass, proto, parent);
+    if (!clone)
+        return NULL;
+    clone->slots[JSSLOT_PRIVATE] = PRIVATE_TO_JSVAL(fp);
+    clone->slots[JSSLOT_BLOCK_DEPTH] =
+        OBJ_GET_SLOT(cx, proto, JSSLOT_BLOCK_DEPTH);
+    return clone;
+}
+
+static JSBool
+block_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+    JSStackFrame *fp;
+    jsint slot;
+
+    JS_ASSERT(JS_InstanceOf(cx, obj, &js_BlockClass, NULL));
+    if (!JSVAL_IS_INT(id))
+        return JS_TRUE;
+
+    fp = (JSStackFrame *) JS_GetPrivate(cx, obj);
+    if (!fp)
+        return JS_TRUE;
+
+    slot = OBJ_BLOCK_DEPTH(cx, obj) + (uint16) JSVAL_TO_INT(id);
+    JS_ASSERT((uintN)slot < fp->script->depth);
+    *vp = fp->spbase[slot];
+    return JS_TRUE;
+}
+
+static JSBool
+block_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+    JSStackFrame *fp;
+    jsint slot;
+
+    JS_ASSERT(JS_InstanceOf(cx, obj, &js_BlockClass, NULL));
+    if (!JSVAL_IS_INT(id))
+        return JS_TRUE;
+
+    fp = (JSStackFrame *) JS_GetPrivate(cx, obj);
+    if (!fp)
+        return JS_TRUE;
+
+    slot = OBJ_BLOCK_DEPTH(cx, obj) + (uint16) JSVAL_TO_INT(id);
+    JS_ASSERT((uintN)slot < fp->script->depth);
+    fp->spbase[slot] = *vp;
+    return JS_TRUE;
+}
+
+JSClass js_BlockClass = {
+    "Block",
+    JSCLASS_HAS_PRIVATE | JSCLASS_HAS_RESERVED_SLOTS(1) | JSCLASS_IS_ANONYMOUS,
+    JS_PropertyStub,  JS_PropertyStub,  block_getProperty, block_setProperty,
+    JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,    JS_FinalizeStub,
+    JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
 JSObject *
@@ -1926,6 +2031,8 @@ js_GetClassId(JSContext *cx, JSClass *clasp, jsid *idp)
     key = JSCLASS_CACHED_PROTO_KEY(clasp);
     if (key != JSProto_Null) {
         *idp = INT_TO_JSID(key);
+    } else if (clasp->flags & JSCLASS_IS_ANONYMOUS) {
+        *idp = INT_TO_JSID(JSProto_Object);
     } else {
         atom = js_Atomize(cx, clasp->name, strlen(clasp->name), 0);
         if (!atom)
@@ -1980,7 +2087,7 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
      * GC calling JS_ClearNewbornRoots. There's also the possibilty of things
      * happening under the objectHook call-out further below.
      */
-    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(obj), &tvr);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, obj, &tvr);
 
     /*
      * Share proto's map only if it has the same JSObjectOps, and only if
@@ -2169,10 +2276,11 @@ js_ConstructObject(JSContext *cx, JSClass *clasp, JSObject *proto,
     obj = JSVAL_TO_OBJECT(rval);
 
     /*
-     * If the given class has both the JSCLASS_HAS_PRIVATE and the
-     * JSCLASS_CONSTRUCT_PROTOTYPE flags, then the class should have its private
-     * data set. If it doesn't, then it means the constructor was replaced, and
-     * we should throw a typerr.
+     * If the instance's class differs from what was requested, throw a type
+     * error.  If the given class has both the JSCLASS_HAS_PRIVATE and the
+     * JSCLASS_CONSTRUCT_PROTOTYPE flags, and the instance does not have its
+     * private data set at this point, then the constructor was replaced and
+     * we should throw a type error.
      */
     if (OBJ_GET_CLASS(cx, obj) != clasp ||
         (!(~clasp->flags & (JSCLASS_HAS_PRIVATE |
@@ -2471,7 +2579,6 @@ js_DefineNativeProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
 {
     JSClass *clasp;
     JSScope *scope;
-    JSProperty *prop;
     JSScopeProperty *sprop;
 
     /*
@@ -2488,6 +2595,7 @@ js_DefineNativeProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
      */
     if (attrs & (JSPROP_GETTER | JSPROP_SETTER)) {
         JSObject *pobj;
+        JSProperty *prop;
 
         /*
          * If JS_THREADSAFE and id is found, js_LookupProperty returns with
@@ -3725,7 +3833,7 @@ js_Call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             return ok;
         }
 #endif
-        ReportIsNotFunction(cx, &argv[-2], 0);
+        ReportIsNotFunction(cx, &argv[-2], cx->fp->flags & JSFRAME_ITERATOR);
         return JS_FALSE;
     }
     return clasp->call(cx, obj, argc, argv, rval);

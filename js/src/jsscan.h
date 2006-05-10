@@ -50,6 +50,11 @@
 
 JS_BEGIN_EXTERN_C
 
+#define JS_KEYWORD(keyword, type, op, version) \
+    extern const char js_##keyword##_str[];
+#include "jskeyword.tbl"
+#undef JS_KEYWORD
+
 typedef enum JSTokenType {
     TOK_ERROR = -1,                     /* well-known as the only code < EOF */
     TOK_EOF = 0,                        /* end of file */
@@ -125,6 +130,10 @@ typedef enum JSTokenType {
     TOK_FILTER = 76,                    /* XML filtering predicate op (.()) */
     TOK_XMLELEM = 77,                   /* XML element node type (no token) */
     TOK_XMLLIST = 78,                   /* XML list node type (no token) */
+    TOK_YIELD = 79,                     /* yield from generator function */
+    TOK_ARRAYCOMP = 80,                 /* array comprehension initialiser */
+    TOK_ARRAYPUSH = 81,                 /* array push within comprehension */
+    TOK_LEXICALSCOPE = 82,              /* block scope AST node label */
     TOK_RESERVED,                       /* reserved keywords */
     TOK_LIMIT                           /* domain size */
 } JSTokenType;

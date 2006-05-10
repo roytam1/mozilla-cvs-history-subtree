@@ -86,6 +86,10 @@
 #include "jsxml.h"
 #endif
 
+#if JS_HAS_GENERATORS
+#include "jsiter.h"
+#endif
+
 #ifdef HAVE_VA_LIST_AS_ARRAY
 #define JS_ADDRESSOF_VA_LIST(ap) ((va_list *)(ap))
 #else
@@ -1270,6 +1274,9 @@ JS_InitStandardClasses(JSContext *cx, JSObject *obj)
 #if JS_HAS_FILE_OBJECT
            js_InitFileClass(cx, obj) &&
 #endif
+#if JS_HAS_GENERATORS
+           js_InitIteratorClasses(cx, obj) &&
+#endif
            js_InitDateClass(cx, obj);
 }
 
@@ -1306,6 +1313,9 @@ static struct {
 #endif
 #if JS_HAS_FILE_OBJECT
     {js_InitFileClass,                  CLASS_ATOM_OFFSET(File)},
+#endif
+#if JS_HAS_GENERATORS
+    {js_InitIteratorClasses,            CLASS_ATOM_OFFSET(StopIteration)},
 #endif
     {NULL,                              0}
 };
@@ -1382,6 +1392,10 @@ static JSStdName standard_class_names[] = {
     {js_InitAttributeNameClass, EAGERLY_PINNED_CLASS_ATOM(AttributeName)},
     {js_InitXMLClass,           LAZILY_PINNED_ATOM(XMLList)},
     {js_InitXMLClass,           LAZILY_PINNED_ATOM(isXMLName)},
+#endif
+
+#if JS_HAS_GENERATORS
+    {js_InitIteratorClasses,    EAGERLY_PINNED_CLASS_ATOM(Iterator)},
 #endif
 
     {NULL,                      0, NULL}
@@ -1625,7 +1639,14 @@ JS_GetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
 JS_PUBLIC_API(JSObject *)
 JS_GetScopeChain(JSContext *cx)
 {
-    return cx->fp ? cx->fp->scopeChain : NULL;
+    JSStackFrame *fp;
+
+    fp = cx->fp;
+    if (!fp) {
+        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_INACTIVE);
+        return NULL;
+    }
+    return js_GetScopeChain(cx, fp);
 }
 
 JS_PUBLIC_API(void *)
@@ -2171,7 +2192,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
         return NULL;
 
     /* After this point, control must exit via label bad or out. */
-    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(proto), &tvr);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, proto, &tvr);
 
     if (!constructor) {
         /*
@@ -4371,7 +4392,7 @@ JS_SetCallReturnValue2(JSContext *cx, jsval v)
 {
 #if JS_HAS_LVALUE_RETURN
     cx->rval2 = v;
-    cx->rval2set = JS_TRUE;
+    cx->rval2set = JS_RVAL2_VALUE;
 #endif
 }
 

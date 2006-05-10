@@ -535,9 +535,10 @@ js_CompileTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
 }
 
 /*
- * Insist on a final return before control flows out of pn, but don't be too
- * smart about loops (do {...; return e2;} while(0) at the end of a function
- * that contains an early return e1 will get a strict-option-only warning).
+ * Insist on a final return before control flows out of pn.  Try to be a bit
+ * smart about loops: do {...; return e2;} while(0) at the end of a function
+ * that contains an early return e1 will get a strict warning.  Similarly for
+ * iloops: while (true){...} is treated as though ... returns.
  */
 #define ENDS_IN_OTHER   0
 #define ENDS_IN_RETURN  1
@@ -559,6 +560,35 @@ HasFinalReturn(JSParseNode *pn)
         if (!pn->pn_kid3)
             return ENDS_IN_OTHER;
         return HasFinalReturn(pn->pn_kid2) & HasFinalReturn(pn->pn_kid3);
+
+      case TOK_WHILE:
+        pn2 = pn->pn_left;
+        if (pn2->pn_type == TOK_PRIMARY && pn2->pn_op == JSOP_TRUE)
+            return ENDS_IN_RETURN;
+        if (pn2->pn_type == TOK_NUMBER && pn2->pn_dval)
+            return ENDS_IN_RETURN;
+        return ENDS_IN_OTHER;
+
+      case TOK_DO:
+        pn2 = pn->pn_right;
+        if (pn2->pn_type == TOK_PRIMARY) {
+            if (pn2->pn_op == JSOP_FALSE)
+                return HasFinalReturn(pn->pn_left);
+            if (pn2->pn_op == JSOP_TRUE)
+                return ENDS_IN_RETURN;
+        }
+        if (pn2->pn_type == TOK_NUMBER) {
+            if (pn2->pn_dval == 0)
+                return HasFinalReturn(pn->pn_left);
+            return ENDS_IN_RETURN;
+        }
+        return ENDS_IN_OTHER;
+
+      case TOK_FOR:
+        pn2 = pn->pn_left;
+        if (pn2->pn_arity == PN_TERNARY && !pn2->pn_kid2)
+            return ENDS_IN_RETURN;
+        return ENDS_IN_OTHER;
 
       case TOK_SWITCH:
         rv = ENDS_IN_RETURN;
@@ -622,33 +652,29 @@ HasFinalReturn(JSParseNode *pn)
 }
 
 static JSBool
-ReportNoReturnValue(JSContext *cx, JSTokenStream *ts)
+ReportBadReturn(JSContext *cx, JSTokenStream *ts, uintN flags, uintN errnum,
+                uintN anonerrnum)
 {
     JSFunction *fun;
-    JSBool ok;
+    const char *name;
 
     fun = cx->fp->fun;
     if (fun->atom) {
-        char *name = js_GetStringBytes(cx->runtime, ATOM_TO_STRING(fun->atom));
-        ok = js_ReportCompileErrorNumber(cx, ts,
-                                         JSREPORT_TS |
-                                         JSREPORT_WARNING |
-                                         JSREPORT_STRICT,
-                                         JSMSG_NO_RETURN_VALUE, name);
+        name = js_AtomToPrintableString(cx, fun->atom);
     } else {
-        ok = js_ReportCompileErrorNumber(cx, ts,
-                                         JSREPORT_TS |
-                                         JSREPORT_WARNING |
-                                         JSREPORT_STRICT,
-                                         JSMSG_ANON_NO_RETURN_VALUE);
+        errnum = anonerrnum;
+        name = NULL;
     }
-    return ok;
+    return js_ReportCompileErrorNumber(cx, ts, JSREPORT_TS | flags, errnum,
+                                       name);
 }
 
 static JSBool
 CheckFinalReturn(JSContext *cx, JSTokenStream *ts, JSParseNode *pn)
 {
-    return HasFinalReturn(pn) == ENDS_IN_RETURN || ReportNoReturnValue(cx, ts);
+    return HasFinalReturn(pn) == ENDS_IN_RETURN ||
+           ReportBadReturn(cx, ts, JSREPORT_WARNING | JSREPORT_STRICT,
+                           JSMSG_NO_RETURN_VALUE, JSMSG_ANON_NO_RETURN_VALUE);
 }
 
 static JSParseNode *
@@ -1274,6 +1300,51 @@ ImportExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 extern const char js_with_statement_str[];
 
 static JSParseNode *
+ContainsStmt(JSParseNode *pn, JSTokenType tt)
+{
+    JSParseNode *pn2, *pnt;
+
+    if (!pn)
+        return NULL;
+    if (pn->pn_type == tt)
+        return pn;
+    switch (pn->pn_arity) {
+      case PN_LIST:
+        for (pn2 = pn->pn_head; pn2; pn2 = pn2->pn_next) {
+            pnt = ContainsStmt(pn2, tt);
+            if (pnt)
+                return pnt;
+        }
+        break;
+      case PN_TERNARY:
+        pnt = ContainsStmt(pn->pn_kid1, tt);
+        if (pnt)
+            return pnt;
+        pnt = ContainsStmt(pn->pn_kid2, tt);
+        if (pnt)
+            return pnt;
+        return ContainsStmt(pn->pn_kid3, tt);
+      case PN_BINARY:
+        /*
+         * Limit recursion if pn is a binary expression, which can't contain a
+         * var statement.
+         */
+        if (pn->pn_op != JSOP_NOP)
+            return NULL;
+        pnt = ContainsStmt(pn->pn_left, tt);
+        if (pnt)
+            return pnt;
+        return ContainsStmt(pn->pn_right, tt);
+      case PN_UNARY:
+        if (pn->pn_op != JSOP_NOP)
+            return NULL;
+        return ContainsStmt(pn->pn_kid, tt);
+      default:;
+    }
+    return NULL;
+}
+
+static JSParseNode *
 Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 {
     JSTokenType tt;
@@ -1798,6 +1869,16 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         catchtail->pn_kid2 = NULL;
 
         if (js_MatchToken(cx, ts, TOK_FINALLY)) {
+#if JS_HAS_GENERATORS
+            /* As in Python (see PEP-255), disallow yield from try-finally. */
+            pn1 = ContainsStmt(pn->pn_kid1, TOK_YIELD);
+            if (pn1) {
+                js_ReportCompileErrorNumber(cx, pn1,
+                                            JSREPORT_PN | JSREPORT_ERROR,
+                                            JSMSG_BAD_RETURN_OR_YIELD,
+                                            js_yield_str);
+            }
+#endif
             tc->tryCount++;
             MUST_MATCH_TOKEN(TOK_LC, JSMSG_CURLY_BEFORE_FINALLY);
             js_PushStatement(tc, &stmtInfo, STMT_FINALLY, -1);
@@ -1968,27 +2049,44 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 
       case TOK_RETURN:
+#if JS_HAS_GENERATORS
+      case TOK_YIELD:
+#endif
         if (!(tc->flags & TCF_IN_FUNCTION)) {
             js_ReportCompileErrorNumber(cx, ts, JSREPORT_TS | JSREPORT_ERROR,
-                                        JSMSG_BAD_RETURN);
+                                        JSMSG_BAD_RETURN_OR_YIELD,
+#if JS_HAS_GENERATORS
+                                        (tt == TOK_YIELD) ? js_yield_str :
+#endif
+                                        js_return_str);
             return NULL;
         }
         pn = NewParseNode(cx, ts, PN_UNARY, tc);
         if (!pn)
             return NULL;
 
-        /* This is ugly, but we don't want to require a semicolon. */
-        ts->flags |= TSF_OPERAND;
-        tt = js_PeekTokenSameLine(cx, ts);
-        ts->flags &= ~TSF_OPERAND;
-        if (tt == TOK_ERROR)
-            return NULL;
+#if JS_HAS_GENERATORS
+        if (tt == TOK_YIELD) {
+            tc->flags |= TCF_FUN_IS_GENERATOR;
+        } else
+#endif
+        {
+            /* This is ugly, but we don't want to require a semicolon. */
+            ts->flags |= TSF_OPERAND;
+            tt = js_PeekTokenSameLine(cx, ts);
+            ts->flags &= ~TSF_OPERAND;
+            if (tt == TOK_ERROR)
+                return NULL;
+        }
 
         if (tt != TOK_EOF && tt != TOK_EOL && tt != TOK_SEMI && tt != TOK_RC) {
             pn2 = Expr(cx, ts, tc);
             if (!pn2)
                 return NULL;
-            tc->flags |= TCF_RETURN_EXPR;
+#if JS_HAS_GENERATORS
+            if (pn->pn_type == TOK_RETURN)
+#endif
+                tc->flags |= TCF_RETURN_EXPR;
             pn->pn_pos.end = pn2->pn_pos.end;
             pn->pn_kid = pn2;
         } else {
@@ -1996,14 +2094,20 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             pn->pn_kid = NULL;
         }
 
+        if ((~tc->flags & (TCF_RETURN_EXPR | TCF_FUN_IS_GENERATOR)) == 0) {
+            /* As in Python (see PEP-255), disallow return v; in generators. */
+            ReportBadReturn(cx, ts, JSREPORT_ERROR,
+                            JSMSG_BAD_GENERATOR_RETURN,
+                            JSMSG_BAD_ANON_GENERATOR_RETURN);
+            return NULL;
+        }
+
         if (JS_HAS_STRICT_OPTION(cx) &&
-            (~tc->flags & (TCF_RETURN_EXPR | TCF_RETURN_VOID)) == 0) {
-            /*
-             * We must be in a frame with a non-native function, because
-             * we're compiling one.
-             */
-            if (!ReportNoReturnValue(cx, ts))
-                return NULL;
+            (~tc->flags & (TCF_RETURN_EXPR | TCF_RETURN_VOID)) == 0 &&
+            !ReportBadReturn(cx, ts, JSREPORT_WARNING | JSREPORT_STRICT,
+                             JSMSG_NO_RETURN_VALUE,
+                             JSMSG_ANON_NO_RETURN_VALUE)) {
+            return NULL;
         }
         break;
 
@@ -2677,7 +2781,7 @@ SetLvalKid(JSContext *cx, JSTokenStream *ts, JSParseNode *pn, JSParseNode *kid,
     return kid;
 }
 
-static const char *incop_name_str[] = {"increment", "decrement"};
+static const char incop_name_str[][10] = {"increment", "decrement"};
 
 static JSBool
 SetIncOpKid(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
@@ -3713,10 +3817,6 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 {
     JSTokenType tt;
     JSParseNode *pn, *pn2, *pn3;
-#if JS_HAS_GETTER_SETTER
-    JSAtom *atom;
-    JSRuntime *rt;
-#endif
 
 #if JS_HAS_SHARP_VARS
     JSParseNode *defsharp;
@@ -3748,6 +3848,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 
     switch (tt) {
       case TOK_FUNCTION:
+#if JS_HAS_XML_SUPPORT
         if (js_MatchToken(cx, ts, TOK_DBLCOLON)) {
             pn2 = NewParseNode(cx, ts, PN_NULLARY, tc);
             if (!pn2)
@@ -3758,6 +3859,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 return NULL;
             break;
         }
+#endif
         pn = FunctionExpr(cx, ts, tc);
         if (!pn)
             return NULL;
@@ -3819,6 +3921,197 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 }
             }
 
+#if JS_HAS_GENERATORS
+            /*
+             * At this point, atomIndex == 0 and pn->pn_count != 0 implies
+             * one element initialiser was parsed (possibly with a defsharp
+             * before the left bracket).
+             *
+             * An array comprehension of the form:
+             *
+             *   [i * j for (i in o) for (j in p) if (i != j)]
+             *
+             * translates to roughly the following let expression:
+             *
+             *   let (array = new Array, i, j) {
+             *     for (i in o) let {
+             *       for (j in p)
+             *         if (i != j)
+             *           array.push(i * j)
+             *     }
+             *     array
+             *   }
+             *
+             * where array is a nameless block-local variable.  The "roughly"
+             * means that an implementation may optimize away the array.push.
+             * An array comprehension opens exactly one block scope, no matter
+             * how many for heads it contains.
+             *
+             * Each let () {...} or for (let ...) ... compiles to:
+             *
+             *   JSOP_ENTERBLOCK <o> ... JSOP_LEAVEBLOCK <n>
+             *
+             * where <o> is a literal object representing the block scope,
+             * with <n> properties, naming each var declared in the block.
+             *
+             * Each var declaration in a let-block binds a name in <o> at
+             * compile time, and allocates a slot on the operand stack at
+             * runtime via JSOP_ENTERBLOCK.  A block-local var is accessed
+             * by the JSOP_GETLOCAL and JSOP_SETLOCAL ops, and iterated with
+             * JSOP_FORLOCAL.  These ops all have an immediate operand, the
+             * local slot's stack index from fp->spbase.
+             *
+             * The array comprehension iteration step, array.push(i * j) in
+             * the example above, is done by <i * j>; JSOP_ARRAYCOMP <array>,
+             * where <array> is the index of array's stack slot.
+             */
+            if (atomIndex == 0 &&
+                pn->pn_count != 0 &&
+                js_MatchToken(cx, ts, TOK_FOR)) {
+                JSParseNode **pnp, *pnexp, *pntop, *pnlet;
+                JSObject *obj;
+                JSScope *scope;
+                JSStmtInfo stmtInfo;
+                JSAtom *atom;
+                JSScopeProperty *sprop;
+
+
+                /* Relabel pn as an array comprehension node. */
+                pn->pn_type = TOK_ARRAYCOMP;
+
+                /*
+                 * Remove the comprehension expression from pn's linked list
+                 * and save it via pnexp.  We'll re-install it underneath the
+                 * ARRAYPUSH nodeafter we parse the rest of the comprehension.
+                 */
+                pnexp = PN_LAST(pn);
+                JS_ASSERT(pn->pn_count == 1 || pn->pn_count == 2);
+                pn->pn_tail = (--pn->pn_count == 1)
+                              ? &pn->pn_head->pn_next
+                              : &pn->pn_head;
+                *pn->pn_tail = NULL;
+
+                /*
+                 * Make a parse-node and literal object representing the array
+                 * comprehension's block scope.
+                 */
+                pntop = NewParseNode(cx, ts, PN_NAME, tc);
+                if (!pntop)
+                    return NULL;
+
+                obj = js_NewBlockObject(cx);
+                if (!obj)
+                    return NULL;
+                scope = OBJ_SCOPE(obj);
+                js_PushBlockScope(tc, &stmtInfo, obj, -1);
+
+                atom = js_AtomizeObject(cx, obj, 0);
+                if (!atom)
+                    return NULL;
+                pntop->pn_type = TOK_LEXICALSCOPE;
+                pntop->pn_atom = atom;
+                pntop->pn_expr = NULL;
+                pnp = &pntop->pn_expr;
+
+                do {
+                    /*
+                     * FOR node is binary, left is control and right is body.
+                     * Use atomIndex to count each block-local let-variable on
+                     * the left-hand side of IN.
+                     */
+                    pn2 = NewParseNode(cx, ts, PN_BINARY, tc);
+                    if (!pn2)
+                        return NULL;
+
+                    MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_AFTER_FOR);
+                    MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NAME_AFTER_FOR_PAREN);
+                    atom = CURRENT_TOKEN(ts).t_atom;
+
+                    /*
+                     * Look for the loop variable in case it was defined by an
+                     * outer 'for' in this comprehension.
+                     */
+                    sprop = SCOPE_GET_PROPERTY(scope, ATOM_TO_JSID(atom));
+                    if (sprop) {
+                        JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
+                        JS_ASSERT((uint16)sprop->shortid < atomIndex);
+                        OBJ_DROP_PROPERTY(cx, obj, (JSProperty *) sprop);
+                    } else {
+                        if (atomIndex == JS_BIT(16)) {
+                            js_ReportCompileErrorNumber(cx, ts,
+                                                JSREPORT_TS | JSREPORT_ERROR,
+                                                JSMSG_ARRAY_INIT_TOO_BIG);
+                            return NULL;
+                        }
+
+                        /* Use JSPROP_ENUMERATE to aid the disassembler. */
+                        if (!js_DefineNativeProperty(cx, obj,
+                                                     ATOM_TO_JSID(atom),
+                                                     JSVAL_VOID, NULL, NULL,
+                                                     JSPROP_ENUMERATE |
+                                                     JSPROP_PERMANENT,
+                                                     SPROP_HAS_SHORTID,
+                                                     (intN)atomIndex++,
+                                                     NULL)) {
+                            return NULL;
+                        }
+                    }
+
+                    /*
+                     * Create a name node with op JSOP_NAME.  We can't set op
+                     * JSOP_GETLOCAL here, because we don't yet know the block 
+                     * depth in the operand stack frame.  The code generator
+                     * computes that, and it tries to bind all names to slots,
+                     * so we must let it do this optimization.
+                     */
+                    pnlet = NewParseNode(cx, ts, PN_NAME, tc);
+                    if (!pnlet)
+                        return NULL;
+                    pnlet->pn_op = JSOP_NAME;
+                    pnlet->pn_atom = atom;
+                    pnlet->pn_expr = NULL;
+                    pnlet->pn_slot = -1;
+                    pnlet->pn_attrs = 0;
+
+                    MUST_MATCH_TOKEN(TOK_IN, JSMSG_IN_AFTER_FOR_NAME);
+                    pn3 = NewBinary(cx, TOK_IN, JSOP_NOP, pnlet,
+                                    Expr(cx, ts, tc), tc);
+                    if (!pn3)
+                        return NULL;
+
+                    MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FOR_CTRL);
+                    pn2->pn_left = pn3;
+                    *pnp = pn2;
+                    pnp = &pn2->pn_right;
+                } while (js_MatchToken(cx, ts, TOK_FOR));
+
+                if (js_MatchToken(cx, ts, TOK_IF)) {
+                    pn2 = NewParseNode(cx, ts, PN_TERNARY, tc);
+                    if (!pn2)
+                        return NULL;
+                    pn2->pn_kid1 = Condition(cx, ts, tc);
+                    if (!pn2->pn_kid1)
+                        return NULL;
+                    pn2->pn_kid2 = NULL;
+                    pn2->pn_kid3 = NULL;
+                    *pnp = pn2;
+                    pnp = &pn2->pn_kid2;
+                }
+
+                pn2 = NewParseNode(cx, ts, PN_UNARY, tc);
+                if (!pn2)
+                    return NULL;
+                pn2->pn_type = TOK_ARRAYPUSH;
+                pn2->pn_op = JSOP_ARRAYPUSH;
+                pn2->pn_kid = pnexp;
+                pn2->pn_array = pn;
+                *pnp = pn2;
+                PN_APPEND(pn, pntop);
+
+                js_PopStatement(tc);
+            }
+#endif /* JS_HAS_GENERATORS */
+
             MUST_MATCH_TOKEN(TOK_RB, JSMSG_BRACKET_AFTER_LIST);
         }
         pn->pn_pos.end = CURRENT_TOKEN(ts).pos.end;
@@ -3852,6 +4145,10 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                     break;
                   case TOK_NAME:
 #if JS_HAS_GETTER_SETTER
+                  {
+                    JSAtom *atom;
+                    JSRuntime *rt;
+
                     atom = CURRENT_TOKEN(ts).t_atom;
                     rt = cx->runtime;
                     if (atom == rt->atomState.getAtom ||
@@ -3875,6 +4172,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                         }
                     }
                     /* else fall thru ... */
+                  }
 #endif
                   case TOK_STRING:
                     pn3 = NewParseNode(cx, ts, PN_NULLARY, tc);
@@ -4099,43 +4397,6 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     }
 #endif
     return pn;
-}
-
-static JSBool
-ContainsVarStmt(JSParseNode *pn)
-{
-    JSParseNode *pn2;
-
-    if (!pn)
-        return JS_FALSE;
-    switch (pn->pn_arity) {
-      case PN_LIST:
-        if (pn->pn_type == TOK_VAR)
-            return JS_TRUE;
-        for (pn2 = pn->pn_head; pn2; pn2 = pn2->pn_next) {
-            if (ContainsVarStmt(pn2))
-                return JS_TRUE;
-        }
-        break;
-      case PN_TERNARY:
-        return ContainsVarStmt(pn->pn_kid1) ||
-               ContainsVarStmt(pn->pn_kid2) ||
-               ContainsVarStmt(pn->pn_kid3);
-      case PN_BINARY:
-        /*
-         * Limit recursion if pn is a binary expression, which can't contain a
-         * var statement.
-         */
-        if (pn->pn_op != JSOP_NOP)
-            return JS_FALSE;
-        return ContainsVarStmt(pn->pn_left) || ContainsVarStmt(pn->pn_right);
-      case PN_UNARY:
-        if (pn->pn_op != JSOP_NOP)
-            return JS_FALSE;
-        return ContainsVarStmt(pn->pn_kid);
-      default:;
-    }
-    return JS_FALSE;
 }
 
 /*
@@ -4544,7 +4805,7 @@ js_FoldConstants(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
 
     switch (pn->pn_type) {
       case TOK_IF:
-        if (ContainsVarStmt(pn2) || ContainsVarStmt(pn3))
+        if (ContainsStmt(pn2, TOK_VAR) || ContainsStmt(pn3, TOK_VAR))
             break;
         /* FALL THROUGH */
 

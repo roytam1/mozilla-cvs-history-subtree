@@ -583,8 +583,8 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
                                                     jschar),
                                             0);
                 report->linebuf = linestr
-                                 ? JS_GetStringBytes(linestr)
-                                 : NULL;
+                                  ? JS_GetStringBytes(linestr)
+                                  : NULL;
                 tp = &ts->tokens[(ts->cursor+ts->lookahead) & NTOKENS_MASK].pos;
 #if JS_HAS_XML_SUPPORT
                 if (pn)

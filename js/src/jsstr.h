@@ -345,8 +345,16 @@ js_StringToObject(JSContext *cx, JSString *str);
 /*
  * Convert a value to a printable C string.
  */
+typedef JSString *(*JSValueToStringFun)(JSContext *cx, jsval v);
+
 extern JS_FRIEND_API(const char *)
-js_ValueToPrintableString(JSContext *cx, jsval v);
+js_ValueToPrintable(JSContext *cx, jsval v, JSValueToStringFun v2sfun);
+
+#define js_ValueToPrintableString(cx,v) \
+    js_ValueToPrintable(cx, v, js_ValueToString)
+
+#define js_ValueToPrintableSource(cx,v) \
+    js_ValueToPrintable(cx, v, js_ValueToSource)
 
 /*
  * Convert a value to a string, returning null after reporting an error,

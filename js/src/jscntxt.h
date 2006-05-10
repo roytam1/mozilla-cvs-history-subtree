@@ -353,6 +353,20 @@ struct JSRuntime {
 #define JS_KEEP_ATOMS(rt)   JS_ATOMIC_INCREMENT(&(rt)->gcKeepAtoms);
 #define JS_UNKEEP_ATOMS(rt) JS_ATOMIC_DECREMENT(&(rt)->gcKeepAtoms);
 
+#if JS_HAS_LVALUE_RETURN
+/*
+ * Values for the cx->rval2set flag byte.  This flag tells whether cx->rval2
+ * is unset (CLEAR), set to a jsval (VALUE) naming a property in the object
+ * referenced by cx->fp->rval, or set to a jsid (ITERKEY) result of a native
+ * iterator's it.next() call (where the return value of it.next() is the next
+ * value in the iteration).
+ * 
+ * The ITERKEY case is just an optimization for native iterators, as general
+ * iterators can return an array of length 2 to return a [key, value] pair. 
+ */
+enum { JS_RVAL2_CLEAR, JS_RVAL2_VALUE, JS_RVAL2_ITERKEY };
+#endif
+
 #ifdef JS_ARGUMENT_FORMATTER_DEFINED
 /*
  * Linked list mapping format strings for JS_{Convert,Push}Arguments{,VA} to
@@ -417,10 +431,21 @@ typedef struct JSLocalRootStack {
 typedef struct JSTempValueRooter JSTempValueRooter;
 
 /*
+ * Context-linked stack of temporary GC roots.
+ *
  * If count is -1, then u.value contains the single value to root.  Otherwise
  * u.array points to a stack-allocated vector of jsvals.  Note that the vector
  * may have length 0 or 1 for full generality, so we need -1 to discriminate
  * the union.
+ *
+ * To root a single GC-thing pointer, which need not be tagged and stored as a
+ * jsval, use JS_PUSH_SINGLE_TEMP_ROOT.  The (jsval)(val) cast works because a
+ * GC-thing is aligned on a 0 mod 8 boundary, and object has the 0 jsval tag.
+ * So any GC-thing may be tagged as if it were an object and untagged, if it's
+ * then used only as an opaque pointer until discriminated by other means than
+ * tag bits (this is how the GC mark function uses its |thing| parameter -- it
+ * consults GC-thing flags stored separately from the thing to decide the type
+ * of thing).
  *
  * If you need to protect a result value that flows out of a C function across
  * several layers of other functions, use the js_LeaveLocalRootScopeWithResult
@@ -446,7 +471,7 @@ struct JSTempValueRooter {
     JS_BEGIN_MACRO                                                            \
         JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
         (tvr)->count = -1;                                                    \
-        (tvr)->u.value = (val);                                               \
+        (tvr)->u.value = (jsval)(val);                                        \
     JS_END_MACRO
 
 #define JS_PUSH_TEMP_ROOT(cx,cnt,arr,tvr)                                     \
@@ -551,7 +576,7 @@ struct JSContext {
      * jsval by calling JS_SetCallReturnValue2(cx, idval).
      */
     jsval               rval2;
-    JSPackedBool        rval2set;
+    uint8               rval2set;
 #endif
 
 #if JS_HAS_XML_SUPPORT

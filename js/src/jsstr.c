@@ -2646,12 +2646,12 @@ js_StringToObject(JSContext *cx, JSString *str)
 }
 
 JS_FRIEND_API(const char *)
-js_ValueToPrintableString(JSContext *cx, jsval v)
+js_ValueToPrintable(JSContext *cx, jsval v, JSValueToStringFun v2sfun)
 {
     JSString *str;
     const char *bytes;
 
-    str = js_ValueToString(cx, v);
+    str = v2sfun(cx, v);
     if (!str)
         return NULL;
     str = js_QuoteString(cx, str, 0);

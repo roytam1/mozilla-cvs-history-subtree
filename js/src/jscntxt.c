@@ -774,12 +774,12 @@ js_InitNullClass(JSContext *cx, JSObject *obj)
     return NULL;
 }
 
-#define JS_PROTO(name,init) extern JSObject *init(JSContext *, JSObject *);
+#define JS_PROTO(name,code,init) extern JSObject *init(JSContext *, JSObject *);
 #include "jsproto.tbl"
 #undef JS_PROTO
 
 static JSObjectOp lazy_prototype_init[JSProto_LIMIT] = {
-#define JS_PROTO(name,init) init,
+#define JS_PROTO(name,code,init) init,
 #include "jsproto.tbl"
 #undef JS_PROTO
 };
@@ -826,12 +826,15 @@ js_GetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
                   JSObject **objp)
 {
     JSBool ok;
+    JSObject *tmp, *cobj;
     JSResolvingKey rkey;
     JSResolvingEntry *rentry;
     uint32 generation;
-    JSObject *tmp, *cobj;
     JSContext *ocx;
     JSObjectOp init;
+
+    while ((tmp = OBJ_GET_PARENT(cx, obj)) != NULL)
+        obj = tmp;
 
     rkey.obj = obj;
     rkey.id = ATOM_TO_JSID(cx->runtime->atomState.classAtoms[key]);
@@ -845,8 +848,6 @@ js_GetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
     }
     generation = cx->resolvingTable->generation;
 
-    while ((tmp = OBJ_GET_PARENT(cx, obj)) != NULL)
-        obj = tmp;
     if (obj == cx->globalObject) {
         ocx = cx;
     } else {
