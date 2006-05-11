@@ -101,6 +101,7 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
 		                   void *wincx)
 {
     SECStatus        rv;
+    SECOidTag        algid;
     SECItem          sig;
 
     if ( !pubKey || !sd ) {
@@ -113,8 +114,9 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
     /* convert sig->len from bit counts to byte count. */
     DER_ConvertBitString(&sig);
 
-    rv = VFY_VerifyDataWithAlgorithmID(sd->data.data, sd->data.len, pubKey, 
-			&sig, &sd->signatureAlgorithm, NULL, wincx);
+    algid = SECOID_GetAlgorithmTag(&sd->signatureAlgorithm);
+    rv = VFY_VerifyData(sd->data.data, sd->data.len, pubKey, &sig,
+			algid, wincx);
 
     return rv ? SECFailure : SECSuccess;
 }
@@ -360,20 +362,20 @@ loser:
                                     chain, 2, NULL, &status, td, cc);
     nss_ZFreeIf(nssTime);
     if (status == PR_SUCCESS) {
-	PORT_Assert(me == chain[0]);
 	/* if it's a root, the chain will only have one cert */
 	if (!chain[1]) {
 	    /* already has a reference from the call to BuildChain */
 	    return cert;
-	} 
-	NSSCertificate_Destroy(chain[0]); /* the first cert in the chain */
-	return STAN_GetCERTCertificate(chain[1]); /* return the 2nd */
-    } 
-    if (chain[0]) {
-	PORT_Assert(me == chain[0]);
-	NSSCertificate_Destroy(chain[0]); /* the first cert in the chain */
+	} else {
+	    CERT_DestroyCertificate(cert); /* the first cert in the chain */
+	    return STAN_GetCERTCertificate(chain[1]); /* return the 2nd */
+	}
+    } else {
+	if (chain[0]) {
+	    CERT_DestroyCertificate(cert);
+	}
+	PORT_SetError (SEC_ERROR_UNKNOWN_ISSUER);
     }
-    PORT_SetError (SEC_ERROR_UNKNOWN_ISSUER);
     return NULL;
 #endif
 }
@@ -727,13 +729,6 @@ cert_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 	    namesCount += subjectNameListLen;
 	    namesList = cert_CombineNamesLists(namesList, subjectNameList);
 	}
-
-        /* check if the cert has an unsupported critical extension */
-	if ( subjectCert->options.bits.hasUnsupportedCriticalExt ) {
-	    PORT_SetError(SEC_ERROR_UNKNOWN_CRITICAL_EXTENSION);
-	    LOG_ERROR_OR_EXIT(log,subjectCert,count,0);
-	}
-
 	/* find the certificate of the issuer */
 	issuerCert = CERT_FindCertIssuer(subjectCert, t, certUsage);
 	if ( ! issuerCert ) {

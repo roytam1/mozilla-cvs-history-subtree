@@ -148,27 +148,21 @@ crmf_destroy_encrypted_value(CRMFEncryptedValue *inEncrValue, PRBool freeit)
     if (inEncrValue != NULL) {
         if (inEncrValue->intendedAlg) {
 	    SECOID_DestroyAlgorithmID(inEncrValue->intendedAlg, PR_TRUE);
-	    inEncrValue->intendedAlg = NULL;
 	}
 	if (inEncrValue->symmAlg) {
 	    SECOID_DestroyAlgorithmID(inEncrValue->symmAlg, PR_TRUE);
-	    inEncrValue->symmAlg = NULL;
 	}
         if (inEncrValue->encSymmKey.data) {
 	    PORT_Free(inEncrValue->encSymmKey.data);
-	    inEncrValue->encSymmKey.data = NULL;
 	}
 	if (inEncrValue->keyAlg) {
 	    SECOID_DestroyAlgorithmID(inEncrValue->keyAlg, PR_TRUE);
-	    inEncrValue->keyAlg = NULL;
 	}
 	if (inEncrValue->valueHint.data) {
 	    PORT_Free(inEncrValue->valueHint.data);
-	    inEncrValue->valueHint.data = NULL;
 	}
         if (inEncrValue->encValue.data) {
 	    PORT_Free(inEncrValue->encValue.data);
-	    inEncrValue->encValue.data = NULL;
 	}
 	if (freeit) {
 	    PORT_Free(inEncrValue);
@@ -189,24 +183,15 @@ crmf_copy_encryptedvalue_secalg(PRArenaPool     *poolp,
 				SECAlgorithmID **destAlgId)
 {
     SECAlgorithmID *newAlgId;
-    SECStatus rv;
 
-    newAlgId = (poolp != NULL) ? PORT_ArenaZNew(poolp, SECAlgorithmID) :
-                                 PORT_ZNew(SECAlgorithmID);
+    *destAlgId = newAlgId = (poolp != NULL) ?
+                            PORT_ArenaZNew(poolp, SECAlgorithmID) :
+                            PORT_ZNew(SECAlgorithmID);
     if (newAlgId == NULL) {
         return SECFailure;
     }
     
-    rv = SECOID_CopyAlgorithmID(poolp, newAlgId, srcAlgId);
-    if (rv != SECSuccess) {
-        if (!poolp) {
-            SECOID_DestroyAlgorithmID(newAlgId, PR_TRUE);
-        }
-        return rv;
-    }
-    *destAlgId = newAlgId;
-    
-    return rv;
+    return SECOID_CopyAlgorithmID(poolp, newAlgId, srcAlgId);
 }
 
 SECStatus
@@ -267,7 +252,7 @@ crmf_copy_encryptedvalue(PRArenaPool        *poolp,
     return SECSuccess;
  loser:
     if (poolp == NULL && destValue != NULL) {
-        crmf_destroy_encrypted_value(destValue, PR_FALSE);
+        crmf_destroy_encrypted_value(destValue, PR_TRUE);
     }
     return SECFailure;
 }

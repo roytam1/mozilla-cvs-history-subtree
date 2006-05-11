@@ -295,6 +295,7 @@ nsslowkey_ConvertToPublicKey(NSSLOWKEYPrivateKey *privk)
 		if (rv == SECSuccess)
 		    return pubk;
 	    }
+	    nsslowkey_DestroyPublicKey (pubk);
 	} else {
 	    PORT_SetError (SEC_ERROR_NO_MEMORY);
 	}

@@ -63,20 +63,6 @@ crmf_encode_integer(PRArenaPool *poolp, SECItem *dest, long value)
     return SECSuccess;
 }
 
-SECStatus
-crmf_encode_unsigned_integer(PRArenaPool *poolp, SECItem *dest, 
-                             unsigned long value) 
-{
-    SECItem *dummy;
-
-    dummy = SEC_ASN1EncodeUnsignedInteger(poolp, dest, value);
-    PORT_Assert (dummy == dest);
-    if (dummy != dest) {
-        return SECFailure;
-    }
-    return SECSuccess;
-}
-
 static SECStatus
 crmf_copy_secitem (PRArenaPool *poolp, SECItem *dest, SECItem *src)
 {
@@ -118,8 +104,7 @@ CRMF_DoesRequestHaveField (CRMFCertRequest       *inCertReq,
 }
 
 CRMFCertRequest *
-CRMF_CreateCertRequest (PRUint32 inRequestID)
-{
+CRMF_CreateCertRequest (long inRequestID) {
     PRArenaPool     *poolp;
     CRMFCertRequest *certReq;
     SECStatus        rv;
@@ -137,8 +122,7 @@ CRMF_CreateCertRequest (PRUint32 inRequestID)
     certReq->poolp = poolp;
     certReq->requestID = inRequestID;
     
-    rv = crmf_encode_unsigned_integer(poolp, &(certReq->certReqId), 
-                                      inRequestID);
+    rv = crmf_encode_integer(poolp, &(certReq->certReqId), inRequestID);
     if (rv != SECSuccess) {
         goto loser;
     }
@@ -193,12 +177,9 @@ crmf_template_copy_secalg (PRArenaPool *poolp, SECAlgorithmID **dest,
     void             *mark = NULL;
     SECAlgorithmID   *mySecAlg;
 
-    if (!poolp) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
+    if (poolp != NULL) {
+        mark = PORT_ArenaMark(poolp);
     }
-
-    mark = PORT_ArenaMark(poolp);
     *dest = mySecAlg = PORT_ArenaZNew(poolp, SECAlgorithmID);
     if (mySecAlg == NULL) {
         goto loser;

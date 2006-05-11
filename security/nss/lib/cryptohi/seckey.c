@@ -48,7 +48,6 @@
 #include "secdig.h"
 #include "prtime.h"
 #include "ec.h"
-#include "keyi.h"
 
 const SEC_ASN1Template CERT_SubjectPublicKeyInfoTemplate[] = {
     { SEC_ASN1_SEQUENCE,
@@ -940,11 +939,13 @@ done:
 }
 
 
-/* Function used to make an oid tag to a key type */
+/* Function used to determine what kind of cert we are dealing with. */
 KeyType 
-seckey_GetKeyType (SECOidTag tag) {
+CERT_GetCertKeyType (CERTSubjectPublicKeyInfo *spki) {
+    int tag;
     KeyType keyType;
 
+    tag = SECOID_GetAlgorithmTag(&spki->algorithm);
     switch (tag) {
       case SEC_OID_X500_RSA_ENCRYPTION:
       case SEC_OID_PKCS1_RSA_ENCRYPTION:
@@ -973,13 +974,6 @@ seckey_GetKeyType (SECOidTag tag) {
 	keyType = nullKey;
     }
     return keyType;
-}
-
-/* Function used to determine what kind of cert we are dealing with. */
-KeyType 
-CERT_GetCertKeyType (CERTSubjectPublicKeyInfo *spki) 
-{
-    return seckey_GetKeyType(SECOID_GetAlgorithmTag(&spki->algorithm));
 }
 
 static SECKEYPublicKey *
@@ -1294,158 +1288,11 @@ SECKEY_ECParamsToKeySize(const SECItem *encodedParams)
     }
 }
 
-int
-SECKEY_ECParamsToBasePointOrderLen(const SECItem *encodedParams)
-{
-    SECOidTag tag;
-    SECItem oid = { siBuffer, NULL, 0};
-	
-    /* The encodedParams data contains 0x06 (SEC_ASN1_OBJECT_ID),
-     * followed by the length of the curve oid and the curve oid.
-     */
-    oid.len = encodedParams->data[1];
-    oid.data = encodedParams->data + 2;
-    if ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)
-	return 0;
-
-    switch (tag) {
-    case SEC_OID_SECG_EC_SECP112R1:
-        return 112;
-    case SEC_OID_SECG_EC_SECP112R2:
-        return 110;
-
-    case SEC_OID_SECG_EC_SECT113R1:
-    case SEC_OID_SECG_EC_SECT113R2:
-	return 113;
-
-    case SEC_OID_SECG_EC_SECP128R1:
-	return 128;
-    case SEC_OID_SECG_EC_SECP128R2:
-	return 126;
-
-    case SEC_OID_SECG_EC_SECT131R1:
-    case SEC_OID_SECG_EC_SECT131R2:
-	return 131;
-
-    case SEC_OID_SECG_EC_SECP160K1:
-    case SEC_OID_SECG_EC_SECP160R1:
-    case SEC_OID_SECG_EC_SECP160R2:
-	return 161;
-
-    case SEC_OID_SECG_EC_SECT163K1:
-	return 163;
-    case SEC_OID_SECG_EC_SECT163R1:
-	return 162;
-    case SEC_OID_SECG_EC_SECT163R2:
-    case SEC_OID_ANSIX962_EC_C2PNB163V1:
-	return 163;
-    case SEC_OID_ANSIX962_EC_C2PNB163V2:
-    case SEC_OID_ANSIX962_EC_C2PNB163V3:
-	return 162;
-
-    case SEC_OID_ANSIX962_EC_C2PNB176V1:
-	return 161;
-
-    case SEC_OID_ANSIX962_EC_C2TNB191V1:
-	return 191;
-    case SEC_OID_ANSIX962_EC_C2TNB191V2:
-	return 190;
-    case SEC_OID_ANSIX962_EC_C2TNB191V3:
-	return 189;
-    case SEC_OID_ANSIX962_EC_C2ONB191V4:
-	return 191;
-    case SEC_OID_ANSIX962_EC_C2ONB191V5:
-	return 188;
-
-    case SEC_OID_SECG_EC_SECP192K1:
-    case SEC_OID_ANSIX962_EC_PRIME192V1:
-    case SEC_OID_ANSIX962_EC_PRIME192V2:
-    case SEC_OID_ANSIX962_EC_PRIME192V3:
-	return 192;
-
-    case SEC_OID_SECG_EC_SECT193R1:
-    case SEC_OID_SECG_EC_SECT193R2:
-	return 193;
-
-    case SEC_OID_ANSIX962_EC_C2PNB208W1:
-	return 193;
-
-    case SEC_OID_SECG_EC_SECP224K1:
-	return 225;
-    case SEC_OID_SECG_EC_SECP224R1:
-	return 224;
-
-    case SEC_OID_SECG_EC_SECT233K1:
-	return 232;
-    case SEC_OID_SECG_EC_SECT233R1:
-	return 233;
-
-    case SEC_OID_SECG_EC_SECT239K1:
-    case SEC_OID_ANSIX962_EC_C2TNB239V1:
-	return 238;
-    case SEC_OID_ANSIX962_EC_C2TNB239V2:
-	return 237;
-    case SEC_OID_ANSIX962_EC_C2TNB239V3:
-	return 236;
-    case SEC_OID_ANSIX962_EC_C2ONB239V4:
-	return 238;
-    case SEC_OID_ANSIX962_EC_C2ONB239V5:
-	return 237;
-    case SEC_OID_ANSIX962_EC_PRIME239V1:
-    case SEC_OID_ANSIX962_EC_PRIME239V2:
-    case SEC_OID_ANSIX962_EC_PRIME239V3:
-	return 239;
-
-    case SEC_OID_SECG_EC_SECP256K1:
-    case SEC_OID_ANSIX962_EC_PRIME256V1:
-	return 256;
-
-    case SEC_OID_ANSIX962_EC_C2PNB272W1:
-	return 257;
-
-    case SEC_OID_SECG_EC_SECT283K1:
-	return 281;
-    case SEC_OID_SECG_EC_SECT283R1:
-	return 282;
-
-    case SEC_OID_ANSIX962_EC_C2PNB304W1:
-	return 289;
-
-    case SEC_OID_ANSIX962_EC_C2TNB359V1:
-	return 353;
-
-    case SEC_OID_ANSIX962_EC_C2PNB368W1:
-	return 353;
-
-    case SEC_OID_SECG_EC_SECP384R1:
-	return 384;
-
-    case SEC_OID_SECG_EC_SECT409K1:
-	return 407;
-    case SEC_OID_SECG_EC_SECT409R1:
-	return 409;
-
-    case SEC_OID_ANSIX962_EC_C2TNB431R1:
-	return 418;
-
-    case SEC_OID_SECG_EC_SECP521R1:
-	return 521;
-
-    case SEC_OID_SECG_EC_SECT571K1:
-    case SEC_OID_SECG_EC_SECT571R1:
-	return 570;
-
-    default:
-	    return 0;
-    }
-}
-
 /* returns key strength in bytes (not bits) */
 unsigned
-SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk)
+SECKEY_PublicKeyStrength(SECKEYPublicKey *pubk)
 {
     unsigned char b0;
-    unsigned size;
 
     /* interpret modulus length as key strength... in
      * fortezza that's the public key length */
@@ -1466,8 +1313,11 @@ SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk)
 	return PR_MAX(pubk->u.fortezza.KEAKey.len, pubk->u.fortezza.DSSKey.len);
     case ecKey:
 	/* Get the key size in bits and adjust */
-	size =	SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
-	return (size + 7)/8;
+	if (pubk->u.ec.size == 0) {
+	    pubk->u.ec.size = 
+		SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
+	} 
+	return (pubk->u.ec.size + 7)/8;
     default:
 	break;
     }
@@ -1476,9 +1326,8 @@ SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk)
 
 /* returns key strength in bits */
 unsigned
-SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk)
+SECKEY_PublicKeyStrengthInBits(SECKEYPublicKey *pubk)
 {
-    unsigned size;
     switch (pubk->keyType) {
     case rsaKey:
     case dsaKey:
@@ -1486,8 +1335,11 @@ SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk)
     case fortezzaKey:
 	return SECKEY_PublicKeyStrength(pubk) * 8; /* 1 byte = 8 bits */
     case ecKey:
-	size = SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
-	return size;
+	if (pubk->u.ec.size == 0) {
+	    pubk->u.ec.size = 
+		SECKEY_ECParamsToKeySize(&pubk->u.ec.DEREncodedParams);
+	} 
+	return pubk->u.ec.size;
     default:
 	break;
     }
@@ -1495,18 +1347,18 @@ SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk)
 }
 
 SECKEYPrivateKey *
-SECKEY_CopyPrivateKey(const SECKEYPrivateKey *privk)
+SECKEY_CopyPrivateKey(SECKEYPrivateKey *privk)
 {
     SECKEYPrivateKey *copyk;
     PRArenaPool *arena;
     
-    if (!privk || !privk->pkcs11Slot) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+    if (privk == NULL) {
 	return NULL;
     }
     
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (arena == NULL) {
+	PORT_SetError (SEC_ERROR_NO_MEMORY);
 	return NULL;
     }
 
@@ -1541,12 +1393,11 @@ fail:
 }
 
 SECKEYPublicKey *
-SECKEY_CopyPublicKey(const SECKEYPublicKey *pubk)
+SECKEY_CopyPublicKey(SECKEYPublicKey *pubk)
 {
     SECKEYPublicKey *copyk;
     PRArenaPool *arena;
-    SECStatus rv = SECSuccess;
-
+    
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (arena == NULL) {
 	PORT_SetError (SEC_ERROR_NO_MEMORY);
@@ -1554,117 +1405,119 @@ SECKEY_CopyPublicKey(const SECKEYPublicKey *pubk)
     }
 
     copyk = (SECKEYPublicKey *) PORT_ArenaZAlloc (arena, sizeof (SECKEYPublicKey));
-    if (!copyk) {
-        PORT_FreeArena (arena, PR_FALSE);
-        PORT_SetError (SEC_ERROR_NO_MEMORY);
-        return NULL;
-    }
+    if (copyk != NULL) {
+	SECStatus rv = SECSuccess;
 
-    copyk->arena = arena;
-    copyk->keyType = pubk->keyType;
-    if (pubk->pkcs11Slot && 
-        PK11_IsPermObject(pubk->pkcs11Slot,pubk->pkcs11ID)) {
-        copyk->pkcs11Slot = PK11_ReferenceSlot(pubk->pkcs11Slot);
-        copyk->pkcs11ID = pubk->pkcs11ID;
+	copyk->arena = arena;
+	copyk->keyType = pubk->keyType;
+	if (pubk->pkcs11Slot && 
+			PK11_IsPermObject(pubk->pkcs11Slot,pubk->pkcs11ID)) {
+	    copyk->pkcs11Slot = PK11_ReferenceSlot(pubk->pkcs11Slot);
+	    copyk->pkcs11ID = pubk->pkcs11ID;
+	} else {
+	    copyk->pkcs11Slot = NULL;	/* go get own reference */
+	    copyk->pkcs11ID = CK_INVALID_HANDLE;
+	}
+	switch (pubk->keyType) {
+	  case rsaKey:
+	    rv = SECITEM_CopyItem(arena, &copyk->u.rsa.modulus,
+				  &pubk->u.rsa.modulus);
+	    if (rv == SECSuccess) {
+		rv = SECITEM_CopyItem (arena, &copyk->u.rsa.publicExponent,
+				       &pubk->u.rsa.publicExponent);
+		if (rv == SECSuccess)
+		    return copyk;
+	    }
+	    break;
+	  case dsaKey:
+	    rv = SECITEM_CopyItem(arena, &copyk->u.dsa.publicValue,
+				  &pubk->u.dsa.publicValue);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.dsa.params.prime,
+				  &pubk->u.dsa.params.prime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.dsa.params.subPrime,
+				  &pubk->u.dsa.params.subPrime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.dsa.params.base,
+				  &pubk->u.dsa.params.base);
+	    break;
+          case keaKey:
+            rv = SECITEM_CopyItem(arena, &copyk->u.kea.publicValue,
+                                  &pubk->u.kea.publicValue);
+            if (rv != SECSuccess) break;
+            rv = SECITEM_CopyItem(arena, &copyk->u.kea.params.hash,
+                                  &pubk->u.kea.params.hash);
+            break;
+	  case fortezzaKey:
+	    copyk->u.fortezza.KEAversion = pubk->u.fortezza.KEAversion;
+	    copyk->u.fortezza.DSSversion = pubk->u.fortezza.DSSversion;
+	    PORT_Memcpy(copyk->u.fortezza.KMID, pubk->u.fortezza.KMID,
+			sizeof(pubk->u.fortezza.KMID));
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.clearance, 
+				  &pubk->u.fortezza.clearance);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.KEApriviledge, 
+				&pubk->u.fortezza.KEApriviledge);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.DSSpriviledge, 
+				&pubk->u.fortezza.DSSpriviledge);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.KEAKey, 
+				&pubk->u.fortezza.KEAKey);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.DSSKey, 
+				&pubk->u.fortezza.DSSKey);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.params.prime, 
+				  &pubk->u.fortezza.params.prime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.params.subPrime, 
+				&pubk->u.fortezza.params.subPrime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.params.base, 
+				&pubk->u.fortezza.params.base);
+            if (rv != SECSuccess) break;
+            rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.keaParams.prime, 
+				  &pubk->u.fortezza.keaParams.prime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.keaParams.subPrime, 
+				&pubk->u.fortezza.keaParams.subPrime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.keaParams.base, 
+				&pubk->u.fortezza.keaParams.base);
+	    break;
+	  case dhKey:
+            rv = SECITEM_CopyItem(arena,&copyk->u.dh.prime,&pubk->u.dh.prime);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena,&copyk->u.dh.base,&pubk->u.dh.base);
+	    if (rv != SECSuccess) break;
+	    rv = SECITEM_CopyItem(arena, &copyk->u.dh.publicValue, 
+				&pubk->u.dh.publicValue);
+	    break;
+	  case ecKey:
+	    copyk->u.ec.size = pubk->u.ec.size;
+            rv = SECITEM_CopyItem(arena,&copyk->u.ec.DEREncodedParams,
+		&pubk->u.ec.DEREncodedParams);
+	    if (rv != SECSuccess) break;
+            rv = SECITEM_CopyItem(arena,&copyk->u.ec.publicValue,
+		&pubk->u.ec.publicValue);
+	    break;
+	  case nullKey:
+	    return copyk;
+	  default:
+	    rv = SECFailure;
+	    break;
+	}
+	if (rv == SECSuccess)
+	    return copyk;
+
+	SECKEY_DestroyPublicKey (copyk);
     } else {
-        copyk->pkcs11Slot = NULL;	/* go get own reference */
-        copyk->pkcs11ID = CK_INVALID_HANDLE;
+	PORT_SetError (SEC_ERROR_NO_MEMORY);
     }
-    switch (pubk->keyType) {
-      case rsaKey:
-          rv = SECITEM_CopyItem(arena, &copyk->u.rsa.modulus,
-                                &pubk->u.rsa.modulus);
-          if (rv == SECSuccess) {
-              rv = SECITEM_CopyItem (arena, &copyk->u.rsa.publicExponent,
-                                     &pubk->u.rsa.publicExponent);
-              if (rv == SECSuccess)
-                  return copyk;
-          }
-          break;
-      case dsaKey:
-          rv = SECITEM_CopyItem(arena, &copyk->u.dsa.publicValue,
-                                &pubk->u.dsa.publicValue);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.dsa.params.prime,
-                                &pubk->u.dsa.params.prime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.dsa.params.subPrime,
-                                &pubk->u.dsa.params.subPrime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.dsa.params.base,
-                                &pubk->u.dsa.params.base);
-          break;
-      case keaKey:
-          rv = SECITEM_CopyItem(arena, &copyk->u.kea.publicValue,
-                                &pubk->u.kea.publicValue);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.kea.params.hash,
-                                &pubk->u.kea.params.hash);
-          break;
-      case fortezzaKey:
-          copyk->u.fortezza.KEAversion = pubk->u.fortezza.KEAversion;
-          copyk->u.fortezza.DSSversion = pubk->u.fortezza.DSSversion;
-          PORT_Memcpy(copyk->u.fortezza.KMID, pubk->u.fortezza.KMID,
-                      sizeof(pubk->u.fortezza.KMID));
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.clearance, 
-                                &pubk->u.fortezza.clearance);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.KEApriviledge, 
-                                &pubk->u.fortezza.KEApriviledge);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.DSSpriviledge, 
-                                &pubk->u.fortezza.DSSpriviledge);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.KEAKey, 
-                                &pubk->u.fortezza.KEAKey);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.DSSKey, 
-                                &pubk->u.fortezza.DSSKey);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.params.prime, 
-                                &pubk->u.fortezza.params.prime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.params.subPrime, 
-                                &pubk->u.fortezza.params.subPrime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.params.base, 
-                                &pubk->u.fortezza.params.base);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.keaParams.prime, 
-                                &pubk->u.fortezza.keaParams.prime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.keaParams.subPrime, 
-                                &pubk->u.fortezza.keaParams.subPrime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.fortezza.keaParams.base, 
-                                &pubk->u.fortezza.keaParams.base);
-          break;
-      case dhKey:
-          rv = SECITEM_CopyItem(arena,&copyk->u.dh.prime,&pubk->u.dh.prime);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena,&copyk->u.dh.base,&pubk->u.dh.base);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena, &copyk->u.dh.publicValue, 
-                                &pubk->u.dh.publicValue);
-          break;
-      case ecKey:
-          copyk->u.ec.size = pubk->u.ec.size;
-          rv = SECITEM_CopyItem(arena,&copyk->u.ec.DEREncodedParams,
-                                &pubk->u.ec.DEREncodedParams);
-          if (rv != SECSuccess) break;
-          rv = SECITEM_CopyItem(arena,&copyk->u.ec.publicValue,
-                                &pubk->u.ec.publicValue);
-          break;
-      case nullKey:
-          return copyk;
-      default:
-          rv = SECFailure;
-          break;
-    }
-    if (rv == SECSuccess)
-        return copyk;
 
-    SECKEY_DestroyPublicKey (copyk);
+    PORT_FreeArena (arena, PR_FALSE);
     return NULL;
 }
 
@@ -2000,6 +1853,7 @@ SECKEY_DecodeDERSubjectPublicKeyInfo(SECItem *spkider)
         }
 	if (rv == SECSuccess)
 	    return spki;
+	SECKEY_DestroySubjectPublicKeyInfo(spki);
     } else {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
@@ -2090,8 +1944,8 @@ SECKEY_ConvertAndDecodePublicKeyAndChallenge(char *pkacstr, char *challenge,
     /* check the signature */
     sig = sd.signature;
     DER_ConvertBitString(&sig);
-    rv = VFY_VerifyDataWithAlgorithmID(sd.data.data, sd.data.len, pubKey, &sig,
-			&(sd.signatureAlgorithm), NULL, wincx);
+    rv = VFY_VerifyData(sd.data.data, sd.data.len, pubKey, &sig,
+			SECOID_GetAlgorithmTag(&(sd.signatureAlgorithm)), wincx);
     if ( rv != SECSuccess ) {
 	goto loser;
     }

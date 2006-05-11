@@ -176,24 +176,22 @@ nssCKFWFindObjects_Create
   return fwFindObjects;
 
  loser:
-  if( fwFindObjects ) {
-    if( NULL != mdFindObjects1 ) {
-      if( NULL != mdFindObjects1->Final ) {
-        fwFindObjects->mdFindObjects = mdFindObjects1;
-        mdFindObjects1->Final(mdFindObjects1, fwFindObjects, mdSession, 
-          fwSession, mdToken, fwToken, mdInstance, fwInstance);
-      }
-    }
+  nss_ZFreeIf(fwFindObjects);
 
-    if( NULL != mdFindObjects2 ) {
-      if( NULL != mdFindObjects2->Final ) {
-        fwFindObjects->mdFindObjects = mdFindObjects2;
-        mdFindObjects2->Final(mdFindObjects2, fwFindObjects, mdSession, 
-          fwSession, mdToken, fwToken, mdInstance, fwInstance);
-      }
+  if( (NSSCKMDFindObjects *)NULL != mdFindObjects1 ) {
+    if( (void *)NULL != (void *)mdFindObjects1->Final ) {
+      fwFindObjects->mdFindObjects = mdFindObjects1;
+      mdFindObjects1->Final(mdFindObjects1, fwFindObjects, mdSession, 
+        fwSession, mdToken, fwToken, mdInstance, fwInstance);
     }
+  }
 
-    nss_ZFreeIf(fwFindObjects);
+  if( (NSSCKMDFindObjects *)NULL != mdFindObjects2 ) {
+    if( (void *)NULL != (void *)mdFindObjects2->Final ) {
+      fwFindObjects->mdFindObjects = mdFindObjects2;
+      mdFindObjects2->Final(mdFindObjects2, fwFindObjects, mdSession, 
+        fwSession, mdToken, fwToken, mdInstance, fwInstance);
+    }
   }
 
   if( CKR_OK == *pError ) {
@@ -358,19 +356,11 @@ nssCKFWFindObjects_Next
 
  wrap:
   /*
-   * This seems is less than ideal-- we should determine if it's a token
+   * This is less than ideal-- we should determine if it's a token
    * object or a session object, and use the appropriate arena.
    * But that duplicates logic in nssCKFWObject_IsTokenObject.
-   * Also we should lookup the real session the object was created on
-   * if the object was a session object... however this code is actually
-   * correct because nssCKFWObject_Create will return a cached version of
-   * the object from it's hash. This is necessary because 1) we don't want
-   * to create an arena style leak (where our arena grows with every search),
-   * and 2) we want the same object to always have the same ID. This means
-   * the only case the nssCKFWObject_Create() will need the objArena and the
-   * Session is in the case of token objects (session objects should already
-   * exist in the cache from their initial creation). So this code is correct,
-   * but it depends on nssCKFWObject_Create caching all objects.
+   * Worry about that later.  For now, be conservative, and use
+   * the token arena.
    */
   objArena = nssCKFWToken_GetArena(fwFindObjects->fwToken, pError);
   if( (NSSArena *)NULL == objArena ) {
@@ -381,7 +371,7 @@ nssCKFWFindObjects_Next
   }
 
   fwObject = nssCKFWObject_Create(objArena, mdObject,
-               NULL, fwFindObjects->fwToken, 
+               fwFindObjects->fwSession, fwFindObjects->fwToken, 
                fwFindObjects->fwInstance, pError);
   if( (NSSCKFWObject *)NULL == fwObject ) {
     if( CKR_OK == *pError ) {

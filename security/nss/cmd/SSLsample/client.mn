@@ -46,5 +46,9 @@ CSRCS =  client.c \
 
 PROGRAM = client
 
+REQUIRES = dbm 
+
 IMPORTS = nss/lib/nss
+
+DEFINES = -DNSPR20 
 

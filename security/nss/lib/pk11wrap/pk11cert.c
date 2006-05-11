@@ -796,8 +796,6 @@ PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
     NSSToken *token = PK11Slot_GetNSSToken(slot);
     SECItem *keyID = pk11_mkcertKeyID(cert);
     char *emailAddr = NULL;
-    nssCertificateStoreTrace lockTrace = {NULL, NULL, PR_FALSE, PR_FALSE};
-    nssCertificateStoreTrace unlockTrace = {NULL, NULL, PR_FALSE, PR_FALSE};
 
     if (keyID == NULL) {
 	goto loser;
@@ -817,10 +815,9 @@ PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
     if (c->object.cryptoContext) {
 	/* Delete the temp instance */
 	NSSCryptoContext *cc = c->object.cryptoContext;
-	nssCertificateStore_Lock(cc->certStore, &lockTrace);
+	nssCertificateStore_Lock(cc->certStore);
 	nssCertificateStore_RemoveCertLOCKED(cc->certStore, c);
-	nssCertificateStore_Unlock(cc->certStore, &lockTrace, &unlockTrace);
-        nssCertificateStore_Check(&lockTrace, &unlockTrace);
+	nssCertificateStore_Unlock(cc->certStore);
 	c->object.cryptoContext = NULL;
 	cert->istemp = PR_FALSE;
 	cert->isperm = PR_TRUE;
@@ -938,7 +935,6 @@ PK11_FindPrivateKeyFromCert(PK11SlotInfo *slot, CERTCertificate *cert,
     CK_OBJECT_HANDLE certh;
     CK_OBJECT_HANDLE keyh;
     CK_ATTRIBUTE *attrs = theTemplate;
-    PRBool needLogin;
     SECStatus rv;
 
     PK11_SETATTRS(attrs, CKA_VALUE, cert->derCert.data, 
@@ -957,18 +953,10 @@ PK11_FindPrivateKeyFromCert(PK11SlotInfo *slot, CERTCertificate *cert,
     if (certh == CK_INVALID_HANDLE) {
 	return NULL;
     }
-    /*
-     * prevent a login race condition. If slot is logged in between
-     * our call to pk11_LoginStillRequired and the 
-     * PK11_MatchItem. The matchItem call will either succeed, or
-     * we will call it one more time after calling PK11_Authenticate 
-     * (which is a noop on an authenticated token).
-     */
-    needLogin = pk11_LoginStillRequired(slot,wincx);
     keyh = PK11_MatchItem(slot,certh,CKO_PRIVATE_KEY);
     if ((keyh == CK_INVALID_HANDLE) && 
 			(PORT_GetError() == SSL_ERROR_NO_CERTIFICATE) && 
-			needLogin) {
+			pk11_LoginStillRequired(slot, wincx)) {
 	/* try it again authenticated */
 	rv = PK11_Authenticate(slot, PR_TRUE, wincx);
 	if (rv != SECSuccess) {
@@ -1007,18 +995,10 @@ PK11_KeyForCertExists(CERTCertificate *cert, CK_OBJECT_HANDLE *keyPtr,
 
     /* Look for the slot that holds the Key */
     for (le = list->head ; le; le = le->next) {
-	/*
-	 * prevent a login race condition. If le->slot is logged in between
-	 * our call to pk11_LoginStillRequired and the 
-	 * pk11_FindPrivateKeyFromCertID, the find will either succeed, or
-	 * we will call it one more time after calling PK11_Authenticate 
-	 * (which is a noop on an authenticated token).
-	 */
-	PRBool needLogin = pk11_LoginStillRequired(le->slot,wincx);
 	key = pk11_FindPrivateKeyFromCertID(le->slot,keyID);
 	if ((key == CK_INVALID_HANDLE) && 
 			(PORT_GetError() == SSL_ERROR_NO_CERTIFICATE) && 
-			needLogin) {
+			pk11_LoginStillRequired(le->slot,wincx)) {
 	    /* authenticate and try again */
 	    rv = PK11_Authenticate(le->slot, PR_TRUE, wincx);
 	    if (rv != SECSuccess) continue;
@@ -1573,25 +1553,16 @@ PK11_FindKeyByAnyCert(CERTCertificate *cert, void *wincx)
     CK_OBJECT_HANDLE keyHandle;
     PK11SlotInfo *slot = NULL;
     SECKEYPrivateKey *privKey = NULL;
-    PRBool needLogin;
     SECStatus rv;
 
     certHandle = PK11_FindObjectForCert(cert, wincx, &slot);
     if (certHandle == CK_INVALID_HANDLE) {
 	 return NULL;
     }
-    /*
-     * prevent a login race condition. If slot is logged in between
-     * our call to pk11_LoginStillRequired and the 
-     * PK11_MatchItem. The matchItem call will either succeed, or
-     * we will call it one more time after calling PK11_Authenticate 
-     * (which is a noop on an authenticated token).
-     */
-    needLogin = pk11_LoginStillRequired(slot,wincx);
     keyHandle = PK11_MatchItem(slot,certHandle,CKO_PRIVATE_KEY);
     if ((keyHandle == CK_INVALID_HANDLE) && 
 			(PORT_GetError() == SSL_ERROR_NO_CERTIFICATE) && 
-			needLogin) {
+			pk11_LoginStillRequired(slot,wincx)) {
 	/* authenticate and try again */
 	rv = PK11_Authenticate(slot, PR_TRUE, wincx);
 	if (rv == SECSuccess) {
@@ -1976,7 +1947,6 @@ pk11_findKeyObjectByDERCert(PK11SlotInfo *slot, CERTCertificate *cert,
     SECItem *keyID;
     CK_OBJECT_HANDLE key;
     SECStatus rv;
-    PRBool needLogin;
 
     if((slot == NULL) || (cert == NULL)) {
 	return CK_INVALID_HANDLE;
@@ -1987,18 +1957,10 @@ pk11_findKeyObjectByDERCert(PK11SlotInfo *slot, CERTCertificate *cert,
 	return CK_INVALID_HANDLE;
     }
 
-    /*
-     * prevent a login race condition. If slot is logged in between
-     * our call to pk11_LoginStillRequired and the 
-     * pk11_FindPrivateKeyFromCerID. The matchItem call will either succeed, or
-     * we will call it one more time after calling PK11_Authenticate 
-     * (which is a noop on an authenticated token).
-     */
-    needLogin = pk11_LoginStillRequired(slot,wincx);
     key = pk11_FindPrivateKeyFromCertID(slot, keyID);
     if ((key == CK_INVALID_HANDLE) && 
 			(PORT_GetError() == SSL_ERROR_NO_CERTIFICATE) && 
-			needLogin) {
+			pk11_LoginStillRequired(slot,wincx)) {
 	/* authenticate and try again */
 	rv = PK11_Authenticate(slot, PR_TRUE, wincx);
 	if (rv != SECSuccess) goto loser;
@@ -2430,46 +2392,3 @@ PK11_ListCertsInSlot(PK11SlotInfo *slot)
     return certs;
 }
 
-PK11SlotList *
-PK11_GetAllSlotsForCert(CERTCertificate *cert, void *arg)
-{
-    NSSCertificate *c = STAN_GetNSSCertificate(cert);
-    /* add multiple instances to the cert list */
-    nssCryptokiObject **ip;
-    nssCryptokiObject **instances = nssPKIObject_GetInstances(&c->object);
-    PK11SlotList *slotList;
-    PRBool found = PR_FALSE;
-
-    if (!cert) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return NULL;
-    }
-
-    if (!instances) {
-	PORT_SetError(SEC_ERROR_NO_TOKEN);
-	return NULL;
-    }
-
-    slotList = PK11_NewSlotList();
-    if (!slotList) {
-	nssCryptokiObjectArray_Destroy(instances);
-	return NULL;
-    }
-
-    for (ip = instances; *ip; ip++) {
-	nssCryptokiObject *instance = *ip;
-	PK11SlotInfo *slot = instance->token->pk11slot;
-	if (slot) {
-	    PK11_AddSlotToList(slotList, slot);
-	    found = PR_TRUE;
-	}
-    }
-    if (!found) {
-	PK11_FreeSlotList(slotList);
-	PORT_SetError(SEC_ERROR_NO_TOKEN);
-	slotList = NULL;
-    }
-
-    nssCryptokiObjectArray_Destroy(instances);
-    return slotList;
-}

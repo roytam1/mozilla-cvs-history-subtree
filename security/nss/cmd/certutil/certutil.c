@@ -70,8 +70,7 @@
 #include "nss.h"
 
 #define MIN_KEY_BITS		512
-/* MAX_KEY_BITS should agree with MAX_RSA_MODULUS in freebl */
-#define MAX_KEY_BITS		8192
+#define MAX_KEY_BITS		2048
 #define DEFAULT_KEY_BITS	1024
 
 #define GEN_BREAK(e) rv=e; break;
@@ -1139,7 +1138,7 @@ static void LongUsage(char *progName)
     FPS "%-20s sect233r1, nistb233, sect239k1, sect283k1, nistk283,\n", "");
     FPS "%-20s sect283r1, nistb283, sect409k1, nistk409, sect409r1,\n", "");
     FPS "%-20s nistb409, sect571k1, nistk571, sect571r1, nistb571,\n", "");
-    FPS "%-20s secp160k1, secp160r1, secp160r2, secp192k1, secp192r1,\n", "");
+    FPS "%-20s secp169k1, secp160r1, secp160r2, secp192k1, secp192r1,\n", "");
     FPS "%-20s nistp192, secp224k1, secp224r1, nistp224, secp256k1,\n", "");
     FPS "%-20s secp256r1, nistp256, secp384r1, nistp384, secp521r1,\n", "");
     FPS "%-20s nistp521, prime192v1, prime192v2, prime192v3, \n", "");
@@ -1391,7 +1390,7 @@ MakeV1Cert(	CERTCertDBHandle *	handle,
 		PRBool 			selfsign, 
 		unsigned int 		serialNumber,
 		int 			warpmonths,
-                int                     validityMonths)
+                int                     validitylength)
 {
     CERTCertificate *issuerCert = NULL;
     CERTValidity *validity;
@@ -1415,7 +1414,8 @@ MakeV1Cert(	CERTCertDBHandle *	handle,
 	now = PR_ImplodeTime (&printableTime);
 	PR_ExplodeTime (now, PR_GMTParameters, &printableTime);
     }
-    printableTime.tm_month += validityMonths;
+    printableTime.tm_month += validitylength;
+    printableTime.tm_month += 3;
     after = PR_ImplodeTime (&printableTime);
 
     /* note that the time is now in micro-second unit */
@@ -1561,7 +1561,7 @@ AddOidToSequence(CERTOidSequence *os, SECOidTag oidTag)
   return SECSuccess;
 }
 
-SEC_ASN1_MKSUB(SEC_ObjectIDTemplate)
+SEC_ASN1_MKSUB(SEC_ObjectIDTemplate);
 
 const SEC_ASN1Template CERT_OidSeqTemplate[] = {
     { SEC_ASN1_SEQUENCE_OF | SEC_ASN1_XTRN,
@@ -2189,7 +2189,7 @@ CreateCert(
 	SECOidTag hashAlgTag,
 	unsigned int serialNumber, 
 	int     warpmonths,
-	int     validityMonths,
+	int     validitylength,
 	const char *emailAddrs,
 	const char *dnsNames,
 	PRBool  ascii,
@@ -2224,7 +2224,7 @@ CreateCert(
 	}
 
 	subjectCert = MakeV1Cert (handle, certReq, issuerNickName, selfsign,
-				  serialNumber, warpmonths, validityMonths);
+				  serialNumber, warpmonths, validitylength);
 	if (subjectCert == NULL) {
 	    GEN_BREAK (SECFailure)
 	}
@@ -2367,7 +2367,7 @@ certutil_main(int argc, char **argv, PRBool initialize)
     int         publicExponent  = 0x010001;
     unsigned int serialNumber   = 0;
     int         warpmonths      = 0;
-    int         validityMonths  = 3;
+    int         validitylength  = 0;
     int         commandsEntered = 0;
     char        commandToRun    = '\0';
     secuPWData  pwdata          = { PW_NONE, 0 };
@@ -2576,8 +2576,8 @@ secuCommandFlag certutil_options[] =
 
     /*  -v validity period  */
     if (certutil.options[opt_Validity].activated) {
-	validityMonths = PORT_Atoi(certutil.options[opt_Validity].arg);
-	if (validityMonths < 0) {
+	validitylength = PORT_Atoi(certutil.options[opt_Validity].arg);
+	if (validitylength < 0) {
 	    PR_fprintf(PR_STDERR, "%s -v: incorrect validity period: \"%s\"\n",
 	               progName, certutil.options[opt_Validity].arg);
 	    return 255;
@@ -2994,7 +2994,7 @@ secuCommandFlag certutil_options[] =
 	rv = CreateCert(certHandle, 
 	                certutil.options[opt_IssuerName].arg,
 	                inFile, outFile, privkey, &pwdata, hashAlgTag,
-	                serialNumber, warpmonths, validityMonths,
+	                serialNumber, warpmonths, validitylength,
 		        certutil.options[opt_ExtendedEmailAddrs].arg,
 		        certutil.options[opt_ExtendedDNSNames].arg,
 	                certutil.options[opt_ASCIIForIO].activated,

@@ -432,7 +432,7 @@ CERT_CopyName(PRArenaPool *arena, CERTName *to, CERTName *from)
 	    return rv;
 	}
 	while ((frdn = *rdns++) != NULL) {
-	    trdn = CERT_CreateRDN(arena, NULL);
+	    trdn = CERT_CreateRDN(arena, 0);
 	    if (!trdn) {
 		rv = SECFailure;
 		break;

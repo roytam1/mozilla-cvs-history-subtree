@@ -489,13 +489,7 @@ RSA_CheckSign(NSSLOWKEYPublicKey *key,
     modulus_len = nsslowkey_PublicModulusLen(key);
     if (sign_len != modulus_len) 
     	goto failure;
-    /*
-     * 0x00 || BT || Pad || 0x00 || ActualData
-     *
-     * The "3" below is the first octet + the second octet + the 0x00
-     * octet that always comes just before the ActualData.
-     */
-    if (hash_len > modulus_len - (3 + RSA_BLOCK_MIN_PAD_LEN)) 
+    if (hash_len > modulus_len - 8) 
     	goto failure;
     PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
     if (key->keyType != NSSLOWKEYRSAKey)
@@ -515,11 +509,11 @@ RSA_CheckSign(NSSLOWKEYPublicKey *key,
     if (buffer[0] != 0 || buffer[1] != 1) 
     	goto loser;
     for (i = 2; i < modulus_len - hash_len - 1; i++) {
+	if (buffer[i] == 0) 
+	    break;
 	if (buffer[i] != 0xff) 
 	    goto loser;
     }
-    if (buffer[i] != 0) 
-	goto loser;
 
     /*
      * make sure we get the same results

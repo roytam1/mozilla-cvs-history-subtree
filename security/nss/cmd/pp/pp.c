@@ -169,7 +169,6 @@ int main(int argc, char **argv)
     } else {
 	fprintf(stderr, "%s: don't know how to print out '%s' files\n",
 		progName, typeTag);
-	SECU_PrintAny(outFile, &data, "File contains", 0);
 	return -1;
     }
 

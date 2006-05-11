@@ -67,7 +67,6 @@ perf_init()
 }
 
 perf_init
-cd ${PERFDIR}
 RSAPERF_OUT=`rsaperf -i 300 -s -n none`
 RSAPERF_OUT=`echo $RSAPERF_OUT | sed \
                 -e "s/^/RSAPERF: $OBJDIR /" \

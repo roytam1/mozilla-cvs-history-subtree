@@ -49,12 +49,7 @@
 #define CHECK_OK(func) if (func == NULL) goto cleanup
 #define CHECK_SEC_OK(func) if (SECSuccess != (rv = func)) goto cleanup
 
-/*
- * Initializes a SECItem from a hexadecimal string
- *
- * Warning: This function ignores leading 00's, so any leading 00's
- * in the hexadecimal string must be optional.
- */
+/* Initializes a SECItem from a hexadecimal string */
 static SECItem *
 hexString2SECItem(PRArenaPool *arena, SECItem *item, const char *str)
 {
@@ -64,12 +59,6 @@ hexString2SECItem(PRArenaPool *arena, SECItem *item, const char *str)
 
     if ((tmp % 2) != 0) return NULL;
     
-    /* skip leading 00's unless the hex string is "00" */
-    while ((tmp > 2) && (str[0] == '0') && (str[1] == '0')) {
-        str += 2;
-        tmp -= 2;
-    }
-
     item->data = (unsigned char *) PORT_ArenaAlloc(arena, tmp/2);
     if (item->data == NULL) return NULL;
     item->len = tmp/2;
@@ -147,8 +136,7 @@ EC_FillParams(PRArenaPool *arena, const SECItem *encodedParams,
     SECOidTag tag;
     SECItem oid = { siBuffer, NULL, 0};
     const ECCurveParams *curveParams;
-    /* 2 ['0'+'4'] + MAX_ECKEY_LEN * 2 [x,y] * 2 [hex string] + 1 ['\0'] */
-    char genenc[3 + 2 * 2 * MAX_ECKEY_LEN];
+    char genenc[2 + 2 * 2 * MAX_ECKEY_LEN];
 
 #if EC_DEBUG
     int i;

@@ -1313,6 +1313,68 @@ PK11_ExportPrivateKeyInfo(CERTCertificate *cert, void *wincx)
     return NULL;
 }
 
+static int
+pk11_private_key_encrypt_buffer_length(SECKEYPrivateKey *key)
+				
+{
+    CK_ATTRIBUTE rsaTemplate = { CKA_MODULUS, NULL, 0 };
+    CK_ATTRIBUTE dsaTemplate = { CKA_PRIME, NULL, 0 };
+    /* XXX We should normally choose an attribute such that
+     * factor times its size is enough to hold the private key.
+     * For EC keys, we have no choice but to use CKA_EC_PARAMS,
+     * CKA_VALUE is not available for token keys. But for named
+     * curves, the number of bytes needed to represent the params
+     * is quite small so we bump up factor from 10 to 15.
+     */
+    CK_ATTRIBUTE ecTemplate = { CKA_EC_PARAMS, NULL, 0 };
+    CK_ATTRIBUTE_PTR pTemplate;
+    CK_RV crv;
+    int length;
+    int factor = 10;
+
+    if(!key) {
+	return -1;
+    }
+
+    switch (key->keyType) {
+	case rsaKey:
+	    pTemplate = &rsaTemplate;
+	    break;
+	case dsaKey:
+	case dhKey:
+	    pTemplate = &dsaTemplate;
+	    break;
+        case ecKey:
+	    pTemplate = &ecTemplate;
+	    factor = 15;
+	    break;
+	case fortezzaKey:
+	default:
+	    pTemplate = NULL;
+    }
+
+    if(!pTemplate) {
+	return -1;
+    }
+
+    crv = PK11_GetAttributes(NULL, key->pkcs11Slot, key->pkcs11ID, 
+								pTemplate, 1);
+    if(crv != CKR_OK) {
+	PORT_SetError( PK11_MapError(crv) );
+	return -1;
+    }
+
+    length = pTemplate->ulValueLen;
+    length *= factor;
+
+
+    if(pTemplate->pValue != NULL) {
+	PORT_Free(pTemplate->pValue);
+    }
+
+    return length;
+}
+
 SECKEYEncryptedPrivateKeyInfo * 
 PK11_ExportEncryptedPrivKeyInfo(
    PK11SlotInfo     *slot,      /* optional, encrypt key in this slot */
@@ -1327,14 +1389,15 @@ PK11_ExportEncryptedPrivKeyInfo(
     SECAlgorithmID                *algid;
     SECItem                       *pbe_param = NULL;
     PK11SymKey                    *key       = NULL;
-    SECKEYPrivateKey		  *tmpPK = NULL;
     SECStatus                      rv        = SECSuccess;
+    int                            encryptBufLen;
     CK_RV                          crv;
-    CK_ULONG                       encBufLen;
+    CK_ULONG                       encBufLenPtr;
     CK_MECHANISM_TYPE              mechanism;
     CK_MECHANISM                   pbeMech;
     CK_MECHANISM                   cryptoMech;
     SECItem                        crypto_param;
+    SECItem                        encryptedKey = {siBuffer, NULL, 0};
 
     if (!pwitem || !pk) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -1398,59 +1461,57 @@ PK11_ExportEncryptedPrivKeyInfo(
     crypto_param.data = (unsigned char *)cryptoMech.pParameter;
     crypto_param.len = cryptoMech.ulParameterLen;
 
+
+    encryptBufLen = pk11_private_key_encrypt_buffer_length(pk); 
+    if(encryptBufLen == -1) {
+	rv = SECFailure;
+	goto loser;
+    }
+    encryptedKey.len = (unsigned int)encryptBufLen;
+    encBufLenPtr = (CK_ULONG) encryptBufLen;
+    encryptedKey.data = (unsigned char *)PORT_ZAlloc(encryptedKey.len);
+    if(!encryptedKey.data) {
+	rv = SECFailure;
+	goto loser;
+    }
+
     /* If the key isn't in the private key slot, move it */
     if (key->slot != pk->pkcs11Slot) {
 	PK11SymKey *newkey = pk11_CopyToSlot(pk->pkcs11Slot,
 						key->type, CKA_WRAP, key);
 	if (newkey == NULL) {
-	    tmpPK = pk11_loadPrivKey(key->slot, pk, NULL, PR_FALSE, PR_TRUE);
-	    if (tmpPK == NULL) {
-		/* couldn't import the wrapping key, couldn't export the
-		 * private key, we are done */
-		rv = SECFailure;
-		goto loser;
-	    }
-	    pk = tmpPK;
-	} else {
-	    /* free the old key and use the new key */
-	    PK11_FreeSymKey(key);
-	    key = newkey;
+	    rv= SECFailure;
+	    goto loser;
 	}
+
+	/* free the old key and use the new key */
+	PK11_FreeSymKey(key);
+	key = newkey;
     }
-    	
+	
     /* we are extracting an encrypted privateKey structure.
      * which needs to be freed along with the buffer into which it is
      * returned.  eventually, we should retrieve an encrypted key using
      * pkcs8/pkcs5.
      */
-    encBufLen = 0;
     PK11_EnterSlotMonitor(pk->pkcs11Slot);
     crv = PK11_GETTAB(pk->pkcs11Slot)->C_WrapKey(pk->pkcs11Slot->session, 
-    		&cryptoMech, key->objectID, pk->pkcs11ID, NULL, 
-		&encBufLen); 
+    		&cryptoMech, key->objectID, pk->pkcs11ID, encryptedKey.data, 
+		&encBufLenPtr); 
     PK11_ExitSlotMonitor(pk->pkcs11Slot);
-    if (crv != CKR_OK) {
-	rv = SECFailure;
-	goto loser;
-    }
-    epki->encryptedData.data = PORT_ArenaAlloc(arena, encBufLen);
-    if (!epki->encryptedData.data) {
-	rv = SECFailure;
-	goto loser;
-    }
-    PK11_EnterSlotMonitor(pk->pkcs11Slot);
-    crv = PK11_GETTAB(pk->pkcs11Slot)->C_WrapKey(pk->pkcs11Slot->session, 
-    		&cryptoMech, key->objectID, pk->pkcs11ID, 
-		epki->encryptedData.data, &encBufLen); 
-    PK11_ExitSlotMonitor(pk->pkcs11Slot);
-    epki->encryptedData.len = (unsigned int) encBufLen;
+    encryptedKey.len = (unsigned int) encBufLenPtr;
     if(crv != CKR_OK) {
 	rv = SECFailure;
 	goto loser;
     }
 
-    if(!epki->encryptedData.len) {
+    if(!encryptedKey.len) {
 	rv = SECFailure;
+	goto loser;
+    }
+    
+    rv = SECITEM_CopyItem(arena, &epki->encryptedData, &encryptedKey);
+    if(rv != SECSuccess) {
 	goto loser;
     }
 
@@ -1469,9 +1530,6 @@ loser:
 
     if(key != NULL) {
     	PK11_FreeSymKey(key);
-    }
-    if (tmpPK != NULL) {
-	SECKEY_DestroyPrivateKey(tmpPK);
     }
     SECOID_DestroyAlgorithmID(algid, PR_TRUE);
 
@@ -1968,7 +2026,6 @@ PK11_ListPublicKeysInSlot(PK11SlotInfo *slot, char *nickname)
     keys = SECKEY_NewPublicKeyList();
     if (keys == NULL) {
 	PORT_Free(key_ids);
-	return NULL;
     }
 
     for (i=0; i < objCount ; i++) {
@@ -2014,7 +2071,6 @@ PK11_ListPrivKeysInSlot(PK11SlotInfo *slot, char *nickname, void *wincx)
     keys = SECKEY_NewPrivateKeyList();
     if (keys == NULL) {
 	PORT_Free(key_ids);
-	return NULL;
     }
 
     for (i=0; i < objCount ; i++) {

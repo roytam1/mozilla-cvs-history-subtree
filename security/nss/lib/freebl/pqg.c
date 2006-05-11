@@ -78,8 +78,6 @@ static const unsigned char fips_186_1_a5_pqseed[] = {
 static SECStatus
 getPQseed(SECItem *seed, PRArenaPool* arena)
 {
-    SECStatus rv;
-
     if (!seed->data) {
         seed->data = (unsigned char*)PORT_ArenaZAlloc(arena, seed->len);
     }
@@ -91,15 +89,7 @@ getPQseed(SECItem *seed, PRArenaPool* arena)
     memcpy(seed->data, fips_186_1_a5_pqseed, seed->len);
     return SECSuccess;
 #else
-    rv = RNG_GenerateGlobalRandomBytes(seed->data, seed->len);
-    /*
-     * NIST CMVP disallows a sequence of 20 bytes with the most
-     * significant byte equal to 0.  Perhaps they interpret
-     * "a sequence of at least 160 bits" as "a number >= 2^159".
-     * So we always set the most significant bit to 1. (bug 334533)
-     */
-    seed->data[0] |= 0x80;
-    return rv;
+    return RNG_GenerateGlobalRandomBytes(seed->data, seed->len);
 #endif
 }
 
@@ -332,8 +322,8 @@ makeGfromH(const mp_int *P,     /* input.  */
     CHECK_MPI_OK( mp_init(&exp) );
     CHECK_MPI_OK( mp_init(&pm1) );
     CHECK_MPI_OK( mp_sub_d(P, 1, &pm1) );        /* P - 1            */
-    if ( mp_cmp(H, &pm1) >= 0)                   /* H >= P-1         */
-	CHECK_MPI_OK( mp_sub(H, &pm1, H) );      /* H = H mod (P-1)  */
+    if ( mp_cmp(H, &pm1) > 0)                   /* H = H mod (P-1)  */
+	CHECK_MPI_OK( mp_sub(H, &pm1, H) );
     /* Let b = 2**n (smallest power of 2 greater than P).
     ** Since P-1 >= b/2, and H < b, quotient(H/(P-1)) = 0 or 1
     ** so the above operation safely computes H mod (P-1)
@@ -402,7 +392,7 @@ PQG_ParamGenSeedLen(unsigned int j, unsigned int seedBytes,
     mp_err    err = MP_OKAY;
     SECStatus rv  = SECFailure;
     int iterations = 0;
-    if (j > 8 || seedBytes < 20 || !pParams || !pVfy) {
+    if (j > 8 || !pParams || !pVfy) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
@@ -548,7 +538,7 @@ step_15:
     **  in certifying the proper generation of p and q."
     */
     /* Generate h. */
-    SECITEM_AllocItem(NULL, &hit, L/8); /* h is no longer than p */
+    SECITEM_AllocItem(NULL, &hit, seedBytes); /* h is no longer than p */
     if (!hit.data) goto cleanup;
     do {
 	/* loop generate h until 1<h<p-1 and (h**[(p-1)/q])mod p > 1 */
