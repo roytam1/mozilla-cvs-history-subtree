@@ -106,8 +106,10 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
 
     // Account for small percentages expanding the preferred width of
     // *other* columns.
-    if (max_small_pct_pref > pref)
+    if (max_small_pct_pref > pref) {
+        pct_running_nonpct += (max_small_pct_pref - pref);
         pref = max_small_pct_pref;
+    }
 
     // Account for large percentages expanding the preferred width of
     // themselves.  This needs to happen *after* accounting for small
