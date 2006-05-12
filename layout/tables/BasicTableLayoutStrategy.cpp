@@ -116,7 +116,7 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     // percentages; otherwise we'd need to iterate over the columns
     // multiple times.  (I'm not entirely convinced that we don't need
     // to even so, but it seems ok.)
-    NS_ASSERTION(0.0f <= pct_running_pct && pct_running_pct < 1.0f,
+    NS_ASSERTION(0.0f <= pct_running_pct && pct_running_pct <= 1.0f,
                  "column percentage widths not adjusted down to 100%");
     if (pct_running_pct == 1.0f) {
         if (pref - pct_running_nonpct > 0) {
