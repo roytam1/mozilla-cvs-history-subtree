@@ -170,6 +170,15 @@ public:
   float GetPrefPercent() {
     return mPrefPercent;
   }
+  // Used to adjust a column's pref percent so that the table's total
+  // never exceeeds 100% (by only allowing percentages to be used,
+  // starting at the first column, until they reach 100%).
+  void AdjustPrefPercent(float *aTableTotalPercent) {
+    float allowed = 1.0f - *aTableTotalPercent;
+    if (mPrefPercent > allowed)
+      mPrefPercent = allowed;
+    *aTableTotalPercent += mPrefPercent;
+  }
 
   void SetFinalWidth(nscoord aFinalWidth) {
     mFinalWidth = aFinalWidth;

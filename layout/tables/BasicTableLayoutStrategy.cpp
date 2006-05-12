@@ -81,7 +81,7 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     nscoord min = 0, pref = 0, max_small_pct_pref = 0, pct_running_nonpct = 0;
-    float pct_running_pct = 0.0f;
+    float pct_running_pct = 0.0f; // always from 0.0f - 1.0f
     PRInt32 colCount = cellMap->GetColCount();
     nscoord spacing = mTableFrame->GetCellSpacingX();
 
@@ -93,7 +93,7 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
         // Percentages are of the table, so we have to reverse them for
         // intrinsic widths.
         float p = colFrame->GetPrefPercent();
-        if (0.0f < p && p < 1.0f) {
+        if (p > 0.0f) {
             nscoord new_small_pct_expand =
                 nscoord(float(colFrame->GetPrefCoord()) / p);
             if (new_small_pct_expand > max_small_pct_pref) {
@@ -116,7 +116,15 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     // percentages; otherwise we'd need to iterate over the columns
     // multiple times.  (I'm not entirely convinced that we don't need
     // to even so, but it seems ok.)
-    if (0.0f < pct_running_pct && pct_running_pct < 1.0f) {
+    NS_ASSERTION(0.0f <= pct_running_pct && pct_running_pct < 1.0f,
+                 "column percentage widths not adjusted down to 100%");
+    if (pct_running_pct == 1.0f) {
+        if (pref - pct_running_nonpct > 0) {
+            pref = nscoord_MAX;
+            // XXX Or should I use some smaller value?  (Test this using
+            // nested tables!)
+        }
+    } else {
         nscoord large_pct_pref = nscoord(float(pref - pct_running_nonpct) /
                                          (1.0f - pct_running_pct));
         if (large_pct_pref > pref)
@@ -184,7 +192,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     nscoord assigned = 0;
     nscoord grow_basis = 0;
     nscoord zoom_basis = 0;
-    float pct_basis = 0.0f;
+    float pct_basis = 0.0f; // 0.0f through 1.0f
     PRInt32 col;
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
@@ -291,9 +299,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                                                 colFrame->GetMinCoord());
                 break;
             case PCT_GROW:
-                if (colFrame->GetPrefPercent() != 0.0f)
-                    col_width += NSToCoordRound(u.f *
-                                                colFrame->GetPrefPercent());
+                col_width += NSToCoordRound(u.f * colFrame->GetPrefPercent());
                 break;
             case EQUAL_GROW:
                 col_width += u.c;

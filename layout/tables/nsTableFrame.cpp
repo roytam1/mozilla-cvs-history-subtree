@@ -3502,6 +3502,13 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
   float p2t = GetPresContext()->ScaledPixelsToTwips();
   nsTableCellMap *cellMap = GetCellMap();
 
+  // Prevent percentages from adding to more than 100% by (to be
+  // compatible with other browsers) treating any percentages that would
+  // increase the total percentage to more than 100% as the number that
+  // would increase it to only 100% (which is 0% if we've already hit
+  // 100%).
+  float pct_used = 0.0f;
+
   for (PRInt32 col = 0, col_end = cellMap->GetColCount();
        col < col_end; ++col) {
     nsTableColFrame *colFrame = GetColFrame(col);
@@ -3605,6 +3612,8 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       colFrame->AddPrefCoord(prefCoord);
       colFrame->AddPrefPercent(prefPercent);
     }
+
+    colFrame->AdjustPrefPercent(&pct_used);
   }
 }
 
