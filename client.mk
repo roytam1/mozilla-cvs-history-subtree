@@ -118,7 +118,6 @@ MODULES_core :=                                 \
   SeaMonkeyAll                                  \
   mozilla/browser/config/version.txt            \
   mozilla/mail/config/version.txt               \
-  mozilla/calendar/sunbird/config/version.txt   \
   mozilla/ipc/ipcd                              \
   mozilla/modules/libpr0n                       \
   mozilla/modules/libmar                        \
