@@ -159,7 +159,7 @@ zapMediaGraph::Run()
   if (!eventQService) return NS_ERROR_FAILURE;
   
 #ifdef SAME_THREAD_MEDIA_GRAPH
-  eventQService->GetSpecialEventQueue(nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE, getter_AddRefs(mEventQ));
+  eventQService->GetSpecialEventQueue(nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE, getter_AddRefs(mEventTarget));
 #else
   // create an event queue:
   eventQService->CreateFromIThread(mMediaThread, PR_FALSE,
@@ -493,12 +493,12 @@ zapMediaGraph::Shutdown()
   return NS_OK;
 }
 
-/* readonly attribute nsIEventQueue eventQueue; */
+/* readonly attribute nsIEventTarget eventTarget; */
 NS_IMETHODIMP
-zapMediaGraph::GetEventQueue(nsIEventQueue * *aEventQueue)
+zapMediaGraph::GetEventTarget(nsIEventTarget * *aEventTarget)
 {
-  *aEventQueue = mEventQ;
-  NS_IF_ADDREF(*aEventQueue);
+  *aEventTarget = mEventTarget;
+  NS_IF_ADDREF(*aEventTarget);
   return NS_OK;
 }
 
@@ -526,12 +526,12 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
   NS_ADDREF(mediaGraph);
 
   nsCOMPtr<nsIThread> mediaThread;
-  nsCOMPtr<nsIEventQueue> eventQ;
+  nsCOMPtr<nsIEventTarget> eventTarget;
 
 #ifdef SAME_THREAD_MEDIA_GRAPH
   nsIThread::GetCurrent(getter_AddRefs(mediaThread));
   eventQService->GetSpecialEventQueue(nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE,
-                                      getter_AddRefs(eventQ));
+                                      getter_AddRefs(eventTarget));
   // For the 'SAME THREAD' case, Run() doesn't go into an event loop,
   // but it still has to be called to initialize the media graph:
   rv = mediaGraph->Run();
@@ -565,8 +565,7 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
   
   // Return a proxy for the media graph:
   rv = NS_GetProxyForObject(eventQ, aIID, mediaGraph,
-                            PROXY_SYNC | PROXY_ALWAYS | PROXY_AUTOPROXIFY |
-                            PROXY_NESTED_QUEUES
+                            PROXY_SYNC | PROXY_ALWAYS | PROXY_AUTOPROXIFY
                             /* | PROXY_ISUPPORTS */,
                             result);
   if (NS_FAILED(rv)) {

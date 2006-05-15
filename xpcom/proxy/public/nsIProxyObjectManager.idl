@@ -79,6 +79,19 @@ interface nsIProxyObjectManager : nsISupports
     const long FORCE_PROXY_CREATION = 0x0004;
 
     /**
+     * 'Autoproxify' all interface parameters.
+     *
+     * Ensures that all 'in' interfaces are accessed on the caller's
+     * thread and all 'out' interfaces are accessed on this proxy's
+     * thread.  If a parameter is already proxied it will be accessed
+     * via the existing proxy.  'inout' parameters will not be
+     * proxified.
+     *
+     * For C++ callers, NS_PROXY_AUTOPROXIFY is a synonym for this flag.
+     */
+    const long AUTOPROXIFY = 0x0008;
+    
+    /**
      * Create a proxy for the given object.  The proxy implements the specified
      * interface, but when its methods are invoked, it causes the corresponding
      * method on the actual object to be called via the designated event
@@ -116,7 +129,8 @@ interface nsIProxyObjectManager : nsISupports
 #define NS_PROXY_SYNC    nsIProxyObjectManager::INVOKE_SYNC
 #define NS_PROXY_ASYNC   nsIProxyObjectManager::INVOKE_ASYNC
 #define NS_PROXY_ALWAYS  nsIProxyObjectManager::FORCE_PROXY_CREATION
-
+#define NS_PROXY_AUTOPROXIFY nsIProxyObjectManager::AUTOPROXIFY
+      
 /**
  * Pass this value as the target to {NS_}GetProxyForObject to specify the current
  * thread as the target for the proxy object.

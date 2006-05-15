@@ -45,9 +45,36 @@
 #include "zapIAudioIn.h"
 #include "nsCOMPtr.h"
 #include "portaudio.h"
-#include "nsIEventQueue.h"
 #include "nsIWritablePropertyBag2.h"
 #include "zapAudioStreamUtils.h"
+#include "nsThreadUtils.h"
+
+class zapAudioIn;
+
+////////////////////////////////////////////////////////////////////////
+// zapAudioInEvent
+// revocable event helper class 
+
+class zapAudioInEvent : public nsRunnable
+{
+public:
+  zapAudioInEvent(zapAudioIn* audioin)
+      : mAudioIn(audioin)
+  {
+  }
+
+  NS_IMETHOD Run();
+  
+  void Revoke() {
+    mAudioIn = nsnull;
+  }
+  
+  nsCString data;
+  double timestamp;
+
+private:
+  zapAudioIn *mAudioIn; // weak ref
+};
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioIn
@@ -72,9 +99,14 @@ public:
   NS_DECL_ZAPIAUDIOIN
 
 private:
+  friend class zapAudioInEvent;
+  nsRevocableEventPtr<zapAudioInEvent> mEvent;
+  
   nsresult StartStream();
   void CloseStream();
+  
   void CreateFrame(const nsACString& data, double timestamp);
+  void AudioInEventDone();
   
   // node parameters (set from zapIMediaGraph::AddNode()):
   PaDeviceID mInputDevice;
@@ -86,9 +118,8 @@ private:
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   
   nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
-  nsCOMPtr<nsIEventQueue> mEventQ; // media graph event queue
+  nsCOMPtr<nsIEventTarget> mEventTarget; // media graph event target
   
-  friend class zapAudioInSendEvent;
   friend int AudioInCallback(void* inputBuffer, void* outputBuffer,
                              unsigned long framesPerBuffer,
                              PaTimestamp outTime, void* userData);

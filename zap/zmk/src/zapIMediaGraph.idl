@@ -36,7 +36,7 @@
 
 #include "nsISupports.idl"
 interface nsIPropertyBag2;
-interface nsIEventQueue;
+interface nsIEventTarget;
 
 /**
  * \defgroup ZMK_MODULE ZAP Media Kit (ZMK) module
@@ -77,9 +77,9 @@ interface zapIMediaGraph : nsISupports
   void shutdown();
 
   /**
-   * The event queue for this media graph
+   * The event target for this media graph
    */
-  readonly attribute nsIEventQueue eventQueue;
+  readonly attribute nsIEventTarget eventTarget;
 };
 
 %{ C++

@@ -38,7 +38,7 @@
 #include "nsIServiceManager.h"
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
-#include "nsIEventQueue.h"
+#include "nsIEventTarget.h"
 #include "zapMediaUtils.h"
 #include "zapDatagramFrame.h"
 #include "nsICancelable.h"
@@ -151,7 +151,7 @@ zapStunBindingRequest::Init(zapStunClient* stunClient,
   }
 
   // XXX SRV lookup
-  nsCOMPtr<nsIEventQueue> eventQ;
+  nsCOMPtr<nsIEventTarget> eventTarget;
   stunClient->mGraph->GetEventQueue(getter_AddRefs(eventQ));
   nsCOMPtr<nsIDNSService> dnsService = do_GetService("@mozilla.org/network/dns-service;1");
   if (NS_FAILED(dnsService->AsyncResolve(mStunServerAddress, 0, this,

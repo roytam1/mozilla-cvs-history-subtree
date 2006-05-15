@@ -6,9 +6,11 @@
 #include "nsAutoPtr.h"
 #include "nsNetError.h"
 #include "nsNetCID.h"
+#include "nsProxyRelease.h"
 #include "prnetdb.h"
 #include "prio.h"
 #include "prerror.h"
+
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
@@ -69,96 +71,45 @@ NS_IMETHODIMP nsDatagram::GetPort(PRInt32 *aPort)
 
 typedef void (nsUDPSocket:: *nsUDPSocketFunc)(void);
 
-struct nsUDPSocketEvent : PLEvent
-{
-  nsUDPSocketEvent(nsUDPSocket *s, nsUDPSocketFunc f)
-    : func(f)
-  {
-    NS_ADDREF(s);
-    PL_InitEvent(this, s, EventHandler, EventCleanup);
-  }
-
-  PR_STATIC_CALLBACK(void *)
-  EventHandler(PLEvent *ev)
-  {
-    nsUDPSocket *s = (nsUDPSocket *) ev->owner;
-    nsUDPSocketEvent *event = (nsUDPSocketEvent *) ev;
-    nsUDPSocketFunc func = event->func;
-    (s->*func)();
-    return nsnull;
-  }
-
-  PR_STATIC_CALLBACK(void)
-  EventCleanup(PLEvent *ev)
-  {
-    nsUDPSocket *s = (nsUDPSocket *) ev->owner;
-    NS_RELEASE(s);
-    delete (nsUDPSocketEvent *) ev;
-  }
-
-  nsUDPSocketFunc func;
-};
-
 static nsresult
 PostEvent(nsUDPSocket *s, nsUDPSocketFunc func)
 {
-  nsUDPSocketEvent *ev = new nsUDPSocketEvent(s, func);
+  nsCOMPtr<nsIRunnable> ev = new nsRunnableMethod<nsUDPSocket>(s, func);
   if (!ev)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  nsresult rv = gSocketTransportService->PostEvent(ev);
-  if (NS_FAILED(rv))
-    PL_DestroyEvent(ev);
-  return rv;
+  return gSocketTransportService->Dispatch(ev, NS_DISPATCH_NORMAL);
 }
 
 //----------------------------------------------------------------------------
 // A 'send' event for proxying nsIUDPSocket::send onto the socket thread.
 // XXX Not sure its neccessary actually.
 
-struct nsUDPSendEvent : PLEvent
+class nsUDPSendEvent : public nsRunnable
 {
-  nsUDPSendEvent(nsUDPSocket *s, nsDatagram* dg)
-      : datagram(dg)
-  {
-    NS_ADDREF(s);
-    NS_ADDREF(dg);
-    PL_InitEvent(this, s, EventHandler, EventCleanup);
+public:
+  nsUDPSendEvent(nsUDPSocket *s, nsDatagram *dg)
+      : mSocket(s), mDatagram(dg) {
   }
 
-  PR_STATIC_CALLBACK(void *)
-  EventHandler(PLEvent *ev)
-  {
-    nsUDPSocket *s = (nsUDPSocket *) ev->owner;
-    nsUDPSendEvent *event = (nsUDPSendEvent *) ev;
-    s->OnMsgSend(event->datagram);
-    return nsnull;
+  NS_IMETHOD Run() {
+    mSocket->OnMsgSend(mDatagram);
+    return NS_OK;
   }
-
-  PR_STATIC_CALLBACK(void)
-  EventCleanup(PLEvent *ev)
-  {
-    nsUDPSocket *s = (nsUDPSocket *) ev->owner;
-    nsUDPSendEvent *event = (nsUDPSendEvent *) ev;
-    NS_RELEASE(s);
-    NS_RELEASE(event->datagram);
-    delete event;
-  }
-
-  nsDatagram *datagram;
+  
+private:
+  nsRefPtr<nsUDPSocket> mSocket;
+  nsRefPtr<nsDatagram> mDatagram;
 };
 
 static nsresult
 PostSendEvent(nsUDPSocket *s, nsDatagram *datagram)
 {
-  nsUDPSendEvent *ev = new nsUDPSendEvent(s, datagram);
+  nsCOMPtr<nsIRunnable> ev = new nsUDPSendEvent(s, datagram);
   if (!ev)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  nsresult rv = gSocketTransportService->PostEvent(ev);
-  if (NS_FAILED(rv))
-    PL_DestroyEvent(ev);
-  return rv;
+  return gSocketTransportService->Dispatch(ev, NS_DISPATCH_NORMAL);
 }
 
 //-----------------------------------------------------------------------------
@@ -274,16 +225,14 @@ nsUDPSocket::TryAttach()
   //
   if (!gSocketTransportService->CanAttachSocket())
   {
-    PLEvent *event = new nsUDPSocketEvent(this, &nsUDPSocket::OnMsgAttach);
+    nsCOMPtr<nsIRunnable> event =
+      NS_NEW_RUNNABLE_METHOD(nsUDPSocket, this, OnMsgAttach);
     if (!event)
       return NS_ERROR_OUT_OF_MEMORY;
 
     nsresult rv = gSocketTransportService->NotifyWhenCanAttachSocket(event);
     if (NS_FAILED(rv))
-    {
-      PL_DestroyEvent(event);
       return rv;
-    }
   }
 
   //
@@ -521,10 +470,10 @@ nsUDPSocket::SetReceiver(nsIUDPReceiver *aReceiver)
   NS_ENSURE_TRUE(mReceiver == nsnull, NS_ERROR_IN_PROGRESS);
   {
     nsAutoLock lock(mLock);
-    nsresult rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+    nsresult rv = NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
                                        NS_GET_IID(nsIUDPReceiver),
                                        aReceiver,
-                                       PROXY_ASYNC | PROXY_ALWAYS,
+                                       NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
                                        getter_AddRefs(mReceiver));
     if (NS_FAILED(rv))
       return rv;

@@ -44,7 +44,6 @@
 #include "nsIProxyObjectManager.h"
 #include "nsProxyEventPrivate.h"
 
-#include "nsIEventQueueService.h"
 #include "nsServiceManagerUtils.h"
 
 #include "nsHashtable.h"
@@ -55,41 +54,35 @@
 #include "nsAutoLock.h"
 
 static NS_DEFINE_IID(kProxyObject_Identity_Class_IID, NS_PROXYEVENT_IDENTITY_CLASS_IID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-
-static void* PR_CALLBACK ProxyObjectDestructorEventHandler(PLEvent *self);
-static void  PR_CALLBACK ProxyObjectDestructorDestroyHandler(PLEvent *self);
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
 class nsProxyEventKey : public nsHashKey
 {
 public:
-    nsProxyEventKey(void* rootObjectKey, void* destQueueKey, PRInt32 proxyType)
-        : mRootObjectKey(rootObjectKey), mDestQueueKey(destQueueKey), mProxyType(proxyType) {
+    nsProxyEventKey(void* rootObjectKey, void* targetKey, PRInt32 proxyType)
+        : mRootObjectKey(rootObjectKey), mTargetKey(targetKey), mProxyType(proxyType) {
     }
   
     PRUint32 HashCode(void) const {
         return NS_PTR_TO_INT32(mRootObjectKey) ^ 
-            NS_PTR_TO_INT32(mDestQueueKey) ^ mProxyType;
+            NS_PTR_TO_INT32(mTargetKey) ^ mProxyType;
     }
 
     PRBool Equals(const nsHashKey *aKey) const {
         const nsProxyEventKey* other = (const nsProxyEventKey*)aKey;
         return mRootObjectKey == other->mRootObjectKey
-            && mDestQueueKey == other->mDestQueueKey
+            && mTargetKey == other->mTargetKey
             && mProxyType == other->mProxyType;
     }
 
     nsHashKey *Clone() const {
-        return new nsProxyEventKey(mRootObjectKey, mDestQueueKey, mProxyType);
+        return new nsProxyEventKey(mRootObjectKey, mTargetKey, mProxyType);
     }
 
 protected:
     void*       mRootObjectKey;
-    void*       mDestQueueKey;
+    void*       mTargetKey;
     PRInt32     mProxyType;
 };
 
@@ -132,7 +125,7 @@ nsProxyEventObject::DebugDump(const char * message, PRUint32 hashKey)
     printf("%s wrapper around  @ %x\n", isRoot ? "ROOT":"non-root\n", GetRealObject());
 
     nsCOMPtr<nsISupports> rootObject = do_QueryInterface(mProxyObject->mRealObject);
-    nsCOMPtr<nsISupports> rootQueue = do_QueryInterface(mProxyObject->mDestQueue);
+    nsCOMPtr<nsISupports> rootQueue = do_QueryInterface(mProxyObject->mTarget);
     nsProxyEventKey key(rootObject, rootQueue, mProxyObject->mProxyType);
     printf("Hashkey: %d\n", key.HashCode());
         
@@ -172,7 +165,7 @@ nsProxyEventObject::DebugDump(const char * message, PRUint32 hashKey)
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 nsProxyEventObject* 
-nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
+nsProxyEventObject::GetNewOrUsedProxy(nsIEventTarget *target,
                                       PRInt32 proxyType, 
                                       nsISupports *aObj,
                                       REFNSIID aIID)
@@ -204,7 +197,7 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
         // if you hit this assertion, you might want to check out how 
         // you are using proxies.  You shouldn't need to be creating
         // a proxy from a proxy.  -- dougt@netscape.com
-        NS_ASSERTION(0, "Someone is building a proxy from a proxy");
+        NS_WARNING("Someone is building a proxy from a proxy");
         
         NS_ASSERTION(identificationObject, "where did my identification object go!");
         if (!identificationObject) {
@@ -234,7 +227,7 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
 
     // Get the root nsISupports of the event queue...  This is used later,
     // as part of the hashtable key...
-    nsCOMPtr<nsISupports> destQRoot = do_QueryInterface(destQueue, &rv);
+    nsCOMPtr<nsISupports> destQRoot = do_QueryInterface(target, &rv);
     if (NS_FAILED(rv) || !destQRoot) {
         return nsnull;
     }
@@ -252,10 +245,6 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
         return nsnull;
     }
 
-    nsCOMPtr<nsIEventQueueService> eventQService(do_GetService(kEventQueueServiceCID, &rv));
-    if (NS_FAILED(rv))
-        return nsnull;
-    
     nsAutoMonitor mon(manager->GetMonitor());
 
     // Get the hash table containing root proxy objects...
@@ -304,12 +293,11 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
             return nsnull;
         }
 
-        peo = new nsProxyEventObject(destQueue, 
+        peo = new nsProxyEventObject(target, 
                                      proxyType, 
                                      rootObject, 
                                      rootClazz, 
-                                     nsnull,
-                                     eventQService);
+                                     nsnull);
         if(!peo) {
             // Ouch... Out of memory!
             return nsnull;
@@ -357,12 +345,11 @@ nsProxyEventObject::GetNewOrUsedProxy(nsIEventQueue *destQueue,
         return nsnull;
     }
 
-    peo = new nsProxyEventObject(destQueue, 
+    peo = new nsProxyEventObject(target, 
                                  proxyType, 
                                  rawInterface, 
                                  proxyClazz, 
-                                 rootProxy,
-                                 eventQService);
+                                 rootProxy);
     if (!peo) {
         // Ouch... Out of memory!
         return nsnull;
@@ -407,19 +394,18 @@ nsProxyEventObject::nsProxyEventObject()
      NS_WARNING("This constructor should never be called");
 }
 
-nsProxyEventObject::nsProxyEventObject(nsIEventQueue *destQueue,
+nsProxyEventObject::nsProxyEventObject(nsIEventTarget *target,
                                        PRInt32 proxyType,
                                        nsISupports* aObj,
                                        nsProxyEventClass* aClass,
-                                       nsProxyEventObject* root,
-                                       nsIEventQueueService* eventQService)
+                                       nsProxyEventObject* root)
     : mClass(aClass),
       mRoot(root),
       mNext(nsnull)
 {
     NS_IF_ADDREF(mRoot);
 
-    mProxyObject = new nsProxyObject(destQueue, proxyType, aObj, eventQService);
+    mProxyObject = new nsProxyObject(target, proxyType, aObj);
 
 #ifdef DEBUG_xpcom_proxy
     DebugDump("Create", 0);
@@ -431,17 +417,7 @@ nsProxyEventObject::~nsProxyEventObject()
 #ifdef DEBUG_xpcom_proxy
     DebugDump("Delete", 0);
 #endif
-    
-    // Be pessimistic about whether the manager or even the monitor
-    // exist...  This is to protect against shutdown issues where a
-    // proxy object could be destroyed after (or while) the Proxy
-    // Manager is being destroyed...  
-    nsProxyObjectManager* manager = nsProxyObjectManager::GetInstance();
-
     if (mRoot) {
-        
-        nsAutoMonitor mon(manager ? manager->GetMonitor() : nsnull);
-        
         //
         // This proxy is not the root interface so it must be removed
         // from the chain of proxies...
@@ -464,16 +440,14 @@ nsProxyEventObject::~nsProxyEventObject()
         // to zero, it safe to remove it because no proxies are in its chain.
         //
         if (! nsProxyObjectManager::IsManagerShutdown()) {
-            
+            nsProxyObjectManager* manager = nsProxyObjectManager::GetInstance();
             nsHashtable *realToProxyMap = manager->GetRealObjectToProxyObjectMap();
 
             NS_ASSERTION(!mNext, "There are still proxies in the chain!");
 
             if (realToProxyMap != nsnull) {
-                nsAutoMonitor mon(manager->GetMonitor());
-        
                 nsCOMPtr<nsISupports> rootObject = do_QueryInterface(mProxyObject->mRealObject);
-                nsCOMPtr<nsISupports> rootQueue = do_QueryInterface(mProxyObject->mDestQueue);
+                nsCOMPtr<nsISupports> rootQueue = do_QueryInterface(mProxyObject->mTarget);
                 nsProxyEventKey key(rootObject, rootQueue, mProxyObject->mProxyType);
 #ifdef DEBUG_dougt
                 void* value =
@@ -502,45 +476,28 @@ NS_IMPL_THREADSAFE_ADDREF(nsProxyEventObject)
 NS_IMETHODIMP_(nsrefcnt)
 nsProxyEventObject::Release(void)
 {
+    //
+    // Be pessimistic about whether the manager or even the monitor exist...
+    // This is to protect against shutdown issues where a proxy object could
+    // be destroyed after (or while) the Proxy Manager is being destroyed...
+    //
+    nsProxyObjectManager* manager = nsProxyObjectManager::GetInstance();
+    nsAutoMonitor mon(manager ? manager->GetMonitor() : nsnull);
+
     nsrefcnt count;
     NS_PRECONDITION(0 != mRefCnt, "dup release");
-
+    // Decrement atomically - in case the Proxy Object Manager has already
+    // been deleted and the monitor is unavailable...
     count = PR_AtomicDecrement((PRInt32 *)&mRefCnt);
     NS_LOG_RELEASE(this, count, "nsProxyEventObject");
     if (0 == count) {
-        mRefCnt = 1; /* stabilize */        
+        mRefCnt = 1; /* stabilize */
         //
         // Remove the proxy from the hashtable (if necessary) or its
-        // proxy chain.  
-
-        if (!mRoot && (mProxyObject->GetProxyType() & PROXY_ISUPPORTS)) {
-            // we must make sure that this root proxy is deleted on
-            // the proxied object's thread
-            PRBool callDirectly;
-            mProxyObject->GetQueue()->IsOnCurrentThread(&callDirectly);
-            if (callDirectly)
-            {
-                NS_DELETEXPCOM(this);
-                return 0;
-            }
-
-            PLEvent *event = PR_NEW(PLEvent);
-            if (event == nsnull)
-            {
-                NS_ERROR("Could not create a plevent. Leaking nsProxyEventObject");
-                return 0;
-            }
-
-            PL_InitEvent(event,
-                         this,
-                         ProxyObjectDestructorEventHandler,
-                         ProxyObjectDestructorDestroyHandler);
-            
-            mProxyObject->GetQueue()->PostEvent(event);
-        }
-        else {
-            NS_DELETEXPCOM(this);
-        }
+        // proxy chain.  This must be done inside of the proxy lock to
+        // prevent GetNewOrUsedProxy(...) from ressurecting it...
+        //
+        NS_DELETEXPCOM(this);
         return 0;
     }
     return count;
@@ -596,16 +553,4 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
     }
 
     return rv;
-}
-
-static void* ProxyObjectDestructorEventHandler(PLEvent *self)
-{
-    nsProxyEventObject* owner = (nsProxyEventObject*) PL_GetEventOwner(self);
-    NS_DELETEXPCOM(owner);
-    return nsnull;
-}
-
-static void ProxyObjectDestructorDestroyHandler(PLEvent *self)
-{
-    PR_DELETE(self);
 }

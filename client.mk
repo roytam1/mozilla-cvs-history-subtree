@@ -194,6 +194,8 @@ LOCALES_core :=                                 \
 BOOTSTRAP_core :=                               \
   mozilla/browser/config/version.txt            \
   mozilla/mail/config/version.txt               \
+  mozilla/calendar/sunbird/config/version.txt   \
+  $(NULL)
 
 MODULES_NS_toolkit :=                           \
   $(MODULES_NS_core)                            \
@@ -399,7 +401,7 @@ MODULES_all :=                                  \
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_3_11_20060403_TAG
+NSS_CO_TAG           = NSS_3_11_20060512_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
 LOCALES_CO_TAG       =
 
@@ -1140,6 +1142,33 @@ echo_objdir:
 # js/src/xpconnect/Makefile.in
 # js/src/xpconnect/src/xpcmodule.cpp
 # js/src/xpconnect/src/xpcprivate.h
+# xpcom/threads/nsEventQueue.cpp
+# xpcom/threads/nsEventQueue.h
+# xpcom/threads/nsPIEventQueueChain.h (removed)
+# xpcom/threads/nsIEventQueue.idl (removed)
+# xpcom/threads/plevent.c (removed)
+# xpcom/threads/plevent.h (removed)
+# xpcom/proxy/public/nsProxyEvent.h (moved to ../src/)
+# xpcom/proxy/src/nsProxyObjectManager.cpp
+# xpcom/proxy/src/nsProxyEventObject.cpp 
+# xpcom/proxy/src/nsProxyEventPrivate.h 
+# extensions/jssh/ChangeLog
+# extensions/jssh/Makefile.in
+# extensions/jssh/install.js
+# extensions/jssh/jar.mn
+# extensions/jssh/nsIJSSh.idl
+# extensions/jssh/nsIJSShServer.idl
+# extensions/jssh/nsJSSh.cpp
+# extensions/jssh/nsJSSh.h
+# extensions/jssh/nsJSShModule.cpp
+# extensions/jssh/nsJSShServer.cpp
+# extensions/jssh/nsJSShServer.h
+# extensions/jssh/nsJSShStarter.js
+# extensions/jssh/resources/content/configure.xul
+# extensions/jssh/resources/content/contents.rdf
+# extensions/jssh/resources/content/jssh-debug.js
+# extensions/jssh/resources/content/tasksOverlay.xul
+# extensions/jssh/xemacs/moz-jssh.el
 
 ZAP_BRANCH_MODIFIED_FILES = \
 	js/src/xpconnect/Makefile.in \
@@ -1170,19 +1199,34 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	xpcom/io/Makefile.in \
 	xpcom/io/nsScriptableInputStream.cpp \
 	xpcom/io/nsScriptableInputStream.h \
-	xpcom/proxy/public/nsProxyEvent.h \
+	xpcom/proxy/public/nsIProxyObjectManager.idl \
 	xpcom/proxy/src/nsProxyEvent.cpp \
+	xpcom/proxy/src/nsProxyEvent.h \
 	xpcom/proxy/src/nsProxyEventClass.cpp \
 	xpcom/proxy/src/nsProxyEventObject.cpp \
 	xpcom/proxy/src/nsProxyEventPrivate.h \
 	xpcom/proxy/src/nsProxyObjectManager.cpp \
 	xpcom/threads/nsEventQueue.cpp \
 	xpcom/threads/nsEventQueue.h \
-	xpcom/threads/nsIEventQueue.idl \
-	xpcom/threads/nsPIEventQueueChain.h \
-	xpcom/threads/plevent.c \
-	xpcom/threads/plevent.h \
-	xpcom/reflect/xptcall/public/xptcall.h
+	xpcom/reflect/xptcall/public/xptcall.h \
+	extensions/jssh/ChangeLog \
+	extensions/jssh/Makefile.in \
+	extensions/jssh/install.js \
+	extensions/jssh/jar.mn \
+	extensions/jssh/nsIJSSh.idl \
+	extensions/jssh/nsIJSShServer.idl \
+	extensions/jssh/nsJSSh.cpp \
+	extensions/jssh/nsJSSh.h \
+	extensions/jssh/nsJSShModule.cpp \
+	extensions/jssh/nsJSShServer.cpp \
+	extensions/jssh/nsJSShServer.h \
+	extensions/jssh/nsJSShStarter.js \
+	extensions/jssh/resources/content/configure.xul \
+	extensions/jssh/resources/content/contents.rdf \
+	extensions/jssh/resources/content/jssh-debug.js \
+	extensions/jssh/resources/content/tasksOverlay.xul \
+	extensions/jssh/xemacs/moz-jssh.el
+
 
 ZAP_BRANCH_NEW_FILES = \
 	js/src/xpconnect/loader/ComponentUtils.jsm \
@@ -1194,8 +1238,8 @@ ZAP_BRANCH_NEW_FILES = \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \
 	xpcom/io/nsIScriptableInputStreamEx.idl \
-	zap \
-	extensions/jssh
+	zap
+
 
 
 commit_zap:

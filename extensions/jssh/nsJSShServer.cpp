@@ -1,10 +1,10 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* ----- BEGIN LICENSE BLOCK -----
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License
- * Version 1.1 (the "License"); you may not use this file except in
- * compliance with the License. You may obtain a copy of the License at
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
@@ -14,27 +14,27 @@
  *
  * The Original Code is Mozilla JavaScript Shell project.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Alex Fritze.
  * Portions created by the Initial Developer are Copyright (C) 2003
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *    Alex Fritze <alex@croczilla.com>
+ *   Alex Fritze <alex@croczilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the NPL, indicate your
+ * use your version of this file under the terms of the MPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
- * ----- END LICENSE BLOCK ----- */
+ * ***** END LICENSE BLOCK ***** */
 
 #include "nsJSShServer.h"
 #include "nsNetCID.h"
@@ -42,11 +42,10 @@
 #include "nsIComponentManager.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
-#include "nsIThread.h"
+#include "nsThreadUtils.h"
 #include "nsJSSh.h"
 
 static NS_DEFINE_CID(kServerSocketCID, NS_SERVERSOCKET_CID);
-static NS_DEFINE_CID(kThreadCID, NS_THREAD_CID);
 
 //**********************************************************************
 // ConnectionListener helper class
@@ -110,8 +109,9 @@ NS_IMETHODIMP ConnectionListener::OnSocketAccepted(nsIServerSocket *aServ, nsISo
 #endif
 
   nsCOMPtr<nsIRunnable> shell = CreateJSSh(input, output, mStartupURI);
-  nsCOMPtr<nsIThread> thread = do_CreateInstance(kThreadCID);
-  thread->Init(shell, 0, PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD , PR_UNJOINABLE_THREAD);
+
+  nsCOMPtr<nsIThread> thread;
+  NS_NewThread(getter_AddRefs(thread), shell);
   return NS_OK;
 }
 
@@ -210,8 +210,8 @@ nsJSShServer::RunShell(nsIInputStream *input, nsIOutputStream *output,
 {
   nsCOMPtr<nsIRunnable> shell = CreateJSSh(input, output, nsCString(startupURI));
   if (!blocking) {
-    nsCOMPtr<nsIThread> thread = do_CreateInstance(kThreadCID);
-    thread->Init(shell, 0, PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD , PR_UNJOINABLE_THREAD);
+    nsCOMPtr<nsIThread> thread;
+    NS_NewThread(getter_AddRefs(thread), shell);
   }
   else
     shell->Run();

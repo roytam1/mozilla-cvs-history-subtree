@@ -101,6 +101,18 @@ public:
     nsIEventTarget*     GetTarget() const { return mTarget; }
     PRInt32             GetProxyType() const { return mProxyType; }
 
+    nsresult AutoproxifyInParameterList(nsXPTCVariant *params,
+                                        uint8 paramCount,
+                                        nsXPTMethodInfo *methodInfo,
+                                        PRUint32 methodIndex,
+                                        nsIInterfaceInfo* interfaceInfo);
+    nsresult AutoproxifyOutParameterList(nsXPTCVariant *params,
+                                         uint8 paramCount,
+                                         nsXPTMethodInfo *methodInfo,
+                                         PRUint32 methodIndex,
+                                         nsIInterfaceInfo* interfaceInfo,
+                                         PRBool proxifyOutPars = PR_TRUE);
+    
     friend class nsProxyEventObject;
 private:
     
@@ -128,11 +140,14 @@ public:
                           nsXPTMethodInfo *methodInfo,
                           PRUint32 methodIndex, 
                           nsXPTCVariant* parameterList, 
-                          PRUint32 parameterCount, 
+                          PRUint32 parameterCount,
+                          nsIInterfaceInfo *interfaceInfo,
                           nsIRunnable *event);
 
     ~nsProxyObjectCallInfo();
 
+    nsresult Init();
+    
     PRUint32            GetMethodIndex() const { return mMethodIndex; }
     nsXPTCVariant*      GetParameterList() const { return mParameterList; }
     PRUint32            GetParameterCount() const { return mParameterCount; }
@@ -156,6 +171,7 @@ private:
     PRUint32         mMethodIndex;               /* which method to be called? */
     nsXPTCVariant   *mParameterList;             /* marshalled in parameter buffer */
     PRUint32         mParameterCount;            /* number of params */
+    nsCOMPtr<nsIInterfaceInfo> mInterfaceInfo;   /* interface info for current interface */
     nsIRunnable     *mEvent;                     /* the current runnable */
     PRInt32          mCompleted;                 /* is true when the method has been called. */
        

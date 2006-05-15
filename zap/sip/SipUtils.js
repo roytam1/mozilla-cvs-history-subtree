@@ -48,7 +48,7 @@ Components.utils.importModule("gre:FunctionUtils.js");
 Components.utils.importModule("gre:AsyncUtils.js");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
-                    "getSIPEventQ",
+                    "getSIPThread",
                     "getProxyOnSIPThread",
                     "gSyntaxFactory",
                     "getDNSService",
@@ -84,7 +84,7 @@ var BRANCH_COOKIE = "z9hG4bK";
 // The SIP stack runs on the main UI thread; handing off to other
 // threads for asynchronous actions, such as sending data or querying
 // dns.
-var getSIPEventQ = getUIEventQ; // from AsyncUtils.js
+var getSIPThread = getMainThread; // from AsyncUtils.js
 
 // Some of our objects need to be manually proxied so that they only
 // get called on the main SIP thread,
@@ -95,12 +95,15 @@ var getSIPEventQ = getUIEventQ; // from AsyncUtils.js
 // QueryInterface in js though, because we want to be able to call
 // js objects transparently from js or c++.
 function getProxyOnSIPThread(aObject, aInterface) {
-    var proxyManager = Components. classes["@mozilla.org/xpcomproxy;1"].
-            getService(Components.interfaces.nsIProxyObjectManager);
+  var IProxyManager = Components.interfaces.nsIProxyManager;
+  
+  var proxyManager = Components. classes["@mozilla.org/xpcomproxy;1"].
+    getService(IProxyManager);
 
-    return proxyManager.getProxyForObject(getSIPEventQ(),
-                                          aInterface, aObject, 5);
-    // 5 == PROXY_ALWAYS | PROXY_SYNC
+  return proxyManager.getProxyForObject(getSIPThread(),
+                                        aInterface, aObject,
+                                        IProxyManager.INVOKE_SYNC |
+                                        IProxyManager.FORCE_PROXY_CREATION);
 }
 
 

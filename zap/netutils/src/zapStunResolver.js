@@ -119,7 +119,7 @@ zapStunResolver.fun(
     else
       this.defaultPort = 3478;
     // firstly look up the stun server address:
-    getDNSService().asyncResolve(host, 0, this, getUIEventQ());
+    getDNSService().asyncResolve(host, 0, this, getMainThread());
     // -> onLookupComplete
   });
 

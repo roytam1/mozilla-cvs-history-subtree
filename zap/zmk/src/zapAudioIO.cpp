@@ -202,7 +202,7 @@ zapAudioIO::AddedToGraph(zapIMediaGraph *graph,
   // down.
   mGraph = graph;
   
-  graph->GetEventQueue(getter_AddRefs(mEventQ));
+  graph->GetEventTarget(getter_AddRefs(mEventTarget));
 
   // node parameter defaults:
   mInputDevice = Pa_GetDefaultInputDeviceID();
@@ -246,7 +246,7 @@ zapAudioIO::RemovedFromGraph(zapIMediaGraph *graph)
   printf("(audioio removed from graph)");
 #endif
   CloseStream();
-  mEventQ = nsnull;
+  mEventTarget = nsnull;
   return NS_OK;
 }
 
@@ -417,19 +417,18 @@ int AudioIOCallback(void* inputBuffer, void* outputBuffer,
 {
   zapAudioIO* audioio = (zapAudioIO*)userData;
   
-  audioio->mEventQ->EnterMonitor();
-  void* result=(void*)PR_FALSE;
+  //audioio->mEventQ->EnterMonitor();
   // only post event if we're still supposed to be running:
   // (otherwise we might end in deadlock)
   if (audioio->mKeepRunning) {
     zapAudioIOEvent* ev = new zapAudioIOEvent(audioio, outTime,
                                               inputBuffer, outputBuffer);
-    audioio->mEventQ->PostSynchronousEvent(ev, &result);
+    audioio->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
   }
-  audioio->mEventQ->ExitMonitor();
+  //audioio->mEventQ->ExitMonitor();
 
-  // stop stream if event was cancelled or mKeepRunning is false
-  return (result==(void*)PR_TRUE ? 0 : 1);
+  // stop stream if mKeepRunning is false
+  return !mKeepRunning;
 }
 
 //----------------------------------------------------------------------

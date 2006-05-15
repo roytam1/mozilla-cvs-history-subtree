@@ -38,7 +38,7 @@
 #include "nsIServiceManager.h"
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
-#include "nsIEventQueue.h"
+#include "nsIEventTarget.h"
 #include "zapMediaUtils.h"
 #include "zapDatagramFrame.h"
 

@@ -93,7 +93,7 @@ SipResolver.fun(
       }
     };
     
-    getDNSService().asyncResolve(uri.host, 0, dnsListener, getSIPEventQ());
+    getDNSService().asyncResolve(uri.host, 0, dnsListener, getSIPThread());
     
   });
 

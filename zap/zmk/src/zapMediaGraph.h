@@ -38,7 +38,7 @@
 #define __ZAP_MEDIAGRAPH_H__
 
 #include "zapIMediaGraph.h"
-#include "nsIEventQueue.h"
+#include "nsIEventTarget.h"
 #include "nsIThread.h"
 #include "nsIRunnable.h"
 #include "nsCOMPtr.h"
@@ -134,7 +134,7 @@ private:
   void RemoveNodeDescriptorConnections(NodeDescriptor* d);
   
   nsCOMPtr<nsIThread> mMediaThread;
-  nsCOMPtr<nsIEventQueue> mEventQ;
+  nsCOMPtr<nsIEventTarget> mEventTarget;
   PRBool mPumpingEvents;
   PRUint32 mNodeIdCounter;
   PRUint32 mConnectionIdCounter;

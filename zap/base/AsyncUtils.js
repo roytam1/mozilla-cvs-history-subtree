@@ -38,7 +38,7 @@
 Components.utils.importModule("gre:FunctionUtils.js");
 
 
-EXPORTED_SYMBOLS = [ "getUIEventQ",
+EXPORTED_SYMBOLS = [ "getMainThread",
                      "makeOneShotTimer",
                      "resetOneShotTimer",
                      "schedule",
@@ -50,13 +50,13 @@ var _doc_ = {};
 
 
 ////////////////////////////////////////////////////////////////////////
-// Event queues
+// Threads
 
-var getEventQService = makeServiceGetter("@mozilla.org/event-queue-service;1",
-                                         Components.interfaces.nsIEventQueueService);
+var getThreadManager = makeServiceGetter("@mozilla.org/thread-manager;1",
+                                         Components.interfaces.nsIThreadManager);
 
-function getUIEventQ() {
-  return getEventQService().getSpecialEventQueue(Components.interfaces.nsIEventQueueService.UI_THREAD_EVENT_QUEUE);
+function getMainThread() {
+  return getThreadManager().mainThread;
 }
 
 ////////////////////////////////////////////////////////////////////////

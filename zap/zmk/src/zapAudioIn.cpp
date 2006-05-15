@@ -42,6 +42,19 @@
 #include "nsIProxyObjectManager.h"
 #include "nsAutoLock.h"
 
+///////////////////////////////////////////////////////////////////////
+// zapAudioInEvent
+
+NS_IMETHODIMP
+zapAudioInEvent::Run()
+{
+  if (!mAudioIn) return NS_OK;
+  
+  mAudioIn->CreateFrame(data, timestamp);
+  mAudioIn->AudioInEventDone();
+  return NS_OK;
+}
+
 ////////////////////////////////////////////////////////////////////////
 // zapAudioIn
 
@@ -103,7 +116,7 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
   // down.
   mGraph = graph;
   
-  graph->GetEventQueue(getter_AddRefs(mEventQ));
+  graph->GetEventTarget(getter_AddRefs(mEventTarget));
   
   // node parameter defaults:
   mInputDevice = Pa_GetDefaultInputDeviceID();
@@ -144,7 +157,7 @@ zapAudioIn::RemovedFromGraph(zapIMediaGraph *graph)
   printf("(audioin removed from graph)");
 #endif
   Stop();
-  mEventQ = nsnull;
+  mEventTarget = nsnull;
   return NS_OK;
 }
 
@@ -211,7 +224,7 @@ zapAudioIn::ProduceFrame(zapIMediaFrame ** frame)
 NS_IMETHODIMP
 zapAudioIn::Play()
 {
-  if (!mEventQ)
+  if (!mEventTarget)
     return NS_ERROR_FAILURE;
   
   if (!mStream)
@@ -245,34 +258,6 @@ zapAudioIn::GetDefaultInputDevice(zapIAudioDevice * *aDefaultInputDevice)
 //----------------------------------------------------------------------
 // portaudio audio source callback:
 
-class zapAudioInSendEvent : public PLEvent
-{
-public:
-  zapAudioInSendEvent(zapAudioIn* audioin)
-  {
-    PL_InitEvent(this, audioin, EventHandler, EventCleanup);
-  }
-
-  PR_STATIC_CALLBACK(void *) EventHandler(PLEvent* ev)
-  {
-    zapAudioInSendEvent* rev = (zapAudioInSendEvent*) ev;
-    zapAudioIn* audioin = (zapAudioIn*) ev->owner;
-
-    audioin->CreateFrame(rev->data, rev->timestamp);
-    
-    return (void*)PR_TRUE;
-  }
-
-  PR_STATIC_CALLBACK(void) EventCleanup(PLEvent* ev)
-  {
-    delete (zapAudioInSendEvent*) ev;
-  }
-
-  nsCString data;
-  double timestamp;
-};
-
-
 int AudioInCallback(void* inputBuffer, void* outputBuffer,
                     unsigned long framesPerBuffer,
                     PaTimestamp outTime, void* userData)
@@ -293,21 +278,20 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
   }
   
   // Post the frame. We need to do this synchronously to pace the callback.
-  audioin->mEventQ->EnterMonitor();
+
+  // XXX We should really enter the event queue's monitor here
   // Unlock the callback lock, so that the stream can be closed while
   // we're waiting for the event. It is important to do this AFTER
   // entering the eventQ monitor but BEFORE posting, to coordinate the
   // request revocation in CloseStream()
   lock.unlock();
-  zapAudioInSendEvent* ev = new zapAudioInSendEvent(audioin);
+  nsRefPtr<zapAudioInEvent> ev = new zapAudioInEvent(audioin);
   PRUint32 bufferLength = audioin->mStreamParameters.GetSamplesPerFrame() * GetPortAudioSampleSize(audioin->mStreamParameters.sample_format);
   ev->data.SetLength(bufferLength);
   memcpy(ev->data.BeginWriting(), inputBuffer, bufferLength);
   ev->timestamp = outTime;
     
-  void* result;
-  audioin->mEventQ->PostSynchronousEvent(ev, &result);
-  audioin->mEventQ->ExitMonitor();
+  audioin->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
   
 #ifdef DEBUG_afri_zmk
 //  printf("}");
@@ -365,9 +349,7 @@ void zapAudioIn::CloseStream()
   mKeepRunning = PR_FALSE;
   lock.unlock();
   // cancel any outstanding CreateFrame() notifications:
-  mEventQ->EnterMonitor();
-  mEventQ->RevokeEvents(this);
-  mEventQ->ExitMonitor();
+  mEvent.Revoke();
 
   Pa_CloseStream(mStream);
   mStream = nsnull;
@@ -402,4 +384,9 @@ void zapAudioIn::CreateFrame(const nsACString& data, double timestamp)
   frame->mTimestamp = (PRUint32)timestamp;
 
   mOutput->ConsumeFrame(frame);
+}
+
+void zapAudioIn::AudioInEventDone()
+{
+  mEvent.Forget();
 }

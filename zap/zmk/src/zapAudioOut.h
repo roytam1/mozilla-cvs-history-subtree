@@ -45,7 +45,7 @@
 #include "zapIAudioOut.h"
 #include "nsCOMPtr.h"
 #include "portaudio.h"
-#include "nsIEventQueue.h"
+#include "nsIEventTarget.h"
 #include "nsIPropertyBag2.h"
 #include "zapAudioStreamUtils.h"
 
@@ -83,7 +83,7 @@ private:
   void CloseStream();
     
   nsCOMPtr<zapIMediaGraph> mGraph;
-  nsCOMPtr<nsIEventQueue> mEventQ;   // media graph event queue
+  nsCOMPtr<nsIEventTarget> mEventTarget;   // media graph event target
 
   // node parameters (set in zapIMediaGraph::AddNode()):
   PaDeviceID mOutputDevice;
