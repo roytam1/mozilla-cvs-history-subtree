@@ -78,6 +78,7 @@
 #include "nsNativeCharsetUtils.h"
 #include <windows.h>
 #include <process.h>
+#include <imm.h>
 
 #ifdef WINCE
 
@@ -672,6 +673,11 @@ static PRBool is_vk_down(int vk)
 
 // VC++5.0 header doesn't have reconvertion structure and message.
 #ifndef WM_IME_REQUEST
+#define WM_IME_REQUEST                  0x0288
+#endif    // #ifndef WM_IME_REQUEST
+
+#ifndef IMR_RECONVERTSTRING
+#define IMR_RECONVERTSTRING             0x0004
 typedef struct tagRECONVERTSTRING {
     DWORD dwSize;
     DWORD dwVersion;
@@ -682,7 +688,10 @@ typedef struct tagRECONVERTSTRING {
     DWORD dwTargetStrLen;
     DWORD dwTargetStrOffset;
 } RECONVERTSTRING, FAR * LPRECONVERTSTRING;
+#endif    // #ifndef IMR_RECONVERTSTRING
 
+#ifndef IMR_QUERYCHARPOSITION
+#define IMR_QUERYCHARPOSITION           0x0006
 typedef struct tagIMECHARPOSITION {
     DWORD dwSize;
     DWORD dwCharPos;
@@ -690,11 +699,7 @@ typedef struct tagIMECHARPOSITION {
     UINT  cLineHeight;
     RECT  rcDocument;
 } IMECHARPOSITION, *PIMECHARPOSITION;
-
-#define IMR_RECONVERTSTRING             0x0004
-#define IMR_QUERYCHARPOSITION           0x0006
-#define WM_IME_REQUEST                  0x0288
-#endif
+#endif    // #ifndef IMR_QUERYCHARPOSITION
 
 // from http://msdn.microsoft.com/library/specs/msime.h
 #define RWM_RECONVERT       TEXT("MSIMEReconvert")
@@ -717,7 +722,9 @@ typedef struct tagIMECHARPOSITION {
 //
 #ifndef WM_APPCOMMAND
 #define WM_APPCOMMAND  0x0319
+#endif
 
+#ifndef APPCOMMAND_BROWSER_BACKWARD
 #define APPCOMMAND_BROWSER_BACKWARD       1
 #define APPCOMMAND_BROWSER_FORWARD        2
 #define APPCOMMAND_BROWSER_REFRESH        3
@@ -754,7 +761,7 @@ typedef struct tagIMECHARPOSITION {
 //#define GET_FLAGS_LPARAM(lParam)      (LOWORD(lParam))
 //#define GET_KEYSTATE_LPARAM(lParam)   GET_FLAGS_LPARAM(lParam)
 
-#endif  // #ifndef WM_APPCOMMAND
+#endif  // #ifndef APPCOMMAND_BROWSER_BACKWARD
 
 static PRBool LangIDToCP(WORD aLangID, UINT& oCP)
 {
