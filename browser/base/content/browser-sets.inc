@@ -142,9 +142,9 @@
     <command id="View:PageSource" oncommand="BrowserViewSourceOfDocument(content.document);" observes="isImage"/>
     <command id="View:PageInfo" oncommand="BrowserPageInfo();"/>
     <command id="View:FullScreen" oncommand="BrowserFullScreen();"/>
-    <command id="cmd_find" oncommand="onFindCmd();" observes="isImage"/>
-    <command id="cmd_findAgain" oncommand="onFindAgainCmd();" observes="isImage"/>
-    <command id="cmd_findPrevious" oncommand="onFindPreviousCmd();" observes="isImage"/>    
+    <command id="cmd_find" oncommand="gFindBar.onFindCmd();" observes="isImage"/>
+    <command id="cmd_findAgain" oncommand="gFindBar.onFindAgainCmd();" observes="isImage"/>
+    <command id="cmd_findPrevious" oncommand="gFindBar.onFindPreviousCmd();" observes="isImage"/>    
 #ifdef MOZ_PLACES
     <command id="Browser:AddBookmarkAs" 
              oncommand="PlacesCommandHook.bookmarkCurrentPage();"/>

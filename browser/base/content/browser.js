@@ -751,10 +751,10 @@ function BrowserStartup()
 
   var sidebarSplitter;
   if (window.opener && !window.opener.closed) {
-    if (window.opener.gFindMode == FIND_NORMAL) {
+    if (window.opener.gFindBar && window.opener.gFindBar.mFindMode == FIND_NORMAL) {
       var openerFindBar = window.opener.document.getElementById("FindToolbar");
       if (openerFindBar && !openerFindBar.hidden)
-        openFindBar();
+        gFindBar.openFindBar();
     }
 
     var openerSidebarBox = window.opener.document.getElementById("sidebar-box");
@@ -951,7 +951,7 @@ function delayedStartup()
     sidebar.setAttribute("src", sidebarBox.getAttribute("src"));
   }
 
-  initFindBar();
+  gFindBar.initFindBar();
 
 #ifndef MOZ_PLACES
   // add bookmark options to context menu for tabs
@@ -1129,7 +1129,7 @@ function BrowserShutdown()
 
   BrowserOffline.uninit();
 
-  uninitFindBar();
+  gFindBar.uninitFindBar();
 
   var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
   var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
@@ -2535,7 +2535,7 @@ function toggleAffectedChrome(aHide)
 
     var findBar = document.getElementById("FindToolbar");
     gChromeState.findOpen = !findBar.hidden;
-    closeFindBar();
+    gFindBar.closeFindBar();
   }
   else {
     if (gChromeState.notificationsOpen) {
@@ -2548,7 +2548,7 @@ function toggleAffectedChrome(aHide)
     }
 
     if (gChromeState.findOpen)
-      openFindBar();
+      gFindBar.openFindBar();
   }
 
   if (gChromeState.sidebarOpen)
@@ -3773,9 +3773,9 @@ nsBrowserStatusHandler.prototype =
       }
     }
     UpdateBackForwardButtons();
-    if (findField && gFindMode != FIND_NORMAL) {
+    if (findField && gFindBar.mFindMode != FIND_NORMAL) {
       // Close the Find toolbar if we're in old-style TAF mode
-      closeFindBar();
+      gFindBar.closeFindBar();
     }
 
     //fix bug 253793 - turn off highlight when page changes
