@@ -223,8 +223,7 @@ menuitem.bookmark-item {
   -moz-margin-end: 0px;
 }
 
-toolbar[mode="full"] .toolbarbutton-1,
-toolbar[mode="full"] .toolbarbutton-menubutton-button {
+toolbar[mode="full"] .toolbarbutton-1 {
   min-width: 57px;
 }
 
