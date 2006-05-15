@@ -2531,7 +2531,7 @@ nsBookmarksService::Release()
     }
 }
 
-NS_IMPL_QUERY_INTERFACE9(nsBookmarksService, 
+NS_IMPL_QUERY_INTERFACE10(nsBookmarksService,
              nsIBookmarksService,
              nsIRDFDataSource,
              nsIRDFRemoteDataSource,
@@ -2539,6 +2539,7 @@ NS_IMPL_QUERY_INTERFACE9(nsBookmarksService,
              nsIRDFObserver,
              nsIStreamListener,
              nsIRequestObserver,
+             nsICharsetResolver,
              nsIObserver,
              nsISupportsWeakReference)
 
