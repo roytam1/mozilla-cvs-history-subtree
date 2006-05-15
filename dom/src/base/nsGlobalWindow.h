@@ -129,7 +129,7 @@ class WindowStateHolder;
 // belonging to the same outer window, but that's an unimportant
 // side effect of inheriting PRCList).
 
-class nsGlobalWindow : public nsPIDOMWindow,
+class nsGlobalWindow : public nsPIDOMWindow_MOZILLA_1_8_BRANCH,
                        public nsIScriptGlobalObject,
                        public nsIDOMJSWindow,
                        public nsIScriptObjectPrincipal,
@@ -224,6 +224,11 @@ public:
 
   virtual NS_HIDDEN_(PRBool) WouldReuseInnerWindow(nsIDocument *aNewDocument);
 
+  // nsPIDOMWindow_MOZILLA_1_8_BRANCH
+  virtual NS_HIDDEN_(void) SetOpenerWindow(nsIDOMWindowInternal *aOpener,
+                                           PRBool aOriginalOpener);
+
+  
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
 
@@ -468,7 +473,7 @@ protected:
   // close us when the JS stops executing or that we have a close
   // event posted.  If this is set, just ignore window.close() calls.
   PRPackedBool                  mHavePendingClose : 1;
-  PRPackedBool                  mOpenerWasCleared : 1;
+  PRPackedBool                  mHadOriginalOpener : 1;
   PRPackedBool                  mIsPopupSpam : 1;
 
   nsCOMPtr<nsIScriptContext>    mContext;
@@ -507,6 +512,10 @@ protected:
   // These member variables are used on both inner and the outer windows.
   nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
   JSObject* mJSObject;
+
+#ifdef DEBUG
+  PRBool mSetOpenerWindowCalled;
+#endif
 
   friend class nsDOMScriptableHelper;
   friend class nsDOMWindowUtils;

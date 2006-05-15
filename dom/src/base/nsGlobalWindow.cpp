@@ -302,13 +302,13 @@ static const char kPkcs11ContractID[] = NS_PKCS11_CONTRACTID;
 //*****************************************************************************
 
 nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
-  : nsPIDOMWindow(aOuterWindow),
+  : nsPIDOMWindow_MOZILLA_1_8_BRANCH(aOuterWindow),
     mIsFrozen(PR_FALSE),
     mFullScreen(PR_FALSE),
     mIsClosed(PR_FALSE), 
     mInClose(PR_FALSE), 
     mHavePendingClose(PR_FALSE),
-    mOpenerWasCleared(PR_FALSE),
+    mHadOriginalOpener(PR_FALSE),
     mIsPopupSpam(PR_FALSE),
     mArguments(nsnull),
     mGlobalObjectOwner(nsnull),
@@ -318,6 +318,9 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mTimeoutPublicIdCounter(1),
     mTimeoutFiringDepth(0),
     mJSObject(nsnull)
+#ifdef DEBUG
+    , mSetOpenerWindowCalled(PR_FALSE)
+#endif
 {
   // Initialize the PRCList (this).
   PR_INIT_CLIST(this);
@@ -521,6 +524,7 @@ NS_INTERFACE_MAP_BEGIN(nsGlobalWindow)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3EventTarget)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow)
+  NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIDOMViewCSS)
   NS_INTERFACE_MAP_ENTRY(nsIDOMAbstractView)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
@@ -1460,9 +1464,30 @@ nsGlobalWindow::GetDocShell()
 void
 nsGlobalWindow::SetOpenerWindow(nsIDOMWindowInternal* aOpener)
 {
-  FORWARD_TO_OUTER_VOID(SetOpenerWindow, (aOpener));
+  SetOpenerWindow(aOpener, PR_TRUE);
+}
 
+void
+nsGlobalWindow::SetOpenerWindow(nsIDOMWindowInternal* aOpener,
+                                PRBool aOriginalOpener)
+{
+  FORWARD_TO_OUTER_VOID(SetOpenerWindow, (aOpener, aOriginalOpener));
+
+  NS_ASSERTION(!aOriginalOpener || !mSetOpenerWindowCalled,
+               "aOriginalOpener is true, but not first call to "
+               "SetOpenerWindow!");
+  NS_ASSERTION(!aOriginalOpener || !mDocument,
+               "aOriginalOpener is true, but we already have a document "
+               "loaded");
+ 
   mOpener = aOpener;
+  if (aOriginalOpener) {
+    mHadOriginalOpener = PR_TRUE;
+  }
+
+#ifdef DEBUG
+  mSetOpenerWindowCalled = PR_TRUE;
+#endif
 }
 
 void
@@ -2293,17 +2318,13 @@ nsGlobalWindow::GetOpener(nsIDOMWindowInternal** aOpener)
 NS_IMETHODIMP
 nsGlobalWindow::SetOpener(nsIDOMWindowInternal* aOpener)
 {
-  FORWARD_TO_OUTER(SetOpener, (aOpener), NS_ERROR_NOT_INITIALIZED);
-
   // check if we were called from a privileged chrome script.
   // If not, opener is settable only to null.
   if (aOpener && !IsCallerChrome()) {
     return NS_OK;
   }
-  if (mOpener && !aOpener)
-    mOpenerWasCleared = PR_TRUE;
 
-  mOpener = aOpener;
+  SetOpenerWindow(aOpener, PR_FALSE);
 
   return NS_OK;
 }
@@ -4447,7 +4468,7 @@ nsGlobalWindow::Close()
   // Don't allow scripts from content to close windows
   // that were not opened by script
   nsresult rv = NS_OK;
-  if (!mOpener && !mOpenerWasCleared) {
+  if (!mHadOriginalOpener) {
     PRBool allowClose = PR_FALSE;
 
     // UniversalBrowserWrite will be enabled if it's been explicitly

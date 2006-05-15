@@ -70,7 +70,6 @@ enum OpenAllowValue {
 };
 
 class nsIDocShell;
-class nsIDocShellTreeItem;
 class nsIFocusController;
 class nsIDocument;
 struct nsTimeout;
@@ -333,7 +332,32 @@ protected:
   nsPIDOMWindow         *mOuterWindow;
 };
 
+#define NS_PIDOMWINDOW_MOZILLA_1_8_BRANCH_IID \
+{ 0x9cb71447, 0x62c7, 0x423a, \
+ { 0x91, 0xca, 0x71, 0x8a, 0x8c, 0xeb, 0xda, 0x76 } }
 
+class nsPIDOMWindow_MOZILLA_1_8_BRANCH : public nsPIDOMWindow
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_PIDOMWINDOW_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * Set the opener window.  aOriginalOpener is true if and only if this is the
+   * original opener for the window.  That is, it can only be true at most once
+   * during the life cycle of a window, and then only the first time
+   * SetOpenerWindow is called.  It might never be true, of course, if the
+   * window does not have an opener when it's created.
+   */
+  virtual void SetOpenerWindow(nsIDOMWindowInternal *aOpener,
+                               PRBool aOriginalOpener) = 0;
+
+protected:
+  nsPIDOMWindow_MOZILLA_1_8_BRANCH(nsPIDOMWindow *aOuterWindow)
+    : nsPIDOMWindow(aOuterWindow)
+  {
+  }                                     
+};
+  
 #ifdef _IMPL_NS_LAYOUT
 PopupControlState
 PushPopupControlState(PopupControlState aState, PRBool aForce);
