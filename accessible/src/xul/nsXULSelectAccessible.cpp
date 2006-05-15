@@ -526,10 +526,9 @@ NS_IMETHODIMP nsXULComboboxAccessible::GetRole(PRUint32 *aRole)
   if (!content) {
     return NS_ERROR_FAILURE;
   }
-  nsAutoString boxName;
-  mDOMNode->GetNodeName(boxName);
-  *aRole = boxName.EqualsLiteral("autocomplete") ?
-           ROLE_AUTOCOMPLETE : ROLE_COMBOBOX;
+  nsAutoString type;
+  content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::type, type);
+  *aRole = type.EqualsLiteral("autocomplete") ? ROLE_AUTOCOMPLETE : ROLE_COMBOBOX;
   return NS_OK;
 }
 
