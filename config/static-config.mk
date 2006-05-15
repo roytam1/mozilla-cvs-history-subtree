@@ -129,7 +129,7 @@ STATIC_EXTRA_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 
 ifdef GNU_CXX
 STATIC_EXTRA_LIBS += -lgdi32
 else
-STATIC_EXTRA_LIBS += urlmon
+STATIC_EXTRA_LIBS += -lurlmon
 endif
 endif
 
