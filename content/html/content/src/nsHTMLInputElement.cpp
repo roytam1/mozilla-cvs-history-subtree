@@ -132,6 +132,8 @@ static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
                                         ? ((bitfield) |=  (0x01 << (field))) \
                                         : ((bitfield) &= ~(0x01 << (field))))
 
+static const char* kWhitespace = "\n\r\t\b";
+
 class nsHTMLInputElement : public nsGenericHTMLFormElement,
                            public nsImageLoadingContent,
                            public nsIDOMHTMLInputElement,
@@ -583,7 +585,7 @@ nsHTMLInputElement::GetForm(nsIDOMHTMLFormElement** aForm)
   return nsGenericHTMLFormElement::GetForm(aForm);
 }
 
-NS_IMPL_STRING_ATTR(nsHTMLInputElement, DefaultValue, value)
+//NS_IMPL_STRING_ATTR(nsHTMLInputElement, DefaultValue, value)
 NS_IMPL_BOOL_ATTR(nsHTMLInputElement, DefaultChecked, checked)
 NS_IMPL_STRING_ATTR(nsHTMLInputElement, Accept, accept)
 NS_IMPL_STRING_ATTR(nsHTMLInputElement, AccessKey, accesskey)
@@ -600,6 +602,25 @@ NS_IMPL_STRING_ATTR(nsHTMLInputElement, UseMap, usemap)
 //NS_IMPL_STRING_ATTR(nsHTMLInputElement, Value, value)
 //NS_IMPL_INT_ATTR_DEFAULT_VALUE(nsHTMLInputElement, Size, size, 0)
 //NS_IMPL_STRING_ATTR_DEFAULT_VALUE(nsHTMLInputElement, Type, type, "text")
+
+NS_IMETHODIMP
+nsHTMLInputElement::GetDefaultValue(nsAString& aValue)
+{
+  GetAttrHelper(nsHTMLAtoms::value, aValue);
+
+  if (mType != NS_FORM_INPUT_HIDDEN) {
+    // Bug 114997: trim \n, etc. for non-hidden inputs
+    aValue = nsContentUtils::TrimCharsInSet(kWhitespace, aValue);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLInputElement::SetDefaultValue(const nsAString& aValue)
+{
+  return SetAttrHelper(nsHTMLAtoms::value, aValue);
+}
 
 NS_IMETHODIMP
 nsHTMLInputElement::GetSize(PRUint32* aValue)
@@ -672,6 +693,10 @@ nsHTMLInputElement::GetValue(nsAString& aValue)
   
   // Treat value == defaultValue for other input elements
   nsresult rv = GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, aValue);
+
+  if (mType != NS_FORM_INPUT_HIDDEN) {
+    aValue = nsContentUtils::TrimCharsInSet(kWhitespace, aValue);
+  }
 
   if (rv == NS_CONTENT_ATTR_NOT_THERE &&
       (mType == NS_FORM_INPUT_RADIO || mType == NS_FORM_INPUT_CHECKBOX)) {
