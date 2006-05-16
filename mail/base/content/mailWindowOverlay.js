@@ -1376,14 +1376,14 @@ function MsgViewPageSource()
 
 function MsgFind()
 {
-  onFindCmd();
+  gFindBar.onFindCmd();
 }
 function MsgFindAgain(reverse)
 {
   if (reverse)
-    onFindPreviousCmd();
+    gFindBar.onFindPreviousCmd();
   else
-    onFindAgainCmd();
+    gFindBar.onFindAgainCmd();
 }
 
 function MsgCanFindAgain()
@@ -2300,8 +2300,8 @@ function OnMsgParsed(aUrl)
   // If the find bar is visible and we just loaded a new message, re-run 
   // the find command. This means the new message will get highlighted and
   // we'll scroll to the first word in the message that matches the find text.
-  if (isFindBarVisible())
-    find();
+  if (gFindBar.isFindBarVisible())
+    gFindBar.find();
     
   gMessageNotificationBar.setPhishingMsg(aUrl);
 }
