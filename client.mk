@@ -374,7 +374,7 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
+MOZ_CO_TAG           = SAFEBROWSING_200605016_BRANCH
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_3_11_20060515_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
