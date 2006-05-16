@@ -4176,6 +4176,7 @@ MOZ_SAFE_BROWSING=
 MOZ_SINGLE_PROFILE=
 MOZ_STATIC_COMPONENT_LIBS=
 MOZ_STATIC_MAIL_BUILD=
+MOZ_STORAGE=1
 MOZ_TIMELINE=
 MOZ_UI_LOCALE=en-US
 MOZ_USE_NATIVE_UCONV=
@@ -4236,7 +4237,7 @@ browser)
   MOZ_APP_DISPLAYNAME=BonEcho
   MOZ_XUL_APP=1
   MOZ_PHOENIX=1
-  MOZ_STORAGE=1
+  MOZ_SAFE_BROWSING=1
   MOZ_APP_VERSION=$FIREFOX_VERSION
   MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc xmlextras pref transformiix universalchardet webservices inspector gnomevfs auth permissions reporter spellcheck"
   AC_DEFINE(MOZ_PHOENIX)
@@ -4341,7 +4342,6 @@ xulrunner)
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
   MOZ_JAVAXPCOM=1
-  MOZ_STORAGE=1
   MOZ_EXTENSIONS_DEFAULT=" xml-rpc xmlextras pref transformiix universalchardet webservices gnomevfs auth"
   AC_DEFINE(MOZ_XULRUNNER)
   ;;
@@ -5370,9 +5370,6 @@ dnl = Enable mozStorage
 dnl = XXX need to implement --with-system-sqlite3 (see bug 263381)
 dnl ========================================================
 dnl Implicitly enabled by default if building calendar or places
-if test -n "$MOZ_CALENDAR" || test -n "$MOZ_PLACES"; then
-    MOZ_STORAGE=1
-fi
 MOZ_ARG_ENABLE_BOOL(storage,
 [  --enable-storage        Enable mozStorage module and related components],
     MOZ_STORAGE=1,
