@@ -234,10 +234,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsViewSourceURI)
 #include "nsDataHandler.h"
 #endif
 
-#ifdef NECKO_PROTOCOL_keyword
-#include "nsKeywordProtocolHandler.h"
-#endif
-
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "nsURIChecker.h"
@@ -261,7 +257,7 @@ NS_GENERIC_AGGREGATED_CONSTRUCTOR(nsSimpleURI)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsIDNService, Init)
 
 ///////////////////////////////////////////////////////////////////////////////
-#ifdef XP_WIN
+#if defined(XP_WIN) && !defined(WINCE)
 #include "nsNotifyAddrListener.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNotifyAddrListener, Init)
 #endif
@@ -1115,15 +1111,6 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       nsDataHandler::Create},
 #endif
 
-#ifdef NECKO_PROTOCOL_keyword
-    // from netwerk/protocol/keyword:
-    { "The Keyword Protocol Handler", 
-      NS_KEYWORDPROTOCOLHANDLER_CID,
-      NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "keyword",
-      nsKeywordProtocolHandler::Create
-    },
-#endif
-    
 #ifdef NECKO_PROTOCOL_viewsource
     // from netwerk/protocol/viewsource:
     { "The ViewSource Protocol Handler", 
@@ -1138,7 +1125,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
     },
 #endif
 
-#ifdef XP_WIN
+#if defined(XP_WIN) && !defined(WINCE)
     { NS_NETWORK_LINK_SERVICE_CLASSNAME,
       NS_NETWORK_LINK_SERVICE_CID,
       NS_NETWORK_LINK_SERVICE_CONTRACTID,
