@@ -125,7 +125,6 @@
 #include "nsPIDOMWindow.h"
 #include "nsStyleContext.h"
 
-
 class nsSpatialNavigationService;
 class nsSpatialNavigation;
 
@@ -220,6 +219,8 @@ void     getRectOfAreaElement         (nsIFrame* f, nsIDOMHTMLAreaElement* e, ns
 PRBool   isRectInDirection            (int direction, nsRect& focusedRect, nsRect& frameRect);
 PRInt64  spatialDistance              (int direction, nsRect& a, nsRect& b);
 void     GetWindowFromDocument        (nsIDOMDocument* aDocument, nsIDOMWindowInternal** aWindow);
+PRBool   IsPartiallyVisible           (nsIPresShell* shell, nsIFrame* frame);
+void     ScrollWindow                 (int direction, nsIDOMWindow* window);
 
 
 
