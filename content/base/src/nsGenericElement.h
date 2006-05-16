@@ -103,6 +103,10 @@ typedef unsigned long PtrBits;
 /** Three bits are element type specific. */
 #define ELEMENT_TYPE_SPECIFIC_BITS_OFFSET      6
 
+/** Four bits for the script-type ID */
+#define GENERIC_ELEMENT_SCRIPT_TYPE_OFFSET     9
+
+/* (at least) three bits remain... */
 
 /**
  * Class that implements the nsIDOMNodeList interface (a list of children of
@@ -453,6 +457,9 @@ public:
   virtual PRBool MayHaveFrame() const;
   void SetHasProperties();
 
+  virtual PRUint32 GetScriptTypeID() const;
+  virtual nsresult SetScriptTypeID(PRUint32 aLang);
+
   /**
    * This calls Clone to do the actual cloning so that we end up with the
    * right class for the clone.
@@ -567,9 +574,11 @@ public:
    * (like onclick) and with the value as JS   
    * @param aEventName the event listener name
    * @param aValue the JS to attach
+   * @param aDefer is deferred execution allowed?
    */
   nsresult AddScriptEventListener(nsIAtom* aEventName,
-                                  const nsAString& aValue);
+                                  const nsAString& aValue,
+                                  PRBool aDefer = PR_TRUE);
 
   /**
    * Trigger a link with uri aLinkURI.  If aClick is false, this triggers a

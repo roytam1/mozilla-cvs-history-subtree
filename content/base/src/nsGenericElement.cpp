@@ -680,6 +680,20 @@ nsDOMEventRTTearoff::GetSystemEventGroup(nsIDOMEventGroup **aGroup)
   return manager->GetSystemEventGroupLM(aGroup);
 }
 
+NS_IMETHODIMP
+nsDOMEventRTTearoff::GetScriptTypeID(PRUint32 *aLang)
+{
+    *aLang = mContent->GetScriptTypeID();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMEventRTTearoff::SetScriptTypeID(PRUint32 aLang)
+{
+    return mContent->SetScriptTypeID(aLang);
+}
+
+
 // nsIDOMEventTarget
 NS_IMETHODIMP
 nsDOMEventRTTearoff::AddEventListener(const nsAString& aType,
@@ -811,6 +825,7 @@ nsGenericElement::nsGenericElement(nsINodeInfo *aNodeInfo)
   : nsIXMLContent(aNodeInfo),
     mFlagsOrSlots(GENERIC_ELEMENT_DOESNT_HAVE_DOMSLOTS)
 {
+  SetScriptTypeID(nsIProgrammingLanguage::JAVASCRIPT);
 }
 
 nsGenericElement::~nsGenericElement()
@@ -2281,6 +2296,29 @@ nsGenericElement::MayHaveFrame() const
   return !!(GetFlags() & GENERIC_ELEMENT_MAY_HAVE_FRAME);
 }
 
+PRUint32
+nsGenericElement::GetScriptTypeID() const
+{
+    PtrBits flags = GetFlags();
+
+    /* 4 bits reserved for script-type ID. */
+    return (flags >> GENERIC_ELEMENT_SCRIPT_TYPE_OFFSET) & 0x000F;
+}
+
+nsresult
+nsGenericElement::SetScriptTypeID(PRUint32 aLang)
+{
+    if ((aLang & 0x000F) != aLang) {
+        NS_ERROR("script ID too large!");
+        return NS_ERROR_FAILURE;
+    }
+    /* SetFlags will just mask in the specific flags set, leaving existing
+       ones alone.  So we must clear all the bits first */
+    UnsetFlags( 0x000FU << GENERIC_ELEMENT_SCRIPT_TYPE_OFFSET);
+    SetFlags( aLang << GENERIC_ELEMENT_SCRIPT_TYPE_OFFSET);
+    return NS_OK;
+}
+
 nsresult
 nsGenericElement::InsertChildAt(nsIContent* aKid,
                                 PRUint32 aIndex,
@@ -3193,7 +3231,8 @@ nsGenericElement::TriggerLink(nsPresContext* aPresContext,
 
 nsresult
 nsGenericElement::AddScriptEventListener(nsIAtom* aEventName,
-                                         const nsAString& aValue)
+                                         const nsAString& aValue,
+                                         PRBool aDefer)
 {
   NS_PRECONDITION(aEventName, "Must have event name!");
   nsCOMPtr<nsISupports> target;
@@ -3208,8 +3247,11 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aEventName,
   if (manager) {
     nsIDocument *ownerDoc = GetOwnerDoc();
 
+    defer = defer && aDefer; // only defer if everyone agrees...
+
+    PRUint32 lang = GetScriptTypeID();
     rv =
-      manager->AddScriptEventListener(target, aEventName, aValue, defer,
+      manager->AddScriptEventListener(target, aEventName, aValue, lang, defer,
                                       !nsContentUtils::IsChromeDoc(ownerDoc));
   }
 

@@ -43,6 +43,7 @@
 #include "nsIScriptObjectPrincipal.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
+#include "nsIScriptRuntime.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "jsapi.h"
 #include "nsIURI.h"
@@ -52,7 +53,8 @@
 #include "nsIPrincipal.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsContentUtils.h"
-
+#include "nsDOMJSUtils.h"
+ 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 // An XBLDocumentInfo object has a special context associated with it which we can use to pre-compile 
@@ -67,14 +69,32 @@ public:
   NS_DECL_ISUPPORTS
   
   // nsIScriptGlobalObject methods
+  virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
   virtual void SetContext(nsIScriptContext *aContext);
+  virtual nsresult SetScriptContext(PRUint32 lang_id, nsIScriptContext *aContext) {
+    NS_ASSERTION(lang_id == nsIProgrammingLanguage::JAVASCRIPT, "Only JS allowed!");
+    SetContext(aContext);
+    return NS_OK;
+  }
+
   virtual nsIScriptContext *GetContext();
   virtual void SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner);
   virtual nsIScriptGlobalObjectOwner *GetGlobalObjectOwner();
   virtual JSObject *GetGlobalJSObject();
-  virtual void OnFinalize(JSObject *aObject);
+  virtual void OnFinalize(PRUint32 aLangID, void *aScriptGlobal);
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
-  virtual nsresult SetNewArguments(PRUint32 aArgc, void* aArgv);
+  virtual nsresult SetNewArguments(nsIArray *aArguments);
+
+  virtual nsIScriptContext *GetScriptContext(PRUint32 language) {
+            // This impl still assumes JS
+            NS_ENSURE_TRUE(language==nsIProgrammingLanguage::JAVASCRIPT, nsnull);
+            return GetContext();
+  }
+  virtual void *GetScriptGlobal(PRUint32 language) {
+            // This impl still assumes JS
+            NS_ENSURE_TRUE(language==nsIProgrammingLanguage::JAVASCRIPT, nsnull);
+            return GetGlobalJSObject();
+  }
 
   // nsIScriptObjectPrincipal methods
   virtual nsIPrincipal* GetPrincipal();
@@ -155,7 +175,7 @@ nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(nativeThis));
 
   if (sgo)
-      sgo->OnFinalize(obj);
+    sgo->OnFinalize(nsIProgrammingLanguage::JAVASCRIPT, obj);
 
   // The addref was part of JSObject construction
   NS_RELEASE(nativeThis);
@@ -229,31 +249,53 @@ XBL_ProtoErrorReporter(JSContext *cx,
 //
 
 void
-nsXBLDocGlobalObject::SetContext(nsIScriptContext *aContext)
+nsXBLDocGlobalObject::SetContext(nsIScriptContext *aScriptContext)
 {
-  mScriptContext = aContext;
-  if (mScriptContext) {
-    JSContext* cx = (JSContext *)mScriptContext->GetNativeContext();
-    JS_SetErrorReporter(cx, XBL_ProtoErrorReporter);
+  if (!aScriptContext) {
+    mScriptContext = nsnull;
+    return;
   }
+  NS_ASSERTION(aScriptContext->GetScriptTypeID() ==
+                                        nsIProgrammingLanguage::JAVASCRIPT,
+               "xbl is not multi-language");
+  NS_ASSERTION(aScriptContext, "Must provide a context");
+  aScriptContext->WillInitializeContext();
+  // NOTE: We init this context with a NULL global - this is subtly
+  // different than nsGlobalWindow which passes 'this'
+  nsresult rv;
+  rv = aScriptContext->InitContext(nsnull);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "InitContext failed");
+  aScriptContext->DidInitializeContext();
+  // and we setup our global manually
+  mScriptContext = aScriptContext;
 }
 
-
-nsIScriptContext *
-nsXBLDocGlobalObject::GetContext()
+nsresult
+nsXBLDocGlobalObject::EnsureScriptEnvironment(PRUint32 aLangID)
 {
-  // This whole fragile mess is predicated on the fact that
-  // GetContext() will be called before GetScriptObject() is.
-  if (! mScriptContext) {
+    if (aLangID != nsIProgrammingLanguage::JAVASCRIPT) {
+        NS_WARNING("XBL still JS only");
+        return NS_ERROR_INVALID_ARG;
+    }
+    if (mScriptContext)
+        return NS_OK; // already initialized for this lang
     nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
     NS_ENSURE_TRUE(factory, nsnull);
 
-    nsresult rv =  factory->NewScriptContext(nsnull, getter_AddRefs(mScriptContext));
-    if (NS_FAILED(rv))
-        return nsnull;
+    nsresult rv;
+    PRUint32 stid = nsIProgrammingLanguage::JAVASCRIPT;
+
+    nsCOMPtr<nsIScriptRuntime> scriptRuntime;
+    rv = NS_GetScriptRuntimeByID(stid, getter_AddRefs(scriptRuntime));
+    NS_ENSURE_SUCCESS(rv, nsnull);
+    nsCOMPtr<nsIScriptContext> newCtx;
+    rv = scriptRuntime->CreateContext(getter_AddRefs(newCtx));
+    NS_ENSURE_SUCCESS(rv, nsnull);
+    rv = SetScriptContext(stid, newCtx);
 
     JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
 
+    // nsJSEnvironment set the error reporter to NS_ScriptErrorReporter
     JS_SetErrorReporter(cx, XBL_ProtoErrorReporter);
     mJSObject = ::JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
     if (!mJSObject)
@@ -265,8 +307,20 @@ nsXBLDocGlobalObject::GetContext()
     // released when the JSObject is finalized.
     ::JS_SetPrivate(cx, mJSObject, this);
     NS_ADDREF(this);
-  }
+    return NS_OK;
+}
 
+nsIScriptContext *
+nsXBLDocGlobalObject::GetContext()
+{
+  // This whole fragile mess is predicated on the fact that
+  // GetContext() will be called before GetScriptObject() is.
+  if (! mScriptContext) {
+    nsresult rv = EnsureScriptEnvironment(nsIProgrammingLanguage::JAVASCRIPT);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to setup JS!?");
+    NS_ENSURE_SUCCESS(rv, nsnull);
+    NS_ASSERTION(mScriptContext, "Failed to find a script context!?");
+  }
   return mScriptContext;
 }
 
@@ -299,12 +353,16 @@ nsXBLDocGlobalObject::GetGlobalJSObject()
   if (!cx)
     return nsnull;
 
-  return ::JS_GetGlobalObject(cx);
+  JSObject *ret = ::JS_GetGlobalObject(cx);
+  NS_ASSERTION(mJSObject == ret, "How did this magic switch happen?");
+  return ret;
 }
 
 void
-nsXBLDocGlobalObject::OnFinalize(JSObject *aObject)
+nsXBLDocGlobalObject::OnFinalize(PRUint32 aLangID, void *aObject)
 {
+  NS_ASSERTION(aLangID == nsIProgrammingLanguage::JAVASCRIPT,
+               "Only JS supported");
   NS_ASSERTION(aObject == mJSObject, "Wrong object finalized!");
 
   mJSObject = nsnull;
@@ -317,7 +375,7 @@ nsXBLDocGlobalObject::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
 }
 
 nsresult
-nsXBLDocGlobalObject::SetNewArguments(PRUint32 aArgc, void* aArgv)
+nsXBLDocGlobalObject::SetNewArguments(nsIArray *aArguments)
 {
   NS_NOTREACHED("waaah!");
   return NS_ERROR_UNEXPECTED;
@@ -380,7 +438,8 @@ nsXBLDocumentInfo::~nsXBLDocumentInfo()
 {
   /* destructor code */
   if (mGlobalObject) {
-    mGlobalObject->SetContext(nsnull); // remove circular reference
+    // remove circular reference
+    mGlobalObject->SetScriptContext(nsIProgrammingLanguage::JAVASCRIPT, nsnull);
     mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
   }
   delete mBindingTable;

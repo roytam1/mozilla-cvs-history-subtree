@@ -42,6 +42,7 @@
 #include "nsCaseTreatment.h"
 #include "nsChangeHint.h"
 #include "nsINode.h"
+#include "nsIProgrammingLanguage.h" // for ::JAVASCRIPT
 
 // Forward declarations
 class nsIAtom;
@@ -61,8 +62,8 @@ class nsAttrName;
 
 // IID for the nsIContent interface
 #define NS_ICONTENT_IID       \
-{ 0x26e42639, 0x013b, 0x442a, \
-  { 0xbe, 0xa0, 0x31, 0xad, 0x43, 0x33, 0x6f, 0x79 } }
+{ 0x469b2ce5, 0x3e00, 0x45e0, \
+  { 0x9c, 0x6e, 0x4e, 0x80, 0xfb, 0x27, 0x59, 0x7d } }
 
 /**
  * A node of content in a document's content model. This interface
@@ -638,6 +639,18 @@ public:
     return 0;
   }
     
+  /* The default script type (language) ID for this content.
+     All content must support fetching the default script language.
+   */
+  virtual PRUint32 GetScriptTypeID() const
+  { return nsIProgrammingLanguage::JAVASCRIPT; }
+
+  /* Not all content supports setting a new default language */
+  virtual nsresult SetScriptTypeID(PRUint32 aLang)
+  {
+    NS_NOTREACHED("SetScriptTypeID not implemented");
+    return NS_ERROR_NOT_IMPLEMENTED;
+  }
 
   virtual void SetHasProperties() = 0;
 

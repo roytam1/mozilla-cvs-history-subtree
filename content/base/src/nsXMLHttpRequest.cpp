@@ -79,6 +79,7 @@
 #include "nsICachingChannel.h"
 #include "nsContentUtils.h"
 #include "nsEventDispatcher.h"
+#include "nsDOMJSUtils.h"
 
 static const char* kLoadAsData = "loadAsData";
 
