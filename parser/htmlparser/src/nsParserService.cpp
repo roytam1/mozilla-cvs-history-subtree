@@ -60,7 +60,8 @@ nsParserService::~nsParserService()
   }
 }
 
-NS_IMPL_ISUPPORTS1(nsParserService, nsIParserService)
+NS_IMPL_ISUPPORTS2(nsParserService, nsIParserService,
+                   nsIParserService_MOZILLA_1_8_BRANCH)
 
 PRInt32
 nsParserService::HTMLAtomTagToId(nsIAtom* aAtom) const

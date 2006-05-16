@@ -160,4 +160,37 @@ class nsIParserService : public nsISupports {
   virtual PRBool IsXMLNCNameChar(PRUnichar aChar) = 0;
 };
 
+/**
+ * A temporary interface to allow adding new methods without changing existing
+ * interfaces for Gecko 1.8.1. After the 1.8.1 release this interface should
+ * not be used.
+ */
+
+#define NS_IPARSERSERVICE_MOZILLA_1_8_BRANCH_IID \
+{ 0x9b70db61, 0x3fd2, 0x4a2e, { 0x99, 0x25, 0x76, 0xdf, 0x06, 0x18, 0xd6, 0x6d } }
+
+class nsIParserService_MOZILLA_1_8_BRANCH : public nsIParserService {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPARSERSERVICE_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * Decodes an entity into a UTF-16 character. If a ; is found between aStart
+   * and aEnd it will try to decode the entity and set aNext to point to the
+   * character after the ;. The resulting UTF-16 character will be written in
+   * aResult, so if the entity is a valid numeric entity there needs to be
+   * space for at least two PRUnichars.
+   *
+   * @param aStart pointer to the character after the ampersand. 
+   * @param aEnd pointer to the position after the last character of the
+   *             string.
+   * @param aNext [out] will be set to the character after the ; or null if
+   *                    the decoding was unsuccessful.
+   * @param aResult the buffer to write the resulting UTF-16 character in.
+   * @return the number of PRUnichars written to aResult.
+   */
+  virtual PRUint32 DecodeEntity(const PRUnichar* aStart, const PRUnichar* aEnd,
+                                const PRUnichar** aNext,
+                                PRUnichar* aResult) = 0;
+};
+
 #endif // nsIParserService_h__

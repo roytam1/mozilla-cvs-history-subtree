@@ -44,8 +44,10 @@
 
 extern "C" int MOZ_XMLIsLetter(const char* ptr);
 extern "C" int MOZ_XMLIsNCNameChar(const char* ptr);
+extern "C" PRBool MOZ_XMLTranslateEntity(const char* ptr, const char* end,
+                                         const char** next, PRUnichar* result);
 
-class nsParserService : public nsIParserService {
+class nsParserService : public nsIParserService_MOZILLA_1_8_BRANCH {
 public:
   nsParserService();
   virtual ~nsParserService();
@@ -89,6 +91,15 @@ public:
   PRBool IsXMLNCNameChar(PRUnichar aChar)
   {
     return MOZ_XMLIsNCNameChar(NS_REINTERPRET_CAST(const char*, &aChar));
+  }
+  PRUint32 DecodeEntity(const PRUnichar* aStart, const PRUnichar* aEnd,
+                        const PRUnichar** aNext, PRUnichar* aResult)
+  {
+    *aNext = nsnull;
+    return MOZ_XMLTranslateEntity(NS_REINTERPRET_CAST(const char*, aStart),
+                                  NS_REINTERPRET_CAST(const char*, aEnd),
+                                  NS_REINTERPRET_CAST(const char**, aNext),
+                                  aResult);
   }
 
 protected:
