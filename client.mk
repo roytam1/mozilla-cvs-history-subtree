@@ -238,11 +238,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = CAMINO_1_0_1_RELEASE
-NSPR_CO_TAG          = CAMINO_1_0_1_RELEASE
-NSS_CO_TAG           = CAMINO_1_0_1_RELEASE
-LDAPCSDK_CO_TAG      = CAMINO_1_0_1_RELEASE
-LOCALES_CO_TAG       = CAMINO_1_0_1_RELEASE
+MOZ_CO_TAG           = CAMINO_1_0_1_MINIBRANCH
+NSPR_CO_TAG          = CAMINO_1_0_1_MINIBRANCH
+NSS_CO_TAG           = CAMINO_1_0_1_MINIBRANCH
+LDAPCSDK_CO_TAG      = CAMINO_1_0_1_MINIBRANCH
+LOCALES_CO_TAG       = CAMINO_1_0_1_MINIBRANCH
 
 BUILD_MODULES = all
 
