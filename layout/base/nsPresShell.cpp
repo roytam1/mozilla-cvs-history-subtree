@@ -5048,7 +5048,7 @@ PresShell::UnsuppressAndInvalidate()
   // got.
   nsCOMPtr<nsISupports> container = mPresContext->GetContainer();
   nsCOMPtr<nsPIDOMWindow> ourWindow = do_GetInterface(container);
-  nsIFocusController* focusController =
+  nsCOMPtr<nsIFocusController> focusController =
     ourWindow ? ourWindow->GetRootFocusController() : nsnull;
 
   if (ourWindow)
