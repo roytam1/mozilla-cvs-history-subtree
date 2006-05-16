@@ -762,6 +762,11 @@ static pascal OSStatus MyMenuEventHandler(EventHandlerCallRef myHandler, EventRe
       PRBool handlerCalledPreventDefault; // but we don't actually care
       bTargetMenuItem->DispatchDOMEvent(NS_LITERAL_STRING("DOMMenuItemActive"), &handlerCalledPreventDefault);
     }
+    
+    // remember which menu ID we're over for later
+    MenuRef menuRef;
+    ::GetEventParameter(event, kEventParamDirectObject, typeMenuRef, NULL, sizeof(menuRef), NULL, &menuRef);
+    gCurrentlyTrackedMenuID = ::GetMenuID(menuRef);
   }
   else if (kind == kEventMenuOpening || kind == kEventMenuClosed) {
     nsISupports* supports = reinterpret_cast<nsISupports*>(userData);
@@ -780,12 +785,6 @@ static pascal OSStatus MyMenuEventHandler(EventHandlerCallRef myHandler, EventRe
         listener->MenuDeselected(menuEvent);
     }
   }
-  else if ( kind == kEventMenuTargetItem ) {
-    // remember which menu ID we're over for later
-    MenuRef menuRef;
-    ::GetEventParameter(event, kEventParamDirectObject, typeMenuRef, NULL, sizeof(menuRef), NULL, &menuRef);
-    gCurrentlyTrackedMenuID = ::GetMenuID(menuRef);
-  }
   
   return result;
 }
@@ -794,14 +793,9 @@ static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData, Event
 {
   // install the event handler for the various carbon menu events.
   static EventTypeSpec eventList[] = {
-      { kEventClassMenu, kEventMenuBeginTracking },
-      { kEventClassMenu, kEventMenuEndTracking },
-      { kEventClassMenu, kEventMenuChangeTrackingMode },
       { kEventClassMenu, kEventMenuOpening },
       { kEventClassMenu, kEventMenuClosed },
       { kEventClassMenu, kEventMenuTargetItem },
-      { kEventClassMenu, kEventMenuMatchKey },
-      { kEventClassMenu, kEventMenuEnableItems }
   };
   static EventHandlerUPP gMyMenuEventHandlerUPP = NewEventHandlerUPP(&MyMenuEventHandler);
   return ::InstallMenuEventHandler(menuRef, gMyMenuEventHandlerUPP,
