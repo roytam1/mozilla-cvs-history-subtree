@@ -2246,14 +2246,8 @@ nsEventListenerManager::FixContextMenuEvent(nsPresContext* aPresContext,
 
   // see if we should use the caret position for the popup
   if (aEvent->message == NS_CONTEXTMENU_KEY) {
-    nsPoint caretPoint;
-    if (PrepareToUseCaretPosition(((nsGUIEvent*)aEvent)->widget,
-                                  shell, caretPoint)) {
-      // caret position is good
-      aEvent->refPoint.x = caretPoint.x;
-      aEvent->refPoint.y = caretPoint.y;
+    if (PrepareToUseCaretPosition(((nsGUIEvent*)aEvent)->widget, aEvent, shell))
       return NS_OK;
-    }
   }
 
   // If we're here because of the key-equiv for showing context menus, we
@@ -2293,9 +2287,9 @@ nsEventListenerManager::FixContextMenuEvent(nsPresContext* aPresContext,
 // nsEventListenerManager::PrepareToUseCaretPosition
 //
 //    This checks to see if we should use the caret position for popup context
-//    menus. Returns true if the caret position should be used, and the window
-//    coordinates of that position are placed into WindowX/Y. This function
-//    will also scroll the window as needed to make the caret visible.
+//    menus. If we should, it fills in refpoint and point on the event and
+//    returns true. This function will also scroll the window as needed to make
+//    the caret visible.
 //
 //    The event widget should be the widget that generated the event, and
 //    whose coordinate system the resulting event's refPoint should be
@@ -2303,8 +2297,8 @@ nsEventListenerManager::FixContextMenuEvent(nsPresContext* aPresContext,
 
 PRBool
 nsEventListenerManager::PrepareToUseCaretPosition(nsIWidget* aEventWidget,
-                                                  nsIPresShell* aShell,
-                                                  nsPoint& aTargetPt)
+                                                  nsEvent* aEvent,
+                                                  nsIPresShell* aShell)
 {
   nsresult rv;
   NS_ASSERTION(aEventWidget, "Event widget is null");
@@ -2401,11 +2395,22 @@ nsEventListenerManager::PrepareToUseCaretPosition(nsIWidget* aEventWidget,
   widgetView->GetNearestWidget(&viewToWidget);
   nsPoint viewDelta = view->GetOffsetTo(widgetView) + viewToWidget;
 
-  // caret coordinates are in twips, convert to pixels
+  // caret coordinates are in twips, convert to pixels for refpoint
   float t2p = aShell->GetPresContext()->TwipsToPixels();
-  aTargetPt.x = NSTwipsToIntPixels(viewDelta.x + caretCoords.x + caretCoords.width, t2p);
-  aTargetPt.y = NSTwipsToIntPixels(viewDelta.y + caretCoords.y + caretCoords.height, t2p);
+  aEvent->refPoint.x = NSTwipsToIntPixels(viewDelta.x + caretCoords.x + caretCoords.width, t2p);
+  aEvent->refPoint.y = NSTwipsToIntPixels(viewDelta.y + caretCoords.y + caretCoords.height, t2p);
 
+  // convert to coordinate system for point
+  aEvent->point.x = aEvent->point.y = 0;
+  nsPresContext* context = aShell->GetPresContext();
+  if (context) {
+    nsIFrame* eventFrame;
+    context->EventStateManager()->GetEventTarget(&eventFrame);
+    if (eventFrame) {
+      aEvent->point = nsLayoutUtils::GetEventCoordinatesForNearestView(
+          aEvent, eventFrame);
+    }
+  }
   return PR_TRUE;
 }
 

@@ -492,3 +492,43 @@ nsLayoutUtils::IsInitialContainingBlock(nsIFrame* aFrame)
   return aFrame ==
     aFrame->GetPresContext()->PresShell()->FrameConstructor()->GetInitialContainingBlock();
 }
+
+nsPoint
+nsLayoutUtils::GetEventCoordinatesForNearestView(nsEvent* aEvent,
+                                                 nsIFrame* aFrame,
+                                                 nsIView** aView)
+{
+  if (!aEvent || (aEvent->eventStructType != NS_MOUSE_EVENT && 
+                  aEvent->eventStructType != NS_MOUSE_SCROLL_EVENT))
+    return nsPoint(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
+
+  nsGUIEvent* GUIEvent = NS_STATIC_CAST(nsGUIEvent*, aEvent);
+  if (!GUIEvent->widget)
+    return nsPoint(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
+
+  nsPoint viewToFrame;
+  nsIView* frameView;
+  aFrame->GetOffsetFromView(viewToFrame, &frameView);
+  if (aView)
+    *aView = frameView;
+
+  return TranslateWidgetToView(aFrame->GetPresContext(), GUIEvent->widget,
+                               GUIEvent->refPoint, frameView);
+}
+
+nsPoint
+nsLayoutUtils::TranslateWidgetToView(nsPresContext* aPresContext, 
+                                     nsIWidget* aWidget, nsIntPoint aPt,
+                                     nsIView* aView)
+{
+  nsIView* baseView = nsIView::GetViewFor(aWidget);
+  if (!baseView)
+    return nsPoint(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
+  nsPoint viewToWidget;
+  nsIWidget* wid = baseView->GetNearestWidget(&viewToWidget);
+  NS_ASSERTION(aWidget == wid, "Clashing widgets");
+  float pixelsToTwips = aPresContext->PixelsToTwips();
+  nsPoint refPointTwips(NSIntPixelsToTwips(aPt.x, pixelsToTwips),
+                        NSIntPixelsToTwips(aPt.y, pixelsToTwips));
+  return refPointTwips - viewToWidget - aView->GetOffsetTo(baseView);
+}

@@ -233,8 +233,8 @@ protected:
                                nsEvent* aEvent,
                                nsIDOMEvent** aDOMEvent);
   PRBool PrepareToUseCaretPosition(nsIWidget* aEventWidget,
-                                   nsIPresShell* aShell,
-                                   nsPoint& aTargetPt);
+                                   nsEvent* aEvent,
+                                   nsIPresShell* aShell);
   void GetCoordinatesFor(nsIDOMElement *aCurrentEl, nsPresContext *aPresContext,
                          nsIPresShell *aPresShell, nsPoint& aTargetPt);
   nsresult GetDOM2EventGroup(nsIDOMEventGroup** aGroup);
