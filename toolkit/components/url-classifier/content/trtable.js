@@ -112,7 +112,10 @@ UrlClassifierTableDomain.inherits(UrlClassifierTable);
  */
 UrlClassifierTableDomain.prototype.exists = function(url, callback) {
   var urlObj = this.ioService_.newURI(url, null, null);
-  var host = urlObj.host;
+  var host = '';
+  try {
+    host = urlObj.host;
+  } catch (e) { }
   var components = host.split(".");
 
   // We don't have a good way map from hosts to domains, so we instead try
