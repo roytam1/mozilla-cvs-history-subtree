@@ -1962,9 +1962,7 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
                 nsCOMPtr<nsIDOMElement> commandElt;
                 domDoc->GetElementById(command, getter_AddRefs(commandElt));
                 nsCOMPtr<nsIContent> commandContent(do_QueryInterface(commandElt));
-                if (commandContent &&
-                    commandContent->IsContentOfType(nsIContent::eXUL) &&
-                    commandContent->Tag() == nsXULAtoms::command) {
+                if (commandContent) {
                     return commandContent->HandleDOMEvent(aPresContext, aEvent, nsnull, NS_EVENT_FLAG_INIT, aEventStatus);
                 }
                 else {
