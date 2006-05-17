@@ -927,10 +927,12 @@ MAKEFILES_suite="
 suite/Makefile
 suite/app/Makefile
 suite/branding/Makefile
+suite/browser/Makefile
 suite/common/Makefile
 suite/components/Makefile
 suite/components/xulappinfo/Makefile
 suite/locales/Makefile
+suite/profile/Makefile
 "
 
 MAKEFILES_xulrunner="
@@ -1480,6 +1482,9 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         jssh ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/jssh/Makefile
+            " ;;
+        femtoscheme ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/femtoscheme/Makefile
             " ;;
         layout-debug ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/layout-debug/Makefile
