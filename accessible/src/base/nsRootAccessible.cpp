@@ -251,6 +251,10 @@ nsresult nsRootAccessible::AddEventListeners()
     rv = target->AddEventListener(NS_LITERAL_STRING("AlertActive"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    // add ourself as a TreeViewChanged listener (custom event fired in tree.xml)
+    rv = target->AddEventListener(NS_LITERAL_STRING("TreeViewChanged"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     // add ourself as a OpenStateChange listener (custom event fired in tree.xml)
     rv = target->AddEventListener(NS_LITERAL_STRING("OpenStateChange"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -321,6 +325,7 @@ nsresult nsRootAccessible::RemoveEventListeners()
     target->RemoveEventListener(NS_LITERAL_STRING("NameChange"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     target->RemoveEventListener(NS_LITERAL_STRING("ValueChange"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     target->RemoveEventListener(NS_LITERAL_STRING("AlertActive"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
+    target->RemoveEventListener(NS_LITERAL_STRING("TreeViewChanged"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     target->RemoveEventListener(NS_LITERAL_STRING("OpenStateChange"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     target->RemoveEventListener(NS_LITERAL_STRING("CheckboxStateChange"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
     target->RemoveEventListener(NS_LITERAL_STRING("RadioStateChange"), NS_STATIC_CAST(nsIDOMXULListener*, this), PR_TRUE);
@@ -595,6 +600,13 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
       return FireDelayedToolkitEvent(nsIAccessibleEvent::EVENT_MENUPOPUPSTART,
                                     targetNode, nsnull);
     }
+  }
+
+  if (eventType.EqualsLiteral("TreeViewChanged")) {
+    NS_ENSURE_TRUE(localName.EqualsLiteral("tree"), NS_OK);
+    nsCOMPtr<nsIContent> treeContent = do_QueryInterface(targetNode);
+    return mAccService->InvalidateSubtreeFor(eventShell, treeContent,
+                                             nsIAccessibleEvent::EVENT_REORDER);
   }
 
   nsCOMPtr<nsIAccessible> accessible;
