@@ -815,6 +815,10 @@ function BrowserViewFind() {
   if(document.getElementById("toolbar-find").collapsed &&  document.getElementById("command_ViewFind").getAttribute("checked")=="true") {
 	document.getElementById("command_ViewFind").setAttribute("checked","false");
   }
+  else
+  {
+    document.getElementById("toolbar-find-tag").focus();
+  }
 }
 
 /**
