@@ -131,7 +131,7 @@ G_ObserverServiceObserver.prototype.observe_ = function(subject, topic, data) {
     this.unregister();
 }
 
-
+#ifdef DEBUG
 function TEST_G_Observer() {
   if (G_GDEBUG) {
 
@@ -172,3 +172,4 @@ function TEST_G_Observer() {
     G_Debug(z, "PASSED");
   }
 }
+#endif

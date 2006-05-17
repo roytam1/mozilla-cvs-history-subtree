@@ -300,9 +300,8 @@ G_PreferenceObserver.prototype.QueryInterface = function(iid) {
   throw Components.results.NS_ERROR_NO_INTERFACE;
 }
 
-
+#ifdef DEBUG
 // UNITTESTS
-
 function TEST_G_Preferences() {
   if (G_GDEBUG) {
     var z = "preferences UNITTEST";
@@ -359,3 +358,4 @@ function TEST_G_Preferences() {
     G_Debug(z, "PASSED");
   }
 }
+#endif
