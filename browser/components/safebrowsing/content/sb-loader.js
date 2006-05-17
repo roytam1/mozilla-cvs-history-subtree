@@ -46,7 +46,13 @@ var safebrowsing = {
   phishWarden: null,
 
   startup: function() {
-    // XXX Defer this to make startup faster?
+    setTimeout(safebrowsing.deferredStartup, 2000);
+
+    // clean up
+    window.removeEventListener("load", safebrowsing.startup, false);
+  },
+  
+  deferredStartup: function() {
     var Cc = Components.classes;
     var appContext = Cc["@mozilla.org/safebrowsing/application;1"]
                      .getService().wrappedJSObject;
@@ -60,11 +66,11 @@ var safebrowsing = {
     safebrowsing.phishWarden = phishWarden;
 
     // Register tables
-    // XXX: move table names to a pref
+    // XXX: move table names to a pref that we originally will download
+    // from the provider (need to workout protocol details)
     phishWarden.registerWhiteTable("goog-white-domain");
     phishWarden.registerWhiteTable("goog-white-url");
     phishWarden.registerBlackTable("goog-black-url");
-    phishWarden.registerBlackTable("goog-black-enchash");
 
     // Download/update lists if we're in non-enhanced mode
     phishWarden.maybeToggleUpdateChecking();
@@ -76,16 +82,21 @@ var safebrowsing = {
         window,
         tabWatcher,
         phishWarden);
-
-    // clean up
-    window.removeEventListener("load", safebrowsing.startup, false);
+    
+    // The initial pages may be a phishing site (e.g., user clicks on a link
+    // in an email message and it opens a new window with a phishing site),
+    // so we need to check all open tabs.
+    safebrowsing.controller.checkAllBrowsers();
   },
 
   /**
    * Clean up.
    */
   shutdown: function() {
-    safebrowsing.controller.shutdown();
+    if (safebrowsing.controller) {
+      // If the user shuts down before deferredStartup, there is no controller.
+      safebrowsing.controller.shutdown();
+    }
     window.removeEventListener("unload", safebrowsing.shutdown, false);
   }
 }

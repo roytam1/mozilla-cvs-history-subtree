@@ -264,17 +264,18 @@ PROT_PhishingWarden.prototype.onDocNavStart = function(request, url) {
   // If we're on the test page and we're not explicitly disabled
   // XXX Do we still need a test url or should each provider just put
   // it in their local list?
-  //if (this.isBlacklistTestURL(url)) {
-  //  this.houstonWeHaveAProblem_(request);
-  //  return;
-  //}
   // Either send a request off or check locally
   if (this.checkRemote_) {
-    // TODO: Use local whitelists to suppress remote BL lookups. 
-    this.fetcher_.get(url,
-                      BindToObject(this.onTRFetchComplete,
-                                   this,
-                                   request));
+    // First check to see if it's a blacklist url.
+    if (this.isBlacklistTestURL(url)) {
+      this.houstonWeHaveAProblem_(request);
+    } else {
+      // TODO: Use local whitelists to suppress remote BL lookups. 
+      this.fetcher_.get(url,
+                        BindToObject(this.onTRFetchComplete,
+                                     this,
+                                     request));
+    }
   } else {
     // Check the local lists for a match.
     // XXX This is to not slow down Tp.  The real solution is to
@@ -440,6 +441,11 @@ PROT_PhishingWarden.prototype.isBlacklistTestURL = function(url) {
  * @param callback Function
  */
 PROT_PhishingWarden.prototype.checkUrl_ = function(url, callback) {
+  // First check to see if it's a blacklist url.
+  if (this.isBlacklistTestURL(url)) {
+    callback();
+    return;
+  }
   if (!this.isSpurious_(url))
     this.isEvilURL_(url, callback);
 }
