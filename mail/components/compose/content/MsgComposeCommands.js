@@ -1724,7 +1724,7 @@ function GenericSendMessage( msgType )
         {
           // We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
           // therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
-          window.content.focus();
+          SetMsgBodyFrameFocus();
           window.cancelSendMessage = false;
           try {
             window.openDialog("chrome://editor/content/EdSpellCheck.xul", "_blank",
@@ -2407,7 +2407,7 @@ function getIdentityForKey(key)
 function AdjustFocus()
 {
   //dump("XXX adjusting focus\n");
-  var element = document.getElementById("addressCol2#" + awGetNumberOfRecipients());
+  var element = awGetInputElement(awGetNumberOfRecipients());
   if (element.value == "") {
       //dump("XXX focus on address\n");
       awSetFocus(awGetNumberOfRecipients(), element);
@@ -2421,7 +2421,7 @@ function AdjustFocus()
       }
       else {
         //dump("XXX focus on body\n");
-        window.content.focus();
+        SetMsgBodyFrameFocus();
       }
   }
 }
@@ -2783,7 +2783,7 @@ function FocusOnFirstAttachment()
   var bucketList = document.getElementById("attachmentBucket");
 
   if (bucketList && bucketList.getRowCount())
-    bucketTree.selectedIndex(0);
+    bucketList.selectedIndex = 0;
 }
 
 function AttachmentElementHasItems()
@@ -3141,12 +3141,12 @@ function subjectKeyPress(event)
   switch(event.keyCode) {
   case 9:
     if (!event.shiftKey) {
-      window.content.focus();
+      SetMsgBodyFrameFocus();
       event.preventDefault();
     }
     break;
   case 13:
-    window.content.focus();
+    SetMsgBodyFrameFocus();
     break;
   }
 }
@@ -3319,7 +3319,7 @@ function DisplaySaveFolderDlg(folderURI)
 
 function SetMsgAddressingWidgetTreeElementFocus()
 {
-  var element = document.getElementById("msgRecipient#" + awGetNumberOfRecipients());
+  var element = awGetInputElement(awGetNumberOfRecipients());
   awSetFocus(awGetNumberOfRecipients(), element);
 }
 
@@ -3341,7 +3341,10 @@ function SetMsgAttachmentElementFocus()
 
 function SetMsgBodyFrameFocus()
 {
-  window.content.focus();
+  // bug 236219: never just set the focus to window.content, that fails to perform
+  // the 'unfocus' operation on the element that currently has focus.
+  document.getElementById("appcontent").focus();  // focus to editor's container
+  window.content.focus();                         // focus to editor
 }
 
 function GetMsgAddressingWidgetTreeElement()
