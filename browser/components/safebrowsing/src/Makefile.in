@@ -44,6 +44,6 @@ VPATH     = @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 # EXTRA_COMPONENTS installs components written in JS to dist/bin/components
-EXTRA_COMPONENTS = safebrowsingApplication.js
+EXTRA_PP_COMPONENTS = nsSafebrowsingApplication.js
 
 include $(topsrcdir)/config/rules.mk

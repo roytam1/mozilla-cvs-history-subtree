@@ -507,8 +507,6 @@ PROT_PhishingWarden.prototype.onStateChange = function(webProgress,
 
   // Thanks Darin for helping with this
   if (stateFlags & wp.STATE_START &&
-      stateFlags & wp.STATE_IS_REQUEST &&
-      request.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI &&
       this.phishWardenEnabled_ === true) {
 
     var url;
