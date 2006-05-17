@@ -1149,9 +1149,8 @@ nsPresContext::GetBidiUtils()
 void
 nsPresContext::SetBidi(PRUint32 aSource, PRBool aForceReflow)
 {
-  // Don't do all this stuff if the options haven't changed or we have no
-  // presshell
-  if (aSource == mBidi || !mShell) {
+  // Don't do all this stuff if the options haven't changed
+  if (aSource == mBidi) {
     return;
   }
 
@@ -1170,9 +1169,11 @@ nsPresContext::SetBidi(PRUint32 aSource, PRBool aForceReflow)
     SetVisualMode(PR_FALSE);
   }
   else {
-    nsIDocument* doc = mShell->GetDocument();
-    if (doc) {
-      SetVisualMode(IsVisualCharset(doc->GetDocumentCharacterSet()));
+    if (mShell) {
+      nsIDocument* doc = mShell->GetDocument();
+      if (doc) {
+        SetVisualMode(IsVisualCharset(doc->GetDocumentCharacterSet()));
+      }
     }
   }
   if (aForceReflow) {
