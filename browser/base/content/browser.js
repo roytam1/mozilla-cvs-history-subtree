@@ -2929,7 +2929,7 @@ const BrowserSearch = {
       const targetDoc = target.ownerDocument;
       // Set the attribute of the (first) search button.
       var searchButton = document.getAnonymousElementByAttribute(this.getSearchBar(),
-                                  "anonid", "searchbar-dropmarker");
+                                  "anonid", "search-go-button");
       if (searchButton) {
         var browser = gBrowser.getBrowserForDocument(targetDoc);
          // Append the URI and an appropriate title to the browser data.
@@ -2959,7 +2959,7 @@ const BrowserSearch = {
    */
   updateSearchButton: function() {
     var searchButton = document.getAnonymousElementByAttribute(this.getSearchBar(),
-                                "anonid", "searchbar-dropmarker");
+                                "anonid", "search-go-button");
     if (!searchButton)
       return;
     var engines = gBrowser.mCurrentBrowser.engines;
