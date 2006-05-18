@@ -3525,9 +3525,27 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
   }
 
   PRInt32 colCount = cellMap->GetColCount();
+  nscoord spacing = GetCellSpacingX();
+
   if (table_constraint != nscoord_MAX) {
     // Handle out of memory by acting like we don't have a constraint.
     constraint_shrinks = new nscoord[colCount];
+
+    if (colCount > 0) {
+      table_total += (1 + colCount) * spacing;
+    }
+
+    if (tablePos->mBoxSizing != NS_STYLE_BOX_SIZING_CONTENT) {
+      NS_ASSERTION(tablePos->mBoxSizing == NS_STYLE_BOX_SIZING_PADDING ||
+                   tablePos->mBoxSizing == NS_STYLE_BOX_SIZING_BORDER,
+                   "unexpected box sizing value");
+      nsLayoutUtils::IntrinsicWidthPart part =
+        tablePos->mBoxSizing == NS_STYLE_BOX_SIZING_PADDING
+          ? nsLayoutUtils::PADDING
+          : nsLayoutUtils::PB_PARTS;
+      table_total += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                         this, nsLayoutUtils::MIN_WIDTH, part);
+    }
   }
 
   // Prevent percentages from adding to more than 100% by (to be
@@ -3620,7 +3638,6 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       // Add the cell-spacing (and take it off again below) so that we don't
       // require extra room for the omitted cell-spacing of column-spanning
       // cells.
-      nscoord spacing = GetCellSpacingX();
       nscoord minAdd = cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
                                                     nsLayoutUtils::MIN_WIDTH) +
                        spacing;
