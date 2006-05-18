@@ -208,7 +208,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         }
         if (colFrame->GetPrefPercent() == 0.0f) {
             grow_basis += colFrame->GetPrefCoord() - min_width;
-            zoom_basis += min_width;
+            zoom_basis += colFrame->GetPrefCoord();
         } else {
             pct_basis += colFrame->GetPrefPercent();
         }
@@ -222,8 +222,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     // *  If we have extra space, give it all to the columns previously
     //    given their min width:
     //    2. in proportion to the difference between their min width and
-    //       pref width, or,
-    //    3. if those are all zero, in proportion to their min width, or,
+    //       pref width up until all columns reach pref width,
+    //    3. once columns reach pref width, in proportion to pref width
     //    4. if those are all zero, instead increase the percentage
     //       width columns in proportion to their percentages
     //    5. if there are no percentage width columns, equally
@@ -238,7 +238,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         else
             l2t = NOOP;
     } else {
-        if (grow_basis > 0)
+        if (grow_basis > 0 && assigned + grow_basis > width)
             l2t = GROW;
         else if (zoom_basis > 0)
             l2t = ZOOM_GROW;
@@ -265,7 +265,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             u.f = float(width - assigned) / float(grow_basis);
             break;
         case ZOOM_GROW:
-            u.f = float(width - assigned) / float(zoom_basis);
+            u.f = 1.0f +
+                  (float(width - assigned - grow_basis) / float(zoom_basis));
             break;
         case PCT_GROW:
             u.f = float(width - assigned) / float(pct_basis);
@@ -295,8 +296,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                 break;
             case ZOOM_GROW:
                 if (colFrame->GetPrefPercent() == 0.0f)
-                    col_width += NSToCoordRound(u.f *
-                                                colFrame->GetMinCoord());
+                    col_width = NSToCoordRound(u.f *
+                                               colFrame->GetPrefCoord());
                 break;
             case PCT_GROW:
                 col_width += NSToCoordRound(u.f * colFrame->GetPrefPercent());
