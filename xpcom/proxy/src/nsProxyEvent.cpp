@@ -280,7 +280,7 @@ nsProxyObjectCallInfo::Init()
             return rv;
     }
     else if (mOwner->GetProxyType() & NS_PROXY_ASYNC)
-        RefCountInInterfacePointers(PR_FALSE);
+        RefCountInInterfacePointers(PR_TRUE);
 
     return NS_OK;
 }
