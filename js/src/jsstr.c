@@ -2663,7 +2663,7 @@ js_ValueToPrintable(JSContext *cx, jsval v, JSValueToStringFun v2sfun)
     return bytes;
 }
 
-JSString *
+JS_FRIEND_API(JSString *)
 js_ValueToString(JSContext *cx, jsval v)
 {
     JSObject *obj;
@@ -2690,7 +2690,7 @@ js_ValueToString(JSContext *cx, jsval v)
     return str;
 }
 
-JSString *
+JS_FRIEND_API(JSString *)
 js_ValueToSource(JSContext *cx, jsval v)
 {
     if (JSVAL_IS_STRING(v))

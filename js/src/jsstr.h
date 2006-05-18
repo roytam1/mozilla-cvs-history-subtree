@@ -360,14 +360,14 @@ js_ValueToPrintable(JSContext *cx, jsval v, JSValueToStringFun v2sfun);
  * Convert a value to a string, returning null after reporting an error,
  * otherwise returning a new string reference.
  */
-extern JSString *
+extern JS_FRIEND_API(JSString *)
 js_ValueToString(JSContext *cx, jsval v);
 
 /*
  * Convert a value to its source expression, returning null after reporting
  * an error, otherwise returning a new string reference.
  */
-extern JSString *
+extern JS_FRIEND_API(JSString *)
 js_ValueToSource(JSContext *cx, jsval v);
 
 #ifdef HT_ENUMERATE_NEXT        /* XXX don't require jshash.h */
