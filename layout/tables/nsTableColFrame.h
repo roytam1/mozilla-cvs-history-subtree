@@ -148,9 +148,6 @@ public:
   nscoord GetMinCoord() {
     return mMinCoord;
   }
-  void ReduceMinCoord(nscoord aDiff) {
-    mMinCoord -= aDiff;
-  }
 
   void ResetPrefCoord() {
     mPrefCoord = 0;

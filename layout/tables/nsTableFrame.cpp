@@ -3508,45 +3508,12 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
   // we shrink the min widths proportionally, in proportion to the
   // difference between the width specified and the min width of the
   // content.
-  // XXX Does anything happen in these cases when percentages are
-  // specified?
-  nsAutoArrayPtr<nscoord> constraint_shrinks;
-  nscoord table_constraint = nscoord_MAX;
-  nscoord constraint_shrinks_total = 0, table_total = 0;
   const nsStylePosition *tablePos = GetStylePosition();
-  if (tablePos->mWidth.GetUnit() == eStyleUnit_Coord) {
-    table_constraint = tablePos->mWidth.GetCoordValue();
-  }
-  if (tablePos->mMaxWidth.GetUnit() == eStyleUnit_Coord) {
-    nscoord max_width = tablePos->mMaxWidth.GetCoordValue();
-    if (max_width < table_constraint) {
-      table_constraint = max_width;
-    }
-  }
+  PRBool tableHasWidth = tablePos->mWidth.GetUnit() == eStyleUnit_Coord ||
+                         tablePos->mMaxWidth.GetUnit() == eStyleUnit_Coord;
 
   PRInt32 colCount = cellMap->GetColCount();
   nscoord spacing = GetCellSpacingX();
-
-  if (table_constraint != nscoord_MAX) {
-    // Handle out of memory by acting like we don't have a constraint.
-    constraint_shrinks = new nscoord[colCount];
-
-    if (colCount > 0) {
-      table_total += (1 + colCount) * spacing;
-    }
-
-    if (tablePos->mBoxSizing != NS_STYLE_BOX_SIZING_CONTENT) {
-      NS_ASSERTION(tablePos->mBoxSizing == NS_STYLE_BOX_SIZING_PADDING ||
-                   tablePos->mBoxSizing == NS_STYLE_BOX_SIZING_BORDER,
-                   "unexpected box sizing value");
-      nsLayoutUtils::IntrinsicWidthPart part =
-        tablePos->mBoxSizing == NS_STYLE_BOX_SIZING_PADDING
-          ? nsLayoutUtils::PADDING
-          : nsLayoutUtils::PB_PARTS;
-      table_total += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                         this, nsLayoutUtils::MIN_WIDTH, part);
-    }
-  }
 
   // Prevent percentages from adding to more than 100% by (to be
   // compatible with other browsers) treating any percentages that would
@@ -3579,14 +3546,12 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       nscoord prefCoord = cellFrame->GetPrefWidth(aRenderingContext);
       float prefPercent = 0.0f;
 
-      nscoord minWithoutWidths = minCoord;
-
       switch (pos->mWidth.GetUnit()) {
         case eStyleUnit_Coord: {
             nscoord w = pos->mWidth.GetCoordValue();
-            if (w > minCoord)
+            if (!tableHasWidth && w > minCoord)
               minCoord = w;
-            prefCoord = minCoord;
+            prefCoord = PR_MAX(w, minCoord);
           }
           break;
         case eStyleUnit_Percent: {
@@ -3638,61 +3603,30 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       // Add the cell-spacing (and take it off again below) so that we don't
       // require extra room for the omitted cell-spacing of column-spanning
       // cells.
-      nscoord minAdd = cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
+      minCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
                                                     nsLayoutUtils::MIN_WIDTH) +
                        spacing;
-      minCoord += minAdd;
-      minWithoutWidths += minAdd;
       prefCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
                                                    nsLayoutUtils::PREF_WIDTH) +
                    spacing;
 
       // XXX Rounding errors due to RoundToPixel below!
       minCoord = minCoord / colSpan;
-      minWithoutWidths = minWithoutWidths / colSpan;
       prefCoord = prefCoord / colSpan;
       prefPercent = prefPercent / colSpan;
 
       minCoord -= spacing;
-      minWithoutWidths -= spacing;
       prefCoord -= spacing;
 
       minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
-      minWithoutWidths = nsTableFrame::RoundToPixel(minWithoutWidths, p2t);
       prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
 
       colFrame->AddMinCoord(minCoord);
-      if (minWithoutWidths > colMinWithoutWidths)
-        colMinWithoutWidths = minWithoutWidths;
       colFrame->AddPrefCoord(prefCoord);
       colFrame->AddPrefPercent(prefPercent);
     }
 
-    if (constraint_shrinks) {
-      constraint_shrinks[col] = colFrame->GetMinCoord() - colMinWithoutWidths;
-      constraint_shrinks_total += constraint_shrinks[col];
-      table_total += colFrame->GetMinCoord();
-    }
-
     colFrame->AdjustPrefPercent(&pct_used);
-  }
-
-  NS_ASSERTION(constraint_shrinks_total == 0 || constraint_shrinks,
-               "should only increment constraint_shrinks_total if "
-               "constraint_shrinks is non-null");
-  // XXX Should this consider border-spacing?
-  if (constraint_shrinks_total > 0 && table_total > table_constraint) {
-    float basis = float(table_total - table_constraint) /
-                  float(constraint_shrinks_total);
-    if (basis > 1.0f) {
-      basis = 1.0f;
-    }
-    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
-         col < col_end; ++col) {
-      nsTableColFrame *colFrame = GetColFrame(col);
-      // XXX ROUNDING ERRORS!!!
-      colFrame->ReduceMinCoord(constraint_shrinks[col] * basis);
-    }
   }
 }
 
