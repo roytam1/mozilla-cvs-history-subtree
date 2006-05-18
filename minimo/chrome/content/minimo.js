@@ -445,6 +445,31 @@ function MiniNavStartup()
   var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
   if (!device.isDefaultBrowser() && device.shouldCheckDefaultBrowser)
     device.setDefaultBrowser();
+    
+    
+  /*
+   * Add an observer to deal with the OS Soft keyboard 
+   * and the XUL UE adjust. We add XUL space which is a virtual
+   * placeholder to the keyboard. This should cover URLbar and 
+   * content. 
+   */
+   
+ 
+  var keyboardObserver = { observe:function (subj, topic, data) { 
+    if(data=="open")  {
+      document.getElementById("keyboardHolder").setAttribute("hidden","false");
+    }  
+    if(data=="close")  {
+      document.getElementById("keyboardHolder").setAttribute("hidden","true");				}  
+    }
+  } 
+
+  try {
+    var os = Components.classes["@mozilla.org/observer-service;1"]
+                       .getService(Components.interfaces.nsIObserverService);
+    os.addObserver(keyboardObserver,"software-keyboard", false);
+  } catch(ignore) { }
+ 
 }
 
 function HomebarHandler(e) {
