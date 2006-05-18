@@ -87,10 +87,6 @@ function PROT_PhishingWarden() {
   // We use this dude to do lookups on our remote server
   this.fetcher_ = new PROT_TRFetcher();
 
-  var wp = Ci.nsIWebProgress;
-  var wpService = Cc["@mozilla.org/docloaderservice;1"].getService(wp);
-  wpService.addProgressListener(this, wp.NOTIFY_STATE_DOCUMENT);
-
   // We need to know whether we're enabled and whether we're in advanced
   // mode, so reflect the appropriate preferences into our state.
 
@@ -115,6 +111,12 @@ function PROT_PhishingWarden() {
   // We have a hardcoded URLs we let people navigate to in order to 
   // check out the warning.
   this.testURLs_ = PROT_GlobalStore.getTestURLs();
+
+  // hook up our browser listener
+  this.progressListener_ = Cc["@mozilla.org/browser/safebrowsing/navstartlistener;1"]
+      .getService(Ci.nsIDocNavStartProgressListener);
+  this.progressListener_.callback = this;
+  this.progressListener_.enabled = this.phishWardenEnabled_;
 
   G_Debug(this, "phishWarden initialized");
 }
@@ -236,6 +238,7 @@ PROT_PhishingWarden.prototype.onPhishWardenEnabledPrefChanged = function(
   this.phishWardenEnabled_ = 
     this.prefs_.getBoolPrefOrDefault(prefName, this.phishWardenEnabled_);
   this.maybeToggleUpdateChecking();
+  this.progressListener_.enabled = this.phishWardenEnabled_;
 }
 
 /**
@@ -501,67 +504,3 @@ PROT_PhishingWarden.prototype.isSpurious_ = function(url) {
           url.startsWith("jar:") ||
           url.startsWith("javascript:"));
 }
-
-/**
- * We do our dirtywork on state changes.
- */
-PROT_PhishingWarden.prototype.onStateChange = function(webProgress, 
-                                                       request, 
-                                                       stateFlags, 
-                                                       status) {
-  var wp = Ci.nsIWebProgressListener;
-
-  // Thanks Darin for helping with this
-  if (stateFlags & wp.STATE_START &&
-      this.phishWardenEnabled_ === true) {
-
-    var url;
-    try {
-      url = request.name;
-    } catch(e) { return; }
-
-    G_Debug(this, "firing docnavstart for " + url);
-    this.onDocNavStart(request, url);
-  }
-}
-
-// We don't care about the other kinds of updates (and won't get them since we
-// only signed up for state requests), but we should implement the interface
-// anyway.
-  
-/**
- * NOP
- */
-PROT_PhishingWarden.prototype.onLocationChange = function(webProgress, 
-                                                          request, 
-                                                          location) { }
-
-/**
- * NOP
- */
-PROT_PhishingWarden.prototype.onProgressChange = function(webProgress, 
-                                                          request, 
-                                                          curSelfProgress, 
-                                                          maxSelfProgress, 
-                                                          curTotalProgress, 
-                                                          maxTotalProgress) { }
-
-/**
- * NOP
- */
-PROT_PhishingWarden.prototype.onSecurityChange = function(webProgress, 
-                                                          request, 
-                                                          state) { }
-
-/**
- * NOP
- */
-PROT_PhishingWarden.prototype.onStatusChange = function(webProgress, 
-                                                        request, 
-                                                        status, 
-                                                        message) { }
-
-/**
- * NOP
- */
-PROT_PhishingWarden.prototype.onLinkIconAvailable = function(browser, aHref) { }
