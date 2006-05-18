@@ -4256,6 +4256,9 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
             return NULL;
         defsharp->pn_kid = NULL;
         defsharp->pn_num = (jsint) CURRENT_TOKEN(ts).t_dval;
+        ts->flags |= TSF_OPERAND;
+        tt = js_GetToken(cx, ts);
+        ts->flags &= ~TSF_OPERAND;
         goto again;
 
       case TOK_USESHARP:
