@@ -3512,7 +3512,6 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
   PRBool tableHasWidth = tablePos->mWidth.GetUnit() == eStyleUnit_Coord ||
                          tablePos->mMaxWidth.GetUnit() == eStyleUnit_Coord;
 
-  PRInt32 colCount = cellMap->GetColCount();
   nscoord spacing = GetCellSpacingX();
 
   // Prevent percentages from adding to more than 100% by (to be
