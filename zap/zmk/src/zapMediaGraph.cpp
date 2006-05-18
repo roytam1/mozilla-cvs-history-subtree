@@ -42,6 +42,7 @@
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
 #include "nsIPropertyBag2.h"
+#include "nsThreadUtils.h"
 
 // ConstructMediaGraph will create a media graph on a new thread and
 // return a (nearly) threadsafe proxy.
@@ -50,15 +51,11 @@
 // #define SAME_THREAD_MEDIA_GRAPH 1
 
 
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-
-
 ////////////////////////////////////////////////////////////////////////
 // zapMediaGraph
 
 zapMediaGraph::zapMediaGraph()
-    : mPumpingEvents(PR_FALSE),
-      mNodeIdCounter(0),
+    : mNodeIdCounter(0),
       mConnectionIdCounter(0)
 {
 #ifdef DEBUG_afri_zmk
@@ -91,18 +88,6 @@ zapMediaGraph::~zapMediaGraph()
 
 NS_IMPL_THREADSAFE_ADDREF(zapMediaGraph)
 
-void* ShutdownEventHandler(PLEvent *event)
-{
-  zapMediaGraph* owner = (zapMediaGraph*)PL_GetEventOwner(event);
-  owner->mPumpingEvents = PR_FALSE;
-  return nsnull;
-}
-
-void ShutdownDestroyHandler(PLEvent *event)
-{
-  PR_FREEIF(event);
-}
-  
 NS_IMETHODIMP_(nsrefcnt)
 zapMediaGraph::Release()
 {
@@ -113,27 +98,25 @@ zapMediaGraph::Release()
 
   if (count == 0) {
     mRefCnt = 1; // stabilize
+
+#ifndef SAME_THREAD_MEDIA_GRAPH
+    // shutdown the media thread from the main thread:
+    if (mMediaThread) {
+      nsCOMPtr<nsIThread> proxiedThread;
+      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                           NS_GET_IID(nsIThread),
+                           mMediaThread.get(),
+                           NS_PROXY_ASYNC,
+                           getter_AddRefs(proxiedThread));
+      if (proxiedThread)
+        proxiedThread->Shutdown();
+    }
+#endif
+    
     NS_DELETEXPCOM(this);
     return 0;
   }
-#ifndef SAME_THREAD_MEDIA_GRAPH
-  else if (count == 1) {
-    // By this time we should only have the nsIThread object holding onto us.
-    if (!mEventQ) {
-      // Hmm... we could have a race condition here if the
-      // proxification failed.
-      NS_ERROR("Uh-oh, we haven't got an event queue. Potential race condition. We might leave a thread running!");
-    }
-    else {
-      // Spin down event loop. This will exit Run() and the nsIThread
-      // will release us.
-      PLEvent *event = PR_NEW(PLEvent);
 
-      PL_InitEvent(event, this, ShutdownEventHandler, ShutdownDestroyHandler);
-      mEventQ->PostEvent(event);
-    }
-  }
-#endif
   return count;
 }
 
@@ -149,52 +132,11 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 zapMediaGraph::Run()
 {
-  nsresult rv = NS_OK;
-
-  nsIThread::GetCurrent(getter_AddRefs(mMediaThread));
+  // Init the media graph
+  mMediaThread = do_GetCurrentThread();
   if (!mMediaThread) return NS_ERROR_FAILURE;
   
-  nsCOMPtr<nsIEventQueueService> eventQService =
-    do_GetService(kEventQueueServiceCID);
-  if (!eventQService) return NS_ERROR_FAILURE;
-  
-#ifdef SAME_THREAD_MEDIA_GRAPH
-  eventQService->GetSpecialEventQueue(nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE, getter_AddRefs(mEventTarget));
-#else
-  // create an event queue:
-  eventQService->CreateFromIThread(mMediaThread, PR_FALSE,
-                                   getter_AddRefs(mEventQ));
-#endif
-  
-  if (!mEventQ) return NS_ERROR_FAILURE;
-
-#ifndef SAME_THREAD_MEDIA_GRAPH
-  // run event loop:
-#ifdef DEBUG_afri_zmk
-  printf("running media thread\n");
-#endif
-  
-  PLEvent *event;
-  mPumpingEvents = PR_TRUE;
-  
-  while (mPumpingEvents) {
-#ifdef DEBUG_afri_zmk
-//    printf(".");
-#endif
-    rv = mEventQ->WaitForEvent(&event);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "WaitForEvent error");
-    if (NS_SUCCEEDED(rv)) {
-      rv = mEventQ->HandleEvent(event);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "HandleEvent error");
-    }
-  }
-
-  // clean up:
-  eventQService->DestroyThreadEventQueue();
-  mEventQ = nsnull;
-#endif // !SAME_THREAD_MEDIA_GRAPH
-  
-  return rv;
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -344,9 +286,9 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
   if (synchronous)
     return nd->node->QueryInterface(uuid, result);
   else
-    return NS_GetProxyForObject(mEventQ, uuid, nd->node,
-                                PROXY_ASYNC | PROXY_ALWAYS |
-                                PROXY_AUTOPROXIFY /*| PROXY_ISUPPORTS*/,
+    return NS_GetProxyForObject(mMediaThread, uuid, nd->node,
+                                NS_PROXY_ASYNC | NS_PROXY_ALWAYS |
+                                NS_PROXY_AUTOPROXIFY /*| NS_PROXY_ISUPPORTS*/,
                                 result);
 }
 
@@ -485,11 +427,9 @@ zapMediaGraph::Shutdown()
   // release all nodes in a robust way:
   while (mNodes->next->type != Descriptor::SENTINEL)
     RemoveDescriptor(mNodes->next);
-  
-  // Don't set mPumpingEvents to false here! If we still have a proxy
-  // holding onto us it would block. We have to keep pumping events
-  // until our ref count goes down to one. The event loop will be spun
-  // down from Release().
+
+  // the thread will be shutdown from our dtor when all references
+  // have been released
   return NS_OK;
 }
 
@@ -497,7 +437,7 @@ zapMediaGraph::Shutdown()
 NS_IMETHODIMP
 zapMediaGraph::GetEventTarget(nsIEventTarget * *aEventTarget)
 {
-  *aEventTarget = mEventTarget;
+  *aEventTarget = mMediaThread;
   NS_IF_ADDREF(*aEventTarget);
   return NS_OK;
 }
@@ -515,63 +455,32 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
 
   if (aOuter != nsnull) return NS_ERROR_NO_AGGREGATION;
   
-  nsCOMPtr<nsIEventQueueService> eventQService =
-    do_GetService(kEventQueueServiceCID);
-  if (!eventQService) {
-    NS_ERROR("Can't get event queue service");
-    return NS_ERROR_FAILURE;
-  }
-  nsIRunnable* mediaGraph = (nsIRunnable*) new zapMediaGraph();
+  nsCOMPtr<nsIRunnable> mediaGraph = new zapMediaGraph();
   if (!mediaGraph) return NS_ERROR_OUT_OF_MEMORY;
-  NS_ADDREF(mediaGraph);
 
   nsCOMPtr<nsIThread> mediaThread;
-  nsCOMPtr<nsIEventTarget> eventTarget;
 
 #ifdef SAME_THREAD_MEDIA_GRAPH
-  nsIThread::GetCurrent(getter_AddRefs(mediaThread));
-  eventQService->GetSpecialEventQueue(nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE,
-                                      getter_AddRefs(eventTarget));
-  // For the 'SAME THREAD' case, Run() doesn't go into an event loop,
-  // but it still has to be called to initialize the media graph:
+  mediaThread = do_GetCurrentThread();
+
   rv = mediaGraph->Run();
   if (NS_FAILED(rv)) {
     NS_ERROR("media graph initialization error");
-    NS_RELEASE(mediaGraph);
     return NS_ERROR_FAILURE;
   }
 #else
   // Create a new thread and run the media graph:
-  NS_NewThread(getter_AddRefs(mediaThread), mediaGraph, 0, PR_UNJOINABLE_THREAD,
-               PR_PRIORITY_HIGH);
+  NS_NewThread(getter_AddRefs(mediaThread), mediaGraph);
   if (!mediaThread) {
-    NS_RELEASE(mediaGraph);
     return NS_ERROR_FAILURE;
-  }
-  
-  // Get the thread's event queue. We call CreateFromIThread() instead
-  // of GetThreadEventQueue() to make sure that the event queue
-  // exists. This avoids potential race conditions in case Run()
-  // hasn't had a chance to create the queue yet.
-  eventQService->CreateFromIThread(mediaThread, PR_FALSE,
-                                   getter_AddRefs(eventQ));
+  }  
 #endif
 
-  if (!eventQ) {
-    NS_ERROR("Strange. Couldn't get event queue");
-    NS_RELEASE(mediaGraph);
-    return NS_ERROR_FAILURE;
-  }
-  
   // Return a proxy for the media graph:
-  rv = NS_GetProxyForObject(eventQ, aIID, mediaGraph,
-                            PROXY_SYNC | PROXY_ALWAYS | PROXY_AUTOPROXIFY
-                            /* | PROXY_ISUPPORTS */,
+  rv = NS_GetProxyForObject(mediaThread, aIID, mediaGraph,
+                            NS_PROXY_SYNC | NS_PROXY_ALWAYS | NS_PROXY_AUTOPROXIFY
+                            /* | NS_PROXY_ISUPPORTS */,
                             result);
-  if (NS_FAILED(rv)) {
-    NS_ERROR("proxification failure. potential race condition.");
-  }
-  NS_RELEASE(mediaGraph);
-
+  
   return rv;
 }

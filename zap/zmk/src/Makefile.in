@@ -26,7 +26,6 @@ CPPSRCS		= \
 		zapAudioDevice.cpp \
 		zapAudioDeviceManager.cpp \
 		zapAudioIn.cpp \
-		zapAudioIO.cpp \
 		zapAudioMixer.cpp \
 		zapAudioOut.cpp \
 		zapAudioStreamUtils.cpp \
@@ -34,11 +33,11 @@ CPPSRCS		= \
 		zapDTMFGenerator.cpp \
 		zapDatagramFrame.cpp \
 		zapFilterNode.cpp \
-		zapGenericSource.cpp \
 		zapG711Decoder.cpp \
 		zapG711Encoder.cpp \
 		zapG711RTPDepacketizer.cpp \
 		zapG711RTPPacketizer.cpp \
+		zapGenericSource.cpp \
 		zapMediaFrame.cpp \
 		zapMediaGraph.cpp \
 		zapMediaModule.cpp \
@@ -72,6 +71,7 @@ CPPSRCS		= \
 		zapTelephoneEventFrame.cpp \
 		zapUDPSocket.cpp \
 		zapUDPSocketPair.cpp \
+#		zapAudioIO.cpp \
 		$(NULL)
 
 XPIDLSRCS	= \

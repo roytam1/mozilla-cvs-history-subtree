@@ -68,7 +68,7 @@
 #include "zapStreamSwitch.h"
 #include "zapStreamTap.h"
 #include "zapSpeexAudioProcessor.h"
-#include "zapAudioIO.h"
+// #include "zapAudioIO.h"
 #include "zapStunClient.h"
 #include "zapStunServer.h"
 #include "zapStunDemuxer.h"
@@ -105,7 +105,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPDemuxer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamSwitch)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStreamTap)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexAudioProcessor)
-NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIO)
+//NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIO)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStunClient)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStunServer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStunDemuxer)
@@ -277,11 +277,11 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_SPEEXAUDIOPROCESSOR_CONTRACTID,
     zapSpeexAudioProcessorConstructor
   },
-  { "Mozilla ZMK Audio IO",
-    ZAP_AUDIOIO_CID,
-    ZAP_AUDIOIO_CONTRACTID,
-    zapAudioIOConstructor
-  },
+//   { "Mozilla ZMK Audio IO",
+//     ZAP_AUDIOIO_CID,
+//     ZAP_AUDIOIO_CONTRACTID,
+//     zapAudioIOConstructor
+//   },
   { "Mozilla ZMK STUN client",
     ZAP_STUNCLIENT_CID,
     ZAP_STUNCLIENT_CONTRACTID,

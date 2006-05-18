@@ -134,12 +134,10 @@ private:
   void RemoveNodeDescriptorConnections(NodeDescriptor* d);
   
   nsCOMPtr<nsIThread> mMediaThread;
-  nsCOMPtr<nsIEventTarget> mEventTarget;
-  PRBool mPumpingEvents;
   PRUint32 mNodeIdCounter;
   PRUint32 mConnectionIdCounter;
   
-  friend void* ShutdownEventHandler(PLEvent *self);
+//  friend void* ShutdownEventHandler(PLEvent *self);
 };
 
 // constructor to obtain a proxied zapMediaGraph object:

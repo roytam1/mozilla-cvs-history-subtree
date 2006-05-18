@@ -152,10 +152,10 @@ zapStunBindingRequest::Init(zapStunClient* stunClient,
 
   // XXX SRV lookup
   nsCOMPtr<nsIEventTarget> eventTarget;
-  stunClient->mGraph->GetEventQueue(getter_AddRefs(eventQ));
+  stunClient->mGraph->GetEventTarget(getter_AddRefs(eventTarget));
   nsCOMPtr<nsIDNSService> dnsService = do_GetService("@mozilla.org/network/dns-service;1");
   if (NS_FAILED(dnsService->AsyncResolve(mStunServerAddress, 0, this,
-                                         eventQ, getter_AddRefs(mDNSRequest)))) {
+                                         eventTarget, getter_AddRefs(mDNSRequest)))) {
     return NS_ERROR_FAILURE;
   }
   

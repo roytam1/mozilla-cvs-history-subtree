@@ -47,34 +47,6 @@
 #include "portaudio.h"
 #include "nsIWritablePropertyBag2.h"
 #include "zapAudioStreamUtils.h"
-#include "nsThreadUtils.h"
-
-class zapAudioIn;
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioInEvent
-// revocable event helper class 
-
-class zapAudioInEvent : public nsRunnable
-{
-public:
-  zapAudioInEvent(zapAudioIn* audioin)
-      : mAudioIn(audioin)
-  {
-  }
-
-  NS_IMETHOD Run();
-  
-  void Revoke() {
-    mAudioIn = nsnull;
-  }
-  
-  nsCString data;
-  double timestamp;
-
-private:
-  zapAudioIn *mAudioIn; // weak ref
-};
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioIn
@@ -100,13 +72,11 @@ public:
 
 private:
   friend class zapAudioInEvent;
-  nsRevocableEventPtr<zapAudioInEvent> mEvent;
   
   nsresult StartStream();
   void CloseStream();
   
   void CreateFrame(const nsACString& data, double timestamp);
-  void AudioInEventDone();
   
   // node parameters (set from zapIMediaGraph::AddNode()):
   PaDeviceID mInputDevice;
@@ -123,9 +93,6 @@ private:
   friend int AudioInCallback(void* inputBuffer, void* outputBuffer,
                              unsigned long framesPerBuffer,
                              PaTimestamp outTime, void* userData);
-  PRLock* mCallbackLock; // lock to synchronize portaudio and media threads
-  PRBool mKeepRunning; // signals the portaudio callback whether to
-                       // shut down or not
 
   nsCOMPtr<zapIMediaSink> mOutput;
 };

@@ -40,6 +40,35 @@
 #include "zapMediaFrame.h"
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"
+#include "nsThreadUtils.h"
+
+////////////////////////////////////////////////////////////////////////
+// zapAudioOutPlayFrameEvent
+
+class zapAudioOutPlayFrameEvent : public nsRunnable
+{
+public:
+  zapAudioOutPlayFrameEvent(zapAudioOut* audioout, void *buf)
+      : mAudioOut(audioout),
+        mOutputBuffer(buf)
+  {
+  }
+
+  NS_IMETHODIMP Run()
+  {
+    if (!mAudioOut) return NS_OK;
+
+    mAudioOut->PlayFrame(mOutputBuffer);
+
+    return NS_OK;
+  }
+  
+private:
+  nsRefPtr<zapAudioOut> mAudioOut;
+  void *mOutputBuffer;
+};
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioOut
@@ -72,8 +101,8 @@ zapAudioOut::~zapAudioOut()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioOut)
-NS_IMPL_RELEASE(zapAudioOut)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioOut)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioOut)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioOut)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
@@ -97,7 +126,7 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
   // down.
   mGraph = graph;
   
-  graph->GetEventQueue(getter_AddRefs(mEventQ));
+  graph->GetEventTarget(getter_AddRefs(mEventTarget));
 
   // node parameter defaults:
   mOutputDevice = Pa_GetDefaultOutputDeviceID();
@@ -132,7 +161,7 @@ zapAudioOut::RemovedFromGraph(zapIMediaGraph *graph)
   printf("(audioout removed from graph)");
 #endif
   CloseStream();
-  mEventQ = nsnull;
+  mEventTarget = nsnull;
   return NS_OK;
 }
 
@@ -213,50 +242,19 @@ zapAudioOut::GetDefaultOutputDevice(zapIAudioDevice * *aDefaultOutputDevice)
 //----------------------------------------------------------------------
 // portaudio audio sink callback:
 
-class zapAudioOutPlayFrameEvent : public PLEvent
-{
-public:
-  zapAudioOutPlayFrameEvent(zapAudioOut* audioout,
-                            void *buf) :
-      outputBuffer(buf)
-  {
-    PL_InitEvent(this, audioout, EventHandler, EventCleanup);
-  }
-
-  PR_STATIC_CALLBACK(void *) EventHandler(PLEvent* ev)
-  {
-    zapAudioOutPlayFrameEvent* rev = (zapAudioOutPlayFrameEvent*) ev;
-    zapAudioOut* audioout = (zapAudioOut*) ev->owner;
-
-    audioout->PlayFrame(rev->outputBuffer);
-
-    return (void*)PR_TRUE;
-  }
-
-  PR_STATIC_CALLBACK(void) EventCleanup(PLEvent* ev)
-  {
-    delete (zapAudioOutPlayFrameEvent*) ev;
-  }
-
-  void *outputBuffer;
-};
-
-
 int AudioOutCallback(void* inputBuffer, void* outputBuffer,
                      unsigned long framesPerBuffer,
                      PaTimestamp outTime, void* userData)
 {
   zapAudioOut* audioout = (zapAudioOut*)userData;
   
-  audioout->mEventQ->EnterMonitor();
   zapAudioOutPlayFrameEvent* ev = new zapAudioOutPlayFrameEvent(audioout,
                                                                 outputBuffer);
-  void* result;
-  audioout->mEventQ->PostSynchronousEvent(ev, &result);
-  audioout->mEventQ->ExitMonitor();
+  //XXX possible deadlock when stream is closed while we wait for
+  //event to be served???
+  audioout->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
 
-  // stop stream if event was cancelled
-  return (result==(void*)PR_TRUE ? 0 : 1);
+  return 0;
 }
 
 //----------------------------------------------------------------------
@@ -368,11 +366,6 @@ void zapAudioOut::CloseStream()
 {
   if (!mStream) return; // stream already stopped
 
-  // cancel any outstanding PlayFrame() notifications:
-  mEventQ->EnterMonitor();
-  mEventQ->RevokeEvents(this);
-  mEventQ->ExitMonitor();
-  
   Pa_CloseStream(mStream);
   mStream = nsnull;
 #ifdef DEBUG_afri_zmk

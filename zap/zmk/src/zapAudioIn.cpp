@@ -41,29 +41,43 @@
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"
 #include "nsAutoLock.h"
+#include "nsThreadUtils.h"
 
 ///////////////////////////////////////////////////////////////////////
 // zapAudioInEvent
 
-NS_IMETHODIMP
-zapAudioInEvent::Run()
+class zapAudioInEvent : public nsRunnable
 {
-  if (!mAudioIn) return NS_OK;
+public:
+  zapAudioInEvent(zapAudioIn* audioin,
+                  const nsACString &data,
+                  double timestamp)
+      : mAudioIn(audioin),
+        mData(data),
+        mTimestamp(timestamp)
+  {
+  }
+
+  NS_IMETHODIMP Run()
+  {
+    if (!mAudioIn) return NS_OK;
+    
+    mAudioIn->CreateFrame(mData, mTimestamp);
+    return NS_OK;
+  }
   
-  mAudioIn->CreateFrame(data, timestamp);
-  mAudioIn->AudioInEventDone();
-  return NS_OK;
-}
+private:
+  nsRefPtr<zapAudioIn> mAudioIn; 
+  nsCString mData;
+  double mTimestamp;
+};
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioIn
 
 zapAudioIn::zapAudioIn()
-    : mStream(nsnull),
-      mKeepRunning(PR_FALSE)
+    : mStream(nsnull)
 {
-  mCallbackLock = PR_NewLock();
-  
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
 #ifdef DEBUG_afri_zmk
@@ -78,8 +92,6 @@ zapAudioIn::zapAudioIn()
 
 zapAudioIn::~zapAudioIn()
 {
-  PR_DestroyLock(mCallbackLock);
-
   NS_ASSERTION(!mStream, "stream still running");
 
   Pa_Terminate();
@@ -91,8 +103,8 @@ zapAudioIn::~zapAudioIn()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioIn)
-NS_IMPL_RELEASE(zapAudioIn)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioIn)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioIn)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioIn)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
@@ -268,30 +280,16 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
 
   zapAudioIn* audioin = (zapAudioIn*)userData;
   
-  nsAutoLock lock(audioin->mCallbackLock);
+  // Asynchronously post the frame.
+  nsCString data;
+  PRUint32 bufferLength = audioin->mStreamParameters.GetSamplesPerFrame() *
+    GetPortAudioSampleSize(audioin->mStreamParameters.sample_format);
+  data.SetLength(bufferLength);
+  memcpy(data.BeginWriting(), inputBuffer, bufferLength);
 
-  if (!audioin->mKeepRunning) {
-#ifdef DEBUG_afri_zmk
-    printf("(audioin cb stopped)}");
-#endif
-    return 1; // stop stream
-  }
-  
-  // Post the frame. We need to do this synchronously to pace the callback.
-
-  // XXX We should really enter the event queue's monitor here
-  // Unlock the callback lock, so that the stream can be closed while
-  // we're waiting for the event. It is important to do this AFTER
-  // entering the eventQ monitor but BEFORE posting, to coordinate the
-  // request revocation in CloseStream()
-  lock.unlock();
-  nsRefPtr<zapAudioInEvent> ev = new zapAudioInEvent(audioin);
-  PRUint32 bufferLength = audioin->mStreamParameters.GetSamplesPerFrame() * GetPortAudioSampleSize(audioin->mStreamParameters.sample_format);
-  ev->data.SetLength(bufferLength);
-  memcpy(ev->data.BeginWriting(), inputBuffer, bufferLength);
-  ev->timestamp = outTime;
+  nsCOMPtr<nsIRunnable> ev = new zapAudioInEvent(audioin, data, outTime);
     
-  audioin->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
+  audioin->mEventTarget->Dispatch(ev, NS_DISPATCH_NORMAL);
   
 #ifdef DEBUG_afri_zmk
 //  printf("}");
@@ -310,11 +308,8 @@ nsresult zapAudioIn::StartStream()
   // on zapAudioIn, because packets and their associated streaminfo
   // might be buffered elsewhere in the graph while we are already
   // busy on the next stream.
-  // No need to lock mCallbackLock; callback isn't running
   mStreamInfo = mStreamParameters.CreateStreamInfo();
     
-  mKeepRunning = PR_TRUE;
-
   PaError err = Pa_OpenStream(&mStream,
                               mInputDevice, mStreamParameters.channels,
                               ZapAudioSampleFormatToPaFormat(mStreamParameters.sample_format),
@@ -331,7 +326,6 @@ nsresult zapAudioIn::StartStream()
     printf("Failed to open portaudio input stream: %s\n",
            Pa_GetErrorText(err));
 #endif
-    mKeepRunning = PR_FALSE;
     return NS_ERROR_FAILURE;
   }
 
@@ -342,14 +336,6 @@ nsresult zapAudioIn::StartStream()
 void zapAudioIn::CloseStream()
 {
   NS_ASSERTION(mStream, "stream not running");
-
-  // make sure that callback will stop the stream if it starts running
-  // from now on:
-  nsAutoLock lock(mCallbackLock);
-  mKeepRunning = PR_FALSE;
-  lock.unlock();
-  // cancel any outstanding CreateFrame() notifications:
-  mEvent.Revoke();
 
   Pa_CloseStream(mStream);
   mStream = nsnull;
@@ -386,7 +372,4 @@ void zapAudioIn::CreateFrame(const nsACString& data, double timestamp)
   mOutput->ConsumeFrame(frame);
 }
 
-void zapAudioIn::AudioInEventDone()
-{
-  mEvent.Forget();
-}
+
