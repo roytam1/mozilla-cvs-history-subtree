@@ -156,9 +156,10 @@ nsDocNavStartProgressListener::OnStateChange(nsIWebProgress *aWebProgress,
 {
   if (mEnabled && aStateFlags & STATE_START && aStateFlags & STATE_IS_REQUEST) {
     // might be for us, check load flags
+    nsresult rv;
 #ifdef DEBUG
     nsLoadFlags loadFlags;
-    nsresult rv = aRequest->GetLoadFlags(&loadFlags);
+    rv = aRequest->GetLoadFlags(&loadFlags);
     NS_ASSERTION(NS_SUCCEEDED(rv) && loadFlags & nsIChannel::LOAD_DOCUMENT_URI,
                  "Unexpected load flags, we only registered for loads");
 #endif

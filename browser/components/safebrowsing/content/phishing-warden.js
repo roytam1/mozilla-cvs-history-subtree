@@ -135,6 +135,13 @@ PROT_PhishingWarden.prototype.QueryInterface = function(iid) {
 }
 
 /**
+ * Cleanup on shutdown.
+ */
+PROT_PhishingWarden.prototype.shutdown = function() {
+  this.progressListener_.callback = null;
+}
+
+/**
  * When a preference (either advanced features or the phishwarden
  * enabled) changes, we might have to start or stop asking for updates. 
  * 

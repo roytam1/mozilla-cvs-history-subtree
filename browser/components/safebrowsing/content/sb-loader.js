@@ -97,6 +97,10 @@ var safebrowsing = {
       // If the user shuts down before deferredStartup, there is no controller.
       safebrowsing.controller.shutdown();
     }
+    if (safebrowsing.phishWarden) {
+      safebrowsing.phishWarden.shutdown();
+    }
+    
     window.removeEventListener("unload", safebrowsing.shutdown, false);
   }
 }
