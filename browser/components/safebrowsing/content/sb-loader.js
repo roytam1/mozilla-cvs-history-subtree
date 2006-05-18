@@ -115,32 +115,6 @@ window.addEventListener("unload", safebrowsing.shutdown, false);
 // Some utils for our UI.
 
 /**
- * Execute a command on a window
- *
- * @param cmd String containing command to execute
- * @param win Reference to Window on which to execute it
- */
-function SB_executeCommand(cmd, win) {
-  try {	
-    var disp = win.document.commandDispatcher;
-    var ctrl = disp.getControllerForCommand(cmd);
-    ctrl.doCommand(cmd);
-  } catch (e) {
-    dump("Exception on command: " + cmd + "\n");
-    dump(e);
-  }
-}
-
-/**
- * Execute a command on this window
- *
- * @param cmd String containing command to execute
- */
-function SB_executeCommandLocally(cmd) {
-  SB_executeCommand(cmd, window);
-}
-
-/**
  * Set status text for a particular link. We look the URLs up in our 
  * globalstore.
  *

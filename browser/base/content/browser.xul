@@ -52,10 +52,6 @@
 <?xml-stylesheet href="chrome://browser/skin/places/browser-places.css" type="text/css"?>
 #endif
 
-#ifdef MOZ_SAFE_BROWSING
-<?xml-stylesheet href="chrome://browser/skin/safebrowsing/browser-protection.css" type="text/css"?>
-#endif
-
 <?xml-stylesheet href="chrome://global/skin/toolbar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://global/skin/findBar.css" type="text/css"?>
 
@@ -498,11 +494,6 @@
     </vbox>
   </hbox>
 
-#ifdef MOZ_SAFE_BROWSING
-#include ../../components/safebrowsing/content/safebrowsing.inc
-#endif
-
-  
 #include ../../../toolkit/components/typeaheadfind/content/findBar.inc
   
   <statusbar class="chromeclass-status" id="status-bar"
