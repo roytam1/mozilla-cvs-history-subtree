@@ -1431,7 +1431,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 atom = GET_ATOM(cx, jp->script, pc);
                 obj = ATOM_TO_OBJECT(atom);
                 argc = OBJ_BLOCK_COUNT(cx, obj);
-                if (argc <= sizeof smallv / sizeof smallv[0]) {
+                if ((size_t)argc <= sizeof smallv / sizeof smallv[0]) {
                     atomv = smallv;
                 } else {
                     atomv = (JSAtom **) JS_malloc(cx, argc * sizeof(JSAtom *));

@@ -353,6 +353,16 @@ js_GetClassId(JSContext *cx, JSClass *clasp, jsid *idp);
 extern JSObject *
 js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent);
 
+/*
+ * Fast access to immutable standard objects (constructors and prototypes).
+ */
+extern JSBool
+js_GetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
+                  JSObject **objp);
+
+extern JSBool
+js_SetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key, JSObject *cobj);
+
 extern JSBool
 js_FindClassObject(JSContext *cx, JSObject *start, jsid id, jsval *vp);
 

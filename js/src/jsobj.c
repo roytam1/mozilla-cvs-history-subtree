@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -199,9 +199,9 @@ obj_setSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
     if (pobj) {
         /*
-         * Innerize pobj here to avoid sticking unwanted properties on the outer
-         * object. This ensures that any with statements only grant access to the
-         * inner object.
+         * Innerize pobj here to avoid sticking unwanted properties on the
+         * outer object. This ensures that any with statements only grant
+         * access to the inner object.
          */
         OBJ_TO_INNER_OBJECT(cx, pobj);
         if (!pobj)
@@ -2164,6 +2164,88 @@ bad:
     goto out;
 }
 
+JS_STATIC_DLL_CALLBACK(JSObject *)
+js_InitNullClass(JSContext *cx, JSObject *obj)
+{
+    JS_ASSERT(0);
+    return NULL;
+}
+
+#define JS_PROTO(name,code,init) extern JSObject *init(JSContext *, JSObject *);
+#include "jsproto.tbl"
+#undef JS_PROTO
+
+static JSObjectOp lazy_prototype_init[JSProto_LIMIT] = {
+#define JS_PROTO(name,code,init) init,
+#include "jsproto.tbl"
+#undef JS_PROTO
+};
+
+JSBool
+js_GetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
+                  JSObject **objp)
+{
+    JSBool ok;
+    JSObject *tmp, *cobj;
+    JSResolvingKey rkey;
+    JSResolvingEntry *rentry;
+    uint32 generation;
+    JSObjectOp init;
+    jsval v;
+
+    while ((tmp = OBJ_GET_PARENT(cx, obj)) != NULL)
+        obj = tmp;
+    if (!(OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_IS_GLOBAL)) {
+        *objp = NULL;
+        return JS_TRUE;
+    }
+
+    ok = JS_GetReservedSlot(cx, obj, key, &v);
+    if (!ok)
+        return JS_FALSE;
+    if (!JSVAL_IS_PRIMITIVE(v)) {
+        *objp = JSVAL_TO_OBJECT(v);
+        return JS_TRUE;
+    }
+
+    rkey.obj = obj;
+    rkey.id = ATOM_TO_JSID(cx->runtime->atomState.classAtoms[key]);
+    if (!js_StartResolving(cx, &rkey, JSRESFLAG_LOOKUP, &rentry))
+        return JS_FALSE;
+    if (!rentry) {
+        /* Already caching key in obj -- suppress recursion. */
+        *objp = NULL;
+        return JS_TRUE;
+    }
+    generation = cx->resolvingTable->generation;
+
+    cobj = NULL;
+    init = lazy_prototype_init[key];
+    if (init) {
+        if (!init(cx, obj)) {
+            ok = JS_FALSE;
+        } else {
+            ok = JS_GetReservedSlot(cx, obj, key, &v);
+            if (ok && !JSVAL_IS_PRIMITIVE(v))
+                cobj = JSVAL_TO_OBJECT(v);
+        }
+    }
+
+    js_StopResolving(cx, &rkey, JSRESFLAG_LOOKUP, rentry, generation);
+    *objp = cobj;
+    return ok;
+}
+
+JSBool
+js_SetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key, JSObject *cobj)
+{
+    JS_ASSERT(!OBJ_GET_PARENT(cx, obj));
+    if (!(OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_IS_GLOBAL))
+        return JS_TRUE;
+
+    return JS_SetReservedSlot(cx, obj, key, OBJECT_TO_JSVAL(cobj));
+}
+
 JSBool
 js_FindClassObject(JSContext *cx, JSObject *start, jsid id, jsval *vp)
 {
@@ -3675,37 +3757,54 @@ JSBool
 js_CheckAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
                jsval *vp, uintN *attrsp)
 {
+    JSBool writing;
     JSObject *pobj;
     JSProperty *prop;
-    JSScopeProperty *sprop;
     JSClass *clasp;
+    JSScopeProperty *sprop;
     JSCheckAccessOp check;
-    JSBool ok;
 
-    if (!js_LookupProperty(cx, obj, id, &pobj, &prop))
-        return JS_FALSE;
-    if (!prop) {
-        *vp = JSVAL_VOID;
-        *attrsp = 0;
-        clasp = OBJ_GET_CLASS(cx, obj);
-        return !clasp->checkAccess ||
-               clasp->checkAccess(cx, obj, ID_TO_VALUE(id), mode, vp);
-    }
-    if (!OBJ_IS_NATIVE(pobj)) {
+    writing = (mode & JSACC_WRITE) != 0;
+    switch (mode & JSACC_TYPEMASK) {
+      case JSACC_PROTO:
+        pobj = obj;
+        if (!writing)
+            *vp = OBJ_GET_SLOT(cx, obj, JSSLOT_PROTO);
+        *attrsp = JSPROP_PERMANENT;
+        break;
+
+      case JSACC_PARENT:
+        JS_ASSERT(!writing);
+        pobj = obj;
+        *vp = OBJ_GET_SLOT(cx, obj, JSSLOT_PARENT);
+        *attrsp = JSPROP_READONLY | JSPROP_PERMANENT;
+        break;
+
+      default:
+        if (!js_LookupProperty(cx, obj, id, &pobj, &prop))
+            return JS_FALSE;
+        if (!prop) {
+            if (!writing)
+                *vp = JSVAL_VOID;
+            *attrsp = 0;
+            clasp = OBJ_GET_CLASS(cx, obj);
+            return !clasp->checkAccess ||
+                   clasp->checkAccess(cx, obj, ID_TO_VALUE(id), mode, vp);
+        }
+        if (!OBJ_IS_NATIVE(pobj)) {
+            OBJ_DROP_PROPERTY(cx, pobj, prop);
+            return OBJ_CHECK_ACCESS(cx, pobj, id, mode, vp, attrsp);
+        }
+
+        sprop = (JSScopeProperty *)prop;
+        *attrsp = sprop->attrs;
+        if (!writing) {
+            *vp = (SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(pobj)))
+                  ? LOCKED_OBJ_GET_SLOT(pobj, sprop->slot)
+                  : JSVAL_VOID;
+        }
         OBJ_DROP_PROPERTY(cx, pobj, prop);
-        return OBJ_CHECK_ACCESS(cx, pobj, id, mode, vp, attrsp);
     }
-    sprop = (JSScopeProperty *)prop;
-    if (!(mode & JSACC_WRITE)) {
-        *vp = (SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(pobj)))
-            ? LOCKED_OBJ_GET_SLOT(pobj, sprop->slot)
-            : ((mode & JSACC_WATCH) == JSACC_PROTO)
-            ? LOCKED_OBJ_GET_SLOT(obj, JSSLOT_PROTO)
-            : (mode == JSACC_PARENT)
-            ? LOCKED_OBJ_GET_SLOT(obj, JSSLOT_PARENT)
-            : JSVAL_VOID;
-    }
-    *attrsp = sprop->attrs;
 
     /*
      * If obj's class has a stub (null) checkAccess hook, use the per-runtime
@@ -3719,19 +3818,11 @@ js_CheckAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
      * checkObjectAccess hook.  This covers precompilation-based sharing and
      * (possibly unintended) runtime sharing across trust boundaries.
      */
-    clasp = LOCKED_OBJ_GET_CLASS(pobj);
+    clasp = OBJ_GET_CLASS(cx, pobj);
     check = clasp->checkAccess;
     if (!check)
         check = cx->runtime->checkObjectAccess;
-    if (check) {
-        JS_UNLOCK_OBJ(cx, pobj);
-        ok = check(cx, pobj, ID_TO_VALUE(id), mode, vp);
-        JS_LOCK_OBJ(cx, pobj);
-    } else {
-        ok = JS_TRUE;
-    }
-    OBJ_DROP_PROPERTY(cx, pobj, prop);
-    return ok;
+    return !check || check(cx, pobj, ID_TO_VALUE(id), mode, vp);
 }
 
 #ifdef JS_THREADSAFE

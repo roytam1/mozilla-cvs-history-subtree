@@ -2064,6 +2064,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
     if (currentVersion != originalVersion)
         js_SetVersion(cx, currentVersion);
 
+#ifdef __GNUC__
+    flags = 0;  /* suppress gcc warnings */
+    id = 0;
+#endif
+
     /*
      * Prepare to call a user-supplied branch handler, and abort the script
      * if it returns false.  We reload onbranch after calling out to native
@@ -2625,6 +2630,7 @@ interrupt:
                     goto out;
                 }
                 *vp = OBJECT_TO_JSVAL(iterobj);
+                flags |= js_GetNativeIteratorFlags(cx, iterobj);
 
                 /*
                  * Store the current object below the iterator for generality:
@@ -2637,7 +2643,7 @@ interrupt:
                 vp[-1] = OBJECT_TO_JSVAL(obj);
             } else if (JSVAL_IS_VOID(rval)) {
                 /* Bytecode compatible old way: don't use iteration protocol. */
-                flags |= JSITER_COMPAT;
+                flags |= JSITER_COMPAT | JSITER_HIDDEN;
                 ok = js_NewNativeIterator(cx, obj, flags, vp);
                 if (!ok)
                     goto out;
@@ -2663,7 +2669,7 @@ interrupt:
 #ifdef DEBUG
             fid = JSVAL_NULL;
 #endif
-            ok = js_CallIteratorNext(cx, iterobj,
+            ok = js_CallIteratorNext(cx, iterobj, flags,
                                      (iterobj == obj) ? NULL : &fid,
                                      &rval);
             if (!ok) {

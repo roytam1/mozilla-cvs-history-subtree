@@ -1110,45 +1110,6 @@ AlreadyHasOwnProperty(JSContext *cx, JSObject *obj, JSAtom *atom, jsval *vp)
 JS_PUBLIC_API(void)
 JS_SetGlobalObject(JSContext *cx, JSObject *obj)
 {
-    JSContext *ocx;
-    JSAtom **classAtoms;
-    JSProtoKey key;
-    jsval v;
-
-    if (!obj) {
-        /* Clearing cx->globalObject: clear cached class object refs too. */
-        memset(cx->classObjects, 0, sizeof cx->classObjects);
-    } else {
-        /*
-         * In case someone initialized obj's standard classes on another
-         * context, then handed obj off to cx, try to find that other context
-         * and copy its class objects into cx's.
-         */
-        ocx = js_FindContextForGlobal(cx, obj);
-        if (ocx) {
-            memcpy(cx->classObjects, ocx->classObjects,
-                   sizeof cx->classObjects);
-        } else {
-            /*
-             * Darn, can't find another context in which obj's standard classes,
-             * or at least some of them, were initialized.  Try to make obj and
-             * cx agree on the state of the standard classes.
-             */
-            memset(cx->classObjects, 0, sizeof cx->classObjects);
-            classAtoms = cx->runtime->atomState.classAtoms;
-            for (key = JSProto_Null; key < JSProto_LIMIT; key++) {
-                if (AlreadyHasOwnProperty(cx, obj, classAtoms[key], &v) &&
-                    !JSVAL_IS_PRIMITIVE(v)) {
-                    cx->classObjects[key] = JSVAL_TO_OBJECT(v);
-                }
-            }
-        }
-    }
-
-    /*
-     * Do this after js_FindContextForGlobal, so it can assert that obj is not
-     * yet cx->globalObject.
-     */
     cx->globalObject = obj;
 
 #if JS_HAS_XML_SUPPORT
@@ -2260,8 +2221,8 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
     }
 
     /* If this is a standard class, cache its prototype. */
-    if (key != JSProto_Null)
-        js_SetClassObject(cx, obj, key, ctor);
+    if (key != JSProto_Null && !js_SetClassObject(cx, obj, key, ctor))
+        goto bad;
 
 out:
     JS_POP_TEMP_ROOT(cx, &tvr);
@@ -3231,8 +3192,6 @@ JS_ClearScope(JSContext *cx, JSObject *obj)
 
     if (obj->map->ops->clear)
         obj->map->ops->clear(cx, obj);
-    if (cx->globalObject == obj)
-        memset(cx->classObjects, 0, sizeof cx->classObjects);
 }
 
 JS_PUBLIC_API(JSIdArray *)

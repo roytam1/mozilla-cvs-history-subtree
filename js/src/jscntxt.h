@@ -628,13 +628,13 @@ struct JSContext {
     /* Stack of thread-stack-allocated temporary GC roots. */
     JSTempValueRooter   *tempValueRooters;
 
-    /* Roots for the standard class objects (Object, Function, etc.) */
-    JSObject            *classObjects[JSProto_LIMIT];
+    /* Iterator cache to speed up native default for-in loop case. */
+    JSObject            *cachedIterObj;
 
 #ifdef GC_MARK_DEBUG
     /* Top of the GC mark stack. */
     void                *gcCurrentMarkNode;
- #endif
+#endif
 };
 
 #define JS_THREAD_ID(cx)            ((cx)->thread ? (cx)->thread->id : 0)
@@ -762,20 +762,6 @@ js_PushLocalRoot(JSContext *cx, JSLocalRootStack *lrs, jsval v);
 
 extern void
 js_MarkLocalRoots(JSContext *cx, JSLocalRootStack *lrs);
-
-/*
- * Fast access to immutable standard objects (constructors and prototypes).
- */
-extern JSContext *
-js_FindContextForGlobal(JSContext *cx, JSObject *obj);
-
-extern JSBool
-js_GetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
-                  JSObject **objp);
-
-extern void
-js_SetClassObject(JSContext *cx, JSObject *obj, JSProtoKey key,
-                  JSObject *value);
 
 /*
  * Report an exception, which is currently realized as a printf-style format
