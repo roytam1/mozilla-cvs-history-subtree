@@ -3537,9 +3537,8 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
     // column less flexible if it causes an increase in the preferred
     // width relative to the cells *after* it in the column.
     // XXX Should this be a quirk?  (This being the reverse iteration,
-    // the way we compute hasSpecifiedWidth (i.e., not counting when a
-    // specified width is already too small on the cell), and the way we
-    // use it only in some cases in nsTableColFrame::AddPrefWidth.)
+    // and the way we use it only in some cases in
+    // nsTableColFrame::AddPrefWidth.)
     for (PRInt32 row = cellMap->GetRowCount() - 1; row >= 0; --row) {
       PRBool originates;
       PRInt32 colSpan;
@@ -3552,10 +3551,11 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       nscoord prefCoord = cellFrame->GetPrefWidth(aRenderingContext);
       float prefPercent = 0.0f;
 
-      nscoord prefOrig = prefCoord;
+      PRBool hasSpecifiedWidth = PR_FALSE;
 
       switch (pos->mWidth.GetUnit()) {
         case eStyleUnit_Coord: {
+            hasSpecifiedWidth = PR_TRUE;
             nscoord w = pos->mWidth.GetCoordValue();
             if (!tableHasWidth && w > minCoord)
               minCoord = w;
@@ -3572,6 +3572,7 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
 
       switch (pos->mMaxWidth.GetUnit()) {
         case eStyleUnit_Coord: {
+            hasSpecifiedWidth = PR_TRUE;
             nscoord w = pos->mMaxWidth.GetCoordValue();
             if (w < minCoord)
               minCoord = w;
@@ -3607,8 +3608,6 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
         default:
           break;
       }
-
-      PRBool hasSpecifiedWidth = prefOrig != prefCoord;
 
       // Add the cell-spacing (and take it off again below) so that we don't
       // require extra room for the omitted cell-spacing of column-spanning
