@@ -77,10 +77,6 @@ EXPORTS = \
 		mozView.h \
 		$(NULL)
 
-GFX_LCPPSRCS = \
-		nsWatchTask.cpp \
-		$(NULL)
-
 MAC_LCPPSRCS = \
 		nsBidiKeyboard.cpp \
 		nsClipboard.cpp \
@@ -102,7 +98,6 @@ CPPSRCS =  \
 		nsMenuBarX.cpp \
 		nsMenuItemX.cpp \
 		$(MAC_LCPPSRCS) \
-		$(GFX_LCPPSRCS) \
 		$(NULL)
 
 CMMSRCS = \
@@ -124,7 +119,6 @@ XPIDLSRCS	+= \
 		nsIDragHelperService.idl \
 		$(NULL)
 
-GFX_CPPSRCS     := $(addprefix $(topsrcdir)/gfx/src/mac/,$(GFX_LCPPSRCS))
 MAC_CPP_CSRCS   := $(addprefix $(srcdir)/../mac/,$(MAC_LCPPSRCS))
 
 SHARED_LIBRARY_LIBS = $(DIST)/lib/libxpwidgets_s.a
@@ -136,7 +130,7 @@ EXTRA_DSO_LDOPTS += \
 		-lgkgfx \
 		$(NULL)
 
-GARBAGE		+= $(GFX_LCPPSRCS) $(MAC_LCPPSRCS)
+GARBAGE		+= $(MAC_LCPPSRCS)
 
 include $(topsrcdir)/config/rules.mk
 

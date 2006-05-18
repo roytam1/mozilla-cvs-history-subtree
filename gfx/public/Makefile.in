@@ -75,7 +75,6 @@ EXPORTS		= \
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 EXPORTS		+= \
           nsIPrintingContext.h \
-          nsRepeater.h \
           $(NULL)
 endif
 
