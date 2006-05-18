@@ -3605,7 +3605,7 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       // cells.
       minCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
                                                     nsLayoutUtils::MIN_WIDTH) +
-                       spacing;
+                  spacing;
       prefCoord += cellFrame->GetIntrinsicBorderPadding(aRenderingContext,
                                                    nsLayoutUtils::PREF_WIDTH) +
                    spacing;
