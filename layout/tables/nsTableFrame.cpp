@@ -3627,11 +3627,11 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       minCoord -= spacing;
       prefCoord -= spacing;
 
-      if (colSpan > 1)
-        hasSpecifiedWidth = PR_FALSE;
-
       minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
       prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
+
+      if (colSpan > 1)
+        hasSpecifiedWidth = PR_FALSE;
 
       colFrame->AddMinCoord(minCoord);
       colFrame->AddPrefCoord(prefCoord, hasSpecifiedWidth);
