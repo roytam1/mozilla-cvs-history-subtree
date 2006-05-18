@@ -67,9 +67,6 @@
  
 <window id="main-window"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-#ifdef MOZ_SAFE_BROWSING
-        xmlns:html="http://www.w3.org/1999/xhtml"
-#endif
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         onload="BrowserStartup()" onunload="BrowserShutdown()" onclose="return WindowIsClosing();"
         contenttitlesetting="true"

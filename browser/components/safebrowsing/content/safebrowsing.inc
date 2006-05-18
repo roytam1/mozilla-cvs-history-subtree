@@ -29,7 +29,7 @@
 
         <hbox id="safebrowsing-palm-message-titlebox"
         class="safebrowsing-palm-fixed-width">
-          <image 
+          <image
           src="chrome://browser/skin/safebrowsing/warning24x24.png" 
           id="safebrowsing-palm-title-icon" />
           <description id="safebrowsing-palm-message-title"
@@ -47,16 +47,15 @@
         <!-- Content area: short warning -->
 
         <description id="safebrowsing-palm-content" 
-         class="safebrowsing-paragraph">
+          class="safebrowsing-paragraph">
           &safeb.palm.message.part1; 
-          <html:a class="safebrowsing-palm-link" tabindex="1"
+          <label class="text-link plain"
             statustext="&safeb.palm.showmore.statustext;"
             onmouseover="SB_setStatus(this.getAttribute('statustext'))"
             onmouseout="SB_clearStatus()"
-            id="safebrowsing-palm-showmore-link" href="#"
-            onclick="goDoCommand('safebrowsing-palm-showmore')">
-            &safeb.palm.message.link1.more;
-          </html:a>
+            id="safebrowsing-palm-showmore-link"
+            onclick="goDoCommand('safebrowsing-palm-showmore')"
+            value="&safeb.palm.message.link1.more;" />
         </description>
 
         <!-- Content area: rest of the warning, revealed if the user
@@ -67,67 +66,63 @@
 
           <description class="safebrowsing-palm-paragraph">
             &safeb.palm.message.part2;
-            <html:a class="safebrowsing-palm-link" tabindex="2" 
+            <label class="text-link plain"
               id="safebrowsing-palm-faq-link"
               onmouseover="SB_setStatusFor(this.id)"
               onmouseout="SB_clearStatus()"
-              onclick="goDoCommand('safebrowsing-palm-phishingfaq')">
-              &safeb.palm.message.link2.phishing.faq;</html:a>
+              onclick="goDoCommand('safebrowsing-palm-phishingfaq')"
+              value="&safeb.palm.message.link2.phishing.faq;" />
             &safeb.palm.message.part3;
-            <html:a class="safebrowsing-palm-link" tabindex="3" 
-            id="safebrowsing-palm-phishingorg-link"
-            onmouseover="SB_setStatusFor(this.id)"
-            onmouseout="SB_clearStatus()"
-            onclick="goDoCommand('safebrowsing-palm-phishingorg')">
-            &safeb.palm.message.link3.antiphishing.org;</html:a>&safeb.palm.message.part3.dot;
+            <label class="text-link plain"
+              id="safebrowsing-palm-phishingorg-link"
+              onmouseover="SB_setStatusFor(this.id)"
+              onmouseout="SB_clearStatus()"
+              onclick="goDoCommand('safebrowsing-palm-phishingorg')"
+              value="&safeb.palm.message.link3.antiphishing.org;" />&safeb.palm.message.part3.dot;
           </description>
 
           <description class="safebrowsing-palm-paragraph">
             &safeb.palm.message.part4;
-            <html:a class="safebrowsing-palm-link" tabindex="4"
+            <label class="text-link plain"
               id="safebrowsing-palm-fraudpage-link"
               onmouseover="SB_setStatusFor(this.id)"
               onmouseout="SB_clearStatus()"
-              onclick="goDoCommand('safebrowsing-palm-fraudpage')">
-              &safeb.palm.message.link4.gwghome;</html:a>&safeb.palm.message.part4.dot;</description>
+              onclick="goDoCommand('safebrowsing-palm-fraudpage')"
+              value="&safeb.palm.message.link4.gwghome;" />&safeb.palm.message.part4.dot;
+          </description>
           <description class="safebrowsing-palm-paragraph">
-            &safeb.palm.message.part5;<html:a 
-              class="safebrowsing-palm-link" tabindex="6"
+            &safeb.palm.message.part5;
+            <label
+              class="text-link plain"
               id="safebrowsing-palm-falsepositive-link"
               onmouseover="SB_setStatusFor(this.id)"
               onmouseout="SB_clearStatus()"
-              onclick="goDoCommand('safebrowsing-palm-falsepositive')">
-              &safeb.palm.message.link5.report;</html:a>&safeb.palm.message.part5.dot;
+              onclick="goDoCommand('safebrowsing-palm-falsepositive')"
+              value="&safeb.palm.message.link5.report;" />&safeb.palm.message.part5.dot;
           </description>
         </vbox>
 
         <!-- Main action links -->
-
-        <hbox id="safebrowsing-palm-message-actionbox" pack="center" 
-         align="center"
-        class="safebrowsing-palm-fixed-width">
-         <description>
-         <html:a 
-          class="safebrowsing-palm-link safebrowsing-palm-bigtext safebrowsing-padded"
-          statustext="&safeb.palm.accept.statustext;"
-          id="safebrowsing-palm-accept-link"
-          onmouseover="SB_setStatus(this.getAttribute('statustext'))"
-          onmouseout="SB_clearStatus()"
-          tabindex="2"
-          onclick="goDoCommand('safebrowsing-accept-warning')">
-          &safeb.palm.accept.label;</html:a></description>
-          <spacer />
-          <spacer />
-         <description>
-         <html:a 
-          class="safebrowsing-palm-link safebrowsing-palm-bigtext safebrowsing-padded"
-          statustext="&safeb.palm.decline.statustext;"
-          id="safebrowsing-palm-decline-link"
-          onmouseover="SB_setStatus(this.getAttribute('statustext'))"
-          onmouseout="SB_clearStatus()"
-          tabindex="3"
-          onclick="goDoCommand('safebrowsing-decline-warning')">
-          &safeb.palm.decline.label;</html:a></description>
+        <hbox id="safebrowsing-palm-message-actionbox"
+         class="safebrowsing-palm-fixed-width"
+         align="center" crop="none">
+         <label
+           class="safebrowsing-palm-bigtext text-link plain"
+           statustext="&safeb.palm.accept.statustext;"
+           id="safebrowsing-palm-accept-link"
+           onmouseover="SB_setStatus(this.getAttribute('statustext'))"
+           onmouseout="SB_clearStatus()"
+           onclick="goDoCommand('safebrowsing-accept-warning')"
+           value="&safeb.palm.accept.label;" />
+         <spacer flex="1"/>
+         <label
+           class="safebrowsing-palm-bigtext text-link plain"
+           statustext="&safeb.palm.decline.statustext;"
+           id="safebrowsing-palm-decline-link"
+           onmouseover="SB_setStatus(this.getAttribute('statustext'))"
+           onmouseout="SB_clearStatus()"
+           onclick="goDoCommand('safebrowsing-decline-warning')"
+           value="&safeb.palm.decline.label;" />
         </hbox>
 
         <!-- Footer -->
@@ -138,15 +133,17 @@
           tooltiptext="&safeb.palm.provider.logo.tooltip;"
           src="chrome://browser/skin/safebrowsing/logo.png" />
           -->
-          <Spacer flex="1" />
-          <hbox>
-            [<description><html:a id="safebrowsing-palm-report-link"
-            onmouseover="SB_setStatusFor(this.id)"
-            onmouseout="SB_clearStatus()"
-            class="safebrowsing-palm-smalltext safebrowsing-palm-link" 
-            onclick="goDoCommand('safebrowsing-submit-generic-phishing')">
-            &safeb.palm.sendreport.label;</html:a></description>]
-          </hbox>
+          <spacer flex="1" />
+          <description>
+            [
+            <label id="safebrowsing-palm-report-link"
+              onmouseover="SB_setStatusFor(this.id)"
+              onmouseout="SB_clearStatus()"
+              class="safebrowsing-palm-smalltext text-link plain"
+              onclick="goDoCommand('safebrowsing-submit-generic-phishing')"
+              value="&safeb.palm.sendreport.label;" />
+            ]
+          </description>
         </hbox>
       </vbox>
     </vbox>

@@ -56,7 +56,7 @@ var safebrowsing = {
     var Cc = Components.classes;
     var appContext = Cc["@mozilla.org/safebrowsing/application;1"]
                      .getService().wrappedJSObject;
-    safebrowsing.globalStore = appContext;
+    safebrowsing.globalStore = appContext.PROT_GlobalStore;
 
     // Each new browser window needs its own controller. 
 
