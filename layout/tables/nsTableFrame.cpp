@@ -3532,8 +3532,15 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
     // XXX Consider col frame!
     // XXX Should it get Border/padding considered?
 
-    for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
-         row < row_end; ++row) {
+    // We need to loop backwards because of the HasSpecifiedWidth
+    // checks, since we must treat a cell specified width as making the
+    // column less flexible if it causes an increase in the preferred
+    // width relative to the cells *after* it in the column.
+    // XXX Should this be a quirk?  (This being the reverse iteration,
+    // the way we compute hasSpecifiedWidth (i.e., not counting when a
+    // specified width is already too small on the cell), and the way we
+    // use it only in some cases in nsTableColFrame::AddPrefWidth.)
+    for (PRInt32 row = cellMap->GetRowCount() - 1; row >= 0; --row) {
       PRBool originates;
       PRInt32 colSpan;
       nsTableCellFrame *cellFrame = cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
@@ -3544,6 +3551,8 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       nscoord minCoord = cellFrame->GetMinWidth(aRenderingContext);
       nscoord prefCoord = cellFrame->GetPrefWidth(aRenderingContext);
       float prefPercent = 0.0f;
+
+      nscoord prefOrig = prefCoord;
 
       switch (pos->mWidth.GetUnit()) {
         case eStyleUnit_Coord: {
@@ -3599,6 +3608,8 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
           break;
       }
 
+      PRBool hasSpecifiedWidth = prefOrig != prefCoord;
+
       // Add the cell-spacing (and take it off again below) so that we don't
       // require extra room for the omitted cell-spacing of column-spanning
       // cells.
@@ -3621,7 +3632,7 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
       prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
 
       colFrame->AddMinCoord(minCoord);
-      colFrame->AddPrefCoord(prefCoord);
+      colFrame->AddPrefCoord(prefCoord, hasSpecifiedWidth);
       colFrame->AddPrefPercent(prefPercent);
     }
 

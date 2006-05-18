@@ -138,6 +138,7 @@ public:
   void Dump(PRInt32 aIndent);
 #endif
 
+  // The largest min-width of the cells.
   void ResetMinCoord() {
     mMinCoord = 0;
   }
@@ -149,17 +150,30 @@ public:
     return mMinCoord;
   }
 
+  // The largest pref-width of the cells
   void ResetPrefCoord() {
     mPrefCoord = 0;
+    mHasSpecifiedCoord = PR_FALSE;
   }
-  void AddPrefCoord(nscoord aPrefCoord) {
-    if (aPrefCoord > mPrefCoord)
+  void AddPrefCoord(nscoord aPrefCoord, PRBool aHasSpecifiedCoord) {
+    if (aPrefCoord >= mPrefCoord) {
       mPrefCoord = aPrefCoord;
+      if (aHasSpecifiedCoord) {
+        mHasSpecifiedCoord = PR_TRUE;
+      }
+    }
   }
   nscoord GetPrefCoord() {
     return mPrefCoord;
   }
 
+  // Whether to expand greater than pref width more conservatively
+  // because the width was specified.
+  PRBool GetHasSpecifiedCoord() {
+    return mHasSpecifiedCoord;
+  }
+
+  // The largest specified percentage width of the cells.
   void ResetPrefPercent() {
     mPrefPercent = 0.0f;
   }
@@ -180,6 +194,7 @@ public:
     *aTableTotalPercent += mPrefPercent;
   }
 
+  // The final width of the column.
   void SetFinalWidth(nscoord aFinalWidth) {
     mFinalWidth = aFinalWidth;
   }
@@ -204,6 +219,7 @@ protected:
   BCPixelSize mRightContBorderWidth;
   BCPixelSize mBottomContBorderWidth;
 
+  PRPackedBool mHasSpecifiedCoord;
   nscoord mMinCoord;
   nscoord mPrefCoord;
   float mPrefPercent;

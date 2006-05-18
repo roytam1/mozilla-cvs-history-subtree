@@ -192,6 +192,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     nscoord assigned = 0;
     nscoord grow_basis = 0;
     nscoord zoom_basis = 0;
+    nscoord zoom_fixed_basis = 0;
     float pct_basis = 0.0f; // 0.0f through 1.0f
     PRInt32 col;
     for (col = 0; col < colCount; ++col) {
@@ -207,8 +208,12 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             val = min_width;
         }
         if (colFrame->GetPrefPercent() == 0.0f) {
-            grow_basis += colFrame->GetPrefCoord() - min_width;
-            zoom_basis += colFrame->GetPrefCoord();
+            nscoord pref_width = colFrame->GetPrefCoord();
+            grow_basis += pref_width - min_width;
+            if (!colFrame->GetHasSpecifiedCoord()) {
+              zoom_basis += pref_width;
+            }
+            zoom_fixed_basis += pref_width;
         } else {
             pct_basis += colFrame->GetPrefPercent();
         }
@@ -228,7 +233,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     //       width columns in proportion to their percentages
     //    5. if there are no percentage width columns, equally
     enum Loop2Type {
-        SHRINK, GROW, ZOOM_GROW, PCT_GROW, EQUAL_GROW, NOOP
+        SHRINK, GROW, ZOOM_GROW, ZOOM_FIXED_GROW, PCT_GROW, EQUAL_GROW, NOOP
     };
 
     Loop2Type l2t;
@@ -242,6 +247,8 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             l2t = GROW;
         else if (zoom_basis > 0)
             l2t = ZOOM_GROW;
+        else if (zoom_fixed_basis > 0)
+            l2t = ZOOM_FIXED_GROW;
         else if (pct_basis > 0.0f)
             l2t = PCT_GROW;
         else if (colCount > 0)
@@ -265,8 +272,12 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             u.f = float(width - assigned) / float(grow_basis);
             break;
         case ZOOM_GROW:
-            u.f = 1.0f +
-                  (float(width - assigned - grow_basis) / float(zoom_basis));
+            u.f = 1.0f + (float(width - assigned - grow_basis) /
+                          float(zoom_basis));
+            break;
+        case ZOOM_FIXED_GROW:
+            u.f = 1.0f + (float(width - assigned - grow_basis) /
+                          float(zoom_fixed_basis));
             break;
         case PCT_GROW:
             u.f = float(width - assigned) / float(pct_basis);
@@ -295,6 +306,17 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                                                  colFrame->GetMinCoord()));
                 break;
             case ZOOM_GROW:
+                if (colFrame->GetPrefPercent() == 0.0f) {
+                    if (colFrame->GetHasSpecifiedCoord())
+                        // XXX It's usually already the pref coord; is
+                        // it always?
+                        col_width = colFrame->GetPrefCoord();
+                    else
+                        col_width = NSToCoordRound(u.f *
+                                                   colFrame->GetPrefCoord());
+                }
+                break;
+            case ZOOM_FIXED_GROW:
                 if (colFrame->GetPrefPercent() == 0.0f)
                     col_width = NSToCoordRound(u.f *
                                                colFrame->GetPrefCoord());
