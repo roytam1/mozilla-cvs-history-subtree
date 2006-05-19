@@ -67,8 +67,6 @@ UrlClassifierTable.prototype.exists = function(url, callback) {
 // Url table implementation
 function UrlClassifierTableUrl() {
   UrlClassifierTable.call(this);
-  this.dbservice_ = Cc["@mozilla.org/url-classifier/dbservice;1"]
-                    .getService(Ci.nsIUrlClassifierDBService);
 }
 UrlClassifierTableUrl.inherits(UrlClassifierTable);
 
@@ -79,11 +77,13 @@ UrlClassifierTableUrl.prototype.exists = function(url, callback) {
   var canonicalized = PROT_URLCanonicalizer.canonicalizeURL_(url);
   G_Debug(this, "Looking up: " + url + " (" + canonicalized + ")");
 
-  this.dbservice_.exists(this.name,
-                         canonicalized,
-                         BindToObject(this.dbCallback_, 
-                                      this,
-                                      callback));
+  var dbservice_ = Cc["@mozilla.org/url-classifier/dbservice;1"]
+                   .getService(Ci.nsIUrlClassifierDBService);
+  dbservice_.exists(this.name,
+                    canonicalized,
+                    BindToObject(this.dbCallback_, 
+                                 this,
+                                 callback));
 }
 
 /**

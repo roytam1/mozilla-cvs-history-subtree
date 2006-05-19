@@ -120,6 +120,7 @@ function G_ObserverServiceObserver(topic, observeFunction, opt_onlyOnce) {
  */
 G_ObserverServiceObserver.prototype.unregister = function() {
   this.observerService_.removeObserver(this.observer_, this.topic_);
+  this.observerService_ = null;
 }
 
 /**
