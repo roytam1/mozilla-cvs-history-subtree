@@ -156,11 +156,11 @@ public:
     mHasSpecifiedCoord = PR_FALSE;
   }
   void AddPrefCoord(nscoord aPrefCoord, PRBool aHasSpecifiedCoord) {
-    if (aPrefCoord >= mPrefCoord) {
+    if (aPrefCoord > mPrefCoord) {
       mPrefCoord = aPrefCoord;
-      if (aHasSpecifiedCoord) {
-        mHasSpecifiedCoord = PR_TRUE;
-      }
+    }
+    if (aHasSpecifiedCoord) {
+      mHasSpecifiedCoord = PR_TRUE;
     }
   }
   nscoord GetPrefCoord() {
