@@ -115,6 +115,8 @@ nsMsgAttachmentHandler::nsMsgAttachmentHandler()
   m_file_analyzed = PR_FALSE;
   m_ctl_count = 0;
   m_null_count = 0;
+  m_have_cr = m_have_lf = m_have_crlf = 0;
+  m_prev_char_was_cr = PR_FALSE;
   m_current_column = 0;
   m_max_column = 0;
   m_lines = 0;
@@ -198,8 +200,29 @@ nsMsgAttachmentHandler::AnalyzeDataChunk(const char *chunk, PRInt32 length)
 
     if (*s == nsCRT::CR || *s == nsCRT::LF)
     {
-      if (s+1 < end && s[0] == nsCRT::CR && s[1] == nsCRT::LF)
-        s++;
+      if (*s == nsCRT::CR)
+      {
+        if (m_prev_char_was_cr)
+          m_have_cr = 1;
+        else
+          m_prev_char_was_cr = PR_TRUE;
+      }
+      else
+      {
+        if (m_prev_char_was_cr)
+        {
+          if (m_current_column == 0)
+          {
+            m_have_crlf = 1;
+            m_lines--;
+          }
+          else
+            m_have_cr = m_have_lf = 1;
+          m_prev_char_was_cr = PR_FALSE;
+        }
+        else
+          m_have_lf = 1;
+      }
       if (m_max_column < m_current_column)
         m_max_column = m_current_column;
       m_current_column = 0;
@@ -215,7 +238,7 @@ nsMsgAttachmentHandler::AnalyzeDataChunk(const char *chunk, PRInt32 length)
 void
 nsMsgAttachmentHandler::AnalyzeSnarfedFile(void)
 {
-  char chunk[256];
+  char chunk[1024];
   PRInt32 numRead = 0;
 
   if (m_file_analyzed)
@@ -229,11 +252,13 @@ nsMsgAttachmentHandler::AnalyzeSnarfedFile(void)
     {
       do
       {
-        numRead = fileHdl.read(chunk, 256);
+        numRead = fileHdl.read(chunk, sizeof(chunk));
         if (numRead > 0)
           AnalyzeDataChunk(chunk, numRead);
       }
       while (numRead > 0);
+      if (m_prev_char_was_cr)
+        m_have_cr = 1;
 
       fileHdl.close();
       m_file_analyzed = PR_TRUE;
@@ -264,9 +289,11 @@ nsMsgAttachmentHandler::PickEncoding(const char *charset, nsIMsgSend *mime_deliv
   if (pPrefBranch) 
     pPrefBranch->GetBoolPref ("mail.file_attach_binary", &forceB64);
   
-  if (!mMainBody && (forceB64 || mime_type_requires_b64_p (m_type)))
+  if (!mMainBody && (forceB64 || mime_type_requires_b64_p (m_type) ||
+    m_have_cr+m_have_lf+m_have_crlf != 1 || m_current_column != 0))
   {
-  /* If the content-type is "image/" or something else known to be binary,
+  /* If the content-type is "image/" or something else known to be binary
+  or several flavors of newlines are present or last line is incomplete,
   always use base64 (so that we don't get confused by newline
   conversions.)
      */
@@ -560,7 +587,8 @@ nsMsgAttachmentHandler::SnarfMsgAttachment(nsMsgCompFields *compFields)
     if (NS_SUCCEEDED(rv) && messageService)
     {
       nsCAutoString uri(m_uri);
-      uri.Append("?fetchCompleteMessage=true");
+      uri += (uri.FindChar('?') == kNotFound) ? "?" : "&";
+      uri.Append("fetchCompleteMessage=true");
       nsCOMPtr<nsIStreamListener> strListener;
       fetcher->QueryInterface(NS_GET_IID(nsIStreamListener), getter_AddRefs(strListener));
 
