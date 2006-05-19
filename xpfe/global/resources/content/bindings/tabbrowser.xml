@@ -1266,8 +1266,7 @@
                              -1 : this.getDropOnIndex(aEvent);
 
             var ltr = window.getComputedStyle(this, null).direction == "ltr";
-            var arrowX;
-            var tabBoxObject;
+            var arrowX, tabBoxObject;
             if (newIndexOn != -1) {
               tabBoxObject = this.mTabs[newIndexOn].boxObject;
               arrowX = tabBoxObject.x + tabBoxObject.width / 2;
@@ -1305,9 +1304,10 @@
         <body>
           <![CDATA[
             var newIndex = this.getDropIndex(aEvent);
+            var tabIndex;
             if (aDragSession.sourceNode &&
                 aDragSession.sourceNode.parentNode == this.mTabContainer) {
-              var tabIndex = this.getTabIndex(aDragSession.sourceNode);
+              tabIndex = this.getTabIndex(aDragSession.sourceNode);
               if (newIndex > tabIndex)
                 newIndex--;
               this.moveTabTo(tabIndex, newIndex);
@@ -1326,7 +1326,7 @@
               var bgLoad = this.mPrefs.getBoolPref("browser.tabs.loadInBackground");
 
               var tab = null;
-              var tabIndex = this.getDropOnIndex(aEvent);
+              tabIndex = this.getDropOnIndex(aEvent);
               if (tabIndex != -1) {
                 // Load in an existing tab
                 tab = this.mTabs[tabIndex];
@@ -1335,7 +1335,8 @@
               else {
                 // We're adding a new tab
                 tab = this.addTab(getShortcutOrURI(url));
-                this.moveTabTo(this.mTabs.length - 1, newIndex);
+                if (newIndex != this.mTabs.length - 1)
+                  this.moveTabTo(this.mTabs.length - 1, newIndex);
               }
               if (this.mCurrentTab != tab && !bgLoad)
                 this.selectedTab = tab;
