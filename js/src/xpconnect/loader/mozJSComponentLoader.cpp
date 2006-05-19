@@ -516,25 +516,26 @@ mozJSComponentLoader::ReallyInit()
 
     // Set up our fastload file
     nsCOMPtr<nsIFastLoadService> flSvc = do_GetFastLoadService(&rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = flSvc->NewFastLoadFile("XPC", getter_AddRefs(mFastLoadFile));
-    if (NS_FAILED(rv)) {
-        LOG(("Could not get fastload file location\n"));
+    if (flSvc)
+    {
+        rv = flSvc->NewFastLoadFile("XPC", getter_AddRefs(mFastLoadFile));
+        if (NS_FAILED(rv)) {
+            LOG(("Could not get fastload file location\n"));
+        }
+        // Listen for xpcom-shutdown so that we can close out our fastload file
+        // at that point (after that we can no longer create an input stream).
+        nsCOMPtr<nsIObserverService> obsSvc =
+            do_GetService(kObserverServiceContractID, &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        rv = obsSvc->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+#ifdef DEBUG_shaver_off
+        fprintf(stderr, "mJCL: ReallyInit success!\n");
+#endif
     }
 
-    // Listen for xpcom-shutdown so that we can close out our fastload file
-    // at that point (after that we can no longer create an input stream).
-    nsCOMPtr<nsIObserverService> obsSvc =
-        do_GetService(kObserverServiceContractID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = obsSvc->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "mJCL: ReallyInit success!\n");
-#endif
     mInitialized = PR_TRUE;
 
     return NS_OK;
