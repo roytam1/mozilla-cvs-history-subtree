@@ -41,7 +41,7 @@ groupbox.scrolling {
  
 toolbarbutton.base-button {
   padding-left:2px ! important;
-  list-style-image: url("chrome://minimo/skin/preferences/options.png");
+  padding-right:2px ! important;
 }
 
 .pref-toolbar {
@@ -49,22 +49,19 @@ toolbarbutton.base-button {
 }
 
 #general-button {
-  -moz-image-region: rect(0px, 32px, 32px, 0px)
+  list-style-image: url("chrome://minimo/skin/preferences/icon-pref-general.png");
 }
 
 #advanced-button {
-  -moz-image-region: rect(0px, 160px, 32px, 128px)
-
+  list-style-image: url("chrome://minimo/skin/preferences/icon-pref-advanced.png");
 }
 
 #privacy-button {
-  -moz-image-region: rect(0px, 64px, 32px, 32px)
-
+  list-style-image: url("chrome://minimo/skin/preferences/icon-pref-lock.png");
 }
 
 #connection-button {
-  -moz-image-region: rect(0px, 96px, 32px, 64px)
-
+  list-style-image: url("chrome://minimo/skin/preferences/icon-pref-networking.png");
 }
 
 toolbar {
