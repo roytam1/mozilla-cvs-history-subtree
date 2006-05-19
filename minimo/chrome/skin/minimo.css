@@ -93,9 +93,6 @@ toolbar *, #appcontent *, * {
 
 /* Tab browser stuff */
 
-.tabs-closebutton-box{
-    list-style-image: url("chrome://minimo/skin/close-12px.png");
-}
 
 #content tabpanels {
     border-left:1px solid white;
@@ -105,11 +102,6 @@ toolbar *, #appcontent *, * {
     margin-top:1px ! important;
     margin-left:2px ! important;
 }
-
-#content .tabs-closebutton-box {
-   margin-right:3px ! important;
-}
-
 
 /* Tab browser close button override */ 
 
@@ -142,14 +134,6 @@ toolbar *, #appcontent *, * {
 #lock-icon.security-notbroken {
     margin-left:2px;
     list-style-image: url("chrome://minimo/skin/security-notbroken.png");
-}
-
-
-.button-close {
-  list-style-image: url("chrome://minimo/skin/close-12px.png");
-  margin-right:4px ! important;
-  margin-top:0px ! important;
-
 }
 
 .button-border {
@@ -185,72 +169,56 @@ caption {
 
 .menu-button
   {
-    background: url("chrome://minimo/skin/m-color.png") no-repeat 50% 50%;
-    width:15px !important;
-    height:15px !important;
+	  list-style-image      : url("chrome://minimo/skin/m.png");
+  }
+
+.nav-button
+  {
+	  list-style-image      : url("chrome://minimo/skin/m-nav.png");
   }
 
 .back-button
   {
-	  list-style-image      : url("chrome://minimo/skin/back-color.png");
+	  list-style-image      : url("chrome://minimo/skin/back-active.png");
 	  margin-left:2px;
   }
 
 .forward-button
   {
-	  list-style-image      : url("chrome://minimo/skin/forward-color.png");
+	  list-style-image      : url("chrome://minimo/skin/forward-active.png");
   }
 
 .stop-button 
   {
-	  list-style-image      : url("chrome://minimo/skin/stop-color.png");
+	  list-style-image      : url("chrome://minimo/skin/stop-active.png");
   }
 
 .go-button 
   {
-	  list-style-image      : url("chrome://minimo/skin/go-color.png");
+	  list-style-image      : url("chrome://minimo/skin/go-active.png");
   }
 
 .reload-button 
   {
-	  list-style-image      : url("chrome://minimo/skin/reload-color.png");
+	  list-style-image      : url("chrome://minimo/skin/reload-active.png");
   }
   
 #back-button[disabled="true"] 
   {
-	  list-style-image      : url("chrome://minimo/skin/back-gray.png");
+	  list-style-image      : url("chrome://minimo/skin/back-disabled.png");
 	  margin-left:2px;
   }
 
 #forward-button[disabled="true"]
   {
-	  list-style-image      : url("chrome://minimo/skin/forward-gray.png");
+	  list-style-image      : url("chrome://minimo/skin/forward-disabled.png");
   }  
   
 .separator-menu {
 	border-top:1px solid black;
 }
 
-#uizoomplusitem {
-  list-style-image: url("chrome://minimo/skin/up.png");
-}
-
-#uizoomminusitem {
-  list-style-image: url("chrome://minimo/skin/down.png");
-}
-
-#zoomplusitem {
-  list-style-image: url("chrome://minimo/skin/up.png");
-}
-
-#zoomminusitem {
-  list-style-image: url("chrome://minimo/skin/down.png");
-}
-
-
 /* Feed icon - not reviewed yet, TOOK from the browser code */
-
-
 
 #feed-button, #feed-button > .button-box,
 #feed-button:hover:active > .button-box {
@@ -278,6 +246,7 @@ caption {
 #feed-button[feeds] {
   list-style-image: url("chrome://minimo/skin/rssfavicon.png");
 }
+
 #feed-button[chromedir="rtl"][feeds] {
   list-style-image: url("chrome://minimo/skin/rssfavicon.png");
 }
