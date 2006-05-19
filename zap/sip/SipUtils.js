@@ -95,7 +95,7 @@ var getSIPThread = getMainThread; // from AsyncUtils.js
 // QueryInterface in js though, because we want to be able to call
 // js objects transparently from js or c++.
 function getProxyOnSIPThread(aObject, aInterface) {
-  var IProxyManager = Components.interfaces.nsIProxyManager;
+  var IProxyManager = Components.interfaces.nsIProxyObjectManager;
   
   var proxyManager = Components. classes["@mozilla.org/xpcomproxy;1"].
     getService(IProxyManager);
@@ -168,6 +168,7 @@ function generateTag() {
   var r = getRandom32();
   
   // return as base 36 to get as few chars as possible:
+  // XXX could use base64 encoding
   return r.toString(36);
 }
 
