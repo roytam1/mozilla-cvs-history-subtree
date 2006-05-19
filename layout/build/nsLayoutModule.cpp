@@ -147,6 +147,7 @@
 #include "nsDOMScriptObjectFactory.h"
 #include "nsAutoCopyListener.h"
 #include "nsDOMAttribute.h"
+#include "nsDOMStorage.h"
 
 #include "nsHTMLCanvasFrame.h"
 
@@ -1330,7 +1331,12 @@ static const nsModuleComponentInfo gComponents[] = {
   { "Style sheet service",
     NS_STYLESHEETSERVICE_CID,
     NS_STYLESHEETSERVICE_CONTRACTID,
-    nsStyleSheetServiceConstructor }
+    nsStyleSheetServiceConstructor },
+
+  { "DOM Storage",
+    NS_DOMSTORAGE_CID,
+    "@mozilla.org/dom/storage;1",
+    NS_NewDOMStorage }
 };
 
 NS_IMPL_NSGETMODULE_WITH_CTOR(nsLayoutModule, gComponents, Initialize)
