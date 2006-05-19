@@ -90,6 +90,43 @@ static PRBool gKeepRunning = PR_TRUE;
 PR_STATIC_CALLBACK(void) EventLoop(void *arg);
 
 // -------------------------------------------------------------------------
+// Wrapper for JS-implemented nsIUrlClassifierCallback that protects against
+// bug 337492.  We should be able to remove this code once that bug is fixed.
+
+#include "nsProxyRelease.h"
+#include "nsEventQueueUtils.h"
+
+class nsUrlClassifierCallbackWrapper : public nsIUrlClassifierCallback
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_FORWARD_NSIURLCLASSIFIERCALLBACK(mInner->)
+
+  nsUrlClassifierCallbackWrapper(nsIUrlClassifierCallback *inner)
+    : mInner(inner)
+  {
+    NS_ADDREF(mInner);
+  }
+
+  ~nsUrlClassifierCallbackWrapper()
+  {
+    nsCOMPtr<nsIEventQueue> mainEventQ;
+    NS_GetMainEventQ(getter_AddRefs(mainEventQ));
+    if (mainEventQ) {
+      NS_ProxyRelease(mainEventQ, mInner);
+    } else {
+      NS_WARNING("unable to get main event queue");
+    }
+  }
+
+private:
+  nsIUrlClassifierCallback *mInner;
+};
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsUrlClassifierCallbackWrapper,
+                              nsIUrlClassifierCallback)
+
+// -------------------------------------------------------------------------
 // Actual worker implemenatation
 class nsUrlClassifierDBServiceWorker : public nsIUrlClassifierDBServiceWorker
 {
@@ -496,12 +533,17 @@ nsUrlClassifierDBService::Exists(const nsACString& tableName,
                                  nsIUrlClassifierCallback *c)
 {
   EnsureThreadStarted();
+
+  nsCOMPtr<nsIUrlClassifierCallback> wrapper =
+      new nsUrlClassifierCallbackWrapper(c);
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
+
   nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
                             NS_GET_IID(nsIUrlClassifierCallback),
-                            c,
+                            wrapper,
                             PROXY_ASYNC,
                             getter_AddRefs(proxyCallback));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -523,12 +565,17 @@ nsUrlClassifierDBService::UpdateTables(const nsACString& updateString,
                                        nsIUrlClassifierCallback *c)
 {
   EnsureThreadStarted();
+
+  nsCOMPtr<nsIUrlClassifierCallback> wrapper =
+      new nsUrlClassifierCallbackWrapper(c);
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
+
   nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
                             NS_GET_IID(nsIUrlClassifierCallback),
-                            c,
+                            wrapper,
                             PROXY_ASYNC,
                             getter_AddRefs(proxyCallback));
   NS_ENSURE_SUCCESS(rv, rv);
