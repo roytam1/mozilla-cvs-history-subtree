@@ -38,13 +38,16 @@
 
 #include "AppDirServiceProvider.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsDirectoryServiceDefs.h"
 #include "nsILocalFileMac.h"
 
 #include <Carbon/Carbon.h>
 
 // Defines
 
-#define APP_REGISTRY_NAME   NS_LITERAL_CSTRING("Application.regs")
+#define APP_REGISTRY_NAME        NS_LITERAL_CSTRING("Application.regs")
+#define COMPONENT_REGISTRY_NAME  NS_LITERAL_CSTRING("compreg.dat")
+#define XPTI_REGISTRY_NAME       NS_LITERAL_CSTRING("xpti.dat")
 
 //*****************************************************************************
 // AppDirServiceProvider::Constructor/Destructor
@@ -89,6 +92,18 @@ AppDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_
     if (NS_SUCCEEDED(rv))
       rv = localFile->AppendNative(APP_REGISTRY_NAME);
   }
+  else if (strcmp(prop, NS_XPCOM_COMPONENT_REGISTRY_FILE) == 0)
+  {
+    rv = GetProductDirectory(getter_AddRefs(localFile));
+    if (NS_SUCCEEDED(rv))
+      rv = localFile->AppendNative(COMPONENT_REGISTRY_NAME);
+  }
+  else if (strcmp(prop, NS_XPCOM_XPTI_REGISTRY_FILE) == 0)
+  {
+    rv = GetProductDirectory(getter_AddRefs(localFile));
+    if (NS_SUCCEEDED(rv))
+      rv = localFile->AppendNative(XPTI_REGISTRY_NAME);
+  }
   else if (strcmp(prop, NS_APP_USER_PROFILES_ROOT_DIR) == 0)
   {
     rv = GetProductDirectory(getter_AddRefs(localFile));
@@ -132,24 +147,28 @@ AppDirServiceProvider::EnsureFolder(OSType inFolderType, nsILocalFile** outFolde
   OSErr err = ::FSFindFolder(kUserDomain, inFolderType, kCreateFolder, &foundRef);
   if (err != noErr)
     return NS_ERROR_FAILURE;
-  nsCOMPtr<nsILocalFileMac> localDir(do_CreateInstance(NS_LOCAL_FILE_CONTRACTID));
-  if (!localDir)
-    return NS_ERROR_FAILURE;
-  rv = localDir->InitWithFSRef(&foundRef);
-  if (NS_FAILED(rv))
-    return rv;
-  rv = localDir->AppendNative(mProductDirName);
-  if (NS_FAILED(rv))
-    return rv;
+
+  nsCOMPtr<nsILocalFile> localDir;
+  NS_NewLocalFile(EmptyString(), PR_TRUE, getter_AddRefs(localDir));
+  nsCOMPtr<nsILocalFileMac> localDirMac(do_QueryInterface(localDir));
+  NS_ENSURE_STATE(localDirMac);
+
+  rv = localDirMac->InitWithFSRef(&foundRef);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = localDirMac->AppendNative(mProductDirName);
+  NS_ENSURE_SUCCESS(rv, rv);
   
   PRBool exists;
-  rv = localDir->Exists(&exists);
-  if (NS_SUCCEEDED(rv) && !exists)
-    rv = localDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
-  if (NS_FAILED(rv))
-    return rv;
+  rv = localDirMac->Exists(&exists);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!exists) {
+    rv = localDirMac->Create(nsIFile::DIRECTORY_TYPE, 0775);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
   
-  *outFolder = localDir;
+  *outFolder = localDirMac;
   NS_ADDREF(*outFolder);
   
   return rv; 
