@@ -2158,9 +2158,13 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
     if (!constructor) {
         /*
          * Lacking a constructor, name the prototype (e.g., Math) unless this
-         * class is anonymous, i.e. for internal use only.
+         * class (a) is anonymous, i.e. for internal use only; (b) the class
+         * of obj (the global object) is has a reserved slot indexed by key;
+         * and (c) key is not the null key.
          */
-        if (clasp->flags & JSCLASS_IS_ANONYMOUS) {
+        if ((clasp->flags & JSCLASS_IS_ANONYMOUS) &&
+            (OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_IS_GLOBAL) &&
+            key != JSProto_Null) {
             named = JS_FALSE;
         } else {
             named = OBJ_DEFINE_PROPERTY(cx, obj, ATOM_TO_JSID(atom),
@@ -2169,6 +2173,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
             if (!named)
                 goto bad;
         }
+
         ctor = proto;
     } else {
         /* Define the constructor function in obj's scope. */
