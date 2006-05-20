@@ -175,7 +175,7 @@ nsBrowserStatusHandler.prototype =
         }
 
         // disable and hides the nav-stop-button; and enables unhides the nav-menu-button button
-        document.getElementById("nav-menu-button").className="menu-button";
+        document.getElementById("nav-menu-button").className="nav-button";
         document.getElementById("nav-menu-button").setAttribute("command","cmd_BrowserNavMenu");
 
         return;
