@@ -494,6 +494,8 @@ var BookmarksCommand = {
       sTextUnicode += url + "\n";
       sTextHTML += "<A HREF=\"" + url + "\">" + name + "</A>";
     }
+    sTextUnicode = sTextUnicode.replace(/\n$/,"");
+    
     // generate unique separator and combine the array to one string 
     var bmSeparator = "]-[", extrarSeparator = "@";
     for (var i = 0; i < tmpBmItem.length; ++i) {
@@ -1796,7 +1798,6 @@ var BookmarksUtils = {
     setTimeout(function () {remoteDS.Flush()}, 100);
   },
 
-  // should update the caller, aShowDialog is no more necessary
   addBookmark: function (aURL, aTitle, aCharset, aIsWebPanel, aDescription)
   {
     var dArgs = {
