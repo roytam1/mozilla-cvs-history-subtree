@@ -97,8 +97,9 @@
 #include "nsTArray.h"
 
 #include "cairo.h"
-#ifndef MOZILLA_1_8_BRANCH
 #include "imgIEncoder.h"
+#ifdef MOZILLA_1_8_BRANCH
+#define imgIEncoder imgIEncoder_MOZILLA_1_8_BRANCH
 #endif
 
 #ifdef MOZ_CAIRO_GFX
@@ -979,7 +980,6 @@ nsCanvasRenderingContext2D::GetInputStream(const nsACString& aMimeType,
                                            const nsAString& aEncoderOptions,
                                            nsIInputStream **aStream)
 {
-#ifndef MOZILLA_1_8_BRANCH
     nsCString conid(NS_LITERAL_CSTRING("@mozilla.org/image/encoder;2?type="));
     conid += aMimeType;
 
@@ -1018,9 +1018,6 @@ nsCanvasRenderingContext2D::GetInputStream(const nsACString& aMimeType,
     }
 
     return CallQueryInterface(encoder, aStream);
-#else
-    return NS_ERROR_FAILURE;
-#endif
 }
 
 //

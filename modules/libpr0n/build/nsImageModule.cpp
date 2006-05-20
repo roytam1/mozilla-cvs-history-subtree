@@ -37,6 +37,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsImgBuildDefines.h"
+
 #ifdef XP_MAC
 #define IMG_BUILD_gif 1
 #define IMG_BUILD_bmp 1
@@ -57,36 +59,43 @@
 #include "imgRequest.h"
 #include "imgRequestProxy.h"
 
-#ifdef IMG_BUILD_gif
+#ifdef IMG_BUILD_DECODER_gif
 // gif
 #include "imgContainerGIF.h"
 #include "nsGIFDecoder2.h"
 #endif
 
-#ifdef IMG_BUILD_bmp
+#ifdef IMG_BUILD_DECODER_bmp
 // bmp/ico
 #include "nsBMPDecoder.h"
 #include "nsICODecoder.h"
 #endif
 
-#ifdef IMG_BUILD_png
+#ifdef IMG_BUILD_DECODER_png
 // png
 #include "nsPNGDecoder.h"
 #endif
 
-#if defined(XP_WIN32) && defined(IMG_BUILD_jpeg) && !defined(WINCE)
-#include "nsJPEGEncoder.h"
-#endif
-
-#ifdef IMG_BUILD_jpeg
+#ifdef IMG_BUILD_DECODER_jpeg
 // jpeg
 #include "nsJPEGDecoder.h"
 #endif
 
-#ifdef IMG_BUILD_xbm
+#ifdef IMG_BUILD_DECODER_xbm
 // xbm
 #include "nsXBMDecoder.h"
 #endif
+
+
+#ifdef IMG_BUILD_ENCODER_png
+// png
+#include "nsPNGEncoder.h"
+#endif
+#ifdef IMG_BUILD_ENCODER_jpeg
+// jpeg
+#include "nsJPEGEncoder.h"
+#endif
+
 
 // objects that just require generic constructors
 
@@ -95,56 +104,60 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(imgContainer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(imgLoader)
 NS_GENERIC_FACTORY_CONSTRUCTOR(imgRequestProxy)
 
-#ifdef IMG_BUILD_gif
+#ifdef IMG_BUILD_DECODER_gif
 // gif
 NS_GENERIC_FACTORY_CONSTRUCTOR(imgContainerGIF)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsGIFDecoder2)
 #endif
 
-#ifdef IMG_BUILD_jpeg
+#ifdef IMG_BUILD_DECODER_jpeg
 // jpeg
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsJPEGDecoder)
 #endif
-
-#if defined(XP_WIN32) && defined(IMG_BUILD_jpeg) && !defined(WINCE)
+#ifdef IMG_BUILD_ENCODER_jpeg
+// jpeg
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsJPEGEncoder)
 #endif
 
-#ifdef IMG_BUILD_bmp
+#ifdef IMG_BUILD_DECODER_bmp
 // bmp
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsICODecoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBMPDecoder)
 #endif
 
-#ifdef IMG_BUILD_png
+#ifdef IMG_BUILD_DECODER_png
 // png
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsPNGDecoder)
 #endif
+#ifdef IMG_BUILD_ENCODER_png
+// png
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsPNGEncoder)
+#endif
 
-#ifdef IMG_BUILD_xbm
+#ifdef IMG_BUILD_DECODER_xbm
 // xbm
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXBMDecoder)
 #endif
 
 static const char* gImageMimeTypes[] = {
-#ifdef IMG_BUILD_gif
+#ifdef IMG_BUILD_DECODER_gif
   "image/gif",
 #endif
-#ifdef IMG_BUILD_jpeg
+#ifdef IMG_BUILD_DECODER_jpeg
   "image/jpeg",
   "image/pjpeg",
   "image/jpg",
 #endif
-#ifdef IMG_BUILD_bmp
+#ifdef IMG_BUILD_DECODER_bmp
   "image/x-icon",
   "image/vnd.microsoft.icon",
   "image/bmp",
 #endif
-#ifdef IMG_BUILD_png
+#ifdef IMG_BUILD_DECODER_png
   "image/png",
   "image/x-png",
 #endif
-#ifdef IMG_BUILD_xbm
+#ifdef IMG_BUILD_DECODER_xbm
   "image/x-xbitmap",
   "image/x-xbm",
   "image/xbm"
@@ -207,7 +220,7 @@ static const nsModuleComponentInfo components[] =
     "@mozilla.org/image/request;1",
     imgRequestProxyConstructor, },
 
-#ifdef IMG_BUILD_gif
+#ifdef IMG_BUILD_DECODER_gif
   // gif
   { "GIF image container",
     NS_GIFCONTAINER_CID,
@@ -219,7 +232,7 @@ static const nsModuleComponentInfo components[] =
      nsGIFDecoder2Constructor, },
 #endif
 
-#ifdef IMG_BUILD_jpeg
+#ifdef IMG_BUILD_DECODER_jpeg
   // jpeg
   { "JPEG decoder",
     NS_JPEGDECODER_CID,
@@ -234,15 +247,15 @@ static const nsModuleComponentInfo components[] =
     "@mozilla.org/image/decoder;2?type=image/jpg",
     nsJPEGDecoderConstructor, },
 #endif
-
-#if defined(XP_WIN32) && defined(IMG_BUILD_jpeg) && !defined(WINCE)
-  { "JPEG encoder",
-    NS_JPEGENCODER_CID, 
+#ifdef IMG_BUILD_ENCODER_jpeg
+  // jpeg (encoder)
+  { "JPEG Encoder",
+    NS_JPEGENCODER_CID,
     "@mozilla.org/image/encoder;2?type=image/jpeg",
     nsJPEGEncoderConstructor, },
 #endif
 
-#ifdef IMG_BUILD_bmp
+#ifdef IMG_BUILD_DECODER_bmp
   // bmp
   { "ICO Decoder",
      NS_ICODECODER_CID,
@@ -258,7 +271,7 @@ static const nsModuleComponentInfo components[] =
      nsBMPDecoderConstructor, },
 #endif
 
-#ifdef IMG_BUILD_png
+#ifdef IMG_BUILD_DECODER_png
   // png
   { "PNG Decoder",
     NS_PNGDECODER_CID,
@@ -269,8 +282,15 @@ static const nsModuleComponentInfo components[] =
     "@mozilla.org/image/decoder;2?type=image/x-png",
     nsPNGDecoderConstructor, },
 #endif
+#ifdef IMG_BUILD_ENCODER_png
+  // png
+  { "PNG Encoder",
+    NS_PNGENCODER_CID,
+    "@mozilla.org/image/encoder;2?type=image/png",
+    nsPNGEncoderConstructor, },
+#endif
 
-#ifdef IMG_BUILD_xbm
+#ifdef IMG_BUILD_DECODER_xbm
   // xbm
   { "XBM Decoder",
      NS_XBMDECODER_CID,
@@ -298,7 +318,7 @@ PR_STATIC_CALLBACK(void)
 imglib_Shutdown(nsIModule* aSelf)
 {
   imgCache::Shutdown();
-#ifdef IMG_BUILD_gif
+#ifdef IMG_BUILD_DECODER_gif
   nsGifShutdown();
 #endif
 }

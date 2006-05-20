@@ -1,5 +1,5 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -12,13 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is image encoder interface.
+ * The Original Code is Oracle Corporation code.
  *
- * The Initial Developer of the Original Code is Scott MacGregor <mscott@mozilla.org>.
+ * The Initial Developer of the Original Code is Oracle Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2005
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Stuart Parmenter <pavlov@pavlov.net>
+ *   Brett Wilson <brettw@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,24 +37,65 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsISupports.idl"
-
-interface nsIClipboardImage;
-interface nsIFile;
+#include "nsIInputStream.idl"
 
 /**
  * imgIEncoder interface
- *   Currently this is a very specific encoder designed to encode a native clipboard image as a JPEG out to disk.
- *   It is not intended to be a generic image encoder. 
- *   
  */
+[scriptable, uuid(b1b0b493-3369-44e0-878d-f7c56d937680)]
+interface imgIEncoder_MOZILLA_1_8_BRANCH : nsIInputStream
+{
+  // Possible values for input format (note that not all image formats
+  // support saving alpha channels):
+
+    // Input is RGB each pixel is represented by three bytes:
+    // R, G, and B (in that order, regardless of host endianness)
+  const PRUint32 INPUT_FORMAT_RGB = 0;
+
+    // Input is RGB each pixel is represented by four bytes:
+    // R, G, and B (in that order, regardless of host endianness).
+    // POST-MULTIPLIED alpha us used (50% transparent red is 0xff000080)
+  const PRUint32 INPUT_FORMAT_RGBA = 1;
+
+    // Input is host-endian ARGB: On big-endian machines each pixel is therefore
+    // ARGB, and for little-endian machiens (Intel) each pixel is BGRA
+    // (This is used by canvas to match it's internal representation)
+    //
+    // PRE-MULTIPLIED alpha is used (That is, 50% transparent red is 0x80800000,
+    // not 0x80ff0000
+  const PRUint32 INPUT_FORMAT_HOSTARGB = 2;
+
+  /* data - list of bytes in the format specified by inputFormat
+   * width  - width in pixels
+   * height - height in pixels
+   * stride - number of bytes per row in the image
+   *          Normally (width*3) or (width*4), depending on your input format,
+   *          but some data uses padding at the end of each row, which would
+   *          be extra.
+   * inputFormat - one of INPUT_FORMAT_* specifying the format of data
+   * outputOptions - semicolon-delimited list of name=value pairs that can
+   *                 give options to the output encoder. Options are encoder-
+   *                 specific. Just give empty string for default behavior.
+   */
+  void initFromData([array, size_is(length), const] in PRUint8 data,
+                    in unsigned long length,
+                    in PRUint32 width,
+                    in PRUint32 height,
+                    in PRUint32 stride,
+                    in PRUint32 inputFormat,
+                    in AString outputOptions);
+};
+
+/**
+ * This is the old imgIEncoder interface that only ever existed on the
+ * Aviary and 1.8 branch.
+ */
+interface nsIClipboardImage;
+interface nsIFile;
 
 [scriptable, uuid(CCC5B3AD-3E67-4e3d-97E1-B06B2E96FEF8)]
 interface imgIEncoder : nsISupports
 {
-  /**
-    Encode a native clipboard image
-  **/
-
   void encodeClipboardImage(in nsIClipboardImage aClipboardImage, out nsIFile aImageFile);
-    
 };
+

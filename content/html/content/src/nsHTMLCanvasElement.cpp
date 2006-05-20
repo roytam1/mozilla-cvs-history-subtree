@@ -368,18 +368,15 @@ nsHTMLCanvasElement::ToDataURLImpl(const nsAString& aMimeType,
 {
   nsresult rv;
   
-  // We get an input stream from the context. If more than one context type
-  // is supported in the future, this will have to be changed to do the right
-  // thing. For now, just assume that the 2D context has all the goods.
-  nsCOMPtr<nsICanvasRenderingContextInternal> context;
-  rv = GetContext(NS_LITERAL_STRING("2d"), getter_AddRefs(context));
-  NS_ENSURE_SUCCESS(rv, rv);
+  // if there's no context, it's an error to call toDataURL.
+  if (!mCurrentContext)
+    return NS_ERROR_FAILURE;
 
   // get image bytes
   nsCOMPtr<nsIInputStream> imgStream;
   NS_ConvertUTF16toUTF8 aMimeType8(aMimeType);
-  rv = context->GetInputStream(aMimeType8, aEncoderOptions,
-                               getter_AddRefs(imgStream));
+  rv = mCurrentContext->GetInputStream(aMimeType8, aEncoderOptions,
+                                       getter_AddRefs(imgStream));
   // XXX ERRMSG we need to report an error to developers here! (bug 329026)
   NS_ENSURE_SUCCESS(rv, rv);
 
