@@ -86,7 +86,7 @@
 /* This CSS rule has to be here because JS code shall access it via DOM StyleSheet */
 
 toolbar *, #appcontent *, * {
-  font-size: 10px;
+  font-size: 14px;
   padding: 0px ! important;
   margin: 0px ! important;
 }
@@ -302,10 +302,4 @@ caption {
 }
 
 
-
-/*
- *  This should not exist...
- */ 
-window { width: 240px ; height: 320px; }
-
-
+ 
