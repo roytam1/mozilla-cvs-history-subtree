@@ -577,11 +577,15 @@ var gUpdatesAvailablePage = {
    * Initialize.
    */
   onPageShow: function() {
+    var update = gUpdates.update.QueryInterface(
+                            Components.interfaces.nsIUpdate_MOZILLA_1_8_BRANCH);
     var updateName = gUpdates.strings.getFormattedString("updateName", 
-      [gUpdates.brandName, gUpdates.update.version]);
+      [gUpdates.brandName, update.version]);
+    if (update.channel == "nightly")
+      updateName = updateName + " nightly (" + update.buildID + ")";
     var updateNameElement = document.getElementById("updateName");
     updateNameElement.value = updateName;
-    var severity = gUpdates.update.isSecurityUpdate ? "minor" : "major";
+    var severity = update.isSecurityUpdate ? "minor" : "major";
     var displayType = gUpdates.strings.getString("updateType_" + severity);
     var updateTypeElement = document.getElementById("updateType");
     updateTypeElement.setAttribute("severity", severity);
@@ -592,11 +596,11 @@ var gUpdatesAvailablePage = {
     updateTypeElement.appendChild(document.createTextNode(intro));
     
     var updateMoreInfoURL = document.getElementById("updateMoreInfoURL");
-    updateMoreInfoURL.href = gUpdates.update.detailsURL;
+    updateMoreInfoURL.href = update.detailsURL;
     
     var em = Components.classes["@mozilla.org/extensions/manager;1"]
                        .getService(Components.interfaces.nsIExtensionManager);
-    var items = em.getIncompatibleItemList("", gUpdates.update.version,
+    var items = em.getIncompatibleItemList("", update.version,
                                            nsIUpdateItem.TYPE_ADDON, false, 
                                            { });
     if (items.length > 0) {
@@ -616,7 +620,7 @@ var gUpdatesAvailablePage = {
     this.onShowMoreDetails();
       
     try {
-      gUpdates.update.getProperty("licenseAccepted");
+      update.getProperty("licenseAccepted");
     }
     catch (e) {
       gUpdates.update.setProperty("licenseAccepted", "false");
