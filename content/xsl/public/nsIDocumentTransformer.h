@@ -80,4 +80,22 @@ public:
   NS_IMETHOD CancelLoads() = 0;
 };
 
+#define NS_IDOCUMENTTRANSFORMER18BRANCH_IID \
+  {0xf361a1c4, 0x6668, 0x4b0f, \
+    { 0x84, 0x77, 0x24, 0x51, 0x65, 0xaa, 0x33, 0xd0 }}
+
+class nsIDocumentTransformer_1_8_BRANCH : public nsISupports
+{
+public: 
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENTTRANSFORMER18BRANCH_IID)
+
+  NS_IMETHOD AddXSLTParamNamespace(const nsString& aPrefix,
+                                   const nsString& aNamespace) = 0;
+  NS_IMETHOD AddXSLTParam(const nsString& aName,
+                          const nsString& aNamespace,
+                          const nsString& aValue,
+                          const nsString& aSelect,
+                          nsIDOMNode* aContextNode) = 0;
+};
+
 #endif //nsIDocumentTransformer_h__

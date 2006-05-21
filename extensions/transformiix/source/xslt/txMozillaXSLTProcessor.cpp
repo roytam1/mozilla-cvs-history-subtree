@@ -65,6 +65,7 @@
 #include "nsIPrincipal.h"
 #include "jsapi.h"
 #include "nsIEventQueueService.h"
+#include "ExprParser.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
@@ -249,6 +250,7 @@ NS_INTERFACE_MAP_BEGIN(txMozillaXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessorObsolete)
     NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
+    NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer_1_8_BRANCH)
     NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XSLTProcessor)
@@ -321,6 +323,153 @@ txMozillaXSLTProcessor::SetSourceContentModel(nsIDOMNode* aSourceDOM)
     }
 
     return NS_OK;
+}
+
+NS_IMETHODIMP
+txMozillaXSLTProcessor::AddXSLTParamNamespace(const nsString& aPrefix,
+                                              const nsString& aNamespace)
+{
+    nsCOMPtr<nsIAtom> pre = do_GetAtom(aPrefix);
+    return mParamNamespaceMap.mapNamespace(pre, aNamespace);
+}
+
+
+class txXSLTParamContext : public txIParseContext,
+                           public txIEvalContext
+{
+public:
+    txXSLTParamContext(txNamespaceMap *aResolver, txXPathNode& aContext,
+                       txResultRecycler* aRecycler)
+        : mResolver(aResolver),
+          mContext(aContext),
+          mRecycler(aRecycler)
+    {
+    }
+
+    // txIParseContext
+    nsresult resolveNamespacePrefix(nsIAtom* aPrefix, PRInt32& aID)
+    {
+        aID = mResolver->lookupNamespace(aPrefix);
+        return aID == kNameSpaceID_Unknown ? NS_ERROR_DOM_NAMESPACE_ERR :
+                                             NS_OK;
+    }
+    nsresult resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
+                                 FunctionCall*& aFunction)
+    {
+        return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
+    }
+    PRBool caseInsensitiveNameTests()
+    {
+        return PR_FALSE;
+    }
+    void SetErrorOffset(PRUint32 aOffset)
+    {
+    }
+
+    // txIEvalContext
+    nsresult getVariable(PRInt32 aNamespace, nsIAtom* aLName,
+                         txAExprResult*& aResult)
+    {
+        aResult = nsnull;
+        return NS_ERROR_INVALID_ARG;
+    }
+    PRBool isStripSpaceAllowed(const txXPathNode& aNode)
+    {
+        return PR_FALSE;
+    }
+    void* getPrivateContext()
+    {
+        return nsnull;
+    }
+    txResultRecycler* recycler()
+    {
+        return mRecycler;
+    }
+    void receiveError(const nsAString& aMsg, nsresult aRes)
+    {
+    }
+    const txXPathNode& getContextNode()
+    {
+      return mContext;
+    }
+    PRUint32 size()
+    {
+      return 1;
+    }
+    PRUint32 position()
+    {
+      return 1;
+    }
+
+private:
+    txNamespaceMap *mResolver;
+    txXPathNode& mContext;
+    txResultRecycler* mRecycler;
+    
+};
+
+
+NS_IMETHODIMP
+txMozillaXSLTProcessor::AddXSLTParam(const nsString& aName,
+                                     const nsString& aNamespace,
+                                     const nsString& aSelect,
+                                     const nsString& aValue,
+                                     nsIDOMNode* aContext)
+{
+    nsresult rv = NS_OK;
+
+    if (aSelect.IsVoid() == aValue.IsVoid()) {
+        // Ignore if neither or both are specified
+        return NS_ERROR_FAILURE;
+    }
+
+    nsRefPtr<txAExprResult> value;
+    if (!aSelect.IsVoid()) {
+
+        // Set up context
+        nsAutoPtr<txXPathNode> contextNode(
+          txXPathNativeNode::createXPathNode(aContext));
+        NS_ENSURE_TRUE(contextNode, NS_ERROR_OUT_OF_MEMORY);
+
+        if (!mRecycler) {
+            mRecycler = new txResultRecycler;
+            NS_ENSURE_TRUE(mRecycler, NS_ERROR_OUT_OF_MEMORY);
+        }
+
+        txXSLTParamContext paramContext(&mParamNamespaceMap, *contextNode,
+                                        mRecycler);
+
+        // Parse
+        nsAutoPtr<Expr> expr;
+        rv = txExprParser::createExpr(aSelect, &paramContext,
+                                      getter_Transfers(expr));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        // Evaluate
+        rv = expr->evaluate(&paramContext, getter_AddRefs(value));
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        value = new StringResult(aValue, nsnull);
+        NS_ENSURE_TRUE(value, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    nsCOMPtr<nsIAtom> name = do_GetAtom(aName);
+    PRInt32 nsId = txNamespaceManager::getNamespaceID(aNamespace);
+    NS_ENSURE_FALSE(nsId == kNameSpaceID_Unknown, NS_ERROR_FAILURE);
+
+    txExpandedName varName(nsId, name);
+    txVariable* var = (txVariable*)mVariables.get(varName);
+    if (var) {
+        var->setValue(value);
+        
+        return NS_OK;
+    }
+
+    var = new txVariable(value);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+
+    return mVariables.add(varName, var);
 }
 
 PR_BEGIN_EXTERN_C
