@@ -2840,6 +2840,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
       }
     }
     else { // it isn't being reflowed
+      aReflowState.y += cellSpacingY;
       nsRect kidRect = kidFrame->GetRect();
       if (kidRect.y != aReflowState.y) {
         Invalidate(kidRect); // invalidate the old position
@@ -2848,12 +2849,11 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         RePositionViews(kidFrame);
         Invalidate(kidRect); // invalidate the new position
       }
-      nscoord heightDelta = cellSpacingY + kidRect.height;
-      aReflowState.y += heightDelta;
+      aReflowState.y += kidRect.height;
 
       // If our height is constrained then update the available height.
       if (NS_UNCONSTRAINEDSIZE != aReflowState.availSize.height) {
-        aReflowState.availSize.height -= heightDelta;
+        aReflowState.availSize.height -= cellSpacingY + kidRect.height;
       }
     }
     ConsiderChildOverflow(aOverflowArea, kidFrame);
