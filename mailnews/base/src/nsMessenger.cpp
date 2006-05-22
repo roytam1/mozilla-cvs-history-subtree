@@ -1777,7 +1777,6 @@ nsSaveMsgListener::nsSaveMsgListener(nsIFileSpec* aSpec, nsMessenger *aMessenger
 {
     m_fileSpec = do_QueryInterface(aSpec);
     m_messenger = aMessenger;
-    m_dataBuffer = nsnull;
 
     // rhp: for charset handling
     m_doCharsetConversion = PR_FALSE;
@@ -1787,6 +1786,9 @@ nsSaveMsgListener::nsSaveMsgListener(nsIFileSpec* aSpec, nsMessenger *aMessenger
     mCanceled = PR_FALSE;
     m_outputFormat = eUnknown;
     mInitialized = PR_FALSE;
+    if (m_fileSpec)
+      m_fileSpec->GetOutputStream(getter_AddRefs(m_outputStream));
+    m_dataBuffer = (char*) PR_CALLOC(FOUR_K+1);
 }
 
 nsSaveMsgListener::~nsSaveMsgListener()
@@ -1991,20 +1993,14 @@ nsresult nsSaveMsgListener::InitializeDownload(nsIRequest * aRequest, PRInt32 aB
 NS_IMETHODIMP
 nsSaveMsgListener::OnStartRequest(nsIRequest* request, nsISupports* aSupport)
 {
-    nsresult rv = NS_OK;
-
-    if (m_fileSpec)
-        rv = m_fileSpec->GetOutputStream(getter_AddRefs(m_outputStream));
-    if (NS_FAILED(rv))
+  if (!m_outputStream)
     {
       mCanceled = PR_TRUE;
       if (m_messenger)
         m_messenger->Alert("saveAttachmentFailed");
     }
-    else if (!m_dataBuffer)
-        m_dataBuffer = (char*) PR_CALLOC(FOUR_K+1);
 
-    return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
