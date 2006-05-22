@@ -301,11 +301,13 @@ caption {
     display:none;
 }
 
-
-
 /*
  *  This should not exist...
  */ 
 window { width: 240px ; height: 320px; }
 
+.button-close {
 
+  list-style-image      : url("chrome://minimo/skin/close.png");
+
+}
