@@ -184,7 +184,7 @@ nsUrlClassifierDBServiceWorker::nsUrlClassifierDBServiceWorker()
 }
 nsUrlClassifierDBServiceWorker::~nsUrlClassifierDBServiceWorker()
 {
-  NS_ASSERTION(mConnection != nsnull,
+  NS_ASSERTION(mConnection == nsnull,
                "Db connection not closed, leaking memory!  Call CloseDb "
                "to close the connection.");
 }
@@ -195,6 +195,8 @@ NS_IMETHODIMP
 nsUrlClassifierDBServiceWorker::Exists(const nsACString& tableName,
                                        const nsACString& key,
                                        nsIUrlClassifierCallback *c) {
+  LOG(("Exists\n"));
+
   nsresult rv = OpenDb();
   if (NS_FAILED(rv)) {
     NS_ERROR("Unable to open database");
@@ -275,6 +277,7 @@ nsUrlClassifierDBServiceWorker::UpdateTables(const nsACString& updateString,
       if (NS_SUCCEEDED(rv)) {
         // If it's a new table, we must have completed the last table.
         // Go ahead and post the completion to the UI thread.
+        // XXX This shouldn't happen before we commit the transaction.
         if (lastTableLine.Length() > 0)
           c->HandleEvent(lastTableLine);
         lastTableLine.Assign(line);
@@ -305,8 +308,8 @@ NS_IMETHODIMP
 nsUrlClassifierDBServiceWorker::CloseDb()
 {
   if (mConnection != nsnull) {
-    delete mConnection;
-    mConnection = nsnull;
+    NS_RELEASE(mConnection);
+    LOG(("urlclassifier db closed\n"));
   }
   return NS_OK;
 }
@@ -410,6 +413,7 @@ nsUrlClassifierDBServiceWorker::OpenDb()
   if (mConnection != nsnull)
     return NS_OK;
 
+  LOG(("Opening db\n"));
   // Compute database filename
   nsCOMPtr<nsIFile> dbFile;
 
@@ -490,6 +494,7 @@ nsUrlClassifierDBService::~nsUrlClassifierDBService()
 {
   sUrlClassifierDBService = nsnull;
   PR_DestroyMonitor(gMonitor);
+  gMonitor = nsnull;
 }
 
 nsresult
@@ -502,12 +507,12 @@ nsUrlClassifierDBService::Init()
   gMonitor = PR_NewMonitor();
   // Start the background thread.
   gDbBackgroundThread = PR_CreateThread(PR_USER_THREAD,
-                                      EventLoop,
-                                      nsnull,
-                                      PR_PRIORITY_NORMAL,
-                                      PR_GLOBAL_THREAD,
-                                      PR_JOINABLE_THREAD,
-                                      0);
+                                        EventLoop,
+                                        nsnull,
+                                        PR_PRIORITY_NORMAL,
+                                        PR_GLOBAL_THREAD,
+                                        PR_JOINABLE_THREAD,
+                                        0);
   if (!gDbBackgroundThread)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -614,15 +619,19 @@ nsUrlClassifierDBService::EnsureThreadStarted()
 nsresult
 nsUrlClassifierDBService::Shutdown()
 {
+  nsresult rv;
   // First close the db connection.
-  nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
-  nsresult rv = NS_GetProxyForObject(gEventQ,
-                                     NS_GET_IID(nsIUrlClassifierDBServiceWorker),
-                                     mWorker,
-                                     PROXY_ASYNC,
-                                     getter_AddRefs(proxy));
-  proxy->CloseDb();
-  NS_ENSURE_SUCCESS(rv, rv);
+  if (mWorker) {
+    LOG(("Sending close request\n"));
+    nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
+    rv = NS_GetProxyForObject(gEventQ,
+                              NS_GET_IID(nsIUrlClassifierDBServiceWorker),
+                              mWorker,
+                              PROXY_ASYNC,
+                              getter_AddRefs(proxy));
+    proxy->CloseDb();
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   PLEvent* ev = new PLEvent;
   PL_InitEvent(ev, nsnull, EventHandler, DestroyHandler);
@@ -632,7 +641,9 @@ nsUrlClassifierDBService::Shutdown()
   }
   LOG(("joining background thread"));
 
-  PR_JoinThread(gDbBackgroundThread);
+  rv = PR_JoinThread(gDbBackgroundThread);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to join background thread");
+
   gDbBackgroundThread = nsnull;
   return NS_OK;
 }
@@ -641,7 +652,7 @@ PR_STATIC_CALLBACK(void)
 EventLoop(void *arg)
 {
   nsresult rv;
-  //LOG(("Starting background thread.\n"));
+  LOG(("Starting background thread.\n"));
 
   nsCOMPtr<nsIEventQueueService> eventQService =
       do_GetService(kEventQueueServiceCID, &rv);
@@ -666,7 +677,15 @@ EventLoop(void *arg)
       gEventQ->HandleEvent(ev);
     }
   }
-  // It's ok to miss pending events, we'll get them during the next update.
+
+  rv = gEventQ->ProcessPendingEvents();
+
+  // Have mWorker release the hold on the event queue.
+  eventQService->DestroyThreadEventQueue();
+
+  // Release the event queue for clean up.
+  NS_RELEASE(gEventQ);
+  gEventQ = nsnull;
 
   LOG(("Exiting background thread.\n"));
 }
