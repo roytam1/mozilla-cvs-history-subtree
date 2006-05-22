@@ -259,11 +259,6 @@ protected:
                             nsITextControlFrame* aFrame);
 
   nsresult GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd);
-  //Helper method
-#ifdef ACCESSIBILITY
-  nsresult FireEventForAccessibility(nsPresContext* aPresContext,
-                                     const nsAString& aEventType);
-#endif
 
   /**
    * Get the name if it exists and return whether it did exist
@@ -353,6 +348,13 @@ protected:
    */
   nsAutoPtr<nsString>      mFileName;
 };
+
+#ifdef ACCESSIBILITY
+//Helper method
+static nsresult FireEventForAccessibility(nsIDOMHTMLInputElement* aTarget,
+                                          nsPresContext* aPresContext,
+                                          const nsAString& aEventType);
+#endif
 
 //
 // construction, destruction
@@ -1567,10 +1569,13 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
 #ifdef ACCESSIBILITY
       // Fire an event to notify accessibility
       if (mType == NS_FORM_INPUT_CHECKBOX) {
-        FireEventForAccessibility(aPresContext,
+        FireEventForAccessibility(this, aPresContext,
                                   NS_LITERAL_STRING("CheckboxStateChange"));
       } else {
-        FireEventForAccessibility(aPresContext,
+        FireEventForAccessibility(this, aPresContext,
+                                  NS_LITERAL_STRING("RadioStateChange"));
+        // Fire event for the previous selected radio.
+        FireEventForAccessibility(selectedRadioButton, aPresContext,
                                   NS_LITERAL_STRING("RadioStateChange"));
       }
 #endif
@@ -2164,13 +2169,17 @@ nsHTMLInputElement::GetPhonetic(nsAString& aPhonetic)
 }
 
 #ifdef ACCESSIBILITY
-nsresult
-nsHTMLInputElement::FireEventForAccessibility(nsPresContext* aPresContext,
-                                              const nsAString& aEventType)
+/*static*/ nsresult
+FireEventForAccessibility(nsIDOMHTMLInputElement* aTarget,
+                          nsPresContext* aPresContext,
+                          const nsAString& aEventType)
 {
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aTarget));
+  NS_ENSURE_TRUE(content, NS_ERROR_FAILURE);
+
   nsCOMPtr<nsIDOMEvent> event;
   nsCOMPtr<nsIEventListenerManager> manager;
-  GetListenerManager(getter_AddRefs(manager));
+  content->GetListenerManager(getter_AddRefs(manager));
   if (manager &&
       NS_SUCCEEDED(manager->CreateEvent(aPresContext, nsnull,
                                         NS_LITERAL_STRING("Events"),
@@ -2182,9 +2191,8 @@ nsHTMLInputElement::FireEventForAccessibility(nsPresContext* aPresContext,
       privateEvent->SetTrusted(PR_TRUE);
     }
 
-    nsISupports *target = NS_STATIC_CAST(nsIDOMHTMLInputElement*, this);
     PRBool defaultActionEnabled;
-    aPresContext->EventStateManager()->DispatchNewEvent(target, event,
+    aPresContext->EventStateManager()->DispatchNewEvent(aTarget, event,
                                                         &defaultActionEnabled);
   }
 
