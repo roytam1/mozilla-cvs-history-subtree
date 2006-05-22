@@ -209,7 +209,7 @@
       
     </toolbar>
 
-   <vbox id="keyboardContainer" hidden="false" style="border:1px solid white; border-style:outset">
+   <vbox id="keyboardContainer" hidden="true" style="border:1px solid white; border-style:outset">
       <hbox id="keyboardHolder"  style="height:90px;" />
     </vbox>
 
