@@ -66,6 +66,14 @@ const nsITransfer              = Components.interfaces.nsITransfer;
 
 const NS_BINDING_ABORTED = 0x804b0002;
 
+/* 
+ * Software keyboard 
+ */
+var gKeyBoardHeight = 0;
+var gKeyBoardLeft = 0;
+var gKeyBoardRight = 0;
+var gkeyBoardService = null;
+
 var gPanMode = null;
 var appCore = null;
 var gBrowser = null;
@@ -437,7 +445,27 @@ function MiniNavStartup()
   if (!device.isDefaultBrowser() && device.shouldCheckDefaultBrowser)
     device.setDefaultBrowser();
     
-    
+ /*
+  * Software Keyboard Windows CE Interaction 
+  */
+
+  try {
+	gKeyboardService = Components.classes["@mozilla.org/softkbservice/service;1"]
+                                 .getService(Components.interfaces.nsISoftKeyBoard);
+    var t = { };
+    var b = { };
+    var l = {};
+    var r = { };
+    gKeyboardService.getWindowRect(t,b,l,r);
+    var deltaHeight = parseInt(b.value-t.value);
+    gKeyboardHeight=deltaHeight;
+    gKeyboardLeft=parseInt(l.value);
+    gKeyboardRight=parseInt(r.value);
+	document.getElementById("keyboardHolder").style.height=deltaHeight+"px";
+	document.getElementById("keyboardContainer").style.height=deltaHeight+6+"px";
+
+  } catch (i) { }
+
   /*
    * Add an observer to deal with the OS Soft keyboard 
    * and the XUL UE adjust. We add XUL space which is a virtual
@@ -447,11 +475,13 @@ function MiniNavStartup()
    
  
   var keyboardObserver = { observe:function (subj, topic, data) { 
-    if(data=="open")  {
-      document.getElementById("keyboardHolder").setAttribute("hidden","false");
+    if(data=="open")  {    
+      document.getElementById("keyboardContainer").setAttribute("hidden","false");
+      var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
+      gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
     }  
     if(data=="close")  {
-      document.getElementById("keyboardHolder").setAttribute("hidden","true");				}  
+      document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
     }
   } 
 
