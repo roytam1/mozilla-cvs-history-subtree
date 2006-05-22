@@ -634,6 +634,7 @@ function startScrolling(event)
   addEventListener('mousemove', handleMouseMove, true);
   addEventListener('mouseup', handleMouseUpDown, true);
   addEventListener('mousedown', handleMouseUpDown, true);
+  addEventListener('contextmenu', handleMouseUpDown, true);
   gAutoScrollTimer = setInterval(autoScrollLoop, 10);
   gAccumulatedScrollErrorX = 0;
   gAccumulatedScrollErrorY = 0;
@@ -695,6 +696,7 @@ function stopScrolling()
     removeEventListener('mousemove', handleMouseMove, true);
     removeEventListener('mousedown', handleMouseUpDown, true);
     removeEventListener('mouseup', handleMouseUpDown, true);
+    removeEventListener('contextmenu', handleMouseUpDown, true);
     clearInterval(gAutoScrollTimer);
   }
 }
