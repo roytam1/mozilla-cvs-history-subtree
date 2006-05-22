@@ -111,9 +111,6 @@
       </vbox>
     </hbox>
   </hbox>
-  <!-- this is static for now 90 pixels we need to set this as a dynamic value based 
-       on the keyboard height from the device --> 
-  <hbox id="keyboardHolder" hidden="true" style="height:90px"/>
   
   <statusbar id="statusbar" hidden="false">
     <statusbarpanel id="statusbar-text" label="Minimo" flex="1"/>
