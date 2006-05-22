@@ -479,8 +479,7 @@ function MiniNavStartup()
       document.getElementById("keyboardContainer").setAttribute("hidden","false");
       var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
 
-//remove
-gURLbar.value=gKeyboardXULBox.screenY;
+
 
       gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
     }  
