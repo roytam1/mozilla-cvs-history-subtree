@@ -61,7 +61,8 @@
         contenttitlesetting="false"
         title="Minimo"
         titlemodifier="Minimo"
-        titlemenuseparator=" - "
+        titlemenuseparator=" - " 
+
         onload="MiniNavStartup()"
         onunload="MiniNavShutdown()"
         windowtype="navigator:browser">
@@ -89,10 +90,7 @@
     
   </keyset>
   
-  
-  
-  <hbox flex="1">
-    <hbox id="appcontent" flex="100%">
+    <hbox id="appcontent" flex="1">
       <vbox id="browserleftbar">
         <vbox id="homebarcontainer">
         </vbox>
@@ -110,19 +108,18 @@
       <vbox id="browserrightbar" >
       </vbox>
     </hbox>
-  </hbox>
-  
-  <statusbar id="statusbar" hidden="false">
+
+
+
+  <statusbar id="statusbar" hidden="false" >
     <statusbarpanel id="statusbar-text" label="Minimo" flex="1"/>
   </statusbar>
-  
-  <toolbox id="mini-toolbars">
+
+
+
+  <toolbox id="mini-toolbars" >
     
-    <vbox id="keyboardContainer" hidden="true" style="height:100px;">
-      <hbox style="height:5px" />
-      <hbox id="keyboardHolder" flex="1" style="margin:10px;height:90px;background-color:blue" />
-      <hbox style="height:5px" />
-    </vbox>
+
   
     <command id="cmd_BrowserOpenTab"          oncommand="BrowserOpenTab()"/>
     <command id="cmd_BrowserScreenRotate"     oncommand="BrowserScreenRotate()"/>
@@ -211,9 +208,18 @@
       <toolbarbutton tabindex="2" accessrule="focus_nav-bar" class="nav-button"  id="nav-menu-button" command="cmd_BrowserNavMenu" />  
       
     </toolbar>
+
+   <vbox id="keyboardContainer" hidden="true">
+      <hbox style="height:5px" />
+      <hbox id="keyboardHolder"  style="height:90px;background-color:blue" />
+      <hbox style="height:5px" />
+    </vbox>
+
+
     <!-- the toolbars shall be added here, check the overlay settings --> 
   </toolbox>
   
+
   <!-- place holder for our app popups and hook to the overlay --> 
   
   <popupset>
