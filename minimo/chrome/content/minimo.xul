@@ -121,7 +121,12 @@
   
   <toolbox id="mini-toolbars">
     
-    
+    <vbox id="keyboardContainer" hidden="true" style="height:100px;">
+      <hbox style="height:5px" />
+      <hbox id="keyboardHolder" flex="1" style="margin:10px;height:90px;background-color:blue" />
+      <hbox style="height:5px" />
+    </vbox>
+  
     <command id="cmd_BrowserOpenTab"          oncommand="BrowserOpenTab()"/>
     <command id="cmd_BrowserScreenRotate"     oncommand="BrowserScreenRotate()"/>
     <command id="cmd_BrowserOpenInfo"         oncommand="BrowserOpenInfo()"/>
