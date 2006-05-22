@@ -141,15 +141,6 @@ nsBrowserStatusHandler.prototype =
         document.getElementById("nav-menu-button").className="stop-button";
         document.getElementById("nav-menu-button").setAttribute("command","cmd_BrowserStop");
 
-        // Notify anyone interested that we are loading.
-        try {
-          var os = Components.classes["@mozilla.org/observer-service;1"]
-                             .getService(Components.interfaces.nsIObserverService);
-          var host = aRequest.QueryInterface(Components.interfaces.nsIChannel).URI.host;
-          os.notifyObservers(null, "loading-domain", host);
-        }
-        catch(e) {}
-
         document.getElementById("statusbar").hidden=false;
 
 
@@ -1354,6 +1345,15 @@ function URLBarEntered()
       var fixedUpURI = gURIFixup.createFixupURI(url, 2 /*fixup url*/ );
       gGlobalHistory.markPageAsTyped(fixedUpURI);
       gURLBar.value = fixedUpURI.spec;
+
+      // Notify anyone interested that we are loading.
+      try {
+        var os = Components.classes["@mozilla.org/observer-service;1"]
+          .getService(Components.interfaces.nsIObserverService);
+        var host = fixedUpURI.host;
+        os.notifyObservers(null, "loading-domain", host);
+      }
+      catch(e) {alert(e);}
     }
     
     loadURI(gURLBar.value);
