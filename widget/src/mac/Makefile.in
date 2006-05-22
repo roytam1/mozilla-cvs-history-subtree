@@ -94,7 +94,6 @@ CPPSRCS	= nsAppShell.cpp \
 		nsMenuItemX.cpp \
 		nsMimeMapper.cpp \
 		nsSound.cpp \
-		nsTSMStrategy.cpp \
 		nsToolkitBase.cpp \
 		nsToolkit.cpp \
 		nsWidgetFactory.cpp \
