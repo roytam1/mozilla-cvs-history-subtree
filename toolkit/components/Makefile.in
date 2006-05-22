@@ -63,8 +63,9 @@ DIRS += \
 	$(NULL)
 
 ifndef MOZ_THUNDERBIRD
+DIRS += autocomplete/public
+else
 DIRS +=	\
-	autocomplete \
 	cookie \
 	help \
 	history \
