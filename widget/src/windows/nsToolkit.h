@@ -132,8 +132,9 @@ public:
     static NS_CreateWindowEx    mCreateWindowEx;
     static NS_RegisterClass     mRegisterClass;
     static NS_UnregisterClass   mUnregisterClass;
-    static NS_SHGetPathFromIDList mSHGetPathFromIDList;
 #ifndef WINCE
+    static NS_DragQueryFile       mDragQueryFile;
+    static NS_SHGetPathFromIDList mSHGetPathFromIDList;
     static NS_SHBrowseForFolder   mSHBrowseForFolder;
 #endif
 };

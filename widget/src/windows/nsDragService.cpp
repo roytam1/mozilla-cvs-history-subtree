@@ -59,6 +59,7 @@
 
 #include "nsAutoPtr.h"
 
+#include "nsToolkit.h"
 
 //-------------------------------------------------------------------------
 //
@@ -261,7 +262,7 @@ nsDragService::GetNumDropItems(PRUint32 * aNumItems)
       STGMEDIUM stm;
       if (mDataObject->GetData(&fe2, &stm) == S_OK) {
         HDROP hdrop = (HDROP)GlobalLock(stm.hGlobal);
-        *aNumItems = ::DragQueryFile(hdrop, 0xFFFFFFFF, NULL, 0);
+        *aNumItems = nsToolkit::mDragQueryFile(hdrop, 0xFFFFFFFF, NULL, 0);
         ::GlobalUnlock(stm.hGlobal);
         ::ReleaseStgMedium(&stm);
       }

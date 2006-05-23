@@ -418,6 +418,22 @@ BOOL WINAPI nsUnregisterClass(LPCWSTR aClassW, HINSTANCE aInst)
 }
 
 #ifndef WINCE
+UINT WINAPI nsDragQueryFile(HDROP aDrop, UINT aCount, LPWSTR aFileW, UINT aLen)
+{
+  char fileA[MAX_PATH+1];
+
+  // query a count of file?
+  if (aCount == 0xFFFFFFFF)
+    return DragQueryFileA(aDrop, aCount, NULL, 0);
+
+  aLen = DragQueryFileA(aDrop, aCount, fileA, MAX_PATH);
+  if (!aLen)
+    return 0;
+
+  aLen = NS_ConvertAtoW(fileA, aFileW ? MAX_PATH : 0, aFileW);
+  return aLen ? aLen - 1 : 0;
+}
+
 BOOL WINAPI nsSHGetPathFromIDList(LPCITEMIDLIST aIdList, LPWSTR aPathW)
 {
   char pathA[MAX_PATH+1];
@@ -481,6 +497,7 @@ NS_RegisterClass    nsToolkit::mRegisterClass = nsRegisterClass;
 NS_UnregisterClass  nsToolkit::mUnregisterClass = nsUnregisterClass; 
 
 #ifndef WINCE
+NS_DragQueryFile        nsToolkit::mDragQueryFile = nsDragQueryFile;
 NS_SHGetPathFromIDList  nsToolkit::mSHGetPathFromIDList = nsSHGetPathFromIDList; 
 NS_SHBrowseForFolder    nsToolkit::mSHBrowseForFolder = nsSHBrowseForFolder; 
 #endif
@@ -632,6 +649,7 @@ nsToolkit::Startup(HMODULE hModule)
       // Explicit call of SHxxxW in Win95 makes moz fails to run (170969)
       // we use GetProcAddress() to hide
 #ifndef WINCE
+      nsToolkit::mDragQueryFile = DragQueryFileW;
       nsToolkit::mShell32Module = ::LoadLibrary("Shell32.dll");
       if (nsToolkit::mShell32Module) {
         nsToolkit::mSHGetPathFromIDList = (NS_SHGetPathFromIDList)GetProcAddress(nsToolkit::mShell32Module, "SHGetPathFromIDListW"); 
