@@ -2346,10 +2346,10 @@ NS_IMETHODIMP nsRenderingContextOS2::CopyOffScreenBits(
    return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextOS2::RetrieveCurrentNativeGraphicData(PRUint32* ngd)
+NS_IMETHODIMP nsRenderingContextOS2::RetrieveCurrentNativeGraphicData(void** ngd)
 {
   if(ngd != nsnull)
-    *ngd = (PRUint32)mPS;
+    *ngd = (void*)mPS;
   return NS_OK;
 }
 
