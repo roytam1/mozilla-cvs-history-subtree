@@ -473,23 +473,37 @@ function MiniNavStartup()
    * content. 
    */
    
- 
   var keyboardObserver = { observe:function (subj, topic, data) {
-      var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
-      if (device.has("hasSoftwareKeyboard") != "yes")
-        return;
-      
-      if(data=="open")  {    
-        document.getElementById("keyboardContainer").setAttribute("hidden","false");
-        var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
-        
-        
-        
-        gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
-    }  
+    var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
+    if (device.has("hasSoftwareKeyboard") != "yes")
+      return;
+      if(data=="open")  {  
+	     var xx=0;
+         var yy=0;
+         try {
+           if(document.commandDispatcher.focusedElement) { 
+             curElement=document.commandDispatcher.focusedElement;
+             xx=getPosX(curElement);
+             yy=getPosY(curElement);
+           }
+         } catch (e) {}
+         
+         document.getElementById("keyboardContainer").setAttribute("hidden","false");
+         
+         try {
+           var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
+           gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
+         } catch (e) { }
+
+         try {
+           if(document.commandDispatcher.focusedElement) { 
+             gBrowser.contentWindow.scrollTo(xx,yy);
+           }
+         } catch (e) {}
+      }  
       if(data=="close")  {
         document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
-    }
+      }
   } 
   
   try {
@@ -499,6 +513,45 @@ function MiniNavStartup()
   } catch(ignore) { }
  
 }
+
+/* 
+ * UTILs to the keyboard / XUL interaction 
+ */
+ 
+function getPosX(refElement)
+{
+	var calcLeft = 0;
+	if (refElement.offsetParent)
+	{
+		while (refElement.offsetParent)
+		{
+			calcLeft += refElement.offsetLeft
+			refElement= refElement.offsetParent;
+		}
+	}
+
+	return calcLeft;
+}
+
+/* 
+ * UTILs to the keyboard / XUL interaction 
+ */
+
+function getPosY(refElement)
+{
+	var calcTop = 0;
+	if (refElement.offsetParent)
+	{
+		while (refElement.offsetParent)
+		{
+			calcTop += refElement.offsetTop
+			refElement= refElement.offsetParent;
+		}
+	}
+
+	return calcTop ;
+}
+
 
 function HomebarHandler(e) {
 
