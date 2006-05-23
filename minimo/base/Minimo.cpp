@@ -799,6 +799,20 @@ int main(int argc, char *argv[])
   
   appShell->Create(nsnull, nsnull);
   
+  nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  if (!prefBranch)
+    return -1;
+  
+  //////////////////////////////////////////////////////////////////////////
+  // NOTE: this enforces the classic skin.
+  unsigned long x, y;
+  GetScreenSize(&x, &y);
+  if (x >= 400 || y >= 400)
+    prefBranch->SetCharPref("general.skins.selectedSkin", "classic-vga/1.0");
+  else
+    prefBranch->SetCharPref("general.skins.selectedSkin", "classic/1.0");
+  //////////////////////////////////////////////////////////////////////////
+    
   ApplicationObserver *appObserver = new ApplicationObserver(appShell);
   if (!appObserver)
     return 1;
@@ -822,10 +836,6 @@ int main(int argc, char *argv[])
   
   delete appObserver;
   delete creatorCallback;
-  
-  nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
-  if (!prefBranch)
-    return -1;
   
   PRBool dumpJSConsole = PR_FALSE;
   

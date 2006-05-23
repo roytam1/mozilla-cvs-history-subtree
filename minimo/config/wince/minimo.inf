@@ -33,6 +33,10 @@ en-US.jar=2
 en-US.manifest=2
 minimo.jar=2
 minimo.manifest=2
+minimo-skin.jar=2
+minimo-skin.manifest=2
+minimo-skin-vga.jar=2
+minimo-skin-vga.manifest=2
 toolkit.jar=2
 toolkit.manifest=2
 
@@ -92,6 +96,10 @@ en-US.jar,,,0
 en-US.manifest,,,0
 minimo.jar,,,0
 minimo.manifest,,,0
+minimo-skin.jar,,,0
+minimo-skin.manifest,,,0
+minimo-skin-vga.jar,,,0
+minimo-skin-vga.manifest,,,0
 toolkit.jar,,,0
 toolkit.manifest,,,0
 
