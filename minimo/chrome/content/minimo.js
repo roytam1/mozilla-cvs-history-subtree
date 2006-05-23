@@ -474,20 +474,24 @@ function MiniNavStartup()
    */
    
  
-  var keyboardObserver = { observe:function (subj, topic, data) { 
-    if(data=="open")  {    
-      document.getElementById("keyboardContainer").setAttribute("hidden","false");
-      var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
-
-
-
-      gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
+  var keyboardObserver = { observe:function (subj, topic, data) {
+      var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
+      if (device.has("hasSoftwareKeyboard") != "yes")
+        return;
+      
+      if(data=="open")  {    
+        document.getElementById("keyboardContainer").setAttribute("hidden","false");
+        var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
+        
+        
+        
+        gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
     }  
-    if(data=="close")  {
-      document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
+      if(data=="close")  {
+        document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
     }
   } 
-
+  
   try {
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(Components.interfaces.nsIObserverService);
@@ -1377,8 +1381,7 @@ function URLBarEntered()
     {
       var fixedUpURI = gURIFixup.createFixupURI(url, 2 /*fixup url*/ );
       gGlobalHistory.markPageAsTyped(fixedUpURI);
-      gURLBar.value = fixedUpURI.spec;
-
+      
       // Notify anyone interested that we are loading.
       try {
         var os = Components.classes["@mozilla.org/observer-service;1"]
