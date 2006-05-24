@@ -1108,7 +1108,7 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         ts->flags &= ~TSF_OPERAND;
         pn2 = Statement(cx, ts, tc);
         if (!pn2) {
-            if ((~ts->flags & (TSF_EOF | TSF_OPERAND)) == 0)
+            if (ts->flags & TSF_EOF)
                 ts->flags |= TSF_UNEXPECTED_EOF;
             return NULL;
         }
