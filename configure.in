@@ -7122,7 +7122,18 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python` -ne 0; then
     fi
     AC_MSG_RESULT(Building Python extensions using python-$MOZ_PYTHON_VER_DOTTED from $MOZ_PYTHON_PREFIX)
 fi
-dnl Later we may allow MOZ_PYTHON_EXTENSIONS to be specified, but not necessary now.
+
+dnl If the user asks for the 'python' extension, then we add
+dnl MOZ_PYTHON_EXTENSIONS to MOZ_EXTENSIONS - but with the leading 'python/'
+dnl Note the careful regex - it must match 'python' followed by anything
+dnl other than a '/', including the end-of-string.
+if test `echo "$MOZ_EXTENSIONS" | grep -c 'python\([[^/]]\|$\)'` -ne 0; then
+    for pyext in $MOZ_PYTHON_EXTENSIONS; do
+        MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS python/$pyext`
+    done
+fi
+dnl Later we may allow MOZ_PYTHON_EXTENSIONS to be specified on the
+dnl command-line, but not yet
 AC_SUBST(MOZ_PYTHON_EXTENSIONS)
 AC_SUBST(MOZ_PYTHON)
 AC_SUBST(MOZ_PYTHON_PREFIX)
