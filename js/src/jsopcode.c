@@ -297,7 +297,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
       case JOF_UINT24:
         if (op == JSOP_FINDNAME) {
             /* Special case to avoid a JOF_FINDNAME just for this op. */
-            atom = js_GetAtom(cx, &script->atomMap, GET_LITERAL_INDEX(pc));
+            atom = js_GetAtom(cx, &script->atomMap, GET_UINT24(pc));
             bytes = ToDisassemblySource(cx, ATOM_KEY(atom));
             if (!bytes)
                 return 0;
@@ -306,7 +306,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
         }
 
         JS_ASSERT(op == JSOP_UINT24 || op == JSOP_LITERAL);
-        fprintf(fp, " %u", GET_LITERAL_INDEX(pc));
+        fprintf(fp, " %u", GET_UINT24(pc));
         break;
 
       case JOF_LITOPX:
@@ -2298,7 +2298,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 goto do_sprint_int;
 
               case JSOP_UINT24:
-                i = (jsint) GET_LITERAL_INDEX(pc);
+                i = (jsint) GET_UINT24(pc);
               do_sprint_int:
                 todo = Sprint(&ss->sprinter, "%u", (unsigned) i);
                 break;
