@@ -1533,7 +1533,9 @@ BindDestructuringVar(JSContext *cx, BindVarArgs *args, JSParseNode *pn,
  *
  *   [rval, lval, xval]
  *
- * and pops all three values, setting lval[xval] = rval.
+ * and pops all three values, setting lval[xval] = rval.  But we cannot select
+ * JSOP_ENUMELEM yet, because the LHS may turn out to be an arg or local var,
+ * which can be optimized further.  So we select JSOP_SETNAME.
  */
 static JSBool
 BindDestructuringLHS(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
@@ -1548,7 +1550,7 @@ BindDestructuringLHS(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
         /* FALL THROUGH */
       case TOK_DOT:
       case TOK_LB:
-        pn->pn_op = JSOP_ENUMELEM;
+        pn->pn_op = JSOP_SETNAME;
         break;
 
 #if JS_HAS_LVALUE_RETURN

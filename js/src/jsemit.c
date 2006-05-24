@@ -3070,6 +3070,83 @@ EmitDestructuringDecls(JSContext *cx, JSCodeGenerator *cg, JSOp prologOp,
     return JS_TRUE;
 }
 
+static JSBool
+EmitDestructuringOpsHelper(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn);
+
+static JSBool
+EmitDestructuringLHS(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
+                     JSBool wantpop)
+{
+    jsuint slot;
+
+    /* Skip any parenthesization. */
+    while (pn->pn_type == TOK_RP)
+        pn = pn->pn_kid;
+
+    /*
+     * Now emit the lvalue opcode sequence.  If the lvalue is a nested
+     * destructuring initialiser-form, call ourselves to handle it, then
+     * pop the matched value.  Otherwise emit an lvalue bytecode sequence
+     * ending with a JSOP_ENUMELEM or equivalent op.
+     */
+    if (pn->pn_type == TOK_RB || pn->pn_type == TOK_RC) {
+        if (!EmitDestructuringOpsHelper(cx, cg, pn))
+            return JS_FALSE;
+        if (wantpop && js_Emit1(cx, cg, JSOP_POP) < 0)
+            return JS_FALSE;
+    } else {
+        if (pn->pn_type == TOK_NAME &&
+            !BindNameToSlot(cx, &cg->treeContext, pn)) {
+            return JS_FALSE;
+        }
+
+        switch (pn->pn_op) {
+          case JSOP_SETNAME:
+            /*
+             * NB: pn is a PN_NAME node, not a PN_BINARY.  Nevertheless,
+             * we want to emit JSOP_ENUMELEM, which has format JOF_ELEM.
+             * So here and for JSOP_ENUMCONSTELEM, we use EmitElemOp.
+             */
+            if (!EmitElemOp(cx, pn, JSOP_ENUMELEM, cg))
+                return JS_FALSE;
+            break;
+
+          case JSOP_SETCONST:
+            if (!EmitElemOp(cx, pn, JSOP_ENUMCONSTELEM, cg))
+                return JS_FALSE;
+            break;
+
+          case JSOP_SETARG:
+          case JSOP_SETVAR:
+          case JSOP_SETGVAR:
+            slot = (jsuint) pn->pn_slot;
+            EMIT_UINT16_IMM_OP(pn->pn_op, slot);
+            if (wantpop && js_Emit1(cx, cg, JSOP_POP) < 0)
+                return JS_FALSE;
+            break;
+
+          default:
+#if JS_HAS_LVALUE_RETURN || JS_HAS_XML_SUPPORT
+          {
+            ptrdiff_t top;
+
+            top = CG_OFFSET(cg);
+            if (!js_EmitTree(cx, cg, pn))
+                return JS_FALSE;
+            if (js_NewSrcNote2(cx, cg, SRC_PCBASE, CG_OFFSET(cg) - top) < 0)
+                return JS_FALSE;
+            if (js_Emit1(cx, cg, JSOP_ENUMELEM) < 0)
+                return JS_FALSE;
+          }
+#endif
+          case JSOP_ENUMELEM:
+            JS_ASSERT(0);
+        }
+    }
+
+    return JS_TRUE;
+}
+
 /*
  * Recursive helper for EmitDestructuringOps.
  *
@@ -3080,7 +3157,7 @@ EmitDestructuringDecls(JSContext *cx, JSCodeGenerator *cg, JSOp prologOp,
 static JSBool
 EmitDestructuringOpsHelper(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 {
-    jsuint index, slot;
+    jsuint index;
     JSParseNode *pn2, *pn3;
     ptrdiff_t top;
     JSBool doElemOp;
@@ -3157,63 +3234,8 @@ EmitDestructuringOpsHelper(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             JS_ASSERT(cg->stackDepth == stackDepth + 1);
         }
 
-        /* Skip any parenthesization. */
-        while (pn3->pn_type == TOK_RP)
-            pn3 = pn3->pn_kid;
-
-        /*
-         * Now emit the lvalue opcode sequence.  If the lvalue is a nested
-         * destructuring initialiser-form, call ourselves to handle it, then
-         * pop the matched value.  Otherwise emit an lvalue bytecode sequence
-         * ending with a JSOP_ENUMELEM or equivalent op.
-         */
-        if (pn3->pn_type != TOK_NAME) {
-            JS_ASSERT(pn3->pn_type == TOK_RB || pn3->pn_type == TOK_RC);
-            if (!EmitDestructuringOpsHelper(cx, cg, pn3))
-                return JS_FALSE;
-            if (js_Emit1(cx, cg, JSOP_POP) < 0)
-                return JS_FALSE;
-        } else {
-            switch (pn3->pn_op) {
-              case JSOP_ENUMELEM:
-              case JSOP_SETNAME:
-                /*
-                 * NB: pn3 is a PN_NAME node, not a PN_BINARY.  Nevertheless,
-                 * we want to emit JSOP_ENUMELEM, which has format JOF_ELEM.
-                 * So here and for JSOP_ENUMCONSTELEM, we use EmitElemOp.
-                 */
-                if (!EmitElemOp(cx, pn3, JSOP_ENUMELEM, cg))
-                    return JS_FALSE;
-                break;
-
-              case JSOP_SETCONST:
-                if (!EmitElemOp(cx, pn3, JSOP_ENUMCONSTELEM, cg))
-                    return JS_FALSE;
-                break;
-
-              case JSOP_SETARG:
-              case JSOP_SETVAR:
-              case JSOP_SETGVAR:
-                slot = (jsuint) pn3->pn_slot;
-                EMIT_UINT16_IMM_OP(pn3->pn_op, slot);
-                if (js_Emit1(cx, cg, JSOP_POP) < 0)
-                    return JS_FALSE;
-                break;
-
-              default:
-#if JS_HAS_LVALUE_RETURN || JS_HAS_XML_SUPPORT
-                top = CG_OFFSET(cg);
-                if (!js_EmitTree(cx, cg, pn3))
-                    return JS_FALSE;
-                if (js_NewSrcNote2(cx, cg, SRC_PCBASE, CG_OFFSET(cg) - top) < 0)
-                    return JS_FALSE;
-                if (js_Emit1(cx, cg, JSOP_ENUMELEM) < 0)
-                    return JS_FALSE;
-#else
-                JS_ASSERT(0);
-#endif
-            }
-        }
+        if (!EmitDestructuringLHS(cx, cg, pn3, JS_TRUE))
+            return JS_FALSE;
 
         JS_ASSERT(cg->stackDepth == stackDepth);
         ++index;
@@ -3257,6 +3279,53 @@ EmitDestructuringOps(JSContext *cx, JSCodeGenerator *cg, JSOp prologOp,
      * related stack manipulations.
      */
     return EmitDestructuringOpsHelper(cx, cg, pn);
+}
+
+static JSBool
+EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
+                    JSParseNode *rhs)
+{
+    jsuint depth, limit, slot;
+    JSParseNode *pn;
+
+    depth = (uintN) cg->stackDepth;
+    limit = 0;
+    for (pn = rhs->pn_head; pn; pn = pn->pn_next) {
+        if (limit == JS_BIT(16)) {
+            js_ReportCompileErrorNumber(cx, rhs,
+                                        JSREPORT_PN | JSREPORT_ERROR,
+                                        JSMSG_ARRAY_INIT_TOO_BIG);
+            return JS_FALSE;
+        }
+
+        if (pn->pn_type == TOK_COMMA) {
+            if (js_Emit1(cx, cg, JSOP_PUSH) < 0)
+                return JS_FALSE;
+        } else {
+            if (!js_EmitTree(cx, cg, pn))
+                return JS_FALSE;
+        }
+        ++limit;
+    }
+
+    limit += depth;
+    slot = depth;
+    for (pn = lhs->pn_head; pn; pn = pn->pn_next) {
+        if (pn->pn_type != TOK_COMMA) {
+            if (slot < limit) {
+                EMIT_UINT16_IMM_OP(JSOP_GETLOCAL, slot);
+            } else {
+                if (js_Emit1(cx, cg, JSOP_PUSH) < 0)
+                    return JS_FALSE;
+            }
+            if (!EmitDestructuringLHS(cx, cg, pn, pn->pn_next != NULL))
+                return JS_FALSE;
+        }
+        ++slot;
+    }
+
+    EMIT_UINT16_IMM_OP(JSOP_SETSP, (jsatomid)depth);
+    return JS_TRUE;
 }
 
 #endif /* JS_HAS_DESTRUCTURING */
@@ -4493,6 +4562,18 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     return JS_FALSE;
                 }
             } else {
+#if JS_HAS_DESTRUCTURING
+                if (!wantval && pn2->pn_type == TOK_ASSIGN) {
+                    JSParseNode *pn4;
+
+                    pn3 = pn2->pn_left;
+                    pn4 = pn2->pn_right;
+                    if (pn3->pn_type == TOK_RB && pn4->pn_type == TOK_RB) {
+                        ok = EmitGroupAssignment(cx, cg, pn3, pn4);
+                        goto out;
+                    }
+                }
+#endif
                 if (!js_EmitTree(cx, cg, pn2))
                     return JS_FALSE;
                 if (js_Emit1(cx, cg, wantval ? JSOP_POPV : JSOP_POP) < 0)
@@ -4570,7 +4651,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
          */
         pn2 = pn->pn_left;
         JS_ASSERT(pn2->pn_type != TOK_RP);
-        atomIndex = (jsatomid) -1; /* Suppress warning. */
+        atomIndex = (jsatomid) -1;              /* quell GCC overwarning */
         switch (pn2->pn_type) {
           case TOK_NAME:
             if (!BindNameToSlot(cx, &cg->treeContext, pn2))
@@ -4603,7 +4684,6 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 #if JS_HAS_DESTRUCTURING
           case TOK_RB:
           case TOK_RC:
-            /* TODO: optimize group assignment cases to avoid array creation. */
             break;
 #endif
 #if JS_HAS_LVALUE_RETURN
@@ -5513,6 +5593,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         JS_ASSERT(0);
     }
 
+#if JS_HAS_DESTRUCTURING
+  out:
+#endif
     if (ok && --cg->emitLevel == 0 && cg->spanDeps)
         ok = OptimizeSpanDeps(cx, cg);
 
