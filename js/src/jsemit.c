@@ -4378,26 +4378,6 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 if (!MaybeEmitVarDecl(cx, cg, pn->pn_op, pn2, &atomIndex))
                     return JS_FALSE;
 
-                if (pn2->pn_slot >= 0) {
-                    atomIndex = (jsatomid) pn2->pn_slot;
-                } else {
-                    ale = js_IndexAtom(cx, pn2->pn_atom, &cg->atomList);
-                    if (!ale)
-                        return JS_FALSE;
-                    atomIndex = ALE_INDEX(ale);
-                }
-
-                if ((js_CodeSpec[op].format & JOF_TYPEMASK) == JOF_CONST &&
-                    (!(cg->treeContext.flags & TCF_IN_FUNCTION) ||
-                     (cg->treeContext.flags & TCF_FUN_HEAVYWEIGHT))) {
-                    /* Emit a prolog bytecode to predefine the variable. */
-                    CG_SWITCH_TO_PROLOG(cg);
-                    if (!UpdateLineNumberNotes(cx, cg, pn2))
-                        return JS_FALSE;
-                    EMIT_ATOM_INDEX_OP(pn->pn_op, atomIndex);
-                    CG_SWITCH_TO_MAIN(cg);
-                }
-
                 if (pn2->pn_expr) {
                     if (op == JSOP_SETNAME)
                         EMIT_ATOM_INDEX_OP(JSOP_BINDNAME, atomIndex);
