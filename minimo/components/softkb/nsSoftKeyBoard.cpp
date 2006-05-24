@@ -166,8 +166,7 @@ BYTE GetKeyPress(PRUint32 actualKey, PRUint32 pressCount)
     case '2':
     {
       pressCount %= 3;
-      
-      switch (pressCount)
+switch (pressCount)
       {
         case 1:
           ch = 'a';
@@ -375,9 +374,14 @@ public:
   nsCOMArray<nsSoftKeyBoard> mObjects;
 
   static void CloseSIP();
+  static void DelayCloseSIP();
+  static void DoDelayCloseSIPCallback(nsITimer *aTimer, void *aClosure);
+
   static void OpenSIP();
 
   void HandlePref(const char* pref, nsIPrefBranch2* prefBranch);
+
+  static nsCOMPtr<nsITimer> gTimer;
 };
 
 NS_INTERFACE_MAP_BEGIN(nsSoftKeyBoard)
@@ -599,11 +603,19 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
+nsCOMPtr<nsITimer> nsSoftKeyBoardService::gTimer = nsnull;
+
 void
 nsSoftKeyBoardService::OpenSIP()
 {
   if (!gUseSoftwareKeyboard)
     return;
+
+  if (gTimer)
+  {
+    gTimer->Cancel();
+    gTimer = nsnull;
+  }
 
 #ifdef WINCE
   HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
@@ -628,6 +640,34 @@ nsSoftKeyBoardService::OpenSIP()
   nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
   if (observerService)
     observerService->NotifyObservers(nsnull, "software-keyboard", NS_LITERAL_STRING("open").get());
+}
+
+
+void
+nsSoftKeyBoardService::DoDelayCloseSIPCallback(nsITimer *aTimer, void *aClosure)
+{
+  nsSoftKeyBoardService::CloseSIP();
+  nsSoftKeyBoardService::gTimer = nsnull;
+}
+
+void
+nsSoftKeyBoardService::DelayCloseSIP()
+{
+  if (nsSoftKeyBoardService::gTimer)
+  {
+    nsSoftKeyBoardService::gTimer->Cancel();
+    nsSoftKeyBoardService::gTimer = nsnull;
+  }
+
+  nsSoftKeyBoardService::gTimer = do_CreateInstance("@mozilla.org/timer;1");
+
+  if (!nsSoftKeyBoardService::gTimer)
+    return;
+
+  nsSoftKeyBoardService::gTimer->InitWithFuncCallback(nsSoftKeyBoardService::DoDelayCloseSIPCallback,
+                                                      nsnull,
+                                                      250,
+                                                      nsITimer::TYPE_ONE_SHOT);
 }
 
 void
