@@ -462,7 +462,7 @@ function MiniNavStartup()
     gKeyboardLeft=parseInt(l.value);
     gKeyboardRight=parseInt(r.value);
 	document.getElementById("keyboardHolder").style.height=deltaHeight+"px";
-	document.getElementById("keyboardContainer").style.height=deltaHeight+6+"px";
+	document.getElementById("keyboardContainer").style.height=deltaHeight+"px";
 
   } catch (i) { }
 
