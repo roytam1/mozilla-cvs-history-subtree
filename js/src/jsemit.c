@@ -3330,6 +3330,138 @@ EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
 
 #endif /* JS_HAS_DESTRUCTURING */
 
+static JSBool
+EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
+                    JSBool var)
+{
+    ptrdiff_t off, noteIndex, tmp;
+    JSParseNode *pn2, *pn3;
+    JSOp op;
+    jsatomid atomIndex;
+
+    off = noteIndex = -1;
+    for (pn2 = pn->pn_head; ; pn2 = pn2->pn_next) {
+#if JS_HAS_DESTRUCTURING
+        if (pn2->pn_type != TOK_NAME) {
+            if (pn2->pn_type == TOK_RB || pn2->pn_type == TOK_RC) {
+                /*
+                 * Emit variable binding ops, but not destructuring ops.
+                 * The parser (see Variables, jsparse.c) has ensured that
+                 * our caller will be the TOK_FOR/TOK_IN case above, and
+                 * that case will emit the destructuring code only after
+                 * emitting an enumerating opcode and a branch that tests
+                 * whether the enumeration ended.
+                 */
+                JS_ASSERT(pn->pn_extra & PNX_FORINVAR);
+                if (!EmitDestructuringDecls(cx, cg, pn->pn_op, pn2))
+                    return JS_FALSE;
+                break;
+            }
+
+            /*
+             * A destructuring initialiser assignment preceded by var is
+             * always evaluated promptly, even if it is to the left of 'in'
+             * in a for-in loop.  As with 'for (var x = i in o)...', this
+             * will cause the entire 'var [a, b] = i' to be hoisted out of
+             * the head of the loop.
+             */
+            JS_ASSERT(pn2->pn_type == TOK_ASSIGN);
+            pn3 = pn2->pn_left;
+            if (!EmitDestructuringDecls(cx, cg, pn->pn_op, pn3))
+                return JS_FALSE;
+            if (!js_EmitTree(cx, cg, pn2->pn_right))
+                return JS_FALSE;
+            if (!EmitDestructuringOps(cx, cg, pn->pn_op, pn3))
+                return JS_FALSE;
+            goto emit_note_pop;
+        }
+#else
+        JS_ASSERT(pn2->pn_type == TOK_NAME);
+#endif
+
+        if (!BindNameToSlot(cx, &cg->treeContext, pn2))
+            return JS_FALSE;
+        JS_ASSERT(var || pn2->pn_slot >= 0);
+
+        op = pn2->pn_op;
+        if (op == JSOP_ARGUMENTS) {
+            JS_ASSERT(!pn2->pn_expr && var); /* JSOP_ARGUMENTS => no initializer */
+#ifdef __GNUC__
+            atomIndex = 0;            /* quell GCC overwarning */
+#endif
+        } else {
+            if (!MaybeEmitVarDecl(cx, cg, pn->pn_op, pn2, &atomIndex))
+                return JS_FALSE;
+
+            if (pn2->pn_expr) {
+                if (op == JSOP_SETNAME) {
+                    JS_ASSERT(var);
+                    EMIT_ATOM_INDEX_OP(JSOP_BINDNAME, atomIndex);
+                }
+                pn3 = pn2->pn_expr;
+                if (pn->pn_op == JSOP_DEFCONST &&
+                    !js_DefineCompileTimeConstant(cx, cg, pn2->pn_atom,
+                                                  pn3)) {
+                    return JS_FALSE;
+                }
+                if (!js_EmitTree(cx, cg, pn3))
+                    return JS_FALSE;
+            }
+        }
+
+        /*
+         * 'for (var x in o) ...' and 'for (var x = i in o) ...' call the
+         * TOK_VAR case, but only the initialized case (a strange one that
+         * falls out of ECMA-262's grammar) wants to run past this point.
+         * Both cases must conditionally emit a JSOP_DEFVAR, above.  Note
+         * that the parser error-checks to ensure that pn->pn_count is 1.
+         *
+         * XXX Narcissus keeps track of variable declarations in the node
+         * for the script being compiled, so there's no need to share any
+         * conditional prolog code generation there.  We could do likewise,
+         * but it's a big change, requiring extra allocation, so probably
+         * not worth the trouble for SpiderMonkey.
+         */
+        if ((pn->pn_extra & PNX_FORINVAR) && !pn2->pn_expr)
+            break;
+
+        if (pn2 == pn->pn_head &&
+            js_NewSrcNote2(cx, cg, SRC_DECL,
+                           (pn->pn_op == JSOP_DEFCONST)
+                           ? SRC_DECL_CONST
+                           : var
+                           ? SRC_DECL_VAR
+                           : SRC_DECL_LET) < 0) {
+            return JS_FALSE;
+        }
+        if (op == JSOP_ARGUMENTS) {
+            if (js_Emit1(cx, cg, op) < 0)
+                return JS_FALSE;
+        } else if (pn2->pn_slot >= 0) {
+            EMIT_UINT16_IMM_OP(op, atomIndex);
+        } else {
+            EMIT_ATOM_INDEX_OP(op, atomIndex);
+        }
+
+#if JS_HAS_DESTRUCTURING
+    emit_note_pop:
+#endif
+        tmp = CG_OFFSET(cg);
+        if (noteIndex >= 0) {
+            if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0, tmp-off))
+                return JS_FALSE;
+        }
+        if (!pn2->pn_next)
+            break;
+        off = tmp;
+        noteIndex = js_NewSrcNote2(cx, cg, SRC_PCDELTA, 0);
+        if (noteIndex < 0 || js_Emit1(cx, cg, JSOP_POP) < 0)
+            return JS_FALSE;
+    }
+
+    return !(pn->pn_extra & PNX_POPVAR) || js_Emit1(cx, cg, JSOP_POP) >= 0;
+}
+
 JSBool
 js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 {
@@ -4326,125 +4458,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_VAR:
-        off = noteIndex = -1;
-        for (pn2 = pn->pn_head; ; pn2 = pn2->pn_next) {
-#if JS_HAS_DESTRUCTURING
-            if (pn2->pn_type != TOK_NAME) {
-                if (pn2->pn_type == TOK_RB || pn2->pn_type == TOK_RC) {
-                    /*
-                     * Emit variable binding ops, but not destructuring ops.
-                     * The parser (see Variables, jsparse.c) has ensured that
-                     * our caller will be the TOK_FOR/TOK_IN case above, and
-                     * that case will emit the destructuring code only after
-                     * emitting an enumerating opcode and a branch that tests
-                     * whether the enumeration ended.
-                     */
-                    JS_ASSERT(pn->pn_extra & PNX_FORINVAR);
-                    if (!EmitDestructuringDecls(cx, cg, pn->pn_op, pn2))
-                        return JS_FALSE;
-                    break;
-                }
-
-                /*
-                 * A destructuring initialiser assignment preceded by var is
-                 * always evaluated promptly, even if it is to the left of 'in'
-                 * in a for-in loop.  As with 'for (var x = i in o)...', this
-                 * will cause the entire 'var [a, b] = i' to be hoisted out of
-                 * the head of the loop.
-                 */
-                JS_ASSERT(pn2->pn_type == TOK_ASSIGN);
-                pn3 = pn2->pn_left;
-                if (!EmitDestructuringDecls(cx, cg, pn->pn_op, pn3))
-                    return JS_FALSE;
-                if (!js_EmitTree(cx, cg, pn2->pn_right))
-                    return JS_FALSE;
-                if (!EmitDestructuringOps(cx, cg, pn->pn_op, pn3))
-                    return JS_FALSE;
-                goto emit_note_pop;
-            }
-#else
-            JS_ASSERT(pn2->pn_type == TOK_NAME);
-#endif
-
-            if (!BindNameToSlot(cx, &cg->treeContext, pn2))
-                return JS_FALSE;
-            op = pn2->pn_op;
-            if (op == JSOP_ARGUMENTS) {
-                JS_ASSERT(!pn2->pn_expr); /* JSOP_ARGUMENTS => no initializer */
-#ifdef __GNUC__
-                atomIndex = 0;            /* quell GCC overwarning */
-#endif
-            } else {
-                if (!MaybeEmitVarDecl(cx, cg, pn->pn_op, pn2, &atomIndex))
-                    return JS_FALSE;
-
-                if (pn2->pn_expr) {
-                    if (op == JSOP_SETNAME)
-                        EMIT_ATOM_INDEX_OP(JSOP_BINDNAME, atomIndex);
-                    pn3 = pn2->pn_expr;
-                    if (pn->pn_op == JSOP_DEFCONST &&
-                        !js_DefineCompileTimeConstant(cx, cg, pn2->pn_atom,
-                                                      pn3)) {
-                        return JS_FALSE;
-                    }
-                    if (!js_EmitTree(cx, cg, pn3))
-                        return JS_FALSE;
-                }
-            }
-
-            /*
-             * 'for (var x in o) ...' and 'for (var x = i in o) ...' call the
-             * TOK_VAR case, but only the initialized case (a strange one that
-             * falls out of ECMA-262's grammar) wants to run past this point.
-             * Both cases must conditionally emit a JSOP_DEFVAR, above.  Note
-             * that the parser error-checks to ensure that pn->pn_count is 1.
-             *
-             * XXX Narcissus keeps track of variable declarations in the node
-             * for the script being compiled, so there's no need to share any
-             * conditional prolog code generation there.  We could do likewise,
-             * but it's a big change, requiring extra allocation, so probably
-             * not worth the trouble for SpiderMonkey.
-             */
-            if ((pn->pn_extra & PNX_FORINVAR) && !pn2->pn_expr)
-                break;
-
-            if (pn2 == pn->pn_head &&
-                js_NewSrcNote2(cx, cg, SRC_DECL,
-                               (pn->pn_op == JSOP_DEFCONST)
-                               ? SRC_DECL_CONST
-                               : SRC_DECL_VAR) < 0) {
-                return JS_FALSE;
-            }
-            if (op == JSOP_ARGUMENTS) {
-                if (js_Emit1(cx, cg, op) < 0)
-                    return JS_FALSE;
-            } else if (pn2->pn_slot >= 0) {
-                EMIT_UINT16_IMM_OP(op, atomIndex);
-            } else {
-                EMIT_ATOM_INDEX_OP(op, atomIndex);
-            }
-
-#if JS_HAS_DESTRUCTURING
-        emit_note_pop:
-#endif
-            tmp = CG_OFFSET(cg);
-            if (noteIndex >= 0) {
-                if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0, tmp-off))
-                    return JS_FALSE;
-            }
-            if (!pn2->pn_next)
-                break;
-            off = tmp;
-            noteIndex = js_NewSrcNote2(cx, cg, SRC_PCDELTA, 0);
-            if (noteIndex < 0 ||
-                js_Emit1(cx, cg, JSOP_POP) < 0) {
-                return JS_FALSE;
-            }
-        }
-        if (pn->pn_extra & PNX_POPVAR) {
-            if (js_Emit1(cx, cg, JSOP_POP) < 0)
-                return JS_FALSE;
-        }
+        if (!EmitVarDeclarations(cx, cg, pn, JS_TRUE))
+            return JS_FALSE;
         break;
 
       case TOK_RETURN:
@@ -5186,7 +5201,12 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             return JS_FALSE;
         break;
       }
-#endif
+
+      case TOK_LET:
+        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE))
+            return JS_FALSE;
+        break;
+#endif /* JS_HAS_BLOCK_SCOPE */
 
 #if JS_HAS_GENERATORS
        case TOK_ARRAYPUSH:

@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set sw=4 ts=8 et tw=80:
+ * vim: set sw=4 ts=8 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -907,6 +907,8 @@ VarPrefix(jssrcnote *sn)
             return "var ";
         if (type == SRC_DECL_CONST)
             return "const ";
+        if (type == SRC_DECL_LET)
+            return "let ";
     }
     return "";
 }
@@ -1482,8 +1484,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_GETLOCAL:
                 i = GET_UINT16(pc);
+                sn = js_GetSrcNote(jp->script, pc);
                 rval = OFF2STR(&ss->sprinter, ss->offsets[i]);
-                todo = SprintCString(&ss->sprinter, rval);
+                todo = Sprint(&ss->sprinter, ss_format, VarPrefix(sn), rval);
                 break;
 
               case JSOP_SETLOCAL:

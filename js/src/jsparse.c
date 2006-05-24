@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -875,7 +875,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
          * wins when jsemit.c's LookupArgOrVar can optimize a JSOP_NAME into a
          * JSOP_GETVAR bytecode).
          */
-        if (!tc->topStmt && (tc->flags & TCF_IN_FUNCTION)) {
+        if (TC_AT_TOPLEVEL(tc) && (tc->flags & TCF_IN_FUNCTION)) {
             /*
              * Define a property on the outer function so that LookupArgOrVar
              * can properly optimize accesses.
@@ -1093,7 +1093,8 @@ FunctionExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 static JSParseNode *
 Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 {
-    JSParseNode *pn, *pn2;
+    JSParseNode *pn, *pn2, *saveBlock;
+    JSStmtInfo *saveStmt;
     JSTokenType tt;
 
     CHECK_RECURSION();
@@ -1101,6 +1102,9 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     pn = NewParseNode(cx, ts, PN_LIST, tc);
     if (!pn)
         return NULL;
+    saveBlock = tc->blockNode;
+    saveStmt = tc->topStmt;
+    tc->blockNode = pn;
     PN_INIT_LIST(pn);
 
     ts->flags |= TSF_OPERAND;
@@ -1115,7 +1119,7 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         ts->flags |= TSF_OPERAND;
 
         /* If compiling top-level statements, emit as we go to save space. */
-        if (!tc->topStmt && (tc->flags & TCF_COMPILING)) {
+        if (TC_AT_TOPLEVEL(tc) && (tc->flags & TCF_COMPILING)) {
             if (cx->fp->fun &&
                 JS_HAS_STRICT_OPTION(cx) &&
                 (tc->flags & TCF_RETURN_EXPR)) {
@@ -1147,6 +1151,18 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             PN_APPEND(pn, pn2);
         }
     }
+
+    /*
+     * Handle the case where there was a let declaration under this block. If
+     * it either pushed a new statement (i.e., we're at the top level) or it
+     * replaced the blockNode with itself then we must cope.
+     */
+    if (tc->topStmt != saveStmt)
+        js_PopStatement(tc);
+    if (tc->blockNode != pn)
+        pn = tc->blockNode;
+    tc->blockNode = saveBlock;
+
     ts->flags &= ~TSF_OPERAND;
     if (tt == TOK_ERROR)
         return NULL;
@@ -1868,6 +1884,65 @@ ContainsStmt(JSParseNode *pn, JSTokenType tt)
       default:;
     }
     return NULL;
+}
+
+static JSStmtInfo *
+FindBlockStatement(JSTreeContext *tc)
+{
+    JSStmtInfo *stmt;
+
+    stmt = tc->topStmt;
+    while (stmt) {
+        if (stmt->type == STMT_BLOCK || stmt->type == STMT_BLOCK_SCOPE)
+            return stmt;
+        stmt = stmt->down;
+    }
+
+    return NULL;
+}
+
+static JSBool
+DeclareLetVar(JSContext *cx, JSAtom *atom, JSObject *blockObj, JSScope *scope,
+              jsuint index, JSTokenStream *ts, JSBool allowDup,
+              uintN overflowError)
+{
+    JSScopeProperty *sprop;
+
+    sprop = SCOPE_GET_PROPERTY(scope, ATOM_TO_JSID(atom));
+    if (sprop) {
+        const char *name;
+
+        JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
+        JS_ASSERT((uint16)sprop->shortid < index);
+        OBJ_DROP_PROPERTY(cx, blockObj, (JSProperty *) sprop);
+        if (allowDup)
+            return JS_TRUE;
+
+        name = js_AtomToPrintableString(cx, atom);
+        if (name) {
+            js_ReportCompileErrorNumber(cx, ts, JSREPORT_TS | JSREPORT_ERROR,
+                                        JSMSG_REDECLARED_VAR, js_let_str,
+                                        name);
+        }
+        return JS_FALSE;
+    }
+
+    if (index == JS_BIT(16)) {
+        js_ReportCompileErrorNumber(cx, ts,
+                            JSREPORT_TS | JSREPORT_ERROR,
+                            overflowError);
+        return JS_FALSE;
+    }
+
+    /* Use JSPROP_ENUMERATE to aid the disassembler. */
+    return js_DefineNativeProperty(cx, blockObj,
+                                   ATOM_TO_JSID(atom),
+                                   JSVAL_VOID, NULL, NULL,
+                                   JSPROP_ENUMERATE |
+                                   JSPROP_PERMANENT,
+                                   SPROP_HAS_SHORTID,
+                                   (intN)index,
+                                   NULL);
 }
 
 static JSParseNode *
@@ -2596,6 +2671,128 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         /* Tell js_EmitTree to generate a final POP. */
         pn->pn_extra |= PNX_POPVAR;
         break;
+
+#if JS_HAS_BLOCK_SCOPE
+      case TOK_LET:
+        if (TC_AT_TOPLEVEL(tc)) {
+            /*
+             * XXX This is a hard case that requires more work. In particular,
+             * in many cases, we're trying to emit code as we go. However,
+             * this means that we haven't necessarily finished processing all
+             * let declarations in the implicit top-level block when we emit a
+             * reference to one of them. For now, punt on this and pretend
+             * this is a var declaration.
+             */
+            CURRENT_TOKEN(ts).type = TOK_VAR;
+            CURRENT_TOKEN(ts).t_op = JSOP_DEFVAR;
+
+            pn = Variables(cx, ts, tc);
+            if (!pn)
+                return NULL;
+            pn->pn_extra |= PNX_POPVAR;
+            break;
+        }
+
+        /*
+         * Are we looking at a let declaration? If so, we need to find the
+         * nearest scope and start pushing our local let-declared variables
+         * into it.
+         */
+        if (js_PeekToken(cx, ts) != TOK_LP) {
+            JSObject *obj;
+            JSScope *scope;
+            JSStmtInfo *stmt, stmtInfo;
+            jsuint index;
+            JSAtom *atom;
+
+            /* Set up the block object and its scope. */
+            stmt = FindBlockStatement(tc);
+            if (stmt && stmt->type == STMT_BLOCK_SCOPE) {
+                JS_ASSERT(stmt->blockObj);
+                obj = stmt->blockObj;
+                scope = OBJ_SCOPE(obj);
+            } else {
+                obj = js_NewBlockObject(cx);
+                if (!obj)
+                    return NULL;
+                scope = OBJ_SCOPE(obj);
+
+                if (stmt) {
+                    /* Convert the block statement into a scope statement. */
+                    JS_ASSERT(stmt->type == STMT_BLOCK);
+                    stmt->type = STMT_BLOCK_SCOPE;
+                    obj->slots[JSSLOT_PARENT] =
+                        OBJECT_TO_JSVAL(tc->blockChain);
+                    tc->blockChain = stmt->blockObj = obj;
+                } else {
+                    js_PushBlockScope(tc, &stmtInfo, obj, -1);
+                }
+            }
+
+            pn1 = tc->blockNode;
+            if (!pn1 || pn1->pn_type != TOK_LEXICALSCOPE) {
+                /* Create a new lexical scope node for these statements. */
+                pn1 = NewParseNode(cx, ts, PN_NAME, tc);
+                if (!pn1)
+                    return NULL;
+
+                atom = js_AtomizeObject(cx, obj, 0);
+                if (!atom)
+                    return NULL;
+                pn1->pn_type = TOK_LEXICALSCOPE;
+                pn1->pn_atom = atom;
+                pn1->pn_expr = tc->blockNode;
+                tc->blockNode = pn1;
+            }
+
+            pn = NewParseNode(cx, ts, PN_LIST, tc);
+            if (!pn)
+                return NULL;
+            pn->pn_op = CURRENT_TOKEN(ts).t_op;
+            PN_INIT_LIST(pn);
+
+            index = OBJ_BLOCK_COUNT(cx, obj);
+
+            do {
+                MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NO_VARIABLE_NAME);
+                atom = CURRENT_TOKEN(ts).t_atom;
+
+                if (!DeclareLetVar(cx, atom, obj, scope, index++, ts,
+                                   JS_FALSE, JSMSG_TOO_MANY_FUN_VARS)) {
+                    return NULL;
+                }
+
+                pn2 = NewParseNode(cx, ts, PN_NAME, tc);
+                if (!pn2)
+                    return NULL;
+                pn2->pn_op = JSOP_NAME;
+                pn2->pn_atom = atom;
+                pn2->pn_expr = NULL;
+                pn2->pn_slot = -1;
+                pn2->pn_attrs = 0;
+
+                if (js_MatchToken(cx, ts, TOK_ASSIGN)) {
+                    if (CURRENT_TOKEN(ts).t_op != JSOP_NOP) {
+                        js_ReportCompileErrorNumber(cx, ts,
+                                                    JSREPORT_TS |
+                                                    JSREPORT_ERROR,
+                                                    JSMSG_BAD_VAR_INIT);
+                        return NULL;
+                    }
+
+                    pn2->pn_expr = AssignExpr(cx, ts, tc);
+                    if (!pn2->pn_expr)
+                        return NULL;
+                    pn2->pn_op = JSOP_SETNAME;
+                }
+
+                PN_APPEND(pn, pn2);
+            } while (js_MatchToken(cx, ts, TOK_COMMA));
+
+            pn->pn_extra |= PNX_POPVAR;
+            break;
+        }
+#endif
 
       case TOK_RETURN:
 #if JS_HAS_GENERATORS
@@ -4428,7 +4625,6 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 JSScope *scope;
                 JSStmtInfo stmtInfo;
                 JSAtom *atom;
-                JSScopeProperty *sprop;
 
                 /* Relabel pn as an array comprehension node. */
                 pn->pn_type = TOK_ARRAYCOMP;
@@ -4436,7 +4632,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 /*
                  * Remove the comprehension expression from pn's linked list
                  * and save it via pnexp.  We'll re-install it underneath the
-                 * ARRAYPUSH nodeafter we parse the rest of the comprehension.
+                 * ARRAYPUSH node after we parse the rest of the comprehension.
                  */
                 pnexp = PN_LAST(pn);
                 JS_ASSERT(pn->pn_count == 1 || pn->pn_count == 2);
@@ -4481,34 +4677,9 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                     MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NAME_AFTER_FOR_PAREN);
                     atom = CURRENT_TOKEN(ts).t_atom;
 
-                    /*
-                     * Look for the loop variable in case it was defined by an
-                     * outer 'for' in this comprehension.
-                     */
-                    sprop = SCOPE_GET_PROPERTY(scope, ATOM_TO_JSID(atom));
-                    if (sprop) {
-                        JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
-                        JS_ASSERT((uint16)sprop->shortid < index);
-                        OBJ_DROP_PROPERTY(cx, obj, (JSProperty *) sprop);
-                    } else {
-                        if (index == JS_BIT(16)) {
-                            js_ReportCompileErrorNumber(cx, ts,
-                                                JSREPORT_TS | JSREPORT_ERROR,
-                                                JSMSG_ARRAY_INIT_TOO_BIG);
-                            return NULL;
-                        }
-
-                        /* Use JSPROP_ENUMERATE to aid the disassembler. */
-                        if (!js_DefineNativeProperty(cx, obj,
-                                                     ATOM_TO_JSID(atom),
-                                                     JSVAL_VOID, NULL, NULL,
-                                                     JSPROP_ENUMERATE |
-                                                     JSPROP_PERMANENT,
-                                                     SPROP_HAS_SHORTID,
-                                                     (intN)index++,
-                                                     NULL)) {
-                            return NULL;
-                        }
+                    if (!DeclareLetVar(cx, atom, obj, scope, index++, ts,
+                                       JS_TRUE, JSMSG_ARRAY_INIT_TOO_BIG)) {
+                        return NULL;
                     }
 
                     /*

@@ -231,6 +231,9 @@ struct JSCodeSpec {
 
 extern const char       js_const_str[];
 extern const char       js_var_str[];
+#if JS_HAS_BLOCK_SCOPE
+extern const char       js_let_str[];
+#endif
 extern const char       js_function_str[];
 extern const char       js_in_str[];
 extern const char       js_instanceof_str[];

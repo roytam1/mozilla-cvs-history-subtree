@@ -113,6 +113,8 @@ struct JSTreeContext {              /* tree context for semantic checks */
     JSStmtInfo      *topStmt;       /* top of statement info stack */
     JSStmtInfo      *topScopeStmt;  /* top lexical scope statement */
     JSObject        *blockChain;    /* compile time block scope chain */
+    JSParseNode     *blockNode;     /* parse node for a lexical scope. 
+                                       XXX combine with blockChain? */
     JSAtomList      decls;          /* function, const, and var declarations */
     JSParseNode     *nodeList;      /* list of recyclable parse-node structs */
 };
@@ -135,10 +137,14 @@ struct JSTreeContext {              /* tree context for semantic checks */
      (tc)->topStmt = (tc)->topScopeStmt = NULL,                               \
      (tc)->blockChain = NULL,                                                 \
      ATOM_LIST_INIT(&(tc)->decls),                                            \
-     (tc)->nodeList = NULL)
+     (tc)->nodeList = NULL, (tc)->blockNode = NULL)
 
 #define TREE_CONTEXT_FINISH(tc)                                               \
     ((void)0)
+
+#define TC_AT_TOPLEVEL(tc)                                                    \
+    (!((tc)->flags & TCF_IN_FUNCTION) &&                                      \
+     (!(tc)->topStmt || (tc)->topStmt->type == STMT_BLOCK_SCOPE))
 
 /*
  * Span-dependent instructions are jumps whose span (from the jump bytecode to
@@ -463,6 +469,7 @@ typedef enum JSSrcNoteType {
 /* Constants for the SRC_DECL source note. */
 #define SRC_DECL_VAR             0
 #define SRC_DECL_CONST           1
+#define SRC_DECL_LET             2
 
 #define SN_TYPE_BITS            5
 #define SN_DELTA_BITS           3
