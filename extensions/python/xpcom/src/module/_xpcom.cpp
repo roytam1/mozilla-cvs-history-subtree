@@ -600,4 +600,6 @@ init_xpcom() {
                                    );
     PyDict_SetItemString(dict, "NS_DEBUG", ob);
     Py_DECREF(ob);
+    // Flag we initialized correctly!
+    PyXPCOM_ModuleInitialized = PR_TRUE;
 }
