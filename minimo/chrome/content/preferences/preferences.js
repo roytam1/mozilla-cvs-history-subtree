@@ -102,6 +102,7 @@ function UIdependencyCheck() {
 function downloadSetTextbox() {
 
   var dirLocation=document.getElementById("downloadDir").value;
+  
   try {
    const nsIDirectoryServiceProvider2 = Components.interfaces.nsIDirectoryServiceProvider2;
    const nsIDirectoryServiceProvider_CONTRACTID = "@mozilla.org/device/directory-provider;1";
@@ -121,11 +122,18 @@ function downloadSetTextbox() {
  	 var file2 = file.QueryInterface(nsILocalFile);
 	 fileId++;	
      var newElement=document.createElement("menuitem");
+	 if(dirLocation.path==file2.path) { 
+	 	newElement.setAttribute("selected","true");
+	 }
 	 newElement.setAttribute("label",file2.path);
+	 
 	 newElement.setAttribute("id","fileDownloadOption"+fileId);
 	 newElement.fileValue=file2;
 	 newElement.setAttribute("oncommand", "downloadSelectedOption('fileDownloadOption"+fileId+"')"     );
 	 document.getElementById("downloadOptionsList").appendChild(newElement);
+     if(dirLocation.path==file2.path) { 
+       document.getElementById("menuDownloadOptions").selectedItem=newElement;
+     }
    }
  } catch (i) { } 
 }
