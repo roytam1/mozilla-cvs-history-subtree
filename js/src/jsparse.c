@@ -1886,6 +1886,8 @@ ContainsStmt(JSParseNode *pn, JSTokenType tt)
     return NULL;
 }
 
+#if JS_HAS_BLOCK_SCOPE
+
 static JSStmtInfo *
 FindBlockStatement(JSTreeContext *tc)
 {
@@ -1944,6 +1946,65 @@ DeclareLetVar(JSContext *cx, JSAtom *atom, JSObject *blockObj, JSScope *scope,
                                    (intN)index,
                                    NULL);
 }
+
+static JSParseNode *
+ParseLetHead(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
+             JSObject *obj)
+{
+    JSParseNode *pn, *pn2;
+    JSScope *scope;
+    jsuint index;
+    JSAtom *atom;
+
+    pn = NewParseNode(cx, ts, PN_LIST, tc);
+    if (!pn)
+        return NULL;
+    PN_INIT_LIST(pn);
+
+    scope = OBJ_SCOPE(obj);
+    index = OBJ_BLOCK_COUNT(cx, obj);
+
+    do {
+        MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NO_VARIABLE_NAME);
+        atom = CURRENT_TOKEN(ts).t_atom;
+
+        if (!DeclareLetVar(cx, atom, obj, scope, index++, ts,
+                           JS_FALSE, JSMSG_TOO_MANY_FUN_VARS)) {
+            return NULL;
+        }
+
+        pn2 = NewParseNode(cx, ts, PN_NAME, tc);
+        if (!pn2)
+            return NULL;
+        pn2->pn_op = JSOP_NAME;
+        pn2->pn_atom = atom;
+        pn2->pn_expr = NULL;
+        pn2->pn_slot = -1;
+        pn2->pn_attrs = 0;
+
+        if (js_MatchToken(cx, ts, TOK_ASSIGN)) {
+            if (CURRENT_TOKEN(ts).t_op != JSOP_NOP) {
+                js_ReportCompileErrorNumber(cx, ts,
+                                            JSREPORT_TS |
+                                            JSREPORT_ERROR,
+                                            JSMSG_BAD_VAR_INIT);
+                return NULL;
+            }
+
+            pn2->pn_expr = AssignExpr(cx, ts, tc);
+            if (!pn2->pn_expr)
+                return NULL;
+            pn2->pn_op = JSOP_SETNAME;
+        }
+
+        PN_APPEND(pn, pn2);
+    } while (js_MatchToken(cx, ts, TOK_COMMA));
+
+    pn->pn_extra |= PNX_POPVAR;
+    return pn;
+}
+
+#endif
 
 static JSParseNode *
 Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
@@ -2674,6 +2735,11 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 
 #if JS_HAS_BLOCK_SCOPE
       case TOK_LET:
+      {
+        JSObject *obj;
+        JSStmtInfo stmtInfo;
+        JSAtom *atom;
+
         if (TC_AT_TOPLEVEL(tc)) {
             /*
              * XXX This is a hard case that requires more work. In particular,
@@ -2693,29 +2759,55 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             break;
         }
 
-        /*
-         * Are we looking at a let declaration? If so, we need to find the
-         * nearest scope and start pushing our local let-declared variables
-         * into it.
-         */
-        if (js_PeekToken(cx, ts) != TOK_LP) {
-            JSObject *obj;
-            JSScope *scope;
-            JSStmtInfo *stmt, stmtInfo;
-            jsuint index;
-            JSAtom *atom;
+        if (js_PeekToken(cx, ts) == TOK_LP) {
+            pn1 = NewParseNode(cx, ts, PN_BINARY, tc);
+            if (!pn)
+                return NULL;
+            (void) js_GetToken(cx, ts);
 
-            /* Set up the block object and its scope. */
+            /* This is a let statement of the form: let (a, b, c) { ... }. */
+            obj = js_NewBlockObject(cx);
+            if (!obj)
+                return NULL;
+
+            atom = js_AtomizeObject(cx, obj, 0);
+            if (!atom)
+                return NULL;
+            js_PushBlockScope(tc, &stmtInfo, obj, -1);
+
+            pn = NewParseNode(cx, ts, PN_NAME, tc);
+            if (!pn)
+                return NULL;
+            pn->pn_type = TOK_LEXICALSCOPE;
+            pn->pn_atom = atom;
+            pn->pn_expr = pn1;
+
+            pn1->pn_left = ParseLetHead(cx, ts, tc, obj);
+            if (!pn1->pn_left)
+                return NULL;
+
+            /* XXX Reparameterize these error messages. */
+            MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FORMAL);
+            MUST_MATCH_TOKEN(TOK_LC, JSMSG_CURLY_BEFORE_BODY);
+
+            pn1->pn_right = Statements(cx, ts, tc);
+            if (!pn1->pn_right)
+                return NULL;
+
+            /* XXX Reparameterize this error message. */
+            MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_AFTER_BODY);
+        } else {
+            JSStmtInfo *stmt;
+
+            /* Set up the block object. */
             stmt = FindBlockStatement(tc);
             if (stmt && stmt->type == STMT_BLOCK_SCOPE) {
                 JS_ASSERT(stmt->blockObj);
                 obj = stmt->blockObj;
-                scope = OBJ_SCOPE(obj);
             } else {
                 obj = js_NewBlockObject(cx);
                 if (!obj)
                     return NULL;
-                scope = OBJ_SCOPE(obj);
 
                 if (stmt) {
                     /* Convert the block statement into a scope statement. */
@@ -2745,53 +2837,13 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 tc->blockNode = pn1;
             }
 
-            pn = NewParseNode(cx, ts, PN_LIST, tc);
+            pn = ParseLetHead(cx, ts, tc, obj);
             if (!pn)
                 return NULL;
-            pn->pn_op = CURRENT_TOKEN(ts).t_op;
-            PN_INIT_LIST(pn);
-
-            index = OBJ_BLOCK_COUNT(cx, obj);
-
-            do {
-                MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NO_VARIABLE_NAME);
-                atom = CURRENT_TOKEN(ts).t_atom;
-
-                if (!DeclareLetVar(cx, atom, obj, scope, index++, ts,
-                                   JS_FALSE, JSMSG_TOO_MANY_FUN_VARS)) {
-                    return NULL;
-                }
-
-                pn2 = NewParseNode(cx, ts, PN_NAME, tc);
-                if (!pn2)
-                    return NULL;
-                pn2->pn_op = JSOP_NAME;
-                pn2->pn_atom = atom;
-                pn2->pn_expr = NULL;
-                pn2->pn_slot = -1;
-                pn2->pn_attrs = 0;
-
-                if (js_MatchToken(cx, ts, TOK_ASSIGN)) {
-                    if (CURRENT_TOKEN(ts).t_op != JSOP_NOP) {
-                        js_ReportCompileErrorNumber(cx, ts,
-                                                    JSREPORT_TS |
-                                                    JSREPORT_ERROR,
-                                                    JSMSG_BAD_VAR_INIT);
-                        return NULL;
-                    }
-
-                    pn2->pn_expr = AssignExpr(cx, ts, tc);
-                    if (!pn2->pn_expr)
-                        return NULL;
-                    pn2->pn_op = JSOP_SETNAME;
-                }
-
-                PN_APPEND(pn, pn2);
-            } while (js_MatchToken(cx, ts, TOK_COMMA));
-
-            pn->pn_extra |= PNX_POPVAR;
-            break;
         }
+
+        break;
+      }
 #endif
 
       case TOK_RETURN:

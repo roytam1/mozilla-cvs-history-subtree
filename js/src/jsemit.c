@@ -5203,9 +5203,42 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_LET:
+      {
+        JSTreeContext *tc;
+        JSObject *blockObj;
+
+        /* Let statements have their declarations on the left. */
+        if (pn->pn_arity == PN_BINARY) {
+            pn2 = pn->pn_right;
+            pn = pn->pn_left;
+
+            tc = &cg->treeContext;
+            JS_ASSERT(tc->topStmt == tc->topScopeStmt &&
+                      tc->topStmt->type == STMT_BLOCK_SCOPE);
+
+            stmt = tc->topStmt;
+            tc->topStmt = stmt->down;
+            tc->topScopeStmt = stmt->downScope;
+            blockObj = tc->blockChain;
+            tc->blockChain = JSVAL_TO_OBJECT(blockObj->slots[JSSLOT_PARENT]);
+        } else {
+            pn2 = NULL;
+        }
+
+        JS_ASSERT(pn->pn_arity == PN_LIST);
         if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE))
             return JS_FALSE;
+
+        if (pn2) {
+            tc->topStmt = stmt;
+            tc->topScopeStmt = stmt;
+            tc->blockChain = blockObj;
+
+            if (!js_EmitTree(cx, cg, pn2))
+                return JS_FALSE;
+        }
         break;
+      }
 #endif /* JS_HAS_BLOCK_SCOPE */
 
 #if JS_HAS_GENERATORS
