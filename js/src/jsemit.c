@@ -3419,7 +3419,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 }
 
                 /* Evaluate expr in the outer lexical scope if requested. */
-                if (tc) {
+                if (popStmt) {
                     JS_ASSERT(tc->topStmt == tc->topScopeStmt &&
                               tc->topStmt->type == STMT_BLOCK_SCOPE);
 
@@ -3434,7 +3434,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 if (!js_EmitTree(cx, cg, pn3))
                     return JS_FALSE;
 
-                if (tc) {
+                if (popStmt) {
                     tc->topStmt = stmt;
                     tc->topScopeStmt = stmt;
                     tc->blockChain = blockObj;
