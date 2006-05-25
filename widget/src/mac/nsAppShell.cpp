@@ -51,6 +51,10 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShell, nsIAppShell)
 nsMacMessagePump* nsAppShell::sMacPump;
 nsAppShell* nsAppShell::sMacPumpOwner;
 
+extern "C" {
+  int NSApplicationLoad();
+}
+
 nsAppShell::nsAppShell()
 {
 }
@@ -66,6 +70,11 @@ nsAppShell::~nsAppShell()
 NS_IMETHODIMP
 nsAppShell::Create(int* argc, char** argv)
 {
+  // We call NSApplicationLoad() to initialize Cocoa. If we don't initialize Cocoa
+  // before we call into it (either through some mozilla component or a plugin)
+  // then we get bad app behavior like in bug 337334.
+  NSApplicationLoad();
+  
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
    return rv;
