@@ -396,6 +396,7 @@ public:
   void HandlePref(const char* pref, nsIPrefBranch2* prefBranch);
 
   static nsCOMPtr<nsITimer> gTimer;
+  static nsCOMPtr<nsITimer> gScrollTimer;
 };
 
 NS_INTERFACE_MAP_BEGIN(nsSoftKeyBoard)
@@ -620,10 +621,13 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
 }
 
 nsCOMPtr<nsITimer> nsSoftKeyBoardService::gTimer = nsnull;
+nsCOMPtr<nsITimer> nsSoftKeyBoardService::gScrollTimer = nsnull;
 
-void
-nsSoftKeyBoardService::ScrollElementIntoView(nsIContent *content)
+
+static void ScrollElementTimerCB(nsITimer *aTimer, void *aClosure)
 {
+  nsIContent* content = (nsIContent*) aClosure;
+
   nsIDocument* doc = content->GetDocument();
   if (!doc)
     return;
@@ -633,7 +637,21 @@ nsSoftKeyBoardService::ScrollElementIntoView(nsIContent *content)
 
   presShell->GetPrimaryFrameFor(content, &frame);
   presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_ANYWHERE, NS_PRESSHELL_SCROLL_ANYWHERE);
+
+  content->Release();
 }
+
+void
+nsSoftKeyBoardService::ScrollElementIntoView(nsIContent *content)
+{
+  NS_ADDREF(content);  // release in timercb.
+  nsSoftKeyBoardService::gScrollTimer = do_CreateInstance("@mozilla.org/timer;1");
+  nsSoftKeyBoardService::gScrollTimer->InitWithFuncCallback(SoftKeyboardTimerCB,
+                                                            (void*)content,
+                                                            250, 
+                                                            nsITimer::TYPE_ONE_SHOT);
+}
+
 
 
 void
