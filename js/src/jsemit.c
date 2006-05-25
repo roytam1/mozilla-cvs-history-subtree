@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -3332,12 +3332,25 @@ EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
 
 static JSBool
 EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
-                    JSBool var)
+                    JSBool var, JSBool popStmt)
 {
     ptrdiff_t off, noteIndex, tmp;
     JSParseNode *pn2, *pn3;
     JSOp op;
     jsatomid atomIndex;
+    JSTreeContext *tc;
+    JSStmtInfo *stmt;
+    JSObject *blockObj;
+
+    /*
+     * Let blocks and expressions initializers' execute in their parents'
+     * lexical scope. If tc is non-null below, then we hide the top lexical
+     * block from any calls to BindNameToSlot hiding in pn2->pn_expr so that
+     * it won't find any names in the new let block.
+     */
+    JS_ASSERT(!var || (var && !popStmt));
+    if (popStmt)
+        tc = &cg->treeContext;
 
     off = noteIndex = -1;
     for (pn2 = pn->pn_head; ; pn2 = pn2->pn_next) {
@@ -3404,8 +3417,28 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                                                   pn3)) {
                     return JS_FALSE;
                 }
+
+                /* Evaluate expr in the outer lexical scope if requested. */
+                if (tc) {
+                    JS_ASSERT(tc->topStmt == tc->topScopeStmt &&
+                              tc->topStmt->type == STMT_BLOCK_SCOPE);
+
+                    stmt = tc->topStmt;
+                    tc->topStmt = stmt->down;
+                    tc->topScopeStmt = stmt->downScope;
+                    blockObj = tc->blockChain;
+                    tc->blockChain =
+                        JSVAL_TO_OBJECT(blockObj->slots[JSSLOT_PARENT]);
+                }
+
                 if (!js_EmitTree(cx, cg, pn3))
                     return JS_FALSE;
+
+                if (tc) {
+                    tc->topStmt = stmt;
+                    tc->topScopeStmt = stmt;
+                    tc->blockChain = blockObj;
+                }
             }
         }
 
@@ -4458,7 +4491,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_VAR:
-        if (!EmitVarDeclarations(cx, cg, pn, JS_TRUE))
+        if (!EmitVarDeclarations(cx, cg, pn, JS_TRUE, JS_FALSE))
             return JS_FALSE;
         break;
 
@@ -5203,42 +5236,22 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_LET:
-      {
-        JSTreeContext *tc;
-        JSObject *blockObj;
-
         /* Let statements have their declarations on the left. */
         if (pn->pn_arity == PN_BINARY) {
             pn2 = pn->pn_right;
             pn = pn->pn_left;
-
-            tc = &cg->treeContext;
-            JS_ASSERT(tc->topStmt == tc->topScopeStmt &&
-                      tc->topStmt->type == STMT_BLOCK_SCOPE);
-
-            stmt = tc->topStmt;
-            tc->topStmt = stmt->down;
-            tc->topScopeStmt = stmt->downScope;
-            blockObj = tc->blockChain;
-            tc->blockChain = JSVAL_TO_OBJECT(blockObj->slots[JSSLOT_PARENT]);
         } else {
             pn2 = NULL;
         }
 
         JS_ASSERT(pn->pn_arity == PN_LIST);
-        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE))
+        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE, pn2 != NULL))
             return JS_FALSE;
 
-        if (pn2) {
-            tc->topStmt = stmt;
-            tc->topScopeStmt = stmt;
-            tc->blockChain = blockObj;
+        if (pn2 && !js_EmitTree(cx, cg, pn2))
+            return JS_FALSE;
 
-            if (!js_EmitTree(cx, cg, pn2))
-                return JS_FALSE;
-        }
         break;
-      }
 #endif /* JS_HAS_BLOCK_SCOPE */
 
 #if JS_HAS_GENERATORS
