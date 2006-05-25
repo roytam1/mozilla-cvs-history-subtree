@@ -646,7 +646,7 @@ nsSoftKeyBoardService::ScrollElementIntoView(nsIContent *content)
 {
   NS_ADDREF(content);  // release in timercb.
   nsSoftKeyBoardService::gScrollTimer = do_CreateInstance("@mozilla.org/timer;1");
-  nsSoftKeyBoardService::gScrollTimer->InitWithFuncCallback(SoftKeyboardTimerCB,
+  nsSoftKeyBoardService::gScrollTimer->InitWithFuncCallback(ScrollElementTimerCB,
                                                             (void*)content,
                                                             250, 
                                                             nsITimer::TYPE_ONE_SHOT);
