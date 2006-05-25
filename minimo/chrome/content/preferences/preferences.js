@@ -100,14 +100,46 @@ function UIdependencyCheck() {
  */
 
 function downloadSetTextbox() {
-      if(document.getElementById("downloadDir")&&document.getElementById("downloadDir").value) {
-        var dirLocation=document.getElementById("downloadDir").value;
-//        document.getElementById("downloadDirDisplay").value=dirLocation.path;
-      } else {
-//        document.getElementById("downloadDirDisplay").value="";
-      }
+
+  var dirLocation=document.getElementById("downloadDir").value;
+  try {
+   const nsIDirectoryServiceProvider2 = Components.interfaces.nsIDirectoryServiceProvider2;
+   const nsIDirectoryServiceProvider_CONTRACTID = "@mozilla.org/device/directory-provider;1";
+   var dirServiceProvider = Components.classes[nsIDirectoryServiceProvider_CONTRACTID].getService(nsIDirectoryServiceProvider2);
+   var files = dirServiceProvider.getFiles("SCDirList");
+
+   if( files.hasMoreElements() ) {
+	document.getElementById("menuDownloadOptions").setAttribute("hidden","false");
+   }
+   
+   var fileId=0;
+
+   while (files.hasMoreElements())
+   {
+     var file = files.getNext();
+     const nsILocalFile = Components.interfaces.nsILocalFile;
+ 	 var file2 = file.QueryInterface(nsILocalFile);
+	 fileId++;	
+     var newElement=document.createElement("menuitem");
+	 newElement.setAttribute("label",file2.path);
+	 newElement.setAttribute("id","fileDownloadOption"+fileId);
+	 newElement.fileValue=file2;
+	 newElement.setAttribute("oncommand", "downloadSelectedOption('fileDownloadOption"+fileId+"')"     );
+	 document.getElementById("downloadOptionsList").appendChild(newElement);
+   }
+ } catch (i) { } 
 }
 
+
+
+function downloadSelectedOption(refId)
+{
+
+  var refElementSelected = document.getElementById(refId);
+  document.getElementById("downloadDir").value=refElementSelected.fileValue;
+  syncPref(document.getElementById("downloadDir"));
+
+}
 
 /* Live Synchronizers
  * =====
