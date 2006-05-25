@@ -478,29 +478,12 @@ function MiniNavStartup()
     if (device.has("hasSoftwareKeyboard") != "yes")
       return;
       if(data=="open")  {  
-	     var xx=0;
-         var yy=0;
-         try {
-           if(document.commandDispatcher.focusedElement) { 
-             curElement=document.commandDispatcher.focusedElement;
-             xx=getPosX(curElement);
-             yy=getPosY(curElement);
-           }
-         } catch (e) {}
-         
          document.getElementById("keyboardContainer").setAttribute("hidden","false");
-         
          try {
            var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
            gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
          } catch (e) { }
-
-         try {
-           if(document.commandDispatcher.focusedElement) { 
-             gBrowser.contentWindow.scrollTo(xx,yy);
-           }
-         } catch (e) {}
-      }  
+      } else
       if(data=="close")  {
         document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
       }
