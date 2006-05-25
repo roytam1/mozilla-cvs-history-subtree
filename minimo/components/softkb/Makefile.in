@@ -52,6 +52,8 @@ MOZILLA_INTERNAL_API = 1
 
 REQUIRES	= \
 		  dom \
+		  gfx \
+		  docshell \
 		  layout \
 		  content \
 		  widget \

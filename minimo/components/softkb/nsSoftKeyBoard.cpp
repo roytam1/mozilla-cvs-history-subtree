@@ -82,6 +82,19 @@
 
 #include "nsISoftKeyBoard.h"
 
+
+#include "nsIDocument.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMDocumentView.h"    
+#include "nsIDOMAbstractView.h" 
+#include "nsIDOMWindowInternal.h"  
+#include "nsPIDOMWindow.h"      
+#include "nsIPresShell.h"    
+#include "nsIDOMWindowInternal.h"  
+#include "nsIPresShell.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDocShell.h"
+
 static PRBool gUseSoftwareKeyboard;
 
 #ifdef WINCE
@@ -378,6 +391,7 @@ public:
   static void DoDelayCloseSIPCallback(nsITimer *aTimer, void *aClosure);
 
   static void OpenSIP();
+  static void ScrollElementIntoView(nsIContent *aContent);
 
   void HandlePref(const char* pref, nsIPrefBranch2* prefBranch);
 
@@ -573,6 +587,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   if (eventType.EqualsLiteral("click"))
   {
     nsSoftKeyBoardService::OpenSIP();
+    nsSoftKeyBoardService::ScrollElementIntoView(targetContent);
     return NS_OK;
   }
 
@@ -596,6 +611,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   {
     //    if (popupConditions == PR_FALSE)
     nsSoftKeyBoardService::OpenSIP();
+    nsSoftKeyBoardService::ScrollElementIntoView(targetContent);
   }
   else
     nsSoftKeyBoardService::CloseSIP();
@@ -604,6 +620,21 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
 }
 
 nsCOMPtr<nsITimer> nsSoftKeyBoardService::gTimer = nsnull;
+
+void
+nsSoftKeyBoardService::ScrollElementIntoView(nsIContent *content)
+{
+  nsIDocument* doc = content->GetDocument();
+  if (!doc)
+    return;
+  
+  nsIFrame* frame;
+  nsIPresShell *presShell = doc->GetShellAt(0);
+
+  presShell->GetPrimaryFrameFor(content, &frame);
+  presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_ANYWHERE, NS_PRESSHELL_SCROLL_ANYWHERE);
+}
+
 
 void
 nsSoftKeyBoardService::OpenSIP()
@@ -845,13 +876,7 @@ nsSoftKeyBoardService::HandlePref(const char* pref, nsIPrefBranch2* prefBranch)
   {
     PRBool enabled;
     prefBranch->GetBoolPref(pref, &enabled);
-    
     gUseSoftwareKeyboard = enabled;
-    
-    if (gUseSoftwareKeyboard)
-      nsSoftKeyBoardService::OpenSIP();
-    else
-      nsSoftKeyBoardService::CloseSIP();
   }
 }
 
