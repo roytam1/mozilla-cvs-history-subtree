@@ -125,7 +125,13 @@
                                  preference="browser.download.dir"
                                  />          
 
+                      <menulist flex="1" label="&setSaveDirectory.label;" hidden="true" id="menuDownloadOptions" >
+                        <menupopup id="downloadOptionsList">
+                        </menupopup>
+                      </menulist>
+
                     </hbox>		
+                    
                   </vbox>
               </groupbox>
 
