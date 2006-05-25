@@ -214,6 +214,10 @@ ifdef ACCESSIBILITY
 tier_9_dirs    += accessible
 endif
 
+ifdef MOZ_ZAP
+tier_9_dirs	+= zap/base zap/netutils zap/zmk
+endif
+
 # 
 # tier 50 - xpfe & toolkit
 #
@@ -386,7 +390,7 @@ tier_99_dirs	+= calendar/sunbird
 endif
 
 ifdef MOZ_ZAP
-tier_99_dirs	+= zap
+tier_99_dirs	+= zap/sdp zap/sip zap/client
 endif
 
 ifdef MOZ_SUITE
