@@ -59,7 +59,6 @@ REQUIRES	= xpcom \
 		  layout \
 		  widget \
 		  libbz2 \
-		  caps \
 		  xulapp \
 		  extensions \
 		  rdf \
@@ -81,6 +80,11 @@ else
 REQUIRES	+= bookmarks
 endif
 
+CSRCS		= \
+		md5.c \
+		nssstubs.c \
+		$(NULL)
+
 CPPSRCS		= \
 		nsLoadCollector.cpp \
 		nsMetricsConfig.cpp \
@@ -100,3 +104,8 @@ EXTRA_DSO_LDOPTS = $(XPCOM_GLUE_LDOPTS) \
 		   $(NULL)
 
 include $(topsrcdir)/config/rules.mk
+
+export:: $(topsrcdir)/security/nss/lib/freebl/md5.c
+	$(INSTALL) $^ .
+
+LOCAL_INCLUDES += -I$(srcdir) -I$(DIST)/public/nss -I$(DIST)/private/nss
