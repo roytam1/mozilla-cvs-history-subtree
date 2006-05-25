@@ -108,29 +108,37 @@ nsObserverList::RemoveObserver(nsIObserver* anObserver)
     // Prevent the observer from being destroyed while we're inside the lock.
     nsCOMPtr<nsIObserver> kungFuDeathGrip(anObserver);
 
+#ifdef NS_WEAK_OBSERVERS
+    // Get the weak ref before we acquire the lock, because this QI could
+    // run any arbitrary JS code
+    nsCOMPtr<nsISupportsWeakReference> weakRefFactory = do_QueryInterface(anObserver);
+    nsCOMPtr<nsISupports> observerRef;
+    if (weakRefFactory) {
+        observerRef = getter_AddRefs(NS_STATIC_CAST(nsISupports*, NS_GetWeakReference(weakRefFactory)));
+    }
+
     nsAutoLock lock(mLock);
 
     if (!mObserverList)
        return NS_ERROR_FAILURE;
     
-#ifdef NS_WEAK_OBSERVERS
-    nsCOMPtr<nsISupportsWeakReference> weakRefFactory = do_QueryInterface(anObserver);
-    nsCOMPtr<nsISupports> observerRef;
-    if (weakRefFactory) {
-        observerRef = getter_AddRefs(NS_STATIC_CAST(nsISupports*, NS_GetWeakReference(weakRefFactory)));
-        if (observerRef)
-            removed = mObserverList->RemoveElement(observerRef);
-        if (!removed)
-            observerRef = anObserver;
-    } else
-        observerRef = anObserver;
+    if (observerRef) {
+        removed = mObserverList->RemoveElement(observerRef);
+    }
 
-    if (!removed && observerRef)
-        removed = mObserverList->RemoveElement(observerRef);  
+    if (!removed && anObserver) {
+        removed = mObserverList->RemoveElement(anObserver);
+    }
 #else
+    nsAutoLock lock(mLock);
+
+    if (!mObserverList)
+       return NS_ERROR_FAILURE;
+    
     if (*anObserver)
         removed = mObserverList->RemoveElement(*anObserver);
 #endif
+
     return removed ? NS_OK : NS_ERROR_FAILURE;
 }
 
