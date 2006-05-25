@@ -69,6 +69,7 @@ private:
   friend class zapPacketPumpClock;
   
   zapPacketPumpClock *mClock; // weak reference managed by object itself
+  PRUint32 mDivider; // clock divider
   
   nsCOMPtr<zapIMediaSink> mOutput;
   nsCOMPtr<zapIMediaSource> mInput;

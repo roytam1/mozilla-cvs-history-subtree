@@ -776,7 +776,10 @@ ACString "name" == "clock" : reference clock; any stream type (passive)
 Sources: 1 (active)
 
 Node parameters:
-none
+- unsigned long "clock_divider" : integer n determining the relative
+                                  rate at which packets will be pumped:
+                                  For every n'th clock frame an input 
+                                  frame will be pumped (default: 1)
 
 Output stream:
 same as "input" stream
