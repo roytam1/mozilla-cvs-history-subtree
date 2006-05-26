@@ -143,8 +143,7 @@ struct JSTreeContext {              /* tree context for semantic checks */
     ((void)0)
 
 #define TC_AT_TOPLEVEL(tc)                                                    \
-    (!((tc)->flags & TCF_IN_FUNCTION) &&                                      \
-     (!(tc)->topStmt || (tc)->topStmt->type == STMT_BLOCK_SCOPE))
+    (!((tc)->flags & TCF_IN_FUNCTION) && !(tc)->topStmt)
 
 /*
  * Span-dependent instructions are jumps whose span (from the jump bytecode to

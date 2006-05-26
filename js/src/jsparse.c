@@ -1948,8 +1948,7 @@ DeclareLetVar(JSContext *cx, JSAtom *atom, JSObject *blockObj, JSScope *scope,
 }
 
 static JSParseNode *
-ParseLetHead(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
-             JSObject *obj)
+LetHead(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSObject *obj)
 {
     JSParseNode *pn, *pn2;
     JSScope *scope;
@@ -2001,6 +2000,99 @@ ParseLetHead(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     } while (js_MatchToken(cx, ts, TOK_COMMA));
 
     pn->pn_extra |= PNX_POPVAR;
+    return pn;
+}
+
+static JSBool
+SetupLexicalBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
+                  JSStmtInfo *stmtInfo, JSParseNode **pnp, JSObject **objp)
+{
+    JSParseNode *pn;
+    JSAtom *atom;
+    JSObject *obj;
+
+    pn = NewParseNode(cx, ts, PN_NAME, tc);
+    if (!pn)
+        return JS_FALSE;
+
+    obj = js_NewBlockObject(cx);
+    if (!obj)
+        return JS_FALSE;
+
+    atom = js_AtomizeObject(cx, obj, 0);
+    if (!atom)
+        return JS_FALSE;
+
+    js_PushBlockScope(tc, stmtInfo, obj, -1);
+    pn->pn_type = TOK_LEXICALSCOPE;
+    pn->pn_op = JSOP_NOP;
+    pn->pn_atom = atom;
+    pn->pn_expr = NULL;
+
+    *pnp = pn;
+    *objp = obj;
+
+    return JS_TRUE;
+}
+
+static JSParseNode *
+LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
+{
+    JSParseNode *pn, *pnlet;
+    JSObject *obj;
+    JSStmtInfo stmtInfo;
+
+    JS_ASSERT(CURRENT_TOKEN(ts).type == TOK_LET);
+
+    /* Create the let binary node. */
+    pnlet = NewParseNode(cx, ts, PN_BINARY, tc);
+    if (!pn)
+        return NULL;
+    (void) js_GetToken(cx, ts);
+
+    /* This is a let statement of the form: let (a, b, c) { ... }. */
+    if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pn, &obj))
+        return NULL;
+    pn->pn_expr = pnlet;
+
+    pnlet->pn_left = LetHead(cx, ts, tc, obj);
+    if (!pnlet->pn_left)
+        return NULL;
+
+    /* XXX Reparameterize these error messages. */
+    MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FORMAL);
+
+    if (statement && !js_MatchToken(cx, ts, TOK_LC)) {
+        JSParseNode *pn1;
+
+        /*
+         * If this is really an expression in let statement guise, then we
+         * need to wrap the TOK_LET node in a TOK_SEMI node so that we pop
+         * the return value of the expression.
+         */
+        pn1 = NewParseNode(cx, ts, PN_UNARY, tc);
+        if (!pn1)
+            return NULL;
+        pn1->pn_type = TOK_SEMI;
+        pn1->pn_num = -1;
+        pn1->pn_kid = pn;
+        pn = pn1;
+
+        statement = JS_FALSE;
+    }
+
+    pnlet->pn_right = statement
+                      ? Statements(cx, ts, tc)
+                      : Expr(cx, ts, tc);
+    if (!pnlet->pn_right)
+        return NULL;
+
+    if (statement) {
+        /* XXX Reparameterize this error message. */
+        MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_AFTER_BODY);
+    }
+    js_PopStatement(tc);
+
     return pn;
 }
 
@@ -2737,67 +2829,32 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
       case TOK_LET:
       {
         JSObject *obj;
-        JSStmtInfo stmtInfo;
         JSAtom *atom;
 
-        if (TC_AT_TOPLEVEL(tc)) {
-            /*
-             * XXX This is a hard case that requires more work. In particular,
-             * in many cases, we're trying to emit code as we go. However,
-             * this means that we haven't necessarily finished processing all
-             * let declarations in the implicit top-level block when we emit a
-             * reference to one of them. For now, punt on this and pretend
-             * this is a var declaration.
-             */
-            CURRENT_TOKEN(ts).type = TOK_VAR;
-            CURRENT_TOKEN(ts).t_op = JSOP_DEFVAR;
-
-            pn = Variables(cx, ts, tc);
-            if (!pn)
-                return NULL;
-            pn->pn_extra |= PNX_POPVAR;
-            break;
-        }
-
         if (js_PeekToken(cx, ts) == TOK_LP) {
-            pn1 = NewParseNode(cx, ts, PN_BINARY, tc);
+            pn = LetBlock(cx, ts, tc, JS_TRUE);
             if (!pn)
                 return NULL;
-            (void) js_GetToken(cx, ts);
-
-            /* This is a let statement of the form: let (a, b, c) { ... }. */
-            obj = js_NewBlockObject(cx);
-            if (!obj)
-                return NULL;
-
-            atom = js_AtomizeObject(cx, obj, 0);
-            if (!atom)
-                return NULL;
-            js_PushBlockScope(tc, &stmtInfo, obj, -1);
-
-            pn = NewParseNode(cx, ts, PN_NAME, tc);
-            if (!pn)
-                return NULL;
-            pn->pn_type = TOK_LEXICALSCOPE;
-            pn->pn_atom = atom;
-            pn->pn_expr = pn1;
-
-            pn1->pn_left = ParseLetHead(cx, ts, tc, obj);
-            if (!pn1->pn_left)
-                return NULL;
-
-            /* XXX Reparameterize these error messages. */
-            MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FORMAL);
-            MUST_MATCH_TOKEN(TOK_LC, JSMSG_CURLY_BEFORE_BODY);
-
-            pn1->pn_right = Statements(cx, ts, tc);
-            if (!pn1->pn_right)
-                return NULL;
-
-            /* XXX Reparameterize this error message. */
-            MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_AFTER_BODY);
         } else {
-            JSStmtInfo *stmt;
+            if (TC_AT_TOPLEVEL(tc)) {
+                /*
+                 * XXX This is a hard case that requires more work. In
+                 * particular, in many cases, we're trying to emit code as we
+                 * go. However, this means that we haven't necessarily
+                 * finished processing all let declarations in the implicit
+                 * top-level block when we emit a reference to one of them.
+                 * For now, punt on this and pretend this is a var
+                 * declaration.
+                 */
+                CURRENT_TOKEN(ts).type = TOK_VAR;
+                CURRENT_TOKEN(ts).t_op = JSOP_DEFVAR;
+
+                pn = Variables(cx, ts, tc);
+                if (!pn)
+                    return NULL;
+                pn->pn_extra |= PNX_POPVAR;
+                break;
+            }
 
             /* Set up the block object. */
             stmt = FindBlockStatement(tc);
@@ -2837,7 +2894,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 tc->blockNode = pn1;
             }
 
-            pn = ParseLetHead(cx, ts, tc, obj);
+            pn = LetHead(cx, ts, tc, obj);
             if (!pn)
                 return NULL;
         }
@@ -4697,22 +4754,9 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                  * Make a parse-node and literal object representing the array
                  * comprehension's block scope.
                  */
-                pntop = NewParseNode(cx, ts, PN_NAME, tc);
-                if (!pntop)
-                    return NULL;
-
-                obj = js_NewBlockObject(cx);
-                if (!obj)
+                if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pntop, &obj))
                     return NULL;
                 scope = OBJ_SCOPE(obj);
-                js_PushBlockScope(tc, &stmtInfo, obj, -1);
-
-                atom = js_AtomizeObject(cx, obj, 0);
-                if (!atom)
-                    return NULL;
-                pntop->pn_type = TOK_LEXICALSCOPE;
-                pntop->pn_atom = atom;
-                pntop->pn_expr = NULL;
                 pnp = &pntop->pn_expr;
 
                 do {
@@ -4794,6 +4838,14 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         pn->pn_pos.end = CURRENT_TOKEN(ts).pos.end;
         return pn;
       }
+
+#if JS_HAS_BLOCK_SCOPE
+      case TOK_LET:
+        pn = LetBlock(cx, ts, tc, JS_FALSE);
+        if (!pn)
+            return NULL;
+        break;
+#endif /* JS_HAS_BLOCK_SCOPE */
 
       case TOK_LC:
         pn = NewParseNode(cx, ts, PN_LIST, tc);

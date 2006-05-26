@@ -5864,6 +5864,7 @@ interrupt:
             fp->blockChain = obj;
           END_LITOPX_CASE(JSOP_ENTERBLOCK)
 
+          BEGIN_CASE(JSOP_LEAVEBLOCKEXPR)
           BEGIN_CASE(JSOP_LEAVEBLOCK)
           {
             JSObject **chainp;
@@ -5878,7 +5879,8 @@ interrupt:
                 obj = *chainp;
             }
             JS_ASSERT(OBJ_GET_CLASS(cx, obj) == &js_BlockClass);
-            JS_ASSERT(fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp);
+            JS_ASSERT(op == JSOP_LEAVEBLOCKEXPR ||
+                      fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp);
             *chainp = OBJ_GET_PARENT(cx, obj);
           }
           END_CASE(JSOP_LEAVEBLOCK)
