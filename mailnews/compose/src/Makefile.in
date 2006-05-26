@@ -82,6 +82,7 @@ REQUIRES	= xpcom \
 		  nkcache \
 		  mimetype \
 		  windowwatcher \
+		  xulapp \
 		  $(NULL)
 
 #ifdef XP_WIN32
