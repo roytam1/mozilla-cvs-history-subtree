@@ -301,14 +301,17 @@
           this._engines = this.searchService.getVisibleEngines({ });
           for (var i = this._engines.length - 1; i >= 0; --i) {
             var menuitem = document.createElementNS(kXULNS, "menuitem");
-            menuitem.setAttribute("label", this._engines[i].name);
-            menuitem.setAttribute("id", this._engines[i].name);
+            var name = this._engines[i].name;
+            menuitem.setAttribute("label", name);
+            menuitem.setAttribute("id", name);
             menuitem.setAttribute("class", "menuitem-iconic searchbar-engine-menuitem");
             // Since this menu is rebuilt by the observer method whenever a new
             // engine is selected, the "selected" attribute does not need to be
             // explicitly cleared anywhere.
             if (this._engines[i] == this.currentEngine)
               menuitem.setAttribute("selected", "true");
+            var tooltip = this._stringBundle.getFormattedString("searchtip", [name]);
+            menuitem.setAttribute("tooltiptext", tooltip);
             if (this._engines[i].iconURI)
               menuitem.setAttribute("src", this._engines[i].iconURI.spec);
             popup.insertBefore(menuitem, popup.firstChild);
@@ -416,8 +419,14 @@
                                           textValue);
           }
 
-          var newTab = textBox._prefBranch.getBoolPref("browser.search.openintab");
-          this.doSearch(textValue, ((aEvent && aEvent.altKey) ^ newTab));
+          // Always open in a new tab on a middle-click; otherwise examine the
+          // preference and the alt key.
+          var newTab = (aEvent && (aEvent.button == 1));
+          if (! newTab) {
+            var newTabPref = textBox._prefBranch.getBoolPref("browser.search.openintab");
+            newTab = ((aEvent && aEvent.altKey) ^ newTabPref);
+          }
+          this.doSearch(textValue, newTab);
         ]]></body>
       </method>
 
@@ -446,6 +455,19 @@
     </implementation>
 
     <handlers>
+      <!-- We can't use checkForMiddleClick() from utilityOverlay.js here
+      because the button is using a command handler rather than an oncommand
+      attribute.  The middle-click behavior itself (i.e., opening the search in
+      a new tab) is handled in handleSearchCommand().
+      -->
+      <handler event="click"><![CDATA[
+        const target = event.originalTarget;
+        var anonid = target.getAttribute("anonid");
+        // Check for middle click.
+        if (anonid == "button" && event.button == 1)
+          this.handleSearchCommand(event);
+      ]]></handler>
+
       <handler event="command"><![CDATA[
         const target = event.originalTarget;
         var anonid = target.getAttribute("anonid");

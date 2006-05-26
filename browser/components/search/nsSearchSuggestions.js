@@ -453,7 +453,7 @@ SuggestAutoComplete.prototype = {
     this._request =
       Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
       .createInstance(Components.interfaces.nsIXMLHttpRequest);
-    this._request.open("GET", serviceURL + escape(searchString), true);
+    this._request.open("GET", serviceURL + encodeURIComponent(searchString), true);
     
     var self = this;
     function onReadyStateChange() {
