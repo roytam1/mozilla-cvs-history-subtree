@@ -401,7 +401,7 @@ nsMenuBarX :: ExecuteCommand ( nsIContent* inDispatchTo )
     nsCOMPtr<nsPresContext> presContext;
     MenuHelpersX::DocShellToPresContext(docShell, getter_AddRefs(presContext));
 
-    nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull, nsMouseEvent::eReal);
+    nsXULCommandEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
 
     inDispatchTo->HandleDOMEvent(presContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
 	}

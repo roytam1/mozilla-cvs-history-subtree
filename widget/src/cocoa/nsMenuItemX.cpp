@@ -261,23 +261,10 @@ NS_METHOD nsMenuItemX::DoCommand()
   MenuHelpersX::DocShellToPresContext(docShell, getter_AddRefs(presContext));
 
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull, nsMouseEvent::eReal);
+  nsXULCommandEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
 
-  // See if we have a command element.  If so, we execute on the command instead
-  // of on our content element.
-  nsAutoString command;
-  mContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::command, command);
-  if (!command.IsEmpty()) {
-    nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(mContent->GetDocument()));
-    nsCOMPtr<nsIDOMElement> commandElt;
-    domDoc->GetElementById(command, getter_AddRefs(commandElt));
-    nsCOMPtr<nsIContent> commandContent(do_QueryInterface(commandElt));
-    if (commandContent)
-      commandContent->HandleDOMEvent(presContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-  }
-  else
-    mContent->HandleDOMEvent(presContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-  
+  mContent->HandleDOMEvent(presContext, &event, nsnull,
+                           NS_EVENT_FLAG_INIT, &status);
   return nsEventStatus_eConsumeNoDefault;
 }
     

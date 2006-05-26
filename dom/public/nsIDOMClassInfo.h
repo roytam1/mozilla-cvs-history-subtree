@@ -356,6 +356,8 @@ enum nsDOMClassInfoID {
   eDOMClassInfo_SVGForeignObjectElement_id,
 #endif
 
+  eDOMClassInfo_XULCommandEvent_id,
+
   // This one better be the last one in this list
   eDOMClassInfoIDCount
 };

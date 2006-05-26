@@ -229,8 +229,8 @@ nsTitleBarFrame::MouseClicked(nsPresContext* aPresContext, nsGUIEvent* aEvent)
   // Execute the oncommand event handler.
   nsEventStatus status = nsEventStatus_eIgnore;
 
-  nsMouseEvent event(aEvent ? NS_IS_TRUSTED_EVENT(aEvent) : PR_FALSE,
-                     NS_XUL_COMMAND, nsnull, nsMouseEvent::eReal);
+  nsXULCommandEvent event(aEvent ? NS_IS_TRUSTED_EVENT(aEvent) : PR_FALSE,
+                          NS_XUL_COMMAND, nsnull);
 
   mContent->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT,
                            &status);

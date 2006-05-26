@@ -1963,7 +1963,59 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
                 domDoc->GetElementById(command, getter_AddRefs(commandElt));
                 nsCOMPtr<nsIContent> commandContent(do_QueryInterface(commandElt));
                 if (commandContent) {
-                    return commandContent->HandleDOMEvent(aPresContext, aEvent, nsnull, NS_EVENT_FLAG_INIT, aEventStatus);
+                    // Create a new command event to the element pointed to
+                    // by the command attribute.  The new event's sourceEvent
+                    // will be the original event that we're handling.
+                    aEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
+
+                    nsXULCommandEvent event(NS_IS_TRUSTED_EVENT(aEvent),
+                                            NS_XUL_COMMAND, nsnull);
+                    if (aEvent->eventStructType == NS_XUL_COMMAND_EVENT) {
+                        nsXULCommandEvent *orig =
+                            NS_STATIC_CAST(nsXULCommandEvent*, aEvent);
+
+                        event.isShift = orig->isShift;
+                        event.isControl = orig->isControl;
+                        event.isAlt = orig->isAlt;
+                        event.isMeta = orig->isMeta;
+                    } else {
+                        NS_WARNING("Incorrect eventStructType for command event");
+                    }
+
+                    // Make sure we have a DOMEvent.
+                    nsIDOMEvent *domEvent = nsnull;
+                    if (!aDOMEvent) {
+                        aDOMEvent = &domEvent;
+                    }
+                        
+                    if (!*aDOMEvent) {
+                        nsCOMPtr<nsIEventListenerManager> lm;
+                        ret = GetListenerManager(getter_AddRefs(lm));
+                        NS_ENSURE_SUCCESS(ret, ret);
+
+                        ret = lm->CreateEvent(aPresContext, aEvent,
+                                              EmptyString(), aDOMEvent);
+                        NS_ENSURE_SUCCESS(ret, ret);
+
+                        // We need to explicitly set the target here, because
+                        // the DOM implementation will try to compute the
+                        // target from the frame. If we don't have a frame
+                        // (e.g., we're a key), then that breaks.
+                        nsCOMPtr<nsIPrivateDOMEvent> privateEvent =
+                            do_QueryInterface(*aDOMEvent);
+                        NS_ENSURE_TRUE(privateEvent, NS_ERROR_FAILURE);
+
+                        nsCOMPtr<nsIDOMEventTarget> target =
+                            do_QueryInterface(NS_STATIC_CAST(nsIContent*,
+                                                             this));
+                        privateEvent->SetTarget(target);
+                    }
+                    event.sourceEvent = *aDOMEvent;
+
+                    return commandContent->HandleDOMEvent(aPresContext, &event,
+                                                          nsnull,
+                                                          NS_EVENT_FLAG_INIT,
+                                                          aEventStatus);
                 }
                 else {
                     NS_WARNING("A XUL element is attached to a command that doesn't exist!\n");
@@ -2713,8 +2765,7 @@ nsXULElement::DoCommand()
             context = shell->GetPresContext();
 
             nsEventStatus status = nsEventStatus_eIgnore;
-            nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull,
-                               nsMouseEvent::eReal);
+            nsXULCommandEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
             HandleDOMEvent(context, &event, nsnull, NS_EVENT_FLAG_INIT,
                            &status);
         }

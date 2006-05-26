@@ -1858,6 +1858,10 @@ nsEventListenerManager::CreateEvent(nsPresContext* aPresContext,
       return NS_NewDOMSVGZoomEvent(aDOMEvent, aPresContext,
                                    NS_STATIC_CAST(nsGUIEvent*,aEvent));
 #endif // MOZ_SVG
+    case NS_XUL_COMMAND_EVENT:
+      return NS_NewDOMXULCommandEvent(aDOMEvent, aPresContext,
+                                      NS_STATIC_CAST(nsXULCommandEvent*,
+                                                     aEvent));
     }
 
     // For all other types of events, create a vanilla event object.
@@ -1906,6 +1910,9 @@ nsEventListenerManager::CreateEvent(nsPresContext* aPresContext,
     return NS_NewDOMSVGZoomEvent(aDOMEvent, aPresContext,
                                  NS_STATIC_CAST(nsGUIEvent*,aEvent));
 #endif // MOZ_SVG
+  if (aEventType.LowerCaseEqualsLiteral("xulcommandevent") ||
+      aEventType.LowerCaseEqualsLiteral("xulcommandevents"))
+    return NS_NewDOMXULCommandEvent(aDOMEvent, aPresContext, nsnull);
 
   return NS_ERROR_DOM_NOT_SUPPORTED_ERR;
 }

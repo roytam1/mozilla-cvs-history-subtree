@@ -212,6 +212,7 @@
 #include "nsIDOMBeforeUnloadEvent.h"
 #include "nsIDOMMutationEvent.h"
 #include "nsIDOMSmartCardEvent.h"
+#include "nsIDOMXULCommandEvent.h"
 #include "nsIDOMPageTransitionEvent.h"
 #include "nsIDOMNSDocumentStyle.h"
 #include "nsIDOMDocumentRange.h"
@@ -1076,6 +1077,9 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(SVGForeignObjectElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
 #endif
+
+  NS_DEFINE_CLASSINFO_DATA(XULCommandEvent, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
@@ -2867,6 +2871,11 @@ nsDOMClassInfo::Init()
      DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorageEvent)
    DOM_CLASSINFO_MAP_END
  
+   DOM_CLASSINFO_MAP_BEGIN(XULCommandEvent, nsIDOMXULCommandEvent)
+     DOM_CLASSINFO_MAP_ENTRY(nsIDOMXULCommandEvent)
+     DOM_CLASSINFO_UI_EVENT_MAP_ENTRIES
+   DOM_CLASSINFO_MAP_END
+
 #ifdef NS_DEBUG
   {
     PRUint32 i = sizeof(sClassInfoData) / sizeof(sClassInfoData[0]);

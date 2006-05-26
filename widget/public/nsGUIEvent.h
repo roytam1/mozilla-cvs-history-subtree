@@ -52,6 +52,7 @@
 #ifdef WIN32
 #undef ERROR
 #endif
+#include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
 
 class nsIRenderingContext;
@@ -61,6 +62,7 @@ class nsIMenuItem;
 class nsIAccessible;
 class nsIContent;
 class nsIURI;
+class nsIDOMEvent;
            
 /**
  * Event Struct Types
@@ -97,6 +99,7 @@ class nsIURI;
 #define NS_SVG_EVENT                      30
 #define NS_SVGZOOM_EVENT                  31
 #endif // MOZ_SVG
+#define NS_XUL_COMMAND_EVENT              32
 
 // These flags are sort of a mess. They're sort of shared between event
 // listener flags and event flags, but only some of them. You've been
@@ -275,7 +278,7 @@ class nsIURI;
 #define NS_XUL_POPUP_SHOWN            (NS_XUL_EVENT_START+1)
 #define NS_XUL_POPUP_HIDING           (NS_XUL_EVENT_START+2)
 #define NS_XUL_POPUP_HIDDEN           (NS_XUL_EVENT_START+3)
-#define NS_XUL_COMMAND                (NS_XUL_EVENT_START+4)
+// NS_XUL_COMMAND used to be here     (NS_XUL_EVENT_START+4)
 #define NS_XUL_BROADCAST              (NS_XUL_EVENT_START+5)
 #define NS_XUL_COMMAND_UPDATE         (NS_XUL_EVENT_START+6)
 #define NS_XUL_CLICK                  (NS_XUL_EVENT_START+7)
@@ -353,6 +356,10 @@ class nsIURI;
 #define NS_SVGZOOM_EVENT_START          2900
 #define NS_SVG_ZOOM                     (NS_SVGZOOM_EVENT_START)
 #endif // MOZ_SVG
+
+// XUL command events
+#define NS_XULCOMMAND_EVENT_START       3000
+#define NS_XUL_COMMAND                  (NS_XULCOMMAND_EVENT_START)
 
 /**
  * Return status for event processors, nsEventStatus, is defined in
@@ -927,6 +934,20 @@ public:
   }
 
   PRBool persisted;
+};
+
+/**
+ * XUL command event
+ */
+class nsXULCommandEvent : public nsInputEvent
+{
+public:
+  nsXULCommandEvent(PRBool isTrusted, PRUint32 msg, nsIWidget *w)
+    : nsInputEvent(isTrusted, msg, w, NS_XUL_COMMAND_EVENT)
+  {
+  }
+
+  nsCOMPtr<nsIDOMEvent> sourceEvent;
 };
 
 /**
