@@ -5204,6 +5204,7 @@
 				0F557D9B0943876800EF68F6,
 				0F557E0B094387F000EF68F6,
 				DE1179E10A15F97700006DD6,
+				DEA548F00A25227200186C93,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9125,6 +9126,7 @@
 				0F557D990943876800EF68F6,
 				0F557E0A094387F000EF68F6,
 				DE1179E20A15F97700006DD6,
+				DEA548F10A25227200186C93,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -14022,6 +14024,27 @@
 			settings = {
 			};
 		};
+		DEA548EF0A25227200186C93 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			name = GeckoUtils.cpp;
+			path = src/extensions/GeckoUtils.cpp;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DEA548F00A25227200186C93 = {
+			fileRef = DEA548EF0A25227200186C93;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DEA548F10A25227200186C93 = {
+			fileRef = DEA548EF0A25227200186C93;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 //DE0
 //DE1
 //DE2
@@ -16035,6 +16058,7 @@
 				F5DE10EB0209DC0601A967DF,
 				F558B1F1030F6E470166970F,
 				F5DE10EA0209DC0601A967DF,
+				DEA548EF0A25227200186C93,
 			);
 			isa = PBXGroup;
 			name = "Gecko Embedding";
