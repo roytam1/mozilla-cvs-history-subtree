@@ -236,6 +236,14 @@ zapMediaGraph::AddNode(const nsACString & type, nsIPropertyBag2* node_pars,
   nsCOMPtr<zapIMediaNode> node = do_CreateInstance(clazz.get());
   if (!node) return NS_ERROR_FAILURE;
 
+  return AddExternalNode(node, node_pars, _retval);
+}
+
+/* [noscript] ACString addExternalNode (in zapIMediaNodeRawPtr node, in nsIPropertyBag2 node_pars); */
+NS_IMETHODIMP
+zapMediaGraph::AddExternalNode(zapIMediaNode *node, nsIPropertyBag2 *node_pars,
+                               nsACString & _retval)
+{
   // make a new id:
   nsCString id = NS_LITERAL_CSTRING("#");
   id.AppendInt(mNodeIdCounter++);

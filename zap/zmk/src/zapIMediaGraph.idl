@@ -37,6 +37,9 @@
 #include "nsISupports.idl"
 interface nsIPropertyBag2;
 interface nsIEventTarget;
+interface zapIMediaNode;
+
+[ptr] native zapIMediaNodeRawPtr(zapIMediaNode);
 
 /**
  * \defgroup ZMK_MODULE ZAP Media Kit (ZMK) module
@@ -49,11 +52,29 @@ interface nsIEventTarget;
 [scriptable, uuid(5fc78f9c-1cbb-4628-8863-d23e25beabe1)]
 interface zapIMediaGraph : nsISupports
 {
-  /** Add node of 'type' and return its id in the graph
-   *  The node will instantiated from the contractid
-   *  "@mozilla.org/zap/medianode;type='type'".
+  /**
+   * Create and add node of 'type' and return its unique id in the
+   * graph. The node will instantiated from the contractid
+   * "@mozilla.org/zap/medianode;type='type'".  The node
+   * implementation does not need to be threadsafe; it will only be
+   * accessed on the media thread. Callers from external threads can
+   * obtain access to thread-proxied interfaces on the node through
+   * zapIMediaGraph::getNode().
    */
   ACString addNode(in ACString type, in nsIPropertyBag2 node_pars);
+
+  /**
+   * Insert the given existing node into the graph and return an id
+   * identifying it within this graph. Note that the node will be
+   * accessed on the media thread, so in general must be threadsafe if
+   * constructed/accessed on different threads.
+   *
+   * 'node' be a pointer to an object implementing zapIMediaNode. It
+   * is of type zapIMediaNodeRawPtr in the IDL to prevent it from
+   * being auto-proxified.
+   */
+  [noscript] ACString addExternalNode(in zapIMediaNodeRawPtr node,
+                                      in nsIPropertyBag2 node_pars);
   
   void removeNode(in ACString id_or_alias);
   void getNode(in ACString id_or_alias, in nsIIDRef uuid,
