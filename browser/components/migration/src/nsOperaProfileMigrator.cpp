@@ -865,6 +865,8 @@ nsOperaCookieMigrator::Migrate()
       segment = nsnull;
     }
   }
+  
+  return NS_OK;
 }
 
 nsresult
