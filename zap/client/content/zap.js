@@ -2459,61 +2459,61 @@ function initCalls() {
 // hash of active calls, indexed by resource name:
 var wActiveCalls = {};
 
-// get the Call object for the given resource. This will either be a
-// new Call instance or the cached instance in wActiveCalls if the
+// get the SIPCall object for the given resource. This will either be a
+// new SIPCall instance or the cached instance in wActiveCalls if the
 // call is currently active:
 function getCall(resource) {
   var call = wActiveCalls[resource.Value];
   if (!call) {
-    call = Call.instantiate();
+    call = SIPCall.instantiate();
     call.initWithResource(resource);
   }
   return call;
 }
 
 //----------------------------------------------------------------------
-// Call class
+// SIPCall class
 
-var Call = makeClass("Call", PersistentRDFObject);
+var SIPCall = makeClass("SIPCall", PersistentRDFObject);
 
-Call.prototype.datasources["default"] = wCallsDS;
-Call.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
-Call.addInMemoryDS("ephemeral");
+SIPCall.prototype.datasources["default"] = wCallsDS;
+SIPCall.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
+SIPCall.addInMemoryDS("ephemeral");
 
 // persistent attributes:
-Call.rdfLiteralAttrib("urn:mozilla:zap:status", ""); // last received/sent SIP status code
-Call.rdfLiteralAttrib("urn:mozilla:zap:remote", ""); // remote SIP address
-Call.rdfLiteralAttrib("urn:mozilla:zap:local", ""); // local SIP address
-Call.rdfLiteralAttrib("urn:mozilla:zap:subject", ""); // SIP Subject header value
-Call.rdfLiteralAttrib("urn:mozilla:zap:callid", ""); // SIP Call-ID header value
-Call.rdfLiteralAttrib("urn:mozilla:zap:timestamp", ""); // yyyy-mm-dd hh:mm:ss (XXX timezone ???)
-Call.rdfLiteralAttrib("urn:mozilla:zap:duration", "-"); // duration in seconds
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:status", ""); // last received/sent SIP status code
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:remote", ""); // remote SIP address
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:local", ""); // local SIP address
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:subject", ""); // SIP Subject header value
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:callid", ""); // SIP Call-ID header value
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:timestamp", ""); // yyyy-mm-dd hh:mm:ss (XXX timezone ???)
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:duration", "-"); // duration in seconds
 
 // ephemeral attributes:
-Call.rdfLiteralAttrib("urn:mozilla:zap:active", "false", "global-ephemeral");
-Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "global-ephemeral");
-Call.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name",
-                      "", "global-ephemeral"); // name to be shown for active calls in the sidebar; initialized from remote address trigger
-Call.rdfLiteralAttrib("urn:mozilla:zap:sidebarindex", "0050",
-                      "global-ephemeral"); // ensure active calls are at the top of the sidebar
-Call.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
-                      "chrome://zap/content/call.xul", "global-ephemeral");
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:active", "false", "global-ephemeral");
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "global-ephemeral");
+SIPCall.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name",
+                         "", "global-ephemeral"); // name to be shown for active calls in the sidebar; initialized from remote address trigger
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:sidebarindex", "0050",
+                         "global-ephemeral"); // ensure active calls are at the top of the sidebar
+SIPCall.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
+                         "chrome://zap/content/call.xul", "global-ephemeral");
 
 // This is to provide an entrypoint for template recursion. see
 // e.g. calls.xul for usage and comments in
 // RDFUtils.js::rdfPointerAttrib:
-Call.rdfPointerAttrib("urn:mozilla:zap:root",
+SIPCall.rdfPointerAttrib("urn:mozilla:zap:root",
                       "urn:mozilla:zap:current-call",
                       "ephemeral");
 
 // triggers:
-Call.rdfAttribTrigger(
+SIPCall.rdfAttribTrigger(
   "urn:mozilla:zap:remote",
   function(prop, val) {
     this["http://home.netscape.com/NC-rdf#Name"] = val;
   });
 
-Call.rdfAttribTrigger(
+SIPCall.rdfAttribTrigger(
   "urn:mozilla:zap:session-running",
   function(prop, val) {
     if (val == "true") {
@@ -2531,7 +2531,7 @@ Call.rdfAttribTrigger(
     }
   });
 
-Call.rdfAttribTrigger(
+SIPCall.rdfAttribTrigger(
   "urn:mozilla:zap:active",
   function(prop, val) {
     if (val == "true") {
@@ -2543,7 +2543,7 @@ Call.rdfAttribTrigger(
   });
 
 // set timestamp to current date/time:
-Call.fun(
+SIPCall.fun(
   function setTimestamp() {
     var now = new Date();
     this["urn:mozilla:zap:timestamp"] =
@@ -2558,7 +2558,7 @@ Call.fun(
 //----------------------------------------------------------------------
 // Active call
 
-var ActiveCall = makeClass("ActiveCall", Call, Scheduler, SupportsImpl);
+var ActiveCall = makeClass("ActiveCall", SIPCall, Scheduler, SupportsImpl);
 ActiveCall.addInterfaces(Components.interfaces.zapISipDialogListener);
 
 // Mediasession and dialog will only be valid for our subclasses
