@@ -665,6 +665,8 @@ nsCacheService::IsStorageEnabledForPolicy_Locked(nsCacheStoragePolicy  storagePo
 
 NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 {
+    NS_ENSURE_ARG_POINTER(visitor);
+
     nsAutoLock lock(mCacheServiceLock);
 
     if (!(mEnableDiskDevice || mEnableMemoryDevice))
