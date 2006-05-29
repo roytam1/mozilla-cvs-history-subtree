@@ -39,6 +39,9 @@
 const Ci = Components.interfaces;
 const Cc = Components.classes;
 
+const engineFlavor = "text/x-moz-search-engine";
+const badIndex = -1;
+
 var gEngineView = null;
 
 var gEngineManagerDialog = {
@@ -133,7 +136,7 @@ var gEngineManagerDialog = {
   },
 
   onSelect: function engineManager_onSelect() {
-    var noEngineSelected = (gEngineView.selectedIndex == -1);
+    var noEngineSelected = (gEngineView.selectedIndex == badIndex);
     var lastSelected = (gEngineView.selectedIndex == gEngineView.lastIndex);
     var firstSelected = (gEngineView.selectedIndex == 0);
 
@@ -222,7 +225,7 @@ EngineStore.prototype = {
     if (aNewIndex < 0 || aNewIndex > this._engines.length - 1)
       throw new Error("ES_moveEngine: invalid aNewIndex!");
     var index = this._getIndexForEngine(aEngine);
-    if (index == -1)
+    if (index == badIndex)
       throw new Error("ES_moveEngine: invalid engine?");
 
     // Switch the two engines in our internal store
@@ -234,7 +237,7 @@ EngineStore.prototype = {
 
   removeEngine: function ES_removeEngine(aEngine) {
     var index = this._getIndexForEngine(aEngine);
-    if (index == -1)
+    if (index == badIndex)
       throw new Error("invalid engine?");
  
     this._engines.splice(index, 1);
@@ -265,7 +268,7 @@ EngineView.prototype = {
       seln.getRangeAt(0, min, { });
       return min.value;
     }
-    return -1;
+    return badIndex;
   },
   get selectedEngine() {
     return this._engineStore.engines[this.selectedIndex];
@@ -282,6 +285,29 @@ EngineView.prototype = {
 
   ensureRowIsVisible: function (index) {
     this.tree.ensureRowIsVisible(index);
+  },
+
+  getSourceIndexFromDrag: function () {
+    var dragService = Cc["@mozilla.org/widget/dragservice;1"].
+                      getService().QueryInterface(Ci.nsIDragService);
+    var dragSession = dragService.getCurrentSession();
+    var transfer = Cc["@mozilla.org/widget/transferable;1"].
+                   createInstance(Ci.nsITransferable);
+
+    transfer.addDataFlavor(engineFlavor);
+    dragSession.getData(transfer, 0);
+
+    var dataObj = {};
+    var len = {};
+    var sourceIndex = badIndex;
+    try {
+      transfer.getAnyTransferData({}, dataObj, len);
+      sourceIndex = dataObj.value.QueryInterface(Ci.nsISupportsString).data;
+      // XXX substract one that was added in beginDrag
+      sourceIndex = parseInt(sourceIndex.substring(0, len.value));
+    } catch (ex) {}
+    
+    return sourceIndex;
   },
 
   // nsITreeView
@@ -305,6 +331,25 @@ EngineView.prototype = {
     this.tree = tree;
   },
 
+  canDrop: function(index, orientation) {
+    return this.getSourceIndexFromDrag() != badIndex &&
+           (orientation == Ci.nsITreeView.DROP_BEFORE ||
+            orientation == Ci.nsITreeView.DROP_AFTER);
+  },
+
+  drop: function(newIndex, orientation) {
+    var sourceIndex = this.getSourceIndexFromDrag();
+    if (sourceIndex != badIndex) {
+      var sourceEngine = this._engineStore.engines[sourceIndex];
+
+      this._engineStore.moveEngine(sourceEngine, newIndex);
+
+      // Redraw, and adjust selection
+      this.invalidate();
+      this.selection.select(newIndex);
+    }
+  },
+
   selection: null,
   getRowProperties: function(index, properties) { },
   getCellProperties: function(index, column, properties) { },
@@ -314,9 +359,7 @@ EngineView.prototype = {
   isContainerEmpty: function(index) { return false; },
   isSeparator: function(index) { return false; },
   isSorted: function(index) { return false; },
-  canDrop: function(index) { return false; },
-  drop: function(index, orientation) { },
-  getParentIndex: function(index) { return -1; },
+  getParentIndex: function(index) { return badIndex; },
   hasNextSibling: function(parentIndex, index) { return false; },
   getLevel: function(index) { return 0; },
   getProgressMode: function(index, column) { },
@@ -331,4 +374,32 @@ EngineView.prototype = {
   performAction: function(action) { },
   performActionOnRow: function(action, index) { },
   performActionOnCell: function(action, index, column) { }
+};
+
+var gDND = {
+  beginDrag: function(aEvent) {
+    var selectedIndex = gEngineView.selectedIndex;
+    if (selectedIndex == badIndex)
+      return;
+
+    var transfer = Cc["@mozilla.org/widget/transferable;1"].
+                   createInstance(Ci.nsITransferable);
+    var dragData = Cc["@mozilla.org/supports-string;1"].
+                   createInstance(Ci.nsISupportsString);
+
+    transfer.addDataFlavor(engineFlavor);
+
+    // XXX something bad seems to happen in drop() if we send "0"
+    dragData.data = (selectedIndex).toString();
+    transfer.setTransferData(engineFlavor, dragData, (selectedIndex).toString() * 2);
+
+    var transArray = Cc["@mozilla.org/supports-array;1"].
+                 createInstance(Ci.nsISupportsArray);
+    transArray.AppendElement(transfer.QueryInterface(Components.interfaces.nsISupports));
+
+    var dragService = Cc["@mozilla.org/widget/dragservice;1"].
+                      getService().QueryInterface(Ci.nsIDragService);
+    dragService.invokeDragSession(aEvent.target, transArray, null,
+                                  Ci.nsIDragService.DRAGDROP_ACTION_MOVE);
+  }
 };
