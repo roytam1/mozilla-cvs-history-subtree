@@ -133,6 +133,15 @@ public:
    */
   virtual nsIScriptGlobalObjectOwner *GetGlobalObjectOwner() = 0;
 
+  /**
+   * Ensure that the script global object is initialized for working with the
+   * specified script language ID.  This will setup the nsIScriptContext
+   * and 'script global' for that language, allowing these to be fetched
+   * and manipulated.
+   * @return NS_OK if successful; error conditions include that the language
+   * has not been registered, as well as 'normal' errors, such as
+   * out-of-memory
+   */
   virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID) = 0;
   /**
    * Get a script context (WITHOUT added reference) for the specified language.

@@ -400,8 +400,6 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   nsCOMPtr<nsIAtom> onEventAtom = do_GetAtom(onEvent);
 
   // Compile the event handler.
-  // XUL is language aware, so although XBL isn't, we still need to
-  // help when we can.
   PRUint32 stID = nsIProgrammingLanguage::JAVASCRIPT;
 
   // Compile the handler and bind it to the element.
