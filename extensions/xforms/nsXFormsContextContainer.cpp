@@ -39,6 +39,7 @@
 #include "nsIXTFBindableElementWrapper.h"
 
 #include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 #include "nsString.h"
 
 #include "nsIDOM3Node.h"
@@ -61,6 +62,24 @@
 //#define DEBUG_XF_CONTEXTCONTAINER
 #endif
 
+class nsXFormsContextContainer;
+
+class nsXFormsFocusListener : public nsIDOMEventListener {
+public:
+  nsXFormsFocusListener(nsXFormsContextContainer* aContainer)
+  : mContainer(aContainer) {}
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDOMEVENTLISTENER
+  void Detach()
+  {
+    mContainer = nsnull;
+  }
+protected:
+  nsXFormsContextContainer* mContainer;
+};
+
+
 /**
  * Implementation of \<contextcontainer\>.
  * 
@@ -76,6 +95,8 @@ class nsXFormsContextContainer : public nsXFormsBindableControlStub,
                                  public nsIXFormsRepeatItemElement
 {
 protected:
+  /** The handler for the focus event */
+  nsRefPtr<nsXFormsFocusListener> mFocusListener;
 
   /** The context position for the element */
   PRInt32 mContextPosition;
@@ -84,21 +105,24 @@ protected:
   PRInt32 mContextSize;
 
   /** Does this element have the repeat-index? */
-  PRBool mHasIndex;
+  PRPackedBool mHasIndex;
+
+  /** Has context changed since last bind? */
+  PRPackedBool mContextIsDirty;
 
 public:
   nsXFormsContextContainer()
-    : mContextPosition(1), mContextSize(1), mHasIndex(PR_FALSE) {}
+    : mContextPosition(1), mContextSize(1), mHasIndex(PR_FALSE),
+      mContextIsDirty(PR_FALSE) {}
 
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIXTFElement overrides
   NS_IMETHOD CloneState(nsIDOMElement *aElement);
-  NS_IMETHOD HandleDefault(nsIDOMEvent *aEvent, PRBool *aHandled);
+  NS_IMETHOD DocumentChanged(nsIDOMDocument *aNewDocument);
 
   // nsIXFormsControl
-  NS_IMETHOD Bind();
-  NS_IMETHOD Refresh();
+  NS_IMETHOD Bind(PRBool *aContextChanged);
   NS_IMETHOD SetContext(nsIDOMNode *aContextNode,
                         PRInt32     aContextPosition,
                         PRInt32     aContextSize);
@@ -110,6 +134,8 @@ public:
 
   // nsIXFormsRepeatItemElement
   NS_DECL_NSIXFORMSREPEATITEMELEMENT
+
+  nsresult HandleFocus(nsIDOMEvent *aEvent);
 
 #ifdef DEBUG_smaug
   virtual const char* Name() {
@@ -123,24 +149,23 @@ public:
 #endif
 };
 
+NS_IMPL_ISUPPORTS1(nsXFormsFocusListener, nsIDOMEventListener)
+
+NS_IMETHODIMP
+nsXFormsFocusListener::HandleEvent(nsIDOMEvent* aEvent)
+{
+  return mContainer ? mContainer->HandleFocus(aEvent) : NS_OK;
+}
+
 NS_IMPL_ISUPPORTS_INHERITED1(nsXFormsContextContainer,
                              nsXFormsBindableControlStub,
                              nsIXFormsRepeatItemElement)
 
-
-// nsIXTFElement
-NS_IMETHODIMP
-nsXFormsContextContainer::HandleDefault(nsIDOMEvent *aEvent,
-                                        PRBool      *aHandled)
+nsresult
+nsXFormsContextContainer::HandleFocus(nsIDOMEvent *aEvent)
 {
   if (!aEvent || !mElement)
     return NS_OK;
-
-  nsAutoString type;
-  aEvent->GetType(type);
-  // Need to use "DOMFocusIn" here, "focus" doesn't bubble
-  if (!type.EqualsLiteral("DOMFocusIn"))
-    return nsXFormsBindableControlStub::HandleDefault(aEvent, aHandled);
 
   if (!nsXFormsUtils::EventHandlingAllowed(aEvent, mElement))
     return NS_OK;
@@ -200,7 +225,31 @@ nsXFormsContextContainer::HandleDefault(nsIDOMEvent *aEvent,
     }
   }
 
-  *aHandled = PR_TRUE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsContextContainer::DocumentChanged(nsIDOMDocument *aNewDocument)
+{
+  if (mFocusListener) {
+    mFocusListener->Detach();
+    nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mElement);
+    if (target) {
+      target->RemoveEventListener(NS_LITERAL_STRING("focus"), mFocusListener,
+                                  PR_TRUE);
+    }
+    mFocusListener = nsnull;
+  }
+
+  if (aNewDocument) {
+    nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mElement);
+    if (target) {
+      mFocusListener = new nsXFormsFocusListener(this);
+      NS_ENSURE_TRUE(mFocusListener, NS_ERROR_OUT_OF_MEMORY);
+      target->AddEventListener(NS_LITERAL_STRING("focus"), mFocusListener,
+                               PR_TRUE);
+    }
+  }
   return NS_OK;
 }
 
@@ -227,11 +276,18 @@ nsXFormsContextContainer::SetContext(nsIDOMNode *aContextNode,
                                      PRInt32     aContextPosition,
                                      PRInt32     aContextSize)
 {
-  mBoundNode = aContextNode;
-  mContextPosition = aContextPosition;
-  mContextSize = aContextSize;
+  mContextIsDirty = (mContextIsDirty ||
+                     mBoundNode != aContextNode ||
+                     mContextPosition != aContextPosition ||
+                     mContextSize != aContextSize);
 
-  return Bind();
+  if (mContextIsDirty) {
+    mBoundNode = aContextNode;
+    mContextPosition = aContextPosition;
+    mContextSize = aContextSize;
+  }
+
+  return BindToModel();
 }
 
 NS_IMETHODIMP
@@ -255,22 +311,11 @@ nsXFormsContextContainer::GetContext(nsAString      &aModelID,
 // nsIXFormsControl
 
 NS_IMETHODIMP
-nsXFormsContextContainer::Bind()
+nsXFormsContextContainer::Bind(PRBool *aContextChanged)
 {
-
-  nsresult rv = BindToModel();
-  NS_ENSURE_SUCCESS(rv, rv);
-  
-  if (mModel) {
-    mModel->SetStates(this, mBoundNode);
-  }
-
-  return NS_OK;
-}
-
-nsresult
-nsXFormsContextContainer::Refresh()
-{
+  NS_ENSURE_ARG(aContextChanged);
+  *aContextChanged = mContextIsDirty;
+  mContextIsDirty = PR_FALSE;
   return NS_OK;
 }
 

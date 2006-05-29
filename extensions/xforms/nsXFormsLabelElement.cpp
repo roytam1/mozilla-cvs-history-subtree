@@ -242,13 +242,18 @@ nsXFormsLabelElement::LoadExternalLabel(const nsAString& aSrc)
             nsCOMPtr<nsIModelElementPrivate> modelPriv =
                                               nsXFormsUtils::GetModel(mElement);
             nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
-            nsXFormsUtils::DispatchEvent(model, eEvent_LinkError);
+            nsXFormsUtils::DispatchEvent(model, eEvent_LinkError, nsnull,
+                                         mElement);
           }
         }
       } else {
         const PRUnichar *strings[] = { NS_LITERAL_STRING("label").get() };
         nsXFormsUtils::ReportError(NS_LITERAL_STRING("externalLinkLoadOrigin"),
                                    strings, 1, mElement, mElement);
+        nsCOMPtr<nsIModelElementPrivate> modelPriv =
+          nsXFormsUtils::GetModel(mElement);
+        nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
+        nsXFormsUtils::DispatchEvent(model, eEvent_LinkError, nsnull, mElement);
       }
     }
   }
@@ -388,7 +393,7 @@ nsXFormsLabelElement::OnStopRequest(nsIRequest *aRequest,
     nsCOMPtr<nsIModelElementPrivate> modelPriv =
       nsXFormsUtils::GetModel(mElement);
     nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
-    nsXFormsUtils::DispatchEvent(model, eEvent_LinkError);
+    nsXFormsUtils::DispatchEvent(model, eEvent_LinkError, nsnull, mElement);
 
     mSrcAttrText.Truncate();
   }

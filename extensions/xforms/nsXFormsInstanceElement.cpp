@@ -351,41 +351,26 @@ nsXFormsInstanceElement::BackupOriginalDocument()
 NS_IMETHODIMP
 nsXFormsInstanceElement::RestoreOriginalDocument()
 {
-  nsresult rv = NS_OK;
-
   // This is called when xforms-reset is received by the model.  We assume
   // that the backup of the instance document has been populated and is
-  // loaded into mOriginalDocument.  Get the backup's root node, clone it, and 
-  // insert it into the live copy of the instance document.  This is the magic 
-  // behind getting xforms-reset to work. 
-  if(mDocument && mOriginalDocument) {
-    nsCOMPtr<nsIDOMNode> newNode, instanceRootNode, nodeReturn;
-    nsCOMPtr<nsIDOMElement> instanceRoot;
-
-    // first remove all the old stuff
-    rv = mDocument->GetDocumentElement(getter_AddRefs(instanceRoot));
-    if(NS_SUCCEEDED(rv)) {
-      if(instanceRoot) {
-        rv = mDocument->RemoveChild(instanceRoot, getter_AddRefs(nodeReturn));
-        NS_ENSURE_SUCCESS(rv, rv);
-      }
-    }
-
-    // now all of the garbage is out o' there!  Put the original data back
-    // into mDocument
-    rv = mOriginalDocument->GetDocumentElement(getter_AddRefs(instanceRoot));
-    NS_ENSURE_SUCCESS(rv, rv);
-    NS_ENSURE_TRUE(instanceRoot, NS_ERROR_FAILURE);
-    instanceRootNode = do_QueryInterface(instanceRoot);
-
-    rv = instanceRootNode->CloneNode(PR_TRUE, getter_AddRefs(newNode)); 
-    if(NS_SUCCEEDED(rv)) {
-      rv = mDocument->AppendChild(newNode, getter_AddRefs(nodeReturn));
-      NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), 
-                       "failed to restore original instance document");
-    }
+  // loaded into mOriginalDocument.
+ 
+ if (!mOriginalDocument) {
+    return NS_ERROR_FAILURE;
   }
-  return rv;
+  
+  nsCOMPtr<nsIDOMNode> newDocNode;
+  nsresult rv = mOriginalDocument->CloneNode(PR_TRUE,
+                                             getter_AddRefs(newDocNode));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMDocument> newDoc(do_QueryInterface(newDocNode));
+  NS_ENSURE_STATE(newDoc);
+  
+  rv = SetInstanceDocument(newDoc);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -498,15 +483,49 @@ nsXFormsInstanceElement::CloneInlineInstance()
     temp->GetNextSibling(getter_AddRefs(child));
   }
 
-  if (child) {
-    nsCOMPtr<nsIDOMNode> newNode;
-    rv = mDocument->ImportNode(child, PR_TRUE, getter_AddRefs(newNode));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIDOMNode> nodeReturn;
-    rv = mDocument->AppendChild(newNode, getter_AddRefs(nodeReturn));
-    NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "failed to append root instance node");
+  // There needs to be a child element, or it is not a valid XML document
+  if (!child) {
+    nsXFormsUtils::ReportError(NS_LITERAL_STRING("inlineInstanceNoChildError"),
+                               mElement);
+    nsCOMPtr<nsIModelElementPrivate> model(GetModel());
+    nsCOMPtr<nsIDOMNode> modelNode(do_QueryInterface(model));
+    nsXFormsUtils::DispatchEvent(modelNode, eEvent_LinkException);
+    nsXFormsUtils::HandleFatalError(mElement,
+                                    NS_LITERAL_STRING("XFormsLinkException"));
+    return NS_ERROR_FAILURE;
   }
+
+  // Check for siblings to first child element node. This is an error, since
+  // the inline content is then not a well-formed XML document.
+  nsCOMPtr<nsIDOMNode> sibling;
+  child->GetNextSibling(getter_AddRefs(sibling));
+  while (sibling) {
+    PRUint16 nodeType;
+    sibling->GetNodeType(&nodeType);
+
+    if (nodeType == nsIDOMNode::ELEMENT_NODE) {
+      nsXFormsUtils::ReportError(NS_LITERAL_STRING("inlineInstanceMultipleElementsError"),
+                                 mElement);
+      nsCOMPtr<nsIModelElementPrivate> model(GetModel());
+      nsCOMPtr<nsIDOMNode> modelNode(do_QueryInterface(model));
+      nsXFormsUtils::DispatchEvent(modelNode, eEvent_LinkException);
+      nsXFormsUtils::HandleFatalError(mElement,
+                                      NS_LITERAL_STRING("XFormsLinkException"));
+      return NS_ERROR_FAILURE;
+    }
+
+    temp.swap(sibling);
+    temp->GetNextSibling(getter_AddRefs(sibling));
+  }
+
+  // Clone and insert content into new document
+  nsCOMPtr<nsIDOMNode> newNode;
+  rv = mDocument->ImportNode(child, PR_TRUE, getter_AddRefs(newNode));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMNode> nodeReturn;
+  rv = mDocument->AppendChild(newNode, getter_AddRefs(nodeReturn));
+  NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "failed to append root instance node");
 
   return rv;
 }

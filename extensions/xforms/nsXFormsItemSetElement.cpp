@@ -47,7 +47,6 @@
 #include "nsIDocument.h"
 #include "nsXFormsUtils.h"
 #include "nsXFormsModelElement.h"
-#include "nsArray.h"
 #include "nsIXFormsControlBase.h"
 #include "nsIXFormsControl.h"
 #include "nsIXFormsItemSetUIElement.h"
@@ -71,7 +70,7 @@ public:
   NS_IMETHOD DoneAddingChildren();
 
   // nsIXFormsControlBase overrides
-  NS_IMETHOD Bind();
+  NS_IMETHOD Bind(PRBool *aContextChanged);
   NS_IMETHOD Refresh();
 
   // nsIXFormsSelectChild
@@ -223,8 +222,10 @@ nsXFormsItemSetElement::SelectItemByNode(nsIDOMNode *aNode,
 }
 
 NS_IMETHODIMP
-nsXFormsItemSetElement::Bind()
+nsXFormsItemSetElement::Bind(PRBool *aContextChanged)
 {
+  NS_ENSURE_ARG(aContextChanged);
+  *aContextChanged = PR_FALSE;
   return BindToModel();
 }
 
@@ -304,23 +305,21 @@ nsXFormsItemSetElement::Refresh()
                                  getter_AddRefs(itemNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
+    anonContent->AppendChild(itemNode, getter_AddRefs(tmpNode));
+
     // XXX Could we get rid of the <contextcontainer>?
     rv = domDoc->CreateElementNS(NS_LITERAL_STRING(NS_NAMESPACE_XFORMS),
                                  NS_LITERAL_STRING("contextcontainer"),
                                  getter_AddRefs(contextContainer));
 
     NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIDOMElement> modelElement = do_QueryInterface(model);
-    nsAutoString modelID;
-    modelElement->GetAttribute(NS_LITERAL_STRING("id"), modelID);
-
-    contextContainer->SetAttribute(NS_LITERAL_STRING("model"), modelID);
+    itemNode->AppendChild(contextContainer, getter_AddRefs(tmpNode));
 
     nsCOMPtr<nsIXFormsContextControl> ctx(do_QueryInterface(contextContainer));
     if (ctx) {
       ctx->SetContext(node, i + 1, nodeCount);
     }
+
     // Clone the template content under the item
     for (PRUint32 j = 0; j < templateNodeCount; ++j) {
       templateNodes->Item(j, getter_AddRefs(templateNode));
@@ -328,8 +327,6 @@ nsXFormsItemSetElement::Refresh()
       contextContainer->AppendChild(cloneNode, getter_AddRefs(templateNode));
     }
 
-    itemNode->AppendChild(contextContainer, getter_AddRefs(tmpNode));
-    anonContent->AppendChild(itemNode, getter_AddRefs(tmpNode));
   }
 
   // refresh parent we

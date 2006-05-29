@@ -134,9 +134,11 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
   nsCOMPtr<nsIDOMNode> contextNode;
   nodeset->SnapshotItem(0, getter_AddRefs(contextNode));
 
-  nsCOMPtr<nsIDOMXPathResult> at =
-    nsXFormsUtils::EvaluateXPath(atExpr, contextNode, mElement,
-                                 nsIDOMXPathResult::NUMBER_TYPE, 1, setSize);
+  nsCOMPtr<nsIDOMXPathResult> at;
+  rv = nsXFormsUtils::EvaluateXPath(atExpr, contextNode, mElement,
+                                    nsIDOMXPathResult::NUMBER_TYPE,
+                                    getter_AddRefs(at), 1, setSize);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   if (!at)
     return NS_OK;
@@ -237,18 +239,20 @@ nsXFormsInsertDeleteElement::HandleAction(nsIDOMEvent            *aEvent,
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Dispatch refreshing events to the model
-  nsCOMPtr<nsIDOMElement> modelElem(do_QueryInterface(model));
-  NS_ASSERTION(modelElem, "Model not implementing nsIDOMElement?!");
   if (aParentAction) {
-    aParentAction->SetRebuild(modelElem, PR_TRUE);
-    aParentAction->SetRecalculate(modelElem, PR_TRUE);
-    aParentAction->SetRevalidate(modelElem, PR_TRUE);
-    aParentAction->SetRefresh(modelElem, PR_TRUE);
+    aParentAction->SetRebuild(model, PR_TRUE);
+    aParentAction->SetRecalculate(model, PR_TRUE);
+    aParentAction->SetRevalidate(model, PR_TRUE);
+    aParentAction->SetRefresh(model, PR_TRUE);
   } else {
-    nsXFormsUtils::DispatchEvent(modelElem, eEvent_Rebuild);
-    nsXFormsUtils::DispatchEvent(modelElem, eEvent_Recalculate);
-    nsXFormsUtils::DispatchEvent(modelElem, eEvent_Revalidate);
-    nsXFormsUtils::DispatchEvent(modelElem, eEvent_Refresh);
+    rv = model->RequestRebuild();
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = model->RequestRecalculate();
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = model->RequestRevalidate();
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = model->RequestRefresh();
+    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   return NS_OK;
