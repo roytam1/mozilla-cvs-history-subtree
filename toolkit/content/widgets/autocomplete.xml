@@ -331,6 +331,9 @@
       <method name="showHistoryPopup">
         <body><![CDATA[
           this.maxRows = 14;
+          // Eusure this having focus.
+          if (!this.focused)
+            this.focus();
           this.attachController();
           this.mController.startSearch("");
         ]]></body>
