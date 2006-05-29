@@ -584,8 +584,8 @@ var BookmarksCommand = {
       items = data.substring(0, ix != -1 ? ix : data.length);
       name  = data.substring(ix);
       // XXX: we should infer the best charset
-      BookmarksUtils.createBookmark(null, items, null, name, null);
-      items = [items];
+      var createdBookmarkResource = BookmarksUtils.createBookmark(null, items, null, name, null);
+      items = [createdBookmarkResource];
       break;
     default: 
       return;
