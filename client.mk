@@ -118,6 +118,7 @@ MODULES_core :=                                 \
   SeaMonkeyAll                                  \
   mozilla/browser/config/version.txt            \
   mozilla/mail/config/version.txt               \
+  mozilla/calendar/sunbird/config/version.txt   \
   mozilla/ipc/ipcd                              \
   mozilla/modules/libpr0n                       \
   mozilla/modules/libmar                        \
@@ -127,6 +128,8 @@ MODULES_core :=                                 \
   mozilla/toolkit                               \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
+  mozilla/db/morkreader                         \
+  mozilla/tools/test-harness                    \
   $(NULL)
 
 LOCALES_core :=                                 \
@@ -164,6 +167,7 @@ MODULES_browser :=                              \
 LOCALES_browser :=                              \
   $(LOCALES_toolkit)                            \
   browser                                       \
+  extensions/reporter                           \
   other-licenses/branding/firefox               \
   $(NULL)
 
@@ -200,6 +204,12 @@ MODULES_calendar :=                             \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
   mozilla/calendar                              \
+  mozilla/other-licenses/branding/sunbird       \
+  $(NULL)
+
+LOCALES_calendar :=                             \
+  $(LOCALES_toolkit)                            \
+  other-licenses/branding/sunbird               \
   $(NULL)
 
 BOOTSTRAP_calendar := mozilla/calendar/sunbird/config/mozconfig
@@ -238,11 +248,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = FIREFOX_2_0a3_RELEASE
-NSPR_CO_TAG          = FIREFOX_2_0a3_RELEASE
-NSS_CO_TAG           = FIREFOX_2_0a3_RELEASE
-LDAPCSDK_CO_TAG      = FIREFOX_2_0a3_RELEASE
-LOCALES_CO_TAG       = FIREFOX_2_0a3_RELEASE
+MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
+NSPR_CO_TAG          = MOZILLA_1_8_BRANCH
+NSS_CO_TAG           = MOZILLA_1_8_BRANCH
+LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
+LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
 
 BUILD_MODULES = all
 
@@ -696,6 +706,55 @@ ifdef RUN_AUTOCONF_LOCALLY
 	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
 	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
 endif
+
+CVSCO_LOGFILE_L10N := $(ROOTDIR)/cvsco-l10n.log
+CVSCO_LOGFILE_L10N := $(shell echo $(CVSCO_LOGFILE_L10N) | sed s%//%/%)
+
+l10n-checkout:
+#	@: Backup the last checkout log.
+	@if test -f $(CVSCO_LOGFILE_L10N) ; then \
+	  mv $(CVSCO_LOGFILE_L10N) $(CVSCO_LOGFILE_L10N).old; \
+	else true; \
+	fi
+	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE_L10N)
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
+	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_l10n-checkout
+
+EN_US_CO_DIRS := $(sort $(foreach dir,$(LOCALE_DIRS),mozilla/$(dir)/locales)) \
+  $(foreach mod,$(MOZ_PROJECT_LIST),mozilla/$(mod)/config) \
+  mozilla/client.mk        \
+  $(MOZCONFIG_MODULES)     \
+  mozilla/configure        \
+  mozilla/configure.in     \
+  mozilla/allmakefiles.sh  \
+  mozilla/build            \
+  mozilla/config           \
+  $(NULL)
+
+EN_US_CO_FILES_NS :=          \
+  mozilla/toolkit/mozapps/installer \
+  $(NULL)
+
+#	Start the checkout. Split the output to the tty and a log file.
+real_l10n-checkout:
+	@set -e; \
+	cvs_co() { set -e; echo "$$@" ; \
+	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE_L10N); }; \
+	cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(EN_US_CO_DIRS); \
+	cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) -l $(EN_US_CO_FILES_NS); \
+	cvs_co $(CVSCO_LOCALES)
+	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE_L10N)
+#	@: Check the log for conflicts. ;
+	@conflicts=`egrep "^C " $(CVSCO_LOGFILE_L10N)` ;\
+	if test "$$conflicts" ; then \
+	  echo "$(MAKE): *** Conflicts during checkout." ;\
+	  echo "$$conflicts" ;\
+	  echo "$(MAKE): Refer to $(CVSCO_LOGFILE_L10N) for full log." ;\
+	  false; \
+	else true; \
+	fi
 
 #####################################################
 # First Checkout
