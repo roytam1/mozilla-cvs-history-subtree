@@ -81,8 +81,7 @@
   <hbox flex="1">
     <tree id="engineList" flex="1" rows="10" hidecolumnpicker="true"
           seltype="single" onselect="gEngineManagerDialog.onSelect();">
-      <treechildren id="engineChildren" flex="1"
-                    ondraggesture="gDND.beginDrag(event);"/>
+      <treechildren id="engineChildren" flex="1"/>
       <treecols>
         <treecol id="engineName" class="sortDirectionIndicator" flex="3"
                  persist="width" label="&nameColumn.label;"/>
