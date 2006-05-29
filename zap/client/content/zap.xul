@@ -68,40 +68,40 @@
   <toolbox id="main_toolbox">
     <!-- Main menu bar -->
     <menubar id="menubar">
-      <menu label="File"
-            accesskey="F">
+      <menu label="&file.menu;"
+            accesskey="&file.accesskey;">
         <menupopup>
-          <menuitem label="Exit" 
-                    accesskey="x"
+          <menuitem label="&exit.menu;"
+                    accesskey="&exit.accesskey;"
                     command="cmd_exit" />
         </menupopup>
       </menu>
 <!--
-        <menu label="Options"
-            accesskey="O">
+        <menu label="&options.label;"
+            accesskey="&options.accesskey;">
         <menupopup>
         </menupopup>
       </menu> 
 -->
-      <menu label="Tools"
-            accesskey="T">
+      <menu label="&tools.menu;"
+            accesskey="&tools.accesskey;">
         <menupopup>
-          <menuitem label="Debug Shell..."
-                    accesskey="d"
+          <menuitem label="&debugShell.menu;"
+                    accesskey="&debugShell.accesskey;"
                     command="cmd_debug_shell" />
-          <menuitem label="Send generic request..."
-                    accesskey="g"
+          <menuitem label="&sendGenericRequest.menu;"
+                    accesskey="&sendGenericRequest.accesskey;"
                     command="cmd_generic_request" />
-          <menuitem label="Send SUBSCRIBE request..."
-                    accesskey="s"
+          <menuitem label="&sendSubscribeRequest.menu;"
+                    accesskey="&sendSubscribeRequest.accesskey;"
                     command="cmd_subscribe_request" />
         </menupopup>
       </menu>
-      <menu label="Help"
-            accesskey="H">
+      <menu label="&help.menu;"
+            accesskey="&help.accesskey;">
         <menupopup>
-          <menuitem label="About ZAP..." 
-                    accesskey="A"
+          <menuitem label="&about.menu;" 
+                    accesskey="&about.accesskey;"
                     command="cmd_about" />
         </menupopup>
       </menu>
@@ -120,10 +120,10 @@
                  showcommentcolumn="false"
                  />
       </toolbaritem>
-      <button id="button_go" label="Go" oncommand="cmdGo()" class="zap_tb_button" />
+      <button id="go" label="&go.button;" oncommand="cmdGo()" class="zap_tb_button" />
       <toolbarspacer/>
       <toolbaritem>
-        <hbox align="center"><label value="Identity:"/></hbox>
+        <hbox align="center"><label value="&identity.label;"/></hbox>
         <menulist id="identities_list"
                   oncommand="identityChange();" 
                   minwidth="100">
@@ -151,7 +151,7 @@
         </menulist>
       </toolbaritem>
       <toolbarspacer/>
-      <button class="zap_tb_button" id="button_dnd" label="DND" type="checkbox"/>
+      <button class="zap_tb_button" id="button_dnd" label="&dnd.button;" type="checkbox"/>
     </toolbar>
   </toolbox>
 

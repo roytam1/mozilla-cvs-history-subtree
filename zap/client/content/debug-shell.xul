@@ -115,7 +115,7 @@
   ]]>
   </script>
 
-  <label class="zap-form-title" crop="end" id="title" value="zap debug shell"/>
+  <label class="zap-form-title" crop="end" id="title" value="&debugShell.title;"/>
   <iframe id="output" flex="1" />
     <hbox>
       <textbox style="border:1px solid grey;margin:2px;" 
@@ -126,7 +126,7 @@
     </hbox>
     <hbox>
       <spacer flex="1"/>
-      <button label="Clear" oncommand="clearOutput()"/>
-      <button label="Print..." oncommand="wOutput.defaultView.print()"/>
+      <button label="&clear.button;" oncommand="clearOutput()"/>
+      <button label="&print.button;" oncommand="wOutput.defaultView.print()"/>
     </hbox>
 </window>

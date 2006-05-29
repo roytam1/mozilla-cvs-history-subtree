@@ -1,1 +1,252 @@
-<!ENTITY zap.title       'zap! v0.2.3'>
+
+<!-- about.xul -->
+<!ENTITY zap.title "zap! v0.2.3">
+<!ENTITY zap.description "zap! - The Mozilla-based Universal SIP client">
+<!ENTITY about1.label "An Open-Source Project sponsored by ">
+<!ENTITY about2.label "Mozilla framework: Copyright (c) 2005-2006 Contributors">
+<!ENTITY about3.label "zap! SIP stack, media kit (zmk) and client: Copyright (c) 2005-2006 ">
+<!ENTITY about4.label "The zap! media kit (zmk) contains 3rd party copyrighted code ">
+
+<!-- call-form.xul -->
+<!ENTITY call.button "Call">
+<!ENTITY sipLogs.button "SIP logs">
+<!ENTITY hangUp.button "Hang Up">
+<!ENTITY dtmf.label "Type DTMF digits here: ">
+<!ENTITY activeOutboundCall.label "Active outbound call">
+<!ENTITY activeInboundCall.label "Active inbound call">
+<!ENTITY reject.button "Reject">
+<!ENTITY accept.button "Accept">
+<!ENTITY callid.label "SIP Call-ID:">
+<!ENTITY localAddress.label "Local Address:">
+<!ENTITY remoteAddress.label "Remote Address:">
+<!ENTITY subject.label "Subject:">
+<!ENTITY currentStatus.label "Current Status:">
+<!ENTITY lastStatus.label "Current Status:">
+<!ENTITY date.label "Date:">
+<!ENTITY duration.label "Duration (s):">
+
+<!-- call.xul -->
+
+<!-- calls.xul -->
+<!ENTITY calls.title "Calls">
+<!ENTITY direction.column "Direction">
+<!ENTITY status.column "Status">
+<!ENTITY remote.column "Remote">
+<!ENTITY subject.column "Subject">
+<!ENTITY date.column "Date">
+<!ENTITY actions.column "Actions">
+
+<!-- config.xul -->
+<!ENTITY configuration.title "Configuration">
+<!ENTITY uiPreferences.title "UI Preferences">
+<!ENTITY notifications.title "Notifications">
+<!ENTITY ringtone.label "Ringtone:">
+<!ENTITY ringtone.description "Ringtone for incoming calls in <html:a href='http://en.wikipedia.org/wiki/RTTTL'>RTTTL format</html:a>. In future other formats will be supported as well (midi, ogg/vorbis, ...).">
+<!ENTITY dialTone.label "Dial Tone:">
+<!ENTITY dialTone.description "Dial tone played when making outgoing calls. XXX Describe format">
+<!ENTITY ringingTone.label "Ringing Tone:">
+<!ENTITY ringingTone.description "Ringing tone played when making outgoing calls. XXX Describe format">
+<!ENTITY busyTone.label "Busy Tone:">
+<!ENTITY busyTone.description "Busy tone played when making outgoing calls. XXX Describe format">
+<!ENTITY errorTone.label "Error Tone:">
+<!ENTITY errorTone.description "Error tone played when making outgoing calls. XXX Describe format">
+<!ENTITY audioSettings.title "Audio Settings">
+<!ENTITY synchronousAudio.label "Synchronous audio i/o interface">
+<!ENTITY synchronousAudio.description "Selects between a synchronous or asynchronous audio interface.  A synchronous audio interface attempts to write and read from the audio hardware simultaneously. This can e.g. provide better echo cancellation performance, but might lead to choppy audio under some circumstances (e.g. on Windows XP when other applications are using the audio hardware).<html:br/>Changes to this field will take effect after a restart.">
+<!ENTITY audioLatency.label "Audio IO latency (ms):">
+<!ENTITY audioLatency.description "Size of buffer mediating between zap and the audio hardware. Must be between 20ms and 10000ms.  Set to a higher value if you experience choppy audio that can't be traced to network problems.<html:br/>For a synchronous audio i/o interface, this value will likely need to be higher (maybe 2x) as for an asynchronous one. <html:br/>This setting should be coordinated with the acoustic echo cancellation window offset setting.<html:br/>Changes to this field will take effect after a restart.">
+<!ENTITY aec.label "Use acoustic echo cancellation">
+<!ENTITY aec.description "Turns on the acoustic echo canceller.">
+<!ENTITY aec2Stage.label "2-stage acoustic echo cancellation">
+<!ENTITY aec2Stage.description "Improves echo cancellation performance.">
+<!ENTITY aecOffset.label "AEC window offset (ms)">
+<!ENTITY aecOffset.description "Delay after which echo is expected at the earliest. Should be set to at least the audio IO latency.">
+<!ENTITY aecLength.label "AEC window length (ms):">
+<!ENTITY aecLength.description "Temporal length of window over which echo cancellation is performed. The recommended length is approximately a third of the room reverberation time. E.g. for a small room the reverberation time is in the order of 300ms, so a tail length of 100ms would be appropriate.">
+<!ENTITY denoise.label "Denoise microphone input">
+<!ENTITY denoise.description "Reduces the amount of background noise present in the input signal.">
+<!ENTITY agc.label "Automatic microphone gain control">
+<!ENTITY agc.description "Automatically adjust the recording level.">
+<!ENTITY agcLevel.label "AGC level:">
+<!ENTITY agcLevel.description "...">
+<!ENTITY vad.label "Use voice activity detection">
+<!ENTITY vad.description "Silences the input signal when no voice is being detected.">
+<!ENTITY dereverb.label "Dereverb">
+<!ENTITY dereverb.description "">
+<!ENTITY dereverbLevel.label "Dereverb level:">
+<!ENTITY dereverbLevel.description "">
+<!ENTITY dereverbDecay.label "Dereverb decay:">
+<!ENTITY dereverbDecay.description "">
+<!ENTITY resetAudio.button "Reset audio processor">
+<!ENTITY sipSettings.title "SIP Settings">
+<!ENTITY instanceId.label "UA Instance ID:">
+<!ENTITY instanceId.description "A unique identifier assigned to this instance of zap when it was first started. It is used by GRUU-enabled services to route messages to this zap instance. It also forms part of the 'grid' uri parameter (in MD5 hashed form) to identify this zap instance among several registered contacts in replies to REGISTER requests.  See <html:a href='http://www.croczilla.com/zap/rfcs/draft-ietf-sip-gruu-05.txt'>draft-ietf-sip-gruu-05.txt</html:a>. <html:br/>Changes to this field will take effect after a restart.">
+<!ENTITY sipPortBase.label "SIP port base:">
+<!ENTITY sipPortBase.description "zap will use the first available socket greater than or equal to this value to listen for SIP traffic.  <html:br/>Changes to this field will take effect after a restart.">
+<!ENTITY registrationFailure.label "Registration failure Tmax:">
+<!ENTITY registrationFailure.description "Maximum time (in seconds) to wait before re-attempting a failed registration.  See <html:a href='http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt'>draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the re-registration logic used in zap.">
+<!ENTITY flowFailure.label "Flow failure Tbase:">
+<!ENTITY flowFailure.description "Base time (in seconds) to wait before attempting to reconnect a failed flow when other flows for the same registration are still alive.  See <html:a href='http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt'>draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the re-registration logic used in zap.">
+
+<!-- contacts.xul -->
+<!ENTITY contacts.title "Contacts">
+<!ENTITY addNewContact.button "Add new Contact">
+<!ENTITY name.column "Name">
+<!ENTITY sipURI.column "SIP URI">
+<!ENTITY contact.title "Contact">
+<!ENTITY call.button "Call">
+<!ENTITY delete.button "Delete">
+<!ENTITY name.label "Name:">
+<!ENTITY name.description "Human-readable name for this contact.">
+<!ENTITY sipURI.label "SIP URI:">
+<!ENTITY sipURI.description "SIP address for this contact. Example: <html:br/><html:i>sip:username@the_sip_service_provider.com</html:i>">
+<!ENTITY associatedIdentity.label "Associated identity:">
+<!ENTITY associatedIdentity.description "The identity to use10508 to call this contact.">
+<!ENTITY notes.label "Notes:">
+<!ENTITY notes.description "Use this field for any additional information you would like to record for this contact.">
+<!ENTITY apply.button "Apply changes">
+
+<!-- debug-shell.xul -->
+<!ENTITY debugShell.title "zap debug shell">
+<!ENTITY clear.button "Clear">
+<!ENTITY print.button "Print...">
+
+<!-- foreign-registration.xul -->
+<!ENTITY contactAddress.label "Registered contact address:">
+<!ENTITY contactHeader.label "Contact header:">
+
+<!-- generic-request.xul -->
+<!ENTITY genericRequest.title "Send Generic Non-Invite Request">
+<!ENTITY remoteParty.label "Remote party:">
+<!ENTITY method.label "Method:">
+<!ENTITY generate.button "Generate template">
+<!ENTITY send.button "Send request">
+<!ENTITY request.label "Request:">
+<!ENTITY response.label "Response:">
+
+<!-- home.xul -->
+<!ENTITY createNewIdentity.button "Create new identity">
+<!ENTITY manageContact.button "Manage Contact">
+<!ENTITY home.description "TBD">
+
+<!-- identities.xul -->
+<!ENTITY identities.label "Identities">
+<!ENTITY createNewIdentity.label "Create a new identity">
+
+<!-- identity-form.xul -->
+<!ENTITY addressOfRecord.label "Address of record:">
+<!ENTITY addressOfRecord.description "SIP address-of-record for this account. Example: <html:br/><html:i>sip:username@my_sip_service_provider.com</html:i>">
+<!ENTITY displayName.label "Display name:">
+<!ENTITY displayName.description "Optional human-readable display name which will typically be displayed by remote clients calling or being called from this identity.  This can be an arbitrary unicode string but must not contain carriage return or linefeed characters.">
+<!ENTITY organization.label "Organization:">
+<!ENTITY organization.description "Optional organizational affiliation of this identity.  It may be used by remote clients to filter calls.">
+<!ENTITY advanced.title "Advanced">
+<!ENTITY automaticRegistration.label "Automatic Registration">
+<!ENTITY automaticRegistration.description "If checked, zap will automatically attempt to register on application startup.">
+<!ENTITY watchContact.label "Watch contact's presence">
+<!ENTITY watchContact.description "If checked, zap will attempt to subscribe to the presence status of contacts associated with this identity.">
+<!ENTITY preference.label "Preference:">
+<!ENTITY preference.description "Optional value (&quot;q&quot; parameter) in the range 0.001-1.000 indicating the relative preference for this user agent/identity compared to other registration bindings for this address-of-record.">
+<!ENTITY authenticationUsername.label "Authentication Username:">
+<!ENTITY authenticationUsername.description "Optional username for authenticating with the registrar for this address-of-record. If this field is left blank, zap assumes that the authentication username is identical to the username part of the address-of-record (as it usually is).">
+<!ENTITY service.label "Service:">
+<!ENTITY service.default "(automatic)">
+<!ENTITY service.description "SIP service to use for registration and outbound calls from this identity.  The default '(automatic)' setting chooses the first appropriate service from the services list (configured from the 'Configuration' form), i.e. the first service for which the 10508domain matches the host part of the address-of-record of this identity.  <html:br/> Zap will use the host part of the address-of-record as request URI for REGISTER requests and send the request over the routes configured in the service profile.">
+
+<!-- identity.xul -->
+<!ENTITY identity.title "SIP Identity">
+<!ENTITY delete.button "Delete this identity">
+<!ENTITY notRegistered.label "Not registered">
+<!ENTITY register.button "Register now">
+<!ENTITY registered.label "Registered">
+<!ENTITY unregister.button "Unregister now">
+<!ENTITY registering.label "Registering...">
+<!ENTITY noregister.button "Stop registering">
+
+<!-- logs.xul -->
+<!ENTITY print.button "Print...">
+
+<!-- make-call.xul -->
+<!ENTITY makeCall.title "Make outgoing call">
+<!ENTITY makeCall.description "<html:b>Invalid SIP Address</html:b> <html:p> Please enter a valid SIP address in the URL bar and hit enter.  </html:p>">
+<!ENTITY makeCall.description "<html:b>Invalid SIP Address</html:b> <html:p> Please enter a valid SIP address in the URL bar and hit enter.  </html:p>">
+<!ENTITY session.title "Session">
+<!ENTITY emptyOffer.label "Let other party make offer">
+<!ENTITY offer.label "Provide media offer">
+<!ENTITY mediaOffer.label "Media offer">
+<!ENTITY audio.label "Audio">
+<!ENTITY pcmuCodec.label "Enable PCMU Codec">
+<!ENTITY pcmaCodec.label "Enable PCMA Codec">
+<!ENTITY speexCodec.label "Enable Speex Codec">
+<!ENTITY rfc2833Codec.label "Enable  Telephone-Events (DTMF)">
+
+<!-- new-identity.xul -->
+<!ENTITY createNewIdentity.title "Create new identity">
+<!ENTITY createIdentity.button "Create identity">
+<!ENTITY cancel.button "Cancel">
+
+<!-- services.xul -->
+<!ENTITY services.title "Services">
+<!ENTITY addService.button "Add new Service">
+<!ENTITY domain.column "Domain">
+<!ENTITY service.label "Service">
+<!ENTITY name.description "Human-readable name for this service.">
+<!ENTITY domain.label "Domain:">
+<!ENTITY domain.description "Home domain of the SIP service or suffix thereof.<html:br/> Zap uses this field to choose an appropriate service for identities configured for '(automatic)' service by matching it against the host part of the identity's address of record.<html:br/> Example:<html:br/> An identity with address of record 'sip:user@foo.bar.com' would match SIP services with domains 'foo.bar.com', 'bar.com', 'ar.com', etc. A full match ('foo.bar.com') is preferred over partial matches.">
+<!ENTITY serviceRoutes.label "Service Routes">
+<!ENTITY serviceRoutes.description "Routes to use as initial preloaded routes when registering an identity with this service. <html:br/> A route is a possibly empty, comma-separated list of SIP URIs enclosed in angle quotes (RFC3261 'name-addr').<html:br/> <html:a href='http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt'>draft-ietf-sip-outbound-01.txt</html:a> suggests that a UA should support sets of up to four <html:b>URIs</html:b> with with to register.  Zap extends this scheme by allowing four <html:b>routes</html:b>, so any proxies that need to be traversed (e.g. to traverse a company intranet) can be specified.<html:br/> Zap will attempt to simultaneously register over all specified non-empty routes and maintain flows over them as described in <html:a href='http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt'>draft-ietf-sip-outbound-01.txt</html:a>. Outbound calls will be routed over the first active flow.<html:br/> Service-Route headers returned by a registration over a flow will override the inital route for that flow as described in <html:a href='http://www.croczilla.com/zap/rfcs/draft-rosenberg-sip-route-construct-00.txt'>draft-rosenberg-sip-route-construct-00.txt</html:a>. If the first hop of the new route differs from the old route, zap will immediately re-register the flow over the new route.">
+<!ENTITY route1.label "Route 1:">
+<!ENTITY route2.label "Route 2:">
+<!ENTITY route3.label "Route 3:">
+<!ENTITY route4.label "Route 4:">
+<!ENTITY registrationInterval.label "Registration Texpire:">
+<!ENTITY registrationInterval.description "Optional suggested expiration interval in seconds to indicate how long zap would like a registration to be valid. This might be overruled by the registrar by a 423 (Interval Too Brief) response or an expires header or field - in either case zap will adjust the actual expiration interval accordingly.">
+<!ENTITY stunServer.label "STUN server:">
+<!ENTITY stunServer.description "Optional address of STUN server to use for STUN requests made for this service (e.g. to resolve the UA Contact Address, see below).  If this field is empty, zap will use attempt to use the home domain name of this service instead when a STUN server is required.">
+<!ENTITY optionsKeepalive.label "Send OPTIONS keep-alive requests">
+<!ENTITY optionsKeepalive.description "If checked, zap will send periodic OPTIONS requests over all registered flows to keep alive any NAT bindings. The interval between OPTIONS requests is the same as that used for STUN monitored flows (see <html:a href='http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt'>draft-ietf-sip-outbound-01.txt</html:a>).">
+<!ENTITY contactType.label "UA Contact Address">
+<!ENTITY contactType.description "Determines the address:port that will be sent as the 'Contact' in registrations.<html:br/> <html:b>Local address</html:b>: The local machine's IP address (or 127.0.0.1 if it can't be determined, e.g. on some Linux setups) and the local SIP port will be sent.<html:br/> <html:b>Resolve by STUN</html:b>: The address will be determined by sending a STUN request to the service's STUN server, yielding a public address through any NATs between the UA and the registrar. The port will not be resolved (The local SIP port will be sent). This method of determining the public address is deprecated, since it fails to work in many NAT scenarios. It might be removed in future versions of zap. The 'Resolve by OPTIONS' should work in all cases where a public address is required.<html:br/> <html:b>Resolve by OPTIONS</html:b>: The address will be determined from the 'received-by' parameter returned by the registrar's reply to an OPTIONS request.  In addition, if the registrar implements RFC3581 (as most will), the port will be determined from the 'rport' parameter. This method will work even if the registrar doesn't honour OPTIONS requests; error responses contain the required information as well.">
+<!ENTITY contactTypeLocal.label "Local address">
+<!ENTITY contactTypeStun.label "Resolve by STUN">
+<!ENTITY contactTypeOptions.label "Resolve by OPTIONS">
+<!ENTITY compatibility.title "Compatibility">
+<!ENTITY elideRoute.label "Elide destination route header">
+<!ENTITY elideRoute.description "Zap uses preloaded routes to set the first hop destination of outbound packets.  This means that outgoing requests outside of a dialog will contain a top Route header that is identical to the first hop. While this behavior is compliant to RFC3261, some registrars get confused by it and end up forwarding the request to themselves over and over until the Max-Forwards count is exhausted.  To fix these buggy registrars, setting this checkbox will instruct zap to remove the top Route header of outgoing outside-of-dialog requests.">
+<!ENTITY registerGrid.label "Match REGISTER contact address by grid only">
+<!ENTITY registerGrid.description "Some services (e.g. Wengo) send REGISTER responses with contact addresses that have an incorrect host part.  This option provides a workaround for this behaviour.">
+
+<!-- sidebar.xul -->
+
+<!-- subscribe-request.xul -->
+<!ENTITY subscribeRequest.title "SUBSCRIBE Request Tester">
+<!ENTITY event.label "Event:">
+<!ENTITY generateIndialog.button "Generate in-dialog request template">
+<!ENTITY sendIndialog.button "Send in-dialog request">
+<!ENTITY terminate.button "Terminate dialog">
+<!ENTITY request.label "Request (click 'generate' button for template, then maybe edit, then send):">
+<!ENTITY log.label "Log:">
+
+<!-- zap.xul -->
+<!ENTITY file.menu "File">
+<!ENTITY file.accesskey "F">
+<!ENTITY exit.menu "Exit">
+<!ENTITY exit.accesskey "x">
+<!ENTITY options.menu "Options">
+<!ENTITY options.accesskey "O">
+<!ENTITY tools.menu "Tools">
+<!ENTITY tools.accesskey "T">
+<!ENTITY debugShell.menu "Debug Shell...">
+<!ENTITY debugShell.accesskey "d">
+<!ENTITY sendGenericRequest.menu "Send generic request...">
+<!ENTITY sendGenericRequest.accesskey "g">
+<!ENTITY sendSubscribeRequest.menu "Send SUBSCRIBE request...">
+<!ENTITY sendSubscribeRequest.accesskey "s">
+<!ENTITY help.menu "Help">
+<!ENTITY help.accesskey "H">
+<!ENTITY about.menu "About ZAP...">
+<!ENTITY about.accesskey "A">
+<!ENTITY go.button "Go">
+<!ENTITY identity.label "Identity:">
+<!ENTITY dnd.button "DND">
+

@@ -67,18 +67,18 @@
   <vbox align="center">
     <image src="chrome://zap/skin/splash.jpg" link="http://www.croczilla.com/zap/"/>
     <label class="title" value="&zap.title;"/>
-    <label value="zap! - The Mozilla-based Universal SIP client"/>
+    <label value="&zap.description;" />
     <hbox>
-      <label value="An Open-Source Project sponsored by "/> 
+      <label value="&about1.label;"/> 
       <label value="8x8 Inc." link="http://www.8x8.com" />
     </hbox>
     <separator class="groove" width="100px" />
-    <label value="Mozilla framework: Copyright (c)2005 Contributors"/>
+    <label value="&about2.label;"/>
     <hbox>
-      <label value="zap! SIP stack, media kit (zmk) and client: Copyright (c)2005 "/>
+      <label value="&about3.label;"/>
       <label value="8x8 Inc." link="http://www.8x8.com" />
     </hbox>
-    <label value="The zap! media kit (zmk) contains 3rd party copyrighted code "/>
+    <label value="&about4.label;"/>
     <hbox>
       <label value="from "/>
       <label value="portaudio.com" link="http://www.portaudio.com" />

@@ -46,9 +46,9 @@
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
   <vbox id="module_page" flex="1">
-    <label class="titlebox" value="Identities"/>
+    <label class="titlebox" value="&identities.label;"/>
     <label id="identities_new" 
-           value="Create a new identity" 
+           value="&createNewIdentity.label;"
            onclick="parent.loadPage('chrome://zap/content/new-identity.xul')" />
 
 

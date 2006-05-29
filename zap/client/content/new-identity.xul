@@ -84,12 +84,12 @@
   </script>
 
   <vbox class="zap-form-body">
-    <label class="zap-form-title" value="Create new identity"/>
+    <label class="zap-form-title" value="&createNewIdentity.title;"/>
     <vbox id="zap_identity_form"/>
   </vbox>
   <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
     <spacer flex="1"/>
-    <button id="apply" label="Create Identity" oncommand="commit()" />
-    <button label="Cancel" oncommand="cancel()" />
+    <button id="apply" label="&createIdentity.button;" oncommand="commit()" />
+    <button label="&cancel.button;" oncommand="cancel()" />
   </hbox>
 </page>

@@ -116,7 +116,7 @@
   </script>
 
   <vbox class="zap-form-list" id="calls-box" flex="1" height="200" minheight="50" persist="height">
-    <label id="list-title" class="zap-form-title" value="Calls"/>
+    <label id="list-title" class="zap-form-title" value="&calls.title;"/>
     <tree id="calls" flex="1" 
           class="zap-form-tree"
           seltype="single"
@@ -125,14 +125,14 @@
           onselect="callsSelectionChange()"
           flags="dont-build-content">
       <treecols>
-        <treecol id="calls_direction" display="Direction" style="min-width:20px;"/>
-        <treecol id="calls_status" label="Status" flex="1" hidden="true"/>
-        <treecol id="calls_remote" label="Remote" flex="2" />
-        <treecol id="calls_subject" label="Subject" flex="2" hidden="true"/>
-        <treecol id="calls_subject" label="Date" flex="1" 
+        <treecol id="calls_direction" display="&direction.column;" style="min-width:20px;"/>
+        <treecol id="calls_status" label="&status.column;" flex="1" hidden="true"/>
+        <treecol id="calls_remote" label="&remote.column;" flex="2" />
+        <treecol id="calls_subject" label="&remote.column;" flex="2" hidden="true"/>
+        <treecol id="calls_subject" label="&date.column;" flex="1" 
                  sortActive="true" sortDirection="descending" 
                  sort="?timestamp"/>
-        <treecol id="calls_actions" display="Actions" />
+        <treecol id="calls_actions" display="&actions.column;" />
       </treecols>
       <template>
         <rule>

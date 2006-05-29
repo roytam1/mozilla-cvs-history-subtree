@@ -114,42 +114,37 @@
   <vbox class="zap-form-body">
 
     <hbox class="zap-form-title-box">
-      <label value="Make outgoing call"/>
+      <label value="&makeCall.title;"/>
     </hbox>
     <deck id="content_deck">
       <vbox>
-        <description>
-          <html:b>Invalid SIP Address</html:b>
-          <html:p>
-          Please enter a valid SIP address in the URL bar and hit enter.
-          </html:p>
-        </description>
+        <description>&makeCall.description;</description>
       </vbox>
 
       <vbox>
-        <label value="Remote party:"/>
+        <label value="&remoteParty.label;"/>
         <textbox id="urn:mozilla:zap:remote" readonly="true"/>
-        <label value="Subject:"/>
+        <label value="&subject.label;"/>
         <textbox id="urn:mozilla:zap:subject"/>
-        <cgroup title="Session" closed="false" persist="closed">
+        <cgroup title="&session.title;" closed="false" persist="closed">
           <radiogroup id="exchange_type">
-            <radio id="offerIn200" label="Let other party make offer" value="offerIn200"/>
-            <radio label="Provide media offer" selected="true" value="offerInInvite"/>
+            <radio id="offerIn200" label="&emptyOffer.label;" value="offerIn200"/>
+            <radio label="&offer.label;" selected="true" value="offerInInvite"/>
           </radiogroup>
           <groupbox id="media_offer" flex="1" disabled="true">
-            <caption><label value="Media Offer"/></caption>
-            <label value="Audio" style="font-weight:bold;"/>
-            <checkbox label="Enable PCMU Codec" id="PCMU" checked="true"/>
-            <checkbox label="Enable PCMA Codec" id="PCMA" checked="true"/>
-            <checkbox label="Enable Speex Codec" id="speex" checked="true"/>
-            <checkbox label="Enable Telephone-Events (DTMF)" id="telephone-event" checked="true"/>
+            <caption><label value="&mediaOffer.label;"/></caption>
+            <label value="&audio.label;" style="font-weight:bold;"/>
+            <checkbox label="&pcmuCodec.label;" id="PCMU" checked="true"/>
+            <checkbox label="&pcmaCodec.label;" id="PCMA" checked="true"/>
+            <checkbox label="&speexCodec.label;" id="speex" checked="true"/>
+            <checkbox label="&rfc2833Codec.label;" id="telephone-event" checked="true"/>
           </groupbox>
         </cgroup>
 
 
         <hbox>
           <spacer flex="1"/>
-          <button id="call_button" label="Call" oncommand="call()" default="true"/>
+          <button id="call_button" label="&call.button;" oncommand="call()" default="true"/>
         </hbox>
       </vbox>
 

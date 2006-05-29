@@ -114,6 +114,6 @@
   <iframe id="content" flex="1" />
     <hbox>
       <spacer flex="1"/>
-      <button label="Print..." oncommand="wContentDoc.defaultView.print()"/>
+      <button label="&print.button;" oncommand="wContentDoc.defaultView.print()"/>
     </hbox>
 </window>

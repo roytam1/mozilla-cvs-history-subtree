@@ -124,20 +124,20 @@
 
 
   <vbox class="zap-form-body">
-    <label class="zap-form-title" value="Send Generic Non-Invite Request"/>
-    <label value="Remote party:"/>
+    <label class="zap-form-title" value="&genericRequest.title;"/>
+    <label value="&remoteParty.label;"/>
     <textbox id="remote" value="sip:613@fwd.pulver.com"/>
-    <label value="Method:"/>
+    <label value="&method.label;"/>
     <textbox id="method" value="OPTIONS"/>
     <hbox>
       <spacer flex="1"/>
-      <button label="Generate template" oncommand="generateTemplate()"/>
-      <button label="Send request" oncommand="sendRequest()"/>
+      <button label="&generate.button;" oncommand="generateTemplate()"/>
+      <button label="&send.button;" oncommand="sendRequest()"/>
     </hbox>
-    <label value="Request:"/>
+    <label value="&request.label;"/>
     <textbox id="request"
              multiline="true" rows="8" /> 
-    <label value="Response:"/>
+    <label value="&response.label;"/>
     <textbox id="response" class="ro_modulefield" 
              multiline="true" rows="8" /> 
   </vbox>

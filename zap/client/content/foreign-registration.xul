@@ -93,9 +93,9 @@
           </bindings>
           <action>
             <vbox uri="?node">  
-              <label value="Address of record:"/>
+              <label value="&addressOfRecord.label;"/>
               <textbox value="?aor" readonly="true"/>
-              <label value="Registered contact address:"/>
+              <label value="&contactAddress.label;"/>
               <textbox value="?address" readonly="true"/>
               <label value="Contact header:"/>
               <textbox value="?contact" multiline="true" rows="8" 

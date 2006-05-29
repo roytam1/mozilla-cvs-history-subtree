@@ -58,63 +58,45 @@
       <rows>
         <irow>
           <label control="http://home.netscape.com/NC-rdf#Name" 
-                 value="Address of record:"/>
+                 value="&addressOfRecord.label;"/>
           <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"
                    validator="validateSIPURI"/>
           <info>
-            <description>
-              SIP address-of-record for this account. Example: 
-              <html:br/><html:i>sip:username@my_sip_service_provider.com</html:i>
-            </description>
+            <description>&addressOfRecord.description;</description>
           </info>
         </irow>
         <irow>
           <label control="urn:mozilla:zap:display_name" 
-                 value="Display Name:"/>
+                 value="&displayName.label;"/>
           <textbox type="zap-formwidget" id="urn:mozilla:zap:display_name"/>
           <info>
-            <description>
-              Optional human-readable display name which will
-              typically be displayed by remote clients calling 
-              or being called from this identity.
-              This can be an arbitrary unicode string 
-              but must not contain carriage return or linefeed characters.
-            </description>
+            <description>&displayName.description;</description>
           </info>
         </irow>
         <irow>
           <label control="urn:mozilla:zap:organization" 
-                 value="Organization:"/>
+                 value="&organization.label;"/>
           <textbox type="zap-formwidget" id="urn:mozilla:zap:organization"/>
           <info>
-            <description>
-              Optional organizational affiliation of
-              this identity. It may be used by remote clients to filter calls.
-            </description>
+            <description>&organization.description;</description>
           </info>
         </irow>
       </rows>
     </grid>
 
-    <cgroup title="Advanced">
+    <cgroup title="&advanced.title;">
       <igroup>
-        <checkbox type="zap-formwidget" label="Automatic registration" 
+        <checkbox type="zap-formwidget" label="&automaticRegistration.label;" 
                   id="urn:mozilla:zap:automatic_registration"/>
         <info>
-          <description>
-            If checked, zap will automatically attempt to register 
-            on application startup.
-          </description>
+          <description>&automaticRegistration.description;</description>
         </info>
       </igroup>
       <igroup>
-        <checkbox type="zap-formwidget" label="Watch contacts' presence" 
+        <checkbox type="zap-formwidget" label="&watchContact.label;" 
                   id="urn:mozilla:zap:watch_contact_presence"/>
         <info>
-          <description>
-            If checked, zap will attempt to subscribe to the presence status 
-            of contacts associated with this identity.
-          </description>
+          <description>&watchContact.description;</description>
         </info>
       </igroup>
       <grid>
@@ -122,38 +104,29 @@
         <rows>
           <irow>
             <label control="urn:mozilla:zap:preference" 
-                   value="Preference:"/>
+                   value="&preference.label;:"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:preference"/>
             <info>
-              <description>
-                Optional value ("q" parameter) in the range 0.001-1.000 indicating
-                the relative preference for this user agent/identity compared to
-                other registration bindings for this address-of-record.
-              </description>
+              <description>&preference.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:authentication_username" 
-                   value="Authentication Username:"/>
+                   value="&authenticationUsername.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:authentication_username"/>
             <info>
-              <description>
-                Optional username for authenticating with the registrar for this 
-                address-of-record. If this field is left blank, zap assumes that 
-                the authentication username is identical to the username part of
-                the address-of-record (as it usually is).
-              </description>
+              <description>&authenticationUsername.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:service"
-                   value="Service:"/>
+                   value="&service.label;"/>
             <menulist type="zap-formwidget" id="urn:mozilla:zap:service">
               <menupopup id="services_list_popup"
                          datasources="rdf:null"                         
                          ref="urn:mozilla:zap:services">
                   <menuitem value="urn:mozilla:zap:automatic_service"
-                            label="(automatic)"/>
+                            label="&service.default;"/>
                 <template>
                   <rule>
                     <conditions>
@@ -174,17 +147,7 @@
               </menupopup>
             </menulist>
             <info>
-              <description>
-                SIP service to use for registration and outbound calls from this identity.
-                The default '(automatic)' setting chooses the first appropriate service from 
-                the services list (configured from the 'Configuration' form), i.e. the first 
-                service for which the domain matches the host part of the 
-                address-of-record of this identity.
-                <html:br/>
-                Zap will use the host part of the 
-                address-of-record as request URI for REGISTER requests and send 
-                the request over the routes configured in the service profile.
-              </description>
+              <description>&service.description;</description>
             </info>
           </irow>
         </rows>

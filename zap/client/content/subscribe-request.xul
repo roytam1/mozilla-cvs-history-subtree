@@ -248,33 +248,33 @@
 
   <vbox class="zap-form-body" flex="1">
     <hbox class="zap-form-title-box">
-      <label value="SUBSCRIBE Request Tester"/>
+      <label value="&subscribeRequest.title;"/>
       <spacer flex="1"/>
       <button label="Reset form" oncommand="reset()"/>
     </hbox>
     <vbox id="unconnected-chrome">
-      <label value="Remote party:"/>
+      <label value="&remoteParty.label;"/>
       <textbox id="remote" />
-      <label value="Event:"/>
+      <label value="&event.label;"/>
       <textbox id="event" value="presence"/>
       <hbox>
         <spacer flex="1"/>
-        <button label="Generate template" oncommand="generateTemplate()"/>
-        <button label="Send request" oncommand="sendInitialRequest()"/>
+        <button label="&generate.button;" oncommand="generateTemplate()"/>
+        <button label="&send.button;" oncommand="sendInitialRequest()"/>
       </hbox>
     </vbox>
     <vbox id="connected-chrome" hidden="true">
       <hbox>
         <spacer flex="1"/>
-        <button label="Generate in-dialog request template" oncommand="generateInDialogTemplate();"/>
-        <button label="Send in-dialog request" oncommand="sendInDialogRequest()"/>
-        <button label="Terminate dialog" oncommand="terminateDialog();"/>
+        <button label="&generateIndialog.button;" oncommand="generateInDialogTemplate();"/>
+        <button label="&sendIndialog.button;" oncommand="sendInDialogRequest()"/>
+        <button label="&terminate.button;" oncommand="terminateDialog();"/>
       </hbox>
     </vbox>
-    <label value="Request (click 'generate' button for template, then maybe edit, then send):"/>
+    <label value="&request.label;"/>
     <textbox id="request"
              multiline="true" rows="8" />
-    <label value="Log:"/>
+    <label value="&log.label;"/>
     <textbox id="log" class="ro_modulefield"
              multiline="true" flex="1" /> 
   </vbox>

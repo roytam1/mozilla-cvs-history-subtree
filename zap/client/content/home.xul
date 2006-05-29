@@ -68,8 +68,8 @@
   <vbox flex="1" style="background-color:white;">
     <label class="zap-form-title" value="&zap.title;"/>
 
-    <button label="Create new identity" oncommand="parent.loadPage('chrome://zap/content/new-identity.xul')"/>
-    <button label="Manage contacts" oncommand="parent.loadPage('chrome://zap/content/contacts.xul')"/>
+    <button label="&createNewIdentity.button;" oncommand="parent.loadPage('chrome://zap/content/new-identity.xul')"/>
+    <button label="&manageContact.button;" oncommand="parent.loadPage('chrome://zap/content/contacts.xul')"/>
 
     <hbox flex="1" style="padding:5px; overflow: -moz-scrollbars-vertical;">
     <description style="font-size:11px;">
@@ -136,6 +136,13 @@
         <html:p>
         You can register with several accounts at the same time. Use the 'Identity'
         dropdown in the toolbar to switch your identity for outgoing calls.
+        </html:p>
+
+      <html:h4>Improving Zap!</html:h4>
+        <html:p>
+          We are now offering cash bounties for new features and improvements. Visit 
+          <html:a href="http://www.croczilla.com/zap/bounties">www.croczilla.com/zap/bounties</html:a>
+          for the list of available bounties and the rules to claims them.
         </html:p>
     </description>
     </hbox>

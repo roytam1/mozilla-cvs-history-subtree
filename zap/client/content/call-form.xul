@@ -116,8 +116,8 @@
               <hbox class="zap-form-title-box" active="false">
                 <label value="Inactive ?direction call"/>
                 <spacer flex="1"/>
-                <button label="Call" oncommand="cmdCall()"/>
-                <button label="SIP logs" oncommand="cmdLogs()"/>
+                <button label="&call.button;" oncommand="cmdCall()"/>
+                <button label="&sipLogs.button;" oncommand="cmdLogs()"/>
               </hbox>
             </vbox>
           </action>
@@ -154,10 +154,10 @@
                   <hbox flex="1" style="-moz-box-align: center;">
                     <label class="zap-form-title-box-label" value="Active ?direction call"/>
                     <spacer flex="1"/>
-                    <button label="Hang Up" oncommand="cmdHangup()"/>
+                    <button label="&hangUp.button;" oncommand="cmdHangup()"/>
                   </hbox>
                   <hbox flex="1" style="-moz-box-align: center;">
-                    <label value="Type DTMF digits here: "/>
+                    <label value="&dtmf.label;"/>
                     <textbox onkeypress="dump(String.fromCharCode(event.charCode));cmdSendDTMF(String.fromCharCode(event.charCode))" flex="1"/> 
                   </hbox>
                 </vbox>
@@ -182,9 +182,9 @@
           <action>
             <vbox uri="?node">
               <hbox class="zap-form-title-box" active="true">
-                <label value="Active outbound call"/>
+                <label value="&activeOutboundCall.label;"/>
                 <spacer flex="1"/>
-                <button label="Cancel" oncommand="cmdCancel()"/>
+                <button label="&cancel.button;" oncommand="cmdCancel()"/>
               </hbox>
             </vbox>
           </action>
@@ -206,7 +206,7 @@
           <action>
             <vbox uri="?node">
               <hbox class="zap-form-title-box" active="true">
-                <label value="Active inbound call"/>
+                <label value="&activeInboundCall.label;"/>
                 <spacer flex="1"/>
                 <button label="Reject" oncommand="cmdReject()"/>
                 <button label="Accept" oncommand="cmdAccept()"/>
@@ -256,17 +256,17 @@
           </bindings>
           <action>
             <vbox uri="?node">
-              <label value="SIP Call-ID:"/>
+              <label value="&callid.label;"/>
               <textbox value="?callid" readonly="true"/>
-              <label value="Local Address:"/>
+              <label value="&localAddress.label;"/>
               <textbox value="?local" readonly="true"/>
-              <label value="Remote Address:"/>
+              <label value="&remoteAddress.label;"/>
               <textbox value="?remote" readonly="true"/>
-              <label value="Subject:"/>
+              <label value="&subject.label;"/>
               <textbox value="?subject" readonly="true"/>
-              <label value="Current Status:"/>
+              <label value="&currentStatus.label;"/>
               <textbox value="?status" readonly="true"/>
-              <label value="Duration (s):"/>
+              <label value="&duration.label;"/>
               <textbox value="?duration" readonly="true"/>
             </vbox>
           </action>
@@ -307,19 +307,19 @@
           </bindings>
           <action>
             <vbox uri="?node">
-              <label value="SIP Call-ID:"/>
+              <label value="&callid.label;"/>
               <textbox value="?callid" readonly="true"/>
-              <label value="Local Address:"/>
+              <label value="&localAddress.label;"/>
               <textbox value="?local" readonly="true"/>
-              <label value="Remote Address:"/>
+              <label value="&localAddress.label;"/>
               <textbox value="?remote" readonly="true"/>
-              <label value="Subject:"/>
+              <label value="&subject.label;"/>
               <textbox value="?subject" readonly="true"/>
-              <label value="Last Status:"/>
+              <label value="&lastStatus.label;"/>
               <textbox value="?status" readonly="true"/>
-              <label value="Date:"/>
+              <label value="&date.label;"/>
               <textbox value="?timestamp" readonly="true"/>
-              <label value="Duration (s):"/>
+              <label value="&duration.label;"/>
               <textbox value="?duration" readonly="true"/>
             </vbox>
           </action>

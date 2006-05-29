@@ -164,9 +164,9 @@
   <vbox class="zap-form-list" id="contacts-box" flex="1" 
         height="200" minheight="50" persist="height">
     <box class="zap-form-title-box">
-      <label value="Contacts" crop="right"/>
+      <label value="&contacts.title;" crop="right"/>
       <spacer flex="1"/>
-      <button label="Add new Contact" oncommand="add()"/>
+      <button label="&addNewContact.button;" oncommand="add()"/>
     </box>
     <tree id="contacts" flex="1"
           class="zap-form-tree"
@@ -176,8 +176,8 @@
           onselect="contactsSelectionChange()"
           flags="dont-build-content">
       <treecols>
-        <treecol id="contacts_col_name" label="Name" flex="1"/>
-        <treecol id="contacts_col_sip_uri" label="SIP URI" flex="1"/>
+        <treecol id="contacts_col_name" label="&name.column;" flex="1"/>
+        <treecol id="contacts_col_sip_uri" label="&sipURI.column;" flex="1"/>
       </treecols>
       <template>
         <rule>
@@ -211,36 +211,31 @@
   <vbox flex="100" height="200" persist="height" class="zap-form-body">
     <vbox id="contact-box" hidden="true" flex="1">
       <box class="zap-form-title-box">
-        <label value="Contact" crop="right"/>
+        <label value="&contact.title;" crop="right"/>
         <spacer flex="1"/>
-        <button id="call-button" label="Call" oncommand="call()" observes="call-interaction-state"/>
-        <button id="delete-button" label="Delete" oncommand="del()" observes="call-interaction-state"/>
+        <button id="call-button" label="&call.button;" oncommand="call()" observes="call-interaction-state"/>
+        <button id="delete-button" label="&delete.button;" oncommand="del()" observes="call-interaction-state"/>
       </box>
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
           <irow>
-            <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
+            <label control="http://home.netscape.com/NC-rdf#Name" value="&name.label;"/>
             <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"/>
             <info>
-              <description>
-                Human-readable name for this contact.
-              </description>
+              <description>&name.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:sip_uri" value="SIP URI:"/>
+            <label control="urn:mozilla:zap:sip_uri" value="&sipURI.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:sip_uri"
                      validator="validateSIPURI" />
             <info>
-              <description>
-              SIP address for this contact. Example: 
-              <html:br/><html:i>sip:username@the_sip_service_provider.com</html:i>
-              </description>
+              <description>&sipURI.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:associated_identity" value="Associated identity:"/>
+            <label control="urn:mozilla:zap:associated_identity" value="&associatedIdentity.label;"/>
             <menulist type="zap-formwidget" 
                       id="urn:mozilla:zap:associated_identity">
               <menupopup id="identities_list_popup"
@@ -267,19 +262,16 @@
               </menupopup>
             </menulist>
             <info>
-              <description>
-              ...
-              </description>
+              <description>&associatedIdentity.description;</description>
             </info>
           </irow>
         </rows>
       </grid>
       <igroup orient="vertical">
-        <label control="urn:mozilla:zap:notes" value="Notes:"/>
+        <label control="urn:mozilla:zap:notes" value="&notes.label;"/>
         <textbox type="zap-formwidget" id="urn:mozilla:zap:notes" multiline="true" rows="8" flex="1"/>
         <info>
-          <description>
-          Use this field for any additional information you would like to record for this contact.
+          <description>&notes.description;
           </description>
         </info>
       </igroup>
@@ -288,7 +280,7 @@
   </vbox>
   <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
     <spacer flex="1"/>
-    <button id="apply" label="Apply changes" oncommand="commit()" />
-    <button label="Cancel" oncommand="cancel()" />
+    <button id="apply" label="&apply.button;" oncommand="commit()" />
+    <button label="&cancel.button;" oncommand="cancel()" />
   </hbox>
 </page>

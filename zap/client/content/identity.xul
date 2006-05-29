@@ -109,9 +109,9 @@
 
   <vbox class="zap-form-body">
     <box class="zap-form-title-box">
-      <label value="SIP Identity" crop="right"/>
+      <label value="&identity.title;" crop="right"/>
       <spacer flex="1"/>
-      <button label="Delete this identity" oncommand="del()"/>
+      <button label="&delete.button;" oncommand="del()"/>
     </box>
 
     <vbox id="identity-template-1"
@@ -132,9 +132,9 @@
             <groupbox flex="1" uri="?node">
               <caption><label value="Status"/></caption>
               <hbox flex="1">
-                <label value="Not registered"/>
+                <label value="&notRegistered.label;"/>
                 <spacer flex="1"/>
-                <button label="Register now" oncommand="registerNow()"/>
+                <button label="&register.button;" oncommand="registerNow()"/>
               </hbox>
             </groupbox>
           </action>
@@ -151,9 +151,9 @@
             <groupbox flex="1" uri="?node">
               <caption><label value="Status"/></caption>
               <hbox flex="1">
-                <label value="Registered"/>
+                <label value="&registered.label;"/>
                 <spacer flex="1"/>
-                <button label="Unregister now" oncommand="unregisterNow()"/>
+                <button label="&unregister.button;" oncommand="unregisterNow()"/>
               </hbox>
             </groupbox>
           </action>
@@ -170,9 +170,9 @@
             <groupbox flex="1" uri="?node">
               <caption><label value="Status"/></caption>
               <hbox flex="1">
-                <label value="Registering..."/>
+                <label value="&registering.label;"/>
                 <spacer flex="1"/>
-                <button label="Stop registering" oncommand="unregisterNow()"/>
+                <button label="&noregister.button;" oncommand="unregisterNow()"/>
               </hbox>
             </groupbox>
           </action>
@@ -184,11 +184,11 @@
   </vbox>
   <hbox style="display:none" class="zap-form-buttonbar">
     <spacer flex="1"/>
-    <button label="Delete identity" oncommand="del()" />
+    <button label="&delete.button;" oncommand="del()" />
   </hbox>
   <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
     <spacer flex="1"/>
-    <button id="apply" label="Apply changes" oncommand="commit()" />
-    <button label="Cancel" oncommand="cancel()" />
+    <button id="apply" label="&apply.button;" oncommand="commit()" />
+    <button label="&cancel.button;" oncommand="cancel()" />
   </hbox>
 </page>

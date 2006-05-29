@@ -143,9 +143,9 @@
   <vbox class="zap-form-list" id="services-box" flex="1" 
         height="200" minheight="50" persist="height">
     <box class="zap-form-title-box">
-      <label value="Services" crop="right"/>
+      <label value="&services.title;" crop="right"/>
       <spacer flex="1"/>
-      <button label="Add new Service" oncommand="add()"/>
+      <button label="&addService.button;" oncommand="add()"/>
     </box>
     <tree id="services" flex="1"
           class="zap-form-tree"
@@ -155,8 +155,8 @@
           onselect="servicesSelectionChange()"
           flags="dont-build-content">
       <treecols>
-        <treecol id="services_col_name" label="Name" flex="1"/>
-        <treecol id="services_col_domain" label="Domain" flex="1"/>
+        <treecol id="services_col_name" label="&name.column;" flex="1"/>
+        <treecol id="services_col_domain" label="&domain.column;" flex="1"/>
       </treecols>
       <template>
         <rule>
@@ -190,64 +190,52 @@
   <vbox flex="100" height="200" persist="height" class="zap-form-body">
     <vbox id="service-box" hidden="true" flex="1">
       <box class="zap-form-title-box">
-        <label value="Service" crop="right"/>
+        <label value="&service.label;" crop="right"/>
         <spacer flex="1"/>
-        <button id="delete-button" label="Delete" oncommand="del()"/>
+        <button id="delete-button" label="&delete.button;" oncommand="del()"/>
       </box>
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
           <irow>
-            <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
+            <label control="http://home.netscape.com/NC-rdf#Name" value="&name.label;"/>
             <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"/>
             <info>
-              <description>
-                Human-readable name for this service.
-              </description>
+              <description>&name.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:domain" value="Domain:"/>
+            <label control="urn:mozilla:zap:domain" value="&domain.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:domain"/>
             <info>
-              <description>
-                Home domain of the SIP service or suffix thereof.<html:br/>
-                Zap uses this field to choose an appropriate service for identities
-                configured for '(automatic)' service by matching it against the 
-                host part of the identity's address of record.<html:br/>
-                Example:<html:br/>
-                An identity with address of record "sip:user@foo.bar.com"
-                would match SIP services with domains "foo.bar.com", "bar.com",
-                "ar.com", etc. A full match ("foo.bar.com") is preferred over
-                partial matches.
-              </description>
+              <description>&domain.description;</description>
             </info>
           </irow>
         </rows>
       </grid>
       <igroup>
         <groupbox flex="1">
-          <caption><label value="Service Routes"/></caption>
+          <caption><label value="&serviceRoutes.label;"/></caption>
           <grid>
             <columns><column/><column flex="1"/><column/></columns>
             <rows>
               <row>
-                <label control="urn:mozilla:zap:route1" value="Route 1:"/>
+                <label control="urn:mozilla:zap:route1" value="&route1.label;"/>
                 <textbox type="zap-formwidget" id="urn:mozilla:zap:route1" 
                          validator="validateSIPRouteSet"/>
               </row>
               <row>
-                <label control="urn:mozilla:zap:route2" value="Route 2:"/>
+                <label control="urn:mozilla:zap:route2" value="&route2.label;"/>
                 <textbox type="zap-formwidget" id="urn:mozilla:zap:route2"
                          validator="validateSIPRouteSet"/>
               </row>
               <row>
-                <label control="urn:mozilla:zap:route3" value="Route 3:"/>
+                <label control="urn:mozilla:zap:route3" value="&route3.label;"/>
                 <textbox type="zap-formwidget" id="urn:mozilla:zap:route3"
                          validator="validateSIPRouteSet"/>
               </row>
               <row>
-                <label control="urn:mozilla:zap:route4" value="Route 4:"/>
+                <label control="urn:mozilla:zap:route4" value="&route4.label;"/>
                 <textbox type="zap-formwidget" id="urn:mozilla:zap:route4"
                          validator="validateSIPRouteSet"/>
               </row>
@@ -255,22 +243,7 @@
           </grid>
         </groupbox>
         <info>
-          <description>
-            Routes to use as initial preloaded routes when registering 
-            an identity with this service. <html:br/>
-            A route is a possibly empty, comma-separated list
-            of SIP URIs enclosed in angle quotes (RFC3261 'name-addr').<html:br/>
-            <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> suggests that a
-            UA should support sets of up to four <html:b>URIs</html:b> with with to register.
-            Zap extends this scheme by allowing four <html:b>routes</html:b>, so any
-            proxies that need to be traversed (e.g. to traverse a company intranet) can be 
-            specified.<html:br/>
-            Zap will attempt to simultaneously register over all specified non-empty routes 
-            and maintain flows over them as described in 
-            <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a>. Outbound calls will be routed over the first active flow.<html:br/>
-            Service-Route headers returned by a registration over a flow will override the 
-            inital route for that flow as described in <html:a href="http://www.croczilla.com/zap/rfcs/draft-rosenberg-sip-route-construct-00.txt">draft-rosenberg-sip-route-construct-00.txt</html:a>. If the first hop of the new route differs from the old route, zap will immediately re-register the flow over the new route.
-          </description>
+          <description>&serviceRoutes.description;</description>
         </info>
       </igroup>
       <grid>
@@ -278,103 +251,57 @@
         <rows>
           <irow>
             <label control="urn:mozilla:zap:suggested_registration_interval"
-                   value="Registration Texpire:"/>
+                   value="&registrationInterval.label;"/>
             <textbox type="zap-formwidget" 
                      validator="makeNumberValidator(1, undefined, true)"
                      id="urn:mozilla:zap:suggested_registration_interval"/>
             <info>
-              <description>
-                Optional suggested expiration interval in seconds to indicate how long zap 
-                would like a registration to be valid. This might be overruled by the 
-                registrar by a 423 (Interval Too Brief) response or an expires header or 
-                field - in either case zap will adjust the actual expiration interval 
-                accordingly.
-              </description>
+              <description>&registrationInterval.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:stun_server" value="STUN server:"/>
+            <label control="urn:mozilla:zap:stun_server" value="&stunServer.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:stun_server"/>
             <info>
-              <description>
-              Optional address of STUN server to use for STUN requests made for
-              this service (e.g. to resolve the UA Contact Address, see below).
-              If this field is empty, zap will use attempt to use the home domain 
-              name of this service instead when a STUN server is required.
-              </description>
+              <description>&stunServer.description;</description>
             </info>
           </irow>
         </rows>
       </grid>
       <igroup>
-        <checkbox type="zap-formwidget" label="Send OPTIONS keep-alive requests" 
+        <checkbox type="zap-formwidget" label="&optionsKeepalive.label;" 
                   id="urn:mozilla:zap:options_keep_alive"/>
         <info>
-          <description>
-          If checked, zap will send periodic OPTIONS requests over all registered flows to
-          keep alive any NAT bindings. The interval between OPTIONS requests is the same as
-          that used for STUN monitored flows (see <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a>).
-          </description>
+          <description>&optionsKeepalive.description;</description>
         </info>
       </igroup>
       <igroup>
         <groupbox flex="1">
-          <caption><label value="UA Contact Address"/></caption>
+          <caption><label value="&contactType.label;"/></caption>
           <radiogroup type="zap-formwidget" id="urn:mozilla:zap:ua_contact_address_type">
-            <radio value="local" label="Local address"/>
-            <radio value="stun" label="Resolve by STUN"/>
-            <radio value="options" label="Resolve by OPTIONS"/>
+            <radio value="local" label="&contactTypeLocal.label;"/>
+            <radio value="stun" label="&contactTypeStun.label;"/>
+            <radio value="options" label="&contactTypeOptions.label;"/>
           </radiogroup>
         </groupbox>
         <info>
-          <description>
-            Determines the address:port that will be sent as the 
-            'Contact' in registrations.<html:br/>
-            <html:b>Local address</html:b>: The local machine's IP address
-            (or 127.0.0.1 if it can't be determined, e.g. on some Linux setups) and the
-            local SIP port will be sent.<html:br/>
-            <html:b>Resolve by STUN</html:b>: The address will be determined by sending a
-            STUN request to the service's STUN server, yielding a public address
-            through any NATs between the UA and the registrar. The port will not be resolved
-            (The local SIP port will be sent). This method of determining the public address
-            is deprecated, since it fails to work in many NAT scenarios. It might be
-            removed in future versions of zap. The 'Resolve by
-            OPTIONS' should work in all cases where a public address is required.<html:br/>
-            <html:b>Resolve by OPTIONS</html:b>: The address will be determined from the 
-            'received-by' parameter returned by the registrar's reply to an OPTIONS request.
-            In addition, if the registrar implements RFC3581 (as most will), the port will
-            be determined from the 'rport' parameter. This method will work even if the
-            registrar doesn't honour OPTIONS requests; error responses contain the required
-            information as well.
-          </description>
+          <description>&contactType.description;</description>
         </info>
       </igroup>
       <groupbox flex="1">
-        <caption><label value="Compatibility"/></caption>      
+        <caption><label value="&compatibility.title;"/></caption>      
         <igroup>
-          <checkbox type="zap-formwidget" label="Elide destination route header" 
+          <checkbox type="zap-formwidget" label="&elideRoute.label;" 
                     id="urn:mozilla:zap:elide_destination_route_header"/>
           <info>
-            <description>
-            Zap uses preloaded routes to set the first hop destination of outbound packets.
-            This means that outgoing requests outside of a dialog will contain a top Route 
-            header that is identical to the first hop. While this behavior is compliant to 
-            RFC3261, some registrars get confused by it and end up forwarding the request 
-            to themselves over and over until the Max-Forwards count is exhausted. 
-            To fix these buggy registrars, setting this checkbox will instruct zap to remove 
-            the top Route header of outgoing outside-of-dialog requests.
-            </description>
+            <description>&elideRoute.description;</description>
           </info>      
         </igroup>
         <igroup>
-          <checkbox type="zap-formwidget" label="Match REGISTER contact address by grid only" 
+          <checkbox type="zap-formwidget" label="&registerGrid.label;" 
                     id="urn:mozilla:zap:register_grid_only_match"/>
           <info>
-            <description>
-            Some services (e.g. Wengo) send REGISTER responses with contact addresses
-            that have an incorrect host part.
-            This option provides a workaround for this behaviour.
-            </description>
+            <description>&registerGrid.description;</description>
           </info>      
         </igroup>
       </groupbox>
@@ -383,7 +310,7 @@
   </vbox>
   <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
     <spacer flex="1"/>
-    <button id="apply" label="Apply changes" oncommand="commit()" />
-    <button label="Cancel" oncommand="cancel()" />
+    <button id="apply" label="&apply.button;" oncommand="commit()" />
+    <button label="&cancel.button;" oncommand="cancel()" />
   </hbox>
 </page>

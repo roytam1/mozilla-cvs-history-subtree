@@ -110,8 +110,8 @@
   </script>
 
   <vbox class="zap-form-body">
-    <label class="zap-form-title" value="Configuration"/>
-    <cgroup title="UI Preferences" id="cgroup-uiprefs" 
+    <label class="zap-form-title" value="&configuration.title;"/>
+    <cgroup title="&uiPreferences.title;" id="cgroup-uiprefs" 
             closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
@@ -122,284 +122,210 @@
       </grid>
     </cgroup>
 
-    <cgroup title="Notifications" id="cgroup-notifications"
+    <cgroup title="&notifications.title;" id="cgroup-notifications"
             closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>
           <irow>
-            <label control="urn:mozilla:zap:ringtone" value="Ringtone:"/>
+            <label control="urn:mozilla:zap:ringtone" value="&ringtone.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:ringtone"/>
             <info>
-              <description>
-                Ringtone for incoming calls in <html:a href="http://en.wikipedia.org/wiki/RTTTL">RTTTL format</html:a>. In future other formats will be supported
-                as well (midi, ogg/vorbis, ...).
-              </description>
+              <description>&ringtone.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:dialtone" value="Dial Tone:"/>
+            <label control="urn:mozilla:zap:dialtone" value="&dialTone.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:dialtone"/>
             <info>
-              <description>
-                Dial tone played when making outgoing calls. XXX Describe format
-              </description>
+              <description>&dialTone.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:ringingtone" value="Ringing Tone:"/>
+            <label control="urn:mozilla:zap:ringingtone" value="&ringingTone.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:ringingtone"/>
             <info>
-              <description>
-                Ringing tone played when making outgoing calls. XXX Describe format
-              </description>
+              <description>&ringingTone.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:busytone" value="Busy Tone:"/>
+            <label control="urn:mozilla:zap:busytone" value="&busyTone.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:busytone"/>
             <info>
-              <description>
-                Busy tone played when making outgoing calls. XXX Describe format
-              </description>
+              <description>&busyTone.description;</description>
             </info>
           </irow>
           <irow>
-            <label control="urn:mozilla:zap:errortone" value="Error Tone:"/>
+            <label control="urn:mozilla:zap:errortone" value="&errorTone.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:errortone"/>
             <info>
-              <description>
-                Error tone played when making outgoing calls. XXX Describe format
-              </description>
+              <description>&errorTone.description;</description>
             </info>
           </irow>
         </rows>
       </grid>
     </cgroup>
 
-    <cgroup title="Audio Settings" id="cgroup-audio"
+    <cgroup title="&audioSettings.title;" id="cgroup-audio"
             closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="Synchronous audio i/o interface"
+                      label="&synchronousAudio.label;"
                       id="urn:mozilla:zap:sync_audio_interface"/>
             <info>
-              <description>
-              Selects between a synchronous or asynchronous audio interface.
-              A synchronous audio interface attempts to write and read from 
-              the audio hardware simultaneously. This can e.g. provide better 
-              echo cancellation performance, but might lead to choppy audio 
-              under some circumstances (e.g. on Windows XP when other 
-              applications are using the audio hardware).              
-              <html:br/>Changes to this field will take effect after a restart.
-              </description>
+              <description>&synchronousAudio.description;</description>
             </info>
           </igroup>
           <irow>
-            <label control="urn:mozilla:zap:audioio_latency" value="Audio IO latency (ms):"/>
+            <label control="urn:mozilla:zap:audioio_latency" value="&audioLatency.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:audioio_latency"
                      validator="makeNumberValidator(20, 10000)"/>
             <info>
-              <description>
-                Size of buffer mediating between zap and the 
-                audio hardware. Must be between 20ms and 10000ms. 
-                Set to a higher value if you experience choppy audio 
-                that can't be traced to network problems.                 
-                <html:br/>For a synchronous audio i/o interface, this value 
-                will likely need to be higher (maybe 2x) as for an 
-                asynchronous one.
-                <html:br/>This setting should be coordinated with the acoustic
-                echo cancellation window offset setting.
-                <html:br/>Changes to this field will take effect after a restart.
-              </description>
+              <description>&audioLatency.description;</description>
             </info>
           </irow>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="Use acoustic echo cancellation"
+                      label="&aec.label;"
                       id="urn:mozilla:zap:aec"/>
             <info>
-              <description>
-              Turns on the acoustic echo canceller.
-              </description>
+              <description>&aec.description;</description>
             </info>
           </igroup>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="2-stage acoustic echo cancellation"
+                      label="&aec2Stage.label;"
                       id="urn:mozilla:zap:aec_2_stage"/>
             <info>
-              <description>
-              Improves echo cancellation performance.
-              </description>
+              <description>&aec2Stage.description;</description>
             </info>
           </igroup>
           <irow>
             <label control="urn:mozilla:zap:aec_window_offset" 
-                   value="AEC window offset (ms):"/>
+                   value="&aecOffset.label;"/>
             <textbox type="zap-formwidget" 
                      id="urn:mozilla:zap:aec_window_offset"/>
             <info>
-              <description>
-              Delay after which echo is expected at the earliest. Should be
-              set to at least the audio IO latency.
-              </description>
+              <description>&aecOffset.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:aec_window_length" 
-                   value="AEC window length (ms):"/>
+                   value="&aecLength.label;"/>
             <textbox type="zap-formwidget" 
                      id="urn:mozilla:zap:aec_window_length"/>
             <info>
-              <description>
-              Temporal length of window over which echo cancellation is
-              performed. The recommended length is approximately a third
-              of the room reverberation time. E.g. for a small room the 
-              reverberation time is in the order of 300ms, so a tail 
-              length of 100ms would be appropriate.
-              </description>
+              <description>&aecLength.description;</description>
             </info>
           </irow>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="Denoise microphone input"
+                      label="&denoise.label;"
                       id="urn:mozilla:zap:denoise"/>
             <info>
-              <description>
-              Reduces the amount of background noise present 
-              in the input signal.
-              </description>
+              <description>&denoise.description;</description>
             </info>
           </igroup>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="Automatic microphone gain control"
+                      label="&agc.label;"
                       id="urn:mozilla:zap:agc"/>
             <info>
-              <description>
-              Automatically adjust the recording level.
-              </description>
+              <description>&agc.description;</description>
             </info>
           </igroup>
           <irow>
             <label control="urn:mozilla:zap:agc_level" 
-                   value="AGC level:"/>
+                   value="&agcLevel.label;"/>
             <textbox type="zap-formwidget" 
                      id="urn:mozilla:zap:agc_level"/>
             <info>
-              <description>
-              </description>
+              <description>&agcLevel.description;</description>
             </info>
           </irow>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="Use voice activity detection"
+                      label="&vad.label;"
                       id="urn:mozilla:zap:vad"/>
             <info>
-              <description>
-              Silences the input signal when no voice is being detected.
-              </description>
+              <description>&vad.description;</description>
             </info>
           </igroup>
           <igroup>
             <checkbox type="zap-formwidget" 
-                      label="Dereverb"
+                      label="&dereverb.label;"
                       id="urn:mozilla:zap:dereverb"/>
             <info>
-              <description>
+              <description>&dereverb.description;
               </description>
             </info>
           </igroup>
           <irow>
             <label control="urn:mozilla:zap:dereverb_level" 
-                   value="Dereverb level:"/>
+                   value="&dereverbLevel.label;"/>
             <textbox type="zap-formwidget" 
                      id="urn:mozilla:zap:dereverb_level"/>
             <info>
-              <description>
-              </description>
+              <description>&dereverbLevel.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:dereverb_decay" 
-                   value="Dereverb decay:"/>
+                   value="&dereverbDecay.label;"/>
             <textbox type="zap-formwidget" 
                      id="urn:mozilla:zap:dereverb_decay"/>
             <info>
-              <description>
-              </description>
+              <description>&dereverbDecay.description;</description>
             </info>
           </irow>
-          <button label="Reset audio processor" 
+          <button label="&resetAudio.button;" 
                   oncommand="parent.wMediaPipeline.dspCtl.reset()"/>
         </rows>
       </grid>
     </cgroup>
 
 
-    <cgroup title="SIP Settings" id="cgroup-sipsettings"
+    <cgroup title="&sipSettings.title;" id="cgroup-sipsettings"
             closed="true" persist="closed">
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
           <irow>
             <label control="urn:mozilla:zap:instance_id"
-                   value="UA Instance ID:"/>
+                   value="&instanceId.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:instance_id"/>
             <info>
-              <description>
-              A unique identifier assigned to this instance of zap when it was
-              first started. It is used by GRUU-enabled services to route
-              messages to this zap instance. It also forms part of the 'grid' uri 
-              parameter (in MD5 hashed form) to identify this zap instance among
-              several registered contacts in replies to REGISTER requests.
-              See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-gruu-05.txt">draft-ietf-sip-gruu-05.txt</html:a>.
-                <html:br/>Changes to this field will take effect after a restart.
-              </description>
+              <description>&instanceId.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:sip_port_base"
-                   value="SIP port base:"/>
+                   value="&sipPortBase.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:sip_port_base"
                      validator="makeNumberValidator(1, 65535)"/>
             <info>
-              <description>
-                zap will use the first available socket greater than or 
-                equal to this value to listen for SIP traffic.
-                <html:br/>Changes to this field will take effect after a restart.
-              </description>
+              <description>&sipPortBase.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_max_time"
-                   value="Registration failure Tmax:"/>
+                   value="&registrationFailure.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_max_time"
                      validator="makeNumberValidator()"/>
             <info>
-              <description>
-                Maximum time (in seconds) to wait before re-attempting a failed registration.
-                See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the 
-                re-registration logic used in zap.                
-              </description>
+              <description>&registrationFailure.description;</description>
             </info>
           </irow>
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_not_failed"
-                   value="Flow failure Tbase:"/>
+                   value="&flowFailure.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_not_failed"
                      validator="makeNumberValidator()"/>
             <info>
-              <description>
-                Base time (in seconds) to wait before attempting to reconnect a failed 
-                flow when other flows for the same registration are still alive.
-                See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the 
-                re-registration logic used in zap.                
-              </description>
+              <description>&flowFailure.description;</description>
             </info>
           </irow>
           <irow>
