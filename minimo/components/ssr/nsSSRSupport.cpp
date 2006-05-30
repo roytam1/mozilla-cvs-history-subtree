@@ -260,7 +260,7 @@ static NS_METHOD SSRUnregistration(nsIComponentManager *aCompMgr,
 
 static const nsModuleComponentInfo components[] =
 {
-  { "SoftKeyBoardService", 
+  { "SSRSupportService", 
     SSRSupport_CID, 
     SSRSupport_ContractID,
     nsSSRSupportConstructor,

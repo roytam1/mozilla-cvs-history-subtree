@@ -748,6 +748,19 @@ nsSoftKeyBoardService::CloseSIP()
 
 }
 
+NS_IMETHODIMP
+nsSoftKeyBoardService::Show(void)
+{
+  nsSoftKeyBoardService::OpenSIP();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSoftKeyBoardService::Hide(void)
+{
+  nsSoftKeyBoardService::CloseSIP();
+  return NS_OK;
+}
 
 
 NS_IMETHODIMP

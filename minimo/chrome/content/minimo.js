@@ -74,6 +74,7 @@ var gKeyBoardHeight = 0;
 var gKeyBoardLeft = 0;
 var gKeyBoardRight = 0;
 var gkeyBoardService = null;
+var gKeyBoardToggle = true;
 
 var gPanMode = null;
 var appCore = null;
@@ -97,11 +98,8 @@ var gURLBarBoxObject = null; // stores the urlbar boxObject so the background lo
 
 var gSoftKeyAccessState=0;   // Accessibility and keyboard shortcuts. See BrowserMenuSpin functions. 
 
-var gPref = null;                    // so far snav toggles on / off via direct access to pref.
-                                     // See bugzilla.mozilla.org/show_bug.cgi?id=311287#c1
-var gPrefAdded=false; // shall be used to flush the pref. 
-
-var gMinimoBundle = null;  // Strings and such.
+var gPref = null;            // direct access to pref.
+var gMinimoBundle = null;    // Strings and such.
 
 function onErrorHandler(x)
 {
@@ -741,15 +739,13 @@ function browserInit(refTab)
 function MiniNavShutdown()
 {
   if (gBrowserStatusHandler) gBrowserStatusHandler.destroy();
-  if(gPrefAdded) {
-	try {
-      var psvc = Components.classes["@mozilla.org/preferences-service;1"]
-        .getService(nsIPrefService);
-      
-      psvc.savePrefFile(null);
-      
-	} catch (e) { onErrorHandler(e); }
-  }
+  try {
+    var psvc = Components.classes["@mozilla.org/preferences-service;1"]
+      .getService(nsIPrefService);
+    
+    psvc.savePrefFile(null);
+    
+  } catch (e) { onErrorHandler(e); }
 }
 
 function loadURI(uri)
@@ -1076,8 +1072,6 @@ function BrowserBookmarkThis() {
   var bmContent=gBookmarksDoc.createTextNode(currentURI);
   newLi.appendChild(bmContent);
   gBookmarksDoc.getElementsByTagName("bm")[0].appendChild(newLi);
-  gPrefAdded=true;
-  
   storeBookmarks();	
   refreshBookmarks();
 }
@@ -1292,8 +1286,17 @@ function DoToggleSoftwareKeyboard()
     var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
 
     if (device.has("hasSoftwareKeyboard") == "yes") {
-      var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(nsIPrefBranch);
-      pref.setBoolPref("skey.enabled", !pref.getBoolPref("skey.enabled"));
+      
+      // use global... xxx fix
+      keyboard = Components.classes["@mozilla.org/softkbservice/service;1"]
+                           .getService(Components.interfaces.nsISoftKeyBoard);
+
+      if (gKeyBoardToggle)
+        keyboard.hide();
+      else
+        keyboard.show();
+      
+      gKeyBoardToggle = !gKeyBoardToggle;
     }
     else {
       document.commandDispatcher.advanceFocus();
