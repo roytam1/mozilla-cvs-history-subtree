@@ -138,8 +138,6 @@ function downloadSetTextbox() {
  } catch (i) { } 
 }
 
-
-
 function downloadSelectedOption(refId)
 {
 
@@ -148,6 +146,81 @@ function downloadSelectedOption(refId)
   syncPref(document.getElementById("downloadDir"));
 
 }
+
+/*
+ * This function depends on a previously set preference : useDiskCache
+ */
+function cacheSetTextbox() {
+
+  var dirLocation=document.getElementById("storeCacheStorageCard").value;
+  
+  try {
+   const nsIDirectoryServiceProvider2 = Components.interfaces.nsIDirectoryServiceProvider2;
+   const nsIDirectoryServiceProvider_CONTRACTID = "@mozilla.org/device/directory-provider;1";
+   var dirServiceProvider = Components.classes[nsIDirectoryServiceProvider_CONTRACTID].getService(nsIDirectoryServiceProvider2);
+   var files = dirServiceProvider.getFiles("SCDirList");
+
+   if( files.hasMoreElements() ) {
+	document.getElementById("menuCacheOptions").setAttribute("hidden","false");
+   }
+   
+   var fileId=0;
+
+   while (files.hasMoreElements())
+   {
+     var file = files.getNext();
+     const nsILocalFile = Components.interfaces.nsILocalFile;
+ 	 var file2 = file.QueryInterface(nsILocalFile);
+	 fileId++;	
+     var newElement=document.createElement("menuitem");
+
+
+	/*
+       * This function depends on a previously set preference : useDiskCache
+       */
+
+	 if(dirLocation.path==file2.path&&document.getElementById("useDiskCache").value) { 
+	 	newElement.setAttribute("selected","true");
+	 }
+
+	  
+	 newElement.setAttribute("label",file2.path);
+	 
+	 newElement.setAttribute("id","fileCacheOption"+fileId);
+	 newElement.fileValue=file2;
+	 newElement.setAttribute("oncommand", "cacheSelectedOption('fileCacheOption"+fileId+"')"     );
+	 document.getElementById("cacheOptionsList").appendChild(newElement);
+     if(dirLocation.path==file2.path) { 
+       document.getElementById("menuCacheOptions").selectedItem=newElement;
+     }
+   }
+ } catch (i) { } 
+
+ 
+
+}
+
+
+function cacheSelectedOption(refId)
+{
+
+  var refElementSelected = document.getElementById(refId);
+  document.getElementById("storeCacheStorageCard").value=refElementSelected.fileValue;
+  syncPref(document.getElementById("storeCacheStorageCard"));
+
+  document.getElementById("useDiskCache").value=true;
+
+  syncPref(document.getElementById("useDiskCache"));
+
+}
+
+function cacheSelectNone() {
+
+  document.getElementById("useDiskCache").value=false;
+  syncPref(document.getElementById("useDiskCache"));
+
+}
+
 
 /* Live Synchronizers
  * =====
