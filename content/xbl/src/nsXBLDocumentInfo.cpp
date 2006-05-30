@@ -307,7 +307,8 @@ nsXBLDocGlobalObject::EnsureScriptEnvironment(PRUint32 aLangID)
   JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
 
   // nsJSEnvironment set the error reporter to NS_ScriptErrorReporter so
-  // we must override that with our own.
+  // we must apparently override that with our own (although it isn't clear 
+  // why - see bug 339647)
   JS_SetErrorReporter(cx, XBL_ProtoErrorReporter);
   mJSObject = ::JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
   if (!mJSObject)
