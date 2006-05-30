@@ -739,8 +739,9 @@ var BookmarksToolbar =
   {
     if (!event) // timer callback case
       BookmarksToolbarRDFObserver._overflowTimerInEffect = false;
-    else if (event.target != document)
-      return; // only interested in chrome resizes
+    // XXXcst - work around bug 295340 (broken event targets) on 1.8 branch
+    //else if (event.target != document)
+    //  return; // only interested in chrome resizes
 
     var buttons = document.getElementById("bookmarks-ptf");
     if (!buttons)
