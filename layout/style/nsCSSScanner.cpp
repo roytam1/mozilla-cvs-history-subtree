@@ -320,7 +320,7 @@ void nsCSSScanner::OutputError()
                   NS_ConvertUCS2toUTF8(mError).get());
 #endif
 
-  // Log it to the JavaScript console
+  // Log it to the Error console
 
   if (InitGlobals() && gReportErrors) {
     nsresult rv;
