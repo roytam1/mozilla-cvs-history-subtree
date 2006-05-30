@@ -40,6 +40,7 @@
 #include "nsISupports.idl"
 
 interface nsIMenuBar;
+interface nsMacWindow;
 
 //
 // nsPIWidgetMac
@@ -68,3 +69,10 @@ interface nsPIWidgetMac : nsISupports
   
 }; // nsPIWidgetMac
 
+[scriptable, uuid(4121DE35-065B-4209-9411-BF2C537CC2D9)]
+interface nsPIWidgetMac_MOZILLA_1_8_BRANCH : nsPIWidgetMac
+{
+  // Find the displayed child sheet (if aShown) or a child sheet that
+  // wants to be displayed (if !aShown)
+  nsMacWindow GetChildSheet ( in boolean aShown );
+}; // nsPIWidgetMac_MOZILLA_1_8_BRANCH

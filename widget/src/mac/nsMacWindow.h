@@ -59,7 +59,7 @@ class nsMacEventHandler;
 //-------------------------------------------------------------------------
 //	MacOS native window
 
-class nsMacWindow : public nsChildWindow, public nsIEventSink, public nsPIWidgetMac, 
+class nsMacWindow : public nsChildWindow, public nsIEventSink, public nsPIWidgetMac_MOZILLA_1_8_BRANCH,
                     public nsPIEventSinkStandalone, public nsIMacTextInputEventSink
 {
 private:
@@ -72,6 +72,7 @@ public:
     NS_DECL_ISUPPORTS_INHERITED
     NS_DECL_NSIEVENTSINK 
     NS_DECL_NSPIWIDGETMAC
+    NS_DECL_NSPIWIDGETMAC_MOZILLA_1_8_BRANCH
     NS_DECL_NSPIEVENTSINKSTANDALONE
     NS_DECL_NSIMACTEXTINPUTEVENTSINK
     
@@ -158,13 +159,14 @@ protected:
 
 	PRPackedBool                    mWindowMadeHere; // true if we created the window
 	PRPackedBool                    mIsSheet;        // true if the window is a sheet (Mac OS X)
-	PRPackedBool                    mIgnoreDeactivate;  // true if this window has a (Mac OS X) sheet opening
+	PRPackedBool                    mIgnoreDeactivate;  // true if this window has a (Mac OS X) sheet as a child
 	PRPackedBool                    mAcceptsActivation;
 	PRPackedBool                    mIsActive;
 	PRPackedBool                    mZoomOnShow;
 	PRPackedBool                    mZooming;
 	PRPackedBool                    mResizeIsFromUs;    // we originated the resize, prevent infinite recursion
-  PRPackedBool                    mShown;             // whether the window was actually shown on screen
+	PRPackedBool                    mShown;             // whether the window was actually shown on screen
+	PRPackedBool                    mSheetNeedsShow;    // a sheet that wants to be displayed but isn't because a sibling sheet is open
 	Point                           mBoundsOffset;      // offset from window structure to content
 	auto_ptr<nsMacEventHandler>     mMacEventHandler;
 	nsIWidget                      *mOffsetParent;
