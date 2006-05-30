@@ -159,7 +159,6 @@ protected:
 
 	PRPackedBool                    mWindowMadeHere; // true if we created the window
 	PRPackedBool                    mIsSheet;        // true if the window is a sheet (Mac OS X)
-	PRPackedBool                    mIgnoreDeactivate;  // true if this window has a (Mac OS X) sheet as a child
 	PRPackedBool                    mAcceptsActivation;
 	PRPackedBool                    mIsActive;
 	PRPackedBool                    mZoomOnShow;
