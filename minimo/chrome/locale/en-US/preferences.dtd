@@ -57,6 +57,7 @@
 <!ENTITY useSWKeyboard.label         "Use Software Keyboard">
 <!ENTITY dumpJSConsole.label         "Dump JS console at shutdown">
 <!ENTITY useDiskCache.label          "Use Disk Cache">
+<!ENTITY useDiskCacheNone.label      "Use None">
 <!ENTITY storeCacheStorageCard.label "Use Disk Cache when storage card is available">
 <!ENTITY enablePreFetching.label     "Enable Pre-Fetching">
 <!ENTITY cacheSettings.label         "Cache">
