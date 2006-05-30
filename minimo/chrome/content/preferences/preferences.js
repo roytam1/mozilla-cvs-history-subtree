@@ -122,9 +122,7 @@ function downloadSetTextbox() {
  	 var file2 = file.QueryInterface(nsILocalFile);
 	 fileId++;	
      var newElement=document.createElement("menuitem");
-	 if(dirLocation.path==file2.path) { 
-	 	newElement.setAttribute("selected","true");
-	 }
+
 	 newElement.setAttribute("label",file2.path);
 	 
 	 newElement.setAttribute("id","fileDownloadOption"+fileId);
@@ -174,15 +172,6 @@ function cacheSetTextbox() {
 	 fileId++;	
      var newElement=document.createElement("menuitem");
 
-
-	/*
-       * This function depends on a previously set preference : useDiskCache
-       */
-
-	 if(dirLocation.path==file2.path&&document.getElementById("useDiskCache").value) { 
-	 	newElement.setAttribute("selected","true");
-	 }
-
 	  
 	 newElement.setAttribute("label",file2.path);
 	 
@@ -190,9 +179,18 @@ function cacheSetTextbox() {
 	 newElement.fileValue=file2;
 	 newElement.setAttribute("oncommand", "cacheSelectedOption('fileCacheOption"+fileId+"')"     );
 	 document.getElementById("cacheOptionsList").appendChild(newElement);
+
+
      if(dirLocation.path==file2.path) { 
-       document.getElementById("menuCacheOptions").selectedItem=newElement;
+		if(document.getElementById("useDiskCache").value) {
+
+		       document.getElementById("menuCacheOptions").selectedItem=newElement;
+		} else {
+		       document.getElementById("menuCacheOptions").selectedItem=document.getElementById("cacheNoneOption");
+
+		}
      }
+
    }
  } catch (i) { } 
 
@@ -308,27 +306,6 @@ function loadHomePageBlank() {
    var homePageField = document.getElementById("browserStartupHomepage");
    homePageField.value = "about:blank";
    syncPref(homePageField);
-}
-
-
-function downloadChooseFolder() {
-
-  const nsILocalFile = Components.interfaces.nsILocalFile;
-
-  var refLocalFile = Components.classes["@mozilla.org/file/local;1"].createInstance(nsILocalFile );
-
-    try {
-	refLocalFile.initWithPath("\\Storage Card");
-
-    } catch(e) { alert(e) }
-
-    var currentDirPref = document.getElementById("downloadDir");
-    var customDirPref = document.getElementById("downloadDir");
-
-    customDirPref.value = currentDirPref.value = refLocalFile;
-
-    document.getElementById("downloadDirDisplay").value=refLocalFile.path;
-
 }
 
 function setDefaultBrowser() {
@@ -546,6 +523,7 @@ function syncPrefSaveDOM() {
 			var prefName=elRef.getAttribute("preference");
 			var transValidator=elRef.getAttribute("onsynctopreference");
 			var prefSETValue=null;
+
 			if(transValidator!="") {
 				prefSETValue=eval(transValidator);
 	
@@ -689,8 +667,7 @@ function syncPrefLoadDOM(elementList) {
 		 	   prefDOMValue = gPref.getBoolPref(prefName);
                 } catch (ex) { prefDOMValue=null; } 
 
-			
-		    document.getElementById(prefName).value=prefDOMValue;
+			    document.getElementById(prefName).value=prefDOMValue;
 
 			if(transValidator) {
 				preGETValue=eval(transValidator);
