@@ -135,7 +135,7 @@ public:
 
   /**
    * Ensure that the script global object is initialized for working with the
-   * specified script language ID.  This will setup the nsIScriptContext
+   * specified script language ID.  This will set up the nsIScriptContext
    * and 'script global' for that language, allowing these to be fetched
    * and manipulated.
    * @return NS_OK if successful; error conditions include that the language
