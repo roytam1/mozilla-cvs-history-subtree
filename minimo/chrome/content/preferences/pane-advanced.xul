@@ -69,16 +69,27 @@
                                 <vbox class="box-prefpadding">
 
 
-	                    <checkbox tabindex="30" id="useDiskCache"
-	                              label="&storeCacheStorageCard.label;"
+	                    <box  id="useDiskCache"
 	                              preference="browser.cache.disk.enable" 
-	                              onclick="syncPref(this)" />
+	                               />
 
 
-                      <box onchange="syncPref(this)"  
-                                 id="storeCacheStorageCard" 
+                    <hbox flex="1">
+
+                         <box onchange="syncPref(this)"  
+                                 id="storeCacheStorageCard" onreadpref="cacheSetTextbox();" 
                                  preference="browser.cache.disk.parent_directory"
                                  />          
+
+
+                      <menulist flex="1" label="Cache Directory" id="menuCacheOptions" >
+                        <menupopup id="cacheOptionsList">
+					<menuitem label="&useDiskCacheNone.label;" id="cacheNoneOption" oncommand="cacheSelectNone()" />
+                        </menupopup>
+                      </menulist>
+
+                    </hbox>	
+
 
 
                        <grid class="box-prefpadding" >
