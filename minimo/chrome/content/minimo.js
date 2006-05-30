@@ -36,6 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+
 const imgICache                = Components.interfaces.imgICache;
 const nsIBrowserDOMWindow      = Components.interfaces.nsIBrowserDOMWindow;
 const nsIBrowserHistory        = Components.interfaces.nsIBrowserHistory;
@@ -100,12 +101,18 @@ var gPref = null;                    // so far snav toggles on / off via direct 
                                      // See bugzilla.mozilla.org/show_bug.cgi?id=311287#c1
 var gPrefAdded=false; // shall be used to flush the pref. 
 
-var gMinimoBundle = null;  // Strings and such. 
+var gMinimoBundle = null;  // Strings and such.
 
-function nsBrowserStatusHandler()
+function onErrorHandler(x)
 {
+  try {
+    var consoleService = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
+    consoleService.logStringMessage(x);
+  }
+  catch(ex) { alert("onErrorHandler: " + x); }
 }
 
+function nsBrowserStatusHandler() {}
 nsBrowserStatusHandler.prototype = 
 {
   QueryInterface : function(aIID)
@@ -390,7 +397,7 @@ function MiniNavStartup()
     } catch (ignore) {}
     
   } catch (e) {
-    alert("Error trying to startup browser.  Please report this as a bug:\n" + e);
+    onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }
 
   var reg = Components.manager.QueryInterface(Components.interfaces.nsIComponentRegistrar);
@@ -473,28 +480,29 @@ function MiniNavStartup()
    * content. 
    */
    
-  var keyboardObserver = { observe:function (subj, topic, data) {
-    var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
-    if (device.has("hasSoftwareKeyboard") != "yes")
-      return;
+  var keyboardObserver = { 
+    observe:function (subj, topic, data) {
+      var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
+      if (device.has("hasSoftwareKeyboard") != "yes")
+        return;
       if(data=="open")  {  
-         document.getElementById("keyboardContainer").setAttribute("hidden","false");
-         try {
-           var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
+        document.getElementById("keyboardContainer").setAttribute("hidden","false");
+        try {
+          var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
            gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
-         } catch (e) { }
+        } catch (e) { }
       } else
-      if(data=="close")  {
-        document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
-      }
-  } 
+        if(data=="close")  {
+          document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
+    }
+  };
+     
   
   try {
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(Components.interfaces.nsIObserverService);
     os.addObserver(keyboardObserver,"software-keyboard", false);
   } catch(ignore) { }
- 
 }
 
 /* 
@@ -740,7 +748,7 @@ function MiniNavShutdown()
       
       psvc.savePrefFile(null);
       
-	} catch (e) { alert(e); }
+	} catch (e) { onErrorHandler(e); }
   }
 }
 
@@ -792,7 +800,7 @@ function BrowserOpenTab()
     gBrowser.selectedTab = gBrowser.addTab('about:blank');
     browserInit(gBrowser.selectedTab);
   } catch (e) {
-    alert(e);
+    onErrorHandler(e);
   }
   //  if (gURLBar) setTimeout(function() { gURLBar.focus(); }, 0);  
 }
@@ -809,7 +817,7 @@ function BrowserOpenLinkAsTab()
       gBrowser.selectedTab = gBrowser.addTab(gPopupNodeContextMenu);
       browserInit(gBrowser.selectedTab);
     } catch (e) {
-      alert(e);
+      onErrorHandler(e);
     }
   }
 }
@@ -972,7 +980,7 @@ function MenuMainPopupShowing () {
 
     }
   }
-  catch(ex) { alert(ex); }
+  catch(ex) { onErrorHandler(ex); }
 }
 
 function MenuNavPopupShowing () {
@@ -1193,7 +1201,7 @@ function DoBrowserFind() {
       gBrowser.fastFind.find(vQuery,0);
     }
   } catch (e) {
-    alert(e);
+    onErrorHandler(e);
   }  
 }
 
@@ -1203,7 +1211,7 @@ function DoBrowserFindNext() {
   try { 
 	gBrowser.fastFind.findNext();
   } catch (e) {
-    alert(e);
+    onErrorHandler(e);
   }  
 }
 
@@ -1252,7 +1260,7 @@ function DoSSRToggle()
     
     gBrowser.webNavigation.reload(nsIWebNavigation.LOAD_FLAGS_CHARSET_CHANGE);
   }
-  catch(ex) { alert(ex); }
+  catch(ex) { onErrorHandler(ex); }
 
 }
 
@@ -1264,13 +1272,22 @@ function DoSNavToggle()
     
     content.focus();    
   }
-  catch(ex) { alert(ex); }
+  catch(ex) { onErrorHandler(ex); }
 
 }
 
 function DoToggleSoftwareKeyboard()
 {
+  // During a page load, this key cause the page to stop
+  // loading.  Probably should rename this function.
+
   try {
+
+    if ( document.getElementById("nav-menu-button").className=="stop-button" )
+    {
+      BrowserStop();
+      return;
+    }
 
     var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
 
@@ -1282,7 +1299,7 @@ function DoToggleSoftwareKeyboard()
       document.commandDispatcher.advanceFocus();
     }
   }
-  catch(ex) { alert(ex); }
+  catch(ex) { onErrorHandler(ex); }
 }
 
 function OpenFrameInTab()
@@ -1425,14 +1442,14 @@ function URLBarEntered()
         var host = fixedUpURI.host;
         os.notifyObservers(null, "loading-domain", host);
       }
-      catch(e) {alert(e);}
+      catch(e) {onErrorHandler(e);}
     }
     
     loadURI(gURLBar.value);
 
     content.focus();
   }
-  catch(ex) {alert(ex);}
+  catch(ex) {onErrorHandler(ex);}
   
   
   return true;
@@ -1639,7 +1656,7 @@ function DownloadSet( aCurTotalProgress, aMaxTotalProgress ) {
 
 function DownloadCancel(refId) {
 
-  try {  document.getElementById("toolbar-download-tag").cachedCancelable.cancel(NS_BINDING_ABORTED) } catch (e) { alert(e) };
+  try {  document.getElementById("toolbar-download-tag").cachedCancelable.cancel(NS_BINDING_ABORTED) } catch (e) { onErrorHandler(e) };
   document.getElementById("download-button-stop").disabled=false;
   BrowserViewDownload(false);
 
