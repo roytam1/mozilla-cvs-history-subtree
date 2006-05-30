@@ -53,13 +53,18 @@ interface nsISidebar : nsISupports
                             in string aCustomizeURL);
     void addSearchEngine(in string engineURL, in string iconURL,
                          in wstring suggestedTitle, in wstring suggestedCategory);
+};
+
+[scriptable, uuid(2efb7dc9-e7b3-44b7-8557-60b1485cfd6e)]
+interface nsISidebar_MOZILLA_1_8_BRANCH : nsISidebar
+{
     void addMicrosummaryGenerator(in string generatorURL);
 };
 
 %{ C++
-// {577CB744-8CAF-11d3-AAEF-00805F8A4905} 
+// {22117140-9c6e-11d3-aaf1-00805f8a4905} 
 #define NS_SIDEBAR_CID \
-{ 0x577cb744, 0x8caf, 0x11d3, { 0xaa, 0xef, 0x0, 0x80, 0x5f, 0x8a, 0x49, 0x5 } }
+{ 0x22117140, 0x9c6e, 0x11d3, { 0xaa, 0xf1, 0x00, 0x80, 0x5f, 0x8a, 0x49, 0x05 } }
 
 #define NS_SIDEBAR_CONTRACTID "@mozilla.org/sidebar;1"
 %}
