@@ -589,8 +589,14 @@ nsAutoCompleteController::AttachRollupListener()
 {
   nsIWidget* widget = GetPopupWidget();
   NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
+  NS_ASSERTION(mInput, "mInput must not be null.");
+  PRBool consumeRollupEvent = PR_FALSE;
+  nsCOMPtr<nsIAutoCompleteInput_MOZILLA_1_8_BRANCH> input =
+    do_QueryInterface(mInput);
+  NS_ASSERTION(input, "mInput must have nsIAutoCompleteInput_MOZILLA_1_8_BRANCH interface.");
+  input->GetConsumeRollupEvent(&consumeRollupEvent);
   return widget->CaptureRollupEvents((nsIRollupListener*)this,
-                                     PR_TRUE, PR_FALSE);
+                                     PR_TRUE, consumeRollupEvent);
 }
 
 NS_IMETHODIMP

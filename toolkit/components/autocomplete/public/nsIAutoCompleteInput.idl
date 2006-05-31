@@ -157,3 +157,13 @@ interface nsIAutoCompleteInput : nsISupports
    */
   boolean onTextReverted();
 };
+
+[scriptable, uuid(CCD37136-76E8-47a7-B46C-B8FEE8EB0536)]
+interface nsIAutoCompleteInput_MOZILLA_1_8_BRANCH : nsIAutoCompleteInput
+{
+  /*
+   * This popup should consume or dispatch the rollup event.
+   * TRUE: should consume; FALSE: should dispatch.
+   */
+  readonly attribute boolean consumeRollupEvent;
+};

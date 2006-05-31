@@ -74,7 +74,9 @@
       <xul:popupset anonid="popupset" class="autocomplete-result-popupset"/>
     </content>
 
-    <implementation implements="nsIAccessibleProvider, nsIAutoCompleteInput, nsIDOMXULMenuListElement">
+    <implementation implements="nsIAccessibleProvider,
+                                nsIAutoCompleteInput_MOZILLA_1_8_BRANCH,
+                                nsIDOMXULMenuListElement">
       <field name="mController">null</field>
       <field name="mSearchNames">null</field>
       <field name="mIgnoreInput">false</field>
@@ -164,7 +166,10 @@
 
       <property name="searchCount" readonly="true"
                 onget="this.initSearchNames(); return this.mSearchNames.length;"/>
-    
+
+      <property name="consumeRollupEvent" readonly="true"
+                onget="return true;"/>
+
       <method name="getSearchAt">
         <parameter name="aIndex"/>
         <body><![CDATA[

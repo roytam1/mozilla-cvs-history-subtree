@@ -80,6 +80,7 @@
 NS_INTERFACE_MAP_BEGIN(nsFormFillController)
   NS_INTERFACE_MAP_ENTRY(nsIFormFillController)
   NS_INTERFACE_MAP_ENTRY(nsIAutoCompleteInput)
+  NS_INTERFACE_MAP_ENTRY(nsIAutoCompleteInput_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIAutoCompleteSearch)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMKeyListener)
@@ -479,6 +480,16 @@ nsFormFillController::OnTextEntered(PRBool *_retval)
 NS_IMETHODIMP
 nsFormFillController::OnTextReverted(PRBool *_retval)
 {
+  return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////
+//// nsIAutoCompleteInput_MOZILLA_1_8_BRANCH
+
+NS_IMETHODIMP
+nsFormFillController::GetConsumeRollupEvent(PRBool *aConsumeRollupEvent)
+{
+  *aConsumeRollupEvent = PR_FALSE;
   return NS_OK;
 }
 

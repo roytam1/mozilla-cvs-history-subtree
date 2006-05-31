@@ -60,7 +60,7 @@
 class nsFormHistory;
 
 class nsFormFillController : public nsIFormFillController,
-                             public nsIAutoCompleteInput,
+                             public nsIAutoCompleteInput_MOZILLA_1_8_BRANCH,
                              public nsIAutoCompleteSearch,
                              public nsIDOMFocusListener,
                              public nsIDOMKeyListener,
@@ -74,6 +74,7 @@ public:
   NS_DECL_NSIFORMFILLCONTROLLER
   NS_DECL_NSIAUTOCOMPLETESEARCH
   NS_DECL_NSIAUTOCOMPLETEINPUT
+  NS_DECL_NSIAUTOCOMPLETEINPUT_MOZILLA_1_8_BRANCH
   NS_DECL_NSIDOMEVENTLISTENER
 
   // nsIDOMFocusListener
