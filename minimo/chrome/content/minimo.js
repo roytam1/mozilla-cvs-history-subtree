@@ -446,9 +446,14 @@ function MiniNavStartup()
    * app.  no annoying dialog -- just do it if the pref is
    * set.
    */
+  
+  try {  // so we pass with the Desktop. 
+  
   var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
   if (!device.isDefaultBrowser() && device.shouldCheckDefaultBrowser)
     device.setDefaultBrowser();
+   
+  } catch ( ignore ) { } 
     
  /*
   * Software Keyboard Windows CE Interaction 
