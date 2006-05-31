@@ -506,6 +506,29 @@ function MiniNavStartup()
                        .getService(Components.interfaces.nsIObserverService);
     os.addObserver(keyboardObserver,"software-keyboard", false);
   } catch(ignore) { }
+  
+  /* 
+   * Pref Observer to Homebar and Fullscreen.
+   */
+    
+  var prefAccessUIObserver = { 
+    destroy: function PrefUIObDestroy() {
+     this._pb.removeObserver("ui.fullscreen", this);
+   },
+   observe: function PrefUIObObserve(subject, topic, data) {
+     if (topic == "nsPref:changed" && data == "ui.fullscreen") {
+		alert('full screen toggle');
+     }
+   }
+  };
+
+  try {
+    gPref2 = Components.classes["@mozilla.org/preferences-service;1"]
+                       .getService(Components.interfaces.nsIPrefBranch2);
+    gPref2.addObserver("ui.fullscreen", prefAccessUIObserver, false);
+  } catch ( ignore ) {}
+
+  
 }
 
 /* 
