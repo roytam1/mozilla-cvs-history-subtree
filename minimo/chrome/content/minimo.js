@@ -529,10 +529,32 @@ function MiniNavStartup()
    }
   };
 
+  var prefAccessUIHomebarObserver = { 
+    destroy: function PrefUIObDestroy() {
+     this.removeObserver("ui.homebar", this);
+   },
+   observe: function PrefUIObObserve(subject, topic, data) {
+   
+     if (topic == "nsPref:changed" && data == "ui.homebar") {
+
+	 var hbValue  = gPref.getBoolPref("ui.homebar");
+
+	 if(hbValue) {
+         document.getElementById("homebarcontainer").style.display="block"; 
+       } else {
+         document.getElementById("homebarcontainer").style.display="none"; 
+       }
+
+     }
+   }
+  };
+  
   try {
     gPref2 = Components.classes["@mozilla.org/preferences-service;1"]
                        .getService(nsIPrefBranch2);
     gPref2.addObserver("ui.fullscreen", prefAccessUIObserver, false);
+    gPref2.addObserver("ui.homebar", prefAccessUIHomebarObserver , false);
+    
   } catch ( ignore ) {}
 
   
