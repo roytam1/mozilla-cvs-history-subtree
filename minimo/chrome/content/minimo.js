@@ -64,6 +64,11 @@ const nsIWebProgressListener   = Components.interfaces.nsIWebProgressListener;
 const nsIWebProgressListener2  = Components.interfaces.nsIWebProgressListener2;
 const nsIXULWindow             = Components.interfaces.nsIXULWindow;
 const nsITransfer              = Components.interfaces.nsITransfer;
+const nsIConsoleService        = Components.interfaces.nsIConsoleService;
+const nsIComponentRegistrar    = Components.interfaces.nsIComponentRegistrar;
+const nsISoftKeyBoard          = Components.interfaces.nsISoftKeyBoard;
+const nsIObserverService       = Components.interfaces.nsIObserverService;
+const nsIPrefBranch2           = Components.interfaces.nsIPrefBranch2;
 
 const NS_BINDING_ABORTED = 0x804b0002;
 
@@ -104,7 +109,7 @@ var gMinimoBundle = null;    // Strings and such.
 function onErrorHandler(x)
 {
   try {
-    var consoleService = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
+    var consoleService = Components.classes["@mozilla.org/consoleservice;1"].getService(nsIConsoleService);
     consoleService.logStringMessage(x);
   }
   catch(ex) { alert("onErrorHandler: " + x); }
@@ -398,7 +403,7 @@ function MiniNavStartup()
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }
 
-  var reg = Components.manager.QueryInterface(Components.interfaces.nsIComponentRegistrar);
+  var reg = Components.manager.QueryInterface(nsIComponentRegistrar);
   reg.registerFactory(Components.ID("{fe4d6bd5-e4cd-45f9-95bd-1e1796d2c7f7}"),
                        "Minimo Transfer Item",
                        "@mozilla.org/transfer;1",
@@ -461,7 +466,7 @@ function MiniNavStartup()
 
   try {
 	gKeyboardService = Components.classes["@mozilla.org/softkbservice/service;1"]
-                                 .getService(Components.interfaces.nsISoftKeyBoard);
+                                 .getService(nsISoftKeyBoard);
     var t = { };
     var b = { };
     var l = {};
@@ -503,7 +508,7 @@ function MiniNavStartup()
   
   try {
     var os = Components.classes["@mozilla.org/observer-service;1"]
-                       .getService(Components.interfaces.nsIObserverService);
+                       .getService(nsIObserverService);
     os.addObserver(keyboardObserver,"software-keyboard", false);
   } catch(ignore) { }
   
@@ -524,7 +529,7 @@ function MiniNavStartup()
 
   try {
     gPref2 = Components.classes["@mozilla.org/preferences-service;1"]
-                       .getService(Components.interfaces.nsIPrefBranch2);
+                       .getService(nsIPrefBranch2);
     gPref2.addObserver("ui.fullscreen", prefAccessUIObserver, false);
   } catch ( ignore ) {}
 
