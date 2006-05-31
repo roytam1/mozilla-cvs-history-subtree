@@ -44,6 +44,7 @@
 #include "nsIContent.h"
 #include "nsIContentViewer.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIWebNavigation.h"
