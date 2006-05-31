@@ -72,6 +72,7 @@
   <!-- defined in minimo/content/bindings/preferences.css and preferences.xml -->  
 
   <preferenceset id="prefsInstance" >
+  
       <preferenceitem preftype="string"  id="browser.startup.homepage" name="browserStartupHomepage" />
       <preferenceitem preftype="bool"    id="browser.shell.checkDefaultBrowser" name="setDefaultBrowser" />
       <preferenceitem preftype="int"     id="permissions.default.image" name="enableImages" />
@@ -87,6 +88,9 @@
       <preferenceitem preftype="int"     id="browser.cache.disk.capacity" name="cacheSizeField" />
       <preferenceitem preftype="file"    id="browser.download.dir" name="downloadDir" />
       <preferenceitem preftype="bool"    id="browser.download.progressDnlgDialog.dontAskForLaunch" name="dontAskForLaunch" />
+      <preferenceitem preftype="bool"    id="ui.fullscreen" name="setFullscreen" />
+      <preferenceitem preftype="bool"    id="ui.homebar" name="setHomebar" />
+      
   </preferenceset>
   
 

@@ -127,7 +127,20 @@
                                               prefuitype="bool"
                                               onclick="setDefaultBrowser();syncPref(this);" 
                                               />
-        
+                                              
+                                <checkbox     tabindex="16"
+                                              id="setFullscreen"
+                                              label="Full screen enabled"
+                                              preference="ui.fullscreen" 
+                                              onclick="syncPref(this)" />
+
+
+                                <checkbox     tabindex="17"
+                                              id="setHomebar"
+                                              label="Homebar enabled"
+                                              preference="ui.homebar" 
+                                              onclick="syncPref(this)" />
+                                              
                             </vbox>
 
                         </groupbox>
