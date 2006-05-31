@@ -522,7 +522,9 @@ function MiniNavStartup()
    },
    observe: function PrefUIObObserve(subject, topic, data) {
      if (topic == "nsPref:changed" && data == "ui.fullscreen") {
-		alert('full screen toggle');
+       
+       window.fullscreen = gPref.getBoolPref("ui.fullscreen");
+
      }
    }
   };
