@@ -224,9 +224,6 @@
           if (this.hasAttribute("empty")) 
             this._textbox._displayCurrentEngine();
 
-          var name = this.currentEngine.name;
-          var text = this._stringBundle.getFormattedString("searchtip", [name]);
-          this.setAttribute("tooltiptext", text);
         ]]></body>
       </method>
 
@@ -275,7 +272,6 @@
               menuitem = document.createElementNS(kXULNS, "menuitem");
               menuitem.setAttribute("class", "menuitem-iconic addengine-item");
               menuitem.setAttribute("label", labelStr);
-              menuitem.setAttribute("tooltiptext", engineInfo.uri);
               menuitem.setAttribute("uri", engineInfo.uri);
               if (engineInfo.icon)
                 menuitem.setAttribute("src", engineInfo.icon);
