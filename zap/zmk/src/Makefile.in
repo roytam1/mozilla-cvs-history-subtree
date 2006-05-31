@@ -30,8 +30,10 @@ CPPSRCS		= \
 		zapAudioOut.cpp \
 		zapAudioStreamUtils.cpp \
 		zapAudioToneFrame.cpp \
+		zapClientSink.cpp \
 		zapDTMFGenerator.cpp \
 		zapDatagramFrame.cpp \
+		zapFileIn.cpp \
 		zapFilterNode.cpp \
 		zapG711Decoder.cpp \
 		zapG711Encoder.cpp \
@@ -81,6 +83,7 @@ XPIDLSRCS	= \
 		zapIAudioIn.idl \
 		zapIAudioOut.idl \
 		zapIAudioToneFrame.idl \
+		zapIClientSink.idl \
 		zapIDTMFGenerator.idl \
 		zapIMediaFrame.idl \
 		zapIMediaGraph.idl \

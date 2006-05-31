@@ -194,6 +194,18 @@ zapIMediaFrame::streamInfo :
 zapIMediaFrame::data :
 - same as zapIStunMessage::serialize()
 
+----------------------------------------------------------------------
+
+X) raw binary data
+------------------
+
+Interfaces: zapIMediaFrame
+
+zapIMediaFrame::streamInfo :
+- ACString "type" : = "raw"
+
+zapIMediaFrame::data :
+- raw binary data
 
 ======================================================================
 ======================================================================
@@ -1061,4 +1073,41 @@ udp frames
 Output streams:
 stun frames ("stun-req"/"stun-res")
 udp frames ("other")
+
+----------------------------------------------------------------------
+
+36) filein
+----------
+
+Reads a file as a sequence of raw data packets.
+
+Sinks: none
+Sources: 1 (passive)
+
+Node parameters:
+- AUTF8String "file_url" : url pointing to the file to read. Must resolve
+                           to a local file. The scheme can be file:/ or 
+                           resource:/ (and possibly others).
+- unsigned long "block_size" : max size of data packets (default: 8192).
+- boolean "loop" : if true, the file will be looped (i.e. seeked to the 
+                   beginning once the end has been reached) (default: false)
+
+Output stream:
+raw binary frames (type = "raw"). Size of frame data with be <=
+block_size
+
+----------------------------------------------------------------------
+
+37) client-sink
+---------------
+
+Allows clients to pull media frames using zapIClientSink::pullFrame().
+
+Sinks: 1 (passive)
+Source: none
+
+Output stream:
+as input stream
+
+----------------------------------------------------------------------
 

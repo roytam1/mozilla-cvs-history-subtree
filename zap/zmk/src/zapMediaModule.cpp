@@ -72,6 +72,8 @@
 #include "zapStunClient.h"
 #include "zapStunServer.h"
 #include "zapStunDemuxer.h"
+#include "zapFileIn.h"
+#include "zapClientSink.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -109,6 +111,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexAudioProcessor)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStunClient)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStunServer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapStunDemuxer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapFileIn)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapClientSink)
+
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -296,6 +301,16 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_STUNDEMUXER_CID,
     ZAP_STUNDEMUXER_CONTRACTID,
     zapStunDemuxerConstructor
+  },
+  { "Mozilla ZMK file input source",
+    ZAP_FILEIN_CID,
+    ZAP_FILEIN_CONTRACTID,
+    zapFileInConstructor
+  },
+  { "Mozilla ZMK client sink",
+    ZAP_CLIENTSINK_CID,
+    ZAP_CLIENTSINK_CONTRACTID,
+    zapClientSinkConstructor
   }
 };
 
