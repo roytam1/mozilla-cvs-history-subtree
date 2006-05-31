@@ -523,7 +523,7 @@ function MiniNavStartup()
    observe: function PrefUIObObserve(subject, topic, data) {
      if (topic == "nsPref:changed" && data == "ui.fullscreen") {
        
-       window.fullscreen = gPref.getBoolPref("ui.fullscreen");
+       window.fullScreen  = gPref.getBoolPref("ui.fullscreen");
 
      }
    }
