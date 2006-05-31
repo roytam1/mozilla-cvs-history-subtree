@@ -539,11 +539,7 @@ function MiniNavStartup()
 
 	 var hbValue  = gPref.getBoolPref("ui.homebar");
 
-	 if(hbValue) {
-         document.getElementById("homebarcontainer").style.display="block"; 
-       } else {
-         document.getElementById("homebarcontainer").style.display="none"; 
-       }
+	  document.getElementById("browserleftbar").collapsed = !hbValue  ;
 
      }
    }
