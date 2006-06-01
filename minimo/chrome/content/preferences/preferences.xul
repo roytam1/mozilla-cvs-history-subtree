@@ -86,8 +86,8 @@
       <preferenceitem preftype="file"    id="browser.cache.disk.parent_directory" name="storeCacheStorageCard" />
       <preferenceitem preftype="bool"    id="network.prefetch-next" name="enablePreFetching" />
       <preferenceitem preftype="int"     id="browser.cache.disk.capacity" name="cacheSizeField" />
-      <preferenceitem preftype="file"    id="browser.download.dir" name="downloadDir" />
       <preferenceitem preftype="bool"    id="browser.download.progressDnlgDialog.dontAskForLaunch" name="dontAskForLaunch" />
+      <preferenceitem preftype="file"    id="browser.download.dir" name="downloadDir" />
       <preferenceitem preftype="bool"    id="ui.fullscreen" name="setFullscreen" />
       <preferenceitem preftype="bool"    id="ui.homebar" name="setHomebar" />
       
