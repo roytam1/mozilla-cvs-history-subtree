@@ -180,7 +180,7 @@ function cacheSetTextbox() {
      const nsILocalFile = Components.interfaces.nsILocalFile;
  	 var file2 = file.QueryInterface(nsILocalFile);
 	 fileId++;	
-     var newElement=document.createElement("menuitem");
+       var newElement=document.createElement("menuitem");
 	 newElement.setAttribute("label",file2.path);
 	 newElement.setAttribute("id","fileCacheOption"+fileId);
 	 newElement.fileValue=file2;
@@ -578,11 +578,7 @@ function syncPrefSaveDOM() {
 }
 function syncPrefLoadDOM(elementList) {
 
-
-
-
 	for(var strCurKey in elementList) {
-
 
 		var elementAndPref=document.getElementById(elementList[strCurKey]);
 		var prefName=elementAndPref.getAttribute("preference");
