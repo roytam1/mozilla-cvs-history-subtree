@@ -113,8 +113,7 @@
 
                   <vbox class="box-prefpadding">
 
-                    <checkbox id="dontAskForLaunch" tabindex="53"
-	                              label="&dontAskForLaunch.label;"
+                    <box id="dontAskForLaunch" tabindex="53"
 	                              preference="browser.download.progressDnlgDialog.dontAskForLaunch" 
 	                              onclick="syncPref(this);" />
 
@@ -125,8 +124,9 @@
                                  preference="browser.download.dir"
                                  />          
 
-                      <menulist flex="1" label="&setSaveDirectory.label;" hidden="true" id="menuDownloadOptions" >
+                      <menulist flex="1"  tabindex="54" label="&setSaveDirectory.label;" hidden="true" id="menuDownloadOptions" ignorekeys="true" >
                         <menupopup id="downloadOptionsList">
+					<menuitem label="&downloadPrompt.label;" id="downloadPromptOption" oncommand="downloadSelectPrompt()" />
                         </menupopup>
                       </menulist>
 
