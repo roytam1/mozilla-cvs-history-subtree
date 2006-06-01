@@ -111,9 +111,9 @@ interface nsIJVMManager : nsISupports {
 	 * isAppletTrusted
 	 */
 
-    nsIPrincipal isAppletTrusted(in string aRSABuf, in PRUint32 aRSABufLen, 
-                         in string aPlaintext, in PRUint32 aPlaintextLen,    
-                         out boolean isTrusted);
+    [noscript] nsIPrincipal isAppletTrusted(in string aRSABuf,
+                         in PRUint32 aRSABufLen, in string aPlaintext,
+                         in PRUint32 aPlaintextLen, out boolean isTrusted);
 
     /**
      * The JavaEnabled variable to see if Java is Enabled or not
