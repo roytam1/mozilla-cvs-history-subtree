@@ -504,6 +504,13 @@ nsUrlClassifierDBService::Init()
   if (!gUrlClassifierDbServiceLog)
     gUrlClassifierDbServiceLog = PR_NewLogModule("UrlClassifierDbService");
 #endif
+
+  // Force the storage service to be created on the main thread.
+  nsresult rv;
+  nsCOMPtr<mozIStorageService> storageService =
+    do_GetService(MOZ_STORAGE_SERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   gMonitor = PR_NewMonitor();
   // Start the background thread.
   gDbBackgroundThread = PR_CreateThread(PR_USER_THREAD,
