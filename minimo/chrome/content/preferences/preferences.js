@@ -143,6 +143,9 @@ function downloadSelectedOption(refId)
   document.getElementById("downloadDir").value=refElementSelected.fileValue;
   syncPref(document.getElementById("downloadDir"));
 
+  document.getElementById("dontAskForLaunch").value=true;
+  syncPref(document.getElementById("dontAskForLaunch"));
+
 }
 
 function downloadSelectPrompt() {
@@ -202,6 +205,7 @@ function cacheSelectedOption(refId)
   var refElementSelected = document.getElementById(refId);
   document.getElementById("storeCacheStorageCard").value=refElementSelected.fileValue;
   syncPref(document.getElementById("storeCacheStorageCard"));
+
   document.getElementById("useDiskCache").value=true;
   syncPref(document.getElementById("useDiskCache"));
 
