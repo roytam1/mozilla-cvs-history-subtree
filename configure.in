@@ -3829,16 +3829,6 @@ fi
 
 fi # SKIP_LIBRARY_CHECKS
 
-dnl check whether to enable canvas
-dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(canvas,
-[  --enable-canvas          Enable html:canvas feature],
-    MOZ_ENABLE_CANVAS=1,
-    MOZ_ENABLE_CANVAS= )
-if test "$MOZ_ENABLE_CANVAS"; then
-    AC_DEFINE(MOZ_ENABLE_CANVAS)
-fi
-
 dnl ========================================================
 dnl Java SDK support
 dnl ========================================================
@@ -4091,8 +4081,6 @@ AC_SUBST(GTK_CONFIG)
 AC_SUBST(TK_CFLAGS)
 AC_SUBST(TK_LIBS)
 
-AC_SUBST(MOZ_ENABLE_CANVAS)
-
 AC_SUBST(MOZ_ENABLE_GTK)
 AC_SUBST(MOZ_ENABLE_XLIB)
 AC_SUBST(MOZ_ENABLE_GTK2)
@@ -4139,6 +4127,7 @@ MOZ_ACTIVEX_SCRIPTING_SUPPORT=
 MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
+MOZ_ENABLE_CANVAS=1
 MOZ_ENABLE_LIBXUL=
 MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
 MOZ_FEEDS=1
@@ -4255,6 +4244,7 @@ minimo)
   MOZ_ACTIVEX_SCRIPTING_SUPPORT=
   MOZ_APP_VERSION=`cat $topsrcdir/minimo/config/version.txt`
   MOZ_COMPOSER=
+  MOZ_ENABLE_CANVAS=
   MOZ_ENABLE_POSTSCRIPT=
   MOZ_EXTENSIONS_DEFAULT=" cookie xmlextras transformiix spatialnavigation permissions"
   MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp"
@@ -4307,6 +4297,7 @@ mail)
   MOZ_PLUGINS=
   NECKO_DISK_CACHE=
   NECKO_PROTOCOLS="http,file,jar,viewsource,res,data"
+  MOZ_ENABLE_CANVAS=
   MOZ_IMG_DECODERS_DEFAULT=`echo "$MOZ_IMG_DECODERS_DEFAULT" | sed "s/ xbm//"`
   MOZ_MAIL_NEWS=1
   MOZ_LDAP_XPCOM=1
@@ -4387,6 +4378,17 @@ if test "$MOZ_XUL_APP"; then
   MOZ_PROFILESHARING=
   AC_DEFINE(MOZ_XUL_APP)
 fi
+
+dnl check whether to enable canvas
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(canvas,
+[  --enable-canvas          Enable html:canvas feature],
+    MOZ_ENABLE_CANVAS=1,
+    MOZ_ENABLE_CANVAS= )
+if test "$MOZ_ENABLE_CANVAS"; then
+    AC_DEFINE(MOZ_ENABLE_CANVAS)
+fi
+AC_SUBST(MOZ_ENABLE_CANVAS)
 
 dnl ========================================================
 dnl =
