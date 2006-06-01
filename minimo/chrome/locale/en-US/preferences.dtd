@@ -58,7 +58,7 @@
 <!ENTITY dumpJSConsole.label         "Dump JS console at shutdown">
 <!ENTITY useDiskCache.label          "Use Disk Cache">
 <!ENTITY useDiskCacheNone.label      "Use None">
-<!ENTITY storeCacheStorageCard.label "Use Disk Cache when storage card is available">
+<!ENTITY downloadPrompt.label        "Ask for file location">
 <!ENTITY enablePreFetching.label     "Enable Pre-Fetching">
 <!ENTITY cacheSettings.label         "Cache">
 <!ENTITY cacheSize.label             "Cache Size (KB)">
