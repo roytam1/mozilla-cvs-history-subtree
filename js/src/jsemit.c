@@ -5230,10 +5230,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         if (!js_EmitTree(cx, cg, pn->pn_expr))
             return JS_FALSE;
 
-        if (pn->pn_extra & PNX_EXPRBLOCK)
-            EMIT_UINT16_IMM_OP(JSOP_LEAVEBLOCKEXPR, count);
-        else
-            EMIT_UINT16_IMM_OP(JSOP_LEAVEBLOCK, count);
+        op = (pn->pn_extra & PNX_BLOCKEXPR)
+             ? JSOP_LEAVEBLOCKEXPR
+             : JSOP_LEAVEBLOCK;
+        EMIT_UINT16_IMM_OP(op, count);
+
         cg->stackDepth -= count;
 
         if (!js_PopStatementCG(cx, cg))

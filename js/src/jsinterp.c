@@ -5869,9 +5869,18 @@ interrupt:
           {
             JSObject **chainp;
 
+            /* Grab the result of the expression. */
+            if (op == JSOP_LEAVEBLOCKEXPR)
+                rval = FETCH_OPND(-1);
+
             i = GET_UINT16(pc);
             sp -= i;
             JS_ASSERT(sp <= fp->spbase + depth);
+
+            /* Store the result into the topmost stack slot. */
+            if (op == JSOP_LEAVEBLOCKEXPR)
+                STORE_OPND(-1, rval);
+
             chainp = &fp->blockChain;
             obj = *chainp;
             if (!obj) {
@@ -5879,8 +5888,9 @@ interrupt:
                 obj = *chainp;
             }
             JS_ASSERT(OBJ_GET_CLASS(cx, obj) == &js_BlockClass);
-            JS_ASSERT(op == JSOP_LEAVEBLOCKEXPR ||
-                      fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp);
+            JS_ASSERT(op == JSOP_LEAVEBLOCKEXPR
+                      ? fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp - 1
+                      : fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp);
             *chainp = OBJ_GET_PARENT(cx, obj);
           }
           END_CASE(JSOP_LEAVEBLOCK)

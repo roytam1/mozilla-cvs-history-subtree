@@ -2028,6 +2028,7 @@ SetupLexicalBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     pn->pn_op = JSOP_NOP;
     pn->pn_atom = atom;
     pn->pn_expr = NULL;
+    pn->pn_extra = 0;
 
     *pnp = pn;
     *objp = obj;
@@ -2038,7 +2039,7 @@ SetupLexicalBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 static JSParseNode *
 LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
 {
-    JSParseNode *pn, *pnlet;
+    JSParseNode *pn, *pnblock, *pnlet;
     JSObject *obj;
     JSStmtInfo stmtInfo;
 
@@ -2050,9 +2051,10 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
         return NULL;
     (void) js_GetToken(cx, ts);
 
-    /* This is a let statement of the form: let (a, b, c) { ... }. */
-    if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pn, &obj))
+    /* This is a let block of the form: let (a, b, c) { ... }. */
+    if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pnblock, &obj))
         return NULL;
+    pn = pnblock;
     pn->pn_expr = pnlet;
 
     pnlet->pn_left = LetHead(cx, ts, tc, obj);
@@ -2081,18 +2083,17 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
         statement = JS_FALSE;
     }
 
-    pnlet->pn_right = statement
-                      ? Statements(cx, ts, tc)
-                      : Expr(cx, ts, tc);
+    pnlet->pn_right = statement ? Statements(cx, ts, tc) : Expr(cx, ts, tc);
     if (!pnlet->pn_right)
         return NULL;
 
-    if (statement) {
-        /* XXX Reparameterize this error message. */
+    /* XXX Reparameterize this error message. */
+    if (statement)
         MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_AFTER_BODY);
-    }
-    js_PopStatement(tc);
+    else
+        pnblock->pn_extra = PNX_BLOCKEXPR;
 
+    js_PopStatement(tc);
     return pn;
 }
 
@@ -2891,6 +2892,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 pn1->pn_type = TOK_LEXICALSCOPE;
                 pn1->pn_atom = atom;
                 pn1->pn_expr = tc->blockNode;
+                pn1->pn_extra = 0;
                 tc->blockNode = pn1;
             }
 
