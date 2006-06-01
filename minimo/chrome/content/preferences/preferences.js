@@ -1,11 +1,7 @@
 /* 
- * Translators function. 
+ * Translators - When Read, When Write
  * =====
- * With XUL and beyond, these mappers shall happen more and more 
- * as we get more hybrid data-types. It's just like Webservice proxies for XUL elemetns. 
- *. So far we have this static hardcoded here. These has to do with the onsyncfrompreference
- * and onsynctopreference attributes in the XUL pref panels. 
- * ===================================================================================
+ * These are usually simple DOM XML translators. We need to make this XBL-based elements.
  */ 
 
 
@@ -65,11 +61,11 @@ function writeCacheLocationPref()
 
 
 /* 
- * This is called after pref -> DOM load. 
- * and also when clicks sync happens - see each pref element item the onchange attribute
+ * UI Visual elements disabled, enabled, dependency.
  */
  
 function UIdependencyCheck() {
+
   if(!document.getElementById("useDiskCache").checked) {
 	//document.getElementById("storeCacheStorageCard").disabled=true;
 	document.getElementById("cacheSizeField").disabled=true;
@@ -86,20 +82,18 @@ function UIdependencyCheck() {
 	document.getElementById("networkProxyHTTP_Port").disabled=false;
   }
 
-  if(!document.getElementById("dontAskForLaunch").checked) {
-//	document.getElementById("downloadDirDisplay").disabled=true;
-  } else {
-//	document.getElementById("downloadDirDisplay").disabled=false;
-  }
-
 }
-
 
 /*
  * OnReadPref callbacks 
  */
 
-function downloadSetTextbox() {
+/*
+ * Depends on dontAskForLaunch pref available. Check Preferences.xul order. 
+ */
+ 
+function downloadSetTextbox()
+{
 
   var dirLocation=document.getElementById("downloadDir").value;
   
@@ -109,7 +103,7 @@ function downloadSetTextbox() {
    var dirServiceProvider = Components.classes[nsIDirectoryServiceProvider_CONTRACTID].getService(nsIDirectoryServiceProvider2);
    var files = dirServiceProvider.getFiles("SCDirList");
 
-   if( files.hasMoreElements() ) {
+   if ( files.hasMoreElements() ) {
 	document.getElementById("menuDownloadOptions").setAttribute("hidden","false");
    }
    
@@ -127,13 +121,19 @@ function downloadSetTextbox() {
 	 
 	 newElement.setAttribute("id","fileDownloadOption"+fileId);
 	 newElement.fileValue=file2;
-	 newElement.setAttribute("oncommand", "downloadSelectedOption('fileDownloadOption"+fileId+"')"     );
+	 newElement.setAttribute("oncommand", "downloadSelectedOption('fileDownloadOption"+fileId+"')");
 	 document.getElementById("downloadOptionsList").appendChild(newElement);
+
      if(dirLocation.path==file2.path) { 
-       document.getElementById("menuDownloadOptions").selectedItem=newElement;
+		if(document.getElementById("dontAskForLaunch").value) {
+		       document.getElementById("menuDownloadOptions").selectedItem=newElement;
+		} else {
+		       document.getElementById("menuDownloadOptions").selectedItem=document.getElementById("downloadPromptOption");
+		}
      }
    }
  } catch (i) { } 
+
 }
 
 function downloadSelectedOption(refId)
@@ -145,8 +145,15 @@ function downloadSelectedOption(refId)
 
 }
 
+function downloadSelectPrompt() {
+
+  document.getElementById("dontAskForLaunch").value=false;
+  syncPref(document.getElementById("dontAskForLaunch"));
+
+}
+
 /*
- * This function depends on a previously set preference : useDiskCache
+ * Depends on usaDiskCache pref enabled. Check Preferences.xul order. 
  */
 function cacheSetTextbox() {
 
@@ -171,15 +178,11 @@ function cacheSetTextbox() {
  	 var file2 = file.QueryInterface(nsILocalFile);
 	 fileId++;	
      var newElement=document.createElement("menuitem");
-
-	  
 	 newElement.setAttribute("label",file2.path);
-	 
 	 newElement.setAttribute("id","fileCacheOption"+fileId);
 	 newElement.fileValue=file2;
 	 newElement.setAttribute("oncommand", "cacheSelectedOption('fileCacheOption"+fileId+"')"     );
 	 document.getElementById("cacheOptionsList").appendChild(newElement);
-
 
      if(dirLocation.path==file2.path) { 
 		if(document.getElementById("useDiskCache").value) {
@@ -187,17 +190,11 @@ function cacheSetTextbox() {
 		       document.getElementById("menuCacheOptions").selectedItem=newElement;
 		} else {
 		       document.getElementById("menuCacheOptions").selectedItem=document.getElementById("cacheNoneOption");
-
 		}
      }
-
    }
  } catch (i) { } 
-
- 
-
 }
-
 
 function cacheSelectedOption(refId)
 {
@@ -205,9 +202,7 @@ function cacheSelectedOption(refId)
   var refElementSelected = document.getElementById(refId);
   document.getElementById("storeCacheStorageCard").value=refElementSelected.fileValue;
   syncPref(document.getElementById("storeCacheStorageCard"));
-
   document.getElementById("useDiskCache").value=true;
-
   syncPref(document.getElementById("useDiskCache"));
 
 }
@@ -219,12 +214,8 @@ function cacheSelectNone() {
 
 }
 
-
-/* Live Synchronizers
- * =====
- * In this section put all the functions you think it should be 
- * synchronized as the end-user hits the button 
- * ===================================================================================
+/*
+ * Synchronous pref actions
  */
 
 function sanitizeAll()
@@ -331,13 +322,12 @@ function setDefaultBrowser() {
 }
 
 /*
- * New Mini Pref Implementation 
+ * Rewrite of Prefs for Minimo.
  * ----------------------------
  * Quick access to OKAY / CANCEL button 
  * Panel selector 
  * OKAY = sync attributes with prefs. 
  * CANCEL = close popup 
- * ===================================================================================
  */
 
 var gPrefQueue=new Array();
@@ -348,6 +338,7 @@ var gPrefArray=null;
 var gPref=null;
 
 function prefStartup() {
+
     keyInitHandler();
 
     /* Pre select the general pane */ 
@@ -372,7 +363,7 @@ function prefStartup() {
     syncPrefLoadDOM(document.getElementById("prefsInstance").prefArray);
 
     syncUIZoom(); // from common.js 
-    
+
     gToolbarButtonSelected.focus();
 
 }
@@ -536,6 +527,7 @@ function syncPrefSaveDOM() {
 			            } 
 				}
 				prefSETValue=elRef.value;
+
 			}
 
 			if (document.getElementById(prefName).getAttribute("preftype")=="string"){
