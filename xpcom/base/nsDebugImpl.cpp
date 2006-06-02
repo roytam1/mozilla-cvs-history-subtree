@@ -63,13 +63,14 @@
 #include "nsISupportsUtils.h"
 #include "nsTraceRefcntImpl.h"
 
-#if defined(__GNUC__) && defined(__i386)
-#  define DebugBreak() { asm("int $3"); }
-#elif defined(__APPLE__) && defined(TARGET_CARBON)
-#  include "MacTypes.h"
-#  define DebugBreak() { Debugger(); }
+// we put Mac OS X first in this test because the GNUC/x86 test is also true
+// on Intel Mac OS X and we want the same impl for PPC/x86 Mac OS X
+#if defined(XP_MACOSX)
+#define DebugBreak() { raise(SIGTRAP); }
+#elif defined(__GNUC__) && (defined(__i386) || defined(__i386__) || defined(__x86_64__))
+#define DebugBreak() { asm("int $3"); }
 #else
-#  define DebugBreak()
+#define DebugBreak()
 #endif
 #endif
 
