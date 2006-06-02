@@ -5882,6 +5882,10 @@ interrupt:
             JS_ASSERT(fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp);
             i = OBJ_BLOCK_COUNT(cx, obj);
             sp += i;
+            while (i != 0) {
+                STORE_OPND(-i, JSVAL_VOID);
+                --i;
+            }
             JS_ASSERT(sp <= fp->spbase + depth);
             JS_ASSERT(OBJ_GET_PARENT(cx, obj) == fp->blockChain);
             fp->blockChain = obj;
