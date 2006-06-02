@@ -83,48 +83,27 @@ EXPORTS		= \
 		nsITextControlFrame.h \
 		$(NULL)
 
-#ifdef HTML_FORMS
-TODO = \
-		nsComboboxControlFrame.cpp \
-		nsListControlFrame.cpp \
-		nsSelectsAreaFrame.cpp \
+CPPSRCS		= \
+		nsButtonFrameRenderer.cpp \
+		nsFieldSetFrame.cpp \
+		nsFileControlFrame.cpp \
+		nsFormControlFrame.cpp \
+		nsFormControlHelper.cpp \
+		nsGfxButtonControlFrame.cpp \
+		nsGfxCheckboxControlFrame.cpp \
+		nsGfxRadioControlFrame.cpp \
+		nsTextControlFrame.cpp \
+		nsHTMLButtonControlFrame.cpp \
+		nsImageControlFrame.cpp \
+		nsLegendFrame.cpp \
+		nsIsIndexFrame.cpp \
 		$(NULL)
-#endif
 
 ifdef HTML_FORMS
-CPPSRCS		= \
-		nsButtonFrameRenderer.cpp \
+CPPSRCS += \
 		nsComboboxControlFrame.cpp \
-		nsFieldSetFrame.cpp \
-		nsFileControlFrame.cpp \
-		nsFormControlFrame.cpp \
-		nsFormControlHelper.cpp \
-		nsGfxButtonControlFrame.cpp \
-		nsGfxCheckboxControlFrame.cpp \
-		nsGfxRadioControlFrame.cpp \
-		nsTextControlFrame.cpp \
-		nsHTMLButtonControlFrame.cpp \
-		nsImageControlFrame.cpp \
-		nsLegendFrame.cpp \
 		nsListControlFrame.cpp \
-		nsIsIndexFrame.cpp \
 		nsSelectsAreaFrame.cpp \
-		$(NULL)
-else
-CPPSRCS		= \
-		nsButtonFrameRenderer.cpp \
-		nsFieldSetFrame.cpp \
-		nsFileControlFrame.cpp \
-		nsFormControlFrame.cpp \
-		nsFormControlHelper.cpp \
-		nsGfxButtonControlFrame.cpp \
-		nsGfxCheckboxControlFrame.cpp \
-		nsGfxRadioControlFrame.cpp \
-		nsTextControlFrame.cpp \
-		nsHTMLButtonControlFrame.cpp \
-		nsImageControlFrame.cpp \
-		nsLegendFrame.cpp \
-		nsIsIndexFrame.cpp \
 		$(NULL)
 endif
 
