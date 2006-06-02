@@ -773,18 +773,13 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   aStatus = NS_FRAME_COMPLETE;
   nsSize availSize(aReflowState.availableWidth, availHeight);
 
-  PRBool noBorderBeforeReflow = GetContentEmpty() &&
-    GetStyleTableBorder()->mEmptyCells != NS_STYLE_TABLE_EMPTY_CELLS_SHOW;
-  /* XXX: remove tableFrame when border-collapse inherits */
   nsTableFrame* tableFrame = nsnull;
   rv = nsTableFrame::GetTableFrame(this, tableFrame); if (!tableFrame) ABORT1(NS_ERROR_NULL_POINTER);
 
   nsMargin borderPadding = aReflowState.mComputedPadding;
   nsMargin border;
   GetBorderWidth(p2t, border);
-  if (!noBorderBeforeReflow) {
-    borderPadding += border;
-  }
+  borderPadding += border;
   
   nscoord topInset    = borderPadding.top;
   nscoord rightInset  = borderPadding.right;
@@ -852,21 +847,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 
   // 0 dimensioned cells need to be treated specially in Standard/NavQuirks mode 
   // see testcase "emptyCells.html"
-  if ((0 == kidSize.width) || (0 == kidSize.height)) { // XXX why was this &&
-    SetContentEmpty(PR_TRUE);
-  }
-  else {
-    SetContentEmpty(PR_FALSE);
-    if (noBorderBeforeReflow) {
-      // need to consider borders, since they were factored out above
-      leftInset   += border.left;
-      rightInset  += border.right;
-      topInset    += border.top;
-      bottomInset += border.bottom;
-      kidOrigin.MoveTo(leftInset, topInset);
-      kidOrigin += collapsedOffset;
-    }
-  }
+  SetContentEmpty(0 == kidSize.height);
 
   // Place the child
   FinishReflowChild(firstKid, aPresContext, &kidReflowState, kidSize,
