@@ -868,50 +868,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
 
-  const nsStylePosition* pos = GetStylePosition();
-
-  // calculate the min cell width
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-  nscoord smallestMinWidth = 0;
-  if (eCompatibility_NavQuirks == compatMode) {
-    if ((pos->mWidth.GetUnit() != eStyleUnit_Coord)   &&
-        (pos->mWidth.GetUnit() != eStyleUnit_Percent)) {
-      if (PR_TRUE == GetContentEmpty()) {
-        if (border.left > 0) 
-          smallestMinWidth += onePixel;
-        if (border.right > 0) 
-          smallestMinWidth += onePixel;
-      }
-    }
-  }
-  PRInt32 colspan = tableFrame->GetEffectiveColSpan(*this);
-  if (colspan > 1) {
-    smallestMinWidth = PR_MAX(smallestMinWidth, colspan * onePixel);
-    nscoord spacingX = tableFrame->GetCellSpacingX();
-    nscoord spacingExtra = spacingX * (colspan - 1);
-    smallestMinWidth += spacingExtra;
-    if (aReflowState.mComputedPadding.left > 0) {
-      smallestMinWidth -= onePixel;
-    }
-  }
- 
-  // XXX resizing the kid causes incremental reflow bugs, because the
-  // kid might reuse its current size if nothing has changed.
-  if ((0 == kidSize.width) && (NS_UNCONSTRAINEDSIZE != kidReflowState.availableWidth)) {
-    // empty content has to be forced to the assigned width for resize or incremental reflow
-    kidSize.width = kidReflowState.availableWidth;
-  }
-  if (0 == kidSize.height) {
-    if ((pos->mHeight.GetUnit() != eStyleUnit_Coord) &&
-        (pos->mHeight.GetUnit() != eStyleUnit_Percent)) {
-      PRInt32 pixHeight = (eCompatibility_NavQuirks == compatMode) ? 1 : 0;
-      kidSize.height = NSIntPixelsToTwips(pixHeight, p2t);
-    }
-  }
-  // end 0 dimensioned cells
-
-  kidSize.width = PR_MAX(kidSize.width, smallestMinWidth); 
-
   // Place the child
   FinishReflowChild(firstKid, aPresContext, &kidReflowState, kidSize,
                     kidOrigin.x, kidOrigin.y, 0);
