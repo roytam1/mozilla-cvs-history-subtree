@@ -4185,6 +4185,12 @@ NECKO_SMALL_BUFFERS=
 SUNCTL=
 JS_STATIC_BUILD=
 
+dnl canvas and cairo won't build with gtk1, so disable it
+dnl ========================================================
+if test "$MOZ_ENABLE_GTK"; then
+    MOZ_ENABLE_CANVAS=
+fi
+
 case "$target_os" in
     msvc*|mks*|cygwin*|mingw*)
         if test -z "$GNU_CC"; then 
