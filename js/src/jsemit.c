@@ -3342,7 +3342,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
     JSOp op;
     jsatomid atomIndex;
     JSTreeContext *tc;
-    JSStmtInfo *stmt;
+    JSStmtInfo *stmt, *scopeStmt;
     JSObject *blockObj;
 
     /*
@@ -3423,12 +3423,11 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
 
                 /* Evaluate expr in the outer lexical scope if requested. */
                 if (popStmt) {
-                    JS_ASSERT(tc->topStmt == tc->topScopeStmt &&
-                              tc->topStmt->type == STMT_BLOCK_SCOPE);
-
                     stmt = tc->topStmt;
+                    scopeStmt = tc->topScopeStmt;
+
                     tc->topStmt = stmt->down;
-                    tc->topScopeStmt = stmt->downScope;
+                    tc->topScopeStmt = scopeStmt->downScope;
                     blockObj = tc->blockChain;
                     tc->blockChain =
                         JSVAL_TO_OBJECT(blockObj->slots[JSSLOT_PARENT]);
@@ -3439,7 +3438,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
 
                 if (popStmt) {
                     tc->topStmt = stmt;
-                    tc->topScopeStmt = stmt;
+                    tc->topScopeStmt = scopeStmt;
                     tc->blockChain = blockObj;
                 }
             }
@@ -3512,6 +3511,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
     JSSrcNoteType noteType;
     jsbytecode *pc;
     JSOp op;
+    JSTokenType type;
     uint32 argc;
     int stackDummy;
 
@@ -3853,8 +3853,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
              * a bit below, so nothing is hoisted: 'for (var x in o) ...'.
              */
             pn3 = pn2->pn_left;
-            if (pn3->pn_type == TOK_VAR && !js_EmitTree(cx, cg, pn3))
+            type = pn3->pn_type;
+            cg->treeContext.flags |= TCF_IN_FOR_INIT;
+            if (TOKEN_TYPE_IS_DECL(type) && !js_EmitTree(cx, cg, pn3))
                 return JS_FALSE;
+            cg->treeContext.flags &= ~TCF_IN_FOR_INIT;
 
             /* Emit a push to allocate the iterator. */
             if (js_Emit1(cx, cg, JSOP_STARTITER) < 0)
@@ -3877,7 +3880,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
             /* Compile a JSOP_FOR* bytecode based on the left hand side. */
             emitIFEQ = JS_TRUE;
-            switch (pn3->pn_type) {
+            type = pn3->pn_type;
+            switch (type) {
+#if JS_HAS_BLOCK_SCOPE
+              case TOK_LET:
+#endif
               case TOK_VAR:
                 pn3 = pn3->pn_head;
 #if JS_HAS_DESTRUCTURING
@@ -3895,7 +3902,10 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 JS_ASSERT(pn3->pn_type == TOK_NAME);
 #endif
                 if (!pn3->pn_expr &&
-                    js_NewSrcNote2(cx, cg, SRC_DECL, SRC_DECL_VAR) < 0) {
+                    js_NewSrcNote2(cx, cg, SRC_DECL,
+                                   type == TOK_VAR
+                                   ? SRC_DECL_VAR
+                                   : SRC_DECL_LET) < 0) {
                     return JS_FALSE;
                 }
                 /* FALL THROUGH */
@@ -4036,8 +4046,10 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 /* No initializer: emit an annotated nop for the decompiler. */
                 op = JSOP_NOP;
             } else {
+                cg->treeContext.flags |= TCF_IN_FOR_INIT;
                 if (!js_EmitTree(cx, cg, pn2->pn_kid1))
                     return JS_FALSE;
+                cg->treeContext.flags &= TCF_IN_FOR_INIT;
                 op = JSOP_POP;
             }
             noteIndex = js_NewSrcNote(cx, cg, SRC_FOR);
@@ -5243,6 +5255,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_LET:
+      {
+        JSBool popStmt;
+
         /* Let statements have their declarations on the left. */
         if (pn->pn_arity == PN_BINARY) {
             pn2 = pn->pn_right;
@@ -5251,14 +5266,17 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             pn2 = NULL;
         }
 
+        popStmt = (pn2 != NULL) || (cg->treeContext.flags & TCF_IN_FOR_INIT);
+
         JS_ASSERT(pn->pn_arity == PN_LIST);
-        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE, pn2 != NULL))
+        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE, popStmt))
             return JS_FALSE;
 
         if (pn2 && !js_EmitTree(cx, cg, pn2))
             return JS_FALSE;
 
         break;
+      }
 #endif /* JS_HAS_BLOCK_SCOPE */
 
 #if JS_HAS_GENERATORS

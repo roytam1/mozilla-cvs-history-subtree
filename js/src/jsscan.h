@@ -145,6 +145,12 @@ typedef enum JSTokenType {
 #define TOKEN_TYPE_IS_XML(tt) \
     (tt == TOK_AT || tt == TOK_DBLCOLON || tt == TOK_ANYNAME)
 
+#if JS_HAS_BLOCK_SCOPE
+#define TOKEN_TYPE_IS_DECL(tt) ((tt) == TOK_VAR || (tt) == TOK_LET)
+#else
+#define TOKEN_TYPE_IS_DECL(tt) ((tt) == TOK_VAR)
+#endif
+
 struct JSStringBuffer {
     jschar      *base;
     jschar      *limit;         /* length limit for quick bounds check */

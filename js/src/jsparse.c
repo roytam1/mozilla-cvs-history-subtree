@@ -1999,7 +1999,7 @@ LetHead(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSObject *obj)
         PN_APPEND(pn, pn2);
     } while (js_MatchToken(cx, ts, TOK_COMMA));
 
-    pn->pn_extra |= PNX_POPVAR;
+    pn->pn_extra = 0;
     return pn;
 }
 
@@ -2060,6 +2060,7 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
     pnlet->pn_left = LetHead(cx, ts, tc, obj);
     if (!pnlet->pn_left)
         return NULL;
+    pnlet->pn_extra = PNX_POPVAR;
 
     /* XXX Reparameterize these error messages. */
     MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FORMAL);
@@ -2351,6 +2352,14 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 
       case TOK_FOR:
+      {
+#if JS_HAS_BLOCK_SCOPE
+        JSParseNode *pnlet;
+        JSObject *obj;
+
+        pnlet = NULL;
+#endif
+
         /* A FOR node is binary, left is loop control and right is the body. */
         pn = NewParseNode(cx, ts, PN_BINARY, tc);
         if (!pn)
@@ -2395,7 +2404,15 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 (void) js_GetToken(cx, ts);
                 pn1 = Variables(cx, ts, tc);
             } else {
-                pn1 = Expr(cx, ts, tc);
+#if JS_HAS_BLOCK_SCOPE
+                if (tt == TOK_LET) {
+                    (void) js_GetToken(cx, ts);
+                    if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pnlet, &obj))
+                        return NULL;
+                    pn1 = LetHead(cx, ts, tc, obj);
+                } else
+#endif
+                    pn1 = Expr(cx, ts, tc);
             }
             tc->flags &= ~TCF_IN_FOR_INIT;
             if (!pn1)
@@ -2414,7 +2431,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             /* Check that the left side of the 'in' is valid. */
             while (pn1->pn_type == TOK_RP)
                 pn1 = pn1->pn_kid;
-            if ((pn1->pn_type == TOK_VAR)
+            if (TOKEN_TYPE_IS_DECL(pn1->pn_type)
                 ? (pn1->pn_count > 1 || pn1->pn_op == JSOP_DEFCONST)
                 : (pn1->pn_type != TOK_NAME &&
                    pn1->pn_type != TOK_DOT &&
@@ -2435,7 +2452,8 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 return NULL;
             }
 
-            if (pn1->pn_type == TOK_VAR) {
+            if (TOKEN_TYPE_IS_DECL(pn1->pn_type))
+            {
                 /* Tell js_EmitTree(TOK_VAR) that pn1 is part of a for/in. */
                 pn1->pn_extra |= PNX_FORINVAR;
 
@@ -2539,6 +2557,14 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         pn->pn_right = pn2;
         js_PopStatement(tc);
 
+#if JS_HAS_BLOCK_SCOPE
+        if (pnlet) {
+            js_PopStatement(tc);
+            pnlet->pn_expr = pn;
+            pn = pnlet;
+        }
+#endif
+
         /* Record the absolute line number for source note emission. */
         pn->pn_pos.end = pn2->pn_pos.end;
         return pn;
@@ -2550,6 +2576,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                                     JSMSG_BAD_FOR_EACH_LOOP);
         return NULL;
 #endif
+      }
 
       case TOK_TRY: {
         JSParseNode *catchtail = NULL;
@@ -2899,6 +2926,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             pn = LetHead(cx, ts, tc, obj);
             if (!pn)
                 return NULL;
+            pn->pn_extra = PNX_POPVAR;
         }
 
         break;
