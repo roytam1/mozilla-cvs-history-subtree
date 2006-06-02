@@ -2060,7 +2060,7 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
     pnlet->pn_left = LetHead(cx, ts, tc, obj);
     if (!pnlet->pn_left)
         return NULL;
-    pnlet->pn_extra = PNX_POPVAR;
+    pnlet->pn_left->pn_extra = PNX_POPVAR;
 
     /* XXX Reparameterize these error messages. */
     MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FORMAL);
