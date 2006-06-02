@@ -25,7 +25,7 @@
 <!ENTITY proxyPortCaption.label      "Port">
 <!ENTITY proxyURL.label              "URL">
 
-<!ENTITY downloadMediaCaption.label  "Download Media">
+<!ENTITY downloadMediaCaption.label  "Default Download Location">
 <!ENTITY useDownloadDir.label        "Use Download Folder">
 <!ENTITY dontAskForLaunch.label      "Always download to storage card when available">
 <!ENTITY setSaveDirectory.label      "Set Save Directory">
@@ -60,7 +60,7 @@
 <!ENTITY useDiskCacheNone.label      "Use None">
 <!ENTITY downloadPrompt.label        "Ask for file location">
 <!ENTITY enablePreFetching.label     "Enable Pre-Fetching">
-<!ENTITY cacheSettings.label         "Cache">
+<!ENTITY cacheSettings.label         "Disk Cache">
 <!ENTITY cacheSize.label             "Cache Size (KB)">
 
 <!-- Summary Pane -->
