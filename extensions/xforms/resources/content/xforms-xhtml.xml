@@ -232,12 +232,22 @@
                 range.setStart(aTextNode, location);
                 range.setEnd(aTextNode, location + 1);
 
-                var u = this._ownerDocument.
-                  createElementNS("http://www.w3.org/1999/xhtml", "u");
-                range.surroundContents(u);
+                var span = this._ownerDocument.
+                  createElementNS("http://www.w3.org/1999/xhtml", "span");
+                span.setAttribute("class", "xf-accesskey-inline");
+                range.surroundContents(span);
               } else {
                 // if we didn't find the accesskey, append it to the end
-                aTextNode.nodeValue += "(" + aAccesskey + ")";
+                var span = this._ownerDocument.
+                  createElementNS("http://www.w3.org/1999/xhtml", "span");
+                span.setAttribute("class", "xf-accesskey-appended");
+                span.textContent = aAccesskey;
+                if (aTextNode.nextSibling) {
+                  aTextNode.parentNode.insertBefore(span,
+                                                    aTextNode.nextSibling);
+                } else {
+                  aTextNode.parentNode.appendChild(span);
+                }
               }
             }
           };
@@ -341,6 +351,32 @@
   </binding>
 
 
+  <!-- CASE -->
+  <binding id="xformswidget-case"
+           extends="chrome://xforms/content/xforms.xml#xformswidget-case-base">
+    <content>
+      <html:div anonid="container" class="-moz-xforms-case-container">
+        <children/>
+      </html:div>
+    </content>
+
+    <implementation>
+      <method name="getControlElement">
+        <body>
+          return {
+            __proto__: this.ownerDocument.
+              getAnonymousElementByAttribute(this, 'anonid', 'container'),
+
+            set selected(val) {
+              this.style.display = val ? "inherit" : "none";
+            }
+          };
+        </body>
+      </method>
+    </implementation>
+  </binding>
+
+
   <!-- UPLOAD: <DEFAULT> -->
   <binding id="xformswidget-upload"
            extends="chrome://xforms/content/xforms.xml#xformswidget-upload-base">
@@ -438,4 +474,17 @@
       </method>
     </implementation>
   </binding>
+
+
+  <!-- REPEAT -->
+  <binding id="xformswidget-repeat"
+           extends="chrome://xforms/content/xforms.xml#xformswidget-repeat-base">
+    <content>
+      <html:div style="display:none;">
+        <children/>
+      </html:div>
+      <html:div anonid="insertion"/>
+    </content>
+  </binding>
+
 </bindings>

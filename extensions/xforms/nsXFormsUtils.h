@@ -71,6 +71,8 @@ class nsIDOMEvent;
 
 #define NS_OK_XFORMS_NOREFRESH \
 NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 1)
+#define NS_OK_XFORMS_DEFERRED \
+NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 2)
 
 /**
  * XForms event types
@@ -134,6 +136,12 @@ struct EventData
 };
 
 extern const EventData sXFormsEventsEntries[42];
+
+// Default intrinsic state for XForms Controls
+extern const PRInt32 kDefaultIntrinsicState;
+
+// Disabled intrinsic state for XForms Controls
+extern const PRInt32 kDisabledIntrinsicState;
 
 /**
  * This class has static helper methods that don't fit into a specific place
@@ -245,11 +253,12 @@ public:
    * nsIXFormsXPathEvaluator::Evalute using the given expression, context node,
    * namespace resolver, and result type.
    */
-  static NS_HIDDEN_(already_AddRefed<nsIDOMXPathResult>)
+  static NS_HIDDEN_(nsresult)
     EvaluateXPath(const nsAString        &aExpression,
                   nsIDOMNode             *aContextNode,
                   nsIDOMNode             *aResolverNode,
                   PRUint16                aResultType,
+                  nsIDOMXPathResult     **aResult,
                   PRInt32                 aContextPosition = 1,
                   PRInt32                 aContextSize = 1,
                   nsCOMArray<nsIDOMNode> *aSet = nsnull,
@@ -261,13 +270,6 @@ public:
    */
   static NS_HIDDEN_(void) GetNodeValue(nsIDOMNode *aDataNode,
                                        nsAString  &aNodeValue);
-
-  /**
-   * Given a node in the instance data and a string, store the value according
-   * to section 10.1.9 of the XForms specification.
-   */
-  static NS_HIDDEN_(void) SetNodeValue(nsIDOMNode     *aDataNode,
-                                       const nsString &aNodeValue);
 
   /**
    * Convenience method for doing XPath evaluations to get bound node
@@ -287,20 +289,20 @@ public:
     GetSingleNodeBindingValue(nsIDOMElement* aElement, nsString& aValue);
 
   /**
-   * Convenience method for doing XPath evaluations to set string value
-   * for an element.
-   * Returns PR_TRUE if the evaluation succeeds.
-   */
-  static NS_HIDDEN_(PRBool)
-    SetSingleNodeBindingValue(nsIDOMElement *aElement, const nsAString &aValue,
-                              PRBool *aChanged);
-  /**
    * Dispatch an XForms event.  aDefaultActionEnabled is returned indicating
-   * if the default action of the dispatched event was enabled.
+   * if the default action of the dispatched event was enabled.  aSrcElement
+   * is passed for events targeted at models.  If the model doesn't exist, yet,
+   * then the event dispatching is deferred.  Once DOMContentLoaded is detected
+   * we'll grab the model from aSrcElement and dispatch the event to that
+   * model.
    */
   static NS_HIDDEN_(nsresult)
     DispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
-                  PRBool *aDefaultActionEnabled = nsnull);
+                  PRBool *aDefaultActionEnabled = nsnull,
+                  nsIDOMElement *aSrcElement = nsnull);
+
+  static NS_HIDDEN_(nsresult)
+    DispatchDeferredEvents(nsIDOMDocument* aDocument);
 
   /**
    * Sets aEvent trusted if aRelatedNode is in chrome.
@@ -369,11 +371,29 @@ public:
                                                 PRInt32                 *aContextPosition,
                                                 PRInt32                 *aContextSize);
 
+  /** Connection type used by CheckConnectionAllowed */
+  enum ConnectionType {
+    /** Send data, such as doing submission */
+    kXFormsActionSend = 1,
+
+    /** Load data, such as getting external instance data */
+    kXFormsActionLoad = 2,
+
+    /** Send and Load data, which is replace=instance */
+    kXFormsActionLoadSend = 3
+  };
+
   /**
-   * @return true if aTestURI has the same origin as aBaseDocument
+   * Check whether a connecion to aTestURI from aElement is allowed.
+   *
+   * @param  aElement          The element trying to access the resource
+   * @param  aTestURI          The uri we are trying to connect to
+   * @param  aType             The type of connection (see ConnectionType)
+   * @return                   Whether connection is allowed
    */
-  static NS_HIDDEN_(PRBool) CheckSameOrigin(nsIDocument *aBaseDocument,
-                                            nsIURI *aTestURI);
+  static NS_HIDDEN_(PRBool) CheckConnectionAllowed(nsIDOMElement *aElement,
+                                                   nsIURI        *aTestURI,
+                                                   ConnectionType aType = kXFormsActionLoad);
 
   /**
    * @return true if aNode is element, its namespace URI is 
@@ -415,7 +435,7 @@ public:
                                                 nsAString  &aNSUri);
 
   /**
-   * Outputs to the JavaScript console.
+   * Outputs to the Error console.
    *
    * @param aMessageName      Name of string to output, which is loaded from
                               xforms.properties
@@ -527,6 +547,38 @@ public:
    */
   static NS_HIDDEN_(nsresult) GetWindowFromDocument(nsIDOMDocument        *aDoc,
                                                     nsIDOMWindowInternal **aWindow);
+
+private:
+  /**
+   * Do same origin checks on aBaseDocument and aTestURI. Hosts can be
+   * whitelisted through the XForms permissions.
+   *
+   * @note The function assumes that the caller does not pass null arguments
+   *
+   * @param  aBaseDocument     The document the XForms lives in
+   * @param  aTestURI          The uri we are trying to connect to
+   * @param  aType             The type of connection (see ConnectionType)
+   * @return                   Whether connection is allowed
+   *
+   */
+  static NS_HIDDEN_(PRBool) CheckSameOrigin(nsIDocument   *aBaseDocument,
+                                            nsIURI        *aTestURI,
+                                            ConnectionType aType = kXFormsActionLoad);
+
+  /**
+   * Check content policy for loading the specificed aTestURI.
+   *
+   * @note The function assumes that the caller does not pass null arguments
+   *
+   * @param  aElement          The element trying to load the content
+   * @param  aBaseDocument     The document the XForms lives in
+   * @param  aTestURI          The uri we are trying to load
+   * @return                   Whether loading is allowed.
+   */
+  static NS_HIDDEN_(PRBool) CheckContentPolicy(nsIDOMElement *aElement,
+                                               nsIDocument   *aDoc,
+                                               nsIURI        *aURI);
+
 };
 
 #endif

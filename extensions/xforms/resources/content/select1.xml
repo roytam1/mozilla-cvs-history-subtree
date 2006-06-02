@@ -50,7 +50,7 @@
     
     <!-- The strange indentation is because of the whitespace nodes.-->
     <content>
-      <children includes="label"/>
+      <children includes="label|hint"/>
       <html:div class="-moz-xforms-select1-popup" anonid="popup"
                 onmouseover="this.parentNode.shouldHandleBlur = false;
                              this.parentNode.mouseOver(event);"
@@ -60,7 +60,7 @@
       </html:div>
       <html:span class="-moz-select1-container"
                  anonid="container"><html:input
-                 class="-moz-xforms-select1-input"
+                 class="-moz-xforms-select1-input xf-value"
                  anonid="control"
                  xbl:inherits="accesskey"
                  onfocus="this.parentNode.parentNode.dispatchDOMUIEvent('DOMFocusIn')"
@@ -68,7 +68,7 @@
                  onclick="this.parentNode.parentNode.handleControlClick();"
                  onkeypress="this.parentNode.parentNode.handleKeyPress(event);"
                  onkeyup="this.parentNode.parentNode.handleKeyUp(event);"
-      /><html:input class="-moz-xforms-select1-dropdown xf-value"
+      /><html:input class="-moz-xforms-select1-dropdown"
                     type="button"
                     anonid="dropmarker"
                     tabindex="-1"
@@ -91,6 +91,7 @@
       <field name="_lastSelectedItem">null</field>
       <field name="popupOpen">false</field>
       <field name="shouldHandleBlur">true</field>
+      <field name="_outOfRange">false</field>
 
       <property name="selectionOpen" readonly="true">
         <getter>
@@ -169,7 +170,7 @@
         <body>
           <![CDATA[
           if (this.selectionOpen && !this._selected && this.incremental) {
-            this._handleSelection();
+            this._handleSelection(false);
           } else {
             this.togglePopup();
           }
@@ -188,26 +189,9 @@
               if (open && this._selected) {
                 this.updateInputField();
                 if (this.incremental) {
-                  this._handleSelection();
-                }
-
-                // need to keep the xforms-select and xforms-deselect event
-                // dispatching after _handleSelection.  That function might
-                // deselect this._selected if this user selected item is a
-                // copyItem bound to a non-element node.  We don't want to
-                // dispatch a xforms-select/deselect in that case since it
-                // really isn't considered to be a valid selection to begin with
-                // (causes a xforms-binding-exception).
-                if (this._lastSelectedItem != this._selected) {
-                  if (this._lastSelectedItem) {
-                    this.dispatchSelectEvent(this._lastSelectedItem, "xforms-deselect");
-                  }
-  
-                  if (this._selected) {
-                    this.dispatchSelectEvent(this._selected, "xforms-select");
-                  }
-  
-                  this._lastSelectedItem = this._selected;
+                  this._handleSelection(true);
+                } else {
+                  this.dispatchSelectEvents();
                 }
               }
             } else if (key == aEvent.DOM_VK_UP ||
@@ -224,26 +208,7 @@
                 if (this._selected) {
                   this.updateInputField();
                 }
-                this._handleSelection();
-
-                // need to keep the xforms-select and xforms-deselect event
-                // dispatching after _handleSelection.  That function might
-                // deselect this._selected if the selected item is a copyItem
-                // bound to a non-element node.  We don't want to dispatch a
-                // xforms-select/deselect in that case since it really isn't
-                // considered to be a valid selection to begin with (causes
-                // a xforms-binding-exception).
-                if (this._lastSelectedItem != this._selected) {
-                  if (this._lastSelectedItem) {
-                    this.dispatchSelectEvent(this._lastSelectedItem, "xforms-deselect");
-                  }
-  
-                  if (this._selected) {
-                    this.dispatchSelectEvent(this._selected, "xforms-select");
-                  }
-  
-                  this._lastSelectedItem = this._selected;
-                }
+                this._handleSelection(true);
               }
             } else if (key == aEvent.DOM_VK_TAB) {
               // Hiding popup when user uses keyboard to focus out
@@ -284,7 +249,7 @@
                 this._selected = null;
               }
               if (this.incremental) {
-                this._handleSelection();
+                this._handleSelection(false);
               }
             }
 
@@ -447,26 +412,9 @@
             if (this._selected) {
               this.updateInputField();
               if (this.incremental) {
-                this._handleSelection();
-              }
-
-              // need to keep the xforms-select and xforms-deselect event
-              // dispatching after _handleSelection.  That function might
-              // deselect this._selected if the selected item is a copyItem
-              // bound to a non-element node.  We don't want to dispatch a
-              // xforms-select/deselect in that case since it really isn't
-              // considered to be a valid selection to begin with (causes
-              // a xforms-binding-exception).
-              if (this._lastSelectedItem != this._selected) {
-                if (this._lastSelectedItem) {
-                  this.dispatchSelectEvent(this._lastSelectedItem, "xforms-deselect");
-                }
-
-                if (this._selected) {
-                  this.dispatchSelectEvent(this._selected, "xforms-select");
-                }
-
-                this._lastSelectedItem = this._selected;
+                this._handleSelection(true);
+              } else {
+                this.dispatchSelectEvents();
               }
             }
             this.inputField.focus();
@@ -651,8 +599,6 @@
                       // oh oh!  We've already found a selectable node in the
                       // instance data and now we have another.  That shouldn't
                       // happen.
-                      // XXX generate xforms-out-of-range exception and style
-                      // control as out-of-range
                       outOfRange = true;
                     }
                     newValue = string;
@@ -662,11 +608,9 @@
                   // a node worth comparing.  As such, look for an
                   // item with a copy element that might match this node.
                   if (newValue || nodeValue) {
-                      // oh oh!  We've already found a selectable node in the
-                      // instance data and now we have another.  That shouldn't
-                      // happen.
-                    // XXX generate xforms-out-of-range exception and style
-                    // control as out-of-range
+                    // oh oh!  We've already found a selectable node in the
+                    // instance data and now we have another.  That shouldn't
+                    // happen.
                     outOfRange = true;
                   }
                   nodeValue = child;
@@ -680,10 +624,19 @@
             }
 
             if (outOfRange) {
+              // a control can't be out of range (or in range for that matter)
+              // if there is no selected value, so make sure that there is a
+              // bound node first.
+              if ((outOfRange != this._outOfRange) && boundNode) {
+                this._outOfRange = outOfRange;
+                this.accessors.setInRange(false);
+              }
+
               // can't possibly work, no sense continuing.
               this.inputField.value = "";
               this._selected.setActive(false);
               this._selected = null;
+              this.refreshWidth();
               return false;
             }
 
@@ -700,14 +653,16 @@
                 if (envelope.nodeType == Node.ELEMENT_NODE) {
                   textNode = envelope.firstChild;
                   if (newValue == textNode.nodeValue) {
-                    // value in instance data already selected.  Nothin' left
-                    // to do.
+                    // Value in instance data already selected. Need to only
+                    // refresh the width.
+                    this.refreshWidth();
                     return true;
                   }
                 } else {
-                  if (newValue == contentEnvelope.nodeValue) {
-                    // value in instance data already selected.  Nothin' left
-                    // to do.
+                  if (newValue == envelope.nodeValue) {
+                    // Value in instance data already selected. Need to only
+                    // refresh the width.
+                    this.refreshWidth();
                     return true;
                   }
                 }
@@ -723,14 +678,23 @@
               this.selectItemByNode(nodeValue);
             }
 
+            outOfRange = false;
             if (this._selected) {
               this.updateInputField();
               this._lastSelectedItem = this._selected;
             } else if (this.selectionOpen) {
               this.inputField.value = newValue;
             } else {
-              // @todo out-of-range (XXX)
               this.inputField.value = "";
+              outOfRange = true;
+            }
+
+            // a control can't be out of range (or in range for that matter)
+            // if there is no selected value, so make sure that there is a
+            // bound node first.
+            if ((outOfRange != this._outOfRange) && boundNode) {
+              this._outOfRange = outOfRange;
+              this.accessors.setInRange(!outOfRange);
             }
             this.refreshWidth();
           } catch (ex) {}
@@ -844,7 +808,7 @@
               this.updateInputField();
             }
 
-            this._handleSelection(true);
+            this._handleSelection(false, true);
           }
           ]]>
         </body>
@@ -853,16 +817,34 @@
       <!-- _handleSelection updates the bound node with the value from the
             currently selected item's value element or copy element. -->
       <method name="_handleSelection">
+        <parameter name="aDispatchSelectEvents"/>
         <parameter name="aInBlur"/>
         <body>
           <![CDATA[
+          // if aDispatchSelectEvents is true, then we need to make sure to
+          // dispatch the xforms-deselect and xforms-select events before we
+          // change the value of the bound node otherwise we'll get the
+          // event ordering wrong.  Similar with setting out of/in range (must
+          // happen after dispatch select/deselect).  aDispatchSelectEvents is
+          // a REQUIRED parameter, whether it be true or false.
+
+          // aInBlur is not a required parameter.  It is true if handleSelection
+          // was called from the blur handler.
+
           var boundNode = this.accessors.getBoundNode();
           if (!boundNode) {
             return;
           }
 
           if (this.selectionOpen && !this._selected) {
+            if (aDispatchSelectEvents == true) {
+              this.dispatchSelectEvents();
+            }
             this.accessors.setValue(this.inputField.value);
+
+            // open selection can't be out of range
+            this._outOfRange = false;
+            this.accessors.setInRange(true);
             return;
           }
 
@@ -887,7 +869,12 @@
             // So if contentEnvelope has a value, it will be the nodeValue.
             var envelope = this._getSelectedValue();
             if (envelope) {
+              if (aDispatchSelectEvents == true) {
+                this.dispatchSelectEvents();
+              }
               this.accessors.setValue(envelope.nodeValue);
+              this._outOfRange = false;
+              this.accessors.setInRange(true);
               return;
             }
 
@@ -906,7 +893,14 @@
             this._selected.setActive(false);
             this._selected = null;
             this.inputField.value = "";
+
+            if (aDispatchSelectEvents == true) {
+              this.dispatchSelectEvents();
+            }
+
             this.accessors.setValue("");
+            this._outOfRange = true;
+            this.accessors.setInRange(false);
             return;
           }
 
@@ -918,11 +912,39 @@
           if (!copyInvolved) {
             // Since we aren't selecting a copyItem nor causing a copyItem to
             // be deselected, no sense using setContent.  Too expensive.
+            if (aDispatchSelectEvents == true) {
+              this.dispatchSelectEvents();
+            }
             this.accessors.setValue(contentEnvelope.textContent);
+            this._outOfRange = false;
+            this.accessors.setInRange(true);
           } else {
+            if (aDispatchSelectEvents == true) {
+              this.dispatchSelectEvents();
+            }
             this.accessors.setContent(contentEnvelope, true);
+            this._outOfRange = false;
+            this.accessors.setInRange(true);
           }
 
+          }
+          ]]>
+        </body>
+      </method>
+
+      <method name="dispatchSelectEvents">
+        <body>
+          <![CDATA[
+          if (this._lastSelectedItem != this._selected) {
+            if (this._lastSelectedItem) {
+              this.dispatchSelectEvent(this._lastSelectedItem, "xforms-deselect");
+            }
+  
+            if (this._selected) {
+              this.dispatchSelectEvent(this._selected, "xforms-select");
+            }
+
+            this._lastSelectedItem = this._selected;
           }
           ]]>
         </body>
@@ -932,6 +954,7 @@
         <parameter name="aElement"/>
         <parameter name="aName"/>
         <body>
+        <![CDATA[
           var ev = document.createEvent("Events");
           ev.initEvent(aName, true, false);
 
@@ -939,11 +962,12 @@
 
           // per http://www.w3.org/TR/2005/PER-xforms-20051006/index-all.html#evt-select
           // we send the event to the itemset if it is a parent.
-          if (elm.parentNode.localName == "itemset")
+          if (elm.parentNode && elm.parentNode.localName == "itemset")
             elm = elm.parentNode;
 
           elm.dispatchEvent(ev);
           return true;
+	]]>
         </body>
       </method>
 
@@ -967,7 +991,7 @@
 
           var boundNode = this.accessors.getBoundNode();
           if (!boundNode)  {
-            return;
+            return null;
           }
 
           var contentEnvelope = boundNode.cloneNode(false);

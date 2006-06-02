@@ -73,6 +73,14 @@
 
     isItemSelected(item) - return true if item is selected
       @param item - item control returned by appendItem()
+
+    getFreeEntryValues() - return space delimited list of free entry items values
+
+    allowFreeEntry(allowed) - enable/disable free entry
+      @param allowed - boolean value
+
+    appendFreeEntryItem(value) - append and select free entry item
+      @param value - item value
 -->
 
 <bindings id="xformsSelectBindings"
@@ -98,7 +106,7 @@
         <body>
           <![CDATA[
           if (this._refreshing)
-            return;
+            return true;
 
           this.control.readonly = this.accessors.isReadonly();
 
@@ -185,9 +193,19 @@
         </getter>
       </property>
 
-      <property name="selection"
-                onget="return this.getAttribute('selection'); "
-                onset="this.setAttribute('selection', val); "/>
+      <property name="selection">
+        <getter>
+          return this.getAttribute("selection");
+        </getter>
+        <setter>
+          this.setAttribute("selection", val);
+
+          if (val == "open")
+            this.control.allowFreeEnry(true);
+          else
+            this.control.allowFreeEnry(false);
+        </setter>
+      </property>
 
       <method name="_buildSelect">
         <body>
@@ -226,15 +244,17 @@
             }
           }
 
+          var outOfRange = false;
+          var selectionOpen = this.selection == 'open';
           // check if any default values were not found
           for (var index in this._defaultHash) {
             if (this._defaultHash[index].hits == 0) {
-              if (this.selection == 'open') {
-                // XXX: If the select is open, the missing elements should be added
-                // and selected per 8.1.10 in the spec.
+              if (selectionOpen) {
+                this.control.appendFreeEntryItem(index);
               } else {
-                // XXX: some of default values not found, we need to throw an
+                // some of default values not found, we need to throw an
                 // xforms-out-of-range event, but only if the select is 'closed'.
+                outOfRange = true;
               }
             }
           }
@@ -242,14 +262,24 @@
           // check if any default elements were not found
           for (var j = 0; j < this._selectedElementArray.length; j++) {
             if (this._selectedElementArray[j].hits == 0) {
-              if (this.selection == 'open') {
+              if (selectionOpen) {
                 // XXX: If the select is open, the missing elements should be added
                 // and selected per 8.1.10 in the spec.
               } else {
-                // XXX: some of default values not found, we need to throw an
+                // some of default values not found, we need to throw an
                 // xforms-out-of-range event, but only if the select is 'closed'.
+                outOfRange = true;
               }
             }
+          }
+
+          // a control can't be out of range (or in range for that matter) if
+          // there is no selected value, so make sure that there is a bound
+          // node first.
+          if (!selectionOpen && this.accessors.hasBoundNode() &&
+              (outOfRange != this._outOfRange)) {
+            this._outOfRange = outOfRange;
+            this.accessors.setInRange(!outOfRange);
           }
 
           return true;
@@ -284,11 +314,11 @@
             // get an array of values selected in the bound node
             var selectedArray = value.split(/\s/);
 
-            if (selectedArray.length == 1 && selectedArray[0] == "") {
-              // when the string is empty, split returns an array containing
-              // one empty string, rather than an empty array.
-              return;
-            }
+            // when the string is empty, split returns an array containing
+            // one empty string, rather than an empty array.  We'll allow that
+            // into the defaultHash so that xforms-out-of-range will be
+            // correctly generated if none of the items in the select have
+            // an empty string as a value
 
             for (var run = 0; run < selectedArray.length; run++) {
               this._defaultHash[selectedArray[run]] = {hits: 0}
@@ -320,12 +350,12 @@
                 // get an array of values selected in the bound node
                 var selectedArray = value.split(" ");
 
-                if (selectedArray.length == 1 && selectedArray[0] == "") {
-                  // when the string is empty, split returns an array containing
-                  // one empty string, rather than an empty array.
-                  continue;
-                }
-
+                // when the string is empty, split returns an array containing
+                // one empty string, rather than an empty array.  We'll allow
+                // that into the defaultHash so that xforms-out-of-range will be
+                // correctly generated if none of the items in the select have
+                // an empty string as a value
+    
                 for (var run = 0; run < selectedArray.length; run++) {
                   this._defaultHash[selectedArray[run]] = {hits: 0}
                 }
@@ -496,7 +526,9 @@
             var item = options[i].control.
               QueryInterface(Components.interfaces.nsIXFormsSelectChild);
             if (item.isCopyItem)
-              break;
+              // _updateSelection is used only to select items when _defaultHash
+              // contains only text nodes.  So we can ignore copyItems.
+              continue;
 
             var value = item.value;
             var selectionValue = value in this._defaultHash;
@@ -504,12 +536,43 @@
             if (selectionValue) {
               this.control.addItemToSelection(options[i].option);
               options[i].wasSelected = true;
+              this._defaultHash[value].hits++;
             }
             else {
               this.control.removeItemFromSelection(options[i].option);
               options[i].wasSelected = false;
             }
           }
+          // see if any of default values are not found.  If so, we need to
+          // throw an xforms-out-of-range event and style the control as
+          // being out of range.  But only if the select is 'closed'.
+          if (this.selection == 'open') {
+            return;
+          }
+
+          var outOfRange = false;
+          var length = 0;
+          for (var index in this._defaultHash) {
+            length++;
+            if (this._defaultHash[index].hits == 0) {
+              outOfRange = true;
+            }
+          }
+
+          if (length == 0) {
+            // this covers the scenario where some items were previously
+            // selected and the user selected a copyItem, yet because the
+            // bound node wasn't an element node the copyItem was deselected
+            // and the bound node was set to empty.  If there is no selected
+            // item, then we must be out of range.
+            outOfRange = true;
+          }
+
+          if (this._outOfRange != outOfRange) {
+            this._outOfRange = outOfRange;
+            this.accessors.setInRange(!outOfRange);
+          }
+
           ]]>
         </body>
       </method>
@@ -525,13 +588,15 @@
           // store the values in a hash for quick access
           this._defaultHash = new Object();
           for (var run = 0; run < selectedArray.length; run++) {
-            this._defaultHash[selectedArray[run]] = {}
+            this._defaultHash[selectedArray[run]] = {hits: 0}
           }
           ]]>
         </body>
       </method>
 
       <method name="_setBoundValue">
+        <parameter name="aContentEnvelope"/>
+        <parameter name="aCopySelectedOrDeselected"/>
         <body>
           <![CDATA[
           var boundNode = this.accessors.getBoundNode();
@@ -542,64 +607,63 @@
           // ALL of the current content with the newly selected content.  Which
           // means calling setContent.  setValue only messes with the first
           // textnode under the bound node.
-          var copySelectedOrDeselected = new Boolean();
-          copySelectedOrDeselected.value = false;
-          var contentEnvelope = this._getSelectedValues(copySelectedOrDeselected);
-          if (contentEnvelope) {
-            if (boundNode.nodeType == Node.ELEMENT_NODE) {
-              // we shouldn't call setContent if we haven't selected any
-              // copyItems.  We can't just test for a single text node under
-              // the bound node because this could still have been the result
-              // of a copyItem being selected.  And if a copyItem is selected,
-              // then we need to do the whole rebuild, recalculate, revalidate,
-              // refresh process according to the spec...whether we really need
-              // to or not.
-              if (copySelectedOrDeselected.value == false) {
-                // well, no copyItems are selected, so need to find the value
-                // to set.  Will be in the first child.
-                var firstChild = contentEnvelope.firstChild;
-                var value = null;
-                if (firstChild) {
-                  value = firstChild.nodeValue;
-                }
-                this.accessors.setValue(value);
-              } else {
-                this.accessors.setContent(contentEnvelope, true);
-              }
-            } else {
-              // if some copyItems were selected by the user prior to the call
-              // to _getSelectedValues, then we would not have set up
-              // _accessorValueCache.  Since the node we are bound to can't
-              // be set by copyItems (its not an ELEMENT_NODE), any copyItems
-              // in this select would have been deselected during
-              // _getSelectedValues.  Thus, anything in the contentEnvelope at
-              // this point should just be strings and so we can set
-              // delegate.value directly and use _accessorValueCache after all.
 
-              this.accessors.setValue(contentEnvelope.nodeValue);
-              this._accessorValueCache = contentEnvelope.nodeValue;
+          if (boundNode.nodeType == Node.ELEMENT_NODE) {
+            // we shouldn't call setContent if we haven't selected any
+            // copyItems.  We can't just test for a single text node under
+            // the bound node because this could still have been the result
+            // of a copyItem being selected.  And if a copyItem is selected,
+            // then we need to do the whole rebuild, recalculate, revalidate,
+            // refresh process according to the spec...whether we really need
+            // to or not.
+            if (!aCopySelectedOrDeselected) {
+              // well, no copyItems are selected, so need to find the value
+              // to set.  Will be in the first child.
+              var firstChild = aContentEnvelope.firstChild;
+              var value = null;
+              if (firstChild) {
+                value = firstChild.nodeValue;
+              }
+              this.accessors.setValue(value);
+            } else {
+              this.accessors.setContent(aContentEnvelope, true);
             }
+          } else {
+            // if some copyItems were selected by the user prior to the call
+            // to _processSelectedValues, then we would not have set up
+            // _accessorValueCache.  Since the node we are bound to can't
+            // be set by copyItems (its not an ELEMENT_NODE), any copyItems
+            // in this select would have been deselected during
+            // _processSelectedValues.  Thus, anything in the contentEnvelope at
+            // this point should just be strings and so we can set
+            // delegate.value directly and use _accessorValueCache after all.
+
+            this.accessors.setValue(aContentEnvelope.nodeValue);
+            this._accessorValueCache = aContentEnvelope.nodeValue;
           }
           ]]>
         </body>
       </method>
 
-      <method name="_getSelectedValues">
+      <!--
+        The method serves to
+          1) unselect illegally selected items
+          2) fire "xforms-select"/"xforms-deselect" events
+          3) return list of selected values
+      -->
+      <method name="_processSelectedValues">
         <parameter name="aIsACopyItemSelectedOrDeselected"/>
         <body>
         <![CDATA[
-          var selectedValues = "";
-
-          // select if found, unselect if not
-          var options = this._controlArray;
-
           if (aIsACopyItemSelectedOrDeselected) {
             aIsACopyItemSelectedOrDeselected.value = false;
           }
 
           var boundNode = this.accessors.getBoundNode();
-          if (!boundNode)
-            return;
+          if (!boundNode) {
+            this._dispatchSelectEvents();
+            return null;
+          }
 
           // we are cloning boundNode to create a node that we will return.
           // By the end of this function, assuming all went well,
@@ -610,8 +674,16 @@
           var contentEnvelope = null;
           contentEnvelope = boundNode.cloneNode(false);
           if (!contentEnvelope) {
-            return;
+            this._dispatchSelectEvents();
+            return null;
           }
+
+          var selectedValues = "";
+          if (this.selection == "open") {
+            selectedValues = this.control.getFreeEntryValues();
+          }
+
+          var options = this._controlArray;
           var boundType = boundNode.nodeType;
           var copyNode;
 
@@ -702,6 +774,7 @@
             contentEnvelope.nodeValue = selectedValues;
           }
 
+          this._dispatchSelectEvents();
           return contentEnvelope;
         ]]>
         </body>
@@ -715,16 +788,16 @@
           for (var i = 0; i < options.length; i++) {
             var selected = this.control.isItemSelected(options[i].option);
             if (options[i].wasSelected && !selected) {
-              this.dispatchSelectEvent(options[i].control, "xforms-deselect");
               options[i].wasSelected = false;
+              this.dispatchSelectEvent(options[i].control, "xforms-deselect");
             }
           }
 
           for (var i = 0; i < options.length; i++) {
             var selected = this.control.isItemSelected(options[i].option);
             if (!options[i].wasSelected && selected) {
-              this.dispatchSelectEvent(options[i].control, "xforms-select");
               options[i].wasSelected = true;
+              this.dispatchSelectEvent(options[i].control, "xforms-select");
             }
           }
           ]]>
@@ -751,6 +824,7 @@
       <field name="_selectedElementArray">new Array()</field>
       <field name="_defaultHash">null</field>
       <field name="_accessorValueCache">null</field>
+      <field name="_outOfRange">false</field>
 
       <method name="getControlElement">
         <body>
@@ -824,20 +898,37 @@
         </setter>
       </property>
 
-      <!-- Update instance data to native control widget value. -->
+      <!-- Update instance data to native control widget value.
+        @param aIncremental - will be true if this function is called because
+          the user selected a new value in the native control widget. It will be
+          false if this function is called due to focus leaving the native
+          control widget.
+      -->
       <method name="updateInstanceData">
         <parameter name="aIncremental"/>
         <body>
-          if (this.parentControl) {
-            if (!aIncremental || this.parentControl.incremental) {
-              this.parentControl._setBoundValue();
-            } else {
-              // we should call _getSelectedValues() method since we probably
-              // should unselect illegaly selected items.
-              this.parentControl._getSelectedValues();
+        <![CDATA[
+          if (!this.parentControl)
+            return;
+
+          // No need to update the bound value if the control is incremental and
+          // we are losing focus. It should already be up to date.
+          if (this.parentControl.incremental && !aIncremental)
+            return;
+
+          // Fire 'xfroms-select'/'xforms-deselect' events and unselect illegaly
+          // selected items.
+          var copySelectedOrDeselected = new Boolean();
+          copySelectedOrDeselected.value = false;
+          var contentEnvelope =
+            this.parentControl._processSelectedValues(copySelectedOrDeselected);
+
+          if (!aIncremental || this.parentControl.incremental) {
+            if (contentEnvelope) {
+              this.parentControl._setBoundValue(contentEnvelope, copySelectedOrDeselected.value);
             }
-            this.parentControl._dispatchSelectEvents();
           }
+        ]]>
         </body>
       </method>
 
@@ -846,6 +937,33 @@
         <parameter name="aType"/>
         <body>
           this.parentControl.dispatchDOMUIEvent(aType);
+        </body>
+      </method>
+
+      <!-- Return values of free entry. The method is a stub and it should
+        be removed when all native controls will support @selection="open".
+      -->
+      <method name="getFreeEntryValues">
+        <body>
+          return "";
+        </body>
+      </method>
+
+      <!-- Allow free entry. The method is a stub and it should be removed when
+        all native controls will support @selection="open".
+      -->
+      <method name="allowFreeEntry">
+        <parameter name="aAllowed"/>
+        <body>
+        </body>
+      </method>
+
+      <!-- Append and select free entry item. The method is a stub and it should
+        be removed when all native controls will support @selection="open".
+      -->
+      <method name="appendFreeEntryItem">
+        <parameter name="aValue"/>
+        <body>
         </body>
       </method>
 
@@ -860,6 +978,13 @@
 
       <property name="XBL_NS" readonly="true"
                 onget="return 'http://www.mozilla.org/xbl';"/>
+
+      <constructor>
+        if (this.parentControl.selection == "open")
+          this.allowFreeEntry(true);
+        else
+          this.allowFreeEntry(false);
+      </constructor>
 
     </implementation>
   </binding>

@@ -248,7 +248,17 @@ public:
   NS_IMETHOD OnCreated(nsIXTFGenericElementWrapper *aWrapper);
 
   // nsIXFormsControlBase overrides
-  NS_IMETHOD Bind() {
+  NS_IMETHOD Bind(PRBool *aContextChanged) {
+    // dummy method, so does nothing
+    return NS_OK;
+  };
+
+  NS_IMETHOD GetOnDeferredBindList(PRBool *onList) {
+    // dummy method, so does nothing
+    return NS_OK;
+  };
+
+  NS_IMETHOD SetOnDeferredBindList(PRBool putOnList) {
     // dummy method, so does nothing
     return NS_OK;
   };
@@ -265,9 +275,19 @@ public:
    * @param aControl          XForms control waiting to be bound
    */
   static NS_HIDDEN_(nsresult) DeferElementBind(nsIDOMDocument    *aDoc,
-                                               nsIXFormsControlBase  *aControl);
+                                               nsIXFormsControl  *aControl);
 
   static nsresult NeedsPostRefresh(nsIXFormsControl* aControl);
+
+  // Sometimes a child that is on the post refresh list will want to force
+  // its containing xforms control to refresh.  Like if an xf:item's label
+  // refreshes, it wants to reflect any of its changes in the xf:select or
+  // xf:select1 that contains it.  This function will try to minimize that by
+  // allowing xforms controls that function as containers (like select/select1)
+  // to defer their refresh until most or all of its children have refreshed.
+  // Well, at least until every control on the sPostRefreshList has been
+  // processed.  This will return PR_TRUE if the refresh will be deferred.
+  static PRBool ContainerNeedsPostRefresh(nsIXFormsControl* aControl);
   static void CancelPostRefresh(nsIXFormsControl* aControl);
 
   /**
@@ -302,20 +322,6 @@ private:
   NS_HIDDEN_(void)     RemoveModelFromDocument();
 
   /**
-   * Set the states on the control |aControl| bound to the instance data node
-   * |aNode|. It dispatches the necessary events and sets the pseudo class
-   * states. |aAllStates| determines whether all states should be set, or only
-   * changed.
-   *
-   * @param aControl          The event target
-   * @param aNode             The instance node
-   * @param aAllStates        Set all states (PR_TRUE), or only changed
-   */
-  NS_HIDDEN_(nsresult) SetStatesInternal(nsIXFormsControl *aControl,
-                                         nsIDOMNode       *aNode,
-                                         PRBool            aDispatchEvents = PR_TRUE);
-
-  /**
    * Sets the state of a specific state.
    *
    * @param aElement          The element to dispatch events to and set states on
@@ -327,8 +333,11 @@ private:
                                       nsXFormsEvent  aOnEvent);
 
   /**
-   * Call the Bind() and Refresh() on controls which was deferred because
-   * the model was not ready.
+   * Handle controls bindings which was deferred because the model was not
+   * ready.
+   *
+   * @note Only registers the controls with the model. Does not setup
+   * bindings, etc.
    *
    * @param aDoc              Document that contains the XForms control
    */
@@ -354,6 +363,30 @@ private:
   NS_HIDDEN_(nsresult) ValidateDocument(nsIDOMDocument *aInstanceDocument,
                                         PRBool         *aResult);
 
+  /**
+   * Request to send an update event to the model. If an update is already
+   * running, the event will be queued, and sent after that. If multiple
+   * events are queued, they will be dispatched FIFO order.
+   *
+   * @param aEvent            The requested event
+   */
+  NS_HIDDEN_(nsresult) RequestUpdateEvent(nsXFormsEvent aEvent);
+  
+  /**
+   * Returns true if a schema has already been registered to address the same
+   * namespace as aSchemaElement.  Per section 3.3.1 of the XForms spec:
+   * Within each XForms Model, there is a limit of one Schema per namespace
+   * declaration, including inline and linked Schemas.
+   *
+   * @param aSchemaElement The schema element
+   */
+  PRBool IsDuplicateSchema(nsIDOMElement *aSchemaElement);
+
+  /**
+   * Validate all the instance documents.
+   */
+  void ValidateInstanceDocuments();
+
   nsIDOMElement            *mElement;
   nsCOMPtr<nsISchemaLoader> mSchemas;
   nsStringArray             mPendingInlineSchemas;
@@ -372,29 +405,64 @@ private:
    */
   nsCOMArray<nsIDOMNode>    mChangedNodes;
 
-  // This flag indicates whether or not the document fired DOMContentLoaded
-  PRBool mDocumentLoaded;
+  /**
+   * This flag indicates whether or not the document has fired
+   * DOMContentLoaded
+   */
+  PRPackedBool mDocumentLoaded;
 
-  // This flag indicates whether a xforms-rebuild has been called, but no
-  // xforms-revalidate yet
-  PRBool mNeedsRefresh;
+  /**
+   * Indicates whether all controls should be refreshed on the next Refresh()
+   * run.
+   */
+  PRPackedBool mRebindAllControls;
 
-  // This flag indicates whether instance elements have been initialized
-  PRBool mInstancesInitialized;
+  /**
+   * Indicates whether instance elements have been initialized
+   */
+  PRPackedBool mInstancesInitialized;
 
   /**
    * Indicates whether the model has handled the xforms-ready event
    */
-  PRBool mReadyHandled;
+  PRPackedBool mReadyHandled;
+
+  /**
+   * Indicates whether the model's instance was built by lazy authoring
+   */
+  PRPackedBool mLazyModel;
+
+  /**
+   * Indicates whether the model has handled the xforms-model-construct-done
+   * event
+   */
+  PRPackedBool mConstructDoneHandled;
+
+  /**
+   * Indicates whether the model is currently processing an update event,
+   * ie. xforms-rebuild, xforms-recalculate, xforms-revalidate, or
+   * xforms-refresh.
+   */
+  PRPackedBool mProcessingUpdateEvent;
+
+  /**
+   * A list of update events that have been queued, because they were
+   * requested while another update was running.
+   */
+  nsVoidArray mUpdateEventQueue;
+
+  /**
+   * The maximum allowed number of iterations of queued event dispatching in
+   * RequestUpdateEvent(), before there is believe to be a loop, and
+   * processing stops.
+   */
+  PRInt32 mLoopMax;
 
   /**
    * All instance documents contained by this model, including lazy-authored
    * instance documents.
    */
   nsRefPtr<nsXFormsModelInstanceDocuments> mInstanceDocuments;
-
-  // Indicates whether the model's instance was built by lazy authoring
-  PRBool mLazyModel;
 
   /**
    * Type information for nodes, with their type set through \<xforms:bind\>.
@@ -411,11 +479,7 @@ private:
    */
   nsClassHashtable<nsISupportsHashKey, nsString> mNodeToP3PType;
 
-  /**
-   * Indicates whether the model has handled the xforms-model-construct-done
-   * event
-   */
-  PRBool mConstructDoneHandled;
+  friend class Updating;
 };
 
 /**

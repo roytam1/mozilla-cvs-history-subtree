@@ -37,26 +37,26 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsIXFormsRangeAccessors.h"
-#include "nsXFormsAccessors.h"
+#include "nsXFormsRangeConditionAccessors.h"
 
 /**
  * Implementation for the accessors for a range element,
  * nsIXFormsRangeAccessors.
  *
- * @todo Support out-of/in-range events (XXX)
  */
-class nsXFormsRangeAccessors : public nsXFormsAccessors,
+class nsXFormsRangeAccessors : public nsXFormsRangeConditionAccessors,
                                public nsIXFormsRangeAccessors
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIXFORMSRANGEACCESSORS
+  NS_FORWARD_NSIXFORMSRANGECONDITIONACCESSORS(nsXFormsRangeConditionAccessors::)
   NS_FORWARD_NSIXFORMSACCESSORS(nsXFormsAccessors::)
 
   // Constructor
   nsXFormsRangeAccessors(nsIDelegateInternal* aDelegate,
                          nsIDOMElement* aElement)
-    : nsXFormsAccessors(aDelegate, aElement)
+    : nsXFormsRangeConditionAccessors(aDelegate, aElement)
   {
   }
 

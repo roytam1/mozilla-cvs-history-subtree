@@ -77,40 +77,33 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
 
   nsAutoString value;
   nsAutoString valueAttr;
+  nsresult rv;
   mElement->GetAttribute(NS_LITERAL_STRING("value"), valueAttr);
 
-  if(!valueAttr.IsEmpty()) {
+  if (!valueAttr.IsEmpty()) {
     // According to the XForms Errata, the context node for the XPath expression
     //   stored in @value should be the node that setvalue is bound to.
-    nsCOMPtr<nsIDOMXPathResult> xpResult =
-      nsXFormsUtils::EvaluateXPath(valueAttr, singleNode, mElement,
-                                   nsIDOMXPathResult::STRING_TYPE);
+    nsCOMPtr<nsIDOMXPathResult> xpResult;
+    rv = nsXFormsUtils::EvaluateXPath(valueAttr, singleNode, mElement,
+                                      nsIDOMXPathResult::STRING_TYPE,
+                                      getter_AddRefs(xpResult));
+    NS_ENSURE_SUCCESS(rv, rv);
     if (!xpResult)
       return NS_OK;
     xpResult->GetStringValue(value);
-  }
-  else {
+  } else {
     nsCOMPtr<nsIDOM3Node> n3(do_QueryInterface(mElement));
     n3->GetTextContent(value);
   }
 
   PRBool changed;
-  nsresult rv =
-    modelPriv->SetNodeValue(singleNode, value, &changed);
+  rv = modelPriv->SetNodeValue(singleNode, value, !aParentAction, &changed);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (changed) {
-    nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
-    NS_ENSURE_STATE(model);
-    if (aParentAction) {
-      aParentAction->SetRecalculate(model, PR_TRUE);
-      aParentAction->SetRevalidate(model, PR_TRUE);
-      aParentAction->SetRefresh(model, PR_TRUE);
-    } else {
-      nsXFormsUtils::DispatchEvent(model, eEvent_Recalculate);
-      nsXFormsUtils::DispatchEvent(model, eEvent_Revalidate);
-      nsXFormsUtils::DispatchEvent(model, eEvent_Refresh);
-    }
+  if (changed && aParentAction) {
+    aParentAction->SetRecalculate(modelPriv, PR_TRUE);
+    aParentAction->SetRevalidate(modelPriv, PR_TRUE);
+    aParentAction->SetRefresh(modelPriv, PR_TRUE);
   }
 
   return NS_OK;
