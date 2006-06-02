@@ -895,6 +895,8 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
  
+  // XXX resizing the kid causes incremental reflow bugs, because the
+  // kid might reuse its current size if nothing has changed.
   if ((0 == kidSize.width) && (NS_UNCONSTRAINEDSIZE != kidReflowState.availableWidth)) {
     // empty content has to be forced to the assigned width for resize or incremental reflow
     kidSize.width = kidReflowState.availableWidth;
@@ -909,18 +911,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   // end 0 dimensioned cells
 
   kidSize.width = PR_MAX(kidSize.width, smallestMinWidth); 
-  if (!tableFrame->IsAutoLayout()) {
-    // a cell in a fixed layout table is constrained to the avail width
-    // if we need to shorten the cell the previous non overflowing block
-    // will get some overflow area
-    if (kidSize.width > availSize.width) {
-      kidSize.width = availSize.width;
-      firstKid->FinishAndStoreOverflow(&kidSize);
-    }
-  }
-  //if (eReflowReason_Resize == aReflowState.reason) {
-  //  NS_ASSERTION(kidSize.width <= availSize.width, "child needed more space during resize reflow");
-  //}
+
   // Place the child
   FinishReflowChild(firstKid, aPresContext, &kidReflowState, kidSize,
                     kidOrigin.x, kidOrigin.y, 0);
