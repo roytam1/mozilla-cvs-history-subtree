@@ -19,7 +19,7 @@
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Darin Fisher <darin@meer.net>
+#   Brian Ryner <bryner@brianryner.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,35 +35,42 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../..
+DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-XPI_NAME		= metrics
-USE_EXTENSION_MANIFEST	= 1
-NO_JAR_AUTO_REG		= 1
-INSTALL_EXTENSION_ID	= metrics@mozilla.org
-XPI_PKGNAME		= metrics-$(MOZ_APP_VERSION)
+MODULE		= metrics
+LIBRARY_NAME	= metrics
+SHORT_LIBNAME	= metrics
 
-DIRS		= public src build
+XPI_NAME	= metrics
 
-ifdef ENABLE_TESTS
-TOOL_DIRS += test
-endif
+REQUIRES	= \
+		xpcom \
+		necko \
+		content \
+		$(NULL)
 
-PREF_JS_EXPORTS = $(srcdir)/metrics.js
+CPPSRCS		= \
+		nsMetricsModule.cpp \
+		$(NULL)
 
-DIST_FILES = install.rdf
+SHARED_LIBRARY_LIBS = \
+		../src/$(LIB_PREFIX)metrics_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)bz2.$(LIB_SUFFIX) \
+		$(NULL)
 
-# We should really pull FIREFOX_VERSION from browser/config/version.txt but we
-# can't be assured that we've even pulled those files. So we hardcode them.
+EXTRA_DSO_LDOPTS = $(XPCOM_GLUE_LDOPTS) \
+		   $(NSPR_LIBS) \
+		   $(NULL)
 
-XULAPP_DEFINES = \
-        -DFIREFOX_VERSION=$(FIREFOX_VERSION) \
-        -DEXTENSION_VERSION=$(MOZILLA_VERSION) \
-        $(NULL)
+LOCAL_INCLUDES	= \
+		-I$(srcdir)/../src \
+		-I$(DIST)/public/nss \
+		-I$(DIST)/private/nss \
+		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
