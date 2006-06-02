@@ -1485,7 +1485,46 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_GETLOCAL:
                 i = GET_UINT16(pc);
                 sn = js_GetSrcNote(jp->script, pc);
-                rval = OFF2STR(&ss->sprinter, ss->offsets[i]);
+                if (i < ss->top) {
+                    rval = OFF2STR(&ss->sprinter, ss->offsets[i]);
+                } else {
+                    jsatomid j, n;
+                    JSScript *script;
+                    jsint depth, count;
+                    JSScopeProperty *sprop;
+
+                    /*
+                     * We must be called from js_DecompileValueGenerator when
+                     * dereferencing a local that's undefined or null.  Search
+                     * jp->script->atomMap for the block containing this local
+                     * by its stack index, i.
+                     */
+                    script = jp->script;
+                    for (j = 0, n = script->atomMap.length; j < n; j++) {
+                        atom = script->atomMap.vector[j];
+                        if (ATOM_IS_OBJECT(atom)) {
+                            obj = ATOM_TO_OBJECT(atom);
+                            if (OBJ_GET_CLASS(cx, obj) == &js_BlockClass) {
+                                depth = OBJ_BLOCK_DEPTH(cx, obj);
+                                count = OBJ_BLOCK_COUNT(cx, obj);
+                                if ((jsuint)(i - depth) < (jsuint)count)
+                                    break;
+                            }
+                        }
+                    }
+
+                    LOCAL_ASSERT(j < n);
+                    for (sprop = OBJ_SCOPE(obj)->lastProp; sprop;
+                         sprop = sprop->parent) {
+                        if (sprop->shortid == i - depth)
+                            break;
+                    }
+
+                    LOCAL_ASSERT(sprop && JSID_IS_ATOM(sprop->id));
+                    atom = JSID_TO_ATOM(sprop->id);
+                    rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
+                    RETRACT(&ss->sprinter, rval);
+                }
                 todo = Sprint(&ss->sprinter, ss_format, VarPrefix(sn), rval);
                 break;
 
