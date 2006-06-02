@@ -4049,7 +4049,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 cg->treeContext.flags |= TCF_IN_FOR_INIT;
                 if (!js_EmitTree(cx, cg, pn2->pn_kid1))
                     return JS_FALSE;
-                cg->treeContext.flags &= TCF_IN_FOR_INIT;
+                cg->treeContext.flags &= ~TCF_IN_FOR_INIT;
                 op = JSOP_POP;
             }
             noteIndex = js_NewSrcNote(cx, cg, SRC_FOR);

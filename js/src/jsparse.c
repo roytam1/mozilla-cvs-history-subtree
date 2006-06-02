@@ -2353,6 +2353,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 #if JS_HAS_BLOCK_SCOPE
         JSParseNode *pnlet;
         JSObject *obj;
+        JSStmtInfo block;
 
         pnlet = NULL;
 #endif
@@ -2404,7 +2405,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 #if JS_HAS_BLOCK_SCOPE
                 if (tt == TOK_LET) {
                     (void) js_GetToken(cx, ts);
-                    if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pnlet, &obj))
+                    if (!SetupLexicalBlock(cx, ts, tc, &block, &pnlet, &obj))
                         return NULL;
                     pn1 = LetHead(cx, ts, tc, obj);
                 } else
@@ -2552,7 +2553,9 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         if (!pn2)
             return NULL;
         pn->pn_right = pn2;
-        js_PopStatement(tc);
+
+        /* Record the absolute line number for source note emission. */
+        pn->pn_pos.end = pn2->pn_pos.end;
 
 #if JS_HAS_BLOCK_SCOPE
         if (pnlet) {
@@ -2561,9 +2564,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             pn = pnlet;
         }
 #endif
-
-        /* Record the absolute line number for source note emission. */
-        pn->pn_pos.end = pn2->pn_pos.end;
+        js_PopStatement(tc);
         return pn;
 
 #if JS_HAS_XML_SUPPORT
