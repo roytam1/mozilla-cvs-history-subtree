@@ -5341,7 +5341,8 @@ function asyncOpenWebPanel(event)
    }
    if (event.button == 1 &&
        !event.getPreventDefault() &&
-       gPrefService.getBoolPref("middlemouse.contentLoadURL")) {
+       gPrefService.getBoolPref("middlemouse.contentLoadURL") &&
+       !gPrefService.getBoolPref("general.autoScroll")) {
      middleMousePaste(event);
    }
    return true;
