@@ -2044,7 +2044,7 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
 
     /* Create the let binary node. */
     pnlet = NewParseNode(cx, ts, PN_BINARY, tc);
-    if (!pn)
+    if (!pnlet)
         return NULL;
     (void) js_GetToken(cx, ts);
 
