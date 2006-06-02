@@ -1099,9 +1099,12 @@ static BookmarkManager* gBookmarkManager = nil;
 
 - (void)bookmarkChanged:(NSNotification *)inNotification
 {
-  // don't write out the bookmark file or metadata for changes in a smart container.
   id item = [inNotification object];
-  if ([[item parent] isSmartFolder])
+
+  // don't write out the bookmark file or metadata for changes in a smart container.
+  // we should really check to see that the bookmarks is in the tree, rather than
+  // just checking its parent
+  if (![item parent] || [[item parent] isSmartFolder])
     return;
 
   unsigned int changeFlags = kBookmarkItemEverythingChangedMask;
@@ -1166,9 +1169,22 @@ static BookmarkManager* gBookmarkManager = nil;
   // previous version entirely.
   NSString* metadataPath = [@"~/Library/Caches/Metadata" stringByExpandingTildeInPath];
   [[NSFileManager defaultManager] createDirectoryAtPath:metadataPath attributes:nil];
+
   metadataPath = [metadataPath stringByAppendingPathComponent:@"Camino"];
-  [[NSFileManager defaultManager] removeFileAtPath:metadataPath handler:nil];
   [[NSFileManager defaultManager] createDirectoryAtPath:metadataPath attributes:nil];
+
+  // delete any existing contents
+  NSEnumerator* dirContentsEnum = [[[NSFileManager defaultManager] directoryContentsAtPath:metadataPath] objectEnumerator];
+  NSString* curFile;
+  while ((curFile = [dirContentsEnum nextObject]))
+  {
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+
+    NSString* curFilePath = [metadataPath stringByAppendingPathComponent:curFile];
+    [[NSFileManager defaultManager] removeFileAtPath:curFilePath handler:nil];
+
+    [pool release];
+  }
   
   // save the path for later
   [mMetadataPath autorelease];
@@ -1179,10 +1195,14 @@ static BookmarkManager* gBookmarkManager = nil;
   BookmarkItem* curItem;
   while ((curItem = [bmEnumerator nextObject]))
   {
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+
     [curItem writeBookmarksMetadataToPath:mMetadataPath];
 
     if (!(++itemCount % 100) && ![NSThread inMainThread])
       usleep(10000);    // 10ms to give the UI some time
+
+    [pool release];
   }
 }
 
