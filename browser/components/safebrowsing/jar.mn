@@ -1,4 +1,0 @@
-browser.jar:
-# script file included into main browser.js
-+ content/browser/safebrowsing/sb-loader.js            (content/sb-loader.js)
-+ content/browser/safebrowsing/warning-overlay.xul     (content/warning-overlay.xul)
