@@ -3367,12 +3367,6 @@ nsTableFrame::CalcBorderBoxHeight(const nsHTMLReflowState& aState)
   return height;
 }
 
-nscoord 
-nsTableFrame::GetMinCaptionWidth()
-{
-  return NS_STATIC_CAST(nsTableOuterFrame*, GetParent())->GetMinCaptionWidth();
-}
-
 PRBool 
 nsTableFrame::IsAutoLayout()
 {

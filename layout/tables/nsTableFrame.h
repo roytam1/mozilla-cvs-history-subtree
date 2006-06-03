@@ -654,9 +654,6 @@ public: /* ----- Cell Map public methods ----- */
     */
   nsTableCellFrame * GetCellFrameAt(PRInt32 aRowIndex, PRInt32 aColIndex);
 
-  /** return the minimum width of the table caption.  Return 0 if there is no caption. */
-  nscoord GetMinCaptionWidth();
-
   /** returns PR_TRUE if table-layout:auto  */
   virtual PRBool IsAutoLayout();
 
