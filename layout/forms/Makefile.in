@@ -97,13 +97,13 @@ CPPSRCS		= \
 		nsImageControlFrame.cpp \
 		nsLegendFrame.cpp \
 		nsIsIndexFrame.cpp \
+		nsSelectsAreaFrame.cpp \
 		$(NULL)
 
 ifdef HTML_FORMS
 CPPSRCS += \
 		nsComboboxControlFrame.cpp \
 		nsListControlFrame.cpp \
-		nsSelectsAreaFrame.cpp \
 		$(NULL)
 endif
 
