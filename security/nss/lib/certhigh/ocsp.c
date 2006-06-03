@@ -2680,7 +2680,8 @@ ocsp_CheckSignature(ocspSignature *signature, void *tbs,
 
     rv = VFY_VerifyDataWithAlgorithmID(encodedTBS->data, encodedTBS->len, 
 			signerKey, &rawSignature,
-			&signature->signatureAlgorithm, NULL, pwArg);
+			&signature->signatureAlgorithm, NULL,
+			pwArg);
 
 finish:
     if (signature->wasChecked)

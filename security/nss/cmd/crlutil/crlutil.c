@@ -159,7 +159,7 @@ static void ListCRLNames (CERTCertDBHandle *certHandle, int crlType, PRBool dele
 	    char* asciiname = NULL;
 	    CERTCertificate *cert = NULL;
 	    if (crlNode->crl && &crlNode->crl->crl.derName) {
-	        cert = CERT_FindCertByName(certHandle,
+	        cert = CERT_FindCertByName(certHandle, 
 	                                   &crlNode->crl->crl.derName);
 	        if (!cert) {
 	            SECU_PrintError(progName, "could not find signing "

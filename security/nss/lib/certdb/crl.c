@@ -2776,29 +2776,27 @@ SECStatus CERT_UncacheCRL(CERTCertDBHandle* dbhandle, SECItem* olddercrl)
                 }
                 if (PR_TRUE == dupe)
                 {
-                    rv = DPCache_RemoveCRL(cache, i); /* got a match */
-                    if (SECSuccess == rv) {
-                        cache->mustchoose = PR_TRUE;
-                        removed = PR_TRUE;
-                    }
+                    DPCache_RemoveCRL(cache, i); /* got a match */
+                    cache->mustchoose = PR_TRUE;
+                    removed = PR_TRUE;
                     break;
                 }
             }
             
             DPCache_UnlockWrite();
 
-            if (SECSuccess != CachedCrl_Destroy(returned) ) {
-                rv = SECFailure;
-            }
+            rv = CachedCrl_Destroy(returned);
         }
 
         ReleaseDPCache(cache, writeLocked);
+
+        if (PR_TRUE != removed)
+        {
+            rv = SECFailure;
+        }
     }
-    if (SECSuccess != SEC_DestroyCrl(oldcrl) ) { 
-        /* need to do this because object is refcounted */
-        rv = SECFailure;
-    }
-    if (SECSuccess == rv && PR_TRUE != removed)
+    SEC_DestroyCrl(oldcrl); /* need to do this because object is refcounted */
+    if (PR_TRUE != removed)
     {
         PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
     }

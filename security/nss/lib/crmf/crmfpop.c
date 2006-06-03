@@ -261,7 +261,7 @@ CRMF_CertReqMsgSetSignaturePOP(CRMFCertReqMsg   *inCertReqMsg,
 {
     SECAlgorithmID  *algID;
     PRArenaPool     *poolp;
-    SECItem          derTemp = {siBuffer, NULL, 0};
+    SECItem          derDest = {siBuffer, NULL, 0};
     void            *mark;
     SECStatus        rv;
     CRMFPOPOSigningKeyInput *signKeyInput = NULL;
@@ -304,7 +304,7 @@ CRMF_CertReqMsgSetSignaturePOP(CRMFCertReqMsg   *inCertReqMsg,
     pop->popChoice.signature.algorithmIdentifier = algID;
     inCertReqMsg->pop = pop;
   
-    rv = crmf_init_encoder_callback_arg (&encoderArg, &derTemp);
+    rv = crmf_init_encoder_callback_arg (&encoderArg, &derDest);
     if (rv != SECSuccess) {
         goto loser;
     }
@@ -314,18 +314,18 @@ CRMF_CertReqMsgSetSignaturePOP(CRMFCertReqMsg   *inCertReqMsg,
     if (rv != SECSuccess) {
         goto loser;
     }
-    rv = SECITEM_CopyItem(poolp, &(inCertReqMsg->derPOP), &derTemp);
+    rv = SECITEM_CopyItem(poolp, &(inCertReqMsg->derPOP), &derDest);
+    PORT_Free (derDest.data);
     if (rv != SECSuccess) {
         goto loser;
     }
-    PORT_Free (derTemp.data);
     PORT_ArenaUnmark(poolp,mark);
     return SECSuccess;
 
  loser:
     PORT_ArenaRelease(poolp,mark);
-    if (derTemp.data != NULL) {
-        PORT_Free(derTemp.data);
+    if (derDest.data != NULL) {
+        PORT_Free(derDest.data);
     }
     return SECFailure;
 }
@@ -358,13 +358,13 @@ crmf_encode_popoprivkey(PRArenaPool            *poolp,
 			const SEC_ASN1Template *privKeyTemplate)
 {
     struct crmfEncoderArg   encoderArg;
-    SECItem                 derTemp; 
+    SECItem                 derDest; 
     SECStatus               rv;
     void                   *mark;
     const SEC_ASN1Template *subDerTemplate;
 
     mark = PORT_ArenaMark(poolp);
-    rv = crmf_init_encoder_callback_arg(&encoderArg, &derTemp);
+    rv = crmf_init_encoder_callback_arg(&encoderArg, &derDest);
     if (rv != SECSuccess) {
         goto loser;
     }
@@ -378,32 +378,32 @@ crmf_encode_popoprivkey(PRArenaPool            *poolp,
     if (rv != SECSuccess) {
         goto loser;
     }
-    if (encoderArg.allocatedLen > derTemp.len+2) {
-        void *dummy = PORT_Realloc(derTemp.data, derTemp.len+2);
+    if (encoderArg.allocatedLen > derDest.len+2) {
+        void *dummy = PORT_Realloc(derDest.data, derDest.len+2);
 	if (dummy == NULL) {
 	    goto loser;
 	}
-	derTemp.data = dummy;
+	derDest.data = dummy;
     }
-    PORT_Memmove(&derTemp.data[2], &derTemp.data[0], derTemp.len);
+    PORT_Memmove(&derDest.data[2], &derDest.data[0], derDest.len);
     /* I couldn't figure out how to get the ASN1 encoder to implicitly
      * tag an implicitly tagged der blob.  So I'm putting in the outter-
      * most tag myself. -javi
      */
-    derTemp.data[0] = (unsigned char)privKeyTemplate->kind;
-    derTemp.data[1] = (unsigned char)derTemp.len;
-    derTemp.len += 2;
-    rv = SECITEM_CopyItem(poolp, &inCertReqMsg->derPOP, &derTemp);
+    derDest.data[0] = (unsigned char)privKeyTemplate->kind;
+    derDest.data[1] = (unsigned char)derDest.len;
+    derDest.len += 2;
+    rv = SECITEM_CopyItem(poolp, &inCertReqMsg->derPOP, &derDest);
     if (rv != SECSuccess) {
         goto loser;
     }
-    PORT_Free(derTemp.data);
+    PORT_Free(derDest.data);
     PORT_ArenaUnmark(poolp, mark);
     return SECSuccess;
  loser:
     PORT_ArenaRelease(poolp, mark);
-    if (derTemp.data) {
-        PORT_Free(derTemp.data);
+    if (derDest.data) {
+        PORT_Free(derDest.data);
     }
     return SECFailure;
 }
