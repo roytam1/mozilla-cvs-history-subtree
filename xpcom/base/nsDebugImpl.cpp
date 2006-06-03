@@ -210,10 +210,10 @@ nsDebugImpl::Assertion(const char *aStr, const char *aExpr, const char *aFile, P
 #endif         
          CreateProcess(executable, buf, NULL, NULL, PR_FALSE,
                        DETACHED_PROCESS | NORMAL_PRIORITY_CLASS,
-                       NULL, NULL, &si, &pi) &&
-         WAIT_OBJECT_0 == WaitForSingleObject(pi.hProcess, INFINITE) &&
-         GetExitCodeProcess(pi.hProcess, &code))
+                       NULL, NULL, &si, &pi))
       {
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        GetExitCodeProcess(pi.hProcess, &code);
         CloseHandle(pi.hProcess);
       }                         
 
