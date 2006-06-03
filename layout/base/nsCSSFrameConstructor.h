@@ -478,7 +478,6 @@ protected:
                                             nsIFrame**       aPlaceholderFrame);
 
 private:
-
   // @param OUT aNewFrame the new radio control frame
   nsresult ConstructRadioControlFrame(nsIFrame**         aNewFrame,
                                       nsIContent*        aContent,
