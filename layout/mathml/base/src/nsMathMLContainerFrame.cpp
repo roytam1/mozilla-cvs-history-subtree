@@ -214,7 +214,7 @@ nsMathMLContainerFrame::GetPreferredStretchSize(nsIRenderingContext& aRenderingC
   }
   else if (aOptions & STRETCH_CONSIDER_EMBELLISHMENTS) {
     // compute our up-to-date size using Place()
-    nsHTMLReflowMetrics metrics(nsnull);
+    nsHTMLReflowMetrics metrics;
     Place(aRenderingContext, PR_FALSE, metrics);
     aPreferredStretchSize = metrics.mBoundingMetrics;
   }
@@ -936,31 +936,6 @@ nsMathMLContainerFrame::AttributeChanged(PRInt32         aNameSpaceID,
   return ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
 }
 
-// We are an inline frame, so we handle dirty request like nsInlineFrame
-NS_IMETHODIMP
-nsMathMLContainerFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
-{
-  // The inline container frame does not handle the reflow
-  // request.  It passes it up to its parent container.
-
-  // If you don't already have dirty children,
-  if (!(mState & NS_FRAME_HAS_DIRTY_CHILDREN)) {
-    if (mParent) {
-      // Record that you are dirty and have dirty children
-      mState |= NS_FRAME_IS_DIRTY;
-      mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-      // Pass the reflow request up to the parent
-      mParent->ReflowDirtyChild(aPresShell, (nsIFrame*) this);
-    }
-    else {
-      NS_ASSERTION(0, "No parent to pass the reflow request up to.");
-    }
-  }
-
-  return NS_OK;
-}
-
 nsresult 
 nsMathMLContainerFrame::ReflowChild(nsIFrame*                aChildFrame,
                                     nsPresContext*           aPresContext,
@@ -1055,7 +1030,7 @@ printf("\n");
 
   nsReflowStatus childStatus;
   nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
-  nsHTMLReflowMetrics childDesiredSize(aDesiredSize.mComputeMEW,
+  nsHTMLReflowMetrics childDesiredSize(
                       aDesiredSize.mFlags | NS_REFLOW_CALC_BOUNDING_METRICS);
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
@@ -1314,7 +1289,7 @@ nsMathMLContainerFrame::Place(nsIRenderingContext& aRenderingContext,
   PRInt32 count = 0;
   PRInt32 carrySpace = 0;
   eMathMLFrameType fromFrameType = eMathMLFrameType_UNKNOWN;
-  nsHTMLReflowMetrics childSize (nsnull);
+  nsHTMLReflowMetrics childSize;
   nsBoundingMetrics bmChild;
   nscoord leftCorrection = 0, italicCorrection = 0;
   nsIAtom* prevFrameType = nsnull;

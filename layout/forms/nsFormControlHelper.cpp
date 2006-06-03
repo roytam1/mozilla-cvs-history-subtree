@@ -326,9 +326,6 @@ void
 nsFormControlHelper::StyleChangeReflow(nsPresContext* aPresContext,
                                        nsIFrame* aFrame)
 {
-  aPresContext->PresShell()->AppendReflowCommand(aFrame,
-                                                 eReflowType_StyleChanged,
-                                                 nsnull);
+  aPresContext->PresShell()->
+    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 }
-
-

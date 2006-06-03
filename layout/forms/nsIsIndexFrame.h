@@ -85,11 +85,8 @@ public:
   // nsIFormControlFrame
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  NS_IMETHOD Reflow(nsPresContext*          aCX,
-                    nsHTMLReflowMetrics&     aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&          aStatus);
-
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  
   virtual PRBool IsLeaf() const;
 
 #ifdef NS_DEBUG
@@ -101,6 +98,8 @@ public:
 
   void           SetFocus(PRBool aOn, PRBool aRepaint);
   void           ScrollIntoView(nsPresContext* aPresContext);
+
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
   // from nsIAnonymousContentCreator
   NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,

@@ -59,7 +59,6 @@
 #include "nsIScrollableView.h"
 #include "nsIDOMHTMLOptGroupElement.h"
 #include "nsWidgetsCID.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsIPresShell.h"
 #include "nsHTMLParts.h"
 #include "nsIDOMEventReceiver.h"
@@ -87,7 +86,6 @@
 #include "nsISelectElement.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsCSSRendering.h"
-#include "nsReflowPath.h"
 #include "nsITheme.h"
 #include "nsIDOMMouseListener.h"
 #include "nsIDOMMouseMotionListener.h"
@@ -774,7 +772,7 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   firstPassState.availableWidth  = NS_UNCONSTRAINEDSIZE;
   firstPassState.availableHeight = NS_UNCONSTRAINEDSIZE;
  
-  nsHTMLReflowMetrics  scrolledAreaDesiredSize(PR_TRUE);
+  nsHTMLReflowMetrics scrolledAreaDesiredSize;
 
 
   if (eReflowReason_Incremental == aReflowState.reason) {

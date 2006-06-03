@@ -77,9 +77,11 @@
 #include "nsLayoutAtoms.h"
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLLegendElement.h"
+#ifdef HTML_FORMS
 #include "nsIComboboxControlFrame.h"
 #include "nsIListControlFrame.h"
 #include "nsISelectControlFrame.h"
+#endif // HTML_FORMS
 #include "nsIRadioControlFrame.h"
 #include "nsICheckboxControlFrame.h"
 #include "nsIDOMCharacterData.h"
@@ -5141,6 +5143,8 @@ nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,
 
   return NS_OK;  
 }
+
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::ConstructSelectFrame(nsFrameConstructorState& aState,
                                             nsIContent*              aContent,
@@ -5386,6 +5390,7 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsFrameConstructorState& aState,
   scrolledFrame->SetInitialChildList(nsnull, childItems.childList);
   return NS_OK;
 }
+#endif // HTML_FORMS
 
 nsresult
 nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
@@ -5631,6 +5636,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     newFrame = NS_NewTextControlFrame(mPresShell, aStyleContext);
     triedFrame = PR_TRUE;
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::select == aTag) {
     if (!gUseXBLForms) {
       if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
@@ -5647,6 +5653,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
       addedToFrameList = PR_TRUE;
     }
   }
+#endif
   else if (nsHTMLAtoms::object == aTag ||
            nsHTMLAtoms::applet == aTag ||
            nsHTMLAtoms::embed == aTag) {
@@ -10319,22 +10326,15 @@ nsCSSFrameConstructor::StyleChangeReflow(nsIFrame* aFrame,
   }
 #endif
 
-  // Is it a box? If so we can coelesce.
-  if (aFrame->IsBoxFrame()) {
-    nsBoxLayoutState state(mPresShell->GetPresContext());
-    aFrame->MarkStyleChange(state);
-  }
-  else {
-    // If the frame is part of a split block-in-inline hierarchy, then
-    // target the style-change reflow at the first ``normal'' ancestor
-    // so we're sure that the style change will propagate to any
-    // anonymously created siblings.
-    if (IsFrameSpecial(aFrame))
-      aFrame = GetIBContainingBlockFor(aFrame);
+  // If the frame is part of a split block-in-inline hierarchy, then
+  // target the style-change reflow at the first ``normal'' ancestor
+  // so we're sure that the style change will propagate to any
+  // anonymously created siblings.
+  if (IsFrameSpecial(aFrame))
+    aFrame = GetIBContainingBlockFor(aFrame);
 
-    // Target a style-change reflow at the frame.
-    mPresShell->AppendReflowCommand(aFrame, eReflowType_StyleChanged, nsnull);
-  }
+  aFrame->AddStateBits(NS_FRAME_IS_DIRTY);
+  mPresShell->FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }
@@ -10817,6 +10817,7 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent*    aContent,
   // The "alt" attribute specifies alternate text that is rendered
   // when the image can not be displayed
 
+#ifdef HTML_FORMS
   // If there's no "alt" attribute, and aContent is an input    
   // element, then use the value of the "value" attribute
   if (!aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::alt, aAltText) &&
@@ -10828,6 +10829,7 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent*    aContent,
                                          "Submit", aAltText);      
     }
   }
+#endif
 }
 
 nsresult
@@ -11119,6 +11121,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     if (!newFrame) 
       return NS_ERROR_NULL_POINTER;
     newFrame->Init(content, aParentFrame, aFrame);
+#ifdef HTML_FORMS
   } else if (nsLayoutAtoms::fieldSetFrame == frameType) {
     newFrame = NS_NewFieldSetFrame(shell, styleContext);
 
@@ -11137,6 +11140,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // Set the fieldset's initial child list
       newFrame->SetInitialChildList(nsnull, continuingAreaFrame);
     }
+#endif
   } else {
     NS_ASSERTION(PR_FALSE, "unexpected frame type");
     return NS_ERROR_UNEXPECTED;

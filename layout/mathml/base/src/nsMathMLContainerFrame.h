@@ -137,10 +137,6 @@ public:
   RemoveFrame(nsIAtom*        aListName,
               nsIFrame*       aOldFrame);
 
-  NS_IMETHODIMP
-  ReflowDirtyChild(nsIPresShell* aPresShell, 
-                   nsIFrame*     aChild);
-
   NS_IMETHOD
   Reflow(nsPresContext*          aPresContext,
          nsHTMLReflowMetrics&     aDesiredSize,

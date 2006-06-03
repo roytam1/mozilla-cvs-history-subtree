@@ -84,13 +84,6 @@ public:
 
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-#ifdef DEBUG_rodsXXX
-  NS_IMETHOD Reflow(nsPresContext*          aCX,
-                    nsHTMLReflowMetrics&     aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&          aStatus);
-#endif
-
   void PaintCheckBox(nsIRenderingContext& aRenderingContext,
                      nsPoint aPt, const nsRect& aDirtyRect);
 

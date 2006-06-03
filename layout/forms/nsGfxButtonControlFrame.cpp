@@ -48,7 +48,6 @@
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 #include "nsLayoutAtoms.h"
-#include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsStyleSet.h"
 #include "nsContentUtils.h"
@@ -313,7 +312,7 @@ nsGfxButtonControlFrame::Reflow(nsPresContext*          aPresContext,
                                 const nsHTMLReflowState& aReflowState, 
                                 nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsGfxButtonControlFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsGfxButtonControlFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   if ((kSuggestedNotSet != mSuggestedSize.width) || 

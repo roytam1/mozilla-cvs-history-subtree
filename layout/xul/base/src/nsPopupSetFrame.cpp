@@ -509,8 +509,8 @@ nsPopupSetFrame::OpenPopup(nsPopupFrameList* aEntry, PRBool aActivateFlag)
     OnDestroyed(aEntry->mPopupContent);
   }
 
-  nsBoxLayoutState state(GetPresContext());
-  MarkDirtyChildren(state); // Mark ourselves dirty.
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  GetPresContext()->PresShell()->FrameNeedsReflow(this, nsIPresShell::eTreeChange);
 }
 
 void

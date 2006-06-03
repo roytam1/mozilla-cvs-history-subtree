@@ -55,6 +55,12 @@ legend {
   border: none;
   position: static ! important;
   float: none ! important;
+  /**
+   * IMPORTANT: DO NOT change the display type without either changing the
+   * frame we use for the legend to not always be an nsAreaFrame or teaching
+   * the reflow state about non-block non-replaced areas.
+   */
+  display: block ! important;
 }
 
 fieldset {

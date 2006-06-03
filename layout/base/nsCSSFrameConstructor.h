@@ -57,7 +57,6 @@ struct nsFrameItems;
 struct nsAbsoluteItems;
 struct nsTableCreator;
 class nsStyleContext;
-struct nsTableList;
 struct nsStyleContent;
 struct nsStyleDisplay;
 class nsIPresShell;
@@ -503,6 +502,7 @@ private:
                                 const nsStyleDisplay*    aStyleDisplay,
                                 nsFrameItems&            aFrameItems);
 
+#ifdef HTML_FORMS
   // ConstructSelectFrame puts the new frame in aFrameItems and
   // handles the kids of the select.
   nsresult ConstructSelectFrame(nsFrameConstructorState& aState,
@@ -514,6 +514,7 @@ private:
                                 const nsStyleDisplay*    aStyleDisplay,
                                 PRBool&                  aFrameHasBeenInitialized,
                                 nsFrameItems&            aFrameItems);
+#endif // HTML_FORMS
 
   // ConstructFieldSetFrame puts the new frame in aFrameItems and
   // handles the kids of the fieldset
@@ -735,6 +736,7 @@ private:
   FinishBuildingScrollFrame(nsIFrame* aScrollFrame,
                             nsIFrame* aScrolledFrame);
 
+#ifdef HTML_FORMS
   // InitializeSelectFrame puts scrollFrame in aFrameItems if aBuildCombobox is false
   nsresult
   InitializeSelectFrame(nsFrameConstructorState& aState,
@@ -745,6 +747,7 @@ private:
                         nsStyleContext*          aStyleContext,
                         PRBool                   aBuildCombobox,
                         nsFrameItems&            aFrameItems);
+#endif
 
   nsresult MaybeRecreateFramesForContent(nsIContent*      aContent);
 

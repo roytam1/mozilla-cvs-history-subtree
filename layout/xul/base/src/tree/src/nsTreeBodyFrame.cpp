@@ -1485,8 +1485,8 @@ nsTreeBodyFrame::MarkDirtyIfSelect()
     // XXX optimize this more
 
     mStringWidth = -1;
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
 }
 
@@ -2397,8 +2397,9 @@ nsTreeBodyFrame::PaintTreeBody(nsIRenderingContext& aRenderingContext,
 
   if (oldPageCount != mPageLength || mHorzWidth != CalcHorzWidth(GetScrollParts())) {
     // Schedule a ResizeReflow that will update our info properly.
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eResize);
   }
   #ifdef DEBUG
   PRInt32 rowCount = mRowCount;

@@ -83,7 +83,7 @@ NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsSt
 
 nsSVGForeignObjectFrame::nsSVGForeignObjectFrame(nsStyleContext* aContext)
   : nsSVGForeignObjectFrameBase(aContext),
-    mIsDirty(PR_TRUE), mPropagateTransform(PR_TRUE)
+    mPropagateTransform(PR_TRUE)
 {
   AddStateBits(NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT |
                NS_FRAME_REFLOW_ROOT);
@@ -285,7 +285,7 @@ nsSVGForeignObjectFrame::PaintSVG(nsISVGRendererCanvas* canvas)
 {
   nsresult rv = NS_OK;
 
-  if (mIsDirty) {
+  if (IsDirty()) {
     nsCOMPtr<nsISVGRendererRegion> region = DoReflow();
   }
 
@@ -416,7 +416,7 @@ nsSVGForeignObjectFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::NotifyRedrawUnsuspended()
 {
-  if (mIsDirty) {
+  if (IsDirty()) {
     nsCOMPtr<nsISVGRendererRegion> dirtyRegion = DoReflow();
     if (dirtyRegion) {
       nsISVGOuterSVGFrame *outerSVGFrame = nsSVGUtils::GetOuterSVGFrame(this);
@@ -529,7 +529,7 @@ void nsSVGForeignObjectFrame::Update()
   printf("**nsSVGForeignObjectFrame::Update()\n");
 #endif
 
-  mIsDirty = PR_TRUE;
+  AddStateBits(NS_FRAME_IS_DIRTY);
 
   nsISVGOuterSVGFrame *outerSVGFrame = nsSVGUtils::GetOuterSVGFrame(this);
   if (!outerSVGFrame) {
@@ -589,14 +589,9 @@ nsSVGForeignObjectFrame::DoReflow()
   SetSize(size);
   
   // create a new reflow state, setting our max size to (width,height):
-  // Make up a potentially reasonable but perhaps too destructive reflow
-  // reason.
-  nsReflowReason reason = (GetStateBits() & NS_FRAME_FIRST_REFLOW)
-                            ? eReflowReason_Initial
-                            : eReflowReason_StyleChange;
-  nsHTMLReflowState reflowState(presContext, this, reason,
+  nsHTMLReflowState reflowState(presContext, this,
                                 renderingContext, size);
-  nsHTMLReflowMetrics desiredSize(nsnull);
+  nsHTMLReflowMetrics desiredSize;
   nsReflowStatus status;
   
   WillReflow(presContext);
@@ -604,8 +599,6 @@ nsSVGForeignObjectFrame::DoReflow()
   NS_ASSERTION(size.width == desiredSize.width &&
                size.height == desiredSize.height, "unexpected size");
   DidReflow(presContext, &reflowState, NS_FRAME_REFLOW_FINISHED);
-
-  mIsDirty = PR_FALSE;
 
   nsCOMPtr<nsISVGRendererRegion> area_after = GetCoveredRegion();
   nsISVGRendererRegion *dirtyRegion;
