@@ -1146,7 +1146,7 @@ nsTableRowFrame::CollapseRowIfNecessary(nscoord aRowOffset,
     rowRect.height = 0;
   }
   else { // row is not collapsed
-    nsTableIterator iter(*this, eTableDIR);
+    nsTableIterator iter(*this);
     // remember the col index of the previous cell to handle rowspans into this
     // row
     PRInt32 firstPrevColIndex = (iter.IsLeftToRight()) ? -1 :

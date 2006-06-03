@@ -3399,8 +3399,7 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
     }
   }
 
-  if (gAsyncReflowDuringDocLoad && mDocumentLoading &&
-      !mDocumentOnloadBlocked) {
+  if (mDocumentLoading && !mDocumentOnloadBlocked) {
     mDocument->BlockOnload();
     mDocumentOnloadBlocked = PR_TRUE;
   }
