@@ -74,9 +74,7 @@ nsLegendFrame::GetType() const
 void
 nsLegendFrame::Destroy()
 {
-#ifdef HTML_FORMS
   nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-#endif
   nsAreaFrame::Destroy();
 }
 
@@ -103,11 +101,9 @@ nsLegendFrame::Reflow(nsPresContext*          aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsLegendFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-#ifdef HTML_FORMS
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
   }
-#endif
   return nsAreaFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
 }
 

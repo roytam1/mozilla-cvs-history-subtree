@@ -90,9 +90,7 @@ nsHTMLButtonControlFrame::~nsHTMLButtonControlFrame()
 void
 nsHTMLButtonControlFrame::Destroy()
 {
-#ifdef HTML_FORMS
   nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-#endif
   nsHTMLContainerFrame::Destroy();
 }
 
@@ -289,11 +287,9 @@ nsHTMLButtonControlFrame::Reflow(nsPresContext* aPresContext,
   NS_PRECONDITION(aReflowState.mComputedWidth != NS_INTRINSICSIZE,
                   "Should have real computed width by now");
 
-#ifdef HTML_FORMS
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
   }
-#endif
 
   // Reflow the child
   nsIFrame* firstKid = mFrames.FirstChild();

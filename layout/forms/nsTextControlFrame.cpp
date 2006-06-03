@@ -1106,9 +1106,7 @@ nsTextControlFrame::PreDestroy()
 
 //unregister self from content
   mTextListener->SetFrame(nsnull);
-#ifdef HTML_FORMS
   nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-#endif
   if (mTextListener)
   {
     nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mContent);
@@ -1811,11 +1809,9 @@ nsTextControlFrame::Reflow(nsPresContext*   aPresContext,
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   // make sure the the form registers itself on the initial/first reflow
-#ifdef HTML_FORMS
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
   }
-#endif
 
   return nsStackFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
                               aStatus);

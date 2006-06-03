@@ -128,9 +128,7 @@ nsImageControlFrame::~nsImageControlFrame()
 void
 nsImageControlFrame::Destroy()
 {
-#ifdef HTML_FORMS
   nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-#endif
   nsImageControlFrameSuper::Destroy();
 }
 
@@ -204,11 +202,9 @@ nsImageControlFrame::Reflow(nsPresContext*         aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsImageControlFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-#ifdef HTML_FORMS
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
   }
-#endif
   return nsImageControlFrameSuper::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
 }
 
