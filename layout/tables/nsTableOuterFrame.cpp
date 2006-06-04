@@ -364,10 +364,7 @@ nsTableOuterFrame::InitChildReflowState(nsPresContext&    aPresContext,
   nsMargin* pCollapseBorder  = nsnull;
   nsMargin* pCollapsePadding = nsnull;
   if ((aReflowState.frame == mInnerTableFrame) && (mInnerTableFrame->IsBorderCollapse())) {
-    if (mInnerTableFrame->NeedToCalcBCBorders()) {
-      mInnerTableFrame->CalcBCBorders();
-    }
-    collapseBorder  = mInnerTableFrame->GetBCBorder();
+    collapseBorder  = mInnerTableFrame->GetIncludedOuterBCBorder();
     pCollapseBorder = &collapseBorder;
     pCollapsePadding = &collapsePadding;
   }
@@ -534,6 +531,10 @@ nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   width += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
              mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
              insetPart);
+  // Include the outer part of the collapsed border that is part of the
+  // table's border-box (in quirks mode).
+  nsMargin outerBC = mInnerTableFrame->GetIncludedOuterBCBorder();
+  width += outerBC.LeftRight();
   DISPLAY_MIN_WIDTH(this, width);
   if (mCaptionFrame) {
     nscoord capWidth =
@@ -565,12 +566,16 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nscoord tableMin = mInnerTableFrame->GetMinWidth(aRenderingContext);
   if (maxWidth < tableMin)
     maxWidth = tableMin;
+  PRBool isBorderCollapse = mInnerTableFrame->IsBorderCollapse();
   nsLayoutUtils::IntrinsicWidthPart insetPart =
-    mInnerTableFrame->IsBorderCollapse() ? nsLayoutUtils::MARGIN
-                                         : nsLayoutUtils::PBM_PARTS;
+     isBorderCollapse ? nsLayoutUtils::MARGIN : nsLayoutUtils::PBM_PARTS;
   maxWidth += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                 mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
                 insetPart);
+  // Include the outer part of the collapsed border that is part of the
+  // table's border-box (in quirks mode).
+  nsMargin outerBC = mInnerTableFrame->GetIncludedOuterBCBorder();
+  maxWidth += outerBC.LeftRight();
   if (mCaptionFrame) {
     PRUint8 captionSide = GetCaptionSide();
     switch(captionSide) {

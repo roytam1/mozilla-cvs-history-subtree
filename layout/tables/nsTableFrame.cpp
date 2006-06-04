@@ -1900,7 +1900,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   
   if (!aReflowState.mStyleDisplay->IsTableClip()) {
     // collapsed border may leak out
-    nsMargin bcMargin = GetBCMargin();
+    nsMargin bcMargin = GetExcludedOuterBCBorder();
     tableRect.Inflate(bcMargin);
   }
   aDesiredSize.mOverflowArea.UnionRect(aDesiredSize.mOverflowArea, tableRect);
@@ -2336,55 +2336,42 @@ DivideBCBorderSize(nscoord  aPixelSize,
 }
 
 nsMargin
-nsTableFrame::GetBCBorder() const
+nsTableFrame::GetOuterBCBorder() const
 {
   if (NeedToCalcBCBorders())
     NS_CONST_CAST(nsTableFrame*, this)->CalcBCBorders();
 
   nsMargin border(0, 0, 0, 0);
-  nsPresContext *presContext = GetPresContext();
   GET_PIXELS_TO_TWIPS(GetPresContext(), p2t);
   BCPropertyData* propData = 
     (BCPropertyData*)nsTableFrame::GetProperty((nsIFrame*)this, nsLayoutAtoms::tableBCProperty, PR_FALSE);
   if (propData) {
-    if (eCompatibility_NavQuirks != presContext->CompatibilityMode()) {
-      border.top += BC_BORDER_BOTTOM_HALF_COORD(p2t, propData->mTopBorderWidth);
-      border.right += BC_BORDER_LEFT_HALF_COORD(p2t, propData->mRightBorderWidth);
-      border.bottom += BC_BORDER_TOP_HALF_COORD(p2t, propData->mBottomBorderWidth);
-      border.left += BC_BORDER_RIGHT_HALF_COORD(p2t, propData->mLeftBorderWidth);
-    }
-    else {
-      border.top    += NSToCoordRound(p2t * (float)propData->mTopBorderWidth);
-      border.right  += NSToCoordRound(p2t * (float)propData->mRightBorderWidth);
-      border.bottom += NSToCoordRound(p2t * (float)propData->mBottomBorderWidth);
-      border.left   += NSToCoordRound(p2t * (float)propData->mLeftBorderWidth);
-    }
+    border.top += BC_BORDER_TOP_HALF_COORD(p2t, propData->mTopBorderWidth);
+    border.right += BC_BORDER_RIGHT_HALF_COORD(p2t, propData->mRightBorderWidth);
+    border.bottom += BC_BORDER_BOTTOM_HALF_COORD(p2t, propData->mBottomBorderWidth);
+    border.left += BC_BORDER_LEFT_HALF_COORD(p2t, propData->mLeftBorderWidth);
   }
   return border;
 }
 
 nsMargin
-nsTableFrame::GetBCMargin() const
+nsTableFrame::GetIncludedOuterBCBorder() const
 {
-  if (NeedToCalcBCBorders())
-    NS_CONST_CAST(nsTableFrame*, this)->CalcBCBorders();
-
-  nsMargin overflow(0, 0, 0, 0);
-  nsPresContext* presContext = GetPresContext();
-  GET_PIXELS_TO_TWIPS(presContext, p2t);
-  BCPropertyData* propData =
-    (BCPropertyData*)nsTableFrame::GetProperty((nsIFrame*)this,
-                                               nsLayoutAtoms::tableBCProperty,
-                                               PR_FALSE);
-  if (propData) {
-    if (eCompatibility_NavQuirks != presContext->CompatibilityMode()) {
-      overflow.top += BC_BORDER_TOP_HALF_COORD(p2t, propData->mTopBorderWidth);
-      overflow.right += BC_BORDER_RIGHT_HALF_COORD(p2t, propData->mRightBorderWidth);
-      overflow.bottom += BC_BORDER_BOTTOM_HALF_COORD(p2t, propData->mBottomBorderWidth);
-      overflow.left += BC_BORDER_LEFT_HALF_COORD(p2t, propData->mLeftBorderWidth);
-    }
+  if (eCompatibility_NavQuirks == GetPresContext()->CompatibilityMode()) {
+    return GetOuterBCBorder();
   }
-  return overflow;
+  nsMargin border(0, 0, 0, 0);
+  return border;
+}
+
+nsMargin
+nsTableFrame::GetExcludedOuterBCBorder() const
+{
+  if (eCompatibility_NavQuirks != GetPresContext()->CompatibilityMode()) {
+    return GetOuterBCBorder();
+  }
+  nsMargin border(0, 0, 0, 0);
+  return border;
 }
 static
 void GetSeparateModelBorderPadding(const nsHTMLReflowState* aReflowState,
@@ -2431,7 +2418,9 @@ nsTableFrame::GetContentAreaOffset(const nsHTMLReflowState* aReflowState) const
 {
   nsMargin offset(0,0,0,0);
   if (IsBorderCollapse()) {
-    offset = GetBCBorder();
+    // LDB: This used to unconditionally include the inner half as well,
+    // but that's pretty clearly wrong per the CSS2.1 spec.
+    offset = GetOuterBCBorder();
   }
   else {
     GetSeparateModelBorderPadding(aReflowState, *mStyleContext, offset);
@@ -3391,7 +3380,6 @@ nsTableFrame::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContex
     colFrame->ResetMinCoord();
     colFrame->ResetPrefCoord();
     colFrame->ResetPrefPercent();
-    nscoord colMinWithoutWidths = 0;
 
     // XXX Consider col frame!
     // XXX Should it get Border/padding considered?

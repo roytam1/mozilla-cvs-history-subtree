@@ -1580,7 +1580,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
         // try to do anything like handling 'auto' widths,
         // '-moz-box-sizing', or 'auto' margins.
         mComputedPadding.SizeTo(0,0,0,0);
-        mComputedBorderPadding = tableFrame->GetBCMargin();
+        mComputedBorderPadding = tableFrame->GetExcludedOuterBCBorder();
       }
     }
 

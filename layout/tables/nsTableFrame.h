@@ -219,11 +219,20 @@ public:
                                   const nsRect& aDirtyRect,
                                   nsPoint aPt);
 
-  nsMargin GetBCBorder() const;
+  // Get the outer half (i.e., the part outside the height and width of
+  // the table) of the largest segment (?) of border-collapsed border on
+  // the table on each side, or 0 for non border-collapsed tables.
+  nsMargin GetOuterBCBorder() const;
 
-  // get the area that the border leak out from the inner table frame into
-  // the surrounding margin space
-  nsMargin GetBCMargin() const;
+  // Same as above, but only if it's included from the border-box width
+  // of the table (nonzero only in quirks mode).
+  nsMargin GetIncludedOuterBCBorder() const;
+
+  // Same as above, but only if it's excluded from the border-box width
+  // of the table (nonzero only in standards mode).  This is the area
+  // that leaks out into the margin (or potentially past it, if there is
+  // no margin).
+  nsMargin GetExcludedOuterBCBorder() const;
 
   /** Get width of table + colgroup + col collapse: elements that
    *  continue along the length of the whole left side.
