@@ -1874,7 +1874,7 @@ function BrowserCloseTabOrWindow()
   }
 #endif
 
-  if (gBrowser.localName == 'tabbrowser' && gBrowser.tabContainer.childNodes.length > 1) {
+  if (gBrowser.localName == "tabbrowser" && (gBrowser.tabContainer.childNodes.length > 1 || !gPrefService.getBoolPref("browser.tabs.autoHide"))) {
     // Just close up a tab.
     gBrowser.removeCurrentTab();
     return;
