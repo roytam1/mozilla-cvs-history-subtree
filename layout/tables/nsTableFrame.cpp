@@ -3328,33 +3328,6 @@ nsTableFrame::IsAutoHeight()
 }
 
 nscoord 
-nsTableFrame::CalcBorderBoxWidth(const nsHTMLReflowState& aState)
-{
-  nscoord width = aState.mComputedWidth;
-
-  if (eStyleUnit_Auto == aState.mStylePosition->mWidth.GetUnit()) {
-    if (0 == width) {
-      width = aState.availableWidth;
-    }
-    if (NS_UNCONSTRAINEDSIZE != aState.availableWidth) {
-      width = aState.availableWidth;
-    }
-  }
-  else if (width != NS_UNCONSTRAINEDSIZE) {
-    nsMargin borderPadding = GetContentAreaOffset(&aState);
-    width += borderPadding.left + borderPadding.right;
-  }
-  width = PR_MAX(width, 0);
-
-  if (NS_UNCONSTRAINEDSIZE != width) {
-    GET_PIXELS_TO_TWIPS(GetPresContext(), p2t);
-    width = RoundToPixel(width, p2t, eRoundUpIfHalfOrMore);
-  }
-
-  return width;
-}
-
-nscoord 
 nsTableFrame::CalcBorderBoxHeight(const nsHTMLReflowState& aState)
 {
   nscoord height = aState.mComputedHeight;

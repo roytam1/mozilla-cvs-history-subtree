@@ -512,10 +512,6 @@ protected:
 
 public:
 
-  // calculate the computed width of aFrame including its border and padding given 
-  // its reflow state.
-  nscoord CalcBorderBoxWidth(const nsHTMLReflowState& aReflowState);
-
   // calculate the computed height of aFrame including its border and padding given 
   // its reflow state.
   nscoord CalcBorderBoxHeight(const nsHTMLReflowState& aReflowState);
