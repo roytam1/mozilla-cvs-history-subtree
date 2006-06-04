@@ -59,12 +59,12 @@
 #include "nsDataHashtable.h"
 #include "nsInterfaceHashtable.h"
 #include "nsPtrHashKey.h"
+#include "blapit.h"
 
 class nsILocalFile;
 class nsIDOMWindow;
 class nsIDOMDocument;
 class nsIDOMNode;
-class nsICryptoHash;
 class nsIMetricsCollector;
 
 #ifdef PR_LOGGING
@@ -136,8 +136,14 @@ public:
     return mWindowMap;
   }
 
-  // Creates a one-way hash of the given string
-  nsresult Hash(const nsAString &str, nsCString &hashed);
+  // Creates a one-way hash of the given string.
+  nsresult HashUTF8(const nsCString &str, nsCString &hashed);
+
+  // Convenience method for hashing UTF-16 strings.
+  // The string is converted to UTF-8, then HashUTF8() is called.
+  nsresult HashUTF16(const nsString &str, nsCString &hashed) {
+    return HashUTF8(NS_ConvertUTF16toUTF8(str), hashed);
+  }
 
 private:
   nsMetricsService();
@@ -171,6 +177,10 @@ private:
   // A reference to the local file containing our current configuration
   void GetConfigFile(nsIFile **result);
 
+  // A reference to the local file where we'll download the server response.
+  // We don't replace the real config file until we know the new one is valid.
+  void GetConfigTempFile(nsIFile **result);
+
   // Generate a new random client id string
   nsresult GenerateClientID(nsCString &clientID);
 
@@ -194,6 +204,16 @@ private:
 
   // Does the real work of GetWindowID().
   PRUint32 GetWindowIDInternal(nsIDOMWindow *window);
+
+  // Tries to load a new config.  If successful, the old config file is
+  // replaced with the new one.  If the new config couldn't be loaded,
+  // a config file is written which disables collection and preserves the
+  // upload interval from the old config.  Returns true if the new config
+  // file was loaded successfully.
+  PRBool LoadNewConfig(nsIFile *newConfig, nsIFile *oldConfig);
+
+  // Removes the existing data file (metrics.xml)
+  void RemoveDataFile();
 
   static PLDHashOperator PR_CALLBACK
   PruneDisabledCollectors(const nsAString &key,
@@ -231,7 +251,7 @@ private:
   nsCOMPtr<nsIDOMNode> mRoot;
 
   // MD5 hashing object for collectors to use
-  nsCOMPtr<nsICryptoHash> mCryptoHash;
+  MD5Context *mMD5Context;
 
   // Window to incrementing-id map.  The keys are nsIDOMWindow*.
   nsDataHashtable< nsPtrHashKey<nsIDOMWindow>, PRUint32 > mWindowMap;
@@ -272,6 +292,11 @@ public:
   // from the OS.  Returns true on success, or false if no random
   // bytes are available
   static PRBool GetRandomNoise(void *buf, PRSize size);
+
+  // Creates a new element in the metrics namespace, using the given
+  // ownerDocument and tag.
+  static nsresult CreateElement(nsIDOMDocument *ownerDoc,
+                                const nsAString &tag, nsIDOMElement **element);
 };
 
 #endif  // nsMetricsService_h__

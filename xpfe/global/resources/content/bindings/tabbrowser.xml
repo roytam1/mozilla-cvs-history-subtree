@@ -57,7 +57,7 @@
       <xul:stringbundle anonid="tbstringbundle" src="chrome://global/locale/tabbrowser.properties"/>
       <xul:tabbox anonid="tabbox" flex="1" eventnode="document" xbl:inherits="handleCtrlPageUpDown">
         <xul:hbox class="tab-drop-indicator-bar" hidden="true">
-          <xul:image class="tab-drop-indicator"/>
+          <xul:image class="tab-drop-indicator" mousethrough="always"/>
         </xul:hbox>
         <xul:hbox class="tabbrowser-strip" collapsed="true" tooltip="_child" context="_child"
                   anonid="strip"
@@ -185,6 +185,9 @@
       </field>
       <field name="nextTabNumber">
         0
+      </field>
+      <field name="_browsers">
+        null
       </field>
 
       <!-- A web progress listener object definition for a given tab. -->
@@ -862,6 +865,8 @@
         <parameter name="aFocusNewTab"/>
         <body>
           <![CDATA[
+            this._browsers = null; // invalidate cache
+
             var t = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
                                              "tab");
 
@@ -890,7 +895,7 @@
 
             this.mPanelContainer.appendChild(b);
 
-            b.addEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            b.addEventListener("DOMTitleChanged", this.onTitleChanged, true);
 
             this.mStrip.collapsed = false;
 
@@ -999,6 +1004,8 @@
         <parameter name="aTab"/>
         <body>
           <![CDATA[
+            this._browsers = null; // invalidate cache
+
             if (aTab.localName != "tab")
               aTab = this.mCurrentTab;
 
@@ -1031,7 +1038,7 @@
             this.mTabListeners.splice(index, 1);
 
             // Remove our title change listener
-            oldBrowser.removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            oldBrowser.removeEventListener("DOMTitleChanged", this.onTitleChanged, true);
 
             // We are no longer the primary content area.
             oldBrowser.setAttribute("type", "content-targetable");
@@ -1049,11 +1056,6 @@
             else
               newIndex = index;
 
-            var oldTab = aTab;
-
-            // clean up the before/afterselected attributes before removing the tab
-            oldTab.selected = false;
-
             // Because of the way XBL works (fields just set JS
             // properties on the element) and the code we have in place
             // to preserve the JS objects for any elements that have
@@ -1065,24 +1067,29 @@
             if (oldBrowser == this.mCurrentBrowser)
               this.mCurrentBrowser = null;
 
-            this.mTabContainer.removeChild(oldTab);
-            this.mPanelContainer.removeChild(oldBrowser);
+            // Clean up before/afterselected attributes before removing the tab
+            aTab.selected = false;
+            this.mTabContainer.removeChild(aTab);
 
             // When the current tab is removed select a new tab
             // and fire select events on tabpanels and tabs
-            if (this.mPreviousTab && (oldTab == this.mCurrentTab))
+            if (this.mPreviousTab && (aTab == this.mCurrentTab))
               this.selectedTab = this.mPreviousTab;
             else {
               this.mTabContainer.selectedIndex = newIndex;
 
-              // When removing a tab to the left of the current tab
-              // fix up the panel index without firing any events
-              this.mTabBox.selectedPanel = this.selectedTab.linkedBrowser;
-              
               // We need to explicitly clear this, because updateCurrentBrowser
               // doesn't get called for a background tab
               this.mPreviousTab = null;
             }
+
+            // The pagehide event that this removal triggers is safe
+            // because the browser is no longer current at this point
+            this.mPanelContainer.removeChild(oldBrowser);
+
+            // Fix up the selected panel in the case the removed
+            // browser was to the left of the current browser
+            this.mTabBox.selectedPanel = this.selectedTab.linkedBrowser;
           ]]>
         </body>
       </method>
@@ -1188,11 +1195,14 @@
       <property name="browsers" readonly="true">
         <getter>
           <![CDATA[
-            var browsers = [];
-            browsers.item = function(i) {return this[i];}
-            for (var i = 0; i < this.mTabs.length; i++)
-              browsers.push(this.mTabs[i].linkedBrowser);
-            return browsers;
+            if (!this._browsers) {
+              var browsers = [];
+              browsers.item = function(i) {return this[i];}
+              for (var i = 0; i < this.mTabs.length; i++)
+                browsers.push(this.mTabs[i].linkedBrowser);
+              this._browsers = browsers;
+            }
+            return this._browsers;
           ]]>
         </getter>
       </property>
@@ -1319,15 +1329,24 @@
                 // Load in an existing tab
                 tab = this.mTabs[tabIndex];
                 tab.linkedBrowser.loadURI(getShortcutOrURI(url));
+                if (this.mCurrentTab != tab && !bgLoad)
+                  this.selectedTab = tab;
               }
-              else {
-                // We're adding a new tab
-                tab = this.addTab(getShortcutOrURI(url));
+              else if (aDragSession.sourceDocument &&
+                       aDragSession.sourceDocument.defaultView.top == content) {
+                // We're adding a new tab, and we may want parent-tab tracking
+                tab = this.addTab(getShortcutOrURI(url), null, null, !bgLoad);
                 if (newIndex != this.mTabs.length - 1)
                   this.moveTabTo(this.mTabs.length - 1, newIndex);
               }
-              if (this.mCurrentTab != tab && !bgLoad)
-                this.selectedTab = tab;
+              else {
+                // We're adding a new tab, but do not want parent-tab tracking
+                tab = this.addTab(getShortcutOrURI(url));
+                if (newIndex != this.mTabs.length - 1)
+                  this.moveTabTo(this.mTabs.length - 1, newIndex);
+                if (this.mCurrentTab != tab && !bgLoad)
+                  this.selectedTab = tab;
+              }
             }
           ]]>
         </body>
@@ -1369,6 +1388,8 @@
         <parameter name="aDestIndex"/>
         <body>
           <![CDATA[
+            this._browsers = null; // invalidate cache
+
             // for compatibility with extensions
             if (typeof(aSrcIndex) != "number")
               aSrcIndex = this.getTabIndex(aSrcIndex);
@@ -1790,7 +1811,7 @@
           this.mTabs[0].linkedBrowser = this.mPanelContainer.childNodes[0];
 
           // Wire up the first title change listener.
-          this.mCurrentBrowser.addEventListener("DOMTitleChanged", this.onTitleChanged, false);
+          this.mCurrentBrowser.addEventListener("DOMTitleChanged", this.onTitleChanged, true);
 
           // Ensure the browser's session history and security UI are wired up
           this.mCurrentBrowser.init();
@@ -1822,7 +1843,7 @@
             this.mTabFilters[i].removeProgressListener(this.mTabListeners[i]);
             this.mTabFilters[i] = null;
             this.mTabListeners[i] = null;
-            this.mPanelContainer.childNodes[i].removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            this.mPanelContainer.childNodes[i].removeEventListener("DOMTitleChanged", this.onTitleChanged, true);
           }
           document.removeEventListener("keypress", this._keyEventHandler, false);
         ]]>
@@ -1832,9 +1853,9 @@
     <handlers>
       <handler event="select" action="if (event.originalTarget == this.mPanelContainer) this.updateCurrentBrowser();"/>
 
-      <handler event="DOMLinkAdded" action="this.onLinkAdded(event);"/>
+      <handler event="DOMLinkAdded" phase="capturing" action="this.onLinkAdded(event);"/>
 
-      <handler event="DOMWindowClose">
+      <handler event="DOMWindowClose" phase="capturing">
         <![CDATA[
           if (!event.isTrusted)
             return;
@@ -1851,7 +1872,7 @@
           event.preventDefault();
         ]]>
       </handler>
-      <handler event="DOMWillOpenModalDialog">
+      <handler event="DOMWillOpenModalDialog" phase="capturing">
         <![CDATA[
           if (!event.isTrusted)
             return;

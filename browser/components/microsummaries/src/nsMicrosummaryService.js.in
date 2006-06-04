@@ -41,6 +41,9 @@ const PERMS_FILE    = 0644;
 const MODE_WRONLY   = 0x02;
 const MODE_TRUNCATE = 0x20;
 
+const NS_ERROR_MODULE_DOM = 2152923136;
+const NS_ERROR_DOM_BAD_URI = NS_ERROR_MODULE_DOM + 1012;
+
 // How often to update microsummaries, in milliseconds.
 // XXX Make this a hidden pref so power users can modify it.
 const UPDATE_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -58,6 +61,10 @@ const FIELD_GENERATED_TITLE   = "bookmarks/generatedTitle";
 const FIELD_CONTENT_TYPE      = "bookmarks/contentType";
 #else
 const NC_NS                   = "http://home.netscape.com/NC-rdf#";
+const RDF_NS                  = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+const FIELD_RDF_TYPE          = RDF_NS + "type";
+const VALUE_MICSUM_BOOKMARK   = NC_NS + "MicsumBookmark";
+const VALUE_NORMAL_BOOKMARK   = NC_NS + "Bookmark";
 const FIELD_MICSUM_GEN_URI    = NC_NS + "MicsumGenURI";
 const FIELD_MICSUM_EXPIRATION = NC_NS + "MicsumExpiration";
 const FIELD_GENERATED_TITLE   = NC_NS + "GeneratedTitle";
@@ -238,12 +245,12 @@ MicrosummaryService.prototype = {
     }
 #else
     var bookmarks = [];
-    var resources = this._bmds.GetAllResources();
-    while (resources.hasMoreElements()) {
-      var resource = resources.getNext().QueryInterface(Ci.nsIRDFResource);
-      if (this._bmds.hasArcOut(resource, this._resource(FIELD_MICSUM_GEN_URI)))
-        bookmarks.push(resource);
-    }
+
+    var resources = this._bmds.GetSources(this._resource(FIELD_RDF_TYPE),
+                                          this._resource(VALUE_MICSUM_BOOKMARK),
+                                          true);
+    while (resources.hasMoreElements())
+      bookmarks.push(resources.getNext().QueryInterface(Ci.nsIRDFResource));
 #endif
 
     var now = new Date().getTime();
@@ -265,6 +272,8 @@ MicrosummaryService.prototype = {
 #endif
       var generatorURI = this._uri(this._getField(bookmarkID, FIELD_MICSUM_GEN_URI));
       var microsummary = new Microsummary(pageURI, generatorURI);
+      if (this._localGenerators[generatorURI.spec])
+        microsummary.generator = this._localGenerators[generatorURI.spec];
 
       // A microsummary observer that calls the microsummary service
       // to update the datastore when the microsummary finishes loading.
@@ -520,7 +529,15 @@ MicrosummaryService.prototype = {
         }
       };
 
-      downloadPage(pageURI, callback);
+      try {
+        downloadPage(pageURI, callback);
+      }
+      catch(e) {
+        // We shouldn't have to do anything if the call fails.  We'll just
+        // return the list of microsummaries without including page-defined
+        // microsummaries in the list.
+        LOG("error downloading page to extract its microsummaries: " + e);
+      }
     }
 
     return microsummaries;
@@ -595,8 +612,12 @@ MicrosummaryService.prototype = {
     var node = this._bmds.GetTarget(bookmarkResource,
                                     this._resource(fieldName),
                                     true);
-    if (node)
-      fieldValue = node.QueryInterface(Ci.nsIRDFLiteral).Value;
+    if (node) {
+      if (fieldName == FIELD_RDF_TYPE)
+        fieldValue = node.QueryInterface(Ci.nsIRDFResource).Value;
+      else
+        fieldValue = node.QueryInterface(Ci.nsIRDFLiteral).Value;
+    }
     else
       fieldValue = null;
 
@@ -620,7 +641,29 @@ MicrosummaryService.prototype = {
                         true);
     }
 
-    this._forceToolbarRebuild();
+    // If we're setting the generator URI field, make sure the bookmark's
+    // RDF type is set to the microsummary bookmark type.
+    if (fieldName == FIELD_MICSUM_GEN_URI &&
+        this._getField(bookmarkID, FIELD_RDF_TYPE) != VALUE_MICSUM_BOOKMARK) {
+      if (this._hasField(bookmarkID, FIELD_RDF_TYPE)) {
+        oldValue = this._getField(bookmarkID, FIELD_RDF_TYPE);
+        this._bmds.Change(bookmarkResource,
+                          this._resource(FIELD_RDF_TYPE),
+                          this._resource(oldValue),
+                          this._resource(VALUE_MICSUM_BOOKMARK));
+      }
+      else {
+        this._bmds.Assert(bookmarkResource,
+                          this._resource(FIELD_RDF_TYPE),
+                          this._resource(VALUE_MICSUM_BOOKMARK),
+                          true);
+      }
+    }
+
+    // If we're setting a field that could affect this bookmark's label
+    // in bookmarks toolbars, then force toolbars to rebuild from scratch.
+    if (fieldName == FIELD_MICSUM_GEN_URI || fieldName == FIELD_GENERATED_TITLE)
+      this._forceToolbarRebuild();
   },
 
   _clearField: function MSS__clearField(bookmarkID, fieldName) {
@@ -633,8 +676,16 @@ MicrosummaryService.prototype = {
       this._bmds.Unassert(bookmarkResource,
                           this._resource(fieldName),
                           node);
-      this._forceToolbarRebuild();
     }
+
+    // If we're clearing the generator URI field, set the bookmark's RDF type
+    // back to the normal bookmark type.
+    if (fieldName == FIELD_MICSUM_GEN_URI &&
+        this._getField(bookmarkID, FIELD_RDF_TYPE) == VALUE_MICSUM_BOOKMARK)
+      this._bmds.Change(bookmarkResource,
+                        this._resource(FIELD_RDF_TYPE),
+                        this._resource(VALUE_MICSUM_BOOKMARK),
+                        this._resource(VALUE_NORMAL_BOOKMARK));
   },
 
   _hasField: function MSS__hasField(bookmarkID, fieldName) {
@@ -709,6 +760,9 @@ MicrosummaryService.prototype = {
     var genURI = this._uri(this._getField(bookmarkID, FIELD_MICSUM_GEN_URI));
     
     var microsummary = new Microsummary(pageURI, genURI);
+    if (this._localGenerators[generatorURI.spec])
+      microsummary.generator = this._localGenerators[generatorURI.spec];
+
     return microsummary;
   },
 
@@ -1421,6 +1475,11 @@ function downloadPage(pageURI, loadHandler) {
  *
  */
 function downloadXMLPage(pageURI, loadHandler) {
+  // Make sure we're not loading javascript: or data: URLs, which could
+  // take advantage of the load to run code with chrome: privileges.
+  if (pageURI.scheme != "http" && pageURI.scheme != "https")
+    throw NS_ERROR_DOM_BAD_URI;
+
   LOG(pageURI.spec + " downloading as XML");
 
   var request = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance();
@@ -1446,6 +1505,11 @@ function downloadXMLPage(pageURI, loadHandler) {
  *
  */
 function downloadHTMLPage(pageURI, loadHandler) {
+  // Make sure we're not loading javascript: or data: URLs, which could
+  // take advantage of the load to run code with chrome: privileges.
+  if (pageURI.scheme != "http" && pageURI.scheme != "https")
+    throw NS_ERROR_DOM_BAD_URI;
+
   LOG(pageURI.spec + " downloading as HTML");
 
   // We download HTML pages via hidden iframes in browser windows.

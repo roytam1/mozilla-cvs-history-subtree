@@ -190,6 +190,9 @@
       <field name="mAddProgressListenerWasCalled">
         false
       </field>
+      <field name="_browsers">
+        null
+      </field>
 
       <method name="getBrowserAtIndex">
         <parameter name="aIndex"/>
@@ -956,7 +959,7 @@
             this.mTabbedMode = true; // Welcome to multi-tabbed mode.
 
             // Get the first tab all hooked up with a title listener and popup blocking listener.
-            this.mCurrentBrowser.addEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            this.mCurrentBrowser.addEventListener("DOMTitleChanged", this.onTitleChanged, true);
 
             var throbberElement = document.getElementById("navigator-throbber");
             if (throbberElement && throbberElement.hasAttribute("busy")) {
@@ -1072,6 +1075,8 @@
         <parameter name="aAllowThirdPartyFixup"/>
         <body>
           <![CDATA[
+            this._browsers = null; // invalidate cache
+
             if (!this.mTabbedMode)
               this.enterTabbedMode();
 
@@ -1128,7 +1133,7 @@
             b.setAttribute("flex", "1");
             this.mPanelContainer.appendChild(notificationbox);
 
-            b.addEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            b.addEventListener("DOMTitleChanged", this.onTitleChanged, true);
 
             if (this.mStrip.collapsed)
               this.setStripVisibilityTo(true);
@@ -1267,6 +1272,7 @@
         <parameter name="aTab"/>
         <body>
           <![CDATA[
+            this._browsers = null; // invalidate cache
             if (aTab.localName != "tab")
               aTab = this.mCurrentTab;
 
@@ -1314,7 +1320,7 @@
             this.mTabListeners.splice(index, 1);
 
             // Remove our title change and blocking listeners
-            oldBrowser.removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            oldBrowser.removeEventListener("DOMTitleChanged", this.onTitleChanged, true);
 
             // We are no longer the primary content area.
             oldBrowser.setAttribute("type", "content-targetable");
@@ -1529,12 +1535,15 @@
       <property name="browsers" readonly="true">
        <getter>
           <![CDATA[
-            var browsers = [];
-            var i;
-            browsers.item = function(i) {return this[i];}
-            for (i = 0; i < this.mTabContainer.childNodes.length; i++)
-              browsers.push(this.mTabContainer.childNodes[i].linkedBrowser);
-            return browsers;
+            if (!this._browsers) {
+              var browsers = [];
+              var i;
+              browsers.item = function(i) {return this[i];}
+              for (i = 0; i < this.mTabContainer.childNodes.length; i++)
+                browsers.push(this.mTabContainer.childNodes[i].linkedBrowser);
+              this._browsers = browsers;
+            }
+            return this._browsers;
           ]]>
         </getter>
       </property>
@@ -1677,6 +1686,7 @@
         <parameter name="aIndex"/>
         <body>
         <![CDATA[
+          this._browsers = null; // invalidate cache
           this.mTabFilters.splice(aIndex, 0, this.mTabFilters.splice(aTab._tPos, 1)[0]);
           this.mTabListeners.splice(aIndex, 0, this.mTabListeners.splice(aTab._tPos, 1)[0]);
 
@@ -2179,7 +2189,7 @@
             this.mTabFilters[i].removeProgressListener(this.mTabListeners[i]);
             this.mTabFilters[i] = null;
             this.mTabListeners[i] = null;
-            this.getBrowserAtIndex(i).removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            this.getBrowserAtIndex(i).removeEventListener("DOMTitleChanged", this.onTitleChanged, true);
           }
           document.removeEventListener("keypress", this._keyEventHandler, false);
         ]]>
@@ -2187,9 +2197,9 @@
     </implementation>
 
     <handlers>
-      <handler event="DOMLinkAdded" action="this.onLinkAdded(event);"/>
+      <handler event="DOMLinkAdded" phase="capturing" action="this.onLinkAdded(event);"/>
 
-      <handler event="DOMWindowClose">
+      <handler event="DOMWindowClose" phase="capturing">
         <![CDATA[
           if (!event.isTrusted)
             return;
@@ -2218,7 +2228,7 @@
           }
         ]]>
       </handler>
-      <handler event="DOMWillOpenModalDialog">
+      <handler event="DOMWillOpenModalDialog" phase="capturing">
         <![CDATA[
           if (!event.isTrusted)
             return;
@@ -2238,7 +2248,7 @@
           }
         ]]>
       </handler>
-      <handler event="DOMModalDialogClosed">
+      <handler event="DOMModalDialogClosed" phase="capturing">
         <![CDATA[
           if (!event.isTrusted)
             return;
@@ -2269,7 +2279,7 @@
         }
 
         this._updateDisableBackgroundClose();
-        pb2.addObserver("browser.tabs.disableBackgroundClose", this, false);
+        pb2.addObserver("browser.tabs.disableBackgroundClose", this, true);
 
         var self = this;
         function onResize() {
@@ -2277,13 +2287,6 @@
         }
         window.addEventListener("resize", onResize, false);
       </constructor>
-
-      <destructor>
-        var pb2 =
-            Components.classes["@mozilla.org/preferences-service;1"].
-            getService(Components.interfaces.nsIPrefBranch2);
-        pb2.removeObserver("browser.tabs.disableBackgroundClose", this);
-      </destructor>
 
       <method name="_updateDisableBackgroundClose">
         <body><![CDATA[

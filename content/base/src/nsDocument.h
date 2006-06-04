@@ -67,7 +67,6 @@
 #include "nsIDOMEventTarget.h"
 #include "nsIContent.h"
 #include "nsIEventListenerManager.h"
-#include "nsGenericDOMNodeList.h"
 #include "nsIDOM3Node.h"
 #include "nsIPrincipal.h"
 #include "nsIParser.h"
@@ -116,6 +115,7 @@ struct nsRadioGroupStruct;
 class nsOnloadBlocker;
 class nsUnblockOnloadEvent;
 struct PLEvent;
+class nsChildContentList;
 
 PR_BEGIN_EXTERN_C
 /* Note that these typedefs declare functions, not pointer to
@@ -225,26 +225,6 @@ public:
   nsDocHeaderData*  mNext;
 };
 
-// Represents the children of a document (prolog, epilog and
-// document element)
-class nsDocumentChildNodes : public nsGenericDOMNodeList
-{
-public:
-  nsDocumentChildNodes(nsIDocument* aDocument);
-  ~nsDocumentChildNodes();
-
-  NS_IMETHOD    GetLength(PRUint32* aLength);
-  NS_IMETHOD    Item(PRUint32 aIndex, nsIDOMNode** aReturn);
-
-  void DropReference();
-
-protected:
-  nsDocumentChildNodes(); // Not implemented
-
-  nsIDocument* mDocument;
-};
-
-
 class nsDOMStyleSheetList : public nsIDOMStyleSheetList,
                             public nsStubDocumentObserver
 {
@@ -328,6 +308,8 @@ public:
 
   virtual void StopDocumentLoad();
 
+  virtual void SetDocumentURI(nsIURI* aURI);
+  
   /**
    * Set the principal responsible for this document.
    */
@@ -531,7 +513,7 @@ public:
   // nsINode
   virtual PRBool IsNodeOfType(PRUint32 aFlags) const;
   virtual nsIContent *GetChildAt(PRUint32 aIndex) const;
-  virtual PRInt32 IndexOf(nsIContent* aPossibleChild) const;
+  virtual PRInt32 IndexOf(nsINode* aPossibleChild) const;
   virtual PRUint32 GetChildCount() const;
   virtual nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                                  PRBool aNotify);
@@ -542,10 +524,6 @@ public:
   virtual nsresult DispatchDOMEvent(nsEvent* aEvent, nsIDOMEvent* aDOMEvent,
                                     nsPresContext* aPresContext,
                                     nsEventStatus* aEventStatus);
-  virtual nsresult GetEventListenerManager(PRBool aCreateIfNotFound,
-                                           nsIEventListenerManager** aResult) {
-    return GetListenerManager(aCreateIfNotFound, aResult);
-  };
 
   // nsIRadioGroupContainer
   NS_IMETHOD WalkRadioGroup(const nsAString& aName,
@@ -664,20 +642,6 @@ public:
   virtual NS_HIDDEN_(void) ForgetLink(nsIContent* aContent);
   virtual NS_HIDDEN_(void) NotifyURIVisitednessChanged(nsIURI* aURI);
 
-  NS_HIDDEN_(nsresult) SetUserData(const nsINode *aObject,
-                                   nsIAtom *aKey,
-                                   nsIVariant *aData,
-                                   nsIDOMUserDataHandler *aHandler,
-                                   nsIVariant **aReturn);
-  NS_HIDDEN_(nsresult) GetUserData(const nsINode *aObject,
-                                   nsIAtom *aKey,
-                                   nsIVariant **aResult);
-  NS_HIDDEN_(void) CallUserDataHandler(PRUint16 aOperation,
-                                       const nsINode *aObject,
-                                       nsIDOMNode *aSource,
-                                       nsIDOMNode *aDest);
-  NS_HIDDEN_(void) CopyUserData(const nsINode *aObject,
-                                nsIDocument *aDestination);
   NS_HIDDEN_(void) ClearBoxObjectFor(nsIContent* aContent);
 
 protected:
@@ -773,7 +737,7 @@ protected:
   nsCOMPtr<nsIScriptLoader> mScriptLoader;
   nsDocHeaderData* mHeaderData;
 
-  nsRefPtr<nsDocumentChildNodes> mChildNodes;
+  nsRefPtr<nsChildContentList> mChildNodes;
 
   nsHashtable mRadioGroups;
 

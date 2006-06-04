@@ -44,8 +44,6 @@
 pref("startup.homepage_override_url","chrome://navigator-region/locale/region.properties");
 // XXX When SeaMonkey becomes a full xul app this can be set without an ifdef
 #ifdef MOZ_XUL_APP
-// defaultChromeURI is only needed until our default command line handler knows what to launch
-pref("toolkit.defaultChromeURI","chrome://navigator/content/navigator.xul");
 pref("general.skins.selectedSkin", "classic/1.0");
 #endif
 
@@ -327,7 +325,6 @@ pref("browser.throbber.url","chrome://navigator-region/locale/region.properties"
 pref("alerts.slideIncrement", 1);
 pref("alerts.slideIncrementTime", 10);
 pref("alerts.totalOpenTime", 4000);
-pref("alerts.height", 50);
 
 // update notifications prefs
 pref("update_notifications.enabled", true);

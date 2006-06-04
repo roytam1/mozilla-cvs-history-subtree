@@ -463,16 +463,10 @@ protected:
 //   before we've finished all of parsing and tokenizing of the document.
 //
 
-class DummyParserRequest : public nsIChannel
+class DummyParserRequest : public nsIRequest
 {
 protected:
   DummyParserRequest(nsIHTMLContentSink* aSink);
-  virtual ~DummyParserRequest();
-
-  static PRInt32 gRefCnt;
-  static nsIURI* gURI;
-
-  nsCOMPtr<nsILoadGroup> mLoadGroup;
 
   nsIHTMLContentSink* mSink; // Weak reference
 
@@ -514,16 +508,13 @@ public:
 
   NS_IMETHOD GetLoadGroup(nsILoadGroup **aLoadGroup)
   {
-    *aLoadGroup = mLoadGroup;
-    NS_IF_ADDREF(*aLoadGroup);
+    *aLoadGroup = nsnull;
 
     return NS_OK;
   }
 
   NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup)
   {
-    mLoadGroup = aLoadGroup;
-
     return NS_OK;
   }
 
@@ -538,124 +529,9 @@ public:
   {
     return NS_OK;
   }
-
-  // nsIChannel
-  NS_IMETHOD GetOriginalURI(nsIURI **aOriginalURI)
-  {
-    *aOriginalURI = gURI;
-    NS_ADDREF(*aOriginalURI);
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetOriginalURI(nsIURI* aOriginalURI)
-  {
-    gURI = aOriginalURI;
-    NS_ADDREF(gURI);
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetURI(nsIURI **aURI)
-  {
-    *aURI = gURI;
-    NS_ADDREF(*aURI);
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetURI(nsIURI* aURI)
-  {
-    gURI = aURI;
-    NS_ADDREF(gURI);
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD Open(nsIInputStream **_retval)
-  {
-    *_retval = nsnull;
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
-  {
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetOwner(nsISupports **aOwner)
-  {
-    *aOwner = nsnull;
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetOwner(nsISupports *aOwner)
-  {
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetNotificationCallbacks(nsIInterfaceRequestor **aNotifCallbacks)
-  {
-    *aNotifCallbacks = nsnull;
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetNotificationCallbacks(nsIInterfaceRequestor *aNotifCallbacks)
-  {
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetSecurityInfo(nsISupports **aSecurityInfo)
-  {
-    *aSecurityInfo = nsnull;
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetContentType(nsACString &aContentType)
-  {
-    aContentType.Truncate();
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetContentType(const nsACString &aContentType)
-  {
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetContentCharset(nsACString &aContentCharset)
-  {
-    aContentCharset.Truncate();
-
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetContentCharset(const nsACString &aContentCharset)
-  {
-    return NS_OK;
-  }
-
-  NS_IMETHOD GetContentLength(PRInt32 *aContentLength)
-  {
-    return NS_OK;
-  }
-
-  NS_IMETHOD SetContentLength(PRInt32 aContentLength)
-  {
-    return NS_OK;
-  }
 };
 
-PRInt32 DummyParserRequest::gRefCnt;
-nsIURI* DummyParserRequest::gURI;
-
-NS_IMPL_ADDREF(DummyParserRequest)
-NS_IMPL_RELEASE(DummyParserRequest)
-NS_IMPL_QUERY_INTERFACE2(DummyParserRequest, nsIRequest, nsIChannel)
+NS_IMPL_ISUPPORTS1(DummyParserRequest, nsIRequest)
 
 nsresult
 DummyParserRequest::Create(nsIRequest** aResult, nsIHTMLContentSink* aSink)
@@ -673,26 +549,7 @@ DummyParserRequest::Create(nsIRequest** aResult, nsIHTMLContentSink* aSink)
 
 DummyParserRequest::DummyParserRequest(nsIHTMLContentSink* aSink)
 {
-
-  if (gRefCnt++ == 0) {
-#ifdef DEBUG
-    nsresult rv =
-#endif
-    NS_NewURI(&gURI, NS_LITERAL_CSTRING("about:parser-dummy-request"));
-
-    NS_ASSERTION(NS_SUCCEEDED(rv),
-                 "unable to create about:parser-dummy-request");
-  }
-
   mSink = aSink;
-}
-
-
-DummyParserRequest::~DummyParserRequest()
-{
-  if (--gRefCnt == 0) {
-    NS_IF_RELEASE(gURI);
-  }
 }
 
 NS_IMETHODIMP
@@ -1758,10 +1615,14 @@ SinkContext::FlushTags(PRBool aNotify)
   FlushText();
 
   if (aNotify) {
-    // Start from the base of the stack (growing upward) and do
+    // Start from the base of the stack (growing downward) and do
     // a notification from the node that is closest to the root of
     // tree for any content that has been added.
-    PRInt32 stackPos = 1;
+
+    // Note that we can start at stackPos == 0 here, because it's the caller's
+    // responsibility to handle flushing interactions between contexts (see
+    // HTMLContentSink::BeginContext).
+    PRInt32 stackPos = 0;
     PRBool flushed = PR_FALSE;
     PRUint32 childCount;
     nsGenericHTMLElement* content;
@@ -1811,9 +1672,10 @@ SinkContext::UpdateChildCounts()
   // Start from the top of the stack (growing upwards) and see if any
   // new content has been appended. If so, we recognize that reflows
   // have been generated for it and we should make sure that no
-  // further reflows occur.
+  // further reflows occur.  Note that we have to include stackPos == 0
+  // to properly notify on kids of <html>.
   PRInt32 stackPos = mStackPos - 1;
-  while (stackPos > 0) {
+  while (stackPos >= 0) {
     Node & node = mStack[stackPos];
     node.mNumFlushed = node.mContent->GetChildCount();
 
@@ -2664,6 +2526,9 @@ HTMLContentSink::OpenBody(const nsIParserNode& aNode)
     PRInt32 parentIndex    = mCurrentContext->mStackPos - 2;
     nsGenericHTMLElement *parent = mCurrentContext->mStack[parentIndex].mContent;
     PRInt32 numFlushed     = mCurrentContext->mStack[parentIndex].mNumFlushed;
+    PRInt32 childCount = parent->GetChildCount();
+    NS_ASSERTION(numFlushed < childCount, "Already notified on the body?");
+    
     PRInt32 insertionPoint =
       mCurrentContext->mStack[parentIndex].mInsertionPoint;
 
@@ -2676,6 +2541,7 @@ HTMLContentSink::OpenBody(const nsIParserNode& aNode)
     } else {
       NotifyAppend(parent, numFlushed);
     }
+    mCurrentContext->mStack[parentIndex].mNumFlushed = childCount;
   }
 
   StartLayout();
@@ -2816,6 +2682,9 @@ HTMLContentSink::OpenFrameset(const nsIParserNode& aNode)
     PRInt32 parentIndex    = mCurrentContext->mStackPos - 2;
     nsGenericHTMLElement *parent = mCurrentContext->mStack[parentIndex].mContent;
     PRInt32 numFlushed     = mCurrentContext->mStack[parentIndex].mNumFlushed;
+    PRInt32 childCount = parent->GetChildCount();
+    NS_ASSERTION(numFlushed < childCount, "Already notified on the frameset?");
+
     PRInt32 insertionPoint =
       mCurrentContext->mStack[parentIndex].mInsertionPoint;
 
@@ -2828,6 +2697,7 @@ HTMLContentSink::OpenFrameset(const nsIParserNode& aNode)
     } else {
       NotifyAppend(parent, numFlushed);
     }
+    mCurrentContext->mStack[parentIndex].mNumFlushed = childCount;
   }
   
   return rv;
@@ -2935,7 +2805,11 @@ HTMLContentSink::OpenContainer(const nsIParserNode& aNode)
           PRInt32 index = mDocument->IndexOf(mRoot);
           NS_ASSERTION(index != -1, "mRoot not child of document?");
           NotifyInsert(nsnull, mRoot, index);
-          
+
+          // Now update the notification information in all our
+          // contexts, since we just inserted the root and notified on
+          // our whole tree
+          UpdateAllContexts();          
         }
       }
       break;

@@ -87,7 +87,7 @@
 #endif
 
 /*
-** Define the interfaces for Unix, Windows and OS/2.
+** Define the interfaces for Unix, Windows, and OS/2.
 */
 #if OS_UNIX
 #define sqlite3OsOpenReadWrite      sqlite3UnixOpenReadWrite
@@ -155,6 +155,7 @@
 #define sqlite3OsFree               sqlite3GenericFree
 #define sqlite3OsAllocationSize     sqlite3GenericAllocationSize
 #endif
+
 
 /*
 ** If using an alternative OS interface, then we must have an "os_other.h"

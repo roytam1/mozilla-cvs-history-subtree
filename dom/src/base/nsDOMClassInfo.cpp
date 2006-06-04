@@ -56,6 +56,7 @@
 #include "nsUnicharUtils.h"
 #include "xptcall.h"
 #include "prprf.h"
+#include "nsTArray.h"
 
 // JavaScript includes
 #include "jsapi.h"
@@ -214,8 +215,6 @@
 #include "nsIDOMComment.h"
 #include "nsIDOMCDATASection.h"
 #include "nsIDOMProcessingInstruction.h"
-#include "nsIDOMEntity.h"
-#include "nsIDOMEntityReference.h"
 #include "nsIDOMNotation.h"
 #include "nsIDOMNSEvent.h"
 #include "nsIDOMKeyEvent.h"
@@ -224,6 +223,7 @@
 #include "nsIDOMBeforeUnloadEvent.h"
 #include "nsIDOMMutationEvent.h"
 #include "nsIDOMSmartCardEvent.h"
+#include "nsIDOMXULCommandEvent.h"
 #include "nsIDOMPageTransitionEvent.h"
 #include "nsIDOMNSDocumentStyle.h"
 #include "nsIDOMDocumentRange.h"
@@ -412,6 +412,14 @@
 
 #include "nsIImageDocument.h"
 
+// Storage includes
+#include "nsIDOMStorage.h"
+#include "nsPIDOMStorage.h"
+#include "nsIDOMStorageList.h"
+#include "nsIDOMStorageItem.h"
+#include "nsIDOMStorageEvent.h"
+#include "nsIDOMToString.h"
+
 static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 static NS_DEFINE_CID(kDOMSOF_CID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
@@ -585,8 +593,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(CDATASection, nsNodeSH, NODE_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsNodeSH,
                            NODE_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(Entity, nsNodeSH, NODE_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(EntityReference, nsNodeSH, NODE_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH, NODE_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH, ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsNamedNodeMapSH,
@@ -617,8 +623,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH,
                            DOCUMENT_SCRIPTABLE_FLAGS |
                            nsIXPCScriptable::WANT_ENUMERATE)
-  NS_DEFINE_CLASSINFO_DATA(HTMLCollection, nsHTMLCollectionSH,
-                           ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLOptionsCollection,
                            nsHTMLOptionsCollectionSH,
                            ARRAY_SCRIPTABLE_FLAGS |
@@ -701,8 +705,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLMetaElement, nsHTMLElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(HTMLModElement, nsHTMLElementSH,
-                           ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLOListElement, nsHTMLElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLObjectElement, nsHTMLPluginObjElementSH,
@@ -735,8 +737,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(HTMLTableCellElement, nsHTMLElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLTableColElement, nsHTMLElementSH,
-                           ELEMENT_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableColGroupElement, nsHTMLElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLTableElement, nsHTMLElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
@@ -798,10 +798,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA_WITH_NAME(XULNodeList, NodeList, nsArraySH,
-                                     ARRAY_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA_WITH_NAME(XULNamedNodeMap, NamedNodeMap,
-                                     nsNamedNodeMapSH, ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA_WITH_NAME(XULAttr, Attr, nsDOMGenericSH,
                                      DOM_DEFAULT_SCRIPTABLE_FLAGS)
 #endif
@@ -928,8 +924,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGGElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(SVGGradientElement, nsElementSH,
-                           ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGImageElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGLinearGradientElement, nsElementSH,
@@ -992,8 +986,6 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)    
   NS_DEFINE_CLASSINFO_DATA(SVGAnimatedNumberList, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)    
-  NS_DEFINE_CLASSINFO_DATA(SVGAnimatedPoints, nsDOMGenericSH,
-                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGAnimatedPreserveAspectRatio, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGAnimatedRect, nsDOMGenericSH,
@@ -1104,6 +1096,27 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(XPathResult, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
+  // WhatWG Storage
+
+  // mrbkap says we don't need WANT_ADDPROPERTY on Storage objects
+  // since a call to addProperty() is always followed by a call to
+  // setProperty(), except in the case when a getter or setter is set
+  // for a property. But we don't care about getters or setters here.
+  NS_DEFINE_CLASSINFO_DATA(Storage, nsStorageSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS |
+                           nsIXPCScriptable::WANT_NEWRESOLVE |
+                           nsIXPCScriptable::WANT_GETPROPERTY |
+                           nsIXPCScriptable::WANT_SETPROPERTY |
+                           nsIXPCScriptable::WANT_DELPROPERTY |
+                           nsIXPCScriptable::DONT_ENUM_STATIC_PROPS |
+                           nsIXPCScriptable::WANT_NEWENUMERATE)
+  NS_DEFINE_CLASSINFO_DATA(StorageList, nsStorageListSH,
+                           ARRAY_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(StorageItem, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(StorageEvent, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+
   // We just want this to have classinfo so it gets mark callbacks for marking
   // event listeners.
   // We really don't want any of the default flags!
@@ -1117,8 +1130,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
 
   NS_DEFINE_CLASSINFO_DATA(XMLHttpProgressEvent, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(XMLHttpRequest, nsDOMGenericSH,
-                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(XMLHttpRequest, nsDOMGCParticipantSH,
+                           GCPARTICIPANT_SCRIPTABLE_FLAGS)
 
   // Define MOZ_SVG_FOREIGNOBJECT here so that when it gets switched on,
   // we preserve binary compatibility. New classes should be added
@@ -1127,6 +1140,9 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(SVGForeignObjectElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
 #endif
+
+  NS_DEFINE_CLASSINFO_DATA(XULCommandEvent, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 };
 
 // Objects that shuld be constructable through |new Name();|
@@ -1760,6 +1776,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMViewCSS)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMAbstractView)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorageWindow)
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(WindowUtils, nsIDOMWindowUtils)
@@ -1872,14 +1889,6 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOM3Node)
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN(Entity, nsIDOMEntity)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEntity)
-  DOM_CLASSINFO_MAP_END
-
-  DOM_CLASSINFO_MAP_BEGIN(EntityReference, nsIDOMEntityReference)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEntityReference)
-  DOM_CLASSINFO_MAP_END
-
   DOM_CLASSINFO_MAP_BEGIN(Notation, nsIDOMNotation)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNotation)
   DOM_CLASSINFO_MAP_END
@@ -1938,11 +1947,6 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLDocument)
     DOM_CLASSINFO_DOCUMENT_MAP_ENTRIES
-  DOM_CLASSINFO_MAP_END
-
-  DOM_CLASSINFO_MAP_BEGIN(HTMLCollection, nsIDOMHTMLCollection)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNodeList)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLCollection)
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(HTMLOptionsCollection, nsIDOMHTMLOptionsCollection)
@@ -2147,11 +2151,6 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN(HTMLModElement, nsIDOMHTMLModElement)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLModElement)
-    DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
-  DOM_CLASSINFO_MAP_END
-
   DOM_CLASSINFO_MAP_BEGIN(HTMLOListElement, nsIDOMHTMLOListElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLOListElement)
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
@@ -2233,15 +2232,6 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(HTMLTableColElement, nsIDOMHTMLTableColElement)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLTableColElement)
-    DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
-  DOM_CLASSINFO_MAP_END
-
-
-  // This should be removed, there are no users of this class any more.
-
-  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(HTMLTableColGroupElement,
-                                      nsIDOMHTMLTableColElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLTableColElement)
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
@@ -2388,14 +2378,6 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMXULCommandDispatcher)
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XULNodeList, nsIDOMNodeList)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNodeList)
-  DOM_CLASSINFO_MAP_END
-
-  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XULNamedNodeMap, nsIDOMNamedNodeMap)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNamedNodeMap)
-  DOM_CLASSINFO_MAP_END
-
   DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XULAttr, nsIDOMAttr)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMAttr)
   DOM_CLASSINFO_MAP_END
@@ -2445,6 +2427,8 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMWindowInternal)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMChromeWindow)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+    // XXXjst: Do we want this on chrome windows?
+    // DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorageWindow)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMViewCSS)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMAbstractView)
   DOM_CLASSINFO_MAP_END
@@ -2631,13 +2615,6 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_SVG_GRAPHIC_ELEMENT_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN(SVGGradientElement, nsIDOMSVGGradientElement)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGGradientElement)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGURIReference)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGStylable)
-    DOM_CLASSINFO_SVG_ELEMENT_MAP_ENTRIES
-  DOM_CLASSINFO_MAP_END
-
   DOM_CLASSINFO_MAP_BEGIN(SVGImageElement, nsIDOMSVGImageElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGImageElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGURIReference)
@@ -2816,10 +2793,6 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedNumberList, nsIDOMSVGAnimatedNumberList)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedNumberList)
-  DOM_CLASSINFO_MAP_END
-
-  DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedPoints, nsIDOMSVGAnimatedPoints)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedPoints)
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedPreserveAspectRatio, nsIDOMSVGAnimatedPreserveAspectRatio)
@@ -3024,6 +2997,23 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMXPathResult)
   DOM_CLASSINFO_MAP_END
 
+  DOM_CLASSINFO_MAP_BEGIN(Storage, nsIDOMStorage)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorage)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(StorageList, nsIDOMStorageList)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorageList)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(StorageItem, nsIDOMStorageItem)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorageItem)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMToString)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(StorageEvent, nsIDOMStorageEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMStorageEvent)
+  DOM_CLASSINFO_MAP_END
+
   // We just want this to have classinfo so it gets mark callbacks for marking
   // event listeners.
   DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(WindowRoot, nsISupports)
@@ -3055,6 +3045,11 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_SVG_GRAPHIC_ELEMENT_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 #endif
+
+  DOM_CLASSINFO_MAP_BEGIN(XULCommandEvent, nsIDOMXULCommandEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMXULCommandEvent)
+    DOM_CLASSINFO_UI_EVENT_MAP_ENTRIES
+  DOM_CLASSINFO_MAP_END
 
 #ifdef NS_DEBUG
   {
@@ -3350,7 +3345,6 @@ nsDOMClassInfo::PostCreate(nsIXPConnectWrappedNative *wrapper,
       if (if_info) {
         nsXPIDLCString name;
         if_info->GetName(getter_Copies(name));
-
         NS_ASSERTION(nsCRT::strcmp(CutPrefix(name), mData->mName) == 0,
                      "Class name and proto chain interface name mismatch!");
       }
@@ -3594,6 +3588,23 @@ nsDOMClassInfo::InnerObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
   return NS_ERROR_UNEXPECTED;
 }
 
+// These are declared here so we can assert that they're empty in ShutDown.
+/**
+ * Every XPConnect wrapper that needs to be preserved (a wrapped native
+ * with JS properties set on it or used by XBL or a wrapped JS event
+ * handler function) as long as the element it wraps is reachable from
+ * script (via JS or via DOM APIs accessible from JS) gets an entry in
+ * this table.
+ *
+ * See PreservedWrapperEntry.
+ */
+static PLDHashTable sPreservedWrapperTable;
+
+// See ExternallyReferencedEntry.
+static PLDHashTable sExternallyReferencedTable;
+
+// See RootWhenExternallyReferencedEntry
+static PLDHashTable sRootWhenExternallyReferencedTable;
 
 // static
 nsIClassInfo *
@@ -3654,6 +3665,20 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoData* aData)
 void
 nsDOMClassInfo::ShutDown()
 {
+  NS_ASSERTION(sPreservedWrapperTable.ops == 0,
+               "preserved wrapper table not empty at shutdown");
+  NS_ASSERTION(sExternallyReferencedTable.ops == 0 ||
+               sExternallyReferencedTable.entryCount == 0,
+               "rooted participant table not empty at shutdown");
+  NS_ASSERTION(sRootWhenExternallyReferencedTable.ops == 0,
+               "root when externally referenced table not empty at shutdown");
+
+  if (sExternallyReferencedTable.ops &&
+      sExternallyReferencedTable.entryCount == 0) {
+    PL_DHashTableFinish(&sExternallyReferencedTable);
+    sExternallyReferencedTable.ops = nsnull;
+  }
+
   if (sClassInfoData[0].u.mConstructorFptr) {
     PRUint32 i;
 
@@ -4925,22 +4950,58 @@ nsDOMConstructor::ToString(nsAString &aResult)
 #define DEBUG_PRESERVE_WRAPPERS
 #endif
 
-/**
- * Every XPConnect wrapper that needs to be preserved (a wrapped native
- * with JS properties set on it or used by XBL or a wrapped JS event
- * handler function) as long as the element it wraps is reachable from
- * script (via JS or via DOM APIs accessible from JS) gets an entry in
- * this table.
- */
-static PLDHashTable sPreservedWrapperTable;
+struct RootWhenExternallyReferencedEntry : public PLDHashEntryHdr {
+  // must be first to line up with PLDHashEntryStub
+  nsIDOMGCParticipant *participant;
+  PRUint32 refcnt;
+};
 
 struct PreservedWrapperEntry : public PLDHashEntryHdr {
   void *key; // must be first to line up with PLDHashEntryStub
   nsIXPConnectJSObjectHolder* (*keyToWrapperFunc)(void* aKey);
   nsIDOMGCParticipant *participant;
+  PRBool rootWhenExternallyReferenced;
 
   // See |WrapperSCCEntry::first|.  Valid only during mark phase of GC.
   PreservedWrapperEntry *next;
+};
+
+PR_STATIC_CALLBACK(void)
+PreservedWrapperClearEntry(PLDHashTable *table, PLDHashEntryHdr *hdr)
+{
+  PreservedWrapperEntry *entry = NS_STATIC_CAST(PreservedWrapperEntry*, hdr);
+
+  if (entry->rootWhenExternallyReferenced) {
+    NS_ASSERTION(sRootWhenExternallyReferencedTable.ops,
+                 "must have been added to rwer table");
+    RootWhenExternallyReferencedEntry *rwerEntry =
+      NS_STATIC_CAST(RootWhenExternallyReferencedEntry*,
+        PL_DHashTableOperate(&sRootWhenExternallyReferencedTable,
+                             entry->participant, PL_DHASH_LOOKUP));
+    NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(rwerEntry),
+                 "boolean vs. table mismatch");
+    if (PL_DHASH_ENTRY_IS_BUSY(rwerEntry) && --rwerEntry->refcnt == 0) {
+      PL_DHashTableRawRemove(&sRootWhenExternallyReferencedTable, rwerEntry);
+      if (sRootWhenExternallyReferencedTable.entryCount == 0) {
+        PL_DHashTableFinish(&sRootWhenExternallyReferencedTable);
+        sRootWhenExternallyReferencedTable.ops = nsnull;
+      }
+    }
+  }
+
+  memset(hdr, 0, table->entrySize);
+}
+
+static const PLDHashTableOps sPreservedWrapperTableOps = {
+  PL_DHashAllocTable,
+  PL_DHashFreeTable,
+  PL_DHashGetKeyStub,
+  PL_DHashVoidPtrKeyStub,
+  PL_DHashMatchEntryStub,
+  PL_DHashMoveEntryStub,
+  PreservedWrapperClearEntry,
+  PL_DHashFinalizeStub,
+  nsnull
 };
 
 /**
@@ -5011,7 +5072,8 @@ static const PLDHashTableOps sWrapperSCCTableOps = {
 nsresult
 nsDOMClassInfo::PreserveWrapper(void *aKey,
                                 nsIXPConnectJSObjectHolder* (*aKeyToWrapperFunc)(void* aKey),
-                                nsIDOMGCParticipant *aParticipant)
+                                nsIDOMGCParticipant *aParticipant,
+                                PRBool aRootWhenExternallyReferenced)
 {
   NS_PRECONDITION(aKey, "unexpected null pointer");
   NS_PRECONDITION(aKeyToWrapperFunc, "unexpected null pointer");
@@ -5020,8 +5082,8 @@ nsDOMClassInfo::PreserveWrapper(void *aKey,
                "cannot change preserved wrapper table during mark phase");
 
   if (!sPreservedWrapperTable.ops &&
-      !PL_DHashTableInit(&sPreservedWrapperTable, PL_DHashGetStubOps(), nsnull,
-                         sizeof(PreservedWrapperEntry), 16)) {
+      !PL_DHashTableInit(&sPreservedWrapperTable, &sPreservedWrapperTableOps,
+                         nsnull, sizeof(PreservedWrapperEntry), 16)) {
     sPreservedWrapperTable.ops = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -5030,10 +5092,42 @@ nsDOMClassInfo::PreserveWrapper(void *aKey,
     PL_DHashTableOperate(&sPreservedWrapperTable, aKey, PL_DHASH_ADD));
   if (!entry)
     return NS_ERROR_OUT_OF_MEMORY;
+  NS_ASSERTION(!entry->key ||
+               (entry->key == aKey &&
+                entry->keyToWrapperFunc == aKeyToWrapperFunc &&
+                entry->participant == aParticipant),
+               "preservation key already used");
 
+  PRBool wasExternallyReferenced = entry->rootWhenExternallyReferenced;
   entry->key = aKey;
   entry->keyToWrapperFunc = aKeyToWrapperFunc;
   entry->participant = aParticipant;
+  entry->rootWhenExternallyReferenced =
+    aRootWhenExternallyReferenced || wasExternallyReferenced;
+
+  if (aRootWhenExternallyReferenced && !wasExternallyReferenced) {
+    if (!sRootWhenExternallyReferencedTable.ops &&
+        !PL_DHashTableInit(&sRootWhenExternallyReferencedTable,
+                           PL_DHashGetStubOps(), nsnull,
+                           sizeof(RootWhenExternallyReferencedEntry), 16)) {
+      PL_DHashTableRawRemove(&sPreservedWrapperTable, entry);
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    RootWhenExternallyReferencedEntry *rwerEntry =
+      NS_STATIC_CAST(RootWhenExternallyReferencedEntry*,
+        PL_DHashTableOperate(&sRootWhenExternallyReferencedTable,
+                             aParticipant, PL_DHASH_ADD));
+    if (!rwerEntry) {
+      PL_DHashTableRawRemove(&sPreservedWrapperTable, entry);
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+    NS_ASSERTION(rwerEntry->refcnt == 0 ||
+                 rwerEntry->participant == aParticipant,
+                 "entry mismatch");
+    rwerEntry->participant = aParticipant;
+    ++rwerEntry->refcnt;
+  }
 
   return NS_OK;
 }
@@ -5045,7 +5139,8 @@ static nsIXPConnectJSObjectHolder* IdentityKeyToWrapperFunc(void* aKey)
 
 // static
 nsresult
-nsDOMClassInfo::PreserveNodeWrapper(nsIXPConnectWrappedNative *aWrapper)
+nsDOMClassInfo::PreserveNodeWrapper(nsIXPConnectWrappedNative *aWrapper,
+                                    PRBool aRootWhenExternallyReferenced)
 {
   nsCOMPtr<nsIDOMGCParticipant> participant =
     do_QueryInterface(aWrapper->Native());
@@ -5054,7 +5149,8 @@ nsDOMClassInfo::PreserveNodeWrapper(nsIXPConnectWrappedNative *aWrapper)
     return NS_OK;
 
   return nsDOMClassInfo::PreserveWrapper(aWrapper, IdentityKeyToWrapperFunc,
-                                         participant);
+                                         participant,
+                                         aRootWhenExternallyReferenced);
 }
 
 // static
@@ -5109,7 +5205,7 @@ nsDOMClassInfo::MarkReachablePreservedWrappers(nsIDOMGCParticipant *aParticipant
   // the mark phase.  However, we can determine that the mark phase
   // has begun by detecting the first mark and lazily call
   // BeginGCMark.
-  if (!sWrapperSCCTable.ops && !nsDOMClassInfo::BeginGCMark()) {
+  if (!sWrapperSCCTable.ops && !nsDOMClassInfo::BeginGCMark(cx)) {
     // We didn't have enough memory to create the temporary data
     // structures we needed.
     sWrapperSCCTable.ops = WRAPPER_SCC_OPS_OOM_MARKER;
@@ -5165,6 +5261,45 @@ nsDOMClassInfo::MarkReachablePreservedWrappers(nsIDOMGCParticipant *aParticipant
   }
 }
 
+struct ExternallyReferencedEntry : public PLDHashEntryHdr {
+  nsIDOMGCParticipant* key; // must be first to line up with PLDHashEntryStub
+};
+
+/* static */ nsresult
+nsDOMClassInfo::SetExternallyReferenced(nsIDOMGCParticipant *aParticipant)
+{
+  NS_PRECONDITION(aParticipant, "unexpected null pointer");
+
+  if (!sExternallyReferencedTable.ops &&
+      !PL_DHashTableInit(&sExternallyReferencedTable, PL_DHashGetStubOps(),
+                         nsnull, sizeof(ExternallyReferencedEntry), 16)) {
+    sExternallyReferencedTable.ops = nsnull;
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  ExternallyReferencedEntry *entry = NS_STATIC_CAST(ExternallyReferencedEntry*,
+    PL_DHashTableOperate(&sExternallyReferencedTable, aParticipant, PL_DHASH_ADD));
+  if (!entry)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  NS_ASSERTION(!entry->key, "participant already rooted");
+  entry->key = aParticipant;
+
+  return NS_OK;
+}
+
+/* static */ void
+nsDOMClassInfo::UnsetExternallyReferenced(nsIDOMGCParticipant *aParticipant)
+{
+  NS_PRECONDITION(aParticipant, "unexpected null pointer");
+
+  PL_DHashTableOperate(&sExternallyReferencedTable, aParticipant,
+                       PL_DHASH_REMOVE);
+
+  // Don't destroy the table when the entryCount hits zero, since that
+  // is expected to happen often.  Instead, destroy it at shutdown.
+}
+
 PR_STATIC_CALLBACK(PLDHashOperator)
 ClassifyWrapper(PLDHashTable *table, PLDHashEntryHdr *hdr,
                 PRUint32 number, void *arg)
@@ -5199,9 +5334,34 @@ ClassifyWrapper(PLDHashTable *table, PLDHashEntryHdr *hdr,
   return PL_DHASH_NEXT;
 }
 
+PR_STATIC_CALLBACK(PLDHashOperator)
+MarkExternallyReferenced(PLDHashTable *table, PLDHashEntryHdr *hdr,
+                         PRUint32 number, void *arg)
+{
+  ExternallyReferencedEntry *entry =
+    NS_STATIC_CAST(ExternallyReferencedEntry*, hdr);
+  JSContext *cx = NS_STATIC_CAST(JSContext*, arg);
+
+  nsIDOMGCParticipant *erParticipant = entry->key;
+
+  if (sRootWhenExternallyReferencedTable.ops) {
+    RootWhenExternallyReferencedEntry *rwerEntry =
+      NS_STATIC_CAST(RootWhenExternallyReferencedEntry*,
+        PL_DHashTableOperate(&sRootWhenExternallyReferencedTable,
+                             erParticipant, PL_DHASH_LOOKUP));
+    if (PL_DHASH_ENTRY_IS_BUSY(rwerEntry)) {
+      NS_ASSERTION(rwerEntry->refcnt > 0, "bad reference count");
+      // XXX Construct something to say where the mark is coming from?
+      nsDOMClassInfo::MarkReachablePreservedWrappers(entry->key, cx, nsnull);
+    }
+  }
+
+  return PL_DHASH_NEXT;
+}
+
 // static
 PRBool
-nsDOMClassInfo::BeginGCMark()
+nsDOMClassInfo::BeginGCMark(JSContext *cx)
 {
   NS_PRECONDITION(!sWrapperSCCTable.ops, "table already initialized");
 
@@ -5215,8 +5375,9 @@ nsDOMClassInfo::BeginGCMark()
   }
 
   PRBool failure = PR_FALSE;
-  if (sPreservedWrapperTable.ops)
+  if (sPreservedWrapperTable.ops) {
     PL_DHashTableEnumerate(&sPreservedWrapperTable, ClassifyWrapper, &failure);
+  }
   if (failure) {
     PL_DHashTableFinish(&sWrapperSCCTable);
     // caller will reset table ops
@@ -5226,6 +5387,11 @@ nsDOMClassInfo::BeginGCMark()
 #ifdef DEBUG_PRESERVE_WRAPPERS
   printf("Marking:\n");
 #endif
+
+  if (sExternallyReferencedTable.ops) {
+    PL_DHashTableEnumerate(&sExternallyReferencedTable,
+                           MarkExternallyReferenced, cx);
+  }
 
   return PR_TRUE;
 }
@@ -6151,8 +6317,8 @@ nsWindowSH::NewEnumerate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   switch (enum_op) {
     case JSENUMERATE_INIT:
     {
-      // First, do the security check that nsDOMClassInfo does to see if we need to
-      // do any work at all.
+      // First, do the security check that nsDOMClassInfo does to see
+      // if we need to do any work at all.
       nsDOMClassInfo::Enumerate(wrapper, cx, obj, _retval);
       if (!*_retval) {
         return NS_OK;
@@ -6727,6 +6893,14 @@ nsEventReceiverSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
                               JSContext *cx, JSObject *obj, jsval id,
                               PRUint32 flags, JSObject **objp, PRBool *_retval)
 {
+  if (id == sOnload_id || id == sOnerror_id) {
+    // Pass true for aRootWhenExternallyReferenced, so we make sure that
+    // this node can't go away while waiting for a network load that
+    // could fire an event handler.
+    nsresult rv = nsDOMClassInfo::PreserveNodeWrapper(wrapper, PR_TRUE);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
   // If we're assigning to an on* property, we'll register the handler
   // in our ::SetProperty() hook, so no need to do it here too.
   if (!JSVAL_IS_STRING(id) || (flags & JSRESOLVE_ASSIGNING)) {
@@ -9588,6 +9762,202 @@ nsTreeColumnsSH::GetNamedItem(nsISupports *aNative,
   return rv;
 }
 #endif
+
+
+// Storage scriptable helper
+
+// One reason we need a newResolve hook is that in order for
+// enumeration of storage object keys to work the keys we're
+// enumerating need to exist on the storage object for the JS engine
+// to find them.
+
+NS_IMETHODIMP
+nsStorageSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, PRUint32 flags,
+                        JSObject **objp, PRBool *_retval)
+{
+  JSObject *realObj;
+  wrapper->GetJSObject(&realObj);
+
+  // First check to see if the property is defined on our prototype,
+  // after converting id to a string if it's an integer.
+
+  JSString *jsstr = JS_ValueToString(cx, id);
+  if (!jsstr) {
+    return JS_FALSE;
+  }
+
+  JSObject *proto = ::JS_GetPrototype(cx, realObj);
+  JSBool hasProp;
+
+  if (proto &&
+      (::JS_HasUCProperty(cx, proto, ::JS_GetStringChars(jsstr),
+                          ::JS_GetStringLength(jsstr), &hasProp) &&
+       hasProp)) {
+    // We found the property we're resolving on the prototype,
+    // nothing left to do here then.
+
+    return NS_OK;
+  }
+
+  // We're resolving property that doesn't exist on the prototype,
+  // check if the key exists in the storage object.
+
+  nsCOMPtr<nsIDOMStorage> storage(do_QueryWrappedNative(wrapper));
+
+  // GetItem() will return null if the caller can't access the session
+  // storage item.
+  nsCOMPtr<nsIDOMStorageItem> item;
+  nsresult rv = storage->GetItem(nsDependentJSString(jsstr),
+                                 getter_AddRefs(item));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (item) {
+    if (!::JS_DefineUCProperty(cx, realObj, ::JS_GetStringChars(jsstr),
+                               ::JS_GetStringLength(jsstr), JSVAL_VOID, nsnull,
+                               nsnull, 0)) {
+      return NS_ERROR_FAILURE;
+    }
+
+    *objp = realObj;
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsStorageSH::GetNamedItem(nsISupports *aNative, const nsAString& aName,
+                          nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMStorage> storage(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(storage, NS_ERROR_UNEXPECTED);
+
+  // Weak, transfer the ownership over to aResult
+  nsIDOMStorageItem* item = nsnull;
+  nsresult rv = storage->GetItem(aName, &item);
+
+  *aResult = item;
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsStorageSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                         JSContext *cx, JSObject *obj, jsval id,
+                         jsval *vp, PRBool *_retval)
+{
+  nsCOMPtr<nsIDOMStorage> storage(do_QueryWrappedNative(wrapper));
+  NS_ENSURE_TRUE(storage, NS_ERROR_UNEXPECTED);
+
+  JSString *key = ::JS_ValueToString(cx, id);
+  NS_ENSURE_TRUE(key, NS_ERROR_UNEXPECTED);
+
+  JSString *value = ::JS_ValueToString(cx, *vp);
+  NS_ENSURE_TRUE(value, NS_ERROR_UNEXPECTED);
+
+  nsresult rv = storage->SetItem(nsDependentJSString(key),
+                                 nsDependentJSString(value));
+  if (NS_SUCCEEDED(rv)) {
+    rv = NS_SUCCESS_I_DID_SOMETHING;
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsStorageSH::DelProperty(nsIXPConnectWrappedNative *wrapper,
+                         JSContext *cx, JSObject *obj, jsval id,
+                         jsval *vp, PRBool *_retval)
+{
+  nsCOMPtr<nsIDOMStorage> storage(do_QueryWrappedNative(wrapper));
+  NS_ENSURE_TRUE(storage, NS_ERROR_UNEXPECTED);
+
+  JSString *key = ::JS_ValueToString(cx, id);
+  NS_ENSURE_TRUE(key, NS_ERROR_UNEXPECTED);
+
+  nsresult rv = storage->RemoveItem(nsDependentJSString(key));
+  if (NS_SUCCEEDED(rv)) {
+    rv = NS_SUCCESS_I_DID_SOMETHING;
+  }
+
+  return rv;
+}
+
+
+NS_IMETHODIMP
+nsStorageSH::NewEnumerate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, PRUint32 enum_op, jsval *statep,
+                          jsid *idp, PRBool *_retval)
+{
+  nsTArray<nsString> *keys =
+    (nsTArray<nsString> *)JSVAL_TO_PRIVATE(*statep);
+
+  switch (enum_op) {
+    case JSENUMERATE_INIT:
+    {
+      nsCOMPtr<nsPIDOMStorage> storage(do_QueryWrappedNative(wrapper));
+
+      // XXXndeakin need to free the keys afterwards
+      keys = storage->GetKeys();
+      NS_ENSURE_TRUE(keys, NS_ERROR_OUT_OF_MEMORY);
+
+      *statep = PRIVATE_TO_JSVAL(keys);
+
+      if (idp) {
+        *idp = INT_TO_JSVAL(keys->Length());
+      }
+      break;
+    }
+    case JSENUMERATE_NEXT:
+      if (keys->Length() != 0) {
+        nsString& key = keys->ElementAt(0);
+        JSString *str =
+          JS_NewUCStringCopyN(cx, NS_REINTERPRET_CAST(const jschar *,
+                                                      key.get()),
+                              key.Length());
+        NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+        JS_ValueToId(cx, STRING_TO_JSVAL(str), idp);
+
+        keys->RemoveElementAt(0);
+
+        break;
+      }
+
+      // Fall through
+    case JSENUMERATE_DESTROY:
+      delete keys;
+
+      *statep = JSVAL_NULL;
+
+      break;
+    default:
+      NS_NOTREACHED("Bad call from the JS engine");
+
+      return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
+}
+
+
+// StorageList scriptable helper
+
+nsresult
+nsStorageListSH::GetNamedItem(nsISupports *aNative, const nsAString& aName,
+                              nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMStorageList> storagelist(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(storagelist, NS_ERROR_UNEXPECTED);
+
+  // Weak, transfer the ownership over to aResult
+  nsIDOMStorage* storage = nsnull;
+  nsresult rv = storagelist->NamedItem(aName, &storage);
+
+  *aResult = storage;
+
+  return rv;
+}
 
 
 // nsIDOMEventListener::HandleEvent() 'this' converter helper

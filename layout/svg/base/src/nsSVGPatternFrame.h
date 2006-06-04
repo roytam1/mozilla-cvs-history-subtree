@@ -39,22 +39,20 @@
 #ifndef __NS_SVGPATTERNFRAME_H__
 #define __NS_SVGPATTERNFRAME_H__
 
-#include "nsSVGDefsFrame.h"
-#include "nsSVGValue.h"
 #include "nsISVGValueObserver.h"
 #include "nsWeakReference.h"
 #include "nsIDOMSVGAnimatedString.h"
 #include "nsIDOMSVGMatrix.h"
+#include "nsSVGPaintServerFrame.h"
 
 class nsIDOMSVGAnimatedPreserveAspectRatio;
 class nsIFrame;
 class nsSVGLength2;
 class nsSVGElement;
 
-typedef nsSVGDefsFrame  nsSVGPatternFrameBase;
+typedef nsSVGPaintServerFrame  nsSVGPatternFrameBase;
 
 class nsSVGPatternFrame : public nsSVGPatternFrameBase,
-                          public nsSVGValue,
                           public nsISVGValueObserver,
                           public nsSupportsWeakReference
 {
@@ -63,11 +61,6 @@ public:
                                          nsIContent*   aContent,
                                          nsStyleContext* aContext);
 
-  friend nsresult NS_GetSVGPatternFrame(nsIFrame**      result, 
-                                        nsIURI*         aURI, 
-                                        nsIContent*     aContent,
-                                        nsIPresShell*   aPresShell);
-
   nsSVGPatternFrame(nsStyleContext* aContext) : nsSVGPatternFrameBase(aContext) {}
 
   nsresult PaintPattern(nsISVGRendererCanvas *canvas,
@@ -75,16 +68,18 @@ public:
 			nsIDOMSVGMatrix **patternMatrix,
 			nsSVGGeometryFrame *aSource);
 
+  // nsSVGPaintServerFrame methods:
+  virtual nsresult SetupPaintServer(nsISVGRendererCanvas *aCanvas,
+                                    cairo_t *aCtx,
+                                    nsSVGGeometryFrame *aSource,
+                                    float aOpacity,
+                                    void **aClosure);
+  virtual void CleanupPaintServer(cairo_t *aCtx, void *aClosure);
+
   // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
-
-  // nsISVGValue interface:
-  NS_IMETHOD SetValueString(const nsAString &aValue) { return NS_OK; }
-  NS_IMETHOD GetValueString(nsAString& aValue) { 
-    return NS_ERROR_NOT_IMPLEMENTED; 
-  }
 
   // nsISVGValueObserver interface:
   NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable, 
@@ -92,10 +87,8 @@ public:
   NS_IMETHOD DidModifySVGObservable(nsISVGValue* observable, 
                                     nsISVGValue::modificationType aModType);
   
-  // nsISVGContainerFrame interface:
-  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
-  already_AddRefed<nsSVGCoordCtxProvider> GetCoordContextProvider();
-  NS_IMETHOD GetBBox(nsIDOMSVGRect **aRect);
+  // nsSVGContainerFrame methods:
+  virtual already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
 
   // nsIFrame interface:
   NS_IMETHOD DidSetStyleContext();
@@ -110,7 +103,6 @@ public:
    * @see nsLayoutAtoms::svgPatternFrame
    */
   virtual nsIAtom* GetType() const;
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
   // nsIFrameDebug interface:

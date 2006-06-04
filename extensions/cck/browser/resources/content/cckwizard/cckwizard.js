@@ -1086,7 +1086,7 @@ function CCKZip(zipfile, location)
     file.remove(false);
   } catch (ex) {}
 
-  if (Components.interfaces.IZipWriterComponent) {
+  if ((document.getElementById("zipLocation").value == "") && (Components.interfaces.IZipWriterComponent)) {
     var archivefileobj = location.clone();
     archivefileobj.append(zipfile);
   
@@ -1140,11 +1140,10 @@ function CCKZip(zipfile, location)
       }
   
       zipwriterobj.commitUpdates();
-      
+      return;
     } catch (e) {
-      gPromptService.alert(window, "", "ZIPWriterComponent error");
+      gPromptService.alert(window, "", "ZIPWriterComponent error - attempting ZIP");
     }
-    return;
   }
   
   var zipLocation = document.getElementById("zipLocation").value;
@@ -1153,15 +1152,15 @@ function CCKZip(zipfile, location)
   }
 
   platform = navigator.platform;
-  var file = location.clone();
+  var scriptfile = location.clone();
              
-  if (navigator.platform == "Win32")
-    file.append("ccktemp.cmd");
+  if ((navigator.platform == "Win32") || (navigator.platform == "OS/2"))
+    scriptfile.append("ccktemp.cmd");
   else
-    file.append("ccktemp.sh");  
+    scriptfile.append("ccktemp.sh");  
   var fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
                        .createInstance(Components.interfaces.nsIFileOutputStream);
-  fos.init(file, -1, -1, false);
+  fos.init(scriptfile, -1, -1, false);
   
   var line = "cd ";
   // this param causes a drive switch on win32
@@ -1169,7 +1168,7 @@ function CCKZip(zipfile, location)
     line += "/d ";
   line += "\"" + location.path + "\"\n";
   fos.write(line, line.length);
-  if (navigator.platform == "Win32")
+  if ((navigator.platform == "Win32") || (navigator.platform == "OS/2"))
     line =  "\"" + zipLocation + "\" -r \"" + location.path + "\\" + zipfile + "\"";
   else
     line = zipLocation + " -r \"" + location.path + "/" + zipfile + "\"";  
@@ -1183,7 +1182,7 @@ function CCKZip(zipfile, location)
   var sh;
 
   // create an nsILocalFile for the executable
-  if (navigator.platform != "Win32") {
+  if ((navigator.platform != "Win32") && (navigator.platform != "OS/2")) {
     sh = Components.classes["@mozilla.org/file/local;1"]
                    .createInstance(Components.interfaces.nsILocalFile);
     sh.initWithPath("/bin/sh");
@@ -1192,22 +1191,31 @@ function CCKZip(zipfile, location)
   var process = Components.classes["@mozilla.org/process/util;1"]
                           .createInstance(Components.interfaces.nsIProcess);
                           
-  if (navigator.platform == "Win32")
-    process.init(file);
+  if ((navigator.platform == "Win32") || (navigator.platform == "OS/2"))
+    process.init(scriptfile);
   else
     process.init(sh);
 
-  var args = [file.path];
+  var args = [scriptfile.path];
   
-  process.run(true, args, args.length);
-  file.remove(false);
+  try {
+    process.run(true, args, args.length);
+  } catch (ex) {
+  }
+
   var file = location.clone();
   file.append(zipfile);
+  if (navigator.platform == "OS/2") {
+    var bundle = document.getElementById("bundle_cckwizard");
+    gPromptService.alert(window, bundle.getString("windowTitle"),
+                       "OS/2 problem workaround - Click OK to continue");
+  }
   if (!file.exists()) {
     var bundle = document.getElementById("bundle_cckwizard");
     gPromptService.alert(window, bundle.getString("windowTitle"),
                        bundle.getString("zipError"));
   }
+  scriptfile.remove(false);
 }
 
 function CCKWriteXULOverlay(destdir)
@@ -1440,7 +1448,7 @@ function CCKWriteProperties(destdir)
       var str = "ToolbarFolder1.BookmarkURL" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
       cos.writeString(str);
       if (listitem.cck['type'] && listitem.cck['type'].length) {
-        var str = "ToolbarFolder1.Type" + (j+1) + "=" + listitem.cck['type'] + "\n";
+        var str = "ToolbarFolder1.BookmarkType" + (j+1) + "=" + listitem.cck['type'] + "\n";
         cos.writeString(str);
       }
     }
@@ -1918,6 +1926,24 @@ function InitConfigInfo()
 function CCKWriteConfigFile(destdir)
 {
   var file = destdir.clone();
+  if (!file.exists()) {
+        var bundle = document.getElementById("bundle_cckwizard");
+        var button = gPromptService.confirmEx(window, bundle.getString("windowTitle"), bundle.getString("createDir").replace(/%S/g, file.path),
+                                              gPromptService.BUTTON_TITLE_YES * gPromptService.BUTTON_POS_0 +
+                                              gPromptService.BUTTON_TITLE_NO * gPromptService.BUTTON_POS_1,
+                                              null, null, null, null, {});
+        if (button == 0) {
+          try {
+            file.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0775);
+          } catch (ex) {
+            gPromptService.alert(window, bundle.getString("windowTitle"),
+                                 bundle.getString("createDirError").replace(/%S/g, filename));
+            return;
+          }
+        } else {
+          return;
+        }
+  }  
   file.append("cck.config");
              
   var fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
@@ -2360,7 +2386,7 @@ function Validate(field, message)
   
   for (var i=0; i < arguments.length; i+=2) {
     /* special case ID */
-    if (document.getElementById(arguments[i] = "id")) {
+    if (document.getElementById(arguments[i]).id == "id") {
       if (!gIDTest.test(document.getElementById(arguments[i]).value)) {
         var bundle = document.getElementById("bundle_cckwizard");
         gPromptService.alert(window, bundle.getString("windowTitle"), arguments[i+1]);
@@ -2426,7 +2452,22 @@ function ValidateDir()
         gPromptService.alert(window, "", "Directory " + filename + " not found");
         return false;
       }
-      if (!file.exists() || !file.isDirectory()) {
+      if (!file.exists()) {
+        var bundle = document.getElementById("bundle_cckwizard");
+        var button = gPromptService.confirmEx(window, bundle.getString("windowTitle"), bundle.getString("createDir").replace(/%S/g, filename),
+                                              gPromptService.BUTTON_TITLE_YES * gPromptService.BUTTON_POS_0 +
+                                              gPromptService.BUTTON_TITLE_NO * gPromptService.BUTTON_POS_1,
+                                              null, null, null, null, {});
+        if (button == 0) {
+          try {
+            file.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0775);
+          } catch (ex) {
+            gPromptService.alert(window, bundle.getString("windowTitle"),
+                                 bundle.getString("createDirError").replace(/%S/g, filename));
+            return false;
+          }
+        }
+      } else if (!file.isDirectory()) {
         gPromptService.alert(window, "", "Directory " + filename + " not found");
         return false;
       }

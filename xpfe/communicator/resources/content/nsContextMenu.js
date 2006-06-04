@@ -80,14 +80,14 @@ nsContextMenu.prototype = {
     },
     // Initialize context menu.
     initMenu : function ( popup ) {
+        // Save menu.
+        this.menu = popup;
+
         const xulNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
         if ( document.popupNode.namespaceURI == xulNS ) {
           this.shouldDisplay = false;
           return;
         }
-        // Save menu.
-        this.menu = popup;
-
         // Get contextual info.
         this.setTarget( document.popupNode );
         
@@ -521,14 +521,14 @@ nsContextMenu.prototype = {
         openNewWindowWith( this.linkURL(), true );
     },
     // Open linked-to URL in a new tab.
-    openLinkInTab : function () {
+    openLinkInTab : function ( reverseBackgroundPref ) {
         // Determine linked-to URL.
-        openNewTabWith( this.linkURL(), true, false );
+        openNewTabWith( this.linkURL(), true, reverseBackgroundPref );
     },
     // Open frame in a new tab.
-    openFrameInTab : function () {
+    openFrameInTab : function ( reverseBackgroundPref ) {
         // Determine linked-to URL.
-        openNewTabWith( this.target.ownerDocument.location.href );
+        openNewTabWith( this.target.ownerDocument.location.href, true, reverseBackgroundPref );
     },
     // Reload clicked-in frame.
     reloadFrame : function () {

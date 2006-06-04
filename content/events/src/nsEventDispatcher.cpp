@@ -227,7 +227,7 @@ nsEventTargetChainItem::GetListenerManager(PRBool aCreateIfNotFound)
   switch (mFlags & NS_TARGET_CHAIN_TYPE_MASK) {
     case NS_TARGET_CHAIN_IS_NODE:
     {
-      mNode->GetEventListenerManager(aCreateIfNotFound, &manager);
+      mNode->GetListenerManager(aCreateIfNotFound, &manager);
       break;
     }
     case NS_TARGET_CHAIN_IS_WINDOW:
@@ -458,16 +458,16 @@ nsEventTargetChainItem::HandleEventTargetChain(nsEventChainPostVisitor& aVisitor
 
   // Bubble
   aVisitor.mEvent->flags &= ~NS_EVENT_FLAG_CAPTURE;
-  if (!(aVisitor.mEvent->flags & NS_EVENT_FLAG_CANT_BUBBLE)) {
-    item = item->mParent;
-    while (item) {
-      nsISupports* newTarget = item->GetNewTarget();
-      if (newTarget) {
-        // Item is at anonymous boundary. Need to retarget for the current item
-        // and for parent items.
-        aVisitor.mEvent->target = newTarget;
-      }
+  item = item->mParent;
+  while (item) {
+    nsISupports* newTarget = item->GetNewTarget();
+    if (newTarget) {
+      // Item is at anonymous boundary. Need to retarget for the current item
+      // and for parent items.
+      aVisitor.mEvent->target = newTarget;
+    }
 
+    if (!(aVisitor.mEvent->flags & NS_EVENT_FLAG_CANT_BUBBLE) || newTarget) {
       if ((!(aVisitor.mEvent->flags & NS_EVENT_FLAG_NO_CONTENT_DISPATCH) ||
            item->ForceContentDispatch()) &&
           (!(aFlags & NS_EVENT_FLAG_SYSTEM_EVENT) ||
@@ -478,8 +478,8 @@ nsEventTargetChainItem::HandleEventTargetChain(nsEventChainPostVisitor& aVisitor
       if (aFlags & NS_EVENT_FLAG_SYSTEM_EVENT) {
         item->PostHandleEvent(aVisitor);
       }
-      item = item->mParent;
     }
+    item = item->mParent;
   }
   aVisitor.mEvent->flags &= ~NS_EVENT_FLAG_BUBBLE;
 
@@ -688,6 +688,11 @@ nsEventDispatcher::CreateEvent(nsPresContext* aPresContext,
       return NS_NewDOMSVGZoomEvent(aDOMEvent, aPresContext,
                                    NS_STATIC_CAST(nsGUIEvent*,aEvent));
 #endif // MOZ_SVG
+
+    case NS_XUL_COMMAND_EVENT:
+      return NS_NewDOMXULCommandEvent(aDOMEvent, aPresContext,
+                                      NS_STATIC_CAST(nsXULCommandEvent*,
+                                                     aEvent));
     }
 
     // For all other types of events, create a vanilla event object.
@@ -727,6 +732,9 @@ nsEventDispatcher::CreateEvent(nsPresContext* aPresContext,
       aEventType.LowerCaseEqualsLiteral("svgzoomevents"))
     return NS_NewDOMSVGZoomEvent(aDOMEvent, aPresContext, nsnull);
 #endif // MOZ_SVG
+  if (aEventType.LowerCaseEqualsLiteral("xulcommandevent") ||
+      aEventType.LowerCaseEqualsLiteral("xulcommandevents"))
+    return NS_NewDOMXULCommandEvent(aDOMEvent, aPresContext, nsnull);
 
   return NS_ERROR_DOM_NOT_SUPPORTED_ERR;
 }

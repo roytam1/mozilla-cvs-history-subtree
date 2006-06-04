@@ -282,6 +282,10 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
       if (!privateWindow) {
         nsCOMPtr<nsIContent> elt(do_QueryInterface(aReceiver));
         nsCOMPtr<nsIDocument> doc;
+        // XXXbz sXBL/XBL2 issue -- this should be the "scope doc" or
+        // something... whatever we use when wrapping DOM nodes
+        // normally.  It's not clear that the owner doc is the right
+        // thing.
         if (elt)
           doc = elt->GetOwnerDoc();
 
@@ -320,7 +324,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
       nsIContent *content = focusedContent;
 
       // if the focused element is a link then we do want space to 
-     // scroll down. focused element may be an element in a link,
+      // scroll down. focused element may be an element in a link,
       // we need to check the parent node too.
       if (focusedContent) {
         while (content) {
@@ -364,7 +368,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
     aEvent->PreventDefault();
 
     nsEventStatus status = nsEventStatus_eIgnore;
-    nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull, nsMouseEvent::eReal);
+    nsXULCommandEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
 
     // Copy the modifiers from the key event.
     nsCOMPtr<nsIDOMKeyEvent> keyEvent = do_QueryInterface(aEvent);

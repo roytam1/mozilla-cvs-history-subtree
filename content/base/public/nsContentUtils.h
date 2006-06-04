@@ -51,9 +51,11 @@
 #include "nsContentList.h"
 #include "nsDOMClassInfoID.h"
 #include "nsIClassInfo.h"
+#include "nsIDOM3Node.h"
 
 class nsIDOMScriptObjectFactory;
 class nsIXPConnect;
+class nsINode;
 class nsIContent;
 class nsIDOMNode;
 class nsIDocument;
@@ -141,8 +143,8 @@ public:
    *         aPossibleAncestor (or is aPossibleAncestor).  PR_FALSE
    *         otherwise.
    */
-  static PRBool ContentIsDescendantOf(nsIContent* aPossibleDescendant,
-                                      nsIContent* aPossibleAncestor);
+  static PRBool ContentIsDescendantOf(nsINode* aPossibleDescendant,
+                                      nsINode* aPossibleAncestor);
 
   /*
    * This method fills the |aArray| with all ancestor nodes of |aNode|
@@ -174,41 +176,49 @@ public:
   /*
    * The out parameter, |aCommonAncestor| will be the closest node, if any,
    * to both |aNode| and |aOther| which is also an ancestor of each.
+   * Returns an error if the two nodes are disconnected and don't have
+   * a common ancestor.
    */
   static nsresult GetCommonAncestor(nsIDOMNode *aNode,
                                     nsIDOMNode *aOther,
                                     nsIDOMNode** aCommonAncestor);
 
-  /*
-   * |aDifferentNodes| will contain up to 3 elements.
-   * The first, if present, is the common ancestor of |aNode| and |aOther|.
-   * The second, if present, is the ancestor node of |aNode| which is
-   * closest to the common ancestor, but not an ancestor of |aOther|.
-   * The third, if present, is the ancestor node of |aOther| which is
-   * closest to the common ancestor, but not an ancestor of |aNode|.
-   *
-   * @throws NS_ERROR_FAILURE if aNode and aOther are disconnected.
+  /**
+   * Returns the common ancestor, if any, for two nodes. Returns null if the
+   * nodes are disconnected.
    */
-  static nsresult GetFirstDifferentAncestors(nsIDOMNode *aNode,
-                                             nsIDOMNode *aOther,
-                                             nsCOMArray<nsIDOMNode>& aDifferentNodes);
+  static nsINode* GetCommonAncestor(nsINode* aNode1,
+                                    nsINode* aNode2);
 
   /**
-   * Compares the document position of nodes which may have parents.
-   * DO NOT pass in nodes that cannot have a parentNode. In other words:
-   * DO NOT pass in Attr, Document, DocumentFragment, Entity, or Notation!
-   * The results will be completely wrong!
+   * Compares the document position of nodes.
    *
-   * @param   aNode   The node to which you are comparing.
-   * @param   aOther  The reference node to which aNode is compared.
+   * @param aNode1 The node whose position is being compared to the reference
+   *               node
+   * @param aNode2 The reference node
    *
-   * @return  The document position flags of the nodes.
+   * @return  The document position flags of the nodes. aNode1 is compared to
+   *          aNode2, i.e. if aNode1 is before aNode2 then
+   *          DOCUMENT_POSITION_PRECEDING will be set.
    *
    * @see nsIDOMNode
    * @see nsIDOM3Node
    */
-  static PRUint16 ComparePositionWithAncestors(nsIDOMNode *aNode,
-                                               nsIDOMNode *aOther);
+  static PRUint16 ComparePosition(nsINode* aNode1,
+                                  nsINode* aNode2);
+
+  /**
+   * Returns true if aNode1 is before aNode2 in the same connected
+   * tree.
+   */
+  static PRBool PositionIsBefore(nsINode* aNode1,
+                                 nsINode* aNode2)
+  {
+    return (ComparePosition(aNode1, aNode2) &
+      (nsIDOM3Node::DOCUMENT_POSITION_PRECEDING |
+       nsIDOM3Node::DOCUMENT_POSITION_DISCONNECTED)) ==
+      nsIDOM3Node::DOCUMENT_POSITION_PRECEDING;
+  }
 
   /**
    * Brute-force search of the element subtree rooted at aContent for
@@ -329,7 +339,7 @@ public:
 
   // Check if a node is in the document prolog, i.e. before the document
   // element.
-  static PRBool InProlog(nsIDOMNode *aNode);
+  static PRBool InProlog(nsINode *aNode);
 
   static nsIParserService* GetParserService();
 
@@ -705,14 +715,12 @@ public:
    * Quick helper to determine whether there are any mutation listeners
    * of a given type that apply to this content or any of its ancestors.
    *
-   * @param aContent  The node to search for listeners (null for documents)
-   * @param aDocument The current document of the node, from nsINode
-   * @param aType     The type of listener (NS_EVENT_BITS_MUTATION_*)
+   * @param aNode  The node to search for listeners
+   * @param aType  The type of listener (NS_EVENT_BITS_MUTATION_*)
    *
    * @return true if there are mutation listeners of the specified type
    */
-  static PRBool HasMutationListeners(nsIContent* aContent,
-                                     nsIDocument* aDocument,
+  static PRBool HasMutationListeners(nsINode* aNode,
                                      PRUint32 aType);
 
   /**
@@ -737,64 +745,63 @@ public:
 
   /**
    * Add aRange to the list of ranges with a start- or endpoint containing
-   * aContent. aCreated will be set to PR_TRUE if this call created a new list
+   * aNode. aCreated will be set to PR_TRUE if this call created a new list
    * (meaning the list was empty before the call to AddToRangeList).
    *
-   * @param aContent The node contained in the start- or endpoint of aRange.
-   * @param aRange The range containing aContent in its start- or endpoint.
+   * @param aNode The node contained in the start- or endpoint of aRange.
+   * @param aRange The range containing aNode in its start- or endpoint.
    * @param aCreated [out] Set to PR_TRUE if a new list was created.
    */
-  static nsresult AddToRangeList(nsIContent *aContent, nsIDOMRange *aRange,
+  static nsresult AddToRangeList(nsINode *aNode, nsIDOMRange *aRange,
                                  PRBool *aCreated);
 
   /**
    * Remove aRange from the list of ranges with a start- or endpoint containing
-   * aContent. This will return PR_TRUE if aRange was the last range in the
-   * list.
+   * aNode. This will return PR_TRUE if aRange was the last range in the list.
    *
-   * @param aContent The node for which to remove aRange.
+   * @param aNode The node for which to remove aRange.
    * @param aRange The range to remove.
    * @return PR_TRUE if aRange was the last range in the list.
    */
-  static PRBool RemoveFromRangeList(nsIContent *aContent, nsIDOMRange *aRange);
+  static PRBool RemoveFromRangeList(nsINode *aNode, nsIDOMRange *aRange);
 
   /**
-   * Look up the list of ranges containing aContent.
+   * Look up the list of ranges containing aNode.
    *
-   * @param aContent The node for which to look up the range list.
+   * @param aNode The node for which to look up the range list.
    * @return The range list if one exists.
    */
-  static const nsVoidArray* LookupRangeList(const nsIContent *aContent);
+  static const nsVoidArray* LookupRangeList(const nsINode *aNode);
 
   /**
-   * Remove the list of ranges containing aContent as their start- or endpoint.
+   * Remove the list of ranges containing aNode as their start- or endpoint.
    *
-   * @param aContent The node for which to remove the range list.
+   * @param aNode The node for which to remove the range list.
    */
-  static void RemoveRangeList(nsIContent *aContent);
+  static void RemoveRangeList(nsINode *aNode);
 
   /**
-   * Get the eventlistener manager for aContent. If a new eventlistener manager
+   * Get the eventlistener manager for aNode. If a new eventlistener manager
    * was created, aCreated is set to PR_TRUE.
    *
-   * @param aContent The node for which to get the eventlistener manager.
+   * @param aNode The node for which to get the eventlistener manager.
    * @param aCreateIfNotFound If PR_FALSE, returns a listener manager only if
    *                          one already exists.
-   * @param aResult [out] Set to the eventlistener manager for aContent.
+   * @param aResult [out] Set to the eventlistener manager for aNode.
    * @param aCreated [out] Set to PR_TRUE if a new eventlistener manager was
    *                       created.
    */
-  static nsresult GetListenerManager(nsIContent *aContent,
+  static nsresult GetListenerManager(nsINode *aNode,
                                      PRBool aCreateIfNotFound,
                                      nsIEventListenerManager **aResult,
                                      PRBool *aCreated);
 
   /**
-   * Remove the eventlistener manager for aContent.
+   * Remove the eventlistener manager for aNode.
    *
-   * @param aContent The node for which to remove the eventlistener manager.
+   * @param aNode The node for which to remove the eventlistener manager.
    */
-  static void RemoveListenerManager(nsIContent *aContent);
+  static void RemoveListenerManager(nsINode *aNode);
 
   static PRBool IsInitialized()
   {
@@ -812,6 +819,53 @@ public:
    */
   static PRBool IsValidNodeName(nsIAtom *aLocalName, nsIAtom *aPrefix,
                                 PRInt32 aNamespaceID);
+
+  /**
+   * Associate an object aData to aKey on node aNode. If aData is null any
+   * previously registered object and UserDataHandler associated to aKey on
+   * aNode will be removed.
+   * Should only be used to implement the DOM Level 3 UserData API.
+   *
+   * @param aNode canonical nsINode pointer of the node to add aData to
+   * @param aKey the key to associate the object to
+   * @param aData the object to associate to aKey on aNode (may be nulll)
+   * @param aHandler the UserDataHandler to call when the node is
+   *                 cloned/deleted/imported/renamed (may be nulll)
+   * @param aResult [out] the previously registered object for aKey on aNode, if
+   *                      any
+   * @return whether adding the object and UserDataHandler succeeded
+   */
+  static nsresult SetUserData(nsINode *aNode, nsIAtom *aKey, nsIVariant *aData,
+                              nsIDOMUserDataHandler *aHandler,
+                              nsIVariant **aResult);
+
+  /**
+   * Call the UserDataHandler associated with aKey on node aNode.
+   * Should only be used to implement the DOM Level 3 UserData API.
+   *
+   * @param aDocument the document that contains the property table for aNode
+   * @param aOperation the type of operation that is being performed on the
+   *                   node. @see nsIDOMUserDataHandler
+   * @param aNode canonical nsINode pointer of the node to call the
+   *                UserDataHandler for
+   * @param aSource the node that aOperation is being performed on, or null if
+   *                the operation is a deletion
+   * @param aDest the newly created node if any, or null
+   */
+  static void CallUserDataHandler(nsIDocument *aDocument, PRUint16 aOperation,
+                                  const nsINode *aNode, nsIDOMNode *aSource,
+                                  nsIDOMNode *aDest);
+
+  /**
+   * Copy the objects and UserDataHandlers for node aNode from aOldDocument to
+   * the current ownerDocument of aNode.
+   * Should only be used to implement the DOM Level 3 UserData API.
+   *
+   * @param aOldDocument the old document
+   * @param aNode canonical nsINode pointer of the node to copy objects
+   *              and UserDataHandlers for
+   */
+  static void CopyUserData(nsIDocument *aOldDocument, const nsINode *aNode);
 
 private:
   static nsresult doReparentContentWrapper(nsIContent *aChild,

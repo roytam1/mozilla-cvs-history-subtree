@@ -47,6 +47,7 @@
 #include "nsPIDOMWindow.h"
 #include "nsIDocShell.h"
 #include "nsIURI.h"
+#include "nsContentErrors.h"
 
 // Print Options
 #include "nsIPrintSettings.h"
@@ -2300,7 +2301,8 @@ nsPrintEngine::ReflowPrintObject(nsPrintObject * aPO)
   }
 
   // create the PresContext
-  aPO->mPresContext = new nsPresContext(mIsCreatingPrintPreview ?
+  aPO->mPresContext = new nsPresContext(aPO->mDocument,
+                                        mIsCreatingPrintPreview ?
                                          nsPresContext::eContext_PrintPreview:
                                          nsPresContext::eContext_Print);
   NS_ENSURE_TRUE(aPO->mPresContext, NS_ERROR_OUT_OF_MEMORY);
@@ -3595,11 +3597,18 @@ nsPrintEngine::TurnScriptingOn(PRBool aDoTurnOn)
       if (aDoTurnOn) {
         doc->DeleteProperty(nsLayoutAtoms::scriptEnabledBeforePrintPreview);
       } else {
-        // Stash the current value of IsScriptEnabled on the document,
-        // so that layout code running in print preview doesn't get
-        // confused.
-        doc->SetProperty(nsLayoutAtoms::scriptEnabledBeforePrintPreview,
-                         NS_INT32_TO_PTR(doc->IsScriptEnabled()));
+        // Have to be careful, because people call us over and over again with
+        // aDoTurnOn == PR_FALSE.  So don't set the property if it's already
+        // set, since in that case we'd set it to the wrong value.
+        nsresult propThere;
+        doc->GetProperty(nsLayoutAtoms::scriptEnabledBeforePrintPreview,
+                         &propThere);
+        if (propThere == NS_PROPTABLE_PROP_NOT_THERE) {
+          // Stash the current value of IsScriptEnabled on the document, so
+          // that layout code running in print preview doesn't get confused.
+          doc->SetProperty(nsLayoutAtoms::scriptEnabledBeforePrintPreview,
+                           NS_INT32_TO_PTR(doc->IsScriptEnabled()));
+        }
       }
       scx->SetScriptsEnabled(aDoTurnOn, PR_TRUE);
     }

@@ -39,11 +39,6 @@
 # ***** END LICENSE BLOCK *****
 
 const kRowMax = 4;
-const kWindowWidth = 635;
-const kWindowHeight = 400;
-const kAnimateIncrement = 50;
-const kAnimateSteps = kWindowHeight / kAnimateIncrement - 1;
-const kVSizeSlop = 5;
 
 var gToolboxDocument = null;
 var gToolbox = null;
@@ -104,17 +99,16 @@ function initDialog()
 function repositionDialog()
 {
   // Position the dialog touching the bottom of the toolbox and centered with 
-  // it. We must resize the window smaller first so that it is positioned 
-  // properly. 
-  var screenX = gToolbox.boxObject.screenX + ((gToolbox.boxObject.width - kWindowWidth) / 2);
+  // it.
+  var width;
+  if (document.documentElement.hasAttribute("width"))
+    width = document.documentElement.getAttribute("width");
+  else
+    width = parseInt(document.documentElement.style.width);
+  var screenX = gToolbox.boxObject.screenX 
+                + ((gToolbox.boxObject.width - width) / 2);
   var screenY = gToolbox.boxObject.screenY + gToolbox.boxObject.height;
 
-  var newHeight = kWindowHeight;
-  if (newHeight >= screen.availHeight - screenY - kVSizeSlop) {
-    newHeight = screen.availHeight - screenY - kVSizeSlop;
-  }
-
-  window.resizeTo(kWindowWidth, newHeight);
   window.moveTo(screenX, screenY);
 }
 
@@ -561,7 +555,6 @@ function addNewToolbar()
     
   gToolbox.appendCustomToolbar(name.value, "");
   
-  repositionDialog();
   gToolboxChanged = true;
 }
 
@@ -615,7 +608,6 @@ function restoreDefaultSet()
   // Restore the disabled and command states
   restoreItemAttributes(["itemdisabled", "itemcommand"], savedAttributes);
 
-  repositionDialog();
   gToolboxChanged = true;
 }
 
@@ -670,8 +662,6 @@ function updateIconSize(aUseSmallIcons)
       gToolboxDocument.persist(toolbar.id, "iconsize");
     }
   }
-
-  repositionDialog();
 }
 
 function updateToolbarMode(aModeValue)
@@ -689,8 +679,6 @@ function updateToolbarMode(aModeValue)
 
   var iconSizeCheckbox = document.getElementById("smallicons");
   iconSizeCheckbox.disabled = aModeValue == "text";
-
-  repositionDialog();
 }
 
 
@@ -922,7 +910,6 @@ var toolbarDNDObserver =
     
     gCurrentDragOverItem = null;
 
-    repositionDialog();
     gToolboxChanged = true;
   },
   
@@ -979,7 +966,6 @@ var paletteDNDObserver =
       }
     }
     
-    repositionDialog();
     gToolboxChanged = true;
   },
   

@@ -53,10 +53,6 @@
 #include "nsGfxUtils.h"
 #include "nsCOMPtr.h"
 
-#ifdef MOZ_WIDGET_COCOA
-#include "nsIQDFlushManager.h"
-#endif
-
 #include "plhash.h"
 
 #include <FixMath.h>
@@ -848,11 +844,54 @@ NS_IMETHODIMP nsRenderingContextMac::GetCurrentTransform(nsTransform2D *&aTransf
 
 
 #pragma mark -
+
+// 0 1 2 3 4 5 6 7
+// *   *   *   *  
+//   *   *   *   *
+// *   *   *   *  
+//   *   *   *   *
+// *   *   *   *  
+//   *   *   *   *
+// *   *   *   *  
+//   *   *   *   *
+static const Pattern dottedPattern = {0xaa,0x55,0xaa,0x55,0xaa,0x55,0xaa,0x55};
+
+// 0 1 2 3 4 5 6 7
+// * * * *        
+//   * * * *      
+//     * * * *    
+//       * * * *  
+//         * * * *
+// *         * * *
+// * *         * *
+// * * *         *
+static const Pattern dashedPattern = {0xf0,0x78,0x3c,0x1e,0x0f,0x87,0xc3,0xe1};
+
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1)
 {
+  if (mLineStyle == nsLineStyle_kNone)
+    return NS_OK;
+
   SetupPortState();
+
+  PenState savedPenState;
+  RGBColor savedBGColor;
+  if (mLineStyle == nsLineStyle_kDotted || mLineStyle == nsLineStyle_kDashed) {
+    ::GetPenState(&savedPenState);
+    ::GetBackColor(&savedBGColor);
+
+    ::PenMode(transparent);
+    if (mLineStyle == nsLineStyle_kDashed)
+      ::PenPat(&dashedPattern);
+    else
+      ::PenPat(&dottedPattern);
+    RGBColor invertedForeColor;
+    ::GetForeColor(&invertedForeColor);
+    ::InvertColor(&invertedForeColor);
+    ::RGBBackColor(&invertedForeColor);
+  }
 
 	mGS->mTMatrix.TransformCoord(&aX0,&aY0);
 	mGS->mTMatrix.TransformCoord(&aX1,&aY1);
@@ -866,35 +905,63 @@ NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord 
 	if (diffY)
 		diffY -= (diffY > 0 ? 1 : -1);
 
-	// draw line
-	::MoveTo(aX0, aY0);
-	::Line(diffX, diffY);
+  ::MoveTo(aX0, aY0);
+  ::Line(diffX, diffY);
+
+  if (mLineStyle == nsLineStyle_kDotted || mLineStyle == nsLineStyle_kDashed) {
+    ::PenMode(savedPenState.pnMode);
+    ::PenPat(&savedPenState.pnPat);
+    ::RGBBackColor(&savedBGColor);
+  }
 
 	return NS_OK;
 }
-
 
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP nsRenderingContextMac::DrawPolyline(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
-	SetupPortState();
+  if (mLineStyle == nsLineStyle_kNone)
+    return NS_OK;
 
-	PRInt32    x,y;
+  SetupPortState();
 
-	x = aPoints[0].x;
-	y = aPoints[0].y;
-	mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
-	::MoveTo(x,y);
+  PenState savedPenState;
+  RGBColor savedBGColor;
+  if (mLineStyle == nsLineStyle_kDotted || mLineStyle == nsLineStyle_kDashed) {
+    ::GetPenState(&savedPenState);
+    ::GetBackColor(&savedBGColor);
 
-	for (PRInt32 i = 1; i < aNumPoints; i++)
-	{
-		x = aPoints[i].x;
-		y = aPoints[i].y;
+    ::PenMode(transparent);
+    if (mLineStyle == nsLineStyle_kDashed)
+      ::PenPat(&dashedPattern);
+    else
+      ::PenPat(&dottedPattern);
+    RGBColor invertedForeColor;
+    ::GetForeColor(&invertedForeColor);
+    ::InvertColor(&invertedForeColor);
+    ::RGBBackColor(&invertedForeColor);
+  }
 
-		mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
-		::LineTo(x,y);
-	}
+  PRInt32 x,y;
+
+  x = aPoints[0].x;
+  y = aPoints[0].y;
+  mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
+
+  ::MoveTo(x,y);
+  for (PRInt32 i = 1; i < aNumPoints; i++) {
+    x = aPoints[i].x;
+    y = aPoints[i].y;
+    mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
+    ::LineTo(x,y);
+  }
+
+  if (mLineStyle == nsLineStyle_kDotted || mLineStyle == nsLineStyle_kDashed) {
+    ::PenMode(savedPenState.pnMode);
+    ::PenPat(&savedPenState.pnPat);
+    ::RGBBackColor(&savedBGColor);
+  }
 
 	return NS_OK;
 }
@@ -1392,30 +1459,6 @@ nsRenderingContextMac::FlushRect(const nsRect& aRect)
 NS_IMETHODIMP
 nsRenderingContextMac::FlushRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
-#ifdef MOZ_WIDGET_COCOA
-  if (mPort) {
-    SetupPortState();
-
-    nscoord x,y,w,h;
-
-    x = aX;
-    y = aY;
-    w = aWidth;
-    h = aHeight;
-
-    mGS->mTMatrix.TransformCoord(&x, &y, &w, &h);
-
-    StRegionFromPool rgn;
-    if (!rgn) return NS_ERROR_OUT_OF_MEMORY;
-
-    ::SetRectRgn(rgn, pinToShort(x), pinToShort(y), pinToShort(x + w), pinToShort(y + h));
-
-    nsCOMPtr<nsIQDFlushManager> qdFlushManager =
-     do_GetService("@mozilla.org/gfx/qdflushmanager;1");
-    if (qdFlushManager)
-      qdFlushManager->FlushPortBuffer(mPort, rgn);
-  }
-#endif
   return NS_OK;
 }
 

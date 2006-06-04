@@ -121,8 +121,6 @@ nsAddrDatabase::nsAddrDatabase()
       m_NickNameColumnToken(0),
       m_PriEmailColumnToken(0),
       m_2ndEmailColumnToken(0),
-      m_DefaultEmailColumnToken(0),
-      m_CardTypeColumnToken(0),
       m_WorkPhoneColumnToken(0),
       m_HomePhoneColumnToken(0),
       m_FaxColumnToken(0),
@@ -1218,8 +1216,6 @@ nsresult nsAddrDatabase::InitMDBInfo()
       m_mdbStore->StringToToken(m_mdbEnv,  kPriEmailColumn, &m_PriEmailColumnToken);
       m_mdbStore->StringToToken(m_mdbEnv,  kLowerPriEmailColumn, &m_LowerPriEmailColumnToken);
       m_mdbStore->StringToToken(m_mdbEnv,  k2ndEmailColumn, &m_2ndEmailColumnToken);
-      m_mdbStore->StringToToken(m_mdbEnv,  kDefaultEmailColumn, &m_DefaultEmailColumnToken);
-      m_mdbStore->StringToToken(m_mdbEnv,  kCardTypeColumn, &m_CardTypeColumnToken);
       m_mdbStore->StringToToken(m_mdbEnv,  kPreferMailFormatColumn, &m_MailFormatColumnToken);
       m_mdbStore->StringToToken(m_mdbEnv,  kPopularityIndexColumn, &m_PopularityIndexColumnToken);
       m_mdbStore->StringToToken(m_mdbEnv,  kWorkPhoneColumn, &m_WorkPhoneColumnToken);
@@ -1345,12 +1341,6 @@ nsresult nsAddrDatabase::AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *ca
 
     card->GetSecondEmail(getter_Copies(unicodeStr));
     Add2ndEmail(cardRow, NS_ConvertUTF16toUTF8(unicodeStr).get());
-    
-    card->GetDefaultEmail(getter_Copies(unicodeStr));
-    AddDefaultEmail(cardRow, NS_ConvertUTF16toUTF8(unicodeStr).get());
-    
-    card->GetCardType(getter_Copies(unicodeStr));
-    AddCardType(cardRow, NS_ConvertUTF16toUTF8(unicodeStr).get());
     
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     card->GetPreferMailFormat(&format);
@@ -1533,18 +1523,6 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewCardAndAddToDB(nsIAbCard *newCard, PRBool
     NotifyCardEntryChange(AB_NotifyInserted, newCard);
   }
   return rv;
-}
-
-NS_IMETHODIMP nsAddrDatabase::CreateNewCardAndAddToDBWithKey(nsIAbCard *newCard, PRBool notify /* = FALSE */, PRUint32 *key)
-{
-  nsresult    err = NS_OK;
-  *key = 0;
-
-  err = CreateNewCardAndAddToDB(newCard, notify);
-  if (NS_SUCCEEDED(err))
-    *key = m_LastRecordKey;
-
-  return err;
 }
 
 NS_IMETHODIMP nsAddrDatabase::CreateNewListCardAndAddToDB(nsIAbDirectory *aList, PRUint32 listRowID, nsIAbCard *newCard, PRBool notify /* = FALSE */)
@@ -2688,18 +2666,6 @@ NS_IMETHODIMP nsAddrDatabase::InitCardFromRow(nsIAbCard *newCard, nsIMdbRow* car
         newCard->SetSecondEmail(tempString.get());
     }
 
-    err = GetStringColumn(cardRow, m_DefaultEmailColumnToken, tempString);
-    if (NS_SUCCEEDED(err) && !tempString.IsEmpty())
-    {
-        newCard->SetDefaultEmail(tempString.get());
-    }
-
-    err = GetStringColumn(cardRow, m_CardTypeColumnToken, tempString);
-    if (NS_SUCCEEDED(err) && !tempString.IsEmpty())
-    {
-        newCard->SetCardType(tempString.get());
-    }
-
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     err = GetIntColumn(cardRow, m_MailFormatColumnToken, &format, 0);
     if (NS_SUCCEEDED(err))
@@ -3804,15 +3770,4 @@ nsresult nsAddrDatabase::DeleteRow(nsIMdbTable* dbTable, nsIMdbRow* dbRow)
   err = dbTable->CutRow(m_mdbEnv, dbRow);
 
   return (err == NS_OK) ? NS_OK : NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP nsAddrDatabase::CreateMailListAndAddToDBWithKey(nsIAbDirectory *newList, PRBool notify, PRUint32 *key)
-{
-  NS_ENSURE_ARG_POINTER(key);
-
-  *key = 0;
-  nsresult rv = CreateMailListAndAddToDB(newList, notify);
-  if (NS_SUCCEEDED(rv))
-    *key = m_LastRecordKey;
-  return rv;
 }

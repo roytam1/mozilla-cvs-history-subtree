@@ -1867,69 +1867,68 @@ static JSConstDoubleSpec install_constants[] =
 static JSFunctionSpec InstallMethods[] =
 {
 /*START HACK FOR DEBUGGING UNTIL ALERTS WORK*/
-  {"TRACE",                     InstallTRACE,                   1},
+  {"TRACE",                     InstallTRACE,                   1,0,0},
 /*END HACK FOR DEBUGGING UNTIL ALERTS WORK*/
   // -- new forms that match prevailing javascript style --
-  {"addDirectory",              InstallAddDirectory,            6},
-  {"addFile",                   InstallAddSubcomponent,         6},
-  {"alert",                     InstallAlert,                   1},
-  {"cancelInstall",             InstallAbortInstall,            1},
-  {"confirm",                   InstallConfirm,                 8},
-  {"execute",                   InstallExecute,                 2},
-  {"gestalt",                   InstallGestalt,                 1},
-  {"getComponentFolder",        InstallGetComponentFolder,      2},
-  {"getFolder",                 InstallGetFolder,               2},
-  {"getLastError",              InstallGetLastError,            0},
-  {"getWinProfile",             InstallGetWinProfile,           2},
-  {"getWinRegistry",            InstallGetWinRegistry,          0},
-  {"initInstall",               InstallStartInstall,            4},
-  {"loadResources",             InstallLoadResources,           1},
-  {"logComment",                InstallLogComment,              1},
-  {"patch",                     InstallPatch,                   5},
-  {"performInstall",            InstallFinalizeInstall,         0},
-  {"registerChrome",            InstallRegisterChrome,          2},
-  {"refreshPlugins",            InstallRefreshPlugins,          1},
-  {"resetError",                InstallResetError,              1},
-//  {"selectChrome",              InstallSelectChrome,            2},
-  {"setPackageFolder",          InstallSetPackageFolder,        1},
-  {"uninstall",                 InstallUninstall,               1},
+  {"addDirectory",              InstallAddDirectory,            6,0,0},
+  {"addFile",                   InstallAddSubcomponent,         6,0,0},
+  {"alert",                     InstallAlert,                   1,0,0},
+  {"cancelInstall",             InstallAbortInstall,            1,0,0},
+  {"confirm",                   InstallConfirm,                 8,0,0},
+  {"execute",                   InstallExecute,                 2,0,0},
+  {"gestalt",                   InstallGestalt,                 1,0,0},
+  {"getComponentFolder",        InstallGetComponentFolder,      2,0,0},
+  {"getFolder",                 InstallGetFolder,               2,0,0},
+  {"getLastError",              InstallGetLastError,            0,0,0},
+  {"getWinProfile",             InstallGetWinProfile,           2,0,0},
+  {"getWinRegistry",            InstallGetWinRegistry,          0,0,0},
+  {"initInstall",               InstallStartInstall,            4,0,0},
+  {"loadResources",             InstallLoadResources,           1,0,0},
+  {"logComment",                InstallLogComment,              1,0,0},
+  {"patch",                     InstallPatch,                   5,0,0},
+  {"performInstall",            InstallFinalizeInstall,         0,0,0},
+  {"registerChrome",            InstallRegisterChrome,          2,0,0},
+  {"refreshPlugins",            InstallRefreshPlugins,          1,0,0},
+  {"resetError",                InstallResetError,              1,0,0},
+//  {"selectChrome",              InstallSelectChrome,            2,0,0},
+  {"setPackageFolder",          InstallSetPackageFolder,        1,0,0},
+  {"uninstall",                 InstallUninstall,               1,0,0},
 
   // the raw file methods are deprecated, use the File object instead
-  {"dirCreate",                 InstallFileOpDirCreate,                1},
-  {"dirGetParent",              InstallFileOpDirGetParent,             1},
-  {"dirRemove",                 InstallFileOpDirRemove,                2},
-  {"dirRename",                 InstallFileOpDirRename,                2},
-  {"fileCopy",                  InstallFileOpFileCopy,                 2},
-  {"fileDelete",                InstallFileOpFileRemove,               1},
-  {"fileExists",                InstallFileOpFileExists,               1},
-  {"fileExecute",               InstallFileOpFileExecute,              2},
-  {"fileGetNativeVersion",      InstallFileOpFileGetNativeVersion,     1},
-  {"fileGetDiskSpaceAvailable", InstallFileOpFileGetDiskSpaceAvailable,1},
-  {"fileGetModDate",            InstallFileOpFileGetModDate,           1},
-  {"fileGetSize",               InstallFileOpFileGetSize,              1},
-  {"fileIsDirectory",           InstallFileOpFileIsDirectory,          1},
-  {"fileIsWritable",            InstallFileOpFileIsWritable,           1},
-  {"fileIsFile",                InstallFileOpFileIsFile,               1},
-  {"fileModDateChanged",        InstallFileOpFileModDateChanged,       2},
-  {"fileMove",                  InstallFileOpFileMove,                 2},
-  {"fileRename",                InstallFileOpFileRename,               2},
-  {"fileWindowsShortcut",       InstallFileOpFileWindowsShortcut,      7},
-  {"fileMacAlias",              InstallFileOpFileMacAlias,             2},
-  {"fileUnixLink",              InstallFileOpFileUnixLink,             2},
+  {"dirCreate",                 InstallFileOpDirCreate,                1,0,0},
+  {"dirGetParent",              InstallFileOpDirGetParent,             1,0,0},
+  {"dirRemove",                 InstallFileOpDirRemove,                2,0,0},
+  {"dirRename",                 InstallFileOpDirRename,                2,0,0},
+  {"fileCopy",                  InstallFileOpFileCopy,                 2,0,0},
+  {"fileDelete",                InstallFileOpFileRemove,               1,0,0},
+  {"fileExists",                InstallFileOpFileExists,               1,0,0},
+  {"fileExecute",               InstallFileOpFileExecute,              2,0,0},
+  {"fileGetNativeVersion",      InstallFileOpFileGetNativeVersion,     1,0,0},
+  {"fileGetDiskSpaceAvailable", InstallFileOpFileGetDiskSpaceAvailable,1,0,0},
+  {"fileGetModDate",            InstallFileOpFileGetModDate,           1,0,0},
+  {"fileGetSize",               InstallFileOpFileGetSize,              1,0,0},
+  {"fileIsDirectory",           InstallFileOpFileIsDirectory,          1,0,0},
+  {"fileIsWritable",            InstallFileOpFileIsWritable,           1,0,0},
+  {"fileIsFile",                InstallFileOpFileIsFile,               1,0,0},
+  {"fileModDateChanged",        InstallFileOpFileModDateChanged,       2,0,0},
+  {"fileMove",                  InstallFileOpFileMove,                 2,0,0},
+  {"fileRename",                InstallFileOpFileRename,               2,0,0},
+  {"fileWindowsShortcut",       InstallFileOpFileWindowsShortcut,      7,0,0},
+  {"fileMacAlias",              InstallFileOpFileMacAlias,             2,0,0},
+  {"fileUnixLink",              InstallFileOpFileUnixLink,             2,0,0},
 
   // -- documented but never supported --
-  {"deleteRegisteredFile",      InstallDeleteComponent,         1},
+  {"deleteRegisteredFile",      InstallDeleteComponent,         1,0,0},
 
   // -- obsolete forms for temporary compatibility --
-  {"abortInstall",              InstallAbortInstall,            1},
-  {"finalizeInstall",           InstallFinalizeInstall,         0},
-  {"startInstall",              InstallStartInstall,            4},
-  {0}
+  {"abortInstall",              InstallAbortInstall,            1,0,0},
+  {"finalizeInstall",           InstallFinalizeInstall,         0,0,0},
+  {"startInstall",              InstallStartInstall,            4,0,0},
+  {nsnull,nsnull,0,0,0}
 };
 
 
 JSObject * InitXPInstallObjects(JSContext *jscontext,
-                             JSObject *global,
                              nsIFile* jarfile,
                              const PRUnichar* url,
                              const PRUnichar* args,
@@ -1937,33 +1936,25 @@ JSObject * InitXPInstallObjects(JSContext *jscontext,
                              CHROMEREG_IFACE* reg,
                              nsIZipReader * theJARFile)
 {
-  JSObject *installObject  = nsnull;
+  JSObject *installObject;
   nsInstall *nativeInstallObject;
 
-  if (global == nsnull)
-  {
-    //we are the global
-    // new global object
-    global = JS_NewObject(jscontext, &InstallClass, nsnull, nsnull);
-  }
-
-  installObject  = JS_InitClass( jscontext,         // context
-                                 global,            // global object
-                                 nsnull,            // parent proto
-                                 &InstallClass,     // JSClass
-                                 nsnull,            // JSNative ctor
-                                 0,                 // ctor args
-                                 nsnull,            // proto props
-                                 nsnull,            // proto funcs
-                                 InstallProperties, // ctor props (static)
-                                 InstallMethods);   // ctor funcs (static)
-
-  if (nsnull == installObject)
-  {
+  // new global object
+  installObject = JS_NewObject(jscontext, &InstallClass, nsnull, nsnull);
+  if (!installObject)
     return nsnull;
-  }
 
-  if ( PR_FALSE == JS_DefineConstDoubles(jscontext, installObject, install_constants) )
+  if (!JS_DefineProperty(jscontext, installObject, InstallClass.name,
+                         OBJECT_TO_JSVAL(installObject), NULL, NULL, 0))
+    return nsnull;
+
+  if (!JS_DefineProperties(jscontext, installObject, InstallProperties))
+    return nsnull;
+
+  if (!JS_DefineFunctions(jscontext, installObject, InstallMethods))
+    return nsnull;
+
+  if (!JS_DefineConstDoubles(jscontext, installObject, install_constants))
     return nsnull;
 
   nativeInstallObject = new nsInstall(theJARFile);
@@ -1983,7 +1974,7 @@ JSObject * InitXPInstallObjects(JSContext *jscontext,
   //
   // Initialize and create the FileOp object
   //
-  if(NS_OK != InitXPFileOpObjectPrototype(jscontext, global, &gFileOpProto))
+  if(NS_OK != InitXPFileOpObjectPrototype(jscontext, installObject, &gFileOpProto))
   {
     return nsnull;
   }
@@ -1995,7 +1986,7 @@ JSObject * InitXPInstallObjects(JSContext *jscontext,
   JS_SetPrivate(jscontext, gFileOpObject, nativeInstallObject);
 
   if (!JS_DefineProperty (jscontext,
-                          installObject, 
+                          installObject,
                           "File", 
                           OBJECT_TO_JSVAL(gFileOpObject),
                           JS_PropertyStub, 
@@ -2019,13 +2010,13 @@ JSObject * InitXPInstallObjects(JSContext *jscontext,
   JSObject *winRegPrototype     = nsnull;
   JSObject *winProfilePrototype = nsnull;
 
-  if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
+  if(NS_OK != InitWinRegPrototype(jscontext, installObject, &winRegPrototype))
   {
     return nsnull;
   }
   nativeInstallObject->SaveWinRegPrototype(winRegPrototype);
 
-  if(NS_OK != InitWinProfilePrototype(jscontext, global, &winProfilePrototype))
+  if(NS_OK != InitWinProfilePrototype(jscontext, installObject, &winProfilePrototype))
   {
     return nsnull;
   }

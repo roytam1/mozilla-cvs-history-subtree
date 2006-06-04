@@ -57,7 +57,7 @@
 #include "nsIMenuBar.h"
 
 #include "nsplugindefs.h"
-#include <QuickDraw.h>
+#include <Quickdraw.h>
 
 #ifdef MOZ_CAIRO_GFX
 class gfxASurface;
@@ -176,7 +176,7 @@ public:
   NS_IMETHOD              Destroy();
 
   NS_IMETHOD              Show(PRBool aState);
-  NS_IMETHOD              IsVisible(PRBool & aState);
+  NS_IMETHOD              IsVisible(PRBool& outState);
 
   virtual nsIWidget*      GetParent(void);
   

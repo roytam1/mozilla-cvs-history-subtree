@@ -52,6 +52,7 @@
 #include <math.h>
 #include <errno.h>
 #include <limits.h>
+#include <float.h>
 #include "prlog.h"
 #include "prprf.h"
 #include "prdtoa.h"
@@ -114,16 +115,32 @@ PRBool
 nsSchemaValidatorUtils::IsValidSchemaDouble(const char* aString,
                                             double *aResult)
 {
+  PRBool isValid = PR_TRUE;
+
   if (*aString == 0)
     return PR_FALSE;
 
   char * pEnd;
   double value = PR_strtod(aString, &pEnd);
 
+  // If end pointer hasn't moved, then the string wasn't a
+  // true double (could be INF, -INF or NaN though)
+  if (pEnd == aString) {
+    nsCAutoString temp(aString);
+
+    // doubles may be INF, -INF or NaN
+    if (temp.EqualsLiteral("INF")) {
+      value = DBL_MAX;
+    } else if (temp.EqualsLiteral("-INF")) {
+      value = - DBL_MAX;
+    } else if (!temp.EqualsLiteral("NaN")) {
+      isValid = PR_FALSE;
+    }
+  }
   if (aResult)
     *aResult = value;
 
-  return (pEnd != aString);
+  return isValid;
 }
 
 PRBool

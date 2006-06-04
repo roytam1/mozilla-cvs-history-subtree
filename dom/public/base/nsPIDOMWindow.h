@@ -271,7 +271,7 @@ public:
 
   // Add a timeout to this window.
   virtual nsresult SetTimeoutOrInterval(nsIScriptTimeoutHandler *aHandler,
-                                        PRFloat64 interval,
+                                        PRInt32 interval,
                                         PRBool aIsInterval, PRInt32 *aReturn) = 0;
 
   // Clear a timeout from this window.

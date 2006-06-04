@@ -42,8 +42,8 @@
 #include "nsISVGValueObserver.h"
 #include <cairo.h>
 
-class nsSVGGradientFrame;
-class nsSVGPatternFrame;
+class nsSVGPaintServerFrame;
+class nsISVGRendererCanvas;
 
 typedef nsFrame nsSVGGeometryFrameBase;
 
@@ -59,7 +59,6 @@ class nsSVGGeometryFrame : public nsSVGGeometryFrameBase,
 {
 public:
   nsSVGGeometryFrame(nsStyleContext *aContext);
-  ~nsSVGGeometryFrame();
 
   // nsIFrame interface:
   NS_IMETHOD DidSetStyleContext();
@@ -79,63 +78,39 @@ public:
   PRBool IsClipChild(); 
 
   float GetStrokeWidth();
-  float GetStrokeOpacity();
-  float GetFillOpacity();
 
-  PRUint16 GetStrokePaintType();
-  nsresult GetStrokePaintServerType(PRUint16 *aStrokePaintServerType);
-  nsresult GetStrokeGradient(nsSVGGradientFrame **aGrad);
-  nsresult GetStrokePattern(nsSVGPatternFrame **aPat);
-  PRUint16 GetFillPaintType();
-  nsresult GetFillPaintServerType(PRUint16 *aFillPaintServerType);
-  nsresult GetFillGradient(nsSVGGradientFrame **aGrad);
-  nsresult GetFillPattern(nsSVGPatternFrame **aPat);
+  // Check if this geometry needs to be filled or stroked.  These also
+  // have the side effect of looking up the paint server if that is
+  // the indicated type and storing it in a property, so need to be
+  // called before SetupCairo{Fill,Stroke}.
+  PRBool HasFill();
+  PRBool HasStroke();
 
-  // Set up a cairo context for filling a path
-  void SetupCairoFill(cairo_t *aCtx);
+  // Setup/Cleanup a cairo context for filling a path
+  nsresult SetupCairoFill(nsISVGRendererCanvas *aCanvas,
+                          cairo_t *aCtx,
+                          void **aClosure);
+  void CleanupCairoFill(cairo_t *aCtx, void *aClosure);
 
   // Set up a cairo context for measuring a stroked path
   void SetupCairoStrokeGeometry(cairo_t *aCtx);
 
-  // Set up a cairo context for stroking path
-  void SetupCairoStroke(cairo_t *aCtx);
-
-  enum {
-    UPDATEMASK_NOTHING           = 0x00000000,
-    UPDATEMASK_CANVAS_TM         = 0x00000001,
-    UPDATEMASK_STROKE_OPACITY    = 0x00000002,
-    UPDATEMASK_STROKE_WIDTH      = 0x00000004,
-    UPDATEMASK_STROKE_DASH_ARRAY = 0x00000008,
-    UPDATEMASK_STROKE_DASHOFFSET = 0x00000010,
-    UPDATEMASK_STROKE_LINECAP    = 0x00000020,
-    UPDATEMASK_STROKE_LINEJOIN   = 0x00000040,
-    UPDATEMASK_STROKE_MITERLIMIT = 0x00000080,
-    UPDATEMASK_FILL_OPACITY      = 0x00000100,
-    UPDATEMASK_FILL_RULE         = 0x00000200,
-    UPDATEMASK_STROKE_PAINT_TYPE = 0x00000400,
-    UPDATEMASK_STROKE_PAINT      = 0x00000800,
-    UPDATEMASK_FILL_PAINT_TYPE   = 0x00001000,
-    UPDATEMASK_FILL_PAINT        = 0x00002000,
-    UPDATEMASK_ALL               = 0xFFFFFFFF
-  };
-
-  enum {
-    PAINT_TYPE_GRADIENT = 0,
-    PAINT_TYPE_PATTERN  = 1 
-  };
+  // Setup/Cleanup a cairo context for stroking path
+  nsresult SetupCairoStroke(nsISVGRendererCanvas *aCanvas,
+                            cairo_t *aCtx,
+                            void **aClosure);
+  void CleanupCairoStroke(cairo_t *aCtx, void *aClosure);
 
 protected:
-  virtual nsresult UpdateGraphic(PRUint32 flags,
-                                 PRBool suppressInvalidation = PR_FALSE) = 0;
+  virtual nsresult UpdateGraphic(PRBool suppressInvalidation = PR_FALSE) = 0;
+
+  nsSVGPaintServerFrame *GetPaintServer(const nsStyleSVGPaint *aPaint);
+
+  NS_IMETHOD InitSVG();
 
 private:
   nsresult GetStrokeDashArray(double **arr, PRUint32 *count);
   float GetStrokeDashoffset();
-
-  nsSVGGradientFrame* mFillGradient;
-  nsSVGGradientFrame* mStrokeGradient;
-  nsSVGPatternFrame*  mFillPattern;
-  nsSVGPatternFrame*  mStrokePattern;
 };
 
 #endif // __NS_SVGGEOMETRYFRAME_H__

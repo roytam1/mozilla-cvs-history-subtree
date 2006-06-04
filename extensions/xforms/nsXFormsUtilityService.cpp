@@ -196,16 +196,24 @@ nsXFormsUtilityService::ValidateString(const nsAString & aValue,
 }
 
 NS_IMETHODIMP
-nsXFormsUtilityService::GetRepeatIndex(nsIDOMNode *aRepeat, PRUint32 *aIndex)
+nsXFormsUtilityService::GetRepeatIndex(nsIDOMNode *aRepeat, PRInt32 *aIndex)
 {
   NS_ASSERTION(aIndex, "no return buffer for index, we'll crash soon");
   *aIndex = 0;
 
   nsCOMPtr<nsIXFormsRepeatElement> repeatEle = do_QueryInterface(aRepeat);
+  if (!repeatEle) {
+    // if aRepeat isn't a repeat element, then setting aIndex to -1 to tell
+    // XPath to return NaN.  Per 7.8.5 in the spec (1.0, 2nd edition)
+    *aIndex = -1;
+  } else {
+    PRUint32 retIndex = 0;
+    nsresult rv = repeatEle->GetIndex(&retIndex);
+    NS_ENSURE_SUCCESS(rv, rv);
+    *aIndex = retIndex;
+  }
 
-  /// 
-  /// @bug This should somehow end up in a NaN per the XForms 1.0 Errata (XXX)
-  return repeatEle ? repeatEle->GetIndex(aIndex) : NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -217,7 +225,7 @@ nsXFormsUtilityService::GetMonths(const nsAString & aValue,
   *aMonths = 0;
   nsCOMPtr<nsISchemaDuration> duration;
   nsCOMPtr<nsISchemaValidator> schemaValidator = 
-    do_GetService(NS_SCHEMAVALIDATOR_CONTRACTID);
+    do_CreateInstance(NS_SCHEMAVALIDATOR_CONTRACTID);
   NS_ENSURE_TRUE(schemaValidator, NS_ERROR_FAILURE);
 
   nsresult rv = schemaValidator->ValidateBuiltinTypeDuration(aValue, 
@@ -251,7 +259,7 @@ nsXFormsUtilityService::GetSeconds(const nsAString & aValue,
 {
   nsCOMPtr<nsISchemaDuration> duration;
   nsCOMPtr<nsISchemaValidator> schemaValidator = 
-    do_GetService(NS_SCHEMAVALIDATOR_CONTRACTID);
+    do_CreateInstance(NS_SCHEMAVALIDATOR_CONTRACTID);
   NS_ENSURE_TRUE(schemaValidator, NS_ERROR_FAILURE);
 
   nsresult rv = schemaValidator->ValidateBuiltinTypeDuration(aValue, 
@@ -290,7 +298,7 @@ nsXFormsUtilityService::GetSecondsFromDateTime(const nsAString & aValue,
 {
   PRTime dateTime;
   nsCOMPtr<nsISchemaValidator> schemaValidator = 
-    do_GetService(NS_SCHEMAVALIDATOR_CONTRACTID);
+    do_CreateInstance(NS_SCHEMAVALIDATOR_CONTRACTID);
   NS_ENSURE_TRUE(schemaValidator, NS_ERROR_FAILURE);
 
   nsresult rv = schemaValidator->ValidateBuiltinTypeDateTime(aValue, &dateTime); 
@@ -378,7 +386,7 @@ nsXFormsUtilityService::GetDaysFromDateTime(const nsAString & aValue,
 
   PRTime date;
   nsCOMPtr<nsISchemaValidator> schemaValidator = 
-    do_GetService(NS_SCHEMAVALIDATOR_CONTRACTID);
+    do_CreateInstance(NS_SCHEMAVALIDATOR_CONTRACTID);
   NS_ENSURE_TRUE(schemaValidator, NS_ERROR_FAILURE);
 
   // aValue could be a xsd:date or a xsd:dateTime.  If it is a dateTime, we

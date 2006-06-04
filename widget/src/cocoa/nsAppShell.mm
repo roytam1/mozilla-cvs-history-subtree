@@ -55,7 +55,16 @@
 // the native run loop.
 //
 @interface AppShellDelegate : NSObject
+{
+  @private
+    nsAppShell* mAppShell;
+    nsresult    mRunRV;
+}
+
+- (id)initWithAppShell:(nsAppShell*)aAppShell;
 - (void)handlePortMessage:(NSPortMessage*)aPortMessage;
+- (void)runAppShell;
+- (nsresult)rvFromRun;
 @end
 
 // nsAppShell implementation
@@ -63,6 +72,7 @@
 nsAppShell::nsAppShell()
 : mPort(nil)
 , mDelegate(nil)
+, mRunningEventLoop(PR_FALSE)
 {
   // mMainPool sits low on the autorelease pool stack to serve as a catch-all
   // for autoreleased objects on this thread.  Because it won't be popped
@@ -118,10 +128,9 @@ nsAppShell::Init()
                                        forKey:@"NSOwner"]
                withZone:NSDefaultMallocZone()];
 
-
   // A message will be sent through mPort to mDelegate on the main thread
   // to interrupt the run loop while it is running.
-  mDelegate = [[AppShellDelegate alloc] init];
+  mDelegate = [[AppShellDelegate alloc] initWithAppShell:this];
   NS_ENSURE_STATE(mDelegate);
 
   mPort = [[NSPort port] retain];
@@ -152,15 +161,12 @@ nsAppShell::Init()
 void
 nsAppShell::ProcessGeckoEvents()
 {
-  if (RunWasCalled()) {
-    // We own the run loop.  Interrupt it.  It will be started again later
-    // (unless exiting) by nsBaseAppShell.  Trust me, I'm a doctor.
-    [NSApp stop:nil];
+  if (mRunningEventLoop) {
+    mRunningEventLoop = PR_FALSE;
 
-    // The run loop is sleeping.  [NSApp run] won't return until it's given
-    // a reason to wake up.  Awaken it by posting a bogus event.
-    // There's no need to make the event presentable (by setting a subtype,
-    // for example) because we own the run loop.
+    // The run loop is sleeping.  [NSApp nextEventMatchingMask:...] won't
+    // return until it's given a reason to wake up.  Awaken it by posting
+    // a bogus event.  There's no need to make the event presentable.
     [NSApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
                                         location:NSMakePoint(0,0)
                                    modifierFlags:0
@@ -215,43 +221,95 @@ nsAppShell::ScheduleNativeEventCallback()
 PRBool
 nsAppShell::ProcessNextNativeEvent(PRBool aMayWait)
 {
-  if (!aMayWait) {
-    // Only process a single event.
+  PRBool eventProcessed = PR_FALSE;
+  PRBool wasRunningEventLoop = mRunningEventLoop;
+
+  mRunningEventLoop = aMayWait;
+  NSDate* waitUntil = nil;
+  if (aMayWait)
+    waitUntil = [NSDate distantFuture];
+
+  do {
+    // Handle the event on its own autorelease pool.
+    // Ordinarily, each event gets a new pool when dispatched by
+    // [NSApp run].
+    NSAutoreleasePool* localPool = [[NSAutoreleasePool alloc] init];
+
     if (NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask
-                                            untilDate:nil
+                                            untilDate:waitUntil
                                                inMode:NSDefaultRunLoopMode
                                               dequeue:YES]) {
-      // Handle the event on its own autorelease pool.
-      // Ordinarily, each event gets a new pool when dispatched by
-      // [NSApp run].
-      NSAutoreleasePool* localPool = [[NSAutoreleasePool alloc] init];
       [NSApp sendEvent:event];
-      [localPool release];
+
+      // Additional processing that [NSApp run] does after each event.
+      NSEventType type = [event type];
+      if (type != NSPeriodic && type != NSMouseMoved) {
+        [[NSApp servicesMenu] update];
+        [[NSApp windowsMenu] update];
+        [[NSApp mainMenu] update];
+      }
+
+      [NSApp updateWindows];
+
+      eventProcessed = PR_TRUE;
     }
-  }
-  else {
-    // Run the run loop until interrupted by a stop: message.
+
+    [localPool release];
+  } while (mRunningEventLoop);
+
+  mRunningEventLoop = wasRunningEventLoop;
+
+  return eventProcessed;
+}
+
+// Run
+//
+// Overrides the base class' Run method to ensure that [NSApp run] has been
+// called.  When [NSApp run] has not yet been called, this method calls it
+// after arranging for a selector to be called from the run loop.  That
+// selector is responsible for calling Run again.  At that point, because
+// [NSApp run] has been called, the base class' method is called.
+//
+// The runAppShell selector will call [NSApp stop:] as soon as the real
+// Run method finishes.  The real Run method's return value is saved so
+// that it may properly be returned.
+//
+// public
+NS_IMETHODIMP
+nsAppShell::Run(void)
+{
+  if (![NSApp isRunning]) {
+    [mDelegate performSelector:@selector(runAppShell)
+                    withObject:nil
+                    afterDelay:0];
     [NSApp run];
+    return [mDelegate rvFromRun];
   }
 
-  if ([NSApp nextEventMatchingMask:NSAnyEventMask
-                         untilDate:nil
-                            inMode:NSDefaultRunLoopMode
-                           dequeue:NO]) {
-    return PR_TRUE;
-  }
-
-  return PR_FALSE;
+  return nsBaseAppShell::Run();
 }
 
 // AppShellDelegate implementation
 
 @implementation AppShellDelegate
+// initWithAppShell:
+//
+// Constructs the AppShellDelegate object
+- (id)initWithAppShell:(nsAppShell*)aAppShell
+{
+  if ((self = [self init])) {
+    mAppShell = aAppShell;
+    mRunRV = NS_ERROR_NOT_INITIALIZED;
+  }
+
+  return self;
+}
+
 // handlePortMessage:
 //
 // The selector called on the delegate object when nsAppShell::mPort is sent an
 // NSPortMessage by ScheduleNativeEventCallback.  Call into the nsAppShell
-// object for access to mRunWasCalled and NativeEventCallback.
+// object for access to mRunningEventLoop and NativeEventCallback.
 //
 - (void)handlePortMessage:(NSPortMessage*)aPortMessage
 {
@@ -260,5 +318,24 @@ nsAppShell::ProcessNextNativeEvent(PRBool aMayWait)
   appShell->ProcessGeckoEvents();
 
   NS_RELEASE(appShell);
+}
+
+// runAppShell
+//
+// Runs the nsAppShell, and immediately stops the Cocoa run loop when
+// nsAppShell::Run is done, saving its return value.
+- (void)runAppShell
+{
+  mRunRV = mAppShell->Run();
+  [NSApp stop:self];
+  return;
+}
+
+// rvFromRun
+//
+// Returns the nsresult return value saved by runAppShell.
+- (nsresult)rvFromRun
+{
+  return mRunRV;
 }
 @end

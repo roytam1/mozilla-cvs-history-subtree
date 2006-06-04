@@ -42,7 +42,6 @@
 #include "nsIDOMSVGPathSegList.h"
 #include "nsIDOMSVGPathSeg.h"
 #include "nsIDOMSVGMatrix.h"
-#include "nsISVGMarkable.h"
 #include "nsISupports.h"
 #include "nsLayoutAtoms.h"
 #include "nsISVGPathFlatten.h"
@@ -50,9 +49,9 @@
 #include "nsINameSpaceManager.h"
 #include "nsGkAtoms.h"
 #include "nsSVGPathElement.h"
+#include "nsSVGMarkerFrame.h"
 
 class nsSVGPathFrame : public nsSVGPathGeometryFrame,
-                       public nsISVGMarkable,
                        public nsISVGPathFlatten
 {
 protected:
@@ -70,8 +69,9 @@ public:
   // nsISVGPathGeometrySource interface:
   NS_IMETHOD ConstructPath(cairo_t *aCtx);
 
-  // nsISVGMarkable interface
-  void GetMarkPoints(nsVoidArray *aMarks);
+  // nsSVGPathGeometry methods
+  virtual PRBool IsMarkable() { return PR_TRUE; }
+  virtual void GetMarkPoints(nsVoidArray *aMarks);
 
   // nsISVGPathFlatten interface
   NS_IMETHOD GetFlattenedPath(nsSVGPathData **data, nsIFrame *parent);
@@ -99,7 +99,6 @@ private:
 };
 
 NS_INTERFACE_MAP_BEGIN(nsSVGPathFrame)
-  NS_INTERFACE_MAP_ENTRY(nsISVGMarkable)
   NS_INTERFACE_MAP_ENTRY(nsISVGPathFlatten)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGPathGeometryFrame)
 
@@ -130,7 +129,7 @@ nsSVGPathFrame::AttributeChanged(PRInt32         aNameSpaceID,
 {
   if (aNameSpaceID == kNameSpaceID_None &&
       aAttribute == nsGkAtoms::d) {
-    UpdateGraphic(nsISVGPathGeometrySource::UPDATEMASK_PATH);
+    UpdateGraphic();
     return NS_OK;
   }
 
@@ -160,7 +159,7 @@ NS_IMETHODIMP nsSVGPathFrame::ConstructPath(cairo_t *aCtx)
 }
 
 //----------------------------------------------------------------------
-// nsISVGMarkable methods:
+// nsSVGPathGeometry methods:
 
 void
 nsSVGPathFrame::GetMarkPoints(nsVoidArray *aMarks) {
@@ -185,7 +184,8 @@ nsSVGPathFrame::GetMarkPoints(nsVoidArray *aMarks) {
   PRUint16 lastSegmentType = nsIDOMSVGPathSeg::PATHSEG_UNKNOWN;
 
   float px, py;    // subpath initial point
-  float pathAngle, pathIndex;
+  float pathAngle;
+  PRUint32 pathIndex;
 
   float prevAngle = 0, startAngle, endAngle;
   
@@ -624,19 +624,13 @@ nsSVGPathFrame::GetFlattenedPath(nsSVGPathData **data,
   nsIFrame *oldParent = mParent;
   nsCOMPtr<nsISVGRendererRegion> dirty_region;
 
-  if (parent) {
+  if (parent)
     mParent = parent;
-    GetGeometry()->Update(this, nsSVGGeometryFrame::UPDATEMASK_CANVAS_TM,
-                          getter_AddRefs(dirty_region));
-  }
 
   GetGeometry()->Flatten(this, data);
 
-  if (parent) {
+  if (parent)
     mParent = oldParent;
-    GetGeometry()->Update(this, nsSVGGeometryFrame::UPDATEMASK_CANVAS_TM,
-                          getter_AddRefs(dirty_region));
-  }
 
   return NS_OK;
 }

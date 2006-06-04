@@ -126,20 +126,21 @@ public:
 		//
 		virtual long 		HandlePositionToOffset(Point aPoint,short* regionClass);
 		virtual nsresult 	HandleOffsetToPosition(long offset,Point* position);
-		virtual nsresult	HandleUpdateInputArea(const char* text,Size text_size, ScriptCode textScript,long fixedLength,TextRangeArray* textRangeArray);
 		virtual nsresult	UnicodeHandleUpdateInputArea(const PRUnichar* text, long charCount, long fixedLength,TextRangeArray* textRangeArray);
 		virtual nsresult	HandleUnicodeGetSelectedText(nsAString& outString);
 		virtual nsresult	ResetInputState();
 		virtual PRBool		HandleUKeyEvent(const PRUnichar* text, long charCount, EventRecord& aOSEvent);
+		virtual PRBool		HandleKeyUpDownEvent(EventHandlerCallRef aHandlerCallRef,
+					                     EventRef aEvent);
 		
 		//
 		// Synthetic events, generated internally to do things at specific times and
 		// not have to rely on hacking up EventRecords to fake it.
 		//
-		virtual PRBool UpdateEvent ( ) ;
 		virtual PRBool ResizeEvent ( WindowRef inWindow ) ;
 		virtual PRBool Scroll ( EventMouseWheelAxis inAxis, PRInt32 inDelta, const Point& inMouseLoc, nsWindow* inWindow, PRUint32 inModifiers );
 		 
+		virtual void	HandleActivateEvent(PRBool aActive);
 protected:
 #if 1
 		virtual void InitializeKeyEvent(nsKeyEvent& aKeyEvent, EventRecord& aOSEvent, 
@@ -148,8 +149,6 @@ protected:
 		virtual PRBool		IsSpecialRaptorKey(UInt32 macKeyCode);
 		virtual PRUint32	ConvertKeyEventToUnicode(EventRecord& aOSEvent);
 #endif
-		virtual PRBool	HandleKeyEvent(EventRecord& aOSEvent);
-		virtual PRBool	HandleActivateEvent(EventRecord& aOSEvent);
 		virtual PRBool	HandleMouseDownEvent(EventRecord& aOSEvent);
 		virtual PRBool	HandleMouseUpEvent(EventRecord& aOSEvent);
 		virtual PRBool	HandleMouseMoveEvent(EventRecord& aOSEvent);
@@ -170,8 +169,10 @@ protected:
 	RgnHandle			mUpdateRgn;
 	TSMDocumentID	mTSMDocument;
 	nsPoint 		mIMEPos;
-	PRBool				mIMEIsComposing;
 	nsAutoString		*mIMECompositionStr;
+	PRPackedBool			mIMEIsComposing;
+	PRPackedBool			mKeyIgnore;
+	PRPackedBool			mKeyHandled;
 };
 
 #endif // MacMacEventHandler_h__

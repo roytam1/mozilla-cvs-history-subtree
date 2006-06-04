@@ -83,10 +83,6 @@ REQUIRES += glitz glitzagl
 endif
 endif
 
-GFX_LCPPSRCS = \
-		nsRepeater.cpp \
-		$(NULL)
-
 CPPSRCS	= nsAppShell.cpp \
 		nsBidiKeyboard.cpp \
 		nsChildWindow.cpp \
@@ -107,7 +103,6 @@ CPPSRCS	= nsAppShell.cpp \
 		nsMimeMapper.cpp \
 	        nsNativeThemeMac.cpp \
 		nsSound.cpp \
-		nsTSMStrategy.cpp \
 		nsToolkitBase.cpp \
 		nsToolkit.cpp \
 		nsWidgetFactory.cpp \
@@ -123,7 +118,6 @@ CPPSRCS	= nsAppShell.cpp \
 		nsPrintOptionsX.cpp \
 		nsPrintSettingsX.cpp \
 		nsPrintSessionX.cpp \
-		$(GFX_LCPPSRCS) \
 		$(NULL)
 
 XPIDLSRCS  += \
@@ -148,15 +142,10 @@ ifdef MOZ_ENABLE_CAIRO_GFX
 EXTRA_DSO_LDOPTS += -lthebes
 endif
 
-GARBAGE		+= $(GFX_LCPPSRCS)
-
 include $(topsrcdir)/config/rules.mk
 
 RESOURCE = libwidget.rsrc
 RES_SRC = $(srcdir)/nsMacWidget.r
-
-export:: $(addprefix $(topsrcdir)/gfx/src/mac/,$(GFX_LCPPSRCS))
-	$(INSTALL) $^ .
 
 $(RESOURCE): $(RES_SRC)
 	/Developer/Tools/Rez -i /Developer/Headers/FlatCarbon -useDF $< -o $@

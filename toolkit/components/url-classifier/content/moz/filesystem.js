@@ -194,7 +194,7 @@ G_FileReader.prototype.read = function(opt_maxBytes) {
     this.stream_.init(fs);
   }
   
-  if (!isDef(opt_maxBytes)) {
+  if (typeof opt_maxBytes == "undefined") {
     opt_maxBytes = this.stream_.available();
   }
 
@@ -282,7 +282,7 @@ G_FileWriter.prototype.close = function() {
   }
 }
 
-
+#ifdef DEBUG
 function TEST_G_File() {
   if (G_GDEBUG) {
     var z = "gfile UNITTEST";
@@ -310,3 +310,4 @@ function TEST_G_File() {
     G_Debug(z, "PASS");
   }
 }
+#endif

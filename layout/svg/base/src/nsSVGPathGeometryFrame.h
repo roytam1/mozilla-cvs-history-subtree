@@ -47,8 +47,6 @@
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
 #include "nsISVGOuterSVGFrame.h"
-#include "nsSVGGradient.h"
-#include "nsSVGPattern.h"
 #include "nsLayoutAtoms.h"
 #include "nsSVGGeometryFrame.h"
 
@@ -129,28 +127,24 @@ protected:
   NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
   
   // nsISVGGeometrySource interface:
-  virtual nsresult UpdateGraphic(PRUint32 flags,
-                                 PRBool suppressInvalidation = PR_FALSE);
+  virtual nsresult UpdateGraphic(PRBool suppressInvalidation = PR_FALSE);
   
 protected:
   NS_IMETHOD InitSVG();
   nsISVGRendererPathGeometry *GetGeometry();
 
-  nsCOMPtr<nsISVGRendererRegion> mMarkerRegion;
+  virtual PRBool IsMarkable() { return PR_FALSE; }
+  virtual void GetMarkPoints(nsVoidArray *aMarks) {}
 
 private:
-  void GetMarkerFrames(nsISVGMarkerFrame **markerStart,
-                       nsISVGMarkerFrame **markerMid,
-                       nsISVGMarkerFrame **markerEnd);
+  nsSVGMarkerProperty *GetMarkerProperty();
   void GetMarkerFromStyle(nsISVGMarkerFrame   **aResult,
                           nsSVGMarkerProperty *property,
                           nsIURI              *aURI);
   void UpdateMarkerProperty();
 
   nsCOMPtr<nsISVGRendererPathGeometry> mGeometry;
-  PRUint32 mUpdateFlags;
-  nsCOMPtr<nsIDOMSVGMatrix>    mOverrideCTM;
-
+  nsCOMPtr<nsIDOMSVGMatrix> mOverrideCTM;
   PRPackedBool mPropagateTransform;
 };
 

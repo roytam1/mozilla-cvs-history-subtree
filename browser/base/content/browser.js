@@ -216,10 +216,11 @@ function ClickAndHoldMouseDownCallback(aButton)
 
 function ClickAndHoldMouseDown(aEvent)
 {
- if (aEvent.target.getAttribute("anonid") != "button")
+ if (aEvent.button != 0 || aEvent.target.getAttribute("anonid") != "button")
    return;
 
- var button = aEvent.target.parentNode.parentNode;
+ // relying on button.xml#menu-button-base internals for improved theme compatibility
+ var button = aEvent.target._menubuttonParent;
  if (!button.disabled)
    gClickAndHoldTimer = setTimeout(ClickAndHoldMouseDownCallback, 500, button);
 }
@@ -228,6 +229,12 @@ function MayStopClickAndHoldTimer(aEvent)
 {
   // Note passing null here is a no-op
   clearTimeout(gClickAndHoldTimer);
+}
+
+function ClickAndHoldStopEvent(aEvent)
+{
+  if (aEvent.target._menubuttonParent.open)
+    aEvent.stopPropagation();
 }
 
 function SetClickAndHoldHandlers()
@@ -243,15 +250,26 @@ function SetClickAndHoldHandlers()
     aElm.addEventListener("mouseout",
                           MayStopClickAndHoldTimer,
                           false);  
+    
+    // don't propagate onclick and oncommand events after
+    // click-and-hold opened the drop-down menu
+    aElm.addEventListener("command",
+                          ClickAndHoldStopEvent,
+                          false);  
+    aElm.addEventListener("click",
+                          ClickAndHoldStopEvent,
+                          false);  
   }
 
   // The click-and-hold area does not include the dropmarkers of the buttons
   var backButton = document.getAnonymousElementByAttribute
     (document.getElementById("back-button"), "anonid", "button");
+  if (backButton)
+    _addClickAndHoldListenersOnElement(backButton);
   var forwardButton = document.getAnonymousElementByAttribute
     (document.getElementById("forward-button"), "anonid", "button");
-  _addClickAndHoldListenersOnElement(backButton);
-  _addClickAndHoldListenersOnElement(forwardButton);
+  if (forwardButton)
+    _addClickAndHoldListenersOnElement(forwardButton);
 }
 #endif
 
@@ -666,12 +684,12 @@ const gXPInstallObserver = {
           // properly differentiate themes. It's likely in fact that themes won't
           // be blocked so this code path will only be reached for extensions.
           notificationName = "xpinstall"
-          messageString = browserBundle.getFormattedString("xpinstallWarning",
+          messageString = browserBundle.getFormattedString("xpinstallPromptWarning",
                                                            [brandShortName, host]);
 
           buttons = [{
-            label: browserBundle.getString("xpinstallWarningButton"),
-            accessKey: browserBundle.getString("xpinstallWarningButton.accesskey"),
+            label: browserBundle.getString("xpinstallPromptWarningButton"),
+            accessKey: browserBundle.getString("xpinstallPromptWarningButton.accesskey"),
             popup: null,
             callback: function() { return xpinstallEditPermissions(browser.docShell); }
           }];
@@ -847,7 +865,7 @@ function prepareForStartup()
   gBrowser.addEventListener("DOMUpdatePageReport", gPopupBlockerObserver.onUpdatePageReport, false);
   // Note: we need to listen to untrusted events, because the pluginfinder XBL
   // binding can't fire trusted ones (runs with page privileges).
-  gBrowser.addEventListener("PluginNotFound", gMissingPluginInstaller.newMissingPlugin, false, true);
+  gBrowser.addEventListener("PluginNotFound", gMissingPluginInstaller.newMissingPlugin, true, true);
   gBrowser.addEventListener("NewTab", BrowserOpenTab, false);
 
   var webNavigation;
@@ -982,7 +1000,7 @@ function delayedStartup()
 
   // called when we go into full screen, even if it is
   // initiated by a web page script
-  window.addEventListener("fullscreen", onFullScreen, false);
+  window.addEventListener("fullscreen", onFullScreen, true);
 
   var element;
   if (gIsLoadingBlank && gURLBar && !gURLBar.hidden && !gURLBar.parentNode.parentNode.collapsed)
@@ -2917,20 +2935,18 @@ const BrowserSearch = {
     var etitle = target.title;
     var ehref = target.href;
     const searchRelRegex = /(^|\s)search($|\s)/i;
-    const searchHrefRegexHttp = /^http:\/\//i;
-    const searchHrefRegexHttps = /^https:\/\//i;
+    const searchHrefRegex = /^https?:\/\//i;
 
     if (!etype)
       return;
 
     if (etype == "application/opensearchdescription+xml" &&
-        searchRelRegex.test(erel) &&
-        (searchHrefRegexHttp.test(ehref) || searchHrefRegexHttps.test(ehref)))
+        searchRelRegex.test(erel) && searchHrefRegex.test(ehref))
     {
       const targetDoc = target.ownerDocument;
       // Set the attribute of the (first) search button.
       var searchButton = document.getAnonymousElementByAttribute(this.getSearchBar(),
-                                  "anonid", "searchbar-dropmarker");
+                                  "anonid", "search-go-button");
       if (searchButton) {
         var browser = gBrowser.getBrowserForDocument(targetDoc);
          // Append the URI and an appropriate title to the browser data.
@@ -2960,7 +2976,7 @@ const BrowserSearch = {
    */
   updateSearchButton: function() {
     var searchButton = document.getAnonymousElementByAttribute(this.getSearchBar(),
-                                "anonid", "searchbar-dropmarker");
+                                "anonid", "search-go-button");
     if (!searchButton)
       return;
     var engines = gBrowser.mCurrentBrowser.engines;
@@ -3297,6 +3313,12 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     reloadButton.disabled =
       document.getElementById("Browser:Reload").getAttribute("disabled") == "true";
   }
+
+#ifdef XP_MACOSX
+  // make sure to re-enable click-and-hold
+  if (!getBoolPref("ui.click_hold_context_menus", false))
+    SetClickAndHoldHandlers();
+#endif
 
 #ifndef MOZ_PLACES
   // fix up the personal toolbar folder
@@ -4204,7 +4226,8 @@ nsContextMenu.prototype = {
         this.menu = popup;
 
         // Get contextual info.
-        this.setTarget( document.popupNode, document.popupEvent );
+        this.setTarget( document.popupNode, document.popupRangeParent,
+                        document.popupRangeOffset );
 
         this.isTextSelected = this.isTextSelection();
         this.isContentSelected = this.isContentSelection();
@@ -4403,7 +4426,7 @@ nsContextMenu.prototype = {
         this.showItem( "context-metadata", this.onMetaDataItem );
     },
     // Set various context menu attributes based on the state of the world.
-    setTarget : function ( node, event ) {
+    setTarget : function ( node, rangeParent, rangeOffset ) {
         const xulNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
         if ( node.namespaceURI == xulNS ) {
           this.shouldDisplay = false;
@@ -4463,14 +4486,14 @@ nsContextMenu.prototype = {
                // allow spellchecking UI on all writable text boxes except passwords
                if (this.onTextInput && ! this.target.readOnly && this.target.type != "password") {
                    InlineSpellCheckerUI.init(this.target);
-                   InlineSpellCheckerUI.initFromEvent(event);
+                   InlineSpellCheckerUI.initFromEvent(rangeParent, rangeOffset);
                }
                this.onKeywordField = this.isTargetAKeywordField(this.target);
             } else if ( this.target instanceof HTMLTextAreaElement ) {
                  this.onTextInput = true;
                  if (! this.target.readOnly) {
                      InlineSpellCheckerUI.init(this.target);
-                     InlineSpellCheckerUI.initFromEvent(event);
+                     InlineSpellCheckerUI.initFromEvent(rangeParent, rangeOffset);
                  }
             } else if ( this.target instanceof HTMLHtmlElement ) {
                // pages with multiple <body>s are lame. we'll teach them a lesson.
@@ -5319,7 +5342,8 @@ function asyncOpenWebPanel(event)
    }
    if (event.button == 1 &&
        !event.getPreventDefault() &&
-       gPrefService.getBoolPref("middlemouse.contentLoadURL")) {
+       gPrefService.getBoolPref("middlemouse.contentLoadURL") &&
+       !gPrefService.getBoolPref("general.autoScroll")) {
      middleMousePaste(event);
    }
    return true;
@@ -6150,6 +6174,15 @@ missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
   }
 }
 
+missingPluginInstaller.prototype.closeNotification = function() {
+  var notificationBox = gBrowser.getNotificationBox();
+  var notification = notificationBox.getNotificationWithValue("missing-plugins");
+
+  if (notification) {
+    notificationBox.removeNotification(notification);
+  }
+}
+
 function pluginsMissing()
 {
   // get the urls of missing plugins
@@ -6188,7 +6221,7 @@ var FeedHandler = {
   init: function() {
     gBrowser.addEventListener("DOMLinkAdded", 
                               function (event) { FeedHandler.onLinkAdded(event); }, 
-                              false);
+                              true);
   },
   
   /**

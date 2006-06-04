@@ -81,7 +81,6 @@ nsXFormsDelegateStub::OnCreated(nsIXTFBindableElementWrapper *aWrapper)
   nsresult rv = nsXFormsBindableControlStub::OnCreated(aWrapper);
   NS_ENSURE_SUCCESS(rv, rv);
   aWrapper->SetNotificationMask(kStandardNotificationMask |
-                                nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT |
                                 nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT);
   return rv;
 }
@@ -116,10 +115,8 @@ nsXFormsDelegateStub::Refresh()
   SetMozTypeAttribute();
 
   nsCOMPtr<nsIXFormsUIWidget> widget = do_QueryInterface(mElement);
-  if (!widget)
-    return NS_ERROR_FAILURE;
 
-  return widget->Refresh();
+  return widget ? widget->Refresh() : NS_OK;
 }
 
 NS_IMETHODIMP
@@ -156,20 +153,8 @@ nsXFormsDelegateStub::SetValue(const nsAString& aValue)
     return NS_OK;
 
   PRBool changed;
-  nsresult rv = mModel->SetNodeValue(mBoundNode, aValue, &changed);
+  nsresult rv = mModel->SetNodeValue(mBoundNode, aValue, PR_TRUE, &changed);
   NS_ENSURE_SUCCESS(rv, rv);
-  if (changed) {
-    nsCOMPtr<nsIDOMNode> model = do_QueryInterface(mModel);
- 
-    if (model) {
-      rv = nsXFormsUtils::DispatchEvent(model, eEvent_Recalculate);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = nsXFormsUtils::DispatchEvent(model, eEvent_Revalidate);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = nsXFormsUtils::DispatchEvent(model, eEvent_Refresh);
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
-  }
 
   return NS_OK;
 }

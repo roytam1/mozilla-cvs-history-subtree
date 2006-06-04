@@ -49,6 +49,7 @@
 #include "nsAutoPtr.h"
 #include "nsWeakReference.h"
 #include "nsHashtable.h"
+#include "nsDataHashtable.h"
 
 // Interfaces Needed
 #include "nsDOMWindowList.h"
@@ -56,7 +57,6 @@
 #include "nsIBrowserDOMWindow.h"
 #include "nsIChromeEventHandler.h"
 #include "nsIControllers.h"
-#include "nsIObserver.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDOMViewCSS.h"
@@ -91,6 +91,9 @@
 #include "mozFlushType.h"
 #include "prclist.h"
 #include "nsIDOMGCParticipant.h"
+#include "nsIDOMStorage.h"
+#include "nsIDOMStorageList.h"
+#include "nsIDOMStorageWindow.h"
 
 #define DEFAULT_HOME_PAGE "www.mozilla.org"
 #define PREF_BROWSER_STARTUP_HOMEPAGE "browser.startup.homepage"
@@ -124,7 +127,7 @@ enum OpenAllowValue {
 extern nsresult
 NS_CreateJSTimeoutHandler(nsIScriptContext *aContext,
                           PRBool aIsInterval,
-                          PRFloat64 *aInterval,
+                          PRInt32 *aInterval,
                           nsIScriptTimeoutHandler **aRet);
 
 //*****************************************************************************
@@ -155,6 +158,7 @@ class nsGlobalWindow : public nsPIDOMWindow,
                        public nsIDOM3EventTarget,
                        public nsIDOMNSEventTarget,
                        public nsIDOMViewCSS,
+                       public nsIDOMStorageWindow,
                        public nsSupportsWeakReference,
                        public nsIInterfaceRequestor,
                        public PRCListStr
@@ -267,6 +271,9 @@ public:
   // nsIDOMAbstractView
   NS_DECL_NSIDOMABSTRACTVIEW
 
+  // nsIDOMStorageWindow
+  NS_DECL_NSIDOMSTORAGEWINDOW
+
   // nsIInterfaceRequestor
   NS_DECL_NSIINTERFACEREQUESTOR
 
@@ -317,8 +324,9 @@ public:
   {
     return mIsFrozen;
   }
-  
-  nsresult Observe(nsISupports* aSubject, const char* aTopic, const PRUnichar* aData);
+
+  nsresult Observe(nsISupports* aSubject, const char* aTopic,
+                   const PRUnichar* aData);
 
   static void ShutDown();
   static PRBool IsCallerChrome();
@@ -409,7 +417,7 @@ protected:
   // Timeout Functions
   // Language agnostic timeout function (all args passed)
   nsresult SetTimeoutOrInterval(nsIScriptTimeoutHandler *aHandler,
-                                 PRFloat64 interval,
+                                PRInt32 interval,
                                 PRBool aIsInterval, PRInt32 *aReturn);
   nsresult ClearTimeoutOrInterval(PRInt32 aTimerID);
 
@@ -554,8 +562,10 @@ protected:
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
 
-  nsCOMPtr<nsISupports>         mInnerWindowHolders[NS_STID_ARRAY_UBOUND];
 
+  nsCOMPtr<nsIDOMStorageList>   gGlobalStorageList;
+
+  nsCOMPtr<nsISupports>         mInnerWindowHolders[NS_STID_ARRAY_UBOUND];
   nsCOMPtr<nsIPrincipal> mOpenerScriptPrincipal; // strong; used to determine
                                                  // whether to clear scope
 
@@ -565,11 +575,14 @@ protected:
   nsTimeout**                   mTimeoutInsertionPoint;
   PRUint32                      mTimeoutPublicIdCounter;
   PRUint32                      mTimeoutFiringDepth;
+  nsCOMPtr<nsIDOMStorage>       mSessionStorage;
 
   // These member variables are used on both inner and the outer windows.
   nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
   nsCOMPtr<nsIDocument> mDoc;  // For fast access to principals
   JSObject* mJSObject;
+
+  nsDataHashtable<nsStringHashKey, PRBool> *mPendingStorageEvents;
 
 #ifdef DEBUG
   PRBool mSetOpenerWindowCalled;
@@ -658,7 +671,7 @@ struct nsTimeout
   PRUint32 mPublicId;
 
   // Non-zero interval in milliseconds if repetitive timeout
-  PRInt32 mInterval;
+  PRUint32 mInterval;
 
   // Nominal time (in microseconds since the epoch) to run this
   // timeout

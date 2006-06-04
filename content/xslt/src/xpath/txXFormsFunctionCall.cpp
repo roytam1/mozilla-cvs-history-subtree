@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -228,11 +228,21 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
-      PRUint32 index;
+      PRInt32 index = 0;
+      double res = Double::NaN;
       rv = xformsService->GetRepeatIndex(repeatEle, &index);
       NS_ENSURE_SUCCESS(rv, rv);
 
-      return aContext->recycler()->getNumberResult(index, aResult);
+      if (index >= 0) {
+        // repeat's index is 1-based.  If it is 0, then that is still ok since
+        // repeat's index can be 0 if uninitialized or if the nodeset that it
+        // is bound to is empty (either initially or due to delete remove all
+        // of the instance nodes).  If index == -1, then repeatEle isn't an
+        // XForms repeat element, so we need to return NaN per spec.
+        res = index;
+      }
+
+      return aContext->recycler()->getNumberResult(res, aResult);
 
     }
     case INSTANCE:
@@ -325,11 +335,11 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                               modelInstance,
                               getter_AddRefs(instanceRoot));
         NS_ENSURE_SUCCESS(rv, rv);
-        NS_ENSURE_TRUE(instanceRoot, NS_ERROR_NULL_POINTER);
- 
-        nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(instanceRoot));
-        if (txNode) {
-          resultSet->add(*txNode);
+        if (instanceRoot) {
+          nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(instanceRoot));
+          if (txNode) {
+            resultSet->add(*txNode);
+          }
         }
       }
  

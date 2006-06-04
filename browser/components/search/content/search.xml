@@ -47,15 +47,12 @@
       xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       xmlns:xbl="http://www.mozilla.org/xbl">
 
-  <binding id="searchbar-base">
+  <binding id="searchbar">
     <resources>
       <stylesheet src="chrome://browser/content/search/searchbarBindings.css"/>
       <stylesheet src="chrome://browser/skin/searchbar.css"/>
     </resources>
-  </binding>
 
-  <binding id="searchbar"
-           extends="chrome://browser/content/search/search.xml#searchbar-base">
     <content>
       <xul:stringbundle src="chrome://browser/locale/search.properties"
                         anonid="searchbar-stringbundle"/>
@@ -66,26 +63,34 @@
                        type="autocomplete"
                        flex="1"
                        autocompletepopup="PopupAutoComplete"
-                       autocompletesearch="form-history"
+                       autocompletesearch="search-autocomplete"
                        autocompletesearchparam="searchbar-history"
                        completeselectedindex="true"
+                       showcommentcolumn="true"
                        tabscrolling="true"
                        xbl:inherits="disableautocomplete,searchengine,src">
-            <xul:image align="center" class="searchbar-engine-image"
+            <xul:image align="center"
+                       class="searchbar-engine-image"
+                       anonid="searchbar-engine-image"
                        xbl:inherits="src"/>
             <xul:hbox class="search-go-button-container">
 # XXX We'd like to add a context="_child" property to this toolbarbutton, but doing
 # so causes the context menu to show up for the textbox too, and subsequently crashes
 # the app on shutdown.  See bug 336662.
+#
+# XXX We'd also like to specify the menupopup position as after_end, as well as 
+# probably adjusting its length to match that of the searchbar so the search 
+# engine icons line up, but that's prevented by inconsistent behavior of the 
+# popup position within a toolbarbutton.  See bug 336868.
               <xul:toolbarbutton class="search-go-button"
-                                 type="menu-button"
-                                 anonid="searchbar-dropmarker"
-                                 xbl:inherits="src">
-                <xul:menupopup anonid="searchbar-popup"
-                               class="searchbar-popup"
-                               position="after_end">
+                                 anonid="search-go-button"
+                                 type="menu-button">
+                <xul:menupopup class="searchbar-popup"
+                               anonid="searchbar-popup"
+                               position="after_start">
                   <xul:menuseparator/>
-                  <xul:menuitem anonid="open-engine-manager"
+                  <xul:menuitem class="open-engine-manager"
+                                anonid="open-engine-manager"
                                 label="&cmd_engineManager.label;"
                                 accesskey="&cmd_engineManager.accesskey;"/>
                 </xul:menupopup>
@@ -122,6 +127,10 @@
         var os = Components.classes["@mozilla.org/observer-service;1"]
                    .getService(Components.interfaces.nsIObserverService);
         os.removeObserver(this, "browser-search-engine-modified");
+
+        // Make sure to break the cycle from _texbox to us.  Otherwise we leak
+        // the world.
+        this._textbox.mController.input = null;
       ]]></destructor>
 
       <field name="_stringBundle">document.getAnonymousElementByAttribute(this, "anonid", "searchbar-stringbundle");</field>
@@ -131,13 +140,18 @@
       <field name="_engines">null</field>
 
       <property name="currentEngine"
-                onset="this.searchService.currentEngine = val;">
+                onset="this.searchService.currentEngine = val; return val;">
         <getter><![CDATA[
           var currentEngine = this.searchService.currentEngine;
           // Return a dummy engine if there is no currentEngine
           return currentEngine || {name:"", uri:null};
         ]]></getter>
       </property>
+      
+      <!-- textbox is used by sanitize.js to clear the undo history when 
+      clearing form information. -->      
+      <property name="textbox" readonly="true"
+                onget="return this._textbox;"/>
 
       <property name="searchService" readonly="true">
         <getter><![CDATA[
@@ -200,6 +214,10 @@
           else
             this.setAttribute("src", "");
 
+          // Update current engine display
+          if (this.hasAttribute("empty")) 
+            this._textbox._displayCurrentEngine();
+
           var name = this.currentEngine.name;
           var text = this._stringBundle.getFormattedString("searchtip", [name]);
           this.setAttribute("tooltiptext", text);
@@ -231,7 +249,7 @@
             // if no separators are present.
             var insertLocation = popup.firstChild;
             while (insertLocation.nextSibling &&
-                insertLocation.localName != "menuseparator") {
+                   insertLocation.localName != "menuseparator") {
               insertLocation = insertLocation.nextSibling;
             }
             if (insertLocation.localName != "menuseparator")
@@ -332,14 +350,9 @@
                       .classes["@mozilla.org/browser/search-service;1"]
                       .getService(Components.interfaces.nsIBrowserSearchService);
             if (searchService) {
-              // If the description file URI ends in "xml", assume an XML file;
-              // otherwise, assume text.  That's about the best we can do without
-              // loading the file itself.
-              const engineURI = aTarget.getAttribute("uri");
-              var type = Components.interfaces.nsISearchEngine.DATA_TEXT;
-              if (engineURI.search(/\.xml$/i))
-                type = Components.interfaces.nsISearchEngine.DATA_XML;
-              searchService.addEngine(engineURI, type,
+              // We only detect OpenSearch files
+              var type = Components.interfaces.nsISearchEngine.DATA_XML;
+              searchService.addEngine(aTarget.getAttribute("uri"), type,
                                       aTarget.getAttribute("src"));
             }
           }
@@ -412,6 +425,15 @@
     </implementation>
 
     <handlers>
+      <handler event="click"><![CDATA[
+        const target = event.originalTarget;
+        var anonid = target.getAttribute("anonid");
+        if (anonid == "searchbar-engine-image") {
+          this._textbox.focus();
+          this._textbox.select();
+        } 
+      ]]></handler>
+
       <handler event="command"><![CDATA[
         const target = event.originalTarget;
         var anonid = target.getAttribute("anonid");
@@ -488,8 +510,8 @@
           <![CDATA[
             // Don't open search popup if history popup is open
             if (!this.popupOpen) {
-              document.getAnonymousElementByAttribute(this,
-                                         "anonid", "searchbar-popup").click();
+              document.getAnonymousElementByAttribute(this._getParentSearchbar(), 
+                                      "anonid", "search-go-button").open = true;
               return false;
             }
             return true;
@@ -636,13 +658,4 @@
 
     </handlers>
   </binding>
-
-  <binding id="searchbar-dropmarker"
-           extends="chrome://browser/content/search/search.xml#searchbar-base">
-    <content>
-      <xul:image class="searchbar-dropmarker-image"/>
-      <children/>
-    </content>
-  </binding>
-
 </bindings>

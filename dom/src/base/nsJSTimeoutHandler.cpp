@@ -86,7 +86,7 @@ public:
   virtual void SetLateness(PRIntervalTime aHowLate);
 
   nsresult Init(nsIScriptContext *aContext, PRBool aIsInterval,
-                PRFloat64 *aInterval);
+                PRInt32 *aInterval);
 private:
 
   nsCOMPtr<nsIScriptContext> mContext;
@@ -174,7 +174,7 @@ nsJSScriptTimeoutHandler::~nsJSScriptTimeoutHandler()
 
 nsresult
 nsJSScriptTimeoutHandler::Init(nsIScriptContext *aContext, PRBool aIsInterval,
-                               PRFloat64 *aInterval)
+                               PRInt32 *aInterval)
 {
   if (!aContext) {
     // This window was already closed, or never properly initialized,
@@ -206,7 +206,7 @@ nsJSScriptTimeoutHandler::Init(nsIScriptContext *aContext, PRBool aIsInterval,
 
   JSString *expr = nsnull;
   JSObject *funobj = nsnull;
-  jsdouble interval = 0.0;
+  int32 interval = 0;
 
   if (argc < 1) {
     ::JS_ReportError(cx, "Function %s requires at least 1 parameter",
@@ -215,7 +215,7 @@ nsJSScriptTimeoutHandler::Init(nsIScriptContext *aContext, PRBool aIsInterval,
     return ncc->SetExceptionWasThrown(PR_TRUE);
   }
 
-  if (argc > 1 && !::JS_ValueToNumber(cx, argv[1], &interval)) {
+  if (argc > 1 && !::JS_ValueToECMAInt32(cx, argv[1], &interval)) {
     ::JS_ReportError(cx,
                      "Second argument to %s must be a millisecond interval",
                      aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
@@ -318,7 +318,7 @@ nsJSScriptTimeoutHandler::GetHandlerText()
 
 nsresult NS_CreateJSTimeoutHandler(nsIScriptContext *aContext,
                                    PRBool aIsInterval,
-                                   PRFloat64 *aInterval,
+                                   PRInt32 *aInterval,
                                    nsIScriptTimeoutHandler **aRet)
 {
   *aRet = nsnull;

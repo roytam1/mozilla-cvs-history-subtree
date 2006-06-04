@@ -49,6 +49,9 @@
 #include "nsIDOMEventTarget.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMNSEvent.h"
+#ifndef MOZILLA_1_8_BRANCH
+#include "nsIDOMXULCommandEvent.h"
+#endif
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentView.h"
@@ -58,6 +61,32 @@
 
 NS_IMPL_ISUPPORTS3(nsUICommandCollector, nsIObserver, nsIDOMEventListener,
                    nsIMetricsCollector)
+
+/* static */
+PLDHashOperator PR_CALLBACK nsUICommandCollector::AddCommandEventListener(
+const nsIDOMWindow* key, PRUint32 windowID, void* userArg)
+{
+  nsCOMPtr<nsIDOMEventTarget> windowTarget =
+    do_QueryInterface(NS_CONST_CAST(nsIDOMWindow *, key));
+  if (!windowTarget) {
+    MS_LOG(("Error casting domeventtarget"));
+    return PL_DHASH_NEXT;
+  }
+
+  nsIDOMEventListener* listener = NS_STATIC_CAST(nsIDOMEventListener*,
+                                                 userArg);
+  if (!listener) {
+    MS_LOG(("no event listener in userArg"));
+    return PL_DHASH_NEXT;
+  }
+
+  nsresult rv = windowTarget->AddEventListener(NS_LITERAL_STRING("command"),
+                                               listener, PR_TRUE);
+  if (NS_FAILED(rv)) {
+    MS_LOG(("Warning: Adding event listener failed"));
+  }
+  return PL_DHASH_NEXT;
+}
 
 /* static */
 PLDHashOperator PR_CALLBACK nsUICommandCollector::RemoveCommandEventListener(
@@ -106,6 +135,14 @@ nsUICommandCollector::OnAttach()
   // listener to each window
   rv = obsSvc->AddObserver(this, "domwindowopened", PR_FALSE);
   NS_ENSURE_SUCCESS(rv, rv);
+
+  // Attach to all existing windows
+  nsMetricsService *ms = nsMetricsService::get();
+  NS_ENSURE_STATE(ms);
+
+  ms->WindowMap().EnumerateRead(AddCommandEventListener,
+                                NS_STATIC_CAST(nsIDOMEventListener*, this));
+
   return NS_OK;
 }
 
@@ -179,10 +216,24 @@ nsUICommandCollector::HandleEvent(nsIDOMEvent* event)
     return NS_ERROR_UNEXPECTED;
   }
 
+  // Get the source event for the command.  This will give us the original
+  // event in the case where a new event was dispatched due to a command=
+  // attribute.
+  nsCOMPtr<nsIDOMEvent> sourceEvent;
+#ifndef MOZILLA_1_8_BRANCH
+  nsCOMPtr<nsIDOMXULCommandEvent> commandEvent = do_QueryInterface(event);
+  if (commandEvent) {  // nsIDOMXULCommandEvent is only in Gecko 1.8.1+
+    commandEvent->GetSourceEvent(getter_AddRefs(sourceEvent));
+  }
+#endif
+  if (!sourceEvent) {
+    sourceEvent = event;
+  }
+
   // Get the Original Target id - this is the target after text node
   // retargeting.  If this id is blank it means the target is anonymous
   // content.
-  nsCOMPtr<nsIDOMNSEvent> nsEvent = do_QueryInterface(event);
+  nsCOMPtr<nsIDOMNSEvent> nsEvent = do_QueryInterface(sourceEvent);
   NS_ENSURE_STATE(nsEvent);
 
   nsCOMPtr<nsIDOMEventTarget> original_target;
@@ -201,7 +252,7 @@ nsUICommandCollector::HandleEvent(nsIDOMEvent* event)
   // In the case of anonymous content, the original target ID will
   // be blank and the target ID will be set.
   nsCOMPtr<nsIDOMEventTarget> target;
-  event->GetTarget(getter_AddRefs(target));
+  sourceEvent->GetTarget(getter_AddRefs(target));
 
   nsString tar_id;
 
@@ -276,7 +327,7 @@ nsUICommandCollector::HandleEvent(nsIDOMEvent* event)
   // Log the Target Id which will be the same as the Original Target Id
   // unless the target is anonymous content
   nsCString hashedTarId;
-  rv = ms->Hash(tar_id, hashedTarId);
+  rv = ms->HashUTF16(tar_id, hashedTarId);
   NS_ENSURE_SUCCESS(rv, rv);
  
   rv = properties->SetPropertyAsACString(NS_LITERAL_STRING("targetidhash"),
@@ -285,7 +336,7 @@ nsUICommandCollector::HandleEvent(nsIDOMEvent* event)
 
   if (logAnonId) {
     nsCString hashedAnonId;
-    rv = ms->Hash(orig_anon, hashedAnonId);
+    rv = ms->HashUTF16(orig_anon, hashedAnonId);
     NS_ENSURE_SUCCESS(rv, rv);
   
     rv = properties->SetPropertyAsACString(

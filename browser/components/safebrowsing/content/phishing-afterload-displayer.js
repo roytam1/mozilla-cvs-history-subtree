@@ -161,18 +161,38 @@ PROT_PhishMsgDisplayerBase.prototype.acceptAction = function() {
   G_Debug(this, "User accepted warning.");
   this.reporter_.report("phishaccept", this.url_);
 
-  var url = PROT_GlobalStore.getGetMeOutOfHereURL();
+  var url = this.getMeOutOfHereUrl_();
   this.browser_.loadURI(url);
+}
+
+/**
+ * Get the url for "Get me out of here."  This is the user's home page if
+ * one is set, ow, about:blank.
+ * @return String url
+ */
+PROT_PhishMsgDisplayerBase.prototype.getMeOutOfHereUrl_ = function() {
+  // Try to get their homepage from prefs.
+  var prefs = Cc["@mozilla.org/preferences-service;1"]
+              .getService(Ci.nsIPrefService).getBranch(null);
+
+  var url = "about:blank";
+  try {
+    url = prefs.getComplexValue("browser.startup.homepage",
+                                Ci.nsIPrefLocalizedString).data;
+  } catch(e) {
+    G_Debug(this, "Couldn't get homepage pref: " + e);
+  }
+  
+  return url;
 }
 
 /**
  * Invoked when the browser is resized
  */
 PROT_PhishMsgDisplayerBase.prototype.onBrowserResized_ = function(event) {
+  G_Debug(this, "Got resize for " + event.target);
 
-  G_Debug(this, "Got resize for " + event.target.nodeName);
-
-  if (event.target == this.doc_) {
+  if (event.target == this.doc_.defaultView) {
     G_Debug(this, "User resized browser.");
 
     if (this.messageShowing_) {
@@ -245,6 +265,14 @@ PROT_PhishMsgDisplayerBase.prototype.start = function() {
 
   this.commandController_ = new PROT_CommandController(this.commandHandlers_);
   this.doc_.defaultView.controllers.appendController(this.commandController_);
+  
+  // Load the overlay if we haven't already.
+  var stack = this.doc_.getElementById('safebrowsing-content-stack');
+  if (!stack) {
+    this.doc_.loadOverlay(
+        "chrome://browser/content/safebrowsing/warning-overlay.xul",
+        null);
+  }
 
   this.resizeHandler_ = BindToObject(this.onBrowserResized_, this);
   this.doc_.defaultView.addEventListener("resize", 
@@ -373,7 +401,7 @@ PROT_PhishMsgDisplayerBase.prototype.unhideLockIcon_ = function() {
  */
 PROT_PhishMsgDisplayerBase.prototype.addWarningInUrlbar_ = function() {
   var urlbarIcon = this.doc_.getElementById(this.urlbarIconId_);
-  urlbarIcon.style.display = "";
+  urlbarIcon.setAttribute('level', 'warn');
 }
 
 /**
@@ -381,7 +409,7 @@ PROT_PhishMsgDisplayerBase.prototype.addWarningInUrlbar_ = function() {
  */
 PROT_PhishMsgDisplayerBase.prototype.removeWarningInUrlbar_ = function() {
   var urlbarIcon = this.doc_.getElementById(this.urlbarIconId_);
-  urlbarIcon.style.display = "none";
+  urlbarIcon.setAttribute('level', 'safe');
 }
 
 /**
@@ -498,6 +526,7 @@ PROT_PhishMsgDisplayerCanvas.prototype.showMessage_ = function() {
   // 4. unhide stack contents
   // 5. display to the canvas
   // 6. unhide the warning message
+  // 7. focus the warning message
 
   // (1)
   // We add the canvas dynamically and remove it when we're done because
@@ -556,6 +585,9 @@ PROT_PhishMsgDisplayerCanvas.prototype.showMessage_ = function() {
   tail.hidden = false;
   tail.style.display = "block";
   this.adjustLocation_(message, tail, refElement);
+
+  // (7)
+  this.doc_.getElementById(this.messageContentId_).focus();
 }
 
 /**

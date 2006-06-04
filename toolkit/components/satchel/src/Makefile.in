@@ -74,18 +74,13 @@ REQUIRES =	\
 CPPSRCS = nsFormFillController.cpp \
           $(NULL)
 
-ifdef MOZ_STORAGE
-REQUIRES += storage
+ifdef MOZ_PLACES
+REQUIRES += storage morkreader
 CPPSRCS += nsStorageFormHistory.cpp
-ifdef MOZ_MORKREADER
-REQUIRES += morkreader
-endif
-else # MOZ_STORAGE
-ifdef MOZ_MORK
+else
 REQUIRES += mork
 CPPSRCS += nsFormHistory.cpp
 endif
-endif # MOZ_STORAGE
 
 LOCAL_INCLUDES = \
 	-I$(srcdir)/../../passwordmgr/base \

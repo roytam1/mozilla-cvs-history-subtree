@@ -89,7 +89,6 @@
 #include "nsIURI.h"
 #include "nsIImageLoadingContent.h"
 #include "nsITimer.h"
-#include "nsIDOMHTMLDocument.h"
 #include "nsIMutableArray.h"
 
 #ifdef NS_DEBUG
@@ -153,7 +152,8 @@ nsresult nsAccessible::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 }
 
 nsAccessible::nsAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell): nsAccessNodeWrap(aNode, aShell), 
-  mParent(nsnull), mFirstChild(nsnull), mNextSibling(nsnull), mRoleMapEntry(nsnull)
+  mParent(nsnull), mFirstChild(nsnull), mNextSibling(nsnull), mRoleMapEntry(nsnull),
+  mAccChildCount(eChildCountUninitialized)
 {
 #ifdef NS_DEBUG_X
    {
@@ -714,7 +714,7 @@ PRBool nsAccessible::IsPartiallyVisible(PRBool *aIsOffscreen)
                                  &rectVisibility);
 
   if (rectVisibility == nsRectVisibility_kVisible ||
-      (rectVisibility == nsRectVisibility_kZeroAreaRect && frame->GetNextInFlow())) {
+      (rectVisibility == nsRectVisibility_kZeroAreaRect && frame->GetNextContinuation())) {
     // This view says it is visible, but we need to check the parent view chain :(
     // Note: zero area rects can occur in the first frame of a multi-frame text flow,
     //       in which case the next frame exists because the text flow is visible
@@ -918,7 +918,7 @@ void nsAccessible::GetBoundsRect(nsRect& aTotalBounds, nsIFrame** aBoundingFrame
       // Use next sibling if it exists, or go back up the tree to get the first next-in-flow or next-sibling 
       // within our search
       while (iterFrame) {
-        iterNextFrame = iterFrame->GetNextInFlow();
+        iterNextFrame = iterFrame->GetNextContinuation();
         if (!iterNextFrame)
           iterNextFrame = iterFrame->GetNextSibling();
         if (iterNextFrame || --depth < 0) 
@@ -1994,8 +1994,7 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
         }
       }
 
-      nsIContent *description =
-        GetXULLabelContent(content, nsAccessibilityAtoms::description);
+      GetXULLabelContent(content, nsAccessibilityAtoms::description);
       if (!relatedNode && content->Tag() == nsAccessibilityAtoms::description &&
           content->IsNodeOfType(nsINode::eXUL)) {
         // This affectively adds an optional control attribute to xul:description,
@@ -2021,7 +2020,7 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
           PRBool hasMoreElements;
           while (NS_SUCCEEDED(formControls->HasMoreElements(&hasMoreElements)) &&
                 hasMoreElements) {
-            nsresult rv = formControls->GetNext(getter_AddRefs(controlSupports));
+            formControls->GetNext(getter_AddRefs(controlSupports));
             nsCOMPtr<nsIFormControl> control = do_QueryInterface(controlSupports);    
             if (control) {
               PRInt32 type = control->GetType();

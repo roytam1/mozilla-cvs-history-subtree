@@ -43,14 +43,13 @@
 #include "nsISVGRenderer.h"
 #include "nsISVGRendererRegion.h"
 #include "nsISVGValueUtils.h"
-#include "nsISVGContainerFrame.h"
+#include "nsSVGContainerFrame.h"
 #include "nsReadableUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsSVGAtoms.h"
 #include "nsCRT.h"
 #include "prdtoa.h"
 #include "nsSVGMarkerFrame.h"
-#include "nsISVGMarkable.h"
 #include "nsIViewManager.h"
 #include "nsSVGMatrix.h"
 #include "nsSVGClipPathFrame.h"
@@ -64,6 +63,7 @@
 #include "nsSVGGraphicElement.h"
 
 struct nsSVGMarkerProperty {
+  nsCOMPtr<nsISVGRendererRegion> mMarkerRegion;
   nsISVGMarkerFrame *mMarkerStart;
   nsISVGMarkerFrame *mMarkerMid;
   nsISVGMarkerFrame *mMarkerEnd;
@@ -80,7 +80,6 @@ struct nsSVGMarkerProperty {
 
 nsSVGPathGeometryFrame::nsSVGPathGeometryFrame(nsStyleContext* aContext)
   : nsSVGPathGeometryFrameBase(aContext),
-    mUpdateFlags(0),
     mPropagateTransform(PR_TRUE)
 {
 #ifdef DEBUG
@@ -136,7 +135,7 @@ nsSVGPathGeometryFrame::AttributeChanged(PRInt32         aNameSpaceID,
 {
   if (aNameSpaceID == kNameSpaceID_None &&
       aAttribute == nsGkAtoms::transform)
-    UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_CANVAS_TM);
+    UpdateGraphic();
   
   return NS_OK;
 }
@@ -149,6 +148,15 @@ nsSVGPathGeometryFrame::DidSetStyleContext()
   nsSVGUtils::StyleEffects(this);
 
   if (GetStateBits() & NS_STATE_SVG_HAS_MARKERS) {
+    nsSVGMarkerProperty *property;
+    property = NS_STATIC_CAST(nsSVGMarkerProperty *,
+                              GetProperty(nsGkAtoms::marker));
+    if (property->mMarkerRegion) {
+      nsISVGOuterSVGFrame *outerSVGFrame = nsSVGUtils::GetOuterSVGFrame(this);
+      if (outerSVGFrame)
+        outerSVGFrame->InvalidateRegion(property->mMarkerRegion, PR_TRUE);
+    }
+
     DeleteProperty(nsGkAtoms::marker);
     RemoveStateBits(NS_STATE_SVG_HAS_MARKERS);
   }
@@ -159,7 +167,7 @@ nsSVGPathGeometryFrame::DidSetStyleContext()
   // style_hints don't map very well onto svg. Here seems to be the
   // best place to deal with style changes:
 
-  UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_ALL);
+  UpdateGraphic();
 
   return NS_OK;
 }
@@ -205,24 +213,14 @@ MarkerPropertyDtor(void *aObject, nsIAtom *aPropertyName,
   delete property;
 }
 
-void
-nsSVGPathGeometryFrame::GetMarkerFrames(nsISVGMarkerFrame **markerStart,
-                                        nsISVGMarkerFrame **markerMid,
-                                        nsISVGMarkerFrame **markerEnd)
+nsSVGMarkerProperty *
+nsSVGPathGeometryFrame::GetMarkerProperty()
 {
-  *markerStart = *markerMid = *markerEnd = nsnull;
+  if (GetStateBits() & NS_STATE_SVG_HAS_MARKERS)
+    return NS_STATIC_CAST(nsSVGMarkerProperty *,
+                          GetProperty(nsGkAtoms::marker));
 
-  if (GetStateBits() & NS_STATE_SVG_HAS_MARKERS) {
-    nsSVGMarkerProperty *property;
-    property = NS_STATIC_CAST(nsSVGMarkerProperty *,
-                              GetProperty(nsGkAtoms::marker));
-
-    if (property) {
-      *markerStart = property->mMarkerStart;
-      *markerMid = property->mMarkerMid;
-      *markerEnd = property->mMarkerEnd;
-    }
-  }
+  return nsnull;
 }
 
 void
@@ -281,36 +279,38 @@ nsSVGPathGeometryFrame::PaintSVG(nsISVGRendererCanvas* canvas)
   /* render */
   GetGeometry()->Render(this, canvas);
 
-  nsISVGMarkable *markable;
-  CallQueryInterface(this, &markable);
-
-  if (markable) {
+  if (IsMarkable()) {
     // Marker Property is added lazily and may have been removed by a restyle
     UpdateMarkerProperty();
-    nsISVGMarkerFrame *markerEnd, *markerMid, *markerStart;
-    GetMarkerFrames(&markerStart, &markerMid, &markerEnd);
+    nsSVGMarkerProperty *property = GetMarkerProperty();
       
-    if (markerEnd || markerMid || markerStart) {
-      // need to set this up with the first draw
-      if (!mMarkerRegion)
-        mMarkerRegion = GetCoveredRegion();
+    if (property &&
+        (property->mMarkerEnd ||
+         property->mMarkerMid ||
+         property->mMarkerStart)) {
+      // need to set up marker region with the first draw
+      if (!property->mMarkerRegion)
+        property->mMarkerRegion = GetCoveredRegion();
         
       float strokeWidth = GetStrokeWidth();
         
       nsVoidArray marks;
-      markable->GetMarkPoints(&marks);
+      GetMarkPoints(&marks);
         
       PRUint32 num = marks.Count();
         
-      if (num && markerStart)
-        markerStart->PaintMark(canvas, this, (nsSVGMark *)marks[0], strokeWidth);
+      if (num && property->mMarkerStart)
+        property->mMarkerStart->PaintMark(canvas, this,
+                                          (nsSVGMark *)marks[0], strokeWidth);
         
-      if (num && markerMid)
+      if (num && property->mMarkerMid)
         for (PRUint32 i = 1; i < num - 1; i++)
-          markerMid->PaintMark(canvas, this, (nsSVGMark *)marks[i], strokeWidth);
+          property->mMarkerMid->PaintMark(canvas, this,
+                                          (nsSVGMark *)marks[i], strokeWidth);
         
-      if (num && markerEnd)
-        markerEnd->PaintMark(canvas, this, (nsSVGMark *)marks[num-1], strokeWidth);
+      if (num && property->mMarkerEnd)
+        property->mMarkerEnd->PaintMark(canvas, this,
+                                        (nsSVGMark *)marks[num-1], strokeWidth);
     }
   }
 
@@ -344,26 +344,27 @@ nsSVGPathGeometryFrame::GetCoveredRegion()
 
   GetGeometry()->GetCoveredRegion(this, &region);
 
-  nsISVGMarkable *markable;
-  CallQueryInterface(this, &markable);
+  if (IsMarkable()) {
+    nsSVGMarkerProperty *property = GetMarkerProperty();
 
-  if (markable) {
-    nsISVGMarkerFrame *markerEnd, *markerMid, *markerStart;
-    GetMarkerFrames(&markerStart, &markerMid, &markerEnd);
-
-    if (!markerEnd && !markerMid && !markerStart)
+    if (!property ||
+        (!property->mMarkerEnd &&
+         !property->mMarkerMid &&
+         !property->mMarkerStart))
       return region;
 
     float strokeWidth = GetStrokeWidth();
 
     nsVoidArray marks;
-    markable->GetMarkPoints(&marks);
+    GetMarkPoints(&marks);
 
     PRUint32 num = marks.Count();
 
-    if (num && markerStart) {
+    if (num && property->mMarkerStart) {
       nsCOMPtr<nsISVGRendererRegion> mark;
-      mark = markerStart->RegionMark(this, (nsSVGMark *)marks[0], strokeWidth);
+      mark = property->mMarkerStart->RegionMark(this,
+                                                (nsSVGMark *)marks[0],
+                                                strokeWidth);
 
       if (mark) {
         nsCOMPtr<nsISVGRendererRegion> tmp = dont_AddRef(region);
@@ -371,10 +372,12 @@ nsSVGPathGeometryFrame::GetCoveredRegion()
       }
     }
 
-    if (num && markerMid)
+    if (num && property->mMarkerMid)
       for (PRUint32 i = 1; i < num - 1; i++) {
         nsCOMPtr<nsISVGRendererRegion> mark;
-        mark = markerMid->RegionMark(this, (nsSVGMark *)marks[i], strokeWidth);
+        mark = property->mMarkerMid->RegionMark(this,
+                                                (nsSVGMark *)marks[i],
+                                                strokeWidth);
 
         if (mark) {
           nsCOMPtr<nsISVGRendererRegion> tmp = dont_AddRef(region);
@@ -382,9 +385,11 @@ nsSVGPathGeometryFrame::GetCoveredRegion()
         }
       }
 
-    if (num && markerEnd) {
+    if (num && property->mMarkerEnd) {
       nsCOMPtr<nsISVGRendererRegion> mark;
-      mark = markerEnd->RegionMark(this, (nsSVGMark *)marks[num-1], strokeWidth);
+      mark = property->mMarkerEnd->RegionMark(this,
+                                              (nsSVGMark *)marks[num-1],
+                                              strokeWidth);
 
       if (mark) {
         nsCOMPtr<nsISVGRendererRegion> tmp = dont_AddRef(region);
@@ -399,7 +404,7 @@ nsSVGPathGeometryFrame::GetCoveredRegion()
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::InitialUpdate()
 {
-  UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_ALL);
+  UpdateGraphic();
 
   return NS_OK;
 }
@@ -407,8 +412,7 @@ nsSVGPathGeometryFrame::InitialUpdate()
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::NotifyCanvasTMChanged(PRBool suppressInvalidation)
 {
-  UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_CANVAS_TM,
-                suppressInvalidation);
+  UpdateGraphic(suppressInvalidation);
   
   return NS_OK;
 }
@@ -423,8 +427,8 @@ nsSVGPathGeometryFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::NotifyRedrawUnsuspended()
 {
-  if (mUpdateFlags != 0)
-    UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_NOTHING);
+  if (GetStateBits() & NS_STATE_SVG_DIRTY)
+    UpdateGraphic();
 
   return NS_OK;
 }
@@ -476,8 +480,7 @@ nsSVGPathGeometryFrame::DidModifySVGObservable (nsISVGValue* observable,
   CallQueryInterface(observable, &filter);
 
   if (filter) {
-    UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_STROKE_PAINT |
-                  nsSVGGeometryFrame::UPDATEMASK_FILL_PAINT);
+    UpdateGraphic();
     return NS_OK;
   }
 
@@ -490,7 +493,7 @@ nsSVGPathGeometryFrame::DidModifySVGObservable (nsISVGValue* observable,
                                           GetProperty(nsGkAtoms::marker)),
                            this,
                            marker);
-    UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_NOTHING);
+    UpdateGraphic();
     return NS_OK;
   }
 
@@ -515,13 +518,8 @@ nsSVGPathGeometryFrame::GetCanvasTM(nsIDOMSVGMatrix * *aCTM)
     return NS_NewSVGMatrix(aCTM);
   }
 
-  nsISVGContainerFrame *containerFrame;
-  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
-  if (!containerFrame) {
-    NS_ERROR("invalid container");
-    return NS_ERROR_FAILURE;
-  }
-
+  nsSVGContainerFrame *containerFrame = NS_STATIC_CAST(nsSVGContainerFrame*,
+                                                       mParent);
   nsCOMPtr<nsIDOMSVGMatrix> parentTM = containerFrame->GetCanvasTM();
   NS_ASSERTION(parentTM, "null TM");
 
@@ -610,6 +608,8 @@ nsSVGPathGeometryFrame::GetShapeRendering(PRUint16 *aShapeRendering)
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::InitSVG()
 {
+  nsSVGPathGeometryFrameBase::InitSVG();
+
   // construct a pathgeometry object:
   nsISVGOuterSVGFrame* outerSVGFrame = nsSVGUtils::GetOuterSVGFrame(this);
   if (!outerSVGFrame) {
@@ -637,10 +637,10 @@ nsSVGPathGeometryFrame::GetGeometry()
 }
 
 nsresult
-nsSVGPathGeometryFrame::UpdateGraphic(PRUint32 flags,
-                                      PRBool suppressInvalidation)
+nsSVGPathGeometryFrame::UpdateGraphic(PRBool suppressInvalidation)
 {
-  mUpdateFlags |= flags;
+  if (GetStateBits() & NS_STATE_SVG_NONDISPLAY_CHILD)
+    return NS_OK;
 
   nsISVGOuterSVGFrame *outerSVGFrame = nsSVGUtils::GetOuterSVGFrame(this);
   if (!outerSVGFrame) {
@@ -650,12 +650,14 @@ nsSVGPathGeometryFrame::UpdateGraphic(PRUint32 flags,
 
   PRBool suspended;
   outerSVGFrame->IsRedrawSuspended(&suspended);
-  if (!suspended) {
+  if (suspended) {
+    AddStateBits(NS_STATE_SVG_DIRTY);
+  } else {
     nsCOMPtr<nsISVGRendererRegion> dirty_region;
     if (GetGeometry())
-      GetGeometry()->Update(this, mUpdateFlags, getter_AddRefs(dirty_region));
+      GetGeometry()->Update(this, getter_AddRefs(dirty_region));
 
-    mUpdateFlags = 0;
+    RemoveStateBits(NS_STATE_SVG_DIRTY);
 
     if (suppressInvalidation)
       return NS_OK;
@@ -666,29 +668,27 @@ nsSVGPathGeometryFrame::UpdateGraphic(PRUint32 flags,
     if (filter_region) {
       outerSVGFrame->InvalidateRegion(filter_region, PR_TRUE);
     } else {
-      if (mMarkerRegion) {
-        outerSVGFrame->InvalidateRegion(mMarkerRegion, PR_TRUE);
-        mMarkerRegion = nsnull;
-      }
-
-      nsISVGMarkable *markable;
-      CallQueryInterface(this, &markable);
+      nsSVGMarkerProperty *property = GetMarkerProperty();
       
-      if (markable) {
-        nsISVGMarkerFrame *markerEnd, *markerMid, *markerStart;
-        GetMarkerFrames(&markerStart, &markerMid, &markerEnd);
-
-        if (markerEnd || markerMid || markerStart) {
-          mMarkerRegion = GetCoveredRegion();
-          if (mMarkerRegion)
-            outerSVGFrame->InvalidateRegion(mMarkerRegion, PR_TRUE);
+      if (property) {
+        if (property->mMarkerRegion) {
+          outerSVGFrame->InvalidateRegion(property->mMarkerRegion, PR_TRUE);
+          property->mMarkerRegion = nsnull;
+        }
+          
+        if (property->mMarkerEnd || 
+            property->mMarkerMid ||
+            property->mMarkerStart) {
+          property->mMarkerRegion = GetCoveredRegion();
+          if (property->mMarkerRegion)
+            outerSVGFrame->InvalidateRegion(property->mMarkerRegion, PR_TRUE);
           return NS_OK;
         }
       }
-
-      if (dirty_region)
-        outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
     }
+
+    if (dirty_region)
+      outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
   }
 
   return NS_OK;

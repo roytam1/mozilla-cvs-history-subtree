@@ -394,7 +394,10 @@ NS_IMETHODIMP nsXULTreeAccessible::GetCachedTreeitemAccessible(PRInt32 aRow, nsI
   NS_ASSERTION(mAccessNodeCache, "No accessibility cache for tree");
   NS_ASSERTION(mTree && mTreeView, "Can't get mTree or mTreeView!\n");
 
-  nsCOMPtr<nsITreeColumn> col = aColumn;
+  nsCOMPtr<nsITreeColumn> col;
+#ifdef MOZ_ACCESSIBILITY_ATK
+  col = aColumn;
+#endif
   PRInt32 columnIndex = -1;
 
   if (!col && mTree) {
@@ -425,7 +428,7 @@ nsresult nsXULTreeAccessible::GetColumnCount(nsITreeBoxObject* aBoxObject, PRInt
 {
   NS_ENSURE_TRUE(aBoxObject, NS_ERROR_FAILURE);
   nsCOMPtr<nsITreeColumns> treeColumns;
-  nsresult rv = aBoxObject->GetColumns(getter_AddRefs(treeColumns));
+  aBoxObject->GetColumns(getter_AddRefs(treeColumns));
   NS_ENSURE_TRUE(treeColumns, NS_ERROR_FAILURE);
   return treeColumns->GetCount(aCount);
 }

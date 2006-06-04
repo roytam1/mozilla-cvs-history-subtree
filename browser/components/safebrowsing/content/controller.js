@@ -72,32 +72,8 @@ function PROT_Controller(win, tabWatcher, phishingWarden) {
   // Use this to query preferences
   this.prefs_ = new G_Preferences();
 
-  // Read state: are we in advanced mode?
-  this.checkRemotePrefName_ = PROT_GlobalStore.getServerCheckEnabledPrefName();
-  this.checkRemote_ = this.prefs_.getPref(this.checkRemotePrefName_, null);
-
-  // Get notifications when the advanced mode preference changes
-  this.checkRemotePrefObserver = BindToObject(this.onCheckRemotePrefChanged,
-                                              this);
-  this.prefs_.addObserver(this.checkRemotePrefName_, 
-                          this.checkRemotePrefObserver);
-
-
-  // Global preference to enable the phishing warden
-  this.phishWardenPrefName_ = PROT_GlobalStore.getPhishWardenEnabledPrefName();
-  this.phishWardenEnabled_ = this.prefs_.getPref(this.phishWardenPrefName_, 
-                                                 null);
-
-  // Get notifications when the phishing warden enabled pref changes
-  this.phishWardenPrefObserver = 
-    BindToObject(this.onPhishWardenEnabledPrefChanged, this);
-  this.prefs_.addObserver(this.phishWardenPrefName_, 
-                          this.phishWardenPrefObserver);
-
   // Set us up to receive the events we want.
   this.tabWatcher_ = tabWatcher;
-  this.onShutdown_ = BindToObject(this.shutdown, this);
-  this.win_.addEventListener("unload", this.onShutdown_, false);
   this.onTabSwitchCallback_ = BindToObject(this.onTabSwitch, this);
   this.tabWatcher_.registerListener("tabswitch",
                                     this.onTabSwitchCallback_);
@@ -174,10 +150,6 @@ PROT_Controller.prototype.shutdown = function(e) {
   // down, and it will remove them.
   this.browserView_ = null;
 
-  this.prefs_.removeObserver(this.checkRemotePrefName_, 
-                             this.checkRemotePrefObserver);
-  this.prefs_.removeObserver(this.phishWardenPrefName_, 
-                             this.phishWardenPrefObserver);
   if (this.tabWatcher_) {
     this.tabWatcher_.removeListener("tabswitch", 
                                     this.onTabSwitchCallback_);
@@ -190,31 +162,6 @@ PROT_Controller.prototype.shutdown = function(e) {
   this.windowWatcher_ = null;
 
   G_Debug(this, "Controller shut down.");
-}
-
-/**
- * Deal with a user changing the pref that says whether we're in advanced
- * mode (and thus should check the remote server)
- *
- * @param prefName Name of the pref holding the value indicating whether
- *                 we should check remote server
- */
-PROT_Controller.prototype.onCheckRemotePrefChanged = function(prefName) {
-  this.checkRemote_ = this.prefs_.getBoolPrefOrDefault(prefName,
-                                                       this.checkRemote_);
-}
-
-/**
- * Deal with a user changing the pref that says whether we should 
- * enable the phishing warden
- *
- * @param prefName Name of the pref holding the value indicating whether
- *                 we should enable the phishing warden
- */
-PROT_Controller.prototype.onPhishWardenEnabledPrefChanged = function(
-                                                                    prefName) {
-  this.phishWardenEnabled_ = 
-    this.prefs_.getBoolPrefOrDefault(prefName, this.phishWardenEnabled_);
 }
 
 /**
@@ -380,11 +327,42 @@ PROT_Controller.prototype.loadURI = function(browser, url) {
 }
 
 /**
- * Reload the current page in the given browser
- *
- * @param browser Browser which to reload
+ * Check all browsers (tabs) to see if any of them are phishy.
+ * This isn't that clean of a design because as new wardens get
+ * added, this method needs to be updated manually.  TODO: fix this
+ * when we add a second warden and know what the needs are.
  */
-PROT_Controller.prototype.reloadPage = function(browser) {
-  var normalReload = browser.webNavigation.LOAD_FLAGS_NORMAL;
-  browser.reload(normalReload);
+PROT_Controller.prototype.checkAllBrowsers = function() {
+  var browsers = this.tabWatcher_.getTabBrowser().browsers;
+  for (var i = 0, browser = null; browser = browsers[i]; ++i) {
+    // Check window and all frames.
+    this.checkAllHtmlWindows_(browser, browser.contentWindow)
+  }
+}
+
+/**
+ * Check the HTML window and all containing frames for phishing urls.
+ * @param browser ChromeWindow that contains the html window
+ * @param win HTMLWindow
+ */
+PROT_Controller.prototype.checkAllHtmlWindows_ = function(browser, win) {
+  // Check this window
+  var doc = win && win.document;
+  if (!doc)
+    return;
+
+  var url = doc.location.href;
+  
+  var callback = BindToObject(this.browserView_.isProblemDocument_,
+                              this.browserView_,
+                              browser,
+                              doc,
+                              this.phishingWarden_);
+
+  this.phishingWarden_.checkUrl_(url, callback);
+  
+  // Check all frames
+  for (var i = 0, frame = null; frame = win.frames[i]; ++i) {
+    this.checkAllHtmlWindows_(browser, frame);
+  }
 }

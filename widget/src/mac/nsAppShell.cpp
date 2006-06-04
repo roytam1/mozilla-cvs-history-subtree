@@ -47,37 +47,19 @@
 #include "nsToolkit.h"
 #include "nsMacMessagePump.h"
 
-// kWNETransitionEventList
-//
-// This list encompasses all Carbon events that can be converted into
-// EventRecords.  Not all will necessarily be called; not all will necessarily
-// be handled.  Some items here may be redundant in that handlers are already
-// installed elsewhere.  This may need a good audit.
-//
-static const EventTypeSpec kWNETransitionEventList[] = {
-  { kEventClassMouse,       kEventMouseDown },
-  { kEventClassMouse,       kEventMouseUp },
-  { kEventClassMouse,       kEventMouseMoved },
-  { kEventClassMouse,       kEventMouseDragged },
-  { kEventClassKeyboard,    kEventRawKeyDown },
-  { kEventClassKeyboard,    kEventRawKeyUp },
-  { kEventClassKeyboard,    kEventRawKeyRepeat },
-  { kEventClassWindow,      kEventWindowUpdate },
-  { kEventClassWindow,      kEventWindowActivated },
-  { kEventClassWindow,      kEventWindowDeactivated },
-  { kEventClassWindow,      kEventWindowCursorChange },
-  { kEventClassApplication, kEventAppActivated },
-  { kEventClassApplication, kEventAppDeactivated },
-  { kEventClassAppleEvent,  kEventAppleEvent },
-  { kEventClassControl,     kEventControlTrack },
+#include <Carbon/Carbon.h>
+
+enum {
+  kEventClassMoz = 'MOZZ',
+  kEventMozNull  = 0,
 };
 
 // nsAppShell implementation
 
 nsAppShell::nsAppShell()
-: mWNETransitionEventHandler(NULL)
-, mCFRunLoop(NULL)
+: mCFRunLoop(NULL)
 , mCFRunLoopSource(NULL)
+, mRunningEventLoop(PR_FALSE)
 {
 }
 
@@ -91,9 +73,6 @@ nsAppShell::~nsAppShell()
 
   if (mCFRunLoop)
     ::CFRelease(mCFRunLoop);
-
-  if (mWNETransitionEventHandler)
-    ::RemoveEventHandler(mWNETransitionEventHandler);
 }
 
 // Init
@@ -113,17 +92,9 @@ nsAppShell::Init()
     return rv;
 
   nsIToolkit *toolkit = mToolkit.get();
-  mMacPump = new nsMacMessagePump(static_cast<nsToolkit*>(toolkit));
-  if (!mMacPump.get() || !nsMacMemoryCushion::EnsureMemoryCushion())
+  mMacPump = new nsMacMessagePump(NS_STATIC_CAST(nsToolkit*, toolkit));
+  if (!mMacPump.get())
     return NS_ERROR_OUT_OF_MEMORY;
-
-  OSStatus err = ::InstallApplicationEventHandler(
-                               ::NewEventHandlerUPP(WNETransitionEventHandler),
-                               GetEventTypeCount(kWNETransitionEventList),
-                               kWNETransitionEventList,
-                               (void*)this,
-                               &mWNETransitionEventHandler);
-  NS_ENSURE_TRUE(err == noErr, NS_ERROR_UNEXPECTED);
 
   // Add a CFRunLoopSource to the main native run loop.  The source is
   // responsible for interrupting the run loop when Gecko events are ready.
@@ -176,42 +147,25 @@ PRBool
 nsAppShell::ProcessNextNativeEvent(PRBool aMayWait)
 {
   PRBool eventProcessed = PR_FALSE;
+  PRBool wasRunningEventLoop = mRunningEventLoop;
 
-  if (!aMayWait) {
-    // Only process a single event.
-#if 0
-    EventQueueRef carbonEventQueue = ::GetCurrentEventQueue();
+  mRunningEventLoop = aMayWait;
+  EventTimeout waitUntil = kEventDurationNoWait;
+  if (aMayWait)
+    waitUntil = kEventDurationForever;
 
-    // This requires Mac OS X 10.3 or later... we cannot use it until the
-    // builds systems are upgraded --darin
-    if (EventRef carbonEvent =
-         ::AcquireFirstMatchingEventInQueue(carbonEventQueue,
-                                            0,
-                                            NULL,
-                                            kEventQueueOptionsNone)) {
-      ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
-      ::RemoveEventFromQueue(carbonEventQueue, carbonEvent);
-      ::ReleaseEvent(carbonEvent);
-    }
-#endif
+  do {
     EventRef carbonEvent;
-    OSStatus err = ::ReceiveNextEvent(0, nsnull, kEventDurationNoWait, PR_TRUE,
+    OSStatus err = ::ReceiveNextEvent(0, nsnull, waitUntil, PR_TRUE,
                                       &carbonEvent);
-    if (err == noErr && carbonEvent) {
+    if (err == noErr) {
       ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
       ::ReleaseEvent(carbonEvent);
       eventProcessed = PR_TRUE;
     }
-  }
-  else {
-    // XXX(darin): It seems to me that we should be using ReceiveNextEvent here
-    // as well to ensure that we only wait for and process a single event.
+  } while (mRunningEventLoop);
 
-    // Run the loop until interrupted by ::QuitApplicationEventLoop().
-    ::RunApplicationEventLoop();
-
-    eventProcessed = PR_TRUE;
-  }
+  mRunningEventLoop = wasRunningEventLoop;
 
   return eventProcessed;
 }
@@ -231,39 +185,22 @@ nsAppShell::ProcessGeckoEvents(void* aInfo)
 {
   nsAppShell* self = NS_STATIC_CAST(nsAppShell*, aInfo);
 
-  if (self->RunWasCalled()) {
-    // We own the run loop.  Interrupt it.  It will be started again later
-    // (unless exiting) by nsBaseAppShell.  Trust me, I'm a doctor.
-    ::QuitApplicationEventLoop();
+  if (self->mRunningEventLoop) {
+    self->mRunningEventLoop = PR_FALSE;
+
+    // The run loop is sleeping.  ::ReceiveNextEvent() won't return until
+    // it's given a reason to wake up.  Awaken it by posting a bogus event.
+    EventRef bogusEvent;
+    OSStatus err = ::CreateEvent(nsnull, kEventClassMoz, kEventMozNull, 0,
+                                 kEventAttributeNone, &bogusEvent);
+    if (err == noErr) {
+      ::PostEventToQueue(::GetMainEventQueue(), bogusEvent,
+                         kEventPriorityStandard);
+      ::ReleaseEvent(bogusEvent);
+    }
   }
 
   self->NativeEventCallback();
 
   NS_RELEASE(self);
-}
-
-// WNETransitionEventHandler
-//
-// Transitional WaitNextEvent handler.  Accepts Carbon events from
-// kWNETransitionEventList, converts them into EventRecords, and
-// dispatches them through the path they would have gone if they
-// had been received as EventRecords from WaitNextEvent.
-//
-// protected static
-pascal OSStatus
-nsAppShell::WNETransitionEventHandler(EventHandlerCallRef aHandlerCallRef,
-                                      EventRef            aEvent,
-                                      void*               aUserData)
-{
-  nsAppShell* self = NS_STATIC_CAST(nsAppShell*, aUserData);
-
-  EventRecord eventRecord;
-  ::ConvertEventRefToEventRecord(aEvent, &eventRecord);
-
-  PRBool handled = self->mMacPump->DispatchEvent(PR_TRUE, &eventRecord);
-
-  if (handled)
-    return noErr;
-
-  return eventNotHandledErr;
 }

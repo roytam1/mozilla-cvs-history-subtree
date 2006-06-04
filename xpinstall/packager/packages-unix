@@ -96,6 +96,7 @@ bin/components/autocomplete.xpt
 bin/components/appshell.xpt
 bin/components/caps.xpt
 bin/components/chrome.xpt
+bin/components/nsBrowserContentHandler.js
 bin/components/nsComposerCmdLineHandler.js
 bin/components/cookie.xpt
 bin/components/libjsd.so
@@ -110,12 +111,14 @@ bin/components/dom_html.xpt
 bin/components/dom_loadsave.xpt
 bin/components/dom_range.xpt
 bin/components/dom_sidebar.xpt
+bin/components/dom_storage.xpt
 bin/components/dom_stylesheets.xpt
 bin/components/dom_traversal.xpt
 bin/components/dom_views.xpt
 bin/components/dom_xbl.xpt
 bin/components/dom_xpath.xpt
 bin/components/dom_xul.xpt
+bin/components/libstoragecomps.so
 bin/components/editor.xpt
 bin/components/find.xpt
 bin/components/gfx.xpt
@@ -154,6 +157,7 @@ bin/components/content_xmldoc.xpt
 bin/components/content_xslt.xpt
 bin/components/content_xtf.xpt
 bin/components/libgklayout.so
+bin/components/libgkgfxthebes.so
 bin/components/libgkplugin.so
 bin/components/libhtmlpars.so
 bin/components/librdf.so
@@ -218,6 +222,7 @@ bin/components/layout_base.xpt
 bin/components/layout_printing.xpt
 bin/components/layout_xul.xpt
 bin/components/layout_xul_tree.xpt
+bin/components/inspector.xpt
 bin/components/xuldoc.xpt
 bin/components/xultmpl.xpt
 bin/components/libnsprefm.so
@@ -241,7 +246,6 @@ bin/components/embed_base.xpt
 bin/components/commandhandler.xpt
 bin/components/webbrowserpersist.xpt
 bin/components/windowwatcher.xpt
-bin/components/xmlextras.xpt
 bin/components/libxmlextras.so
 bin/components/nsHelperAppDlg.js
 bin/components/helperAppDlg.xpt
@@ -485,8 +489,6 @@ bin/chrome/pippki.jar
 
 [inspector]
 bin/components/inspector-cmdline.js
-bin/components/libinspector.so
-bin/components/inspector.xpt
 bin/chrome/inspector.jar
 bin/defaults/pref/inspector.js
 bin/res/inspector/viewer-registry.rdf

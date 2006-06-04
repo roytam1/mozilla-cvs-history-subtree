@@ -69,7 +69,9 @@
 const kKeyFilename = "kf.txt";
 
 // If we don't have a key, we can get one at this url.
-const kGetKeyUrl = "safebrowsing.provider.0.keyURL";
+// XXX We shouldn't be referencing browser.safebrowsing. from here.  This
+// should be an constructor param or settable some other way.
+const kGetKeyUrl = "browser.safebrowsing.provider.0.keyURL";
 
 /**
  * A key manager for UrlCrypto. There should be exactly one of these
@@ -301,7 +303,7 @@ PROT_UrlCryptoKeyManager.prototype.maybeLoadOldKey = function() {
 }
 
 
-
+#ifdef DEBUG
 /**
  * Cheesey tests
  */
@@ -394,4 +396,4 @@ function TEST_PROT_UrlCryptoKeyManager() {
 
   }
 }
-
+#endif

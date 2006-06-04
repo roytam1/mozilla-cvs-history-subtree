@@ -4059,6 +4059,12 @@ RegExp(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         obj = js_NewObject(cx, &js_RegExpClass, NULL, NULL);
         if (!obj)
             return JS_FALSE;
+
+        /*
+         * regexp_compile does not use rval to root its temporaries
+         * so we can use it to root obj.
+         */
+        *rval = OBJECT_TO_JSVAL(obj);
     }
     return regexp_compile(cx, obj, argc, argv, rval);
 }
@@ -4109,7 +4115,7 @@ js_NewRegExpObject(JSContext *cx, JSTokenStream *ts,
     re = js_NewRegExp(cx, ts,  str, flags, JS_FALSE);
     if (!re)
         return NULL;
-    JS_PUSH_SINGLE_TEMP_ROOT(cx, STRING_TO_JSVAL(str), &tvr);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, str, &tvr);
     obj = js_NewObject(cx, &js_RegExpClass, NULL, NULL);
     if (!obj || !JS_SetPrivate(cx, obj, re)) {
         js_DestroyRegExp(cx, re);

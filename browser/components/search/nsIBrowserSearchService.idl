@@ -41,7 +41,7 @@
 interface nsIURI;
 interface nsIInputStream;
 
-[scriptable, uuid(ebe9f0f6-ca5a-415a-b578-82e2db61fb2a)]
+[scriptable, uuid(58e4f602-a7c8-4cd1-9dca-716705e826ef)]
 interface nsISearchSubmission : nsISupports
 {
   /**
@@ -56,7 +56,7 @@ interface nsISearchSubmission : nsISupports
   readonly attribute nsIURI uri;
 };
 
-[scriptable, uuid(b64edb5b-4d05-44df-b9bf-2098d9069f88)]
+[scriptable, uuid(d8ceea19-d004-4206-a614-bef9849a2cc9)]
 interface nsISearchEngine : nsISupports
 {
   /**
@@ -108,6 +108,11 @@ interface nsISearchEngine : nsISupports
   attribute AString alias;
 
   /**
+   * A text description describing the engine.
+   */
+  readonly attribute AString description;
+
+  /**
    * Whether the engine should be hidden from the user.
    */
   attribute boolean hidden;
@@ -123,14 +128,19 @@ interface nsISearchEngine : nsISupports
   readonly attribute AString name;
 
   /**
-   * The search engine type.
-   */
-  readonly attribute long type;
-
-  /**
    * A URL string pointing to the engine's search form.
    */
   readonly attribute AString searchForm;
+
+  /**
+   * A URI object for retrieving suggested searches.
+   */
+  readonly attribute nsIURI suggestionURI;
+
+  /**
+   * The search engine type.
+   */
+  readonly attribute long type;
 
 };
 
@@ -147,8 +157,10 @@ interface nsIBrowserSearchService : nsISupports
    *        An integer representing the plugin file format. Must be one
    *        of the supported search engine data types defined above.
    *
-   * @param iconURL the URL to an icon file to be used as the search engine's
-   *        icon.
+   * @param iconURL
+   *        A URL string to an icon file to be used as the search engine's
+   *        icon. This value may be overridden by an icon specified in the
+   *        engine description file.
    *
    * @throws NS_ERROR_FAILURE if the type is invalid, or if the description
    *         file cannot be successfully loaded.

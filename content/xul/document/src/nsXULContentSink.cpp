@@ -1330,10 +1330,10 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                       return rv;
               } else {
                   if (value.Length() == 1 && value[0] == '0')
-                    // This means that we need to set JSOPTION_XML in the JS options.
-                    // We re-use our knowledge of the implementation to reuse
-                    // JSVERSION_HAS_XML as a safe version flag.
-                    // If version has JSVERSION_UNKNOWN (-1), then this is still OK.
+                    // This means that we need to set JSOPTION_XML in the JS
+                    // options. We use our implementation knowledge to reuse
+                    // JSVERSION_HAS_XML as a safe version flag. If version
+                    // has JSVERSION_UNKNOWN (-1), then this is still OK.
                     version |= JSVERSION_HAS_XML;
               }
           }
@@ -1351,7 +1351,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
   // Not all script languages have a "sandbox" concept.  At time of
   // writing, Python is the only other language, and it does not.
   // For such languages, neither any inline script nor remote script are
-  // safe to execute for untrusted sources.
+  // safe to execute from untrusted sources.
   // So for such languages, we only allow script when the document
   // itself is from chrome.  We then don't bother to check the
   // "src=" tag - we trust chrome to do the right thing.

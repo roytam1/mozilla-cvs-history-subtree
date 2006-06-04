@@ -200,7 +200,7 @@ nsSVGImageFrame::AttributeChanged(PRInt32         aNameSpaceID,
         aAttribute == nsGkAtoms::width ||
         aAttribute == nsGkAtoms::height ||
         aAttribute == nsGkAtoms::preserveAspectRatio)) {
-     UpdateGraphic(nsISVGPathGeometrySource::UPDATEMASK_PATH);
+     UpdateGraphic();
      return NS_OK;
    }
 
@@ -531,6 +531,11 @@ nsSVGImageListener::~nsSVGImageListener()
 {
 }
 
+NS_IMETHODIMP nsSVGImageListener::OnStartRequest(imgIRequest *aRequest)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsSVGImageListener::OnStartDecode(imgIRequest *aRequest)
 {
   return NS_OK;
@@ -575,7 +580,13 @@ NS_IMETHODIMP nsSVGImageListener::OnStopDecode(imgIRequest *aRequest,
     return NS_ERROR_FAILURE;
 
   mFrame->mSurfaceInvalid = PR_TRUE;
-  mFrame->UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_ALL);
+  mFrame->UpdateGraphic();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsSVGImageListener::OnStopRequest(imgIRequest *aRequest,
+                                                PRBool aLastPart)
+{
   return NS_OK;
 }
 
@@ -587,7 +598,7 @@ NS_IMETHODIMP nsSVGImageListener::FrameChanged(imgIContainer *aContainer,
     return NS_ERROR_FAILURE;
 
   mFrame->mSurfaceInvalid = PR_TRUE;
-  mFrame->UpdateGraphic(nsSVGGeometryFrame::UPDATEMASK_ALL);
+  mFrame->UpdateGraphic();
   return NS_OK;
 }
 

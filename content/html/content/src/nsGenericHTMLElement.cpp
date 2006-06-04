@@ -1369,9 +1369,9 @@ nsGenericHTMLElement::FindForm(nsIForm* aCurrentForm)
       NS_ASSERTION(formCOMPtr, "aCurrentForm isn't an nsIContent?");
       // Use an nsIContent temporary to reduce addref/releasing as we go up the
       // tree
-      nsIContent* iter = formCOMPtr;
+      nsINode* iter = formCOMPtr;
       do {
-        iter = iter->GetParent();
+        iter = iter->GetNodeParent();
         if (iter == prevContent) {
           nsIDOMHTMLFormElement* form;
           CallQueryInterface(aCurrentForm, &form);
@@ -1755,14 +1755,12 @@ nsresult
 nsGenericHTMLElement::SetInlineStyleRule(nsICSSStyleRule* aStyleRule,
                                          PRBool aNotify)
 {
-  PRBool hasListeners = PR_FALSE;
   PRBool modification = PR_FALSE;
   nsAutoString oldValueStr;
 
-  nsIDocument* document = GetCurrentDoc();
-  hasListeners = nsContentUtils::HasMutationListeners(this,
-    document,
-    NS_EVENT_BITS_MUTATION_ATTRMODIFIED);
+  PRBool hasListeners = aNotify &&
+    nsContentUtils::HasMutationListeners(this,
+                                         NS_EVENT_BITS_MUTATION_ATTRMODIFIED);
 
   // There's no point in comparing the stylerule pointers since we're always
   // getting a new stylerule here. And we can't compare the stringvalues of
@@ -1775,7 +1773,7 @@ nsGenericHTMLElement::SetInlineStyleRule(nsICSSStyleRule* aStyleRule,
     modification = GetAttr(kNameSpaceID_None, nsHTMLAtoms::style,
                            oldValueStr);
   }
-  else if (aNotify) {
+  else if (aNotify && IsInDoc()) {
     modification = !!mAttrsAndChildren.GetAttr(nsHTMLAtoms::style);
   }
 
@@ -1791,7 +1789,7 @@ nsGenericHTMLElement::GetBaseURI() const
   nsIDocument* doc = GetOwnerDoc();
 
   void* prop;
-  if (HasProperties() && (prop = GetProperty(nsHTMLAtoms::htmlBaseHref))) {
+  if (HasFlag(NODE_HAS_PROPERTIES) && (prop = GetProperty(nsHTMLAtoms::htmlBaseHref))) {
     nsIURI* uri = NS_STATIC_CAST(nsIURI*, prop);
     NS_ADDREF(uri);
     
@@ -1818,7 +1816,7 @@ void
 nsGenericHTMLElement::GetBaseTarget(nsAString& aBaseTarget) const
 {
   void* prop;
-  if (HasProperties() && (prop = GetProperty(nsHTMLAtoms::htmlBaseTarget))) {
+  if (HasFlag(NODE_HAS_PROPERTIES) && (prop = GetProperty(nsHTMLAtoms::htmlBaseTarget))) {
     NS_STATIC_CAST(nsIAtom*, prop)->ToString(aBaseTarget);
     
     return;
@@ -2660,7 +2658,7 @@ nsGenericHTMLElement::MapBackgroundInto(const nsMappedAttributes* aAttributes,
         // as well as elements with _baseHref set. We need to be able
         // to get to the element somehow, or store the base URI in the
         // attributes.
-        nsIDocument* doc = aData->mPresContext->GetDocument();
+        nsIDocument* doc = aData->mPresContext->Document();
         nsCOMPtr<nsIURI> uri;
         nsresult rv = nsContentUtils::NewURIWithDocumentCharset(
             getter_AddRefs(uri), spec, doc, doc->GetBaseURI());
@@ -3131,10 +3129,7 @@ nsGenericHTMLFormElement::BeforeSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                                         const nsAString* aValue, PRBool aNotify)
 {
   if (aNameSpaceID == kNameSpaceID_None) {
-    nsCOMPtr<nsIFormControl> thisControl;
     nsAutoString tmp;
-
-    QueryInterface(NS_GET_IID(nsIFormControl), getter_AddRefs(thisControl));
 
     // remove the control from the hashtable as needed
 
@@ -3142,7 +3137,7 @@ nsGenericHTMLFormElement::BeforeSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
       GetAttr(kNameSpaceID_None, aName, tmp);
 
       if (!tmp.IsEmpty()) {
-        mForm->RemoveElementFromTable(thisControl, tmp);
+        mForm->RemoveElementFromTable(this, tmp);
       }
     }
 
@@ -3150,16 +3145,16 @@ nsGenericHTMLFormElement::BeforeSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
       GetAttr(kNameSpaceID_None, nsHTMLAtoms::name, tmp);
 
       if (!tmp.IsEmpty()) {
-        mForm->RemoveElementFromTable(thisControl, tmp);
+        mForm->RemoveElementFromTable(this, tmp);
       }
 
       GetAttr(kNameSpaceID_None, nsHTMLAtoms::id, tmp);
 
       if (!tmp.IsEmpty()) {
-        mForm->RemoveElementFromTable(thisControl, tmp);
+        mForm->RemoveElementFromTable(this, tmp);
       }
 
-      mForm->RemoveElement(thisControl);
+      mForm->RemoveElement(this);
     }
   }
 
@@ -3172,15 +3167,12 @@ nsGenericHTMLFormElement::AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                                        const nsAString* aValue, PRBool aNotify)
 {
   if (aNameSpaceID == kNameSpaceID_None) {
-    nsCOMPtr<nsIFormControl> thisControl =
-      do_QueryInterface(NS_STATIC_CAST(nsIContent*, this));
-
     // add the control to the hashtable as needed
 
     if (mForm && (aName == nsHTMLAtoms::name || aName == nsHTMLAtoms::id) &&
         aValue) {
       if (!aValue->IsEmpty()) {
-        mForm->AddElementToTable(thisControl, *aValue);
+        mForm->AddElementToTable(this, *aValue);
       }
     }
 
@@ -3190,16 +3182,16 @@ nsGenericHTMLFormElement::AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
       GetAttr(kNameSpaceID_None, nsHTMLAtoms::name, tmp);
 
       if (!tmp.IsEmpty()) {
-        mForm->AddElementToTable(thisControl, tmp);
+        mForm->AddElementToTable(this, tmp);
       }
 
       GetAttr(kNameSpaceID_None, nsHTMLAtoms::id, tmp);
 
       if (!tmp.IsEmpty()) {
-        mForm->AddElementToTable(thisControl, tmp);
+        mForm->AddElementToTable(this, tmp);
       }
 
-      mForm->AddElement(thisControl);
+      mForm->AddElement(this);
     }
 
     // And notify on content state changes, if any

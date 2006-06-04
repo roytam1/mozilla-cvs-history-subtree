@@ -231,10 +231,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsViewSourceURI)
 #include "nsDataHandler.h"
 #endif
 
-#ifdef NECKO_PROTOCOL_keyword
-#include "nsKeywordProtocolHandler.h"
-#endif
-
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "nsURIChecker.h"
@@ -258,7 +254,7 @@ NS_GENERIC_AGGREGATED_CONSTRUCTOR(nsSimpleURI)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsIDNService, Init)
 
 ///////////////////////////////////////////////////////////////////////////////
-#ifdef XP_WIN
+#if defined(XP_WIN) && !defined(WINCE)
 #include "nsNotifyAddrListener.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNotifyAddrListener, Init)
 #endif
@@ -310,27 +306,28 @@ nsresult NS_NewStreamConv(nsStreamConverterService **aStreamConv);
 #define BINHEX_TO_WILD               "?from=application/mac-binhex40&to=*/*"
 #endif
 
-static const char *const g_StreamConverterArray[] = {
-        FTP_TO_INDEX,
-        GOPHER_TO_INDEX,
-        INDEX_TO_HTML,
-        MULTI_MIXED_X,
-        MULTI_MIXED,
-        MULTI_BYTERANGES,
-        UNKNOWN_CONTENT,
-        MAYBE_TEXT,
-        GZIP_TO_UNCOMPRESSED,
-        XGZIP_TO_UNCOMPRESSED,
-        COMPRESS_TO_UNCOMPRESSED,
-        XCOMPRESS_TO_UNCOMPRESSED,
-        DEFLATE_TO_UNCOMPRESSED,
+static const char *const sStreamConverterArray[] = {
+    FTP_TO_INDEX,
+    GOPHER_TO_INDEX,
+    INDEX_TO_HTML,
+    MULTI_MIXED_X,
+    MULTI_MIXED,
+    MULTI_BYTERANGES,
+    UNKNOWN_CONTENT,
+    MAYBE_TEXT,
+    GZIP_TO_UNCOMPRESSED,
+    XGZIP_TO_UNCOMPRESSED,
+    COMPRESS_TO_UNCOMPRESSED,
+    XCOMPRESS_TO_UNCOMPRESSED,
+    DEFLATE_TO_UNCOMPRESSED,
 #ifdef BUILD_BINHEX_DECODER
-        BINHEX_TO_WILD,
+    BINHEX_TO_WILD,
 #endif
-        PLAIN_TO_HTML
-    };
+    PLAIN_TO_HTML
+};
 
-static PRUint32 g_StreamConverterCount = sizeof(g_StreamConverterCount)/sizeof(const char*);
+static const PRUint32 sStreamConverterCount =
+    NS_ARRAY_LENGTH(sStreamConverterArray);
 
 // each stream converter must add its from/to key to the category manager
 // in RegisterStreamConverters(). This provides a string representation
@@ -343,21 +340,16 @@ RegisterStreamConverters(nsIComponentManager *aCompMgr, nsIFile *aPath,
                          const char *registryLocation,
                          const char *componentType,
                          const nsModuleComponentInfo *info) {
-    nsresult rv;
     nsCOMPtr<nsICategoryManager> catmgr =
-        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    nsXPIDLCString previous;
+        do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
+    NS_ENSURE_STATE(catmgr);
 
-    PRUint32 count = 0;
-    while (count < g_StreamConverterCount) {
-        (void) catmgr->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, g_StreamConverterArray[count],
-                                      "", PR_TRUE, PR_TRUE, getter_Copies(previous));
-        if (NS_FAILED(rv)) NS_ASSERTION(0, "adding a cat entry failed");
-        count++;
+    for (PRUint32 count = 0; count < sStreamConverterCount; ++count) {
+        catmgr->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY,
+                                 sStreamConverterArray[count], "",
+                                 PR_TRUE, PR_TRUE, nsnull);
     }
-    
-    return rv;
+    return NS_OK;
 }
 
 // same as RegisterStreamConverters except the reverse.
@@ -365,21 +357,16 @@ static NS_METHOD
 UnregisterStreamConverters(nsIComponentManager *aCompMgr, nsIFile *aPath,
                            const char *registryLocation,
                            const nsModuleComponentInfo *info) {
-    nsresult rv;
     nsCOMPtr<nsICategoryManager> catmgr =
-        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
+        do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
+    NS_ENSURE_STATE(catmgr);
 
-
-    PRUint32 count = 0;
-    while (count < g_StreamConverterCount) {
-        rv = catmgr->DeleteCategoryEntry(NS_ISTREAMCONVERTER_KEY, 
-                                         g_StreamConverterArray[count], 
-                                         PR_TRUE);
-        if (NS_FAILED(rv)) return rv;
-        count++;
+    for (PRUint32 count = 0; count < sStreamConverterCount; ++count) {
+        catmgr->DeleteCategoryEntry(NS_ISTREAMCONVERTER_KEY, 
+                                    sStreamConverterArray[count], 
+                                    PR_TRUE);
     }
-    return rv;
+    return NS_OK;
 }
 
 #ifdef BUILD_BINHEX_DECODER
@@ -1108,15 +1095,6 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       nsDataHandler::Create},
 #endif
 
-#ifdef NECKO_PROTOCOL_keyword
-    // from netwerk/protocol/keyword:
-    { "The Keyword Protocol Handler", 
-      NS_KEYWORDPROTOCOLHANDLER_CID,
-      NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "keyword",
-      nsKeywordProtocolHandler::Create
-    },
-#endif
-    
 #ifdef NECKO_PROTOCOL_viewsource
     // from netwerk/protocol/viewsource:
     { "The ViewSource Protocol Handler", 
@@ -1131,7 +1109,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
     },
 #endif
 
-#ifdef XP_WIN
+#if defined(XP_WIN) && !defined(WINCE)
     { NS_NETWORK_LINK_SERVICE_CLASSNAME,
       NS_NETWORK_LINK_SERVICE_CID,
       NS_NETWORK_LINK_SERVICE_CONTRACTID,

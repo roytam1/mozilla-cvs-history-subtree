@@ -64,11 +64,7 @@ public:
   NS_IMETHOD GetScriptRuntime(const nsAString &aLanguageName,
                               nsIScriptRuntime **aLanguage) = 0;
 
-  // Get a script language given its nsIProgrammingLanguage ID.  Note that for
-  // languages other than javascript, if the language has not previosly been
-  // loaded by name, the factory will instantiate *all* registered
-  // nsIScriptRuntime components to match the ID (we have no way of mapping
-  // language IDs directly to contract IDs at the moment.)
+  // Get a script language given its nsIProgrammingLanguage ID.
   NS_IMETHOD GetScriptRuntimeByID(PRUint32 aScriptTypeID, 
                                   nsIScriptRuntime **aLanguage) = 0;
 

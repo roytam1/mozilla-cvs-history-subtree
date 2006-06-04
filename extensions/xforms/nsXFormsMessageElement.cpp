@@ -178,7 +178,7 @@ private:
   nsresult HandleModalAndModelessMessage(nsIDOMDocument* aDoc, nsAString& aLevel);
   void CloneNode(nsIDOMNode* aSrc, nsIDOMNode** aTarget);
   PRBool HandleInlineAlert(nsIDOMEvent* aEvent);
-  nsresult ConstructMessageWindowURL(nsAString& aData,
+  nsresult ConstructMessageWindowURL(const nsAString& aData,
                                      PRBool aIsLink,
                                      /*out*/ nsAString& aURL);
 
@@ -420,19 +420,15 @@ nsXFormsMessageElement::HandleAction(nsIDOMEvent* aEvent,
   // to use that we can't reach right now.  If it won't load, then might as
   // well stop here.  We don't want to be popping up empty windows
   // or windows that will just end up showing 404 messages.
-  if (mStopType == eStopType_LinkError) {
+  // We also stop if we were not allowed to access the given resource.
+  if (mStopType == eStopType_LinkError ||
+      mStopType == eStopType_Security) {
     // we couldn't successfully link to our external resource.  Better throw
     // the xforms-link-error event
     nsCOMPtr<nsIModelElementPrivate> modelPriv =
       nsXFormsUtils::GetModel(mElement);
     nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
     nsXFormsUtils::DispatchEvent(model, eEvent_LinkError);
-    return NS_OK;
-  }
-
-  // If we couldn't test the external link due to it not living in an
-  // acceptable domain, then no sense going any further down this path.
-  if (mStopType == eStopType_Security) {
     return NS_OK;
   }
 
@@ -642,7 +638,19 @@ nsXFormsMessageElement::HandleModalAndModelessMessage(nsIDOMDocument* aDoc,
   if (!hasBinding && !src.IsEmpty()) {
     // Creating a normal window for messages with src attribute.
     options.AppendLiteral(",chrome=no");
-    rv = ConstructMessageWindowURL(src, PR_TRUE, src);
+
+    // Create a new URI so that we properly convert relative urls to absolute.
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(aDoc));
+    NS_ENSURE_STATE(doc);
+    nsCOMPtr<nsIURI> uri;
+    NS_NewURI(getter_AddRefs(uri), src, doc->GetDocumentCharacterSet().get(),
+              doc->GetDocumentURI());
+    NS_ENSURE_STATE(uri);
+    nsCAutoString uriSpec;
+    uri->GetSpec(uriSpec);
+    rv = ConstructMessageWindowURL(NS_ConvertUTF8toUTF16(uriSpec),
+                                   PR_TRUE,
+                                   src);
     NS_ENSURE_SUCCESS(rv, rv);
   } else {
     // Cloning the content of the xf:message and creating a
@@ -734,7 +742,7 @@ nsXFormsMessageElement::HandleModalAndModelessMessage(nsIDOMDocument* aDoc,
 }
 
 nsresult
-nsXFormsMessageElement::ConstructMessageWindowURL(nsAString& aData,
+nsXFormsMessageElement::ConstructMessageWindowURL(const nsAString& aData,
                                                   PRBool aIsLink,
                                                   nsAString& aURL)
 {
@@ -924,7 +932,7 @@ nsXFormsMessageElement::TestExternalFile()
             doc->GetDocumentURI());
   NS_ENSURE_STATE(uri);
 
-  if (!nsXFormsUtils::CheckSameOrigin(doc, uri)) {
+  if (!nsXFormsUtils::CheckConnectionAllowed(mElement, uri)) {
     nsAutoString tagName;
     mElement->GetLocalName(tagName);
     const PRUnichar *strings[] = { tagName.get() };
@@ -1009,18 +1017,13 @@ nsXFormsMessageElement::OnChannelRedirect(nsIChannel *OldChannel,
   nsresult rv = aNewChannel->GetURI(getter_AddRefs(newURI));
   NS_ENSURE_SUCCESS(rv, rv);
   
-  NS_ENSURE_STATE(mElement);
-  nsCOMPtr<nsIDOMDocument> domDoc;
-  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
-  nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDoc));
-  NS_ENSURE_STATE(doc);
-
-  if (!nsXFormsUtils::CheckSameOrigin(doc, newURI)) {
+  if (!nsXFormsUtils::CheckConnectionAllowed(mElement, newURI)) {
     nsAutoString tagName;
     mElement->GetLocalName(tagName);
     const PRUnichar *strings[] = { tagName.get() };
     nsXFormsUtils::ReportError(NS_LITERAL_STRING("externalLinkLoadOrigin"),
                                strings, 1, mElement, mElement);
+    mStopType = eStopType_Security;
     return NS_ERROR_ABORT;
   }
 
@@ -1033,42 +1036,28 @@ NS_IMETHODIMP
 nsXFormsMessageElement::OnStartRequest(nsIRequest *aRequest,
                                        nsISupports *aContext)
 {
-  return NS_OK;
-}
+  // Make sure to null out mChannel before we return.  Keep in mind that
+  // if this is the last message channel to be loaded for the xforms
+  // document then when AddRemoveExternalResource is called, it may result
+  // in xforms-ready firing. Should there be a message acting as a handler
+  // for xforms-ready, it will start the logic to display itself
+  // (HandleAction()).  So we can't call AddRemoveExternalResource to remove
+  // this channel from the count until we've set the mStopType to be the
+  // proper value.  Entering this function, mStopType will be eStopType_None,
+  // so if we need mStopType to be any other value (like in an error
+  // condition), please make sure it is set before AddRemoveExternalResource
+  // is called.
+  NS_ASSERTION(aRequest == mChannel, "unexpected request");
+  NS_ASSERTION(mChannel, "no channel");
 
-NS_IMETHODIMP
-nsXFormsMessageElement::OnDataAvailable(nsIRequest *aRequest,
-                                        nsISupports *aContext,
-                                        nsIInputStream *aInputStream,
-                                        PRUint32 aOffset,
-                                        PRUint32 aCount)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXFormsMessageElement::OnStopRequest(nsIRequest *aRequest,
-                                      nsISupports *aContext,
-                                      nsresult aStatusCode)
-{
-
-  // We are done with the load request, whatever the result, so make sure to
-  // null out mChannel before we return.  Keep in mind that if this is the last
-  // message channel to be loaded for the xforms document then when
-  // AddRemoveExternalResource is called, it may result in xforms-ready firing.
-  // Should there be a message acting as a handler for xforms-ready, it will
-  // start the logic to display itself (HandleAction()).  So we can't call
-  // AddRemoveExternalResource to remove this channel from the count until we've
-  // set the mStopType to be the proper value.  Entering this function,
-  // mStopType will be eStopType_None, so if we need mStopType to be any other
-  // value (like in an error condition), please make sure it is set before
-  // AddRemoveExternalResource is called.
-
-  if (NS_FAILED(aStatusCode)) {
+  nsresult status;
+  nsresult rv = mChannel->GetStatus(&status);
+  // DNS errors and other obvious problems will return failure status
+  if (NS_FAILED(rv) || NS_FAILED(status)) {
     // NS_BINDING_ABORTED means that we have been cancelled by a later
-    // AttributeSet() call (which will also reset mStopType).  So don't treat
-    // like an error.
-    if (aStatusCode != NS_BINDING_ABORTED) {
+    // AttributeSet() call (which will also reset mStopType), so don't
+    // treat it like an error.
+    if (status != NS_BINDING_ABORTED) {
       nsAutoString src, tagName;
       mElement->GetLocalName(tagName);
       mElement->GetAttribute(NS_LITERAL_STRING("src"), src);
@@ -1076,21 +1065,24 @@ nsXFormsMessageElement::OnStopRequest(nsIRequest *aRequest,
       nsXFormsUtils::ReportError(NS_LITERAL_STRING("externalLink2Error"),
                                  strings, 2, mElement, mElement);
       mStopType = eStopType_LinkError;
-      AddRemoveExternalResource(PR_FALSE);
-      mChannel = nsnull;
-    
-      return NS_OK;
     }
+
+    AddRemoveExternalResource(PR_FALSE);
+    mChannel = nsnull;
+
+    return NS_BINDING_ABORTED;
   }
 
-  PRUint32 responseStatus;
+  // If status is zero, it might still be an error if it's http:
+  // http has data even when there's an error like a 404.
   nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(mChannel);
-  if (NS_SUCCEEDED(aStatusCode) && httpChannel) {
-    nsresult rv = httpChannel->GetResponseStatus(&responseStatus);
-    
-    // If responseStatus is 4xx or 5xx, it is an error.  2xx is success.
+  if (httpChannel) {
+    // If responseStatus is 2xx, it is valid.
     // 3xx (various flavors of redirection) COULD be successful.  Can't really
-    //  follow those to conclusion so we'll assume they were successful.
+    // follow those to conclusion so we'll assume they were successful.
+    // If responseStatus is 4xx or 5xx, it is an error.
+    PRUint32 responseStatus;
+    rv = httpChannel->GetResponseStatus(&responseStatus);
     if (NS_FAILED(rv) || (responseStatus >= 400)) {
       nsAutoString src, tagName;
       mElement->GetLocalName(tagName);
@@ -1105,6 +1097,25 @@ nsXFormsMessageElement::OnStopRequest(nsIRequest *aRequest,
   AddRemoveExternalResource(PR_FALSE);
   mChannel = nsnull;
 
+  return NS_BINDING_ABORTED;
+}
+
+NS_IMETHODIMP
+nsXFormsMessageElement::OnDataAvailable(nsIRequest *aRequest,
+                                        nsISupports *aContext,
+                                        nsIInputStream *aInputStream,
+                                        PRUint32 aOffset,
+                                        PRUint32 aCount)
+{
+  NS_NOTREACHED("nsXFormsMessageElement::OnDataAvailable");
+  return NS_BINDING_ABORTED;
+}
+
+NS_IMETHODIMP
+nsXFormsMessageElement::OnStopRequest(nsIRequest *aRequest,
+                                      nsISupports *aContext,
+                                      nsresult aStatusCode)
+{
   return NS_OK;
 }
 

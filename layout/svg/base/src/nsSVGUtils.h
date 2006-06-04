@@ -88,6 +88,16 @@ class nsAttrValue;
 
 #define NS_STATE_SVG_HAS_MARKERS      0x02000000
 
+#define NS_STATE_SVG_DIRTY            0x04000000
+#define NS_STATE_SVG_METRICS_DIRTY    0x08000000
+
+#define NS_STATE_SVG_FILL_PSERVER     0x10000000
+#define NS_STATE_SVG_STROKE_PSERVER   0x20000000
+#define NS_STATE_SVG_PSERVER_MASK     0x30000000
+
+/* are we the child of a non-display container? */
+#define NS_STATE_SVG_NONDISPLAY_CHILD 0x40000000
+
 class nsSVGUtils
 {
 public:
@@ -109,13 +119,6 @@ public:
    */
   static nsresult GetReferencedFrame(nsIFrame **aRefFrame, nsIURI* aURI,
                                      nsIContent *aContent, nsIPresShell *aPresShell);
-  /*
-   * For SVGPaint attributes (fills, strokes), return the type of the Paint.  This
-   * is an expanded type that includes whether this is a solid fill, a gradient, or
-   * a pattern.
-   */
-  static nsresult GetPaintType(PRUint16 *aPaintType, const nsStyleSVGPaint& aPaint, 
-                               nsIContent *aContent, nsIPresShell *aPresShell);
 
   /*
    * Creates a bounding box by walking the children and doing union.

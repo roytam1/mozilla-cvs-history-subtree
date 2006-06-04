@@ -79,6 +79,8 @@ const ICON_DATAURL_PREFIX = "data:image/x-icon;base64,";
 // Supported extensions for Sherlock plugin icons
 const SHERLOCK_ICON_EXTENSIONS = [".gif", ".png", ".jpg", ".jpeg"];
 
+const NEW_LINES = /(\r\n|\r|\n)/;
+
 // Set an arbitrary cap on the maximum icon size. Without this, large icons can
 // cause big delays when loading them at startup.
 const MAX_ICON_SIZE   = 10000;
@@ -253,19 +255,20 @@ function b64(aBytes) {
   return out;
 }
 
-function iconLoadListener(aChannel, aEngine) {
-  this._countRead = 0;
+function loadListener(aChannel, aEngine, aCallback) {
   this._channel = aChannel;
   this._bytes = [],
   this._engine = aEngine;
+  this._callback = aCallback;
 }
-iconLoadListener.prototype = {
+loadListener.prototype = {
+  _callback: null,
   _channel: null,
   _countRead: 0,
   _engine: null,
   _stream: null,
 
-  QueryInterface: function SRCH_iconLoad_QI(aIID) {
+  QueryInterface: function SRCH_loadQI(aIID) {
     if (aIID.equals(Ci.nsISupports)           ||
         aIID.equals(Ci.nsIRequestObserver)    ||
         aIID.equals(Ci.nsIStreamListener)     ||
@@ -281,40 +284,32 @@ iconLoadListener.prototype = {
   },
 
   // nsIRequestObserver
-  onStartRequest: function SRCH_iconLoadStartR(aRequest, aContext) {
-    LOG("iconLoadListener: Starting icon request.");
+  onStartRequest: function SRCH_loadStartR(aRequest, aContext) {
+    LOG("loadListener: Starting request: " + aRequest.name);
     this._stream = Cc["@mozilla.org/binaryinputstream;1"].
                    createInstance(Ci.nsIBinaryInputStream);
   },
 
-  onStopRequest: function SRCH_iconLoadStopR(aRequest, aContext, aStatusCode) {
-    LOG("iconLoadListener: Stopping icon request.");
-    var httpChannel = this._channel.QueryInterface(Ci.nsIHttpChannel);
-    if ((httpChannel && httpChannel.requestSucceeded) &&
-        Components.isSuccessCode(aStatusCode)         &&
-        this._countRead > 0) {
+  onStopRequest: function SRCH_loadStopR(aRequest, aContext, aStatusCode) {
+    LOG("loadListener: Stopping request: " + aRequest.name);
 
-      if (this._countRead < MAX_ICON_SIZE) {
-        var str = b64(this._bytes);
-        this._engine._iconURI = makeURI(ICON_DATAURL_PREFIX + str);
-
-        // The engine might not have a file yet, if it's being downloaded,
-        // because the request for the engine file itself (_onLoad) may not yet
-        // have occured. In that case, this change will be written to file when
-        // _onLoad is called.
-        if (this._engine._file)
-          this._engine._serializeToFile();
-        notifyAction(this._engine, SEARCH_ENGINE_CHANGED);
-      }
-    }
+    var httpFailed = (aRequest instanceof Ci.nsIHttpChannel) &&
+                     !aRequest.requestSucceeded;
+    if (httpFailed || !Components.isSuccessCode(aStatusCode) ||
+        this._countRead == 0) {
+      LOG("loadListener: request failed!");
+      // send null so the callback can deal with the failure
+      this._callback(null, this._engine);
+    } else
+      this._callback(this._bytes, this._engine);
     this._channel = null;
     this._engine  = null;
   },
 
   // nsIStreamListener
-  onDataAvailable: function SRCH_iconLoadDAvailable(aRequest, aContext,
-                                                    aInputStream, aOffset,
-                                                    aCount) {
+  onDataAvailable: function SRCH_loadDAvailable(aRequest, aContext,
+                                                aInputStream, aOffset,
+                                                aCount) {
     this._stream.setInputStream(aInputStream);
 
     // Get a byte array of the data
@@ -323,13 +318,13 @@ iconLoadListener.prototype = {
   },
 
   // nsIChannelEventSink
-  onChannelRedirect: function SRCH_iconLoadCRedirect(aOldChannel, aNewChannel,
-                                                     aFlags) {
+  onChannelRedirect: function SRCH_loadCRedirect(aOldChannel, aNewChannel,
+                                                 aFlags) {
     this._channel = aNewChannel;
   },
 
   // nsIInterfaceRequestor
-  getInterface: function SRCH_iconLoad_GI(aIID) {
+  getInterface: function SRCH_load_GI(aIID) {
     return this.QueryInterface(aIID);
   },
 
@@ -385,11 +380,11 @@ function closeSafeOutputStream(aFOS) {
  *        The URL string from which to create an nsIURI.
  * @returns an nsIURI object, or null if the creation of the URI failed.
  */
-function makeURI(aURLSpec) {
+function makeURI(aURLSpec, aCharset) {
   var ios = Cc["@mozilla.org/network/io-service;1"].
             getService(Ci.nsIIOService);
   try {
-    return ios.newURI(aURLSpec, null, null);
+    return ios.newURI(aURLSpec, aCharset, null);
   } catch (ex) { }
 
   return null;
@@ -409,56 +404,127 @@ function getDir(aKey) {
   return dir;
 }
 
-// This isn't a full list - this is just copied over from
-// nsInternetSearchService to maintain backwards compat with Firefox 1.0.x
-const kCharsetCodes = [];
-kCharsetCodes[0] = "x-mac-roman";
-kCharsetCodes[6] = "x-mac-greek";
-kCharsetCodes[35] = "x-mac-turkish";
-kCharsetCodes[513] = "ISO-8859-1";
-kCharsetCodes[514] = "ISO-8859-2";
-kCharsetCodes[517] = "ISO-8859-5";
-kCharsetCodes[518] = "ISO-8859-6";
-kCharsetCodes[519] = "ISO-8859-7";
-kCharsetCodes[520] = "ISO-8859-8";
-kCharsetCodes[521] = "ISO-8859-9";
-kCharsetCodes[1049] = "IBM864";
-kCharsetCodes[1280] = "windows-1252";
-kCharsetCodes[1281] = "windows-1250";
-kCharsetCodes[1282] = "windows-1251";
-kCharsetCodes[1283] = "windows-1253";
-kCharsetCodes[1284] = "windows-1254";
-kCharsetCodes[1285] = "windows-1255";
-kCharsetCodes[1286] = "windows-1256";
-kCharsetCodes[1536] = "us-ascii";
-kCharsetCodes[1584] = "GB2312";
-kCharsetCodes[1585] = "x-gbk";
-kCharsetCodes[1600] = "EUC-KR";
-kCharsetCodes[2080] = "ISO-2022-JP";
-kCharsetCodes[2096] = "ISO-2022-CN";
-kCharsetCodes[2112] = "ISO-2022-KR";
-kCharsetCodes[2336] = "EUC-JP";
-kCharsetCodes[2352] = "GB2312";
-kCharsetCodes[2353] = "x-euc-tw";
-kCharsetCodes[2368] = "EUC-KR";
-kCharsetCodes[2561] = "Shift_JIS";
-kCharsetCodes[2562] = "KOI8-R";
-kCharsetCodes[2563] = "Big5";
-kCharsetCodes[2565] = "HZ-GB-2312";
-
 /**
- * Gets a character set name from a given code.
- * @param aCode
- *        One of the codes from the kCharsetCodes table, representing the
- *        requested charset.
- * @returns the requested character set name, or the default character set name
- *          if it doesn't exist.
+ * The following two functions are essentially copied from
+ * nsInternetSearchService. They are required for backwards compatibility.
  */
-function getCharSetFromCode(aCode) {
-  if (kCharsetCodes[aCode])
-    return kCharsetCodes[aCode];
+function queryCharsetFromCode(aCode) {
+  const codes = [];
+  codes[0] = "x-mac-roman";
+  codes[6] = "x-mac-greek";
+  codes[35] = "x-mac-turkish";
+  codes[513] = "ISO-8859-1";
+  codes[514] = "ISO-8859-2";
+  codes[517] = "ISO-8859-5";
+  codes[518] = "ISO-8859-6";
+  codes[519] = "ISO-8859-7";
+  codes[520] = "ISO-8859-8";
+  codes[521] = "ISO-8859-9";
+  codes[1049] = "IBM864";
+  codes[1280] = "windows-1252";
+  codes[1281] = "windows-1250";
+  codes[1282] = "windows-1251";
+  codes[1283] = "windows-1253";
+  codes[1284] = "windows-1254";
+  codes[1285] = "windows-1255";
+  codes[1286] = "windows-1256";
+  codes[1536] = "us-ascii";
+  codes[1584] = "GB2312";
+  codes[1585] = "x-gbk";
+  codes[1600] = "EUC-KR";
+  codes[2080] = "ISO-2022-JP";
+  codes[2096] = "ISO-2022-CN";
+  codes[2112] = "ISO-2022-KR";
+  codes[2336] = "EUC-JP";
+  codes[2352] = "GB2312";
+  codes[2353] = "x-euc-tw";
+  codes[2368] = "EUC-KR";
+  codes[2561] = "Shift_JIS";
+  codes[2562] = "KOI8-R";
+  codes[2563] = "Big5";
+  codes[2565] = "HZ-GB-2312";
+  
+  if (codes[aCode])
+    return codes[aCode];
 
   return getLocalizedPref("intl.charset.default", DEFAULT_QUERY_CHARSET);
+}
+function fileCharsetFromCode(aCode) {
+  const codes = [
+    "x-mac-roman",           // 0
+    "Shift_JIS",             // 1
+    "Big5",                  // 2
+    "EUC-KR",                // 3
+    "X-MAC-ARABIC",          // 4
+    "X-MAC-HEBREW",          // 5
+    "X-MAC-GREEK",           // 6
+    "X-MAC-CYRILLIC",        // 7
+    "X-MAC-DEVANAGARI" ,     // 9
+    "X-MAC-GURMUKHI",        // 10
+    "X-MAC-GUJARATI",        // 11
+    "X-MAC-ORIYA",           // 12
+    "X-MAC-BENGALI",         // 13
+    "X-MAC-TAMIL",           // 14
+    "X-MAC-TELUGU",          // 15
+    "X-MAC-KANNADA",         // 16
+    "X-MAC-MALAYALAM",       // 17
+    "X-MAC-SINHALESE",       // 18
+    "X-MAC-BURMESE",         // 19
+    "X-MAC-KHMER",           // 20
+    "X-MAC-THAI",            // 21
+    "X-MAC-LAOTIAN",         // 22
+    "X-MAC-GEORGIAN",        // 23
+    "X-MAC-ARMENIAN",        // 24
+    "GB2312",                // 25
+    "X-MAC-TIBETAN",         // 26
+    "X-MAC-MONGOLIAN",       // 27
+    "X-MAC-ETHIOPIC",        // 28
+    "X-MAC-CENTRALEURROMAN", // 29
+    "X-MAC-VIETNAMESE",      // 30
+    "X-MAC-EXTARABIC"        // 31
+  ];
+  // Sherlock files have always defaulted to x-mac-roman, so do that here too
+  return codes[aCode] || codes[0];
+}
+
+/**
+ * Returns a string interpretation of aBytes using aCharset, or null on
+ * failure.
+ */
+function bytesToString(aBytes, aCharset) {
+  var converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"].
+                  createInstance(Ci.nsIScriptableUnicodeConverter);
+  LOG("bytesToString: converting using charset: " + aCharset);
+
+  try {
+    converter.charset = aCharset;
+    return converter.convertFromByteArray(aBytes, aBytes.length);
+  } catch (ex) {}
+
+  return null;
+}
+
+/**
+ * Converts an array of bytes representing a Sherlock file into an array of
+ * lines representing the useful data from the file.
+ *
+ * @param aBytes
+ *        The array of bytes representing the Sherlock file.
+ * @param aCharsetCode
+ *        An integer value representing a character set code to be passed to
+ *        fileCharsetFromCode, or null for the default Sherlock encoding.
+ */
+function sherlockBytesToLines(aBytes, aCharsetCode) {
+  // fileCharsetFromCode returns the default encoding if aCharsetCode is null
+  var charset = fileCharsetFromCode(aCharsetCode);
+
+  var dataString = bytesToString(aBytes, charset);
+  ENSURE(dataString, "sherlockBytesToLines: Couldn't convert byte array!",
+         Cr.NS_ERROR_FAILURE);
+
+  // Split the string into lines, and filter out comments and
+  // whitespace-only lines
+  return dataString.split(NEW_LINES).filter(isUsefulLine);
 }
 
 /**
@@ -528,9 +594,6 @@ function getBoolPref(aName, aDefault) {
  * @param aName
  *        A name to "sanitize". Can be an empty string, in which case a random
  *        8 character filename will be produced.
- * @param aExt
- *        A file extension to use for the file. If not provided, defaults to
- *        XML_FILE_EXT.
  * @returns A nsIFile object in the user's search engines directory with a
  *          unique sanitized name.
  */
@@ -560,8 +623,9 @@ function sanitizeName(aName) {
 
   if (!name) {
     // Our input had no valid characters - use a random name
+    var cl = chars.length - 1;
     for (var i = 0; i < 8; ++i)
-      name += chars.charAt(Math.round(Math.random() * (chars.length - 1)));
+      name += chars.charAt(Math.round(Math.random() * cl));
   }
 
   return name;
@@ -592,7 +656,7 @@ function notifyAction(aEngine, aVerb) {
  * @see kInvalidWords.
  */
 function QueryParameter(aName, aValue) {
-  ENSURE_ARG(aName && aValue, "missing name or value for QueryParameter!");
+  ENSURE_ARG(aName && (aValue != null), "missing name or value for QueryParameter!");
 
   ENSURE(!kInvalidWords.test(aValue),
          "Illegal value while creating a QueryParameter",
@@ -776,7 +840,7 @@ function Engine(aLocation, aSourceDataType, aIsReadOnly) {
 Engine.prototype = {
   // The engine's alias.
   _alias: null,
-  // The data describing the engine. Is either an array of lines, for Sherlock
+  // The data describing the engine. Is either an array of bytes, for Sherlock
   // files, or an XML document element, for XML plugins.
   _data: null,
   // The engine's data type. See data types (DATA_) defined above.
@@ -787,17 +851,19 @@ Engine.prototype = {
   _description: "",
   // The file from which the plugin was loaded.
   _file: null,
+  // Set to true if the engine has a preferred icon (an icon that should not be
+  // overridden by a non-preferred icon).
+  _hasPreferredIcon: null,
   // Whether the engine is hidden from the user.
   _hidden: null,
-  // The XMLHTTPRequest object used to download the engine.
-  // (null for engines loaded from disk)
-  _req: null,
   // The engine's name.
   _name: null,
   // The engine type. See engine types (TYPE_) defined above.
   _type: null,
   // The name of the charset used to submit the search terms.
   _queryCharset: null,
+  // A URL string pointing to the engine's search form.
+  _searchForm: null,
   // The URI object from which the engine was retrieved.
   // This is null for local plugins, and is only used for error messages and
   // logging.
@@ -831,20 +897,12 @@ Engine.prototype = {
         this._data = doc.documentElement;
         break;
       case SEARCH_DATA_TEXT:
-        fileInStream.QueryInterface(Ci.nsILineInputStream);
+        var binaryInStream = Cc["@mozilla.org/binaryinputstream;1"].
+                             createInstance(Ci.nsIBinaryInputStream);
+        binaryInStream.setInputStream(fileInStream);
 
-        var line = { value: "" };
-        var more = false;
-        var lines = [];
-
-        do {
-          more = fileInStream.readLine(line);
-          // Filter out comments and whitespace-only lines
-          if (isUsefulLine(line.value))
-            lines.push(line.value);
-        } while (more);
-
-        this._data = lines;
+        var bytes = binaryInStream.readByteArray(binaryInStream.available());
+        this._data = bytes;
 
         break;
       default:
@@ -868,49 +926,14 @@ Engine.prototype = {
                 Cr.NS_ERROR_UNEXPECTED);
 
     LOG("_initFromURI: Downloading engine from: \"" + this._uri.spec + "\".");
-    var mimeType = "";
-    switch (this._dataType) {
-      case SEARCH_DATA_XML:
-        mimeType = "text/xml";
-        break;
-      case SEARCH_DATA_TEXT:
-        mimeType = "text/plain";
-        break;
-      default:
-        ERROR("Bogus engine _dataType: \"" + this._dataType + "\"",
-              Cr.NS_ERROR_UNEXPECTED);
-    }
 
-    this._req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
-                createInstance(Ci.nsIXMLHttpRequest);
-    this._req.open("GET", this._uri.spec, true);
-    this._req.overrideMimeType(mimeType);
-    this._req.setRequestHeader("Cache-Control", "no-cache");
+    var ios = Cc["@mozilla.org/network/io-service;1"].
+              getService(Ci.nsIIOService);
+    var chan = ios.newChannelFromURI(this._uri);
 
-    var self = this;
-    this._req.send(null);
-    this._req.onerror = function (event) { self._onError(event); };
-    this._req.onload  = function (event) { self._onLoad(event);  };
-  },
-
-  /**
-   * Handle an error during the load of an engine by prompting the user to
-   * notify him that the load failed.
-   */
-  _onError: function SRCH_ENG_onError(aEvent) {
-    var sbs = Cc["@mozilla.org/intl/stringbundle;1"].
-              getService(Ci.nsIStringBundleService);
-    var searchBundle = sbs.createBundle(SEARCH_BUNDLE);
-    var brandBundle = sbs.createBundle(BRAND_BUNDLE);
-    var brandName = brandBundle.GetStringFromName("brandShortName");
-    var title = searchBundle.GetStringFromName("error_loading_engine_title");
-    var text = searchBundle.formatStringFromName("error_loading_engine_msg",
-                                                 [brandName, this._location],
-                                                 2);
-
-    var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].
-             getService(Ci.nsIWindowWatcher);
-    ww.getNewPrompter(null).alert(title, text);
+    var listener = new loadListener(chan, this, this._onLoad);
+    chan.notificationCallbacks = listener;
+    chan.asyncOpen(listener, null);
   },
 
   /**
@@ -918,45 +941,65 @@ Engine.prototype = {
    * triggers parsing of the data. The engine is then flushed to disk. Notifies
    * the search service once initialization is complete.
    */
-  _onLoad: function SRCH_ENG_onLoad(aEvent) {
+  _onLoad: function SRCH_ENG_onLoad(aBytes, aEngine) {
+    /**
+     * Handle an error during the load of an engine by prompting the user to
+     * notify him that the load failed.
+     */
+    function onError() {
+      var sbs = Cc["@mozilla.org/intl/stringbundle;1"].
+                getService(Ci.nsIStringBundleService);
+      var searchBundle = sbs.createBundle(SEARCH_BUNDLE);
+      var brandBundle = sbs.createBundle(BRAND_BUNDLE);
+      var brandName = brandBundle.GetStringFromName("brandShortName");
+      var title = searchBundle.GetStringFromName("error_loading_engine_title");
+      var text = searchBundle.formatStringFromName("error_loading_engine_msg",
+                                                   [brandName, aEngine._location],
+                                                   2);
 
-    var httpChannel = this._req.channel.QueryInterface(Ci.nsIHttpChannel);
-    if (this._req.readyState != 4 || !httpChannel.requestSucceeded) {
-      this._onError();
-      LOG("_onLoad: Request for " + this._location + " failed!");
+      var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].
+               getService(Ci.nsIWindowWatcher);
+      ww.getNewPrompter(null).alert(title, text);
+    }
+
+    if (!aBytes) {
+      onError();
       return;
     }
 
-    switch (this._dataType) {
+    switch (aEngine._dataType) {
       case SEARCH_DATA_XML:
-        this._data = this._req.responseXML.documentElement;
+        var dataString = bytesToString(aBytes, "UTF-8");
+        ENSURE(dataString, "_onLoad: Couldn't convert byte array!",
+               Cr.NS_ERROR_FAILURE);
+        var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
+                     createInstance(Ci.nsIDOMParser);
+        var doc = parser.parseFromString(dataString, "text/xml");
+        aEngine._data = doc.documentElement;
         break;
       case SEARCH_DATA_TEXT:
-        this._data = this._req.responseText.split(/(\r\n|\n\r|\r|\n)/);
-
-        // Filter out comments and whitespace-only lines.
-        this._data.filter(isUsefulLine);
+        aEngine._data = aBytes;
         break;
       default:
-        this._onError();
+        onError();
         LOG("_onLoad: Bogus engine _dataType: \"" + this._dataType + "\"");
         return;
     }
     try {
       // Initialize the engine from the obtained data
-      this._initFromData();
+      aEngine._initFromData();
     } catch (ex) {
-      // Report an error to the user
       LOG("_onLoad: Failed to init engine!\n" + ex);
-      this._onError();
+      // Report an error to the user
+      onError();
       return;
     }
 
     // Write the engine to file
-    this._serializeToFile();
+    aEngine._serializeToFile();
 
     // Notify the search service of the sucessful load
-    notifyAction(this, SEARCH_ENGINE_LOADED);
+    notifyAction(aEngine, SEARCH_ENGINE_LOADED);
   },
 
   /**
@@ -967,8 +1010,15 @@ Engine.prototype = {
    *         data scheme. Icons with HTTP[S] schemes will be downloaded and
    *         converted to data URIs for storage in the engine XML files, if
    *         the engine is not readonly.
+   *  @param aIsPreferred
+   *         Whether or not this icon is to be preferred. Preferred icons can
+   *         override non-preferred icons.
    */
-  _setIcon: function SRCH_ENG_setIcon(aIconURL) {
+  _setIcon: function SRCH_ENG_setIcon(aIconURL, aIsPreferred) {
+    // If we already have a preferred icon, and this isn't a preferred icon,
+    // just ignore it.
+    if (this._hasPreferredIcon && !aIsPreferred)
+      return;
 
     var uri = makeURI(aIconURL);
 
@@ -982,6 +1032,8 @@ Engine.prototype = {
     switch (uri.scheme) {
       case "data":
         this._iconURI = uri;
+        notifyAction(this, SEARCH_ENGINE_CHANGED);
+        this._hasPreferredIcon = aIsPreferred;
         break;
       case "http":
       case "https":
@@ -993,7 +1045,33 @@ Engine.prototype = {
           var ios = Cc["@mozilla.org/network/io-service;1"].
                     getService(Ci.nsIIOService);
           var chan = ios.newChannelFromURI(uri);
-          var listener = new iconLoadListener(chan, this);
+
+          function iconLoadCallback(aByteArray, aEngine) {
+            // This callback may run after we've already set a preferred icon,
+            // so check again.
+            if (aEngine._hasPreferredIcon && !aIsPreferred)
+              return;
+
+            if (!aByteArray || aByteArray.length > MAX_ICON_SIZE) {
+              LOG("iconLoadCallback: engine too large!");
+              return;
+            }
+
+            var str = b64(aByteArray);
+            aEngine._iconURI = makeURI(ICON_DATAURL_PREFIX + str);
+
+            // The engine might not have a file yet, if it's being downloaded,
+            // because the request for the engine file itself (_onLoad) may not
+            // yet be complete. In that case, this change will be written to
+            // file when _onLoad is called.
+            if (aEngine._file)
+              aEngine._serializeToFile();
+
+            notifyAction(aEngine, SEARCH_ENGINE_CHANGED);
+            aEngine._hasPreferredIcon = aIsPreferred;
+          }
+
+          var listener = new loadListener(chan, this, iconLoadCallback);
           chan.notificationCallbacks = listener;
           chan.asyncOpen(listener, null);
         }
@@ -1062,12 +1140,12 @@ Engine.prototype = {
                 "Can't call _initFromMetaData on a readonly engine!",
                 Cr.NS_ERROR_FAILURE);
 
+    this._urls.push(new EngineURL("text/html", aMethod, aTemplate));
+
     this._name = aName;
     this._alias = aAlias;
     this._description = aDescription;
-    this._setIcon(aIconURL);
-
-    this._urls.push(new EngineURL("text/html", aMethod, aTemplate));
+    this._setIcon(aIconURL, true);
 
     this._serializeToFile();
   },
@@ -1075,6 +1153,8 @@ Engine.prototype = {
   /**
    * Extracts data from an OpenSearch URL element and creates an EngineURL
    * object which is then added to the engine's list of URLs.
+   *
+   * @throws NS_ERROR_FAILURE if a URL object could not be created.
    *
    * @see http://opensearch.a9.com/spec/1.1/querysyntax/#urltag.
    * @see EngineURL()
@@ -1086,13 +1166,25 @@ Engine.prototype = {
     var method   = aElement.getAttribute("method") || "GET";
     var template = aElement.getAttribute("template");
 
-    var url = new EngineURL(type, method, template);
+    try {
+      var url = new EngineURL(type, method, template);
+    } catch (ex) {
+      LOG("_parseURL: failed to add " + template + " as a URL");
+      throw Cr.NS_ERROR_FAILURE;
+    }
 
     for (var i = 0; i < aElement.childNodes.length; ++i) {
       var param = aElement.childNodes[i];
-      if (param.localName == "Param")
-        url.addParam(param.getAttribute("name"), param.getAttribute("value"));
+      if (param.localName == "Param") {
+        try {
+          url.addParam(param.getAttribute("name"), param.getAttribute("value"));
+        } catch (ex) {
+          // Ignore failure
+          LOG("_parseURL: Url element has an invalid param");
+        }
+      }
     }
+
     this._urls.push(url);
   },
 
@@ -1104,12 +1196,12 @@ Engine.prototype = {
     LOG("_parseImage: Image textContent: \"" + aElement.textContent + "\"");
     if (aElement.getAttribute("width")  == "16" &&
         aElement.getAttribute("height") == "16") {
-      this._setIcon(aElement.textContent);
+      this._setIcon(aElement.textContent, true);
     }
   },
 
   _parseAsMozSearch: function SRCH_ENG_parseAsMoz() {
-    //XXX for now, just forward to the OpenSearch parser
+    //forward to the OpenSearch parser
     this._parseAsOpenSearch();
   },
 
@@ -1130,16 +1222,27 @@ Engine.prototype = {
           this._description = child.textContent;
           break;
         case "Url":
-          this._parseURL(child);
+          try {
+            this._parseURL(child);
+          } catch (ex) {
+            // Parsing of the element failed, just skip it.
+          }
           break;
         case "Image":
           this._parseImage(child);
           break;
+        case "InputEncoding":
+          this._queryCharset = child.textContent.toUpperCase();
+          break;
+        // Non-OpenSearch elements
         case "Alias":
           this._alias = child.textContent;
           break;
-        case "InputEncoding":
-          this._queryCharset = child.textContent.toUpperCase();
+        case "SuggestionURL":
+          this._createSuggestionURI(child.textContent);
+          break;
+        case "SearchForm":
+          this._searchForm = child.textContent;
           break;
       }
     }
@@ -1374,19 +1477,46 @@ Engine.prototype = {
       throw Cr.NS_ERROR_FAILURE;
     }
 
-    var searchSection = getSection(this._data, "search");
+    // First try converting our byte array using the default Sherlock encoding.
+    // If this fails, or if we find a sourceTextEncoding attribute, we need to
+    // reconvert the byte array using the specified encoding.
+    var sherlockLines, searchSection, sourceTextEncoding;
+    try {
+      sherlockLines = sherlockBytesToLines(this._data);
+      searchSection = getSection(sherlockLines, "search");
+      sourceTextEncoding = parseInt(searchSection["sourcetextencoding"]);
+      if (sourceTextEncoding) {
+        // Re-convert the bytes using the found sourceTextEncoding
+        sherlockLines = sherlockBytesToLines(this._data, sourceTextEncoding);
+        searchSection = getSection(sherlockLines, "search");
+      }
+    } catch (ex) {
+      // The conversion using the default charset failed. Remove any non-ascii
+      // bytes and try to find a sourceTextEncoding.
+      var asciiBytes = this._data.filter(function (n) {return !(0x80 & n);});
+      var asciiString = String.fromCharCode.apply(null, asciiBytes);
+      sherlockLines = asciiString.split(NEW_LINES).filter(isUsefulLine);
+      searchSection = getSection(sherlockLines, "search");
+      sourceTextEncoding = parseInt(searchSection["sourcetextencoding"]);
+      if (sourceTextEncoding) {
+        sherlockLines = sherlockBytesToLines(this._data, sourceTextEncoding);
+        searchSection = getSection(sherlockLines, "search");
+      } else
+        ERROR("Couldn't find a working charset", Cr.NS_ERROR_FAILURE);
+    }
+
     LOG("_parseAsSherlock: Search section:\n" + searchSection.toSource());
 
     this._name = searchSection["name"] || err("Missing name!");
     this._description = searchSection["description"] || "";
     this._queryCharset = searchSection["querycharset"] ||
-                            getCharSetFromCode(searchSection["queryencoding"]);
+                         queryCharsetFromCode(searchSection["queryencoding"]);
 
     // XXX should this really fall back to GET?
     var method = (searchSection["method"] || "GET").toUpperCase();
     var template = searchSection["action"] || err("Missing action!");
 
-    var inputs        = getInputs(this._data);
+    var inputs = getInputs(sherlockLines);
     LOG("_parseAsSherlock: Inputs:\n" + inputs.toSource());
 
     var url = null;
@@ -1507,6 +1637,13 @@ Engine.prototype = {
     closeSafeOutputStream(fos);
   },
 
+  _createSuggestionURI: function SRCH_ENG_createSuggestionURI	(aURLString) {
+    var suggestionURI = makeURI(aURLString,  this._queryCharset);
+    if (suggestionURI &&
+        (suggestionURI.schemeIs("http") || suggestionURI.schemeIs("https")))
+      this._suggestionURI = suggestionURI;
+  },
+
   /**
    * Remove the engine's file from disk. The search service calls this once it
    * removes the engine from its internal store. This function will throw if
@@ -1555,6 +1692,10 @@ Engine.prototype = {
     }
   },
 
+  get suggestionURI() {
+    return this._suggestionURI;
+  },
+
   get iconURI() {
     return this._iconURI;
   },
@@ -1587,19 +1728,23 @@ Engine.prototype = {
   },
 
   get searchForm() {
-    // XXX OpenSearch has a searchForm attribute, should use it instead of this
-    // ugly ugly hack
-    return makeURI("http://" + makeURI(this._urls[0].template).host).spec;
+    if (!this._searchForm) {
+      // No searchForm specified in the engine definition file, use the prePath
+      // (e.g. https://foo.com for https://foo.com/search.php?q=bar).
+      this._searchForm = makeURI(this._urls[0].template).prePath;
+    }
+
+    return this._searchForm;
   },
 
   get queryCharset() {
     if (this._queryCharset)
       return this._queryCharset;
-    return this._queryCharset = getCharSetFromCode(/* get the default */);
+    return this._queryCharset = queryCharsetFromCode(/* get the default */);
   },
 
   addParam: function SRCH_ENG_addParam(aName, aValue) {
-    ENSURE_ARG(aName && aValue,
+    ENSURE_ARG(aName && (aValue != null),
                "missing name or value for nsISearchEngine::addParam!");
     ENSURE_WARN(!this._readOnly,
                 "called nsISearchEngine::addParam on a read-only engine!",
@@ -1611,6 +1756,11 @@ Engine.prototype = {
   getSubmission: function SRCH_ENG_getSubmission(aData) {
     ENSURE_WARN(this._urls[0], "engine object has no URL!",
                 Cr.NS_ERROR_UNEXPECTED);
+
+    if (!aData) {
+      // Return a dummy submission object with our searchForm attribute
+      return new Submission(makeURI(this.searchForm), null);
+    }
 
     LOG("getSubmission: In data: \"" + aData + "\"");
     var textToSubURI = Cc["@mozilla.org/intl/texttosuburi;1"].
@@ -1720,7 +1870,7 @@ SearchService.prototype = {
       var file = files.nextFile;
 
       // Ignore hidden and empty files, and directories
-      if (file.fileSize == 0 || !file.isFile() || file.isHidden())
+      if (!file.isFile() || file.fileSize == 0 || file.isHidden())
         continue;
 
       var fileURL = ios.newFileURI(file).QueryInterface(Ci.nsIURL);
@@ -2006,7 +2156,7 @@ SearchService.prototype = {
       LOG("addEngine: Error adding engine:\n" + ex);
       throw Cr.NS_ERROR_FAILURE;
     }
-    engine._setIcon(aIconURL);
+    engine._setIcon(aIconURL, false);
   },
 
   removeEngine: function SRCH_SVC_removeEngine(aEngine) {

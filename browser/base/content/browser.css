@@ -17,6 +17,13 @@ menuitem.spell-suggestion {
   font-size: 12px !important;
 }
 
+%ifdef MOZ_PLACES
 #PersonalToolbar > #bookmarksBarShowPlaces > .toolbarbutton-text {
   visibility: collapse;
+}
+%endif
+
+/* apply Fitts' law to the notification bar's close button */
+window[sizemode="maximized"] #content .notification-inner {
+	border-right: 0px !important;
 }

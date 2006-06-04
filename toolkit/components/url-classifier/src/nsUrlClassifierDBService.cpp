@@ -72,6 +72,37 @@ static nsUrlClassifierDBService* sUrlClassifierDBService;
 static nsIThread* gDbBackgroundThread = nsnull;
 
 // -------------------------------------------------------------------------
+// Wrapper for JS-implemented nsIUrlClassifierCallback that protects against
+// bug 337492.  We should be able to remove this code once that bug is fixed.
+
+#include "nsProxyRelease.h"
+
+class nsUrlClassifierCallbackWrapper : public nsIUrlClassifierCallback
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_FORWARD_NSIURLCLASSIFIERCALLBACK(mInner->)
+
+  nsUrlClassifierCallbackWrapper(nsIUrlClassifierCallback *inner)
+    : mInner(inner)
+  {
+    NS_ADDREF(mInner);
+  }
+
+  ~nsUrlClassifierCallbackWrapper()
+  {
+    nsCOMPtr<nsIThread> mainThread = do_GetMainThread();
+    NS_ProxyRelease(mainThread, mInner);
+  }
+
+private:
+  nsIUrlClassifierCallback *mInner;
+};
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsUrlClassifierCallbackWrapper,
+                              nsIUrlClassifierCallback)
+
+// -------------------------------------------------------------------------
 // Actual worker implemenatation
 class nsUrlClassifierDBServiceWorker : public nsIUrlClassifierDBServiceWorker
 {
@@ -129,7 +160,7 @@ nsUrlClassifierDBServiceWorker::nsUrlClassifierDBServiceWorker()
 }
 nsUrlClassifierDBServiceWorker::~nsUrlClassifierDBServiceWorker()
 {
-  NS_ASSERTION(mConnection != nsnull,
+  NS_ASSERTION(mConnection == nsnull,
                "Db connection not closed, leaking memory!  Call CloseDb "
                "to close the connection.");
 }
@@ -140,6 +171,8 @@ NS_IMETHODIMP
 nsUrlClassifierDBServiceWorker::Exists(const nsACString& tableName,
                                        const nsACString& key,
                                        nsIUrlClassifierCallback *c) {
+  LOG(("Exists\n"));
+
   nsresult rv = OpenDb();
   if (NS_FAILED(rv)) {
     NS_ERROR("Unable to open database");
@@ -154,12 +187,11 @@ nsUrlClassifierDBServiceWorker::Exists(const nsACString& tableName,
   statement.AssignLiteral("SELECT value FROM ");
   statement.Append(dbTableName);
   statement.AppendLiteral(" WHERE key = ?1");
-  nsCOMPtr<mozIStorageStatement> foostatement;
 
-  nsString value;
   rv = mConnection->CreateStatement(statement,
                                     getter_AddRefs(selectStatement));
 
+  nsAutoString value;
   // If CreateStatment failed, this probably means the table doesn't exist.
   // That's ok, we just return an emptry string.
   if (NS_SUCCEEDED(rv)) {
@@ -221,6 +253,7 @@ nsUrlClassifierDBServiceWorker::UpdateTables(const nsACString& updateString,
       if (NS_SUCCEEDED(rv)) {
         // If it's a new table, we must have completed the last table.
         // Go ahead and post the completion to the UI thread.
+        // XXX This shouldn't happen before we commit the transaction.
         if (lastTableLine.Length() > 0)
           c->HandleEvent(lastTableLine);
         lastTableLine.Assign(line);
@@ -251,8 +284,10 @@ NS_IMETHODIMP
 nsUrlClassifierDBServiceWorker::CloseDb()
 {
   if (mConnection != nsnull) {
+    NS_RELEASE(mConnection);
     delete mConnection;
     mConnection = nsnull;
+    LOG(("urlclassifier db closed\n"));
   }
   return NS_OK;
 }
@@ -330,10 +365,17 @@ nsUrlClassifierDBServiceWorker::ProcessUpdateTable(
 
     rv = aUpdateStatement->Execute();
     NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Failed to update");
-  } else if ('-' == op && spacePos == kNotFound) {
+  } else if ('-' == op) {
     // Remove operation of the form "-KEY"
-    const nsDependentCSubstring &key = Substring(aLine, 1);
-    aDeleteStatement->BindUTF8StringParameter(0, key);
+    if (spacePos == kNotFound) {
+      // No trailing tab
+      const nsDependentCSubstring &key = Substring(aLine, 1);
+      aDeleteStatement->BindUTF8StringParameter(0, key);
+    } else {
+      // With trailing tab
+      const nsDependentCSubstring &key = Substring(aLine, 1, spacePos - 1);
+      aDeleteStatement->BindUTF8StringParameter(0, key);
+    }
 
     rv = aDeleteStatement->Execute();
     NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Failed to delete");
@@ -349,6 +391,7 @@ nsUrlClassifierDBServiceWorker::OpenDb()
   if (mConnection != nsnull)
     return NS_OK;
 
+  LOG(("Opening db\n"));
   // Compute database filename
   nsCOMPtr<nsIFile> dbFile;
 
@@ -433,8 +476,15 @@ nsUrlClassifierDBService::Init()
   if (!gUrlClassifierDbServiceLog)
     gUrlClassifierDbServiceLog = PR_NewLogModule("UrlClassifierDbService");
 #endif
+
+  // Force the storage service to be created on the main thread.
+  nsresult rv;
+  nsCOMPtr<mozIStorageService> storageService =
+    do_GetService(MOZ_STORAGE_SERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   // Start the background thread.
-  nsresult rv = NS_NewThread(&gDbBackgroundThread);
+  rv = NS_NewThread(&gDbBackgroundThread);
   if (NS_FAILED(rv))
     return rv;
 
@@ -460,12 +510,16 @@ nsUrlClassifierDBService::Exists(const nsACString& tableName,
 {
   NS_ENSURE_TRUE(gDbBackgroundThread, NS_ERROR_NOT_INITIALIZED);
 
+  nsCOMPtr<nsIUrlClassifierCallback> wrapper =
+      new nsUrlClassifierCallbackWrapper(c);
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
+
   nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
                             NS_GET_IID(nsIUrlClassifierCallback),
-                            c,
+                            wrapper,
                             NS_PROXY_ASYNC,
                             getter_AddRefs(proxyCallback));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -488,12 +542,16 @@ nsUrlClassifierDBService::UpdateTables(const nsACString& updateString,
 {
   NS_ENSURE_TRUE(gDbBackgroundThread, NS_ERROR_NOT_INITIALIZED);
 
+  nsCOMPtr<nsIUrlClassifierCallback> wrapper =
+      new nsUrlClassifierCallbackWrapper(c);
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
+
   nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
                             NS_GET_IID(nsIUrlClassifierCallback),
-                            c,
+                            wrapper,
                             NS_PROXY_ASYNC,
                             getter_AddRefs(proxyCallback));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -527,19 +585,22 @@ nsUrlClassifierDBService::Shutdown()
   if (!gDbBackgroundThread)
     return NS_OK;
 
+  nsresult rv;
   // First close the db connection.
-  nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
-  nsresult rv = NS_GetProxyForObject(gDbBackgroundThread,
-                                     NS_GET_IID(nsIUrlClassifierDBServiceWorker),
-                                     mWorker,
-                                     NS_PROXY_ASYNC,
-                                     getter_AddRefs(proxy));
-  proxy->CloseDb();
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  if (mWorker) {
+    nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
+    rv = NS_GetProxyForObject(gDbBackgroundThread,
+                              NS_GET_IID(nsIUrlClassifierDBServiceWorker),
+                              mWorker,
+                              NS_PROXY_ASYNC,
+                              getter_AddRefs(proxy));
+    proxy->CloseDb();
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
   LOG(("joining background thread"));
 
   gDbBackgroundThread->Shutdown();
   NS_RELEASE(gDbBackgroundThread);
+
   return NS_OK;
 }

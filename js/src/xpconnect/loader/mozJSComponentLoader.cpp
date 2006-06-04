@@ -115,7 +115,7 @@ Reporter(JSContext *cx, const char *message, JSErrorReport *rep)
     /*
      * Make an nsIScriptError, populate it with information from this
      * error, then log it with the console service.  The UI can then
-     * poll the service to update the JavaScript console.
+     * poll the service to update the Error console.
      */
     nsCOMPtr<nsIScriptError> errorObject = 
         do_CreateInstance(NS_SCRIPTERROR_CONTRACTID);
@@ -191,9 +191,9 @@ Debug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 static JSFunctionSpec gGlobalFun[] = {
-    {"dump", Dump, 1 },
-    {"debug", Debug, 1 },
-    {0}
+    {"dump",    Dump,   1,0,0},
+    {"debug",   Debug,  1,0,0},
+    {nsnull,nsnull,0,0,0}
 };
 
 class JSCLContextHelper

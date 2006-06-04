@@ -26,15 +26,11 @@
   list-style-image: url("chrome://browser/skin/Search-bar.png");
 }
 
-.searchbar-dropmarker-image {
-  list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
-}
-
 .autocomplete-textbox-container {
   border: none;
   padding-right: 0px;
   height: 21px !important;
-  margin: 0px -5px 0px -1px;
+  margin: 0px -3px 0px -1px;
 }
 
 .search-go-button {

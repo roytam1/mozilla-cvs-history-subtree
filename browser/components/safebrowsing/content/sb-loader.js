@@ -40,76 +40,79 @@
  * browser/base/content/global-scripts.inc
  */
 
-window.addEventListener("load", SB_startup, false);
+var safebrowsing = {
+  controller: null,
+  globalStore: null,
+  phishWarden: null,
 
-var SB_controller;  // Exported so it's accessible by child windows
-var SB_appContext;  // The context in which our Application lives
-                    // TODO: appContext does not need to be global
+  startup: function() {
+    setTimeout(safebrowsing.deferredStartup, 2000);
 
-function SB_startup() {
-  var Cc = Components.classes;
-  SB_appContext = Cc["@mozilla.org/safebrowsing/application;1"]
-                      .getService();
-  SB_appContext = SB_appContext.wrappedJSObject;
-
-  // Each new browser window needs its own controller. 
-
-  var contentArea = document.getElementById("content");
-  var tabWatcher = new SB_appContext.G_TabbedBrowserWatcher(
-      contentArea,
-      "safebrowsing-watcher",
-      true /*ignore about:blank*/);
-
-  var phishWarden = new SB_appContext.PROT_PhishingWarden();
+    // clean up
+    window.removeEventListener("load", safebrowsing.startup, false);
+  },
   
+  deferredStartup: function() {
+    var Cc = Components.classes;
+    var appContext = Cc["@mozilla.org/safebrowsing/application;1"]
+                     .getService().wrappedJSObject;
+    safebrowsing.globalStore = appContext.PROT_GlobalStore;
 
-  // Register tables
-  // TODO: move table names to a pref
-  phishWarden.registerWhiteTable("goog-white-domain");
-  phishWarden.registerWhiteTable("goog-white-url");
-  phishWarden.registerBlackTable("goog-black-url");
-  phishWarden.registerBlackTable("goog-black-enchash");
-  
-  // Download/update lists if we're in non-enhanced mode
-  phishWarden.maybeToggleUpdateChecking();
+    // Each new browser window needs its own controller. 
 
-  SB_controller = new SB_appContext.PROT_Controller(
-      window,
-      tabWatcher,
-      phishWarden);
+    var contentArea = document.getElementById("content");
 
-  // clean up
-  window.removeEventListener("load", SB_startup, false);
-}
+    var phishWarden = new appContext.PROT_PhishingWarden();
+    safebrowsing.phishWarden = phishWarden;
 
+    // Register tables
+    // XXX: move table names to a pref that we originally will download
+    // from the provider (need to workout protocol details)
+    phishWarden.registerWhiteTable("goog-white-domain");
+    phishWarden.registerWhiteTable("goog-white-url");
+    phishWarden.registerBlackTable("goog-black-url");
 
-// Some utils for our UI.
+    // Download/update lists if we're in non-enhanced mode
+    phishWarden.maybeToggleUpdateChecking();
+    var tabWatcher = new appContext.G_TabbedBrowserWatcher(
+        contentArea,
+        "safebrowsing-watcher",
+        true /*ignore about:blank*/);
+    safebrowsing.controller = new appContext.PROT_Controller(
+        window,
+        tabWatcher,
+        phishWarden);
+    
+    // The initial pages may be a phishing site (e.g., user clicks on a link
+    // in an email message and it opens a new window with a phishing site),
+    // so we need to check all open tabs.
+    safebrowsing.controller.checkAllBrowsers();
+  },
 
-/**
- * Execute a command on a window
- *
- * @param cmd String containing command to execute
- * @param win Reference to Window on which to execute it
- */
-function SB_executeCommand(cmd, win) {
-  try {	
-    var disp = win.document.commandDispatcher;
-    var ctrl = disp.getControllerForCommand(cmd);
-    ctrl.doCommand(cmd);
-  } catch (e) {
-    dump("Exception on command: " + cmd + "\n");
-    dump(e);
+  /**
+   * Clean up.
+   */
+  shutdown: function() {
+    if (safebrowsing.controller) {
+      // If the user shuts down before deferredStartup, there is no controller.
+      safebrowsing.controller.shutdown();
+    }
+    if (safebrowsing.phishWarden) {
+      safebrowsing.phishWarden.shutdown();
+    }
+    
+    window.removeEventListener("unload", safebrowsing.shutdown, false);
   }
 }
 
-/**
- * Execute a command on this window
- *
- * @param cmd String containing command to execute
- */
-function SB_executeCommandLocally(cmd) {
-  SB_executeCommand(cmd, window);
-}
+window.addEventListener("load", safebrowsing.startup, false);
+window.addEventListener("unload", safebrowsing.shutdown, false);
+
+
+// XXX Everything below here should be removed from the global namespace and
+// moved into the safebrowsing object.
+
+// Some utils for our UI.
 
 /**
  * Set status text for a particular link. We look the URLs up in our 
@@ -118,7 +121,7 @@ function SB_executeCommandLocally(cmd) {
  * @param link ID of a link for which we should show status text
  */
 function SB_setStatusFor(link) {
-  var gs = SB_appContext.PROT_GlobalStore;
+  var gs = safebrowsing.globalStore;
   var msg;
   if (link == "safebrowsing-palm-faq-link")
     msg = gs.getPhishingFaqURL(); 

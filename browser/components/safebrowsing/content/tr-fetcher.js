@@ -70,7 +70,7 @@ PROT_TRFetcher.TRY_REKEYING_RESPONSE = "pleaserekey";
 PROT_TRFetcher.prototype.extraQueryParams = {
   sourceid: "firefox-antiphish",
   features: "TrustRank",
-  client: "navclient-auto-ffox"
+  client: "navclient-auto-ffox2"
 };
 
 /**
@@ -118,11 +118,6 @@ PROT_TRFetcher.prototype.get = function(forPage, callback) {
   var url = this.getRequestURL_(forPage);
   var closure = BindToObject(this.onFetchComplete_, this, callback);
   (new PROT_XMLFetcher()).get(url, closure);
-  
-  // Make this true if you want to dump URLs in a format we can use 
-  // for testing
-  if (false)
-    dump("\ntests[\"" + url + "\"] = \"" + forPage + "\";\n");
 };
 
 /**
@@ -166,8 +161,8 @@ PROT_TRFetcher.prototype.extractResponse_ = function(responseText) {
   return this.protocol4Parser_.parse(responseText);
 };
 
+#ifdef DEBUG
 // Unittests
-
 function TEST_PROT_TRFetcher() {
   if (G_GDEBUG) {
     var z = "trfetcher UNITTEST";
@@ -203,3 +198,4 @@ function TEST_PROT_TRFetcher() {
     G_Debug(z, "PASSED");
   }
 }
+#endif

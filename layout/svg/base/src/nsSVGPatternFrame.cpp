@@ -36,7 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsSVGPattern.h"
 #include "nsGkAtoms.h"
 #include "nsIDOMSVGAnimatedEnum.h"
 #include "nsIDOMSVGAnimatedRect.h"
@@ -58,6 +57,8 @@
 #include "nsSVGPatternElement.h"
 #include "nsSVGGeometryFrame.h"
 #include "nsSVGPatternFrame.h"
+#include "nsISVGCairoCanvas.h"
+#include "nsISVGCairoSurface.h"
 
 #ifdef DEBUG_scooter
 static void printCTM(char *msg, nsIDOMSVGMatrix *aCTM);
@@ -81,11 +82,8 @@ nsSVGPatternFrame::~nsSVGPatternFrame()
 // nsISupports methods:
 
 NS_INTERFACE_MAP_BEGIN(nsSVGPatternFrame)
-  NS_INTERFACE_MAP_ENTRY(nsISVGValue)
-  NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsISVGValue)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGPatternFrameBase)
 
 //----------------------------------------------------------------------
@@ -167,14 +165,8 @@ nsSVGPatternFrame::GetType() const
   return nsLayoutAtoms::svgPatternFrame;
 }
 
-PRBool
-nsSVGPatternFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  return !(aFlags & ~nsIFrame::eSVG);
-}
-
 //----------------------------------------------------------------------
-// nsISVGContainerFrame interface:
+// nsSVGContainerFrame methods:
 
 // If our GetCanvasTM is getting called, we
 // need to return *our current* transformation
@@ -199,47 +191,6 @@ nsSVGPatternFrame::GetCanvasTM() {
     }
   }
   return rCTM;  
-}
-
-already_AddRefed<nsSVGCoordCtxProvider> 
-nsSVGPatternFrame::GetCoordContextProvider() {
-  NS_ASSERTION(mParent, "null parent");
-  
-  nsISVGContainerFrame *containerFrame;
-  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), 
-                          (void**)&containerFrame);
-  if (!containerFrame) {
-    NS_ERROR("invalid container");
-    return nsnull;
-  }
-
-  return containerFrame->GetCoordContextProvider();  
-}
-
-NS_IMETHODIMP
-nsSVGPatternFrame::GetBBox(nsIDOMSVGRect **aRect) {
-  *aRect = nsnull;
-
-  if (mBBox) {
-    *aRect = mBBox;
-    return NS_OK;
-  } else {
-    if (mSource) {
-      // Yes, use it!
-      nsCOMPtr<nsISVGChildFrame> callerSVGFrame =
-        do_QueryInterface(NS_STATIC_CAST(nsIFrame*, mSource));
-      if (callerSVGFrame) {
-        return callerSVGFrame->GetBBox(aRect);
-      }
-    } else {
-      // No, we'll use our content parent, then
-      nsCOMPtr<nsISVGChildFrame> aFrame = do_QueryInterface(mParent); 
-      if (aFrame) {
-        return aFrame->GetBBox(aRect);
-      }
-    }
-  }
-  return NS_ERROR_FAILURE;
 }
 
 nsresult
@@ -680,7 +631,7 @@ nsSVGPatternFrame::ConstructCTM(nsIDOMSVGMatrix **aCTM,
     callerBBox->GetWidth(&width);
     callerBBox->GetHeight(&height);
     NS_NewSVGMatrix(getter_AddRefs(tCTM), width, 0.0f, 0.0f, 
-                    height, 0.0f, 0.0f);
+                    height, minx, miny);
   } else {
     NS_NewSVGMatrix(getter_AddRefs(tCTM));
   }
@@ -834,6 +785,85 @@ nsSVGPatternFrame::CreateSurface(nsISVGRendererSurface **aSurface)
   return NS_OK;
 }
 
+//----------------------------------------------------------------------
+// nsSVGPaintServerFrame methods:
+
+struct PatternClosure
+{
+  nsCOMPtr<nsISVGRendererSurface> mSurface;
+  cairo_pattern_t *mPattern;
+};
+
+nsresult
+nsSVGPatternFrame::SetupPaintServer(nsISVGRendererCanvas *aCanvas,
+                                    cairo_t *aCtx,
+                                    nsSVGGeometryFrame *aSource,
+                                    float aOpacity,
+                                    void **aClosure)
+{
+  *aClosure = nsnull;
+
+  nsCOMPtr<nsISVGCairoCanvas> cairoCanvas = do_QueryInterface(aCanvas);
+
+  cairo_matrix_t matrix;
+  cairo_get_matrix(aCtx, &matrix);
+
+  // Paint it!
+  nsCOMPtr<nsISVGRendererSurface> surface;
+  nsCOMPtr<nsIDOMSVGMatrix> pMatrix;
+  cairo_identity_matrix(aCtx);
+  nsresult rv = PaintPattern(aCanvas, getter_AddRefs(surface),
+                             getter_AddRefs(pMatrix), aSource);
+  cairo_set_matrix(aCtx, &matrix);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Get the cairo surface
+  nsCOMPtr<nsISVGCairoSurface> cairoSurface = do_QueryInterface(surface);
+  if (!cairoSurface)
+    return NS_ERROR_FAILURE;
+
+  cairo_surface_t *pattern_surface = cairoSurface->GetSurface();
+  if (!pattern_surface)
+    return NS_ERROR_FAILURE;
+
+  // Translate the pattern frame
+  cairo_matrix_t pmatrix = NS_ConvertSVGMatrixToCairo(pMatrix);
+  cairoCanvas->AdjustMatrixForInitialTransform(&pmatrix);
+  if (cairo_matrix_invert(&pmatrix))
+    return NS_ERROR_FAILURE;
+
+  cairo_pattern_t *surface_pattern =
+    cairo_pattern_create_for_surface(pattern_surface);
+  if (!surface_pattern)
+    return NS_ERROR_FAILURE;
+
+  cairo_pattern_set_matrix (surface_pattern, &pmatrix);
+  cairo_pattern_set_extend (surface_pattern, CAIRO_EXTEND_REPEAT);
+
+  PatternClosure *closure = new PatternClosure;
+  if (!closure) {
+    cairo_pattern_destroy(surface_pattern);
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  cairo_set_source(aCtx, surface_pattern);
+
+  closure->mSurface = surface;
+  closure->mPattern = surface_pattern;
+
+  *aClosure = closure;
+
+  return NS_OK;
+}
+
+void
+nsSVGPatternFrame::CleanupPaintServer(cairo_t *aCtx, void *aClosure)
+{
+  PatternClosure *closure = NS_STATIC_CAST(PatternClosure*, aClosure);
+  cairo_pattern_destroy(closure->mPattern);
+  delete closure;
+}
+
 // -------------------------------------------------------------------------
 // Public functions
 // -------------------------------------------------------------------------
@@ -866,47 +896,6 @@ nsIFrame* NS_NewSVGPatternFrame(nsIPresShell*   aPresShell,
   printf("NS_NewSVGPatternFrame\n");
 #endif
   return it;
-}
-
-// Public function to locate the SVGPatternFrame structure pointed to by a URI
-// and return a nsSVGPatternFrame
-nsresult NS_GetSVGPattern(nsSVGPatternFrame **aPattern, nsIURI *aURI, 
-                          nsIContent *aContent, 
-                          nsIPresShell *aPresShell)
-{
-  *aPattern = nsnull;
-
-#ifdef DEBUG_scooter
-  nsCAutoString uriSpec;
-  aURI->GetSpec(uriSpec);
-  printf("NS_GetSVGPattern: uri = %s\n",uriSpec.get());
-#endif
-  nsIFrame *result;
-  if (!NS_SUCCEEDED(nsSVGUtils::GetReferencedFrame(&result, aURI,
-                                                   aContent, aPresShell)))
-    return NS_ERROR_FAILURE;
-#ifdef DEBUG_scooter
-  const char *contentString;
-  nsIAtom *tag = aContent->Tag();
-  tag->GetUTF8String(&contentString);
-  printf("NS_GetSVGPattern: checking content -- caller content tag is %s, ",
-          contentString);
-  tag = result->GetContent()->Tag();
-  tag->GetUTF8String(&contentString);
-  printf("target content tag is %s\n",
-          contentString);
-#endif
-  // Check to see if we are referencing an ancestor (*not* a good thing)
-  if (result && nsContentUtils::ContentIsDescendantOf(aContent, result->GetContent())) {
-    NS_WARNING("Pattern child references pattern!");
-    return NS_ERROR_FAILURE;
-  }
-  if (result->GetType() == nsLayoutAtoms::svgPatternFrame) {
-    *aPattern = NS_STATIC_CAST(nsSVGPatternFrame*, result);
-    return NS_OK;
-  }
-
-  return NS_ERROR_FAILURE;
 }
 
 #ifdef DEBUG_scooter

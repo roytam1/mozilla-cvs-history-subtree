@@ -116,9 +116,9 @@ NS_IMETHODIMP nsAbDirProperty::GetDirType(PRInt32 *aDirType)
   return GetIntValue("dirType", LDAPDirectory, aDirType);
 }
 
-NS_IMETHODIMP nsAbDirProperty::GetFileName(char* *aFileName)
+NS_IMETHODIMP nsAbDirProperty::GetFileName(nsACString &aFileName)
 {
-  return GetStringValue("filename", "", aFileName);
+  return GetStringValue("filename", EmptyCString(), aFileName);
 }
 
 NS_IMETHODIMP nsAbDirProperty::GetURI(nsACString &aURI)
@@ -287,9 +287,6 @@ NS_IMETHODIMP nsAbDirProperty::CreateDirectoryByURI(const PRUnichar *dirName, co
 NS_IMETHODIMP nsAbDirProperty::AddMailList(nsIAbDirectory *list)
 { return NS_ERROR_NOT_IMPLEMENTED; }
 
-NS_IMETHODIMP nsAbDirProperty::AddMailListWithKey(nsIAbDirectory *list, PRUint32 *key)
-{ return NS_ERROR_NOT_IMPLEMENTED; }
-
 NS_IMETHODIMP nsAbDirProperty::EditMailListToDatabase(const char *uri, nsIAbCard *listCard)
 { return NS_ERROR_NOT_IMPLEMENTED; }
 
@@ -297,12 +294,6 @@ NS_IMETHODIMP nsAbDirProperty::AddCard(nsIAbCard *childCard, nsIAbCard **addedCa
 { return NS_ERROR_NOT_IMPLEMENTED; }
 
 NS_IMETHODIMP nsAbDirProperty::DropCard(nsIAbCard *childCard, PRBool needToCopyCard)
-{ return NS_ERROR_NOT_IMPLEMENTED; }
-
-NS_IMETHODIMP nsAbDirProperty::GetValueForCard(nsIAbCard *card, const char *name, PRUnichar **value)
-{ return NS_ERROR_NOT_IMPLEMENTED; }
-
-NS_IMETHODIMP nsAbDirProperty::SetValueForCard(nsIAbCard *card, const char *name, const PRUnichar *value)
 { return NS_ERROR_NOT_IMPLEMENTED; }
 
 NS_IMETHODIMP nsAbDirProperty::GetSupportsMailingLists(PRBool *aSupportsMailingsLists)
@@ -363,17 +354,17 @@ NS_IMETHODIMP nsAbDirProperty::GetDirectoryProperties(nsIAbDirectoryProperties *
   rv = properties->SetPrefName(m_DirPrefId.get());
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsXPIDLCString prefStringValue;
+  nsCAutoString prefStringValue;
   PRInt32 prefIntValue;
   if (m_DirPrefId.EqualsLiteral("ldap_2.servers.pab") ||
       m_DirPrefId.EqualsLiteral("ldap_2.servers.history"))
   {
     // get default address book name from addressbook.properties 
-    rv = GetLocalizedStringValue("description", "", getter_Copies(prefStringValue));
+    rv = GetLocalizedStringValue("description", EmptyCString(), prefStringValue);
   }
   else
   {
-    rv = GetStringValue("description", "", getter_Copies(prefStringValue));
+    rv = GetStringValue("description", EmptyCString(), prefStringValue);
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -386,17 +377,17 @@ NS_IMETHODIMP nsAbDirProperty::GetDirectoryProperties(nsIAbDirectoryProperties *
   rv = properties->SetDirType(prefIntValue);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = GetFileName(getter_Copies(prefStringValue));
+  rv = GetFileName(prefStringValue);
   NS_ENSURE_SUCCESS(rv, rv);
   
-  rv = properties->SetFileName(prefStringValue);
+  rv = properties->SetFileName(prefStringValue.get());
   NS_ENSURE_SUCCESS(rv, rv);
 
   // the string "s" is the default uri ( <scheme> + "://" + <filename> )
   rv = GetURI(prefStringValue);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = properties->SetURI(prefStringValue);
+  rv = properties->SetURI(prefStringValue.get());
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = GetIntValue("maxHits", kDefaultMaxHits, &prefIntValue);
@@ -405,10 +396,10 @@ NS_IMETHODIMP nsAbDirProperty::GetDirectoryProperties(nsIAbDirectoryProperties *
   rv = properties->SetMaxHits(prefIntValue);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = GetStringValue("auth.dn", nsnull, getter_Copies(prefStringValue));
+  rv = GetStringValue("auth.dn", EmptyCString(), prefStringValue);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = properties->SetAuthDn(prefStringValue);
+  rv = properties->SetAuthDn(prefStringValue.get());
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = GetPalmSyncCategoryId(&prefIntValue);
@@ -481,24 +472,20 @@ NS_IMETHODIMP nsAbDirProperty::GetBoolValue(const char *aName,
 }
 
 NS_IMETHODIMP nsAbDirProperty::GetStringValue(const char *aName,
-                                             const char *aDefaultValue, 
-                                             char * *aResult)
+                                              const nsACString &aDefaultValue, 
+                                              nsACString &aResult)
 {
-  NS_ENSURE_ARG_POINTER(aResult);
-
   if (!m_DirectoryPrefs && NS_FAILED(InitDirectoryPrefs()))
     return NS_ERROR_NOT_INITIALIZED;
 
   nsXPIDLCString value;
 
-  if (NS_SUCCEEDED(m_DirectoryPrefs->GetCharPref(aName, getter_Copies(value))))
-  {
-    /* unfortunately, there may be some prefs out there which look like this */
-    *aResult = value.EqualsLiteral("(null)") ?
-      nsCRT::strdup(aDefaultValue) : ToNewCString(value);
-  }
+    /* unfortunately, there may be some prefs out there which look like (null) */
+  if (NS_SUCCEEDED(m_DirectoryPrefs->GetCharPref(aName, getter_Copies(value))) &&
+      !value.EqualsLiteral("(null"))
+    aResult = value;
   else
-    *aResult = nsCRT::strdup(aDefaultValue);
+    aResult = aDefaultValue;
 
   return NS_OK;
 }
@@ -510,11 +497,9 @@ NS_IMETHODIMP nsAbDirProperty::GetStringValue(const char *aName,
  * "ldap_2.servers.history.description"
  */
 NS_IMETHODIMP nsAbDirProperty::GetLocalizedStringValue(const char *aName,
-                                                       const char *aDefaultValue, 
-                                                       char * *aResult)
+                                                       const nsACString &aDefaultValue, 
+                                                       nsACString &aResult)
 {
-  NS_ENSURE_ARG_POINTER(aResult);
-
   if (!m_DirectoryPrefs && NS_FAILED(InitDirectoryPrefs()))
     return NS_ERROR_NOT_INITIALIZED;
 
@@ -531,9 +516,9 @@ NS_IMETHODIMP nsAbDirProperty::GetLocalizedStringValue(const char *aName,
   }
 
   if (wvalue.IsEmpty())
-    *aResult = aDefaultValue ? nsCRT::strdup(aDefaultValue) : nsnull;
+    aResult = aDefaultValue;
   else
-    *aResult = ToNewUTF8String(wvalue);
+    CopyUTF16toUTF8(wvalue, aResult);
 
   return NS_OK;
 }
@@ -557,12 +542,12 @@ NS_IMETHODIMP nsAbDirProperty::SetBoolValue(const char *aName,
 }
 
 NS_IMETHODIMP nsAbDirProperty::SetStringValue(const char *aName,
-                                             const char *aValue)
+                                              const nsACString &aValue)
 {
   if (!m_DirectoryPrefs && NS_FAILED(InitDirectoryPrefs()))
     return NS_ERROR_NOT_INITIALIZED;
 
-  return m_DirectoryPrefs->SetCharPref(aName, aValue);
+  return m_DirectoryPrefs->SetCharPref(aName, PromiseFlatCString(aValue).get());
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

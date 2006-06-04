@@ -893,8 +893,12 @@ nsTreeContentView::ContentAppended(nsIDocument *aDocument,
                                    nsIContent* aContainer,
                                    PRInt32     aNewIndexInContainer)
 {
-  nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
-  ContentInserted(aDocument, aContainer, child, aNewIndexInContainer);
+  PRUint32 childCount = aContainer->GetChildCount();
+  while ((PRUint32)aNewIndexInContainer < childCount) {
+    nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
+    ContentInserted(aDocument, aContainer, child, aNewIndexInContainer);
+    aNewIndexInContainer++;
+  }
 }
 
 void
@@ -1449,9 +1453,9 @@ nsTreeContentView::UpdateParentIndexes(PRInt32 aIndex, PRInt32 aSkip, PRInt32 aC
 nsIContent*
 nsTreeContentView::GetCell(nsIContent* aContainer, nsITreeColumn* aCol)
 {
-  const PRUnichar* colID;
+  nsCOMPtr<nsIAtom> colAtom;
   PRInt32 colIndex;
-  aCol->GetIdConst(&colID);
+  aCol->GetAtom(getter_AddRefs(colAtom));
   aCol->GetIndex(&colIndex);
 
   // Traverse through cells, try to find the cell by "ref" attribute or by cell
@@ -1463,9 +1467,8 @@ nsTreeContentView::GetCell(nsIContent* aContainer, nsITreeColumn* aCol)
     nsCOMPtr<nsIContent> cell = *iter;
 
     if (cell->Tag() == nsXULAtoms::treecell) {
-      if (colID[0] != 0 && cell->AttrValueIs(kNameSpaceID_None, nsXULAtoms::ref,
-                                             nsDependentString(colID),
-                                             eCaseMatters)) {
+      if (colAtom && cell->AttrValueIs(kNameSpaceID_None, nsXULAtoms::ref,
+                                       colAtom, eCaseMatters)) {
         result = cell;
         break;
       }

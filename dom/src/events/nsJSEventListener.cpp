@@ -176,12 +176,14 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       NS_ENSURE_SUCCESS(rv, rv);
       // filename
       var = do_CreateInstance(NS_VARIANT_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
       rv = var->SetAsWString(scriptEvent->fileName);
       NS_ENSURE_SUCCESS(rv, rv);
       rv = tempargv->AppendElement(var, PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);
       // line number
       var = do_CreateInstance(NS_VARIANT_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
       rv = var->SetAsUint32(scriptEvent->lineNr);
       NS_ENSURE_SUCCESS(rv, rv);
       rv = tempargv->AppendElement(var, PR_FALSE);

@@ -55,12 +55,40 @@ class nsEventChainPreVisitor;
 class nsEventChainPostVisitor;
 class nsIEventListenerManager;
 class nsIPrincipal;
+class nsIDOMRange;
+class nsVoidArray;
+
+// This bit will be set if the node doesn't have nsDOMSlots
+#define NODE_DOESNT_HAVE_SLOTS      0x00000001U
+
+// This bit will be set if the node has a range list in the range list hash
+#define NODE_HAS_RANGELIST          0x00000002U
+
+// This bit will be set if the node has a listener manager in the listener
+// manager hash
+#define NODE_HAS_LISTENERMANAGER    0x00000004U
+
+// Whether this node has had any properties set on it
+#define NODE_HAS_PROPERTIES         0x00000008U
+
+// Whether this node is anonymous
+// NOTE: Should only be used on nsIContent nodes
+#define NODE_IS_ANONYMOUS           0x00000010U
+
+// Whether this node may have a frame
+// NOTE: Should only be used on nsIContent nodes
+#define NODE_MAY_HAVE_FRAME         0x00000020U
+
+// Four bits for the script-type ID
+#define NODE_SCRIPT_TYPE_OFFSET                6
+
+// Remaining bits are node type specific.
+#define NODE_TYPE_SPECIFIC_BITS_OFFSET      0x0a
 
 // IID for the nsINode interface
-// f96eef82-43fc-4eee-9784-4259415e98a9
 #define NS_INODE_IID \
-{ 0x1418310f, 0x2151, 0x47b7, \
-  { 0x9f, 0x4f, 0x4a, 0xc4, 0x95, 0x82, 0xfa, 0xc8 } }
+{ 0x7b23c37c, 0x18e6, 0x4d80, \
+  { 0xbc, 0x95, 0xb3, 0x7b, 0x3b, 0x89, 0x7a, 0xe0 } }
 
 // hack to make egcs / gcc 2.95.2 happy
 class nsINode_base : public nsIDOMGCParticipant {
@@ -81,10 +109,13 @@ public:
     
   nsINode(nsINodeInfo* aNodeInfo)
     : mNodeInfo(aNodeInfo),
-      mParentPtrBits(0)
+      mParentPtrBits(0),
+      mFlagsOrSlots(NODE_DOESNT_HAVE_SLOTS)
   {
   }
-    
+
+  virtual ~nsINode();
+
   /**
    * Bit-flags to pass (or'ed together) to IsNodeOfType()
    */
@@ -110,11 +141,13 @@ public:
     /** XUL elements */
     eXUL                 = 1 << 9,
     /** svg elements */
-    eSVG                 = 1 << 10
+    eSVG                 = 1 << 10,
+    /** document fragments */
+    eDOCUMENT_FRAGMENT   = 1 << 11
   };
 
   /**
-   * API for doing a quick check if a content object is of a given
+   * API for doing a quick check if a content is of a given
    * type, such as HTML, XUL, Text, ...  Use this when you can instead of
    * checking the tag.
    *
@@ -144,7 +177,7 @@ public:
    * If the return value is not -1, then calling GetChildAt() with that value
    * will return aPossibleChild.
    */
-  virtual PRInt32 IndexOf(nsIContent* aPossibleChild) const = 0;
+  virtual PRInt32 IndexOf(nsINode* aPossibleChild) const = 0;
 
   /**
    * Do we need a GetCurrentDoc of some sort?  I don't think we do...
@@ -228,7 +261,26 @@ public:
    *                       (though a null return value does not imply the
    *                       property was not set, i.e. it can be set to null).
    */
-  virtual void* GetProperty(nsIAtom *aPropertyName,
+  void* GetProperty(nsIAtom *aPropertyName,
+                    nsresult *aStatus = nsnull) const
+  {
+    return GetProperty(0, aPropertyName, aStatus);
+  }
+
+  /**
+   * Get a property associated with this node.
+   *
+   * @param aCategory      category of property to get.
+   * @param aPropertyName  name of property to get.
+   * @param aStatus        out parameter for storing resulting status.
+   *                       Set to NS_PROPTABLE_PROP_NOT_THERE if the property
+   *                       is not set.
+   * @return               the property. Null if the property is not set
+   *                       (though a null return value does not imply the
+   *                       property was not set, i.e. it can be set to null).
+   */
+  virtual void* GetProperty(PRUint32 aCategory,
+                            nsIAtom *aPropertyName,
                             nsresult *aStatus = nsnull) const;
 
   /**
@@ -245,9 +297,34 @@ public:
    *                                       was already set
    * @throws NS_ERROR_OUT_OF_MEMORY if that occurs
    */
-  virtual nsresult SetProperty(nsIAtom *aPropertyName,
+  nsresult SetProperty(nsIAtom *aPropertyName,
+                       void *aValue,
+                       NSPropertyDtorFunc aDtor = nsnull)
+  {
+    return SetProperty(0, aPropertyName, aValue, aDtor);
+  }
+
+  /**
+   * Set a property to be associated with this node. This will overwrite an
+   * existing value if one exists. The existing value is destroyed using the
+   * destructor function given when that value was set.
+   *
+   * @param aCategory       category of property to set.
+   * @param aPropertyName   name of property to set.
+   * @param aValue          new value of property.
+   * @param aDtor           destructor function to be used when this property
+   *                        is destroyed.
+   * @param aOldValue [out] previous value of property.
+   *
+   * @return NS_PROPTABLE_PROP_OVERWRITTEN (success value) if the property
+   *                                       was already set
+   * @throws NS_ERROR_OUT_OF_MEMORY if that occurs
+   */
+  virtual nsresult SetProperty(PRUint32 aCategory,
+                               nsIAtom *aPropertyName,
                                void *aValue,
-                               NSPropertyDtorFunc aDtor = nsnull);
+                               NSPropertyDtorFunc aDtor = nsnull,
+                               void **aOldValue = nsnull);
 
   /**
    * Destroys a property associated with this node. The value is destroyed
@@ -257,12 +334,26 @@ public:
    *
    * @throws NS_PROPTABLE_PROP_NOT_THERE if the property was not set
    */
-  virtual nsresult DeleteProperty(nsIAtom *aPropertyName);
+  nsresult DeleteProperty(nsIAtom *aPropertyName)
+  {
+    return DeleteProperty(0, aPropertyName);
+  }
+
+  /**
+   * Destroys a property associated with this node. The value is destroyed
+   * using the destruction function given when that value was set.
+   *
+   * @param aCategory      category of property to destroy.
+   * @param aPropertyName  name of property to destroy.
+   *
+   * @throws NS_PROPTABLE_PROP_NOT_THERE if the property was not set
+   */
+  virtual nsresult DeleteProperty(PRUint32 aCategory, nsIAtom *aPropertyName);
 
   /**
    * Unset a property associated with this node. The value will not be
    * destroyed but rather returned. It is the caller's responsibility to
-   * destroy the value after that point
+   * destroy the value after that point.
    *
    * @param aPropertyName  name of property to unset.
    * @param aStatus        out parameter for storing resulting status.
@@ -272,9 +363,64 @@ public:
    *                       (though a null return value does not imply the
    *                       property was not set, i.e. it can be set to null).
    */
-  virtual void* UnsetProperty(nsIAtom  *aPropertyName,
+  void* UnsetProperty(nsIAtom  *aPropertyName,
+                      nsresult *aStatus = nsnull)
+  {
+    return UnsetProperty(0, aPropertyName, aStatus);
+  }
+
+  /**
+   * Unset a property associated with this node. The value will not be
+   * destroyed but rather returned. It is the caller's responsibility to
+   * destroy the value after that point.
+   *
+   * @param aCategory      category of property to unset.
+   * @param aPropertyName  name of property to unset.
+   * @param aStatus        out parameter for storing resulting status.
+   *                       Set to NS_PROPTABLE_PROP_NOT_THERE if the property
+   *                       is not set.
+   * @return               the property. Null if the property is not set
+   *                       (though a null return value does not imply the
+   *                       property was not set, i.e. it can be set to null).
+   */
+  virtual void* UnsetProperty(PRUint32 aCategory,
+                              nsIAtom *aPropertyName,
                               nsresult *aStatus = nsnull);
   
+  PRBool HasProperties() const
+  {
+    return HasFlag(NODE_HAS_PROPERTIES);
+  }
+
+  /**
+   * Inform node of range ownership changes.  This allows the node to do the
+   * right thing to ranges in the face of changes to the content model.
+   *
+   * RangeRemove -- informs content that it no longer owns a range endpoint
+   * GetRangeList -- returns the list of ranges that have one or both endpoints
+   *                 within this content item
+   */
+  /**
+   * Inform node that it owns one or both range endpoints
+   * @param aRange the range the node owns
+   */
+  virtual nsresult RangeAdd(nsIDOMRange* aRange);
+
+  /**
+   * Inform node that it no longer owns either range endpoint
+   * @param aRange the range the node no longer owns
+   */
+  virtual void RangeRemove(nsIDOMRange* aRange);
+
+  /**
+   * Get the list of ranges that have either endpoint in this node
+   * item.
+   * @return the list of ranges owned partially by this node. The
+   * nsVoidArray is owned by the node object and its lifetime is
+   * controlled completely by the node object.
+   */
+  virtual const nsVoidArray *GetRangeList() const;
+
   /**
    * Return the principal of this node.  This is guaranteed to never be a null
    * pointer.
@@ -282,11 +428,6 @@ public:
   nsIPrincipal* NodePrincipal() const {
     return mNodeInfo->NodeInfoManager()->DocumentPrincipal();
   }
-
-  /**
-   * IsNodeOfType()?  Do we need a non-QI way to tell apart documents and
-   * content?
-   */
 
   /**
    * Called before the capture phase of the event flow.
@@ -344,9 +485,8 @@ public:
    *                          one already exists. [IN]
    * @param aResult           The event listener manager [OUT]
    */
-  virtual nsresult GetEventListenerManager(PRBool aCreateIfNotFound,
-                                           nsIEventListenerManager** aResult)
-                                           = 0;
+  NS_IMETHOD GetListenerManager(PRBool aCreateIfNotFound,
+                                nsIEventListenerManager** aResult);
 
   /**
    * Get the parent nsIContent for this node.
@@ -370,16 +510,91 @@ public:
     return NS_REINTERPRET_CAST(nsINode*, mParentPtrBits & ~kParentBitMask);
   }
 
+  // This class should be extended by subclasses that wish to store more
+  // information in the slots.
+  class nsSlots
+  {
+  public:
+    nsSlots(PtrBits aFlags) : mFlags(aFlags)
+    {
+    }
+
+    PtrBits mFlags;
+
+  protected:
+    // This is protected so that no-one accidentally deletes this rather than
+    // the subclass
+    ~nsSlots() {}
+  };
+
 protected:
+  /**
+   * Functions for managing flags and slots
+   */
+
+  PRBool HasSlots() const
+  {
+    return !(mFlagsOrSlots & NODE_DOESNT_HAVE_SLOTS);
+  }
+
+  nsSlots* FlagsAsSlots() const
+  {
+    NS_ASSERTION(HasSlots(), "check HasSlots first");
+    return NS_REINTERPRET_CAST(nsSlots*, mFlagsOrSlots);
+  }
+
+  nsSlots* GetExistingSlots() const
+  {
+    return HasSlots() ? FlagsAsSlots() : nsnull;
+  }
+
+  void SetSlots(nsSlots* aSlots)
+  {
+    NS_ASSERTION(!HasSlots(), "Already has slots");
+    mFlagsOrSlots = NS_REINTERPRET_CAST(PtrBits, aSlots);
+  }
+
+  PtrBits GetFlags() const
+  {
+    return NS_UNLIKELY(HasSlots()) ? FlagsAsSlots()->mFlags : mFlagsOrSlots;
+  }
+
+  PRBool HasFlag(PtrBits aFlag) const
+  {
+    return !!(GetFlags() & aFlag);
+  }
+
+  void SetFlags(PtrBits aFlagsToSet)
+  {
+    NS_ASSERTION(!(aFlagsToSet & (NODE_IS_ANONYMOUS | NODE_MAY_HAVE_FRAME)) ||
+                 IsNodeOfType(eCONTENT),
+                 "Flag only permitted on nsIContent nodes");
+    PtrBits* flags = HasSlots() ? &FlagsAsSlots()->mFlags :
+                                  &mFlagsOrSlots;
+    *flags |= aFlagsToSet;
+  }
+
+  void UnsetFlags(PtrBits aFlagsToUnset)
+  {
+    PtrBits* flags = HasSlots() ? &FlagsAsSlots()->mFlags :
+                                  &mFlagsOrSlots;
+    *flags &= ~aFlagsToUnset;
+  }
 
   nsCOMPtr<nsINodeInfo> mNodeInfo;
-
-  typedef PRUword PtrBits;
 
   enum { PARENT_BIT_INDOCUMENT = 1 << 0, PARENT_BIT_PARENT_IS_CONTENT = 1 << 1 };
   enum { kParentBitMask = 0x3 };
 
   PtrBits mParentPtrBits;
+
+  /**
+   * Used for either storing flags for this element or a pointer to
+   * this contents nsContentSlots. See the definition of the
+   * NODE_* macros for the layout of the bits in this
+   * member.
+   */
+  PtrBits mFlagsOrSlots;
 
 #endif // MOZILLA_INTERNAL_API
 };

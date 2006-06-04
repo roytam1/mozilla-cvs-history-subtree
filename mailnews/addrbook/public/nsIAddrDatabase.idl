@@ -65,8 +65,6 @@ interface nsIMdbRow;
 #define kNicknameColumn           "NickName"
 #define kPriEmailColumn           "PrimaryEmail"
 #define k2ndEmailColumn           "SecondEmail"
-#define kDefaultEmailColumn       "DefaultEmail"
-#define kCardTypeColumn           "CardType"
 #define kPreferMailFormatColumn   "PreferMailFormat"
 #define kPopularityIndexColumn    "PopularityIndex"
 #define kWorkPhoneColumn          "WorkPhone"
@@ -138,7 +136,7 @@ interface nsAddrDBCommitType
   const long kCompressCommit = 3;
 };
 
-[scriptable, uuid(BEBB5B43-B81E-4cff-91ED-B8DAD6F7D9F5)]
+[scriptable, uuid(b979cae8-8ad4-46b7-8ccc-0a1193df15fd)]
 interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 
   /**
@@ -172,10 +170,8 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	void forceClosed();
 
 	void createNewCardAndAddToDB(in nsIAbCard newCard, in boolean aNotify);
-	void createNewCardAndAddToDBWithKey(in nsIAbCard newCard, in boolean aNotify, out unsigned long key);	
 	void createNewListCardAndAddToDB(in nsIAbDirectory list, in unsigned long listRowID, in nsIAbCard newCard, in boolean aNotify);
 	void createMailListAndAddToDB(in nsIAbDirectory newList, in boolean aNotify);
-  void createMailListAndAddToDBWithKey(in nsIAbDirectory newList, in boolean aNotify, out PRUint32 key);
 
   /**
    * Enumerate the cards in the directory. The enumerator will return the
@@ -225,8 +221,6 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addNickName(in nsIMdbRow row, in string value);
 	[noscript] void addPrimaryEmail(in nsIMdbRow row, in string value);
 	[noscript] void add2ndEmail(in nsIMdbRow row, in string value);
-  [noscript] void addDefaultEmail(in nsIMdbRow row, in string value);
-  [noscript] void addCardType(in nsIMdbRow row, in string value);
 	[noscript] void addWorkPhone(in nsIMdbRow row, in string value);
 	[noscript] void addHomePhone(in nsIMdbRow row, in string value);
 	[noscript] void addFaxNumber(in nsIMdbRow row, in string value);

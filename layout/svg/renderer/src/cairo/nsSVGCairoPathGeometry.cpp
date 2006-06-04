@@ -52,12 +52,8 @@
 #include <float.h>
 #include <cairo.h>
 #include "nsSVGCairoRegion.h"
-#include "nsSVGCairoGradient.h"
-#include "nsISVGCairoSurface.h"
-#include "nsSVGCairoPattern.h"
 #include "nsIDOMSVGRect.h"
-#include "nsSVGTypeCIDs.h"
-#include "nsIComponentManager.h"
+#include "nsSVGRect.h"
 #include "nsISVGPathFlatten.h"
 #include "nsSVGPathGeometryFrame.h"
 #include "nsSVGMatrix.h"
@@ -104,7 +100,9 @@ nsresult
 NS_NewSVGCairoPathGeometry(nsISVGRendererPathGeometry **result)
 {
   *result = new nsSVGCairoPathGeometry;
-  if (!*result) return NS_ERROR_OUT_OF_MEMORY;
+  if (!*result) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
 
   NS_ADDREF(*result);
   return NS_OK;
@@ -159,14 +157,14 @@ nsSVGCairoPathGeometry::Render(nsSVGPathGeometryFrame *aSource,
 {
   nsCOMPtr<nsISVGCairoCanvas> cairoCanvas = do_QueryInterface(canvas);
   NS_ASSERTION(cairoCanvas, "wrong svg render context for geometry!");
-  if (!cairoCanvas) return NS_ERROR_FAILURE;
+  if (!cairoCanvas) {
+    return NS_ERROR_FAILURE;
+  }
 
   cairo_t *ctx = cairoCanvas->GetContext();
 
   PRUint16 renderMode;
   canvas->GetRenderMode(&renderMode);
-
-  cairo_new_path(ctx);
 
   /* save/pop the state so we don't screw up the xform */
   cairo_save(ctx);
@@ -202,149 +200,45 @@ nsSVGCairoPathGeometry::Render(nsSVGPathGeometryFrame *aSource,
     break;
   }
 
-  PRUint16 strokeType = aSource->GetStrokePaintType();
-  PRUint16 fillType = aSource->GetFillPaintType();
-  PRUint16 strokeServerType = 0;
-
-  PRBool bStroking = PR_FALSE;
-  if (strokeType != eStyleSVGPaintType_None) {
-    bStroking = PR_TRUE;
-    if (strokeType == eStyleSVGPaintType_Server) {
-      if (NS_FAILED(aSource->GetStrokePaintServerType(&strokeServerType)))
-        // unknown type or missing frame
-        bStroking = PR_FALSE;
-    }
+  void *closure;
+  if (aSource->HasFill() &&
+      NS_SUCCEEDED(aSource->SetupCairoFill(canvas, ctx, &closure))) {
+    cairo_fill_preserve(ctx);
+    aSource->CleanupCairoFill(ctx, closure);
   }
 
-  PRUint16 fillServerType = 0;
-  if (fillType == eStyleSVGPaintType_Server) {
-    if (NS_FAILED(aSource->GetFillPaintServerType(&fillServerType)))
-      // unknown type or missing frame
-      fillType = eStyleSVGPaintType_None;
+  if (aSource->HasStroke() &&
+      NS_SUCCEEDED(aSource->SetupCairoStroke(canvas, ctx, &closure))) {
+    cairo_stroke(ctx);
+    aSource->CleanupCairoStroke(ctx, closure);
   }
 
-  if (fillType != eStyleSVGPaintType_None) {
-    aSource->SetupCairoFill(ctx);
-
-    if (fillType == eStyleSVGPaintType_Color) {
-      cairo_fill_preserve(ctx);
-    } else if (fillType == eStyleSVGPaintType_Server) {
-      if (fillServerType == nsSVGGeometryFrame::PAINT_TYPE_GRADIENT) {
-        nsSVGGradientFrame *aGrad;
-        aSource->GetFillGradient(&aGrad);
-
-        cairo_pattern_t *gradient = CairoGradient(ctx, aGrad, aSource);
-        if (gradient) {
-          cairo_set_source(ctx, gradient);
-          cairo_fill_preserve(ctx);
-          cairo_pattern_destroy(gradient);
-        }
-      } else if (fillServerType == nsSVGGeometryFrame::PAINT_TYPE_PATTERN) {
-        nsSVGPatternFrame *aPat;
-        aSource->GetFillPattern(&aPat);
-        // Paint the pattern -- note that because we will call back into the
-        // layout layer to paint, we need to pass the canvas, not just the context
-        nsCOMPtr<nsISVGRendererSurface> patSurface;
-        cairo_pattern_t *pattern = CairoPattern(canvas, aPat, aSource, getter_AddRefs(patSurface));
-        if (pattern) {
-          cairo_set_source(ctx, pattern);
-          cairo_fill_preserve(ctx);
-          cairo_pattern_destroy(pattern);
-        }
-      } else {
-        cairo_fill_preserve(ctx);
-      }
-    }
-
-    if (!bStroking)
-      cairo_new_path(ctx);
-  }
-
-  if (bStroking) {
-    aSource->SetupCairoStroke(ctx);
-
-    if (strokeType == eStyleSVGPaintType_Color) {
-      cairo_stroke(ctx);
-    } else if (strokeType == eStyleSVGPaintType_Server) {
-      if (strokeServerType == nsSVGGeometryFrame::PAINT_TYPE_GRADIENT) {
-        nsSVGGradientFrame *aGrad;
-        aSource->GetStrokeGradient(&aGrad);
-
-        cairo_pattern_t *gradient = CairoGradient(ctx, aGrad, aSource);
-        if (gradient) {
-          cairo_set_source(ctx, gradient);
-          cairo_stroke(ctx);
-          cairo_pattern_destroy(gradient);
-        }
-      } else if (strokeServerType == nsSVGGeometryFrame::PAINT_TYPE_PATTERN) {
-        nsSVGPatternFrame *aPat;
-        aSource->GetStrokePattern(&aPat);
-        // Paint the pattern -- note that because we will call back into the
-        // layout layer to paint, we need to pass the canvas, not just the context
-        nsCOMPtr<nsISVGRendererSurface> patSurface;
-        cairo_pattern_t *pattern = CairoPattern(canvas, aPat, aSource, getter_AddRefs(patSurface));
-        if (pattern) {
-          cairo_set_source(ctx, pattern);
-          cairo_stroke(ctx);
-          cairo_pattern_destroy(pattern);
-        }
-      } else {
-        cairo_stroke(ctx);
-      }
-    }
-  }
+  cairo_new_path(ctx);
 
   cairo_restore(ctx);
 
   return NS_OK;
 }
 
-/** Implements nsISVGRendererRegion update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGCairoPathGeometry::Update(nsSVGPathGeometryFrame *aSource,
-                               PRUint32 updatemask,
                                nsISVGRendererRegion **_retval)
 {
   *_retval = nsnull;
 
-  const unsigned long pathmask =
-    nsISVGPathGeometrySource::UPDATEMASK_PATH |
-    nsSVGGeometryFrame::UPDATEMASK_CANVAS_TM;
-
-  const unsigned long fillmask = 
-    pathmask |
-    nsSVGGeometryFrame::UPDATEMASK_FILL_RULE;
-
-  const unsigned long strokemask =
-    pathmask |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_WIDTH       |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_LINECAP     |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_LINEJOIN    |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_MITERLIMIT  |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_DASH_ARRAY  |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_DASHOFFSET;
-
-  const unsigned long coveredregionmask =
-    fillmask                                          |
-    strokemask                                        |
-    nsSVGGeometryFrame::UPDATEMASK_FILL_PAINT_TYPE    |
-    nsSVGGeometryFrame::UPDATEMASK_STROKE_PAINT_TYPE;
-
   nsCOMPtr<nsISVGRendererRegion> before = mCoveredRegion;
 
-  if (updatemask & coveredregionmask) {
-    nsCOMPtr<nsISVGRendererRegion> after;
-    GetCoveredRegion(aSource, getter_AddRefs(after));
+  nsCOMPtr<nsISVGRendererRegion> after;
+  GetCoveredRegion(aSource, getter_AddRefs(after));
 
-    if (mCoveredRegion) {
-      if (after)
-        after->Combine(before, _retval);
-    } else {
-      *_retval = after;
-      NS_IF_ADDREF(*_retval);
-    }
-    mCoveredRegion = after;
+  if (mCoveredRegion) {
+    if (after)
+      after->Combine(before, _retval);
+  } else {
+    *_retval = after;
+    NS_IF_ADDREF(*_retval);
   }
+  mCoveredRegion = after;
 
   if (!*_retval) {
     *_retval = before;
@@ -361,21 +255,20 @@ nsSVGCairoPathGeometry::GetCoveredRegion(nsSVGPathGeometryFrame *aSource,
 {
   *_retval = nsnull;
 
+  PRBool hasFill = aSource->HasFill();
+  PRBool hasStroke = aSource->HasStroke();
+
+  if (!hasFill && !hasStroke) {
+    return NS_OK;
+  }
+
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
 
   GeneratePath(aSource, ctx, nsnull);
 
-  PRBool hasCoveredFill = 
-    aSource->GetFillPaintType() != eStyleSVGPaintType_None;
-  
-  bool hasCoveredStroke =
-    aSource->GetStrokePaintType() != eStyleSVGPaintType_None;
-
-  if (!hasCoveredFill && !hasCoveredStroke) return NS_OK;
-
   double xmin, ymin, xmax, ymax;
 
-  if (hasCoveredStroke) {
+  if (hasStroke) {
     aSource->SetupCairoStrokeGeometry(ctx);
     cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
   } else
@@ -399,8 +292,9 @@ nsSVGCairoPathGeometry::ContainsPoint(nsSVGPathGeometryFrame *aSource,
   // early reject test
   if (mCoveredRegion) {
     nsCOMPtr<nsISVGCairoRegion> region = do_QueryInterface(mCoveredRegion);
-    if (!region->Contains(x,y))
+    if (!region->Contains(x,y)) {
       return NS_OK;
+    }
   }
 
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
@@ -435,11 +329,6 @@ nsSVGCairoPathGeometry::GetBoundingBox(nsSVGPathGeometryFrame *aSource,
 {
   *aBoundingBox = nsnull;
 
-  nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
-
-  NS_ASSERTION(rect, "could not create rect");
-  if (!rect) return NS_ERROR_FAILURE;
-
   double xmin, ymin, xmax, ymax;
 
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
@@ -465,15 +354,7 @@ nsSVGCairoPathGeometry::GetBoundingBox(nsSVGPathGeometryFrame *aSource,
 
   cairo_destroy(ctx);
 
-  rect->SetX(xmin);
-  rect->SetY(ymin);
-  rect->SetWidth(xmax - xmin);
-  rect->SetHeight(ymax - ymin);
-
-  *aBoundingBox = rect;
-  NS_ADDREF(*aBoundingBox);
-  
-  return NS_OK;
+  return NS_NewSVGRect(aBoundingBox, xmin, ymin, xmax - xmin, ymax - ymin);
 }
 
 NS_IMETHODIMP
