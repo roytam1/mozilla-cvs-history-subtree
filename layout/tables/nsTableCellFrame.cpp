@@ -493,7 +493,7 @@ void nsTableCellFrame::VerticallyAlignChild(const nsHTMLReflowState& aReflowStat
                                             nscoord                  aMaxAscent)
 {
   const nsStyleTextReset* textStyle = GetStyleTextReset();
-  /* XXX: remove tableFrame when border-collapse inherits */
+  /* It's the 'border-collapse' on the table that matters */
   nsPresContext* presContext = GetPresContext();
   GET_PIXELS_TO_TWIPS(presContext, p2t);
   nsMargin borderPadding = nsTableFrame::GetBorderPadding(aReflowState, p2t, this);
@@ -733,7 +733,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   aStatus = NS_FRAME_COMPLETE;
   nsSize availSize(aReflowState.availableWidth, availHeight);
 
-  /* XXX: remove tableFrame when border-collapse inherits */
+  /* It's the 'border-collapse' on the table that matters */
   nsTableFrame* tableFrame = nsTableFrame::GetTableFrame(this);
   if (!tableFrame)
     ABORT1(NS_ERROR_NULL_POINTER);
