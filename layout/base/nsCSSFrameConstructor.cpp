@@ -11121,7 +11121,6 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     if (!newFrame) 
       return NS_ERROR_NULL_POINTER;
     newFrame->Init(content, aParentFrame, aFrame);
-#ifdef HTML_FORMS
   } else if (nsLayoutAtoms::fieldSetFrame == frameType) {
     newFrame = NS_NewFieldSetFrame(shell, styleContext);
 
@@ -11140,7 +11139,6 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // Set the fieldset's initial child list
       newFrame->SetInitialChildList(nsnull, continuingAreaFrame);
     }
-#endif
   } else {
     NS_ASSERTION(PR_FALSE, "unexpected frame type");
     return NS_ERROR_UNEXPECTED;
