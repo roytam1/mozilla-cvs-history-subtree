@@ -85,8 +85,9 @@
          Everytime you edit these keys, you may also consider
          to check/edit the key assignment on minimo.js/MenuHandleMenuEscape
       -->
-    <key id="minimo-key"  keycode="VK_F19"  oncommand="BrowserMenuSpin()"/>
-    <key id="minimo-key3" keycode="VK_F20" oncommand="DoToggleSoftwareKeyboard()"/>
+    <key id="minimo-key"  keycode="VK_F19"  oncommand="spinCycle()"/>
+    <key id="minimo-key2" keycode="VK_F10"  oncommand="spinCycle()"/>
+    <key id="minimo-key3" keycode="VK_F20"  oncommand="DoToggleSoftwareKeyboard()"/>
     
   </keyset>
   
@@ -295,7 +296,8 @@
                onpopupshown="MenuEnableEscapeKeys()"
                onpopuphidden="MenuDisableEscapeKeys()" 
                onpopuphiding="MenuMainPopupHiding()" 
-               onpopupshowing="MenuMainPopupShowing()" >
+               onpopupshowing="MenuMainPopupShowing()"
+               oncommand="spinSetnext(gSpinFirst)" >
       
       <menuitem id="command_BrowserOpenTab" 
                 command="cmd_BrowserOpenTab" 
@@ -371,9 +373,10 @@
     </menupopup>  
     
     <menupopup id="menu_NavPopup"
-               onpopuphiding="MenuNavPopupHiding()" 
+               onpopuphiding="MenuNavPopupHiding()"  
                onpopupshown="MenuEnableEscapeKeys()"
-               onpopuphidden="MenuDisableEscapeKeys()">
+               onpopuphidden="MenuDisableEscapeKeys()"
+               oncommand="spinSetnext(gSpinLast)" >
       
 	  <menuitem id="command_BrowserBookmark"
 	            command="cmd_BrowserBookmark"
