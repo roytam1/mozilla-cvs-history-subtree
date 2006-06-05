@@ -92,6 +92,9 @@ public:
   NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
 
+  // Our min width is our pref width
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+
   NS_IMETHOD Reflow(nsPresContext*          aCX,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -118,6 +121,8 @@ public:
    * @see nsLayoutAtoms::scrollFrame
    */
   virtual nsIAtom* GetType() const;
+
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
     // nsIFrameDebug

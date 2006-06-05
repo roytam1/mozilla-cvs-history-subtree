@@ -62,6 +62,8 @@ public:
                                     const nsRect&           aDirtyRect,
                                     const nsDisplayListSet& aLists);
 
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
+  
   static PRBool IsOptionElement(nsIContent* aContent);
   static PRBool IsOptionElementFrame(nsIFrame *aFrame);
   

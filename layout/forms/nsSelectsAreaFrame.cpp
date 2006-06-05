@@ -229,3 +229,10 @@ nsSelectsAreaFrame::BuildDisplayListInternal(nsDisplayListBuilder*   aBuilder,
   
   return NS_OK;
 }
+
+PRBool
+nsSelectsAreaFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
+}
+
