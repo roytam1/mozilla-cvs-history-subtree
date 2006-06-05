@@ -2193,8 +2193,9 @@ NS_IMETHODIMP nsMsgDatabase::SetStringProperty(nsMsgKey aKey, const char *aPrope
   rv = msgHdr->SetStringProperty(aProperty, aValue);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  // if this is the junk score property notify
-  if (!strcmp(aProperty, "junkscore"))
+  // if this is the junk score property notify, as long as we're not going
+  // from no value to non junk
+  if (!strcmp(aProperty, "junkscore") && !(oldValue.IsEmpty() && !strcmp(aValue, "0")))
     NotifyJunkScoreChanged(nsnull);
 
   PRUint32 flags;
