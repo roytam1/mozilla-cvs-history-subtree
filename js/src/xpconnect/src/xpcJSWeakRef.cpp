@@ -62,8 +62,6 @@ nsresult xpcJSWeakRef::Init()
     rv = cc->GetJSContext(&cx);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    JSObject *targetObject = nsnull;
-
     PRUint32 argc = 0;
     rv = cc->GetArgc(&argc);
     NS_ENSURE_SUCCESS(rv, rv);
