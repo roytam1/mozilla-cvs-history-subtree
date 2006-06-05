@@ -175,6 +175,7 @@ nsBrowserStatusHandler.prototype =
       if (aStateFlags & nsIWebProgressListener.STATE_STOP)
       {
         document.getElementById("statusbar").hidden=true;
+        document.getElementById("statusbar-text").label="";
 
         // gURLBarBoxObject width + 20 pixels.... so you cannot see it.         
         document.getElementById("urlbar").inputField.style.backgroundPosition=gURLBarBoxObject.width+20+"px 100%";
