@@ -1952,17 +1952,21 @@ function BrowserMenuPopupFalse() {
   document.getElementById("menu_MainPopup").hidePopup();
 }
 
+/* 
+ * Ideally we want the XUL key assignements to work when popups are on.
+ * What we have here is a an alternate system to catch the SOFT KEYS so 
+ * when the popup is on, because XUL <key /> does not work, we enable 
+ * keydown listeners. And when the XUL menus are of the screen we 
+ * disable the listeners. 
+ * 
+ * Ref bugs: like https://bugzilla.mozilla.org/show_bug.cgi?id=55495 
+ */ 
 function MenuEnableEscapeKeys() {
 	// we remove the focus from the toolbar button to avoid a command_action (keyboard event) to 
 	// call the menu again. 
 
 	document.getElementById("menu_MainPopup").focus();
-
-	// When popups are on, <key /> not working...bugs like https://bugzilla.mozilla.org/show_bug.cgi?id=55495 
-
 	document.addEventListener("keydown",MenuHandleMenuEscape,true); 
-
-
 }
 
 function MenuDisableEscapeKeys() {
@@ -1979,8 +1983,6 @@ function MenuHandleMenuEscape(e) {
   }
   if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F10 ) {
     spinCycle();
-  } else {
-
   }
 
 }
