@@ -101,10 +101,22 @@ var gDeckMode=0; // 0 = site, 1 = sb, 2= rss. Used for the URLBAR selector, Deck
 var gDeckMenuChecked=null; // to keep the state of the checked URLBAR selector mode. 
 var gURLBarBoxObject = null; // stores the urlbar boxObject so the background loader can update itself based on actual urlbar size width;
 
-var gSoftKeyAccessState=0;   // Accessibility and keyboard shortcuts. See BrowserMenuSpin functions. 
-
 var gPref = null;            // direct access to pref.
 var gMinimoBundle = null;    // Strings and such.
+
+
+/*
+ * Keyboard Spin Menu Control 
+ */
+var gKeySpinCurrent     = null;
+var gKeySpinMode        = 0;
+var gKeySpinLastFocused = null;
+var gSpinLast           = null;
+var gSpinUrl            = null;
+var gSpinFirst          = null;
+var gSpinDocument       = null;
+var gSpinTemp           = null;
+
 
 function onErrorHandler(x)
 {
@@ -555,6 +567,12 @@ function MiniNavStartup()
   } catch ( ignore ) {}
 
   
+ /*
+  * Enable Key Spin Control 
+  */
+ 
+ spinCreate();
+
 }
 
 /* 
@@ -1326,6 +1344,16 @@ function DoSNavToggle()
 
 function DoToggleSoftwareKeyboard()
 {
+
+ /*
+  * Whichever is the current Key Spin, we next te next state to be the current. 
+  * So if you are on top of a softkey->menu, and the keyboard comes up, 
+  * then if you Softkey you should get the menu again 
+  */
+  spinSetnext(gKeySpinCurrent); 
+
+
+
   // During a page load, this key cause the page to stop
   // loading.  Probably should rename this function.
 
@@ -1546,104 +1574,6 @@ function URLBarClickHandler(aEvent, aElt)
 {
   if (!gIgnoreClick && aElt.selectionStart == aElt.selectionEnd)
     aElt.select();
-}
-
-/* 
- * Main Menu 
- */ 
-
-function BrowserMenuPopup() {
-   ref=document.getElementById("menu_MainPopup");
-
-   if(gShowingMenuCurrent==ref) {
-	gShowingMenuCurrent.hidePopup();
-	gShowingMenuCurrent=null;
-   } else {
-	if(!gShowingMenuCurrent) {
-		gShowingMenuCurrent=ref;
-	} 
-      gShowingMenuCurrent.showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
-   }
-}
-
-function BrowserNavMenuPopup() {
-   ref=document.getElementById("menu_NavPopup");
-
-   if(gShowingMenuCurrent==ref) {
-	gShowingMenuCurrent.hidePopup();
-	gShowingMenuCurrent=null;
-   } else {
-	if(!gShowingMenuCurrent) {
-		gShowingMenuCurrent=ref;
-	} 
-      gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-   }
-}
-
-function MenuMainPopupHiding() {
-	gShowingMenuCurrent=null;
-}
-
-function MenuNavPopupHiding() {
-	gShowingMenuCurrent=null;
-}
-
-function BrowserMenuPopupFalse() {
-  document.getElementById("menu_MainPopup").hidePopup();
-}
-
-
-/*
- * BrowserMenu Accessibility Key Spin
- * You click the Softkey1 and rotates through some elements / focus. 
- * depends on gSoftKeyAccessState with initial state=0;
- */
-
-
-function BrowserMenuSpin() {
-  if(gSoftKeyAccessState==0||gSoftKeyAccessState==3) {
-	if(gSoftKeyAccessState==3) {
-	    document.getElementById("menu_NavPopup").hidePopup();
-	    gSoftKeyAccessState=1;
-	}
-	document.getElementById("menu-button").focus();
-	document.getElementById("menu_MainPopup").showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
-	gShowingMenuCurrent=document.getElementById("menu_MainPopup");
-	gSoftKeyAccessState=1;
-  } else if(gSoftKeyAccessState==1) {
-	document.getElementById("menu_MainPopup").hidePopup();
-	document.getElementById("urlbar").focus();
-	gSoftKeyAccessState=2;	    
-  } else if(gSoftKeyAccessState==2) {
-	document.getElementById("menu_NavPopup").showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-	gShowingMenuCurrent=document.getElementById("menu_NavPopup");
-	document.getElementById("nav-menu-button").focus();
-	gSoftKeyAccessState=3;
-  } 
-}
-
-function MenuEnableEscapeKeys() {
-
-	// we remove the focus from the toolbar button to avoid a command_action (keyboard event) to 
-	// call the menu again. 
-	
-	document.getElementById("menu_MainPopup").focus();
-
-	// When popups are on, <key /> not working...bugs like https://bugzilla.mozilla.org/show_bug.cgi?id=55495 
-
-	document.addEventListener("keypress",MenuHandleMenuEscape,true); 
-	
-}
-
-function MenuDisableEscapeKeys() {
-  document.removeEventListener("keypress",MenuHandleMenuEscape,true); 
-}
-
-function MenuHandleMenuEscape(e) {
-  /* This applies because our <key /> handlers would not work when Menu popups are active */ 
-  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F19 ) {
-    BrowserMenuSpin();
-  }
 }
 
 
@@ -1897,3 +1827,156 @@ function BrowserPanMouseHandlerDestroy(e) {
   }
 }
 
+/*
+ * Keyboard Spin Menu Control 
+ */
+
+function spinCycle() {
+  gKeySpinCurrent.SpinOut();
+  gKeySpinCurrent = gKeySpinCurrent.next;
+  setTimeout("gKeySpinCurrent.SpinIn()",0);
+}
+
+function spinSetnext(ref) {
+  gSpinTemp.next  = ref;
+  gKeySpinCurrent = gSpinTemp;
+}
+
+function spinCreate() {
+
+ var spinLeftMenu = { 
+    SpinIn:function () {
+      document.getElementById("menu-button").focus();
+      document.getElementById("menu_MainPopup").showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
+      gShowingMenuCurrent=document.getElementById("menu_MainPopup");
+    }, 
+    SpinOut:function () {
+      document.getElementById("menu_MainPopup").hidePopup();
+    }
+  }
+	
+
+  var spinUrlBar = { 
+    SpinIn:function () {
+      document.getElementById("urlbar").focus();
+    }, 
+    SpinOut:function () {
+    }
+  }
+
+  var spinRightMenu = { 
+    SpinIn:function () {
+      document.getElementById("nav-menu-button").focus();
+      document.getElementById("menu_NavPopup").showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
+      gShowingMenuCurrent=document.getElementById("menu_NavPopup");		
+    }, 
+    SpinOut:function () {
+      document.getElementById("menu_NavPopup").hidePopup();
+    }
+  }
+
+  var spinDocument = { 
+    SpinIn:function () {
+      if(gKeySpinLastFocused) {
+        gKeySpinLastFocused.focus();	// pass through some other previous state stored.
+      } else {
+        spinCycle();			// this should not occur
+      }
+    }, 
+    SpinOut:function () {
+    }
+  }
+
+  gSpinTemp = {	
+    SpinIn:function () { }, 
+    SpinOut:function () { }
+  }
+
+  gKeySpinCurrent = spinRightMenu;
+  spinLeftMenu.next=spinUrlBar;
+  spinUrlBar.next=spinRightMenu;
+  spinRightMenu.next=spinLeftMenu;
+  spinDocument.next=spinLeftMenu;   // this may show up in the middle. 
+  gSpinLast=spinRightMenu;
+  gSpinDocument = spinDocument;
+  gSpinFirst=spinLeftMenu;
+  gSpinUrl=spinUrlBar;
+
+}
+
+/* 
+ * Menu Menu Controls
+ */ 
+
+function BrowserMenuPopup() {
+   ref=document.getElementById("menu_MainPopup");
+
+   if(gShowingMenuCurrent==ref) {
+	gShowingMenuCurrent.hidePopup();
+	gShowingMenuCurrent=null;
+   } else {
+	if(!gShowingMenuCurrent) {
+		gShowingMenuCurrent=ref;
+	} 
+      gShowingMenuCurrent.showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
+   }
+}
+
+function BrowserNavMenuPopup() {
+   ref=document.getElementById("menu_NavPopup");
+
+   if(gShowingMenuCurrent==ref) {
+	gShowingMenuCurrent.hidePopup();
+	gShowingMenuCurrent=null;
+   } else {
+	if(!gShowingMenuCurrent) {
+		gShowingMenuCurrent=ref;
+	} 
+      gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
+   }
+}
+
+function MenuMainPopupHiding() {
+	gShowingMenuCurrent=null;
+}
+
+function MenuNavPopupHiding() {
+	gShowingMenuCurrent=null;
+}
+
+function BrowserMenuPopupFalse() {
+  document.getElementById("menu_MainPopup").hidePopup();
+}
+
+function MenuEnableEscapeKeys() {
+	// we remove the focus from the toolbar button to avoid a command_action (keyboard event) to 
+	// call the menu again. 
+
+	document.getElementById("menu_MainPopup").focus();
+
+	// When popups are on, <key /> not working...bugs like https://bugzilla.mozilla.org/show_bug.cgi?id=55495 
+
+	document.addEventListener("keydown",MenuHandleMenuEscape,true); 
+
+
+}
+
+function MenuDisableEscapeKeys() {
+
+  document.removeEventListener("keydown",MenuHandleMenuEscape,true); 
+
+}
+
+function MenuHandleMenuEscape(e) {
+
+  /* This applies because our <key /> handlers would not work when Menu popups are active */ 
+  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F19 ) {
+    spinCycle();
+  }
+  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F10 ) {
+    spinCycle();
+  } else {
+
+  }
+
+}
