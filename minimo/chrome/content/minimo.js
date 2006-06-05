@@ -412,6 +412,9 @@ function MiniNavStartup()
 
     } catch (ignore) {}
     
+    var selects_all = gPref.getBoolPref("browser.urlbar.clickSelectsAll");
+    gURLBar.clickSelectsAll = selects_all;
+
   } catch (e) {
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }

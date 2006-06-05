@@ -55,6 +55,11 @@ mkdir -p minimo/res
 cp -a bin/res/*                                          minimo/res
 rm -rf minimo/res/samples
 rm -rf minimo/res/throbber
+rm -rf minimo/res/viewer.properties
+rm -rf minimo/res/viewsource.css
+rm -rf minimo/res/hiddenWindow.html
+rm -rf minimo/res/bloatcycle.html
+
 
 mkdir -p minimo/plugins
 

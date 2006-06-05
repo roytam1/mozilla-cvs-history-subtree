@@ -51,6 +51,8 @@ pref("accessibility.warn_on_browsewithcaret", true);
 
 pref("browser.history_expire_days", 9);
 
+pref("browser.urlbar.clickSelectsAll", true);
+
 // loading and rendering of framesets and iframes
 pref("browser.frames.enabled", true);
 
