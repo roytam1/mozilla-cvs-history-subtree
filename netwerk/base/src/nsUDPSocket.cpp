@@ -188,7 +188,7 @@ nsUDPSocket::OnMsgSend(nsDatagram*dg)
   dg->GetAddress(host);
   PRInt32 port;
   dg->GetPort(&port);
-#ifdef DEBUG_afri
+#ifdef DEBUG_afri_udpsocket
 //  printf("-> sending %d bytes to %s, port %d ... ", dg->mData.Length(), host.get(), port);  
 #endif
   nsACString::const_iterator iter;
@@ -201,7 +201,7 @@ nsUDPSocket::OnMsgSend(nsDatagram*dg)
     return;
   }
   NS_ASSERTION(sent==dg->mData.Length(), "Sent fewer bytes than in buffer");
-#ifdef DEBUG_afri
+#ifdef DEBUG_afri_udpsocket
 //  printf(" done <-\n");
 #endif
 }
@@ -258,7 +258,7 @@ nsUDPSocket::TryAttach()
 void
 nsUDPSocket::OnSocketReady(PRFileDesc *fd, PRInt16 outFlags)
 {
-#ifdef DEBUG_afri
+#ifdef DEBUG_afri_udpsocket
 //  printf("Socket %p ready: %d\n", this, outFlags);
 #endif
   
@@ -280,14 +280,14 @@ nsUDPSocket::OnSocketReady(PRFileDesc *fd, PRInt16 outFlags)
     PRInt32 avail = PR_Available(mFD);
     if (avail == -1 || avail == 0) {
       NS_WARNING("no data available");
-#ifdef DEBUG_afri
+#ifdef DEBUG_afri_udpsocket
       printf("%s\n", PR_ErrorToString(PR_GetError(),PR_LANGUAGE_I_DEFAULT));
 #endif
       mCondition = NS_ERROR_UNEXPECTED;
     }
 
     datagram->mData.SetLength(avail);
-#ifdef DEBUG_afri
+#ifdef DEBUG_afri_udpsocket
 //    printf("udp socket: data waiting for us: %d\n", avail);
 #endif
     char *buf = datagram->mData.BeginWriting();
@@ -306,7 +306,7 @@ nsUDPSocket::OnSocketReady(PRFileDesc *fd, PRInt16 outFlags)
 
     if (rv != avail) {
       datagram->mData.SetLength(rv);
-#ifdef DEBUG_afri
+#ifdef DEBUG_afri_udpsocket
       printf("nsUDPSocket: read bytes %d != avail bytes %d\n",
              rv, avail);
 #endif
