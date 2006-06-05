@@ -128,7 +128,6 @@ MODULES_core :=                                 \
   mozilla/config                                \
   mozilla/build                                 \
   mozilla/caps                                  \
-  mozilla/content                               \
   mozilla/db/.cvsignore                         \
   mozilla/db/Makefile.in                        \
   mozilla/db/README.html                        \
@@ -591,7 +590,7 @@ CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS
 ########################
 # CVS defines for layout
 #
-LAYOUT_CO_MODULE = mozilla/layout
+LAYOUT_CO_MODULE = mozilla/content mozilla/layout
 LAYOUT_CO_FLAGS := -P
 ifdef MOZ_CO_FLAGS
   LAYOUT_CO_FLAGS := $(MOZ_CO_FLAGS)
