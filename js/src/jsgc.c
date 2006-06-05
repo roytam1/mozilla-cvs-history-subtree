@@ -57,6 +57,7 @@
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jsbit.h"
+#include "jsclist.h"
 #include "jscntxt.h"
 #include "jsconfig.h"
 #include "jsdbgapi.h"
@@ -243,7 +244,7 @@ JS_STATIC_ASSERT(sizeof(JSStackHeader) >= 2 * sizeof(jsval));
 #endif
 
 static JSBool
-NewGCArena(JSRuntime *rt, JSGCArenaList *arenaList, JSBool triedGC)
+NewGCArena(JSRuntime *rt, JSGCArenaList *arenaList)
 {
     JSGCArena *a;
     jsuword offset;
@@ -252,8 +253,6 @@ NewGCArena(JSRuntime *rt, JSGCArenaList *arenaList, JSBool triedGC)
 
     /* Check if we are allowed and can allocate a new arena. */
     if (rt->gcBytes >= rt->gcMaxBytes)
-        return JS_FALSE;
-    if (!triedGC && rt->gcMallocBytes >= rt->gcMaxMallocBytes)
         return JS_FALSE;
     a = (JSGCArena *)malloc(GC_ARENA_SIZE);
     if (!a)
@@ -342,6 +341,12 @@ FinishGCArenaLists(JSRuntime *rt)
         while (arenaList->last)
             DestroyGCArena(rt, arenaList, &arenaList->last);
         arenaList->freeList = NULL;
+    }
+
+    if (rt->gcCloseTable.array) {
+        free(rt->gcCloseTable.array);
+        rt->gcCloseTable.array = NULL;
+        rt->gcCloseTable.count = 0;
     }
 }
 
@@ -693,6 +698,59 @@ js_RemoveRoot(JSRuntime *rt, void *rp)
     return JS_TRUE;
 }
 
+JSBool
+js_AddObjectToCloseTable(JSContext *cx, JSObject *obj)
+{
+    JSRuntime *rt;
+    JSObject **array;
+    uint32 count, length;
+
+    /*
+     * Return early without doing anything if shutting down, to prevent a bad
+     * close hook from ilooping the GC.  This could result in shutdown leaks,
+     * so printf in DEBUG builds.
+     */
+    rt = cx->runtime;
+    JS_ASSERT(rt->gcClosePhase != 1);
+    if (rt->state == JSRTS_LANDING) {
+#ifdef DEBUG
+        fprintf(stderr,
+"JS API usage error: an extended class's close hook allocates another object\n"
+"also of extended class %s that has a close hook.  To prevent infinite loops\n"
+"when shutting down the JS garbage collector, this object will not be closed.\n"
+"This may result in a memory leak.\n",
+                OBJ_GET_CLASS(cx, obj)->name);
+#endif
+        return JS_TRUE;
+    }
+
+    JS_LOCK_GC(rt);
+    array = rt->gcCloseTable.array;
+    count = rt->gcCloseTable.count;
+    length = GC_CLOSE_TABLE_LENGTH(count);
+
+    if (!array || count == length) {
+        length = (length < GC_CLOSE_TABLE_LINEAR)
+                 ? 2 * length
+                 : length + GC_CLOSE_TABLE_LINEAR;
+        array = (JSObject **) realloc(array, length * sizeof(JSObject *));
+        if (!array) {
+            JS_UNLOCK_GC(rt);
+            JS_ReportOutOfMemory(cx);
+            return JS_FALSE;
+        }
+#ifdef DEBUG
+        memset(array + count, 0, (length - count) * sizeof(JSObject *));
+#endif
+        rt->gcCloseTable.array = array;
+    }
+
+    array[count++] = obj;
+    rt->gcCloseTable.count = count;
+    JS_UNLOCK_GC(rt);
+    return JS_TRUE;
+}
+
 #if defined(DEBUG_brendan) || defined(DEBUG_timeless)
 #define DEBUG_gchist
 #endif
@@ -713,7 +771,7 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
 {
     JSRuntime *rt;
     uintN flindex;
-    JSBool triedGC;
+    JSBool doGC;
     JSGCThing *thing;
     uint8 *flagp, *firstPage;
     JSGCArenaList *arenaList;
@@ -722,6 +780,7 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
     JSLocalRootStack *lrs;
 #ifdef JS_THREADSAFE
     JSBool gcLocked;
+    uintN localMallocBytes;
     JSGCThing **flbase, **lastptr;
     JSGCThing *tmpthing;
     uint8 *tmpflagp;
@@ -740,15 +799,26 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
     flbase = cx->thread->gcFreeLists;
     JS_ASSERT(flbase);
     thing = flbase[flindex];
-    if (thing) {
+    localMallocBytes = cx->thread->gcMallocBytes;
+    if (thing && rt->gcMaxMallocBytes - rt->gcMallocBytes > localMallocBytes) {
         flagp = thing->flagp;
         flbase[flindex] = thing->next;
         METER(rt->gcStats.localalloc++);  /* this is not thread-safe */
+        JS_ASSERT(!rt->gcClosePhase);
         goto success;
     }
 
     JS_LOCK_GC(rt);
     gcLocked = JS_TRUE;
+
+    /* Transfer thread-local counter to global one. */
+    if (localMallocBytes != 0) {
+        cx->thread->gcMallocBytes = 0;
+        if (rt->gcMaxMallocBytes - rt->gcMallocBytes < localMallocBytes)
+            rt->gcMallocBytes = rt->gcMaxMallocBytes;
+        else
+            rt->gcMallocBytes += localMallocBytes;
+    }
 #endif
     JS_ASSERT(!rt->gcRunning);
     if (rt->gcRunning) {
@@ -761,52 +831,15 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
 #ifdef WAY_TOO_MUCH_GC
     rt->gcPoke = JS_TRUE;
 #endif
-    js_GC(cx, GC_KEEP_ATOMS | GC_ALREADY_LOCKED);
-    triedGC = JS_TRUE;
+    doGC = JS_TRUE;
 #else
-    triedGC = JS_FALSE;
+    doGC = (rt->gcMallocBytes >= rt->gcMaxMallocBytes);
 #endif
 
     arenaList = &rt->gcArenaList[flindex];
-
-  retry:
-    /* Try to get thing from the free list first. */
-    thing = arenaList->freeList;
-    if (thing) {
-        arenaList->freeList = thing->next;
-        flagp = thing->flagp;
-        JS_ASSERT(*flagp & GCF_FINAL);
-        METER(arenaList->stats.freelen--);
-        METER(arenaList->stats.recycle++);
-
-#ifdef JS_THREADSAFE
-        /*
-         * Fill the local free list by taking several things from the
-         * global free list.
-         */
-        JS_ASSERT(!flbase[flindex]);
-        tmpthing = arenaList->freeList;
-        if (tmpthing) {
-            maxFreeThings = MAX_THREAD_LOCAL_THINGS;
-            do {
-                if (!tmpthing->next)
-                    break;
-                tmpthing = tmpthing->next;
-            } while (--maxFreeThings != 0);
-
-            flbase[flindex] = arenaList->freeList;
-            arenaList->freeList = tmpthing->next;
-            tmpthing->next = NULL;
-        }
-#endif
-    } else {
-        if ((!arenaList->last || arenaList->lastLimit == GC_THINGS_SIZE) &&
-            !NewGCArena(rt, arenaList, triedGC)) {
-
+    for (;;) {
+        if (doGC && !rt->gcClosePhase) {
             /*
-             * Consider doing a "last ditch" GC when the free list is empty,
-             * the last arena is full and we can not allocate a new arena.
-             *
              * Keep rt->gcLock across the call into js_GC so we don't starve
              * and lose to racing threads who deplete the heap just after
              * js_GC has replenished it (or has synchronized with a racing
@@ -814,9 +847,6 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
              * can happen on certain operating systems. For the gory details,
              * see bug 162779 at https://bugzilla.mozilla.org/.
              */
-            if (triedGC)
-                goto fail;
-            rt->gcPoke = JS_TRUE;
             js_GC(cx, GC_KEEP_ATOMS | GC_ALREADY_LOCKED);
             if (JS_HAS_NATIVE_BRANCH_CALLBACK_OPTION(cx) &&
                 cx->branchCallback && !cx->branchCallback(cx, NULL)) {
@@ -824,61 +854,115 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
                 JS_UNLOCK_GC(rt);
                 return NULL;
             }
-            triedGC = JS_TRUE;
             METER(rt->gcStats.retry++);
-            goto retry;
         }
 
-        /* The last arena should have room for more things at this point. */
-        offset = arenaList->lastLimit;
-        if ((offset & GC_PAGE_MASK) == 0) {
-            /* Skip JSGCPageInfo record located at GC_PAGE_SIZE boundary. */
-            offset += PAGE_THING_GAP(nbytes);
-        }
-        JS_ASSERT(offset + nbytes <= GC_THINGS_SIZE);
-        arenaList->lastLimit = (uint16)(offset + nbytes);
-        a = arenaList->last;
-        firstPage = (uint8 *)FIRST_THING_PAGE(a);
-        thing = (JSGCThing *)(firstPage + offset);
-        flagp = a->base + offset / sizeof(JSGCThing);
-        if (flagp >= firstPage)
-            flagp += GC_THINGS_SIZE;
-        METER(++arenaList->stats.nthings);
-        METER(arenaList->stats.maxthings =
-              JS_MAX(arenaList->stats.nthings, arenaList->stats.maxthings));
+        /* Try to get thing from the free list. */
+        thing = arenaList->freeList;
+        if (thing) {
+            arenaList->freeList = thing->next;
+            flagp = thing->flagp;
+            JS_ASSERT(*flagp & GCF_FINAL);
+            METER(arenaList->stats.freelen--);
+            METER(arenaList->stats.recycle++);
+
+            if (rt->gcClosePhase) {
+                flags |= GCF_MARK;
+                break;
+            }
 
 #ifdef JS_THREADSAFE
-        /*
-         * Refill the local free list by taking free things from the
-         * last arena. Prefer to order free things by ascending addresses
-         * in the (unscientific) hope of better cache locality.
-         */
-        JS_ASSERT(!flbase[flindex]);
-        METER(nfree = 0);
-        lastptr = &flbase[flindex];
-        maxFreeThings = MAX_THREAD_LOCAL_THINGS;
-        for (offset = arenaList->lastLimit;
-             offset != GC_THINGS_SIZE && maxFreeThings-- != 0;
-             offset += nbytes) {
-            if ((offset & GC_PAGE_MASK) == 0)
-                offset += PAGE_THING_GAP(nbytes);
-            JS_ASSERT(offset + nbytes <= GC_THINGS_SIZE);
-            tmpflagp = a->base + offset / sizeof(JSGCThing);
-            if (tmpflagp >= firstPage)
-                tmpflagp += GC_THINGS_SIZE;
+            /*
+             * Fill the local free list by taking several things from the
+             * global free list.
+             */
+            JS_ASSERT(!flbase[flindex]);
+            tmpthing = arenaList->freeList;
+            if (tmpthing) {
+                maxFreeThings = MAX_THREAD_LOCAL_THINGS;
+                do {
+                    if (!tmpthing->next)
+                        break;
+                    tmpthing = tmpthing->next;
+                } while (--maxFreeThings != 0);
 
-            tmpthing = (JSGCThing *)(firstPage + offset);
-            tmpthing->flagp = tmpflagp;
-            *tmpflagp = GCF_FINAL;    /* signifying that thing is free */
-
-            *lastptr = tmpthing;
-            lastptr = &tmpthing->next;
-            METER(++nfree);
-        }
-        arenaList->lastLimit = offset;
-        *lastptr = NULL;
-        METER(arenaList->stats.freelen += nfree);
+                flbase[flindex] = arenaList->freeList;
+                arenaList->freeList = tmpthing->next;
+                tmpthing->next = NULL;
+            }
 #endif
+            break;
+        }
+
+        /* Allocate from the tail of last arena or from new arena if we can. */
+        if ((arenaList->last && arenaList->lastLimit != GC_THINGS_SIZE) ||
+            NewGCArena(rt, arenaList)) {
+
+            offset = arenaList->lastLimit;
+            if ((offset & GC_PAGE_MASK) == 0) {
+                /*
+                 * Skip JSGCPageInfo record located at GC_PAGE_SIZE boundary.
+                 */
+                offset += PAGE_THING_GAP(nbytes);
+            }
+            JS_ASSERT(offset + nbytes <= GC_THINGS_SIZE);
+            arenaList->lastLimit = (uint16)(offset + nbytes);
+            a = arenaList->last;
+            firstPage = (uint8 *)FIRST_THING_PAGE(a);
+            thing = (JSGCThing *)(firstPage + offset);
+            flagp = a->base + offset / sizeof(JSGCThing);
+            if (flagp >= firstPage)
+                flagp += GC_THINGS_SIZE;
+            METER(++arenaList->stats.nthings);
+            METER(arenaList->stats.maxthings =
+                  JS_MAX(arenaList->stats.nthings,
+                         arenaList->stats.maxthings));
+
+            if (rt->gcClosePhase) {
+                flags |= GCF_MARK;
+                break;
+            }
+
+#ifdef JS_THREADSAFE
+            /*
+             * Refill the local free list by taking free things from the last
+             * arena. Prefer to order free things by ascending address in the
+             * (unscientific) hope of better cache locality.
+             */
+            JS_ASSERT(!flbase[flindex]);
+            METER(nfree = 0);
+            lastptr = &flbase[flindex];
+            maxFreeThings = MAX_THREAD_LOCAL_THINGS;
+            for (offset = arenaList->lastLimit;
+                 offset != GC_THINGS_SIZE && maxFreeThings-- != 0;
+                 offset += nbytes) {
+                if ((offset & GC_PAGE_MASK) == 0)
+                    offset += PAGE_THING_GAP(nbytes);
+                JS_ASSERT(offset + nbytes <= GC_THINGS_SIZE);
+                tmpflagp = a->base + offset / sizeof(JSGCThing);
+                if (tmpflagp >= firstPage)
+                    tmpflagp += GC_THINGS_SIZE;
+
+                tmpthing = (JSGCThing *)(firstPage + offset);
+                tmpthing->flagp = tmpflagp;
+                *tmpflagp = GCF_FINAL;    /* signifying that thing is free */
+
+                *lastptr = tmpthing;
+                lastptr = &tmpthing->next;
+                METER(++nfree);
+            }
+            arenaList->lastLimit = offset;
+            *lastptr = NULL;
+            METER(arenaList->stats.freelen += nfree);
+#endif
+            break;
+        }
+
+        /* Consider doing a "last ditch" GC unless already tried. */
+        if (doGC)
+            goto fail;
+        rt->gcPoke = JS_TRUE;
+        doGC = JS_TRUE;
     }
 
     /* We successfully allocated the thing. */
@@ -896,11 +980,10 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
          */
         if (js_PushLocalRoot(cx, lrs, (jsval) thing) < 0) {
             /*
-             * When we fail for a thing allocated through the tail of
-             * the last arena, thing's flag byte is not initialized. So
-             * to prevent GC accessing the uninitialized flags during
-             * the finalization, we always mark the thing as final. See
-             * bug 337407.
+             * When we fail for a thing allocated through the tail of the last
+             * arena, thing's flag byte is not initialized. So to prevent GC
+             * accessing the uninitialized flags during the finalization, we
+             * always mark the thing as final. See bug 337407.
              */
             *flagp = GCF_FINAL;
             goto fail;
@@ -2219,6 +2302,122 @@ restart:
      */
     ScanDelayedChildren(cx);
 
+    /*
+     * Close phase.
+     *
+     * Isolate cx's active frames from extended class close hooks that could
+     * invoke scripted functions.  We ensure liveness during the close phase
+     * by marking all objects in the close table that are not marked.  We move
+     * each such object after marking it to a private work-list, then process
+     * that list after the marking half of the close phase.
+     *
+     * The GC allocator works when called from the close phase.  All things
+     * allocated during the close phase are born marked, and there must be no
+     * way for a garbage thing to be connected to such a newborn.  If the GC
+     * allocator called from the close phase exhausts the malloc heap, it will
+     * fail without trying a last-ditch GC.
+     */
+    if (rt->gcCloseTable.count != 0) {
+        JSObject **array, *obj;
+        uint32 count, index, pivot;
+        JSExtendedClass *xclasp;
+        uint32 added, closed, length;
+
+        /*
+         * First half: find unmarked objects reachable from rt->gcCloseTable,
+         * mark them, and set them aside at the end of the table.
+         */
+        rt->gcClosePhase = 1;
+
+        array = rt->gcCloseTable.array;
+        count = pivot = rt->gcCloseTable.count;
+        index = 0;
+        do {
+            obj = array[index];
+            if (*js_GetGCThingFlags(obj) & GCF_MARK) {
+                ++index;
+            } else {
+                array[index] = array[--pivot];
+                array[pivot] = obj;
+                GC_MARK(cx, obj, "close-phase object");
+            }
+        } while (index < pivot);
+        JS_ASSERT(array == rt->gcCloseTable.array);
+
+        /*
+         * Mark children of things that caused too deep recursion during the
+         * just-completed marking half of the close phase.
+         */
+        ScanDelayedChildren(cx);
+
+        /*
+         * Second half: loop over the items we set aside on the todo list and
+         * close their objects.  Temporarily set aside cx->fp here to prevent
+         * close hooks from running on the GC's interpreter stack.
+         */
+        rt->gcClosePhase = 2;
+        fp = cx->fp;
+        cx->fp = NULL;
+
+        while (index < count) {
+            /*
+             * Reload rt->gcCloseTable.array because close hooks may create
+             * new objects that have close hooks, so may extend the table.
+             */
+            obj = rt->gcCloseTable.array[index++];
+            xclasp = (JSExtendedClass *) LOCKED_OBJ_GET_CLASS(obj);
+            JS_ASSERT(xclasp->base.flags & JSCLASS_IS_EXTENDED);
+            xclasp->close(cx, obj);
+        }
+
+        rt->gcClosePhase = 0;
+        cx->fp = fp;
+
+        /*
+         * Move any added object pointers down over the span just processed,
+         * and update the table's count.
+         */
+        array = rt->gcCloseTable.array;
+        added = rt->gcCloseTable.count - count;
+        memmove(array + pivot, array + count, added);
+        closed = count - pivot;
+        rt->gcCloseTable.count -= closed;
+
+        /*
+         * Check whether we need to shrink the table now.  The previous value,
+         * possibly the maximum, of the table count is (count + added).  If as
+         * many or more objects were added during the above close loop as were
+         * closed, we won't shrink.
+         *
+         * Note that we might not shrink even if more objects were closed than
+         * were added, since we may not have closed enough to justify a shrink
+         * by power of two or linear growth increment.  So use straightforward
+         * code here, computing current and previous lengths and comparing.
+         */
+        length = GC_CLOSE_TABLE_LENGTH(rt->gcCloseTable.count);
+        count += added;
+        if (length < GC_CLOSE_TABLE_LENGTH(count)) {
+            JS_ASSERT(closed > added);
+            array = (JSObject **) realloc(array, length * sizeof(JSObject *));
+            if (array) {
+                rt->gcCloseTable.array = array;
+#ifdef DEBUG
+                count = rt->gcCloseTable.count;
+                memset(array + count, 0, (length - count) * sizeof(JSObject *));
+#endif
+            }
+        }
+
+        /*
+         * Poke the GC in case any marked object is really garbage.  This will
+         * cause a restart to collect such objects.  Since such objects are no
+         * longer in rt->gcCloseTable, they will not be closed again -- they
+         * will only finalized if they are indeed collectible.
+         */
+        if (gcflags & GC_LAST_CONTEXT)
+            rt->gcPoke = JS_TRUE;
+    }
+
     JS_ASSERT(!cx->insideGCMarkCallback);
     if (rt->gcCallback) {
         cx->insideGCMarkCallback = JS_TRUE;
@@ -2231,7 +2430,7 @@ restart:
     /*
      * Sweep phase.
      *
-     * Finalize as we sweep, outside of rt->gcLock, but with rt->gcRunning set
+     * Finalize as we sweep, outside of rt->gcLock but with rt->gcRunning set
      * so that any attempt to allocate a GC-thing from a finalizer will fail,
      * rather than nest badly and leave the unmarked newborn to be swept.
      *
@@ -2388,4 +2587,18 @@ restart:
         if (gcflags & GC_ALREADY_LOCKED)
             JS_LOCK_GC(rt);
     }
+}
+
+void
+js_UpdateMallocCounter(JSContext *cx, size_t nbytes)
+{
+    uint32 *pbytes, bytes;
+
+#ifdef JS_THREADSAFE
+    pbytes = &cx->thread->gcMallocBytes;
+#else
+    pbytes = &cx->runtime->gcMallocBytes;
+#endif
+    bytes = *pbytes;
+    *pbytes = ((uint32)-1 - bytes <= nbytes) ? (uint32)-1 : bytes + nbytes;
 }

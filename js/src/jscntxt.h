@@ -72,6 +72,12 @@ struct JSThread {
 
     /* Thread-local gc free lists array. */
     JSGCThing           *gcFreeLists[GC_NUM_FREELISTS];
+
+    /*
+     * Thread-local version of JSRuntime.gcMallocBytes to avoid taking
+     * locks on each JS_malloc.
+     */
+    uint32              gcMallocBytes;
 };
 
 extern void JS_DLL_CALLBACK
@@ -117,8 +123,18 @@ struct JSRuntime {
     uint32              gcMaxMallocBytes;
     uint32              gcLevel;
     uint32              gcNumber;
+
+    /*
+     * NB: do not pack another flag here by claiming gcPadding unless the new
+     * flag is written only by the GC thread.  Atomic updates to packed bytes
+     * are not guaranteed, so stores issued by one thread may be lost due to
+     * unsynchronized read-modify-write cycles on other threads.
+     */
     JSPackedBool        gcPoke;
     JSPackedBool        gcRunning;
+    uint8               gcClosePhase;
+    uint8               gcPadding;
+
     JSGCCallback        gcCallback;
     uint32              gcMallocBytes;
     JSGCArena           *gcUnscannedArenaStackTop;
@@ -139,12 +155,12 @@ struct JSRuntime {
      */
     uint32              gcPrivateBytes;
 
-#if JS_HAS_XML_SUPPORT
-    /* Lists of JSXML private data structures to be finalized. */
-    JSXMLNamespace      *gcDoomedNamespaces;
-    JSXMLQName          *gcDoomedQNames;
-    JSXML               *gcDoomedXML;
-#endif
+    /*
+     * Table for tracking objects of extended classes that have non-null close
+     * hooks, and need the GC to perform two-phase finalization.
+     */
+    JSGCCloseTable      gcCloseTable;
+
 #ifdef JS_GCMETER
     JSGCStats           gcStats;
 #endif
