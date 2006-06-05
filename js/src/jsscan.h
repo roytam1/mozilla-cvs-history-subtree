@@ -44,6 +44,7 @@
  */
 #include <stddef.h>
 #include <stdio.h>
+#include "jsconfig.h"
 #include "jsopcode.h"
 #include "jsprvtd.h"
 #include "jspubtd.h"
@@ -146,9 +147,9 @@ typedef enum JSTokenType {
     (tt == TOK_AT || tt == TOK_DBLCOLON || tt == TOK_ANYNAME)
 
 #if JS_HAS_BLOCK_SCOPE
-#define TOKEN_TYPE_IS_DECL(tt) ((tt) == TOK_VAR || (tt) == TOK_LET)
+# define TOKEN_TYPE_IS_DECL(tt) ((tt) == TOK_VAR || (tt) == TOK_LET)
 #else
-#define TOKEN_TYPE_IS_DECL(tt) ((tt) == TOK_VAR)
+# define TOKEN_TYPE_IS_DECL(tt) ((tt) == TOK_VAR)
 #endif
 
 struct JSStringBuffer {

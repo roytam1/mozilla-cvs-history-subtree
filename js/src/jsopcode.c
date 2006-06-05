@@ -66,6 +66,7 @@
 #include "jsobj.h"
 #include "jsopcode.h"
 #include "jsregexp.h"
+#include "jsscan.h"
 #include "jsscope.h"
 #include "jsscript.h"
 #include "jsstr.h"
@@ -1485,7 +1486,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_GETLOCAL:
                 i = GET_UINT16(pc);
                 sn = js_GetSrcNote(jp->script, pc);
-                if (i < ss->top) {
+                if ((uintN)i < ss->top) {
                     rval = OFF2STR(&ss->sprinter, ss->offsets[i]);
                 } else {
                     jsatomid j, n;
@@ -1514,15 +1515,18 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     }
 
                     LOCAL_ASSERT(j < n);
+                    i -= depth;
                     for (sprop = OBJ_SCOPE(obj)->lastProp; sprop;
                          sprop = sprop->parent) {
-                        if (sprop->shortid == i - depth)
+                        if (sprop->shortid == i)
                             break;
                     }
 
                     LOCAL_ASSERT(sprop && JSID_IS_ATOM(sprop->id));
                     atom = JSID_TO_ATOM(sprop->id);
                     rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
+                    if (!rval)
+                        return JS_FALSE;
                     RETRACT(&ss->sprinter, rval);
                 }
                 todo = Sprint(&ss->sprinter, ss_format, VarPrefix(sn), rval);
@@ -1557,19 +1561,22 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 op = JSOP_RETURN;
                 /* FALL THROUGH */
               case JSOP_RETURN:
-#if JS_HAS_GENERATORS
-              case JSOP_YIELD:
-#endif
-                lval = js_CodeSpec[op].name;
                 rval = POP_STR();
                 if (*rval != '\0')
-                    js_printf(jp, "\t%s %s;\n", lval, rval);
+                    js_printf(jp, "\t%s %s;\n", js_return_str, rval);
                 else
-                    js_printf(jp, "\t%s;\n", lval);
+                    js_printf(jp, "\t%s;\n", js_return_str);
                 todo = -2;
                 break;
 
 #if JS_HAS_GENERATORS
+              case JSOP_YIELD:
+                rval = POP_STR();
+                todo = (*rval != '\0')
+                       ? Sprint(&ss->sprinter, "%s %s", js_yield_str, rval)
+                       : SprintCString(&ss->sprinter, js_yield_str);
+                break;
+
               case JSOP_ARRAYPUSH:
               {
                 uintN pos, blockpos, startpos;

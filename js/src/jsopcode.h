@@ -45,7 +45,6 @@
 #include <stddef.h>
 #include "jsprvtd.h"
 #include "jspubtd.h"
-#include "jsconfig.h"
 #include "jsutil.h"
 
 JS_BEGIN_EXTERN_C
@@ -190,10 +189,8 @@ typedef enum JSOp {
 #define ATOM_INDEX_LIMIT_LOG2   23
 #define ATOM_INDEX_LIMIT        ((uint32)1 << ATOM_INDEX_LIMIT_LOG2)
 
-#if JS_HAS_SHARP_VARS
 JS_STATIC_ASSERT(sizeof(jsatomid) * JS_BITS_PER_BYTE >=
                  ATOM_INDEX_LIMIT_LOG2 + 1);
-#endif
 
 /* Common uint16 immediate format helpers. */
 #define UINT16_HI(i)            ((jsbytecode)((i) >> 8))
@@ -229,23 +226,6 @@ struct JSCodeSpec {
     uint32              format;         /* immediate operand format */
 };
 
-extern const char       js_const_str[];
-extern const char       js_var_str[];
-#if JS_HAS_BLOCK_SCOPE
-extern const char       js_let_str[];
-#endif
-extern const char       js_function_str[];
-extern const char       js_in_str[];
-extern const char       js_instanceof_str[];
-extern const char       js_new_str[];
-extern const char       js_delete_str[];
-extern const char       js_typeof_str[];
-extern const char       js_void_str[];
-extern const char       js_null_str[];
-extern const char       js_this_str[];
-extern const char       js_false_str[];
-extern const char       js_true_str[];
-extern const char       js_default_str[];
 extern const JSCodeSpec js_CodeSpec[];
 extern uintN            js_NumCodeSpecs;
 extern const jschar     js_EscapeMap[];

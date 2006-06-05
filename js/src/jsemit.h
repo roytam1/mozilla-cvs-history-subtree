@@ -142,7 +142,7 @@ struct JSTreeContext {              /* tree context for semantic checks */
 #define TREE_CONTEXT_FINISH(tc)                                               \
     ((void)0)
 
-#define TC_AT_TOPLEVEL(tc)                                                    \
+#define TREE_CONTEXT_AT_TOP_LEVEL(tc)                                         \
     (!((tc)->flags & TCF_IN_FUNCTION) && !(tc)->topStmt)
 
 /*
