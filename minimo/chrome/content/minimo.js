@@ -573,6 +573,18 @@ function MiniNavStartup()
     
   } catch ( ignore ) {}
 
+ /* 
+  * Pref Sync for UI. 
+  */ 
+  
+ var prefState = gPref.getBoolPref("ui.fullscreen");
+ window.fullScreen  = prefState;
+ document.getElementById("mini-toolbars").hidden = prefState ;
+ document.getElementById("browserleftbar").collapsed = prefState;
+
+ var hbValue  = gPref.getBoolPref("ui.homebar");
+ document.getElementById("browserleftbar").collapsed = !hbValue  ;
+ 
   
  /*
   * Enable Key Spin Control 
