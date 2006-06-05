@@ -3338,7 +3338,7 @@ EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
 
 static JSBool
 EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
-                    JSBool var, JSBool popStmt)
+                    JSBool inHead)
 {
     ptrdiff_t off, noteIndex, tmp;
     JSParseNode *pn2, *pn3;
@@ -3347,16 +3347,19 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
     JSTreeContext *tc;
     JSStmtInfo *stmt, *scopeStmt;
     JSObject *blockObj;
+#ifdef DEBUG
+    JSBool varOrConst = (pn->pn_op != JSOP_NOP);
+#endif
 
     /*
-     * Let blocks and expressions initializers' execute in their parents'
-     * lexical scope. If tc is non-null below, then we hide the top lexical
+     * Let blocks and expressions have a parenthesized head in which the new
+     * scope is not yet open. Initializer evaluation uses the parent node's
+     * lexical scope. If inHead is true below, then we hide the top lexical
      * block from any calls to BindNameToSlot hiding in pn2->pn_expr so that
      * it won't find any names in the new let block.
      */
-    JS_ASSERT(!var || (var && !popStmt));
-    if (popStmt)
-        tc = &cg->treeContext;
+    JS_ASSERT(!varOrConst || !inHead);
+    tc = &cg->treeContext;
 
     off = noteIndex = -1;
     for (pn2 = pn->pn_head; ; pn2 = pn2->pn_next) {
@@ -3400,11 +3403,12 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
 
         if (!BindNameToSlot(cx, &cg->treeContext, pn2))
             return JS_FALSE;
-        JS_ASSERT(var || pn2->pn_slot >= 0);
+        JS_ASSERT(varOrConst || pn2->pn_slot >= 0);
 
         op = pn2->pn_op;
         if (op == JSOP_ARGUMENTS) {
-            JS_ASSERT(!pn2->pn_expr && var); /* JSOP_ARGUMENTS => no initializer */
+            /* JSOP_ARGUMENTS => no initializer */
+            JS_ASSERT(!pn2->pn_expr && varOrConst);
 #ifdef __GNUC__
             atomIndex = 0;            /* quell GCC overwarning */
 #endif
@@ -3414,7 +3418,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
 
             if (pn2->pn_expr) {
                 if (op == JSOP_SETNAME) {
-                    JS_ASSERT(var);
+                    JS_ASSERT(varOrConst);
                     EMIT_ATOM_INDEX_OP(JSOP_BINDNAME, atomIndex);
                 }
                 pn3 = pn2->pn_expr;
@@ -3425,7 +3429,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 }
 
                 /* Evaluate expr in the outer lexical scope if requested. */
-                if (popStmt) {
+                if (inHead) {
                     stmt = tc->topStmt;
                     scopeStmt = tc->topScopeStmt;
 
@@ -3435,11 +3439,17 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                     tc->blockChain =
                         JSVAL_TO_OBJECT(blockObj->slots[JSSLOT_PARENT]);
                 }
+#ifdef __GNUC__
+                else {
+                    stmt = scopeStmt = NULL;    /* quell GCC overwarning */
+                    blockObj = NULL;
+                }
+#endif
 
                 if (!js_EmitTree(cx, cg, pn3))
                     return JS_FALSE;
 
-                if (popStmt) {
+                if (inHead) {
                     tc->topStmt = stmt;
                     tc->topScopeStmt = scopeStmt;
                     tc->blockChain = blockObj;
@@ -3467,7 +3477,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
             js_NewSrcNote2(cx, cg, SRC_DECL,
                            (pn->pn_op == JSOP_DEFCONST)
                            ? SRC_DECL_CONST
-                           : var
+                           : (pn->pn_op == JSOP_DEFVAR)
                            ? SRC_DECL_VAR
                            : SRC_DECL_LET) < 0) {
             return JS_FALSE;
@@ -4509,7 +4519,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_VAR:
-        if (!EmitVarDeclarations(cx, cg, pn, JS_TRUE, JS_FALSE))
+        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE))
             return JS_FALSE;
         break;
 
@@ -5264,7 +5274,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
       case TOK_LET:
       {
-        JSBool popStmt;
+        JSBool inHead;
 
         /* Let statements have their declarations on the left. */
         if (pn->pn_arity == PN_BINARY) {
@@ -5274,10 +5284,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             pn2 = NULL;
         }
 
-        popStmt = (pn2 != NULL) || (cg->treeContext.flags & TCF_IN_FOR_INIT);
+        /* Let and for loop heads evaluate and bind in the outer scope. */
+        inHead = (pn2 != NULL || (cg->treeContext.flags & TCF_IN_FOR_INIT));
 
         JS_ASSERT(pn->pn_arity == PN_LIST);
-        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE, popStmt))
+        if (!EmitVarDeclarations(cx, cg, pn, inHead))
             return JS_FALSE;
 
         if (pn2 && !js_EmitTree(cx, cg, pn2))
