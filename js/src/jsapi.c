@@ -1339,6 +1339,7 @@ static JSStdName standard_class_names[] = {
 #if JS_HAS_GENERATORS
     {js_InitIteratorClasses,    EAGER_ATOM_AND_CLASP(Iterator)},
     {js_InitIteratorClasses,    EAGER_ATOM_AND_CLASP(Generator)},
+    {js_InitIteratorClasses,    EAGER_ATOM_AND_CLASP(GeneratorExit)},
 #endif
 
     {NULL,                      0, NULL, NULL}
@@ -1633,10 +1634,14 @@ JS_malloc(JSContext *cx, size_t nbytes)
     JS_ASSERT(nbytes != 0);
     if (nbytes == 0)
         nbytes = 1;
-    cx->runtime->gcMallocBytes += nbytes;
+
     p = malloc(nbytes);
-    if (!p)
+    if (!p) {
         JS_ReportOutOfMemory(cx);
+        return NULL;
+    }
+    js_UpdateMallocCounter(cx, nbytes);
+
     return p;
 }
 
@@ -1962,7 +1967,7 @@ JS_MaybeGC(JSContext *cx)
      * F == 0 && B > 3/2 Bl(1-0.8) or just B > 6/5 Bl.
      */
     if ((bytes > 8192 && bytes > lastBytes + lastBytes / 5) ||
-        rt->gcMallocBytes > rt->gcMaxMallocBytes) {
+        rt->gcMallocBytes >= rt->gcMaxMallocBytes) {
         JS_GC(cx);
     }
 #endif
