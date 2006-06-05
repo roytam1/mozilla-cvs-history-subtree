@@ -144,7 +144,7 @@
     <command id="cmd_BrowserForward"          oncommand="BrowserForward()" />
     <command id="cmd_BrowserReload"           oncommand="BrowserReload()" />
     <command id="cmd_BrowserStop"             oncommand="BrowserStop()" />
-    <command id="cmd_DoPanelPreferences"      oncommand="DoPanelPreferences()" /> 
+    <command id="cmd_DoPanelPreferences"      oncommand="DoBrowserPreferences()" /> 
     <command id="cmd_DoBrowserRSS"            oncommand="DoBrowserRSS()" />
     <command id="cmd_BrowserMenu"             oncommand="BrowserMenuPopup()" />
     <command id="cmd_BrowserNavMenu"          oncommand="BrowserNavMenuPopup()" />

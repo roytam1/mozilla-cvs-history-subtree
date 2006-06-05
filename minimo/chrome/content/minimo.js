@@ -1190,6 +1190,22 @@ function DoBrowserSearch() {
   }  
 }
 
+
+/*
+ * New preferences launches it in the tab 
+ */
+
+function DoBrowserPreferences() {
+  
+  try { 
+    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/preferences/preferences.xul');    
+    browserInit(gBrowser.selectedTab);
+  } catch (e) {
+    
+  }  
+}
+
+
 /* 
  * Search extension to urlbar, deckmode.
  * Called form the deckmode urlbar selector
