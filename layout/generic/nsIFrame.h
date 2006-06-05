@@ -1018,7 +1018,11 @@ public:
    */
   struct InlineIntrinsicWidthData {
     InlineIntrinsicWidthData()
-      : prevLines(0), currentLine(0), skipWhitespace(PR_TRUE) {}
+      : prevLines(0)
+      , currentLine(0)
+      , skipWhitespace(PR_TRUE)
+      , trailingWhitespace(0)
+    {}
 
     // The maximum intrinsic width for all previous lines.
     nscoord prevLines;
@@ -1033,6 +1037,10 @@ public:
     // ended with whitespace.
     PRBool skipWhitespace;
 
+    // This contains the width of the trimmable whitespace at the end of
+    // |currentLine|; it is zero if there is no such whitespace.
+    nscoord trailingWhitespace;
+
     // Floats encountered in the lines.
     nsVoidArray floats; // of nsIFrame*
   };
@@ -1042,13 +1050,6 @@ public:
   };
 
   struct InlinePrefWidthData : public InlineIntrinsicWidthData {
-    // This contains the width of the trimmable whitespace at the end of
-    // |currentLine|; it is zero if there is no such whitespace.
-    nscoord trailingWhitespace;
-
-    InlinePrefWidthData()
-      : trailingWhitespace(0) {}
-
     void Break(nsIRenderingContext *aRenderingContext);
   };
 

@@ -2739,6 +2739,7 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                            nsIFrame::InlineMinWidthData *aData)
 {
+  aData->trailingWhitespace = 0;
   aData->skipWhitespace = PR_FALSE;
   aData->currentLine += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                             this, nsLayoutUtils::MIN_WIDTH);
@@ -2757,8 +2758,9 @@ nsFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
 void
 nsIFrame::InlineMinWidthData::Break(nsIRenderingContext *aRenderingContext)
 {
+  currentLine -= trailingWhitespace;
   prevLines = PR_MAX(prevLines, currentLine);
-  currentLine = 0;
+  currentLine = trailingWhitespace = 0;
 
   for (PRInt32 i = 0, i_end = floats.Count(); i != i_end; ++i) {
     nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, floats[i]);

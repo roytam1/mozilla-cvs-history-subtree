@@ -5921,17 +5921,20 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
         } else {
           firstChar = *bp2;
         }
+        nscoord width;
         if ('\t' == firstChar) {
           // XXX Need to track column!
           wordLen = 8;
           // Apply word spacing to every space derived from a tab
-          aData->currentLine +=
+          width =
             (ts.mSpaceWidth + ts.mWordSpacing + ts.mLetterSpacing)*wordLen;
         } else {
           // Apply word spacing to every space, if there's more than one
-          aData->currentLine +=
+          width =
             wordLen*(ts.mWordSpacing + ts.mLetterSpacing + ts.mSpaceWidth);// XXX simplistic
         }
+        aData->currentLine += width;
+        aData->trailingWhitespace += width;
       }
     } else {
       nsTextDimensions dimensions;
@@ -5949,6 +5952,7 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
 
       aData->currentLine += dimensions.width;
       aData->skipWhitespace = PR_FALSE;
+      aData->trailingWhitespace = 0;
     }
   }
 }

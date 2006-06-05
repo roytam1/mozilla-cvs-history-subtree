@@ -80,7 +80,10 @@ nsPlaceholderFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                                       nsIFrame::InlineMinWidthData *aData)
 {
   // Override AddInlineMinWith so that *nothing* happens.  In
-  // particular, we don't want to set aData->skipWhitespace to false.
+  // particular, we don't want to zero out |aData->trailingWhitespace|,
+  // since nsLineLayout skips placeholders when trimming trailing
+  // whitespace, and we don't want to set aData->skipWhitespace to
+  // false.
 
   // ...but push floats onto the list
   if (mOutOfFlowFrame->GetStyleDisplay()->mFloats != NS_STYLE_FLOAT_NONE)
