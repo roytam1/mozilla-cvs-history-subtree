@@ -5934,7 +5934,12 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
             wordLen*(ts.mWordSpacing + ts.mLetterSpacing + ts.mSpaceWidth);// XXX simplistic
         }
         aData->currentLine += width;
-        aData->trailingWhitespace += width;
+        if (styleText->WhiteSpaceIsSignificant())
+          // XXX Should we also subtract the old value of
+          // trailingWhitespace from currentLine?
+          aData->trailingWhitespace = 0;
+        else
+          aData->trailingWhitespace += width;
       }
     } else {
       nsTextDimensions dimensions;
@@ -6027,7 +6032,12 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
             wordLen*(ts.mWordSpacing + ts.mLetterSpacing + ts.mSpaceWidth);// XXX simplistic
         }
         aData->currentLine += width;
-        aData->trailingWhitespace += width;
+        if (GetStyleText()->WhiteSpaceIsSignificant())
+          // XXX Should we also subtract the old value of
+          // trailingWhitespace from currentLine?
+          aData->trailingWhitespace = 0;
+        else
+          aData->trailingWhitespace += width;
       }
     } else {
       nsTextDimensions dimensions;
