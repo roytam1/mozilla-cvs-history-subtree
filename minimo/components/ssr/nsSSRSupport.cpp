@@ -166,6 +166,7 @@ nsSSRSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar
     const char* domain = NS_ConvertUCS2toUTF8(aData).get();
     
     if (!strcmp(domain, "maps.google.com") ||
+        !strcmp(domain, "people.mozilla.com") ||
         !strcmp(domain, "slashdot.org") ||
         !strcmp(domain, "www.digg.com") ||
         !strcmp(domain, "weblogs.mozillazine.org") ||
