@@ -1911,6 +1911,8 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
   mCurrentTarget = aTargetFrame;
   mCurrentTargetContent = nsnull;
   nsresult ret = NS_OK;
+  //Keep the prescontext alive, we might need it after event dispatch
+  nsRefPtr<nsPresContext> presContext = aPresContext;
 
   NS_ASSERTION(mCurrentTarget, "mCurrentTarget is null");
   if (!mCurrentTarget) return NS_ERROR_NULL_POINTER;
@@ -2020,8 +2022,8 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
         GetEventTarget(&targ);
         if (!targ) return NS_ERROR_FAILURE;
       }
-      ret = CheckForAndDispatchClick(aPresContext, (nsMouseEvent*)aEvent, aStatus);
-      nsIPresShell *shell = aPresContext->GetPresShell();
+      ret = CheckForAndDispatchClick(presContext, (nsMouseEvent*)aEvent, aStatus);
+      nsIPresShell *shell = presContext->GetPresShell();
       if (shell) {
         shell->FrameSelection()->SetMouseDownState(PR_FALSE);
       }
@@ -2112,7 +2114,7 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
       case MOUSE_SCROLL_N_LINES:
       case MOUSE_SCROLL_PAGE:
         {
-          DoScrollText(aPresContext, aTargetFrame, msEvent, numLines,
+          DoScrollText(presContext, aTargetFrame, msEvent, numLines,
                        (msEvent->scrollFlags & nsMouseScrollEvent::kIsHorizontal),
                        (action == MOUSE_SCROLL_PAGE));
         }
@@ -2144,7 +2146,7 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
   case NS_DRAGDROP_EXIT:
     // clean up after ourselves. make sure we do this _after_ the event, else we'll
     // clean up too early!
-    GenerateDragDropEnterExit(aPresContext, (nsGUIEvent*)aEvent);
+    GenerateDragDropEnterExit(presContext, (nsGUIEvent*)aEvent);
     break;
 
   case NS_KEY_UP:
@@ -2263,7 +2265,7 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
   case NS_MOUSE_ENTER:
     if (mCurrentTarget) {
       nsCOMPtr<nsIContent> targetContent;
-      mCurrentTarget->GetContentForEvent(aPresContext, aEvent,
+      mCurrentTarget->GetContentForEvent(presContext, aEvent,
                                          getter_AddRefs(targetContent));
       SetContentState(targetContent, NS_EVENT_STATE_HOVER);
     }
