@@ -1,4 +1,4 @@
-pref("general.useragent.extra.minimo", "Minimo/0.015");
+pref("general.useragent.extra.minimo", "Minimo/0.016");
 
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/xhtml?q=");
