@@ -34,6 +34,7 @@ minimo-skin.jar:
 	skin/classic/minimo/extensions/icon-star.png    (skin/extensions/icon-star.png)
 	skin/classic/minimo/extensions/icon-cash.png    (skin/extensions/icon-cash.png)
 	skin/classic/minimo/extensions/icon-history.png    (skin/extensions/icon-history.png)
+	skin/classic/minimo/extensions/icon-map.png    (skin/extensions/icon-map.png)
 
 minimo-skin-vga.jar:
 %   skin    minimo   classic-vga/1.0 %skin/classic/minimo/
@@ -71,7 +72,7 @@ minimo-skin-vga.jar:
 	skin/classic/minimo/extensions/icon-star.png    (skin-vga/extensions/icon-star.png)
 	skin/classic/minimo/extensions/icon-cash.png    (skin-vga/extensions/icon-cash.png)
 	skin/classic/minimo/extensions/icon-history.png    (skin-vga/extensions/icon-history.png)
-
+	skin/classic/minimo/extensions/icon-map.png    (skin/extensions/icon-map.png)
 
 minimo.jar:
 %   content minimo               %content/minimo/
