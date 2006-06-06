@@ -1103,7 +1103,7 @@ block_size
 
 Allows clients to pull media frames using zapIClientSink::pullFrame().
 
-Sinks: 1 (passive)
+Sinks: 1 (active)
 Source: none
 
 Output stream:
@@ -1111,3 +1111,15 @@ as input stream
 
 ----------------------------------------------------------------------
 
+38) null-sink
+-------------
+
+A passive sink that discards all frames.
+
+Sinks: 1 (passive)
+Source: none
+
+Input stream:
+any
+
+----------------------------------------------------------------------

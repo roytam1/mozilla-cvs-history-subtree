@@ -43,6 +43,7 @@ CPPSRCS		= \
 		zapMediaFrame.cpp \
 		zapMediaGraph.cpp \
 		zapMediaModule.cpp \
+		zapNullSink.cpp \
 		zapPacketBuffer.cpp \
 		zapPacketPump.cpp \
 		zapRTPDemuxer.cpp \
