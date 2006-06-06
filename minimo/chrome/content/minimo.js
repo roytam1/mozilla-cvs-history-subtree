@@ -577,14 +577,17 @@ function MiniNavStartup()
   * Pref Sync for UI. 
   */ 
   
- var prefState = gPref.getBoolPref("ui.fullscreen");
- window.fullScreen  = prefState;
- document.getElementById("mini-toolbars").hidden = prefState ;
- document.getElementById("browserleftbar").collapsed = prefState;
+ try {
+   var prefState = gPref.getBoolPref("ui.fullscreen");
+   window.fullScreen  = prefState;
+   document.getElementById("mini-toolbars").hidden = prefState ;
+   document.getElementById("browserleftbar").collapsed = prefState;
+ } catch ( i )  { } 
 
- var hbValue  = gPref.getBoolPref("ui.homebar");
- document.getElementById("browserleftbar").collapsed = !hbValue  ;
- 
+ try {
+   var hbValue  = gPref.getBoolPref("ui.homebar");
+   document.getElementById("browserleftbar").collapsed = !hbValue  ;
+ } catch ( i ) { } 
   
  /*
   * Enable Key Spin Control 
