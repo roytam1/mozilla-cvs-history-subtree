@@ -839,7 +839,7 @@ AsyncObject.metafun(
     // install 'whenCondition':
     eval("f = function when"+condition+"(fct) {"+
          "  if (this._"+condition+")"+
-         "    fct();"+
+         "    fct.apply(this);"+
          "  else"+
          "    this._"+condition+"Hook.push(fct);};");
     this.fun(f);    
