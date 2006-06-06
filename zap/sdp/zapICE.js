@@ -276,7 +276,7 @@ zapICEStunReflexiveCandidateFactory.fun(
       this.schedule(this.stop, 0);
       return;
     }
-    
+
     this.paceDuration = paceDuration;
     this.mediaGraph = mediaGraph;
     this.localCandidates = localCandidates;
@@ -310,10 +310,16 @@ zapICEStunReflexiveCandidateFactory.fun(
     var lc = this.localCandidates[this.currentCandidate];
     var comp = lc.componentAt(this.currentComponent);
     var serv = this.stunServers[this.currentServer];
-    var req = comp.stunClientCtl.sendBindingRequest(this, serv, null, null);
-    this.activeRequests[Components.utils.getObjectId(req)] = [lc, this.currentComponent, serv];
-    ++this.activeRequestCount;
-
+    try {
+      var req = comp.stunClientCtl.sendBindingRequest(this, serv, null, null);
+      this.activeRequests[Components.utils.getObjectId(req)] = [lc, this.currentComponent, serv];
+      ++this.activeRequestCount;
+    }
+    catch(e) {
+      // The binding request has failed immediatly; probably because
+      // the stun server is invalid. Let's continue as normal.
+    }
+    
     // we iterate through components first, then candidates, then servers
     if (++this.currentComponent >= lc.componentCount) {
       this.currentComponent = 0;
@@ -326,7 +332,6 @@ zapICEStunReflexiveCandidateFactory.fun(
         }
       }
     }
-      
     this.schedule(this.next, this.paceDuration);
   });
 
@@ -480,13 +485,21 @@ ICECandidates.appendCtor(
     this.activeCandidate = args.activeCandidate;
   });
 
+ICECandidates.fun(
+  function destroy() {
+    for (var i=0,l=this.candidates.length; i<l; ++i) {
+      this.candidates[i].destroy();
+    }
+    delete this.candidates;
+    delete this.activeCandidate;
+  });
 
 // continuation done() will be called with an ICECandidates object
 function produceICECandidates(done, componentCount, udpPortbase,
                               maxDuration, paceDuration,
                               mediaGraph, stunServers)
 {
-
+  
   // generate local candidates first:
   var locals = gatherLocalICECandidates(componentCount, udpPortbase, mediaGraph);
   

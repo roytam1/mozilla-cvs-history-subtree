@@ -43,6 +43,7 @@ Components.utils.importModule("gre:ClassUtils.js");
 Components.utils.importModule("gre:ArrayUtils.js");
 Components.utils.importModule("gre:StringUtils.js");
 Components.utils.importModule("gre:ObjectUtils.js");
+Components.utils.importModule("gre:zapICE.js");
 
 // name our global object:
 function toString() { return "[MediaSession.js]"; }
@@ -76,18 +77,26 @@ MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
 
 //----------------------------------------------------------------------
 // zapIMediaSession
-// INITIALIZED --> NEGOTIATED --> RUNNING --> TERMINATED
+// INIT_PENDING --> INITIALIZED --> NEGOTIATED --> RUNNING --> TERMINATED
 
 //  void init(in ACString originUsername,
 //            in ACString originAddress,
 //            in ACString connectionAddress,
 //            in ACString callAudioIn,
 //            in ACString callAudioOut,
-//            in ACString callTEventIn);
+//            in ACString callTEventIn,
+//            [array, size_is(codec_count)] in string codecs,
+//            in unsigned long codec_count,
+//            [array, size_is(stunServer_count)] in string stunServers,
+//            in unsigned long stunServer_count,
+//            in zapIMediaSessionListener listener);
 MediaSession.fun(
   function init(originUsername, originAddress, connectionAddress,
                 callAudioIn, callAudioOut, callTEventIn,
-                codecs, codec_count) {
+                codecs, codec_count, stunServers, stunServer_count,
+                listener) {
+    this.changeState("INIT_PENDING");
+    
     this.originUsername = originUsername;
     this.originAddress = originAddress;
     this.connectionAddress = connectionAddress;
@@ -95,6 +104,9 @@ MediaSession.fun(
     this.callAudioOut = callAudioOut;
     this.callTEventIn = callTEventIn;
 
+    this.stunServers = stunServers;
+    this.listener = listener;
+    
     //--------------------------------------------------
     var SpeexFormatDescriptor = {};
     SpeexFormatDescriptor.localPayloadType = "97";
@@ -280,7 +292,21 @@ MediaSession.fun(
     // should have been set up by our client application:
     this.mediaGraph = Components.classes["@mozilla.org/zap/mediagraph;1"].getService(Components.interfaces.zapIMediaGraph);
     this.socketpair = this.mediaGraph.addNode("udp-socket-pair", null);
-    this.changeState("INITIALIZED");
+
+    // asynchronously gather ICE candidates. Trigger 'INITIALIZED'
+    // status from continuation
+    var me = this;
+    function iceCandidatesProduced(candidates) {
+      if (me.currentState == "TERMINATED") return; // we have already terminated
+      me.iceCandidates = candidates;
+      me.changeState("INITIALIZED");
+      if (me.listener)
+        me.listener.mediaSessionInitialized(me);
+    }
+    this._dump("$$1");
+    produceICECandidates(iceCandidatesProduced, 2, 49152, 5000, 50,
+                         this.mediaGraph, this.stunServers);
+    this._dump("$$2");
   });
 
 //  zapISdpSessionDescription generateSDPOffer();
@@ -332,7 +358,8 @@ MediaSession.fun(
   });
 
 //  zapISdpSessionDescription processSDPOffer(in zapISdpSessionDescription offer);
-MediaSession.fun(
+MediaSession.statefun(
+  "INITIALIZED",
   function processSDPOffer(offer) {
     var remoteHost, remoteRTPPort, remoteRTCPPort;
     
@@ -407,7 +434,8 @@ MediaSession.fun(
   });
 
 //  void processSDPAnswer(in zapISdpSessionDescription answer);
-MediaSession.fun(
+MediaSession.statefun(
+  "INITIALIZED",
   function processSDPAnswer(answer) {
     var remoteHost, remoteRTPPort, remoteRTCPPort;
     
@@ -470,6 +498,8 @@ MediaSession.getter(
 //  void shutdown();
 MediaSession.fun(
   function shutdown() {
+    delete this.listener;
+
     // remove all the nodes we added to the graph:
     this.mediaGraph.removeNode(this.socketpair);
     if (this.rtpsession) {
@@ -480,6 +510,11 @@ MediaSession.fun(
       this.mediaGraph.removeNode(this.outboundMerger);
       this.mediaGraph.removeNode(this.inboundMerger);
       this.mediaGraph.removeNode(this.demuxer);
+
+      if (this.iceCandidates) {
+        this.iceCandidates.destroy();
+        delete this.iceCandidates;
+      }
       
       // disconnect our codecs:
       for (var i=0,l=this.supportedRTPAVPFormats.length; i<l; ++i) {

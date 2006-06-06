@@ -156,6 +156,7 @@ zapStunBindingRequest::Init(zapStunClient* stunClient,
   nsCOMPtr<nsIDNSService> dnsService = do_GetService("@mozilla.org/network/dns-service;1");
   if (NS_FAILED(dnsService->AsyncResolve(mStunServerAddress, 0, this,
                                          eventTarget, getter_AddRefs(mDNSRequest)))) {
+    NS_ERROR("DNS resolution error");
     return NS_ERROR_FAILURE;
   }
   
@@ -438,7 +439,7 @@ zapStunClient::SendBindingRequest(zapIStunClientListener *listener,
                                   nsICancelable **_retval)
 {
   if (!mOutput || !mInput) {
-    NS_ERROR("Can't send binding request in unconnected state");
+    NS_WARNING("Can't send binding request in unconnected state");
     return NS_ERROR_FAILURE;
   }
 

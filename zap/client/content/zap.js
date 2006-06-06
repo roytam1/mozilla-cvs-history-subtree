@@ -2642,6 +2642,7 @@ ActiveCall.fun(
 // OutboundCall class
 
 var OutboundCall = makeClass("OutboundCall", ActiveCall);
+OutboundCall.addInterfaces(Components.interfaces.zapIMediaSessionListener);
 
 OutboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "outbound");
 
@@ -2661,7 +2662,7 @@ OutboundCall.fun(
     this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
     this.setTimestamp();
 
-    this.whenRoutingInfoResolved(this.proceedWithCall);
+    this.whenRoutingInfoResolved(this.initMediaSession);
     
     this.routingInfo = identity.getRoutingInfo();
     if (!this.routingInfo)
@@ -2707,11 +2708,46 @@ OutboundCall.fun(
           contact: addr,
           directContact: addr,
           routeset: []
-        };  
+        };
         me.RoutingInfoResolved = true;
       }
     };
     rc.sendRequest(listener);
+  });
+
+
+// This will be set as soon as the media session is initialized:
+OutboundCall.addCondition("MediaSessionInitialized");
+
+OutboundCall.fun(
+  function initMediaSession() {
+    this["urn:mozilla:zap:status"] = "Setting up call media...";
+    this.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
+    var stunServers = this.identity.service.getStunServer() ? [this.identity.service.getStunServer()] : [];
+
+    // infer connectionAddress as best we can 
+    var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+    
+    this.whenMediaSessionInitialized(this.proceedWithCall);
+    
+    this.mediasession.init("zap",
+                           connectionAddress,
+                           connectionAddress,
+                           this.callPipe.callAudioIn,
+                           this.callPipe.callAudioOut,
+                           this.callPipe.callTEventIn,
+                           this.codecs,
+                           this.codecs.length,
+                           stunServers,
+                           stunServers.length,
+                           this);
+    // continue in mediaSessionInitialized()
+  });
+
+OutboundCall.fun(
+  function mediaSessionInitialized(s) {
+    this._dump("outbound call media session ready!\n");
+    this.MediaSessionInitialized = true;
   });
 
 OutboundCall.fun(
@@ -2744,19 +2780,6 @@ OutboundCall.fun(
     
     this["urn:mozilla:zap:callid"] = rc.request.getCallIDHeader().callID;
         
-    this.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
-
-    // infer connectionAddress as best we can 
-    var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
-
-    this.mediasession.init("zap",
-                           connectionAddress,
-                           connectionAddress,
-                           this.callPipe.callAudioIn,
-                           this.callPipe.callAudioOut,
-                           this.callPipe.callTEventIn,
-                           this.codecs,
-                           this.codecs.length);
     if (!this.offerIn200) {
       var offer = this.mediasession.generateSDPOffer();
       rc.request.setContent("application", "sdp", offer.serialize());
@@ -2954,8 +2977,10 @@ InboundCall.fun(
 //----------------------------------------------------------------------
 // InboundCallHandler
 
-var InboundCallHandler = makeClass("InboundCallHandler", SupportsImpl);
-InboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteRSListener);
+var InboundCallHandler = makeClass("InboundCallHandler",
+                                   SupportsImpl, Scheduler);
+InboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteRSListener,
+                                 Components.interfaces.zapIMediaSessionListener);
 
 
 // helper returning a routing info structure to use for incoming calls that
@@ -3027,6 +3052,10 @@ InboundCallHandler.fun(
     var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
     
     var codecs = ["PCMU", "PCMA", "speex", "telephone-event"];
+
+    var stunServers = [];
+    if (this.call.identity)
+      stunServers.push(this.call.identity.service.getStunServer());
     
     this.call.mediasession.init("zap",
                                 connectionAddress,
@@ -3034,19 +3063,21 @@ InboundCallHandler.fun(
                                 this.call.callPipe.callAudioIn,
                                 this.call.callPipe.callAudioOut,
                                 this.call.callPipe.callTEventIn,
-                                codecs, codecs.length);
+                                codecs, codecs.length,
+                                stunServers,
+                                stunServers.length,
+                                this);
     
     // check if there is a media offer in the request:
     if (!rs.request.body.length) {
       // no. we provide the offer in our 200 answer.
       this.offerIn200 = true;
-      this.offer = this.call.mediasession.generateSDPOffer();
     }
     else {
       // parse offer; check if it's acceptable:
       try {
-        var offer = wSdpService.deserializeSessionDescription(rs.request.body);
-        this.answer = this.call.mediasession.processSDPOffer(offer);
+        this.offer = wSdpService.deserializeSessionDescription(rs.request.body);
+        //XXX if (!this.call.mediasession.isOfferAcceptable(offer)) throw("unacceptable offer");
       }
       catch(e) {
         // Session negotiation failed.
@@ -3062,6 +3093,14 @@ InboundCallHandler.fun(
     this._respond("180");
     this.alertUser();
   });
+
+InboundCallHandler.addCondition("MediaSessionInitialized");
+InboundCallHandler.fun(
+  function mediaSessionInitialized(s) {
+    this._dump("inbound call media session ready!\n");
+    this.MediaSessionInitialized = true;
+  });
+
 
 InboundCallHandler.fun(
   function alertUser() {
@@ -3160,18 +3199,26 @@ InboundCallHandler.fun(
 
 InboundCallHandler.fun(
   function acceptCall() {
+    this.unalertUser();
+    this.call["urn:mozilla:zap:status"] = "Setting up call media...";
+    this.whenMediaSessionInitialized(this.proceedAcceptingCall);
+  });
+
+InboundCallHandler.fun(
+  function proceedAcceptingCall() {
     // formulate accepting response:
     var resp = this.rs.formulateResponse("200", this.routingInfo.contact);
     // append session description:
     if (this.offerIn200)
-      resp.setContent("application", "sdp", this.offer.serialize());
+      resp.setContent("application", "sdp",
+                      this.call.mediasession.generateSDPOffer().serialize());
     else {
-      resp.setContent("application", "sdp", this.answer.serialize());
+      var answer = this.call.mediasession.processSDPOffer(this.offer);
+      resp.setContent("application", "sdp", answer.serialize());
       this.call.mediasession.startSession();
     }
     
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
-    this.unalertUser();
     this.call.dialog = this.rs.sendResponse(resp);
     this.call.dialog.listener = this.call;    
     this.call["urn:mozilla:zap:session-running"] = "true";
@@ -3237,6 +3284,7 @@ InboundCallHandler.fun(
     this.call = null;
     this.rs = null;
   });
+
 
 //----------------------------------------------------------------------
 // Alerting

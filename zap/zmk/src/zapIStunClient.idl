@@ -50,6 +50,10 @@ interface zapIStunClient : nsISupports
    * 'username' is != null, a USERNAME attribute with the given value
    * will be added. If 'password' is != null, a MESSAGE-INTEGRITY
    * attribute will be generated.
+   *
+   * This function will either return an error (e.g. if the stunServer
+   * is invalid, like an empty string), or will call the listener
+   * exactly once with a final response or error.
    */
   nsICancelable sendBindingRequest(in zapIStunClientListener listener,
                                    in ACString stunServer,

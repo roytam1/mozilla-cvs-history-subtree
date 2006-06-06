@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,41 +36,20 @@
 
 #include "nsISupports.idl"
 
-interface zapISdpSessionDescription;
-interface zapIMediaSessionListener;
+interface zapIMediaSession;
 
 /**
  * XXX This will change when we support several concurrent media streams
  */
-[scriptable, uuid(af83aea5-6268-47a7-97e8-5252e1cd379b)]
-interface zapIMediaSession : nsISupports
+[scriptable, uuid(171b82a4-4e7f-4b58-9a0c-be3eb745f78e)]
+interface zapIMediaSessionListener : nsISupports
 {
-  void init(in ACString originUsername,
-            in ACString originAddress,
-            in ACString connectionAddress,
-            in ACString callAudioIn,
-            in ACString callAudioOut,
-            in ACString callTEventIn,
-            [array, size_is(codec_count)] in string codecs,
-            in unsigned long codec_count,
-            [array, size_is(stunServer_count)] in string stunServers,
-            in unsigned long stunServer_count,
-            in zapIMediaSessionListener listener);
-            
-  zapISdpSessionDescription generateSDPOffer();
-  
-  zapISdpSessionDescription processSDPOffer(in zapISdpSessionDescription offer);
-
-  void processSDPAnswer(in zapISdpSessionDescription answer);
-
   /**
-   * startSession() must only be called after a successful call to
-   * processSDPOffer() or processSDPAnswer()
+   * Will be called exactly once, after the media session has been
+   * initialized (ICE candidates gathered, etc), unless the media
+   * session has been shutdown (with a call to
+   * zapIMediaSession::shutdown()) before initialization is complete.
    */
-  void startSession();
-  
-  readonly attribute unsigned short localRTPPort;
-  readonly attribute unsigned short localRTCPPort;
-
-  void shutdown();
+  void mediaSessionInitialized(in zapIMediaSession session);
 };
+
