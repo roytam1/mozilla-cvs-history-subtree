@@ -1184,6 +1184,9 @@ DocumentViewerImpl::PageHide(PRBool aIsUnload)
   if (!aIsUnload)
     return NS_OK;
 
+  // if Destroy() was called during OnPageHide(), mDocument is nsnull.
+  NS_ENSURE_STATE(mDocument);
+
   // First, get the script global object from the document...
   nsIScriptGlobalObject *global = mDocument->GetScriptGlobalObject();
 
