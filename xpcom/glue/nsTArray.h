@@ -520,7 +520,7 @@ class nsTArray : public nsTArray_base {
       if (newLen > oldLen) {
         SetCapacity(newLen);
         // Check for out of memory conditions
-        if (Capacity() != newLen)
+        if (Capacity() < newLen)
           return PR_FALSE;
         // Initialize the extra array elements
         elem_type *iter = Elements() + oldLen, *end = Elements() + newLen;
