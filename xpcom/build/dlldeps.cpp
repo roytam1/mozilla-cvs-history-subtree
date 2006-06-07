@@ -41,6 +41,7 @@
 #include <windows.h>
 #include "nsXPCOMGlue.h"
 #include "nsVoidArray.h"
+#include "nsTArray.h"
 #include "nsValueArray.h"
 #include "nsIAtom.h"
 #include "nsIByteArrayInputStream.h"
@@ -107,6 +108,15 @@ void XXXNeverCalled()
     nsTextFormatter::smprintf_free(nsnull);
     nsVoidArray();
     nsSmallVoidArray();
+    {
+      nsTArray<PRBool> array1(1), array2(1);
+      PRBool a, b, c;
+      a = b = c = PR_FALSE;
+      array1.AppendElement(a);
+      array2.InsertElementAt(b, 0);
+      array2.InsertElementAt(c, 0);
+      array1.AppendElements(array2);
+    }
     nsStringHashSet();
     nsCStringHashSet();
     nsInt32HashSet();
