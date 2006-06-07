@@ -3077,7 +3077,7 @@ InboundCallHandler.fun(
       // parse offer; check if it's acceptable:
       try {
         this.offer = wSdpService.deserializeSessionDescription(rs.request.body);
-        //XXX if (!this.call.mediasession.isOfferAcceptable(offer)) throw("unacceptable offer");
+        if (!this.call.mediasession.isOfferAcceptable(this.offer)) throw("unacceptable offer");
       }
       catch(e) {
         // Session negotiation failed.

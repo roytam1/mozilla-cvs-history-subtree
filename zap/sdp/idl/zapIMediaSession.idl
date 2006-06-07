@@ -42,7 +42,7 @@ interface zapIMediaSessionListener;
 /**
  * XXX This will change when we support several concurrent media streams
  */
-[scriptable, uuid(af83aea5-6268-47a7-97e8-5252e1cd379b)]
+[scriptable, uuid(a0d1b940-e8d9-47e1-a4b2-42987bc4f472)]
 interface zapIMediaSession : nsISupports
 {
   void init(in ACString originUsername,
@@ -56,11 +56,48 @@ interface zapIMediaSession : nsISupports
             [array, size_is(stunServer_count)] in string stunServers,
             in unsigned long stunServer_count,
             in zapIMediaSessionListener listener);
-            
-  zapISdpSessionDescription generateSDPOffer();
+
+  /**
+   * Check if the given offer is acceptable to us, i.e. if we can accept
+   * any media sessions proposed in the offer.
+   *
+   * Returns true if the offer is acceptable, false otherwise.
+   */
+  boolean isOfferAcceptable(in zapISdpSessionDescription offer);
   
+  /**
+   * Generate an sdp offer.
+   *
+   * This function must only be called after the media session is
+   * fully initialized (i.e. after
+   * zapIMediaSessionListener::mediaSessionInitialized() has been
+   * called.
+   *
+   */
+  zapISdpSessionDescription generateSDPOffer();
+
+  /**
+   * Process other party's sdp offer and generate an answer.
+   *
+   * This function must only be called after the media session is
+   * fully initialized (i.e. after
+   * zapIMediaSessionListener::mediaSessionInitialized() has been
+   * called.
+   *
+   * Throws an exception if the offer is not acceptable.
+   */
   zapISdpSessionDescription processSDPOffer(in zapISdpSessionDescription offer);
 
+  /**
+   * Process other party's sdp answer.
+   *
+   * This function must only be called after the media session is
+   * fully initialized (i.e. after
+   * zapIMediaSessionListener::mediaSessionInitialized() has been
+   * called.
+   *
+   * Throws an exception if the answer is not acceptable.
+   */
   void processSDPAnswer(in zapISdpSessionDescription answer);
 
   /**

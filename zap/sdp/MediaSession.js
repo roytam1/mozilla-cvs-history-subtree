@@ -309,8 +309,27 @@ MediaSession.fun(
     this._dump("$$2");
   });
 
-//  zapISdpSessionDescription generateSDPOffer();
+//  boolean isOfferAcceptable(in zapISdpSessionDescription offer);
 MediaSession.fun(
+  function isOfferAcceptable(offer) {
+    try {
+      var mediaDescriptions = offer.getMediaDescriptions({});
+      // XXX assuming that there is only one media description for the moment:
+      var d = mediaDescriptions[0].QueryInterface(Components.interfaces.zapISdpRtpAvpMediaDescription); 
+      
+      if (!this.matchRemotePayloadFormats(d.getRtpAvpFormats({})))
+        throw("No matching payload formats!");
+    }
+    catch(e) {
+      this._dump("Offer unacceptable ("+e+"). Offer: "+offer.serialize());
+      return false;
+    }
+    return true;
+  });
+
+//  zapISdpSessionDescription generateSDPOffer();
+MediaSession.statefun(
+  "INITIALIZED",
   function generateSDPOffer() {
     // m=
     var mediaDescription = gSdpService.createRtpAvpMediaDescription();
