@@ -73,6 +73,7 @@ nsAutoCompleteController::nsAutoCompleteController() :
   mPopupClosedByCompositionStart(PR_FALSE),
   mIsIMEComposing(PR_FALSE),
   mIgnoreHandleText(PR_FALSE),
+  mIsOpen(PR_FALSE),
   mSearchStatus(0),
   mRowCount(0),
   mSearchesOngoing(0)
@@ -117,12 +118,14 @@ nsAutoCompleteController::SetInput(nsIAutoCompleteInput *aInput)
   // Don't do anything if the input isn't changing.
   if (mInput == aInput)
     return NS_OK;
-  
+
   // Clear out the current search context
   if (mInput) {
     ClearSearchTimer();
     ClearResults();
-    ClosePopup();
+    if (mIsOpen) {
+      ClosePopup();
+    }
     mSearches->Clear();
   }
     
@@ -912,8 +915,11 @@ nsAutoCompleteController::OpenPopup()
 {
   PRUint32 minResults;
   mInput->GetMinResultsForPopup(&minResults);
-  if (mRowCount >= minResults)    
+
+  if (mRowCount >= minResults) {
+    mIsOpen = PR_TRUE;
     return mInput->SetPopupOpen(PR_TRUE);
+  }
   
   return NS_OK;
 }
@@ -925,7 +931,7 @@ nsAutoCompleteController::ClosePopup()
   mInput->GetPopup(getter_AddRefs(popup));
   NS_ENSURE_TRUE(popup != nsnull, NS_ERROR_FAILURE);
   popup->SetSelectedIndex(-1);
-
+  mIsOpen = PR_FALSE;
   return mInput->SetPopupOpen(PR_FALSE);
 }
 

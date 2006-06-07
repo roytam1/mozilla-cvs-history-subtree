@@ -115,6 +115,7 @@ protected:
   PRPackedBool mPopupClosedByCompositionStart;
   PRPackedBool mIsIMEComposing;
   PRPackedBool mIgnoreHandleText;
+  PRBool mIsOpen;
   PRUint16 mSearchStatus;
   PRUint32 mRowCount;
   PRUint32 mSearchesOngoing;
