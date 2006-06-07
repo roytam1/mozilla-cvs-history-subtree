@@ -37,11 +37,16 @@ html *:not(select):not(option):not(optgroup) {
 
   /* avoid overflow on pre and table cells */
   white-space: normal ! important;
+
 }
 
 html table,html tbody,html thead,html tfoot,html tr,html td,html th,html col,html colgroup {
   /* we need to "flatten" all tables */
   display: block ! important;
+}
+
+html input {
+  min-width: 64px ! important;
 }
 
 html img[width="1"], html img[height="1"] {
