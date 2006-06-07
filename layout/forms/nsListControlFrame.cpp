@@ -284,7 +284,8 @@ if (aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE) { \
 //---------------------------------------------------------
 nsListControlFrame::nsListControlFrame(
   nsIPresShell* aShell, nsIDocument* aDocument, nsStyleContext* aContext)
-  : nsHTMLScrollFrame(aShell, aContext, PR_FALSE)
+  : nsHTMLScrollFrame(aShell, aContext, PR_FALSE),
+    mHeightOfARow(0)
 {
   mComboboxFrame      = nsnull;
   mChangesSinceDragStart = PR_FALSE;
@@ -298,6 +299,7 @@ nsListControlFrame::nsListControlFrame(
   mNeedToReset        = PR_TRUE;
   mPostChildrenLoadedReset = PR_FALSE;
 
+#ifdef HTML_FORMS
   mCacheSize.width             = -1;
   mCacheSize.height            = -1;
   mCachedMaxElementWidth       = -1;
@@ -308,6 +310,7 @@ nsListControlFrame::nsListControlFrame(
   
   mOverrideReflowOpt           = PR_FALSE;
   mPassId                      = 0;
+#endif
 
   mControlSelectMode           = PR_FALSE;
 #ifdef HTML_FORMS
@@ -665,36 +668,78 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   NS_PRECONDITION(aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE,
                   "Must have a computed width");
 
+  // If all the content and frames are here 
+  // then initialize it before reflow
+  if (mIsAllContentHere && !mHasBeenInitialized) {
+    if (PR_FALSE == mIsAllFramesHere) {
+      CheckIfAllFramesHere();
+    }
+    if (mIsAllFramesHere && !mHasBeenInitialized) {
+      mHasBeenInitialized = PR_TRUE;
+    }
+  }
+
+  /*
+   * Due to the fact that our intrinsic height depends on the heights of our
+   * kids, we end up having to do two-pass reflow, in general -- the first pass
+   * to find the intrinsic height and a second pass to reflow the scrollframe
+   * at that height (which will size the scrollbars correctly, etc).
+   *
+   * Naturaly, we want to avoid doing the second reflow as much as possible.
+   * We can skip it in the following cases (in all of which the first reflow is
+   * already happening at the right height):
+   *
+   * - We're reflowing with a constrained computed height -- just use that
+   *   height.
+   * - We're not dirty and have no dirty kids.  In this case, our cached max
+   *   height of a child is not going to change.
+   * - We do our first reflow using our cached max height of a child, then
+   *   compute the new max height and it's the same as the old one.
+   */
+
   PRBool autoHeight = (aReflowState.mComputedHeight == NS_UNCONSTRAINEDSIZE);
+  PRBool mightNeedSecondPass = autoHeight &&
+    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN));
   
   nsHTMLReflowState state(aReflowState);
-
+  PRInt32 length = GetNumberOfOptions();  
+  
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
   } else if (autoHeight) {
     // When not doing an initial reflow, and when the height is auto, start off
-    // with our computed height set to our current height
-    state.mComputedHeight =
-      GetRect().height - state.mComputedBorderPadding.TopBottom();
+    // with our computed height set to what we'd expect our height to be.
+    state.mComputedHeight = CalcIntrinsicHeight(mHeightOfARow, length);
+    state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
   }
 
-  // XXXbz should we continue doing this weird "scroll to index"
-  // thing?  Why was it added?
+  // XXXbz should we continue doing this weird "scroll to index" thing?  Why
+  // was it added?  AHA!  Looks like it's no longer needed what with
+  // OnOptionSelected and DidReflow both scrolling as needed.
 
-  // XXXbz need to call SetSuppressScrollbarUpdate() around reflows
-  // that we don't want to restore scroll positions...  Possibly only
-  // for initial reflow?  Or maybe we can just nix the whole thing?
-  
+  /*
+   * I don't think we want to SetSuppressScrollbarUpdate() here.  The only case
+   * we'd _want_ to suppress it is the case when we're going to do both reflow
+   * passes and the first pass will produce a height that is both smaller than
+   * the current height and smaller than the height we'll eventually end up
+   * with, since in that situation we'd end up clamping the scroll position to
+   * a too-small value after the first reflow.  The only way that can happen is
+   * if our size attr has decreased (so that we'll end up with a smaller height
+   * than our current height), and at the same time the size of our tallest
+   * option has increased.  This is a pretty rare case, and not calling
+   * SetSuppressScrollbarUpdate() means we can get away without a second reflow
+   * in other (much more common) cases.
+   */  
   nsresult rv = nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize,
                                           state, aStatus);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (!autoHeight) {
-    // All done here, since our height was specified.
+  if (!mightNeedSecondPass) {
     return rv;
   }
 
-  // Now we need to compute our desired height and see whether that's the
-  // height we have.
+  // Now we need to compute our current height of a row and see
+  // whether that's the height we already have.
 
   // Calculate the height of a single row in the listbox or dropdown
   // list by using the tallest of the grandchildren, since there may be
@@ -703,54 +748,33 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   PRInt32 heightOfARow = GetMaxOptionHeight(GetOptionsContainer());
 
   // Check to see if we have zero items 
-  PRInt32 length = GetNumberOfOptions();
   if (heightOfARow == 0) {
     heightOfARow = CalcFallbackRowHeight(length);
   }
 
-  nscoord visibleHeight;
+  if (heightOfARow == mHeightOfARow) {
+    // All done.  No need to do more reflow.
+    return rv;
+  }
+
+  mHeightOfARow = heightOfARow;
   
+  // Gotta reflow again.
+  // XXXbz We're just changing the height here; do we need to dirty ourselves
+  // or anything like that?  We might need to, per the letter of the reflow
+  // protocol, but things seem to work fine without it...  Is that just an
+  // implementation detail of nsHTMLScrollFrame that we're depending on?
+  nsHTMLScrollFrame::DidReflow(aPresContext, &state, aStatus);
+
   PRBool isInDropDownMode = IsInDropDownMode();
 
   // Now compute the height we want to have
   if (isInDropDownMode) {
     NS_ERROR("Shouldn't happen");
   } else {
-    // Calculate the visible height of the listbox
-    mNumDisplayRows = 1;
-    GetSizeAttribute(&mNumDisplayRows);
-    if (mNumDisplayRows >= 1) {
-      visibleHeight = mNumDisplayRows * heightOfARow;
-    } else {
-      // When SIZE=0 or unspecified we constrain the height to
-      // [2..kMaxDropDownRows] rows.  We add in the height of optgroup labels
-      // (within the constraint above), bug 300474.
-      visibleHeight = ::GetOptGroupLabelsHeight(GetPresContext(), mContent, heightOfARow);
-
-      if (GetMultiple()) {
-        if (length < 2) {
-          // Add in 1 heightOfARow also when length==0 to match how we
-          // calculate the desired size.
-          visibleHeight = heightOfARow + PR_MAX(heightOfARow, visibleHeight);
-        } else {
-          visibleHeight = PR_MIN(kMaxDropDownRows * heightOfARow, length * heightOfARow + visibleHeight);
-        }
-      } else {
-        visibleHeight += 2 * heightOfARow;
-      }
-    }
+    state.mComputedHeight = CalcIntrinsicHeight(mHeightOfARow, length);
+    state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
   }
-
-  if (visibleHeight == state.mComputedHeight) {
-    // No need to do anything;
-    return rv;
-  }
-  
-  // Gotta reflow again.  We're just changing the height here; do we need to
-  // dirty ourselves or anything like that?  We might need to...
-  nsHTMLScrollFrame::DidReflow(aPresContext, &state, aStatus);
-
-  state.mComputedHeight = visibleHeight;
 
   nsHTMLScrollFrame::WillReflow(aPresContext);
   return nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize, state, aStatus);
@@ -2364,6 +2388,41 @@ nsListControlFrame::CalcFallbackRowHeight(PRInt32 aNumOptions)
   }
 
   return rowHeight;
+}
+
+nscoord
+nsListControlFrame::CalcIntrinsicHeight(nscoord aHeightOfARow,
+                                        PRInt32 aNumberOfOptions)
+{
+  mNumDisplayRows = 1;
+  GetSizeAttribute(&mNumDisplayRows);
+  if (mNumDisplayRows >= 1) {
+    return mNumDisplayRows * aHeightOfARow;
+  }
+
+  // When SIZE=0 or unspecified we constrain the height to
+  // [2..kMaxDropDownRows] rows.  We add in the height of optgroup labels
+  // (within the constraint above), bug 300474.
+  nscoord labelHeight =
+    ::GetOptGroupLabelsHeight(GetPresContext(), mContent, aHeightOfARow);
+
+  if (GetMultiple()) {
+    if (aNumberOfOptions < 2) {
+      // Add in 1 aHeightOfARow also when aNumberOfOptions == 0
+      return aHeightOfARow + PR_MAX(aHeightOfARow, labelHeight);
+    }
+
+    return PR_MIN(kMaxDropDownRows * aHeightOfARow,
+                  aNumberOfOptions * aHeightOfARow + labelHeight);
+  }
+
+  // Should we even reach this case?  Probably not unless we're actually a
+  // combobox...
+
+  // XXXbz perhaps we should simply assert that GetMultiple() is true if
+  // mNumDisplayRows is <= 0 ?
+  NS_NOTREACHED("Shouldn't hit this");
+  return labelHeight + 2 * aHeightOfARow;
 }
 
 //----------------------------------------------------------------------

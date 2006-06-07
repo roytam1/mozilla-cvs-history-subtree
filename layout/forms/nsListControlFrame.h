@@ -155,7 +155,9 @@ public:
   virtual void AboutToDropDown();
   virtual void AboutToRollup();
   virtual void UpdateSelection();
+#ifdef HTML_FORMS
   virtual void SetOverrideReflowOptimization(PRBool aValue) { mOverrideReflowOpt = aValue; }
+#endif
   virtual void FireOnChange();
   virtual void ComboboxFinish(PRInt32 aIndex);
   virtual void OnContentReset();
@@ -192,7 +194,9 @@ public:
   static void ComboboxFocusSet();
 
   // Helper
+#ifdef HTML_FORMS
   void SetPassId(PRInt16 aId)  { mPassId = aId; }
+#endif
 
   PRBool IsFocused() { return this == mFocused; }
   void PaintFocus(nsIRenderingContext& aRC, nsPoint aPt);
@@ -231,6 +235,10 @@ protected:
   // aNumOptions is the number of options we have; if we have none,
   // we'll just guess at a row height based on our own style.
   nscoord  CalcFallbackRowHeight(PRInt32 aNumOptions);
+
+  // CalcIntrinsicHeight computes our intrinsic height (taking the "size"
+  // attribute into account).
+  nscoord CalcIntrinsicHeight(nscoord aHeightOfARow, PRInt32 aNumberOfOptions);
 
   // Dropped down stuff
   void     SetComboboxItem(PRInt32 aIndex);
@@ -274,23 +282,35 @@ protected:
   PRPackedBool mNeedToReset:1;
   PRPackedBool mPostChildrenLoadedReset:1;
 
+#ifdef HTML_FORMS
   PRPackedBool mOverrideReflowOpt:1;
+#endif
 
   //bool value for multiple discontiguous selection
   PRPackedBool mControlSelectMode:1;
 
+#ifdef HTML_FORMS
   PRInt16 mPassId;
   nscoord mCachedDesiredMEW;
+#endif
 
   nsRefPtr<nsListEventListener> mEventListener;
 
   //Resize Reflow OpitmizationSize;
+#ifdef HTML_FORMS
   nsSize       mCacheSize;
   nscoord      mCachedAscent;
   nscoord      mCachedMaxElementWidth;
   nsSize       mCachedUnconstrainedSize;
   nsSize       mCachedAvailableSize;
+#endif
 
+  // We cache the height of a single row so that changes to the "size"
+  // attribute, padding, etc. can all be handled with only one reflow.  We'll
+  // have to reflow twice if someone changes with our font size or something
+  // like that, so that the heights of our options will change.
+  nscoord mHeightOfARow;
+  
   static nsListControlFrame * mFocused;
   
 #ifdef DO_REFLOW_COUNTER

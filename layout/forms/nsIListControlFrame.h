@@ -46,8 +46,8 @@ class nsIContent;
 
 // IID for the nsIListControlFrame class
 #define NS_ILISTCONTROLFRAME_IID    \
-  { 0xa28ca6f, 0x6850, 0x11da, \
-      { 0x95, 0x2c, 0x0, 0xe0, 0x81, 0x61, 0x16, 0x5f } }
+{ 0xfa7cf9c1, 0x1a6a, 0x45cf, \
+ { 0x8d, 0x3f, 0x33, 0xb2, 0x22, 0xdf, 0x96, 0x15 } }
 
 /** 
   * nsIListControlFrame is the interface for frame-based listboxes.
@@ -115,7 +115,9 @@ public:
   /**
    *
    */
+#ifdef HTML_FORMS
   virtual void SetOverrideReflowOptimization(PRBool aValue) = 0;
+#endif
 
   /**
    * Tell the selected list to roll up and ensure that the proper index is
