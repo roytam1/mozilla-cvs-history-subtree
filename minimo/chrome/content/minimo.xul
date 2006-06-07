@@ -91,11 +91,13 @@
     
   </keyset>
   
-    <hbox id="appcontent" flex="1">
-      <vbox id="browserleftbar">
-        <vbox id="homebarcontainer">
+    <hbox id="appcontent" flex="1" >
+    
+      <vbox id="browserleftbar" style="overflow:hidden" >
+        <vbox id="homebarcontainer"  >
         </vbox>
       </vbox>
+      
       <vbox id="browser" context="context" flex="1">
         <tabbrowser id="content" 
                     contentcontextmenu="contentAreaContextMenu"
@@ -211,7 +213,7 @@
     </toolbar>
 
    <vbox id="keyboardContainer" hidden="true" style="border-bottom:2px solid gray;">
-      <hbox id="keyboardHolder"  style="height:90px;" />
+      <hbox id="keyboardHolder"  style="height:1px;" />
     </vbox>
 
 

@@ -75,9 +75,6 @@ const NS_BINDING_ABORTED = 0x804b0002;
 /* 
  * Software keyboard 
  */
-var gKeyBoardHeight = 0;
-var gKeyBoardLeft = 0;
-var gKeyBoardRight = 0;
 var gkeyBoardService = null;
 var gKeyBoardToggle = true;
 
@@ -483,18 +480,6 @@ function MiniNavStartup()
   try {
 	gKeyboardService = Components.classes["@mozilla.org/softkbservice/service;1"]
                                  .getService(nsISoftKeyBoard);
-    var t = { };
-    var b = { };
-    var l = {};
-    var r = { };
-    gKeyboardService.getWindowRect(t,b,l,r);
-    var deltaHeight = parseInt(b.value-t.value);
-    gKeyboardHeight=deltaHeight;
-    gKeyboardLeft=parseInt(l.value);
-    gKeyboardRight=parseInt(r.value);
-	document.getElementById("keyboardHolder").style.height=deltaHeight+"px";
-	document.getElementById("keyboardContainer").style.height=deltaHeight+"px";
-
   } catch (i) { }
 
   /*
@@ -510,14 +495,32 @@ function MiniNavStartup()
       if (device.has("hasSoftwareKeyboard") != "yes")
         return;
       if(data=="open")  {  
-        document.getElementById("keyboardContainer").setAttribute("hidden","false");
-        try {
+      
+          document.getElementById("keyboardContainer").setAttribute("hidden","false");
+          
+          try {
+        
+          var t = { };
+          var b = { };
+          var l = { };
+          var r = { };
+          gKeyboardService.getWindowRect(t,b,l,r);
+          keyboardHeight = parseInt(b.value-t.value);
+          keyboardLeft =parseInt(l.value);
+          keyboardRight=parseInt(r.value);
+          document.getElementById("keyboardHolder").style.height=keyboardHeight +"px";
+          document.getElementById("keyboardContainer").style.height=keyboardHeight +"px";
+                
           var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
-           gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+gKeyboardHeight,gKeyboardLeft,gKeyboardRight);   
+
+          gKeyboardService.setWindowRect(gKeyboardXULBox.screenY,gKeyboardXULBox.screenY+keyboardHeight,keyboardLeft,keyboardRight);   
+
         } catch (e) { }
-      } else
-        if(data=="close")  {
-          document.getElementById("keyboardContainer").setAttribute("hidden","true");				}  
+        
+      } else if(data=="close")  {
+        document.getElementById("keyboardContainer").setAttribute("hidden","true");
+      }  
+
     }
   };
      
@@ -586,6 +589,7 @@ function MiniNavStartup()
 
  try {
    var hbValue  = gPref.getBoolPref("ui.homebar");
+
    document.getElementById("browserleftbar").collapsed = !hbValue  ;
  } catch ( i ) { } 
   
