@@ -896,7 +896,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 #else 
     h = LoadLibrary(name);
 #endif
-    if (h < (HINSTANCE)HINSTANCE_ERROR) {
+    if (!h) {
         oserr = _MD_ERRNO();
         PR_DELETE(lm);
         goto unlock;
