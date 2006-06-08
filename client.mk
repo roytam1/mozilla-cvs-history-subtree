@@ -209,6 +209,7 @@ MODULES_calendar :=                             \
 
 LOCALES_calendar :=                             \
   $(LOCALES_toolkit)                            \
+  calendar                                      \
   other-licenses/branding/sunbird               \
   $(NULL)
 
