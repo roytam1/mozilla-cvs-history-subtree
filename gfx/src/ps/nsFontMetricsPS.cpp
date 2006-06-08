@@ -491,12 +491,8 @@ nsFontPS::FindFont(PRUnichar aChar, const nsFont& aFont,
 #endif
 
   /* Find in afm font */
-  nsVoidArray *fonts = aFontMetrics->GetFontsPS();
-  if (!fonts)
-    return nsnull;
-
-  if (fonts->Count() > 0) {
-    fontps *fps = (fontps*)fonts->ElementAt(0);
+  if (aFontMetrics->GetFontsPS()->Count() > 0) {
+    fontps *fps = (fontps*)aFontMetrics->GetFontsPS()->ElementAt(0);
     NS_ENSURE_TRUE(fps, nsnull);
     fontPS = fps->fontps;
   }
@@ -513,7 +509,7 @@ nsFontPS::FindFont(PRUnichar aChar, const nsFont& aFont,
     fps->ccmap  = nsnull;
 #endif
 #endif
-    fonts->AppendElement(fps);
+    aFontMetrics->GetFontsPS()->AppendElement(fps);
   }
   return fontPS;
 }
@@ -822,9 +818,6 @@ nsFontPSXft::FindFont(PRUnichar aChar, const nsFont& aFont,
   nsCOMPtr<nsIAtom> langGroup;
   fontPSInfo fpi;
   fpi.fontps = aFontMetrics->GetFontsPS();
-  if (!fpi.fontps)
-    return nsnull;
-
   int i = 0;
 
   while (1) {
@@ -1575,8 +1568,6 @@ nsFontPSFreeType::FindFont(PRUnichar aChar, const nsFont& aFont,
   nsCAutoString locale;
   fontPSInfo fpi, fpi2;
   fpi.fontps = aFontMetrics->GetFontsPS();
-  if (!fpi.fontps)
-    return nsnull;
 
   int i = 0;
   while (1) {
