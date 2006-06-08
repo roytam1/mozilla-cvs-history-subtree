@@ -79,10 +79,6 @@ static Boolean KeyDown(const UInt8 theKey)
 	#define botRight(r)	(((Point *) &(r))[1])
 #endif
 
-PRBool	nsMacEventHandler::sMouseInWidgetHit = PR_FALSE;
-
-nsMacEventDispatchHandler	gEventDispatchHandler;
-
 static void ConvertKeyEventToContextMenuEvent(const nsKeyEvent* inKeyEvent, nsMouseEvent* outCMEvent);
 static inline PRBool IsContextMenuKey(const nsKeyEvent& inKeyEvent);
 
@@ -369,6 +365,9 @@ nsMacEventHandler::nsMacEventHandler(nsMacWindow* aTopLevelWidget)
 
   mKeyIgnore = PR_FALSE;
   mKeyHandled = PR_FALSE;
+
+  mMouseInWidgetHit = PR_FALSE;
+  mEventDispatchHandler = new nsMacEventDispatchHandler();
 }
 
 
@@ -380,6 +379,7 @@ nsMacEventHandler::~nsMacEventHandler()
 		delete mIMECompositionStr;
 		mIMECompositionStr = nsnull;
 	}
+	delete mEventDispatchHandler;
 }
 
 
@@ -431,7 +431,7 @@ PRBool nsMacEventHandler::HandleMenuCommand(
   long         aMenuResult)
 {
 	// get the focused widget
-	nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+	nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
 	if (!focusedWidget)
 		focusedWidget = mTopLevelWidget;
 
@@ -458,7 +458,7 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 		// make sure the focusedWidget wasn't changed or deleted
 		// when we dispatched the event (even though if we get here, 
 		// the event is supposed to not have been handled)
-		if (focusedWidget == gEventDispatchHandler.GetActive())
+		if (focusedWidget == mEventDispatchHandler->GetActive())
 		{
 			nsCOMPtr<nsIWidget> grandParent;
 			nsCOMPtr<nsIWidget> parent ( dont_AddRef(focusedWidget->GetParent()) );
@@ -524,12 +524,12 @@ PRBool nsMacEventHandler::DragEvent ( unsigned int aMessage, Point aMouseGlobal,
 	  // this is most likely the case of a drag exit, so we need to make sure
 	  // we send the event to the last pointed to widget. We don't really care
 	  // about the mouse coordinates because we know they're outside the window.
-	  widgetHit = gEventDispatchHandler.GetWidgetPointed();
+	  widgetHit = mEventDispatchHandler->GetWidgetPointed();
 	  widgetHitPoint = nsPoint(0,0);
 	}	
 
 	// update the tracking of which widget the mouse is now over.
-	gEventDispatchHandler.SetWidgetPointed(widgetHit);
+	mEventDispatchHandler->SetWidgetPointed(widgetHit);
 	
 	nsMouseEvent geckoEvent(PR_TRUE, aMessage, widgetHit, nsMouseEvent::eReal);
 
@@ -1030,7 +1030,7 @@ PRBool nsMacEventHandler::HandleUKeyEvent(const PRUnichar* text, long charCount,
 
   nsresult result = NS_ERROR_UNEXPECTED;
   // get the focused widget
-  nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+  nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
   if (!focusedWidget)
     focusedWidget = mTopLevelWidget;
   
@@ -1100,7 +1100,7 @@ PRBool nsMacEventHandler::HandleUKeyEvent(const PRUnichar* text, long charCount,
 // HandleActivateEvent
 //
 //-------------------------------------------------------------------------
-void nsMacEventHandler::HandleActivateEvent(PRBool aActive)
+void nsMacEventHandler::HandleActivateEvent(EventRef aEvent)
 {
 #if PINK_PROFILING_ACTIVATE
 if (KeyDown(0x39))	// press [caps lock] to start the profile
@@ -1108,8 +1108,10 @@ if (KeyDown(0x39))	// press [caps lock] to start the profile
 #endif
 
   OSErr err;
+  PRUint32 eventKind = ::GetEventKind(aEvent);
+  PRBool isActive = (eventKind == kEventWindowActivated) ? PR_TRUE : PR_FALSE;
 
-	if (aActive)
+	if (isActive)
 	{
 		//
 		// Activate The TSMDocument associated with this handler
@@ -1134,12 +1136,12 @@ if (KeyDown(0x39))	// press [caps lock] to start the profile
 		mTopLevelWidget->IsActive(&active);
 		nsWindow*	focusedWidget = mTopLevelWidget;
 		if (!active) {
-		  gEventDispatchHandler.SetActivated(focusedWidget);
+		  mEventDispatchHandler->SetActivated(focusedWidget);
 		  mTopLevelWidget->SetIsActive(PR_TRUE);
 		}
-		else if (!gEventDispatchHandler.GetActive()) {
+		else if (!mEventDispatchHandler->GetActive()) {
 		  NS_ASSERTION(0, "We think we're active, but there is no active widget!");
-		  gEventDispatchHandler.SetActivated(focusedWidget);
+		  mEventDispatchHandler->SetActivated(focusedWidget);
 		}
 		
 		// Twiddle menu bars
@@ -1154,6 +1156,13 @@ if (KeyDown(0x39))	// press [caps lock] to start the profile
 		  //				look all the way up to the window
 		  //				until one of the parents has a menubar
 		}
+
+		// Mouse-moved events were not processed while the window was
+		// inactive.  Grab the current mouse position and treat it as
+		// a mouse-moved event would be.
+		EventRecord eventRecord;
+		::ConvertEventRefToEventRecord(aEvent, &eventRecord);
+		HandleMouseMoveEvent(eventRecord);
 	}
 	else
 	{
@@ -1184,7 +1193,7 @@ if (KeyDown(0x39))	// press [caps lock] to start the profile
 		(err==noErr)?"":"ERROR", err);
 #endif
 		// Dispatch an NS_DEACTIVATE event 
-		gEventDispatchHandler.SetDeactivated(mTopLevelWidget);
+		mEventDispatchHandler->SetDeactivated(mTopLevelWidget);
 		mTopLevelWidget->SetIsActive(PR_FALSE);
 	}
 #if PINK_PROFILING_ACTIVATE
@@ -1226,6 +1235,14 @@ PRBool
 nsMacEventHandler::Scroll(EventMouseWheelAxis inAxis, PRInt32 inDelta,
                           const Point& inMouseLoc, nsWindow* inWindow,
                           PRUint32 inModifiers) {
+  // Only scroll active windows.  Treat popups as active.
+  WindowRef windowRef = NS_STATIC_CAST(WindowRef,
+                         mTopLevelWidget->GetNativeData(NS_NATIVE_DISPLAY));
+  nsWindowType windowType;
+  mTopLevelWidget->GetWindowType(windowType);
+  if (!::IsWindowActive(windowRef) && windowType != eWindowType_popup)
+    return PR_FALSE;
+
   // Figure out which widget should be scrolled by traversing the widget
   // hierarchy beginning at the root nsWindow.  inMouseLoc should be
   // relative to the origin of this nsWindow.  If the scroll event came
@@ -1237,9 +1254,23 @@ nsMacEventHandler::Scroll(EventMouseWheelAxis inAxis, PRInt32 inDelta,
   if (!widgetToScroll)
     return PR_FALSE;
 
-  if (gRollupListener && gRollupWidget && gRollupWidget != widgetToScroll) {
+  if (gRollupListener && gRollupWidget) {
+    // Roll up the rollup widget if the scroll isn't targeted at it
+    // (or one of its children) and the listener was told to do so.
+
     PRBool rollup = PR_FALSE;
     gRollupListener->ShouldRollupOnMouseWheelEvent(&rollup);
+
+    if (rollup) {
+      nsCOMPtr<nsIWidget> widgetOrAncestor = widgetToScroll;
+      do {
+        if (widgetOrAncestor == gRollupWidget) {
+          rollup = PR_FALSE;
+          break;
+        }
+      } while (widgetOrAncestor = widgetOrAncestor->GetParent());
+    }
+
     if (rollup)
       gRollupListener->Rollup();
   }
@@ -1367,7 +1398,7 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 			if (nsnull != gRollupListener && (nsnull != gRollupWidget) ) {
 				gRollupListener->Rollup();
 			}
-			gEventDispatchHandler.DispatchGuiEvent(mTopLevelWidget, NS_XUL_CLOSE);		
+			mEventDispatchHandler->DispatchGuiEvent(mTopLevelWidget, NS_XUL_CLOSE);		
 			// mTopLevelWidget->Destroy(); (this, by contrast, would immediately close the window)
 			retVal = PR_TRUE;
 			break;
@@ -1426,8 +1457,8 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
         retVal = PR_TRUE;
 			}
 						
-			gEventDispatchHandler.SetWidgetHit(widgetHit);
-			sMouseInWidgetHit = PR_TRUE;
+			mEventDispatchHandler->SetWidgetHit(widgetHit);
+			mMouseInWidgetHit = PR_TRUE;
 			break;
 		}
 
@@ -1435,14 +1466,14 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 		case inZoomIn:
 		case inZoomOut:
 		{
-			gEventDispatchHandler.DispatchSizeModeEvent(mTopLevelWidget,
+			mEventDispatchHandler->DispatchSizeModeEvent(mTopLevelWidget,
 				partCode == inZoomIn ? nsSizeMode_Normal : nsSizeMode_Maximized);
 			retVal = PR_TRUE;
 			break;
 		}
 
     case inToolbarButton:           // we get this part on Mac OS X only
-      gEventDispatchHandler.DispatchGuiEvent(mTopLevelWidget, NS_OS_TOOLBAR);		
+      mEventDispatchHandler->DispatchGuiEvent(mTopLevelWidget, NS_OS_TOOLBAR);		
       retVal = PR_TRUE;
       break;
 	}
@@ -1473,7 +1504,7 @@ PRBool nsMacEventHandler::HandleMouseUpEvent(
 	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, mouseButton);
 
 	nsWindow* widgetReleased = (nsWindow*)mouseEvent.widget;
-	nsWindow* widgetHit = gEventDispatchHandler.GetWidgetHit();
+	nsWindow* widgetHit = mEventDispatchHandler->GetWidgetHit();
 
 	if ( widgetReleased )
 	{
@@ -1490,7 +1521,7 @@ PRBool nsMacEventHandler::HandleMouseUpEvent(
 	  //XXX unclear what we should do in this case. (pinkerton).
 	}
 	
-	gEventDispatchHandler.SetWidgetHit(nsnull);
+	mEventDispatchHandler->SetWidgetHit(nsnull);
 
 	return retVal;
 }
@@ -1503,26 +1534,31 @@ PRBool nsMacEventHandler::HandleMouseUpEvent(
 //-------------------------------------------------------------------------
 PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
 {
-	nsWindow* lastWidgetHit = gEventDispatchHandler.GetWidgetHit();
-	nsWindow* lastWidgetPointed = gEventDispatchHandler.GetWidgetPointed();
+	nsWindow* lastWidgetHit = mEventDispatchHandler->GetWidgetHit();
+	nsWindow* lastWidgetPointed = mEventDispatchHandler->GetWidgetPointed();
   
 	PRBool retVal = PR_FALSE;
+
+	WindowRef wind = reinterpret_cast<WindowRef>(mTopLevelWidget->GetNativeData(NS_NATIVE_DISPLAY));
+	nsWindowType windowType;
+	mTopLevelWidget->GetWindowType(windowType);
+	if (!::IsWindowActive(wind) && windowType != eWindowType_popup)
+		return retVal;
 
 	nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
 	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, NS_MOUSE_MOVE);
 	if (lastWidgetHit)
 	{
 		Point macPoint = aOSEvent.where;
-		WindowRef wind = reinterpret_cast<WindowRef>(mTopLevelWidget->GetNativeData(NS_NATIVE_DISPLAY));
 		nsGraphicsUtils::SafeSetPortWindowPort(wind);
 		{
 			StOriginSetter  originSetter(wind);
 			::GlobalToLocal(&macPoint);
 		}
 		PRBool inWidgetHit = lastWidgetHit->PointInWidget(macPoint);
-		if (sMouseInWidgetHit != inWidgetHit)
+		if (mMouseInWidgetHit != inWidgetHit)
 		{
-			sMouseInWidgetHit = inWidgetHit;
+			mMouseInWidgetHit = inWidgetHit;
 			mouseEvent.message = (inWidgetHit ? NS_MOUSE_ENTER : NS_MOUSE_EXIT);
 		}
 		lastWidgetHit->DispatchMouseEvent(mouseEvent);
@@ -1540,7 +1576,6 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
         nsPoint widgetHitPoint = mouseEvent.point;
 
         Point macPoint = aOSEvent.where;
-        WindowRef wind = reinterpret_cast<WindowRef>(mTopLevelWidget->GetNativeData(NS_NATIVE_DISPLAY));
         nsGraphicsUtils::SafeSetPortWindowPort(wind);
 
         {
@@ -1564,9 +1599,9 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
 				mouseEvent.point = widgetHitPoint;
 			}
 
-      gEventDispatchHandler.SetWidgetPointed(widgetPointed);
+      mEventDispatchHandler->SetWidgetPointed(widgetPointed);
 #if TRACK_MOUSE_LOC
-      gEventDispatchHandler.SetGlobalPoint(aOSEvent.where);
+      mEventDispatchHandler->SetGlobalPoint(aOSEvent.where);
 #endif
 
 			if (widgetPointed)
@@ -1649,7 +1684,7 @@ void nsMacEventHandler::ConvertOSEventToMouseEvent(
 
 	// if the mouse button is still down, send events to the last widget hit unless the
 	// new event is in a popup window.
-	nsWindow* lastWidgetHit = gEventDispatchHandler.GetWidgetHit();
+	nsWindow* lastWidgetHit = mEventDispatchHandler->GetWidgetHit();
 	nsWindow* widgetHit = nsnull;
 	if (lastWidgetHit)
 	{
@@ -1667,7 +1702,7 @@ void nsMacEventHandler::ConvertOSEventToMouseEvent(
             {
                 // Some widgets can eat mouseUp events (text widgets in TEClick, sbars in TrackControl).
                 // In that case, stop considering this widget as being still hit.
-                gEventDispatchHandler.SetWidgetHit(nsnull);
+                mEventDispatchHandler->SetWidgetHit(nsnull);
             }
         }
 	}
@@ -1954,7 +1989,7 @@ error:
 nsresult nsMacEventHandler::HandleUnicodeGetSelectedText(nsAString& outString)
 {
   outString.Truncate(0);
-  nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+  nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
   if (!focusedWidget)
     focusedWidget = mTopLevelWidget;
 
@@ -1992,7 +2027,7 @@ nsresult nsMacEventHandler::HandleStartComposition(void)
 	// 
 	// get the focused widget [tague: may need to rethink this later]
 	//
-	nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+	nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
 	if (!focusedWidget)
 		focusedWidget = mTopLevelWidget;
 	
@@ -2030,7 +2065,7 @@ nsresult nsMacEventHandler::HandleEndComposition(void)
 	// 
 	// get the focused widget [tague: may need to rethink this later]
 	//
-	nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+	nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
 	if (!focusedWidget)
 		focusedWidget = mTopLevelWidget;
 	
@@ -2094,7 +2129,7 @@ nsresult nsMacEventHandler::HandleTextEvent(PRUint32 textRangeCount, nsTextRange
 	// 
 	// get the focused widget [tague: may need to rethink this later]
 	//
-	nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+	nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
 	if (!focusedWidget)
 		focusedWidget = mTopLevelWidget;
 	
@@ -2142,7 +2177,7 @@ nsMacEventHandler::HandleKeyUpDownEvent(EventHandlerCallRef aHandlerCallRef,
                "Unknown event kind");
 
   PRBool handled = PR_FALSE;
-  nsWindow* focusedWidget = gEventDispatchHandler.GetActive();
+  nsWindow* focusedWidget = mEventDispatchHandler->GetActive();
   if (!focusedWidget)
     focusedWidget = mTopLevelWidget;
 
@@ -2195,7 +2230,7 @@ nsMacEventHandler::HandleKeyUpDownEvent(EventHandlerCallRef aHandlerCallRef,
 
   // kEventRawKeyDown only.  Prepare for a possible NS_KEY_PRESS event.
 
-  nsWindow* checkFocusedWidget = gEventDispatchHandler.GetActive();
+  nsWindow* checkFocusedWidget = mEventDispatchHandler->GetActive();
   if (!checkFocusedWidget)
     checkFocusedWidget = mTopLevelWidget;
 
