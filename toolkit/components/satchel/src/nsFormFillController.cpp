@@ -148,7 +148,7 @@ GetScreenOrigin(nsIDOMElement* aElement)
         scale = presContext->TwipsToPixels();
 
         nsIFrame* frame;
-        nsresult rv = presShell->GetPrimaryFrameFor(content, &frame);
+        presShell->GetPrimaryFrameFor(content, &frame);
 
         nsIView* view;
         nsPoint offset;
@@ -967,7 +967,7 @@ nsFormFillController::RemoveWindowListeners(nsIDOMWindow *aWindow)
   StopControllingInput();
   
   nsCOMPtr<nsPIDOMWindow> privateDOMWindow(do_QueryInterface(aWindow));
-  nsIChromeEventHandler* chromeEventHandler;
+  nsIChromeEventHandler* chromeEventHandler = nsnull;
   if (privateDOMWindow)
     chromeEventHandler = privateDOMWindow->GetChromeEventHandler();
   
