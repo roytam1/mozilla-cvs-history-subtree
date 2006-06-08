@@ -487,6 +487,9 @@ function syncPref(refElement) {
 		//document.getElementById("textbox-okay-pane").value+= "Changed key ="+gPrefQueue[refElementPref].value+"\n";
 	}
 	setTimeout("UIdependencyCheck()",0);
+
+	document.getElementById("okay-button").setAttribute("disabled",false);
+	
 }
 
 
@@ -495,7 +498,10 @@ function syncPref(refElement) {
  */
 
 function PrefOkay() {
-	window.close();
+
+	document.getElementById("okay-button").setAttribute("disabled",true);
+
+	//window.close();
 }
 
 /* 
@@ -504,7 +510,7 @@ function PrefOkay() {
 
 function PrefCancel() {
     gCancelSync=true;
-	window.close();
+	//window.close();
 }
 
 

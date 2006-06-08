@@ -4,7 +4,7 @@
 <!ENTITY privacy.label               "Privacy"> 
 <!ENTITY proxy.label                 "Proxy">
 <!ENTITY general.label               "General">
-<!ENTITY okayButton.label            "OK">
+<!ENTITY okayButton.label            "Save">
 <!ENTITY cancelButton.label          "Cancel">
 
 
