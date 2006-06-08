@@ -66,7 +66,7 @@ function writeCacheLocationPref()
  
 function UIdependencyCheck() {
 
-  if(!document.getElementById("useDiskCache").checked) {
+  if(!document.getElementById("useDiskCache").value) {
 	//document.getElementById("storeCacheStorageCard").disabled=true;
 	document.getElementById("cacheSizeField").disabled=true;
   } else {
