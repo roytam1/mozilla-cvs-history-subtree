@@ -128,6 +128,10 @@
 #include "nsTextControlFrame.h"
 #include "nsStyleSheetService.h"
 
+#include "nsDOMParser.h"
+#include "nsDOMSerializer.h"
+#include "nsXMLHttpRequest.h"
+
 // view stuff
 #include "nsViewsCID.h"
 #include "nsViewManager.h"
@@ -221,6 +225,10 @@ void NS_InitSVGRendererGDIPlusGlobals();
 void NS_FreeSVGRendererGDIPlusGlobals();
 #endif
 #endif
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMSerializer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsXMLHttpRequest)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMParser)
 
 //-----------------------------------------------------------------------------
 
@@ -1332,6 +1340,21 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_STYLESHEETSERVICE_CID,
     NS_STYLESHEETSERVICE_CONTRACTID,
     nsStyleSheetServiceConstructor },
+
+  { "XML Serializer",
+    NS_XMLSERIALIZER_CID,
+    NS_XMLSERIALIZER_CONTRACTID,
+    nsDOMSerializerConstructor },
+
+  { "XMLHttpRequest",
+    NS_XMLHTTPREQUEST_CID,
+    NS_XMLHTTPREQUEST_CONTRACTID,
+    nsXMLHttpRequestConstructor },
+
+  { "DOM Parser",
+    NS_DOMPARSER_CID,
+    NS_DOMPARSER_CONTRACTID,
+    nsDOMParserConstructor },
 
   { "DOM Storage",
     NS_DOMSTORAGE_CID,

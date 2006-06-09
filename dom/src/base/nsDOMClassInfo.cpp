@@ -189,6 +189,11 @@
 #include "nsStyleContext.h"
 #include "nsAutoPtr.h"
 
+#include "nsIDOMLSProgressEvent.h"
+#include "nsIDOMParser.h"
+#include "nsIDOMSerializer.h"
+#include "nsIXMLHttpRequest.h"
+
 // includes needed for the prototype chain interfaces
 #include "nsIDOMNavigator.h"
 #include "nsIDOMBarProp.h"
@@ -1070,6 +1075,16 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            ELEMENT_SCRIPTABLE_FLAGS)
 #endif
 
+  NS_DEFINE_CLASSINFO_DATA(DOMParser, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(XMLSerializer, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+
+  NS_DEFINE_CLASSINFO_DATA(XMLHttpProgressEvent, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(XMLHttpRequest, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+
   // Define MOZ_SVG_FOREIGNOBJECT here so that when it gets switched on,
   // we preserve binary compatibility. New classes should be added
   // at the end.
@@ -1080,6 +1095,23 @@ static nsDOMClassInfoData sClassInfoData[] = {
 
   NS_DEFINE_CLASSINFO_DATA(XULCommandEvent, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
+};
+
+// Objects that shuld be constructable through |new Name();|
+struct nsContractIDMapData
+{
+  PRInt32 mDOMClassInfoID;
+  const char *mContractID;
+};
+
+#define NS_DEFINE_CONSTRUCTOR_DATA(_class, _contract_id)                      \
+  { eDOMClassInfo_##_class##_id, _contract_id },
+
+static const nsContractIDMapData kConstructorMap[] =
+{
+  NS_DEFINE_CONSTRUCTOR_DATA(DOMParser, NS_DOMPARSER_CONTRACTID)
+  NS_DEFINE_CONSTRUCTOR_DATA(XMLSerializer, NS_XMLSERIALIZER_CONTRACTID)
+  NS_DEFINE_CONSTRUCTOR_DATA(XMLHttpRequest, NS_XMLHTTPREQUEST_CONTRACTID)
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
@@ -2847,6 +2879,26 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_END
 #endif
 
+  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(DOMParser, nsIDOMParser)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMParser)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XMLSerializer, nsIDOMSerializer)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSerializer)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(XMLHttpRequest, nsIXMLHttpRequest)
+    DOM_CLASSINFO_MAP_ENTRY(nsIXMLHttpRequest)
+    DOM_CLASSINFO_MAP_ENTRY(nsIJSXMLHttpRequest)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+    DOM_CLASSINFO_MAP_ENTRY(nsIInterfaceRequestor)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XMLHttpProgressEvent, nsIDOMEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMLSProgressEvent)
+  DOM_CLASSINFO_MAP_END
+
 #if defined(MOZ_SVG) && defined(MOZ_SVG_FOREIGNOBJECT)
   DOM_CLASSINFO_MAP_BEGIN(SVGForeignObjectElement, nsIDOMSVGForeignObjectElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGForeignObjectElement)
@@ -4324,13 +4376,29 @@ nsWindowSH::DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   return NS_OK;
 }
 
+static const char*
+FindConstructorContractID(PRInt32 aDOMClassInfoID)
+{
+  PRUint32 i;
+  for (i = 0; i < NS_ARRAY_LENGTH(kConstructorMap); ++i) {
+    if (kConstructorMap[i].mDOMClassInfoID == aDOMClassInfoID) {
+      return kConstructorMap[i].mContractID;
+    }
+  }
+  return nsnull;
+}
+
 static nsresult
 BaseStubConstructor(const nsGlobalNameStruct *name_struct, JSContext *cx,
                     JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsresult rv;
   nsCOMPtr<nsISupports> native;
-  if (name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructor) {
+  if (name_struct->mType == nsGlobalNameStruct::eTypeClassConstructor) {
+    const char *contractid =
+      FindConstructorContractID(name_struct->mDOMClassInfoID);
+    native = do_CreateInstance(contractid, &rv);
+  } else if (name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructor) {
     native = do_CreateInstance(name_struct->mCID, &rv);
   } else if (name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructorAlias) {
     native = do_CreateInstance(name_struct->mAlias->mCID, &rv);
@@ -4521,7 +4589,9 @@ nsDOMConstructor::Construct(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
     return NS_ERROR_UNEXPECTED;
   }
 
-  if ((name_struct->mType != nsGlobalNameStruct::eTypeExternalClassInfo ||
+  if ((name_struct->mType != nsGlobalNameStruct::eTypeClassConstructor ||
+       !FindConstructorContractID(name_struct->mDOMClassInfoID)) &&
+      (name_struct->mType != nsGlobalNameStruct::eTypeExternalClassInfo ||
        !name_struct->mData->mConstructorCID) &&
       name_struct->mType != nsGlobalNameStruct::eTypeExternalConstructor &&
       name_struct->mType != nsGlobalNameStruct::eTypeExternalConstructorAlias) {

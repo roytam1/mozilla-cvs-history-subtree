@@ -41,6 +41,7 @@
 #include "nsIDOMParser.h"
 #include "nsCOMPtr.h"
 #include "nsIURI.h"
+#include "nsIEventQueueService.h"
 #include "nsIDOMLoadListener.h"
 #include "nsWeakReference.h"
 
@@ -69,6 +70,7 @@ public:
 
 private:
   nsCOMPtr<nsIURI> mBaseURI;
+  nsCOMPtr<nsIEventQueueService> mEventQService;
   PRBool mLoopingForSyncLoad;
 };
 
