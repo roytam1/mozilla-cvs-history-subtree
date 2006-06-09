@@ -597,7 +597,25 @@ function MiniNavStartup()
  
  spinCreate();
 
+ /* 
+  * We trap the showPopup method for the element id=PopupAutoComplete ( see minimo.xul )
+  * so we can force the showPopup to be called with the right parameters. 
+  * See bug: 341017
+  */ 
+  
+ document.getElementById("PopupAutoComplete").StoredShowPopup = document.getElementById("PopupAutoComplete").showPopup;
+ document.getElementById("PopupAutoComplete").showPopup = PopupAutoCompleteShowPop;
+
 }
+
+
+/* 
+ * Trap function to PopupAutoComplete (id=) / bug 341017
+ */ 
+function PopupAutoCompleteShowPop(t1,t2,t3,t4,t5,t6) {
+  document.getElementById("PopupAutoComplete").StoredShowPopup(t1,-1,-1,t4,"topleft","bottomleft");
+}
+
 
 /* 
  * UTILs to the keyboard / XUL interaction 
