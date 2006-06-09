@@ -732,7 +732,7 @@ var BookmarksCommand = {
          reallyOpen = (buttonPressed == 0);
          // don't set the pref unless they press OK and it's false
          if (reallyOpen && !warnOnOpen.value)
-           PREF.setBoolPref(kWarnOnOpen, false);
+           PREF.setBoolPref(kWarnOnOpenPref, false);
        }
   
        if (!reallyOpen)
