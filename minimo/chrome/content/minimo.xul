@@ -189,10 +189,7 @@
                completeselectedindex="true"
                maxrows="14"
                autocompletepopup="PopupAutoComplete"
-               ontextentered="return URLBarEntered();"
-               onfocus="URLBarFocusHandler(event, this);"
-               onmousedown="URLBarMouseDownHandler(event, this);"
-               onclick="URLBarClickHandler(event, this);">
+               ontextentered="return URLBarEntered();">
 		
 		<!--
 		    <deck onclick="PageProxyClickHandler(event)" id='proxy-deck' >

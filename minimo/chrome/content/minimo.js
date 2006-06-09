@@ -84,8 +84,6 @@ var gBrowser = null;
 var gBookmarksDoc=null; 
 var gURLBar = null;
 var gClickSelectsAll = true;
-var gIgnoreFocus = false;
-var gIgnoreClick = false;
 var gBrowserStatusHandler;
 var gSelectedTab=null;
 var gFullScreen=false;
@@ -1586,37 +1584,6 @@ function PageProxyClickHandler(aEvent) {
   document.getElementById("urlbarModeSelector").showPopup(document.getElementById("proxy-deck"),-1,-1,"popup","bottomleft", "topleft");
 }
 
-
-function URLBarFocusHandler(aEvent, aElt)
-{
-  
-  if (gIgnoreFocus)
-    gIgnoreFocus = false;
-  else if (gClickSelectsAll)
-    aElt.select();
-  
-  // gURLBar.setAttribute("open", "true"); 
-  // gURLBar.showHistoryPopup();
-  
-  
-}
-
-function URLBarMouseDownHandler(aEvent, aElt)
-{
-  if (aElt.hasAttribute("focused")) { 
-    gIgnoreClick = true;
-  } else {
-    gIgnoreFocus = true;
-    gIgnoreClick = false;
-    aElt.setSelectionRange(0, 0);
-  } 
-}
-
-function URLBarClickHandler(aEvent, aElt)
-{
-  if (!gIgnoreClick && aElt.selectionStart == aElt.selectionEnd)
-    aElt.select();
-}
 
 
 /*
