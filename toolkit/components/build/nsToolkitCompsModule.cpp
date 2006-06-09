@@ -59,11 +59,14 @@
 #endif
 #include "nsAutoCompleteSimpleResult.h"
 #include "nsFormFillController.h"
-#ifdef MOZ_STORAGE
+
+// form history (satchel)
+#ifdef MOZ_PLACES
 #include "nsStorageFormHistory.h"
-#elif defined(MOZ_MORK)
+#else
 #include "nsFormHistory.h"
 #endif
+
 #ifndef MOZ_PLACES
 #include "nsGlobalHistory.h"
 #endif
