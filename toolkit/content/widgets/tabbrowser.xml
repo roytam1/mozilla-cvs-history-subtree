@@ -1188,8 +1188,9 @@
           var shouldPrompt = this.mPrefs.getBoolPref(pref);
 
           if (shouldPrompt) {
-            var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                                          .getService(Components.interfaces.nsIPromptService);
+            var promptService = 
+                Components.classes["@mozilla.org/embedcomp/prompt-service;1"].
+                getService(Components.interfaces.nsIPromptService);
 
             //default to true: if it were false, we wouldn't get this far
             var warnOnClose = { value:true };
@@ -1201,13 +1202,13 @@
             var messageKey = (tabsToClose == 1) ? "tabs.closeWarningOne" : "tabs.closeWarningMultiple";
             var closeKey = (tabsToClose == 1) ? "tabs.closeButtonOne" : "tabs.closeButtonMultiple";
             var buttonPressed = promptService.confirmEx(window,
-                                                        bundle.getString('tabs.closeWarningTitle'),
+                                                        bundle.getString("tabs.closeWarningTitle"),
                                                         bundle.getFormattedString(messageKey, [tabsToClose]),
                                                         (promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0)
                                                         + (promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1),
                                                         bundle.getString(closeKey),
                                                         null, null,
-                                                        bundle.getString('tabs.closeWarningPromptMe'),
+                                                        bundle.getString("tabs.closeWarningPromptMe"),
                                                         warnOnClose);
             reallyClose = (buttonPressed == 0);
             // don't set the pref unless they press OK and it's false

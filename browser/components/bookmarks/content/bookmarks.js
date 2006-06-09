@@ -701,6 +701,44 @@ var BookmarksCommand = {
     RDFC.Init(BMDS, resource);
     var containerChildren = RDFC.GetElements();
 
+    const kWarnOnOpenPref = "browser.tabs.warnOnOpen";
+    if (PREF.getBoolPref(kWarnOnOpenPref))
+    {
+      var reallyOpen = true;
+      var tabsToOpen = RDFC.GetCount();
+
+      if (tabsToOpen >= PREF.getIntPref("browser.tabs.maxOpenBeforeWarn"))
+      {
+        var promptService = 
+            Components.classes["@mozilla.org/embedcomp/prompt-service;1"].
+            getService(Components.interfaces.nsIPromptService);
+ 
+        // default to true: if it were false, we wouldn't get this far
+        var warnOnOpen = { value: true };
+ 
+        var messageKey = "tabs.openWarningMultiple";
+        var openKey = "tabs.openButtonMultiple";
+
+        var buttonPressed = promptService.confirmEx(window,
+            BookmarksUtils.getLocaleString("tabs.openWarningTitle"),
+            BookmarksUtils.getLocaleString(messageKey, [tabsToOpen]),
+            (promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0)
+            + (promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1),
+            BookmarksUtils.getLocaleString(openKey),
+            null, null,
+            BookmarksUtils.getLocaleString("tabs.openWarningPromptMe"),
+            warnOnOpen);
+
+         reallyOpen = (buttonPressed == 0);
+         // don't set the pref unless they press OK and it's false
+         if (reallyOpen && !warnOnOpen.value)
+           PREF.setBoolPref(kWarnOnOpen, false);
+       }
+  
+       if (!reallyOpen)
+         return;
+    }
+
     if (aTargetBrowser == "current" || aTargetBrowser == "tab") {
       var browser  = w.document.getElementById("content");
       var tabPanels = browser.browsers;
