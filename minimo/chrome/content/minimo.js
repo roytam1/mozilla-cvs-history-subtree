@@ -545,7 +545,7 @@ function MiniNavStartup()
        var prefState = gPref.getBoolPref("ui.fullscreen");
 
        window.fullScreen  = prefState;
-       document.getElementById("mini-toolbars").hidden = prefState ;
+       document.getElementById("nav-bar").hidden = prefState ;
        document.getElementById("browserleftbar").collapsed = prefState;
   
      }
@@ -583,7 +583,7 @@ function MiniNavStartup()
  try {
    var prefState = gPref.getBoolPref("ui.fullscreen");
    window.fullScreen  = prefState;
-   document.getElementById("mini-toolbars").hidden = prefState ;
+   document.getElementById("nav-bar").hidden = prefState ;
    document.getElementById("browserleftbar").collapsed = prefState;
  } catch ( i )  { } 
 
@@ -1440,7 +1440,7 @@ function DoFullScreen()
 {
   gFullScreen = !gFullScreen;
   
-  document.getElementById("mini-toolbars").hidden = gFullScreen;
+  document.getElementById("nav-bar").hidden = gFullScreen;
   document.getElementById("browserleftbar").collapsed = gFullScreen;
   
   // Is this the simpler approach to count tabs? 
