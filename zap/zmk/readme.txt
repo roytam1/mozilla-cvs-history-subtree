@@ -1091,7 +1091,11 @@ Node parameters:
 - unsigned long "block_size" : max size of data packets (default: 8192).
 - boolean "loop" : if true, the file will be looped (i.e. seeked to the 
                    beginning once the end has been reached) (default: false)
-
+- boolean "generate_eof" : if true, an empty frame with a new stream info 
+                           will be generated at the end of the file (or, 
+                           if the file is being looped, a new stream info
+                           will be generated whenever the stream is rewound) 
+                           (default: true)
 Output stream:
 raw binary frames (type = "raw"). Size of frame data with be <=
 block_size

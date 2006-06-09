@@ -89,6 +89,7 @@ zapFileIn::AddedToGraph(zapIMediaGraph *graph,
   // node parameter defaults:
   mBlockSize = 8192;
   mLoop = PR_FALSE;
+  mGenerateEOF = PR_TRUE;
   nsCString fileSpec;
   
   // unpack node parameters:
@@ -99,6 +100,7 @@ zapFileIn::AddedToGraph(zapIMediaGraph *graph,
     return NS_ERROR_FAILURE;
   node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("block_size"), &mBlockSize);
   node_pars->GetPropertyAsBool(NS_LITERAL_STRING("loop"), &mLoop);
+  node_pars->GetPropertyAsBool(NS_LITERAL_STRING("generate_eof"), &mGenerateEOF);
   
   // try to open the file:
   nsCOMPtr<nsIIOService> ioService = do_GetService("@mozilla.org/network/io-service;1");
@@ -196,13 +198,17 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
 
   if (!mFile) return NS_ERROR_FAILURE;
   
-  // construct audio frame:
+  // construct raw frame:
   nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
   frame->mStreamInfo = mStreamInfo;
   frame->mTimestamp = 0; // XXX
 
-  if (mLoop && PR_Available(mFile) <= 0)
+  if (mLoop && PR_Available(mFile) <= 0) {
+    // Create a new stream info, so that downstream nodes get the
+    // stream break.
+    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
     PR_Seek(mFile, 0, PR_SEEK_SET); // rewind
+  }
   
   // write frame data:
   frame->mData.SetLength(mBlockSize);
@@ -210,7 +216,12 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   if (bytesRead <= 0) {
     PR_Close(mFile);
     mFile = nsnull;
-    return NS_ERROR_FAILURE;
+    if (mGenerateEOF) {
+      mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+      // fall through to emit the frame.
+    }
+    else
+      return NS_ERROR_FAILURE;
   }
   
   frame->mData.SetLength(bytesRead);

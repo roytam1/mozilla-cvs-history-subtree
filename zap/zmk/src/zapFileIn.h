@@ -71,6 +71,7 @@ private:
   PRUint32 mBlockSize;
   PRFileDesc *mFile;
   PRBool mLoop;
+  PRBool mGenerateEOF;
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   nsCOMPtr<zapIMediaSink> mOutput;
