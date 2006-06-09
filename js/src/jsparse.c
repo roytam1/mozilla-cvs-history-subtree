@@ -875,7 +875,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
          * wins when jsemit.c's LookupArgOrVar can optimize a JSOP_NAME into a
          * JSOP_GETVAR bytecode).
          */
-        if (tc->topStmt && (tc->flags & TCF_IN_FUNCTION)) {
+        if (!tc->topStmt && (tc->flags & TCF_IN_FUNCTION)) {
             /*
              * Define a property on the outer function so that LookupArgOrVar
              * can properly optimize accesses.
