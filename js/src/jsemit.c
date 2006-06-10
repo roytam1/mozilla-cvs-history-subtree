@@ -3125,6 +3125,7 @@ EmitDestructuringLHS(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
           case JSOP_SETARG:
           case JSOP_SETVAR:
           case JSOP_SETGVAR:
+          case JSOP_SETLOCAL:
             slot = (jsuint) pn->pn_slot;
             EMIT_UINT16_IMM_OP(pn->pn_op, slot);
             if (wantpop && js_Emit1(cx, cg, JSOP_POP) < 0)
