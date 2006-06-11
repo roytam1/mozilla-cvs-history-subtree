@@ -75,6 +75,10 @@ var MediaSession = makeClass("MediaSession",
                              SupportsImpl, Unwrappable, StateMachine);
 MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
 
+// This attrib will be set to false, should it be apparent that our
+// peer doesn't do ICE:
+MediaSession.obj("usingICE", true);
+
 //----------------------------------------------------------------------
 // zapIMediaSession
 // INIT_PENDING --> INITIALIZED --> NEGOTIATED --> RUNNING --> TERMINATED
@@ -303,10 +307,8 @@ MediaSession.fun(
       if (me.listener)
         me.listener.mediaSessionInitialized(me);
     }
-    this._dump("$$1");
     produceICECandidates(iceCandidatesProduced, 2, 49152, 5000, 50,
                          this.mediaGraph, this.stunServers);
-    this._dump("$$2");
   });
 
 //  boolean isOfferAcceptable(in zapISdpSessionDescription offer);
@@ -352,6 +354,26 @@ MediaSession.statefun(
                                               [mediaDescription], 1
                                               );
 
+    if (this.usingICE) {
+      // Add a session-level ice-pwd attribute:
+      offer.appendAttrib("ice-pwd:" + this.iceCandidates.password);
+      
+      // Encode the candidates as media-level attributes:
+      for (var i=0, l=this.iceCandidates.candidates.length; i<l; ++i) {
+        var cand = this.iceCandidates.candidates[i];
+        for (var j=0, m=cand.componentCount; j<m; ++j) {
+          var comp = cand.componentAt(j);
+          mediaDescription.appendAdditionalAttrib("candidate:"+
+                                                  cand.getCandidateID()+" "+
+                                                  (j+1)+" "+
+                                                  comp.protocol+" "+
+                                                  cand.q+" "+
+                                                  comp.address+" "+
+                                                  comp.port);
+        }
+      }
+    }
+    
     return offer;
   });
 

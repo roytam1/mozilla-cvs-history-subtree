@@ -50,7 +50,7 @@ interface zapISdpConnection;
  * otherwise.
  *
  */
-[scriptable, uuid(09debe48-e37c-42bd-a1eb-38cb5c4916f2)]
+[scriptable, uuid(6cffa73e-6f76-49a1-a6e1-1c63bc1ae50e)]
 interface zapISdpMediaDescription : zapISdpSyntaxObject
 {
   /**
@@ -87,6 +87,7 @@ interface zapISdpMediaDescription : zapISdpSyntaxObject
                      [retval, array, size_is(count)] out zapISdpBandwidth bws);
   void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
                      in unsigned long count);
+  void appendBandwidth(in zapISdpBandwidth bw);
   //@}
   
   /**

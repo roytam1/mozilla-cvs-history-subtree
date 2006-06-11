@@ -50,7 +50,7 @@ interface zapISdpConnection;
  * \nosubgrouping
  * An RFC2327/draft-ietf-mmusic-sdp-new-24.txt session description
  */
-[scriptable, uuid(800e5e3a-3fd6-46f6-95f4-11373ede9fdb)]
+[scriptable, uuid(94be544b-97f9-484a-82bb-9d8c5248687b)]
 interface zapISdpSessionDescription : zapISdpSyntaxObject
 {
   /**
@@ -101,6 +101,7 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
                          [retval, array, size_is(count)] out zapISdpEmailAddress addresses);
   void setEmailAddresses([array, size_is(count)] in zapISdpEmailAddress addresses,
                          in unsigned long count);
+  void appendEmailAddress(in zapISdpEmailAddress addr);
   //@}
 
   /**
@@ -111,6 +112,7 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
                        [retval, array, size_is(count)] out zapISdpPhoneNumber numbers);
   void setPhoneNumbers([array, size_is(count)] in zapISdpPhoneNumber numbers,
                        in unsigned long count);
+  void appendPhoneNumber(in zapISdpPhoneNumber number);
   //@}
 
   /**
@@ -130,6 +132,7 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
                      [retval, array, size_is(count)] out zapISdpBandwidth bws);
   void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
                      in unsigned long count);
+  void appendBandwidth(in zapISdpBandwidth bw);
   //@}
 
   /**
@@ -141,6 +144,7 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
                 [retval, array, size_is(count)] out zapISdpTime times);
   void setTimes([array, size_is(count)] in zapISdpTime times,
                 in unsigned long count);
+  void appendTime(in zapISdpTime time);
   //@}
 
   /**
@@ -165,6 +169,7 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
                   [retval, array, size_is(count)] out string attribs);
   void setAttribs([array, size_is(count)] in string attribs,
                   in unsigned long count);
+  void appendAttrib(in string attrib);
   //@}
 
   /**
@@ -175,5 +180,6 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
                             [retval, array, size_is(count)] out zapISdpMediaDescription media);
   void setMediaDescriptions([array, size_is(count)] in zapISdpMediaDescription media,
                             in unsigned long count);
+  void appendMediaDescription(in zapISdpMediaDescription media);
   //@}
 };

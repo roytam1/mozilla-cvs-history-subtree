@@ -46,7 +46,7 @@ interface zapISdpRtpAvpMediaFormat;
  * mappings as described in RFC3551.
  *
  */
-[scriptable, uuid(4f1f24f1-cf97-434e-b663-7bb0795275ac)]
+[scriptable, uuid(cf5257a3-7271-43c9-9c5f-4279fcc4cb49)]
 interface zapISdpRtpAvpMediaDescription : zapISdpMediaDescription
 {
   /**
@@ -59,6 +59,7 @@ interface zapISdpRtpAvpMediaDescription : zapISdpMediaDescription
   void setRtpAvpFormats([array, size_is(count)] in
                         zapISdpRtpAvpMediaFormat formats,
                         in unsigned long count);
+  void appendRtpAvpFormat(in zapISdpRtpAvpMediaFormat format);
   //@}
   
   /**
@@ -73,5 +74,6 @@ interface zapISdpRtpAvpMediaDescription : zapISdpMediaDescription
   void setAdditionalAttribs([array, size_is(count)] in
                             string attribs,
                             in unsigned long count);
+  void appendAdditionalAttrib(in string attr);
   //@}
 };

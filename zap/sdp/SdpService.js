@@ -376,24 +376,27 @@ SdpFieldContainer.addInterfaces(Components.interfaces.zapISdpSyntaxObject);
 
 SdpFieldContainer.metafun(
   "\
- Adds an instance array called '_<name>', a getter                   \n\
- 'function get<name>(count)' and a setter                            \n\
- 'function set<name>(array, count).                                   ",
+ Adds an instance array called '_<name>s', a getter                  \n\
+ 'function get<name>s(count)', a setter                              \n\
+ 'function set<name>s(array, count)', as well as the function        \n\
+ 'function append<name>(val)'.                                         ",
   function arr(name) {
     // add a ctor that adds the array to new instances:
-    var arrName = "_"+name;
+    var arrName = "_"+name+"s";
     this.appendCtor(function() { this[arrName] = []; });
 
     // construct getters/setters:
     var get_fct, set_fct;
-    eval("get_fct = function get"+name+"(c) {"+
+    eval("get_fct = function get"+name+"s(c) {"+
          "if (c) c.value = this[arrName].length; "+
          "return this[arrName]; }");
-    eval("set_fct = function set"+name+"(a, c) { this[arrName] = a; }");
-
+    eval("set_fct = function set"+name+"s(a, c) { this[arrName] = a; }");
+    eval("append_fct = function append"+name+"(v) { this[arrName].push(v); }");
+    
     // install functions:
     this.fun(get_fct);
     this.fun(set_fct);
+    this.fun(append_fct);
   });
 
 //----------------------------------------------------------------------
@@ -546,7 +549,8 @@ SdpGenericMediaDescription.obj("connection", null);
 //                    [retval, array, size_is(count)] out zapISdpBandwidth bws);
 // void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
 //                    in unsigned long count);
-SdpGenericMediaDescription.arr("Bandwidths");
+// void appendBandwidth(in zapISdpBandwidth bw);
+SdpGenericMediaDescription.arr("Bandwidth");
 
 // attribute zapISdpKey key;
 SdpGenericMediaDescription.obj("key", null);
@@ -558,13 +562,15 @@ SdpGenericMediaDescription.obj("key", null);
 //                 [retval, array, size_is(count)] out string formats);
 // void setFormats([array, size_is(count)] in string formats,
 //                 in unsigned long count);
-SdpGenericMediaDescription.arr("Formats");
+// void appendFormat(in string format);
+SdpGenericMediaDescription.arr("Format");
 
 // void getAttribs(out unsigned long count,
 //                 [retval, array, size_is(count)] out string attribs);
 // void setAttribs([array, size_is(count)] in string attribs,
 //                 in unsigned long count);  
-SdpGenericMediaDescription.arr("Attribs");
+// void appendAttrib(in string attr);
+SdpGenericMediaDescription.arr("Attrib");
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -718,7 +724,8 @@ SdpRtpAvpMediaDescription.obj("connection", null);
 //                    [retval, array, size_is(count)] out zapISdpBandwidth bws);
 // void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
 //                    in unsigned long count);
-SdpRtpAvpMediaDescription.arr("Bandwidths");
+// void appendBandwidth(in zapISdpBandwidth bw);
+SdpRtpAvpMediaDescription.arr("Bandwidth");
 
 // attribute zapISdpKey key;
 SdpRtpAvpMediaDescription.obj("key", null);
@@ -732,7 +739,8 @@ SdpRtpAvpMediaDescription.obj("key", null);
 // void setRtpAvpFormats([array, size_is(count)] in
 //                       zapISdpRtpAvpMediaFormat formats,
 //                       in unsigned long count);
-SdpRtpAvpMediaDescription.arr("RtpAvpFormats");
+// void appendRtpAvpFormat(in zapISdpRtpAvpMediaFormat format);
+SdpRtpAvpMediaDescription.arr("RtpAvpFormat");
 
 // void getAdditionalAttribs(out unsigned long count,
 //                           [retval, array, size_is(count)] out
@@ -740,7 +748,8 @@ SdpRtpAvpMediaDescription.arr("RtpAvpFormats");
 // void setAdditionalAttribs([array, size_is(count)] in
 //                           string attribs,
 //                           in unsigned long count);
-SdpRtpAvpMediaDescription.arr("AdditionalAttribs");
+// void appendAdditionalAttrib(in string attr);
+SdpRtpAvpMediaDescription.arr("AdditionalAttrib");
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -885,14 +894,16 @@ SdpSessionDescription.parsedAttrib("uri", REGEXP_URI_OR_NOTHING, "");
 //                        [retval, array, size_is(count)] out zapISdpEmailAddress addresses);
 // void setEmailAddresses([array, size_is(count)] in zapISdpEmailAddress addresses,
 //                        in unsigned long count);
-SdpSessionDescription.arr("EmailAddresses");
+// void appendEmailAddress(in zapISdpEmailAddress addr);
+SdpSessionDescription.arr("EmailAddresse");
 
 // void getPhoneNumbers(out unsigned long count,
 //                      [retval, array, size_is(count)] out zapISdpPhoneNumber numbers);
 
 // void setPhoneNumbers([array, size_is(count)] in zapISdpPhoneNumber numbers,
 //                      in unsigned long count);
-SdpSessionDescription.arr("PhoneNumbers");
+// void appendPhoneNumber(in zapISdpPhoneNumber number);
+SdpSessionDescription.arr("PhoneNumber");
 
 // attribute zapISdpConnection connection;
 SdpSessionDescription.obj("connection", null);
@@ -902,14 +913,16 @@ SdpSessionDescription.obj("connection", null);
 
 // void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
 //                    in unsigned long count);
-SdpSessionDescription.arr("Bandwidths");
+// void appendBandwidth(in zapISdpBandwidth bw);
+SdpSessionDescription.arr("Bandwidth");
 
 // void getTimes(out unsigned long count,
 //               [retval, array, size_is(count)] out zapISdpTime times);
 
 // void setTimes([array, size_is(count)] in zapISdpTime times,
 //               in unsigned long count);
-SdpSessionDescription.arr("Times");
+// void appendTime(in zapISdpTime time);
+SdpSessionDescription.arr("Time");
 
 // attribute zapISdpZoneAdjustments zoneAdjustments;
 SdpSessionDescription.obj("zoneAdjustments", null);
@@ -922,14 +935,16 @@ SdpSessionDescription.obj("key", null);
 
 // void setAttribs([array, size_is(count)] in string attribs,
 //                 in unsigned long count);
-SdpSessionDescription.arr("Attribs");
+// void appendAttrib(in string attrib);
+SdpSessionDescription.arr("Attrib");
 
 // void getMediaDescriptions(out unsigned long count,
 //                           [retval, array, size_is(count)] out zapISdpMediaDescription media);
 
 // void setMediaDescriptions([array, size_is(count)] in zapISdpMediaDescription media,
 //                           in unsigned long count);
-SdpSessionDescription.arr("MediaDescriptions");
+// void appendMediaDescription(in zapISdpMediaDescription media);
+SdpSessionDescription.arr("MediaDescription");
 
 ////////////////////////////////////////////////////////////////////////
 // Class SdpService

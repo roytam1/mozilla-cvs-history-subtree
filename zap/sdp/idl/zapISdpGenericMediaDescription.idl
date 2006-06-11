@@ -41,7 +41,7 @@
  * \nosubgrouping
  * A generic media description (m= and follow-on lines)
  */
-[scriptable, uuid(e1f9372d-0e87-45b4-a515-e34c7cfa0c41)]
+[scriptable, uuid(24a577b3-25e8-4795-9bc0-6ca48aaa8eae)]
 interface zapISdpGenericMediaDescription : zapISdpMediaDescription
 {
   /**
@@ -52,6 +52,7 @@ interface zapISdpGenericMediaDescription : zapISdpMediaDescription
                   [retval, array, size_is(count)] out string formats);
   void setFormats([array, size_is(count)] in string formats,
                   in unsigned long count);
+  void appendFormat(in string format);
   //@}
   
   /**
@@ -62,5 +63,6 @@ interface zapISdpGenericMediaDescription : zapISdpMediaDescription
                   [retval, array, size_is(count)] out string attribs);
   void setAttribs([array, size_is(count)] in string attribs,
                   in unsigned long count);
+  void appendAttrib(in string attr);
   //@}
 };

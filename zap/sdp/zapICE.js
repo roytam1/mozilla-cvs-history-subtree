@@ -91,7 +91,7 @@ var zapICETransport = makeClass("zapICETransport", ErrorReporter);
 // zapICETransport.obj("port", null);
 
 // protocol
-zapICETransport.obj("protocol", "udp");
+zapICETransport.obj("protocol", "UDP");
 
 // free resources attached to this transport:
 zapICETransport.fun(
@@ -499,6 +499,10 @@ function produceICECandidates(done, componentCount, udpPortbase,
                               maxDuration, paceDuration,
                               mediaGraph, stunServers)
 {
+  //XXX
+  dump("Producing ICE candidates for STUN servers:");
+  for (var i=0;i<stunServers.length; ++i) dump(" "+stunServers[i]);
+  dump("\n");
   
   // generate local candidates first:
   var locals = gatherLocalICECandidates(componentCount, udpPortbase, mediaGraph);
