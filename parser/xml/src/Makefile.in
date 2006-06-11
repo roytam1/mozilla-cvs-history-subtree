@@ -52,6 +52,7 @@ REQUIRES	= \
 		string \
 		htmlparser \
 		content \
+		uconv \
 		$(NULL)
 
 CPPSRCS		= \
