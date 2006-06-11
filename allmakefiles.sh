@@ -847,8 +847,6 @@ intl/locale/public/Makefile
 MAKEFILES_inspector="
 extensions/inspector/Makefile
 extensions/inspector/base/Makefile
-extensions/inspector/base/public/Makefile
-extensions/inspector/base/src/Makefile
 extensions/inspector/build/Makefile
 extensions/inspector/build/src/Makefile
 extensions/inspector/resources/Makefile
@@ -1088,7 +1086,6 @@ xpfe/components/build2/Makefile
 MAKEFILES_calendar="
 calendar/Makefile
 calendar/resources/Makefile
-calendar/resources/locale/Makefile
 calendar/libical/Makefile
 calendar/libical/src/Makefile
 calendar/libical/src/libical/Makefile
@@ -1105,6 +1102,8 @@ calendar/xpi/Makefile
 "
 
 MAKEFILES_sunbird="
+calendar/installer/Makefile
+calendar/installer/windows/Makefile
 calendar/locales/Makefile
 calendar/sunbird/Makefile
 calendar/sunbird/app/Makefile
