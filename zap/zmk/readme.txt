@@ -1151,3 +1151,32 @@ Input stream:
 any
 
 ----------------------------------------------------------------------
+
+39) pcm-ping
+------------
+
+A filter emiting a 'pcm ping' for each frame received.
+
+Sinks: 1 (passive)
+Sources: 1 (active)
+
+Node parameters:
+- double "sample_rate" : sample rate in Hz (default: 8000)
+- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "channels" : number of channels (default: 1)
+- ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
+                             (default: "float32_32768")
+- double "ping_pitch" : frequency of the ping (in Hz, default: 1760Hz)
+
+
+Input stream:
+any
+
+Output stream:
+audio/pcm frames with
+- double "sample_rate" == corresponding node parameter
+- double "frame_duration" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == corresponding node parameter
+
+----------------------------------------------------------------------
