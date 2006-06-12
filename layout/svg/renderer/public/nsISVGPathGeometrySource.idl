@@ -60,7 +60,7 @@ interface nsISVGRendererPathBuilder;
  *
  * @nosubgrouping
  */
-[scriptable, uuid(73c9350e-6b0b-4458-aa24-aa5333476eff)]
+[uuid(73c9350e-6b0b-4458-aa24-aa5333476eff)]
 interface nsISVGPathGeometrySource : nsISVGGeometrySource
 {
 

@@ -62,7 +62,7 @@ interface nsIDOMSVGRect;
  * nsISVGGlyphMetricsSource::font, nsISVGGlyphMetricsSource::canvasTM, and
  * other relevant style such as nsISVGGlyphMetricsSource::strokeWidth.
  */
-[scriptable, uuid(2cdc98a4-594f-42a7-970c-e4dcb7a72aa0)]
+[uuid(2cdc98a4-594f-42a7-970c-e4dcb7a72aa0)]
 interface nsISVGRendererGlyphMetrics : nsISupports
 {
   /**

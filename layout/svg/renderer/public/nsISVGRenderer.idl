@@ -76,7 +76,7 @@ interface nsPresContext;
  * cross-platform libart engine
  * ("@mozilla.org/svg/renderer;1?tech=LIBART").
  */
-[scriptable, uuid(14e914e0-f283-4fd0-9d71-d3e842927007)]
+[uuid(14e914e0-f283-4fd0-9d71-d3e842927007)]
 interface nsISVGRenderer : nsISupports
 {
   // void Init(in nsPresContext presContext);

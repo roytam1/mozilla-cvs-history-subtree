@@ -63,7 +63,7 @@ interface nsIDOMSVGRect;
  * glyph rendering and hit-testing for the (composite) glyph described
  * by the nsISVGGlyphGeometrySource members.
  */
-[scriptable, uuid(e2b739d0-8415-4f36-982c-3579876e1435)]
+[uuid(e2b739d0-8415-4f36-982c-3579876e1435)]
 interface nsISVGRendererGlyphGeometry : nsISupports
 {
   /**

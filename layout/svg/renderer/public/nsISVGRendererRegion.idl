@@ -53,7 +53,7 @@ interface nsISVGRectangleSink;
  *
  * This interface abstracts a rendering engine-native region object.
  */
-[scriptable, uuid(9356e1c6-66e6-49a0-8c67-7e910270ed1e)]
+[uuid(9356e1c6-66e6-49a0-8c67-7e910270ed1e)]
 interface nsISVGRendererRegion : nsISupports
 {
   /**

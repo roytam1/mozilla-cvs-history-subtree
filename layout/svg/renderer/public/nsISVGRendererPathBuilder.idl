@@ -53,7 +53,7 @@
  * native representation of the path described by
  * nsISVGPathGeometrySource.
  */
-[scriptable, uuid(c3cd294e-39ae-4718-b2bc-87c0fad97a12)]
+[uuid(c3cd294e-39ae-4718-b2bc-87c0fad97a12)]
 interface nsISVGRendererPathBuilder : nsISupports
 {
   /**

@@ -69,7 +69,7 @@ interface nsISVGRendererSurface;
  * Mozilla-native rendering object with a call to
  * nsISVGRenderer::createCanvas().
  */
-[scriptable, uuid(2e64a227-de4b-4a69-ab82-5dda1579e90f)]
+[uuid(2e64a227-de4b-4a69-ab82-5dda1579e90f)]
 interface nsISVGRendererCanvas : nsISupports
 {
   /**

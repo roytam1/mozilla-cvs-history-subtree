@@ -66,7 +66,7 @@ interface nsISVGRendererGlyphMetrics;
  *
  * @nosubgrouping
  */
-[scriptable, uuid(b36065f1-c52b-4eda-b9ad-e483cf1a63bf)]
+[uuid(b36065f1-c52b-4eda-b9ad-e483cf1a63bf)]
 interface nsISVGGlyphGeometrySource : nsISVGGlyphMetricsSource
 {
   /**

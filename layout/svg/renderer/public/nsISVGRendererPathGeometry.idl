@@ -63,7 +63,7 @@ interface nsSVGPathData;
  * provide rendering, hit-testing and metrics for the path described
  * by the nsISVGPathGeometrySource members.
  */
-[scriptable, uuid(95f9e432-90e6-48c1-a242-5346517b93d1)]
+[uuid(95f9e432-90e6-48c1-a242-5346517b93d1)]
 interface nsISVGRendererPathGeometry : nsISupports
 {
   /**
