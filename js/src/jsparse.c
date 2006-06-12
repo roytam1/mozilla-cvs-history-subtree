@@ -2084,7 +2084,8 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
     pnlet = NewParseNode(cx, ts, PN_BINARY, tc);
     if (!pnlet)
         return NULL;
-    (void) js_GetToken(cx, ts);
+
+    MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_BEFORE_LET);
 
     /* This is a let block of the form: let (a, b, c) { ... }. */
     if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pnblock, &obj))
@@ -2097,8 +2098,7 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
         return NULL;
     pnlet->pn_left->pn_extra = PNX_POPVAR;
 
-    /* XXX Reparameterize these error messages. */
-    MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_FORMAL);
+    MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_LET);
 
     if (statement && !js_MatchToken(cx, ts, TOK_LC)) {
         JSParseNode *pn1;
@@ -2123,9 +2123,8 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
     if (!pnlet->pn_right)
         return NULL;
 
-    /* XXX Reparameterize this error message. */
     if (statement)
-        MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_AFTER_BODY);
+        MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_AFTER_LET);
     else
         pnblock->pn_extra = PNX_BLOCKEXPR;
 
@@ -3117,7 +3116,7 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     pn = NewParseNode(cx, ts, PN_LIST, tc);
     if (!pn)
         return NULL;
-    pn->pn_op = args.op;
+    pn->pn_op = let ? JSOP_NOP : args.op;
     PN_INIT_LIST(pn);
 
     /*
