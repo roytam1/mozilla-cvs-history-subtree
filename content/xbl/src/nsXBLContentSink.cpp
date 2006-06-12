@@ -869,7 +869,8 @@ nsXBLContentSink::CreateElement(const PRUnichar** aAtts, PRUint32 aAttsCount,
     return NS_ERROR_OUT_OF_MEMORY;
 
   prototype->mNodeInfo = aNodeInfo;
-  // XBL doesn't do multi-language yet.
+  // XXX - we need to do exactly what the XUL content-sink does (eg,
+  // look for 'type', 'version' etc attributes)
   prototype->mScriptTypeID = nsIProgrammingLanguage::JAVASCRIPT;
 
   AddAttributesToXULPrototype(aAtts, aAttsCount, prototype);
