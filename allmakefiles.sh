@@ -225,6 +225,8 @@ intl/lwbrk/src/Makefile
 intl/lwbrk/public/Makefile
 intl/lwbrk/tests/Makefile
 intl/unicharutil/Makefile
+intl/unicharutil/util/Makefile
+intl/unicharutil/util/internal/Makefile
 intl/unicharutil/idl/Makefile
 intl/unicharutil/src/Makefile
 intl/unicharutil/public/Makefile
@@ -845,8 +847,6 @@ intl/locale/public/Makefile
 MAKEFILES_inspector="
 extensions/inspector/Makefile
 extensions/inspector/base/Makefile
-extensions/inspector/base/public/Makefile
-extensions/inspector/base/src/Makefile
 extensions/inspector/build/Makefile
 extensions/inspector/build/src/Makefile
 extensions/inspector/resources/Makefile
@@ -1068,7 +1068,6 @@ xpfe/components/build2/Makefile
 MAKEFILES_calendar="
 calendar/Makefile
 calendar/resources/Makefile
-calendar/resources/locale/Makefile
 calendar/libical/Makefile
 calendar/libical/src/Makefile
 calendar/libical/src/libical/Makefile
@@ -1085,6 +1084,9 @@ calendar/xpi/Makefile
 "
 
 MAKEFILES_sunbird="
+calendar/installer/Makefile
+calendar/installer/windows/Makefile
+calendar/locales/Makefile
 calendar/sunbird/Makefile
 calendar/sunbird/app/Makefile
 calendar/sunbird/base/Makefile
@@ -1103,6 +1105,9 @@ extensions/sql/base/src/Makefile
 extensions/sql/base/resources/Makefile
 extensions/sql/pgsql/public/Makefile
 extensions/sql/pgsql/src/Makefile
+extensions/sql/odbc/Makefile
+extensions/sql/odbc/public/Makefile
+extensions/sql/odbc/src/Makefile
 extensions/sql/build/Makefile
 extensions/sql/build/src/Makefile
 extensions/sql/sqltest/Makefile

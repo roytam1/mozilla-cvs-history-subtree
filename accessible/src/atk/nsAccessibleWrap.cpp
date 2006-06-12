@@ -79,16 +79,28 @@ enum MaiInterfaceType {
     MAI_INTERFACE_TEXT /* 7 */
 };
 
-static const GType AtkTypeForMai[] = {
-    ATK_TYPE_COMPONENT,
-    ATK_TYPE_ACTION,
-    ATK_TYPE_VALUE,
-    ATK_TYPE_EDITABLE_TEXT,
-    ATK_TYPE_HYPERTEXT,
-    ATK_TYPE_SELECTION,
-    ATK_TYPE_TABLE,
-    ATK_TYPE_TEXT
-};
+static GType GetAtkTypeForMai(MaiInterfaceType type)
+{
+  switch (type) {
+    case MAI_INTERFACE_COMPONENT:
+      return ATK_TYPE_COMPONENT;
+    case MAI_INTERFACE_ACTION:
+      return ATK_TYPE_ACTION;
+    case MAI_INTERFACE_VALUE:
+      return ATK_TYPE_VALUE;
+    case MAI_INTERFACE_EDITABLE_TEXT:
+      return ATK_TYPE_EDITABLE_TEXT;
+    case MAI_INTERFACE_HYPERTEXT:
+      return ATK_TYPE_HYPERTEXT;
+    case MAI_INTERFACE_SELECTION:
+      return ATK_TYPE_SELECTION;
+    case MAI_INTERFACE_TABLE:
+      return ATK_TYPE_TABLE;
+    case MAI_INTERFACE_TEXT:
+      return ATK_TYPE_TEXT;
+  }
+  return G_TYPE_INVALID;
+}
 
 static const GInterfaceInfo atk_if_infos[] = {
     {(GInterfaceInitFunc)componentInterfaceInitCB,
@@ -388,9 +400,9 @@ GetMaiAtkType(PRUint16 interfacesBits)
     };
 
     /*
-     * The members we used to register a GType are MaiInterface::GetAtkType()
-     * and MaiInterface::GetInterfaceInfo(), which is the same with different
-     * MaiInterface objects. So we can reuse the registered GType when having
+     * The members we use to register GTypes are GetAtkTypeForMai
+     * and atk_if_infos, which are constant values to each MaiInterface
+     * So we can reuse the registered GType when having
      * the same MaiInterface types.
      */
     const char *atkTypeName = GetUniqueMaiAtkTypeName(interfacesBits);
@@ -404,19 +416,17 @@ GetMaiAtkType(PRUint16 interfacesBits)
      * given object type to 4095.
      */
     static PRUint16 typeRegCount = 0;
-    if (typeRegCount++ < 4095) {
-        type = g_type_register_static(MAI_TYPE_ATK_OBJECT,
-                                      atkTypeName,
-                                      &tinfo, GTypeFlags(0));
+    if (typeRegCount++ >= 4095) {
+        return G_TYPE_INVALID;
     }
-    else {
-        return 0;
-    }
+    type = g_type_register_static(MAI_TYPE_ATK_OBJECT,
+                                  atkTypeName,
+                                  &tinfo, GTypeFlags(0));
 
-    for (PRUint32 index = 0; index < NS_ARRAY_LENGTH(AtkTypeForMai); index++) {
+    for (PRUint32 index = 0; index < NS_ARRAY_LENGTH(atk_if_infos); index++) {
       if (interfacesBits & (1 << index)) {
         g_type_add_interface_static(type,
-                                    AtkTypeForMai[index],
+                                    GetAtkTypeForMai((MaiInterfaceType)index),
                                     &atk_if_infos[index]);
       }
     }
@@ -526,12 +536,12 @@ nsAccessibleWrap::TranslateStates(PRUint32 aState, PRUint32 aExtState, void *aAt
     if (aState & nsIAccessible::STATE_INVALID)
         atk_state_set_add_state (state_set, ATK_STATE_INVALID);
 
-#ifdef ATK_STATE_DEFAULT
+#if 0
     if (aState & nsIAccessible::STATE_DEFAULT)
         atk_state_set_add_state (state_set, ATK_STATE_DEFAULT);
 #endif
 
-#ifdef ATK_STATE_REQUIRED
+#ifdef USE_ATK_STATE_REQUIRED
     if (aState & nsIAccessible::STATE_REQUIRED)
         atk_state_set_add_state (state_set, ATK_STATE_REQUIRED);
 #endif
@@ -790,12 +800,12 @@ getRoleCB(AtkObject *aAtkObj)
             }
             accRole = linkRole;
         }
-#ifndef ATK_ROLE_AUTOCOMPLETE
+#ifndef USE_ATK_ROLE_AUTOCOMPLETE
         else if (accRole == nsIAccessible::ROLE_AUTOCOMPLETE) {
           accRole = ATK_ROLE_COMBO_BOX;
         }
 #endif
-#ifndef ATK_ROLE_CAPTION
+#ifndef USE_ATK_ROLE_CAPTION
         else if (accRole == nsIAccessible::ROLE_CAPTION) {
           accRole = ATK_ROLE_LABEL;
         }
@@ -918,10 +928,11 @@ refRelationSetCB(AtkObject *aAtkObj)
     AtkObject *accessible_array[1];
     AtkRelation* relation;
     
-    PRUint32 relationType[2] = {nsIAccessible::RELATION_LABELLED_BY,
-                                nsIAccessible::RELATION_LABEL_FOR};
+    PRUint32 relationType[] = {nsIAccessible::RELATION_LABELLED_BY,
+                               nsIAccessible::RELATION_LABEL_FOR,
+                               nsIAccessible::RELATION_NODE_CHILD_OF};
 
-    for (PRUint32 i = 0; i <= 1; i++) { 
+    for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(relationType); i++) { 
       if (!atk_relation_set_contains(relation_set, NS_STATIC_CAST(AtkRelationType, relationType[i]))) {
           nsIAccessible* accRelated;
           nsresult rv = accWrap->GetAccessibleRelated(relationType[i], &accRelated);

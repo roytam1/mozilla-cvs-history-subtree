@@ -56,6 +56,7 @@
 #include "nsIDOMHTMLInputElement.h"
 #include "nsIMenuFrame.h"
 #include "nsIMenuParent.h"
+#include "nsWidgetAtoms.h"
 #include <malloc.h>
 
 #ifdef MOZ_CAIRO_GFX
@@ -212,11 +213,6 @@ nsNativeThemeWin::nsNativeThemeWin() {
     getThemeSysFont = (GetThemeSysFontPtr)GetProcAddress(mThemeDLL, "GetThemeSysFont");
     getThemeColor = (GetThemeColorPtr)GetProcAddress(mThemeDLL, "GetThemeColor");
   }
-
-  mInputAtom = do_GetAtom("input");
-  mInputCheckedAtom = do_GetAtom("_moz-input-checked");
-  mTypeAtom = do_GetAtom("type");
-  mMenuActiveAtom = do_GetAtom("_moz-menuactive");
 
   UpdateConfig();
 
@@ -408,7 +404,8 @@ nsNativeThemeWin::GetThemePartAndState(nsIFrame* aFrame, PRUint8 aWidgetType,
       // XXXdwh This check will need to be more complicated, since HTML radio groups
       // use checked, but XUL radio groups use selected.  There will need to be an
       // IsNodeOfType test for HTML vs. XUL here.
-      nsIAtom* atom = (aWidgetType == NS_THEME_CHECKBOX) ? mCheckedAtom : mSelectedAtom;
+      nsIAtom* atom = (aWidgetType == NS_THEME_CHECKBOX) ? nsWidgetAtoms::checked
+                                                         : nsWidgetAtoms::selected;
 
       PRBool isHTML = PR_FALSE;
       PRBool isHTMLChecked = PR_FALSE;
@@ -815,10 +812,6 @@ nsNativeThemeWin::DrawWidgetBackground(nsIRenderingContext* aContext,
 
   gfxFloat xoff, yoff;
   nsRefPtr<gfxASurface> surf = ctx->CurrentSurface(&xoff, &yoff);
-  if (!surf) {
-    surf = ctx->CurrentSurface();
-    xoff = yoff = 0.0;
-  }
 
   HDC hdc = NS_STATIC_CAST(gfxWindowsSurface*, NS_STATIC_CAST(gfxASurface*, surf.get()))->GetDC();
   SaveDC(hdc);
@@ -827,18 +820,12 @@ nsNativeThemeWin::DrawWidgetBackground(nsIRenderingContext* aContext,
   /* Need to force the clip to be set */
   ctx->UpdateSurfaceClip();
 
-  //ctx->CurrentSurface()->Flush();
-
-  /* Set the device offsets as appropriate */
-  POINT origViewportOrigin;
-  GetViewportOrgEx(hdc, &origViewportOrigin);
-  SetViewportOrgEx(hdc, origViewportOrigin.x - (int) xoff, origViewportOrigin.y - (int) yoff, NULL);
-
   /* Covert the current transform to a world transform */
   gfxMatrix m = ctx->CurrentMatrix();
   XFORM xform;
   double dm[6];
   m.ToValues(&dm[0], &dm[1], &dm[2], &dm[3], &dm[4], &dm[5]);
+
   xform.eM11 = (FLOAT) dm[0];
   xform.eM12 = (FLOAT) dm[1];
   xform.eM21 = (FLOAT) dm[2];
@@ -846,6 +833,19 @@ nsNativeThemeWin::DrawWidgetBackground(nsIRenderingContext* aContext,
   xform.eDx  = (FLOAT) dm[4];
   xform.eDy  = (FLOAT) dm[5];
   SetWorldTransform (hdc, &xform);
+
+#if 0
+  fprintf (stderr, "xform: %f %f %f %f [%f %f]\n", dm[0], dm[1], dm[2], dm[3], dm[4], dm[5]);
+  fprintf (stderr, "tr: [%d %d %d %d]\ncr: [%d %d %d %d]\noff: [%f %f]\n",
+           tr.x, tr.y, tr.width, tr.height, cr.x, cr.y, cr.width, cr.height,
+           xoff, yoff);
+  fflush (stderr);
+#endif
+
+  /* Set the device offsets as appropriate */
+  POINT origViewportOrigin;
+  GetViewportOrgEx(hdc, &origViewportOrigin);
+  SetViewportOrgEx(hdc, origViewportOrigin.x + (int) xoff, origViewportOrigin.y + (int) yoff, NULL);
 
 #else /* non-MOZ_CAIRO_GFX */
 
@@ -869,6 +869,13 @@ nsNativeThemeWin::DrawWidgetBackground(nsIRenderingContext* aContext,
 
   GetNativeRect(tr, widgetRect);
   GetNativeRect(cr, clipRect);
+
+#if 0
+  fprintf (stderr, "widget: [%d %d %d %d]\nclip: [%d %d %d %d]\n",
+           widgetRect.left, widgetRect.top, widgetRect.right, widgetRect.bottom,
+           clipRect.left, clipRect.top, clipRect.right, clipRect.bottom);
+  fflush (stderr);
+#endif
 
   // For left edge and right edge tabs, we need to adjust the widget
   // rects and clip rects so that the edges don't get drawn.
@@ -1156,9 +1163,11 @@ nsNativeThemeWin::WidgetStateChanged(nsIFrame* aFrame, PRUint8 aWidgetType,
     // Check the attribute to see if it's relevant.  
     // disabled, checked, dlgtype, default, etc.
     *aShouldRepaint = PR_FALSE;
-    if (aAttribute == mDisabledAtom || aAttribute == mCheckedAtom ||
-        aAttribute == mSelectedAtom || aAttribute == mReadOnlyAtom ||
-        aAttribute == mMenuActiveAtom)
+    if (aAttribute == nsWidgetAtoms::disabled ||
+        aAttribute == nsWidgetAtoms::checked ||
+        aAttribute == nsWidgetAtoms::selected ||
+        aAttribute == nsWidgetAtoms::readonly ||
+        aAttribute == nsWidgetAtoms::mozmenuactive)
       *aShouldRepaint = PR_TRUE;
   }
 
@@ -1624,7 +1633,7 @@ nsresult nsNativeThemeWin::ClassicGetThemePartAndState(nsIFrame* aFrame, PRUint8
           aState |= DFCS_RTL;
       }
 
-      if (CheckBooleanAttr(aFrame, mMenuActiveAtom))
+      if (CheckBooleanAttr(aFrame, nsWidgetAtoms::mozmenuactive))
         aState |= DFCS_HOT;
 
       // Only menu items of the appropriate type may have tick or bullet marks.
@@ -1961,11 +1970,6 @@ nsresult nsNativeThemeWin::ClassicDrawWidgetBackground(nsIRenderingContext* aCon
   /* Need to force the clip to be set */
   ctx->UpdateSurfaceClip();
 
-  /* Set the device offsets as appropriate */
-  POINT origViewportOrigin;
-  GetViewportOrgEx(hdc, &origViewportOrigin);
-  SetViewportOrgEx(hdc, origViewportOrigin.x - (int) xoff, origViewportOrigin.y - (int) yoff, NULL);
-
   /* Covert the current transform to a world transform */
   gfxMatrix m = ctx->CurrentMatrix();
   XFORM xform;
@@ -1978,6 +1982,11 @@ nsresult nsNativeThemeWin::ClassicDrawWidgetBackground(nsIRenderingContext* aCon
   xform.eDx  = (FLOAT) dm[4];
   xform.eDy  = (FLOAT) dm[5];
   SetWorldTransform (hdc, &xform);
+
+  /* Set the device offsets as appropriate */
+  POINT origViewportOrigin;
+  GetViewportOrgEx(hdc, &origViewportOrigin);
+  SetViewportOrgEx(hdc, origViewportOrigin.x + (int) xoff, origViewportOrigin.y + (int) yoff, NULL);
 
 #else /* non-MOZ_CAIRO_GFX */
 

@@ -98,7 +98,6 @@ static PRTime gtimeOfLastPurgeCheck;    //variable to know when to check for pur
 #define PREF_MAIL_WARN_FILTER_CHANGED "mail.warn_filter_changed"
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kParserCID, NS_PARSER_CID);
 
@@ -2168,7 +2167,7 @@ nsMsgDBFolder::createCollationKeyGenerator()
   rv = localeSvc->GetApplicationLocale(getter_AddRefs(locale));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr <nsICollationFactory> factory = do_CreateInstance(kCollationFactoryCID, &rv);
+  nsCOMPtr <nsICollationFactory> factory = do_CreateInstance(NS_COLLATIONFACTORY_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = factory->CreateCollation(locale, &gCollationKeyGenerator);
@@ -5249,5 +5248,81 @@ void nsMsgDBFolder::SetMRUTime()
   nsCAutoString nowStr;
   nowStr.AppendInt(seconds);
   SetStringProperty(MRU_TIME_PROPERTY, nowStr.get());
+}
+
+
+NS_IMETHODIMP nsMsgDBFolder::AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword)
+{
+  nsresult rv = NS_OK;
+  GetDatabase(nsnull);
+  if (mDatabase)
+  {
+    PRUint32 count;
+    NS_ENSURE_ARG(aMessages);
+    nsresult rv = aMessages->Count(&count);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsXPIDLCString keywords;
+
+    for(PRUint32 i = 0; i < count; i++)
+    {
+      nsMsgKey msgKey;
+      nsCOMPtr<nsIMsgDBHdr> message = do_QueryElementAt(aMessages, i, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+      (void) message->GetMessageKey(&msgKey);
+
+      message->GetStringProperty("keywords", getter_Copies(keywords));
+      nsACString::const_iterator start, end;
+      if (!MsgFindKeyword(nsDependentCString(aKeyword), keywords, start, end))
+      {
+        if (!keywords.IsEmpty())
+          keywords.Append(' ');
+        keywords.Append(aKeyword);
+        mDatabase->SetStringProperty(msgKey, "keywords", keywords);
+      }
+    }
+  }
+  return rv;
+}
+
+NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword)
+{
+  nsresult rv = NS_OK;
+  GetDatabase(nsnull);
+  if (mDatabase)
+  {
+    PRUint32 count;
+    NS_ENSURE_ARG(aMessages);
+    nsresult rv = aMessages->Count(&count);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsXPIDLCString keywords;
+    // If the tag is also a label, we should remove the label too...
+    PRBool keywordIsLabel = (!strncmp(aKeyword, "$label", 6)  && aKeyword[6] >= '1' && aKeyword[6] <= '5');
+
+    for(PRUint32 i = 0; i < count; i++)
+    {
+      nsMsgKey msgKey;
+      nsCOMPtr<nsIMsgDBHdr> message = do_QueryElementAt(aMessages, i, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+      (void) message->GetMessageKey(&msgKey);
+      if (keywordIsLabel)
+      {
+        nsMsgLabelValue labelValue;
+        message->GetLabel(&labelValue);
+        if (labelValue == aKeyword[6])
+          message->SetLabel(0);
+      }
+
+      rv = message->GetStringProperty("keywords", getter_Copies(keywords));
+      nsACString::const_iterator start, end;
+      nsACString::const_iterator saveStart;
+      keywords.BeginReading(saveStart);
+      if (MsgFindKeyword(nsDependentCString(aKeyword), keywords, start, end))
+      {
+        keywords.Cut(Distance(saveStart, start), Distance(start, end));
+        mDatabase->SetStringProperty(msgKey, "keywords", keywords);
+      }
+    }
+  }
+  return rv;
 }
 

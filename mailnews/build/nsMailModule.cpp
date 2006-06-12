@@ -103,6 +103,8 @@
 #include "nsCidProtocolHandler.h"
 #include "nsRssIncomingServer.h"
 #include "nsRssService.h"
+#include "nsMsgTagService.h"
+
 #ifdef XP_WIN
 #include "nsMessengerWinIntegration.h"
 #endif
@@ -330,6 +332,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgGroupView)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgOfflineManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgProgress)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSpamSettings)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgTagService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCidProtocolHandler)
 #ifdef XP_WIN
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerWinIntegration, Init)
@@ -826,6 +829,10 @@ static const nsModuleComponentInfo gComponents[] = {
       NS_SPAMSETTINGS_CONTRACTID,
       nsSpamSettingsConstructor,
     },
+    { "Tag Service", NS_MSGTAGSERVICE_CID,
+      NS_MSGTAGSERVICE_CONTRACTID,
+      nsMsgTagServiceConstructor,
+    },
     { "cid protocol", NS_CIDPROTOCOL_CID,
       NS_CIDPROTOCOLHANDLER_CONTRACTID,
       nsCidProtocolHandlerConstructor,
@@ -1208,7 +1215,21 @@ static const nsModuleComponentInfo gComponents[] = {
     // mdn  components
     ////////////////////////////////////////////////////////////////////////////////
     { "MIME VCard Handler", NS_VCARD_CONTENT_TYPE_HANDLER_CID, "@mozilla.org/mimecth;1?type=text/x-vcard",
-       nsVCardMimeContentTypeHandlerConstructor, }
+       nsVCardMimeContentTypeHandlerConstructor, },
+
+#ifdef MOZ_SUITE
+    ////////////////////////////////////////////////////////////////////////////////
+    // suite general startup
+    ////////////////////////////////////////////////////////////////////////////////
+    { "Messenger Bootstrapper", NS_MESSENGERBOOTSTRAP_CID,
+      NS_MAILSTARTUPHANDLER_CONTRACTID, nsMessengerBootstrapConstructor },
+    { "Address Book", NS_ADDRESSBOOK_CID,
+      NS_ADDRESSBOOKSTARTUPHANDLER_CONTRACTID, nsAddressBookConstructor },
+    { "Compose Service", NS_MSGCOMPOSESERVICE_CID,
+      NS_MSGCOMPOSESTARTUPHANDLER_CONTRACTID, nsMsgComposeServiceConstructor },
+    { "NNTP Service", NS_NNTPSERVICE_CID,
+      NS_NEWSSTARTUPHANDLER_CONTRACTID, nsNntpServiceConstructor },
+#endif
 };
 
 PR_STATIC_CALLBACK(void) nsMailModuleDtor(nsIModule* self)

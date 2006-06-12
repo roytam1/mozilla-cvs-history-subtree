@@ -50,6 +50,7 @@
 #include "nsBidiUtils.h"
 #include "nsCSSFrameConstructor.h"
 #include "nsHTMLContainerFrame.h"
+#include "nsLayoutUtils.h"
 
 static const PRUnichar kSpace            = 0x0020;
 static const PRUnichar kLineSeparator    = 0x2028;
@@ -188,6 +189,7 @@ static void
 AdvanceLineIteratorToFrame(nsIFrame* aFrame,
                            nsIFrame* aBlockFrame,
                            nsBlockFrame::line_iterator& aLine,
+                           nsIFrame*& aPrevFrame,
                            const nsBlockFrame::line_iterator& aEndLines)
 {
   // Advance aLine to the line containing aFrame
@@ -198,9 +200,11 @@ AdvanceLineIteratorToFrame(nsIFrame* aFrame,
     parent = child->GetParent();
   }
   NS_ASSERTION (parent, "aFrame is not a descendent of aBlockFrame");
-  while (aLine != aEndLines && !aLine->Contains(child)) {
+  while (aLine != aEndLines && !aLine->ContainsAfter(aPrevFrame, child, aLine, aEndLines)) {
     ++aLine;
+    aPrevFrame = nsnull;
   }
+  aPrevFrame = child;
   NS_ASSERTION (aLine != aEndLines, "frame not found on any line");
 }
 
@@ -331,6 +335,7 @@ nsBidiPresUtils::Resolve(nsPresContext* aPresContext,
 
   nsBlockFrame::line_iterator line = aBlockFrame->begin_lines();
   nsBlockFrame::line_iterator endLines = aBlockFrame->end_lines();
+  nsIFrame* prevFrame = nsnull;
   PRBool lineNeedsUpdate = PR_FALSE;
   
   for (; ;) {
@@ -406,7 +411,7 @@ nsBidiPresUtils::Resolve(nsPresContext* aPresContext,
             break;
           }
           if (lineNeedsUpdate) {
-            AdvanceLineIteratorToFrame(frame, aBlockFrame, line, endLines);
+            AdvanceLineIteratorToFrame(frame, aBlockFrame, line, prevFrame, endLines);
             lineNeedsUpdate = PR_FALSE;
           }
           line->MarkDirty();
@@ -422,7 +427,7 @@ nsBidiPresUtils::Resolve(nsPresContext* aPresContext,
             RemoveBidiContinuation(aPresContext, frame,
                                    frameIndex, newIndex, temp);
             if (lineNeedsUpdate) {
-              AdvanceLineIteratorToFrame(frame, aBlockFrame, line, endLines);
+              AdvanceLineIteratorToFrame(frame, aBlockFrame, line, prevFrame, endLines);
               lineNeedsUpdate = PR_FALSE;
             }
             line->MarkDirty();
@@ -1208,7 +1213,7 @@ nsresult nsBidiPresUtils::RenderText(const PRUnichar*     aText,
      * x-coordinate of the end of the run for the start of the next run.
      */
     if (level & 1) {
-      aRenderingContext.GetWidth(aText + start, subRunLength, width, nsnull);
+      nsLayoutUtils::SafeGetWidth(&aRenderingContext, aText + start, subRunLength, width);
       aX += width;
       xEndRun = aX;
     }
@@ -1233,11 +1238,11 @@ nsresult nsBidiPresUtils::RenderText(const PRUnichar*     aText,
                         (nsCharType)charType, level & 1,
                         isBidiSystem);
 
-      aRenderingContext.GetWidth(runVisualText.get(), subRunLength, width, nsnull);
+      nsLayoutUtils::SafeGetWidth(&aRenderingContext, runVisualText.get(), subRunLength, width);
       if (level & 1) {
         aX -= width;
       }
-      aRenderingContext.DrawString(runVisualText.get(), subRunLength, aX, aY, width);
+      nsLayoutUtils::SafeDrawString(&aRenderingContext, runVisualText.get(), subRunLength, aX, aY, width);
 
       /*
        * The caller may request to calculate the visual position of one
@@ -1292,9 +1297,9 @@ nsresult nsBidiPresUtils::RenderText(const PRUnichar*     aText,
             }
             // The delta between the start of the run and the left part's end.
             PRInt32 visualLeftLength = posResolve->visualIndex - visualStart;
-            aRenderingContext.GetWidth(visualLeftPart,
-                                       visualLeftLength,
-                                       subWidth, nsnull);
+            nsLayoutUtils::SafeGetWidth(&aRenderingContext, visualLeftPart,
+                                        visualLeftLength,
+                                        subWidth);
             posResolve->visualLeftTwips = aX + subWidth - xStartText;
           }
         }

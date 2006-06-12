@@ -43,11 +43,10 @@
 #include "nsISVGChildFrame.h"
 #include "nsISVGValueObserver.h"
 #include "nsWeakReference.h"
-#include "nsISVGRendererRegion.h"
 #include "nsIDOMSVGMatrix.h"
 #include "nsIDOMSVGLength.h"
 
-typedef nsBlockFrame nsSVGForeignObjectFrameBase;
+typedef nsContainerFrame nsSVGForeignObjectFrameBase;
 
 class nsISVGFilterFrame;
 
@@ -68,24 +67,13 @@ private:
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
 public:
   // nsIFrame:  
-  NS_IMETHOD Reflow(nsPresContext*          aPresContext,
-                    nsHTMLReflowMetrics&     aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&          aStatus);
-
-  NS_IMETHOD  AppendFrames(nsIAtom*        aListName,
-                           nsIFrame*       aFrameList);
-  
-  NS_IMETHOD  InsertFrames(nsIAtom*        aListName,
-                           nsIFrame*       aPrevFrame,
-                           nsIFrame*       aFrameList);
-  
-  NS_IMETHOD  RemoveFrame(nsIAtom*        aListName,
-                          nsIFrame*       aOldFrame);
-
   NS_IMETHOD  AttributeChanged(PRInt32         aNameSpaceID,
                                nsIAtom*        aAttribute,
                                PRInt32         aModType);
+
+  virtual nsIFrame* GetContentInsertionFrame() {
+    return GetFirstChild(nsnull)->GetContentInsertionFrame();
+  }
 
   NS_IMETHOD DidSetStyleContext();
 
@@ -94,10 +82,7 @@ public:
    *
    * @see nsLayoutAtoms::svgForeignObjectFrame
    */
-  // XXX Need to make sure that any of the code examining
-  // frametypes, particularly code looking at block and area
-  // also handles foreignObject before we return our own frametype
-  // virtual nsIAtom* GetType() const;
+  virtual nsIAtom* GetType() const;
   virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
@@ -119,7 +104,8 @@ public:
   // nsISVGChildFrame interface:
   NS_IMETHOD PaintSVG(nsISVGRendererCanvas* canvas);
   NS_IMETHOD GetFrameForPointSVG(float x, float y, nsIFrame** hit);  
-  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
+  NS_IMETHOD_(nsRect) GetCoveredRegion();
+  NS_IMETHOD UpdateCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCanvasTMChanged(PRBool suppressInvalidation);
   NS_IMETHOD NotifyRedrawSuspended();
@@ -140,7 +126,7 @@ public:
 protected:
   // implementation helpers:
   void Update();
-  already_AddRefed<nsISVGRendererRegion> DoReflow();
+  void DoReflow();
   float GetPxPerTwips();
   float GetTwipsPerPx();
   // Get the bounding box relative to the outer SVG element, in user units

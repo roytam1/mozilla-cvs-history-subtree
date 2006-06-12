@@ -157,6 +157,7 @@ var view = {
   selectionChanged : function() {},
   cycleCell: function(row, col) {},
   isEditable: function(row, col) {return false; },
+  isSelectable: function(row, col) {return false; },
   setCellValue: function(row, col, value) {},
   setCellText: function(row, col, value) {},
   performAction: function(action) {},
@@ -567,6 +568,8 @@ function ModifyPref(entry)
       gPrefBranch.setComplexValue(entry.prefCol, nsISupportsString, supportsString);
     }
   }
+
+  gPrefService.savePrefFile(null);
 
   // Fire event for accessibility
   var event = document.createEvent('Events');

@@ -2246,6 +2246,7 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIFrame*             aParentFram
         } else {
           *aFrame = nsnull;
           rv = NS_ERROR_NOT_AVAILABLE;
+          return rv; // Don't fall through to the warning below.
         }
         NS_ENSURE_SUCCESS(rv, rv);
       }
@@ -7651,15 +7652,19 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsFrameConstructorState& aState,
                   ;
   }
 
-  if (aTag != nsSVGAtoms::svg && !parentIsSVG) {
+  if ((aTag != nsSVGAtoms::svg && !parentIsSVG) ||
+      (aTag == nsGkAtoms::desc || aTag == nsGkAtoms::title)) {
     // Sections 5.1 and G.4 of SVG 1.1 say that SVG elements other than
     // svg:svg not contained within svg:svg are incorrect, although they
     // don't seem to specify error handling.  Ignore them, since many of
     // our frame classes can't deal.  It *may* be that the document
     // should at that point be considered in error according to F.2, but
     // it's hard to tell.
+    //
     // Style mutation can't change this situation, so don't bother
     // adding to the undisplayed content map.
+    //
+    // We don't currently handle any UI for desc/title
     *aHaltProcessing = PR_TRUE;
     return NS_OK;
   }
@@ -7817,32 +7822,43 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsFrameConstructorState& aState,
   // If we succeeded in creating a frame then initialize it, process its
   // children (if requested), and set the initial child list
   if (newFrame != nsnull) {
+    InitAndRestoreFrame(aState, aContent, geometricParent, nsnull, newFrame);
+    nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, forceView);
+
+    rv = aState.AddChild(newFrame, aFrameItems, disp, aContent, aStyleContext,
+                         aParentFrame, isOuterSVGNode, isOuterSVGNode);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+
+    nsFrameItems childItems;
 #ifdef MOZ_SVG_FOREIGNOBJECT
-    if (aTag == nsSVGAtoms::foreignObject) {
+    if (aTag == nsSVGAtoms::foreignObject) { 
+      // Resolve pseudo style and create an inner block frame
+      // XXX this breaks style inheritance
+      nsRefPtr<nsStyleContext> innerPseudoStyle;
+      innerPseudoStyle = mPresShell->StyleSet()->
+        ResolvePseudoStyleFor(aContent,
+                              nsCSSAnonBoxes::mozSVGForeignContent, aStyleContext);
+    
+      nsIFrame* blockFrame = NS_NewBlockFrame(mPresShell, innerPseudoStyle);
+      if (NS_UNLIKELY(!blockFrame))
+        return NS_ERROR_OUT_OF_MEMORY;
+    
+      blockFrame->AddStateBits(NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT |
+                               NS_FRAME_REFLOW_ROOT);
       // Claim to be relatively positioned so that we end up being the
-      // absolute containing block.  Also, push "null" as the float
-      // containing block so that we get the SPACE_MGR bit set.
+      // absolute containing block.
       nsFrameConstructorSaveState saveState;
       aState.PushFloatContainingBlock(nsnull, saveState, PR_FALSE, PR_FALSE);
-      const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
+      const nsStyleDisplay* disp = innerPseudoStyle->GetStyleDisplay();
       rv = ConstructBlock(aState, disp, aContent,
-                          geometricParent, aParentFrame, aStyleContext,
-                          &newFrame, aFrameItems, PR_TRUE);
+                          newFrame, newFrame, innerPseudoStyle,
+                          &blockFrame, childItems, PR_TRUE);
     } else
 #endif  // MOZ_SVG_FOREIGNOBJECT
     {
-      InitAndRestoreFrame(aState, aContent, geometricParent, nsnull, newFrame);
-
-      rv = aState.AddChild(newFrame, aFrameItems, disp, aContent, aStyleContext,
-                           aParentFrame, isOuterSVGNode, isOuterSVGNode);
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
-
-      nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, forceView);
-
       // Process the child content if requested.
-      nsFrameItems childItems;
       if (!newFrame->IsLeaf()) {
         if (aTag == nsSVGAtoms::svgSwitch) {
           rv = SVGSwitchProcessChildren(aState, aContent, newFrame,
@@ -7855,12 +7871,12 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsFrameConstructorState& aState,
       }
       CreateAnonymousFrames(aTag, aState, aContent, newFrame,
                             PR_FALSE, childItems);
-
-      // Set the frame's initial child list
-      newFrame->SetInitialChildList(nsnull, childItems.childList);
     }
 
-    if (!newFrame->IsLeaf())
+    // Set the frame's initial child list
+    newFrame->SetInitialChildList(nsnull, childItems.childList);
+
+    if (NS_SUCCEEDED(rv) && !newFrame->IsLeaf())
       rv = CreateInsertionPointChildren(aState, newFrame, aContent);
       
     return rv;

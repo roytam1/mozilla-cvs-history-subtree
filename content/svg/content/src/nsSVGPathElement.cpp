@@ -384,13 +384,16 @@ nsSVGPathElement::GetPathFlatten()
 {
   nsIDocument* doc = GetCurrentDoc();
   if (!doc) {
-    NS_ERROR("no document");
     return nsnull;
   }
   
+  // Flush all pending notifications so that our frames are up to date.  Make
+  // sure to do this first thing, since it may end up destroying our document's
+  // presshell.
+  doc->FlushPendingNotifications(Flush_Layout);
+
   nsIPresShell* presShell = doc->GetShellAt(0);
   if (!presShell) {
-    NS_ERROR("no presshell");
     return nsnull;
   }
 
@@ -411,15 +414,12 @@ nsSVGPathElement::GetPathFlatten()
 void
 nsSVGPathList::Clear()
 {
-  if (mCommands) {
-    free(mCommands);
-    mCommands = nsnull;
-  }
   if (mArguments) {
     free(mArguments);
     mArguments = nsnull;
   }
   mNumCommands = 0;
+  mNumArguments = 0;
 }
 
 void
@@ -427,7 +427,9 @@ nsSVGPathList::Playback(cairo_t *aCtx)
 {
   float *args = mArguments;
   for (PRUint32 i = 0; i < mNumCommands; i++) {
-    PRUint8 command = (mCommands[i / 4] >> (2 * (i % 4))) & 0x3;
+    PRUint8 command =
+      NS_REINTERPRET_CAST(PRUint8*, mArguments + mNumArguments)[i / 4];
+    command = (command >> (2 * (i % 4))) & 0x3;
     switch (command) {
     case MOVETO:
       cairo_move_to(aCtx, args[0], args[1]);

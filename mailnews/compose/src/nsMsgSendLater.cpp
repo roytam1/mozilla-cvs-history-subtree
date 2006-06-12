@@ -72,8 +72,6 @@
 #include "nsIMimeConverter.h"
 #include "nsMsgMimeCID.h"
 
-static NS_DEFINE_CID(kISupportsArrayCID, NS_SUPPORTSARRAY_CID);
-
 NS_IMPL_ISUPPORTS2(nsMsgSendLater, nsIMsgSendLater, nsIStreamListener)
 
 nsMsgSendLater::nsMsgSendLater()
@@ -769,7 +767,7 @@ nsresult
 nsMsgSendLater::DeleteCurrentMessage()
 {
   // Get the composition fields interface
-  nsCOMPtr<nsISupportsArray> msgArray = do_CreateInstance(kISupportsArrayCID);
+  nsCOMPtr<nsISupportsArray> msgArray = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID);
   if (!msgArray)
     return NS_ERROR_FACTORY_NOT_LOADED;
 
@@ -878,6 +876,8 @@ nsMsgSendLater::BuildHeaders()
           prune_p = do_flags_p = PR_TRUE;
         else if (!PL_strncasecmp(HEADER_X_MOZILLA_DRAFT_INFO, buf, end - buf))
           prune_p = do_return_receipt_p = PR_TRUE;
+        else if (!PL_strncasecmp(HEADER_X_MOZILLA_KEYWORDS, buf, end - buf))
+          prune_p = PR_TRUE;
         else if (!PL_strncasecmp(HEADER_X_MOZILLA_NEWSHOST, buf, end - buf))
         {
           prune_p = PR_TRUE;

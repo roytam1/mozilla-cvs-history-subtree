@@ -62,7 +62,7 @@
       <xul:tabbox anonid="tabbox" flex="1" eventnode="document" xbl:inherits="handleCtrlPageUpDown"
                   onselect="if (!('updateCurrentBrowser' in this.parentNode) || event.target.localName != 'tabpanels') return; this.parentNode.updateCurrentBrowser();">
         <xul:hbox class="tab-drop-indicator-bar">
-          <xul:hbox class="tab-drop-indicator"/>
+          <xul:hbox class="tab-drop-indicator" mousethrough="always"/>
         </xul:hbox>
         <xul:hbox class="tabbrowser-strip" collapsed="true" tooltip="_child" context="_child"
                   anonid="strip"
@@ -357,11 +357,14 @@
                   this.mTabBrowser.mIsBusy = false;
               }
 
-              if (!oldBlank && this.mTabBrowser.mCurrentTab == this.mTab) {
+              if (this.mTabBrowser.mCurrentTab == this.mTab) {
                 for (var i = 0; i < this.mTabBrowser.mProgressListeners.length; i++) {
                   var p = this.mTabBrowser.mProgressListeners[i];
-                  if (p)
+                  if (p && !oldBlank)
                     p.onStateChange(aWebProgress, aRequest, aStateFlags, aStatus);
+                  // make sure that the visible status of new blank tabs is correctly set
+                  else if (p && "onUpdateCurrentBrowser" in p)
+                    p.onUpdateCurrentBrowser(aStateFlags, aStatus, "", 0);
                 }
               }
 
@@ -1277,12 +1280,7 @@
               aTab = this.mCurrentTab;
 
             var l = this.mTabContainer.childNodes.length;
-            if (l == 1) {
-              if (!this.mPrefs.getBoolPref("browser.tabs.autoHide")) {
-                // blank the tab
-                this.loadURI("about:blank");
-                return;
-              }
+            if (l == 1 && this.mPrefs.getBoolPref("browser.tabs.autoHide")) {
               // hide the tab bar
               this.mPrefs.setBoolPref("browser.tabs.forceHide", true);
               this.setStripVisibilityTo(false);
@@ -1290,11 +1288,16 @@
             }
 
             var ds = this.getBrowserForTab(aTab).docShell;
-
             if (ds.contentViewer && !ds.contentViewer.permitUnload())
               return;
 
-            if (l == 2) {
+            if (l == 1) {
+              // add a new blank tab to replace the one being closed
+              // (this ensures that the remaining tab is as good as new)
+              this.addTab("about:blank");
+              l++;
+            }
+            else if (l == 2) {
               var autohide = this.mPrefs.getBoolPref("browser.tabs.autoHide");
               var tabStripHide = !window.toolbar.visible;
               if (autohide || tabStripHide)
@@ -2267,7 +2270,7 @@
         <xul:spacer class="tabs-right" flex="1"/>
       </xul:hbox>
     </content>
-    <implementation implements="nsIObserver">
+    <implementation>
       <constructor>
         var pb2 =
             Components.classes['@mozilla.org/preferences-service;1'].
@@ -2279,7 +2282,7 @@
         }
 
         this._updateDisableBackgroundClose();
-        pb2.addObserver("browser.tabs.disableBackgroundClose", this, true);
+        pb2.addObserver("browser.tabs.disableBackgroundClose", this._prefObserver, true);
 
         var self = this;
         function onResize() {
@@ -2304,15 +2307,25 @@
           }
         ]]></body>
       </method>
-      <method name="observe">
-        <parameter name="subject"/>
-        <parameter name="topic"/>
-        <parameter name="data"/>
-        <body><![CDATA[
+      <field name="_prefObserver">({
+        tabbox: this,
+  
+        observe: function(subject, topic, data)
+        {
           if (topic == "nsPref:changed")
-            this._updateDisableBackgroundClose();
-        ]]></body>
-      </method>
+            this.tabbox._updateDisableBackgroundClose();
+        },
+  
+        QueryInterface : function(aIID)
+        {
+          if (aIID.equals(Components.interfaces.nsIObserver) ||
+              aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
+              aIID.equals(Components.interfaces.nsISupports))
+            return this;
+          throw Components.results.NS_NOINTERFACE;
+        }
+        });
+      </field>
       <field name="mTabClipWidth">140</field>
       <method name="adjustCloseButtons">
         <parameter name="aNumTabs"/>

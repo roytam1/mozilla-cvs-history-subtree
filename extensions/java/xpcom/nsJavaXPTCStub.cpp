@@ -53,7 +53,9 @@ nsJavaXPTCStub::nsJavaXPTCStub(jobject aJavaObject, nsIInterfaceInfo *aIInfo)
   , mWeakRefCnt(0)
 {
   JNIEnv* env = GetJNIEnv();
-  mJavaWeakRef = env->NewWeakGlobalRef(aJavaObject);
+  jobject weakref = env->NewObject(weakReferenceClass,
+                                   weakReferenceConstructorMID, aJavaObject);
+  mJavaWeakRef = env->NewGlobalRef(weakref);
 
 #ifdef DEBUG_JAVAXPCOM
   nsIID* iid;
@@ -77,7 +79,11 @@ nsJavaXPTCStub::AddRefInternal()
   // If this is the first AddRef call, we create a strong global ref to the
   // Java object to keep it from being garbage collected.
   if (mRefCnt == 0) {
-    mJavaStrongRef = GetJNIEnv()->NewGlobalRef(mJavaWeakRef);
+    JNIEnv* env = GetJNIEnv();
+    jobject referent = env->CallObjectMethod(mJavaWeakRef, getReferentMID);
+    if (!env->IsSameObject(referent, NULL)) {
+      mJavaStrongRef = env->NewGlobalRef(referent);
+    }
     NS_ASSERTION(mJavaStrongRef != nsnull, "Failed to acquire strong ref");
   }
 
@@ -179,7 +185,8 @@ nsJavaXPTCStub::Destroy()
     }
   }
 
-  env->DeleteWeakGlobalRef(mJavaWeakRef);
+  env->CallVoidMethod(mJavaWeakRef, clearReferentMID);
+  env->DeleteGlobalRef(mJavaWeakRef);
 }
 
 void
@@ -255,7 +262,7 @@ nsJavaXPTCStub::QueryInterface(const nsID &aIID, void **aInstancePtr)
 
   // Query Java object
   LOG(("\tCalling Java object queryInterface\n"));
-  jobject javaObject = env->NewLocalRef(mJavaWeakRef);
+  jobject javaObject = env->CallObjectMethod(mJavaWeakRef, getReferentMID);
 
   jmethodID qiMID = 0;
   jclass clazz = env->GetObjectClass(javaObject);
@@ -390,7 +397,7 @@ nsJavaXPTCStub::CallMethod(PRUint16 aMethodIndex,
 
   nsresult rv = NS_OK;
   JNIEnv* env = GetJNIEnv();
-  jobject javaObject = env->NewLocalRef(mJavaWeakRef);
+  jobject javaObject = env->CallObjectMethod(mJavaWeakRef, getReferentMID);
 
   nsCAutoString methodSig("(");
 
@@ -1503,40 +1510,23 @@ nsJavaXPTCStub::FinalizeJavaParams(const nsXPTParamInfo &aParamInfo,
           isWeakRef = PR_FALSE;
         }
 
-        PRBool isXPTCStub;
-        rv = GetNewOrUsedXPCOMObject(env, java_obj, iid, &xpcom_obj,
-                                     &isXPTCStub);
+        rv = GetNewOrUsedXPCOMObject(env, java_obj, iid, &xpcom_obj);
         if (NS_FAILED(rv))
           break;
 
         // If the function expects a weak reference, then we need to
         // create it here.
         if (isWeakRef) {
-          if (isXPTCStub) {
-            nsJavaXPTCStub* stub = NS_STATIC_CAST(nsJavaXPTCStub*,
-                                                 NS_STATIC_CAST(nsXPTCStubBase*,
-                                                                xpcom_obj));
-            nsJavaXPTCStubWeakRef* weakref;
-            weakref = new nsJavaXPTCStubWeakRef(java_obj, stub);
-            if (!weakref) {
-              rv = NS_ERROR_OUT_OF_MEMORY;
-              break;
-            }
+          nsCOMPtr<nsISupportsWeakReference> supportsweak =
+                                                 do_QueryInterface(xpcom_obj);
+          if (supportsweak) {
+            nsWeakPtr weakref;
+            supportsweak->GetWeakReference(getter_AddRefs(weakref));
             NS_RELEASE(xpcom_obj);
             xpcom_obj = weakref;
             NS_ADDREF(xpcom_obj);
-          } else { // if is native XPCOM object
-            nsCOMPtr<nsISupportsWeakReference> supportsweak =
-                                                   do_QueryInterface(xpcom_obj);
-            if (supportsweak) {
-              nsWeakPtr weakref;
-              supportsweak->GetWeakReference(getter_AddRefs(weakref));
-              NS_RELEASE(xpcom_obj);
-              xpcom_obj = weakref;
-              NS_ADDREF(xpcom_obj);
-            } else {
-              xpcom_obj = nsnull;
-            }
+          } else {
+            xpcom_obj = nsnull;
           }
         }
       }
@@ -1682,7 +1672,8 @@ nsJavaXPTCStub::GetWeakReference(nsIWeakReference** aInstancePtr)
   if (!aInstancePtr)
     return NS_ERROR_NULL_POINTER;
 
-  jobject javaObject = GetJNIEnv()->NewLocalRef(mJavaWeakRef);
+  jobject javaObject = GetJNIEnv()->CallObjectMethod(mJavaWeakRef,
+                                                     getReferentMID);
   nsJavaXPTCStubWeakRef* weakref;
   weakref = new nsJavaXPTCStubWeakRef(javaObject, this);
   if (!weakref)
@@ -1699,7 +1690,7 @@ jobject
 nsJavaXPTCStub::GetJavaObject()
 {
   JNIEnv* env = GetJNIEnv();
-  jobject javaObject = env->NewLocalRef(mJavaWeakRef);
+  jobject javaObject = env->CallObjectMethod(mJavaWeakRef, getReferentMID);
 
 #ifdef DEBUG_JAVAXPCOM
   nsIID* iid;

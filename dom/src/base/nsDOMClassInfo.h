@@ -398,6 +398,7 @@ protected:
   static const JSClass *sObjectClass;
   static const JSClass *sXPCNativeWrapperClass;
 
+public:
   static PRBool sDoSecurityCheckInAddProperty;
 };
 
@@ -1634,6 +1635,27 @@ public:
   static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
   {
     return new nsNonDOMObjectSH(aData);
+  }
+};
+
+// Need this to override GetFlags() on nsNodeSH
+class nsAttributeSH : public nsNodeSH
+{
+protected:
+  nsAttributeSH(nsDOMClassInfoData* aData) : nsNodeSH(aData)
+  {
+  }
+
+  virtual ~nsAttributeSH()
+  {
+  }
+
+public:
+  NS_IMETHOD GetFlags(PRUint32 *aFlags);
+
+  static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
+  {
+    return new nsAttributeSH(aData);
   }
 };
 
