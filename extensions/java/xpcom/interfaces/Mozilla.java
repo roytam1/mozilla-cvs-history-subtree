@@ -339,6 +339,12 @@ public class Mozilla implements IGRE, IXPCOM, IXPCOMError {
       // get 'section' name, which will be a registry key name
       String section = (String) sectionsIter.next();
 
+      // Skip over GRE key ("<root>\Software\mozilla.org\GRE")
+      int len = aKeyName.length();
+      if (section.length() <= len) {
+        continue;
+      }
+
       // Get the GRE subkey;  that is, everything after
       // "<root>\Software\mozilla.org\GRE\"
       String subkeyName = section.substring(aKeyName.length() + 1);
