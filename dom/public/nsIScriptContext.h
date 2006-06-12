@@ -306,9 +306,12 @@ public:
 
 
   /**
-   * Init this context.
+   * Init this context ready for use.  If aGlobalObject is not NULL, this
+   * function may initialize based on this global (for example, using the
+   * global to locate a chrome window, create a new 'scope' for this
+   * global, etc)
    *
-   * @param aGlobalObject the gobal object
+   * @param aGlobalObject the gobal object, which may be nsnull.
    *
    * @return NS_OK if context initialization was successful
    *
