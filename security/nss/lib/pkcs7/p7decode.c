@@ -1436,8 +1436,7 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
     CERTCertificate *cert, **certs;
     PRBool goodsig;
     CERTCertDBHandle *certdb, *defaultdb; 
-    SECOidTag encTag,digestTag;
-    HASH_HashType found_type;
+    SECOidData *algiddata;
     int i, certcount;
     SECKEYPublicKey *publickey;
     SECItem *content_type;
@@ -1616,19 +1615,14 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
     /*
      * Find and confirm digest algorithm.
      */
-    digestTag = SECOID_FindOIDTag(&(signerinfo->digestAlg.algorithm));
-
-    /* make sure we understand the digest type first */
-    found_type = HASH_GetHashTypeByOidTag(digestTag);
-    if ((digestTag == SEC_OID_UNKNOWN) || (found_type == HASH_AlgNULL)) {
-	PORT_SetError (SEC_ERROR_PKCS7_BAD_SIGNATURE);
-	goto done;
-    }
+    algiddata = SECOID_FindOID (&(signerinfo->digestAlg.algorithm));
 
     if (detached_digest != NULL) {
-	unsigned int hashLen     = HASH_ResultLen(found_type);
+	HASH_HashType found_type = HASH_GetHashTypeByOidTag(algiddata->offset);
+	unsigned int hashLen     = HASH_ResultLen(digest_type);
 
 	if (digest_type != found_type || 
+	    digest_type == HASH_AlgNULL || 
 	    detached_digest->len != hashLen) {
 	    PORT_SetError (SEC_ERROR_PKCS7_BAD_SIGNATURE);
 	    goto done;
@@ -1644,8 +1638,12 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
 	/*
 	 * pick digest matching signerinfo->digestAlg from digests
 	 */
+	if (algiddata == NULL) {
+	    PORT_SetError (SEC_ERROR_PKCS7_BAD_SIGNATURE);
+	    goto done;
+	}
 	for (i = 0; digestalgs[i] != NULL; i++) {
-	    if (SECOID_FindOIDTag(&(digestalgs[i]->algorithm)) == digestTag)
+	    if (SECOID_FindOID (&(digestalgs[i]->algorithm)) == algiddata)
 		break;
 	}
 	if (digestalgs[i] == NULL) {
@@ -1656,8 +1654,21 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
 	digest = digests[i];
     }
 
-    encTag = SECOID_FindOIDTag(&(signerinfo->digestEncAlg.algorithm));
-    if (encTag == SEC_OID_UNKNOWN) {
+    /*
+     * XXX This may not be the right set of algorithms to check.
+     * I'd prefer to trust that just calling VFY_Verify{Data,Digest}
+     * would do the right thing (and set an error if it could not);
+     * then additional algorithms could be handled by that code
+     * and we would Just Work.  So this check should just be removed,
+     * but not until the VFY code is better at setting errors.
+     */
+    algiddata = SECOID_FindOID (&(signerinfo->digestEncAlg.algorithm));
+    if (algiddata == NULL ||
+	((algiddata->offset != SEC_OID_PKCS1_RSA_ENCRYPTION) &&
+#ifdef NSS_ECC_MORE_THAN_SUITE_B
+	 (algiddata->offset != SEC_OID_ANSIX962_EC_PUBLIC_KEY) &&
+#endif
+	 (algiddata->offset != SEC_OID_ANSIX9_DSA_SIGNATURE))) {
 	PORT_SetError (SEC_ERROR_PKCS7_BAD_SIGNATURE);
 	goto done;
     }
@@ -1726,10 +1737,14 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
 	    goto done;
 	}
 
-	goodsig = (PRBool)(VFY_VerifyDataDirect(encoded_attrs.data, 
+	/*
+	 * XXX the 5th (algid) argument should be the signature algorithm.
+	 * See sec_pkcs7_pick_sign_alg in p7encode.c.
+	 */
+	goodsig = (PRBool)(VFY_VerifyData (encoded_attrs.data, 
 				   encoded_attrs.len,
 				   publickey, &(signerinfo->encDigest),
-				   encTag, digestTag, NULL,
+				   SECOID_GetAlgorithmTag(&(signerinfo->digestEncAlg)),
 				   cinfo->pwfn_arg) == SECSuccess);
 	PORT_Free (encoded_attrs.data);
     } else {
@@ -1784,9 +1799,14 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
 	    sig = &holder;
 	}
 
-	goodsig = (PRBool)(VFY_VerifyDigestDirect(digest, publickey, sig,
-				     encTag, digestTag, cinfo->pwfn_arg)
-                            == SECSuccess);
+	/*
+	 * XXX the 4th (algid) argument should be the signature algorithm.
+	 * See sec_pkcs7_pick_sign_alg in p7encode.c.
+	 */
+	goodsig = (PRBool)(VFY_VerifyDigest (digest, publickey, sig,
+				     SECOID_GetAlgorithmTag(&(signerinfo->digestEncAlg)),
+				     cinfo->pwfn_arg)
+		   == SECSuccess);
 
 	if (sigkey != NULL) {
 	    PORT_Assert (sig == &holder);

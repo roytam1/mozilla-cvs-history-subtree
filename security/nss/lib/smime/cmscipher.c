@@ -224,9 +224,8 @@ NSS_CMSCipherContext_StartEncrypt(PRArenaPool *poolp, PK11SymKey *key, SECAlgori
     }
 
     cc = (NSSCMSCipherContext *)PORT_ZAlloc(sizeof(NSSCMSCipherContext));
-    if (cc == NULL) {
-	goto loser;
-    }
+    if (cc == NULL)
+	return NULL;
 
     /* now find pad and block sizes for our mechanism */
     cc->pad_size = PK11_GetBlockSize(mechanism,param);
