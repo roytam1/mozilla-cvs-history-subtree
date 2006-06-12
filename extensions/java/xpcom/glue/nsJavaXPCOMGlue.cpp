@@ -40,6 +40,12 @@
 #include "nsXPCOMGlue.h"
 #include <stdlib.h>
 
+#if defined(XP_WIN) || defined(XP_OS2)
+#define JX_EXPORT   JNIEXPORT
+#else
+#define JX_EXPORT   JNIEXPORT NS_EXPORT
+#endif
+
 #define GRE_NATIVE(func) Java_org_mozilla_xpcom_internal_GREImpl_##func
 #define XPCOM_NATIVE(func) Java_org_mozilla_xpcom_internal_XPCOMImpl_##func
 #define JAVAPROXY_NATIVE(func) \
@@ -50,14 +56,14 @@
  *  JNI Load & Unload
  ***********************/
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" JX_EXPORT jint JNICALL
 JNI_OnLoad(JavaVM* vm, void* reserved)
 {
   // Let the JVM know that we are using JDK 1.2 JNI features.
   return JNI_VERSION_1_2;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JX_EXPORT void JNICALL
 JNI_OnUnload(JavaVM* vm, void* reserved)
 {
 }
@@ -207,7 +213,7 @@ ThrowException(JNIEnv* env, const nsresult aErrorCode, const char* aMessage)
   }
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JX_EXPORT void JNICALL
 GRE_NATIVE(initEmbeddingNative) (JNIEnv* env, jobject aObject,
                                  jobject aLibXULDirectory,
                                  jobject aAppDirectory, jobject aAppDirProvider)
@@ -221,14 +227,14 @@ GRE_NATIVE(initEmbeddingNative) (JNIEnv* env, jobject aObject,
   InitEmbedding(env, aObject, aLibXULDirectory, aAppDirectory, aAppDirProvider);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JX_EXPORT void JNICALL
 GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject aObject)
 {
   TermEmbedding(env, aObject);
   XPCOMGlueShutdown();
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JX_EXPORT jobject JNICALL
 XPCOM_NATIVE(initXPCOMNative) (JNIEnv* env, jobject aObject,
                                jobject aMozBinDirectory,
                                jobject aAppFileLocProvider)
@@ -242,53 +248,53 @@ XPCOM_NATIVE(initXPCOMNative) (JNIEnv* env, jobject aObject,
   return InitXPCOM(env, aObject, aMozBinDirectory, aAppFileLocProvider);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JX_EXPORT void JNICALL
 XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject aObject, jobject aServMgr)
 {
   ShutdownXPCOM(env, aObject, aServMgr);
   XPCOMGlueShutdown();
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JX_EXPORT jobject JNICALL
 XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jobject aObject, jstring aPath,
                             jboolean aFollowLinks)
 {
   return NewLocalFile(env, aObject, aPath, aFollowLinks);
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JX_EXPORT jobject JNICALL
 XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jobject aObject)
 {
   return GetComponentManager(env, aObject);
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JX_EXPORT jobject JNICALL
 XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jobject aObject)
 {
   return GetComponentRegistrar(env, aObject);
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JX_EXPORT jobject JNICALL
 XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jobject aObject)
 {
   return GetServiceManager(env, aObject);
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JX_EXPORT jobject JNICALL
 JAVAPROXY_NATIVE(callXPCOMMethod) (JNIEnv *env, jclass that, jobject aJavaProxy,
                                    jstring aMethodName, jobjectArray aParams)
 {
   return CallXPCOMMethod(env, that, aJavaProxy, aMethodName, aParams);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JX_EXPORT void JNICALL
 JAVAPROXY_NATIVE(finalizeProxyNative) (JNIEnv *env, jclass that,
                                        jobject aJavaProxy)
 {
   FinalizeProxy(env, that, aJavaProxy);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" JX_EXPORT jboolean JNICALL
 JAVAPROXY_NATIVE(isSameXPCOMObject) (JNIEnv *env, jclass that, jobject aProxy1,
                                      jobject aProxy2)
 {
