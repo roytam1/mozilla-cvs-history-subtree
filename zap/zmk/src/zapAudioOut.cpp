@@ -108,6 +108,7 @@ NS_INTERFACE_MAP_BEGIN(zapAudioOut)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
+  NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
   NS_INTERFACE_MAP_ENTRY(zapIAudioOut)
 NS_INTERFACE_MAP_END
 
@@ -149,6 +150,10 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
 #ifdef DEBUG_afri_zmk
   printf("(audioout using device %d)", mOutputDevice);
 #endif
+
+  mClockStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("clock"));
+  mClockStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("clock_cycle"),
+                                        mStreamParameters.frame_duration);
   
   return mStreamParameters.InitWithProperties(node_pars);
 }
@@ -169,8 +174,14 @@ zapAudioOut::RemovedFromGraph(zapIMediaGraph *graph)
 NS_IMETHODIMP
 zapAudioOut::GetSource(nsIPropertyBag2 *source_pars, zapIMediaSource **_retval)
 {
-  NS_ERROR("audioout is a sink-only node");
-  return NS_ERROR_FAILURE;
+  if (mClockOutput) {
+    NS_ERROR("output end already connected");
+    return NS_ERROR_FAILURE;
+  }
+
+  *_retval = this;
+  NS_ADDREF(*_retval);
+  return NS_OK;
 }
 
 /* zapIMediaSink getSink (in nsIPropertyBag2 sink_pars); */
@@ -219,6 +230,39 @@ NS_IMETHODIMP
 zapAudioOut::ConsumeFrame(zapIMediaFrame * frame)
 {
   NS_ERROR("Not a passive sink - maybe you need some buffering?");
+  return NS_ERROR_FAILURE;
+}
+
+//----------------------------------------------------------------------
+// zapIMediaSource methods:
+
+/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+NS_IMETHODIMP
+zapAudioOut::ConnectSink(zapIMediaSink *sink,
+                         const nsACString & connection_id)
+{
+  NS_ASSERTION(!mClockOutput, "already connected");
+  mClockOutput = sink;
+  StartStream();
+  
+  return NS_OK;
+}
+
+/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+NS_IMETHODIMP
+zapAudioOut::DisconnectSink(zapIMediaSink *sink,
+                            const nsACString & connection_id)
+{
+  mClockOutput = nsnull;
+  return NS_OK;
+}
+
+/* zapIMediaFrame produceFrame (); */
+NS_IMETHODIMP
+zapAudioOut::ProduceFrame(zapIMediaFrame ** frame)
+{
+  NS_ERROR("not a passive source!");
+  *frame = nsnull;
   return NS_ERROR_FAILURE;
 }
 
@@ -311,6 +355,13 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
       memcpy(outputBuffer, data.BeginReading(), l);
     }
   }
+
+  if (mClockOutput) {
+    nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
+    frame->mStreamInfo = mClockStreamInfo;
+    frame->mTimestamp = 0; // XXX
+    mClockOutput->ConsumeFrame(frame);
+  }
 }
 
 PRBool zapAudioOut::ValidateFrame(zapIMediaFrame* frame)
@@ -335,7 +386,7 @@ PRBool zapAudioOut::ValidateFrame(zapIMediaFrame* frame)
 
 nsresult zapAudioOut::StartStream()
 {
-  NS_ASSERTION(!mStream, "stream still running");
+  if (mStream) return NS_OK; // stream already running
 
   // try to open stream:
   PaError err = Pa_OpenStream(&mStream,

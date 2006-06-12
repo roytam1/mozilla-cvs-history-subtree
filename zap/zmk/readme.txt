@@ -207,6 +207,22 @@ zapIMediaFrame::streamInfo :
 zapIMediaFrame::data :
 - raw binary data
 
+----------------------------------------------------------------------
+
+XI) clock
+---------
+
+A clock frame
+
+Interfaces: zapIMediaFrame
+
+zapIMediaFrame::streamInfo : 
+- ACString "type" := "clock"
+- double "clock_cycle" := 1/clock rate in seconds
+
+zapIMediaFrame::data : empty
+
+
 ======================================================================
 ======================================================================
 
@@ -251,7 +267,9 @@ audio/pcm frames with
 Audio sink.
 
 Sinks: 1 (active)
-Sources: none
+
+Sources: 1 (active)
+- Clock output that receives clock frames at the sampling rate
 
 Control interfaces: zapIAudioOut
 
@@ -271,6 +289,11 @@ audio/pcm frames with
 - double "frame_duration" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
+
+Output stream:
+clock frames with
+- double "clock_cycle" : duration of one clock cycle (equal to frame_duration)
+
 
 ----------------------------------------------------------------------
 
@@ -842,11 +865,11 @@ as input streams
 Adds an offset to the timestamp of input frames, so that the timestamp
 of the first frame of an input stream coincides with the last
 timestamp seen at the 'timebase' input. Whenever the input stream or
-timebase stream changes (i.e. when the frameinfo is different from one
+timebase stream changes (i.e. when the streaminfo is different from one
 frame to the next), the offset will be recalculated.
 Note: Warning: this node mutates frames. XXX maybe we need cloning.
 
-Sinks: 1
+Sinks: 2
 
 - ACString "name" == "input" : input stream (any type) (neutral)
 - ACString "name" == "timebase" : timebase stream (any type) (passive)
@@ -985,7 +1008,8 @@ Sources: 2 (active)
 Source parameters:
 ACString "name" == "ain" : audio in.
 ACString "name" == "monitor" : receives every frame played on audioout,
-                               including missing frames.
+                               including automatically generated silence 
+                               frames.
 
 Control interfaces: zapIAudioIO
 

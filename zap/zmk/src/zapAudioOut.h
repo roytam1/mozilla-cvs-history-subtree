@@ -60,6 +60,7 @@
 
 class zapAudioOut : public zapIMediaNode,
                     public zapIMediaSink,
+                    public zapIMediaSource,
                     public zapIAudioOut
 {
 public:
@@ -69,6 +70,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
   NS_DECL_ZAPIMEDIASINK
+  NS_DECL_ZAPIMEDIASOURCE
   NS_DECL_ZAPIAUDIOOUT
 
 private:
@@ -98,6 +100,9 @@ private:
                                                   // (used for
                                                   // detecting stream
                                                   // breaks)
+
+  nsCOMPtr<zapIMediaSink> mClockOutput;
+  nsCOMPtr<nsIWritablePropertyBag2> mClockStreamInfo;
 };
 
 #endif // __ZAP_AUDIOOUT_H__
