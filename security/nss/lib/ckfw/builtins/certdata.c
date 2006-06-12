@@ -643,7 +643,7 @@ static const NSSItem nss_builtins_items_0 [] = {
   { (void *)&ck_false, (PRUint32)sizeof(CK_BBOOL) },
   { (void *)"CVS ID", (PRUint32)7 },
   { (void *)"NSS", (PRUint32)4 },
-  { (void *)"@(#) $RCSfile$ $Revision$ $Date$""; @(#) $RCSfile$ $Revision$ $Date$", (PRUint32)160 }
+  { (void *)"@(#) $RCSfile$ $Revision$ $Date$""; @(#) $RCSfile$ $Revision$ $Date$", (PRUint32)165 }
 };
 #endif /* DEBUG */
 static const NSSItem nss_builtins_items_1 [] = {
