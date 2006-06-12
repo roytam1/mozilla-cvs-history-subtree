@@ -207,7 +207,6 @@ zapAudioOut::ConnectSource(zapIMediaSource *source,
                            const nsACString & connection_id)
 {
   NS_ASSERTION(!mInput, "already connected");
-  NS_ASSERTION(!mStream, "protocol error");
 
   mInput = source;
   StartStream();
