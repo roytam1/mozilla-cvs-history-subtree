@@ -292,5 +292,5 @@ zapStreamTap::ProduceFrame(zapIMediaFrame ** frame)
     ((zapStreamTapOutput*)mOutputs[i])->ConsumeFrame(*frame);
   }
   
-  return NS_ERROR_FAILURE;
+  return NS_OK;
 }
