@@ -58,6 +58,16 @@ nsDOMMutationEvent::nsDOMMutationEvent(nsPresContext* aPresContext,
   }
 }
 
+nsDOMMutationEvent::~nsDOMMutationEvent()
+{
+  if (mEventIsInternal) {
+    delete mEvent->userType;
+    nsMutationEvent* mutation = NS_STATIC_CAST(nsMutationEvent*, mEvent);
+    delete mutation;
+    mEvent = nsnull;
+  }
+}
+
 NS_INTERFACE_MAP_BEGIN(nsDOMMutationEvent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMMutationEvent)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(MutationEvent)
