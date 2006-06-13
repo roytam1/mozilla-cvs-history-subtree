@@ -774,9 +774,7 @@ UpdateCheckListener.prototype = {
       var addonsMsg = document.getElementById("addonsMsg");
       addonsMsg.showMessage("chrome://mozapps/skin/extensions/question.png",
                             getExtensionString("noUpdatesMsg"),
-                            getExtensionString("closeButtonLabel"),
-                            getExtensionString("closeButtonAccesskey"),
-                            false, "addons-no-updates");
+                            null, null, true, "addons-no-updates");
     }
   },
   
