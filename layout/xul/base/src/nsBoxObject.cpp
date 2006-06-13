@@ -585,6 +585,10 @@ nsBoxObject::GetDocShell(nsIDocShell** aResult)
   // No nsIFrameFrame available for mContent, try if there's a mapping
   // between mContent's document to mContent's subdocument.
 
+  if (!mContent) {
+    return NS_OK;
+  }
+
   // XXXbz sXBL/XBL2 issue -- ownerDocument or currentDocument?
   nsIDocument *doc = mContent->GetDocument();
 
