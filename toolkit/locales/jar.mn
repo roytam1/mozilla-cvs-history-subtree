@@ -59,11 +59,7 @@
 + locale/@AB_CD@/global/nsTreeSorting.properties        (%chrome/global/nsTreeSorting.properties)
   locale/@AB_CD@/global/preferences.dtd                 (%chrome/global/preferences.dtd)
 + locale/@AB_CD@/global/printdialog.dtd                 (%chrome/global/printdialog.dtd)
-#ifdef XP_UNIX
-#ifndef XP_MACOSX
 + locale/@AB_CD@/global/printjoboptions.dtd             (%chrome/global/printjoboptions.dtd)
-#endif
-#endif
 + locale/@AB_CD@/global/printPageSetup.dtd              (%chrome/global/printPageSetup.dtd)
 + locale/@AB_CD@/global/printPreview.dtd                (%chrome/global/printPreview.dtd)
 + locale/@AB_CD@/global/printPreviewProgress.dtd        (%chrome/global/printPreviewProgress.dtd)
