@@ -394,6 +394,7 @@ UnrootGlobals(PLHashEntry *he, PRIntn i, void *arg)
 {
     JSContext *cx = (JSContext *)arg;
     JSObject *global = (JSObject *)he->value;
+    JSAutoRequest ar(cx);
     JS_ClearScope(cx, global);
     JS_RemoveRoot(cx, &he->value);
     nsCRT::free((char *)he->key);
