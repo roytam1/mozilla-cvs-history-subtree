@@ -325,7 +325,7 @@ nsHTMLReflowState::InitFrameType()
   // See if the frame is replaced
   if (frame->IsFrameOfType(nsIFrame::eReplacedContainsBlock)) {
     frameType = NS_FRAME_REPLACED_CONTAINS_BLOCK(frameType);
-  } else if (frame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
+  } else if (frame->IsFrameOfType(nsIFrame::eReplaced)) {
     frameType = NS_FRAME_REPLACED(frameType);
   }
 

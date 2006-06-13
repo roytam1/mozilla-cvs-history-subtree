@@ -1466,6 +1466,12 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
 
 //--------------------------------------------------------------
 
+PRBool
+nsComboboxControlFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~(eReplaced));
+}
+
 #ifdef NS_DEBUG
 NS_IMETHODIMP
 nsComboboxControlFrame::GetFrameName(nsAString& aResult) const

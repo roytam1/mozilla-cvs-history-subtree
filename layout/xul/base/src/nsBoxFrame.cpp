@@ -1586,6 +1586,13 @@ nsBoxFrame::GetType() const
   return nsLayoutAtoms::boxFrame;
 }
 
+PRBool
+nsBoxFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  // This is bogus, but it's what we've always done.
+  return !(aFlags & ~(eReplaced));
+}
+
 #ifdef DEBUG_LAYOUT
 NS_IMETHODIMP
 nsBoxFrame::GetDebug(PRBool& aDebug)

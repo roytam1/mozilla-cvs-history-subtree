@@ -239,7 +239,10 @@ nsSVGGlyphFrame::GetType() const
 PRBool
 nsSVGGlyphFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~nsIFrame::eSVG);
+  // Set the frame state bit for text frames to mark them as replaced.
+  // XXX kipp: temporary
+
+  return !(aFlags & ~(eSVG | eReplaced));
 }
 
 //----------------------------------------------------------------------

@@ -564,8 +564,7 @@ nsFrame::Init(nsIContent*      aContent,
     nsFrameState state = aPrevInFlow->GetStateBits();
 
     // Make bits that are currently off (see constructor) the same:
-    mState |= state & (NS_FRAME_REPLACED_ELEMENT |
-                       NS_FRAME_SELECTED_CONTENT |
+    mState |= state & (NS_FRAME_SELECTED_CONTENT |
                        NS_FRAME_INDEPENDENT_SELECTION |
                        NS_FRAME_IS_SPECIAL);
   }
@@ -1139,8 +1138,7 @@ nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder* aBuilder,
 
   // Replaced elements have their visibility handled here, because
   // they're visually atomic
-  if ((GetStateBits() & NS_FRAME_REPLACED_ELEMENT) &&
-      !IsVisibleForPainting(aBuilder))
+  if (IsFrameOfType(eReplaced) && !IsVisibleForPainting(aBuilder))
     return NS_OK;
   if (GetStyleVisibility()->mVisible == NS_STYLE_VISIBILITY_COLLAPSE)
     return NS_OK;

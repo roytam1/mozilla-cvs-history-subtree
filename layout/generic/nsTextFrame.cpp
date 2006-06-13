@@ -321,6 +321,8 @@ public:
    * @see nsLayoutAtoms::textFrame
    */
   virtual nsIAtom* GetType() const;
+
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
   
 #ifdef DEBUG
   NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
@@ -6748,6 +6750,14 @@ nsIAtom*
 nsTextFrame::GetType() const
 {
   return nsLayoutAtoms::textFrame;
+}
+
+PRBool
+nsTextFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  // Set the frame state bit for text frames to mark them as replaced.
+  // XXX kipp: temporary
+  return !(aFlags & ~(eReplaced));
 }
 
 /* virtual */ PRBool

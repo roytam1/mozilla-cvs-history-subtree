@@ -1170,6 +1170,13 @@ nsXULScrollFrame::Release(void)
     return NS_OK;
 }
 
+PRBool
+nsXULScrollFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  // Override nsBoxFrame.
+  return !aFlags;
+}
+
 #ifdef NS_DEBUG
 NS_IMETHODIMP
 nsXULScrollFrame::GetFrameName(nsAString& aResult) const

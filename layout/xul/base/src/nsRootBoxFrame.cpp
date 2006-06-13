@@ -107,6 +107,7 @@ public:
    * @see nsLayoutAtoms::rootFrame
    */
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
   
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
@@ -256,6 +257,13 @@ nsIAtom*
 nsRootBoxFrame::GetType() const
 {
   return nsLayoutAtoms::rootFrame;
+}
+
+PRBool
+nsRootBoxFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  // Override the bogus thing nsBoxFrame does.
+  return !aFlags;
 }
 
 nsIFrame*

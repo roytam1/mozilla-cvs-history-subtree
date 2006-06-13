@@ -657,7 +657,7 @@ void MarkPercentAwareFrame(nsPresContext *aPresContext,
                            nsInlineFrame  *aInline,
                            nsIFrame       *aFrame)
 {
-  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) 
+  if (aFrame->IsFrameOfType(nsIFrame::eReplaced)) 
   { // aFrame is a replaced element, check it's style
     if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
       SetContainsPercentAwareChild(aInline);

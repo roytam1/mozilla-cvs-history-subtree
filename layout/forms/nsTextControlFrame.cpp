@@ -1900,7 +1900,7 @@ nsTextControlFrame::IsLeaf() const
 PRBool
 nsTextControlFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
 }
 
 static PRBool

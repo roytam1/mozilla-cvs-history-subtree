@@ -588,5 +588,5 @@ nsFileControlFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
 PRBool
 nsFileControlFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
 }

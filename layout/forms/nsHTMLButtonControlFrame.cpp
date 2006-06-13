@@ -480,5 +480,5 @@ nsHTMLButtonControlFrame::RemoveFrame(nsIAtom*        aListName,
 PRBool
 nsHTMLButtonControlFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
 }

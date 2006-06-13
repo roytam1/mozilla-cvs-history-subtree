@@ -1437,7 +1437,7 @@ PRBool
 nsLineLayout::IsPercentageAwareReplacedElement(nsPresContext *aPresContext, 
                                                nsIFrame* aFrame)
 {
-  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT)
+  if (aFrame->IsFrameOfType(nsIFrame::eReplaced))
   {
     nsIAtom* frameType = aFrame->GetType();
     if (nsLayoutAtoms::brFrame != frameType && 
@@ -1473,7 +1473,7 @@ nsLineLayout::IsPercentageAwareReplacedElement(nsPresContext *aPresContext,
 
 PRBool IsPercentageAwareFrame(nsPresContext *aPresContext, nsIFrame *aFrame)
 {
-  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
+  if (aFrame->IsFrameOfType(nsIFrame::eReplaced)) {
     if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
       return PR_TRUE;
     }

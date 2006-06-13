@@ -166,10 +166,6 @@ typedef PRUint32 nsFrameState;
 // destroyed to allow these references to be cleared.
 #define NS_FRAME_EXTERNAL_REFERENCE                   0x00000010
 
-// If this bit is set, then the frame is a replaced element. For example,
-// a frame displaying an image
-#define NS_FRAME_REPLACED_ELEMENT                     0x00000020
-
 // If this bit is set, then the frame corresponds to generated content
 #define NS_FRAME_GENERATED_CONTENT                    0x00000040
 
@@ -1291,12 +1287,14 @@ public:
    * Bit-flags to pass to IsFrameOfType()
    */
   enum {
-    eMathML =           1 << 0,
-    eSVG =              1 << 1,
-    eSVGForeignObject = 1 << 2,
-    eReplacedContainsBlock = 1 << 3  // Frame that contains a block but looks
-                                     // like a replaced element from the
-                                     // outside
+    eMathML =                           1 << 0,
+    eSVG =                              1 << 1,
+    eSVGForeignObject =                 1 << 2,
+    // the frame is for a replaced element, such as an image
+    eReplaced =                         1 << 3,
+    // Frame that contains a block but looks like a replaced element
+    // from the outside
+    eReplacedContainsBlock =            1 << 4
   };
 
   /**

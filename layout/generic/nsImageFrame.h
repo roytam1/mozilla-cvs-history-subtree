@@ -126,6 +126,7 @@ public:
 #endif
 
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
   NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;

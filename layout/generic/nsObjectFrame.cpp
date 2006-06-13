@@ -500,6 +500,12 @@ nsObjectFrame::GetType() const
   return nsLayoutAtoms::objectFrame; 
 }
 
+PRBool
+nsObjectFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~(eReplaced));
+}
+
 #ifdef DEBUG
 NS_IMETHODIMP
 nsObjectFrame::GetFrameName(nsAString& aResult) const

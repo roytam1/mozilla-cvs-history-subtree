@@ -569,5 +569,5 @@ nsIsIndexFrame::RestoreState(nsPresState* aState)
 PRBool
 nsIsIndexFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
 }

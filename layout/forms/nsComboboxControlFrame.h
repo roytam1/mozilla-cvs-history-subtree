@@ -121,6 +121,7 @@ public:
 
   void PaintFocus(nsIRenderingContext& aRenderingContext, nsPoint aPt);
 
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif

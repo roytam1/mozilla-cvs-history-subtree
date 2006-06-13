@@ -58,6 +58,7 @@ public:
   NS_IMETHOD GetFlex(nsBoxLayoutState& aState, nscoord& aFlex);
   NS_IMETHOD GetAscent(nsBoxLayoutState& aState, nscoord& aAscent);
 
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif

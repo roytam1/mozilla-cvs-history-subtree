@@ -85,6 +85,7 @@ public:
                          nsEventStatus* aEventStatus);
 
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef ACCESSIBILITY
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
@@ -192,6 +193,12 @@ nsIAtom*
 nsImageControlFrame::GetType() const
 {
   return nsLayoutAtoms::imageControlFrame; 
+}
+
+PRBool
+nsImageControlFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~(eReplaced));
 }
 
 NS_METHOD

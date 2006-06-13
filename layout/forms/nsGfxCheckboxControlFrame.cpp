@@ -97,6 +97,12 @@ nsGfxCheckboxControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr
   return nsFormControlFrame::QueryInterface(aIID, aInstancePtr);
 }
 
+PRBool
+nsGfxCheckboxControlFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
+}
+
 #ifdef ACCESSIBILITY
 NS_IMETHODIMP nsGfxCheckboxControlFrame::GetAccessible(nsIAccessible** aAccessible)
 {

@@ -2302,7 +2302,7 @@ nsListControlFrame::GetType() const
 PRBool
 nsListControlFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
 }
 
 #ifdef DEBUG

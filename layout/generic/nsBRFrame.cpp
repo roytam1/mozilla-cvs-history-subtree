@@ -74,6 +74,7 @@ public:
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
   
 protected:
   BRFrame(nsStyleContext* aContext) : nsFrame(aContext) {}
@@ -211,6 +212,12 @@ nsIAtom*
 BRFrame::GetType() const
 {
   return nsLayoutAtoms::brFrame;
+}
+
+PRBool
+BRFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~(eReplaced));
 }
 
 nsIFrame::ContentOffsets BRFrame::CalcContentOffsetsFromFramePoint(nsPoint aPoint)
