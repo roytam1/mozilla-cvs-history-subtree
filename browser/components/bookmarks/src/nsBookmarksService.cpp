@@ -3472,8 +3472,13 @@ nsBookmarksService::RequestCharset(nsIWebNavigation* aWebNavigation,
 
     nsCOMPtr<nsIRDFResource> bookmark;
     rv = GetSource(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmark));
+
     if (NS_FAILED(rv))
         return rv;
+
+    // No bookmark
+    if (rv == NS_RDF_NO_VALUE)
+        return NS_ERROR_FAILURE;
 
     nsCOMPtr<nsIRDFNode> nodeType;
     GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
