@@ -841,7 +841,7 @@ RDFContentSinkImpl::GetIdAboutAttribute(const PRUnichar** aAttributes,
                                         PRBool* aIsAnonymous)
 {
     // This corresponds to the dirty work of production [6.5]
-    nsresult rv;
+    nsresult rv = NS_OK;
 
     nsCAutoString docURI;
     rv = mDocumentURL->GetSpec(docURI);
