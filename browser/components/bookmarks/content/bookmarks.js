@@ -622,6 +622,10 @@ var BookmarksCommand = {
   {
     if (!aTargetBrowser)
       return;
+
+    if (aTargetBrowser == "tab" && !this._confirmOpenTabs(aSelection.length))
+      return;
+
     for (var i=0; i<aSelection.length; ++i) {
       var type = aSelection.type[i];
       if (aTargetBrowser == "save") {
@@ -689,25 +693,14 @@ var BookmarksCommand = {
     openUILinkIn(url, aTargetBrowser);
   },
 
-  openGroupBookmark: function (aURI, aTargetBrowser)
+  _confirmOpenTabs: function(numTabsToOpen) 
   {
-    var w = getTopWin();
-    if (!w)
-      // no browser window is open, we have to open the group into a new window
-      aTargetBrowser = "window";
-
-    var resource = RDF.GetResource(aURI);
-    var urlArc   = RDF.GetResource(gNC_NS+"URL");
-    RDFC.Init(BMDS, resource);
-    var containerChildren = RDFC.GetElements();
+    var reallyOpen = true;
 
     const kWarnOnOpenPref = "browser.tabs.warnOnOpen";
     if (PREF.getBoolPref(kWarnOnOpenPref))
     {
-      var reallyOpen = true;
-      var tabsToOpen = RDFC.GetCount();
-
-      if (tabsToOpen >= PREF.getIntPref("browser.tabs.maxOpenBeforeWarn"))
+      if (numTabsToOpen >= PREF.getIntPref("browser.tabs.maxOpenBeforeWarn"))
       {
         var promptService = 
             Components.classes["@mozilla.org/embedcomp/prompt-service;1"].
@@ -721,7 +714,7 @@ var BookmarksCommand = {
 
         var buttonPressed = promptService.confirmEx(window,
             BookmarksUtils.getLocaleString("tabs.openWarningTitle"),
-            BookmarksUtils.getLocaleString(messageKey, [tabsToOpen]),
+            BookmarksUtils.getLocaleString(messageKey, [numTabsToOpen]),
             (promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0)
             + (promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1),
             BookmarksUtils.getLocaleString(openKey),
@@ -734,10 +727,24 @@ var BookmarksCommand = {
          if (reallyOpen && !warnOnOpen.value)
            PREF.setBoolPref(kWarnOnOpenPref, false);
        }
-  
-       if (!reallyOpen)
-         return;
     }
+    return reallyOpen;
+  },
+
+  openGroupBookmark: function (aURI, aTargetBrowser)
+  {
+    var w = getTopWin();
+    if (!w)
+      // no browser window is open, we have to open the group into a new window
+      aTargetBrowser = "window";
+
+    var resource = RDF.GetResource(aURI);
+    var urlArc   = RDF.GetResource(gNC_NS+"URL");
+    RDFC.Init(BMDS, resource);
+    var containerChildren = RDFC.GetElements();
+
+    if (!this._confirmOpenTabs(RDFC.GetCount()))
+      return;
 
     if (aTargetBrowser == "current" || aTargetBrowser == "tab") {
       var browser  = w.document.getElementById("content");
