@@ -43,7 +43,9 @@ EXPORTED_SYMBOLS = [ "urlToFile",
                      "getProfileFile",
                      "getProfileDefaultsFile",
                      "ensureProfileFile",
-                     "getProfileFileURL"];
+                     "getProfileFileURL",
+                     "getStageDir"
+                   ];
 
 
 // name our global object:
@@ -209,4 +211,11 @@ function ensureProfileFile(name)
     return false;
   }
   return true;
+}
+
+// returns the xulrunner stagin directory
+function getStageDir()
+{
+  // XXX is XCurProcD correct here?
+  return gDirectoryService.get("XCurProcD", Components.interfaces.nsIFile);
 }
