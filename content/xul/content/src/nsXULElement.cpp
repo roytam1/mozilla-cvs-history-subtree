@@ -1983,11 +1983,14 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
                     }
 
                     // Make sure we have a DOMEvent.
-                    nsIDOMEvent *domEvent = nsnull;
-                    if (!aDOMEvent) {
+                    if (aDOMEvent) {
+                        if (*aDOMEvent) {
+                            externalDOMEvent = PR_TRUE;
+                        }
+                    } else {
                         aDOMEvent = &domEvent;
                     }
-                        
+
                     if (!*aDOMEvent) {
                         nsCOMPtr<nsIEventListenerManager> lm;
                         ret = GetListenerManager(getter_AddRefs(lm));
@@ -2012,10 +2015,33 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
                     }
                     event.sourceEvent = *aDOMEvent;
 
-                    return commandContent->HandleDOMEvent(aPresContext, &event,
-                                                          nsnull,
-                                                          NS_EVENT_FLAG_INIT,
-                                                          aEventStatus);
+                    ret = commandContent->HandleDOMEvent(aPresContext,
+                                                         &event, nsnull,
+                                                         NS_EVENT_FLAG_INIT,
+                                                         aEventStatus);
+
+                    // We're leaving the DOM event loop so if we created a
+                    // DOM event, release here.  If externalDOMEvent is
+                    // set, the event was passed in, and we don't own it.
+                    if (*aDOMEvent && !externalDOMEvent) {
+                        nsrefcnt rc;
+                        NS_RELEASE2(*aDOMEvent, rc);
+                        // Note: we expect one outstanding reference to
+                        // *aDOMEvent, because we set it in event.sourceEvent.
+                        if (rc > 1) {
+                            // Okay, so someone in the DOM loop (a listener,
+                            // JS object) still has a ref to the DOM Event,
+                            // but the internal data hasn't been malloc'd.
+                            // Force a copy of the data here so the DOM Event
+                            // is still valid.
+                            nsCOMPtr<nsIPrivateDOMEvent> privateEvent =
+                                do_QueryInterface(*aDOMEvent);
+                            if (privateEvent) {
+                                privateEvent->DuplicatePrivateData();
+                            }
+                        }
+                    }
+                    return ret;
                 }
                 else {
                     NS_WARNING("A XUL element is attached to a command that doesn't exist!\n");
