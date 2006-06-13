@@ -176,6 +176,10 @@ pref("nglayout.debug.enable_xbl_forms", false);
 // size of scrollbar snapping region
 pref("slider.snapMultiplier", 6);
 
+// Default to using the system filepicker if possible, but allow
+// toggling to use the XUL filepicker
+pref("ui.allow_platform_file_picker", true);
+
 // option to choose plug-in finder
 pref("application.use_ns_plugin_finder", false);
 

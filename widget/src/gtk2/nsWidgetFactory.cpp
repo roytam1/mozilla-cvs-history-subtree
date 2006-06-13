@@ -51,6 +51,8 @@
 #include "nsSound.h"
 #include "nsBidiKeyboard.h"
 #include "nsNativeKeyBindings.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
 
 #include "nsIComponentRegistrar.h"
 #include "nsComponentManagerUtils.h"
@@ -85,8 +87,19 @@ nsFilePickerConstructor(nsISupports *aOuter, REFNSIID aIID,
     return NS_ERROR_NO_AGGREGATION;
   }
 
+  PRBool allowPlatformPicker = PR_TRUE;
+  nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  if (prefs) {
+    PRBool prefAllow;
+    nsresult rv = prefs->GetBoolPref("ui.allow_platform_file_picker",
+                                     &prefAllow);
+    if (NS_SUCCEEDED(rv)) {
+        allowPlatformPicker = prefAllow;
+    }
+  }
+
   nsCOMPtr<nsIFilePicker> picker;
-  if (gtk_check_version(2,6,3) == NULL) {
+  if (allowPlatformPicker && gtk_check_version(2,6,3) == NULL) {
     picker = new nsFilePicker;
   } else {
     picker = do_CreateInstance(kXULFilePickerCID);
