@@ -76,7 +76,7 @@ nsSidebar.prototype.nc = "http://home.netscape.com/NC-rdf#";
 
 function sidebarURLSecurityCheck(url)
 {
-    if (url.search(/(^http:|^ftp:|^https:)/) == -1)
+    if (!/(^http:|^ftp:|^https:)/i.test(url))
         throw "Script attempted to add sidebar panel from illegal source";
 }
 
@@ -133,17 +133,17 @@ function (engineURL, iconURL, suggestedTitle, suggestedCategory)
         // make sure using HTTP or HTTPS and refering to a .src file
         // for the engine.
         if (! /^https?:\/\/.+\.src$/i.test(engineURL))
-            throw "Unsupported search engine URL";
+            throw "Unsupported search engine URL.";
 
         // make sure using HTTP or HTTPS and refering to a
         // .gif/.jpg/.jpeg/.png file for the icon.
         if (! /^https?:\/\/.+\.(gif|jpg|jpeg|png)$/i.test(iconURL))
-            throw "Unsupported search icon URL";
+            throw "Unsupported search icon URL.";
     }
     catch(ex)
     {
         debug(ex);
-        this.promptService.alert(null, "Failed to add the search engine.");
+        this.promptService.alert(null, "Error", "Failed to add the search engine. " + ex);
         throw Components.results.NS_ERROR_INVALID_ARG;
     }
 
