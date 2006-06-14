@@ -444,20 +444,24 @@ js_DeflateString(JSContext *cx, const jschar *chars, size_t length);
  * 'chars' must be large enough for 'length' jschars.
  * The buffer is NOT null-terminated.
  * cx may be NULL, which means no errors are thrown.
- * The destination length needs to be initialized with the buffer size, takes the number of chars moved.
+ * The destination length needs to be initialized with the buffer size, takes
+ * the number of chars moved.
  */
 extern JSBool
-js_InflateStringToBuffer(JSContext* cx, const char *bytes, size_t length, jschar *chars, size_t* charsLength);
+js_InflateStringToBuffer(JSContext* cx, const char *bytes, size_t length,
+                         jschar *chars, size_t* charsLength);
 
 /*
  * Deflate JS chars to bytes into a buffer.
  * 'bytes' must be large enough for 'length chars.
  * The buffer is NOT null-terminated.
  * cx may be NULL, which means no errors are thrown.
- * The destination length needs to be initialized with the buffer size, takes the number of bytes moved.
+ * The destination length needs to be initialized with the buffer size, takes
+ * the number of bytes moved.
  */
 extern JSBool
-js_DeflateStringToBuffer(JSContext* cx, const jschar *chars, size_t charsLength, char *bytes, size_t* length);
+js_DeflateStringToBuffer(JSContext* cx, const jschar *chars,
+                         size_t charsLength, char *bytes, size_t* length);
 
 /*
  * Associate bytes with str in the deflated string cache, returning true on
