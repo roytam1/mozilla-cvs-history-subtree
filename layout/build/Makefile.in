@@ -102,6 +102,7 @@ REQUIRES	= xpcom \
 		  commandhandler \
 		  webbrwsr \
 		  uconv \
+		  inspector \
 		  $(NULL)
 
 CPPSRCS		= \
@@ -146,6 +147,14 @@ SHARED_LIBRARY_LIBS += \
 		$(DIST)/lib/$(LIB_PREFIX)gkxulgrid_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkconxultmpl_s.$(LIB_SUFFIX) \
 		$(NULL)
+endif
+
+ifndef MOZ_NO_INSPECTOR_APIS
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)inspector_s.$(LIB_SUFFIX) \
+		$(NULL)
+else
+DEFINES += -DMOZ_NO_INSPECTOR_APIS
 endif
 
 ifdef MOZ_MATHML
@@ -237,6 +246,7 @@ LOCAL_INCLUDES	+= -I$(srcdir)/../base \
 		   -I$(srcdir)/../style \
 		   -I$(srcdir)/../xul/content/src \
 		   -I$(srcdir)/../xul/base/src \
+		   -I$(srcdir)/../inspector/src \
 		   -I$(srcdir)/../../content/base/src \
 		   -I$(srcdir)/../../content/html/content/src \
 		   -I$(srcdir)/../../content/html/document/src \

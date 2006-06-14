@@ -102,8 +102,10 @@ inDOMUtils::IsIgnorableWhitespace(nsIDOMCharacterData *aDataNode,
     return NS_OK;
   }
 
+
+  nsIFrame* frame;
   nsCOMPtr<nsIContent> content = do_QueryInterface(aDataNode);
-  nsIFrame* frame = presShell->GetPrimaryFrameFor(content);
+  presShell->GetPrimaryFrameFor(content, &frame);
   if (frame) {
     const nsStyleText* text = frame->GetStyleText();
     *aReturn = text->mWhiteSpace != NS_STYLE_WHITESPACE_PRE &&

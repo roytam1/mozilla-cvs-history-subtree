@@ -159,6 +159,15 @@
 #include "nsIDOMCanvasRenderingContext2D.h"
 #endif
 
+#ifndef MOZ_NO_INSPECTOR_APIS
+#include "inDOMView.h"
+#include "inDeepTreeWalker.h"
+#include "inFlasher.h"
+#include "inCSSValueSearch.h"
+#include "inFileSearch.h"
+#include "inDOMUtils.h"
+#endif
+
 class nsIDocumentLoaderFactory;
 
 #define PRODUCT_NAME "Gecko"
@@ -303,6 +312,10 @@ Initialize(nsIModule* aSelf)
   nsXBLAtoms::AddRefAtoms();
   nsLayoutAtoms::AddRefAtoms();
   nsXULAtoms::AddRefAtoms();
+
+#ifndef MOZ_NO_INSPECTOR_APIS
+  inDOMView::InitAtoms();
+#endif
 
 #ifdef MOZ_XUL
   rv = nsXULContentUtils::Init();
@@ -611,6 +624,15 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentAreaDragDrop)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDataDocumentContentPolicy)
 MAKE_CTOR(CreateSyncLoadDOMService,       nsISyncLoadDOMService,       NS_NewSyncLoadDOMService)
 MAKE_CTOR(CreatePluginDocument,           nsIDocument,                 NS_NewPluginDocument)
+
+#ifndef MOZ_NO_INSPECTOR_APIS
+NS_GENERIC_FACTORY_CONSTRUCTOR(inDOMView)
+NS_GENERIC_FACTORY_CONSTRUCTOR(inDeepTreeWalker)
+NS_GENERIC_FACTORY_CONSTRUCTOR(inFlasher)
+NS_GENERIC_FACTORY_CONSTRUCTOR(inCSSValueSearch)
+NS_GENERIC_FACTORY_CONSTRUCTOR(inFileSearch)
+NS_GENERIC_FACTORY_CONSTRUCTOR(inDOMUtils)
+#endif
 
 #ifdef MOZ_ENABLE_CANVAS
 MAKE_CTOR(CreateCanvasRenderingContext2D, nsIDOMCanvasRenderingContext2D, NS_NewCanvasRenderingContext2D)
@@ -932,6 +954,40 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_TREEBOXOBJECT_CID,
     "@mozilla.org/layout/xul-boxobject-tree;1",
     CreateNewTreeBoxObject },
+
+#endif // MOZ_XUL
+
+#ifndef MOZ_NO_INSPECTOR_APIS
+
+  { "DOM View",
+    IN_DOMVIEW_CID, 
+    "@mozilla.org/inspector/dom-view;1",
+    inDOMViewConstructor },
+
+  { "Deep Tree Walker", 
+    IN_DEEPTREEWALKER_CID, 
+    "@mozilla.org/inspector/deep-tree-walker;1",
+    inDeepTreeWalkerConstructor },
+
+  { "Flasher", 
+    IN_FLASHER_CID, 
+    "@mozilla.org/inspector/flasher;1", 
+    inFlasherConstructor },
+
+  { "CSS Value Search", 
+    IN_CSSVALUESEARCH_CID, 
+    "@mozilla.org/inspector/search;1?type=cssvalue", 
+    inCSSValueSearchConstructor },
+
+  { "File Search", 
+    IN_FILESEARCH_CID, 
+    "@mozilla.org/inspector/search;1?type=file", 
+    inFileSearchConstructor },
+
+  { "DOM Utils", 
+    IN_DOMUTILS_CID, 
+    "@mozilla.org/inspector/dom-utils;1", 
+    inDOMUtilsConstructor },
 
 #endif
 

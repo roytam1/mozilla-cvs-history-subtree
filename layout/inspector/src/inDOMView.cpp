@@ -489,18 +489,10 @@ inDOMView::GetParentIndex(PRInt32 rowIndex, PRInt32 *_retval)
   RowToNode(rowIndex, &node);
   if (!node) return NS_ERROR_FAILURE;
 
-  // GetParentIndex returns -1 if there is no parent  
-  *_retval = -1;
-  
   inDOMViewNode* checkNode = nsnull;
-  PRInt32 i = rowIndex - 1;
+  PRUint32 i = rowIndex - 1;
   do {
-    nsresult rv = RowToNode(i, &checkNode);
-    if (NS_FAILED(rv)) {
-      // No parent. Just break out.
-      break;
-    }
-    
+    RowToNode(i, &checkNode);
     if (checkNode == node->parent) {
       *_retval = i;
       return NS_OK;
@@ -601,13 +593,6 @@ inDOMView::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
   return NS_OK;
 }
 
-
-NS_IMETHODIMP
-inDOMView::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
-{
-  return NS_OK;
-}
-
 NS_IMETHODIMP
 inDOMView::IsSeparator(PRInt32 index, PRBool *_retval)
 {
@@ -656,13 +641,13 @@ inDOMView::PerformActionOnCell(const PRUnichar* action, PRInt32 row, nsITreeColu
 
 NS_IMPL_NSIDOCUMENTOBSERVER_CORE_STUB(inDOMView)
 NS_IMPL_NSIDOCUMENTOBSERVER_LOAD_STUB(inDOMView)
+NS_IMPL_NSIDOCUMENTOBSERVER_REFLOW_STUB(inDOMView)
 NS_IMPL_NSIDOCUMENTOBSERVER_STATE_STUB(inDOMView)
 NS_IMPL_NSIDOCUMENTOBSERVER_STYLE_STUB(inDOMView)
 
 void
-inDOMView::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
-                            PRInt32 aNameSpaceID, nsIAtom* aAttribute,
-                            PRInt32 aModType)
+inDOMView::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent, PRInt32 aNameSpaceID,
+                            nsIAtom* aAttribute, PRInt32 aModType)
 {
   if (!mTree) {
     return;
@@ -777,16 +762,9 @@ inDOMView::ContentAppended(nsIDocument *aDocument,
     return;
   }
 
-  PRUint32 count = aContainer->GetChildCount();
-  NS_ASSERTION((PRUint32)aNewIndexInContainer < count,
-               "Bogus aNewIndexInContainer");
+  nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
 
-  while ((PRUint32)aNewIndexInContainer < count) {
-    nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
-
-    ContentInserted(aDocument, aContainer, child, aNewIndexInContainer);
-    ++aNewIndexInContainer;
-  }
+  ContentInserted(aDocument, aContainer, child, aNewIndexInContainer);
 }
 
 void
@@ -822,16 +800,6 @@ inDOMView::ContentInserted(nsIDocument *aDocument, nsIContent* aContainer,
   inDOMViewNode* parentNode = nsnull;
   if (NS_FAILED(rv = RowToNode(parentRow, &parentNode)))
     return;
-
-  if (!parentNode->isOpen) {
-    // Parent is not open, so don't bother creating tree rows for the
-    // kids.  But do indicate that it's now a container, if needed.
-    if (!parentNode->isContainer) {
-      parentNode->isContainer = PR_TRUE;
-      mTree->InvalidateRow(parentRow);
-    }
-    return;
-  }
 
   // get the previous sibling of the inserted content
   nsCOMPtr<nsIDOMNode> previous;
@@ -892,28 +860,13 @@ inDOMView::ContentRemoved(nsIDocument *aDocument, nsIContent* aContainer, nsICon
   if (NS_FAILED(rv = RowToNode(row, &oldNode)))
     return;
 
-  // The parent may no longer be a container.  Note that we don't want
-  // to access oldNode after calling RemoveNode, so do this now.
-  inDOMViewNode* parentNode = oldNode->parent;
-  
-  // Keep track of how many rows we are removing.  It's at least one,
-  // but if we're open it's more.
-  PRInt32 oldCount = GetRowCount();
-  
   if (oldNode->isOpen)
     CollapseNode(row);
 
   RemoveLink(oldNode);
   RemoveNode(row);
 
-  if (aContainer->GetChildCount() == 0) {
-    // Fix up the parent
-    parentNode->isContainer = PR_FALSE;
-    parentNode->isOpen = PR_FALSE;
-    mTree->InvalidateRow(NodeToRow(parentNode));
-  }
-    
-  mTree->RowCountChanged(row, GetRowCount() - oldCount);
+  mTree->RowCountChanged(row, -1);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -931,12 +884,6 @@ PRInt32
 inDOMView::GetRowCount()
 {
   return mNodes.Count();
-}
-
-PRInt32
-inDOMView::NodeToRow(inDOMViewNode* aNode)
-{
-  return mNodes.IndexOf(aNode);
 }
 
 inDOMViewNode*
@@ -1063,10 +1010,7 @@ void
 inDOMView::CollapseNode(PRInt32 aRow)
 {
   inDOMViewNode* node = nsnull;
-  nsresult rv = RowToNode(aRow, &node);
-  if (NS_FAILED(rv)) {
-    return;
-  }
+  RowToNode(aRow, &node);
 
   PRInt32 row = 0;
   GetLastDescendantOf(node, aRow, &row);

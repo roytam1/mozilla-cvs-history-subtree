@@ -408,7 +408,7 @@ inCSSValueSearch::EqualizeURL(nsAutoString* aURL)
   if (mNormalizeChromeURLs) {
     if (aURL->Find("chrome://", PR_FALSE, 0, 1) >= 0) {
       PRUint32 len = aURL->Length();
-      PRUnichar* result = new PRUnichar[len-8];
+      char* result = new char[len-8];
       const PRUnichar* src = aURL->get();
       PRUint32 i = 9;
       PRUint32 milestone = 0;
@@ -426,7 +426,7 @@ inCSSValueSearch::EqualizeURL(nsAutoString* aURL)
       }
       result[i-9-s] = 0;
 
-      aURL->Assign(result);
+      aURL->AssignWithConversion(result);
       delete [] result;
     }
   } else {

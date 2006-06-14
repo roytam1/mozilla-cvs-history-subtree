@@ -102,7 +102,6 @@ protected:
 
   inDOMViewNode* GetNodeAt(PRInt32 aIndex);
   PRInt32 GetRowCount();
-  PRInt32 NodeToRow(inDOMViewNode* aNode);
   PRBool RowOutOfBounds(PRInt32 aRow, PRInt32 aCount);
   inDOMViewNode* CreateNode(nsIDOMNode* aNode, inDOMViewNode* aParent);
   void AppendNode(inDOMViewNode* aNode);

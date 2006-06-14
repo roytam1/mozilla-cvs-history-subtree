@@ -41,6 +41,7 @@
 #include "inIFileSearch.h"
 
 #include "nsString.h"
+#include "nsVoidArray.h"
 #include "nsISimpleEnumerator.h"
 #include "nsCOMArray.h"
 #include "inISearchObserver.h"

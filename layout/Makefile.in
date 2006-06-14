@@ -66,6 +66,10 @@ ifdef MOZ_SVG
 DIRS           += svg
 endif
 
+ifndef MOZ_NO_INSPECTOR_APIS
+DIRS           += inspector
+endif
+
 DIRS           += build
 
 ifdef ENABLE_TESTS
