@@ -6086,8 +6086,19 @@ nsGlobalWindow::CloseWindow(nsISupports *aWindow)
 {
   nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(aWindow));
 
-  NS_STATIC_CAST(nsGlobalWindow *,
-                 NS_STATIC_CAST(nsPIDOMWindow*, win))->ReallyCloseWindow();
+  nsGlobalWindow* globalWin =
+    NS_STATIC_CAST(nsGlobalWindow *,
+                   NS_STATIC_CAST(nsPIDOMWindow*, win));
+
+  // Need to post an event for closing, otherwise window and 
+  // presshell etc. may get destroyed while creating frames, bug 338897.
+  nsCloseEvent* ev = new nsCloseEvent(globalWin);
+  if (ev) {
+    if (NS_FAILED(ev->PostCloseEvent())) {
+      PL_DestroyEvent(ev);
+    }
+  }
+  // else if OOM, better not to close. That might cause a crash.
 }
 
 // static
