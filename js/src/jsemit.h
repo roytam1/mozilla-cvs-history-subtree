@@ -142,9 +142,6 @@ struct JSTreeContext {              /* tree context for semantic checks */
 #define TREE_CONTEXT_FINISH(tc)                                               \
     ((void)0)
 
-#define TREE_CONTEXT_AT_TOP_LEVEL(tc)                                         \
-    (!((tc)->flags & TCF_IN_FUNCTION) && !(tc)->topStmt)
-
 /*
  * Span-dependent instructions are jumps whose span (from the jump bytecode to
  * the jump target) may require 2 or 4 bytes of immediate operand.

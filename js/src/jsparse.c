@@ -691,6 +691,7 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
 {
     JSStackFrame *fp, frame;
     JSObject *funobj;
+    JSStmtInfo stmtInfo;
     uintN oldflags;
     JSParseNode *pn;
 
@@ -707,10 +708,14 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
         cx->fp = &frame;
     }
 
+    js_PushStatement(tc, &stmtInfo, STMT_BLOCK, -1);
+
     oldflags = tc->flags;
     tc->flags &= ~(TCF_RETURN_EXPR | TCF_RETURN_VOID);
     tc->flags |= TCF_IN_FUNCTION;
     pn = Statements(cx, ts, tc);
+
+    js_PopStatement(tc);
 
     /* Check for falling off the end of a function that returns a value. */
     if (pn && JS_HAS_STRICT_OPTION(cx) && (tc->flags & TCF_RETURN_EXPR)) {
@@ -1119,7 +1124,7 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         ts->flags |= TSF_OPERAND;
 
         /* If compiling top-level statements, emit as we go to save space. */
-        if (TREE_CONTEXT_AT_TOP_LEVEL(tc) && (tc->flags & TCF_COMPILING)) {
+        if (!tc->topStmt && (tc->flags & TCF_COMPILING)) {
             if (cx->fp->fun &&
                 JS_HAS_STRICT_OPTION(cx) &&
                 (tc->flags & TCF_RETURN_EXPR)) {
@@ -2888,45 +2893,43 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             if (!pn)
                 return NULL;
         } else {
-            if (TREE_CONTEXT_AT_TOP_LEVEL(tc)) {
-                /*
-                 * XXX This is a hard case that requires more work. In
-                 * particular, in many cases, we're trying to emit code as we
-                 * go. However, this means that we haven't necessarily
-                 * finished processing all let declarations in the implicit
-                 * top-level block when we emit a reference to one of them.
-                 * For now, punt on this and pretend this is a var
-                 * declaration.
-                 */
-                CURRENT_TOKEN(ts).type = TOK_VAR;
-                CURRENT_TOKEN(ts).t_op = JSOP_DEFVAR;
-
-                pn = Variables(cx, ts, tc);
-                if (!pn)
-                    return NULL;
-                pn->pn_extra |= PNX_POPVAR;
-                break;
-            }
-
             /* Set up the block object. */
             stmt = FindBlockStatement(tc);
             if (stmt && stmt->type == STMT_BLOCK_SCOPE) {
                 JS_ASSERT(stmt->blockObj);
                 obj = stmt->blockObj;
             } else {
-                obj = js_NewBlockObject(cx);
-                if (!obj)
-                    return NULL;
-
                 if (stmt) {
                     /* Convert the block statement into a scope statement. */
+                    obj = js_NewBlockObject(cx);
+                    if (!obj)
+                        return NULL;
                     JS_ASSERT(stmt->type == STMT_BLOCK);
+                    JS_ASSERT(stmt->downScope == NULL);
                     stmt->type = STMT_BLOCK_SCOPE;
+                    stmt->downScope = tc->topScopeStmt;
+                    tc->topScopeStmt = stmt;
                     obj->slots[JSSLOT_PARENT] =
                         OBJECT_TO_JSVAL(tc->blockChain);
                     tc->blockChain = stmt->blockObj = obj;
                 } else {
-                    js_PushBlockScope(tc, &stmtInfo, obj, -1);
+                    /*
+                     * XXX This is a hard case that requires more work. In
+                     * particular, in many cases, we're trying to emit code as
+                     * we go. However, this means that we haven't necessarily
+                     * finished processing all let declarations in the
+                     * implicit top-level block when we emit a reference to
+                     * one of them.  For now, punt on this and pretend this is
+                     * a var declaration.
+                     */
+                    CURRENT_TOKEN(ts).type = TOK_VAR;
+                    CURRENT_TOKEN(ts).t_op = JSOP_DEFVAR;
+
+                    pn = Variables(cx, ts, tc);
+                    if (!pn)
+                        return NULL;
+                    pn->pn_extra |= PNX_POPVAR;
+                    break;
                 }
             }
 
