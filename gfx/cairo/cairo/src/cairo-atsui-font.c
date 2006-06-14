@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "cairo-atsui.h"
+#include "cairo-quartz.h"
 #include "cairoint.h"
 #include "cairo.h"
 
@@ -467,7 +468,8 @@ _cairo_atsui_font_show_glyphs(void *abstract_font,
                                             destImageSurface->depth / 4,
                                             destImageSurface->stride,
                                             colorSpace,
-                                            kCGImageAlphaPremultipliedFirst);
+                                            kCGImageAlphaPremultipliedFirst |
+                                            kCGBitmapByteOrder32Host);
     CGContextTranslateCTM(myBitmapContext, 0, destImageSurface->height);
     CGContextScaleCTM(myBitmapContext, 1.0f, -1.0f);
 
