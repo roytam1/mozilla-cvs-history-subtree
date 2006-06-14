@@ -1822,6 +1822,9 @@ restart:
                 GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");
             }
         }
+
+        if (acx->sharpObjectMap.depth > 0)
+            js_GCMarkSharpMap(cx, &acx->sharpObjectMap);
     }
 #ifdef DUMP_CALL_TABLE
     js_DumpCallTable(cx);
