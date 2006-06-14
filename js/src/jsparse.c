@@ -1343,7 +1343,6 @@ typedef struct BindVarArgs {
         } var;
         struct {
             jsuint          index;
-            JSBool          allowDup;
             uintN           overflowError;
         } let;
     } u;
@@ -1369,14 +1368,12 @@ DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args)
         JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
         JS_ASSERT((uint16)sprop->shortid < args->u.let.index);
         OBJ_DROP_PROPERTY(cx, blockObj, (JSProperty *) sprop);
-        if (args->u.let.allowDup)
-            return JS_TRUE;
 
         name = js_AtomToPrintableString(cx, atom);
         if (name) {
             js_ReportCompileErrorNumber(cx, args->ts,
                                         JSREPORT_TS | JSREPORT_ERROR,
-                                        JSMSG_REDECLARED_VAR, js_let_str,
+                                        JSMSG_REDECLARED_VAR, "variable",
                                         name);
         }
         return JS_FALSE;
@@ -3155,7 +3152,6 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     } else {
         args.obj = tc->topScopeStmt->blockObj;
         args.u.let.index = 0;
-        args.u.let.allowDup = JS_FALSE;
         args.u.let.overflowError = JSMSG_TOO_MANY_FUN_VARS;
     }
 
@@ -4794,7 +4790,6 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 args.let = JS_TRUE;
                 args.op = JSOP_NOP;
                 args.u.let.index = 0;
-                args.u.let.allowDup = JS_TRUE;
                 args.u.let.overflowError = JSMSG_ARRAY_INIT_TOO_BIG;
 
                 do {
