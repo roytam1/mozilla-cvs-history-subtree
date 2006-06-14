@@ -3486,6 +3486,7 @@ BOOL nsWindow::OnKeyDown(UINT aVirtualKeyCode, UINT aScanCode, LPARAM aKeyData)
 
   PRUint32 extraFlags = (noDefault ? NS_EVENT_FLAG_NO_DEFAULT : 0);
 
+  PRBool dispatchAsciiKeyPressEvent = PR_TRUE;
   MSG msg;
   BOOL gotMsg = nsToolkit::mPeekMessage(&msg, mWnd, WM_KEYFIRST, WM_KEYLAST, PM_NOREMOVE | PM_NOYIELD);
   // Enter and backspace are always handled here to avoid for example the
@@ -3545,6 +3546,11 @@ BOOL nsWindow::OnKeyDown(UINT aVirtualKeyCode, UINT aScanCode, LPARAM aKeyData)
 #endif
     return OnChar(msg.wParam, extraFlags);
   }
+  else if (!mIsControlDown && !mIsAltDown) {
+    // This is not normal key down event if the inputting character
+    // is ASCII character. If so, we should not send the KeyPress event.
+    dispatchAsciiKeyPressEvent = PR_FALSE;
+  }
 
   WORD asciiKey = 0;
 
@@ -3583,6 +3589,9 @@ BOOL nsWindow::OnKeyDown(UINT aVirtualKeyCode, UINT aScanCode, LPARAM aKeyData)
         }
       }
   }
+
+  if (asciiKey && !dispatchAsciiKeyPressEvent)
+    return noDefault;
 
   if (asciiKey)
     DispatchKeyEvent(NS_KEY_PRESS, asciiKey, 0, aKeyData, extraFlags);
