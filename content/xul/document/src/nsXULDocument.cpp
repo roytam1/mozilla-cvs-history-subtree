@@ -1624,7 +1624,11 @@ nsXULDocument::GetPixelDimensions(nsIPresShell* aShell, PRInt32* aWidth,
 
     FlushPendingNotifications(Flush_Layout);
 
-    result = aShell->GetPrimaryFrameFor(mRootContent, &frame);
+    if (mRootContent) {
+        result = aShell->GetPrimaryFrameFor(mRootContent, &frame);
+    } else {
+        frame = nsnull;
+    }
     if (NS_SUCCEEDED(result) && frame) {
         nsIView* view = frame->GetView();
         // If we have a view check if it's scrollable. If not,
@@ -3306,7 +3310,10 @@ nsXULDocument::ResumeWalk()
         mDocumentLoaded = PR_TRUE;
 
         nsAutoString title;
-        mRootContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::title, title);
+        if (mRootContent) {
+            mRootContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::title,
+                                  title);
+        }
         SetTitle(title);
 
         StartLayout();
@@ -3964,6 +3971,10 @@ nsXULDocument::OverlayForwardReference::Resolve()
 
     if (id.IsEmpty()) {
         // overlay had no id, use the root element
+        if (!mDocument->mRootContent) {
+            return eResolve_Error;
+        }
+
         mDocument->InsertElement(mDocument->mRootContent, mOverlay, notify);
         mResolved = PR_TRUE;
         return eResolve_Succeeded;
