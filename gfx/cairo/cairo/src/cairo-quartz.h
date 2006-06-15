@@ -43,6 +43,12 @@
 
 #include <Carbon/Carbon.h>
 
+/* kCGBitmapByteOrder32Host was introduced in the 10.4 SDK.  If the constant
+ * isn't available, use 0, corresponding to kCGBitmapByteOrderDefault. */
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4
+#define kCGBitmapByteOrder32Host 0
+#endif
+
 CAIRO_BEGIN_DECLS
 
 cairo_surface_t *
