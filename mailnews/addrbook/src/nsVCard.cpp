@@ -944,7 +944,7 @@ static char * lexGetDataFromBase64()
 		b = 62;
 	    else if (c == '/')
 		b = 63;
-	    else if (c == '=') {
+      else if (c == '=' && (quadIx == 2 || quadIx == 3)) {
 		b = 0;
 		pad++;
 	    } else if ((c == ' ') || (c == '\t')) {
@@ -998,6 +998,7 @@ static char * lexGetDataFromBase64()
 		}
 		trip = 0;
 		quadIx = 0;
+        pad = 0;
 		}
 	    }
 	} /* while */
