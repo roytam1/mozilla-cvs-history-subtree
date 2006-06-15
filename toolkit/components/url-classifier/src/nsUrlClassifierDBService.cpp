@@ -53,11 +53,13 @@
 #include "nsToolkitCompsCID.h"
 #include "nsUrlClassifierDBService.h"
 #include "nsString.h"
+#include "nsTArray.h"
 #include "plevent.h"
 #include "prlog.h"
 #include "prmon.h"
 #include "prthread.h"
 
+// NSPR_LOG_MODULES=UrlClassifierDbService:5
 #if defined(PR_LOGGING)
 static const PRLogModuleInfo *gUrlClassifierDbServiceLog = nsnull;
 #define LOG(args) PR_LOG(gUrlClassifierDbServiceLog, PR_LOG_DEBUG, args)
@@ -173,13 +175,25 @@ private:
   // to be created in the background thread (currently mozStorageConnection
   // isn't thread safe).
   mozIStorageConnection* mConnection;
+
+  // True if we're in the middle of a streaming update.
+  PRBool mHasPendingUpdate;
+
+  // For incremental updates, keep track of tables that have been updated.
+  // When finish() is called, we go ahead and pass these update lines to
+  // the callback.
+  nsTArray<nsCString> mTableUpdateLines;
+
+  // We receive data in small chunks that may be broken in the middle of
+  // a line.  So we save the last partial line here.
+  nsCString mPendingStreamUpdate;
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsUrlClassifierDBServiceWorker,
                               nsIUrlClassifierDBServiceWorker)
 
 nsUrlClassifierDBServiceWorker::nsUrlClassifierDBServiceWorker()
-  : mConnection(nsnull)
+  : mConnection(nsnull), mHasPendingUpdate(PR_FALSE), mTableUpdateLines()
 {
 }
 nsUrlClassifierDBServiceWorker::~nsUrlClassifierDBServiceWorker()
@@ -194,7 +208,8 @@ nsUrlClassifierDBServiceWorker::~nsUrlClassifierDBServiceWorker()
 NS_IMETHODIMP
 nsUrlClassifierDBServiceWorker::Exists(const nsACString& tableName,
                                        const nsACString& key,
-                                       nsIUrlClassifierCallback *c) {
+                                       nsIUrlClassifierCallback *c)
+{
   LOG(("Exists\n"));
 
   nsresult rv = OpenDb();
@@ -238,7 +253,8 @@ nsUrlClassifierDBServiceWorker::Exists(const nsACString& tableName,
 // we call the callback with the table line.
 NS_IMETHODIMP
 nsUrlClassifierDBServiceWorker::UpdateTables(const nsACString& updateString,
-                                             nsIUrlClassifierCallback *c) {
+                                             nsIUrlClassifierCallback *c)
+{
   LOG(("Updating tables\n"));
 
   nsresult rv = OpenDb();
@@ -275,11 +291,14 @@ nsUrlClassifierDBServiceWorker::UpdateTables(const nsACString& updateString,
                            getter_AddRefs(deleteStatement));
       NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "malformed table line");
       if (NS_SUCCEEDED(rv)) {
-        // If it's a new table, we must have completed the last table.
-        // Go ahead and post the completion to the UI thread.
-        // XXX This shouldn't happen before we commit the transaction.
-        if (lastTableLine.Length() > 0)
+        // If it's a new table, we may have completed a table.
+        // Go ahead and post the completion to the UI thread and db.
+        if (lastTableLine.Length() > 0) {
+          mConnection->CommitTransaction();
           c->HandleEvent(lastTableLine);
+
+          mConnection->BeginTransaction();
+        }
         lastTableLine.Assign(line);
       }
     } else {
@@ -297,6 +316,109 @@ nsUrlClassifierDBServiceWorker::UpdateTables(const nsACString& updateString,
   if (lastTableLine.Length() > 0)
     c->HandleEvent(lastTableLine);
   LOG(("Finishing table update\n"));
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBServiceWorker::Update(const nsACString& chunk)
+{
+  LOG(("Update from Stream."));
+  nsresult rv = OpenDb();
+  if (NS_FAILED(rv)) {
+    NS_ERROR("Unable to open database");
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCAutoString updateString(mPendingStreamUpdate);
+  updateString.Append(chunk);
+  
+  nsCOMPtr<mozIStorageStatement> updateStatement;
+  nsCOMPtr<mozIStorageStatement> deleteStatement;
+  nsCAutoString dbTableName;
+
+  // If we're not in the middle of an update, we start a new transaction.
+  // Otherwise, we need to pick up where we left off.
+  if (!mHasPendingUpdate) {
+    mConnection->BeginTransaction();
+    mHasPendingUpdate = PR_TRUE;
+  } else {
+    PRUint32 numTables = mTableUpdateLines.Length();
+    if (numTables > 0) {
+      const nsDependentCSubstring &line = Substring(
+              mTableUpdateLines[numTables - 1], 0);
+
+      rv = ProcessNewTable(line, &dbTableName,
+                           getter_AddRefs(updateStatement),
+                           getter_AddRefs(deleteStatement));
+      NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "malformed table line");
+    }
+  }
+
+  PRUint32 cur = 0;
+  PRInt32 next;
+  while(cur < updateString.Length() &&
+        (next = updateString.FindChar('\n', cur)) != kNotFound) {
+    const nsDependentCSubstring &line = Substring(updateString,
+                                                  cur, next - cur);
+    cur = next + 1; // prepare for next run
+
+    // Skip blank lines
+    if (line.Length() == 0)
+      continue;
+
+    if ('[' == line[0]) {
+      rv = ProcessNewTable(line, &dbTableName,
+                           getter_AddRefs(updateStatement),
+                           getter_AddRefs(deleteStatement));
+      NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "malformed table line");
+      if (NS_SUCCEEDED(rv)) {
+        // Add the line to our array of table lines.
+        mTableUpdateLines.AppendElement(line);
+      }
+    } else {
+      rv = ProcessUpdateTable(line, dbTableName, updateStatement,
+                              deleteStatement);
+      NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "malformed update line");
+    }
+  }
+  // Save the remaining string fragment.
+  mPendingStreamUpdate = Substring(updateString, cur);
+  LOG(("pending stream update: %s", mPendingStreamUpdate.get()));
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBServiceWorker::Finish(nsIUrlClassifierCallback *c)
+{
+  if (!mHasPendingUpdate)
+    return NS_OK;
+
+  LOG(("Finish, committing transaction"));
+  mConnection->CommitTransaction();
+
+  for (PRUint32 i = 0; i < mTableUpdateLines.Length(); ++i) {
+    c->HandleEvent(mTableUpdateLines[i]);
+  }
+  mTableUpdateLines.Clear();
+  mPendingStreamUpdate.Truncate();
+  mHasPendingUpdate = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBServiceWorker::CancelStream()
+{
+  if (!mHasPendingUpdate)
+    return NS_OK;
+
+  LOG(("CancelStream, rolling back transaction"));
+  mConnection->RollbackTransaction();
+
+  mTableUpdateLines.Clear();
+  mPendingStreamUpdate.Truncate();
+  mHasPendingUpdate = PR_FALSE;
+  
   return NS_OK;
 }
 
@@ -431,7 +553,8 @@ nsUrlClassifierDBServiceWorker::OpenDb()
 }
 
 nsresult
-nsUrlClassifierDBServiceWorker::MaybeCreateTable(const nsCString& aTableName) {
+nsUrlClassifierDBServiceWorker::MaybeCreateTable(const nsCString& aTableName)
+{
   LOG(("MaybeCreateTable %s\n", aTableName.get()));
 
   nsCOMPtr<mozIStorageStatement> createStatement;
@@ -448,7 +571,8 @@ nsUrlClassifierDBServiceWorker::MaybeCreateTable(const nsCString& aTableName) {
 
 void
 nsUrlClassifierDBServiceWorker::GetDbTableName(const nsACString& aTableName,
-                                               nsCString* aDbTableName) {
+                                               nsCString* aDbTableName)
+{
   aDbTableName->Assign(aTableName);
   aDbTableName->ReplaceChar('-', '_');
 }
@@ -601,6 +725,75 @@ nsUrlClassifierDBService::UpdateTables(const nsACString& updateString,
   NS_ENSURE_SUCCESS(rv, rv);
 
   return proxy->UpdateTables(updateString, proxyCallback);
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBService::Update(const nsACString& aUpdateChunk)
+{
+  EnsureThreadStarted();
+
+  nsresult rv;
+
+  // The actual worker uses the background thread.
+  nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
+  rv = NS_GetProxyForObject(gEventQ,
+                            NS_GET_IID(nsIUrlClassifierDBServiceWorker),
+                            mWorker,
+                            PROXY_ASYNC,
+                            getter_AddRefs(proxy));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return proxy->Update(aUpdateChunk);
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBService::Finish(nsIUrlClassifierCallback *c)
+{
+  EnsureThreadStarted();
+
+  nsCOMPtr<nsIUrlClassifierCallback> wrapper =
+      new nsUrlClassifierCallbackWrapper(c);
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
+
+  nsresult rv;
+  // The proxy callback uses the current thread.
+  nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
+  rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+                            NS_GET_IID(nsIUrlClassifierCallback),
+                            wrapper,
+                            PROXY_ASYNC,
+                            getter_AddRefs(proxyCallback));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // The actual worker uses the background thread.
+  nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
+  rv = NS_GetProxyForObject(gEventQ,
+                            NS_GET_IID(nsIUrlClassifierDBServiceWorker),
+                            mWorker,
+                            PROXY_ASYNC,
+                            getter_AddRefs(proxy));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return proxy->Finish(proxyCallback);
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBService::CancelStream()
+{
+  EnsureThreadStarted();
+
+  nsresult rv;
+
+  // The actual worker uses the background thread.
+  nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
+  rv = NS_GetProxyForObject(gEventQ,
+                            NS_GET_IID(nsIUrlClassifierDBServiceWorker),
+                            mWorker,
+                            PROXY_ASYNC,
+                            getter_AddRefs(proxy));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return proxy->CancelStream();
 }
 
 NS_IMETHODIMP
