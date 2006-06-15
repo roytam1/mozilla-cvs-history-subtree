@@ -56,7 +56,6 @@
 #include "nsIIOService.h"
 #include "nsICacheService.h"
 #include "nsICacheSession.h"
-#include "nsITransactionManager.h"
 #include "nsIPrefBranch.h"
 #include "nsICharsetResolver.h"
 
@@ -86,7 +85,6 @@ protected:
     nsCOMPtr<nsIIOService>          mNetService;
     nsCOMPtr<nsICacheService>       mCacheService;
     nsCOMPtr<nsICacheSession>       mCacheSession;
-    nsCOMPtr<nsITransactionManager> mTransactionManager;
 
     PRUint32      htmlSize;
     PRInt32       mUpdateBatchNest;
