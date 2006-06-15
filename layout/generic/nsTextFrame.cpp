@@ -6003,6 +6003,7 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
     wordLen = (mState & NS_FRAME_IS_BIDI) ? mContentOffset + mContentLength : -1;
 #endif // IBMBIDI
     PRBool isWhitespace, wasTransformed;
+    // XXX Should fix this to use something better than GetNextWord!
     // XXX Is !aData->skipWhitespace the right criterion for when the
     // text transformer should capitalize the first letter?
     bp2 = tx.GetNextWord(!aData->skipWhitespace, &wordLen, &contentLen,
