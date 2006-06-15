@@ -390,6 +390,11 @@ nsGlobalWindow::~nsGlobalWindow()
       PR_REMOVE_AND_INIT_LINK(w);
     }
   } else {
+    if (mListenerManager) {
+      mListenerManager->Disconnect();
+      mListenerManager = nsnull;
+    }
+
     // An inner window is destroyed, pull it out of the outer window's
     // list if inner windows.
 
@@ -495,7 +500,7 @@ nsGlobalWindow::FreeInnerObjects(JSContext *cx)
   mChromeEventHandler = nsnull;
 
   if (mListenerManager) {
-    mListenerManager->RemoveAllListeners(PR_FALSE);
+    mListenerManager->Disconnect();
     mListenerManager = nsnull;
   }
 
@@ -534,6 +539,7 @@ NS_INTERFACE_MAP_BEGIN(nsGlobalWindow)
   NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventReceiver)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMGCParticipant)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3EventTarget)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSEventTarget)
@@ -1033,7 +1039,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       }
 
       if (aRemoveEventListeners && currentInner->mListenerManager) {
-        currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
+        currentInner->mListenerManager->Disconnect();
         currentInner->mListenerManager = nsnull;
       }
 
@@ -5249,6 +5255,8 @@ nsGlobalWindow::GetListenerManager(nsIEventListenerManager **aResult)
 
     mListenerManager = do_CreateInstance(kEventListenerManagerCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
+    mListenerManager->SetListenerTarget(
+      NS_STATIC_CAST(nsIDOMEventReceiver*, this));
   }
 
   NS_ADDREF(*aResult = mListenerManager);
@@ -5271,6 +5279,37 @@ nsGlobalWindow::GetSystemEventGroup(nsIDOMEventGroup **aGroup)
     return manager->GetSystemEventGroupLM(aGroup);
   }
   return NS_ERROR_FAILURE;
+}
+
+//*****************************************************************************
+// nsGlobalWindow::nsIDOMGCParticipant
+//*****************************************************************************
+
+nsIDOMGCParticipant*
+nsGlobalWindow::GetSCCIndex()
+{
+  return this;
+}
+
+static void AppendToReachableList(nsISupports *aObject,
+                                  nsCOMArray<nsIDOMGCParticipant>& aArray)
+{
+  nsCOMPtr<nsIDOMGCParticipant> p = do_QueryInterface(aObject);
+  if (p)
+    aArray.AppendObject(p);
+}
+
+void
+nsGlobalWindow::AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray)
+{
+  AppendToReachableList(mChromeEventHandler, aArray);
+  AppendToReachableList(mDocument, aArray);
+  // XXXldb Do we want this to go both ways?
+  if (IsOuterWindow()) {
+    AppendToReachableList(mInnerWindow, aArray);
+  } else {
+    AppendToReachableList(mOuterWindow, aArray);
+  }
 }
 
 //*****************************************************************************

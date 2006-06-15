@@ -374,6 +374,7 @@ nsHTMLInputElement::nsHTMLInputElement(nsINodeInfo *aNodeInfo,
 
 nsHTMLInputElement::~nsHTMLInputElement()
 {
+  DestroyImageLoadingContent();
   if (mValue) {
     nsMemory::Free(mValue);
   }
@@ -396,6 +397,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLInputElement,
   NS_INTERFACE_MAP_ENTRY(nsIRadioControlElement)
   NS_INTERFACE_MAP_ENTRY(nsIPhonetic)
   NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver)
+  NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIImageLoadingContent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSEditableElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLInputElement)

@@ -835,18 +835,16 @@ nsGenericElement::Shutdown()
 
     // See comment above.
 
-    // Copy the ops out of the hash table
-    PLDHashTableOps hash_table_ops = *sEventListenerManagersHash.ops;
+    // However, we have to handle this table differently.  If it still
+    // has entries, we want to leak it too, so that we can keep it alive
+    // in case any elements are destroyed.  Because if they are, we need
+    // their event listener managers to be destroyed too, or otherwise
+    // it could leave dangling references in DOMClassInfo's preserved
+    // wrapper table.
 
-    // Set the clearEntry hook to be a nop
-    hash_table_ops.clearEntry = NopClearEntry;
-
-    // Set the ops in the hash table to be the new ops
-    sEventListenerManagersHash.ops = &hash_table_ops;
-
-    PL_DHashTableFinish(&sEventListenerManagersHash);
-
-    sEventListenerManagersHash.ops = nsnull;
+    if (sEventListenerManagersHash.entryCount == 0) {
+      PL_DHashTableFinish(&sEventListenerManagersHash);
+    }
   }
 }
 
@@ -899,7 +897,7 @@ nsGenericElement::~nsGenericElement()
       // modification of sEventListenerManagersHash.  See bug 334177.
       PL_DHashTableRawRemove(&sEventListenerManagersHash, entry);
       if (listenerManager) {
-        listenerManager->SetListenerTarget(nsnull);
+        listenerManager->Disconnect();
       }
     }
   }
@@ -1007,6 +1005,46 @@ nsGenericElement::InitHashes()
   }
 
   return NS_OK;
+}
+
+/**
+ * During the Mark phase of the GC, we need to mark all of the preserved
+ * wrappers that are reachable via DOM APIs.  Since reachability for DOM
+ * nodes is symmetric, if one DOM node is reachable from another via DOM
+ * APIs, then they are in the same strongly connected component.
+ * (Strongly connected components are never reachable from each other
+ * via DOM APIs.)  We can refer to each strongly connected component by
+ * walking up to the top of the parent chain.  This function finds that
+ * root node for any DOM node.
+ */
+nsIDOMGCParticipant*
+nsGenericElement::GetSCCIndex()
+{
+  // This is an optimized way of walking nsIDOMNode::GetParentNode to
+  // the top of the tree.
+  nsCOMPtr<nsIDOMGCParticipant> result = do_QueryInterface(GetCurrentDoc());
+  if (!result) {
+    nsIContent *top = this;
+    while (top->GetParent())
+      top = top->GetParent();
+    result = do_QueryInterface(top);
+  }
+
+  return result;
+}
+
+void
+nsGenericElement::AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray)
+{
+  NS_ASSERTION(GetCurrentDoc() == nsnull,
+               "shouldn't be an SCC index if we're in a doc");
+
+  // This node is the root of a subtree that's been removed from the
+  // document (since AppendReachableList is only called on SCC index
+  // nodes).  The document is reachable from it (through
+  // .ownerDocument), but it's not reachable from the document.
+  nsCOMPtr<nsIDOMGCParticipant> participant = do_QueryInterface(GetOwnerDoc());
+  aArray.AppendObject(participant);
 }
 
 NS_IMETHODIMP
@@ -3610,6 +3648,7 @@ nsGenericElement::RemoveChild(nsIDOMNode *aOldChild, nsIDOMNode **aReturn)
 NS_INTERFACE_MAP_BEGIN(nsGenericElement)
   NS_INTERFACE_MAP_ENTRY(nsIContent)
   NS_INTERFACE_MAP_ENTRY(nsIStyledContent)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMGCParticipant)
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, new nsNode3Tearoff(this))
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOMEventReceiver,
                                  nsDOMEventRTTearoff::Create(this))

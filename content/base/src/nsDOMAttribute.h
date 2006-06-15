@@ -71,7 +71,8 @@ protected:
 // object that implements nsIDOMAttr and nsIDOMNode
 class nsDOMAttribute : public nsIDOMAttr,
                        public nsIDOM3Node,
-                       public nsIAttribute
+                       public nsIAttribute,
+                       public nsIDOMGCParticipant
 {
 public:
   nsDOMAttribute(nsDOMAttributeMap* aAttrMap, nsINodeInfo *aNodeInfo,
@@ -79,6 +80,10 @@ public:
   virtual ~nsDOMAttribute();
 
   NS_DECL_ISUPPORTS
+
+  // nsIDOMGCParticipant interface methods
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
 
   // nsIDOMNode interface
   NS_DECL_NSIDOMNODE

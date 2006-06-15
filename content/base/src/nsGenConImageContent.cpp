@@ -56,17 +56,23 @@ public:
 
   nsresult Init(imgIRequest* aImageRequest)
   {
-    return aImageRequest->Clone(this, getter_AddRefs(mCurrentRequest));
+    PreserveLoadHandlers();
+    nsresult rv = aImageRequest->Clone(this, getter_AddRefs(mCurrentRequest));
+    if (NS_FAILED(rv))
+      UnpreserveLoadHandlers();
+    return rv;
   }
 private:
-  ~nsGenConImageContent() {}
+  virtual ~nsGenConImageContent();
 
 public:
   NS_DECL_ISUPPORTS_INHERITED
 };
 
-NS_IMPL_ISUPPORTS_INHERITED2(nsGenConImageContent, nsXMLElement,
-                             nsIImageLoadingContent, imgIDecoderObserver)
+NS_IMPL_ISUPPORTS_INHERITED3(nsGenConImageContent, nsXMLElement,
+                             nsIImageLoadingContent,
+                             imgIDecoderObserver,
+                             imgIDecoderObserver_MOZILLA_1_8_BRANCH)
 
 nsresult
 NS_NewGenConImageContent(nsIContent** aResult, nsINodeInfo* aNodeInfo,
@@ -80,4 +86,9 @@ NS_NewGenConImageContent(nsIContent** aResult, nsINodeInfo* aNodeInfo,
   if (NS_FAILED(rv))
     NS_RELEASE(*aResult);
   return rv;
+}
+
+nsGenConImageContent::~nsGenConImageContent()
+{
+  DestroyImageLoadingContent();
 }

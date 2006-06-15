@@ -41,6 +41,7 @@
 #include "nsAutoPtr.h"
 #include "nsCRT.h"
 #include "nsIDocument.h"
+#include "nsIDOMGCParticipant.h"
 #include "nsWeakReference.h"
 #include "nsWeakPtr.h"
 #include "nsVoidArray.h"
@@ -291,7 +292,8 @@ class nsDocument : public nsIDocument,
                    public nsIDOM3EventTarget,
                    public nsIDOMNSEventTarget,
                    public nsIScriptObjectPrincipal,
-                   public nsIRadioGroupContainer
+                   public nsIRadioGroupContainer,
+                   public nsIDOMGCParticipant
 {
 public:
   NS_DECL_ISUPPORTS
@@ -549,6 +551,10 @@ public:
   // for radio group
   nsresult GetRadioGroup(const nsAString& aName,
                          nsRadioGroupStruct **aRadioGroup);
+
+  // nsIDOMGCParticipant interface methods
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
 
   // nsIDOMNode
   NS_DECL_NSIDOMNODE

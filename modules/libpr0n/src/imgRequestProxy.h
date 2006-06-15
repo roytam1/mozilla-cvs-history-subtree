@@ -71,7 +71,9 @@ public:
   imgRequestProxy();
   virtual ~imgRequestProxy();
 
-  /* additional members */
+  // Callers to Init or ChangeOwner are required to call
+  // NotifyProxyListener on the request after (although not immediately
+  // after) doing so.
   nsresult Init(imgRequest *request, nsILoadGroup *aLoadGroup, imgIDecoderObserver *aObserver);
   nsresult ChangeOwner(imgRequest *aNewOwner); // this will change mOwner.  Do not call this if the previous
                                                // owner has already sent notifications out!
@@ -83,7 +85,7 @@ protected:
   friend class imgRequest;
 
   /* non-virtual imgIDecoderObserver methods */
-  void OnStartDecode   (void);
+  void OnStartDecode   ();
   void OnStartContainer(imgIContainer *aContainer);
   void OnStartFrame    (gfxIImageFrame *aFrame);
   void OnDataAvailable (gfxIImageFrame *aFrame, const nsIntRect * aRect);
@@ -94,9 +96,9 @@ protected:
   /* non-virtual imgIContainerObserver methods */
   void FrameChanged(imgIContainer *aContainer, gfxIImageFrame *aFrame, nsIntRect * aDirtyRect);
 
-  /* non-virtual nsIRequestObserver methods */
+  /* non-virtual nsIRequestObserver (plus some) methods */
   void OnStartRequest(nsIRequest *request, nsISupports *ctxt);
-  void OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode); 
+  void OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode, PRBool aLastPart); 
 
   inline PRBool HasObserver() const {
     return mListener != nsnull;

@@ -38,9 +38,9 @@
 #ifndef nsIDOMGCParticipant_h_
 #define nsIDOMGCParticipant_h_
 
+#include "nscore.h"
 #include "nsISupports.h"
-
-template<class E> class nsCOMArray;
+#include "nsCOMArray.h"
 
 // 0e2a5a8d-28fd-4a5c-8bf1-5b0067ff3286
 #define NS_IDOMGCPARTICIPANT_IID \
@@ -62,7 +62,7 @@ template<class E> class nsCOMArray;
 class nsIDOMGCParticipant : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOMGCPARTICIPANT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMGCPARTICIPANT_IID)
 
   /**
    * Get a reference node for what is known to be a strongly connected
@@ -89,7 +89,5 @@ public:
    */
   virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDOMGCParticipant, NS_IDOMGCPARTICIPANT_IID)
 
 #endif // !defined(nsIDOMGCParticipant_h_)

@@ -50,6 +50,11 @@ interface gfxIImageFrame;
 /**
  * imgIDecoderObserver interface
  *
+ * This interface is used both for observing imgIDecoder objects and for
+ * observing imgIRequest objects.  In the former case, aRequest is
+ * always null.
+ * XXXldb The two functions should probably be split.
+ *
  * @author Stuart Parmenter <pavlov@netscape.com>
  * @version 0.1
  * @see imagelib2
@@ -93,4 +98,28 @@ interface imgIDecoderObserver : imgIContainerObserver
   void onStopDecode(in imgIRequest aRequest, in nsresult status,
                     in wstring statusArg);
 
+};
+
+[scriptable, uuid(d3ab9070-b5d2-410f-977d-36b1788de1e5)]
+interface imgIDecoderObserver_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * called at the same time that nsIRequestObserver::onStartRequest would be
+   * (used only for observers of imgIRequest objects, which are nsIRequests,
+   * not imgIDecoder objects)
+   *
+   * Unlike nsIRequestObserver::onStartRequest, this can be called
+   * synchronously.
+   */
+  void onStartRequest(in imgIRequest aRequest);
+
+  /**
+   * called at the same time that nsIRequestObserver::onStopRequest would be
+   * (used only for observers of imgIRequest objects, which are nsIRequests,
+   * not imgIDecoder objects)
+   *
+   * Unlike nsIRequestObserver::onStartRequest, this can be called
+   * synchronously.
+   */
+  void onStopRequest(in imgIRequest aRequest, in boolean aIsLastPart);
 };

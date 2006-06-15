@@ -57,10 +57,11 @@ nsXPCWrappedJS::AggregatedQueryInterface(REFNSIID aIID, void** aInstancePtr)
     // to be in QueryInterface before the possible delegation to 'outer', but
     // we don't want to do this check twice in one call in the normal case:
     // once in QueryInterface and once in DelegatedQueryInterface.
-    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)))
+    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)) ||
+       aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH)))
     {
         NS_ADDREF(this);
-        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
+        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH*,this);
         return NS_OK;
     }
 
@@ -81,10 +82,18 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
     // Always check for this first so that our 'outer' can get this interface
     // from us without recurring into a call to the outer's QI!
-    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)))
+    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)) ||
+       aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH)))
     {
         NS_ADDREF(this);
-        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
+        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH*,this);
+        return NS_OK;
+    }
+
+    // This interface is a hack that says "don't AddRef me".
+    if(aIID.Equals(NS_GET_IID(nsWeakRefToIXPConnectWrappedJS)))
+    {
+        *aInstancePtr = NS_STATIC_CAST(nsWeakRefToIXPConnectWrappedJS*, this);
         return NS_OK;
     }
 
@@ -189,10 +198,7 @@ do_decrement:
 NS_IMETHODIMP
 nsXPCWrappedJS::GetWeakReference(nsIWeakReference** aInstancePtr)
 {
-    if(mRoot != this)
-        return mRoot->GetWeakReference(aInstancePtr);
-
-    return nsSupportsWeakReference::GetWeakReference(aInstancePtr);
+    return mRoot->nsSupportsWeakReference::GetWeakReference(aInstancePtr);
 }
 
 NS_IMETHODIMP

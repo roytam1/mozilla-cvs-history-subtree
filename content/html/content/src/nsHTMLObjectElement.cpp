@@ -115,6 +115,7 @@ nsHTMLObjectElement::nsHTMLObjectElement(nsINodeInfo *aNodeInfo,
 
 nsHTMLObjectElement::~nsHTMLObjectElement()
 {
+  DestroyImageLoadingContent();
 }
 
 PRBool
@@ -138,6 +139,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLObjectElement,
                                     nsGenericHTMLFormElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLObjectElement)
   NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver)
+  NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIImageLoadingContent)
   NS_INTERFACE_MAP_ENTRY(nsIPluginElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLObjectElement)

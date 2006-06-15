@@ -38,6 +38,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsImageLoadingContent.h"
+#include "nsAutoPtr.h"
 #include "nsContentErrors.h"
 #include "nsIContent.h"
 #include "nsIDocument.h"
@@ -71,6 +72,7 @@
 #include "nsContentUtils.h"
 #include "nsIContentPolicy.h"
 #include "nsContentPolicyUtils.h"
+#include "nsDOMClassInfo.h"
 
 #ifdef DEBUG_chb
 static void PrintReqURL(imgIRequest* req) {
@@ -96,21 +98,44 @@ static void PrintReqURL(imgIRequest* req) {
 nsImageLoadingContent::nsImageLoadingContent()
   : mObserverList(nsnull),
     mImageBlockingStatus(nsIContentPolicy::ACCEPT),
+    mRootRefCount(0),
     mLoadingEnabled(PR_TRUE)
 {
   if (!nsContentUtils::GetImgLoader())
     mLoadingEnabled = PR_FALSE;
 }
 
-nsImageLoadingContent::~nsImageLoadingContent()
+void
+nsImageLoadingContent::DestroyImageLoadingContent()
 {
   // Cancel our requests so they won't hold stale refs to us
   if (mCurrentRequest) {
     mCurrentRequest->Cancel(NS_ERROR_FAILURE);
+    mCurrentRequest = nsnull;
   }
   if (mPendingRequest) {
     mPendingRequest->Cancel(NS_ERROR_FAILURE);
+    mPendingRequest = nsnull;
   }
+
+  // This can actually fire for multipart/x-mixed-replace, since if the
+  // load is canceled between parts (e.g., by cancelling the load
+  // group), we won't get any notification.  See bug 321054 comment 31
+  // and bug 339610.  *If* that multipart/x-mixed-replace image has
+  // event handlers, we won't even get to this warning; we'll leak
+  // instead.
+  NS_WARN_IF_FALSE(mRootRefCount == 0,
+                   "unbalanced handler preservation refcount");
+  if (mRootRefCount != 0) {
+    mRootRefCount = 1;
+    UnpreserveLoadHandlers();
+  }
+}
+
+nsImageLoadingContent::~nsImageLoadingContent()
+{
+  NS_ASSERTION(!mCurrentRequest && !mPendingRequest,
+               "DestroyImageLoadingContent not called");
   NS_ASSERTION(!mObserverList.mObserver && !mObserverList.mNext,
                "Observers still registered?");
 }
@@ -144,6 +169,12 @@ nsImageLoadingContent::FrameChanged(imgIContainer* aContainer,
 /*
  * imgIDecoderObserver impl
  */
+NS_IMETHODIMP
+nsImageLoadingContent::OnStartRequest(imgIRequest* aRequest)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsImageLoadingContent::OnStartDecode(imgIRequest* aRequest)
 {
@@ -203,15 +234,28 @@ nsImageLoadingContent::OnStopDecode(imgIRequest* aRequest,
 
   if (aRequest == mPendingRequest) {
     mCurrentRequest->Cancel(NS_ERROR_IMAGE_SRC_CHANGED);
-    mCurrentRequest = mPendingRequest;
+    mPendingRequest.swap(mCurrentRequest);
     mPendingRequest = nsnull;
   }
+
+  // XXXldb What's the difference between when OnStopDecode and OnStopRequest
+  // fire?  Should we do this work there instead?  Should they just be the
+  // same?
 
   if (NS_SUCCEEDED(aStatus)) {
     FireEvent(NS_LITERAL_STRING("load"));
   } else {
     FireEvent(NS_LITERAL_STRING("error"));
   }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsImageLoadingContent::OnStopRequest(imgIRequest* aRequest, PRBool aLastPart)
+{
+  if (aLastPart)
+    UnpreserveLoadHandlers();
 
   return NS_OK;
 }
@@ -376,6 +420,8 @@ nsImageLoadingContent::LoadImageWithChannel(nsIChannel* aChannel,
     return NS_OK;
   }
 
+  PreserveLoadHandlers();
+
   // Null out our mCurrentURI, in case we have no image requests right now.
   mCurrentURI = nsnull;
   
@@ -384,7 +430,12 @@ nsImageLoadingContent::LoadImageWithChannel(nsIChannel* aChannel,
 
   nsCOMPtr<imgIRequest> & req = mCurrentRequest ? mPendingRequest : mCurrentRequest;
 
-  return nsContentUtils::GetImgLoader()->LoadImageWithChannel(aChannel, this, doc, aListener, getter_AddRefs(req));
+  nsresult rv = nsContentUtils::GetImgLoader()->LoadImageWithChannel(aChannel, this, doc, aListener, getter_AddRefs(req));
+
+  if (NS_FAILED(rv))
+    UnpreserveLoadHandlers();
+
+  return rv;
 }
 
 // XXX This should be a protected method, not an interface method!!!
@@ -445,7 +496,9 @@ nsImageLoadingContent::ImageURIChanged(const nsAString& aNewURI,
   // the error code from those.
 
   PRInt16 newImageStatus;
-  PRBool loadImage = nsContentUtils::CanLoadImage(imageURI, this, doc,
+  PRBool loadImage = nsContentUtils::CanLoadImage(imageURI,
+                                                  NS_STATIC_CAST(nsIImageLoadingContent*, this),
+                                                  doc,
                                                   &newImageStatus);
   NS_ASSERTION(loadImage || !NS_CP_ACCEPTED(newImageStatus),
                "CanLoadImage lied");
@@ -460,9 +513,11 @@ nsImageLoadingContent::ImageURIChanged(const nsAString& aNewURI,
     return NS_OK;
   }
 
+  PreserveLoadHandlers();
+
   nsCOMPtr<imgIRequest> & req = mCurrentRequest ? mPendingRequest : mCurrentRequest;
 
-  nsCOMPtr<nsIContent> thisContent = do_QueryInterface(this, &rv);
+  nsCOMPtr<nsIContent> thisContent = do_QueryInterface(NS_STATIC_CAST(nsIImageLoadingContent*, this), &rv);
   NS_ENSURE_TRUE(thisContent, rv);
 
   // It may be that one of our frames has replaced itself with alt text... This
@@ -476,6 +531,10 @@ nsImageLoadingContent::ImageURIChanged(const nsAString& aNewURI,
   rv = nsContentUtils::LoadImage(imageURI, doc, doc->GetDocumentURI(),
                                  this, nsIRequest::LOAD_NORMAL,
                                  getter_AddRefs(req));
+  if (NS_FAILED(rv)) {
+    UnpreserveLoadHandlers();
+  }
+
   // If we now have a current request, we don't need to store the URI, since
   // we can get it off the request. Release it.
   if (mCurrentRequest) {
@@ -579,7 +638,7 @@ nsImageLoadingContent::CancelImageRequests(nsresult aReason,
 nsIDocument*
 nsImageLoadingContent::GetOurDocument()
 {
-  nsCOMPtr<nsIContent> thisContent = do_QueryInterface(this);
+  nsCOMPtr<nsIContent> thisContent = do_QueryInterface(NS_STATIC_CAST(nsIImageLoadingContent*, this));
   NS_ENSURE_TRUE(thisContent, nsnull);
 
   return thisContent->GetOwnerDoc();
@@ -594,7 +653,7 @@ nsImageLoadingContent::StringToURI(const nsAString& aSpec,
   NS_PRECONDITION(aURI, "Null out param");
 
   // (1) Get the base URI
-  nsCOMPtr<nsIContent> thisContent = do_QueryInterface(this);
+  nsCOMPtr<nsIContent> thisContent = do_QueryInterface(NS_STATIC_CAST(nsIImageLoadingContent*, this));
   NS_ASSERTION(thisContent, "An image loading content must be an nsIContent");
   nsCOMPtr<nsIURI> baseURL = thisContent->GetBaseURI();
 
@@ -615,25 +674,31 @@ nsImageLoadingContent::StringToURI(const nsAString& aSpec,
  */
 MOZ_DECL_CTOR_COUNTER(ImageEvent)
 
-class ImageEvent : public PLEvent
+class nsImageLoadingContent::Event : public PLEvent
 {
 public:
-  ImageEvent(nsPresContext* aPresContext, nsIContent* aContent,
+  Event(nsPresContext* aPresContext, nsImageLoadingContent* aContent,
              const nsAString& aMessage, nsIDocument* aDocument)
     : mPresContext(aPresContext),
       mContent(aContent),
       mMessage(aMessage),
       mDocument(aDocument)
   {
-    MOZ_COUNT_CTOR(ImageEvent);
+    MOZ_COUNT_CTOR(nsImageLoadingContent::Event);
+    PL_InitEvent(this, aContent, Handle, Destroy);
   }
-  ~ImageEvent()
+  ~Event()
   {
-    MOZ_COUNT_DTOR(ImageEvent);
+    MOZ_COUNT_DTOR(nsImageLoadingContent::Event);
+    mDocument->UnblockOnload();
+    mContent->UnpreserveLoadHandlers();
   }
   
+  PR_STATIC_CALLBACK(void*) Handle(PLEvent* aEvent);
+  PR_STATIC_CALLBACK(void) Destroy(PLEvent* aEvent);
+
   nsCOMPtr<nsPresContext> mPresContext;
-  nsCOMPtr<nsIContent> mContent;
+  nsRefPtr<nsImageLoadingContent> mContent;
   nsString mMessage;
   // Need to hold on to the document in case our event outlives document
   // teardown... Wantto be able to get back to the document even if the
@@ -641,10 +706,11 @@ public:
   nsCOMPtr<nsIDocument> mDocument;
 };
 
-PR_STATIC_CALLBACK(void*)
-HandleImagePLEvent(PLEvent* aEvent)
+/* static */ void * PR_CALLBACK
+nsImageLoadingContent::Event::Handle(PLEvent* aEvent)
 {
-  ImageEvent* evt = NS_STATIC_CAST(ImageEvent*, aEvent);
+  nsImageLoadingContent::Event* evt =
+    NS_STATIC_CAST(nsImageLoadingContent::Event*, aEvent);
   nsEventStatus estatus = nsEventStatus_eIgnore;
   PRUint32 eventMsg;
 
@@ -654,19 +720,20 @@ HandleImagePLEvent(PLEvent* aEvent)
     eventMsg = NS_IMAGE_ERROR;
   }
 
+  nsCOMPtr<nsIContent> ourContent = do_QueryInterface(NS_STATIC_CAST(nsIImageLoadingContent*, evt->mContent));
+
   nsEvent event(PR_TRUE, eventMsg);
-  evt->mContent->HandleDOMEvent(evt->mPresContext, &event, nsnull,
-                                NS_EVENT_FLAG_INIT, &estatus);
+  ourContent->HandleDOMEvent(evt->mPresContext, &event, nsnull,
+                             NS_EVENT_FLAG_INIT, &estatus);
 
   return nsnull;
 }
 
-PR_STATIC_CALLBACK(void)
-DestroyImagePLEvent(PLEvent* aEvent)
+/* static */ void PR_CALLBACK
+nsImageLoadingContent::Event::Destroy(PLEvent* aEvent)
 {
-  ImageEvent* evt = NS_STATIC_CAST(ImageEvent*, aEvent);
-  evt->mDocument->UnblockOnload();
-
+  nsImageLoadingContent::Event* evt =
+    NS_STATIC_CAST(nsImageLoadingContent::Event*, aEvent);
   delete evt;
 }
 
@@ -700,17 +767,14 @@ nsImageLoadingContent::FireEvent(const nsAString& aEventType)
   nsPresContext *presContext = shell->GetPresContext();
   NS_ENSURE_TRUE(presContext, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsIContent> ourContent = do_QueryInterface(this);
-  
-  ImageEvent* evt = new ImageEvent(presContext, ourContent, aEventType, document);
-
+  nsImageLoadingContent::Event* evt =
+    new Event(presContext, this, aEventType, document);
   NS_ENSURE_TRUE(evt, NS_ERROR_OUT_OF_MEMORY);
-
-  PL_InitEvent(evt, this, ::HandleImagePLEvent, ::DestroyImagePLEvent);
 
   // Block onload for our event.  Since we unblock in the event destructor, we
   // want to block now, even if posting will fail.
   document->BlockOnload();
+  PreserveLoadHandlers();
   
   rv = eventQ->PostEvent(evt);
 
@@ -719,4 +783,36 @@ nsImageLoadingContent::FireEvent(const nsAString& aEventType)
   }
 
   return rv;
+}
+
+void
+nsImageLoadingContent::PreserveLoadHandlers()
+{
+  ++mRootRefCount;
+  NS_LOG_ADDREF(&mRootRefCount, mRootRefCount,
+                "nsImageLoadingContent::mRootRefCount", sizeof(mRootRefCount));
+  if (mRootRefCount == 1) {
+    nsCOMPtr<nsIDOMGCParticipant> part = do_QueryInterface(NS_STATIC_CAST(nsIImageLoadingContent*, this));
+    nsresult rv = nsDOMClassInfo::SetExternallyReferenced(part);
+    // The worst that will happen if we ignore this failure is that
+    // onload or onerror will fail to fire.  I suppose we could fire
+    // onerror now as a result of that, but the only reason it would
+    // actually fail is out-of-memory, and it seems silly to bother and
+    // unlikely to work in that case.
+    NS_ASSERTION(NS_SUCCEEDED(rv), "ignoring failure to root participant");
+  }
+}
+
+void
+nsImageLoadingContent::UnpreserveLoadHandlers()
+{
+  NS_ASSERTION(mRootRefCount != 0,
+               "load handler preservation refcount underflow");
+  --mRootRefCount;
+  NS_LOG_RELEASE(&mRootRefCount, mRootRefCount,
+                 "nsImageLoadingContent::mRootRefCount");
+  if (mRootRefCount == 0) {
+    nsCOMPtr<nsIDOMGCParticipant> part = do_QueryInterface(NS_STATIC_CAST(nsIImageLoadingContent*, this));
+    nsDOMClassInfo::UnsetExternallyReferenced(part);
+  }
 }

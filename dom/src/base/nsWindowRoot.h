@@ -52,6 +52,7 @@ class nsIDOMEvent;
 #include "nsIChromeEventHandler.h"
 #include "nsIEventListenerManager.h"
 #include "nsPIWindowRoot.h"
+#include "nsIDOMGCParticipant.h"
 #include "nsIFocusController.h"
 #include "nsIDOMEventTarget.h"
 
@@ -59,7 +60,8 @@ class nsWindowRoot : public nsIDOMEventReceiver,
                      public nsIDOM3EventTarget,
                      public nsIDOMNSEventTarget,
                      public nsIChromeEventHandler,
-                     public nsPIWindowRoot
+                     public nsPIWindowRoot,
+                     public nsIDOMGCParticipant
 {
 public:
   nsWindowRoot(nsIDOMWindow* aWindow);
@@ -79,6 +81,10 @@ public:
   NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
   NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
   NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
+
+  // nsIDOMGCParticipant
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
 
   // nsPIWindowRoot
   NS_IMETHOD GetFocusController(nsIFocusController** aResult);

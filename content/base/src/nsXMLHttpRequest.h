@@ -51,13 +51,15 @@
 #include "nsIStreamListener.h"
 #include "nsIEventQueueService.h"
 #include "nsWeakReference.h"
-#include "nsISupportsArray.h"
 #include "jsapi.h"
 #include "nsIScriptContext.h"
 #include "nsIChannelEventSink.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIHttpHeaderVisitor.h"
 #include "nsIProgressEventSink.h"
+#include "nsJSUtils.h"
+#include "nsTArray.h"
+#include "nsIDOMGCParticipant.h"
 
 #include "nsIDOMLSProgressEvent.h"
 
@@ -69,8 +71,9 @@ class nsXMLHttpRequest : public nsIXMLHttpRequest,
                          public nsIDOMEventTarget,
                          public nsIStreamListener,
                          public nsIChannelEventSink,
-                         public nsIInterfaceRequestor,
                          public nsIProgressEventSink,
+                         public nsIInterfaceRequestor,
+                         public nsIDOMGCParticipant,
                          public nsSupportsWeakReference
 {
 public:
@@ -112,7 +115,14 @@ public:
 
   // nsIInterfaceRequestor
   NS_DECL_NSIINTERFACEREQUESTOR
+
+  // nsIDOMGCParticipant
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
+
 protected:
+  typedef nsMarkedJSFunctionHolder<nsIDOMEventListener> ListenerHolder;
+
   nsresult GetStreamForWString(const PRUnichar* aStr,
                                PRInt32 aLength,
                                nsIInputStream** aStream);
@@ -137,7 +147,8 @@ protected:
   nsIURI *GetBaseURI();
   nsresult CreateEvent(nsEvent* event, nsIDOMEvent** domevent);
   void NotifyEventListeners(nsIDOMEventListener* aHandler,
-                            nsISupportsArray* aListeners, nsIDOMEvent* aEvent);
+                            const nsCOMArray<nsIDOMEventListener>* aListeners,
+                            nsIDOMEvent* aEvent);
   void ClearEventListeners();
   already_AddRefed<nsIHttpChannel> GetCurrentHttpChannel();
 
@@ -146,15 +157,15 @@ protected:
   nsCOMPtr<nsIRequest> mReadRequest;
   nsCOMPtr<nsIDOMDocument> mDocument;
 
-  nsCOMPtr<nsISupportsArray> mLoadEventListeners;
-  nsCOMPtr<nsISupportsArray> mErrorEventListeners;
+  nsTArray<ListenerHolder*> mLoadEventListeners;
+  nsTArray<ListenerHolder*> mErrorEventListeners;
   nsCOMPtr<nsIScriptContext> mScriptContext;
 
-  nsCOMPtr<nsIDOMEventListener> mOnLoadListener;
-  nsCOMPtr<nsIDOMEventListener> mOnErrorListener;
-  nsCOMPtr<nsIDOMEventListener> mOnProgressListener;
+  nsMarkedJSFunctionHolder<nsIDOMEventListener> mOnLoadListener;
+  nsMarkedJSFunctionHolder<nsIDOMEventListener> mOnErrorListener;
+  nsMarkedJSFunctionHolder<nsIDOMEventListener> mOnProgressListener;
 
-  nsCOMPtr<nsIOnReadyStateChangeHandler> mOnReadystatechangeListener;
+  nsMarkedJSFunctionHolder<nsIOnReadyStateChangeHandler> mOnReadystatechangeListener;
 
   nsCOMPtr<nsIStreamListener> mXMLParserStreamListener;
   nsCOMPtr<nsIEventQueueService> mEventQService;

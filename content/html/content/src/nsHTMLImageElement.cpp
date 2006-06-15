@@ -182,6 +182,7 @@ nsHTMLImageElement::nsHTMLImageElement(nsINodeInfo *aNodeInfo)
 
 nsHTMLImageElement::~nsHTMLImageElement()
 {
+  DestroyImageLoadingContent();
 }
 
 
@@ -195,6 +196,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLImageElement, nsGenericHTMLElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLImageElement)
   NS_INTERFACE_MAP_ENTRY(nsIJSNativeInitializer)
   NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver)
+  NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIImageLoadingContent)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLImageElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END

@@ -46,6 +46,7 @@
 #include "nsDOMString.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsCOMArray.h"
 
 //----------------------------------------------------------------------
 PRBool nsDOMAttribute::sInitialized;
@@ -78,6 +79,7 @@ nsDOMAttribute::~nsDOMAttribute()
 NS_INTERFACE_MAP_BEGIN(nsDOMAttribute)
   NS_INTERFACE_MAP_ENTRY(nsIDOMAttr)
   NS_INTERFACE_MAP_ENTRY(nsIAttribute)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMGCParticipant)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3Node)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMAttr)
@@ -87,6 +89,29 @@ NS_INTERFACE_MAP_END
 
 NS_IMPL_ADDREF(nsDOMAttribute)
 NS_IMPL_RELEASE(nsDOMAttribute)
+
+// nsIDOMGCParticipant methods
+nsIDOMGCParticipant*
+nsDOMAttribute::GetSCCIndex()
+{
+  nsIContent *owner = GetContentInternal();
+
+  return owner ? owner->GetSCCIndex() : this;
+}
+
+void
+nsDOMAttribute::AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray)
+{
+  NS_ASSERTION(GetContentInternal() == nsnull,
+               "shouldn't be an SCC index if we're in an element");
+
+  // This node is the root of a subtree that's been removed from the
+  // document (since AppendReachableList is only called on SCC index
+  // nodes).  The document is reachable from it (through
+  // .ownerDocument), but it's not reachable from the document.
+  nsCOMPtr<nsIDOMGCParticipant> participant = do_QueryInterface(GetOwnerDoc());
+  aArray.AppendObject(participant);
+}
 
 void
 nsDOMAttribute::SetMap(nsDOMAttributeMap *aMap)

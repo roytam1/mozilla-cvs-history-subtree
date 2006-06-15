@@ -165,14 +165,24 @@ public:
   NS_IMETHOD ReleaseEvent(PRInt32 aEventTypes) = 0;
 
   /**
-  * Removes all event listeners registered by this instance of the listener
-  * manager.
+  * Tells the event listener manager that its target (which owns it) is
+  * no longer using it (and could go away).
+  *
+  * This causes the removal of all event listeners registered by this
+  * instance of the listener manager.  This is important for Bug 323807,
+  * since nsDOMClassInfo::PreserveWrapper (and nsIDOMGCParticipant)
+  * require that we remove all event listeners to remove any weak
+  * references in the nsDOMClassInfo's preserved wrapper table to the
+  * target.
+  *
+  * It also clears the weak pointer set by the call to
+  * |SetListenerTarget|.
   */
-  NS_IMETHOD RemoveAllListeners(PRBool aScriptOnly) = 0;
+  NS_IMETHOD Disconnect(PRBool aUnusedParam = PR_FALSE) = 0;
 
   /**
-  * Removes all event listeners registered by this instance of the listener
-  * manager.
+  * Tells the event listener manager what its target is.  This must be
+  * followed by a call to |Disconnect| before the target is destroyed.
   */
   NS_IMETHOD SetListenerTarget(nsISupports* aTarget) = 0;
 

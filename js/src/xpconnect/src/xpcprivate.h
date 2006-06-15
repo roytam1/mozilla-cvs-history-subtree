@@ -2199,7 +2199,7 @@ private:
 // interface on the single underlying (possibly aggregate) JSObject.
 
 class nsXPCWrappedJS : public nsXPTCStubBase,
-                       public nsIXPConnectWrappedJS,
+                       public nsWeakRefToIXPConnectWrappedJS,
                        public nsSupportsWeakReference,
                        public nsIPropertyBag
 {
@@ -2207,7 +2207,8 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECTJSOBJECTHOLDER
     NS_DECL_NSIXPCONNECTWRAPPEDJS
-    NS_DECL_NSISUPPORTSWEAKREFERENCE
+    NS_DECL_NSIXPCONNECTWRAPPEDJS_MOZILLA_1_8_BRANCH
+    //NS_DECL_NSISUPPORTSWEAKREFERENCE // methods also on nsIXPConnectWrappedJS
     NS_DECL_NSIPROPERTYBAG
 
     // Note that both nsXPTCStubBase and nsIXPConnectWrappedJS declare

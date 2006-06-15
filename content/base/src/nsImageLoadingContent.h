@@ -57,15 +57,20 @@ class nsIDocument;
 class imgILoader;
 class nsIIOService;
 
-class nsImageLoadingContent : public nsIImageLoadingContent
+class nsImageLoadingContent : public nsIImageLoadingContent,
+                              public imgIDecoderObserver_MOZILLA_1_8_BRANCH
 {
   /* METHODS */
 public:
   nsImageLoadingContent();
   virtual ~nsImageLoadingContent();
 
+  NS_IMETHOD_(nsrefcnt) AddRef(void) = 0;
+  NS_IMETHOD_(nsrefcnt) Release(void) = 0;
+
   NS_DECL_IMGICONTAINEROBSERVER
   NS_DECL_IMGIDECODEROBSERVER
+  NS_DECL_IMGIDECODEROBSERVER_MOZILLA_1_8_BRANCH
   NS_DECL_NSIIMAGELOADINGCONTENT
 
 protected:
@@ -93,6 +98,16 @@ protected:
    * somehow not an image anymore).
    */
   void CancelImageRequests();
+
+  /**
+   * Derived classes of nsImageLoadingContent MUST call
+   * DestroyImageLoadingContent from their destructor, or earlier.  It
+   * does things that cannot be done in ~nsImageLoadingContent because
+   * they rely on being able to QueryInterface to other derived classes,
+   * which cannot happen once the derived class destructor has started
+   * calling the base class destructors.
+   */
+  void DestroyImageLoadingContent();
 
 private:
   /**
@@ -160,6 +175,18 @@ private:
    * @param aEventType "load" or "error" depending on how things went
    */
   nsresult FireEvent(const nsAString& aEventType);
+  class Event;
+  friend class Event;
+
+protected:
+  /**
+   * Manage the rooting and un-rooting in nsDOMClassInfo of the content
+   * node, so that things reachable from the node are protected from
+   * garbage collection while the onload or onerror handlers (which can
+   * make it reachable again) could fire.
+   */
+  void PreserveLoadHandlers();
+  void UnpreserveLoadHandlers();
 
   /* MEMBERS */
 protected:
@@ -179,6 +206,12 @@ private:
   ImageObserver mObserverList;
 
   PRInt16 mImageBlockingStatus;
+  // This counts the number of operations that we're currently doing
+  // that require us to root in nsDOMClassInfo to say that there is
+  // currently network or other activity that could trigger onload or
+  // onerror handlers.  The number of things a single node can do at
+  // once is quite limited, so a PRUint8 should be quite sufficient.
+  PRUint8 mRootRefCount;
   PRPackedBool mLoadingEnabled;
 };
 

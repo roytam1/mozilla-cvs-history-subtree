@@ -414,34 +414,20 @@ GenericListenersHashEnum(nsHashKey *aKey, void *aData, void* closure)
   if (listeners) {
     PRInt32 i, count = listeners->Count();
     nsListenerStruct *ls;
-    PRBool* scriptOnly = NS_STATIC_CAST(PRBool*, closure);
     for (i = count-1; i >= 0; --i) {
       ls = (nsListenerStruct*)listeners->ElementAt(i);
       if (ls) {
-        if (*scriptOnly) {
-          if (ls->mFlags & NS_PRIV_EVENT_FLAG_SCRIPT) {
-            NS_RELEASE(ls->mListener);
-            //listeners->RemoveElement((void*)ls); we delete the entire array anyways, no need to RemoveElement
-            PR_DELETE(ls);
-          }
-        }
-        else {
-          NS_IF_RELEASE(ls->mListener);
-          PR_DELETE(ls);
-        }
+        delete ls;
       }
     }
-    //Only delete if we were removing all listeners
-    if (!*scriptOnly) {
-      delete listeners;
-    }
+    delete listeners;
   }
   return PR_TRUE;
 }
 
 nsEventListenerManager::~nsEventListenerManager() 
 {
-  RemoveAllListeners(PR_FALSE);
+  RemoveAllListeners();
 
   --mInstanceCount;
   if(mInstanceCount == 0) {
@@ -451,13 +437,11 @@ nsEventListenerManager::~nsEventListenerManager()
 }
 
 nsresult
-nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
+nsEventListenerManager::RemoveAllListeners()
 {
-  if (!aScriptOnly) {
-    mListenersRemoved = PR_TRUE;
-  }
+  mListenersRemoved = PR_TRUE;
 
-  ReleaseListeners(&mSingleListener, aScriptOnly);
+  ReleaseListeners(&mSingleListener);
   if (!mSingleListener) {
     mSingleListenerType = eEventArrayType_None;
     mManagerType &= ~NS_ELM_SINGLE;
@@ -468,24 +452,19 @@ nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
     for (PRInt32 i=0; i<EVENT_ARRAY_TYPE_LENGTH && i < mMultiListeners->Count(); i++) {
       nsVoidArray* listeners;
       listeners = NS_STATIC_CAST(nsVoidArray*, mMultiListeners->ElementAt(i));
-      ReleaseListeners(&listeners, aScriptOnly);
+      ReleaseListeners(&listeners);
     }
-    if (!aScriptOnly) {
-      delete mMultiListeners;
-      mMultiListeners = nsnull;
-      mManagerType &= ~NS_ELM_MULTI;
-    }
+    delete mMultiListeners;
+    mMultiListeners = nsnull;
+    mManagerType &= ~NS_ELM_MULTI;
   }
 
   if (mGenericListeners) {
-    PRBool scriptOnly = aScriptOnly;
-    mGenericListeners->Enumerate(GenericListenersHashEnum, &scriptOnly);
+    mGenericListeners->Enumerate(GenericListenersHashEnum, nsnull);
     //hash destructor
-    if (!aScriptOnly) {
-      delete mGenericListeners;
-      mGenericListeners = nsnull;
-      mManagerType &= ~NS_ELM_HASH;
-    }
+    delete mGenericListeners;
+    mGenericListeners = nsnull;
+    mManagerType &= ~NS_ELM_HASH;
   }
 
   return NS_OK;
@@ -676,8 +655,7 @@ nsEventListenerManager::GetTypeForIID(const nsIID& aIID)
 }
 
 void
-nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners,
-                                         PRBool aScriptOnly)
+nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners)
 {
   if (nsnull != *aListeners) {
     PRInt32 i, count = (*aListeners)->Count();
@@ -685,24 +663,11 @@ nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners,
     for (i = 0; i < count; i++) {
       ls = (nsListenerStruct*)(*aListeners)->ElementAt(i);
       if (ls) {
-        if (aScriptOnly) {
-          if (ls->mFlags & NS_PRIV_EVENT_FLAG_SCRIPT) {
-            NS_RELEASE(ls->mListener);
-            //(*aListeners)->RemoveElement((void*)ls); We're going to delete the array anyways
-            PR_DELETE(ls);
-          }
-        }
-        else {
-          NS_IF_RELEASE(ls->mListener);
-          PR_DELETE(ls);
-        }
+        delete ls;
       }
     }
-    //Only delete if we were removing all listeners
-    if (!aScriptOnly) {
-      delete *aListeners;
-      *aListeners = nsnull;
-    }
+    delete *aListeners;
+    *aListeners = nsnull;
   }
 }
 
@@ -765,7 +730,8 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
 
   for (PRInt32 i=0; i<listeners->Count(); i++) {
     ls = (nsListenerStruct*)listeners->ElementAt(i);
-    if (ls->mListener == aListener && ls->mFlags == aFlags &&
+    nsRefPtr<nsIDOMEventListener> iListener = ls->mListener.Get();
+    if (iListener == aListener && ls->mFlags == aFlags &&
         ls->mGroupFlags == group) {
       ls->mSubType |= aSubType;
       found = PR_TRUE;
@@ -774,17 +740,20 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
   }
 
   if (!found) {
-    ls = PR_NEW(nsListenerStruct);
-    if (ls) {
-      ls->mListener = aListener;
-      ls->mFlags = aFlags;
-      ls->mSubType = aSubType;
-      ls->mSubTypeCapture = NS_EVENT_BITS_NONE;
-      ls->mHandlerIsString = 0;
-      ls->mGroupFlags = group;
-      listeners->AppendElement((void*)ls);
-      NS_ADDREF(aListener);
+    ls = new nsListenerStruct;
+    if (!ls) {
+      return NS_ERROR_OUT_OF_MEMORY;
     }
+
+    nsCOMPtr<nsIDOMGCParticipant> participant = do_QueryInterface(mTarget);
+    NS_ASSERTION(participant, "must implement nsIDOMGCParticipant");
+    ls->mListener.Set(aListener, participant);
+    ls->mFlags = aFlags;
+    ls->mSubType = aSubType;
+    ls->mSubTypeCapture = NS_EVENT_BITS_NONE;
+    ls->mHandlerIsString = 0;
+    ls->mGroupFlags = group;
+    listeners->AppendElement((void*)ls);
   }
 
   return NS_OK;
@@ -809,13 +778,13 @@ nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener,
 
   for (PRInt32 i=0; i<listeners->Count(); i++) {
     ls = (nsListenerStruct*)listeners->ElementAt(i);
-    if (ls->mListener == aListener &&
+    nsRefPtr<nsIDOMEventListener> iListener = ls->mListener.Get();
+    if (iListener == aListener &&
         (ls->mFlags & ~NS_PRIV_EVENT_UNTRUSTED_PERMITTED) == aFlags) {
       ls->mSubType &= ~aSubType;
       if (ls->mSubType == NS_EVENT_BITS_NONE) {
-        NS_RELEASE(ls->mListener);
         listeners->RemoveElement((void*)ls);
-        PR_DELETE(ls);
+        delete ls;
       }
       break;
     }
@@ -1402,14 +1371,12 @@ nsEventListenerManager::RemoveScriptEventListener(nsIAtom *aName)
   if (ls) {
     ls->mSubType &= ~flags;
     if (ls->mSubType == NS_EVENT_BITS_NONE) {
-      NS_RELEASE(ls->mListener);
-
       //Get the listeners array so we can remove ourselves from it
       nsVoidArray* listeners;
       listeners = GetListenersByType(arrayType, nsnull, PR_FALSE);
       NS_ENSURE_TRUE(listeners, NS_ERROR_FAILURE);
       listeners->RemoveElement((void*)ls);
-      PR_DELETE(ls);
+      delete ls;
     }
   }
 
@@ -1635,6 +1602,7 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
 
 nsresult
 nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
+                                           nsIDOMEventListener* aListener,
                                            nsIDOMEvent* aDOMEvent,
                                            nsIDOMEventTarget* aCurrentTarget,
                                            PRUint32 aSubType,
@@ -1660,7 +1628,7 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
     }
     if (aListenerStruct->mHandlerIsString & aSubType) {
 
-      nsCOMPtr<nsIJSEventListener> jslistener = do_QueryInterface(aListenerStruct->mListener);
+      nsCOMPtr<nsIJSEventListener> jslistener = do_QueryInterface(aListener);
       if (jslistener) {
         nsAutoString eventString;
         if (NS_SUCCEEDED(aDOMEvent->GetType(eventString))) {
@@ -1684,10 +1652,7 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
   if (NS_SUCCEEDED(result)) {
     nsCOMPtr<nsIPrivateDOMEvent> aPrivDOMEvent(do_QueryInterface(aDOMEvent));
     aPrivDOMEvent->SetCurrentTarget(aCurrentTarget);
-    // Hold a strong ref to the event listener so it won't die while
-    // handling the event.
-    nsCOMPtr<nsIDOMEventListener> listener = aListenerStruct->mListener;
-    result = listener->HandleEvent(aDOMEvent);
+    result = aListener->HandleEvent(aDOMEvent);
     aPrivDOMEvent->SetCurrentTarget(nsnull);
   }
 
@@ -1776,19 +1741,23 @@ nsEventListenerManager::HandleEvent(nsPresContext* aPresContext,
             ls->mGroupFlags == currentGroup &&
             (NS_IS_TRUSTED_EVENT(aEvent) ||
              ls->mFlags & NS_PRIV_EVENT_UNTRUSTED_PERMITTED)) {
-          // Try the type-specific listener interface
-          PRBool hasInterface = PR_FALSE;
-          if (typeData)
-            DispatchToInterface(*aDOMEvent, ls->mListener,
-                                dispData->method, *typeData->iid,
-                                &hasInterface);
+          nsRefPtr<nsIDOMEventListener> eventListener = ls->mListener.Get();
+          NS_ASSERTION(eventListener, "listener wasn't preserved properly");
+          if (eventListener) {
+            // Try the type-specific listener interface
+            PRBool hasInterface = PR_FALSE;
+            if (typeData)
+              DispatchToInterface(*aDOMEvent, eventListener,
+                                  dispData->method, *typeData->iid,
+                                  &hasInterface);
 
-          // If it doesn't implement that, call the generic HandleEvent()
-          if (!hasInterface && (ls->mSubType == NS_EVENT_BITS_NONE ||
-                                ls->mSubType & dispData->bits)) {
-            HandleEventSubType(ls, *aDOMEvent, aCurrentTarget,
-                               dispData ? dispData->bits : NS_EVENT_BITS_NONE,
-                               aFlags);
+            // If it doesn't implement that, call the generic HandleEvent()
+            if (!hasInterface && (ls->mSubType == NS_EVENT_BITS_NONE ||
+                                  ls->mSubType & dispData->bits)) {
+              HandleEventSubType(ls, eventListener, *aDOMEvent, aCurrentTarget,
+                                 dispData ? dispData->bits : NS_EVENT_BITS_NONE,
+                                 aFlags);
+            }
           }
         }
       }
@@ -2063,9 +2032,23 @@ nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes,
 }
 
 NS_IMETHODIMP
+nsEventListenerManager::Disconnect(PRBool)
+{
+  mTarget = nsnull;
+
+  // Bug 323807: nsDOMClassInfo::PreserveWrapper (and
+  // nsIDOMGCParticipant) require that we remove all event listeners now
+  // to remove any weak references in the nsDOMClassInfo's preserved
+  // wrapper table to the target.
+  return RemoveAllListeners();
+}
+
+NS_IMETHODIMP
 nsEventListenerManager::SetListenerTarget(nsISupports* aTarget)
 {
-  //WEAK reference, must be set back to nsnull when done
+  NS_PRECONDITION(aTarget, "unexpected null pointer");
+
+  //WEAK reference, must be set back to nsnull when done by calling Disconnect
   mTarget = aTarget;
   return NS_OK;
 }

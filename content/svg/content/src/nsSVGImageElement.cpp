@@ -115,6 +115,7 @@ NS_INTERFACE_MAP_BEGIN(nsSVGImageElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGImageElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGURIReference)
   NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver)
+  NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIImageLoadingContent)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(SVGImageElement)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGImageElementBase)
@@ -130,6 +131,7 @@ nsSVGImageElement::nsSVGImageElement(nsINodeInfo *aNodeInfo)
 
 nsSVGImageElement::~nsSVGImageElement()
 {
+  DestroyImageLoadingContent();
 }
 
   

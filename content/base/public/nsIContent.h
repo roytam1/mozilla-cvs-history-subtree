@@ -44,6 +44,7 @@
 #include "nsAString.h"
 #include "nsContentErrors.h"
 #include "nsPropertyTable.h"
+#include "nsIDOMGCParticipant.h"
 
 // Forward declarations
 class nsIAtom;
@@ -59,15 +60,16 @@ class nsIEventListenerManager;
 class nsIURI;
 
 // IID for the nsIContent interface
-#define NS_ICONTENT_IID       \
-{ 0x3fecc374, 0x2839, 0x4db3, \
- { 0x8d, 0xe8, 0x6b, 0x76, 0xd1, 0xd8, 0xe6, 0xf6 } }
+// 9d059608-ddb0-4e6a-9969-d2f363a1b557
+#define NS_ICONTENT_IID \
+{ 0x9d059608, 0xddb0, 0x4e6a, \
+  { 0x99, 0x69, 0xd2, 0xf3, 0x63, 0xa1, 0xb5, 0x57 } }
 
 /**
  * A node of content in a document's content model. This interface
  * is supported by all content objects.
  */
-class nsIContent : public nsISupports {
+class nsIContent : public nsIDOMGCParticipant {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICONTENT_IID)
 
