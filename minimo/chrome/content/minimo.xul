@@ -256,8 +256,13 @@
       <menuitem id="item-back"    hidden="true"  label="&backCmd.label;"      command="cmd_BrowserBack" />
       <menuitem id="item-forward" hidden="true"  label="&forwardCmd.label;"   command="cmd_BrowserForward"/>
       <menuitem id="item-reload"  hidden="false" label="&reloadCmd.label;"    command="cmd_BrowserReload"/>
-      
-      
+
+      <menuseparator/>
+
+      <menuitem id="context_menu_quit"
+                label="&quit.label;"
+                command="cmd_Quit"
+                hidden="true"/>
 	</popup>
     
     
