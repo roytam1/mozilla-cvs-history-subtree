@@ -885,6 +885,10 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
         nsIDocument *ownerDocument = GetOwnerDoc();
         if (aDocument != ownerDocument) {
 
+            nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(ownerDocument);
+            if (nsDoc) {
+              nsDoc->SetBoxObjectFor(this, nsnull);
+            }
             if (HasProperties()) {
                 ownerDocument->PropertyTable()->DeleteAllPropertiesFor(this);
             }

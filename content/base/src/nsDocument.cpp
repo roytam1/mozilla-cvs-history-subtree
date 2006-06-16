@@ -722,6 +722,17 @@ nsDocument::nsDocument()
 #endif
 }
 
+PR_STATIC_CALLBACK(PRBool)
+DropBoxObjectDocumentReference(nsHashKey* aKey, void* aData, void* aClosure)
+{
+  nsISupports* data = NS_STATIC_CAST(nsISupports*, aData);
+  nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(data));
+  if (boxObject) {
+    boxObject->SetDocument(nsnull);
+  }
+  return PR_TRUE;
+}
+
 nsDocument::~nsDocument()
 {
 #ifdef PR_LOGGING
@@ -819,7 +830,10 @@ nsDocument::~nsDocument()
   }
 
   delete mHeaderData;
-  delete mBoxObjectTable;
+  if (mBoxObjectTable) {
+    mBoxObjectTable->Enumerate(DropBoxObjectDocumentReference, nsnull);
+    delete mBoxObjectTable;
+  }
   delete mXPathDocument;
 }
 
@@ -3089,7 +3103,7 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
 {
   nsCOMPtr<nsIContent> content(do_QueryInterface(aElement));
   NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
-  NS_ENSURE_TRUE(content->GetCurrentDoc() == this,
+  NS_ENSURE_TRUE(content->GetOwnerDoc() == this,
                  NS_ERROR_DOM_WRONG_DOCUMENT_ERR);
   
   nsresult rv;
