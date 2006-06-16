@@ -1591,7 +1591,7 @@ BindDestructuringVar(JSContext *cx, BindVarArgs *args, JSParseNode *pn,
     /*
      * Select the appropriate name-setting opcode, which may be specialized
      * further for local variable and argument slot optimizations.  At this
-     * point, we can't select the right final opcode, yet we must preserve
+     * point, we can't select the optimal final opcode, yet we must preserve
      * the CONST bit and convey "set", not "get".
      */
     pn->pn_op = (args->op == JSOP_DEFCONST)
@@ -1602,11 +1602,11 @@ BindDestructuringVar(JSContext *cx, BindVarArgs *args, JSParseNode *pn,
 }
 
 /*
- * At this point, we are destructuring {... P: Q, ...} = R, where P is any id,
- * Q is any LHS expression except a destructuring initialiser, and R is on the
- * stack.  Because R is already evaluated, the usual LHS-specialized bytecodes
- * won't work.  After pushing R[P] we need to evaluate Q's "reference base" QB
- * and then push its property name QN.  At this point the stack looks like
+ * Here, we are destructuring {... P: Q, ...} = R, where P is any id, Q is any
+ * LHS expression except a destructuring initialiser, and R is on the stack.
+ * Because R is already evaluated, the usual LHS-specialized bytecodes won't
+ * work.  After pushing R[P] we need to evaluate Q's "reference base" QB and
+ * then push its property name QN.  At this point the stack looks like
  *
  *   [... R, R[P], QB, QN]
  *
@@ -1808,18 +1808,22 @@ CheckDestructuring(JSContext *cx, BindVarArgs *args,
     JSBool ok;
     FindPropValData data;
     JSParseNode *lhs, *rhs, *pn, *pn2;
+    uint32 count;
 
     ok = JS_TRUE;
     data.table.ops = NULL;
     lhs = left->pn_head;
-    if (left->pn_count == 0 || lhs->pn_type == TOK_DEFSHARP)
+    if (left->pn_count == 0 || lhs->pn_type == TOK_DEFSHARP) {
+        pn = left;
         goto no_var_name;
+    }
 
     if (left->pn_type == TOK_RB) {
         rhs = (right && right->pn_type == left->pn_type)
               ? right->pn_head
               : NULL;
 
+        count = 0;
         while (lhs) {
             pn = lhs, pn2 = rhs;
             if (!args) {
@@ -1831,24 +1835,33 @@ CheckDestructuring(JSContext *cx, BindVarArgs *args,
                         pn2 = pn2->pn_kid;
                 }
             }
-            if (pn->pn_type == TOK_RB || pn->pn_type == TOK_RC) {
-                ok = CheckDestructuring(cx, args, pn, pn2, tc);
-            } else if (pn->pn_type != TOK_COMMA) {
-                if (args) {
-                    if (pn->pn_type != TOK_NAME)
-                        goto no_var_name;
 
-                    ok = BindDestructuringVar(cx, args, pn, tc);
+            if (pn->pn_type != TOK_COMMA) {
+                if (pn->pn_type == TOK_RB || pn->pn_type == TOK_RC) {
+                    ok = CheckDestructuring(cx, args, pn, pn2, tc);
                 } else {
-                    ok = BindDestructuringLHS(cx, pn, tc);
+                    if (args) {
+                        if (pn->pn_type != TOK_NAME)
+                            goto no_var_name;
+
+                        ok = BindDestructuringVar(cx, args, pn, tc);
+                    } else {
+                        ok = BindDestructuringLHS(cx, pn, tc);
+                    }
                 }
+                if (!ok)
+                    goto out;
+                ++count;
             }
-            if (!ok)
-                goto out;
 
             lhs = lhs->pn_next;
             if (rhs)
                 rhs = rhs->pn_next;
+        }
+
+        if (count == 0) {
+            pn = left;
+            goto no_var_name;
         }
     } else {
         JS_ASSERT(left->pn_type == TOK_RC);
@@ -1888,7 +1901,6 @@ CheckDestructuring(JSContext *cx, BindVarArgs *args,
 
             lhs = lhs->pn_next;
         }
-        
     }
 
 out:
@@ -1897,7 +1909,7 @@ out:
     return ok;
 
 no_var_name:
-    js_ReportCompileErrorNumber(cx, args->ts, JSREPORT_TS | JSREPORT_ERROR,
+    js_ReportCompileErrorNumber(cx, pn, JSREPORT_PN | JSREPORT_ERROR,
                                 JSMSG_NO_VARIABLE_NAME);
     ok = JS_FALSE;
     goto out;
@@ -4811,7 +4823,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 
                     /*
                      * Create a name node with op JSOP_NAME.  We can't set op
-                     * JSOP_GETLOCAL here, because we don't yet know the block 
+                     * JSOP_GETLOCAL here, because we don't yet know the block
                      * depth in the operand stack frame.  The code generator
                      * computes that, and it tries to bind all names to slots,
                      * so we must let it do this optimization.
@@ -4922,7 +4934,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                                 return NULL;
                             pn3->pn_atom = CURRENT_TOKEN(ts).t_atom;
                             pn3->pn_expr = NULL;
-                            
+
                             /* We have to fake a 'function' token here. */
                             CURRENT_TOKEN(ts).t_op = JSOP_NOP;
                             CURRENT_TOKEN(ts).type = TOK_FUNCTION;

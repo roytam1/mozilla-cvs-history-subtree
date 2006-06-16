@@ -349,6 +349,7 @@ struct JSParseNode {
 #define PNX_ENDCOMMA    0x10            /* array literal has comma at end */
 #define PNX_XMLROOT     0x20            /* top-most node in XML literal tree */
 #define PNX_BLOCKEXPR   0x40            /* this block is an expression */
+#define PNX_GROUPINIT   0x80            /* var [a, b] = [c, d]; unit list */
 
 /*
  * Move pn2 into pn, preserving pn->pn_pos and pn->pn_offset and handing off

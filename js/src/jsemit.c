@@ -3208,12 +3208,12 @@ EmitDestructuringOpsHelper(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             pn3 = pn2->pn_left;
             if (pn3->pn_type == TOK_NUMBER) {
                 /*
-                 * If we're emitting an object destructuring initialiser,
-                 * annotate JSOP_GETELEM with SRC_LABEL<0> so we know we are
+                 * If we are emitting an object destructuring initialiser,
+                 * annotate the index op with SRC_INITPROP so we know we are
                  * not decompiling an array initialiser.
                  */
                 if (pn->pn_type == TOK_RC &&
-                    js_NewSrcNote2(cx, cg, SRC_LABEL, 0) < 0) {
+                    js_NewSrcNote(cx, cg, SRC_INITPROP) < 0) {
                     return JS_FALSE;
                 }
                 if (!EmitNumberOp(cx, pn3->pn_dval, cg))
@@ -3332,14 +3332,38 @@ EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
     }
 
     EMIT_UINT16_IMM_OP(JSOP_SETSP, (jsatomid)depth);
+    cg->stackDepth = (uintN) depth;
+    return JS_TRUE;
+}
+
+/*
+ * Helper called with pop out param initialized to a JSOP_POP* opcode.  If we
+ * can emit a group assignment sequence, which results in 0 stack depth delta,
+ * we set *pop to JSOP_NOP so callers can veto emitting pn followed by a pop.
+ */
+static JSBool
+MaybeEmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
+                         JSOp *pop)
+{
+    JSParseNode *lhs, *rhs;
+
+    JS_ASSERT(pn->pn_type == TOK_ASSIGN);
+    JS_ASSERT(*pop == JSOP_POP || *pop == JSOP_POPV);
+    lhs = pn->pn_left;
+    rhs = pn->pn_right;
+    if (lhs->pn_type == TOK_RB && rhs->pn_type == TOK_RB) {
+        if (!EmitGroupAssignment(cx, cg, lhs, rhs))
+            return JS_FALSE;
+        *pop = JSOP_NOP;
+    }
     return JS_TRUE;
 }
 
 #endif /* JS_HAS_DESTRUCTURING */
 
 static JSBool
-EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
-                    JSBool inHead)
+EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
+              JSBool inHead)
 {
     ptrdiff_t off, noteIndex, tmp;
     JSParseNode *pn2, *pn3;
@@ -3359,7 +3383,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
      * block from any calls to BindNameToSlot hiding in pn2->pn_expr so that
      * it won't find any names in the new let block.
      */
-    JS_ASSERT(!varOrConst || !inHead);
+    JS_ASSERT(!inHead || !varOrConst);
     tc = &cg->treeContext;
 
     off = noteIndex = -1;
@@ -3370,8 +3394,8 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 /*
                  * Emit variable binding ops, but not destructuring ops.
                  * The parser (see Variables, jsparse.c) has ensured that
-                 * our caller will be the TOK_FOR/TOK_IN case above, and
-                 * that case will emit the destructuring code only after
+                 * our caller will be the TOK_FOR/TOK_IN case in js_EmitTree,
+                 * and that case will emit the destructuring code only after
                  * emitting an enumerating opcode and a branch that tests
                  * whether the enumeration ended.
                  */
@@ -3389,6 +3413,19 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
              * the head of the loop.
              */
             JS_ASSERT(pn2->pn_type == TOK_ASSIGN);
+            if (noteIndex < 0 && !pn2->pn_next) {
+                /*
+                 * If this is the only destructuring assignment in the list,
+                 * try to optimize to a group assignment.
+                 */
+                op = JSOP_POP;
+                if (!MaybeEmitGroupAssignment(cx, cg, pn2, &op))
+                    return JS_FALSE;
+                if (op == JSOP_NOP)
+                    pn->pn_extra = (pn->pn_extra & ~PNX_POPVAR) | PNX_GROUPINIT;
+                break;
+            }
+
             pn3 = pn2->pn_left;
             if (!EmitDestructuringDecls(cx, cg, pn->pn_op, pn3))
                 return JS_FALSE;
@@ -3404,7 +3441,7 @@ EmitVarDeclarations(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
 
         if (!BindNameToSlot(cx, &cg->treeContext, pn2))
             return JS_FALSE;
-        JS_ASSERT(varOrConst || pn2->pn_slot >= 0);
+        JS_ASSERT(pn2->pn_slot >= 0 || varOrConst);
 
         op = pn2->pn_op;
         if (op == JSOP_ARGUMENTS) {
@@ -4056,15 +4093,35 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     return JS_FALSE;
             }
         } else {
+            op = JSOP_POP;
             if (!pn2->pn_kid1) {
                 /* No initializer: emit an annotated nop for the decompiler. */
                 op = JSOP_NOP;
             } else {
                 cg->treeContext.flags |= TCF_IN_FOR_INIT;
-                if (!js_EmitTree(cx, cg, pn2->pn_kid1))
+#if JS_HAS_DESTRUCTURING
+                pn3 = pn2->pn_kid1;
+                if (pn3->pn_type == TOK_ASSIGN &&
+                    !MaybeEmitGroupAssignment(cx, cg, pn3, &op)) {
                     return JS_FALSE;
+                }
+#endif
+                if (op == JSOP_POP) {
+                    if (!js_EmitTree(cx, cg, pn3))
+                        return JS_FALSE;
+                    if (TOKEN_TYPE_IS_DECL(pn3->pn_type)) {
+                        /*
+                         * Check whether a destructuring-initialized var decl
+                         * was optimized to a group assignment.  If so, we do
+                         * not need to emit a pop below, so switch to a nop,
+                         * just for the decompiler.
+                         */
+                        JS_ASSERT(pn3->pn_arity == PN_LIST);
+                        if (pn3->pn_extra & PNX_GROUPINIT)
+                            op = JSOP_NOP;
+                    }
+                }
                 cg->treeContext.flags &= ~TCF_IN_FOR_INIT;
-                op = JSOP_POP;
             }
             noteIndex = js_NewSrcNote(cx, cg, SRC_FOR);
             if (noteIndex < 0 ||
@@ -4114,10 +4171,19 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 } while ((stmt = stmt->down) != NULL &&
                          stmt->type == STMT_LABEL);
 
-                if (!js_EmitTree(cx, cg, pn3))
+                op = JSOP_POP;
+#if JS_HAS_DESTRUCTURING
+                if (pn3->pn_type == TOK_ASSIGN &&
+                    !MaybeEmitGroupAssignment(cx, cg, pn3, &op)) {
                     return JS_FALSE;
-                if (js_Emit1(cx, cg, JSOP_POP) < 0)
-                    return JS_FALSE;
+                }
+#endif
+                if (op == JSOP_POP) {
+                    if (!js_EmitTree(cx, cg, pn3))
+                        return JS_FALSE;
+                    if (js_Emit1(cx, cg, op) < 0)
+                        return JS_FALSE;
+                }
 
                 /* Restore the absolute line number for source note readers. */
                 off = (ptrdiff_t) pn->pn_pos.end.lineno;
@@ -4520,7 +4586,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_VAR:
-        if (!EmitVarDeclarations(cx, cg, pn, JS_FALSE))
+        if (!EmitVariables(cx, cg, pn, JS_FALSE))
             return JS_FALSE;
         break;
 
@@ -4624,22 +4690,20 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     return JS_FALSE;
                 }
             } else {
+                op = wantval ? JSOP_POPV : JSOP_POP;
 #if JS_HAS_DESTRUCTURING
-                if (!wantval && pn2->pn_type == TOK_ASSIGN) {
-                    JSParseNode *pn4;
-
-                    pn3 = pn2->pn_left;
-                    pn4 = pn2->pn_right;
-                    if (pn3->pn_type == TOK_RB && pn4->pn_type == TOK_RB) {
-                        ok = EmitGroupAssignment(cx, cg, pn3, pn4);
-                        goto out;
-                    }
+                if (!wantval &&
+                    pn2->pn_type == TOK_ASSIGN &&
+                    !MaybeEmitGroupAssignment(cx, cg, pn2, &op)) {
+                    return JS_FALSE;
                 }
 #endif
-                if (!js_EmitTree(cx, cg, pn2))
-                    return JS_FALSE;
-                if (js_Emit1(cx, cg, wantval ? JSOP_POPV : JSOP_POP) < 0)
-                    return JS_FALSE;
+                if (op != JSOP_NOP) {
+                    if (!js_EmitTree(cx, cg, pn2))
+                        return JS_FALSE;
+                    if (js_Emit1(cx, cg, op) < 0)
+                        return JS_FALSE;
+                }
             }
         }
         break;
@@ -5289,7 +5353,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         inHead = (pn2 != NULL || (cg->treeContext.flags & TCF_IN_FOR_INIT));
 
         JS_ASSERT(pn->pn_arity == PN_LIST);
-        if (!EmitVarDeclarations(cx, cg, pn, inHead))
+        if (!EmitVariables(cx, cg, pn, inHead))
             return JS_FALSE;
 
         if (pn2 && !js_EmitTree(cx, cg, pn2))
@@ -5442,7 +5506,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 #endif
             /* Annotate JSOP_INITELEM so we decompile 2:c and not just c. */
             if (pn3->pn_type == TOK_NUMBER) {
-                if (js_NewSrcNote2(cx, cg, SRC_LABEL, 0) < 0)
+                if (js_NewSrcNote(cx, cg, SRC_INITPROP) < 0)
                     return JS_FALSE;
                 if (js_Emit1(cx, cg, JSOP_INITELEM) < 0)
                     return JS_FALSE;
@@ -5684,9 +5748,6 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         JS_ASSERT(0);
     }
 
-#if JS_HAS_DESTRUCTURING
-  out:
-#endif
     if (ok && --cg->emitLevel == 0 && cg->spanDeps)
         ok = OptimizeSpanDeps(cx, cg);
 
