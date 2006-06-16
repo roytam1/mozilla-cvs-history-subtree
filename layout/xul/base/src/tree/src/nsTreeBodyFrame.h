@@ -211,6 +211,11 @@ public:
   friend nsresult NS_NewTreeBodyFrame(nsIPresShell* aPresShell, 
                                           nsIFrame** aNewFrame);
 
+  struct ScrollParts {
+    nsIScrollbarFrame* mVScrollbar;
+    nsIContent*        mVScrollbarContent;
+  };
+
 protected:
   PRInt32 GetLastVisibleRow() {
     return mTopRowIndex + mPageLength;
@@ -250,14 +255,18 @@ protected:
   // the pseudo-styles passed in and place them into the cache.
   nsStyleContext* GetPseudoStyleContext(nsIAtom* aPseudoElement);
 
-  // Makes |mScrollbar| non-null if at all possible, and returns it.
-  nsIFrame* EnsureScrollbar();
+  // Retrieves the scrollbars and scrollview relevant to this treebody. We
+  // traverse the frame tree under our base element, in frame order, looking
+  // for the first relevant vertical scrollbar, horizontal scrollbar, and
+  // scrollable frame (with associated content and scrollable view). These
+  // are all volatile and should not be retained.
+  ScrollParts GetScrollParts();
 
   // Update the curpos of the scrollbar.
-  void UpdateScrollbar();
+  void UpdateScrollbar(const ScrollParts& aParts);
 
   // Update the maxpos of the scrollbar.
-  void InvalidateScrollbar();
+  void InvalidateScrollbar(const ScrollParts& aParts);
 
   // Check vertical overflow.
   void CheckVerticalOverflow();
@@ -266,9 +275,10 @@ protected:
   // Examples include container, open, selected, and focus.
   void PrefillPropertyArray(PRInt32 aRowIndex, nsTreeColumn* aCol);
 
-  // Our internal scroll method, used by all the public scroll methods.
-  nsresult ScrollInternal(PRInt32 aRow);
-  
+  nsresult ScrollInternal(const ScrollParts& aParts, PRInt32 aRow);
+  nsresult ScrollToRowInternal(const ScrollParts& aParts, PRInt32 aRow);
+  nsresult EnsureRowIsVisibleInternal(const ScrollParts& aParts, PRInt32 aRow);
+
   // Convert client pixels into twips in our coordinate space.
   void AdjustClientCoordsToBoxCoordSpace(PRInt32 aX, PRInt32 aY,
                                          nscoord* aResultX, nscoord* aResultY);
@@ -348,9 +358,6 @@ protected: // Data Members
   // represents a resolved :-moz-tree-cell-image (or twisty) pseudo-element.
   // It maps directly to an imgIRequest.
   nsDataHashtable<nsStringHashKey, nsTreeImageCacheEntry> mImageCache;
-
-  // Our vertical scrollbar.
-  nsIFrame* mScrollbar;
 
   // The index of the first visible row and the # of rows visible onscreen.  
   // The tree only examines onscreen rows, starting from
