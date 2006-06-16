@@ -5591,7 +5591,9 @@ nsDocShell::RestoreFromHistory()
     if (shell)
         shell->Thaw();
 
-    return NS_OK;
+    nsCOMPtr<nsPIDOMWindow_MOZILLA_1_8_BRANCH> win18 = do_QueryInterface(privWin);
+    NS_ENSURE_STATE(win18);
+    return win18->FireDelayedDOMEvents();
 }
 
 NS_IMETHODIMP

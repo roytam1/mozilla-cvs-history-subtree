@@ -333,8 +333,8 @@ protected:
 };
 
 #define NS_PIDOMWINDOW_MOZILLA_1_8_BRANCH_IID \
-{ 0x9cb71447, 0x62c7, 0x423a, \
- { 0x91, 0xca, 0x71, 0x8a, 0x8c, 0xeb, 0xda, 0x76 } }
+{ 0x7bf31d9e, 0xd17b, 0x47dc, \
+  { 0xa6, 0xe4, 0x5f, 0xae, 0x29, 0x94, 0xf1, 0x07 } }
 
 class nsPIDOMWindow_MOZILLA_1_8_BRANCH : public nsPIDOMWindow
 {
@@ -350,6 +350,12 @@ public:
    */
   virtual void SetOpenerWindow(nsIDOMWindowInternal *aOpener,
                                PRBool aOriginalOpener) = 0;
+
+  /**
+   * Fire any DOM notification events related to things that happened while
+   * the window was frozen.
+   */
+  virtual nsresult FireDelayedDOMEvents() = 0;
 
 protected:
   nsPIDOMWindow_MOZILLA_1_8_BRANCH(nsPIDOMWindow *aOuterWindow)

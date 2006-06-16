@@ -241,6 +241,8 @@ public:
   virtual NS_HIDDEN_(void) SetOpenerWindow(nsIDOMWindowInternal *aOpener,
                                            PRBool aOriginalOpener);
 
+  virtual NS_HIDDEN_(nsresult) FireDelayedDOMEvents();
+
   
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
