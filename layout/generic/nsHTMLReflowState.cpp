@@ -188,11 +188,46 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
 
   InitFrameType();
   InitCBReflowState();
+
   InitConstraints(aPresContext, aContainingBlockWidth, aContainingBlockHeight, aBorder, aPadding);
 
-  mFlags.mIsResize = !(frame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
-                     frame->GetSize().width !=
-                       mComputedWidth + mComputedBorderPadding.LeftRight();
+  mFlags.mHResize = !(frame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
+                    frame->GetSize().width !=
+                      mComputedWidth + mComputedBorderPadding.LeftRight();
+
+  // XXX Should we really need to null check mCBReflowState?  (We do for
+  // at least nsBoxFrame).
+  if (mCBReflowState && !frame->IsContainingBlock()) {
+    // XXX Is this problematic for relatively positioned inlines acting
+    // as containing block for absolutely positioned elements?
+    mFlags.mVResize = mCBReflowState->mFlags.mVResize;
+  } else if (mComputedHeight == NS_AUTOHEIGHT) {
+    if (eCompatibility_NavQuirks == aPresContext->CompatibilityMode() &&
+        mCBReflowState) {
+      // XXX This condition doesn't quite match CalcQuirkContainingBlockHeight.
+      mFlags.mVResize = mCBReflowState->mFlags.mVResize;
+    } else {
+      mFlags.mVResize = mFlags.mHResize || 
+                        (frame->GetStateBits() &
+                         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN));
+    }
+  } else {
+    // not 'auto' height
+    mFlags.mVResize = frame->GetSize().height !=
+                        mComputedHeight + mComputedBorderPadding.TopBottom();
+  }
+
+  if ((mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent ||
+       frame->IsBoxFrame()) &&
+      mCBReflowState) {
+    const nsHTMLReflowState *rs = this;
+    do {
+      rs = rs->parentReflowState;
+      if (rs->frame->GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT)
+        break; // no need to go further
+      rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+    } while (rs != mCBReflowState);
+  }
 
   NS_ASSERTION(NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType) ||
                (mFrameType == NS_CSS_FRAME_TYPE_INLINE &&
@@ -1429,12 +1464,6 @@ nsHTMLReflowState::ComputeContainingBlockRectangle(nsPresContext*          aPres
       }
     }
   } else {
-    // If this is an unconstrained reflow, then reset the containing block
-    // width to NS_UNCONSTRAINEDSIZE. This way percentage based values have
-    // no effect
-    if (NS_UNCONSTRAINEDSIZE == availableWidth) {
-      aContainingBlockWidth = NS_UNCONSTRAINEDSIZE;
-    }
     // an element in quirks mode gets a containing block based on looking for a
     // parent with a non-auto height if the element has a percent height
     if (NS_AUTOHEIGHT == aContainingBlockHeight) {

@@ -166,6 +166,12 @@ typedef PRUint32 nsFrameState;
 // destroyed to allow these references to be cleared.
 #define NS_FRAME_EXTERNAL_REFERENCE                   0x00000010
 
+// If this bit is set, this frame or one of its descendants has a
+// percentage height that depends on an ancestor of this frame.
+// (Or it did at one point in the past, since we don't necessarily clear
+// the bit when it's no longer needed; it's an optimization.)
+#define NS_FRAME_CONTAINS_RELATIVE_HEIGHT             0x00000020
+
 // If this bit is set, then the frame corresponds to generated content
 #define NS_FRAME_GENERATED_CONTENT                    0x00000040
 

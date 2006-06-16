@@ -857,7 +857,7 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   // If we're not dirty (which means we'll mark everything dirty later)
   // and our width has changed, mark the lines dirty that we need to
   // mark dirty for a resize reflow.
-  if (aReflowState.mFlags.mIsResize)
+  if (aReflowState.mFlags.mHResize)
     PrepareResizeReflow(state);
 
   mState &= ~NS_FRAME_FIRST_REFLOW;
@@ -1634,7 +1634,9 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
   AutoNoisyIndenter indent(gNoisyReflow);
 #endif
 
-  PRBool selfDirty = (GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
+  PRBool selfDirty = (GetStateBits() & NS_FRAME_IS_DIRTY) ||
+                     (aState.mReflowState.mFlags.mVResize &&
+                      (GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT));
   
     // the amount by which we will slide the current line if it is not
     // dirty

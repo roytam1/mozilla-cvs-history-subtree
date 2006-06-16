@@ -5611,8 +5611,10 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
     // mLastSize before calling Reflow and then switching it back, but
     // I'm not sure mLastSize is guaranteed to be what it was before
     // LayoutChildAt changed it.
-    if (metrics->mLastSize != GetSize())
-      reflowState.mFlags.mIsResize = PR_TRUE;
+    if (metrics->mLastSize.width != GetSize().width)
+      reflowState.mFlags.mHResize = PR_TRUE;
+    if (metrics->mLastSize.height != GetSize().height)
+      reflowState.mFlags.mVResize = PR_TRUE;
 
     #ifdef DEBUG_REFLOW
       nsAdaptorAddIndents();

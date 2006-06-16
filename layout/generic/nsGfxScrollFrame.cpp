@@ -714,7 +714,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
     state.mStyles.mHorizontal = NS_STYLE_OVERFLOW_HIDDEN;
 
   //------------ Handle Incremental Reflow -----------------
-  PRBool reflowContents = PR_TRUE;
+  PRBool reflowContents = PR_TRUE; // XXX Ignored
   PRBool reflowHScrollbar = PR_TRUE;
   PRBool reflowVScrollbar = PR_TRUE;
   PRBool reflowScrollCorner = PR_TRUE;

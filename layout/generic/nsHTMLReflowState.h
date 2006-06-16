@@ -268,7 +268,15 @@ struct nsHTMLReflowState {
                                      // is assuming a horizontal scrollbar
     PRUint16 mAssumingVScrollbar:1;  // parent frame is an nsIScrollableFrame and it
                                      // is assuming a vertical scrollbar
-    PRUint16 mIsResize:1;            // Is frame (a) not dirty and (b) a different width than before?
+
+    PRUint16 mHResize:1;             // Is frame (a) not dirty and (b) a
+                                     // different width than before?
+
+    PRUint16 mVResize:1;             // Is frame (a) not dirty and (b) a
+                                     // different height than before or
+                                     // (potentially) in a context where
+                                     // percent heights have a different
+                                     // basis?
   } mFlags;
 
 #ifdef IBMBIDI
@@ -366,7 +374,16 @@ struct nsHTMLReflowState {
   void ApplyMinMaxConstraints(nscoord* aContentWidth, nscoord* aContentHeight) const;
 
   PRBool ShouldReflowAllKids() const {
-    return (frame->GetStateBits() & NS_FRAME_IS_DIRTY) || mFlags.mIsResize;
+    // Note that we could make a stronger optimization for mVResize if
+    // we use it in a ShouldReflowChild test that replaces the current
+    // checks of NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN, if it
+    // were tested there along with NS_FRAME_CONTAINS_RELATIVE_HEIGHT.
+    // This would need to be combined with a slight change in which
+    // frames NS_FRAME_CONTAINS_RELATIVE_HEIGHT is marked on.
+    return (frame->GetStateBits() & NS_FRAME_IS_DIRTY) ||
+           mFlags.mHResize ||
+           (mFlags.mVResize && 
+            (frame->GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT));
   }
 
 protected:
