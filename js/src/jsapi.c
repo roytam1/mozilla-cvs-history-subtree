@@ -3441,6 +3441,12 @@ JS_GetFunctionFlags(JSFunction *fun)
     return fun->flags;
 }
 
+JS_PUBLIC_API(uint16)
+JS_GetFunctionArity(JSFunction *fun)
+{
+    return fun->nargs;
+}
+
 JS_PUBLIC_API(JSBool)
 JS_ObjectIsFunction(JSContext *cx, JSObject *obj)
 {
