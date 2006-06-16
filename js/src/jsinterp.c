@@ -4556,8 +4556,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
              */
             SAVE_SP(fp);
             obj2 = fp->scopeChain;
-            parent = js_ConstructObject(cx, &js_ObjectClass, NULL, obj2,
-                                        0, NULL);
+            parent = js_NewObject(cx, &js_ObjectClass, NULL, obj2);
             if (!parent) {
                 ok = JS_FALSE;
                 goto out;
