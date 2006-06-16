@@ -473,13 +473,6 @@ nsEditor::RemoveEventListeners()
                                     NS_GET_IID(nsIDOMDragListener));
     }
   }
-
-  mKeyListenerP = nsnull;
-  mMouseListenerP = nsnull;
-  mFocusListenerP = nsnull;
-  mTextListenerP = nsnull;
-  mCompositionListenerP = nsnull;
-  mDragListenerP = nsnull;
 }
 
 NS_IMETHODIMP
