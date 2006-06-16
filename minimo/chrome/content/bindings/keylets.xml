@@ -101,7 +101,7 @@
 				if(tryElement) {
 					if(e.keyCode==tryElement.rule_keyCode) {
 
-						e.preventBubble();
+						e.stopPropagation();
 
 						if(tryElement.rule_focusTo.indexOf("#advance")>-1) {
 
