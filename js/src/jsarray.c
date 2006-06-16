@@ -475,9 +475,18 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
         }
 
         /* Allocate 3 + 1 at end for ", ", closing bracket, and zero. */
-        growth = (nchars + (sepstr ? seplen : 0) +
-                  JSSTRING_LENGTH(str) +
-                  3 + 1) * sizeof(jschar);
+        tmplen = JSSTRING_LENGTH(str);
+        growth = (nchars + (sepstr ? seplen : 0) + tmplen + 3 + 1);
+        if (nchars > growth || tmplen > growth ||
+            growth > (size_t)-1 / sizeof(jschar)) {
+            if (chars) {
+                free(chars);
+                chars = NULL;
+            }
+            JS_ReportOutOfMemory(cx);
+            goto done;
+        }
+        growth *= sizeof(jschar);
         if (!chars) {
             chars = (jschar *) malloc(growth);
             if (!chars)
@@ -496,7 +505,6 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
         }
         sepstr = JSSTRING_CHARS(sep);
 
-        tmplen = JSSTRING_LENGTH(str);
         js_strncpy(&chars[nchars], JSSTRING_CHARS(str), tmplen);
         nchars += tmplen;
     }
