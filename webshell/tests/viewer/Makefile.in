@@ -263,6 +263,10 @@ CXXFLAGS	+= -DNGPREFS
 endif
 endif
 
+ifdef MOZ_JPROF
+EXTRA_LIBS += -ljprof
+endif
+
 libs:: $(PROGRAM) $(srcdir)/mozilla-viewer.sh
 ifeq (,$(filter WINNT OS2,$(OS_ARCH)))
 	$(INSTALL) $(srcdir)/mozilla-viewer.sh $(DIST)/bin
