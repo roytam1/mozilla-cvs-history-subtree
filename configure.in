@@ -1121,6 +1121,10 @@ if test "$GNU_CC"; then
     MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -Wl,-h,$@ -o $@'
     MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -Wl,-h,$@ -o $@'
     DSO_LDOPTS='-shared'
+    if test "$GCC_USE_GNU_LD"; then
+        # Don't allow undefined symbols in libraries
+        DSO_LDOPTS="$DSO_LDOPTS -Wl,-z,defs"
+    fi
     DSO_CFLAGS=''
     DSO_PIC_CFLAGS='-fPIC'
     _MOZ_RTTI_FLAGS_ON=${_COMPILER_PREFIX}-frtti
@@ -1147,7 +1151,13 @@ if test "$GNU_CC"; then
 else
     MKSHLIB='$(LD) $(DSO_LDOPTS) -h $@ -o $@'
     MKCSHLIB='$(LD) $(DSO_LDOPTS) -h $@ -o $@'
+
     DSO_LDOPTS='-shared'
+    if test "$GNU_LD"; then
+        # Don't allow undefined symbols in libraries
+        DSO_LDOPTS="$DSO_LDOPTS -z defs"
+    fi
+
     DSO_CFLAGS=''
     DSO_PIC_CFLAGS='-KPIC'
     _DEFINES_CFLAGS='$(ACDEFINES) -D_MOZILLA_CONFIG_H_ -DMOZILLA_CLIENT'
@@ -6657,7 +6667,7 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
            MOZ_CAIRO_LIBS="-lmozcairo -lmozlibpixman"
 
            if test "$MOZ_X11"; then
-               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $XLDFLAGS -lXrender -lfreetype"
+               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $XLDFLAGS -lXrender $XLIBS -lfontconfig -lfreetype"
            fi
            if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
                MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lgdi32"

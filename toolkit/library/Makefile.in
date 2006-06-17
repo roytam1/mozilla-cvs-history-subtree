@@ -362,6 +362,14 @@ DSO_LDOPTS += -Wl,--export-all-symbols
 endif
 endif # WINNT
 
+ifdef MOZ_JPROF
+EXTRA_DSO_LDOPTS += -ljprof
+endif
+
+ifdef NS_TRACE_MALLOC
+EXTRA_DSO_LIBS += tracemalloc
+endif
+
 ifdef MOZ_SVG_RENDERER_GDIPLUS
 OS_LIBS += Gdiplus.lib
 endif
