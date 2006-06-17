@@ -397,7 +397,10 @@ tier_99_dirs	+= zap/sdp zap/sip zap/client
 endif
 
 ifdef MOZ_SUITE
-tier_99_dirs += xpfe/components/search
+tier_99_dirs += \
+	xpfe/components/search \
+	xpfe/components/bookmarks \
+	$(NULL)
 
 # When Suite becomes a full MOZ_XUL_APP we can remove this ifdef
 ifdef MOZ_XUL_APP
