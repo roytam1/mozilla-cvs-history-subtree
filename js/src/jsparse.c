@@ -2899,9 +2899,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 
         if (js_PeekToken(cx, ts) == TOK_LP) {
             pn = LetBlock(cx, ts, tc, JS_TRUE);
-            if (!pn)
-                return NULL;
-            if (!(pn->pn_extra & PNX_BLOCKEXPR))
+            if (!pn || !(pn->pn_extra & PNX_BLOCKEXPR))
                 return pn;
         } else {
             /* Set up the block object. */
