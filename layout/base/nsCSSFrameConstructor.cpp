@@ -2494,6 +2494,25 @@ ProcessPseudoFrame(nsPresContext*    aPresContext,
 }
 
 static nsresult 
+ProcessPseudoRowGroupFrame(nsPresContext*     aPresContext,
+                           nsPseudoFrameData& aPseudoData,
+                           nsIFrame*&         aParent)
+{
+  nsresult rv = NS_OK;
+  if (!aPresContext) return rv;
+
+  aParent = aPseudoData.mFrame;
+  nsTableRowGroupFrame* rgFrame = nsTableFrame::GetRowGroupFrame(aParent);
+  nsFrameItems* items = &aPseudoData.mChildList;
+  if (items && items->childList) {
+    rv = rgFrame->SetInitialChildList(aPresContext, nsnull, items->childList);
+    if (NS_FAILED(rv)) return rv;
+  }
+  aPseudoData.Reset();
+  return rv;
+}
+
+static nsresult 
 ProcessPseudoTableFrame(nsPresContext* aPresContext,
                         nsPseudoFrames& aPseudoFrames,
                         nsIFrame*&      aParent)
@@ -2583,12 +2602,12 @@ ProcessPseudoFrames(nsFrameConstructorState& aState,
       if (nsLayoutAtoms::tableRowFrame == aHighestType) return rv;
     }
     if (pseudoFrames.mRowGroup.mFrame) {
-      rv = ProcessPseudoFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
+      rv = ProcessPseudoRowGroupFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
       if (nsLayoutAtoms::tableRowGroupFrame == aHighestType) return rv;
     }
   }
   else if (nsLayoutAtoms::tableRowGroupFrame == pseudoFrames.mLowestType) {
-    rv = ProcessPseudoFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
+    rv = ProcessPseudoRowGroupFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
     if (nsLayoutAtoms::tableRowGroupFrame == aHighestType) return rv;
 
     if (pseudoFrames.mTableOuter.mFrame) {
@@ -2609,7 +2628,7 @@ ProcessPseudoFrames(nsFrameConstructorState& aState,
     if (nsLayoutAtoms::tableRowFrame == aHighestType) return rv;
 
     if (pseudoFrames.mRowGroup.mFrame) {
-      rv = ProcessPseudoFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
+      rv = ProcessPseudoRowGroupFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
       if (nsLayoutAtoms::tableRowGroupFrame == aHighestType) return rv;
     }
     if (pseudoFrames.mTableOuter.mFrame) {
@@ -2630,7 +2649,7 @@ ProcessPseudoFrames(nsFrameConstructorState& aState,
       if (nsLayoutAtoms::tableRowFrame == aHighestType) return rv;
     }
     if (pseudoFrames.mRowGroup.mFrame) {
-      rv = ProcessPseudoFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
+      rv = ProcessPseudoRowGroupFrame(presContext, pseudoFrames.mRowGroup, aHighestFrame);
       if (nsLayoutAtoms::tableRowGroupFrame == aHighestType) return rv;
     }
     if (pseudoFrames.mTableOuter.mFrame) {
@@ -2867,8 +2886,10 @@ nsCSSFrameConstructor::CreatePseudoRowFrame(nsTableCreator&          aTableCreat
 {
   nsresult rv = NS_OK;
 
-  nsIFrame* parentFrame = (aState.mPseudoFrames.mRowGroup.mFrame) 
-                          ? aState.mPseudoFrames.mRowGroup.mFrame : aParentFrameIn;
+  nsIFrame* parentFrame = aParentFrameIn;
+  if (aState.mPseudoFrames.mRowGroup.mFrame) {
+    parentFrame = (nsIFrame*) nsTableFrame::GetRowGroupFrame(aState.mPseudoFrames.mRowGroup.mFrame);
+  }
   if (!parentFrame) return rv;
 
   nsStyleContext *parentStyle;
