@@ -64,6 +64,7 @@
 #include "nsIObserver.h"
 #include "nsIMsgFilterPlugin.h"
 #include "nsIStringBundle.h"
+#include "nsMsgTagService.h"
 
 #define MESSENGER_STRING_URL       "chrome://messenger/locale/messenger.properties"
 
@@ -171,6 +172,8 @@ protected:
   nsresult FetchSize(nsIMsgDBHdr * aHdr, PRUnichar ** aSizeString);
   nsresult FetchPriority(nsIMsgDBHdr *aHdr, PRUnichar ** aPriorityString);
   nsresult FetchLabel(nsIMsgDBHdr *aHdr, PRUnichar ** aLabelString);
+  nsresult FetchTags(nsIMsgDBHdr *aHdr, PRUnichar ** aTagString);
+  nsresult FetchKeywords(nsIMsgDBHdr *aHdr, char ** keywordString);
   nsresult FetchAccount(nsIMsgDBHdr * aHdr, PRUnichar ** aAccount);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
 
@@ -304,13 +307,10 @@ protected:
   PRBool OfflineMsgSelected(nsMsgViewIndex * indices, PRInt32 numIndices);
   PRBool NonDummyMsgSelected(nsMsgViewIndex * indices, PRInt32 numIndices);
   PRUnichar * GetString(const PRUnichar *aStringName);
-  nsresult AddLabelPrefObservers();
-  nsresult RemoveLabelPrefObservers();
   nsresult GetPrefLocalizedString(const char *aPrefName, nsString& aResult);
   nsresult GetLabelPrefStringAndAtom(const char *aPrefName, nsString& aColor, nsIAtom** aColorAtom);
-  nsresult AppendLabelProperties(nsMsgLabelValue label, nsISupportsArray *aProperties);
-  nsresult AppendSelectedTextColorProperties(nsMsgLabelValue label, nsISupportsArray *aProperties);
-  nsresult InitLabelPrefs(void);
+  nsresult AppendKeywordProperties(const char *keywords, nsISupportsArray *properties, PRBool addSelectedTextProperty);
+  nsresult InitLabelStrings(void);
   nsresult CopyDBView(nsMsgDBView *aNewMsgDBView, nsIMessenger *aMessengerInstance, nsIMsgWindow *aMsgWindow, nsIMsgDBViewCommandUpdater *aCmdUpdater);
   void InitializeAtomsAndLiterals();
   virtual PRInt32 FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex);
@@ -358,6 +358,7 @@ protected:
   // I18N date formater service which we'll want to cache locally.
   nsCOMPtr<nsIDateTimeFormat> mDateFormater;
   nsCOMPtr<nsIMsgHeaderParser> mHeaderParser;
+  nsCOMPtr<nsIMsgTagService> mTagService;
   // i'm not sure if we are going to permamently need a nsIMessenger instance or if we'll be able
   // to phase it out eventually....for now we need it though.
   nsCOMPtr<nsIMessenger> mMessengerInstance;

@@ -140,5 +140,11 @@ NS_MSG_BASE void Seconds2PRTime(PRUint32 seconds, PRTime *prTime);
 // helper function to generate current date+time as a string
 NS_MSG_BASE void MsgGenerateNowStr(nsACString &nowStr);
 
+// fills in the position of the passed in keyword in the passed in keyword list
+// and returns false if the keyword isn't present
+NS_MSG_BASE PRBool MsgFindKeyword(const nsACString &keyword, nsACString &keywords, 
+                                  nsACString::const_iterator &start, 
+                                  nsACString::const_iterator &end);
+
 #endif
 

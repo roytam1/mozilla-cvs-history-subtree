@@ -1159,7 +1159,6 @@ function OnLoadFolderPane()
 // "mailnews.ui.threadpane.version" pref.
 function UpgradeThreadPaneUI()
 {
-  var labelCol;
   var threadPaneUIVersion;
 
   try {

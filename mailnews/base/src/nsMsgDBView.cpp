@@ -97,8 +97,6 @@ nsIAtom * nsMsgDBView::kJunkMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kNotJunkMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kDummyMsgAtom = nsnull;
 
-nsIAtom * nsMsgDBView::mLabelPrefColorAtoms[PREF_LABELS_MAX] = {nsnull, nsnull, nsnull, nsnull, nsnull};
-
 nsIAtom * nsMsgDBView::kLabelColorWhiteAtom = nsnull;
 nsIAtom * nsMsgDBView::kLabelColorBlackAtom = nsnull;
 
@@ -165,7 +163,7 @@ nsMsgDBView::nsMsgDBView()
     InitDisplayFormats();
   }
   
-  AddLabelPrefObservers();
+  InitLabelStrings();
   gInstanceCount++;
 }
 
@@ -244,9 +242,6 @@ nsMsgDBView::~nsMsgDBView()
     NS_IF_RELEASE(kLowPriorityAtom);
 #endif
 
-    for(PRInt32 i = 0; i < PREF_LABELS_MAX; i++)
-      NS_IF_RELEASE(mLabelPrefColorAtoms[i]);
-
     NS_IF_RELEASE(kLabelColorWhiteAtom);
     NS_IF_RELEASE(kLabelColorBlackAtom);
 
@@ -265,7 +260,7 @@ nsMsgDBView::~nsMsgDBView()
   }
 }
 
-nsresult nsMsgDBView::InitLabelPrefs()
+nsresult nsMsgDBView::InitLabelStrings()
 {
   nsresult rv = NS_OK;
   nsCString prefString;
@@ -275,60 +270,6 @@ nsresult nsMsgDBView::InitLabelPrefs()
     prefString.Assign(PREF_LABELS_DESCRIPTION);
     prefString.AppendInt(i + 1);
     rv = GetPrefLocalizedString(prefString.get(), mLabelPrefDescriptions[i]);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    prefString.Assign(PREF_LABELS_COLOR);
-    prefString.AppendInt(i + 1);
-    rv = GetLabelPrefStringAndAtom(prefString.get(), mLabelPrefColors[i], &mLabelPrefColorAtoms[i]);
-    NS_ENSURE_SUCCESS(rv,rv);
-  }
-  return rv;
-}
-
-nsresult nsMsgDBView::AddLabelPrefObservers()
-{
-  nsresult rv;
-  nsCString prefString;
-
-  nsCOMPtr<nsIPrefBranch2> pbi(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  InitLabelPrefs();
-
-  for(PRInt32 i = 0; i < PREF_LABELS_MAX; i++)
-  {
-    prefString.Assign(PREF_LABELS_DESCRIPTION);
-    prefString.AppendInt(i + 1);
-    rv = pbi->AddObserver(prefString.get(), this, PR_FALSE);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    prefString.Assign(PREF_LABELS_COLOR);
-    prefString.AppendInt(i + 1);
-    rv = pbi->AddObserver(prefString.get(), this, PR_FALSE);
-    NS_ENSURE_SUCCESS(rv,rv);
-  }
-  return rv;
-}
-
-nsresult nsMsgDBView::RemoveLabelPrefObservers()
-{
-  nsresult rv;
-  nsCString prefString;
-
-  nsCOMPtr<nsIPrefBranch2> pbi(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  for(PRInt32 i = 0; i < PREF_LABELS_MAX; i++)
-  {
-    prefString.Assign(PREF_LABELS_DESCRIPTION);
-    prefString.AppendInt(i + 1);
-    rv = pbi->RemoveObserver(prefString.get(), this);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    prefString.Assign(PREF_LABELS_COLOR);
-    prefString.AppendInt(i + 1);
-    rv = pbi->RemoveObserver(prefString.get(), this);
-    NS_ENSURE_SUCCESS(rv,rv);
   }
   return rv;
 }
@@ -364,13 +305,6 @@ NS_IMETHODIMP nsMsgDBView::Observe(nsISupports *aSubject, const char *aTopic, co
       rv = GetPrefLocalizedString(prefName.get(), mLabelPrefDescriptions[indexInt - 1]);
       matchFound = PR_TRUE;
     }
-    else if(prefName.Find(PREF_LABELS_COLOR, PR_TRUE, 0, 1) != kNotFound)
-    {
-      /* it's a color, get the color string from the pref, and create a new atom for it */
-      rv = GetLabelPrefStringAndAtom(prefName.get(), mLabelPrefColors[indexInt - 1], &mLabelPrefColorAtoms[indexInt - 1]);
-      matchFound = PR_TRUE;
-    }
-
     if(matchFound) {
       NS_ENSURE_SUCCESS(rv,rv);
       NS_ASSERTION(mTree, "no tree, see bug #114956");
@@ -422,65 +356,31 @@ nsresult nsMsgDBView::GetPrefLocalizedString(const char *aPrefName, nsString& aR
   return rv;
 }
 
-// helper function used to fetch color information from the prefs and create atoms for them.
-nsresult nsMsgDBView::GetLabelPrefStringAndAtom(const char *aPrefName, nsString& aColor, nsIAtom** aColorAtom)
+nsresult nsMsgDBView::AppendKeywordProperties(const char *keywords, nsISupportsArray *properties, PRBool addSelectedTextProperty)
 {
-  nsresult rv = NS_OK;
-  nsCOMPtr<nsIPrefBranch> prefBranch;
-  nsXPIDLCString csval;
-  nsCAutoString prefColorTree(LABEL_COLOR_STRING);
-
-  prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = prefBranch->GetCharPref(aPrefName, getter_Copies(csval));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  aColor.AssignWithConversion(csval);
-
-  /* Build the color atom here.  This is where we cache it to be used
-   * later in AppendLabelProperties() */
-  NS_IF_RELEASE(*aColorAtom);
-  prefColorTree.AppendWithConversion(aColor.get() + 1);
-  *aColorAtom = NS_NewAtom(prefColorTree);
-  NS_ENSURE_TRUE(*aColorAtom, NS_ERROR_FAILURE);
-
-  return rv;
-}
-
-// helper function used to tell the tree to apply a certain color style
-// for fonts and highlights.
-nsresult nsMsgDBView::AppendLabelProperties(nsMsgLabelValue label, nsISupportsArray *aProperties)
-{
-  NS_ENSURE_ARG_POINTER(aProperties);
-
-  // We need to subtract 1 because mLabelPrefColors is 0 based.
-  if(!mLabelPrefColors[label - 1].IsEmpty())
+  // get last keyword, get its color, turn that into an atom, and and 
+  // append that as a property.
+  nsCStringArray keywordsArray;
+  nsCAutoString color;
+  keywordsArray.ParseString(keywords, " ");
+  nsresult rv;
+  if (!mTagService)
   {
-    NS_ENSURE_TRUE(mLabelPrefColorAtoms[label - 1], NS_ERROR_FAILURE);
-    aProperties->AppendElement(mLabelPrefColorAtoms[label - 1]);
+    mTagService = do_GetService(NS_MSGTAGSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
   }
-  return NS_OK;
-}
-
-// helper function used to tell the tree to apply a certain color style
-// for fonts when it is highlighted.
-nsresult nsMsgDBView::AppendSelectedTextColorProperties(nsMsgLabelValue label, nsISupportsArray *aProperties)
-{
-  NS_ENSURE_ARG_POINTER(aProperties);
-
-  // This checks to see if the text color is white (#FFFFFF).  If it is, we
-  // want to set the text color black when highlighted so it will be
-  // readable.  We don't care if the text color is black because this
-  // means the highlight color will be black.
-  //
-  // We need to subtract 1 because mLabelPrefColors is 0 based.
-  if(mLabelPrefColors[label - 1].EqualsLiteral(LABEL_COLOR_WHITE_STRING))
-    aProperties->AppendElement(kLabelColorBlackAtom);  
-  else
-    aProperties->AppendElement(kLabelColorWhiteAtom);  
-
-  return NS_OK;
+  rv = mTagService->GetColorForKey(*(keywordsArray[keywordsArray.Count() - 1]), color);
+  if (NS_SUCCEEDED(rv) && !color.IsEmpty())
+  {
+    if (addSelectedTextProperty)
+      properties->AppendElement(color.EqualsLiteral(LABEL_COLOR_WHITE_STRING) 
+        ? kLabelColorBlackAtom
+        : kLabelColorWhiteAtom);  
+    color.Replace(0, 1, NS_LITERAL_CSTRING(LABEL_COLOR_STRING));
+    nsCOMPtr <nsIAtom> keywordAtom = do_GetAtom(color.get());
+    properties->AppendElement(keywordAtom);
+  }
+  return rv;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -771,14 +671,68 @@ nsresult nsMsgDBView::FetchPriority(nsIMsgDBHdr *aHdr, PRUnichar ** aPriorityStr
     break;
   }
 
-  if (priorityString)
-    *aPriorityString = nsCRT::strdup(priorityString);
-  else
-    *aPriorityString = nsnull;
+  *aPriorityString = (priorityString) ? nsCRT::strdup(priorityString) : nsnull;
 
   return NS_OK;
 }
 
+nsresult nsMsgDBView::FetchKeywords(nsIMsgDBHdr *aHdr, char ** keywordString)
+{
+  nsresult rv = NS_OK;
+  if (!mTagService)
+  {
+    mTagService = do_GetService(NS_MSGTAGSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  nsMsgLabelValue label = 0;
+
+  rv = aHdr->GetLabel(&label);
+  nsXPIDLCString keywords;
+  aHdr->GetStringProperty("keywords", getter_Copies(keywords));
+  if (label > 0)
+  {
+    nsCAutoString labelStr("$label");
+    labelStr.Append((char) (label + '0'));
+    if (!FindInReadable(labelStr, keywords))
+    {
+      if (!keywords.IsEmpty())
+        keywords.Append(' ');
+      keywords.Append(labelStr);
+    }
+  }
+  *keywordString = ToNewCString(keywords);
+  return (*keywordString) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+nsresult nsMsgDBView::FetchTags(nsIMsgDBHdr *aHdr, PRUnichar ** aTagString)
+{
+  nsresult rv = NS_OK;
+  if (!mTagService)
+  {
+    mTagService = do_GetService(NS_MSGTAGSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  nsXPIDLCString keywords;
+  nsXPIDLString label, tags;
+  FetchLabel(aHdr, getter_Copies(label));
+  aHdr->GetStringProperty("keywords", getter_Copies(keywords));
+  nsCStringArray keywordsArray;
+  keywordsArray.ParseString(keywords.get(), " ");
+  nsAutoString tag;
+  for (PRInt32 i = 0; i < keywordsArray.Count(); i++)
+  {
+    rv = mTagService->GetTagForKey(*(keywordsArray[i]), tag);
+    if (NS_SUCCEEDED(rv) && !tag.IsEmpty() && !tag.Equals(label))
+    {
+      if (!tags.IsEmpty())
+        tags.Append((PRUnichar) ' ');
+      tags.Append(tag);
+    }
+  }
+  tags.Append(label);
+  *aTagString = ToNewUnicode(tags);
+  return rv;
+}
 nsresult nsMsgDBView::FetchLabel(nsIMsgDBHdr *aHdr, PRUnichar ** aLabelString)
 {
   nsresult rv = NS_OK;
@@ -1176,8 +1130,6 @@ nsresult nsMsgDBView::GetSelectedIndices(nsUInt32Array *selection)
 
 NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *properties)
 {
-  nsMsgLabelValue label;
-
   if (!IsValidIndex(index))
     return NS_MSG_INVALID_DBVIEW_INDEX; 
 
@@ -1192,15 +1144,10 @@ NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *pro
     return NS_MSG_INVALID_DBVIEW_INDEX;
   }
 
-  // we only care if label is between 1 and PREF_LABELS_MAX inclusive.
-  if (NS_SUCCEEDED(msgHdr->GetLabel(&label)) && (label >= 1) && (label <= PREF_LABELS_MAX))
-  {
-    // Set the row properties.  This will color the background of a row given
-    // a particular label color.
-    rv = AppendLabelProperties(label, properties);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
+  nsXPIDLCString keywordProperty;
+  FetchKeywords(msgHdr, getter_Copies(keywordProperty));
+  if (!keywordProperty.IsEmpty())
+    AppendKeywordProperties(keywordProperty.get(), properties, PR_FALSE);
   return NS_OK;
 }
 
@@ -1211,8 +1158,6 @@ NS_IMETHODIMP nsMsgDBView::GetColumnProperties(nsITreeColumn* col, nsISupportsAr
 
 NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, nsITreeColumn *col, nsISupportsArray *properties)
 {
-  nsMsgLabelValue label;
-
   if (!IsValidIndex(aRow))
     return NS_MSG_INVALID_DBVIEW_INDEX; 
 
@@ -1281,6 +1226,16 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, nsITreeColumn *col, n
     properties->AppendElement(atoi(junkScoreStr.get()) > 50 ? kJunkMsgAtom : kNotJunkMsgAtom);
   }
 
+  nsXPIDLCString keywords;
+
+  FetchKeywords(msgHdr, getter_Copies(keywords));
+  if (!keywords.IsEmpty())
+    AppendKeywordProperties(keywords.get(), properties, PR_TRUE);
+
+  // this is a double fetch of the keywords property since we also fetch
+  // it for the tags - do we want to do this?
+  // I'm not sure anyone uses the kw- property, though it could be nice
+  // for people wanting to extend the thread pane.
   nsXPIDLCString keywordProperty;
   msgHdr->GetStringProperty("keywords", getter_Copies(keywordProperty));
   if (!keywordProperty.IsEmpty())
@@ -1324,25 +1279,6 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, nsITreeColumn *col, n
     break;
   }
 #endif
-
-  // we only care if label is between 1 and PREF_LABELS_MAX inclusive.
-  if (NS_SUCCEEDED(msgHdr->GetLabel(&label)) && (label >= 1) && (label <= PREF_LABELS_MAX))
-  {
-    // Set the cell properties.  This will color the text of a column given
-    // a particular label color.
-    rv = AppendLabelProperties(label, properties);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // AppendSelectedTextColorProperties() should not be merged into
-    // AppendLabelProperties() because AppendLabelProperties() is called
-    // by both GetCellProperties() and GetRowProperties().
-    //
-    // AppendSelectedTextColorProperties() is used to only apply the
-    // 'selected' text color for a label (it will not work if it's
-    // only called from GetRowProperties() instead of here).
-    rv = AppendSelectedTextColorProperties(label, properties);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
 
   const PRUnichar* colID;
   col->GetIdConst(&colID);
@@ -1595,10 +1531,6 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
     rv = FetchPriority(msgHdr, getter_Copies(valueText));
     aValue.Assign(valueText);
     break;
-  case 'l': // label
-    rv = FetchLabel(msgHdr, getter_Copies(valueText));
-    aValue.Assign(valueText);
-    break;
   case 'a': // account
     if (colID[1] == 'c') // account
     {
@@ -1622,6 +1554,11 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
           aValue.Assign(formattedCountString);
         }
       }
+    }
+    else if (colID[1] == 'a') // tags
+    {
+      rv = FetchTags(msgHdr, getter_Copies(valueText));
+      aValue.Assign(valueText);
     }
     break;
   case 'u':
@@ -1701,10 +1638,17 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, nsITreeColumn* col)
     if (colID[6] == 'B') 
       ApplyCommandToIndices(nsMsgViewCommandType::toggleMessageRead, (nsMsgViewIndex *) &row, 1);
    break;
-  case 't': // threaded cell or total cell
+  case 't': // tag cell, threaded cell or total cell
     if (colID[1] == 'h') 
     {
       ExpandAndSelectThreadByIndex(row, PR_FALSE);
+    }
+    else if (colID[1] == 'a')
+    {
+      // ### Do we want to keep this behaviour but switch it to tags?
+      // We could enumerate over the tags and go to the next one - it looks
+      // to me like this wasn't working before tags landed, so maybe not
+      // worth bothering with.
     }
     break;
   case 'f': // flagged column
@@ -1730,27 +1674,6 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, nsITreeColumn* col)
           ApplyCommandToIndices(nsMsgViewCommandType::junk, (nsMsgViewIndex *) &row, 1);
         else
           ApplyCommandToIndices(nsMsgViewCommandType::unjunk, (nsMsgViewIndex *) &row, 1);
-      }
-    }
-    break;
-  case 'l': // label column
-    {
-      nsCOMPtr <nsIMsgDBHdr> msgHdr;
-
-      nsresult rv = GetMsgHdrForViewIndex(row, getter_AddRefs(msgHdr));
-      if (NS_SUCCEEDED(rv) && msgHdr)
-      {
-        nsMsgLabelValue label;
-
-        if (NS_SUCCEEDED(msgHdr->GetLabel(&label)))
-        {
-          // we have five labels, and the special 0 label, meaning no label.
-          // lastLabel - label1 is 4, so we need to compare label to 4 + 1 to see if we're at the last label
-          if (label != (nsMsgViewCommandType::lastLabel - nsMsgViewCommandType::label1 + 1))
-            msgHdr->SetLabel(label + 1);
-          else
-            msgHdr->SetLabel(0);
-        }
       }
     }
     break;
@@ -1856,8 +1779,6 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
 
 NS_IMETHODIMP nsMsgDBView::Close()
 {
-  RemoveLabelPrefObservers();
-
   PRInt32 oldSize = GetSize();
   // this is important, because the tree will ask us for our
   // row count, which get determine from the number of keys.
@@ -2075,12 +1996,6 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
   case nsMsgViewCommandType::undeleteMsg:
   case nsMsgViewCommandType::deleteNoTrash:
   case nsMsgViewCommandType::markThreadRead:
-  case nsMsgViewCommandType::label0:
-  case nsMsgViewCommandType::label1:
-  case nsMsgViewCommandType::label2:
-  case nsMsgViewCommandType::label3:
-  case nsMsgViewCommandType::label4:
-  case nsMsgViewCommandType::label5:
   case nsMsgViewCommandType::junk:
   case nsMsgViewCommandType::unjunk:
     // since the FE could have constructed the list of indices in
@@ -2237,11 +2152,6 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
   case nsMsgViewCommandType::toggleThreadWatched:
   case nsMsgViewCommandType::markThreadRead:
   case nsMsgViewCommandType::downloadSelectedForOffline:
-  case nsMsgViewCommandType::label1:
-  case nsMsgViewCommandType::label2:
-  case nsMsgViewCommandType::label3:
-  case nsMsgViewCommandType::label4:
-  case nsMsgViewCommandType::label5:
     *selectable_p = haveSelection;
     break;
   case nsMsgViewCommandType::junk:
@@ -2423,14 +2333,6 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
     case nsMsgViewCommandType::markThreadRead:
       rv = SetThreadOfMsgReadByIndex(indices[i], imapUids, PR_TRUE);
       break;
-    case nsMsgViewCommandType::label0:
-    case nsMsgViewCommandType::label1:
-    case nsMsgViewCommandType::label2:
-    case nsMsgViewCommandType::label3:
-    case nsMsgViewCommandType::label4:
-    case nsMsgViewCommandType::label5:
-      rv = SetLabelByIndex(indices[i], (command - nsMsgViewCommandType::label0));
-      break;
     case nsMsgViewCommandType::junk:
       rv = SetAsJunkByIndex(junkPlugin.get(), indices[i],
                              nsIJunkMailPlugin::JUNK);
@@ -2452,7 +2354,6 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
   if (thisIsImapFolder)
   {
     imapMessageFlagsType flags = kNoImapMsgFlag;
-    PRBool commandIsLabelSet = PR_FALSE;
     PRBool addFlags = PR_FALSE;
     PRBool isRead = PR_FALSE;
     
@@ -2485,16 +2386,6 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
       flags |= kImapMsgFlaggedFlag;
       addFlags = PR_FALSE;
       break;
-    case nsMsgViewCommandType::label0:
-    case nsMsgViewCommandType::label1:
-    case nsMsgViewCommandType::label2:
-    case nsMsgViewCommandType::label3:
-    case nsMsgViewCommandType::label4:
-    case nsMsgViewCommandType::label5:
-      flags |= ((command - nsMsgViewCommandType::label0) << 9);
-      addFlags = (command != nsMsgViewCommandType::label0);
-      commandIsLabelSet = PR_TRUE;
-      break;
     case nsMsgViewCommandType::undeleteMsg:
       flags = kImapMsgDeletedFlag;
       addFlags = PR_FALSE;
@@ -2516,7 +2407,7 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
       break;
     }
     
-    if (flags != kNoImapMsgFlag || commandIsLabelSet)	// can't get here without thisIsImapThreadPane == TRUE
+    if (flags != kNoImapMsgFlag)	// can't get here without thisIsImapThreadPane == TRUE
       imapFolder->StoreImapFlags(flags, addFlags, imapUids.GetArray(), imapUids.GetSize(), nsnull);
     
   }
@@ -2707,22 +2598,6 @@ nsresult nsMsgDBView::SetFlaggedByIndex(nsMsgViewIndex index, PRBool mark)
 	rv = dbToUse->MarkMarked(m_keys[index], mark, this);
 	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
 	return rv;
-}
-
-nsresult nsMsgDBView::SetLabelByIndex(nsMsgViewIndex index, nsMsgLabelValue label)
-{
-  nsresult rv;
-  
-  if (!IsValidIndex(index))
-    return NS_MSG_INVALID_DBVIEW_INDEX;
-  
-  nsCOMPtr <nsIMsgDatabase> dbToUse;
-  rv = GetDBForViewIndex(index, getter_AddRefs(dbToUse));
-  NS_ENSURE_SUCCESS(rv, rv);
-  
-  rv = dbToUse->SetLabel(m_keys[index], label);
-  NoteChange(index, 1, nsMsgViewNotificationCode::changed);
-  return rv;
 }
 
 nsresult nsMsgDBView::SetStringPropertyByIndex(nsMsgViewIndex index, const char *aProperty, const char *aValue)
@@ -3235,6 +3110,7 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
             *pMaxLen = kMaxSubjectKey;
             break;
         case nsMsgViewSortType::byAccount:
+        case nsMsgViewSortType::byTags:
         case nsMsgViewSortType::byLocation:
             *pFieldType = kCollationKey;
             *pMaxLen = kMaxLocationKey;
@@ -3255,7 +3131,6 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
         case nsMsgViewSortType::byFlagged:
         case nsMsgViewSortType::byUnread:
         case nsMsgViewSortType::byStatus:
-        case nsMsgViewSortType::byLabel:
         case nsMsgViewSortType::byJunkStatus:
         case nsMsgViewSortType::byAttachments:
             *pFieldType = kU32;
@@ -3334,13 +3209,6 @@ nsresult nsMsgDBView::GetLongField(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue s
     case nsMsgViewSortType::byStatus:
         rv = GetStatusSortValue(msgHdr,result);
         break;
-    case nsMsgViewSortType::byLabel:
-        rv = msgHdr->GetLabel(result);
-        if(*result == 0)
-          // set result to be the last label id value + 1 to ensure that it will always
-          // be sorted last.
-          *result = (nsMsgViewCommandType::lastLabel - nsMsgViewCommandType::label0) + 1;
-        break;
     case nsMsgViewSortType::byFlagged:
         bits = 0;
         rv = msgHdr->GetFlags(&bits);
@@ -3415,16 +3283,20 @@ nsMsgDBView::GetCollationKey(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue sortTyp
         rv = msgHdr->GetAuthorCollationKey(result, len);
         break;
     case nsMsgViewSortType::byAccount:
+    case nsMsgViewSortType::byTags:
       {
-        nsXPIDLString accountName;
+        nsXPIDLString str;
         nsCOMPtr <nsIMsgDatabase> dbToUse = m_db;
     
         if (!dbToUse) // probably search view
           GetDBForViewIndex(0, getter_AddRefs(dbToUse));
 
-        rv = FetchAccount(msgHdr, getter_Copies(accountName));
+        rv = (sortType == nsMsgViewSortType::byAccount)
+            ? FetchAccount(msgHdr, getter_Copies(str))
+            : FetchTags(msgHdr, getter_Copies(str));
+
         if (NS_SUCCEEDED(rv) && dbToUse)
-          rv = dbToUse->CreateCollationKey(accountName, result, len);
+          rv = dbToUse->CreateCollationKey(str, result, len);
       }
       break;
     default:

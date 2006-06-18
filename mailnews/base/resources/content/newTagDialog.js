@@ -22,7 +22,6 @@
  *
  * Contributor(s):
  *  David Bienvenu <bienvenu@nventure.com> 
- *  Karsten Düsterloh <mnyromyr@tprac.de>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -74,13 +73,18 @@ function onOK()
   
   var messengerBundle = document.getElementById("bundle_messenger");
   var alertText = messengerBundle.getString("tagExists");
-  var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                                .getService(Components.interfaces.nsIPromptService);
-  promptService.alert(window, document.title, alertText);
+  window.alert(alertText);
   return false;
 }
 
 function doEnabling()
 {
-  dialog.OKButton.disabled = !dialog.nameField.value;
+  if (dialog.nameField.value) {
+    if (dialog.OKButton.disabled)
+      dialog.OKButton.disabled = false;
+  } else {
+    if (!dialog.OKButton.disabled)
+      dialog.OKButton.disabled = true;
+  }
 }
+

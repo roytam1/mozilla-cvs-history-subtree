@@ -142,8 +142,8 @@
 <!ENTITY sortBySizeCmd.accesskey "z">
 <!ENTITY sortByStatusCmd.label "Status">
 <!ENTITY sortByStatusCmd.accesskey "u">
-<!ENTITY sortByLabelCmd.label "Label">
-<!ENTITY sortByLabelCmd.accesskey "L">
+<!ENTITY sortByTagsCmd.label "Tags">
+<!ENTITY sortByTagsCmd.accesskey "g">
 <!ENTITY sortByJunkStatusCmd.label "Junk Status">
 <!ENTITY sortByJunkStatusCmd.accesskey "J">
 <!ENTITY sortBySubjectCmd.label "Subject">
@@ -330,8 +330,8 @@
 <!ENTITY fileHereMenu.accesskey "F">
 <!ENTITY copyHereMenu.label "Copy Here">
 <!ENTITY copyHereMenu.accesskey "C">
-<!ENTITY labelMenu.label "Label">
-<!ENTITY labelMenu.accesskey "L">
+<!ENTITY tagsMenu.label "Tag">
+<!ENTITY tagsMenu.accesskey "g">
 <!ENTITY labelCmd0.accesskey "0">
 <!ENTITY labelCmd0.key "0">
 <!ENTITY labelCmd1.label "1">
@@ -523,7 +523,7 @@
 <!ENTITY subjectColumn.label "Subject">
 <!ENTITY dateColumn.label "Date">
 <!ENTITY priorityColumn.label "Priority">
-<!ENTITY labelColumn.label "Label">
+<!ENTITY tagsColumn.label "Tag">
 <!ENTITY accountColumn.label "Account">
 <!ENTITY statusColumn.label "Status">
 <!ENTITY sizeColumn.label "Size">
@@ -545,7 +545,7 @@
 <!ENTITY subjectColumn.tooltip "Click to sort by subject">
 <!ENTITY dateColumn.tooltip "Click to sort by date">
 <!ENTITY priorityColumn.tooltip "Click to sort by priority">
-<!ENTITY labelColumn.tooltip "Click to sort by label">
+<!ENTITY tagsColumn.tooltip "Click to sort by tags">
 <!ENTITY accountColumn.tooltip "Click to sort by account">
 <!ENTITY statusColumn.tooltip "Click to sort by status">
 <!ENTITY sizeColumn.tooltip "Click to sort by size">

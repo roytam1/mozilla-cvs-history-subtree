@@ -288,6 +288,9 @@ public:
                                                  PRBool aLocalOnly, nsIUrlListener *aUrlListener, 
                                                  PRBool *aAsyncResults);
 
+  NS_IMETHOD AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword);
+  NS_IMETHOD RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword);
+
   // nsIMsgImapMailFolder methods
   NS_DECL_NSIMSGIMAPMAILFOLDER
           

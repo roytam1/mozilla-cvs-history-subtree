@@ -87,7 +87,6 @@
 #include "nsICopyMsgStreamListener.h"
 #include "nsIFileStream.h"
 #include "nsIMsgParseMailMsgState.h"
-#include "nsMsgLineBuffer.h"
 #include "nsMsgLocalCID.h"
 #include "nsIOutputStream.h"
 #include "nsIDocShell.h"
@@ -1614,10 +1613,6 @@ nsImapService::SetMessageFlags(nsIEventQueue * aClientEventQueue,
                                imapMessageFlagsType flags,
                                PRBool messageIdsAreUID)
 {
-	// create a protocol instance to handle the request.
-	// NOTE: once we start working with multiple connections, this step will be much more complicated...but for now
-	// just create a connection and process the request.
-
   return DiddleFlags(aClientEventQueue, aImapMailFolder, aUrlListener, aURL, messageIdentifierList,
                     "setmsgflags", flags, messageIdsAreUID);
 }

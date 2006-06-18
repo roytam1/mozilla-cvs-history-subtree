@@ -602,45 +602,8 @@
         </rule>
       </template>
     </menu>
-    <menu id="threadPaneContext-labels" label="&labelMenu.label;" accesskey="&labelMenu.accesskey;">
-      <menupopup onpopupshowing="InitMessageLabel('threadPaneContext')">
-        <menuitem
-           id="threadPaneContext-labelMenuItem0"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd0.accesskey;"
-           observes="cmd_label0"/>
-        <menuseparator/>
-        <menuitem
-           id="threadPaneContext-labelMenuItem1"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd1.accesskey;"
-           observes="cmd_label1"/>
-        <menuitem
-           id="threadPaneContext-labelMenuItem2"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd2.accesskey;"
-           observes="cmd_label2"/>
-        <menuitem
-           id="threadPaneContext-labelMenuItem3"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd3.accesskey;"
-           observes="cmd_label3"/>
-        <menuitem
-           id="threadPaneContext-labelMenuItem4"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd4.accesskey;"
-           observes="cmd_label4"/>
-        <menuitem
-           id="threadPaneContext-labelMenuItem5"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd5.accesskey;"
-           observes="cmd_label5"/>
+    <menu id="threadPaneContext-tags" label="&tagsMenu.label;" accesskey="&tagsMenu.accesskey;">
+      <menupopup id="threadPaneContext-tagpopup" onpopupshowing="InitMessageTags('threadPaneContext')">
       </menupopup>
     </menu>
     <menu id="threadPaneContext-mark" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
@@ -944,46 +907,9 @@
         </rule>
       </template>
     </menu>
-    <menuseparator id="messagePaneContext-sep-labels-1"/>
-    <menu id="messagePaneContext-labels" label="&labelMenu.label;" accesskey="&labelMenu.accesskey;">
-      <menupopup onpopupshowing="InitMessageLabel('messagePaneContext')">
-        <menuitem
-           id="messagePaneContext-labelMenuItem0"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd0.accesskey;"
-           observes="cmd_label0"/>
-        <menuseparator/>
-        <menuitem
-           id="messagePaneContext-labelMenuItem1"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd1.accesskey;"
-           observes="cmd_label1"/>
-        <menuitem
-           id="messagePaneContext-labelMenuItem2"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd2.accesskey;"
-           observes="cmd_label2"/>
-        <menuitem
-           id="messagePaneContext-labelMenuItem3"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd3.accesskey;"
-           observes="cmd_label3"/>
-        <menuitem
-           id="messagePaneContext-labelMenuItem4"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd4.accesskey;"
-           observes="cmd_label4"/>
-        <menuitem
-           id="messagePaneContext-labelMenuItem5"
-           type="radio"
-           checked="false"
-           accesskey="&labelCmd5.accesskey;"
-           observes="cmd_label5"/>
+    <menuseparator id="messagePaneContext-sep-tags-1"/>
+    <menu id="messagePaneContext-tags" label="&tagsMenu.label;" accesskey="&tagsMenu.accesskey;">
+      <menupopup id="messagePaneContext-tagpopup" onpopupshowing="InitMessageTags('messagePaneContext')">
       </menupopup>
     </menu>
     <menu id="messagePaneContext-mark" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
@@ -1289,7 +1215,7 @@
               <menuitem id="sortByStatusMenuitem" type="radio" name="sortby" label="&sortByStatusCmd.label;" accesskey="&sortByStatusCmd.accesskey;" oncommand="MsgSortByStatus()"/>
               <menuitem id="sortBySubjectMenuitem" type="radio" name="sortby" label="&sortBySubjectCmd.label;" accesskey="&sortBySubjectCmd.accesskey;" oncommand="MsgSortBySubject()"/>
               <menuitem id="sortByUnreadMenuitem" type="radio" name="sortby" label="&sortByUnreadCmd.label;"  accesskey="&sortByUnreadCmd.accesskey;" oncommand="MsgSortByUnread()"/>
-              <menuitem id="sortByLabelMenuitem" type="radio" name="sortby" label="&sortByLabelCmd.label;" accesskey="&sortByLabelCmd.accesskey;" oncommand="MsgSortByLabel()"/>
+              <menuitem id="sortByTagsMenuitem" type="radio" name="sortby" label="&sortByTagsCmd.label;" accesskey="&sortByTagsCmd.accesskey;" oncommand="MsgSortByTags()"/>
               <menuitem id="sortByJunkStatusMenuitem" type="radio" name="sortby" label="&sortByJunkStatusCmd.label;" accesskey="&sortByJunkStatusCmd.accesskey;" oncommand="MsgSortByJunkStatus()"/>
               <menuitem id="sortByAttachmentsMenuitem" type="radio" name="sortby" label="&sortByAttachmentsCmd.label;" accesskey="&sortByAttachmentsCmd.accesskey;" oncommand="MsgSortByAttachments()"/>			  
               <menuseparator/>
@@ -1607,85 +1533,48 @@
               </template>
             </menu>
 
-        <menu id="labelMenu" label="&labelMenu.label;" accesskey="&labelMenu.accesskey;">
-          <menupopup id="menuPopup-labels" onpopupshowing="InitMessageLabel('menuPopup')">
-            <menuitem
-               id="menuPopup-labelMenuItem0"
-               type="radio"
-               checked="false"
-               accesskey="&labelCmd0.accesskey;"
-               observes="cmd_label0"/>
-            <menuseparator/>
-            <menuitem
-               id="menuPopup-labelMenuItem1"
-               type="radio"
-               checked="false"
-               accesskey="&labelCmd1.accesskey;"
-               observes="cmd_label1"/>
-            <menuitem
-               id="menuPopup-labelMenuItem2"
-               type="radio"
-               checked="false"
-               accesskey="&labelCmd2.accesskey;"
-               observes="cmd_label2"/>
-            <menuitem
-               id="menuPopup-labelMenuItem3"
-               type="radio"
-               checked="false"
-               accesskey="&labelCmd3.accesskey;"
-               observes="cmd_label3"/>
-            <menuitem
-               id="menuPopup-labelMenuItem4"
-               type="radio"
-               checked="false"
-               accesskey="&labelCmd4.accesskey;"
-               observes="cmd_label4"/>
-            <menuitem
-               id="menuPopup-labelMenuItem5"
-               type="radio"
-               checked="false"
-               accesskey="&labelCmd5.accesskey;"
-               observes="cmd_label5"/>
-          </menupopup>
-        </menu>
-        <menu id="markMenu" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
-          <menupopup onpopupshowing="InitMessageMark()">
-            <menuitem type="checkbox" id="markReadMenuItem" label="&markAsReadCmd.label;" accesskey="&markAsReadCmd.accesskey;" observes="cmd_markAsRead"
+            <menu id="messageMenu-tags" label="&tagsMenu.label;" accesskey="&tagsMenu.accesskey;">
+              <menupopup id="messageMenu-tagpopup" onpopupshowing="InitMessageTags('messageMenu')">
+              </menupopup>
+            </menu>
+            <menu id="markMenu" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
+              <menupopup onpopupshowing="InitMessageMark()">
+                <menuitem type="checkbox" id="markReadMenuItem" label="&markAsReadCmd.label;" accesskey="&markAsReadCmd.accesskey;" observes="cmd_markAsRead"
 #ifndef XP_MACOSX
                       key="key_toggleRead"
 #endif
               />
-            <menuitem label="&markThreadAsReadCmd.label;" accesskey="&markThreadAsReadCmd.accesskey;" observes="cmd_markThreadAsRead"
+                <menuitem label="&markThreadAsReadCmd.label;" accesskey="&markThreadAsReadCmd.accesskey;" observes="cmd_markThreadAsRead"
 #ifndef XP_MACOSX
                       key="key_markThreadAsRead"
 #endif
               />
-            <menuitem label="&markReadByDateCmd.label;" accesskey="&markReadByDateCmd.accesskey;" command="cmd_markReadByDate"
+                <menuitem label="&markReadByDateCmd.label;" accesskey="&markReadByDateCmd.accesskey;" command="cmd_markReadByDate"
 #ifndef XP_MACOSX
                       key="key_markReadByDate"
 #endif
               />
-            <menuitem label="&markAllReadCmd.label;" key="key_markAllRead" accesskey="&markAllReadCmd.accesskey;" observes="cmd_markAllRead"/>
-            <menuseparator/>
-            <menuitem id="markFlaggedMenuItem" 
-                      type="checkbox" 
-                      label="&markFlaggedCmd.label;" 
-                      accesskey="&markFlaggedCmd.accesskey;" 
-                      observes="cmd_markAsFlagged"
+                <menuitem label="&markAllReadCmd.label;" key="key_markAllRead" accesskey="&markAllReadCmd.accesskey;" observes="cmd_markAllRead"/>
+                <menuseparator/>
+                <menuitem id="markFlaggedMenuItem" 
+                          type="checkbox" 
+                          label="&markFlaggedCmd.label;" 
+                          accesskey="&markFlaggedCmd.accesskey;" 
+                          observes="cmd_markAsFlagged"
 #ifndef XP_MACOSX
                       key="key_toggleFlagged"
 #endif
               />
-            <menuseparator/>
-            <menuitem label="&markAsJunkCmd.label;" 
-                      accesskey="&markAsJunkCmd.accesskey;" 
-                      observes="cmd_markAsJunk"
+                <menuseparator/>
+                <menuitem label="&markAsJunkCmd.label;" 
+                          accesskey="&markAsJunkCmd.accesskey;" 
+                          observes="cmd_markAsJunk"
 #ifndef XP_MACOSX
                       key="key_markJunk"
 #endif
               />
-            <menuitem label="&markAsNotJunkCmd.label;"
-                      key="key_markNotJunk" 
+                <menuitem label="&markAsNotJunkCmd.label;"
+                          key="key_markNotJunk" 
                       accesskey="&markAsNotJunkCmd.accesskey;" 
                       observes="cmd_markAsNotJunk"/>
             <menuitem label="&recalculateJunkScoreCmd.label;"
