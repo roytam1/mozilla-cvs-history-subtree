@@ -86,8 +86,9 @@ nsLayoutStylesheetCache::ScrollbarsSheet()
               NS_LITERAL_CSTRING("chrome://global/skin/xulscrollbars.css"));
 #endif
 
+    // Scrollbars don't need access to unsafe rules
     if (sheetURI)
-      LoadSheet(sheetURI, gStyleCache->mScrollbarsSheet);
+      LoadSheet(sheetURI, gStyleCache->mScrollbarsSheet, PR_FALSE);
 #ifdef XP_MACOSX
     NS_ASSERTION(gStyleCache->mScrollbarsSheet, "Could not load nativescrollbars.css.");
 #else
@@ -110,8 +111,9 @@ nsLayoutStylesheetCache::FormsSheet()
       NS_NewURI(getter_AddRefs(sheetURI),
                 NS_LITERAL_CSTRING("resource://gre/res/forms.css"));
 
+    // forms.css needs access to unsafe rules
     if (sheetURI)
-      LoadSheet(sheetURI, gStyleCache->mFormsSheet);
+      LoadSheet(sheetURI, gStyleCache->mFormsSheet, PR_TRUE);
 
     NS_ASSERTION(gStyleCache->mFormsSheet, "Could not load forms.css.");
   }
@@ -211,13 +213,14 @@ nsLayoutStylesheetCache::LoadSheetFile(nsIFile* aFile, nsCOMPtr<nsICSSStyleSheet
   nsCOMPtr<nsIURI> uri;
   NS_NewFileURI(getter_AddRefs(uri), aFile);
 
-  LoadSheet(uri, aSheet);
+  LoadSheet(uri, aSheet, PR_FALSE);
 }
 
 static NS_DEFINE_CID(kCSSLoaderCID, NS_CSS_LOADER_CID);
 
 void
-nsLayoutStylesheetCache::LoadSheet(nsIURI* aURI, nsCOMPtr<nsICSSStyleSheet> &aSheet)
+nsLayoutStylesheetCache::LoadSheet(nsIURI* aURI, nsCOMPtr<nsICSSStyleSheet> &aSheet,
+                                   PRBool aEnableUnsafeRules)
 {
   if (!aURI) {
     NS_ERROR("Null URI. Out of memory?");
@@ -226,10 +229,10 @@ nsLayoutStylesheetCache::LoadSheet(nsIURI* aURI, nsCOMPtr<nsICSSStyleSheet> &aSh
 
   // note: CSS Loader is treated as a service here... slightly unusual,
   // but within the rules.
-  nsCOMPtr<nsICSSLoader> cssLoader = do_GetService(kCSSLoaderCID);
+  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> cssLoader = do_GetService(kCSSLoaderCID);
   if (!cssLoader) return;
 
-  cssLoader->LoadAgentSheet(aURI, getter_AddRefs(aSheet));
+  cssLoader->LoadSheetSync(aURI, aEnableUnsafeRules, getter_AddRefs(aSheet));
 }  
 
 nsLayoutStylesheetCache*

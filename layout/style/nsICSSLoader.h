@@ -138,6 +138,19 @@ public:
   NS_IMETHOD SetEnabled(PRBool aEnabled) = 0;
 };
 
+// IID for the nsICSSLoader_MOZILLA_1_8_BRANCH interface
+// 8cee4512-b487-4573-8bcb-190d36fff66a
+#define NS_ICSS_LOADER_MOZILLA_1_8_BRANCH_IID     \
+{0x8cee4512, 0xb487, 0x4573, {0x8b, 0xcb, 0x19, 0x0d, 0x36, 0xff, 0xf6, 0x6a}}
+
+class nsICSSLoader_MOZILLA_1_8_BRANCH : public nsISupports {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_LOADER_MOZILLA_1_8_BRANCH_IID)
+
+  // Load a sheet, with optional enabling of unsafe rules
+  NS_IMETHOD LoadSheetSync(nsIURI* aURL, PRBool aEnableUnsafeRules, nsICSSStyleSheet** aSheet) = 0;
+};
+
 nsresult 
 NS_NewCSSLoader(nsIDocument* aDocument, nsICSSLoader** aLoader);
 

@@ -120,7 +120,8 @@ protected:
                                  PRBool aIsOverlay, PRBool
                                  aUseProfile, PRBool aRemove);
  
-  nsresult LoadStyleSheetWithURL(nsIURI* aURL, nsICSSStyleSheet** aSheet);
+  nsresult LoadStyleSheetWithURL(nsIURI* aURL, PRBool aAllowUnsafeRules,
+                                 nsICSSStyleSheet** aSheet);
 
   nsresult LoadInstallDataSource();
   nsresult LoadProfileDataSource();

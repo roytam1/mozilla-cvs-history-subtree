@@ -145,6 +145,27 @@ public:
                               nscolor* aColor) = 0;
 };
 
+// IID for the nsICSSParser_MOZILLA_1_8_BRANCH interface
+// fcef7cd9-9ac4-4283-91f6-8eea74c15892
+#define NS_ICSS_PARSER_MOZILLA_1_8_BRANCH_IID     \
+{0xfcef7cd9, 0x9ac4, 0x4283, {0x91, 0xf6, 0x8e, 0xea, 0x74, 0xc1, 0x58, 0x92}}
+
+class nsICSSParser_MOZILLA_1_8_BRANCH : public nsISupports {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_PARSER_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * @param aAllowUnsafeRules see aEnableUnsafeRules in
+   * nsICSSLoader::LoadSheetSync
+   */
+  NS_IMETHOD Parse(nsIUnicharInputStream* aInput,
+                   nsIURI*                aSheetURL,
+                   nsIURI*                aBaseURI,
+                   PRUint32               aLineNumber,
+                   PRBool                 aAllowUnsafeRules,
+                   nsICSSStyleSheet*&     aResult) = 0;
+};
+
 nsresult
 NS_NewCSSParser(nsICSSParser** aInstancePtrResult);
 

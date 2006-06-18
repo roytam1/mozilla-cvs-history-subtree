@@ -125,6 +125,7 @@ public:
                 nsIURI* aURI,
                 nsICSSStyleSheet* aSheet,
                 PRBool aSyncLoad,
+                PRBool aAllowUnsafeRules,
                 nsICSSLoaderObserver* aObserver);
 
   already_AddRefed<nsIURI> GetReferrerURI();
@@ -186,6 +187,10 @@ public:
   // such.
   PRPackedBool               mIsCancelled;
   
+  // mAllowUnsafeRules is true if we should allow unsafe rules to be parsed
+  // in the loaded sheet.
+  PRPackedBool               mAllowUnsafeRules;
+
   // This is the element that imported the sheet.  Needed to get the
   // charset set on it.
   nsCOMPtr<nsIStyleSheetLinkingElement> mOwningElement;
@@ -211,7 +216,8 @@ enum StyleSheetState {
  * Loader Declaration *
  **********************/
 
-class CSSLoaderImpl : public nsICSSLoader
+class CSSLoaderImpl : public nsICSSLoader,
+                      public nsICSSLoader_MOZILLA_1_8_BRANCH
 {
 public:
   CSSLoaderImpl(void);
@@ -255,6 +261,9 @@ public:
                             nsIURI* aURL, 
                             nsMediaList* aMedia,
                             nsICSSImportRule* aRule);
+
+  // nsICSSLoader_MOZILLA_1_8_BRANCH
+  NS_IMETHOD LoadSheetSync(nsIURI* aURL, PRBool aAllowUnsafeRules, nsICSSStyleSheet** aSheet);
 
   NS_IMETHOD LoadAgentSheet(nsIURI* aURL, nsICSSStyleSheet** aSheet);
 
@@ -310,6 +319,7 @@ private:
 
   nsresult InternalLoadAgentSheet(nsIURI* aURL,
                                   nsICSSStyleSheet** aSheet,
+                                  PRBool aAllowUnsafeRules,
                                   nsICSSLoaderObserver* aObserver);
   
 public:

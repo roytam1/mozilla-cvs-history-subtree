@@ -144,9 +144,10 @@ nsStyleSheetService::LoadAndRegisterSheet(nsIURI *aSheetURI,
   NS_ENSURE_ARG(aSheetType == AGENT_SHEET || aSheetType == USER_SHEET);
   NS_ENSURE_ARG_POINTER(aSheetURI);
 
-  nsCOMPtr<nsICSSLoader> loader = do_CreateInstance(kCSSLoaderCID);
+  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_CreateInstance(kCSSLoaderCID);
   nsCOMPtr<nsICSSStyleSheet> sheet;
-  nsresult rv = loader->LoadAgentSheet(aSheetURI, getter_AddRefs(sheet));
+  nsresult rv = loader->LoadSheetSync(aSheetURI, aSheetType == AGENT_SHEET,
+                                      getter_AddRefs(sheet));
   NS_ENSURE_SUCCESS(rv, rv);
 
   mSheets[aSheetType].AppendObject(sheet);
