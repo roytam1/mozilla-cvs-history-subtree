@@ -96,7 +96,7 @@ public:
 protected:
   nsresult GetDynamicInfo(nsIURI *aChromeURL, PRBool aIsOverlay, nsISimpleEnumerator **aResult);
 
-  static nsresult LoadStyleSheetWithURL(nsIURI* aURL, nsICSSStyleSheet** aSheet);
+  static nsresult LoadStyleSheetWithURL(nsIURI* aURL, PRBool aAllowUnsafeRules, nsICSSStyleSheet** aSheet);
 
   nsresult LoadInstallDataSource();
   nsresult LoadProfileDataSource();
