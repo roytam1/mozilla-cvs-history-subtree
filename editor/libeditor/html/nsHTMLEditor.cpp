@@ -3554,7 +3554,7 @@ nsHTMLEditor::ReplaceStyleSheet(const nsAString& aURL)
   // Editor override style sheets may want to style Gecko anonymous boxes
   nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_QueryInterface(cssLoader);
   nsCOMPtr<nsICSSStyleSheet> sheet;
-  rv = loader->LoadSheetSync(uaURI, PR_TRUE, this);
+  rv = loader->LoadSheetSync(uaURI, PR_TRUE, getter_AddRefs(sheet));
   NS_ENSURE_SUCCESS(rv, rv);
 
   return NS_OK;
