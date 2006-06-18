@@ -2901,6 +2901,8 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             pn = LetBlock(cx, ts, tc, JS_TRUE);
             if (!pn)
                 return NULL;
+            if (!(pn->pn_extra & PNX_BLOCKEXPR))
+                return pn;
         } else {
             /* Set up the block object. */
             stmt = FindBlockStatement(tc);
