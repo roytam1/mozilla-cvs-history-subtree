@@ -157,6 +157,7 @@ SheetLoadData::SheetLoadData(CSSLoaderImpl* aLoader,
     mIsAgent(PR_FALSE),
     mIsLoading(PR_FALSE),
     mIsCancelled(PR_FALSE),
+    mAllowUnsafeRules(PR_FALSE),
     mOwningElement(aOwningElement),
     mObserver(aObserver)
 {
@@ -182,6 +183,7 @@ SheetLoadData::SheetLoadData(CSSLoaderImpl* aLoader,
     mIsAgent(PR_FALSE),
     mIsLoading(PR_FALSE),
     mIsCancelled(PR_FALSE),
+    mAllowUnsafeRules(PR_FALSE),
     mOwningElement(nsnull),
     mObserver(aObserver)
 {
@@ -192,6 +194,7 @@ SheetLoadData::SheetLoadData(CSSLoaderImpl* aLoader,
     NS_ADDREF(mParentData);
     mSyncLoad = mParentData->mSyncLoad;
     mIsAgent = mParentData->mIsAgent;
+    mAllowUnsafeRules = mParentData->mAllowUnsafeRules;
     ++(mParentData->mPendingChildren);
   }
 }
@@ -200,6 +203,7 @@ SheetLoadData::SheetLoadData(CSSLoaderImpl* aLoader,
                              nsIURI* aURI,
                              nsICSSStyleSheet* aSheet,
                              PRBool aSyncLoad,
+                             PRBool aAllowUnsafeRules,
                              nsICSSLoaderObserver* aObserver)
   : mLoader(aLoader),
     mParserToUnblock(nsnull),
@@ -213,6 +217,7 @@ SheetLoadData::SheetLoadData(CSSLoaderImpl* aLoader,
     mIsAgent(PR_TRUE),
     mIsLoading(PR_FALSE),
     mIsCancelled(PR_FALSE),
+    mAllowUnsafeRules(aAllowUnsafeRules),
     mOwningElement(nsnull),
     mObserver(aObserver)
 {
@@ -251,7 +256,7 @@ CSSLoaderImpl::~CSSLoaderImpl(void)
                "How did we get destroyed when there are pending data?");
 }
 
-NS_IMPL_ISUPPORTS1(CSSLoaderImpl, nsICSSLoader)
+NS_IMPL_ISUPPORTS2(CSSLoaderImpl, nsICSSLoader, nsICSSLoader_MOZILLA_1_8_BRANCH)
 
 void
 CSSLoaderImpl::Shutdown()
@@ -1364,8 +1369,10 @@ CSSLoaderImpl::ParseSheet(nsIUnicharInputStream* aStream,
   nsCOMPtr<nsIURI> sheetURI, baseURI;
   aLoadData->mSheet->GetSheetURI(getter_AddRefs(sheetURI));
   aLoadData->mSheet->GetBaseURI(getter_AddRefs(baseURI));
-  rv = parser->Parse(aStream, sheetURI, baseURI, aLoadData->mLineNumber,
-                     *getter_AddRefs(dummySheet));
+  nsCOMPtr<nsICSSParser_MOZILLA_1_8_BRANCH> parser18 = do_QueryInterface(parser);
+  rv = parser18->Parse(aStream, sheetURI, baseURI, aLoadData->mLineNumber,
+                       aLoadData->mAllowUnsafeRules,
+                       *getter_AddRefs(dummySheet));
   mParsingDatas.RemoveElementAt(mParsingDatas.Count() - 1);
   RecycleParser(parser);
 
@@ -1770,11 +1777,19 @@ CSSLoaderImpl::LoadChildSheet(nsICSSStyleSheet* aParentSheet,
 }
 
 NS_IMETHODIMP
+CSSLoaderImpl::LoadSheetSync(nsIURI* aURL, PRBool aAllowUnsafeRules,
+                             nsICSSStyleSheet** aSheet)
+{
+  LOG(("CSSLoaderImpl::LoadAgentSheet synchronous"));
+  return InternalLoadAgentSheet(aURL, aSheet, aAllowUnsafeRules, nsnull);
+}
+
+NS_IMETHODIMP
 CSSLoaderImpl::LoadAgentSheet(nsIURI* aURL, 
                               nsICSSStyleSheet** aSheet)
 {
   LOG(("CSSLoaderImpl::LoadAgentSheet synchronous"));
-  return InternalLoadAgentSheet(aURL, aSheet, nsnull);
+  return InternalLoadAgentSheet(aURL, aSheet, PR_FALSE, nsnull);
 }
 
 NS_IMETHODIMP
@@ -1782,12 +1797,13 @@ CSSLoaderImpl::LoadAgentSheet(nsIURI* aURL,
                               nsICSSLoaderObserver* aObserver)
 {
   LOG(("CSSLoaderImpl::LoadAgentSheet asynchronous"));
-  return InternalLoadAgentSheet(aURL, nsnull, aObserver);
+  return InternalLoadAgentSheet(aURL, nsnull, PR_FALSE, aObserver);
 }
 
 nsresult
 CSSLoaderImpl::InternalLoadAgentSheet(nsIURI* aURL, 
                                       nsICSSStyleSheet** aSheet,
+                                      PRBool aAllowUnsafeRules,
                                       nsICSSLoaderObserver* aObserver)
 {
   NS_PRECONDITION(aURL, "Must have a URI to load");
@@ -1829,7 +1845,8 @@ CSSLoaderImpl::InternalLoadAgentSheet(nsIURI* aURL,
     return NS_OK;
   }
 
-  SheetLoadData* data = new SheetLoadData(this, aURL, sheet, syncLoad, aObserver);
+  SheetLoadData* data =
+    new SheetLoadData(this, aURL, sheet, syncLoad, aAllowUnsafeRules, aObserver);
 
   if (!data) {
     sheet->SetComplete();

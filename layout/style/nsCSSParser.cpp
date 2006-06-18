@@ -83,7 +83,8 @@
 //----------------------------------------------------------------------
 
 // Your basic top-down recursive descent style parser
-class CSSParserImpl : public nsICSSParser {
+class CSSParserImpl : public nsICSSParser,
+                      public nsICSSParser_MOZILLA_1_8_BRANCH {
 public:
   CSSParserImpl();
   virtual ~CSSParserImpl();
@@ -101,6 +102,14 @@ public:
 #endif
 
   NS_IMETHOD SetChildLoader(nsICSSLoader* aChildLoader);
+
+  // nsICSSParser_MOZILLA_1_8_BRANCH
+  NS_IMETHOD Parse(nsIUnicharInputStream* aInput,
+                   nsIURI*                aSheetURI,
+                   nsIURI*                aBaseURI,
+                   PRUint32               aLineNumber,
+                   PRBool                 aAllowUnsafeRules,
+                   nsICSSStyleSheet*&     aResult);
 
   NS_IMETHOD Parse(nsIUnicharInputStream* aInput,
                    nsIURI*                aSheetURI,
@@ -395,6 +404,9 @@ protected:
 
   // True if we are in quirks mode; false in standards or almost standards mode
   PRPackedBool  mNavQuirkMode : 1;
+  
+  // True if unsafe rules should be allowed
+  PRPackedBool mUnsafeRulesEnabled : 1;
 
 #ifdef MOZ_SVG
   // True if we are in SVG mode; false in "normal" CSS
@@ -503,6 +515,7 @@ CSSParserImpl::CSSParserImpl()
     mNameSpaceMap(nsnull),
     mHavePushBack(PR_FALSE),
     mNavQuirkMode(PR_FALSE),
+    mUnsafeRulesEnabled(PR_FALSE),
 #ifdef MOZ_SVG
     mSVGMode(PR_FALSE),
 #endif
@@ -516,7 +529,7 @@ CSSParserImpl::CSSParserImpl()
 {
 }
 
-NS_IMPL_ISUPPORTS1(CSSParserImpl, nsICSSParser)
+NS_IMPL_ISUPPORTS2(CSSParserImpl, nsICSSParser, nsICSSParser_MOZILLA_1_8_BRANCH)
 
 CSSParserImpl::~CSSParserImpl()
 {
@@ -629,6 +642,17 @@ CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
                      PRUint32               aLineNumber,
                      nsICSSStyleSheet*&     aResult)
 {
+  return Parse(aInput, aSheetURI, aBaseURI, aLineNumber, PR_FALSE, aResult);
+}
+
+NS_IMETHODIMP
+CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
+                     nsIURI*                aSheetURI,
+                     nsIURI*                aBaseURI,
+                     PRUint32               aLineNumber,
+                     PRBool                 aAllowUnsafeRules,
+                     nsICSSStyleSheet*&     aResult)
+{
   NS_ASSERTION(nsnull != aBaseURI, "need base URL");
   NS_ASSERTION(nsnull != aSheetURI, "need sheet URL");
 
@@ -683,6 +707,8 @@ CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
     mSection = eCSSSection_Charset; // sheet is empty, any rules are fair
   }
 
+  mUnsafeRulesEnabled = aAllowUnsafeRules;
+
   nsCSSToken* tk = &mToken;
   for (;;) {
     // Get next non-whitespace token
@@ -703,6 +729,8 @@ CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
     }
   }
   ReleaseScanner();
+
+  mUnsafeRulesEnabled = PR_FALSE;
 
   aResult = mSheet;
   NS_ADDREF(aResult);
@@ -2399,7 +2427,9 @@ CSSParserImpl::ParsePseudoSelector(PRInt32&       aDataMask,
   nsCOMPtr<nsIAtom> pseudo = do_GetAtom(buffer);
 
   // stash away some info about this pseudo so we only have to get it once.
+  PRBool isTreePseudo = PR_FALSE;
 #ifdef MOZ_XUL
+  isTreePseudo = IsTreePseudoElement(pseudo);
   // If a tree pseudo-element is using the function syntax, it will
   // get isTree set here and will pass the check below that only
   // allows functions if they are in our list of things allowed to be
@@ -2411,7 +2441,10 @@ CSSParserImpl::ParsePseudoSelector(PRInt32&       aDataMask,
                   IsTreePseudoElement(pseudo);
 #endif
   PRBool isPseudoElement = nsCSSPseudoElements::IsPseudoElement(pseudo);
-  PRBool isAnonBox = nsCSSAnonBoxes::IsAnonBox(pseudo);
+  // anonymous boxes are only allowed if they're the tree boxes or we have
+  // enabled unsafe rules
+  PRBool isAnonBox = nsCSSAnonBoxes::IsAnonBox(pseudo) &&
+    (mUnsafeRulesEnabled || isTreePseudo);
 
   // If it's a function token, it better be on our "ok" list, and if the name
   // is that of a function pseudo it better be a function token
@@ -2478,7 +2511,7 @@ CSSParserImpl::ParsePseudoSelector(PRInt32&       aDataMask,
     if (!parsingPseudoElement &&
         !nsCSSPseudoElements::IsCSS2PseudoElement(pseudo)
 #ifdef MOZ_XUL
-        && !IsTreePseudoElement(pseudo)
+        && !isTreePseudo
 #endif
         ) {
       REPORT_UNEXPECTED_TOKEN(PEPseudoSelNewStyleOnly);
