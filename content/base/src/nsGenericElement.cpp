@@ -3003,7 +3003,7 @@ doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
   // was processing.
   if (guard.Mutated(0)) {
     aIndex = container.IndexOf(aKid);
-    if (aIndex < 0) {
+    if (aIndex == (PRUint32)(-1)) {
       return NS_OK;
     }
   }
