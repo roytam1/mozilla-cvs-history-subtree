@@ -85,7 +85,7 @@ iterator_mark(JSContext *cx, JSObject *obj, void *arg)
     /* Avoid double work if js_CloseNativeIterator was called on obj. */
     state = obj->slots[JSSLOT_ITER_STATE];
     if (JSVAL_IS_VOID(state))
-        return;
+        return 0;
 
     parent = obj->slots[JSSLOT_PARENT];
     if (!JSVAL_IS_NULL(state) && !JSVAL_IS_PRIMITIVE(parent)) {
