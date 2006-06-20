@@ -3421,9 +3421,10 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 op = JSOP_POP;
                 if (!MaybeEmitGroupAssignment(cx, cg, pn2, &op))
                     return JS_FALSE;
-                if (op == JSOP_NOP)
+                if (op == JSOP_NOP) {
                     pn->pn_extra = (pn->pn_extra & ~PNX_POPVAR) | PNX_GROUPINIT;
-                break;
+                    break;
+                }
             }
 
             pn3 = pn2->pn_left;
