@@ -369,16 +369,20 @@ NS_IMETHODIMP nsDOMStorage::RemoveItem(const nsAString& aKey)
     NS_ENSURE_SUCCESS(rv, rv);
 
     mItemsCached = PR_FALSE;
+
+    BroadcastChangeNotification();
 #endif
   }
   else if (entry) {
     // clear string as StorageItems may be referencing this item
     entry->mItem->ClearValue();
+
+    BroadcastChangeNotification();
   }
 
-  mItems.RawRemoveEntry(entry);
-
-  BroadcastChangeNotification();
+  if (entry) {
+    mItems.RawRemoveEntry(entry);
+  }
 
   return NS_OK;
 }
@@ -886,6 +890,7 @@ nsresult
 nsDOMStorageEvent::Init()
 {
   nsresult rv = InitEvent(NS_LITERAL_STRING("storage"), PR_TRUE, PR_FALSE);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // This init method is only called by native code, so set the
   // trusted flag here.
