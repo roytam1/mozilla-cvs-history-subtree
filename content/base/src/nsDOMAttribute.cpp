@@ -71,7 +71,10 @@ nsDOMAttribute::~nsDOMAttribute()
     doc->PropertyTable()->DeleteAllPropertiesFor(this);
 
   NS_IF_RELEASE(mChild);
-  NS_IF_RELEASE(mChildList);
+  if (mChildList) {
+    mChildList->DropReference();
+    NS_RELEASE(mChildList);
+  }
 }
 
 
