@@ -4672,6 +4672,14 @@ nsTypedSelection::Clear(nsPresContext* aPresContext)
   }
   // Reset direction so for more dependable table selection range handling
   SetDirection(eDirNext);
+
+  // If this was an ATTENTION selection, change it back to normal now
+  PRInt16 displayresult = nsISelectionController::SELECTION_OFF;
+  mFrameSelection->GetDisplaySelection(&displayresult);
+  if (displayresult == nsISelectionController::SELECTION_ATTENTION) {
+    mFrameSelection->SetDisplaySelection(nsISelectionController::SELECTION_ON);
+  }
+
   return NS_OK;
 }
 
