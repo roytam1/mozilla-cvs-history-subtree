@@ -1679,13 +1679,16 @@ function DownloadCancel(refId) {
 
 }
 
-function DownloadReveal() {
- 
-  document.getElementById("toolbar-download-tag").value=document.getElementById("toolbar-download-tag").getAttribute("reveal");
-  document.getElementById("download-button-stop").label="";
-  document.getElementById("toolbar-download-tag").inputField.style.backgroundColor="lightgreen";
-  document.getElementById("toolbar-download-tag").inputField.style.backgroundPosition=gInputBoxObject.width+20+"px 100%";
+function DownloadLaunch() {
+  var url = document.getElementById("toolbar-download-tag").getAttribute("destlocation");
 
+  var ioSvc = Components.classes["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+ 
+  const fileUrl = ioSvc.newURI(url, null, null).QueryInterface(Components.interfaces.nsIFileURL);
+
+  fileUrl.file.QueryInterface(Components.interfaces.nsILocalFile).launch();
+  //  fileUrl.file.QueryInterface(Components.interfaces.nsILocalFile).reveal();
 }
 
 function TransferItemFactory() {
@@ -1722,8 +1725,8 @@ TransferItem.prototype = {
     document.getElementById("toolbar-download-tag").cachedCancelable=aCancelable;
     document.getElementById("download-button-stop").disabled=false;
     document.getElementById("toolbar-download-tag").value=aSource.spec; 
-    document.getElementById("toolbar-download-tag").setAttribute("reveal",aTarget.spec);
-    document.getElementById("toolbar-download-tag").setAttribute("sourcelocation",aSource.spec);
+    document.getElementById("toolbar-download-tag").setAttribute("sourcelocation",aSource);
+    document.getElementById("toolbar-download-tag").setAttribute("destlocation",aTarget.spec);
     document.getElementById("toolbar-download-tag").inputField.style.backgroundColor="lightgreen";
     document.getElementById("download-close").hidden=true;
 
@@ -1733,8 +1736,8 @@ TransferItem.prototype = {
 
        if ( aStateFlags & nsIWebProgressListener.STATE_STOP ) {
 
-          document.getElementById("download-button-stop").label=document.getElementById("minimo_properties").getString("downloadButtonReveal");
-          document.getElementById("download-button-stop").setAttribute("oncommand","DownloadReveal()");
+          document.getElementById("download-button-stop").label=document.getElementById("minimo_properties").getString("downloadButtonLaunch");
+          document.getElementById("download-button-stop").setAttribute("oncommand","DownloadLaunch()");
           document.getElementById("toolbar-download-tag").inputField.style.backgroundColor="lightgreen";
           document.getElementById("download-close").hidden=false;
 
