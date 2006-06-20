@@ -115,7 +115,6 @@ SessionStartup.prototype = {
    * Initialize the component
    */
   init: function sss_init() {
-    debug("startup init");
     this._prefBranch = Cc["@mozilla.org/preferences-service;1"].
                        getService(Ci.nsIPrefService).
                        getBranch("browser.");

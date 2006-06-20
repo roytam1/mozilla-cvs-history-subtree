@@ -208,8 +208,9 @@ bin/components/nsExtensionManager.js
 bin/components/nsUpdateService.js
 bin/components/extensions.xpt
 bin/components/update.xpt
-bin/components/nsSessionStore.js
 bin/components/nsBookmarkTransactionManager.js
+bin/components/nsSessionStartUp.js
+bin/components/nsSessionStore.js
 bin/components/sessionstore.xpt
 
 ; Safe Browsing
