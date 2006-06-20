@@ -87,18 +87,16 @@ function resetOneShotTimer(timer, duration) {
   return timer;
 }
 
-// Asynchronously call 'fct' after 'interval' ms. Return timer
-// object. Calling 'cancel()' on the return value will cancel the
-// scheduled function call (or any subsequent re-schedules).
-// fct will be called with a function argument 'reschedule(interval)',
-// which can be used to schedule another call of 'fct'
+// Asynchronously call 'fct' after 'interval' ms. 
 function schedule(fct, interval) {
-  return makeOneShotTimer(
+  // We'll hold onto the timer object in the closure to prevent it
+  // from being garbarge collected.
+  var timer = makeOneShotTimer(
     {
-      notify : function(timer) {
-        fct(function reschedule(_interval) {
-              resetOneShotTimer(timer, _interval ? _interval : interval);
-            });
+      notify : function(t) {
+        fct();
+        // Now make sure that the timer can be garbage collected:
+        timer = null;
       }
     },
     interval);
@@ -113,6 +111,8 @@ callback.prototype.notify = function(t) { this.fct(); };
 // Periodically make an asynchronous call to 'fct' every 'period'
 // ms. Return timer object. Calling 'cancel()' on the return value
 // will cancel the schedule.
+// The caller must hold onto the timer object for as long as the timer is
+// supposed to run (otherwise it might be garbage collected).
 function schedulePeriodic(fct, period) {
   var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
   // to prevent a reference cycle it is important here that the
