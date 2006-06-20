@@ -359,6 +359,13 @@ extern JS_PUBLIC_API(uint32)
 JS_GetTopScriptFilenameFlags(JSContext *cx, JSStackFrame *fp);
 
 /*
+ * Get the script filename flags for the script.  If the script
+ * doesn't have a filename, return JSFILENAME_NULL.
+ */
+extern JS_PUBLIC_API(uint32)
+JS_GetScriptFilenameFlags(JSScript *script);
+
+/*
  * Associate flags with a script filename prefix in rt, so that any subsequent
  * script compilation will inherit those flags if the script's filename is the
  * same as prefix, or if prefix is a substring of the script's filename.
