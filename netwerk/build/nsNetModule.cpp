@@ -47,6 +47,7 @@
 #include "nsSocketProviderService.h"
 #include "nscore.h"
 #include "nsSimpleURI.h"
+#include "nsSimpleNestedURI.h"
 #include "nsLoadGroup.h"
 #include "nsStreamLoader.h"
 #include "nsUnicharStreamLoader.h"
@@ -176,6 +177,8 @@ NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsCookieService, nsCookieService::GetSi
 // about:blank is mandatory
 #include "nsAboutProtocolHandler.h"
 #include "nsAboutBlank.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAboutProtocolHandler)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSafeAboutProtocolHandler)
 
 #ifdef NECKO_PROTOCOL_about
 // about
@@ -230,7 +233,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsGopherHandler)
 #ifdef NECKO_PROTOCOL_viewsource
 #include "nsViewSourceHandler.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsViewSourceHandler)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsViewSourceURI)
 #endif
 
 #ifdef NECKO_PROTOCOL_data
@@ -253,6 +255,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsStdURLParser)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsStandardURL)
 
 NS_GENERIC_AGGREGATED_CONSTRUCTOR(nsSimpleURI)
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSimpleNestedURI)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -657,6 +661,10 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_SIMPLEURI_CID,
       NS_SIMPLEURI_CONTRACTID,
       nsSimpleURIConstructor },
+    { "Simple Nested URI", 
+      NS_SIMPLENESTEDURI_CID,
+      nsnull,
+      nsSimpleNestedURIConstructor },
     { NS_ASYNCSTREAMCOPIER_CLASSNAME,
       NS_ASYNCSTREAMCOPIER_CID,
       NS_ASYNCSTREAMCOPIER_CONTRACTID,
@@ -981,10 +989,15 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
 #endif
 
     // from netwerk/protocol/about (about:blank is mandatory):
-    { "About Protocol Handler", 
+    { NS_ABOUTPROTOCOLHANDLER_CLASSNAME, 
       NS_ABOUTPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "about", 
-      nsAboutProtocolHandler::Create
+      nsAboutProtocolHandlerConstructor
+    },
+    { NS_SAFEABOUTPROTOCOLHANDLER_CLASSNAME,
+      NS_SAFEABOUTPROTOCOLHANDLER_CID,
+      NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "safe-about", 
+      nsSafeAboutProtocolHandlerConstructor
     },
     { "about:blank", 
       NS_ABOUT_BLANK_MODULE_CID,
@@ -1115,11 +1128,6 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_VIEWSOURCEHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "view-source",
       nsViewSourceHandlerConstructor
-    },
-    { "The ViewSource URI", 
-      NS_VIEWSOURCEURI_CID,
-      nsnull,
-      nsViewSourceURIConstructor
     },
 #endif
 
