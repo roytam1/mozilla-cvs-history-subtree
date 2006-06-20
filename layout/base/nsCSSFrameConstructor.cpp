@@ -13427,6 +13427,9 @@ nsCSSFrameConstructor::WipeContainingBlock(nsFrameConstructorState& aState,
                                            nsIFrame* aFrame,
                                            nsIFrame* aFrameList)
 {
+  if (!aContainingBlock) 
+    return PR_FALSE;
+
   // Before we go and append the frames, check for a special
   // situation: an inline frame that will now contain block
   // frames. This is a no-no and the frame construction logic knows
