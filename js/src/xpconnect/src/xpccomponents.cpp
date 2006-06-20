@@ -2608,7 +2608,7 @@ nsXPCComponents_Utils::GetObjectId()
 
     PRUint32 argc = 0;
     cc->GetArgc(&argc);
-    if (argc != 1)
+    if (argc < 1)
         return NS_ERROR_FAILURE;
 
     jsval *argv = nsnull;
@@ -2616,22 +2616,35 @@ nsXPCComponents_Utils::GetObjectId()
     if (!argv || JSVAL_IS_NULL(argv[0]))
         return NS_ERROR_FAILURE;
 
-    JSObject *obj;
-    if (!JS_ValueToObject(cx, argv[0], &obj))
-        return NS_ERROR_FAILURE;
+    char buf[80];
     
-    jsid id;
-    if (!JS_GetObjectId(cx, obj, &id))
-        return NS_ERROR_FAILURE;
+    nsCOMPtr<nsIXPConnectWrappedNative> wn;
+    if (argc > 1 &&
+        JSVAL_IS_BOOLEAN(argv[1]) &&
+        JSVAL_TO_BOOLEAN(argv[1]) &&
+        !JSVAL_IS_PRIMITIVE(argv[0]) &&
+        NS_SUCCEEDED(xpc->GetWrappedNativeOfJSObject(cx, JSVAL_TO_OBJECT(argv[0]),
+                                                     getter_AddRefs(wn))) && wn) {
+        sprintf(buf, "%p", wn->Native());
+    }
+    else {
+        JSObject *obj;
+        if (!JS_ValueToObject(cx, argv[0], &obj))
+            return NS_ERROR_FAILURE;
+    
+        jsid id;
+        if (!JS_GetObjectId(cx, obj, &id))
+            return NS_ERROR_FAILURE;
+        
+        sprintf(buf,"%p", id);
+    }
 
+    JSString *str = JS_NewStringCopyZ(cx, buf);
+    
     jsval *retval = nsnull;
     cc->GetRetValPtr(&retval);
     if (!retval)
         return NS_ERROR_UNEXPECTED;
-    
-    char buf[80];
-    sprintf(buf,"%p", id);
-    JSString *str = JS_NewStringCopyZ(cx, buf);
     *retval = STRING_TO_JSVAL(str);
     
     return NS_OK;

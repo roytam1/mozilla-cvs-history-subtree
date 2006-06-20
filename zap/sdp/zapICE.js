@@ -312,7 +312,7 @@ zapICEStunReflexiveCandidateFactory.fun(
     var serv = this.stunServers[this.currentServer];
     try {
       var req = comp.stunClientCtl.sendBindingRequest(this, serv, null, null);
-      this.activeRequests[Components.utils.getObjectId(req)] = [lc, this.currentComponent, serv];
+      this.activeRequests[Components.utils.getObjectId(req, true)] = [lc, this.currentComponent, serv];
       ++this.activeRequestCount;
     }
     catch(e) {
@@ -340,17 +340,10 @@ zapICEStunReflexiveCandidateFactory.fun(
 
 zapICEStunReflexiveCandidateFactory.fun(
   function bindingRequestComplete(finalMessage, request) {
-    var rid = Components.utils.getObjectId(request);
+    var rid = Components.utils.getObjectId(request, true);
     var rinfo = this.activeRequests[rid];
-    if (!rinfo) {
-      // XXX not quite sure why, but we hit this when a stun client fails to
-      // contact the server. In this case the request arg will have a different
-      // obj-id than that originally used as ket in activeRequests.
-      // Possibly this is some interaction between the autoproxy/timer
-      // callback/xpconnect wrapping code.
-      dump("no rinfo for request "+request+"\n");
-      return;
-    }
+    this._assert(rinfo, "uh oh, callback couldn't be matched");
+
     delete this.activeRequests[rid];
     --this.activeRequestCount;
 
@@ -370,10 +363,10 @@ zapICEStunReflexiveCandidateFactory.fun(
       }
       
       // we have a new STUN server reflexive address:
-      dump("Obtained refl addr "+reflAddr+":"+reflPort+
-           " from STUN server "+rinfo[2]+"\n");
+      this._dump("Obtained refl addr "+reflAddr+":"+reflPort+
+                 " from STUN server "+rinfo[2]+"\n");
       // insert it into our partial candidate map:
-      var partialCandidateID = Components.utils.getObjectId(rinfo[0]) +
+      var partialCandidateID = Components.utils.getObjectId(rinfo[0], true) +
         ":" + rinfo[2];
       var partialCandidateInfo = this.partialCandidates[partialCandidateID];
       if (!partialCandidateInfo) {
@@ -389,7 +382,7 @@ zapICEStunReflexiveCandidateFactory.fun(
       // check if we have a full candidate:
       if (++partialCandidateInfo.count == rinfo[0].componentCount) {
         // yup. -> make a new candidate:
-        dump("we have a full candidate\n");
+        this._dump("we have a full candidate\n");
         this.candidateProduced(zapICEDerivedCandidate.instantiate(
                                  { components: partialCandidateInfo.components,
                                    localCandidate: rinfo[0] }));
@@ -441,8 +434,8 @@ function produceDerivedCandidates(done, maxDuration, paceDuration,
   function candidateProduced(cand) {
     // make sure the candidate is unique:
     for (var i=0,l=candidates.length; i<l; ++i) {
-      if (Components.utils.getObjectId(cand.localCandidate) !=
-          Components.utils.getObjectId(candidates[i].localCandidate))
+      if (Components.utils.getObjectId(cand.localCandidate, true) !=
+          Components.utils.getObjectId(candidates[i].localCandidate, true))
         continue;
       if (cand.componentCount != candidates[i].componentCount) continue;
       for (var j=0,m=cand.componentCount; j<m; ++j) {
@@ -499,11 +492,6 @@ function produceICECandidates(done, componentCount, udpPortbase,
                               maxDuration, paceDuration,
                               mediaGraph, stunServers)
 {
-  //XXX
-  dump("Producing ICE candidates for STUN servers:");
-  for (var i=0;i<stunServers.length; ++i) dump(" "+stunServers[i]);
-  dump("\n");
-  
   // generate local candidates first:
   var locals = gatherLocalICECandidates(componentCount, udpPortbase, mediaGraph);
   

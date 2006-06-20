@@ -211,9 +211,12 @@ interface nsIXPCComponents_Utils : nsISupports
      * To be called from JS only.
      *
      * Returns a unique identifier for obj, good for the lifetime of
-     * obj.
+     * obj. If the optional argument 'inner' is true, and obj is a
+     * wrapped native object, an identifier for the inner object will
+     * be returned.
      */
-    void /* String */ getObjectId(/* in JSObject obj */);
+    void /* String */ getObjectId(/* in JSObject obj,
+                                     [optional] in boolean inner*/);
 };
 
 /**
