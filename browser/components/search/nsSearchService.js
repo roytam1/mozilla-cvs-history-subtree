@@ -100,7 +100,7 @@ const OPENSEARCH_NS_11  = "http://a9.com/-/spec/opensearch/1.1/";
 
 // Although the specification at http://opensearch.a9.com/spec/1.1/description/
 // gives the namespace names defined above, many existing OpenSearch engines
-// are using the former versions.  We therefore allow either.
+// are using the following versions.  We therefore allow either.
 const OPENSEARCH_NAMESPACES = [ OPENSEARCH_NS_11, OPENSEARCH_NS_10,
                                 "http://a9.com/-/spec/opensearchdescription/1.1/",
                                 "http://a9.com/-/spec/opensearchdescription/1.0/"];
@@ -846,6 +846,7 @@ function Engine(aLocation, aSourceDataType, aIsReadOnly) {
     switch (aLocation.scheme) {
       case "https":
       case "http":
+      case "ftp":
       case "data":
       case "file":
       case "resource":
@@ -1047,10 +1048,10 @@ Engine.prototype = {
    * Sets the .iconURI property of the engine.
    *
    *  @param aIconURL
-   *         A URI string pointing to the engine's icon. Must have a http[s] or
-   *         data scheme. Icons with HTTP[S] schemes will be downloaded and
-   *         converted to data URIs for storage in the engine XML files, if
-   *         the engine is not readonly.
+   *         A URI string pointing to the engine's icon. Must have a http[s],
+   *         ftp, or data scheme. Icons with HTTP[S] or FTP schemes will be
+   *         downloaded and converted to data URIs for storage in the engine
+   *         XML files, if the engine is not readonly.
    *  @param aIsPreferred
    *         Whether or not this icon is to be preferred. Preferred icons can
    *         override non-preferred icons.
@@ -1069,7 +1070,7 @@ Engine.prototype = {
 
     LOG("_setIcon: Setting icon url \"" + uri.spec + "\" for engine \""
         + this.name + "\".");
-    // Only accept remote icons from http[s]
+    // Only accept remote icons from http[s] or ftp
     switch (uri.scheme) {
       case "data":
         this._iconURI = uri;
@@ -1078,6 +1079,7 @@ Engine.prototype = {
         break;
       case "http":
       case "https":
+      case "ftp":
         // No use downloading the icon if the engine file is read-only
         // XXX could store the data: URI in a pref... ew?
         if (!this._readOnly) {
