@@ -2578,7 +2578,7 @@ nsBoxFrame::RegUnregAccessKey(nsPresContext* aPresContext, PRBool aDoReg)
 
 
 void
-nsBoxFrame::FireDOMEvent(const nsAString& aDOMEventName, nsIContent *aContent)
+nsBoxFrame::FireChromeDOMEvent(const nsAString& aDOMEventName, nsIContent *aContent)
 {
   nsIContent *content = aContent ? aContent : mContent;
   if (content && mPresContext) {

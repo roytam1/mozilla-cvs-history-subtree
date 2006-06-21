@@ -251,7 +251,7 @@ nsMenuBarFrame::SetActive(PRBool aActiveFlag)
   NS_NAMED_LITERAL_STRING(active, "DOMMenuBarActive");
   NS_NAMED_LITERAL_STRING(inactive, "DOMMenuBarInactive");
   
-  FireDOMEvent(mIsActive ? active : inactive);
+  FireChromeDOMEvent(mIsActive ? active : inactive);
 
   return NS_OK;
 }

@@ -587,7 +587,7 @@ nsMenuFrame::SelectMenu(PRBool aActivateFlag)
     domEventToFire.AssignLiteral("DOMMenuItemInactive");
   }
 
-  FireDOMEvent(domEventToFire);
+  FireChromeDOMEvent(domEventToFire);
   return NS_OK;
 }
 
@@ -677,7 +677,7 @@ nsMenuFrame::ActivateMenu(PRBool aActivateFlag)
 
   } else {
     if (mMenuOpen) {
-      menuPopup->FireDOMEvent(NS_LITERAL_STRING("DOMMenuInactive"));
+      menuPopup->FireChromeDOMEvent(NS_LITERAL_STRING("DOMMenuInactive"));
     }
     nsIView* view = menuPopup->GetView();
     NS_ASSERTION(view, "View is gone, looks like someone forgot to rollup the popup!");

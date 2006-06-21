@@ -205,7 +205,7 @@ public:
   static nsresult LayoutChildAt(nsBoxLayoutState& aState, nsIBox* aBox, const nsRect& aRect);
 
   // Fire DOM event. If no aContent argument use frame's mContent.
-  void FireDOMEvent(const nsAString& aDOMEventName, nsIContent *aContent = nsnull);
+  void FireChromeDOMEvent(const nsAString& aDOMEventName, nsIContent *aContent = nsnull);
 
 protected:
 #ifdef DEBUG_LAYOUT
