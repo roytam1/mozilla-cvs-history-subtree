@@ -3523,10 +3523,12 @@ js_SetIdArrayLength(JSContext *cx, JSIdArray *ida, jsint length)
 }
 
 /* Private type used to iterate over all properties of a native JS object */
-typedef struct JSNativeIteratorState {
-    jsint next_index;   /* index into jsid array */
-    JSIdArray *ida;     /* all property ids in enumeration */
-} JSNativeIteratorState;
+struct JSNativeIteratorState {
+    jsint                   next_index; /* index into jsid array */
+    JSIdArray               *ida;       /* all property ids in enumeration */
+    JSNativeIteratorState   *next;      /* double-linked list support */
+    JSNativeIteratorState   **prevp;
+};
 
 /*
  * This function is used to enumerate the properties of native JSObjects
@@ -3537,6 +3539,7 @@ JSBool
 js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
              jsval *statep, jsid *idp)
 {
+    JSRuntime *rt;
     JSObject *proto;
     JSClass *clasp;
     JSEnumerateOp enumerate;
@@ -3546,6 +3549,7 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     JSIdArray *ida;
     JSNativeIteratorState *state;
 
+    rt = cx->runtime;
     clasp = OBJ_GET_CLASS(cx, obj);
     enumerate = clasp->enumerate;
     if (clasp->flags & JSCLASS_NEW_ENUMERATE)
@@ -3622,6 +3626,15 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         }
         state->ida = ida;
         state->next_index = 0;
+
+        JS_LOCK_RUNTIME(rt);
+        state->next = rt->nativeIteratorStates;
+        if (state->next)
+            state->next->prevp = &state->next;
+        state->prevp = &rt->nativeIteratorStates;
+        *state->prevp = state;
+        JS_UNLOCK_RUNTIME(rt);
+
         *statep = PRIVATE_TO_JSVAL(state);
         if (idp)
             *idp = INT_TO_JSVAL(length);
@@ -3639,6 +3652,17 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 
       case JSENUMERATE_DESTROY:
         state = (JSNativeIteratorState *) JSVAL_TO_PRIVATE(*statep);
+
+        JS_LOCK_RUNTIME(rt);
+        JS_ASSERT(rt->nativeIteratorStates);
+        JS_ASSERT(*state->prevp == state);
+        if (state->next) {
+            JS_ASSERT(state->next->prevp == &state->next);
+            state->next->prevp = state->prevp;
+        }
+        *state->prevp = state->next;
+        JS_UNLOCK_RUNTIME(rt);
+
         JS_DestroyIdArray(cx, state->ida);
         JS_free(cx, state);
         *statep = JSVAL_NULL;
@@ -3646,6 +3670,32 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     }
     return JS_TRUE;
 }
+
+void
+js_MarkNativeIteratorStates(JSContext *cx)
+{
+    JSNativeIteratorState *state;
+    jsid *cursor, *end, id;
+
+    state = cx->runtime->nativeIteratorStates;
+    if (!state)
+        return;
+
+    do {
+        JS_ASSERT(*state->prevp == state);
+        cursor = state->ida->vector;
+        end = cursor + state->ida->length;
+        for (; cursor != end; ++cursor) {
+            id = *cursor;
+            if (JSID_IS_ATOM(id)) {
+                GC_MARK_ATOM(cx, JSID_TO_ATOM(id), NULL);
+            } else if (JSID_IS_OBJECT(id)) {
+                GC_MARK(cx, JSID_TO_OBJECT(id), "ida->vector[i]", NULL);
+            }
+        }
+    } while ((state = state->next) != NULL);
+}
+  
 
 JSBool
 js_CheckAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
