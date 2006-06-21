@@ -6592,6 +6592,18 @@ static void DisplayReflowEnterPrint(nsPresContext*          aPresContext,
     DR_state->PrettyUC(aReflowState.mComputedHeight, height);
     printf("c=%s,%s ", width, height);
 
+    if (aFrame->GetStateBits() & NS_FRAME_IS_DIRTY)
+      printf("dirty ");
+
+    if (aFrame->GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN)
+      printf("dirty-children ");
+
+    if (aReflowState.mFlags.mHResize)
+      printf("h-resize ");
+
+    if (aReflowState.mFlags.mVResize)
+      printf("v-resize ");
+
     nsIFrame* inFlow = aFrame->GetPrevInFlow();
     if (inFlow) {
       printf("pif=%p ", (void*)inFlow);
