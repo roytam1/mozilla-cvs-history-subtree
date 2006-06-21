@@ -305,7 +305,18 @@
     <groupbox>
       <caption label="&engines.label;"/>
     <description>&searchEngines.description;</description>
-    <box class="ccklist" id="searchEngineList" new="onNewSearchEngine();" edit="onEditSearchEngine();"/>
+    <box class="ccklist" id="searchEngineList" new="onNewSearchEngine();" edit="onEditSearchEngine();"
+         ondelete="RefreshDefaultSearchEngines()" onmoveup="RefreshDefaultSearchEngines()" onmovedown="RefreshDefaultSearchEngines()"/>
+    <spacer />
+
+    <hbox align="center">
+      <label control="defaultSearchEngine" value="&defaultSearchEngine.label;" />
+       <menulist id="defaultSearchEngine">
+         <menupopup>
+         </menupopup>
+       </menulist>
+    </hbox>
+
     </groupbox>
   </wizardpage>
 

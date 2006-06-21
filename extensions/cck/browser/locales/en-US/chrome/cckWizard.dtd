@@ -103,6 +103,8 @@
 <!ENTITY  customizeSearchEngines.label  "Customize Search Engines">
 <!ENTITY  searchEngines.description     "Use the buttons below to add search engines.">
 
+<!ENTITY  defaultSearchEngine.label     "Default Search Engine">
+
 <!ENTITY  engines.label                 "Search Engines">
 <!ENTITY  engines.description           "Please select a .src file and the corresponding image.">
 

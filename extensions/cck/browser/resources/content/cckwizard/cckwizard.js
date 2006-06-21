@@ -648,6 +648,35 @@ function OnRegOK()
   listitem.cck['type'] = document.getElementById('Type').value;
 }
 
+function RefreshDefaultSearchEngines()
+{
+  var menulist;
+  menulist = document.getElementById('defaultSearchEngine');
+  if (!menulist)
+    menulist = this.opener.document.getElementById('defaultSearchEngine');
+
+  var curitem = menulist.value;
+  menulist.selectedIndex = -1;
+  menulist.removeAllItems();
+  
+  var setcuritem = false;
+  
+  var bundle = document.getElementById("bundle_cckwizard");
+  menulist.appendItem(bundle.getString("useBrowserDefault"), "");
+  for (var i=0; i < listbox.getRowCount(); i++) {
+    listitem = listbox.getItemAtIndex(i);
+    name = listitem.getAttribute("label");
+    menulistitem = menulist.appendItem(name, name);
+    if (name == curitem)
+      setcuritem = true;
+    menulistitem.minWidth=menulist.width;
+  }
+  if (setcuritem)
+    menulist.value = curitem;
+  else 
+    menulist.selectedIndex = 0;
+}
+
 function onNewSearchEngine()
 {
   window.openDialog("chrome://cckwizard/content/searchengine.xul","newsearchengine","chrome,centerscreen,modal");
@@ -662,9 +691,9 @@ function OnSearchEngineLoad()
 {
   listbox = this.opener.document.getElementById('searchEngineList');    
   if (window.name == 'editsearchengine') {
-    document.getElementById('searchengine').value = listbox.selectedItem.label;
-    document.getElementById('searchengineicon').value = listbox.selectedItem.value;
-    document.getElementById('icon').src = listbox.selectedItem.value;
+    document.getElementById('searchengine').value = listbox.selectedItem.cck['engineurl'];
+    document.getElementById('searchengineicon').value = listbox.selectedItem.cck['iconurl'];
+    document.getElementById('icon').src = listbox.selectedItem.cck['iconurl'];
   }
   searchEngineCheckOKButton();
   
@@ -685,17 +714,21 @@ function OnSearchEngineOK()
     return false;
   }
 
-
-
   listbox = this.opener.document.getElementById('searchEngineList');
   var listitem;
+  var name = getSearchEngineName(document.getElementById('searchengine').value);
+  if (!name) {
+    var bundle = document.getElementById("bundle_cckwizard");
+    gPromptService.alert(window, bundle.getString("windowTitle"),
+                         bundle.getString("searchEngine.error"));
+    return false;
+  }
   if (window.name == 'newsearchengine') {
-    listitem = listbox.appendItem(document.getElementById('searchengine').value, document.getElementById('searchengineicon').value);
+    listitem = listbox.appendItem(name, "");
     listitem.setAttribute("class", "listitem-iconic");    
   } else {
     listitem = listbox.selectedItem;
-    listbox.selectedItem.label = document.getElementById('searchengine').value;
-    listbox.selectedItem.value = document.getElementById('searchengineicon').value;
+    listbox.selectedItem.label = name;
   }
   var sourcefile = Components.classes["@mozilla.org/file/local;1"]
                              .createInstance(Components.interfaces.nsILocalFile);
@@ -704,7 +737,110 @@ function OnSearchEngineOK()
                          .getService(Components.interfaces.nsIIOService);
   var imgfile = ioServ.newFileURI(sourcefile);
   listitem.setAttribute("image", imgfile.spec);
+
+  listitem.cck['name'] = name;
+  listitem.cck['engineurl'] = document.getElementById('searchengine').value;
+  listitem.cck['iconurl'] = document.getElementById('searchengineicon').value;
+
+  RefreshDefaultSearchEngines();
 }
+
+/* This code was lifted from nsSearchService.js.
+   It's only purpose is to get the name of the search engine */
+
+const kUselessLine = /^\s*($|#)/i;
+
+function getSearchEngineName(searchenginepath)
+{
+  var sourcefile = Components.classes["@mozilla.org/file/local;1"]
+                             .createInstance(Components.interfaces.nsILocalFile);
+  sourcefile.initWithPath(searchenginepath);
+  
+  var stream = Components.classes["@mozilla.org/network/file-input-stream;1"]
+                         .createInstance(Components.interfaces.nsIFileInputStream);
+  stream.init(sourcefile, 0x01, 0644, 0);
+  var lis = stream.QueryInterface(Components.interfaces.nsILineInputStream);
+  
+  var line = { value: "" };
+  var more = false;
+  var lines = [];
+
+  do {
+    more = lis.readLine(line);
+    // Filter out comments and whitespace-only lines
+    if (!(kUselessLine.test(line.value)))
+      lines.push(line.value);
+  } while (more);
+  
+  stream.close();
+  
+  var searchSection = getSection(lines, "search");
+
+  return searchSection["name"];
+}
+
+function sTrim(aStr) {
+  return aStr.replace(/^\s+/g, "").replace(/\s+$/g, "");
+}
+
+    function getSection(aLines, aSection) {
+      var lines = aLines;
+      var startMark = new RegExp("^\\s*<" + aSection.toLowerCase() + "\\s*",
+                                 "gi");
+      var endMark   = /\s*>\s*$/gi;
+
+      var foundStart = false;
+      var startLine, numberOfLines;
+      // Find the beginning and end of the section
+      for (var i = 0; i < lines.length; i++) {
+        if (foundStart) {
+          if (endMark.test(lines[i])) {
+            numberOfLines = i - startLine;
+            // Remove the end marker
+            lines[i] = lines[i].replace(endMark, "");
+            // If the endmarker was not the only thing on the line, include
+            // this line in the results
+            if (lines[i])
+              numberOfLines++;
+            break;
+          }
+        } else {
+          if (startMark.test(lines[i])) {
+            foundStart = true;
+            // Remove the start marker
+            lines[i] = lines[i].replace(startMark, "");
+            startLine = i;
+            // If the line is empty, don't include it in the result
+            if (!lines[i])
+              startLine++;
+          }
+        }
+      }
+      lines = lines.splice(startLine, numberOfLines);
+
+      var section = {};
+      for (var i = 0; i < lines.length; i++) {
+        var line = sTrim(lines[i]);
+
+        var els = line.split("=");
+        var name = sTrim(els.shift().toLowerCase());
+        var value = sTrim(els.join("="));
+
+        if (!name || !value)
+          continue;
+
+        // Strip leading and trailing whitespace, remove quotes from the
+        // value, and remove any trailing slashes or ">" characters
+        value = value.replace(/^["']/, "")
+                     .replace(/["']\s*[\\\/]?>?\s*$/, "") || "";
+        value = sTrim(value);
+
+        // Don't clobber existing attributes
+        if (!(name in section))
+          section[name] = value;
+      }
+      return section;
+    }
 
 function onNewCert()
 {
@@ -949,20 +1085,21 @@ function CreateCCK()
     CCKCopyFile(listitem.getAttribute("label"), pluginsubdir);
   }
 
+  listbox = document.getElementById('searchEngineList');
+
   destdir.initWithPath(currentconfigpath);
   destdir.append("xpi");
   destdir.append("searchplugins");
   try {
     destdir.remove(true);
-    destdir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0775);
+    if (listbox.getRowCount() > 0)
+      destdir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0775);
   } catch(ex) {}
-  
-  listbox = document.getElementById('searchEngineList');
 
   for (var i=0; i < listbox.getRowCount(); i++) {
     listitem = listbox.getItemAtIndex(i);
-    CCKCopyFile(listitem.getAttribute("label"), destdir);
-    CCKCopyFile(listitem.getAttribute("value"), destdir);
+    CCKCopyFile(listitem.cck['engineurl'], destdir);
+    CCKCopyFile(listitem.cck['iconurl'], destdir);
   }
 
   destdir.initWithPath(currentconfigpath);
@@ -1415,6 +1552,9 @@ function CCKWriteProperties(destdir)
     str = str.replace(/%startup.homepage_override_url%/g, document.getElementById("HomePageURL").value);
   }
 
+  str = str.replace(/%browser.search.defaultenginename%/g, document.getElementById("defaultSearchEngine").value);
+  str = str.replace(/%browser.search.order.1%/g, document.getElementById("defaultSearchEngine").value);
+ 
   str = str.replace(/%PopupAllowedSites%/g, document.getElementById("PopupAllowedSites").value);
   str = str.replace(/%InstallAllowedSites%/g, document.getElementById("InstallAllowedSites").value);
   cos.writeString(str);
@@ -1577,6 +1717,9 @@ function CCKWriteDefaultJS(destdir)
   var useragent1end = '");\n';
   var useragent2end = ')");\n';
 
+  var searchengine1 = 'pref("browser.search.defaultenginename", "chrome://cck/content/cck.properties");\n';
+  var searchengine2 = 'pref("browser.search.order.1",           "chrome://cck/content/cck.properties");\n';
+
   var file = destdir.clone();
   file.append("firefox-cck.js");
              
@@ -1610,7 +1753,14 @@ function CCKWriteDefaultJS(destdir)
   } else if (overrideurl && overrideurl.length) {
     fos.write(homepage2, homepage2.length);
   }
+
+  var defaultSearch = document.getElementById("defaultSearchEngine");
+  if (defaultSearch.value != "") {
+    fos.write(searchengine1, searchengine1.length);
+    fos.write(searchengine2, searchengine2.length);
+  }
   
+
   var useragent = document.getElementById("OrganizationName").value;
   if (useragent && (useragent.length > 0)) {
     fos.write(useragent1begin, useragent1begin.length);
@@ -1620,7 +1770,7 @@ function CCKWriteDefaultJS(destdir)
     fos.write(useragent, useragent.length);
     fos.write(useragent2end, useragent2end.length);
   }
-  
+
   // Preferences
   listbox = document.getElementById("prefList");
   for (var i=0; i < listbox.getRowCount(); i++) {
@@ -2088,9 +2238,9 @@ function CCKWriteConfigFile(destdir)
       listbox = document.getElementById('searchEngineList');    
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
-        var line = "SearchEngine" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
+        var line = "SearchEngine" + (j+1) + "=" + listitem.cck['engineurl'] + "\n";
         fos.write(line, line.length);
-        var line = "SearchEngineIcon" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
+        var line = "SearchEngineIcon" + (j+1) + "=" + listitem.cck['iconurl'] + "\n";
         fos.write(line, line.length);      
       }
     } else if (elements[i].id == "bundleList") {
@@ -2107,6 +2257,11 @@ function CCKWriteConfigFile(destdir)
         var line = "CertPath" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
         fos.write(line, line.length);
         var line = "CertTrust" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
+        fos.write(line, line.length);
+      }
+    } else if (elements[i].id == "defaultSearchEngine") {
+      if (elements[i].value) {
+        var line = "DefaultSearchEngine=" + elements[i].value + "\n";
         fos.write(line, line.length);
       }
     }
@@ -2323,16 +2478,21 @@ function CCKReadConfigFile(srcdir)
   listbox = document.getElementById('searchEngineList');
   listbox.clear();
 
+  var menulist = document.getElementById('defaultSearchEngine')
+  menulist.selectedIndex = -1;
+  menulist.removeAllItems();
+
   /* I changed the name from SearchPlugin to SearchEngine. */
   /* This code is to support old config files */
   var searchname = "SearchEngine";
   if  (configarray['SearchPlugin1']) {
     searchname = "SearchPlugin";
   }
-  
+
   var i = 1;
-  while(searchenginename = configarray[searchname + i]) {
-    listitem = listbox.appendItem(searchenginename, configarray[searchname + 'Icon' + i]);
+  while(searchengineurl = configarray[searchname + i]) {
+    name = getSearchEngineName(searchengineurl);
+    listitem = listbox.appendItem(name, "");
     listitem.setAttribute("class", "listitem-iconic");
     try {
       sourcefile.initWithPath(configarray[searchname + 'Icon' + i]);
@@ -2342,8 +2502,15 @@ function CCKReadConfigFile(srcdir)
       listitem.setAttribute("image", imgfile.spec);
     } catch (e) {
     }
+    listitem.cck['name'] = name;
+    listitem.cck['engineurl'] = searchengineurl;
+    listitem.cck['iconurl'] = configarray[searchname + 'Icon' + i];
     i++;
   }
+  
+  RefreshDefaultSearchEngines();
+
+  menulist.value = configarray["DefaultSearchEngine"];
 
   var hidden = document.getElementById("hidden");
   hidden.checked = configarray["hidden"];
