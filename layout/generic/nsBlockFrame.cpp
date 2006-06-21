@@ -863,12 +863,9 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   mState &= ~NS_FRAME_FIRST_REFLOW;
 
   // Now reflow...
-  PRBool didSomething;
-  rv = ReflowDirtyLines(state, &didSomething);
+  rv = ReflowDirtyLines(state);
   NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
   if (NS_FAILED(rv)) return rv;
-
-  didSomething |= (GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
 
   // If the block is complete, put continuted floats in the closest ancestor 
   // block that uses the same space manager and leave the block complete; this 
@@ -975,21 +972,10 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
 
-  if (didSomething) {
-    CheckFloats(state);
+  CheckFloats(state);
 
-    // Compute our final size
-    ComputeFinalSize(aReflowState, state, aMetrics);
-  } else {
-    // Just return our current size as our desired size.
-    aMetrics.width = mRect.width;
-    aMetrics.height = mRect.height;
-    aMetrics.ascent = mAscent;
-    aMetrics.descent = aMetrics.height - aMetrics.ascent;
-    
-    // Whether or not we're complete hasn't changed
-    aStatus = (nsnull != GetNextInFlow()) ? NS_FRAME_NOT_COMPLETE : NS_FRAME_COMPLETE;
-  }
+  // Compute our final size
+  ComputeFinalSize(aReflowState, state, aMetrics);
 
   ComputeCombinedArea(aReflowState, aMetrics);
 
@@ -1615,14 +1601,12 @@ static void DumpLine(const nsBlockReflowState& aState, nsLineBox* aLine,
  * Reflow the dirty lines
  */
 nsresult
-nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
-                               PRBool* aALineWasDirty)
+nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
 {
   nsresult rv = NS_OK;
   PRBool keepGoing = PR_TRUE;
   PRBool repositionViews = PR_FALSE; // should we really need this?
   PRBool foundAnyClears = PR_FALSE;
-  *aALineWasDirty = PR_FALSE;
 
 #ifdef DEBUG
   if (gNoisyReflow) {
@@ -1752,7 +1736,6 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
     // Now repair the line and update |aState.mY| by calling
     // |ReflowLine| or |SlideLine|.
     if (line->IsDirty()) {
-      *aALineWasDirty = PR_TRUE;
       lastLineMovedUp = PR_TRUE;
 
       PRBool maybeReflowingForFirstTime =
