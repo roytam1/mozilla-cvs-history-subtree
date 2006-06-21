@@ -217,7 +217,8 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
                         mComputedHeight + mComputedBorderPadding.TopBottom();
   }
 
-  if ((mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent ||
+  if (((mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent &&
+        mComputedHeight != NS_AUTOHEIGHT) ||
        frame->IsBoxFrame()) &&
       mCBReflowState) {
     const nsHTMLReflowState *rs = this;
