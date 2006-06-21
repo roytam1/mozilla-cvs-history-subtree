@@ -59,6 +59,23 @@ const static char* start_url = "chrome://minimo/content/minimo.xul";
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 
+void ErrorAlert(const char* message)
+{
+  // this needs to be a low-resource quick dialog that does
+  // not use anything in mozilla/gecko
+
+#ifdef WINCE
+  MessageBox(0, 
+             message, 
+             "ERROR", 
+             MB_APPLMODAL);
+#else
+  printf("ERROR!!: %s\n", message);
+#endif
+
+}
+
+
 void OpenNewTab(char* url)
 {
   nsCOMPtr<nsIWindowWatcher> wwatch = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
@@ -774,8 +791,12 @@ int main(int argc, char *argv[])
   
   // Choose the new profile
   if (NS_FAILED(StartupProfile()))
-    return 1;
-  
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (1)!");
+    return -1;
+  }
+
   DoPreferences();
   OverrideComponents();
   
@@ -787,21 +808,33 @@ int main(int argc, char *argv[])
     nsCOMPtr<nsIComponentRegistrar> registrar;
     NS_GetComponentRegistrar(getter_AddRefs(registrar));
     if (!registrar)
+    {
+      KillSplashScreen();
+      ErrorAlert("Could not start Minimo. (2)!");
       return -1;
+    }
     
     registrar->AutoRegister(nsnull);
     
 	appShell = do_CreateInstance(kAppShellCID);
     
 	if (!appShell)
-      return 1;
+    {
+      KillSplashScreen();
+      ErrorAlert("Could not start Minimo. (3)!");
+      return -1;
+    }
   }
   
   appShell->Create(nsnull, nsnull);
   
   nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
   if (!prefBranch)
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (4)!");
     return -1;
+  }
   
   //////////////////////////////////////////////////////////////////////////
   // NOTE: this enforces the classic skin.
@@ -815,21 +848,44 @@ int main(int argc, char *argv[])
     
   ApplicationObserver *appObserver = new ApplicationObserver(appShell);
   if (!appObserver)
-    return 1;
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (5)!");
+    return -1;
+  }
+
   NS_ADDREF(appObserver);
   
   WindowCreator *creatorCallback = new WindowCreator(appShell);
   if (!creatorCallback)
-    return 1;
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (6)!");
+    return -1;
+  }
   
   nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
   wwatch->SetWindowCreator(creatorCallback);
   
   nsCOMPtr<nsIDOMWindow> newWindow;
-  wwatch->OpenWindow(nsnull, start_url, "_blank", "chrome,dialog=no,all", nsnull, getter_AddRefs(newWindow));
-  
-  appShell->Run();
-  
+  nsresult rv = wwatch->OpenWindow(nsnull, start_url, "_blank", "chrome,dialog=no,all", nsnull, getter_AddRefs(newWindow));
+
+  if (NS_FAILED(rv))
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (7)!");
+    return -1;
+  }
+
+  rv = appShell->Run();
+
+  if (NS_FAILED(rv))
+  {
+    KillSplashScreen();
+    ErrorAlert("Minimo had an issue.  Quitting. (8)!");
+    return -1;
+  }
+
   appShell = nsnull;
   wwatch = nsnull;
   newWindow = nsnull;
