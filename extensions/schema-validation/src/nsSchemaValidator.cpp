@@ -2494,6 +2494,9 @@ nsSchemaValidator::IsValidSchemaDate(const nsAString & aNodeValue,
 
   LOG(("  Validating Date:"));
 
+  if (aNodeValue.IsEmpty())
+    return PR_FALSE;
+
   nsAutoString dateString(aNodeValue); 
   if (dateString.First() == '-') {
     aResult->isNegative = PR_TRUE;
