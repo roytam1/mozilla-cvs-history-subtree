@@ -134,7 +134,7 @@ GetDocumentCharacterSetForURI(const nsAString& aHref, nsACString& aCharset)
 
 nsLocation::nsLocation(nsIDocShell *aDocShell)
 {
-  mDocShell = aDocShell; // Weak Reference
+  mDocShell = do_GetWeakReference(aDocShell);
 }
 
 nsLocation::~nsLocation()
@@ -157,13 +157,25 @@ NS_IMPL_RELEASE(nsLocation)
 void
 nsLocation::SetDocShell(nsIDocShell *aDocShell)
 {
-   mDocShell = aDocShell; // Weak Reference
+   mDocShell = do_GetWeakReference(aDocShell);
+}
+
+nsIDocShell *
+nsLocation::GetDocShell()
+{
+  nsCOMPtr<nsIDocShell> docshell(do_QueryReferent(mDocShell));
+  return docshell;
 }
 
 nsresult
 nsLocation::CheckURL(nsIURI* aURI, nsIDocShellLoadInfo** aLoadInfo)
 {
   *aLoadInfo = nsnull;
+
+  nsCOMPtr<nsIDocShell> docShell(do_QueryReferent(mDocShell));
+  if (!docShell) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
 
   nsresult result;
   // Get JSContext from stack.
@@ -213,7 +225,7 @@ nsLocation::CheckURL(nsIURI* aURI, nsIDocShellLoadInfo** aLoadInfo)
 
   // Create load info
   nsCOMPtr<nsIDocShellLoadInfo> loadInfo;
-  mDocShell->CreateLoadInfo(getter_AddRefs(loadInfo));
+  docShell->CreateLoadInfo(getter_AddRefs(loadInfo));
   NS_ENSURE_TRUE(loadInfo, NS_ERROR_FAILURE);
 
   loadInfo->SetOwner(owner);
@@ -293,8 +305,8 @@ nsLocation::GetURI(nsIURI** aURI, PRBool aGetInnermostURI)
   *aURI = nsnull;
 
   nsresult rv;
-
-  nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell, &rv));
+  nsCOMPtr<nsIDocShell> docShell(do_QueryReferent(mDocShell));
+  nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(docShell, &rv));
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -343,9 +355,10 @@ nsLocation::GetWritableURI(nsIURI** aURI)
 nsresult
 nsLocation::SetURI(nsIURI* aURI, PRBool aReplace)
 {
-  if (mDocShell) {
+  nsCOMPtr<nsIDocShell> docShell(do_QueryReferent(mDocShell));
+  if (docShell) {
     nsCOMPtr<nsIDocShellLoadInfo> loadInfo;
-    nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
+    nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(docShell));
 
     if(NS_FAILED(CheckURL(aURI, getter_AddRefs(loadInfo))))
       return NS_ERROR_FAILURE;
@@ -356,8 +369,8 @@ nsLocation::SetURI(nsIURI* aURI, PRBool aReplace)
       loadInfo->SetLoadType(nsIDocShellLoadInfo::loadStopContent);
     }
 
-    return mDocShell->LoadURI(aURI, loadInfo,
-                              nsIWebNavigation::LOAD_FLAGS_NONE, PR_TRUE);
+    return docShell->LoadURI(aURI, loadInfo,
+                             nsIWebNavigation::LOAD_FLAGS_NONE, PR_TRUE);
   }
 
   return NS_OK;
@@ -585,8 +598,10 @@ nsLocation::SetHrefWithBase(const nsAString& aHref, nsIURI* aBase,
   nsresult result;
   nsCOMPtr<nsIURI> newUri, baseURI;
 
+  nsCOMPtr<nsIDocShell> docShell(do_QueryReferent(mDocShell));
+
   // Try to make sure the base url is something that will be useful. 
-  result = FindUsableBaseURI(aBase,  mDocShell, getter_AddRefs(baseURI));
+  result = FindUsableBaseURI(aBase,  docShell, getter_AddRefs(baseURI));
   if (!baseURI)  {
     // If nothing useful was found, just use what you have.
     baseURI = aBase;
@@ -626,7 +641,7 @@ nsLocation::SetHrefWithBase(const nsAString& aHref, nsIURI* aBase,
             // Now check to make sure that the script is running in our window,
             // since we only want to replace if the location is set by a
             // <script> tag in the same window.  See bug 178729.
-            nsCOMPtr<nsIScriptGlobalObject> ourGlobal(do_GetInterface(mDocShell));
+            nsCOMPtr<nsIScriptGlobalObject> ourGlobal(do_GetInterface(docShell));
             inScriptTag = (ourGlobal == scriptContext->GetGlobalObject());
           }
         }  
@@ -823,7 +838,8 @@ NS_IMETHODIMP
 nsLocation::Reload(PRBool aForceget)
 {
   nsresult rv;
-  nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
+  nsCOMPtr<nsIDocShell> docShell(do_QueryReferent(mDocShell));
+  nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(docShell));
 
   if (webNav) {
     PRUint32 reloadFlags = nsIWebNavigation::LOAD_FLAGS_NONE;
@@ -840,7 +856,6 @@ nsLocation::Reload(PRBool aForceget)
       rv = NS_OK;
     }
   } else {
-    NS_ASSERTION(0, "nsIWebNavigation interface is not available!");
     rv = NS_ERROR_FAILURE;
   }
 
@@ -858,7 +873,8 @@ nsLocation::Reload()
   if (!ncc)
     return NS_ERROR_NOT_AVAILABLE;
 
-  nsCOMPtr<nsPIDOMWindow> window(do_GetInterface(mDocShell));
+  nsCOMPtr<nsIDocShell> docShell(do_QueryReferent(mDocShell));
+  nsCOMPtr<nsPIDOMWindow> window(do_GetInterface(docShell));
 
   if (window && window->IsHandlingResizeEvent()) {
     // location.reload() was called on a window that is handling a
