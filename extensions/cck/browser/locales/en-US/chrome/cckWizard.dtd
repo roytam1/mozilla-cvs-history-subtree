@@ -217,6 +217,10 @@
 <!ENTITY  autoTypeRadio.accesskey       "a">
 <!ENTITY  configAutoconfigText.label    "Configuration location (URL):">
 <!ENTITY  configAutoconfigText.accesskey "u">
+<!ENTITY  autoCCKTypeRadio.label        "Store proxy configuration file in the CCK:">
+<!ENTITY  autoCCKTypeRadio.accesskey    "i">
+
+
 <!ENTITY  reload.label                  "Reload">
 <!ENTITY  reload.accesskey              "l">
 <!ENTITY  ftp.label                     "FTP Proxy:">

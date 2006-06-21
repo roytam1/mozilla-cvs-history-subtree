@@ -511,6 +511,11 @@
         <hbox class="indent" flex="1" align="center">
           <textbox id="autoproxyurl" flex="1" preference="network.proxy.autoconfig_url"/>
         </hbox>
+        <radio value="5" label="&autoCCKTypeRadio.label;" accesskey="&autoCCKTypeRadio.accesskey;" oncommand="DoEnabling();"/>
+        <hbox class="indent" flex="1" align="center">
+          <textbox id="autoproxyfile" flex="1"/>
+          <button id="autoproxyfilebutton" label="&chooseFile.label;" oncommand="choosefile('autoproxyfile');"/>
+        </hbox>
       </radiogroup>
     </groupbox>
   </wizardpage>

@@ -341,6 +341,21 @@ function onEditPreference()
   window.openDialog("chrome://cckwizard/content/pref.xul","editpref","chrome,centerscreen,modal");
 }
 
+Array.prototype.exists = function (x) {
+    for (var i = 0; i < this.length; i++) {
+        if (this[i] == x) return true;
+    }
+    return false;
+}
+
+var prefsLockOnly = ["browser.startup.homepage", "browser.throbber.url",
+                     "network.proxy.type", "network.proxy.http", "network.proxy.http_port",
+                     "network.proxy.share_proxy_settings", "network.proxy.ssl",
+                     "network.proxy.ssl_port", "network.proxy.ftp", "network.proxy.ftp_port",
+                     "network.proxy.gopher", "network.proxy.gopher_port", "network.proxy.socks",
+                     "network.proxy.socks_port", "network.proxy.socks_version",
+                     "network.proxy.no_proxies_on", "network.proxy.autoconfig_url"];
+
 function OnPrefLoad()
 {
   listbox = this.opener.document.getElementById('prefList');    
@@ -350,7 +365,12 @@ function OnPrefLoad()
       document.getElementById('prefvalue').preftype = nsIPrefBranch.PREF_INT;
     }
     document.getElementById('prefname').value = listbox.selectedItem.label;
-    document.getElementById('prefvalue').value = listbox.selectedItem.value;
+    if (prefsLockOnly.exists(listbox.selectedItem.label)) {
+      document.getElementById('prefvalue').disabled = true;
+      document.getElementById('prefvalue').value = this.opener.document.getElementById("bundle_cckwizard").getString("lockError");      
+    } else {
+      document.getElementById('prefvalue').value = listbox.selectedItem.value;
+    }
     document.getElementById('prefname').disabled = true;
     if (listbox.selectedItem.cck['lock'] == "true")
       document.getElementById('lockPref').checked = true;
@@ -407,6 +427,12 @@ function prefSetPrefValue()
     document.getElementById('prefvalue').hidden = false;
     document.getElementById('prefvalueboolean').hidden = true;
   }
+  if (prefsLockOnly.exists(prefname)) {
+    document.getElementById('prefvalue').disabled = true;
+    document.getElementById('prefvalue').value = this.opener.document.getElementById("bundle_cckwizard").getString("lockError");      
+  } else {
+    document.getElementById('prefvalue').disabled = false;
+  }
 }
 
 function OnPrefOK()
@@ -422,18 +448,13 @@ function OnPrefOK()
     }
   }
 
-  
-
-  if (((document.getElementById('prefname').value == "browser.startup.homepage") || (document.getElementById('prefname').value == "browser.throbber.url")) && 
-      (document.getElementById('prefvalue').value.length > 0)) {
-    gPromptService.alert(window, bundle.getString("windowTitle"),
-                         bundle.getString("lockError"));
-    return false;
+  if (prefsLockOnly.exists(document.getElementById('prefname').value)) {
+     document.getElementById('prefvalue').value = "";
   }
 
   var value = document.getElementById('prefvalue').value;
   
-  if (document.getElementById('prefvalue').preftype == nsIPrefBranch.PREF_INT) {
+  if ((document.getElementById('prefvalue').preftype == nsIPrefBranch.PREF_INT) && (!(prefsLockOnly.exists(document.getElementById('prefname').value)))) {
     if (parseInt(value) != value) {
       gPromptService.alert(window, bundle.getString("windowTitle"),
                            bundle.getString("intError"));
@@ -1002,6 +1023,10 @@ function CreateCCK()
   for (var i=0; i < listbox.getRowCount(); i++) {
     listitem = listbox.getItemAtIndex(i);
     CCKCopyFile(listitem.getAttribute("label"), destdir);
+  }
+
+  if (document.getElementById("ProxyType").value = "5") {
+    CCKCopyFile(document.getElementById("autoproxyfile").value, destdir);
   }
 
 /* copy/create contents.rdf if 1.0 */
@@ -1776,7 +1801,7 @@ function CCKWriteDefaultJS(destdir)
   for (var i=0; i < listbox.getRowCount(); i++) {
     listitem = listbox.getItemAtIndex(i);
     /* allow for locking prefs without setting value */
-    if (listitem.getAttribute("value").length) {
+    if ((listitem.getAttribute("value").length) && (!(prefsLockOnly.exists(listitem.getAttribute("label"))))) {
       var line;
       /* If it is a string, put quotes around it */
       if (listitem.cck['type'] == "string") {
@@ -1838,6 +1863,16 @@ function CCKWriteDefaultJS(destdir)
           fos.write(line, line.length);
         }
       }
+      break;
+    case "5":
+      var file = Components.classes["@mozilla.org/file/local;1"]
+                           .createInstance(Components.interfaces.nsILocalFile);
+      file.initWithPath(document.getElementById("autoproxyfile").value);
+      var line = 'pref("network.proxy.autoconfig_url", "chrome://cck/content/' + file.leafName + '");\n';
+      fos.write(line, line.length);
+      
+      var line = 'pref("network.proxy.type", 2);\n';
+      fos.write(line, line.length);
 
       break;
   }
@@ -2692,12 +2727,15 @@ function DoEnabling()
   var sslPort = document.getElementById("SSLportno");
   var noProxy = document.getElementById("NoProxyname");
   var autoURL = document.getElementById("autoproxyurl");
+  var autoFile = document.getElementById("autoproxyfile");
+  var autoFileButton = document.getElementById("autoproxyfilebutton");
   var shareAllProxies = document.getElementById("shareAllProxies");
 
   // convenience arrays
   var manual = [ftp, ftpPort, gopher, gopherPort, http, httpPort, socks, socksPort, socksVersion, socksVersion4, socksVersion5, ssl, sslPort, noProxy, shareAllProxies];
   var manual2 = [http, httpPort, noProxy, shareAllProxies];
   var auto = [autoURL];
+  var file = [autoFile, autoFileButton];
 
   // radio buttons
   var radiogroup = document.getElementById("ProxyType");
@@ -2712,9 +2750,14 @@ function DoEnabling()
       for (i = 0; i < auto.length; i++)
         auto[i].setAttribute( "disabled", "true" );
       break;
+      for (i = 0; i < file.length; i++)
+        file[i].setAttribute( "disabled", "true" );
+      break;
     case "1":
       for (i = 0; i < auto.length; i++)
         auto[i].setAttribute( "disabled", "true" );
+      for (i = 0; i < file.length; i++)
+        file[i].setAttribute( "disabled", "true" );
       if (!radiogroup.disabled && !shareAllProxies.checked) {
         for (i = 0; i < manual.length; i++) {
            manual[i].removeAttribute( "disabled" );
@@ -2727,10 +2770,21 @@ function DoEnabling()
         }
       }
       break;
+    case "5":
+      for (i = 0; i < auto.length; i++)
+        auto[i].setAttribute( "disabled", "true" );
+      for (i = 0; i < manual.length; i++)
+        manual[i].setAttribute("disabled", "true");
+      if (!radiogroup.disabled)
+        for (i = 0; i < file.length; i++)
+          file[i].removeAttribute("disabled");
+      break;
     case "2":
     default:
       for (i = 0; i < manual.length; i++)
         manual[i].setAttribute("disabled", "true");
+      for (i = 0; i < file.length; i++)
+        file[i].setAttribute( "disabled", "true" );
       if (!radiogroup.disabled)
         for (i = 0; i < auto.length; i++)
           auto[i].removeAttribute("disabled");
