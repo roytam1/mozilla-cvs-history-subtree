@@ -74,7 +74,6 @@ CRCCheck on
 !insertmacro un.TrimNewLines
 !insertmacro WordFind
 !insertmacro WordReplace
-!insertmacro GetSize
 
 ; Use the pre-processor where ever possible
 ; Remember that !define's create smaller packages than Var's!
@@ -90,7 +89,6 @@ Var fhUninstallLog
 !include defines.nsi
 !include SetProgramAccess.nsi
 !include common.nsh
-!include locales.nsi
 !include version.nsh
 
 !insertmacro RegCleanMain
@@ -130,13 +128,7 @@ ReserveFile shortcuts.ini
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP wizWatermark.bmp
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-
-; Use a right to left header image when the language is right to left
-!ifdef ${AB_CD}_rtl
-!define MUI_HEADERIMAGE_BITMAP_RTL wizHeaderRTL.bmp
-!else
 !define MUI_HEADERIMAGE_BITMAP wizHeader.bmp
-!endif
 
 /**
  * Installation Pages
@@ -1161,30 +1153,14 @@ Function .onInit
   !insertmacro MUI_INSTALLOPTIONS_EXTRACT "shortcuts.ini"
   !insertmacro createShortcutsINI
   !insertmacro createBasicCustomOptionsINI
-
-  ; There must always be nonlocalized and localized directories.
-  ${GetSize} "$EXEDIR\nonlocalized\" "/S=0K" $1 $8 $9
-  ${GetSize} "$EXEDIR\localized\" "/S=0K" $2 $8 $9
-  IntOp $0 $1 + $2
-  SectionSetSize 0 $0
-
-  ${If} ${FileExists} "$EXEDIR\optional\extensions\inspector@mozilla.org"
-    ; Set the section size for DOMi.
-    ${GetSize} "$EXEDIR\optional\extensions\inspector@mozilla.org" "/S=0K" $0 $8 $9
-    SectionSetSize 1 $0
-  ${Else}
-    ; Hide DOMi in the components page if it isn't available.
+  ; Hide DOMi in the components page if it isn't available
+  ${Unless} ${FileExists} "$EXEDIR\optional\extensions\inspector@mozilla.org"
     SectionSetText 1 ""
-  ${EndIf}
-
-  ; Set the section size for Talkback only if it exists.
-  ${If} ${FileExists} "$EXEDIR\optional\extensions\talkback@mozilla.org"
-    ${GetSize} "$EXEDIR\optional\extensions\talkback@mozilla.org" "/S=0K" $0 $8 $9
-    SectionSetSize 2 $0
-  ${Else}
-    ; Hide Talkback in the components page if it isn't available.
+  ${EndUnless}
+  ; Hide Talkback in the components page if it isn't available
+  ${Unless} ${FileExists} "$EXEDIR\optional\extensions\talkback@mozilla.org"
     SectionSetText 2 ""
-  ${EndIf}
+  ${EndUnless}
 FunctionEnd
 
 Function un.onInit

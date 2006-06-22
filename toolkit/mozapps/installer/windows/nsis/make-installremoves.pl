@@ -41,8 +41,6 @@
 # deleteThisFile/deleteThisFolder instructions suitable for an install.js
 # script. This simply processes <> to stdout.
 
-print "\n\n$1\n\n";
-
 while (<>) {
     m|^\s*(\S+)\s*$|;
     my $file = $1;
