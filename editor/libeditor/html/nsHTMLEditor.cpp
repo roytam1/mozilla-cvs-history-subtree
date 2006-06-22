@@ -3551,10 +3551,8 @@ nsHTMLEditor::ReplaceStyleSheet(const nsAString& aURL)
   rv = NS_NewURI(getter_AddRefs(uaURI), aURL);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Editor override style sheets may want to style Gecko anonymous boxes
-  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_QueryInterface(cssLoader);
   nsCOMPtr<nsICSSStyleSheet> sheet;
-  rv = loader->LoadSheetSync(uaURI, PR_TRUE, getter_AddRefs(sheet));
+  rv = cssLoader->LoadAgentSheet(uaURI, this);
   NS_ENSURE_SUCCESS(rv, rv);
 
   return NS_OK;
@@ -3605,7 +3603,8 @@ nsHTMLEditor::AddOverrideStyleSheet(const nsAString& aURL)
 
   // We MUST ONLY load synchronous local files (no @import)
   nsCOMPtr<nsICSSStyleSheet> sheet;
-  rv = cssLoader->LoadAgentSheet(uaURI, getter_AddRefs(sheet));
+  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_QueryInterface(cssLoader);
+  rv = loader->LoadSheetSync(uaURI, PR_TRUE, getter_AddRefs(sheet));
 
   // Synchronous loads should ALWAYS return completed
   if (!sheet)
