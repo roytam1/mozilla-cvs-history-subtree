@@ -3222,18 +3222,28 @@ ExtensionManager.prototype = {
     if (isDirty)
       this._finishOperations();
 
-    // Disable all incompatible items and let update enable them if appropriate.
     var ds = this.datasource;
-    var currAppID = gApp.ID;
-    var items = ds.getIncompatibleItemList(currAppID, currAppVersion,
-                                           nsIUpdateItem.TYPE_ADDON, true);
-    for (var i = 0; i < items.length; ++i)
-      ds.setItemProperty(items[i].id, EM_R("appDisabled"), EM_L("true"));
-    // Update the manifests to reflect the items that were disabled.
+    var allAppManaged = true;
+    var ctr = getContainer(ds, ds._itemRoot);
+    var elements = ctr.GetElements();
+    while (elements.hasMoreElements()) {
+      var itemResource = elements.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var id = stripPrefix(itemResource.Value, PREFIX_ITEM_URI);
+      if (allAppManaged && ds.getItemProperty(id, "appManaged") != "true")
+        allAppManaged = false;
+      if (ds.getItemProperty(id, "compatible") == "true") {
+        if (ds.getItemProperty(id, "appDisabled"))
+          ds.setItemProperty(id, EM_R("appDisabled"), null);
+      }
+      else if (!ds.getItemProperty(id, "appDisabled"))
+        ds.setItemProperty(id, EM_R("appDisabled"), EM_L("true"));
+    }
     this._updateManifests(true);
 
-    // Always check for compatibility updates when upgrading
-    this._showMismatchWindow();
+    // Always check for compatibility updates when upgrading if we have add-ons
+    // that aren't managed by the application.
+    if (!allAppManaged)
+      this._showMismatchWindow();
     
     // Finish any pending upgrades from the compatibility update to avoid an
     // additional restart.
