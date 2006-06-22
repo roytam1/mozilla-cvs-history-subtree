@@ -712,10 +712,7 @@ public:
   NS_DECL_ISUPPORTS
 
   void SetDocShell(nsIDocShell *aDocShell);
-  nsIDocShell *GetDocShell()
-  {
-    return mDocShell;
-  }
+  nsIDocShell *GetDocShell();
 
   // nsIDOMLocation
   NS_DECL_NSIDOMLOCATION
@@ -742,7 +739,7 @@ protected:
   nsresult CheckURL(nsIURI *url, nsIDocShellLoadInfo** aLoadInfo);
   nsresult FindUsableBaseURI(nsIURI * aBaseURI, nsIDocShell * aParent, nsIURI ** aUsableURI);
 
-  nsIDocShell *mDocShell; // Weak Reference
+  nsWeakPtr mDocShell;
 };
 
 /* factory function */

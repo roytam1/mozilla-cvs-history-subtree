@@ -845,11 +845,6 @@ WindowStateHolder::~WindowStateHolder()
     }
 
     mInnerWindow->FreeInnerObjects(cx);
-
-    if (mLocation) {
-      // Don't leave the weak reference to the docshell lying around.
-      mLocation->SetDocShell(nsnull);
-    }
   }
 }
 
