@@ -171,7 +171,11 @@ ToLowerCase( const nsAString& aSource, nsAString& aDest )
   {
     nsAString::const_iterator fromBegin, fromEnd;
     nsAString::iterator toBegin;
-    aDest.SetLength(aSource.Length());
+    // FIXME: need way to return error
+    if (!EnsureStringLength(aDest, aSource.Length())) {
+      aDest.Truncate();
+      return; // out of memory
+    }
     CopyToLowerCase converter(aDest.BeginWriting(toBegin));
     copy_string(aSource.BeginReading(fromBegin), aSource.EndReading(fromEnd), converter);
   }
@@ -257,7 +261,11 @@ ToUpperCase( const nsAString& aSource, nsAString& aDest )
   {
     nsAString::const_iterator fromBegin, fromEnd;
     nsAString::iterator toBegin;
-    aDest.SetLength(aSource.Length());
+    // FIXME: need way to return error
+    if (!EnsureStringLength(aDest, aSource.Length())) {
+      aDest.Truncate();
+      return; // out of memory
+    }
     CopyToUpperCase converter(aDest.BeginWriting(toBegin));
     copy_string(aSource.BeginReading(fromBegin), aSource.EndReading(fromEnd), converter);
   }

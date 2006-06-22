@@ -882,6 +882,8 @@ nsBidiPresUtils::FormatUnicodeText(nsPresContext*  aPresContext,
 
     if (mBuffer.Length() < aTextLength) {
       mBuffer.SetLength(aTextLength);
+      if (mBuffer.Length() < aTextLength)
+        return NS_ERROR_OUT_OF_MEMORY;
     }
     PRUnichar* buffer = mBuffer.BeginWriting();
 
@@ -1112,6 +1114,8 @@ nsresult nsBidiPresUtils::RenderText(const PRUnichar*     aText,
       
       nsAutoString runVisualText;
       runVisualText.Assign(aText + start, subRunLength);
+      if (runVisualText.Length() < subRunLength)
+        return NS_ERROR_OUT_OF_MEMORY;
       FormatUnicodeText(aPresContext, runVisualText.BeginWriting(), subRunLength,
                         (nsCharType)charType, level & 1,
                         isBidiSystem);
@@ -1231,6 +1235,8 @@ nsBidiPresUtils::ReorderUnicodeText(PRUnichar*       aText,
 
     if (mBuffer.Length() < aTextLength) {
       mBuffer.SetLength(aTextLength);
+      if (mBuffer.Length() < aTextLength)
+        return NS_ERROR_OUT_OF_MEMORY;
     }
     PRUnichar* buffer = mBuffer.BeginWriting();
 

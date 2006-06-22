@@ -476,7 +476,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     // escape each URL segment, if necessary, and calculate approximate normalized
     // spec length.
     //
-    PRInt32 approxLen = 3; // includes room for "://"
+    PRUint32 approxLen = 3; // includes room for "://"
 
     // the scheme is already ASCII
     if (mScheme.mLen > 0)
@@ -513,7 +513,8 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     //
     // generate the normalized URL string
     //
-    mSpec.SetLength(approxLen + 32);
+    if (!EnsureStringLength(mSpec, approxLen + 32))
+        return NS_ERROR_OUT_OF_MEMORY;
     char *buf;
     mSpec.BeginWriting(buf);
     PRUint32 i = 0;
@@ -625,6 +626,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
         CoalescePath(coalesceFlag, buf + mDirectory.mPos);
     }
     mSpec.SetLength(strlen(buf));
+    NS_ASSERTION(mSpec.Length() <= approxLen+32, "We've overflowed the mSpec buffer!");
     return NS_OK;
 }
 

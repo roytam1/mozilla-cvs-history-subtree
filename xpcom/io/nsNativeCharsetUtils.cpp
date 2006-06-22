@@ -824,7 +824,8 @@ NS_CopyNativeToUnicode(const nsACString &input, nsAString &output)
     // this will generally result in a larger allocation, but that seems
     // better than an extra buffer copy.
     //
-    output.SetLength(inputLen);
+    if (!EnsureStringLength(output, inputLen))
+        return NS_ERROR_OUT_OF_MEMORY;
     nsAString::iterator out_iter;
     output.BeginWriting(out_iter);
 
@@ -907,6 +908,7 @@ NS_ShutdownNativeCharsetUtils()
 
 #include <windows.h>
 #include "nsAString.h"
+#include "nsReadableUtils.h"
 
 NS_COM nsresult
 NS_CopyNativeToUnicode(const nsACString &input, nsAString &output)
@@ -925,7 +927,8 @@ NS_CopyNativeToUnicode(const nsACString &input, nsAString &output)
         resultLen += n;
 
     // allocate sufficient space
-    output.SetLength(resultLen);
+    if (!EnsureStringLength(output, resultLen))
+        return NS_ERROR_OUT_OF_MEMORY;
     if (resultLen > 0) {
         nsAString::iterator out_iter;
         output.BeginWriting(out_iter);
@@ -955,7 +958,8 @@ NS_CopyUnicodeToNative(const nsAString  &input, nsACString &output)
         resultLen += n;
 
     // allocate sufficient space
-    output.SetLength(resultLen);
+    if (!EnsureStringLength(output, resultLen))
+        return NS_ERROR_OUT_OF_MEMORY;
     if (resultLen > 0) {
         nsACString::iterator out_iter;
         output.BeginWriting(out_iter);
@@ -1023,6 +1027,7 @@ NS_ConvertWtoA(const PRUnichar *aStrInW, int aBufferSizeOut, char *aStrOutA,
 #include <os2.h>
 #include <uconv.h>
 #include "nsAString.h"
+#include "nsReadableUtils.h"
 #include <ulserrno.h>
 #include "nsNativeCharsetUtils.h"
 
@@ -1039,7 +1044,8 @@ NS_CopyNativeToUnicode(const nsACString &input, nsAString  &output)
 
     // determine length of result
     PRUint32 resultLen = inputLen;
-    output.SetLength(resultLen);
+    if (!EnsureStringLength(output, resultLen))
+        return NS_ERROR_OUT_OF_MEMORY;
 
     nsAString::iterator out_iter;
     output.BeginWriting(out_iter);
@@ -1079,7 +1085,8 @@ NS_CopyUnicodeToNative(const nsAString &input, nsACString &output)
     // maximum length of unicode string of length x converted to native
     // codepage is x*2
     size_t resultLen = inputLen * 2;
-    output.SetLength(resultLen);
+    if (!EnsureStringLength(output, resultLen))
+        return NS_ERROR_OUT_OF_MEMORY;
 
     nsACString::iterator out_iter;
     output.BeginWriting(out_iter);
@@ -1152,6 +1159,7 @@ NS_ShutdownNativeCharsetUtils()
 #include <Script.h>
 #include <MacErrors.h>
 #include "nsAString.h"
+#include "nsReadableUtils.h"
 
 class nsFSStringConversionMac {
 public:
