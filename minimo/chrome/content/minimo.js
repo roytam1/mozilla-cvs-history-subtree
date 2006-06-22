@@ -621,43 +621,43 @@ function PopupAutoCompleteShowPop(t1,t2,t3,t4,t5,t6) {
  * UTILs to the keyboard / XUL interaction 
  */
  
-function getPosX(refElement)
-{
-	var calcLeft = 0;
-	if (refElement.offsetParent)
-	{
-		while (refElement.offsetParent)
-		{
-			calcLeft += refElement.offsetLeft
-			refElement= refElement.offsetParent;
-		}
-	}
+function getPosX(refElement) {
 
-	return calcLeft;
+  var calcLeft = 0;
+  if (refElement.offsetParent)
+  {
+    while (refElement.offsetParent)
+    {
+      calcLeft += refElement.offsetLeft
+        refElement= refElement.offsetParent;
+    }
+  }
+  
+  return calcLeft;
 }
 
 /* 
  * UTILs to the keyboard / XUL interaction 
  */
 
-function getPosY(refElement)
-{
-	var calcTop = 0;
-	if (refElement.offsetParent)
-	{
-		while (refElement.offsetParent)
-		{
-			calcTop += refElement.offsetTop
-			refElement= refElement.offsetParent;
-		}
-	}
+function getPosY(refElement) {
 
-	return calcTop ;
+  var calcTop = 0;
+  if (refElement.offsetParent)
+  {
+    while (refElement.offsetParent)
+    {
+      calcTop += refElement.offsetTop
+        refElement= refElement.offsetParent;
+    }
+  }
+  
+  return calcTop ;
 }
 
 
 function HomebarHandler(e) {
-
+  
   if(e.target.nodeName=="toolbarbutton") {
 
   } else {
@@ -784,25 +784,21 @@ function BrowserUpdateFeeds() {
  * For now, this updates via DOM the top menu. Context menu should be here as well. 
  */
 function BrowserUpdateBackForwardState() {
-
-       if(gBrowser.webNavigation.canGoBack) {
-            document.getElementById("command_back").setAttribute("disabled","false");
-            document.getElementById("item-back").setAttribute("hidden","false");
-        } else {
-            document.getElementById("command_back").setAttribute("disabled","true");
-            document.getElementById("item-back").setAttribute("hidden","true");
-
-
-        }
+  if(gBrowser.webNavigation.canGoBack) {
+    document.getElementById("command_back").hidden = false;
+    document.getElementById("item-back").hidden = false;
+  } else {
+    document.getElementById("command_back").hidden = true;
+    document.getElementById("item-back").hidden = true;
+  }
         
-        if(gBrowser.webNavigation.canGoForward) {
-            document.getElementById("command_forward").setAttribute("disabled","false");
-            document.getElementById("item-forward").setAttribute("hidden","false");
-        } else {
-            document.getElementById("command_forward").setAttribute("disabled","true");
-            document.getElementById("item-forward").setAttribute("hidden","true");
-        }
-
+  if(gBrowser.webNavigation.canGoForward) {
+    document.getElementById("command_forward").hidden = false;
+    document.getElementById("item-forward").hidden = false;
+  } else {
+    document.getElementById("command_forward").hidden = true;
+    document.getElementById("item-forward").hidden = true;
+  }
 }
 
 

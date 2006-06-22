@@ -253,9 +253,9 @@
       
       <menuseparator/>
       
-      <menuitem id="item-back"    hidden="true"  label="&backCmd.label;"      command="cmd_BrowserBack" />
-      <menuitem id="item-forward" hidden="true"  label="&forwardCmd.label;"   command="cmd_BrowserForward"/>
-      <menuitem id="item-reload"  hidden="false" label="&reloadCmd.label;"    command="cmd_BrowserReload"/>
+      <menuitem id="item-back"    label="&backCmd.label;"      command="cmd_BrowserBack" />
+      <menuitem id="item-forward" label="&forwardCmd.label;"   command="cmd_BrowserForward"/>
+      <menuitem id="item-reload"  label="&reloadCmd.label;"    command="cmd_BrowserReload"/>
 
       <menuseparator/>
 
