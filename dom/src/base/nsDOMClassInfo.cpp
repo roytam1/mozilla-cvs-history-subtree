@@ -5879,7 +5879,10 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     PRBool doSecurityCheckInAddProperty = sDoSecurityCheckInAddProperty;
     sDoSecurityCheckInAddProperty = PR_FALSE;
 
-    JSBool ok = ::JS_ResolveStandardClass(my_cx, obj, id, &did_resolve);
+    // Don't resolve standard classes on XPCNativeWrapper.
+    JSBool ok = !ObjectIsNativeWrapper(cx, obj) ?
+                ::JS_ResolveStandardClass(my_cx, obj, id, &did_resolve) :
+                JS_TRUE;
 
     sDoSecurityCheckInAddProperty = doSecurityCheckInAddProperty;
 
