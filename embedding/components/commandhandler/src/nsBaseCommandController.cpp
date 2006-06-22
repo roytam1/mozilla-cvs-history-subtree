@@ -47,11 +47,11 @@ NS_IMPL_ADDREF(nsBaseCommandController)
 NS_IMPL_RELEASE(nsBaseCommandController)
 
 NS_INTERFACE_MAP_BEGIN(nsBaseCommandController)
-	NS_INTERFACE_MAP_ENTRY(nsIController)
-	NS_INTERFACE_MAP_ENTRY(nsICommandController)
-	NS_INTERFACE_MAP_ENTRY(nsIControllerContext)
-	NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
-	NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIControllerContext)
+  NS_INTERFACE_MAP_ENTRY(nsIController)
+  NS_INTERFACE_MAP_ENTRY(nsICommandController)
+  NS_INTERFACE_MAP_ENTRY(nsIControllerContext)
+  NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIControllerContext)
 NS_INTERFACE_MAP_END
 
 nsBaseCommandController::nsBaseCommandController()
@@ -134,6 +134,7 @@ nsBaseCommandController::IsCommandEnabled(const char *aCommand,
     weak = do_QueryReferent(mCommandContextWeakPtr);
     context = weak;
   }
+  NS_ENSURE_STATE(mCommandTable);
   return mCommandTable->IsCommandEnabled(aCommand, context, aResult);
 }
 
@@ -149,6 +150,7 @@ nsBaseCommandController::SupportsCommand(const char *aCommand, PRBool *aResult)
     weak = do_QueryReferent(mCommandContextWeakPtr);
     context = weak;
   }
+  NS_ENSURE_STATE(mCommandTable);
   return mCommandTable->SupportsCommand(aCommand, context, aResult);
 }
 
@@ -163,6 +165,7 @@ nsBaseCommandController::DoCommand(const char *aCommand)
     weak = do_QueryReferent(mCommandContextWeakPtr);
     context = weak;
   }
+  NS_ENSURE_STATE(mCommandTable);
   return mCommandTable->DoCommand(aCommand, context);
 }
 
@@ -178,6 +181,7 @@ nsBaseCommandController::DoCommandWithParams(const char *aCommand,
     weak = do_QueryReferent(mCommandContextWeakPtr);
     context = weak;
   }
+  NS_ENSURE_STATE(mCommandTable);
   return mCommandTable->DoCommandParams(aCommand, aParams, context);
 }
 
@@ -193,6 +197,7 @@ nsBaseCommandController::GetCommandStateWithParams(const char *aCommand,
     weak = do_QueryReferent(mCommandContextWeakPtr);
     context = weak;
   }
+  NS_ENSURE_STATE(mCommandTable);
   return mCommandTable->GetCommandState(aCommand, aParams, context);
 }
 
