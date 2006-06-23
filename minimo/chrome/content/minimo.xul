@@ -62,7 +62,6 @@
         title="Minimo"
         titlemodifier="Minimo"
         titlemenuseparator=" - " 
-
         onload="MiniNavStartup()"
         onunload="MiniNavShutdown()"
         windowtype="navigator:browser">
@@ -93,7 +92,7 @@
   
     <hbox id="appcontent" flex="1" >
     
-      <vbox id="browserleftbar" style="overflow:hidden" >
+      <vbox id="homebar" style="overflow:hidden" >
         <vbox id="homebarcontainer"  >
         </vbox>
       </vbox>
@@ -137,7 +136,6 @@
     <command id="cmd_ViewDeckSearch"          oncommand="BrowserViewDeckSearch()"/>
     <command id="cmd_ViewDeckDefault"         oncommand="BrowserViewDeckDefault()"/>
     <command id="cmd_ViewFind"                oncommand="BrowserViewFind()" />
-    <command id="cmd_ViewHomebar"             oncommand="BrowserViewHomebar()" />
     <command id="cmd_ViewDownload"            oncommand="BrowserViewDownload(true)" />
     <command id="cmd_ViewDownloadHidden"      oncommand="BrowserViewDownload(false)" />
     <command id="cmd_BrowserOpenLinkAsNewTab" oncommand="BrowserOpenLinkAsTab()" />
@@ -248,7 +246,7 @@
 
 	  <menuitem id="full_screen" 
                 label="&toggleFullScreen.label;" 
-                oncommand="DoFullScreen()"/>     
+                oncommand="FullScreenToggle()"/>     
       
       
       <menuseparator/>
@@ -321,7 +319,7 @@
       
 	  <menuitem id="full_screen" 
                 label="&gotoFullScreen.label;" 
-                oncommand="DoFullScreen()"/>
+                oncommand="FullScreenToggle()"/>
       
       <!-- this shouldn't be an option on smartphones -->
       
@@ -359,7 +357,7 @@
                 label="&findToolbar.label;"  /> 
       
       <menuitem id="command_ViewHomeBar"
-                command="cmd_ViewHomebar" 
+                oncommand="HomebarToggle()"
                 label="&homebarToolbar.label;"  /> 
       <!--
           <menuitem id="command_ViewDownload"

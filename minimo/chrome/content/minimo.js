@@ -86,7 +86,6 @@ var gURLBar = null;
 var gClickSelectsAll = true;
 var gBrowserStatusHandler;
 var gSelectedTab=null;
-var gFullScreen=false;
 var gRSSTag="minimo";
 var gGlobalHistory = null;
 var gURIFixup = null;
@@ -448,8 +447,7 @@ function MiniNavStartup()
    */
    
   bmInitXUL(document,document.getElementById("homebarcontainer"));
-  document.getElementById("browserleftbar").style.display="block";
-  document.getElementById("browserleftbar").addEventListener("mousedown",HomebarHandler,true);  
+  document.getElementById("homebar").style.display="block";
 
   /*
    * Local bundle repository
@@ -534,63 +532,16 @@ function MiniNavStartup()
    */
     
   var prefAccessUIObserver = { 
-    destroy: function PrefUIObDestroy() {
-     this._pb.removeObserver("ui.fullscreen", this);
-   },
-   observe: function PrefUIObObserve(subject, topic, data) {
-     if (topic == "nsPref:changed" && data == "ui.fullscreen") {
-       
-       var prefState = gPref.getBoolPref("ui.fullscreen");
 
-       window.fullScreen  = prefState;
-       document.getElementById("nav-bar").hidden = prefState ;
-       document.getElementById("browserleftbar").collapsed = prefState;
-  
-     }
-   }
+    observe: function PrefUIObObserve(subject, topic, data) {
+      
+      if (topic != "nsPref:changed")
+        return;
+
+      setTimeout("setScreenUpTimeout()",10);
+    }
   };
 
-  var prefAccessUIHomebarObserver = { 
-    destroy: function PrefUIObDestroy() {
-     this.removeObserver("ui.homebar", this);
-   },
-   observe: function PrefUIObObserve(subject, topic, data) {
-   
-     if (topic == "nsPref:changed" && data == "ui.homebar") {
-
-	 var hbValue  = gPref.getBoolPref("ui.homebar");
-
-	  document.getElementById("browserleftbar").collapsed = !hbValue  ;
-
-     }
-   }
-  };
-  
-  try {
-    gPref2 = Components.classes["@mozilla.org/preferences-service;1"]
-                       .getService(nsIPrefBranch2);
-    gPref2.addObserver("ui.fullscreen", prefAccessUIObserver, false);
-    gPref2.addObserver("ui.homebar", prefAccessUIHomebarObserver , false);
-    
-  } catch ( ignore ) {}
-
- /* 
-  * Pref Sync for UI. 
-  */ 
-  
- try {
-   var prefState = gPref.getBoolPref("ui.fullscreen");
-   window.fullScreen  = prefState;
-   document.getElementById("nav-bar").hidden = prefState ;
-   document.getElementById("browserleftbar").collapsed = prefState;
- } catch ( i )  { } 
-
- try {
-   var hbValue  = gPref.getBoolPref("ui.homebar");
-
-   document.getElementById("browserleftbar").collapsed = !hbValue  ;
- } catch ( i ) { } 
-  
  /*
   * Enable Key Spin Control 
   */
@@ -606,8 +557,32 @@ function MiniNavStartup()
  document.getElementById("PopupAutoComplete").StoredShowPopup = document.getElementById("PopupAutoComplete").showPopup;
  document.getElementById("PopupAutoComplete").showPopup = PopupAutoCompleteShowPop;
 
+
+ /*
+  * Setup the screen for fullscreen or not
+  */
+  setTimeout("setScreenUpTimeout()",10);
+
 }
 
+
+function setScreenUpTimeout() {
+
+  try {
+    if (gPref.getBoolPref("ui.homebar") == true)
+      DoHomebar(true);
+    else
+      DoHomebar(false);
+  } catch(e) {}
+
+  try {
+    if (gPref.getBoolPref("ui.fullscreen") == true)
+      DoFullScreen(true);
+    else
+      DoFullScreen(false);
+  } catch(e) {}
+
+}
 
 /* 
  * Trap function to PopupAutoComplete (id=) / bug 341017
@@ -655,16 +630,6 @@ function getPosY(refElement) {
   return calcTop ;
 }
 
-
-function HomebarHandler(e) {
-  
-  if(e.target.nodeName=="toolbarbutton") {
-
-  } else {
-	BrowserHomeBar();
-  }
-
-}
 
 /* 
  * XUL > Menu > Tabs > Creates menuitems for each tab. 
@@ -1024,19 +989,23 @@ function BrowserViewFind() {
   }
 }
 
-/**
- * Has to go through some other approach like a XML-based rule system. 
- * Those are constraints conditions and action. 
- **/
-function BrowserViewHomebar() {
 
-  var wholeHomebarState = document.getElementById("browserleftbar").collapsed;
+function DoHomebar(show)
+{
+  document.getElementById("homebar").collapsed = !show;
+}
 
-  document.getElementById("browserleftbar").collapsed = !wholeHomebarState;
 
-  if(!wholeHomebarState) { 
-    document.getElementById("homebarcontainer").style.display="block"; 
-  } 
+function HomebarToggle() {
+
+  try {
+    var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(nsIPrefBranch);
+    var value = !pref.getBoolPref("ui.homebar");
+    pref.setBoolPref("ui.homebar", value);
+
+    DoHomebar(value);
+  }
+  catch(ex) { onErrorHandler(ex); }
 }
 
 /** 
@@ -1381,7 +1350,6 @@ function DoSSRToggle()
     gBrowser.webNavigation.reload(nsIWebNavigation.LOAD_FLAGS_CHARSET_CHANGE);
   }
   catch(ex) { onErrorHandler(ex); }
-
 }
 
 function DoSNavToggle()
@@ -1447,23 +1415,32 @@ function OpenFrameInTab()
   BrowserOpenURLasTab(url);
 }
 
-
-function DoFullScreen()
+function FullScreenToggle()
 {
-  gFullScreen = !gFullScreen;
-  
-  document.getElementById("nav-bar").hidden = gFullScreen;
-  document.getElementById("browserleftbar").collapsed = gFullScreen;
+  try {
+    var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(nsIPrefBranch);
+    var value = !pref.getBoolPref("ui.fullscreen");
+    pref.setBoolPref("ui.fullscreen", value);
+
+    DoFullScreen(value)
+  }
+  catch(ex) { onErrorHandler(ex); }
+}
+
+function DoFullScreen(fullscreen)
+{
+  document.getElementById("nav-bar").hidden = fullscreen;
+  //  document.getElementById("homebar").collapsed = fullscreen;
 
   // Show a Quit in the context menu
-  document.getElementById("context_menu_quit").hidden = !gFullScreen;
+  document.getElementById("context_menu_quit").hidden = !fullscreen;
   
   // Is this the simpler approach to count tabs? 
   if(gBrowser.mPanelContainer.childNodes.length>1) {
-    gBrowser.setStripVisibilityTo(!gFullScreen);
+    gBrowser.setStripVisibilityTo(!fullscreen);
   } 
   
-  window.fullScreen = gFullScreen;  
+  window.fullScreen = fullscreen;  
 }
 
 /* 
@@ -1773,14 +1750,6 @@ TransferItem.prototype = {
   
   onSecurityChange: function( aWebProgress, aRequest, state ) {
   },
-}
-  
-
-function BrowserHomeBar()  {
-
-    if(document.getElementById("homebarcontainer").style.display=="none") document.getElementById("homebarcontainer").style.display="block"; 
-    else document.getElementById("homebarcontainer").style.display="none";
-
 }
 
 
