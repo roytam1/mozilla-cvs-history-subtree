@@ -161,6 +161,10 @@ ifdef MOZ_IPCD
 tier_9_dirs += ipc/ipcd
 endif
 
+ifdef MOZ_JSDEBUGGER
+tier_9_dirs += js/jsd
+endif
+
 tier_9_dirs	+= \
 		modules/libutil \
 		netwerk \
@@ -250,10 +254,6 @@ endif
 
 ifdef MOZ_XPINSTALL
 tier_50_dirs     +=  xpinstall
-endif
-
-ifdef MOZ_JSDEBUGGER
-tier_50_dirs += js/jsd
 endif
 
 ifdef MOZ_JAVAXPCOM
