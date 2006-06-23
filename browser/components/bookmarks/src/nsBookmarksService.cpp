@@ -3605,6 +3605,15 @@ nsBookmarksService::ResolveKeyword(const PRUnichar *aUserInput, PRUnichar** aPos
 }
 
 NS_IMETHODIMP
+nsBookmarksService::GetTransactionManager(nsITransactionManager** aTransactionManager)
+{
+    // the transaction manager has been moved into a js service
+    // see bug #164811, but we haven't changed the nsIBookmarksService 
+    // interface so we still need to implement GetTransactionManager
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
 nsBookmarksService::GetBookmarksToolbarFolder(nsIRDFResource** aResult)
 {
     
