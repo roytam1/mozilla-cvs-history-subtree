@@ -1482,7 +1482,6 @@ nsTextTransformer::DoArabicShaping(PRUnichar* aText,
   PRBool isVisual = mPresContext->IsVisualMode();
 
   nsAutoString buf;
-  buf.SetLength(aTextLength);
   if (!EnsureStringLength(buf, aTextLength)) {
     // no way to signal OOM
     aTextLength = 0;
