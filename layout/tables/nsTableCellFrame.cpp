@@ -784,6 +784,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     // If we're reflowing everything, then we'll find out if we need
     // to re-set this.
+    // XXXldb Should this (also?) be SetNeedSpecialReflow(PR_FALSE)?
     SetHadSpecialReflow(PR_FALSE);
   }
 

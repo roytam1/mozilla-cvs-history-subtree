@@ -59,6 +59,7 @@ nsTableColFrame::nsTableColFrame(nsStyleContext* aContext) : nsFrame(aContext)
   ResetMinCoord();
   ResetPrefCoord();
   ResetPrefPercent();
+  ResetFinalWidth();
 }
 
 nsTableColFrame::~nsTableColFrame()

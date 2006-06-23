@@ -186,6 +186,7 @@ nsTableFrame::nsTableFrame(nsStyleContext* aContext)
   mBits.mCellSpansPctCol        = PR_FALSE;
   mBits.mNeedToCalcBCBorders    = PR_FALSE;
   mBits.mIsBorderCollapse       = PR_FALSE;
+  mBits.mResizedColumns         = PR_FALSE; // only really matters if splitting
 }
 
 NS_IMPL_ADDREF_INHERITED(nsTableFrame, nsHTMLContainerFrame)
@@ -862,6 +863,19 @@ nsTableFrame::CreateAnonymousColFrames(nsTableColGroupFrame* aColGroupFrame,
     aColGroupFrame->AddColsToTable(startColIndex, PR_TRUE, 
                                   *aFirstNewFrame, lastColFrame);
   }
+}
+
+void
+nsTableFrame::DidResizeColumns()
+{
+  NS_PRECONDITION(!GetPrevInFlow(),
+                  "should only be called on first-in-flow");
+  if (mBits.mResizedColumns)
+    return; // already marked
+
+  for (nsTableFrame *f = this; f;
+       f = NS_STATIC_CAST(nsTableFrame*, GetNextInFlow()))
+    f->mBits.mResizedColumns = PR_TRUE;
 }
 
 void
@@ -1953,8 +1967,8 @@ nsTableFrame::ReflowTable(nsHTMLReflowMetrics&     aDesiredSize,
                        aReflowState.mComputedBorderPadding.LeftRight();
   nsTableReflowState reflowState(*GetPresContext(), aReflowState, *this,
                                  aDesiredSize.width, aAvailHeight);
-  ReflowChildren(reflowState, !aReflowState.ShouldReflowAllKids(),
-                 aStatus, aLastChildReflowed, aDesiredSize.mOverflowArea);
+  ReflowChildren(reflowState, aStatus, aLastChildReflowed,
+                 aDesiredSize.mOverflowArea);
 
   ReflowColGroups(aReflowState.rendContext);
   return rv;
@@ -2443,6 +2457,13 @@ nsTableFrame::InitChildReflowState(nsHTMLReflowState& aReflowState)
     }
   }
   aReflowState.Init(presContext, -1, -1, pCollapseBorder, &padding);
+
+  NS_ASSERTION(!mBits.mResizedColumns ||
+               !aReflowState.parentReflowState->mFlags.mSpecialHeightReflow,
+               "should not resize columns on special height reflow");
+  if (mBits.mResizedColumns) {
+    aReflowState.mFlags.mHResize = PR_TRUE;
+  }
 }
 
 // Position and size aKidFrame and update our reflow state. The origin of
@@ -2552,7 +2573,6 @@ IsRepeatable(nsTableRowGroupFrame& aHeaderOrFooter,
 // update aReflowMetrics a aStatus
 NS_METHOD 
 nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
-                             PRBool              aDirtyOnly,
                              nsReflowStatus&     aStatus,
                              nsIFrame*&          aLastChildReflowed,
                              nsRect&             aOverflowArea)
@@ -2568,7 +2588,10 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   PRBool isPaginated = presContext->IsPaginated();
 
   aOverflowArea = nsRect (0, 0, 0, 0);
-  
+
+  PRBool reflowAllKids = aReflowState.reflowState.ShouldReflowAllKids() ||
+                         mBits.mResizedColumns;
+
   nsAutoVoidArray rowGroups;
   PRUint32 numRowGroups;
   nsTableRowGroupFrame *thead, *tfoot;
@@ -2578,7 +2601,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
     // Get the frame state bits
     // See if we should only reflow the dirty child frames
-    if (!aDirtyOnly || (kidFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
+    if (reflowAllKids || (kidFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
                                           NS_FRAME_HAS_DIRTY_CHILDREN))) {
       if (pageBreak) {
         PushChildren(rowGroups, childX);
@@ -2761,6 +2784,9 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
       tfoot->SetRepeatable(IsRepeatable(*tfoot, height));
     }
   }
+
+  // We've now propagated the column resize to all the children.
+  mBits.mResizedColumns = PR_FALSE;
 
   return rv;
 }

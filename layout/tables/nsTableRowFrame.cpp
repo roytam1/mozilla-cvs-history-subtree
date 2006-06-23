@@ -891,6 +891,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       // the cell wants to be bigger than what was available last time or
       // it is a style change reflow or we are printing, then we must reflow the
       // cell. Otherwise we can skip the reflow.
+      // XXXldb Why is this condition distinct from doReflowChild above?
       nsSize cellDesiredSize = cellFrame->GetDesiredSize();
       if ((availCellWidth != cellFrame->GetPriorAvailWidth())       ||
           (cellDesiredSize.width > cellFrame->GetPriorAvailWidth()) ||

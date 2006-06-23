@@ -395,6 +395,8 @@ public:
   /** empty the column frame cache */
   void ClearColCache();
 
+  void DidResizeColumns();
+
   virtual void AppendCell(nsTableCellFrame& aCellFrame,
                           PRInt32           aRowIndex);
 
@@ -487,7 +489,6 @@ public:
 protected:
 
   NS_METHOD ReflowChildren(nsTableReflowState&  aReflowState,
-                           PRBool               aDirtyOnly,
                            nsReflowStatus&      aStatus,
                            nsIFrame*&           aLastChildReflowed,
                            nsRect&              aOverflowArea);
@@ -708,6 +709,7 @@ protected:
     PRUint32 mNeedToCalcBCBorders:1;
     PRUint32 mLeftContBCBorder:8;
     PRUint32 mNeedToCollapse:1;    // rows, cols that have visibility:collapse need to be collapsed
+    PRBool mResizedColumns:1;          // have we resized columns since last reflow?
     PRUint32 :10;                       // unused
   } mBits;
 

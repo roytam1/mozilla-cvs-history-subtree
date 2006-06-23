@@ -193,6 +193,9 @@ public:
   }
 
   // The final width of the column.
+  void ResetFinalWidth() {
+    mFinalWidth = nscoord_MIN; // so we detect that it changed
+  }
   void SetFinalWidth(nscoord aFinalWidth) {
     mFinalWidth = aFinalWidth;
   }

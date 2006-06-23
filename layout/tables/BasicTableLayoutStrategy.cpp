@@ -199,14 +199,11 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
         nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
         nscoord min_width = colFrame->GetMinCoord();
-        nscoord val;
-        if (pct_width > min_width) {
-            // XXX Is it OK that pct_width isn't rounded to pixel?
-            // (What's the point anyway?)
-            val = pct_width;
-        } else {
-            val = min_width;
-        }
+        // XXX Is it OK that pct_width isn't rounded to pixel?
+        // (What's the point anyway?)
+        nscoord val = PR_MAX(pct_width, min_width);
+        // Note that we re-compute |val| in the loop below.
+
         if (colFrame->GetPrefPercent() == 0.0f) {
             nscoord pref_width = colFrame->GetPrefCoord();
             grow_basis += pref_width - min_width;
@@ -217,7 +214,6 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         } else {
             pct_basis += colFrame->GetPrefPercent();
         }
-        colFrame->SetFinalWidth(val);
         assigned += val;
     }
 
@@ -291,19 +287,20 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
 
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
+        nscoord min_width = colFrame->GetMinCoord();
+        // recompute |val| from the loop above
+        nscoord col_width = PR_MAX(pct_width, min_width);
 
-        nscoord col_width = colFrame->GetFinalWidth();
         switch (l2t) {
             case SHRINK: // u.f is negative
-                col_width += NSToCoordRound(u.f *
-                                            (colFrame->GetFinalWidth() -
-                                             colFrame->GetMinCoord()));
+                col_width += NSToCoordRound(u.f * (col_width - min_width));
                 break;
             case GROW:
                 if (colFrame->GetPrefPercent() == 0.0f)
                     col_width += NSToCoordRound(u.f *
                                                 (colFrame->GetPrefCoord() -
-                                                 colFrame->GetMinCoord()));
+                                                 min_width));
                 break;
             case ZOOM_GROW:
                 if (colFrame->GetPrefPercent() == 0.0f) {
@@ -326,7 +323,7 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                 break;
             case EQUAL_GROW:
                 col_width += u.c;
-                NS_ASSERTION(colFrame->GetMinCoord() == 0, "yikes");
+                NS_ASSERTION(min_width == 0, "yikes");
                 break;
             case NOOP:
                 break;
@@ -335,7 +332,12 @@ BasicTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         nscoord new_x = prev_x + col_width;
         nscoord new_x_round = nsTableFrame::RoundToPixel(new_x, p2t);
 
-        colFrame->SetFinalWidth(new_x_round - prev_x_round);
+        nscoord old_final = colFrame->GetFinalWidth();
+        nscoord new_final = new_x_round - prev_x_round;
+        colFrame->SetFinalWidth(new_final);
+
+        if (old_final != new_final)
+            mTableFrame->DidResizeColumns();
 
         prev_x = new_x;
         prev_x_round = new_x_round;

@@ -340,6 +340,10 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState, kidFrame,
                                        kidAvailSize);
       InitChildReflowState(*aPresContext, borderCollapse, p2t, kidReflowState);
+
+      // This can indicate that columns were resized.
+      if (aReflowState.reflowState.mFlags.mHResize)
+        kidReflowState.mFlags.mHResize = PR_TRUE;
      
       // If this isn't the first row, then we can't be at the top of the page
       if (kidFrame != GetFirstFrame()) {
