@@ -389,6 +389,7 @@ struct nsHTMLReflowState {
 protected:
 
   void InitCBReflowState();
+  void InitResizeFlags(nsPresContext* aPresContext);
 
   void InitConstraints(nsPresContext* aPresContext,
                        nscoord         aContainingBlockWidth,

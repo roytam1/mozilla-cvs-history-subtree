@@ -191,6 +191,43 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
 
   InitConstraints(aPresContext, aContainingBlockWidth, aContainingBlockHeight, aBorder, aPadding);
 
+  InitResizeFlags(aPresContext);
+
+  NS_ASSERTION(NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType) ||
+               (mFrameType == NS_CSS_FRAME_TYPE_INLINE &&
+                !NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) ||
+               mComputedWidth != NS_UNCONSTRAINEDSIZE,
+               "shouldn't use unconstrained widths anymore");
+}
+
+void nsHTMLReflowState::InitCBReflowState()
+{
+  if (!parentReflowState) {
+    mCBReflowState = nsnull;
+    return;
+  }
+
+  if (parentReflowState->frame->IsContainingBlock() ||
+      // Absolutely positioned frames should always be kids of the frames that
+      // determine their containing block
+      (NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_ABSOLUTE)) {
+    // a block inside a table cell needs to use the table cell
+    if (parentReflowState->parentReflowState &&
+        IS_TABLE_CELL(parentReflowState->parentReflowState->frame->GetType())) {
+      mCBReflowState = parentReflowState->parentReflowState;
+    } else {
+      mCBReflowState = parentReflowState;
+    }
+      
+    return;
+  }
+  
+  mCBReflowState = parentReflowState->mCBReflowState;
+}
+
+void
+nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
+{
   mFlags.mHResize = !(frame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
                     frame->GetSize().width !=
                       mComputedWidth + mComputedBorderPadding.LeftRight();
@@ -229,37 +266,6 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
       rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
     } while (rs != mCBReflowState);
   }
-
-  NS_ASSERTION(NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType) ||
-               (mFrameType == NS_CSS_FRAME_TYPE_INLINE &&
-                !NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) ||
-               mComputedWidth != NS_UNCONSTRAINEDSIZE,
-               "shouldn't use unconstrained widths anymore");
-}
-
-void nsHTMLReflowState::InitCBReflowState()
-{
-  if (!parentReflowState) {
-    mCBReflowState = nsnull;
-    return;
-  }
-
-  if (parentReflowState->frame->IsContainingBlock() ||
-      // Absolutely positioned frames should always be kids of the frames that
-      // determine their containing block
-      (NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_ABSOLUTE)) {
-    // a block inside a table cell needs to use the table cell
-    if (parentReflowState->parentReflowState &&
-        IS_TABLE_CELL(parentReflowState->parentReflowState->frame->GetType())) {
-      mCBReflowState = parentReflowState->parentReflowState;
-    } else {
-      mCBReflowState = parentReflowState;
-    }
-      
-    return;
-  }
-  
-  mCBReflowState = parentReflowState->mCBReflowState;
 }
 
 const nsHTMLReflowState*
