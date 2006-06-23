@@ -826,6 +826,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
   // Reflow each of our existing cell frames
   for (nsIFrame* kidFrame = iter.First(); kidFrame; kidFrame = iter.Next()) {
     nsIAtom* frameType = kidFrame->GetType();
+    printf("x is %d\n", x);
     if (!IS_TABLE_CELL(frameType)) {
       // XXXldb nsCSSFrameConstructor needs to enforce this!
       NS_NOTREACHED("yikes, a non-row child");
@@ -876,6 +877,9 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
                            cellSpacingX, iter.IsLeftToRight(), PR_FALSE);
     }
 
+    // remember the rightmost (ltr) or leftmost (rtl) column this cell spans into
+    prevColIndex = (iter.IsLeftToRight()) ? cellColIndex + (cellColSpan - 1) : cellColIndex;
+
     // Reflow the child frame
     if (doReflowChild) {
       // Calculate the available width for the table cell using the known column widths
@@ -883,8 +887,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       CalcAvailWidth(aTableFrame, GetComputedWidth(aReflowState, aTableFrame), p2t,
                      *cellFrame, cellSpacingX, availColWidth, availCellWidth);
 
-      // remember the rightmost (ltr) or leftmost (rtl) column this cell spans into
-      prevColIndex = (iter.IsLeftToRight()) ? cellColIndex + (cellColSpan - 1) : cellColIndex;
       nsHTMLReflowMetrics desiredSize;
 
       // If the avail width is not the same as last time we reflowed the cell or
