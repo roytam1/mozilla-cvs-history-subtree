@@ -1482,7 +1482,11 @@ nsTextTransformer::DoArabicShaping(PRUnichar* aText,
   PRBool isVisual = mPresContext->IsVisualMode();
 
   nsAutoString buf;
-  buf.SetLength(aTextLength);
+  if (!EnsureStringLength(buf, aTextLength)) {
+    // no way to signal OOM
+    aTextLength = 0;
+    return;
+  }
   PRUnichar* buffer = buf.BeginWriting();
   
   ArabicShaping(aText, buf.Length(), buffer, (PRUint32 *)&newLen, !isVisual, !isVisual);

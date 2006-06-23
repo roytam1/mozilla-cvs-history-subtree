@@ -6769,7 +6769,8 @@ void nsWindow::GetCompositionString(HIMC aHIMC, DWORD aIndex, nsString* aStrUnic
   long lRtn;
   if (nsToolkit::mUseImeApiW) {
     NS_IMM_GETCOMPOSITIONSTRINGW(aHIMC, aIndex, NULL, 0, lRtn);
-    aStrUnicode->SetCapacity((lRtn / sizeof(WCHAR)) + 1);
+    if (!EnsureStringLength(*aStrUnicode, (lRtn / sizeof(WCHAR)) + 1))
+      return; // out of memory
 
     long buflen = lRtn + sizeof(WCHAR);
     NS_IMM_GETCOMPOSITIONSTRINGW(aHIMC, aIndex, (LPVOID)aStrUnicode->BeginWriting(), buflen, lRtn);
@@ -6777,7 +6778,8 @@ void nsWindow::GetCompositionString(HIMC aHIMC, DWORD aIndex, nsString* aStrUnic
     aStrUnicode->SetLength(lRtn);
   } else {
     NS_IMM_GETCOMPOSITIONSTRINGA(aHIMC, aIndex, NULL, 0, lRtn);
-    aStrAnsi->SetCapacity(lRtn + 1);
+    if (!EnsureStringLength(*aStrAnsi, lRtn + 1))
+      return; // out of memory
 
     long buflen = lRtn + 1;
     NS_IMM_GETCOMPOSITIONSTRINGA(aHIMC, aIndex, (LPVOID)aStrAnsi->BeginWriting(), buflen, lRtn);
@@ -6785,7 +6787,8 @@ void nsWindow::GetCompositionString(HIMC aHIMC, DWORD aIndex, nsString* aStrUnic
 
     size_t unicharSize = MultiByteToWideChar(gCurrentKeyboardCP, MB_PRECOMPOSED,
       aStrAnsi->get(), aStrAnsi->Length(), NULL, 0);
-    aStrUnicode->SetCapacity(unicharSize + 1);
+    if (!EnsureStringLength(*aStrUnicode, unicharSize + 1))
+      return; // out of memory
 
     unicharSize = MultiByteToWideChar(gCurrentKeyboardCP, MB_PRECOMPOSED,
       aStrAnsi->get(), aStrAnsi->Length(), aStrUnicode->BeginWriting(), unicharSize + 1);

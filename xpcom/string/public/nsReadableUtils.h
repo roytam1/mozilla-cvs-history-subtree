@@ -364,4 +364,11 @@ NS_COM const nsAFlatString& EmptyString();
 NS_COM const nsAFlatCString& EmptyCString();
 
 
+template<class T>
+inline PRBool EnsureStringLength(T& aStr, PRUint32 aLen)
+{
+    aStr.SetLength(aLen);
+    return (aStr.Length() == aLen);
+}
+
 #endif // !defined(nsReadableUtils_h___)
