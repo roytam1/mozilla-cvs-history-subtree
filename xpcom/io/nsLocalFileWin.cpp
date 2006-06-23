@@ -2639,7 +2639,6 @@ nsLocalFile::SetPersistentDescriptor(const nsACString &aPersistentDescriptor)
 NS_IMETHODIMP
 nsLocalFile::Reveal()
 {
-#ifndef WINCE
     // make sure mResolvedPath is set
     nsresult rv = ResolveAndStat();
     if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
@@ -2669,7 +2668,6 @@ nsLocalFile::Reveal()
                                  explorerParams.get(),
                                  NULL, SW_SHOWNORMAL) <= (HINSTANCE) 32)
         return NS_ERROR_FAILURE;
-#endif
  
     return NS_OK;
 }
@@ -2678,7 +2676,6 @@ nsLocalFile::Reveal()
 NS_IMETHODIMP
 nsLocalFile::Launch()
 {
-#ifndef WINCE
     const nsString &path = mWorkingPath;
 
     // use the app registry name to launch a shell execute....
@@ -2721,7 +2718,6 @@ nsLocalFile::Launch()
             return NS_ERROR_FILE_EXECUTION_FAILED;
         }
     }
-#endif
     return NS_OK;
 }
 
