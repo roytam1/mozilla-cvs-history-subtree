@@ -1420,7 +1420,7 @@ nsXULDocument::GetElementsByAttribute(const nsAString& aAttribute,
                                             nsnull,
                                             PR_TRUE,
                                             attrAtom,
-                                            kNameSpaceID_None);
+                                            kNameSpaceID_Unknown);
     NS_ENSURE_TRUE(list, NS_ERROR_OUT_OF_MEMORY);
 
     NS_ADDREF(*aReturn = list);
@@ -2299,20 +2299,64 @@ nsXULDocument::MatchAttribute(nsIContent* aContent,
 {
     NS_PRECONDITION(aContent, "Must have content node to work with!");
   
-    // Getting attrs is expensive, so use HasAttr() first.
-    if (!aContent->HasAttr(aNamespaceID, aAttrName)) {
-        return PR_FALSE;
+    if (aNamespaceID != kNameSpaceID_Unknown) {
+        // Getting attrs is expensive, so use HasAttr() first.
+        if (!aContent->HasAttr(aNamespaceID, aAttrName)) {
+            return PR_FALSE;
+        }
+
+        if (aAttrValue.EqualsLiteral("*")) {
+            // Wildcard.  We already know we have this attr, so we match
+            return PR_TRUE;
+        }
+
+        nsAutoString value;
+        nsresult rv = aContent->GetAttr(aNamespaceID, aAttrName, value);
+
+        return NS_SUCCEEDED(rv) && value.Equals(aAttrValue);
     }
 
-    if (aAttrValue.EqualsLiteral("*")) {
-        // Wildcard.  We already know we have this attr, so we match
-        return PR_TRUE;
+
+    // Qualified name match. This takes more work.
+
+    PRUint32 count = aContent->GetAttrCount();
+    for (PRUint32 i = 0; i < count; ++i) {
+        PRInt32 namespaceID;
+        nsCOMPtr<nsIAtom> name;
+        nsCOMPtr<nsIAtom> prefix;
+
+#ifdef DEBUG
+        nsresult rv =
+#endif
+        aContent->GetAttrNameAt(i, &namespaceID, getter_AddRefs(name),
+                                getter_AddRefs(prefix));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "GetAttrCount lied?");
+        
+        PRBool nameMatch;
+        if (!prefix) {
+            nameMatch = name == aAttrName;
+        } else {
+            nsAutoString nameStr;
+            nsAutoString prefixStr;
+            name->ToString(nameStr);
+            prefix->ToString(prefixStr);
+            nameMatch = aAttrName->Equals(prefixStr + NS_LITERAL_STRING(":") +
+                                          nameStr);
+        }
+
+        if (nameMatch) {
+            if (aAttrValue.EqualsLiteral("*")) {
+                return PR_TRUE;
+            }
+
+            nsAutoString value;
+            nsresult rv = aContent->GetAttr(namespaceID, name, value);
+
+            return NS_SUCCEEDED(rv) && value.Equals(aAttrValue);
+        }
     }
 
-    nsAutoString value;
-    nsresult rv = aContent->GetAttr(aNamespaceID, aAttrName, value);
-
-    return NS_SUCCEEDED(rv) && value.Equals(aAttrValue);
+    return PR_FALSE;
 }
 
 nsresult
