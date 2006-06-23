@@ -826,7 +826,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
   // Reflow each of our existing cell frames
   for (nsIFrame* kidFrame = iter.First(); kidFrame; kidFrame = iter.Next()) {
     nsIAtom* frameType = kidFrame->GetType();
-    printf("x is %d\n", x);
     if (!IS_TABLE_CELL(frameType)) {
       // XXXldb nsCSSFrameConstructor needs to enforce this!
       NS_NOTREACHED("yikes, a non-row child");
