@@ -986,7 +986,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
         Invalidate(kidRect); // invalidate the new position
       }
       // we need to account for the cell's width even if it isn't reflowed
-      x += kidFrame->GetSize().width;
+      x += kidRect.width;
 
       if (kidFrame->GetNextInFlow()) {
         aStatus = NS_FRAME_NOT_COMPLETE;
