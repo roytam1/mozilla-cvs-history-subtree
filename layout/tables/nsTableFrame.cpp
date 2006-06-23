@@ -2578,12 +2578,8 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
     // Get the frame state bits
     // See if we should only reflow the dirty child frames
-    PRBool doReflowChild = PR_TRUE;
-    if (aDirtyOnly && ((kidFrame->GetStateBits() & NS_FRAME_IS_DIRTY) == 0)) {
-      doReflowChild = PR_FALSE;
-    }
-
-    if (doReflowChild) {
+    if (!aDirtyOnly || (kidFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
+                                          NS_FRAME_HAS_DIRTY_CHILDREN))) {
       if (pageBreak) {
         PushChildren(rowGroups, childX);
         aStatus = NS_FRAME_NOT_COMPLETE;
