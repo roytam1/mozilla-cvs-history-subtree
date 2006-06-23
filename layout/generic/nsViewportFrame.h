@@ -66,10 +66,16 @@ public:
   */
 class ViewportFrame : public nsContainerFrame {
 public:
+  typedef nsContainerFrame Super;
+
   ViewportFrame(nsStyleContext* aContext) : nsContainerFrame(aContext) {}
   virtual ~ViewportFrame() { } // useful for debugging
 
   virtual void Destroy();
+
+  NS_IMETHOD Init(nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsIFrame*        asPrevInFlow);
 
   NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
                                  nsIFrame*       aChildList);

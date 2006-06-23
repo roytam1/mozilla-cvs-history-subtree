@@ -57,6 +57,18 @@ NS_NewViewportFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
   return new (aPresShell) ViewportFrame(aContext);
 }
 
+NS_IMETHODIMP
+ViewportFrame::Init(nsIContent*      aContent,
+                    nsIFrame*        aParent,
+                    nsIFrame*        aPrevInFlow)
+{
+  // Because |Reflow| sets mComputedHeight on the child to
+  // availableHeight.
+  AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+  
+  return Super::Init(aContent, aParent, aPrevInFlow);
+}
+
 void
 ViewportFrame::Destroy()
 {
