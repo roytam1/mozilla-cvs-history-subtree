@@ -146,7 +146,6 @@ nsMenuPopupFrame::Release(void)
 //
 NS_INTERFACE_MAP_BEGIN(nsMenuPopupFrame)
   NS_INTERFACE_MAP_ENTRY(nsIMenuParent)
-  NS_INTERFACE_MAP_ENTRY(nsITimerCallback)
 NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 
 
@@ -169,6 +168,11 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
                        nsIFrame*        aPrevInFlow)
 {
   nsresult rv = nsBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+
+  // Set up a mediator which can be used for callbacks on this frame.
+  mTimerMediator = new nsMenuPopupTimerMediator(this);
+  if (NS_UNLIKELY(!mTimerMediator))
+    return NS_ERROR_OUT_OF_MEMORY;
 
   // lookup if we're allowed to overlap the OS bar (menubar/taskbar) from the
   // look&feel object
@@ -1384,7 +1388,7 @@ NS_IMETHODIMP nsMenuPopupFrame::SetCurrentMenuItem(nsIMenuFrame* aMenuItem)
       mCloseTimer = do_CreateInstance("@mozilla.org/timer;1");
       nsCOMPtr<nsITimerInternal> ti = do_QueryInterface(mCloseTimer);
       ti->SetIdle(PR_FALSE);
-      mCloseTimer->InitWithCallback(this, menuDelay, nsITimer::TYPE_ONE_SHOT); 
+      mCloseTimer->InitWithCallback(mTimerMediator, menuDelay, nsITimer::TYPE_ONE_SHOT);
       mTimerMenu = mCurrentMenu;
     }
   }
@@ -1975,6 +1979,13 @@ nsMenuPopupFrame::HandleEvent(nsPresContext* aPresContext,
 NS_IMETHODIMP
 nsMenuPopupFrame::Destroy(nsPresContext* aPresContext)
 {
+  // Null out the pointer to this frame in the mediator wrapper so that it 
+  // doesn't try to interact with a deallocated frame.
+  mTimerMediator->ClearFrame();
+
+  if (mCloseTimer)
+    mCloseTimer->Cancel();
+
   RemoveKeyboardNavigator();
   return nsBoxFrame::Destroy(aPresContext);
 }
@@ -2030,7 +2041,7 @@ nsMenuPopupFrame::GetFrameForPoint(const nsPoint& aPoint,
 //
 // The code below melds the two cases together.
 //
-NS_IMETHODIMP
+nsresult
 nsMenuPopupFrame::Notify(nsITimer* aTimer)
 {
   // Our timer has fired. 
@@ -2147,3 +2158,42 @@ nsMenuPopupFrame::EnableRollup(PRBool aShouldRollup)
     CreateDismissalListener();
 }
 
+
+// nsMenuPopupTimerMediator implementation.
+NS_IMPL_ISUPPORTS1(nsMenuPopupTimerMediator, nsITimerCallback)
+
+/**
+ * Constructs a wrapper around an nsMenuFrame.
+ * @param aFrame nsMenuFrame to create a wrapper around.
+ */
+nsMenuPopupTimerMediator::nsMenuPopupTimerMediator(nsMenuPopupFrame *aFrame) :
+  mFrame(aFrame)
+{
+  NS_ASSERTION(mFrame, "Must have frame");
+}
+
+nsMenuPopupTimerMediator::~nsMenuPopupTimerMediator()
+{
+}
+
+/**
+ * Delegates the notification to the contained frame if it has not been destroyed.
+ * @param aTimer Timer which initiated the callback.
+ * @return NS_ERROR_FAILURE if the frame has been destroyed.
+ */
+NS_IMETHODIMP nsMenuPopupTimerMediator::Notify(nsITimer* aTimer)
+{
+  if (!mFrame)
+    return NS_ERROR_FAILURE;
+
+  return mFrame->Notify(aTimer);
+}
+
+/**
+ * Clear the pointer to the contained nsMenuFrame. This should be called
+ * when the contained nsMenuFrame is destroyed.
+ */
+void nsMenuPopupTimerMediator::ClearFrame()
+{
+  mFrame = nsnull;
+}
