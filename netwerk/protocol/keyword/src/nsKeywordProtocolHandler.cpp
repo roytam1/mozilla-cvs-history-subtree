@@ -98,37 +98,13 @@ nsKeywordProtocolHandler::GetProtocolFlags(PRUint32 *result) {
 // digests a spec _without_ the preceeding "keyword:" scheme.
 static char *
 MangleKeywordIntoHTTPURL(const char *aSpec, const char *aHTTPURL) {
-    char * unescaped = nsCRT::strdup(aSpec);
-    if(unescaped == nsnull) 
-       return nsnull;
-
-    // XXX this doesn't play nicely w/ i18n URLs
-    nsUnescape(unescaped);
-
-    // build up a request to the keyword server.
     nsCAutoString query;
-
-    // pull out the "go" action word, or '?', if any
-    char one = unescaped[0], two = unescaped[1];
-    if (one == '?') {                            // "?blah"
-        query = unescaped+1;
-    } else if ( (one == 'g' || one == 'G')       //
-                            &&                   //
-                (two == 'o' || two == 'O')       // "g[G]o[O] blah"
-                            &&                   //
-                     (unescaped[2] == ' ') ) {      //
-
-        query = unescaped+3;
-    } else {
-        query = unescaped;
-    }
-
-    nsMemory::Free(unescaped);
+    query = (*aSpec == '?') ? (aSpec + 1) : aSpec;
 
     query.Trim(" "); // pull leading/trailing spaces.
 
     // encode
-    char * encQuery = nsEscape(query.get(), url_Path);
+    char * encQuery = nsEscape(query.get(), url_XPAlphas);
     if (!encQuery) return nsnull;
     query = encQuery;
     nsMemory::Free(encQuery);

@@ -267,8 +267,8 @@ nsDefaultURIFixup::CreateFixupURI(const nsACString& aStringURI, PRUint32 aFixupF
 
     // See if it is a keyword
     // Test whether keywords need to be fixed up
+    PRBool fixupKeywords = PR_FALSE;
     if (aFixupFlags & FIXUP_FLAG_ALLOW_KEYWORD_LOOKUP) {
-        PRBool fixupKeywords = PR_FALSE;
         if (mPrefBranch)
         {
             NS_ENSURE_SUCCESS(mPrefBranch->GetBoolPref("keyword.enabled", &fixupKeywords), NS_ERROR_FAILURE);
@@ -335,6 +335,17 @@ nsDefaultURIFixup::CreateFixupURI(const nsACString& aStringURI, PRUint32 aFixupF
 
     if (*aURI && aFixupFlags & FIXUP_FLAGS_MAKE_ALTERNATE_URI) {
         MakeAlternateURI(*aURI);
+    }
+
+    // If we still haven't been able to construct a valid URI, try to force a
+    // keyword match.  This catches search strings with '.' or ':' in them.
+    if (!*aURI && fixupKeywords)
+    {
+        nsCAutoString keywordSpec("keyword:");
+        keywordSpec.Append(aStringURI);
+        NS_NewURI(aURI, keywordSpec);
+        if(*aURI)
+            return NS_OK;
     }
 
     return rv;
