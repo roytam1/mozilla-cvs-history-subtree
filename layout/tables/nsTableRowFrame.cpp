@@ -865,18 +865,19 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       }
     }
 
+    PRInt32 cellColIndex;
+    cellFrame->GetColIndex(cellColIndex);
+    cellColSpan = aTableFrame.GetEffectiveColSpan(*cellFrame);
+
+    // If the adjacent cell is in a prior row (because of a rowspan) add in the space
+    if ((iter.IsLeftToRight() && (prevColIndex != (cellColIndex - 1))) ||
+        (!iter.IsLeftToRight() && (prevColIndex != cellColIndex + cellColSpan))) {
+      x += GetSpaceBetween(prevColIndex, cellColIndex, cellColSpan, aTableFrame, 
+                           cellSpacingX, iter.IsLeftToRight(), PR_FALSE);
+    }
+
     // Reflow the child frame
     if (doReflowChild) {
-      PRInt32 cellColIndex;
-      cellFrame->GetColIndex(cellColIndex);
-      cellColSpan = aTableFrame.GetEffectiveColSpan(*cellFrame);
-
-      // If the adjacent cell is in a prior row (because of a rowspan) add in the space
-      if ((iter.IsLeftToRight() && (prevColIndex != (cellColIndex - 1))) ||
-          (!iter.IsLeftToRight() && (prevColIndex != cellColIndex + cellColSpan))) {
-        x += GetSpaceBetween(prevColIndex, cellColIndex, cellColSpan, aTableFrame, 
-                             cellSpacingX, iter.IsLeftToRight(), PR_FALSE);
-      }
       // Calculate the available width for the table cell using the known column widths
       nscoord availColWidth, availCellWidth;
       CalcAvailWidth(aTableFrame, GetComputedWidth(aReflowState, aTableFrame), p2t,
@@ -976,6 +977,14 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       x += desiredSize.width;  
     }
     else {
+      nsRect kidRect = kidFrame->GetRect();
+      if (kidRect.x != x) {
+        Invalidate(kidRect); // invalidate the old position
+        kidRect.x = x;
+        kidFrame->SetRect(kidRect);        // move to the new position
+        nsTableFrame::RePositionViews(kidFrame);
+        Invalidate(kidRect); // invalidate the new position
+      }
       // we need to account for the cell's width even if it isn't reflowed
       x += kidFrame->GetSize().width;
 
