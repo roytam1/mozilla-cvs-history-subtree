@@ -62,6 +62,7 @@ public:
 
 private:
     nsTableFrame *mTableFrame;
+    nscoord mMinWidth;
     nscoord mLastCalcWidth;
 };
 

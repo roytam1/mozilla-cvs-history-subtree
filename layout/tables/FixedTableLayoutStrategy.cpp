@@ -60,12 +60,84 @@ FixedTableLayoutStrategy::~FixedTableLayoutStrategy()
 /* virtual */ nscoord
 FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 {
+    DISPLAY_MIN_WIDTH(mTableFrame, mMinWidth);
+    if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+        return mMinWidth;
+
     // It's theoretically possible to do something much better here that
     // depends only on the columns and the first row, but it wouldn't be
-    // compatible with other browsers.
-    nscoord result = 0;
-    DISPLAY_MIN_WIDTH(mTableFrame, result);
-    return result;
+    // compatible with other browsers, or with the use of GetMinWidth by
+    // nsHTMLReflowState to determine the width of a fixed-layout table,
+    // since CSS2.1 says:
+    //   The width of the table is then the greater of the value of the
+    //   'width' property for the table element and the sum of the
+    //   column widths (plus cell spacing or borders).
+
+    nsTableCellMap *cellMap = mTableFrame->GetCellMap();
+    PRInt32 colCount = cellMap->GetColCount();
+    nscoord spacing = mTableFrame->GetCellSpacingX();
+
+    // XXX Should this code do any pixel rounding?
+
+    nscoord coordTotal = 0;
+    float percentTotal = 0.0f;
+
+    if (colCount > 0) {
+        // XXX Should only add columns that have cells originating in them!
+        coordTotal += spacing * (colCount + 1);
+    }
+
+    for (PRInt32 col = 0; col < colCount; ++col) {
+        nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        const nsStyleCoord *styleWidth =
+            &colFrame->GetStylePosition()->mWidth;
+        if (styleWidth->GetUnit() == eStyleUnit_Coord) {
+            coordTotal += styleWidth->GetCoordValue();
+        } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
+            percentTotal += styleWidth->GetPercentValue();
+        } else {
+            NS_ASSERTION(styleWidth->GetUnit() == eStyleUnit_Auto, "bad width");
+
+            // The 'table-layout: fixed' algorithm considers only cells
+            // in the first row.
+            PRBool originates;
+            PRInt32 colSpan;
+            nsTableCellFrame *cellFrame =
+                cellMap->GetCellInfoAt(0, col, &originates, &colSpan);
+            if (cellFrame) {
+                styleWidth = &cellFrame->GetStylePosition()->mWidth;
+                if (styleWidth->GetUnit() == eStyleUnit_Coord) {
+                    nscoord cellWidth = styleWidth->GetCoordValue();
+                    // Add in cell's padding and border.
+                    cellWidth += cellFrame->GetIntrinsicBorderPadding(
+                                  aRenderingContext, nsLayoutUtils::MIN_WIDTH);
+
+                    if (colSpan > 1) {
+                        // If a column-spanning cell is in the first
+                        // row, split up the space evenly.  (XXX This
+                        // isn't quite right if some of the columns it's
+                        // in have specified widths.  Should we care?)
+                        cellWidth = ((cellWidth + spacing) / colSpan) - spacing;
+                    }
+                    coordTotal += cellWidth;
+                } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
+                    percentTotal = styleWidth->GetPercentValue() / float(colSpan);
+                    if (colSpan > 1) {
+                        coordTotal -= spacing * (colSpan - 1);
+                    }
+                }
+            }
+        }
+    }
+
+    // XXX It needs to be clamed somewhere less than 1.  The exact value
+    // should be tested for interoperability.
+    if (percentTotal > 0.99f)
+        percentTotal = 0.99f;
+
+    nscoord result = coordTotal / (1.0f - percentTotal);
+
+    return (mMinWidth = result);
 }
 
 /* virtual */ nscoord
@@ -82,6 +154,7 @@ FixedTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
 /* virtual */ void
 FixedTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
+    mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
     mLastCalcWidth = nscoord_MIN;
 }
 
@@ -143,12 +216,20 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                 } else {
                     colWidth = unassignedMarker;
                 }
-                // If a column-spanning cell is in the first row, split
-                // up the space evenly.  (XXX This isn't quite right if
-                // some of the columns it's in have specified widths.
-                // Should we care?)
-                if (colWidth != unassignedMarker && colSpan > 1) {
-                    colWidth = ((colWidth + spacing) / colSpan) - spacing;
+                if (colWidth != unassignedMarker) {
+                    // Add in cell's padding and border.
+                    // XXX This should use real percentage padding, not
+                    // the intrinsic width estimate for percentages!
+                    colWidth += cellFrame->GetIntrinsicBorderPadding(
+                                  aReflowState.rendContext, nsLayoutUtils::MIN_WIDTH);
+
+                    if (colSpan > 1) {
+                        // If a column-spanning cell is in the first
+                        // row, split up the space evenly.  (XXX This
+                        // isn't quite right if some of the columns it's
+                        // in have specified widths.  Should we care?)
+                        colWidth = ((colWidth + spacing) / colSpan) - spacing;
+                    }
                 }
             } else {
                 colWidth = unassignedMarker;
