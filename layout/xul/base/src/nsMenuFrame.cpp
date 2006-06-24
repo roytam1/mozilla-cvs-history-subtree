@@ -795,6 +795,8 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
       menuPopupContent->GetAttr(kNameSpaceID_None, nsXULAtoms::popupanchor, popupAnchor);
       menuPopupContent->GetAttr(kNameSpaceID_None, nsXULAtoms::popupalign, popupAlign);
 
+      ConvertPosition(menuPopupContent, popupAnchor, popupAlign);
+
       if (onMenuBar) {
         if (popupAnchor.IsEmpty())
           popupAnchor.AssignLiteral("bottomleft");
@@ -1101,7 +1103,8 @@ nsMenuFrame::SetDebug(nsBoxLayoutState& aState, nsIFrame* aList, PRBool aDebug)
 }
 #endif
 
-static void ConvertPosition(nsIContent* aPopupElt, nsString& aAnchor, nsString& aAlign)
+void
+nsMenuFrame::ConvertPosition(nsIContent* aPopupElt, nsString& aAnchor, nsString& aAlign)
 {
   nsAutoString position;
   aPopupElt->GetAttr(kNameSpaceID_None, nsXULAtoms::position, position);
