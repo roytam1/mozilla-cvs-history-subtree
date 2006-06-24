@@ -106,8 +106,8 @@ static PRLogModuleInfo *gJSCLLog;
 
 #define LOG(args) PR_LOG(gJSCLLog, PR_LOG_DEBUG, args)
 
-JS_STATIC_DLL_CALLBACK(void)
-Reporter(JSContext *cx, const char *message, JSErrorReport *rep)
+void JS_DLL_CALLBACK
+mozJSLoaderErrorReporter(JSContext *cx, const char *message, JSErrorReport *rep)
 {
     nsresult rv;
 
@@ -958,7 +958,7 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
         return nsnull;
     }
 
-    JSCLAutoErrorReporterSetter aers(cx, Reporter);
+    JSCLAutoErrorReporterSetter aers(cx, mozJSLoaderErrorReporter);
 
     jsval argv[2], retval, NSGetModule_val;
 
@@ -1343,7 +1343,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     rv = mRuntimeService->GetBackstagePass(getter_AddRefs(backstagePass));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    JSCLAutoErrorReporterSetter aers(cx, Reporter);
+    JSCLAutoErrorReporterSetter aers(cx, mozJSLoaderErrorReporter);
 
     nsCOMPtr<nsIXPConnect> xpc =
         do_GetService(kXPConnectServiceContractID, &rv);
