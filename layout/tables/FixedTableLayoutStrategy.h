@@ -62,6 +62,7 @@ public:
 
 private:
     nsTableFrame *mTableFrame;
+    nscoord mLastCalcWidth;
 };
 
 #endif /* !defined(FixedTableLayoutStrategy_h_) */

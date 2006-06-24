@@ -3354,13 +3354,10 @@ nsTableFrame::CalcBorderBoxHeight(const nsHTMLReflowState& aState)
 PRBool 
 nsTableFrame::IsAutoLayout()
 {
-  if (NS_STYLE_TABLE_LAYOUT_FIXED == GetStyleTable()->mLayoutStrategy) {
-    // a fixed-layout table must have a width
-    if (eStyleUnit_Auto != GetStylePosition()->mWidth.GetUnit()) {
-      return PR_FALSE;
-    }
-  }
-  return PR_TRUE;
+  // a fixed-layout inline-table must have a width
+  return GetStyleTable()->mLayoutStrategy == NS_STYLE_TABLE_LAYOUT_AUTO ||
+         (GetStyleDisplay()->mDisplay == NS_STYLE_DISPLAY_INLINE_TABLE &&
+          GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto);
 }
 
 #ifdef DEBUG

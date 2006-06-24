@@ -43,10 +43,13 @@
 
 #include "FixedTableLayoutStrategy.h"
 #include "nsTableFrame.h"
+#include "nsTableColFrame.h"
+#include "nsTableCellFrame.h"
 
 FixedTableLayoutStrategy::FixedTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
 {
+    MarkIntrinsicWidthsDirty();
 }
 
 /* virtual */
@@ -57,28 +60,118 @@ FixedTableLayoutStrategy::~FixedTableLayoutStrategy()
 /* virtual */ nscoord
 FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 {
+    // It's theoretically possible to do something much better here that
+    // depends only on the columns and the first row, but it wouldn't be
+    // compatible with other browsers.
     nscoord result = 0;
     DISPLAY_MIN_WIDTH(mTableFrame, result);
-    NS_NOTYETIMPLEMENTED("FixedTableLayoutStrategy");
     return result;
 }
 
 /* virtual */ nscoord
 FixedTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
 {
-    nscoord result = 0;
-    DISPLAY_MIN_WIDTH(mTableFrame, result);
-    NS_NOTYETIMPLEMENTED("FixedTableLayoutStrategy");
+    // It's theoretically possible to do something much better here that
+    // depends only on the columns and the first row, but it wouldn't be
+    // compatible with other browsers.
+    nscoord result = nscoord_MAX;
+    DISPLAY_PREF_WIDTH(mTableFrame, result);
     return result;
 }
 
 /* virtual */ void
 FixedTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
+    mLastCalcWidth = nscoord_MIN;
 }
 
 /* virtual */ void
 FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
 {
-    NS_NOTYETIMPLEMENTED("FixedTableLayoutStrategy");
+    nscoord tableWidth = aReflowState.mComputedWidth;
+
+    if (mLastCalcWidth == tableWidth)
+        return;
+    mLastCalcWidth = tableWidth;
+
+    nsTableCellMap *cellMap = mTableFrame->GetCellMap();
+    PRInt32 colCount = cellMap->GetColCount();
+    nscoord spacing = mTableFrame->GetCellSpacingX();
+
+    // XXX Should this code do any pixel rounding?
+
+    // border-spacing isn't part of the basis for percentages.
+    if (colCount > 0) {
+        // XXX Should only add columns that have cells originating in them!
+        nscoord subtract = spacing * (colCount + 1);
+        tableWidth -= subtract;
+    }
+
+    // XXX This ignores the 'min-width' and 'max-width' properties
+    // throughout.  Then again, that's what the CSS spec says to do.
+
+    PRUint32 unassignedCount = 0;
+    nscoord unassignedSpace = tableWidth;
+    const nscoord unassignedMarker = nscoord_MIN;
+
+    for (PRInt32 col = 0; col < colCount; ++col) {
+        nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        const nsStyleCoord *styleWidth =
+            &colFrame->GetStylePosition()->mWidth;
+        nscoord colWidth;
+        if (styleWidth->GetUnit() == eStyleUnit_Coord) {
+            colWidth = styleWidth->GetCoordValue();
+        } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
+            colWidth = NSToCoordFloor(styleWidth->GetPercentValue() *
+                                      float(tableWidth));
+        } else {
+            NS_ASSERTION(styleWidth->GetUnit() == eStyleUnit_Auto, "bad width");
+
+            // The 'table-layout: fixed' algorithm considers only cells
+            // in the first row.
+            PRBool originates;
+            PRInt32 colSpan;
+            nsTableCellFrame *cellFrame =
+                cellMap->GetCellInfoAt(0, col, &originates, &colSpan);
+            if (cellFrame) {
+                styleWidth = &cellFrame->GetStylePosition()->mWidth;
+                if (styleWidth->GetUnit() == eStyleUnit_Coord) {
+                    colWidth = styleWidth->GetCoordValue();
+                } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
+                    colWidth = NSToCoordFloor(styleWidth->GetPercentValue() *
+                                              float(tableWidth));
+                } else {
+                    colWidth = unassignedMarker;
+                }
+                // If a column-spanning cell is in the first row, split
+                // up the space evenly.  (XXX This isn't quite right if
+                // some of the columns it's in have specified widths.
+                // Should we care?)
+                if (colWidth != unassignedMarker && colSpan > 1) {
+                    colWidth = ((colWidth + spacing) / colSpan) - spacing;
+                }
+            } else {
+                colWidth = unassignedMarker;
+            }
+        }
+
+        colFrame->SetFinalWidth(colWidth);
+
+        if (colWidth == unassignedMarker) {
+            ++unassignedCount;
+        } else {
+            unassignedSpace -= colWidth;
+        }
+    }
+
+    if (unassignedCount > 0) {
+        if (unassignedSpace < 0)
+            unassignedSpace = 0;
+        nscoord toAssign = unassignedSpace / unassignedCount;
+        for (PRInt32 col = 0; col < colCount; ++col) {
+            nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+            if (colFrame->GetFinalWidth() == unassignedMarker)
+                colFrame->SetFinalWidth(toAssign);
+        }
+    }
 }
