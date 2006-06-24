@@ -173,5 +173,11 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
             if (colFrame->GetFinalWidth() == unassignedMarker)
                 colFrame->SetFinalWidth(toAssign);
         }
+    } else if (unassignedSpace > 0) {
+        nscoord toAdd = unassignedSpace / colCount;
+        for (PRInt32 col = 0; col < colCount; ++col) {
+            nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+            colFrame->SetFinalWidth(colFrame->GetFinalWidth() + toAdd);
+        }
     }
 }
