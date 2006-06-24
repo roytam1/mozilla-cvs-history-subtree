@@ -526,9 +526,6 @@ public:
   // its reflow state.
   nscoord CalcBorderBoxHeight(const nsHTMLReflowState& aReflowState);
 
-  // Compute intrinsic width member variables on the columns
-  void ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext);
-
 protected:
 
   // update the  desired height of this table taking into account the current

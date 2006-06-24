@@ -61,6 +61,10 @@ public:
     virtual void CalcColumnWidths(const nsHTMLReflowState& aReflowState);
 
 private:
+    // Compute intrinsic width member variables on the columns.
+    void ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext);
+
+    // Compute the min and pref widths.
     void ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext);
 
     nsTableFrame *mTableFrame;

@@ -43,6 +43,7 @@
 
 #include "BasicTableLayoutStrategy.h"
 #include "nsTableFrame.h"
+#include "nsTableCellFrame.h"
 #include "nsLayoutUtils.h"
 
 BasicTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
@@ -75,9 +76,150 @@ BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
 }
 
 void
+BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
+{
+    nsTableFrame *tableFrame = mTableFrame;
+    float p2t = tableFrame->GetPresContext()->ScaledPixelsToTwips();
+    nsTableCellMap *cellMap = tableFrame->GetCellMap();
+
+    // We need to consider the width on the table since a specified width
+    // on the table prevents widths on cells that would make the table
+    // larger than that specified width from being honored.  In this case,
+    // we shrink the min widths proportionally, in proportion to the
+    // difference between the width specified and the min width of the
+    // content.
+    const nsStylePosition *tablePos = tableFrame->GetStylePosition();
+    PRBool tableHasWidth = tablePos->mWidth.GetUnit() == eStyleUnit_Coord ||
+                           tablePos->mMaxWidth.GetUnit() == eStyleUnit_Coord;
+
+    nscoord spacing = tableFrame->GetCellSpacingX();
+
+    // Prevent percentages from adding to more than 100% by (to be
+    // compatible with other browsers) treating any percentages that would
+    // increase the total percentage to more than 100% as the number that
+    // would increase it to only 100% (which is 0% if we've already hit
+    // 100%).
+    float pct_used = 0.0f;
+
+    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
+         col < col_end; ++col) {
+        nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
+        colFrame->ResetMinCoord();
+        colFrame->ResetPrefCoord();
+        colFrame->ResetPrefPercent();
+
+        // XXX Consider col frame!
+        // XXX Should it get Border/padding considered?
+
+        for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
+             row < row_end; ++row) {
+            PRBool originates;
+            PRInt32 colSpan;
+            nsTableCellFrame *cellFrame =
+                cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
+            if (!cellFrame)
+                continue;
+
+            const nsStylePosition *pos = cellFrame->GetStylePosition();
+            nscoord minCoord = cellFrame->GetMinWidth(aRenderingContext);
+            nscoord prefCoord = cellFrame->GetPrefWidth(aRenderingContext);
+            float prefPercent = 0.0f;
+
+            PRBool hasSpecifiedWidth = PR_FALSE;
+
+            switch (pos->mWidth.GetUnit()) {
+                case eStyleUnit_Coord: {
+                      hasSpecifiedWidth = PR_TRUE;
+                      nscoord w = pos->mWidth.GetCoordValue();
+                      if (!tableHasWidth && w > minCoord)
+                          minCoord = w;
+                      prefCoord = PR_MAX(w, minCoord);
+                    }
+                    break;
+                case eStyleUnit_Percent: {
+                        prefPercent = pos->mWidth.GetPercentValue();
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            switch (pos->mMaxWidth.GetUnit()) {
+                case eStyleUnit_Coord: {
+                        hasSpecifiedWidth = PR_TRUE;
+                        nscoord w = pos->mMaxWidth.GetCoordValue();
+                        if (w < minCoord)
+                            minCoord = w;
+                        if (w < prefCoord)
+                            prefCoord = w;
+                    }
+                    break;
+                case eStyleUnit_Percent: {
+                        float p = pos->mMaxWidth.GetPercentValue();
+                        if (p < prefPercent)
+                            prefPercent = p;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            switch (pos->mMinWidth.GetUnit()) {
+                case eStyleUnit_Coord: {
+                        nscoord w = pos->mMinWidth.GetCoordValue();
+                        if (w > minCoord)
+                            minCoord = w;
+                        if (w > prefCoord)
+                            prefCoord = w;
+                    }
+                    break;
+                case eStyleUnit_Percent: {
+                        float p = pos->mMinWidth.GetPercentValue();
+                        if (p > prefPercent)
+                            prefPercent = p;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            // Add the cell-spacing (and take it off again below) so that we don't
+            // require extra room for the omitted cell-spacing of column-spanning
+            // cells.
+            minCoord += cellFrame->GetIntrinsicBorderPadding(
+                    aRenderingContext, nsLayoutUtils::MIN_WIDTH) +
+                spacing;
+            prefCoord += cellFrame->GetIntrinsicBorderPadding(
+                    aRenderingContext, nsLayoutUtils::PREF_WIDTH) +
+                spacing;
+
+            // XXX Rounding errors due to RoundToPixel below!
+            minCoord = minCoord / colSpan;
+            prefCoord = prefCoord / colSpan;
+            prefPercent = prefPercent / colSpan;
+
+            minCoord -= spacing;
+            prefCoord -= spacing;
+
+            minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
+            prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
+
+            if (colSpan > 1)
+                hasSpecifiedWidth = PR_FALSE;
+
+            colFrame->AddMinCoord(minCoord);
+            colFrame->AddPrefCoord(prefCoord, hasSpecifiedWidth);
+            colFrame->AddPrefPercent(prefPercent);
+        }
+
+        colFrame->AdjustPrefPercent(&pct_used);
+    }
+}
+
+void
 BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext)
 {
-    mTableFrame->ComputeColumnIntrinsicWidths(aRenderingContext);
+    ComputeColumnIntrinsicWidths(aRenderingContext);
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     nscoord min = 0, pref = 0, max_small_pct_pref = 0, pct_running_nonpct = 0;
