@@ -6965,6 +6965,13 @@ nsGlobalWindow::SaveWindowState(nsISupports **aState)
   nsGlobalWindow *inner = GetCurrentInnerWindowInternal();
   NS_ASSERTION(inner, "No inner window to save");
 
+  // Don't do anything else to this inner window! After this point, all
+  // calls to SetTimeoutOrInterval will create entries in the timeout
+  // list that will only run after this window has come out of the bfcache.
+  // Also, while we're frozen, we won't dispatch online/offline events
+  // to the page.
+  inner->Freeze();
+
   // Remember the outer window's XPConnect prototype.
   nsCOMPtr<nsIClassInfo> ci =
     do_QueryInterface((nsIScriptGlobalObject *)this);
@@ -6984,9 +6991,6 @@ nsGlobalWindow::SaveWindowState(nsISupports **aState)
 #ifdef DEBUG_PAGE_CACHE
   printf("saving window state, state = %p\n", (void*)state);
 #endif
-
-  // Don't do anything else to this inner window!
-  inner->Freeze();
 
   state.swap(*aState);
   return NS_OK;
@@ -7075,13 +7079,13 @@ nsGlobalWindow::SuspendTimeouts()
     if (t->mTimer) {
       t->mTimer->Cancel();
       t->mTimer = nsnull;
-    }
 
-    // Drop the reference that the timer's closure had on this timeout, we'll
-    // add it back in ResumeTimeouts. Note that it shouldn't matter that we're
-    // passing null for the context, since this shouldn't actually release this
-    // timeout.
-    t->Release(nsnull);
+      // Drop the reference that the timer's closure had on this timeout, we'll
+      // add it back in ResumeTimeouts. Note that it shouldn't matter that we're
+      // passing null for the context, since this shouldn't actually release this
+      // timeout.
+      t->Release(nsnull);
+    }
   }
 
   // Suspend our children as well.
@@ -7103,6 +7107,12 @@ nsGlobalWindow::SuspendTimeouts()
                          NS_STATIC_CAST(nsPIDOMWindow*, pWin));
 
         win->SuspendTimeouts();
+
+        NS_ASSERTION(win->IsOuterWindow(), "Expected outer window");
+        nsGlobalWindow* inner = win->GetCurrentInnerWindowInternal();
+        if (inner) {
+          inner->Freeze();
+        }
       }
     }
   }
@@ -7159,6 +7169,12 @@ nsGlobalWindow::ResumeTimeouts()
         nsGlobalWindow *win =
           NS_STATIC_CAST(nsGlobalWindow*,
                          NS_STATIC_CAST(nsPIDOMWindow*, pWin));
+
+        NS_ASSERTION(win->IsOuterWindow(), "Expected outer window");
+        nsGlobalWindow* inner = win->GetCurrentInnerWindowInternal();
+        if (inner) {
+          inner->Thaw();
+        }
 
         rv = win->ResumeTimeouts();
         NS_ENSURE_SUCCESS(rv, rv);
