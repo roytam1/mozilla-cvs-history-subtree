@@ -2732,7 +2732,6 @@ OutboundCall.fun(
     
     this.mediasession.init("zap",
                            connectionAddress,
-                           connectionAddress,
                            this.callPipe.callAudioIn,
                            this.callPipe.callAudioOut,
                            this.callPipe.callTEventIn,
@@ -3058,7 +3057,6 @@ InboundCallHandler.fun(
       stunServers.push(this.call.identity.service.getStunServer());
     
     this.call.mediasession.init("zap",
-                                connectionAddress,
                                 connectionAddress,
                                 this.call.callPipe.callAudioIn,
                                 this.call.callPipe.callAudioOut,

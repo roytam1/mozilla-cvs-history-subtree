@@ -76,7 +76,7 @@ var MediaSession = makeClass("MediaSession",
 MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
 
 // This attrib will be set to false, should it be apparent that our
-// peer doesn't do ICE:
+// peer doesn't do ICE
 MediaSession.obj("usingICE", true);
 
 //----------------------------------------------------------------------
@@ -85,7 +85,6 @@ MediaSession.obj("usingICE", true);
 
 //  void init(in ACString originUsername,
 //            in ACString originAddress,
-//            in ACString connectionAddress,
 //            in ACString callAudioIn,
 //            in ACString callAudioOut,
 //            in ACString callTEventIn,
@@ -95,7 +94,7 @@ MediaSession.obj("usingICE", true);
 //            in unsigned long stunServer_count,
 //            in zapIMediaSessionListener listener);
 MediaSession.fun(
-  function init(originUsername, originAddress, connectionAddress,
+  function init(originUsername, originAddress, 
                 callAudioIn, callAudioOut, callTEventIn,
                 codecs, codec_count, stunServers, stunServer_count,
                 listener) {
@@ -103,7 +102,6 @@ MediaSession.fun(
     
     this.originUsername = originUsername;
     this.originAddress = originAddress;
-    this.connectionAddress = connectionAddress;
     this.callAudioIn = callAudioIn;
     this.callAudioOut = callAudioOut;
     this.callTEventIn = callTEventIn;
@@ -295,10 +293,9 @@ MediaSession.fun(
     // We use getService here to retrieve the global media graph that
     // should have been set up by our client application:
     this.mediaGraph = Components.classes["@mozilla.org/zap/mediagraph;1"].getService(Components.interfaces.zapIMediaGraph);
-    this.socketpair = this.mediaGraph.addNode("udp-socket-pair", null);
 
     // asynchronously gather ICE candidates. Trigger 'INITIALIZED'
-    // status from continuation
+    // status from continuation.
     var me = this;
     function iceCandidatesProduced(candidates) {
       if (me.currentState == "TERMINATED") return; // we have already terminated
@@ -308,7 +305,8 @@ MediaSession.fun(
         me.listener.mediaSessionInitialized(me);
     }
     produceICECandidates(iceCandidatesProduced, 2, 49152, 5000, 50,
-                         this.mediaGraph, this.stunServers);
+                         this.mediaGraph, this.stunServers,
+                         this.originAddress);
   });
 
 //  boolean isOfferAcceptable(in zapISdpSessionDescription offer);
@@ -336,7 +334,7 @@ MediaSession.statefun(
     // m=
     var mediaDescription = gSdpService.createRtpAvpMediaDescription();
     mediaDescription.media = "audio";
-    mediaDescription.port = this.localRTPPort;
+    mediaDescription.port = this.iceCandidates.activeCandidate.componentAt(0).port;
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
 
@@ -350,7 +348,7 @@ MediaSession.statefun(
     
     var offer = gSdpService.formulateSDPOffer(this.originUsername,
                                               this.originAddress,
-                                              this.connectionAddress,
+                                              this.iceCandidates.activeCandidate.componentAt(0).address,
                                               [mediaDescription], 1
                                               );
 
@@ -446,7 +444,7 @@ MediaSession.statefun(
     // c=
     answer.connection = gSdpService.createConnection();
     answer.connection.addressType = "IP4";
-    answer.connection.address = this.connectionAddress;
+    answer.connection.address = this.iceCandidates.activeCandidate.componentAt(0).address;
     // t=
     var time = gSdpService.createTime();
     time.value = "0 0";
@@ -455,7 +453,7 @@ MediaSession.statefun(
     // media descriptions:
     var mediaDescription = gSdpService.createRtpAvpMediaDescription();
     mediaDescription.media = "audio";
-    mediaDescription.port = this.localRTPPort;
+    mediaDescription.port = this.iceCandidates.activeCandidate.componentAt(0).port;
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
     // construct array of accepted formats:
@@ -519,30 +517,12 @@ MediaSession.statefun(
     this.changeState("RUNNING");
   });
 
-//  readonly attribute unsigned short localRTPPort;
-MediaSession.getter(
-  "localRTPPort",
-  function getLocalRTPPort() {
-    var sp = this.mediaGraph.getNode(this.socketpair, Components.interfaces.zapIUDPSocketPair, true);
-    return sp.portA;
-  });
-
-//  readonly attribute unsigned short localRTCPPort;
-MediaSession.getter(
-  "localRTCPPort",
-  function getLocalRTCPPort() {
-    var sp = this.mediaGraph.getNode(this.socketpair, Components.interfaces.zapIUDPSocketPair, true);
-    return sp.portB;
-  });
-
-
 //  void shutdown();
 MediaSession.fun(
   function shutdown() {
     delete this.listener;
 
     // remove all the nodes we added to the graph:
-    this.mediaGraph.removeNode(this.socketpair);
     if (this.rtpsession) {
       this.mediaGraph.removeNode(this.buf);
       this.mediaGraph.removeNode(this.rtpsession);
@@ -596,9 +576,10 @@ MediaSession.fun(
     this.mediaGraph.connect(this.rtpsession, PB({$name:"local2remote-rtp"}),
                             this.rtptransmitter, null);
     this.mediaGraph.connect(this.rtptransmitter, null,
-                            this.socketpair, PB({$name:"socket-a"}));
+                            this.iceCandidates.activeCandidate.componentAt(0).getLocalMuxId(),
+                            null);
     // decoder pipe:
-    this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
+    this.mediaGraph.connect(this.iceCandidates.activeCandidate.componentAt(0).getLocalDemuxId(), PB({$name:"other"}),
                             this.rtpreceiver, null);
     this.mediaGraph.connect(this.rtpreceiver, null,
                             this.rtpsession, PB({$name:"remote2local-rtp"}));

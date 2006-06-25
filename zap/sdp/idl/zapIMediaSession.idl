@@ -47,7 +47,6 @@ interface zapIMediaSession : nsISupports
 {
   void init(in ACString originUsername,
             in ACString originAddress,
-            in ACString connectionAddress,
             in ACString callAudioIn,
             in ACString callAudioOut,
             in ACString callTEventIn,
@@ -106,8 +105,5 @@ interface zapIMediaSession : nsISupports
    */
   void startSession();
   
-  readonly attribute unsigned short localRTPPort;
-  readonly attribute unsigned short localRTCPPort;
-
   void shutdown();
 };

@@ -93,6 +93,18 @@ var zapICETransport = makeClass("zapICETransport", ErrorReporter);
 // protocol
 zapICETransport.obj("protocol", "UDP");
 
+// id of multiplexer in the media graph
+zapICETransport.fun(
+  function getLocalMuxId() {
+    this._error("to be implemented by subclass");
+  });
+
+// id of demultiplexer in the media graph
+zapICETransport.fun(
+  function getLocalDemuxId() {
+    this._error("to be implemented by subclass");
+  });
+
 // free resources attached to this transport:
 zapICETransport.fun(
   function destroy() {
@@ -143,6 +155,16 @@ zapICELocalUDPTransport.appendCtor(
   });
 
 zapICELocalUDPTransport.fun(
+  function getLocalMuxId() {
+    return this.mux;
+  });
+
+zapICELocalUDPTransport.fun(
+  function getLocalDemuxId() {
+    return this.demux;
+  });
+
+zapICELocalUDPTransport.fun(
   function destroy() {
     var g = this.mediaGraph;
     g.removeNode(this.socket);
@@ -165,6 +187,30 @@ zapICELocalUDPTransport.getter(
     return this.socketCtl.port;
   });
 
+////////////////////////////////////////////////////////////////////////
+// zapICEDerivedUDPTransport
+//
+// A derived UDP transport
+
+var zapICEDerivedUDPTransport = makeClass("zapICEDerivedUDPTransport",
+                                          zapICETransport);
+
+zapICEDerivedUDPTransport.appendCtor(
+  function zapICEDerivedUDPTransportCtor(args) {
+    this.address = args.address;
+    this.port = args.port;
+    this.localTransport = args.localTransport;
+  });
+
+zapICEDerivedUDPTransport.fun(
+  function getLocalMuxId() {
+    return this.localTransport.getLocalMuxId();
+  });
+
+zapICEDerivedUDPTransport.fun(
+  function getLocalDemuxId() {
+    return this.localTransport.getLocalDemuxId();
+  });
 
 ////////////////////////////////////////////////////////////////////////
 // zapICECandidate
@@ -374,9 +420,11 @@ zapICEStunReflexiveCandidateFactory.fun(
                                  components : new Array(rinfo[0].componentCount) };
         this.partialCandidates[partialCandidateID] = partialCandidateInfo;
       }
-      var component = zapICETransport.instantiate();
-      component.address = reflAddr;
-      component.port = reflPort;
+      var component = zapICEDerivedUDPTransport.instantiate(
+        { address: reflAddr,
+          port:  reflPort,
+          localTransport: rinfo[0].componentAt(rinfo[1])
+        });
       partialCandidateInfo.components[rinfo[1]] = component;
 
       // check if we have a full candidate:
@@ -490,18 +538,29 @@ ICECandidates.fun(
 // continuation done() will be called with an ICECandidates object
 function produceICECandidates(done, componentCount, udpPortbase,
                               maxDuration, paceDuration,
-                              mediaGraph, stunServers)
+                              mediaGraph, stunServers, bestGuessAddress)
 {
   // generate local candidates first:
-  var locals = gatherLocalICECandidates(componentCount, udpPortbase, mediaGraph);
-  
+  var cands = gatherLocalICECandidates(componentCount, udpPortbase, mediaGraph);
   // asynchronously produce derived candidates and proceed with
   // continuation done():
   function productionDone(cl) {
     var pw = generateICEPassword();
-    done(ICECandidates.instantiate({ password: pw, candidates: cl.concat(locals) , activeCandidate: cl[0]}));
+    cands = cands.concat(cl);
+
+    // Active candidate selection:
+    // We return the first candidate that matches our 'bestGuessAddress', or
+    // the first candidate if non matches:
+    var ac = findif(function(c) { return c.componentAt(0).address == bestGuessAddress; },
+                    cands);
+    if (!ac)
+      ac = cands[0];
+    
+    done(ICECandidates.instantiate({ password: pw,
+                                     candidates: cands,
+                                     activeCandidate: ac}));
   }
 
   produceDerivedCandidates(productionDone, maxDuration, paceDuration,
-                           mediaGraph, locals, stunServers);
+                           mediaGraph, cands, stunServers);
 }
