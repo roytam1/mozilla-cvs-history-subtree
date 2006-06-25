@@ -56,21 +56,18 @@
 
 struct nsTableCellReflowState : public nsHTMLReflowState
 {
-  nsTableCellReflowState(nsPresContext*          aPresContext,
+  nsTableCellReflowState(nsPresContext*           aPresContext,
                          const nsHTMLReflowState& aParentReflowState,
                          nsIFrame*                aFrame,
-                         const nsSize&            aAvailableSpace);
+                         const nsSize&            aAvailableSpace,
+                         PRBool                   aInit = PR_TRUE)
+    : nsHTMLReflowState(aPresContext, aParentReflowState, aFrame,
+                        aAvailableSpace, aInit)
+  {
+  }
 
   void FixUp(const nsSize& aAvailSpace);
 };
-
-nsTableCellReflowState::nsTableCellReflowState(nsPresContext*          aPresContext,
-                                               const nsHTMLReflowState& aParentRS,
-                                               nsIFrame*                aFrame,
-                                               const nsSize&            aAvailSpace)
-  :nsHTMLReflowState(aPresContext, aParentRS, aFrame, aAvailSpace)
-{
-}
 
 void nsTableCellReflowState::FixUp(const nsSize& aAvailSpace)
 {
@@ -832,7 +829,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
 
       // it's an unknown frame type, give it a generic reflow and ignore the results
       nsTableCellReflowState kidReflowState(aPresContext, aReflowState,
-                                            kidFrame, nsSize(0,0));
+                                            kidFrame, nsSize(0,0), PR_FALSE);
       InitChildReflowState(*aPresContext, nsSize(0,0), PR_FALSE, p2t, kidReflowState);
       nsHTMLReflowMetrics desiredSize;
       nsReflowStatus  status;
@@ -909,7 +906,7 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
 
         // Reflow the child
         nsTableCellReflowState kidReflowState(aPresContext, aReflowState, 
-                                              kidFrame, kidAvailSize);
+                                              kidFrame, kidAvailSize, PR_FALSE);
         InitChildReflowState(*aPresContext, kidAvailSize, borderCollapse, p2t,
                              kidReflowState);
 
@@ -1099,7 +1096,7 @@ nsTableRowFrame::ReflowCellFrame(nsPresContext*          aPresContext,
   PRBool borderCollapse = ((nsTableFrame*)tableFrame->GetFirstInFlow())->IsBorderCollapse();
   GET_PIXELS_TO_TWIPS(aPresContext, p2t);
   nsTableCellReflowState cellReflowState(aPresContext, aReflowState,
-                                         aCellFrame, availSize);
+                                         aCellFrame, availSize, PR_FALSE);
   InitChildReflowState(*aPresContext, availSize, borderCollapse, p2t, cellReflowState);
 
   nsHTMLReflowMetrics desiredSize;

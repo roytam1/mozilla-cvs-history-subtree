@@ -337,8 +337,8 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
       // it wants. We'll deal with splitting later after we've computed the row
       // heights, taking into account cells with row spans...
       nsSize kidAvailSize(aReflowState.availSize.width, NS_UNCONSTRAINEDSIZE);
-      nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState, kidFrame,
-                                       kidAvailSize);
+      nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState,
+                                       kidFrame, kidAvailSize, PR_FALSE);
       InitChildReflowState(*aPresContext, borderCollapse, p2t, kidReflowState);
 
       // This can indicate that columns were resized.
@@ -1006,7 +1006,7 @@ nsTableRowGroupFrame::SplitRowGroup(nsPresContext*          aPresContext,
         availSize.height = PR_MIN(availSize.height, rowRect.height);
 
         nsHTMLReflowState rowReflowState(aPresContext, aReflowState,
-                                         rowFrame, availSize);
+                                         rowFrame, availSize, PR_FALSE);
                                          
         InitChildReflowState(*aPresContext, borderCollapse, p2t, rowReflowState);
         rowReflowState.mFlags.mIsTopOfPage = isTopOfPage; // set top of page

@@ -1013,7 +1013,8 @@ nsTableOuterFrame::OuterReflowChild(nsPresContext*            aPresContext,
   }
   nsSize availSize(aAvailWidth, availHeight);
   // create and init the child reflow state
-  nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame, availSize);
+  nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame, availSize,
+                            PR_FALSE);
   InitChildReflowState(*aPresContext, childRS);
   childRS.mPercentHeightObserver = nsnull; // the observer is for non table related frames inside cells
 
