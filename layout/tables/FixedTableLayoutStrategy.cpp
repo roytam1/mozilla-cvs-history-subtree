@@ -79,12 +79,11 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 
     // XXX Should this code do any pixel rounding?
 
-    nscoord coordTotal = 0;
-    float percentTotal = 0.0f;
+    nscoord result = 0;
 
     if (colCount > 0) {
         // XXX Should only add columns that have cells originating in them!
-        coordTotal += spacing * (colCount + 1);
+        result += spacing * (colCount + 1);
     }
 
     for (PRInt32 col = 0; col < colCount; ++col) {
@@ -92,9 +91,9 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
         const nsStyleCoord *styleWidth =
             &colFrame->GetStylePosition()->mWidth;
         if (styleWidth->GetUnit() == eStyleUnit_Coord) {
-            coordTotal += styleWidth->GetCoordValue();
+            result += styleWidth->GetCoordValue();
         } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
-            percentTotal += styleWidth->GetPercentValue();
+            // do nothing
         } else {
             NS_ASSERTION(styleWidth->GetUnit() == eStyleUnit_Auto, "bad width");
 
@@ -119,23 +118,15 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
                         // in have specified widths.  Should we care?)
                         cellWidth = ((cellWidth + spacing) / colSpan) - spacing;
                     }
-                    coordTotal += cellWidth;
+                    result += cellWidth;
                 } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
-                    percentTotal = styleWidth->GetPercentValue() / float(colSpan);
                     if (colSpan > 1) {
-                        coordTotal -= spacing * (colSpan - 1);
+                        result -= spacing * (colSpan - 1);
                     }
                 }
             }
         }
     }
-
-    // XXX It needs to be clamed somewhere less than 1.  The exact value
-    // should be tested for interoperability.
-    if (percentTotal > 0.99f)
-        percentTotal = 0.99f;
-
-    nscoord result = coordTotal / (1.0f - percentTotal);
 
     return (mMinWidth = result);
 }
@@ -187,16 +178,24 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
     nscoord unassignedSpace = tableWidth;
     const nscoord unassignedMarker = nscoord_MIN;
 
+    // We use the PrefPercent on the columns to store the percentages
+    // used to compute column widths in case we need to reduce their
+    // basis.
+    float pctTotal = 0.0f;
+
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        colFrame->ResetPrefPercent();
         const nsStyleCoord *styleWidth =
             &colFrame->GetStylePosition()->mWidth;
         nscoord colWidth;
         if (styleWidth->GetUnit() == eStyleUnit_Coord) {
             colWidth = styleWidth->GetCoordValue();
         } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
-            colWidth = NSToCoordFloor(styleWidth->GetPercentValue() *
-                                      float(tableWidth));
+            float pct = styleWidth->GetPercentValue();
+            colWidth = NSToCoordFloor(pct * float(tableWidth));
+            colFrame->AddPrefPercent(pct);
+            pctTotal += pct;
         } else {
             NS_ASSERTION(styleWidth->GetUnit() == eStyleUnit_Auto, "bad width");
 
@@ -211,8 +210,11 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                 if (styleWidth->GetUnit() == eStyleUnit_Coord) {
                     colWidth = styleWidth->GetCoordValue();
                 } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
-                    colWidth = NSToCoordFloor(styleWidth->GetPercentValue() *
-                                              float(tableWidth));
+                    float pct = styleWidth->GetPercentValue();
+                    colWidth = NSToCoordFloor(pct * float(tableWidth));
+                    pct /= float(colSpan);
+                    colFrame->AddPrefPercent(pct);
+                    pctTotal += pct;
                 } else {
                     colWidth = unassignedMarker;
                 }
@@ -229,6 +231,8 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                         // isn't quite right if some of the columns it's
                         // in have specified widths.  Should we care?)
                         colWidth = ((colWidth + spacing) / colSpan) - spacing;
+                        if (colWidth < 0)
+                            colWidth = 0;
                     }
                 }
             } else {
@@ -245,9 +249,28 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
         }
     }
 
+    if (unassignedSpace < 0) {
+        if (pctTotal > 0) {
+            // If the columns took up too much space, reduce those that
+            // had percentage widths.  The spec doesn't say to do this,
+            // but we've always done it in the past, and so does WinIE6.
+            nscoord pctUsed = NSToCoordFloor(pctTotal * float(tableWidth));
+            nscoord reduce = PR_MIN(pctUsed, -unassignedSpace);
+            float reduceRatio = float(reduce) / pctTotal;
+            for (PRInt32 col = 0; col < colCount; ++col) {
+                nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+                nscoord colWidth = colFrame->GetFinalWidth();
+                colWidth -= NSToCoordFloor(colFrame->GetPrefPercent() *
+                                           reduceRatio);
+                if (colWidth < 0)
+                    colWidth = 0;
+                colFrame->SetFinalWidth(colWidth);
+            }
+        }
+        unassignedSpace = 0;
+    }
+
     if (unassignedCount > 0) {
-        if (unassignedSpace < 0)
-            unassignedSpace = 0;
         nscoord toAssign = unassignedSpace / unassignedCount;
         for (PRInt32 col = 0; col < colCount; ++col) {
             nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
@@ -255,6 +278,9 @@ FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState
                 colFrame->SetFinalWidth(toAssign);
         }
     } else if (unassignedSpace > 0) {
+        // The spec says to distribute extra space evenly.  (That's not
+        // what WinIE6 does, though.  It treats percentages and
+        // nonpercentages differently.)
         nscoord toAdd = unassignedSpace / colCount;
         for (PRInt32 col = 0; col < colCount; ++col) {
             nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
