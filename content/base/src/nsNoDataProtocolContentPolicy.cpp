@@ -42,10 +42,6 @@
  */
 
 #include "nsNoDataProtocolContentPolicy.h"
-#include "nsIDocument.h"
-#include "nsINode.h"
-#include "nsIDOMWindow.h"
-#include "nsIDOMDocument.h"
 #include "nsString.h"
 #include "nsContentUtils.h"
 #include "nsIProtocolHandler.h"
