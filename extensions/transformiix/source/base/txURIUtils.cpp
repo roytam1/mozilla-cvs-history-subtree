@@ -236,16 +236,6 @@ PRBool URIUtils::CanCallerAccess(nsIDOMNode *aNode)
         return PR_TRUE;
     }
 
-    // Ask the securitymanager if we have "UniversalBrowserRead"
-    PRBool caps = PR_FALSE;
-    nsresult rv =
-        gTxSecurityManager->IsCapabilityEnabled("UniversalBrowserRead",
-                                                &caps);
-    NS_ENSURE_SUCCESS(rv, PR_FALSE);
-    if (caps) {
-        return PR_TRUE;
-    }
-
     // Make sure that this is a real node. We do this by first QI'ing to
     // nsIContent (which is important performance wise) and if that QI
     // fails we QI to nsIDocument. If both those QI's fail we won't let
@@ -312,6 +302,23 @@ PRBool URIUtils::CanCallerAccess(nsIDOMNode *aNode)
         // very rarely, like for textnodes out of the tree and <option>s created
         // using 'new Option'.
 
+        return PR_TRUE;
+    }
+
+    if (principal == systemPrincipal) {
+        // We already know the subject is NOT systemPrincipal, no point calling
+        // CheckSameOriginPrincipal since we know they don't match.
+
+        return PR_FALSE;
+    }
+
+    // Ask the securitymanager if we have "UniversalBrowserRead"
+    PRBool caps = PR_FALSE;
+    nsresult rv =
+        gTxSecurityManager->IsCapabilityEnabled("UniversalBrowserRead",
+                                                &caps);
+    NS_ENSURE_SUCCESS(rv, PR_FALSE);
+    if (caps) {
         return PR_TRUE;
     }
 
