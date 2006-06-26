@@ -118,6 +118,10 @@ function initHandlers()
     window.addEventListener("blur", onWindowBlue, true);
 
     client.inputPopup = null;
+
+    // Should fail silently pre-moz1.4
+    doCommandWithParams("cmd_clipboardDragDropHook",
+                        {addhook: CopyPasteHandler});
 }
 
 function onClose()
@@ -125,12 +129,9 @@ function onClose()
     if ("userClose" in client && client.userClose)
         return true;
 
-    if (!("getConnectionCount" in client) ||
-        client.getConnectionCount() == 0)
-    {
-        /* if we're not connected to anything, just close the window */
+    // if we're not connected to anything, just close the window
+    if (!("getConnectionCount" in client) || (client.getConnectionCount() == 0))
         return true;
-    }
 
     /* otherwise, try to close out gracefully */
     client.wantToQuit();
@@ -669,42 +670,44 @@ function onNotifyTimeout()
     }
 }
 
-var lastWhoCheckTime = new Date();
-var lastWhoCheckChannel = null;
-
 function onWhoTimeout()
 {
-    lastWhoCheckTime = new Date();
-    var checkNext = (lastWhoCheckChannel == null);
+    function checkWho()
+    {
+        var checkNext = (net.lastWhoCheckChannel == null);
+        for (var c in net.primServ.channels)
+        {
+            var chan = net.primServ.channels[c];
+
+            if (checkNext && chan.active &&
+                chan.getUsersLength() < client.prefs["autoAwayCap"])
+            {
+                net.primServ.LIGHTWEIGHT_WHO = true;
+                net.primServ.sendData("WHO " + chan.encodedName + "\n");
+                net.lastWhoCheckChannel = chan;
+                net.lastWhoCheckTime = Date.now();
+                return;
+            }
+
+            if (chan == net.lastWhoCheckChannel)
+                checkNext = true;
+        }
+        if (net.lastWhoCheckChannel)
+        {
+            net.lastWhoCheckChannel = null;
+            checkWho();
+        }
+    };
 
     for (var n in client.networks)
     {
         var net = client.networks[n];
-        if (net.isConnected())
-        {
-            for (var c in net.primServ.channels)
-            {
-                var chan = net.primServ.channels[c];
-
-                if (checkNext && chan.active &&
-                    chan.getUsersLength() < client.prefs["autoAwayCap"])
-                {
-                    net.primServ.LIGHTWEIGHT_WHO = true;
-                    net.primServ.sendData("WHO " + chan.encodedName + "\n");
-                    lastWhoCheckChannel = chan;
-                    return;
-                }
-
-                if (chan == lastWhoCheckChannel)
-                    checkNext = true;
-            }
-        }
-    }
-
-    if (lastWhoCheckChannel)
-    {
-        lastWhoCheckChannel = null;
-        onWhoTimeout();
+        var period = net.prefs["autoAwayPeriod"];
+        // The time since the last check, with a 5s error margin to
+        // stop us from not checking because the timer fired a tad early:
+        var waited = Date.now() - net.lastWhoCheckTime + 5000;
+        if (net.isConnected() && (period != 0) && (period * 60000 < waited))
+            checkWho();
     }
 }
 
@@ -920,6 +923,10 @@ function my_unknown (e)
             e.channel = new CIRCChannel(e.server, null, e.params[0]);
         }
 
+        var targetDisplayObj = this;
+        if (e.channel && ("messages" in e.channel))
+            targetDisplayObj = e.channel;
+
         // Check for /knock support for the +i message.
         if (((e.code == 471) || (e.code == 473) || (e.code == 475)) &&
             ("knock" in e.server.servCmds))
@@ -928,12 +935,12 @@ function my_unknown (e)
                         "knock " + e.channel.unicodeName];
             msg = getMsg("msg.irc." + e.code + ".knock", args, "");
             client.munger.entries[".inline-buttons"].enabled = true;
-            this.display(msg);
+            targetDisplayObj.display(msg);
             client.munger.entries[".inline-buttons"].enabled = false;
         }
         else
         {
-            this.display(msg);
+            targetDisplayObj.display(msg);
         }
 
         if (e.channel)
@@ -968,6 +975,8 @@ function my_unknown (e)
     this.display(toUnicode(e.params.join(" "), this), e.code.toUpperCase());
 }
 
+CIRCNetwork.prototype.lastWhoCheckChannel = null;
+CIRCNetwork.prototype.lastWhoCheckTime = 0;
 CIRCNetwork.prototype.on001 = /* Welcome! */
 CIRCNetwork.prototype.on002 = /* your host is */
 CIRCNetwork.prototype.on003 = /* server born-on date */
@@ -1074,6 +1083,8 @@ function my_showtonet (e)
                 };
                 setTimeout(delayFn, 1000 * Math.random(), this);
             }
+
+            client.ident.removeNetwork(this);
 
             // Had some collision during connect.
             if (this.primServ.me.unicodeName != this.prefs["nickname"])
@@ -1741,6 +1752,14 @@ function my_sconnect (e)
                               e.server.getURL(),
                               e.connectAttempt,
                               this.MAX_CONNECT_ATTEMPTS]), "INFO");
+
+    if (this.prefs["identd.enabled"])
+    {
+        if (jsenv.HAS_SERVER_SOCKETS)
+            client.ident.addNetwork(this, e.server);
+        else
+            display(MSG_IDENT_SERVER_NOT_POSSIBLE, MT_WARN);
+    }
 }
 
 CIRCNetwork.prototype.onError =
@@ -1787,6 +1806,7 @@ function my_neterror (e)
         updateProgress();
     }
 
+    client.ident.removeNetwork(this);
 
     this.display(msg, type);
 
@@ -1891,6 +1911,8 @@ function my_netdisconnect (e)
     updateProgress();
     updateSecurityIcon();
 
+    client.ident.removeNetwork(this);
+
     if ("userClose" in client && client.userClose &&
         client.getConnectionCount() == 0)
         window.close();
@@ -1905,6 +1927,14 @@ function my_netdisconnect (e)
 CIRCNetwork.prototype.onCTCPReplyPing =
 function my_replyping (e)
 {
+    // see bug 326523
+    if (stringTrim(e.CTCPData).length != 13)
+    {
+        this.display(getMsg(MSG_PING_REPLY_INVALID, e.user.unicodeName),
+                     "INFO", e.user, "ME!");
+        return;
+    }
+
     var delay = formatDateOffset((new Date() - new Date(Number(e.CTCPData))) /
                                  1000);
     this.display(getMsg(MSG_PING_REPLY, [e.user.unicodeName, delay]), "INFO",
@@ -2121,22 +2151,54 @@ function my_topic (e)
 }
 
 CIRCChannel.prototype.on367 = /* channel ban stuff */
-CIRCChannel.prototype.on368 =
 function my_bans(e)
 {
-    // Uh, we'll format this some other time.
-    if (!("pendingBanList" in this))
-        this.display(toUnicode(e.params.join(" "), this), e.code.toUpperCase());
+    if ("pendingBanList" in this)
+        return;
+
+    var msg = getMsg(MSG_BANLIST_ITEM,
+                     [e.user.unicodeName, e.ban, this.unicodeName, e.banTime]);
+    if (this.iAmHalfOp() || this.iAmOp())
+        msg += " " + getMsg(MSG_BANLIST_BUTTON, "mode -b " + e.ban);
+
+    client.munger.entries[".inline-buttons"].enabled = true;
+    this.display(msg, "BAN");
+    client.munger.entries[".inline-buttons"].enabled = false;
+}
+
+CIRCChannel.prototype.on368 =
+function my_endofbans(e)
+{
+    if ("pendingBanList" in this)
+        return;
+
+    this.display(getMsg(MSG_BANLIST_END, this.unicodeName), "BAN");
 }
 
 CIRCChannel.prototype.on348 = /* channel except stuff */
-CIRCChannel.prototype.on349 =
 function my_excepts(e)
 {
-    if (!("pendingExceptList" in this))
-        this.display(toUnicode(e.params.join(" "), this), e.code.toUpperCase());
+    if ("pendingExceptList" in this)
+        return;
+
+    var msg = getMsg(MSG_EXCEPTLIST_ITEM, [e.user.unicodeName, e.except,
+                                           this.unicodeName, e.exceptTime]);
+    if (this.iAmHalfOp() || this.iAmOp())
+        msg += " " + getMsg(MSG_EXCEPTLIST_BUTTON, "mode -e " + e.except);
+
+    client.munger.entries[".inline-buttons"].enabled = true;
+    this.display(msg, "EXCEPT");
+    client.munger.entries[".inline-buttons"].enabled = false;
 }
 
+CIRCChannel.prototype.on349 =
+function my_endofexcepts(e)
+{
+    if ("pendingExceptList" in this)
+        return;
+
+    this.display(getMsg(MSG_EXCEPTLIST_END, this.unicodeName), "EXCEPT");
+}
 
 CIRCChannel.prototype.onNotice =
 function my_notice (e)
@@ -2485,6 +2547,47 @@ function my_unkctcp (e)
                                 "BAD-CTCP", this, e.server.me);
 }
 
+function onDCCAutoAcceptTimeout(o, folder)
+{
+    // user may have already accepted or declined
+    if (o.state.state != DCC_STATE_REQUESTED)
+        return;
+
+    if (o.TYPE == "IRCDCCChat")
+    {
+        o.accept();
+        display(getMsg(MSG_DCCCHAT_ACCEPTED, o._getParams()), "DCC-CHAT");
+    }
+    else
+    {
+        var dest, leaf, tries = 0;
+        while (true)
+        {
+            leaf = escapeFileName(o.filename);
+            if (++tries > 1)
+            {
+                // A file with the same name as the offered file already exists
+                // in the user's download folder. Add [x] before the extension.
+                // The extension is the last dot to the end of the string,
+                // unless it is one of the special-cased compression extensions,
+                // in which case the second to last dot is used. The second
+                // extension can only contain letters, to avoid mistakes like
+                // "patch-version1[2].0.gz". If no file extension is present,
+                // the [x] is just appended to the filename.
+                leaf = leaf.replace(/(\.[a-z]*\.(gz|bz2|z)|\.[^\.]*|)$/i,
+                                    "[" + tries + "]$&");
+            }
+
+            dest = getFileFromURLSpec(folder);
+            dest.append(leaf);
+            if (!dest.exists())
+                break;
+        }
+        o.accept(dest);
+        display(getMsg(MSG_DCCFILE_ACCEPTED, o._getParams()), "DCC-FILE");
+    }
+}
+
 CIRCUser.prototype.onDCCChat =
 function my_dccchat(e)
 {
@@ -2494,11 +2597,32 @@ function my_dccchat(e)
     var u = client.dcc.addUser(e.user, e.host);
     var c = client.dcc.addChat(u, e.port);
 
-    client.munger.entries[".inline-buttons"].enabled = true;
+    var str = MSG_DCCCHAT_GOT_REQUEST;
     var cmds = getMsg(MSG_DCC_COMMAND_ACCEPT, "dcc-accept " + c.id) + " " +
                getMsg(MSG_DCC_COMMAND_DECLINE, "dcc-decline " + c.id);
-    this.parent.parent.display(getMsg(MSG_DCCCHAT_GOT_REQUEST,
-                                      c._getParams().concat(cmds)),
+
+    var allowList = this.parent.parent.prefs["dcc.autoAccept.list"];
+    for (var m = 0; m < allowList.length; ++m)
+    {
+        if (hostmaskMatches(e.user, getHostmaskParts(allowList[m])))
+        {
+            var acceptDelay = client.prefs["dcc.autoAccept.delay"];
+            if (acceptDelay == 0)
+            {
+                str = MSG_DCCCHAT_ACCEPTING_NOW;
+            }
+            else
+            {
+                str = MSG_DCCCHAT_ACCEPTING;
+                cmds = [(acceptDelay / 1000), cmds];
+            }
+            setTimeout(onDCCAutoAcceptTimeout, acceptDelay, c);
+            break;
+        }
+    }
+
+    client.munger.entries[".inline-buttons"].enabled = true;
+    this.parent.parent.display(getMsg(str, c._getParams().concat(cmds)),
                                "DCC-CHAT");
     client.munger.entries[".inline-buttons"].enabled = false;
 
@@ -2509,7 +2633,7 @@ function my_dccchat(e)
 }
 
 CIRCUser.prototype.onDCCSend =
-function my_dccchat(e)
+function my_dccsend(e)
 {
     if (!jsenv.HAS_SERVER_SOCKETS || !client.prefs["dcc.enabled"])
         return;
@@ -2517,23 +2641,47 @@ function my_dccchat(e)
     var u = client.dcc.addUser(e.user, e.host);
     var f = client.dcc.addFileTransfer(u, e.port, e.file, e.size);
 
-    client.munger.entries[".inline-buttons"].enabled = true;
+    var str = MSG_DCCFILE_GOT_REQUEST;
     var cmds = getMsg(MSG_DCC_COMMAND_ACCEPT, "dcc-accept " + f.id) + " " +
                getMsg(MSG_DCC_COMMAND_DECLINE, "dcc-decline " + f.id);
-    this.parent.parent.display(getMsg(MSG_DCCFILE_GOT_REQUEST,
-                                      [e.user.unicodeName, e.host, e.port,
-                                       e.file, getSISize(e.size), cmds]),
+
+    var allowList = this.parent.parent.prefs["dcc.autoAccept.list"];
+    for (var m = 0; m < allowList.length; ++m)
+    {
+        if (hostmaskMatches(e.user, getHostmaskParts(allowList[m]),
+                            this.parent))
+        {
+            var acceptDelay = client.prefs["dcc.autoAccept.delay"];
+            if (acceptDelay == 0)
+            {
+                str = MSG_DCCFILE_ACCEPTING_NOW;
+            }
+            else
+            {
+                str = MSG_DCCFILE_ACCEPTING;
+                cmds = [(acceptDelay / 1000), cmds];
+            }
+            setTimeout(onDCCAutoAcceptTimeout, acceptDelay,
+                       f, this.parent.parent.prefs["dcc.downloadsFolder"]);
+            break;
+        }
+    }
+
+    client.munger.entries[".inline-buttons"].enabled = true;
+    this.parent.parent.display(getMsg(str,[e.user.unicodeName,
+                                           e.host, e.port, e.file,
+                                           getSISize(e.size)].concat(cmds)),
                                "DCC-FILE");
     client.munger.entries[".inline-buttons"].enabled = false;
 
-    // Pass the event over to the DCC Chat object.
+    // Pass the event over to the DCC File object.
     e.set = "dcc-file";
     e.destObject = f;
     e.destMethod = "onGotRequest";
 }
 
 CIRCUser.prototype.onDCCReject =
-function my_dccchat(e)
+function my_dccreject(e)
 {
     if (!client.prefs["dcc.enabled"])
         return;
@@ -2578,7 +2726,7 @@ function my_unkctcp(e)
 }
 
 CIRCDCCChat.prototype.onConnect =
-function my_dccdisconnect(e)
+function my_dccconnect(e)
 {
     playEventSounds("dccchat", "connect");
     this.displayHere(getMsg(MSG_DCCCHAT_OPENED, this._getParams()), "DCC-CHAT");
@@ -2652,6 +2800,7 @@ function my_dccfileprogress(e)
     {
         this.progress = pcent;
         updateProgress();
+        updateTitle();
 
         var tab = getTabForObject(this);
         if (tab)
@@ -2704,10 +2853,66 @@ function my_dccfiledisconnect(e)
     updateProgress();
     this.updateHeader();
 
-    var tab = getTabForObject(this);
+    var msg, tab = getTabForObject(this);
     if (tab)
         tab.setAttribute("label", this.viewName + " (DONE)");
 
-    this.display(getMsg(MSG_DCCFILE_CLOSED, this._getParams()), "DCC-FILE");
+    if (this.state.dir == DCC_DIR_GETTING)
+    {
+        msg = getMsg(MSG_DCCFILE_CLOSED_SAVED,
+                     this._getParams().concat(this.localPath));
+    }
+    else
+    {
+        msg = getMsg(MSG_DCCFILE_CLOSED_SENT, this._getParams());
+    }
+    this.display(msg, "DCC-FILE");
 }
 
+var CopyPasteHandler = new Object();
+
+CopyPasteHandler.onPasteOrDrop =
+function phand_onpaste(e, data)
+{
+    // XXXbug 329487: The effect of onPasteOrDrop's return value is actually the
+    //                exact opposite of the definition in the IDL.
+
+    // Don't mess with the multiline box at all.
+    if (client.prefs["multiline"])
+        return true;
+
+    var str = new Object();
+    var strlen = new Object();
+    data.getTransferData("text/unicode", str, strlen);
+    str.value.QueryInterface(Components.interfaces.nsISupportsString);
+    str.value.data = str.value.data.replace(/(^\s*[\r\n]+|[\r\n]+\s*$)/g, "");
+
+    if (str.value.data.indexOf("\n") == -1)
+    {
+        // If, after stripping leading/trailing empty lines, the string is a
+        // single line, put it back in the transferable and return.
+        data.setTransferData("text/unicode", str.value,
+                             str.value.data.length * 2);
+        return true;
+    }
+
+    // If it's a drop, move the text cursor to the mouse position.
+    if (e && ("rangeOffset" in e))
+        client.input.setSelectionRange(e.rangeOffset, e.rangeOffset);
+
+    str = client.input.value.substr(0, client.input.selectionStart) +
+          str.value.data + client.input.value.substr(client.input.selectionEnd);
+    client.prefs["multiline"] = true;
+    client.input.value = str;
+    return false;
+}
+
+CopyPasteHandler.QueryInterface =
+function phand_qi(iid)
+{
+    if (iid.equals(Components.interfaces.nsISupports) ||
+        iid.equals(Components.interfaces.nsIClipboardDragDropHooks))
+        return this;
+
+    throw Components.results.NS_ERROR_NO_INTERFACE;
+}

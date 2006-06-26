@@ -77,6 +77,11 @@ function initPrefs()
         mkdir(logPath);
     client.prefManager.logPath = logPath;
 
+    var downloadsPath = profilePath.clone();
+    downloadsPath.append("downloads");
+    if (!downloadsPath.exists())
+        mkdir(downloadsPath);
+
     var logDefault = client.prefManager.logPath.clone();
     logDefault.append(escapeFileName("client.log"));
 
@@ -111,11 +116,18 @@ function initPrefs()
         }
     }
 
+    // Set a property so network ident prefs get the same group later:
+    client.prefManager.identGroup = ".connect";
+    // Linux and OS X won't let non-root listen on port 113.
+    if ((client.platform == "Linux") || (client.platform == "Mac"))
+        client.prefManager.identGroup = "hidden";
+
     var prefs =
         [
          ["activityFlashDelay", 200,      "global"],
          ["aliases",            [],       "lists.aliases"],
          ["autoAwayCap",        300,      "global"],
+         ["autoAwayPeriod",     2,        "appearance.misc"],
          ["autoRejoin",         false,    ".connect"],
          ["awayNick",           "",       ".ident"],
          ["bugURL",           "https://bugzilla.mozilla.org/show_bug.cgi?id=%s",
@@ -134,6 +146,8 @@ function initPrefs()
          ["dccUserLog",         false,    "global.log"],
          ["dccUserMaxLines",    500,      "global.maxLines"],
          ["dcc.enabled",        true,     "dcc"],
+         ["dcc.autoAccept.delay", 10000,  "hidden"],
+         ["dcc.downloadsFolder", getURLSpecFromFile(downloadsPath.path), "dcc"],
          ["dcc.listenPorts",    [],       "dcc.ports"],
          ["dcc.useServerIP",    true,     "dcc"],
          ["debugMode",          "",       "global"],
@@ -145,6 +159,7 @@ function initPrefs()
          ["hasPrefs",           false,    "hidden"],
          ["font.family",        "default", "appearance.misc"],
          ["font.size",          0,        "appearance.misc"],
+         ["identd.enabled",     false,    client.prefManager.identGroup],
          ["initialURLs",        [],       "startup.initialURLs"],
          ["initialScripts",     [getURLSpecFromFile(scriptPath.path)],
                                           "startup.initialScripts"],
@@ -185,6 +200,7 @@ function initPrefs()
          ["munger.mailto",      true,     "munger"],
          ["munger.quote",       true,     "munger"],
          ["munger.rheet",       true,     "munger"],
+         ["munger.talkback-link", true,   "munger"],
          ["munger.teletype",    true,     "munger"],
          ["munger.underline",   true,     "munger"],
          ["munger.word-hyphenator", true, "munger"],
@@ -248,6 +264,7 @@ function initPrefs()
     var dccUserMaxLines = client.prefs["dccUserMaxLines"];
     CIRCDCCChat.prototype.MAX_MESSAGES  = dccUserMaxLines;
     CIRCDCCFileTransfer.prototype.MAX_MESSAGES = dccUserMaxLines;
+    CIRCDCC.prototype.listenPorts       = client.prefs["dcc.listenPorts"];
     client.MAX_MESSAGES                 = client.prefs["clientMaxLines"];
     client.charset                      = client.prefs["charset"];
 
@@ -325,6 +342,17 @@ function makeLogName(obj, type)
     // Get details for $-replacement variables.
     var info = getObjectDetails(obj);
 
+    // Store the most specific time short code on the object.
+    obj.smallestLogInterval = "";
+    if (file.indexOf("$y") != -1)
+        obj.smallestLogInterval = "y";
+    if (file.indexOf("$m") != -1)
+        obj.smallestLogInterval = "m";
+    if (file.indexOf("$d") != -1)
+        obj.smallestLogInterval = "d";
+    if (file.indexOf("$h") != -1)
+        obj.smallestLogInterval = "h";
+
     // Three longs codes: $(network), $(channel) and $(user).
     // Each is available only if appropriate for the object.
     var longCodes = new Object();
@@ -335,15 +363,13 @@ function makeLogName(obj, type)
     if (info.user)
         longCodes["user"] = info.user.unicodeName;
 
-    // Six short codes: $y, $m, $d, $h, $n, $s.
+    // 4 short codes: $y, $m, $d, $h.
     // These are time codes, each replaced with a fixed-length number.
     var d = new Date();
     var shortCodes = { y: formatTimeNumber(d.getFullYear(), 4),
                        m: formatTimeNumber(d.getMonth() + 1, 2),
                        d: formatTimeNumber(d.getDate(), 2),
-                       h: formatTimeNumber(d.getHours(), 2),
-                       n: formatTimeNumber(d.getMinutes(), 2),
-                       s: formatTimeNumber(d.getSeconds(), 2)
+                       h: formatTimeNumber(d.getHours(), 2)
                      };
 
     // Replace all $-variables in one go.
@@ -390,6 +416,7 @@ function getNetworkPrefManager(network)
 
     var prefs =
         [
+         ["autoAwayPeriod",   defer, "appearance.misc"],
          ["autoRejoin",       defer, ".connect"],
          ["away",             "",    "hidden"],
          ["awayNick",         defer, ".ident"],
@@ -400,6 +427,8 @@ function getNetworkPrefManager(network)
          ["conference.limit", defer, "appearance.misc"],
          ["connectTries",     defer, ".connect"],
          ["dcc.useServerIP",  defer, "dcc"],
+         ["dcc.downloadsFolder", defer, "dcc"],
+         ["dcc.autoAccept.list", [], "dcc.autoAccept"],
          ["defaultQuitMsg",   defer, ".connect"],
          ["desc",             defer, ".ident"],
          ["displayHeader",    client.prefs["networkHeader"],
@@ -407,6 +436,7 @@ function getNetworkPrefManager(network)
          ["font.family",      defer, "appearance.misc"],
          ["font.size",        defer, "appearance.misc"],
          ["hasPrefs",         false, "hidden"],
+         ["identd.enabled",   defer, client.prefManager.identGroup],
          ["ignoreList",       [],    "hidden"],
          ["log",              client.prefs["networkLog"], ".log"],
          ["logFileName",      makeLogNameNetwork,         ".log"],
@@ -641,6 +671,10 @@ function onPrefChanged(prefName, newValue, oldValue)
             CIRCNetwork.prototype.MAX_CONNECT_ATTEMPTS = newValue;
             break;
 
+        case "dcc.listenPorts":
+            CIRCDCC.prototype.listenPorts = newValue;
+            break;
+
         case "dccUserMaxLines":
             CIRCDCCFileTransfer.prototype.MAX_MESSAGES  = newValue;
             CIRCDCCChat.prototype.MAX_MESSAGES  = newValue;
@@ -738,6 +772,14 @@ function onPrefChanged(prefName, newValue, oldValue)
         case "aliases":
             initAliases();
             break;
+
+        default:
+            // Make munger prefs apply without a restart
+            if ((m = prefName.match(/^munger\.(\S+)$/))
+                && (m[1] in client.munger.entries))
+            {
+                client.munger.entries[m[1]].enabled = newValue;
+            }
     }
 }
 

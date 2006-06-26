@@ -39,11 +39,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const __cz_version   = "0.9.70";
+const __cz_version   = "0.9.74";
 const __cz_condition = "green";
 const __cz_suffix    = "";
 const __cz_guid      = "59c81df5-4b7a-477b-912d-4e0fdf64e5f2";
-const __cz_locale    = "0.9.70.0";
+const __cz_locale    = "0.9.74";
 
 var warn;
 var ASSERT;
@@ -85,7 +85,9 @@ client.MAX_MSG_PER_ROW = 3; /* default number of messages to collapse into a
 client.INITIAL_COLSPAN = 5; /* MAX_MSG_PER_ROW cannot grow to greater than
                              * one half INITIAL_COLSPAN + 1. */
 client.NOTIFY_TIMEOUT = 5 * 60 * 1000; /* update notify list every 5 minutes */
-client.AWAY_TIMEOUT = 2 * 60 * 1000; /* update away status every 2 mins */
+
+// Check every minute which networks have away statuses that need an update.
+client.AWAY_TIMEOUT = 60 * 1000;
 
 client.SLOPPY_NETWORKS = true; /* true if msgs from a network can be displayed
                                 * on the current object if it is related to
@@ -161,7 +163,7 @@ function init()
     initApplicationCompatibility();
     initMessages();
     if (client.host == "")
-        showErrorDlg(getMsg(MSG_ERR_UNKNOWN_HOST, getBrowserURL()));
+        showErrorDlg(getMsg(MSG_ERR_UNKNOWN_HOST, client.unknownUID));
 
     initRDF();
     initCommands();
@@ -175,9 +177,14 @@ function init()
     // Create DCC handler.
     client.dcc = new CIRCDCC(client);
 
+    client.ident = new IdentServer(client);
+
     // start logging.  nothing should call display() before this point.
     if (client.prefs["log"])
         client.openLogFile(client);
+    // kick-start a log-check interval to make sure we change logfiles in time:
+    // It will fire 2 seconds past the next full hour.
+    setTimeout("checkLogFiles()", 3602000 - (Date.now() % 3600000));
 
     // Make sure the userlist is on the correct side.
     updateUserlistSide(client.prefs["userlistLeft"]);
@@ -223,7 +230,7 @@ function initStatic()
     }
     catch (ex)
     {
-        dd("IO service failed to initalize: " + ex);
+        dd("IO service failed to initialize: " + ex);
     }
 
     try
@@ -236,7 +243,7 @@ function initStatic()
     }
     catch (ex)
     {
-        dd("Sound failed to initalize: " + ex);
+        dd("Sound failed to initialize: " + ex);
     }
 
     try
@@ -248,7 +255,7 @@ function initStatic()
     }
     catch (ex)
     {
-        dd("Global History failed to initalize: " + ex);
+        dd("Global History failed to initialize: " + ex);
     }
 
     try
@@ -272,7 +279,7 @@ function initStatic()
     }
     catch (ex)
     {
-        dd("Locale-correct date formatting failed to initalize: " + ex);
+        dd("Locale-correct date formatting failed to initialize: " + ex);
     }
 
     multilineInputMode(client.prefs["multiline"]);
@@ -352,6 +359,7 @@ function initStatic()
 
     client.logFile = null;
     setInterval("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
+    // Call every minute, will check only the networks necessary.
     setInterval("onWhoTimeout()", client.AWAY_TIMEOUT);
 
     client.awayMsgs = [{ message: MSG_AWAY_DEFAULT }];
@@ -421,7 +429,12 @@ function initApplicationCompatibility()
                 client.host = "Mozilla";
                 client.hostCompat.typeChromeBrowser = true;
                 break;
+            case "{a463f10c-3994-11da-9945-000d60ca027b}": // Flock
+                client.host = "Flock";
+                client.hostCompat.typeChromeBrowser = true;
+                break;
             default:
+                client.unknownUID = app.ID;
                 client.host = ""; // Unknown host, show an error later.
         }
     }
@@ -429,11 +442,18 @@ function initApplicationCompatibility()
     {
         var url = getBrowserURL();
         if (url == "chrome://navigator/content/navigator.xul")
+        {
             client.host = "Mozilla";
+        }
         else if (url == "chrome://browser/content/browser.xul")
+        {
             client.host = "Firefox";
+        }
         else
+        {
             client.host = ""; // We don't know this host. Show an error later.
+            client.unknownUID = url;
+        }
     }
 
     client.platform = "Unknown";
@@ -459,25 +479,6 @@ function initApplicationCompatibility()
         client.lineEnd = "\n";
 }
 
-function initNetworks()
-{
-    client.addNetwork("moznet",
-                      [{name: "irc.mozilla.org", port:6667},
-                       {name: "irc.mozilla.org", port:6697, isSecure:true}]);
-    client.addNetwork("hybridnet", [{name: "irc.ssc.net", port: 6667}]);
-    client.addNetwork("slashnet", [{name: "irc.slashnet.org", port:6667}]);
-    client.addNetwork("dalnet", [{name: "irc.dal.net", port:6667}]);
-    client.addNetwork("undernet", [{name: "irc.undernet.org", port:6667}]);
-    client.addNetwork("webbnet", [{name: "irc.webbnet.info", port:6667}]);
-    client.addNetwork("quakenet", [{name: "irc.quakenet.org", port:6667}]);
-    client.addNetwork("freenode", [{name: "irc.freenode.net", port:6667}]);
-    client.addNetwork("serenia",
-                      [{name: "chat.serenia.net", port:9999, isSecure:true}]);
-    client.addNetwork("efnet",
-                      [{name: "irc.prison.net", port: 6667},
-                       {name: "irc.magic.ca", port: 6667}]);
-}
-
 function initIcons()
 {
     // Make sure we got the ChatZilla icon(s) in place first.
@@ -489,7 +490,7 @@ function initIcons()
      * In XULRunner, things are more fun, as we're not an extension.
      */
     var sourceDir;
-    if (client.host == "Firefox")
+    if ((client.host == "Firefox") || (client.host == "Flock"))
     {
         sourceDir = getSpecialDirectory("ProfD");
         sourceDir.append("extensions");
@@ -1023,6 +1024,18 @@ function insertChannelLink (matchText, containerTag, eventData)
     anchor.setAttribute ("class", "chatzilla-link");
     insertHyphenatedWord (matchText, anchor);
     containerTag.appendChild (anchor);
+}
+
+function insertTalkbackLink(matchText, containerTag, eventData)
+{
+    var anchor = document.createElementNS("http://www.w3.org/1999/xhtml",
+                                          "html:a");
+
+    anchor.setAttribute("href", "http://talkback-public.mozilla.org/" +
+                        "search/start.jsp?search=2&type=iid&id=" + matchText);
+    anchor.setAttribute("class", "chatzilla-link");
+    insertHyphenatedWord(matchText, anchor);
+    containerTag.appendChild(anchor);
 }
 
 function insertBugzillaLink (matchText, containerTag, eventData)
@@ -1926,7 +1939,8 @@ function getObjectDetails (obj, rv)
             //rv.viewType = MSG_USER;
             rv.file = obj;
             rv.user = obj.user;
-            rv.fileName = obj.unicodeName;
+            rv.userName = obj.unicodeName;
+            rv.fileName = obj.filename;
             break;
 
         default:
@@ -1972,7 +1986,7 @@ function addDynamicRule (rule)
 function getCommandEnabled(command)
 {
     try {
-        var dispatcher = top.document.commandDispatcher;
+        var dispatcher = document.commandDispatcher;
         var controller = dispatcher.getControllerForCommand(command);
 
         return controller.isCommandEnabled(command);
@@ -1986,10 +2000,32 @@ function getCommandEnabled(command)
 function doCommand(command)
 {
     try {
-        var dispatcher = top.document.commandDispatcher;
+        var dispatcher = document.commandDispatcher;
         var controller = dispatcher.getControllerForCommand(command);
         if (controller && controller.isCommandEnabled(command))
             controller.doCommand(command);
+    }
+    catch (e)
+    {
+    }
+}
+
+function doCommandWithParams(command, params)
+{
+    try {
+        var dispatcher = document.commandDispatcher;
+        var controller = dispatcher.getControllerForCommand(command);
+        controller.QueryInterface(Components.interfaces.nsICommandController);
+
+        if (!controller || !controller.isCommandEnabled(command))
+            return;
+
+        var cmdparams = newObject("@mozilla.org/embedcomp/command-params;1",
+                                  "nsICommandParams");
+        for (var i in params)
+            cmdparams.setISupportsValue(i, params[i]);
+
+        controller.doCommandWithParams(command, cmdparams);
     }
     catch (e)
     {
@@ -2434,10 +2470,11 @@ function updateTitle (obj)
         (obj && obj != client.currentObject))
         return;
 
-    var tstring;
+    var tstring = MSG_TITLE_UNKNOWN;
     var o = getObjectDetails(client.currentObject);
     var net = o.network ? o.network.unicodeName : "";
     var nick = "";
+    client.statusBar["server-nick"].disabled = false;
 
     switch (client.currentObject.TYPE)
     {
@@ -2466,7 +2503,11 @@ function updateTitle (obj)
                 if (o.parent.me.canonicalName in client.currentObject.users)
                 {
                     var cuser = client.currentObject.users[o.parent.me.canonicalName];
-                    if (cuser.isOp)
+                    if (cuser.isFounder)
+                        nick = "~" + nick;
+                    else if (cuser.isAdmin)
+                        nick = "&" + nick;
+                    else if (cuser.isOp)
                         nick = "@" + nick;
                     else if (cuser.isHalfOp)
                         nick = "%" + nick;
@@ -2503,9 +2544,22 @@ function updateTitle (obj)
 
         case "IRCClient":
             nick = client.prefs["nickname"];
+            break;
 
-        default:
-            tstring = MSG_TITLE_UNKNOWN;
+        case "IRCDCCChat":
+            client.statusBar["server-nick"].disabled = true;
+            nick = o.chat.me.unicodeName;
+            tstring = getMsg(MSG_TITLE_DCCCHAT, o.userName);
+            break;
+
+        case "IRCDCCFileTransfer":
+            client.statusBar["server-nick"].disabled = true;
+            nick = o.file.me.unicodeName;
+            var data = [o.file.progress, o.file.filename, o.userName];
+            if (o.file.state.dir == 1)
+                tstring = getMsg(MSG_TITLE_DCCFILE_SEND, data);
+            else
+                tstring = getMsg(MSG_TITLE_DCCFILE_GET, data);
             break;
     }
 
@@ -3338,7 +3392,7 @@ function userlistdnd_dstart(event, transferData, dragAction)
     var tree = document.getElementById('user-list');
     tree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, col, cell);
     // Check whether we're actually on a normal row and cell
-    if (!cell.value || (row.value == -1)) 
+    if (!cell.value || (row.value == -1))
         return;
     var user = tree.contentView.getItemAtIndex(row.value).firstChild.firstChild;
     var nickname = user.getAttribute("unicodeName");
@@ -3388,7 +3442,17 @@ client.addNetwork =
 function cli_addnet(name, serverList, temporary)
 {
     client.networks[name] =
-        new CIRCNetwork (name, serverList, client.eventPump, temporary);
+        new CIRCNetwork(name, serverList, client.eventPump, temporary);
+}
+
+client.removeNetwork =
+function cli_removenet(name)
+{
+    // Allow network a chance to clean up any mess.
+    if (typeof client.networks[name].destroy == "function")
+        client.networks[name].destroy();
+
+    delete client.networks[name];
 }
 
 client.connectToNetwork =
@@ -3924,6 +3988,19 @@ function __display(message, msgtype, sourceObj, destObj)
     if (fromUser && msgtype.match(/^(PRIVMSG|ACTION|NOTICE)$/))
     {
         var nick = sourceObj.unicodeName;
+        var decorSt = "";
+        var decorEn = "";
+
+        // Set default decorations.
+        if (msgtype == "ACTION")
+        {
+            decorSt = "* ";
+        }
+        else
+        {
+            decorSt = "<";
+            decorEn = ">";
+        }
 
         var nickURL;
         if ((sourceObj != me) && ("getURL" in sourceObj))
@@ -3939,18 +4016,12 @@ function __display(message, msgtype, sourceObj, destObj)
                 getAttention = true;
                 this.defaultCompletion = "/msg " + nick + " ";
 
-                if (msgtype == "ACTION")
+                // If this is a private message, and it's not in a query view,
+                // use *nick* instead of <nick>.
+                if ((msgtype != "ACTION") && (this.TYPE != "IRCUser"))
                 {
-                    logString += "* " + nick + " ";
-                }
-                else
-                {
-                    // If this private message is not in a query view, use
-                    // *nick* instead of <nick>.
-                    if (this.TYPE == "IRCUser")
-                        logString += "<" + nick + "> ";
-                    else
-                        logString += "*" + nick + "* ";
+                    decorSt = "*";
+                    decorEn = "*";
                 }
             }
             else
@@ -3966,41 +4037,20 @@ function __display(message, msgtype, sourceObj, destObj)
                             client.prefs["nickCompleteStr"] + " ";
                     }
                 }
-                if (msgtype == "ACTION")
-                    logString += "* " + nick + " ";
-                else
-                    logString += "<" + nick + "> ";
             }
         }
         else
         {
-            // Messages from us to somewhere...
-
-            if (toUser)
+            // Messages from us, on a channel or network view, to a user
+            if (toUser && (this.TYPE != "IRCUser"))
             {
-                // From us to a user.
-
-                if (this.TYPE == "IRCUser")
-                {
-                    if (msgtype == "ACTION")
-                        logString += "* " + nick + " ";
-                    else
-                        logString += "<" + nick + "> ";
-                }
-                else
-                {
-                    nick = destObj.unicodeName;
-                    logString += ">" + nick + "< ";
-                }
-            }
-            else
-            {
-                if (msgtype == "ACTION")
-                    logString += "*" + nick + " ";
-                else
-                    logString += "<" + nick + "> ";
+                nick = destObj.unicodeName;
+                decorSt = ">";
+                decorEn = "<";
             }
         }
+        // Log the nickname in the same format as we'll let the user copy.
+        logString += decorSt + nick + decorEn + " ";
 
         // Mark makes alternate "talkers" show up in different shades.
         //if (!("mark" in this))
@@ -4020,6 +4070,8 @@ function __display(message, msgtype, sourceObj, destObj)
         if (nick && (nick.length > client.MAX_NICK_DISPLAY))
             blockLevel = true;
 
+        if (decorSt)
+            msgRowSource.appendChild(newInlineText(decorSt, "chatzilla-decor"));
         if (nickURL)
         {
             var nick_anchor =
@@ -4034,6 +4086,8 @@ function __display(message, msgtype, sourceObj, destObj)
         {
             msgRowSource.appendChild(newInlineText(nick));
         }
+        if (decorEn)
+            msgRowSource.appendChild(newInlineText(decorEn, "chatzilla-decor"));
         canMergeData = this.prefs["collapseMsgs"];
     }
     else
@@ -4403,11 +4457,11 @@ function cli_quit (reason)
 }
 
 client.wantToQuit =
-function cli_wantToQuit(reason)
+function cli_wantToQuit(reason, deliberate)
 {
-    
+
     var close = true;
-    if (client.prefs["warnOnClose"])
+    if (client.prefs["warnOnClose"] && !deliberate)
     {
         const buttons = ["!yes", "!no"];
         var checkState = { value: true };
@@ -4453,6 +4507,33 @@ function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
 client.openLogFile =
 function cli_startlog (view)
 {
+    function getNextLogFileDate()
+    {
+        var d = new Date();
+        d.setMilliseconds(0);
+        d.setSeconds(0);
+        d.setMinutes(0);
+        switch (view.smallestLogInterval)
+        {
+            case "h":
+                return d.setHours(d.getHours() + 1);
+            case "d":
+                d.setHours(0);
+                return d.setDate(d.getDate() + 1);
+            case "m":
+                d.setHours(0);
+                d.setDate(1);
+                return d.setMonth(d.getMonth() + 1);
+            case "y":
+                d.setHours(0);
+                d.setDate(1);
+                d.setMonth(0);
+                return d.setFullYear(d.getFullYear() + 1);
+        }
+        //XXXhack: This should work...
+        return Infinity;
+    };
+
     const NORMAL_FILE_TYPE = Components.interfaces.nsIFile.NORMAL_FILE_TYPE;
 
     try
@@ -4464,6 +4545,8 @@ function cli_startlog (view)
             file.localFile.create(NORMAL_FILE_TYPE, 0666 & ~futils.umask);
         }
         view.logFile = fopen(file.localFile, ">>");
+        // If we're here, it's safe to say when we should re-open:
+        view.nextLogFileDate = getNextLogFileDate();
     }
     catch (ex)
     {
@@ -4473,19 +4556,79 @@ function cli_startlog (view)
         return;
     }
 
-    view.displayHere(getMsg(MSG_LOGFILE_OPENED, getLogPath(view)));
+    if (!("logFileWrapping" in view) || !view.logFileWrapping)
+        view.displayHere(getMsg(MSG_LOGFILE_OPENED, getLogPath(view)));
+    view.logFileWrapping = false;
 }
 
 client.closeLogFile =
-function cli_stoplog (view)
+function cli_stoplog(view, wrapping)
 {
-    view.displayHere(getMsg(MSG_LOGFILE_CLOSING, getLogPath(view)));
+    if ("frame" in view && !wrapping)
+        view.displayHere(getMsg(MSG_LOGFILE_CLOSING, getLogPath(view)));
+
+    view.logFileWrapping = Boolean(wrapping);
 
     if (view.logFile)
     {
         view.logFile.close();
         view.logFile = null;
     }
+}
+
+function checkLogFiles()
+{
+    // For every view that has a logfile, check if we need a different file
+    // based on the current date and the logfile preference. We close the
+    // current logfile, and display will open the new one based on the pref
+    // when it's needed.
+
+    var d = new Date();
+    for (var n in client.networks)
+    {
+        var net = client.networks[n];
+        if (net.logFile && (d > net.nextLogFileDate))
+            client.closeLogFile(net, true);
+        if (("primServ" in net) && net.primServ && ("channels" in net.primServ))
+        {
+            for (var c in net.primServ.channels)
+            {
+                var chan = net.primServ.channels[c];
+                if (chan.logFile && (d > chan.nextLogFileDate))
+                    client.closeLogFile(chan, true);
+            }
+        }
+        if ("users" in net)
+        {
+            for (var u in net.users)
+            {
+                var user = net.users[u];
+                if (user.logFile && (d > user.nextLogFileDate))
+                    client.closeLogFile(user, true);
+            }
+        }
+    }
+
+    for (var dc in client.dcc.chats)
+    {
+        var dccChat = client.dcc.chats[dc];
+        if (dccChat.logFile && (d > dccChat.nextLogFileDate))
+            client.closeLogFile(dccChat, true);
+    }
+    for (var df in client.dcc.files)
+    {
+        var dccFile = client.dcc.files[df];
+        if (dccFile.logFile && (d > dccFile.nextLogFileDate))
+            client.closeLogFile(dccFile, true);
+    }
+
+    // Don't forget about the client tab:
+    if (client.logFile && (d > client.nextLogFileDate))
+        client.closeLogFile(client, true);
+
+    // We use the same line again to make sure we keep a constant offset
+    // from the full hour, in case the timers go crazy at some point.
+    setTimeout("checkLogFiles()", 3602000 - (Date.now() % 3600000));
 }
 
 CIRCChannel.prototype.getLCFunction =
@@ -4624,6 +4767,8 @@ function usr_graphres()
         rdf.Assert (this.rdfRes, rdf.resUser, rdf.litUnk);
         rdf.Assert (this.rdfRes, rdf.resHost, rdf.litUnk);
         rdf.Assert (this.rdfRes, rdf.resSortName, rdf.litUnk);
+        rdf.Assert (this.rdfRes, rdf.resFounder, rdf.litUnk);
+        rdf.Assert (this.rdfRes, rdf.resAdmin, rdf.litUnk);
         rdf.Assert (this.rdfRes, rdf.resOp, rdf.litUnk);
         rdf.Assert (this.rdfRes, rdf.resHalfOp, rdf.litUnk);
         rdf.Assert (this.rdfRes, rdf.resVoice, rdf.litUnk);
@@ -4664,7 +4809,7 @@ function usr_updres()
     // Check for the highest mode the user has.
     const userModes = this.parent.parent.userModes;
     var modeLevel = 0;
-    var mode = "";
+    var mode;
     for (var i = 0; i < this.modes.length; i++)
     {
         for (var j = 0; j < userModes.length; j++)
@@ -4674,7 +4819,7 @@ function usr_updres()
                 if (userModes.length - j > modeLevel)
                 {
                     modeLevel = userModes.length - j;
-                    mode = userModes[j].symbol;
+                    mode = userModes[j];
                 }
                 break;
             }
@@ -4684,17 +4829,17 @@ function usr_updres()
     // Counts numerically down from 9.
     var sortname = (9 - modeLevel) + "-" + this.unicodeName;
 
-    // We want to show mode symbols, but only those we don't 'style'.
-    if (mode && !mode.match(/^[@%+]$/))
-    {
-        rdf.Change(this.rdfRes, rdf.resNick,
-                   rdf.GetLiteral(mode + " " + this.unicodeName));
-    }
-    else
-    {
-        rdf.Change (this.rdfRes, rdf.resNick, rdf.GetLiteral(this.unicodeName));
-    }
+    // We want to show mode symbols, but only for modes we don't 'style'.
+    var displayname = this.unicodeName;
+    if (mode && !mode.mode.match(/^[qaohv]$/))
+        displayname = mode.symbol + " " + displayname;
+
+    rdf.Change(this.rdfRes, rdf.resNick, rdf.GetLiteral(displayname));
     rdf.Change(this.rdfRes, rdf.resSortName, rdf.GetLiteral(sortname));
+    rdf.Change(this.rdfRes, rdf.resFounder,
+               this.isFounder ? rdf.litTrue : rdf.litFalse);
+    rdf.Change(this.rdfRes, rdf.resAdmin,
+               this.isAdmin ? rdf.litTrue : rdf.litFalse);
     rdf.Change(this.rdfRes, rdf.resOp,
                this.isOp ? rdf.litTrue : rdf.litFalse);
     rdf.Change(this.rdfRes, rdf.resHalfOp,

@@ -120,6 +120,7 @@ jsenv.HAS_DOCUMENT = (typeof document == "object");
 jsenv.HAS_NSPR_EVENTQ = jsenv.HAS_DOCUMENT;
 jsenv.HAS_STREAM_PROVIDER = ("nsIStreamProvider" in Components.interfaces);
 jsenv.HAS_SERVER_SOCKETS = ("nsIServerSocket" in Components.interfaces);
+jsenv.HAS_THREAD_MANAGER = ("nsIThreadManager" in Components.interfaces);
 
 function dumpObject (o, pfx, sep)
 {
@@ -1133,6 +1134,59 @@ function getHostmaskParts(hostmask)
     // And re-construct the 'parsed' hostmask.
     rv.mask = rv.nick + "!" + rv.user + "@" + rv.host;
     return rv;
+}
+
+function makeMaskRegExp(text)
+{
+    function escapeChars(c)
+    {
+        if (c == "*")
+            return ".*";
+        if (c == "?")
+            return ".";
+        return "\\" + c;
+    }
+    // Anything that's not alpha-numeric gets escaped.
+    // "*" and "?" are 'escaped' to ".*" and ".".
+    // Optimisation; * translates as 'match all'.
+    return new RegExp("^" + text.replace(/[^\w\d]/g, escapeChars) + "$", "i");
+}
+
+function hostmaskMatches(user, mask)
+{
+    // Need to match .nick, .user, and .host.
+    if (!("nickRE" in mask))
+    {
+        // We cache all the regexp objects, but use null if the term is
+        // just "*", so we can skip having the object *and* the .match
+        // later on.
+        if (mask.nick == "*")
+            mask.nickRE = null;
+        else
+            mask.nickRE = makeMaskRegExp(mask.nick);
+
+        if (mask.user == "*")
+            mask.userRE = null;
+        else
+            mask.userRE = makeMaskRegExp(mask.user);
+
+        if (mask.host == "*")
+            mask.hostRE = null;
+        else
+            mask.hostRE = makeMaskRegExp(mask.host);
+    }
+
+    var lowerNick;
+    if (user.TYPE == "IRCChanUser")
+        lowerNick = user.parent.parent.toLowerCase(user.unicodeName);
+    else
+        lowerNick = user.parent.toLowerCase(user.unicodeName);
+
+    if ((!mask.nickRE || lowerNick.match(mask.nickRE)) &&
+        (!mask.userRE || user.name.match(mask.userRE)) &&
+        (!mask.hostRE || user.host.match(mask.hostRE)))
+        return true;
+    return false;
 }
 
 function isinstance(inst, base)

@@ -54,7 +54,7 @@ function initCommands()
          ["attach",            cmdAttach,                          CMD_CONSOLE],
          ["away",              cmdAway,                            CMD_CONSOLE],
          ["back",              cmdAway,                            CMD_CONSOLE],
-         ["ban",               cmdBan,             CMD_NEED_CHAN | CMD_CONSOLE],
+         ["ban",               cmdBanOrExcept,     CMD_NEED_CHAN | CMD_CONSOLE],
          ["cancel",            cmdCancel,           CMD_NEED_NET | CMD_CONSOLE],
          ["charset",           cmdCharset,                         CMD_CONSOLE],
          ["channel-motif",     cmdMotif,           CMD_NEED_CHAN | CMD_CONSOLE],
@@ -76,6 +76,11 @@ function initCommands()
          ["custom-away",       cmdAway,                                      0],
          ["op",                cmdChanUserMode,    CMD_NEED_CHAN | CMD_CONSOLE],
          ["dcc-accept",        cmdDCCAccept,                       CMD_CONSOLE],
+         ["dcc-accept-list",  cmdDCCAutoAcceptList, CMD_NEED_NET | CMD_CONSOLE],
+         ["dcc-accept-list-add", cmdDCCAutoAcceptAdd,
+                                                    CMD_NEED_NET | CMD_CONSOLE],
+         ["dcc-accept-list-remove", cmdDCCAutoAcceptDel,
+                                                    CMD_NEED_NET | CMD_CONSOLE],
          ["dcc-chat",          cmdDCCChat,          CMD_NEED_SRV | CMD_CONSOLE],
          ["dcc-close",         cmdDCCClose,                        CMD_CONSOLE],
          ["dcc-decline",       cmdDCCDecline,                      CMD_CONSOLE],
@@ -100,6 +105,7 @@ function initCommands()
          ["echo",              cmdEcho,                            CMD_CONSOLE],
          ["enable-plugin",     cmdAblePlugin,                      CMD_CONSOLE],
          ["eval",              cmdEval,                            CMD_CONSOLE],
+         ["except",            cmdBanOrExcept,     CMD_NEED_CHAN | CMD_CONSOLE],
          ["find",              cmdFind,                                      0],
          ["find-again",        cmdFindAgain,                                 0],
          ["focus-input",       cmdFocusInput,                                0],
@@ -183,7 +189,8 @@ function initCommands()
          ["toggle-pref",       cmdTogglePref,                                0],
          ["topic",             cmdTopic,           CMD_NEED_CHAN | CMD_CONSOLE],
          ["unignore",          cmdIgnore,           CMD_NEED_NET | CMD_CONSOLE],
-         ["unban",             cmdBan,             CMD_NEED_CHAN | CMD_CONSOLE],
+         ["unban",             cmdBanOrExcept,     CMD_NEED_CHAN | CMD_CONSOLE],
+         ["unexcept",          cmdBanOrExcept,     CMD_NEED_CHAN | CMD_CONSOLE],
          ["unstalk",           cmdUnstalk,                         CMD_CONSOLE],
          ["urls",              cmdURLs,                            CMD_CONSOLE],
          ["user",              cmdUser,                            CMD_CONSOLE],
@@ -204,6 +211,9 @@ function initCommands()
          ["j",                "join",                              CMD_CONSOLE],
          ["part",             "leave",                             CMD_CONSOLE],
          ["raw",              "quote",                             CMD_CONSOLE],
+         // Shortcuts to useful URLs:
+         ["faq",              "goto-url http://chatzilla.hacksrus.com/faq/", 0],
+         ["homepage",         "goto-url http://chatzilla.hacksrus.com/",     0],
          // Used to display a nickname in the menu only.
          ["label-user",       "echo",                                        0],
          // These are all the font family/size menu commands...
@@ -637,8 +647,10 @@ function dispatchCommand (command, e, flags)
         }
         else
         {
+            if ("beforeHooks" in client.commandManager)
+                callHooks(client.commandManager, true);
             if ("beforeHooks" in e.command)
-                callHooks (e.command, true);
+                callHooks(e.command, true);
 
             if ("dbgDispatch" in client && client.dbgDispatch)
             {
@@ -667,8 +679,10 @@ function dispatchCommand (command, e, flags)
     else if (typeof e.command.func == "string")
     {
         /* dispatch an alias (semicolon delimited list of subcommands) */
+        if ("beforeHooks" in client.commandManager)
+            callHooks(client.commandManager, true);
         if ("beforeHooks" in e.command)
-            callHooks (e.command, true);
+            callHooks(e.command, true);
 
         var commandList;
         //Don't make use of e.inputData if we have multiple commands in 1 alias
@@ -712,7 +726,9 @@ function dispatchCommand (command, e, flags)
     }
 
     if ("afterHooks" in e.command)
-        callHooks (e.command, false);
+        callHooks(e.command, false);
+    if ("afterHooks" in client.commandManager)
+        callHooks(client.commandManager, false);
 
     return ("returnValue" in e) ? e.returnValue : null;
 }
@@ -822,24 +838,24 @@ function cmdAblePlugin(e)
     }
 }
 
-function cmdBan(e)
+function cmdBanOrExcept(e)
 {
     /* If we're unbanning, or banning in odd cases, we may actually be talking
      * about a user who is not in the channel, so we need to check the server
      * for information as well.
      */
-    if (!e.user)
+    if (!e.user && e.nickname)
         e.user = e.channel.getUser(e.nickname);
-    if (!e.user)
+    if (!e.user && e.nickname)
         e.user = e.server.getUser(e.nickname);
 
-    var mask;
+    var mask = "";
     if (e.user)
     {
         // We have a real user object, so get their proper 'ban mask'.
-        mask = e.user.getBanMask();
+        mask = fromUnicode(e.user.getBanMask(), e.server);
     }
-    else
+    else if (e.nickname)
     {
         /* If we have either ! or @ in the nickname assume the user has given
          * us a complete mask and pass it directly, otherwise assume it is
@@ -850,7 +866,22 @@ function cmdBan(e)
             mask = mask + "!*@*";
     }
 
-    var op = (e.command.name == "unban") ? " -b " : " +b ";
+    var op;
+    switch (e.command.name)
+    {
+        case "ban":
+            op = " +b ";
+            break;
+        case "unban":
+            op = " -b ";
+            break;
+        case "except":
+            op = " +e ";
+            break;
+        case "unexcept":
+            op = " -e ";
+            break;
+    }
     e.server.sendData("MODE " + e.channel.encodedName + op + mask + "\n");
 }
 
@@ -1449,7 +1480,16 @@ function cmdSSLServer(e)
 
 function cmdQuit(e)
 {
-    client.wantToQuit(e.reason);
+    // if we're not connected to anything, just close the window
+    if (!("getConnectionCount" in client) || (client.getConnectionCount() == 0))
+    {
+         client.userClose = true;
+         window.close();
+         return;
+    }
+
+    // Otherwise, try to close gracefully:
+    client.wantToQuit(e.reason, true);
 }
 
 function cmdDisconnect(e)
@@ -2094,7 +2134,7 @@ function cmdGotoURL(e)
         return;
     }
 
-    if (e.command.name == "goto-url-external")
+    if ((e.command.name == "goto-url-external") || (client.host == "XULrunner"))
     {
         const ioSvc = getService(IO_SVC, "nsIIOService");
         const extProtoSvc = getService(EXT_PROTO_SVC,
@@ -2420,6 +2460,7 @@ function cmdLoad(e)
             if ("onPrefChanged" in plugin)
                 prefManager.addObserver(plugin);
             client.prefManager.addObserver(prefManager);
+            client.prefManagers.push(prefManager);
         }
         else
         {
@@ -2457,7 +2498,7 @@ function cmdWho(e)
 {
     e.network.pendingWhoReply = true;
     e.server.LIGHTWEIGHT_WHO = false;
-    e.server.who(e.pattern);
+    e.server.who(e.rest);
 }
 
 function cmdWhoIs(e)
@@ -2748,7 +2789,7 @@ function cmdPass(e)
 
 function cmdPing (e)
 {
-    e.network.dispatch("ctcp", { target: e.target, code: "PING" });
+    e.network.dispatch("ctcp", { target: e.nickname, code: "PING" });
 }
 
 function cmdPref (e)
@@ -3276,7 +3317,7 @@ function cmdSave(e)
         dialogTitle = getMsg(MSG_SAVE_DIALOGTITLE, e.sourceObject.viewName);
         rv = pickSaveAs(dialogTitle, TYPELIST, e.sourceObject.viewName +
                         ".html");
-        if (rv.file == null)
+        if (!rv.ok)
             return;
         saveType = rv.picker.filterIndex;
         file = rv.file;
@@ -3746,7 +3787,7 @@ function cmdDCCSend(e)
     if (!e.file)
     {
         var pickerRv = pickOpen(MSG_DCCFILE_SEND);
-        if (pickerRv.reason == PICK_CANCEL)
+        if (!pickerRv.ok)
             return false;
         file = pickerRv.file;
     }
@@ -3896,6 +3937,87 @@ function cmdDCCList(e) {
     return true;
 }
 
+function cmdDCCAutoAcceptList(e)
+{
+    if (!jsenv.HAS_SERVER_SOCKETS)
+        return display(MSG_DCC_NOT_POSSIBLE);
+    if (!client.prefs["dcc.enabled"])
+        return display(MSG_DCC_NOT_ENABLED);
+
+    var list = e.network.prefs["dcc.autoAccept.list"];
+
+    if (list.length == 0)
+        display(MSG_DCCACCEPT_DISABLED);
+    else
+        display(getMsg(MSG_DCCACCEPT_LIST, arraySpeak(list)));
+
+    return true;
+}
+
+function cmdDCCAutoAcceptAdd(e)
+{
+    if (!jsenv.HAS_SERVER_SOCKETS)
+        return display(MSG_DCC_NOT_POSSIBLE);
+    if (!client.prefs["dcc.enabled"])
+        return display(MSG_DCC_NOT_ENABLED);
+
+    var list = e.network.prefs["dcc.autoAccept.list"];
+
+    if (!e.user && e.server)
+        e.user = e.server.getUser(e.nickname);
+
+    var mask = e.user ? "*!" + e.user.name + "@" + e.user.host : e.nickname;
+    var index = arrayIndexOf(list, mask);
+    if (index == -1)
+    {
+        list.push(mask);
+        list.update();
+        display(getMsg(MSG_DCCACCEPT_ADD, mask));
+    }
+    else
+    {
+        display(getMsg(MSG_DCCACCEPT_ADDERR,
+                       e.user ? e.user.unicodeName : e.nickname));
+    }
+    return true;
+}
+
+function cmdDCCAutoAcceptDel(e)
+{
+    if (!jsenv.HAS_SERVER_SOCKETS)
+        return display(MSG_DCC_NOT_POSSIBLE);
+    if (!client.prefs["dcc.enabled"])
+        return display(MSG_DCC_NOT_ENABLED);
+
+    var list = e.network.prefs["dcc.autoAccept.list"];
+
+    if (!e.user && e.server)
+        e.user = e.server.getUser(e.nickname);
+
+    var maskObj, newList = new Array();
+    for (var m = 0; m < list.length; ++m)
+    {
+        maskObj = getHostmaskParts(list[m]);
+        if (e.nickname == list[m] ||
+            (e.user && hostmaskMatches(e.user, maskObj, e.server)))
+        {
+            display(getMsg(MSG_DCCACCEPT_DEL, list[m]));
+        }
+        else
+        {
+            newList.push(list[m]);
+        }
+    }
+
+    if (list.length > newList.length)
+        e.network.prefs["dcc.autoAccept.list"] = newList;
+    else
+        display(getMsg(MSG_DCCACCEPT_DELERR,
+                       e.user ? e.user.unicodeName : e.nickname));
+
+    return true;
+}
+
 function cmdDCCAccept(e)
 {
     if (!jsenv.HAS_SERVER_SOCKETS)
@@ -3906,7 +4028,13 @@ function cmdDCCAccept(e)
     function accept(c)
     {
         if (c.TYPE == "IRCDCCChat")
-            return c.accept();
+        {
+            if (!c.accept())
+                return false;
+
+            display(getMsg(MSG_DCCCHAT_ACCEPTED, c._getParams()), "DCC-CHAT");
+            return true;
+        }
 
         // Accept the request passed in...
         var filename = c.filename;
@@ -3917,16 +4045,13 @@ function cmdDCCAccept(e)
 
         var pickerRv = pickSaveAs(getMsg(MSG_DCCFILE_SAVE_TO, filename),
                                   ["$all", ext], filename);
-        if (pickerRv.reason == PICK_CANCEL)
+        if (!pickerRv.ok)
             return false;
-        c.accept(pickerRv.file);
 
-        if (c.TYPE == "CIRCDCCChat")
-            display(getMsg(MSG_DCCCHAT_ACCEPTED, c._getParams()),
-                    "DCC-CHAT");
-        else
-            display(getMsg(MSG_DCCFILE_ACCEPTED, c._getParams()),
-                    "DCC-FILE");
+        if (!c.accept(pickerRv.file))
+            return false;
+
+        display(getMsg(MSG_DCCFILE_ACCEPTED, c._getParams()), "DCC-FILE");
         return true;
     };
 
@@ -3956,7 +4081,7 @@ function cmdDCCAccept(e)
     if (list.length == 1)
         return accept(list[0]);
 
-    // Oops, couldn't figure the user's requets out, so give them some help.
+    // Oops, couldn't figure the user's request out, so give them some help.
     display(getMsg(MSG_DCC_PENDING_MATCHES, [list.length]));
     display(MSG_DCC_MATCHES_HELP);
     return true;
@@ -3973,7 +4098,7 @@ function cmdDCCDecline(e)
     {
         // Decline the request passed in...
         c.decline();
-        if (c.TYPE == "CIRCDCCChat")
+        if (c.TYPE == "IRCDCCChat")
             display(getMsg(MSG_DCCCHAT_DECLINED, c._getParams()), "DCC-CHAT");
         else
             display(getMsg(MSG_DCCFILE_DECLINED, c._getParams()), "DCC-FILE");

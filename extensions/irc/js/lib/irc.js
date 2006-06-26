@@ -193,6 +193,16 @@ function net_hasSecure()
     return false;
 }
 
+CIRCNetwork.prototype.clearServerList =
+function net_clearserverlist()
+{
+    /* Note: we don't have to worry about being connected, since primServ
+     * keeps the currently connected server alive if we still need it.
+     */
+    this.servers = new Object();
+    this.serverList = new Array();
+}
+
 /** Trigger an onDoConnect event after a delay. */
 CIRCNetwork.prototype.delayedConnect =
 function net_delayedConnect(eventProperties)
@@ -531,9 +541,9 @@ CIRCServer.prototype.canonicalChanModes = {
            getValue: function (modifier) { return (modifier == "+"); }
        },
     k: {
-           name: "key", 
-           getValue: function (modifier, data) 
-                     { 
+           name: "key",
+           getValue: function (modifier, data)
+                     {
                          if (modifier == "+")
                              return data;
                          else
@@ -678,8 +688,8 @@ function serv_connect (password)
         if (jsenv.HAS_NSPR_EVENTQ)
             this.connection.startAsyncRead(this);
         else
-            s.parent.eventPump.addEvent(new CEvent ("server", "poll", s,
-                                                    "onPoll"));
+            this.parent.eventPump.addEvent(new CEvent("server", "poll", this,
+                                                      "onPoll"));
     }
 
     return true;
@@ -958,13 +968,13 @@ function serv_uptimer()
     this.lastPing = this.lastPingSent = new Date();
 }
 
-CIRCServer.prototype.userhost = 
+CIRCServer.prototype.userhost =
 function serv_userhost(target)
 {
     this.sendData("USERHOST " + fromUnicode(target, this) + "\n");
 }
 
-CIRCServer.prototype.userip = 
+CIRCServer.prototype.userip =
 function serv_userip(target)
 {
     this.sendData("USERIP " + fromUnicode(target, this) + "\n");
@@ -1172,7 +1182,7 @@ function serv_ppline(e)
         ev.data = lines[i].replace(/\r/g, "");
         if (ev.data)
         {
-            if (ev.data.match(/^(?::[^ ]+ )?32[123] /i))
+            if (ev.data.match(/^(?::[^ ]+ )?(?:32[123]|352|315) /i))
                 this.parent.eventPump.addBulkEvent(ev);
             else
                 this.parent.eventPump.addEvent(ev);
@@ -1205,53 +1215,6 @@ function serv_ppline(e)
 CIRCServer.prototype.onRawData =
 function serv_onRawData(e)
 {
-    var me = this;
-    function makeMaskRegExp(text)
-    {
-        function escapeChars(c)
-        {
-            if (c == "*")
-                return ".*";
-            if (c == "?")
-                return ".";
-            return "\\" + c;
-        }
-        // Anything that's not alpha-numeric gets escaped.
-        // "*" and "?" are 'escaped' to ".*" and ".".
-        // Optimisation; * translates as 'match all'.
-        return new RegExp("^" + text.replace(/[^\w\d]/g, escapeChars) + "$", "i");
-    };
-    function hostmaskMatches(user, mask)
-    {
-        // Need to match .nick, .user, and .host.
-        if (!("nickRE" in mask))
-        {
-            // We cache all the regexp objects, but use null if the term is
-            // just "*", so we can skip having the object *and* the .match
-            // later on.
-            if (mask.nick == "*")
-                mask.nickRE = null;
-            else
-                mask.nickRE = makeMaskRegExp(mask.nick);
-
-            if (mask.user == "*")
-                mask.userRE = null;
-            else
-                mask.userRE = makeMaskRegExp(mask.user);
-
-            if (mask.host == "*")
-                mask.hostRE = null;
-            else
-                mask.hostRE = makeMaskRegExp(mask.host);
-        }
-        var lowerNick = me.toLowerCase(user.unicodeName);
-        if ((!mask.nickRE || lowerNick.match(mask.nickRE)) &&
-            (!mask.userRE || user.name.match(mask.userRE)) &&
-            (!mask.hostRE || user.host.match(mask.hostRE)))
-            return true;
-        return false;
-    };
-
     var ary;
     var l = e.data;
 
@@ -1400,6 +1363,8 @@ function serv_001 (e)
     this.parent.connectAttempt = 0;
     this.parent.connectCandidate = 0;
     this.parent.state = NET_ONLINE;
+    // nextHost is incremented after picking a server. Push it back here.
+    this.parent.nextHost--;
 
     /* servers won't send a nick change notification if user was forced
      * to change nick while logging in (eg. nick already in use.)  We need
@@ -1863,6 +1828,15 @@ function serv_348(e)
     e.channel = new CIRCChannel(this, null, e.params[2]);
     e.destObject = e.channel;
     e.set = "channel";
+    e.except = e.params[3];
+    e.user = new CIRCUser(this, null, e.params[4]);
+    e.exceptTime = new Date (Number(e.params[5]) * 1000);
+
+    if (typeof e.channel.excepts[e.except] == "undefined")
+    {
+        e.channel.excepts[e.except] = {host: e.except, user: e.user,
+                                       time: e.exceptTime };
+    }
 
     return true;
 }
@@ -2509,7 +2483,7 @@ function serv_cact (e)
 CIRCServer.prototype.onCTCPFinger =
 function serv_cfinger (e)
 {
-    e.user.ctcp("FINGER", this.parent.prefs["desc"], "NOTICE");
+    e.user.ctcp("FINGER", this.parent.INITIAL_DESC, "NOTICE");
     return true;
 }
 
@@ -2670,6 +2644,7 @@ function CIRCChannel(parent, unicodeName, encodedName)
 
     this.users = new Object();
     this.bans = new Object();
+    this.excepts = new Object();
     this.mode = new CIRCChanMode(this);
     this.usersStable = true;
     /* These next two flags represent a subtle difference in state:
@@ -2794,19 +2769,19 @@ function chan_userslen (mode)
 CIRCChannel.prototype.iAmOp =
 function chan_amop()
 {
-    return this.users[this.parent.me.canonicalName].isOp;
+    return this.active && this.users[this.parent.me.canonicalName].isOp;
 }
 
 CIRCChannel.prototype.iAmHalfOp =
 function chan_amhalfop()
 {
-    return this.users[this.parent.me.canonicalName].isHalfOp;
+    return this.active && this.users[this.parent.me.canonicalName].isHalfOp;
 }
 
 CIRCChannel.prototype.iAmVoice =
 function chan_amvoice()
 {
-    return this.parent.users[this.parent.parent.me.canonicalName].isVoice;
+    return this.active && this.users[this.parent.me.canonicalName].isVoice;
 }
 
 CIRCChannel.prototype.setTopic =
@@ -2910,7 +2885,7 @@ function chan_modestr (f)
     /* modeA are 'list' ones, and so should not be shown.
      * modeB are 'param' ones, like +k key, so we wont show them either.
      * modeC are 'on-param' ones, like +l limit, which we will show.
-     * modeD are 'boolean' ones, which we will definately show.
+     * modeD are 'boolean' ones, which we will definitely show.
      */
 
     // Add modeD:
@@ -3127,6 +3102,9 @@ function usr_hostmask (pfx)
 CIRCUser.prototype.getBanMask =
 function usr_banmask()
 {
+    if (!this.host)
+        return this.unicodeName + "!*@*";
+
     var hostmask = this.host;
     if (!/^\d+\.\d+\.\d+\.\d+$/.test(hostmask))
         hostmask = hostmask.replace(/^[^.]+/, "*");
@@ -3224,6 +3202,10 @@ function CIRCChanUser(parent, unicodeName, encodedName, modes)
                 }
             }
         }
+        existingUser.isFounder = (arrayContains(existingUser.modes, "q")) ?
+            true : false;
+        existingUser.isAdmin = (arrayContains(existingUser.modes, "a")) ?
+            true : false;
         existingUser.isOp = (arrayContains(existingUser.modes, "o")) ?
             true : false;
         existingUser.isHalfOp = (arrayContains(existingUser.modes, "h")) ?
@@ -3254,6 +3236,8 @@ function CIRCChanUser(parent, unicodeName, encodedName, modes)
     this.modes = new Array();
     if (typeof modes != "undefined")
         this.modes = modes;
+    this.isFounder = (arrayContains(this.modes, "q")) ? true : false;
+    this.isAdmin = (arrayContains(this.modes, "a")) ? true : false;
     this.isOp = (arrayContains(this.modes, "o")) ? true : false;
     this.isHalfOp = (arrayContains(this.modes, "h")) ? true : false;
     this.isVoice = (arrayContains(this.modes, "v")) ? true : false;
@@ -3323,7 +3307,7 @@ function cusr_setban (f)
         return false;
 
     var modifier = (f) ? " +b " : " -b ";
-    modifier += this.getBanMask() + " ";
+    modifier += fromUnicode(this.getBanMask(), server) + " ";
 
     server.sendData("MODE " + this.parent.encodedName + modifier + "\n");
 
@@ -3339,7 +3323,8 @@ function cusr_kban (reason)
         return false;
 
     reason = (typeof reason != "undefined") ? reason : this.encodedName;
-    var modifier = " -o+b " + this.encodedName + " " + this.getBanMask() + " ";
+    var modifier = " -o+b " + this.encodedName + " " +
+                   fromUnicode(this.getBanMask(), server) + " ";
 
     server.sendData("MODE " + this.parent.encodedName + modifier + "\n" +
                     "KICK " + this.parent.encodedName + " " +
