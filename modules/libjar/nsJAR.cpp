@@ -295,7 +295,7 @@ nsJAR::Extract(const char *zipEntry, nsIFile* outFile)
   else
   {
 #if defined(XP_UNIX)
-    if (item->flags & ZIFLAG_SYMLINK) 
+    if (item->isSymlink) 
     {
       nsCAutoString path;
       rv = outFile->GetNativePath(path);

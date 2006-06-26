@@ -686,7 +686,7 @@ PRInt32 nsZipArchive::ExtractFile(const char* zipEntry, const char* aOutname,
 #if defined(XP_UNIX)
   else
   {
-    if (ZIFLAG_SYMLINK & item->flags)
+    if (item->isSymlink)
     {
       status = ResolveSymlink(aOutname, item);
     }
@@ -837,7 +837,7 @@ PRInt32 nsZipArchive::FindFree(nsZipFind* aFind)
 PRInt32 nsZipArchive::ResolveSymlink(const char *path, nsZipItem *item)
 {
   PRInt32    status = ZIP_OK;
-  if (item->flags & ZIFLAG_SYMLINK)
+  if (item->isSymlink)
   {
     char buf[PATH_MAX+1];
     PRFileDesc * fIn = PR_Open(path, PR_RDONLY, 0000);
@@ -1004,7 +1004,9 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
       break;
     }
 
-    item->offset = xtolong(central->localhdr_offset);
+    item->headerOffset = xtolong(central->localhdr_offset);
+    item->dataOffset = 0;
+    item->hasDataOffset = PR_FALSE;
     item->compression = (PRUint8)xtoint(central->method);
 #if defined(DEBUG)
     /*
@@ -1017,10 +1019,7 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
     item->crc32 = xtolong(central->crc32);
     PRUint32 external_attributes = xtolong(central->external_attributes);
     item->mode = ExtractMode(external_attributes);
-    if (IsSymlink(external_attributes))
-    {
-      item->flags |= ZIFLAG_SYMLINK;
-    }
+    item->isSymlink = IsSymlink(external_attributes);
     item->time = xtoint(central->time);
     item->date = xtoint(central->date);
 
@@ -1163,16 +1162,15 @@ PRInt32  nsZipArchive::SeekToItem(const nsZipItem* aItem, PRFileDesc* aFd)
   PRFileDesc* fd = aFd;
   
   //-- the first time an item is used we need to calculate its offset
-  if (!(aItem->flags & ZIFLAG_DATAOFFSET))
+  if (!aItem->hasDataOffset)
   {
-    //-- aItem->offset contains the header offset, not the data offset.
     //-- read local header to get variable length values and calculate
     //-- the real data offset
     //--
     //-- NOTE: extralen is different in central header and local header
     //--       for archives created using the Unix "zip" utility. To set
     //--       the offset accurately we need the _local_ extralen.
-    if (!ZIP_Seek(fd, aItem->offset, PR_SEEK_SET))
+    if (!ZIP_Seek(fd, aItem->headerOffset, PR_SEEK_SET))
       return ZIP_ERR_CORRUPT;
 
     ZipLocal   Local;
@@ -1183,14 +1181,15 @@ PRInt32  nsZipArchive::SeekToItem(const nsZipItem* aItem, PRFileDesc* aFd)
       return ZIP_ERR_CORRUPT;
     }
 
-    ((nsZipItem*)aItem)->offset += ZIPLOCAL_SIZE +
-                                   xtoint(Local.filename_len) +
-                                   xtoint(Local.extrafield_len);
-    ((nsZipItem*)aItem)->flags |= ZIFLAG_DATAOFFSET;
+    ((nsZipItem*)aItem)->dataOffset += aItem->headerOffset +
+                                       ZIPLOCAL_SIZE +
+                                       xtoint(Local.filename_len) +
+                                       xtoint(Local.extrafield_len);
+    ((nsZipItem*)aItem)->hasDataOffset = PR_TRUE;
   }
 
   //-- move to start of file in archive
-  if (!ZIP_Seek(fd, aItem->offset, PR_SEEK_SET))
+  if (!ZIP_Seek(fd, aItem->dataOffset, PR_SEEK_SET))
     return  ZIP_ERR_CORRUPT;
 
   return ZIP_OK;
@@ -1749,7 +1748,7 @@ nsZipArchive::~nsZipArchive()
 // nsZipItem constructor and destructor
 //------------------------------------------
 
-nsZipItem::nsZipItem() : name(0), offset(0), next(0), flags(0)
+nsZipItem::nsZipItem() : name(0), headerOffset(0), dataOffset(0), next(0), hasDataOffset(0), isSymlink(0)
 {
 }
 

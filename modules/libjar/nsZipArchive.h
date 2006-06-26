@@ -61,9 +61,6 @@
 
 #endif
 
-#define ZIFLAG_SYMLINK      0x01  /* zip item is a symlink */
-#define ZIFLAG_DATAOFFSET   0x02  /* zip item offset points to file data */
-
 #include "zlib.h"
 
 class nsZipFind;
@@ -116,7 +113,8 @@ class nsZipItem
 public:
   char*       name; /* '\0' terminated */
 
-  PRUint32    offset;
+  PRUint32    headerOffset;
+  PRUint32    dataOffset;
   PRUint32    size;             /* size in original file */
   PRUint32    realsize;         /* inflated size */
   PRUint32    crc32;
@@ -134,7 +132,8 @@ public:
    * Keep small items together, to avoid overhead.
    */
   PRUint8      compression;
-  PRUint8      flags;
+  PRPackedBool hasDataOffset : 1;
+  PRPackedBool isSymlink : 1;
 
 #ifndef STANDALONE
   /**
