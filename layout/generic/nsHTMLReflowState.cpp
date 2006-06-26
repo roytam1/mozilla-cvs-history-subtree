@@ -1866,9 +1866,6 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       } else {
         if (nsLayoutAtoms::tableFrame == fType) {
           // The width is shrink-to-fit
-          NS_ASSERTION(NS_STATIC_CAST(nsTableFrame*, frame)->IsAutoLayout(),
-                       "auto widths should trigger auto layout, or otherwise "
-                       "we shouldn't use shrink-to-fit");
           ShrinkWidthToFit(availableWidth);
         } else {
           nscoord inset = mComputedMargin.LeftRight() +
