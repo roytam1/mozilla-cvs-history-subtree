@@ -81,7 +81,7 @@ nsNoDataProtocolContentPolicy::ShouldLoad(PRUint32 aContentType,
       return NS_OK;
     }
 
-    nsIIOService* ios = nsContentUtils::GetIOService();
+    nsIIOService* ios = nsContentUtils::GetIOServiceWeakRef();
     if (!ios) {
       // default to accept, just in case
       return NS_OK;
