@@ -83,6 +83,9 @@ class nsSVGClipPathFrame : public nsSVGClipPathFrameBase
 
   // nsISVGContainerFrame interface:
   already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
+
+  // recursion prevention flag
+  PRPackedBool mInUse;  
 };
 
 nsresult
