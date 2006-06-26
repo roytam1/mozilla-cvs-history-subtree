@@ -286,10 +286,21 @@ function loadHomePageFromBrowser() {
    var newVal = "";
    var tabbrowser = win.document.getElementById("content");
    var l = tabbrowser.browsers.length;
+
+   var firstAdded = false;
+
    for (var i = 0; i < l; i++) {
-     if (i)
-       newVal += "|";
-       newVal += tabbrowser.getBrowserAtIndex(i).webNavigation.currentURI.spec;
+      var url = tabbrowser.getBrowserAtIndex(i).webNavigation.currentURI.spec;
+      
+      if (url == "chrome://minimo/content/preferences/preferences.xul")
+          continue;
+
+      if (firstAdded)
+         newVal += "|";
+      else
+          firstAdded = true;
+
+      newVal += url;
    }
    homePageField.value = newVal;
    syncPref(homePageField);
