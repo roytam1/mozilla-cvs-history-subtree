@@ -1514,6 +1514,18 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
     if (global) {
       global->SetNewDocument(aDocument, nsnull, PR_TRUE, PR_TRUE);
     }
+
+    // Clear the list of old child docshells.
+    nsCOMPtr<nsIDocShellTreeNode> node = do_QueryInterface(container);
+    if (node) {
+      PRInt32 count;
+      node->GetChildCount(&count);
+      for (PRInt32 i = 0; i < count; ++i) {
+        nsCOMPtr<nsIDocShellTreeItem> child;
+        node->GetChildAt(0, getter_AddRefs(child));
+        node->RemoveChild(child);
+      }
+    }
   }
 
   rv = SyncParentSubDocMap();
