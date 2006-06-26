@@ -129,11 +129,9 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
       idx = SYSCLR_MENUDISABLEDTEXT;
       break;
     case eColor_highlight:
-    case eColor__moz_menuhover:
       idx = SYSCLR_HILITEBACKGROUND;
       break;
     case eColor_highlighttext:
-    case eColor__moz_menuhovertext:
       idx = SYSCLR_HILITEFOREGROUND;
       break;
     case eColor_inactiveborder:
@@ -201,10 +199,16 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
     case eColor__moz_buttondefault:
       idx = SYSCLR_BUTTONDEFAULT;
       break;
+    case eColor__moz_menuhover:
+      idx = SYSCLR_MENUHILITEBGND;
+      break;
+    case eColor__moz_menuhovertext:
+      idx = SYSCLR_MENUHILITE;
+      break;
     default:
-        idx = SYSCLR_WINDOW;
-        break;
-    }
+      idx = SYSCLR_WINDOW;
+      break;
+  }
 
   long lColor = WinQuerySysColor( HWND_DESKTOP, idx, 0);
 

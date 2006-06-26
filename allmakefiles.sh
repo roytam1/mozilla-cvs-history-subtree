@@ -1031,6 +1031,8 @@ toolkit/profile/src/Makefile
 toolkit/themes/Makefile
 toolkit/themes/gnomestripe/global/Makefile
 toolkit/themes/gnomestripe/Makefile
+toolkit/themes/pmstripe/global/Makefile
+toolkit/themes/pmstripe/Makefile
 toolkit/themes/pinstripe/communicator/Makefile
 toolkit/themes/pinstripe/Makefile
 toolkit/themes/pinstripe/global/Makefile
