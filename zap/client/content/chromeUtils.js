@@ -30,6 +30,15 @@ function selectResource(tree, resource) {
 
 //----------------------------------------------------------------------
 
+
+function shouldShowAnimations()
+{
+  var config = window.wConfig;
+  if (!config)
+    config = parent.wConfig;
+  return config["urn:mozilla:zap:ui_animations"] == "true";
+}
+
 // maximum height before the slidebar gets scrollbars:
 var VSLIDEBAR_MAX_HEIGHT = 100;
 
@@ -41,7 +50,7 @@ function showVSlideBar(elem, animate) {
   }
   
   bar.style.visibility = "visible";
-  if (!animate) {
+  if (!animate || !shouldShowAnimations()) {
     bar.style.maxHeight = VSLIDEBAR_MAX_HEIGHT+"px";
     return;
   }
@@ -76,7 +85,7 @@ function hideVSlideBar(elem, animate) {
   }
   
   bar.style.overflow = "hidden";
-  if (!animate) {
+  if (!animate || !shouldShowAnimations()) {
     bar.style.maxHeight = "0px";
     bar.style.visibility = "hidden";
     return;

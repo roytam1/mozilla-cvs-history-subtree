@@ -39,6 +39,8 @@
 <!-- config.xul -->
 <!ENTITY configuration.title "Configuration">
 <!ENTITY uiPreferences.title "UI Preferences">
+<!ENTITY uiAnimations.label "UI Animations">
+<!ENTITY uiAnimations.description "Animate some UI elements, e.g. slide in call notification">
 <!ENTITY notifications.title "Notifications">
 <!ENTITY ringtone.label "Ringtone:">
 <!ENTITY ringtone.description "Ringtone for incoming calls in <html:a href='http://en.wikipedia.org/wiki/RTTTL'>RTTTL format</html:a>. In future other formats will be supported as well (midi, ogg/vorbis, ...).">

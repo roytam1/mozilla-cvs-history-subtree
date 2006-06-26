@@ -292,6 +292,8 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
 
 Config.rdfLiteralAttrib("urn:mozilla:zap:ui_update_period", "1000");
 
+Config.rdfLiteralAttrib("urn:mozilla:zap:ui_animations", "true");
+
 Config.rdfLiteralAttrib("urn:mozilla:zap:ringtone", "zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"); //"nuages_gris:d=4,o=4,b=180:p,d,g,2c#5,d5,a#,g,p,d,g,c#5,c#5,d5,a#,g,1p");
 Config.rdfLiteralAttrib("urn:mozilla:zap:dialtone", "@0+350+440v8");
 Config.rdfLiteralAttrib("urn:mozilla:zap:ringingtone", "@2.0+440+480v8@4.0R");

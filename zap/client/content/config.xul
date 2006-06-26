@@ -116,8 +116,14 @@
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
-          <row>
-          </row>
+          <igroup>
+            <checkbox type="zap-formwidget" 
+                      label="&uiAnimations.label;"
+                      id="urn:mozilla:zap:ui_animations"/>
+            <info>
+              <description>&uiAnimations.description;</description>
+            </info>
+          </igroup>
         </rows>
       </grid>
     </cgroup>
