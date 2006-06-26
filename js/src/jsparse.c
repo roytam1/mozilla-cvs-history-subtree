@@ -1637,7 +1637,7 @@ BindDestructuringLHS(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
 
 #if JS_HAS_LVALUE_RETURN
       case TOK_LP:
-        JS_ASSERT(pn->pn_op == JSOP_CALL);
+        JS_ASSERT(pn->pn_op == JSOP_CALL || pn->pn_op == JSOP_EVAL);
         pn->pn_op = JSOP_SETCALL;
         break;
 #endif
@@ -3335,7 +3335,7 @@ AssignExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 #endif
 #if JS_HAS_LVALUE_RETURN
       case TOK_LP:
-        JS_ASSERT(pn->pn_op == JSOP_CALL);
+        JS_ASSERT(pn->pn_op == JSOP_CALL || pn->pn_op == JSOP_EVAL);
         pn2->pn_op = JSOP_SETCALL;
         break;
 #endif

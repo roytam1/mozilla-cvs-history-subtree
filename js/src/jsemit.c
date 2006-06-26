@@ -3144,6 +3144,7 @@ EmitDestructuringLHS(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 return JS_FALSE;
             if (js_Emit1(cx, cg, JSOP_ENUMELEM) < 0)
                 return JS_FALSE;
+            break;
           }
 #endif
           case JSOP_ENUMELEM:
