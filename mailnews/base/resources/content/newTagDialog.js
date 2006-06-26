@@ -70,7 +70,7 @@ function onOK()
     // above will throw an error if tag doesn't exist. So if it doesn't throw an error,
     // the tag exists, so alert the user and return false.
   }
-  catch (ex) {return dialog.okCallback(name, "")}
+  catch (ex) {return dialog.okCallback(name, document.getElementById("tagColorPicker").color)}
   
   var messengerBundle = document.getElementById("bundle_messenger");
   var alertText = messengerBundle.getString("tagExists");
