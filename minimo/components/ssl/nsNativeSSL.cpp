@@ -50,7 +50,7 @@
 #include "nsITransportSecurityInfo.h"
 #include "nsISSLStatusProvider.h"
 #include "nsIStringBundle.h"
-
+#include "nsDataHashtable.h"
 #include "nsIWebProgressListener.h"
 
 #include "nsSecureBrowserUIImpl.h"
@@ -71,6 +71,7 @@ static HINSTANCE gSchannel = NULL ;
 static PRDescIdentity nsWINCESSLIOLayerIdentity;
 static PRIOMethods	  nsWINCESSLIOLayerMethods;
 
+static nsDataHashtable<nsCStringHashKey, PRBool> gUserAcceptedSSLProblem;
 
 #ifdef DEBUG
 void MessageBoxWSAError(const char * msg)
@@ -102,7 +103,6 @@ public:
   nsWINCESSLSocketInfo() 
   {
     mSecurityState          = nsIWebProgressListener::STATE_IS_BROKEN; 
-    mUserAcceptedSSLProblem = PR_FALSE;
   }
 
   virtual ~nsWINCESSLSocketInfo() {}
@@ -125,9 +125,6 @@ public:
   PRInt32   mProxyPort;
 
   PRUint32  mSecurityState;
-
-  PRBool    mUserAcceptedSSLProblem;
-
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsWINCESSLSocketInfo, nsITransportSecurityInfo)
@@ -148,7 +145,11 @@ nsWINCESSLSocketInfo::GetShortSecurityDescription(PRUnichar** aText)
 
 static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
 {
-  if (info->mUserAcceptedSSLProblem)
+  info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
+  
+  PRBool accepted = PR_FALSE;
+  gUserAcceptedSSLProblem.Get(info->mDestinationHost, &accepted);
+  if (accepted)
     return IDYES;
 
   nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
@@ -169,7 +170,7 @@ static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
   int result = MessageBoxW(0, message.get(), title.get(), MB_YESNO | MB_ICONWARNING | MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND );
   
   if (result == IDYES)
-    info->mUserAcceptedSSLProblem = PR_TRUE;
+    gUserAcceptedSSLProblem.Put(info->mDestinationHost, PR_TRUE);
   
   return result;
 }
@@ -250,7 +251,8 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
 
   if (! _stricmp (destinationHost, subject))
   {
-    info->mSecurityState = nsIWebProgressListener::STATE_IS_SECURE | nsIWebProgressListener::STATE_SECURE_HIGH;
+    if (info->mSecurityState != nsIWebProgressListener::STATE_IS_BROKEN)
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_SECURE | nsIWebProgressListener::STATE_SECURE_HIGH;
     res = SSL_ERR_OKAY;
   }
   else
@@ -457,6 +459,8 @@ nsWINCESSLSocketProvider::NewSocket(PRInt32 family,
     nsWINCESSLIOLayerMethods.write     = nsWINCESSLIOLayerWrite;
     nsWINCESSLIOLayerMethods.read      = nsWINCESSLIOLayerRead;
     nsWINCESSLIOLayerMethods.poll      = nsWINCESSLIOLayerPoll;
+
+    gUserAcceptedSSLProblem.Init(128);
 
     firstTime = PR_FALSE;
   }
