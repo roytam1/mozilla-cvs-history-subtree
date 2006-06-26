@@ -387,7 +387,7 @@ nsTableOuterFrame::GetMargin(nsPresContext*           aPresContext,
   // XXX We really shouldn't construct a reflow state to do this.
   nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame,
                             nsSize(aAvailWidth, aOuterRS.availableHeight),
-                            PR_FALSE);
+                            -1, -1, PR_FALSE);
   InitChildReflowState(*aPresContext, childRS);
 
   aMargin = childRS.mComputedMargin;
@@ -1014,7 +1014,7 @@ nsTableOuterFrame::OuterReflowChild(nsPresContext*            aPresContext,
   nsSize availSize(aAvailWidth, availHeight);
   // create and init the child reflow state
   nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame, availSize,
-                            PR_FALSE);
+                            -1, -1, PR_FALSE);
   InitChildReflowState(*aPresContext, childRS);
   childRS.mPercentHeightObserver = nsnull; // the observer is for non table related frames inside cells
 

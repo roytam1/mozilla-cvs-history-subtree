@@ -2635,7 +2635,8 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   
       // Reflow the child into the available space
       nsHTMLReflowState kidReflowState(presContext, aReflowState.reflowState,
-                                       kidFrame, kidAvailSize, PR_FALSE);
+                                       kidFrame, kidAvailSize,
+                                       -1, -1, PR_FALSE);
       InitChildReflowState(kidReflowState);
       // XXX fix up bad mComputedWidth for scroll frame
       kidReflowState.mComputedWidth = PR_MAX(kidReflowState.mComputedWidth, 0);
@@ -2742,7 +2743,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
           nsHTMLReflowState footerReflowState(presContext,
                                               aReflowState.reflowState,
                                               repeatedFooter, kidAvailSize,
-                                              PR_FALSE);
+                                              -1, -1, PR_FALSE);
           InitChildReflowState(footerReflowState);
           aReflowState.y += cellSpacingY;
           nsReflowStatus footerStatus;

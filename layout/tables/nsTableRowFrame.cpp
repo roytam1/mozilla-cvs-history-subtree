@@ -62,7 +62,7 @@ struct nsTableCellReflowState : public nsHTMLReflowState
                          const nsSize&            aAvailableSpace,
                          PRBool                   aInit = PR_TRUE)
     : nsHTMLReflowState(aPresContext, aParentReflowState, aFrame,
-                        aAvailableSpace, aInit)
+                        aAvailableSpace, -1, -1, aInit)
   {
   }
 
