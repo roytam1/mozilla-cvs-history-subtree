@@ -1152,8 +1152,13 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
     nsPoint captionOrigin;
     GetCaptionOrigin(captionSide, containSize, innerSize, 
                      innerMargin, captionSize, captionMargin, captionOrigin);
-    FinishReflowChild(mCaptionFrame, aPresContext, nsnull, captionMet,
-                      captionOrigin.x, captionOrigin.y, 0);
+    if (reflowCaption) {
+      FinishReflowChild(mCaptionFrame, aPresContext, nsnull, captionMet,
+                        captionOrigin.x, captionOrigin.y, 0);
+    } else {
+      mCaptionFrame->SetPosition(captionOrigin);
+      nsTableFrame::RePositionViews(mCaptionFrame);
+    }
   }
   // XXX If the height is constrained then we need to check whether
   // everything still fits...
@@ -1161,8 +1166,13 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   nsPoint innerOrigin;
   GetInnerOrigin(captionSide, containSize, captionSize, 
                  captionMargin, innerSize, innerMargin, innerOrigin);
-  FinishReflowChild(mInnerTableFrame, aPresContext, nsnull, innerMet,
-                    innerOrigin.x, innerOrigin.y, 0);
+  if (reflowInner) {
+    FinishReflowChild(mInnerTableFrame, aPresContext, nsnull, innerMet,
+                      innerOrigin.x, innerOrigin.y, 0);
+  } else {
+    mInnerTableFrame->SetPosition(innerOrigin);
+    nsTableFrame::RePositionViews(mInnerTableFrame);
+  }
 
   UpdateReflowMetrics(captionSide, aDesiredSize, innerMargin,
                       captionMargin, aOuterRS.availableWidth);
