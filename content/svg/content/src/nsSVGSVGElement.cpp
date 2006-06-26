@@ -43,6 +43,7 @@
 #include "nsIDOMSVGLocatable.h"
 #include "nsSVGAnimatedLength.h"
 #include "nsSVGLength.h"
+#include "nsSVGAngle.h"
 #include "nsCOMPtr.h"
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
@@ -740,8 +741,7 @@ nsSVGSVGElement::CreateSVGLength(nsIDOMSVGLength **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGAngle(nsIDOMSVGAngle **_retval)
 {
-  NS_NOTYETIMPLEMENTED("nsSVGSVGElement::CreateSVGAngle");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_NewSVGAngle(_retval);
 }
 
 /* nsIDOMSVGPoint createSVGPoint (); */
