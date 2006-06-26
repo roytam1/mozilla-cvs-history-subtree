@@ -311,7 +311,7 @@
               <textbox value="?callid" readonly="true"/>
               <label value="&localAddress.label;"/>
               <textbox value="?local" readonly="true"/>
-              <label value="&localAddress.label;"/>
+              <label value="&remoteAddress.label;"/>
               <textbox value="?remote" readonly="true"/>
               <label value="&subject.label;"/>
               <textbox value="?subject" readonly="true"/>
