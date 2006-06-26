@@ -2412,19 +2412,64 @@ nsXPCComponents_utils_Sandbox::CallOrConstruct(nsIXPConnectWrappedNative *wrappe
 #endif
 }
 
-/***************************************************************************/
 
 /*
  * Throw an exception on caller_cx that is made from message and report,
  * which were reported as uncaught on cx.
  */
 static void
+SandboxErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
+
+class ContextHolder : public nsISupports
+{
+public:
+    ContextHolder(JSContext *aOuterCx, JSObject *aSandbox);
+
+    JSContext *GetJSContext()
+    {
+        return mJSContext;
+    }
+    JSContext *GetOuterContext()
+    {
+        NS_ASSERTION(mOuterContext, "GetOuterContext called late");
+        return mOuterContext;
+    }
+
+    void DidEval()
+    {
+        JS_SetErrorReporter(mJSContext, nsnull);
+        mOuterContext = nsnull;
+    }
+
+    NS_DECL_ISUPPORTS
+
+private:
+    XPCAutoJSContext mJSContext;
+    JSContext *mOuterContext;
+};
+
+NS_IMPL_ISUPPORTS0(ContextHolder)
+
+ContextHolder::ContextHolder(JSContext *aOuterCx, JSObject *aSandbox)
+    : mJSContext(JS_NewContext(JS_GetRuntime(aOuterCx), 1024), JS_FALSE),
+      mOuterContext(aOuterCx)
+{
+    if (mJSContext) {
+        JS_SetOptions(mJSContext, JSOPTION_PRIVATE_IS_NSISUPPORTS);
+        JS_SetGlobalObject(mJSContext, aSandbox);
+        JS_SetContextPrivate(mJSContext, this);
+        JS_SetErrorReporter(mJSContext, SandboxErrorReporter);
+    }
+}
+
+static void
 SandboxErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
-    JSContext *caller_cx = NS_STATIC_CAST(JSContext*, JS_GetContextPrivate(cx));
-
-    JS_ThrowReportedError(caller_cx, message, report);
+    ContextHolder *ch = NS_STATIC_CAST(ContextHolder*, JS_GetContextPrivate(cx));
+    JS_ThrowReportedError(ch->GetOuterContext(), message, report);
 }
+
+/***************************************************************************/
 
 /* void evalInSandbox(in AString source, in nativeobj sandbox); */
 NS_IMETHODIMP
@@ -2490,20 +2535,18 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         return NS_ERROR_FAILURE;
     }
 
-    XPCAutoJSContext sandcx(JS_NewContext(JS_GetRuntime(cx), 1024), false);
-    if(!sandcx) {
+    nsRefPtr<ContextHolder> sandcx = new ContextHolder(cx, sandbox);
+    if(!sandcx || !sandcx->GetJSContext()) {
         JS_ReportError(cx, "Can't prepare context for evalInSandbox");
         JSPRINCIPALS_DROP(cx, jsPrincipals);
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    JS_SetGlobalObject(sandcx, sandbox);
-
     XPCPerThreadData *data = XPCPerThreadData::GetData();
     XPCJSContextStack *stack;
     PRBool popContext = PR_FALSE;
     if (data && (stack = data->GetJSContextStack())) {
-        if (NS_FAILED(stack->Push(sandcx))) {
+        if (NS_FAILED(stack->Push(sandcx->GetJSContext()))) {
             JS_ReportError(cx,
                     "Unable to initialize XPConnect with the sandbox context");
             JSPRINCIPALS_DROP(cx, jsPrincipals);
@@ -2513,17 +2556,13 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         popContext = PR_TRUE;
     }
 
-    // Capture uncaught exceptions reported as errors on sandcx and
-    // re-throw them on cx.
-    JS_SetContextPrivate(sandcx, cx);
-    JS_SetErrorReporter(sandcx, SandboxErrorReporter);
 
     // Push a fake frame onto sandcx so that we can properly propagate uncaught
     // exceptions.
     JSStackFrame frame;
     memset(&frame, 0, sizeof frame);
 
-    NS_STATIC_CAST(JSContext *, sandcx)->fp = &frame;
+    sandcx->GetJSContext()->fp = &frame;
 
     // Get the current source info from xpc. Use the codebase as a fallback,
     // though.
@@ -2541,13 +2580,14 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         }
     }
 
-    if (!JS_EvaluateUCScriptForPrincipals(sandcx, sandbox, jsPrincipals,
+    if (!JS_EvaluateUCScriptForPrincipals(sandcx->GetJSContext(), sandbox,
+                                          jsPrincipals,
                                           NS_REINTERPRET_CAST(const jschar *,
                                               PromiseFlatString(source).get()),
                                           source.Length(), filename.get(),
                                           lineNo, rval)) {
         jsval exn;
-        if (JS_GetPendingException(sandcx, &exn)) {
+        if (JS_GetPendingException(sandcx->GetJSContext(), &exn)) {
             JS_SetPendingException(cx, exn);
             cc->SetExceptionWasThrown(PR_TRUE);
         } else {
@@ -2560,6 +2600,11 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
     if (popContext) {
         stack->Pop(nsnull);
     }
+
+    NS_ASSERTION(sandcx->GetJSContext()->fp == &frame, "Dangling frame");
+    sandcx->GetJSContext()->fp = NULL;
+
+    sandcx->DidEval();
 
     JSPRINCIPALS_DROP(cx, jsPrincipals);
     return rv;
