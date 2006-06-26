@@ -252,7 +252,7 @@ protected:
                             nsIContent* aSubmitElement);
 
   /**
-   * Notify any submit observsers of the submit.
+   * Notify any submit observers of the submit.
    *
    * @param aActionURL the URL being submitted to
    * @param aCancelSubmit out param where submit observers can specify that the
@@ -275,6 +275,10 @@ protected:
   PRPackedBool mIsSubmitting;
   /** Whether the submission is to be deferred in case a script triggers it */
   PRPackedBool mDeferSubmission;
+  /** Whether we notified NS_FORMSUBMIT_SUBJECT listeners already */
+  PRPackedBool mNotifiedObservers;
+  /** If we notified the listeners early, what was the result? */
+  PRPackedBool mNotifiedObserversResult;
   /** Keep track of what the popup state was when the submit was initiated */
   PopupControlState mSubmitPopupState;
   /** Keep track of whether a submission was user-initiated or not */
@@ -435,6 +439,8 @@ nsHTMLFormElement::nsHTMLFormElement(nsINodeInfo *aNodeInfo)
     mGeneratingReset(PR_FALSE),
     mIsSubmitting(PR_FALSE),
     mDeferSubmission(PR_FALSE),
+    mNotifiedObservers(PR_FALSE),
+    mNotifiedObserversResult(PR_FALSE),
     mSubmitPopupState(openAbused),
     mSubmitInitiatedFromUserInput(PR_FALSE),
     mPendingSubmission(nsnull),
@@ -924,11 +930,15 @@ nsHTMLFormElement::SubmitSubmission(nsPresContext* aPresContext,
   //
   // Notify observers of submit
   //
-  PRBool aCancelSubmit = PR_FALSE;
-  rv = NotifySubmitObservers(actionURI, &aCancelSubmit);
-  NS_ENSURE_SUBMIT_SUCCESS(rv);
+  PRBool cancelSubmit = PR_FALSE;
+  if (mNotifiedObservers) {
+    cancelSubmit = mNotifiedObserversResult;
+  } else {
+    rv = NotifySubmitObservers(actionURI, &cancelSubmit);
+    NS_ENSURE_SUBMIT_SUCCESS(rv);
+  }
 
-  if (aCancelSubmit) {
+  if (cancelSubmit) {
     mIsSubmitting = PR_FALSE;
     return NS_OK;
   }
@@ -1273,6 +1283,27 @@ NS_IMETHODIMP
 nsHTMLFormElement::OnSubmitClickBegin()
 {
   mDeferSubmission = PR_TRUE;
+
+  // Prepare to run NotifySubmitObservers early before the
+  // scripts on the page get to modify the form data, possibly
+  // throwing off any password manager. (bug 257781)
+  nsCOMPtr<nsIURI> actionURI;
+  nsresult rv;
+
+  rv = GetActionURL(getter_AddRefs(actionURI));
+  if (NS_FAILED(rv) || !actionURI)
+    return NS_OK;
+
+  //
+  // Notify observers of submit
+  //
+  PRBool cancelSubmit = PR_FALSE;
+  rv = NotifySubmitObservers(actionURI, &cancelSubmit);
+  if (NS_SUCCEEDED(rv)) {
+    mNotifiedObservers = PR_TRUE;
+    mNotifiedObserversResult = cancelSubmit;
+  }
+
   return NS_OK;
 }
 
@@ -1412,6 +1443,7 @@ nsHTMLFormElement::GetLength(PRInt32* aLength)
 void
 nsHTMLFormElement::ForgetCurrentSubmission()
 {
+  mNotifiedObservers = PR_FALSE;
   mIsSubmitting = PR_FALSE;
   mSubmittingRequest = nsnull;
   if (mWebProgress) {
