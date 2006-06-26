@@ -1972,7 +1972,9 @@ NS_METHOD nsWindow::Show(PRBool bState)
 #endif
             break;
           default :
-#ifndef WINCE
+#ifdef WINCE
+            ::ShowWindow(mWnd, SW_SHOWNORMAL);
+#else
             // If none of our windows is visible, allow taking of focus
             gWindowsVisible = false;
             EnumWindows(gEnumWindowsProc, 0);
@@ -1992,11 +1994,11 @@ NS_METHOD nsWindow::Show(PRBool bState)
                 GetAttention(2);
               }
               else
-#endif
               {
                 ::ShowWindow(mWnd, SW_SHOWNORMAL);
               }
             }
+#endif // WINCE
         }
       } else {
         DWORD flags = SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW;
