@@ -133,6 +133,9 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
+  NS_ASSERTION((aContainingBlockWidth == -1) == (aContainingBlockHeight == -1),
+               "cb width and height should only be non-default together");
+
   parentReflowState = &aParentReflowState;
   frame = aFrame;
 
