@@ -3309,6 +3309,9 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
                     (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN),
                   "frame not dirty");
 
+  // XXX Add this assertion at some point!?  nsSliderFrame triggers it a lot.
+  //NS_ASSERTION(!mIsReflowing, "can't mark frame dirty during reflow");
+
   // If we've not yet done the initial reflow, then don't bother
   // enqueuing a reflow command yet.
   if (! mDidInitialReflow)
