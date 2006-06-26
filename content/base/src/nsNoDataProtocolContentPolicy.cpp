@@ -47,6 +47,7 @@
 #include "nsIProtocolHandler.h"
 #include "nsIIOService.h"
 #include "nsIExternalProtocolHandler.h"
+#include "nsIURI.h"
 
 NS_IMPL_ISUPPORTS1(nsNoDataProtocolContentPolicy, nsIContentPolicy)
 
