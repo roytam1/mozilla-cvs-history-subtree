@@ -149,6 +149,43 @@ nsSVGUtils::CoordToFloat(nsPresContext *aPresContext, nsIContent *aContent,
   return val;
 }
 
+float
+nsSVGUtils::UserSpace(nsIContent *content,
+                      nsIDOMSVGLength *length,
+                      ctxDirection direction)
+{
+  PRUint16 units;
+  float value;
+
+  length->GetUnitType(&units);
+  length->GetValueInSpecifiedUnits(&value);
+
+  nsCOMPtr<nsISVGLength> val;
+  NS_NewSVGLength(getter_AddRefs(val), value, units);
+ 
+  nsCOMPtr<nsIDOMSVGElement> element = do_QueryInterface(content);
+  nsCOMPtr<nsIDOMSVGSVGElement> svg;
+  element->GetOwnerSVGElement(getter_AddRefs(svg));
+  nsCOMPtr<nsSVGCoordCtxProvider> ctx = do_QueryInterface(svg);
+
+  if (ctx) {
+    switch (direction) {
+    case X:
+      val->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextX()));
+      break;
+    case Y:
+      val->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextY()));
+      break;
+    case XY:
+      val->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextUnspecified()));
+      break;
+    }
+  }
+
+  val->GetValue(&value);
+  return value;
+}
+
 nsresult nsSVGUtils::GetReferencedFrame(nsIFrame **aRefFrame, nsCAutoString& uriSpec, nsIContent *aContent, 
                                         nsIPresShell *aPresShell)
 {
