@@ -96,10 +96,10 @@ InspectorCmdLineHandler.prototype =
       cmdLine.handleFlag("inspector", true);
     }
 
-      var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(nsIWindowWatcher);
-      wwatch.openWindow(null, "chrome://inspector/content/", "_blank",
-                        "chrome,dialog=no,all", args);
+    var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                           .getService(nsIWindowWatcher);
+    wwatch.openWindow(null, "chrome://inspector/content/", "_blank",
+                      "chrome,dialog=no,all", args);
     cmdLine.preventDefault = true;
   },
 
