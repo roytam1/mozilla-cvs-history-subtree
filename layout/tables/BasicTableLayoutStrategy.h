@@ -64,7 +64,8 @@ private:
     // Compute intrinsic width member variables on the columns.
     void ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext);
 
-    // Compute the min and pref widths.
+    // Compute the min and pref widths of the table from the width
+    // variables on the columns.
     void ComputeIntrinsicWidths(nsIRenderingContext* aRenderingContext);
 
     nsTableFrame *mTableFrame;
