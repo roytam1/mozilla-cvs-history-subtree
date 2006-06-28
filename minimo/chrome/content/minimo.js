@@ -1368,10 +1368,10 @@ function DoToggleSoftwareKeyboard()
 {
 
  /*
-  * Whichever is the current Key Spin, we next te next state to be the current. 
-  * So if you are on top of a softkey->menu, and the keyboard comes up, 
-  * then if you Softkey you should get the menu again 
+  * This is called to create a Escape entry in the Keyboard Spin state machine. 
+  * We want to remember the state before this event. 
   */
+  
   spinSetnext(gKeySpinCurrent); 
 
 
