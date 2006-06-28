@@ -1210,7 +1210,8 @@ nsScriptSecurityManager::GetBaseURIScheme(nsIURI* aURI,
             path.EqualsLiteral("license") ||
             path.EqualsLiteral("licence") ||
             path.EqualsLiteral("credits") ||
-            path.EqualsLiteral("neterror"))
+            path.EqualsLiteral("neterror") ||
+            path.EqualsLiteral("feeds")) // FIXME: make this list extendable
         {
             aScheme = NS_LITERAL_CSTRING("about safe");
             return NS_OK;
@@ -1637,7 +1638,8 @@ nsScriptSecurityManager::CanExecuteScripts(JSContext* cx,
         nsCAutoString spec;
         principalURI->GetSpec(spec);
         if (spec.EqualsLiteral("about:") ||
-            StringBeginsWith(spec, NS_LITERAL_CSTRING("about:neterror?")))
+            StringBeginsWith(spec, NS_LITERAL_CSTRING("about:neterror?")) ||
+            spec.EqualsLiteral("about:feeds")) // FIXME: make this list extendable
         {
             *result = PR_TRUE;
             return NS_OK;              
