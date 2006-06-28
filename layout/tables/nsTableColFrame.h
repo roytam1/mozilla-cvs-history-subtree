@@ -260,10 +260,14 @@ protected:
   PRPackedBool mHasSpecifiedCoord;
   nscoord mMinCoord;
   nscoord mPrefCoord;
-  nscoord mSpanMinCoord;
-  nscoord mSpanPrefCoord;
+  nscoord mSpanMinCoord; // XXX...
+  nscoord mSpanPrefCoord; // XXX...
   float mPrefPercent;
-  float mSpanPrefPercent;
+  float mSpanPrefPercent; // XXX...
+  // ...XXX the three members marked above could be allocated as part of
+  // a separate array allocated only during
+  // BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths (and only
+  // when colspans were present).
   nscoord mFinalWidth;
 };
 

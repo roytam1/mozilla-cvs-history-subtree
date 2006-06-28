@@ -164,6 +164,12 @@ GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
     return CellWidthInfo(minCoord, prefCoord, prefPercent, hasSpecifiedWidth);
 }
 
+/**
+ * The algorithm in this function, in addition to meeting the
+ * requirements of Web-compatibility, is also invariant under reordering
+ * of the rows within a table (something that most, but not all, other
+ * browsers are).
+ */
 void
 BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
 {
