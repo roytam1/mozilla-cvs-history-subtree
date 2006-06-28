@@ -1827,6 +1827,11 @@ function BrowserPanMouseHandlerDestroy(e) {
 
 /*
  * Keyboard Spin Menu Control 
+ * --
+ * The key spin engine. This will call the SpinOut() state of the current State, 
+ * will set the current State to be the .next ( of the linked list defined in 
+ * spinCreate function ) and will call the SpinIn state of the next. The setTimeout
+ * was used because of a bug. 
  */
 
 function spinCycle() {
@@ -1835,9 +1840,27 @@ function spinCycle() {
   setTimeout("gKeySpinCurrent.SpinIn()",0);
 }
 
+/* 
+ * The spinSetNext
+ * ---
+ * Is used to set a temporary state to the keyboard spin state machine.
+ * Let's say if the user hits the Keyboard softkey when the state is
+ * over a menu, we want to tell that the Next State is the Current state. 
+ * So when it press the Left softkey, it will recover the current state. 
+ */
+ 
 function spinSetnext(ref) {
-  gSpinTemp.next  = ref;
-  gKeySpinCurrent = gSpinTemp;
+
+  /* 
+   * This should be performed only once to break the normal Spin states. 
+   * If you call this twice it will call itself thus loopback. 
+   */
+   
+  if(ref!=gSpinTemp) {
+    gSpinTemp.next  = ref;
+    gKeySpinCurrent = gSpinTemp;
+  } 
+  
 }
 
 function spinCreate() {
