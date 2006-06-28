@@ -2711,7 +2711,7 @@ nsFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 #ifdef DEBUG
   nsAutoString frameName;
   GetFrameName(frameName);
-  NS_NOTREACHED(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
+  NS_WARNING(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
     nsDependentCString(" frame didn't implement GetMinWidth")).get());
 #endif
   nscoord result = 0;
@@ -2725,7 +2725,7 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 #ifdef DEBUG
   nsAutoString frameName;
   GetFrameName(frameName);
-  NS_NOTREACHED(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
+  NS_WARNING(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
     nsDependentCString(" frame didn't implement GetPrefWidth")).get());
 #endif
   nscoord result = 0;
