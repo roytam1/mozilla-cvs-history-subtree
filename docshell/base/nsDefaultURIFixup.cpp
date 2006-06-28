@@ -52,7 +52,7 @@
 #include "nsDefaultURIFixup.h"
 
 /* Implementation file */
-NS_IMPL_ISUPPORTS1(nsDefaultURIFixup, nsIURIFixup)
+NS_IMPL_ISUPPORTS2(nsDefaultURIFixup, nsIURIFixup, nsIURIFixup_MOZILLA_1_8_BRANCH)
 
 nsDefaultURIFixup::nsDefaultURIFixup()
 {
@@ -341,9 +341,7 @@ nsDefaultURIFixup::CreateFixupURI(const nsACString& aStringURI, PRUint32 aFixupF
     // keyword match.  This catches search strings with '.' or ':' in them.
     if (!*aURI && fixupKeywords)
     {
-        nsCAutoString keywordSpec("keyword:");
-        keywordSpec.Append(aStringURI);
-        NS_NewURI(aURI, keywordSpec);
+        KeywordToURI(aStringURI, aURI);
         if(*aURI)
             return NS_OK;
     }
@@ -351,6 +349,42 @@ nsDefaultURIFixup::CreateFixupURI(const nsACString& aStringURI, PRUint32 aFixupF
     return rv;
 }
 
+static nsresult MangleKeywordIntoURI(const char *aKeyword, const char *aURL,
+                                     nsCString& query)
+{
+    query = (*aKeyword == '?') ? (aKeyword + 1) : aKeyword;
+    query.Trim(" "); // pull leading/trailing spaces.
+
+    // encode
+    char * encQuery = nsEscape(query.get(), url_XPAlphas);
+    if (!encQuery) return NS_ERROR_OUT_OF_MEMORY;
+    query.Adopt(encQuery);
+
+    // prepend the query with the keyword url
+    // XXX this url should come from somewhere else
+    query.Insert(aURL, 0);
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsDefaultURIFixup::KeywordToURI(const nsACString& aKeyword,
+                                              nsIURI **aURI)
+{
+    *aURI = nsnull;
+    NS_ENSURE_STATE(mPrefBranch);
+
+    nsXPIDLCString url;
+    mPrefBranch->GetCharPref("keyword.URL", getter_Copies(url));
+    // if we can't find a keyword.URL keywords won't work.
+    if (url.IsEmpty())
+        return NS_ERROR_NOT_AVAILABLE;
+
+    nsCAutoString spec;
+    nsresult rv = MangleKeywordIntoURI(PromiseFlatCString(aKeyword).get(),
+                                       url.get(), spec);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_NewURI(aURI, spec);
+}
 
 PRBool nsDefaultURIFixup::MakeAlternateURI(nsIURI *aURI)
 {
@@ -734,9 +768,7 @@ nsresult nsDefaultURIFixup::KeywordURIFixup(const nsACString & aURIString,
         (spaceLoc > 0 && (qMarkLoc == kNotFound || spaceLoc < qMarkLoc)) ||
         qMarkLoc == 0)
     {
-        nsCAutoString keywordSpec("keyword:");
-        keywordSpec.Append(aURIString);
-        NS_NewURI(aURI, keywordSpec);
+        KeywordToURI(aURIString, aURI);
     }
 
     if(*aURI)
