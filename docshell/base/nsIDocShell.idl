@@ -53,6 +53,7 @@ class nsIPresShell;
 [ptr] native nsIPresShell(nsIPresShell);
 
 interface nsIURI;
+interface nsIChannel;
 interface nsIContentViewer;
 interface nsIURIContentListener;
 interface nsIChromeEventHandler;
@@ -407,7 +408,7 @@ interface nsIDocShell : nsISupports
   void historyPurged(in long numEntries);
 };
 
-[scriptable, uuid(616b8670-d170-11da-a94d-0800200c9a66)]
+[scriptable, uuid(b1545c8f-d1ef-456b-804d-7857ef23d145)]
 interface nsIDocShell_MOZILLA_1_8_BRANCH : nsISupports
 {
   /*
@@ -425,4 +426,11 @@ interface nsIDocShell_MOZILLA_1_8_BRANCH : nsISupports
    * @param storage the storage object to add
    */
   void addSessionStorage(in ACString aDomain, in nsIDOMStorage storage);
+
+  /**
+   * Gets the channel for the currently loaded document, if any. 
+   * For a new document load, this will be the channel of the previous document
+   * until after OnLocationChange fires.
+   */
+  readonly attribute nsIChannel currentDocumentChannel;
 };
