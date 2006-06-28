@@ -6021,15 +6021,17 @@ void
 nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
                            nsHTMLReflowMetrics& aMetrics)
 {
+  const nsHTMLReflowState &rs = aState.mReflowState;
+
   // Reflow the bullet now
   nsSize availSize;
-  availSize.width = NS_UNCONSTRAINEDSIZE;
+  // Make up a width since it doesn't really matter (XXX).
+  availSize.width = rs.mComputedWidth;
   availSize.height = NS_UNCONSTRAINEDSIZE;
 
   // Get the reason right.
   // XXXwaterson Should this look just like the logic in
   // nsBlockReflowContext::ReflowBlock and nsLineLayout::ReflowFrame?
-  const nsHTMLReflowState &rs = aState.mReflowState;
   nsHTMLReflowState reflowState(aState.mPresContext, rs,
                                 mBullet, availSize);
   nsReflowStatus  status;
@@ -6040,8 +6042,7 @@ nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
   // from the rest of the frames in the line
   nscoord x = 
 #ifdef IBMBIDI
-           (rs.availableWidth != NS_UNCONSTRAINEDSIZE &&
-            NS_STYLE_DIRECTION_RTL == GetStyleVisibility()->mDirection)
+           (NS_STYLE_DIRECTION_RTL == GetStyleVisibility()->mDirection)
              // According to the CSS2 spec, section 12.6.1, outside marker box
              // is distanced from the associated principal box's border edge.
              // |rs.availableWidth| reflects exactly a border edge: it includes
