@@ -2001,5 +2001,8 @@ function MenuHandleMenuEscape(e) {
   if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F10 ) {
     spinCycle();
   }
+  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F20 ) {
+    DoToggleSoftwareKeyboard();
+  }
 
 }
