@@ -1367,12 +1367,23 @@ function DoSNavToggle()
 function DoToggleSoftwareKeyboard()
 {
 
+ /* 
+  * If the menu is on display, then we hide it..
+  */
+  
+  if(gShowingMenuCurrent) {
+  
+    gShowingMenuCurrent.hidePopup();
+   
+  }
+  
  /*
-  * This is called to create a Escape entry in the Keyboard Spin state machine. 
-  * We want to remember the state before this event. 
+  * .. and.. this is called to create an Escape Entry in the keyboard spin State Machine. 
+  * We want to remember this gKeySpinCurrent state, when the user press the Left Softkey.
   */
   
   spinSetnext(gKeySpinCurrent); 
+
 
 
 
