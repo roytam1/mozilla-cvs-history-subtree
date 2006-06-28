@@ -182,6 +182,43 @@ public:
   float GetPrefPercent() {
     return mPrefPercent;
   }
+
+  // The largest min-width of the cells (for column-spanning cells).
+  void ResetSpanMinCoord() {
+    mSpanMinCoord = 0;
+  }
+  void AddSpanMinCoord(nscoord aSpanMinCoord) {
+    if (aSpanMinCoord > mSpanMinCoord)
+      mSpanMinCoord = aSpanMinCoord;
+  }
+  nscoord GetSpanMinCoord() {
+    return mSpanMinCoord;
+  }
+
+  // The largest pref-width of the column-spanning cells.
+  void ResetSpanPrefCoord() {
+    mSpanPrefCoord = 0;
+  }
+  void AddSpanPrefCoord(nscoord aSpanPrefCoord) {
+    if (aSpanPrefCoord > mSpanPrefCoord)
+      mSpanPrefCoord = aSpanPrefCoord;
+  }
+  nscoord GetSpanPrefCoord() {
+    return mSpanPrefCoord;
+  }
+
+  // The largest specified percentage width of the column-spanning cells.
+  void ResetSpanPrefPercent() {
+    mSpanPrefPercent = 0.0f;
+  }
+  void AddSpanPrefPercent(float aSpanPrefPercent) {
+    if (aSpanPrefPercent > mSpanPrefPercent)
+      mSpanPrefPercent = aSpanPrefPercent;
+  }
+  float GetSpanPrefPercent() {
+    return mSpanPrefPercent;
+  }
+
   // Used to adjust a column's pref percent so that the table's total
   // never exceeeds 100% (by only allowing percentages to be used,
   // starting at the first column, until they reach 100%).
@@ -223,7 +260,10 @@ protected:
   PRPackedBool mHasSpecifiedCoord;
   nscoord mMinCoord;
   nscoord mPrefCoord;
+  nscoord mSpanMinCoord;
+  nscoord mSpanPrefCoord;
   float mPrefPercent;
+  float mSpanPrefPercent;
   nscoord mFinalWidth;
 };
 

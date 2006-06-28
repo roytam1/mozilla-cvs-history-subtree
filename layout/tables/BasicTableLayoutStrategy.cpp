@@ -75,6 +75,95 @@ BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
     return mPrefWidth;
 }
 
+struct CellWidthInfo {
+    CellWidthInfo(nscoord aMinCoord, nscoord aPrefCoord,
+                  float aPrefPercent, PRBool aHasSpecifiedWidth)
+        : hasSpecifiedWidth(aHasSpecifiedWidth)
+        , minCoord(aMinCoord)
+        , prefCoord(aPrefCoord)
+        , prefPercent(aPrefPercent)
+    {
+    }
+
+    PRBool hasSpecifiedWidth;
+    nscoord minCoord;
+    nscoord prefCoord;
+    float prefPercent;
+};
+
+static CellWidthInfo
+GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
+                 nsTableCellFrame *aCellFrame)
+{
+    const nsStylePosition *pos = aCellFrame->GetStylePosition();
+
+    nscoord minCoord = aCellFrame->GetMinWidth(aRenderingContext);
+    nscoord prefCoord = aCellFrame->GetPrefWidth(aRenderingContext);
+    float prefPercent = 0.0f;
+    PRBool hasSpecifiedWidth = PR_FALSE;
+
+    switch (pos->mWidth.GetUnit()) {
+        case eStyleUnit_Coord: {
+                hasSpecifiedWidth = PR_TRUE;
+                nscoord w = pos->mWidth.GetCoordValue();
+                prefCoord = PR_MAX(w, minCoord);
+            }
+            break;
+        case eStyleUnit_Percent: {
+                prefPercent = pos->mWidth.GetPercentValue();
+            }
+            break;
+        default:
+            break;
+    }
+
+    switch (pos->mMaxWidth.GetUnit()) {
+        case eStyleUnit_Coord: {
+                hasSpecifiedWidth = PR_TRUE;
+                nscoord w = pos->mMaxWidth.GetCoordValue();
+                if (w < minCoord)
+                    minCoord = w;
+                if (w < prefCoord)
+                    prefCoord = w;
+            }
+            break;
+        case eStyleUnit_Percent: {
+                float p = pos->mMaxWidth.GetPercentValue();
+                if (p < prefPercent)
+                    prefPercent = p;
+            }
+            break;
+        default:
+            break;
+    }
+
+    switch (pos->mMinWidth.GetUnit()) {
+        case eStyleUnit_Coord: {
+                nscoord w = pos->mMinWidth.GetCoordValue();
+                if (w > minCoord)
+                    minCoord = w;
+                if (w > prefCoord)
+                    prefCoord = w;
+            }
+            break;
+        case eStyleUnit_Percent: {
+                float p = pos->mMinWidth.GetPercentValue();
+                if (p > prefPercent)
+                    prefPercent = p;
+            }
+            break;
+        default:
+            break;
+    }
+
+    minCoord += aCellFrame->GetIntrinsicBorderPadding(
+                    aRenderingContext, nsLayoutUtils::MIN_WIDTH);
+    prefCoord += aCellFrame->GetIntrinsicBorderPadding(
+                    aRenderingContext, nsLayoutUtils::PREF_WIDTH);
+
+    return CellWidthInfo(minCoord, prefCoord, prefPercent, hasSpecifiedWidth);
+}
+
 void
 BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRenderingContext)
 {
@@ -82,31 +171,18 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
     float p2t = tableFrame->GetPresContext()->ScaledPixelsToTwips();
     nsTableCellMap *cellMap = tableFrame->GetCellMap();
 
-    // We need to consider the width on the table since a specified width
-    // on the table prevents widths on cells that would make the table
-    // larger than that specified width from being honored.  In this case,
-    // we shrink the min widths proportionally, in proportion to the
-    // difference between the width specified and the min width of the
-    // content.
-    const nsStylePosition *tablePos = tableFrame->GetStylePosition();
-    PRBool tableHasWidth = tablePos->mWidth.GetUnit() == eStyleUnit_Coord ||
-                           tablePos->mMaxWidth.GetUnit() == eStyleUnit_Coord;
-
     nscoord spacing = tableFrame->GetCellSpacingX();
 
-    // Prevent percentages from adding to more than 100% by (to be
-    // compatible with other browsers) treating any percentages that would
-    // increase the total percentage to more than 100% as the number that
-    // would increase it to only 100% (which is 0% if we've already hit
-    // 100%).
-    float pct_used = 0.0f;
-
-    for (PRInt32 col = 0, col_end = cellMap->GetColCount();
-         col < col_end; ++col) {
+    // Loop over the columns to consider cells *without* a colspan.
+    PRInt32 col, col_end;
+    for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
         nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
         colFrame->ResetMinCoord();
         colFrame->ResetPrefCoord();
         colFrame->ResetPrefPercent();
+        colFrame->ResetSpanMinCoord();
+        colFrame->ResetSpanPrefCoord();
+        colFrame->ResetSpanPrefPercent();
 
         // XXX Consider col frame!
         // XXX Should it get Border/padding considered?
@@ -117,100 +193,105 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
             PRInt32 colSpan;
             nsTableCellFrame *cellFrame =
                 cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
-            if (!cellFrame)
+            if (!cellFrame || !originates || colSpan > 1)
                 continue;
 
-            const nsStylePosition *pos = cellFrame->GetStylePosition();
-            nscoord minCoord = cellFrame->GetMinWidth(aRenderingContext);
-            nscoord prefCoord = cellFrame->GetPrefWidth(aRenderingContext);
-            float prefPercent = 0.0f;
+            CellWidthInfo info = GetCellWidthInfo(aRenderingContext, cellFrame);
 
-            PRBool hasSpecifiedWidth = PR_FALSE;
+            info.minCoord = nsTableFrame::RoundToPixel(info.minCoord, p2t);
+            info.prefCoord = nsTableFrame::RoundToPixel(info.prefCoord, p2t);
 
-            switch (pos->mWidth.GetUnit()) {
-                case eStyleUnit_Coord: {
-                      hasSpecifiedWidth = PR_TRUE;
-                      nscoord w = pos->mWidth.GetCoordValue();
-                      if (!tableHasWidth && w > minCoord)
-                          minCoord = w;
-                      prefCoord = PR_MAX(w, minCoord);
-                    }
-                    break;
-                case eStyleUnit_Percent: {
-                        prefPercent = pos->mWidth.GetPercentValue();
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            switch (pos->mMaxWidth.GetUnit()) {
-                case eStyleUnit_Coord: {
-                        hasSpecifiedWidth = PR_TRUE;
-                        nscoord w = pos->mMaxWidth.GetCoordValue();
-                        if (w < minCoord)
-                            minCoord = w;
-                        if (w < prefCoord)
-                            prefCoord = w;
-                    }
-                    break;
-                case eStyleUnit_Percent: {
-                        float p = pos->mMaxWidth.GetPercentValue();
-                        if (p < prefPercent)
-                            prefPercent = p;
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            switch (pos->mMinWidth.GetUnit()) {
-                case eStyleUnit_Coord: {
-                        nscoord w = pos->mMinWidth.GetCoordValue();
-                        if (w > minCoord)
-                            minCoord = w;
-                        if (w > prefCoord)
-                            prefCoord = w;
-                    }
-                    break;
-                case eStyleUnit_Percent: {
-                        float p = pos->mMinWidth.GetPercentValue();
-                        if (p > prefPercent)
-                            prefPercent = p;
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            // Add the cell-spacing (and take it off again below) so that we don't
-            // require extra room for the omitted cell-spacing of column-spanning
-            // cells.
-            minCoord += cellFrame->GetIntrinsicBorderPadding(
-                    aRenderingContext, nsLayoutUtils::MIN_WIDTH) +
-                spacing;
-            prefCoord += cellFrame->GetIntrinsicBorderPadding(
-                    aRenderingContext, nsLayoutUtils::PREF_WIDTH) +
-                spacing;
-
-            // XXX Rounding errors due to RoundToPixel below!
-            minCoord = minCoord / colSpan;
-            prefCoord = prefCoord / colSpan;
-            prefPercent = prefPercent / colSpan;
-
-            minCoord -= spacing;
-            prefCoord -= spacing;
-
-            minCoord = nsTableFrame::RoundToPixel(minCoord, p2t);
-            prefCoord = nsTableFrame::RoundToPixel(prefCoord, p2t);
-
-            if (colSpan > 1)
-                hasSpecifiedWidth = PR_FALSE;
-
-            colFrame->AddMinCoord(minCoord);
-            colFrame->AddPrefCoord(prefCoord, hasSpecifiedWidth);
-            colFrame->AddPrefPercent(prefPercent);
+            colFrame->AddMinCoord(info.minCoord);
+            colFrame->AddPrefCoord(info.prefCoord, info.hasSpecifiedWidth);
+            colFrame->AddPrefPercent(info.prefPercent);
         }
+    }
+
+    // Loop over the columns to consider cells *with* a colspan.
+    for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
+        nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
+
+        for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
+             row < row_end; ++row) {
+            PRBool originates;
+            PRInt32 colSpan;
+            nsTableCellFrame *cellFrame =
+                cellMap->GetCellInfoAt(row, col, &originates, &colSpan);
+            if (!cellFrame || !originates || colSpan == 1)
+                continue;
+
+            NS_ASSERTION(colSpan > 1, "bad colspan");
+
+            CellWidthInfo info = GetCellWidthInfo(aRenderingContext, cellFrame);
+
+            info.minCoord -= spacing * (colSpan - 1);
+            info.prefCoord -= spacing * (colSpan - 1);
+
+            // Accumulate information about the spanned columns.
+            float totalSPct = 0.0f;
+            nscoord totalSPref = 0, totalSNonPctPref = 0;
+            PRInt32 scol, scol_end;
+            for (scol = col, scol_end = col + colSpan;
+                 scol < scol_end; ++scol) {
+                nsTableColFrame *scolFrame = tableFrame->GetColFrame(scol);
+                totalSPref += scolFrame->GetPrefCoord();
+                float scolPct = scolFrame->GetPrefPercent();
+                if (scolPct == 0.0f) {
+                    totalSNonPctPref += scolFrame->GetPrefCoord();
+                } else {
+                    totalSPct += scolPct;
+                }
+            }
+
+            // Compute the ratios used to distribute this cell's width
+            // appropriately among the spanned columns.
+            // XXX There could be non-percentage width columns with zero
+            // preferred width, so testing totalSNonPctPref isn't really
+            // right.
+            float pctRatio = 0.0f;
+            if (totalSNonPctPref > 0 && totalSPct < info.prefPercent) {
+                pctRatio = (info.prefPercent - totalSPct) /
+                           float(totalSNonPctPref);
+            }
+
+            // ... and actually do the distribution.
+            for (scol = col, scol_end = col + colSpan;
+                 scol < scol_end; ++scol) {
+                nsTableColFrame *scolFrame = tableFrame->GetColFrame(scol);
+                if (scolFrame->GetPrefPercent() == 0.0f) {
+                    scolFrame->AddSpanPrefPercent(pctRatio *
+                                                  scolFrame->GetPrefCoord());
+                }
+
+                float coordRatio; // for both min and pref
+                if (totalSPref > 0) {
+                    coordRatio = float(scolFrame->GetPrefCoord()) /
+                                 float(totalSPref);
+                } else {
+                    coordRatio = 1.0f / float(colSpan);
+                }
+                scolFrame->AddSpanMinCoord(NSToCoordRound(
+                               float(info.minCoord) * coordRatio));
+                scolFrame->AddSpanPrefCoord(NSToCoordRound(
+                               float(info.prefCoord) * coordRatio));
+            }
+        }
+    }
+
+    // Combine the results of the span analysis into the main results.
+
+    // Prevent percentages from adding to more than 100% by (to be
+    // compatible with other browsers) treating any percentages that would
+    // increase the total percentage to more than 100% as the number that
+    // would increase it to only 100% (which is 0% if we've already hit
+    // 100%).  This means layout depends on the order of columns.
+    float pct_used = 0.0f;
+    for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
+        nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
+
+        colFrame->AddMinCoord(colFrame->GetSpanMinCoord());
+        colFrame->AddPrefCoord(colFrame->GetSpanPrefCoord(), PR_FALSE);
+        colFrame->AddPrefPercent(colFrame->GetSpanPrefPercent());
 
         colFrame->AdjustPrefPercent(&pct_used);
     }
