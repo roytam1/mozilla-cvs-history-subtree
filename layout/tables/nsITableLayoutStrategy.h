@@ -68,7 +68,7 @@ public:
      * Compute final column widths based on the intrinsic width data and
      * the available width.
      */
-    virtual void CalcColumnWidths(const nsHTMLReflowState& aReflowState) = 0;
+    virtual void ComputeColumnWidths(const nsHTMLReflowState& aReflowState) = 0;
 };
 
 #endif /* !defined(nsITableLayoutStrategy_h_) */

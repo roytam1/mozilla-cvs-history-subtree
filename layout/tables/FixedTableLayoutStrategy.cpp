@@ -150,7 +150,7 @@ FixedTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 }
 
 /* virtual */ void
-FixedTableLayoutStrategy::CalcColumnWidths(const nsHTMLReflowState& aReflowState)
+FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowState)
 {
     nscoord tableWidth = aReflowState.mComputedWidth;
 
