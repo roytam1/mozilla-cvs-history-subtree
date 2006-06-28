@@ -47,7 +47,8 @@
 #include <windows.h>
 
 class nsWindowsShellService : public nsIWindowsShellService,
-                              public nsIObserver
+                              public nsIObserver,
+                              public nsIShellService_MOZILLA_1_8_BRANCH
 {
 public:
   nsWindowsShellService();
@@ -57,6 +58,7 @@ public:
   NS_DECL_NSISHELLSERVICE
   NS_DECL_NSIWINDOWSSHELLSERVICE
   NS_DECL_NSIOBSERVER
+  NS_DECL_NSISHELLSERVICE_MOZILLA_1_8_BRANCH
 
   static NS_METHOD Register(nsIComponentManager *aCompMgr, nsIFile *aPath, const char *registryLocation,
                             const char *componentType, const nsModuleComponentInfo *info);

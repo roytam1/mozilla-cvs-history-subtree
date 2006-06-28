@@ -38,8 +38,9 @@
 #include "nsISupports.idl"
 
 interface nsIDOMElement;
+interface nsILocalFile;
 
-[scriptable, uuid(d6f62053-3769-46f6-bd2b-0a1440d6c394)]
+[scriptable, uuid(a4c253ab-09b9-4fb0-a61d-600621e690e4)]
 interface nsIShellService : nsISupports
 {
   /**
@@ -114,3 +115,18 @@ interface nsIShellService : nsISupports
   attribute unsigned long desktopBackgroundColor;
 };
  
+// this interface stability for non-frozen interfaces esp. outside of gecko 
+// is retarded.
+[scriptable, uuid(d48f8ea2-c912-48fa-9714-10d8098f05ea)]
+interface nsIShellService_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * Opens an application with a specific URI to load.
+   * @param   application
+   *          The application file (or bundle directory, on OS X)
+   * @param   uri
+   *          The uri to be loaded by the application
+   */
+  void openApplicationWithURI(in nsILocalFile aApplication, in ACString aURI);
+};
+
