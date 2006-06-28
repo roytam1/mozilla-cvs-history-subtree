@@ -230,6 +230,18 @@ interface nsILocalFileMac : nsILocalFile
     boolean isPackage();
 };
 
+[scriptable, uuid(BB388DF7-F29B-478E-9639-F54D3B8A4A30)]
+interface nsILocalFileMac_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * bundleDisplayName
+   *
+   * returns the display name of the application bundle (usually the human 
+   * readable name of the application)
+   */
+  readonly attribute AString bundleDisplayName;
+};
+
 %{C++
 extern "C"
 {

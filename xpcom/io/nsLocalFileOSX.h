@@ -55,7 +55,8 @@ class nsDirEnumerator;
 // for the conversion to NFC (composed Unicode) done in "non-Native" getters.
 //*****************************************************************************
 
-class NS_COM nsLocalFile : public nsILocalFileMac
+class NS_COM nsLocalFile : public nsILocalFileMac, 
+                           public nsILocalFileMac_MOZILLA_1_8_BRANCH
 {
     friend class nsDirEnumerator;
     
@@ -70,6 +71,7 @@ public:
     NS_DECL_NSIFILE
     NS_DECL_NSILOCALFILE
     NS_DECL_NSILOCALFILEMAC
+    NS_DECL_NSILOCALFILEMAC_MOZILLA_1_8_BRANCH
 
 public:
 
