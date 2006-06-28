@@ -755,6 +755,7 @@ nsObjectFrame::InstantiatePlugin(nsIPluginHost* aPluginHost,
 
   // XXX having to do this sucks. it'd be better to move the code from DidReflow
   // to FixupWindow or something.
+  AddStateBits(NS_FRAME_IS_DIRTY);
   GetPresContext()->GetPresShell()->
     FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   return rv;
