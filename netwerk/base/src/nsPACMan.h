@@ -153,6 +153,16 @@ private:
   nsresult StartLoading();
 
   /**
+   * Reload the PAC file if there is reason to.
+   */
+  void MaybeReloadPAC();
+
+  /**
+   * Called when we fail to load the PAC file.
+   */
+  void OnLoadFailure();
+
+  /**
    * Returns true if the given URI matches the URI of our PAC file.
    */
   PRBool IsPACURI(nsIURI *uri) {
@@ -173,6 +183,8 @@ private:
   nsCOMPtr<nsIStreamLoader>    mLoader;
   PLEvent                     *mLoadEvent;
   PRBool                       mShutdown;
+  PRTime                       mScheduledReload;
+  PRUint32                     mLoadFailureCount;
 };
 
 #endif  // nsPACMan_h__
