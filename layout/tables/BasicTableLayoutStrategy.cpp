@@ -228,8 +228,9 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
             info.prefCoord -= spacing * (colSpan - 1);
 
             // Accumulate information about the spanned columns.
-            float totalSPct = 0.0f;
+            float unusedSPct = info.prefPercent;
             nscoord totalSPref = 0, totalSNonPctPref = 0;
+            PRInt32 nonPctCount = 0;
             PRInt32 scol, scol_end;
             for (scol = col, scol_end = col + colSpan;
                  scol < scol_end; ++scol) {
@@ -238,20 +239,22 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
                 float scolPct = scolFrame->GetPrefPercent();
                 if (scolPct == 0.0f) {
                     totalSNonPctPref += scolFrame->GetPrefCoord();
+                    ++nonPctCount;
                 } else {
-                    totalSPct += scolPct;
+                    unusedSPct -= scolPct;
                 }
             }
 
+            if (unusedSPct < 0.0f)
+                unusedSPct = 0.0f;
+
             // Compute the ratios used to distribute this cell's width
             // appropriately among the spanned columns.
-            // XXX There could be non-percentage width columns with zero
-            // preferred width, so testing totalSNonPctPref isn't really
-            // right.
             float pctRatio = 0.0f;
-            if (totalSNonPctPref > 0 && totalSPct < info.prefPercent) {
-                pctRatio = (info.prefPercent - totalSPct) /
-                           float(totalSNonPctPref);
+            if (nonPctCount && unusedSPct > 0.0f) {
+                if (totalSNonPctPref > 0) {
+                    pctRatio = unusedSPct / float(totalSNonPctPref);
+                }
             }
 
             // ... and actually do the distribution.
@@ -259,8 +262,14 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
                  scol < scol_end; ++scol) {
                 nsTableColFrame *scolFrame = tableFrame->GetColFrame(scol);
                 if (scolFrame->GetPrefPercent() == 0.0f) {
-                    scolFrame->AddSpanPrefPercent(pctRatio *
-                                                  scolFrame->GetPrefCoord());
+                    float spp;
+                    if (totalSNonPctPref > 0) {
+                        spp = pctRatio * scolFrame->GetPrefCoord();
+                    } else {
+                        spp = unusedSPct / float(nonPctCount);
+                                
+                    }
+                    scolFrame->AddSpanPrefPercent(spp);
                 }
 
                 float coordRatio; // for both min and pref
