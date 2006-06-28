@@ -262,7 +262,7 @@ nsTableColGroupFrame::InsertColsReflow(PRInt32         aColIndex,
   if (!tableFrame)
     return;
 
-  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  tableFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(tableFrame,
                                                   nsIPresShell::eTreeChange);
 }
@@ -294,7 +294,7 @@ nsTableColGroupFrame::RemoveChild(nsTableColFrame& aChild,
   if (!tableFrame)
     return;
 
-  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  tableFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   GetPresContext()->PresShell()->FrameNeedsReflow(tableFrame,
                                                   nsIPresShell::eTreeChange);
 }
@@ -316,7 +316,7 @@ nsTableColGroupFrame::RemoveFrame(nsIAtom*        aListName,
 
     tableFrame->RemoveCol(this, colIndex, PR_TRUE, PR_TRUE);
 
-    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+    tableFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
     GetPresContext()->PresShell()->FrameNeedsReflow(tableFrame,
                                                     nsIPresShell::eTreeChange);
   }
