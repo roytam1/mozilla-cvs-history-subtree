@@ -11,11 +11,11 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is Minimo.
+# The Original Code is the Mozilla Browser code.
 #
 # The Initial Developer of the Original Code is
-# Doug Turner <dougt@meer.net>.
-# Portions created by the Initial Developer are Copyright (C) 2005
+# Benjamin Smedberg <bsmedberg@covad.net>
+# Portions created by the Initial Developer are Copyright (C) 2004
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
@@ -34,13 +34,21 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ..
+DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
+relativesrcdir = minimo/locales
+
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = config components chrome locales customization base 
+DEFINES += -DAB_CD=$(AB_CD)
+
+################### XXX
+libs-%:
+	@$(MAKE) -C ../../toolkit/locales libs-$*
+	@$(MAKE) libs AB_CD=$* XPI_NAME=locale-$* PREF_DIR=defaults/pref
 
 include $(topsrcdir)/config/rules.mk
+

@@ -769,6 +769,11 @@ void UnloadKnownLibs()
 int main(int argc, char *argv[])
 {
 #ifdef WINCE
+  // EVIL?
+  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+
+#ifdef WINCE
   CreateListenerWindow();
 #endif
   
@@ -877,6 +882,11 @@ int main(int argc, char *argv[])
     return -1;
   }
 
+#ifdef WINCE
+  // EVIL?
+  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+ 
   rv = appShell->Run();
 
   if (NS_FAILED(rv))

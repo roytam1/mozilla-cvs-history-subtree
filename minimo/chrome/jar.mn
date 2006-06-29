@@ -78,8 +78,6 @@ minimo-skin-vga.jar:
 
 minimo.jar:
 %   content minimo               %content/minimo/
-%   locale  minimo   en-US       %locale/en-US/minimo/
-%   locale  branding en-US       %branding/locale/
 	content/minimo/minimo.js		 (content/minimo.js)
 	content/minimo/common.js		 (content/common.js)
 	content/minimo/minimo.xul		 (content/minimo.xul)
@@ -108,11 +106,3 @@ minimo.jar:
     content/minimo/history/history_template.xml  (content/history/history_template.xml)
 	content/minimo/bindings/preferences.css  (content/bindings/preferences.css)
 	content/minimo/bindings/preferences.xml  (content/bindings/preferences.xml)
-	locale/en-US/minimo/minimo.dtd	      (locale/en-US/minimo.dtd)
-    locale/en-US/minimo/minimo.properties (locale/en-US/minimo.properties)
-    locale/en-US/minimo/preferences.dtd   (locale/en-US/preferences.dtd)
-    locale/en-US/minimo/bookmarks.dtd     (locale/en-US/bookmarks.dtd)
-    locale/en-US/minimo/history.dtd       (locale/en-US/history.dtd)
-    locale/en-US/minimo/rssload.dtd       (locale/en-US/rssload.dtd)
-    branding/locale/brand.dtd        (locale/en-US/brand.dtd)
-    branding/locale/brand.properties (locale/en-US/brand.properties)
