@@ -154,15 +154,9 @@ CheckSameOrigin(nsIDOMNode *aRoot)
     }
   }
 
-  nsCOMPtr<nsIURI> root_uri;
-
   nsIPrincipal *principal = doc->GetPrincipal();
 
   if (principal) {
-    principal->GetURI(getter_AddRefs(root_uri));
-  }
-
-  if (root_uri) {
     nsresult rv;
     nsCOMPtr<nsIScriptSecurityManager> secMan = 
       do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
@@ -178,9 +172,16 @@ CheckSameOrigin(nsIDOMNode *aRoot)
       return NS_OK;
     }
 
-    // Check if the caller (if any) is from the same origin that the
-    // root is from.
-    return secMan->CheckSameOrigin(nsnull, root_uri);
+    nsCOMPtr<nsIPrincipal> subject;
+    rv = secMan->GetSubjectPrincipal(getter_AddRefs(subject));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // Since UBR is not enabled, we better have a subject principal,
+    // but just in case...
+    if (subject) {
+      // Check if the caller is from the same origin that the root is from.
+      return secMan->CheckSameOriginPrincipal(subject, principal);
+    }
   }
 
   return NS_OK;
