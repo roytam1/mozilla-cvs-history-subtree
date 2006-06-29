@@ -602,7 +602,7 @@
         </rule>
       </template>
     </menu>
-    <menu id="threadPaneContext-tags" label="&tagsMenu.label;" accesskey="&tagsMenu.accesskey;">
+    <menu id="threadPaneContext-tags" label="&tagMenu.label;" accesskey="&tagMenu.accesskey;">
       <menupopup id="threadPaneContext-tagpopup" onpopupshowing="InitMessageTags(this)">
         <menuseparator/>
         <menuitem id="addNewTag" label="&addNewTag.label;" accesskey="&addNewTag.accesskey;"
@@ -911,7 +911,7 @@
       </template>
     </menu>
     <menuseparator id="messagePaneContext-sep-tags-1"/>
-    <menu id="messagePaneContext-tags" label="&tagsMenu.label;" accesskey="&tagsMenu.accesskey;">
+    <menu id="messagePaneContext-tags" label="&tagMenu.label;" accesskey="&tagMenu.accesskey;">
       <menupopup id="messagePaneContext-tagpopup" onpopupshowing="InitMessageTags(this)">
         <menuseparator/>
         <menuitem id="addNewTag" label="&addNewTag.label;" accesskey="&addNewTag.accesskey;"
@@ -1539,8 +1539,11 @@
               </template>
             </menu>
 
-            <menu id="messageMenu-tags" label="&tagsMenu.label;" accesskey="&tagsMenu.accesskey;">
-              <menupopup id="messageMenu-tagpopup" onpopupshowing="InitMessageTags('messageMenu')">
+            <menu id="tagMenu" label="&tagMenu.label;" accesskey="&tagMenu.accesskey;" observes="cmd_tag">
+              <menupopup onpopupshowing="InitMessageTags(this)">
+                <menuseparator/>
+                <menuitem id="addNewTag" label="&addNewTag.label;" accesskey="&addNewTag.accesskey;"
+                          oncommand="AddTag();"/>
               </menupopup>
             </menu>
             <menu id="markMenu" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
