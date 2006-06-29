@@ -144,6 +144,7 @@ safebrowsing.progressListener =
 safebrowsing.progressListener.callback =
   safebrowsing.progressListenerCallback;
 safebrowsing.progressListener.enabled = true;
+safebrowsing.progressListener.delay = 0;
 
 window.addEventListener("load", safebrowsing.startup, false);
 window.addEventListener("unload", safebrowsing.shutdown, false);
