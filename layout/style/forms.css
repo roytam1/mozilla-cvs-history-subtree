@@ -712,6 +712,6 @@ input[type="file"] > input[type="button"]:active:hover {
 %ifndef HTML_FORMS
 
 /* XXX TEMPORARY, to make it easier to test Web pages that have selects */
-select { display: none; }
+select { display: none ! important; }
 
 %endif
