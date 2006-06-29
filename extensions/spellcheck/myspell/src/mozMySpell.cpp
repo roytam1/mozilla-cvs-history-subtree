@@ -63,6 +63,7 @@
 #include "nsIObserverService.h"
 #include "nsISimpleEnumerator.h"
 #include "nsIDirectoryEnumerator.h"
+#include "nsIFile.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "mozISpellI18NManager.h"
@@ -70,7 +71,6 @@
 #include "nsUnicharUtilCIID.h"
 #include "nsUnicharUtils.h"
 #include "nsCRT.h"
-#include "nsIFile.h"
 #include <stdlib.h>
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
