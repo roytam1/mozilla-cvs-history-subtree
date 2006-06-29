@@ -113,6 +113,7 @@ XPIDLSRCS	= \
 		nsIDOMSVGTSpanElement.idl \
 		nsIDOMSVGURIReference.idl \
 		nsIDOMSVGUseElement.idl \
+		nsIDOMSVGViewSpec.idl \
 		nsIDOMSVGZoomAndPan.idl \
 		nsIDOMSVGZoomEvent.idl \
 		$(NULL)
