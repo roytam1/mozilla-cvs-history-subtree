@@ -722,7 +722,7 @@ function EngineURL(aType, aMethod, aTemplate) {
     // Disable these for now, see bug 295018
     // case "file":
     // case "resource":
-      this.template = templateURI.spec;
+      this.template = aTemplate;
       break;
     default:
       ENSURE(false, "new EngineURL: template uses invalid scheme!",
