@@ -178,6 +178,11 @@ MODULES_minimo :=                               \
   mozilla/minimo                                \
   $(NULL)
 
+LOCALES_minimo :=                               \
+  $(LOCALES_toolkit)                            \
+  minimo                                        \
+  $(NULL)
+
 MODULES_mail :=                                 \
   $(MODULES_toolkit)                            \
   mozilla/mail                                  \
