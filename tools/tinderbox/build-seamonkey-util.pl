@@ -391,6 +391,12 @@ sub SetupEnv {
     my $topsrcdir = "$Settings::BaseDir/$Settings::DirName/mozilla";
     $objdir = "$topsrcdir/${Settings::ObjDir}";
 
+    if (not -e $objdir) {
+        # Not checking errors here, because it's too early to set $status and the 
+        # build will fail anyway; failing loudly is better than failing silently.
+        run_shell_command("mkdir -p $objdir");
+    }
+
     $Settings::TopsrcdirFull = $topsrcdir;
     $Settings::TopsrcdirLast = $topsrcdir . ".last";
 
