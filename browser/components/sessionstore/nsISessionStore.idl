@@ -53,4 +53,12 @@ interface nsISessionStore : nsISupports
    * Initialize the service
    */
   void init(in nsIDOMWindow aWindow);
+
+  /**
+   * @param aWindow
+   *          The window to reopen a closed tab in.
+   * @param aIndex
+   *          Indicates the window to be restored (FIFO ordered).
+   */
+  void undoCloseTab(in nsIDOMWindow aWindow, in unsigned long aIndex);
 };
