@@ -300,7 +300,7 @@ nsSAXXMLReader::ReportError(const PRUnichar* aErrorText,
 NS_IMETHODIMP
 nsSAXXMLReader::GetBaseURI(nsIURI **aBaseURI)
 {
-  *aBaseURI = mBaseURI;
+  NS_IF_ADDREF(*aBaseURI = mBaseURI);
   return NS_OK;
 }
 
@@ -314,7 +314,7 @@ nsSAXXMLReader::SetBaseURI(nsIURI *aBaseURI)
 NS_IMETHODIMP
 nsSAXXMLReader::GetContentHandler(nsISAXContentHandler **aContentHandler)
 {
-  *aContentHandler = mContentHandler;
+  NS_IF_ADDREF(*aContentHandler = mContentHandler);
   return NS_OK;
 }
 
@@ -328,7 +328,7 @@ nsSAXXMLReader::SetContentHandler(nsISAXContentHandler *aContentHandler)
 NS_IMETHODIMP
 nsSAXXMLReader::GetDtdHandler(nsISAXDTDHandler **aDtdHandler)
 {
-  *aDtdHandler = mDTDHandler;
+  NS_IF_ADDREF(*aDtdHandler = mDTDHandler);
   return NS_OK;
 }
 
@@ -342,7 +342,7 @@ nsSAXXMLReader::SetDtdHandler(nsISAXDTDHandler *aDtdHandler)
 NS_IMETHODIMP
 nsSAXXMLReader::GetErrorHandler(nsISAXErrorHandler **aErrorHandler)
 {
-  *aErrorHandler = mErrorHandler;
+  NS_IF_ADDREF(*aErrorHandler = mErrorHandler);
   return NS_OK;
 }
 
@@ -368,7 +368,7 @@ nsSAXXMLReader::GetFeature(const nsAString &aName, PRBool *aResult)
 NS_IMETHODIMP
 nsSAXXMLReader::GetLexicalHandler(nsISAXLexicalHandler **aLexicalHandler)
 {
-  *aLexicalHandler = mLexicalHandler;
+  NS_IF_ADDREF(*aLexicalHandler = mLexicalHandler);
   return NS_OK;
 }
 
