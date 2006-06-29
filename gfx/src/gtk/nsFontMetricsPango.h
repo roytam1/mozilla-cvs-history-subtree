@@ -134,6 +134,8 @@ public:
                                      { aAveCharWidth = mAveCharWidth;
                                        return NS_OK; };
 
+    PRInt32 GetMaxStringLength() { return mMaxStringLength; }
+
     // nsIFontMetricsGTK (calls from the font rendering layer)
     virtual nsresult GetWidth(const char* aString, PRUint32 aLength,
                               nscoord& aWidth,
@@ -194,6 +196,7 @@ public:
     virtual GdkFont* GetCurrentGDKFont(void);
 
     virtual nsresult SetRightToLeftText(PRBool aIsRTL);
+    virtual PRBool GetRightToLeftText();
 
     virtual nsresult GetClusterInfo(const PRUnichar *aText,
                                     PRUint32 aLength,
@@ -262,6 +265,7 @@ private:
     nscoord                  mSpaceWidth;
     nscoord                  mPangoSpaceWidth;
     nscoord                  mAveCharWidth;
+    PRInt32                  mMaxStringLength;
 
     // Private methods
     nsresult RealizeFont(void);

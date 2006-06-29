@@ -1084,7 +1084,7 @@ struct nsBoundingMetrics {
   operator += (const nsBoundingMetrics& bm) {
     if (ascent < bm.ascent) ascent = bm.ascent;
     if (descent < bm.descent) descent = bm.descent;   
-    rightBearing = width + bm.rightBearing;
+    rightBearing = PR_MAX(rightBearing, width + bm.rightBearing);
     width += bm.width;
   }
 };

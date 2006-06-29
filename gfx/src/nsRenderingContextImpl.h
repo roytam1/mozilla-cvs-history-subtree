@@ -99,10 +99,19 @@ public:
   NS_IMETHOD PopTranslation(PushedTranslation* aState);
 
   /**
+   * Return the maximum length of a string that can be handled by the platform
+   * using the current font metrics.
+   * The implementation here is just a stub; classes that don't override
+   * the safe string methods need to implement this.
+   */
+  virtual PRInt32 GetMaxStringLength() { return 1; }
+
+  /**
    * Let the device context know whether we want text reordered with
    * right-to-left base direction
    */
   NS_IMETHOD SetRightToLeftText(PRBool aIsRTL);
+  NS_IMETHOD GetRightToLeftText(PRBool* aIsRTL);
 
   NS_IMETHOD DrawImage(imgIContainer *aImage, const nsRect & aSrcRect, const nsRect & aDestRect);
   NS_IMETHOD DrawTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect);
@@ -123,6 +132,131 @@ public:
                            PRUint32 aStart,
                            PRUint32 aEnd,
                            PRUint32 &aWidth);
+
+  // Silence C++ hiding warnings
+  NS_IMETHOD GetWidth(char aC, nscoord &aWidth) = 0;
+  NS_IMETHOD GetWidth(PRUnichar aC, nscoord &aWidth,
+                      PRInt32 *aFontID = nsnull) = 0;
+
+  // Safe string method variants: by default, these defer to the more
+  // elaborate methods below
+  NS_IMETHOD GetWidth(const nsString& aString, nscoord &aWidth,
+                      PRInt32 *aFontID = nsnull);
+  NS_IMETHOD GetWidth(const char* aString, nscoord& aWidth);
+  NS_IMETHOD DrawString(const nsString& aString, nscoord aX, nscoord aY,
+                        PRInt32 aFontID = -1,
+                        const nscoord* aSpacing = nsnull);
+
+  // Safe string methods
+  NS_IMETHOD GetWidth(const char* aString, PRUint32 aLength,
+                      nscoord& aWidth);
+  NS_IMETHOD GetWidth(const PRUnichar *aString, PRUint32 aLength,
+                      nscoord &aWidth, PRInt32 *aFontID = nsnull);
+
+  NS_IMETHOD GetTextDimensions(const char* aString, PRUint32 aLength,
+                               nsTextDimensions& aDimensions);
+  NS_IMETHOD GetTextDimensions(const PRUnichar* aString, PRUint32 aLength,
+                               nsTextDimensions& aDimensions, PRInt32* aFontID = nsnull);
+
+#if defined(_WIN32) || defined(XP_OS2) || defined(MOZ_X11) || defined(XP_BEOS)
+  NS_IMETHOD GetTextDimensions(const char*       aString,
+                               PRInt32           aLength,
+                               PRInt32           aAvailWidth,
+                               PRInt32*          aBreaks,
+                               PRInt32           aNumBreaks,
+                               nsTextDimensions& aDimensions,
+                               PRInt32&          aNumCharsFit,
+                               nsTextDimensions& aLastWordDimensions,
+                               PRInt32*          aFontID = nsnull);
+
+  NS_IMETHOD GetTextDimensions(const PRUnichar*  aString,
+                               PRInt32           aLength,
+                               PRInt32           aAvailWidth,
+                               PRInt32*          aBreaks,
+                               PRInt32           aNumBreaks,
+                               nsTextDimensions& aDimensions,
+                               PRInt32&          aNumCharsFit,
+                               nsTextDimensions& aLastWordDimensions,
+                               PRInt32*          aFontID = nsnull);
+#endif
+#ifdef MOZ_MATHML
+  NS_IMETHOD
+  GetBoundingMetrics(const char*        aString,
+                     PRUint32           aLength,
+                     nsBoundingMetrics& aBoundingMetrics);
+  NS_IMETHOD
+  GetBoundingMetrics(const PRUnichar*   aString,
+                     PRUint32           aLength,
+                     nsBoundingMetrics& aBoundingMetrics,
+                     PRInt32*           aFontID = nsnull);
+#endif
+  NS_IMETHOD DrawString(const char *aString, PRUint32 aLength,
+                        nscoord aX, nscoord aY,
+                        const nscoord* aSpacing = nsnull);
+  NS_IMETHOD DrawString(const PRUnichar *aString, PRUint32 aLength,
+                        nscoord aX, nscoord aY,
+                        PRInt32 aFontID = -1,
+                        const nscoord* aSpacing = nsnull);
+
+  // Unsafe platform-specific implementations
+  NS_IMETHOD GetWidthInternal(const char* aString, PRUint32 aLength,
+                              nscoord& aWidth)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetWidthInternal(const PRUnichar *aString, PRUint32 aLength,
+                              nscoord &aWidth, PRInt32 *aFontID = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetTextDimensionsInternal(const char* aString, PRUint32 aLength,
+                                       nsTextDimensions& aDimensions)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetTextDimensionsInternal(const PRUnichar* aString, PRUint32 aLength,
+                                       nsTextDimensions& aDimensions, PRInt32* aFontID = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+
+#if defined(_WIN32) || defined(XP_OS2) || defined(MOZ_X11) || defined(XP_BEOS)
+  NS_IMETHOD GetTextDimensionsInternal(const char*       aString,
+                                       PRInt32           aLength,
+                                       PRInt32           aAvailWidth,
+                                       PRInt32*          aBreaks,
+                                       PRInt32           aNumBreaks,
+                                       nsTextDimensions& aDimensions,
+                                       PRInt32&          aNumCharsFit,
+                                       nsTextDimensions& aLastWordDimensions,
+                                       PRInt32*          aFontID = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+
+  NS_IMETHOD GetTextDimensionsInternal(const PRUnichar*  aString,
+                                       PRInt32           aLength,
+                                       PRInt32           aAvailWidth,
+                                       PRInt32*          aBreaks,
+                                       PRInt32           aNumBreaks,
+                                       nsTextDimensions& aDimensions,
+                                       PRInt32&          aNumCharsFit,
+                                       nsTextDimensions& aLastWordDimensions,
+                                       PRInt32*          aFontID = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+#endif
+#ifdef MOZ_MATHML
+  NS_IMETHOD
+  GetBoundingMetricsInternal(const char*        aString,
+                             PRUint32           aLength,
+                             nsBoundingMetrics& aBoundingMetrics)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD
+  GetBoundingMetricsInternal(const PRUnichar*   aString,
+                             PRUint32           aLength,
+                             nsBoundingMetrics& aBoundingMetrics,
+                             PRInt32*           aFontID = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+#endif
+  NS_IMETHOD DrawStringInternal(const char *aString, PRUint32 aLength,
+                                nscoord aX, nscoord aY,
+                                const nscoord* aSpacing = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD DrawStringInternal(const PRUnichar *aString, PRUint32 aLength,
+                                nscoord aX, nscoord aY,
+                                PRInt32 aFontID = -1,
+                                const nscoord* aSpacing = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
 
   NS_IMETHOD RenderEPS(const nsRect& aRect, FILE *aDataFile);
 

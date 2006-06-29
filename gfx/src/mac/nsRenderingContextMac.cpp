@@ -1235,6 +1235,14 @@ NS_IMETHODIMP nsRenderingContextMac::FillArc(nscoord aX, nscoord aY, nscoord aWi
 }
 
 #pragma mark -
+
+PRInt32 nsRenderingContextMac::GetMaxStringLength()
+{
+  if (!mGS->mFontMetrics)
+    return 1;
+  return NS_STATIC_CAST(nsFontMetricsMac*, mGS->mFontMetrics)->GetMaxStringLength();
+}
+
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP nsRenderingContextMac::GetWidth(char ch, nscoord &aWidth)
@@ -1263,22 +1271,8 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(PRUnichar ch, nscoord &aWidth, PRI
 
 //------------------------------------------------------------------------
 
-NS_IMETHODIMP nsRenderingContextMac::GetWidth(const nsString& aString, nscoord &aWidth, PRInt32 *aFontID)
-{
-	return GetWidth(aString.get(), aString.Length(), aWidth, aFontID);
-}
-
-//------------------------------------------------------------------------
-
-NS_IMETHODIMP nsRenderingContextMac::GetWidth(const char *aString, nscoord &aWidth)
-{
-	return GetWidth(aString, strlen(aString), aWidth);
-}
-
-//------------------------------------------------------------------------
-
 NS_IMETHODIMP
-nsRenderingContextMac::GetWidth(const char* aString, PRUint32 aLength, nscoord& aWidth)
+nsRenderingContextMac::GetWidthInternal(const char* aString, PRUint32 aLength, nscoord& aWidth)
 {
 	SetupPortState();
 
@@ -1297,7 +1291,8 @@ nsRenderingContextMac::GetWidth(const char* aString, PRUint32 aLength, nscoord& 
 
 //------------------------------------------------------------------------
 
-NS_IMETHODIMP nsRenderingContextMac::GetWidth(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID)
+NS_IMETHODIMP
+nsRenderingContextMac::GetWidthInternal(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID)
 {
 	SetupPortState();
 	
@@ -1317,8 +1312,8 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(const PRUnichar *aString, PRUint32
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP
-nsRenderingContextMac::GetTextDimensions(const char* aString, PRUint32 aLength,
-                                        nsTextDimensions& aDimensions)
+nsRenderingContextMac::GetTextDimensionsInternal(const char* aString, PRUint32 aLength,
+                                                 nsTextDimensions& aDimensions)
 {
   nsresult rv= GetWidth(aString, aLength, aDimensions.width);
   if (NS_SUCCEEDED(rv) && (mGS->mFontMetrics))
@@ -1330,8 +1325,8 @@ nsRenderingContextMac::GetTextDimensions(const char* aString, PRUint32 aLength,
 }
 
 NS_IMETHODIMP
-nsRenderingContextMac::GetTextDimensions(const PRUnichar* aString, PRUint32 aLength,
-                                         nsTextDimensions& aDimensions, PRInt32* aFontID)
+nsRenderingContextMac::GetTextDimensionsInternal(const PRUnichar* aString, PRUint32 aLength,
+                                                 nsTextDimensions& aDimensions, PRInt32* aFontID)
 {
   SetupPortState();
   
@@ -1351,9 +1346,9 @@ nsRenderingContextMac::GetTextDimensions(const PRUnichar* aString, PRUint32 aLen
 #pragma mark -
 //------------------------------------------------------------------------
 
-NS_IMETHODIMP nsRenderingContextMac::DrawString(const char *aString, PRUint32 aLength,
-                                         nscoord aX, nscoord aY,
-                                         const nscoord* aSpacing)
+NS_IMETHODIMP nsRenderingContextMac::DrawStringInternal(const char *aString, PRUint32 aLength,
+                                                        nscoord aX, nscoord aY,
+                                                        const nscoord* aSpacing)
 {
 	SetupPortState();
 
@@ -1398,9 +1393,9 @@ NS_IMETHODIMP nsRenderingContextMac::DrawString(const char *aString, PRUint32 aL
 
 
 //------------------------------------------------------------------------
-NS_IMETHODIMP nsRenderingContextMac::DrawString(const PRUnichar *aString, PRUint32 aLength,
-                                         nscoord aX, nscoord aY, PRInt32 aFontID,
-                                         const nscoord* aSpacing)
+NS_IMETHODIMP nsRenderingContextMac::DrawStringInternal(const PRUnichar *aString, PRUint32 aLength,
+                                                        nscoord aX, nscoord aY, PRInt32 aFontID,
+                                                        const nscoord* aSpacing)
 {
 	SetupPortState();
 
@@ -1424,9 +1419,9 @@ NS_IMETHODIMP nsRenderingContextMac::DrawString(const PRUnichar *aString, PRUint
 
 //------------------------------------------------------------------------
 
-NS_IMETHODIMP nsRenderingContextMac::DrawString(const nsString& aString,
-                                         nscoord aX, nscoord aY, PRInt32 aFontID,
-                                         const nscoord* aSpacing)
+NS_IMETHODIMP nsRenderingContextMac::DrawStringInternal(const nsString& aString,
+                                                        nscoord aX, nscoord aY, PRInt32 aFontID,
+                                                        const nscoord* aSpacing)
 {
  	return DrawString(aString.get(), aString.Length(), aX, aY, aFontID, aSpacing);
 }
@@ -1503,18 +1498,18 @@ nsRenderingContextMac::FlushRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord
 #ifdef MOZ_MATHML
 
 NS_IMETHODIMP
-nsRenderingContextMac::GetBoundingMetrics(const char*        aString, 
-                                          PRUint32           aLength,
-                                          nsBoundingMetrics& aBoundingMetrics)
+nsRenderingContextMac::GetBoundingMetricsInternal(const char*        aString, 
+                                                  PRUint32           aLength,
+                                                  nsBoundingMetrics& aBoundingMetrics)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsRenderingContextMac::GetBoundingMetrics(const PRUnichar*   aString, 
-                                          PRUint32           aLength,
-                                          nsBoundingMetrics& aBoundingMetrics,
-                                          PRInt32*           aFontID)
+nsRenderingContextMac::GetBoundingMetricsInternal(const PRUnichar*   aString, 
+                                                  PRUint32           aLength,
+                                                  nsBoundingMetrics& aBoundingMetrics,
+                                                  PRInt32*           aFontID)
 {
   SetupPortState();
   
@@ -1540,6 +1535,13 @@ nsRenderingContextMac::SetRightToLeftText(PRBool aIsRTL)
 {
   mRightToLeftText = aIsRTL;
 	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRenderingContextMac::GetRightToLeftText(PRBool* aIsRTL)
+{
+  *aIsRTL = mRightToLeftText;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

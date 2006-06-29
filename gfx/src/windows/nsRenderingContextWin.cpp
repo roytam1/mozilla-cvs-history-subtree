@@ -1438,14 +1438,9 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(PRUnichar ch, nscoord &aWidth, P
   return GetWidth(buf, 1, aWidth, aFontID);
 }
 
-NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const char* aString, nscoord& aWidth)
-{
-  return GetWidth(aString, strlen(aString), aWidth);
-}
-
-NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const char* aString,
-                                                PRUint32 aLength,
-                                                nscoord& aWidth)
+NS_IMETHODIMP nsRenderingContextWin :: GetWidthInternal(const char* aString,
+                                                        PRUint32 aLength,
+                                                        nscoord& aWidth)
 {
 
   if (nsnull != mFontMetrics)
@@ -1466,11 +1461,6 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const char* aString,
   }
   else
     return NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const nsString& aString, nscoord& aWidth, PRInt32 *aFontID)
-{
-  return GetWidth(aString.get(), aString.Length(), aWidth, aFontID);
 }
 
 struct GetWidthData {
@@ -1497,10 +1487,10 @@ do_GetWidth(const nsFontSwitch* aFontSwitch,
   return PR_TRUE; // don't stop till the end
 }
 
-NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const PRUnichar *aString,
-                                                PRUint32 aLength,
-                                                nscoord &aWidth,
-                                                PRInt32 *aFontID)
+NS_IMETHODIMP nsRenderingContextWin :: GetWidthInternal(const PRUnichar *aString,
+                                                        PRUint32 aLength,
+                                                        nscoord &aWidth,
+                                                        PRInt32 *aFontID)
 {
   if (!mFontMetrics) return NS_ERROR_FAILURE;
 
@@ -1524,15 +1514,15 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const PRUnichar *aString,
 }
 
 NS_IMETHODIMP
-nsRenderingContextWin::GetTextDimensions(const char*       aString,
-                                         PRInt32           aLength,
-                                         PRInt32           aAvailWidth,
-                                         PRInt32*          aBreaks,
-                                         PRInt32           aNumBreaks,
-                                         nsTextDimensions& aDimensions,
-                                         PRInt32&          aNumCharsFit,
-                                         nsTextDimensions& aLastWordDimensions,
-                                         PRInt32*          aFontID)
+nsRenderingContextWin::GetTextDimensionsInternal(const char*       aString,
+                                                 PRInt32           aLength,
+                                                 PRInt32           aAvailWidth,
+                                                 PRInt32*          aBreaks,
+                                                 PRInt32           aNumBreaks,
+                                                 nsTextDimensions& aDimensions,
+                                                 PRInt32&          aNumCharsFit,
+                                                 nsTextDimensions& aLastWordDimensions,
+                                                 PRInt32*          aFontID)
 {
   NS_PRECONDITION(aBreaks[aNumBreaks - 1] == aLength, "invalid break array");
 
@@ -1958,15 +1948,15 @@ do_BreakGetTextDimensions(const nsFontSwitch* aFontSwitch,
 }
 
 NS_IMETHODIMP
-nsRenderingContextWin::GetTextDimensions(const PRUnichar*  aString,
-                                         PRInt32           aLength,
-                                         PRInt32           aAvailWidth,
-                                         PRInt32*          aBreaks,
-                                         PRInt32           aNumBreaks,
-                                         nsTextDimensions& aDimensions,
-                                         PRInt32&          aNumCharsFit,
-                                         nsTextDimensions& aLastWordDimensions,
-                                         PRInt32*          aFontID)
+nsRenderingContextWin::GetTextDimensionsInternal(const PRUnichar*  aString,
+                                                 PRInt32           aLength,
+                                                 PRInt32           aAvailWidth,
+                                                 PRInt32*          aBreaks,
+                                                 PRInt32           aNumBreaks,
+                                                 nsTextDimensions& aDimensions,
+                                                 PRInt32&          aNumCharsFit,
+                                                 nsTextDimensions& aLastWordDimensions,
+                                                 PRInt32*          aFontID)
 {
   if (!mFontMetrics) return NS_ERROR_FAILURE;
 
@@ -2121,9 +2111,9 @@ nsRenderingContextWin::GetTextDimensions(const PRUnichar*  aString,
 }
 
 NS_IMETHODIMP
-nsRenderingContextWin::GetTextDimensions(const char*       aString,
-                                         PRUint32          aLength,
-                                         nsTextDimensions& aDimensions)
+nsRenderingContextWin::GetTextDimensionsInternal(const char*       aString,
+                                                 PRUint32          aLength,
+                                                 nsTextDimensions& aDimensions)
 {
   if (!mFontMetrics) {
     aDimensions.Clear();
@@ -2167,10 +2157,10 @@ do_GetTextDimensions(const nsFontSwitch* aFontSwitch,
 }
 
 NS_IMETHODIMP
-nsRenderingContextWin::GetTextDimensions(const PRUnichar*  aString,
-                                         PRUint32          aLength,
-                                         nsTextDimensions& aDimensions,
-                                         PRInt32*          aFontID)
+nsRenderingContextWin::GetTextDimensionsInternal(const PRUnichar*  aString,
+                                                 PRUint32          aLength,
+                                                 nsTextDimensions& aDimensions,
+                                                 PRInt32*          aFontID)
 {
   aDimensions.Clear();
   if (!mFontMetrics) return NS_ERROR_FAILURE;
@@ -2196,9 +2186,9 @@ nsRenderingContextWin::GetTextDimensions(const PRUnichar*  aString,
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextWin :: DrawString(const char *aString, PRUint32 aLength,
-                                                  nscoord aX, nscoord aY,
-                                                  const nscoord* aSpacing)
+NS_IMETHODIMP nsRenderingContextWin :: DrawStringInternal(const char *aString, PRUint32 aLength,
+                                                          nscoord aX, nscoord aY,
+                                                          const nscoord* aSpacing)
 {
   NS_PRECONDITION(mFontMetrics,"Something is wrong somewhere");
 
@@ -2295,10 +2285,10 @@ do_DrawString(const nsFontSwitch* aFontSwitch,
   return PR_TRUE; // don't stop till the end
 }
 
-NS_IMETHODIMP nsRenderingContextWin :: DrawString(const PRUnichar *aString, PRUint32 aLength,
-                                                  nscoord aX, nscoord aY,
-                                                  PRInt32 aFontID,
-                                                  const nscoord* aSpacing)
+NS_IMETHODIMP nsRenderingContextWin :: DrawStringInternal(const PRUnichar *aString, PRUint32 aLength,
+                                                          nscoord aX, nscoord aY,
+                                                          PRInt32 aFontID,
+                                                          const nscoord* aSpacing)
 {
   if (!mFontMetrics) return NS_ERROR_FAILURE;
 
@@ -2329,19 +2319,11 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawString(const PRUnichar *aString, PRUi
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextWin :: DrawString(const nsString& aString,
-                                                  nscoord aX, nscoord aY,
-                                                  PRInt32 aFontID,
-                                                  const nscoord* aSpacing)
-{
-  return DrawString(aString.get(), aString.Length(), aX, aY, aFontID, aSpacing);
-}
-
 #ifdef MOZ_MATHML
 NS_IMETHODIMP 
-nsRenderingContextWin::GetBoundingMetrics(const char*        aString,
-                                          PRUint32           aLength,
-                                          nsBoundingMetrics& aBoundingMetrics)
+nsRenderingContextWin::GetBoundingMetricsInternal(const char*        aString,
+                                                  PRUint32           aLength,
+                                                  nsBoundingMetrics& aBoundingMetrics)
 {
   NS_PRECONDITION(mFontMetrics,"Something is wrong somewhere");
 
@@ -2402,10 +2384,10 @@ do_GetBoundingMetrics(const nsFontSwitch* aFontSwitch,
 }
 
 NS_IMETHODIMP
-nsRenderingContextWin::GetBoundingMetrics(const PRUnichar*   aString,
-                                          PRUint32           aLength,
-                                          nsBoundingMetrics& aBoundingMetrics,
-                                          PRInt32*           aFontID)
+nsRenderingContextWin::GetBoundingMetricsInternal(const PRUnichar*   aString,
+                                                  PRUint32           aLength,
+                                                  nsBoundingMetrics& aBoundingMetrics,
+                                                  PRInt32*           aFontID)
 {
   aBoundingMetrics.Clear();
   if (!mFontMetrics) return NS_ERROR_FAILURE;
@@ -2438,6 +2420,13 @@ nsRenderingContextWin::GetBoundingMetrics(const PRUnichar*   aString,
   return rv;
 }
 #endif // MOZ_MATHML
+
+PRInt32 nsRenderingContextWin::GetMaxStringLength()
+{
+  if (!mFontMetrics)
+    return 1;
+  return NS_STATIC_CAST(nsFontMetricsWin*, mFontMetrics)->GetMaxStringLength();
+}
 
 NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsIDrawingSurface* aSrcSurf,
                                                          PRInt32 aSrcX, PRInt32 aSrcY,
@@ -2911,6 +2900,17 @@ nsRenderingContextWin::SetRightToLeftText(PRBool aIsRTL)
   }
 
   mRightToLeftText = aIsRTL;
+#endif
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRenderingContextWin::GetRightToLeftText(PRBool* aIsRTL)
+{
+#ifndef WINCE
+  *aIsRTL = mRightToLeftText;
+#else
+  *aIsRTL = PR_FALSE;
 #endif
   return NS_OK;
 }

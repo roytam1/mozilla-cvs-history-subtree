@@ -255,6 +255,7 @@ public:
   NS_IMETHOD  GetMaxDescent(nscoord &aDescent);
   NS_IMETHOD  GetMaxAdvance(nscoord &aAdvance);
   NS_IMETHOD  GetAveCharWidth(nscoord &aAveCharWidth);
+  virtual PRInt32 GetMaxStringLength();
   NS_IMETHOD  GetLangGroup(nsIAtom** aLangGroup);
   NS_IMETHOD  GetFontHandle(nsFontHandle &aHandle);
   
@@ -347,6 +348,7 @@ public:
   virtual GdkFont* GetCurrentGDKFont(void);
 
   virtual nsresult SetRightToLeftText(PRBool aIsRTL);
+  virtual PRBool GetRightToLeftText();
 
   virtual nsresult GetClusterInfo(const PRUnichar *aText,
                                   PRUint32 aLength,
@@ -416,6 +418,7 @@ protected:
   nscoord             mUnderlineOffset;
   nscoord             mSpaceWidth;
   nscoord             mAveCharWidth;
+  PRInt32             mMaxStringLength;
 
   PRUint16            mPixelSize;
   PRUint8             mStretchIndex;

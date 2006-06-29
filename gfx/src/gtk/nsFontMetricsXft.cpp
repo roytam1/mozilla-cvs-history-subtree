@@ -735,6 +735,12 @@ nsFontMetricsXft::SetRightToLeftText(PRBool aIsRTL)
     return NS_OK;
 }
 
+PRBool
+nsFontMetricsXft::GetRightToLeftText()
+{
+    return PR_FALSE;
+}
+
 nsresult
 nsFontMetricsXft::GetClusterInfo(const PRUnichar *aText,
                                  PRUint32 aLength,
@@ -846,6 +852,10 @@ nsFontMetricsXft::CacheFontMetrics(void)
 
     // mMaxAdvance
     mMaxAdvance = nscoord(xftFont->max_advance_width * f);
+    // X may screw up if we try to measure/draw more than 32767 pixels in
+    // one operation.
+    mMaxStringLength = (PRInt32)floor(32767.0/xftFont->max_advance_width);
+    mMaxStringLength = PR_MAX(1, mMaxStringLength);
 
     // mSpaceWidth (width of a space)
     gint rawWidth;

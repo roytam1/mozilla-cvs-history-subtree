@@ -124,6 +124,7 @@ public:
 
     // Set the direction of the text rendering
     virtual nsresult SetRightToLeftText(PRBool aIsRTL) = 0;
+    virtual PRBool GetRightToLeftText() = 0;
 
     virtual nsresult GetClusterInfo(const PRUnichar *aText,
                                     PRUint32 aLength,
@@ -143,7 +144,7 @@ public:
                                    PRUint32 aStart,
                                    PRUint32 aEnd,
                                    PRUint32 &aWidth) = 0;
-
+    virtual PRInt32 GetMaxStringLength() = 0;
 };
 
 #endif /* __nsIFontMetricsGTK_h */
