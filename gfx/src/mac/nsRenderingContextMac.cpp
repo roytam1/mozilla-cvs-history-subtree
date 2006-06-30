@@ -1417,16 +1417,6 @@ NS_IMETHODIMP nsRenderingContextMac::DrawStringInternal(const PRUnichar *aString
 	return rv;        
 }
 
-//------------------------------------------------------------------------
-
-NS_IMETHODIMP nsRenderingContextMac::DrawStringInternal(const nsString& aString,
-                                                        nscoord aX, nscoord aY, PRInt32 aFontID,
-                                                        const nscoord* aSpacing)
-{
- 	return DrawString(aString.get(), aString.Length(), aX, aY, aFontID, aSpacing);
-}
-
-
 #pragma mark -
 //------------------------------------------------------------------------
 
