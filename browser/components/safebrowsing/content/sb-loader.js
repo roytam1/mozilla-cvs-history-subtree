@@ -101,6 +101,7 @@ var safebrowsing = {
     // so we need to check all requests that fired before deferredStartup.
     if (!phishWarden.phishWardenEnabled_) {
       safebrowsing.progressListenerCallback.requests = null;
+      safebrowsing.progressListenerCallback.onDocNavStart = null;
       safebrowsing.progressListenerCallback = null;
       safebrowsing.progressListener = null;
       return;
@@ -115,6 +116,7 @@ var safebrowsing = {
     }
     // Cleanup
     safebrowsing.progressListenerCallback.requests = null;
+    safebrowsing.progressListenerCallback.onDocNavStart = null;
     safebrowsing.progressListenerCallback = null;
     safebrowsing.progressListener = null;
   },
@@ -144,6 +146,7 @@ safebrowsing.progressListener =
 safebrowsing.progressListener.callback =
   safebrowsing.progressListenerCallback;
 safebrowsing.progressListener.enabled = true;
+safebrowsing.progressListener.delay = 0;
 
 window.addEventListener("load", safebrowsing.startup, false);
 window.addEventListener("unload", safebrowsing.shutdown, false);
