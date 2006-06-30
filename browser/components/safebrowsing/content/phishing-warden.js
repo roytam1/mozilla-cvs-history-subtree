@@ -455,7 +455,8 @@ PROT_PhishingWarden.prototype.checkUrl_ = function(url, callback) {
     callback();
     return;
   }
-  this.isEvilURL_(url, callback);
+  if (!this.isSpurious_(url))
+    this.isEvilURL_(url, callback);
 }
 
 /**
@@ -491,4 +492,21 @@ PROT_PhishingWarden.prototype.checkRemoteData = function(callback,
   } else {
     G_Debug(this, "Remote blacklist miss");
   }
+}
+
+/**
+ * Helper function to determine whether a given URL is "spurious" for some
+ * definition of "spurious".
+ *
+ * @param url String containing the URL to check
+ * 
+ * @returns Boolean indicating whether Fritz thinks it's too boring to notice
+ */ 
+PROT_PhishingWarden.prototype.isSpurious_ = function(url) {
+  return (url == "about:blank" ||
+          url == "about:config" ||  
+          url.startsWith("chrome://") ||
+          url.startsWith("file://") ||
+          url.startsWith("jar:") ||
+          url.startsWith("javascript:"));
 }
