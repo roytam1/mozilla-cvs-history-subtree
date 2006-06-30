@@ -25,9 +25,6 @@ cp -pRL bin/minimo                                         minimo
 cp -pRL bin/libnspr4.so                                    minimo
 cp -pRL bin/libplc4.so                                     minimo
 cp -pRL bin/libplds4.so                                    minimo
-cp -pRL bin/libxpcom.so                                    minimo
-cp -pRL bin/libxpcom_core.so                               minimo
-
 cp -pRL bin/libnss3.so                                     minimo
 cp -pRL bin/libnssckbi.so                                  minimo
 cp -pRL bin/libsmime3.so                                   minimo
@@ -35,8 +32,7 @@ cp -pRL bin/libsoftokn3.so                                 minimo
 cp -pRL bin/libsoftokn3.chk                                minimo
 cp -pRL bin/libfreebl3.so                                  minimo
 cp -pRL bin/libfreebl3.chk                                 minimo
-cp -pRL bin/libssl3.so                                   minimo
-
+cp -pRL bin/libssl3.so                                     minimo
 
 mkdir -p minimo/chrome
 
@@ -49,20 +45,22 @@ cp -pRL bin/chrome/en-US.manifest                          minimo/chrome
 cp -pRL bin/chrome/minimo.jar                              minimo/chrome
 cp -pRL bin/chrome/minimo.manifest                         minimo/chrome
 
+cp -pRL bin/chrome/minimo-skin.jar                         minimo/chrome
+cp -pRL bin/chrome/minimo-skin.manifest                    minimo/chrome
+
+cp -pRL bin/chrome/minimo-skin-vga.jar                     minimo/chrome
+cp -pRL bin/chrome/minimo-skin-vga.manifest                minimo/chrome
+
 cp -pRL bin/chrome/toolkit.jar                             minimo/chrome
 cp -pRL bin/chrome/toolkit.manifest                        minimo/chrome
 
 cp -pRL bin/chrome/pippki.jar                              minimo/chrome
 cp -pRL bin/chrome/pippki.manifest                         minimo/chrome
 
-
 mkdir -p minimo/components
 
 cp -pRL bin/components/nsHelperAppDlg.js                   minimo/components
 cp -pRL bin/components/nsProgressDialog.js                 minimo/components
-
-cp -pRL bin/components/nsDictionary.js                     minimo/components
-cp -pRL bin/components/nsXmlRpcClient.js                   minimo/components
 
 cp -pRL bin/extensions/spatial-navigation@extensions.mozilla.org/components/* minimo/components
 
@@ -73,6 +71,10 @@ mkdir -p minimo/res
 cp -pRL bin/res/*                                          minimo/res
 rm -rf minimo/res/samples
 rm -rf minimo/res/throbber
+rm -rf minimo/res/viewer.properties
+rm -rf minimo/res/viewsource.css
+rm -rf minimo/res/hiddenWindow.html
+rm -rf minimo/res/bloatcycle.html
 
 mkdir -p minimo/plugins
 
@@ -107,6 +109,8 @@ popd
 pushd $SRCDIR
 
 cp -pRL ../customization/all.js                             $OBJDIR/dist/minimo/greprefs
+
+cat ../customization/ua.css.additions >> $OBJDIR/dist/minimo/res/ua.css
 
 popd
 
