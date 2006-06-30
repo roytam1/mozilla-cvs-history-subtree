@@ -1893,6 +1893,21 @@ function spinCreate() {
       document.getElementById("urlbar").focus();
     }, 
     SpinOut:function () {
+
+      var device = Components.classes["@mozilla.org/device/support;1"].getService(nsIDeviceSupport);
+      
+      if (device.has("hasSoftwareKeyboard") == "yes") {
+        // use global... xxx fix
+        keyboard = Components.classes["@mozilla.org/softkbservice/service;1"]
+                             .getService(Components.interfaces.nsISoftKeyBoard);
+
+        if (gKeyBoardToggle)
+          keyboard.hide();
+        else
+          keyboard.show();
+        
+        gKeyBoardToggle = !gKeyBoardToggle;
+      }
     }
   }
 
