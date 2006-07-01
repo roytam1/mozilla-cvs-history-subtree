@@ -1582,6 +1582,7 @@ nsCrypto::GenerateCRMFRequest(nsIDOMCRMFObject** aReturn)
   printf ("Created the folloing CRMF request:\n%s\n", encodedRequest);
 #endif
   if (!encodedRequest) {
+    nsFreeKeyPairInfo(keyids, numRequests);
     return NS_ERROR_FAILURE;
   }                                                    
   nsCRMFObject *newObject = new nsCRMFObject();
