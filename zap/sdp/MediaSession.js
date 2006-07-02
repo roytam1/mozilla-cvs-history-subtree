@@ -353,23 +353,7 @@ MediaSession.statefun(
                                               );
 
     if (this.usingICE) {
-      // Add a session-level ice-pwd attribute:
-      offer.appendAttrib("ice-pwd:" + this.iceCandidates.password);
-      
-      // Encode the candidates as media-level attributes:
-      for (var i=0, l=this.iceCandidates.candidates.length; i<l; ++i) {
-        var cand = this.iceCandidates.candidates[i];
-        for (var j=0, m=cand.componentCount; j<m; ++j) {
-          var comp = cand.componentAt(j);
-          mediaDescription.appendAdditionalAttrib("candidate:"+
-                                                  cand.getCandidateID()+" "+
-                                                  (j+1)+" "+
-                                                  comp.protocol+" "+
-                                                  cand.q+" "+
-                                                  comp.address+" "+
-                                                  comp.port);
-        }
-      }
+      encodeICECandidates(this.iceCandidates, offer, mediaDescription);
     }
     
     return offer;
@@ -427,6 +411,19 @@ MediaSession.statefun(
     this.remoteRTPPort = remoteRTPPort;
     this.remoteRTCPPort = remoteRTCPPort;
 
+
+    // parse ICE info:
+    if (this.usingICE) {
+      this.remoteICECandidates = extractICECandidates(offer, d);
+      if (!this.remoteICECandidates)
+        this.usingICE = false;
+      else {
+        this._dump("We have ICE candidates!");
+        for (var i=0,l=this.remoteICECandidates.candidates.length; i<l; ++i)
+          this._dump(this.remoteICECandidates.candidates[i]);
+      }
+    }
+    
     // change state:
     this.changeState("NEGOTIATED");
         
@@ -469,6 +466,10 @@ MediaSession.statefun(
     
     answer.setMediaDescriptions([mediaDescription], 1);
 
+    if (this.usingICE) {
+      encodeICECandidates(this.iceCandidates, answer, mediaDescription);
+    }
+    
     return answer;
   });
 
@@ -504,6 +505,18 @@ MediaSession.statefun(
     this.remoteRTPPort = remoteRTPPort;
     this.remoteRTCPPort = remoteRTCPPort;
 
+    // parse remote ICE info:
+    if (this.usingICE) {
+      this.remoteICECandidates = extractICECandidates(answer, d);
+      if (!this.remoteICECandidates)
+        this.usingICE = false;
+      else {
+        this._dump("We have ICE candidates!");
+        for (var i=0,l=this.remoteICECandidates.candidates.length; i<l; ++i)
+          this._dump(this.remoteICECandidates.candidates[i]);
+      }
+    }
+    
     // change state:
     this.changeState("NEGOTIATED");
   });

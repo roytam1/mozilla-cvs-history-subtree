@@ -47,7 +47,9 @@ Components.utils.importModule("gre:FunctionUtils.js");
 // name our global object:
 function toString() { return "[zapICE.js]"; }
 
-EXPORTED_SYMBOLS = ["produceICECandidates"];
+EXPORTED_SYMBOLS = ["produceICECandidates",
+                    "encodeICECandidates",
+                    "extractICECandidates"];
 
 // object to hold component's documentation:
 var _doc_ = {};
@@ -74,13 +76,18 @@ function generateICEPassword() {
   return password;
 }
 
+function generateCandidateId() {
+  // XXX could use base64, also 24 bits of randomness sufficient
+  var r = getRandom32();
+  return r.toString(36);
+}
+
 ////////////////////////////////////////////////////////////////////////
 // zapICETransport
 //
 // Abstraction of a transport address over which we can send or receive
 // media streams.
 // Behaviour is ammended by subclasses.
-// UDP is hardcoded atm.
 
 var zapICETransport = makeClass("zapICETransport", ErrorReporter);
 
@@ -91,32 +98,53 @@ var zapICETransport = makeClass("zapICETransport", ErrorReporter);
 // zapICETransport.obj("port", null);
 
 // protocol
-zapICETransport.obj("protocol", "UDP");
-
-// id of multiplexer in the media graph
-zapICETransport.fun(
-  function getLocalMuxId() {
-    this._error("to be implemented by subclass");
-  });
-
-// id of demultiplexer in the media graph
-zapICETransport.fun(
-  function getLocalDemuxId() {
-    this._error("to be implemented by subclass");
-  });
+// zapICETransport.obj("protocol", null);
 
 // free resources attached to this transport:
 zapICETransport.fun(
   function destroy() {
   });
 
+zapICETransport.spec(
+  function toString() {
+    if (!this.address) return this._zapICETransport_toString();
+    var rv = "["+this._class_.toString()+" "+this.address+":"+this.port+"]";
+    return rv;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// zapICENativeUDPTransport
+//
+// UDP transport belonging to us (as opposed to a remote transport offered
+// by our peer).
+// Behaviour is ammended by subclasses.
+
+var zapICENativeUDPTransport = makeClass("zapICENativeUDPTransport",
+                                         zapICETransport);
+
+// protocol
+zapICENativeUDPTransport.obj("protocol", "UDP");
+
+// id of multiplexer in the media graph
+zapICENativeUDPTransport.fun(
+  function getLocalMuxId() {
+    this._error("to be implemented by subclass");
+  });
+
+// id of demultiplexer in the media graph
+zapICENativeUDPTransport.fun(
+  function getLocalDemuxId() {
+    this._error("to be implemented by subclass");
+  });
+
+
 ////////////////////////////////////////////////////////////////////////
 // zapICELocalUDPTransport
 //
-// A local UDP transport
+// A native transport local to the machine we're running on
 
 var zapICELocalUDPTransport = makeClass("zapICELocalUDPTransport",
-                                        zapICETransport);
+                                        zapICENativeUDPTransport);
 
 // ctor expects an arg { address, portbase, mediaGraph }
 // binds to a STUN-able UDP socket at 'address' and the first free port
@@ -190,10 +218,10 @@ zapICELocalUDPTransport.getter(
 ////////////////////////////////////////////////////////////////////////
 // zapICEDerivedUDPTransport
 //
-// A derived UDP transport
+// A native derived UDP transport
 
 var zapICEDerivedUDPTransport = makeClass("zapICEDerivedUDPTransport",
-                                          zapICETransport);
+                                          zapICENativeUDPTransport);
 
 zapICEDerivedUDPTransport.appendCtor(
   function zapICEDerivedUDPTransportCtor(args) {
@@ -213,6 +241,24 @@ zapICEDerivedUDPTransport.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
+// zapICEPeerUDPTransport
+//
+// UDP transport offered by our peer
+
+var zapICEPeerUDPTransport = makeClass("zapICEPeerUDPTransport",
+                                       zapICETransport);
+
+zapICEPeerUDPTransport.appendCtor(
+  function zapICEPeerUDPTransportCtor(args) {
+    this.address = args.address;
+    this.port = args.port;
+  });
+
+// protocol
+zapICEPeerUDPTransport.obj("protocol", "UDP");
+
+
+////////////////////////////////////////////////////////////////////////
 // zapICECandidate
 // holds an array of ICE transports ('components') that act together as
 // a unit.
@@ -225,12 +271,25 @@ var zapICECandidate = makeClass("zapICECandidate",
 zapICECandidate.appendCtor(
   function zapICECandidateCtor(args) {
     this.components = args.components;
+    this.id = args.id;
+    this.q = args.q;
   });
 
 zapICECandidate.fun(
   function destroy() {
     for (var i=0,l=this.components.length; i<l; ++i)
       this.components[i].destroy();
+  });
+
+zapICECandidate.spec(
+  function toString() {
+    if (!this.components) return this._zapICECandidate_toString();
+
+    var rv = "["+this._class_.toString()+" "+this.id+" "+this.q+" ( ";
+    for (var i=0,l=this.components.length; i<l; ++i)
+      rv += this.components[i]+" ";
+    rv += " )";
+    return rv;
   });
 
 zapICECandidate.getter(
@@ -245,19 +304,10 @@ zapICECandidate.fun(
   });
 
 // unique candidate id
-zapICECandidate.fun(
-  function getCandidateID() {
-    if (!this._candidateID) {
-      // XXX doesn't guarantee uniqueness of local candidate ids!
-      var r = getRandom32();
-      // XXX could use base64, also 24 bits of randomness sufficient
-      this._candidateID = r.toString(36);
-    }
-    return this._candidateID;
-  });
+// zapICECandidate.obj("id", null);
 
 // relative priority of this candidate
-zapICECandidate.obj("q", "0.5");
+// zapICECandidate.obj("q", null);
   
 
 ////////////////////////////////////////////////////////////////////////
@@ -273,7 +323,12 @@ function makeICELocalUDPCandidate(address, portbase,
                        portbase:   portbase++,
                        mediaGraph: mediaGraph}));
   
-  return zapICECandidate.instantiate({components: components});
+  return zapICECandidate.instantiate(
+    {
+      components: components,
+      id: generateCandidateId(),
+      q: "0.5"
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -284,7 +339,8 @@ function makeICELocalUDPCandidate(address, portbase,
 var zapICEDerivedCandidate = makeClass("zapICEDerivedCandidate",
                                        zapICECandidate);
 
-// ctor expects an arg { localCandidate }
+// ctor expects an arg { localCandidate } in addition to args of base
+// ctor
 zapICEDerivedCandidate.appendCtor(
   function zapICEDerivedCandidateCtor(args) {
     this.localCandidate = args.localCandidate;
@@ -433,7 +489,9 @@ zapICEStunReflexiveCandidateFactory.fun(
         this._dump("we have a full candidate\n");
         this.candidateProduced(zapICEDerivedCandidate.instantiate(
                                  { components: partialCandidateInfo.components,
-                                   localCandidate: rinfo[0] }));
+                                   localCandidate: rinfo[0],
+                                   q: "0.5",
+                                   id: generateCandidateId()}));
         delete this.partialCandidates[partialCandidateID];
       }
     }
@@ -563,4 +621,93 @@ function produceICECandidates(done, componentCount, udpPortbase,
 
   produceDerivedCandidates(productionDone, maxDuration, paceDuration,
                            mediaGraph, cands, stunServers);
+}
+
+// encode ICECandidates object into an sdp media offer/answer
+function encodeICECandidates(candidates, session, media) {
+  session.appendAttrib("ice-pwd:" + candidates.password);
+
+  // Encode the candidates as media-level attributes:
+  for (var i=0, l=candidates.candidates.length; i<l; ++i) {
+    var cand = candidates.candidates[i];
+    for (var j=0, m=cand.componentCount; j<m; ++j) {
+      var comp = cand.componentAt(j);
+      media.appendAdditionalAttrib("candidate:"+
+                                   cand.id+" "+
+                                   (j+1)+" "+
+                                   comp.protocol+" "+
+                                   cand.q+" "+
+                                   comp.address+" "+
+                                   comp.port);
+    }
+  }
+}
+
+// extract ICECandidates object from sdp media offer/answer (or null if the
+// sdp doesn't contain ICE-specific fields):
+function extractICECandidates(session, media) {
+  // firstly we expect an ice-pwd attrib at the session level:
+  var sessionAttribs = session.getAttribs({});
+  var pwd = findif(/^ice-pwd:/, sessionAttribs);
+  if (!pwd ||
+      !(pwd = /ice-pwd:(.*)/(pwd)[1])) {
+    dump("No ICE password\n");
+    return null; // no password attrib -> no ICE
+  }
+  dump("EXTRACTED ICE PASSWORD = "+pwd+"\n");
+
+  // secondly, we need some candidates:
+  // XXX currently hardcoded for rtp/avp
+  var comps = {}; // candidate components indexed by candidate id
+  var mediaAttribs = media.getAdditionalAttribs({});
+  if (!mediaAttribs) {
+    dump("No ICE candidates\n");
+    return null; // no candidates -> no ICE
+  }
+  mediaAttribs.forEach(
+    function(a) {
+      var c = /^candidate:([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*)$/(a);
+      if (!c) return;
+      var entry;
+      if (!(entry = comps[c[1]])) {
+        entry = comps[c[1]] = [];
+      }
+      entry.push({componentID:c[2], transport:c[3], address:c[5], port:c[6], q:c[4]});
+    });
+
+  // Construct proper candidates from the components hash:
+  var cands = [];
+  for (var c in comps) {
+    dump("ICE PROCESSING CANDIDATE "+c+"\n");
+    var candcomps = comps[c];
+    var address = candcomps[0].address;
+    var q = candcomps[0].q;
+    // sort in ascending component id order:
+    candcomps.sort(function(a,b) { return a.componentID - b.componentID; });
+    var transports = [];
+    for (var i=0,l=candcomps.length; i<l; ++i) {
+      // sanity checks:
+      if (candcomps[i].componentID != i+1 ||
+          candcomps[i].address != address ||
+          candcomps[i].q != q ||
+          candcomps[i].transport != "UDP") {
+        dump("ICE CANDIDATE PARSE ERROR 2\n");
+        return null;
+      }
+      transports.push(zapICEPeerUDPTransport.instantiate(
+                        {
+                          address : candcomps[i].address,
+                          port : candcomps[i].port
+                        }));
+    }
+    cands.push(zapICECandidate.instantiate(
+      { components: transports,
+        id : c,
+        q : q
+      }));
+  }
+  dump("WE'VE GOT "+cands.length+" ICE CANDIDATES\n");
+  return ICECandidates.instantiate({ password : pwd,
+                                     candidates: cands,
+                                     activeCandidate: null});
 }
