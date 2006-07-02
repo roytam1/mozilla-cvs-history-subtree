@@ -192,7 +192,7 @@ zapStunMessage::zapStunMessage(nsISupports* outer)
       mHasServerAttrib(PR_FALSE)
 {
 #ifdef DEBUG
-  printf("zapStunMessage@%p::zapStunMessage(%p)\n", this, outer);
+  //printf("zapStunMessage@%p::zapStunMessage(%p)\n", this, outer);
 #endif
   NS_INIT_AGGREGATED(outer);
 }
@@ -200,7 +200,7 @@ zapStunMessage::zapStunMessage(nsISupports* outer)
 zapStunMessage::~zapStunMessage()
 {
 #ifdef DEBUG
-  printf("zapStunMessage@%p::~zapStunMessage()\n", this);
+  //printf("zapStunMessage@%p::~zapStunMessage()\n", this);
 #endif
 }
 
