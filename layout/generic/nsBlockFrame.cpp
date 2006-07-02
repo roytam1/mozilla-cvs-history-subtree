@@ -4268,8 +4268,6 @@ nsBlockFrame::DrainOverflowLines(nsBlockReflowState& aState)
   }
 
   // Now join the line lists into mLines
-  NS_ASSERTION(!overflowLines, "This code shouldn't be needed anymore "
-                               "(tell dbaron if you see this)");
   if (overflowLines) {
     if (!overflowLines->empty()) {
       // Join the line lists
