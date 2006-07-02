@@ -95,14 +95,14 @@ private:
 zapStunBindingRequest::zapStunBindingRequest()
 {
 #ifdef DEBUG
-  printf("zapStunBindingRequest::zapStunBindingRequest()\n");
+  //printf("zapStunBindingRequest::zapStunBindingRequest()\n");
 #endif
 }
 
 zapStunBindingRequest::~zapStunBindingRequest()
 {
 #ifdef DEBUG
-  printf("zapStunBindingRequest::~zapStunBindingRequest()\n");
+  //printf("zapStunBindingRequest::~zapStunBindingRequest()\n");
 #endif
 }
 
