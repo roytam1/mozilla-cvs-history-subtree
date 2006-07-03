@@ -1495,7 +1495,7 @@ NS_IMETHODIMP nsRenderingContextBeOS::CopyOffScreenBits(nsIDrawingSurface* aSrcS
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextBeOS::RetrieveCurrentNativeGraphicData(PRUint32 *ngd)
+NS_IMETHODIMP nsRenderingContextBeOS::RetrieveCurrentNativeGraphicData(void** ngd)
 {
 	return NS_OK;
 }

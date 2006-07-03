@@ -174,7 +174,7 @@ public:
 	
 	NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
 		const nsRect &aDestBounds, PRUint32 aCopyFlags);
-	NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 *ngd);
+	NS_IMETHOD RetrieveCurrentNativeGraphicData(void** ngd);
 	
 	void CreateClipRegion();
 
