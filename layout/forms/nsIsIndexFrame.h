@@ -99,8 +99,6 @@ public:
   void           SetFocus(PRBool aOn, PRBool aRepaint);
   void           ScrollIntoView(nsPresContext* aPresContext);
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
-
   // from nsIAnonymousContentCreator
   NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
                                     nsISupportsArray& aChildList);

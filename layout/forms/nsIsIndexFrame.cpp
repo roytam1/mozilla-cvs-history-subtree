@@ -565,9 +565,3 @@ nsIsIndexFrame::RestoreState(nsPresState* aState)
   SetInputValue(stateString);
   return NS_OK;
 }
-
-PRBool
-nsIsIndexFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
-}
