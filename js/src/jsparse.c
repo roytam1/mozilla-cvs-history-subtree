@@ -1343,7 +1343,7 @@ typedef struct BindVarArgs {
         } var;
         struct {
             jsuint          index;
-            uintN           overflowError;
+            uintN           overflow;
         } let;
     } u;
 } BindVarArgs;
@@ -1382,7 +1382,7 @@ DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args)
     if (args->u.let.index == JS_BIT(16)) {
         js_ReportCompileErrorNumber(cx, args->ts,
                                     JSREPORT_TS | JSREPORT_ERROR,
-                                    args->u.let.overflowError);
+                                    args->u.let.overflow);
         return JS_FALSE;
     }
 
@@ -3164,7 +3164,7 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     } else {
         args.obj = tc->topScopeStmt->blockObj;
         args.u.let.index = 0;
-        args.u.let.overflowError = JSMSG_TOO_MANY_FUN_VARS;
+        args.u.let.overflow = JSMSG_TOO_MANY_FUN_VARS;
     }
 
     do {
@@ -4802,7 +4802,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 args.let = JS_TRUE;
                 args.op = JSOP_NOP;
                 args.u.let.index = 0;
-                args.u.let.overflowError = JSMSG_ARRAY_INIT_TOO_BIG;
+                args.u.let.overflow = JSMSG_ARRAY_INIT_TOO_BIG;
 
                 do {
                     /*
