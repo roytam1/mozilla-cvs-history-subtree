@@ -930,6 +930,16 @@ JS_Unlock(JSRuntime *rt)
     JS_UNLOCK_RUNTIME(rt);
 }
 
+JS_PUBLIC_API(JSContextCallback)
+JS_SetContextCallback(JSRuntime *rt, JSContextCallback cxCallback)
+{
+    JSContextCallback old;
+
+    old = rt->cxCallback;
+    rt->cxCallback = cxCallback;
+    return old;
+}
+
 JS_PUBLIC_API(JSContext *)
 JS_NewContext(JSRuntime *rt, size_t stackChunkSize)
 {
@@ -939,19 +949,19 @@ JS_NewContext(JSRuntime *rt, size_t stackChunkSize)
 JS_PUBLIC_API(void)
 JS_DestroyContext(JSContext *cx)
 {
-    js_DestroyContext(cx, JS_FORCE_GC);
+    js_DestroyContext(cx, JSDCM_FORCE_GC);
 }
 
 JS_PUBLIC_API(void)
 JS_DestroyContextNoGC(JSContext *cx)
 {
-    js_DestroyContext(cx, JS_NO_GC);
+    js_DestroyContext(cx, JSDCM_NO_GC);
 }
 
 JS_PUBLIC_API(void)
 JS_DestroyContextMaybeGC(JSContext *cx)
 {
-    js_DestroyContext(cx, JS_MAYBE_GC);
+    js_DestroyContext(cx, JSDCM_MAYBE_GC);
 }
 
 JS_PUBLIC_API(void *)
@@ -1017,6 +1027,7 @@ static struct v2smap {
     {JSVERSION_ECMA_3,  "ECMAv3"},
     {JSVERSION_1_5,     "1.5"},
     {JSVERSION_1_6,     "1.6"},
+    {JSVERSION_1_7,     "1.7"},
     {JSVERSION_DEFAULT, js_default_str},
     {JSVERSION_UNKNOWN, NULL},          /* must be last, NULL is sentinel */
 };
@@ -3613,6 +3624,12 @@ JS_PUBLIC_API(uintN)
 JS_GetFunctionFlags(JSFunction *fun)
 {
     return fun->flags;
+}
+
+JS_PUBLIC_API(uint16)
+JS_GetFunctionArity(JSFunction *fun)
+{
+    return fun->nargs;
 }
 
 JS_PUBLIC_API(JSBool)

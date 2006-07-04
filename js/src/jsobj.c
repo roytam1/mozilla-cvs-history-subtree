@@ -649,6 +649,42 @@ js_LeaveSharpObject(JSContext *cx, JSIdArray **idap)
     }
 }
 
+JS_STATIC_DLL_CALLBACK(intN)
+gc_sharp_table_entry_marker(JSHashEntry *he, intN i, void *arg)
+{
+    GC_MARK((JSContext *)arg, (JSObject *)he->key, "sharp table entry");
+    return JS_DHASH_NEXT;
+}
+
+void
+js_GCMarkSharpMap(JSContext *cx, JSSharpObjectMap *map)
+{
+    JS_ASSERT(map->depth > 0);
+    JS_ASSERT(map->table);
+
+    /*
+     * During recursive calls to MarkSharpObjects a non-native object or
+     * object with a custom getProperty method can potentially return an
+     * unrooted value or even cut from the object graph an argument of one of
+     * MarkSharpObjects recursive invocations. So we must protect map->table
+     * entries against GC.
+     *
+     * We can not simply use JSTempValueRooter to mark the obj argument of
+     * MarkSharpObjects during recursion as we have to protect *all* entries
+     * in JSSharpObjectMap including those that contains otherwise unreachable
+     * objects just allocated through custom getProperty. Otherwise newer
+     * allocations can re-use the address of an object stored in the hashtable
+     * confusing js_EnterSharpObject. So to address the problem we simply
+     * mark all objects from map->table.
+     *
+     * An alternative "proper" solution is to use JSTempValueRooter in
+     * MarkSharpObjects with code to remove during finalization entries
+     * with otherwise unreachable objects. But this is way too complex
+     * to justify spending efforts.
+     */
+    JS_HashTableEnumerateEntries(map->table, gc_sharp_table_entry_marker, cx);
+}
+
 #define OBJ_TOSTRING_EXTRA      4       /* for 4 local GC roots */
 
 #if JS_HAS_TOSOURCE
@@ -3662,10 +3698,12 @@ js_SetIdArrayLength(JSContext *cx, JSIdArray *ida, jsint length)
 }
 
 /* Private type used to iterate over all properties of a native JS object */
-typedef struct JSNativeIteratorState {
-    jsint next_index;   /* index into jsid array */
-    JSIdArray *ida;     /* all property ids in enumeration */
-} JSNativeIteratorState;
+struct JSNativeIteratorState {
+    jsint                   next_index; /* index into jsid array */
+    JSIdArray               *ida;       /* all property ids in enumeration */
+    JSNativeIteratorState   *next;      /* double-linked list support */
+    JSNativeIteratorState   **prevp;
+};
 
 /*
  * This function is used to enumerate the properties of native JSObjects
@@ -3676,6 +3714,7 @@ JSBool
 js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
              jsval *statep, jsid *idp)
 {
+    JSRuntime *rt;
     JSObject *proto;
     JSClass *clasp;
     JSEnumerateOp enumerate;
@@ -3685,6 +3724,7 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     JSIdArray *ida;
     JSNativeIteratorState *state;
 
+    rt = cx->runtime;
     clasp = OBJ_GET_CLASS(cx, obj);
     enumerate = clasp->enumerate;
     if (clasp->flags & JSCLASS_NEW_ENUMERATE)
@@ -3761,6 +3801,15 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         }
         state->ida = ida;
         state->next_index = 0;
+
+        JS_LOCK_RUNTIME(rt);
+        state->next = rt->nativeIteratorStates;
+        if (state->next)
+            state->next->prevp = &state->next;
+        state->prevp = &rt->nativeIteratorStates;
+        *state->prevp = state;
+        JS_UNLOCK_RUNTIME(rt);
+
         *statep = PRIVATE_TO_JSVAL(state);
         if (idp)
             *idp = INT_TO_JSVAL(length);
@@ -3778,6 +3827,17 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 
       case JSENUMERATE_DESTROY:
         state = (JSNativeIteratorState *) JSVAL_TO_PRIVATE(*statep);
+
+        JS_LOCK_RUNTIME(rt);
+        JS_ASSERT(rt->nativeIteratorStates);
+        JS_ASSERT(*state->prevp == state);
+        if (state->next) {
+            JS_ASSERT(state->next->prevp == &state->next);
+            state->next->prevp = state->prevp;
+        }
+        *state->prevp = state->next;
+        JS_UNLOCK_RUNTIME(rt);
+
         JS_DestroyIdArray(cx, state->ida);
         JS_free(cx, state);
         *statep = JSVAL_NULL;
@@ -3800,6 +3860,31 @@ js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         break;
     }
     return JS_TRUE;
+}
+
+void
+js_MarkNativeIteratorStates(JSContext *cx)
+{
+    JSNativeIteratorState *state;
+    jsid *cursor, *end, id;
+
+    state = cx->runtime->nativeIteratorStates;
+    if (!state)
+        return;
+
+    do {
+        JS_ASSERT(*state->prevp == state);
+        cursor = state->ida->vector;
+        end = cursor + state->ida->length;
+        for (; cursor != end; ++cursor) {
+            id = *cursor;
+            if (JSID_IS_ATOM(id)) {
+                GC_MARK_ATOM(cx, JSID_TO_ATOM(id));
+            } else if (JSID_IS_OBJECT(id)) {
+                GC_MARK(cx, JSID_TO_OBJECT(id), "ida->vector[i]");
+            }
+        }
+    } while ((state = state->next) != NULL);
 }
 
 JSBool

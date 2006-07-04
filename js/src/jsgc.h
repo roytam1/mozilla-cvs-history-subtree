@@ -131,31 +131,17 @@ js_AddRootRT(JSRuntime *rt, void *rp, const char *name);
 extern JSBool
 js_RemoveRoot(JSRuntime *rt, void *rp);
 
-/*
- * Table for tracking objects of extended classes that have non-null close
- * hooks, and need the GC to perform two-phase finalization.  The array grows
- * by powers of two starting from length GC_CLOSE_TABLE_MIN, but switching to
- * linear growth when length reaches GC_CLOSE_TABLE_LINEAR.  The count member
- * counts valid slots in array, so the current allocated length is given by
- * GC_CLOSE_TABLE_LENGTH(count).
- */
-typedef struct JSGCCloseTable {
-    JSObject    **array;
-    uint32      count;
-} JSGCCloseTable;
+/* Table of pointers with count valid members. */
+typedef struct JSPtrTable {
+    size_t      count;
+    void        **array;
+} JSPtrTable;
+
+extern JSBool
+js_RegisterCloseableIterator(JSContext *cx, JSObject *obj);
 
 extern JSBool
 js_AddObjectToCloseTable(JSContext *cx, JSObject *obj);
-
-#define GC_CLOSE_TABLE_MIN_LOG2     3
-#define GC_CLOSE_TABLE_MIN          JS_BIT(GC_CLOSE_TABLE_MIN_LOG2)
-#define GC_CLOSE_TABLE_LINEAR_LOG2  10
-#define GC_CLOSE_TABLE_LINEAR       JS_BIT(GC_CLOSE_TABLE_LINEAR_LOG2)
-
-#define GC_CLOSE_TABLE_LENGTH(count)                                          \
-    (((count) < GC_CLOSE_TABLE_LINEAR)                                        \
-     ? JS_MAX(JS_BIT(JS_CeilingLog2(count)), GC_CLOSE_TABLE_MIN)              \
-     : JS_ROUNDUP(count, GC_CLOSE_TABLE_LINEAR))
 
 /*
  * The private JSGCThing struct, which describes a gcFreeList element.
@@ -228,17 +214,20 @@ js_MarkStackFrame(JSContext *cx, JSStackFrame *fp);
  *   GC_LAST_CONTEXT    Called from js_DestroyContext for last JSContext in a
  *                      JSRuntime, when it is imperative that rt->gcPoke gets
  *                      cleared early in js_GC, if it is set.
- *   GC_ALREADY_LOCKED  rt->gcLock is already held on entry to js_GC, and kept
- *                      on return to its caller.
+ *   GC_LAST_DITCH      Called from js_NewGCThing as a last-ditch GC attempt.
+ *                      See comments before js_GC definition for details.
  */
 #define GC_KEEP_ATOMS       0x1
 #define GC_LAST_CONTEXT     0x2
-#define GC_ALREADY_LOCKED   0x4
+#define GC_LAST_DITCH       0x4
 
 extern void
 js_ForceGC(JSContext *cx, uintN gcflags);
 
-extern void
+/*
+ * Return false when the branch callback cancels GC and true otherwise.
+ */
+extern JSBool
 js_GC(JSContext *cx, uintN gcflags);
 
 /* Call this after succesful malloc of memory for GC-related things. */

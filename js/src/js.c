@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -2242,9 +2242,9 @@ global_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
         return JS_FALSE;
     if (resolved) {
         *objp = obj;
+        return JS_TRUE;
+    }
 #endif
-    return JS_TRUE;
-}
 
 #if defined(SHELL_HACK) && defined(DEBUG) && defined(XP_UNIX)
     if ((flags & (JSRESOLVE_QUALIFIED | JSRESOLVE_ASSIGNING)) == 0) {

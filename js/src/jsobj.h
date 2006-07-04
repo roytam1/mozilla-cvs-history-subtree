@@ -304,6 +304,13 @@ js_EnterSharpObject(JSContext *cx, JSObject *obj, JSIdArray **idap,
 extern void
 js_LeaveSharpObject(JSContext *cx, JSIdArray **idap);
 
+/*
+ * Mark objects stored in map if GC happens between js_EnterSharpObject
+ * and js_LeaveSharpObject. GC calls this when map->depth > 0.
+ */
+extern void
+js_GCMarkSharpMap(JSContext *cx, JSSharpObjectMap *map);
+
 extern JSBool
 js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval);
@@ -490,6 +497,9 @@ js_SetIdArrayLength(JSContext *cx, JSIdArray *ida, jsint length);
 extern JSBool
 js_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
              jsval *statep, jsid *idp);
+
+extern void
+js_MarkNativeIteratorStates(JSContext *cx);
 
 extern JSBool
 js_CheckAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,

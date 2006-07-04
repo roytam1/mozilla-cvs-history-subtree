@@ -1295,19 +1295,12 @@ JS_GetScriptTotalSize(JSContext *cx, JSScript *script)
 }
 
 JS_PUBLIC_API(uint32)
-JS_GetTopScriptFilenameFlags(JSContext *cx, JSStackFrame *fp)
+JS_GetScriptFilenameFlags(JSScript *script)
 {
-    if (!fp)
-        fp = cx->fp;
-    while (fp) {
-        if (fp->script) {
-            if (!fp->script->filename)
-                return JSFILENAME_NULL;
-            return js_GetScriptFilenameFlags(fp->script->filename);
-        }
-        fp = fp->down;
-    }
-    return 0;
+    JS_ASSERT(script);
+    if (!script->filename)
+        return JSFILENAME_NULL;
+    return js_GetScriptFilenameFlags(script->filename);
 }
 
 JS_PUBLIC_API(JSBool)
@@ -1328,7 +1321,7 @@ JS_PUBLIC_API(void)
 JS_FlagSystemObject(JSContext *cx, JSObject *obj)
 {
     uint8 *flagp;
-    
+
     flagp = js_GetGCThingFlags(obj);
     *flagp |= GCF_SYSTEM;
 }

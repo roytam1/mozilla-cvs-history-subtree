@@ -76,50 +76,31 @@ extern const char js_throw_str[]; /* from jsscan.h */
 #error JS_INITIAL_NSLOTS must be greater than JSSLOT_ITER_FLAGS.
 #endif
 
-static uint32
-iterator_mark(JSContext *cx, JSObject *obj, void *arg)
+/*
+ * Shared code to close iterator's state either through an explicit call or
+ * when GC detects that the iterator is no longer reachable.
+ */
+void
+js_CloseIteratorState(JSContext *cx, JSObject *iterobj)
 {
+    jsval *slots;
     jsval state, parent;
     JSObject *iterable;
 
-    /* Avoid double work if js_CloseNativeIterator was called on obj. */
-    state = obj->slots[JSSLOT_ITER_STATE];
-    if (JSVAL_IS_VOID(state))
-        return 0;
-
-    parent = obj->slots[JSSLOT_PARENT];
-    if (!JSVAL_IS_NULL(state) && !JSVAL_IS_PRIMITIVE(parent)) {
-        iterable = JSVAL_TO_OBJECT(parent);
-#if JS_HAS_XML_SUPPORT
-        if ((JSVAL_TO_INT(obj->slots[JSSLOT_ITER_FLAGS]) & JSITER_FOREACH) &&
-            OBJECT_IS_XML(cx, iterable)) {
-            ((JSXMLObjectOps *) iterable->map->ops)->
-                enumerateValues(cx, iterable, JSENUMERATE_MARK, &state,
-                                NULL, NULL);
-        } else
-#endif
-            OBJ_ENUMERATE(cx, iterable, JSENUMERATE_MARK, &state, NULL);
-    }
-    return 0;
-}
-
-static void
-iterator_close(JSContext *cx, JSObject *obj)
-{
-    jsval state, parent;
-    JSObject *iterable;
+    JS_ASSERT(JS_InstanceOf(cx, iterobj, &js_IteratorClass, NULL));
+    slots = iterobj->slots;
 
     /* Avoid double work if js_CloseNativeIterator was called on obj. */
-    state = obj->slots[JSSLOT_ITER_STATE];
-    if (JSVAL_IS_VOID(state))
+    state = slots[JSSLOT_ITER_STATE];
+    if (JSVAL_IS_NULL(state))
         return;
 
     /* Protect against failure to fully initialize obj. */
-    parent = obj->slots[JSSLOT_PARENT];
-    if (!JSVAL_IS_NULL(state) && !JSVAL_IS_PRIMITIVE(parent)) {
+    parent = slots[JSSLOT_PARENT];
+    if (!JSVAL_IS_PRIMITIVE(parent)) {
         iterable = JSVAL_TO_OBJECT(parent);
 #if JS_HAS_XML_SUPPORT
-        if ((JSVAL_TO_INT(obj->slots[JSSLOT_ITER_FLAGS]) & JSITER_FOREACH) &&
+        if ((JSVAL_TO_INT(slots[JSSLOT_ITER_FLAGS]) & JSITER_FOREACH) &&
             OBJECT_IS_XML(cx, iterable)) {
             ((JSXMLObjectOps *) iterable->map->ops)->
                 enumerateValues(cx, iterable, JSENUMERATE_DESTROY, &state,
@@ -128,19 +109,16 @@ iterator_close(JSContext *cx, JSObject *obj)
 #endif
             OBJ_ENUMERATE(cx, iterable, JSENUMERATE_DESTROY, &state, NULL);
     }
+    slots[JSSLOT_ITER_STATE] = JSVAL_NULL;
 }
 
-JSExtendedClass js_IteratorClass = {
-  { "Iterator",
-    JSCLASS_IS_EXTENDED |
+JSClass js_IteratorClass = {
+    "Iterator",
     JSCLASS_HAS_RESERVED_SLOTS(2) | /* slots for state and flags */
     JSCLASS_HAS_CACHED_PROTO(JSProto_Iterator),
     JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
     JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   JS_FinalizeStub,
-    NULL,             NULL,             NULL,             NULL,
-    NULL,             NULL,             iterator_mark,    NULL },
-    NULL,             NULL,             NULL,             iterator_close,
-    JSCLASS_NO_RESERVED_MEMBERS
+    JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
 #if JS_HAS_GENERATORS
@@ -169,7 +147,7 @@ NewKeyValuePair(JSContext *cx, jsid key, jsval val, jsval *rval)
 {
     jsval vec[2];
     JSObject *aobj;
-    
+
     vec[0] = ID_TO_VALUE(key);
     vec[1] = val;
     aobj = js_NewArrayObject(cx, 2, vec);
@@ -248,7 +226,7 @@ iterator_next(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     JSBool foreach, ok;
     jsid id;
 
-    if (!JS_InstanceOf(cx, obj, &js_IteratorClass.base, argv))
+    if (!JS_InstanceOf(cx, obj, &js_IteratorClass, argv))
         return JS_FALSE;
 
     iterable = OBJ_GET_PARENT(cx, obj);
@@ -321,7 +299,7 @@ js_NewNativeIterator(JSContext *cx, JSObject *obj, uintN flags, jsval *vp)
      * scope chain to lookup the iterator's constructor. Since we use the
      * parent slot to keep track of the iterable, we must fix it up later.
      */
-    iterobj = js_NewObject(cx, &js_IteratorClass.base, NULL, NULL);
+    iterobj = js_NewObject(cx, &js_IteratorClass, NULL, NULL);
     if (!iterobj)
         return JS_FALSE;
 
@@ -332,6 +310,8 @@ js_NewNativeIterator(JSContext *cx, JSObject *obj, uintN flags, jsval *vp)
     iterobj->slots[JSSLOT_PARENT] = OBJECT_TO_JSVAL(obj);
     iterobj->slots[JSSLOT_ITER_STATE] = JSVAL_NULL;
     iterobj->slots[JSSLOT_ITER_FLAGS] = INT_TO_JSVAL(flags);
+    if (!js_RegisterCloseableIterator(cx, iterobj))
+        return JS_FALSE;
 
     ok =
 #if JS_HAS_XML_SUPPORT
@@ -351,7 +331,7 @@ js_NewNativeIterator(JSContext *cx, JSObject *obj, uintN flags, jsval *vp)
 uintN
 js_GetNativeIteratorFlags(JSContext *cx, JSObject *iterobj)
 {
-    if (OBJ_GET_CLASS(cx, iterobj) != &js_IteratorClass.base)
+    if (OBJ_GET_CLASS(cx, iterobj) != &js_IteratorClass)
         return 0;
     return JSVAL_TO_INT(OBJ_GET_SLOT(cx, iterobj, JSSLOT_ITER_FLAGS));
 }
@@ -361,7 +341,7 @@ js_CloseNativeIterator(JSContext *cx, JSObject *iterobj)
 {
     uintN flags;
 
-    if (!JS_InstanceOf(cx, iterobj, &js_IteratorClass.base, NULL))
+    if (!JS_InstanceOf(cx, iterobj, &js_IteratorClass, NULL))
         return;
 
     /*
@@ -382,9 +362,7 @@ js_CloseNativeIterator(JSContext *cx, JSObject *iterobj)
     if (iterobj == cx->cachedIterObj)
         cx->cachedIterObj = NULL;
 
-    /* Close iterobj, then mark its ITER_STATE slot to flag it as dead. */
-    iterator_close(cx, iterobj);
-    iterobj->slots[JSSLOT_ITER_STATE] = JSVAL_VOID;
+    js_CloseIteratorState(cx, iterobj);
 }
 
 JSBool
@@ -393,7 +371,7 @@ js_DefaultIterator(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 {
     JSBool keyonly;
 
-    if (OBJ_GET_CLASS(cx, obj) == &js_IteratorClass.base) {
+    if (OBJ_GET_CLASS(cx, obj) == &js_IteratorClass) {
         *rval = OBJECT_TO_JSVAL(obj);
         return JS_TRUE;
     }
@@ -439,7 +417,7 @@ js_ValueToIterator(JSContext *cx, jsval v, uintN flags)
         if (JSVAL_IS_PRIMITIVE(rval))
             goto bad_iterator;
         iterobj = JSVAL_TO_OBJECT(rval);
-        JS_ASSERT(OBJ_GET_CLASS(cx, iterobj) == &js_IteratorClass.base);
+        JS_ASSERT(OBJ_GET_CLASS(cx, iterobj) == &js_IteratorClass);
         iterobj->slots[JSSLOT_ITER_FLAGS] |= INT_TO_JSVAL(JSITER_HIDDEN);
         goto out;
     }
@@ -459,7 +437,7 @@ js_ValueToIterator(JSContext *cx, jsval v, uintN flags)
      * code -- the js_CloseNativeIteration early-finalization optimization
      * based on it will break badly if script can reach iterobj.
      */
-    if (OBJ_GET_CLASS(cx, iterobj) == &js_IteratorClass.base &&
+    if (OBJ_GET_CLASS(cx, iterobj) == &js_IteratorClass &&
         VALUE_IS_FUNCTION(cx, fval)) {
         fun = (JSFunction *) JS_GetPrivate(cx, JSVAL_TO_OBJECT(fval));
         if (!FUN_INTERPRETED(fun) && fun->u.n.native == js_DefaultIterator)
@@ -499,7 +477,7 @@ js_CallIteratorNext(JSContext *cx, JSObject *iterobj, uintN flags,
 
     /* Fastest path for repeated call from for-in loop bytecode. */
     if (iterobj == cx->cachedIterObj) {
-        JS_ASSERT(OBJ_GET_CLASS(cx, iterobj) == &js_IteratorClass.base);
+        JS_ASSERT(OBJ_GET_CLASS(cx, iterobj) == &js_IteratorClass);
         JS_ASSERT(flags & JSITER_HIDDEN);
         if (!iterator_next(cx, iterobj, 0, NULL, rval) ||
             !CheckKeyValueReturn(cx, flags, idp, rval)) {
@@ -516,7 +494,7 @@ js_CallIteratorNext(JSContext *cx, JSObject *iterobj, uintN flags,
     scope = OBJ_SCOPE(obj);
     sprop = NULL;
 
-    while (LOCKED_OBJ_GET_CLASS(obj) == &js_IteratorClass.base) {
+    while (LOCKED_OBJ_GET_CLASS(obj) == &js_IteratorClass) {
         obj = scope->object;
         sprop = SCOPE_GET_PROPERTY(scope, id);
         if (sprop)
@@ -905,7 +883,7 @@ js_InitIteratorClasses(JSContext *cx, JSObject *obj)
 
 #if JS_HAS_GENERATORS
     /* Expose Iterator and initialize the generator internals if configured. */
-    proto = JS_InitClass(cx, obj, NULL, &js_IteratorClass.base, Iterator, 2,
+    proto = JS_InitClass(cx, obj, NULL, &js_IteratorClass, Iterator, 2,
                          NULL, iterator_methods, NULL, NULL);
     if (!proto)
         return NULL;

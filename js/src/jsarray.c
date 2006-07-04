@@ -283,7 +283,7 @@ JSBool
 js_IsArrayLike(JSContext *cx, JSObject *obj, JSBool *answerp, jsuint *lengthp)
 {
     JSClass *clasp;
-    
+
     clasp = OBJ_GET_CLASS(cx, obj);
     *answerp = (clasp == &js_ArgumentsClass || clasp == &js_ArrayClass);
     if (!*answerp) {
@@ -307,21 +307,57 @@ array_length_getter(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 static JSBool
 array_length_setter(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
-    jsuint newlen, oldlen, slot;
+    jsuint newlen, oldlen, gap, index;
     jsid id2;
     jsval junk;
+    JSObject *iter;
+    JSTempValueRooter tvr;
+    JSBool ok;
 
     if (!ValueIsLength(cx, *vp, &newlen))
         return JS_FALSE;
     if (!js_GetLengthProperty(cx, obj, &oldlen))
         return JS_FALSE;
-    slot = oldlen;
-    while (slot > newlen) {
-        --slot;
-        if (!IndexToId(cx, slot, &id2))
-            return JS_FALSE;
-        if (!OBJ_DELETE_PROPERTY(cx, obj, id2, &junk))
-            return JS_FALSE;
+    if (oldlen > newlen) {
+        if (oldlen - newlen < (1 << 24)) {
+            do {
+                --oldlen;
+                if (!IndexToId(cx, oldlen, &id2))
+                    return JS_FALSE;
+                if (!OBJ_DELETE_PROPERTY(cx, obj, id2, &junk))
+                    return JS_FALSE;
+            } while (oldlen != newlen);
+        } else {
+            /*
+             * We are going to remove a lot of indexes in a presumably sparse
+             * array. So instead of looping through indexes between newlen and
+             * oldlen, we iterate through all properties and remove those that
+             * correspond to indexes from the [newlen, oldlen) range.
+             * See bug 322135.
+             */
+            iter = JS_NewPropertyIterator(cx, obj);
+            if (!iter)
+                return JS_FALSE;
+
+            /* Protect iter against GC in OBJ_DELETE_PROPERTY. */
+            JS_PUSH_SINGLE_TEMP_ROOT(cx, iter, &tvr);
+            gap = oldlen - newlen;
+            for (;;) {
+                ok = JS_NextProperty(cx, iter, &id2);
+                if (!ok)
+                    break;
+                if (id2 == JSVAL_VOID)
+                    break;
+                if (js_IdIsIndex(id2, &index) && index - newlen < gap) {
+                    ok = OBJ_DELETE_PROPERTY(cx, obj, id2, &junk);
+                    if (!ok)
+                        break;
+                }
+            }
+            JS_POP_TEMP_ROOT(cx, &tvr);
+            if (!ok)
+                return JS_FALSE;
+        }
     }
     return IndexToValue(cx, newlen, vp);
 }
@@ -682,10 +718,21 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     jsuint len, half, i;
     jsid id, id2;
     jsval *tmproot, *tmproot2;
-    JSBool idexists, id2exists;
+    JSBool idexists, id2exists, ok;
 
     if (!js_GetLengthProperty(cx, obj, &len))
         return JS_FALSE;
+
+    /*
+     * When len > JSVAL_INT_MAX + 1 the loop below accesses indexes greater
+     * than JSVAL_INT_MAX. For such indexes the corresponding ids are atoms.
+     * We use JS_KEEP_ATOMS to protect them against GC since OBJ_GET_PROPERTY
+     * can potentially execute an arbitrary script. See bug 341956.
+     *
+     * After this point control must flow through label out: to exit.
+     */
+    if (len > JSVAL_INT_MAX + 1)
+        JS_KEEP_ATOMS(cx->runtime);
 
     /*
      * Use argv[argc] and argv[argc + 1] as local roots to hold temporarily
@@ -695,44 +742,51 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     tmproot2 = argv + argc + 1;
     half = len / 2;
     for (i = 0; i < half; i++) {
-        if (!IndexToId(cx, i, &id))
-            return JS_FALSE;
-        if (!IndexToId(cx, len - i - 1, &id2))
-            return JS_FALSE;
-
-        /* Check for holes to make sure they don't get filled. */
-        if (!PropertyExists(cx, obj, id, &idexists) ||
-            !PropertyExists(cx, obj, id2, &id2exists)) {
-            return JS_FALSE;
-        }
-
         /*
-         * Get both of the values now. Note that we don't use v, or v2 based on
-         * idexists and id2exists.
+         * Get both values while checking for holes to make sure they don't
+         * get filled.
          */
-        if (!OBJ_GET_PROPERTY(cx, obj, id, tmproot) ||
-            !OBJ_GET_PROPERTY(cx, obj, id2, tmproot2)) {
-            return JS_FALSE;
-        }
+        if (!IndexToId(cx, i, &id))
+            goto bad;
+        if (!PropertyExists(cx, obj, id, &idexists))
+            goto bad;
+        if (idexists && !OBJ_GET_PROPERTY(cx, obj, id, tmproot))
+            goto bad;
 
+        if (!IndexToId(cx, len - i - 1, &id2))
+            goto bad;
+        if (!PropertyExists(cx, obj, id2, &id2exists))
+            goto bad;
+        if (id2exists && !OBJ_GET_PROPERTY(cx, obj, id2, tmproot2))
+            goto bad;
+
+        /* Exchange the values. */
         if (idexists) {
             if (!OBJ_SET_PROPERTY(cx, obj, id2, tmproot))
-                return JS_FALSE;
+                goto bad;
         } else {
             if (!OBJ_DELETE_PROPERTY(cx, obj, id2, tmproot))
-                return JS_FALSE;
+                goto bad;
         }
         if (id2exists) {
             if (!OBJ_SET_PROPERTY(cx, obj, id, tmproot2))
-                return JS_FALSE;
+                goto bad;
         } else {
             if (!OBJ_DELETE_PROPERTY(cx, obj, id, tmproot2))
-                return JS_FALSE;
+                goto bad;
         }
     }
+    ok = JS_TRUE;
 
+  out:
+    if (len > JSVAL_INT_MAX + 1)
+        JS_UNKEEP_ATOMS(cx->runtime);
     *rval = OBJECT_TO_JSVAL(obj);
-    return JS_TRUE;
+    return ok;
+
+  bad:
+    ok = JS_FALSE;
+    goto out;
 }
 
 typedef struct HSortArgs {
@@ -989,6 +1043,7 @@ array_sort(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     }
 
+    /* After this point control must flow through label out: to exit. */
     vec = (jsval *) JS_malloc(cx, ((size_t) len) * sizeof(jsval));
     if (!vec)
         return JS_FALSE;
@@ -998,7 +1053,7 @@ array_sort(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
      * one while increasing fp->nvars when we know that the property at
      * the corresponding index exists and its value must be rooted.
      *
-     * In this way when sorting a huge mostly spare array we will not
+     * In this way when sorting a huge mostly sparse array we will not
      * access the tail of vec corresponding to properties that do not
      * exist allowing OS to avoiding committing RAM for it. See bug 330812.
      */
@@ -1051,31 +1106,31 @@ array_sort(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     ok = js_HeapSort(vec, (size_t) newlen, pivotroot, sizeof(jsval),
                      all_strings ? sort_compare_strings : sort_compare,
                      &ca);
+    if (!ok)
+        goto out;
 
-    if (ok) {
-        while (undefs != 0) {
-            --undefs;
-            vec[newlen++] = JSVAL_VOID;
-        }
-        ok = InitArrayElements(cx, obj, newlen, vec);
-        if (ok)
-            *rval = OBJECT_TO_JSVAL(obj);
-
-        /* Re-create any holes that sorted to the end of the array. */
-        while (len > newlen) {
-            jsval junk;
-
-            if (!IndexToId(cx, --len, &id))
-                return JS_FALSE;
-            if (!OBJ_DELETE_PROPERTY(cx, obj, id, &junk))
-                return JS_FALSE;
-        }
+    while (undefs != 0) {
+        --undefs;
+        vec[newlen++] = JSVAL_VOID;
     }
+    ok = InitArrayElements(cx, obj, newlen, vec);
 
-out:
-    if (vec)
-        JS_free(cx, vec);
-    return ok;
+  out:
+    JS_free(cx, vec);
+    if (!ok)
+        return JS_FALSE;
+
+    /* Re-create any holes that sorted to the end of the array. */
+    while (len > newlen) {
+        jsval junk;
+
+        if (!IndexToId(cx, --len, &id))
+            return JS_FALSE;
+        if (!OBJ_DELETE_PROPERTY(cx, obj, id, &junk))
+            return JS_FALSE;
+    }
+    *rval = OBJECT_TO_JSVAL(obj);
+    return JS_TRUE;
 }
 
 /*
@@ -1109,20 +1164,26 @@ array_pop(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsuint index;
     jsid id;
+    JSBool ok;
     jsval junk;
 
     if (!js_GetLengthProperty(cx, obj, &index))
         return JS_FALSE;
     if (index > 0) {
         index--;
+
+        /* Get the to-be-deleted property's value into rval. */
         if (!IndexToId(cx, index, &id))
             return JS_FALSE;
 
-        /* Get the to-be-deleted property's value into rval. */
-        if (!OBJ_GET_PROPERTY(cx, obj, id, rval))
-            return JS_FALSE;
-
-        if (!OBJ_DELETE_PROPERTY(cx, obj, id, &junk))
+        /* See comments in array_reverse. */
+        if (index > JSVAL_INT_MAX)
+            JS_KEEP_ATOMS(cx->runtime);
+        ok = OBJ_GET_PROPERTY(cx, obj, id, rval) &&
+             OBJ_DELETE_PROPERTY(cx, obj, id, &junk);
+        if (index > JSVAL_INT_MAX)
+            JS_UNKEEP_ATOMS(cx->runtime);
+        if (!ok)
             return JS_FALSE;
     }
     return js_SetLengthProperty(cx, obj, index);
@@ -1152,9 +1213,11 @@ array_shift(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             for (i = 1; i <= length; i++) {
                 if (!IndexToId(cx, i, &id))
                     return JS_FALSE;
-                if (!IndexToId(cx, i - 1, &id2))
-                    return JS_FALSE;
                 if (!OBJ_GET_PROPERTY(cx, obj, id, &argv[0]))
+                    return JS_FALSE;
+
+                /* Get id after value to avoid nested GC hazards. */
+                if (!IndexToId(cx, i - 1, &id2))
                     return JS_FALSE;
                 if (!OBJ_SET_PROPERTY(cx, obj, id2, &argv[0]))
                     return JS_FALSE;
@@ -1187,16 +1250,21 @@ array_unshift(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             while (last--) {
                 if (!IndexToExistingId(cx, obj, last, &id))
                     return JS_FALSE;
+                if (id != JSID_HOLE) {
+                    if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
+                        return JS_FALSE;
+                }
+
+                /* Get id after value to avoid nested GC hazards. */
                 if (!IndexToId(cx, last + argc, &id2))
                     return JS_FALSE;
                 if (id == JSID_HOLE) {
-                    OBJ_DELETE_PROPERTY(cx, obj, id2, &junk);
-                    continue;
+                    if (!OBJ_DELETE_PROPERTY(cx, obj, id2, &junk))
+                        return JS_FALSE;
+                } else {
+                    if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
+                        return JS_FALSE;
                 }
-                if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
-                    return JS_FALSE;
-                if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
-                    return JS_FALSE;
             }
         }
 
@@ -1291,6 +1359,8 @@ array_splice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                 continue;       /* don't fill holes in the new array */
             if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
                 return JS_FALSE;
+
+            /* Get id after value to avoid nested GC hazards. */
             if (!IndexToId(cx, last - begin, &id2))
                 return JS_FALSE;
             if (!OBJ_SET_PROPERTY(cx, obj2, id2, vp))
@@ -1309,11 +1379,15 @@ array_splice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         while (last-- > end) {
             if (!IndexToExistingId(cx, obj, last, &id))
                 return JS_FALSE;
-            if (!IndexToId(cx, last + delta, &id2))
-                return JS_FALSE;
             if (id != JSID_HOLE) {
                 if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
                     return JS_FALSE;
+            }
+
+            /* Get id after value to avoid nested GC hazards. */
+            if (!IndexToId(cx, last + delta, &id2))
+                return JS_FALSE;
+            if (id != JSID_HOLE) {
                 if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
                     return JS_FALSE;
             } else {
@@ -1327,11 +1401,15 @@ array_splice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         for (last = end; last < length; last++) {
             if (!IndexToExistingId(cx, obj, last, &id))
                 return JS_FALSE;
-            if (!IndexToId(cx, last - delta, &id2))
-                return JS_FALSE;
             if (id != JSID_HOLE) {
                 if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
                     return JS_FALSE;
+            }
+
+            /* Get id after value to avoid nested GC hazards. */
+            if (!IndexToId(cx, last - delta, &id2))
+                return JS_FALSE;
+            if (id != JSID_HOLE) {
                 if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
                     return JS_FALSE;
             } else {
@@ -1406,6 +1484,8 @@ array_concat(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                     }
                     if (!OBJ_GET_PROPERTY(cx, aobj, id, vp))
                         return JS_FALSE;
+
+                    /* Get id after value to avoid nested GC hazards. */
                     if (!IndexToId(cx, length + slot, &id2))
                         return JS_FALSE;
                     if (!OBJ_SET_PROPERTY(cx, nobj, id2, vp))
@@ -1488,6 +1568,8 @@ array_slice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             continue;
         if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
             return JS_FALSE;
+
+        /* Get id after value to avoid nested GC hazards. */
         if (!IndexToId(cx, slot - begin, &id2))
             return JS_FALSE;
         if (!OBJ_SET_PROPERTY(cx, nobj, id2, vp))
@@ -1704,6 +1786,15 @@ array_extra(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval,
           case FOREACH:
             break;
           case MAP:
+            /*
+             * We reconstruct id once again when it is a GC thing since scripts
+             * can trigger GC that collects it. See bug 341956.
+             */
+            if (i > JSVAL_INT_MAX) {
+                ok = IndexToId(cx, i, &id);
+                if (!ok)
+                    goto out;
+            }
             ok = OBJ_SET_PROPERTY(cx, newarr, id, &rval2);
             if (!ok)
                 goto out;

@@ -94,7 +94,12 @@ js_GetCurrentThread(JSRuntime *rt);
 
 #endif /* JS_THREADSAFE */
 
-typedef enum JSGCMode { JS_NO_GC, JS_MAYBE_GC, JS_FORCE_GC } JSGCMode;
+typedef enum JSDestroyContextMode {
+    JSDCM_NO_GC,
+    JSDCM_MAYBE_GC,
+    JSDCM_FORCE_GC,
+    JSDCM_NEW_FAILED
+} JSDestroyContextMode;
 
 typedef enum JSRuntimeState {
     JSRTS_DOWN,
@@ -108,9 +113,17 @@ typedef struct JSPropertyTreeEntry {
     JSScopeProperty     *child;
 } JSPropertyTreeEntry;
 
+/*
+ * Forward declaration for opaque JSRuntime.nativeIteratorStates.
+ */
+typedef struct JSNativeIteratorState JSNativeIteratorState;
+
 struct JSRuntime {
     /* Runtime state, synchronized by the stateChange/gcLock condvar/lock. */
     JSRuntimeState      state;
+
+    /* Context create/destroy callback. */
+    JSContextCallback   cxCallback;
 
     /* Garbage collector state, used by jsgc.c. */
     JSGCArenaList       gcArenaList[GC_NUM_FREELISTS];
@@ -132,7 +145,7 @@ struct JSRuntime {
      */
     JSPackedBool        gcPoke;
     JSPackedBool        gcRunning;
-    uint8               gcClosePhase;
+    JSPackedBool        gcClosePhase;
     uint8               gcPadding;
 
     JSGCCallback        gcCallback;
@@ -159,7 +172,13 @@ struct JSRuntime {
      * Table for tracking objects of extended classes that have non-null close
      * hooks, and need the GC to perform two-phase finalization.
      */
-    JSGCCloseTable      gcCloseTable;
+    JSPtrTable          gcCloseTable;
+
+    /*
+     * Table for tracking iterators to ensure that we close iterator's state
+     * before finalizing the iterable object.
+     */
+    JSPtrTable          gcIteratorTable;
 
 #ifdef JS_GCMETER
     JSGCStats           gcStats;
@@ -320,6 +339,12 @@ struct JSRuntime {
     JSObject            *anynameObject;
     JSObject            *functionNamespaceObject;
 
+    /*
+     * A helper list for the GC, so it can mark native iterator states. See
+     * js_MarkNativeIteratorStates for details.
+     */
+    JSNativeIteratorState *nativeIteratorStates;
+
 #ifdef DEBUG
     /* Function invocation metering. */
     jsrefcount          inlineCalls;
@@ -374,9 +399,9 @@ struct JSRuntime {
  * referenced by cx->fp->rval, or set to a jsid (ITERKEY) result of a native
  * iterator's it.next() call (where the return value of it.next() is the next
  * value in the iteration).
- * 
+ *
  * The ITERKEY case is just an optimization for native iterators, as general
- * iterators can return an array of length 2 to return a [key, value] pair. 
+ * iterators can return an array of length 2 to return a [key, value] pair.
  */
 enum { JS_RVAL2_CLEAR, JS_RVAL2_VALUE, JS_RVAL2_ITERKEY };
 #endif
@@ -724,7 +749,7 @@ extern JSContext *
 js_NewContext(JSRuntime *rt, size_t stackChunkSize);
 
 extern void
-js_DestroyContext(JSContext *cx, JSGCMode gcmode);
+js_DestroyContext(JSContext *cx, JSDestroyContextMode mode);
 
 /*
  * Return true if cx points to a context in rt->contextList, else return false.
