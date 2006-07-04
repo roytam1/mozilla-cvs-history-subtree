@@ -5897,13 +5897,12 @@ interrupt:
           BEGIN_LITOPX_CASE(JSOP_ENTERBLOCK, 0)
             obj = ATOM_TO_OBJECT(atom);
             JS_ASSERT(fp->spbase + OBJ_BLOCK_DEPTH(cx, obj) == sp);
-            i = OBJ_BLOCK_COUNT(cx, obj);
-            sp += i;
-            while (i != 0) {
-                STORE_OPND(-i, JSVAL_VOID);
-                --i;
+            vp = sp + OBJ_BLOCK_COUNT(cx, obj);
+            JS_ASSERT(vp <= fp->spbase + depth);
+            while (sp < vp) {
+                STORE_OPND(0, JSVAL_VOID);
+                sp++;
             }
-            JS_ASSERT(sp <= fp->spbase + depth);
             JS_ASSERT(OBJ_GET_PARENT(cx, obj) == fp->blockChain);
             fp->blockChain = obj;
           END_LITOPX_CASE(JSOP_ENTERBLOCK)
@@ -5917,9 +5916,10 @@ interrupt:
             if (op == JSOP_LEAVEBLOCKEXPR)
                 rval = FETCH_OPND(-1);
 
-            i = GET_UINT16(pc);
-            sp -= i;
-            JS_ASSERT(sp <= fp->spbase + depth);
+            sp -= GET_UINT16(pc);
+            JS_ASSERT(op == JSOP_LEAVEBLOCKEXPR
+                      ? fp->spbase < sp && sp <= fp->spbase + depth
+                      : fp->spbase <= sp && sp < fp->spbase + depth);
 
             /* Store the result into the topmost stack slot. */
             if (op == JSOP_LEAVEBLOCKEXPR)
