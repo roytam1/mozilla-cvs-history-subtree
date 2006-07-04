@@ -333,7 +333,23 @@ NS_IMETHODIMP nsScrollBoxObject::GetPosition(PRInt32 *x, PRInt32 *y)
 /* void getScrolledSize (out long width, out long height); */
 NS_IMETHODIMP nsScrollBoxObject::GetScrolledSize(PRInt32 *width, PRInt32 *height)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsIFrame* scrolledBox = GetScrolledBox(this);
+    if (!scrolledBox)
+        return NS_ERROR_FAILURE;
+        	
+    nsRect scrollRect = scrolledBox->GetRect();
+
+    nsCOMPtr<nsIPresShell> shell = GetPresShell();
+    if (!shell) {
+      return NS_ERROR_UNEXPECTED;
+    }
+
+    float twipsToPixels = shell->GetPresContext()->TwipsToPixels();
+ 
+    *width  = NSTwipsToIntPixels(scrollRect.width, twipsToPixels);
+    *height = NSTwipsToIntPixels(scrollRect.height, twipsToPixels);
+
+    return NS_OK;
 }
 
 /* void ensureElementIsVisible (in nsIDOMElement child); */
