@@ -113,7 +113,7 @@ struct JSTreeContext {              /* tree context for semantic checks */
     JSStmtInfo      *topStmt;       /* top of statement info stack */
     JSStmtInfo      *topScopeStmt;  /* top lexical scope statement */
     JSObject        *blockChain;    /* compile time block scope chain */
-    JSParseNode     *blockNode;     /* parse node for a lexical scope. 
+    JSParseNode     *blockNode;     /* parse node for a lexical scope.
                                        XXX combine with blockChain? */
     JSAtomList      decls;          /* function, const, and var declarations */
     JSParseNode     *nodeList;      /* list of recyclable parse-node structs */

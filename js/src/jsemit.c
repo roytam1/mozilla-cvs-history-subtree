@@ -5351,7 +5351,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             pn2 = NULL;
         }
 
-        /* Let and for loop heads evaluate and bind in the outer scope. */
+        /* Let and for loop heads evaluate initializers in the outer scope. */
         inHead = (pn2 != NULL || (cg->treeContext.flags & TCF_IN_FOR_INIT));
 
         JS_ASSERT(pn->pn_arity == PN_LIST);
@@ -5360,7 +5360,6 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
         if (pn2 && !js_EmitTree(cx, cg, pn2))
             return JS_FALSE;
-
         break;
       }
 #endif /* JS_HAS_BLOCK_SCOPE */
