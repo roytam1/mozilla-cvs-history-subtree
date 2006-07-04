@@ -3296,8 +3296,7 @@ EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
     jsuint depth, limit, slot;
     JSParseNode *pn;
 
-    depth = (uintN) cg->stackDepth;
-    limit = 0;
+    depth = limit = (uintN) cg->stackDepth;
     for (pn = rhs->pn_head; pn; pn = pn->pn_next) {
         if (limit == JS_BIT(16)) {
             js_ReportCompileErrorNumber(cx, rhs,
@@ -3316,7 +3315,6 @@ EmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *lhs,
         ++limit;
     }
 
-    limit += depth;
     slot = depth;
     for (pn = lhs->pn_head; pn; pn = pn->pn_next) {
         if (pn->pn_type != TOK_COMMA) {
