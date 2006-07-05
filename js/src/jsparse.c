@@ -522,7 +522,7 @@ js_CompileTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
          * that the tc can be downcast to a cg and used to emit code during
          * parsing, rather than at the end of the parse phase.
          *
-         * Update: the threaded interpreter needs a stop instruction, so we
+         * Nowadays the threaded interpreter needs a stop instruction, so we
          * do have to emit that here.
          */
         JS_ASSERT(cg->treeContext.flags & TCF_COMPILING);
@@ -769,21 +769,24 @@ js_CompileFunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun)
 
     /*
      * Farble the body so that it looks like a block statement to js_EmitTree,
-     * which is called beneath FunctionBody (see Statements, further below in
-     * this file).
+     * which is called beneath FunctionBody; see Statements, further below in
+     * this file.  FunctionBody pushes a STMT_BLOCK record around its call to
+     * Statements, so Statements will not compile each statement as it loops
+     * to save JSParseNode space -- it will not compile at all, only build a
+     * JSParseNode tree.
      *
-     * NB: with threaded interpretation, we must emit a stop opcode at the end
-     * of every scripted function and top-level script.
+     * Therefore we must fold constants, allocate try notes, and generate code
+     * for this function, including a stop opcode at the end.
      */
     CURRENT_TOKEN(ts).type = TOK_LC;
     pn = FunctionBody(cx, ts, fun, &funcg.treeContext);
-    if (!pn || js_Emit1(cx, &funcg, JSOP_STOP) < 0) {
+    if (!pn ||
+        !js_FoldConstants(cx, pn, &funcg.treeContext) ||
+        !js_AllocTryNotes(cx, &funcg) ||
+        !js_EmitTree(cx, &funcg, pn) ||
+        js_Emit1(cx, &funcg, JSOP_STOP) < 0) {
         ok = JS_FALSE;
     } else {
-        /*
-         * No need to emit code here -- Statements (via FunctionBody) already
-         * has.  See similar comment in js_CompileTokenStream, and bug 108257.
-         */
         fun->u.i.script = js_NewScriptFromCG(cx, &funcg, fun);
         if (!fun->u.i.script) {
             ok = JS_FALSE;
@@ -2048,7 +2051,6 @@ FindBlockStatement(JSTreeContext *tc)
             return stmt;
         stmt = stmt->down;
     }
-
     return NULL;
 }
 
