@@ -4639,7 +4639,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             if (js_Emit1(cx, cg, JSOP_PUSH) < 0)
                 return JS_FALSE;
         }
-        if (js_Emit1(cx, cg, pn->pn_op) < 0)
+        if (js_Emit1(cx, cg, JSOP_YIELD) < 0)
             return JS_FALSE;
         break;
 #endif
