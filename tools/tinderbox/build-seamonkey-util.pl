@@ -484,14 +484,11 @@ sub SetupPath {
         # you have to match BuildDebug and --enable-optimize, 
         # --disable-debug to make things work here.
 
-        my $actualProductName = defined($Settings::MacOSProductName) ?
-         $Settings::MacOSProductName : $Settings::ProductName;
-        
         $Settings::DistBin = "dist/";
 
         # Deal with the most common case first.
         if ($Settings::ProductName ne 'XULRunner') {
-            $Settings::DistBin .= $actualProductName;
+            $Settings::DistBin .= "$Settings::ProductName";
             if ($Settings::BuildDebug) {
                 $Settings::DistBin .= "Debug";
             }
