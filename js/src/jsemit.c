@@ -1225,6 +1225,7 @@ js_PushStatement(JSTreeContext *tc, JSStmtInfo *stmt, JSStmtType type,
                  ptrdiff_t top)
 {
     stmt->type = type;
+    stmt->flags = 0;
     SET_STATEMENT_TOP(stmt, top);
     stmt->label = NULL;
     stmt->down = tc->topStmt;

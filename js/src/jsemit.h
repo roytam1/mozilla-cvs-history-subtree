@@ -88,7 +88,8 @@ typedef enum JSStmtType {
 typedef struct JSStmtInfo JSStmtInfo;
 
 struct JSStmtInfo {
-    JSStmtType      type;           /* statement type */
+    uint16          type;           /* statement type */
+    uint16          flags;          /* flags, see below */
     ptrdiff_t       update;         /* loop update offset (top if none) */
     ptrdiff_t       breaks;         /* offset of last break in loop */
     ptrdiff_t       continues;      /* offset of last continue in loop */
@@ -99,6 +100,11 @@ struct JSStmtInfo {
     JSStmtInfo      *downScope;     /* next enclosing lexical scope */
     JSObject        *blockObj;      /* block object if BLOCK_SCOPE */
 };
+
+#define SIF_BODY_BLOCK  0x0001      /* STMT_BLOCK type is a function body */
+
+#define AT_TOP_LEVEL(tc)                                                      \
+    (!(tc)->topStmt || ((tc)->topStmt->flags & SIF_BODY_BLOCK))
 
 #define SET_STATEMENT_TOP(stmt, top)                                          \
     ((stmt)->update = (top), (stmt)->breaks =                                 \

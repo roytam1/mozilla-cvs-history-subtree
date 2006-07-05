@@ -709,6 +709,7 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
     }
 
     js_PushStatement(tc, &stmtInfo, STMT_BLOCK, -1);
+    stmtInfo.flags = SIF_BODY_BLOCK;
 
     oldflags = tc->flags;
     tc->flags &= ~(TCF_RETURN_EXPR | TCF_RETURN_VOID);
@@ -866,14 +867,14 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                     return NULL;
                 }
             }
-            if (tc->topStmt && prevop == JSOP_DEFVAR)
+            if (!AT_TOP_LEVEL(tc) && prevop == JSOP_DEFVAR)
                 tc->flags |= TCF_FUN_CLOSURE_VS_VAR;
         } else {
             ale = js_IndexAtom(cx, funAtom, &tc->decls);
             if (!ale)
                 return NULL;
         }
-        ALE_SET_JSOP(ale, tc->topStmt ? JSOP_CLOSURE : JSOP_DEFFUN);
+        ALE_SET_JSOP(ale, AT_TOP_LEVEL(tc) ? JSOP_DEFFUN : JSOP_CLOSURE);
 
         /*
          * A function nested at top level inside another's body needs only a
@@ -883,7 +884,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
          * wins when jsemit.c's LookupArgOrVar can optimize a JSOP_NAME into a
          * JSOP_GETVAR bytecode).
          */
-        if (!tc->topStmt && (tc->flags & TCF_IN_FUNCTION)) {
+        if (AT_TOP_LEVEL(tc) && (tc->flags & TCF_IN_FUNCTION)) {
             /*
              * Define a property on the outer function so that LookupArgOrVar
              * can properly optimize accesses.
@@ -1034,7 +1035,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
          * are not local args or vars (TCF_FUN_USES_NONLOCALS), then our
          * enclosing function, if any, must be heavyweight.
          */
-        if ((!lambda && funAtom && tc->topStmt) ||
+        if ((!lambda && funAtom && !AT_TOP_LEVEL(tc)) ||
             (funtc.flags & TCF_FUN_USES_NONLOCALS)) {
             tc->flags |= TCF_FUN_HEAVYWEIGHT;
         }
@@ -1060,7 +1061,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         result->pn_pos = pn->pn_pos;
         result->pn_kid = pn;
         op = JSOP_ANONFUNOBJ;
-    } else if (tc->topStmt) {
+    } else if (!AT_TOP_LEVEL(tc)) {
         /*
          * ECMA ed. 3 extension: a function expression statement not at the
          * top level, e.g., in a compound statement such as the "then" part
