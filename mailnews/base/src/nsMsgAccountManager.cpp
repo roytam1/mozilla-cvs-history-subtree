@@ -1111,7 +1111,16 @@ PRBool PR_CALLBACK nsMsgAccountManager::cleanupOnExit(nsHashKey *aKey, void *aDa
                  PR_CWait(folder, PR_MicrosecondsToInterval(1000UL));
                  PR_CExitMonitor(folder);
                  if (eventQueue)
-                   eventQueue->ProcessPendingEvents();
+                 {
+                   PLEvent *event;
+                   do
+                   {
+                     eventQueue->GetEvent(&event);
+                     if (event)
+                       eventQueue->HandleEvent(event);
+                   }
+                   while (event);
+                 }
                }
              }
              if (emptyTrashOnExit)
@@ -1124,7 +1133,16 @@ PRBool PR_CALLBACK nsMsgAccountManager::cleanupOnExit(nsHashKey *aKey, void *aDa
                  PR_CWait(folder, PR_MicrosecondsToInterval(1000UL));
                  PR_CExitMonitor(folder);
                  if (eventQueue)
-                   eventQueue->ProcessPendingEvents();
+                 {
+                   PLEvent *event;
+                   do
+                   {
+                     eventQueue->GetEvent(&event);
+                     if (event)
+                       eventQueue->HandleEvent(event);
+                   }
+                   while (event);
+                 }
                }
              }
            } 
