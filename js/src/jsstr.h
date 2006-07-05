@@ -304,6 +304,9 @@ js_InitRuntimeStringState(JSContext *cx);
 extern void
 js_FinishRuntimeStringState(JSContext *cx);
 
+extern void
+js_FinishDeflatedStringCache(JSRuntime *rt);
+
 /* Initialize the String class, returning its prototype object. */
 extern JSClass js_StringClass;
 
