@@ -127,6 +127,7 @@
 #include "nsILanguageAtomService.h"
 #include "nsTextControlFrame.h"
 #include "nsStyleSheetService.h"
+#include "nsNoDataProtocolContentPolicy.h"
 
 #include "nsDOMParser.h"
 #include "nsDOMSerializer.h"
@@ -622,6 +623,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsInspectorCSSUtils)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWyciwygProtocolHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentAreaDragDrop)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDataDocumentContentPolicy)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsNoDataProtocolContentPolicy)
 MAKE_CTOR(CreateSyncLoadDOMService,       nsISyncLoadDOMService,       NS_NewSyncLoadDOMService)
 MAKE_CTOR(CreatePluginDocument,           nsIDocument,                 NS_NewPluginDocument)
 
@@ -806,6 +808,44 @@ UnregisterDataDocumentContentPolicy(nsIComponentManager *aCompMgr,
   
   return catman->DeleteCategoryEntry("content-policy",
                                      NS_DATADOCUMENTCONTENTPOLICY_CONTRACTID,
+                                     PR_TRUE);
+}
+
+static NS_METHOD
+RegisterNoDataProtocolContentPolicy(nsIComponentManager *aCompMgr,
+                                    nsIFile* aPath,
+                                    const char* aRegistryLocation,
+                                    const char* aComponentType,
+                                    const nsModuleComponentInfo* aInfo)
+{
+  nsresult rv;
+  nsCOMPtr<nsICategoryManager> catman =
+    do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  nsXPIDLCString previous;
+  return catman->AddCategoryEntry("content-policy",
+                                  NS_NODATAPROTOCOLCONTENTPOLICY_CONTRACTID,
+                                  NS_NODATAPROTOCOLCONTENTPOLICY_CONTRACTID,
+                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
+}
+
+static NS_METHOD
+UnregisterNoDataProtocolContentPolicy(nsIComponentManager *aCompMgr,
+                                      nsIFile *aPath,
+                                      const char *registryLocation,
+                                      const nsModuleComponentInfo *info)
+{
+  nsresult rv;
+  nsCOMPtr<nsICategoryManager> catman =
+    do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  
+  return catman->DeleteCategoryEntry("content-policy",
+                                     NS_NODATAPROTOCOLCONTENTPOLICY_CONTRACTID,
                                      PR_TRUE);
 }
 
@@ -1256,6 +1296,13 @@ static const nsModuleComponentInfo gComponents[] = {
     nsDataDocumentContentPolicyConstructor,
     RegisterDataDocumentContentPolicy,
     UnregisterDataDocumentContentPolicy },
+
+  { "No data protocol content policy",
+    NS_NODATAPROTOCOLCONTENTPOLICY_CID,
+    NS_NODATAPROTOCOLCONTENTPOLICY_CONTRACTID,
+    nsNoDataProtocolContentPolicyConstructor,
+    RegisterNoDataProtocolContentPolicy,
+    UnregisterNoDataProtocolContentPolicy },
 
   { "DOM CSS Computed Style Declaration",
     NS_COMPUTEDDOMSTYLE_CID,

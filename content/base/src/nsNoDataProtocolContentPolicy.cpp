@@ -42,15 +42,12 @@
  */
 
 #include "nsNoDataProtocolContentPolicy.h"
-#include "nsIDocument.h"
-#include "nsINode.h"
-#include "nsIDOMWindow.h"
-#include "nsIDOMDocument.h"
 #include "nsString.h"
 #include "nsContentUtils.h"
 #include "nsIProtocolHandler.h"
 #include "nsIIOService.h"
 #include "nsIExternalProtocolHandler.h"
+#include "nsIURI.h"
 
 NS_IMPL_ISUPPORTS1(nsNoDataProtocolContentPolicy, nsIContentPolicy)
 
@@ -81,12 +78,12 @@ nsNoDataProtocolContentPolicy::ShouldLoad(PRUint32 aContentType,
       return NS_OK;
     }
 
-    nsIIOService* ios = nsContentUtils::GetIOService();
+    nsIIOService* ios = nsContentUtils::GetIOServiceWeakRef();
     if (!ios) {
       // default to accept, just in case
       return NS_OK;
     }
-    
+
     nsCOMPtr<nsIProtocolHandler> handler;
     ios->GetProtocolHandler(scheme.get(), getter_AddRefs(handler));
 

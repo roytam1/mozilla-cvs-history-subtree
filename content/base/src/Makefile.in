@@ -116,6 +116,7 @@ CPPSRCS		= \
 		nsLoadListenerProxy.cpp \
 		nsMappedAttributes.cpp \
 		nsNameSpaceManager.cpp \
+		nsNoDataProtocolContentPolicy.cpp \
 		nsNodeInfo.cpp \
 		nsNodeInfoManager.cpp \
 		nsParserUtils.cpp \
