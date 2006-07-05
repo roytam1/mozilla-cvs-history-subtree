@@ -102,8 +102,6 @@ calendar.jar:
     content/calendar/calExtOverlay.js (content/calExtOverlay.js)
     content/calendar/calExtOverlay.xul (content/calExtOverlay.xul)
     content/calendar/menuOverlay.xul (content/menuOverlay.xul)
-    content/calendar/pref/prefBird.xul (content/pref/prefBird.xul)
-    content/calendar/pref/prefBirdOverlay.xul (content/pref/prefBirdOverlay.xul)
     skin/classic/calendar/calendar.css (skin/classic/calendar.css)
     skin/classic/calendar/prevnextarrow.png (skin/classic/prevnextarrow.png)
     skin/classic/calendar/datetimepickers/minimonth.css (skin/classic/datetimepickers/minimonth.css)
