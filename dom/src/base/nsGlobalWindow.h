@@ -60,6 +60,7 @@
 #include "nsIObserver.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIDOMClientInformation.h"
 #include "nsIDOMViewCSS.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOM3EventTarget.h"
@@ -669,7 +670,8 @@ private:
 //*****************************************************************************
 
 class nsNavigator : public nsIDOMNavigator,
-                    public nsIDOMJSNavigator
+                    public nsIDOMJSNavigator,
+                    public nsIDOMClientInformation
 {
 public:
   nsNavigator(nsIDocShell *aDocShell);
@@ -678,6 +680,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOMNAVIGATOR
   NS_DECL_NSIDOMJSNAVIGATOR
+  NS_DECL_NSIDOMCLIENTINFORMATION
   
   void SetDocShell(nsIDocShell *aDocShell);
   nsIDocShell *GetDocShell()

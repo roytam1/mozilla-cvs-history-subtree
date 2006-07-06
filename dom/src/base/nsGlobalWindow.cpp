@@ -122,6 +122,7 @@
 #include "nsIWebBrowserChrome.h"
 #include "nsIWebBrowserFind.h"  // For window.find()
 #include "nsIWindowMediator.h"  // For window.find()
+#include "nsIWebContentHandlerRegistrar.h"
 #include "nsIComputedDOMStyle.h"
 #include "nsIEntropyCollector.h"
 #include "nsDOMCID.h"
@@ -7698,6 +7699,7 @@ NS_INTERFACE_MAP_BEGIN(nsNavigator)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNavigator)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNavigator)
   NS_INTERFACE_MAP_ENTRY(nsIDOMJSNavigator)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMClientInformation)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(Navigator)
 NS_INTERFACE_MAP_END
 
@@ -8202,3 +8204,34 @@ nsNavigator::RefreshMIMEArray()
     rv = mMimeTypes->Refresh();
   return rv;
 }
+
+//*****************************************************************************
+//    nsNavigator::nsIDOMClientInformation
+//*****************************************************************************
+
+NS_IMETHODIMP
+nsNavigator::RegisterContentHandler(const nsAString& aMIMEType, 
+                                    const nsAString& aURI, 
+                                    const nsAString& aTitle)
+{
+  nsCOMPtr<nsIWebContentHandlerRegistrar> registrar = 
+    do_GetService(NS_WEBCONTENTHANDLERREGISTRAR_CONTRACTID);
+  if (registrar)
+    return registrar->RegisterContentHandler(aMIMEType, aURI, aTitle);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNavigator::RegisterProtocolHandler(const nsAString& aProtocol, 
+                                     const nsAString& aURI, 
+                                     const nsAString& aTitle)
+{
+  nsCOMPtr<nsIWebContentHandlerRegistrar> registrar = 
+    do_GetService(NS_WEBCONTENTHANDLERREGISTRAR_CONTRACTID);
+  if (registrar)
+    return registrar->RegisterProtocolHandler(aProtocol, aURI, aTitle);
+
+  return NS_OK;
+}
+
