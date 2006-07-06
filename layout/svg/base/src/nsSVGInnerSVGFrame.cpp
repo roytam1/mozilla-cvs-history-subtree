@@ -105,6 +105,7 @@ public:
    * @see nsLayoutAtoms::svgInnerSVGFrame
    */
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -345,6 +346,12 @@ nsIAtom *
 nsSVGInnerSVGFrame::GetType() const
 {
   return nsLayoutAtoms::svgInnerSVGFrame;
+}
+
+PRBool
+nsSVGInnerSVGFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eSVG);
 }
 
 //----------------------------------------------------------------------

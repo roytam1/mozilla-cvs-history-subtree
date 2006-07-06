@@ -82,12 +82,12 @@ protected:
   nsSVGTSpanFrame();
   virtual ~nsSVGTSpanFrame();
   virtual nsresult InitSVG();
-  
+
    // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
-  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
 public:
   // nsIFrame:
 
@@ -113,6 +113,7 @@ public:
    * @see nsLayoutAtoms::svgTSpanFrame
    */
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -129,7 +130,7 @@ public:
 
   // nsISupportsWeakReference
   // implementation inherited from nsSupportsWeakReference
-  
+
   // nsISVGChildFrame interface:
   NS_IMETHOD PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPointSVG(float x, float y, nsIFrame** hit);
@@ -140,12 +141,12 @@ public:
   NS_IMETHOD NotifyRedrawUnsuspended();
   NS_IMETHOD SetMatrixPropagation(PRBool aPropagate);
   NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
-  
+
   // nsISVGContainerFrame interface:
   nsISVGOuterSVGFrame *GetOuterSVGFrame();
   already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
   already_AddRefed<nsSVGCoordCtxProvider> GetCoordContextProvider();
-  
+
   // nsISVGTextContainerFrame interface:
   NS_IMETHOD_(nsISVGTextFrame *) GetTextFrame();
   NS_IMETHOD_(PRBool) GetAbsolutePositionAdjustmentX(float &x, PRUint32 charNum);
@@ -156,7 +157,7 @@ public:
   NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetY();
   NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetDx();
   NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetDy();
-  
+
   // nsISVGGlyphFragmentNode interface:
   NS_IMETHOD_(nsISVGGlyphFragmentLeaf *) GetFirstGlyphFragment();
   NS_IMETHOD_(nsISVGGlyphFragmentLeaf *) GetNextGlyphFragment();
@@ -169,10 +170,10 @@ public:
 protected:
   nsISVGGlyphFragmentNode *GetFirstGlyphFragmentChildNode();
   nsISVGGlyphFragmentNode *GetNextGlyphFragmentChildNode(nsISVGGlyphFragmentNode*node);
-  
+
 private:
   PRUint32 mCharOffset; // index of first character of this node relative to the enclosing <text>-element
-  PRBool mFragmentTreeDirty; 
+  PRBool mFragmentTreeDirty;
   PRBool mPropagateTransform;
 };
 

@@ -1119,12 +1119,18 @@ public:
   ~nsFrameConstructorState();
   
   // Function to push the existing absolute containing block state and
-  // create a new scope.
+  // create a new scope. Code that uses this function should get matching
+  // logic in GetAbsoluteContainingBlock.
   void PushAbsoluteContainingBlock(nsIFrame* aNewAbsoluteContainingBlock,
                                    nsFrameConstructorSaveState& aSaveState);
 
   // Function to push the existing float containing block state and
-  // create a new scope
+  // create a new scope. Code that uses this function should get matching
+  // logic in GetFloatContainingBlock.
+  // Pushing a null float containing block forbids any frames from being
+  // floated until a new float containing block is pushed.
+  // XXX we should get rid of null float containing blocks and teach the
+  // various frame classes to deal with floats instead.
   void PushFloatContainingBlock(nsIFrame* aNewFloatContainingBlock,
                                 nsFrameConstructorSaveState& aSaveState,
                                 PRBool aFirstLetterStyle,
@@ -5388,9 +5394,14 @@ nsCSSFrameConstructor::ConstructTextFrame(nsFrameConstructorState& aState,
 
 #ifdef MOZ_SVG
   nsresult rv;
-  nsCOMPtr<nsISVGTextContainerFrame> svg_parent = do_QueryInterface(aParentFrame);
-  if (svg_parent)
+
+  if (aParentFrame->IsFrameOfType(nsIFrame::eSVG)) {
+    nsCOMPtr<nsISVGTextContainerFrame> svg_parent = do_QueryInterface(aParentFrame);
+    if (!svg_parent) {
+      return NS_OK;
+    }
     rv = NS_NewSVGGlyphFrame(mPresShell, aContent, aParentFrame, &newFrame);
+  }
   else
     rv = NS_NewTextFrame(mPresShell, &newFrame);
 #else
@@ -7132,6 +7143,10 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
       return rv;
     }
 
+    // Push a null float containing block to disable floating within mathml
+    nsFrameConstructorSaveState saveState;
+    aState.PushFloatContainingBlock(nsnull, saveState, PR_FALSE, PR_FALSE);
+
     // MathML frames are inline frames, so just process their kids
     nsFrameItems childItems;
     rv = ProcessChildren(aState, aContent, newFrame, PR_TRUE,
@@ -7790,6 +7805,19 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsFrameConstructorState& aState,
     return ConstructTextFrame(aState, aContent, adjParentFrame, styleContext,
                               *frameItems, pseudoParent);
 
+#ifdef MOZ_SVG
+  // Don't create frames for non-SVG children of SVG elements
+  if (aNameSpaceID != kNameSpaceID_SVG &&
+      aParentFrame &&
+      aParentFrame->IsFrameOfType(nsIFrame::eSVG)
+#ifdef MOZ_SVG_FOREIGNOBJECT
+      && !aParentFrame->IsFrameOfType(nsIFrame::eSVGForeignObject)
+#endif
+      ) {
+    return NS_OK;
+  }
+#endif
+ 
   // Style resolution can normally happen lazily.  However, getting the
   // Visibility struct can cause |SetBidiEnabled| to be called on the
   // pres context, and this needs to happen before we start reflow, so
@@ -8025,7 +8053,7 @@ nsCSSFrameConstructor::GetFloatContainingBlock(nsIFrame* aFrame)
   
   // Starting with aFrame, look for a frame that is a float containing block
   for (nsIFrame* containingBlock = aFrame;
-       containingBlock;
+       containingBlock && !containingBlock->IsFrameOfType(nsIFrame::eMathML);
        containingBlock = containingBlock->GetParent()) {
     if (containingBlock->IsFloatContainingBlock()) {
       return containingBlock;

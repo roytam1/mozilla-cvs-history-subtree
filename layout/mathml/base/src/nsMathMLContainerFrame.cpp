@@ -1181,6 +1181,12 @@ nsMathMLContainerFrame::GetType() const
   return nsMathMLAtoms::ordinaryMathMLFrame;
 }
 
+PRBool
+nsMathMLContainerFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eMathML);
+}
+
 enum eMathMLFrameType {
   eMathMLFrameType_UNKNOWN = -1,
   eMathMLFrameType_Ordinary,

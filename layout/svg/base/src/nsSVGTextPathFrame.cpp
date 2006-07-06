@@ -61,6 +61,7 @@ public:
    * @see nsLayoutAtoms::svgGFrame
    */
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -81,7 +82,7 @@ public:
 
 private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
-  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
 
 protected:
   virtual ~nsSVGTextPathFrame();
@@ -122,20 +123,20 @@ NS_NewSVGTextPathFrame(nsIPresShell* aPresShell, nsIContent* aContent,
     NS_ERROR("trying to construct an SVGTextPathFrame for an invalid container");
     return NS_ERROR_FAILURE;
   }
-  
+
   nsCOMPtr<nsIDOMSVGTextPathElement> tspan_elem = do_QueryInterface(aContent);
   if (!tspan_elem) {
     NS_ERROR("Trying to construct an SVGTextPathFrame for a "
              "content element that doesn't support the right interfaces");
     return NS_ERROR_FAILURE;
   }
-  
+
   nsSVGTextPathFrame* it = new (aPresShell) nsSVGTextPathFrame;
   if (nsnull == it)
     return NS_ERROR_OUT_OF_MEMORY;
 
   *aNewFrame = it;
-  
+
   return NS_OK;
 }
 
@@ -186,6 +187,11 @@ nsSVGTextPathFrame::GetType() const
   return nsLayoutAtoms::svgTextPathFrame;
 }
 
+PRBool
+nsSVGTextPathFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eSVG);
+}
 
 NS_IMETHODIMP_(already_AddRefed<nsIDOMSVGLengthList>)
 nsSVGTextPathFrame::GetX()
@@ -216,7 +222,7 @@ nsSVGTextPathFrame::GetDy()
 //----------------------------------------------------------------------
 // nsISVGPathFlatten methods:
 
-nsresult GetReferencedFrame(nsIFrame **aServer, nsCAutoString& uriSpec, nsIContent *aContent, 
+nsresult GetReferencedFrame(nsIFrame **aServer, nsCAutoString& uriSpec, nsIContent *aContent,
                                         nsIPresShell *aPresShell)
 {
   nsresult rv = NS_OK;
@@ -248,7 +254,7 @@ nsresult GetReferencedFrame(nsIFrame **aServer, nsCAutoString& uriSpec, nsIConte
   nsCOMPtr<nsIDOMElement> element;
   rv = domDoc->GetElementById(aURIName, getter_AddRefs(element));
   if (!NS_SUCCEEDED(rv) || element == nsnull) {
-    return rv;  
+    return rv;
   }
 
   // Get the Primary Frame
