@@ -675,6 +675,12 @@ function RefreshDefaultSearchEngines()
   menulist = document.getElementById('defaultSearchEngine');
   if (!menulist)
     menulist = this.opener.document.getElementById('defaultSearchEngine');
+  
+  var listbox;
+  listbox = document.getElementById('searchEngineList');
+  if (!listbox)
+    listbox = this.opener.document.getElementById('searchEngineList');
+
 
   var curitem = menulist.value;
   menulist.selectedIndex = -1;
@@ -683,7 +689,8 @@ function RefreshDefaultSearchEngines()
   var setcuritem = false;
   
   var bundle = document.getElementById("bundle_cckwizard");
-  menulist.appendItem(bundle.getString("useBrowserDefault"), "");
+  menulistitem = menulist.appendItem(bundle.getString("useBrowserDefault"), "");
+  menulistitem.minWidth=menulist.width;
   for (var i=0; i < listbox.getRowCount(); i++) {
     listitem = listbox.getItemAtIndex(i);
     name = listitem.getAttribute("label");
