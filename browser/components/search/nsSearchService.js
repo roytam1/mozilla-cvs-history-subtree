@@ -1843,7 +1843,7 @@ Engine.prototype = {
     return "";
   },
 
-  // This getter is used in SearchService.observer.  It is not intended to be
+  // This getter is used in SearchService.observe.  It is not intended to be
   // used (or needed) by callers outside this file.
   get uri() {
     return this._uri;
