@@ -1649,7 +1649,8 @@
               if (window.getComputedStyle(this.parentNode, null)
                         .direction == "ltr") {
                 var newMarginLeft;
-                var minMarginLeft = tabStripBoxObject.x - halfIndWidth;
+                var minMarginLeft = tabStripBoxObject.x - halfIndWidth -
+                                    ib.boxObject.x;
                 // make sure we don't place the tab drop indicator past the
                 // edge, or the containing box will flex and stretch
                 // the tab drop indicator bar, which will flex the url bar.  
@@ -1668,14 +1669,14 @@
                 else if (pixelsToScroll < 0)
                   newMarginLeft = minMarginLeft;
                 else {
-                if (newIndex == this.mTabs.length) {
+                  if (newIndex == this.mTabs.length) {
                     newMarginLeft = this.mTabs[newIndex-1].boxObject.screenX +
                                     this.mTabs[newIndex-1].boxObject.width - 
                                     this.boxObject.screenX - halfIndWidth;
-                } else {
+                  } else {
                     newMarginLeft = this.mTabs[newIndex].boxObject.screenX - 
                                     this.boxObject.screenX - halfIndWidth;
-                }
+                  }
 
                   // ensure we never place the drop indicator beyond
                   // our limits
@@ -1687,7 +1688,8 @@
                 ind.style.marginLeft = newMarginLeft + 'px';
               } else {
                 var newMarginRight;
-                var minMarginRight = tabStripBoxObject.x - halfIndWidth;
+                var minMarginRight = tabStripBoxObject.x - halfIndWidth -
+                                     ib.boxObject.x;
                 // make sure we don't place the tab drop indicator past the
                 // edge, or the containing box will flex and stretch
                 // the tab drop indicator bar, which will flex the url bar.  
@@ -1706,12 +1708,12 @@
                 else if (pixelsToScroll < 0)
                   newMarginRight = minMarginRight;
                 else {
-                if (newIndex == this.mTabs.length) {
+                  if (newIndex == this.mTabs.length) {
                     newMarginRight = this.boxObject.width + 
                                      this.boxObject.screenX -
                                      this.mTabs[newIndex-1].boxObject.screenX -
                                      halfIndWidth;
-                } else {
+                  } else {
                     newMarginRight = this.boxObject.width + 
                                      this.boxObject.screenX -
                                      this.mTabs[newIndex].boxObject.screenX -
