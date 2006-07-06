@@ -37,31 +37,106 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "domstubs.idl"
-#include "nsISupportsPrimitives.idl"
+
+/********************************* #includes *********************************/
+
+#include "domstubs.idl"                 // nsIDOMElement, nsIDOMWindow
+#include "nsISupports.idl"              // nsISupports
+
+
+/******************************** Declarations *******************************/
 
 interface nsIDocShell;
+
+
+/****************************** nsTypeAheadFind ******************************/
 
 [scriptable, uuid(376da416-e6b3-4bac-98f3-6aa408742751)]
 interface nsITypeAheadFind : nsISupports
 {
+  /****************************** Initializer ******************************/
+
+  /* Necessary initialization that can't happen in the constructor, either
+   * because function calls here may fail, or because the docShell is
+   * required. */
   void init(in nsIDocShell aDocShell);
 
-  const unsigned short FIND_FOUND    = 0;
-  const unsigned short FIND_NOTFOUND = 1;
-  const unsigned short FIND_WRAPPED  = 2;
 
+  /***************************** Core functions ****************************/
+
+  /* Find aSearchString in page.  If aLinksOnly is true, only search the page's
+   * hyperlinks for the string.  aHasFocus will be true if the "Find" textfield
+   * has focus. */
   unsigned short find(in AString aSearchString, in boolean aLinksOnly);
+
+  /* Find next match in the page. */
   unsigned short findNext();
+
+  /* Find previous match in the page. */
   unsigned short findPrevious();
 
+
+  /**************************** Helper functions ***************************/
+
+  /* Change searched docShell.  This happens when e.g. we use the same
+   * nsITypeAheadFind object to search different tabs. */
   void setDocShell(in nsIDocShell aDocShell);
 
+
+  /******************************* Attributes ******************************/
+
   readonly attribute AString searchString;
-  attribute boolean focusLinks;
-  attribute boolean caseSensitive;
+                                        // Most recent search string
+  attribute boolean focusLinks;         // DOES NOTHING
+  attribute boolean caseSensitive;      // Searches are case sensitive
   readonly attribute nsIDOMElement foundLink;
+                                        // Most recent elem found, if a link
   readonly attribute nsIDOMWindow currentWindow;
+                                        // Window of most recent match
+
+
+  /******************************* Constants *******************************/
+
+  /* Find return codes */
+  const unsigned short FIND_FOUND    = 0;
+                                        // Successful find
+  const unsigned short FIND_NOTFOUND = 1;
+                                        // Unsuccessful find
+  const unsigned short FIND_WRAPPED  = 2;
+                                        // Successful find, but wrapped around
+
+
+  /*************************************************************************/
+
 };
 
+
+/********************* nsTypeAheadFind_MOZILLA_1_8_BRANCH ********************/
+
+[scriptable, uuid(6e934f17-1975-49c2-880e-4f9fa79a1b2e)]
+interface nsITypeAheadFind_MOZILLA_1_8_BRANCH : nsITypeAheadFind
+{
+  /**************************** Helper functions ***************************/
+
+  /* Change the look of the the "found match" selection to aToggle, and repaint
+   * the selection. */
+  void setSelectionModeAndRepaint(in short toggle);
+
+  /* Collapse the "found match" selection to its start.  Because not all
+   * matches are owned by the same selection controller, this doesn't
+   * necessarily happen automatically. */
+  void collapseSelection();
+
+
+  /******************************* Attributes ******************************/
+
+  readonly attribute nsIDOMElement foundEditable;
+                                        // Most recent elem found, if editable
+
+
+  /*************************************************************************/
+
+};
+
+
+/*****************************************************************************/

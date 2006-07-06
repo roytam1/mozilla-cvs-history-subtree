@@ -68,7 +68,7 @@ enum {
 
 const int kMaxBadCharsBeforeCancel = 3;
 
-class nsTypeAheadFind : public nsITypeAheadFind,
+class nsTypeAheadFind : public nsITypeAheadFind_MOZILLA_1_8_BRANCH,
                         public nsIObserver,
                         public nsSupportsWeakReference
 {
@@ -78,6 +78,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSITYPEAHEADFIND
+  NS_DECL_NSITYPEAHEADFIND_MOZILLA_1_8_BRANCH
   NS_DECL_NSIOBSERVER
 
 protected:
@@ -94,13 +95,16 @@ protected:
 
   void GetSelection(nsIPresShell *aPresShell, nsISelectionController **aSelCon, 
                     nsISelection **aDomSel);
+  PRBool FindFieldHasFocus(nsPresContext *aPresContext);
   PRBool IsRangeVisible(nsIPresShell *aPresShell, nsPresContext *aPresContext,
-                         nsIDOMRange *aRange, PRBool aMustBeVisible, 
-                         PRBool aGetTopVisibleLeaf,
-                         nsIDOMRange **aNewRange);
+                        nsIDOMRange *aRange, PRBool aMustBeVisible, 
+                        PRBool aGetTopVisibleLeaf, nsIDOMRange **aNewRange,
+                        PRBool *aUsesIndependentSelection);
   nsresult FindItNow(nsIPresShell *aPresShell, PRBool aIsRepeatingSameChar, 
-                     PRBool aIsLinksOnly, PRBool aIsFirstVisiblePreferred, PRBool aFindNext, PRUint16* aResult);
-  nsresult GetSearchContainers(nsISupports *aContainer,                                
+                     PRBool aIsLinksOnly, PRBool aIsFirstVisiblePreferred, 
+                     PRBool aFindNext, PRUint16* aResult);
+  nsresult GetSearchContainers(nsISupports *aContainer,
+                               nsISelectionController *aSelectionController,
                                PRBool aIsRepeatingSameChar,
                                PRBool aIsFirstVisiblePreferred, 
                                PRBool aCanUseDocSelection,
@@ -124,8 +128,8 @@ protected:
   PRBool mStartLinksOnlyPref;
   PRPackedBool mLinksOnly;
   PRBool mCaretBrowsingOn;
-  PRBool mFocusLinks;
-  nsCOMPtr<nsIDOMElement> mFoundLink;
+  nsCOMPtr<nsIDOMElement> mFoundLink;     // Most recent elem found, if a link
+  nsCOMPtr<nsIDOMElement> mFoundEditable; // Most recent elem found, if editable
   nsCOMPtr<nsIDOMWindow> mCurrentWindow;
   PRPackedBool mLiteralTextSearchOnly;
   PRPackedBool mDontTryExactMatch;
@@ -152,7 +156,9 @@ protected:
   nsCOMPtr<nsIFind> mFind;
   nsCOMPtr<nsIWebBrowserFind> mWebBrowserFind;
 
-  // The focused content window that we're listening to
+  // The focused content window that we're listening to and its cached objects
   nsWeakPtr mDocShell;
   nsWeakPtr mPresShell;
+  nsWeakPtr mSelectionController;
+                                          // Most recent match's controller
 };

@@ -257,7 +257,7 @@
               return this._fastFind = n.fastFind
 
             this._fastFind = Components.classes["@mozilla.org/typeaheadfind;1"]
-                                       .createInstance(Components.interfaces.nsITypeAheadFind);                                
+                                       .createInstance(Components.interfaces.nsITypeAheadFind_MOZILLA_1_8_BRANCH);
             this._fastFind.init(this.docShell);
           }
           return this._fastFind;
