@@ -693,6 +693,14 @@ nsContentUtils::CanCallerAccess(nsIDOMNode *aNode)
     return PR_TRUE;
   }
 
+  if (principal == systemPrincipal) {
+      // we already know subjectPrincipal isn't the systemPrincipal so if
+      // the object principal is they cannot match. Bail out now to
+      // avoid wasting time in CheckSameOriginPrincipal
+
+      return PR_FALSE;
+  }
+
   rv = sSecurityManager->CheckSameOriginPrincipal(subjectPrincipal,
                                                   principal);
   if (NS_SUCCEEDED(rv)) {
