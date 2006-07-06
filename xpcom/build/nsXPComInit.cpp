@@ -128,6 +128,8 @@
 #include "nsMacUtilsImpl.h"
 #endif
 
+#include "nsSystemInfo.h"
+
 #include <locale.h>
 
 // Registry Factory creation function defined in nsRegistry.cpp
@@ -216,6 +218,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacUtilsImpl)
 #endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUUIDGenerator)
+
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSystemInfo, Init)
 
 static NS_METHOD
 nsXPTIInterfaceInfoManagerGetSingleton(nsISupports* outer,
@@ -412,6 +416,8 @@ static const nsModuleComponentInfo components[] = {
 #ifdef XP_MACOSX
     COMPONENT(MACUTILSIMPL, nsMacUtilsImplConstructor),
 #endif
+
+    COMPONENT(SYSTEMINFO, nsSystemInfoConstructor),
 };
 
 #undef COMPONENT
