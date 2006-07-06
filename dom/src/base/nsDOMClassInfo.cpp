@@ -3682,6 +3682,8 @@ void InvalidateContextAndWrapperCache()
 // static helper that determines if a security manager check is needed
 // by checking if the callee's context is the same as the caller's
 // context
+// Note: See documentNeedsSecurityCheck for information about the control
+// flow in this function.
 
 static inline PRBool
 needsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
@@ -3721,29 +3723,30 @@ needsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
   JSStackFrame *fp = nsnull;
   JSObject *fp_obj = nsnull;
 
+  cached_win_needs_check = PR_FALSE;
+
   do {
     fp = ::JS_FrameIterator(cx, &fp);
 
-    if(!fp) {
-      break;
+    if (!fp) {
+      cached_win_cx = nsnull;
+      return cached_win_needs_check;
     }
 
     fp_obj = ::JS_GetFrameFunctionObject(cx, fp);
+    cached_win_needs_check = PR_TRUE;
   } while (!fp_obj);
 
-  if (fp_obj) {
-    JSObject *global = GetGlobalJSObject(cx, fp_obj);
+  JSObject *global = GetGlobalJSObject(cx, fp_obj);
 
-    JSObject *wrapper_obj = nsnull;
-    wrapper->GetJSObject(&wrapper_obj);
+  JSObject *wrapper_obj = nsnull;
+  wrapper->GetJSObject(&wrapper_obj);
 
-    if (global != wrapper_obj) {
-      return PR_TRUE;
-    }
+  if (global != wrapper_obj) {
+    return PR_TRUE;
   }
 
   cached_win_needs_check = PR_FALSE;
-
   return PR_FALSE;
 }
 
@@ -7266,7 +7269,6 @@ documentNeedsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
 
   cached_doc_cx = cx;
   cached_doc_wrapper = wrapper;
-  cached_doc_needs_check = PR_TRUE;
   
   // Get the JS object from the wrapper
   JSObject *wrapper_obj = nsnull;
@@ -7293,26 +7295,33 @@ documentNeedsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
   JSObject *function_obj = nsnull;
   JSStackFrame *fp = nsnull;
 
+  // Initialize to false to handle the case where there's no JS running
+  // on the current context (e.g., we're getting here from a property
+  // access from the JS API).  Since the scope chain is immutable, it's
+  // OK to keep skipping the check.
+
+  cached_doc_needs_check = PR_FALSE;
+
   do {
     fp = ::JS_FrameIterator(cx, &fp);
-
     if (!fp) {
-      if (!function_obj) {
-        // No JS is running (there's no frame on the JS stack with a
-        // function object), someone is just accessing properties on a
-        // JS object using the JS API, no need to do security checks
-        // then.
+      // Clear cached_doc_cx so that we don't really cache this return
+      // value. If we hit this case, then we didn't really have enough
+      // information about the currently running code to make any long-term
+      // decisions.
 
-        // Since the scope chain is immutable, it's OK to keep
-        // skipping the check
-        cached_doc_needs_check = PR_FALSE;
-        return PR_FALSE;
-      }
-
-      break;
+      cached_doc_cx = nsnull;
+      return cached_doc_needs_check;
     }
 
     function_obj = ::JS_GetFrameFunctionObject(cx, fp);
+
+    // Since we're here, we know that there is some JS running. Now, we
+    // need to default to being paranoid, and can only skip the security
+    // check if we find that the currently-running function is from the
+    // same scope.
+
+    cached_doc_needs_check = PR_TRUE;
   } while (!function_obj);
 
   // Get the global object that the calling function comes from.
