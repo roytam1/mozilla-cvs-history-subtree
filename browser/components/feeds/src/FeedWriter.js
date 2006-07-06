@@ -368,7 +368,8 @@ FeedWriter.prototype = {
     var chan = 
         window.QueryInterface(Ci.nsIInterfaceRequestor).
         getInterface(Ci.nsIWebNavigation).
-        QueryInterface(Ci.nsIDocShell).currentDocumentChannel;
+        QueryInterface(Ci.nsIDocShell_MOZILLA_1_8_BRANCH).
+        currentDocumentChannel;
     const kPrefix = "jar:file:";
     return chan.URI.spec.substring(0, kPrefix.length) == kPrefix;
   },
