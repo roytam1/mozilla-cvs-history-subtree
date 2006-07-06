@@ -1103,7 +1103,6 @@ static JSParseNode *
 Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 {
     JSParseNode *pn, *pn2, *saveBlock;
-    JSStmtInfo *saveStmt;
     JSTokenType tt;
 
     CHECK_RECURSION();
@@ -1112,7 +1111,6 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     if (!pn)
         return NULL;
     saveBlock = tc->blockNode;
-    saveStmt = tc->topStmt;
     tc->blockNode = pn;
     PN_INIT_LIST(pn);
 
@@ -1162,12 +1160,10 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     }
 
     /*
-     * Handle the case where there was a let declaration under this block. If
-     * it either pushed a new statement (i.e., we're at the top level) or it
-     * replaced the blockNode with itself then we must cope.
+     * Handle the case where there was a let declaration under this block.  If
+     * it replaced tc->blockNode with a new block node then we must refresh pn
+     * and then restore tc->blockNode.
      */
-    if (tc->topStmt != saveStmt)
-        js_PopStatement(tc);
     if (tc->blockNode != pn)
         pn = tc->blockNode;
     tc->blockNode = saveBlock;
@@ -2921,8 +2917,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                     stmt->type = STMT_BLOCK_SCOPE;
                     stmt->downScope = tc->topScopeStmt;
                     tc->topScopeStmt = stmt;
-                    obj->slots[JSSLOT_PARENT] =
-                        OBJECT_TO_JSVAL(tc->blockChain);
+                    obj->slots[JSSLOT_PARENT] = OBJECT_TO_JSVAL(tc->blockChain);
                     tc->blockChain = stmt->blockObj = obj;
                 } else {
                     /*
