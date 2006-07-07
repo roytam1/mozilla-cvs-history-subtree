@@ -33,7 +33,7 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-
++
 # NSIS defines for release builds.
 # The nightly build branding.nsi is located in browser/installer/windows/nsis/
 !define BrandShortName        "Firefox"
@@ -43,5 +43,7 @@
 !define URLUpdateInfo         "http://www.mozilla.org/products/firefox/"
 !define SurveyURL             "https://survey.mozilla.com/1/Mozilla%20Firefox/${AppVersion}%20(${AB_CD})/exit.html"
 
+# Set to 75 for Firefox 2.0 beta releases and should be changed to 10 for the
+# Firefox 2.0 Official Release.
 # Percentage of new "Standard" installs to enable talkback for
-!define RandomPercent         "10"
+!define RandomPercent         "75"

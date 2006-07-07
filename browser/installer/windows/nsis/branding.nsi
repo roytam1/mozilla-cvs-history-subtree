@@ -36,8 +36,8 @@
 
 # NSIS defines for nightly builds.
 # The release build branding.nsi is located in other-license/branding/firefox/
-!define BrandShortName        "Minefield"
-!define BrandFullName         "Minefield"
+!define BrandShortName        "Bon Echo"
+!define BrandFullName         "Bon Echo"
 !define CompanyName           "Mozilla"
 !define URLInfoAbout          "http://www.mozilla.org/"
 !define URLUpdateInfo         "http://www.mozilla.org/products/firefox/"
