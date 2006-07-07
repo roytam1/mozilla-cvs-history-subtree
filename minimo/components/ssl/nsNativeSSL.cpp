@@ -102,7 +102,7 @@ class nsWINCESSLSocketInfo : public nsITransportSecurityInfo
 public:
   nsWINCESSLSocketInfo() 
   {
-    mSecurityState          = nsIWebProgressListener::STATE_IS_BROKEN; 
+    mSecurityState          = nsIWebProgressListener::STATE_IS_INSECURE; 
   }
 
   virtual ~nsWINCESSLSocketInfo() {}
@@ -145,8 +145,6 @@ nsWINCESSLSocketInfo::GetShortSecurityDescription(PRUnichar** aText)
 
 static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
 {
-  info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
-  
   PRBool accepted = PR_FALSE;
   gUserAcceptedSSLProblem.Get(info->mDestinationHost, &accepted);
   if (accepted)
@@ -179,17 +177,22 @@ static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
 static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLOB pCertChain, DWORD dwFlags )
 {
   nsWINCESSLSocketInfo* info = (nsWINCESSLSocketInfo*)pvArg;
-  info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
   
   if ( SSL_CERT_X509 != dwType )
+  {
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
     return SSL_ERR_BAD_DATA;
+  }
   
   if ( SSL_CERT_FLAG_ISSUER_UNKNOWN & dwFlags )
   {
     if (DisplaySSLProblemDialog(info, L"confirmUnknownIssuer") != IDYES)
+    {
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
       return SSL_ERR_CERT_UNKNOWN;
+    }
   }
-  
+
   // see:
   // http://groups.google.com/groups?q=SslCrackCertificate&hl=en&lr=&ie=UTF-8&oe=UTF-8&selm=uQf1VcLWBHA.1632%40tkmsftngp05&rnum=3
   
@@ -204,6 +207,7 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
     
     if (!gSslCrackCertificate || !gSslFreeCertificate)
     {
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
 #ifdef DEBUG
       MessageBox(0, "Could not find the right stuff in the default security library", "schannel.dll", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
 #endif
@@ -213,15 +217,20 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
   
   X509Certificate * cert = 0;
   if ( !gSslCrackCertificate( pCertChain->pBlobData, pCertChain->cbSize, TRUE, &cert ) )
+  {
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
     return SSL_ERR_BAD_DATA;
-
+  }
   
   // all we have to do is compare the name in the cert to
   // what the hostname was when we created this socket.
 
   char* subject = strstr(cert->pszSubject, "CN=");
   if (!subject)
+  {
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
     return SSL_ERR_BAD_DATA;
+  }
 
   subject = subject+3; // pass CN=
 
@@ -251,14 +260,16 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
 
   if (! _stricmp (destinationHost, subject))
   {
-    if (info->mSecurityState != nsIWebProgressListener::STATE_IS_BROKEN)
-      info->mSecurityState = nsIWebProgressListener::STATE_IS_SECURE | nsIWebProgressListener::STATE_SECURE_HIGH;
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_SECURE | nsIWebProgressListener::STATE_SECURE_HIGH;
     res = SSL_ERR_OKAY;
   }
   else
   {
     if (DisplaySSLProblemDialog(info, L"confirmMismatch") == IDYES)
+    {
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_SECURE | nsIWebProgressListener::STATE_SECURE_HIGH;
       res = SSL_ERR_OKAY;
+    }
   }
   
   if (end)
