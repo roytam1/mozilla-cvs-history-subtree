@@ -125,9 +125,7 @@ CreateScopeTable(JSContext *cx, JSScope *scope, JSBool report)
             JS_ReportOutOfMemory(cx);
         return JS_FALSE;
     }
-
-    /* Racy update after calloc, to help keep the GC self-scheduled well. */
-    cx->runtime->gcMallocBytes += JS_BIT(sizeLog2) * sizeof(JSScopeProperty *);
+    js_UpdateMallocCounter(cx, JS_BIT(sizeLog2) * sizeof(JSScopeProperty *));
 
     scope->hashShift = JS_DHASH_BITS - sizeLog2;
     for (sprop = scope->lastProp; sprop; sprop = sprop->parent) {
@@ -150,7 +148,6 @@ js_NewScope(JSContext *cx, jsrefcount nrefs, JSObjectOps *ops, JSClass *clasp,
     js_InitObjectMap(&scope->map, nrefs, ops, clasp);
     scope->object = obj;
     scope->flags = 0;
-    scope->dswIndex = 0;
     InitMinimalScope(scope);
 
 #ifdef JS_THREADSAFE

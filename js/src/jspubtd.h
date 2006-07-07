@@ -70,6 +70,7 @@ typedef enum JSVersion {
     JSVERSION_ECMA_3  = 148,
     JSVERSION_1_5     = 150,
     JSVERSION_1_6     = 160,
+    JSVERSION_1_7     = 170,
     JSVERSION_DEFAULT = 0,
     JSVERSION_UNKNOWN = -1
 } JSVersion;
@@ -89,6 +90,14 @@ typedef enum JSType {
     JSTYPE_XML,                 /* xml object */
     JSTYPE_LIMIT
 } JSType;
+
+/* Dense index into cached prototypes and class atoms for standard objects. */
+typedef enum JSProtoKey {
+#define JS_PROTO(name,code,init) JSProto_##name = code,
+#include "jsproto.tbl"
+#undef JS_PROTO
+    JSProto_LIMIT
+} JSProtoKey;
 
 /* JSObjectOps.checkAccess mode enumeration. */
 typedef enum JSAccessMode {
@@ -248,6 +257,9 @@ typedef JSBool
  * Finalize obj, which the garbage collector has determined to be unreachable
  * from other live objects or from GC roots.  Obviously, finalizers must never
  * store a reference to obj.
+ *
+ * This is also the type of the JSExtendedClass.close hook, which is stubbed
+ * with NULL if not needed.
  */
 typedef void
 (* JS_DLL_CALLBACK JSFinalizeOp)(JSContext *cx, JSObject *obj);
@@ -529,6 +541,27 @@ typedef JSBool
 
 /* Callbacks and their arguments. */
 
+typedef enum JSContextOp {
+    JSCONTEXT_NEW,
+    JSCONTEXT_DESTROY
+} JSContextOp;
+
+/*
+ * The possible values for contextOp when the runtime calls the callback are:
+ *   JSCONTEXT_NEW      JS_NewContext succesfully created a new JSContext
+ *                      instance. The callback can initialize the instance as
+ *                      required. If the callback returns false, the instance
+ *                      will be destroyed and JS_NewContext returns null. In
+ *                      this case the callback is not called again.
+ *   JSCONTEXT_DESTROY  One of JS_DestroyContext* methods is called. The
+ *                      callback may perform its own cleanup and must always
+ *                      return true.
+ *   Any other value    For future compatibility the callback must do nothing
+ *                      and return true in this case.
+ */
+typedef JSBool
+(* JS_DLL_CALLBACK JSContextCallback)(JSContext *cx, uintN contextOp);
+
 typedef enum JSGCStatus {
     JSGC_BEGIN,
     JSGC_END,
@@ -546,9 +579,28 @@ typedef void
 (* JS_DLL_CALLBACK JSErrorReporter)(JSContext *cx, const char *message,
                                     JSErrorReport *report);
 
+/*
+ * Possible exception types. These types are part of a JSErrorFormatString
+ * structure. They define which error to throw in case of a runtime error.
+ * JSEXN_NONE marks an unthrowable error.
+ */
+typedef enum JSExnType {
+    JSEXN_NONE = -1,
+      JSEXN_ERR,
+        JSEXN_INTERNALERR,
+        JSEXN_EVALERR,
+        JSEXN_RANGEERR,
+        JSEXN_REFERENCEERR,
+        JSEXN_SYNTAXERR,
+        JSEXN_TYPEERR,
+        JSEXN_URIERR,
+        JSEXN_LIMIT
+} JSExnType;
+
 typedef struct JSErrorFormatString {
-    const char *format;
-    uintN argCount;
+    const char *format;  /* the error message (may be UTF-8 if compiled with JS_C_STRINGS_ARE_UTF8) */
+    uint16 argCount;     /* the number of arguments to convert in the error message */
+    int16 exnType;       /* One of the JSExnType constants above */
 } JSErrorFormatString;
 
 typedef const JSErrorFormatString *

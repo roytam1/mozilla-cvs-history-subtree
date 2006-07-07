@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -60,27 +60,22 @@
 #include "jsopcode.h"
 #include "jsscript.h"
 
-#if JS_HAS_ERROR_EXCEPTIONS
-#if !JS_HAS_EXCEPTIONS
-# error "JS_HAS_EXCEPTIONS must be defined to use JS_HAS_ERROR_EXCEPTIONS"
-#endif
-
 /* XXX consider adding rt->atomState.messageAtom */
 static char js_message_str[]  = "message";
 static char js_filename_str[] = "fileName";
 static char js_lineno_str[]   = "lineNumber";
 static char js_stack_str[]    = "stack";
 
-/* Forward declarations for ExceptionClass's initializer. */
+/* Forward declarations for js_ErrorClass's initializer. */
 static JSBool
 Exception(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
 static void
 exn_finalize(JSContext *cx, JSObject *obj);
 
-static JSClass ExceptionClass = {
-    "Error",
-    JSCLASS_HAS_PRIVATE,
+JSClass js_ErrorClass = {
+    js_Error_str,
+    JSCLASS_HAS_PRIVATE | JSCLASS_HAS_CACHED_PROTO(JSProto_Error),
     JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
     JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   exn_finalize,
     NULL,             NULL,             NULL,             Exception,
@@ -250,7 +245,7 @@ js_ErrorFromException(JSContext *cx, jsval exn)
     if (JSVAL_IS_PRIMITIVE(exn))
         return NULL;
     obj = JSVAL_TO_OBJECT(exn);
-    if (OBJ_GET_CLASS(cx, obj) != &ExceptionClass)
+    if (OBJ_GET_CLASS(cx, obj) != &js_ErrorClass)
         return NULL;
     privateValue = OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE);
     if (JSVAL_IS_VOID(privateValue))
@@ -263,37 +258,20 @@ js_ErrorFromException(JSContext *cx, jsval exn)
     return privateData->errorReport;
 }
 
-/*
- * This must be kept in synch with the exceptions array below.
- * XXX use a jsexn.tbl file a la jsopcode.tbl
- */
-typedef enum JSExnType {
-    JSEXN_NONE = -1,
-      JSEXN_ERR,
-        JSEXN_INTERNALERR,
-        JSEXN_EVALERR,
-        JSEXN_RANGEERR,
-        JSEXN_REFERENCEERR,
-        JSEXN_SYNTAXERR,
-        JSEXN_TYPEERR,
-        JSEXN_URIERR,
-        JSEXN_LIMIT
-} JSExnType;
-
 struct JSExnSpec {
     int protoIndex;
     const char *name;
+    JSProtoKey key;
     JSNative native;
 };
 
 /*
- * All *Error constructors share the same JSClass, ExceptionClass.  But each
+ * All *Error constructors share the same JSClass, js_ErrorClass.  But each
  * constructor function for an *Error class must have a distinct native 'call'
  * function pointer, in order for instanceof to work properly across multiple
  * standard class sets.  See jsfun.c:fun_hasInstance.
  */
 #define MAKE_EXCEPTION_CTOR(name)                                             \
-const char js_##name##_str[] = #name;                                         \
 static JSBool                                                                 \
 name(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)      \
 {                                                                             \
@@ -312,15 +290,15 @@ MAKE_EXCEPTION_CTOR(URIError)
 #undef MAKE_EXCEPTION_CTOR
 
 static struct JSExnSpec exceptions[] = {
-    { JSEXN_NONE,       js_Error_str,           Error },
-    { JSEXN_ERR,        js_InternalError_str,   InternalError },
-    { JSEXN_ERR,        js_EvalError_str,       EvalError },
-    { JSEXN_ERR,        js_RangeError_str,      RangeError },
-    { JSEXN_ERR,        js_ReferenceError_str,  ReferenceError },
-    { JSEXN_ERR,        js_SyntaxError_str,     SyntaxError },
-    { JSEXN_ERR,        js_TypeError_str,       TypeError },
-    { JSEXN_ERR,        js_URIError_str,        URIError },
-    {0,NULL,NULL}
+    {JSEXN_NONE, js_Error_str,          JSProto_Error,          Error},
+    {JSEXN_ERR,  js_InternalError_str,  JSProto_InternalError,  InternalError},
+    {JSEXN_ERR,  js_EvalError_str,      JSProto_EvalError,      EvalError},
+    {JSEXN_ERR,  js_RangeError_str,     JSProto_RangeError,     RangeError},
+    {JSEXN_ERR,  js_ReferenceError_str, JSProto_ReferenceError, ReferenceError},
+    {JSEXN_ERR,  js_SyntaxError_str,    JSProto_SyntaxError,    SyntaxError},
+    {JSEXN_ERR,  js_TypeError_str,      JSProto_TypeError,      TypeError},
+    {JSEXN_ERR,  js_URIError_str,       JSProto_URIError,       URIError},
+    {0,          NULL,                  JSProto_Null,           NULL}
 };
 
 static JSBool
@@ -365,16 +343,9 @@ InitExceptionObject(JSContext *cx, JSObject *obj, JSString *message,
      * the backtrace procedure, not result in a failure of this constructor.
      */
     checkAccess = cx->runtime->checkObjectAccess;
-    if (checkAccess) {
-        older = JS_SetErrorReporter(cx, NULL);
-        state = JS_SaveExceptionState(cx);
-    }
-#ifdef __GNUC__         /* suppress bogus gcc warnings */
-    else {
-        older = NULL;
-        state = NULL;
-    }
-#endif
+    older = JS_SetErrorReporter(cx, NULL);
+    state = JS_SaveExceptionState(cx);
+
     callerid = ATOM_KEY(cx->runtime->atomState.callerAtom);
 
     /*
@@ -446,11 +417,21 @@ InitExceptionObject(JSContext *cx, JSObject *obj, JSString *message,
                 v = fp->argv[i];
                 if (JSVAL_IS_PRIMITIVE(v)) {
                     argsrc = js_ValueToSource(cx, v);
-                } else if (JSVAL_IS_FUNCTION(cx, v)) {
+                } else if (VALUE_IS_FUNCTION(cx, v)) {
                     /* XXX Avoid function decompilation bloat for now. */
                     argsrc = JS_GetFunctionId(JS_ValueToFunction(cx, v));
-                    if (!argsrc)
-                        argsrc = js_ValueToSource(cx, v);
+                    if (!argsrc && !(argsrc = js_ValueToSource(cx, v))) {
+                        /*
+                         * Continue to soldier on if the function couldn't be
+                         * converted into a string.
+                         */
+                        JS_ClearPendingException(cx);
+                        argsrc = JS_NewStringCopyZ(cx, "[unknown function]");
+                        if (!argsrc) {
+                            ok = JS_FALSE;
+                            break;
+                        }
+                    }
                 } else {
                     /* XXX Avoid toString on objects, it takes too long and
                            uses too much memory, for too many classes (see
@@ -492,13 +473,12 @@ InitExceptionObject(JSContext *cx, JSObject *obj, JSString *message,
 #undef APPEND_STRING_TO_STACK
 
 done:
-    if (checkAccess) {
-        if (ok)
-            JS_RestoreExceptionState(cx, state);
-        else
-            JS_DropExceptionState(cx, state);
-        JS_SetErrorReporter(cx, older);
-    }
+    if (ok)
+        JS_RestoreExceptionState(cx, state);
+    else
+        JS_DropExceptionState(cx, state);
+    JS_SetErrorReporter(cx, older);
+
     if (!ok) {
         JS_free(cx, stackbuf);
         return JS_FALSE;
@@ -571,7 +551,7 @@ Exception(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                               rval);
         if (!ok)
             goto out;
-        obj = js_NewObject(cx, &ExceptionClass, JSVAL_TO_OBJECT(*rval), NULL);
+        obj = js_NewObject(cx, &js_ErrorClass, JSVAL_TO_OBJECT(*rval), NULL);
         if (!obj) {
             ok = JS_FALSE;
             goto out;
@@ -583,7 +563,7 @@ Exception(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
      * If it's a new object of class Exception, then null out the private
      * data so that the finalizer doesn't attempt to free it.
      */
-    if (OBJ_GET_CLASS(cx, obj) == &ExceptionClass)
+    if (OBJ_GET_CLASS(cx, obj) == &js_ErrorClass)
         OBJ_SET_SLOT(cx, obj, JSSLOT_PRIVATE, JSVAL_VOID);
 
     /* Set the 'message' property. */
@@ -828,8 +808,23 @@ static JSFunctionSpec exception_methods[] = {
 JSObject *
 js_InitExceptionClasses(JSContext *cx, JSObject *obj)
 {
+    JSObject *obj_proto, *protos[JSEXN_LIMIT];
     int i;
-    JSObject *protos[JSEXN_LIMIT];
+
+    /*
+     * If lazy class initialization occurs for any Error subclass, then all
+     * classes are initialized, starting with Error.  To avoid reentry and
+     * redundant initialization, we must not pass a null proto parameter to
+     * js_NewObject below, when called for the Error superclass.  We need to
+     * ensure that Object.prototype is the proto of Error.prototype.
+     *
+     * See the equivalent code to ensure that parent_proto is non-null when
+     * JS_InitClass calls js_NewObject, in jsapi.c.
+     */
+    if (!js_GetClassPrototype(cx, obj, INT_TO_JSID(JSProto_Object),
+                              &obj_proto)) {
+        return NULL;
+    }
 
     if (!js_EnterLocalRootScope(cx))
         return NULL;
@@ -838,14 +833,15 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
     for (i = 0; exceptions[i].name != 0; i++) {
         JSAtom *atom;
         JSFunction *fun;
+        JSObject *funobj;
         JSString *nameString;
         int protoIndex = exceptions[i].protoIndex;
 
         /* Make the prototype for the current constructor name. */
-        protos[i] = js_NewObject(cx, &ExceptionClass,
+        protos[i] = js_NewObject(cx, &js_ErrorClass,
                                  (protoIndex != JSEXN_NONE)
                                  ? protos[protoIndex]
-                                 : NULL,
+                                 : obj_proto,
                                  obj);
         if (!protos[i])
             break;
@@ -853,20 +849,20 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
         /* So exn_finalize knows whether to destroy private data. */
         OBJ_SET_SLOT(cx, protos[i], JSSLOT_PRIVATE, JSVAL_VOID);
 
-        atom = js_Atomize(cx, exceptions[i].name, strlen(exceptions[i].name), 0);
-        if (!atom)
-            break;
-
         /* Make a constructor function for the current name. */
+        atom = cx->runtime->atomState.classAtoms[exceptions[i].key];
         fun = js_DefineFunction(cx, obj, atom, exceptions[i].native, 3, 0);
         if (!fun)
             break;
 
         /* Make this constructor make objects of class Exception. */
-        fun->clasp = &ExceptionClass;
+        fun->clasp = &js_ErrorClass;
+
+        /* Extract the constructor object. */
+        funobj = fun->object;
 
         /* Make the prototype and constructor links. */
-        if (!js_SetClassPrototype(cx, fun->object, protos[i],
+        if (!js_SetClassPrototype(cx, funobj, protos[i],
                                   JSPROP_READONLY | JSPROP_PERMANENT)) {
             break;
         }
@@ -883,6 +879,10 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
                                JSPROP_ENUMERATE)) {
             break;
         }
+
+        /* Finally, stash the constructor for later uses. */
+        if (!js_SetClassObject(cx, obj, exceptions[i].key, funobj))
+            break;
     }
 
     js_LeaveLocalRootScope(cx);
@@ -920,12 +920,19 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
     return protos[0];
 }
 
-static JSExnType errorToExceptionNum[] = {
-#define MSG_DEF(name, number, count, exception, format) \
-    exception,
-#include "js.msg"
-#undef MSG_DEF
-};
+const JSErrorFormatString*
+js_GetLocalizedErrorMessage(JSContext* cx, void *userRef, const char *locale, const uintN errorNumber)
+{
+    const JSErrorFormatString *errorString = NULL;
+
+    if (cx->localeCallbacks && cx->localeCallbacks->localeGetErrorMessage) {
+        errorString = cx->localeCallbacks
+                        ->localeGetErrorMessage(userRef, locale, errorNumber);
+    }
+    if (!errorString)
+        errorString = js_GetErrorMessage(userRef, locale, errorNumber);
+    return errorString;
+}
 
 #if defined ( DEBUG_mccabe ) && defined ( PRINTNAMES )
 /* For use below... get character strings for error name and exception name */
@@ -947,6 +954,7 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     JSString *messageStr, *filenameStr;
     uintN lineno;
     JSExnPrivate *privateData;
+    const JSErrorFormatString *errorString;
 
     /*
      * Tell our caller to report immediately if cx has no active frames, or if
@@ -958,7 +966,8 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
 
     /* Find the exception index associated with this error. */
     errorNumber = (JSErrNum) reportp->errorNumber;
-    exn = errorToExceptionNum[errorNumber];
+    errorString = js_GetLocalizedErrorMessage(cx, NULL, NULL, errorNumber);
+    exn = errorString ? errorString->exnType : JSEXN_NONE;
     JS_ASSERT(exn < JSEXN_LIMIT);
 
 #if defined( DEBUG_mccabe ) && defined ( PRINTNAMES )
@@ -996,11 +1005,12 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
      * exception constructor name in the scope chain of the current context's
      * top stack frame, or in the global object if no frame is active.
      */
-    ok = js_GetClassPrototype(cx, exceptions[exn].name, &errProto);
+    ok = js_GetClassPrototype(cx, NULL, INT_TO_JSID(exceptions[exn].key),
+                              &errProto);
     if (!ok)
         goto out;
 
-    errObject = js_NewObject(cx, &ExceptionClass, errProto, NULL);
+    errObject = js_NewObject(cx, &js_ErrorClass, errProto, NULL);
     if (!errObject) {
         ok = JS_FALSE;
         goto out;
@@ -1021,17 +1031,13 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
         goto out;
     }
 
-    if (reportp) {
-        filenameStr = JS_NewStringCopyZ(cx, reportp->filename);
-        if (!filenameStr) {
-            ok = JS_FALSE;
-            goto out;
-        }
-        lineno = reportp->lineno;
-    } else {
-        filenameStr = cx->runtime->emptyString;
-        lineno = 0;
+    filenameStr = JS_NewStringCopyZ(cx, reportp->filename);
+    if (!filenameStr) {
+        ok = JS_FALSE;
+        goto out;
     }
+    lineno = reportp->lineno;
+
     ok = InitExceptionObject(cx, errObject, messageStr, filenameStr, lineno);
     if (!ok)
         goto out;
@@ -1057,9 +1063,6 @@ out:
     cx->creatingException = JS_FALSE;
     return ok;
 }
-#endif /* JS_HAS_ERROR_EXCEPTIONS */
-
-#if JS_HAS_EXCEPTIONS
 
 JSBool
 js_ReportUncaughtException(JSContext *cx)
@@ -1100,11 +1103,7 @@ js_ReportUncaughtException(JSContext *cx)
         vp[0] = exn;
     }
 
-#if JS_HAS_ERROR_EXCEPTIONS
     reportp = js_ErrorFromException(cx, exn);
-#else
-    reportp = NULL;
-#endif
 
     /* XXX L10N angels cry once again (see also jsemit.c, /L10N gaffes/) */
     str = js_ValueToString(cx, exn);
@@ -1113,13 +1112,13 @@ js_ReportUncaughtException(JSContext *cx)
     } else {
         if (vp)
             vp[1] = STRING_TO_JSVAL(str);
-        bytes = js_GetStringBytes(str);
+        bytes = js_GetStringBytes(cx->runtime, str);
     }
     ok = JS_TRUE;
 
     if (!reportp &&
         exnObject &&
-        OBJ_GET_CLASS(cx, exnObject) == &ExceptionClass) {
+        OBJ_GET_CLASS(cx, exnObject) == &js_ErrorClass) {
         const char *filename;
         uint32 lineno;
 
@@ -1167,5 +1166,3 @@ out:
         js_FreeStack(cx, mark);
     return ok;
 }
-
-#endif /* JS_HAS_EXCEPTIONS */

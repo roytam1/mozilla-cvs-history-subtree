@@ -64,7 +64,7 @@ js_NewXMLNamespace(JSContext *cx, JSString *prefix, JSString *uri,
                    JSBool declared);
 
 extern void
-js_MarkXMLNamespace(JSContext *cx, JSXMLNamespace *ns, void *arg);
+js_MarkXMLNamespace(JSContext *cx, JSXMLNamespace *ns);
 
 extern void
 js_FinalizeXMLNamespace(JSContext *cx, JSXMLNamespace *ns);
@@ -88,7 +88,7 @@ js_NewXMLQName(JSContext *cx, JSString *uri, JSString *prefix,
                JSString *localName);
 
 extern void
-js_MarkXMLQName(JSContext *cx, JSXMLQName *qn, void *arg);
+js_MarkXMLQName(JSContext *cx, JSXMLQName *qn);
 
 extern void
 js_FinalizeXMLQName(JSContext *cx, JSXMLQName *qn);
@@ -130,7 +130,7 @@ struct JSXMLArrayCursor {
 /*
  * NB: don't reorder this enum without changing all array initializers that
  * depend on it in jsxml.c.
- */ 
+ */
 typedef enum JSXMLClass {
     JSXML_CLASS_LIST,
     JSXML_CLASS_ELEMENT,
@@ -202,7 +202,7 @@ extern JSXML *
 js_NewXML(JSContext *cx, JSXMLClass xml_class);
 
 extern void
-js_MarkXML(JSContext *cx, JSXML *xml, void *arg);
+js_MarkXML(JSContext *cx, JSXML *xml);
 
 extern void
 js_FinalizeXML(JSContext *cx, JSXML *xml);
