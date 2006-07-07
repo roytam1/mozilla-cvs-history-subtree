@@ -130,14 +130,14 @@
                                               
                                 <checkbox     tabindex="16"
                                               id="setFullscreen"
-                                              label="Full screen enabled"
+                                              label="&fullScreenEnabled.label;"
                                               preference="ui.fullscreen" 
                                               onclick="syncPref(this)" />
 
 
                                 <checkbox     tabindex="17"
                                               id="setHomebar"
-                                              label="Homebar enabled"
+                                              label="&homebarEnabled.label;"
                                               preference="ui.homebar" 
                                               onclick="syncPref(this)" />
                                               
