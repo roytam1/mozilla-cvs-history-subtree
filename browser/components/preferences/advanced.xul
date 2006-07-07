@@ -103,6 +103,9 @@
       <preference id="browser.safebrowsing.remoteLookups"
                   name="browser.safebrowsing.remoteLookups"
                   type="bool"/>
+      <preference id="browser.safebrowsing.dataProvider"
+                  name="browser.safebrowsing.dataProvider"
+                  type="int" onchange="gAdvancedPane.onProviderChanged();"/>
 #endif
     </preferences>
     
@@ -275,7 +278,8 @@
                     class="indent"
                     label="&safeBrowsingEnable.label;"
                     accesskey="&safeBrowsingEnable.accesskey;"
-                    preference="browser.safebrowsing.enabled"/>
+                    preference="browser.safebrowsing.enabled"
+                    onsynctopreference="return gAdvancedPane.writeCheckPhish();"/>
           <radiogroup id="safe-provider" class="indent"
                       preference="browser.safebrowsing.remoteLookups">
             <radio id="safe-local" value="false"

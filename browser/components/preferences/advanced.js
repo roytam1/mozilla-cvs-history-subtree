@@ -229,5 +229,80 @@ var gAdvancedPane = {
     document.getElementById("safe-local").disabled = !sbEnabled;
     document.getElementById("safe-remote").disabled = !sbEnabled;
 #endif
+  },
+
+  /**
+   * Displays a EULA for phishing detection if phishing detection is being
+   * enabled, allowing privacy wonks to not enable it if they want; otherwise,
+   * disables phishing protection.
+   */
+  writeCheckPhish: function ()
+  {
+    var checkbox = document.getElementById("safe-active");
+    // if the user's trying to enable phishing, we need to display a phishing
+    // EULA so he can choose not to enable it
+    if (checkbox.checked) {
+      var userAgreed = this._userAgreedToPhishingEULA();
+
+      // XXX I think this shouldn't be necessary and should be happening automatically, but it isn't
+      if (!userAgreed)
+        checkbox.checked = false;
+      return userAgreed;
+    }
+
+    // user disabling -- nothing to display, no preference value to override
+    return undefined;
+  },
+
+  /**
+   * Displays the currently-used phishing provider's EULA and offers the user
+   * the choice of cancelling the enabling of phishing.
+   *
+   * @returns bool
+   *          true if the user still wants to enable phishing protection with
+   *          the current provider, false otherwise
+   */
+  _userAgreedToPhishingEULA: function ()
+  {
+    // XXX this is hackish, and there's no nice URL support -- window with
+    //     HTML file provided by anti-phishing provider later?
+    const Cc = Components.classes, Ci = Components.interfaces;
+    const IPS = Ci.nsIPromptService;
+    var ips = Cc["@mozilla.org/embedcomp/prompt-service;1"]
+                .getService(IPS);
+    var bundle = document.getElementById("bundlePreferences");
+    var btnPressed = ips.confirmEx(window,
+                                   bundle.getString("phishEULATitle"),
+                                   bundle.getString("phishEULAText"),
+                                   IPS.BUTTON_POS_0 * IPS.BUTTON_TITLE_IS_STRING +
+                                     IPS.BUTTON_POS_1 * IPS.BUTTON_TITLE_IS_STRING,
+                                   bundle.getString("phishEULAOK"),
+                                   bundle.getString("phishEULACancel"),
+                                   "",
+                                   "", {});
+    return (btnPressed == 0);
+  },
+
+  /**
+   * Requires that the user agree to the new phishing provider's EULA when the
+   * provider is changed, disabling protection if the user doesn't agree.
+   */
+  onProviderChanged: function ()
+  {
+    if (!this._userAgreedToPhishingEULA()) {
+      this._disablePhishingProtection();
+    }
+  },
+
+  /**
+   * Turns off phishing protection and updates UI accordingly.
+   */
+  _disablePhishingProtection: function ()
+  {
+    var checkbox = document.getElementById("safe-active");
+    var phishEnabled = document.getElementById("browser.safebrowsing.enabled");
+    phishEnabled.value = false;
+    this._pane.userChangedValue(checkbox);
   }
+
 };
