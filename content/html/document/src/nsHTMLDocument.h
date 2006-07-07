@@ -64,6 +64,7 @@ class nsIURI;
 class nsIMarkupDocumentViewer;
 class nsIDocumentCharsetInfo;
 class nsICacheEntryDescriptor;
+class nsIEditingSession;
 
 class nsHTMLDocument : public nsDocument,
                        public nsIHTMLDocument,
@@ -313,6 +314,11 @@ protected:
   PLDHashTable mIdAndNameHashTable;
 
   nsCOMPtr<nsIWyciwygChannel> mWyciwygChannel;
+
+  void SetEnableRealTimeSpell(nsIDOMWindow* window,
+                              nsIEditingSession* editSession);
+
+  static int PR_CALLBACK RealTimeSpellCallback(const char* aPref, void* aContext);
 
   /* Midas implementation */
   nsresult   GetMidasCommandManager(nsICommandManager** aCommandManager);

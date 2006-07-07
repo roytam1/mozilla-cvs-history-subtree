@@ -74,6 +74,8 @@ REQUIRES	= xpcom \
 		  unicharutil \
 		  commandhandler \
 		  composer \
+		  editor \
+ 		  txtsvc \
 		  plugin \
 		  $(NULL)
 
