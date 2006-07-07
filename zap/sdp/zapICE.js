@@ -415,7 +415,17 @@ zapICEStunReflexiveCandidateFactory.fun(
     var serv = this.stunServers[this.currentServer];
     try {
       var req = comp.stunClientCtl.sendBindingRequest(this, serv, null, null);
-      this.activeRequests[Components.utils.getObjectId(req, true)] = [lc, this.currentComponent, serv];
+      this.activeRequests[Components.utils.getObjectId(req, true)] =
+        [lc, this.currentComponent, serv, req]; // It is important here to keep
+                                                // 'req' in our activeRequests hash to
+                                                // persist it through GC.
+                                                // Otherwise we might get a different
+                                                // (proxied,wrapped) req pointer
+                                                // passed into bindingRequestComplete()
+                                                // and getObjectId() will return a
+                                                // different value to the one used as
+                                                // key in activeRequests.
+
       ++this.activeRequestCount;
     }
     catch(e) {
