@@ -49,7 +49,8 @@ function toString() { return "[zapICE.js]"; }
 
 EXPORTED_SYMBOLS = ["produceICECandidates",
                     "encodeICECandidates",
-                    "extractICECandidates"];
+                    "extractICECandidates",
+                    "createCandidatePairList"];
 
 // object to hold component's documentation:
 var _doc_ = {};
@@ -572,19 +573,19 @@ function produceDerivedCandidates(done, maxDuration, paceDuration,
 }
 
 ////////////////////////////////////////////////////////////////////////
-// ICECandidates
+// zapICECandidates
 //
 
-var ICECandidates = makeClass("ICECandidates", ErrorReporter);
+var zapICECandidates = makeClass("zapICECandidates", ErrorReporter);
 
-ICECandidates.appendCtor(
-  function ICECandidatesCtor(args) {
+zapICECandidates.appendCtor(
+  function zapICECandidatesCtor(args) {
     this.password = args.password;
     this.candidates = args.candidates;
     this.activeCandidate = args.activeCandidate;
   });
 
-ICECandidates.fun(
+zapICECandidates.fun(
   function destroy() {
     for (var i=0,l=this.candidates.length; i<l; ++i) {
       this.candidates[i].destroy();
@@ -593,7 +594,7 @@ ICECandidates.fun(
     delete this.activeCandidate;
   });
 
-// continuation done() will be called with an ICECandidates object
+// continuation done() will be called with an zapICECandidates object
 function produceICECandidates(done, componentCount, udpPortbase,
                               maxDuration, paceDuration,
                               mediaGraph, stunServers, bestGuessAddress)
@@ -614,16 +615,16 @@ function produceICECandidates(done, componentCount, udpPortbase,
     if (!ac)
       ac = cands[0];
     
-    done(ICECandidates.instantiate({ password: pw,
-                                     candidates: cands,
-                                     activeCandidate: ac}));
+    done(zapICECandidates.instantiate({ password: pw,
+                                        candidates: cands,
+                                        activeCandidate: ac}));
   }
 
   produceDerivedCandidates(productionDone, maxDuration, paceDuration,
                            mediaGraph, cands, stunServers);
 }
 
-// encode ICECandidates object into an sdp media offer/answer
+// encode zapICECandidates object into an sdp media offer/answer
 function encodeICECandidates(candidates, session, media) {
   session.appendAttrib("ice-pwd:" + candidates.password);
 
@@ -707,7 +708,57 @@ function extractICECandidates(session, media) {
       }));
   }
   dump("WE'VE GOT "+cands.length+" ICE CANDIDATES\n");
-  return ICECandidates.instantiate({ password : pwd,
-                                     candidates: cands,
-                                     activeCandidate: null});
+  return zapICECandidates.instantiate({ password : pwd,
+                                        candidates: cands,
+                                        activeCandidate: null});
+}
+
+////////////////////////////////////////////////////////////////////////
+// zapICECandidatePair
+
+var zapICECandidatePair = makeClass("zapICECandidatePair", ErrorReporter);
+
+zapICECandidatePair.appendCtor(
+  function zapICECandidatePairCtor(args) {
+    this.local = args.local;
+    this.remote = args.remote;
+  });
+
+zapICECandidatePair.getter(
+  "id",
+  function get_id() {
+    //XXX
+  });
+
+////////////////////////////////////////////////////////////////////////
+// zapICECandidatePairList
+
+var zapICECandidatePairList = makeClass("zapICECandidatePairList", ErrorReporter);
+
+zapICECandidatePairList.appendCtor(
+  function zapICECandidatePairListCtor(args) {
+    this.candidatePairs = args.candidatePairs;
+  });
+
+
+// forms an ICECandidatePairList from two zapICECandidates objects:
+function createCandidatePairList(localCandidates, remoteCandidates)
+{
+  var pairs = [];
+  for (var l=0,ll=localCandidates.candidates.length; l<ll; ++l) {
+    for (var r=0,rl=remoteCandidates.candidates.length; r<rl; ++r) {
+      var lc = localCandidates.candidates[l];
+      var rc = remoteCandidates.candidates[r];
+      //XXX we're assuming for the time being that the transport protocols match
+      pairs.push(zapICECandidatePair.instantiate(
+                  {
+                    local :  lc,
+                    remote : rc
+                  }));
+    }
+  }
+  return zapICECandidatePairList.instantiate(
+    {
+      candidatePairs : pairs
+    });
 }

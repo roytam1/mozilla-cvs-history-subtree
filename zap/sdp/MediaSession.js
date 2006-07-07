@@ -514,6 +514,11 @@ MediaSession.statefun(
         this._dump("We have ICE candidates!");
         for (var i=0,l=this.remoteICECandidates.candidates.length; i<l; ++i)
           this._dump(this.remoteICECandidates.candidates[i]);
+
+        // create the candidate pair list:
+        this.iceCandidatePairs = createCandidatePairList(this.iceCandidates,
+                                                         this.remoteICECandidates);
+        this._dump("pair list has "+this.iceCandidatePairs.candidatePairs.length+ " entries");
       }
     }
     
