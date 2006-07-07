@@ -214,6 +214,11 @@ interface nsIXPCComponents_Utils : nsISupports
      * obj. If the optional argument 'inner' is true, and obj is a
      * wrapped native object, an identifier for the inner object will
      * be returned.
+     *
+     * Note that even if inner==true, the returned id could still
+     * point to an xpcom proxy and not the actual object, so be
+     * extremely careful when using object ids to compare the
+     * identities of COM objects.
      */
     void /* String */ getObjectId(/* in JSObject obj,
                                      [optional] in boolean inner*/);

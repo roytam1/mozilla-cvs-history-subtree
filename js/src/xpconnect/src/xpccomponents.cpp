@@ -2614,7 +2614,7 @@ nsXPCComponents_Utils::ForceGC()
     return NS_OK;
 }
 
-/* String getObjectId(in JSObject obj); */
+/* String getObjectId(in JSObject obj, [optional] in boolean inner); */
 NS_IMETHODIMP
 nsXPCComponents_Utils::GetObjectId()
 {
