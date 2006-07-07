@@ -33,7 +33,7 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-+
+
 # NSIS defines for release builds.
 # The nightly build branding.nsi is located in browser/installer/windows/nsis/
 !define BrandShortName        "Firefox"
