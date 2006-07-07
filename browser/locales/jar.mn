@@ -33,6 +33,7 @@
 *   locale/browser/bookmarks/bookmarksProperties.dtd (%chrome/browser/bookmarks/bookmarksProperties.dtd)
 #ifdef MOZ_SAFE_BROWSING
      locale/browser/safebrowsing/phishing-afterload-warning-message.dtd (%chrome/browser/safebrowsing/phishing-afterload-warning-message.dtd)
+     locale/browser/safebrowsing/report-phishing.dtd                    (%chrome/browser/safebrowsing/report-phishing.dtd)
 #endif
 #ifdef MOZ_FEEDS
     locale/browser/feeds/subscribe.dtd              (%chrome/browser/feeds/subscribe.dtd)
