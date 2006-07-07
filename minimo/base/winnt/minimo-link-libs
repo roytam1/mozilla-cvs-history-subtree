@@ -7,6 +7,5 @@ unicharutil_s
 gfxshared_s
 gkgfx
 xpcom_core
-xpcomglue
 embed_base_s
 profdirserviceprovider_s

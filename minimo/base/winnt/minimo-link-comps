@@ -2,6 +2,7 @@ xpc3250
 uconv
 i18n
 necko
+necko2
 jar50
 rdf
 xppref32
@@ -16,17 +17,16 @@ embedcomponents
 webbrwsr
 texteditor
 txmgr
-tkautoc
 appshell
 chrome
 mork
 tkitcmps
+transformiix
 xmlextras
-websrvcs
-gkplugin
 softkey
 phone
 snav
 ssr
 cookie
 perms
+devicesupport
