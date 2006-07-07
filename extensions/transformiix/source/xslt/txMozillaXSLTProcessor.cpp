@@ -66,6 +66,7 @@
 #include "jsapi.h"
 #include "nsIEventQueueService.h"
 #include "ExprParser.h"
+#include "nsIScriptSecurityManager.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
@@ -249,6 +250,7 @@ NS_IMPL_RELEASE(txMozillaXSLTProcessor)
 NS_INTERFACE_MAP_BEGIN(txMozillaXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessorObsolete)
+    NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessorPrivate)
     NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
     NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer_1_8_BRANCH)
     NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
@@ -259,7 +261,8 @@ NS_INTERFACE_MAP_END
 txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mStylesheetDocument(nsnull),
                                                    mTransformResult(NS_OK),
                                                    mCompileResult(NS_OK),
-                                                   mVariables(PR_TRUE)
+                                                   mVariables(PR_TRUE),
+                                                   mFlags(0)
 {
 }
 
@@ -293,7 +296,8 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                    type == nsIDOMNode::DOCUMENT_NODE,
                    NS_ERROR_INVALID_ARG);
 
-    nsresult rv = TX_CompileStylesheet(aStyleDOM, getter_AddRefs(mStylesheet));
+    nsresult rv = TX_CompileStylesheet(aStyleDOM, this, 
+                                       getter_AddRefs(mStylesheet));
     NS_ENSURE_SUCCESS(rv, rv);
 
     mSource = aSourceDOM;
@@ -560,7 +564,8 @@ txMozillaXSLTProcessor::ImportStylesheet(nsIDOMNode *aStyle)
                    type == nsIDOMNode::DOCUMENT_NODE,
                    NS_ERROR_INVALID_ARG);
 
-    nsresult rv = TX_CompileStylesheet(aStyle, getter_AddRefs(mStylesheet));
+    nsresult rv = TX_CompileStylesheet(aStyle, this,
+                                       getter_AddRefs(mStylesheet));
     // XXX set up exception context, bug 204658
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -618,7 +623,7 @@ txMozillaXSLTProcessor::TransformToDoc(nsIDOMDocument *aOutputDoc,
         sourceDOMDocument = do_QueryInterface(mSource);
     }
 
-    txExecutionState es(mStylesheet);
+    txExecutionState es(mStylesheet, IsLoadDisabled());
 
     // XXX Need to add error observers
 
@@ -669,7 +674,7 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    txExecutionState es(mStylesheet);
+    txExecutionState es(mStylesheet, IsLoadDisabled());
 
     // XXX Need to add error observers
 
@@ -947,6 +952,41 @@ txMozillaXSLTProcessor::Reset()
     return NS_OK;
 }
 
+static
+PRBool
+IsCallerChrome()
+{
+  nsCOMPtr<nsIScriptSecurityManager> secman =
+    do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+  PRBool is_caller_chrome = PR_FALSE;
+  nsresult rv = secman->SubjectPrincipalIsSystem(&is_caller_chrome);
+  if (NS_FAILED(rv)) {
+    return PR_FALSE;
+  }
+
+  return is_caller_chrome;
+}
+
+NS_IMETHODIMP
+txMozillaXSLTProcessor::SetFlags(PRUint32 aFlags)
+{
+    NS_ENSURE_TRUE(IsCallerChrome(), NS_ERROR_DOM_SECURITY_ERR);
+
+    mFlags = aFlags;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+txMozillaXSLTProcessor::GetFlags(PRUint32* aFlags)
+{
+    NS_ENSURE_TRUE(IsCallerChrome(), NS_ERROR_DOM_SECURITY_ERR);
+
+    *aFlags = mFlags;
+
+    return NS_OK;
+}
+
 NS_IMETHODIMP
 txMozillaXSLTProcessor::LoadStyleSheet(nsIURI* aUri, nsILoadGroup* aLoadGroup,
                                        nsIPrincipal* aCallerPrincipal)
@@ -1116,7 +1156,7 @@ txMozillaXSLTProcessor::ensureStylesheet()
     if (!style) {
         style = do_QueryInterface(mStylesheetDocument);
     }
-    return TX_CompileStylesheet(style, getter_AddRefs(mStylesheet));
+    return TX_CompileStylesheet(style, this, getter_AddRefs(mStylesheet));
 }
 
 NS_IMPL_NSIDOCUMENTOBSERVER_LOAD_STUB(txMozillaXSLTProcessor)

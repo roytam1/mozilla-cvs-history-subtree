@@ -82,6 +82,7 @@ NS_DOMCI_EXTENSION(Transformiix)
     NS_DOMCI_EXTENSION_ENTRY_BEGIN(XSLTProcessor)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessor)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessorObsolete) // XXX DEPRECATED
+        NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessorPrivate)
     NS_DOMCI_EXTENSION_ENTRY_END(XSLTProcessor, nsIXSLTProcessor, PR_TRUE,
                                  &kXSLTProcessorCID)
 
