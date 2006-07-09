@@ -151,8 +151,8 @@ SipUAStack.fun(
       try { this.userAgent = config.getProperty("user_agent"); }catch(e){}
     }
     this.instanceID = instance_id ? instance_id : gUUIDGenerator.generateUUIDURNString();
-    this.allowedMethods = methods.split(",");
-    this.supportedExtensions = extensions.split(",");
+    this.allowedMethods = methods.length ? methods.split(",") : [];
+    this.supportedExtensions = extensions.length ? extensions.split(",") : [];
     
     // Create transport layer:
     this.transport = createSipTransport();
