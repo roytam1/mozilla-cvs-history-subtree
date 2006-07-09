@@ -124,8 +124,16 @@ function commonDialogOnLoad()
   }
 
   // display the main text
-  var messageParent = document.getElementById("info.box").getElementsByTagName('description')[0];
-  messageParent.textContent = gCommonDialogParam.GetString(0).substr(0, 10000);
+  var messageText = gCommonDialogParam.GetString(0);
+  var messageParent = document.getElementById("info.box");
+  var messageParagraphs = messageText.split("\n");
+
+  for (var i = 0; i < messageParagraphs.length; i++) {
+    var descriptionNode = document.createElement("description");
+    var text = document.createTextNode(messageParagraphs[i]);
+    descriptionNode.appendChild(text);
+    messageParent.appendChild(descriptionNode);
+  }
 
   setElementText("info.header", gCommonDialogParam.GetString(3), true);
 

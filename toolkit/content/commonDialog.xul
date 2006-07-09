@@ -31,9 +31,7 @@
 #endif
       <!-- text -->
       <description id="info.header" class="header"/>
-      <vbox id="info.box">
-        <description/>
-      </vbox>
+      <vbox id="info.box"/>
 
       <!-- textboxes -->
       <vbox id="loginContainer" hidden="true">
