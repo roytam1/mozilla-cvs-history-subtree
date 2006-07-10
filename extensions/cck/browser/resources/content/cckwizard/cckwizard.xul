@@ -311,7 +311,7 @@
 
     <hbox align="center">
       <label control="defaultSearchEngine" value="&defaultSearchEngine.label;" />
-       <menulist id="defaultSearchEngine">
+       <menulist editable="true" id="defaultSearchEngine">
          <menupopup>
          </menupopup>
        </menulist>

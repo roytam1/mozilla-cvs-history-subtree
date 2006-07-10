@@ -1,37 +1,41 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is the Client Customization Kit (CCK).
- *
- * The Initial Developer of the Original Code is IBM Corp.
- * Portions created by the Initial Developer are Copyright (C) 2005
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
+# The Original Code is the Client Customization Kit (CCK).
+#
+# The Initial Developer of the Original Code is IBM Corp.
+# Portions created by the Initial Developer are Copyright (C) 2005
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#   Ben Goodger <beng@google.com> (Original author)
+#   Gavin Sharp <gavin@gavinsharp.com>
+#   Joe Hughes  <joe@retrovirus.com>
+#   Pamela Greene <pamg.bugs@gmail.com>
+#
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+#
+# ***** END LICENSE BLOCK *****
 
 var currentconfigname;
 var currentconfigpath;
@@ -778,97 +782,6 @@ function OnSearchEngineOK()
 
 const kUselessLine = /^\s*($|#)/i;
 
-function getSearchEngineName(searchenginepath)
-{
-  var sourcefile = Components.classes["@mozilla.org/file/local;1"]
-                             .createInstance(Components.interfaces.nsILocalFile);
-  sourcefile.initWithPath(searchenginepath);
-  
-  var stream = Components.classes["@mozilla.org/network/file-input-stream;1"]
-                         .createInstance(Components.interfaces.nsIFileInputStream);
-  stream.init(sourcefile, 0x01, 0644, 0);
-  var lis = stream.QueryInterface(Components.interfaces.nsILineInputStream);
-  
-  var line = { value: "" };
-  var more = false;
-  var lines = [];
-
-  do {
-    more = lis.readLine(line);
-    // Filter out comments and whitespace-only lines
-    if (!(kUselessLine.test(line.value)))
-      lines.push(line.value);
-  } while (more);
-  
-  stream.close();
-  
-  var searchSection = getSection(lines, "search");
-
-  return searchSection["name"];
-}
-
-function sTrim(aStr) {
-  return aStr.replace(/^\s+/g, "").replace(/\s+$/g, "");
-}
-
-    function getSection(aLines, aSection) {
-      var lines = aLines;
-      var startMark = new RegExp("^\\s*<" + aSection.toLowerCase() + "\\s*",
-                                 "gi");
-      var endMark   = /\s*>\s*$/gi;
-
-      var foundStart = false;
-      var startLine, numberOfLines;
-      // Find the beginning and end of the section
-      for (var i = 0; i < lines.length; i++) {
-        if (foundStart) {
-          if (endMark.test(lines[i])) {
-            numberOfLines = i - startLine;
-            // Remove the end marker
-            lines[i] = lines[i].replace(endMark, "");
-            // If the endmarker was not the only thing on the line, include
-            // this line in the results
-            if (lines[i])
-              numberOfLines++;
-            break;
-          }
-        } else {
-          if (startMark.test(lines[i])) {
-            foundStart = true;
-            // Remove the start marker
-            lines[i] = lines[i].replace(startMark, "");
-            startLine = i;
-            // If the line is empty, don't include it in the result
-            if (!lines[i])
-              startLine++;
-          }
-        }
-      }
-      lines = lines.splice(startLine, numberOfLines);
-
-      var section = {};
-      for (var i = 0; i < lines.length; i++) {
-        var line = sTrim(lines[i]);
-
-        var els = line.split("=");
-        var name = sTrim(els.shift().toLowerCase());
-        var value = sTrim(els.join("="));
-
-        if (!name || !value)
-          continue;
-
-        // Strip leading and trailing whitespace, remove quotes from the
-        // value, and remove any trailing slashes or ">" characters
-        value = value.replace(/^["']/, "")
-                     .replace(/["']\s*[\\\/]?>?\s*$/, "") || "";
-        value = sTrim(value);
-
-        // Don't clobber existing attributes
-        if (!(name in section))
-          section[name] = value;
-      }
-      return section;
-    }
 
 function onNewCert()
 {
@@ -2808,3 +2721,4 @@ function htmlEscape(s)
   return s;
 }
 
+#include search.js
