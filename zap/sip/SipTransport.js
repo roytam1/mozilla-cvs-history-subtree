@@ -43,6 +43,7 @@ Components.utils.importModule("gre:ArrayUtils.js");
 Components.utils.importModule("gre:StringUtils.js");
 Components.utils.importModule("gre:ObjectUtils.js");
 Components.utils.importModule("gre:SipUtils.js");
+Components.utils.importModule("gre:AsyncUtils.js");
 
 debug("*** SipTransport 1\n");
 
@@ -121,9 +122,7 @@ SipTCPConnection.fun(
     this._scriptableInputStream = CLASS_SCRIPT_INPUT_STREAM.createInstance();
     this._scriptableInputStream.QueryInterface(ITF_SCRIPT_INPUT_STREAM);
     this._scriptableInputStream.init(this._inputStream);
-    this._proxy = getProxyOnSIPThread(this,
-                                      Components.interfaces.nsIInputStreamCallback);
-    this._inputStream.asyncWait(this._proxy, 0, 0, null);
+    this._inputStream.asyncWait(this, 0, 0, getMainThread());
   });
 
 //----------------------------------------------------------------------
@@ -136,19 +135,18 @@ SipTCPConnection.fun(
       this._readBuffer += this._scriptableInputStream.readEx(this._scriptableInputStream.available());
       this._dump("Data received from "+this._socket.host+":"+this._socket.port);
       this._processBuffer(oldLength);
-      this._inputStream.asyncWait(this._proxy, 0, 0, null);
+      this._inputStream.asyncWait(this, 0, 0, getMainThread());
     }
     catch (e) {
       this._dump("stream closed or other error: "+e);
       this._transceiver._connectionClosed(this.protocol, this.host, this.port);      
-      delete this._proxy;
     }
   });
 
 //----------------------------------------------------------------------
 // zapISipConnection implementation
 
-SipTCPConnection.obj("protocol", "tcp");
+SipTCPConnection.obj("protocol", "TCP");
 
 SipTCPConnection.getter(
   "host",
@@ -274,7 +272,7 @@ SipTCPConnection.fun(
   function _handleMessage(bytes, message) {
     this._transceiver._dispatchPacket(bytes,
                                       Components.interfaces.zapISipTransceiverSink.APPLICATION_SIP,
-                                      "tcp",
+                                      "TCP",
                                       "xxx-local-address",
                                       this._socket.port,
                                       this.host,
@@ -312,20 +310,20 @@ SipTransceiver.appendCtor(
 //                          in unsigned long port);
 SipTransceiver.fun(
   function openListeningSocket(transportProtocol, port) {
-    transportProtocol = transportProtocol.toLowerCase();
+    transportProtocol = transportProtocol.toUpperCase();
     var key = transportProtocol+":"+port;
     if (hashhas(this._listeningSockets, key))
       this._error("SipTransceiver: "+transportProtocol+
                   " listening socket at "+port+" already open");
 
     var socket;
-    if (transportProtocol == "udp") {
+    if (transportProtocol == "UDP") {
       socket = CLASS_UDP_SOCKET.createInstance();
       socket.QueryInterface(ITF_UDP_SOCKET);
       socket.init(port);
       socket.setReceiver(this);
     }
-    else if (transportProtocol == "tcp") {
+    else if (transportProtocol == "TCP") {
       socket = CLASS_SERVER_SOCKET.createInstance();
       socket.QueryInterface(ITF_SERVER_SOCKET);
       socket.init(port, false, -1);
@@ -342,13 +340,13 @@ SipTransceiver.fun(
 //                           in unsigned long port);
 SipTransceiver.fun(
   function closeListeningSocket(transportProtocol, port) {
-    transportProtocol = transportProtocol.toLowerCase();
+    transportProtocol = transportProtocol.toUpperCase();
     var key = transportProtocol+":"+port;
     var socket;
     if (!(socket = hashget(this._listeningSockets, key)))
       this._error("SipTransceiver: Trying to close unknown "+
                   transportProtocol+" socket at "+port);
-    if (transportProtocol == "udp" || transportProtocol == "tcp")
+    if (transportProtocol == "UDP" || transportProtocol == "TCP")
       socket.close();
     else
       this._error("SipTransceiver: Unsupported transport protocol '"+transportProtocol+"'");
@@ -381,7 +379,7 @@ SipTransceiver.fun(
   function sendPacket(packet, transportProtocol, destAddress, destPort, connection) {
     var localPort;
     var localAddress;
-    if (transportProtocol == "udp") {
+    if (transportProtocol == "UDP") {
       this._assert(connection==null,
                    "Connection provided for connection-less protocol!");
       var socket = this._getUDPSendSocket();
@@ -390,7 +388,7 @@ SipTransceiver.fun(
       localPort = socket.port;
       localAddress = socket.address;
     }
-    else if (transportProtocol == "tcp") {
+    else if (transportProtocol == "TCP") {
       // if a connection has been provided, use it:
       if (connection && connection.isAlive()) {
         this._dump("using provided connection");
@@ -399,8 +397,9 @@ SipTransceiver.fun(
         // check if we have an open connection to the given port
         // already:
         if (!(connection = hashget(this._connections,
-                                   "tcp:"+destAddress+":"+destPort))) {
+                                   "TCP:"+destAddress+":"+destPort))) {
           // no. -> open a new one:
+          this._dump("opening new tcp socket");
           var socket = getSTS().createTransport([], 0, destAddress, destPort, null);
           connection = this._createTCPConnection(socket);
         }
@@ -465,7 +464,7 @@ SipTransceiver.fun(
     
     this._dispatchPacket(data.data,
                          application,
-                         "udp",
+                         "UDP",
                          socket.address,
                          socket.port,
                          data.address,
@@ -496,7 +495,7 @@ SipTransceiver.fun(
   function _createTCPConnection(socket) {
     var connection = SipTCPConnection.instantiate();
     connection.init(socket, this);
-    hashset(this._connections, "tcp:"+socket.host+":"+socket.port,
+    hashset(this._connections, "TCP:"+socket.host+":"+socket.port,
             connection);
     return connection;
   });
@@ -674,7 +673,7 @@ StunMonitorScheduler.fun(
 StunMonitorScheduler.fun(
   function getRequestInterval() {
     // see draft-ietf-sip-outbound-01 4.2
-    if (this.flow.transportProtocol == "udp")
+    if (this.flow.transportProtocol == "UDP")
       return 24000+Math.floor(Math.random()*5000);
     else
       return 95000+Math.floor(Math.random()*7000);
@@ -761,7 +760,7 @@ OptionsMonitorScheduler.fun(
   function getRequestInterval() {
     // we use the same interval as the stun monitor
     // see draft-ietf-sip-outbound-01 4.2
-    if (this.flow.transportProtocol == "udp")
+    if (this.flow.transportProtocol == "UDP")
       return 24000+Math.floor(Math.random()*5000);
     else
       return 95000+Math.floor(Math.random()*7000);
@@ -968,7 +967,7 @@ SipTransport.fun(
     // udp and tcp:
     while (port < 65536) {
       try {
-        this.transceiver.openListeningSocket("udp", port);
+        this.transceiver.openListeningSocket("UDP", port);
       }
       catch(e) {
         ++port;
@@ -976,10 +975,10 @@ SipTransport.fun(
       }
 
       try {
-        this.transceiver.openListeningSocket("tcp", port);
+        this.transceiver.openListeningSocket("TCP", port);
       }
       catch(e) {
-        this.transceiver.closeListeningSocket("udp", port);
+        this.transceiver.closeListeningSocket("UDP", port);
         ++port;
         continue;
       }
@@ -1014,7 +1013,6 @@ SipTransport.fun(
   "Send a request (RFC3261 Section 18.1.1)",
   function sendRequest(request, endpoint, connection) {
     this._assert(endpoint, "no endpoint for sending request. backtrace:"+this._backtrace());
-    // XXX possibly switch transports if request is too large.
 
     // Insert IP address or host name and port into 'sent-by' of top
     // Via (RFC3261 18.1.1)
@@ -1022,11 +1020,14 @@ SipTransport.fun(
     topVia.host = this._getMyFQDN();
     topVia.port = this.listeningPort;
     
-    // XXX distinguish between sip/sips, etc. etc.
-    
-    
     // Add transport portion of 'sent-protocol':
-    topVia.transport = endpoint.transport.toUpperCase();
+    var transport = endpoint.transport.toUpperCase();
+    topVia.transport = transport;
+
+    if (transport == "TCP") {
+      // make sure we have a content-length header
+      request.ensureContentLengthHeader();
+    }
     
     return this.transceiver.sendPacket(request.serialize(),
                                        endpoint.transport,
@@ -1042,8 +1043,13 @@ SipTransport.fun(
     // Examine top via to determine transport, address and port:
     var topVia = response.getTopViaHeader();
     
-    var transport = topVia.transport.toLowerCase();
+    var transport = topVia.transport.toUpperCase();
 
+    if (transport == "TCP") {
+      // make sure we have a content-length header
+      response.ensureContentLengthHeader();
+    }
+    
     // Check for 'received' parameter first:
     var address = topVia.getParameter("received");
     if (!address)

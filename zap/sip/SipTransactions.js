@@ -86,6 +86,10 @@ SipTransaction.obj("initialRequest", null);
 // (initialized by subclasses):
 SipTransaction.obj("key", null);
 
+// Turn off SipTransaction debug messages.
+// XXX This should be configuarable
+SipTransaction.spec(function _dump() {});
+
 //----------------------------------------------------------------------
 // nsITimerCallback implementation:
 
@@ -197,7 +201,7 @@ SipInviteClientTransaction.obj(
       t.timers.timerB = makeOneShotTimer(t, t.manager.T1 * 64);
       
       // start timer 'A' if transport is not reliable:
-      if (t.endpoint.transport == "udp") {
+      if (t.endpoint.transport == "UDP") {
         t.timers.timerA = makeOneShotTimer(t, t.manager.T1);
       }
     },
@@ -296,7 +300,7 @@ SipInviteClientTransaction.obj(
     enterState : function enterState_Completed(t) {
       log(t._name_+": COMPLETED");
       t._dump("Entering 'Completed' state");
-      if (t.endpoint.transport != "udp") {
+      if (t.endpoint.transport != "UDP") {
         // reliable transport
         // -> move straight to 'Terminated' state:
         t.changeState(t.Terminated);
@@ -392,7 +396,7 @@ SipNonInviteClientTransaction.obj(
       t.timers.timerF = makeOneShotTimer(t, t.manager.T1 * 64);
 
       // start timer 'E':
-      if (t.endpoint.transport == "udp") {
+      if (t.endpoint.transport == "UDP") {
         t.timers.timerE = makeOneShotTimer(t, t.manager.T1);
       }
     },
@@ -490,7 +494,7 @@ SipNonInviteClientTransaction.obj(
   {
     enterState : function enterState_Completed(t) {
       t._dump("Entering 'Completed' state");
-      if (t.endpoint.transport != "udp") {
+      if (t.endpoint.transport != "UDP") {
         // reliable transport
         // -> move straight to 'Terminated' state:
         t.changeState(t.Terminated);

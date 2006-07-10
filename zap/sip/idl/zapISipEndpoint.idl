@@ -54,7 +54,7 @@ interface zapISipEndpoint : nsISupports
   readonly attribute unsigned long port;
 
   /**
-   * Transport protocol to endpoint (udp, tcp, ...)
+   * Transport protocol to endpoint (UDP, TCP, ...)
    */
   readonly attribute ACString transport;
 };

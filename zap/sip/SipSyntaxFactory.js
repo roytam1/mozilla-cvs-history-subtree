@@ -2474,6 +2474,12 @@ SipMessage.fun(
     this.appendHeader(theSyntaxFactory.createContentLengthHeader(bodyContent.length));
   });
 
+// void ensureContentLengthHeader()
+SipMessage.fun(
+  function ensureContentLengthHeader() {
+    if (this.getTopHeader("Content-Length")) return;
+    this.appendHeader(theSyntaxFactory.createContentLengthHeader(0));
+  });
 
 //----------------------------------------------------------------------
 // implementation helpers:

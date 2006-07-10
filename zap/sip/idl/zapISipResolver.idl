@@ -49,5 +49,6 @@ interface zapISipResolveListener;
 interface zapISipResolver : nsISupports
 {
   void resolveDestinationsAsync(in zapISipSIPURI uri,
-                                in zapISipResolveListener listener);
+                                in zapISipResolveListener listener,
+                                in boolean attemptTCP);
 };

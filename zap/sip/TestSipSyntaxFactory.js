@@ -29,7 +29,7 @@ m.setContent("application", "sdp",   "v=0\r\n"+
              "\r\n");
 s.invite(m);
 
-s._transactionmanager.executeInviteClientTransaction(m, "udp", "192.168.123.40", 5060, {});
+s._transactionmanager.executeInviteClientTransaction(m, "UDP", "192.168.123.40", 5060, {});
 
 var rl =
   "INVITE sip:alex@192.168.123.184 SIP/2.0\r\n"+
@@ -56,8 +56,8 @@ var rl =
   "\r\n";
 
 t = SipTransceiver.instantiate();
-t.openListeningSocket("udp", 5060);
-t.openListeningSocket("tcp", 5060);
+t.openListeningSocket("UDP", 5060);
+t.openListeningSocket("TCP", 5060);
 
 var r =
   "INVITE sip:alex@192.168.123.40 SIP/2.0\r\n"+

@@ -71,8 +71,19 @@ SipResolver.addInterfaces(Components.interfaces.zapISipResolver);
 // zapISipResolver implementation:
 
 SipResolver.fun(
-  function resolveDestinationsAsync(uri, resolveListener) {
+  function resolveDestinationsAsync(uri, resolveListener, attemptTCP) {
     // XXX do the lookup properly (SRV,NAPTR) (rfc3261 8.1.2, rfc3263)    
+
+    // first check if the transport has been specified as a URI parameter:
+    var transport = uri.getURIParameter("transport");
+    transport = transport.toUpperCase();
+    if (transport != "UDP" && transport != "TCP") {
+      // no. -> determine transport based on scheme:
+      if (uri.sips)
+        transport = "TCP";
+      else
+        transport = "UDP";
+    }
     
     var dnsListener = {
       onLookupComplete : function(req, rec, status) {
@@ -80,12 +91,22 @@ SipResolver.fun(
         if (rec) {
           var port = uri.port ? uri.port : "5060";
           while (rec.hasMore()) {
+            var addr = rec.getNextAddrAsString();
+            if (transport!="TCP" && attemptTCP) {
+              var endpoint = {
+                transport : "TCP",
+                address   : addr,
+                port      : port
+              };
+              rv.push(endpoint);
+            }
             var endpoint = {
-              transport : "udp",
-              address : rec.getNextAddrAsString(),
-              port : port
-            };
+              transport : transport,
+              address   : addr,
+              port      : port
+              };
             rv.push(endpoint);
+
           }
         }
         resolveListener.resolveComplete(rv, rv.length);

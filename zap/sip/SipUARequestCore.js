@@ -134,8 +134,19 @@ SipNonInviteRC.statefun(
     
     // Asynchronously resolve possible destinations for the request:
     this.changeState("RESOLVING");
+
+    // RFC3261 18.1.1:
+    // If a request is within 200 bytes of the path MTU, or if it is
+    // larger than 1300 bytes and the path MTU is unknown, the request
+    // MUST be sent using an RFC 2914 [43] congestion controlled
+    // transport protocol, such as TCP.
+    // XXX We add another 100 bytes padding, since the request core still
+    // adds branch parameters and the sip transport layer adds a sent-by
+    // attribute.
+    var attemptTCP = this.currentRequest.serialize().length > 1200;      
+    
     this.stack.resolver.resolveDestinationsAsync(destinationURI,
-                                                 this);
+                                                 this, attemptTCP);
   });
 
 //  readonly attribute boolean active;
@@ -180,10 +191,13 @@ SipNonInviteRC.statefun(
       return;
     }
     // send request to next destination:
-    this.currentRequest.getTopViaHeader().setParameter("branch",
-                                                       this.stack.shortBranchParameters ?
-                                                       BRANCH_COOKIE+generateTag() :
-                                                       BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
+    var destination = this._destinationIterator.getNext();
+    var topVia = this.currentRequest.getTopViaHeader();
+    topVia.setParameter("branch",
+                        this.stack.shortBranchParameters ?
+                        BRANCH_COOKIE+generateTag() :
+                        BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
+      
     if (this.dialog) {
       // we're sending a request within a dialog.
       // update local sequence number
@@ -198,7 +212,7 @@ SipNonInviteRC.statefun(
     }
 
     this.stack.transactionManager.executeNonInviteClientTransaction(this.currentRequest,
-                                                                    this._destinationIterator.getNext(),
+                                                                    destination,
                                                                     this);
   });
 
@@ -347,8 +361,19 @@ SipInviteRC.statefun(
     
     // Asynchronously resolve possible destinations for the request:
     this.changeState("RESOLVING");
+
+    // RFC3261 18.1.1:
+    // If a request is within 200 bytes of the path MTU, or if it is
+    // larger than 1300 bytes and the path MTU is unknown, the request
+    // MUST be sent using an RFC 2914 [43] congestion controlled
+    // transport protocol, such as TCP.
+    // XXX We add another 100 bytes padding, since the request core still
+    // adds branch parameters and the sip transport layer adds a sent-by
+    // attribute.
+    var attemptTCP = this.currentRequest.serialize().length > 1200;    
+    
     this.stack.resolver.resolveDestinationsAsync(destinationURI,
-                                                 this);
+                                                 this, attemptTCP);
   });
 
 //  void cancel();
@@ -442,10 +467,13 @@ SipInviteRC.statefun(
     }
     
     // send request to next destination:
-    this.currentRequest.getTopViaHeader().setParameter("branch",
-                                                       this.stack.shortBranchParameters ?
-                                                       BRANCH_COOKIE+generateTag() :
-                                                       BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
+    this.current_destination = this._destinationIterator.getNext();
+    var topVia = this.currentRequest.getTopViaHeader();
+    topVia.setParameter("branch",
+                        this.stack.shortBranchParameters ?
+                        BRANCH_COOKIE+generateTag() :
+                        BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
+    
     if (this.dialog) {
       // we're sending a request within a dialog.
       // update local sequence number
@@ -458,7 +486,7 @@ SipInviteRC.statefun(
     else {
       this.currentRequest.getCSeqHeader().sequenceNumber += 1;
     }
-    this.current_destination = this._destinationIterator.getNext();
+    
     this.stack.transactionManager.executeInviteClientTransaction(this.currentRequest,
                                                                  this.current_destination,
                                                                  this,
@@ -678,8 +706,18 @@ SipInviteRC.fun(
       ackDestinationURI = ack.requestURI;
     ackDestinationURI = ackDestinationURI.QueryInterface(Components.interfaces.zapISipSIPURI);
     
+    // RFC3261 18.1.1:
+    // If a request is within 200 bytes of the path MTU, or if it is
+    // larger than 1300 bytes and the path MTU is unknown, the request
+    // MUST be sent using an RFC 2914 [43] congestion controlled
+    // transport protocol, such as TCP.
+    // XXX We add another 100 bytes padding, since the request core still
+    // adds branch parameters and the sip transport layer adds a sent-by
+    // attribute.
+    var attemptTCP = ack.serialize().length > 1200;
+    
     this.stack.resolver.resolveDestinationsAsync(ackDestinationURI,
-                                                 resolveListener);
+                                                 resolveListener, attemptTCP);
   });
 
 

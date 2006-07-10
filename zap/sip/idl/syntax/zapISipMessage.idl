@@ -158,4 +158,12 @@ interface zapISipMessage : zapISipSyntaxObject
    */
   void setContent(in ACString contentType, in ACString contentSubType,
                   in ACString bodyContent);
+
+  /**
+   * Add a Content-Length header if there isn't one already. This is
+   * called by SipTransport::sendRequest() and
+   * SipTransport::sendResponse() to ensure that outgoing SIP messages
+   * are correctly framed for delivery over TCP.
+   */
+  void ensureContentLengthHeader();
 };
