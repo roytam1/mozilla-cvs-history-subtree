@@ -232,21 +232,21 @@ var gAdvancedPane = {
   },
 
   /**
-   * Displays a EULA for phishing detection if phishing detection is being
-   * enabled, allowing privacy wonks to not enable it if they want; otherwise,
-   * disables phishing protection.
+   * Displays a EULA if on-load anti-phishing detection is being enabled, 
+   * allowing privacy wonks to not enable it if they want; if the user doesn't
+   * agree, protection is switched back to using a cached anti-phishing list.
    */
-  writeCheckPhish: function ()
+  writeOnloadLookup: function ()
   {
-    var checkbox = document.getElementById("safe-active");
-    // if the user's trying to enable phishing, we need to display a phishing
-    // EULA so he can choose not to enable it
-    if (checkbox.checked) {
+    var radio = document.getElementById("safe-provider");
+    // if the user's trying to enable on-load anti-phishing detection, tell him
+    // about privacy concerns in a EULA so he can cancel it if he chooses
+    if (radio.value == "true") {
       var userAgreed = this._userAgreedToPhishingEULA();
 
       // XXX I think this shouldn't be necessary and should be happening automatically, but it isn't
       if (!userAgreed)
-        checkbox.checked = false;
+        radio.value = "false";
       return userAgreed;
     }
 
@@ -281,17 +281,6 @@ var gAdvancedPane = {
                                    "",
                                    "", {});
     return (btnPressed == 0);
-  },
-
-  /**
-   * Requires that the user agree to the new phishing provider's EULA when the
-   * provider is changed, disabling protection if the user doesn't agree.
-   */
-  onProviderChanged: function ()
-  {
-    if (!this._userAgreedToPhishingEULA()) {
-      this._disablePhishingProtection();
-    }
   },
 
   /**
