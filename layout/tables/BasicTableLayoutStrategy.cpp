@@ -118,6 +118,8 @@ GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
     }
 
     switch (pos->mMaxWidth.GetUnit()) {
+        // XXX To really implement 'max-width' well, we'd need to store
+        // it separately on the columns.
         case eStyleUnit_Coord: {
                 hasSpecifiedWidth = PR_TRUE;
                 nscoord w = pos->mMaxWidth.GetCoordValue();
