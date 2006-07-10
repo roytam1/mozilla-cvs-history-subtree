@@ -91,38 +91,45 @@ struct CellWidthInfo {
     float prefPercent;
 };
 
+// Used for both column and cell calculations.  The parts needed only
+// for cells are skipped when aCellFrame is null.
 static CellWidthInfo
-GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
-                 nsTableCellFrame *aCellFrame)
+GetWidthInfo(nsIRenderingContext *aRenderingContext,
+             nsTableCellFrame *aCellFrame,
+             const nsStylePosition *aStylePos)
 {
-    const nsStylePosition *pos = aCellFrame->GetStylePosition();
-
-    nscoord minCoord = aCellFrame->GetMinWidth(aRenderingContext);
-    nscoord prefCoord = aCellFrame->GetPrefWidth(aRenderingContext);
+    nscoord minCoord, prefCoord;
+    if (aCellFrame) {
+        minCoord = aCellFrame->GetMinWidth(aRenderingContext);
+        prefCoord = aCellFrame->GetPrefWidth(aRenderingContext);
+    } else {
+        minCoord = 0;
+        prefCoord = 0;
+    }
     float prefPercent = 0.0f;
     PRBool hasSpecifiedWidth = PR_FALSE;
 
-    switch (pos->mWidth.GetUnit()) {
+    switch (aStylePos->mWidth.GetUnit()) {
         case eStyleUnit_Coord: {
                 hasSpecifiedWidth = PR_TRUE;
-                nscoord w = pos->mWidth.GetCoordValue();
+                nscoord w = aStylePos->mWidth.GetCoordValue();
                 prefCoord = PR_MAX(w, minCoord);
             }
             break;
         case eStyleUnit_Percent: {
-                prefPercent = pos->mWidth.GetPercentValue();
+                prefPercent = aStylePos->mWidth.GetPercentValue();
             }
             break;
         default:
             break;
     }
 
-    switch (pos->mMaxWidth.GetUnit()) {
+    switch (aStylePos->mMaxWidth.GetUnit()) {
         // XXX To really implement 'max-width' well, we'd need to store
         // it separately on the columns.
         case eStyleUnit_Coord: {
                 hasSpecifiedWidth = PR_TRUE;
-                nscoord w = pos->mMaxWidth.GetCoordValue();
+                nscoord w = aStylePos->mMaxWidth.GetCoordValue();
                 if (w < minCoord)
                     minCoord = w;
                 if (w < prefCoord)
@@ -130,7 +137,7 @@ GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
             }
             break;
         case eStyleUnit_Percent: {
-                float p = pos->mMaxWidth.GetPercentValue();
+                float p = aStylePos->mMaxWidth.GetPercentValue();
                 if (p < prefPercent)
                     prefPercent = p;
             }
@@ -139,9 +146,9 @@ GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
             break;
     }
 
-    switch (pos->mMinWidth.GetUnit()) {
+    switch (aStylePos->mMinWidth.GetUnit()) {
         case eStyleUnit_Coord: {
-                nscoord w = pos->mMinWidth.GetCoordValue();
+                nscoord w = aStylePos->mMinWidth.GetCoordValue();
                 if (w > minCoord)
                     minCoord = w;
                 if (w > prefCoord)
@@ -149,7 +156,7 @@ GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
             }
             break;
         case eStyleUnit_Percent: {
-                float p = pos->mMinWidth.GetPercentValue();
+                float p = aStylePos->mMinWidth.GetPercentValue();
                 if (p > prefPercent)
                     prefPercent = p;
             }
@@ -158,13 +165,32 @@ GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
             break;
     }
 
-    minCoord += aCellFrame->GetIntrinsicBorderPadding(
-                    aRenderingContext, nsLayoutUtils::MIN_WIDTH);
-    prefCoord += aCellFrame->GetIntrinsicBorderPadding(
-                    aRenderingContext, nsLayoutUtils::PREF_WIDTH);
+    // XXX Should col frame have border/padding considered?
+    if (aCellFrame) {
+        minCoord += aCellFrame->GetIntrinsicBorderPadding(
+                        aRenderingContext, nsLayoutUtils::MIN_WIDTH);
+        prefCoord += aCellFrame->GetIntrinsicBorderPadding(
+                        aRenderingContext, nsLayoutUtils::PREF_WIDTH);
+    }
 
     return CellWidthInfo(minCoord, prefCoord, prefPercent, hasSpecifiedWidth);
 }
+
+static inline CellWidthInfo
+GetCellWidthInfo(nsIRenderingContext *aRenderingContext,
+                 nsTableCellFrame *aCellFrame)
+{
+    return GetWidthInfo(aRenderingContext, aCellFrame,
+                        aCellFrame->GetStylePosition());
+}
+
+static inline CellWidthInfo
+GetColWidthInfo(nsIRenderingContext *aRenderingContext,
+                nsIFrame *aFrame)
+{
+    return GetWidthInfo(aRenderingContext, nsnull, aFrame->GetStylePosition());
+}
+
 
 /**
  * The algorithm in this function, in addition to meeting the
@@ -181,7 +207,8 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
 
     nscoord spacing = tableFrame->GetCellSpacingX();
 
-    // Loop over the columns to consider cells *without* a colspan.
+    // Loop over the columns to consider the columns and cells *without*
+    // a colspan.
     PRInt32 col, col_end;
     for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
         nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
@@ -192,9 +219,29 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
         colFrame->ResetSpanPrefCoord();
         colFrame->ResetSpanPrefPercent();
 
-        // XXX Consider col frame!
-        // XXX Should it get Border/padding considered?
+        // Consider the widths on the column.
+        CellWidthInfo colInfo = GetColWidthInfo(aRenderingContext, colFrame);
+        colInfo.minCoord = nsTableFrame::RoundToPixel(colInfo.minCoord, p2t);
+        colInfo.prefCoord = nsTableFrame::RoundToPixel(colInfo.prefCoord, p2t);
+        colFrame->AddMinCoord(colInfo.minCoord);
+        colFrame->AddPrefCoord(colInfo.prefCoord, colInfo.hasSpecifiedWidth);
+        colFrame->AddPrefPercent(colInfo.prefPercent);
 
+        // Consider the widths on the column-group.  Note that we follow
+        // what the HTML spec says here, and make the width apply to
+        // each column in the group, not the group as a whole.
+        NS_ASSERTION(colFrame->GetParent()->GetType() ==
+                         nsLayoutAtoms::tableColGroupFrame,
+                     "expected a column-group");
+        colInfo = GetColWidthInfo(aRenderingContext, colFrame->GetParent());
+        colInfo.minCoord = nsTableFrame::RoundToPixel(colInfo.minCoord, p2t);
+        colInfo.prefCoord = nsTableFrame::RoundToPixel(colInfo.prefCoord, p2t);
+        colFrame->AddMinCoord(colInfo.minCoord);
+        colFrame->AddPrefCoord(colInfo.prefCoord, colInfo.hasSpecifiedWidth);
+        colFrame->AddPrefPercent(colInfo.prefPercent);
+
+        // Consider the contents of and the widths on the cells without
+        // colspans.
         for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
              row < row_end; ++row) {
             PRBool originates;
@@ -217,8 +264,6 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
 
     // Loop over the columns to consider cells *with* a colspan.
     for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
-        nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
-
         for (PRInt32 row = 0, row_end = cellMap->GetRowCount();
              row < row_end; ++row) {
             PRBool originates;
