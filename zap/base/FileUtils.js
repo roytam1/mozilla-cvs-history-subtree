@@ -39,12 +39,14 @@ EXPORTED_SYMBOLS = [ "urlToFile",
                      "fileToURL",
                      "openFileForWriting",
                      "openFileForReading",
+                     "readFile",
                      "getProfileDir",
                      "getProfileFile",
                      "getProfileDefaultsFile",
                      "ensureProfileFile",
                      "getProfileFileURL",
-                     "getStageDir"
+                     "getStageDir",
+                     "getStageFile"
                    ];
 
 
@@ -161,6 +163,19 @@ function openFileForReading(file) {
   return sis;  
 }
 
+// Returns a string with the content of the given file.
+// Throws an exception if the file can't be read
+function readFile(file) {
+  var sis = openFileForReading(file);
+  if (!sis) throw("Can't open file");
+  var rv = "";
+  var avail;
+  while ((avail = sis.available()))
+    rv += sis.readEx(avail);
+
+  return rv;
+}
+
 // returns the profile directory
 function getProfileDir()
 {
@@ -213,9 +228,19 @@ function ensureProfileFile(name)
   return true;
 }
 
-// returns the xulrunner stagin directory
+// returns the xulrunner staging directory
 function getStageDir()
 {
   // XXX is XCurProcD correct here?
   return gDirectoryService.get("XCurProcD", Components.interfaces.nsIFile);
+}
+
+// get a file in the staging directory:
+function getStageFile(name)
+{
+  // XXX is XCurProcD correct here?
+  var file = gDirectoryService.get("XCurProcD",
+                                   Components.interfaces.nsIFile);
+  file.append(name);
+  return file;
 }
