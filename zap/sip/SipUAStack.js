@@ -440,18 +440,34 @@ SipUAStack.fun(
           rs.init(this, null, message);
           // pass along the handler chain:
           // UA client request handler --> UA Stack request handler
-          if (!this.requestHandler ||
-              !this.requestHandler.handleInviteRequest(rs))
-            this.handleInviteRequest(rs);
+          try {
+            if (!this.requestHandler ||
+                !this.requestHandler.handleInviteRequest(rs))
+              this.handleInviteRequest(rs);
+          }
+          catch(e) {
+            this._dump("Error handling request: "+e);
+            // -> 500 (Server Internal Error)
+            var response = rs.formulateResponse("500");
+            rs.sendResponse(response);
+          }
         }
         else {
           var rs = SipNonInviteRS.instantiate();
           rs.init(this, null, message);
           // pass along the handler chain:
           // UA client request handler --> UA Stack request handler
-          if (!this.requestHandler ||
-              !this.requestHandler.handleNonInviteRequest(rs))
-            this.handleNonInviteRequest(rs);
+          try {
+            if (!this.requestHandler ||
+                !this.requestHandler.handleNonInviteRequest(rs))
+              this.handleNonInviteRequest(rs);
+          }
+          catch(e) {
+            this._dump("Error handling request: "+e);
+            // -> 500 (Server Internal Error)
+            var response = rs.formulateResponse("500");
+            rs.sendResponse(response);
+          }
         }
       }
     }
