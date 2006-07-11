@@ -76,6 +76,12 @@ NS_IMETHODIMP
 zapStunServer::AddAllowedClient(const nsACString & username,
                                 const nsACString & password)
 {
+  if (username.Length() % 4 ||
+      password.Length() %4) {
+    NS_ERROR("invalid password/server");
+    return NS_ERROR_FAILURE;
+  }
+  
   nsCString* pw = new nsCString(password);
   if (!mAllowedClients.Put(username, pw)) {
     delete pw;
