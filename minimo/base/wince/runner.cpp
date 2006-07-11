@@ -6,6 +6,16 @@ void SentURLLoadRequest(const char* url)
   // the use of minimo_runner.exe only.
   COPYDATASTRUCT cds = { 0, ::strlen( url ) + 1, (void*)url };
   HWND a = FindWindowW(L"MINIMO_LISTENER", NULL);
+
+  int attempts = 20;
+
+  while (!a && attempts)
+  {
+    attempts--;
+    Sleep(500);
+    a = FindWindowW(L"MINIMO_LISTENER", NULL);
+  }
+
   SendMessage(a, WM_COPYDATA, NULL, (LPARAM)&cds); 
 }
 
