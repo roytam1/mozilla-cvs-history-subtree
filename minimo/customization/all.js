@@ -647,15 +647,17 @@ pref("browser.formfill.enable", true);
 
 
 /* slow computer, slow connection */
-pref("content.max.tokenizing.time", 2250000);
-pref("content.notify.interval", 750000);
+pref("content.max.tokenizing.time", 3000);
 pref("content.notify.ontimer", true);
-pref("content.switch.threshold", 750000);
-pref("nglayout.initialpaint.delay", 750);
-pref("network.http.max-connections", 32);
-pref("network.http.max-connections-per-server", 8);
-pref("network.http.max-persistent-connections-per-proxy", 8);
+pref("content.switch.threshold", 3000);
+pref("nglayout.initialpaint.delay", 0);
+pref("content.interrupt.parsing", true);
+
+pref("network.http.max-connections", 4);
+pref("network.http.max-connections-per-server", 4);
+pref("network.http.max-persistent-connections-per-proxy", 4);
 pref("network.http.max-persistent-connections-per-server", 4);
+
 pref("dom.disable_window_status_change", true);
 
 pref("browser.chrome.favicons",true);
