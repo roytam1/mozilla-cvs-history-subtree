@@ -266,6 +266,14 @@ zapPacketBuffer::ProduceFrame(zapIMediaFrame ** frame)
 //----------------------------------------------------------------------
 // zapIPacketBuffer
 
+/* void purge (); */
+NS_IMETHODIMP
+zapPacketBuffer::Purge()
+{
+  ClearBuffer();  
+  return NS_OK;
+}
+
 /* attribute unsigned long maxSize; */
 NS_IMETHODIMP
 zapPacketBuffer::GetMaxSize(PRUint32 *aMaxSize)

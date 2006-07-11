@@ -43,6 +43,11 @@
 interface zapIPacketBuffer : nsISupports
 {
   /**
+   * Purge all currently buffered packets.
+   */
+  void purge();
+  
+  /**
    * Maximum number of packets to buffer.
    * If this is set to a lower value minSize, liftCount and dropCount
    * will be adjusted if needed.
