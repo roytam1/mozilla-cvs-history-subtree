@@ -86,21 +86,19 @@ zapUDPSocket::AddedToGraph(zapIMediaGraph *graph,
                          nsIPropertyBag2* node_pars)
 {
   // unpack node parameters:
-  if (!node_pars) {
-    NS_ERROR("no node parameters");
-    return NS_ERROR_FAILURE;
-  }
-  
-  if (NS_FAILED(node_pars->GetPropertyAsInterface(NS_LITERAL_STRING("socket"),
-                                                     NS_GET_IID(nsIUDPSocket),
-                                                     getter_AddRefs(mSocket)))
-      || !mSocket) {
+  if (!node_pars ||
+      NS_FAILED(node_pars->GetPropertyAsInterface(NS_LITERAL_STRING("socket"),
+                                                  NS_GET_IID(nsIUDPSocket),
+                                                  getter_AddRefs(mSocket))) ||
+      !mSocket) {
     PRUint16 port = 0;
     PRUint32 max_port = 0;
-    if (NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("port"), &port))) {
+    if (node_pars &&
+        NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("port"), &port))) {
       max_port = port;
     }
-    else if (NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("portbase"), &port))) {
+    else if (node_pars &&
+             NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("portbase"), &port))) {
       max_port = 65535;
     }
       
