@@ -1180,3 +1180,22 @@ audio/pcm frames with
 - unsigned long "sample_format" == corresponding node parameter
 
 ----------------------------------------------------------------------
+
+40) udp-packetizer
+------------------
+
+Filter for payloading generic frames onto a UDP frame.
+Note that no size check will be made, i.e. the resulting datagram
+frames might be larger than the MTU!
+
+Node parameters:
+- ACString "address" : destination address for datagrams
+- unsigned short "port" : destination port for datagrams
+
+Input stream:
+any frames.
+
+Output stream:
+datagram frames.
+
+----------------------------------------------------------------------

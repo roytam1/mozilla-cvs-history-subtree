@@ -76,6 +76,7 @@
 #include "zapClientSink.h"
 #include "zapNullSink.h"
 #include "zapPCMPing.h"
+#include "zapUDPPacketizer.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -117,6 +118,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapFileIn)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapClientSink)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapNullSink)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapPCMPing)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapUDPPacketizer)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -326,6 +328,11 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_PCMPING_CID,
     ZAP_PCMPING_CONTRACTID,
     zapPCMPingConstructor
+  },
+  { "Mozilla ZMK UDP Packetizer",
+    ZAP_UDPPACKETIZER_CID,
+    ZAP_UDPPACKETIZER_CONTRACTID,
+    zapUDPPacketizerConstructor
   }
 };
 
