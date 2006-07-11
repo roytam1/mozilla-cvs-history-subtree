@@ -132,7 +132,6 @@ DWORD WINAPI SplashScreenThreadProc(LPVOID notused)
                    HWND_DESKTOP,
                    (DLGPROC)SplashScreenDialogProc,
                    NULL );
-
   return 0;
 }
 

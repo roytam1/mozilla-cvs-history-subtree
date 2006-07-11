@@ -75,7 +75,6 @@ void ErrorAlert(const char* message)
 
 }
 
-
 void OpenNewTab(char* url)
 {
   nsCOMPtr<nsIWindowWatcher> wwatch = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
@@ -525,7 +524,13 @@ LRESULT CALLBACK BrowserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
   if (message == WM_COPYDATA) 
   {
     COPYDATASTRUCT *cds = (COPYDATASTRUCT*)lParam;
-    OpenNewTab((char*)cds->lpData);
+    char* command = (char*)cds->lpData;
+
+    if (!strncmp(command, "URL", 3))
+    {
+      OpenNewTab(command+3);
+    }
+
     return 0;
   }
   
@@ -769,6 +774,7 @@ void UnloadKnownLibs()
 int main(int argc, char *argv[])
 {
 #ifdef WINCE
+
   // EVIL?
   SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif

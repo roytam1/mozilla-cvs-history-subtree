@@ -1,14 +1,23 @@
 #include <windows.h>
 
-void SentURLLoadRequest(const char* url)
+void SentCommandRequest(const char* command, const char* value)
 {
   // This will change in the future -- this window is for
   // the use of minimo_runner.exe only.
-  COPYDATASTRUCT cds = { 0, ::strlen( url ) + 1, (void*)url };
+
+  
+  char buffer[1024];
+  COPYDATASTRUCT cds = { 0, 1024, buffer };
+  
+  if (strlen(command) != 3)
+    return; // command string must be exactly 3 chars
+  
+  strcpy(buffer, command);
+  strncat(buffer, value, 1000);
+  
   HWND a = FindWindowW(L"MINIMO_LISTENER", NULL);
 
   int attempts = 20;
-
   while (!a && attempts)
   {
     attempts--;
@@ -50,7 +59,7 @@ int main(int argc, char *argv[])
   if (argc == 3)
   {
     if (!strcmp("-url", argv[1]))
-      SentURLLoadRequest(argv[2]);
+      SentCommandRequest("URL", argv[2]);
   }
 
   SetCursor(NULL);
