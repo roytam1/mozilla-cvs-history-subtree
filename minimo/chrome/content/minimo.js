@@ -519,29 +519,41 @@ function MiniNavStartup()
 
     }
   };
+
+  var minimoAppObserver = { 
+    observe:function (subj, topic, data) {
+
+      if (topic=="open-url")
+      {
+        alert(data);
+        try { 
+          gBrowser.selectedTab = gBrowser.addTab(data);
+          browserInit(gBrowser.selectedTab);
+        } catch (e) {
+          onErrorHandler(e);
+        }
+      }
+
+      else if (topic=="add-bm")
+      {
+        BrowserBookmarkURL(data, null, null);
+      }  
+
+    }
+  };
      
   
   try {
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(nsIObserverService);
     os.addObserver(keyboardObserver,"software-keyboard", false);
+
+    os.addObserver(minimoAppObserver,"open-url", false);
+    os.addObserver(minimoAppObserver,"add-bm", false);
+
+
   } catch(ignore) { }
   
-  /* 
-   * Pref Observer to Homebar and Fullscreen.
-   */
-    
-  var prefAccessUIObserver = { 
-
-    observe: function PrefUIObObserve(subject, topic, data) {
-      
-      if (topic != "nsPref:changed")
-        return;
-
-      setTimeout("setScreenUpTimeout()",10);
-    }
-  };
-
  /*
   * Enable Key Spin Control 
   */
@@ -1131,28 +1143,42 @@ function BrowserContentAreaPopupShowing () {
 
 /* Bookmarks */ 
 
-function BrowserBookmarkThis() {
+function BrowserBookmarkURL (uri, title, icon) {
+
  /* So far to force resync load bookmark from the pref, there are cases, bookmark is 
   * erased and we need to check
   */
   var bookmarkstore = gPref.getCharPref("browser.bookmark.store");
   loadBookmarks(bookmarkstore);
-  
-  var currentURI=gBrowser.selectedBrowser.webNavigation.currentURI.spec;
-  var currentContentTitle=gBrowser.selectedBrowser.contentTitle;
-  var currentIconURL=gBrowser.selectedBrowser.mIconURL;
+
   var newLi=gBookmarksDoc.createElement("li");
-  newLi.setAttribute("title",currentContentTitle);
-  if(currentIconURL) {
-	newLi.setAttribute("iconsrc",currentIconURL); 
-  } else {
+
+  if (title)
+    newLi.setAttribute("title",title);
+  else
+    newLi.setAttribute("title",uri);
+
+  if(icon)
+	newLi.setAttribute("iconsrc",currentIconURL);
+  else
 	newLi.setAttribute("iconsrc","chrome://minimo/skin/m.gif");
-  }
-  var bmContent=gBookmarksDoc.createTextNode(currentURI);
+
+
+  var bmContent=gBookmarksDoc.createTextNode(uri);
+
   newLi.appendChild(bmContent);
   gBookmarksDoc.getElementsByTagName("bm")[0].appendChild(newLi);
   storeBookmarks();	
   refreshBookmarks();
+}
+
+function BrowserBookmarkThis() {
+
+  var currentURI=gBrowser.selectedBrowser.webNavigation.currentURI.spec;
+  var currentContentTitle=gBrowser.selectedBrowser.contentTitle;
+  var currentIconURL=gBrowser.selectedBrowser.mIconURL;
+
+  BrowserBookmarkURL( currentURI, currentContentTitle, currentIconURL);
 }
 
 function BrowserBookmark() {

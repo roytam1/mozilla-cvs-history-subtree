@@ -75,11 +75,11 @@ void ErrorAlert(const char* message)
 
 }
 
-void OpenNewTab(char* url)
+PRBool isChromeAvaiable()
 {
   nsCOMPtr<nsIWindowWatcher> wwatch = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
   if (!wwatch)
-    return;
+    return PR_FALSE;
   
   nsCOMPtr<nsIDOMWindow> fosterParent;
   wwatch->GetActiveWindow(getter_AddRefs(fosterParent));
@@ -88,30 +88,8 @@ void OpenNewTab(char* url)
   nsCOMPtr<nsIDocShellTreeItem> rootItem = do_QueryInterface(navNav);
   nsCOMPtr<nsIDOMWindow> rootWin(do_GetInterface(rootItem));
   nsCOMPtr<nsIDOMChromeWindow> chromeWin(do_QueryInterface(rootWin));
-  
-  if (!chromeWin)
-  {
-    // We are currently starting up.  Save this url request as a startup page.
-    nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
-    if (!prefBranch)
-      return;
-    
-    prefBranch->SetCharPref("browser.startup.homepage.override", url);
-    return;
-  }
-  
-  nsCOMPtr<nsIBrowserDOMWindow> bwin;    
-  chromeWin->GetBrowserDOMWindow(getter_AddRefs(bwin));
-  
-  nsCOMPtr<nsIURI> uri;
-  nsDependentCString urlStr(url);
-  NS_NewURI(getter_AddRefs(uri), urlStr, 0, 0);
-  
-  nsCOMPtr<nsIDOMWindow> newBrowserWindow;
-  bwin->OpenURI(uri, 0,
-                nsIBrowserDOMWindow::OPEN_CURRENTWINDOW,
-                nsIBrowserDOMWindow::OPEN_EXTERNAL,
-                getter_AddRefs(newBrowserWindow));
+
+  return (PRBool)chromeWin.get();
 }
 
 class ApplicationObserver: public nsIObserver 
@@ -528,7 +506,27 @@ LRESULT CALLBACK BrowserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 
     if (!strncmp(command, "URL", 3))
     {
-      OpenNewTab(command+3);
+      if (!isChromeAvaiable())
+      {
+        // We are currently starting up.  Save this url request as a startup page.
+        nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
+        if (!prefBranch)
+          return 0;
+        
+        prefBranch->SetCharPref("browser.startup.homepage.override", command+3);
+        return 0;
+      }
+      
+      nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
+      os->NotifyObservers(nsnull, "open-url", NS_ConvertUTF8toUTF16(command+3).get());
+      return 0;
+    }
+    
+    if (!strncmp(command, "ABM", 3))
+    {
+      nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
+      os->NotifyObservers(nsnull, "add-bm", NS_ConvertUTF8toUTF16(command+3).get());
+      return 0;
     }
 
     return 0;
@@ -746,7 +744,7 @@ _library Libraries[] =
   {
     {  L"schannel.dll",    NULL },
     {  NULL, NULL },
-  };
+};
 
 void LoadKnownLibs()
 {

@@ -60,6 +60,10 @@ int main(int argc, char *argv[])
   {
     if (!strcmp("-url", argv[1]))
       SentCommandRequest("URL", argv[2]);
+
+    else if (!strcmp("-bm", argv[1]))
+      SentCommandRequest("ABM", argv[2]);
+
   }
 
   SetCursor(NULL);
