@@ -304,8 +304,10 @@ function ClearAll()
           elements[i].checked = false;
       } else if (elements[i].className == "ccklist") {
         document.getElementById(elements[i].id).clear();
+      } else if (elements[i].id == "defaultSearchEngine") {
+        document.getElementById(elements[i].id).removeAllItems();
       }
-    } 
+    }
 }
 
 function OnConfigOK()
@@ -2053,8 +2055,11 @@ function CCKWriteConfigFile(destdir)
              
   var fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
                        .createInstance(Components.interfaces.nsIFileOutputStream);
-                       
+  var cos = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+                      .createInstance(Components.interfaces.nsIConverterOutputStream);
+  
   fos.init(file, -1, -1, false);
+  cos.init(fos, null, 0, null);
 
   var elements = document.getElementsByAttribute("id", "*")
   for (var i=0; i < elements.length; i++) {
@@ -2064,19 +2069,19 @@ function CCKWriteConfigFile(destdir)
       if ((elements[i].id != "saveOnExit") && (elements[i].id != "zipLocation")) {
         if (elements[i].value.length > 0) {
           var line = elements[i].getAttribute("id") + "=" + elements[i].value + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
         }
       }
     } else if (elements[i].nodeName == "radiogroup") {
         if ((elements[i].value.length > 0) && (elements[i].value != "0")) {
           var line = elements[i].getAttribute("id") + "=" + elements[i].value + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
         }
     } else if (elements[i].nodeName == "checkbox") {
       if (elements[i].id != "saveOnExit") {
         if (elements[i].checked) {
           var line = elements[i].getAttribute("id") + "=" + elements[i].checked + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
         }
       }
     } else if (elements[i].id == "prefList") {
@@ -2084,18 +2089,18 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "PreferenceName" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         if (listitem.getAttribute("value").length) {
           var line = "PreferenceValue" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
         }
 	      if (listitem.cck['type'].length > 0) {
           var line = "PreferenceType" + (j+1) + "=" + listitem.cck['type'] + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
 	      if (listitem.cck['lock'].length > 0) {
           var line = "PreferenceLock" + (j+1) + "=" + listitem.cck['lock'] + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
       }
     } else if (elements[i].id == "browserPluginList") {
@@ -2103,10 +2108,10 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "BrowserPluginPath" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         if (listitem.getAttribute("value")) {
           var line = "BrowserPluginType" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
       }
     } else if (elements[i].id == "tbFolder.bookmarkList") {
@@ -2114,14 +2119,14 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "ToolbarFolder1.BookmarkTitle" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         if (listitem.getAttribute("value")) {
           var line = "ToolbarFolder1.BookmarkURL" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
 	      if (listitem.cck['type'].length > 0) {
           var line = "ToolbarFolder1.BookmarkType" + (j+1) + "=" + listitem.cck['type'] + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
       }
     } else if (elements[i].id == "tb.bookmarkList") {
@@ -2129,14 +2134,14 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "ToolbarBookmarkTitle" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
 	      if (listitem.getAttribute("value")) {
           var line = "ToolbarBookmarkURL" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
 	      if (listitem.cck['type'].length > 0) {
           var line = "ToolbarBookmarkType" + (j+1) + "=" + listitem.cck['type'] + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
       }
       
@@ -2145,14 +2150,14 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "BookmarkFolder1.BookmarkTitle" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
 	      if (listitem.getAttribute("value")) {
           var line = "BookmarkFolder1.BookmarkURL" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
 	      if (listitem.cck['type'].length > 0) {
           var line = "BookmarkFolder1.BookmarkType" + (j+1) + "=" + listitem.cck['type'] + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
       }
       
@@ -2161,14 +2166,14 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "BookmarkTitle" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
 	      if (listitem.getAttribute("value")) {
           var line = "BookmarkURL" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
 	      if (listitem.cck['type'].length > 0) {
           var line = "BookmarkType" + (j+1) + "=" + listitem.cck['type'] + "\n";
-          fos.write(line, line.length);
+          cos.writeString(line);
 	      }
       }
       
@@ -2177,50 +2182,51 @@ function CCKWriteConfigFile(destdir)
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "RegName" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "RootKey" + (j+1) + "=" + listitem.cck['rootkey'] + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "Key" + (j+1) + "=" + listitem.cck['key'] + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "Name" + (j+1) + "=" + listitem.cck['name'] + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "NameValue" + (j+1) + "=" + listitem.cck['namevalue'] + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "Type" + (j+1) + "=" + listitem.cck['type'] + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
       }
     } else if (elements[i].id == "searchEngineList") {
       listbox = document.getElementById('searchEngineList');    
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "SearchEngine" + (j+1) + "=" + listitem.cck['engineurl'] + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "SearchEngineIcon" + (j+1) + "=" + listitem.cck['iconurl'] + "\n";
-        fos.write(line, line.length);      
+        cos.writeString(line);
       }
     } else if (elements[i].id == "bundleList") {
       listbox = document.getElementById('bundleList')    
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "BundlePath" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
       }
     } else if (elements[i].id == "certList") {
       listbox = document.getElementById('certList')    
       for (var j=0; j < listbox.getRowCount(); j++) {
         listitem = listbox.getItemAtIndex(j);
         var line = "CertPath" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
         var line = "CertTrust" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
       }
     } else if (elements[i].id == "defaultSearchEngine") {
       if (elements[i].value) {
         var line = "DefaultSearchEngine=" + elements[i].value + "\n";
-        fos.write(line, line.length);
+        cos.writeString(line);
       }
     }
   }
+  cos.close();
   fos.close();
 }
 
@@ -2237,9 +2243,13 @@ function CCKReadConfigFile(srcdir)
   
   var stream = Components.classes["@mozilla.org/network/file-input-stream;1"]
                          .createInstance(Components.interfaces.nsIFileInputStream);
+  var cis = Components.classes["@mozilla.org/intl/converter-input-stream;1"]
+                      .createInstance(Components.interfaces.nsIConverterInputStream);
+
 
   stream.init(file, 0x01, 0644, 0);
-  var lis = stream.QueryInterface(Components.interfaces.nsILineInputStream);
+  cis.init(stream,  null, 1024, Components.interfaces.nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
+  var lis = cis.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
   var line = {value:null};
   
   configarray = new Array();
@@ -2465,7 +2475,9 @@ function CCKReadConfigFile(srcdir)
   
   RefreshDefaultSearchEngines();
 
-  menulist.value = configarray["DefaultSearchEngine"];
+  if (configarray["DefaultSearchEngine"]) {
+    menulist.value = configarray["DefaultSearchEngine"];
+  }
 
   var hidden = document.getElementById("hidden");
   hidden.checked = configarray["hidden"];
