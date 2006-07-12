@@ -32,6 +32,7 @@ CPPSRCS		= \
 		zapAudioToneFrame.cpp \
 		zapClientSink.cpp \
 		zapDTMFGenerator.cpp \
+		zapDataExtractor.cpp \
 		zapDatagramFrame.cpp \
 		zapFileIn.cpp \
 		zapFilterNode.cpp \

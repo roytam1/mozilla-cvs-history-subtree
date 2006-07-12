@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,40 +34,75 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_UDPPACKETIZER_H__
-#define __ZAP_UDPPACKETIZER_H__
-
-#include "zapFilterNode.h"
-#include "nsIWritablePropertyBag2.h"
+#include "zapDataExtractor.h"
+#include "zapIMediaGraph.h"
 #include "nsString.h"
+#include "nsIPropertyBag2.h"
+#include "nsHashPropertyBag.h"
+#include "zapMediaUtils.h"
+#include "zapMediaFrame.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapUDPPacketizer
+// zapDataExtractor
 
-// {92FFAAD8-B6E2-4943-9C01-6E96864DC92D}
-#define ZAP_UDPPACKETIZER_CID                             \
-  { 0x92ffaad8, 0xb6e2, 0x4943, { 0x9c, 0x01, 0x6e, 0x96, 0x86, 0x4d, 0xc9, 0x2d } }
-
-#define ZAP_UDPPACKETIZER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "udp-packetizer"
-
-class zapUDPPacketizer : public zapFilterNode
+zapDataExtractor::zapDataExtractor()
 {
-public:
-  zapUDPPacketizer();
-  ~zapUDPPacketizer();
+#ifdef DEBUG_afri_zmk
+  printf("zapDataExtractor::zapDataExtractor()\n");
+#endif
+}
+
+zapDataExtractor::~zapDataExtractor()
+{
+#ifdef DEBUG_afri_zmk
+  printf("zapDataExtractor::~zapDataExtractor()\n");
+#endif
+}
+
+NS_IMETHODIMP
+zapDataExtractor::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
+                               nsIPropertyBag2 *node_pars)
+{
+  mStart = 0;
   
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
+  // unpack node parameters:
+  if (!node_pars) {
+    return NS_OK;
+  }
 
-private:
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  nsCString mAddress;
-  PRUint16 mPort;
-  nsCString mHeader;
-};
+  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("start"),
+                                 &mStart);
+    
+  return NS_OK;
+}
 
-#endif // __ZAP_UDPPACKETIZER_H__
+NS_IMETHODIMP
+zapDataExtractor::RemovedFromGraph(zapIMediaGraph *graph)
+{
+  return NS_OK;
+}
+
+nsresult
+zapDataExtractor::ValidateNewStream(nsIPropertyBag2* streamInfo)
+{
+  // We accept any stream, but we still need to feed streambreak
+  // downstream:
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "raw");
+
+  return NS_OK;
+}
+
+nsresult
+zapDataExtractor::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
+{
+  zapMediaFrame* frame = new zapMediaFrame();
+  frame->AddRef();
+  frame->mStreamInfo = mStreamInfo;
+  nsCString data;
+  input->GetData(data);
+  if (data.Length() > mStart)
+    frame->mData = Substring(data, mStart);
+
+  *output = frame;
+  return NS_OK;
+}

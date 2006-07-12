@@ -76,7 +76,9 @@ zapUDPPacketizer::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(
                       NS_LITERAL_STRING("port"), &mPort),
                     NS_ERROR_FAILURE);
-  
+  node_pars->GetPropertyAsACString(NS_LITERAL_STRING("header"),
+                                   mHeader);
+    
   return NS_OK;
 }
 
@@ -103,7 +105,9 @@ zapUDPPacketizer::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   zapDatagramFrame* frame = new zapDatagramFrame();
   frame->AddRef();
   frame->mStreamInfo = mStreamInfo;
-  input->GetData(frame->mData);
+  nsCString data;
+  input->GetData(data);
+  frame->mData = mHeader + data;
   frame->mAddress = mAddress;
   frame->mPort = mPort;
   *output = frame;

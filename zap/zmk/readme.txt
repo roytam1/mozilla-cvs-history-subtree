@@ -1189,13 +1189,31 @@ Note that no size check will be made, i.e. the resulting datagram
 frames might be larger than the MTU!
 
 Node parameters:
-- ACString "address" : destination address for datagrams
-- unsigned short "port" : destination port for datagrams
-
+- ACString "address" : destination address for datagrams (no default)
+- unsigned short "port" : destination port for datagrams (no default)
+- ACString "header" : a header that will be prepended to all datagrams
+                      (default: "")
 Input stream:
 any frames.
 
 Output stream:
 datagram frames.
+
+----------------------------------------------------------------------
+
+41) data-extractor
+------------------
+
+Filter for extracting partial data from frames
+
+Node parameters:
+- unsigned long "start" : offset into the input frame's data at which to 
+                          start extracting. (default: 0)
+
+Input stream:
+any frames.
+
+Output stream:
+raw binary frames (type = "raw").
 
 ----------------------------------------------------------------------

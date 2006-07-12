@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,27 +34,27 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_UDPPACKETIZER_H__
-#define __ZAP_UDPPACKETIZER_H__
+#ifndef __ZAP_DATAEXTRACTOR_H__
+#define __ZAP_DATAEXTRACTOR_H__
 
 #include "zapFilterNode.h"
 #include "nsIWritablePropertyBag2.h"
 #include "nsString.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapUDPPacketizer
+// zapDataExtractor
 
-// {92FFAAD8-B6E2-4943-9C01-6E96864DC92D}
-#define ZAP_UDPPACKETIZER_CID                             \
-  { 0x92ffaad8, 0xb6e2, 0x4943, { 0x9c, 0x01, 0x6e, 0x96, 0x86, 0x4d, 0xc9, 0x2d } }
+// {7EBDEDB2-5064-410A-8999-2386F7FC186E}
+#define ZAP_DATAEXTRACTOR_CID                             \
+  { 0x7ebdedb2, 0x5064, 0x410a, { 0x89, 0x99, 0x23, 0x86, 0xf7, 0xfc, 0x18, 0x6e } }
 
-#define ZAP_UDPPACKETIZER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "udp-packetizer"
+#define ZAP_DATAEXTRACTOR_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "data-extractor"
 
-class zapUDPPacketizer : public zapFilterNode
+class zapDataExtractor : public zapFilterNode
 {
 public:
-  zapUDPPacketizer();
-  ~zapUDPPacketizer();
+  zapDataExtractor();
+  ~zapDataExtractor();
   
   NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
                           const nsACString & id,
@@ -65,9 +65,7 @@ public:
 
 private:
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  nsCString mAddress;
-  PRUint16 mPort;
-  nsCString mHeader;
+  PRUint32 mStart;
 };
 
-#endif // __ZAP_UDPPACKETIZER_H__
+#endif // __ZAP_DATAEXTRACTOR_H__
