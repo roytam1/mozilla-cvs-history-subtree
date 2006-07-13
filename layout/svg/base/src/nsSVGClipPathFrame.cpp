@@ -225,6 +225,7 @@ nsSVGClipPathFrame::ClipHitTest(nsISVGChildFrame* aParent,
     }
   }
 
+  mInUse = PR_FALSE;
   return NS_OK;
 }
 
