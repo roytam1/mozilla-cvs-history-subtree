@@ -322,6 +322,8 @@ nsTextInputListener::Focus(nsIDOMEvent* aEvent)
     editor->AddEditorObserver(this);
   }
 
+  mFrame->SetHasFocus(PR_TRUE);
+
   return mFrame->InitFocusedValue();
 }
 
@@ -336,6 +338,8 @@ nsTextInputListener::Blur(nsIDOMEvent* aEvent)
   if (editor) {
     editor->RemoveEditorObserver(this);
   }
+
+  mFrame->SetHasFocus(PR_FALSE);
 
   return mFrame->CheckFireOnChange();
 }
@@ -1298,6 +1302,7 @@ nsTextControlFrame::nsTextControlFrame(nsIPresShell* aShell)
   mSuggestedHeight = NS_FORMSIZE_NOTSET;
   mScrollableView = nsnull;
   mDidPreDestroy = PR_FALSE;
+  mHasFocus = PR_FALSE;
 }
 
 nsTextControlFrame::~nsTextControlFrame()
@@ -3261,6 +3266,12 @@ nsTextControlFrame::SetValue(const nsAString& aValue)
 
       if (outerTransaction)
         mNotifyOnInput = PR_TRUE;
+
+      if (mHasFocus) {
+        // Since this code doesn't handle user-generated changes, reset
+        // mFocusedValue so the onchange event doesn't fire incorrectly.
+        InitFocusedValue();
+      }
     }
 
     if (mScrollableView)
