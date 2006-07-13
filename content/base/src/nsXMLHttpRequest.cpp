@@ -1470,7 +1470,7 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
       do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
 
     if (doc) {
-      nsIPrincipal *principal = doc->NodePrincipal();
+      nsIPrincipal *principal = doc->GetPrincipal();
 
       if (principal) {
         nsCOMPtr<nsIURI> codebase;
