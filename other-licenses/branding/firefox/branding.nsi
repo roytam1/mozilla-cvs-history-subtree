@@ -44,7 +44,7 @@
 !define CompanyName           "Mozilla"
 !define URLInfoAbout          "http://www.mozilla.org/"
 !define URLUpdateInfo         "http://www.mozilla.org/products/firefox/"
-!define SurveyURL             "https://survey.mozilla.com/1/Mozilla%20Firefox/${AppVersion}%20(${AB_CD})/exit.html"
+!define SurveyURL             "https://survey.mozilla.com/1/Mozilla%20Firefox/${AppVersion}/${AB_CD}/exit.html"
 
 # Set to 75 for Firefox 2.0 beta releases and should be changed to 10 for the
 # Firefox 2.0 Official Release.
