@@ -347,16 +347,16 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
         mIsTopWidgetWindow = PR_TRUE;
         if (aInitData)
         {
-          // I'm making the assumption here that any dialog created w/out a titlebar is modal and am
-          // therefore keeping the old modal dialog proc. I'm only special-casing dialogs with a
-          // titlebar since those are the only ones that might end up not being modal.
           // We never give dialog boxes a close box.
 
           switch (aInitData->mBorderStyle)
           {
             case eBorderStyle_none:
-            case eBorderStyle_default:
               windowClass = kModalWindowClass;
+              break;
+
+            case eBorderStyle_default:
+              windowClass = kDocumentWindowClass;
               break;
 
             case eBorderStyle_all:
