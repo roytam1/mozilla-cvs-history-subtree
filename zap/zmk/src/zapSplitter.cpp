@@ -175,6 +175,7 @@ zapSplitter::AddedToGraph(zapIMediaGraph *graph,
                           const nsACString & id,
                           nsIPropertyBag2* node_pars)
 {
+  mGraph = graph;
   return NS_OK;
 }
 
@@ -238,9 +239,22 @@ zapSplitter::DisconnectSource(zapIMediaSource *source,
 NS_IMETHODIMP
 zapSplitter::ConsumeFrame(zapIMediaFrame * frame)
 {
-  for (int i=0, l=mOutputs.Count(); i<l; ++i) {
-    ((zapSplitterOutput*)mOutputs[i])->ConsumeFrame(frame);
+  // Take a ref-counted snapshot of all outputs to isolate ourselves
+  // against any mediagraph reconfigurations triggered by any of our
+  // ConsumeFrame calls. (Alternatively we could lock down the
+  // mediagraph).
+  nsVoidArray outputs;
+  outputs = mOutputs;
+  int length = outputs.Count();
+  
+  for (int i=0; i<length; ++i)
+    ((zapSplitterOutput*)outputs[i])->AddRef();
+  for (int i=0; i<length; ++i) {
+    ((zapSplitterOutput*)outputs[i])->ConsumeFrame(frame);
   }
+  for (int i=0; i<length; ++i)
+    ((zapSplitterOutput*)outputs[i])->Release();
+  
   return NS_OK;
 }
 

@@ -67,6 +67,8 @@ class zapPacketPump : public zapIMediaNode,
 
 private:
   friend class zapPacketPumpClock;
+
+  nsCOMPtr<zapIMediaGraph> mGraph;
   
   zapPacketPumpClock *mClock; // weak reference managed by object itself
   PRUint32 mDivider; // clock divider

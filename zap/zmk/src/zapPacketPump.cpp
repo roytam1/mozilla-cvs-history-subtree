@@ -43,6 +43,7 @@
 #include "nsAutoPtr.h"
 #include "nsString.h"
 #include "nsIComponentManager.h"
+#include "zapMediaGraphAutoLock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapPacketPumpClock
@@ -127,7 +128,10 @@ zapPacketPumpClock::ConsumeFrame(zapIMediaFrame * frame)
   // ok, our cue. attempt to pump a frame
   nsCOMPtr<zapIMediaFrame> mframe;
   if (NS_SUCCEEDED(mPump->mInput->ProduceFrame(getter_AddRefs(mframe)))) {
-    mPump->mOutput->ConsumeFrame(mframe);
+    // the following check is important, since the graph might have been
+    // reconfigured by the ProduceFrame call
+    if (mPump->mOutput)
+      mPump->mOutput->ConsumeFrame(mframe);
     mCounter = 0;
   }
   
@@ -175,6 +179,8 @@ zapPacketPump::AddedToGraph(zapIMediaGraph *graph,
                               const nsACString & id,
                               nsIPropertyBag2* node_pars)
 {
+  mGraph = graph;
+
   // node parameter defaults:
   mDivider = 1;
 

@@ -302,6 +302,9 @@ clock frames with
 
 Audio mixer node, mixes n audio sinks to one audio source.
 
+This is a locking node. Trying to modify the mediagraph while this
+node is processing a frame will throw an exception.
+
 Control interfaces:
 - 
 
@@ -930,6 +933,9 @@ and the other outputs active ("type"=="tap"), i.e. they receive a
 packet whenever the master output requests one.
 XXX The input frames are not cloned! Unexpected things might happen if
 a mutable stream (like e.g. rtp) is being tapped!
+
+This is a locking node. Trying to modify the mediagraph while this
+node is processing a frame will throw an exception.
 
 Sinks: 1 (active)
 Sources: n (1 passive , n-1 active)

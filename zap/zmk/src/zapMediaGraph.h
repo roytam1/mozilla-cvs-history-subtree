@@ -137,7 +137,7 @@ private:
   PRUint32 mNodeIdCounter;
   PRUint32 mConnectionIdCounter;
   
-//  friend void* ShutdownEventHandler(PLEvent *self);
+  PRUint32 mLockCount;
 };
 
 // constructor to obtain a proxied zapMediaGraph object:

@@ -39,6 +39,7 @@
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
+#include "zapMediaGraphAutoLock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamTapOutput
@@ -176,6 +177,7 @@ zapStreamTap::AddedToGraph(zapIMediaGraph *graph,
                            const nsACString & id,
                            nsIPropertyBag2* node_pars)
 {
+  mGraph = graph;
   return NS_OK;
 }
 
@@ -286,6 +288,8 @@ zapStreamTap::ProduceFrame(zapIMediaFrame ** frame)
 {
   if (!mInput || NS_FAILED(mInput->ProduceFrame(frame)))
     return NS_ERROR_FAILURE;
+
+  zapMediaGraphAutoLock lock(mGraph);
 
   // pass output to taps:
   for (int i=0, l=mOutputs.Count(); i<l; ++i) {

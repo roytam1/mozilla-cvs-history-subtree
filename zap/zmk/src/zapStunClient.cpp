@@ -609,7 +609,8 @@ zapStunClient::SendStunRequest(zapIStunMessage* message,
                                const nsACString& server,
                                PRInt32 port)
 {
-  NS_ASSERTION(mOutput, "inconsistent state");
+  NS_ASSERTION(mOutput, "no output connection - should we tell the stun request object?");
+  if (!mOutput) return;
   
   // create datagram frame:
   zapDatagramFrame* frame = new zapDatagramFrame();

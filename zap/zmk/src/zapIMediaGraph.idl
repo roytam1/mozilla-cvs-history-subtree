@@ -49,7 +49,7 @@ interface zapIMediaNode;
 /**
  * \ingroup ZMK_MODULE
  */
-[scriptable, uuid(5fc78f9c-1cbb-4628-8863-d23e25beabe1)]
+[scriptable, uuid(f79833a3-7344-4925-b7e4-db02591274b7)]
 interface zapIMediaGraph : nsISupports
 {
   /**
@@ -75,8 +75,18 @@ interface zapIMediaGraph : nsISupports
    */
   [noscript] ACString addExternalNode(in zapIMediaNodeRawPtr node,
                                       in nsIPropertyBag2 node_pars);
-  
+
+  /**
+   * Remove the given node.
+   *
+   * This method will always fail if the media graph is locked. See
+   * lock()/unlock()
+   */
   void removeNode(in ACString id_or_alias);
+
+  /**
+   * Obtain a proxied interface for the given node.
+   */
   void getNode(in ACString id_or_alias, in nsIIDRef uuid,
                in boolean synchronous,
                [iid_is(uuid),retval] out nsQIResult result);
@@ -89,12 +99,41 @@ interface zapIMediaGraph : nsISupports
 
   /**
    * Connect source to sink and return id for the connection.
+   *
+   * This method will always fail if the media graph is locked. See
+   * lock()/unlock().
    */
   ACString connect(in ACString source_node, in nsIPropertyBag2 source_pars,
                    in ACString sink_node, in nsIPropertyBag2 sink_pars);
 
+  /**
+   * Break the connection identified by connection_id.
+   *
+   * This method will always fail if the media graph is locked. See
+   * lock()/unlock()
+   */
   void disconnect(in ACString connection_id);
-  
+
+  /**
+   * Prevent connect()/disconnect()/removeNode()/shutdown() calls from
+   * modifying the media graph. Maintains a 'lock count', so n calls
+   * to lock() have to be followed by n calls to unlock() before
+   * modifications are allowed again.
+   */
+  void lock();
+
+  /**
+   * Reenable connect()/disconnect()/removeNode()/shutdown() calls.
+   * See documentation for lock()
+   */
+  void unlock();
+
+  /**
+   * Shutdown this mediagraph instance.
+   *
+   * This method will always fail if the media graph is locked. See
+   * lock()/unlock()
+   */
   void shutdown();
 
   /**

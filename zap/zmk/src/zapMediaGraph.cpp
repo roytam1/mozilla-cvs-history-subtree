@@ -56,7 +56,8 @@
 
 zapMediaGraph::zapMediaGraph()
     : mNodeIdCounter(0),
-      mConnectionIdCounter(0)
+      mConnectionIdCounter(0),
+      mLockCount(0)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapMediaGraph::zapMediaGraph()\n");
@@ -269,6 +270,11 @@ zapMediaGraph::AddExternalNode(zapIMediaNode *node, nsIPropertyBag2 *node_pars,
 NS_IMETHODIMP
 zapMediaGraph::RemoveNode(const nsACString & id_or_alias)
 {
+  if (mLockCount) {
+    NS_ERROR("Can't modify locked mediagraph");
+    return NS_ERROR_FAILURE;
+  }
+  
   NodeDescriptor* d = ResolveNodeDescriptor(id_or_alias);
   if (!d) {
     NS_WARNING("Target node not found");
@@ -358,6 +364,11 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
                        const nsACString & sink_node_id, nsIPropertyBag2 *sink_pars,
                        nsACString & _retval)
 {
+  if (mLockCount) {
+    NS_ERROR("Can't modify locked mediagraph");
+    return NS_ERROR_FAILURE;
+  }
+  
   NodeDescriptor* src_nd = ResolveNodeDescriptor(source_node_id);
   if (!src_nd) {
     NS_ERROR("Source node not found");
@@ -411,6 +422,11 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
 NS_IMETHODIMP
 zapMediaGraph::Disconnect(const nsACString & connection_id)
 {
+  if (mLockCount) {
+    NS_ERROR("Can't modify locked mediagraph");
+    return NS_ERROR_FAILURE;
+  }
+  
   // find connection:
   Descriptor* t = mConnections->next;
 
@@ -427,11 +443,35 @@ zapMediaGraph::Disconnect(const nsACString & connection_id)
   return NS_OK;
 }
 
+/* void lock (); */
+NS_IMETHODIMP
+zapMediaGraph::Lock()
+{
+  ++mLockCount;
+  return NS_OK;
+}
+
+/* void unlock (); */
+NS_IMETHODIMP
+zapMediaGraph::Unlock()
+{
+  if (mLockCount == 0) {
+    NS_ERROR("unbalanced lock/unlock calls");
+    return NS_ERROR_FAILURE;
+  }
+  --mLockCount;
+  return NS_OK;
+}
 
 /* void shutdown (); */
 NS_IMETHODIMP
 zapMediaGraph::Shutdown()
 {
+  if (mLockCount) {
+    NS_ERROR("uh oh, we're still locked");
+    return NS_ERROR_FAILURE;
+  }
+  
   // release all nodes in a robust way:
   while (mNodes->next->type != Descriptor::SENTINEL)
     RemoveDescriptor(mNodes->next);

@@ -41,6 +41,7 @@
 #include "zapIMediaFrame.h"
 #include "zapMediaFrame.h"
 #include "math.h"
+#include "zapMediaGraphAutoLock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioMixerInput
@@ -203,6 +204,8 @@ zapAudioMixer::AddedToGraph(zapIMediaGraph *graph,
                             const nsACString & id,
                             nsIPropertyBag2* node_pars)
 {
+  mGraph = graph;
+  
   // unpack node parameters:
   nsresult rv;
   rv = mStreamParameters.InitWithProperties(node_pars);
@@ -276,6 +279,8 @@ zapAudioMixer::DisconnectSink(zapIMediaSink *sink,
 NS_IMETHODIMP
 zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
 {
+  zapMediaGraphAutoLock lock(mGraph);
+  
   PRUint32 samplesPerFrame = mStreamParameters.GetSamplesPerFrame();
   mSampleClock += samplesPerFrame;
   

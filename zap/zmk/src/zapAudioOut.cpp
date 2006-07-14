@@ -121,10 +121,6 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
                           const nsACString & id,
                           nsIPropertyBag2* node_pars)
 {
-  // Add a reference to the mediagraph. We must hang onto this
-  // reference until the node is destroyed so that any proxies on us
-  // have a context to shut down in even after the graph has shut
-  // down.
   mGraph = graph;
   
   graph->GetEventTarget(getter_AddRefs(mEventTarget));

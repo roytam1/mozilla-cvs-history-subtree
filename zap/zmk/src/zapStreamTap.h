@@ -71,6 +71,8 @@ private:
   friend class zapStreamTapOutput;
 
   void RequestFrame();
+
+  nsCOMPtr<zapIMediaGraph> mGraph;
   
   // zapStreamTapOutput active tap outputs (weak references):
   nsVoidArray mOutputs;

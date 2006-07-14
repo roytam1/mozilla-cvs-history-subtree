@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,55 +34,32 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_AUDIOMIXER_H__
-#define __ZAP_AUDIOMIXER_H__
+#ifndef __ZAP_MEDIAGRAPHAUTOLOCK_H__
+#define __ZAP_MEDIAGRAPHAUTOLOCK_H__
 
-#include "zapIMediaNode.h"
-#include "zapIMediaSource.h"
-#include "zapIMediaSink.h"
+#include "zapIMediaGraph.h"
 #include "nsCOMPtr.h"
-#include "nsString.h"
-#include "nsVoidArray.h"
-#include "nsIWritablePropertyBag2.h"
-#include "zapAudioStreamUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapAudioMixer
+// A simple autolock guarding a mediagraph against modifications
 
-// {69044C68-74FA-48D0-AF1C-A3A9878DF3B6}
-#define ZAP_AUDIOMIXER_CID                             \
-  { 0x69044c68, 0x74fa, 0x48d0, { 0xaf, 0x1c, 0xa3, 0xa9, 0x87, 0x8d, 0xf3, 0xb6 } }
-
-#define ZAP_AUDIOMIXER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audio-mixer"
-
-class zapAudioMixer : public zapIMediaNode,
-                      public zapIMediaSource
+class zapMediaGraphAutoLock
 {
 public:
-  zapAudioMixer();
-  ~zapAudioMixer();
+  zapMediaGraphAutoLock(zapIMediaGraph* graph)
+      : mGraph(graph) {
+    if (mGraph)
+      mGraph->Lock();
+  }
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_ZAPIMEDIANODE
-  NS_DECL_ZAPIMEDIASOURCE
-
+  ~zapMediaGraphAutoLock() {
+    if (mGraph)
+      mGraph->Unlock();
+  }
+  
 private:
-  friend class zapAudioMixerInput;
-
   nsCOMPtr<zapIMediaGraph> mGraph;
-  
-  // node parameters (set in zapIMediaGraph::AddNode()):
-  zapAudioStreamParameters mStreamParameters;
-
-  // zapAudioMixerInput inputs (weak references):
-  nsVoidArray mInputs;
-
-  PRUint32 mSampleClock;
-  
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  
-  // mixer output sink:
-  nsCOMPtr<zapIMediaSink> mOutput;
+   
 };
 
-#endif // __ZAP_AUDIOMIXER_H__
+#endif // __ZAP_MEDIAGRAPHAUTOLOCK_H__
