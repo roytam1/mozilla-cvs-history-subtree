@@ -225,6 +225,23 @@ function cacheSelectNone() {
 function sanitizeAll()
 {
 
+    // GPS Permissions
+    try
+    {
+        var permMgr = Components.classes["@mozilla.org/permissionmanager;1"]
+                                .getService(Components.interfaces.nsIPermissionManager);
+
+        var enumerator = permMgr.enumerator;
+        while (enumerator.hasMoreElements()) {
+             var nextPermission = enumerator.getNext();
+             nextPermission = nextPermission.QueryInterface(Components.interfaces.nsIPermission); 
+             if (nextPermission.type == "GPS") {
+                permMgr.remove(nextPermission.host, "GPS");   
+            }
+        }
+
+    } catch (e) { alert(e) }
+
     // Cookies
     try 
     {

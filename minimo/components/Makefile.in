@@ -41,7 +41,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = phone softkb ssr device
+DIRS = phone softkb ssr device gps
 
 ifdef WINCE
 DIRS += ssl

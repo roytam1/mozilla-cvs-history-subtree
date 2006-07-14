@@ -31,3 +31,4 @@ nsNativeSSLModule
 nsCookieModule
 nsPermissionsModule
 DeviceSupportModule
+MozGPSModule
