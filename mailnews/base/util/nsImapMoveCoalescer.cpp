@@ -284,17 +284,22 @@ NS_IMETHODIMP nsMoveCoalescerCopyListener::OnStopCopy(nsresult aStatus)
     nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(m_destFolder);
     if (imapFolder)
     {
-      nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
-      NS_ENSURE_SUCCESS(rv, rv);
-      nsCOMPtr <nsIURI> url;
-      nsCOMPtr<nsIEventQueueService> pEventQService = 
-        do_GetService(kEventQueueServiceCID, &rv); 
-      nsCOMPtr <nsIEventQueue> eventQueue;
-      if (NS_SUCCEEDED(rv) && pEventQService)
-        pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
-        getter_AddRefs(eventQueue));
-      nsCOMPtr <nsIUrlListener> listener = do_QueryInterface(m_coalescer);
-      rv = imapService->SelectFolder(eventQueue, m_destFolder, listener, nsnull, getter_AddRefs(url));
+      PRUint32 folderFlags;
+      m_destFolder->GetFlags(&folderFlags);
+      if (!(folderFlags & (MSG_FOLDER_FLAG_JUNK | MSG_FOLDER_FLAG_TRASH)))
+      {
+        nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
+        NS_ENSURE_SUCCESS(rv, rv);
+        nsCOMPtr <nsIURI> url;
+        nsCOMPtr<nsIEventQueueService> pEventQService = 
+          do_GetService(kEventQueueServiceCID, &rv); 
+        nsCOMPtr <nsIEventQueue> eventQueue;
+        if (NS_SUCCEEDED(rv) && pEventQService)
+          pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+          getter_AddRefs(eventQueue));
+        nsCOMPtr <nsIUrlListener> listener = do_QueryInterface(m_coalescer);
+        rv = imapService->SelectFolder(eventQueue, m_destFolder, listener, nsnull, getter_AddRefs(url));
+      }
     }
   }
   return rv;
