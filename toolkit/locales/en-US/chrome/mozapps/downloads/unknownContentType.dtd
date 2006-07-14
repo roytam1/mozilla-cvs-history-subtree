@@ -62,4 +62,4 @@
 <!ENTITY  chooseHandler.label         "Browse...">
 <!ENTITY  chooseHandler.accesskey     "B">
 
-
+<!ENTITY  unknownPromptText.label     "Would you like to save this file?">
