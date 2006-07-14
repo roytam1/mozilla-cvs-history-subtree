@@ -286,7 +286,6 @@ GPSService::GPSService()
 
 GPSService::~GPSService()  
 {
-  MessageBox(0, "~", "~", 0);
 #ifdef WINCE
   StopGPS();
   FreeLibrary(mGPSInst);
@@ -313,9 +312,6 @@ GPSService::StartGPS()
     return NS_OK;
 
   mGPSDevice = mOpenDevice(NULL, NULL, NULL, 0);
-
-  if (!mGPSDevice)
-    MessageBox(0, "No GPS Device Found", "ERROR", 0);
 #endif
   return NS_OK;
 }
