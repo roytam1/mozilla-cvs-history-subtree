@@ -130,11 +130,11 @@ nsPrompt::Init()
 // nsPrompt::nsIPrompt
 //*****************************************************************************
 
-class nsAutoDOMEventDispatcher
+class nsAutoWindowStateHelper
 {
 public:
-  nsAutoDOMEventDispatcher(nsIDOMWindow *aWindow);
-  ~nsAutoDOMEventDispatcher();
+  nsAutoWindowStateHelper(nsIDOMWindow *aWindow);
+  ~nsAutoWindowStateHelper();
 
   PRBool DefaultEnabled()
   {
@@ -148,21 +148,34 @@ protected:
   PRBool mDefaultEnabled;
 };
 
-nsAutoDOMEventDispatcher::nsAutoDOMEventDispatcher(nsIDOMWindow *aWindow)
+nsAutoWindowStateHelper::nsAutoWindowStateHelper(nsIDOMWindow *aWindow)
   : mWindow(aWindow),
     mDefaultEnabled(DispatchCustomEvent("DOMWillOpenModalDialog"))
 {
+  nsCOMPtr<nsPIDOMWindow_MOZILLA_1_8_BRANCH> window =
+    do_QueryInterface(aWindow);
+
+  if (window) {
+    window->EnterModalState();
+  }
 }
 
-nsAutoDOMEventDispatcher::~nsAutoDOMEventDispatcher()
+nsAutoWindowStateHelper::~nsAutoWindowStateHelper()
 {
+  nsCOMPtr<nsPIDOMWindow_MOZILLA_1_8_BRANCH> window =
+    do_QueryInterface(mWindow);
+
+  if (window) {
+    window->LeaveModalState();
+  }
+
   if (mDefaultEnabled) {
     DispatchCustomEvent("DOMModalDialogClosed");
   }
 }
 
 PRBool
-nsAutoDOMEventDispatcher::DispatchCustomEvent(const char *aEventName)
+nsAutoWindowStateHelper::DispatchCustomEvent(const char *aEventName)
 {
   if (!mWindow) {
     return PR_TRUE;
@@ -208,9 +221,9 @@ NS_IMETHODIMP
 nsPrompt::Alert(const PRUnichar* dialogTitle, 
                 const PRUnichar* text)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -223,9 +236,9 @@ nsPrompt::AlertCheck(const PRUnichar* dialogTitle,
                      const PRUnichar* checkMsg,
                      PRBool *checkValue)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -238,9 +251,9 @@ nsPrompt::Confirm(const PRUnichar* dialogTitle,
                   const PRUnichar* text,
                   PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -254,9 +267,9 @@ nsPrompt::ConfirmCheck(const PRUnichar* dialogTitle,
                        PRBool *checkValue,
                        PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -275,9 +288,9 @@ nsPrompt::ConfirmEx(const PRUnichar *dialogTitle,
                     PRBool *checkValue,
                     PRInt32 *buttonPressed)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -294,9 +307,9 @@ nsPrompt::Prompt(const PRUnichar *dialogTitle,
                  PRBool *checkValue,
                  PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -313,9 +326,9 @@ nsPrompt::PromptUsernameAndPassword(const PRUnichar *dialogTitle,
                                     PRBool *checkValue,
                                     PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -333,9 +346,9 @@ nsPrompt::PromptPassword(const PRUnichar *dialogTitle,
                          PRBool *checkValue,
                          PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -351,9 +364,9 @@ nsPrompt::Select(const PRUnichar *dialogTitle,
                  PRInt32 *outSelection,
                  PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -376,9 +389,9 @@ nsPrompt::Prompt(const PRUnichar* dialogTitle,
                  PRUnichar* *result,
                  PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -404,9 +417,9 @@ nsPrompt::PromptUsernameAndPassword(const PRUnichar* dialogTitle,
                                     PRUnichar* *pwd,
                                     PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 
@@ -424,9 +437,9 @@ nsPrompt::PromptPassword(const PRUnichar* dialogTitle,
                          PRUnichar* *pwd,
                          PRBool *_retval)
 {
-  nsAutoDOMEventDispatcher autoDOMEventDispatcher(mParent);
+  nsAutoWindowStateHelper windowStateHelper(mParent);
 
-  if (!autoDOMEventDispatcher.DefaultEnabled()) {
+  if (!windowStateHelper.DefaultEnabled()) {
     return NS_OK;
   }
 

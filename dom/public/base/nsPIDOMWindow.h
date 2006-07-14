@@ -333,8 +333,8 @@ protected:
 };
 
 #define NS_PIDOMWINDOW_MOZILLA_1_8_BRANCH_IID \
-{ 0x7bf31d9e, 0xd17b, 0x47dc, \
-  { 0xa6, 0xe4, 0x5f, 0xae, 0x29, 0x94, 0xf1, 0x07 } }
+{ 0xa9b7f235, 0x4c98, 0x4257, \
+  { 0xb1, 0x1a, 0xbe, 0x53, 0x39, 0x69, 0xdf, 0x2a } }
 
 class nsPIDOMWindow_MOZILLA_1_8_BRANCH : public nsPIDOMWindow
 {
@@ -356,6 +356,13 @@ public:
    * the window was frozen.
    */
   virtual nsresult FireDelayedDOMEvents() = 0;
+
+  /**
+   * Callback for notifying a window about a modal dialog being
+   * opened/closed with the window as a parent.
+   */
+  virtual void EnterModalState() = 0;
+  virtual void LeaveModalState() = 0;
 
 protected:
   nsPIDOMWindow_MOZILLA_1_8_BRANCH(nsPIDOMWindow *aOuterWindow)

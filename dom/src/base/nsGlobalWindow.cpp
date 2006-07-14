@@ -315,6 +315,7 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mHavePendingClose(PR_FALSE),
     mHadOriginalOpener(PR_FALSE),
     mIsPopupSpam(PR_FALSE),
+    mModalStateDepth(0),
     mArguments(nsnull),
     mGlobalObjectOwner(nsnull),
     mDocShell(nsnull),
@@ -4476,9 +4477,10 @@ nsGlobalWindow::Close()
 {
   FORWARD_TO_OUTER(Close, (), NS_ERROR_NOT_INITIALIZED);
 
-  if (IsFrame() || !mDocShell) {
-    // window.close() is called on a frame in a frameset, or on a
-    // window that's already closed. Ignore such calls.
+  if (IsFrame() || !mDocShell || IsInModalState()) {
+    // window.close() is called on a frame in a frameset, on a window
+    // that's already closed, or on a window for which there's
+    // currently a modal dialog open. Ignore such calls.
 
     return NS_OK;
   }
@@ -4678,6 +4680,57 @@ nsGlobalWindow::ReallyCloseWindow()
 
     CleanUp();
   }
+}
+
+void
+nsGlobalWindow::EnterModalState()
+{
+  nsCOMPtr<nsIDOMWindow> top;
+  GetTop(getter_AddRefs(top));
+
+  if (!top) {
+    NS_ERROR("Uh, EnterModalState() called w/o a reachable top window?");
+
+    return;
+  }
+
+  NS_STATIC_CAST(nsGlobalWindow *,
+                 NS_STATIC_CAST(nsIDOMWindow *,
+                                top.get()))->mModalStateDepth++;
+}
+
+void
+nsGlobalWindow::LeaveModalState()
+{
+  nsCOMPtr<nsIDOMWindow> top;
+  GetTop(getter_AddRefs(top));
+
+  if (!top) {
+    NS_ERROR("Uh, LeaveModalState() called w/o a reachable top window?");
+
+    return;
+  }
+
+  NS_STATIC_CAST(nsGlobalWindow *,
+                 NS_STATIC_CAST(nsIDOMWindow *,
+                                top.get()))->mModalStateDepth--;
+}
+
+PRBool
+nsGlobalWindow::IsInModalState()
+{
+  nsCOMPtr<nsIDOMWindow> top;
+  GetTop(getter_AddRefs(top));
+
+  if (!top) {
+    NS_ERROR("Uh, IsInModalState() called w/o a reachable top window?");
+
+    return PR_FALSE;
+  }
+
+  return NS_STATIC_CAST(nsGlobalWindow *,
+                        NS_STATIC_CAST(nsIDOMWindow *,
+                                       top.get()))->mModalStateDepth != 0;
 }
 
 NS_IMETHODIMP
