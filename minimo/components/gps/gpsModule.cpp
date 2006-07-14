@@ -77,10 +77,12 @@
 
 #define MINIMO_PROPERTIES_URL "chrome://minimo/locale/minimo.properties"
 
+
+#ifdef WINCE
+
 #include <windows.h>
 #include <Winbase.h>
 
-#ifdef WINCE
 // UNTIL WE EXCLUSIVELY CARE ABOUT >=WM5
 #ifndef _GPSAPI_H_
 
