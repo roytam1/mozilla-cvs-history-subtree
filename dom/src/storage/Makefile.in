@@ -55,6 +55,7 @@ REQUIRES       = xpcom         \
                  layout        \
                  locale        \
                  necko         \
+                 jar           \
                  pref          \
                  unicharutil   \
                  widget        \
