@@ -5906,6 +5906,8 @@ if test -n "$USE_CPLUS"; then
     MAKEFILES="$MAKEFILES pr/src/cplus/Makefile pr/src/cplus/tests/Makefile"
 fi
 
+echo $MAKEFILES > unallmakefiles
+
 trap '' 1 2 15
 cat > confcache <<\EOF
 # This file is a shell script that caches the results of configure
