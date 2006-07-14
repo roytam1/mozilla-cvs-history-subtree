@@ -577,8 +577,8 @@ static Boolean we_are_front_process()
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsWindow::SetFocus(PRBool aRaise)
 {
-  nsIWidget* top;
-  nsToolkit::GetTopWidget(mWindowPtr, &top);
+  nsCOMPtr<nsIWidget> top;
+  nsToolkit::GetTopWidget(mWindowPtr, getter_AddRefs(top));
 
   if (top) {
     nsCOMPtr<nsPIWidgetMac_MOZILLA_1_8_BRANCH> topMac = do_QueryInterface(top);
@@ -2336,7 +2336,7 @@ NS_IMETHODIMP nsWindow::GetAttention(PRInt32 aCycleCount)
 	gNMRec.nmSound  = NULL;   // No alert sound, see bug 307323
 	gNMRec.nmStr    = NULL;   // No alert/window so no text
 	gNMRec.nmResp   = NULL;   // No response proc, use the default behavior
-	gNMRec.nmRefCon = NULL;
+	gNMRec.nmRefCon = 0;
 	if (::NMInstall(&gNMRec) == noErr)
 		gNotificationInstalled = true;
 
