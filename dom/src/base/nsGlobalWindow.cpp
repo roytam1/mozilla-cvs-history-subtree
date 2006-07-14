@@ -4304,6 +4304,7 @@ nsGlobalWindow::Open(const nsAString& aUrl, const nsAString& aName,
                       PR_TRUE,           // aCalledNoScript
                       PR_FALSE,          // aDoJSFixups
                       nsnull, 0, nsnull, // No args
+                      GetPrincipal(),    // aCalleePrincipal
                       _retval);
 }
 
@@ -4351,6 +4352,7 @@ nsGlobalWindow::Open(nsIDOMWindow **_retval)
                       PR_FALSE,          // aCalledNoScript
                       PR_TRUE,           // aDoJSFixups
                       nsnull, 0, nsnull, // No args
+                      GetPrincipal(),    // aCalleePrincipal
                       _retval);
 }
 
@@ -4366,6 +4368,7 @@ nsGlobalWindow::OpenDialog(const nsAString& aUrl, const nsAString& aName,
                       PR_TRUE,                    // aCalledNoScript
                       PR_FALSE,                   // aDoJSFixups
                       nsnull, 0, aExtraArgument,  // Arguments
+                      GetPrincipal(),             // aCalleePrincipal
                       _retval);
 }
 
@@ -4414,6 +4417,7 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
                       PR_FALSE,            // aCalledNoScript
                       PR_FALSE,            // aDoJSFixups
                       argv, argc, nsnull,  // Arguments
+                      GetPrincipal(),      // aCalleePrincipal
                       _retval);
 }
 
@@ -5693,24 +5697,27 @@ nsGlobalWindow::GetSessionStorage(nsIDOMStorage ** aSessionStorage)
 {
   *aSessionStorage = nsnull;
 
-  FORWARD_TO_OUTER(GetSessionStorage, (aSessionStorage), NS_OK);
+  FORWARD_TO_INNER(GetSessionStorage, (aSessionStorage), NS_ERROR_UNEXPECTED);
 
   nsIPrincipal *principal = GetPrincipal();
-  
-  if (!principal || !mDocShell) {
+  nsIDocShell *docShell = GetDocShell();
+
+  if (!principal || !docShell) {
     return NS_OK;
   }
 
   nsCOMPtr<nsIURI> codebase;
   nsresult rv = principal->GetURI(getter_AddRefs(codebase));
-  NS_ENSURE_TRUE(NS_SUCCEEDED(rv) && codebase, rv);
+
+  if (NS_FAILED(rv) || !codebase) {
+    return NS_FAILED(rv) ? rv : NS_ERROR_DOM_NOT_SUPPORTED_ERR;
+  }
 
   nsCAutoString currentDomain;
   rv = codebase->GetAsciiHost(currentDomain);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> ds =
-    do_QueryInterface(GetDocShell());
+  nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH> ds(do_QueryInterface(docShell));
   NS_ENSURE_TRUE(ds, NS_ERROR_DOM_NOT_SUPPORTED_ERR);
 
   return ds->GetSessionStorageForDomain(currentDomain, aSessionStorage);
@@ -5998,11 +6005,13 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
                              PRBool aCalledNoScript, PRBool aDoJSFixups,
                              jsval *argv, PRUint32 argc,
                              nsISupports *aExtraArgument,
+                             nsIPrincipal *aCalleePrincipal,
                              nsIDOMWindow **aReturn)
 {
   FORWARD_TO_OUTER(OpenInternal, (aUrl, aName, aOptions, aDialog,
                                   aCalledNoScript, aDoJSFixups,
-                                  argv, argc, aExtraArgument, aReturn),
+                                  argv, argc, aExtraArgument, aCalleePrincipal,
+                                  aReturn),
                    NS_ERROR_NOT_INITIALIZED);
 
   NS_PRECONDITION(!aExtraArgument || (!argv && argc == 0),
@@ -6027,13 +6036,10 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
   const PRBool checkForPopup =
     !aDialog && !WindowExists(aName, !aCalledNoScript);
 
-  // Grab the current codebase before we do any opening as that could
-  // change the current codebase.
-  nsIPrincipal *currentPrincipal = GetPrincipal();
   nsCOMPtr<nsIURI> currentCodebase;
 
-  if (currentPrincipal) {
-    currentPrincipal->GetURI(getter_AddRefs(currentCodebase));
+  if (aCalleePrincipal) {
+    aCalleePrincipal->GetURI(getter_AddRefs(currentCodebase));
   }
 
   // These next two variables are only accessed when checkForPopup is true

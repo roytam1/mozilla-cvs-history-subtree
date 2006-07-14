@@ -388,6 +388,7 @@ protected:
                                     PRBool aDoJSFixups,
                                     jsval *argv, PRUint32 argc,
                                     nsISupports *aExtraArgument,
+                                    nsIPrincipal *aCalleePrincipal,
                                     nsIDOMWindow **aReturn);
 
   static void CloseWindow(nsISupports* aWindow);
