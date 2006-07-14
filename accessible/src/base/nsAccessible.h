@@ -198,7 +198,7 @@ protected:
   PRUint32 mAccChildCount;
 
   static nsRoleMapEntry gWAIRoleMap[];
-  static nsStateMapEntry gDisabledStateMap;
+  static nsStateMapEntry gUnivStateMap[];
 };
 
 

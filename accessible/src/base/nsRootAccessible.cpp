@@ -813,6 +813,9 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
     FireCurrentFocusEvent();
   }
   else if (eventType.LowerCaseEqualsLiteral("domcontentloaded")) {
+    // Don't create the doc accessible until load scripts have a chance to set
+    // role attribute for <body> or <html> element, because the value of 
+    // role attribute will be cached when the doc accessible is Init()'d
     TryFireEarlyLoadEvent(accessible, targetNode);
   }
   else if (eventType.EqualsLiteral("DOMMenuInactive")) {

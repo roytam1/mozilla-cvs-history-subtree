@@ -449,7 +449,7 @@ STDMETHODIMP nsAccessibleWrap::get_accRole(
   NS_ASSERTION(content, "No content for accessible");
   if (content) {
     nsAutoString roleString;
-    if (role != ROLE_CLIENT) {
+    if (role != ROLE_CLIENT && GetRoleAttribute(content, roleString)) {
       content->GetAttr(kNameSpaceID_XHTML2_Unofficial, nsAccessibilityAtoms::role, roleString);
     }
     if (roleString.IsEmpty()) {

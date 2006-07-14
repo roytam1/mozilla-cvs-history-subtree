@@ -467,14 +467,6 @@ nsAccessibilityService::CreateHTMLButtonAccessibleXBL(nsIDOMNode *aNode, nsIAcce
   return NS_OK;
 }
 
-PRBool nsAccessibilityService::GetRole(nsIContent *aContent,
-                                       nsAString& aRole)
-{
-  return NS_CONTENT_ATTR_HAS_VALUE ==
-         aContent->GetAttr(kNameSpaceID_XHTML2_Unofficial,
-                           nsAccessibilityAtoms::role, aRole);
-}
-
 nsresult
 nsAccessibilityService::CreateHTMLAccessibleByMarkup(nsISupports *aFrame,
                                                      nsIWeakReference *aWeakShell,
@@ -1912,9 +1904,9 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
     // XUL elements may implement nsIAccessibleProvider via XBL
     // This allows them to say what kind of accessible to create
     // Non-HTML elements must have an nsIAccessibleProvider, tabindex
-    // or XHTML2 role or they're not in the accessible tree.
+    // or role attribute or they're not in the accessible tree.
     nsAutoString role;
-    if (GetRole(content, role) &&
+    if (nsAccessNode::GetRoleAttribute(content, role) &&
         StringEndsWith(role, NS_LITERAL_STRING(":presentation"))) {
       return NS_ERROR_FAILURE;
     }
@@ -1941,7 +1933,7 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
   else {
     // --- Try creating accessible for HTML ---
     nsAutoString role;
-    GetRole(content, role);
+    nsAccessNode::GetRoleAttribute(content, role);
     if (!content->HasAttr(kNameSpaceID_None, nsAccessibilityAtoms::tabindex)) {
       // If no tabindex, check for a Presentation role, which
       // tells us not to expose this to the accessibility hierarchy.
@@ -1963,7 +1955,7 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
           nsAutoString tableRole;
           while ((tableContent = tableContent->GetParent()) != nsnull) {
             if (tableContent->Tag() == nsAccessibilityAtoms::table) {
-              if (GetRole(tableContent, tableRole) &&
+              if (nsAccessNode::GetRoleAttribute(tableContent, tableRole) &&
                   StringEndsWith(tableRole, NS_LITERAL_STRING(":presentation"),
                   nsCaseInsensitiveStringComparator())) {
                 // Table that we're a descendant of is presentational
