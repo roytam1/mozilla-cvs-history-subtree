@@ -790,12 +790,12 @@ Section "Uninstall"
   ${GetParentDir}
   Pop $R1
 
-  ; Only remove the Clients\Mail key if it refers to this install location.
-  ; The Clients\Mail registry key is independent of the default app for the OS
+  ; Only remove the StartMenuInternet key if it refers to this install location.
+  ; The StartMenuInternet registry key is independent of the default browser
   ; settings. The XPInstall base un-installer always removes this key if it is
-  ; uninstalling the default app and it will always replace the keys when
+  ; uninstalling the default browser and it will always replace the keys when
   ; installing even if there is another install of Firefox that is set as the
-  ; default app. Now the key is always updated on install but it is only
+  ; default browser. Now the key is always updated on install but it is only
   ; removed if it refers to this install location.
   ${If} $INSTDIR == $R1
     ; XXXrstrong - if there is another installation of the same app ideally we
