@@ -183,6 +183,7 @@ static void Shutdown();
 #include "nsISVGRenderer.h"
 #include "nsSVGRect.h"
 #include "nsSVGUtils.h"
+#include "nsSVGTypeCIDs.h"
 
 #ifdef MOZ_SVG_RENDERER_LIBART
 void NS_InitSVGRendererLibartGlobals();
