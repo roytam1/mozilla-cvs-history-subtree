@@ -48,8 +48,6 @@ PR_BEGIN_EXTERN_C
 
 #if defined(__GNUC__) && defined(__i386__) && (__GNUC__ >= 3) && !defined(XP_OS2)
 #define PL_DHASH_FASTCALL __attribute__ ((regparm (3),stdcall))
-#elif defined(XP_WIN)
-#define PL_DHASH_FASTCALL __fastcall
 #else
 #define PL_DHASH_FASTCALL
 #endif
