@@ -138,6 +138,8 @@ static NS_DEFINE_CID(kDOMEventGroupCID, NS_DOMEVENTGROUP_CID);
 #include "nsDateTimeFormatCID.h"
 #include "nsIDateTimeFormat.h"
 
+#include "nsLayoutStatics.h"
+
 #ifdef MOZ_LOGGING
 // so we can get logging even in release builds
 #define FORCE_PR_LOG 1
@@ -779,6 +781,8 @@ nsDocument::nsDocument()
   : nsIDocument(),
     mVisible(PR_TRUE)
 {
+  nsLayoutStatics::AddRef();
+
 #ifdef PR_LOGGING
   if (!gDocumentLeakPRLog)
     gDocumentLeakPRLog = PR_NewLogModule("DocumentLeak");
@@ -902,6 +906,7 @@ nsDocument::~nsDocument()
     delete mBoxObjectTable;
   }
   delete mXPathDocument;
+  nsLayoutStatics::Release();
 }
 
 PRBool gCheckedForXPathDOM = PR_FALSE;

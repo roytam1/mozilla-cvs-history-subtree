@@ -55,7 +55,6 @@
 #include "nsICSSStyleSheet.h"
 #include "nsDOMAttribute.h"
 #include "nsDOMClassInfo.h"
-#include "nsDOMScriptObjectFactory.h"
 #include "nsEventListenerManager.h"
 #include "nsFrame.h"
 #include "nsGenericElement.h"  // for nsDOMEventRTTearoff
@@ -63,6 +62,7 @@
 #include "nsGlobalWindow.h"
 #include "nsHTMLAtoms.h"
 #include "nsImageFrame.h"
+#include "nsJSEnvironment.h"
 #include "nsLayoutAtoms.h"
 #include "nsLayoutStylesheetCache.h"
 #include "nsNodeInfo.h"
@@ -76,7 +76,6 @@
 #include "nsTextTransformer.h"
 #include "nsXBLAtoms.h"
 #include "nsXBLWindowKeyHandler.h"
-#include "txXSLTProcessor.h"
 
 #ifdef MOZ_XUL
 #include "nsXULContentUtils.h"
@@ -106,7 +105,7 @@ nsresult
 nsLayoutStatics::Initialize()
 {
 #ifdef NS_BUILD_REFCNT_LOGGING
-  NS_LogCtor(&sLayoutStaticRefcnt, "nsLayoutStatics", 1);
+  nsTraceRefcnt::LogCtor(&sLayoutStaticRefcnt, "nsLayoutStatics", 0);
 #endif
 
   NS_ASSERTION(sLayoutStaticRefcnt == 0,
@@ -118,22 +117,21 @@ nsLayoutStatics::Initialize()
 
   nsresult rv;
 
-  nsDOMScriptObjectFactory::Startup();
+  nsJSEnvironment::Startup();
   rv = nsContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsContentUtils");
+
+    Shutdown();
+
     return rv;
   }
-
   rv = nsAttrValue::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsAttrValue");
-    return rv;
-  }
 
-  rv = nsTextFragment::Init();
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Could not initialize nsTextFragment");
+    Shutdown();
+
     return rv;
   }
 
@@ -144,7 +142,10 @@ nsLayoutStatics::Initialize()
   nsCSSKeywords::AddRefTable();
   nsCSSProps::AddRefTable();
   nsColorNames::AddRefTable();
-  nsGkAtoms::AddRefAtoms();
+  nsHTMLAtoms::AddRefAtoms();
+  nsXBLAtoms::AddRefAtoms();
+  nsLayoutAtoms::AddRefAtoms();
+  nsXULAtoms::AddRefAtoms();
 
 #ifndef MOZ_NO_INSPECTOR_APIS
   inDOMView::InitAtoms();
@@ -154,32 +155,37 @@ nsLayoutStatics::Initialize()
   rv = nsXULContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsXULContentUtils");
+
+    Shutdown();
+
     return rv;
   }
 #endif
 
 #ifdef MOZ_MATHML
   nsMathMLOperators::AddRefTable();
+  nsMathMLAtoms::AddRefAtoms();
 #endif
 
 #ifdef MOZ_SVG
   if (nsSVGUtils::SVGEnabled())
     nsContentDLF::RegisterSVG();
+  nsSVGAtoms::AddRefAtoms();
+#ifdef MOZ_SVG_RENDERER_LIBART
+  NS_InitSVGRendererLibartGlobals();
+#endif
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  NS_InitSVGRendererGDIPlusGlobals();
+#endif
 #endif
 
 #ifdef DEBUG
   nsFrame::DisplayReflowStartup();
 #endif
   rv = nsTextTransformer::Initialize();
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Could not initialize nsTextTransformer");
-    return rv;
-  }
-  nsDOMAttribute::Initialize();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (!txXSLTProcessor::init()) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  nsDOMAttribute::Initialize();
 
   return NS_OK;
 }
@@ -188,13 +194,12 @@ void
 nsLayoutStatics::Shutdown()
 {
 #ifdef NS_BUILD_REFCNT_LOGGING
-  NS_LogDtor(&sLayoutStaticRefcnt, "nsLayoutStatics", 1);
+  nsTraceRefcnt::LogDtor(&sLayoutStaticRefcnt, "nsLayoutStatics", 0);
 #endif
 
-  txXSLTProcessor::shutdown();
   nsDOMAttribute::Shutdown();
   nsRange::Shutdown();
-  nsDOMEventRTTearoff::Shutdown();
+  nsGenericElement::Shutdown();
   nsEventListenerManager::Shutdown();
   nsContentList::Shutdown();
   nsComputedDOMStyle::Shutdown();
@@ -223,6 +228,15 @@ nsLayoutStatics::Shutdown()
   nsMathMLOperators::ReleaseTable();
 #endif
 
+#ifdef MOZ_SVG
+#ifdef MOZ_SVG_RENDERER_LIBART
+  NS_FreeSVGRendererLibartGlobals();
+#endif
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  NS_FreeSVGRendererGDIPlusGlobals();
+#endif
+#endif
+
   nsCSSFrameConstructor::ReleaseGlobals();
   nsTextTransformer::Shutdown();
   nsSpaceManager::Shutdown();
@@ -233,8 +247,6 @@ nsLayoutStatics::Shutdown()
   NS_IF_RELEASE(nsContentDLF::gUAStyleSheet);
   NS_IF_RELEASE(nsRuleNode::gLangService);
   nsGenericHTMLElement::Shutdown();
-
-  nsTextFragment::Shutdown();
 
   nsAttrValue::Shutdown();
   nsContentUtils::Shutdown();
