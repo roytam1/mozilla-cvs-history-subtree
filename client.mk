@@ -1151,9 +1151,10 @@ echo_objdir:
 # xpcom/threads/plevent.c (removed)
 # xpcom/threads/plevent.h (removed)
 # xpcom/proxy/public/nsProxyEvent.h (moved to ../src/)
+# xpcom/proxy/src/nsProxyEvent.h (removed)
+# xpcom/proxy/src/nsProxyEventClass.cpp 
 # xpcom/proxy/src/nsProxyObjectManager.cpp
 # xpcom/proxy/src/nsProxyEventObject.cpp 
-# xpcom/proxy/src/nsProxyEventPrivate.h 
 # extensions/jssh/ChangeLog
 # extensions/jssh/Makefile.in
 # extensions/jssh/install.js
@@ -1203,7 +1204,6 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	xpcom/io/nsScriptableInputStream.h \
 	xpcom/proxy/public/nsIProxyObjectManager.idl \
 	xpcom/proxy/src/nsProxyEvent.cpp \
-	xpcom/proxy/src/nsProxyEvent.h \
 	xpcom/proxy/src/nsProxyEventClass.cpp \
 	xpcom/proxy/src/nsProxyEventObject.cpp \
 	xpcom/proxy/src/nsProxyEventPrivate.h \
