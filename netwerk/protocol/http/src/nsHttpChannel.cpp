@@ -1336,8 +1336,6 @@ nsHttpChannel::OpenCacheEntry(PRBool offline, PRBool *delayed)
     else if (NS_SUCCEEDED(rv)) {
         mCacheEntry->GetAccessGranted(&mCacheAccess);
         LOG(("got cache entry [access=%x]\n", mCacheAccess));
-        if (mCacheAccess == nsICache::ACCESS_WRITE)
-            mOpenedCacheForWriting = PR_TRUE;
     }
     return rv;
 }
@@ -4429,8 +4427,6 @@ nsHttpChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry,
     if (NS_SUCCEEDED(status)) {
         mCacheEntry = entry;
         mCacheAccess = access;
-        if (mCacheAccess == nsICache::ACCESS_WRITE)
-            mOpenedCacheForWriting = PR_TRUE;
     }
 
     nsresult rv;

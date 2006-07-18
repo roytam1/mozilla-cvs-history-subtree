@@ -150,4 +150,3 @@ interface nsIHttpActivityObserver : nsISupports
             nsIHttpActivityObserver::ACTIVITY_SUBTYPE_TRANSACTION_CLOSE
 
 %}
-
