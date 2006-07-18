@@ -60,6 +60,7 @@ class nsHttpTransaction;
 class nsHttpRequestHead;
 class nsHttpResponseHead;
 class nsHttpChunkedDecoder;
+class nsIHttpActivityObserver;
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction represents a single HTTP transaction.  It is thread-safe,
@@ -163,6 +164,9 @@ private:
     nsCOMPtr<nsISupports>           mSecurityInfo;
     nsCOMPtr<nsIAsyncInputStream>   mPipeIn;
     nsCOMPtr<nsIAsyncOutputStream>  mPipeOut;
+
+    nsCOMPtr<nsISupports>             mChannel;
+    nsCOMPtr<nsIHttpActivityObserver> mActivityDistributor;
 
     nsCString                       mReqHeaderBuf;    // flattened request headers
     nsCOMPtr<nsIInputStream>        mRequestStream;
