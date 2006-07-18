@@ -719,7 +719,7 @@ nsresult nsMsgNewsFolder::AbbreviatePrettyName(PRUnichar ** prettyName, PRInt32 
   PRInt32    newword = 0;     // == 2 if done with all abbreviated words
   
   fullwords = 0;
-  char currentChar;
+  PRUnichar currentChar;
   for (PRInt32 i = 1; i < length; i++) {
     currentChar = name[i];
     if (newword < 2) {
