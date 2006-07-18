@@ -1900,10 +1900,10 @@ StopLoadingSheetCallback(nsIURI* aKey, SheetLoadData*& aData, void* aClosure)
 NS_IMETHODIMP
 CSSLoaderImpl::Stop()
 {
-  if (mLoadingDatas.Count() > 0) {
+  if (mLoadingDatas.IsInitialized() && mLoadingDatas.Count() > 0) {
     mLoadingDatas.Enumerate(StopLoadingSheetCallback, this);
   }
-  if (mPendingDatas.Count() > 0) {
+  if (mPendingDatas.IsInitialized() && mPendingDatas.Count() > 0) {
     mPendingDatas.Enumerate(StopLoadingSheetCallback, this);
   }
   return NS_OK;
