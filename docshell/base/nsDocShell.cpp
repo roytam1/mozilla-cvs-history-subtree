@@ -5467,7 +5467,9 @@ nsDocShell::RestoreFromHistory()
     mLSHE->SetRefreshURIList(nsnull);
 
     // Reattach to the window object.
-    rv = mContentViewer->Open(windowState);
+    nsCOMPtr<nsIContentViewer_MOZILLA_1_8_BRANCH> cv18 =
+        do_QueryInterface(mContentViewer);
+    rv = cv18->OpenWithEntry(windowState, mLSHE);
 
     // Now remove it from the cached presentation.
     mLSHE->SetContentViewer(nsnull);

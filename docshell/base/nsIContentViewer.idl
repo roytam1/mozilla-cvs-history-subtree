@@ -96,3 +96,15 @@ interface nsIContentViewer : nsISupports
    */
   void clearHistoryEntry();
 };
+
+[scriptable, uuid(51341ed4-a3bf-4fd5-ae17-5fd3ec59dcab)]
+interface nsIContentViewer_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * Attach the content viewer to its DOM window and docshell.
+   * @param aState A state object that might be useful in attaching the DOM
+   *               window.
+   * @param aSHEntry The history entry that the content viewer was stored in
+   */
+  void openWithEntry(in nsISupports aState, in nsISHEntry aSHEntry);
+};
