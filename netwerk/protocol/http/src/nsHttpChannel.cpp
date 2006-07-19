@@ -897,7 +897,7 @@ nsHttpChannel::ProcessNormal()
     if (mCacheEntry) {
         rv = InitCacheEntry();
         if (NS_FAILED(rv))
-            CloseCacheEntry();
+            CloseCacheEntry(NS_BINDING_ABORTED);
     }
 
     // Check that the server sent us what we were asking for
