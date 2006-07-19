@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+     <vbox id="homebar">
+
+
+
+  			<toolbarbutton image="chrome://minimo/skin/extensions/icon-google.png" oncommand="BrowserOpenURLasTab('http://www.google.com/ig')">
+			</toolbarbutton >
+      </vbox>
+    
+</overlay>

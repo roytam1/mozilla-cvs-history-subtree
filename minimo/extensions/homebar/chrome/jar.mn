@@ -1,0 +1,12 @@
+
+homebar.jar:
+%   content homebar               %content/homebar/
+	content/homebar/google.xul		(content/homebar/google.xul)
+	content/homebar/map.xul			(content/homebar/map.xul)
+	content/homebar/shopping.xul		(content/homebar/shopping.xul)
+	content/homebar/update.xul		(content/homebar/update.xul)
+	content/homebar/yokel.xul		(content/homebar/yokel.xul)
+	content/homebar/history.xul		(content/homebar/history.xul)
+	content/homebar/mobile.xul		(content/homebar/mobile.xul)
+	content/homebar/technorati.xul	(content/homebar/technorati.xul)
+	content/homebar/wunderground.xul	(content/homebar/wunderground.xul)
