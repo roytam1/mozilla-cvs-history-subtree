@@ -1254,6 +1254,7 @@ sub get_profile_dir {
     # $ProductName must be set to the codename for the Mac, so check
     # $BinaryName and use the correct profile for browser.
     $profile_product_name = 'Firefox' if ($Settings::BinaryName =~ /^firefox/);
+    $profile_product_name = 'Sunbird' if ($Settings::BinaryName =~ /^sunbird/);
 
     my $profile_dir;
 
