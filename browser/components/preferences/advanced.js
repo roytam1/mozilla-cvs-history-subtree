@@ -77,14 +77,14 @@ var gAdvancedPane = {
   {
     document.documentElement.openWindow("mozilla:certmanager",
                                         "chrome://pippki/content/certManager.xul",
-                                        "width=600,height=400", null);
+                                        "", null);
   },
   
   showCRLs: function ()
   {
     document.documentElement.openWindow("Mozilla:CRLManager", 
                                         "chrome://pippki/content/crlManager.xul",
-                                        "width=600,height=400", null);
+                                        "", null);
   },
   
   showOCSP: function ()
@@ -97,7 +97,7 @@ var gAdvancedPane = {
   {
     document.documentElement.openWindow("mozilla:devicemanager",
                                         "chrome://pippki/content/device_manager.xul",
-                                        "width=600,height=400", null);
+                                        "", null);
   },
 
   /**
