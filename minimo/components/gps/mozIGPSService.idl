@@ -44,4 +44,7 @@ interface mozIGPSService : nsISupports
   readonly attribute double latitude;
   readonly attribute double longitude;
   readonly attribute double altitude;
+
+  readonly attribute double error;
+
 };

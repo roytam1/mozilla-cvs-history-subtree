@@ -586,6 +586,40 @@ NS_IMETHODIMP GPSService::GetAltitude(double *aAltitude)
   return NS_OK;
 }
 
+/* readonly attribute double error; */
+NS_IMETHODIMP GPSService::GetError(double *aError)
+{
+
+#ifdef WINCE
+  GPS_POSITION pos;
+  memset(&pos, 0, sizeof(GPS_POSITION));
+  pos.dwVersion = GPS_VERSION_1;
+  pos.dwSize = sizeof(GPS_POSITION);
+
+  int attempts = 10;
+
+  if (attempts &&
+      (! (pos.dwValidFields & GPS_VALID_ALTITUDE_WRT_SEA_LEVEL) || 
+       pos.dwFlags == GPS_DATA_FLAGS_HARDWARE_OFF ||
+       pos.FixQuality == GPS_FIX_QUALITY_UNKNOWN))
+  {
+    mGetPosition(mGPSDevice, &pos, 500000, 0); 
+    attempts--;
+  }
+
+  if (attempts == 0)
+  {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  *aError = pos.flHorizontalDilutionOfPrecision; // maybe not this value.
+#endif
+  
+#ifdef SKYHOOK
+#endif
+
+  return NS_OK;
+}
 
 //------------------------------------------------------------------------------
 //  XPCOM REGISTRATION BELOW
