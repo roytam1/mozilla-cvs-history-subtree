@@ -2199,17 +2199,22 @@ void nsAccessible::DoCommandCallback(nsITimer *aTimer, void *aClosure)
     if (!doc) {
       return;
     }
-    nsIPresShell *presShell = doc->GetShellAt(0);
+    nsCOMPtr<nsIPresShell> presShell = doc->GetShellAt(0);
     nsPIDOMWindow *outerWindow = doc->GetWindow();
     if (presShell && outerWindow) {
       nsAutoPopupStatePusher popupStatePusher(outerWindow, openAllowed);
 
+      nsMouseEvent downEvent(PR_TRUE, NS_MOUSE_LEFT_BUTTON_DOWN, nsnull,
+                              nsMouseEvent::eSynthesized);
+      nsMouseEvent upEvent(PR_TRUE, NS_MOUSE_LEFT_BUTTON_UP, nsnull,
+                              nsMouseEvent::eSynthesized);
       nsMouseEvent clickEvent(PR_TRUE, NS_MOUSE_LEFT_CLICK, nsnull,
                               nsMouseEvent::eSynthesized);
 
       nsEventStatus eventStatus = nsEventStatus_eIgnore;
-      content->HandleDOMEvent(presShell->GetPresContext(), &clickEvent, nsnull,
-                              NS_EVENT_FLAG_INIT, &eventStatus);
+      presShell->HandleDOMEventWithTarget(content, &downEvent, &eventStatus);
+      presShell->HandleDOMEventWithTarget(content, &upEvent, &eventStatus);
+      presShell->HandleDOMEventWithTarget(content, &clickEvent, &eventStatus);
     }
   }
 }
