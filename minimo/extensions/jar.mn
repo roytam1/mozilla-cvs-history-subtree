@@ -1,0 +1,14 @@
+sudoku.jar:
+%   content sudoku               %content/sudoku/
+	content/sudoku/sudoku.html			(sudoku/content/sudoku.html)
+	content/sudoku/sudoku.js			(sudoku/content/sudoku.js)
+	content/sudoku/appdef.xul			(sudoku/content/appdef.xul)
+	content/sudoku/package.pkg			(sudoku/content/package.pkg)
+	content/sudoku/widget.js			(sudoku/content/widget.js)
+	content/sudoku/grey-out.png			(sudoku/content/grey-out.png)
+	content/sudoku/wait.gif				(sudoku/content/wait.gif)
+
+flickr.jar:
+%   content flickr               %content/flickr/
+	content/flickr/app.xhtml			(flickr/content/app.xhtml)
+	content/flickr/flickr.js			(flickr/content/flickr.js)
