@@ -401,7 +401,7 @@
                           key="goHome"/>
                 <menuseparator id="startHistorySeparator"/>
                 <menuseparator hidden="true" id="endHistorySeparator"/>
-                <menu label="&historyUndoMenu.label;" disabled="true">
+                <menu id="historyUndoMenu" label="&historyUndoMenu.label;" disabled="true">
                   <menupopup id="historyUndoPopup"/>
                 </menu>
                 <menuseparator id="endUndoSeparator"/>
