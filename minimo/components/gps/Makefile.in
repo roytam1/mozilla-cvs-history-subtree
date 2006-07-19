@@ -64,7 +64,6 @@ REQUIRES	= xpcom \
 
 CPPSRCS     = gpsModule.cpp  \
               wmgpsapi.cpp   \
-			  skyhookapi.cpp \
 			  $(NULL)
 
 XPIDLSRCS = mozIGPSService.idl
