@@ -4121,8 +4121,11 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     if (mCacheEntry) {
         nsresult closeStatus = status;
         // we don't want to discard the cache entry if we're only reading from
-        // the cache.
-        if (!mOpenedCacheForWriting || request == mCachePump)
+        // the cache.  If the cache entry was newly created, but we haven't
+        // started streaming data to it, then we don't want to keep it around
+        // if the load failed.
+        if ((!mOpenedCacheForWriting && mCacheAccess != nsICache::ACCESS_WRITE) ||
+                request == mCachePump)
             closeStatus = NS_OK;
         // we also don't want to discard the cache entry if the server supports
         // byte range requests, because we could always complete the download
