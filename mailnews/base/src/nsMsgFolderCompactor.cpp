@@ -399,7 +399,6 @@ nsFolderCompactState::FinishCompact()
   // make sure the new database is valid.
   // Close it so we can rename the .msf file.
   m_db->SetSummaryValid(PR_TRUE);
-  m_db->Commit(nsMsgDBCommitType::kLargeCommit);
   m_db->ForceClosed();
   m_db = nsnull;
 
@@ -699,7 +698,6 @@ nsFolderCompactState::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
           if (srcDB)
           {
             srcDB->SetSummaryValid(PR_FALSE);
-            srcDB->Commit(nsMsgDBCommitType::kLargeCommit);
             srcDB->ForceClosed();
           }
         }
@@ -932,7 +930,6 @@ nsOfflineStoreCompactState::FinishCompact()
   m_folder->GetExpungedBytes(&expungedBytes);
   m_folder->UpdateSummaryTotals(PR_TRUE);
   m_db->SetSummaryValid(PR_TRUE);
-  m_db->Commit(nsMsgDBCommitType::kLargeCommit);
 
     // remove the old folder 
   fileSpec.Delete(PR_FALSE);

@@ -152,9 +152,11 @@ NS_IMETHODIMP nsMsgTagService::GetColorForKey(const nsACString &key, nsACString 
   prefName.Append(key);
   prefName.AppendLiteral(".color");
   nsXPIDLCString color;
-  nsresult rv = m_prefBranch->GetCharPref(prefName.get(), getter_Copies(color));
+  (void) m_prefBranch->GetCharPref(prefName.get(), getter_Copies(color));
   _retval = color;
-  return rv;
+  // we're going to blow off errors here and just return the empty string,
+  // so that js code won't throw an exception if no color is set.
+  return NS_OK;
 }
 
 /* void deleteTag (in wstring tag); */
