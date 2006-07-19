@@ -2848,6 +2848,10 @@ nsCanvasRenderingContext2D::GetImageData()
     if (!dataArray)
         return NS_ERROR_OUT_OF_MEMORY;
 
+    nsAutoGCRoot autoGCRoot(&dataArray, &rv);
+    if (NS_FAILED(rv))
+        return rv;
+
     JSObject *result = JS_NewObject(ctx, NULL, NULL, NULL);
     if (!result)
         return NS_ERROR_OUT_OF_MEMORY;
