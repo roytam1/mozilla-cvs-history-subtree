@@ -1472,7 +1472,7 @@ DocumentViewerImpl::Destroy()
     else {
       mSHEntry->SyncPresentationState();
     }
-    nsISHEntry *shEntry = mSHEntry; // save a weak reference, see below
+    nsCOMPtr<nsISHEntry> shEntry = mSHEntry; // we'll need this below
     mSHEntry = nsnull;
 
     // Break the link from the document/presentation to the docshell, so that
