@@ -644,12 +644,10 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
 
     // Now check whether it's ok to ask a window provider for a window.  Don't
     // do it if we're opening a dialog or if our parent is a chrome window or
-    // if we're opening something that has dependent, modal, dialog, or chrome
-    // flags set.
+    // if we're opening something that has modal, dialog, or chrome flags set.
     nsCOMPtr<nsIDOMChromeWindow> chromeWin = do_QueryInterface(aParent);
     if (!aDialog && !chromeWin &&
-        !(chromeFlags & (nsIWebBrowserChrome::CHROME_DEPENDENT     |
-                         nsIWebBrowserChrome::CHROME_MODAL         |
+        !(chromeFlags & (nsIWebBrowserChrome::CHROME_MODAL         |
                          nsIWebBrowserChrome::CHROME_OPENAS_DIALOG | 
                          nsIWebBrowserChrome::CHROME_OPENAS_CHROME))) {
       nsCOMPtr<nsIWindowProvider> provider = do_GetInterface(parentTreeOwner);
@@ -1485,6 +1483,11 @@ PRUint32 nsWindowWatcher::CalculateChromeFlags(const char *aFeatures,
        while still allowing alerts and the like. */
     if (!aChromeURL)
       chromeFlags &= ~(nsIWebBrowserChrome::CHROME_MODAL | nsIWebBrowserChrome::CHROME_OPENAS_CHROME);
+  }
+
+  if (!(chromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_CHROME)) {
+    // Remove the dependent flag if we're not opening as chrome
+    chromeFlags &= ~nsIWebBrowserChrome::CHROME_DEPENDENT;
   }
 
   return chromeFlags;
