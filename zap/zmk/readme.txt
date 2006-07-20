@@ -1223,3 +1223,31 @@ Output stream:
 raw binary frames (type = "raw").
 
 ----------------------------------------------------------------------
+
+42) audio-reformatter
+---------------------
+
+Node for reformatting (but not resampling!) audio streams.
+
+Sinks: 1 (active)
+Sources: 1 (passive)
+
+Node parameters:
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : number of samples in frame *per channel* (default: 160)
+- unsigned long "channels" : number of channels (default: 1, must be <=2)
+- ACString "sample_format" : "float32_32768" (default: "float32_32768")
+
+Input streams:
+audio/pcm frames with 
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "channels" : must be <= channels set as node parameter
+
+Output stream:
+audio/pcm frames with 
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
+- unsigned long "channels" == corresponding node parameter
+- unsigned long "sample_format" == "float32_32768"
+
+----------------------------------------------------------------------

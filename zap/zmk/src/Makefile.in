@@ -28,6 +28,7 @@ CPPSRCS		= \
 		zapAudioIn.cpp \
 		zapAudioMixer.cpp \
 		zapAudioOut.cpp \
+		zapAudioReformatter.cpp \
 		zapAudioStreamUtils.cpp \
 		zapAudioToneFrame.cpp \
 		zapClientSink.cpp \

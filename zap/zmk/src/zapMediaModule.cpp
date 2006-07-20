@@ -78,6 +78,7 @@
 #include "zapPCMPing.h"
 #include "zapUDPPacketizer.h"
 #include "zapDataExtractor.h"
+#include "zapAudioReformatter.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -121,6 +122,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapNullSink)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapPCMPing)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapUDPPacketizer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapDataExtractor)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioReformatter)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -331,15 +333,23 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_PCMPING_CONTRACTID,
     zapPCMPingConstructor
   },
-  { "Mozilla ZMK UDP Packetizer",
+  {
+    "Mozilla ZMK UDP Packetizer",
     ZAP_UDPPACKETIZER_CID,
     ZAP_UDPPACKETIZER_CONTRACTID,
     zapUDPPacketizerConstructor
   },
-  { "Mozilla ZMK Data Extractor",
+  {
+    "Mozilla ZMK Data Extractor",
     ZAP_DATAEXTRACTOR_CID,
     ZAP_DATAEXTRACTOR_CONTRACTID,
     zapDataExtractorConstructor
+  },
+  {
+    "Mozilla ZMK Audio Reformatter",
+    ZAP_AUDIOREFORMATTER_CID,
+    ZAP_AUDIOREFORMATTER_CONTRACTID,
+    zapAudioReformatterConstructor
   }
 };
 
