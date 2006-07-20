@@ -184,9 +184,7 @@ NS_IMETHODIMP nsCaretAccessible::NotifySelectionChanged(nsIDOMDocument *aDoc, ns
 #endif
 
 #ifndef MOZ_ACCESSIBILITY_ATK
-  if (visible) {
-    mRootAccessible->FireToolkitEvent(nsIAccessibleEvent::EVENT_LOCATION_CHANGE, this, nsnull);
-  }
+  mRootAccessible->FireToolkitEvent(nsIAccessibleEvent::EVENT_LOCATION_CHANGE, this, nsnull);
 #else
   nsCOMPtr<nsIAccessible> accessible;
   nsCOMPtr<nsIAccessibilityService> accService(do_GetService("@mozilla.org/accessibilityService;1"));
@@ -241,8 +239,9 @@ NS_IMETHODIMP nsCaretAccessible::NotifySelectionChanged(nsIDOMDocument *aDoc, ns
 /** Return the caret's bounds */
 NS_IMETHODIMP nsCaretAccessible::GetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
 {
-  if (!mVisible)
-    return NS_ERROR_FAILURE;  // When root accessible hasn't yet called SetCaretBounds()
+  if (mCaretRect.IsEmpty()) {
+    return NS_ERROR_FAILURE;
+  }
   *x = mCaretRect.x;
   *y = mCaretRect.y;
   *width = mCaretRect.width;

@@ -438,10 +438,25 @@ void nsRootAccessible::FireAccessibleFocusEvent(nsIAccessible *aAccessible,
 {
   NS_ASSERTION(aAccessible, "Attempted to fire focus event for no accessible");
 
-  // Fire focus only if it changes, but always fire focus events for menu items
-  // Also always fire for XUL tree items, because they always use the same node for
-  // the tree container itself
-  // XXX use optional aForceIt bool param
+  if (mCaretAccessible) {
+    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aFocusEvent));
+    if (nsevent) {
+      // Use the originally focused node where the selection lives.
+      // For example, use the anonymous HTML:input instead of the containing
+      // XUL:textbox. In this case, sometimes it is a later focus event
+      // which points to the actual anonymous child with focus, so to be safe 
+      // we need to reset the selection listener every time.
+      // This happens because when some bindings handle focus, they retarget
+      // focus to the appropriate child inside of themselves, but DOM focus
+      // stays outside on that binding parent.
+      nsCOMPtr<nsIDOMEventTarget> domEventTarget;
+      nsevent->GetOriginalTarget(getter_AddRefs(domEventTarget));
+      nsCOMPtr<nsIDOMNode> realFocusedNode = do_QueryInterface(domEventTarget);
+      mCaretAccessible->AttachNewSelectionListener(realFocusedNode);
+    }
+  }
+
+  // Fire focus only if it changes, but always fire focus events when aForceEvent == PR_TRUE
   if (gLastFocusedNode == aNode && !aForceEvent) {
     return;
   }
@@ -475,18 +490,6 @@ void nsRootAccessible::FireAccessibleFocusEvent(nsIAccessible *aAccessible,
 
   privateAccessible->FireToolkitEvent(nsIAccessibleEvent::EVENT_FOCUS,
                                       aAccessible, nsnull);
-  if (mCaretAccessible) {
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aFocusEvent));
-    if (nsevent) {
-      // Use the originally focused node where the selection lives.
-      // For example, use the anonymous HTML:input instead of the containing
-      // XUL:textbox.
-      nsCOMPtr<nsIDOMEventTarget> domEventTarget;
-      nsevent->GetOriginalTarget(getter_AddRefs(domEventTarget));
-      nsCOMPtr<nsIDOMNode> realFocusedNode = do_QueryInterface(domEventTarget);
-      mCaretAccessible->AttachNewSelectionListener(realFocusedNode);
-    }
-  }
 }
 
 void nsRootAccessible::FireCurrentFocusEvent()
