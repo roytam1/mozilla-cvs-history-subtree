@@ -95,7 +95,7 @@ zapPCMPing::AddedToGraph(zapIMediaGraph *graph,
   mPingData.SetLength(mStreamParameters.GetFrameLength());
   float *d = (float*)mPingData.BeginWriting();
   double sample_step = 1.0/mStreamParameters.sample_rate;
-  double samples_left = mStreamParameters.GetSamplesPerFrame()/2;
+  double samples_left = mStreamParameters.samples/2;
   double amplitude_step = 3000.0/samples_left;
   double sample_time = 0.0;
   double amplitude = 0.0;
@@ -106,7 +106,7 @@ zapPCMPing::AddedToGraph(zapIMediaGraph *graph,
     sample_time += sample_step;
     amplitude += amplitude_step;
   }
-  samples_left = mStreamParameters.GetSamplesPerFrame()/2;
+  samples_left = mStreamParameters.samples/2;
   // ramp down
   while (samples_left--) {
     *d++ = (float)(amplitude*sin(omega*sample_time));

@@ -142,7 +142,7 @@ PaSampleFormat ZapAudioSampleFormatToPaFormat(zapAudioStreamSampleFormat format)
 void zapAudioStreamParameters::InitWithDefaults()
 {
   sample_rate = 8000;
-  frame_duration = 0.02;
+  samples = 160;
   channels = 1;
   sample_format = sf_float32_32768;
 }
@@ -152,10 +152,10 @@ zapAudioStreamParameters::InitWithProperties(nsIPropertyBag2* properties)
 {
   InitWithDefaults();
   if (properties) {
-    properties->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+    properties->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                     &sample_rate);
-    properties->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                    &frame_duration);
+    properties->GetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                                    &samples);
     properties->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
                                     &channels);
     nsCString sampleformat_string;
@@ -179,10 +179,10 @@ zapAudioStreamParameters::CreateStreamInfo()
 
   bag->SetPropertyAsACString(NS_LITERAL_STRING("type"),
                              NS_LITERAL_CSTRING("audio/pcm"));
-  bag->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+  bag->SetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                            sample_rate);
-  bag->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                           frame_duration);
+  bag->SetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                           samples);
   bag->SetPropertyAsUint32(NS_LITERAL_STRING("channels"),
                            channels);
 
@@ -206,8 +206,8 @@ PRBool CheckAudioStream(nsIPropertyBag2* streamInfo,
   nsCString sample_format_str;
   ZapAudioSampleFormatToStr(pars.sample_format, sample_format_str);  
   return CHECK_STREAM_TYPE(streamInfo, NS_LITERAL_CSTRING("audio/pcm")) &&
-    CHECK_STREAM_DOUBLE(streamInfo, "sample_rate", pars.sample_rate) &&
-    CHECK_STREAM_DOUBLE(streamInfo, "frame_duration", pars.frame_duration) &&
-    CHECK_STREAM_UINT32(streamInfo, "channels", pars.channels) &&
-    CHECK_STREAM_CSTRING(streamInfo, "sample_format", sample_format_str);
+      CHECK_STREAM_UINT32(streamInfo, "sample_rate", pars.sample_rate) &&
+      CHECK_STREAM_UINT32(streamInfo, "samples", pars.samples) &&
+      CHECK_STREAM_UINT32(streamInfo, "channels", pars.channels) &&
+      CHECK_STREAM_CSTRING(streamInfo, "sample_format", sample_format_str);
 }

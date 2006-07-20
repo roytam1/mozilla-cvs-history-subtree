@@ -103,7 +103,7 @@ zapRtttlPlayer::AddedToGraph(zapIMediaGraph *graph,
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (mStreamParameters.sample_rate != 8000 ||
-      mStreamParameters.frame_duration != 0.02 ||
+      mStreamParameters.samples != 160 ||
       mStreamParameters.channels != 1 ||
       mStreamParameters.sample_format != sf_float32_32768) {
     NS_ERROR("unsupported sample format! write me!");
@@ -187,8 +187,8 @@ zapRtttlPlayer::ProduceFrame(zapIMediaFrame ** _retval)
   // write frame data:
   frame->mData.SetLength(mStreamParameters.GetFrameLength());
   float* d = (float*)frame->mData.BeginWriting();
-  float sample_step = 1/mStreamParameters.sample_rate;
-  int samples_left = mStreamParameters.GetSamplesPerFrame();
+  float sample_step = 1.0/mStreamParameters.sample_rate;
+  int samples_left = mStreamParameters.samples;
   while (1) {
     int tone_samples_left = (int)((mTones[mTonePointer.current].duration-
                                    mTonePointer.offset)*mStreamParameters.sample_rate);
@@ -216,7 +216,7 @@ zapRtttlPlayer::ProduceFrame(zapIMediaFrame ** _retval)
     }
     else {
       // advance offset within tone:
-      mTonePointer.offset += samples_left/mStreamParameters.sample_rate;
+      mTonePointer.offset += samples_left/(float)mStreamParameters.sample_rate;
       break;
     }
   }

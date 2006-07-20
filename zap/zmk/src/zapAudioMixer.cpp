@@ -139,10 +139,17 @@ zapAudioMixerInput::ConsumeFrame(zapIMediaFrame * frame)
 
 nsresult zapAudioMixerInput::ProduceFrame(zapIMediaFrame** frame)
 {
-  if (!mInput ||
-      NS_FAILED(mInput->ProduceFrame(frame)) ||
-      !ValidateFrame(*frame))
+  *frame = nsnull;
+  
+  if (!mInput || NS_FAILED(mInput->ProduceFrame(frame)))
     return NS_ERROR_FAILURE;
+  
+  if (!ValidateFrame(*frame)) {
+    NS_IF_RELEASE(*frame);
+    *frame = nsnull;
+    return NS_ERROR_FAILURE;
+  }
+  
   return NS_OK;
 }
 
@@ -281,7 +288,7 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
 {
   zapMediaGraphAutoLock lock(mGraph);
   
-  PRUint32 samplesPerFrame = mStreamParameters.GetSamplesPerFrame();
+  PRUint32 samplesPerFrame = mStreamParameters.samples;
   mSampleClock += samplesPerFrame;
   
   PRInt32 activeInputs = mInputs.Count();//XXX
@@ -309,7 +316,7 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
       NS_ASSERTION(indata.Length() == mStreamParameters.GetFrameLength(),
                    "buffer length mismatch");
       float* s = (float*)indata.BeginReading();
-      for (int sp=0; sp < samplesPerFrame; ++sp)
+      for (unsigned int sp=0; sp < samplesPerFrame; ++sp)
         d[sp] += s[sp];
     }
   }
@@ -317,7 +324,7 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
   // scale data
   if (activeInputs > 1) {
     float scalefactor = 1.0f / sqrt((float)activeInputs);
-    for (int sp=0; sp < samplesPerFrame; ++sp) {
+    for (unsigned int sp=0; sp < samplesPerFrame; ++sp) {
       d[sp] *= scalefactor;
       }
   }

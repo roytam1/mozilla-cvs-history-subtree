@@ -85,7 +85,7 @@ zapTToneToPCMConverter::AddedToGraph(zapIMediaGraph *graph,
     return NS_ERROR_FAILURE;
 
   if (mOutStreamParameters.sample_rate != 8000 ||
-      mOutStreamParameters.frame_duration != 0.02 ||
+      mOutStreamParameters.samples != 160 ||
       mOutStreamParameters.channels != 1 ||
       mOutStreamParameters.sample_format != sf_float32_32768) {
     NS_ERROR("Unsupported sample format! Write me!");
@@ -158,7 +158,7 @@ zapTToneToPCMConverter::DisconnectSink(zapIMediaSink *sink,
 NS_IMETHODIMP
 zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
 {
-  PRUint32 samplesPerFrame = mOutStreamParameters.GetSamplesPerFrame();
+  PRUint32 samplesPerFrame = mOutStreamParameters.samples;
   
   // advance sample clock:
   mSampleClock += samplesPerFrame;

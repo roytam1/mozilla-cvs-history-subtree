@@ -70,7 +70,7 @@ public:
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
 
 private:
-  double mSampleRate; // encoder sample rate
+  PRUint32 mSampleRate; // encoder sample rate
   SpeexBits mEncoderBits;
   void* mEncoderState;
   PRUint32 mInputBufferLength; // expected length of input buffers (bytes)

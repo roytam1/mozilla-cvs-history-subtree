@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -53,11 +54,10 @@ public:
         mOutputBuffer(buf)
   {
   }
-
+  
   NS_IMETHODIMP Run()
   {
     if (!mAudioOut) return NS_OK;
-
     mAudioOut->PlayFrame(mOutputBuffer);
 
     return NS_OK;
@@ -149,7 +149,7 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
 
   mClockStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("clock"));
   mClockStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("clock_cycle"),
-                                        mStreamParameters.frame_duration);
+                                        mStreamParameters.GetFrameDuration() );
   
   return mStreamParameters.InitWithProperties(node_pars);
 }
@@ -305,7 +305,7 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
   nsCOMPtr<zapIMediaFrame> frame;
   if (mInput)
     mInput->ProduceFrame(getter_AddRefs(frame));
-
+    
   if (!frame || !ValidateFrame(frame)) {
     // undeflow or incompatible frame
 #ifdef DEBUG_afri_zmk
@@ -316,11 +316,10 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
     // floating point representation where zero is 0 0 0 0.
     if (mStreamParameters.sample_format == sf_float32_32768) {
       // output buffer is int16:
-      memset(outputBuffer, 0, mStreamParameters.GetSamplesPerFrame()*2);
+      memset(outputBuffer, 0, mStreamParameters.samples*mStreamParameters.channels*2);
     }
     else {
-      memset(outputBuffer, 0, mStreamParameters.GetSamplesPerFrame() *
-                              GetZapAudioSampleSize(mStreamParameters.sample_format));
+      memset(outputBuffer, 0, mStreamParameters.GetFrameLength());
     }
   }
   else {
@@ -332,17 +331,15 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
 #endif
     nsCString data;
     frame->GetData(data);
-    NS_ASSERTION(data.Length() == mStreamParameters.GetSamplesPerFrame() *
-                 GetZapAudioSampleSize(mStreamParameters.sample_format),
-                 "buffer length mismatch");
-    PRUint32 l = PR_MIN(data.Length(),
-                        mStreamParameters.GetSamplesPerFrame() *
-                        GetZapAudioSampleSize(mStreamParameters.sample_format));
+    
+    NS_ASSERTION(data.Length() == mStreamParameters.GetFrameLength(), "buffer length mismatch");
+    PRUint32 l = PR_MIN(data.Length(), mStreamParameters.GetFrameLength());
+    
     if (mStreamParameters.sample_format == sf_float32_32768) {
       // convert to int16
       float* s = (float*)data.BeginReading();
       PRInt16* d = (PRInt16*)outputBuffer;
-      for (int i=0; i<l/4; ++i)
+      for (unsigned int i=0; i<l/4; ++i)
         *d++ = (PRInt16)*s++;
     }
     else {
@@ -350,7 +347,7 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
       memcpy(outputBuffer, data.BeginReading(), l);
     }
   }
-
+  
   if (mClockOutput) {
     nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
     frame->mStreamInfo = mClockStreamInfo;
@@ -370,7 +367,40 @@ PRBool zapAudioOut::ValidateFrame(zapIMediaFrame* frame)
   // us:
   if (!CheckAudioStream(streamInfo, mStreamParameters)) {
 #ifdef DEBUG_afri_zmk
-    printf("(aout incomp. frames!)");
+    printf("(aout incomp. frames!)\n");
+    nsCString sample_format_str;
+    ZapAudioSampleFormatToStr( mStreamParameters.sample_format, sample_format_str );  
+
+    printf( "sample_rate: %i, samples: %i, frame duration: %10lf, channels: %i, sample_format: %s\n", 
+            mStreamParameters.sample_rate,
+            mStreamParameters.samples,
+            mStreamParameters.GetFrameDuration(),
+            mStreamParameters.channels,
+            sample_format_str.BeginReading() );
+
+    unsigned int sample_rate;
+    unsigned int samples;
+    unsigned int channels;
+    streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
+                                    &sample_rate);
+    streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                                    &samples);
+    streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
+                                    &channels);
+    nsCString sampleformat_string;
+    streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
+                                      sampleformat_string);
+    zapAudioStreamSampleFormat sampleformat = StrToZapAudioSampleFormat( sampleformat_string );
+    nsCString type_string;
+    streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
+                                      type_string);
+    printf( "sample_rate: %i, samples: %i, frame duration: %10lf, channels: %i, sample_format: %s, type: %s\n", 
+            sample_rate,
+            samples,
+            (double)samples / sample_rate,
+            channels,
+            sampleformat_string.BeginReading(),
+            type_string.BeginReading() );
 #endif
     return PR_FALSE;
   }
@@ -390,7 +420,7 @@ nsresult zapAudioOut::StartStream()
                               ZapAudioSampleFormatToPaFormat(mStreamParameters.sample_format),
                               nsnull,
                               mStreamParameters.sample_rate,
-                              mStreamParameters.GetSamplesPerFrame()/mStreamParameters.channels,
+                              mStreamParameters.samples,
                               mBuffers,
                               paNoFlag,
                               AudioOutCallback, this);

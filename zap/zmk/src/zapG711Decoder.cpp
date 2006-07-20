@@ -113,10 +113,10 @@ zapG711Decoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
   mStreamInfo = do_QueryInterface(bag);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
                                      NS_LITERAL_CSTRING("audio/pcm"));
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
-                                   8000.0);
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                   0.02);
+  mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
+                                   8000);
+  mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                                   160);
   mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("channels"),
                                    1);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("sample_format"),

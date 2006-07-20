@@ -112,20 +112,20 @@ zapSpeexDecoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIP
 {
   // default: nb mode
   const SpeexMode* speexmode = &speex_nb_mode;
-  mSampleRate = 8000.0f;
+  mSampleRate = 8000;
   
   // extract node parameters:
 
   if (node_pars) {
-    if (NS_SUCCEEDED(node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+    if (NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                                     &mSampleRate))) {
-      if (mSampleRate == 8000.0f) {
+      if (mSampleRate == 8000) {
         speexmode = &speex_nb_mode;
       }
-      else if (mSampleRate == 16000.0f) {
+      else if (mSampleRate == 16000) {
         speexmode = &speex_wb_mode;
       }
-      else if (mSampleRate == 32000.0f) {
+      else if (mSampleRate == 32000) {
         speexmode = &speex_uwb_mode;
       }
       else {
@@ -179,10 +179,10 @@ zapSpeexDecoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
   mStreamInfo = do_QueryInterface(bag);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
                                      NS_LITERAL_CSTRING("audio/pcm"));
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+  mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                    mSampleRate);
-  mStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                   0.02);
+  mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                                   160);
   mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("channels"),
                                    1);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("sample_format"),

@@ -13,8 +13,8 @@ Interfaces: zapIMediaFrame
 
 zapIMediaFrame::streamInfo :
 - ACString "type" : = "audio/pcm"
-- double "sample_rate" : sample rate in Hz
-- double "frame_duration" : duration of frame in s
+- unsigned long "sample_rate" : sample rate in Hz
+- unsigned long "samples" : number of samples in frame *per channel*
 - unsigned long "channels" : number of channels
 - ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32" 
 
@@ -38,7 +38,7 @@ zapIMediaFrame::data :
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                             ...                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|       sample 'sample_rate*frame_duration-1' channel n-1       |
+|                      sample 'samples-1' channel n-1           |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 "sample_format" == "int16":
@@ -245,16 +245,16 @@ Node parameters:
 - zapIAudioDevice "device" (default: default audio in)
 - int "buffers" : number of buffer mediating between zmk and device
                   (default: 2, must be >=2)
-- double "sample_rate" : sample rate in Hz (default: 8000)
-- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1)
 - ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
                              (default: "float32_32768")
 
 Output stream:
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
 
@@ -277,22 +277,22 @@ Node parameters:
 - zapIAudioDevice "device" (default: default audio out)
 - int "buffers" : number of buffer mediating between zmk and device
                   (default: 4, must be >=2)
-- double "sample_rate" : sample rate in Hz (default: 8000)
-- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1)
 - ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
                              (default: "float32_32768")
 
 Input stream: 
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
 
 Output stream:
 clock frames with
-- double "clock_cycle" : duration of one clock cycle (equal to frame_duration)
+- double "clock_cycle" : duration of one clock cycle in seconds.
 
 
 ----------------------------------------------------------------------
@@ -312,22 +312,22 @@ Sinks: n (active)
 Sources: 1 (passive)
 
 Node parameters:
-- double "sample_rate" : sample rate in Hz (default: 8000)
-- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1)
 - ACString "sample_format" : "float32_32768" (default: "float32_32768")
 
 Input streams:
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == "float32_32768"
 
 Output stream:
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == "float32_32768"
 
@@ -443,12 +443,12 @@ Filter for encoding audio streams into speex streams.
 Control interfaces: zapISpeexEncoder
 
 Node parameters:
-- double "sample_rate" : 8000|16000|32000 (default: 8000)
+- unsigned long "sample_rate" : 8000|16000|32000 (default: 8000)
 
 Input stream:
 audio/pcm frames with
-- double "sample_rate" == 8000, 16000, or 32000; must match node parameter
-- double "frame_duration" == 0.02
+- unsigned long "sample_rate" == 8000, 16000, or 32000; must match node parameter
+- unsigned long "samples" : number of samples in frame *per channel* == 160
 - unsigned long "channels" == 1
 - unsigned long "sample_format" == "float32_32768"
 
@@ -465,15 +465,15 @@ Filter for decoding speex streams as encoded using speex-encoder
 Control interfaces: zapISpeexDecoder
 
 Node parameters:
--double "sample_rate" : 8000|16000|32000 (default:8000)
+-unsigned long "sample_rate" : 8000|16000|32000 (default:8000)
 
 Input stream:
 audio/speex frames
 
 Output stream:
 audio/pcm frames with
-- double "sample_rate" == 8000, 16000, or 32000; matches node parameter
-- double "frame_duration" == 0.02
+- unsigned long "sample_rate" == 8000, 16000, or 32000; matches node parameter
+- unsigned long "samples" == 160
 - unsigned long "channels" == 1
 - unsigned long "sample_format" == "float32_32768"
 
@@ -520,8 +520,8 @@ Node parameters:
 
 Input stream:
 audio/pcm frames with
-- double "sample_rate" == 8000
-- double "frame_duration" == 0.02
+- unsigned long "sample_rate" == 8000
+- unsigned long "samples" == 160
 - unsigned long "channels" == 1
 - unsigned long "sample_format" == "float32_32768"
 
@@ -544,8 +544,8 @@ audio/pcmu or audio/pcma frames
 
 Output stream:
 audio/pcm frames with
-- double "sample_rate" == 8000
-- double "frame_duration" == 0.02
+- unsigned long "sample_rate" == 8000
+- unsigned long "samples" == 160
 - unsigned long "channels" == 1
 - unsigned long "sample_format" == "float32_32768"
 
@@ -683,8 +683,8 @@ Node parameters:
 - boolean "loop" : true: the sample should be looped indefinitely (default: true)
 - double "amplitude" : 0.0 <= amplitude <= 1.0 (default: 0.5)
 
-- double "sample_rate" : sample rate in Hz (default: 8000)
-- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : == 160
 - unsigned long "channels" : number of channels (default: 1)
 - ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
                              (default: "float32_32768")
@@ -708,8 +708,8 @@ Node parameters:
 double "ztlp" : zero dBm0 tranmission level point as a fraction of the 
                 maximum output stream amplitude (Default: 1.0==maximum amplitude
                 of output stream)
-double "sample_rate" : sample rate in Hz (default: 8000)
-double "frame_duration" : duration of one frame in s (default: 0.02)
+unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 unsigned long "channels" : number of channels (default: 1)
 ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
                                (default: "float32_32768")
@@ -743,8 +743,8 @@ Node parameters:
 - double "pause_duration" : duration of pauses in s (0.07).
                             x <= (2^16-1)/sample_rate
 - double "volume" : volume in dBm0 (-8)
-- double "sample_rate" : XXX 8000Hz hardcoded atm.
-- double "max_frame_duration" : minimum packetization interval in 
+- unsigned long "sample_rate" : XXX 8000Hz hardcoded atm.
+- double "max_samples" : maximum number of samples in one frame 
                                 seconds (0.02).
                                 1/sample_rate <= x <= (2^16-1)/sample_rate
 
@@ -789,7 +789,7 @@ Sources: 1 (passive)
 Control interfaces: zapITToneGenerator
 
 Node parameters:
-- double "sample_rate" : XXX 8000Hz hardcoded atm.
+- unsigned long "sample_rate" : XXX 8000Hz hardcoded atm.
 - double "max_frame_duration" : minimum packetization interval in seconds 
                                 (default: 0.02s).
                                 1/sample_rate <= x <= (2^16-1)/sample_rate
@@ -982,8 +982,8 @@ Control interfaces: zapISpeexAudioProcessor
 
 Input streams:
 audio/pcm frames with
-- double "sample_rate" == 8000
-- double "frame_duration" == 0.02
+- unsigned long "sample_rate" == 8000
+- unsigned long "samples" == 160
 - unsigned long "channels" == 1
 - unsigned long "sample_format" == "float32_32768"
 
@@ -1024,23 +1024,23 @@ Node parameters:
 - zapIAudioDevice "output_device" (default: default audio out)
 - int "buffers" : number of buffers mediating between zmk and audio hardware
                   (default: 4, must be >=2)
-- double "sample_rate" : sample rate in Hz (default: 8000)
-- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1)
 - ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
                              (default: "float32_32768")
 
 Input stream:
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
 
 Output stream:
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
 
@@ -1167,8 +1167,8 @@ Sinks: 1 (passive)
 Sources: 1 (active)
 
 Node parameters:
-- double "sample_rate" : sample rate in Hz (default: 8000)
-- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "sample_rate" : sample rate in Hz (default: 8000)
+- unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1)
 - ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
                              (default: "float32_32768")
@@ -1180,8 +1180,8 @@ any
 
 Output stream:
 audio/pcm frames with
-- double "sample_rate" == corresponding node parameter
-- double "frame_duration" == corresponding node parameter
+- unsigned long "sample_rate" == corresponding node parameter
+- unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
 

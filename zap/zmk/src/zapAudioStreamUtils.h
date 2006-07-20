@@ -66,26 +66,27 @@ PaSampleFormat ZapAudioSampleFormatToPaFormat(zapAudioStreamSampleFormat format)
 //
 
 struct zapAudioStreamParameters {
-  double sample_rate; // sample rate in Hz
-  double frame_duration; // frame duration in s
-  PRUint32 channels; // number of channels
+  PRUint32 sample_rate;    // sample rate in Hz
+  PRUint32 samples;        // number of samples/frame *per channel*
+  PRUint32 channels;       // number of channels
   zapAudioStreamSampleFormat sample_format; 
 
   // initialize with default parameters (sample_rate: 8000,
-  // frame_duration: 0.02, channels: 1, sample_format:
+  // samples: 160, channels: 1, sample_format:
   // sf_float32_32768)
   void InitWithDefaults();
 
   nsresult InitWithProperties(nsIPropertyBag2* properties);
 
-  PRUint32 GetSamplesPerFrame() {
-    return (PRUint32)(sample_rate*frame_duration*channels);
+  double GetFrameDuration() const {
+    NS_ASSERTION(sample_rate != 0, "invalid sample rate");
+    return (double)samples / sample_rate;
   }
 
-  PRUint32 GetFrameLength() {
-    return GetSamplesPerFrame()*GetZapAudioSampleSize(sample_format);
+  PRUint32 GetFrameLength() const {
+    return samples * channels * GetZapAudioSampleSize(sample_format);
   }
-  
+
   already_AddRefed<nsIWritablePropertyBag2> CreateStreamInfo();
 };
 

@@ -31,7 +31,7 @@ var rtp2speex = g.addNode("rtp2speex-converter", null);
    +----+  A   +----+  B   +----+  C   +----+  D   +----+
 */
 
-var A = g.connect(ain, PB({$frame_duration:0.02, $sample_rate:8000, $sample_format:"float32_32768"}), enc, null);
+var A = g.connect(ain, PB({$samples:160, $sample_rate:8000, $sample_format:"float32_32768"}), enc, null);
 var B = g.connect(enc, null, speex2rtp, null);
 var C = g.connect(speex2rtp, null, buf, null);
 var D = g.connect(buf, null, rtp2speex, null);

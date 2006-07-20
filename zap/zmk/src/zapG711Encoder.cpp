@@ -121,10 +121,10 @@ zapG711Encoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
     return NS_ERROR_FAILURE;
   }
 
-  double sampleRate;
-  if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+  PRUint32 sampleRate;
+  if (NS_FAILED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                                 &sampleRate)) ||
-      sampleRate != 8000.0) {
+      sampleRate != 8000) {
     NS_ERROR("unsupported sample rate");
 #ifdef DEBUG_afri_zmk
     printf("%f != 8000\n", sampleRate);
@@ -132,10 +132,10 @@ zapG711Encoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
     return NS_ERROR_FAILURE;
   }
 
-  double frameDuration;
-  if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                                &frameDuration)) ||
-      frameDuration != 0.02) {
+  PRUint32 samples;
+  if (NS_FAILED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                                                &samples)) ||
+      samples != 160 ) {
     NS_ERROR("unsupported frame duration");
     return NS_ERROR_FAILURE;
   }

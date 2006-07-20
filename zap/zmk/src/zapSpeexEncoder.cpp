@@ -227,19 +227,19 @@ zapSpeexEncoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIP
 {
   // default: nb mode
   const SpeexMode* speexmode = &speex_nb_mode;
-  mSampleRate = 8000.0f;
+  mSampleRate = 8000;
   
   // extract node parameters:
   if (node_pars) {
-    if (NS_SUCCEEDED(node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+    if (NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                                     &mSampleRate))) {
-      if (mSampleRate == 8000.0f) {
+      if (mSampleRate == 8000) {
         speexmode = &speex_nb_mode;
       }
-      else if (mSampleRate == 16000.0f) {
+      else if (mSampleRate == 16000) {
         speexmode = &speex_wb_mode;
       }
-      else if (mSampleRate == 32000.0f) {
+      else if (mSampleRate == 32000) {
         speexmode = &speex_uwb_mode;
       }
       else {
@@ -279,21 +279,21 @@ zapSpeexEncoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
     return NS_ERROR_FAILURE;
   }
   
-  double sampleRate;
-  if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("sample_rate"),
+  PRUint32 sampleRate;
+  if (NS_FAILED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                                 &sampleRate)) ||
       sampleRate != mSampleRate) {
     NS_ERROR("unsupported sample rate");
 #ifdef DEBUG_afri_zmk
-    printf("%f != %f\n", sampleRate, mSampleRate);
+    printf("%i != %i\n", sampleRate, mSampleRate);
 #endif
     return NS_ERROR_FAILURE;
   }
 
-  double frameDuration;
-  if (NS_FAILED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING("frame_duration"),
-                                                &frameDuration)) ||
-      frameDuration != 0.02) {
+  PRUint32 samples;
+  if (NS_FAILED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("samples"),
+                                                &samples)) ||
+      samples != 160) {
     NS_ERROR("unsupported frame duration");
     return NS_ERROR_FAILURE;
   }
@@ -317,9 +317,9 @@ zapSpeexEncoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
   // Stream parameters are ok.
 
   // determine expected buffer size:
-  int frameSize;
-  speex_encoder_ctl(mEncoderState, SPEEX_GET_FRAME_SIZE, &frameSize);
-  mInputBufferLength = 4 * frameSize; // float32 samples
+  PRUint32 encoderFrameSize;
+  speex_encoder_ctl(mEncoderState, SPEEX_GET_FRAME_SIZE, &encoderFrameSize);
+  mInputBufferLength = 4 * encoderFrameSize; // float32 samples
 
   // Create a new streaminfo:
   nsCOMPtr<nsIWritablePropertyBag> bag;

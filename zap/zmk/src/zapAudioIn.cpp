@@ -282,8 +282,10 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
   
   // Asynchronously post the frame.
   nsCString data;
-  PRUint32 bufferLength = audioin->mStreamParameters.GetSamplesPerFrame() *
-    GetPortAudioSampleSize(audioin->mStreamParameters.sample_format);
+  PRUint32 bufferLength = 
+      audioin->mStreamParameters.samples *
+      audioin->mStreamParameters.channels *
+      GetPortAudioSampleSize(audioin->mStreamParameters.sample_format);
   data.SetLength(bufferLength);
   memcpy(data.BeginWriting(), inputBuffer, bufferLength);
 
@@ -316,7 +318,7 @@ nsresult zapAudioIn::StartStream()
                               nsnull,
                               paNoDevice, 0, 0, nsnull,
                               mStreamParameters.sample_rate,
-                              mStreamParameters.GetSamplesPerFrame()/mStreamParameters.channels,
+                              mStreamParameters.samples,
                               mBuffers,
                               paNoFlag,
                               AudioInCallback, this);
@@ -353,7 +355,7 @@ void zapAudioIn::CreateFrame(const nsACString& data, double timestamp)
 
   if (mStreamParameters.sample_format == sf_float32_32768) {
     // convert from int16 to float:
-    PRUint32 samplesPerFrame = mStreamParameters.GetSamplesPerFrame();
+    PRUint32 samplesPerFrame = mStreamParameters.samples * mStreamParameters.channels;
     frame->mData.SetLength( samplesPerFrame * GetZapAudioSampleSize(mStreamParameters.sample_format));
     float* d = (float*)frame->mData.BeginWriting();
     nsACString::const_iterator p;
