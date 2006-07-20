@@ -1732,8 +1732,9 @@ nsHTMLDocument::MatchLinks(nsIContent *aContent, PRInt32 aNamespaceID,
                            nsIAtom* aAtom, const nsAString& aData)
 {
   nsINodeInfo *ni = aContent->GetNodeInfo();
+  nsIDocument *doc = aContent->GetDocument();
 
-  if (ni) {
+  if (ni && doc) {
     NS_ASSERTION(aContent->IsInDoc(),
                  "This method should never be called on content nodes that "
                  "are not in a document!");
