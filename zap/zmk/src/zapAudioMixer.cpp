@@ -288,8 +288,8 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
 {
   zapMediaGraphAutoLock lock(mGraph);
   
-  PRUint32 samplesPerFrame = mStreamParameters.samples;
-  mSampleClock += samplesPerFrame;
+  PRUint32 samplesPerFrame = mStreamParameters.samples * mStreamParameters.channels;
+  mSampleClock += mStreamParameters.samples;
   
   PRInt32 activeInputs = mInputs.Count();//XXX
   if (!activeInputs) {
