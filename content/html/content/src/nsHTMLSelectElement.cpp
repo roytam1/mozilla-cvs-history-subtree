@@ -1122,7 +1122,7 @@ nsHTMLSelectElement::SetLength(PRUint32 aLength)
     }
 
     nsCOMPtr<nsITextContent> text;
-    rv = NS_NewTextNode(getter_AddRefs(text));
+    rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfo->NodeInfoManager());
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = element->AppendChildTo(text, PR_FALSE);

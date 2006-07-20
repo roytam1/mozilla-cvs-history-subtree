@@ -78,6 +78,7 @@ class nsIConsoleService;
 class nsIStringBundleService;
 class nsIStringBundle;
 class nsIJSRuntimeService;
+class nsIScriptGlobalObject;
 struct JSRuntime;
 #ifdef MOZ_XTF
 class nsIXTFService;
@@ -98,6 +99,13 @@ public:
                                          nsIContent *aNewParent,
                                          nsIDocument *aNewDocument,
                                          nsIDocument *aOldDocument);
+
+  /**
+   * When a document's scope changes (e.g., from document.open(), call this
+   * function to move all content wrappers from the old scope to the new one.
+   */
+  static nsresult ReparentContentWrappersInScope(nsIScriptGlobalObject *aOldScope,
+                                                 nsIScriptGlobalObject *aNewScope);
 
   static PRBool   IsCallerChrome();
 
@@ -606,7 +614,7 @@ private:
   static nsresult doReparentContentWrapper(nsIContent *aChild,
                                            JSContext *cx,
                                            JSObject *aOldGlobal,
-                                           JSObject *parent_obj);
+                                           JSObject *aNewGlobal);
 
   static nsresult EnsureStringBundle(PropertiesFile aFile);
 

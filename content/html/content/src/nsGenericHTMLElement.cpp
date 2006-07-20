@@ -3010,7 +3010,7 @@ nsGenericHTMLElement::ReplaceContentsWithText(const nsAString& aText,
     rv = textChild->SetData(aText);
   } else {
     nsCOMPtr<nsITextContent> text;
-    rv = NS_NewTextNode(getter_AddRefs(text));
+    rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfo->NodeInfoManager());
     NS_ENSURE_SUCCESS(rv, rv);
 
     text->SetText(aText, PR_TRUE);

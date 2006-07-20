@@ -432,7 +432,7 @@ nsHTMLOptionElement::SetText(const nsAString& aText)
 
   if (!usedExistingTextNode) {
     nsCOMPtr<nsITextContent> text;
-    rv = NS_NewTextNode(getter_AddRefs(text));
+    rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfo->NodeInfoManager());
     NS_ENSURE_SUCCESS(rv, rv);
 
     text->SetText(aText, PR_TRUE);
@@ -540,8 +540,8 @@ nsHTMLOptionElement::Initialize(JSContext* aContext,
     if (jsstr) {
       // Create a new text node and append it to the option
       nsCOMPtr<nsITextContent> textContent;
-
-      result = NS_NewTextNode(getter_AddRefs(textContent));
+      result = NS_NewTextNode(getter_AddRefs(textContent),
+                              mNodeInfo->NodeInfoManager());
       if (NS_FAILED(result)) {
         return result;
       }

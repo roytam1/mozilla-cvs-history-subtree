@@ -2104,8 +2104,10 @@ nsComboboxControlFrame::CreateAnonymousContent(nsPresContext* aPresContext,
 
   // Add a child text content node for the label
 
+  nsNodeInfoManager *nimgr = mContent->GetNodeInfo()->NodeInfoManager();
+
   nsCOMPtr<nsITextContent> labelContent;
-  NS_NewTextNode(getter_AddRefs(labelContent));
+  NS_NewTextNode(getter_AddRefs(labelContent), nimgr);
 
   if (labelContent) {
     // set the value of the text node
@@ -2116,12 +2118,9 @@ nsComboboxControlFrame::CreateAnonymousContent(nsPresContext* aPresContext,
     }
     ActuallyDisplayText(PR_FALSE);
 
-    nsCOMPtr<nsIDocument> doc = mContent->GetDocument();
-
     nsCOMPtr<nsINodeInfo> nodeInfo;
-    doc->NodeInfoManager()->GetNodeInfo(nsHTMLAtoms::input, nsnull,
-                                        kNameSpaceID_None,
-                                        getter_AddRefs(nodeInfo));
+    nimgr->GetNodeInfo(nsHTMLAtoms::input, nsnull, kNameSpaceID_None,
+                       getter_AddRefs(nodeInfo));
 
     aChildList.AppendElement(mDisplayContent);
 
