@@ -1,14 +1,21 @@
 sudoku.jar:
 %   content sudoku               %content/sudoku/
-	content/sudoku/sudoku.html			(sudoku/content/sudoku.html)
+%   overlay chrome://minimo/content/minimo.xul chrome://sudoku/content/homebaseOverlay.xul
+    content/sudoku/sudoku.html			(sudoku/content/sudoku.html)
 	content/sudoku/sudoku.js			(sudoku/content/sudoku.js)
-	content/sudoku/appdef.xul			(sudoku/content/appdef.xul)
+	content/sudoku/appdef.xml			(sudoku/content/appdef.xml)
 	content/sudoku/package.pkg			(sudoku/content/package.pkg)
 	content/sudoku/widget.js			(sudoku/content/widget.js)
 	content/sudoku/grey-out.png			(sudoku/content/grey-out.png)
 	content/sudoku/wait.gif				(sudoku/content/wait.gif)
+	content/sudoku/homebaseOverlay.xul  (sudoku/content/homebaseOverlay.xul)
+	content/sudoku/flickr.png           (sudoku/content/flickr.png)
 
 flickr.jar:
 %   content flickr               %content/flickr/
+%   overlay chrome://minimo/content/minimo.xul chrome://flicker/content/homebaseOverlay.xul
 	content/flickr/app.xhtml			(flickr/content/app.xhtml)
 	content/flickr/flickr.js			(flickr/content/flickr.js)
+	content/flickr/homebaseOverlay.xul  (flickr/content/homebaseOverlay.xul)
+	content/flickr/flickr.png           (flickr/content/flickr.png)
+
