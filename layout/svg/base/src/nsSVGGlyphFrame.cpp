@@ -868,10 +868,10 @@ nsSVGGlyphFrame::GetCharacterData(nsAString & aCharacterData)
   return NS_OK;
 }
 
-static void
-FindPoint(nsSVGPathData *data,
-          float aX, float aY, float aAdvance,
-          nsSVGCharacterPosition *aCP)
+void
+NS_SVGFindPointOnPath(nsSVGPathData *data,
+                      float aX, float aY, float aAdvance,
+                      nsSVGCharacterPosition *aCP)
 {
   float x, y, length = 0;
   float midpoint = aX + aAdvance/2;
@@ -881,7 +881,7 @@ FindPoint(nsSVGPathData *data,
       float dy = data->y[i] - y;
       float sublength = sqrt(dx*dx + dy*dy);
       
-      if (length + sublength > midpoint) {
+      if (sublength != 0 && length + sublength >= midpoint) {
         float ratio = (aX - length)/sublength;
         aCP->x = x * (1.0f - ratio) + data->x[i] * ratio;
         aCP->y = y * (1.0f - ratio) + data->y[i] * ratio;
@@ -952,7 +952,7 @@ nsSVGGlyphFrame::GetCharacterPosition(nsSVGCharacterPosition **aCharacterPositio
       // add y (normal)
       // add rotation
       // move point back along tangent
-      FindPoint(data, x, mY, advance, &(cp[i]));
+      NS_SVGFindPointOnPath(data, x, mY, advance, &(cp[i]));
     }
     x += advance;
   }

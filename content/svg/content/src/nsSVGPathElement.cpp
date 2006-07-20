@@ -47,6 +47,8 @@
 #include "nsISVGPathFlatten.h"
 #include "nsIDocument.h"
 #include "nsIFrame.h"
+#include "nsISVGGlyphMetricsSource.h"
+#include "nsSVGPoint.h"
 
 typedef nsSVGGraphicElement nsSVGPathElementBase;
 
@@ -168,11 +170,35 @@ nsSVGPathElement::GetTotalLength(float *_retval)
   return NS_OK;
 }
 
+void
+NS_SVGFindPointOnPath(nsSVGPathData *data,
+                      float aX, float aY, float aAdvance,
+                      nsSVGCharacterPosition *aCP);
+
 /* nsIDOMSVGPoint getPointAtLength (in float distance); */
 NS_IMETHODIMP
 nsSVGPathElement::GetPointAtLength(float distance, nsIDOMSVGPoint **_retval)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *_retval = nsnull;
+  nsCOMPtr<nsISVGPathFlatten> flattener = GetPathFlatten();
+  if (!flattener)
+    return NS_ERROR_FAILURE;
+
+  nsSVGPathData *data;
+  flattener->GetFlattenedPath(&data);
+  if (!data)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  float length = data->Length();
+  distance = PR_MAX(0,      distance);
+  distance = PR_MIN(length, distance);
+
+  nsSVGCharacterPosition cp;
+  NS_SVGFindPointOnPath(data, distance, 0, 0, &cp);
+
+  delete data;
+
+  return NS_NewSVGPoint(_retval, cp.x, cp.y);
 }
 
 /* unsigned long getPathSegAtLength (in float distance); */
