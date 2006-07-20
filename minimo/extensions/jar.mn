@@ -1,3 +1,4 @@
+
 sudoku.jar:
 %   content sudoku               %content/sudoku/
 %   overlay chrome://minimo/content/minimo.xul chrome://sudoku/content/homebaseOverlay.xul
@@ -19,3 +20,48 @@ flickr.jar:
 	content/flickr/homebaseOverlay.xul  (flickr/content/homebaseOverlay.xul)
 	content/flickr/flickr.png           (flickr/content/flickr.png)
 
+google.jar: 
+%   content google               %content/google/
+%   overlay chrome://minimo/content/minimo.xul chrome://google/content/homebaseOverlay.xul
+    content/google/homebaseOverlay.xul  (google/content/homebaseOverlay.xul)
+
+history.jar: 
+%   content history               %content/history/
+%   overlay chrome://minimo/content/minimo.xul chrome://history/content/homebaseOverlay.xul
+    content/history/homebaseOverlay.xul  (history/content/homebaseOverlay.xul)
+
+map.jar: 
+%   content map                   %content/map/
+%   overlay chrome://minimo/content/minimo.xul chrome://map/content/homebaseOverlay.xul
+    content/map/homebaseOverlay.xul  (map/content/homebaseOverlay.xul)
+
+mobile.jar: 
+%   content mobile                %content/mobile/
+%   overlay chrome://minimo/content/minimo.xul chrome://mobile/content/homebaseOverlay.xul
+    content/mobile/homebaseOverlay.xul  (mobile/content/homebaseOverlay.xul)
+
+shopping.jar: 
+%   content shopping              %content/shopping/
+%   overlay chrome://minimo/content/minimo.xul chrome://shopping/content/homebaseOverlay.xul
+    content/shopping/homebaseOverlay.xul  (shopping/content/homebaseOverlay.xul)
+
+technorati.jar: 
+%   content technorati            %content/technorati/
+%   overlay chrome://minimo/content/minimo.xul chrome://technorati/content/homebaseOverlay.xul
+    content/technorati/homebaseOverlay.xul  (technorati/content/homebaseOverlay.xul)
+
+update.jar: 
+%   content update                %content/update/
+%   overlay chrome://minimo/content/minimo.xul chrome://update/content/homebaseOverlay.xul
+    content/update/homebaseOverlay.xul  (update/content/homebaseOverlay.xul)
+
+wunderground.jar: 
+%   content wunderground          %content/wunderground/
+%   overlay chrome://minimo/content/minimo.xul chrome://wunderground/content/homebaseOverlay.xul
+    content/wunderground/homebaseOverlay.xul  (wunderground/content/homebaseOverlay.xul)
+
+yokel.jar: 
+%   content yokel               %content/yokel/
+%   overlay chrome://minimo/content/minimo.xul chrome://yokel/content/homebaseOverlay.xul
+    content/yokel/homebaseOverlay.xul  (yokel/content/homebaseOverlay.xul)
+    
