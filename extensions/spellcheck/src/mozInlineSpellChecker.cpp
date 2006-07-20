@@ -55,7 +55,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentRange.h"
 #include "nsIDOMNode.h"
-#include "nsIDOMNSUIEvent.h"
+#include "nsIDOMNSUIEvent.h"n
 #include "nsIDOMElement.h"
 #include "nsIDOMText.h"
 #include "nsIDOMNodeList.h"
@@ -1097,8 +1097,8 @@ nsresult mozInlineSpellChecker::SaveCurrentSelectionPosition()
 // This is a copy of nsContentUtils::ContentIsDescendantOf. Another crime
 // for XPCOM's rap sheet
 static PRBool
-ContentIsDescendantOf(nsINode* aPossibleDescendant,
-                      nsINode* aPossibleAncestor)
+ContentIsDescendantOf(nsIContent* aPossibleDescendant,
+                      nsIContent* aPossibleAncestor)
 {
   NS_PRECONDITION(aPossibleDescendant, "The possible descendant is null!");
   NS_PRECONDITION(aPossibleAncestor, "The possible ancestor is null!");
@@ -1106,7 +1106,7 @@ ContentIsDescendantOf(nsINode* aPossibleDescendant,
   do {
     if (aPossibleDescendant == aPossibleAncestor)
       return PR_TRUE;
-    aPossibleDescendant = aPossibleDescendant->GetNodeParent();
+    aPossibleDescendant = aPossibleDescendant->GetParent();
   } while (aPossibleDescendant);
 
   return PR_FALSE;
@@ -1152,8 +1152,8 @@ mozInlineSpellChecker::HandleNavigationEvent(nsIDOMEvent* aEvent,
     return NS_OK; // editor doesn't like us
 
   // mCurrentSelectionAnchorNode might not be in the DOM anymore! check
-  nsCOMPtr<nsINode> root = do_QueryInterface(wordUtil.GetRootNode());
-  nsCOMPtr<nsINode> currentAnchor = do_QueryInterface(currentAnchorNode);
+  nsCOMPtr<nsIContent> root = do_QueryInterface(wordUtil.GetRootNode());
+  nsCOMPtr<nsIContent> currentAnchor = do_QueryInterface(currentAnchorNode);
   if (root && currentAnchor && !ContentIsDescendantOf(currentAnchor, root))
     return NS_OK;
 
