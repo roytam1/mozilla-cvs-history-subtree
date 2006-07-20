@@ -308,8 +308,20 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
     
   if (!frame || !ValidateFrame(frame)) {
     // undeflow or incompatible frame
-#ifdef DEBUG_afri_zmk
-//    printf("U");
+#ifdef DEBUG
+    if (mInput) {
+      if (frame) {
+        printf("Incompatible frame:\n");
+        nsCOMPtr<nsIPropertyBag2> streamInfo;
+        frame->GetStreamInfo(getter_AddRefs(streamInfo));
+        zapAudioStreamParameters pars;
+        pars.InitWithProperties(streamInfo);
+        printf("samples=%d, rate=%d, channels=%d, format=%d\n", pars.samples, pars.sample_rate, pars.channels, pars.sample_format);
+        printf("my pars: length=%d, rate=%d, channels=%d, format=%d\n", mStreamParameters.samples, mStreamParameters.sample_rate, mStreamParameters.channels, mStreamParameters.sample_format);
+      }
+//       else
+//         printf("U");
+    }
 #endif
     // Generate a silence buffer
     // XXX in the case of Float32 samples, this requires a sane
