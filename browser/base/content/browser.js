@@ -6698,6 +6698,7 @@ var AugmentTabs = {
 
     // create new menu item
     var undoCloseTabItem = document.createElement("menuitem");
+    undoCloseTabItem.setAttribute("id", "tabContextUndoCloseTab");
     undoCloseTabItem.setAttribute("label", menuLabel);
     undoCloseTabItem.setAttribute("accesskey", menuAccessKey);
     undoCloseTabItem.addEventListener("command", function() { undoCloseTab(0); }, false);
