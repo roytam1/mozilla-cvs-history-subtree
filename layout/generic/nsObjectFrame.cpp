@@ -2121,8 +2121,8 @@ nsresult nsObjectFrame::GetPluginInstance(nsIPluginInstance*& aPluginInstance)
 {
   aPluginInstance = nsnull;
 
-  if (mInstanceOwner == nsnull)
-    return NS_ERROR_NULL_POINTER;
+  if (!mInstanceOwner)
+    return NS_OK;
   
   return mInstanceOwner->GetInstance(aPluginInstance);
 }
