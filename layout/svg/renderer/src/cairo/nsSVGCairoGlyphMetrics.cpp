@@ -286,7 +286,9 @@ nsSVGCairoGlyphMetrics::SelectFont(cairo_t *ctx)
 
     nsCOMPtr<nsPresContext> presContext;
     mSource->GetPresContext(getter_AddRefs(presContext));
-    float pxPerTwips;
-    pxPerTwips = presContext->TwipsToPixels();
-    cairo_set_font_size(ctx, font.size*pxPerTwips);
+    float pxPerTwips = presContext->TwipsToPixels();
+    float pixelScale;
+    presContext->DeviceContext()->GetCanonicalPixelScale(pixelScale);
+
+    cairo_set_font_size(ctx, font.size * pxPerTwips / pixelScale);
 }
