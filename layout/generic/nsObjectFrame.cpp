@@ -1563,7 +1563,7 @@ nsObjectFrame::CreateDefaultFrames(nsPresContext *aPresContext,
                         getter_AddRefs(img));
 
   nsCOMPtr<nsITextContent> text;
-  rv |= NS_NewTextNode(getter_AddRefs(text), doc->NodeInfoManager());
+  rv |= NS_NewTextNode(getter_AddRefs(text));
 
   if (NS_FAILED(rv))
     return;

@@ -797,7 +797,7 @@ nsXMLContentSink::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
   if (0 != mTextLength) {
     if (aCreateTextNode) {
       nsCOMPtr<nsITextContent> textContent;
-      rv = NS_NewTextNode(getter_AddRefs(textContent), mNodeInfoManager);
+      rv = NS_NewTextNode(getter_AddRefs(textContent));
       NS_ENSURE_SUCCESS(rv, rv);
 
       // Set the text in the text node
@@ -1097,16 +1097,16 @@ nsXMLContentSink::HandleComment(const PRUnichar *aName)
   FlushText();
 
   nsCOMPtr<nsIContent> comment;
-  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment), mNodeInfoManager);
+  nsresult result = NS_NewCommentNode(getter_AddRefs(comment));
   if (comment) {
-    nsCOMPtr<nsIDOMComment> domComment = do_QueryInterface(comment, &rv);
+    nsCOMPtr<nsIDOMComment> domComment = do_QueryInterface(comment, &result);
     if (domComment) {
       domComment->AppendData(nsDependentString(aName));
-      rv = AddContentAsLeaf(comment);
+      result = AddContentAsLeaf(comment);
     }
   }
 
-  return rv;
+  return result;
 }
 
 NS_IMETHODIMP 
@@ -1126,16 +1126,16 @@ nsXMLContentSink::HandleCDataSection(const PRUnichar *aData,
   }
   
   nsCOMPtr<nsIContent> cdata;
-  nsresult rv = NS_NewXMLCDATASection(getter_AddRefs(cdata), mNodeInfoManager);
+  nsresult result = NS_NewXMLCDATASection(getter_AddRefs(cdata));
   if (cdata) {
     nsCOMPtr<nsIDOMCDATASection> domCDATA = do_QueryInterface(cdata);
     if (domCDATA) {
       domCDATA->SetData(nsDependentString(aData, aLength));
-      rv = AddContentAsLeaf(cdata);
+      result = AddContentAsLeaf(cdata);
     }
   }
 
-  return rv;
+  return result;
 }
 
 NS_IMETHODIMP
@@ -1158,9 +1158,8 @@ nsXMLContentSink::HandleDoctypeDecl(const nsAString & aSubset,
 
   // Create a new doctype node
   nsCOMPtr<nsIDOMDocumentType> docType;
-  rv = NS_NewDOMDocumentType(getter_AddRefs(docType), mNodeInfoManager, nsnull,
-                             name, nsnull, nsnull, aPublicId, aSystemId,
-                             aSubset);
+  rv = NS_NewDOMDocumentType(getter_AddRefs(docType), name, nsnull, nsnull,
+                             aPublicId, aSystemId, aSubset);
   if (NS_FAILED(rv) || !docType) {
     return rv;
   }
@@ -1213,8 +1212,7 @@ nsXMLContentSink::HandleProcessingInstruction(const PRUnichar *aTarget,
 
   nsCOMPtr<nsIContent> node;
 
-  nsresult rv = NS_NewXMLProcessingInstruction(getter_AddRefs(node),
-                                               mNodeInfoManager, target,
+  nsresult rv = NS_NewXMLProcessingInstruction(getter_AddRefs(node), target,
                                                data);
   NS_ENSURE_SUCCESS(rv, rv);
 

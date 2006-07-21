@@ -6570,13 +6570,9 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
     // set the parent to be the document's global object, if there
     // is one
 
-    // Get the scope object from the document.
-    nsCOMPtr<nsIDocument_MOZILLA_1_8_0_BRANCH> doc18(do_QueryInterface(doc));
-    if (!doc18) {
-      NS_ERROR("Unexpected document");
-      return NS_ERROR_FAILURE;
-    }
-    native_parent = doc18->GetScopeObject();
+    // Get the script global object from the document.
+
+    native_parent = doc->GetScriptGlobalObject();
 
     if (!native_parent) {
       // No global object reachable from this document, use the

@@ -1763,8 +1763,7 @@ nsresult nsRange::CloneContents(nsIDOMDocumentFragment** aReturn)
 
   nsCOMPtr<nsIDocument> doc(do_QueryInterface(document));
 
-  res = NS_NewDocumentFragment(getter_AddRefs(clonedFrag),
-                               doc->NodeInfoManager());
+  res = NS_NewDocumentFragment(getter_AddRefs(clonedFrag), doc);
   if (NS_FAILED(res)) return res;
 
   nsCOMPtr<nsIDOMNode> commonCloneAncestor(do_QueryInterface(clonedFrag));

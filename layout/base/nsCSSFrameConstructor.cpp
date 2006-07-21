@@ -2115,8 +2115,7 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIFrame*             aParentFram
         nsresult rv = NS_ERROR_FAILURE;
         if (attrName) {
           nsIFrame*   textFrame = nsnull;
-          rv = NS_NewAttributeContent(mDocument->NodeInfoManager(),
-                                      attrNameSpace, attrName,
+          rv = NS_NewAttributeContent(attrNameSpace, attrName,
                                       getter_AddRefs(content));
           NS_ENSURE_SUCCESS(rv, rv);
 
@@ -2204,8 +2203,7 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIFrame*             aParentFram
       // Create a text content node
       nsIFrame* textFrame = nsnull;
       nsCOMPtr<nsITextContent> textContent;
-      NS_NewTextNode(getter_AddRefs(textContent),
-                     mDocument->NodeInfoManager());
+      NS_NewTextNode(getter_AddRefs(textContent));
       if (textContent) {
         // Set the text
         textContent->SetText(contentString, PR_TRUE);
@@ -10801,8 +10799,7 @@ nsCSSFrameConstructor::ConstructAlternateFrame(nsIContent*      aContent,
 
   // Create a text content element for the alternate text
   nsCOMPtr<nsITextContent> altTextContent;
-  rv = NS_NewTextNode(getter_AddRefs(altTextContent),
-                      mDocument->NodeInfoManager());
+  rv = NS_NewTextNode(getter_AddRefs(altTextContent));
   if (NS_FAILED(rv))
     return rv;
 

@@ -44,34 +44,31 @@
 
 nsresult
 NS_NewXMLProcessingInstruction(nsIContent** aInstancePtrResult,
-                               nsNodeInfoManager *aNodeInfoManager,
                                const nsAString& aTarget,
-                               const nsAString& aData)
+                               const nsAString& aData,
+                               nsIDocument *aOwnerDocument)
 {
-  NS_PRECONDITION(aNodeInfoManager, "Missing nodeinfo manager");
-
   if (aTarget.EqualsLiteral("xml-stylesheet")) {
-    return NS_NewXMLStylesheetProcessingInstruction(aInstancePtrResult,
-                                                    aNodeInfoManager, aData);
+    return NS_NewXMLStylesheetProcessingInstruction(aInstancePtrResult, aData,
+                                                    aOwnerDocument);
   }
 
   *aInstancePtrResult = nsnull;
 
-  nsXMLProcessingInstruction *instance =
-    new nsXMLProcessingInstruction(aNodeInfoManager, aTarget, aData);
-  if (!instance) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  nsCOMPtr<nsIContent> instance;
+  instance = new nsXMLProcessingInstruction(aTarget, aData,
+                                            nsnull);
+  NS_ENSURE_TRUE(instance, NS_ERROR_OUT_OF_MEMORY);
 
-  NS_ADDREF(*aInstancePtrResult = instance);
+  instance.swap(*aInstancePtrResult);
 
   return NS_OK;
 }
 
-nsXMLProcessingInstruction::nsXMLProcessingInstruction(nsNodeInfoManager *aNodeInfoManager,
-                                                       const nsAString& aTarget,
-                                                       const nsAString& aData)
-  : nsGenericDOMDataNode(aNodeInfoManager),
+nsXMLProcessingInstruction::nsXMLProcessingInstruction(const nsAString& aTarget,
+                                                       const nsAString& aData,
+                                                       nsIDocument *aDocument)
+  : nsGenericDOMDataNode(aDocument),
     mTarget(aTarget)
 {
   nsGenericDOMDataNode::SetData(aData);
@@ -174,8 +171,11 @@ nsXMLProcessingInstruction::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   nsAutoString data;
   GetData(data);
 
+  nsIDocument *document = GetOwnerDoc();
+  // We really want to pass the document here, but can't yet.  Waiting
+  // on BindToTree.
   nsXMLProcessingInstruction *pi =
-    new nsXMLProcessingInstruction(mNodeInfoManager, mTarget, data);
+    new nsXMLProcessingInstruction(mTarget, data, nsnull);
   if (!pi) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

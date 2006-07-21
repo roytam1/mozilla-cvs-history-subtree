@@ -52,7 +52,7 @@ class nsTextNode : public nsGenericDOMDataNode,
                    public nsIDOMText
 {
 public:
-  nsTextNode(nsNodeInfoManager *aNodeInfoManager);
+  nsTextNode(nsIDocument *aDocument);
   virtual ~nsTextNode();
 
   // nsISupports
@@ -76,7 +76,7 @@ public:
 #endif
 
   virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
-                                                        nsNodeInfoManager *aNodeInfoManager);
+                                                        nsIDocument *aOwnerDocument);
 };
 
 /**
@@ -112,9 +112,7 @@ public:
     nsITextContent* mContent;  // Weak ref; it owns us
   };
 
-  nsAttributeTextNode(nsNodeInfoManager *aNodeInfoManager)
-    : nsTextNode(aNodeInfoManager)
-  {
+  nsAttributeTextNode() : nsTextNode(nsnull) {
   }
   virtual ~nsAttributeTextNode() {
     DetachListener();
@@ -133,24 +131,20 @@ private:
 
 nsresult
 NS_NewTextNode(nsITextContent** aInstancePtrResult,
-               nsNodeInfoManager *aNodeInfoManager)
+               nsIDocument *aOwnerDocument)
 {
-  NS_PRECONDITION(aNodeInfoManager, "Missing nodeInfoManager");
-
   *aInstancePtrResult = nsnull;
 
-  nsCOMPtr<nsITextContent> instance = new nsTextNode(aNodeInfoManager);
-  if (!instance) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  nsCOMPtr<nsITextContent> instance = new nsTextNode(nsnull);
+  NS_ENSURE_TRUE(instance, NS_ERROR_OUT_OF_MEMORY);
 
-  NS_ADDREF(*aInstancePtrResult = instance);
+  instance.swap(*aInstancePtrResult);
 
   return NS_OK;
 }
 
-nsTextNode::nsTextNode(nsNodeInfoManager *aNodeInfoManager)
-  : nsGenericDOMDataNode(aNodeInfoManager)
+nsTextNode::nsTextNode(nsIDocument *aDocument)
+  : nsGenericDOMDataNode(aDocument)
 {
 }
 
@@ -206,17 +200,16 @@ nsTextNode::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsTextNode::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE,
-                                                      mNodeInfoManager);
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, GetOwnerDoc());
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);
 }
 
 already_AddRefed<nsITextContent>
-nsTextNode::CloneContent(PRBool aCloneText, nsNodeInfoManager *aNodeInfoManager)
+nsTextNode::CloneContent(PRBool aCloneText, nsIDocument *aOwnerDocument)
 {
-  nsTextNode* it = new nsTextNode(aNodeInfoManager);
+  nsTextNode* it = new nsTextNode(nsnull);
   if (!it)
     return nsnull;
 
@@ -311,21 +304,16 @@ nsAttributeTextNode::nsAttrChangeListener::HandleEvent(nsIDOMEvent* aEvent)
 }
 
 nsresult
-NS_NewAttributeContent(nsNodeInfoManager *aNodeInfoManager,
-                       PRInt32 aNameSpaceID, nsIAtom* aAttrName,
+NS_NewAttributeContent(PRInt32 aNameSpaceID, nsIAtom* aAttrName,
                        nsIContent** aResult)
 {
-  NS_PRECONDITION(aNodeInfoManager, "Missing nodeInfoManager");
   NS_PRECONDITION(aAttrName, "Must have an attr name");
   NS_PRECONDITION(aNameSpaceID != kNameSpaceID_Unknown, "Must know namespace");
   
   *aResult = nsnull;
   
-  nsRefPtr<nsAttributeTextNode> textNode =
-    new nsAttributeTextNode(aNodeInfoManager);
-  if (!textNode) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  nsRefPtr<nsAttributeTextNode> textNode = new nsAttributeTextNode();
+  NS_ENSURE_TRUE(textNode, NS_ERROR_OUT_OF_MEMORY);
 
   textNode->mListener =
     new nsAttributeTextNode::nsAttrChangeListener(aNameSpaceID,

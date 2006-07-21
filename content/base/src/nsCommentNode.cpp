@@ -46,7 +46,7 @@ class nsCommentNode : public nsGenericDOMDataNode,
                       public nsIDOMComment
 {
 public:
-  nsCommentNode(nsNodeInfoManager *aNodeInfoManager);
+  nsCommentNode(nsIDocument *aDocument);
   virtual ~nsCommentNode();
 
   // nsISupports
@@ -76,29 +76,24 @@ public:
 #endif
 
   virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
-                                                        nsNodeInfoManager *aNodeInfoManager);
+                                                        nsIDocument *aOwnerDocument);
 };
 
 nsresult
-NS_NewCommentNode(nsIContent** aInstancePtrResult,
-                  nsNodeInfoManager *aNodeInfoManager)
+NS_NewCommentNode(nsIContent** aInstancePtrResult, nsIDocument *aOwnerDocument)
 {
-  NS_PRECONDITION(aNodeInfoManager, "Missing nodeinfo manager");
-
   *aInstancePtrResult = nsnull;
 
-  nsCommentNode *instance = new nsCommentNode(aNodeInfoManager);
-  if (!instance) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  nsCOMPtr<nsIContent> instance = new nsCommentNode(nsnull);
+  NS_ENSURE_TRUE(instance, NS_ERROR_OUT_OF_MEMORY);
 
-  NS_ADDREF(*aInstancePtrResult = instance);
+  instance.swap(*aInstancePtrResult);
 
   return NS_OK;
 }
 
-nsCommentNode::nsCommentNode(nsNodeInfoManager *aNodeInfoManager)
-  : nsGenericDOMDataNode(aNodeInfoManager)
+nsCommentNode::nsCommentNode(nsIDocument *aDocument)
+  : nsGenericDOMDataNode(aDocument)
 {
 }
 
@@ -169,18 +164,16 @@ nsCommentNode::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsCommentNode::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE,
-                                                      mNodeInfoManager);
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, GetOwnerDoc());
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);
 }
 
 already_AddRefed<nsITextContent>
-nsCommentNode::CloneContent(PRBool aCloneText,
-                            nsNodeInfoManager *aNodeInfoManager)
+nsCommentNode::CloneContent(PRBool aCloneText, nsIDocument *aOwnerDocument)
 {
-  nsCommentNode* it = new nsCommentNode(aNodeInfoManager);
+  nsCommentNode* it = new nsCommentNode(nsnull);
   if (!it)
     return nsnull;
 

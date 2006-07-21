@@ -653,8 +653,7 @@ nsXULContentBuilder::BuildContentFromTemplate(nsIContent *aTemplateNode,
                 if (NS_FAILED(rv)) return rv;
 
                 nsCOMPtr<nsITextContent> content;
-                rv = NS_NewTextNode(getter_AddRefs(content),
-                                    mRoot->GetNodeInfo()->NodeInfoManager());
+                rv = NS_NewTextNode(getter_AddRefs(content));
                 if (NS_FAILED(rv)) return rv;
 
                 content->SetText(value, PR_FALSE);

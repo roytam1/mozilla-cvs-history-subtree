@@ -429,14 +429,13 @@ private:
 const PRBool OBJ_IS_GLOBAL = PR_TRUE;
 const PRBool OBJ_IS_NOT_GLOBAL = PR_FALSE;
 
-class nsXPConnect : public nsIXPConnect_MOZILLA_1_8_BRANCH,
+class nsXPConnect : public nsIXPConnect,
                     public nsSupportsWeakReference
 {
 public:
     // all the interface method declarations...
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECT
-    NS_DECL_NSIXPCONNECT_MOZILLA_1_8_BRANCH
 
     // non-interface implementation
 public:
@@ -2067,7 +2066,6 @@ private:
     JSBool InitTearOffJSObject(XPCCallContext& ccx,
                                 XPCWrappedNativeTearOff* to);
 
-public:
     static nsresult GatherScriptableCreateInfo(
                         nsISupports* obj,
                         nsIClassInfo* classInfo,

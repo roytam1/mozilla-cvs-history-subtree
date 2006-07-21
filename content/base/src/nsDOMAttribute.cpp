@@ -298,8 +298,8 @@ nsDOMAttribute::GetFirstChild(nsIDOMNode** aFirstChild)
   if (!value.IsEmpty()) {
     if (!mChild) {
       nsCOMPtr<nsITextContent> content;
-      result = NS_NewTextNode(getter_AddRefs(content),
-                              mNodeInfo->NodeInfoManager());
+
+      result = NS_NewTextNode(getter_AddRefs(content));
       if (NS_FAILED(result)) {
         return result;
       }
@@ -453,7 +453,7 @@ nsDOMAttribute::SetPrefix(const nsAString& aPrefix)
     }
   }
 
-  mNodeInfo.swap(newNodeInfo);
+  newNodeInfo.swap(mNodeInfo);
 
   return NS_OK;
 }

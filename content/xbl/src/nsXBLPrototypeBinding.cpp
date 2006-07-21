@@ -522,8 +522,7 @@ nsXBLPrototypeBinding::AttributeChanged(nsIAtom* aAttribute,
           aChangedElement->GetAttr(aNameSpaceID, aAttribute, value);
           if (!value.IsEmpty()) {
             nsCOMPtr<nsITextContent> textContent;
-            NS_NewTextNode(getter_AddRefs(textContent),
-                           realElement->GetNodeInfo()->NodeInfoManager());
+            NS_NewTextNode(getter_AddRefs(textContent));
             if (!textContent) {
               continue;
             }
@@ -892,10 +891,8 @@ PRBool PR_CALLBACK SetAttrs(nsHashKey* aKey, void* aData, void* aClosure)
             (realElement->GetNodeInfo()->Equals(nsHTMLAtoms::html,
                                                 kNameSpaceID_XUL) &&
              dst == nsHTMLAtoms::value && !value.IsEmpty())) {
-
           nsCOMPtr<nsITextContent> textContent;
-          NS_NewTextNode(getter_AddRefs(textContent),
-                         realElement->GetNodeInfo()->NodeInfoManager());
+          NS_NewTextNode(getter_AddRefs(textContent));
           if (!textContent) {
             continue;
           }
