@@ -100,6 +100,7 @@ public:
   nsresult ReadPref(nsIPrefBranch*, const char* pref);
   PRBool   AskForPermission();
 
+  PRBool  mStarted;
   PRBool  mEnabled;
   PRInt32 mPrecision;
 
@@ -123,10 +124,9 @@ GPSService::GetService ()
 
 GPSService::GPSService()  
 {
+  mStarted     = PR_FALSE;
   mEnabled     = PR_TRUE;
   mPrecision   = -1;
-
-  StartGPS();
 }  
 
 GPSService::~GPSService()  
@@ -148,6 +148,9 @@ NS_IMPL_THREADSAFE_RELEASE(GPSService)
 nsresult
 GPSService::StartGPS()
 {
+  if (mStarted)
+    return NS_OK;
+
   nsresult rv;
   nsCOMPtr<nsICategoryManager> categoryManager = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -167,15 +170,23 @@ GPSService::StartGPS()
       
       nsCAutoString gpsCID;
       gpsCIDSupportsCString->GetData(gpsCID);
-      
+
       nsCOMPtr<mozIGPSService> gps = do_GetService(gpsCID.get());
-      mGPSServers.AppendObject(gps);
+      if (gps)
+      {
+        //        MessageBox(0, gpsCID.get(), "Adding...", 0);
+        mGPSServers.AppendObject(gps);
+      }
     }
   }
 
+#ifdef WINCE
   // add the built in here
   extern mozIGPSService* GetWMGPSService();
   mGPSServers.AppendObject(GetWMGPSService());
+#endif
+
+  mStarted = PR_TRUE;
 
   return NS_OK;
 }
@@ -183,6 +194,8 @@ GPSService::StartGPS()
 nsresult
 GPSService::StopGPS()
 {
+  mStarted = PR_FALSE;
+  mGPSServers.Clear();
   return NS_OK;
 }
 
@@ -330,6 +343,7 @@ GPSService::AskForPermission()
 
 void GPSService::GetBestLocation(double* aLat, double* aLon, double* aAlt, double *aErr)
 {
+  StartGPS();
   
   double lastLat = -1, lastLon = -1, lastAlt = -1, lastErr = -1;
   

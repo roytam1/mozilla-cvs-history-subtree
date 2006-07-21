@@ -63,8 +63,11 @@ REQUIRES	= xpcom \
               $(NULL)
 
 CPPSRCS     = gpsModule.cpp  \
-              wmgpsapi.cpp   \
-			  $(NULL)
+              $(NULL)
+
+ifdef WINCE
+CPPSRCS     += wmgpsapi.cpp
+endif
 
 XPIDLSRCS = mozIGPSService.idl
 
