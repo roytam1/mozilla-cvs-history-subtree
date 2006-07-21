@@ -10,7 +10,6 @@ sudoku.jar:
 	content/sudoku/grey-out.png			(sudoku/content/grey-out.png)
 	content/sudoku/wait.gif				(sudoku/content/wait.gif)
 	content/sudoku/homebaseOverlay.xul  (sudoku/content/homebaseOverlay.xul)
-	content/sudoku/flickr.png           (sudoku/content/flickr.png)
 
 flickr.jar:
 %   content flickr               %content/flickr/
@@ -18,7 +17,6 @@ flickr.jar:
 	content/flickr/app.xhtml			(flickr/content/app.xhtml)
 	content/flickr/flickr.js			(flickr/content/flickr.js)
 	content/flickr/homebaseOverlay.xul  (flickr/content/homebaseOverlay.xul)
-	content/flickr/flickr.png           (flickr/content/flickr.png)
 
 google.jar: 
 %   content google               %content/google/
