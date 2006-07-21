@@ -117,9 +117,6 @@ nsMathMLContainerFrame::ReflowError(nsIRenderingContext& aRenderingContext,
   aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
 
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
-  }
   // Also return our bounding metrics
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 
@@ -512,9 +509,6 @@ nsMathMLContainerFrame::FinalizeReflow(nsIRenderingContext& aRenderingContext,
       Stretch(aRenderingContext, NS_STRETCH_DIRECTION_DEFAULT, defaultSize,
               aDesiredSize);
     }
-  }
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
   }
   // Also return our bounding metrics
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
@@ -982,8 +976,8 @@ nsMathMLContainerFrame::ReflowForeignChild(nsIFrame*                aChildFrame,
 
   // provide a local, self-contained linelayout where to reflow the nsInlineFrame
   nsSize availSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
-  nsLineLayout ll(aPresContext, aReflowState.mSpaceManager, aReflowState.parentReflowState,
-                  aDesiredSize.mComputeMEW);
+  nsLineLayout ll(aPresContext, aReflowState.mSpaceManager,
+                  aReflowState.parentReflowState, PR_FALSE);
   ll.BeginLineReflow(0, 0, availSize.width, availSize.height, PR_FALSE, PR_FALSE);
   PRBool pushedFrame;
   ll.ReflowFrame(aChildFrame, aStatus, &aDesiredSize, pushedFrame);
@@ -1015,15 +1009,6 @@ nsMathMLContainerFrame::Reflow(nsPresContext*          aPresContext,
   aDesiredSize.ascent = aDesiredSize.descent = 0;
   aDesiredSize.mBoundingMetrics.Clear();
 
-  // See if this is an incremental reflow
-  if (aReflowState.reason == eReflowReason_Incremental) {
-#ifdef MATHML_NOISY_INCREMENTAL_REFLOW
-printf("nsMathMLContainerFrame::Reflow:IncrementalReflow received by: ");
-nsFrame::ListTag(stdout, this);
-printf("\n");
-#endif
-  }
-
   /////////////
   // Reflow children
   // Asking each child to cache its bounding metrics
@@ -1034,10 +1019,8 @@ printf("\n");
                       aDesiredSize.mFlags | NS_REFLOW_CALC_BOUNDING_METRICS);
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
-    nsReflowReason reason = (childFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW)
-      ? eReflowReason_Initial : aReflowState.reason;
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
-                                       childFrame, availSize, reason);
+                                       childFrame, availSize);
     rv = ReflowChild(childFrame, aPresContext, childDesiredSize,
                      childReflowState, childStatus);
     //NS_ASSERTION(NS_FRAME_IS_COMPLETE(childStatus), "bad status");
@@ -1094,10 +1077,6 @@ printf("\n");
       }
       childFrame = childFrame->GetNextSibling();
     }
-  }
-
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = childDesiredSize.mMaxElementWidth;
   }
 
   /////////////

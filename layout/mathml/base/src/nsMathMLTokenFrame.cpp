@@ -132,15 +132,6 @@ nsMathMLTokenFrame::Reflow(nsPresContext*          aPresContext,
 {
   nsresult rv = NS_OK;
 
-  // See if this is an incremental reflow
-  if (aReflowState.reason == eReflowReason_Incremental) {
-#ifdef MATHML_NOISY_INCREMENTAL_REFLOW
-printf("nsMathMLContainerFrame::ReflowTokenFor:IncrementalReflow received by: ");
-nsFrame::ListTag(stdout, aFrame);
-printf("\n");
-#endif
-  }
-
   // initializations needed for empty markup like <mtag></mtag>
   aDesiredSize.width = aDesiredSize.height = 0;
   aDesiredSize.ascent = aDesiredSize.descent = 0;
@@ -153,10 +144,8 @@ printf("\n");
   PRInt32 count = 0;
   nsIFrame* childFrame = GetFirstChild(nsnull);
   while (childFrame) {
-    nsReflowReason reason = (childFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW)
-      ? eReflowReason_Initial : aReflowState.reason;
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
-                                       childFrame, availSize, reason);
+                                       childFrame, availSize);
     rv = ReflowChild(childFrame, aPresContext, childDesiredSize,
                      childReflowState, aStatus);
     //NS_ASSERTION(NS_FRAME_IS_COMPLETE(aStatus), "bad status");
@@ -173,10 +162,6 @@ printf("\n");
 
     count++;
     childFrame = childFrame->GetNextSibling();
-  }
-
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = childDesiredSize.mMaxElementWidth;
   }
 
   // cache the frame's mBoundingMetrics

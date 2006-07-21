@@ -444,32 +444,8 @@ nsMathMLmtableOuterFrame::Reflow(nsPresContext*          aPresContext,
   nsAutoString value;
   // we want to return a table that is anchored according to the align attribute
 
-  nsHTMLReflowState reflowState(aReflowState);
-  if ((NS_FRAME_FIRST_REFLOW & mState) &&
-      (NS_UNCONSTRAINEDSIZE == reflowState.availableWidth)) {
-    // We are going to reflow twice because the table frame code is
-    // skipping the Pass 2 reflow when, at the Pass 1 reflow, the available
-    // size is unconstrained. Skipping the Pass2 messes the MathML vertical
-    // alignments that are resolved during the reflow of cell frames.
-
-    nscoord oldComputedWidth = reflowState.mComputedWidth;
-    reflowState.mComputedWidth = NS_UNCONSTRAINEDSIZE;
-    reflowState.reason = eReflowReason_Initial;
-
-    rv = nsTableOuterFrame::Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
-
-    // The second reflow will just be a reflow with a constrained width
-    reflowState.availableWidth = aDesiredSize.width;
-    reflowState.mComputedWidth = oldComputedWidth;
-    reflowState.reason = eReflowReason_StyleChange;
-
-    mState &= ~NS_FRAME_FIRST_REFLOW;
-  }
-  else if (mRect.width) {
-    reflowState.availableWidth = mRect.width;
-  }
-
-  rv = nsTableOuterFrame::Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+  rv = nsTableOuterFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
+                                 aStatus);
   NS_ASSERTION(aDesiredSize.height >= 0, "illegal height for mtable");
   NS_ASSERTION(aDesiredSize.width >= 0, "illegal width for mtable");
 

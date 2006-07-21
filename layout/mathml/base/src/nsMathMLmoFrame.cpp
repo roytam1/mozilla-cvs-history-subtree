@@ -938,9 +938,6 @@ nsMathMLmoFrame::Reflow(nsPresContext*          aPresContext,
     aDesiredSize.height = 0;
     aDesiredSize.ascent = 0;
     aDesiredSize.descent = 0;
-    if (aDesiredSize.mComputeMEW) {
-      aDesiredSize.mMaxElementWidth = 0;
-    }
     aDesiredSize.mBoundingMetrics.Clear();
     aStatus = NS_FRAME_COMPLETE;
 
