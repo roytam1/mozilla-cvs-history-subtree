@@ -24,6 +24,7 @@
  *   Makoto Kato  <m_kato@ga2.so-net.ne.jp>
  *   Dean Tessman <dean_tessman@hotmail.com>
  *   Mats Palmgren <mats.palmgren@bredband.net>
+ *   Simon Bünzli <zeniko@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -158,7 +159,7 @@ static PRInt8 sTextfieldSelectModel = eTextfieldSelect_unset;
 static PRBool sLeftClickOnly = PR_TRUE;
 static PRBool sKeyCausesActivation = PR_TRUE;
 static PRUint32 sESMInstanceCount = 0;
-static PRInt32 sGeneralAccesskeyModifier = -1; // magic value of -1 means uninitialized
+static PRInt32 sChromeAccessModifier = 0, sContentAccessModifier = 0;
 PRInt32 nsEventStateManager::sUserInputEventDepth = 0;
 
 enum {
@@ -167,6 +168,12 @@ enum {
  MOUSE_SCROLL_HISTORY,
  MOUSE_SCROLL_TEXTSIZE
 };
+
+// mask values for ui.key.chromeAccess and ui.key.contentAccess
+#define NS_MODIFIER_SHIFT    1
+#define NS_MODIFIER_CONTROL  2
+#define NS_MODIFIER_ALT      4
+#define NS_MODIFIER_META     8
 
 static nsIScriptGlobalObject *
 GetDocumentOuterWindow(nsIDocument *aDocument)
@@ -200,6 +207,29 @@ GetDocumentFromWindow(nsIDOMWindow *aWindow)
   }
 
   return doc;
+}
+
+static PRInt32
+GetAccessModifierMaskFromPref(PRInt32 aItemType)
+{
+  PRInt32 accessKey = nsContentUtils::GetIntPref("ui.key.generalAccessKey", -1);
+  switch (accessKey) {
+    case -1:                             break; // use the individual prefs
+    case nsIDOMKeyEvent::DOM_VK_SHIFT:   return NS_MODIFIER_SHIFT;
+    case nsIDOMKeyEvent::DOM_VK_CONTROL: return NS_MODIFIER_CONTROL;
+    case nsIDOMKeyEvent::DOM_VK_ALT:     return NS_MODIFIER_ALT;
+    case nsIDOMKeyEvent::DOM_VK_META:    return NS_MODIFIER_META;
+    default:                             return 0;
+  }
+
+  switch (aItemType) {
+  case nsIDocShellTreeItem::typeChrome:
+    return nsContentUtils::GetIntPref("ui.key.chromeAccess", 0);
+  case nsIDocShellTreeItem::typeContent:
+    return nsContentUtils::GetIntPref("ui.key.contentAccess", 0);
+  default:
+    return 0;
+  }
 }
 
 /******************************************************************/
@@ -251,9 +281,10 @@ nsEventStateManager::Init()
         nsContentUtils::GetBoolPref("nglayout.events.dispatchLeftClickOnly",
                                     sLeftClickOnly);
 
-      sGeneralAccesskeyModifier =
-        nsContentUtils::GetIntPref("ui.key.generalAccessKey",
-                                   sGeneralAccesskeyModifier);
+      sChromeAccessModifier =
+        GetAccessModifierMaskFromPref(nsIDocShellTreeItem::typeChrome);
+      sContentAccessModifier =
+        GetAccessModifierMaskFromPref(nsIDocShellTreeItem::typeContent);
 
       nsIContent::sTabFocusModelAppliesToXUL =
         nsContentUtils::GetBoolPref("accessibility.tabfocus_applies_to_xul",
@@ -264,6 +295,8 @@ nsEventStateManager::Init()
     prefBranch->AddObserver("accessibility.tabfocus_applies_to_xul", this, PR_TRUE);
     prefBranch->AddObserver("nglayout.events.dispatchLeftClickOnly", this, PR_TRUE);
     prefBranch->AddObserver("ui.key.generalAccessKey", this, PR_TRUE);
+    prefBranch->AddObserver("ui.key.chromeAccess", this, PR_TRUE);
+    prefBranch->AddObserver("ui.key.contentAccess", this, PR_TRUE);
 #if 0
     prefBranch->AddObserver("mousewheel.withaltkey.action", this, PR_TRUE);
     prefBranch->AddObserver("mousewheel.withaltkey.numlines", this, PR_TRUE);
@@ -338,6 +371,8 @@ nsEventStateManager::Shutdown()
     prefBranch->RemoveObserver("accessibility.tabfocus_applies_to_xul", this);
     prefBranch->RemoveObserver("nglayout.events.dispatchLeftClickOnly", this);
     prefBranch->RemoveObserver("ui.key.generalAccessKey", this);
+    prefBranch->RemoveObserver("ui.key.chromeAccess", this);
+    prefBranch->RemoveObserver("ui.key.contentAccess", this);
 #if 0
     prefBranch->RemoveObserver("mousewheel.withshiftkey.action", this);
     prefBranch->RemoveObserver("mousewheel.withshiftkey.numlines", this);
@@ -387,9 +422,16 @@ nsEventStateManager::Observe(nsISupports *aSubject,
         nsContentUtils::GetBoolPref("nglayout.events.dispatchLeftClickOnly",
                                     sLeftClickOnly);
     } else if (data.EqualsLiteral("ui.key.generalAccessKey")) {
-      sGeneralAccesskeyModifier =
-        nsContentUtils::GetIntPref("ui.key.generalAccessKey",
-                                   sGeneralAccesskeyModifier);
+      sChromeAccessModifier =
+        GetAccessModifierMaskFromPref(nsIDocShellTreeItem::typeChrome);
+      sContentAccessModifier =
+        GetAccessModifierMaskFromPref(nsIDocShellTreeItem::typeContent);
+    } else if (data.EqualsLiteral("ui.key.chromeAccess")) {
+      sChromeAccessModifier =
+        GetAccessModifierMaskFromPref(nsIDocShellTreeItem::typeChrome);
+    } else if (data.EqualsLiteral("ui.key.contentAccess")) {
+      sContentAccessModifier =
+        GetAccessModifierMaskFromPref(nsIDocShellTreeItem::typeContent);
 #if 0
     } else if (data.EqualsLiteral("mousewheel.withaltkey.action")) {
     } else if (data.EqualsLiteral("mousewheel.withaltkey.numlines")) {
@@ -949,16 +991,21 @@ nsEventStateManager::PreHandleEvent(nsPresContext* aPresContext,
 
       nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
 
-      PRBool isSpecialAccessKeyDown = PR_FALSE;
-      switch (sGeneralAccesskeyModifier) {
-        case nsIDOMKeyEvent::DOM_VK_CONTROL: isSpecialAccessKeyDown = keyEvent->isControl; break;
-        case nsIDOMKeyEvent::DOM_VK_ALT: isSpecialAccessKeyDown = keyEvent->isAlt; break;
-        case nsIDOMKeyEvent::DOM_VK_META: isSpecialAccessKeyDown = keyEvent->isMeta; break;
-      }
+      PRInt32 modifierMask = 0;
+      if (keyEvent->isShift)
+        modifierMask |= NS_MODIFIER_SHIFT;
+      if (keyEvent->isControl)
+        modifierMask |= NS_MODIFIER_CONTROL;
+      if (keyEvent->isAlt)
+        modifierMask |= NS_MODIFIER_ALT;
+      if (keyEvent->isMeta)
+        modifierMask |= NS_MODIFIER_META;
 
-      //This is to prevent keyboard scrolling while alt or other accesskey modifier in use.
-      if (isSpecialAccessKeyDown)
-        HandleAccessKey(aPresContext, keyEvent, aStatus, -1, eAccessKeyProcessingNormal);
+      // Prevent keyboard scrolling while an accesskey modifier is in use.
+      if (modifierMask && (modifierMask == sChromeAccessModifier ||
+                           modifierMask == sContentAccessModifier))
+        HandleAccessKey(aPresContext, keyEvent, aStatus, -1,
+                        eAccessKeyProcessingNormal, modifierMask);
     }
   case NS_KEY_DOWN:
   case NS_KEY_UP:
@@ -973,6 +1020,28 @@ nsEventStateManager::PreHandleEvent(nsPresContext* aPresContext,
   return NS_OK;
 }
 
+static PRInt32
+GetAccessModifierMask(nsISupports* aDocShell)
+{
+  nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(aDocShell));
+  if (!treeItem)
+    return -1; // invalid modifier
+
+  PRInt32 itemType;
+  treeItem->GetItemType(&itemType);
+  switch (itemType) {
+
+  case nsIDocShellTreeItem::typeChrome:
+    return sChromeAccessModifier;
+
+  case nsIDocShellTreeItem::typeContent:
+    return sContentAccessModifier;
+
+  default:
+    return -1; // invalid modifier
+  }
+}
+
 // Note: for the in parameter aChildOffset,
 // -1 stands for not bubbling from the child docShell
 // 0 -- childCount - 1 stands for the child docShell's offset
@@ -982,11 +1051,14 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
                                      nsKeyEvent *aEvent,
                                      nsEventStatus* aStatus,
                                      PRInt32 aChildOffset,
-                                     ProcessingAccessKeyState aAccessKeyState)
+                                     ProcessingAccessKeyState aAccessKeyState,
+                                     PRInt32 aModifierMask)
 {
-
+  nsCOMPtr<nsISupports> pcContainer = aPresContext->GetContainer();
+  NS_ASSERTION(pcContainer, "no container for presContext");
+  
   // Alt or other accesskey modifier is down, we may need to do an accesskey
-  if (mAccessKeys) {
+  if (mAccessKeys && aModifierMask == GetAccessModifierMask(pcContainer)) {
     // Someone registered an accesskey.  Find and activate it.
     PRUint32 accKey = (IS_IN_BMP(aEvent->charCode)) ? 
       ToLowerCase((PRUnichar)aEvent->charCode) : aEvent->charCode;
@@ -1082,9 +1154,6 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
   if (nsEventStatus_eConsumeNoDefault != *aStatus) {
     // checking all sub docshells
 
-    nsCOMPtr<nsISupports> pcContainer = aPresContext->GetContainer();
-    NS_ASSERTION(pcContainer, "no container for presContext");
-
     nsCOMPtr<nsIDocShellTreeNode> docShell(do_QueryInterface(pcContainer));
     NS_ASSERTION(docShell, "no docShellTreeNode for presContext");
 
@@ -1117,7 +1186,8 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
           NS_STATIC_CAST(nsEventStateManager *, subPC->EventStateManager());
 
         if (esm)
-          esm->HandleAccessKey(subPC, aEvent, aStatus, -1, eAccessKeyProcessingDown);
+          esm->HandleAccessKey(subPC, aEvent, aStatus, -1,
+                               eAccessKeyProcessingDown, aModifierMask);
 
         if (nsEventStatus_eConsumeNoDefault == *aStatus)
           break;
@@ -1127,9 +1197,6 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
 
   // bubble up the process to the parent docShell if necesary
   if (eAccessKeyProcessingDown != aAccessKeyState && nsEventStatus_eConsumeNoDefault != *aStatus) {
-    nsCOMPtr<nsISupports> pcContainer = aPresContext->GetContainer();
-    NS_ASSERTION(pcContainer, "no container for presContext");
-
     nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(pcContainer));
     NS_ASSERTION(docShell, "no docShellTreeItem for presContext");
 
@@ -1152,7 +1219,8 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
         NS_STATIC_CAST(nsEventStateManager *, parentPC->EventStateManager());
 
       if (esm)
-        esm->HandleAccessKey(parentPC, aEvent, aStatus, myOffset, eAccessKeyProcessingUp);
+        esm->HandleAccessKey(parentPC, aEvent, aStatus, myOffset,
+                             eAccessKeyProcessingUp, aModifierMask);
     }
   }// if end. bubble up process
 }// end of HandleAccessKey
