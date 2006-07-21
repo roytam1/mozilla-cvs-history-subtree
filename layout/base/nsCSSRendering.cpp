@@ -2599,32 +2599,23 @@ FindCanvasBackground(nsPresContext* aPresContext,
   nsIFrame *firstChild = aForFrame->GetFirstChild(nsnull);
   if (firstChild) {
     const nsStyleBackground* result = firstChild->GetStyleBackground();
-  
-    // for printing and print preview.. this should be a pageContentFrame
-    nsStyleContext* parentContext;
+    nsIFrame* topFrame = aForFrame;
 
     if (firstChild->GetType() == nsLayoutAtoms::pageContentFrame) {
-      // we have to find the background style ourselves.. since the 
-      // pageContentframe does not have content
-      while(firstChild){
-        for (nsIFrame* kidFrame = firstChild; nsnull != kidFrame; ) {
-          parentContext = kidFrame->GetStyleContext();
-          result = parentContext->GetStyleBackground();
-          if (!result->IsTransparent()) {
-            *aBackground = kidFrame->GetStyleBackground();
-            return PR_TRUE;
-          } else {
-            kidFrame = kidFrame->GetNextSibling(); 
-          }
-        }
-        firstChild = firstChild->GetFirstChild(nsnull);
+      topFrame = firstChild->GetFirstChild(nsnull);
+      NS_ASSERTION(topFrame,
+                   "nsPageContentFrame is missing a normal flow child");
+      if (!topFrame) {
+        return PR_FALSE;
       }
-      return PR_FALSE;    // nothing found for this
+      NS_ASSERTION(topFrame->GetContent(),
+                   "nsPageContentFrame child without content");
+      result = topFrame->GetStyleBackground();
     }
 
     // Check if we need to do propagation from BODY rather than HTML.
     if (result->IsTransparent()) {
-      nsIContent* content = aForFrame->GetContent();
+      nsIContent* content = topFrame->GetContent();
       if (content) {
         // Use |GetOwnerDoc| so it works during destruction.
         nsIDocument* document = content->GetOwnerDoc();
