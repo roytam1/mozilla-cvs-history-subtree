@@ -6761,7 +6761,6 @@ HistoryMenu.populateUndoSubmenu = function PHM_populateUndoSubmenu() {
   undoPopup.parentNode.removeAttribute("disabled");
 
   // populate menu
-  var urls = [];
   var undoItems = ss.getClosedTabData(window);
   var keys = undoItems.getKeys({});
   for (var i = 0; i < keys.length; i++) {
@@ -6773,7 +6772,6 @@ HistoryMenu.populateUndoSubmenu = function PHM_populateUndoSubmenu() {
     m.addEventListener("command", function(aEvent) { 
       undoCloseTab(aEvent.originalTarget.getAttribute("value"));
     }, false);
-    urls.push(tabData.state.entries[0].url);
   }
 
   // "open in tabs"
@@ -6784,7 +6782,10 @@ HistoryMenu.populateUndoSubmenu = function PHM_populateUndoSubmenu() {
   m = undoPopup.appendChild(document.createElement("menuitem"));
   m.setAttribute("label", stringBundle.GetStringFromName("cmd_bm_openfolder"));
   m.setAttribute("accesskey", stringBundle.GetStringFromName("cmd_bm_openfolder_accesskey"));
-  m.addEventListener("command", function() { loadOneOrMoreURIs(urls.join("|")); }, false);
+  m.addEventListener("command", function() {
+    for (var i = 0; i < keys.length; i++)
+      undoCloseTab();
+  }, false);
 }
 
 /**
@@ -6795,5 +6796,5 @@ HistoryMenu.populateUndoSubmenu = function PHM_populateUndoSubmenu() {
 function undoCloseTab(aIndex) {
   var ss = Cc["@mozilla.org/browser/sessionstore;1"].
            getService(Ci.nsISessionStore);
-  ss.undoCloseTab(window, aIndex);
+  ss.undoCloseTab(window, aIndex || 0);
 }
