@@ -48,7 +48,7 @@
  -->
      <vbox id="homebar">
 
-  			<toolbarbutton image="chrome://minimo/skin/extensions/icon-history.png" oncommand="BrowserOpenURLasTab('chrome://sudoku/content/sudoky.html')">
+  			<toolbarbutton image="chrome://sudoku/content/favicon.png" oncommand="BrowserOpenURLasTab('chrome://sudoku/content/sudoku.html')">
 			</toolbarbutton >
 
       </vbox>

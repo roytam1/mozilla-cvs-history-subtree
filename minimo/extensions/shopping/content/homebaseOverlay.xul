@@ -5,7 +5,7 @@
 
 
 
-  			<toolbarbutton image="chrome://minimo/skin/extensions/icon-shopping.png" oncommand="BrowserOpenURLasTab('http://www.inner-browsing.com/shop/newshop.xhtml ')">
+  			<toolbarbutton image="chrome://shopping/content/favicon.png" oncommand="BrowserOpenURLasTab('http://www.inner-browsing.com/shop/newshop.xhtml ')">
 			</toolbarbutton >
 
   	

@@ -2,7 +2,8 @@
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
      <vbox id="homebar">
-  			<toolbarbutton image="http://m.technorati.com/favicon.ico" oncommand="BrowserOpenURLasTab('http://m.technorati.com/')">
+
+  			<toolbarbutton image="chrome://technorati/content/favicon.ico" oncommand="BrowserOpenURLasTab('http://m.technorati.com/')">
 			</toolbarbutton >
 
   		

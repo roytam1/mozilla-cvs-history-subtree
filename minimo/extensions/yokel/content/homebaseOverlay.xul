@@ -4,7 +4,7 @@
      <vbox id="homebar">
 
 
-  			<toolbarbutton image="chrome://minimo/skin/extensions/icon-yokel.png" oncommand="BrowserOpenURLasTab('http://www.yokel.com')">
+  			<toolbarbutton image="chrome://yokel/content/favicon.png" oncommand="BrowserOpenURLasTab('http://www.yokel.com')">
 			</toolbarbutton >
   
 
