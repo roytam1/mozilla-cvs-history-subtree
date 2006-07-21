@@ -34,7 +34,7 @@ interface nsIMicrosummaryObserver : nsISupports
 };
 
 
-[scriptable, uuid(ff3eba15-81de-4c24-bfcf-c8180dc3c00a)]
+[scriptable, uuid(2fbe58bf-098c-4475-a133-c00fabe8ce16)]
 interface nsIMicrosummaryGenerator : nsISupports
 {
     // An arbitrary descriptive name for this microsummary generator.
@@ -70,10 +70,22 @@ interface nsIMicrosummaryGenerator : nsISupports
      *
      */
     AString generateMicrosummary(in nsIDOMNode aPageContent);
+
+    /**
+     * Calculate the interval until the microsummary should be updated for
+     * the next time, depending on the page content. If the generator doesn't
+     * specify an interval, null is returned.
+     *
+     * @param   pageContent
+     *          the content of the page being summarized
+     * @returns the interval in milliseconds until the next update request
+     *
+     */
+    long calculateUpdateInterval(in nsIDOMNode aPageContent);
 };
 
 
-[scriptable, uuid(f9d1a73c-e147-46f3-ba61-4f0bd33f5d47)]
+[scriptable, uuid(5060a462-7644-4a8a-bb7d-10059eed33b6)]
 interface nsIMicrosummary : nsISupports
 {
     // the URI of the page being summarized
@@ -90,6 +102,10 @@ interface nsIMicrosummary : nsISupports
     // Since generators and pages can be remote resources, and we need them
     // to generate the content, this may not always be available.
     readonly attribute AString content;
+
+    // The minimum interval after which this microsummary would like to be refreshed
+    // (or null if it doesn't care).
+    readonly attribute long updateInterval;
 
     /**
      * Add a microsummary observer to this microsummary.
