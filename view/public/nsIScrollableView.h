@@ -208,4 +208,25 @@ public:
 //for this view, it can never be scrolled via a blit
 #define NS_SCROLL_PROPERTY_NEVER_BLIT     0x0002
 
+// {A1985DF6-047A-4DD7-A21A-C72559470323}
+#define NS_ISCROLLABLEVIEW_MOZILLA_1_8_BRANCH_IID \
+{ 0xA1985DF6, 0x047A, 0x4DD7, \
+{ 0xA2, 0x1A, 0xC7, 0x25, 0x59, 0x47, 0x03, 0x23 } }
+
+class nsIScrollableView_MOZILLA_1_8_BRANCH : public nsIScrollableView
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCROLLABLEVIEW_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * Scroll the view left or right by aNumLinesX pixels.  Positive values move 
+   * right.  Scroll the view up or down by aNumLinesY pixels.  Positive values
+   * move down.  Prevents scrolling off the end of the view.
+   * @param aNumLinesX number of lines to scroll the view horizontally
+   * @param aNumLinesY number of lines to scroll the view vertically
+   * @return error status
+   */
+  NS_IMETHOD ScrollByPixels(PRInt32 aNumPixelsX, PRInt32 aNumPixelsY) = 0;
+};
+
 #endif

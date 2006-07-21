@@ -49,7 +49,7 @@ class SmoothScroll;
 //this is a class that acts as a container for other views and provides
 //automatic management of scrolling of the views it contains.
 
-class nsScrollPortView : public nsView, public nsIScrollableView
+class nsScrollPortView : public nsView, public nsIScrollableView_MOZILLA_1_8_BRANCH
 {
 public:
   nsScrollPortView(nsViewManager* aViewManager = nsnull);
@@ -77,6 +77,7 @@ public:
   NS_IMETHOD  GetPageScrollDistances(nsSize *aDistances);
   NS_IMETHOD  ScrollByPages(PRInt32 aNumPagesX, PRInt32 aNumPagesY);
   NS_IMETHOD  ScrollByWhole(PRBool aTop);
+  NS_IMETHOD  ScrollByPixels(PRInt32 aNumPixelsX, PRInt32 aNumPixelsY);
   NS_IMETHOD  CanScroll(PRBool aHorizontal, PRBool aForward, PRBool &aResult);
 
   NS_IMETHOD_(nsIView*) View();

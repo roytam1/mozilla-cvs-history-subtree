@@ -147,8 +147,9 @@ protected:
 
   pascal static OSStatus WindowEventHandler ( EventHandlerCallRef inHandlerChain, 
                                                EventRef inEvent, void* userData ) ;
-  pascal static OSStatus ScrollEventHandler ( EventHandlerCallRef inHandlerChain, 
-                                               EventRef inEvent, void* userData ) ;
+  pascal static OSStatus ScrollEventHandler(EventHandlerCallRef aHandlerCallRef,
+                                            EventRef            aEvent,
+                                            void*               aUserData);
   pascal static OSStatus KeyEventHandler(EventHandlerCallRef aHandlerCallRef,
                                          EventRef            aEvent,
                                          void*               aUserData);
@@ -163,6 +164,7 @@ protected:
 	PRPackedBool                    mResizeIsFromUs;    // we originated the resize, prevent infinite recursion
 	PRPackedBool                    mShown;             // whether the window was actually shown on screen
 	PRPackedBool                    mSheetNeedsShow;    // a sheet that wants to be displayed but isn't because a sibling sheet is open
+	PRPackedBool			mInPixelMouseScroll;
 	Point                           mBoundsOffset;      // offset from window structure to content
 	auto_ptr<nsMacEventHandler>     mMacEventHandler;
 	nsIWidget                      *mOffsetParent;

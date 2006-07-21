@@ -166,7 +166,8 @@ enum {
  MOUSE_SCROLL_N_LINES,
  MOUSE_SCROLL_PAGE,
  MOUSE_SCROLL_HISTORY,
- MOUSE_SCROLL_TEXTSIZE
+ MOUSE_SCROLL_TEXTSIZE,
+ MOUSE_SCROLL_PIXELS
 };
 
 // mask values for ui.key.chromeAccess and ui.key.contentAccess
@@ -1775,7 +1776,7 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
                                   nsInputEvent* aEvent,
                                   PRInt32 aNumLines,
                                   PRBool aScrollHorizontal,
-                                  PRBool aScrollPage)
+                                  ScrollQuantity aScrollQuantity)
 {
   nsIScrollableView* scrollView = nsnull;
   PRBool scrollRootView = ShouldScrollRootView(aPresContext);
@@ -1796,7 +1797,7 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
       NS_ENSURE_SUCCESS(rv, rv);
       NS_ENSURE_TRUE(newFrame && newPresContext, NS_ERROR_FAILURE);
       return DoScrollText(newPresContext, newFrame, aEvent, aNumLines,
-                          aScrollHorizontal, aScrollPage);
+                          aScrollHorizontal, aScrollQuantity);
     }
     // find target frame that is root scrollable content
     nsIFrame* targetFrame = aTargetFrame;
@@ -1826,7 +1827,7 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
     nsCOMPtr<nsIDOMAbstractView> view;
     docView->GetDefaultView(getter_AddRefs(view));
 
-    if (aScrollPage) {
+    if (aScrollQuantity == eScrollByPage) {
       if (aNumLines > 0) {
         aNumLines = nsIDOMNSUIEvent::SCROLL_PAGE_DOWN;
       } else {
@@ -1931,7 +1932,7 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
     PRInt32 scrollX = 0;
     PRInt32 scrollY = aNumLines;
 
-    if (aScrollPage)
+    if (aScrollQuantity == eScrollByPage)
       scrollY = (scrollY > 0) ? 1 : -1;
       
     if (aScrollHorizontal) {
@@ -1939,8 +1940,17 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
       scrollY = 0;
     }
     
-    if (aScrollPage)
+    if (aScrollQuantity == eScrollByPage)
       scrollView->ScrollByPages(scrollX, scrollY);
+    else if (aScrollQuantity == eScrollByPixel) {
+      // CallQueryInterface doesn't work beacuse nsIScrollableView does not
+      // contain QueryInterface.  Casting is fine, because nsScrollPortView
+      // is the only class that implements the interface, and it's been
+      // updated to implement nsIScrollableView_MOZILLA_1_8_BRANCH.
+      nsIScrollableView_MOZILLA_1_8_BRANCH* scrollView_MOZILLA_1_8_BRANCH =
+       NS_STATIC_CAST(nsIScrollableView_MOZILLA_1_8_BRANCH*, scrollView);
+      scrollView_MOZILLA_1_8_BRANCH->ScrollByPixels(scrollX, scrollY);
+    }
     else
       scrollView->ScrollByLines(scrollX, scrollY);
 
@@ -1955,7 +1965,7 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
                                 *getter_AddRefs(newPresContext));
     if (NS_SUCCEEDED(rv) && newFrame)
       return DoScrollText(newPresContext, newFrame, aEvent, aNumLines,
-                          aScrollHorizontal, aScrollPage);
+                          aScrollHorizontal, aScrollQuantity);
     else
       return NS_ERROR_FAILURE;
   }
@@ -2197,6 +2207,8 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
         numLines = msEvent->delta;
         if (msEvent->scrollFlags & nsMouseScrollEvent::kIsFullPage)
           action = MOUSE_SCROLL_PAGE;
+        else if (msEvent->scrollFlags & nsMouseScrollEvent::kIsPixels)
+          action = MOUSE_SCROLL_PIXELS;
       }
       else
         {
@@ -2231,13 +2243,27 @@ nsEventStateManager::PostHandleEvent(nsPresContext* aPresContext,
 
       switch (action) {
       case MOUSE_SCROLL_N_LINES:
+        {
+          DoScrollText(presContext, aTargetFrame, msEvent, numLines,
+                       (msEvent->scrollFlags & nsMouseScrollEvent::kIsHorizontal),
+                       eScrollByLine);
+        }
+        break;
+
       case MOUSE_SCROLL_PAGE:
         {
           DoScrollText(presContext, aTargetFrame, msEvent, numLines,
                        (msEvent->scrollFlags & nsMouseScrollEvent::kIsHorizontal),
-                       (action == MOUSE_SCROLL_PAGE));
+                       eScrollByPage);
         }
+        break;
 
+      case MOUSE_SCROLL_PIXELS:
+        {
+          DoScrollText(presContext, aTargetFrame, msEvent, numLines,
+                       (msEvent->scrollFlags & nsMouseScrollEvent::kIsHorizontal),
+                       eScrollByPixel);
+        }
         break;
 
       case MOUSE_SCROLL_HISTORY:

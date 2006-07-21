@@ -118,6 +118,10 @@ nsresult nsScrollPortView::QueryInterface(const nsIID& aIID, void** aInstancePtr
     *aInstancePtr = (void*)(nsIScrollableView*)this;
     return NS_OK;
   }
+  if (aIID.Equals(NS_GET_IID(nsIScrollableView_MOZILLA_1_8_BRANCH))) {
+    *aInstancePtr = (void*)(nsIScrollableView_MOZILLA_1_8_BRANCH*)this;
+    return NS_OK;
+  }
 
   return nsView::QueryInterface(aIID, aInstancePtr);
 }
@@ -466,6 +470,19 @@ NS_IMETHODIMP nsScrollPortView::ScrollByWhole(PRBool aTop)
   ScrollTo(mOffsetX, newPos, 0);
 
   return NS_OK;
+}
+
+NS_IMETHODIMP nsScrollPortView::ScrollByPixels(PRInt32 aNumPixelsX,
+                                               PRInt32 aNumPixelsY)
+{
+  nsCOMPtr<nsIDeviceContext> dev;
+  mViewManager->GetDeviceContext(*getter_AddRefs(dev));
+  float p2t = dev->DevUnitsToAppUnits(); 
+
+  nscoord dx = NSIntPixelsToTwips(aNumPixelsX, p2t);
+  nscoord dy = NSIntPixelsToTwips(aNumPixelsY, p2t);
+
+  return ScrollTo(mOffsetX + dx, mOffsetY + dy, 0);
 }
 
 NS_IMETHODIMP nsScrollPortView::CanScroll(PRBool aHorizontal,
