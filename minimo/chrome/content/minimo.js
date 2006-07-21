@@ -440,14 +440,7 @@ function MiniNavStartup()
    * We save the inputField (anonymous node within textbox urlbar) BoxObject, so we can measure its width 
    * on progress load
    */
-  gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("urlbar").inputField));
-  
-  /* 
-   * Homebar init...
-   */
-   
-  bmInitXUL(document,document.getElementById("homebarcontainer"));
-  document.getElementById("homebar").style.display="block";
+  gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("urlbar").inputField));  
 
   /*
    * Local bundle repository

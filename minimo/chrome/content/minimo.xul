@@ -93,8 +93,7 @@
     <hbox id="appcontent" flex="1" >
     
       <vbox id="homebar" style="overflow:hidden" >
-        <vbox id="homebarcontainer"  >
-        </vbox>
+
       </vbox>
       
       <vbox id="browser" context="context" flex="1">
