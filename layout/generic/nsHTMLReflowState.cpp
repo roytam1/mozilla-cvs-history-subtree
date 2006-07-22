@@ -1958,6 +1958,13 @@ nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
     // ignore
     // First check if there is an HTML alignment that we should honor
     const nsHTMLReflowState* prs = parentReflowState;
+    if (frame->GetType() == nsLayoutAtoms::tableFrame) {
+      NS_ASSERTION(prs->frame->GetType() == nsLayoutAtoms::tableOuterFrame,
+                   "table not inside outer table");
+      // Center the table within the outer table based on the alignment
+      // of the outer table's parent.
+      prs = prs->parentReflowState;
+    }
     if (prs &&
         (prs->mStyleText->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_LEFT ||
          prs->mStyleText->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER ||
