@@ -190,7 +190,6 @@ void
 nsLayoutStatics::Shutdown()
 {
   nsDOMAttribute::Shutdown();
-  nsRange::Shutdown();
   nsGenericElement::Shutdown();
   nsEventListenerManager::Shutdown();
   nsContentList::Shutdown();
