@@ -865,7 +865,22 @@ void nsXPInstallManager::Shutdown()
 
         nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
         if (os)
-            os->RemoveObserver(this, XPI_PROGRESS_TOPIC);
+        {
+            nsresult rv;
+            nsCOMPtr<nsIProxyObjectManager> pmgr =
+                        do_GetService(kProxyObjectManagerCID, &rv);
+            if (pmgr)
+            {
+                nsCOMPtr<nsIObserverService> pos;
+                rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+                                              NS_GET_IID(nsIObserverService),
+                                              os,
+                                              PROXY_SYNC | PROXY_ALWAYS,
+                                              getter_AddRefs(pos) );
+                if (NS_SUCCEEDED(rv))
+                    pos->RemoveObserver(this, XPI_PROGRESS_TOPIC);
+            }
+        }
 
         NS_RELEASE_THIS();
     }
