@@ -338,6 +338,8 @@ NS_IMETHODIMP nsCaret::GetCaretCoordinates(EViewCoordinates aRelativeToType, nsI
 
   PRUint8 bidiLevel;
   nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShell);
+  if (!presShell)
+    return NS_ERROR_FAILURE;
   presShell->GetCaretBidiLevel(&bidiLevel);
   
   err = GetCaretFrameForNodeOffset(contentNode,
@@ -408,6 +410,8 @@ NS_IMETHODIMP nsCaret::DrawAtPosition(nsIDOMNode* aNode, PRInt32 aOffset)
 
   PRUint8 bidiLevel;
   nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShell);
+  if (!presShell)
+    return NS_ERROR_FAILURE;
   presShell->GetCaretBidiLevel(&bidiLevel);
   
   // XXX we need to do more work here to get the correct hint.
@@ -550,6 +554,8 @@ nsCaret::DrawAtPositionWithHint(nsIDOMNode*             aNode,
 
     // If there has been a reflow, set the caret Bidi level to the level of the current frame
     nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShell);
+    if (!presShell)
+      return PR_FALSE;
     if (aBidiLevel & BIDI_LEVEL_UNDEFINED)
       presShell->SetCaretBidiLevel(NS_GET_EMBEDDING_LEVEL(theFrame));
   }
@@ -914,6 +920,8 @@ void nsCaret::DrawCaret()
       return;
 
     nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShell);
+    if (!presShell)
+      return;
     presShell->GetCaretBidiLevel(&bidiLevel);
   }
   else
