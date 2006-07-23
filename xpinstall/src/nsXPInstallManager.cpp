@@ -173,6 +173,8 @@ nsXPInstallManager::InitManagerWithHashes(const PRUnichar **aURLs,
     if (!mTriggers)
         return NS_ERROR_OUT_OF_MEMORY;
 
+    mNeedsShutdown = PR_TRUE;
+
     for (PRUint32 i = 0; i < aURLCount; ++i) 
     {
         nsXPITriggerItem* item = new nsXPITriggerItem(0, aURLs[i], nsnull,
@@ -181,6 +183,7 @@ nsXPInstallManager::InitManagerWithHashes(const PRUnichar **aURLs,
         {
             delete mTriggers; // nsXPITriggerInfo frees any alloc'ed nsXPITriggerItems
             mTriggers = nsnull;
+            Shutdown();
             return NS_ERROR_OUT_OF_MEMORY;
         }
         mTriggers->Add(item);
@@ -192,10 +195,14 @@ nsXPInstallManager::InitManagerWithHashes(const PRUnichar **aURLs,
     {
         delete mTriggers;
         mTriggers = nsnull;
+        Shutdown();
         return rv;
     }
 
-    return Observe(aListener, XPI_PROGRESS_TOPIC, NS_LITERAL_STRING("open").get());
+    rv = Observe(aListener, XPI_PROGRESS_TOPIC, NS_LITERAL_STRING("open").get());
+    if (NS_FAILED(rv))
+        Shutdown();
+    return rv;
 }
 
 
@@ -551,11 +558,11 @@ NS_IMETHODIMP nsXPInstallManager::Observe( nsISupports *aSubject,
                             do_GetService(kProxyObjectManagerCID, &rv);
                 if (pmgr)
                 {
-                    rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ,
-                                                  NS_GET_IID(nsIXPIProgressDialog),
-                                                  dlg,
-                                                  PROXY_SYNC | PROXY_ALWAYS,
-                                                  getter_AddRefs(mDlg) );
+                    pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ,
+                                             NS_GET_IID(nsIXPIProgressDialog),
+                                             dlg,
+                                             PROXY_SYNC | PROXY_ALWAYS,
+                                             getter_AddRefs(mDlg) );
                 }
             }
 
