@@ -191,6 +191,10 @@ protected:
   static void DoCommandCallback(nsITimer *aTimer, void *aClosure);
   nsresult DoCommand(nsIContent *aContent = nsnull);
 
+  // Relation helpers
+  already_AddRefed<nsIDOMNode> GetInverseRelatedNode(nsIAtom *aRelationAttr,
+                                                     PRUint32 aAncestorLevelsToSearch = 0);
+
   // Data Members
   nsCOMPtr<nsIAccessible> mParent;
   nsIAccessible *mFirstChild, *mNextSibling;
