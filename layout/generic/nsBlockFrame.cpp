@@ -1356,24 +1356,23 @@ nsBlockFrame::MarkLineDirty(line_iterator aLine)
 nsresult
 nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
 {
-  // See if we can try and avoid marking all the lines as dirty
-  PRBool  tryAndSkipLines = PR_FALSE;
-
   // we need to calculate if any part of then block itself 
   // is impacted by a float (bug 19579)
   aState.GetAvailableSpace();
 
-  if ((! aState.IsImpactedByFloat())) {
-
-    // If the text is left-aligned, then we try and avoid reflowing the lines
-    const nsStyleText* styleText = GetStyleText();
-
-    if ((NS_STYLE_TEXT_ALIGN_LEFT == styleText->mTextAlign) ||
-        ((NS_STYLE_TEXT_ALIGN_DEFAULT == styleText->mTextAlign) &&
-         (NS_STYLE_DIRECTION_LTR == aState.mReflowState.mStyleVisibility->mDirection))) {
-      tryAndSkipLines = PR_TRUE;
-    }
-  }
+  const nsStyleText* styleText = GetStyleText();
+  // See if we can try and avoid marking all the lines as dirty
+  PRBool tryAndSkipLines =
+      // There must be no floats.
+      !aState.IsImpactedByFloat() &&
+      // The text must be left-aligned.
+      (NS_STYLE_TEXT_ALIGN_LEFT == styleText->mTextAlign ||
+       (NS_STYLE_TEXT_ALIGN_DEFAULT == styleText->mTextAlign &&
+        NS_STYLE_DIRECTION_LTR ==
+          aState.mReflowState.mStyleVisibility->mDirection)) &&
+      // The left content-edge must be a constant distance from the left
+      // border-edge.
+      GetStylePadding()->mPadding.GetLeftUnit() != eStyleUnit_Percent;
 
 #ifdef DEBUG
   if (gDisableResizeOpt) {
