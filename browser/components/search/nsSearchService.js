@@ -1430,6 +1430,9 @@ Engine.prototype = {
     ENSURE(this.name && (this._urls.length > 0),
            "_parseAsOpenSearch: No name, or missing URL!",
            Cr.NS_ERROR_FAILURE);
+    ENSURE(this.supportsResponseType(URLTYPE_SEARCH_HTML),
+           "_parseAsOpenSearch: No text/html result type!",
+           Cr.NS_ERROR_FAILURE);
   },
 
   /**
@@ -2071,11 +2074,6 @@ SearchService.prototype = {
       // XXX handle duplicates better?
       // might want to prompt the user in the case where the engine is being
       // added through a user action
-    }
-
-    if (!aEngine.supportsResponseType(URLTYPE_SEARCH_HTML)) {
-      LOG("_addEngineToStore: Won't add engines that have no HTML output!");
-      return;
     }
 
     this._engines[aEngine.name] = aEngine;
