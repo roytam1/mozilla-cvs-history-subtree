@@ -255,11 +255,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
-NSPR_CO_TAG          = MOZILLA_1_8_BRANCH
-NSS_CO_TAG           = MOZILLA_1_8_BRANCH
-LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
-LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
+MOZ_CO_TAG           = SONGBIRD_0_2A_2006_07_24_BRANCH
+NSPR_CO_TAG          = SONGBIRD_0_2A_2006_07_24_BRANCH
+NSS_CO_TAG           = SONGBIRD_0_2A_2006_07_24_BRANCH
+LDAPCSDK_CO_TAG      = SONGBIRD_0_2A_2006_07_24_BRANCH
+LOCALES_CO_TAG       = SONGBIRD_0_2A_2006_07_24_BRANCH
 
 BUILD_MODULES = all
 
