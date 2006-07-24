@@ -342,6 +342,12 @@ protected:
   }
   PRBool GuessVScrollbarNeeded(const ScrollReflowState& aState);
 
+#ifdef DEBUG
+  PRBool IsScrollbarUpdateSuppressed() const {
+    return mInner.mSupppressScrollbarUpdate;
+  }
+#endif
+  
 private:
   friend class nsGfxScrollFrameInner;
   nsGfxScrollFrameInner mInner;
