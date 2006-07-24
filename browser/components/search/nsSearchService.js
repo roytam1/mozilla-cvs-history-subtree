@@ -661,6 +661,7 @@ function getSanitizedFile(aName) {
  */
 function sanitizeName(aName) {
   const chars = "-abcdefghijklmnopqrstuvwxyz0123456789";
+  const maxLength = 60;
 
   var name = aName.toLowerCase();
   name = name.replace(/ /g, "-");
@@ -674,6 +675,9 @@ function sanitizeName(aName) {
     for (var i = 0; i < 8; ++i)
       name += chars.charAt(Math.round(Math.random() * cl));
   }
+
+  if (name.length > maxLength)
+    name = name.substring(0, maxLength);
 
   return name;
 }
