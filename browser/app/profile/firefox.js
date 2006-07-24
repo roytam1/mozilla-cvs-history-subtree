@@ -482,7 +482,7 @@ pref("browser.safebrowsing.provider.0.keyURL", "https://www.google.com/safebrows
 pref("browser.safebrowsing.provider.0.reportURL", "http://sb.google.com/safebrowsing/report?");
 
 // HTML report pages
-pref("browser.safebrowsing.provider.0.reportGenericURL", "http://www.mozilla.org/projects/bonecho/anti-phishing/report_general/?");
-pref("browser.safebrowsing.provider.0.reportErrorURL", "http://www.mozilla.org/projects/bonecho/anti-phishing/report_error/?");
-pref("browser.safebrowsing.provider.0.reportPhishURL", "http://www.mozilla.org/projects/bonecho/anti-phishing/report_phish/?");
+pref("browser.safebrowsing.provider.0.reportGenericURL", "http://www.mozilla.org/projects/bonecho/anti-phishing/report_general/?hl={moz:locale}");
+pref("browser.safebrowsing.provider.0.reportErrorURL", "http://www.mozilla.org/projects/bonecho/anti-phishing/report_error/?hl={moz:locale}");
+pref("browser.safebrowsing.provider.0.reportPhishURL", "http://www.mozilla.org/projects/bonecho/anti-phishing/report_phish/?hl={moz:locale}");
 #endif
