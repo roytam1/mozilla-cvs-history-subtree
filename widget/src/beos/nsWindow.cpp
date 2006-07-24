@@ -1311,12 +1311,15 @@ NS_METHOD nsWindow::SetCursor(nsCursor aCursor)
 			gCursorArray.InsertElementAt((void*) new BCursor(cursorCell),14);
 			gCursorArray.InsertElementAt((void*) new BCursor(cursorZoomIn),15);
 			gCursorArray.InsertElementAt((void*) new BCursor(cursorZoomOut),16);
+			gCursorArray.InsertElementAt((void*) new BCursor(cursorRight),17);
+			gCursorArray.InsertElementAt((void*) new BCursor(cursorLeft),18);
+			gCursorArray.InsertElementAt((void*) new BCursor(cursorTop),19);
+			gCursorArray.InsertElementAt((void*) new BCursor(cursorBottom),20);
 		}
 
 		switch (aCursor) 
 		{
 			case eCursor_standard:
-			case eCursor_wait:
 			case eCursor_move:
 				newCursor = B_CURSOR_SYSTEM_DEFAULT;
 				break;
@@ -1330,13 +1333,19 @@ NS_METHOD nsWindow::SetCursor(nsCursor aCursor)
 				break;
 	
 			case eCursor_n_resize:
+				newCursor = (BCursor *)gCursorArray.SafeElementAt(19);
+				break;
+
 			case eCursor_s_resize:
-				newCursor = (BCursor *)gCursorArray.SafeElementAt(2);
+				newCursor = (BCursor *)gCursorArray.SafeElementAt(20);
 				break;
 	
 			case eCursor_w_resize:
+				newCursor = (BCursor *)gCursorArray.SafeElementAt(17);
+				break;
+
 			case eCursor_e_resize:
-				newCursor = (BCursor *)gCursorArray.SafeElementAt(1);
+				newCursor = (BCursor *)gCursorArray.SafeElementAt(18);
 				break;
 	
 			case eCursor_nw_resize:
@@ -1387,6 +1396,7 @@ NS_METHOD nsWindow::SetCursor(nsCursor aCursor)
 				newCursor = (BCursor *)gCursorArray.SafeElementAt(10);
 				break;
 	
+			case eCursor_wait:
 			case eCursor_spinning:
 				newCursor = (BCursor *)gCursorArray.SafeElementAt(13);
 				break;
@@ -1858,8 +1868,8 @@ bool nsWindow::CallMethod(MethodInfo *info)
 
 			scrollEvent.time      = PR_IntervalNow();
 
-			scrollEvent.point.x = cursor.x;
-			scrollEvent.point.y = cursor.y;
+			scrollEvent.point.x = nscoord(cursor.x);
+			scrollEvent.point.y = nscoord(cursor.y);
 
 			// we don't use the mIsXDown bools because
 			// they get reset on Gecko reload (makes it harder
@@ -1955,7 +1965,8 @@ bool nsWindow::CallMethod(MethodInfo *info)
 			NS_ASSERTION(info->nArgs == 4, "Wrong number of arguments to CallMethod");
 
 			nsMouseEvent event(PR_TRUE, (int32)  info->args[0], this, nsMouseEvent::eReal);
-			InitEvent (event, &nsPoint( ((int32 *)info->args)[1], ((int32 *)info->args)[2] ) );
+			nsPoint point(((int32 *)info->args)[1], ((int32 *)info->args)[2]);
+			InitEvent (event, &point);
 			uint32 mod = (uint32) info->args[3];
 			event.isShift   = mod & B_SHIFT_KEY;
 			event.isControl = mod & B_CONTROL_KEY;
