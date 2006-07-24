@@ -301,7 +301,8 @@ public:
 	virtual void            FrameMoved(BPoint origin);
 	virtual void            WorkspacesChanged(uint32 oldworkspace, uint32 newworkspace);
 	virtual void            FrameResized(float width, float height);
-	
+
+	bool                    fJustGotBounds;	
 private:
 	BPoint          lastWindowPoint;
 };
@@ -339,6 +340,7 @@ private:
 	BPoint               lastViewPoint;
 	uint32               mouseMask;
 	bool                 restoreMouseMask;	
+	bool                 fJustValidated;
 };
 
 //
