@@ -1457,10 +1457,14 @@ JS_EXPORT_DATA(void *) js_LiveThingToFind;
 #endif
 
 static void
-GetObjSlotName(JSScope *scope, uint32 slot, char *buf, size_t bufsize)
+GetObjSlotName(JSScope *scope, JSObject *obj, uint32 slot, char *buf,
+               size_t bufsize)
 {
     jsval nval;
     JSScopeProperty *sprop;
+    JSClass *clasp;
+    uint32 key;
+    const char *slotname;
 
     if (!scope) {
         JS_snprintf(buf, bufsize, "**UNKNOWN OBJECT MAP ENTRY**");
@@ -1480,7 +1484,20 @@ GetObjSlotName(JSScope *scope, uint32 slot, char *buf, size_t bufsize)
             JS_snprintf(buf, bufsize, "__parent__");
             break;
           default:
-            JS_snprintf(buf, bufsize, "**UNKNOWN SLOT %ld**", (long)slot);
+            slotname = NULL;
+            clasp = LOCKED_OBJ_GET_CLASS(obj);
+            if (clasp->flags & JSCLASS_IS_GLOBAL) {
+                key = slot - JSSLOT_START(clasp);
+#define JS_PROTO(name,code,init) \
+    if ((code) == key) { slotname = js_##name##_str; goto found; }
+#include "jsproto.tbl"
+#undef JS_PROTO
+            }
+          found:
+            if (slotname)
+                JS_snprintf(buf, bufsize, "CLASS_OBJECT(%s)", slotname);
+            else
+                JS_snprintf(buf, bufsize, "**UNKNOWN SLOT %ld**", (long)slot);
             break;
         }
     } else {
@@ -1794,7 +1811,7 @@ MarkGCThingChildren(JSContext *cx, void *thing, uint8 *flagp,
                 }
             }
 #ifdef GC_MARK_DEBUG
-            GetObjSlotName(scope, vp - obj->slots, name, sizeof name);
+            GetObjSlotName(scope, obj, vp - obj->slots, name, sizeof name);
 #endif
             thing = next_thing;
             flagp = next_flagp;
@@ -2272,10 +2289,39 @@ js_MarkStackFrame(JSContext *cx, JSStackFrame *fp)
             GC_MARK_JSVALS(cx, nslots, fp->spbase, "operand");
         }
     }
+
+    /* Allow for primitive this parameter due to JSFUN_THISP_* flags. */
     JS_ASSERT(JSVAL_IS_OBJECT((jsval)fp->thisp) ||
               (fp->fun && JSFUN_THISP_FLAGS(fp->fun->flags)));
     if (JSVAL_IS_GCTHING((jsval)fp->thisp))
-        GC_MARK(cx, fp->thisp, "this");
+        GC_MARK(cx, JSVAL_TO_GCTHING((jsval)fp->thisp), "this");
+
+    /*
+     * Mark fp->argv, even though in the common case it will be marked via our
+     * caller's frame, or via a JSStackHeader if fp was pushed by an external
+     * invocation.
+     *
+     * The hard case is when there is not enough contiguous space in the stack
+     * arena for actual, missing formal, and local root (JSFunctionSpec.extra)
+     * slots.  In this case, fp->argv points to new space in a new arena, and
+     * marking the caller's operand stack, or an external caller's allocated
+     * stack tracked by a JSStackHeader, will not mark all the values stored
+     * and addressable via fp->argv.
+     *
+     * But note that fp->argv[-2] will be marked via the caller, even when the
+     * arg-vector moves.  And fp->argv[-1] will be marked as well, and we mark
+     * it redundantly just above this comment.
+     *
+     * So in summary, solely for the hard case of moving argv due to missing
+     * formals and extra roots, we must mark actuals, missing formals, and any
+     * local roots arrayed at fp->argv here.
+     *
+     * It would be good to avoid redundant marking of the same reference, in
+     * the case where fp->argv does point into caller-allocated space tracked
+     * by fp->down->spbase or cx->stackHeaders.  This would allow callbacks
+     * such as the forthcoming rt->gcThingCallback (bug 333078) to compute JS
+     * reference counts.  So this comment deserves a FIXME bug to cite.
+     */
     if (fp->argv) {
         nslots = fp->argc;
         if (fp->fun) {
@@ -2494,7 +2540,7 @@ js_GC(JSContext *cx, uintN gcflags)
     memset(cx->thread->gcFreeLists, 0, sizeof cx->thread->gcFreeLists);
     iter = NULL;
     while ((acx = js_ContextIterator(rt, JS_FALSE, &iter)) != NULL) {
-        if (acx->thread == cx->thread)
+        if (!acx->thread || acx->thread == cx->thread)
             continue;
         memset(acx->thread->gcFreeLists, 0, sizeof acx->thread->gcFreeLists);
     }
