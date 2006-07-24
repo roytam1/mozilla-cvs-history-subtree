@@ -26,11 +26,25 @@
   list-style-image: url("chrome://browser/skin/bookmarks/bookmark-item.png");
 }
 
+.searchbar-engine-button {
+  min-width: 22px;
+  margin: 0px 3px 0px 0px;
+}
+
+.searchbar-engine-button[addengines="true"] {
+  list-style-image: url("chrome://browser/skin/Search-add-engines.png");
+}
+
+.searchbar-dropmarker-image {
+  list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
+  padding: 8px 0px 7px 19px;
+}
+
 .autocomplete-textbox-container {
   border: none;
   padding-right: 0px;
   height: 21px !important;
-  margin: 0px -3px 0px -1px;
+  margin: 0px -5px 0px -3px;
 }
 
 .search-go-button {
@@ -38,10 +52,6 @@
   list-style-image: url("chrome://browser/skin/Search.png");
   -moz-image-region: rect(0px 16px 16px 0px);
   padding: 0px;
-}
-
-.search-go-button[addengines="true"] {
-  list-style-image: url("chrome://browser/skin/Search-add-engines.png");
 }
 
 .search-go-button:hover {
@@ -52,14 +62,10 @@
   -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 
-.search-go-button[disabled="true"]{
+.search-go-button[disabled="true"] {
   -moz-image-region: rect(0px, 48px, 16px, 32px);
 }
 
 .searchbar-engine-menuitem[selected="true"] > .menu-iconic-text {
   font-weight: bold;
-}
-
-.search-go-button .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/bookmarks/folderarrow.png") !important;
 }
