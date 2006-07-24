@@ -56,6 +56,7 @@
 #include "nsIDOMEventListener.h"
 #include "nsIContent.h"
 #include "nsAutoPtr.h"
+#include "nsSelectsAreaFrame.h"
 
 class nsIDOMHTMLSelectElement;
 class nsIDOMHTMLOptionsCollection;
@@ -199,7 +200,31 @@ public:
 #endif
 
   PRBool IsFocused() { return this == mFocused; }
+
+  /**
+   * Function to paint the focus rect when our nsSelectsAreaFrame is painting.
+   * @param aPt the offset of this frame, relative to the rendering reference
+   * frame
+   */
   void PaintFocus(nsIRenderingContext& aRC, nsPoint aPt);
+
+  /**
+   * Function to calculate the height a row, for use with the "size" attribute.
+   * Can't be const because GetNumberOfOptions() isn't const.
+   */
+  nscoord CalcHeightOfARow();
+
+  /**
+   * Function to ask whether we're currently in what might be the
+   * first pass of a two-pass reflow.
+   */
+  PRBool MightNeedSecondPass() const {
+    return mMightNeedSecondPass;
+  }
+
+  void SetSuppressScrollbarUpdate(PRBool aSuppress) {
+    nsHTMLScrollFrame::SetSuppressScrollbarUpdate(aSuppress);
+  }
 
 #ifdef ACCESSIBILITY
   void FireMenuItemActiveEvent(); // Inform assistive tech what got focused
@@ -258,8 +283,12 @@ protected:
   PRBool   HandleListSelection(nsIDOMEvent * aDOMEvent, PRInt32 selectedIndex);
   void     InitSelectionRange(PRInt32 aClickedIndex);
 
-  nsIFrame* GetOptionsContainer() {
-    return GetScrolledFrame();
+  nsSelectsAreaFrame* GetOptionsContainer() const {
+    return NS_STATIC_CAST(nsSelectsAreaFrame*, GetScrolledFrame());
+  }
+
+  nscoord HeightOfARow() {
+    return GetOptionsContainer()->HeightOfARow();
   }
   
   // Data Members
@@ -289,6 +318,10 @@ protected:
   //bool value for multiple discontiguous selection
   PRPackedBool mControlSelectMode:1;
 
+  // True if we're in the middle of a reflow and might need a second
+  // pass.  This only happens for auto heights.
+  PRPackedBool mMightNeedSecondPass:1;
+
 #ifdef HTML_FORMS
   PRInt16 mPassId;
   nscoord mCachedDesiredMEW;
@@ -305,12 +338,6 @@ protected:
   nsSize       mCachedAvailableSize;
 #endif
 
-  // We cache the height of a single row so that changes to the "size"
-  // attribute, padding, etc. can all be handled with only one reflow.  We'll
-  // have to reflow twice if someone changes with our font size or something
-  // like that, so that the heights of our options will change.
-  nscoord mHeightOfARow;
-  
   static nsListControlFrame * mFocused;
   
 #ifdef DO_REFLOW_COUNTER

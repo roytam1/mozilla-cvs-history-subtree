@@ -285,7 +285,7 @@ if (aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE) { \
 nsListControlFrame::nsListControlFrame(
   nsIPresShell* aShell, nsIDocument* aDocument, nsStyleContext* aContext)
   : nsHTMLScrollFrame(aShell, aContext, PR_FALSE),
-    mHeightOfARow(0)
+    mMightNeedSecondPass(PR_FALSE)
 {
   mComboboxFrame      = nsnull;
   mChangesSinceDragStart = PR_FALSE;
@@ -647,6 +647,23 @@ GetOptGroupLabelsHeight(nsPresContext* aPresContext,
 //-----------------------------------------------------------------
 
 nscoord
+nsListControlFrame::CalcHeightOfARow()
+{
+  // Calculate the height of a single row in the listbox or dropdown list by
+  // using the tallest thing in the subtree, since there may be option groups
+  // in addition to option elements, either of which may be visible or
+  // invisible, may use different fonts, etc.
+  PRInt32 heightOfARow = GetMaxOptionHeight(GetOptionsContainer());
+
+  // Check to see if we have zero items 
+  if (heightOfARow == 0) {
+    heightOfARow = CalcFallbackRowHeight(GetNumberOfOptions());
+  }
+
+  return heightOfARow;
+}
+
+nscoord
 nsListControlFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   // We don't want to have options wrapping unless they absolutely
@@ -668,6 +685,9 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   NS_PRECONDITION(aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE,
                   "Must have a computed width");
 
+  // XXXbz chances are, we want to cache our desired size and bail out early
+  // here.  Do some tests!
+  
   // If all the content and frames are here 
   // then initialize it before reflow
   if (mIsAllContentHere && !mHasBeenInitialized) {
@@ -698,67 +718,47 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
    */
 
   PRBool autoHeight = (aReflowState.mComputedHeight == NS_UNCONSTRAINEDSIZE);
-  PRBool mightNeedSecondPass = autoHeight &&
+  mMightNeedSecondPass = autoHeight &&
     (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN));
   
   nsHTMLReflowState state(aReflowState);
   PRInt32 length = GetNumberOfOptions();  
+
+  nscoord oldHeightOfARow = HeightOfARow();
   
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
   } else if (autoHeight) {
     // When not doing an initial reflow, and when the height is auto, start off
     // with our computed height set to what we'd expect our height to be.
-    state.mComputedHeight = CalcIntrinsicHeight(mHeightOfARow, length);
+    state.mComputedHeight = CalcIntrinsicHeight(oldHeightOfARow, length);
     state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
   }
 
-  // XXXbz should we continue doing this weird "scroll to index" thing?  Why
-  // was it added?  AHA!  Looks like it's no longer needed what with
-  // OnOptionSelected and DidReflow both scrolling as needed.
-
-  /*
-   * I don't think we want to SetSuppressScrollbarUpdate() here.  The only case
-   * we'd _want_ to suppress it is the case when we're going to do both reflow
-   * passes and the first pass will produce a height that is both smaller than
-   * the current height and smaller than the height we'll eventually end up
-   * with, since in that situation we'd end up clamping the scroll position to
-   * a too-small value after the first reflow.  The only way that can happen is
-   * if our size attr has decreased (so that we'll end up with a smaller height
-   * than our current height), and at the same time the size of our tallest
-   * option has increased.  This is a pretty rare case, and not calling
-   * SetSuppressScrollbarUpdate() means we can get away without a second reflow
-   * in other (much more common) cases.
-   */  
   nsresult rv = nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize,
                                           state, aStatus);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (!mightNeedSecondPass) {
+  if (!mMightNeedSecondPass) {
+    NS_ASSERTION(!autoHeight || HeightOfARow() == oldHeightOfARow,
+                 "How did our height of a row change if nothing was dirty?");
     return rv;
   }
 
-  // Now we need to compute our current height of a row and see
-  // whether that's the height we already have.
+  mMightNeedSecondPass = PR_FALSE;
 
-  // Calculate the height of a single row in the listbox or dropdown
-  // list by using the tallest of the grandchildren, since there may be
-  // option groups in addition to option elements, either of which may
-  // be visible or invisible.
-  PRInt32 heightOfARow = GetMaxOptionHeight(GetOptionsContainer());
-
-  // Check to see if we have zero items 
-  if (heightOfARow == 0) {
-    heightOfARow = CalcFallbackRowHeight(length);
-  }
-
-  if (heightOfARow == mHeightOfARow) {
+  // Now see whether we need a second pass.  If the height of a row has not
+  // changed, we don't.
+  if (HeightOfARow() == oldHeightOfARow) {
     // All done.  No need to do more reflow.
+    NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
+                 "Shouldn't be suppressing if the height of a row has not "
+                 "changed!");
     return rv;
   }
 
-  mHeightOfARow = heightOfARow;
-  
+  SetSuppressScrollbarUpdate(PR_FALSE);
+
   // Gotta reflow again.
   // XXXbz We're just changing the height here; do we need to dirty ourselves
   // or anything like that?  We might need to, per the letter of the reflow
@@ -772,7 +772,7 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   if (isInDropDownMode) {
     NS_ERROR("Shouldn't happen");
   } else {
-    state.mComputedHeight = CalcIntrinsicHeight(mHeightOfARow, length);
+    state.mComputedHeight = CalcIntrinsicHeight(HeightOfARow(), length);
     state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
   }
 
@@ -1914,7 +1914,7 @@ nsListControlFrame::IsInDropDownMode() const
 
 //---------------------------------------------------------
 PRInt32
-nsListControlFrame::GetNumberOfOptions() 
+nsListControlFrame::GetNumberOfOptions()
 {
   if (mContent != nsnull) {
     nsCOMPtr<nsIDOMHTMLOptionsCollection> options = GetOptions(mContent);

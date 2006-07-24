@@ -230,6 +230,33 @@ nsSelectsAreaFrame::BuildDisplayListInternal(nsDisplayListBuilder*   aBuilder,
   return NS_OK;
 }
 
+NS_IMETHODIMP 
+nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext, 
+                           nsHTMLReflowMetrics&     aDesiredSize,
+                           const nsHTMLReflowState& aReflowState, 
+                           nsReflowStatus&          aStatus)
+{
+  nsresult rv = nsAreaFrame::Reflow(aPresContext, aDesiredSize,
+                                    aReflowState, aStatus);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Check whether we need to suppress scrolbar updates.  We want to do that if
+  // we're in a possible first pass and our height of a row has changed.
+  nsListControlFrame* list = GetEnclosingListFrame(this);
+  if (NS_LIKELY(list != nsnull)) {
+    if (list->MightNeedSecondPass()) {
+      nscoord newHeightOfARow = list->CalcHeightOfARow();
+      if (newHeightOfARow != mHeightOfARow) {
+        mHeightOfARow = newHeightOfARow;
+        list->SetSuppressScrollbarUpdate(PR_TRUE);
+      }
+    }
+  }
+
+  return rv;
+}
+
+
 PRBool
 nsSelectsAreaFrame::IsFrameOfType(PRUint32 aFlags) const
 {
