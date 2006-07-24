@@ -211,6 +211,10 @@ select:empty {
   -moz-user-select: none;
 }
 
+select::-moz-scrolled-content {
+  display: block !important;
+}
+
 option {
   display: block;
   min-height: 1em;

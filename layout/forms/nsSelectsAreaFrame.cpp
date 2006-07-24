@@ -255,11 +255,3 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
 
   return rv;
 }
-
-
-PRBool
-nsSelectsAreaFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
-}
-

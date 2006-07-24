@@ -67,8 +67,6 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
-  
   static PRBool IsOptionElement(nsIContent* aContent);
   static PRBool IsOptionElementFrame(nsIFrame *aFrame);
   
