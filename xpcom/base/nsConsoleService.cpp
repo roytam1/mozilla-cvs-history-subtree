@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Simon Bünzli <zeniko@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -52,8 +53,12 @@
 
 NS_IMPL_THREADSAFE_ADDREF(nsConsoleService)
 NS_IMPL_THREADSAFE_RELEASE(nsConsoleService)
-NS_IMPL_QUERY_INTERFACE1_CI(nsConsoleService, nsIConsoleService)
-NS_IMPL_CI_INTERFACE_GETTER1(nsConsoleService, nsIConsoleService)
+NS_IMPL_QUERY_INTERFACE2_CI(nsConsoleService,
+                            nsIConsoleService,
+                            nsIConsoleService_mozilla_BRANCH)
+NS_IMPL_CI_INTERFACE_GETTER2(nsConsoleService,
+                             nsIConsoleService,
+                             nsIConsoleService_mozilla_BRANCH)
 
 nsConsoleService::nsConsoleService()
     : mMessages(nsnull), mCurrent(0), mFull(PR_FALSE), mListening(PR_FALSE), mLock(nsnull)
@@ -328,4 +333,24 @@ nsConsoleService::GetProxyForListener(nsIConsoleListener* aListener,
                                          PROXY_ASYNC | PROXY_ALWAYS,
                                          (void**) aProxy);
     return rv;
+}
+
+NS_IMETHODIMP
+nsConsoleService::Reset()
+{
+    /*
+     * Make sure nobody trips into the buffer while it's being reset
+     */
+    nsAutoLock lock(mLock);
+
+    mCurrent = 0;
+    mFull = PR_FALSE;
+
+    /*
+     * Free all messages stored so far (cf. destructor)
+     */
+    for (PRUint32 i = 0; i < mBufferSize && mMessages[i] != nsnull; i++)
+        NS_RELEASE(mMessages[i]);
+
+    return NS_OK;
 }

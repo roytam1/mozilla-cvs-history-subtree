@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Simon Bünzli <zeniko@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -70,7 +71,20 @@ interface nsIConsoleService : nsISupports
      * Each registered listener should also be unregistered.
      */
     void unregisterListener(in nsIConsoleListener listener);
-   
+};
+
+/**
+ * Temporary interface for Gecko 1.8.1.
+ *
+ * @status TEMPORARY
+ */
+[scriptable, uuid(3c3f3e30-ebd5-11da-8ad9-0800200c9a66)]
+interface nsIConsoleService_mozilla_BRANCH : nsIConsoleService
+{
+    /**
+     * Clear the message buffer (e.g. for privacy reasons).
+     */
+    void reset();
 };
 
 
