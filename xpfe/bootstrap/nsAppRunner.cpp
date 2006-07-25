@@ -570,8 +570,7 @@ LaunchApplicationWithArgs(const char *commandLineArg,
         if (NS_FAILED(rv)) return rv;
 
         if (openWindowWithArgs) {
-          nsAutoString cmdArgs;
-          NS_CopyNativeToUnicode(cmdResult, cmdArgs);
+          NS_ConvertASCIItoUTF16 cmdArgs(cmdResult);
 #ifdef DEBUG_CMD_LINE
           printf("opening %s with %s\n", chromeUrlForTask.get(), "OpenWindow");
 #endif /* DEBUG_CMD_LINE */
