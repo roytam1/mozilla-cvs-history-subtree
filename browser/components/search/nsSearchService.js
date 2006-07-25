@@ -1125,7 +1125,7 @@ Engine.prototype = {
      * Handle an error during the load of an engine by prompting the user to
      * notify him that the load failed.
      */
-    function onError() {
+    function onError(aErrorString, aTitleString) {
       if (aEngine._engineToUpdate) {
         // We're in an update, so just fail quietly
         LOG("updating " + aEngine._engineToUpdate.name + " failed");
