@@ -118,20 +118,6 @@ public:
 
   virtual nsresult GetFormProperty(nsIAtom* aName, nsAString& aValue) const; 
   
-  // Resize Reflow Optimization Methods
-  static void SetupCachedSizes(nsSize& aCacheSize,
-                               nscoord& aCachedAscent,
-                               nsHTMLReflowMetrics& aDesiredSize);
-
-  static void SkipResizeReflow(nsSize& aCacheSize,
-                               nscoord& aCachedAscent,
-                               nscoord& aCachedMaxElementWidth,
-                               nsSize& aCachedAvailableSize,
-                               nsHTMLReflowMetrics& aDesiredSize,
-                               const nsHTMLReflowState& aReflowState,
-                               nsReflowStatus& aStatus,
-                               PRBool& aBailOnWidth,
-                               PRBool& aBailOnHeight);
   // AccessKey Helper function
   static nsresult RegUnRegAccessKey(nsIFrame * aFrame, PRBool aDoReg);
 
