@@ -1220,10 +1220,9 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
       scx->InitContext(this);
 
-      // Now that both the the inner and outer windows are initialized
-      // we can clear the outer scope again to make *all* properties
-      // forward to the inner window.
-      ::JS_ClearScope(cx, mJSObject);
+      // *Don't* call JS_ClearScope here since it's unnecessary
+      // and it confuses the JS engine as to which Function is
+      // on which window. See bug 343966.
 
       // Make the inner and outer window both share the same
       // prototype. The prototype we share is the outer window's
