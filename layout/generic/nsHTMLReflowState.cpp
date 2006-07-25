@@ -1811,7 +1811,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
         mComputedMaxWidth = mComputedMaxHeight = NS_UNCONSTRAINEDSIZE;
       }
     } else {
-      ComputeBlockBoxData(aPresContext, cbrs, widthUnit, heightUnit,
+      ComputeBlockBoxData(aPresContext, availableWidth, widthUnit, heightUnit,
                           aContainingBlockWidth,
                           aContainingBlockHeight);
     }
@@ -1835,7 +1835,7 @@ inline PRBool IsSideCaption(nsIFrame* aCaptionFrame)
 // normal flow.
 void
 nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
-                                       const nsHTMLReflowState* cbrs,
+                                       nscoord aAvailWidth,
                                        nsStyleUnit aWidthUnit,
                                        nsStyleUnit aHeightUnit,
                                        nscoord aContainingBlockWidth,
@@ -1880,7 +1880,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
         }
       }
 
-      CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
+      CalculateBlockSideMargins(aAvailWidth, mComputedWidth);
     }
   } else {
     ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
@@ -1889,7 +1889,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
     AdjustComputedWidth(PR_TRUE); 
 
     // Now that we have the computed-width, compute the side margins
-    CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
+    CalculateBlockSideMargins(aAvailWidth, mComputedWidth);
   }
 
   // Compute the content height

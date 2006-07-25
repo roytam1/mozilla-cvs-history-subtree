@@ -414,7 +414,7 @@ protected:
                               nscoord aContainingBlockHeight);
 
   void ComputeBlockBoxData(nsPresContext* aPresContext,
-                           const nsHTMLReflowState* cbrs,
+                           nscoord aAvailWidth,
                            nsStyleUnit aWidthUnit,
                            nsStyleUnit aHeightUnit,
                            nscoord aContainingBlockWidth,
