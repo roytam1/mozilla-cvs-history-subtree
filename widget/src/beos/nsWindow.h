@@ -338,6 +338,7 @@ public:
 private:
 	void                 DoDraw(BRect updateRect);
 	BPoint               lastViewPoint;
+	BPoint               mousePos;
 	uint32               mouseMask;
 	bool                 restoreMouseMask;	
 	bool                 fJustValidated;
