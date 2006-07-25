@@ -70,6 +70,7 @@ class nsIView;
 class nsStyleContext;
 class nsIListControlFrame;
 class nsIScrollableView;
+class nsComboboxDisplayFrame;
 
 /**
  * Child list name indices
@@ -88,6 +89,7 @@ class nsComboboxControlFrame : public nsAreaFrame,
 {
 public:
   friend nsIFrame* NS_NewComboboxControlFrame(nsIPresShell* aPresShell, nsStyleContext* aContext, PRUint32 aFlags);
+  friend class nsComboboxDisplayFrame;
 
   nsComboboxControlFrame(nsStyleContext* aContext);
   ~nsComboboxControlFrame();
@@ -201,9 +203,7 @@ protected:
   nsresult ReflowComboChildFrame(nsPresContext*          aPresContext, 
                             nsHTMLReflowMetrics&     aDesiredSize,
                             const nsHTMLReflowState& aReflowState, 
-                            nsReflowStatus&          aStatus,
-                            nscoord                  aAvailableWidth,
-                            nscoord                  aAvailableHeight);
+                            nsReflowStatus&          aStatus);
 
 public:
   nsresult PositionDropdown(nsPresContext* aPresContext,
@@ -253,6 +253,7 @@ protected:
   nsIFrame*                mTextFrame;               // display area frame
   nsIListControlFrame *    mListControlFrame;        // ListControl Interface for the dropdown frame
 
+#ifdef HTML_FORMS
   // Resize Reflow Optimization
   nsSize                mCacheSize;
   nsSize                mCachedAvailableSize;
@@ -264,7 +265,10 @@ protected:
 
   nscoord               mItemDisplayWidth;
   //nscoord               mItemDisplayHeight;
+#endif // HTML_FORMS
 
+  nscoord mDisplayWidth;
+  
   PRPackedBool          mDroppedDown;             // Current state of the dropdown list, PR_TRUE is dropped down
   PRPackedBool          mInRedisplayText;
 
