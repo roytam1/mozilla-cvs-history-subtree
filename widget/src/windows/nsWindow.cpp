@@ -1430,19 +1430,18 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
     if (!gMsgFilterHook && !gCallProcHook && !gCallMouseHook) {
       RegisterSpecialDropdownHooks();
     }
-    gProcessHook = PR_TRUE;
 #endif
-    
+    gProcessHook = PR_TRUE;
+
   } else {
     NS_IF_RELEASE(gRollupListener);
     NS_IF_RELEASE(gRollupWidget);
     
-#ifndef WINCE
     gProcessHook = PR_FALSE;
+#ifndef WINCE
     UnregisterSpecialDropdownHooks();
 #endif
   }
-
   return NS_OK;
 }
 
@@ -2005,10 +2004,14 @@ NS_METHOD nsWindow::Show(PRBool bState)
           flags |= SWP_NOZORDER;
 
         if (mWindowType == eWindowType_popup) {
-          // ensure popups are the topmost of the TOPMOST layer. Remember
-          // not to set the SWP_NOZORDER flag as that might allow the taskbar
-          // to overlap the popup.
+#ifndef WINCE
+          // ensure popups are the topmost of the TOPMOST
+          // layer. Remember not to set the SWP_NOZORDER
+          // flag as that might allow the taskbar to overlap
+          // the popup.  However on windows ce, we need to
+          // activate the popup or clicks will not be sent.
           flags |= SWP_NOACTIVATE;
+#endif
           ::SetWindowPos(mWnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
         } else {
           ::SetWindowPos(mWnd, HWND_TOP, 0, 0, 0, 0, flags);
@@ -5002,7 +5005,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       // Get current input context
       HIMC hC = ImmGetContext(mWnd);
       // Close the IME 
-      ImmSetOpenStatus(hC, FALSE);
+      if (hC)
+        ImmSetOpenStatus(hC, FALSE);
       }
 #endif
       WCHAR className[kMaxClassNameLength];
@@ -8164,7 +8168,7 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
           }
         } // if rollup listener knows about menus
       }
-
+#ifndef WINCE
       if (inMsg == WM_MOUSEACTIVATE) {
         // Prevent the click inside the popup from causing a change in window
         // activation. Since the popup is shown non-activated, we need to eat
@@ -8191,7 +8195,9 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
         }
       }
       // if we've still determined that we should still rollup everything, do it.
-      else if ( rollup ) {
+      else 
+#endif
+      if ( rollup ) {
         gRollupListener->Rollup();
 
         // Tell hook to stop processing messages
