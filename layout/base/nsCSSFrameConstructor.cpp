@@ -77,11 +77,9 @@
 #include "nsLayoutAtoms.h"
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLLegendElement.h"
-#ifdef HTML_FORMS
 #include "nsIComboboxControlFrame.h"
 #include "nsIListControlFrame.h"
 #include "nsISelectControlFrame.h"
-#endif // HTML_FORMS
 #include "nsIRadioControlFrame.h"
 #include "nsICheckboxControlFrame.h"
 #include "nsIDOMCharacterData.h"
@@ -5144,7 +5142,6 @@ nsCSSFrameConstructor::ConstructButtonFrame(nsFrameConstructorState& aState,
   return NS_OK;  
 }
 
-#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::ConstructSelectFrame(nsFrameConstructorState& aState,
                                             nsIContent*              aContent,
@@ -5390,7 +5387,6 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsFrameConstructorState& aState,
   scrolledFrame->SetInitialChildList(nsnull, childItems.childList);
   return NS_OK;
 }
-#endif // HTML_FORMS
 
 nsresult
 nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
@@ -5627,7 +5623,6 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     newFrame = NS_NewTextControlFrame(mPresShell, aStyleContext);
     triedFrame = PR_TRUE;
   }
-#ifdef HTML_FORMS
   else if (nsHTMLAtoms::select == aTag) {
     if (!gUseXBLForms) {
       if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
@@ -5637,13 +5632,14 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
                                 aTag, aStyleContext, newFrame,
                                 display, frameHasBeenInitialized,
                                 aFrameItems);
-      NS_ASSERTION(nsPlaceholderFrame::GetRealFrameFor(aFrameItems.lastChild) ==
-                   newFrame,
-                   "Frame didn't get added to aFrameItems?");
-      addedToFrameList = PR_TRUE;
+      if (newFrame) {
+        NS_ASSERTION(nsPlaceholderFrame::GetRealFrameFor(aFrameItems.lastChild) ==
+                     newFrame,
+                     "Frame didn't get added to aFrameItems?");
+        addedToFrameList = PR_TRUE;
+      }
     }
   }
-#endif
   else if (nsHTMLAtoms::object == aTag ||
            nsHTMLAtoms::applet == aTag ||
            nsHTMLAtoms::embed == aTag) {
@@ -10758,7 +10754,6 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent*    aContent,
   // The "alt" attribute specifies alternate text that is rendered
   // when the image can not be displayed
 
-#ifdef HTML_FORMS
   // If there's no "alt" attribute, and aContent is an input    
   // element, then use the value of the "value" attribute
   if (!aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::alt, aAltText) &&
@@ -10770,7 +10765,6 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent*    aContent,
                                          "Submit", aAltText);      
     }
   }
-#endif
 }
 
 nsresult

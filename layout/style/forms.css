@@ -155,6 +155,7 @@ select {
   border-width: 2px;
   border-style: inset;
   text-indent: 0;
+  overflow: -moz-hidden-unscrollable;
 }
 
 /* Need the "select[size][multiple]" selector to override the settings on
@@ -710,12 +711,5 @@ input[type="image"][disabled] {
 input[type="file"] > input[type="button"]:active:hover {
   font-size: inherit;
 }
-
-%endif
-
-%ifndef HTML_FORMS
-
-/* XXX TEMPORARY, to make it easier to test Web pages that have selects */
-select { display: none ! important; }
 
 %endif
