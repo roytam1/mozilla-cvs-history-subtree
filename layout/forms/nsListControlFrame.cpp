@@ -165,122 +165,6 @@ NS_NewListControlFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
   return it;
 }
 
-#ifdef HTML_FORMS
-//-----------------------------------------------------------
-// Reflow Debugging Macros
-// These let us "see" how many reflow counts are happening
-//-----------------------------------------------------------
-#ifdef DO_REFLOW_COUNTER
-
-#define MAX_REFLOW_CNT 1024
-static PRInt32 gTotalReqs    = 0;;
-static PRInt32 gTotalReflows = 0;;
-static PRInt32 gReflowControlCntRQ[MAX_REFLOW_CNT];
-static PRInt32 gReflowControlCnt[MAX_REFLOW_CNT];
-static PRInt32 gReflowInx = -1;
-
-#define REFLOW_COUNTER() \
-  if (mReflowId > -1) \
-    gReflowControlCnt[mReflowId]++;
-
-#define REFLOW_COUNTER_REQUEST() \
-  if (mReflowId > -1) \
-    gReflowControlCntRQ[mReflowId]++;
-
-#define REFLOW_COUNTER_DUMP(__desc) \
-  if (mReflowId > -1) {\
-    gTotalReqs    += gReflowControlCntRQ[mReflowId];\
-    gTotalReflows += gReflowControlCnt[mReflowId];\
-    printf("** Id:%5d %s RF: %d RQ: %d   %d/%d  %5.2f\n", \
-           mReflowId, (__desc), \
-           gReflowControlCnt[mReflowId], \
-           gReflowControlCntRQ[mReflowId],\
-           gTotalReflows, gTotalReqs, float(gTotalReflows)/float(gTotalReqs)*100.0f);\
-  }
-
-#define REFLOW_COUNTER_INIT() \
-  if (gReflowInx < MAX_REFLOW_CNT) { \
-    gReflowInx++; \
-    mReflowId = gReflowInx; \
-    gReflowControlCnt[mReflowId] = 0; \
-    gReflowControlCntRQ[mReflowId] = 0; \
-  } else { \
-    mReflowId = -1; \
-  }
-
-// reflow messages
-#define REFLOW_DEBUG_MSG(_msg1) printf((_msg1))
-#define REFLOW_DEBUG_MSG2(_msg1, _msg2) printf((_msg1), (_msg2))
-#define REFLOW_DEBUG_MSG3(_msg1, _msg2, _msg3) printf((_msg1), (_msg2), (_msg3))
-#define REFLOW_DEBUG_MSG4(_msg1, _msg2, _msg3, _msg4) printf((_msg1), (_msg2), (_msg3), (_msg4))
-
-#endif // DO_REFLOW_COUNTER
-
-#else //-------------
-
-#define REFLOW_COUNTER_REQUEST() 
-#define REFLOW_COUNTER() 
-#define REFLOW_COUNTER_DUMP(__desc) 
-#define REFLOW_COUNTER_INIT() 
-
-#define REFLOW_DEBUG_MSG(_msg) 
-#define REFLOW_DEBUG_MSG2(_msg1, _msg2) 
-#define REFLOW_DEBUG_MSG3(_msg1, _msg2, _msg3) 
-#define REFLOW_DEBUG_MSG4(_msg1, _msg2, _msg3, _msg4) 
-
-#endif // HTML_FORMS
-
-//------------------------------------------
-// This is for being VERY noisy
-//------------------------------------------
-#ifdef HTML_FORMS
-#ifdef DO_VERY_NOISY
-#define REFLOW_NOISY_MSG(_msg1) printf((_msg1))
-#define REFLOW_NOISY_MSG2(_msg1, _msg2) printf((_msg1), (_msg2))
-#define REFLOW_NOISY_MSG3(_msg1, _msg2, _msg3) printf((_msg1), (_msg2), (_msg3))
-#define REFLOW_NOISY_MSG4(_msg1, _msg2, _msg3, _msg4) printf((_msg1), (_msg2), (_msg3), (_msg4))
-#else
-#define REFLOW_NOISY_MSG(_msg) 
-#define REFLOW_NOISY_MSG2(_msg1, _msg2) 
-#define REFLOW_NOISY_MSG3(_msg1, _msg2, _msg3) 
-#define REFLOW_NOISY_MSG4(_msg1, _msg2, _msg3, _msg4) 
-#endif
-#endif
-
-//------------------------------------------
-// Displays value in pixels or twips
-//------------------------------------------
-#ifdef HTML_FORMS
-#ifdef DO_PIXELS
-#define PX(__v) __v / 15
-#else
-#define PX(__v) __v 
-#endif
-#endif
-
-//------------------------------------------
-// Asserts if we return a desired size that 
-// doesn't correctly match the mComputedWidth
-//------------------------------------------
-#ifdef HTML_FORMS
-#ifdef DO_UNCONSTRAINED_CHECK
-#define UNCONSTRAINED_CHECK() \
-if (aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE) { \
-  nscoord width = aDesiredSize.width - borderPadding.left - borderPadding.right; \
-  if (width != aReflowState.mComputedWidth) { \
-    printf("aDesiredSize.width %d %d != aReflowState.mComputedWidth %d\n", aDesiredSize.width, width, aReflowState.mComputedWidth); \
-  } \
-  NS_ASSERTION(width == aReflowState.mComputedWidth, "Returning bad value when constrained!"); \
-}
-#else
-#define UNCONSTRAINED_CHECK()
-#endif
-#endif
-
-//------------------------------------------------------
-//-- Done with macros
-//------------------------------------------------------
-
 //---------------------------------------------------------
 nsListControlFrame::nsListControlFrame(
   nsIPresShell* aShell, nsIDocument* aDocument, nsStyleContext* aContext)
@@ -299,32 +183,12 @@ nsListControlFrame::nsListControlFrame(
   mNeedToReset        = PR_TRUE;
   mPostChildrenLoadedReset = PR_FALSE;
 
-#ifdef HTML_FORMS
-  mCacheSize.width             = -1;
-  mCacheSize.height            = -1;
-  mCachedMaxElementWidth       = -1;
-  mCachedAvailableSize.width   = -1;
-  mCachedAvailableSize.height  = -1;
-  mCachedUnconstrainedSize.width  = -1;
-  mCachedUnconstrainedSize.height = -1;
-  
-  mOverrideReflowOpt           = PR_FALSE;
-  mPassId                      = 0;
-#endif
-
   mControlSelectMode           = PR_FALSE;
-#ifdef HTML_FORMS
-  REFLOW_COUNTER_INIT()
-#endif
 }
 
 //---------------------------------------------------------
 nsListControlFrame::~nsListControlFrame()
 {
-#ifdef HTML_FORMS
-  REFLOW_COUNTER_DUMP("nsLCF");
-#endif
-
   mComboboxFrame = nsnull;
 }
 
@@ -551,25 +415,6 @@ NS_IMETHODIMP nsListControlFrame::GetAccessible(nsIAccessible** aAccessible)
 }
 #endif
 
-#ifdef HTML_FORMS
-//---------------------------------------------------------
-// Reflow is overriden to constrain the listbox height to the number of rows and columns
-// specified. 
-#ifdef DO_REFLOW_DEBUG
-static int myCounter = 0;
-
-static void printSize(char * aDesc, nscoord aSize) 
-{
-  printf(" %s: ", aDesc);
-  if (aSize == NS_UNCONSTRAINEDSIZE) {
-    printf("UNC");
-  } else {
-    printf("%d", aSize);
-  }
-}
-#endif
-#endif
-
 static nscoord
 GetMaxOptionHeight(nsIFrame* aContainer)
 {
@@ -699,6 +544,14 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
     }
   }
 
+  if (mState & NS_FRAME_FIRST_REFLOW) {
+    nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
+  }
+
+  if (IsInDropDownMode()) {
+    return ReflowAsDropdown(aPresContext, aDesiredSize, aReflowState, aStatus);
+  }
+
   /*
    * Due to the fact that our intrinsic height depends on the heights of our
    * kids, we end up having to do two-pass reflow, in general -- the first pass
@@ -718,21 +571,16 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
    */
 
   PRBool autoHeight = (aReflowState.mComputedHeight == NS_UNCONSTRAINEDSIZE);
-  PRBool isInDropDownMode = IsInDropDownMode();
 
-  // XXXbz this is wrong; we should just use our mRect to start with if
-  // isindropdownmode is true and mMightNeedSecondPass is otherwise false!
-  mMightNeedSecondPass = isInDropDownMode || (autoHeight &&
-    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)));
+  mMightNeedSecondPass = autoHeight &&
+    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN));
   
   nsHTMLReflowState state(aReflowState);
   PRInt32 length = GetNumberOfOptions();  
 
   nscoord oldHeightOfARow = HeightOfARow();
   
-  if (mState & NS_FRAME_FIRST_REFLOW) {
-    nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
-  } else if (autoHeight && !isInDropDownMode) {
+  if (!(mState & NS_FRAME_FIRST_REFLOW) && autoHeight) {
     // When not doing an initial reflow, and when the height is auto, start off
     // with our computed height set to what we'd expect our height to be.
     state.mComputedHeight = CalcIntrinsicHeight(oldHeightOfARow, length);
@@ -754,12 +602,8 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   nscoord heightOfARow = HeightOfARow();
 
   // Now see whether we need a second pass.  If the height of a row has not
-  // changed, we don't, unless we're a combobox.  Comboboxes always need a
-  // second pass, because we want to compare the intrinsic height to things.
-  // XXXbz maybe we can make that better somehow?  If we do, change
-  // nsSelectsAreaFrame::Reflow accordingly.
-  
-  if (heightOfARow == oldHeightOfARow && !isInDropDownMode) {
+  // changed, we don't.
+  if (heightOfARow == oldHeightOfARow) {
     // All done.  No need to do more reflow.
     NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
                  "Shouldn't be suppressing if the height of a row has not "
@@ -777,501 +621,85 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   nsHTMLScrollFrame::DidReflow(aPresContext, &state, aStatus);
 
   // Now compute the height we want to have
-  if (isInDropDownMode) {
-    nscoord visibleHeight = GetScrolledFrame()->GetSize().height;
-    mNumDisplayRows = kMaxDropDownRows;
-    if (visibleHeight > mNumDisplayRows * heightOfARow) {
-      visibleHeight = mNumDisplayRows * heightOfARow;
-      // This is an adaptive algorithm for figuring out how many rows 
-      // should be displayed in the drop down. The standard size is 20 rows, 
-      // but on 640x480 it is typically too big.
-      // This takes the height of the screen divides it by two and then subtracts off 
-      // an estimated height of the combobox. I estimate it by taking the max element size
-      // of the drop down and multiplying it by 2 (this is arbitrary) then subtract off
-      // the border and padding of the drop down (again rather arbitrary)
-      // This all breaks down if the font of the combobox is a lot larger then the option items
-      // or CSS style has set the height of the combobox to be rather large.
-      // We can fix these cases later if they actually happen.
-      nscoord screenHeightInPixels = 0;
-      if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
-        float   p2t;
-        p2t = aPresContext->PixelsToTwips();
-        nscoord screenHeight = NSIntPixelsToTwips(screenHeightInPixels, p2t);
+  state.mComputedHeight = CalcIntrinsicHeight(heightOfARow, length);
+  state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
 
-        nscoord availDropHgt = (screenHeight / 2) - (heightOfARow*2); // approx half screen minus combo size
-        availDropHgt -= aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
+  nsHTMLScrollFrame::WillReflow(aPresContext);
+  return nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize, state, aStatus);
+}
 
-        nscoord hgt = visibleHeight + aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
-        if (heightOfARow > 0) {
-          if (hgt > availDropHgt) {
-            visibleHeight = (availDropHgt / heightOfARow) * heightOfARow;
-          }
-          mNumDisplayRows = visibleHeight / heightOfARow;
-        } else {
-          // Hmmm, not sure what to do here. Punt, and make both of them one
-          visibleHeight   = 1;
-          mNumDisplayRows = 1;
+nsresult
+nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext, 
+                                     nsHTMLReflowMetrics&     aDesiredSize,
+                                     const nsHTMLReflowState& aReflowState, 
+                                     nsReflowStatus&          aStatus)
+{
+  // XXXbz figure out when we can optimize away the second pass here!
+  mMightNeedSecondPass = PR_TRUE;
+
+  nsHTMLReflowState state(aReflowState);
+  nsresult rv = nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize,
+                                          state, aStatus);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mMightNeedSecondPass = PR_FALSE;
+
+  SetSuppressScrollbarUpdate(PR_FALSE);
+
+  nscoord heightOfARow = HeightOfARow();
+
+  // Gotta reflow again.
+  // XXXbz We're just changing the height here; do we need to dirty ourselves
+  // or anything like that?  We might need to, per the letter of the reflow
+  // protocol, but things seem to work fine without it...  Is that just an
+  // implementation detail of nsHTMLScrollFrame that we're depending on?
+  nsHTMLScrollFrame::DidReflow(aPresContext, &state, aStatus);
+
+  // Now compute the height we want to have
+  nscoord visibleHeight = GetScrolledFrame()->GetSize().height;
+  mNumDisplayRows = kMaxDropDownRows;
+  if (visibleHeight > mNumDisplayRows * heightOfARow) {
+    visibleHeight = mNumDisplayRows * heightOfARow;
+    // This is an adaptive algorithm for figuring out how many rows 
+    // should be displayed in the drop down. The standard size is 20 rows, 
+    // but on 640x480 it is typically too big.
+    // This takes the height of the screen divides it by two and then subtracts off 
+    // an estimated height of the combobox. I estimate it by taking the max element size
+    // of the drop down and multiplying it by 2 (this is arbitrary) then subtract off
+    // the border and padding of the drop down (again rather arbitrary)
+    // This all breaks down if the font of the combobox is a lot larger then the option items
+    // or CSS style has set the height of the combobox to be rather large.
+    // We can fix these cases later if they actually happen.
+    nscoord screenHeightInPixels = 0;
+    if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
+      float   p2t;
+      p2t = aPresContext->PixelsToTwips();
+      nscoord screenHeight = NSIntPixelsToTwips(screenHeightInPixels, p2t);
+      
+      nscoord availDropHgt = (screenHeight / 2) - (heightOfARow*2); // approx half screen minus combo size
+      availDropHgt -= aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
+      
+      nscoord hgt = visibleHeight + aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
+      if (heightOfARow > 0) {
+        if (hgt > availDropHgt) {
+          visibleHeight = (availDropHgt / heightOfARow) * heightOfARow;
         }
+        mNumDisplayRows = visibleHeight / heightOfARow;
+      } else {
+        // Hmmm, not sure what to do here. Punt, and make both of them one
+        visibleHeight   = 1;
+        mNumDisplayRows = 1;
       }
-
-      state.mComputedHeight = mNumDisplayRows * heightOfARow;
-      // Note: no need to apply min/max constraints, since we have no such
-      // rules applied to the combobox dropdown.
-      // XXXbz this is ending up too big!!  Figure out why.
     }
-  } else {
-    state.mComputedHeight = CalcIntrinsicHeight(heightOfARow, length);
-    state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
+
+    state.mComputedHeight = mNumDisplayRows * heightOfARow;
+    // Note: no need to apply min/max constraints, since we have no such
+    // rules applied to the combobox dropdown.
+    // XXXbz this is ending up too big!!  Figure out why.
   }
 
   nsHTMLScrollFrame::WillReflow(aPresContext);
   return nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize, state, aStatus);
-  
-#ifdef HTML_FORMS
-  DO_GLOBAL_REFLOW_COUNT("nsListControlFrame", aReflowState.reason);
-  DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-  REFLOW_COUNTER_REQUEST();
-
-  aStatus = NS_FRAME_COMPLETE;
-
-#ifdef DO_REFLOW_DEBUG
-  printf("%p ** Id: %d nsLCF::Reflow %d R: ", this, mReflowId, myCounter++);
-  switch (aReflowState.reason) {
-    case eReflowReason_Initial:
-      printf("Initia");break;
-    case eReflowReason_Incremental:
-      printf("Increm");break;
-    case eReflowReason_Resize:
-      printf("Resize");break;
-    case eReflowReason_StyleChange:
-      printf("StyleC");break;
-    case eReflowReason_Dirty:
-      printf("Dirty ");break;
-    default:printf("<unknown>%d", aReflowState.reason);break;
-  }
-  
-  printSize("AW", aReflowState.availableWidth);
-  printSize("AH", aReflowState.availableHeight);
-  printSize("CW", aReflowState.mComputedWidth);
-  printSize("CH", aReflowState.mComputedHeight);
-  printf("\n");
-#if 0
-    {
-      const nsStyleDisplay* display = GetStyleDisplay();
-      printf("+++++++++++++++++++++++++++++++++ ");
-      switch (display->mVisible) {
-        case NS_STYLE_VISIBILITY_COLLAPSE: printf("NS_STYLE_VISIBILITY_COLLAPSE\n");break;
-        case NS_STYLE_VISIBILITY_HIDDEN:   printf("NS_STYLE_VISIBILITY_HIDDEN\n");break;
-        case NS_STYLE_VISIBILITY_VISIBLE:  printf("NS_STYLE_VISIBILITY_VISIBLE\n");break;
-      }
-    }
-#endif
-#endif // DEBUG_rodsXXX
-
-  PRBool bailOnWidth;
-  PRBool bailOnHeight;
-  // This ifdef is for turning off the optimization
-  // so we can check timings against the old version
-#if 1
-
-  nsFormControlFrame::SkipResizeReflow(mCacheSize,
-                                       mCachedAscent,
-                                       mCachedMaxElementWidth, 
-                                       mCachedAvailableSize, 
-                                       aDesiredSize, aReflowState, 
-                                       aStatus, 
-                                       bailOnWidth, bailOnHeight);
-
-  // Here we bail if both the height and the width haven't changed
-  // also we see if we should override the optimization
-  //
-  // The optimization can get overridden by the combobox 
-  // sometime the combobox knows that the list MUST do a full reflow
-  // no matter what
-  if (!mOverrideReflowOpt && bailOnWidth && bailOnHeight) {
-    REFLOW_DEBUG_MSG3("*** Done nsLCF - Bailing on DW: %d  DH: %d ", PX(aDesiredSize.width), PX(aDesiredSize.height));
-    REFLOW_DEBUG_MSG3("bailOnWidth %d  bailOnHeight %d\n", PX(bailOnWidth), PX(bailOnHeight));
-    NS_ASSERTION(aDesiredSize.width < 100000, "Width is still NS_UNCONSTRAINEDSIZE");
-    NS_ASSERTION(aDesiredSize.height < 100000, "Height is still NS_UNCONSTRAINEDSIZE");
-    return NS_OK;
-  } else if (mOverrideReflowOpt) {
-    mOverrideReflowOpt = PR_FALSE;
-  }
-
-#else
-  bailOnWidth  = PR_FALSE;
-  bailOnHeight = PR_FALSE;
-#endif
-
-  // If all the content and frames are here 
-  // then initialize it before reflow
-    if (mIsAllContentHere && !mHasBeenInitialized) {
-      if (PR_FALSE == mIsAllFramesHere) {
-        CheckIfAllFramesHere();
-      }
-      if (mIsAllFramesHere && !mHasBeenInitialized) {
-        mHasBeenInitialized = PR_TRUE;
-      }
-    }
-
-
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
-      if (command) {
-        // XXX So this may do it too often
-        // the side effect of this is if the user has scrolled to some other place in the list and
-        // an incremental reflow comes through the list gets scrolled to the first selected item
-        // I haven't been able to make it do it, but it will do it
-        // basically the real solution is to know when all the reframes are there.
-        PRInt32 selectedIndex = mEndSelectionIndex;
-        if (selectedIndex == kNothingSelected) {
-          selectedIndex = GetSelectedIndex();
-        }
-        ScrollToIndex(selectedIndex);
-      }
-    }
-
-   // Strategy: Let the inherited reflow happen as though the width and height of the
-   // ScrollFrame are big enough to allow the listbox to
-   // shrink to fit the longest option element line in the list.
-   // The desired width and height returned by the inherited reflow is returned, 
-   // unless one of the following has been specified.
-   // 1. A css width has been specified.
-   // 2. The size has been specified.
-   // 3. The css height has been specified, but the number of rows has not.
-   //  The size attribute overrides the height setting but the height setting
-   // should be honored if there isn't a size specified.
-
-    // Determine the desired width + height for the listbox + 
-  aDesiredSize.width  = 0;
-  aDesiredSize.height = 0;
-
-  // Add the list frame as a child of the form
-  if (eReflowReason_Initial == aReflowState.reason) {
-    nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
-  }
-
-  //--Calculate a width just big enough for the scrollframe to shrink around the
-  //longest element in the list
-  nsHTMLReflowState secondPassState(aReflowState);
-  nsHTMLReflowState firstPassState(aReflowState);
-
-  //nsHTMLReflowState   firstPassState(aPresContext, nsnull,
-  //                                   this, aDesiredSize);
-
-   // Get the size of option elements inside the listbox
-   // Compute the width based on the longest line in the listbox.
-  
-  firstPassState.mComputedWidth  = NS_UNCONSTRAINEDSIZE;
-  firstPassState.mComputedHeight = NS_UNCONSTRAINEDSIZE;
-  firstPassState.availableWidth  = NS_UNCONSTRAINEDSIZE;
-  firstPassState.availableHeight = NS_UNCONSTRAINEDSIZE;
- 
-  nsHTMLReflowMetrics scrolledAreaDesiredSize;
-
-
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    nsHTMLReflowCommand *command = firstPassState.path->mReflowCommand;
-    if (command) {
-      nsReflowType type;
-      command->GetType(type);
-      firstPassState.reason = eReflowReason_StyleChange;
-      firstPassState.path = nsnull;
-    } else {
-      nsresult res = nsHTMLScrollFrame::Reflow(aPresContext, 
-                                               scrolledAreaDesiredSize,
-                                               aReflowState, 
-                                               aStatus);
-      if (NS_FAILED(res)) {
-        NS_ASSERTION(aDesiredSize.width < 100000, "Width is still NS_UNCONSTRAINEDSIZE");
-        NS_ASSERTION(aDesiredSize.height < 100000, "Height is still NS_UNCONSTRAINEDSIZE");
-        return res;
-      }
-
-      firstPassState.reason = eReflowReason_StyleChange;
-      firstPassState.path = nsnull;
-    }
-  }
-
-  if (mPassId == 0 || mPassId == 1) {
-    if (mPassId == 0) {
-      // We will reflow again, so tell the scrollframe not to scroll-to-restored-position
-      // yet
-      SetSuppressScrollbarUpdate(PR_TRUE);
-    }
-    nsresult res = nsHTMLScrollFrame::Reflow(aPresContext, 
-                                             scrolledAreaDesiredSize,
-                                             firstPassState, 
-                                             aStatus);
-    if (mPassId == 0) {
-      SetSuppressScrollbarUpdate(PR_FALSE);
-    }
-    
-    if (NS_FAILED(res)) {
-      NS_ASSERTION(aDesiredSize.width < 100000, "Width is still NS_UNCONSTRAINEDSIZE");
-      NS_ASSERTION(aDesiredSize.height < 100000, "Height is still NS_UNCONSTRAINEDSIZE");
-      return res;
-    }
-    mCachedUnconstrainedSize.width  = scrolledAreaDesiredSize.width;
-    mCachedUnconstrainedSize.height = scrolledAreaDesiredSize.height;
-    mCachedAscent                   = scrolledAreaDesiredSize.ascent;
-    mCachedDesiredMEW               = scrolledAreaDesiredSize.mMaxElementWidth;
-  } else {
-    scrolledAreaDesiredSize.width  = mCachedUnconstrainedSize.width;
-    scrolledAreaDesiredSize.height = mCachedUnconstrainedSize.height;
-    scrolledAreaDesiredSize.mMaxElementWidth = mCachedDesiredMEW;
-  }
-
-  // Compute the bounding box of the contents of the list using the area 
-  // calculated by the first reflow as a starting point.
-  //
-  // The nsHTMLScrollFrame::Reflow adds border and padding to the
-  // maxElementWidth, so these need to be subtracted
-  nscoord scrolledAreaWidth  = scrolledAreaDesiredSize.width -
-    (aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right);
-  nscoord scrolledAreaHeight = scrolledAreaDesiredSize.height -
-    (aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom);
-
-  // Set up max values
-  mMaxWidth  = scrolledAreaWidth;
-
-  // Now the scrolledAreaWidth and scrolledAreaHeight are exactly 
-  // wide and high enough to enclose their contents
-  PRBool isInDropDownMode = IsInDropDownMode();
-
-  nscoord visibleWidth = 0;
-  if (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedWidth) {
-    visibleWidth = scrolledAreaWidth;
-  } else {
-    visibleWidth = aReflowState.mComputedWidth;
-  }
-
-   // Determine if a scrollbar will be needed, If so we need to add
-   // enough the width to allow for the scrollbar.
-   // The scrollbar will be needed under two conditions:
-   // (size * heightOfaRow) < scrolledAreaHeight or
-   // the height set through Style < scrolledAreaHeight.
-
-   // Calculate the height of a single row in the listbox or dropdown
-   // list by using the tallest of the grandchildren, since there may be
-   // option groups in addition to option elements, either of which may
-   // be visible or invisible.
-  PRInt32 heightOfARow = GetMaxOptionHeight(GetOptionsContainer());
-
-  // Check to see if we have zero items 
-  PRInt32 length = GetNumberOfOptions();
-  if (heightOfARow == 0) {
-    heightOfARow = CalcFallbackRowHeight(length);
-  }
-  mMaxHeight = heightOfARow;
-
-  // Check to see if we have no width and height
-  // The following code measures the width and height 
-  // of a bogus string so the list actually displays
-  nscoord visibleHeight = 0;
-  if (isInDropDownMode) {
-    // Compute the visible height of the drop-down list
-    // The dropdown list height is the smaller of its height setting or the height
-    // of the smallest box that can drawn around its contents.
-    visibleHeight = scrolledAreaHeight;
-
-    mNumDisplayRows = kMaxDropDownRows;
-    if (visibleHeight > (mNumDisplayRows * heightOfARow)) {
-      visibleHeight = (mNumDisplayRows * heightOfARow);
-      // This is an adaptive algorithm for figuring out how many rows 
-      // should be displayed in the drop down. The standard size is 20 rows, 
-      // but on 640x480 it is typically too big.
-      // This takes the height of the screen divides it by two and then subtracts off 
-      // an estimated height of the combobox. I estimate it by taking the max element size
-      // of the drop down and multiplying it by 2 (this is arbitrary) then subtract off
-      // the border and padding of the drop down (again rather arbitrary)
-      // This all breaks down if the font of the combobox is a lot larger then the option items
-      // or CSS style has set the height of the combobox to be rather large.
-      // We can fix these cases later if they actually happen.
-      if (isInDropDownMode) {
-        nscoord screenHeightInPixels = 0;
-        if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
-          float   p2t;
-          p2t = aPresContext->PixelsToTwips();
-          nscoord screenHeight = NSIntPixelsToTwips(screenHeightInPixels, p2t);
-
-          nscoord availDropHgt = (screenHeight / 2) - (heightOfARow*2); // approx half screen minus combo size
-          availDropHgt -= aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
-
-          nscoord hgt = visibleHeight + aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
-          if (heightOfARow > 0) {
-            if (hgt > availDropHgt) {
-              visibleHeight = (availDropHgt / heightOfARow) * heightOfARow;
-            }
-            mNumDisplayRows = visibleHeight / heightOfARow;
-          } else {
-            // Hmmm, not sure what to do here. Punt, and make both of them one
-            visibleHeight   = 1;
-            mNumDisplayRows = 1;
-          }
-        }
-      }
-    }
-   
-  } else {
-      // Calculate the visible height of the listbox
-    if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) {
-      visibleHeight = aReflowState.mComputedHeight;
-    } else {
-      mNumDisplayRows = 1;
-      GetSizeAttribute(&mNumDisplayRows);
-      if (mNumDisplayRows >= 1) {
-        visibleHeight = mNumDisplayRows * heightOfARow;
-      } else {
-        // When SIZE=0 or unspecified we constrain the height to [2..kMaxDropDownRows] rows.
-        // We add in the height of optgroup labels (within the constraint above), bug 300474.
-        visibleHeight = ::GetOptGroupLabelsHeight(GetPresContext(), mContent, heightOfARow);
-
-        if (GetMultiple()) {
-          if (length < 2) {
-            // Add in 1 heightOfARow also when length==0 to match how we calculate the desired size.
-            visibleHeight = heightOfARow + PR_MAX(heightOfARow, visibleHeight);
-          } else {
-            visibleHeight = PR_MIN(kMaxDropDownRows * heightOfARow, length * heightOfARow + visibleHeight);
-          }
-        } else {
-          visibleHeight += 2 * heightOfARow;
-        }
-      }
-    }
-  }
-
-  // There are no items in the list
-  // but we want to include space for the scrollbars
-  // So fake like we will need scrollbars also
-  if (!isInDropDownMode && 0 == length) {
-    if (aReflowState.mComputedWidth != 0) {
-      scrolledAreaHeight = visibleHeight+1;
-    }
-  }
-
-  // The visible height is zero, this could be a select with no options
-  // or a select with a single option that has no content or no label
-  //
-  // So this may not be the best solution, but we get the height of the font
-  // for the list frame and use that as the max/minimum size for the contents
-  if (visibleHeight == 0) {
-    if (aReflowState.mComputedHeight != 0) {
-      nsCOMPtr<nsIFontMetrics> fontMet;
-      nsresult rvv = nsFormControlHelper::GetFrameFontFM(this, getter_AddRefs(fontMet));
-      if (NS_SUCCEEDED(rvv) && fontMet) {
-        aReflowState.rendContext->SetFont(fontMet);
-        fontMet->GetHeight(visibleHeight);
-        mMaxHeight = visibleHeight;
-      }
-    }
-  }
-
-  // When in dropdown mode make sure we obey min/max-width and min/max-height
-  if (!isInDropDownMode) {
-    nscoord fullWidth = visibleWidth + aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right;
-    if (fullWidth > aReflowState.mComputedMaxWidth) {
-      visibleWidth = aReflowState.mComputedMaxWidth - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right;
-    }
-    if (fullWidth < aReflowState.mComputedMinWidth) {
-      visibleWidth = aReflowState.mComputedMinWidth - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right;
-    }
-
-    // calculate full height for comparison
-    // must add in Border & Padding twice because the scrolled area also inherits Border & Padding
-    nscoord fullHeight = 0;
-    if (aReflowState.mComputedHeight != 0) {
-      fullHeight = visibleHeight + aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
-                                         // + aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
-    }
-    if (fullHeight > aReflowState.mComputedMaxHeight) {
-      visibleHeight = aReflowState.mComputedMaxHeight - aReflowState.mComputedBorderPadding.top - aReflowState.mComputedBorderPadding.bottom;
-    }
-    if (fullHeight < aReflowState.mComputedMinHeight) {
-      visibleHeight = aReflowState.mComputedMinHeight - aReflowState.mComputedBorderPadding.top - aReflowState.mComputedBorderPadding.bottom;
-    }
-  }
-
-   // Do a second reflow with the adjusted width and height settings
-   // This sets up all of the frames with the correct width and height.
-  secondPassState.mComputedWidth  = visibleWidth;
-  secondPassState.mComputedHeight = visibleHeight;
-  secondPassState.reason = eReflowReason_Resize;
-
-  if (mPassId == 0 || mPassId == 2 || visibleHeight != scrolledAreaHeight ||
-      visibleWidth != scrolledAreaWidth) {
-    nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize, secondPassState, aStatus);
-    if (aReflowState.mComputedHeight == 0) {
-      aDesiredSize.ascent  = 0;
-      aDesiredSize.descent = 0;
-      aDesiredSize.height  = 0;
-    }
-
-    // Set the max element size to be the same as the desired element size.
-  } else {
-    // aDesiredSize is the desired frame size, so includes border and padding
-    aDesiredSize.width  = visibleWidth +
-      (aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right);
-    aDesiredSize.height = visibleHeight +
-      (aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom);
-    aDesiredSize.ascent =
-      scrolledAreaDesiredSize.ascent + aReflowState.mComputedBorderPadding.top;
-    aDesiredSize.descent = aDesiredSize.height - aDesiredSize.ascent;
-  }
-
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
-  }
-
-  aStatus = NS_FRAME_COMPLETE;
-
-#ifdef DEBUG_rodsX
-  if (!isInDropDownMode) {
-    PRInt32 numRows = 1;
-    GetSizeAttribute(&numRows);
-    printf("%d ", numRows);
-    if (numRows == 2) {
-      COMPARE_QUIRK_SIZE("nsListControlFrame", 56, 38) 
-    } else if (numRows == 3) {
-      COMPARE_QUIRK_SIZE("nsListControlFrame", 56, 54) 
-    } else if (numRows == 4) {
-      COMPARE_QUIRK_SIZE("nsListControlFrame", 56, 70) 
-    } else {
-      COMPARE_QUIRK_SIZE("nsListControlFrame", 127, 118) 
-    }
-  }
-#endif
-
-  if (aReflowState.availableWidth != NS_UNCONSTRAINEDSIZE) {
-    mCachedAvailableSize.width  = aDesiredSize.width - (aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right);
-    REFLOW_DEBUG_MSG2("** nsLCF Caching AW: %d\n", PX(mCachedAvailableSize.width));
-  }
-  if (aReflowState.availableHeight != NS_UNCONSTRAINEDSIZE) {
-    mCachedAvailableSize.height = aDesiredSize.height - (aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom);
-    REFLOW_DEBUG_MSG2("** nsLCF Caching AH: %d\n", PX(mCachedAvailableSize.height));
-  }
-
-  //REFLOW_DEBUG_MSG3("** nsLCF Caching AW: %d  AH: %d\n", PX(mCachedAvailableSize.width), PX(mCachedAvailableSize.height));
-
-  nsFormControlFrame::SetupCachedSizes(mCacheSize, mCachedAscent,
-                                       mCachedMaxElementWidth, aDesiredSize);
-
-  REFLOW_DEBUG_MSG3("** Done nsLCF DW: %d  DH: %d\n\n", PX(aDesiredSize.width), PX(aDesiredSize.height));
-
-  REFLOW_COUNTER();
-
-#ifdef DO_REFLOW_COUNTER
-  if (gReflowControlCnt[mReflowId] > 50) {
-    REFLOW_DEBUG_MSG3("** Id: %d Cnt: %d ", mReflowId, gReflowControlCnt[mReflowId]);
-    REFLOW_DEBUG_MSG3("Done nsLCF DW: %d  DH: %d\n", PX(aDesiredSize.width), PX(aDesiredSize.height));
-  }
-#endif
-
-  NS_ASSERTION(aDesiredSize.width < 100000, "Width is still NS_UNCONSTRAINEDSIZE");
-  NS_ASSERTION(aDesiredSize.height < 100000, "Height is still NS_UNCONSTRAINEDSIZE");
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-  return NS_OK;
-#endif // HTML_FORMS
 }
 
 nsGfxScrollFrameInner::ScrollbarStyles
@@ -1504,10 +932,8 @@ nsListControlFrame::CaptureMouseEvents(PRBool aGrabMouseEvents)
   // is in drop-down mode, and the caller is requesting capture (we let release capture
   // requests go through to ensure that we can release capture requested via other
   // code paths, if any exist).
-#ifdef HTML_FORMS
   if (aGrabMouseEvents && IsInDropDownMode() && nsComboboxControlFrame::ToolkitHasNativePopup())
     return;
-#endif
   
   nsIView* view = GetScrolledFrame()->GetView();
 
@@ -1837,8 +1263,6 @@ nsListControlFrame::OnContentReset()
 void 
 nsListControlFrame::ResetList(PRBool aAllowScrolling)
 {
-  REFLOW_DEBUG_MSG("LBX::ResetList\n");
-
   // if all the frames aren't here 
   // don't bother reseting
   if (!mIsAllFramesHere) {
@@ -2439,6 +1863,9 @@ nscoord
 nsListControlFrame::CalcIntrinsicHeight(nscoord aHeightOfARow,
                                         PRInt32 aNumberOfOptions)
 {
+  NS_PRECONDITION(!IsInDropDownMode(),
+                  "Shouldn't be in dropdown mode when we call this");
+  
   mNumDisplayRows = 1;
   GetSizeAttribute(&mNumDisplayRows);
 
@@ -2485,8 +1912,6 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
 
   UpdateInListState(aMouseEvent);
 
-  REFLOW_DEBUG_MSG("--------------------------- MouseUp ----------------------------\n");
-
   mButtonDown = PR_FALSE;
 
   if (nsFormControlHelper::GetDisabled(mContent)) {
@@ -2516,7 +1941,6 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
   const nsStyleVisibility* vis = GetStyleVisibility();
       
   if (!vis->IsVisible()) {
-    REFLOW_DEBUG_MSG(">>>>>> Select is NOT visible");
     return NS_OK;
   }
 
@@ -2537,8 +1961,6 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
 
     PRInt32 selectedIndex;
     if (NS_SUCCEEDED(GetIndexFromDOMEvent(aMouseEvent, selectedIndex))) {
-      REFLOW_DEBUG_MSG2(">>>>>> Found Index: %d", selectedIndex);
-
       // If it's disabled, disallow the click and leave.
       PRBool isDisabled = PR_FALSE;
       IsOptionDisabled(selectedIndex, isDisabled);
@@ -2560,7 +1982,6 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
       mouseEvent->clickCount = IgnoreMouseEventForSelection(aMouseEvent) ? 1 : 0;
     }
   } else {
-    REFLOW_DEBUG_MSG(">>>>>> Didn't find");
     CaptureMouseEvents(PR_FALSE);
     // Notify
     if (mChangesSinceDragStart) {
@@ -2734,8 +2155,6 @@ nsListControlFrame::MouseDown(nsIDOMEvent* aMouseEvent)
 
   UpdateInListState(aMouseEvent);
 
-  REFLOW_DEBUG_MSG("--------------------------- MouseDown ----------------------------\n");
-
   mButtonDown = PR_TRUE;
 
   if (nsFormControlHelper::GetDisabled(mContent)) {
@@ -2797,7 +2216,6 @@ nsresult
 nsListControlFrame::MouseMove(nsIDOMEvent* aMouseEvent)
 {
   NS_ASSERTION(aMouseEvent, "aMouseEvent is null.");
-  //REFLOW_DEBUG_MSG("MouseMove\n");
 
   UpdateInListState(aMouseEvent);
 
@@ -2826,7 +2244,6 @@ nsresult
 nsListControlFrame::DragMove(nsIDOMEvent* aMouseEvent)
 {
   NS_ASSERTION(aMouseEvent, "aMouseEvent is null.");
-  //REFLOW_DEBUG_MSG("DragMove\n");
 
   UpdateInListState(aMouseEvent);
 
@@ -3079,11 +2496,6 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
   PRUint32 charcode = 0;
   keyEvent->GetKeyCode(&keycode);
   keyEvent->GetCharCode(&charcode);
-#ifdef DO_REFLOW_DEBUG
-  if (charcode >= 32) {
-    REFLOW_DEBUG_MSG3("KeyCode: %c %d\n", charcode, charcode);
-  }
-#endif
 
   PRBool isAlt = PR_FALSE;
 
@@ -3137,23 +2549,16 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
 
     case nsIDOMKeyEvent::DOM_VK_UP:
     case nsIDOMKeyEvent::DOM_VK_LEFT: {
-      REFLOW_DEBUG_MSG2("DOM_VK_UP   mEndSelectionIndex: %d ",
-                        mEndSelectionIndex);
       AdjustIndexForDisabledOpt(mEndSelectionIndex, newIndex,
                                 (PRInt32)numOptions,
                                 -1, -1);
-      REFLOW_DEBUG_MSG2("  After: %d\n", newIndex);
       } break;
     
     case nsIDOMKeyEvent::DOM_VK_DOWN:
     case nsIDOMKeyEvent::DOM_VK_RIGHT: {
-      REFLOW_DEBUG_MSG2("DOM_VK_DOWN mEndSelectionIndex: %d ",
-                        mEndSelectionIndex);
-
       AdjustIndexForDisabledOpt(mEndSelectionIndex, newIndex,
                                 (PRInt32)numOptions,
                                 1, 1);
-      REFLOW_DEBUG_MSG2("  After: %d\n", newIndex);
       } break;
 
     case nsIDOMKeyEvent::DOM_VK_RETURN: {
@@ -3333,13 +2738,10 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
       GetPresContext()->PresShell()->
         GetDocument()->FlushPendingNotifications(Flush_OnlyReflow);
     }
-    REFLOW_DEBUG_MSG2("  After: %d\n", newIndex);
 
     // Make sure the SelectArea frame gets painted
     Invalidate(nsRect(0,0,mRect.width,mRect.height), PR_TRUE);
 
-  } else {
-    REFLOW_DEBUG_MSG("  After: SKIPPED it\n");
   }
 
   return NS_OK;

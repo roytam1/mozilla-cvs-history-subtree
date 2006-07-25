@@ -249,7 +249,7 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
       if (newHeightOfARow != mHeightOfARow || list->IsInDropDownMode()) {
         // XXXbz we could probably do better (e.g. compare aDesiredSize.height
         // to kMaxDropDownRows * HeightOfARow() and do something depending on
-        // that.
+        // that, for comboboxes.
         mHeightOfARow = newHeightOfARow;
         list->SetSuppressScrollbarUpdate(PR_TRUE);
       }

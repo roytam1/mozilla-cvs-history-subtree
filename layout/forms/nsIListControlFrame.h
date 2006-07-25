@@ -113,13 +113,6 @@ public:
   virtual void FireOnChange() = 0;
 
   /**
-   *
-   */
-#ifdef HTML_FORMS
-  virtual void SetOverrideReflowOptimization(PRBool aValue) = 0;
-#endif
-
-  /**
    * Tell the selected list to roll up and ensure that the proper index is
    * selected, possibly firing onChange if the index has changed
    *

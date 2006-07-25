@@ -191,15 +191,7 @@ public:
 
 protected:
 
-#ifdef HTML_FORMS
-#ifdef DO_NEW_REFLOW
-  NS_IMETHOD ReflowItems(nsPresContext* aPresContext,
-                         const nsHTMLReflowState& aReflowState,
-                         nsHTMLReflowMetrics& aDesiredSize);
-#endif
-#endif // HTML_FORMS
-  
-   // Utilities
+  // Utilities
   nsresult ReflowComboChildFrame(nsPresContext*          aPresContext, 
                             nsHTMLReflowMetrics&     aDesiredSize,
                             const nsHTMLReflowState& aReflowState, 
@@ -225,25 +217,12 @@ protected:
   
   void ShowPopup(PRBool aShowPopup);
   void ShowList(nsPresContext* aPresContext, PRBool aShowList);
-  void SetButtonFrameSize(const nsSize& aSize);
   void CheckFireOnChange();
   void FireValueChangeEvent();
   nsresult RedisplayText(PRInt32 aIndex);
   void HandleRedisplayTextEvent();
   void ActuallyDisplayText(PRBool aNotify);
-  nsresult GetPrimaryComboFrame(nsPresContext* aPresContext, nsIContent* aContent, nsIFrame** aFrame);
   NS_IMETHOD ToggleList(nsPresContext* aPresContext);
-
-  void ReflowCombobox(nsPresContext *         aPresContext,
-                      const nsHTMLReflowState& aReflowState,
-                      nsHTMLReflowMetrics&     aDesiredSize,
-                      nsReflowStatus&          aStatus,
-                      nsIFrame *               aDisplayFrame,
-                      nscoord&                 aDisplayWidth,
-                      nscoord                  aBtnWidth,
-                      const nsMargin&          aBorderPadding,
-                      nscoord                  aFallBackHgt = -1,
-                      PRBool                   aCheckHeight = PR_FALSE);
 
   nsFrameList              mPopupFrames;             // additional named child list
   nsCOMPtr<nsITextContent> mDisplayContent;          // Anonymous content used to display the current selection
@@ -252,20 +231,6 @@ protected:
   nsIFrame*                mDropdownFrame;           // dropdown list frame
   nsIFrame*                mTextFrame;               // display area frame
   nsIListControlFrame *    mListControlFrame;        // ListControl Interface for the dropdown frame
-
-#ifdef HTML_FORMS
-  // Resize Reflow Optimization
-  nsSize                mCacheSize;
-  nsSize                mCachedAvailableSize;
-  nscoord               mCachedMaxElementWidth;
-  nscoord               mCachedAscent;
-
-  nsSize                mCachedUncDropdownSize;
-  nsSize                mCachedUncComboSize;
-
-  nscoord               mItemDisplayWidth;
-  //nscoord               mItemDisplayHeight;
-#endif // HTML_FORMS
 
   nscoord mDisplayWidth;
   

@@ -156,9 +156,6 @@ public:
   virtual void AboutToDropDown();
   virtual void AboutToRollup();
   virtual void UpdateSelection();
-#ifdef HTML_FORMS
-  virtual void SetOverrideReflowOptimization(PRBool aValue) { mOverrideReflowOpt = aValue; }
-#endif
   virtual void FireOnChange();
   virtual void ComboboxFinish(PRInt32 aIndex);
   virtual void OnContentReset();
@@ -195,10 +192,6 @@ public:
   static void ComboboxFocusSet();
 
   // Helper
-#ifdef HTML_FORMS
-  void SetPassId(PRInt16 aId)  { mPassId = aId; }
-#endif
-
   PRBool IsFocused() { return this == mFocused; }
 
   /**
@@ -267,11 +260,21 @@ protected:
   nscoord  CalcFallbackRowHeight(PRInt32 aNumOptions);
 
   // CalcIntrinsicHeight computes our intrinsic height (taking the "size"
-  // attribute into account).
+  // attribute into account).  This should only be called in non-dropdown mode.
   nscoord CalcIntrinsicHeight(nscoord aHeightOfARow, PRInt32 aNumberOfOptions);
 
   // Dropped down stuff
   void     SetComboboxItem(PRInt32 aIndex);
+
+  /**
+   * Method to reflow ourselves as a dropdown list.  This differs from
+   * reflow as a listbox because the criteria for needing a second
+   * pass are different.  This will be called from Reflow() as needed.
+   */
+  nsresult ReflowAsDropdown(nsPresContext*           aPresContext,
+                            nsHTMLReflowMetrics&     aDesiredSize,
+                            const nsHTMLReflowState& aReflowState,
+                            nsReflowStatus&          aStatus);
 
   // Selection
   PRBool   SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
@@ -315,10 +318,6 @@ protected:
   PRPackedBool mNeedToReset:1;
   PRPackedBool mPostChildrenLoadedReset:1;
 
-#ifdef HTML_FORMS
-  PRPackedBool mOverrideReflowOpt:1;
-#endif
-
   //bool value for multiple discontiguous selection
   PRPackedBool mControlSelectMode:1;
 
@@ -326,21 +325,7 @@ protected:
   // pass.  This only happens for auto heights.
   PRPackedBool mMightNeedSecondPass:1;
 
-#ifdef HTML_FORMS
-  PRInt16 mPassId;
-  nscoord mCachedDesiredMEW;
-#endif
-
   nsRefPtr<nsListEventListener> mEventListener;
-
-  //Resize Reflow OpitmizationSize;
-#ifdef HTML_FORMS
-  nsSize       mCacheSize;
-  nscoord      mCachedAscent;
-  nscoord      mCachedMaxElementWidth;
-  nsSize       mCachedUnconstrainedSize;
-  nsSize       mCachedAvailableSize;
-#endif
 
   static nsListControlFrame * mFocused;
   
