@@ -55,10 +55,10 @@ NS_IMPL_THREADSAFE_ADDREF(nsConsoleService)
 NS_IMPL_THREADSAFE_RELEASE(nsConsoleService)
 NS_IMPL_QUERY_INTERFACE2_CI(nsConsoleService,
                             nsIConsoleService,
-                            nsIConsoleService_mozilla_BRANCH)
+                            nsIConsoleService_MOZILLA_1_8_BRANCH)
 NS_IMPL_CI_INTERFACE_GETTER2(nsConsoleService,
                              nsIConsoleService,
-                             nsIConsoleService_mozilla_BRANCH)
+                             nsIConsoleService_MOZILLA_1_8_BRANCH)
 
 nsConsoleService::nsConsoleService()
     : mMessages(nsnull), mCurrent(0), mFull(PR_FALSE), mListening(PR_FALSE), mLock(nsnull)

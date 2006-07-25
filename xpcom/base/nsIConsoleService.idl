@@ -79,7 +79,7 @@ interface nsIConsoleService : nsISupports
  * @status TEMPORARY
  */
 [scriptable, uuid(3c3f3e30-ebd5-11da-8ad9-0800200c9a66)]
-interface nsIConsoleService_mozilla_BRANCH : nsIConsoleService
+interface nsIConsoleService_MOZILLA_1_8_BRANCH : nsIConsoleService
 {
     /**
      * Clear the message buffer (e.g. for privacy reasons).
