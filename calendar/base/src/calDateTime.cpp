@@ -888,4 +888,3 @@ calDateTime::InnerObject(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
-

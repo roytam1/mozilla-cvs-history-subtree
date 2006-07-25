@@ -205,7 +205,9 @@ calRecurrenceDate::GetIcalProperty(calIIcalProperty **aProp)
         return NS_ERROR_FAILURE;
 
     // we need to set the timezone of the above created property manually,
+
     // the only reason this is necessary is because the icalproperty_set_value()
+
     // has the somewhat non-intuitive behavior of not handling the TZID
     // parameter automagically.
     nsresult rv;
@@ -284,9 +286,11 @@ calRecurrenceDate::SetIcalProperty(calIIcalProperty *aProp)
     struct icaltimetype theDate = icalvalue_get_date(icalproperty_get_value(prop));
 
     // we need to transfer the timezone from the icalproperty to the calIDateTime
+
     // object manually, the only reason this is necessary is because the
+
     // icalproperty_get_value() has the somewhat non-intuitive behavior of
-    // not handling the TZID parameter automagically. 
+    // not handling the TZID parameter automagically.
     const char *tzid = icalproperty_get_parameter_as_string(prop, "TZID");
     if (tzid) {
         // We have to walk up to our parent VCALENDAR and try to find this tzid

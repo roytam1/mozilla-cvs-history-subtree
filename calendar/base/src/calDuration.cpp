@@ -347,4 +347,3 @@ calDuration::Compare(calIDuration *aOther, PRInt32 *aResult)
 
     return NS_OK;
 }
-

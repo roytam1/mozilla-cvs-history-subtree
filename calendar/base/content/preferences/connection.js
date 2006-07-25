@@ -93,10 +93,37 @@ var gConnectionsDialog = {
     var autoconfigURLPref = document.getElementById("network.proxy.autoconfig_url");
     autoconfigURLPref.disabled = proxyTypePref.value != 2;
 
+#ifdef MOZILLA_1_8_BRANCH
     var disableReloadPref = document.getElementById("pref.advanced.proxies.disable_button.reload");
     disableReloadPref.disabled = proxyTypePref.value != 2;
   },
-  
+#else
+    this.updateReloadButton();
+  },
+
+  updateReloadButton: function ()
+  {
+    // Disable the "Reload PAC" button if the selected proxy type is not PAC or
+    // if the current value of the PAC textbox does not match the value stored
+    // in prefs.  Likewise, disable the reload button if PAC is not configured
+    // in prefs.
+
+    var typedURL = document.getElementById("networkProxyAutoconfigURL").value;
+    var proxyTypeCur = document.getElementById("network.proxy.type").value;
+
+    var prefs =
+        Components.classes["@mozilla.org/preferences-service;1"].
+        getService(Components.interfaces.nsIPrefBranch);
+    var pacURL = prefs.getCharPref("network.proxy.autoconfig_url");
+    var proxyType = prefs.getIntPref("network.proxy.type");
+
+    var disableReloadPref =
+        document.getElementById("pref.advanced.proxies.disable_button.reload");
+    disableReloadPref.disabled =
+        (proxyTypeCur != 2 || proxyType != 2 || typedURL != pacURL);
+  },
+#endif
+
   readProxyType: function ()
   {
     this.proxyTypeChanged();
@@ -151,11 +178,16 @@ var gConnectionsDialog = {
 
   reloadPAC: function ()
   {
+#ifdef MOZILLA_1_8_BRANCH
     var autoURL = document.getElementById("networkProxyAutoconfigURL");
     var pps = Components.classes["@mozilla.org/network/protocol-proxy-service;1"]
                         .getService(Components.interfaces.nsPIProtocolProxyService);
     pps.configureFromPAC(autoURL.value);
+#else
+    Components.classes["@mozilla.org/network/protocol-proxy-service;1"].
+        getService().reloadPAC();
   },
+#endif
   
   doAutoconfigURLFixup: function ()
   {
