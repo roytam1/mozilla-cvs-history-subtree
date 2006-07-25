@@ -79,6 +79,14 @@ extern "C" {
 extern "C" {
 #include <cairo-win32.h>
 }
+#elif defined(XP_OS2)
+#define INCL_WINWINDOWMGR
+#define INCL_GPIBITMAPS
+#include <os2.h>
+#include "nsDrawingSurfaceOS2.h"
+extern "C" {
+#include <cairo-os2.h>
+}
 #else
 #include "nsRenderingContextGTK.h"
 #include <gdk/gdkx.h>
@@ -248,6 +256,23 @@ nsSVGCairoCanvas::Init(nsIRenderingContext *ctx,
     surface->GetDC(&hdc);
     cairoSurf = cairo_win32_surface_create(hdc);
   }
+#elif defined(XP_OS2)
+  nsDrawingSurfaceOS2 *surface; /* to get a HPS from this */
+  nsOffscreenSurface *surface2; /* to get a HDC from this */
+  ctx->GetDrawingSurface((nsIDrawingSurface**)&surface);
+  ctx->GetDrawingSurface((nsIDrawingSurface**)&surface2);
+
+  HPS hps = surface->GetPS();
+  HDC hdc = surface2->GetDC();
+  LONG caps;
+  if (DevQueryCaps(hdc, CAPS_TECHNOLOGY, 1L, &caps) &&
+      caps == CAPS_TECH_RASTER_DISPLAY && hps) {
+    /* only the display with an existing presentationn handle *
+     * can handle content drawn by cairo                      */
+    surface->GetDimensions(&mWidth, &mHeight);
+    cairoSurf = cairo_os2_surface_create(hps, mWidth, mHeight);
+    cairo_surface_mark_dirty(cairoSurf);
+  }
 #elif defined(MOZ_ENABLE_GTK2) || defined(MOZ_ENABLE_GTK)
   nsDrawingSurfaceGTK *surface;
   ctx->GetDrawingSurface((nsIDrawingSurface**)&surface);
@@ -289,7 +314,7 @@ nsSVGCairoCanvas::Init(nsIRenderingContext *ctx,
     mContainer->Init(mWidth, mHeight, nsnull);
     
     mBuffer = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-#ifdef XP_WIN
+#if defined(XP_WIN) || defined(XP_OS2)
     mBuffer->Init(0, 0, mWidth, mHeight, gfxIFormats::BGR, 24);
 #else
     mBuffer->Init(0, 0, mWidth, mHeight, gfxIFormats::RGB_A8, 24);
@@ -505,7 +530,7 @@ static nsresult CopyCairoImageToIImage(PRUint8* aData, PRInt32 aWidth, PRInt32 a
       *outrowrgb++ = 0;
 #endif
 
-#ifdef XP_WIN
+#if defined(XP_WIN) || defined(XP_OS2)
       // On windows, RGB_A8 is really BGR_A8.
       // in fact, BGR_A8 is also BGR_A8.
       // Preblend with white since win32 printing can't deal with RGBA
