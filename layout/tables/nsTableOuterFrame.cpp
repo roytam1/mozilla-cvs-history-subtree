@@ -627,7 +627,6 @@ void
 nsTableOuterFrame::SetDesiredSize(PRUint8         aCaptionSide,
                                   const nsMargin& aInnerMargin,
                                   const nsMargin& aCaptionMargin,
-                                  nscoord         aAvailableWidth,
                                   nscoord&        aWidth,
                                   nscoord&        aHeight)
 {
@@ -641,11 +640,6 @@ nsTableOuterFrame::SetDesiredSize(PRUint8         aCaptionSide,
   if (mCaptionFrame) {
     captionRect = mCaptionFrame->GetRect();
     captionWidth = captionRect.width;
-    if ((NS_UNCONSTRAINEDSIZE == aAvailableWidth) &&
-        ((NS_SIDE_LEFT == aCaptionSide) || (NS_SIDE_RIGHT == aCaptionSide))) {
-      BalanceLeftRightCaption(aCaptionSide, aInnerMargin, aCaptionMargin, 
-                              innerWidth, captionWidth);
-    }
   }
   switch(aCaptionSide) {
     case NS_SIDE_LEFT:
@@ -665,6 +659,7 @@ nsTableOuterFrame::SetDesiredSize(PRUint8         aCaptionSide,
 
 }
 
+// XXX This is now unused, but it probably should be used!
 void
 nsTableOuterFrame::BalanceLeftRightCaption(PRUint8         aCaptionSide,
                                            const nsMargin& aInnerMargin,
@@ -1049,10 +1044,10 @@ void
 nsTableOuterFrame::UpdateReflowMetrics(PRUint8              aCaptionSide,
                                        nsHTMLReflowMetrics& aMet,
                                        const nsMargin&      aInnerMargin,
-                                       const nsMargin&      aCaptionMargin,
-                                       const nscoord        aAvailableWidth)
+                                       const nsMargin&      aCaptionMargin)
 {
-  SetDesiredSize(aCaptionSide, aInnerMargin, aCaptionMargin, aAvailableWidth, aMet.width, aMet.height);
+  SetDesiredSize(aCaptionSide, aInnerMargin, aCaptionMargin,
+                 aMet.width, aMet.height);
 
   aMet.mOverflowArea = nsRect(0, 0, aMet.width, aMet.height);
   ConsiderChildOverflow(aMet.mOverflowArea, mInnerTableFrame);
@@ -1174,8 +1169,7 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
     nsTableFrame::RePositionViews(mInnerTableFrame);
   }
 
-  UpdateReflowMetrics(captionSide, aDesiredSize, innerMargin,
-                      captionMargin, aOuterRS.availableWidth);
+  UpdateReflowMetrics(captionSide, aDesiredSize, innerMargin, captionMargin);
   
   // Return our desired rect
   aDesiredSize.ascent  = mInnerTableFrame->GetAscent();

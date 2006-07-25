@@ -215,7 +215,6 @@ protected:
   void SetDesiredSize(PRUint8         aCaptionSide,
                       const nsMargin& aInnerMargin,
                       const nsMargin& aCaptionMargin,
-                      nscoord         aAvailWidth,
                       nscoord&        aWidth,
                       nscoord&        aHeight);
 
@@ -255,8 +254,7 @@ protected:
   void UpdateReflowMetrics(PRUint8              aCaptionSide,
                            nsHTMLReflowMetrics& aMet,
                            const nsMargin&      aInnerMargin,
-                           const nsMargin&      aCaptionMargin,
-                           const nscoord        aAvailWidth);
+                           const nsMargin&      aCaptionMargin);
 
   void InvalidateDamage(PRUint8         aCaptionSide,
                         const nsSize&   aOuterSize,
