@@ -693,16 +693,17 @@ nsContentUtils::CanCallerAccess(nsIDOMNode *aNode)
     return PR_TRUE;
   }
 
+  PRBool enabled = PR_FALSE;
   if (principal == systemPrincipal) {
-      // we already know subjectPrincipal isn't the systemPrincipal so if
-      // the object principal is they cannot match. Bail out now to
-      // avoid wasting time in CheckSameOriginPrincipal
+    // we know subjectPrincipal != systemPrincipal so we can only
+    // access the object if UniversalXPConnect is enabled. We can
+    // avoid wasting time in CheckSameOriginPrincipal
 
-      return PR_FALSE;
+    rv = sSecurityManager->IsCapabilityEnabled("UniversalXPConnect", &enabled);
+    return NS_SUCCEEDED(rv) && enabled;
   }
 
-  rv = sSecurityManager->CheckSameOriginPrincipal(subjectPrincipal,
-                                                  principal);
+  rv = sSecurityManager->CheckSameOriginPrincipal(subjectPrincipal, principal);
   if (NS_SUCCEEDED(rv)) {
     return PR_TRUE;
   }
@@ -710,11 +711,8 @@ nsContentUtils::CanCallerAccess(nsIDOMNode *aNode)
   // see if the caller has otherwise been given the ability to touch
   // input args to DOM methods
 
-  PRBool enabled = PR_FALSE;
-  rv = sSecurityManager->IsCapabilityEnabled("UniversalBrowserRead",
-                                             &enabled);
-  NS_ENSURE_SUCCESS(rv, PR_FALSE);
-  return enabled;
+  rv = sSecurityManager->IsCapabilityEnabled("UniversalBrowserRead", &enabled);
+  return NS_SUCCEEDED(rv) && enabled;
 }
 
 //static
