@@ -106,6 +106,10 @@ public:
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
 #endif
 
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
   NS_IMETHOD Reflow(nsPresContext*          aCX,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -185,15 +189,16 @@ public:
 
 protected:
 
+#ifdef HTML_FORMS
 #ifdef DO_NEW_REFLOW
   NS_IMETHOD ReflowItems(nsPresContext* aPresContext,
                          const nsHTMLReflowState& aReflowState,
                          nsHTMLReflowMetrics& aDesiredSize);
 #endif
-
+#endif // HTML_FORMS
+  
    // Utilities
-  nsresult ReflowComboChildFrame(nsIFrame*           aFrame, 
-                            nsPresContext*          aPresContext, 
+  nsresult ReflowComboChildFrame(nsPresContext*          aPresContext, 
                             nsHTMLReflowMetrics&     aDesiredSize,
                             const nsHTMLReflowState& aReflowState, 
                             nsReflowStatus&          aStatus,

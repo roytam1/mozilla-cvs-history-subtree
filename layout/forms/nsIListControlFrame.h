@@ -46,8 +46,8 @@ class nsIContent;
 
 // IID for the nsIListControlFrame class
 #define NS_ILISTCONTROLFRAME_IID    \
-{ 0xfa7cf9c1, 0x1a6a, 0x45cf, \
- { 0x8d, 0x3f, 0x33, 0xb2, 0x22, 0xdf, 0x96, 0x15 } }
+{ 0x4de9ab73, 0x31b5, 0x4d92, \
+ { 0xb7, 0xe4, 0x73, 0xb4, 0x4d, 0xcb, 0xfc, 0xda } }
 
 /** 
   * nsIListControlFrame is the interface for frame-based listboxes.
@@ -81,10 +81,10 @@ public:
   virtual void CaptureMouseEvents(PRBool aGrabMouseEvents) = 0;
 
   /**
-   * Returns the maximum width and height of an item in the listbox
+   * Returns the height of a single row in the list.  This is the
+   * maximum of the heights of all the options/optgroups.
    */
-
-  virtual nsSize GetMaximumSize() = 0;
+  virtual nscoord GetHeightOfARow() = 0;
 
   /**
    * Returns the number of options in the listbox

@@ -718,8 +718,12 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
    */
 
   PRBool autoHeight = (aReflowState.mComputedHeight == NS_UNCONSTRAINEDSIZE);
-  mMightNeedSecondPass = autoHeight &&
-    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN));
+  PRBool isInDropDownMode = IsInDropDownMode();
+
+  // XXXbz this is wrong; we should just use our mRect to start with if
+  // isindropdownmode is true and mMightNeedSecondPass is otherwise false!
+  mMightNeedSecondPass = isInDropDownMode || (autoHeight &&
+    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)));
   
   nsHTMLReflowState state(aReflowState);
   PRInt32 length = GetNumberOfOptions();  
@@ -728,7 +732,7 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   
   if (mState & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
-  } else if (autoHeight) {
+  } else if (autoHeight && !isInDropDownMode) {
     // When not doing an initial reflow, and when the height is auto, start off
     // with our computed height set to what we'd expect our height to be.
     state.mComputedHeight = CalcIntrinsicHeight(oldHeightOfARow, length);
@@ -747,9 +751,15 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
 
   mMightNeedSecondPass = PR_FALSE;
 
+  nscoord heightOfARow = HeightOfARow();
+
   // Now see whether we need a second pass.  If the height of a row has not
-  // changed, we don't.
-  if (HeightOfARow() == oldHeightOfARow) {
+  // changed, we don't, unless we're a combobox.  Comboboxes always need a
+  // second pass, because we want to compare the intrinsic height to things.
+  // XXXbz maybe we can make that better somehow?  If we do, change
+  // nsSelectsAreaFrame::Reflow accordingly.
+  
+  if (heightOfARow == oldHeightOfARow && !isInDropDownMode) {
     // All done.  No need to do more reflow.
     NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
                  "Shouldn't be suppressing if the height of a row has not "
@@ -766,13 +776,51 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   // implementation detail of nsHTMLScrollFrame that we're depending on?
   nsHTMLScrollFrame::DidReflow(aPresContext, &state, aStatus);
 
-  PRBool isInDropDownMode = IsInDropDownMode();
-
   // Now compute the height we want to have
   if (isInDropDownMode) {
-    NS_ERROR("Shouldn't happen");
+    nscoord visibleHeight = GetScrolledFrame()->GetSize().height;
+    mNumDisplayRows = kMaxDropDownRows;
+    if (visibleHeight > mNumDisplayRows * heightOfARow) {
+      visibleHeight = mNumDisplayRows * heightOfARow;
+      // This is an adaptive algorithm for figuring out how many rows 
+      // should be displayed in the drop down. The standard size is 20 rows, 
+      // but on 640x480 it is typically too big.
+      // This takes the height of the screen divides it by two and then subtracts off 
+      // an estimated height of the combobox. I estimate it by taking the max element size
+      // of the drop down and multiplying it by 2 (this is arbitrary) then subtract off
+      // the border and padding of the drop down (again rather arbitrary)
+      // This all breaks down if the font of the combobox is a lot larger then the option items
+      // or CSS style has set the height of the combobox to be rather large.
+      // We can fix these cases later if they actually happen.
+      nscoord screenHeightInPixels = 0;
+      if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
+        float   p2t;
+        p2t = aPresContext->PixelsToTwips();
+        nscoord screenHeight = NSIntPixelsToTwips(screenHeightInPixels, p2t);
+
+        nscoord availDropHgt = (screenHeight / 2) - (heightOfARow*2); // approx half screen minus combo size
+        availDropHgt -= aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
+
+        nscoord hgt = visibleHeight + aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
+        if (heightOfARow > 0) {
+          if (hgt > availDropHgt) {
+            visibleHeight = (availDropHgt / heightOfARow) * heightOfARow;
+          }
+          mNumDisplayRows = visibleHeight / heightOfARow;
+        } else {
+          // Hmmm, not sure what to do here. Punt, and make both of them one
+          visibleHeight   = 1;
+          mNumDisplayRows = 1;
+        }
+      }
+
+      state.mComputedHeight = mNumDisplayRows * heightOfARow;
+      // Note: no need to apply min/max constraints, since we have no such
+      // rules applied to the combobox dropdown.
+      // XXXbz this is ending up too big!!  Figure out why.
+    }
   } else {
-    state.mComputedHeight = CalcIntrinsicHeight(HeightOfARow(), length);
+    state.mComputedHeight = CalcIntrinsicHeight(heightOfARow, length);
     state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
   }
 
@@ -2314,13 +2362,10 @@ nsListControlFrame::GetFrameName(nsAString& aResult) const
 #endif
 
 //---------------------------------------------------------
-nsSize
-nsListControlFrame::GetMaximumSize()
+nscoord
+nsListControlFrame::GetHeightOfARow()
 {
-  nsSize aSize;
-  aSize.width  = mMaxWidth;
-  aSize.height = mMaxHeight;
-  return aSize;
+  return HeightOfARow();
 }
 
 //----------------------------------------------------------------------
@@ -2396,33 +2441,38 @@ nsListControlFrame::CalcIntrinsicHeight(nscoord aHeightOfARow,
 {
   mNumDisplayRows = 1;
   GetSizeAttribute(&mNumDisplayRows);
-  if (mNumDisplayRows >= 1) {
-    return mNumDisplayRows * aHeightOfARow;
-  }
 
-  // When SIZE=0 or unspecified we constrain the height to
-  // [2..kMaxDropDownRows] rows.  We add in the height of optgroup labels
-  // (within the constraint above), bug 300474.
-  nscoord labelHeight =
-    ::GetOptGroupLabelsHeight(GetPresContext(), mContent, aHeightOfARow);
+  // Extra height to tack on to aHeightOfARow * mNumDisplayRows
+  nscoord extraHeight = 0;
+  
+  if (mNumDisplayRows < 1) {
+    // When SIZE=0 or unspecified we constrain the height to
+    // [2..kMaxDropDownRows] rows.  We add in the height of optgroup labels
+    // (within the constraint above), bug 300474.
+    nscoord labelHeight =
+      ::GetOptGroupLabelsHeight(GetPresContext(), mContent, aHeightOfARow);
 
-  if (GetMultiple()) {
-    if (aNumberOfOptions < 2) {
-      // Add in 1 aHeightOfARow also when aNumberOfOptions == 0
-      return aHeightOfARow + PR_MAX(aHeightOfARow, labelHeight);
+    if (GetMultiple()) {
+      if (aNumberOfOptions < 2) {
+        // Add in 1 aHeightOfARow also when aNumberOfOptions == 0
+        mNumDisplayRows = 1;
+        extraHeight = PR_MAX(aHeightOfARow, labelHeight);
+      }
+      else if (aNumberOfOptions * aHeightOfARow + labelHeight >
+               kMaxDropDownRows * aHeightOfARow) {
+        mNumDisplayRows = kMaxDropDownRows;
+      } else {
+        mNumDisplayRows = aNumberOfOptions;
+        extraHeight = labelHeight;
+      }
     }
-
-    return PR_MIN(kMaxDropDownRows * aHeightOfARow,
-                  aNumberOfOptions * aHeightOfARow + labelHeight);
+    else {
+      NS_NOTREACHED("Shouldn't hit this case -- we should a be a combobox if "
+                    "we have no size set and no multiple set!");
+    }
   }
 
-  // Should we even reach this case?  Probably not unless we're actually a
-  // combobox...
-
-  // XXXbz perhaps we should simply assert that GetMultiple() is true if
-  // mNumDisplayRows is <= 0 ?
-  NS_NOTREACHED("Shouldn't hit this");
-  return labelHeight + 2 * aHeightOfARow;
+  return mNumDisplayRows * aHeightOfARow + extraHeight;
 }
 
 //----------------------------------------------------------------------
@@ -2726,7 +2776,6 @@ nsListControlFrame::MouseDown(nsIDOMEvent* aMouseEvent)
         return NS_OK;
       }
 
-#ifdef HTML_FORMS
       if (!nsComboboxControlFrame::ToolkitHasNativePopup())
       {
         PRBool isDroppedDown = mComboboxFrame->IsDroppedDown();
@@ -2735,7 +2784,6 @@ nsListControlFrame::MouseDown(nsIDOMEvent* aMouseEvent)
           CaptureMouseEvents(PR_FALSE);
         }
       }
-#endif
     }
   }
 
@@ -3006,7 +3054,6 @@ nsListControlFrame::GetIncrementalString()
 void
 nsListControlFrame::DropDownToggleKey(nsIDOMEvent* aKeyEvent)
 {
-#ifdef HTML_FORMS
   // Cocoa widgets do native popups, so don't try to show
   // dropdowns there.
   if (IsInDropDownMode() && !nsComboboxControlFrame::ToolkitHasNativePopup()) {
@@ -3014,7 +3061,6 @@ nsListControlFrame::DropDownToggleKey(nsIDOMEvent* aKeyEvent)
     mComboboxFrame->RedisplaySelectedText();
     aKeyEvent->PreventDefault();
   }
-#endif
 }
 
 nsresult

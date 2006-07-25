@@ -85,6 +85,7 @@ EXPORTS		= \
 
 CPPSRCS		= \
 		nsButtonFrameRenderer.cpp \
+		nsComboboxControlFrame.cpp \
 		nsFieldSetFrame.cpp \
 		nsFileControlFrame.cpp \
 		nsFormControlFrame.cpp \
@@ -96,16 +97,10 @@ CPPSRCS		= \
 		nsHTMLButtonControlFrame.cpp \
 		nsImageControlFrame.cpp \
 		nsLegendFrame.cpp \
-		nsIsIndexFrame.cpp \
-		$(NULL)
-
-ifdef HTML_FORMS
-CPPSRCS += \
-		nsComboboxControlFrame.cpp \
 		nsListControlFrame.cpp \
+		nsIsIndexFrame.cpp \
 		nsSelectsAreaFrame.cpp \
 		$(NULL)
-endif
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1

@@ -150,7 +150,7 @@ public:
   virtual PRInt32 GetSelectedIndex(); 
   virtual void GetOptionText(PRInt32 aIndex, nsAString & aStr);
   virtual void CaptureMouseEvents(PRBool aGrabMouseEvents);
-  virtual nsSize GetMaximumSize();
+  virtual nscoord GetHeightOfARow();
   virtual PRInt32 GetNumberOfOptions();  
   virtual void SyncViewWithFrame();
   virtual void AboutToDropDown();
@@ -226,6 +226,11 @@ public:
     nsHTMLScrollFrame::SetSuppressScrollbarUpdate(aSuppress);
   }
 
+  /**
+   * Return whether the list is in dropdown mode.
+   */
+  PRBool IsInDropDownMode() const;
+
 #ifdef ACCESSIBILITY
   void FireMenuItemActiveEvent(); // Inform assistive tech what got focused
 #endif
@@ -267,7 +272,6 @@ protected:
 
   // Dropped down stuff
   void     SetComboboxItem(PRInt32 aIndex);
-  PRBool   IsInDropDownMode() const;
 
   // Selection
   PRBool   SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
