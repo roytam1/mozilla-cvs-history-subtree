@@ -66,7 +66,7 @@ BrowserGlue.prototype = {
       case "browser:purge-session-history":
         // reset the console service's error buffer
         const cs = Components.classes["@mozilla.org/consoleservice;1"]
-                             .getService(Components.interfaces.nsIConsoleService_mozilla_BRANCH);
+                             .getService(Components.interfaces.nsIConsoleService_MOZILLA_1_8_BRANCH);
         cs.logStringMessage(null); // clear the console (in case it's open)
         cs.reset();
         break;
