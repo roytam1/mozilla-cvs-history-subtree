@@ -967,7 +967,7 @@ nsMathMLmoFrame::MarkIntrinsicWidthsDirty()
   } while (embellishData.coreFrame == this);
 
   // we have automatic data to update in the children of the target frame
-  return ReLayoutChildren(target);
+  RebuildAutomaticDataForChildren(target);
 }
 
 NS_IMETHODIMP
