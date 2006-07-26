@@ -83,7 +83,6 @@ var appCore = null;
 var gBrowser = null;
 var gBookmarksDoc=null; 
 var gURLBar = null;
-var gClickSelectsAll = true;
 var gBrowserStatusHandler;
 var gSelectedTab=null;
 var gRSSTag="minimo";
@@ -518,7 +517,6 @@ function MiniNavStartup()
 
       if (topic=="open-url")
       {
-        alert(data);
         try { 
           gBrowser.selectedTab = gBrowser.addTab(data);
           browserInit(gBrowser.selectedTab);
