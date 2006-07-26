@@ -404,28 +404,30 @@ nsIFrame*
 nsMathMLmtableOuterFrame::GetRowFrameAt(nsPresContext* aPresContext,
                                         PRInt32         aRowIndex)
 {
-  // To find the row at the given index, we will iterate downwards or
-  // upwards depending on the sign of the index
-  nsTableIteration dir = eTableLTR;
-  if (aRowIndex < 0) {
-    aRowIndex = -aRowIndex;
-    dir = eTableRTL;
-  }
-  // if our inner table says that the index is valid, find the row now
   PRInt32 rowCount, colCount;
   GetTableSize(rowCount, colCount);
-  if (aRowIndex <= rowCount) {
+
+  // Negative indices mean to find upwards from the end.
+  if (aRowIndex < 0) {
+    aRowIndex = rowCount + aRowIndex;
+  }
+  // aRowIndex is 1-based, so convert it to a 0-based index
+  --aRowIndex;
+
+  // if our inner table says that the index is valid, find the row now
+  if (aRowIndex <= 0 && aRowIndex < rowCount) {
     nsIFrame* innerTableFrame = mFrames.FirstChild();
-    nsTableIterator rowgroupIter(*innerTableFrame, dir);
+    nsTableIterator rowgroupIter(*innerTableFrame);
     nsIFrame* rowgroupFrame = rowgroupIter.First();
     while (rowgroupFrame) {
-      nsTableIterator rowIter(*rowgroupFrame, dir);
+      nsTableIterator rowIter(*rowgroupFrame);
       nsIFrame* rowFrame = rowIter.First();
       while (rowFrame) {
-        if (--aRowIndex == 0) {
+        if (aRowIndex == 0) {
           DEBUG_VERIFY_THAT_FRAME_IS(rowFrame, TABLE_ROW);
           return rowFrame;
         }
+        --aRowIndex;
         rowFrame = rowIter.Next();
       }
       rowgroupFrame = rowgroupIter.Next();
