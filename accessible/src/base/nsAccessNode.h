@@ -135,9 +135,9 @@ class nsAccessNode: public nsIAccessNode, public nsPIAccessNode
     static PRBool GetRoleAttribute(nsIContent *aContent, nsAString& aRole)
     {
       aRole.Truncate();
-      return (aContent->IsContentOfType(nsIContent::eHTML) && aContent->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::role, aRole)) ||
-              aContent->GetAttr(kNameSpaceID_XHTML, nsAccessibilityAtoms::role, aRole) ||
-              aContent->GetAttr(kNameSpaceID_XHTML2_Unofficial, nsAccessibilityAtoms::role, aRole);
+      return (aContent->IsContentOfType(nsIContent::eHTML) && aContent->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::role, aRole) != NS_CONTENT_ATTR_NOT_THERE) ||
+              aContent->GetAttr(kNameSpaceID_XHTML, nsAccessibilityAtoms::role, aRole) != NS_CONTENT_ATTR_NOT_THERE ||
+              aContent->GetAttr(kNameSpaceID_XHTML2_Unofficial, nsAccessibilityAtoms::role, aRole) != NS_CONTENT_ATTR_NOT_THERE;
     }
 
     static nsIDOMNode *gLastFocusedNode;
