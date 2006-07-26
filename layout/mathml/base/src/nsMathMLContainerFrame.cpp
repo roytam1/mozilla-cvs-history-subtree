@@ -842,7 +842,8 @@ nsMathMLContainerFrame::ReLayoutChildren(nsIFrame* aParentFrame)
   if (!parent)
     return NS_OK;
 
-  return parent->ReflowDirtyChild(frame->GetPresContext()->PresShell(), frame);
+  return frame->GetPresContext()->PresShell()->
+           FrameNeedsReflow(frame, nsIPresShell::eStyleChange);
 }
 
 // There are precise rules governing children of a MathML frame,
@@ -927,7 +928,9 @@ nsMathMLContainerFrame::AttributeChanged(PRInt32         aNameSpaceID,
     MapAttributesIntoCSS(GetPresContext(), this);
   }
 
-  return ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+  // XXXldb This should only do work for attributes that cause changes!
+  return GetPresContext()->PresShell()->
+           FrameNeedsReflow(this, nsIPresShell::eStyleChange);
 }
 
 nsresult 

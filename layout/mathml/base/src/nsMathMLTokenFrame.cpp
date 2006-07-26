@@ -222,17 +222,12 @@ nsMathMLTokenFrame::Place(nsIRenderingContext& aRenderingContext,
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsMathMLTokenFrame::ReflowDirtyChild(nsIPresShell* aPresShell,
-                                     nsIFrame*     aChild)
+/* virtual */ void
+nsMathMLTokenFrame::MarkIntrinsicWidthsDirty()
 {
-  // if we get this, it means it was called by the nsTextFrame beneath us, and
-  // this means something changed in the text content. So re-process our text
-
-  ProcessTextData(aPresShell->GetPresContext());
-
-  mState |= NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN;
-  return mParent->ReflowDirtyChild(aPresShell, this);
+  // this could be called due to changes in the nsTextFrame beneath us
+  // when something changed in the text content. So re-process our text
+  ProcessTextData(GetPresContext());
 }
 
 NS_IMETHODIMP

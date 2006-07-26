@@ -949,14 +949,13 @@ nsMathMLmoFrame::Reflow(nsPresContext*          aPresContext,
                                     aReflowState, aStatus);
 }
 
-NS_IMETHODIMP
-nsMathMLmoFrame::ReflowDirtyChild(nsIPresShell* aPresShell,
-                                  nsIFrame*     aChild)
+/* virtual */ void
+nsMathMLmoFrame::MarkIntrinsicWidthsDirty()
 {
-  // if we get this, it means it was called by the nsTextFrame beneath us, and 
-  // this means something changed in the text content. So blow away everything
-  // an re-build the automatic data from the parent of our outermost embellished
-  // container (we ensure that we are the core, not just a sibling of the core)
+  // if we get this, it may mean that something changed in the text
+  // content. So blow away everything an re-build the automatic data
+  // from the parent of our outermost embellished container (we ensure
+  // that we are the core, not just a sibling of the core)
 
   ProcessTextData(GetPresContext());
 
