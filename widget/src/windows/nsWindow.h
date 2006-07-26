@@ -521,6 +521,8 @@ protected:
 
   void ConstrainZLevel(HWND *aAfter);
 
+  PRBool CanTakeFocus();
+
 private:
 
 
