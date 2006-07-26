@@ -44,6 +44,10 @@
 #include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
 
+#ifndef MOZILLA_1_8_BRANCH
+#include "nsIClassInfoImpl.h"
+#endif
+
 #define SECONDS_PER_WEEK   604800
 #define SECONDS_PER_DAY     86400
 #define SECONDS_PER_HOUR     3600
