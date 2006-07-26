@@ -5914,15 +5914,15 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
 
     if (isWhitespace) {
       const nsStyleText *styleText = GetStyleText();
-      if (styleText->CanBreakAtWhiteSpace()) {
+      PRUnichar firstChar;
+      if (tx.TransformedTextIsAscii()) {
+        firstChar = *bp1;
+      } else {
+        firstChar = *bp2;
+      }
+      if ('\n' == firstChar || styleText->CanBreakAtWhiteSpace()) {
         aData->Break(aRenderingContext);
       } else if (!aData->skipWhitespace) {
-        PRUnichar firstChar;
-        if (tx.TransformedTextIsAscii()) {
-          firstChar = *bp1;
-        } else {
-          firstChar = *bp2;
-        }
         nscoord width;
         if ('\t' == firstChar) {
           // XXX Need to track column!
