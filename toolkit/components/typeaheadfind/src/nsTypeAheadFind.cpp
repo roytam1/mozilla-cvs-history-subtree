@@ -1104,16 +1104,6 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly,
                    PR_FALSE, aResult);
   }
 
-#ifndef NO_LINK_CYCLE_ON_SAME_CHAR
-  if (NS_FAILED(rv) && !mLiteralTextSearchOnly && mAllTheSameChar && 
-      mTypeAheadBuffer.Length() > 1) {
-    mRepeatingMode = eRepeatingChar;
-    mDontTryExactMatch = PR_TRUE;  // Repeated character find mode
-    rv = FindItNow(nsnull, PR_TRUE, PR_TRUE, isFirstVisiblePreferred, PR_FALSE,
-                   aResult);
-  }
-#endif
-
   // ---------Handle success or failure ---------------
   if (NS_SUCCEEDED(rv)) {
     if (mTypeAheadBuffer.Length() == 1) {
