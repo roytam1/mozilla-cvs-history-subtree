@@ -967,6 +967,8 @@ nsMathMLmoFrame::MarkIntrinsicWidthsDirty()
   } while (embellishData.coreFrame == this);
 
   // we have automatic data to update in the children of the target frame
+  // XXXldb This should really be marking dirty rather than rebuilding
+  // so that we don't rebuild multiple times for the same change.
   RebuildAutomaticDataForChildren(target);
 }
 
