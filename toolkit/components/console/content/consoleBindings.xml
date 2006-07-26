@@ -80,7 +80,7 @@
           
           try {
             var isupports = Components.classes['@mozilla.org/consoleservice;1'].getService();
-            this.mCService = isupports.QueryInterface(Components.interfaces.nsIConsoleService_mozilla_BRANCH);
+            this.mCService = isupports.QueryInterface(Components.interfaces.nsIConsoleService_MOZILLA_1_8_BRANCH);
             this.mCService.registerListener(this.mConsoleListener);
           } catch (ex) {
             appendItem(
