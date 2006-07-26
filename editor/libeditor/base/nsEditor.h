@@ -614,6 +614,7 @@ protected:
   PRPackedBool                  mNeedRecoverIMEOpenState;   // Need IME open state change on blur.
 
   PRPackedBool                  mShouldTxnSetSelection;  // turn off for conservative selection adjustment by txns
+  PRPackedBool                  mDidPreDestroy;    // whether PreDestroy has been called
   // various listeners
   nsVoidArray*                  mActionListeners;  // listens to all low level actions on the doc
   nsVoidArray*                  mEditorObservers;   // just notify once per high level change
