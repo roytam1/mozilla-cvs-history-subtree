@@ -25,3 +25,10 @@ section, set /NODEFAULTLIB, and add "LIBCMT.LIB, MSVCRT.LIB" to the list of
 libraries to ignore.  The resulting .lib should link cleanly with a VC6
 firefox.
 
+***** Note about OS/2 *****
+
+The files cairo-os2-private.h, cairo-os2-surface.c, and cairo-os2.h and the
+line @OS2_SURFACE_FEATURE@ in cairo-features.h.in are not part of upstream
+cairo 1.0.x and so were added in the Mozilla tree. Do not overwrite them.
+                        Peter Weilbacher <mozilla@Weilbacher.org>, Jul 2006
+

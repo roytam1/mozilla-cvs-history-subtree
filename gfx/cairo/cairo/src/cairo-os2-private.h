@@ -1,6 +1,6 @@
 /* cairo - a vector graphics library with display and print output
  *
- * Copyright (C) 2003 University of Southern California
+ * Copyright © 2005 Red Hat, Inc
  *
  * This library is free software; you can redistribute it and/or
  * modify it either under the terms of the GNU Lesser General Public
@@ -27,62 +27,50 @@
  *
  * The Original Code is the cairo graphics library.
  *
- * The Initial Developer of the Original Code is University of Southern
- * California.
+ * The Initial Developer of the Original Code is Red Hat, Inc.
  *
  * Contributor(s):
- *	Carl D. Worth <cworth@cworth.org>
+ *	Doodle <doodle@scenergy.dfmk.hu>
  */
 
-#ifndef CAIRO_FEATURES_H
-#define CAIRO_FEATURES_H
+#ifndef CAIRO_OS2_PRIVATE_H
+#define CAIRO_OS2_PRIVATE_H
 
-/* Include NSPR's prcpucfg.h for endianness information */
-#include "prcpucfg.h"
-
-#ifdef IS_BIG_ENDIAN
-#define WORDS_BIGENDIAN
-#endif
-
-#ifdef IS_LITTLE_ENDIAN
-#define WORDS_LITTLEENDIAN
-#endif
-
-#ifdef  __cplusplus
-# define CAIRO_BEGIN_DECLS  extern "C" {
-# define CAIRO_END_DECLS    }
+#define INCL_DOS
+#define INCL_DOSSEMAPHORES
+#define INCL_DOSERRORS
+#define INCL_WIN
+#define INCL_GPI
+#ifdef __WATCOMC__
+#include <os2.h>
 #else
-# define CAIRO_BEGIN_DECLS
-# define CAIRO_END_DECLS
+#include <os2emx.h>
 #endif
 
-#define CAIRO_VERSION_MAJOR 1
-#define CAIRO_VERSION_MINOR 0
-#define CAIRO_VERSION_MICRO 2
-#define CAIRO_VERSION_STRING "1.0.2"
+#include <cairo-os2.h>
+#include <cairoint.h>
 
-@PS_SURFACE_FEATURE@
+typedef struct _cairo_os2_surface
+{
+  cairo_surface_t        base;
 
-@PDF_SURFACE_FEATURE@
+  /* Mutex semaphore to protect private fields from concurrent access */
+  HMTX                   hmtxUsePrivateFields;
+  /* Private fields: */
+  HPS                    hpsClientWindow;
+  HWND                   hwndClientWindow;
+  BITMAPINFO2            bmi2BitmapInfo;
+  unsigned char         *pchPixels;
+  cairo_image_surface_t *pImageSurface;
+  int                    iPixelArrayLendCounter;
+  HEV                    hevPixelArrayCameBack;
 
-@XLIB_SURFACE_FEATURE@
+  RECTL                  rclDirtyArea;
+  int                    bDirtyAreaPresent;
 
-@QUARTZ_SURFACE_FEATURE@
+  /* General flags: */
+  int                    bBlitAsChanges;
 
-@XCB_SURFACE_FEATURE@
+} cairo_os2_surface_t;
 
-@WIN32_SURFACE_FEATURE@
-
-@OS2_SURFACE_FEATURE@
-
-@GLITZ_SURFACE_FEATURE@
-
-@FT_FONT_FEATURE@
-
-@WIN32_FONT_FEATURE@
-
-@ATSUI_FONT_FEATURE@
-
-@PNG_FUNCTIONS_FEATURE@
-
-#endif
+#endif /* CAIRO_OS2_PRIVATE_H */
