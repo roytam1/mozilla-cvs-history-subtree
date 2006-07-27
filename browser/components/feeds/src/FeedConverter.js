@@ -134,7 +134,15 @@ FeedConverter.prototype = {
    * Whether or not the preview page is being forced.
    */
   _forcePreviewPage: false,
-  
+
+  /** 
+  * Release our references to various things once we're done using them.
+  */
+  _releaseHandles: function FC__releaseHandles() {
+    this._listener = null;
+    this._request = null;
+  },
+
   /**
    * See nsIFeedResultListener.idl
    */
@@ -169,46 +177,50 @@ FeedConverter.prototype = {
     //
     // If this is just a feed, not some kind of specialized application, then
     // auto-handlers can be set and we should obey them. 
-    var feedService = 
-        Cc["@mozilla.org/browser/feeds/result-service;1"].
-        getService(Ci.nsIFeedResultService);
-    if (!this._forcePreviewPage) {
-      var skipPreview = safeGetBoolPref(PREF_SKIP_PREVIEW_PAGE, false);
-      if (skipPreview) {
-        var handler = safeGetCharPref(PREF_SELECTED_HANDLER, "bookmarks");
-        if (handler == "web") {
-          var wccr = 
-              Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
-              getService(Ci.nsIWebContentConverterService);
-          var feed = result.doc.QueryInterface(Ci.nsIFeed);
-          if (feed.type == Ci.nsIFeed.TYPE_FEED &&
-              wccr.getAutoHandler(TYPE_MAYBE_FEED)) {
-            wccr.loadPreferredHandler(this._request);
+    try {
+      var feedService = 
+          Cc["@mozilla.org/browser/feeds/result-service;1"].
+          getService(Ci.nsIFeedResultService);
+      if (!this._forcePreviewPage) {
+        var skipPreview = safeGetBoolPref(PREF_SKIP_PREVIEW_PAGE, false);
+        if (skipPreview) {
+          var handler = safeGetCharPref(PREF_SELECTED_HANDLER, "bookmarks");
+          if (handler == "web") {
+            var wccr = 
+                Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
+                getService(Ci.nsIWebContentConverterService);
+            var feed = result.doc.QueryInterface(Ci.nsIFeed);
+            if (feed.type == Ci.nsIFeed.TYPE_FEED &&
+                wccr.getAutoHandler(TYPE_MAYBE_FEED)) {
+              wccr.loadPreferredHandler(this._request);
+              return;
+            }
+          }
+          else {
+            feedService.addToClientReader(this._request, result.uri.spec);
             return;
           }
         }
-        else {
-          feedService.addToClientReader(this._request, result.uri.spec);
-          return;
-        }
       }
-    }
-        
-    // If there was no automatic handler, or this was a podcast, photostream or
-    // some other kind of application, we must always show the preview page...
-  
-    // Store the result in the result service so that the display page can 
-    // access it.
-    feedService.addFeedResult(result);
 
-    // Now load the actual XUL document.
-    var ios = 
-        Cc["@mozilla.org/network/io-service;1"].
-        getService(Ci.nsIIOService);
-    var chromeURI = ios.newURI(FEEDHANDLER_URI, null, null);
-    var chromeChannel = ios.newChannelFromURI(chromeURI, null);
-    chromeChannel.originalURI = result.uri;
-    chromeChannel.asyncOpen(this._listener, null);
+      // If there was no automatic handler, or this was a podcast, photostream or
+      // some other kind of application, we must always show the preview page...
+      // Store the result in the result service so that the display page can 
+      // access it.
+      feedService.addFeedResult(result);
+      
+      // Now load the actual XUL document.
+      var ios = 
+           Cc["@mozilla.org/network/io-service;1"].
+           getService(Ci.nsIIOService);
+      var chromeURI = ios.newURI(FEEDHANDLER_URI, null, null);
+      var chromeChannel = ios.newChannelFromURI(chromeURI, null);
+      chromeChannel.originalURI = result.uri;
+      chromeChannel.asyncOpen(this._listener, null);
+    }
+    finally {
+      this._releaseHandles();
+    }
   },
   
   /**
