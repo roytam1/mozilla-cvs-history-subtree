@@ -132,8 +132,8 @@
 <!ENTITY sortMenu.accesskey "S">
 <!ENTITY sortByDateCmd.label "Date">
 <!ENTITY sortByDateCmd.accesskey "e">
-<!ENTITY sortByFlagCmd.label "Star">
-<!ENTITY sortByFlagCmd.accesskey "S">
+<!ENTITY sortByFlagCmd.label "Flag">
+<!ENTITY sortByFlagCmd.accesskey "F">
 <!ENTITY sortByAttachmentsCmd.label "Attachments">
 <!ENTITY sortByAttachmentsCmd.accesskey "A">
 <!ENTITY sortByPriorityCmd.label "Priority">
@@ -147,7 +147,7 @@
 <!ENTITY sortByJunkStatusCmd.label "Junk Status">
 <!ENTITY sortByJunkStatusCmd.accesskey "J">
 <!ENTITY sortBySubjectCmd.label "Subject">
-<!ENTITY sortBySubjectCmd.accesskey "b">
+<!ENTITY sortBySubjectCmd.accesskey "S">
 <!ENTITY sortBySenderCmd.label "Sender">
 <!ENTITY sortBySenderCmd.accesskey "n">
 <!ENTITY sortByRecipientCmd.label "Recipient">
@@ -264,8 +264,9 @@
 <!ENTITY nextUnreadMsgCmd.label "Unread Message">
 <!ENTITY nextUnreadMsgCmd.accesskey "U">
 <!ENTITY nextUnreadMsgCmd.key "n">
-<!ENTITY nextFlaggedMsgCmd.label "Starred Message">
-<!ENTITY nextFlaggedMsgCmd.accesskey "S">
+<!ENTITY nextFlaggedMsgCmd.label "Flagged Message">
+<!ENTITY nextFlaggedMsgCmd.accesskey "F">
+<!ENTITY nextUnflaggedMsgCmd.label "Unflagged Message">
 <!ENTITY nextUnreadThread.label "Unread Thread">
 <!ENTITY nextUnreadThreadCmd.accesskey "T">
 <!ENTITY nextUnreadThreadCmd.key "t">
@@ -279,8 +280,8 @@
 <!ENTITY prevUnreadMsgCmd.accesskey "U">
 <!ENTITY previousUnreadMsgCmd.key "p">
 <!ENTITY previousUnreadMsgCmd.accesskey "U">
-<!ENTITY prevFlaggedMsgCmd.label "Starred Message">
-<!ENTITY previousFlaggedMsgCmd.accesskey "S">
+<!ENTITY prevFlaggedMsgCmd.label "Flagged Message">
+<!ENTITY previousFlaggedMsgCmd.accesskey "F">
 <!ENTITY startPageCmd.label "Mail Start Page">
 <!ENTITY startPageCmd.accesskey "S">
 <!ENTITY msgMenu.label "Message">
@@ -364,9 +365,9 @@
 <!ENTITY markAllReadCmd.label "All Read">
 <!ENTITY markAllReadCmd.accesskey "A">
 <!ENTITY markAllReadCmd.key "c">
-<!ENTITY markFlaggedCmd.label "Add Star">
-<!ENTITY markFlaggedCmd.accesskey "S">
-<!ENTITY markFlaggedCmd.key "S">
+<!ENTITY markFlaggedCmd.label "Flag">
+<!ENTITY markFlaggedCmd.accesskey "F">
+<!ENTITY markFlaggedCmd.key "i">
 <!ENTITY markAsJunkCmd.label "As Junk">
 <!ENTITY markAsJunkCmd.accesskey "J">
 <!ENTITY markAsJunkCmd.key "j">
@@ -539,7 +540,7 @@
 <!ENTITY unreadColumn.label "Unread">
 <!ENTITY totalColumn.label "Total">
 <!ENTITY readColumn.label "Read">
-<!ENTITY flagColumn.label "Starred">
+<!ENTITY flagColumn.label "Flag">
 <!ENTITY locationColumn.label "Location">
 <!ENTITY idColumn.label "Order Received">
 <!ENTITY attachmentColumn.label "Attachments">
@@ -560,7 +561,7 @@
 <!ENTITY unreadColumn.tooltip "Number of unread messages in thread">
 <!ENTITY totalColumn.tooltip "Total number of messages in thread">
 <!ENTITY readColumn.tooltip "Click to sort by read">
-<!ENTITY flagColumn.tooltip "Click to sort by star">
+<!ENTITY flagColumn.tooltip "Click to sort by flag">
 <!ENTITY locationColumn.tooltip "Click to sort by location">
 <!ENTITY idColumn.tooltip "Click to sort by order received">
 <!ENTITY attachmentColumn.tooltip "Click to sort by attachments">
