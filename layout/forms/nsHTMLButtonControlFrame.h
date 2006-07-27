@@ -75,6 +75,11 @@ public:
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
 
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
+  // Differs from GetMinWidth in that it allows one to specify whether
+  // to fall back on 0 for the min width if we have a specified width.
+  nscoord DoGetMinWidth(nsIRenderingContext *aRenderingContext,
+                        PRBool aZeroIfWidthSpecified);
   
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,

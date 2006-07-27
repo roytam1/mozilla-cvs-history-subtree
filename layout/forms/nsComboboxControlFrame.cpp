@@ -559,12 +559,18 @@ static void printSize(char * aDesc, nscoord aSize)
 nscoord
 nsComboboxControlFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  // We don't want to have options wrapping unless they absolutely
-  // have to, so our min width is our pref width.
+  // Note: to fix the combobox equivalent of bug 40596 while still working
+  // correctly in general, we want to return our preferred width as our min
+  // width if our style width is auto.  Otherwise, we're ok with shrinking as
+  // small as needed.
   nscoord result;
   DISPLAY_MIN_WIDTH(this, result);
 
-  result = GetPrefWidth(aRenderingContext);
+  if (GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto) {
+    result = GetPrefWidth(aRenderingContext);
+  } else {
+    result = 0;
+  }
 
   return result;
 }
