@@ -819,7 +819,6 @@ nsCanvasRenderingContext2D::SetDimensions(PRInt32 width, PRInt32 height)
     cairo_set_line_join(mCairo, CAIRO_LINE_JOIN_MITER);
 
     cairo_new_path(mCairo);
-    cairo_move_to(mCairo, 0.0, 0.0);
 
     return NS_OK;
 }
@@ -1419,7 +1418,6 @@ NS_IMETHODIMP
 nsCanvasRenderingContext2D::BeginPath()
 {
     cairo_new_path(mCairo);
-    cairo_move_to(mCairo, 0.0, 0.0);
     return NS_OK;
 }
 
@@ -1867,8 +1865,9 @@ nsCanvasRenderingContext2D::SetGlobalCompositeOperation(const nsAString& op)
     else CANVAS_OP_TO_CAIRO_OP("source-atop", ATOP)
     else CANVAS_OP_TO_CAIRO_OP("source-in", IN)
     else CANVAS_OP_TO_CAIRO_OP("source-out", OUT)
-    else CANVAS_OP_TO_CAIRO_OP("source-over", SOURCE)
+    else CANVAS_OP_TO_CAIRO_OP("source-over", OVER)
     else CANVAS_OP_TO_CAIRO_OP("xor", XOR)
+    // not part of spec, kept here for compat
     else CANVAS_OP_TO_CAIRO_OP("over", OVER)
     else return NS_ERROR_NOT_IMPLEMENTED;
 
@@ -1899,9 +1898,8 @@ nsCanvasRenderingContext2D::GetGlobalCompositeOperation(nsAString& op)
     else CANVAS_OP_TO_CAIRO_OP("source-atop", ATOP)
     else CANVAS_OP_TO_CAIRO_OP("source-in", IN)
     else CANVAS_OP_TO_CAIRO_OP("source-out", OUT)
-    else CANVAS_OP_TO_CAIRO_OP("source-over", SOURCE)
+    else CANVAS_OP_TO_CAIRO_OP("source-over", OVER)
     else CANVAS_OP_TO_CAIRO_OP("xor", XOR)
-    else CANVAS_OP_TO_CAIRO_OP("over", OVER)
     else return NS_ERROR_FAILURE;
 
 #undef CANVAS_OP_TO_CAIRO_OP
