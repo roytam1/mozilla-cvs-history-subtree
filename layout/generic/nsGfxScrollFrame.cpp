@@ -697,6 +697,17 @@ nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 }
 
 NS_IMETHODIMP
+nsHTMLScrollFrame::GetPadding(nsMargin& aMargin)
+{
+  // Our padding hangs out on the inside of the scrollframe, but XUL doesn't
+  // reaize that.  If we're stuck inside a XUL box, we need to claim no
+  // padding.
+  // @see also nsXULScrollFrame::GetPadding.
+  aMargin.SizeTo(0,0,0,0);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
                           nsHTMLReflowMetrics&     aDesiredSize,
                           const nsHTMLReflowState& aReflowState,
