@@ -148,7 +148,12 @@ nsNativeAppSupportBeOS::Stop(PRBool *aResult)
 NS_IMETHODIMP
 nsNativeAppSupportBeOS::Quit() 
 {
-    return NS_OK;
+	if (be_app->Lock())
+	{
+		be_app->Quit();
+		return NS_OK;
+	}
+	return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
