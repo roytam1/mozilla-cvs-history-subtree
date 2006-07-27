@@ -1111,7 +1111,7 @@ public:
    *
    * Otherwise, if the frame has the NS_FRAME_HAS_DIRTY_CHILDREN bit
    * set, then it is responsible for reflowing at least those
-   * children that have NS_FRAME_DIRTY_CHILDREN or NS_FRAME_IS_DIRTY
+   * children that have NS_FRAME_HAS_DIRTY_CHILDREN or NS_FRAME_IS_DIRTY
    * set.
    *
    * If a difference in available size from the previous reflow causes
