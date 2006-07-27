@@ -174,8 +174,6 @@ nsListControlFrame::nsListControlFrame(
   mComboboxFrame      = nsnull;
   mChangesSinceDragStart = PR_FALSE;
   mButtonDown         = PR_FALSE;
-  mMaxWidth           = 0;
-  mMaxHeight          = 0;
 
   mIsAllContentHere   = PR_FALSE;
   mIsAllFramesHere    = PR_FALSE;
@@ -530,9 +528,6 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   NS_PRECONDITION(aReflowState.mComputedWidth != NS_UNCONSTRAINEDSIZE,
                   "Must have a computed width");
 
-  // XXXbz chances are, we want to cache our desired size and bail out early
-  // here.  Do some tests!
-  
   // If all the content and frames are here 
   // then initialize it before reflow
   if (mIsAllContentHere && !mHasBeenInitialized) {

@@ -303,8 +303,6 @@ protected:
   PRInt32      mEndSelectionIndex;
 
   nsIComboboxControlFrame *mComboboxFrame;
-  nscoord      mMaxWidth;
-  nscoord      mMaxHeight;
   PRInt32      mNumDisplayRows;
   PRPackedBool mChangesSinceDragStart:1;
   PRPackedBool mButtonDown:1;
