@@ -188,7 +188,7 @@ FeedConverter.prototype = {
           }
         }
         else {
-          feedService.addToClientReader(result.uri.spec);
+          feedService.addToClientReader(this._request, result.uri.spec);
           return;
         }
       }
@@ -301,7 +301,7 @@ var FeedResultService = {
   /**
    * See nsIFeedService.idl
    */
-  addToClientReader: function FRS_addToClientReader(spec) {
+  addToClientReader: function FRS_addToClientReader(request, spec) {
     var prefs =   
         Cc["@mozilla.org/preferences-service;1"].
         getService(Ci.nsIPrefBranch);
@@ -353,6 +353,19 @@ var FeedResultService = {
 #endif
       break;
     }
+
+    // We need to reload the current page to cause the feed list to get 
+    // regenerated. If we don't do this, the startDocumentLoad notification
+    // the browser receives for the initiation of the load of the feed 
+    // preview page will reset the list of feeds maintained by that browser,
+    // so that subsequent clicks to the subscribe icon (unlikely, but possible)
+    // will do nothing, even if the user wants to choose another option.
+    // See bug #341407
+    request.cancel(Cr.NS_ERROR_FAILURE);
+    var channel = request.QueryInterface(Ci.nsIChannel);
+    var webNavigation = 
+        channel.notificationCallbacks.getInterface(Ci.nsIWebNavigation);
+    webNavigation.reload(Ci.nsIWebNavigation.LOAD_FLAGS_NONE);
   },
   
   /**
