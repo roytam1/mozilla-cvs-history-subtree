@@ -701,7 +701,7 @@
       <handler event="command">
         <![CDATA[
           var id = event.originalTarget.getAttribute("anonid");
-          if (id != "messageButton" || id != "closeButton")
+          if (id != "messageButton" && id != "closeButton")
             return;
           var notifyData = this.notifyData;
           if (!this.notifyData || id == "closeButton" &&
