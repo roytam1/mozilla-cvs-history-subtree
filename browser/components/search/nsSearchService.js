@@ -2616,6 +2616,14 @@ SearchService.prototype = {
     notifyAction(engine, SEARCH_ENGINE_CHANGED);
   },
 
+  restoreDefaultEngines: function SRCH_SVC_resetDefaultEngines() {
+    for each (var e in this._engines) {
+      // Unhide all appdir-installed engines
+      if (e.hidden && e._isInAppDir)
+        e.hidden = false;
+    }
+  },
+
   get defaultEngine() {
     const defPref = BROWSER_SEARCH_PREF + "defaultenginename";
     // Get the default engine - this pref should always exist, but the engine
