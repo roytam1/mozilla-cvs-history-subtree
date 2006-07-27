@@ -312,7 +312,7 @@ nsHTMLButtonControlFrame::Reflow(nsPresContext* aPresContext,
   // Reflow the child
   nsIFrame* firstKid = mFrames.FirstChild();
 
-  // Eventually we may want to check-and-bail if
+  // XXXbz Eventually we may want to check-and-bail if
   // !aReflowState.ShouldReflowAllKids() &&
   // !(firstKid->GetStateBits() &
   //   (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)).
