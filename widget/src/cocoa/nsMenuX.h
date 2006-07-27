@@ -105,7 +105,6 @@ public:
     NS_IMETHOD GetEnabled(PRBool* aIsEnabled);
     NS_IMETHOD IsHelpMenu(PRBool* aIsEnabled);
 
-    // 
     NS_IMETHOD AddMenuItem(nsIMenuItem * aMenuItem);
     NS_IMETHOD AddMenu(nsIMenu * aMenu);
 
@@ -132,9 +131,6 @@ protected:
     void LoadSubMenu ( nsIMenu * pParentMenu, nsIContent* menuitemContent );
     void LoadSeparator ( nsIContent* menuitemContent );
 
-    nsEventStatus HelpMenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWindow, 
-                                      void* unused, void* aDocShell);
-
     MenuHandle NSStringNewMenu(short menuID, nsString& menuTitle);
 
 protected:
@@ -151,8 +147,6 @@ protected:
     // MacSpecific
     PRInt16                     mMacMenuID;
     MenuHandle                  mMacMenuHandle;
-    PRInt16                     mHelpMenuOSItemsCount;
-    PRPackedBool                mIsHelpMenu;
     PRPackedBool                mIsEnabled;
     PRPackedBool                mDestroyHandlerCalled;
     PRPackedBool                mNeedsRebuild;

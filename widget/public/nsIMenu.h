@@ -194,4 +194,22 @@ class nsIMenu : public nsISupports {
     
 };
 
+// {7A7742F0-2D18-4111-924C-E89A362D4D23}
+#define NS_IMENU_MOZILLA_1_8_BRANCH_IID \
+{ 0x7A7742F0, 0x2D18, 0x4111, \
+  { 0x92, 0x4C, 0xE8, 0x9A, 0x36, 0x2D, 0x4D, 0x23 } };
+
+class nsIMenu_MOZILLA_1_8_BRANCH : public nsIMenu
+{
+  public:
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENU_MOZILLA_1_8_BRANCH_IID)
+
+   /**
+    * Enable/disable native widget for a particular nsIMenuItem
+    *
+    */
+    NS_IMETHOD ChangeNativeEnabledStatusForMenuItem(nsIMenuItem* aMenuItem,
+                                                    PRBool aEnabled) = 0;
+};
+
 #endif

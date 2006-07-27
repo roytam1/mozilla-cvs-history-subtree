@@ -111,9 +111,9 @@ NS_IMPL_ISUPPORTS4(nsMenuX, nsIMenu, nsIMenuListener, nsIChangeObserver, nsISupp
 //
 nsMenuX::nsMenuX()
     :   mNumMenuItems(0), mParent(nsnull), mManager(nsnull),
-        mMacMenuID(0), mMacMenuHandle(nsnull), mHelpMenuOSItemsCount(0),
-        mIsHelpMenu(PR_FALSE), mIsEnabled(PR_TRUE), mDestroyHandlerCalled(PR_FALSE),
-        mNeedsRebuild(PR_TRUE), mConstructed(PR_FALSE), mVisible(PR_TRUE), mHandler(nsnull)
+        mMacMenuID(0), mMacMenuHandle(nsnull), mIsEnabled(PR_TRUE),
+        mDestroyHandlerCalled(PR_FALSE), mNeedsRebuild(PR_TRUE),
+        mConstructed(PR_FALSE), mVisible(PR_TRUE), mHandler(nsnull)
 {
 #if DEBUG
   //++gMenuCounterX;
@@ -484,12 +484,6 @@ nsEventStatus nsMenuX::MenuSelected(const nsMenuEvent & aMenuEvent)
   MenuHandle selectedMenuHandle = (MenuHandle) aMenuEvent.mCommand;
 
   if (mMacMenuHandle == selectedMenuHandle) {
-    if (mIsHelpMenu && mConstructed){
-      RemoveAll();
-      mConstructed = false;
-      SetRebuild(PR_TRUE);
-    }
-
     // Open the node.
     mMenuContent->SetAttr(kNameSpaceID_None, nsWidgetAtoms::open, NS_LITERAL_STRING("true"), PR_TRUE);
   
@@ -497,7 +491,7 @@ nsEventStatus nsMenuX::MenuSelected(const nsMenuEvent & aMenuEvent)
     // Fire our oncreate handler. If we're told to stop, don't build the menu at all
     PRBool keepProcessing = OnCreate();
 
-    if (!mIsHelpMenu && !mNeedsRebuild || !keepProcessing)
+    if (!mNeedsRebuild || !keepProcessing)
       return nsEventStatus_eConsumeNoDefault;
 
     if(!mConstructed || mNeedsRebuild) {
@@ -509,13 +503,8 @@ nsEventStatus nsMenuX::MenuSelected(const nsMenuEvent & aMenuEvent)
         NS_ERROR("No doc shell");
         return nsEventStatus_eConsumeNoDefault;
       }
-      if (mIsHelpMenu) {
-        HelpMenuConstruct(aMenuEvent, nsnull /* mParentWindow */, nsnull, docShell);	      
-        mConstructed = true;
-      } else {
-        MenuConstruct(aMenuEvent, nsnull /* mParentWindow */, nsnull, docShell);
-        mConstructed = true;
-      }	
+      MenuConstruct(aMenuEvent, nsnull /* mParentWindow */, nsnull, docShell);
+      mConstructed = true;
     } 
 
     OnCreated();  // Now that it's built, fire the popupShown event.
@@ -597,46 +586,6 @@ nsEventStatus nsMenuX::MenuConstruct(
   return nsEventStatus_eIgnore;
 }
 
-//-------------------------------------------------------------------------
-nsEventStatus nsMenuX::HelpMenuConstruct(
-    const nsMenuEvent & aMenuEvent,
-    nsIWidget         * aParentWindow, 
-    void              * /* menuNode */,
-    void              * aDocShell)
-{
-  //printf("nsMenuX::MenuConstruct called for %s = %d \n", NS_LossyConvertUCS2toASCII(mLabel).get(), mMacMenuHandle);
- 
-  int numHelpItems = ::CountMenuItems(mMacMenuHandle);
-  for (int i=0; i < numHelpItems; ++i) {
-    mMenuItemsArray.AppendElement(&gDummyMenuItemX);
-  }
-     
-  // Retrieve our menupopup.
-  nsCOMPtr<nsIContent> menuPopup;
-  GetMenuPopupContent(getter_AddRefs(menuPopup));
-  if (!menuPopup)
-    return nsEventStatus_eIgnore;
-      
-  // Iterate over the kids
-  PRUint32 count = menuPopup->GetChildCount();
-  for ( PRUint32 i = 0; i < count; ++i ) {
-    nsIContent *child = menuPopup->GetChildAt(i);
-    if ( child ) {      
-      // depending on the type, create a menu item, separator, or submenu
-      nsIAtom *tag = child->Tag();
-      if ( tag == nsWidgetAtoms::menuitem )
-        LoadMenuItem(this, child);
-      else if ( tag == nsWidgetAtoms::menuseparator )
-        LoadSeparator(child);
-      else if ( tag == nsWidgetAtoms::menu )
-        LoadSubMenu(this, child);
-    }   
-  } // for each menu item
-  
-  //printf("  Done building, mMenuItemVoidArray.Count() = %d \n", mMenuItemVoidArray.Count());
-             
-  return nsEventStatus_eIgnore;
-}
 
 //-------------------------------------------------------------------------
 nsEventStatus nsMenuX::MenuDestruct(const nsMenuEvent & aMenuEvent)
@@ -662,18 +611,15 @@ nsEventStatus nsMenuX::MenuDestruct(const nsMenuEvent & aMenuEvent)
 //-------------------------------------------------------------------------
 nsEventStatus nsMenuX::CheckRebuild(PRBool & aNeedsRebuild)
 {
-  aNeedsRebuild = PR_TRUE; //mNeedsRebuild;
+  aNeedsRebuild = PR_TRUE;
   return nsEventStatus_eIgnore;
 }
 
 //-------------------------------------------------------------------------
 nsEventStatus nsMenuX::SetRebuild(PRBool aNeedsRebuild)
 {
-  if(!gConstructingMenu) {
+  if(!gConstructingMenu)
     mNeedsRebuild = aNeedsRebuild;
-    //if(mNeedsRebuild)
-    //  RemoveAll();
-  }
   return nsEventStatus_eIgnore;
 }
 
@@ -713,9 +659,7 @@ NS_METHOD nsMenuX::GetEnabled(PRBool* aIsEnabled)
 */
 NS_METHOD nsMenuX::IsHelpMenu(PRBool* aIsHelpMenu)
 {
-  NS_ENSURE_ARG_POINTER(aIsHelpMenu);
-  *aIsHelpMenu = mIsHelpMenu;
-  return NS_OK;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 

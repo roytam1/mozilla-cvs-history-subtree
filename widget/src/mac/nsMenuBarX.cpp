@@ -552,22 +552,18 @@ NS_METHOD nsMenuBarX::AddMenu(nsIMenu * aMenu)
   MenuRef menuRef = nsnull;
   aMenu->GetNativeData((void**)&menuRef);
 
-  PRBool helpMenu;
-  aMenu->IsHelpMenu(&helpMenu);
-  if(!helpMenu) {
-    nsCOMPtr<nsIContent> menu;
-    aMenu->GetMenuContent(getter_AddRefs(menu));
-    nsAutoString menuHidden;
-    menu->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, menuHidden);
-    if(!menuHidden.EqualsLiteral("true") && menu->GetChildCount() > 0) {
-    	// make sure we only increment |mNumMenus| if the menu is visible, since
-    	// we use it as an index of where to insert the next menu.
-      mNumMenus++;
-      
-      ::InsertMenuItem(mRootMenu, "\pPlaceholder", mNumMenus);
-      OSStatus status = ::SetMenuItemHierarchicalMenu(mRootMenu, mNumMenus, menuRef);
-      NS_ASSERTION(status == noErr, "nsMenuBarX::AddMenu: SetMenuItemHierarchicalMenu failed.");
-    }
+  nsCOMPtr<nsIContent> menu;
+  aMenu->GetMenuContent(getter_AddRefs(menu));
+  nsAutoString menuHidden;
+  menu->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, menuHidden);
+  if(!menuHidden.EqualsLiteral("true") && menu->GetChildCount() > 0) {
+    // make sure we only increment |mNumMenus| if the menu is visible, since
+    // we use it as an index of where to insert the next menu.
+    mNumMenus++;
+    
+    ::InsertMenuItem(mRootMenu, "\pPlaceholder", mNumMenus);
+    OSStatus status = ::SetMenuItemHierarchicalMenu(mRootMenu, mNumMenus, menuRef);
+    NS_ASSERTION(status == noErr, "nsMenuBarX::AddMenu: SetMenuItemHierarchicalMenu failed.");
   }
 
   return NS_OK;
@@ -758,7 +754,7 @@ nsMenuBarX::AttributeChanged( nsIDocument * aDocument, nsIContent * aContent,
   nsCOMPtr<nsIChangeObserver> obs;
   Lookup ( aContent, getter_AddRefs(obs) );
   if ( obs )
-    obs->AttributeChanged ( aDocument, aNameSpaceID, aAttribute );
+    obs->AttributeChanged(aDocument, aNameSpaceID, aContent, aAttribute);
 }
 
 void
