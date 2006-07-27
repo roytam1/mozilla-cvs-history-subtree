@@ -1374,7 +1374,7 @@ dnl Get version of various core apps from the version files.
 FIREFOX_VERSION=`cat $topsrcdir/browser/config/version.txt`
 THUNDERBIRD_VERSION=`cat $topsrcdir/mail/config/version.txt`
 SUNBIRD_VERSION=`cat $topsrcdir/calendar/sunbird/config/version.txt`
-SEAMONKEY_VERSION=`cat $topsrcdir/xpfe/bootstrap/version.txt`
+SEAMONKEY_VERSION=`cat $topsrcdir/suite/config/version.txt`
 
 AC_DEFINE_UNQUOTED(MOZILLA_VERSION,"$MOZILLA_VERSION")
 AC_DEFINE_UNQUOTED(MOZILLA_VERSION_U,$MOZILLA_VERSION)
@@ -4097,7 +4097,7 @@ MOZ_ARG_ENABLE_STRING(application,
                             mail (Thunderbird)
                             minimo
                             composer
-                            calendar
+                            calendar (Sunbird)
                             xulrunner
                             zap (SIP client)
                             macbrowser (Camino)
@@ -4316,7 +4316,7 @@ composer)
 
 calendar)
   MOZ_APP_NAME=sunbird
-  MOZ_APP_DISPLAYNAME=Sunbird
+  MOZ_APP_DISPLAYNAME=Calendar
   MOZ_XUL_APP=1
   MOZ_UPDATER=1
   MOZ_SUNBIRD=1
@@ -4847,12 +4847,17 @@ browser)
     MOZ_APP_DISPLAYNAME=Firefox
     ;;
 
+calendar)
+    MOZ_BRANDING_DIRECTORY=other-licenses/branding/sunbird
+    MOZ_APP_DISPLAYNAME=Sunbird
+    ;;
+
 mail)
     MOZ_BRANDING_DIRECTORY=other-licenses/branding/thunderbird
     ;;
 
 *)]
-    AC_MSG_ERROR([Official branding is only available for Firefox and Thunderbird.])
+    AC_MSG_ERROR([Official branding is only available for Firefox Sunbird and Thunderbird.])
 esac
 )
 
@@ -7029,8 +7034,8 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
            OS2_SURFACE_FEATURE="#define CAIRO_HAS_OS2_SURFACE 1"
            FT_FONT_FEATURE="#define CAIRO_HAS_FT_FONT 1"
            MOZ_ENABLE_CAIRO_FT=1
-           CAIRO_FT_CFLAGS="-I${FREETYPE2}/include -I${FONTCONFIG2}/include"
-           CAIRO_FT_LIBS="${FREETYPE2}/lib/freetype.lib ${FONTCONFIG2}/lib/fontcfg.lib"
+           CAIRO_FT_CFLAGS="-I${MZFTCFGFT2}/include"
+           CAIRO_FT_LIBS="-L${MZFTCFGFT2}/lib -lmozft -lmzfntcfg"
        fi
        if test "$MOZ_ENABLE_GLITZ"; then
            GLITZ_SURFACE_FEATURE="#define CAIRO_HAS_GLITZ_SURFACE 1"

@@ -54,8 +54,8 @@
 #include "nsAutoLock.h"
 
 nsProxyEventObject::nsProxyEventObject(nsProxyObject *aParent,
-                                       nsProxyEventClass* aClass,
-                                       nsISomeInterface* aRealInterface)
+                            nsProxyEventClass* aClass,
+                            already_AddRefed<nsISomeInterface> aRealInterface)
     : mRealInterface(aRealInterface),
       mClass(aClass),
       mProxyObject(aParent),
@@ -445,6 +445,7 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
                 break;
             }
         }
+        rv = proxyInfo->GetResult();
     } else {
         NS_WARNING("Failed to dispatch nsProxyCallEvent");
     }
@@ -452,6 +453,5 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
     threadInt->PopEventQueue();
 
     PROXY_LOG(("PROXY(%p): PostAndWait exit [%p %x]\n", this, proxyInfo.get(), rv));
-    if (NS_SUCCEEDED(rv))
-        return proxyInfo->GetResult();
+    return rv;
 }
