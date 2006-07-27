@@ -451,19 +451,30 @@ nsComboboxControlFrame::ShowList(nsPresContext* aPresContext, PRBool aShowList)
 }
 
 nsresult
-nsComboboxControlFrame::ReflowComboChildFrame(nsPresContext*  aPresContext, 
-                                             nsHTMLReflowMetrics&     aDesiredSize,
-                                             const nsHTMLReflowState& aReflowState, 
-                                             nsReflowStatus&          aStatus)
+nsComboboxControlFrame::ReflowDropdown(nsPresContext*  aPresContext, 
+                                       const nsHTMLReflowState& aReflowState)
 {
+  // All we want out of it later on, really, is the height of a row, so we
+  // don't even need to cache mDropdownFrame's ascent or anything.  If we don't
+  // need to reflow it, just bail out here.
+  if (!aReflowState.ShouldReflowAllKids() &&
+      !(mDropdownFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
+                                          NS_FRAME_HAS_DIRTY_CHILDREN))) {
+    return NS_OK;
+  }
+
   // XXXbz this will, for small-height dropdowns, have extra space on the right
   // edge for the scrollbar we don't show... but that's the best we can do here
   // for now.
   nsSize availSize(aReflowState.availableWidth, NS_UNCONSTRAINEDSIZE);
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, mDropdownFrame,
                                    availSize);
-  kidReflowState.mComputedWidth =
-    PR_MAX(kidReflowState.mComputedWidth, aReflowState.mComputedWidth);
+
+  // If the dropdown's intrinsic width is narrower than our specified width,
+  // then expand it out.  We want our border-box width to end up the same as
+  // the dropdown's so account for both sets of mComputedBorderPadding.
+  kidReflowState.mComputedWidth = PR_MAX(kidReflowState.mComputedWidth,
+                                         aReflowState.mComputedWidth);
 
   // ensure we start off hidden
   if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
@@ -481,12 +492,15 @@ nsComboboxControlFrame::ReflowComboChildFrame(nsPresContext*  aPresContext,
     flags = 0;
   }
   nsRect rect = mDropdownFrame->GetRect();
-  nsresult rv = ReflowChild(mDropdownFrame, aPresContext, aDesiredSize,
-                            kidReflowState, rect.x, rect.y, flags, aStatus);
+  nsHTMLReflowMetrics desiredSize;
+  nsReflowStatus ignoredStatus;
+  nsresult rv = ReflowChild(mDropdownFrame, aPresContext, desiredSize,
+                            kidReflowState, rect.x, rect.y, flags,
+                            ignoredStatus);
  
    // Set the child's width and height to it's desired size
   FinishReflowChild(mDropdownFrame, aPresContext, &kidReflowState,
-                    aDesiredSize, rect.x, rect.y, flags);
+                    desiredSize, rect.x, rect.y, flags);
   return rv;
 }
 
@@ -596,9 +610,6 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
                                const nsHTMLReflowState& aReflowState, 
                                nsReflowStatus&          aStatus)
 {
-  // XXXbz chances are, we want to cache our desired size and bail out early
-  // here.  Do some tests!
-  
   // Constraints we try to satisfy:
 
   // 1) Default width of button is the vertical scrollbar size
@@ -609,17 +620,6 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
   //    allocating width for the button.
   // 5) Height of display area is GetHeightOfARow() on the
   //    mListControlFrame.
-
-  // NOTES:
-  // b) Watch out for the rect-setting code in ReflowCombobox() (the
-  // one that does SetRect() on aDisplayFrame.  See what this "doesn't
-  // position things exactly where we want them" thing is about.
-  // Make sure to test empty comboboxes
-  // Make sure to test comboboxes with 1px-font options.
-  // Make sure to test accesskeys on comboboxes.
-  // Check whether we need the last arg for ReflowComboChildFrame.  Or other args!
-  // Test rtl comboboxes
-  // Check what ascent and descent are
 
   if (!mDisplayFrame || !mButtonFrame || !mDropdownFrame) {
     NS_ERROR("Why did the frame constructor allow this to happen?  Fix it!!");
@@ -644,10 +644,8 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
     RedisplayText(selectedIndex);
   }
 
-  // First reflow our list so that we know how tall we should be.
-  nsHTMLReflowMetrics dropdownDesiredSize;
-  ReflowComboChildFrame(aPresContext, dropdownDesiredSize, aReflowState,
-                        aStatus);
+  // First reflow our dropdown so that we know how tall we should be.
+  ReflowDropdown(aPresContext, aReflowState);
   
   // Get the default size of the scrollbar.
   // That will be the default width of the dropdown button.

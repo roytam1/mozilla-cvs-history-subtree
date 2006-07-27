@@ -192,10 +192,8 @@ public:
 protected:
 
   // Utilities
-  nsresult ReflowComboChildFrame(nsPresContext*          aPresContext, 
-                            nsHTMLReflowMetrics&     aDesiredSize,
-                            const nsHTMLReflowState& aReflowState, 
-                            nsReflowStatus&          aStatus);
+  nsresult ReflowDropdown(nsPresContext*          aPresContext, 
+                          const nsHTMLReflowState& aReflowState);
 
 public:
   nsresult PositionDropdown(nsPresContext* aPresContext,
@@ -232,6 +230,8 @@ protected:
   nsIFrame*                mTextFrame;               // display area frame
   nsIListControlFrame *    mListControlFrame;        // ListControl Interface for the dropdown frame
 
+  // The width of our display area.  Used by that frame's reflow to
+  // size to the full width except the drop-marker.
   nscoord mDisplayWidth;
   
   PRPackedBool          mDroppedDown;             // Current state of the dropdown list, PR_TRUE is dropped down
