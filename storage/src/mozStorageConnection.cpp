@@ -40,7 +40,6 @@
 #include <stdio.h>
 
 #include "nsError.h"
-#include "nsArray.h"
 #include "nsIFile.h"
 
 #include "mozIStorageFunction.h"
@@ -73,7 +72,31 @@ mozStorageConnection::~mozStorageConnection()
         if (srv != SQLITE_OK) {
             NS_WARNING("sqlite3_close failed.  There are probably outstanding statements!");
         }
+
+        // make sure it really got closed
+        ((mozStorageService*)(mStorageService.get()))->FlushAsyncIO();
     }
+}
+
+// convert a sqlite srv to an nsresult
+static nsresult
+ConvertResultCode (int srv)
+{
+    switch (srv) {
+        case SQLITE_OK:
+            return NS_OK;
+        case SQLITE_CORRUPT:
+        case SQLITE_NOTADB:
+            return NS_ERROR_FILE_CORRUPTED;
+        case SQLITE_PERM:
+        case SQLITE_CANTOPEN:
+            return NS_ERROR_FILE_ACCESS_DENIED;
+        case SQLITE_BUSY:
+            return NS_ERROR_FILE_IS_LOCKED;
+    }
+
+    // generic error
+    return NS_ERROR_FAILURE;
 }
 
 #ifdef PR_LOGGING
@@ -109,7 +132,7 @@ mozStorageConnection::Initialize(nsIFile *aDatabaseFile)
     }
     if (srv != SQLITE_OK) {
         mDBConn = nsnull;
-        return NS_ERROR_FAILURE; // XXX error code
+        return ConvertResultCode(srv);
     }
 
 #ifdef PR_LOGGING
@@ -119,7 +142,36 @@ mozStorageConnection::Initialize(nsIFile *aDatabaseFile)
     sqlite3_trace (mDBConn, tracefunc, nsnull);
 #endif
 
-    rv = NS_NewArray(getter_AddRefs(mFunctions));
+    /* Execute a dummy statement to force the db open, and to verify
+     * whether it's valid or not
+     */
+    sqlite3_stmt *stmt = nsnull;
+    nsCString query("SELECT * FROM sqlite_master");
+    srv = sqlite3_prepare (mDBConn, query.get(), query.Length(), &stmt, nsnull);
+ 
+    if (srv == SQLITE_OK) {
+        srv = sqlite3_step(stmt);
+ 
+        if (srv == SQLITE_DONE || srv == SQLITE_ROW)
+            srv = SQLITE_OK;
+    } else {
+        stmt = nsnull;
+    }
+
+    if (stmt != nsnull)
+        sqlite3_finalize (stmt);
+ 
+    if (srv != SQLITE_OK) {
+        sqlite3_close (mDBConn);
+        mDBConn = nsnull;
+
+        // make sure it really got closed
+        ((mozStorageService*)(mStorageService.get()))->FlushAsyncIO();
+
+        return ConvertResultCode(srv);
+    }
+
+    mFunctions = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -199,7 +251,7 @@ mozStorageConnection::CreateStatement(const nsACString& aSQLStatement,
     nsresult rv = statement->Initialize (this, aSQLStatement);
     if (NS_FAILED(rv)) {
         NS_RELEASE(statement);
-        return NS_ERROR_FAILURE; // XXX error code
+        return rv;
     }
 
     *_retval = statement;
@@ -215,7 +267,7 @@ mozStorageConnection::ExecuteSimpleSQL(const nsACString& aSQLStatement)
                             NULL, NULL, NULL);
     if (srv != SQLITE_OK) {
         HandleSqliteError(nsPromiseFlatCString(aSQLStatement).get());
-        return NS_ERROR_FAILURE; // XXX error code
+        return ConvertResultCode(srv);
     }
 
     return NS_OK;
@@ -234,7 +286,7 @@ mozStorageConnection::TableExists(const nsACString& aSQLStatement, PRBool *_retv
     int srv = sqlite3_prepare (mDBConn, query.get(), query.Length(), &stmt, nsnull);
     if (srv != SQLITE_OK) {
         HandleSqliteError(query.get());
-        return NS_ERROR_FAILURE; // XXX error code
+        return ConvertResultCode(srv);
     }
 
     PRBool exists = PR_FALSE;
@@ -269,7 +321,7 @@ mozStorageConnection::IndexExists(const nsACString& aIndexName, PRBool* _retval)
     int srv = sqlite3_prepare(mDBConn, query.get(), query.Length(), &stmt, nsnull);
     if (srv != SQLITE_OK) {
         HandleSqliteError(query.get());
-        return NS_ERROR_FAILURE; // XXX error code
+        return ConvertResultCode(srv);
     }
 
     PRBool exists = PR_FALSE;
@@ -381,10 +433,7 @@ mozStorageConnection::CreateTable(/*const nsID& aID,*/
 
     PR_smprintf_free(buf);
 
-    if (srv != SQLITE_OK) {
-        return NS_ERROR_FAILURE; // XXX SQL_ERROR_TABLE_EXISTS
-    }
-    return NS_OK;
+    return ConvertResultCode(srv);
 }
 
 /**
@@ -433,7 +482,7 @@ mozStorageConnection::CreateFunction(const char *aFunctionName,
                                        nsnull);
     if (srv != SQLITE_OK) {
         HandleSqliteError(nsnull);
-        return NS_ERROR_FAILURE;
+        return ConvertResultCode(srv);
     }
 
     rv = mFunctions->AppendElement (aFunction, PR_FALSE);
@@ -450,9 +499,7 @@ nsresult
 mozStorageConnection::Preload()
 {
   int srv = sqlite3Preload(mDBConn);
-  if (srv != SQLITE_OK)
-    return NS_ERROR_FAILURE;
-  return NS_OK;
+  return ConvertResultCode(srv);
 }
 
 /**
