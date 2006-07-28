@@ -876,7 +876,9 @@ function updateEmailAddressNode(emailAddressNode, address)
   emailAddressNode.setAttribute("emailAddress", address.emailAddress);
   emailAddressNode.setAttribute("fullAddress", address.fullAddress);
   emailAddressNode.setAttribute("displayName", address.displayName);
-  AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
+  
+  if ("AddExtraAddressProcessing" in this)
+    AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
 }
 
 // createnewAttachmentInfo --> constructor method for creating new attachment object which goes into the
