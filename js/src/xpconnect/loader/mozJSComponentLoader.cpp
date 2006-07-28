@@ -1154,7 +1154,7 @@ mozJSComponentLoader::GlobalForLocation(nsILocalFile *aComponent,
     // that?  On the other hand, the fact that this is in our components dir
     // means that if someone snuck a malicious file into this dir we're screwed
     // anyway...  So maybe flagging as a prefix is fine.
-    xpc->FlagSystemFilenamePrefix(nativePath.get());
+    xpc->FlagSystemFilenamePrefix(urlSpec.get());
 
 #ifdef DEBUG_shaver_off
     fprintf(stderr, "mJCL: compiled JS component %s\n",
