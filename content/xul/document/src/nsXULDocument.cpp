@@ -3161,7 +3161,8 @@ nsXULDocument::ResumeWalk()
                     NS_ASSERTION(element, "no element on context stack");
 
                     nsCOMPtr<nsITextContent> text;
-                    rv = NS_NewTextNode(getter_AddRefs(text));
+                    rv = NS_NewTextNode(getter_AddRefs(text),
+                                        mNodeInfoManager);
                     NS_ENSURE_SUCCESS(rv, rv);
 
                     nsXULPrototypeText* textproto =

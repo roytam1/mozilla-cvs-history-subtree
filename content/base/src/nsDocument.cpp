@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -553,8 +554,13 @@ nsDOMImplementation::CreateDocumentType(const nsAString& aQualifiedName,
   nsCOMPtr<nsIAtom> name = do_GetAtom(aQualifiedName);
   NS_ENSURE_TRUE(name, NS_ERROR_OUT_OF_MEMORY);
 
-  return NS_NewDOMDocumentType(aReturn, name, nsnull, nsnull,
-                               aPublicId, aSystemId, EmptyString());
+  nsCOMPtr<nsIPrincipal> principal;
+  rv = nsContentUtils::GetSecurityManager()->
+    GetCodebasePrincipal(mBaseURI, getter_AddRefs(principal));
+  NS_ENSURE_SUCCESS(rv, rv);
+    
+  return NS_NewDOMDocumentType(aReturn, nsnull, principal, name, nsnull,
+                               nsnull, aPublicId, aSystemId, EmptyString());
 }
 
 NS_IMETHODIMP
@@ -914,6 +920,7 @@ PRBool gHaveXPathDOM = PR_FALSE;
 
 NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_0_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
@@ -2124,6 +2131,13 @@ nsDocument::GetScriptGlobalObject() const
    return mScriptGlobalObject;
 }
 
+nsIScriptGlobalObject*
+nsDocument::GetScopeObject()
+{
+    nsCOMPtr<nsIScriptGlobalObject> scope(do_QueryReferent(mScopeObject));
+    return scope;
+}
+
 void
 nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
 {
@@ -2144,9 +2158,10 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
 
   mScriptGlobalObject = aScriptGlobalObject;
 
-  if (mScriptGlobalObject) {
+  if (aScriptGlobalObject) {
     // Go back to using the docshell for the layout history state
     mLayoutHistoryState = nsnull;
+    mScopeObject = do_GetWeakReference(aScriptGlobalObject);
   }
 }
 
@@ -2594,7 +2609,7 @@ nsDocument::CreateTextNode(const nsAString& aData, nsIDOMText** aReturn)
   *aReturn = nsnull;
 
   nsCOMPtr<nsITextContent> text;
-  nsresult rv = NS_NewTextNode(getter_AddRefs(text), this);
+  nsresult rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfoManager);
 
   if (NS_SUCCEEDED(rv)) {
     rv = CallQueryInterface(text, aReturn);
@@ -2607,7 +2622,7 @@ nsDocument::CreateTextNode(const nsAString& aData, nsIDOMText** aReturn)
 NS_IMETHODIMP
 nsDocument::CreateDocumentFragment(nsIDOMDocumentFragment** aReturn)
 {
-  return NS_NewDocumentFragment(aReturn, this);
+  return NS_NewDocumentFragment(aReturn, mNodeInfoManager);
 }
 
 NS_IMETHODIMP
@@ -2616,7 +2631,7 @@ nsDocument::CreateComment(const nsAString& aData, nsIDOMComment** aReturn)
   *aReturn = nsnull;
 
   nsCOMPtr<nsIContent> comment;
-  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment), this);
+  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment), mNodeInfoManager);
 
   if (NS_SUCCEEDED(rv)) {
     rv = CallQueryInterface(comment, aReturn);
@@ -2641,7 +2656,8 @@ nsDocument::CreateCDATASection(const nsAString& aData,
     return NS_ERROR_DOM_INVALID_CHARACTER_ERR;
 
   nsCOMPtr<nsIContent> content;
-  nsresult rv = NS_NewXMLCDATASection(getter_AddRefs(content), this);
+  nsresult rv = NS_NewXMLCDATASection(getter_AddRefs(content),
+                                      mNodeInfoManager);
 
   if (NS_SUCCEEDED(rv)) {
     rv = CallQueryInterface(content, aReturn);
@@ -2662,8 +2678,8 @@ nsDocument::CreateProcessingInstruction(const nsAString& aTarget,
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIContent> content;
-  rv = NS_NewXMLProcessingInstruction(getter_AddRefs(content), aTarget, aData,
-                                      this);
+  rv = NS_NewXMLProcessingInstruction(getter_AddRefs(content),
+                                      mNodeInfoManager, aTarget, aData);
   if (NS_FAILED(rv)) {
     return rv;
   }

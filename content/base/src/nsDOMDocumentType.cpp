@@ -43,9 +43,12 @@
 #include "nsContentUtils.h"
 #include "nsDOMString.h"
 #include "nsIDOM3Node.h"
+#include "nsNodeInfoManager.h"
 
 nsresult
 NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
+                      nsNodeInfoManager *aNodeInfoManager,
+                      nsIPrincipal *aPrincipal,
                       nsIAtom *aName,
                       nsIDOMNamedNodeMap *aEntities,
                       nsIDOMNamedNodeMap *aNotations,
@@ -53,11 +56,29 @@ NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
                       const nsAString& aSystemId,
                       const nsAString& aInternalSubset)
 {
+  NS_PRECONDITION(aNodeInfoManager || aPrincipal,
+                  "Must have a principal if no nodeinfo manager.");
   NS_ENSURE_ARG_POINTER(aDocType);
   NS_ENSURE_ARG_POINTER(aName);
 
-  *aDocType = new nsDOMDocumentType(aName, aEntities, aNotations, aPublicId,
-                                    aSystemId, aInternalSubset);
+  nsresult rv;
+
+  nsRefPtr<nsNodeInfoManager> nimgr;
+  if (aNodeInfoManager) {
+    nimgr = aNodeInfoManager;
+  }
+  else {
+    nimgr = new nsNodeInfoManager();
+    NS_ENSURE_TRUE(nimgr, NS_ERROR_OUT_OF_MEMORY);
+    
+    rv = nimgr->Init(nsnull);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nimgr->SetDocumentPrincipal(aPrincipal);
+  }
+
+  *aDocType = new nsDOMDocumentType(nimgr, aName, aEntities, aNotations,
+                                    aPublicId, aSystemId, aInternalSubset);
   if (!*aDocType) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -67,13 +88,14 @@ NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
   return NS_OK;
 }
 
-nsDOMDocumentType::nsDOMDocumentType(nsIAtom *aName,
+nsDOMDocumentType::nsDOMDocumentType(nsNodeInfoManager *aNodeInfoManager,
+                                     nsIAtom *aName,
                                      nsIDOMNamedNodeMap *aEntities,
                                      nsIDOMNamedNodeMap *aNotations,
                                      const nsAString& aPublicId,
                                      const nsAString& aSystemId,
                                      const nsAString& aInternalSubset) :
-  nsGenericDOMDataNode(nsnull),
+  nsGenericDOMDataNode(aNodeInfoManager),
   mName(aName),
   mEntities(aEntities),
   mNotations(aNotations),
@@ -196,7 +218,7 @@ nsDOMDocumentType::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsDOMDocumentType::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsDOMDocumentType* it = new nsDOMDocumentType(mName,
+  nsDOMDocumentType* it = new nsDOMDocumentType(mNodeInfoManager, mName,
                                                 mEntities,
                                                 mNotations,
                                                 mPublicId,

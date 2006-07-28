@@ -682,3 +682,12 @@ interface nsIXPConnect : nsISupports
                                        in nsIClassInfo aClassInfo,
                                        in nsIXPConnectJSObjectHolder aPrototype);
 };
+
+[uuid(5e49db95-e8f0-4640-940e-349900765620)]
+interface nsIXPConnect_MOZILLA_1_8_BRANCH : nsIXPConnect
+{
+    void
+    reparentScopeAwareWrappers(in JSContextPtr aJSContext,
+                               in JSObjectPtr  aOldScope,
+                               in JSObjectPtr  aNewScope);
+};

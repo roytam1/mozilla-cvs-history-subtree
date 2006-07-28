@@ -1960,17 +1960,20 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
 
   // Before we reset the doc notify the globalwindow of the change.
 
-  if (mScriptGlobalObject) {
-    // Hold onto ourselves on the offchance that we're down to one ref
+  // Hold onto ourselves on the offchance that we're down to one ref
+  nsRefPtr<nsHTMLDocument> kungFuDeathGrip(this);
 
-    nsCOMPtr<nsIDOMDocument> kungFuDeathGrip =
-      do_QueryInterface((nsIHTMLDocument*)this);
+  if (mScriptGlobalObject) {
+    // Remember the old scope in case the call to SetNewDocument changes it.
+    nsCOMPtr<nsIScriptGlobalObject> oldScope(do_QueryReferent(mScopeObject));
 
     rv = mScriptGlobalObject->SetNewDocument((nsDocument *)this, nsnull,
                                              PR_FALSE, PR_FALSE);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    if (NS_FAILED(rv)) {
-      return rv;
+    nsCOMPtr<nsIScriptGlobalObject> newScope(do_QueryReferent(mScopeObject));
+    if (oldScope && newScope != oldScope) {
+      nsContentUtils::ReparentContentWrappersInScope(oldScope, newScope);
     }
   }
 

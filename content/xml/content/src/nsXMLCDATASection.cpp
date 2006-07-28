@@ -46,7 +46,7 @@ class nsXMLCDATASection : public nsGenericDOMDataNode,
                           public nsIDOMCDATASection
 {
 public:
-  nsXMLCDATASection(nsIDocument *aDocument);
+  nsXMLCDATASection(nsNodeInfoManager *aNodeInfoManager);
   virtual ~nsXMLCDATASection();
 
   // nsISupports
@@ -73,27 +73,31 @@ public:
 #endif
 
   virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
-                                                        nsIDocument *aOwnerDocument);
+                                                        nsNodeInfoManager *aNodeInfoManager);
 
 protected:
 };
 
 nsresult
 NS_NewXMLCDATASection(nsIContent** aInstancePtrResult,
-                      nsIDocument *aOwnerDocument)
+                      nsNodeInfoManager *aNodeInfoManager)
 {
+  NS_PRECONDITION(aNodeInfoManager, "Missing nodeinfo manager");
+
   *aInstancePtrResult = nsnull;
 
-  nsCOMPtr<nsIContent> instance = new nsXMLCDATASection(nsnull);
-  NS_ENSURE_TRUE(instance, NS_ERROR_OUT_OF_MEMORY);
+  nsXMLCDATASection *instance = new nsXMLCDATASection(aNodeInfoManager);
+  if (!instance) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
 
-  instance.swap(*aInstancePtrResult);
+  NS_ADDREF(*aInstancePtrResult = instance);
 
   return NS_OK;
 }
 
-nsXMLCDATASection::nsXMLCDATASection(nsIDocument *aDocument)
-  : nsGenericDOMDataNode(aDocument)
+nsXMLCDATASection::nsXMLCDATASection(nsNodeInfoManager *aNodeInfoManager)
+  : nsGenericDOMDataNode(aNodeInfoManager)
 {
 }
 
@@ -157,16 +161,16 @@ nsXMLCDATASection::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsXMLCDATASection::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, GetOwnerDoc());
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, mNodeInfoManager);
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);
 }
 
 already_AddRefed<nsITextContent> 
-nsXMLCDATASection::CloneContent(PRBool aCloneText, nsIDocument *aOwnerDocument)
+nsXMLCDATASection::CloneContent(PRBool aCloneText, nsNodeInfoManager *aNodeInfoManager)
 {
-  nsXMLCDATASection* it = new nsXMLCDATASection(nsnull);
+  nsXMLCDATASection* it = new nsXMLCDATASection(aNodeInfoManager);
   if (!it)
     return nsnull;
 

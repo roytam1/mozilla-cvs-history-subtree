@@ -1501,7 +1501,8 @@ SinkContext::AddComment(const nsIParserNode& aNode)
   }
   
   nsCOMPtr<nsIContent> comment;
-  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment));
+  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment),
+                                  mSink->mNodeInfoManager);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIDOMComment> domComment(do_QueryInterface(comment));
@@ -1741,7 +1742,8 @@ SinkContext::FlushText(PRBool* aDidFlush, PRBool aReleaseLast)
       }
     } else {
       nsCOMPtr<nsITextContent> textContent;
-      rv = NS_NewTextNode(getter_AddRefs(textContent));
+      rv = NS_NewTextNode(getter_AddRefs(textContent),
+                          mSink->mNodeInfoManager);
       NS_ENSURE_SUCCESS(rv, rv);
 
       mLastTextNode = textContent;
@@ -3086,7 +3088,7 @@ HTMLContentSink::SetDocumentTitle(const nsAString& aTitle, const nsIParserNode* 
   }
 
   nsCOMPtr<nsITextContent> text;
-  rv = NS_NewTextNode(getter_AddRefs(text));
+  rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfoManager);
   NS_ENSURE_SUCCESS(rv, rv);
 
   text->SetText(title, PR_TRUE);
@@ -4113,7 +4115,7 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
 
   if (!script.IsEmpty()) {
     nsCOMPtr<nsITextContent> text;
-    rv = NS_NewTextNode(getter_AddRefs(text));
+    rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfoManager);
     NS_ENSURE_SUCCESS(rv, rv);
 
     text->SetText(script, PR_TRUE);
@@ -4250,7 +4252,7 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
   if (!content.IsEmpty()) {
     // Create a text node holding the content
     nsCOMPtr<nsITextContent> text;
-    rv = NS_NewTextNode(getter_AddRefs(text));
+    rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfoManager);
     NS_ENSURE_SUCCESS(rv, rv);
 
     text->SetText(content, PR_TRUE);
