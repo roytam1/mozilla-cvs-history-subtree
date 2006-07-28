@@ -6691,8 +6691,11 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
       // in milliseconds
       PRTime lateness = now - timeout->mWhen;
 
+      // Make sure to cast the unsigned PR_USEC_PER_MSEC to signed
+      // PRTime to make the division do the right thing on 64-bit
+      // platforms whether lateness is positive or negative.
       timeout->mArgv[timeout->mArgc] =
-        INT_TO_JSVAL((jsint)(lateness / PR_USEC_PER_MSEC));
+        INT_TO_JSVAL((jsint)(lateness / (PRTime)PR_USEC_PER_MSEC));
 
       jsval dummy;
       scx->CallEventHandler(mJSObject, timeout->mFunObj, timeout->mArgc + 1,
@@ -6745,8 +6748,11 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
       // If the next interval timeout is already supposed to have
       // happened then run the timeout as soon as we can (meaning
       // after DOM_MIN_TIMEOUT_VALUE time has passed).
-      if (delay < ((PRTime)DOM_MIN_TIMEOUT_VALUE * PR_USEC_PER_MSEC)) {
-        delay = (PRTime)DOM_MIN_TIMEOUT_VALUE * PR_USEC_PER_MSEC;
+
+      // Note: We must cast the rhs expression to PRTime to work
+      // around what looks like a compiler bug on x86_64.
+      if (delay < (PRTime)(DOM_MIN_TIMEOUT_VALUE * PR_USEC_PER_MSEC)) {
+        delay = DOM_MIN_TIMEOUT_VALUE * PR_USEC_PER_MSEC;
       }
 
       if (timeout->mTimer) {
@@ -6756,9 +6762,15 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
         // codes if this fails since the callers of this method
         // doesn't care about them nobody who cares about them
         // anyways.
+
+        // Make sure to cast the unsigned PR_USEC_PER_MSEC to signed
+        // PRTime to make the division do the right thing on 64-bit
+        // platforms whether delay is positive or negative (which we
+        // know is always positive here, but cast anyways for
+        // consistency).
         nsresult rv = timeout->mTimer->
           InitWithFuncCallback(TimerCallback, timeout,
-                               (PRInt32)(delay / PR_USEC_PER_MSEC),
+                               (PRInt32)(delay / (PRTime)PR_USEC_PER_MSEC),
                                nsITimer::TYPE_ONE_SHOT);
 
         if (NS_FAILED(rv)) {
@@ -7438,8 +7450,13 @@ nsGlobalWindow::ResumeTimeouts()
   nsresult rv;
 
   for (nsTimeout *t = mTimeouts; t; t = t->mNext) {
+    // Make sure to cast the unsigned PR_USEC_PER_MSEC to signed
+    // PRTime to make the division do the right thing on 64-bit
+    // platforms whether t->mWhen is positive or negative (which is
+    // likely to always be positive here, but cast anyways for
+    // consistency).
     PRUint32 delay =
-      PR_MAX(((PRUint32)(t->mWhen / PR_USEC_PER_MSEC)),
+      PR_MAX(((PRUint32)(t->mWhen / (PRTime)PR_USEC_PER_MSEC)),
               DOM_MIN_TIMEOUT_VALUE);
 
     // Set mWhen back to the time when the timer is supposed to
