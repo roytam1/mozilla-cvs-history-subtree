@@ -62,13 +62,11 @@ public:
 private:
   nsRefPtr<zapPacketPump> mPump;
   nsCOMPtr<zapIMediaSource> mInput;
-  PRUint32 mCounter; // counter for clock frames
 };
 
 //----------------------------------------------------------------------
 
 zapPacketPumpClock::zapPacketPumpClock()
-    : mCounter(0)
 {
 }
 
@@ -123,7 +121,7 @@ zapPacketPumpClock::ConsumeFrame(zapIMediaFrame * frame)
 {
   if (!mPump || !mPump->mInput || !mPump->mOutput) return NS_OK;
 
-  if (++mCounter < mPump->mDivider) return NS_OK;
+  nsRefPtr<zapPacketPumpClock> deathGrip(this);
 
   // ok, our cue. attempt to pump a frame
   nsCOMPtr<zapIMediaFrame> mframe;
@@ -132,7 +130,6 @@ zapPacketPumpClock::ConsumeFrame(zapIMediaFrame * frame)
     // reconfigured by the ProduceFrame call
     if (mPump->mOutput)
       mPump->mOutput->ConsumeFrame(mframe);
-    mCounter = 0;
   }
   
   return NS_OK;
@@ -181,15 +178,6 @@ zapPacketPump::AddedToGraph(zapIMediaGraph *graph,
 {
   mGraph = graph;
 
-  // node parameter defaults:
-  mDivider = 1;
-
-  // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("clock_divider"),
-                                   &mDivider);
-  }
-  
   return NS_OK;
 }
 

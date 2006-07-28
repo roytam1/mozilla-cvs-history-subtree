@@ -218,7 +218,9 @@ zapAudioMixer::AddedToGraph(zapIMediaGraph *graph,
   rv = mStreamParameters.InitWithProperties(node_pars);
   NS_ENSURE_SUCCESS(rv, rv);
   
-  if (mStreamParameters.sample_format != sf_float32_32768) {
+  if (mStreamParameters.sample_format != sf_float32_32768 && 
+      mStreamParameters.sample_format != sf_float32_1) 
+  {
     NS_ERROR("unsupported sample format! write me!");
     return NS_ERROR_FAILURE;
   }

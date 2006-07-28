@@ -78,7 +78,9 @@ zapAudioReformatter::AddedToGraph(zapIMediaGraph *graph,
   if (NS_FAILED(mOutStreamPars.InitWithProperties(node_pars)))
     return NS_ERROR_FAILURE;
 
-  if (mOutStreamPars.sample_format != sf_float32_32768 ||
+  if ( (mOutStreamPars.sample_format != sf_float32_32768 &&
+        mOutStreamPars.sample_format != sf_float32_1 &&
+        mOutStreamPars.sample_format != sf_int16) ||
       mOutStreamPars.channels > 2) {
     NS_ERROR("Unsupported sample format! Write me!");
     return NS_ERROR_FAILURE;
@@ -281,6 +283,7 @@ zapAudioReformatter::ProduceSamples(float *out, PRUint32 sampleCount)
     float sample;
     switch (mInStreamPars.sample_format) {
       case sf_float32_32768:
+      case sf_float32_1:
         sample = *(float*)inp;
         inp += sizeof(float);
         break;

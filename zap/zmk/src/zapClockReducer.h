@@ -34,46 +34,45 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_PACKETPUMP_H__
-#define __ZAP_PACKETPUMP_H__
+#ifndef __ZAP_CLOCKREDUCER_H__
+#define __ZAP_CLOCKREDUCER_H__
 
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
 #include "nsCOMPtr.h"
 
-class zapPacketPumpClock;
-
 ////////////////////////////////////////////////////////////////////////
-// zapPacketPump
+// zapClockReducer
 
-// {35A96EF1-5D16-4E31-9613-27127B35E799}
-#define ZAP_PACKETPUMP_CID                             \
-  { 0x35a96ef1, 0x5d16, 0x4e31, { 0x96, 0x13, 0x27, 0x12, 0x7b, 0x35, 0xe7, 0x99 } }
+// {709F5F2F-A997-480C-BD3F-48CFFE0467EF}
+#define ZAP_CLOCKREDUCER_CID                             \
+  { 0x709f5f2f, 0xa997, 0x480c, { 0xbd, 0x3f, 0x48, 0xcf, 0xfe, 0x04, 0x67, 0xef } }
 
-#define ZAP_PACKETPUMP_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "pump"
+#define ZAP_CLOCKREDUCER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "clock-reducer"
 
-class zapPacketPump : public zapIMediaNode,
-                      public zapIMediaSource,
-                      public zapIMediaSink
+class zapClockReducer : public zapIMediaNode,
+                        public zapIMediaSource,
+                        public zapIMediaSink
 {
+public:
+  zapClockReducer();
+  ~zapClockReducer();
+
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
   NS_DECL_ZAPIMEDIASOURCE
   NS_DECL_ZAPIMEDIASINK
-  
-  zapPacketPump();
-  ~zapPacketPump();
 
 private:
-  friend class zapPacketPumpClock;
-
-  nsCOMPtr<zapIMediaGraph> mGraph;
   
-  zapPacketPumpClock *mClock; // weak reference managed by object itself
-  
-  nsCOMPtr<zapIMediaSink> mOutput;
   nsCOMPtr<zapIMediaSource> mInput;
+  nsCOMPtr<zapIMediaSink> mOutput;
+
+  PRInt32 mNumerator;
+  PRInt32 mDenominator;
+
+  PRInt32 mEpsilon;
 };
 
-#endif // __ZAP_PACKETPUMP_H__
+#endif // __ZAP_CLOCKREDUCER_H__

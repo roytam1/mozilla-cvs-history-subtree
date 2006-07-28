@@ -315,21 +315,22 @@ Node parameters:
 - unsigned long "sample_rate" : sample rate in Hz (default: 8000)
 - unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1)
-- ACString "sample_format" : "float32_32768" (default: "float32_32768")
+- ACString "sample_format" : "float32_32768" | "float32_1" 
+                             (default: "float32_32768")
 
 Input streams:
 audio/pcm frames with
 - unsigned long "sample_rate" == corresponding node parameter
 - unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
-- unsigned long "sample_format" == "float32_32768"
+- unsigned long "sample_format" == corresponding node parameter
 
 Output stream:
 audio/pcm frames with
 - unsigned long "sample_rate" == corresponding node parameter
 - unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
-- unsigned long "sample_format" == "float32_32768"
+- unsigned long "sample_format" == corresponding node parameter
 
 ----------------------------------------------------------------------
 
@@ -805,19 +806,14 @@ audio/tone frames
 
 General purpose packet pump. Pumps an unaltered "input" packet to the
 output whenever a "clock" frame is received. The timestamp of the
-frame is NOT modified.
+frame is NOT modified. Frames will only be pumped if an output sink is 
+connected.
 
 Sinks: 2 
 
 ACString "name" == "input" : pumped input frames; any stream type (active)
 ACString "name" == "clock" : reference clock; any stream type (passive)
 Sources: 1 (active)
-
-Node parameters:
-- unsigned long "clock_divider" : integer n determining the relative
-                                  rate at which packets will be pumped:
-                                  For every n'th clock frame an input 
-                                  frame will be pumped (default: 1)
 
 Output stream:
 same as "input" stream
@@ -1236,7 +1232,8 @@ Node parameters:
 - unsigned long "sample_rate" : sample rate in Hz (default: 8000)
 - unsigned long "samples" : number of samples in frame *per channel* (default: 160)
 - unsigned long "channels" : number of channels (default: 1, must be <=2)
-- ACString "sample_format" : "float32_32768" (default: "float32_32768")
+- ACString "sample_format" : "float32_32768" | "float32_1" 
+                             (default: "float32_32768")
 
 Input streams:
 audio/pcm frames with 
@@ -1248,6 +1245,29 @@ audio/pcm frames with
 - unsigned long "sample_rate" == corresponding node parameter
 - unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
-- unsigned long "sample_format" == "float32_32768"
+- unsigned long "sample_format" == corresponding node parameter
 
 ----------------------------------------------------------------------
+
+43) clock-reducer
+-----------------
+
+Node for filtering a fixed proportion of frame. Only every n'th frame
+received at the input will be fed to the output, where n =
+numerator/denominator.
+
+Sinks: 1 (passive)
+Sources: 1 (active)
+
+Node parameters:
+- long "numerator" : See description above (default: 1)
+- long "denominator" : See description above (default: 1)
+
+Input streams:
+any
+
+Output streams:
+any
+
+----------------------------------------------------------------------
+
