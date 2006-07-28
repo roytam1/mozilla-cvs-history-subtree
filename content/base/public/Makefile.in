@@ -82,6 +82,7 @@ SDK_XPIDLSRCS   = \
 XPIDLSRCS	= \
 		nsIChromeRegistry.idl       \
 		nsIContentPolicy.idl        \
+		nsISelection2.idl \
 		nsIDOMParser.idl \
 		nsIDOMSerializer.idl \
 		nsISelectionController.idl  \

@@ -36,13 +36,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsISupports.idl"
 #include "nsISelection.idl"
 
 interface nsIDOMNode;
 interface nsIDOMRange;
 
 %{C++
-#include "nsCOMArray.h"
+#include "nsTArray.h"
 %}
 
 [ptr] native RangeArray(nsCOMArray<nsIDOMRange>);
