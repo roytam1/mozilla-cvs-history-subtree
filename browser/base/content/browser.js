@@ -4928,23 +4928,6 @@ nsContextMenu.prototype = {
 
       permissionmanager.add(uri, "image",
                             aBlock ? nsIPermissionManager.DENY_ACTION : nsIPermissionManager.ALLOW_ACTION);
-    },
-    isImageBlocked : function() {
-      var nsIPermissionManager = Components.interfaces.nsIPermissionManager;
-      var permissionmanager =
-        Components.classes["@mozilla.org/permissionmanager;1"]
-          .getService(Components.interfaces.nsIPermissionManager);
-
-      var uri = this.target.QueryInterface(Components.interfaces.nsIImageLoadingContent).currentURI;
-
-      return permissionmanager.testPermission(uri, "image") == nsIPermissionManager.DENY_ACTION;
-    },
-    // Generate email address and put it on clipboard.
-    copyEmail : function () {
-        // Copy the comma-separated list of email addresses only.
-        // There are other ways of embedding email addresses in a mailto:
-        // link, but such complex parsing is beyond us.
-        var url = this.linkURL;
 
       var savedmenu = this;
       function undoImageBlock() {
@@ -4977,6 +4960,24 @@ nsContextMenu.prototype = {
 
       // Reload the page to show the effect instantly
       BrowserReload();
+    },
+    isImageBlocked : function() {
+      var nsIPermissionManager = Components.interfaces.nsIPermissionManager;
+      var permissionmanager =
+        Components.classes["@mozilla.org/permissionmanager;1"]
+          .getService(Components.interfaces.nsIPermissionManager);
+
+      var uri = this.target.QueryInterface(Components.interfaces.nsIImageLoadingContent).currentURI;
+
+      return permissionmanager.testPermission(uri, "image") == nsIPermissionManager.DENY_ACTION;
+    },
+    // Generate email address and put it on clipboard.
+    copyEmail : function () {
+        // Copy the comma-separated list of email addresses only.
+        // There are other ways of embedding email addresses in a mailto:
+        // link, but such complex parsing is beyond us.
+        var url = this.linkURL;
+
         var qmark = url.indexOf( "?" );
         var addresses;
 
