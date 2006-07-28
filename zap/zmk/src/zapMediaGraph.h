@@ -45,13 +45,16 @@
 #include "nsAutoPtr.h"
 #include "zapIMediaNode.h"
 #include "nsString.h"
+#include "nsISupportsPriority.h"
 
 class zapMediaGraph : public zapIMediaGraph,
+                      public nsISupportsPriority,
                       public nsIRunnable
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIAGRAPH
+  NS_DECL_NSISUPPORTSPRIORITY
   NS_DECL_NSIRUNNABLE
   
   zapMediaGraph();

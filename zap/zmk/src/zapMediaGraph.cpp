@@ -43,6 +43,7 @@
 #include "zapIMediaSink.h"
 #include "nsIPropertyBag2.h"
 #include "nsThreadUtils.h"
+#include "nsISupportsPriority.h"
 
 // ConstructMediaGraph will create a media graph on a new thread and
 // return a (nearly) threadsafe proxy.
@@ -124,8 +125,43 @@ zapMediaGraph::Release()
 NS_INTERFACE_MAP_BEGIN(zapMediaGraph)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIRunnable)
   NS_INTERFACE_MAP_ENTRY(zapIMediaGraph)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsPriority)
   NS_INTERFACE_MAP_ENTRY(nsIRunnable)
 NS_INTERFACE_MAP_END
+
+//----------------------------------------------------------------------
+// nsISupportsPriority methods:
+
+/* attribute long priority; */
+NS_IMETHODIMP
+zapMediaGraph::GetPriority(PRInt32 *aPriority)
+{
+  if (!mMediaThread) return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsISupportsPriority> supPrio = do_QueryInterface(mMediaThread);
+  NS_ASSERTION(supPrio, "uh-oh, thread doesn't implement expected interface");
+  return supPrio->GetPriority(aPriority);
+}
+NS_IMETHODIMP
+zapMediaGraph::SetPriority(PRInt32 aPriority)
+{
+  if (!mMediaThread) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsISupportsPriority> supPrio = do_QueryInterface(mMediaThread);
+  NS_ASSERTION(supPrio, "uh-oh, thread doesn't implement expected interface");
+  return supPrio->SetPriority(aPriority);
+}
+
+/* void adjustPriority (in long delta); */
+NS_IMETHODIMP
+zapMediaGraph::AdjustPriority(PRInt32 delta)
+{
+  if (!mMediaThread) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsISupportsPriority> supPrio = do_QueryInterface(mMediaThread);
+  NS_ASSERTION(supPrio, "uh-oh, thread doesn't implement expected interface");
+  return supPrio->AdjustPriority(delta);
+}
 
 //----------------------------------------------------------------------
 // nsIRunnable methods:
@@ -521,7 +557,7 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
   NS_NewThread(getter_AddRefs(mediaThread), mediaGraph);
   if (!mediaThread) {
     return NS_ERROR_FAILURE;
-  }  
+  }
 #endif
 
   // Return a proxy for the media graph:
