@@ -913,7 +913,7 @@ function updateEmailAddressNode(emailAddressNode, address)
   emailAddressNode.setAttribute("fullAddress", address.fullAddress);
   emailAddressNode.setAttribute("displayName", address.displayName);
   
-    AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
+  AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
 }
 
 // thunderbird has smart logic for determining if we should show just the display name.
@@ -923,8 +923,8 @@ function updateEmailAddressNode(emailAddressNode, address)
 
 function AddExtraAddressProcessing(emailAddress, addressNode)
 {
-  var displayName = addressNode.getTextAttribute("displayName");  
-  var emailAddress = addressNode.getTextAttribute("emailAddress");
+  var displayName = addressNode.getAttribute("displayName");  
+  var emailAddress = addressNode.getAttribute("emailAddress");
 
   // always show the address for the from and reply-to fields
   var parentElementId = addressNode.parentNode.id;
