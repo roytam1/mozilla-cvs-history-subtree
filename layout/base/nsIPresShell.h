@@ -96,9 +96,10 @@ template<class E> class nsCOMArray;
 
 typedef short SelectionType;
 
-#define NS_IPRESSHELL_IID     \
-{ 0xa736d2fd, 0x0191, 0x42ea, \
-  { 0xb1, 0xb0, 0x80, 0x45, 0x1d, 0xfa, 0x03, 0x53 } }
+// 8ab3eaf7-dcb0-4ba0-9bf4-c21b3cbef85c
+#define NS_IPRESSHELL_IID \
+{ 0x8ab3eaf7, 0xdcb0, 0x4ba0, \
+  { 0x9b, 0xf4, 0xc2, 0x1b, 0x3c, 0xbe, 0xf8, 0x5c } }
 
 // Constants uses for ScrollFrameIntoView() function
 #define NS_PRESSHELL_SCROLL_TOP      0

@@ -47,8 +47,10 @@ class nsBoxLayoutState;
 class nsIRenderingContext;
 struct nsRect;
 
-// {162F6B5F-F926-11d3-BA06-001083023C1E}
-#define NS_IBOX_LAYOUT_IID { 0x162f6b5f, 0xf926, 0x11d3, { 0xba, 0x6, 0x0, 0x10, 0x83, 0x2, 0x3c, 0x1e } }
+// d0f7955e-7cae-4213-9e08-ad1d512f396f
+#define NS_IBOX_LAYOUT_IID \
+{ 0xd0f7955e, 0x7cae, 0x4213, \
+  { 0x9e, 0x08, 0xad, 0x1d, 0x51, 0x2f, 0x39, 0x6f } }
 
 class nsIBoxLayout : public nsISupports {
 
