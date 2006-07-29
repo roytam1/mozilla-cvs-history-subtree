@@ -155,7 +155,8 @@ menuitem.bookmark-item {
 
 /* ..... fix bookmarks padding issue ..... */
 
-#menu_BookmarksPopup menuitem { 
+#menu_BookmarksPopup menuitem,
+#menu_BookmarksPopup menu { 
 -moz-padding-start: 4px; 
 }
 
