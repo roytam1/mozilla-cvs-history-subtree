@@ -336,20 +336,10 @@ private:
 
 /************************************************/
 
-class XPCAutoUnlock : public nsAutoLockBase {
+class XPCAutoUnlock : public nsAutoUnlockBase {
 public:
-
-    static XPCLock* NewLock(const char* name)
-                        {return nsAutoMonitor::NewMonitor(name);}
-    static void     DestroyLock(XPCLock* lock)
-                        {nsAutoMonitor::DestroyMonitor(lock);}
-
     XPCAutoUnlock(XPCLock* lock)
-#ifdef DEBUG
-        : nsAutoLockBase(lock ? (void*) lock : (void*) this, eAutoMonitor),
-#else
-        : nsAutoLockBase(lock, eAutoMonitor),
-#endif
+        : nsAutoUnlockBase(lock),
           mLock(lock)
     {
         if(mLock)
@@ -2893,6 +2883,8 @@ public:
     void MarkAutoRootsBeforeJSFinalize(JSContext* cx);
     void MarkAutoRootsAfterJSFinalize();
 
+    jsuword GetStackLimit() const { return mStackLimit; }
+
     static void InitStatics()
         { gLock = nsnull; gThreads = nsnull; gTLSIndex = BAD_TLS_INDEX; }
 
@@ -2920,6 +2912,8 @@ private:
     nsIException*        mException;
     JSBool               mExceptionManagerNotAvailable;
     AutoMarkingPtr*      mAutoRoots;
+
+    jsuword              mStackLimit;
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
     JSUint32             mWrappedNativeThreadsafetyReportDepth;
