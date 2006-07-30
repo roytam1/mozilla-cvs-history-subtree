@@ -20,6 +20,7 @@
 #
 # Contributor(s):
 #   Ben Goodger <beng@google.com>
+#   Jeff Walden <jwalden+code@mit.edu>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -65,8 +66,8 @@ const FEEDHANDLER_URI = "about:feeds";
 
 const PREF_SELECTED_APP = "browser.feeds.handlers.application";
 const PREF_SELECTED_WEB = "browser.feeds.handlers.webservice";
-const PREF_SELECTED_HANDLER = "browser.feeds.handler";
-const PREF_SKIP_PREVIEW_PAGE = "browser.feeds.skip_preview_page";
+const PREF_SELECTED_ACTION = "browser.feeds.handler";
+const PREF_SELECTED_READER = "browser.feeds.handler.default";
 
 function safeGetBoolPref(pref, defaultValue) {
   var prefs =   
@@ -136,8 +137,8 @@ FeedConverter.prototype = {
   _forcePreviewPage: false,
 
   /** 
-  * Release our references to various things once we're done using them.
-  */
+   * Release our references to various things once we're done using them.
+   */
   _releaseHandles: function FC__releaseHandles() {
     this._listener = null;
     this._request = null;
@@ -182,23 +183,36 @@ FeedConverter.prototype = {
           Cc["@mozilla.org/browser/feeds/result-service;1"].
           getService(Ci.nsIFeedResultService);
       if (!this._forcePreviewPage) {
-        var skipPreview = safeGetBoolPref(PREF_SKIP_PREVIEW_PAGE, false);
-        if (skipPreview) {
-          var handler = safeGetCharPref(PREF_SELECTED_HANDLER, "bookmarks");
-          if (handler == "web") {
-            var wccr = 
-                Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
-                getService(Ci.nsIWebContentConverterService);
-            var feed = result.doc.QueryInterface(Ci.nsIFeed);
-            if (feed.type == Ci.nsIFeed.TYPE_FEED &&
-                wccr.getAutoHandler(TYPE_MAYBE_FEED)) {
-              wccr.loadPreferredHandler(this._request);
+        var handler = safeGetCharPref(PREF_SELECTED_ACTION, "ask");
+        if (handler != "ask") {
+          if (handler == "reader")
+            handler = safeGetCharPref(PREF_SELECTED_READER, "bookmarks");
+
+LOG("handler: " + handler);
+
+          switch (handler) {
+            case "web":
+              var wccr = 
+                  Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
+                  getService(Ci.nsIWebContentConverterService);
+              var feed = result.doc.QueryInterface(Ci.nsIFeed);
+LOG("feed: " + feed + ", feed.type: " + feed.type);
+              if (feed.type == Ci.nsIFeed.TYPE_FEED &&
+                  wccr.getAutoHandler(TYPE_MAYBE_FEED)) {
+LOG("before...");
+                wccr.loadPreferredHandler(this._request);
+                return;
+              }
+LOG("goats");
+              break;
+
+            default:
+              LOG("unexpected handler: " + handler);
+              // fall through -- let feed service handle error
+            case "bookmarks":
+            case "client":
+              feedService.addToClientReader(this._request, result.uri.spec);
               return;
-            }
-          }
-          else {
-            feedService.addToClientReader(this._request, result.uri.spec);
-            return;
           }
         }
       }
@@ -317,7 +331,11 @@ var FeedResultService = {
     var prefs =   
         Cc["@mozilla.org/preferences-service;1"].
         getService(Ci.nsIPrefBranch);
-    var handler = safeGetCharPref(PREF_SELECTED_HANDLER, "bookmarks");
+
+    var handler = safeGetCharPref(PREF_SELECTED_ACTION, "bookmarks");
+    if (handler == "ask" || handler == "reader")                                
+      handler = safeGetCharPref(PREF_SELECTED_READER, "bookmarks");             
+
     switch (handler) {
     case "client":
       try {
@@ -353,6 +371,11 @@ var FeedResultService = {
           getService(Ci.nsIShellService_MOZILLA_1_8_BRANCH);
       ss.openApplicationWithURI(clientApp, spec);
       break;
+
+    default:
+      // "web" should have been handled elsewhere
+      LOG("unexpected handler: " + handler);
+      // fall through
     case "bookmarks":
       var wm = 
           Cc["@mozilla.org/appshell/window-mediator;1"].

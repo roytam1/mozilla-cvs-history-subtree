@@ -56,7 +56,7 @@ const TYPE_ANY = "*/*";
 const PREF_CONTENTHANDLERS_AUTO = "browser.contentHandlers.auto.";
 const PREF_CONTENTHANDLERS_BRANCH = "browser.contentHandlers.types.";
 const PREF_SELECTED_WEB = "browser.feeds.handlers.webservice";
-const PREF_SELECTED_HANDLER = "browser.feeds.handler";
+const PREF_SELECTED_ACTION = "browser.feeds.handler";
 
 function WebContentConverter() {
 }
@@ -163,6 +163,17 @@ var WebContentConverterRegistrar = {
   getAutoHandler: 
   function WCCR_getAutoHandler(contentType) {
     contentType = this._resolveContentType(contentType);
+
+function p(o)
+{
+  var s = "o = {\n";
+  for (var i in o)
+    s +=  "      " + i + ": " + o[i] + ",\n";
+  s +=    "    }";
+  return s;
+}
+
+LOG("autohandled stuff: " + p(this._autoHandleContentTypes));
     if (contentType in this._autoHandleContentTypes)
       return this._autoHandleContentTypes[contentType];
     return null;
@@ -312,12 +323,12 @@ var WebContentConverterRegistrar = {
     
     var needToUpdateHandler = true;
     try {
-      needToUpdateHandler = ps.getCharPref(PREF_SELECTED_HANDLER) != "web";
+      needToUpdateHandler = ps.getCharPref(PREF_SELECTED_ACTION) != "web";
     }
     catch (e) {
     }
     if (needToUpdateHandler)
-      ps.setCharPref(PREF_SELECTED_HANDLER, "web");
+      ps.setCharPref(PREF_SELECTED_ACTION, "web");
   },
   
   _confirmAddHandler: function WCCR__confirmAddHandler(contentType, title, uri) {
