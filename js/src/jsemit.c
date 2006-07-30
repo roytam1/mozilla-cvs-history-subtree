@@ -1830,6 +1830,10 @@ EmitAtomOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
  * or not pn->pn_op was modified, if this function finds an argument or local
  * variable name, pn->pn_attrs will contain the property's attributes after a
  * successful return.
+ *
+ * NB: if you add more opcodes specialized from JSOP_NAME, etc., don't forget
+ * to update the TOK_FOR (for-in) and TOK_ASSIGN (op=, e.g. +=) special cases
+ * in js_EmitTree.
  */
 static JSBool
 BindNameToSlot(JSContext *cx, JSTreeContext *tc, JSParseNode *pn)
@@ -4863,6 +4867,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                                        ? JSOP_GETGVAR
                                        : (pn2->pn_op == JSOP_SETARG)
                                        ? JSOP_GETARG
+                                       : (pn2->pn_op == JSOP_SETLOCAL)
+                                       ? JSOP_GETLOCAL
                                        : JSOP_GETVAR,
                                        atomIndex);
                     break;
