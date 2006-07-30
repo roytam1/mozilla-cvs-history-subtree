@@ -498,8 +498,8 @@ nsHTMLStyleSheet::RulesMatching(ElementRuleProcessorData* aData)
         // suppress in html documents empty forms inside tables, 
         // they have been used as a hack
         // to avoid the form top and bottom margin
-        nsIDocument* doc   = content->GetOwnerDoc();
-        nsIContent* parent = content->GetParent();
+        nsIDocument* doc   = styledContent->GetOwnerDoc();
+        nsIContent* parent = styledContent->GetParent();
         if (!content->GetChildCount() &&                       // form is empty
             doc && !doc->IsCaseSensitive() &&          // document is not XHTML
             parent && parent->IsNodeOfType(nsINode::eHTML)) { // parent is HTML
