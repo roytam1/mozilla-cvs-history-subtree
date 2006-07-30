@@ -163,17 +163,6 @@ var WebContentConverterRegistrar = {
   getAutoHandler: 
   function WCCR_getAutoHandler(contentType) {
     contentType = this._resolveContentType(contentType);
-
-function p(o)
-{
-  var s = "o = {\n";
-  for (var i in o)
-    s +=  "      " + i + ": " + o[i] + ",\n";
-  s +=    "    }";
-  return s;
-}
-
-LOG("autohandled stuff: " + p(this._autoHandleContentTypes));
     if (contentType in this._autoHandleContentTypes)
       return this._autoHandleContentTypes[contentType];
     return null;

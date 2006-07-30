@@ -187,23 +187,17 @@ FeedConverter.prototype = {
         if (handler != "ask") {
           if (handler == "reader")
             handler = safeGetCharPref(PREF_SELECTED_READER, "bookmarks");
-
-LOG("handler: " + handler);
-
           switch (handler) {
             case "web":
               var wccr = 
                   Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
                   getService(Ci.nsIWebContentConverterService);
               var feed = result.doc.QueryInterface(Ci.nsIFeed);
-LOG("feed: " + feed + ", feed.type: " + feed.type);
               if (feed.type == Ci.nsIFeed.TYPE_FEED &&
                   wccr.getAutoHandler(TYPE_MAYBE_FEED)) {
-LOG("before...");
                 wccr.loadPreferredHandler(this._request);
                 return;
               }
-LOG("goats");
               break;
 
             default:
