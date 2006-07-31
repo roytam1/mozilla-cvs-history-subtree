@@ -1809,8 +1809,11 @@ NS_IMETHODIMP nsFrame::HandleRelease(nsPresContext* aPresContext,
       NS_STATIC_CAST(nsFrame*, activeFrame)->DisplaySelection(activeFrame->GetPresContext())
         != nsISelectionController::SELECTION_OFF) {
     GetFrameSelectionFor(activeFrame, getter_AddRefs(frameselection), getter_AddRefs(selCon));
-    frameselection->SetMouseDownState( PR_FALSE );
+    nsresult rv = frameselection->SetMouseDownState(PR_FALSE);
     frameselection->StopAutoScrollTimer();
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
   }
 
   if (DisplaySelection(aPresContext) == nsISelectionController::SELECTION_OFF)
@@ -1852,6 +1855,9 @@ NS_IMETHODIMP nsFrame::HandleRelease(nsPresContext* aPresContext,
       {
         // We are doing this to simulate what we would have done on HandlePress
         result = frameselection->SetMouseDownState( PR_TRUE );
+        if (NS_FAILED(result)) {
+          return result;
+        }
 
         nsCOMPtr<nsIContent> content;
         PRInt32 startOffset = 0, endOffset = 0;

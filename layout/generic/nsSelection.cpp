@@ -2770,7 +2770,7 @@ nsSelection::SetMouseDownState(PRBool aState)
     else
       reason = nsISelectionListener::MOUSEUP_REASON;
     PostReason(reason);//not a drag reason
-    NotifySelectionListeners(nsISelectionController::SELECTION_NORMAL);//notify that reason is mouse up please.
+    return NotifySelectionListeners(nsISelectionController::SELECTION_NORMAL);
   }
   return NS_OK;
 }
@@ -7860,8 +7860,10 @@ nsTypedSelection::NotifySelectionListeners()
   for (PRInt32 i = 0; i < cnt; i++)
   {
     nsISelectionListener* thisListener = mSelectionListeners[i];
-    if (thisListener)
-      thisListener->NotifySelectionChanged(domdoc, this, reason);
+    if (thisListener) {
+      nsresult rv = thisListener->NotifySelectionChanged(domdoc, this, reason);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
   }
   return NS_OK;
 }
