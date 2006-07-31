@@ -39,11 +39,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const __cz_version   = "0.9.74";
+const __cz_version   = "0.9.75";
 const __cz_condition = "green";
 const __cz_suffix    = "";
 const __cz_guid      = "59c81df5-4b7a-477b-912d-4e0fdf64e5f2";
-const __cz_locale    = "0.9.74";
+const __cz_locale    = "0.9.75";
 
 var warn;
 var ASSERT;
@@ -184,7 +184,7 @@ function init()
         client.openLogFile(client);
     // kick-start a log-check interval to make sure we change logfiles in time:
     // It will fire 2 seconds past the next full hour.
-    setTimeout("checkLogFiles()", 3602000 - (Date.now() % 3600000));
+    setTimeout("checkLogFiles()", 3602000 - (Number(new Date()) % 3600000));
 
     // Make sure the userlist is on the correct side.
     updateUserlistSide(client.prefs["userlistLeft"]);
@@ -2231,15 +2231,6 @@ function gotoIRCURL (url)
     }
 
     var network;
-    var pass = "";
-
-    if (url.needpass)
-    {
-        if (url.pass)
-            pass = url.pass;
-        else
-            pass = window.promptPassword(getMsg(MSG_URL_PASSWORD, url.spec));
-    }
 
     if (url.isserver)
     {
@@ -2263,8 +2254,22 @@ function gotoIRCURL (url)
             dd ("gotoIRCURL: not already connected to " +
                 "server " + url.host + " trying to connect...");
             */
+            var pass = "";
+            if (url.needpass)
+            {
+                if (url.pass)
+                    pass = url.pass;
+                else
+                    pass = promptPassword(getMsg(MSG_HOST_PASSWORD, url.host));
+            }
+
             network = dispatch((url.scheme == "ircs" ? "sslserver" : "server"),
-                                {hostname: url.host, port: url.port, password: pass});
+                               {hostname: url.host, port: url.port,
+                                password: pass});
+
+            if (!url.target)
+                return;
+
             if (!("pendingURLs" in network))
                 network.pendingURLs = new Array();
             network.pendingURLs.unshift(url);
@@ -2288,6 +2293,10 @@ function gotoIRCURL (url)
                 "network " + url.host + " trying to connect...");
             */
             client.connectToNetwork(network, (url.scheme == "ircs" ? true : false));
+
+            if (!url.target)
+                return;
+
             if (!("pendingURLs" in network))
                 network.pendingURLs = new Array();
             network.pendingURLs.unshift(url);
@@ -4628,7 +4637,7 @@ function checkLogFiles()
 
     // We use the same line again to make sure we keep a constant offset
     // from the full hour, in case the timers go crazy at some point.
-    setTimeout("checkLogFiles()", 3602000 - (Date.now() % 3600000));
+    setTimeout("checkLogFiles()", 3602000 - (Number(new Date()) % 3600000));
 }
 
 CIRCChannel.prototype.getLCFunction =

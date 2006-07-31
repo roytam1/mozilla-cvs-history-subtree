@@ -130,6 +130,9 @@ CIRCNetwork.prototype.MAX_CONNECT_ATTEMPTS = 5;
 CIRCNetwork.prototype.getReconnectDelayMs = function() { return 15000; }
 CIRCNetwork.prototype.stayingPower = false;
 
+// "http" = use HTTP proxy, "none" = none, anything else = auto.
+CIRCNetwork.prototype.PROXY_TYPE_OVERRIDE = "";
+
 CIRCNetwork.prototype.TYPE = "IRCNetwork";
 
 CIRCNetwork.prototype.getURL =
@@ -211,6 +214,19 @@ function net_delayedConnect(eventProperties)
     {
         network.immediateConnect(eventProperties);
     };
+
+    if ((-1 != this.MAX_CONNECT_ATTEMPTS) &&
+        (this.connectAttempt >= this.MAX_CONNECT_ATTEMPTS))
+    {
+        this.state = NET_OFFLINE;
+
+        var ev = new CEvent("network", "error", this, "onError");
+        ev.debug = "Connection attempts exhausted, giving up.";
+        ev.errorCode = JSIRC_ERR_EXHAUSTED;
+        this.eventPump.addEvent(ev);
+
+        return;
+    }
 
     this.state = NET_WAITING;
     this.reconnectTimer = setTimeout(reconnectFn,
@@ -343,20 +359,6 @@ function net_doconnect(e)
 
     this.connectAttempt++;
     this.connectCandidate++;
-
-    if ((-1 != this.MAX_CONNECT_ATTEMPTS) &&
-        (this.connectAttempt > this.MAX_CONNECT_ATTEMPTS))
-    {
-        this.state = NET_OFFLINE;
-
-        ev = new CEvent ("network", "error", this, "onError");
-        ev.server = this;
-        ev.debug = "Connection attempts exhausted, giving up.";
-        ev.errorCode = JSIRC_ERR_EXHAUSTED;
-        this.eventPump.addEvent(ev);
-
-        return false;
-    }
 
     this.state = NET_CONNECTING; /* connection is considered "made" when server
                                   * sends a 001 message (see server.on001) */
@@ -674,7 +676,11 @@ function serv_connect (password)
         return false;
     }
 
-    if (this.connection.connect(this.hostname, this.port, null, true, this.isSecure, null))
+    var config = { isSecure: this.isSecure };
+    if (this.parent.PROXY_TYPE_OVERRIDE)
+        config.proxy = this.parent.PROXY_TYPE_OVERRIDE;
+
+    if (this.connection.connect(this.hostname, this.port, config))
     {
         var ev = new CEvent("server", "connect", this, "onConnect");
 
@@ -2271,36 +2277,50 @@ function serv_invite(e)
 CIRCServer.prototype.onNotice =
 function serv_notice (e)
 {
-    if (!("user" in e))
+    var targetName = e.params[1];
+
+    // Strip off one (and only one) user mode prefix.
+    for (var i = 0; i < this.userModes.length; i++)
+    {
+        if (targetName[0] == this.userModes[i].symbol)
+        {
+            targetName = targetName.substr(1);
+            break;
+        }
+    }
+
+    if (arrayIndexOf(this.channelTypes, targetName[0]) != -1)
+    {
+        e.channel = new CIRCChannel(this, null, targetName);
+        if ("user" in e)
+            e.user = new CIRCChanUser(e.channel, e.user.unicodeName);
+        e.replyTo = e.channel;
+        e.set = "channel";
+    }
+    else if (!("user" in e))
     {
         e.set = "network";
         e.destObject = this.parent;
         return true;
     }
-
-    if (arrayIndexOf(this.channelTypes, e.params[1][0]) != -1)
+    else
     {
-        e.channel = new CIRCChannel(this, null, e.params[1]);
-        e.user = new CIRCChanUser(e.channel, e.user.unicodeName);
-        e.replyTo = e.channel;
-        e.set = "channel";
+        e.set = "user";
+        e.replyTo = e.user; /* send replies to the user who sent the message */
     }
-    else if (e.params[2].search (/\x01.*\x01/i) != -1)
+
+    if (e.params[2].search (/\x01.*\x01/i) != -1)
     {
         e.type = "ctcp-reply";
         e.destMethod = "onCTCPReply";
         e.set = "server";
         e.destObject = this;
-        return true;
     }
     else
     {
-        e.set = "user";
-        e.replyTo = e.user; /* send replys to the user who sent the message */
+        e.msg = e.decodeParam(2, e.replyTo);
+        e.destObject = e.replyTo;
     }
-
-    e.msg = e.decodeParam(2, e.replyTo);
-    e.destObject = e.replyTo;
 
     return true;
 }
@@ -2308,11 +2328,23 @@ function serv_notice (e)
 CIRCServer.prototype.onPrivmsg =
 function serv_privmsg (e)
 {
-    /* setting replyTo provides a standard place to find the target for     */
-    /* replys associated with this event.                                   */
-    if (arrayIndexOf(this.channelTypes, e.params[1][0]) != -1)
+    var targetName = e.params[1];
+
+    // Strip off one (and only one) user mode prefix.
+    for (var i = 0; i < this.userModes.length; i++)
     {
-        e.channel = new CIRCChannel(this, null, e.params[1]);
+        if (targetName[0] == this.userModes[i].symbol)
+        {
+            targetName = targetName.substr(1);
+            break;
+        }
+    }
+
+    /* setting replyTo provides a standard place to find the target for     */
+    /* replies associated with this event.                                  */
+    if (arrayIndexOf(this.channelTypes, targetName[0]) != -1)
+    {
+        e.channel = new CIRCChannel(this, null, targetName);
         e.user = new CIRCChanUser(e.channel, e.user.unicodeName);
         e.replyTo = e.channel;
         e.set = "channel";
