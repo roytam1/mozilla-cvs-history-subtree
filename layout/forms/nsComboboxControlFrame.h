@@ -127,7 +127,13 @@ public:
 
   void PaintFocus(nsIRenderingContext& aRenderingContext, nsPoint aPt);
 
+  // XXXbz this is only needed to prevent the quirk percent height stuff from
+  // leaking out of the combobox.  We may be able to get rid of this as more
+  // things move to IsFrameOfType.
+  virtual nsIAtom* GetType() const;
+
   virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
+
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif

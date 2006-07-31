@@ -620,6 +620,10 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
 
   nsHTMLScrollFrame::WillReflow(aPresContext);
+
+  // XXXbz to make the ascent really correct, we should add our
+  // mComputedPadding.top to it (and subtract it from descent).  Need that
+  // because nsGfxScrollFrame just adds in the border....
   return nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize, state, aStatus);
 }
 

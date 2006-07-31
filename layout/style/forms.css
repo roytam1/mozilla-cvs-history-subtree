@@ -187,6 +187,17 @@ select > input[type="button"] {
   background-repeat: no-repeat !important;
   background-position: center !important;
   -moz-appearance: menulist-button;
+
+  /* Make sure to size correctly if the combobox has a non-auto height. */
+  height: 100% ! important;
+  -moz-box-sizing: border-box ! important;
+
+  /*
+    Make sure to align properly with the display frame.  Note that we
+    want the baseline of the combobox to match the baseline of the
+    display frame, so the dropmarker is what gets the vertical-align.
+  */
+  vertical-align: bottom !important;
 }
 
 select > input[type="button"]:active {
@@ -210,6 +221,9 @@ select:empty {
   white-space: nowrap;
   text-align: inherit;
   -moz-user-select: none;
+  /* Make sure to size correctly if the combobox has a non-auto height. */
+  height: 100% ! important;
+  -moz-box-sizing: border-box ! important;
 }
 
 select::-moz-scrolled-content {

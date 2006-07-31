@@ -667,19 +667,36 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
                                     aStatus);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // The display frame is going to be the right height and width at this
-  // point. Use its height as the button height.
-  nsRect buttonRect = mButtonFrame->GetRect();
-  nsRect displayRect = mDisplayFrame->GetRect();
-  buttonRect.height = displayRect.height;
-  buttonRect.y = displayRect.y;
+  // If we have a non-intrinsic computed height, our kids should have sized
+  // themselves properly on their own.
+  if (aReflowState.mComputedHeight == NS_INTRINSICSIZE) {
+    // The display frame is going to be the right height and width at this
+    // point. Use its height as the button height.
+    nsRect buttonRect = mButtonFrame->GetRect();
+    nsRect displayRect = mDisplayFrame->GetRect();
+    buttonRect.height = displayRect.height;
+    buttonRect.y = displayRect.y;
 
-  mButtonFrame->SetRect(buttonRect);
+    mButtonFrame->SetRect(buttonRect);
+  }
+#ifdef DEBUG
+  else {
+    NS_ASSERTION(mButtonFrame->GetSize().height ==
+                 mDisplayFrame->GetSize().height,
+                 "Different heights?");
+  }
+#endif
   
   return rv;
 }
 
 //--------------------------------------------------------------
+
+nsIAtom*
+nsComboboxControlFrame::GetType() const
+{
+  return nsLayoutAtoms::comboboxControlFrame; 
+}
 
 PRBool
 nsComboboxControlFrame::IsFrameOfType(PRUint32 aFlags) const
@@ -1082,7 +1099,12 @@ nsComboboxDisplayFrame::Reflow(nsPresContext*           aPresContext,
                                nsReflowStatus&          aStatus)
 {
   nsHTMLReflowState state(aReflowState);
-  state.mComputedHeight = mComboBox->mListControlFrame->GetHeightOfARow();
+  if (state.mComputedHeight == NS_INTRINSICSIZE) {
+    // Note that the only way we can have a computed height here is if the
+    // combobox had a specified height.  If it didn't, size based on what our
+    // rows look like, for lack of anything better.
+    state.mComputedHeight = mComboBox->mListControlFrame->GetHeightOfARow();
+  }
   state.mComputedWidth = mComboBox->mDisplayWidth -
     state.mComputedBorderPadding.LeftRight();
   if (state.mComputedWidth < 0) {
