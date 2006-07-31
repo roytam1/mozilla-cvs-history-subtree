@@ -387,17 +387,9 @@ function prefStartup() {
 
     } catch (ignore) { alert(ignore)}
 
-    // This is now deprecated, since we have XBL-defined elements to handle the list of registered pref ID elements. 
-    // var regPrefElements= new Array ( 'browserStartupHomepage', 'enableImages', 'ssr', 'sitessr','skey', 'dumpJS', 'UseProxy', 'networkProxyHTTP', 'networkProxyHTTP_Port', 'browserDisplayZoomUI', 'browserDisplayZoomContent'  );
-    // Now depends on the preferenceset.preferenceitem XBL implementation. 
-    // in minimo/content/bindings/preferences.css and preferences.xml
-
     syncPrefLoadDOM(document.getElementById("prefsInstance").prefArray);
 
-    syncUIZoom(); // from common.js 
-
     gToolbarButtonSelected.focus();
-
 }
 
 /*

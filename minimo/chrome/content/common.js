@@ -38,26 +38,6 @@
 
 
 
-/* XUL zoom in sync with pref service 
- * and also WARNING, this assumes styleSheets[1] and cssRules [1] is: 
- * defined in minimo.css and is: 
- * toolbar *, #appcontent *, * {
- * font-size: 10px;
- * padding: 0px ! important;
- *  margin: 0px ! important;
- * } 
- */
-
-function syncUIZoom() {
-  try
-  {
-    var currentUILevel=gPref.getIntPref("browser.display.zoomui");
-    document.styleSheets[1].cssRules[1].style.fontSize=currentUILevel+"px";
-  }
-  catch (e) {}
-}
-
-
 /* All these Bookmarks  to be renamed to Bookmarks*Stuff function name space */ 
 
 function loadBookmarks(storeStr) {

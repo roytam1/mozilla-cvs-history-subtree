@@ -179,15 +179,15 @@ pref("dom.disable_window_open_feature.status",      true);
 pref("dom.allow_scripts_to_close_windows",          false);
 
 pref("dom.disable_open_during_load",                false);
-pref("dom.popup_maximum",                           20);
-pref("dom.popup_allowed_events", "change click dblclick mouseup reset submit");
-pref("dom.disable_open_click_delay", 5000);
 
 // Disable popups from plugins by default
 //   0 = openAllowed
 //   1 = openControlled
 //   2 = openAbused
 pref("privacy.popups.disable_from_plugins", 2);
+
+// popups.policy 1=allow,2=reject
+pref("privacy.popups.policy",               2);
 
 pref("dom.event.contextmenu.enabled",       true);
 
@@ -513,10 +513,6 @@ pref("capability.policy.default.SOAPCall.invokeVerifySourceHeader", "allAccess")
 pref("plugin.override_internal_types", false);
 pref("plugin.expose_full_path", false); // if true navigator.plugins reveals full path
 
-// See bug 136985.  Gives embedders a pref to hook into to show
-// a popup blocker if they choose.
-pref("browser.popups.showPopupBlocker", true);
-
 // Pref to control whether the viewmanager code does double-buffering or not
 // See http://bugzilla.mozilla.org/show_bug.cgi?id=169483 for further details...
 pref("viewmanager.do_doublebuffering", true);
@@ -633,9 +629,6 @@ pref("skey.enabled", true);
 
 pref("browser.startup.homepage", "http://www.meer.net/~dougt/minimo_ce/start.html");
 
-pref("browser.display.zoomui",10);
-pref("browser.display.zoomcontent",10);
-
 pref("snav.enabled", true);
 pref("accessibility.tabfocus", 7);
 pref("accessibility.tabfocus_applies_to_xul", false);
@@ -682,3 +675,4 @@ pref("ui.homebar",true);
 pref("ui.fullscreen",false);
 
 
+pref("gps.enabled", true);

@@ -39,9 +39,8 @@
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://minimo/skin/minimo.css" type="text/css"?> 
 
-<?xul-overlay href="chrome://minimo/content/toolbars/toolbar-view.xul"?>
-<?xul-overlay href="chrome://minimo/content/toolbars/toolbar-rss.xul"?>
-<?xul-overlay href="chrome://minimo/content/toolbars/toolbar-search.xul"?>
+<?xul-overlay href="chrome://global/content/editMenuOverlay.xul"?>
+
 <?xul-overlay href="chrome://minimo/content/toolbars/toolbar-find.xul"?>
 <?xul-overlay href="chrome://minimo/content/toolbars/toolbar-pan.xul"?>
 <?xul-overlay href="chrome://minimo/content/toolbars/toolbar-download.xul"?>
@@ -154,6 +153,8 @@
     <command id="cmd_BrowserHomeBar"          oncommand="BrowserHomeBar()" />
     <command id="cmd_Pan"                     oncommand="BrowserPan()" />
     
+
+
     <!-- Keyboard Focus Handler Controls --> 
     <!-- This entire focusnavigation set is not XBLized yet, 
          Minimo JS code will look into it anyways.  --> 
