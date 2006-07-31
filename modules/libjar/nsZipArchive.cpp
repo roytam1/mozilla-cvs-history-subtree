@@ -1181,10 +1181,10 @@ PRInt32  nsZipArchive::SeekToItem(const nsZipItem* aItem, PRFileDesc* aFd)
       return ZIP_ERR_CORRUPT;
     }
 
-    ((nsZipItem*)aItem)->dataOffset += aItem->headerOffset +
-                                       ZIPLOCAL_SIZE +
-                                       xtoint(Local.filename_len) +
-                                       xtoint(Local.extrafield_len);
+    ((nsZipItem*)aItem)->dataOffset = aItem->headerOffset +
+                                      ZIPLOCAL_SIZE +
+                                      xtoint(Local.filename_len) +
+                                      xtoint(Local.extrafield_len);
     ((nsZipItem*)aItem)->hasDataOffset = PR_TRUE;
   }
 
