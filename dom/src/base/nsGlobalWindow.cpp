@@ -3237,8 +3237,7 @@ nsGlobalWindow::IsCallerChrome()
 
 // static
 void
-nsGlobalWindow::MakeScriptDialogTitle(const nsAString &aInTitle,
-                                      nsAString &aOutTitle)
+nsGlobalWindow::MakeScriptDialogTitle(nsAString &aOutTitle)
 {
   aOutTitle.Truncate();
 
@@ -3247,7 +3246,11 @@ nsGlobalWindow::MakeScriptDialogTitle(const nsAString &aInTitle,
 
   nsresult rv = NS_OK;
   NS_WARN_IF_FALSE(sSecMan, "Global Window has no security manager!");
-  if (sSecMan) {
+  
+  nsCOMPtr<nsIStringBundleService> stringBundleService =
+    do_GetService(kCStringBundleServiceCID);
+  
+  if (sSecMan && stringBundleService) {
     nsCOMPtr<nsIPrincipal> principal;
     rv = sSecMan->GetSubjectPrincipal(getter_AddRefs(principal));
 
@@ -3274,9 +3277,19 @@ nsGlobalWindow::MakeScriptDialogTitle(const nsAString &aInTitle,
               nsCAutoString prepath;
               fixedURI->GetPrePath(prepath);
 
-              aOutTitle = NS_ConvertUTF8toUTF16(prepath);
-              if (!aInTitle.IsEmpty()) {
-                aOutTitle.Append(NS_LITERAL_STRING(" - ") + aInTitle);
+              nsCOMPtr<nsIStringBundle> stringBundle;
+              stringBundleService->CreateBundle(kDOMBundleURL,
+                                                getter_AddRefs(stringBundle));
+              if (stringBundle) {
+                nsXPIDLString tempString;
+                const PRUnichar *formatStrings[1];
+                NS_ConvertUTF8toUTF16 ucsPrePath(prepath);
+                formatStrings[0] = ucsPrePath.get();
+                stringBundle->FormatStringFromName(NS_LITERAL_STRING("ScriptDlgHeading").get(),
+                                                   formatStrings, 1, getter_Copies(tempString));
+                if (tempString) {
+                  aOutTitle = tempString.get();
+                }
               }
             }
           }
@@ -3288,39 +3301,24 @@ nsGlobalWindow::MakeScriptDialogTitle(const nsAString &aInTitle,
     }
   }
 
-  if (aOutTitle.IsEmpty()) {
-    // We didn't find a host so use the generic title modifier.  Load
-    // the string to be prepended to titles for script
-    // confirm/alert/prompt boxes.
-
-    nsCOMPtr<nsIStringBundleService> stringBundleService =
-      do_GetService(kCStringBundleServiceCID);
-
-    if (stringBundleService) {
-      nsCOMPtr<nsIStringBundle> stringBundle;
-      stringBundleService->CreateBundle(kDOMBundleURL,
-                                        getter_AddRefs(stringBundle));
-
-      if (stringBundle) {
-        nsAutoString inTitle(aInTitle);
-        nsXPIDLString tempString;
-        const PRUnichar *formatStrings[1];
-        formatStrings[0] = inTitle.get();
-        stringBundle->FormatStringFromName(
-          NS_LITERAL_STRING("ScriptDlgTitle").get(),
-          formatStrings, 1, getter_Copies(tempString));
-        if (tempString) {
-          aOutTitle = tempString.get();
-        }
-      }
+  if (aOutTitle.IsEmpty() && stringBundleService) {
+    // We didn't find a host so use the generic heading
+    nsCOMPtr<nsIStringBundle> stringBundle;
+    stringBundleService->CreateBundle(kDOMBundleURL,
+                                      getter_AddRefs(stringBundle));
+    if (stringBundle) {
+      nsXPIDLString tempString;
+      stringBundle->GetStringFromName(NS_LITERAL_STRING("ScriptDlgGenericHeading").get(),
+                                      getter_Copies(tempString));
+      if (tempString)
+        aOutTitle = tempString.get();
     }
   }
 
   // Just in case
   if (aOutTitle.IsEmpty()) {
-    NS_WARNING("could not get ScriptDlgTitle string from string bundle");
-    aOutTitle.AssignLiteral("[Script] ");
-    aOutTitle.Append(aInTitle);
+    NS_WARNING("could not get ScriptDlgGenericHeading string from string bundle");
+    aOutTitle.AssignLiteral("[Script]");
   }
 }
 
@@ -3348,7 +3346,7 @@ nsGlobalWindow::Alert(const nsAString& aString)
   nsAutoString newTitle;
   const PRUnichar *title = nsnull;
   if (!IsCallerChrome()) {
-      MakeScriptDialogTitle(EmptyString(), newTitle);
+      MakeScriptDialogTitle(newTitle);
       title = newTitle.get();
   }
   else {
@@ -3382,7 +3380,7 @@ nsGlobalWindow::Confirm(const nsAString& aString, PRBool* aReturn)
   nsAutoString newTitle;
   const PRUnichar *title = nsnull;
   if (!IsCallerChrome()) {
-      MakeScriptDialogTitle(EmptyString(), newTitle);
+      MakeScriptDialogTitle(newTitle);
       title = newTitle.get();
   }
   else {
@@ -3428,7 +3426,7 @@ nsGlobalWindow::Prompt(const nsAString& aMessage, const nsAString& aInitial,
   // Test whether title needs to prefixed with [script]
   nsAutoString title;
   if (!IsCallerChrome()) {
-    MakeScriptDialogTitle(aTitle, title);
+    MakeScriptDialogTitle(title);
   } else {
     NS_WARNING("chrome shouldn't be calling prompt(), use the prompt "
                "service");
