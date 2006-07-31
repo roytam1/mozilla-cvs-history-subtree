@@ -1063,7 +1063,7 @@ ReflowCommandHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *entry,
 
 struct CantRenderReplacedElementEvent;
 
-class PresShell : public nsIPresShell, public nsIViewObserver,
+class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH, public nsIViewObserver,
                   public nsStubDocumentObserver,
                   public nsISelectionController, public nsIObserver,
                   public nsSupportsWeakReference
@@ -1630,6 +1630,32 @@ nsIPresShell::GetVerifyReflowFlags()
 #endif
 }
 
+void
+nsIPresShell_MOZILLA_1_8_BRANCH::AddWeakFrame(nsWeakFrame* aWeakFrame)
+{
+  if (aWeakFrame->GetFrame()) {
+    aWeakFrame->GetFrame()->AddStateBits(NS_FRAME_EXTERNAL_REFERENCE);
+  }
+  aWeakFrame->SetPreviousWeakFrame(mWeakFrames);
+  mWeakFrames = aWeakFrame;
+}
+
+void
+nsIPresShell_MOZILLA_1_8_BRANCH::RemoveWeakFrame(nsWeakFrame* aWeakFrame)
+{
+  if (mWeakFrames == aWeakFrame) {
+    mWeakFrames = aWeakFrame->GetPreviousWeakFrame();
+    return;
+  }
+  nsWeakFrame* nextWeak = mWeakFrames;
+  while (nextWeak && nextWeak->GetPreviousWeakFrame() != aWeakFrame) {
+    nextWeak = nextWeak->GetPreviousWeakFrame();
+  }
+  if (nextWeak) {
+    nextWeak->SetPreviousWeakFrame(aWeakFrame->GetPreviousWeakFrame());
+  }
+}
+
 //----------------------------------------------------------------------
 
 nsresult
@@ -1673,8 +1699,8 @@ PresShell::PresShell()
   new (this) nsFrameManager();
 }
 
-NS_IMPL_ISUPPORTS7(PresShell, nsIPresShell, nsIDocumentObserver,
-                   nsIViewObserver, nsISelectionController,
+NS_IMPL_ISUPPORTS8(PresShell, nsIPresShell, nsIPresShell_MOZILLA_1_8_BRANCH,
+                   nsIDocumentObserver, nsIViewObserver, nsISelectionController,
                    nsISelectionDisplay, nsIObserver, nsISupportsWeakReference)
 
 PresShell::~PresShell()
@@ -1952,6 +1978,11 @@ PresShell::Destroy()
   // Destroy the frame manager. This will destroy the frame hierarchy
   mFrameConstructor->WillDestroyFrameTree();
   FrameManager()->Destroy();
+
+  NS_WARN_IF_FALSE(!mWeakFrames, "Weak frames alive after destroying FrameManager");
+  while (mWeakFrames) {
+    mWeakFrames->Clear(this);
+  }
 
   // Let the style set do its cleanup.
   mStyleSet->Shutdown(mPresContext);
@@ -3891,6 +3922,16 @@ PresShell::ClearFrameRefs(nsIFrame* aFrame)
       mCurrentEventContentStack.ReplaceObjectAt(currentEventContent, i);
       mCurrentEventFrameStack.ReplaceElementAt(nsnull, i);
     }
+  }
+
+  nsWeakFrame* weakFrame = mWeakFrames;
+  while (weakFrame) {
+    nsWeakFrame* prev = weakFrame->GetPreviousWeakFrame();
+    if (weakFrame->GetFrame() == aFrame) {
+      // This removes weakFrame from mWeakFrames.
+      weakFrame->Clear(this);
+    }
+    weakFrame = prev;
   }
 
   return NS_OK;
