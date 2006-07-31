@@ -44,6 +44,9 @@
 #include "nsSVGLengthList.h"
 #include "nsISVGSVGElement.h"
 #include "nsSVGCoordCtxProvider.h"
+#include "nsIDocument.h"
+#include "nsIFrame.h"
+#include "nsISVGChildFrame.h"
 
 typedef nsSVGStylableElement nsSVGTSpanElementBase;
 
@@ -262,8 +265,38 @@ NS_IMETHODIMP nsSVGTSpanElement::GetNumberOfChars(PRInt32 *_retval)
 /* float getComputedTextLength (); */
 NS_IMETHODIMP nsSVGTSpanElement::GetComputedTextLength(float *_retval)
 {
-  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetComputedTextLength");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsIDOMSVGRect> bbox;
+
+  nsIDocument* doc = GetCurrentDoc();
+  if (!doc) return NS_ERROR_FAILURE;
+  nsIPresShell *presShell = doc->GetShellAt(0);
+  NS_ASSERTION(presShell, "no presShell");
+  if (!presShell) return NS_ERROR_FAILURE;
+
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
+
+  NS_ASSERTION(frame, "can't get bounding box for element without frame");
+
+  if (frame) {
+    nsISVGChildFrame* svgframe;
+    frame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&svgframe);
+    NS_ASSERTION(svgframe, "wrong frame type");
+    if (svgframe) {
+      svgframe->SetMatrixPropagation(PR_FALSE);
+      svgframe->NotifyCanvasTMChanged();
+      nsresult rv = svgframe->GetBBox(getter_AddRefs(bbox));
+      svgframe->SetMatrixPropagation(PR_TRUE);
+      svgframe->NotifyCanvasTMChanged();
+    }
+  }
+
+  if (bbox)
+    bbox->GetWidth(_retval);
+  else
+    *_retval = 0;
+  
+  return NS_OK;
 }
 
 /* float getSubStringLength (in unsigned long charnum, in unsigned long nchars); */
