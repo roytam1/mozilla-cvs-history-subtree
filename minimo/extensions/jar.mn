@@ -31,7 +31,11 @@ history.jar:
 %   overlay chrome://minimo/content/minimo.xul chrome://history/content/homebaseOverlay.xul
     content/history/homebaseOverlay.xul  (history/content/homebaseOverlay.xul)
 	content/history/favicon.png          (history/content/favicon.png)
-
+    content/history/historyview.js       (history/content/historyview.js)
+    content/history/historyview.xhtml    (history/content/historyview.xhtml)
+    content/history/history_template.xml (history/content/history_template.xml)
+    content/history/history.css          (history/content/history.css) 
+    
 map.jar: 
 %   content map                   %content/map/
 %   overlay chrome://minimo/content/minimo.xul chrome://map/content/homebaseOverlay.xul
