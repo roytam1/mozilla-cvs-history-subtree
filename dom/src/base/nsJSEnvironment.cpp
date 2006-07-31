@@ -78,6 +78,7 @@
 #include "nsIAtom.h"
 #include "nsContentUtils.h"
 #include "jscntxt.h"
+#include "jsdbgapi.h"
 #include "nsIDOMGCParticipant.h"
 
 // For locale aware string methods
