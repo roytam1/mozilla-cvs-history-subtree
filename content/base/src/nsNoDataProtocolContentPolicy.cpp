@@ -65,8 +65,7 @@ nsNoDataProtocolContentPolicy::ShouldLoad(PRUint32 aContentType,
   if (aContentType == TYPE_OTHER ||
       aContentType == TYPE_SCRIPT ||
       aContentType == TYPE_IMAGE ||
-      aContentType == TYPE_STYLESHEET ||
-      aContentType == TYPE_OBJECT) {
+      aContentType == TYPE_STYLESHEET) {
     nsCAutoString scheme;
     aContentLocation->GetScheme(scheme);
     // Fast-track for the common cases
