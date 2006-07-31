@@ -652,6 +652,7 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
 
   // Now compute the height we want to have
   nscoord visibleHeight = GetScrolledFrame()->GetSize().height;
+
   mNumDisplayRows = kMaxDropDownRows;
   if (visibleHeight > mNumDisplayRows * heightOfARow) {
     visibleHeight = mNumDisplayRows * heightOfARow;
@@ -691,6 +692,9 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
     // Note: no need to apply min/max constraints, since we have no such
     // rules applied to the combobox dropdown.
     // XXXbz this is ending up too big!!  Figure out why.
+  } else  if (visibleHeight == 0) {
+    // Looks like we have no options.  Just size us to a single row height.
+    state.mComputedHeight = heightOfARow;
   }
 
   nsHTMLScrollFrame::WillReflow(aPresContext);
