@@ -471,6 +471,8 @@ pref("browser.contentHandlers.types.1.type", "application/vnd.mozilla.maybe.feed
 pref("browser.contentHandlers.types.2.title", "chrome://browser-region/locale/region.properties");
 pref("browser.contentHandlers.types.2.uri", "chrome://browser-region/locale/region.properties");
 pref("browser.contentHandlers.types.2.type", "application/vnd.mozilla.maybe.feed");
+
+pref("browser.feeds.handler", "ask");
 #endif
 
 #ifdef MOZ_SAFE_BROWSING
