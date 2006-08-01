@@ -541,7 +541,12 @@ nsSVGGradientFrame::GetGradientTransform(nsIDOMSVGMatrix **aGradientTransform,
   } else {
     nsIFrame *frame = nsnull;
     CallQueryInterface(aSource, &frame);
-    mSourceContent = frame->GetContent();
+
+    nsIAtom *callerType = frame->GetType();
+    if (callerType == nsLayoutAtoms::svgGlyphFrame)
+      mSourceContent = frame->GetContent()->GetParent();
+    else
+      mSourceContent = frame->GetContent();
   }
 
   if (!bboxTransform)
