@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set sw=4 ts=8 et tw=80:
+ * vim: set sw=4 ts=8 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -478,9 +478,9 @@ PeekChar(JSTokenStream *ts)
 }
 
 /*
- * Peek n chars ahead into ts.  Return true if n chars were read, false if there
- * weren't enough characters in the input stream.  This function cannot be used
- * to peek into or past a newline.
+ * Peek n chars ahead into ts.  Return true if n chars were read, false if
+ * there weren't enough characters in the input stream.  This function cannot
+ * be used to peek into or past a newline.
  */
 static JSBool
 PeekChars(JSTokenStream *ts, intN n, jschar *cp)
