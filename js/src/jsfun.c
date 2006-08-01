@@ -2077,7 +2077,7 @@ js_NewFunction(JSContext *cx, JSObject *funobj, JSNative native, uintN nargs,
             return NULL;
     }
 
-    /* Protect fun from any potential last-ditch GCs. */
+    /* Protect fun from any potential GC callback. */
     JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(funobj), &tvr);
 
     /*
