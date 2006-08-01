@@ -1225,7 +1225,7 @@ Engine.prototype = {
     if (ss.getEngineByName(aEngine.name)) {
       if (aEngine._confirm)
         onError("error_duplicate_engine_msg", "error_invalid_engine_title");
-        
+
       LOG("_onLoad: duplicate engine found, bailing");
       return;
     }
@@ -2150,6 +2150,9 @@ function SearchService() {
 SearchService.prototype = {
   _engines: { },
   _sortedEngines: null,
+  // Whether or not we need to write the order of engines on shutdown. This
+  // needs to happen anytime _sortedEngines is modified after initial startup. 
+  _needToSetOrderPrefs: false,
 
   _init: function() {
     engineMetadataService.init();
@@ -2219,8 +2222,10 @@ SearchService.prototype = {
       // has already been built (i.e. if this._sortedEngines is non-null). If
       // it hasn't, we're still loading engines from disk, and will build the
       // sorted engine list when that initial loading is done.
-      if (this._sortedEngines)
+      if (this._sortedEngines) {
         this._sortedEngines.push(aEngine);
+        this._needToSetOrderPrefs = true;
+      }
       notifyAction(aEngine, SEARCH_ENGINE_ADDED);
     }
 
@@ -2308,8 +2313,12 @@ SearchService.prototype = {
   },
 
   _saveSortedEngineList: function SRCH_SVC_saveSortedEngineList() {
+    // We only need to write the prefs. if something has changed.
+    if (!this._needToSetOrderPrefs)
+      return;
+
     var engines = this._getSortedEngines(true);
-    var values = []; 
+    var values = [];
     var names = [];
 
     for (var i = 0; i < engines.length; ++i) {
@@ -2336,11 +2345,17 @@ SearchService.prototype = {
       if (orderNumber && !this._sortedEngines[orderNumber-1]) {
         this._sortedEngines[orderNumber-1] = engine;
         addedEngines[engine.name] = engine;
+      } else {
+        // We need to call _saveSortedEngines so this gets sorted out.
+        this._needToSetOrderPrefs = true;
       }
     }
 
     // Filter out any nulls for engines that may have been removed
-    this._sortedEngines = this._sortedEngines.filter(function(a) { return !!a; });
+    var filteredEngines = this._sortedEngines.filter(function(a) { return !!a; });
+    if (this._sortedEngines.length != filteredEngines.length)
+      this._needToSetOrderPrefs = true;
+    this._sortedEngines = filteredEngines;
 
     // Array for the remaining engines, alphabetically sorted
     var alphaEngines = [];
@@ -2613,6 +2628,9 @@ SearchService.prototype = {
       delete this._engines[engineToRemove.name];
 
       notifyAction(engineToRemove, SEARCH_ENGINE_REMOVED);
+
+      // Since we removed an engine, we need to update the preferences.
+      this._needToSetOrderPrefs = true;
     }
   },
 
@@ -2633,6 +2651,9 @@ SearchService.prototype = {
     this._sortedEngines.splice(aNewIndex, 0, movedEngine);
 
     notifyAction(engine, SEARCH_ENGINE_CHANGED);
+
+    // Since we moved an engine, we need to update the preferences.
+    this._needToSetOrderPrefs = true;
   },
 
   restoreDefaultEngines: function SRCH_SVC_resetDefaultEngines() {
