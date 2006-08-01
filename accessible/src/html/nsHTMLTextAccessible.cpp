@@ -201,6 +201,17 @@ nsHTMLLIAccessible::nsHTMLLIAccessible(nsIDOMNode *aDOMNode, nsIWeakReference* a
   }
 }
 
+NS_IMETHODIMP nsHTMLLIAccessible::Shutdown()
+{
+  if (mBulletAccessible) {
+    // Ensure that weak pointer to this is nulled out
+    mBulletAccessible->Shutdown();
+  }
+  nsresult rv = nsAccessibleWrap::Shutdown();
+  mBulletAccessible = nsnull;
+  return rv;
+}
+
 NS_IMETHODIMP nsHTMLLIAccessible::GetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
 {
   nsresult rv = nsAccessibleWrap::GetBounds(x, y, width, height);
@@ -226,6 +237,7 @@ void nsHTMLLIAccessible::CacheChildren(PRBool aWalkAnonContent)
 
   if (mAccChildCount == eChildCountUninitialized) {
     SetFirstChild(mBulletAccessible);
+    mBulletAccessible->SetParent(this);
     mAccChildCount = 1;
     nsAccessibleTreeWalker walker(mWeakShell, mDOMNode, aWalkAnonContent);
     walker.mState.frame = GetFrame();
@@ -245,7 +257,7 @@ void nsHTMLLIAccessible::CacheChildren(PRBool aWalkAnonContent)
 
 nsHTMLListBulletAccessible::nsHTMLListBulletAccessible(nsIDOMNode* aDomNode, 
   nsIWeakReference* aShell, nsIFrame *aFrame, const nsAString& aBulletText): 
-  nsHTMLTextAccessible(aDomNode, aShell, aFrame), mBulletText(aBulletText)
+  nsHTMLTextAccessible(aDomNode, aShell, aFrame), mWeakParent(nsnull), mBulletText(aBulletText)
 {
 }
 
@@ -260,6 +272,7 @@ NS_IMETHODIMP nsHTMLListBulletAccessible::GetUniqueID(void **aUniqueID)
 NS_IMETHODIMP nsHTMLListBulletAccessible::Shutdown()
 {
   mBulletText.Truncate();
+  mWeakParent = nsnull;
   return nsHTMLTextAccessible::Shutdown();
 }
 

@@ -1765,7 +1765,7 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
   // Please leave this in for now, it's a convenient debugging method
   nsAutoString name;
   aNode->GetLocalName(name);
-  if (name.LowerCaseEqualsLiteral("wizardpage"))
+  if (name.LowerCaseEqualsLiteral("span"))
     printf("## aaronl debugging tag name\n");
 
   nsAutoString attrib;
