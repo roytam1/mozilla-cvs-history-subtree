@@ -325,3 +325,8 @@ catch (exc) {
     logMessage( "error in init sequence", exc );
 }
 
+// some string resources:
+var g_privateItemTitle = getWcapBundle().GetStringFromName("privateItem.title");
+var g_busyItemTitle = getWcapBundle().GetStringFromName("busyItem.title");
+var g_busyItemUuidPrefix = ("uuid" + getTime().icalString);
+

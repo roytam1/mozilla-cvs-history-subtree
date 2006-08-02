@@ -37,10 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var g_privateItemTitle = getWcapBundle().GetStringFromName("privateItem.title");
-var g_busyItemTitle = getWcapBundle().GetStringFromName("busyItem.title");
-var g_busyItemUuidPrefix = ("uuid" + getTime().icalString);
-
 // xxx todo: just to avoid registration errors, how to do better?
 var calWcapCalendar;
 if (!calWcapCalendar) {
