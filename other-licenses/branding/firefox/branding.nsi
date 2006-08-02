@@ -42,8 +42,8 @@
 # should not contain release that may be in the BrandFullName (e.g. Beta 1, etc.)
 !define BrandFullNameInternal "Mozilla Firefox"
 !define CompanyName           "Mozilla"
-!define URLInfoAbout          "http://www.mozilla.org/"
-!define URLUpdateInfo         "http://www.mozilla.org/products/firefox/"
+!define URLInfoAbout          "http://www.mozilla.com/${AB_CD}"
+!define URLUpdateInfo         "http://www.mozilla.com/${AB_CD}/firefox"
 !define SurveyURL             "https://survey.mozilla.com/1/Mozilla%20Firefox/${AppVersion}/${AB_CD}/exit.html"
 
 # Set to 75 for Firefox 2.0 beta releases and should be changed to 10 for the
