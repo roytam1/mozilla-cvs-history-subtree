@@ -453,7 +453,7 @@ nsDOMAttribute::SetPrefix(const nsAString& aPrefix)
     }
   }
 
-  mNodeInfo.swap(newNodeInfo);
+  newNodeInfo.swap(mNodeInfo);
 
   return NS_OK;
 }
