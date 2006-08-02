@@ -159,14 +159,14 @@ private:
   // Handle a new table line of the form [table-name #.####].  We create the
   // table if it doesn't exist and set the aTableName, aUpdateStatement,
   // and aDeleteStatement.
-  nsresult ProcessNewTable(const nsDependentCSubstring& aLine,
+  nsresult ProcessNewTable(const nsCSubstring& aLine,
                            nsCString* aTableName,
                            mozIStorageStatement** aUpdateStatement,
                            mozIStorageStatement** aDeleteStatement);
 
   // Handle an add or remove line.  We execute additional update or delete
   // statements.
-  nsresult ProcessUpdateTable(const nsDependentCSubstring& aLine,
+  nsresult ProcessUpdateTable(const nsCSubstring& aLine,
                               const nsCString& aTableName,
                               mozIStorageStatement* aUpdateStatement,
                               mozIStorageStatement* aDeleteStatement);
@@ -249,6 +249,48 @@ nsUrlClassifierDBServiceWorker::Exists(const nsACString& tableName,
   return NS_OK;
 }
 
+// We get a comma separated list of table names.  For each table that doesn't
+// exist, we return it in a comma separated list via the callback.
+NS_IMETHODIMP
+nsUrlClassifierDBServiceWorker::CheckTables(const nsACString & tableNames,
+                                            nsIUrlClassifierCallback *c)
+{
+  nsresult rv = OpenDb();
+  if (NS_FAILED(rv)) {
+    NS_ERROR("Unable to open database");
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCAutoString changedTables;
+
+  // tablesNames is a comma separated list, so get each table name out for
+  // checking.
+  PRUint32 cur = 0;
+  PRInt32 next;
+  while (cur < tableNames.Length()) {
+    next = tableNames.FindChar(',', cur);
+    if (kNotFound == next) {
+      next = tableNames.Length();
+    }
+    const nsCSubstring &tableName = Substring(tableNames, cur, next - cur);
+    cur = next + 1;
+
+    nsCString dbTableName;
+    GetDbTableName(tableName, &dbTableName);
+    PRBool exists;
+    nsresult rv = mConnection->TableExists(dbTableName, &exists);
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (!exists) {
+      if (changedTables.Length() > 0)
+        changedTables.Append(",");
+      changedTables.Append(tableName);
+    }
+  }
+  
+  c->HandleEvent(changedTables);
+  return NS_OK;
+}
+
 // Do a batch update of the database.  After we complete processing a table,
 // we call the callback with the table line.
 NS_IMETHODIMP
@@ -277,8 +319,7 @@ nsUrlClassifierDBServiceWorker::UpdateTables(const nsACString& updateString,
   while(cur < updateString.Length() &&
         (next = updateString.FindChar('\n', cur)) != kNotFound) {
     count ++;
-    const nsDependentCSubstring &line = Substring(updateString,
-                                                  cur, next - cur);
+    const nsCSubstring &line = Substring(updateString, cur, next - cur);
     cur = next + 1; // prepare for next run
 
     // Skip blank lines
@@ -344,7 +385,7 @@ nsUrlClassifierDBServiceWorker::Update(const nsACString& chunk)
   } else {
     PRUint32 numTables = mTableUpdateLines.Length();
     if (numTables > 0) {
-      const nsDependentCSubstring &line = Substring(
+      const nsCSubstring &line = Substring(
               mTableUpdateLines[numTables - 1], 0);
 
       rv = ProcessNewTable(line, &dbTableName,
@@ -358,8 +399,7 @@ nsUrlClassifierDBServiceWorker::Update(const nsACString& chunk)
   PRInt32 next;
   while(cur < updateString.Length() &&
         (next = updateString.FindChar('\n', cur)) != kNotFound) {
-    const nsDependentCSubstring &line = Substring(updateString,
-                                                  cur, next - cur);
+    const nsCSubstring &line = Substring(updateString, cur, next - cur);
     cur = next + 1; // prepare for next run
 
     // Skip blank lines
@@ -438,7 +478,7 @@ nsUrlClassifierDBServiceWorker::CloseDb()
 
 nsresult
 nsUrlClassifierDBServiceWorker::ProcessNewTable(
-                                    const nsDependentCSubstring& aLine,
+                                    const nsCSubstring& aLine,
                                     nsCString* aDbTableName,
                                     mozIStorageStatement** aUpdateStatement,
                                     mozIStorageStatement** aDeleteStatement)
@@ -450,7 +490,7 @@ nsUrlClassifierDBServiceWorker::ProcessNewTable(
     return NS_ERROR_FAILURE;
   }
 
-  const nsDependentCSubstring &tableName = Substring(aLine, 1, spacePos - 1);
+  const nsCSubstring &tableName = Substring(aLine, 1, spacePos - 1);
   GetDbTableName(tableName, aDbTableName);
 
   // Create the table
@@ -479,7 +519,7 @@ nsUrlClassifierDBServiceWorker::ProcessNewTable(
 
 nsresult
 nsUrlClassifierDBServiceWorker::ProcessUpdateTable(
-                                   const nsDependentCSubstring& aLine,
+                                   const nsCSubstring& aLine,
                                    const nsCString& aTableName,
                                    mozIStorageStatement* aUpdateStatement,
                                    mozIStorageStatement* aDeleteStatement)
@@ -502,8 +542,8 @@ nsUrlClassifierDBServiceWorker::ProcessUpdateTable(
 
   if ('+' == op && spacePos != kNotFound) {
     // Insert operation of the form "+KEY\tVALUE"
-    const nsDependentCSubstring &key = Substring(aLine, 1, spacePos - 1);
-    const nsDependentCSubstring &value = Substring(aLine, spacePos + 1);
+    const nsCSubstring &key = Substring(aLine, 1, spacePos - 1);
+    const nsCSubstring &value = Substring(aLine, spacePos + 1);
     aUpdateStatement->BindUTF8StringParameter(0, key);
     aUpdateStatement->BindUTF8StringParameter(1, value);
 
@@ -513,11 +553,11 @@ nsUrlClassifierDBServiceWorker::ProcessUpdateTable(
     // Remove operation of the form "-KEY"
     if (spacePos == kNotFound) {
       // No trailing tab
-      const nsDependentCSubstring &key = Substring(aLine, 1);
+      const nsCSubstring &key = Substring(aLine, 1);
       aDeleteStatement->BindUTF8StringParameter(0, key);
     } else {
       // With trailing tab
-      const nsDependentCSubstring &key = Substring(aLine, 1, spacePos - 1);
+      const nsCSubstring &key = Substring(aLine, 1, spacePos - 1);
       aDeleteStatement->BindUTF8StringParameter(0, key);
     }
 
@@ -700,6 +740,38 @@ nsUrlClassifierDBService::Exists(const nsACString& tableName,
   NS_ENSURE_SUCCESS(rv, rv);
 
   return proxy->Exists(tableName, key, proxyCallback);
+}
+
+NS_IMETHODIMP
+nsUrlClassifierDBService::CheckTables(const nsACString & tableNames,
+                                      nsIUrlClassifierCallback *c)
+{
+  EnsureThreadStarted();
+
+  nsCOMPtr<nsIUrlClassifierCallback> wrapper =
+      new nsUrlClassifierCallbackWrapper(c);
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
+
+  nsresult rv;
+  // The proxy callback uses the current thread.
+  nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
+  rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+                            NS_GET_IID(nsIUrlClassifierCallback),
+                            wrapper,
+                            PROXY_ASYNC,
+                            getter_AddRefs(proxyCallback));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // The actual worker uses the background thread.
+  nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
+  rv = NS_GetProxyForObject(gEventQ,
+                            NS_GET_IID(nsIUrlClassifierDBServiceWorker),
+                            mWorker,
+                            PROXY_ASYNC,
+                            getter_AddRefs(proxy));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return proxy->CheckTables(tableNames, proxyCallback);
 }
 
 NS_IMETHODIMP
