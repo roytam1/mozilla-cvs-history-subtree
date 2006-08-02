@@ -402,10 +402,10 @@ const long NSFindPanelActionSetFindString = 7;
   if (inAllowPopups)
     piWindow = do_QueryInterface(contentWindow);
   nsAutoPopupStatePusher popupStatePusher(piWindow, openAllowed);
-  
+
   nsAutoString specStr;
   [urlSpec assignTo_nsAString:specStr];
-  
+
   nsCOMPtr<nsIURI> referrerURI;
   if ( referrer )
     NS_NewURI(getter_AddRefs(referrerURI), [referrer UTF8String]);
@@ -420,6 +420,9 @@ const long NSFindPanelActionSetFindString = 7;
   if (flags & NSLoadFlagsBypassCacheAndProxy) {
     navFlags |= nsIWebNavigation::LOAD_FLAGS_BYPASS_CACHE | 
                 nsIWebNavigation::LOAD_FLAGS_BYPASS_PROXY;
+  }
+  if (flags & NSLoadFlagsAllowThirdPartyFixup) {
+    navFlags |= nsIWebNavigation::LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP;
   }
 
   nsresult rv = nav->LoadURI(specStr.get(), navFlags, referrerURI, nsnull, nsnull);
