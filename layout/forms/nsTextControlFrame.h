@@ -219,12 +219,6 @@ public: //for methods who access nsTextControlFrame directly
   /* called to free up native keybinding services */
   static NS_HIDDEN_(void) ShutDown();
 
-  enum SpellcheckDefaultState {
-    SpellcheckNone = 0,
-    SpellcheckMultiLineOnly = 1,
-    SpellcheckAllTextFields = 2
-  };
-
 protected:
 
   /**
@@ -303,10 +297,6 @@ private:
                                 nsIDOMNode *aEndNode, PRInt32 aEndOffset);
   nsresult SelectAllContents();
   nsresult SetSelectionEndPoints(PRInt32 aSelStart, PRInt32 aSelEnd);
-
-  void SetEnableRealTimeSpell(PRBool aEnabled);
-  void SyncRealTimeSpell();
-  static int PR_CALLBACK RealTimeSpellCallback(const char* aPref, void* aContext);
 
 private:
   nsCOMPtr<nsIEditor> mEditor;

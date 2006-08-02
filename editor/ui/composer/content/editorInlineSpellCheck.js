@@ -52,7 +52,7 @@ var InlineSpellChecker =
   {
     this.editor = editor;
     this.inlineSpellChecker = editor.inlineSpellChecker;
-    this.inlineSpellChecker.enableRealTimeSpell = enable;
+    this.editor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(enable);
   },
 
   checkDocument : function(doc)

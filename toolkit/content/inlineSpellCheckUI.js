@@ -118,7 +118,7 @@ var InlineSpellCheckerUI = {
   set enabled(isEnabled)
   {
     if (this.mInlineSpellChecker)
-      this.mInlineSpellChecker.enableRealTimeSpell = isEnabled;
+      this.mEditor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(isEnabled);
   },
 
   // returns true if the given event is over a misspelled word
@@ -273,8 +273,7 @@ var InlineSpellCheckerUI = {
   // callback for enabling or disabling spellchecking
   toggleEnabled: function()
   {
-    this.mInlineSpellChecker.enableRealTimeSpell =
-        ! this.mInlineSpellChecker.enableRealTimeSpell;
+    this.mEditor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(!this.mInlineSpellChecker.enableRealTimeSpell);
   },
 
   // callback for adding the current misspelling to the user-defined dictionary

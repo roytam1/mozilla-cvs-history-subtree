@@ -2099,14 +2099,14 @@ function addRecipientsToIgnoreList(aAddressesToAdd)
 function StopInlineSpellChecker()
 {
   if (InlineSpellChecker.inlineSpellChecker)
-    InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell = false;
+    InlineSpellChecker.editor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(false);
 }
 
 function ToggleInlineSpellChecker(target)
 {
   if (InlineSpellChecker.inlineSpellChecker)
   {
-    InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell = !InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell;
+    InlineSpellChecker.editor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(!InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell);
 
     if (InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
       InlineSpellChecker.checkDocument(window.content.document);

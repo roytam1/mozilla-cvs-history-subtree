@@ -49,12 +49,14 @@
 #include "nsCSSDeclaration.h"
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
+#include "nsIDOMHTMLBodyElement.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMAttr.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMDocumentFragment.h"
+#include "nsIDOMNSHTMLDocument.h"
 #include "nsIDOMNSHTMLElement.h"
 #include "nsIDOMElementCSSInlineStyle.h"
 #include "nsIDOMWindow.h"
@@ -140,6 +142,8 @@
 #include "nsCOMArray.h"
 #include "nsNodeInfoManager.h"
 
+#include "nsIEditor.h"
+
 // XXX todo: add in missing out-of-memory checks
 
 //----------------------------------------------------------------------
@@ -195,7 +199,7 @@ nsGenericHTMLElement::Init(nsINodeInfo *aNodeInfo)
 #endif
 
 
-class nsGenericHTMLElementTearoff : public nsIDOMNSHTMLElement,
+class nsGenericHTMLElementTearoff : public nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH,
                                     public nsIDOMElementCSSInlineStyle
 {
   NS_DECL_ISUPPORTS
@@ -212,6 +216,7 @@ class nsGenericHTMLElementTearoff : public nsIDOMNSHTMLElement,
   }
 
   NS_FORWARD_NSIDOMNSHTMLELEMENT(mElement->)
+  NS_FORWARD_NSIDOMNSHTMLELEMENT_MOZILLA_1_8_BRANCH(mElement->)
   NS_FORWARD_NSIDOMELEMENTCSSINLINESTYLE(mElement->)
 
 private:
@@ -224,6 +229,7 @@ NS_IMPL_RELEASE(nsGenericHTMLElementTearoff)
 
 NS_INTERFACE_MAP_BEGIN(nsGenericHTMLElementTearoff)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIDOMElementCSSInlineStyle)
 NS_INTERFACE_MAP_END_AGGREGATED(mElement)
 
@@ -247,6 +253,10 @@ nsGenericHTMLElement::DOMQueryInterface(nsIDOMHTMLElement *aElement,
     inst = NS_STATIC_CAST(nsIDOMHTMLElement *, aElement);
   } else if (aIID.Equals(NS_GET_IID(nsIDOMNSHTMLElement))) {
     inst = NS_STATIC_CAST(nsIDOMNSHTMLElement *,
+                          new nsGenericHTMLElementTearoff(this));
+    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
+  } else if (aIID.Equals(NS_GET_IID(nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH))) {
+    inst = NS_STATIC_CAST(nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH *,
                           new nsGenericHTMLElementTearoff(this));
     NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
   } else if (aIID.Equals(NS_GET_IID(nsIDOMElementCSSInlineStyle))) {
@@ -1310,6 +1320,89 @@ nsGenericHTMLElement::ScrollIntoView(PRBool aTop)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsGenericHTMLElement::GetSpellcheck(PRBool* aSpellcheck)
+{
+  NS_ENSURE_ARG_POINTER(aSpellcheck);
+  *aSpellcheck = PR_FALSE;              // Default answer is to not spellcheck
+
+  // Has the state has been explicitly set?
+  nsIContent* content;
+  for (content = this; content; content = content->GetParent()) {
+    if (content->IsContentOfType(nsIContent::eHTML)) {
+      nsAutoString target;
+      content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::spellcheck, target);
+      if (target.EqualsLiteral("true")) {
+        *aSpellcheck = PR_TRUE;
+        return NS_OK;
+      }
+      if (target.EqualsLiteral("false")) {
+        *aSpellcheck = PR_FALSE;
+        return NS_OK;
+      }
+    }
+  }
+
+  // Is this a chrome element?
+  if (nsContentUtils::IsChromeDoc(GetOwnerDoc())) {
+    return NS_OK;                       // Not spellchecked by default
+  }
+
+  // Is this the actual body of the current document?
+  if (IsCurrentBodyElement()) {
+    // Is designMode on?
+    nsCOMPtr<nsIDOMNSHTMLDocument> nsHTMLDocument =
+      do_QueryInterface(GetCurrentDoc());
+    if (!nsHTMLDocument) {
+      return PR_FALSE;
+    }
+
+    nsAutoString designMode;
+    nsHTMLDocument->GetDesignMode(designMode);
+    *aSpellcheck = designMode.EqualsLiteral("on");
+    return NS_OK;
+  }
+
+  // Is this element editable?
+  nsCOMPtr<nsIFormControl> formControl = do_QueryInterface(this);
+  if (!formControl) {
+    return NS_OK;                       // Not spellchecked by default
+  }
+
+  // Is this a multiline plaintext input?
+  PRInt32 controlType = formControl->GetType();
+  if (controlType == NS_FORM_TEXTAREA) {
+    *aSpellcheck = PR_TRUE;             // Spellchecked by default
+    return NS_OK;
+  }
+
+  // Is this anything other than a single-line plaintext input?
+  if (controlType != NS_FORM_INPUT_TEXT) {
+    return NS_OK;                       // Not spellchecked by default
+  }
+
+  // Does the user want single-line inputs spellchecked by default?
+  // NOTE: Do not reflect a pref value of 0 back to the DOM getter.
+  // The web page should not know if the user has disabled spellchecking.
+  // We'll catch this in the editor itself.
+  PRInt32 spellcheckLevel =
+    nsContentUtils::GetIntPref("layout.spellcheckDefault", 1);
+  if (spellcheckLevel == 2) {           // "Spellcheck multi- and single-line"
+    *aSpellcheck = PR_TRUE;             // Spellchecked by default
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsGenericHTMLElement::SetSpellcheck(PRBool aSpellcheck)
+{
+  if (aSpellcheck) {
+    return SetAttrHelper(nsHTMLAtoms::spellcheck, NS_LITERAL_STRING("true"));
+  }
+
+  return SetAttrHelper(nsHTMLAtoms::spellcheck, NS_LITERAL_STRING("false"));
+}
 
 PRBool
 nsGenericHTMLElement::InNavQuirksMode(nsIDocument* aDoc)
@@ -1822,7 +1915,15 @@ nsGenericHTMLElement::SetAttrAndNotify(PRInt32 aNamespaceID,
     }
   }
   
-  if (aNamespaceID == kNameSpaceID_XMLEvents && 
+  if (aNotify && aNamespaceID == kNameSpaceID_None &&
+      aAttribute == nsHTMLAtoms::spellcheck) {
+    nsCOMPtr<nsIEditor> editor = GetAssociatedEditor();
+    nsCOMPtr<nsIEditor_MOZILLA_1_8_BRANCH> editor_1_8 =
+      do_QueryInterface(editor);
+    if (editor_1_8) {
+      editor_1_8->SyncRealTimeSpell();
+    }
+  } else if (aNamespaceID == kNameSpaceID_XMLEvents && 
       aAttribute == nsHTMLAtoms::_event && mNodeInfo->GetDocument()) {
     mNodeInfo->GetDocument()->AddXMLEventsContent(this);
   }
@@ -4141,6 +4242,14 @@ nsGenericHTMLElement::GetEditor(nsIEditor** aEditor)
   if (!nsContentUtils::IsCallerChrome())
     return NS_ERROR_DOM_SECURITY_ERR;
 
+  return GetEditorInternal(aEditor);
+}
+
+nsresult
+nsGenericHTMLElement::GetEditorInternal(nsIEditor** aEditor)
+{
+  *aEditor = nsnull;
+
   nsIFormControlFrame *fcFrame = GetFormControlFrame(PR_FALSE);
   if (fcFrame) {
     nsITextControlFrame *textFrame = nsnull;
@@ -4151,4 +4260,33 @@ nsGenericHTMLElement::GetEditor(nsIEditor** aEditor)
   }
 
   return NS_OK;
+}
+
+already_AddRefed<nsIEditor>
+nsGenericHTMLElement::GetAssociatedEditor()
+{
+  // If contenteditable is ever implemented, it might need to do something different here?
+
+  nsIEditor* editor = nsnull;
+  GetEditorInternal(&editor);
+  return editor;
+}
+
+PRBool
+nsGenericHTMLElement::IsCurrentBodyElement()
+{
+  nsCOMPtr<nsIDOMHTMLBodyElement> bodyElement = do_QueryInterface(this);
+  if (!bodyElement) {
+    return PR_FALSE;
+  }
+
+  nsCOMPtr<nsIDOMHTMLDocument> htmlDocument =
+    do_QueryInterface(GetCurrentDoc());
+  if (!htmlDocument) {
+    return PR_FALSE;
+  }
+
+  nsCOMPtr<nsIDOMHTMLElement> htmlElement;
+  htmlDocument->GetBody(getter_AddRefs(htmlElement));
+  return htmlElement == bodyElement;
 }

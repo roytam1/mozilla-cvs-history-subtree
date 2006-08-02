@@ -1674,7 +1674,7 @@ nsDOMClassInfo::RegisterExternalClasses()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOM3Node)
 
 #define DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES                                \
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLElement)                              \
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH)           \
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMElementCSSInlineStyle)                      \
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)                                \
     DOM_CLASSINFO_MAP_ENTRY(nsIDOM3Node)

@@ -63,5 +63,11 @@ interface nsIDOMNSHTMLElement : nsISupports
 
   // |top| is optional in JS, scriptability of this method is done in
   // nsHTMLElementSH
-  void           scrollIntoView(in boolean top);
+  void scrollIntoView(in boolean top);
+};
+
+[scriptable, uuid(91fdb05e-f1af-4857-a604-45448bc02471)]
+interface nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH : nsIDOMNSHTMLElement
+{
+           attribute boolean         spellcheck;
 };
