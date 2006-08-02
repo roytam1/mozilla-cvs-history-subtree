@@ -1241,7 +1241,10 @@ Otherwise, we return the URL we originally got. Right now this supports .url,
 -(IBAction) showHistory:(id)aSender
 {
   NSWindow* browserWindow = [self getFrontmostBrowserWindow];
-  if (!browserWindow) {
+  if (browserWindow) {
+    if (![browserWindow isMainWindow])
+      [browserWindow makeKeyAndOrderFront:self];
+  } else {
     [self newWindow:self];
     browserWindow = [mApplication mainWindow];
   }
@@ -1277,7 +1280,10 @@ Otherwise, we return the URL we originally got. Right now this supports .url,
 -(IBAction)manageBookmarks:(id)aSender
 {
   NSWindow* browserWindow = [self getFrontmostBrowserWindow];
-  if (!browserWindow) {
+  if (browserWindow) {
+    if (![browserWindow isMainWindow])
+      [browserWindow makeKeyAndOrderFront:self];
+  } else {
     [self newWindow:self];
     browserWindow = [mApplication mainWindow];
   }
