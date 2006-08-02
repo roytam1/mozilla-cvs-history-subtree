@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,61 +34,22 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_AUDIOMIXER_H__
-#define __ZAP_AUDIOMIXER_H__
+#include "nsISupports.idl"
 
-#include "zapIMediaNode.h"
-#include "zapIMediaSource.h"
-#include "zapIMediaSink.h"
-#include "nsCOMPtr.h"
-#include "nsString.h"
-#include "nsVoidArray.h"
-#include "nsIWritablePropertyBag2.h"
-#include "zapAudioStreamUtils.h"
-#include "zapIAudioMixer.h"
-
-////////////////////////////////////////////////////////////////////////
-// zapAudioMixer
-
-// {69044C68-74FA-48D0-AF1C-A3A9878DF3B6}
-#define ZAP_AUDIOMIXER_CID                             \
-  { 0x69044c68, 0x74fa, 0x48d0, { 0xaf, 0x1c, 0xa3, 0xa9, 0x87, 0x8d, 0xf3, 0xb6 } }
-
-#define ZAP_AUDIOMIXER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "audio-mixer"
-
-class zapAudioMixer : public zapIMediaNode,
-                      public zapIMediaSource,
-                      public zapIAudioMixer
+/**
+ * \ingroup ZMK_MODULE
+ */
+[scriptable, uuid(8ee87d40-1251-4fa5-aa21-502bac6669ab)]
+interface zapIAudioMixer : nsISupports
 {
-public:
-  zapAudioMixer();
-  ~zapAudioMixer();
+  /**
+   * Master volume in dB.
+   */
+  attribute float masterVolume;
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_ZAPIMEDIANODE
-  NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIAUDIOMIXER
-
-private:
-  friend class zapAudioMixerInput;
-
-  nsCOMPtr<zapIMediaGraph> mGraph;
-
-  float mVolumeFactor;
-  PRBool mMute;
-  
-  // node parameters (set in zapIMediaGraph::AddNode()):
-  zapAudioStreamParameters mStreamParameters;
-
-  // zapAudioMixerInput inputs (weak references):
-  nsVoidArray mInputs;
-
-  PRUint32 mSampleClock;
-  
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  
-  // mixer output sink:
-  nsCOMPtr<zapIMediaSink> mOutput;
+  /**
+   * Sets/gets mute status. When muted, the mixer will still pump
+   * frames, but the output frames will be silent.
+   */
+  attribute boolean mute;
 };
-
-#endif // __ZAP_AUDIOMIXER_H__

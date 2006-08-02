@@ -300,13 +300,13 @@ clock frames with
 3) audio-mixer
 --------------
 
-Audio mixer node, mixes n audio sinks to one audio source.
+Audio mixer node, mixes n audio sinks to one audio source. Initial
+master volume will be 0dB and the mixer will initially be unmuted.
 
 This is a locking node. Trying to modify the mediagraph while this
 node is processing a frame will throw an exception.
 
-Control interfaces:
-- 
+Control interfaces: zapIAudioMixer
 
 Sinks: n (active)
 Sources: 1 (passive)

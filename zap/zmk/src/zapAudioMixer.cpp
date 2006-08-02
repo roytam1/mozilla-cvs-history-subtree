@@ -42,6 +42,7 @@
 #include "zapMediaFrame.h"
 #include "math.h"
 #include "zapMediaGraphAutoLock.h"
+#include "math.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioMixerInput
@@ -177,6 +178,8 @@ PRBool zapAudioMixerInput::ValidateFrame(zapIMediaFrame* frame)
 // zapAudioMixer
 
 zapAudioMixer::zapAudioMixer()
+    : mVolumeFactor(1.0),
+      mMute(PR_FALSE)
 {
 #ifdef DEBUG_afri_zmk
   printf("zapAudioMixer::zapAudioMixer()\n");
@@ -200,6 +203,7 @@ NS_INTERFACE_MAP_BEGIN(zapAudioMixer)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIAudioMixer)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
@@ -312,7 +316,7 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
   for (PRInt32 i=0; i<activeInputs; ++i) {
     nsCOMPtr<zapIMediaFrame> frame;
     ((zapAudioMixerInput*)mInputs[i])->ProduceFrame(getter_AddRefs(frame));
-    if (frame) {
+    if (frame && !mMute) {
       nsCString indata;
       frame->GetData(indata);
       NS_ASSERTION(indata.Length() == mStreamParameters.GetFrameLength(),
@@ -324,8 +328,8 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
   }
 
   // scale data
-  if (activeInputs > 1) {
-    float scalefactor = 1.0f / sqrt((float)activeInputs);
+  if (!mMute && (activeInputs > 1 || mVolumeFactor != 1.0)) {
+    float scalefactor = mVolumeFactor / sqrt((float)activeInputs);
     for (unsigned int sp=0; sp < samplesPerFrame; ++sp) {
       d[sp] *= scalefactor;
       }
@@ -335,5 +339,35 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
   return NS_OK;
 }
 
+//----------------------------------------------------------------------
+// zapIAudioMixer methods:
 
+/* attribute float masterVolume; */
+NS_IMETHODIMP
+zapAudioMixer::GetMasterVolume(float *aMasterVolume)
+{
+  NS_ASSERTION(mVolumeFactor > 0.0, "uh-oh, invalid volume factor");
+  *aMasterVolume = 20*log10(mVolumeFactor);
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapAudioMixer::SetMasterVolume(float aMasterVolume)
+{
+  mVolumeFactor = pow(10.0, aMasterVolume/20.0);
+  if (mVolumeFactor <= 0.0) mVolumeFactor = 1e-20;
+  return NS_OK;
+}
 
+/* attribute boolean mute; */
+NS_IMETHODIMP
+zapAudioMixer::GetMute(PRBool *aMute)
+{
+  *aMute = mMute;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapAudioMixer::SetMute(PRBool aMute)
+{
+  mMute = aMute;
+  return NS_OK;
+}
