@@ -12,6 +12,9 @@ sudoku.jar:
 	content/sudoku/homebaseOverlay.xul  (sudoku/content/homebaseOverlay.xul)
 	content/sudoku/favicon.png          (sudoku/content/favicon.png)
 
+	skin/classic-vga/sudoku/extensions/favicon.png      (sudoku/skin-vga/favicon.png)
+	skin/classic/sudoku/extensions/favicon.png          (sudoku/skin/favicon.png)
+
 flickr.jar:
 %   content flickr               %content/flickr/
 %   overlay chrome://minimo/content/minimo.xul chrome://flicker/content/homebaseOverlay.xul
@@ -20,12 +23,18 @@ flickr.jar:
 	content/flickr/homebaseOverlay.xul  (flickr/content/homebaseOverlay.xul)
 	content/flickr/favicon.png          (flickr/content/favicon.png)
 
+	skin/classic-vga/flickr/extensions/favicon.png      (flickr/skin-vga/favicon.png)
+	skin/classic/flickr/extensions/favicon.png          (flickr/skin/favicon.png)
+	
 google.jar: 
 %   content google               %content/google/
 %   overlay chrome://minimo/content/minimo.xul chrome://google/content/homebaseOverlay.xul
     content/google/homebaseOverlay.xul  (google/content/homebaseOverlay.xul)
 	content/google/favicon.png          (google/content/favicon.png)
 
+	skin/classic-vga/google/extensions/favicon.png      (google/skin-vga/favicon.png)
+	skin/classic/google/extensions/favicon.png          (google/skin/favicon.png)
+	
 history.jar: 
 %   content history               %content/history/
 %   overlay chrome://minimo/content/minimo.xul chrome://history/content/homebaseOverlay.xul
@@ -35,31 +44,46 @@ history.jar:
     content/history/historyview.xhtml    (history/content/historyview.xhtml)
     content/history/history_template.xml (history/content/history_template.xml)
     content/history/history.css          (history/content/history.css) 
+ 
+	skin/classic-vga/history/extensions/favicon.png      (history/skin-vga/favicon.png)
+	skin/classic/history/extensions/favicon.png          (history/skin/favicon.png)
     
 map.jar: 
 %   content map                   %content/map/
 %   overlay chrome://minimo/content/minimo.xul chrome://map/content/homebaseOverlay.xul
     content/map/homebaseOverlay.xul     (map/content/homebaseOverlay.xul)
 	content/map/favicon.png             (map/content/favicon.png)
-
+	
+	skin/classic-vga/map/extensions/favicon.png      (map/skin-vga/favicon.png)
+	skin/classic/map/extensions/favicon.png          (map/skin/favicon.png)
+   
 mobile.jar: 
 %   content mobile                %content/mobile/
 %   overlay chrome://minimo/content/minimo.xul chrome://mobile/content/homebaseOverlay.xul
     content/mobile/homebaseOverlay.xul  (mobile/content/homebaseOverlay.xul)
 	content/mobile/favicon.png          (mobile/content/favicon.png)
-
+	
+	skin/classic-vga/mobile/extensions/favicon.png      (mobile/skin-vga/favicon.png)
+	skin/classic/mobile/extensions/favicon.png          (mobile/skin/favicon.png)
+   
 shopping.jar: 
 %   content shopping              %content/shopping/
 %   overlay chrome://minimo/content/minimo.xul chrome://shopping/content/homebaseOverlay.xul
     content/shopping/homebaseOverlay.xul  (shopping/content/homebaseOverlay.xul)
 	content/shopping/favicon.png          (shopping/content/favicon.png)
-
+	
+	skin/classic-vga/shopping/extensions/favicon.png      (shopping/skin-vga/favicon.png)
+	skin/classic/shopping/extensions/favicon.png          (shopping/skin/favicon.png)
+   
 technorati.jar: 
 %   content technorati            %content/technorati/
 %   overlay chrome://minimo/content/minimo.xul chrome://technorati/content/homebaseOverlay.xul
     content/technorati/homebaseOverlay.xul  (technorati/content/homebaseOverlay.xul)
 	content/technorati/favicon.ico          (technorati/content/favicon.ico)
-
+	
+	skin/classic-vga/technorati/extensions/favicon.png      (technorati/skin-vga/favicon.png)
+	skin/classic/technorati/extensions/favicon.png          (technorati/skin/favicon.png)
+   
 update.jar: 
 %   content update                %content/update/
 %   overlay chrome://minimo/content/minimo.xul chrome://update/content/homebaseOverlay.xul
@@ -70,10 +94,16 @@ wunderground.jar:
 %   overlay chrome://minimo/content/minimo.xul chrome://wunderground/content/homebaseOverlay.xul
     content/wunderground/homebaseOverlay.xul  (wunderground/content/homebaseOverlay.xul)
 	content/wunderground/favicon.gif          (wunderground/content/favicon.gif)
-
+	
+	skin/classic-vga/wunderground/extensions/favicon.png      (wunderground/skin-vga/favicon.png)
+	skin/classic/wunderground/extensions/favicon.png          (wunderground/skin/favicon.png)
+   
 yokel.jar: 
 %   content yokel               %content/yokel/
 %   overlay chrome://minimo/content/minimo.xul chrome://yokel/content/homebaseOverlay.xul
     content/yokel/homebaseOverlay.xul  (yokel/content/homebaseOverlay.xul)
 	content/yokel/favicon.png          (yokel/content/favicon.png)
-    
+  	
+	skin/classic-vga/yokel/extensions/favicon.png      (yokel/skin-vga/favicon.png)
+	skin/classic/yokel/extensions/favicon.png          (yokel/skin/favicon.png)
+     
