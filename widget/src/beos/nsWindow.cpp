@@ -1830,7 +1830,11 @@ NS_METHOD nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 				childWidget->Move(bounds.x, bounds.y);
 			}
 		}			
-		//OnPaint don't need Lock()
+		// Native region needs shifting too.
+		mView->paintregion.OffsetBy(aDx, aDy);
+		// Adding native paintregion to calculated one.
+		// May be done with BRegion reg; GetNativeRegion(&reg);
+		invalid.Include(&mView->paintregion);		//OnPaint don't need Lock()
 		mView->UnlockLooper();
 		// Drawing uncovered regions by direct OnPaint call,
 		// so we avoid going through the callback stuff
