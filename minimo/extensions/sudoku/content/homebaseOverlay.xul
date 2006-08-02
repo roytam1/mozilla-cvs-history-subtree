@@ -48,7 +48,7 @@
  -->
      <vbox id="homebar">
 
-  			<toolbarbutton image="chrome://sudoku/content/favicon.png" oncommand="BrowserOpenURLasTab('chrome://sudoku/content/sudoku.html')">
+  			<toolbarbutton image="chrome://sudoku/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://sudoku/content/sudoku.html')">
 			</toolbarbutton >
 
       </vbox>

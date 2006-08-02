@@ -4,7 +4,7 @@
      <vbox id="homebar">
 
 
-  			<toolbarbutton image="chrome://map/content/favicon.png" oncommand="BrowserOpenURLasTab('http://people.mozilla.com/~chofmann/map.html')">
+  			<toolbarbutton image="chrome://map/skin/favicon.png" oncommand="BrowserOpenURLasTab('http://people.mozilla.com/~chofmann/map.html')">
 			</toolbarbutton >
 
   		

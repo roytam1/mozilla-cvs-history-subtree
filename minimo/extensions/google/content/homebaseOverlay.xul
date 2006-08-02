@@ -3,7 +3,7 @@
 
      <vbox id="homebar">
 
-  			<toolbarbutton image="chrome://google/content/favicon.png" oncommand="BrowserOpenURLasTab('http://www.google.com/ig')">
+  			<toolbarbutton image="chrome://google/skin/favicon.png" oncommand="BrowserOpenURLasTab('http://www.google.com/ig')">
 			</toolbarbutton >
       </vbox>
     

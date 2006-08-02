@@ -5,7 +5,7 @@
 
 
 
-  			<toolbarbutton image="chrome://shopping/content/favicon.png" oncommand="BrowserOpenURLasTab('http://www.inner-browsing.com/shop/newshop.xhtml ')">
+  			<toolbarbutton image="chrome://shopping/skin/favicon.png" oncommand="BrowserOpenURLasTab('http://www.inner-browsing.com/shop/newshop.xhtml ')">
 			</toolbarbutton >
 
   	

@@ -3,7 +3,7 @@
 
      <vbox id="homebar">
 
-  			<toolbarbutton image="chrome://technorati/content/favicon.ico" oncommand="BrowserOpenURLasTab('http://m.technorati.com/')">
+  			<toolbarbutton image="chrome://technorati/skin/favicon.ico" oncommand="BrowserOpenURLasTab('http://m.technorati.com/')">
 			</toolbarbutton >
 
   		

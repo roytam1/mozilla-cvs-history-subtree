@@ -4,7 +4,7 @@
      <vbox id="homebar">
 
 
-  			<toolbarbutton image="chrome://history/content/favicon.png" oncommand="BrowserOpenURLasTab('chrome://history/content/historyview.xhtml')">
+  			<toolbarbutton image="chrome://history/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://history/content/historyview.xhtml')">
 			</toolbarbutton >
 
       </vbox>

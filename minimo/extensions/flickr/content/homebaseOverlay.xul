@@ -42,7 +42,7 @@
  
      <vbox id="homebar">
 
-  			<toolbarbutton image="chrome://flickr/content/favicon.png" oncommand="BrowserOpenURLasTab('chrome://flickr/content/app.xhtml')">
+  			<toolbarbutton image="chrome://flickr/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://flickr/content/app.xhtml')">
 			</toolbarbutton >
 
       </vbox>
