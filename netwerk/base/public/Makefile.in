@@ -119,6 +119,7 @@ XPIDLSRCS	= \
 		nsIChannelEventSink.idl \
 		nsINetUtil.idl \
 		nsIUDPSocket.idl \
+		nsIProxiedChannel.idl \
 		$(NULL)
 
 EXPORTS		= \
