@@ -12,9 +12,9 @@ sudoku.jar:
 	content/sudoku/homebaseOverlay.xul  (sudoku/content/homebaseOverlay.xul)
 	content/sudoku/favicon.png          (sudoku/content/favicon.png)
 %   skin    sudoku   classic/1.0 %skin/classic/sudoku/
-	skin/classic/sudoku/extensions/favicon.png          (sudoku/skin/favicon.png)
+	skin/classic/sudoku/favicon.png          (sudoku/skin/favicon.png)
 %   skin    sudoku   classic-vga/1.0 %skin/classic-vga/sudoku/
-	skin/classic-vga/sudoku/extensions/favicon.png      (sudoku/skin-vga/favicon.png)
+	skin/classic-vga/sudoku/favicon.png      (sudoku/skin-vga/favicon.png)
 
 flickr.jar:
 %   content flickr               %content/flickr/
@@ -24,9 +24,9 @@ flickr.jar:
 	content/flickr/homebaseOverlay.xul  (flickr/content/homebaseOverlay.xul)
 	content/flickr/favicon.png          (flickr/content/favicon.png)
 %   skin    flickr   classic/1.0 %skin/classic/flickr/
-	skin/classic/flickr/extensions/favicon.png          (flickr/skin/favicon.png)
+	skin/classic/flickr/favicon.png          (flickr/skin/favicon.png)
 %   skin    flickr   classic-vga/1.0 %skin/classic-vga/flickr/
-	skin/classic-vga/flickr/extensions/favicon.png      (flickr/skin-vga/favicon.png)
+	skin/classic-vga/flickr/favicon.png      (flickr/skin-vga/favicon.png)
 	
 google.jar: 
 %   content google               %content/google/
@@ -34,9 +34,9 @@ google.jar:
     content/google/homebaseOverlay.xul  (google/content/homebaseOverlay.xul)
 	content/google/favicon.png          (google/content/favicon.png)
 %   skin    google   classic/1.0 %skin/classic/google/
-	skin/classic/google/extensions/favicon.png          (google/skin/favicon.png)
+	skin/classic/google/favicon.png          (google/skin/favicon.png)
 %   skin    google   classic-vga/1.0 %skin/classic-vga/google/
-	skin/classic-vga/google/extensions/favicon.png      (google/skin-vga/favicon.png)
+	skin/classic-vga/google/favicon.png      (google/skin-vga/favicon.png)
 	
 history.jar: 
 %   content history               %content/history/
@@ -48,9 +48,9 @@ history.jar:
     content/history/history_template.xml (history/content/history_template.xml)
     content/history/history.css          (history/content/history.css) 
 %   skin    history   classic/1.0 %skin/classic/history/
-	skin/classic/sudoku/extensions/favicon.png          (history/skin/favicon.png)
+	skin/classic/history/favicon.png          (history/skin/favicon.png)
 %   skin    history   classic-vga/1.0 %skin/classic-vga/history/
-	skin/classic-vga/history/extensions/favicon.png      (history/skin-vga/favicon.png)
+	skin/classic-vga/history/favicon.png      (history/skin-vga/favicon.png)
     
 map.jar: 
 %   content map                   %content/map/
@@ -58,9 +58,9 @@ map.jar:
     content/map/homebaseOverlay.xul     (map/content/homebaseOverlay.xul)
 	content/map/favicon.png             (map/content/favicon.png)
 %   skin    map   classic/1.0 %skin/classic/map/
-	skin/classic/sudoku/extensions/favicon.png          (map/skin/favicon.png)
+	skin/classic/map/favicon.png          (map/skin/favicon.png)
 %   skin    map   classic-vga/1.0 %skin/classic-vga/map/
-	skin/classic-vga/map/extensions/favicon.png      (map/skin-vga/favicon.png)
+	skin/classic-vga/map/favicon.png      (map/skin-vga/favicon.png)
    
 mobile.jar: 
 %   content mobile                %content/mobile/
@@ -68,9 +68,9 @@ mobile.jar:
     content/mobile/homebaseOverlay.xul  (mobile/content/homebaseOverlay.xul)
 	content/mobile/favicon.png          (mobile/content/favicon.png)
 %   skin    mobile   classic/1.0 %skin/classic/mobile/
-	skin/classic/sudoku/extensions/favicon.png          (mobile/skin/favicon.png)
+	skin/classic/mobile/favicon.png          (mobile/skin/favicon.png)
 %   skin    mobile   classic-vga/1.0 %skin/classic-vga/mobile/
-	skin/classic-vga/mobile/extensions/favicon.png      (mobile/skin-vga/favicon.png)
+	skin/classic-vga/mobile/favicon.png      (mobile/skin-vga/favicon.png)
    
 shopping.jar: 
 %   content shopping              %content/shopping/
@@ -78,9 +78,9 @@ shopping.jar:
     content/shopping/homebaseOverlay.xul  (shopping/content/homebaseOverlay.xul)
 	content/shopping/favicon.png          (shopping/content/favicon.png)
 %   skin    shopping   classic/1.0 %skin/classic/shopping/
-	skin/classic/sudoku/extensions/favicon.png          (shopping/skin/favicon.png)
+	skin/classic/shopping/favicon.png          (shopping/skin/favicon.png)
 %   skin    shopping   classic-vga/1.0 %skin/classic-vga/shopping/
-	skin/classic-vga/shopping/extensions/favicon.png      (shopping/skin-vga/favicon.png)
+	skin/classic-vga/shopping/favicon.png      (shopping/skin-vga/favicon.png)
    
 technorati.jar: 
 %   content technorati            %content/technorati/
@@ -88,9 +88,9 @@ technorati.jar:
     content/technorati/homebaseOverlay.xul  (technorati/content/homebaseOverlay.xul)
 	content/technorati/favicon.ico          (technorati/content/favicon.ico)
 %   skin    technorati   classic/1.0 %skin/classic/technorati/
-	skin/classic/sudoku/extensions/favicon.png          (technorati/skin/favicon.png)
+	skin/classic/technorati/favicon.png          (technorati/skin/favicon.png)
 %   skin    technorati   classic-vga/1.0 %skin/classic-vga/technorati/
-	skin/classic-vga/technorati/extensions/favicon.png      (technorati/skin-vga/favicon.png)
+	skin/classic-vga/technorati/favicon.png      (technorati/skin-vga/favicon.png)
    
 update.jar: 
 %   content update                %content/update/
@@ -103,9 +103,9 @@ wunderground.jar:
     content/wunderground/homebaseOverlay.xul  (wunderground/content/homebaseOverlay.xul)
 	content/wunderground/favicon.gif          (wunderground/content/favicon.gif)
 %   skin    wunderground   classic/1.0 %skin/classic/wunderground/
-	skin/classic/sudoku/extensions/favicon.png          (wunderground/skin/favicon.png)
+	skin/classic/wunderground/favicon.png          (wunderground/skin/favicon.png)
 %   skin    wunderground   classic-vga/1.0 %skin/classic-vga/wunderground/
-	skin/classic-vga/wunderground/extensions/favicon.png      (wunderground/skin-vga/favicon.png)
+	skin/classic-vga/wunderground/favicon.png      (wunderground/skin-vga/favicon.png)
    
 yokel.jar: 
 %   content yokel               %content/yokel/
@@ -113,7 +113,7 @@ yokel.jar:
     content/yokel/homebaseOverlay.xul  (yokel/content/homebaseOverlay.xul)
 	content/yokel/favicon.png          (yokel/content/favicon.png)
 %   skin    yokel   classic/1.0 %skin/classic/yokel/
-	skin/classic/sudoku/extensions/favicon.png          (yokel/skin/favicon.png)
+	skin/classic/yokel/favicon.png          (yokel/skin/favicon.png)
 %   skin    yokel   classic-vga/1.0 %skin/classic-vga/yokel/
-	skin/classic-vga/yokel/extensions/favicon.png      (yokel/skin-vga/favicon.png)
+	skin/classic-vga/yokel/favicon.png      (yokel/skin-vga/favicon.png)
      
