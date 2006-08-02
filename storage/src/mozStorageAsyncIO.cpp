@@ -233,10 +233,15 @@
 #include "mozStorageService.h"
 #include "nsAutoLock.h"
 #include "nsEventQueueUtils.h"
+#include "nsIConsoleService.h"
+#include "nsIPrompt.h"
 #include "nsIRunnable.h"
+#include "nsIStringBundle.h"
 #include "nsIThread.h"
 #include "nsMemory.h"
+#include "nsNetCID.h"
 #include "nsProxyRelease.h"
+#include "nsString.h"
 #include "plstr.h"
 #include "prlock.h"
 #include "prcvar.h"
@@ -264,9 +269,19 @@
 // AsyncOsFile
 //
 //    This is a wrapper around the sqlite interal OsFile.
+//
+//    ======
+//    DANGER
+//    ======
+//
+//    This function is allocated on my Alloc(), and NOT by new. This means that
+//    any C++ objects in here will not get their constructor called.
 
 struct AsyncOsFile : public OsFile
 {
+  // This is the filename of the file when it was opened.
+  nsCString* mFilename;
+
   // This keeps track of the current file offset. Seek operations change this
   // offset instead of actually changing the file because we will do stuff to
   // the file in the background. We store this offset for each operation such
@@ -411,6 +426,7 @@ static int AppendNewAsyncMessage(AsyncOsFile* aFile, PRUint32 aOp,
                                  sqlite_int64 aOffset, PRInt32 aDataSize,
                                  const char *aData);
 static int AsyncWriteError = SQLITE_OK; // set on write error
+static void DisplayAsyncWriteError();
 
 // threading
 // serializes access to the queue, AsyncWriteThreadInstance = nsnull means
@@ -703,6 +719,7 @@ AsyncOpenFile(const char* aName, AsyncOsFile** aFile,
   }
   memset(*aFile, 0, sizeof(AsyncOsFile));
 
+  (*aFile)->mFilename = new nsCString(aName);
   (*aFile)->pMethod = &iomethod;
   (*aFile)->mOpen = PR_TRUE;
   (*aFile)->mBaseRead = aBaseRead;
@@ -1402,7 +1419,10 @@ ProcessOneMessage(AsyncMessage* aMessage)
       // two handles matters here)
       sqliteOrigClose(&aMessage->mFile->mBaseWrite);
       sqliteOrigClose(&aMessage->mFile->mBaseRead);
+      if (aMessage->mFile->mFilename)
+        delete aMessage->mFile->mFilename;
       nsMemory::Free(aMessage->mFile);
+      aMessage->mFile = nsnull;
       break;
 
     case ASYNC_OPENDIRECTORY:
@@ -1510,9 +1530,30 @@ ProcessAsyncMessages()
       // put it back when it's done
       rc = ProcessOneMessage(message);
 
+      // check for error
       if (rc != SQLITE_OK) {
         AsyncWriteError = rc;
         NS_NOTREACHED("FILE ERROR");
+
+        // log error to console
+        nsresult rv;
+        nsCOMPtr<nsIConsoleService> consoleSvc =
+            do_GetService("@mozilla.org/consoleservice;1", &rv);
+        if (NS_FAILED(rv)) {
+          NS_WARNING("Couldn't get the console service for logging file error");
+        } else {
+          nsAutoString logMessage;
+          logMessage.AssignLiteral("mozStorage: error code ");
+          logMessage.AppendInt(rc);
+          logMessage.AppendLiteral(" for database ");
+          if (message->mFile && message->mFile->mFilename)
+            logMessage.Append(NS_ConvertUTF8toUTF16(*message->mFile->mFilename));
+          rv = consoleSvc->LogStringMessage(logMessage.get());
+          NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Couldn't log message on async error");
+        }
+
+        // tell user to restart
+        DisplayAsyncWriteError();
         return;
       }
 
@@ -1536,5 +1577,123 @@ ProcessAsyncMessages()
       // yield so the UI thread is more responsive
       PR_Sleep(PR_INTERVAL_NO_WAIT);
     #endif
+  }
+}
+
+
+// nsAsyncWriteErrorDisplayer
+//
+//    This gets dispatched to the main thread so that we can do all the UI
+//    calls there. The prompt service must be called from the main thread.
+
+class nsAsyncWriteErrorDisplayer : public PLEvent
+{
+public:
+  nsAsyncWriteErrorDisplayer();
+  nsresult Post();
+};
+
+// HandleWriteErrorDisplayPLEvent
+//
+//    Actually displays the error message
+
+PR_STATIC_CALLBACK(void*)
+HandleWriteErrorDisplayPLEvent(PLEvent* aEvent)
+{
+  nsresult rv;
+  nsCOMPtr<nsIPrompt> prompt = do_CreateInstance(
+      NS_DEFAULTPROMPT_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get prompt service");
+    return nsnull;
+  }
+
+  nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(
+      "@mozilla.org/intl/stringbundle;1", &rv);
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get string bundle");
+    return nsnull;
+  }
+
+  nsCOMPtr<nsIStringBundle> bundle;
+  rv = bundleService->CreateBundle(
+      "chrome://global/locale/storage.properties", getter_AddRefs(bundle));
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get storage properties");
+    return nsnull;
+  }
+
+  nsXPIDLString message;
+  rv = bundle->GetStringFromName(NS_LITERAL_STRING("storageWriteError").get(),
+                                 getter_Copies(message));
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get error string");
+    return nsnull;
+  }
+
+  prompt->Alert(nsnull, message.get());
+  return nsnull;
+}
+
+PR_STATIC_CALLBACK(void)
+DestroyWriteErrorDisplayerPLEvent(PLEvent* aEvent)
+{
+  nsAsyncWriteErrorDisplayer* displayer = NS_REINTERPRET_CAST(
+      nsAsyncWriteErrorDisplayer*, aEvent);
+  delete displayer;
+}
+
+nsAsyncWriteErrorDisplayer::nsAsyncWriteErrorDisplayer()
+{
+  PL_InitEvent(this, nsnull, HandleWriteErrorDisplayPLEvent,
+               DestroyWriteErrorDisplayerPLEvent);
+}
+
+
+// nsAsyncWriteErrorDisplayer::Post
+//
+//    Post this event to the given UI thread event queue.
+
+nsresult
+nsAsyncWriteErrorDisplayer::Post()
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIEventQueueService> eventQueueService =
+    do_GetService("@mozilla.org/event-queue-service;1", &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  eventQueueService->
+    GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                         getter_AddRefs(eventQueue));
+  if (!eventQueue)
+    return NS_ERROR_FAILURE;
+
+  rv = eventQueue->PostEvent(this);
+  if (NS_FAILED(rv)) {
+    PL_DestroyEvent(this);
+    return rv;
+  }
+
+  return NS_OK;
+}
+
+// DisplayAsyncWriteError
+//
+//    Displays a general message box informing the user of the I/O error. The
+//    problem is that this is called from the I/O thread, which can't display
+//    UI. Therefore, we proxy to the UI thread.
+
+void
+DisplayAsyncWriteError()
+{
+  nsAsyncWriteErrorDisplayer* displayer = new nsAsyncWriteErrorDisplayer();
+  if (! displayer) {
+    NS_NOTREACHED("Can't create the event to display a write error");
+    return;
+  }
+  if (NS_FAILED(displayer->Post())) {
+    NS_NOTREACHED("Can't call main thread");
   }
 }
