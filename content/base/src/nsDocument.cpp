@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -919,6 +920,7 @@ PRBool gHaveXPathDOM = PR_FALSE;
 
 NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_0_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
@@ -2129,6 +2131,13 @@ nsDocument::GetScriptGlobalObject() const
    return mScriptGlobalObject;
 }
 
+nsIScriptGlobalObject*
+nsDocument::GetScopeObject()
+{
+    nsCOMPtr<nsIScriptGlobalObject> scope(do_QueryReferent(mScopeObject));
+    return scope;
+}
+
 void
 nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
 {
@@ -2149,9 +2158,10 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
 
   mScriptGlobalObject = aScriptGlobalObject;
 
-  if (mScriptGlobalObject) {
+  if (aScriptGlobalObject) {
     // Go back to using the docshell for the layout history state
     mLayoutHistoryState = nsnull;
+    mScopeObject = do_GetWeakReference(aScriptGlobalObject);
   }
 }
 

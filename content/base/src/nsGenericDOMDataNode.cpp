@@ -686,6 +686,11 @@ nsGenericDOMDataNode::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
   new_bits |= mParentPtrBits & nsIContent::kParentBitMask;
   mParentPtrBits = new_bits;
 
+  nsIDocument *oldOwnerDocument = GetOwnerDoc();
+  nsIDocument *newOwnerDocument;
+  nsNodeInfoManager* nodeInfoManager;
+
+  // XXXbz sXBL/XBL2 issue!
   // Set document
   if (aDocument) {
     mParentPtrBits |= PARENT_BIT_INDOCUMENT;
@@ -693,12 +698,19 @@ nsGenericDOMDataNode::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
       aDocument->SetBidiEnabled(PR_TRUE);
     }
 
-    nsIDocument *ownerDocument = GetOwnerDoc();
-    if (aDocument != ownerDocument) {
-      // get a new nodeinfo manager
-      mNodeInfoManager = aDocument->NodeInfoManager();
-    }
+    newOwnerDocument = aDocument;
+    nodeInfoManager = newOwnerDocument->NodeInfoManager();
+  } else {
+    newOwnerDocument = aParent->GetOwnerDoc();
+    nodeInfoManager = aParent->GetNodeInfo()->NodeInfoManager();
   }
+
+  if (oldOwnerDocument && oldOwnerDocument != newOwnerDocument) {
+    // Remove all properties.
+    oldOwnerDocument->PropertyTable()->DeleteAllPropertiesFor(this);
+  }
+
+  mNodeInfoManager = nodeInfoManager;
 
   NS_POSTCONDITION(aDocument == GetCurrentDoc(), "Bound to wrong document");
   NS_POSTCONDITION(aParent == GetParent(), "Bound to wrong parent");
