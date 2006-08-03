@@ -1,10 +1,10 @@
 
 
 all:
-	cl /DWM50 /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-as.c
-	cl /DWM50 /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-gcc.c
-	cl /DWM50 /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-lib.c
-	cl /DWM50 /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-link.c
+	cl /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-as.c
+	cl /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-gcc.c
+	cl /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-lib.c
+	cl /D_CRT_SECURE_NO_DEPRECATE vs8ppc2003arm/arm-wince-link.c
 	mv arm-wince-as.exe vs8ppc2003arm
 	mv arm-wince-gcc.exe vs8ppc2003arm
 	mv arm-wince-lib.exe vs8ppc2003arm

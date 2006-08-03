@@ -20,11 +20,11 @@
 #endif  //WM50
 #else
 #if SMARTPHONE
-#define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/Smartphone2003/Include/"
-#define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/Smartphone2003/Lib/armv4/"
+#define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/Smartphone2003/Include"
+#define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/Smartphone2003/Lib/armv4"
 #else  //Smartphone
-#define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Include/"
-#define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Lib/armv4/"
+#define WCE_INC   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Include"
+#define WCE_LIB   "c:/Program Files/Microsoft Visual Studio 8/SmartDevices/SDK/PocketPC2003/Lib/armv4"
 #endif  //Smartphone
 #endif //WM50
 
