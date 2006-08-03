@@ -55,7 +55,7 @@ class nsIDOMText;
 class nsINodeInfo;
 class nsURI;
 
-#define PARENT_BIT_IS_IN_A_HASH ((PtrBits)0x1 << 0)
+#define PARENT_BIT_IS_IN_A_HASH ((PtrBits)0x1 << 1)
 
 class nsGenericDOMDataNode : public nsITextContent
 {
