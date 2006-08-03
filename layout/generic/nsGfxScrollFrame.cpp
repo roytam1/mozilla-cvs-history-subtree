@@ -783,7 +783,8 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
     state.mComputedBorder.LeftRight();
   aDesiredSize.height = state.mInsideBorderSize.height +
     state.mComputedBorder.TopBottom();
-  aDesiredSize.ascent = state.mAscent + state.mComputedBorder.top;
+  aDesiredSize.ascent =
+    state.mAscent + aReflowState.mComputedBorderPadding.top;
 
   aDesiredSize.descent = aDesiredSize.height - aDesiredSize.ascent;
   aDesiredSize.mOverflowArea = nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
