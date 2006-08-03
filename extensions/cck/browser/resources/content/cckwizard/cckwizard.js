@@ -727,7 +727,11 @@ function OnSearchEngineLoad()
   if (window.name == 'editsearchengine') {
     document.getElementById('searchengine').value = listbox.selectedItem.cck['engineurl'];
     document.getElementById('searchengineicon').value = listbox.selectedItem.cck['iconurl'];
-    document.getElementById('icon').src = listbox.selectedItem.cck['iconurl'];
+    if (listbox.selectedItem.cck['iconurl'].length > 0) {
+      document.getElementById('icon').src = listbox.selectedItem.cck['iconurl'];
+    } else {
+      document.getElementById('icon').src = getSearchEngineImage(listbox.selectedItem.cck['engineurl']);
+    }
   }
   searchEngineCheckOKButton();
   
@@ -735,10 +739,31 @@ function OnSearchEngineLoad()
 
 function searchEngineCheckOKButton()
 {
-  if ((document.getElementById("searchengine").value) && (document.getElementById("searchengineicon").value)) {
+  if (document.getElementById("searchengine").value) {    
     document.documentElement.getButton("accept").setAttribute( "disabled", "false" );
   } else {
     document.documentElement.getButton("accept").setAttribute( "disabled", "true" );  
+  }
+  if (!(document.getElementById("searchengineicon").value)) {
+    if (searchengineimage = getSearchEngineImage(document.getElementById("searchengine").value)) {
+      document.getElementById('icon').src = searchengineimage;
+      document.getElementById("searchengineicon").setAttribute( "disabled", "true" );
+    } else {
+      document.getElementById('icon').src = "";
+      document.getElementById("searchengineicon").removeAttribute( "disabled");
+    }
+  } else {
+    try {
+      var sourcefile = Components.classes["@mozilla.org/file/local;1"]
+                                 .createInstance(Components.interfaces.nsILocalFile);
+      sourcefile.initWithPath(document.getElementById('searchengineicon').value);
+      var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
+                             .getService(Components.interfaces.nsIIOService);
+      var imgfile = ioServ.newFileURI(sourcefile);
+      document.getElementById('icon').src = imgfile.spec;
+    } catch (ex) {
+      document.getElementById('icon').src = "";
+    }
   }
 }
 
@@ -764,13 +789,17 @@ function OnSearchEngineOK()
     listitem = listbox.selectedItem;
     listbox.selectedItem.label = name;
   }
-  var sourcefile = Components.classes["@mozilla.org/file/local;1"]
-                             .createInstance(Components.interfaces.nsILocalFile);
-  sourcefile.initWithPath(document.getElementById('searchengineicon').value);
-  var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
-                         .getService(Components.interfaces.nsIIOService);
-  var imgfile = ioServ.newFileURI(sourcefile);
-  listitem.setAttribute("image", imgfile.spec);
+  if (document.getElementById('searchengineicon').value) {
+    var sourcefile = Components.classes["@mozilla.org/file/local;1"]
+                               .createInstance(Components.interfaces.nsILocalFile);
+    sourcefile.initWithPath(document.getElementById('searchengineicon').value);
+    var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
+                           .getService(Components.interfaces.nsIIOService);
+    var imgfile = ioServ.newFileURI(sourcefile);
+    listitem.setAttribute("image", imgfile.spec);
+  } else {
+    listitem.setAttribute("image", getSearchEngineImage(document.getElementById('searchengine').value));
+  }
 
   listitem.cck['name'] = name;
   listitem.cck['engineurl'] = document.getElementById('searchengine').value;
@@ -1046,7 +1075,8 @@ function CreateCCK()
   for (var i=0; i < listbox.getRowCount(); i++) {
     listitem = listbox.getItemAtIndex(i);
     CCKCopyFile(listitem.cck['engineurl'], destdir);
-    CCKCopyFile(listitem.cck['iconurl'], destdir);
+    if (listitem.cck['iconurl'].length > 0)
+      CCKCopyFile(listitem.cck['iconurl'], destdir);
   }
 
   destdir.initWithPath(currentconfigpath);
@@ -2459,13 +2489,17 @@ function CCKReadConfigFile(srcdir)
     name = getSearchEngineName(searchengineurl);
     listitem = listbox.appendItem(name, "");
     listitem.setAttribute("class", "listitem-iconic");
-    try {
-      sourcefile.initWithPath(configarray[searchname + 'Icon' + i]);
-      var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
-                             .getService(Components.interfaces.nsIIOService);
-      var imgfile = ioServ.newFileURI(sourcefile);
-      listitem.setAttribute("image", imgfile.spec);
-    } catch (e) {
+    if (configarray[searchname + 'Icon' + i].length > 0) {
+      try {
+        sourcefile.initWithPath(configarray[searchname + 'Icon' + i]);
+        var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
+                               .getService(Components.interfaces.nsIIOService);
+        var imgfile = ioServ.newFileURI(sourcefile);
+        listitem.setAttribute("image", imgfile.spec);
+      } catch (e) {
+      }
+    } else {
+      listitem.setAttribute("image", getSearchEngineImage(searchengineurl));
     }
     listitem.cck['name'] = name;
     listitem.cck['engineurl'] = searchengineurl;

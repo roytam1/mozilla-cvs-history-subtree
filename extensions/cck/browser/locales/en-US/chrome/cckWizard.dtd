@@ -5,7 +5,7 @@
 <!ENTITY  beforeYouBegin.description    "Decide which customizations you want to make and create/collect the customized files, such as:
                                          <html:ul>
                                          <html:li>Custom animation files for browser&apos;s animated logo</html:li>
-                                         <html:li>Search engines (SRC files and the corresponding images)</html:li>
+                                         <html:li>Search engines</html:li>
                                          <html:li>Browser plug-ins</html:li>
                                          <html:li>Extensions/themes</html:li>
                                          </html:ul>">
@@ -106,9 +106,9 @@
 <!ENTITY  defaultSearchEngine.label     "Default Search Engine">
 
 <!ENTITY  engines.label                 "Search Engines">
-<!ENTITY  engines.description           "Please select a .src file and the corresponding image.">
+<!ENTITY  engines.description           "Please select a search engine and (if applicable) corresponding image.">
 
-<!ENTITY  engine.label                  "SRC File">
+<!ENTITY  engine.label                  "Search Engine:">
 <!ENTITY  engineIcon.label              "Image File:">
 
 <!ENTITY  file.label                    "File:">
