@@ -320,10 +320,12 @@ nsHTMLReflowState::InitFrameType()
     if (disp->IsAbsolutelyPositioned()) {
       frameType = NS_CSS_FRAME_TYPE_ABSOLUTE;
     }
-    else {
-      NS_ASSERTION(NS_STYLE_FLOAT_NONE != disp->mFloats,
-                   "unknown out of flow frame type");
+    else if (NS_STYLE_FLOAT_NONE != disp->mFloats) {
       frameType = NS_CSS_FRAME_TYPE_FLOATING;
+    } else {
+      NS_ASSERTION(disp->mDisplay == NS_STYLE_DISPLAY_POPUP,
+                   "unknown out of flow frame type");
+      frameType = NS_CSS_FRAME_TYPE_UNKNOWN;
     }
   }
   else {
