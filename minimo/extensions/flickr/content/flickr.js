@@ -1,44 +1,7 @@
-/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *   Marcio S. Galli - mgalli@geckonnection.com
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
- 
+
 /*
   Flikr documentation
-  THIS IS TEMPORARY AND SHOULD BE CHANGED - It uses marcio developers key. 
+
   --
 
   Example post image binaries: 
@@ -114,6 +77,9 @@ function auth() {
 
 	
 }
+
+
+
 var docX = null;
 var api_key= null;
 var sharedsecret = null;
@@ -131,7 +97,7 @@ function auth2() {
 
 	str=sharedsecret+"api_key"+api_key+"methodflickr.auth.getFullTokenmini_token"+mtoken;
 
-	var sig= hex_md5(str);
+	var sig= MD5(str);
 
 	strUrl = "http://flickr.com/services/rest/?method=flickr.auth.getFullToken&api_key="+api_key+"&mini_token="+mtoken+"&api_sig="+sig;
 
@@ -174,7 +140,7 @@ function auth_desktop() {
 
 	str=sharedsecret+"api_key"+api_key+"methodflickr.auth.getFrob";
 
-	var sig = hex_md5(str);
+	var sig = MD5(str);
 
 	strUrl = "http://flickr.com/services/rest/?method=flickr.auth.getFrob&api_key="+api_key+"&api_sig="+sig;
 
@@ -210,7 +176,7 @@ function auth_desktop_login() {
 
 	str=sharedsecret+"api_key"+api_key+"frob"+flickrDesktopFrob+"perms"+"write";
 
-	var sig = hex_md5(str);
+	var sig = MD5(str);
 
 	try {  
 		win.gBrowser.selectedTab = win.gBrowser.addTab('http://www.flickr.com/services/auth/?api_key='+api_key+'&perms=write&frob='+flickrDesktopFrob+'&api_sig='+sig);   
@@ -238,7 +204,7 @@ function auth_desktop_gettoken() {
 
 	str=sharedsecret+"api_key"+api_key+"frob"+flickrDesktopFrob+"methodflickr.auth.getToken";
 
-	var sig = hex_md5(str);
+	var sig = MD5(str);
 
 	strUrl = "http://flickr.com/services/rest/?method=flickr.auth.getToken&api_key="+api_key+"&frob="+flickrDesktopFrob+"&api_sig="+sig;
       docZ.load(strUrl);
@@ -320,9 +286,9 @@ function desktop_sendpict() {
 ////
 /// this is for minimo
 // trying to set dir. 
-//   var fileCustomDirFile= refLocalFile.QueryInterface(nsILocalFile);
-//   fileCustomDirFile.initWithPath("\\Storage Card\\");
-//   fp.displayDirectory = fileCustomDirFile;
+   var fileCustomDirFile= refLocalFile.QueryInterface(nsILocalFile);
+   fileCustomDirFile.initWithPath("\\Storage Card\\");
+   fp.displayDirectory = fileCustomDirFile;
 
 
   fp.appendFilters(nsIFilePicker.filterAll);
@@ -342,7 +308,7 @@ function desktop_sendpict() {
   }
 
   str=sharedsecret+"api_key"+api_key+"auth_token"+desktopToken;
-  var sig = hex_md5(str);
+  var sig = MD5(str);
 
 
 	var ref="http://www.flickr.com/services/upload/";
@@ -482,7 +448,7 @@ function fulltokenLoaded() {
 
   token = docX.getElementsByTagName("token").item(0).firstChild.nodeValue;
   str=sharedsecret+"api_key"+api_key+"auth_token"+token;
-  var sig = hex_md5(str);
+  var sig = MD5(str);
 
 
 	var ref="http://www.flickr.com/services/upload/";
@@ -567,134 +533,11 @@ function oldLoaded() {
 
   str=sharedsecret+"api_key"+api_key+"auth_token"+token;
 
-  var sig = hex_md5(str);
+  var sig = MD5(str);
 
   document.getElementById("f_api_sig").value = sig;
   
   document.getElementById("form_send").submit();
-
-}
-
-
-/* This is called and currently being used from minimo.js, 
- * See the path bookmarks/... 
- */
-function bmInitXUL(targetDoc, targetElement) {
-
-    var testLoad=new bmProcessor("browser.bookmark.homebar");
-    testLoad.xslSet("bookmarks/bookmark_template_xul.xml");
-    testLoad.setTargetDocument(targetDoc);
-    testLoad.setTargetElement(targetElement);
-    testLoad.run();
-    
-}
-
-function bmProcessor(prefStore) {
-
-
-
-      /* init stuff */ 
-  
-
-	this.xmlRef=document.implementation.createDocument("","",null);
-	this.xslRef=document.implementation.createDocument("http://www.w3.org/1999/XSL/Transform","stylesheet",null);
-
-	var bookmarkStore=null;
-
-	try {
-	      gPref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
-	      bookmarkStore = gPref.getCharPref(prefStore);
-     
-      } catch (ignore) {}
-
-
-	var aDOMParser = new DOMParser();
-	this.xmlRef = aDOMParser.parseFromString(bookmarkStore,"text/xml");
-
-	if(this.xmlRef&&this.xmlRef.firstChild&&this.xmlRef.firstChild.nodeName=="bm") {
-
-		// All good to go. 
-		
-	} else {
-		var bookmarkEmpty="<bm></bm>";
-		gPref.setCharPref(prefStore,bookmarkEmpty);
-		this.xmlRef = aDOMParser.parseFromString(bookmarkEmpty,"text/xml");
-	}
-
-	this.xslUrl="";
-
-	var myThis=this;
-	var omega=function thisScopeFunction2() { myThis.xslLoaded(); }
-
-	this.xslRef.addEventListener("load",omega,false);
-
-	this.xmlLoadedState=true;
-	this.xslLoadedState=false;
-
-
-}
-
-bmProcessor.prototype.xmlLoaded = function () {
-	this.xmlLoadedState=true;	
-alert('loaded');
-	this.apply();
-}
-
-bmProcessor.prototype.xslLoaded = function () {
-	this.xslLoadedState=true;
-	this.apply();
-}
-
-bmProcessor.prototype.xmlSet = function (urlstr) {
-	this.xmlUrl=urlstr;
-}
-
-bmProcessor.prototype.xslSet = function (urlstr) {
-	this.xslUrl=urlstr;
-}
-
-bmProcessor.prototype.setTargetDocument = function (targetDoc) {
-	this.targetDocument=targetDoc;
-}
-
-bmProcessor.prototype.setTargetElement = function (targetEle) {
-	this.targetElement=targetEle;
-}
-
-bmProcessor.prototype.apply = function () {
-    if( this.xmlRef.getElementsByTagName("li").length < 1) {
-      if( this.targetDocument && this.targetDocument ) {
-        if(this.targetDocument.getElementById("message-empty")) {
-
-            this.targetDocument.getElementById("message-empty").style.display="block";
-        }
-        // ... other checks? other formatting...
-      } 
-      return; 
-    }
-
-    if(this.xmlLoadedState&&this.xslLoadedState) {	
-        var xsltProcessor = new XSLTProcessor();
-        var htmlFragment=null;
-        try {
-          xsltProcessor.importStylesheet(this.xslRef);
-          htmlFragment = xsltProcessor.transformToFragment(this.xmlRef, this.targetDocument);
-        } catch (e) {
-        }
-        this.targetElement.appendChild(htmlFragment.firstChild);
-    }    
-}
-
-bmProcessor.prototype.run = function () {
-	try {
-		// Already parsed.
-		// this.xmlRef.load(this.xmlUrl);
-	} catch (e) {
-	}
-	try {
-		this.xslRef.load(this.xslUrl);
-	} catch (e) {
-	}
 
 }
 
