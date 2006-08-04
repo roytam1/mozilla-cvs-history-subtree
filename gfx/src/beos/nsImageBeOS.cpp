@@ -64,6 +64,7 @@ nsImageBeOS::nsImageBeOS()
   , mNumBytesPixel(0)
   , mImageCurrent(PR_FALSE)
   , mOptimized(PR_FALSE)
+  , mTileBitmap(nsnull)
 {
 }
 
@@ -74,6 +75,13 @@ nsImageBeOS::~nsImageBeOS()
 		delete mImage;
 		mImage = nsnull;
 	}
+			
+	if (mTileBitmap) 
+	{
+		delete mTileBitmap;
+		mTileBitmap = nsnull;
+	}
+
 	if (nsnull != mImageBits) 
 	{
 		delete [] mImageBits;
@@ -351,31 +359,43 @@ NS_IMETHODIMP nsImageBeOS::DrawTile(nsIRenderingContext &aContext, nsIDrawingSur
 	        			aTileRect.x + aTileRect.width - 1, aTileRect.y + aTileRect.height - 1));
     	    view->ConstrainClippingRegion(&rgn);
 
-			BBitmap *tmpbmp = 0;			
 			// Force transparency for bitmap blitting in case of padding even if mAlphaDepth == 0
 			if (0 != mAlphaDepth || aPadX || aPadY) 
 				view->SetDrawingMode(B_OP_ALPHA);
 			// Creating temporary bitmap, compatible with mImage and  with size of area to be filled with tiles
-			tmpbmp = new BBitmap(BRect(0, 0, aTileRect.width - 1, aTileRect.height -1), mImage->ColorSpace(), false);
-			int32 tmpbitlength = tmpbmp->BitsLength();
+			// Reuse existing if possible
+			if (!mTileBitmap || mTileBitmap->Bounds().IntegerWidth() + 1 != aTileRect.width || mTileBitmap->Bounds().IntegerHeight() + 1 != aTileRect.height)
+			{
+				if (mTileBitmap)
+				{
+					delete mTileBitmap;
+					mTileBitmap = nsnull;
+				}
+				mTileBitmap = new BBitmap(BRect(0, 0, aTileRect.width - 1, aTileRect.height -1), mImage->ColorSpace(), false);
+			}
+			
+			int32 tmpbitlength = mTileBitmap->BitsLength();
 
-			if (!tmpbmp || tmpbitlength == 0)
+			if (!mTileBitmap || tmpbitlength == 0)
 			{
 				// Failed. Cleaning things a bit.
 				((nsRenderingContextBeOS&)aContext).UnlockView();
-				if(tmpbmp)
-					delete tmpbmp;
+				if (mTileBitmap)
+				{
+					delete mTileBitmap;
+					mTileBitmap = nsnull;
+				}
 				beosdrawing->ReleaseView();
 				return NS_ERROR_FAILURE;
 			}
 
-			uint32 *dst0 = (uint32 *)tmpbmp->Bits();
+			uint32 *dst0 = (uint32 *)mTileBitmap->Bits();
 			uint32 *src0 = (uint32 *)mImage->Bits();
 			uint32 *dst = dst0;
-			uint32 dstRowLength = tmpbmp->BytesPerRow()/4;
-			uint32 dstColHeight = tmpbitlength/tmpbmp->BytesPerRow();
+			uint32 dstRowLength = mTileBitmap->BytesPerRow()/4;
+			uint32 dstColHeight = tmpbitlength/mTileBitmap->BytesPerRow();
 
-			// Filling tmpbmp with transparent color to preserve padding areas on destination 
+			// Filling mTileBitmap with transparent color to preserve padding areas on destination 
 			uint32 filllength = tmpbitlength/4;
 			if (0 != mAlphaDepth  || aPadX || aPadY) 
 			{
@@ -395,9 +415,9 @@ NS_IMETHODIMP nsImageBeOS::DrawTile(nsIRenderingContext &aContext, nsIDrawingSur
 					for (uint32 x = 0, xx = aSXOffset; x < dstRowLength; ++x) 
 					{
 						// Avoid memwrite if outside update rect
-						if(xx >= validX && xx <= validMostX)
+						if (xx >= validX && xx <= validMostX)
 							dst[x] = src[xx];
-						if(++xx == mWidth)
+						if (++xx == mWidth)
 						{
 							// Width of source reached. Adding horizontal paddding.
 							xx = 0;
@@ -412,15 +432,9 @@ NS_IMETHODIMP nsImageBeOS::DrawTile(nsIRenderingContext &aContext, nsIDrawingSur
 					y += aPadY;
 				}
 			}
-			// Flushing temporary bitmap to proper area in drawable BView	
-			view->DrawBitmap(tmpbmp, BPoint(aTileRect.x , aTileRect.y ));
+			// Flushing tile bitmap to proper area in drawable BView	
+			view->DrawBitmap(mTileBitmap, BPoint(aTileRect.x , aTileRect.y ));
 			view->SetDrawingMode(B_OP_COPY);
-			
-			if (tmpbmp) 
-			{
-				delete tmpbmp;
-				tmpbmp = 0;
-			}
 		}
 		((nsRenderingContextBeOS&)aContext).UnlockView();
 		beosdrawing->ReleaseView();
@@ -496,7 +510,7 @@ void nsImageBeOS::CreateImage(nsIDrawingSurface* aSurface)
 		if (nsnull != mImage) 
 		{
 			BRect bounds = mImage->Bounds();
-			if (bounds.IntegerWidth() != validMostX - 1 || bounds.IntegerHeight() != validMostY - 1 ||
+			if (bounds.IntegerWidth() < validMostX - 1 || bounds.IntegerHeight() < validMostY - 1 ||
 				mImage->ColorSpace() != cs) 
 			{
 				

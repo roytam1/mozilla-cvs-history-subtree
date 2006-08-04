@@ -103,6 +103,7 @@ protected:
 	
 private:
 	BBitmap *mImage;
+	BBitmap *mTileBitmap;
 	PRUint8 *mImageBits;
 	PRInt32 mWidth;
 	PRInt32 mHeight;
