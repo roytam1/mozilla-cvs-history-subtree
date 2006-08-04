@@ -40,21 +40,26 @@
 #define _NSUUIDGENERATOR_H_
 
 #include "nsIUUIDGenerator.h"
+#include "prlock.h"
 
 class nsUUIDGenerator : public nsIUUIDGenerator {
 public:
     nsUUIDGenerator();
+    virtual ~nsUUIDGenerator();
 
     NS_DECL_ISUPPORTS
 
     NS_DECL_NSIUUIDGENERATOR
 
-protected:
     nsresult Init();
+  
+protected:
 
-    PRBool mInitialized;
+    PRLock* mLock;
+#if !defined(XP_WIN) && !defined(XP_MACOSX)
     char mState[32];
     PRUint8 mRBytes;
+#endif
 };
 
 #define NS_UUID_GENERATOR_CONTRACTID "@mozilla.org/uuid-generator;1"
