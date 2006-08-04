@@ -56,6 +56,7 @@
 #include "jsdbgapi.h"           // for JS_ClearWatchPointsForObject
 #include "nsReadableUtils.h"
 #include "nsDOMClassInfo.h"
+#include "nsBuildID.h"
 
 // Other Classes
 #include "nsIEventListenerManager.h"
@@ -7792,6 +7793,7 @@ nsNavigator::~nsNavigator()
 NS_INTERFACE_MAP_BEGIN(nsNavigator)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNavigator)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNavigator)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNavigator_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIDOMJSNavigator)
   NS_INTERFACE_MAP_ENTRY(nsIDOMClientInformation)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(Navigator)
@@ -8102,6 +8104,18 @@ nsNavigator::GetOnLine(PRBool* aOnline)
   }
   
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNavigator::GetBuildID(nsAString & aBuildID)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+  long buildID = NS_BUILD_ID;
+  if (buildID) {
+    aBuildID = NS_LITERAL_STRING(NS_STRINGIFY(NS_BUILD_ID));
+    rv = NS_OK;
+  }
+  return rv;
 }
 
 NS_IMETHODIMP

@@ -676,6 +676,7 @@ private:
 //*****************************************************************************
 
 class nsNavigator : public nsIDOMNavigator,
+                    public nsIDOMNavigator_MOZILLA_1_8_BRANCH,
                     public nsIDOMJSNavigator,
                     public nsIDOMClientInformation
 {
@@ -685,6 +686,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOMNAVIGATOR
+  NS_DECL_NSIDOMNAVIGATOR_MOZILLA_1_8_BRANCH
   NS_DECL_NSIDOMJSNAVIGATOR
   NS_DECL_NSIDOMCLIENTINFORMATION
   

@@ -77,3 +77,9 @@ interface nsIDOMJSNavigator : nsISupports
   // dealt with in the implementation of this method.
   void                      preference();
 };
+
+[scriptable, uuid(b3abb5c6-a0c4-47e9-84f6-edb873042769)]
+interface nsIDOMNavigator_MOZILLA_1_8_BRANCH : nsISupports
+{
+  readonly attribute DOMString           buildID;
+};
