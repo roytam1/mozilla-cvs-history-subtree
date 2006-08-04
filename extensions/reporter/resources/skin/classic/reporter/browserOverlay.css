@@ -12,13 +12,13 @@
 #reporterMenuButton:hover {
   -moz-image-region: rect(0px 46px 23px 23px);
 }
-/*
+
 #reporterMenuButton:hover:active {
-  -moz-image-region: rect(0 0 0 0);
+  -moz-image-region: rect(0px 69px 23px 46px);
 }
-*/
+
 #reporterMenuButton[disabled="true"] {
-  -moz-image-region: rect(0px 69px 23px 46px) !important;
+  -moz-image-region: rect(0px 92px 23px 69px) !important;
 }
 
 /* Small */
@@ -33,12 +33,12 @@ toolbar[iconsize="small"] #reporterMenuButton {
 toolbar[iconsize="small"] #reporterMenuButton:hover {
   -moz-image-region: rect(0px 28px 15px 14px);
 }
-/*
+
 toolbar[iconsize="small"] #reporterMenuButton:hover:active {
-  -moz-image-region: rect(0 0 0 0);
+  -moz-image-region: rect(0px 42px 15px 28px);
 }
-*/
+
 toolbar[iconsize="small"] #reporterMenuButton[disabled="true"] {
-  -moz-image-region: rect(0px 42px 15px 28px) !important;
+  -moz-image-region: rect(0px 56px 15px 42px) !important;
 }
 
