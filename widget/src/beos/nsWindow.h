@@ -187,6 +187,7 @@ protected:
 	static PRBool           DealWithPopups(uint32 methodID, nsPoint pos);
     // Following methods need to be virtual if we will subclassing
 	void                    OnDestroy();
+	void                    OnWheel(PRInt32 aDirection, uint32 aButtons, BPoint aPoint, nscoord aDelta);
 	PRBool                  OnMove(PRInt32 aX, PRInt32 aY);
 	nsresult                OnPaint(nsRect &r, const nsIRegion *nsreg = nsnull);
 	PRBool                  OnResize(nsRect &aWindowRect);
@@ -321,6 +322,7 @@ public:
 	virtual void            MouseUp(BPoint point);
 	bool                    GetPaintRegion(BRegion *breg);
 	void                    Validate(BRect r);
+	BPoint                  GetWheel();
 	void                    KeyDown(const char *bytes, int32 numBytes);
 	void                    KeyUp(const char *bytes, int32 numBytes);
 	virtual void            MakeFocus(bool focused);
@@ -332,11 +334,13 @@ private:
 #if defined(BeIME)
  	void                 DoIME(BMessage *msg);
 #endif
-	BPoint               lastViewPoint;
 	BPoint               mousePos;
 	uint32               mouseMask;
+	// actually it is delta, not point, using it as convinient x,y storage
+	BPoint               wheel;
 	bool                 fRestoreMouseMask;	
 	bool                 fJustValidated;
+	bool                 fWheelDispatched;
 };
 
 //
