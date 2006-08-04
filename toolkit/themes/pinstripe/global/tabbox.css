@@ -13,7 +13,7 @@ tab {
   -moz-appearance: tab;
   -moz-box-align: stretch;
   color				: #000000;
-  padding: 3px;
+  padding: 3px 3px 0px 3px;
 }
 
 .tab-text {
@@ -47,7 +47,6 @@ tab:hover:active > .tab-image-right {
 
 tabs {
   padding			: 0px;
-  margin-bottom: -2px;
 }
 
 tabbox {

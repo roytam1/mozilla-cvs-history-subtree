@@ -1,4 +1,3 @@
-
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
 .tabbrowser-tabs {
@@ -6,24 +5,25 @@
   border: none;
 }
 
+
 tab:not([selected="true"]) > .tab-image-middle > .tab-icon {
   /* background: url("chrome://global/skin/inactivetab-icon-black.png") repeat; */
 }
 
 tab:not([selected="true"]):hover {
-  background: url("chrome://global/skin/10pct_transparent_grey.png") repeat;
+  background: url("chrome://global/skin/tabbrowser-tabs-bkgnd.png") repeat;
 }
 
 tab:not([selected="true"]) > .tab-image-middle > .tab-icon {
-   opacity: 0.5;
+  opacity: 0.5;
 }
 
 tab:not([selected="true"]):hover > .tab-image-middle > .tab-icon {
-   opacity: 1.0;
+  opacity: 1.0;
 }
 
 tab:hover > .tab-image-middle > .tab-icon > .tab-extra-status {
-        background: none;
+  background: none;
 }
 
 .tab-icon-image {
@@ -58,6 +58,10 @@ tab {
 
 tab[selected="true"] {
   -moz-user-focus: normal;
+  cursor: -moz-grab;
+}
+tab[selected="true"]  .tab-image-middle > .tab-text{
+  cursor: -moz-grab !important;
 }
 
 tab > .tab-image-middle > .tab-text {
@@ -69,51 +73,62 @@ tab:focus > .tab-image-middle > .tab-text {
 }
 
 tab[selected="true"], tab:hover {
-	color: #000000;
+  color: #000000;
 }
 
 tab[first-tab="true"] > .tab-image-left {
-	margin-left: 3px !important;
+  margin-left: 3px !important;
 }
 
 .tab-image-left, .tab-image-right {
-	width: 8px;
-	margin: 0px;
-	padding: 0px;
+  width: 8px;
+  margin: 0px;
+  padding: 0px;
 }
 
+
+tab > .tab-image-right {
+  background: url("chrome://global/skin/tab-right.png") no-repeat;
+}
 tab:not([selected="true"]) > .tab-image-right {
-	background: url("chrome://global/skin/inactivetab-right.png") no-repeat;
+  opacity: 0.30;
 }
-
-tab[selected="true"] > .tab-image-right {
-	background: url("chrome://global/skin/activetab-right.png") no-repeat;
-}
-
-tab[selected="true"] > .tab-image-left {
-	background: url("chrome://global/skin/activetab-left.png") no-repeat;
-}
-
-tab[selected="true"] > .tab-image-middle {
-	background: url("chrome://global/skin/activetab-middle.png") repeat-x;
+tab:hover:not([selected="true"]) > .tab-image-right {
+  opacity: 0.60;
 }
 
 
-tab[beforeselected="true"] > .tab-image-right {
-	background: none !important;
+tab > .tab-image-left {
+  background: url("chrome://global/skin/tab-left.png") no-repeat;
+}
+tab:not([selected="true"]) > .tab-image-left {
+  opacity: 0.30;
+}
+tab:hover:not([selected="true"]) > .tab-image-left {
+  opacity: 0.60;
+}
+
+tab > .tab-image-middle {
+  background: url("chrome://global/skin/tab-middle.png") repeat-x;
+}
+tab:not([selected="true"]) > .tab-image-middle {
+  opacity: 0.30;
+}
+tab:hover:not([selected="true"]) > .tab-image-middle {
+  opacity: 0.60;
 }
 
 tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-icon-image  {
-	list-style-image: url("chrome://global/skin/icons/small-globe-sunken-grey.png");
+  list-style-image: url("chrome://global/skin/icons/small-globe-sunken-grey.png");
 }
 
 /* ::::: close button ::::: */
 /**
  * XXXben - this looks like something added specifically for tabbrowser.
- *          if it turns out no one uses this that can't easily be evangelized to
- *          use their own roll-your-own binding, then we should get rid of this
- *          to tighten up the toolkit api. This binding made obsolete in Firefox
- *          by 308396. 
+ *       if it turns out no one uses this that can't easily be evangelized to
+ *       use their own roll-your-own binding, then we should get rid of this
+ *       to tighten up the toolkit api. This binding made obsolete in Firefox
+ *       by 308396. 
  */
 .tabs-closebutton {
   padding: 0px 4px 2px 0px;
@@ -122,33 +137,33 @@ tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-icon-image  {
   border: none !important;
 }
 .tabs-closebutton:hover {
-	border: none !important;
+  border: none !important;
 }
 
 .tabs-closebutton:hover:active {
-	list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
-	border: none !important;
+  list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
+  border: none !important;
 
 }
 
 .tabbrowser-strip {
-	-moz-box-orient: vertical !important;
+  -moz-box-orient: vertical !important;
 }
 .tabbrowser-tabs {
   padding: 0px;
   margin: 0px;
   -moz-box-pack: center;
   -moz-box-align: center;
-  background: url("chrome://global/skin/10pct_transparent_pixel.png") repeat;
+  background: url("chrome://global/skin/tabbrowser-tabs-bkgnd.png") repeat;
 }
 
 
 .tabbrowser-strip {
-	-moz-appearance: dialog;
+  -moz-appearance: dialog;
 }
 
 .tab-image-right, .tab-image-left {
-	height: 18px !important;
+  height: 18px !important;
 }
 
 .tabbrowser-tab {
@@ -157,34 +172,34 @@ tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-icon-image  {
 }
 
 .tabs-bottom {
-	border: none;
-	height: 4px !important;
-	background: url("chrome://global/skin/tabs-bottom-bg.png") repeat !important;
-	margin: 0px !important;
+  border: none;
+  height: 4px !important;
+  background: url("chrome://global/skin/tabs-bottom-bg.png") repeat !important;
+  margin: 0px !important;
 
 }
 
 tabbrowser > tabbox > tabpanels {
-	-moz-appearance: none !important;
+  -moz-appearance: none !important;
 }
 
 .tab-drop-indicator-bar {
-    display:none;
-    height: 9px;
-    margin-top: -9px;
-    position: relative;
+   display:none;
+   height: 9px;
+   margin-top: -9px;
+   position: relative;
 }
 
 .tab-drop-indicator {
-    height: 9px;
-    width: 9px;
-    margin-bottom: -5px;
-    position: relative;
-    background: url('chrome://global/skin/tabDragDrop/tabDragIndicator.png') 50% 50% no-repeat;
+   height: 9px;
+   width: 9px;
+   margin-bottom: -5px;
+   position: relative;
+   background: url('chrome://global/skin/tabDragDrop/tabDragIndicator.png') 50% 50% no-repeat;
 }
 
 .tab-drop-indicator-bar[dragging="true"] {
-    display: -moz-box;
+   display: -moz-box;
 }
 
 /**
@@ -197,16 +212,17 @@ tabbrowser > tabbox > tabpanels {
 .tab-close-button {
   list-style-image: url("chrome://global/skin/icons/closetab.png");
   -moz-appearance: none;
-  -moz-margin-start: -5px;
-  -moz-padding-end: 3px;
-  margin-top: 2px;
   border: none !important;
+  margin: 0px !important;
   padding: 0px;
+  background: inherit;
+  cursor: default;
   opacity: 0.7;
 }
 
 .tab-close-button:hover,
 .tabbrowser-tab[selected="true"] > .tab-close-button:hover {
+  list-style-image: url("chrome://global/skin/icons/closetab-active.png");
   opacity: 1.0;
 }
 
@@ -216,45 +232,87 @@ tabbrowser > tabbox > tabpanels {
   opacity: 1.0;
 }
 
+.tabbrowser-tab > .tab-close-button {
+  background-image: url("chrome://global/skin/tab-middle.png");
+  background-repeat: no-repeat;
+}
 .tabbrowser-tab[selected="true"] > .tab-close-button {
   -moz-margin-start: -5px;
   -moz-margin-end: -1px;
+  -moz-padding-end: 3px;
   margin-top: 0px;
   opacity: 1.0;
-  -moz-padding-end: 3px;
-  padding-top: 2px;
-	background-image: url("chrome://global/skin/activetab-middle.png");
-  background-repeat: no-repeat;
-  background-position: 5px 0px;
 }
-
+.tabbrowser-tab:not([selected="true"]) > .tab-close-button {
+  opacity: 0.35;
+}
+.tabbrowser-tab:not([selected="true"]):hover > .tab-close-button {
+  opacity: 0.5;
+}
 
 .tab-close-button-placeholder {
   list-style-image: url("chrome://global/skin/icons/closetab.png");
   opacity: 0.5;
   -moz-margin-start: -5px;
   -moz-padding-end: 3px;
-  margin-top: 2px;
   border: none !important;
   padding: 0px;
+}
+
+/**
+ * Tab Scrollbox Arrow Buttons
+ */
+
+.tabbrowser-arrowscrollbox > .scrollbutton-up{
+  width: 19px;
+  height: 25px;
+  margin-left: 0px !important;
+  padding-left: 0px !important;
+  list-style-image: url("chrome://global/skin/tab-arrow-start.png") !important;
+  background-image: url("chrome://global/skin/tab-arrow-start-bkgnd.png") !important;
+  opacity: 0.65;
+}
+
+.tabbrowser-arrowscrollbox > .scrollbutton-up:hover{
+  opacity: 1.0;
+}
+
+.tabbrowser-arrowscrollbox > .scrollbutton-down{
+  width: 19px;
+  height: 25px;
+  margin-right: 0px !important;
+  list-style-image: url("chrome://global/skin/tab-arrow-end.png") !important;
+  background-image: url("chrome://global/skin/tab-arrow-end-bkgnd.png") !important;
+  background-repeat: no-repeat;
+  opacity: 0.65;
+}
+
+.tabbrowser-arrowscrollbox > .scrollbutton-down:hover{
+  opacity: 1.0;
 }
 
 /**
  * All Tabs Button
  */
 
-.tabs-alltabs-box {
+.tabs-alltabs-box{
+  width: 16px;
+  height: 25px;
+  background-image: url("chrome://global/skin/alltabs-box-bkgnd.png");
+  opacity: 0.65;
+}
+
+.tabs-alltabs-box:hover{
+  opacity: 1.0;
+}
+
+.tabs-alltabs-box[flash="true"] {
   background-color: orange;
   opacity: 0.0;
 }
 
-.tabs-alltabs-button {
-  list-style-image: url("chrome://global/skin/icons/alltabs.png");
-  -moz-image-region: rect(0px, 16px, 16px, 0px); 
-}
-
-.tabs-alltabs-button[open="true"] {
-  -moz-image-region: rect(0px, 64px, 16px, 48px);
+.tabbrowser-tabs[overflow="true"] .tabs-alltabs-box{
+  background-image: url("chrome://global/skin/alltabs-box-overflow-bkgnd.png");
 }
 
 /**
