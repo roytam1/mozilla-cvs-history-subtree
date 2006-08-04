@@ -2,6 +2,10 @@ classic.jar:
 % skin browser classic/1.0 %skin/classic/browser/
 *       skin/classic/browser/browser.css                        (browser.css)
         skin/classic/browser/browser.xml
+        skin/classic/browser/dropmark-nav.png
+        skin/classic/browser/dropmark-nav-rtl.png
+        skin/classic/browser/dropmark-nav-small.png
+        skin/classic/browser/dropmark-nav-rtl-small.png
 *       skin/classic/browser/engineManager.css                  (engineManager.css)
         skin/classic/browser/Go.png
         skin/classic/browser/Go-rtl.png
@@ -14,14 +18,18 @@ classic.jar:
         skin/classic/browser/searchbar.css
         skin/classic/browser/Search-bar.png
         skin/classic/browser/Search.png
+        skin/classic/browser/Search-rtl.png
         skin/classic/browser/Search-add-engines.png
+        skin/classic/browser/Search-provider-bkgnd.png
         skin/classic/browser/Secure.png
         skin/classic/browser/Security-broken.png
         skin/classic/browser/Throbber.gif
         skin/classic/browser/Throbber.png
         skin/classic/browser/Throbber-small.png
         skin/classic/browser/Toolbar.png
+        skin/classic/browser/Toolbar-rtl.png
         skin/classic/browser/Toolbar-small.png
+        skin/classic/browser/Toolbar-rtl-small.png
 #ifdef MOZ_FEEDS
         skin/classic/browser/feeds/feedIcon.png                 (feeds/feedIcon.png)
         skin/classic/browser/feeds/feedIcon16.png               (feeds/feedIcon16.png)
@@ -47,12 +55,12 @@ classic.jar:
         skin/classic/browser/bookmarks/Bookmarks-toolbar.png    (bookmarks/Bookmarks-toolbar.png)
 #endif
 #ifdef MOZ_SAFE_BROWSING
-  skin/classic/browser/safebrowsing/browser-protection.css      (safebrowsing/browser-protection.css)
-  skin/classic/browser/safebrowsing/close16x16.png              (safebrowsing/close16x16.png)
-  skin/classic/browser/safebrowsing/dim.png                     (safebrowsing/dim.png)
-  skin/classic/browser/safebrowsing/tail.png                    (safebrowsing/tail.png)
-  skin/classic/browser/safebrowsing/warning16x16.png            (safebrowsing/warning16x16.png)
-  skin/classic/browser/safebrowsing/warning24x24.png            (safebrowsing/warning24x24.png)
+        skin/classic/browser/safebrowsing/browser-protection.css      (safebrowsing/browser-protection.css)
+        skin/classic/browser/safebrowsing/close16x16.png              (safebrowsing/close16x16.png)
+        skin/classic/browser/safebrowsing/dim.png                     (safebrowsing/dim.png)
+        skin/classic/browser/safebrowsing/tail.png                    (safebrowsing/tail.png)
+        skin/classic/browser/safebrowsing/warning16x16.png            (safebrowsing/warning16x16.png)
+        skin/classic/browser/safebrowsing/warning24x24.png            (safebrowsing/warning24x24.png)
 #endif
         skin/classic/browser/preferences/Options.png            (preferences/Options.png)
         skin/classic/browser/preferences/preferences.css        (preferences/preferences.css)

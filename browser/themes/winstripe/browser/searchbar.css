@@ -1,5 +1,13 @@
+#searchbar .search-go-button,
+#searchbar .searchbar-textbox {
+	border: 0px !important;
+}
+
 .searchbar-textbox {
+  height: 22px;
   width: 15em;
+  margin-right: 0;
+  margin-left: 0;
 }
 
 .searchbar-engine-image {
@@ -12,7 +20,9 @@
 
 .searchbar-engine-button {
   min-width: 22px;
-  margin: 0px 3px 0px 0px;
+  /* margin: 0px 3px 0px 0px; <-- WORKS LTR, NOT RTL */
+  margin: 0px;
+  -moz-margin-end: 3px;
 }
 
 .searchbar-engine-button[addengines="true"] {
@@ -24,51 +34,33 @@
   padding: 8px 0px 7px 20px;
 }
 
-.search-go-button-container {
-  border-left: 1px solid ThreeDShadow;
-}
-
 .search-go-button {
   list-style-image: url("chrome://browser/skin/Search.png");
-  -moz-image-region: rect(0px 16px 16px 0px);
   padding: 0px;
   -moz-appearance: none;
-  border: 1px solid ThreeDFace;
+  -moz-image-region: rect(0px 25px 22px 0px);
 }
 
-.search-go-button:hover {
-  border-top: 1px solid ThreeDHighlight;
-  border-left: 1px solid ThreeDHighlight;
-  border-right: 1px solid ThreeDShadow;
-  border-bottom: 1px solid ThreeDShadow;
+.search-go-button[chromedir="rtl"] {
+  list-style-image: url("chrome://browser/skin/Search-rtl.png");
+  padding: 0px;
+  -moz-appearance: none;
+  -moz-image-region: rect(0px 25px 22px 0px);
 }
 
-.search-go-button:hover > .toolbarbutton-menubutton-button {
-  -moz-border-right-colors: ThreeDHighlight ThreeDShadow;
+.search-go-button:hover,
+.search-go-button:hover[chromedir="rtl"] {
+  -moz-image-region: rect(0px 50px 22px 25px);
+}
+
+.search-go-button[disabled="true"],
+.search-go-button[disabled="true"][chromedir="rtl"] {
+  -moz-image-region: rect(0px, 75px, 22px, 50px);
 }
 
 .search-go-button:hover:active,
-.search-go-button[open="true"] {
-  border-top: 1px solid ThreeDShadow;
-  border-left: 1px solid ThreeDShadow;
-  border-right: 1px solid ThreeDShadow;
-  border-bottom: 1px solid ThreeDShadow;
-}
-
-.search-go-button-container {
-  background-color: ThreeDFace;
-}
-
-.search-go-button:hover {
-  -moz-image-region: rect(0px 32px 16px 16px);
-}
-
-.search-go-button:hover:active {
-  -moz-image-region: rect(0px, 32px, 16px, 16px);
-}
-
-.search-go-button[disabled="true"]{
-  -moz-image-region: rect(0px, 48px, 16px, 32px);
+.search-go-button[disabled="true"][chromedir="rtl"] {
+  -moz-image-region: rect(0px, 100px, 22px, 75px);
 }
 
 .searchbar-engine-menuitem[selected="true"] > .menu-iconic-text {

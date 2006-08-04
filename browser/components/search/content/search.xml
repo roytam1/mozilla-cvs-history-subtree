@@ -89,11 +89,11 @@
                               accesskey="&cmd_engineManager.accesskey;"/>
               </xul:menupopup>
             </xul:button>
-            <xul:hbox class="search-go-button-container">
-              <xul:toolbarbutton class="search-go-button"
-                                 anonid="search-go-button" />
-            </xul:hbox>
           </xul:textbox>
+          <xul:hbox class="search-go-button-container">
+            <xul:toolbarbutton class="search-go-button"
+                               anonid="search-go-button" />
+          </xul:hbox>
         </xul:box>
       </xul:box>
     </content>

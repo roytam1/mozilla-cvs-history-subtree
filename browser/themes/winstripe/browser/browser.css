@@ -207,21 +207,25 @@ menuitem.bookmark-item {
 }
 
 .bookmark-item[type="menu"][livemark="true"] { 
-  -moz-image-region: rect(0px, 48px, 16px, 32px) !important;
+  -moz-image-region: rect(0px, 54px, 18px, 36px) !important;
 }
 
 .bookmark-item[type="menu"][livemark="true"][open="true"] { 
-  -moz-image-region: rect(16px, 48px, 32px, 32px) !important;
+  -moz-image-region: rect(18px, 54px, 36px, 36px) !important;
 }
 
 /* ::::: primary toolbar buttons ::::: */
 
 .toolbarbutton-1 {
   -moz-box-orient: vertical;
-  min-width: 0px;
+  min-width: 0;
   list-style-image: url("chrome://browser/skin/Toolbar.png");
 }
-
+.toolbarbutton-1[chromedir="rtl"] {
+  -moz-box-orient: vertical;
+  min-width: 0;
+  list-style-image: url("chrome://browser/skin/Toolbar-rtl.png");
+}
 .toolbarbutton-1 .toolbarbutton-icon {
   -moz-margin-end: 0px;
 }
@@ -232,28 +236,30 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 }
 
 .toolbarbutton-1, .toolbarbutton-menubutton-button {
-  padding: 5px;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .toolbarbutton-1:hover:active:not([disabled]),
 .toolbarbutton-1[open="true"], 
 .toolbarbutton-menubutton-button:hover:active:not([disabled]),
 .toolbarbutton-menubutton-button[open="true"] {
-  padding-top: 5px;
-  padding-bottom: 5px;
-  -moz-padding-start: 6px;
-  -moz-padding-end: 4px;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .toolbarbutton-1[checked="true"] {
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
-  -moz-padding-start: 6px !important;
-  -moz-padding-end: 4px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;  
 }
 
 .toolbarbutton-1[type="menu-button"] {
-  padding: 0px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important; 
 }
 
 .toolbarbutton-menubutton-stack,
@@ -262,42 +268,142 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 .toolbarbutton-menubutton-button:hover,
 .toolbarbutton-menubutton-stack:hover:active,
 .toolbarbutton-menubutton-button:hover:active {
+  border: 0 !important;
+  padding: 0 !important;
   margin: 0 !important;
   display: -moz-box;
 }
+
 
 /* ::::: 24px primary toolbar buttons ::::: */
 
 /* back button-- */
 
-#back-button, #forward-button[chromedir="rtl"] {
+#back-button, 
+#forward-button[chromedir="rtl"] {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
   -moz-image-region: rect(0px 24px 24px 0px);
+  -moz-margin-start: 5px !important;
+  -moz-margin-end: 0 !important;
 }
-
-#back-button[buttonover="true"], #forward-button[buttonover="true"][chromedir="rtl"] {
+#back-button:hover,
+#back-button[buttonover="true"],
+#forward-button:hover[chromedir="rtl"],
+#forward-button[buttonover="true"][chromedir="rtl"] {
   -moz-image-region: rect(24px 24px 48px 0px);
 }
-#back-button[disabled="true"], #forward-button[disabled="true"][chromedir="rtl"] {
+#back-button[disabled="true"], 
+#forward-button[disabled="true"][chromedir="rtl"] {
   -moz-image-region: rect(48px 24px 72px 0px) !important;
+}
+#back-button:hover:active,
+#forward-button:hover:active[chromedir="rtl"] {
+  -moz-image-region: rect(96px 24px 120px 0px);
+}
+
+/* back button dropmarker */
+
+#back-button .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav.png");
+  -moz-image-region: rect(0px 14px 24px 0px);
+}
+
+#forward-button[chromedir="rtl"] .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png");
+  -moz-image-region: rect(0px 14px 24px 0px);
+}
+#back-button:hover > .toolbarbutton-menubutton-dropmarker,
+#back-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker,
+#forward-button:hover[chromedir="rtl"]  > .toolbarbutton-menubutton-dropmarker,
+#forward-button[buttonover="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(24px 14px 48px 0px);
+}
+#back-button > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
+  -moz-image-region: rect(48px 14px 72px 0px);
+}
+#forward-button[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker[disabled="true"]{
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png") !important;
+  -moz-image-region: rect(48px 14px 72px 0px);
+}
+#back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
+#back-button:hover:active > .toolbarbutton-menubutton-dropmarker, 
+#forward-button[buttondown="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
+#forward-button:hover:active[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(72px 14px 96px 0px);
 }
 
 /* forward button */
 
-#forward-button, #back-button[chromedir="rtl"] {
+#forward-button,
+#back-button[chromedir="rtl"] {
   -moz-image-region: rect(0px 48px 24px 24px);
-  -moz-padding-end: 2px;
+  -moz-margin-start: 5px !important;
+  -moz-margin-end: 0 !important;
 }
-#forward-button[buttonover="true"], #back-button[buttonover="true"][chromedir="rtl"] {
+#forward-button:hover,
+#forward-button[buttonover="true"],
+#back-button:hover[chromedir="rtl"],
+#back-button[buttonover="true"][chromedir="rtl"] {
   -moz-image-region: rect(24px 48px 48px 24px);
 }
-#forward-button[disabled="true"], #back-button[disabled="true"][chromedir="rtl"] {
+#forward-button[disabled="true"], 
+#back-button[disabled="true"][chromedir="rtl"] {
    -moz-image-region: rect(48px 48px 72px 24px) !important;
+}
+#forward-button:hover:active,
+#back-button:hover:active[chromedir="rtl"] {
+  -moz-image-region: rect(96px 48px 120px 24px);
+}
+
+/* forward button dropmarker */
+
+#forward-button .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav.png");
+  -moz-image-region: rect(0px 14px 24px 0px);
+}
+#back-button[chromedir="rtl"] .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png");
+  -moz-image-region: rect(0px 14px 24px 0px);
+}
+#forward-button:hover > .toolbarbutton-menubutton-dropmarker,
+#forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker,
+#back-button:hover[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
+#back-button[buttonover="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(24px 14px 48px 0px);
+}
+#forward-button > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
+  -moz-image-region: rect(48px 14px 72px 0px);
+}
+#back-button[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png") !important;
+  -moz-image-region: rect(48px 14px 72px 0px);
+}
+#forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
+#back-button[buttondown="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(72px 14px 96px 0px);
 }
 
 /* stop button */
 
 #stop-button {
   -moz-image-region: rect(0px 72px 24px 48px);
+  margin: 0 5px !important;
 }
 #stop-button:hover {
   -moz-image-region: rect(24px 72px 48px 48px);
@@ -305,11 +411,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #stop-button[disabled="true"] {
   -moz-image-region: rect(48px 72px 72px 48px) !important;
 }
+#stop-button:hover:active {
+  -moz-image-region: rect(96px 72px 120px 48px);
+}
 
 /* reload button */
 
 #reload-button {
   -moz-image-region: rect(0px 96px 24px 72px);
+  margin: 0 5px !important;
 }
 #reload-button:hover {
   -moz-image-region: rect(24px 96px 48px 72px);
@@ -317,11 +427,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #reload-button[disabled="true"] {
   -moz-image-region: rect(48px 96px 72px 72px);
 }
+#reload-button:hover:active {
+  -moz-image-region: rect(96px 96px 120px 72px);
+}
 
 /* home button */
 
 #home-button {
   -moz-image-region: rect(0px 120px 24px 96px);
+  margin: 0 5px !important;
 }
 #home-button:hover {
   -moz-image-region: rect(24px 120px 48px 96px);
@@ -329,11 +443,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #home-button[disabled="true"] {
   -moz-image-region: rect(48px 120px 72px 96px);
 }
+#home-button:hover:active {
+  -moz-image-region: rect(96px 120px 120px 96px);
+}
 
 /* download manager button */
 
 #downloads-button {
   -moz-image-region: rect(0px 144px 24px 120px);
+  margin: 0 5px !important;
 }
 #downloads-button:hover {
   -moz-image-region: rect(24px 144px 48px 120px);
@@ -341,11 +459,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #downloads-button[disabled="true"] {
   -moz-image-region: rect(48px 144px 72px 120px) !important;
 }
+#downloads-button:hover:active {
+  -moz-image-region: rect(96px 144px 120px 120px);
+}
 
 /* history sidebar button */
 
 #history-button {
   -moz-image-region: rect(0px 168px 24px 144px);
+  margin: 0 5px !important;
 }
 #history-button:hover {
   -moz-image-region: rect(24px 168px 48px 144px);
@@ -353,11 +475,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #history-button[disabled="true"] {
   -moz-image-region: rect(48px 168px 72px 144px) !important;
 }
+#history-button:hover:active {
+  -moz-image-region: rect(96px 168px 120px 144px);
+}
 
 /* bookmark sidebar button */
 
 #bookmarks-button {
   -moz-image-region: rect(0px 192px 24px 168px);
+  margin: 0 5px !important;
 }
 #bookmarks-button:hover {
   -moz-image-region: rect(24px 192px 48px 168px);
@@ -368,11 +494,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #bookmarks-button[checked="true"] {
   -moz-image-region: rect(72px 192px 96px 168px) !important;
 }
+#bookmarks-button:hover:active {
+  -moz-image-region: rect(96px 192px 120px 168px);
+}
 
 /* print button */
 
 #print-button {
   -moz-image-region: rect(0px 216px 24px 192px);
+  margin: 0 5px !important;
 }
 #print-button:hover {
   -moz-image-region: rect(24px 216px 48px 192px);
@@ -380,11 +510,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #print-button[disabled="true"] {
   -moz-image-region: rect(48px 216px 72px 192px) !important;
 }
+#print-button:hover:active {
+  -moz-image-region: rect(96px 216px 120px 192px);
+}
 
 /* new tab button */
 
 #new-tab-button {
   -moz-image-region: rect(0px 240px 24px 216px);
+  margin: 0 5px !important;
 }
 #new-tab-button:hover {
   -moz-image-region: rect(24px 240px 48px 216px);
@@ -392,11 +526,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #new-tab-button[disabled="true"] {
   -moz-image-region: rect(48px 240px 72px 216px) !important;
 }
+#new-tab-button:hover:active {
+  -moz-image-region: rect(96px 240px 120px 216px);
+}
 
 /* new window button */
 
 #new-window-button {
   -moz-image-region: rect(0px 264px 24px 240px);
+  margin: 0 5px !important;
 }
 #new-window-button:hover {
   -moz-image-region: rect(24px 264px 48px 240px);
@@ -404,11 +542,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #new-window-button[disabled="true"] {
   -moz-image-region: rect(48px 264px 72px 240px) !important;
 }
+#new-window-button:hover:active {
+  -moz-image-region: rect(96px 264px 120px 240px);
+}
 
 /* cut button */
 
 #cut-button {
   -moz-image-region: rect(0px 288px 24px 264px);
+  margin: 0 5px !important;
 }
 #cut-button:hover {
   -moz-image-region: rect(24px 288px 48px 264px);
@@ -416,11 +558,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #cut-button[disabled="true"] {
   -moz-image-region: rect(48px 288px 72px 264px) !important;
 }
+#cut-button:hover:active {
+  -moz-image-region: rect(96px 288px 120px 264px);
+}
 
 /* copy button */
 
 #copy-button {
   -moz-image-region: rect(0px 312px 24px 288px);
+  margin: 0 5px !important;
 }
 #copy-button:hover {
   -moz-image-region: rect(24px 312px 48px 288px);
@@ -428,11 +574,15 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #copy-button[disabled="true"] {
   -moz-image-region: rect(48px 312px 72px 288px);
 }
+#copy-button:hover:active {
+  -moz-image-region: rect(96px 312px 120px 288px);
+}
 
 /* paste button */
 
 #paste-button {
   -moz-image-region: rect(0px 336px 24px 312px);
+  margin: 0 5px !important;
 }
 #paste-button:hover {
   -moz-image-region: rect(24px 336px 48px 312px);
@@ -440,42 +590,52 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #paste-button[disabled="true"] {
   -moz-image-region: rect(48px 336px 72px 312px);
 }
+#paste-button:hover:active {
+  -moz-image-region: rect(96px 336px 120px 312px);
+}
 
 /* ::::: 16px primary toolbar buttons ::::: */
 
 toolbar[iconsize="small"] .toolbarbutton-1 {
   -moz-box-orient: vertical;
+  min-width: 0;
   list-style-image: url("chrome://browser/skin/Toolbar-small.png");
 }
-
+toolbar[iconsize="small"] .toolbarbutton-1[chromedir="rtl"] {
+  -moz-box-orient: vertical;
+  min-width: 0;
+  list-style-image: url("chrome://browser/skin/Toolbar-rtl-small.png");
+}
 toolbar[iconsize="small"] .toolbarbutton-1 .toolbarbutton-icon {
   -moz-margin-end: 0px;
 }
 
-toolbar[iconsize="small"] .toolbarbutton-1, toolbar[iconsize="small"] .toolbarbutton-menubutton-button {
-  padding: 3px;
-  -moz-margin-end: 2px;
+toolbar[iconsize="small"] .toolbarbutton-1, 
+.toolbarbutton-menubutton-button {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 toolbar[iconsize="small"] .toolbarbutton-1:hover:active:not([disabled]),
 toolbar[iconsize="small"] .toolbarbutton-1[open="true"], 
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active:not([disabled]),
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button[open="true"] {
-  padding-top: 3px;
-  padding-bottom: 3px;
-  -moz-padding-start: 4px;
-  -moz-padding-end: 2px;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 toolbar[iconsize="small"] .toolbarbutton-1[checked="true"] {
-  padding-top: 3px !important;
-  padding-bottom: 3px !important;
-  -moz-padding-start: 4px !important;
-  -moz-padding-end: 2px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 toolbar[iconsize="small"] .toolbarbutton-1[type="menu-button"] {
-  padding: 0px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important; 
 }
 
 toolbar[iconsize="small"] .toolbarbutton-menubutton-stack,
@@ -484,41 +644,142 @@ toolbar[iconsize="small"] .toolbarbutton-menubutton-stack:hover,
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover,
 toolbar[iconsize="small"] .toolbarbutton-menubutton-stack:hover:active,
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active {
+  border: 0 !important;
+  padding: 0 !important;
   margin: 0 !important;
   display: -moz-box;
 }
+/* ::::: small back button ::::: */
 
 /* back button-- */
 
-toolbar[iconsize="small"] #back-button, toolbar[iconsize="small"] #forward-button[chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button, 
+toolbar[iconsize="small"] #forward-button[chromedir="rtl"] {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
   -moz-image-region: rect(0px 16px 16px 0px);
+  -moz-margin-start: 5px !important;
+  -moz-margin-end: 0 !important;
 }
-
-toolbar[iconsize="small"] #back-button[buttonover="true"], toolbar[iconsize="small"] #forward-button[buttonover="true"][chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button:hover,
+toolbar[iconsize="small"] #back-button[buttonover="true"],
+toolbar[iconsize="small"] #forward-button:hover[chromedir="rtl"],
+toolbar[iconsize="small"] #forward-button[buttonover="true"][chromedir="rtl"] {
   -moz-image-region: rect(16px 16px 32px 0px);
 }
-
-toolbar[iconsize="small"] #back-button[disabled="true"], toolbar[iconsize="small"] #forward-button[disabled="true"][chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button[disabled="true"], 
+toolbar[iconsize="small"] #forward-button[disabled="true"][chromedir="rtl"] {
   -moz-image-region: rect(32px 16px 48px 0px) !important;
 }
-
-/* forward button */
-
-toolbar[iconsize="small"] #forward-button, toolbar[iconsize="small"] #back-button[chromedir="rtl"] {
-  -moz-image-region: rect(0px 32px 16px 16px);
-  -moz-padding-end: 2px;
+toolbar[iconsize="small"] #back-button:hover:active,
+toolbar[iconsize="small"] #forward-button:hover:active[chromedir="rtl"] {
+  -moz-image-region: rect(64px 16px 80px 0px);
 }
-toolbar[iconsize="small"] #forward-button[buttonover="true"], toolbar[iconsize="small"] #back-button[buttonover="true"][chromedir="rtl"] {
+
+/* small back button dropmarker */
+
+toolbar[iconsize="small"] #back-button .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+toolbar[iconsize="small"] #forward-button[chromedir="rtl"] .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl-small.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+toolbar[iconsize="small"] #back-button:hover > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button:hover[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button[buttonover="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(16px 16px 32px 0px);
+}
+toolbar[iconsize="small"] #back-button > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav-small.png") !important;
+  -moz-image-region: rect(32px 16px 48px 0px);
+}
+toolbar[iconsize="small"] #forward-button[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl-small.png") !important;
+  -moz-image-region: rect(32px 16px 48px 0px);
+}
+toolbar[iconsize="small"] #back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button:hover:active > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button[buttondown="true"][chromedir="rtl"]  > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button:hover:active[chromedir="rtl"]  > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(64px 16px 80px 0px);
+}
+
+
+/* small forward button-- */
+
+toolbar[iconsize="small"] #forward-button, 
+toolbar[iconsize="small"] #back-button[chromedir="rtl"] {
+  -moz-image-region: rect(0px 32px 16px 16px);
+  -moz-margin-start: 5px !important;
+  -moz-margin-end: 0 !important;
+}
+toolbar[iconsize="small"] #forward-button:hover,
+toolbar[iconsize="small"] #forward-button[buttonover="true"],
+toolbar[iconsize="small"] #back-button:hover[chromedir="rtl"],
+toolbar[iconsize="small"] #back-button[buttonover="true"][chromedir="rtl"] {
   -moz-image-region: rect(16px 32px 32px 16px);
 }
-toolbar[iconsize="small"] #forward-button[disabled="true"], toolbar[iconsize="small"] #back-button[disabled="true"][chromedir="rtl"] {
-   -moz-image-region: rect(32px 32px 48px 16px) !important;
+toolbar[iconsize="small"] #forward-button[disabled="true"], 
+toolbar[iconsize="small"] #back-button[disabled="true"][chromedir="rtl"] {
+  -moz-image-region: rect(32px 32px 48px 16px) !important;
+}
+toolbar[iconsize="small"] #forward-button:hover:active,
+toolbar[iconsize="small"] #back-button:hover:active[chromedir="rtl"] {
+  -moz-image-region: rect(64px 32px 80px 16px);
+}
+
+/* small front button dropmarker */
+
+toolbar[iconsize="small"] #forward-button .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+toolbar[iconsize="small"] #back-button[chromedir="rtl"] .toolbarbutton-menubutton-dropmarker {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl-small.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+toolbar[iconsize="small"] #forward-button:hover > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button:hover[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button[buttonover="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+  -moz-image-region: rect(16px 16px 32px 0px);
+}
+toolbar[iconsize="small"] #forward-button > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav-small.png") !important;
+  -moz-image-region: rect(32px 16px 48px 0px);
+}
+toolbar[iconsize="small"] #back-button[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl-small.png") !important;
+  -moz-image-region: rect(32px 16px 48px 0px);
+}
+toolbar[iconsize="small"] #forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button:hover:active > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button[buttondown="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button:hover:active[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker{
+  -moz-image-region: rect(64px 16px 80px 0px);
 }
 
 /* stop button */
 
 toolbar[iconsize="small"] #stop-button {
   -moz-image-region: rect(0px 48px 16px 32px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #stop-button:hover {
   -moz-image-region: rect(16px 48px 32px 32px);
@@ -526,11 +787,14 @@ toolbar[iconsize="small"] #stop-button:hover {
 toolbar[iconsize="small"] #stop-button[disabled="true"] {
   -moz-image-region: rect(32px 48px 48px 32px) !important;
 }
-
+toolbar[iconsize="small"] #stop-button:hover:active {
+  -moz-image-region: rect(64px 48px 80px 32px);
+}
 /* reload button */
 
 toolbar[iconsize="small"] #reload-button {
   -moz-image-region: rect(0px 64px 16px 48px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #reload-button:hover {
   -moz-image-region: rect(16px 64px 32px 48px);
@@ -538,11 +802,14 @@ toolbar[iconsize="small"] #reload-button:hover {
 toolbar[iconsize="small"] #reload-button[disabled="true"] {
   -moz-image-region: rect(32px 64px 48px 48px);
 }
-
+toolbar[iconsize="small"] #reload-button:hover:active {
+  -moz-image-region: rect(64px 64px 80px 48px);
+}
 /* home button */
 
 toolbar[iconsize="small"] #home-button {
   -moz-image-region: rect(0px 80px 16px 64px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #home-button:hover {
   -moz-image-region: rect(16px 80px 32px 64px);
@@ -550,11 +817,15 @@ toolbar[iconsize="small"] #home-button:hover {
 toolbar[iconsize="small"] #home-button[disabled="true"] {
   -moz-image-region: rect(32px 80px 48px 64px);
 }
+toolbar[iconsize="small"] #home-button:hover:active {
+  -moz-image-region: rect(64px 80px 80px 64px);
+}
 
 /* download manager button */
 
 toolbar[iconsize="small"] #downloads-button {
   -moz-image-region: rect(0px 96px 16px 80px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #downloads-button:hover {
   -moz-image-region: rect(16px 96px 32px 80px);
@@ -562,11 +833,15 @@ toolbar[iconsize="small"] #downloads-button:hover {
 toolbar[iconsize="small"] #downloads-button[disabled="true"] {
   -moz-image-region: rect(32px 96px 48px 80px) !important;
 }
+toolbar[iconsize="small"] #downloads-button:hover:active {
+  -moz-image-region: rect(64px 96px 80px 80px);
+}
 
 /* history sidebar button */
 
 toolbar[iconsize="small"] #history-button {
   -moz-image-region: rect(0px 112px 16px 96px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #history-button:hover {
   -moz-image-region: rect(16px 112px 32px 96px);
@@ -574,11 +849,15 @@ toolbar[iconsize="small"] #history-button:hover {
 toolbar[iconsize="small"] #history-button[disabled="true"] {
   -moz-image-region: rect(32px 112px 48px 96px) !important;
 }
+toolbar[iconsize="small"] #history-button:hover:active {
+  -moz-image-region: rect(64px 112px 80px 96px);
+}
 
 /* bookmark sidebar button */
 
 toolbar[iconsize="small"] #bookmarks-button {
   -moz-image-region: rect(0px 128px 16px 112px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #bookmarks-button:hover {
   -moz-image-region: rect(16px 128px 32px 112px);
@@ -589,11 +868,15 @@ toolbar[iconsize="small"] #bookmarks-button[disabled="true"] {
 toolbar[iconsize="small"] #bookmarks-button[checked="true"] {
   -moz-image-region: rect(48px 128px 64px 112px) !important;
 }
+toolbar[iconsize="small"] #bookmarks-button:hover:active {
+  -moz-image-region: rect(64px 128px 80px 112px);
+}
 
 /* print button */
 
 toolbar[iconsize="small"] #print-button {
   -moz-image-region: rect(0px 144px 16px 128px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #print-button:hover {
   -moz-image-region: rect(16px 144px 32px 128px);
@@ -601,11 +884,15 @@ toolbar[iconsize="small"] #print-button:hover {
 toolbar[iconsize="small"] #print-button[disabled="true"] {
   -moz-image-region: rect(32px 144px 48px 128px) !important;
 }
+toolbar[iconsize="small"] #print-button:hover:active {
+  -moz-image-region: rect(64px 144px 80px 128px);
+}
 
 /* new tab button */
 
 toolbar[iconsize="small"] #new-tab-button {
   -moz-image-region: rect(0px 160px 16px 144px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #new-tab-button:hover {
   -moz-image-region: rect(16px 160px 32px 144px);
@@ -613,11 +900,15 @@ toolbar[iconsize="small"] #new-tab-button:hover {
 toolbar[iconsize="small"] #new-tab-button[disabled="true"] {
   -moz-image-region: rect(32px 160px 48px 144px) !important;
 }
+toolbar[iconsize="small"] #new-tab-button:hover:active {
+  -moz-image-region: rect(64px 160px 80px 144px);
+}
 
 /* new window button */
 
 toolbar[iconsize="small"] #new-window-button {
   -moz-image-region: rect(0px 176px 16px 160px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #new-window-button:hover {
   -moz-image-region: rect(16px 176px 32px 160px);
@@ -625,11 +916,15 @@ toolbar[iconsize="small"] #new-window-button:hover {
 toolbar[iconsize="small"] #new-window-button[disabled="true"] {
   -moz-image-region: rect(32px 176px 48px 160px) !important;
 }
+toolbar[iconsize="small"] #new-window-button:hover:active {
+  -moz-image-region: rect(64px 176px 80px 160px);
+}
 
 /* cut button */
 
 toolbar[iconsize="small"] #cut-button {
   -moz-image-region: rect(0px 192px 16px 176px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #cut-button:hover {
   -moz-image-region: rect(16px 192px 32px 176px);
@@ -637,11 +932,15 @@ toolbar[iconsize="small"] #cut-button:hover {
 toolbar[iconsize="small"] #cut-button[disabled="true"] {
   -moz-image-region: rect(32px 192px 48px 176px) !important;
 }
+toolbar[iconsize="small"] #cut-button:hover:active {
+  -moz-image-region: rect(64px 192px 80px 176px);
+}
 
 /* copy button */
 
 toolbar[iconsize="small"] #copy-button {
   -moz-image-region: rect(0px 208px 16px 192px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #copy-button:hover {
   -moz-image-region: rect(16px 208px 32px 192px);
@@ -649,17 +948,24 @@ toolbar[iconsize="small"] #copy-button:hover {
 toolbar[iconsize="small"] #copy-button[disabled="true"] {
   -moz-image-region: rect(32px 208px 48px 192px);
 }
+toolbar[iconsize="small"] #copy-button:hover:active {
+  -moz-image-region: rect(64px 208px 80px 192px);
+}
 
 /* paste button */
 
 toolbar[iconsize="small"] #paste-button {
   -moz-image-region: rect(0px 224px 16px 208px);
+  margin: 0 5px !important;
 }
 toolbar[iconsize="small"] #paste-button:hover {
   -moz-image-region: rect(16px 224px 32px 208px);
 }
 toolbar[iconsize="small"] #paste-button[disabled="true"] {
   -moz-image-region: rect(32px 224px 48px 208px);
+}
+toolbar[iconsize="small"] #paste-button:hover:active {
+  -moz-image-region: rect(64px 224px 80px 208px);
 }
 
 /* ::::: fullscreen window controls ::::: */
@@ -687,7 +993,7 @@ toolbar[iconsize="small"] #paste-button[disabled="true"] {
 /* ::::: nav-bar-inner ::::: */
 
 #urlbar {
-  margin: 2px 3px;
+  margin: 2px 0 2px 0;
 }
 
 /* This needs to be at least as large as the maximum possible width
@@ -755,16 +1061,19 @@ statusbarpanel#statusbar-display {
 
 #go-container {
   -moz-box-orient: vertical; /* for go button flex hack */
+  -moz-margin-end: 5px;
 }
 
 #go-button {
-  -moz-box-flex: 1; /* expand to fill toolbar height */
+  /* -moz-box-flex: 1;  expand to fill toolbar height */
   list-style-image: url("chrome://browser/skin/Go.png");
-  -moz-image-region: rect(0px 20px 20px 0px);
+  -moz-image-region: rect(0px 25px 22px 0px);
+  border-left: 0px;
+  border-right: 0px;
   padding-top: 2px;
   padding-bottom: 2px;
-  -moz-padding-start: 3px;
-  -moz-padding-end: 5px;
+  -moz-padding-start: 0;
+  -moz-padding-end: 0;
 }
 
 #go-button[chromedir="rtl"] {
@@ -772,15 +1081,16 @@ statusbarpanel#statusbar-display {
 }
 
 #go-button:hover {
-  -moz-image-region: rect(0px 40px 20px 20px);
-}
-
-#go-button:hover:active {
-  padding: 3px 4px 1px 4px;
+  -moz-image-region: rect(0px 50px 22px 25px);
 }
 
 #go-button[disabled="true"] {
-  -moz-image-region: rect(0px 60px 20px 40px);
+  -moz-image-region: rect(0px 75px 22px 50px);
+}
+
+#go-button:hover:active {
+  -moz-image-region: rect(0px 100px 22px 75px);
+ /* padding: 3px 4px 1px 0; */
 }
 
 #go-button > .toolbarbutton-icon {
@@ -811,16 +1121,19 @@ statusbarpanel#statusbar-display {
 
 #security-button[level="high"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   display: -moz-box;
 }
 
 #security-button[level="low"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   display: -moz-box;
 }
 
 #security-button[level="broken"] {
   list-style-image: url("chrome://browser/skin/Security-broken.png");
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   display: -moz-box;
 }
 
@@ -896,7 +1209,7 @@ toolbar[mode="text"] #navigator-throbber[busy="true"] {
 }
 
 #FindToolbar > .tabs-closebutton {
-	border: 1px solid transparent;
+  border: 1px solid transparent;
   padding: 3px 2px 4px 2px !important;
 }
 
@@ -941,12 +1254,39 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 }
 
 #urlbar[level="high"] #lock-icon {
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
+  list-style-image: url("chrome://browser/skin/Secure.png");
+}
+#urlbar[level="high"] #lock-icon:hover {
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
+  list-style-image: url("chrome://browser/skin/Secure.png");
+}
+#urlbar[level="high"] #lock-icon:active {
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   list-style-image: url("chrome://browser/skin/Secure.png");
 }
 #urlbar[level="low"] #lock-icon {
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
+  list-style-image: url("chrome://browser/skin/Secure.png");
+}
+#urlbar[level="low"] #lock-icon:hover {
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
+  list-style-image: url("chrome://browser/skin/Secure.png");
+}
+#urlbar[level="low"] #lock-icon:active {
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   list-style-image: url("chrome://browser/skin/Secure.png");
 }
 #urlbar[level="broken"] #lock-icon {
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
+  list-style-image: url("chrome://browser/skin/Security-broken.png");
+}
+#urlbar[level="broken"] #lock-icon:hover {
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
+  list-style-image: url("chrome://browser/skin/Security-broken.png");
+}
+#urlbar[level="broken"] #lock-icon:active {
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   list-style-image: url("chrome://browser/skin/Security-broken.png");
 }
 
@@ -988,10 +1328,28 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 }
 
 #feed-button[feeds] {
-  list-style-image: url("chrome://browser/skin/page-livemarks.png");
+  -moz-image-region: rect(0px, 36px, 18px, 18px);
+  list-style-image: url("chrome://browser/skin/livemark-item.png");
 }
 #feed-button[chromedir="rtl"][feeds] {
-  list-style-image: url("chrome://browser/skin/page-livemarks-rtl.png");
+  -moz-image-region: rect(0px, 36px, 18px, 18px);
+  list-style-image: url("chrome://browser/skin/livemark-item.png");
+}
+#feed-button[feeds]:hover {
+  -moz-image-region: rect(18px, 36px, 36px, 18px);
+  list-style-image: url("chrome://browser/skin/livemark-item.png");
+}
+#feed-button[chromedir="rtl"][feeds]:hover {
+  -moz-image-region: rect(18px, 36px, 36px, 18px);
+  list-style-image: url("chrome://browser/skin/livemark-item.png");
+}
+#feed-button[feeds]:active {
+  -moz-image-region: rect(54px, 36px, 72px, 18px);
+  list-style-image: url("chrome://browser/skin/livemark-item.png");
+}
+#feed-button[chromedir="rtl"][feeds]:active {
+  -moz-image-region: rect(54px, 36px, 72px, 18px);
+  list-style-image: url("chrome://browser/skin/livemark-item.png");
 }
 
 /* ::::: About Popup Blocking dialog ::::: */
