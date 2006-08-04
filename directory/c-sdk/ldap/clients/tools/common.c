@@ -50,10 +50,15 @@
 #include <nspr.h>
 #include <stdlib.h>
 #include <time.h>	/* for time() and ctime() */
+#ifdef HAVE_SASL_OPTIONS
+#include <sasl.h>
+#include "ldaptool-sasl.h"
+#endif  /* HAVE_SASL_OPTIONS */
 
 #if defined(HPUX)
 #include <sys/termios.h>  /* for tcgetattr and tcsetattr */
 #endif /* HPUX */
+
 
 static LDAP_REBINDPROC_CALLBACK get_rebind_credentials;
 static void print_library_info( const LDAPAPIInfo *aip, FILE *fp );
@@ -61,6 +66,7 @@ static int wait4result( LDAP *ld, int msgid, struct berval **servercredp,
 	char *msg );
 static int parse_result( LDAP *ld, LDAPMessage *res,
 	struct berval **servercredp, char *msg, int freeit );
+static int check_response_controls( LDAP *ld, char *msg, LDAPControl **ctrls, int freeit );
 
 #ifdef LDAPTOOL_DEBUG_MEMORY   
 static void *ldaptool_debug_malloc( size_t size );
@@ -80,6 +86,9 @@ static void * ldaptool_fortezza_getpin( char **passwordp );
 static char * ldaptool_fortezza_err2string( int err );
 #endif /* FORTEZZA */
 #endif
+#ifdef HAVE_SASL_OPTIONS
+static int saslSetParam(char *saslarg);
+#endif  /* HAVE_SASL_OPTIONS */
 
 /* copied from ldaprot.h - required to parse the pwpolicy ctrl */
 #define LDAP_TAG_PWP_WARNING	0xA0L   /* context specific + constructed */
@@ -164,6 +173,13 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -H\t\tdisplay usage information\n" );
     fprintf( stderr, "    -J controloid[:criticality[:value|::b64value|:<fileurl]]\n" );
     fprintf( stderr, "\t\tcriticality is a boolean value (default is false)\n" );
+#ifdef HAVE_SASL_OPTIONS
+#ifdef HAVE_SASL_OPTIONS_2
+    fprintf( stderr, "    -2 attrName=attrVal\tSASL options which are described in the man page\n");
+#else
+    fprintf( stderr, "    -o attrName=attrVal\tSASL options which are described in the man page\n");
+#endif
+#endif  /* HAVE_SASL_OPTIONS */
 }
 
 /* globals */
@@ -198,6 +214,15 @@ static FILE		*password_fp = NULL;
 static char             *proxyauth_id = NULL;
 static int		proxyauth_version = 2;	/* use newer proxy control */
 static int		no_pwpolicy_req_ctrl = 0;
+#ifdef HAVE_SASL_OPTIONS
+static unsigned         sasl_flags = LDAP_SASL_INTERACTIVE;
+static char             *sasl_mech = NULL;
+static char             *sasl_authid = NULL;
+static char             *sasl_realm = NULL;
+static char             *sasl_username = NULL;
+static char             *sasl_secprops = NULL;
+static int              ldapauth = -1;
+#endif  /* HAVE_SASL_OPTIONS */
 
 #ifndef NO_LIBLCACHE
 static char		*cache_config_file = NULL;
@@ -358,7 +383,15 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	extra_opts = "";
     }
 
+#ifdef HAVE_SASL_OPTIONS
+#ifdef HAVE_SASL_OPTIONS_2
+    common_opts = "gnvEMRHZ02:3d:D:f:h:j:I:K:N:O:P:p:W:w:V:X:m:i:y:Y:J:";
+#else
+    common_opts = "gnvEMRHZ03d:D:f:h:j:I:K:N:O:o:P:p:W:w:V:X:m:i:y:Y:J:";
+#endif
+#else
     common_opts = "gnvEMRHZ03d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
+#endif  /* HAVE_SASL_OPTIONS */
 
     /* note: optstring must include room for liblcache "C:" option */
     if (( optstring = (char *) malloc( strlen( extra_opts ) + strlen( common_opts )
@@ -629,6 +662,19 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	case 'g':	/* do not send password policy request control */
 		no_pwpolicy_req_ctrl++;
 		break;
+#ifdef HAVE_SASL_OPTIONS
+#ifdef HAVE_SASL_OPTIONS_2
+	case '2':       /* attribute assignment */
+#else
+	case 'o':       /* attribute assignment */
+#endif
+		if ((rc = saslSetParam(optarg)) == -1) {
+			return (-1);
+		}
+		ldapauth = LDAP_AUTH_SASL;
+		ldversion = LDAP_VERSION3;
+		break;
+#endif  /* HAVE_SASL_OPTIONS */
 	default:
 	    (*extra_opt_callback)( i, optarg );
 	}
@@ -653,7 +699,12 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	return (-1);
     }
 
+    /* complain if -j or -w does not also have -D, unless using SASL */
+#ifdef HAVE_SASL_OPTIONS
+    if ( (isj || isw) && !isD && (  ldapauth != LDAP_AUTH_SASL ) ) {
+#else
     if ( (isj || isw) && !isD ) {
+#endif
 	fprintf(stderr, "%s: with -j, -w options, please specify -D\n\n", ldaptool_progname );
 	return (-1);
     }
@@ -676,76 +727,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
     if (prompt_password != 0) {
 	char *password_string = "Enter bind password: ";
-
-#if defined(_WIN32)
-	char pbuf[257];
-	fputs(password_string,stdout);
-	fflush(stdout);
-	if (fgets(pbuf,256,stdin) == NULL) {
-	    passwd = NULL;
-	} else {
-	    char *tmp;
-
-	    tmp = strchr(pbuf,'\n');
-	    if (tmp) *tmp = '\0';
-	    tmp = strchr(pbuf,'\r');
-	    if (tmp) *tmp = '\0';
-	    passwd = strdup(pbuf);
-	}
-#else
-#if defined(SOLARIS)
-	/* 256 characters on Solaris */
-	passwd = getpassphrase(password_string);
-#else
-#if defined(HPUX)
-	/* HP-UX has deprecated their password asking function, so we have
-	 * to resort to doing it the hard way . . . */
-    char pbuf[257];
-    struct termios termstat;
-    tcflag_t savestat;
-    /* Only perform terminal manipulation if stdin is a terminal */
-    int havetty = isatty(fileno(stdin));
-
-    fputs(password_string, stdout);
-    fflush(stdout);
-
-    if(havetty) {
-        if(tcgetattr(fileno(stdin), &termstat) < 0) {
-            perror( "tcgetattr" );
-            exit( LDAP_LOCAL_ERROR );
-        }
-        savestat = termstat.c_lflag;
-        termstat.c_lflag &= ~(ECHO | ECHOE | ECHOK);
-        termstat.c_lflag |= (ICANON | ECHONL);
-        if(tcsetattr(fileno(stdin), TCSANOW, &termstat) < 0) {
-            perror( "tcsetattr" );
-            exit( LDAP_LOCAL_ERROR );
-        }
-    }
-    if (fgets(pbuf,256,stdin) == NULL) {
-        passwd = NULL;
-    } else {
-        char *tmp;
-        passwd = NULL;
-        tmp = strchr(pbuf,'\n');
-        if (tmp)
-            *tmp = '\0';
-        passwd = strdup(pbuf);
-    }
-    if(havetty) {
-        termstat.c_lflag = savestat;
-        if(tcsetattr(fileno(stdin), TCSANOW, &termstat) < 0) {
-            perror( "tcgetattr" );
-            exit( LDAP_LOCAL_ERROR );
-        }
-    }
-#else
-	/* limited to 16 chars on Tru64, 32 on AIX */
-	passwd = getpass(password_string);
-#endif
-#endif
-#endif
-
+        passwd = ldaptool_getpass( password_string );
     } else if (password_fp != NULL) {
 	char *linep = NULL;
 	int   increment = 0;
@@ -814,6 +796,13 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
     if ( ldai.ldapai_vendor_name != NULL ) {
 	ldap_memfree( ldai.ldapai_vendor_name );
     }
+
+#ifdef HAVE_SASL_OPTIONS
+    if (ldversion == LDAP_VERSION2 && ldapauth == LDAP_AUTH_SASL) {
+       fprintf( stderr, "Incompatible with version %d\n", ldversion);
+       return (-1);
+    }
+#endif  /* HAVE_SASL_OPTIONS */
 
     return( optind );
 }
@@ -1129,6 +1118,10 @@ ldaptool_bind( LDAP *ld )
     char	*conv;
     LDAPControl	auth_resp_ctrl, *ctrl_array[ 3 ], **bindctrls;
     LDAPControl pwpolicy_req_ctrl;
+    LDAPControl     **ctrls = NULL;
+#ifdef HAVE_SASL_OPTIONS
+    void *defaults;
+#endif
 
     if ( ldaptool_not ) {
 	return;
@@ -1163,13 +1156,58 @@ ldaptool_bind( LDAP *ld )
      */
     if ( ldversion > LDAP_VERSION2 && binddn == NULL && passwd == NULL
 	    && ssl_certname == NULL ) {
-	return;
+#ifdef HAVE_SASL_OPTIONS
+        if ( ldapauth != LDAP_AUTH_SASL ) {
+#endif
+                return;
+#ifdef HAVE_SASL_OPTIONS
+        }
+#endif
     }
 
     /*
      * do the bind, backing off one LDAP version if necessary
      */
     conv = ldaptool_local2UTF8( binddn, "bind DN" );
+
+#ifdef HAVE_SASL_OPTIONS
+    if ( ldapauth == LDAP_AUTH_SASL) {
+        LDAPControl **rctrls = NULL;
+        if ( sasl_mech == NULL) {
+           fprintf( stderr, "Please specify the SASL mechanism name when "
+                                "using SASL options\n");
+           return;
+        }
+
+        if ( sasl_secprops != NULL) {
+           rc = ldap_set_option( ld, LDAP_OPT_X_SASL_SECPROPS,
+                                (void *) sasl_secprops );
+
+           if ( rc != LDAP_SUCCESS ) {
+              fprintf( stderr, "Unable to set LDAP_OPT_X_SASL_SECPROPS: %s\n",
+                                sasl_secprops );
+              return;
+           }
+        }
+
+        defaults = ldaptool_set_sasl_defaults( ld, sasl_mech,
+              sasl_authid, sasl_username, passwd, sasl_realm );
+        if (defaults == NULL) {
+           perror ("malloc");
+           exit (LDAP_NO_MEMORY);
+        }
+
+        rc = ldap_sasl_interactive_bind_ext_s( ld, binddn, sasl_mech,
+                        bindctrls, ctrls, sasl_flags,
+                        ldaptool_sasl_interact, defaults, &rctrls );
+        if (rc != LDAP_SUCCESS ) {
+           ldap_perror( ld, "Bind Error" );
+        }
+
+        check_response_controls( ld, "ldaptool_bind", rctrls, 1 );
+
+    } else
+#endif  /* HAVE_SASL_OPTIONS */
 
     /*
      * if using LDAPv3 and client auth., try a SASL EXTERNAL bind
@@ -1190,6 +1228,9 @@ ldaptool_bind( LDAP *ld )
 	return;			/* success */
     }
 
+#ifdef HAVE_SASL_OPTIONS
+  if (ldapauth != LDAP_AUTH_SASL) {
+#endif  /* HAVE_SASL_OPTIONS */
     if ( rc == LDAP_PROTOCOL_ERROR && ldversion > LDAP_VERSION2 ) {
 	/*
 	 * try again, backing off one LDAP version
@@ -1208,6 +1249,9 @@ ldaptool_bind( LDAP *ld )
 	    return;		/* a qualified success */
 	}
     }
+#ifdef HAVE_SASL_OPTIONS
+  }
+#endif  /* HAVE_SASL_OPTIONS */
 
     if ( conv != NULL ) {
         free( conv );
@@ -1521,21 +1565,8 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	char *msg, int freeit )
 {
     int		rc, lderr, errno;
-    int		pw_days=0, pw_hrs=0, pw_mins=0, pw_secs=0; /* for pwpolicy */
     char	**refs = NULL;
     LDAPControl	**ctrls;
-    BerElement *ber = NULL;
-    static const char *pwpolicy_err2str[] = {
-	"Password has expired.",
-	"Account is locked.",
-	"Password has been reset by an administrator; you must change it.",
-	"Password change not allowed.",
-	"Must supply old password.",
-	"Invalid password syntax.",
-	"Password too short.",
-	"Password too young.",
-	"Password in history."
-    };
 
     if (( rc = ldap_parse_result( ld, res, &lderr, NULL, NULL, &refs,
 	    &ctrls, 0 )) != LDAP_SUCCESS ) {
@@ -1544,141 +1575,15 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	return( rc );
     }
 
-    /* check for authentication response control & PWPOLICY control*/
-    if ( NULL != ctrls ) {
-	int		i;
-	char		*s;
-
-	for ( i = 0; NULL != ctrls[i]; ++i ) {
-	    if ( 0 == strcmp( ctrls[i]->ldctl_oid,
-			LDAP_CONTROL_AUTH_RESPONSE )) {
-		    s = ctrls[i]->ldctl_value.bv_val;
-		    if ( NULL == s ) {
-			s = "Null";
-		    } else if ( *s == '\0' ) {
-			s = "Anonymous";
-		    }
-		fprintf( stderr, "%s: bound as %s\n", ldaptool_progname, s );
-	    }
-
-	    if ( 0 == strcmp( ctrls[i]->ldctl_oid,
-			LDAP_CONTROL_PWEXPIRING )) {
-
-		    /* Warn the user his passwd is to expire */
-		    errno = 0;	
-		    pw_secs = atoi(ctrls[i]->ldctl_value.bv_val);
-		    if ( pw_secs > 0  && errno != ERANGE ) {
-			if ( pw_secs > 86400 ) {
-				pw_days = ( pw_secs / 86400 );
-				pw_secs = ( pw_secs % 86400 );
-			} 
-			if ( pw_secs > 3600 ) {
-				pw_hrs = ( pw_secs / 3600 );
-				pw_secs = ( pw_secs % 3600 );
-			}
-			if ( pw_secs > 60 ) {
-				pw_mins = ( pw_secs / 60 );
-				pw_secs = ( pw_secs % 60 );
-			}
-
-			printf("%s: Warning ! Your password will expire after ", ldaptool_progname);
-			if ( pw_days ) {
-				printf ("%d days, ", pw_days);
-			}
-			if ( pw_hrs ) {
-				printf ("%d hrs, ", pw_hrs);
-			}
-			if ( pw_mins ) {
-				printf ("%d mins, ", pw_mins);
-			}
-			printf("%d seconds.\n", pw_secs);
-			
-		   }
-		}
-	    if ( 0 == strcmp( ctrls[i]->ldctl_oid,
-		LDAP_X_CONTROL_PWPOLICY_RESPONSE )) {
-		unsigned long tag1=0, tag2=0, tag3=0;
-		long warnvalue=0;
-		int grclogins=-1, secsleft=-1;
-		long errvalue=-1;
-		static int err2str_size = sizeof(pwpolicy_err2str)/sizeof(pwpolicy_err2str[0]);
-
-		if ( ( ber = ber_init(&(ctrls[i]->ldctl_value)) ) == NULL ) {
-			fprintf(stderr, "%s: not enough memory\n", ldaptool_progname);
-			return( LDAP_NO_MEMORY );
-		}
-		if ( ber_scanf(ber,"{t", &tag1) == LBER_ERROR ) {
-			/* error */
-			ber_free( ber, 1 );
-			return (ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
-		} 
-		switch (tag1) {
-		case LDAP_TAG_PWP_WARNING:
-			if ( ber_scanf(ber, "{ti}", &tag2, &warnvalue)
-					== LBER_ERROR ) {
-				/* error */
-				ber_free( ber, 1 );
-				return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
-			}
-			switch (tag2) {
-			case LDAP_TAG_PWP_SECSLEFT:
-				secsleft = (int)warnvalue;
-				break;
-			case LDAP_TAG_PWP_GRCLOGINS:
-				grclogins = (int)warnvalue;
-				break;
-			default:
-				/* error */
-				ber_free( ber, 1 );
-				return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
-			}
-			/* Now check for the error value if it's present */
-			if ( ber_scanf(ber, "te", &tag3, &errvalue) != LBER_ERROR ) {
-				if (tag3 != LDAP_TAG_PWP_ERROR) {
-					errvalue = -1;
-				}
-			}
-			break;
-		case LDAP_TAG_PWP_ERROR:
-			if ( ber_scanf(ber, "e}", &errvalue) 
-					== LBER_ERROR ) {
-				/* error */
-				ber_free( ber, 1 );
-				return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
-			}
-			break;
-		default : /* error */
-			ber_free( ber, 1 );
-			return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
-		}
-		
-		/* Now we have all the values */
-		if ( secsleft >= 0 ) {
-			fprintf(stderr, "%s: Password will expire in %d seconds\n",
-				ldaptool_progname, secsleft);
-		}
-		if ( grclogins >= 0 ) {
-			fprintf(stderr, "%s: %d grace login(s) remain\n",
-				ldaptool_progname, grclogins);
-		}
-		if ( errvalue >= 0 && errvalue < err2str_size ) {
-			fprintf(stderr, "%s: %s\n",
-				ldaptool_progname, pwpolicy_err2str[errvalue]);
-		} else if ( errvalue != -1 ) {
-			fprintf(stderr, "%s: %s\n",
-				ldaptool_progname,
-				"Invalid error value in password policy response control");
-		}
-	    } /* end of LDAP_X_CONTROL_PWPOLICY_RESPONSE */
-	}
-	ldap_controls_free( ctrls );
+    if ( (rc = check_response_controls( ld, msg, ctrls, 1 )) != LDAP_SUCCESS ) {
+	ldap_msgfree( res );
+        return( rc );
     }
 
     if ( servercredp != NULL && ( rc = ldap_parse_sasl_bind_result( ld, res,
 	    servercredp, 0 )) != LDAP_SUCCESS ) {
 	(void)ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP );
 	ldap_msgfree( res );
-	ber_free( ber, 1 );
 	return( rc );
     }
 
@@ -1695,10 +1600,166 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	ldap_value_free( refs );
     }
 
-    ber_free( ber, 1 );
     return( lderr );
 }
 
+/*
+ * check for response controls. authentication response control
+ * and PW POLICY control are the ones we care about right now.
+ */
+static int
+check_response_controls( LDAP *ld, char *msg, LDAPControl **ctrls, int freeit )
+{
+    int  i;
+    int  errno;
+    int  pw_days=0, pw_hrs=0, pw_mins=0, pw_secs=0; /* for pwpolicy */
+    char *s = NULL;
+    BerElement *ber = NULL;
+    static const char *pwpolicy_err2str[] = {
+        "Password has expired.",
+        "Account is locked.",
+        "Password has been reset by an administrator; you must change it.",
+        "Password change not allowed.",
+        "Must supply old password.",
+        "Invalid password syntax.",
+        "Password too short.",
+        "Password too young.",
+        "Password in history."
+    };
+
+    if ( NULL != ctrls ) {
+        for ( i = 0; NULL != ctrls[i]; ++i ) {
+
+            if ( 0 == strcmp( ctrls[i]->ldctl_oid,
+                 LDAP_CONTROL_AUTH_RESPONSE )) {
+                s = ctrls[i]->ldctl_value.bv_val;
+                if ( NULL == s ) {
+                    s = "Null";
+                } else if ( *s == '\0' ) {
+                    s = "Anonymous";
+                }
+                fprintf( stderr, "%s: bound as %s\n", ldaptool_progname, s );
+            } /* end of LDAP_CONTROL_AUTH_RESPONSE */
+
+            if ( 0 == strcmp( ctrls[i]->ldctl_oid,
+                 LDAP_CONTROL_PWEXPIRING )) {
+
+                /* Warn the user his passwd is to expire */
+                errno = 0;
+                pw_secs = atoi(ctrls[i]->ldctl_value.bv_val);
+                if ( pw_secs > 0  && errno != ERANGE ) {
+                    if ( pw_secs > 86400 ) {
+                        pw_days = ( pw_secs / 86400 );
+                        pw_secs = ( pw_secs % 86400 );
+                    }
+                    if ( pw_secs > 3600 ) {
+                        pw_hrs = ( pw_secs / 3600 );
+                        pw_secs = ( pw_secs % 3600 );
+                    }
+                    if ( pw_secs > 60 ) {
+                        pw_mins = ( pw_secs / 60 );
+                        pw_secs = ( pw_secs % 60 );
+                    }
+
+                    printf("%s: Warning ! Your password will expire after ", ldaptool_progname);
+                    if ( pw_days ) {
+                        printf ("%d days, ", pw_days);
+                    }
+                    if ( pw_hrs ) {
+                        printf ("%d hrs, ", pw_hrs);
+                    }
+                    if ( pw_mins ) {
+                        printf ("%d mins, ", pw_mins);
+                    }
+                    printf("%d seconds.\n", pw_secs);
+                }
+            } /* end of LDAP_CONTROL_PWEXPIRING */
+
+            if ( 0 == strcmp( ctrls[i]->ldctl_oid,
+                LDAP_X_CONTROL_PWPOLICY_RESPONSE )) {
+                unsigned long tag1=0, tag2=0, tag3=0;
+                long warnvalue=0;
+                int grclogins=-1, secsleft=-1;
+                long errvalue=-1;
+                static int err2str_size = sizeof(pwpolicy_err2str)/sizeof(pwpolicy_err2str[0]);
+
+                if ( ( ber = ber_init(&(ctrls[i]->ldctl_value)) ) == NULL ) {
+                    fprintf(stderr, "%s: not enough memory\n", ldaptool_progname);
+                    return( LDAP_NO_MEMORY );
+                }
+                if ( ber_scanf(ber,"{t", &tag1) == LBER_ERROR ) {
+                    /* error */
+                    ber_free( ber, 1 );
+                    return (ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
+                }
+                switch (tag1) {
+                case LDAP_TAG_PWP_WARNING:
+                    if ( ber_scanf(ber, "{ti}", &tag2, &warnvalue)
+                                        == LBER_ERROR ) {
+                        /* error */
+                        ber_free( ber, 1 );
+                        return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
+                    }
+                    switch (tag2) {
+                        case LDAP_TAG_PWP_SECSLEFT:
+                            secsleft = (int)warnvalue;
+                            break;
+                        case LDAP_TAG_PWP_GRCLOGINS:
+                            grclogins = (int)warnvalue;
+                            break;
+                        default:
+                            /* error */
+                            ber_free( ber, 1 );
+                            return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
+                        }
+                    /* Now check for the error value if it's present */
+                    if ( ber_scanf(ber, "te", &tag3, &errvalue) != LBER_ERROR ) {
+                        if (tag3 != LDAP_TAG_PWP_ERROR) {
+                            errvalue = -1;
+                        }
+                    }
+                    break;
+                case LDAP_TAG_PWP_ERROR:
+                    if ( ber_scanf(ber, "e}", &errvalue)
+                                        == LBER_ERROR ) {
+                        /* error */
+                        ber_free( ber, 1 );
+                        return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
+                    }
+                    break;
+                default : /* error */
+                    ber_free( ber, 1 );
+                    return(ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP ));
+                }
+
+                /* Now we have all the values */
+                if ( secsleft >= 0 ) {
+                    fprintf(stderr, "%s: Password will expire in %d seconds\n",
+                               ldaptool_progname, secsleft);
+                }
+                if ( grclogins >= 0 ) {
+                    fprintf(stderr, "%s: %d grace login(s) remain\n",
+                               ldaptool_progname, grclogins);
+                }
+                if ( errvalue >= 0 && errvalue < err2str_size ) {
+                    fprintf(stderr, "%s: %s\n",
+                               ldaptool_progname, pwpolicy_err2str[errvalue]);
+                } else if ( errvalue != -1 ) {
+                    fprintf(stderr, "%s: %s\n",
+                               ldaptool_progname,
+                               "Invalid error value in password policy response control");
+                }
+            } /* end of LDAP_X_CONTROL_PWPOLICY_RESPONSE */
+
+        }
+
+        if ( freeit ) {
+            ldap_controls_free( ctrls );
+            ber_free( ber, 1 );
+        }
+    }
+    return( LDAP_SUCCESS );
+}
 
 /*
  * if -M was passed on the command line, create and return a "Manage DSA IT"
@@ -2381,6 +2442,164 @@ ldaptool_fortezza_err2string( int err )
 #endif /* FORTEZZA */
 #endif /* LDAP_TOOL_PKCS11 */
 #endif /* NET_SSL */
+
+#ifdef HAVE_SASL_OPTIONS
+/*
+ * Function checks for valid args, returns an error if not found
+ * and sets SASL params from command line
+ */
+
+static int
+saslSetParam(char *saslarg)
+{
+    char *attr = NULL;
+    int argnamelen;
+
+    attr = strchr(saslarg, '=');
+    if (attr == NULL) {
+       fprintf( stderr, "Didn't find \"=\" character in %s\n", saslarg);
+       return (-1);
+    }
+
+    argnamelen = attr - saslarg;
+    attr++;
+
+    if (!strncasecmp(saslarg, "secProp", argnamelen)) {
+         if ( sasl_secprops != NULL ) {
+            fprintf( stderr, "secProp previously specified\n");
+            return (-1);
+         }
+         if (( sasl_secprops = strdup(attr)) == NULL ) {
+            perror ("malloc");
+            exit (LDAP_NO_MEMORY);
+         }
+    } else if (!strncasecmp(saslarg, "realm", argnamelen)) {
+         if ( sasl_realm != NULL ) {
+            fprintf( stderr, "Realm previously specified\n");
+            return (-1);
+         }
+         if (( sasl_realm = strdup(attr)) == NULL ) {
+            perror ("malloc");
+            exit (LDAP_NO_MEMORY);
+         }
+    } else if (!strncasecmp(saslarg, "authzid", argnamelen)) {
+         if (sasl_username != NULL) {
+            fprintf( stderr, "Authorization name previously specified\n");
+            return (-1);
+         }
+         if (( sasl_username = strdup(attr)) == NULL ) {
+            perror ("malloc");
+            exit (LDAP_NO_MEMORY);
+         }
+    } else if (!strncasecmp(saslarg, "authid", argnamelen)) {
+         if ( sasl_authid != NULL ) {
+            fprintf( stderr, "Authentication name previously specified\n");
+            return (-1);
+         }
+         if (( sasl_authid = strdup(attr)) == NULL) {
+            perror ("malloc");
+            exit (LDAP_NO_MEMORY);
+         }
+    } else if (!strncasecmp(saslarg, "mech", argnamelen)) {
+         if ( sasl_mech != NULL ) {
+            fprintf( stderr, "Mech previously specified\n");
+            return (-1);
+         }
+         if (( sasl_mech = strdup(attr)) == NULL) {
+            perror ("malloc");
+            exit (LDAP_NO_MEMORY);
+         }
+    } else {
+         fprintf (stderr, "Invalid attribute name %s\n", saslarg);
+         return (-1);
+    }
+    return 0;
+}
+#endif  /* HAVE_SASL_OPTIONS */
+
+/*
+ * Implements getpass like functionality for supported platforms.
+ *
+ * It is the callers responsibility to zero out the memory used
+ * to store the password and to free it when it's finished with
+ * it.
+ */
+char *
+ldaptool_getpass ( const char *prompt )
+{
+    char *pass;
+
+#if defined(_WIN32)
+    char pbuf[257];
+    fputs(prompt,stdout);
+    fflush(stdout);
+    if (fgets(pbuf,256,stdin) == NULL) {
+        pass = NULL;
+    } else {
+        char *tmp;
+
+        tmp = strchr(pbuf,'\n');
+        if (tmp) *tmp = '\0';
+        tmp = strchr(pbuf,'\r');
+        if (tmp) *tmp = '\0';
+        pass = strdup(pbuf);
+    }
+#else
+#if defined(SOLARIS)
+    /* 256 characters on Solaris */
+    pass = (char *)getpassphrase(prompt);
+#else
+#if defined(HPUX)
+    /* HP-UX has deprecated their password asking function, so we have
+     * to resort to doing it the hard way . . . */
+    char pbuf[257];
+    struct termios termstat;
+    tcflag_t savestat;
+    /* Only perform terminal manipulation if stdin is a terminal */
+    int havetty = isatty(fileno(stdin));
+
+    fputs(prompt, stdout);
+    fflush(stdout);
+
+    if(havetty) {
+        if(tcgetattr(fileno(stdin), &termstat) < 0) {
+            perror( "tcgetattr" );
+            exit( LDAP_LOCAL_ERROR );
+        }
+        savestat = termstat.c_lflag;
+        termstat.c_lflag &= ~(ECHO | ECHOE | ECHOK);
+        termstat.c_lflag |= (ICANON | ECHONL);
+        if(tcsetattr(fileno(stdin), TCSANOW, &termstat) < 0) {
+            perror( "tcsetattr" );
+            exit( LDAP_LOCAL_ERROR );
+        }
+    }
+    if (fgets(pbuf,256,stdin) == NULL) {
+        pass = NULL;
+    } else {
+        char *tmp;
+        pass = NULL;
+        tmp = strchr(pbuf,'\n');
+        if (tmp)
+            *tmp = '\0';
+        pass = strdup(pbuf);
+    }
+    if(havetty) {
+        termstat.c_lflag = savestat;
+        if(tcsetattr(fileno(stdin), TCSANOW, &termstat) < 0) {
+            perror( "tcgetattr" );
+            exit( LDAP_LOCAL_ERROR );
+        }
+    }
+#else
+    /* limited to 16 chars on Tru64, 32 on AIX */
+    pass = (char *)getpass(prompt);
+#endif
+#endif
+#endif
+
+    return pass;
+}
 
 int
 ldaptool_boolean_str2value ( const char *ptr, int strict )

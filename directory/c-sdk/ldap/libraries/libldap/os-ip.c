@@ -115,9 +115,16 @@ struct nsldapi_cb_statusinfo {		/* used with ext. I/O poll() callback */
 #else
 #define NSLDAPI_CB_POLL_SD_CAST
 #endif
+#if defined(LDAP_SASLIO_HOOKS)
+#define NSLDAPI_CB_POLL_MATCH( sbp, pollfd ) \
+    ( ((sbp)->sb_sd == NSLDAPI_CB_POLL_SD_CAST ((pollfd).lpoll_fd)) && \
+    (((sbp)->sb_sasl_fns.lbextiofn_socket_arg == (pollfd).lpoll_socketarg) || \
+    ((sbp)->sb_ext_io_fns.lbextiofn_socket_arg == (pollfd).lpoll_socketarg) ) )
+#else
 #define NSLDAPI_CB_POLL_MATCH( sbp, pollfd ) \
     ((sbp)->sb_sd == NSLDAPI_CB_POLL_SD_CAST ((pollfd).lpoll_fd) && \
     (sbp)->sb_ext_io_fns.lbextiofn_socket_arg == (pollfd).lpoll_socketarg)
+#endif
 
 
 struct nsldapi_iostatus_info {
@@ -179,6 +186,9 @@ static LBER_SOCKET nsldapi_os_socket( LDAP *ld, int secure, int domain,
 static int nsldapi_os_ioctl( LBER_SOCKET s, int option, int *statusp );
 static int nsldapi_os_connect_with_to( LBER_SOCKET s, struct sockaddr *name,
 	int namelen, int msec_timeout );
+#if defined(KERBEROS)
+char * nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb );
+#endif
 
 /*
  * Function typedefs used by nsldapi_try_each_host()
@@ -485,6 +495,10 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, const char *hostlist,
  */
 {
 	int		s;
+#ifdef LDAP_SASLIO_HOOKS
+        char *sasl_host = NULL;
+        int sasl_ssf = 0;
+#endif
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_connect_to_host: %s, port: %d\n",
 	    NULL == hostlist ? "NULL" : hostlist, defport, 0 );
@@ -523,6 +537,13 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, const char *hostlist,
 	}
 
 	sb->sb_sd = s;
+
+#ifdef LDAP_SASLIO_HOOKS
+	if (nsldapi_sasl_is_inited()) {
+		nsldapi_sasl_open( ld, sb, ld->ld_defhost, sasl_ssf );
+		NSLDAPI_FREE( sasl_host );
+	}
+#endif
 
 	/*
 	 * Set krbinstancep (canonical name of host for use by Kerberos).
@@ -772,7 +793,7 @@ nsldapi_close_connection( LDAP *ld, Sockbuf *sb )
 
 #ifdef KERBEROS
 char *
-nsldapi_host_connected_to( Sockbuf *sb )
+nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb )
 {
 	struct hostent		*hp;
 	char			*p;
@@ -791,7 +812,7 @@ nsldapi_host_connected_to( Sockbuf *sb )
 	 * hostname is used as the kerberos instance.
 	 */
 #error XXXmcs: need to use DNS callbacks here
-	if (( hp = gethostbyaddr( (char *) &sin.sin_addr,
+	if (( hp = (struct hostent *)gethostbyaddr( (char *) &sin.sin_addr,
 	    sizeof( sin.sin_addr ), AF_INET )) != NULL ) {
 		if ( hp->h_name != NULL ) {
 			return( nsldapi_strdup( hp->h_name ));

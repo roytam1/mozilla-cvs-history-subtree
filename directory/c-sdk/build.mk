@@ -154,6 +154,11 @@ else
 SVRCORE_LINK = $(SVRCORE_LIBS) -l$(SVRCORE_LIBNAME)
 endif
 
+# sasl library
+ifneq ($(OS_ARCH), WINNT)
+SASL_LINK = $(SASL_LIBS)
+endif
+
 #
 # NSPR library
 #

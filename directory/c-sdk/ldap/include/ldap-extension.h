@@ -596,6 +596,11 @@ void ldap_x_free( void *ptr );
  */
 #define LDAP_OPT_EXTRA_THREAD_FN_PTRS  0x65     /* 101 - API extension */
 
+/*
+ * When bind is called, don't bind if there's a connection open with the same DN
+ */
+#define LDAP_OPT_NOREBIND               0x66    /* 102 - API extension */
+
 typedef int (LDAP_C LDAP_CALLBACK LDAP_TF_MUTEX_TRYLOCK_CALLBACK)( void *m );
 typedef void *(LDAP_C LDAP_CALLBACK LDAP_TF_SEMA_ALLOC_CALLBACK)( void );
 typedef void (LDAP_C LDAP_CALLBACK LDAP_TF_SEMA_FREE_CALLBACK)( void *s );
@@ -669,6 +674,55 @@ LDAP_API(int) LDAP_CALL ldap_utf8isspace( char* s );
 #define LDAP_UTF8GETCC(s) ((0x80 & *(unsigned char*)(s)) ? ldap_utf8getcc (&s) : *s++)
 #define LDAP_UTF8GETC(s) ((0x80 & *(unsigned char*)(s)) ? ldap_utf8getcc ((const char**)&s) : *s++)
 
+/* SASL options */
+#define LDAP_OPT_X_SASL_MECH            0x6100
+#define LDAP_OPT_X_SASL_REALM           0x6101
+#define LDAP_OPT_X_SASL_AUTHCID         0x6102
+#define LDAP_OPT_X_SASL_AUTHZID         0x6103
+#define LDAP_OPT_X_SASL_SSF             0x6104 /* read-only */
+#define LDAP_OPT_X_SASL_SSF_EXTERNAL    0x6105 /* write-only */
+#define LDAP_OPT_X_SASL_SECPROPS        0x6106 /* write-only */
+#define LDAP_OPT_X_SASL_SSF_MIN         0x6107
+#define LDAP_OPT_X_SASL_SSF_MAX         0x6108
+#define LDAP_OPT_X_SASL_MAXBUFSIZE      0x6109
+
+/* ldap_interactive_bind_s Interaction flags
+ *  Interactive: prompt always - REQUIRED
+ */
+#define LDAP_SASL_INTERACTIVE   1U
+
+/*
+ * V3 SASL Interaction Function Callback Prototype
+ *      when using Cyrus SASL, interact is pointer to sasl_interact_t
+ *  should likely passed in a control (and provided controls)
+ */
+typedef int (LDAP_SASL_INTERACT_PROC)
+        (LDAP *ld, unsigned flags, void* defaults, void *interact );
+
+LDAP_API(int) LDAP_CALL ldap_sasl_interactive_bind_s (
+        LDAP *ld,
+        const char *dn, /* usually NULL */
+        const char *saslMechanism,
+        LDAPControl **serverControls,
+        LDAPControl **clientControls,
+
+        /* should be client controls */
+        unsigned flags,
+        LDAP_SASL_INTERACT_PROC *proc,
+        void *defaults );
+
+LDAP_API(int) LDAP_CALL ldap_sasl_interactive_bind_ext_s (
+        LDAP *ld,
+        const char *dn, /* usually NULL */
+        const char *saslMechanism,
+        LDAPControl **serverControls,
+        LDAPControl **clientControls,
+
+        /* should be client controls */
+        unsigned flags,
+        LDAP_SASL_INTERACT_PROC *proc,
+        void *defaults,
+        LDAPControl ***responseControls );
 
 #ifdef __cplusplus
 }

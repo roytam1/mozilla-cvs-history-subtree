@@ -87,12 +87,11 @@ usage( void )
     fprintf( stderr, "    -U\t\tproduce file URLs in conjunction with -t\n" );
     fprintf( stderr, "    -e\t\tminimize base-64 encoding of values\n" );
     fprintf( stderr, "    -u\t\tinclude User Friendly entry names in the output\n" );
-    fprintf( stderr, "    -o\t\tprint entries using old format (default is LDIF)\n" );
     fprintf( stderr, "    -r\t\tflush output after each entry is printed (useful with -C)\n" );
     fprintf( stderr, "    -T\t\tdon't fold (wrap) long lines (default is to fold)\n" );
     fprintf( stderr, "    -1\t\tomit leading \"version: %d\" line in LDIF output\n", LDIF_VERSION_ONE );
     fprintf( stderr, "    -A\t\tretrieve attribute names only (no values)\n" );
-    fprintf( stderr, "    -B\t\tprint non-ASCII values when old format (-o) is used\n" );
+    fprintf( stderr, "    -B\t\tprint non-ASCII values and use old output format (attr=value)\n" );
     fprintf( stderr, "    -x\t\tperforming sorting on server\n" );
     fprintf( stderr, "    -F sep\tprint `sep' instead of `%s' between attribute names\n", LDAPTOOL_DEFSEP );
     fprintf( stderr, "          \tand values\n" );
@@ -157,8 +156,18 @@ main( int argc, char **argv )
 
 
     ldaptool_reset_control_array( ldaptool_request_ctrls );
+#ifdef HAVE_SASL_OPTIONS
+#ifdef HAVE_SASL_OPTIONS_2
+    optind = ldaptool_process_args( argc, argv, "ABLTU1eortuxa:b:F:G:l:S:s:z:C:",
+        0, options_callback );
+#else
+    optind = ldaptool_process_args( argc, argv, "ABLTU1ertuxa:b:F:G:l:S:s:z:C:",
+        0, options_callback );
+#endif
+#else
     optind = ldaptool_process_args( argc, argv,
 	    "ABLTU1eortuxa:b:F:G:l:S:s:z:C:", 0, options_callback );
+#endif  /* HAVE_SASL_OPTIONS */
 
     if ( optind == -1 ) {
 	usage();
@@ -333,14 +342,12 @@ options_callback( int option, char *optarg )
 	break;
     case 'L':       /* print entries in LDIF format -- now the default */
 	break;
-    case 'o':	/* print entries using old ldapsearch format */
-	ldif = 0;
-	break;
     case 'r':	/* flush output after each entry is written */
 	flush_after_each_entry = 1;
 	break;
-    case 'B':	/* allow binary values to be printed, even if -o used */
+    case 'B':	/* allow binary values to be printed, use old format */
 	++allow_binary;
+	ldif = 0;
 	break;
     case '1':	/* omit leading "version: #" line from LDIF output */
 	write_ldif_version = 0;

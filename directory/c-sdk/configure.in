@@ -208,6 +208,12 @@ AC_ARG_ENABLE(mdupdate,
 	    USE_MDUPDATE=1
       fi ])
 
+
+dnl ========================================================
+dnl = check for sasl options
+dnl ========================================================
+AM_PATH_GIVEN_SASL()
+
 dnl ========================================================
 dnl = svrcore gives the command line tools secure PIN management
 dnl = for client cert based authentication

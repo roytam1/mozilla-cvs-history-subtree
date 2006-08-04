@@ -173,6 +173,7 @@ void ldaptool_add_control_to_array( LDAPControl *ctrl, LDAPControl **array);
 void ldaptool_reset_control_array( LDAPControl **array );
 char *ldaptool_get_tmp_dir( void );
 char *ldaptool_local2UTF8( const char *s, const char *desc );
+char *ldaptool_getpass( const char *prompt );
 int ldaptool_berval_is_ascii( const struct berval *bvp );
 int ldaptool_sasl_bind_s( LDAP *ld, const char *dn, const char *mechanism,
         const struct berval *cred, LDAPControl **serverctrls,

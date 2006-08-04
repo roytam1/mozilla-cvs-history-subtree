@@ -39,6 +39,8 @@
 MOD_DEPTH 	= ../../..
 srcdir		= @srcdir@
 topsrcdir	= @top_srcdir@
+SASL_CFLAGS     = @SASL_CFLAGS@
+HAVE_SASL	= @HAVE_SASL@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
@@ -96,6 +98,10 @@ SRCS		= abandon.c \
 		  utf8.c \
 		  vlistctrl.c
 
+ifeq ($(HAVE_SASL), 1)
+SRCS		+= saslio.c
+endif
+
 ifeq ($(OS_ARCH),WINNT)
 SRCS		+= dllmain.c \
                    mozock.c
@@ -119,6 +125,11 @@ GARBAGE 	+= $(LIBLDAP) $(DLLLDAP)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/public
+
+ifeq ($(HAVE_SASL), 1)
+INCLUDES        += $(SASL_CFLAGS)
+endif
+
 DEFINES		+= $(DEFS) -UMOZILLA_CLIENT
 
 ifdef USE_PTHREADS
@@ -185,7 +196,7 @@ EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(OS_LIBS) -lc
 endif
 
 ifeq ($(OS_ARCH), Linux)
-EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(SASL_LINK)
 endif
 
 ifeq ($(OS_ARCH), WINNT)

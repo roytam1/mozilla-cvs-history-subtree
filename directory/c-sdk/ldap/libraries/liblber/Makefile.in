@@ -39,6 +39,8 @@
 MOD_DEPTH	= ../../..
 srcdir		= @srcdir@
 topsrcdir 	= @top_srcdir@
+HAVE_SASL	= @HAVE_SASL@
+SASL_CFLAGS	= @SASL_CFLAGS@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
@@ -62,6 +64,11 @@ GARBAGE 	+= $(LIBLBER)
 
 LOCAL_INCLUDES  =
 INCLUDES	+= -I$(HDIR)  -I$(INSTALLDIR)/include 
+
+ifeq ($(HAVE_SASL), 1)
+INCLUDES	+= $(SASL_CFLAGS)
+endif
+
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS

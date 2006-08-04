@@ -45,6 +45,9 @@ NSS_LIBS   = @NSS_LIBS@
 NSS_CFLAGS = @NSS_CFLAGS@
 SVRCORE_LIBS   = @SVRCORE_LIBS@
 SVRCORE_CFLAGS = @SVRCORE_CFLAGS@
+HAVE_SASL = @HAVE_SASL@
+SASL_LIBS = @SASL_LIBS@
+SASL_CFLAGS = @SASL_CFLAGS@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
@@ -53,6 +56,7 @@ INSTALLDIR     = $(DIST)/$(OBJDIR_NAME)/bin
 
 INCLUDES	+= $(NSS_CFLAGS) \
 		$(NSPR_CFLAGS) \
+		$(SASL_CFLAGS) \
 		-I$(DIST)/public/ldap \
 		-I$(topsrcdir)/ldap/include
 
@@ -108,11 +112,14 @@ LDAPCOMPARE_OBJ         = $(addprefix $(OBJDEST)/, ldapcompare.o)
 LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
 ifeq ($(OS_ARCH), HP-UX)
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
-			  $(addprefix $(OBJDEST)/, fileurl.o) 
+			  $(addprefix $(OBJDEST)/, fileurl.o)
 else
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
 			  $(addprefix $(OBJDEST)/, convutf8.o) \
 			  $(addprefix $(OBJDEST)/, fileurl.o) 
+endif
+ifeq ($(HAVE_SASL), 1)
+LDAPTOOLCOMMON_OBJ      += $(addprefix $(OBJDEST)/, ldaptool-sasl.o)
 endif
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.o) \
@@ -163,6 +170,12 @@ ifeq ($(HAVE_SVRCORE), 1)
 EXTRA_LIBS += $(SVRCORE_LINK)
 endif
 EXTRA_LIBS += $(LDAPTOOLS_NSS_LINK) $(NSPRLINK)
+endif
+
+ifeq ($(HAVE_SASL), 1)
+ifneq ($(OS_ARCH), WINNT)
+EXTRA_LIBS += $(SASL_LINK)
+endif
 endif
 
 # set platform specific libs
