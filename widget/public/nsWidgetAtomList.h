@@ -73,6 +73,7 @@ WIDGET_ATOM(checked, "checked")
 WIDGET_ATOM(disabled, "disabled")
 WIDGET_ATOM(label, "label")
 WIDGET_ATOM(hidden, "hidden")
+WIDGET_ATOM(image, "image")
 
 WIDGET_ATOM(curpos, "curpos")
 WIDGET_ATOM(maxpos, "maxpos")

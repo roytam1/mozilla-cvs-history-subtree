@@ -75,4 +75,18 @@ public:
 }; // nsIImageMac
 
 
+// {27000483-8846-4F3D-9B18-EA0C4CB2979D}
+#define NS_IIMAGEMAC_MOZILLA_1_8_BRANCH_IID \
+{ 0x27000483, 0x8846, 0x4F3D, \
+  { 0x9B, 0x18, 0xEA, 0x0C, 0x4C, 0xB2, 0x97, 0x9D } };
+
+class nsIImageMac_MOZILLA_1_8_BRANCH: public nsIImageMac
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IIMAGEMAC_MOZILLA_1_8_BRANCH_IID)
+
+    // Get the underlying CGImageRef.  The object that is returned is
+    // not retained.
+  NS_IMETHOD GetCGImageRef(CGImageRef* aCGImageRef) = 0;
+};
 #endif

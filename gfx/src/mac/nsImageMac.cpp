@@ -127,7 +127,8 @@ nsImageMac::~nsImageMac()
 }
 
 
-NS_IMPL_ISUPPORTS2(nsImageMac, nsIImage, nsIImageMac)
+NS_IMPL_ISUPPORTS3(nsImageMac, nsIImage, nsIImageMac,
+                   nsIImageMac_MOZILLA_1_8_BRANCH)
 
 
 nsresult
@@ -791,6 +792,17 @@ nsImageMac::ConvertFromPICT(PicHandle inPicture)
 {
   NS_WARNING("ConvertFromPICT is not implemented.");
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+nsImageMac::GetCGImageRef(CGImageRef* aCGImageRef)
+{
+  nsresult rv = EnsureCachedImage();
+  if (NS_FAILED(rv)) return rv;
+
+  *aCGImageRef = mImage;
+  return NS_OK;
 }
 
 

@@ -39,6 +39,7 @@
 #define nsMenuX_h__
 
 #include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 #include "nsIMenu.h"
 #include "nsSupportsArray.h"
 #include "nsIMenuListener.h"
@@ -52,6 +53,7 @@
 
 class nsIMenuBar;
 class nsIMenuListener;
+class nsMenuItemIcon;
 
 
 //static PRInt16      mMacMenuIDCount;    // use GetUniqueMenuID()
@@ -143,6 +145,10 @@ public:
     NS_IMETHOD AddMenuItem(nsIMenuItem * aMenuItem);
     NS_IMETHOD AddMenu(nsIMenu * aMenu);
     NS_IMETHOD ChangeNativeEnabledStatusForMenuItem(nsIMenuItem* aMenuItem, PRBool aEnabled);
+    NS_IMETHOD GetMenuRefAndItemIndexForMenuItem(nsISupports* aMenuItem,
+                                                 void**       aMenuRef,
+                                                 PRUint16*    aMenuItemIndex);
+    NS_IMETHOD SetupIcon();
 
 protected:
       // Determines how many menus are visible among the siblings that are before me.
@@ -179,6 +185,7 @@ protected:
     nsWeakPtr                   mDocShellWeakRef;       // weak ref to docshell
     nsCOMPtr<nsIContent>        mMenuContent;           // the |menu| tag, strong ref
     nsCOMPtr<nsIMenuListener>   mListener;              // strong ref
+    nsRefPtr<nsMenuItemIcon>    mIcon;
 
     // MacSpecific
     PRInt16                     mMacMenuID;

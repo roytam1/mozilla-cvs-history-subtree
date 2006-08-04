@@ -55,7 +55,7 @@
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsIDOMCSSValue.h"
 #include "nsIDOMCSSPrimitiveValue.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueueService.h"
 #include "nsToolkit.h"
 #include "nsNetUtil.h"
 #include "imgILoader.h"
@@ -83,11 +83,12 @@ PRAllocCGFree(void* aInfo, const void* aData, size_t aSize) {
 }
 
 
-NS_IMPL_ISUPPORTS2(nsMenuItemIcon, imgIContainerObserver, imgIDecoderObserver)
+NS_IMPL_ISUPPORTS3(nsMenuItemIcon, imgIContainerObserver, imgIDecoderObserver,
+                   imgIDecoderObserver_MOZILLA_1_8_BRANCH)
 
-nsMenuItemIcon::nsMenuItemIcon(nsISupports* aMenuItem,
-                               nsIMenu*     aMenu,
-                               nsIContent*  aContent)
+nsMenuItemIcon::nsMenuItemIcon(nsISupports*                aMenuItem,
+                               nsIMenu_MOZILLA_1_8_BRANCH* aMenu,
+                               nsIContent*                 aContent)
 : mContent(aContent)
 , mMenuItem(aMenuItem)
 , mMenu(aMenu)
@@ -161,12 +162,10 @@ nsMenuItemIcon::GetIconURI(nsIURI** aIconURI)
 
   // First, look at the content node's "image" attribute.
   nsAutoString imageURIString;
-  PRBool hasImageAttr = mContent->GetAttr(kNameSpaceID_None,
-                                          nsWidgetAtoms::image,
-                                          imageURIString);
+  nsresult rv = mContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::image,
+                                  imageURIString);
 
-  nsresult rv;
-  if (!hasImageAttr) {
+  if (rv != NS_CONTENT_ATTR_HAS_VALUE) {
     // If the content node has no "image" attribute, get the
     // "list-style-image" property from CSS.
     nsCOMPtr<nsIDOMDocumentView> domDocumentView =
@@ -315,15 +314,22 @@ nsMenuItemIcon::LoadIcon(nsIURI* aIconURI)
     // If there are any failures at this point, just return NS_OK and let
     // the image load asynchronously to completion.
 
-    nsCOMPtr<nsIThread> thread = NS_GetCurrentThread();
-    if (!thread) return NS_OK;
+    nsCOMPtr<nsIEventQueueService> eventQueueService = 
+     do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return NS_OK;
 
+    nsCOMPtr<nsIEventQueue> eventQueue;
+    rv = eventQueueService->GetSpecialEventQueue(
+     nsIEventQueueService::CURRENT_THREAD_EVENT_QUEUE,
+     getter_AddRefs(eventQueue));
+    if (NS_FAILED(rv)) return NS_OK;
+
+    PLEvent* event;
     rv = NS_OK;
     while (!mLoadedIcon && mIconRequest && NS_SUCCEEDED(rv)) {
-      PRBool processed;
-      rv = thread->ProcessNextEvent(PR_TRUE, &processed);
-      if (NS_SUCCEEDED(rv) && !processed)
-        rv = NS_ERROR_UNEXPECTED;
+      rv = eventQueue->WaitForEvent(&event);
+      if (NS_SUCCEEDED(rv))
+        rv = eventQueue->HandleEvent(event);
     }
   }
 
@@ -334,7 +340,6 @@ nsMenuItemIcon::LoadIcon(nsIURI* aIconURI)
 PRBool
 nsMenuItemIcon::ShouldLoadSync(nsIURI* aURI)
 {
-#if 0 // bug 338225
   // Older menu managers are unable to cope with menu item icons changing
   // while a menu is open in tracking.  On Panther (10.3), the updated icon
   // will not be displayed and highlighting of menu items in the affected
@@ -374,24 +379,6 @@ nsMenuItemIcon::ShouldLoadSync(nsIURI* aURI)
 
   return PR_FALSE;
 #endif
-#else // bug 338225
-  // Bug 338225 prevents any Gecko events from being processed while
-  // MenuSelect is tracking the menu.  Bug 346108 (duplicate) applies
-  // specifically to this issue.  Make the load synchronous on any OS
-  // release if it's coming from a local scheme as a workaround.
-  PRBool isLocalScheme;
-  if (NS_SUCCEEDED(aURI->SchemeIs("chrome", &isLocalScheme)) &&
-      isLocalScheme)
-    return PR_TRUE;
-  if (NS_SUCCEEDED(aURI->SchemeIs("data", &isLocalScheme)) &&
-      isLocalScheme)
-    return PR_TRUE;
-  if (NS_SUCCEEDED(aURI->SchemeIs("moz-anno", &isLocalScheme)) &&
-      isLocalScheme)
-    return PR_TRUE;
-
-  return PR_FALSE;
-#endif // bug 338225
 }
 
 
@@ -462,7 +449,7 @@ nsMenuItemIcon::OnStopFrame(imgIRequest*    aRequest,
   nsCOMPtr<nsIImage> iimage = do_GetInterface(frame);
   if (!iimage) return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIImageMac> imageMac = do_QueryInterface(iimage);
+  nsCOMPtr<nsIImageMac_MOZILLA_1_8_BRANCH> imageMac = do_QueryInterface(iimage);
   if (!imageMac) return NS_ERROR_FAILURE;
 
   CGImageRef cgImage;
