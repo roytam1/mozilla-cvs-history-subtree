@@ -1006,6 +1006,7 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 
 #urlbar-spacer {
   visibility: hidden;
+  height: 0px;  /* We just want this widget's horizontal size behavior */
 }
 
 /* ::::: page proxy icon ::::: */
