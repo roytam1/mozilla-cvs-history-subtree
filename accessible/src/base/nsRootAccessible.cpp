@@ -297,10 +297,6 @@ nsresult nsRootAccessible::AddEventListeners()
                                            NS_STATIC_CAST(nsIDOMXULListener*, this), 
                                            PR_TRUE);
     NS_ENSURE_SUCCESS(rv, rv);
-    target->AddEventListener(NS_LITERAL_STRING("pageshow"), 
-                             NS_STATIC_CAST(nsIDOMXULListener*, this), 
-                             PR_TRUE);
-    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   if (!mCaretAccessible)
@@ -342,9 +338,6 @@ nsresult nsRootAccessible::RemoveEventListeners()
   GetChromeEventHandler(getter_AddRefs(target));
   if (target) {
     target->RemoveEventListener(NS_LITERAL_STRING("pagehide"), 
-                                NS_STATIC_CAST(nsIDOMXULListener*, this), 
-                                PR_TRUE);
-    target->RemoveEventListener(NS_LITERAL_STRING("pageshow"), 
                                 NS_STATIC_CAST(nsIDOMXULListener*, this), 
                                 PR_TRUE);
   }
@@ -830,14 +823,7 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
   }
 #else
   AtkStateChange stateData;
-  if (eventType.EqualsIgnoreCase("pageshow")) {
-    nsCOMPtr<nsIHTMLDocument> htmlDoc(do_QueryInterface(targetNode));
-    if (htmlDoc) {
-      privAcc->FireToolkitEvent(nsIAccessibleEvent::EVENT_REORDER, 
-                                accessible, nsnull);
-    }
-  }
-  else if (eventType.LowerCaseEqualsLiteral("focus") || 
+  if (eventType.LowerCaseEqualsLiteral("focus") || 
       eventType.LowerCaseEqualsLiteral("dommenuitemactive")) {
     if (treeItemAccessible) { // use focused treeitem
       privAcc = do_QueryInterface(treeItemAccessible);
