@@ -57,8 +57,15 @@ typedef struct _cairo_win32_surface {
      * on some versions of Windows.
      */
     HBITMAP saved_dc_bitmap;
-    
-    cairo_surface_t *image;
+
+    /* We need two images that point to the same bits, because of
+     * broken pixman clipping semantics -- pixman (brokenly) does
+     * source clipping because Render does -- the xlib backend
+     * avoids this by creating two Pictures for each Drawable,
+     * one that's used as a src and one that's used as a dst.
+     */
+    cairo_surface_t *src_image;
+    cairo_surface_t *dst_image;
     
     cairo_rectangle_t clip_rect;
 

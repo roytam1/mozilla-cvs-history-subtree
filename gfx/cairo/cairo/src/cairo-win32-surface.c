@@ -260,9 +260,16 @@ _cairo_win32_surface_create_for_dc (HDC             original_dc,
     if (status)
 	goto FAIL;
 
-    surface->image = cairo_image_surface_create_for_data (bits, format,
-							  width, height, rowstride);
-    if (surface->image->status) {
+    surface->src_image = cairo_image_surface_create_for_data (bits, format,
+                                                              width, height, rowstride);
+    if (surface->src_image->status) {
+	status = CAIRO_STATUS_NO_MEMORY;
+	goto FAIL;
+    }
+
+    surface->dst_image = cairo_image_surface_create_for_data (bits, format,
+                                                              width, height, rowstride);
+    if (surface->dst_image->status) {
 	status = CAIRO_STATUS_NO_MEMORY;
 	goto FAIL;
     }
@@ -337,8 +344,11 @@ _cairo_win32_surface_finish (void *abstract_surface)
 {
     cairo_win32_surface_t *surface = abstract_surface;
 
-    if (surface->image)
-	cairo_surface_destroy (surface->image);
+    if (surface->src_image)
+	cairo_surface_destroy (surface->src_image);
+
+    if (surface->dst_image)
+	cairo_surface_destroy (surface->dst_image);
 
     if (surface->saved_clip) {
 	DeleteObject (surface->saved_clip);
@@ -403,9 +413,9 @@ _cairo_win32_surface_acquire_source_image (void                    *abstract_sur
     cairo_win32_surface_t *surface = abstract_surface;
     cairo_win32_surface_t *local = NULL;
     cairo_status_t status;
-        
-    if (surface->image) {
-	*image_out = (cairo_image_surface_t *)surface->image;
+
+    if (surface->src_image) {
+	*image_out = (cairo_image_surface_t *)surface->src_image;
 	*image_extra = NULL;
 
 	return CAIRO_STATUS_SUCCESS;
@@ -417,7 +427,7 @@ _cairo_win32_surface_acquire_source_image (void                    *abstract_sur
     if (status)
 	return status;
 
-    *image_out = (cairo_image_surface_t *)local->image;
+    *image_out = (cairo_image_surface_t *)local->src_image;
     *image_extra = local;
 
     return CAIRO_STATUS_SUCCESS;
@@ -447,13 +457,13 @@ _cairo_win32_surface_acquire_dest_image (void                    *abstract_surfa
     RECT clip_box;
     int x1, y1, x2, y2;
         
-    if (surface->image) {
+    if (surface->dst_image) {
 	image_rect->x = 0;
 	image_rect->y = 0;
 	image_rect->width = surface->clip_rect.width;
 	image_rect->height = surface->clip_rect.height;
 
-	*image_out = (cairo_image_surface_t *)surface->image;
+	*image_out = (cairo_image_surface_t *)surface->dst_image;
 	*image_extra = NULL;
 
 	return CAIRO_STATUS_SUCCESS;
@@ -489,7 +499,7 @@ _cairo_win32_surface_acquire_dest_image (void                    *abstract_surfa
     if (status)
 	return status;
 
-    *image_out = (cairo_image_surface_t *)local->image;
+    *image_out = (cairo_image_surface_t *)local->dst_image;
     *image_extra = local;
     
     image_rect->x = x1;
@@ -782,7 +792,7 @@ _cairo_win32_surface_fill_rectangles (void			*abstract_surface,
     /* If we have a local image, use the fallback code; it will be as fast
      * as calling out to GDI.
      */
-    if (surface->image)
+    if (surface->dst_image)
 	return CAIRO_INT_STATUS_UNSUPPORTED;
 
     /* Optimize for no destination alpha (surface->pixman_image is non-NULL for all
@@ -840,11 +850,11 @@ _cairo_win32_surface_set_clip_region (void              *abstract_surface,
     /* If we are in-memory, then we set the clip on the image surface
      * as well as on the underlying GDI surface.
      */
-    if (surface->image) {
+    if (surface->dst_image) {
 	unsigned int serial;
 
-	serial = _cairo_surface_allocate_clip_serial (surface->image);
-	_cairo_surface_set_clip_region (surface->image, region, serial);
+	serial = _cairo_surface_allocate_clip_serial (surface->dst_image);
+	_cairo_surface_set_clip_region (surface->dst_image, region, serial);
     }
 
     /* The semantics we want is that any clip set by cairo combines
@@ -995,7 +1005,8 @@ cairo_win32_surface_create (HDC hdc)
 	return &_cairo_surface_nil;
     }
 
-    surface->image = NULL;
+    surface->src_image = NULL;
+    surface->dst_image = NULL;
     surface->format = CAIRO_FORMAT_RGB24;
     
     surface->dc = hdc;

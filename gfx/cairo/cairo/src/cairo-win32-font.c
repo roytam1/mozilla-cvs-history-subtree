@@ -974,7 +974,7 @@ _draw_glyphs_on_surface (cairo_win32_surface_t     *surface,
 static void
 _compute_argb32_mask_alpha (cairo_win32_surface_t *mask_surface)
 {
-    cairo_image_surface_t *image = (cairo_image_surface_t *)mask_surface->image;
+    cairo_image_surface_t *image = (cairo_image_surface_t *)mask_surface->src_image;
     int i, j;
 
     for (i = 0; i < image->height; i++) {
@@ -991,7 +991,7 @@ _compute_argb32_mask_alpha (cairo_win32_surface_t *mask_surface)
 static void
 _invert_argb32_mask (cairo_win32_surface_t *mask_surface)
 {
-    cairo_image_surface_t *image = (cairo_image_surface_t *)mask_surface->image;
+    cairo_image_surface_t *image = (cairo_image_surface_t *)mask_surface->src_image;
     int i, j;
 
     for (i = 0; i < image->height; i++) {
@@ -1008,7 +1008,7 @@ _invert_argb32_mask (cairo_win32_surface_t *mask_surface)
 static cairo_surface_t *
 _compute_a8_mask (cairo_win32_surface_t *mask_surface)
 {
-    cairo_image_surface_t *image24 = (cairo_image_surface_t *)mask_surface->image;
+    cairo_image_surface_t *image24 = (cairo_image_surface_t *)mask_surface->src_image;
     cairo_image_surface_t *image8;
     int i, j;
 
@@ -1114,7 +1114,7 @@ _cairo_win32_scaled_font_show_glyphs (void		       *abstract_font,
 	    mask_surface = &tmp_surface->base;
 
 	    /* XXX: Hacky, should expose this in cairo_image_surface */
-	    pixman_image_set_component_alpha (((cairo_image_surface_t *)tmp_surface->image)->pixman_image, TRUE);
+	    pixman_image_set_component_alpha (((cairo_image_surface_t *)tmp_surface->src_image)->pixman_image, TRUE);
 	    
 	} else {
 	    mask_surface = _compute_a8_mask (tmp_surface);
