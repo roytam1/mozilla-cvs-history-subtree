@@ -160,7 +160,8 @@ menuitem.bookmark-item {
 -moz-padding-start: 4px; 
 }
 
-#menu_BookmarksPopup menuitem.menuitem-iconic { 
+#menu_BookmarksPopup menuitem.menuitem-iconic,
+#menu_BookmarksPopup menu.menu-iconic { 
 -moz-padding-start: 0px; 
 }
 
