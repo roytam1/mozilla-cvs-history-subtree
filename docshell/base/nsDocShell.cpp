@@ -5449,15 +5449,6 @@ nsDocShell::RestoreFromHistory()
     nsCOMPtr<nsIDOMDocument> domDoc;
     mContentViewer->GetDOMDocument(getter_AddRefs(domDoc));
 
-    nsCOMArray<nsIDocShellTreeItem> childShells;
-    PRInt32 i = 0;
-    nsCOMPtr<nsIDocShellTreeItem> child;
-    while (NS_SUCCEEDED(mLSHE->ChildShellAt(i++, getter_AddRefs(child))) &&
-           child) {
-        childShells.AppendObject(child);
-    }
-    mLSHE->ClearChildShells();
-
     // get the previous content viewer size
     nsRect oldBounds(0, 0, 0, 0);
     mLSHE->GetViewerBounds(oldBounds);
@@ -5470,6 +5461,17 @@ nsDocShell::RestoreFromHistory()
     nsCOMPtr<nsIContentViewer_MOZILLA_1_8_BRANCH> cv18 =
         do_QueryInterface(mContentViewer);
     rv = cv18->OpenWithEntry(windowState, mLSHE);
+
+    // Now that we're done calling OpenWithEntry, we can grab the child
+    // shell list off of mLSHE as well.
+    nsCOMArray<nsIDocShellTreeItem> childShells;
+    PRInt32 i = 0;
+    nsCOMPtr<nsIDocShellTreeItem> child;
+    while (NS_SUCCEEDED(mLSHE->ChildShellAt(i++, getter_AddRefs(child))) &&
+           child) {
+        childShells.AppendObject(child);
+    }
+    mLSHE->ClearChildShells();
 
     // Now remove it from the cached presentation.
     mLSHE->SetContentViewer(nsnull);
