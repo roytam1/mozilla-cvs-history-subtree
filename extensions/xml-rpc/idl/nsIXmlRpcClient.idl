@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Martijn Pieters <mj@digicool.com> (original author)
+ *   Samuel Sieb <samuel@sieb.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -52,7 +53,7 @@ interface nsIXmlRpcFault;
 /**
  * Simple XML-RPC client interface.
  */
-[scriptable, uuid(37127241-1e6e-46aa-ba87-601d41bb47df)]
+[scriptable, uuid(4d7d15c0-3747-4f7f-b6b3-792a5ea1a9aa)]
 interface nsIXmlRpcClient: nsISupports {
     /**
      * Set server URL. Call this before using this object.
@@ -75,6 +76,14 @@ interface nsIXmlRpcClient: nsISupports {
      * Clear authentication info.
      */
     void clearAuthentication(in string username, in string password);
+
+    /**
+     * Set character encoding.  The default charset if this function is
+     * not called is "UTF-8".
+     *
+     * @param encoding  encoding charset to be used
+     */
+    void setEncoding(in string encoding);
 
     /**
      * The URL of the XML-RPC server
@@ -125,7 +134,7 @@ interface nsIXmlRpcClient: nsISupports {
         [array, size_is(count)] in nsISupports arguments, in PRUint32 count);
 
     /**
-     * Wether or not a call is in progress
+     * Whether or not a call is in progress
      */
     readonly attribute boolean inProgress;
     
