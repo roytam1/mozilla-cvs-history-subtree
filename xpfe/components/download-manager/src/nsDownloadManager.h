@@ -124,6 +124,7 @@ public:
   nsresult Cancel();
   nsresult Suspend();
   nsresult SetDisplayName(const PRUnichar* aDisplayName);
+  nsresult SetTempFile(nsILocalFile* aTempFile);
   nsresult Resume();
   void DisplayDownloadFinishedAlert();
 
@@ -174,6 +175,7 @@ private:
   nsCOMPtr<nsIRequest> mRequest;
   nsCOMPtr<nsIProgressDialog> mDialog;
   nsCOMPtr<nsIMIMEInfo> mMIMEInfo;
+  nsCOMPtr<nsILocalFile> mTempFile;
   DownloadState mDownloadState;
 
   PRInt32 mPercentComplete;
