@@ -286,15 +286,15 @@
             <hbox id="urlbar-icons-spacer"/>
           </textbox>
         </deck>
+        <toolbarbutton id="go-button"
+                       chromedir="&locale.dir;"
+                       onclick="handleURLBarCommand(event);"
+                       tooltiptext="&goButton.tooltip;"/>
       </toolbaritem>
 
       <toolbaritem id="search-container" title="&searchItem.title;"
                     align="center" class="chromeclass-toolbar-additional"
                     flex="100">
-        <toolbarbutton id="go-button"
-                       chromedir="&locale.dir;"
-                       onclick="handleURLBarCommand(event);"
-                       tooltiptext="&goButton.tooltip;"/>
         <searchbar id="searchbar" flex="1"/>
       </toolbaritem>
       
