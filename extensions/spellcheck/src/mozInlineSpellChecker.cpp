@@ -902,6 +902,8 @@ NS_IMETHODIMP
 mozInlineSpellChecker::IgnoreWords(const PRUnichar **aWordsToIgnore,
                                    PRUint32 aCount)
 {
+  NS_ENSURE_TRUE(mSpellCheck, NS_ERROR_NOT_INITIALIZED);
+
   // add each word to the ignore list and then recheck the document
   for (PRUint32 index = 0; index < aCount; index++)
     mSpellCheck->IgnoreWordAllOccurrences(aWordsToIgnore[index]);
@@ -1382,6 +1384,8 @@ nsresult mozInlineSpellChecker::DoSpellCheck(mozInlineSpellWordUtil& aWordUtil,
       if (inExclusion)
         continue;
     }
+
+    NS_ENSURE_TRUE(mSpellCheck, NS_ERROR_NOT_INITIALIZED);
 
     // check spelling and add to selection if misspelled
     PRBool isMisspelled;
