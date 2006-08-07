@@ -329,10 +329,10 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
     // When creating a popup window, aNativeParent is not a WindowPtr but
     // an nsIWidget, so walk up that tree to the top-level window and get
     // the dispatch handler.
-    nsIWidget* widget = NS_STATIC_CAST(nsIWidget*, aNativeParent);
+    nsCOMPtr<nsIWidget> widget = NS_STATIC_CAST(nsIWidget*, aNativeParent);
     nsIWidget* topWidget = nsnull;
 
-    while (widget && (widget = widget->GetParent()))
+    while (widget && (widget = dont_AddRef(widget->GetParent())))
       topWidget = widget;
 
     if (topWidget) {
