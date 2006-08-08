@@ -56,6 +56,7 @@
 #include "nsITreeColumns.h"
 #include "nsNetCID.h"
 #include "nsIIOService.h"
+#include "nsIObserverService.h"
 
 static const char *kAutoCompleteSearchCID = "@mozilla.org/autocomplete/search;1?name=";
 
@@ -1095,12 +1096,18 @@ nsAutoCompleteController::EnterMatch()
     }
   }
   
+  nsCOMPtr<nsIObserverService> obsSvc =
+    do_GetService("@mozilla.org/observer-service;1");
+  NS_ENSURE_STATE(obsSvc);
+  obsSvc->NotifyObservers(mInput, "autocomplete-will-enter-text", nsnull);
+
   if (!value.IsEmpty()) {
     mInput->SetTextValue(value);
     mInput->SelectTextRange(value.Length(), value.Length());
     mSearchString = value;
   }
   
+  obsSvc->NotifyObservers(mInput, "autocomplete-did-enter-text", nsnull);
   ClosePopup();
   
   PRBool cancel;
@@ -1117,8 +1124,16 @@ nsAutoCompleteController::RevertTextValue()
   PRBool cancel = PR_FALSE;
   mInput->OnTextReverted(&cancel);  
 
-  if (!cancel)
+  if (!cancel) {
+    nsCOMPtr<nsIObserverService> obsSvc =
+      do_GetService("@mozilla.org/observer-service;1");
+    NS_ENSURE_STATE(obsSvc);
+    obsSvc->NotifyObservers(mInput, "autocomplete-will-revert-text", nsnull);
+
     mInput->SetTextValue(oldValue);
+
+    obsSvc->NotifyObservers(mInput, "autocomplete-did-revert-text", nsnull);
+  }
 
   return NS_OK;
 }
@@ -1407,4 +1422,3 @@ nsAutoCompleteController::GetPopupWidget()
 
   return nsnull;
 }
-
