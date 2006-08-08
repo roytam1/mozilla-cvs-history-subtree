@@ -2667,8 +2667,8 @@ nsBookmarksService::CreateFolderInContainer(const PRUnichar* aName,
     nsresult rv = CreateFolder(aName, aResult);
     if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
-//        if (NS_FAILED(rv))
-//            NS_RELEASE(aResult);
+        if (NS_FAILED(rv))
+            NS_RELEASE(*aResult);
     }
     return rv;
 }
@@ -2841,8 +2841,8 @@ nsBookmarksService::CreateBookmarkInContainer(const PRUnichar* aName,
     nsresult rv = CreateBookmark(aName, aURL, aShortcutURL, aDescription, aDocCharSet, aPostData, aResult);
     if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
-//        if (NS_FAILED(rv))
-//            NS_RELEASE(aResult);
+        if (NS_FAILED(rv))
+            NS_RELEASE(*aResult);
     }
     return rv;
 }
@@ -2958,8 +2958,8 @@ nsBookmarksService::CreateLivemarkInContainer(const PRUnichar* aName,
     nsresult rv = CreateLivemark(aName, aURL, aFeedURL, aDescription, aResult);
     if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
-//        if (NS_FAILED(rv))
-//            NS_RELEASE(aResult);
+        if (NS_FAILED(rv))
+            NS_RELEASE(*aResult);
     }
     return rv;
 }
@@ -2999,8 +2999,8 @@ nsBookmarksService::CreateSeparatorInContainer(nsIRDFResource* aParentFolder,
     nsresult rv = CreateSeparator(aResult);
     if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
-//        if (NS_FAILED(rv))
-//            NS_RELEASE(aResult);
+        if (NS_FAILED(rv))
+            NS_RELEASE(*aResult);
     }
     return rv;
 }
