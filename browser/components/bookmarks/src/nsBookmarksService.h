@@ -67,7 +67,7 @@ class nsIOutputStream;
 #endif
 #endif
 
-class nsBookmarksService : public nsIBookmarksService,
+class nsBookmarksService : public nsIBookmarksService_MOZILLA_1_8_BRANCH,
                            public nsIRDFDataSource,
                            public nsIRDFRemoteDataSource,
                            public nsIStreamListener,
@@ -201,6 +201,7 @@ public:
 
     // nsIBookmarksService
     NS_DECL_NSIBOOKMARKSSERVICE
+    NS_DECL_NSIBOOKMARKSSERVICE_MOZILLA_1_8_BRANCH
 
     // nsIRDFDataSource
     NS_IMETHOD GetURI(char* *uri);

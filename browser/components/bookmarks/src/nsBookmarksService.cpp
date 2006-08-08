@@ -2561,8 +2561,9 @@ nsBookmarksService::Release()
     }
 }
 
-NS_IMPL_QUERY_INTERFACE9(nsBookmarksService,
+NS_IMPL_QUERY_INTERFACE10(nsBookmarksService,
              nsIBookmarksService,
+             nsIBookmarksService_MOZILLA_1_8_BRANCH,
              nsIRDFDataSource,
              nsIRDFRemoteDataSource,
              nsIRDFObserver,
@@ -2664,8 +2665,11 @@ nsBookmarksService::CreateFolderInContainer(const PRUnichar* aName,
         return NS_RDF_ASSERTION_REJECTED;
 
     nsresult rv = CreateFolder(aName, aResult);
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
+        if (NS_FAILED(rv))
+            NS_RELEASE(aResult);
+    }
     return rv;
 }
 
@@ -2835,8 +2839,11 @@ nsBookmarksService::CreateBookmarkInContainer(const PRUnichar* aName,
         return NS_RDF_ASSERTION_REJECTED;
     
     nsresult rv = CreateBookmark(aName, aURL, aShortcutURL, aDescription, aDocCharSet, aPostData, aResult);
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
+        if (NS_FAILED(rv))
+            NS_RELEASE(aResult);
+    }
     return rv;
 }
 
@@ -2949,8 +2956,11 @@ nsBookmarksService::CreateLivemarkInContainer(const PRUnichar* aName,
         return NS_RDF_ASSERTION_REJECTED;
 
     nsresult rv = CreateLivemark(aName, aURL, aFeedURL, aDescription, aResult);
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv)) {
         rv = InsertResource(*aResult, aParentFolder, aIndex);
+        if (NS_FAILED(rv))
+            NS_RELEASE(aResult);
+    }
     return rv;
 }
 
@@ -2975,6 +2985,26 @@ nsBookmarksService::CreateSeparator(nsIRDFResource** aResult)
 
     return rv;
 }
+
+NS_IMETHODIMP
+nsBookmarksService::CreateSeparatorInContainer(nsIRDFResource* aParentFolder,
+                                               PRInt32 aIndex,
+                                               nsIRDFResource** aResult)
+{
+    nsCOMPtr<nsIRDFNode> nodeType;
+    GetSynthesizedType(aParentFolder, getter_AddRefs(nodeType));
+    if (nodeType == kNC_Livemark)
+        return NS_RDF_ASSERTION_REJECTED;
+
+    nsresult rv = CreateSeparator(aResult);
+    if (NS_SUCCEEDED(rv)) {
+        rv = InsertResource(*aResult, aParentFolder, aIndex);
+        if (NS_FAILED(rv))
+            NS_RELEASE(aResult);
+    }
+    return rv;
+}
+
 
 NS_IMETHODIMP
 nsBookmarksService::CloneResource(nsIRDFResource* aSource,
