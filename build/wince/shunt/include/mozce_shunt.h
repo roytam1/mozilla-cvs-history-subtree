@@ -44,6 +44,15 @@
 
 #include "mozce_defs.h"
 
+
+// Enable a way for malloc to inform a mozce application
+// that it is getting low on memory.
+#define MOZCE_ALLOCATOR
+
+#ifdef MOZCE_ALLOCATOR
+#include "mozce_allocator.h"
+#endif
+
 #include <commdlg.h>
 
 //////////////////////////////////////////////////////////
@@ -1657,7 +1666,7 @@ extern "C" {
   MOZCE_SHUNT_API HANDLE mozce_OpenSemaphoreW(DWORD inDesiredAccess, BOOL inInheritHandle, LPCWSTR inName);
   MOZCE_SHUNT_API UINT mozce_GetSystemDirectoryW(LPWSTR inBuffer, UINT inSize);
   MOZCE_SHUNT_API UINT mozce_GetWindowsDirectoryW(LPWSTR inBuffer, UINT inSize);
-  
+
 #ifdef __cplusplus
 };
 #endif
