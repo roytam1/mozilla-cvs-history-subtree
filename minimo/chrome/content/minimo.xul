@@ -305,16 +305,6 @@
                 command="cmd_BrowserOpenTab" 
                 label="&newtab.label;"  /> 
       
-      <menu     id="command_TabFocus" 
-                label="&tabs.label;"  >
-        
-        <menupopup id="MenuTabsContainer" 
-                   onpopupshown="BrowserMenuTabsActive()" 
-                   onpopuphidden="BrowserMenuTabsDestroy()" >
-          
-        </menupopup>
-      </menu>
-      
       <menuseparator/>
       
 	  <menuitem id="full_screen" 

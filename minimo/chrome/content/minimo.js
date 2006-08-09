@@ -137,7 +137,7 @@ nsBrowserStatusHandler.prototype =
   
   init : function()
   {
-    this.urlBar           = document.getElementById("urlbar");
+    this.urlBar= document.getElementById("urlbar");
     this.progressBGPosition = 0;  /* To be removed, fix in onProgressChange ... */ 
 
     var securityUI = gBrowser.securityUI;
@@ -405,8 +405,8 @@ function MiniNavStartup()
 
     } catch (ignore) {}
     
-    var selects_all = gPref.getBoolPref("browser.urlbar.clickSelectsAll");
-    gURLBar.clickSelectsAll = selects_all;
+    //    var selects_all = gPref.getBoolPref("browser.urlbar.clickSelectsAll");
+    //    gURLBar.clickSelectsAll = selects_all;
 
   } catch (e) {
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
@@ -512,6 +512,11 @@ function MiniNavStartup()
     }
   };
 
+  function InformUserAboutLowMem() {
+    document.getElementById("statusbar").hidden=false;
+    document.getElementById("statusbar-text").label="Stopped. Low on memory.";        
+  }
+
   var minimoAppObserver = { 
     observe:function (subj, topic, data) {
 
@@ -530,6 +535,13 @@ function MiniNavStartup()
         BrowserBookmarkURL(data, null, null);
       }  
 
+      else if (topic=="low-mem")
+      {
+        gBrowser.webNavigation.stop(nsIWebNavigation.STOP_ALL);
+
+        setTimeout("InformUserAboutLowMem()",10);
+      }  
+
     }
   };
      
@@ -541,6 +553,7 @@ function MiniNavStartup()
 
     os.addObserver(minimoAppObserver,"open-url", false);
     os.addObserver(minimoAppObserver,"add-bm", false);
+    os.addObserver(minimoAppObserver,"low-mem", false);
 
 
   } catch(ignore) { }
@@ -1865,7 +1878,7 @@ function BrowserPanMouseHandlerDestroy(e) {
 function spinCycle() {
   gKeySpinCurrent.SpinOut();
   gKeySpinCurrent = gKeySpinCurrent.next;
-  setTimeout("gKeySpinCurrent.SpinIn()",0);
+  setTimeout("gKeySpinCurrent.SpinIn()",60);
 }
 
 /* 
