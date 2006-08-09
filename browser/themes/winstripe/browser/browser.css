@@ -396,7 +396,9 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
   -moz-image-region: rect(48px 14px 72px 0px);
 }
 #forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
-#back-button[buttondown="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+#forward-button:hover:active > .toolbarbutton-menubutton-dropmarker, 
+#back-button[buttondown="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
+#back-button:hover:active[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(72px 14px 96px 0px);
 }
 
