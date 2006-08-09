@@ -93,6 +93,8 @@ private:
   nsCOMPtr<nsISVGRendererRegion> mCoveredRegion;
 
   void GeneratePath(cairo_t *ctx, nsISVGCairoCanvas* aCanvas);
+  void SetupStrokeGeometry(cairo_t *ctx);
+  void SetupStrokeHitGeometry(cairo_t *ctx);
 };
 
 /** @} */
@@ -193,18 +195,18 @@ nsSVGCairoPathGeometry::GeneratePath(cairo_t *ctx, nsISVGCairoCanvas* aCanvas)
   NS_NewSVGCairoPathBuilder(getter_AddRefs(builder), ctx);
   mSource->ConstructPath(builder);
   builder->EndPath();
+}
 
-  PRUint16 type;
+void
+nsSVGCairoPathGeometry::SetupStrokeGeometry(cairo_t *ctx)
+{
+  float width;
+  mSource->GetStrokeWidth(&width);
+  cairo_set_line_width(ctx, double(width));
 
-  mSource->GetStrokePaintType(&type);
-  if (type != nsISVGGeometrySource::PAINT_TYPE_NONE) {
-    float width;
-    mSource->GetStrokeWidth(&width);
-    cairo_set_line_width(ctx, double(width));
-
-    PRUint16 capStyle;
-    mSource->GetStrokeLinecap(&capStyle);
-    switch (capStyle) {
+  PRUint16 capStyle;
+  mSource->GetStrokeLinecap(&capStyle);
+  switch (capStyle) {
     case nsISVGGeometrySource::STROKE_LINECAP_BUTT:
       cairo_set_line_cap(ctx, CAIRO_LINE_CAP_BUTT);
       break;
@@ -214,15 +216,15 @@ nsSVGCairoPathGeometry::GeneratePath(cairo_t *ctx, nsISVGCairoCanvas* aCanvas)
     case nsISVGGeometrySource::STROKE_LINECAP_SQUARE:
       cairo_set_line_cap(ctx, CAIRO_LINE_CAP_SQUARE);
       break;
-    }
+  }
 
-    float miterlimit;
-    mSource->GetStrokeMiterlimit(&miterlimit);
-    cairo_set_miter_limit(ctx, double(miterlimit));
+  float miterlimit;
+  mSource->GetStrokeMiterlimit(&miterlimit);
+  cairo_set_miter_limit(ctx, double(miterlimit));
 
-    PRUint16 joinStyle;
-    mSource->GetStrokeLinejoin(&joinStyle);
-    switch(joinStyle) {
+  PRUint16 joinStyle;
+  mSource->GetStrokeLinejoin(&joinStyle);
+  switch(joinStyle) {
     case nsISVGGeometrySource::STROKE_LINEJOIN_MITER:
       cairo_set_line_join(ctx, CAIRO_LINE_JOIN_MITER);
       break;
@@ -233,32 +235,26 @@ nsSVGCairoPathGeometry::GeneratePath(cairo_t *ctx, nsISVGCairoCanvas* aCanvas)
       cairo_set_line_join(ctx, CAIRO_LINE_JOIN_BEVEL);
       break;
     }
-
-    float *dashArray, offset;
-    PRUint32 count;
-    mSource->GetStrokeDashArray(&dashArray, &count);
-    if (count > 0) {
-      double *dashes = new double[count];
-      for (unsigned i=0; i<count; i++)
-        dashes[i] = dashArray[i];
-      mSource->GetStrokeDashoffset(&offset);
-      cairo_set_dash(ctx, dashes, count, double(offset));
-      nsMemory::Free(dashArray);
-      delete [] dashes;
-    }
-  }
-
-  mSource->GetFillPaintType(&type);
-  if (type != nsISVGGeometrySource::PAINT_TYPE_NONE) {
-    PRUint16 rule;
-    mSource->GetFillRule(&rule);
-    if (rule == nsISVGGeometrySource::FILL_RULE_EVENODD)
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_EVEN_ODD);
-    else
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
-  }
 }
 
+void
+nsSVGCairoPathGeometry::SetupStrokeHitGeometry(cairo_t *ctx)
+{
+  SetupStrokeGeometry(ctx);
+
+  float *dashArray, offset;
+  PRUint32 count;
+  mSource->GetStrokeDashArray(&dashArray, &count);
+  if (count > 0) {
+    double *dashes = new double[count];
+    for (unsigned i=0; i<count; i++)
+      dashes[i] = dashArray[i];
+    mSource->GetStrokeDashoffset(&offset);
+    cairo_set_dash(ctx, dashes, count, double(offset));
+    nsMemory::Free(dashArray);
+    delete [] dashes;
+  }
+}
 
 //----------------------------------------------------------------------
 // nsISVGRendererPathGeometry methods:
@@ -288,16 +284,19 @@ nsSVGCairoPathGeometry::Render(nsISVGRendererCanvas *canvas)
 
   GeneratePath(ctx, cairoCanvas);
 
+  PRUint16 rule;
   if (renderMode != nsISVGRendererCanvas::SVG_RENDER_MODE_NORMAL) {
-    PRUint16 rule;
     mSource->GetClipRule(&rule);
-    if (rule == nsISVGGeometrySource::FILL_RULE_EVENODD)
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_EVEN_ODD);
-    else
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
-
     cairo_set_matrix(ctx, &matrix);
+  } else {
+    mSource->GetFillRule(&rule);
+  }
+  if (rule == nsISVGGeometrySource::FILL_RULE_EVENODD)
+    cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_EVEN_ODD);
+  else
+    cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
 
+  if (renderMode != nsISVGRendererCanvas::SVG_RENDER_MODE_NORMAL) {
     return NS_OK;
   }
 
@@ -370,6 +369,8 @@ nsSVGCairoPathGeometry::Render(nsISVGRendererCanvas *canvas)
   }
 
   if (bStroking) {
+    SetupStrokeHitGeometry(ctx);
+
     nscolor rgb;
     mSource->GetStrokePaint(&rgb);
     float opacity;
@@ -468,23 +469,10 @@ nsSVGCairoPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
 
   GeneratePath(ctx, nsnull);
-
-  PRUint16 type;  
-  mSource->GetFillPaintType(&type);
-  PRBool hasCoveredFill = type != nsISVGGeometrySource::PAINT_TYPE_NONE;
-  
-  mSource->GetStrokePaintType(&type);
-  bool hasCoveredStroke = type != nsISVGGeometrySource::PAINT_TYPE_NONE;
-
-  if (!hasCoveredFill && !hasCoveredStroke) return NS_OK;
+  SetupStrokeGeometry(ctx);
 
   double xmin, ymin, xmax, ymax;
-
-  if (hasCoveredStroke)
-    cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-  else
-    cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-
+  cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
   cairo_user_to_device(ctx, &xmin, &ymin);
   cairo_user_to_device(ctx, &xmax, &ymax);
 
@@ -513,23 +501,27 @@ nsSVGCairoPathGeometry::ContainsPoint(float x, float y, PRBool *_retval)
   double xx = x, yy = y;
   cairo_device_to_user(ctx, &xx, &yy);
 
+  PRUint16 rule;
   PRBool isClip;
   mSource->IsClipChild(&isClip);
-  if (isClip) {
-    PRUint16 rule;
+  if (isClip)
     mSource->GetClipRule(&rule);
-    if (rule == nsISVGGeometrySource::FILL_RULE_EVENODD)
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_EVEN_ODD);
-    else
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
-  }
+  else
+    mSource->GetFillRule(&rule);
+
+  if (rule == nsISVGGeometrySource::FILL_RULE_EVENODD)
+    cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_EVEN_ODD);
+  else
+    cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
 
   PRUint16 mask = 0;
   mSource->GetHittestMask(&mask);
   if (mask & nsISVGPathGeometrySource::HITTEST_MASK_FILL)
     *_retval = cairo_in_fill(ctx, xx, yy);
-  if (!*_retval && (mask & nsISVGPathGeometrySource::HITTEST_MASK_STROKE))
+  if (!*_retval && (mask & nsISVGPathGeometrySource::HITTEST_MASK_STROKE)) {
+    SetupStrokeHitGeometry(ctx);
     *_retval = cairo_in_stroke(ctx, xx, yy);
+  }
 
   cairo_destroy(ctx);
 
