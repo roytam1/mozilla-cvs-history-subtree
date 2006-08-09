@@ -53,7 +53,7 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
 #include <windows.h>
 #define NS_MEMORY_FLUSHER_THREAD
 #else
