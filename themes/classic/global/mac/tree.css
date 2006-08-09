@@ -77,11 +77,11 @@ treechildren::-moz-tree-row {
 }
 
 treechildren::-moz-tree-row(selected) {
-  background-color: -moz-Dialog;
+  background-color: -moz-mac-secondaryhighlight;
 }
 
 treechildren::-moz-tree-row(selected, focus) {
-  background-color: Highlight;
+  background-color: -moz-mac-alternateprimaryhighlight;
 }
 
 tree[selstyle="primary"] > treechildren::-moz-tree-row {
@@ -109,17 +109,17 @@ treechildren::-moz-tree-cell-text(selected) {
 }
 
 tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, selected) {
-  background-color: -moz-Dialog;
+  background-color: -moz-mac-secondaryhighlight;
   color: -moz-DialogText;
 }
 
 treechildren::-moz-tree-cell-text(selected, focus) {
-  color: HighlightText;
+  color: #FFFFFF;
 }
 
 tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, selected, focus) {
-  background-color: Highlight;
-  color: HighlightText;
+  background-color: -moz-mac-alternateprimaryhighlight;
+  color: #FFFFFF;
 }
 
 
@@ -150,12 +150,12 @@ treechildren::-moz-tree-separator {
 
 tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, dropOn),
 treechildren::-moz-tree-cell-text(primary, dropOn) {
-  background-color: Highlight;
-  color: HighlightText;
+  background-color: -moz-mac-alternateprimaryhighlight;
+  color: #FFFFFF;
 }
 
 treechildren::-moz-tree-drop-feedback {
-  background-color: Highlight;
+  background-color: -moz-mac-alternateprimaryhighlight;
   width: 50px;
   height: 2px;
   margin-left: 5px;
@@ -315,7 +315,7 @@ treechildren[alternatingbackground="true"]::-moz-tree-row(odd) {
 }
 
 treechildren[alternatingbackground="true"]::-moz-tree-row(odd, selected) {
-  background-color: -moz-Dialog;
+  background-color: -moz-mac-secondaryhighlight;
 }
 
 treechildren[alternatingbackground="true"]::-moz-tree-cell-text(odd, selected) {
@@ -323,9 +323,9 @@ treechildren[alternatingbackground="true"]::-moz-tree-cell-text(odd, selected) {
 }
 
 treechildren[alternatingbackground="true"]::-moz-tree-row(odd, selected, focus) {
-  background-color: Highlight;
+  background-color: -moz-mac-alternateprimaryhighlight;
 }
 
 treechildren[alternatingbackground="true"]::-moz-tree-cell-text(odd, selected, focus) {
-  color: HighlightText;
+  color: #FFFFFF;
 }
