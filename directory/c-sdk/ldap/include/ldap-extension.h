@@ -689,7 +689,9 @@ LDAP_API(int) LDAP_CALL ldap_utf8isspace( char* s );
 /* ldap_interactive_bind_s Interaction flags
  *  Interactive: prompt always - REQUIRED
  */
-#define LDAP_SASL_INTERACTIVE   1U
+#define LDAP_SASL_AUTOMATIC     0U /* only prompt for missing items not supplied as defaults */
+#define LDAP_SASL_INTERACTIVE   1U /* prompt for everything and print defaults, if any */
+#define LDAP_SASL_QUIET         2U /* no prompts - only use defaults (e.g. for non-interactive apps) */
 
 /*
  * V3 SASL Interaction Function Callback Prototype

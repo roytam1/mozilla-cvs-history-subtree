@@ -208,6 +208,17 @@ AC_ARG_ENABLE(mdupdate,
 	    USE_MDUPDATE=1
       fi ])
 
+dnl ========================================================
+dnl = build the optional command-line utilities such as
+dnl = ldapsearch and ldapmodify.
+dnl ========================================================
+AC_ARG_ENABLE(clu,
+   [  --enable-clu            Enable building the command-line utilities],
+   [ if test "$enableval" = "yes"; then
+           BUILDCLU=1
+           AC_SUBST(BUILDCLU)
+     fi ],
+   []) 
 
 dnl ========================================================
 dnl = check for sasl options
@@ -229,6 +240,7 @@ AC_ARG_WITH(system-svrcore,
             HAVE_SVRCORE=1
             SVRCORE_LIBS=-lsvrcore
             AC_SUBST(SVRCORE_LIBS)
+            AC_SUBST(HAVE_SVRCORE)
 dnl svrcore implies both nspr and nss
             USE_NSS=1
             no_nspr=no
@@ -246,6 +258,8 @@ if test -z "$_SYSTEM_SVRCORE" ; then
    if test -n "$HAVE_SVRCORE" ; then
 dnl svrcore implies both nspr and nss
        USE_NSS=1
+       HAVE_SVRCORE=1
+       AC_SUBST(HAVE_SVRCORE)
        no_nspr=no
        if test -z "$SVRCORE_CFLAGS" -o -z "$SVRCORE_LIBS" ; then
            if test -n "$_SYSTEM_SVRCORE"; then

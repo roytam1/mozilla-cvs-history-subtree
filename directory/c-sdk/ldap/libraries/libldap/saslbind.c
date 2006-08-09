@@ -384,6 +384,13 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
         int             saslrc, rc;
         struct berval   ccred;
         unsigned        credlen;
+        int stepnum = 1;
+        char *sasl_username = NULL;
+
+        if (rctrl) {
+            /* init to NULL so we can call ldap_controls_free below */
+            *rctrl = NULL;
+        }
 
         if (NSLDAPI_LDAP_VERSION( ld ) < LDAP_VERSION3) {
                 LDAP_SET_LDERRNO( ld, LDAP_NOT_SUPPORTED, NULL, NULL );
@@ -417,6 +424,9 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
         ccred.bv_val = NULL;
         ccred.bv_len = 0;
 
+        LDAPDebug(LDAP_DEBUG_TRACE, "Starting SASL/%s authentication\n",
+                  (mechs ? mechs : ""), 0, 0 );
+
         do {
                 saslrc = sasl_client_start( ctx,
                         mechs,
@@ -425,8 +435,9 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
                         &credlen,
                         &mech );
 
-                LDAPDebug(LDAP_DEBUG_TRACE, "Starting SASL/%s authentication\n",
-                          (mech ? mech : ""), 0, 0 );
+                LDAPDebug(LDAP_DEBUG_TRACE, "Doing step %d of client start for SASL/%s authentication\n",
+                          stepnum, (mech ? mech : ""), 0 );
+                stepnum++;
 
                 if( saslrc == SASL_INTERACT &&
                     (callback)(ld, flags, defaults, prompts) != LDAP_SUCCESS ) {
@@ -440,12 +451,28 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
                 return( nsldapi_sasl_cvterrno( ld, saslrc, nsldapi_strdup( sasl_errdetail( ctx ) ) ) );
         }
 
+        stepnum = 1;
+
         do {
-                int           msgid;
-                LDAPMessage   *result;
                 struct berval *scred;
+                int clientstepnum = 1;
 
                 scred = NULL;
+
+                if (rctrl) {
+                    /* if we're looping again, we need to free any controls set
+                       during the previous loop */
+                    /* NOTE that this assumes we only care about the controls
+                       returned by the last call to nsldapi_sasl_bind_s - if
+                       we care about _all_ controls, we will have to figure out
+                       some way to append them each loop go round */
+                    ldap_controls_free(*rctrl);
+                    *rctrl = NULL;
+                }
+
+                LDAPDebug(LDAP_DEBUG_TRACE, "Doing step %d of bind for SASL/%s authentication\n",
+                          stepnum, (mech ? mech : ""), 0 );
+                stepnum++;
 
                 /* notify server of a sasl bind step */
                 rc = nsldapi_sasl_bind_s(ld, dn, mech, &ccred,
@@ -463,17 +490,30 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
                 if( rc == LDAP_SUCCESS && saslrc == SASL_OK ) {
                         /* we're done, no need to step */
                         if( scred ) {
+                            if ( scred->bv_len == 0 ) { /* MS AD sends back empty screds */
+                                LDAPDebug(LDAP_DEBUG_ANY,
+                                          "SASL BIND complete - ignoring empty credential response\n",
+                                          0, 0, 0);
+                                ber_bvfree( scred );
+                            } else {
                                 /* but server provided us with data! */
+                                LDAPDebug(LDAP_DEBUG_TRACE,
+                                          "SASL BIND complete but invalid because server responded with credentials - length [%lu]\n",
+                                          scred->bv_len, 0, 0);
                                 ber_bvfree( scred );
                                 LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR,
-                                                  NULL, "Error during SASL handshake." );
+                                                  NULL, "Error during SASL handshake - invalid server credential response" );
                                 return( LDAP_LOCAL_ERROR );
+                            }
                         }
                         break;
                 }
 
                 /* perform the next step of the sasl bind */
                 do {
+                        LDAPDebug(LDAP_DEBUG_TRACE, "Doing client step %d of bind step %d for SASL/%s authentication\n",
+                                  clientstepnum, stepnum, (mech ? mech : "") );
+                        clientstepnum++;
                         saslrc = sasl_client_step( ctx,
                                 (scred == NULL) ? NULL : scred->bv_val,
                                 (scred == NULL) ? 0 : scred->bv_len,
@@ -502,6 +542,11 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
 
         if ( saslrc != SASL_OK ) {
                 return( nsldapi_sasl_cvterrno( ld, saslrc, nsldapi_strdup( sasl_errdetail( ctx ) ) ) );
+        }
+
+        saslrc = sasl_getprop( ctx, SASL_USERNAME, (const void **) &sasl_username );
+        if ( (saslrc == SASL_OK) && sasl_username ) {
+                LDAPDebug(LDAP_DEBUG_TRACE, "SASL identity: %s\n", sasl_username, 0, 0);
         }
 
         saslrc = sasl_getprop( ctx, SASL_SSF, (const void **) &ssf );
@@ -697,9 +742,9 @@ ldap_sasl_bind_s(
  * use an optionally provided set of default values to complete
  * any necessary interactions.
  *
- * Currently inpose the following restrictions:
- *   A mech list must be provided, only LDAP_SASL_INTERACTIVE
- *   mode is supported
+ * Currently imposes the following restrictions:
+ *   A mech list must be provided
+ *   LDAP_SASL_INTERACTIVE mode requires a callback
  */
 int
 LDAP_CALL
@@ -719,7 +764,14 @@ ldap_sasl_interactive_bind_s( LDAP *ld, const char *dn,
  * This function extends ldap_sasl_interactive_bind_s by allowing
  * controls received from the server to be returned as rctrl. The
  * caller must pass in a valid LDAPControl** pointer and free the
- * array of controls when finished with them.
+ * array of controls when finished with them e.g.
+ * LDAPControl **retctrls = NULL;
+ * ...
+ * ldap_sasl_interactive_bind_ext_s(ld, ...., &retctrls);
+ * ...
+ * ldap_controls_free(retctrls);
+ * Only the controls from the server during the last bind step are returned -
+ * intermediate controls (if any, usually not) are discarded.
  */
 int
 LDAP_CALL
@@ -739,7 +791,7 @@ ldap_sasl_interactive_bind_ext_s( LDAP *ld, const char *dn,
                 return( LDAP_PARAM_ERROR );
         }
 
-        if (flags != LDAP_SASL_INTERACTIVE || callback == NULL) {
+        if ((flags == LDAP_SASL_INTERACTIVE) && (callback == NULL)) {
                 return( LDAP_PARAM_ERROR );
         }
 

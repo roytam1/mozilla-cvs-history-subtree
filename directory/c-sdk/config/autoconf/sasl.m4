@@ -43,7 +43,7 @@ AC_ARG_WITH(sasl,
           AC_MSG_ERROR(sasl.h not found)
         fi
 
-        SASL_LIBS="-L$withval/lib -lsasl2"
+        SASL_LIBS="-L$withval/lib"
       else
         AC_MSG_RESULT(yes)
         AC_MSG_ERROR([sasl not found in $withval])
@@ -73,13 +73,28 @@ AC_ARG_WITH(sasl-lib,
       if test -d "$withval"; then
         AC_MSG_RESULT([using $withval])
         HAVE_SASL=1
-        SASL_LIBS="-L$withval -lsasl2"
+        SASL_LIBS="-L$withval"
       else
         echo
         AC_MSG_ERROR([$withval not found])
       fi
     ],
     AC_MSG_RESULT(no))
+
+# check for sasl
+# set ldflags to point to where the user told us to find the sasl libs,
+# if any - otherwise it will just use the default location (e.g. /usr/lib)
+# the way AC_CHECK_LIB works is it actually attempts to compile and link
+# a test program - that's why we need to set LDFLAGS
+SAVE_LDFLAGS=$LDFLAGS
+if test -n "$SASL_LIBS" ; then
+    LDFLAGS="$LDFLAGS $SASL_LIBS"
+fi
+AC_CHECK_LIB([sasl2], [sasl_client_init], [sasl_lib=-lsasl2],
+             AC_CHECK_LIB([sasl], [sasl_client_init], [sasl_lib=-lsasl]))
+
+SASL_LIBS="$SASL_LIBS $sasl_lib"
+LDFLAGS=$SAVE_LDFLAGS
 
 AC_SUBST(SASL_LIBS)
 AC_SUBST(SASL_CFLAGS)

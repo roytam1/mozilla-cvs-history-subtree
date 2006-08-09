@@ -41,6 +41,6 @@
  * Include file for ldaptool routines for SASL
  */
 
-void *ldaptool_set_sasl_defaults ( LDAP *ld, char *mech, char *authid, char *username, char *passwd, char *realm ); 
+void *ldaptool_set_sasl_defaults ( LDAP *ld, unsigned flags, char *mech, char *authid, char *username, char *passwd, char *realm ); 
 int ldaptool_sasl_interact ( LDAP *ld, unsigned flags, void *defaults, void *p );
 #endif	/* _LDAPTOOL_SASL_H */

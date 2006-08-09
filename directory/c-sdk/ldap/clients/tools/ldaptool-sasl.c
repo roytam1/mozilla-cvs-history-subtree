@@ -50,7 +50,7 @@
 
 #ifdef HAVE_SASL_OPTIONS
 
-#define SASL_PROMPT	"SASL"
+#define SASL_PROMPT	"Interact"
 
 typedef struct {
         char *mech;
@@ -60,43 +60,63 @@ typedef struct {
         char *realm;
 } ldaptoolSASLdefaults;
 
-static int get_default(ldaptoolSASLdefaults *defaults, sasl_interact_t *interact);
+static int get_default(ldaptoolSASLdefaults *defaults, sasl_interact_t *interact, unsigned flags);
 static int get_new_value(sasl_interact_t *interact, unsigned flags);
 
+/*
+  Note that it is important to use "" (the empty string, length 0) as the default
+  username value for non-interactive cases.  This allows the sasl library to find the best
+  possible default.  For example, if using GSSAPI, you want the default value for
+  the username to be extracted from the Kerberos tgt.  The sasl library will do
+  that for you if you set the default username to "".
+*/
 void *
-ldaptool_set_sasl_defaults ( LDAP *ld, char *mech, char *authid, char *username,
+ldaptool_set_sasl_defaults ( LDAP *ld, unsigned flags, char *mech, char *authid, char *username,
 				 char *passwd, char *realm )
 {
-        ldaptoolSASLdefaults *defaults;
-         
-        if ((defaults = calloc(sizeof(defaults[0]), 1)) == NULL)
+	ldaptoolSASLdefaults *defaults;
+
+	if ((defaults = calloc(sizeof(ldaptoolSASLdefaults), 1)) == NULL) {
 		return NULL;
+	}
 
-	if (mech)
-		defaults->mech = mech;
-	else
+	if (mech) {
+		defaults->mech = strdup(mech);
+	} else {
 		ldap_get_option(ld, LDAP_OPT_X_SASL_MECH, &defaults->mech);
+	}
 
-	if (authid)
-		defaults->authid = authid;
-	else
-		/* Default to the login name that is running the command */
-		defaults->authid = (char *) strdup( getlogin() );
+	if (authid) { /* use explicit passed in value */
+		defaults->authid = strdup(authid);
+	} else { /* use option value if any */
+		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHCID, &defaults->authid);
+		if (!defaults->authid) {
+			/* Default to the login name that is running the command */
+			defaults->authid = strdup( getlogin() );
+		}
+	}
 
-	if (username)
-		defaults->username = username;
-	else
-		/* Default to the login name that is running the command */
-		defaults->username = (char *) strdup( getlogin() );
+	if (username) { /* use explicit passed in value */
+		defaults->username = strdup(username);
+	} else { /* use option value if any */
+		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHZID, &defaults->username);
+		if (!defaults->username && (flags == LDAP_SASL_INTERACTIVE)) {
+			/* Default to the login name that is running the command */
+			defaults->username = strdup( getlogin() );
+		} else if (!defaults->username) { /* not interactive - use default sasl value */
+			defaults->username = strdup( "" );
+		}
+	}
 
-        defaults->passwd = passwd;
+	defaults->passwd = passwd;
 
-	if (realm)
+	if (realm) {
 		defaults->realm = realm;
-	else
+	} else {
 		ldap_get_option(ld, LDAP_OPT_X_SASL_REALM, &defaults->realm);
+	}
 
-        return defaults;
+	return defaults;
 }
 
 int
@@ -105,16 +125,19 @@ ldaptool_sasl_interact( LDAP *ld, unsigned flags, void *defaults, void *prompts 
 	ldaptoolSASLdefaults	*sasldefaults = defaults;
 	int			rc;
 
-	if (prompts == NULL || flags != LDAP_SASL_INTERACTIVE)
+	if (prompts == NULL) {
 		return (LDAP_PARAM_ERROR);
+	}
 
 	for (interact = prompts; interact->id != SASL_CB_LIST_END; interact++) {
 		/* Obtain the default value */
-		if ((rc = get_default(sasldefaults, interact)) != LDAP_SUCCESS)
+		if ((rc = get_default(sasldefaults, interact, flags)) != LDAP_SUCCESS) {
 			return (rc);
-
-		/* If no default, get the new value from stdin */
-		if (interact->result == NULL) {
+		}
+		/* always prompt in interactive mode - only prompt in automatic mode
+		   if there is no default - never prompt in quiet mode */
+		if ( (flags == LDAP_SASL_INTERACTIVE) ||
+			 ((interact->result == NULL) && (flags == LDAP_SASL_AUTOMATIC)) ) {
 			if ((rc = get_new_value(interact, flags)) != LDAP_SUCCESS)
 				return (rc);
 		}
@@ -124,35 +147,39 @@ ldaptool_sasl_interact( LDAP *ld, unsigned flags, void *defaults, void *prompts 
 }
 
 static int 
-get_default(ldaptoolSASLdefaults *defaults, sasl_interact_t *interact) {
+get_default(ldaptoolSASLdefaults *defaults, sasl_interact_t *interact, unsigned flags) {
 	const char	*defvalue = interact->defresult;
 
 	if (defaults != NULL) {
 		switch( interact->id ) {
-        	case SASL_CB_AUTHNAME:
+		case SASL_CB_AUTHNAME:
 			defvalue = defaults->authid;
 			break;
-        	case SASL_CB_USER:
+		case SASL_CB_USER:
 			defvalue = defaults->username;
 			break;
-        	case SASL_CB_PASS:
+		case SASL_CB_PASS:
 			defvalue = defaults->passwd;
 			break;
-        	case SASL_CB_GETREALM:
+		case SASL_CB_GETREALM:
 			defvalue = defaults->realm;
 			break;
 		}
 	}
 
+	LDAPDebug(LDAP_DEBUG_TRACE, "get_default: id [%lu] sasl default [%s] my default [%s]\n",
+			  interact->id,
+			  interact->defresult ? interact->defresult : "(null)",
+			  defvalue ? defvalue : "(null)");
+
 	if (defvalue != NULL) {
-		interact->result = (char *)malloc(strlen(defvalue)+1);
-		strcpy((char *)interact->result,defvalue);
+		interact->result = strdup(defvalue);
 		
 		/* Clear passwd */
-		if (interact->id == SASL_CB_PASS && defaults != NULL) {
+		if ((interact->id == SASL_CB_PASS) && (defaults != NULL)) {
 			/* At this point defaults->passwd is not NULL */
-            		memset( defaults->passwd, '\0', strlen(defaults->passwd));
-            		defaults->passwd = NULL;
+			memset( defaults->passwd, '\0', strlen(defaults->passwd));
+			defaults->passwd = NULL;
 		}
 
 		if ((char *)interact->result == NULL)
@@ -162,44 +189,69 @@ get_default(ldaptoolSASLdefaults *defaults, sasl_interact_t *interact) {
 	return (LDAP_SUCCESS);
 }
 
+/*
+ * This function should always be called in LDAP_SASL_INTERACTIVE mode, or
+ * in LDAP_SASL_AUTOMATIC mode when there is no default value.  This function
+ * will print out the challenge, default value, and prompt to get the value.
+ * If there is a default value, the user can just press Return/Enter at the
+ * prompt to use the default value.  If there is no default, and the user
+ * didn't enter anything, this will return "" (the empty string) as the
+ * value.
+ */
 static int 
 get_new_value(sasl_interact_t *interact, unsigned flags) {
-	char	*newvalue, str[1024];
-	int	len;
+	char	*newvalue = NULL, str[1024];
+	int	len = 0;
 
-	if (interact->id == SASL_CB_ECHOPROMPT || interact->id == SASL_CB_NOECHOPROMPT) {
-		if (interact->challenge)
-			fprintf(stderr, "Challenge:%s\n", interact->challenge);
+	if ((interact->id == SASL_CB_ECHOPROMPT) || (interact->id == SASL_CB_NOECHOPROMPT)) {
+		if (interact->challenge) {
+			fprintf(stderr, "Challenge: %s\n", interact->challenge);
+		}
 	}
 
-#ifdef HAVE_SNPRINTF
+	if (interact->result) {
+		fprintf(stderr, "Default: %s\n", (char *)interact->result);
+	}
+
 	snprintf(str, sizeof(str), "%s:", interact->prompt?interact->prompt:SASL_PROMPT);
-#else
-	sprintf(str, "%s:", interact->prompt?interact->prompt:SASL_PROMPT);
-#endif
+	str[sizeof(str)-1] = '\0';
 
 	/* Get the new value */
-	if (interact->id == SASL_CB_PASS || interact->id == SASL_CB_NOECHOPROMPT) {
-                if ((newvalue = ldaptool_getpass( str )) == NULL) {
+	if ((interact->id == SASL_CB_PASS) || (interact->id == SASL_CB_NOECHOPROMPT)) {
+		if ((newvalue = ldaptool_getpass( str )) == NULL) {
 			return (LDAP_UNAVAILABLE);
 		}
 		len = strlen(newvalue);
 	} else {
 		fputs(str, stderr);
-		if ((newvalue = fgets(str, sizeof(str), stdin)) == NULL)
+		if ((newvalue = fgets(str, sizeof(str), stdin)) == NULL) {
 			return (LDAP_UNAVAILABLE);
+		}
 		len = strlen(str);
-		if (len > 0 && str[len - 1] == '\n')
-			str[len - 1] = 0; 
+		if ((len > 0) && (str[len - 1] == '\n')) {
+			str[len - 1] = '\0';
+			len--;
+		}
 	}
 
-	interact->result = (char *) strdup(newvalue);
-	memset(newvalue, '\0', len);
-        ldap_memfree( newvalue );
+	if (len > 0) { /* user typed in something - use it */
+		if (interact->result) {
+			free(interact->result);
+		}
+		interact->result = strdup(newvalue);
+		memset(newvalue, '\0', len);
+/*        ldap_memfree( newvalue );*/
 
-	if (interact->result == NULL)
-		return (LDAP_NO_MEMORY);
-	interact->len = len;
+		if (interact->result == NULL) {
+			return (LDAP_NO_MEMORY);
+		}
+		interact->len = len;
+	} else { /* use default or "" */
+		if (!interact->result) {
+			interact->result = "";
+		}
+		interact->len = strlen(interact->result);
+	}
 	return (LDAP_SUCCESS);
 }
 #endif	/* HAVE_SASL_OPTIONS */

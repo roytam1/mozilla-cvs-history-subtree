@@ -313,6 +313,9 @@ nsldapi_sasl_close( LDAP *ld, Sockbuf *sb )
 		sasl_dispose( &ctx );
 		sb->sb_sasl_ctx = NULL;
 	}
+
+    NSLDAPI_FREE(sb->sb_sasl_ibuf);
+    sb->sb_sasl_ibuf = NULL;
 	
 	return( LDAP_SUCCESS );
 }

@@ -215,7 +215,7 @@ static char             *proxyauth_id = NULL;
 static int		proxyauth_version = 2;	/* use newer proxy control */
 static int		no_pwpolicy_req_ctrl = 0;
 #ifdef HAVE_SASL_OPTIONS
-static unsigned         sasl_flags = LDAP_SASL_INTERACTIVE;
+static unsigned         sasl_flags = LDAP_SASL_AUTOMATIC;
 static char             *sasl_mech = NULL;
 static char             *sasl_authid = NULL;
 static char             *sasl_realm = NULL;
@@ -1190,7 +1190,7 @@ ldaptool_bind( LDAP *ld )
            }
         }
 
-        defaults = ldaptool_set_sasl_defaults( ld, sasl_mech,
+        defaults = ldaptool_set_sasl_defaults( ld, sasl_flags, sasl_mech,
               sasl_authid, sasl_username, passwd, sasl_realm );
         if (defaults == NULL) {
            perror ("malloc");
@@ -2508,6 +2508,19 @@ saslSetParam(char *saslarg)
          if (( sasl_mech = strdup(attr)) == NULL) {
             perror ("malloc");
             exit (LDAP_NO_MEMORY);
+         }
+    } else if (!strncasecmp(saslarg, "flags", argnamelen)) {
+         int len = strlen(attr);
+         if (len && !strncasecmp(attr, "automatic", len)) {
+            sasl_flags = LDAP_SASL_AUTOMATIC;
+         } else if (len && !strncasecmp(attr, "interactive", len)) {
+            sasl_flags = LDAP_SASL_INTERACTIVE;
+         } else if (len && !strncasecmp(attr, "quiet", len)) {
+            sasl_flags = LDAP_SASL_QUIET;
+         } else {
+            fprintf(stderr, "Invalid SASL flags value [%s]: must be one of "
+                    "automatic, interactive, or quiet\n", attr);
+            return (-1);
          }
     } else {
          fprintf (stderr, "Invalid attribute name %s\n", saslarg);
