@@ -161,6 +161,11 @@ ApplicationObserver::Observe(nsISupports *aSubject, const char *aTopic, const PR
   } 
   else if (!strcmp(aTopic, "xul-window-visible"))
   {
+#ifdef WINCE
+  // EVIL?
+  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+
     KillSplashScreen();
   }
   
@@ -529,6 +534,29 @@ LRESULT CALLBACK BrowserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
       return 0;
     }
 
+    if (!strncmp(command, "OOM", 3))
+    {
+#ifdef WINCE
+      SHCloseApps(512*1024); // Ask the system for another 512kb.
+#endif
+
+      nsMemory::HeapMinimize(PR_TRUE);
+      
+      // dump image cache.
+      nsCOMPtr<imgICache> ic = do_GetService("@mozilla.org/image/cache;1");
+      if (ic)
+      {
+        ic->ClearCache(FALSE);
+        ic->ClearCache(TRUE);
+      }
+
+      nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
+      if (os)
+        os->NotifyObservers(nsnull, "low-mem", nsnull);
+
+      return 0;
+    }
+
     return 0;
   }
   
@@ -753,10 +781,12 @@ void LoadKnownLibs()
     Libraries[i].module = LoadLibraryW(Libraries[i].name);
     if (!Libraries[i].module)
     {
+#if 0
       MessageBox(0, 
                  "Preload library failed to load.", 
                  "Lib Load Failed", 
                  MB_APPLMODAL);
+#endif
     }
   }
 }
@@ -771,11 +801,6 @@ void UnloadKnownLibs()
 
 int main(int argc, char *argv[])
 {
-#ifdef WINCE
-
-  // EVIL?
-  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
 
 #ifdef WINCE
   CreateListenerWindow();
@@ -896,7 +921,6 @@ int main(int argc, char *argv[])
   if (NS_FAILED(rv))
   {
     KillSplashScreen();
-    ErrorAlert("Minimo had an issue.  Quitting. (8)!");
     return -1;
   }
 

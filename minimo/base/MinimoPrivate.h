@@ -49,7 +49,12 @@
 #include <gtk/gtk.h>
 #endif
 
+#ifdef WINCE
+#include <aygshell.h>
+#endif
+
 // Mozilla header files
+#include "imgICache.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsAppShellCID.h"
 #include "nsDirectoryService.h"

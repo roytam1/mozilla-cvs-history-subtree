@@ -78,7 +78,8 @@ REQUIRES	= xpcom					 \
 		      pipnss                 \
 			  pipboot                \
 		      intl                   \
-		      embedcomponents		 \
+		      imglib2                \
+			  embedcomponents		 \
 		      appcomps				 \
 		      phone					 \
 		      js					 \

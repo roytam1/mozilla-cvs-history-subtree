@@ -83,7 +83,7 @@ SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp )
   {
     return 1; // don't erase the background
   } 
-
+  
   if ( msg == WM_INITDIALOG ) 
   {
     SetWindowText(dlg, "Minimo");
