@@ -3115,6 +3115,7 @@ nsresult nsMsgAccountManager::AddVFListenersForVF(nsIMsgFolder *virtualFolder,
     dbListener->Init();
     msgDBService->RegisterPendingListener(realFolder, dbListener);
   }
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgAccountManager::OnItemAdded(nsIRDFResource *parentItem, nsISupports *item)
