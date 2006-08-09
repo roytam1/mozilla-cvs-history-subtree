@@ -1524,9 +1524,9 @@ NS_IMETHODIMP nsMessenger::GetUndoTransactionType(PRUint32 *txnType)
     rv = mTxnMgr->PeekUndoStack(getter_AddRefs(txn));
     if (NS_SUCCEEDED(rv) && txn)
     {
-        nsCOMPtr<nsMsgTxn> msgTxn = do_QueryInterface(txn, &rv);
-        if (NS_SUCCEEDED(rv) && msgTxn)
-            rv = msgTxn->GetTransactionType(txnType);
+      nsCOMPtr <nsIPropertyBag2> propertyBag = do_QueryInterface(txn, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+      return propertyBag->GetPropertyAsUint32(NS_LITERAL_STRING("type"), txnType);
     }
     return rv;
 }
@@ -1554,9 +1554,9 @@ NS_IMETHODIMP nsMessenger::GetRedoTransactionType(PRUint32 *txnType)
     rv = mTxnMgr->PeekRedoStack(getter_AddRefs(txn));
     if (NS_SUCCEEDED(rv) && txn)
     {
-        nsCOMPtr<nsMsgTxn> msgTxn = do_QueryInterface(txn, &rv);
-        if (NS_SUCCEEDED(rv) && msgTxn)
-            rv = msgTxn->GetTransactionType(txnType);
+      nsCOMPtr <nsIPropertyBag2> propertyBag = do_QueryInterface(txn, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+      return propertyBag->GetPropertyAsUint32(NS_LITERAL_STRING("type"), txnType);
     }
     return rv;
 }
@@ -1588,9 +1588,7 @@ nsMessenger::Undo(nsIMsgWindow *msgWindow)
         rv = mTxnMgr->PeekUndoStack(getter_AddRefs(txn));
         if (NS_SUCCEEDED(rv) && txn)
         {
-            nsCOMPtr<nsMsgTxn> msgTxn = do_QueryInterface(txn, &rv);
-            if (NS_SUCCEEDED(rv) && msgTxn)
-                msgTxn->SetMsgWindow(msgWindow);
+            NS_STATIC_CAST(nsMsgTxn*, NS_STATIC_CAST(nsITransaction*, txn.get()))->SetMsgWindow(msgWindow);
         }
         mTxnMgr->UndoTransaction();
     }
@@ -1612,9 +1610,7 @@ nsMessenger::Redo(nsIMsgWindow *msgWindow)
         rv = mTxnMgr->PeekRedoStack(getter_AddRefs(txn));
         if (NS_SUCCEEDED(rv) && txn)
         {
-            nsCOMPtr<nsMsgTxn> msgTxn = do_QueryInterface(txn, &rv);
-            if (NS_SUCCEEDED(rv) && msgTxn)
-                msgTxn->SetMsgWindow(msgWindow);
+            NS_STATIC_CAST(nsMsgTxn*, NS_STATIC_CAST(nsITransaction*, txn.get()))->SetMsgWindow(msgWindow);
         }
         mTxnMgr->RedoTransaction();
     }
