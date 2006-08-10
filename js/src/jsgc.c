@@ -634,13 +634,6 @@ retry:
             if (!tried_gc) {
                 rt->gcPoke = JS_TRUE;
                 js_GC(cx, GC_KEEP_ATOMS | GC_ALREADY_LOCKED);
-                if (JS_HAS_NATIVE_BRANCH_CALLBACK_OPTION(cx) &&
-                    cx->branchCallback &&
-                    !cx->branchCallback(cx, NULL)) {
-                    METER(rt->gcStats.retryhalt++);
-                    JS_UNLOCK_GC(rt);
-                    return NULL;
-                }
                 tried_gc = JS_TRUE;
                 METER(rt->gcStats.retry++);
                 goto retry;
