@@ -1505,7 +1505,6 @@ PRInt32 nsNNTPProtocol::SendData(nsIURI * aURL, const char * dataBuffer, PRBool 
 PRInt32 nsNNTPProtocol::NewsResponse(nsIInputStream * inputStream, PRUint32 length)
 {
 	PRUint32 status = 0;
-	nsresult rv;
 
 	NS_PRECONDITION(nsnull != inputStream, "invalid input stream");
 	
@@ -1541,17 +1540,10 @@ PRInt32 nsNNTPProtocol::NewsResponse(nsIInputStream * inputStream, PRUint32 leng
     else
         NS_MsgSACopy(&m_responseText, line);
 
-	if (m_responseCode == MK_NNTP_RESPONSE_AUTHINFO_DENIED) {
 		/* login failed */
-		AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
+  if (m_responseCode == MK_NNTP_RESPONSE_AUTHINFO_DENIED)
+    HandleAuthenticationFailure();
 
-        NS_ASSERTION(m_newsFolder, "no newsFolder");
-		/* forget the password & username, since login failed */
-		if (m_newsFolder) {
-			rv = m_newsFolder->ForgetGroupUsername();
-			rv = m_newsFolder->ForgetGroupPassword();	
-		}
-    }
 
 	/* authentication required can come at any time
 	 */
@@ -2739,8 +2731,7 @@ PRInt32 nsNNTPProtocol::AuthorizationResponse()
   }
   else if (MK_NNTP_RESPONSE_AUTHINFO_CONT == m_responseCode)
   {
-		/* password required
-    */	
+    /* password required */	
     char * command = 0;
     nsXPIDLCString password;
     nsXPIDLCString cachedPassword;
@@ -2811,14 +2802,7 @@ PRInt32 nsNNTPProtocol::AuthorizationResponse()
   else
   {
     /* login failed */
-    AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
-    
-    NS_ASSERTION(m_newsFolder, "no newsFolder");
-    if (m_newsFolder) {
-      rv = m_newsFolder->ForgetGroupUsername();
-      rv = m_newsFolder->ForgetGroupPassword();	
-    }
-    
+    HandleAuthenticationFailure();
     return(MK_NNTP_AUTH_FAILED);
   }
 		
@@ -2858,20 +2842,12 @@ PRInt32 nsNNTPProtocol::PasswordResponse()
     else
       m_nextState = SEND_FIRST_NNTP_COMMAND;
 #endif /* HAVE_NNTP_EXTENSIONS */
-    
+    m_nntpServer->SetUserAuthenticated(PR_TRUE);
     return(0);
   }
   else
   {
-    /* login failed */
-    AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
-    
-    NS_ASSERTION(m_newsFolder, "no newsFolder");
-    if (m_newsFolder) {
-      rv = m_newsFolder->ForgetGroupUsername();
-      rv = m_newsFolder->ForgetGroupPassword();	
-    }
-    
+    HandleAuthenticationFailure();
     return(MK_NNTP_AUTH_FAILED);
   }
 		
@@ -3196,7 +3172,7 @@ PRInt32 nsNNTPProtocol::ReadNewsList(nsIInputStream * inputStream, PRUint32 leng
     m_readNewsListCount++;
     mNumGroupsListed++;
     rv = m_nntpServer->AddNewsgroupToList(line);
-    NS_ASSERTION(NS_SUCCEEDED(rv),"failed to add to subscribe ds");
+//    NS_ASSERTION(NS_SUCCEEDED(rv),"failed to add to subscribe ds");
     // since it's not fatal, don't let this error stop the LIST command.
     rv = NS_OK;
   }
@@ -3277,6 +3253,31 @@ void nsNNTPProtocol::TimerCallback()
     m_request->Resume();
   
   return;
+}
+
+void nsNNTPProtocol::HandleAuthenticationFailure()
+{
+  PRBool userHasAuthenticatedInThisSession;
+  m_nntpServer->GetUserAuthenticated(&userHasAuthenticatedInThisSession);
+
+  /* login failed */
+  AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
+  
+  NS_ASSERTION(m_newsFolder, "no newsFolder");
+  if (m_newsFolder) 
+  {
+    if (!userHasAuthenticatedInThisSession)
+    {
+      (void) m_newsFolder->ForgetGroupUsername();
+      (void) m_newsFolder->ForgetGroupPassword();	
+    }
+    // we'll allow one failure before clearing out password,
+    // but we need to handle the case where the password has
+    // changed while the app is running, and 
+    // reprompt the user for the (potentially) new password.
+    // So clear the userAuthenticated flag.
+    m_nntpServer->SetUserAuthenticated(PR_FALSE);
+  }
 }
 
 /* start the xover command

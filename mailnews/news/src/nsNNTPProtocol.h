@@ -412,6 +412,8 @@ private:
   nsresult SetCheckingForNewNewsStatus(PRInt32 current, PRInt32 total);
 	nsresult InitializeNewsFolderFromUri(const char *uri);
 	void TimerCallback();
+
+  void HandleAuthenticationFailure();
 	nsCOMPtr <nsIInputStream> mInputStream;
   nsCOMPtr <nsITimer> mUpdateTimer; 
 	nsresult AlertError(PRInt32 errorCode, const char *text);

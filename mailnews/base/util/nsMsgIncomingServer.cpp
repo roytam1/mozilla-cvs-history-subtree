@@ -878,18 +878,22 @@ nsMsgIncomingServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
     }
     if (dialog)
     {
-      nsXPIDLString uniPassword;
       nsXPIDLCString serverUri;
       rv = GetServerURI(getter_Copies(serverUri));
       if (NS_FAILED(rv)) return rv;
       PRBool passwordProtectLocalCache = PR_FALSE;
 
       (void) m_prefBranch->GetBoolPref( "mail.password_protect_local_cache", &passwordProtectLocalCache);
+      PRUnichar *uniPassword = nsnull;
+      if (*aPassword)
+        uniPassword = ToNewUnicode(NS_ConvertASCIItoUTF16(*aPassword));
 
       PRUint32 savePasswordType = (passwordProtectLocalCache) ? nsIAuthPrompt::SAVE_PASSWORD_FOR_SESSION : nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY;
       rv = dialog->PromptPassword(aPromptTitle, aPromptMessage, 
-        NS_ConvertASCIItoUCS2(serverUri).get(), savePasswordType,
-        getter_Copies(uniPassword), okayValue);
+                                  NS_ConvertASCIItoUTF16(serverUri).get(), savePasswordType,
+                                  &uniPassword, okayValue);
+      nsAutoString uniPasswordAdopted;
+      uniPasswordAdopted.Adopt(uniPassword);
       if (NS_FAILED(rv)) return rv;
       
       if (!*okayValue) // if the user pressed cancel, just return NULL;
@@ -899,8 +903,8 @@ nsMsgIncomingServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
       }
       
       // we got a password back...so remember it
-      nsCString aCStr; aCStr.AssignWithConversion(uniPassword); 
-      
+      nsCString aCStr; 
+      aCStr.AssignWithConversion(uniPasswordAdopted); 
       rv = SetPassword(aCStr.get());
       if (NS_FAILED(rv)) return rv;
     } // if we got a prompt dialog
