@@ -7879,6 +7879,7 @@ js_FilterXMLList(JSContext *cx, JSObject *obj, jsbytecode *pc, jsval *vp)
     /* All control flow after this point must exit via label out or bad. */
     fp = cx->fp;
     scobj = fp->scopeChain;
+    withobj = NULL;
     xml = GetPrivate(cx, obj, "filtering predicate operator");
     if (!xml)
         goto bad;
@@ -7901,7 +7902,7 @@ js_FilterXMLList(JSContext *cx, JSObject *obj, jsbytecode *pc, jsval *vp)
     result = (JSXML *) JS_GetPrivate(cx, resobj);
 
     /* Hoist the scope chain update out of the loop over kids. */
-    withobj = js_NewObject(cx, &js_WithClass, NULL, scobj);
+    withobj = js_NewWithObject(cx, NULL, scobj, -1);
     if (!withobj)
         goto bad;
     fp->scopeChain = withobj;
@@ -7925,7 +7926,10 @@ js_FilterXMLList(JSContext *cx, JSObject *obj, jsbytecode *pc, jsval *vp)
     *vp = OBJECT_TO_JSVAL(resobj);
 
 out:
-    fp->scopeChain = scobj;
+    if (withobj) {
+        fp->scopeChain = scobj;
+        JS_SetPrivate(cx, withobj, NULL);
+    }
     JS_LeaveLocalRootScope(cx);
     return ok;
 bad:

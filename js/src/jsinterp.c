@@ -1950,7 +1950,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           case JSOP_ENTERWITH:
             FETCH_OBJECT(cx, -1, rval, obj);
             SAVE_SP(fp);
-            withobj = js_NewObject(cx, &js_WithClass, obj, fp->scopeChain);
+            withobj = js_NewWithObject(cx, obj, fp->scopeChain,
+                                       sp - fp->spbase - 1);
             if (!withobj)
                 goto out;
             rval = INT_TO_JSVAL(sp - fp->spbase);
@@ -1968,6 +1969,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             rval = OBJ_GET_SLOT(cx, withobj, JSSLOT_PARENT);
             JS_ASSERT(JSVAL_IS_OBJECT(rval));
             fp->scopeChain = JSVAL_TO_OBJECT(rval);
+            JS_SetPrivate(cx, withobj, NULL);
             break;
 
           case JSOP_SETRVAL:
@@ -4931,7 +4933,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
             obj = fp->scopeChain;
             while (OBJ_GET_CLASS(cx, obj) == &js_WithClass &&
-                   JSVAL_TO_INT(OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE)) > i) {
+                   JS_GetPrivate(cx, obj) == fp &&
+                   JSVAL_TO_INT(OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE)) >= i) {
                 obj = OBJ_GET_PARENT(cx, obj);
             }
             fp->scopeChain = obj;

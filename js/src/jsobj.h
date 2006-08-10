@@ -237,6 +237,24 @@ extern JS_FRIEND_DATA(JSObjectOps) js_WithObjectOps;
 extern JSClass  js_ObjectClass;
 extern JSClass  js_WithClass;
 
+extern JSObject *
+js_NewWithObject(JSContext *cx, JSObject *proto, JSObject *parent, jsint depth);
+
+/*
+ * A With object is like a Block object, in that both have one reserved slot
+ * telling the stack depth of the relevant slots (the slot whose value is the
+ * object named in the with statement, the slots containing the block's local
+ * variables); and both have a private slot referring to the JSStackFrame in
+ * whose activation they were created (or null if the with or block object
+ * outlives the frame).
+ */
+#define JSSLOT_BLOCK_DEPTH      (JSSLOT_PRIVATE + 1)
+
+#define OBJ_BLOCK_DEPTH(cx,obj) \
+    JSVAL_TO_INT(OBJ_GET_SLOT(cx, obj, JSSLOT_BLOCK_DEPTH))
+#define OBJ_SET_BLOCK_DEPTH(cx,obj,depth) \
+    OBJ_SET_SLOT(cx, obj, JSSLOT_BLOCK_DEPTH, INT_TO_JSVAL(depth))
+
 struct JSSharpObjectMap {
     jsrefcount  depth;
     jsatomid    sharpgen;
