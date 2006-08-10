@@ -89,6 +89,7 @@ class nsIStyleFrameConstruction;
 class nsIStyleSheet;
 class nsCSSFrameConstructor;
 class nsISelection;
+class nsWeakFrame;
 
 #define NS_IPRESSHELL_IID     \
 { 0x0672be76, 0x1047, 0x4905, \
@@ -740,6 +741,23 @@ protected:
   // Set to true when the accessibility service is being used to mirror
   // the dom/layout trees
   PRPackedBool mIsAccessibilityActive;
+};
+
+#define NS_IPRESSHELL_MOZILLA_1_8_BRANCH_IID \
+{ 0x36b539e8, 0xf22f, 0x4fcb, \
+  { 0xb0, 0x5d, 0x00, 0x95, 0x29, 0x1e, 0x99, 0x68 } }
+
+class nsIPresShell_MOZILLA_1_8_BRANCH : public nsIPresShell
+{
+public: 
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPRESSHELL_MOZILLA_1_8_BRANCH_IID)
+
+  void AddWeakFrame(nsWeakFrame* aWeakFrame);
+  void RemoveWeakFrame(nsWeakFrame* aWeakFrame);
+
+protected:
+  // A list of weak frames. This is a pointer to the last item in the list.
+  nsWeakFrame* mWeakFrames;
 };
 
 /**
