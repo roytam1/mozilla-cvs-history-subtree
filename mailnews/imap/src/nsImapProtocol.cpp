@@ -721,7 +721,6 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
     PRUint32 capability = kCapabilityUndefined;
 
     m_hostSessionList->GetCapabilityForHost(GetImapServerKey(), capability);
-    GetServerStateParser().SetCapabilityFlag(capability);
 
     (void) server->GetUseSecAuth(&m_useSecAuth);
     (void) server->GetSocketType(&m_socketType);
@@ -790,10 +789,13 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
         if (NS_FAILED(rv) && m_socketType == nsIMsgIncomingServer::tryTLS)
         {
           connectionType = nsnull;
+          m_socketType = nsIMsgIncomingServer::defaultSocket;
           rv = socketService->CreateTransport(&connectionType, connectionType != nsnull,
                                               *socketHost, socketPort, proxyInfo,
                                               getter_AddRefs(m_transport));
         }
+        // remember so we can know whether we can issue a start tls or not...
+        m_connectionType = connectionType;
         if (m_transport)
         {
           // Ensure that the socket can get the notification callbacks
@@ -1327,7 +1329,8 @@ PRBool nsImapProtocol::ProcessCurrentURL()
       }
       else
       {
-        if ((m_socketType == nsIMsgIncomingServer::tryTLS 
+        if (m_connectionType.Equals("starttls") 
+            && (m_socketType == nsIMsgIncomingServer::tryTLS 
             && (GetServerStateParser().GetCapabilityFlag() & kHasStartTLSCapability))
           || m_socketType == nsIMsgIncomingServer::alwaysUseTLS)
         {
@@ -1342,18 +1345,55 @@ PRBool nsImapProtocol::ProcessCurrentURL()
 
             if (NS_SUCCEEDED(rv) && secInfo) 
             {
-                nsCOMPtr<nsISSLSocketControl> sslControl = do_QueryInterface(secInfo, &rv);
+              nsCOMPtr<nsISSLSocketControl> sslControl = do_QueryInterface(secInfo, &rv);
 
-                if (NS_SUCCEEDED(rv) && sslControl)
-                    rv = sslControl->StartTLS();
+              if (NS_SUCCEEDED(rv) && sslControl)
+              {
+                rv = sslControl->StartTLS();
+                if (NS_SUCCEEDED(rv))
+                {
+                  Capability();
+                  PRInt32 capabilityFlag = GetServerStateParser().GetCapabilityFlag();
+                  // Courier imap doesn't return STARTTLS capability if we've done
+                  // a STARTTLS! But we need to remember this capability so we'll
+                  // try to use STARTTLS next time.
+                  if (!(capabilityFlag & kHasStartTLSCapability))
+                  {
+                    capabilityFlag |= kHasStartTLSCapability;
+                    GetServerStateParser().SetCapabilityFlag(capabilityFlag);
+                    m_hostSessionList->SetCapabilityForHost(GetImapServerKey(), capabilityFlag);
+                    CommitCapability();
+                  }
+                }
+              }
             }
-
-            Capability();
+            if (NS_FAILED(rv))
+            {
+              nsCAutoString logLine("STARTTLS negotiation failed. Error 0x");
+              logLine.AppendInt(rv, 16);
+              Log("ProcessCurrentURL", nsnull, logLine.get());    
+              if (m_socketType == nsIMsgIncomingServer::alwaysUseTLS)
+              {
+                SetConnectionStatus(-1);        // stop netlib
+                m_transport->Close(rv);
+              }
+            }
           }
           else if (m_socketType == nsIMsgIncomingServer::alwaysUseTLS)
-            return PR_FALSE;
+          {
+            SetConnectionStatus(-1);        // stop netlib
+            m_transport->Close(rv);
+          }
         }
 
+        // in this case, we didn't know the server supported TLS when
+        // we created the socket, so we're going to retry with
+        // STARTTLS.
+        else if (m_socketType == nsIMsgIncomingServer::tryTLS 
+                 && (GetServerStateParser().GetCapabilityFlag() & kHasStartTLSCapability))
+        {
+          return RetryUrl();
+        }
         logonFailed = !TryToLogon();
       }
   } // if death signal not received
@@ -5796,6 +5836,9 @@ void nsImapProtocol::GetMyRightsForFolder(const char *mailboxName)
   nsCString command(GetServerCommandTag());
   char *escapedName = CreateEscapedMailboxName(mailboxName);
     
+  if (MailboxIsNoSelectMailbox(escapedName))
+    return; // Don't issue myrights on Noselect folder
+
   command.Append(" myrights \"");
   command.Append(escapedName);
   command.Append("\"" CRLF);
