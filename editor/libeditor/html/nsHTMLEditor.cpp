@@ -374,6 +374,11 @@ nsHTMLEditor::CreateEventListeners()
 void
 nsHTMLEditor::RemoveEventListeners()
 {
+  if (!mDocWeak)
+  {
+    return;
+  }
+
   nsCOMPtr<nsIDOMEventReceiver> erP = GetDOMEventReceiver();
 
   if (erP)

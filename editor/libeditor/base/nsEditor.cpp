@@ -426,6 +426,11 @@ nsEditor::InstallEventListeners()
 void
 nsEditor::RemoveEventListeners()
 {
+  if (!mDocWeak)
+  {
+    return;
+  }
+
   nsCOMPtr<nsIDOMEventReceiver> erP = GetDOMEventReceiver();
 
   if (erP)
@@ -5567,7 +5572,14 @@ nsEditor::GetDOMEventReceiver()
     // Don't use getDocument here, because we have no way of knowing
     // if Init() was ever called.  So we need to get the document
     // ourselves, if it exists.
-    CallQueryReferent(mDocWeak.get(), &erp);
+    if (mDocWeak)
+    {
+      CallQueryReferent(mDocWeak.get(), &erp);
+    }
+    else
+    {
+      NS_ERROR("not initialized yet");
+    }
   }
 
   return erp;
