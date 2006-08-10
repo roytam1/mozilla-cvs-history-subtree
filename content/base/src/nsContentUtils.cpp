@@ -930,9 +930,12 @@ PRBool
 nsContentUtils::IsCallerChrome()
 {
   PRBool is_caller_chrome = PR_FALSE;
-  nsresult rv = sSecurityManager->SubjectPrincipalIsSystem(&is_caller_chrome);
-  if (NS_FAILED(rv)) {
-    return PR_FALSE;
+
+  if (sSecurityManager) {
+    nsresult rv = sSecurityManager->SubjectPrincipalIsSystem(&is_caller_chrome);
+    if (NS_FAILED(rv)) {
+      return PR_FALSE;
+    }
   }
 
   return is_caller_chrome;
