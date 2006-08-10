@@ -4,7 +4,7 @@
 }
 
 .searchbar-textbox {
-  height: 22px;
+  min-height: 22px;
   width: 15em;
   margin-right: 0;
   margin-left: 0;
