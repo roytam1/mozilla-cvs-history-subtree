@@ -573,7 +573,7 @@ protected:
                             nsLineBox* aLine,
                             nscoord aDeltaY);
 
-  void CheckFloatList(nsBlockReflowState& aState);
+  void CheckFloats(nsBlockReflowState& aState);
 
   //----------------------------------------
   // List handling kludge
