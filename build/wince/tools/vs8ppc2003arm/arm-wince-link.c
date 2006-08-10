@@ -20,6 +20,7 @@ main(int argc, char **argv)
   args[i++] = "coredll.lib";
   args[i++] = "ceshell.lib";
   args[i++] = "ole32.lib";
+  args[i++] = "aygshell.lib";
 
   args[i++] = "shunt.lib";
   #ifdef WM50
