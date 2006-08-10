@@ -92,7 +92,8 @@ NS_IMETHODIMP nsDrawingSurfaceBeOS :: Lock(PRInt32 aX, PRInt32 aY,
 
   if (mBitmap && !mLocked)
   {
-
+    if (mView)
+      mView->Sync();
     if (mLockFlags & NS_LOCK_SURFACE_READ_ONLY)
       mBitmap->LockBits();
     *aStride = mBitmap->BytesPerRow();
@@ -246,19 +247,27 @@ bool nsDrawingSurfaceBeOS :: LockDrawable()
 {
   //TODO: try to avoid exta locking also for onscreen BView.
   //Perhaps it needs synchronization with widget through nsToolkit and lock counting.
-  bool rv = true;
+  bool rv = false;
   if (!mBitmap)
-    rv = mView->LockLooper();
+  {
+    // Non-bitmap (onscreen) view - unlock it as required if exists
+    rv = mView && mView->LockLooper();
+  }
+  else
+  {
+    // Was locked in Init(), only test for locked state here
+  	rv = mBitmap->IsLocked();
+  }
   return rv;
 }
 
 void nsDrawingSurfaceBeOS :: UnlockDrawable()
 {
-  if (!mView)
-    return;
-    
+  // Do nothing, bitmap is locked for lifetime in our implementation
   if (mBitmap)
-    mView->Sync();
-  else
+    return;
+  // Non-bitmap (onscreen) view - unlock it as required.
+  // mBitmap may be gone in destroy process, so additional check for Looper()
+  if (mView  && mView->Looper())
     mView->UnlockLooper();
 }
