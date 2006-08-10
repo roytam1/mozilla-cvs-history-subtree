@@ -628,6 +628,7 @@ HasFinalReturn(JSParseNode *pn)
         return ENDS_IN_RETURN;
 
       case TOK_COLON:
+      case TOK_LEXICALSCOPE:
         return HasFinalReturn(pn->pn_expr);
 
       case TOK_THROW:
@@ -653,6 +654,12 @@ HasFinalReturn(JSParseNode *pn)
         for (pn2 = pn->pn_kid2; pn2; pn2 = pn2->pn_kid2)
             rv &= HasFinalReturn(pn2->pn_kid3);
         return rv;
+
+      case TOK_LET:
+        /* Non-binary let statements are let declarations. */
+        if (pn->pn_arity != PN_BINARY)
+            return ENDS_IN_OTHER;
+        return HasFinalReturn(pn->pn_right);
 
       default:
         return ENDS_IN_OTHER;
