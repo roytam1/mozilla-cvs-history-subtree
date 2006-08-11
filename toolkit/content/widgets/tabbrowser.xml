@@ -774,7 +774,12 @@
               if (element instanceof Window ||
                   element instanceof NSHTMLElement || 
                   element instanceof XULElement) {
-                element.focus();
+                try {
+                  element.focus();
+                }
+                catch(ex) {
+                  dump("XXXfocus() failed, see bug #348183: ex = " + ex + "\n");
+                }
               }
               document.commandDispatcher.suppressFocusScroll = false;
             }
