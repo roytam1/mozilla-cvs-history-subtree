@@ -932,9 +932,10 @@ function AddExtraAddressProcessing(emailAddress, addressNode)
   if (parentElementId == "expandedfromBox" || parentElementId == "expandedreply-toBox")
     condenseName = false;
 
-  if (condenseName && gShowCondensedEmailAddresses && displayName && useDisplayNameForAddress(emailAddress))
+  if (condenseName && gShowCondensedEmailAddresses && displayName)
   {
-    addressNode.setAttribute('label', displayName); 
+    useDisplayNameForAddress(emailAddress);
+    addressNode.setAttribute("label", displayName); 
     addressNode.setAttribute("tooltiptext", emailAddress);
     addressNode.setAttribute("tooltip", "emailAddressTooltip");
   }
