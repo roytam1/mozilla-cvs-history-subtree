@@ -153,7 +153,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'Universal Cairo-Cocoa';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -168,7 +168,7 @@ $BuildNameExtra = 'Universal Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'Firefox-Cairo';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -191,10 +191,10 @@ $BinaryName = 'firefox-bin';
 #$ShellOverride = '';
 
 # Release build options
-$ReleaseBuild  = 1;
-$shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseBuild  = 0;
+$shiptalkback  = 0;
+#$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+#$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -202,25 +202,25 @@ $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/cairo-cocoa";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/cairo-cocoa";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
-$archive       = 1;
-#$push_raw_xpis = 1;
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "trunk";
-$update_platform = "Darwin_Universal-gcc3";
-$update_hash = "md5";
-$update_filehost = "ftp.mozilla.org";
-$update_appv = "3.0a1";
-$update_extv = "3.0a1";
-$update_pushinfo = 1;
+$archive       = 0;
+$push_raw_xpis = 0;
+#$update_package = 1;
+#$update_product = "Firefox";
+#$update_version = "trunk";
+#$update_platform = "Darwin_ppc-gcc3";
+#$update_hash = "md5";
+#$update_filehost = "ftp.mozilla.org";
+#$update_appv = "3.0a1";
+#$update_extv = "3.0a1";
+#$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
