@@ -69,8 +69,8 @@ $VendorName               = "";
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-#$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
-#$EmbedCodesizeTest        = 1;  # mZ, require mozilla/tools/codesigns
+$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
+$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
 #$LayoutPerformanceTest    = 1;  # Tp
@@ -140,7 +140,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_cvsroot   = "/builds/cvs.hourly/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -153,7 +153,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Cocoa';
+$BuildNameExtra = 'Cocoa';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -207,7 +207,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experim
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 0;
