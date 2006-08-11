@@ -22,9 +22,9 @@ AC_ARG_WITH(sasl,
         HAVE_SASL=1
 
         dnl = Check for sasl.h in the normal locations
-        if test -e /usr/include/sasl.h; then
+        if test -f /usr/include/sasl.h; then
           SASL_CFLAGS="-I/usr/include"
-        elif test -e /usr/include/sasl/sasl.h; then
+        elif test -f /usr/include/sasl/sasl.h; then
           SASL_CFLAGS="-I/usr/include/sasl"
         else
           AC_MSG_ERROR(sasl.h not found)
@@ -35,9 +35,9 @@ AC_ARG_WITH(sasl,
         AC_MSG_RESULT([using $withval])
         HAVE_SASL=1
 
-        if test -e "$withval/include/sasl.h"; then
+        if test -f "$withval/include/sasl.h"; then
           SASL_CFLAGS="-I$withval/include"
-        elif test -e "$withval/include/sasl/sasl.h"; then
+        elif test -f "$withval/include/sasl/sasl.h"; then
           SASL_CFLAGS="-I$withval/include/sasl"
         else
           AC_MSG_ERROR(sasl.h not found)
@@ -55,7 +55,7 @@ AC_MSG_CHECKING(for --with-sasl-inc)
 AC_ARG_WITH(sasl-inc,
     [[  --with-sasl-inc=PATH   SASL include file directory]],
     [
-      if test -e "$withval"/sasl.h; then
+      if test -f "$withval"/sasl.h; then
         AC_MSG_RESULT([using $withval])
         HAVE_SASL=1
         SASL_CFLAGS="-I$withval"
@@ -90,6 +90,10 @@ SAVE_LDFLAGS=$LDFLAGS
 if test -n "$SASL_LIBS" ; then
     LDFLAGS="$LDFLAGS $SASL_LIBS"
 fi
+
+AC_CHECK_FUNC(getaddrinfo,,[
+	AC_CHECK_LIB(socket, getaddrinfo, [LIBS="-lsocket -lnsl $LIBS"])])
+
 AC_CHECK_LIB([sasl2], [sasl_client_init], [sasl_lib=-lsasl2],
              AC_CHECK_LIB([sasl], [sasl_client_init], [sasl_lib=-lsasl]))
 

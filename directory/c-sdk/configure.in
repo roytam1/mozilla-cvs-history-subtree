@@ -1955,11 +1955,15 @@ mips-sony-newsos*)
     	DSO_LDOPTS='-G -h $(notdir $@)'
         DSO_CFLAGS=-KPIC
     	if test -n "$USE_64"; then
-            CC="$CC -xarch=v9"
-            CXX="$CXX -xarch=v9"
+    		if test "$OS_TEST" = "i86pc"; then
+    			CC="$CC -xarch=amd64"
+            	CXX="$CXX -xarch=amd64"
+            else
+            	CC="$CC -xarch=v9"
+            	CXX="$CXX -xarch=v9"
+            fi
         fi
         CC="$CC -xstrconst"
-        CXX="$CXX -Qoption cg -xstrconst"
         if test -z "$MOZ_OPTIMIZE"; then
             CFLAGS="$CFLAGS -xs"
             CXXFLAGS="$CXXFLAGS -xs"
