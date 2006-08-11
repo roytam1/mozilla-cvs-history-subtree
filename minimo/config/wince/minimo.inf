@@ -7,6 +7,9 @@ CESignature="$Windows CE$"
 AppName="Minimo"
 InstallDir=%CE1%\%AppName%
 
+[CEDevice]
+BuildMax = 0xE0000000
+
 [DefaultInstall]
 CopyFiles=Files.minimo,Files.chrome,Files.components,Files.greprefs,Files.res,Files.res_dtd,Files.res_entityTables,Files.res_fonts
 CEShortcuts=Shortcuts
