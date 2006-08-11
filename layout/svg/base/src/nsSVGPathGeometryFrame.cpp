@@ -319,11 +319,11 @@ nsSVGPathGeometryFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
 NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
 nsSVGPathGeometryFrame::GetCoveredRegion()
 {
-  nsISVGRendererRegion *region = nsnull;
   if (!GetGeometry())
-    return region;
+    return nsnull;
 
-  GetGeometry()->GetCoveredRegion(&region);
+  nsCOMPtr<nsISVGRendererRegion> region;
+  GetGeometry()->GetCoveredRegion(getter_AddRefs(region));
 
   nsISVGMarkable *markable;
   CallQueryInterface(this, &markable);
@@ -332,50 +332,57 @@ nsSVGPathGeometryFrame::GetCoveredRegion()
     nsSVGMarkerFrame *markerEnd, *markerMid, *markerStart;
     GetMarkerFrames(&markerStart, &markerMid, &markerEnd);
 
-    if (!markerEnd && !markerMid && !markerStart)
-      return region;
+    if (markerEnd && markerMid && markerStart) {
+      float strokeWidth;
+      GetStrokeWidth(&strokeWidth);
 
-    float strokeWidth;
-    GetStrokeWidth(&strokeWidth);
+      nsVoidArray marks;
+      markable->GetMarkPoints(&marks);
 
-    nsVoidArray marks;
-    markable->GetMarkPoints(&marks);
+      PRUint32 num = marks.Count();
 
-    PRUint32 num = marks.Count();
-
-    if (markerStart) {
-      nsCOMPtr<nsISVGRendererRegion> mark;
-      mark = markerStart->RegionMark(this, (nsSVGMark *)marks[0], strokeWidth);
-
-      if (mark) {
-        nsCOMPtr<nsISVGRendererRegion> tmp = dont_AddRef(region);
-        mark->Combine(tmp, &region);
-      }
-    }
-
-    if (markerMid)
-      for (PRUint32 i = 1; i < num - 1; i++) {
+      if (num && markerStart) {
         nsCOMPtr<nsISVGRendererRegion> mark;
-        mark = markerMid->RegionMark(this, (nsSVGMark *)marks[i], strokeWidth);
+        mark = markerStart->RegionMark(this, (nsSVGMark *)marks[0], strokeWidth);
 
-        if (mark) {
-          nsCOMPtr<nsISVGRendererRegion> tmp = dont_AddRef(region);
-          mark->Combine(tmp, &region);
+        if (!region) {
+          region = mark;
+        } else if (mark) {
+          nsCOMPtr<nsISVGRendererRegion> tmp = region;
+          mark->Combine(tmp, getter_AddRefs(region));
         }
       }
 
-    if (markerEnd) {
-      nsCOMPtr<nsISVGRendererRegion> mark;
-      mark = markerEnd->RegionMark(this, (nsSVGMark *)marks[num-1], strokeWidth);
+      if (num && markerMid)
+        for (PRUint32 i = 1; i < num - 1; i++) {
+          nsCOMPtr<nsISVGRendererRegion> mark;
+          mark = markerMid->RegionMark(this, (nsSVGMark *)marks[i], strokeWidth);
 
-      if (mark) {
-        nsCOMPtr<nsISVGRendererRegion> tmp = dont_AddRef(region);
-        mark->Combine(tmp, &region);
+          if (!region) {
+            region = mark;
+          } else if (mark) {
+            nsCOMPtr<nsISVGRendererRegion> tmp = region;
+            mark->Combine(tmp, getter_AddRefs(region));
+          }
+        }
+
+      if (num && markerEnd) {
+        nsCOMPtr<nsISVGRendererRegion> mark;
+        mark = markerEnd->RegionMark(this, (nsSVGMark *)marks[num-1], strokeWidth);
+
+        if (!region) {
+          region = mark;
+        } else if (mark) {
+          nsCOMPtr<nsISVGRendererRegion> tmp = region;
+          mark->Combine(tmp, getter_AddRefs(region));
+        }
       }
     }
   }
 
-  return region;
+  nsISVGRendererRegion *retval = nsnull;
+  region.swap(retval);
+  return retval;
 }
 
 NS_IMETHODIMP
