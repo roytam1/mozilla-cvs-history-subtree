@@ -235,17 +235,20 @@ tabbrowser > tabbox > tabpanels {
 .tabbrowser-tab > .tab-close-button {
   background-image: url("chrome://global/skin/tab-middle.png");
   background-repeat: no-repeat;
-}
-.tabbrowser-tab[selected="true"] > .tab-close-button {
   -moz-margin-start: -5px;
   -moz-margin-end: -1px;
   -moz-padding-end: 3px;
+}
+
+.tabbrowser-tab[selected="true"] > .tab-close-button {
   margin-top: 0px;
   opacity: 1.0;
 }
+
 .tabbrowser-tab:not([selected="true"]) > .tab-close-button {
   opacity: 0.35;
 }
+
 .tabbrowser-tab:not([selected="true"]):hover > .tab-close-button {
   opacity: 0.5;
 }
