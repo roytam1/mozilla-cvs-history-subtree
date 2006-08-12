@@ -1321,7 +1321,7 @@ nsTableFrame::InsertRowGroups(nsIFrame* aFirstRowGroupFrame,
     nsAutoVoidArray rows;
     // Loop over the rowgroups and check if some of them are new, if they are
     // insert cellmaps in the order that is predefined by OrderRowGroups,
-    PRInt32 rgIndex; // declared here to avoid Win bustage
+    PRUint32 rgIndex; // declared here to avoid Win bustage
     for (rgIndex = 0; rgIndex < numRowGroups; rgIndex++) {
       nsIFrame* kidFrame = aFirstRowGroupFrame;
       while (kidFrame) {
