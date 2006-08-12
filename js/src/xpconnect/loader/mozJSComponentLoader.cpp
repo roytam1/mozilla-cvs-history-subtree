@@ -1010,6 +1010,14 @@ mozJSComponentLoader::UnloadAll(PRInt32 aWhen)
         mRuntimeService = nsnull;
     }
 
+    // Flag this script as a system script
+    // FIXME: BUG 346139: We actually want to flag this exact filename, not
+    // anything that starts with this filename... Maybe we need a way to do
+    // that?  On the other hand, the fact that this is in our components dir
+    // means that if someone snuck a malicious file into this dir we're screwed
+    // anyway...  So maybe flagging as a prefix is fine.
+    xpc->FlagSystemFilenamePrefix(nativePath.get());
+
 #ifdef DEBUG_shaver_off
     fprintf(stderr, "mJCL: UnloadAll(%d)\n", aWhen);
 #endif
