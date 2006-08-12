@@ -1321,7 +1321,8 @@ nsTableFrame::InsertRowGroups(nsIFrame* aFirstRowGroupFrame,
     nsAutoVoidArray rows;
     // Loop over the rowgroups and check if some of them are new, if they are
     // insert cellmaps in the order that is predefined by OrderRowGroups,
-    for (PRUint32 rgIndex = 0; rgIndex < numRowGroups; rgIndex++) {
+    PRInt32 rgIndex; // declared here to avoid Win bustage
+    for (rgIndex = 0; rgIndex < numRowGroups; rgIndex++) {
       nsIFrame* kidFrame = aFirstRowGroupFrame;
       while (kidFrame) {
         nsTableRowGroupFrame* rgFrame = GetRowGroupFrame(kidFrame);
@@ -1346,7 +1347,7 @@ nsTableFrame::InsertRowGroups(nsIFrame* aFirstRowGroupFrame,
     ResetRowIndices(aFirstRowGroupFrame, aLastRowGroupFrame);
 
     //now that the cellmaps are reordered too insert the rows
-    for (PRUint32 rgIndex = 0; rgIndex < numRowGroups; rgIndex++) {
+    for (rgIndex = 0; rgIndex < numRowGroups; rgIndex++) {
       nsIFrame* kidFrame = aFirstRowGroupFrame;
       while (kidFrame) {
         nsTableRowGroupFrame* rgFrame = GetRowGroupFrame(kidFrame);
