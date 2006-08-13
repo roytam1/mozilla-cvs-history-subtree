@@ -76,11 +76,11 @@
     <separator id="tabsSeparator"/>
 
     <vbox id="tabPrefsBox" align="start">
-      <checkbox id="warnCloseMultiple" label="&warnCloseMultiple.label;"
-                accesskey="&warnCloseMultiple.accesskey;"
+      <checkbox id="warnCloseMultiple" label="&warnCloseMultipleTabs.label;"
+                accesskey="&warnCloseMultipleTabs.accesskey;"
                 preference="browser.tabs.warnOnClose"/>
-      <checkbox id="warnOpenMany" label="&warnOpenMany.label;"
-                accesskey="&warnOpenMany.accesskey;"
+      <checkbox id="warnOpenMany" label="&warnOpenManyTabs.label;"
+                accesskey="&warnOpenManyTabs.accesskey;"
                 preference="browser.tabs.warnOnOpen"/>
       <checkbox id="showTabBar" label="&showTabBar.label;"
                 accesskey="&showTabBar.accesskey;"

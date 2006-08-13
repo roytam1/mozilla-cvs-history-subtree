@@ -1280,7 +1280,7 @@
             if (!aAll)
               --tabsToClose;
 
-            var messageKey = (tabsToClose == 1) ? "tabs.closeWarningOne" : "tabs.closeWarningMultiple";
+            var messageKey = (tabsToClose == 1) ? "tabs.closeWarningOneTab" : "tabs.closeWarningMultipleTabs";
             var closeKey = (tabsToClose == 1) ? "tabs.closeButtonOne" : "tabs.closeButtonMultiple";
             var buttonPressed = promptService.confirmEx(window,
                                                         bundle.getString("tabs.closeWarningTitle"),
