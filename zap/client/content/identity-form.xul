@@ -104,10 +104,48 @@
         <rows>
           <irow>
             <label control="urn:mozilla:zap:preference" 
-                   value="&preference.label;:"/>
+                   value="&preference.label;"/>
             <textbox type="zap-formwidget" id="urn:mozilla:zap:preference"/>
             <info>
               <description>&preference.description;</description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:feature-class"
+                   value="&class.label;"/>
+            <menulist type="zap-formwidget" id="urn:mozilla:zap:feature-class">
+              <menupopup id="services_list_popup"
+                         datasources="rdf:null"                         
+                         ref="urn:mozilla:zap:feature-classes">
+                <menuitem value="urn:mozilla:zap:feature-class-personal"
+                          label="&class.personal;"/>
+                <menuitem value="urn:mozilla:zap:feature-class-business"
+                          label="&class.business;"/>
+              </menupopup>
+            </menulist>
+            <info>
+              <description>&class.description;</description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:feature-priority"
+                   value="&priority.label;"/>
+            <menulist type="zap-formwidget" id="urn:mozilla:zap:feature-priority">
+              <menupopup id="services_list_popup"
+                         datasources="rdf:null"                         
+                         ref="urn:mozilla:zap:feature-priorities">
+                <menuitem value="urn:mozilla:zap:feature-priority-non-urgent"
+                          label="&priority.non-urgent;"/>
+                <menuitem value="urn:mozilla:zap:feature-priority-normal"
+                          label="&priority.normal;"/>
+                <menuitem value="urn:mozilla:zap:feature-priority-urgent"
+                          label="&priority.urgent;"/>
+                <menuitem value="urn:mozilla:zap:feature-priority-emergency"
+                          label="&priority.emergency;"/>
+              </menupopup>
+            </menulist>
+            <info>
+              <description>&priority.description;</description>
             </info>
           </irow>
           <irow>

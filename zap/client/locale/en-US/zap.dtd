@@ -149,6 +149,16 @@
 <!ENTITY watchContact.description "If checked, zap will attempt to subscribe to the presence status of contacts associated with this identity.">
 <!ENTITY preference.label "Preference:">
 <!ENTITY preference.description "Optional value (&quot;q&quot; parameter) in the range 0.001-1.000 indicating the relative preference for this user agent/identity compared to other registration bindings for this address-of-record.">
+<!ENTITY class.label "Class:">
+<!ENTITY class.personal "Personal">
+<!ENTITY class.business "Business">
+<!ENTITY class.description "Indicates the setting, business or personal, for this identity.">
+<!ENTITY priority.label "Priority:">
+<!ENTITY priority.non-urgent "Non-Urgent">
+<!ENTITY priority.normal "Normal">
+<!ENTITY priority.urgent "Urgent">
+<!ENTITY priority.emergency "Emergency">
+<!ENTITY priority.description "Indicates the call priorities the identity is willing to handle.  A value of X means that the identity is willing to take calls with priority X and higher.">
 <!ENTITY authenticationUsername.label "Authentication Username:">
 <!ENTITY authenticationUsername.description "Optional username for authenticating with the registrar for this address-of-record. If this field is left blank, zap assumes that the authentication username is identical to the username part of the address-of-record (as it usually is).">
 <!ENTITY service.label "Service:">

@@ -599,6 +599,8 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:preference", "0.1");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:feature-class", "feature-class-personal");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:feature-priority", "feature-priority-normal");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "true");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
@@ -1529,6 +1531,35 @@ Registration.fun(
       // add a q-value
       contactHeader.setParameter("q", this.group.identity["urn:mozilla:zap:preference"]);
     }
+    contactHeader.setParameter("audio", "");
+    contactHeader.setParameter("application", "\"FALSE\"");
+    contactHeader.setParameter("data", "\"FALSE\"");
+    contactHeader.setParameter("control", "\"FALSE\"");
+    contactHeader.setParameter("video", "\"FALSE\"");
+    // XXX should be true when ToIP will be committed
+    contactHeader.setParameter("text", "\"FALSE\"");
+    contactHeader.setParameter("automata", "\"FALSE\"");
+    var featureClass = this.group.identity["urn:mozilla:zap:feature-class"] == "urn:mozilla:zap:feature-class-business" ? "business" : "personal";
+    contactHeader.setParameter("class", "\"" + featureClass + "\"");
+    contactHeader.setParameter("duplex", "");
+    contactHeader.setParameter("mobility", "\"FALSE\"");
+    contactHeader.setParameter("description", "\"" + wUserAgent + "\"");
+    var featurePriority = this.group.identity["urn:mozilla:zap:feature-priority"];
+    if (featurePriority == "urn:mozilla:zap:feature-priority-non-urgent") {
+      featurePriority = 10;
+    }
+    else if (featurePriority == "urn:mozilla:zap:feature-priority-normal") {
+      featurePriority = 20;
+    }
+    else if (featurePriority == "urn:mozilla:zap:feature-priority-urgent") {
+      featurePriority = 30;
+    }
+    else if (featurePriority == "urn:mozilla:zap:feature-priority-emergency") {
+      featurePriority = 40;
+    }
+    contactHeader.setParameter("priority", "\"" + featurePriority + "\"");
+    contactHeader.setParameter("actor", "\"principal\"");
+    contactHeader.setParameter("message", "\"FALSE\"");
     
     if (this.group.interval) {
       // add an expires parameter
