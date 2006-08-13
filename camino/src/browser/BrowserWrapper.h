@@ -41,6 +41,7 @@
 @class BrowserWindowController;
 @class ToolTip;
 @class AutoCompleteTextField;
+@class RolloverImageButton;
 
 class nsIMutableArray;
 class nsIArray;
