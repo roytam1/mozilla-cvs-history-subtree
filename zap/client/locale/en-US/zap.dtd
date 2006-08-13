@@ -128,7 +128,7 @@
 
 <!-- home.xul -->
 <!ENTITY createNewIdentity.button "Create new identity">
-<!ENTITY manageContact.button "Manage Contact">
+<!ENTITY manageContact.button "Manage Contacts">
 <!ENTITY home.description "TBD">
 
 <!-- identities.xul -->
