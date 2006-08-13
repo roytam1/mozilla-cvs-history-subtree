@@ -122,7 +122,7 @@
       <html:h4>SIP Accounts</html:h4>
         <html:p>
         To get zap to register with your SIP account,
-        create a new identity (Sidebar > Identities > New Identity) and 
+        create a new identity (Button '&createNewIdentity.button;' above) and 
         enter the address-of-record.
         </html:p>
         <html:p>
