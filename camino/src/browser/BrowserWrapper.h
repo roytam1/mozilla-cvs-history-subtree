@@ -149,6 +149,7 @@ class nsIArray;
   ToolTip*                  mToolTip;
 
   IBOutlet NSView*          mBlockedPopupView;   // loaded on demand, can be nil, STRONG
+  IBOutlet RolloverImageButton* mBlockedPopupCloseButton; 
 
   double                    mProgress;
   
