@@ -539,7 +539,7 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
     }
   }
 
-  if (mState & NS_FRAME_FIRST_REFLOW) {
+  if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
     nsFormControlFrame::RegUnRegAccessKey(this, PR_TRUE);
   }
 
@@ -575,7 +575,7 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
 
   nscoord oldHeightOfARow = HeightOfARow();
   
-  if (!(mState & NS_FRAME_FIRST_REFLOW) && autoHeight) {
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW) && autoHeight) {
     // When not doing an initial reflow, and when the height is auto, start off
     // with our computed height set to what we'd expect our height to be.
     state.mComputedHeight = CalcIntrinsicHeight(oldHeightOfARow, length);
@@ -589,6 +589,8 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   if (!mMightNeedSecondPass) {
     NS_ASSERTION(!autoHeight || HeightOfARow() == oldHeightOfARow,
                  "How did our height of a row change if nothing was dirty?");
+    NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
+                 "Shouldn't be suppressing if we don't need a second pass!");
     return rv;
   }
 
@@ -605,6 +607,9 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
                  "changed!");
     return rv;
   }
+
+  NS_ASSERTION(IsScrollbarUpdateSuppressed(),
+               "Why didn't we suppress for our second pass?");
 
   SetSuppressScrollbarUpdate(PR_FALSE);
 
@@ -633,19 +638,56 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
                                      const nsHTMLReflowState& aReflowState, 
                                      nsReflowStatus&          aStatus)
 {
-  // XXXbz figure out when we can optimize away the second pass here!
-  mMightNeedSecondPass = PR_TRUE;
+  NS_PRECONDITION(aReflowState.mComputedHeight == NS_UNCONSTRAINEDSIZE,
+                  "We should not have a computed height here!");
+  
+  mMightNeedSecondPass =
+    (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0;
+
+  nscoord oldHeightOfARow = HeightOfARow();
 
   nsHTMLReflowState state(aReflowState);
+
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
+    // When not doing an initial reflow, and when the height is auto, start off
+    // with our computed height set to what we'd expect our height to be.
+    state.mComputedHeight = GetScrolledFrame()->GetSize().height;
+    state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
+  }
+
   nsresult rv = nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize,
                                           state, aStatus);
   NS_ENSURE_SUCCESS(rv, rv);
 
+  if (!mMightNeedSecondPass) {
+    NS_ASSERTION(state.mComputedHeight == GetScrolledFrame()->GetSize().height,
+                 "How did our kid's height change if nothing was dirty?");
+    NS_ASSERTION(HeightOfARow() == oldHeightOfARow,
+                 "How did our height of a row change if nothing was dirty?");
+    NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
+                 "Shouldn't be suppressing if we don't need a second pass!");
+    return rv;
+  }
+
   mMightNeedSecondPass = PR_FALSE;
 
-  SetSuppressScrollbarUpdate(PR_FALSE);
-
+  nscoord visibleHeight = GetScrolledFrame()->GetSize().height;
   nscoord heightOfARow = HeightOfARow();
+
+  // Now see whether we need a second pass.  If the height of a row has not
+  // changed and neither has the height of our scrolled frame, we don't.
+  if (visibleHeight == state.mComputedHeight &&
+      heightOfARow == oldHeightOfARow) {
+    // All done.  No need to do more reflow.
+    NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
+                 "Shouldn't be suppressing if total height has not changed!");
+    return rv;    
+  }
+
+  NS_ASSERTION(IsScrollbarUpdateSuppressed(),
+               "Why didn't we suppress for our second pass?");
+
+  SetSuppressScrollbarUpdate(PR_FALSE);
 
   // Gotta reflow again.
   // XXXbz We're just changing the height here; do we need to dirty ourselves
@@ -655,8 +697,6 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
   nsHTMLScrollFrame::DidReflow(aPresContext, &state, aStatus);
 
   // Now compute the height we want to have
-  nscoord visibleHeight = GetScrolledFrame()->GetSize().height;
-
   mNumDisplayRows = kMaxDropDownRows;
   if (visibleHeight > mNumDisplayRows * heightOfARow) {
     visibleHeight = mNumDisplayRows * heightOfARow;

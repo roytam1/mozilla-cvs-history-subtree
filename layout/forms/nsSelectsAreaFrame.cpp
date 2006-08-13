@@ -236,6 +236,8 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
                            const nsHTMLReflowState& aReflowState, 
                            nsReflowStatus&          aStatus)
 {
+  nscoord oldHeight = GetSize().height;
+  
   nsresult rv = nsAreaFrame::Reflow(aPresContext, aDesiredSize,
                                     aReflowState, aStatus);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -246,10 +248,8 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
   if (NS_LIKELY(list != nsnull)) {
     if (list->MightNeedSecondPass()) {
       nscoord newHeightOfARow = list->CalcHeightOfARow();
-      if (newHeightOfARow != mHeightOfARow || list->IsInDropDownMode()) {
-        // XXXbz we could probably do better (e.g. compare aDesiredSize.height
-        // to kMaxDropDownRows * HeightOfARow() and do something depending on
-        // that, for comboboxes.
+      if (newHeightOfARow != mHeightOfARow ||
+          (list->IsInDropDownMode() && oldHeight != GetSize().height)) {
         mHeightOfARow = newHeightOfARow;
         list->SetSuppressScrollbarUpdate(PR_TRUE);
       }
