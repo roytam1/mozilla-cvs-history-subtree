@@ -916,6 +916,7 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 #page-proxy-button {
   width: 16px;
   height: 16px;
+  max-height: 16px;
   margin: 0px;
   padding: 0px;
 }
@@ -1085,24 +1086,24 @@ sidebarheader {
 
 #feed-button[feeds] {
   list-style-image: url("chrome://browser/skin/livemark-item.png");
-  -moz-image-region: rect(0px, 36px, 18px, 18px);
+  -moz-image-region: rect(1px, 36px, 17px, 18px);
 }
 #feed-button[feeds]:hover {
-  -moz-image-region: rect(18px, 36px, 36px, 18px);
+  -moz-image-region: rect(19px, 36px, 35px, 18px);
 }
 #feed-button[feeds]:active {
-  -moz-image-region: rect(54px, 36px, 72px, 18px);
+  -moz-image-region: rect(55px, 36px, 71px, 18px);
 }
 
 #feed-button[chromedir="rtl"][feeds] {
   list-style-image: url("chrome://browser/skin/livemark-item-rtl.png");
-  -moz-image-region: rect(0px, 36px, 18px, 18px);
+  -moz-image-region: rect(1px, 36px, 17px, 18px);
 }
 #feed-button[chromedir="rtl"][feeds]:hover {
-  -moz-image-region: rect(18px, 36px, 36px, 18px);
+  -moz-image-region: rect(19px, 36px, 35px, 18px);
 }
 #feed-button[chromedir="rtl"][feeds]:active {
-  -moz-image-region: rect(54px, 36px, 72px, 18px);
+  -moz-image-region: rect(55px, 36px, 71px, 18px);
 }
 
 /* ----- THROBBER ----- */
