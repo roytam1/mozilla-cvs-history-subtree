@@ -44,6 +44,7 @@
         width="640" height="480" screenX="20" screenY="20" 
         persist="width height screenX screenY sizemode"
         title = "&zap.title;"
+        windowtype="zap_mainwin"
         onload="windowInit();"
         onunload="windowClose();"
         xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">

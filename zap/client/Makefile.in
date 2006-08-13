@@ -5,7 +5,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS 		= profile src
+DIRS 		= profile src components
 
 MODULE		= zap
 export XPI_NAME	= zap
