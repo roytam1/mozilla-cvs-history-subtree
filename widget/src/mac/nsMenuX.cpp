@@ -44,6 +44,7 @@
 #include "nsIComponentManager.h"
 #include "nsIDocShell.h"
 #include "prinrval.h"
+#include "nsIRollupListener.h"
 
 #include "nsMenuX.h"
 #include "nsMenuBarX.h"
@@ -73,6 +74,9 @@
 
 #include "nsCRT.h"
 
+// externs defined in nsWindow.cpp
+extern nsIRollupListener * gRollupListener;
+extern nsIWidget         * gRollupWidget;
 
 static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData, EventHandlerRef* outHandler) ;
 
@@ -725,6 +729,11 @@ static pascal OSStatus MyMenuEventHandler(EventHandlerCallRef myHandler, EventRe
     gCurrentlyTrackedMenuID = ::GetMenuID(menuRef);
   }
   else if (kind == kEventMenuOpening || kind == kEventMenuClosed) {
+    if (kind == kEventMenuOpening && gRollupListener != nsnull && gRollupWidget != nsnull) {
+      gRollupListener->Rollup();
+      return userCanceledErr;
+    }
+
     nsISupports* supports = reinterpret_cast<nsISupports*>(userData);
     nsCOMPtr<nsIMenuListener> listener(do_QueryInterface(supports));
     if (listener) {
