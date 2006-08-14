@@ -245,10 +245,10 @@ nsXULContentUtils::GetElementRefResource(nsIContent* aElement, nsIRDFResource** 
 
     if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
         // We'll use rdf_MakeAbsolute() to translate this to a URL.
-        nsCOMPtr<nsIDocument> doc = aElement->GetDocument();
+        nsCOMPtr<nsIDocument> doc = aElement->GetOwnerDoc();
 
         nsIURI *url = doc->GetDocumentURI();
-        NS_ASSERTION(url != nsnull, "element has no document");
+        NS_ASSERTION(url != nsnull, "document has no uri");
         if (! url)
             return NS_ERROR_UNEXPECTED;
 
