@@ -23,12 +23,11 @@ classic.jar:
   skin/classic/browser/pageInfo.css
   skin/classic/browser/Popup-blocked.png
   skin/classic/browser/searchbar.css
-  skin/classic/browser/search-bar-background-left.png
   skin/classic/browser/search-bar-background-mid.png
-  skin/classic/browser/search-bar-background-right.png
-  skin/classic/browser/Search-bar.png
-  skin/classic/browser/Search.png
-  skin/classic/browser/Search-add-engines.png
+  skin/classic/browser/Search-go.png
+  skin/classic/browser/Search-go-rtl.png
+  skin/classic/browser/Search-provider-bkgnd.png
+  skin/classic/browser/Search-provider-bkgnd-rtl.png
   skin/classic/browser/Secure.png
   skin/classic/browser/Security-broken.png
   skin/classic/browser/Secure-urlbar.png

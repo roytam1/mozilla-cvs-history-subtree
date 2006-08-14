@@ -1,7 +1,8 @@
+/* *** pinstripe *** */
+
 .searchbar-textbox {
   background: url("chrome://browser/skin/search-bar-background-mid.png") repeat-x;
-  
-  margin: 4px 11px 4px 11px;
+  margin: 4px 0px 4px 0px;
   -moz-appearance: none;
   font: icon;
   height: 22px !important;
@@ -10,60 +11,80 @@
 }
 
 .searchbar-left {
-  background: url("chrome://browser/skin/search-bar-background-left.png") no-repeat left center;
-  margin-left: 3px;
-}
-
-.searchbar-right {
-  background: url("chrome://browser/skin/search-bar-background-right.png") no-repeat right center;
-  margin-right: 3px;
+  -moz-margin-start: 3px;
 }
 
 .searchbar-engine-image {
   width: 16px;
   height: 16px;
-  margin: 3px 3px 3px 0px;
+  -moz-margin-start: 9px;
   list-style-image: url("chrome://browser/skin/bookmarks/bookmark-item.png");
 }
 
 .searchbar-engine-button {
-  min-width: 22px;
-  margin: 0px 3px 0px 0px;
+  background-image: url("chrome://browser/skin/Search-provider-bkgnd.png");
+  background-position: 0px 0px;
+  background-repeat: no-repeat;
+  margin: 0px;
+  padding: 0px;
+  width: 37px;
+  height: 22px;
+}
+
+#search-container[chromedir="rtl"] .searchbar-engine-button {
+  background-image: url("chrome://browser/skin/Search-provider-bkgnd-rtl.png");
+}
+
+.searchbar-engine-button:hover {
+  background-position: -37px 0px;
 }
 
 .searchbar-engine-button[addengines="true"] {
-  list-style-image: url("chrome://browser/skin/Search-add-engines.png");
+  background-position: -111px 0px;
+}
+
+.searchbar-engine-button[open="true"] {
+  background-position: -74px 0px;
 }
 
 .searchbar-dropmarker-image {
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
-  padding: 8px 0px 7px 19px;
+  padding-top: 9px;
+  padding-bottom: 8px;
+  -moz-padding-start: 29px;
+  -moz-padding-end: 3px;
 }
 
 .autocomplete-textbox-container {
   border: none;
-  padding-right: 0px;
+  padding: 0px;
+  margin: 0px;
   height: 21px !important;
-  margin: 0px -5px 0px -3px;
 }
 
 .search-go-button {
   -moz-box-flex: 1; /* expand to fill toolbar height */
-  list-style-image: url("chrome://browser/skin/Search.png");
-  -moz-image-region: rect(0px 16px 16px 0px);
+  list-style-image: url("chrome://browser/skin/Search-go.png");
+  -moz-image-region: rect(0px 25px 22px 0px);
   padding: 0px;
+  margin: 0px;
+  -moz-margin-start: -1px;
+}
+
+#search-container[chromedir="rtl"] .search-go-button {
+  list-style-image: url("chrome://browser/skin/Search-go-rtl.png");
 }
 
 .search-go-button:hover {
-  -moz-image-region: rect(0px 32px 16px 16px);
+  -moz-image-region: rect(0px 50px 22px 25px);
 }
 
 .search-go-button:hover:active {
-  -moz-image-region: rect(0px, 32px, 16px, 16px);
+  -moz-image-region: rect(0px, 100px, 22px, 75px);
 }
 
 .search-go-button[disabled="true"] {
-  -moz-image-region: rect(0px, 48px, 16px, 32px);
+  -moz-image-region: rect(0px, 75px, 22px, 50px);
 }
 
 .searchbar-engine-menuitem[selected="true"] > .menu-iconic-text {

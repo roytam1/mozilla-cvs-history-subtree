@@ -314,262 +314,264 @@ menubutton:not([disabled="true"]):hover:active {
 /* ----- DEFAULT BACK BUTTON ----- */	
 
 #back-button {
-  -moz-image-region: rect(0px 24px 24px 0px);
+  -moz-image-region: rect(0px, 24px, 24px, 0px);
 }
 #back-button:hover,
 #back-button[buttonover="true"] {
-  -moz-image-region: rect(24px 24px 48px 0px);
+  -moz-image-region: rect(24px, 24px, 48px, 0px);
 }
 #back-button[disabled="true"] {
- -moz-image-region: rect(48px 24px 72px 0px);
+ -moz-image-region: rect(48px, 24px, 72px, 0px);
 }
 #back-button:hover:active,
 #back-button[buttondown="true"],
 #back-button[open="true"] {
-  -moz-image-region: rect(96px 24px 120px 0px);
+  -moz-image-region: rect(96px, 24px, 120px, 0px);
 }
 
 /* ----- DEFAULT BACK BUTTON DROPMARKER ----- */	
 
 #back-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 3px;
   list-style-image: url("chrome://browser/skin/dropmark-nav.png");
-  -moz-image-region: rect(0px 14px 24px 0px);
+  -moz-image-region: rect(0px, 14px, 24px, 0px);
 }
 
 #back-button:hover .toolbarbutton-menubutton-dropmarker, 
 #back-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(24px 14px 48px 0px);
+  -moz-image-region: rect(24px, 14px, 48px, 0px);
 }
 
 #back-button[disabled="true"] .toolbarbutton-menubutton-dropmarker {
   list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
-  -moz-image-region: rect(48px 14px 72px 0px) !important;
+  -moz-image-region: rect(48px, 14px, 72px, 0px) !important;
 }
 
 #back-button:hover:active .toolbarbutton-menubutton-dropmarker, 
 #back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(72px 14px 96px 0px);
+  -moz-image-region: rect(72px, 14px, 96px, 0px);
 }
 
 /* ----- DEFAULT FORWARD BUTTON ----- */	
 
 #forward-button {
-  -moz-image-region: rect(0px 48px 24px 24px);
+  -moz-image-region: rect(0px, 48px, 24px, 24px);
 }
 #forward-button:hover,
 #forward-button[buttonover="true"] {
-  -moz-image-region: rect(24px 48px 48px 24px);
+  -moz-image-region: rect(24px, 48px, 48px, 24px);
 }
 /* #forward-button[buttondown="true"], #forward-button[open="true"] {
-  -moz-image-region: rect(32px 64px 64px 32px);
+  -moz-image-region: rect(32px, 64px, 64px, 32px);
 } */
 #forward-button[disabled="true"] {
- -moz-image-region: rect(48px 48px 72px 24px) !important;
+ -moz-image-region: rect(48px, 48px, 72px, 24px) !important;
 }
 #forward-button:hover:active {
-  -moz-image-region: rect(96px 48px 120px 24px);
+  -moz-image-region: rect(96px, 48px, 120px, 24px);
 }
 
 /* ----- DEFAULT FORWARD BUTTON DROPMARKER ----- */	
 
 #forward-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 3px;
   list-style-image: url("chrome://browser/skin/dropmark-nav.png");
-  -moz-image-region: rect(0px 14px 24px 0px);
+  -moz-image-region: rect(0px, 14px, 24px, 0px);
 }
 #forward-button:hover .toolbarbutton-menubutton-dropmarker, 
 #forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(24px 14px 48px 0px);
+  -moz-image-region: rect(24px, 14px, 48px, 0px);
 }
 #forward-button[disabled="true"] .toolbarbutton-menubutton-dropmarker {
   list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
-  -moz-image-region: rect(48px 14px 72px 0px) !important;
+  -moz-image-region: rect(48px, 14px, 72px, 0px) !important;
 }
 #forward-button:hover:active .toolbarbutton-menubutton-dropmarker, 
 #forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(72px 14px 96px 0px);
+  -moz-image-region: rect(72px, 14px, 96px, 0px);
 }
 
 /* ----- DEFAULT STOP BUTTON ----- */	
 
 #stop-button {
-  -moz-image-region: rect(0px 72px 24px 48px);
+  -moz-image-region: rect(0px, 72px, 24px, 48px);
 }
 #stop-button:hover {
-  -moz-image-region: rect(24px 72px 48px 48px);
+  -moz-image-region: rect(24px, 72px, 48px, 48px);
 }
 #stop-button[disabled="true"] {
-  -moz-image-region: rect(48px 72px 72px 48px) !important;
+  -moz-image-region: rect(48px, 72px, 72px, 48px) !important;
 }
 #stop-button:hover:active {
-  -moz-image-region: rect(96px 72px 120px 48px);
+  -moz-image-region: rect(96px, 72px, 120px, 48px);
 }
 
 /* ----- DEFAULT RELOAD BUTTON ----- */	
 
 #reload-button {
-  -moz-image-region: rect(0px 96px 24px 72px);
+  -moz-image-region: rect(0px, 96px, 24px, 72px);
 }
 #reload-button:hover {
-  -moz-image-region: rect(24px 96px 48px 72px);
+  -moz-image-region: rect(24px, 96px, 48px, 72px);
 }
 #reload-button[disabled="true"] {
-  -moz-image-region: rect(48px 96px 72px 72px) !important;
+  -moz-image-region: rect(48px, 96px, 72px, 72px) !important;
 }
 #reload-button:hover:active {
-  -moz-image-region: rect(96px 96px 120px 72px);
+  -moz-image-region: rect(96px, 96px, 120px, 72px);
 }
 
 /* ----- DEFAULT HOME BUTTON ----- */	
 
 #home-button {
-  -moz-image-region: rect(0px 120px 24px 96px);
+  -moz-image-region: rect(0px, 120px, 24px, 96px);
 }
 #home-button:hover {
-  -moz-image-region: rect(24px 120px 48px 96px);
+  -moz-image-region: rect(24px, 120px, 48px, 96px);
 }
 #home-button[disabled="true"] {
-  -moz-image-region: rect(48px 120px 72px 96px) !important;
+  -moz-image-region: rect(48px, 120px, 72px, 96px) !important;
 }
 #home-button:hover:active {
-  -moz-image-region: rect(96px 120px 120px 96px);
+  -moz-image-region: rect(96px, 120px, 120px, 96px);
 }
 
 /* ----- DEFAULT DOWNLOADS BUTTON ----- */	
 
 #downloads-button {
-  -moz-image-region: rect(0px 144px 24px 120px);
+  -moz-image-region: rect(0px, 144px, 24px, 120px);
 }
 #downloads-button:hover {
-  -moz-image-region: rect(24px 144px 48px 120px);
+  -moz-image-region: rect(24px, 144px, 48px, 120px);
 }
 #downloads-button[disabled="true"] {
-  -moz-image-region: rect(48px 144px 72px 120px);
+  -moz-image-region: rect(48px, 144px, 72px, 120px);
 }
 #downloads-button:hover:active {
-  -moz-image-region: rect(96px 144px 120px 120px);
+  -moz-image-region: rect(96px, 144px, 120px, 120px);
 }
 
 /* ----- DEFAULT HISTORY BUTTON ----- */	
 
 #history-button {
-  -moz-image-region: rect(0px 168px 24px 144px);
+  -moz-image-region: rect(0px, 168px, 24px, 144px);
 }
 #history-button:hover:active {
-  -moz-image-region: rect(24px 168px 48px 144px);
+  -moz-image-region: rect(24px, 168px, 48px, 144px);
 }
 #history-button[disabled="true"] {
-  -moz-image-region: rect(48px 168px 72px 144px);
+  -moz-image-region: rect(48px, 168px, 72px, 144px);
 }
 #history-button:hover:active,
 #history-button[checked="true"] {
-  -moz-image-region: rect(96px 168px 120px 144px);
+  -moz-image-region: rect(96px, 168px, 120px, 144px);
 }
 
 /* ----- DEFAULT BOOKMARKS BUTTON ----- */	
 
 #bookmarks-button {
-  -moz-image-region: rect(0px 192px 24px 168px);
+  -moz-image-region: rect(0px, 192px, 24px, 168px);
 }
 #bookmarks-button:hover {
-  -moz-image-region: rect(24px 192px 48px 168px);
+  -moz-image-region: rect(24px, 192px, 48px, 168px);
 }
 #bookmarks-button[disabled="true"] {
-  -moz-image-region: rect(48px 192px 72px 168px);
+  -moz-image-region: rect(48px, 192px, 72px, 168px);
 }
 #bookmarks-button:hover:active,
 #bookmarks-button[checked="true"] {
-  -moz-image-region: rect(96px 192px 120px 168px);
+  -moz-image-region: rect(96px, 192px, 120px, 168px);
 }
 /* ----- DEFAULT PRINT BUTTON ----- */	
 
 #print-button {
-  -moz-image-region: rect(0px 216px 24px 192px);
+  -moz-image-region: rect(0px, 216px, 24px, 192px);
 }
 #print-button:hover {
-  -moz-image-region: rect(24px 216px 48px 192px);
+  -moz-image-region: rect(24px, 216px, 48px, 192px);
 }
 #print-button[disabled="true"] {
-  -moz-image-region: rect(48px 216px 72px 192px);
+  -moz-image-region: rect(48px, 216px, 72px, 192px);
 }
 #print-button:hover:active {
-  -moz-image-region: rect(96px 216px 120px 192px);
+  -moz-image-region: rect(96px, 216px, 120px, 192px);
 }
 
 /* ----- DEFAULT NEW-TAB BUTTON ----- */	
 
 #new-tab-button {
-  -moz-image-region: rect(0px 240px 24px 216px);
+  -moz-image-region: rect(0px, 240px, 24px, 216px);
 }
 #new-tab-button:hover {
-  -moz-image-region: rect(24px 240px 48px 216px);
+  -moz-image-region: rect(24px, 240px, 48px, 216px);
 }
 #new-tab-button[disabled="true"] {
-  -moz-image-region: rect(48px 240px 72px 216px);
+  -moz-image-region: rect(48px, 240px, 72px, 216px);
 }
 #new-tab-button:hover:active {
-  -moz-image-region: rect(96px 240px 120px 216px);
+  -moz-image-region: rect(96px, 240px, 120px, 216px);
 }
 
 /* ----- DEFAULT NEW-WINDOW BUTTON ----- */	
 
 #new-window-button {
-  -moz-image-region: rect(0px 264px 24px 240px);
+  -moz-image-region: rect(0px, 264px, 24px, 240px);
 }
 #new-window-button:hover {
-  -moz-image-region: rect(24px 264px 48px 240px);
+  -moz-image-region: rect(24px, 264px, 48px, 240px);
 }
 #new-window-button[disabled="true"] {
-  -moz-image-region: rect(48px 264px 72px 240px);
+  -moz-image-region: rect(48px, 264px, 72px, 240px);
 }
 #new-window-button:hover:active {
-  -moz-image-region: rect(96px 264px 120px 240px);
+  -moz-image-region: rect(96px, 264px, 120px, 240px);
 }
 
 /* ----- DEFAULT CUT BUTTON ----- */	
 
 #cut-button {
-  -moz-image-region: rect(0px 288px 24px 264px);
+  -moz-image-region: rect(0px, 288px, 24px, 264px);
 }
 #cut-button:hover {
-  -moz-image-region: rect(24px 288px 48px 264px);
+  -moz-image-region: rect(24px, 288px, 48px, 264px);
 }
 #cut-button[disabled="true"] {
-  -moz-image-region: rect(48px 288px 72px 264px);
+  -moz-image-region: rect(48px, 288px, 72px, 264px);
 }
 #cut-button:hover:active,
 #cut-button[checked="true"] {
-  -moz-image-region: rect(96px 288px 120px 264px);
+  -moz-image-region: rect(96px, 288px, 120px, 264px);
 }
 
 /* ----- DEFAULT COPY BUTTON ----- */	
 
 #copy-button {
-  -moz-image-region: rect(0px 312px 24px 288px);
+  -moz-image-region: rect(0px, 312px, 24px, 288px);
 }
 #copy-button:hover {
-  -moz-image-region: rect(24px 312px 48px 288px);
+  -moz-image-region: rect(24px, 312px, 48px, 288px);
 }
 #copy-button[disabled="true"] {
-  -moz-image-region: rect(48px 312px 72px 288px);
+  -moz-image-region: rect(48px, 312px, 72px, 288px);
 }
 #copy-button:hover:active,
 #copy-button[checked="true"] {
-  -moz-image-region: rect(96px 312px 120px 288px);
+  -moz-image-region: rect(96px, 312px, 120px, 288px);
 }
 /* ----- DEFAULT PASTE BUTTON ----- */	
 
 #paste-button {
-  -moz-image-region: rect(0px 336px 24px 312px);
+  -moz-image-region: rect(0px, 336px, 24px, 312px);
 }
 #paste-button:hover {
-  -moz-image-region: rect(24px 336px 48px 312px);
+  -moz-image-region: rect(24px, 336px, 48px, 312px);
 }
 #paste-button[disabled="true"] {
-  -moz-image-region: rect(48px 336px 72px 312px);
+  -moz-image-region: rect(48px, 336px, 72px, 312px);
 }
 #paste-button:hover:active,
 #copy-button[checked="true"] {
-  -moz-image-region: rect(96px 336px 120px 312px);
+  -moz-image-region: rect(96px, 336px, 120px, 312px);
 }
 
 
@@ -583,249 +585,249 @@ toolbar[iconsize="small"] .toolbarbutton-1 {
 /* ----- SMALL BACK BUTTON ----- */
 
 toolbar[iconsize="small"] #back-button {
-  -moz-image-region: rect(0px 16px 16px 0px);
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
 }
 toolbar[iconsize="small"] #back-button:hover {
-  -moz-image-region: rect(16px 16px 32px 0px);
+  -moz-image-region: rect(16px, 16px, 32px, 0px);
 }
 toolbar[iconsize="small"] #back-button[disabled="true"] {
-  list-style-image: url("chrome://browser/skin/Toolbar-small.png") !important;
-  -moz-image-region: rect(32px 16px 48px 0px) !important;
+  -moz-image-region: rect(32px, 16px, 48px, 0px) !important;
 }
 toolbar[iconsize="small"] #back-button:hover:active,
 toolbar[iconsize="small"] #back-button[buttondown="true"] {
-  -moz-image-region: rect(64px 16px 80px 0px);
+  -moz-image-region: rect(64px, 16px, 80px, 0px);
 }
 
 /* ----- SMALL BACK BUTTON DROPMARKER ----- */
 
 toolbar[iconsize="small"] #back-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 7px;
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
-  -moz-image-region: rect(0px 14px 16px 0px);
+  -moz-image-region: rect(0px, 14px, 16px, 0px);
 }
 
 toolbar[iconsize="small"] #back-button:hover .toolbarbutton-menubutton-dropmarker, 
 toolbar[iconsize="small"] #back-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(16px 14px 32px 0px);
+  -moz-image-region: rect(16px, 14px, 32px, 0px);
 }
 
 toolbar[iconsize="small"] #back-button[disabled="true"] .toolbarbutton-menubutton-dropmarker {
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png") !important;
-  -moz-image-region: rect(32px 14px 48px 0px) !important;
+  -moz-image-region: rect(32px, 14px, 48px, 0px) !important;
 }
 
 toolbar[iconsize="small"] #back-button:hover:active .toolbarbutton-menubutton-dropmarker, 
 toolbar[iconsize="small"] #back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(48px 14px 64px 0px);
+  -moz-image-region: rect(48px, 14px, 64px, 0px);
 }
 
 /* ----- SMALL FORWARD BUTTON ----- */
 
 toolbar[iconsize="small"] #forward-button {
-  -moz-image-region: rect(0px 32px 16px 16px);
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 toolbar[iconsize="small"] #forward-button:hover {
-  -moz-image-region: rect(16px 32px 32px 16px);
+  -moz-image-region: rect(16px, 32px, 32px, 16px);
 }
 toolbar[iconsize="small"] #forward-button[disabled="true"] {
-	list-style-image: url("chrome://browser/skin/Toolbar-small.png") !important;
-   -moz-image-region: rect(32px 32px 48px 16px) !important;
+  -moz-image-region: rect(32px, 32px, 48px, 16px) !important;
 }
 toolbar[iconsize="small"] #forward-button:hover:active,
 toolbar[iconsize="small"] #forward-button[buttondown="true"] {
-  -moz-image-region: rect(64px 32px 80px 16px);
+  -moz-image-region: rect(64px, 32px, 80px, 16px);
 }
 
 /* ----- SMALL FORWARD BUTTON DROPMARKER ----- */
 
 toolbar[iconsize="small"] #forward-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 7px;
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
-  -moz-image-region: rect(0px 14px 16px 0px);
+  -moz-image-region: rect(0px, 14px, 16px, 0px);
 }
 
 toolbar[iconsize="small"] #forward-button:hover .toolbarbutton-menubutton-dropmarker, 
 toolbar[iconsize="small"] #forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(16px 14px 32px 0px);
+  -moz-image-region: rect(16px, 14px, 32px, 0px);
 }
 
 toolbar[iconsize="small"] #forward-button[disabled="true"] .toolbarbutton-menubutton-dropmarker {
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png") !important;
-  -moz-image-region: rect(32px 14px 48px 0px) !important;
+  -moz-image-region: rect(32px, 14px, 48px, 0px) !important;
 }
 
 toolbar[iconsize="small"] #forward-button:hover:active .toolbarbutton-menubutton-dropmarker, 
 toolbar[iconsize="small"] #forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(48px 14px 64px 0px);
+  -moz-image-region: rect(48px, 14px, 64px, 0px);
 }
 
 /* ----- SMALL STOP BUTTON ----- */
 
 toolbar[iconsize="small"] #stop-button {
-  -moz-image-region: rect(0px 48px 16px 32px);
+  -moz-image-region: rect(0px, 48px, 16px, 32px);
 }
 toolbar[iconsize="small"] #stop-button:hover {
-  -moz-image-region: rect(16px 48px 32px 32px);
+  -moz-image-region: rect(16px, 48px, 32px, 32px);
 }
 toolbar[iconsize="small"] #stop-button[disabled="true"] {
-  -moz-image-region: rect(32px 48px 48px 32px) !important;
+  -moz-image-region: rect(32px, 48px, 48px, 32px) !important;
 }
 toolbar[iconsize="small"] #stop-button:hover:active {
-  -moz-image-region: rect(64px 48px 80px 32px);
+  -moz-image-region: rect(64px, 48px, 80px, 32px);
 }
 /* ----- SMALL RELOAD BUTTON ----- */
 
 toolbar[iconsize="small"] #reload-button {
-  -moz-image-region: rect(0px 64px 16px 48px);
+  -moz-image-region: rect(0px, 64px, 16px, 48px);
 }
 toolbar[iconsize="small"] #reload-button:hover {
-  -moz-image-region: rect(16px 64px 32px 48px);
+  -moz-image-region: rect(16px, 64px, 32px, 48px);
 }
 toolbar[iconsize="small"] #reload-button[disabled="true"] {
-  -moz-image-region: rect(32px 64px 48px 48px) !important;
+  -moz-image-region: rect(32px, 64px, 48px, 48px) !important;
 }
 toolbar[iconsize="small"] #reload-button:hover:active {
-  -moz-image-region: rect(64px 64px 80px 48px);
+  -moz-image-region: rect(64px, 64px, 80px, 48px);
 }
 /* ----- SMALL HOME BUTTON ----- */
 
 toolbar[iconsize="small"] #home-button {
-  -moz-image-region: rect(0px 80px 16px 64px);
+  -moz-image-region: rect(0px, 80px, 16px, 64px);
 }
 toolbar[iconsize="small"] #home-button:hover {
-  -moz-image-region: rect(16px 80px 32px 64px);
+  -moz-image-region: rect(16px, 80px, 32px, 64px);
 }
 toolbar[iconsize="small"] #home-button[disabled="true"] {
-  -moz-image-region: rect(32px 80px 48px 64px) !important;
+  -moz-image-region: rect(32px, 80px, 48px, 64px) !important;
 }
 toolbar[iconsize="small"] #home-button:hover:active {
-  -moz-image-region: rect(64px 80px 80px 64px);
+  -moz-image-region: rect(64px, 80px, 80px, 64px);
 }
 /* ----- SMALL DOWNLOAD MANAGER BUTTON ----- */
 
 toolbar[iconsize="small"] #downloads-button {
-  -moz-image-region: rect(0px 96px 16px 80px);
+  -moz-image-region: rect(0px, 96px, 16px, 80px);
 }
 toolbar[iconsize="small"] #downloads-button:hover {
-  -moz-image-region: rect(16px 96px 32px 80px);
+  -moz-image-region: rect(16px, 96px, 32px, 80px);
 }
 toolbar[iconsize="small"] #downloads-button[disabled="true"] {
-  -moz-image-region: rect(32px 96px 48px 80px) !important;
+  -moz-image-region: rect(32px, 96px, 48px, 80px) !important;
 }
 toolbar[iconsize="small"] #downloads-button:hover:active {
-  -moz-image-region: rect(64px 96px 80px 80px);
+  -moz-image-region: rect(64px, 96px, 80px, 80px);
 }
 /* ----- SMALL HISTORY SIDEBAR BUTTON ----- */
 
 toolbar[iconsize="small"] #history-button {
-  -moz-image-region: rect(0px 112px 16px 96px);
+  -moz-image-region: rect(0px, 112px, 16px, 96px);
 }
 toolbar[iconsize="small"] #history-button:hover {
-  -moz-image-region: rect(16px 112px 32px 96px);
+  -moz-image-region: rect(16px, 112px, 32px, 96px);
 }
 toolbar[iconsize="small"] #history-button[disabled="true"] {
-  -moz-image-region: rect(32px 112px 48px 96px) !important;
+  -moz-image-region: rect(32px, 112px, 48px, 96px) !important;
 }
 toolbar[iconsize="small"] #history-button:hover:active {
-  -moz-image-region: rect(64px 112px 80px 96px);
+  -moz-image-region: rect(64px, 112px, 80px, 96px);
 }
 /* ----- SMALL BOOKMARK SIDEBAR BUTTON ----- */
 
 toolbar[iconsize="small"] #bookmarks-button {
-  -moz-image-region: rect(0px 128px 16px 112px);
+  -moz-image-region: rect(0px, 128px, 16px, 112px);
 }
 toolbar[iconsize="small"] #bookmarks-button:hover {
-  -moz-image-region: rect(16px 128px 32px 112px);
+  -moz-image-region: rect(16px, 128px, 32px, 112px);
 }
 toolbar[iconsize="small"] #bookmarks-button[disabled="true"] {
-  -moz-image-region: rect(32px 128px 48px 112px) !important;
+  -moz-image-region: rect(32px, 128px, 48px, 112px) !important;
 }
 toolbar[iconsize="small"] #bookmarks-button:hover:active {
-  -moz-image-region: rect(64px 128px 80px 112px);
+  -moz-image-region: rect(64px, 128px, 80px, 112px);
 }
 /* ----- SMALL PRINT BUTTON ----- */
 
 toolbar[iconsize="small"] #print-button {
-  -moz-image-region: rect(0px 144px 16px 128px);
+  -moz-image-region: rect(0px, 144px, 16px, 128px);
 }
 toolbar[iconsize="small"] #print-button:hover {
-  -moz-image-region: rect(16px 144px 32px 128px);
+  -moz-image-region: rect(16px, 144px, 32px, 128px);
 }
 toolbar[iconsize="small"] #print-button[disabled="true"] {
-  -moz-image-region: rect(32px 144px 48px 128px) !important;
+  -moz-image-region: rect(32px, 144px, 48px, 128px) !important;
 }
 toolbar[iconsize="small"] #print-button:hover:active {
-  -moz-image-region: rect(64px 144px 80px 128px);
+  -moz-image-region: rect(64px, 144px, 80px, 128px);
 }
 /* ----- SMALL NEW TAB BUTTON ----- */
 
 toolbar[iconsize="small"] #new-tab-button {
-  -moz-image-region: rect(0px 160px 16px 144px);
+  -moz-image-region: rect(0px, 160px, 16px, 144px);
 }
 toolbar[iconsize="small"] #new-tab-button:hover {
-  -moz-image-region: rect(16px 160px 32px 144px);
+  -moz-image-region: rect(16px, 160px, 32px, 144px);
 }
 toolbar[iconsize="small"] #new-tab-button[disabled="true"] {
-  -moz-image-region: rect(32px 160px 48px 144px) !important;
+  -moz-image-region: rect(32px, 160px, 48px, 144px) !important;
 }
 toolbar[iconsize="small"] #new-tab-button:hover:active {
-  -moz-image-region: rect(64px 160px 80px 144px);
+  -moz-image-region: rect(64px, 160px, 80px, 144px);
 }
 /* ----- SMALL NEW WINDOW BUTTON ----- */
 
 toolbar[iconsize="small"] #new-window-button {
-  -moz-image-region: rect(0px 176px 16px 160px);
+  -moz-image-region: rect(0px, 176px, 16px, 160px);
 }
 toolbar[iconsize="small"] #new-window-button:hover {
-  -moz-image-region: rect(16px 176px 32px 160px);
+  -moz-image-region: rect(16px, 176px, 32px, 160px);
 }
 toolbar[iconsize="small"] #new-window-button[disabled="true"] {
-  -moz-image-region: rect(32px 176px 48px 160px) !important;
+  -moz-image-region: rect(32px, 176px, 48px, 160px) !important;
 }
 toolbar[iconsize="small"] #new-window-button:hover:active {
-  -moz-image-region: rect(64px 176px 80px 160px);
+  -moz-image-region: rect(64px, 176px, 80px, 160px);
 }
 /* ----- SMALL CUT BUTTON ----- */
 
 toolbar[iconsize="small"] #cut-button {
-  -moz-image-region: rect(0px 192px 16px 176px);
+  -moz-image-region: rect(0px, 192px, 16px, 176px);
 }
 toolbar[iconsize="small"] #cut-button:hover {
-  -moz-image-region: rect(16px 192px 32px 176px);
+  -moz-image-region: rect(16px, 192px, 32px, 176px);
 }
 toolbar[iconsize="small"] #cut-button[disabled="true"] {
-  -moz-image-region: rect(32px 192px 48px 176px) !important;
+  -moz-image-region: rect(32px, 192px, 48px, 176px) !important;
 }
 toolbar[iconsize="small"] #cut-button:hover:active {
-  -moz-image-region: rect(64px 192px 80px 176px);
+  -moz-image-region: rect(64px, 192px, 80px, 176px);
 }
 /* ----- SMALL COPY BUTTON ----- */
 
 toolbar[iconsize="small"] #copy-button {
-  -moz-image-region: rect(0px 208px 16px 192px);
+  -moz-image-region: rect(0px, 208px, 16px, 192px);
 }
 toolbar[iconsize="small"] #copy-button:hover {
-  -moz-image-region: rect(16px 208px 32px 192px);
+  -moz-image-region: rect(16px, 208px, 32px, 192px);
 }
 toolbar[iconsize="small"] #copy-button[disabled="true"] {
-  -moz-image-region: rect(32px 208px 48px 192px) !important;
+  -moz-image-region: rect(32px, 208px, 48px, 192px) !important;
 }
 toolbar[iconsize="small"] #copy-button:hover:active {
-  -moz-image-region: rect(64px 208px 80px 192px);
+  -moz-image-region: rect(64px, 208px, 80px, 192px);
 }
 
 /* ----- SMALL PASTE BUTTON ----- */
 
 toolbar[iconsize="small"] #paste-button {
-  -moz-image-region: rect(0px 224px 16px 208px);
+  -moz-image-region: rect(0px, 224px, 16px, 208px);
 }
 toolbar[iconsize="small"] #paste-button:hover {
-  -moz-image-region: rect(16px 224px 32px 208px);
+  -moz-image-region: rect(16px, 224px, 32px, 208px);
 }
 toolbar[iconsize="small"] #paste-button[disabled="true"] {
-  -moz-image-region: rect(32px 224px 48px 208px) !important;
+  -moz-image-region: rect(32px, 224px, 48px, 208px) !important;
 }
 toolbar[iconsize="small"] #paste-button:hover:active {
-  -moz-image-region: rect(64px 224px 80px 208px);
+  -moz-image-region: rect(64px, 224px, 80px, 208px);
 }
 
 /* ----- FULLSCREEN WINDOW CONTROLS ----- */
@@ -873,24 +875,24 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 
 #urlbar[level="high"] #lock-icon {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(0px 18px 18px 0px);
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
 }
 #urlbar[level="high"] #lock-icon:hover {
-  -moz-image-region: rect(18px 18px 36px 0px);
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
 }
 #urlbar[level="high"] #lock-icon:active {
-  -moz-image-region: rect(36px 18px 54px 0px);
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
 }
 
 #urlbar[level="low"] #lock-icon {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(0px 18px 18px 0px);
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
 }
 #urlbar[level="low"] #lock-icon:hover {
-  -moz-image-region: rect(18px 18px 36px 0px);
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
 }
 #urlbar[level="low"] #lock-icon:active {
-  -moz-image-region: rect(36px 18px 54px 0px);
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
 }
 
 #urlbar[level="broken"] #lock-icon {
