@@ -61,19 +61,7 @@
                         anonid="searchbar-stringbundle"/>
       <xul:box class="searchbar-left" flex="1">
         <xul:box class="searchbar-right" flex="1">
-          <xul:textbox class="searchbar-textbox"
-                       anonid="searchbar-textbox"
-                       type="autocomplete"
-                       flex="1"
-                       autocompletepopup="PopupAutoComplete"
-                       autocompletesearch="search-autocomplete"
-                       autocompletesearchparam="searchbar-history"
-                       timeout="250"
-                       maxrows="10"
-                       completeselectedindex="true"
-                       showcommentcolumn="true"
-                       tabscrolling="true"
-                       xbl:inherits="disableautocomplete,searchengine,src">
+          <xul:hbox class="searchbar-engine-button-container" align="center">
             <xul:button class="searchbar-engine-button"
                         type="menu"
                         anonid="searchbar-engine-button"
@@ -89,6 +77,20 @@
                               accesskey="&cmd_engineManager.accesskey;"/>
               </xul:menupopup>
             </xul:button>
+          </xul:hbox>
+          <xul:textbox class="searchbar-textbox"
+                       anonid="searchbar-textbox"
+                       type="autocomplete"
+                       flex="1"
+                       autocompletepopup="PopupAutoComplete"
+                       autocompletesearch="search-autocomplete"
+                       autocompletesearchparam="searchbar-history"
+                       timeout="250"
+                       maxrows="10"
+                       completeselectedindex="true"
+                       showcommentcolumn="true"
+                       tabscrolling="true"
+                       xbl:inherits="disableautocomplete,searchengine,src">
           </xul:textbox>
           <xul:hbox class="search-go-button-container">
             <xul:toolbarbutton class="search-go-button"
@@ -133,6 +135,8 @@
           "anonid", "searchbar-textbox");</field>
       <field name="_popup">document.getAnonymousElementByAttribute(this, 
           "anonid", "searchbar-popup");</field>
+      <field name="_engineButton">document.getAnonymousElementByAttribute(
+          this, "anonid", "searchbar-engine-button");</field>
       <field name="_ss">null</field>
       <field name="_engines">null</field>
 
@@ -529,7 +533,9 @@
           this.onEnginePopupCommand(target);
       ]]></handler>
 
-      <handler event="popupshowing" action="this.rebuildPopupDynamic();"/>
+      <handler event="popupshowing" action="this.rebuildPopupDynamic();
+                                            this._engineButton.setAttribute('open', true);"/>
+      <handler event="popuphiding" action="this._engineButton.removeAttribute('open');"/>
     </handlers>
   </binding>
 

@@ -16,10 +16,8 @@ classic.jar:
         skin/classic/browser/livemark-item.png
         skin/classic/browser/livemark-item-rtl.png
         skin/classic/browser/searchbar.css
-        skin/classic/browser/Search-bar.png
         skin/classic/browser/Search.png
         skin/classic/browser/Search-rtl.png
-        skin/classic/browser/Search-add-engines.png
         skin/classic/browser/Search-provider-bkgnd.png
         skin/classic/browser/Secure.png
         skin/classic/browser/Security-broken.png

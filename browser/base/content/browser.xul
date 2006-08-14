@@ -293,6 +293,7 @@
       </toolbaritem>
 
       <toolbaritem id="search-container" title="&searchItem.title;"
+                    chromedir="&locale.dir;"
                     align="center" class="chromeclass-toolbar-additional"
                     flex="100">
         <searchbar id="searchbar" flex="1"/>

@@ -1,3 +1,5 @@
+/* *** winstripe *** */
+
 #searchbar .search-go-button,
 #searchbar .searchbar-textbox {
 	border: 0px !important;
@@ -6,12 +8,28 @@
 .searchbar-textbox {
   min-height: 22px;
   width: 15em;
-  margin-right: 0;
-  margin-left: 0;
+  margin-right: 0px;
+  margin-left: 0px;
+  background-color: -moz-field;
+  border: none;
+}
+
+.autocomplete-textbox-container {
+  -moz-appearance: none;
+  -moz-border-top-colors: #96969D;
+  -moz-border-bottom-colors: #96969D;
+  -moz-border-right-colors: #96969D;
+  border-width: 1px 1px 1px 0px;
+  margin: 0px;
+}
+
+.textbox-input {
+  padding: 0px !important;
+  margin: 0px !important;
 }
 
 .searchbar-engine-image {
-  margin: 0px 0px 0px 2px;
+  margin: 0px 0px 0px 3px;
   height: 16px;
   width: 16px;
   list-style-image: url("chrome://global/skin/icons/folder-item.png");
@@ -19,19 +37,28 @@
 }
 
 .searchbar-engine-button {
-  min-width: 22px;
-  /* margin: 0px 3px 0px 0px; <-- WORKS LTR, NOT RTL */
+  width: 32px;
+  height: 22px;
+  border: none;
   margin: 0px;
-  -moz-margin-end: 3px;
+  -moz-margin-end: -1px;
+  padding: 0px;
+  background-repeat: no-repeat;
+  background-position: 0px 0px;
+  background-image: url("chrome://browser/skin/Search-provider-bkgnd.png");
 }
 
 .searchbar-engine-button[addengines="true"] {
-  list-style-image: url("chrome://browser/skin/Search-add-engines.png");
+  background-position: -96px 0px;
+}
+
+.searchbar-engine-button[open="true"] {
+  background-position: -64px 0px;
 }
 
 .searchbar-dropmarker-image {
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
-  padding: 8px 0px 7px 20px;
+  padding: 10px 3px 9px 24px;
 }
 
 .search-go-button {
@@ -43,23 +70,17 @@
 
 .search-go-button[chromedir="rtl"] {
   list-style-image: url("chrome://browser/skin/Search-rtl.png");
-  padding: 0px;
-  -moz-appearance: none;
-  -moz-image-region: rect(0px 25px 22px 0px);
 }
 
-.search-go-button:hover,
-.search-go-button:hover[chromedir="rtl"] {
+.search-go-button:hover {
   -moz-image-region: rect(0px 50px 22px 25px);
 }
 
-.search-go-button[disabled="true"],
-.search-go-button[disabled="true"][chromedir="rtl"] {
+.search-go-button[disabled="true"] {
   -moz-image-region: rect(0px, 75px, 22px, 50px);
 }
 
-.search-go-button:hover:active,
-.search-go-button[disabled="true"][chromedir="rtl"] {
+.search-go-button:hover:active {
   -moz-image-region: rect(0px, 100px, 22px, 75px);
 }
 
