@@ -541,6 +541,16 @@ function MiniNavStartup()
 
         setTimeout("InformUserAboutLowMem()",10);
       }  
+      else if (topic=="nsPref:changed")
+      {
+        if (data=="ui.homebar")
+        {
+          if (gPref.getBoolPref("ui.homebar") == true)
+            DoHomebar(true);
+          else
+            DoHomebar(false);
+        }
+      }
 
     }
   };
@@ -554,6 +564,10 @@ function MiniNavStartup()
     os.addObserver(minimoAppObserver,"open-url", false);
     os.addObserver(minimoAppObserver,"add-bm", false);
     os.addObserver(minimoAppObserver,"low-mem", false);
+
+
+    var pbi = gPref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+    pbi.addObserver("ui.homebar", minimoAppObserver, false);
 
 
   } catch(ignore) { }
@@ -1011,18 +1025,6 @@ function DoHomebar(show)
   document.getElementById("homebar").collapsed = !show;
 }
 
-
-function HomebarToggle() {
-
-  try {
-    var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(nsIPrefBranch);
-    var value = !pref.getBoolPref("ui.homebar");
-    pref.setBoolPref("ui.homebar", value);
-
-    DoHomebar(value);
-  }
-  catch(ex) { onErrorHandler(ex); }
-}
 
 /** 
  * urlbar indentity, style, progress indicator.

@@ -126,10 +126,6 @@
     <command id="cmd_BrowserOpenInfo"         oncommand="BrowserOpenInfo()"/>
     <command id="cmd_BrowserTestDialogs"      oncommand="BrowserTestDialogs()"/>
     <command id="cmd_BrowserTestSendSMS"      oncommand="BrowserTestSendSMS()"/>
-    <!--
-        <command id="cmd_ViewRSS"                 oncommand="BrowserViewRSS()"/>
-        <command id="cmd_ViewSearch"              oncommand="BrowserViewSearch()"/>
-        -->
     <command id="cmd_ViewDeckSB"              oncommand="BrowserViewDeckSB()"/>
     <command id="cmd_ViewDeckSearch"          oncommand="BrowserViewDeckSearch()"/>
     <command id="cmd_ViewDeckDefault"         oncommand="BrowserViewDeckDefault()"/>
@@ -189,12 +185,6 @@
                autocompletepopup="PopupAutoComplete"
                ontextentered="return URLBarEntered();">
 		
-		<!--
-		    <deck onclick="PageProxyClickHandler(event)" id='proxy-deck' >
-		      <image id="urlbar-deck"  />  
-		    </deck>
-		    -->
-		
         <hbox>
 		  <button type="menu" style="-moz-user-focus: none" class="plain" id="feed-button">
 			<menupopup id='feed-button-menu' position="after_end" />
@@ -222,13 +212,6 @@
 	<popup id="contentAreaContextMenu" onpopupshowing="BrowserContentAreaPopupShowing()">
       
       
-      <!--
-          
-          <menuitem id="link_as_new_tab"    label="&linknewtab.label;" command="cmd_BrowserOpenLinkAsNewTab" hidden="true"/>
-          <menuitem id="item-bookmark-page" label="&bookmarkthispage.label;" insertbefore="context-sep-view"  command="cmd_BrowserBookmarkThis" hidden="false"/>
-          <menuitem id="item-bookmark"      label="&bookmarks.label;" command="cmd_BrowserBookmark" hidden="true"/>
-          
-          -->        
 	  <menuitem id="item-call"   label="" insertbefore="context-sep-view" oncommand="" hidden="true"/>
       
       
@@ -273,14 +256,6 @@
                 label="&decksearch.label;"
                 command="cmd_ViewDeckSearch"/>
       
-      <!--		
-                <menuitem id="command_ViewDeckSB"
-                          image="chrome://minimo/skin/extensions/icon-delicious.png" 
-                          class="menuitem-iconic"       
-                          label="&decksb.label;"       
-                          command="cmd_ViewDeckSB" />
-                -->
-      
 	  <menuitem id="command_ViewDeckDefault"
                 image="chrome://minimo/skin/extensions/icon-urlbar.png" 
                 class="menuitem-iconic"  
@@ -306,10 +281,6 @@
                 label="&newtab.label;"  /> 
       
       <menuseparator/>
-      
-	  <menuitem id="full_screen" 
-                label="&gotoFullScreen.label;" 
-                oncommand="FullScreenToggle()"/>
       
       <!-- this shouldn't be an option on smartphones -->
       
@@ -345,15 +316,6 @@
       <menuitem id="command_ViewFind"
                 command="cmd_ViewFind" 
                 label="&findToolbar.label;"  /> 
-      
-      <menuitem id="command_ViewHomeBar"
-                oncommand="HomebarToggle()"
-                label="&homebarToolbar.label;"  /> 
-      <!--
-          <menuitem id="command_ViewDownload"
-                    command="cmd_ViewDownload" 
-                    label="&downloadText.label;"  /> 
-          -->
       
       <menuseparator/>
       
