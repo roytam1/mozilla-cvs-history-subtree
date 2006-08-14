@@ -26,7 +26,7 @@
       <xul:hbox pack="center" align="center">
   	    <xul:image anonid="close-button-placeholder" class="tab-close-button-placeholder"/>
       </xul:hbox>
-      <xul:toolbarbutton anonid="close-button" class="tab-close-button"/>
+      <xul:toolbarbutton anonid="close-button" class="tab-close-button" tabindex="-1"/>
         <xul:hbox class="tab-image-right" xbl:inherits="selected"/>
     </content>
   </binding>

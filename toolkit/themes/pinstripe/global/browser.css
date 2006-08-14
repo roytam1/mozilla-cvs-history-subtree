@@ -243,6 +243,9 @@ tabbrowser > tabbox > tabpanels {
 .tabbrowser-tab[selected="true"] > .tab-close-button {
   margin-top: 0px;
   opacity: 1.0;
+  /* Make this button focusable so clicking on it will not focus the tab while
+     it's getting closed */
+  -moz-user-focus: normal;
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-close-button {
