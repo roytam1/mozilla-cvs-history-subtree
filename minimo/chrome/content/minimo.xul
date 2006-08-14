@@ -39,8 +39,10 @@
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://minimo/skin/minimo.css" type="text/css"?> 
 
-<?xul-overlay href="chrome://global/content/editMenuOverlay.xul"?>
+<!-- XBL bindings --> 
+<?xml-stylesheet href="chrome://minimo/content/bindings/keynav.css" type="text/css"?> 
 
+<?xul-overlay href="chrome://global/content/editMenuOverlay.xul"?>
 <?xul-overlay href="chrome://minimo/content/toolbars/toolbar-find.xul"?>
 <?xul-overlay href="chrome://minimo/content/toolbars/toolbar-pan.xul"?>
 <?xul-overlay href="chrome://minimo/content/toolbars/toolbar-download.xul"?>
@@ -83,11 +85,39 @@
          Everytime you edit these keys, you may also consider
          to check/edit the key assignment on minimo.js/MenuHandleMenuEscape
       -->
+   
     <key id="minimo-key"  keycode="VK_F19"  oncommand="spinCycle()"/>
+
+    <!-- *** disabled for now. 
+    <key id="minimo-key4" keycode="VK_F19"  oncommand="document.getElementById('keynavigator').run('n_leftmenu')"/>
+         *** --> 
+         
     <key id="minimo-key2" keycode="VK_F10"  oncommand="spinCycle()"/>
     <key id="minimo-key3" keycode="VK_F20"  oncommand="DoToggleSoftwareKeyboard()"/>
     
   </keyset>
+  
+  <!-- * The keynav map definitions.
+       * You can enable this element if you getElementById("keynavigator").run('n_leftmenu')
+       * 
+       -->
+       
+  <keynav id="keynavigator" default="n_leftmenu"> 
+    <navmap from="n_tabs"       roundmap="n_find,n_tabs,n_content,n_home" />
+    <navmap from="n_home"       roundmap="n_tabs,n_content,n_leftmenu,n_content" />
+    <navmap from="n_navmenu"    roundmap="n_content,n_leftmenu,n_find,n_urlbar" />
+    <navmap from="n_urlbar"     roundmap="n_content,n_navmenu,n_find,n_leftmenu" />
+    <navmap from="n_leftmenu"   roundmap="n_home,n_urlbar,n_find,n_navmenu" />
+    <navmap from="n_find"       roundmap="n_urlbar,n_find,n_tabs,n_find" />
+    <navmap from="n_content"    roundmap="n_tabs,n_home,n_urlbar,n_home" />
+    
+    <statemap navid="n_leftmenu"  highlight="menu-button"              focus="menu-button" />
+    <statemap navid="n_home"      highlight="homebar"                  focus="firstbase" />
+    <statemap navid="n_urlbar"    highlight="#urlbarInputField"        focus="#urlbarInputField" />
+    <statemap navid="n_content"   highlight="#contentDocument.body"    focus="#contentWindow" />
+    <statemap navid="n_tabs"      highlight="content"                  focus="#selectedTab" />
+    <statemap navid="n_navmenu"   highlight="nav-menu-button"          focus="nav-menu-button" />
+  </keynav> 
   
     <hbox id="appcontent" flex="1" >
     
