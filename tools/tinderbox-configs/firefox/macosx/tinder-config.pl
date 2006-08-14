@@ -77,7 +77,7 @@ $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 1;  # Txul
-$StartupPerformanceTest   = 1;  # Ts
+$StartupPerformanceTest   = 0;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
 
