@@ -91,10 +91,10 @@ tab > .tab-image-right {
   background: url("chrome://global/skin/tab-right.png") no-repeat;
 }
 tab:not([selected="true"]) > .tab-image-right {
-  opacity: 0.30;
+  opacity: 0.6;
 }
 tab:hover:not([selected="true"]) > .tab-image-right {
-  opacity: 0.60;
+  opacity: 0.8;
 }
 
 
@@ -102,20 +102,20 @@ tab > .tab-image-left {
   background: url("chrome://global/skin/tab-left.png") no-repeat;
 }
 tab:not([selected="true"]) > .tab-image-left {
-  opacity: 0.30;
+  opacity: 0.6;
 }
 tab:hover:not([selected="true"]) > .tab-image-left {
-  opacity: 0.60;
+  opacity: 0.8;
 }
 
 tab > .tab-image-middle {
   background: url("chrome://global/skin/tab-middle.png") repeat-x;
 }
 tab:not([selected="true"]) > .tab-image-middle {
-  opacity: 0.30;
+  opacity: 0.6;
 }
 tab:hover:not([selected="true"]) > .tab-image-middle {
-  opacity: 0.60;
+  opacity: 0.8;
 }
 
 tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-icon-image  {
@@ -246,11 +246,11 @@ tabbrowser > tabbox > tabpanels {
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-close-button {
-  opacity: 0.35;
+  opacity: 0.6;
 }
 
 .tabbrowser-tab:not([selected="true"]):hover > .tab-close-button {
-  opacity: 0.5;
+  opacity: 0.8;
 }
 
 .tab-close-button-placeholder {
