@@ -169,7 +169,6 @@ public:
   NS_IMETHOD SyncViewWithFrame();
   NS_IMETHOD AboutToDropDown();
   NS_IMETHOD AboutToRollup();
-  NS_IMETHOD UpdateSelection();
   NS_IMETHOD SetOverrideReflowOptimization(PRBool aValue) { mOverrideReflowOpt = aValue; return NS_OK; }
   NS_IMETHOD GetOptionsContainer(nsPresContext* aPresContext, nsIFrame** aFrame);
   NS_IMETHOD FireOnChange();
@@ -216,7 +215,8 @@ public:
 #endif
 
 protected:
-
+  // Returns PR_FALSE if calling it destroyed |this|.
+  PRBool     UpdateSelection();
   void       DropDownToggleKey(nsIDOMEvent* aKeyEvent);
   nsresult   IsOptionDisabled(PRInt32 anIndex, PRBool &aIsDisabled);
   nsresult   ScrollToFrame(nsIContent * aOptElement);
