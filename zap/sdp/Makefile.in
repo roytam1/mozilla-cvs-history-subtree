@@ -12,6 +12,7 @@ MODULE       = zap_sdp
 EXTRA_PP_COMPONENTS = \
 	SdpService.js \
 	MediaSession.js \
+	zapCodecRegistry.js \
 	zapICE.js \
 	$(NULL)
 

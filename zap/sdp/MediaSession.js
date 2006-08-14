@@ -44,6 +44,7 @@ Components.utils.importModule("gre:ArrayUtils.js");
 Components.utils.importModule("gre:StringUtils.js");
 Components.utils.importModule("gre:ObjectUtils.js");
 Components.utils.importModule("gre:zapICE.js");
+Components.utils.importModule("gre:zapCodecRegistry.js");
 
 // name our global object:
 function toString() { return "[MediaSession.js]"; }
@@ -65,7 +66,6 @@ var PB = makePropertyBag;
 // access the sdp service directly (less overhead, no type safety,
 // access to non-xpcom interface):
 var gSdpService = Components.utils.importModule('gre:SdpService.js', null).theSdpService;
-
 
 ////////////////////////////////////////////////////////////////////////
 // Class MediaSession
@@ -109,184 +109,14 @@ MediaSession.fun(
     this.stunServers = stunServers;
     this.listener = listener;
     
-    //--------------------------------------------------
-    var SpeexFormatDescriptor = {};
-    SpeexFormatDescriptor.localPayloadType = "97";
-    SpeexFormatDescriptor.remotePayloadType = "";
-    SpeexFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
-    SpeexFormatDescriptor.sdpformat.payloadType = SpeexFormatDescriptor.localPayloadType;
-    SpeexFormatDescriptor.sdpformat.encodingName = "speex";
-    SpeexFormatDescriptor.sdpformat.clockRate = "8000";
-    
-    SpeexFormatDescriptor.connect = function speex_connect(session) {
-      if (!this.remotePayloadType) return;
-      
-      this.enc = session.mediaGraph.addNode("speex-encoder", null);
-      this.dec = session.mediaGraph.addNode("speex-decoder", null);
-      this.speex2rtp = session.mediaGraph.addNode("speex-rtp-packetizer",
-                                              PB({$payload_type:this.remotePayloadType}));
-      this.rtp2speex = session.mediaGraph.addNode("speex-rtp-depacketizer",
-                                                  null);
-
-      session.mediaGraph.connect(session.outboundSwitch,
-                                 PB({$id:this.localPayloadType}),
-                                 this.enc, null);
-      session.mediaGraph.connect(this.enc, null, this.speex2rtp, null);    
-      session.mediaGraph.connect(this.speex2rtp, null,
-                                 session.outboundMerger,
-                                 null);
-
-      session.mediaGraph.connect(session.demuxer,
-                                 PB({$payload_type:this.localPayloadType}),
-                                 this.rtp2speex, null);
-      session.mediaGraph.connect(this.rtp2speex, null, this.dec, null);
-      session.mediaGraph.connect(this.dec, null, session.inboundMerger, null);
-    };
-    
-    SpeexFormatDescriptor.disconnect = function speex_disconnect(session) {
-      if (!this.remotePayloadType) return;
-      
-      session.mediaGraph.removeNode(this.enc);
-      session.mediaGraph.removeNode(this.dec);
-      session.mediaGraph.removeNode(this.speex2rtp);
-      session.mediaGraph.removeNode(this.rtp2speex);
-    };
-
-    //--------------------------------------------------
-    var PCMUFormatDescriptor = {};
-    PCMUFormatDescriptor.localPayloadType = "0";
-    PCMUFormatDescriptor.remotePayloadType = "";
-    PCMUFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
-    PCMUFormatDescriptor.sdpformat.payloadType = PCMUFormatDescriptor.localPayloadType;
-    PCMUFormatDescriptor.sdpformat.encodingName = "PCMU";
-    PCMUFormatDescriptor.sdpformat.clockRate = "8000";
-    
-    PCMUFormatDescriptor.connect = function PCMU_connect(session) {
-      if (!this.remotePayloadType) return;
-      
-      this.enc = session.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcmu"}));
-      this.dec = session.mediaGraph.addNode("g711-decoder", null);
-      this.g7112rtp = session.mediaGraph.addNode("g711-rtp-packetizer",
-                                              PB({$payload_type:this.remotePayloadType}));
-      this.rtp2g711 = session.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcmu"}));
-
-      session.mediaGraph.connect(session.outboundSwitch,
-                                 PB({$id:this.localPayloadType}),
-                                 this.enc, null);
-      session.mediaGraph.connect(this.enc, null, this.g7112rtp, null);    
-      session.mediaGraph.connect(this.g7112rtp, null,
-                                 session.outboundMerger,
-                                 null);
-
-      session.mediaGraph.connect(session.demuxer,
-                                 PB({$payload_type:this.localPayloadType}),
-                                 this.rtp2g711, null);
-      session.mediaGraph.connect(this.rtp2g711, null, this.dec, null);
-      session.mediaGraph.connect(this.dec, null, session.inboundMerger, null);
-    };
-    
-    PCMUFormatDescriptor.disconnect = function PCMU_disconnect(session) {
-      if (!this.remotePayloadType) return;
-      
-      session.mediaGraph.removeNode(this.enc);
-      session.mediaGraph.removeNode(this.dec);
-      session.mediaGraph.removeNode(this.g7112rtp);
-      session.mediaGraph.removeNode(this.rtp2g711);
-    };
-
-    //--------------------------------------------------
-    var PCMAFormatDescriptor = {};
-    PCMAFormatDescriptor.localPayloadType = "8";
-    PCMAFormatDescriptor.remotePayloadType = "";
-    PCMAFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
-    PCMAFormatDescriptor.sdpformat.payloadType = PCMAFormatDescriptor.localPayloadType;
-    PCMAFormatDescriptor.sdpformat.encodingName = "PCMA";
-    PCMAFormatDescriptor.sdpformat.clockRate = "8000";
-
-    PCMAFormatDescriptor.connect = function PCMA_connect(session) {
-
-      if (!this.remotePayloadType) return;
-      
-      this.enc = session.mediaGraph.addNode("g711-encoder", PB({$type:"audio/pcma"}));
-      this.dec = session.mediaGraph.addNode("g711-decoder", null);
-      this.g7112rtp = session.mediaGraph.addNode("g711-rtp-packetizer",
-                                              PB({$payload_type:this.remotePayloadType}));
-      this.rtp2g711 = session.mediaGraph.addNode("g711-rtp-depacketizer", PB({$type:"audio/pcma"}));
-
-      session.mediaGraph.connect(session.outboundSwitch,
-                                 PB({$id:this.localPayloadType}),
-                                 this.enc, null);
-      session.mediaGraph.connect(this.enc, null, this.g7112rtp, null);    
-      session.mediaGraph.connect(this.g7112rtp, null,
-                                 session.outboundMerger,
-                                 null);
-
-      session.mediaGraph.connect(session.demuxer,
-                                 PB({$payload_type:this.localPayloadType}),
-                                 this.rtp2g711, null);
-      session.mediaGraph.connect(this.rtp2g711, null, this.dec, null);
-      session.mediaGraph.connect(this.dec, null, session.inboundMerger, null);
-    };
-    
-    PCMAFormatDescriptor.disconnect = function PCMA_disconnect(session) {
-
-      if (!this.remotePayloadType) return;
-      
-      session.mediaGraph.removeNode(this.enc);
-      session.mediaGraph.removeNode(this.dec);
-      session.mediaGraph.removeNode(this.g7112rtp);
-      session.mediaGraph.removeNode(this.rtp2g711);
-    };
-
-    
-    //--------------------------------------------------
-    var TEventFormatDescriptor = {};
-    TEventFormatDescriptor.localPayloadType = "101";
-    TEventFormatDescriptor.remotePayloadType = "";
-    TEventFormatDescriptor.sdpformat = gSdpService.createRtpAvpMediaFormat();
-    TEventFormatDescriptor.sdpformat.payloadType = TEventFormatDescriptor.localPayloadType;
-    TEventFormatDescriptor.sdpformat.encodingName = "telephone-event";
-    TEventFormatDescriptor.sdpformat.clockRate = "8000";
-    TEventFormatDescriptor.sdpformat.fmtParameters = "0-15";
-
-    TEventFormatDescriptor.connect = function TEvent_connect(session) {
-      if (!this.remotePayloadType) return;
-      
-      this.tevent2rtp = session.mediaGraph.addNode("tevent-rtp-packetizer",
-                                                   PB({$payload_type:this.remotePayloadType}));
-      this.sync = session.mediaGraph.addNode("stream-syncer", null);
-      
-      session.mediaGraph.connect(session.callTEventIn, null, this.sync, PB({$name:"input"}));
-      session.mediaGraph.connect(session.callAudioIn, null, this.sync, PB({$name:"timebase"}));
-      session.mediaGraph.connect(this.sync, null, this.tevent2rtp, null);
-      session.mediaGraph.connect(this.tevent2rtp, null,
-                                 session.outboundMerger,
-                                 null);
-    };
-
-    TEventFormatDescriptor.disconnect = function TEvent_disconnect(session) {
-      if (!this.remotePayloadType) return;
-      
-      session.mediaGraph.removeNode(this.sync);
-      session.mediaGraph.removeNode(this.tevent2rtp);      
-    };
-    
-    //--------------------------------------------------
     this.supportedRTPAVPFormats = [];
     for (var i=0; i < codec_count; ++i) {
-      switch(codecs[i]) {
-        case "PCMU":
-          this.supportedRTPAVPFormats.push(PCMUFormatDescriptor);
-          break;
-        case "PCMA":
-          this.supportedRTPAVPFormats.push(PCMAFormatDescriptor);
-          break;
-        case "speex":
-          this.supportedRTPAVPFormats.push(SpeexFormatDescriptor);
-          break;
-        case "telephone-event":
-          this.supportedRTPAVPFormats.push(TEventFormatDescriptor);
-          break;
+      var codec = createCodecInstance(codecs[i]);
+      if (codec) {
+        this.supportedRTPAVPFormats.push(codec);
+      }
+      else {
+        this._dump("Unknown codec '"+codecs[i]+"'");
       }
     }
     
