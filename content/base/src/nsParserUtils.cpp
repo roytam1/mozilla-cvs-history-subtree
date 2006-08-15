@@ -60,7 +60,8 @@
 
 PRBool
 nsParserUtils::GetQuotedAttributeValue(const nsString& aSource, nsIAtom *aName,
-                                       nsAString& aValue)
+                                       nsAString& aValue,
+                                       PRBool aComplyWithSpec)
 {
   aValue.Truncate();
 
@@ -110,6 +111,12 @@ nsParserUtils::GetQuotedAttributeValue(const nsString& aSource, nsIAtom *aName,
     // the value is between start and iter.
     
     if (aName->Equals(attrName)) {
+      if (!aComplyWithSpec) {
+        aValue.Append(start, iter - start);
+
+        return PR_TRUE;
+      }
+
       nsCOMPtr<nsIParserService_MOZILLA_1_8_BRANCH> parserService =
         do_QueryInterface(nsContentUtils::GetParserServiceWeakRef());
       NS_ENSURE_TRUE(parserService, PR_FALSE);

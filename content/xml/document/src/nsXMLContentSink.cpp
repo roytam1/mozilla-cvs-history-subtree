@@ -246,10 +246,10 @@ CheckXSLTParamPI(nsIDOMProcessingInstruction* aPi,
     aPi->GetData(data);
     nsAutoString prefix, namespaceAttr;
     nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::prefix,
-                                           prefix);
+                                           prefix, PR_TRUE);
     if (!prefix.IsEmpty() &&
         nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::_namespace,
-                                               namespaceAttr)) {
+                                               namespaceAttr, PR_TRUE)) {
       proc->AddXSLTParamNamespace(prefix, namespaceAttr);
     }
   }
@@ -259,13 +259,15 @@ CheckXSLTParamPI(nsIDOMProcessingInstruction* aPi,
     aPi->GetData(data);
     nsAutoString name, namespaceAttr, select, value;
     nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::name,
-                                           name);
+                                           name, PR_TRUE);
     nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::_namespace,
-                                           namespaceAttr);
-    if (!nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::select, select)) {
+                                           namespaceAttr, PR_TRUE);
+    if (!nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::select,
+                                                select, PR_TRUE)) {
       select.SetIsVoid(PR_TRUE);
     }
-    if (!nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::value, value)) {
+    if (!nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::value, value,
+                                                PR_TRUE)) {
       value.SetIsVoid(PR_TRUE);
     }
     if (!name.IsEmpty()) {
