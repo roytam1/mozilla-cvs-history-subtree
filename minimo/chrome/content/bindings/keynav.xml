@@ -140,12 +140,11 @@
 
 		  <![CDATA[ 
 
-
 			event.stopPropagation();
 			event.preventDefault();
 
-
 			document.staticReferenceKeynav.outState();
+			
 			var statesList = document.staticReferenceKeynav.allArrays[document.staticReferenceKeynav.currentState];
 			statesSplitted = statesList.split(",");
 
@@ -170,7 +169,6 @@
 			}
 
 			if(event.keyCode == 13) {
-				//document.staticReferenceKeynav.currentState=statesSplitted[3];
 				document.staticReferenceKeynav.doState();
 			}
 
@@ -239,33 +237,28 @@
 
 			try {
 
-			var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
+				var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
 
-			var doObj;
-	
 				if(stateObject.refHighlight.indexOf("#")>-1) {
 	
 					if(stateObject.refHighlight.indexOf("InputField")>-1) {
-						doObj = document.getElementById("urlbar").inputField;
+						setTimeout("document.getElementById('urlbar').inputField.style.backgroundColor='yellow'",0);
 					}
-
+	
 					if(stateObject.refHighlight.indexOf("browserTabs")>-1) {
-						doObj = document.getElementById("content");
+						setTimeout("document.getElementById('content').style.backgroundColor='yellow'",0);
 					}	
 					if(stateObject.refHighlight.indexOf("contentDocument.body")>-1) {
-						doObj = document.getElementById("content").contentDocument.body;
+						setTimeout("document.getElementById('content').contentDocument.body.style.backgroundColor='yellow'",0);
 					}		
-	
+		
 				} else {
-				
-					doObj = document.getElementById(stateObject.refHighlight);
-	
+					
+					setTimeout("document.getElementById('"+stateObject.refHighlight+"').style.backgroundColor='yellow'",0);
+					
 				}
 	
-			doObj.style.backgroundColor="yellow";
-			
-	
-			} catch(i) { alert(i) }
+			} catch(i) {  }
 
 		  ]]>
 
@@ -278,34 +271,31 @@
 		<body>
 
 		  <![CDATA[ 
+		  
+			try {
 
-			var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
+				var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
 
-			var doObj;
-	
 				if(stateObject.refHighlight.indexOf("#")>-1) {
 	
-					if(stateObject.refHighlight.indexOf("InputField")>-1) {						
-						doObj = document.getElementById("urlbar").inputField;
+					if(stateObject.refHighlight.indexOf("InputField")>-1) {
+						setTimeout("document.getElementById('urlbar').inputField.style.backgroundColor='#eeeeee'",0);
 					}
+	
 					if(stateObject.refHighlight.indexOf("browserTabs")>-1) {
-						doObj = document.getElementById("content");
+						setTimeout("document.getElementById('content').style.backgroundColor='#eeeeee'",0);
 					}	
 					if(stateObject.refHighlight.indexOf("contentDocument.body")>-1) {
-						doObj = document.getElementById("content").contentDocument.body;
+						setTimeout("document.getElementById('content').contentDocument.body.style.backgroundColor='#eeeeee'",0);
 					}		
-
-	
+		
 				} else {
-				
-					doObj = document.getElementById(stateObject.refHighlight);
-	
+					
+					setTimeout("document.getElementById('"+stateObject.refHighlight+"').style.backgroundColor='#eeeeee'",0);
+					
 				}
 	
-			doObj.style.backgroundColor="#e0e0e0";
-			
-	
-			} catch(i) { alert(i) }
+			} catch(i) { }
 
 
 		  ]]>
