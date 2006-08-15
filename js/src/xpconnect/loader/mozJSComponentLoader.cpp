@@ -99,9 +99,12 @@ static const int kFastLoadWriteDelay = 5000;   // 5 seconds
 #ifdef PR_LOGGING
 // NSPR_LOG_MODULES=JSComponentLoader:5
 static PRLogModuleInfo *gJSCLLog;
-#endif
-
 #define LOG(args) PR_LOG(gJSCLLog, PR_LOG_DEBUG, args)
+#define LOGINF(args) PR_LOG(gJSCLLog, PR_LOG_ALWAYS, args)
+#else 
+#define LOG(x)
+#define LOGINF(x)
+#endif
 
 void JS_DLL_CALLBACK
 mozJSLoaderErrorReporter(JSContext *cx, const char *message, JSErrorReport *rep)
@@ -1340,9 +1343,7 @@ mozJSComponentLoader::ImportModuleToJSObject(const nsACString & registryLocation
             NS_ERROR("Error getting array length");
             return NS_ERROR_FAILURE;
         }
-#ifdef DEBUG
-        printf("Installing symbols [ ");
-#endif
+        LOGINF(("Installing symbols [ "));
     
         for (jsuint i=0; i<symbolCount; ++i) {
             jsval val;
@@ -1353,9 +1354,7 @@ mozJSComponentLoader::ImportModuleToJSObject(const nsACString & registryLocation
                 NS_ERROR("Array element is not a string");
                 return NS_ERROR_FAILURE;
             }
-#ifdef DEBUG
-            printf("%s ", JS_GetStringBytes(symbolName));
-#endif
+            LOGINF(("%s ", JS_GetStringBytes(symbolName)));
     
             if (!JS_GetProperty(mContext, globalObj, JS_GetStringBytes(symbolName), &val)) {
                 NS_ERROR("Could not get symbol");
@@ -1367,9 +1366,7 @@ mozJSComponentLoader::ImportModuleToJSObject(const nsACString & registryLocation
                 return NS_ERROR_FAILURE;
             }
         }
-#ifdef DEBUG
-        printf("] from %s\n", PromiseFlatCString(registryLocation).get());
-#endif
+        LOGINF(("] from %s\n", PromiseFlatCString(registryLocation).get()));
     }
     
     return NS_OK;
