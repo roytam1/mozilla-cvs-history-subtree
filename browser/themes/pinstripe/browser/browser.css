@@ -850,11 +850,13 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 /* ::::: nav-bar-inner ::::: */
 
 #urlbar {
-  margin: 5px 0px 5px 4px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  -moz-margin-start: 4px;
+  -moz-margin-end: 0px;
   padding: 0px;
   font: icon !important;
 }
-
 
 #urlbar[level="high"] > .autocomplete-textbox-container,
 #urlbar[level="low"] > .autocomplete-textbox-container
@@ -979,6 +981,10 @@ statusbarpanel#statusbar-display {
   min-width: 0;
   list-style-image: url("chrome://browser/skin/Go.png");
   -moz-image-region: rect(0px, 25px, 25px, 0px);
+}
+
+#go-button[chromedir="rtl"] {
+  list-style-image: url("chrome://browser/skin/Go-rtl.png");
 }
 
 #go-button:hover {
