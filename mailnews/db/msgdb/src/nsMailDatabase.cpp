@@ -487,6 +487,7 @@ NS_IMETHODIMP nsMailDatabase::SetSummaryValid(PRBool valid)
       
       m_dbFolderInfo->SetFolderSize(m_folderSpec->GetFileSize());
       m_dbFolderInfo->SetFolderDate(actualFolderTimeStamp);
+      m_dbFolderInfo->SetVersion(GetCurVersion());
     }
     else
     {
