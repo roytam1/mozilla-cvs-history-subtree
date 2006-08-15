@@ -229,7 +229,16 @@ SipUAStack.fun(
   function createInviteRequestClient(ToAddress, FromAddress, contactAddress,
                                      routeset, count, rcFlags) {
     var rc = SipInviteRC.instantiate();
-    var request = this.formulateGenericRequest("INVITE", ToAddress.uri,
+
+    var uri = ToAddress.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+    var requestURI = uri.clone(true);
+    uri.port = "";
+    uri.removeURIParameter("maddr");
+    uri.removeURIParameter("ttl");
+    uri.removeURIParameter("transport");
+    uri.removeURIParameter("lr");
+
+    var request = this.formulateGenericRequest("INVITE", requestURI,
                                                ToAddress, FromAddress,
                                                routeset, count);
     // add mandatory Contact header (rfc3261 8.1.1.8):

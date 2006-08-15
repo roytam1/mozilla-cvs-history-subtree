@@ -65,6 +65,22 @@
         // so let's just fall through:
         return;
       }
+      var uri = wRemoteAddress.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+      var method = uri.getURIParameter("method");
+      if (!method) {
+        method = "INVITE";
+      }
+      // XXX We process only INVITE for now but in the future MESSAGE can be processed...
+      if (method != "INVITE") {
+        return;
+      }
+      if (uri.hasHeader("Subject")) {
+        document.getElementById("urn:mozilla:zap:subject").value = uri.getHeader("Subject");
+      }
+      uri.getHeaderNames({}).forEach(function(name) {
+                                       uri.removeHeader(name);
+                                     });
+      uri.removeURIParameter("method");
       
       dump("initialized make-call.xul:"+wRemoteAddress.serialize()+"\n");
 
