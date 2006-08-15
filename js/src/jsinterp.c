@@ -5931,9 +5931,29 @@ interrupt:
                 STORE_OPND(0, JSVAL_VOID);
                 sp++;
             }
-            JS_ASSERT(!fp->blockChain ||
-                      OBJ_GET_PARENT(cx, obj) == fp->blockChain);
-            fp->blockChain = obj;
+
+            /*
+             * If this frame had to reflect the compile-time block chain into
+             * the runtime scope chain, we can't optimize block scopes out of
+             * runtime any longer, because an outer block that parents obj has
+             * been cloned onto the scope chain.  To avoid re-cloning such a
+             * parent and accumulating redundant clones via js_GetScopeChain,
+             * we must clone each block eagerly on entry, and push it on the
+             * scope chain, until this frame pops.
+             */
+            if (fp->flags & JSFRAME_POP_BLOCKS) {
+                JS_ASSERT(!fp->blockChain);
+                obj = js_CloneBlockObject(cx, obj, fp->scopeChain, fp);
+                if (!obj) {
+                    ok = JS_FALSE;
+                    goto out;
+                }
+                fp->scopeChain = obj;
+            } else {
+                JS_ASSERT(!fp->blockChain ||
+                          OBJ_GET_PARENT(cx, obj) == fp->blockChain);
+                fp->blockChain = obj;
+            }
           END_LITOPX_CASE(JSOP_ENTERBLOCK)
 
           BEGIN_CASE(JSOP_LEAVEBLOCKEXPR)
