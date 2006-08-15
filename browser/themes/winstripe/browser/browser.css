@@ -201,18 +201,27 @@ menuitem.bookmark-item {
 /* only the folder icon has any effect for now, item icon is unused */
 .bookmark-item[livemark="true"] { 
   list-style-image: url("chrome://browser/skin/livemark-item.png") !important;
+  -moz-image-region: rect(0px, 36px, 18px, 18px) !important;
 }
 
 .bookmark-item[livemark="true"][chromedir="rtl"] { 
   list-style-image: url("chrome://browser/skin/livemark-item-rtl.png") !important;
+  -moz-image-region: rect(0px, 36px, 18px, 18px) !important;
 }
 
-.bookmark-item[type="menu"][livemark="true"] { 
-  -moz-image-region: rect(0px, 54px, 18px, 36px) !important;
+.bookmark-item[livemark="true"][open="true"],
+.bookmark-item[livemark="true"][open="true"][chromedir="rtl"] { 
+  -moz-image-region: rect(18px, 36px, 36px, 18px) !important;
 }
 
-.bookmark-item[type="menu"][livemark="true"][open="true"] { 
-  -moz-image-region: rect(18px, 54px, 36px, 36px) !important;
+.bookmark-item[type="menu"][livemark="true"],
+.bookmark-item[type="menu"][livemark="true"][chromedir="rtl"] { 
+  -moz-image-region: rect(1px, 53px, 17px, 37px) !important;
+}
+
+.bookmark-item[type="menu"][livemark="true"][open="true"],
+.bookmark-item[type="menu"][livemark="true"][open="true"][chromedir="rtl"] { 
+  -moz-image-region: rect(19px, 53px, 35px, 37px) !important;
 }
 
 /* ::::: primary toolbar buttons ::::: */
