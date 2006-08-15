@@ -73,11 +73,11 @@ $CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-#$LayoutPerformanceTest    = 1;  # Tp
+$LayoutPerformanceTest    = 1;  # Tp
 #$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 1;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
+$StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
 
@@ -193,8 +193,8 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 0;
 $shiptalkback  = 0;
-#$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -210,7 +210,7 @@ $milestone     = "trunk";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
-$archive       = 0;
+$archive       = 1;
 $push_raw_xpis = 0;
 #$update_package = 1;
 #$update_product = "Firefox";
