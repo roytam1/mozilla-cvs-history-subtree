@@ -1,0 +1,17 @@
+/**
+
+\mainpage Mozilla ZAP Documentation
+
+\section DOCUMENTED_MODULES Documented Modules
+
+- \ref NETUTILS_MODULE : Network utilities (STUN, DNS, ...)
+- \ref ZMK_MODULE : Media processing library
+- \ref SDP_MODULE : Session Description Protocol parser/negotiator/ICE
+- \ref SIP_MODULE : Implementation of the Session Initiation Protocol
+
+\section UNDOCUMENTED_MODULES As Yet Undocumented Modules
+
+- Base: Common shared (mostly JS) utility code
+- Client: Zap user agen application chrome
+
+*/
