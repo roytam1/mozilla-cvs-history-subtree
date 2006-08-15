@@ -86,12 +86,10 @@
          to check/edit the key assignment on minimo.js/MenuHandleMenuEscape
       -->
    
-    <key id="minimo-key"  keycode="VK_F19"  oncommand="spinCycle()"/>
+    <key id="minimo-key"  keycode="VK_F19" oncommand="spinCycle()"/>
 
-    <!-- *** disabled for now. 
-    <key id="minimo-key4" keycode="VK_F19"  oncommand="document.getElementById('keynavigator').run('n_leftmenu')"/>
-         *** --> 
-         
+ <!--   <key id="minimo-key4" keycode="VK_F19" oncommand="document.getElementById('keynavigator').run('n_leftmenu')"/> -->
+          
     <key id="minimo-key2" keycode="VK_F10"  oncommand="spinCycle()"/>
     <key id="minimo-key3" keycode="VK_F20"  oncommand="DoToggleSoftwareKeyboard()"/>
     

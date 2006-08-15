@@ -434,7 +434,7 @@ function MiniNavStartup()
   document.__defineSetter__("title",function(x){}); // Stays with the titled defined by the XUL element. 
   
   gBrowser.addEventListener("DOMLinkAdded", BrowserLinkAdded, false);
-  
+
   /*
    * We save the inputField (anonymous node within textbox urlbar) BoxObject, so we can measure its width 
    * on progress load
@@ -838,7 +838,7 @@ function browserInit(refTab)
     
   }
   gURLBar = document.getElementById("urlbar");
-  
+
 }
 
 function MiniNavShutdown()
@@ -1165,7 +1165,7 @@ function BrowserBookmarkURL (uri, title, icon) {
     newLi.setAttribute("title",uri);
 
   if(icon)
-	newLi.setAttribute("iconsrc",currentIconURL);
+	newLi.setAttribute("iconsrc",icon);
   else
 	newLi.setAttribute("iconsrc","chrome://minimo/skin/m.gif");
 
@@ -1878,6 +1878,7 @@ function BrowserPanMouseHandlerDestroy(e) {
  */
 
 function spinCycle() {
+
   gKeySpinCurrent.SpinOut();
   gKeySpinCurrent = gKeySpinCurrent.next;
   setTimeout("gKeySpinCurrent.SpinIn()",60);
