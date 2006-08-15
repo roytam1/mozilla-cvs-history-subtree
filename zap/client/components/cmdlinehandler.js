@@ -51,19 +51,33 @@ ZAPCmdLineHandler.prototype = {
       dump("ERROR: -dial needs an argument!!\n\n");
     }
     if (dial) {
-      var mainwin = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                              .getService(Components.interfaces.nsIWindowMediator)
-                              .getMostRecentWindow('zap_mainwin');
-      if (!mainwin) {
-        dump("ERROR: Main window not loaded, cannot handle dial command\n");
-        return;
+      this.dialURL(dial);
+    }
+
+    // Handle URL given on the command line
+    var count = commandline.length;
+    for (var i=0; i<count; ++i) {
+      var curarg = commandline.getArgument(i);
+      if (curarg.match(/^sips?:/)) {
+        this.dialURL(curarg);
       }
-      mainwin.wURLField.value = dial;
-      mainwin.cmdGo();
     }
   },
   
-  helpInfo : "  -dial <url>           Dial the given URL",
+  helpInfo : "  -dial <url>           Dial the given URL\n"+
+             "  [<url>]               Dial the given URL",
+
+  dialURL : function(url) {
+    var mainwin = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                            .getService(Components.interfaces.nsIWindowMediator)
+                            .getMostRecentWindow('zap_mainwin');
+    if (!mainwin) {
+      dump("ERROR: Main window not loaded, cannot handle dial command\n");
+      return;
+    }
+    mainwin.wURLField.value = url;
+    mainwin.cmdGo();
+  }    
 
 };
 
