@@ -205,7 +205,6 @@ static inline PRBool IsAlphaTranslucencySupported() { return pUpdateLayeredWindo
 
 
 #ifdef WINCE
-static PRBool gSoftKeyMenuBar = PR_FALSE;
 static PRBool gOverrideHWKeys = PR_TRUE;
 
 typedef BOOL (__stdcall *UnregisterFunc1Proc)( UINT, UINT );
@@ -283,9 +282,8 @@ void CreateSoftKeyMenuBar(HWND wnd)
   if (!wnd)
     return;
 
-  static HWND gSoftKeyMenuBar = nsnull;
 
-  if (gSoftKeyMenuBar != nsnull)
+  if (SHFindMenuBar(wnd))
     return;
 
   SHMENUBARINFO mbi;
@@ -305,20 +303,17 @@ void CreateSoftKeyMenuBar(HWND wnd)
 
   SetWindowPos(mbi.hwndMB, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE);
 
-  SendMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TBACK,
+  PostMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TBACK,
               MAKELPARAM(SHMBOF_NODEFAULT | SHMBOF_NOTIFY,
                          SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
   
-  SendMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TSOFT1, 
+  PostMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TSOFT1, 
               MAKELPARAM (SHMBOF_NODEFAULT | SHMBOF_NOTIFY, 
                           SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
   
-  
-  SendMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TSOFT2, 
+  PostMessage(mbi.hwndMB, SHCMBM_OVERRIDEKEY, VK_TSOFT2, 
               MAKELPARAM (SHMBOF_NODEFAULT | SHMBOF_NOTIFY, 
                           SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
-
-  gSoftKeyMenuBar = mbi.hwndMB;
 }
 
 #endif
@@ -1750,11 +1745,13 @@ nsWindow::StandardWindowCreate(nsIWidget *aParent,
     }
   }
 #ifdef WINCE
-  
-  if (mWindowType == eWindowType_dialog || mWindowType == eWindowType_toplevel )
+  if (mWindowType == eWindowType_dialog || 
+      mWindowType == eWindowType_toplevel ||
+      mWindowType == eWindowType_popup )
+  {  
     CreateSoftKeyMenuBar(mWnd);
-  
-  MapHardwareButtons(mWnd);
+    MapHardwareButtons(mWnd);
+  }
 #endif
 
   return NS_OK;
@@ -2016,8 +2013,11 @@ NS_METHOD nsWindow::Show(PRBool bState)
           // layer. Remember not to set the SWP_NOZORDER
           // flag as that might allow the taskbar to overlap
           // the popup.
+#ifndef WINCE
+          // Make urlbar context menus clickable my ensuring
+          // that the popup isn't activated.
           flags |= SWP_NOACTIVATE;
-
+#endif
           ::SetWindowPos(mWnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
         } else {
           ::SetWindowPos(mWnd, HWND_TOP, 0, 0, 0, 0, flags);
@@ -4829,8 +4829,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         shrg.dwFlags = SHRG_RETURNCMD;
         if (SHRecognizeGesture(&shrg)  == GN_CONTEXTMENU)
         {
-          result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_DOWN, wParam);
-          result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_UP, wParam);
+          DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_DOWN, wParam);
+          DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_UP, wParam);
+          result = 0;
           break;
         }
       }
@@ -4995,6 +4996,17 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 #endif
 
     case WM_SETFOCUS:
+#ifdef WINCE
+      {
+        // Get current input context
+        HIMC hC = ImmGetContext(mWnd);		
+        // Open the IME 
+        ImmSetOpenStatus(hC, TRUE);
+        // Set "multi-press" input mode
+        ImmEscapeW(NULL, hC, IME_ESC_SET_MODE, (LPVOID)IM_SPELL);
+      }
+#endif
+
       result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
       if (gJustGotActivate) {
         gJustGotActivate = PR_FALSE;
@@ -5024,15 +5036,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           ShowWindow( hWndSIP, SW_HIDE );
           SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
         }
-      }
-
-      {
-        // Get current input context
-        HIMC hC = ImmGetContext(mWnd);		
-        // Open the IME 
-        ImmSetOpenStatus(hC, TRUE);
-        // Set "multi-press" input mode
-        ImmEscapeW(NULL, hC, IME_ESC_SET_MODE, (LPVOID)IM_SPELL);
       }
 #endif
       break;
@@ -5236,16 +5239,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       result = PR_TRUE;
       break;
 
-#ifndef WINCE
-    case WM_INPUTLANGCHANGEREQUEST:
-      *aRetValue = TRUE;
-      result = PR_FALSE;
-      break;
-
-    case WM_INPUTLANGCHANGE:
-      result = OnInputLangChange((HKL)lParam, aRetValue);
-      break;
-
     case WM_IME_STARTCOMPOSITION:
       result = OnIMEStartComposition();
       break;
@@ -5279,6 +5272,16 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
     case WM_IME_SETCONTEXT:
       result = OnIMESetContext(wParam, lParam);
+      break;
+
+#ifndef WINCE
+    case WM_INPUTLANGCHANGEREQUEST:
+      *aRetValue = TRUE;
+      result = PR_FALSE;
+      break;
+
+    case WM_INPUTLANGCHANGE:
+      result = OnInputLangChange((HKL)lParam, aRetValue);
       break;
 
     case WM_DROPFILES:
@@ -7670,7 +7673,6 @@ NS_IMETHODIMP nsWindow::CancelIMEComposition()
 PRBool
 nsWindow::IMEMouseHandling(PRUint32 aEventType, PRInt32 aAction, LPARAM lParam)
 {
-#ifndef WINCE
   POINT ptPos;
   ptPos.x = (short)LOWORD(lParam);
   ptPos.y = (short)HIWORD(lParam);
@@ -7690,7 +7692,6 @@ nsWindow::IMEMouseHandling(PRUint32 aEventType, PRInt32 aAction, LPARAM lParam)
       }
     }
   }
-#endif
   return PR_FALSE;
 }
 
@@ -8234,15 +8235,6 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
       }
       // if we've still determined that we should still rollup everything, do it.
       else 
-#else
-        if (inMsg == WM_ACTIVATE)
-        {
-          // This is a activate event on windows ce.  lets
-          // eat it so that we do not close the popup before
-          // the next event (a mouse down, etc.).
-          *outResult = 0;
-          return true;
-        }          
 #endif
       if ( rollup ) {
         gRollupListener->Rollup();
