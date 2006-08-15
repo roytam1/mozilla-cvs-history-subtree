@@ -403,7 +403,6 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
   nsresult err = NS_OK;
   PRBool useNot = PR_FALSE;
   PRBool useQuotes = PR_FALSE;
-  PRBool excludeHeader = PR_FALSE;
   PRBool ignoreValue = PR_FALSE;
   nsCAutoString arbitraryHeader;
   const char *whichMnemonic = nsnull;
@@ -445,7 +444,6 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
     break;
   case nsMsgSearchAttrib::Body:
     whichMnemonic = m_kImapBody;
-    excludeHeader = PR_TRUE;
     break;
   case nsMsgSearchAttrib::AgeInDays:  // added for searching online for age in days...
     // for AgeInDays, we are actually going to perform a search by date, so convert the operations for age
@@ -465,7 +463,6 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
       NS_ASSERTION(PR_FALSE, "invalid search operator");
       return NS_ERROR_INVALID_ARG;
     }
-    excludeHeader = PR_TRUE;
     break;
   case nsMsgSearchAttrib::Size:
     switch (op)
@@ -480,7 +477,6 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
       NS_ASSERTION(PR_FALSE, "invalid search operator");
       return NS_ERROR_INVALID_ARG;
     }
-    excludeHeader = PR_TRUE;
     break;
     case nsMsgSearchAttrib::Date:
       switch (op)
@@ -499,11 +495,9 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
         NS_ASSERTION(PR_FALSE, "invalid search operator");
         return NS_ERROR_INVALID_ARG;
       }
-      excludeHeader = PR_TRUE;
       break;
       case nsMsgSearchAttrib::AnyText:
         whichMnemonic = m_kImapAnyText;
-        excludeHeader = PR_TRUE;
         break;
       case nsMsgSearchAttrib::Keywords:
         whichMnemonic = m_kImapKeyword;
@@ -511,7 +505,6 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
       case nsMsgSearchAttrib::MsgStatus:
         useNot = PR_FALSE; // bizarrely, NOT SEEN is wrong, but UNSEEN is right.
         ignoreValue = PR_TRUE; // the mnemonic is all we need
-        excludeHeader = PR_TRUE;
         PRUint32 status;
         searchValue->GetStatus(&status);
         
@@ -706,7 +699,7 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
             PL_strcat(encoding, m_kImapOr);
           if (useNot)
             PL_strcat (encoding, m_kImapNot);
-          if (!excludeHeader)
+          if (!arbitraryHeader.IsEmpty())
             PL_strcat (encoding, m_kImapHeader);
           PL_strcat (encoding, whichMnemonic);
           if (!ignoreValue)
