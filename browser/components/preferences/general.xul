@@ -51,15 +51,15 @@
                 label2="&useCurrentMultiple.label;"
                 oncommand="gGeneralPane.setHomePageToCurrentPage();"
                 id="browserUseCurrent"
-                prefstring="pref.browser.homepage.disable_button.current_page"/>
+                preference="pref.browser.homepage.disable_button.current_page"/>
         <button label="&useBookmark.label;" accesskey="&useBookmark.accesskey;"
                 oncommand="gGeneralPane.setHomePageToBookmark();"
                 id="browserUseBookmark"
-                prefstring="pref.browser.homepage.disable_button.bookmark_page"/>
+                preference="pref.browser.homepage.disable_button.bookmark_page"/>
         <button label="&useBlank.label;" accesskey="&useBlank.accesskey;"
                 oncommand="gGeneralPane.setHomePageToBlankPage();"
                 id="browserUseBlank"
-                prefstring="pref.browser.homepage.disable_button.blank_page"/>
+                preference="pref.browser.homepage.disable_button.blank_page"/>
       </hbox>
     </groupbox>
 
