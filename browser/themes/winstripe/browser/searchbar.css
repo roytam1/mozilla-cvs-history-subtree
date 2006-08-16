@@ -1,5 +1,11 @@
 /* *** winstripe *** */
 
+%ifdef MOZ_WIDGET_GTK2
+#searchbar {
+  -moz-margin-start: 3px;
+}
+%endif
+
 #searchbar .search-go-button,
 #searchbar .searchbar-textbox {
 	border: 0px !important;

@@ -15,7 +15,7 @@ classic.jar:
         skin/classic/browser/page-livemarks-rtl.png
         skin/classic/browser/livemark-item.png
         skin/classic/browser/livemark-item-rtl.png
-        skin/classic/browser/searchbar.css
+*       skin/classic/browser/searchbar.css                      (searchbar.css)
         skin/classic/browser/Search.png
         skin/classic/browser/Search-rtl.png
         skin/classic/browser/Search-provider-bkgnd.png
