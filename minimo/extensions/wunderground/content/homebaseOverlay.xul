@@ -3,7 +3,7 @@
 
      <vbox id="homebar">
 
-  			<toolbarbutton image="chrome://wunderground/skin/favicon.gif" oncommand="BrowserOpenURLasTab('http://mobile.wunderground.com/')">
+  			<toolbarbutton image="chrome://wunderground/skin/favicon.png" oncommand="BrowserOpenURLasTab('http://mobile.wunderground.com/')">
 			</toolbarbutton >
 
   	
