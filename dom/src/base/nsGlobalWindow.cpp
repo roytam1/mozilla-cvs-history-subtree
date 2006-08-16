@@ -3566,9 +3566,10 @@ nsGlobalWindow::Blur()
   GetTreeOwner(getter_AddRefs(treeOwner));
   nsCOMPtr<nsIEmbeddingSiteWindow2> siteWindow(do_GetInterface(treeOwner));
   if (siteWindow)
+    // This method call may cause mDocShell to become nsnull.
     rv = siteWindow->Blur();
 
-  if (NS_SUCCEEDED(rv))
+  if (NS_SUCCEEDED(rv) && mDocShell)
     mDocShell->SetHasFocus(PR_FALSE);
 
   return rv;
