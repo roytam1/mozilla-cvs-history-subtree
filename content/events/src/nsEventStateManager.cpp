@@ -1082,10 +1082,11 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
     // checking all sub docshells
 
     nsCOMPtr<nsISupports> pcContainer = aPresContext->GetContainer();
-    NS_ASSERTION(pcContainer, "no container for presContext");
-
     nsCOMPtr<nsIDocShellTreeNode> docShell(do_QueryInterface(pcContainer));
-    NS_ASSERTION(docShell, "no docShellTreeNode for presContext");
+    if (!docShell) {
+      NS_WARNING("no docShellTreeNode for presContext");
+      return;
+    }
 
     PRInt32 childCount;
     docShell->GetChildCount(&childCount);
@@ -1127,10 +1128,11 @@ nsEventStateManager::HandleAccessKey(nsPresContext* aPresContext,
   // bubble up the process to the parent docShell if necesary
   if (eAccessKeyProcessingDown != aAccessKeyState && nsEventStatus_eConsumeNoDefault != *aStatus) {
     nsCOMPtr<nsISupports> pcContainer = aPresContext->GetContainer();
-    NS_ASSERTION(pcContainer, "no container for presContext");
-
     nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(pcContainer));
-    NS_ASSERTION(docShell, "no docShellTreeItem for presContext");
+    if (!docShell) {
+      NS_WARNING("no docShellTreeNode for presContext");
+      return;
+    }
 
     nsCOMPtr<nsIDocShellTreeItem> parentShellItem;
     docShell->GetParent(getter_AddRefs(parentShellItem));
