@@ -96,7 +96,7 @@ cd minimo/chrome
 
 cat *.manifest > temp
 rm *.manifest
-sed  -e 's/jar:.*.jar/jar:chrome.jar/' temp > minimo.manifest
+sed  -e 's/jar:.*.jar/jar:minimo.jar/' temp > minimo.manifest
 rm temp
 
 ls -a *.jar > files
