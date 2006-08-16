@@ -503,7 +503,6 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, JSStackFrame *fp)
                     return JS_FALSE;
                 if (JSVAL_IS_VOID(v))
                     v = OBJ_GET_SLOT(cx, thisp, JSSLOT_PARENT);
-                JS_ASSERT(JSVAL_TO_OBJECT(v) == OBJ_GET_PARENT(cx, thisp));
                 if (JSVAL_IS_NULL(v))
                     break;
                 thisp = JSVAL_TO_OBJECT(v);
