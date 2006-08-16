@@ -2494,9 +2494,9 @@ ProcessPseudoRowGroupFrame(nsPresContext*     aPresContext,
   if (!aPresContext) return rv;
 
   aParent = aPseudoData.mFrame;
-  nsTableRowGroupFrame* rgFrame = nsTableFrame::GetRowGroupFrame(aParent);
   nsFrameItems* items = &aPseudoData.mChildList;
   if (items && items->childList) {
+    nsTableRowGroupFrame* rgFrame = nsTableFrame::GetRowGroupFrame(aParent);
     rv = rgFrame->SetInitialChildList(aPresContext, nsnull, items->childList);
     if (NS_FAILED(rv)) return rv;
   }
