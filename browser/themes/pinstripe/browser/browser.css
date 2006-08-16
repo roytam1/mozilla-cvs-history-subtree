@@ -913,6 +913,15 @@ toolbar[iconsize="small"] #paste-button:hover:active {
   visibility: hidden;
 }
 
+#wrapper-urlbar-container #urlbar {
+  -moz-user-input: disabled;
+  cursor: -moz-grab;
+}
+
+#wrapper-urlbar-container #urlbar > .autocomplete-history-dropmarker {
+  visibility: hidden;
+}
+
 /* ----- PAGE PROXY ICON ----- */
 
 #page-proxy-deck,
