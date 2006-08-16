@@ -292,7 +292,7 @@
                        ondragover="nsDragAndDrop.dragOver(event, goButtonObserver);"
                        ondragdrop="nsDragAndDrop.drop(event, goButtonObserver);"
                        ondragexit="nsDragAndDrop.dragExit(event, goButtonObserver);"
-                       tooltiptext="&goButton.tooltip;"/>
+                       tooltiptext="&goEndCap.tooltip;"/>
       </toolbaritem>
 
       <toolbaritem id="search-container" title="&searchItem.title;"
