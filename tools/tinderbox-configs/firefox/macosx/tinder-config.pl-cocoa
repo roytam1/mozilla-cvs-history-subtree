@@ -192,8 +192,8 @@ $BinaryName = 'firefox-bin';
 #$ShellOverride = '';
 
 # Release build options
-$ReleaseBuild  = 0;
-$shiptalkback  = 0;
+$ReleaseBuild  = 1;
+$shiptalkback  = 1;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
