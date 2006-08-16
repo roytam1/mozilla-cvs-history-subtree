@@ -63,6 +63,8 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 
+#include "jscntxt.h"
+
 #include "nsIXPConnect.h"
 
 #if defined(XP_MACOSX)
@@ -1730,6 +1732,11 @@ _evaluate(NPP npp, NPObject* npobj, NPString *script, NPVariant *result)
     return false;
   }
 
+  // Root obj and the rval (below).
+  jsval vec[] = { OBJECT_TO_JSVAL(obj), JSVAL_NULL };
+  JSAutoTempValueRooter tvr(cx, NS_ARRAY_LENGTH(vec), vec);
+  jsval *rval = &vec[1];
+
   if (result) {
     // Initialize the out param to void
     VOID_TO_NPVARIANT(*result);
@@ -1750,20 +1757,11 @@ _evaluate(NPP npp, NPObject* npobj, NPString *script, NPVariant *result)
   nsIPrincipal *principal = nsnull;
   // XXX: Get the principal from the security stack (TBD)
 
-  jsval rval = JSVAL_NULL;
-  if (!::JS_AddNamedRoot(cx, &rval, "NPN_evaluate")) {
-    return false;
-  }
-    
   nsresult rv = scx->EvaluateStringWithValue(utf16script, obj, principal,
-                                             nsnull, 0, nsnull, &rval, nsnull);
+                                             nsnull, 0, nsnull, rval, nsnull);
 
-  bool retval = NS_SUCCEEDED(rv) &&
-    (!result || JSValToNPVariant(npp, cx, rval, result));
-  
-  ::JS_RemoveRoot(cx, &rval);
-  
-  return retval;
+  return NS_SUCCEEDED(rv) &&
+         (!result || JSValToNPVariant(npp, cx, *rval, result));
 }
 
 bool NP_EXPORT

@@ -54,6 +54,7 @@
 #include "jsprvtd.h"
 #include "jspubtd.h"
 #include "jsregexp.h"
+#include "jsutil.h"
 
 JS_BEGIN_EXTERN_C
 
@@ -556,6 +557,33 @@ struct JSContext {
     /* Stack of thread-stack-allocated temporary GC roots. */
     JSTempValueRooter   *tempValueRooters;
 };
+
+#ifdef __cplusplus
+/* FIXME(bug 332648): Move this into a public header. */
+class JSAutoTempValueRooter
+{
+  public:
+    JSAutoTempValueRooter(JSContext *cx, size_t len, jsval *vec)
+        : mContext(cx) {
+        JS_PUSH_TEMP_ROOT(mContext, len, vec, &mTvr);
+    }
+    JSAutoTempValueRooter(JSContext *cx, jsval v)
+        : mContext(cx) {
+        JS_PUSH_SINGLE_TEMP_ROOT(mContext, v, &mTvr);
+    }
+
+    ~JSAutoTempValueRooter() {
+        JS_POP_TEMP_ROOT(mContext, &mTvr);
+    }
+
+  private:
+    static void *operator new(size_t) { return 0; }
+    static void operator delete(void *, size_t) { }
+
+    JSContext *mContext;
+    JSTempValueRooter mTvr;
+};
+#endif
 
 /*
  * Slightly more readable macros for testing per-context option settings (also
