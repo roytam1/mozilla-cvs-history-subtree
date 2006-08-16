@@ -3365,8 +3365,9 @@ MaybeEmitGroupAssignment(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
 
 static JSBool
 EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
-              JSBool inHead)
+              JSBool popScope, ptrdiff_t *headNoteIndex)
 {
+    JSBool inLetHead;
     ptrdiff_t off, noteIndex, tmp;
     JSParseNode *pn2, *pn3;
     JSOp op;
@@ -3381,12 +3382,19 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
     /*
      * Let blocks and expressions have a parenthesized head in which the new
      * scope is not yet open. Initializer evaluation uses the parent node's
-     * lexical scope. If inHead is true below, then we hide the top lexical
+     * lexical scope. If popScope is true below, then we hide the top lexical
      * block from any calls to BindNameToSlot hiding in pn2->pn_expr so that
      * it won't find any names in the new let block.
      */
-    JS_ASSERT(!inHead || !varOrConst);
+    JS_ASSERT(!popScope || !varOrConst);
     tc = &cg->treeContext;
+
+    /*
+     * We pop the scope around initializers for for-in loop variables and let
+     * statements/expressions. Let statements/expressions have a different
+     * sourcenote sequence, so test here to see which case we are really in.
+     */
+    inLetHead = (popScope && !(tc->flags & TCF_IN_FOR_INIT));
 
     off = noteIndex = -1;
     for (pn2 = pn->pn_head; ; pn2 = pn2->pn_next) {
@@ -3470,7 +3478,7 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 }
 
                 /* Evaluate expr in the outer lexical scope if requested. */
-                if (inHead) {
+                if (popScope) {
                     stmt = tc->topStmt;
                     scopeStmt = tc->topScopeStmt;
 
@@ -3490,7 +3498,7 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
                 if (!js_EmitTree(cx, cg, pn3))
                     return JS_FALSE;
 
-                if (inHead) {
+                if (popScope) {
                     tc->topStmt = stmt;
                     tc->topScopeStmt = scopeStmt;
                     tc->blockChain = blockObj;
@@ -3515,6 +3523,7 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
             break;
 
         if (pn2 == pn->pn_head &&
+            !inLetHead &&
             js_NewSrcNote2(cx, cg, SRC_DECL,
                            (pn->pn_op == JSOP_DEFCONST)
                            ? SRC_DECL_CONST
@@ -3546,6 +3555,16 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
         noteIndex = js_NewSrcNote2(cx, cg, SRC_PCDELTA, 0);
         if (noteIndex < 0 || js_Emit1(cx, cg, JSOP_POP) < 0)
             return JS_FALSE;
+    }
+
+    /* If this is a let head, emit and return a srcnote on the pop. */
+    if (!inLetHead) {
+        *headNoteIndex = -1;
+    } else {
+        *headNoteIndex = js_NewSrcNote(cx, cg, SRC_DECL);
+        if (*headNoteIndex < 0)
+            return JS_FALSE;
+        JS_ASSERT(pn->pn_extra & PNX_POPVAR);
     }
 
     return !(pn->pn_extra & PNX_POPVAR) || js_Emit1(cx, cg, JSOP_POP) >= 0;
@@ -4641,7 +4660,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_VAR:
-        if (!EmitVariables(cx, cg, pn, JS_FALSE))
+        if (!EmitVariables(cx, cg, pn, JS_FALSE, &noteIndex))
             return JS_FALSE;
         break;
 
@@ -5396,7 +5415,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
       case TOK_LET:
       {
-        JSBool inHead;
+        JSBool popScope;
 
         /* Let statements have their declarations on the left. */
         if (pn->pn_arity == PN_BINARY) {
@@ -5407,14 +5426,21 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         }
 
         /* Let and for loop heads evaluate initializers in the outer scope. */
-        inHead = (pn2 != NULL || (cg->treeContext.flags & TCF_IN_FOR_INIT));
+        popScope = (pn2 != NULL || (cg->treeContext.flags & TCF_IN_FOR_INIT));
 
         JS_ASSERT(pn->pn_arity == PN_LIST);
-        if (!EmitVariables(cx, cg, pn, inHead))
+        if (!EmitVariables(cx, cg, pn, popScope, &noteIndex))
             return JS_FALSE;
 
+        tmp = CG_OFFSET(cg);
         if (pn2 && !js_EmitTree(cx, cg, pn2))
             return JS_FALSE;
+
+        if (noteIndex >= 0 &&
+            !js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0,
+                                 CG_OFFSET(cg) - tmp)) {
+            return JS_FALSE;
+        }
         break;
       }
 #endif /* JS_HAS_BLOCK_SCOPE */
