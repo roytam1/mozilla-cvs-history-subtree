@@ -429,7 +429,9 @@ nsNativeThemeGTK::DrawWidgetBackground(nsIRenderingContext* aContext,
 
   nsDrawingSurfaceGTK* surface;
   aContext->GetDrawingSurface((nsIDrawingSurface**)&surface);
+  NS_ENSURE_TRUE(surface, NS_ERROR_FAILURE);
   GdkWindow* window = (GdkWindow*) surface->GetDrawable();
+  NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
   nsTransform2D* transformMatrix;
   aContext->GetCurrentTransform(transformMatrix);
