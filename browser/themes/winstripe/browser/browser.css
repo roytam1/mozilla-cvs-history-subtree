@@ -289,8 +289,7 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 
 /* back button-- */
 
-#back-button, 
-#forward-button[chromedir="rtl"] {
+#back-button {
   border: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -299,17 +298,13 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
   -moz-margin-end: 0 !important;
 }
 #back-button:hover,
-#back-button[buttonover="true"],
-#forward-button:hover[chromedir="rtl"],
-#forward-button[buttonover="true"][chromedir="rtl"] {
+#back-button[buttonover="true"] {
   -moz-image-region: rect(24px 24px 48px 0px);
 }
-#back-button[disabled="true"], 
-#forward-button[disabled="true"][chromedir="rtl"] {
+#back-button[disabled="true"] {
   -moz-image-region: rect(48px 24px 72px 0px) !important;
 }
-#back-button:hover:active,
-#forward-button:hover:active[chromedir="rtl"] {
+#back-button:hover:active {
   -moz-image-region: rect(96px 24px 120px 0px);
 }
 
@@ -345,32 +340,25 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
   -moz-image-region: rect(48px 14px 72px 0px);
 }
 #back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
-#back-button:hover:active > .toolbarbutton-menubutton-dropmarker, 
-#forward-button[buttondown="true"][chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker,
-#forward-button:hover:active[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
+#back-button:hover:active > .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(72px 14px 96px 0px);
 }
 
 /* forward button */
 
-#forward-button,
-#back-button[chromedir="rtl"] {
+#forward-button {
   -moz-image-region: rect(0px 48px 24px 24px);
   -moz-margin-start: 5px !important;
   -moz-margin-end: 0 !important;
 }
 #forward-button:hover,
-#forward-button[buttonover="true"],
-#back-button:hover[chromedir="rtl"],
-#back-button[buttonover="true"][chromedir="rtl"] {
+#forward-button[buttonover="true"] {
   -moz-image-region: rect(24px 48px 48px 24px);
 }
-#forward-button[disabled="true"], 
-#back-button[disabled="true"][chromedir="rtl"] {
+#forward-button[disabled="true"] {
    -moz-image-region: rect(48px 48px 72px 24px) !important;
 }
-#forward-button:hover:active,
-#back-button:hover:active[chromedir="rtl"] {
+#forward-button:hover:active {
   -moz-image-region: rect(96px 48px 120px 24px);
 }
 
@@ -665,8 +653,7 @@ toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active {
 
 /* back button-- */
 
-toolbar[iconsize="small"] #back-button, 
-toolbar[iconsize="small"] #forward-button[chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button {
   border: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -675,17 +662,13 @@ toolbar[iconsize="small"] #forward-button[chromedir="rtl"] {
   -moz-margin-end: 0 !important;
 }
 toolbar[iconsize="small"] #back-button:hover,
-toolbar[iconsize="small"] #back-button[buttonover="true"],
-toolbar[iconsize="small"] #forward-button:hover[chromedir="rtl"],
-toolbar[iconsize="small"] #forward-button[buttonover="true"][chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button[buttonover="true"] {
   -moz-image-region: rect(16px 16px 32px 0px);
 }
-toolbar[iconsize="small"] #back-button[disabled="true"], 
-toolbar[iconsize="small"] #forward-button[disabled="true"][chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button[disabled="true"] {
   -moz-image-region: rect(32px 16px 48px 0px) !important;
 }
-toolbar[iconsize="small"] #back-button:hover:active,
-toolbar[iconsize="small"] #forward-button:hover:active[chromedir="rtl"] {
+toolbar[iconsize="small"] #back-button:hover:active {
   -moz-image-region: rect(64px 16px 80px 0px);
 }
 
@@ -729,24 +712,19 @@ toolbar[iconsize="small"] #forward-button:hover:active[chromedir="rtl"]  > .tool
 
 /* small forward button-- */
 
-toolbar[iconsize="small"] #forward-button, 
-toolbar[iconsize="small"] #back-button[chromedir="rtl"] {
+toolbar[iconsize="small"] #forward-button {
   -moz-image-region: rect(0px 32px 16px 16px);
   -moz-margin-start: 5px !important;
   -moz-margin-end: 0 !important;
 }
 toolbar[iconsize="small"] #forward-button:hover,
-toolbar[iconsize="small"] #forward-button[buttonover="true"],
-toolbar[iconsize="small"] #back-button:hover[chromedir="rtl"],
-toolbar[iconsize="small"] #back-button[buttonover="true"][chromedir="rtl"] {
+toolbar[iconsize="small"] #forward-button[buttonover="true"] {
   -moz-image-region: rect(16px 32px 32px 16px);
 }
-toolbar[iconsize="small"] #forward-button[disabled="true"], 
-toolbar[iconsize="small"] #back-button[disabled="true"][chromedir="rtl"] {
+toolbar[iconsize="small"] #forward-button[disabled="true"] {
   -moz-image-region: rect(32px 32px 48px 16px) !important;
 }
-toolbar[iconsize="small"] #forward-button:hover:active,
-toolbar[iconsize="small"] #back-button:hover:active[chromedir="rtl"] {
+toolbar[iconsize="small"] #forward-button:hover:active {
   -moz-image-region: rect(64px 32px 80px 16px);
 }
 

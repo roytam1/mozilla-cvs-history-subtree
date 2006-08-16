@@ -62,7 +62,10 @@
 
 .searchbar-dropmarker-image {
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
-  padding: 10px 3px 9px 24px;
+  padding-top: 10px;
+  padding-bottom: 9px;
+  -moz-padding-start: 24px;
+  -moz-padding-end: 3px;
 }
 
 .search-go-button {
