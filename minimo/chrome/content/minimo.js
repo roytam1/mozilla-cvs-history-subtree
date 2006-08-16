@@ -405,9 +405,6 @@ function MiniNavStartup()
 
     } catch (ignore) {}
     
-    //    var selects_all = gPref.getBoolPref("browser.urlbar.clickSelectsAll");
-    //    gURLBar.clickSelectsAll = selects_all;
-
   } catch (e) {
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }
@@ -1923,7 +1920,9 @@ function spinCreate() {
 
   var spinUrlBar = { 
     SpinIn:function () {
-      document.getElementById("urlbar").focus();
+      var urlbar = document.getElementById("urlbar");
+      urlbar.focus();
+      urlbar.select();
     }, 
     SpinOut:function () {
 
