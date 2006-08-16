@@ -150,6 +150,7 @@
 
   
     <command id="cmd_BrowserOpenTab"          oncommand="BrowserOpenTab()"/>
+    <command id="cmd_BrowserCloseTab"         oncommand="BrowserCloseTab()"/>
     <command id="cmd_BrowserScreenRotate"     oncommand="BrowserScreenRotate()"/>
     <command id="cmd_BrowserOpenInfo"         oncommand="BrowserOpenInfo()"/>
     <command id="cmd_BrowserTestDialogs"      oncommand="BrowserTestDialogs()"/>
@@ -307,6 +308,20 @@
       <menuitem id="command_BrowserOpenTab" 
                 command="cmd_BrowserOpenTab" 
                 label="&newtab.label;"  /> 
+
+      <menuitem id="command_BrowserCloseTab" 
+                command="cmd_BrowserCloseTab" 
+                label="&closetab.label;"  /> 
+      
+      <menu     id="command_TabFocus" 
+                label="&tabs.label;"  >
+        
+        <menupopup id="MenuTabsContainer" 
+                   onpopupshown="BrowserMenuTabsActive()" 
+                   onpopuphidden="BrowserMenuTabsDestroy()" >
+          
+        </menupopup>
+      </menu>
       
       <menuseparator/>
       
