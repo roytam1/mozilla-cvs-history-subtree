@@ -85,3 +85,5 @@ minimo.jar:
     content/minimo/bookmarks/bookmark_template_xul.xml  (content/bookmarks/bookmark_template_xul.xml)
 	content/minimo/bindings/preferences.css  (content/bindings/preferences.css)
 	content/minimo/bindings/preferences.xml  (content/bindings/preferences.xml)
+	content/minimo/bindings/keynav.css       (content/bindings/keynav.css)
+	content/minimo/bindings/keynav.xml       (content/bindings/keynav.xml)
