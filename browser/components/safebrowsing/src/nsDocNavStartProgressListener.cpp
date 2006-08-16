@@ -38,11 +38,11 @@
 #include "nsCURILoader.h"
 #include "nsDocNavStartProgressListener.h"
 #include "nsIChannel.h"
+#include "nsIJARURI.h"
 #include "nsIRequest.h"
 #include "nsITimer.h"
 #include "nsIURI.h"
 #include "nsIWebProgress.h"
-#include "nsNetUtil.h"
 #include "nsServiceManagerUtils.h"
 #include "nsString.h"
 
@@ -198,15 +198,13 @@ nsDocNavStartProgressListener::IsSpurious(nsIURI* aURI, PRBool* isSpurious)
 
   if (scheme.Equals("jar")) {
     // If it's a jar URI, we want to check the inner URI's scheme
-    nsCAutoString inner;
-    rv = aURI->GetPath(inner);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
+    nsCOMPtr<nsIJARURI> jarURI;
     nsCOMPtr<nsIURI> innerURI;
-    rv = NS_NewURI(getter_AddRefs(innerURI), inner);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return IsSpurious(innerURI, isSpurious);
+    if (jarURI = do_QueryInterface(aURI)) {
+      rv = jarURI->GetJARFile(getter_AddRefs(innerURI));
+      NS_ENSURE_SUCCESS(rv, rv);
+      return IsSpurious(innerURI, isSpurious);
+    }
   }
 
   return NS_OK;

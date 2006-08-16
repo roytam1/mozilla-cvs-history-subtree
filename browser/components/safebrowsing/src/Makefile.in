@@ -47,6 +47,7 @@ MOZILLA_INTERNAL_API = 1
 FORCE_STATIC_LIB = 1
 
 REQUIRES = \
+						jar \
 						necko \
 						safebrowsing \
 						string \
