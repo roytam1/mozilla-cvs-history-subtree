@@ -87,6 +87,7 @@
 #include "nsIForm.h"
 #include "nsIFormControl.h"
 #include "nsHTMLAtoms.h"
+#include "nsHTMLParts.h"
 #include "nsISupportsPrimitives.h"
 #include "nsLayoutAtoms.h"
 #include "imgIDecoderObserver.h"
@@ -112,6 +113,7 @@ static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
 #include "nsIMIMEService.h"
 #include "jsdbgapi.h"
 #include "nsIJSRuntimeService.h"
+#include "nsIFragmentContentSink.h"
 
 // for ReportToConsole
 #include "nsIStringBundle.h"
@@ -415,6 +417,9 @@ void
 nsContentUtils::Shutdown()
 {
   sInitialized = PR_FALSE;
+
+  NS_HTMLParanoidFragmentSinkShutdown();
+  NS_XHTMLParanoidFragmentSinkShutdown();
 
   PRInt32 i;
   for (i = 0; i < PRInt32(PropertiesFile_COUNT); ++i)
