@@ -1808,6 +1808,7 @@ nsDownload::nsDownload():mDownloadState(nsIDownloadManager::DOWNLOAD_NOTSTARTED)
                          mPercentComplete(0),
                          mCurrBytes(0),
                          mMaxBytes(0),
+                         mPaused(PR_FALSE),
                          mStartTime(0),
                          mLastUpdate(-500)
 {
@@ -2289,10 +2290,12 @@ nsDownload::Pause(PRBool aPaused)
     if (mRequest) {
       if (aPaused) {
         mRequest->Suspend();
+        mPaused = PR_TRUE;
         mDownloadState = nsIDownloadManager::DOWNLOAD_PAUSED;
       }
       else {
         mRequest->Resume();
+        mPaused = PR_FALSE;
         mDownloadState = nsIDownloadManager::DOWNLOAD_DOWNLOADING;
       }
     }
