@@ -136,6 +136,7 @@ tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-icon-image  {
   list-style-image: url("chrome://global/skin/icons/closetab.png") !important;
   border: none !important;
 }
+
 .tabs-closebutton:hover {
   border: none !important;
 }
@@ -176,7 +177,6 @@ tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-icon-image  {
   height: 4px !important;
   background: url("chrome://global/skin/tabs-bottom-bg.png") repeat !important;
   margin: 0px !important;
-
 }
 
 tabbrowser > tabbox > tabpanels {
@@ -283,17 +283,34 @@ tabbrowser > tabbox > tabpanels {
   opacity: 1.0;
 }
 
-.tabbrowser-arrowscrollbox > .scrollbutton-down{
+.scrollbutton-rel-box > .scrollbutton-down-box{
   width: 19px;
   height: 25px;
-  margin-right: 0px !important;
-  list-style-image: url("chrome://global/skin/tab-arrow-end.png") !important;
   background-image: url("chrome://global/skin/tab-arrow-end-bkgnd.png") !important;
   background-repeat: no-repeat;
   opacity: 0.65;
 }
 
-.tabbrowser-arrowscrollbox > .scrollbutton-down:hover{
+.scrollbutton-rel-box > .scrollbutton-down-box-animate{
+  width: 19px;
+  height: 25px;
+  background-image: url("chrome://global/skin/tab-arrow-end-bkgnd-animate.png") !important;
+  background-repeat: no-repeat;
+  opacity: 0.0;
+}
+
+.scrollbutton-rel-box > .scrollbutton-down{
+  width: 19px;
+  height: 25px;
+  margin: 0px !important;
+  border: 0px !important;
+  list-style-image: url("chrome://global/skin/tab-arrow-end.png") !important;
+  opacity: 0.65;
+}
+
+.scrollbutton-rel-box > .scrollbutton-down:hover{
+  background-image: url("chrome://global/skin/tab-arrow-end-bkgnd.png") !important;
+  background-repeat: no-repeat;
   opacity: 1.0;
 }
 
@@ -305,20 +322,41 @@ tabbrowser > tabbox > tabpanels {
   width: 16px;
   height: 25px;
   background-image: url("chrome://global/skin/alltabs-box-bkgnd.png");
+  background-repeat: no-repeat;
   opacity: 0.65;
-}
-
-.tabs-alltabs-box:hover{
-  opacity: 1.0;
-}
-
-.tabs-alltabs-box[flash="true"] {
-  background-color: orange;
-  opacity: 0.0;
 }
 
 .tabbrowser-tabs[overflow="true"] .tabs-alltabs-box{
   background-image: url("chrome://global/skin/alltabs-box-overflow-bkgnd.png");
+}
+
+.tabs-alltabs-button{
+  width: 16px;
+  height: 25px;
+  margin: 0px !important;
+  border: 0px !important;
+}
+
+.tabs-alltabs-button  > .toolbarbutton-menu-dropmarker{
+  margin-right: 2px;
+}
+
+.tabs-alltabs-button:hover{
+  background-image: url("chrome://global/skin/alltabs-box-bkgnd.png");
+  background-repeat: no-repeat;
+  opacity: 1.0;
+}
+
+.tabbrowser-tabs[overflow="true"] .tabs-alltabs-button:hover{
+  background-image: url("chrome://global/skin/alltabs-box-overflow-bkgnd.png");
+}
+
+.tabs-alltabs-box-animate{
+  width: 16px;
+  height: 25px;
+  background-image: url("chrome://global/skin/alltabs-box-overflow-bkgnd-animate.png");
+  background-repeat: no-repeat;
+  opacity: 0.0;
 }
 
 /**
