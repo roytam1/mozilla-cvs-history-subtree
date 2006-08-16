@@ -47,7 +47,6 @@
       <constructor>
       <![CDATA[
 		this.currentState = this.getAttribute("default");
-		this.lambdaRef = null; // stores the call back event function handler. 
 
 		document.staticReferenceKeynav = this;
 
@@ -55,12 +54,6 @@
       </constructor>
 
 	<property name="default" />
-
-	<property name="preferencelist">
-		<getter>
-			return this.prefArray;
-		</getter>
-	</property>
 
 	<field name="allArrays">
 		new Array()
@@ -114,7 +107,6 @@
 		<body>
 		  <![CDATA[ 
 
-			//alert("roundmap for "+elementName+" is "+this.allArrays[elementName]);
 			this.captureKeys();
 			this.inState();
 
@@ -145,32 +137,41 @@
 
 			document.staticReferenceKeynav.outState();
 			
-			var statesList = document.staticReferenceKeynav.allArrays[document.staticReferenceKeynav.currentState];
-			statesSplitted = statesList.split(",");
+			try { 
+			
+				var statesList = document.staticReferenceKeynav.allArrays[document.staticReferenceKeynav.currentState];
+				statesSplitted = statesList.split(",");
 
-			if(event.keyCode == event.DOM_VK_UP) {
-				document.staticReferenceKeynav.currentState=statesSplitted[0];
-				document.staticReferenceKeynav.inState();
-			}
+				if(event.keyCode == event.DOM_VK_UP) {
+					document.staticReferenceKeynav.currentState=statesSplitted[0];
+					document.staticReferenceKeynav.inState();
+				}
+	
+				if(event.keyCode == event.DOM_VK_RIGHT) {
+					document.staticReferenceKeynav.currentState=statesSplitted[1];
+					document.staticReferenceKeynav.inState();
+				}
+	
+				if(event.keyCode == event.DOM_VK_DOWN) {
+					document.staticReferenceKeynav.currentState=statesSplitted[2];
+					document.staticReferenceKeynav.inState();
+				}
+	
+				if(event.keyCode == event.DOM_VK_LEFT) {
+					document.staticReferenceKeynav.currentState=statesSplitted[3];
+					document.staticReferenceKeynav.inState();
+				}
+	
+				if(event.keyCode == 13) {
+					document.staticReferenceKeynav.doState();
+				}
 
-			if(event.keyCode == event.DOM_VK_RIGHT) {
-				document.staticReferenceKeynav.currentState=statesSplitted[1];
-				document.staticReferenceKeynav.inState();
-			}
-
-			if(event.keyCode == event.DOM_VK_DOWN) {
-				document.staticReferenceKeynav.currentState=statesSplitted[2];
-				document.staticReferenceKeynav.inState();
-			}
-
-			if(event.keyCode == event.DOM_VK_LEFT) {
-				document.staticReferenceKeynav.currentState=statesSplitted[3];
-				document.staticReferenceKeynav.inState();
-			}
-
-			if(event.keyCode == 13) {
-				document.staticReferenceKeynav.doState();
-			}
+			} catch (i) {
+			
+				document.removeEventListener("keypress",this.eventCapture,true);
+			
+			} 
+			
 
 		  ]]>
 
@@ -188,9 +189,9 @@
 
 			try {
 
-			var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
+				var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
 
-			var doObj;
+				var doObj;
 	
 				if(stateObject.refFocus.indexOf("#")>-1) {
 	
@@ -217,10 +218,14 @@
 	
 				}
 	
-                doObj.focus();
-                document.removeEventListener("keypress",this.eventCapture,true);
+				if(doObj) {
+	                doObj.focus();
+    			} 
+    			
 	
-			} catch(i) { alert(i) }
+			} catch(i) { }
+
+            document.removeEventListener("keypress",this.eventCapture,true);
 
 		  ]]>
 
@@ -239,23 +244,27 @@
 
 				var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
 
-				if(stateObject.refHighlight.indexOf("#")>-1) {
-	
-					if(stateObject.refHighlight.indexOf("InputField")>-1) {
-						setTimeout("document.getElementById('urlbar').inputField.style.backgroundColor='yellow'",0);
-					}
-	
-					if(stateObject.refHighlight.indexOf("browserTabs")>-1) {
-						setTimeout("document.getElementById('content').style.backgroundColor='yellow'",0);
-					}	
-					if(stateObject.refHighlight.indexOf("contentDocument.body")>-1) {
-						setTimeout("document.getElementById('content').contentDocument.body.style.backgroundColor='yellow'",0);
-					}		
+				if(stateObject) { 
+				
+					if(stateObject.refHighlight.indexOf("#")>-1) {
 		
-				} else {
-					
-					setTimeout("document.getElementById('"+stateObject.refHighlight+"').style.backgroundColor='yellow'",0);
-					
+						if(stateObject.refHighlight.indexOf("InputField")>-1) {
+							setTimeout("document.getElementById('urlbar').inputField.style.backgroundColor='yellow'",0);
+						}
+		
+						if(stateObject.refHighlight.indexOf("browserTabs")>-1) {
+							setTimeout("document.getElementById('content').style.backgroundColor='yellow'",0);
+						}	
+						if(stateObject.refHighlight.indexOf("contentDocument.body")>-1) {
+							setTimeout("document.getElementById('content').contentDocument.body.style.backgroundColor='yellow'",0);
+						}		
+			
+					} else {
+						
+						setTimeout("document.getElementById('"+stateObject.refHighlight+"').style.backgroundColor='yellow'",0);
+						
+					}
+
 				}
 	
 			} catch(i) {  }
@@ -276,23 +285,27 @@
 
 				var stateObject = document.staticReferenceKeynav.stateArray[document.staticReferenceKeynav.currentState];
 
-				if(stateObject.refHighlight.indexOf("#")>-1) {
-	
-					if(stateObject.refHighlight.indexOf("InputField")>-1) {
-						setTimeout("document.getElementById('urlbar').inputField.style.backgroundColor='#eeeeee'",0);
-					}
-	
-					if(stateObject.refHighlight.indexOf("browserTabs")>-1) {
-						setTimeout("document.getElementById('content').style.backgroundColor='#eeeeee'",0);
-					}	
-					if(stateObject.refHighlight.indexOf("contentDocument.body")>-1) {
-						setTimeout("document.getElementById('content').contentDocument.body.style.backgroundColor='#eeeeee'",0);
-					}		
+				if(stateObject) {
+				
+					if(stateObject.refHighlight.indexOf("#")>-1) {
 		
-				} else {
-					
-					setTimeout("document.getElementById('"+stateObject.refHighlight+"').style.backgroundColor='#eeeeee'",0);
-					
+						if(stateObject.refHighlight.indexOf("InputField")>-1) {
+							setTimeout("document.getElementById('urlbar').inputField.style.backgroundColor='#eeeeee'",0);
+						}
+		
+						if(stateObject.refHighlight.indexOf("browserTabs")>-1) {
+							setTimeout("document.getElementById('content').style.backgroundColor='#eeeeee'",0);
+						}	
+						if(stateObject.refHighlight.indexOf("contentDocument.body")>-1) {
+							setTimeout("document.getElementById('content').contentDocument.body.style.backgroundColor='#eeeeee'",0);
+						}		
+			
+					} else {
+						
+						setTimeout("document.getElementById('"+stateObject.refHighlight+"').style.backgroundColor='#eeeeee'",0);
+						
+					}
+
 				}
 	
 			} catch(i) { }
