@@ -132,6 +132,11 @@ toolbar *, #appcontent *, * {
   display: -moz-box;  
 }
 
+/* Alltabs override - we remove the button */ 
+
+.tabs-alltabs-button { display:none }
+
+
 /* Lock... */
 
 #lock-icon.security-na {
