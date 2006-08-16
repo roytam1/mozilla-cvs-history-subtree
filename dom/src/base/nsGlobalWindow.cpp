@@ -6082,9 +6082,10 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
 
     timeout->mExpr = expr;
   } else if (funobj) {
-    /* Leave an extra slot for a secret final argument that
-       indicates to the called function how "late" the timeout is. */
-    timeout->mArgv = (jsval *) PR_MALLOC((argc - 1) * sizeof(jsval));
+    // Leave an extra slot for a secret final argument that
+    // indicates to the called function how "late" the timeout is.
+    timeout->mArgv =
+      (jsval *) PR_MALLOC(((argc > 1) ? argc - 1 : 1) * sizeof(jsval));
 
     if (!timeout->mArgv) {
       timeout->Release(scx);
