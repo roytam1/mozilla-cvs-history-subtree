@@ -96,7 +96,7 @@ cd minimo/chrome
 
 cat *.manifest > temp
 rm *.manifest
-sed  -e 's/jar:.*.jar/jar:chrome.jar/' temp > chrome.manifest
+sed  -e 's/jar:.*.jar/jar:chrome.jar/' temp > minimo.manifest
 rm temp
 
 ls -a *.jar > files
@@ -106,7 +106,7 @@ chmod +x run
 ./run
 rm run
 rm -rf *.jar
-zip -r -9 chrome.jar skin locale branding content
+zip -r -9 minimo.jar skin locale branding content
 rm -rf skin locale branding content
 
 cd ..
