@@ -3,7 +3,7 @@
 
      <vbox id="homebar">
 
-			<toolbarbutton position="1" image="chrome://mobile/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites')">
+			<toolbarbutton id="firstbase" position="1" image="chrome://mobile/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites')">
 			</toolbarbutton >
 
 
