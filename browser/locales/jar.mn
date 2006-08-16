@@ -37,7 +37,6 @@
 #endif
 #ifdef MOZ_FEEDS
     locale/browser/feeds/subscribe.dtd              (%chrome/browser/feeds/subscribe.dtd)
-    locale/browser/feeds/options.dtd                (%chrome/browser/feeds/options.dtd)
     locale/browser/feeds/addFeedReader.dtd          (%chrome/browser/feeds/addFeedReader.dtd)
     locale/browser/feeds/subscribe.properties       (%chrome/browser/feeds/subscribe.properties)
 #endif
@@ -53,6 +52,7 @@
     locale/browser/preferences/connection.dtd         (%chrome/browser/preferences/connection.dtd)
     locale/browser/preferences/downloadactions.dtd    (%chrome/browser/preferences/downloadactions.dtd)
     locale/browser/preferences/feeds.dtd              (%chrome/browser/preferences/feeds.dtd)
+    locale/browser/preferences/feeds.properties       (%chrome/browser/preferences/feeds.properties)
     locale/browser/preferences/fonts.dtd              (%chrome/browser/preferences/fonts.dtd)
     locale/browser/preferences/languages.dtd          (%chrome/browser/preferences/languages.dtd)
     locale/browser/preferences/main.dtd               (%chrome/browser/preferences/main.dtd)
