@@ -35,12 +35,6 @@ cp -a bin/chrome/en-US.manifest                          minimo/chrome
 cp -a bin/chrome/minimo.jar                              minimo/chrome
 cp -a bin/chrome/minimo.manifest                         minimo/chrome
 
-cp -a bin/chrome/minimo-skin.jar                         minimo/chrome
-cp -a bin/chrome/minimo-skin.manifest                    minimo/chrome
-
-cp -a bin/chrome/minimo-skin-vga.jar                     minimo/chrome
-cp -a bin/chrome/minimo-skin-vga.manifest                minimo/chrome
-
 cp -a bin/chrome/toolkit.jar                             minimo/chrome
 cp -a bin/chrome/toolkit.manifest                        minimo/chrome
 
@@ -100,47 +94,30 @@ echo Chewing on chrome
 
 cd minimo/chrome
 
-unzip toolkit.jar
-rm -rf toolkit.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 toolkit.jar content
-rm -rf content
+cat *.manifest > temp
+rm *.manifest
+sed  -e 's/jar:.*.jar/jar:chrome.jar/' temp > chrome.manifest
+rm temp
 
-unzip en-US.jar
-rm -rf en-US.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 en-US.jar content
-rm -rf content
-
-unzip classic.jar
-rm -rf classic.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 classic.jar skin
-rm -rf skin
-
-unzip en-US.jar
-rm -rf en-US.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 en-US.jar locale
-rm -rf locale
-
-unzip minimo.jar
-rm -rf minimo.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 minimo.jar skin locale branding content
+ls -a *.jar > files
+sed  -e 's/^/unzip /' files > run
+rm files
+chmod +x run 
+./run
+rm run
+rm -rf *.jar
+zip -r -9 chrome.jar skin locale branding content
 rm -rf skin locale branding content
 
-unzip minimo-skin.jar
-rm -rf minimo-skin.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 minimo-skin.jar skin locale branding content
-rm -rf skin locale branding content
+cd ..
+cd ..
 
-unzip minimo-skin-vga.jar
-rm -rf minimo-skin-vga.jar
-#perl $SRCDIR/../config/liceater.pl `find .`
-zip -r -9 minimo-skin-vga.jar skin locale branding content
-rm -rf skin locale branding content
+cp -a bin/chrome/minimo-skin.jar                         minimo/chrome
+cp -a bin/chrome/minimo-skin.manifest                    minimo/chrome
+
+cp -a bin/chrome/minimo-skin-vga.jar                     minimo/chrome
+cp -a bin/chrome/minimo-skin-vga.manifest                minimo/chrome
+
 
 popd
 
