@@ -952,7 +952,7 @@ nsObjectFrame::GetDesiredSize(nsPresContext* aPresContext,
   aMetrics.ascent = aMetrics.height;
 
   if (aMetrics.mComputeMEW) {
-    aMetrics.mMaxElementWidth = aMetrics.width;
+    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
   }
 }
 
