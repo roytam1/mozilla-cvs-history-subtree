@@ -1955,7 +1955,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (!withobj)
                 goto out;
             rval = INT_TO_JSVAL(sp - fp->spbase);
-            OBJ_SET_SLOT(cx, withobj, JSSLOT_PRIVATE, rval);
             fp->scopeChain = withobj;
             STORE_OPND(-1, OBJECT_TO_JSVAL(withobj));
             break;
@@ -4934,7 +4933,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             obj = fp->scopeChain;
             while (OBJ_GET_CLASS(cx, obj) == &js_WithClass &&
                    JS_GetPrivate(cx, obj) == fp &&
-                   JSVAL_TO_INT(OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE)) >= i) {
+                   OBJ_BLOCK_DEPTH(cx, obj) >= i) {
                 obj = OBJ_GET_PARENT(cx, obj);
             }
             fp->scopeChain = obj;
