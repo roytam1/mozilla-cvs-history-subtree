@@ -90,7 +90,7 @@
                        completeselectedindex="true"
                        showcommentcolumn="true"
                        tabscrolling="true"
-                       xbl:inherits="disableautocomplete,searchengine,src">
+                       xbl:inherits="disabled,disableautocomplete,searchengine,src">
           </xul:textbox>
           <xul:hbox class="search-go-button-container">
             <xul:toolbarbutton class="search-go-button"
