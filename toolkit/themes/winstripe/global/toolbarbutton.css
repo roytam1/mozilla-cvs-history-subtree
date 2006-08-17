@@ -45,6 +45,7 @@
 /* ::::: toolbarbutton ::::: */
 
 toolbarbutton {
+  -moz-appearance: toolbarbutton;
   -moz-box-align: center;
   -moz-box-pack: center;
   margin: 0;
@@ -67,17 +68,23 @@ toolbarbutton.tabbable {
   -moz-user-focus: normal !important;
 }
 
-toolbarbutton:focus {
+toolbarbutton:focus 
+{
+  /* -moz-appearance looks redundant here but is necessary.
+      Without it, the outline won't appear. */
+  -moz-appearance: toolbarbutton;
   outline: 1px dotted -moz-DialogText;
   -moz-outline-offset: -2px;
 }
 
 toolbarbutton:hover,
 toolbarbutton[buttonover="true"] {
+  border-color: ThreeDHighlight ThreeDShadow ThreeDShadow ThreeDHighlight;
 }
 
 toolbarbutton:hover:active,
 toolbarbutton[open="true"] {
+  border-color: ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow;
   padding-top: 4px;
   padding-bottom: 2px;
   -moz-padding-start: 4px;
@@ -96,6 +103,7 @@ toolbarbutton[disabled="true"][open="true"] {
 /* ..... checked state ..... */
 
 toolbarbutton[checked="true"] {
+  border-color: ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow !important;
   padding-top: 4px !important;
   padding-bottom: 2px !important;
   -moz-padding-start: 4px !important;

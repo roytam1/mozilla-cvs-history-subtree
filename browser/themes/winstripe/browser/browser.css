@@ -256,6 +256,9 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 .toolbarbutton-1, .toolbarbutton-menubutton-button {
   border: 0 !important;
   padding: 0 !important;
+%ifndef MOZ_WIDGET_GTK2
+  -moz-appearance: none;
+%endif
 }
 
 .toolbarbutton-1:hover:active:not([disabled]),
@@ -1042,7 +1045,7 @@ statusbarpanel#statusbar-display {
 .autocomplete-treebody::-moz-tree-cell(suggesthint) {
   border-top: 1px solid GrayText;
 }
-	
+
 /* ::::: go button ::::: */
 
 #go-container {
@@ -1052,10 +1055,10 @@ statusbarpanel#statusbar-display {
 
 #go-button {
   /* -moz-box-flex: 1;  expand to fill toolbar height */
+  -moz-appearance: none;
   list-style-image: url("chrome://browser/skin/Go.png");
   -moz-image-region: rect(0px 25px 22px 0px);
-  border-left: 0px;
-  border-right: 0px;
+  border: 0px;
   padding-top: 2px;
   padding-bottom: 2px;
   -moz-padding-start: 0;
