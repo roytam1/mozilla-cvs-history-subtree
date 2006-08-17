@@ -589,9 +589,38 @@ function MiniNavStartup()
   * Setup the screen for fullscreen or not
   */
   setTimeout("setScreenUpTimeout()",10);
+ 
+ 
+ /* 
+  *  Build the homebase reference menu. 
+  */
+  homebase_menuBuild();
 
 }
 
+function homebase_menuBuild() {
+
+	var homebaseItems = document.getElementById("homebar").childNodes;
+
+    var hasItems = ( homebaseItems.length > 0 );
+
+
+    document.getElementById("command_Homebase").hidden = !hasItems;
+    
+	for (var i = 0; i < homebaseItems.length; i++) {
+
+		var refElement = homebaseItems[i];
+  		  var hbMenuElement=document.createElement("menuitem");
+  		  hbMenuElement.setAttribute("image",refElement.getAttribute("image"));
+  		  hbMenuElement.setAttribute("label",refElement.getAttribute("title"));
+  		  hbMenuElement.setAttribute("class","menuitem-iconic");
+  		  hbMenuElement.setAttribute("oncommand",refElement.getAttribute("oncommand"));   
+ 
+  		  document.getElementById("MenuHomebaseContainer").appendChild(hbMenuElement);	
+ 
+	} 
+	
+}
 
 function setScreenUpTimeout() {
 
