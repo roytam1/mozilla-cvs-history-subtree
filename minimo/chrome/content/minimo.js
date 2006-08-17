@@ -609,7 +609,10 @@ function homebase_menuBuild() {
     
 	for (var i = 0; i < homebaseItems.length; i++) {
 
-		var refElement = homebaseItems[i];
+          var refElement = homebaseItems[i];
+	
+		  refElement.setAttribute("tabindex",100+i); 
+		
   		  var hbMenuElement=document.createElement("menuitem");
   		  hbMenuElement.setAttribute("image",refElement.getAttribute("image"));
   		  hbMenuElement.setAttribute("label",refElement.getAttribute("title"));
