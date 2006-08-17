@@ -1559,7 +1559,7 @@ nsCSSStyleSheet::SetOwningDocument(nsIDocument* aDocument)
   mDocument = aDocument;
   // Now set the same document on all our child sheets....
   for (nsCSSStyleSheet* child = mFirstChild; child; child = child->mNext) {
-    child->mDocument = aDocument;
+    child->SetOwningDocument(aDocument);
   }
   return NS_OK;
 }
