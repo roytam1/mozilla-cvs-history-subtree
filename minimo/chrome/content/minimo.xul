@@ -381,41 +381,40 @@
                oncommand="spinSetnext(gSpinLast)" >
       
 	  <menuitem id="command_BrowserBookmark"
-	            command="cmd_BrowserBookmark"
+	            command="cmd_BrowserBookmark" accesskey="1"
 	            label="&bookmarks.label;" />
       
       <menuitem id="item-bookmark-page" 
-                label="&bookmarkthispage.label;" 
+                label="&bookmarkthispage.label;" accesskey="2"
                 command="cmd_BrowserBookmarkThis"/>
       
       <menuseparator/>
       
-      <menuitem id="command_home"    
-                command="cmd_BrowserHome" 
-                label="&homeCmd.label;"  /> 
+      <menuitem id="command_home"    accesskey="3" 
+                command="cmd_BrowserHome"                label="&homeCmd.label;"  /> 
       
       <!--            class="menuitem-iconic" image="chrome://minimo/skin/back-color.png" -->
       <menuitem id="command_back"    
-                command="cmd_BrowserBack" 
+                command="cmd_BrowserBack"  accesskey="4"
                 label="&backCmd.label;"  /> 
       
       <!--            class="menuitem-iconic" image="chrome://minimo/skin/forward-color.png" -->
       <menuitem id="command_forward" 
-                command="cmd_BrowserForward" 
+                command="cmd_BrowserForward"  accesskey="5"
                 label="&forwardCmd.label;"  /> 
       
       <!--            class="menuitem-iconic" image="chrome://minimo/skin/reload-color.png" -->
       <menuitem id="command_reload"  
-                command="cmd_BrowserReload" 
+                command="cmd_BrowserReload"  accesskey="6"
                 label="&reloadCmd.label;"  /> 
       
       <!--            class="menuitem-iconic" image="chrome://minimo/skin/go-color.png" -->
       <menuitem id="command_go"
-                command="cmd_BrowserGo" 
+                command="cmd_BrowserGo"  accesskey="7"
                 label="&goCmd.label;"  /> 
       
       <menuitem id="command_pan"
-                command="cmd_Pan" 
+                command="cmd_Pan"  accesskey="8"
                 label="&panCmd.label;"  /> 
       
     </menupopup>  
