@@ -129,7 +129,7 @@ toolbar *, #appcontent *, * {
 }
  
 .tabbrowser-tabs > .tabbrowser-tab[selected="true"] > .tab-close-button {
-  display: -moz-box;  
+  display: none;
 }
 
 /* Alltabs override - we remove the button */ 
