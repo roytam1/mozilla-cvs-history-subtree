@@ -277,6 +277,10 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 .toolbarbutton-1[type="menu-button"] {
   border: 0 !important;
   padding: 0 !important;
+%ifndef MOZ_WIDGET_GTK2
+  -moz-margin-start: 5px !important;
+  -moz-margin-end: 0 !important;
+%endif
 }
 
 .toolbarbutton-menubutton-stack,
@@ -287,10 +291,6 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 .toolbarbutton-menubutton-button:hover:active {
   border: 0 !important;
   padding: 0 !important;
-%ifndef MOZ_WIDGET_GTK2
-  -moz-margin-start: 5px !important;
-  -moz-margin-end: 0 !important;
-%endif
   display: -moz-box;
 }
 
