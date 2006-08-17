@@ -321,6 +321,7 @@ nsldapi_sasl_secprops(
         ldap_charray_free( props );
         return( LDAP_SUCCESS );
 }
+#endif /* LDAP_SASLIO_HOOKS */
 
 static int
 nsldapi_sasl_bind_s(
@@ -371,6 +372,7 @@ nsldapi_sasl_bind_s(
         return( ldap_result2error( ld, result, 1 ) );
 }
 
+#ifdef LDAP_SASLIO_HOOKS
 static int
 nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
         const char *mechs, unsigned flags,
