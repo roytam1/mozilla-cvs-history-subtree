@@ -538,7 +538,7 @@ nsSVGGradientFrame::GetGradientTransform(nsIDOMSVGMatrix **aGradientTransform,
       NS_NewSVGMatrix(getter_AddRefs(bboxTransform),
                       width, 0, 0, height, x, y);
     }
-  } else {
+  } else if (aSource) {
     nsIFrame *frame = nsnull;
     CallQueryInterface(aSource, &frame);
 
