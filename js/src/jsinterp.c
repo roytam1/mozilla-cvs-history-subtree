@@ -2021,7 +2021,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
     JSFunction *fun;
     JSType type;
 #if !defined JS_THREADED_INTERP && defined DEBUG
-    FILE *tracefp;
+    FILE *tracefp = NULL;
 #endif
 #if JS_HAS_EXPORT_IMPORT
     JSIdArray *ida;
