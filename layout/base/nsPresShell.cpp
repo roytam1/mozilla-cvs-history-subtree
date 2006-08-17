@@ -3402,11 +3402,6 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
     }
   }
 
-  if (mDocumentLoading && !mDocumentOnloadBlocked) {
-    mDocument->BlockOnload();
-    mDocumentOnloadBlocked = PR_TRUE;
-  }
-
   // Post a reflow event if we are not batching reflow commands.
   if (!mBatchReflows) {
     // If we're in the middle of a drag, process it right away (needed for mac,
@@ -6091,6 +6086,12 @@ PresShell::PostReflowEvent()
       mDirtyRoots.Count() == 0)
     return;
 
+  // Block onload if needed until the event fires
+  if (mDocumentLoading && !mDocumentOnloadBlocked) {
+    mDocument->BlockOnload();
+    mDocumentOnloadBlocked = PR_TRUE;
+  }
+  
   nsRefPtr<ReflowEvent> ev = new ReflowEvent(this);
   if (NS_FAILED(NS_DispatchToCurrentThread(ev))) {
     NS_WARNING("failed to dispatch reflow event");
