@@ -79,11 +79,15 @@ static HWND gSplashScreenDialog = NULL;
 BOOL CALLBACK
 SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp ) 
 {
-  if (msg == WM_ERASEBKGND)
+  if ( msg == WM_TIMER )
   {
-    return 1; // don't erase the background
-  } 
-  
+    HWND progressControl = GetDlgItem(dlg, IDC_PROGRESS);
+
+    SendMessage(progressControl, (UINT) PBM_STEPIT, (WPARAM) 0, (LPARAM) 0);
+    UpdateWindow(progressControl); 
+    return 0;
+  }
+     
   if ( msg == WM_INITDIALOG ) 
   {
     SetWindowText(dlg, "Minimo");
@@ -107,20 +111,38 @@ SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp )
                         GetSystemMetrics(SM_CXSCREEN)/2 - bitmap.bmWidth/2,
                         GetSystemMetrics(SM_CYSCREEN)/2 - bitmap.bmHeight/2,
                         bitmap.bmWidth,
-                        bitmap.bmHeight,
+                        bitmap.bmHeight + 10,
                         SWP_NOZORDER );
+
+
+          HWND progressControl = GetDlgItem( dlg, IDC_PROGRESS );
+          SetWindowPos( progressControl,
+                        NULL,
+                        0,
+                        bitmap.bmHeight + 1,
+                        bitmap.bmWidth,
+                        9,
+                        0);
+
+          SendMessage(progressControl, (UINT) PBM_SETRANGE, (WPARAM) 0, MAKELPARAM (0, 200));
+          //SendMessage(progressControl, (UINT) PBM_SETBARCOLOR, (WPARAM) 0, (LPARAM) (COLORREF) RGB(255,0,0));
+
           ShowWindow( dlg, SW_SHOW );
         }
       }
     }
+
+    SetTimer(dlg, 1, 100, NULL); 
     return 1;
   } 
-  else if (msg == WM_CLOSE)
+  
+  if (msg == WM_CLOSE)
   {
     NS_TIMELINE_MARK_FUNCTION("SplashScreenDialogProc Close");
     
     EndDialog(dlg, 0);
     gSplashScreenDialog = NULL;
+    return 0;
   }
   return 0;
 }

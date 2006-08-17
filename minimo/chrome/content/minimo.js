@@ -1344,6 +1344,7 @@ function DoBrowserFind() {
          http://lxr.mozilla.org/mozilla/source/toolkit/components/typeaheadfind/content/findBar.js
       */
       gBrowser.fastFind.find(vQuery,0);
+      document.getElementById("toolbar-find-tag").focus();
     }
   } catch (e) {
     onErrorHandler(e);
@@ -1355,6 +1356,7 @@ function DoBrowserFind() {
 function DoBrowserFindNext() {
   try { 
 	gBrowser.fastFind.findNext();
+    document.getElementById("toolbar-find-tag").focus();
   } catch (e) {
     onErrorHandler(e);
   }  

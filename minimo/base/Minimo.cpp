@@ -165,7 +165,7 @@ ApplicationObserver::Observe(nsISupports *aSubject, const char *aTopic, const PR
   // EVIL?
   SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif
-
+ 
     KillSplashScreen();
   }
   
@@ -805,7 +805,7 @@ int main(int argc, char *argv[])
 #ifdef WINCE
   CreateListenerWindow();
 #endif
-  
+
 #ifdef MOZ_WIDGET_GTK2
   gtk_set_locale();
   gtk_init(&argc, &argv);
@@ -816,6 +816,8 @@ int main(int argc, char *argv[])
 #endif
   
   CreateSplashScreen();
+  
+  Sleep(1);
   
 #ifdef _BUILD_STATIC_BIN
   NS_InitEmbedding(nsnull, nsnull, kPStaticModules, kStaticModuleCount);
@@ -911,11 +913,6 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-#ifdef WINCE
-  // EVIL?
-  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
- 
   rv = appShell->Run();
 
   if (NS_FAILED(rv))
