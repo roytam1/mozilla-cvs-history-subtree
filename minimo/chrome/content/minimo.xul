@@ -306,14 +306,14 @@
                oncommand="spinSetnext(gSpinFirst)" >
       
       <menuitem id="command_BrowserOpenTab" 
-                command="cmd_BrowserOpenTab" 
+                command="cmd_BrowserOpenTab"  accesskey="1"
                 label="&newtab.label;"  /> 
 
       <menuitem id="command_BrowserCloseTab" 
-                command="cmd_BrowserCloseTab" 
+                command="cmd_BrowserCloseTab" accesskey="2"
                 label="&closetab.label;"  /> 
       
-      <menu     id="command_TabFocus" 
+      <menu     id="command_TabFocus" accesskey="3"
                 label="&tabs.label;"  >
         
         <menupopup id="MenuTabsContainer" 
@@ -323,7 +323,7 @@
         </menupopup>
       </menu>
           
-      <menu     id="command_Homebase" 
+      <menu     id="command_Homebase" accesskey="4"
                 label="&homebase.label;"  hidden="true" >
         <menupopup id="MenuHomebaseContainer" />
       </menu>
@@ -332,32 +332,32 @@
       
       <!-- this shouldn't be an option on smartphones -->
       
-	  <menuitem id="snav_toggle" 
+	  <menuitem id="snav_toggle"  accesskey="5"
                 label="" 
                 oncommand="DoSNavToggle()"/>
       
-	  <menuitem id="ssr_toggle" 
+	  <menuitem id="ssr_toggle" accesskey="6"
                 label="" 
                 oncommand="DoSSRToggle()"/>
       
-      <menuitem id="togglet_google" 
+      <menuitem id="togglet_google" accesskey="7"
                 label="&togglet_google.label;" 
                 oncommand="DoGoogleToggle()"/>
       
       
       <menuseparator/>
       
-	  <menuitem id="textplus" 
+	  <menuitem id="textplus" accesskey="8"
                 label="&textSizePlus.label;" 
                 oncommand="BrowserResetZoomPlus()"/>
       
-	  <menuitem id="testminus" 
+	  <menuitem id="testminus" accesskey="9"
                 label="&textSizeMinus.label;" 
                 oncommand="BrowserResetZoomMinus()"/>
       
       <menuseparator/>
       
-      <menuitem id="command_DoPanelPreferences" 
+      <menuitem id="command_DoPanelPreferences" accesskey="0"
                 command="cmd_DoPanelPreferences" 
                 label="&prefs.label;"  /> 
       
