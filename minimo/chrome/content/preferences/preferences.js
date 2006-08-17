@@ -371,8 +371,6 @@ var gPref=null;
 
 function prefStartup() {
 
-    keyInitHandler();
-
     /* Pre select the general pane */ 
 
     gPanelSelected=document.getElementById("general-pane");
@@ -402,14 +400,6 @@ function prefShutdown() {
 	}
 }
 
-/* General Access keyboard handler */ 
-
-function keyInitHandler() {
-
-  document.addEventListener("keypress",eventHandlerMenu,true);
-  
-}
-
 /* Called directly from the XUL top toolbar items */ 
 
 function show(idPane,toolbarButtonRef) {
@@ -422,75 +412,6 @@ function show(idPane,toolbarButtonRef) {
     gToolbarButtonSelected=toolbarButtonRef;
     gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css
     gPanelSelected.collapsed=false;
-}
-
-/*
- * Followin two functions inherited (yes copy and paste) from the MInimo.js. Has 
- * Some differences, shall be combined in one or completelly elimiated when XBL 
- * elements ready 
- */ 
-
-function eventHandlerMenu(e) {
-
-/*
-  if(e.charCode==109) {
-  	document.getElementById("general-button").focus();
-    e.stopPropagation();
-  } 
-*/
-
-   if(e.keyCode==134 || e.keyCode==70) /*SoftKey1 or HWKey1*/ {
-  	document.getElementById("general-button").focus();
-    e.stopPropagation();
-  } 
-
-  var outnavTarget=document.commandDispatcher.focusedElement.getAttribute("accessrule");
-
-  if(!outnavTarget && (e.keyCode==40||e.keyCode==38)) {
-    e.preventDefault();
-	if(e.keyCode==38) { 
-		document.commandDispatcher.rewindFocus();
-	}
-	if(e.keyCode==40) {
-		document.commandDispatcher.advanceFocus();
-	}
-
-  }
-  if(outnavTarget!="" && (e.keyCode==40||e.keyCode==38)) {
-      e.stopPropagation();
-      if(e.keyCode==40) {
-        ruleElement=findRuleById(document.getElementById(outnavTarget).getAttribute("accessnextrule"),"accessnextrule");
-      }
-      if(e.keyCode==38) {
-        ruleElement=findRuleById(document.getElementById(outnavTarget).getAttribute("accessprevrule"),"accessprevrule"); 
-      }
-	  var tempElement=ruleElement.getAttribute("accessfocus");
-      if(tempElement.indexOf("#")>-1) {
-      
-        if(tempElement=="#tabContainer") { 
-          if(ruleElement.tabContainer) {
-            ruleElement.selectedTab.focus();
-          }
-        } 
-		if(tempElement=="#tabContent") { 
-          document.commandDispatcher.advanceFocusIntoSubtree(document.getElementById("nav-bar"));
-          document.commandDispatcher.rewindFocus();
-        } 
-        
-	  } else { 
-		  document.getElementById(tempElement).focus();
-	  }
-  }
-}
-
-function findRuleById(outnavTarget,ruleattribute) {
-  var ruleElement=document.getElementById(outnavTarget);
-
-  if(ruleElement.collapsed) {
-      return findRuleById(ruleElement.getAttribute(ruleattribute), ruleattribute);
-  } else {
-	return ruleElement;
-  } 
 }
 
 /* 
@@ -521,7 +442,6 @@ function PrefOkay() {
 
 	document.getElementById("okay-button").setAttribute("disabled",true);
 
-	//window.close();
 }
 
 /* 
@@ -530,7 +450,6 @@ function PrefOkay() {
 
 function PrefCancel() {
     gCancelSync=true;
-	//window.close();
 }
 
 
