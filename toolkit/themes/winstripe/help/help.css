@@ -38,59 +38,87 @@
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
 toolbar toolbarbutton {
-	-moz-box-orient: horizontal !important;
-	min-width: 16px;
-	list-style-image: url("chrome://help/skin/Toolbar.png");
+  -moz-box-orient: horizontal !important;
+  min-width: 0px;
+  list-style-image: url("chrome://help/skin/Toolbar.png");
+  -moz-appearance: none;
+  border: 0;
 }
 
 toolbarbutton:not([disabled="true"]):hover,
 menubutton:not([disabled="true"]):hover {
-        color: -moz-buttonhovertext;
+  color: -moz-buttonhovertext;
 }
 
-toolbarbutton:not([disabled="true"]):hover:active,
-menubutton:not([disabled="true"]):hover:active {
-	color: ButtonText !important;
+toolbarbutton:not([disabled="true"]):hover,
+menubutton:not([disabled="true"]):hover,
+toolbarbutton:not([disabled="true"]):active,
+menubutton:not([disabled="true"]):active {
+  margin: 0px;
+  padding: 3px;
+  color: ButtonText !important;
+}
+
+/* Hide labels for the toolbar because we really don't need them what with the
+   tooltips */
+toolbar#HelpToolbar .toolbarbutton-text{
+  display: none;
 }
 
 /* Set the minimum sidebar width so the help contents aren't squeezed together.*/
 #help-sidebar { min-width: 15em; width: 20em; max-width: 25em; }
 
+/* ----- BACK AND FORWARD BUTTONS ----- */
+
+#help-back-button > toolbarbutton,
+#help-forward-button > toolbarbutton{
+  -moz-padding-start: 0px !important;
+  -moz-padding-end: 0px !important;
+}
+
+#help-back-button > toolbarbutton > image,
+#help-forward-button > toolbarbutton > image{
+	-moz-margin-end: 0px;
+}
+
 /* ----- BACK BUTTON ----- */
 
 #help-back-button, 
 #help-forward-button[chromedir="rtl"] {
-	-moz-image-region: rect(0px 24px 24px 0px); 
+  -moz-margin-start: 5px !important;
+  -moz-margin-end: 2px;
+  -moz-image-region: rect(0px 24px 24px 0px); 
 }
 
 #help-back-button:hover, 
 #help-forward-button[chromedir="rtl"]:hover { 
-	-moz-image-region: rect(24px 24px 48px 0px); 
+  -moz-image-region: rect(24px 24px 48px 0px); 
 }
 
 #help-back-button[disabled="true"], 
 #help-forward-button[disabled="true"][chromedir="rtl"] { 
-	-moz-image-region: rect(48px 24px 72px 0px); 
+  -moz-image-region: rect(48px 24px 72px 0px); 
 }
 
 #help-back-button:hover:active, 
 #help-forward-button[chromedir="rtl"]:hover:active { 
-	-moz-image-region: rect(72px 24px 96px 0px); 
+  -moz-image-region: rect(72px 24px 96px 0px); 
 }
 
 #help-back-button .toolbarbutton-text,
 #help-forward-button[chromedir="rtl"] .toolbarbutton-text {
-	display:none !important;
+  display:none !important;
 }
 
 #help-back-button .toolbarbutton-menubutton-button,
 #help-forward-button[chromedir="rtl"] .toolbarbutton-menubutton-button {
-	-moz-box-align: end !important;
+  -moz-box-align: end !important;
 }
 
 /* ----- BACK BUTTON DROPMARKER ----- */
 
 #help-back-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 4px;
   list-style-image: url("chrome://browser/skin/dropmark-nav.png");
   -moz-image-region: rect(0px 14px 24px 0px);
   padding: 0;
@@ -111,71 +139,93 @@ menubutton:not([disabled="true"]):hover:active {
 
 #help-forward-button, 
 #help-back-button[chromedir="rtl"] { 
-	-moz-image-region: rect(0px 48px 24px 24px); 
+  -moz-image-region: rect(0px 48px 24px 24px); 
 }
 
 #help-forward-button:hover, 
 #help-back-button[chromedir="rtl"]:hover { 
-	-moz-image-region: rect(24px 48px 48px 24px); 
+  -moz-image-region: rect(24px 48px 48px 24px); 
 }
 
 #help-forward-button[disabled="true"], 
 #help-back-button[disabled="true"][chromedir="rtl"] { 
-	-moz-image-region: rect(48px 48px 72px 24px); 
+  -moz-image-region: rect(48px 48px 72px 24px); 
 }
 
-#help-forward-button:hover:active, 
+#help-forward-button:active, 
 #help-back-button[chromedir="rtl"]:hover:active { 
-	-moz-image-region: rect(24px 48px 48px 24px); 
+  -moz-image-region: rect(72px 48px 96px 24px); 
 }
 
 #help-forward-button .toolbarbutton-text {
-	display:none !important;
+  display:none !important;
 }
+
+/* ----- FORWARD BUTTON DROPMARKER ----- */
+
+#help-forward-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 4px;
+  list-style-image: url("chrome://browser/skin/dropmark-nav.png");
+  -moz-image-region: rect(0px 14px 24px 0px);
+  padding: 0;
+}
+#help-forward-button:hover > .toolbarbutton-menubutton-dropmarker,
+#forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker{
+  -moz-image-region: rect(24px 14px 48px 0px);
+}
+#help-forward-button > .toolbarbutton-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
+  -moz-image-region: rect(48px 14px 72px 0px);
+}
+#help-forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
+#forward-button:hover:active > .toolbarbutton-menubutton-dropmarker{
+  -moz-image-region: rect(72px 14px 96px 0px);
+}
+
 
 /* ----- HOME BUTTON ----- */
 
 #help-home-button { 
-	-moz-image-region: rect(0px 72px 24px 48px); 
+  -moz-image-region: rect(0px 72px 24px 48px); 
 }
 
 #help-home-button:hover { 
-	-moz-image-region: rect(24px 72px 48px 48px); 
+  -moz-image-region: rect(24px 72px 48px 48px); 
 }
 
 #help-home-button[disabled="true"] { 
-	-moz-image-region: rect(48px 72px 72px 48px); 
+  -moz-image-region: rect(48px 72px 72px 48px); 
 }
 
 #help-home-button:hover:active { 
-	-moz-image-region: rect(72px 72px 96px 48px); 
+  -moz-image-region: rect(72px 72px 96px 48px); 
 }
 
 #help-home-button .toolbarbutton-text {
-	display:none !important;
+  display:none !important;
 }
 
 
 /* ----- PRINT BUTTON ----- */
 
 #help-print-button { 
-	-moz-image-region: rect(0px 96px 24px 72px); 
+  -moz-image-region: rect(0px 96px 24px 72px); 
 }
 
 #help-print-button:hover { 
-	-moz-image-region: rect(24px 96px 48px 72px); 
+  -moz-image-region: rect(24px 96px 48px 72px); 
 }
 
 #help-print-button[disabled="true"] { 
-	-moz-image-region: rect(48px 96px 72px 72px); 
+  -moz-image-region: rect(48px 96px 72px 72px); 
 }
 
 #help-print-button:hover:active { 
-	-moz-image-region: rect(72px 96px 96px 72px); 
+  -moz-image-region: rect(72px 96px 96px 72px); 
 }
 
 #help-print-button .toolbarbutton-text {
-	display:none !important;
+  display:none !important;
 }
 
 /* ----- OTHER ----- */
