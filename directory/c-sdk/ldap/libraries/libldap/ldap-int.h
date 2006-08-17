@@ -202,6 +202,9 @@ typedef struct ldap_conn {
 	int			lconn_bound;	/* has a bind been done? */
 	int			lconn_pending_requests; /* count of unsent req*/
 	char			*lconn_krbinstance;
+#ifdef LDAP_SASLIO_HOOKS
+    sasl_conn_t     *lconn_sasl_ctx; /* the sasl connection context */
+#endif /* LDAP_SASLIO_HOOKS */
 	struct ldap_conn	*lconn_next;
 } LDAPConn;
 
@@ -418,8 +421,6 @@ struct ldap {
 	char                    *ld_def_sasl_authzid;
 	/* SASL Security properties */
 	struct sasl_security_properties ld_sasl_secprops;
-	/* prldap shadow io functions */
-	struct ldap_x_ext_io_fns ld_sasl_io_fns;
 #endif
 };
 
@@ -778,9 +779,8 @@ int nsldapi_sasl_secprops( const char *in,
 /*
  * in saslio.c
  */
-int nsldapi_sasl_install( LDAP *ld, Sockbuf *sb, void *ctx_arg );
-int nsldapi_sasl_open( LDAP *ld, Sockbuf *sb, const char * host,
-                                           sasl_ssf_t ssf );
+int nsldapi_sasl_install( LDAP *ld, LDAPConn *lconn );
+int nsldapi_sasl_open( LDAP *ld, LDAPConn *lconn, sasl_conn_t **ctx, sasl_ssf_t ssf );
 
 #endif /* LDAP_SASLIO_HOOKS */
 

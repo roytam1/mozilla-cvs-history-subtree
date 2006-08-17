@@ -59,9 +59,6 @@ extern "C" {
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#ifdef LDAP_SASLIO_HOOKS
-#include <sasl.h>
-#endif
 
 #ifdef macintosh
 # include "ldap-macos.h"
@@ -224,16 +221,6 @@ struct sockbuf {
 
 	struct lber_x_ext_io_fns
 			sb_ext_io_fns;	/* extended I/O callback functions */
-#ifdef LDAP_SASLIO_HOOKS
-        sasl_conn_t     *sb_sasl_ctx;   /* pointer to sasl context */
-        char            *sb_sasl_ibuf;  /* sasl decrypted input buffer */
-        char            *sb_sasl_iptr;  /* current location in buffer */
-        int             sb_sasl_bfsz;   /* Alloc'd size of input buffer */
-        int             sb_sasl_ilen;   /* remaining length to process */
-        struct lber_x_ext_io_fns
-                        sb_sasl_fns;    /* sasl redirect copy ext I/O funcs */
-        void            *sb_sasl_prld;  /* reverse ld pointer for callbacks */
-#endif
 };
 #define NULLSOCKBUF	((Sockbuf *)NULL)
 

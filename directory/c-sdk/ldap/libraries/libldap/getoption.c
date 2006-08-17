@@ -311,11 +311,10 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 			int sc;
 			sasl_ssf_t      *ssf;
 			sasl_conn_t     *ctx;
-			if( ld->ld_defconn == NULL ||
-			    ld->ld_defconn->lconn_sb == NULL ) {
+			if( ld->ld_defconn == NULL ) {
 				return -1;
 			}
-			ctx = (sasl_conn_t *)(ld->ld_defconn->lconn_sb->sb_sasl_ctx);
+			ctx = (sasl_conn_t *)(ld->ld_defconn->lconn_sasl_ctx);
 			if ( ctx == NULL ) {
 				return -1;
 			}

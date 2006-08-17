@@ -167,10 +167,10 @@ get_default(ldaptoolSASLdefaults *defaults, sasl_interact_t *interact, unsigned 
 		}
 	}
 
-	LDAPDebug(LDAP_DEBUG_TRACE, "get_default: id [%lu] sasl default [%s] my default [%s]\n",
-			  interact->id,
-			  interact->defresult ? interact->defresult : "(null)",
-			  defvalue ? defvalue : "(null)");
+	LDAPToolDebug(LDAP_DEBUG_TRACE, "get_default: id [%lu] sasl default [%s] my default [%s]\n",
+                  interact->id,
+                  interact->defresult ? interact->defresult : "(null)",
+                  defvalue ? defvalue : "(null)");
 
 	if (defvalue != NULL) {
 		interact->result = strdup(defvalue);
@@ -236,11 +236,10 @@ get_new_value(sasl_interact_t *interact, unsigned flags) {
 
 	if (len > 0) { /* user typed in something - use it */
 		if (interact->result) {
-			free(interact->result);
+			free((void *)interact->result);
 		}
 		interact->result = strdup(newvalue);
 		memset(newvalue, '\0', len);
-/*        ldap_memfree( newvalue );*/
 
 		if (interact->result == NULL) {
 			return (LDAP_NO_MEMORY);

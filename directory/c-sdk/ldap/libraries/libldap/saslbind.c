@@ -378,7 +378,7 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
         LDAPControl **sctrl, LDAPControl **cctrl, LDAPControl ***rctrl )
 {
         sasl_interact_t *prompts = NULL;
-        sasl_conn_t     *ctx;
+        sasl_conn_t     *ctx = NULL;
         sasl_ssf_t      *ssf = NULL;
         const char      *mech = NULL;
         int             saslrc, rc;
@@ -397,29 +397,14 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
                 return( LDAP_NOT_SUPPORTED );
         }
 
-        if ( ld->ld_defconn == NULL ||
-             ld->ld_defconn->lconn_status != LDAP_CONNST_CONNECTED) {
-                rc = nsldapi_open_ldap_defconn( ld );
-                if( rc < 0 )  {
-                        return( LDAP_GET_LDERRNO( ld, NULL, NULL ) );
-                }
-        }
-
         /* shouldn't happen */
         if (callback == NULL) {
                 return( LDAP_LOCAL_ERROR );
         }
 
-        /* expect context to be initialized when connection is open */
-        ctx = (sasl_conn_t *)ld->ld_defconn->lconn_sb->sb_sasl_ctx;
-
-        if( ctx == NULL ) {
-                LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-                return( LDAP_LOCAL_ERROR );
+        if ( (rc = nsldapi_sasl_open(ld, NULL, &ctx, 0)) != LDAP_SUCCESS ) {
+            return( rc );
         }
-
-        /* (re)set security properties */
-        sasl_setprop( ctx, SASL_SEC_PROPS, &ld->ld_sasl_secprops );
 
         ccred.bv_val = NULL;
         ccred.bv_len = 0;
@@ -555,7 +540,7 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
                         LDAPDebug(LDAP_DEBUG_TRACE,
                                 "SASL install encryption, for SSF: %lu\n",
                                 (unsigned long) *ssf, 0, 0 );
-                        nsldapi_sasl_install( ld, ld->ld_conns->lconn_sb, ctx );
+                        nsldapi_sasl_install( ld, NULL );
                 }
         }
 

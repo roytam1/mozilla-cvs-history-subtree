@@ -115,16 +115,9 @@ struct nsldapi_cb_statusinfo {		/* used with ext. I/O poll() callback */
 #else
 #define NSLDAPI_CB_POLL_SD_CAST
 #endif
-#if defined(LDAP_SASLIO_HOOKS)
-#define NSLDAPI_CB_POLL_MATCH( sbp, pollfd ) \
-    ( ((sbp)->sb_sd == NSLDAPI_CB_POLL_SD_CAST ((pollfd).lpoll_fd)) && \
-    (((sbp)->sb_sasl_fns.lbextiofn_socket_arg == (pollfd).lpoll_socketarg) || \
-    ((sbp)->sb_ext_io_fns.lbextiofn_socket_arg == (pollfd).lpoll_socketarg) ) )
-#else
 #define NSLDAPI_CB_POLL_MATCH( sbp, pollfd ) \
     ((sbp)->sb_sd == NSLDAPI_CB_POLL_SD_CAST ((pollfd).lpoll_fd) && \
     (sbp)->sb_ext_io_fns.lbextiofn_socket_arg == (pollfd).lpoll_socketarg)
-#endif
 
 
 struct nsldapi_iostatus_info {
@@ -495,10 +488,6 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, const char *hostlist,
  */
 {
 	int		s;
-#ifdef LDAP_SASLIO_HOOKS
-        char *sasl_host = NULL;
-        int sasl_ssf = 0;
-#endif
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_connect_to_host: %s, port: %d\n",
 	    NULL == hostlist ? "NULL" : hostlist, defport, 0 );
@@ -537,13 +526,6 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, const char *hostlist,
 	}
 
 	sb->sb_sd = s;
-
-#ifdef LDAP_SASLIO_HOOKS
-	if (nsldapi_sasl_is_inited()) {
-		nsldapi_sasl_open( ld, sb, ld->ld_defhost, sasl_ssf );
-		NSLDAPI_FREE( sasl_host );
-	}
-#endif
 
 	/*
 	 * Set krbinstancep (canonical name of host for use by Kerberos).

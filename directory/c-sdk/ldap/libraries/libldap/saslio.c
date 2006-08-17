@@ -46,6 +46,60 @@
 #define NSLDAPI_SM_BUF	128
 
 /*
+ * Data structures:
+ */
+
+/* data structure that populates the I/O callback socket-specific arg. */
+typedef struct lextiof_socket_private {
+	struct ldap_x_ext_io_fns sess_io_fns; /* the saved layered ld fns from the layer we are "pushing" */
+	struct lber_x_ext_io_fns sock_io_fns; /* the saved layered ber fns from the layer we are "pushing" */
+	sasl_conn_t     *sasl_ctx;     /* the sasl context - pointer to the one from the connection */
+	char            *sb_sasl_ibuf; /* sasl decrypted input buffer */
+	char            *sb_sasl_iptr; /* current location in buffer */
+	int             sb_sasl_bfsz;  /* Alloc'd size of input buffer */
+	int             sb_sasl_ilen;  /* remaining length to process */
+	LDAP            *ld;           /* used to set errno */
+	Sockbuf         *sb;           /* pointer to our associated sockbuf */
+} SASLIOSocketArg;
+
+static void
+destroy_SASLIOSocketArg(SASLIOSocketArg** sockarg)
+{
+	if (sockarg && *sockarg) {
+		NSLDAPI_FREE((*sockarg)->sb_sasl_ibuf);
+		NSLDAPI_FREE((*sockarg));
+		*sockarg = NULL;
+	}
+}
+
+static SASLIOSocketArg*
+new_SASLIOSocketArg(sasl_conn_t *ctx, int bufsiz, LDAP *ld, Sockbuf *sb)
+{
+	SASLIOSocketArg *sockarg = NULL;
+
+	if (bufsiz <= 0) {
+		return sockarg;
+	}
+
+	sockarg = (SASLIOSocketArg*)NSLDAPI_CALLOC(1, sizeof(SASLIOSocketArg));
+	if (sockarg) {
+		sockarg->sasl_ctx = ctx;
+		sockarg->sb_sasl_ibuf = NSLDAPI_MALLOC(bufsiz);
+		if (!sockarg->sb_sasl_ibuf) {
+			destroy_SASLIOSocketArg(&sockarg);
+			return sockarg;
+		}
+		sockarg->sb_sasl_iptr = NULL;
+		sockarg->sb_sasl_bfsz = bufsiz;
+		sockarg->sb_sasl_ilen = 0;
+		sockarg->ld           = ld;
+		sockarg->sb           = sb;
+	}
+
+	return sockarg;
+}
+
+/*
  * SASL Dependent routines
  *
  * SASL security and integrity options are supported through the
@@ -88,41 +142,40 @@ static int
 nsldapi_sasl_read( int s, void *buf, int  len,
 	struct lextiof_socket_private *arg)
 {
-	Sockbuf		*sb = (Sockbuf *)arg;
 	LDAP		*ld;
 	const char	*dbuf;
 	char		*cp;
 	int		ret;
 	unsigned	dlen, blen;
    
-	ld = (LDAP *)sb->sb_sasl_prld;
+	ld = (LDAP *)arg->ld;
 
 	/* Is there anything left in the existing buffer? */
-	if ((ret = sb->sb_sasl_ilen) > 0) {
+	if ((ret = arg->sb_sasl_ilen) > 0) {
 		ret = (ret > len ? len : ret);
-		SAFEMEMCPY( buf, sb->sb_sasl_iptr, ret );
-		if (ret == sb->sb_sasl_ilen) {
-			sb->sb_sasl_ilen = 0;
-			sb->sb_sasl_iptr = NULL;
+		SAFEMEMCPY( buf, arg->sb_sasl_iptr, ret );
+		if (ret == arg->sb_sasl_ilen) {
+			arg->sb_sasl_ilen = 0;
+			arg->sb_sasl_iptr = NULL;
 		} else {
-			sb->sb_sasl_ilen -= ret;
-			sb->sb_sasl_iptr += ret;
+			arg->sb_sasl_ilen -= ret;
+			arg->sb_sasl_iptr += ret;
 		}
 		return( ret );
 	}
 
 	/* buffer is empty - fill it */
-	cp = sb->sb_sasl_ibuf;
+	cp = arg->sb_sasl_ibuf;
 	dlen = 0;
 	
 	/* Read the length of the packet */
 	while ( dlen < 4 ) {
-		if (sb->sb_sasl_fns.lbextiofn_read != NULL) {
-			ret = sb->sb_sasl_fns.lbextiofn_read(
+		if (arg->sock_io_fns.lbextiofn_read != NULL) {
+			ret = arg->sock_io_fns.lbextiofn_read(
 				s, cp, 4 - dlen,
-				sb->sb_sasl_fns.lbextiofn_socket_arg);
+				arg->sock_io_fns.lbextiofn_socket_arg);
 		} else {
-			ret = read( sb->sb_sd, cp, 4 - dlen );
+			ret = read( s, cp, 4 - dlen );
 		}
 #ifdef EINTR
 		if ( ( ret < 0 ) && ( LDAP_GET_ERRNO(ld) == EINTR ) )
@@ -137,7 +190,7 @@ nsldapi_sasl_read( int s, void *buf, int  len,
 
 	blen = 4;
 
-	ret = nsldapi_sasl_pktlen( sb->sb_sasl_ibuf, sb->sb_sasl_bfsz );
+	ret = nsldapi_sasl_pktlen( arg->sb_sasl_ibuf, arg->sb_sasl_bfsz );
 	if (ret < 0) {
 		LDAP_SET_ERRNO(ld, EIO);
 		return( -1 );
@@ -146,12 +199,12 @@ nsldapi_sasl_read( int s, void *buf, int  len,
 
 	/* read the rest of the encrypted packet */
 	while ( dlen > 0 ) {
-		if (sb->sb_sasl_fns.lbextiofn_read != NULL) {
-			ret = sb->sb_sasl_fns.lbextiofn_read(
+		if (arg->sock_io_fns.lbextiofn_read != NULL) {
+			ret = arg->sock_io_fns.lbextiofn_read(
 				s, cp, dlen,
-				sb->sb_sasl_fns.lbextiofn_socket_arg);
+				arg->sock_io_fns.lbextiofn_socket_arg);
 		} else {
-			ret = read( sb->sb_sd, cp, dlen );
+			ret = read( s, cp, dlen );
 		}
 
 #ifdef EINTR
@@ -167,30 +220,30 @@ nsldapi_sasl_read( int s, void *buf, int  len,
    	}
 
 	/* Decode the packet */
-	ret = sasl_decode( sb->sb_sasl_ctx,
-			   sb->sb_sasl_ibuf, blen,
+	ret = sasl_decode( arg->sasl_ctx,
+			   arg->sb_sasl_ibuf, blen,
 			   &dbuf, &dlen);
 	if ( ret != SASL_OK ) {
 		/* sb_sasl_read: failed to decode packet, drop it, error */
-		sb->sb_sasl_iptr = NULL;
-		sb->sb_sasl_ilen = 0;
+		arg->sb_sasl_iptr = NULL;
+		arg->sb_sasl_ilen = 0;
 		LDAP_SET_ERRNO(ld, EIO);
 		return( -1 );
 	}
 	
 	/* copy decrypted packet to the input buffer */
-	SAFEMEMCPY( sb->sb_sasl_ibuf, dbuf, dlen );
-	sb->sb_sasl_iptr = sb->sb_sasl_ibuf;
-	sb->sb_sasl_ilen = dlen;
+	SAFEMEMCPY( arg->sb_sasl_ibuf, dbuf, dlen );
+	arg->sb_sasl_iptr = arg->sb_sasl_ibuf;
+	arg->sb_sasl_ilen = dlen;
 
 	ret = (dlen > (unsigned) len ? len : dlen);
-	SAFEMEMCPY( buf, sb->sb_sasl_iptr, ret );
-	if (ret == sb->sb_sasl_ilen) {
-		sb->sb_sasl_ilen = 0;
-		sb->sb_sasl_iptr = NULL;
+	SAFEMEMCPY( buf, arg->sb_sasl_iptr, ret );
+	if (ret == arg->sb_sasl_ilen) {
+		arg->sb_sasl_ilen = 0;
+		arg->sb_sasl_iptr = NULL;
 	} else {
-		sb->sb_sasl_ilen -= ret;
-		sb->sb_sasl_iptr += ret;
+		arg->sb_sasl_ilen -= ret;
+		arg->sb_sasl_iptr += ret;
 	}
 	return( ret );
 }
@@ -199,13 +252,12 @@ static int
 nsldapi_sasl_write( int s, const void *buf, int  len,
 	struct lextiof_socket_private *arg)
 {
-	Sockbuf		*sb = (Sockbuf *)arg;
 	int			ret = 0;
 	const char	*obuf, *optr, *cbuf = (const char *)buf;
 	unsigned	olen, clen, tlen = 0;
 	unsigned	*maxbuf; 
 	
-	ret = sasl_getprop(sb->sb_sasl_ctx, SASL_MAXOUTBUF,
+	ret = sasl_getprop(arg->sasl_ctx, SASL_MAXOUTBUF,
 					   (const void **)&maxbuf);
 	if ( ret != SASL_OK ) {
 		/* just a sanity check, should never happen */
@@ -215,7 +267,7 @@ nsldapi_sasl_write( int s, const void *buf, int  len,
 	while (len > 0) {
 		clen = (len > *maxbuf) ? *maxbuf : len;
 		/* encode the next packet. */
-		ret = sasl_encode( sb->sb_sasl_ctx, cbuf, clen, &obuf, &olen);
+		ret = sasl_encode( arg->sasl_ctx, cbuf, clen, &obuf, &olen);
 		if ( ret != SASL_OK ) {
 			/* XXX Log error? "sb_sasl_write: failed to encode packet..." */
 			return( -1 );
@@ -223,12 +275,12 @@ nsldapi_sasl_write( int s, const void *buf, int  len,
 		/* Write everything now, buffer is only good until next sasl_encode */
 		optr = obuf;
 		while (olen > 0) {
-			if (sb->sb_sasl_fns.lbextiofn_write != NULL) {
-				ret = sb->sb_sasl_fns.lbextiofn_write(
+			if (arg->sock_io_fns.lbextiofn_write != NULL) {
+				ret = arg->sock_io_fns.lbextiofn_write(
 					s, optr, olen,
-					sb->sb_sasl_fns.lbextiofn_socket_arg);
+					arg->sock_io_fns.lbextiofn_socket_arg);
 			} else {
-				ret = write( sb->sb_sd, optr, olen);
+				ret = write( s, optr, olen);
 			}
 			if ( ret < 0 )
 				return( ret );
@@ -242,129 +294,239 @@ nsldapi_sasl_write( int s, const void *buf, int  len,
 	return( tlen );
 }
 
+/*
+ * What's all this then?
+ * First, take a look at os-ip.c:nsldapi_add_to_cb_pollfds().  When a new descriptor is
+ * added to the pollfds array, the lpoll_socketarg field is initialized to the value from
+ * the socketarg field - sb->sb_ext_io_fns.lbextiofn_socket_arg.  In our case, since we
+ * override this with our sasl data (see below nsldapi_sasl_install), we need to restore
+ * the previous value so that the layer below us (i.e. prldap) can use the lpoll_socketarg
+ * which it sets.
+ * So how do which know which fds[i] is a "sasl" fd?
+ * We initialize the lextiof_session_private *arg (see nsldapi_sasl_install) to point to
+ * the socket_private data in sb->sb_ext_io_fns.lbextiofn_socket_arg for "sasl" sockets,
+ * which is then used to initialize lpoll_socketarg (see above).
+ * So, if the arg which gets passed into nsldapi_sasl_poll is the same as the
+ * fds[i].lpoll_socketarg, we know it is a "sasl" socket and we need to "pop" the sasl
+ * layer.  We do this by replacing lpoll_socketarg with the one we saved when we "pushed"
+ * the sasl layer.
+ * So why the loop to restore the sasl lpoll_socketarg?
+ * The lower layer only uses lpoll_socketarg during poll().  See ldappr-io.c:prldap_poll()
+ * for more information about how that works.  However, after the polling is done, there
+ * is some special magic in os-ip.c in the functions nsldapi_add_to_cb_pollfds(),
+ * nsldapi_clear_from_cb_pollfds(), and nsldapi_find_in_cb_pollfds() to find the correct
+ * Sockbuf to operate on.  This is the macro NSLDAPI_CB_POLL_MATCH().  For the extended
+ * io function callbacks to work correctly, it is not sufficient to say that the file
+ * descriptor in the Sockbuf matches the one that poll says has activity - we also need
+ * to match the lpoll_socketarg with the sb->sb_ext_io_fns.lbextiofn_socket_arg to make
+ * sure this really is the Sockbuf we want to use.  So we have to restore the
+ * lpoll_socketarg with the original one.
+ * Why have origarg and staticorigarg?
+ * To avoid malloc.  The sizeof staticorigarg should be large enough to accomodate almost
+ * all clients without incurring too much additional overhead.  However, if we need more
+ * room, origarg will grow to nfds.  If this proves to be inadequate, the size of the
+ * staticorigarg is a good candidate for a #define set by configure.
+ */
 static int
 nsldapi_sasl_poll(
 	LDAP_X_PollFD fds[], int nfds, int timeout,
 	struct lextiof_session_private *arg ) 
 {
-	Sockbuf		*sb = (Sockbuf *)arg;
-	LDAP		*ld;
-	int		i;
+	LDAP_X_EXTIOF_POLL_CALLBACK *origpoll; /* poll fn from the pushed layer */
+	struct lextiof_session_private *origsess = NULL; /* session arg from the pushed layer */
+	SASLIOSocketArg **origarg = NULL; /* list of saved original socket args */
+	SASLIOSocketArg *staticorigarg[1024]; /* default list to avoid malloc */
+	int origargsize = sizeof(staticorigarg)/sizeof(staticorigarg[0]);
+	int rc = -1; /* the return code - -1 means failure */
 
-	if (sb == NULL) {
-		return( -1 );
+	if (arg == NULL) { /* should not happen */
+		return( rc );
 	}
-	ld = (LDAP *)sb->sb_sasl_prld;
+
+	origarg = staticorigarg;
+	/* if the static array is not large enough, alloc a dynamic one */
+	if (origargsize < nfds) {
+		origarg = (SASLIOSocketArg **)NSLDAPI_MALLOC(nfds*sizeof(SASLIOSocketArg *));
+	}
 
 	if (fds && nfds > 0) {
+		int i;
 		for(i = 0; i < nfds; i++) {
-			if (fds[i].lpoll_socketarg ==
-			     (struct lextiof_socket_private *)sb) {
-				fds[i].lpoll_socketarg =
-					(struct lextiof_socket_private *)
-					sb->sb_sasl_fns.lbextiofn_socket_arg;
+			/* save the original socket arg */
+			origarg[i] = fds[i].lpoll_socketarg;
+			if (arg == (struct lextiof_session_private *)fds[i].lpoll_socketarg) {
+				/* lpoll_socketarg is a sasl socket arg - we need to replace it
+				   with the one from the layer we pushed (i.e. prldap) */
+				SASLIOSocketArg *sockarg = (SASLIOSocketArg *)fds[i].lpoll_socketarg;
+				/* reset to pushed layer's socket arg */
+				fds[i].lpoll_socketarg = sockarg->sock_io_fns.lbextiofn_socket_arg;
+				/* grab the pushed layers' poll fn and its session arg */
+				if (!origsess) {
+					origpoll = sockarg->sess_io_fns.lextiof_poll;
+					origsess = sockarg->sess_io_fns.lextiof_session_arg;
+				}
 			}
-
 		}
 	}
-	return ( ld->ld_sasl_io_fns.lextiof_poll( fds, nfds, timeout,
-		(void *)ld->ld_sasl_io_fns.lextiof_session_arg) );
+
+	if (origsess == NULL) { /* should not happen */
+		goto done;
+	}
+
+	/* call the "real" poll function */
+	rc = origpoll( fds, nfds, timeout, origsess );
+
+	/* reset the lpoll_socketarg values to their original values because
+	   they must match what's in sb->iofns->lbextiofn_socket_arg in order
+	   for NSLDAPI_CB_POLL_MATCH to work - see os-ip.c */
+	if (fds && nfds > 0) {
+		int i;
+		for(i = 0; i < nfds; i++) {
+			if ((SASLIOSocketArg *)arg == origarg[i]) {
+				fds[i].lpoll_socketarg = origarg[i];
+			}
+		}
+	}
+
+done:
+	/* if we had to use a dynamic array, free it */
+	if (origarg != staticorigarg) {
+		NSLDAPI_FREE(origarg);
+	}
+
+	return rc;
 }
 
 int
-nsldapi_sasl_open( LDAP *ld, Sockbuf *sb, const char * host, sasl_ssf_t ssf )
+nsldapi_sasl_open( LDAP *ld, LDAPConn *lconn, sasl_conn_t **ctx, sasl_ssf_t ssf )
 {
         int saslrc;
-        sasl_conn_t *ctx;
+        char *host = NULL;
 
-        if ( host == NULL ) {
+        if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
+                LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR, NULL, NULL );
+                return( LDAP_LOCAL_ERROR );
+        }
+
+        if ( lconn == NULL ) {
+                if ( ld->ld_defconn == NULL ||
+                     ld->ld_defconn->lconn_status != LDAP_CONNST_CONNECTED) {
+                        int rc = nsldapi_open_ldap_defconn( ld );
+                        if( rc < 0 )  {
+                                return( LDAP_GET_LDERRNO( ld, NULL, NULL ) );
+                        }
+                }
+                lconn = ld->ld_defconn;
+        }
+
+        /* need to clear out the old context for this connection, if any */
+        /* client may have re-bind-ed this connection without closing first */
+        if (lconn->lconn_sasl_ctx) {
+            sasl_dispose(&lconn->lconn_sasl_ctx);
+            lconn->lconn_sasl_ctx = NULL;
+        }
+
+        if ( 0 != ldap_get_option( ld, LDAP_OPT_HOST_NAME, &host ) ) {
                 LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR, NULL, NULL );
                 return( LDAP_LOCAL_ERROR );
         }
 
         saslrc = sasl_client_new( "ldap", host,
                 NULL, NULL, /* iplocalport, ipremoteport - use defaults */
-                NULL, 0, &ctx );
+                NULL, 0, ctx );
+        ldap_memfree(host);
 
-        if ( saslrc != SASL_OK ) {
+        if ( (saslrc != SASL_OK) || (!*ctx) ) {
                 return( nsldapi_sasl_cvterrno( ld, saslrc, NULL ) );
         }
-
-        sb->sb_sasl_ctx = (void *)ctx;
 
         if( ssf ) {
                 sasl_ssf_t extprops;
                 memset(&extprops, 0L, sizeof(extprops));
                 extprops = ssf;
 
-                (void) sasl_setprop( ctx, SASL_SSF_EXTERNAL,
+                (void) sasl_setprop( *ctx, SASL_SSF_EXTERNAL,
                         (void *) &extprops );
         }
+
+        /* (re)set security properties */
+        sasl_setprop( *ctx, SASL_SEC_PROPS, &ld->ld_sasl_secprops );
+
+        /* set the connection context */
+        lconn->lconn_sasl_ctx = *ctx;
 
         return( LDAP_SUCCESS );
 }
 
 static int
-nsldapi_sasl_close( LDAP *ld, Sockbuf *sb )
+nsldapi_sasl_close( struct lextiof_socket_private *arg )
 {
-	sasl_conn_t	*ctx = (sasl_conn_t *)sb->sb_sasl_ctx;
-	
-	if( ctx != NULL ) {
-		sasl_dispose( &ctx );
-		sb->sb_sasl_ctx = NULL;
-	}
+	/* undo function pointer interposing */
+	ldap_set_option( arg->ld, LDAP_X_OPT_EXTIO_FN_PTRS, &arg->sess_io_fns );
+	/* have to do this separately to make sure the socketarg is set correctly */
+	ber_sockbuf_set_option( arg->sb,
+							LBER_SOCKBUF_OPT_EXT_IO_FNS,
+							(void *)&arg->sock_io_fns );
 
-    NSLDAPI_FREE(sb->sb_sasl_ibuf);
-    sb->sb_sasl_ibuf = NULL;
-	
+	destroy_SASLIOSocketArg(&arg);
 	return( LDAP_SUCCESS );
 }
 
 static int
 nsldapi_sasl_close_socket(int s, struct lextiof_socket_private *arg ) 
 {
-	Sockbuf		*sb = (Sockbuf *)arg;
-	LDAP		*ld;
+	LDAP_X_EXTIOF_CLOSE_CALLBACK *origclose;
+	struct lextiof_socket_private *origsock;
 
-	if (sb == NULL) {
+	if (arg == NULL) {
 		return( -1 );
 	}
-	ld = (LDAP *)sb->sb_sasl_prld;
-	/* undo function pointer interposing */
-	ldap_set_option( ld, LDAP_X_OPT_EXTIO_FN_PTRS, &ld->ld_sasl_io_fns );
-	ber_sockbuf_set_option( sb,
-			LBER_SOCKBUF_OPT_EXT_IO_FNS,
-			(void *)&sb->sb_sasl_fns);
+
+	origclose = arg->sess_io_fns.lextiof_close;
+	origsock = arg->sock_io_fns.lbextiofn_socket_arg;
 
 	/* undo SASL */
-	nsldapi_sasl_close( ld, sb );
+	nsldapi_sasl_close( arg );
+	arg = NULL;
+	/* arg is destroyed at this point - do not use it */
 
-	return ( ld->ld_sasl_io_fns.lextiof_close( s,
-		(struct lextiof_socket_private *)
-		sb->sb_sasl_fns.lbextiofn_socket_arg ) );
+	return ( origclose( s, origsock ) );
 }
 
 /*
  * install encryption routines if security has been negotiated
  */
 int
-nsldapi_sasl_install( LDAP *ld, Sockbuf *sb, void *ctx_arg )
+nsldapi_sasl_install( LDAP *ld, LDAPConn *lconn )
 {
         struct lber_x_ext_io_fns        fns;
         struct ldap_x_ext_io_fns        iofns;
         sasl_security_properties_t      *secprops;
         int     rc, value;
         int     bufsiz;
+        Sockbuf *sb = NULL;
+        sasl_conn_t *ctx = NULL;
+        SASLIOSocketArg *sockarg = NULL;
 
+        if ( lconn == NULL ) {
+                lconn = ld->ld_defconn;
+                if ( lconn == NULL ) {
+                        return( LDAP_LOCAL_ERROR );
+                }
+        }
+        if ( (sb = lconn->lconn_sb) == NULL ) {
+                return( LDAP_LOCAL_ERROR );
+        }
         rc = ber_sockbuf_get_option( sb,
                         LBER_SOCKBUF_OPT_TO_FILE_ONLY,
                         (void *) &value);
-        if (rc != 0 || value != 0)
+        if (rc != 0 || value != 0) {
                 return( LDAP_LOCAL_ERROR );
+        }
 
-        /* initialize input buffer - use MAX SIZE to avoid reallocs */
-        sb->sb_sasl_ctx = (sasl_conn_t *)ctx_arg;
-        rc = sasl_getprop( sb->sb_sasl_ctx, SASL_SEC_PROPS,
+        /* the sasl context in the lconn must have been set prior to this */
+        ctx = lconn->lconn_sasl_ctx;
+        rc = sasl_getprop( ctx, SASL_SEC_PROPS,
                            (const void **)&secprops );
         if (rc != SASL_OK)
                 return( LDAP_LOCAL_ERROR );
@@ -372,65 +534,74 @@ nsldapi_sasl_install( LDAP *ld, Sockbuf *sb, void *ctx_arg )
         if (bufsiz <= 0) {
                 return( LDAP_LOCAL_ERROR );
         }
-        if ((sb->sb_sasl_ibuf = NSLDAPI_MALLOC(bufsiz)) == NULL) {
+
+        /* create our socket specific context */
+        sockarg = new_SASLIOSocketArg(ctx, bufsiz, ld, sb);
+        if (!sockarg) {
                 return( LDAP_LOCAL_ERROR );
         }
-        sb->sb_sasl_iptr = NULL;
-        sb->sb_sasl_bfsz = bufsiz;
-        sb->sb_sasl_ilen = 0;
 
-        /* Reset Session then Socket Args */
-        /* Get old values */
-        (void) memset( &sb->sb_sasl_fns, 0, LBER_X_EXTIO_FNS_SIZE);
-        sb->sb_sasl_fns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
+        /* save a copy of the existing io fns and the session arg */
+        memset( &sockarg->sess_io_fns, 0, LDAP_X_EXTIO_FNS_SIZE );
+        sockarg->sess_io_fns.lextiof_size = LDAP_X_EXTIO_FNS_SIZE;
+        rc = ldap_get_option( ld, LDAP_X_OPT_EXTIO_FN_PTRS,
+                              &sockarg->sess_io_fns );
+        if (rc != 0) {
+                destroy_SASLIOSocketArg(&sockarg);
+                return( LDAP_LOCAL_ERROR );
+        }
+
+        /* save a copy of the existing ber io fns and the socket arg */
+        memset( &sockarg->sock_io_fns, 0, LBER_X_EXTIO_FNS_SIZE );
+        sockarg->sock_io_fns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
         rc = ber_sockbuf_get_option( sb,
                         LBER_SOCKBUF_OPT_EXT_IO_FNS,
-                        (void *)&sb->sb_sasl_fns);
-        memset( &ld->ld_sasl_io_fns, 0, sizeof(iofns));
-        ld->ld_sasl_io_fns.lextiof_size = LDAP_X_EXTIO_FNS_SIZE;
-        rc = ldap_get_option( ld, LDAP_X_OPT_EXTIO_FN_PTRS,
-                              &ld->ld_sasl_io_fns );
-        if (rc != 0 )
+                        (void *)&sockarg->sock_io_fns);
+        if (rc != 0) {
+                destroy_SASLIOSocketArg(&sockarg);
                 return( LDAP_LOCAL_ERROR );
+        }
 
-        /* Set new values */
-        if (  ld->ld_sasl_io_fns.lextiof_read != NULL ||
-              ld->ld_sasl_io_fns.lextiof_write != NULL ||
-              ld->ld_sasl_io_fns.lextiof_poll != NULL ||
-              ld->ld_sasl_io_fns.lextiof_connect != NULL ||
-              ld->ld_sasl_io_fns.lextiof_close != NULL ) {
+        /* Set new values for the ext io funcs if there are any -
+           when using the native io fns (as opposed to prldap) there
+           won't be any */
+        if (  sockarg->sess_io_fns.lextiof_read != NULL ||
+              sockarg->sess_io_fns.lextiof_write != NULL ||
+              sockarg->sess_io_fns.lextiof_poll != NULL ||
+              sockarg->sess_io_fns.lextiof_connect != NULL ||
+              sockarg->sess_io_fns.lextiof_close != NULL ) {
                 memset( &iofns, 0, sizeof(iofns));
-                iofns.lextiof_size = LDAP_X_EXTIO_FNS_SIZE;
+				/* first, copy struct - sets defaults */
+				iofns = sockarg->sess_io_fns;
+				/* next, just reset those functions we want to override */
                 iofns.lextiof_read = nsldapi_sasl_read;
                 iofns.lextiof_write = nsldapi_sasl_write;
                 iofns.lextiof_poll = nsldapi_sasl_poll;
-                iofns.lextiof_connect = ld->ld_sasl_io_fns.lextiof_connect;
                 iofns.lextiof_close = nsldapi_sasl_close_socket;
-                iofns.lextiof_newhandle = ld->ld_sasl_io_fns.lextiof_newhandle;
-                iofns.lextiof_disposehandle =
-                                ld->ld_sasl_io_fns.lextiof_disposehandle;
-                iofns.lextiof_session_arg =
-                                (void *) sb;
-                                /* ld->ld_sasl_io_fns.lextiof_session_arg; */
+                iofns.lextiof_session_arg = sockarg; /* this is key in nsldapi_sasl_poll */
                 rc = ldap_set_option( ld, LDAP_X_OPT_EXTIO_FN_PTRS,
                               &iofns );
-                if (rc != 0 )
+                if (rc != 0) {
+                        /* frees everything and resets fns above */
+                        nsldapi_sasl_close(sockarg);
                         return( LDAP_LOCAL_ERROR );
-                sb->sb_sasl_prld = (void *)ld;
+                }
         }
 
+        /* set the new ber io funcs and socket arg */
         (void) memset( &fns, 0, LBER_X_EXTIO_FNS_SIZE);
         fns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
         fns.lbextiofn_read = nsldapi_sasl_read;
         fns.lbextiofn_write = nsldapi_sasl_write;
-        fns.lbextiofn_socket_arg =
-                        (void *) sb;
-                        /* (void *)sb->sb_sasl_fns.lbextiofn_socket_arg; */
+        fns.lbextiofn_socket_arg = sockarg;
         rc = ber_sockbuf_set_option( sb,
                         LBER_SOCKBUF_OPT_EXT_IO_FNS,
                         (void *)&fns);
-        if (rc != 0)
+        if (rc != 0) {
+                /* frees everything and resets fns above */
+                nsldapi_sasl_close(sockarg);
                 return( LDAP_LOCAL_ERROR );
+        }
 
         return( LDAP_SUCCESS );
 }

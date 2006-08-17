@@ -150,6 +150,12 @@ extern FILE		*ldaptool_fp;
 extern char		*ldaptool_charset;
 extern char		*ldaptool_convdir;
 extern LDAPControl	*ldaptool_request_ctrls[];
+#ifdef LDAP_DEBUG
+extern int ldaptool_dbg_lvl;
+#define LDAPToolDebug(lvl,fmt,arg1,arg2,arg3) if (lvl & ldaptool_dbg_lvl) { fprintf(stderr,fmt,arg1,arg2,arg3); }
+#else
+#define LDAPToolDebug(lvl,fmt,arg1,arg2,arg3)
+#endif /* LDAP_DEBUG */
 
 
 /*

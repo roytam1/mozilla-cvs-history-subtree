@@ -761,6 +761,12 @@ nsldapi_free_connection( LDAP *ld, LDAPConn *lc, LDAPControl **serverctrls,
 		if ( lc->lconn_binddn != NULL ) {
 			NSLDAPI_FREE( lc->lconn_binddn );
 		}
+#ifdef LDAP_SASLIO_HOOKS
+		if ( lc->lconn_sasl_ctx ) { /* the sasl connection context */
+			sasl_dispose(&lc->lconn_sasl_ctx);
+			lc->lconn_sasl_ctx = NULL;
+		}
+#endif /* LDAP_SASLIO_HOOKS */
 		NSLDAPI_FREE( lc );
 		LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_free_connection: actually freed\n",
 		    0, 0, 0 );
