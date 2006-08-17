@@ -322,7 +322,12 @@
           
         </menupopup>
       </menu>
-      
+          
+      <menu     id="command_Homebase" 
+                label="&homebase.label;"  hidden="true" >
+        <menupopup id="MenuHomebaseContainer" />
+      </menu>
+        
       <menuseparator/>
       
       <!-- this shouldn't be an option on smartphones -->
