@@ -939,6 +939,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #define inXML JS_FALSE
 #endif
     jsval val;
+    int stackDummy;
 
     static const char catch_cookie[]     = "/*CATCH*/";
     static const char finally_cookie[]   = "/*FINALLY*/";
@@ -999,6 +1000,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     JS_END_MACRO
 
     cx = ss->sprinter.context;
+    if (!JS_CHECK_STACK_SIZE(cx, stackDummy)) {
+        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_OVER_RECURSED);
+        return JS_FALSE;
+    }
+
     jp = ss->printer;
     endpc = pc + nb;
     forelem_tail = forelem_done = NULL;
