@@ -180,6 +180,7 @@ tabpanels {
   padding: 0px;
   cursor: default;
   list-style-image: url("chrome://global/skin/icons/close.png");
+  -moz-binding: url(chrome://global/content/bindings/toolbarbutton.xml#toolbarbutton-image);
 }
 
 .tab-close-button:hover,
@@ -236,7 +237,7 @@ tabpanels {
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up{
   -moz-appearance: none !important;
-  border: 0px !important;
+  border: none !important;
   margin-top: 2px;
   padding: 0px;
   width: 18px !important;
@@ -257,7 +258,7 @@ tabpanels {
 
 .scrollbutton-rel-box > .scrollbutton-down-box{
   -moz-appearance: none !important;
-  border: 0px !important;
+  border: none !important;
   margin-top: 2px;
   width: 18px !important;
   height: 25px !important;
@@ -274,6 +275,8 @@ tabpanels {
 }
 
 .scrollbutton-rel-box > .scrollbutton-down{
+  -moz-appearance: none !important;
+  border: 0px !important;
   list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png") !important;
   opacity: 0.4;
   -moz-margin-start: 0px !important;
@@ -327,6 +330,8 @@ tabpanels {
 }
 
 .tabs-alltabs-button {
+  -moz-appearance: none !important;
+  border: 0px !important;
   margin-top: 2px;
   width: 20px !important;
   height: 25px !important;
@@ -335,6 +340,10 @@ tabpanels {
   -moz-padding-start: 4px !important;
   -moz-padding-end: 4px !important;
 //  background: transparent !important;
+}
+
+.tabs-alltabs-button  > .toolbarbutton-text {
+  display: none;
 }
 
 .tabs-alltabs-button:hover {
