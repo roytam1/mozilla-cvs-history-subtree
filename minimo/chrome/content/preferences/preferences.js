@@ -400,7 +400,24 @@ function prefShutdown() {
 	}
 }
 
-/* Called directly from the XUL top toolbar items */ 
+/* 
+ * Called from the XUL 
+ * --
+ * When user dispatches oncommand for a given toolbarbutton on top
+ * we dispatch a focus to an item. 
+ */ 
+
+function focusTo(elementId) {
+	document.getElementById(elementId).focus();
+}
+
+
+/* 
+ * Called from the XUL 
+ * -- 
+ * When user moves focus over a toolbarbutton item on top
+ * we should show the right pane. 
+ */
 
 function show(idPane,toolbarButtonRef) {
 
