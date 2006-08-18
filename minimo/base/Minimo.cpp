@@ -817,7 +817,9 @@ int main(int argc, char *argv[])
   
   CreateSplashScreen();
   
+#ifdef WINCE
   Sleep(1);
+#endif
   
 #ifdef _BUILD_STATIC_BIN
   NS_InitEmbedding(nsnull, nsnull, kPStaticModules, kStaticModuleCount);
