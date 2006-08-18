@@ -343,6 +343,7 @@ SuggestAutoComplete.prototype = {
       return;
 
     this._listener.onSearchResult(this, this._formHistoryResult);
+    this._formHistoryTimer = null;
     this._reset();
   },
 
@@ -391,11 +392,12 @@ SuggestAutoComplete.prototype = {
    * This clears all the per-request state.
    */
   _reset: function SAC_reset() {
-    if (this._formHistoryTimer)
-      this._formHistoryTimer.cancel();
-    this._formHistoryTimer = null;
-    this._formHistoryResult = null;
-    this._listener = null;
+    // Don't let go of our listener and form history result if the timer is
+    // still pending, the timer will call _reset() when it fires.
+    if (!this._formHistoryTimer) {
+      this._listener = null;
+      this._formHistoryResult = null;
+    }
     this._request = null;
   },
 
