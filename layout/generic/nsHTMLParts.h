@@ -42,7 +42,7 @@
 #include "nsReflowType.h"
 class nsHTMLReflowCommand;
 class nsIAtom;
-class nsINodeInfo;
+class nsNodeInfoManager;
 class nsIContent;
 class nsIContentIterator;
 class nsIDocument;
@@ -89,7 +89,8 @@ NS_NewBlockFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame,
 
 // Special Generated Content Frame
 nsresult
-NS_NewAttributeContent(PRInt32 aNameSpaceID, nsIAtom* aAttrName,
+NS_NewAttributeContent(nsNodeInfoManager *aNodeInfoManager,
+                       PRInt32 aNameSpaceID, nsIAtom* aAttrName,
                        nsIContent** aResult);
 
 // Create a basic area frame but the GetFrameForPoint is overridden to always

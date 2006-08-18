@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -325,7 +326,8 @@ nsNode3Tearoff::SetTextContent(nsIContent* aContent,
 
   if (!aTextContent.IsEmpty()) {
     nsCOMPtr<nsITextContent> textContent;
-    nsresult rv = NS_NewTextNode(getter_AddRefs(textContent));
+    nsresult rv = NS_NewTextNode(getter_AddRefs(textContent),
+                                 aContent->GetNodeInfo()->NodeInfoManager());
     NS_ENSURE_SUCCESS(rv, rv);
 
     textContent->SetText(aTextContent, PR_TRUE);
@@ -1872,6 +1874,12 @@ nsGenericElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
 
   nsresult rv;
   
+  nsIDocument *oldOwnerDocument = GetOwnerDoc();
+  nsIDocument *newOwnerDocument;
+  nsNodeInfoManager* nodeInfoManager;
+
+  // XXXbz sXBL/XBL2 issue!
+
   // Finally, set the document
   if (aDocument) {
     // Notify XBL- & nsIAnonymousContentCreator-generated
@@ -1886,36 +1894,36 @@ nsGenericElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
     // Being added to a document.
     mParentPtrBits |= PARENT_BIT_INDOCUMENT;
 
-    // check the document on the nodeinfo to see whether we need a
-    // new nodeinfo
-    // XXXbz sXBL/XBL2 issue!
-    nsIDocument *ownerDocument = GetOwnerDoc();
-    if (aDocument != ownerDocument) {
+    newOwnerDocument = aDocument;
+    nodeInfoManager = newOwnerDocument->NodeInfoManager();
+  } else {
+    newOwnerDocument = aParent->GetOwnerDoc();
+    nodeInfoManager = aParent->GetNodeInfo()->NodeInfoManager();
+  }
 
-      nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(this);
-      if (domElement) {
-        nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(ownerDocument);
-        if (nsDoc) {
-          nsDoc->SetBoxObjectFor(domElement, nsnull);
-        }
-      }
-      if (HasProperties()) {
-        ownerDocument->PropertyTable()->DeleteAllPropertiesFor(this);
-      }
+  // Handle a change in our owner document.
 
-      // get a new nodeinfo
-      nsNodeInfoManager* nodeInfoManager = aDocument->NodeInfoManager();
-      if (nodeInfoManager) {
-        nsCOMPtr<nsINodeInfo> newNodeInfo;
-        rv = nodeInfoManager->GetNodeInfo(mNodeInfo->NameAtom(),
-                                          mNodeInfo->GetPrefixAtom(),
-                                          mNodeInfo->NamespaceID(),
-                                          getter_AddRefs(newNodeInfo));
-        NS_ENSURE_SUCCESS(rv, rv);
-        NS_ASSERTION(newNodeInfo, "GetNodeInfo lies");
-        mNodeInfo.swap(newNodeInfo);
+  if (oldOwnerDocument && oldOwnerDocument != newOwnerDocument) {
+    // Remove all properties.
+    oldOwnerDocument->PropertyTable()->DeleteAllPropertiesFor(this);
+    nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(this);
+    if (domElement) {
+      nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(oldOwnerDocument);
+      if (nsDoc) {
+        nsDoc->SetBoxObjectFor(domElement, nsnull);
       }
     }
+  }
+
+  if (mNodeInfo->NodeInfoManager() != nodeInfoManager) {
+    nsCOMPtr<nsINodeInfo> newNodeInfo;
+    rv = nodeInfoManager->GetNodeInfo(mNodeInfo->NameAtom(),
+                                      mNodeInfo->GetPrefixAtom(),
+                                      mNodeInfo->NamespaceID(),
+                                      getter_AddRefs(newNodeInfo));
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ASSERTION(newNodeInfo, "GetNodeInfo lies");
+    mNodeInfo.swap(newNodeInfo);
   }
 
   // Now recurse into our kids
@@ -2954,7 +2962,7 @@ doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
   
   NS_PRECONDITION(aKid && aKid->GetParent() == aParent &&
                   aKid == container.GetChildAt(aIndex) &&
-                  container.IndexOf(aKid) == aIndex, "Bogus aKid");
+                  container.IndexOf(aKid) == (PRInt32)aIndex, "Bogus aKid");
 
   mozAutoDocUpdate updateBatch(aDocument, UPDATE_CONTENT_MODEL, aNotify);
 
@@ -4122,7 +4130,7 @@ nsGenericElement::List(FILE* out, PRInt32 aIndent) const
   mNodeInfo->GetQualifiedName(buf);
   fputs(NS_LossyConvertUCS2toASCII(buf).get(), out);
 
-  fprintf(out, "@%p", this);
+  fprintf(out, "@%p", (void *)this);
 
   PRUint32 attrcount = mAttrsAndChildren.AttrCount();
   for (index = 0; index < attrcount; index++) {

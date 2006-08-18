@@ -57,8 +57,8 @@
 #include "pldhash.h"
 #include "prprf.h"
 
-nsGenericDOMDataNode::nsGenericDOMDataNode(nsIDocument *aDocument)
-  : mDocument(aDocument)
+nsGenericDOMDataNode::nsGenericDOMDataNode(nsNodeInfoManager *aNodeInfoManager)
+  : mNodeInfoManager(aNodeInfoManager)
 {
 }
 
@@ -130,8 +130,8 @@ nsGenericDOMDataNode::GetParentNode(nsIDOMNode** aParentNode)
   if (parent) {
     rv = CallQueryInterface(parent, aParentNode);
   }
-  else if (mDocument) {
-    rv = CallQueryInterface(mDocument, aParentNode);
+  else if (IsInDoc()) {
+    rv = CallQueryInterface(GetCurrentDoc(), aParentNode);
   }
   else {
     *aParentNode = nsnull;
@@ -155,10 +155,13 @@ nsGenericDOMDataNode::GetPreviousSibling(nsIDOMNode** aPrevSibling)
       sibling = parent->GetChildAt(pos - 1);
     }
   }
-  else if (mDocument) {
-    PRInt32 pos = mDocument->IndexOf(this);
-    if (pos > 0) {
-      sibling = mDocument->GetChildAt(pos - 1);
+  else {
+    nsIDocument *doc = GetCurrentDoc();
+    if (doc) {
+      PRInt32 pos = doc->IndexOf(this);
+      if (pos > 0) {
+        sibling = doc->GetChildAt(pos - 1);
+      }
     }
   }
 
@@ -185,10 +188,13 @@ nsGenericDOMDataNode::GetNextSibling(nsIDOMNode** aNextSibling)
       sibling = parent->GetChildAt(pos + 1);
     }
   }
-  else if (mDocument) {
-    PRInt32 pos = mDocument->IndexOf(this);
-    if (pos > -1) {
-      sibling = mDocument->GetChildAt(pos + 1);
+  else {
+    nsIDocument *doc = GetCurrentDoc();
+    if (doc) {
+      PRInt32 pos = doc->IndexOf(this);
+      if (pos > -1) {
+        sibling = doc->GetChildAt(pos + 1);
+      }
     }
   }
 
@@ -646,11 +652,31 @@ nsGenericDOMDataNode::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
   new_bits |= mParentPtrBits & nsIContent::kParentBitMask;
   mParentPtrBits = new_bits;
 
+  nsIDocument *oldOwnerDocument = GetOwnerDoc();
+  nsIDocument *newOwnerDocument;
+  nsNodeInfoManager* nodeInfoManager;
+
+  // XXXbz sXBL/XBL2 issue!
   // Set document
-  mDocument = aDocument;
-  if (mDocument && mText.IsBidi()) {
-    mDocument->SetBidiEnabled(PR_TRUE);
+  if (aDocument) {
+    mParentPtrBits |= PARENT_BIT_INDOCUMENT;
+    if (mText.IsBidi()) {
+      aDocument->SetBidiEnabled(PR_TRUE);
+    }
+
+    newOwnerDocument = aDocument;
+    nodeInfoManager = newOwnerDocument->NodeInfoManager();
+  } else {
+    newOwnerDocument = aParent->GetOwnerDoc();
+    nodeInfoManager = aParent->GetNodeInfo()->NodeInfoManager();
   }
+
+  if (oldOwnerDocument && oldOwnerDocument != newOwnerDocument) {
+    // Remove all properties.
+    oldOwnerDocument->PropertyTable()->DeleteAllPropertiesFor(this);
+  }
+
+  mNodeInfoManager = nodeInfoManager;
 
   NS_POSTCONDITION(aDocument == GetCurrentDoc(), "Bound to wrong document");
   NS_POSTCONDITION(aParent == GetParent(), "Bound to wrong parent");
@@ -665,7 +691,7 @@ nsGenericDOMDataNode::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
 void
 nsGenericDOMDataNode::UnbindFromTree(PRBool aDeep, PRBool aNullParent)
 {
-  mDocument = nsnull;
+  mParentPtrBits &= ~PARENT_BIT_INDOCUMENT;
   if (aNullParent) {
     mParentPtrBits &= nsIContent::kParentBitMask;
   }
@@ -1017,8 +1043,9 @@ nsGenericDOMDataNode::GetBaseURI() const
   }
 
   nsIURI *uri;
-  if (mDocument) {
-    NS_IF_ADDREF(uri = mDocument->GetBaseURI());
+  nsIDocument *doc = GetOwnerDoc();
+  if (doc) {
+    NS_IF_ADDREF(uri = doc->GetBaseURI());
   }
   else {
     uri = nsnull;
@@ -1057,7 +1084,8 @@ nsGenericDOMDataNode::SplitText(PRUint32 aOffset, nsIDOMText** aReturn)
    * same class as this node!
    */
 
-  nsCOMPtr<nsITextContent> newContent = CloneContent(PR_FALSE, nsnull);
+  nsCOMPtr<nsITextContent> newContent = CloneContent(PR_FALSE,
+                                                     mNodeInfoManager);
   if (!newContent) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -1330,7 +1358,7 @@ nsGenericDOMDataNode::GetCurrentValueAtom()
 
 already_AddRefed<nsITextContent> 
 nsGenericDOMDataNode::CloneContent(PRBool aCloneText,
-                                   nsIDocument *aOwnerDocument)
+                                   nsNodeInfoManager *aNodeInfoManager)
 {
   NS_ERROR("Huh, this shouldn't be called!");
 

@@ -49,9 +49,9 @@ class nsXMLProcessingInstruction : public nsGenericDOMDataNode,
                                    public nsIDOMProcessingInstruction
 {
 public:
-  nsXMLProcessingInstruction(const nsAString& aTarget,
-                             const nsAString& aData,
-                             nsIDocument *aDocument);
+  nsXMLProcessingInstruction(nsNodeInfoManager *aNodeInfoManager,
+                             const nsAString& aTarget,
+                             const nsAString& aData);
   virtual ~nsXMLProcessingInstruction();
 
   // nsISupports

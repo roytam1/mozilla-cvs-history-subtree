@@ -40,6 +40,7 @@
 #include "nsIContent.h"
 class nsString;
 class nsTextFragment;
+class nsNodeInfoManager;
 
 // IID for the nsITextContent interface
 #define NS_ITEXT_CONTENT_IID \
@@ -96,18 +97,16 @@ public:
 
 // XXX These belong elsewhere
 /**
- * There's no need to pass in aOwnerDocument if the node is going to be
- * inserted *immediately* after creation.
+ * aNodeInfoManager must not be null.
  */
 nsresult
-NS_NewTextNode(nsITextContent **aResult, nsIDocument *aOwnerDocument = nsnull);
+NS_NewTextNode(nsITextContent **aResult, nsNodeInfoManager *aNodeInfoManager);
 
 /**
- * There's no need to pass in aOwnerDocument if the node is going to be
- * inserted *immediately* after creation.
+ * aNodeInfoManager must not be null.
  */
 nsresult
-NS_NewCommentNode(nsIContent **aResult, nsIDocument *aOwnerDocument = nsnull);
+NS_NewCommentNode(nsIContent **aResult, nsNodeInfoManager *aNodeInfoManager);
 
 
 #endif /* nsITextContent_h___ */

@@ -46,7 +46,7 @@ class nsCommentNode : public nsGenericDOMDataNode,
                       public nsIDOMComment
 {
 public:
-  nsCommentNode(nsIDocument *aDocument);
+  nsCommentNode(nsNodeInfoManager *aNodeInfoManager);
   virtual ~nsCommentNode();
 
   // nsISupports
@@ -76,24 +76,29 @@ public:
 #endif
 
   virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
-                                                        nsIDocument *aOwnerDocument);
+                                                        nsNodeInfoManager *aNodeInfoManager);
 };
 
 nsresult
-NS_NewCommentNode(nsIContent** aInstancePtrResult, nsIDocument *aOwnerDocument)
+NS_NewCommentNode(nsIContent** aInstancePtrResult,
+                  nsNodeInfoManager *aNodeInfoManager)
 {
+  NS_PRECONDITION(aNodeInfoManager, "Missing nodeinfo manager");
+
   *aInstancePtrResult = nsnull;
 
-  nsCOMPtr<nsIContent> instance = new nsCommentNode(nsnull);
-  NS_ENSURE_TRUE(instance, NS_ERROR_OUT_OF_MEMORY);
+  nsCommentNode *instance = new nsCommentNode(aNodeInfoManager);
+  if (!instance) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
 
-  instance.swap(*aInstancePtrResult);
+  NS_ADDREF(*aInstancePtrResult = instance);
 
   return NS_OK;
 }
 
-nsCommentNode::nsCommentNode(nsIDocument *aDocument)
-  : nsGenericDOMDataNode(aDocument)
+nsCommentNode::nsCommentNode(nsNodeInfoManager *aNodeInfoManager)
+  : nsGenericDOMDataNode(aNodeInfoManager)
 {
 }
 
@@ -164,16 +169,18 @@ nsCommentNode::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsCommentNode::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, GetOwnerDoc());
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE,
+                                                      mNodeInfoManager);
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);
 }
 
 already_AddRefed<nsITextContent>
-nsCommentNode::CloneContent(PRBool aCloneText, nsIDocument *aOwnerDocument)
+nsCommentNode::CloneContent(PRBool aCloneText,
+                            nsNodeInfoManager *aNodeInfoManager)
 {
-  nsCommentNode* it = new nsCommentNode(nsnull);
+  nsCommentNode* it = new nsCommentNode(aNodeInfoManager);
   if (!it)
     return nsnull;
 

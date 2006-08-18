@@ -53,7 +53,8 @@ class nsDOMDocumentType : public nsGenericDOMDataNode,
                           public nsIDOMDocumentType
 {
 public:
-  nsDOMDocumentType(nsIAtom *aName,
+  nsDOMDocumentType(nsNodeInfoManager *aNodeInfoManager,
+                    nsIAtom *aName,
                     nsIDOMNamedNodeMap *aEntities,
                     nsIDOMNamedNodeMap *aNotations,
                     const nsAString& aPublicId,
@@ -85,6 +86,8 @@ protected:
 
 nsresult
 NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
+                      nsNodeInfoManager *aOwnerDoc,
+                      nsIPrincipal *aPrincipal,
                       nsIAtom *aName,
                       nsIDOMNamedNodeMap *aEntities,
                       nsIDOMNamedNodeMap *aNotations,

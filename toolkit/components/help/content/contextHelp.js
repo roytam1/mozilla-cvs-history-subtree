@@ -45,6 +45,7 @@ var helpFileURI;
 # see http://www.mozilla.org/projects/help-viewer/content_packs.html
 function openHelp(topic, contentPack)
 {
+  dump("WWWWWWEEEEEEEEEEE'RRRRRRE HERE\n");
 # helpFileURI is the content pack to use in this function. If contentPack is defined,
 # use that and set the helpFileURI to that value so that it will be the default.
   helpFileURI = contentPack || helpFileURI;

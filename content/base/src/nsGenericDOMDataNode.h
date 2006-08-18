@@ -55,14 +55,14 @@ class nsIDOMText;
 class nsINodeInfo;
 class nsURI;
 
-#define PARENT_BIT_IS_IN_A_HASH ((PtrBits)0x1 << 0)
+#define PARENT_BIT_IS_IN_A_HASH ((PtrBits)0x1 << 1)
 
 class nsGenericDOMDataNode : public nsITextContent
 {
 public:
   NS_DECL_ISUPPORTS
 
-  nsGenericDOMDataNode(nsIDocument *aDocument);
+  nsGenericDOMDataNode(nsNodeInfoManager *aNodeInfoManager);
   virtual ~nsGenericDOMDataNode();
 
   // Implementation for nsIDOMNode
@@ -173,24 +173,17 @@ public:
                               PRBool aNullParent = PR_TRUE);
   PRBool IsInDoc() const
   {
-    return !!mDocument;
+    return mParentPtrBits & PARENT_BIT_INDOCUMENT;
   }
 
   nsIDocument *GetCurrentDoc() const
   {
-    return mDocument;
+    return IsInDoc() ? GetOwnerDoc() : nsnull;
   }
 
   nsIDocument *GetOwnerDoc() const
   {
-    // XXXbz sXBL/XBL2 issue!
-    if (mDocument) {
-      return mDocument;
-    }
-
-    nsIContent *parent = GetParent();
-
-    return parent ? parent->GetOwnerDoc() : nsnull;
+    return mNodeInfoManager->GetDocument();
   }
 
   virtual PRBool IsNativeAnonymous() const;
@@ -257,7 +250,7 @@ public:
   //----------------------------------------
 
   virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
-                                                        nsIDocument *aOwnerDocument);
+                                                        nsNodeInfoManager *aNodeInfoManager);
 
 #ifdef DEBUG
   void ToCString(nsAString& aBuf, PRInt32 aOffset, PRInt32 aLen) const;
@@ -267,6 +260,7 @@ protected:
   nsresult SplitText(PRUint32 aOffset, nsIDOMText** aReturn);
 
   nsTextFragment mText;
+  nsRefPtr<nsNodeInfoManager> mNodeInfoManager;
 
 private:
   void LookupListenerManager(nsIEventListenerManager **aListenerManager) const;
@@ -304,8 +298,6 @@ private:
   {
     return GetIsInAHash() && nsGenericElement::sEventListenerManagersHash.ops;
   }
-
-  nsIDocument *mDocument;
 };
 
 //----------------------------------------------------------------------

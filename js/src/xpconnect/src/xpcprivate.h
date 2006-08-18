@@ -426,13 +426,14 @@ private:
 // returned as function call result values they are not addref'd. Exceptions
 // to this rule are noted explicitly.
 
-class nsXPConnect : public nsIXPConnect,
+class nsXPConnect : public nsIXPConnect_MOZILLA_1_8_BRANCH,
                     public nsSupportsWeakReference
 {
 public:
     // all the interface method declarations...
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECT
+    NS_DECL_NSIXPCONNECT_MOZILLA_1_8_BRANCH
 
     // non-interface implementation
 public:
@@ -2060,6 +2061,7 @@ private:
     JSBool InitTearOffJSObject(XPCCallContext& ccx,
                                 XPCWrappedNativeTearOff* to);
 
+public:
     static nsresult GatherScriptableCreateInfo(
                         nsISupports* obj,
                         nsIClassInfo* classInfo,

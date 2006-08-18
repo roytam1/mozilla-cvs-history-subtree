@@ -51,7 +51,7 @@ class nsXMLStylesheetPI : public nsXMLProcessingInstruction,
                           public nsStyleLinkElement
 {
 public:
-  nsXMLStylesheetPI(const nsAString& aData, nsIDocument *aDocument);
+  nsXMLStylesheetPI(nsNodeInfoManager *aNodeInfoManager, const nsAString& aData);
   virtual ~nsXMLStylesheetPI();
 
   // nsISupports
@@ -92,10 +92,10 @@ NS_IMPL_ADDREF_INHERITED(nsXMLStylesheetPI, nsXMLProcessingInstruction)
 NS_IMPL_RELEASE_INHERITED(nsXMLStylesheetPI, nsXMLProcessingInstruction)
 
 
-nsXMLStylesheetPI::nsXMLStylesheetPI(const nsAString& aData,
-                                     nsIDocument *aDocument) :
-  nsXMLProcessingInstruction(NS_LITERAL_STRING("xml-stylesheet"), aData,
-                             aDocument)
+nsXMLStylesheetPI::nsXMLStylesheetPI(nsNodeInfoManager *aNodeInfoManager,
+                                     const nsAString& aData)
+  : nsXMLProcessingInstruction(aNodeInfoManager, NS_LITERAL_STRING("xml-stylesheet"),
+                               aData)
 {
 }
 
@@ -147,7 +147,7 @@ nsXMLStylesheetPI::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   nsAutoString data;
   GetData(data);
 
-  nsXMLStylesheetPI *pi = new nsXMLStylesheetPI(data, nsnull);
+  nsXMLStylesheetPI *pi = new nsXMLStylesheetPI(mNodeInfoManager, data);
   if (!pi) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -251,17 +251,19 @@ nsXMLStylesheetPI::GetStyleSheetInfo(nsAString& aTitle,
 
 nsresult
 NS_NewXMLStylesheetProcessingInstruction(nsIContent** aInstancePtrResult,
-                                         const nsAString& aData,
-                                         nsIDocument *aOwnerDocument)
+                                         nsNodeInfoManager *aNodeInfoManager,
+                                         const nsAString& aData)
 {
+  NS_PRECONDITION(aNodeInfoManager, "Missing nodeinfo manager");
+
   *aInstancePtrResult = nsnull;
   
-  nsCOMPtr<nsIContent> instance = new nsXMLStylesheetPI(aData, nsnull);
+  nsXMLStylesheetPI *instance = new nsXMLStylesheetPI(aNodeInfoManager, aData);
   if (!instance) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  instance.swap(*aInstancePtrResult);
+  NS_ADDREF(*aInstancePtrResult = instance);
 
   return NS_OK;
 }
