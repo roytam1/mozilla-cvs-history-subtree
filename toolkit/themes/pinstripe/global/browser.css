@@ -341,6 +341,10 @@ tabbrowser > tabbox > tabpanels {
   margin-right: 2px;
 }
 
+.tabs-alltabs-button  > .toolbarbutton-text {
+  display: none;
+}
+
 .tabs-alltabs-button:hover{
   background-image: url("chrome://global/skin/alltabs-box-bkgnd.png");
   background-repeat: no-repeat;
