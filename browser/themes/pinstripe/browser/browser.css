@@ -934,6 +934,7 @@ statusbarpanel#statusbar-display {
 
 #go-button {
   -moz-appearance: toolbarbutton;
+  -moz-padding-end: 5px;
   height: 25px;
 }
 
@@ -965,8 +966,11 @@ statusbarpanel#statusbar-display {
   -moz-image-region: rect(0px, 100px, 25px, 75px);
 }
 
-#go-button > .button-box > .button-text {
-  margin-left: 5px !important;
+toolbar:not([mode="text"]) #go-button,
+toolbar:not([mode="text"]) .search-go-button,
+toolbarpaletteitem:not([place="toolbar"]) #go-button,
+toolbarpaletteitem:not([place="toolbar"]) .search-go-button {
+  -moz-binding: url(chrome://global/content/bindings/toolbarbutton.xml#toolbarbutton-image);
 }
 
 #go-button > .button-box {

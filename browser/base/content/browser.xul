@@ -288,6 +288,7 @@
         </deck>
         <toolbarbutton id="go-button"
                        chromedir="&locale.dir;"
+                       label="&goEndCap.label;"
                        onclick="handleURLBarCommand(event);"
                        ondragover="nsDragAndDrop.dragOver(event, goButtonObserver);"
                        ondragdrop="nsDragAndDrop.drop(event, goButtonObserver);"

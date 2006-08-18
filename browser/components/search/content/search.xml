@@ -94,7 +94,8 @@
           </xul:textbox>
           <xul:hbox class="search-go-button-container">
             <xul:toolbarbutton class="search-go-button"
-                               anonid="search-go-button" />
+                               anonid="search-go-button" 
+                               label="&searchEndCap.label;" />
           </xul:hbox>
         </xul:box>
       </xul:box>

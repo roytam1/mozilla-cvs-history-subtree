@@ -1062,7 +1062,7 @@ statusbarpanel#statusbar-display {
   padding-top: 2px;
   padding-bottom: 2px;
   -moz-padding-start: 0;
-  -moz-padding-end: 0;
+  -moz-padding-end: 5px;
 }
 
 #go-button[chromedir="rtl"] {
@@ -1086,9 +1086,11 @@ statusbarpanel#statusbar-display {
   margin: 0;
 }
 
-#go-button > .toolbarbutton-text {
-  display: -moz-box !important;
-  margin: 0 2px 1px 2px !important;
+toolbar:not([mode="text"]) #go-button,
+toolbar:not([mode="text"]) .search-go-button,
+toolbarpaletteitem:not([place="toolbar"]) #go-button,
+toolbarpaletteitem:not([place="toolbar"]) .search-go-button {
+  -moz-binding: url(chrome://global/content/bindings/toolbarbutton.xml#toolbarbutton-image);
 }
 
 #sidebar {
