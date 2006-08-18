@@ -877,7 +877,7 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 }
 
 #wrapper-urlbar-container #urlbar > .autocomplete-history-dropmarker {
-  visibility: hidden;
+  display: none;
 }
 
 /* ----- PAGE PROXY ICON ----- */
