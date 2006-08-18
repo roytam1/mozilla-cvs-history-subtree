@@ -246,48 +246,6 @@ toolbarpaletteitem[place="toolbar"] .places-toolbar-items {
   -moz-box-orient: vertical;
 }
 
-
-/* affects where the dropmark will appear */
-.toolbarbutton-menubutton-stack {
-  margin: 0px !important;
-  padding: 0px;
-  -moz-box-orient: horizontal;
-}
-
-/* affects where the label will appear when displayed */
-.toolbarbutton-menubutton-stack > .toolbarbutton-menubutton-button {
-  -moz-box-orient: vertical;
-  -moz-box-align: end;
-}
-
-/* this element contains the icon and the label */
-.toolbarbutton-menubutton-button {
-  margin: 0px !important;
-  padding: 0px !important;
-  border: 0px !important;
-}
-
-/* this is the label */
-.toolbarbutton-text {
-    margin: 0px;
-	padding: 0px;
-	float: right !important;
-}
-
-/* this is the icon */
-.toolbarbutton-icon {
-    margin: 0px;
-	padding: 0px;
-}
-
-/* this is the buttons dropmarker */
-.toolbarbutton-menubutton-dropmarker {
-  float: left !important;
-  height: 10px !important;
-}
-
-
-
 toolbarbutton:not([disabled="true"]):hover,
 menubutton:not([disabled="true"]):hover,
 toolbarbutton:not([disabled="true"]):hover:active,
@@ -295,18 +253,22 @@ menubutton:not([disabled="true"]):hover:active {
   color: ButtonText !important;
 }
 
-.toolbarbutton-menubutton-stack,
-.toolbarbutton-menubutton-button,
-.toolbarbutton-menubutton-stack:hover,
-.toolbarbutton-menubutton-button:hover,
-.toolbarbutton-menubutton-stack:hover:active,
-.toolbarbutton-menubutton-button:hover:active {
-  margin: 0px !important;
-  display: -moz-box;
+/* set up extended binding for the back & forward buttons */
+toolbar:not([mode="text"]) #back-button,
+toolbar:not([mode="text"]) #forward-button {
+  -moz-binding: url(chrome://browser/skin/browser.xml#toolbar-menubutton);
 }
 
-#back-button, #forward-button  {
-  -moz-binding: url("chrome://browser/skin/browser.xml#toolbar-menu-button");
+toolbar:not([mode="text"]) #back-button .toolbarbutton-menubutton-button,
+toolbar:not([mode="text"]) #forward-button .toolbarbutton-menubutton-button {
+  -moz-binding: url('chrome://global/content/bindings/toolbarbutton.xml#toolbarbutton-image');
+  margin: 0;
+  padding: 0;
+}
+
+toolbar:not([mode="text"]) #back-button .toolbarbutton-menubutton-dropmarker,
+toolbar:not([mode="text"]) #forward-button .toolbarbutton-menubutton-dropmarker {
+  margin-top: 1px;
 }
 
 /* ----- DEFAULT PRIMARY TOOLBAR BUTTONS ----- */	
@@ -332,13 +294,12 @@ menubutton:not([disabled="true"]):hover:active {
 /* ----- DEFAULT BACK BUTTON DROPMARKER ----- */	
 
 #back-button .toolbarbutton-menubutton-dropmarker {
-  margin-top: 3px;
   list-style-image: url("chrome://browser/skin/dropmark-nav.png");
   -moz-image-region: rect(0px, 14px, 24px, 0px);
 }
 
 #back-button:hover .toolbarbutton-menubutton-dropmarker, 
-#back-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
+#back-button[buttonover="true"]  .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(24px, 14px, 48px, 0px);
 }
 
@@ -348,7 +309,7 @@ menubutton:not([disabled="true"]):hover:active {
 }
 
 #back-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-#back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
+#back-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(72px, 14px, 96px, 0px);
 }
 
@@ -374,12 +335,11 @@ menubutton:not([disabled="true"]):hover:active {
 /* ----- DEFAULT FORWARD BUTTON DROPMARKER ----- */	
 
 #forward-button .toolbarbutton-menubutton-dropmarker {
-  margin-top: 3px;
   list-style-image: url("chrome://browser/skin/dropmark-nav.png");
   -moz-image-region: rect(0px, 14px, 24px, 0px);
 }
 #forward-button:hover .toolbarbutton-menubutton-dropmarker, 
-#forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
+#forward-button[buttonover="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(24px, 14px, 48px, 0px);
 }
 #forward-button[disabled="true"] .toolbarbutton-menubutton-dropmarker {
@@ -387,7 +347,7 @@ menubutton:not([disabled="true"]):hover:active {
   -moz-image-region: rect(48px, 14px, 72px, 0px) !important;
 }
 #forward-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-#forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
+#forward-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(72px, 14px, 96px, 0px);
 }
 
@@ -601,13 +561,12 @@ toolbar[iconsize="small"] #back-button[buttondown="true"] {
 /* ----- SMALL BACK BUTTON DROPMARKER ----- */
 
 toolbar[iconsize="small"] #back-button .toolbarbutton-menubutton-dropmarker {
-  margin-top: 7px;
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
   -moz-image-region: rect(0px, 14px, 16px, 0px);
 }
 
 toolbar[iconsize="small"] #back-button:hover .toolbarbutton-menubutton-dropmarker, 
-toolbar[iconsize="small"] #back-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
+toolbar[iconsize="small"] #back-button[buttonover="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(16px, 14px, 32px, 0px);
 }
 
@@ -617,7 +576,7 @@ toolbar[iconsize="small"] #back-button[disabled="true"] .toolbarbutton-menubutto
 }
 
 toolbar[iconsize="small"] #back-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-toolbar[iconsize="small"] #back-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
+toolbar[iconsize="small"] #back-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(48px, 14px, 64px, 0px);
 }
 
@@ -639,14 +598,13 @@ toolbar[iconsize="small"] #forward-button[buttondown="true"] {
 
 /* ----- SMALL FORWARD BUTTON DROPMARKER ----- */
 
-toolbar[iconsize="small"] #forward-button .toolbarbutton-menubutton-dropmarker {
-  margin-top: 7px;
+toolbar[iconsize="small"] #forward-button .toolbarbutton-menubutton-dropmarker {  
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
   -moz-image-region: rect(0px, 14px, 16px, 0px);
 }
 
 toolbar[iconsize="small"] #forward-button:hover .toolbarbutton-menubutton-dropmarker, 
-toolbar[iconsize="small"] #forward-button[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
+toolbar[iconsize="small"] #forward-button[buttonover="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(16px, 14px, 32px, 0px);
 }
 
@@ -656,7 +614,7 @@ toolbar[iconsize="small"] #forward-button[disabled="true"] .toolbarbutton-menubu
 }
 
 toolbar[iconsize="small"] #forward-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-toolbar[iconsize="small"] #forward-button[buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
+toolbar[iconsize="small"] #forward-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(48px, 14px, 64px, 0px);
 }
 
