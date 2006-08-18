@@ -50,9 +50,6 @@
   <!-- ADVANCED PANE --> 
 
     <hbox class="panel-container" flex="1" id="advanced-pane"
-          accessfocus="useDiskCache"
-          accessnextrule="privacy-pane"
-          accessprevrule="general-pane"
           collapsed="true"  >
      
         <groupbox flex="1" class="box-floatoptions scrolling" >
@@ -100,7 +97,7 @@
                                <row>
 
                                     <label value="&cacheSize.label;" />
-                                    <textbox id="cacheSizeField" size="5" tabindex="32"
+                                    <textbox id="cacheSizeField" size="5" 
                                              onfocus="" onblur=""
                                              style="margin:3px ! important;" 
                                              preference="browser.cache.disk.capacity" prefuitype="int" 
@@ -121,7 +118,7 @@
 
                                 <vbox class="box-prefpadding">
 
-	                		    <checkbox tabindex="35" id="enablePreFetching"
+	                		    <checkbox  id="enablePreFetching"
 	                              label="&enablePreFetching.label;"
 	                              preference="network.prefetch-next" 
 	                              onclick="syncPref(this)" />
@@ -134,15 +131,15 @@
 
                                 <vbox class="box-prefpadding">
 
-	                    <checkbox tabindex="37" id="skey"
+	                    <checkbox  id="skey"
 	                              label="&useSWKeyboard.label;"
 	                              preference="skey.enabled"
 	                              onclick="syncPref(this)" />
 	                              
-	                    <checkbox tabindex="39"
+	                    <checkbox 
 	                              id="dumpJS"
 	                              label="&dumpJSConsole.label;"
-	                              preference="config.wince.dumpJSConsole" accessrule="advanced-pane"
+	                              preference="config.wince.dumpJSConsole" 
 	                              onclick="syncPref(this)" />
 
 					</vbox>
