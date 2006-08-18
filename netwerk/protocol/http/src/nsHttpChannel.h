@@ -147,6 +147,7 @@ private:
 
     nsresult AsyncCall(nsAsyncCallback funcPtr);
 
+    PRBool   RequestIsConditional();
     nsresult Connect(PRBool firstTime = PR_TRUE);
     nsresult AsyncAbort(nsresult status);
     nsresult SetupTransaction();
