@@ -50,9 +50,6 @@
 
     <hbox id="connection-pane"
           class="panel-container"
-          accessfocus="UseProxy"
-          accessnextrule="pref-bar"
-          accessprevrule="privacy-pane"
           flex="1"
           collapsed="true"  >
           
@@ -68,7 +65,7 @@
  
                 <vbox class="box-prefpadding">
 
-                <checkbox id="UseProxy" tabindex="50"
+                <checkbox id="UseProxy"
                           label="&useproxyCheckbox.label;"
                           preference="network.proxy.type" 
                           onclick="syncPref(this)" 
@@ -87,7 +84,7 @@
                              <label value="&proxyPortCaption.label;" />
                            </row>
                            <row>
-                             <textbox onchange="syncPref(this)"  tabindex="51"
+                             <textbox onchange="syncPref(this)" 
                                  flex="1" 
                                  style="margin:3px ! important;" 
                                  id="networkProxyHTTP"
@@ -95,10 +92,10 @@
                                  />
                                  
                              <textbox onchange="syncPref(this)" 
-                                 id="networkProxyHTTP_Port"  tabindex="52"
+                                 id="networkProxyHTTP_Port" 
                                  size="5"  
                                  style="margin:3px ! important;"  
-                                 preference="network.proxy.http_port" accessrule="connection-pane"
+                                 preference="network.proxy.http_port" 
                                  />    
 
                            </row>
@@ -113,7 +110,7 @@
 
                   <vbox class="box-prefpadding">
 
-                    <box id="dontAskForLaunch" tabindex="53"
+                    <box id="dontAskForLaunch" 
 	                              preference="browser.download.progressDnlgDialog.dontAskForLaunch" 
 	                              onclick="syncPref(this);" />
 
@@ -124,7 +121,7 @@
                                  preference="browser.download.dir"
                                  />          
 
-                      <menulist flex="1"  tabindex="54" label="&setSaveDirectory.label;" hidden="true" id="menuDownloadOptions" ignorekeys="true" >
+                      <menulist flex="1"  label="&setSaveDirectory.label;" hidden="true" id="menuDownloadOptions" ignorekeys="true" >
                         <menupopup id="downloadOptionsList">
 					<menuitem label="&downloadPrompt.label;" id="downloadPromptOption" oncommand="downloadSelectPrompt()" />
                         </menupopup>

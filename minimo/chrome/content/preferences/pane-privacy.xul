@@ -52,9 +52,6 @@
     <hbox id="privacy-pane"
           class="panel-container"  
           flex="1"
-          accessfocus="privacySanitize"
-          accessnextrule="connection-pane"
-          accessprevrule="advanced-pane"
           collapsed="true"  >
           
         <groupbox flex="1" class="box-floatoptions scrolling" >
@@ -64,7 +61,7 @@
                     <vbox flex="1" style="padding:4px ! important">
                         <groupbox class='box-prefgroupitem' id='sanitize-box'>
 			            <box class="box-prefpadding">
-      			          <button id="privacySanitize" tabindex="40"
+      			          <button id="privacySanitize" 
 			                        class='box-prefgroupitem'
 			                        label="&sanitizeButton.label;" 
 			                        oncommand="sanitizeAll();"/>
@@ -72,9 +69,9 @@
 				</groupbox>
             	      <groupbox class='box-prefgroupitem' id='bookmarks-box'>
 			            <box class="box-prefpadding">
-      			          <button id="bookmarksSanitize" tabindex="45"
+      			          <button id="bookmarksSanitize" 
 			                        class='box-prefgroupitem'
-			                        label="&sanitizeBookmarks.label;" accessrule="privacy-pane"
+			                        label="&sanitizeBookmarks.label;" 
 			                        oncommand="sanitizeBookmarks();"/>
 			            </box>
 				</groupbox>
