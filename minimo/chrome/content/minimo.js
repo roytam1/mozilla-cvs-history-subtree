@@ -2007,7 +2007,7 @@ function spinCreate() {
     SpinOut:function () { }
   }
 
-  gKeySpinCurrent = spinRightMenu;
+  gKeySpinCurrent = spinHomebaseMenu;
   spinLeftMenu.next=spinUrlBar;
   spinUrlBar.next=spinRightMenu;
   spinRightMenu.next=spinHomebaseMenu;
