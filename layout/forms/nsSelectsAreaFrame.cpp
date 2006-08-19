@@ -236,7 +236,14 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
                            const nsHTMLReflowState& aReflowState, 
                            nsReflowStatus&          aStatus)
 {
-  nscoord oldHeight = GetSize().height;
+  // See similar logic in nsListControlFrame::Reflow and
+  // nsListControlFrame::ReflowAsDropdown.  We need to match it here.
+  nscoord oldHeight;
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
+    oldHeight = GetSize().height;
+  } else {
+    oldHeight = NS_UNCONSTRAINEDSIZE;
+  }
   
   nsresult rv = nsAreaFrame::Reflow(aPresContext, aDesiredSize,
                                     aReflowState, aStatus);

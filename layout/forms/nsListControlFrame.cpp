@@ -599,7 +599,8 @@ nsListControlFrame::Reflow(nsPresContext*           aPresContext,
   nscoord heightOfARow = HeightOfARow();
 
   // Now see whether we need a second pass.  If the height of a row has not
-  // changed, we don't.
+  // changed, we don't.  See similar logic in nsSelectsAreaFrame::Reflow.  We
+  // need to match it here.
   if (heightOfARow == oldHeightOfARow) {
     // All done.  No need to do more reflow.
     NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
@@ -648,11 +649,22 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
 
   nsHTMLReflowState state(aReflowState);
 
+  nscoord oldVisibleHeight;
   if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
     // When not doing an initial reflow, and when the height is auto, start off
-    // with our computed height set to what we'd expect our height to be.
-    state.mComputedHeight = GetScrolledFrame()->GetSize().height;
+    // with our computed height set to what we'd expect our height to be.  Note
+    // that we basically assume that the padding and border of a comboxbox
+    // dropdown doesn't change so that it's safe to subtract it off here.
+    // XXXbz what about scrollbars?  Do we need to do something special if we
+    // have a horizontal scrollbar here?
+    state.mComputedHeight =
+      GetSize().height - state.mComputedBorderPadding.TopBottom();
     state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
+    oldVisibleHeight = GetScrolledFrame()->GetSize().height;
+  } else {
+    // Set oldVisibleHeight to something that will never test true against a
+    // real height.
+    oldVisibleHeight = NS_UNCONSTRAINEDSIZE;
   }
 
   nsresult rv = nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize,
@@ -660,7 +672,7 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (!mMightNeedSecondPass) {
-    NS_ASSERTION(state.mComputedHeight == GetScrolledFrame()->GetSize().height,
+    NS_ASSERTION(oldVisibleHeight == GetScrolledFrame()->GetSize().height,
                  "How did our kid's height change if nothing was dirty?");
     NS_ASSERTION(HeightOfARow() == oldHeightOfARow,
                  "How did our height of a row change if nothing was dirty?");
@@ -675,13 +687,16 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
   nscoord heightOfARow = HeightOfARow();
 
   // Now see whether we need a second pass.  If the height of a row has not
-  // changed and neither has the height of our scrolled frame, we don't.
-  if (visibleHeight == state.mComputedHeight &&
+  // changed and neither has the height of our scrolled frame, we don't.  See
+  // similar logic in nsSelectsAreaFrame::Reflow.  We need to match it here.
+  if (visibleHeight == oldVisibleHeight &&
       heightOfARow == oldHeightOfARow) {
     // All done.  No need to do more reflow.
     NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
                  "Shouldn't be suppressing if total height has not changed!");
-    return rv;    
+    NS_ASSERTION(!(GetStateBits() & NS_FRAME_FIRST_REFLOW),
+                 "How is the visible height unconstrained?");
+    return rv;
   }
 
   NS_ASSERTION(IsScrollbarUpdateSuppressed(),
