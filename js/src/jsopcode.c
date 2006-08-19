@@ -475,7 +475,7 @@ QuoteString(Sprinter *sp, JSString *str, jschar quote)
     if (quote && Sprint(sp, "%c", (char)quote) < 0)
         return NULL;
 
-    /* 
+    /*
      * If we haven't Sprint'd anything yet, Sprint an empty string so that
      * the OFF2STR below gives a valid result.
      */
@@ -890,6 +890,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #define inXML JS_FALSE
 #endif
     jsval val;
+    int stackDummy;
     static const char catch_cookie[] = "/*CATCH*/";
     static const char with_cookie[] = "/*WITH*/";
 
@@ -938,6 +939,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     JS_END_MACRO
 
     cx = ss->sprinter.context;
+    if (!JS_CHECK_STACK_SIZE(cx, stackDummy)) {
+        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_OVER_RECURSED);
+        return JS_FALSE;
+    }
+
     jp = ss->printer;
     endpc = pc + nb;
     forelem_tail = forelem_done = NULL;
@@ -2544,7 +2550,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #if JS_HAS_XML_SUPPORT
               case JSOP_STARTXML:
               case JSOP_STARTXMLEXPR:
-                inXML = op == JSOP_STARTXML; 
+                inXML = op == JSOP_STARTXML;
                 todo = -2;
                 break;
 
@@ -2619,7 +2625,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_XMLELTEXPR:
               case JSOP_XMLTAGEXPR:
                 todo = Sprint(&ss->sprinter, "{%s}", POP_STR());
-                inXML = JS_TRUE; 
+                inXML = JS_TRUE;
                 /* If we're an attribute value, we shouldn't quote this. */
                 quoteAttr = JS_FALSE;
                 break;
