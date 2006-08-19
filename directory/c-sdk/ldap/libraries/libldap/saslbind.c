@@ -825,8 +825,8 @@ ldap_parse_sasl_bind_result(
 {
 	BerElement	ber;
 	int		rc, err;
-	long		along;
-	unsigned long	len;
+    ber_int_t	along;
+	ber_len_t	len;
 	char		*m, *e;
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "ldap_parse_sasl_bind_result\n", 0, 0, 0 );

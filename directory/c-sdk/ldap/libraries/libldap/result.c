@@ -547,8 +547,9 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 {
 	BerElement	*ber;
 	LDAPMessage	*new, *l, *prev, *chainprev, *tmp;
-	long		id;
-	unsigned long	tag, len;
+	ber_int_t	id;
+	ber_tag_t	tag;
+	ber_len_t	len;
 	int		terrno, lderr, foundit = 0;
 	LDAPRequest	*lr;
 	int		rc, has_parent, message_can_be_returned;
@@ -1037,8 +1038,8 @@ check_for_refs( LDAP *ld, LDAPRequest *lr, BerElement *ber,
 static int
 build_result_ber( LDAP *ld, BerElement **berp, LDAPRequest *lr )
 {
-	unsigned long	len;
-	long		along;
+	ber_len_t	len;
+	ber_int_t	along;
 	BerElement	*ber;
 	int		err;
 

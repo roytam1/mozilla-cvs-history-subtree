@@ -145,8 +145,9 @@ int
 nsldapi_get_controls( BerElement *ber, LDAPControl ***controlsp )
 {
 	LDAPControl		*newctrl;
-	unsigned long		tag, len;
-	int			rc, maxcontrols, curcontrols;
+	ber_tag_t		tag;
+	ber_len_t		len;
+	int				rc, maxcontrols, curcontrols;
 	char			*last;
 
 	/*

@@ -98,10 +98,10 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
     char **prevdnp, int *chgnumpresentp, long *chgnump )
 {
     BerElement		*ber;
-    int			rc, i, changetype;
-    unsigned long	len;
-    long		along;
-    char		*previousdn;
+    int				rc, i, changetype;
+    ber_len_t		len;
+    ber_int_t		along;
+    char			*previousdn;
 
     if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
 	return( LDAP_PARAM_ERROR );
@@ -169,7 +169,7 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
 
     if ( chgnump != NULL ) {	/* check for optional changenumber */
 	if ( ber_peek_tag( ber, &len ) == LBER_INTEGER
-		&& ber_get_int( ber, chgnump ) != LBER_ERROR ) {
+		&& ber_get_int( ber, (int *)chgnump ) != LBER_ERROR ) {
 	    if ( chgnumpresentp != NULL ) {
 		*chgnumpresentp = 1;
 	    }
