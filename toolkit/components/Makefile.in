@@ -60,6 +60,7 @@ DIRS += \
 	printing \
 	viewsource \
 	viewconfig \
+	urlformatter \
 	$(NULL)
 
 ifdef MOZ_THUNDERBIRD
