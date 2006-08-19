@@ -412,7 +412,7 @@ interface nsIDocShell : nsISupports
   void historyPurged(in long numEntries);
 };
 
-[scriptable, uuid(b1545c8f-d1ef-456b-804d-7857ef23d145)]
+[scriptable, uuid(45988A14-B240-4D07-AE64-50ECCA26E6D8)]
 interface nsIDocShell_MOZILLA_1_8_BRANCH : nsISupports
 {
   /*
@@ -421,7 +421,7 @@ interface nsIDocShell_MOZILLA_1_8_BRANCH : nsISupports
    *
    * @param domain the domain of the storage object to retrieve
    */
-  nsIDOMStorage getSessionStorageForDomain(in ACString aDomain);
+  nsIDOMStorage getSessionStorageForURI(in nsIURI uri);
 
   /*
    * Add a WebApps session storage object to the docshell.
