@@ -12,6 +12,8 @@
   "Subscribe Now">
 <!ENTITY subscribeUsing
   "Subscribe to this feed using ">
+<!ENTITY feedLiveBookmarks
+  "Live Bookmarks">
 <!ENTITY error.title
   "Error Processing Feed">
 <!ENTITY error.message
