@@ -1249,16 +1249,16 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
     if (mProfileChangeFailed)
       return NS_ERROR_ABORT;
 
-    nsCOMPtr<nsICategoryManager> catman = 
+    nsCOMPtr<nsICategoryManager> catman =
              do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
 
-    if(NS_SUCCEEDED(rv) && catman) 
+    if(NS_SUCCEEDED(rv) && catman)
     {
         nsCOMPtr<nsISimpleEnumerator> enumItem;
         rv = catman->EnumerateCategory(NS_PROFILE_STARTUP_CATEGORY, getter_AddRefs(enumItem));
-        if(NS_SUCCEEDED(rv) && enumItem) 
+        if(NS_SUCCEEDED(rv) && enumItem)
         {
-           while (PR_TRUE) 
+           while (PR_TRUE)
            {
                nsCOMPtr<nsISupportsCString> contractid;
 
@@ -1270,7 +1270,7 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
         
                nsCOMPtr <nsIProfileStartupListener> listener = do_GetService(contractidString.get(), &rv);
         
-               if (listener) 
+               if (listener)
                    listener->OnProfileStartup(aCurrentProfile);
            }
         }
@@ -1286,7 +1286,7 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
     PRBool prefs_converted = PR_FALSE;
     (void)prefBranch->GetBoolPref("prefs.converted-to-utf8", &prefs_converted);
 
-    if (!prefs_converted) 
+    if (!prefs_converted)
     {
         nsCOMPtr <nsIPrefConverter> pPrefConverter = do_GetService(kPrefConverterCID, &rv);
         if (!pPrefConverter) return NS_ERROR_FAILURE;
