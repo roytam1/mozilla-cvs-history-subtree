@@ -169,7 +169,8 @@ NS_NewListControlFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
 nsListControlFrame::nsListControlFrame(
   nsIPresShell* aShell, nsIDocument* aDocument, nsStyleContext* aContext)
   : nsHTMLScrollFrame(aShell, aContext, PR_FALSE),
-    mMightNeedSecondPass(PR_FALSE)
+    mMightNeedSecondPass(PR_FALSE),
+    mLastDropdownComputedHeight(NS_UNCONSTRAINEDSIZE)
 {
   mComboboxFrame      = nsnull;
   mChangesSinceDragStart = PR_FALSE;
@@ -651,15 +652,12 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
 
   nscoord oldVisibleHeight;
   if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
+    NS_ASSERTION(mLastDropdownComputedHeight != NS_UNCONSTRAINEDSIZE,
+                 "Why do we not have a height set?");
+    
     // When not doing an initial reflow, and when the height is auto, start off
-    // with our computed height set to what we'd expect our height to be.  Note
-    // that we basically assume that the padding and border of a comboxbox
-    // dropdown doesn't change so that it's safe to subtract it off here.
-    // XXXbz what about scrollbars?  Do we need to do something special if we
-    // have a horizontal scrollbar here?
-    state.mComputedHeight =
-      GetSize().height - state.mComputedBorderPadding.TopBottom();
-    state.ApplyMinMaxConstraints(nsnull, &state.mComputedHeight);
+    // with our computed height set to what we'd expect our height to be.
+    state.mComputedHeight = mLastDropdownComputedHeight;
     oldVisibleHeight = GetScrolledFrame()->GetSize().height;
   } else {
     // Set oldVisibleHeight to something that will never test true against a
@@ -678,6 +676,8 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
                  "How did our height of a row change if nothing was dirty?");
     NS_ASSERTION(!IsScrollbarUpdateSuppressed(),
                  "Shouldn't be suppressing if we don't need a second pass!");
+    NS_ASSERTION(!(GetStateBits() & NS_FRAME_FIRST_REFLOW),
+                 "How can we avoid a second pass during first reflow?");
     return rv;
   }
 
@@ -696,6 +696,8 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
                  "Shouldn't be suppressing if total height has not changed!");
     NS_ASSERTION(!(GetStateBits() & NS_FRAME_FIRST_REFLOW),
                  "How is the visible height unconstrained?");
+    NS_ASSERTION(!(GetStateBits() & NS_FRAME_FIRST_REFLOW),
+                 "How can we avoid a second pass during first reflow?");
     return rv;
   }
 
@@ -755,6 +757,8 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
     // Looks like we have no options.  Just size us to a single row height.
     state.mComputedHeight = heightOfARow;
   }
+
+  mLastDropdownComputedHeight = state.mComputedHeight;
 
   nsHTMLScrollFrame::WillReflow(aPresContext);
   return nsHTMLScrollFrame::Reflow(aPresContext, aDesiredSize, state, aStatus);

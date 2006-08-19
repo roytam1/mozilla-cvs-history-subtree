@@ -323,6 +323,11 @@ protected:
   // pass.  This only happens for auto heights.
   PRPackedBool mMightNeedSecondPass:1;
 
+  // The last computed height we reflowed at if we're a combobox dropdown.
+  // XXXbz should we be using a subclass here?  Or just not worry
+  // about the extra member on listboxes?
+  nscoord mLastDropdownComputedHeight;
+
   nsRefPtr<nsListEventListener> mEventListener;
 
   static nsListControlFrame * mFocused;
