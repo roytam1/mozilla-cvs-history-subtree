@@ -2400,8 +2400,7 @@ function StatusbarViewPopupManager() {
   catch(ex) { }
   
   // open whitelist with site prefilled to unblock
-  window.openDialog("chrome://communicator/content/permissions/permissionsManager.xul", "",
-                      "chrome,resizable=yes", hostPort);
+  viewPopups(hostPort);
 }
 
 function popupBlockerMenuShowing(event) {
