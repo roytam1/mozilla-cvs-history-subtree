@@ -36,9 +36,12 @@
 }
 
 .tabbrowser-tab[selected="true"] > .tab-image-middle {
+  -moz-padding-start: 1px;
+}
+
+.tabbrowser-tab[selected="true"] > * {
   padding-bottom: 1px;
   padding-top: 0;
-  -moz-padding-start: 1px;
   margin-bottom: 1px;
 }
 
