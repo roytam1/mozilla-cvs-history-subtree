@@ -944,6 +944,7 @@
         <parameter name="aReferrerURI"/>
         <parameter name="aCharset"/>
         <parameter name="aFocusNewTab"/>
+        <parameter name="aFlags"/>
         <body>
           <![CDATA[
             this._browsers = null; // invalidate cache
@@ -1004,7 +1005,7 @@
               // the document successfully loads
               b.userTypedValue = aURI;
 
-              b.loadURI(aURI, aReferrerURI, aCharset);
+              b.loadURIWithFlags(aURI, aFlags, aReferrerURI, aCharset);
             }
 
             if (aFocusNewTab) {
