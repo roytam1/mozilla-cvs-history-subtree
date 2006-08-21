@@ -753,9 +753,12 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
     // Note: no need to apply min/max constraints, since we have no such
     // rules applied to the combobox dropdown.
     // XXXbz this is ending up too big!!  Figure out why.
-  } else  if (visibleHeight == 0) {
+  } else if (visibleHeight == 0) {
     // Looks like we have no options.  Just size us to a single row height.
     state.mComputedHeight = heightOfARow;
+  } else {
+    // Not too big, not too small.  Just use it!
+    state.mComputedHeight = NS_UNCONSTRAINEDSIZE;
   }
 
   // Note: At this point, state.mComputedHeight can be NS_UNCONSTRAINEDSIZE in
