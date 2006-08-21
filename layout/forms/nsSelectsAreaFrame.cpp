@@ -236,13 +236,24 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
                            const nsHTMLReflowState& aReflowState, 
                            nsReflowStatus&          aStatus)
 {
+  nsListControlFrame* list = GetEnclosingListFrame(this);
+  NS_ASSERTION(list,
+               "Must have an nsListControlFrame!  Frame constructor is "
+               "broken");
+  
+  PRBool isInDropdownMode = list->IsInDropDownMode();
+  
   // See similar logic in nsListControlFrame::Reflow and
   // nsListControlFrame::ReflowAsDropdown.  We need to match it here.
   nscoord oldHeight;
-  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
-    oldHeight = GetSize().height;
-  } else {
-    oldHeight = NS_UNCONSTRAINEDSIZE;
+  if (isInDropdownMode) {
+    // Store the height now in case it changes during
+    // nsAreaFrame::Reflow for some odd reason.
+    if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
+      oldHeight = GetSize().height;
+    } else {
+      oldHeight = NS_UNCONSTRAINEDSIZE;
+    }
   }
   
   nsresult rv = nsAreaFrame::Reflow(aPresContext, aDesiredSize,
@@ -251,15 +262,16 @@ nsSelectsAreaFrame::Reflow(nsPresContext*           aPresContext,
 
   // Check whether we need to suppress scrolbar updates.  We want to do that if
   // we're in a possible first pass and our height of a row has changed.
-  nsListControlFrame* list = GetEnclosingListFrame(this);
-  if (NS_LIKELY(list != nsnull)) {
-    if (list->MightNeedSecondPass()) {
-      nscoord newHeightOfARow = list->CalcHeightOfARow();
-      if (newHeightOfARow != mHeightOfARow ||
-          (list->IsInDropDownMode() && oldHeight != GetSize().height)) {
-        mHeightOfARow = newHeightOfARow;
-        list->SetSuppressScrollbarUpdate(PR_TRUE);
-      }
+  if (list->MightNeedSecondPass()) {
+    nscoord newHeightOfARow = list->CalcHeightOfARow();
+    // We'll need a second pass if our height of a row changed.  For
+    // comboboxes, we'll also need it if our height changed.  If we're going
+    // to do a second pass, suppress scrollbar updates for this pass.
+    if (newHeightOfARow != mHeightOfARow ||
+        (isInDropdownMode && (oldHeight != aDesiredSize.height ||
+                              oldHeight != GetSize().height))) {
+      mHeightOfARow = newHeightOfARow;
+      list->SetSuppressScrollbarUpdate(PR_TRUE);
     }
   }
 
