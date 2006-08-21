@@ -667,17 +667,17 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
                                     aStatus);
   NS_ENSURE_SUCCESS(rv, rv);
 
+  // Now set the correct width and height on our button.  The width we need to
+  // set always, the height only if we had an auto height.
+  nsRect buttonRect = mButtonFrame->GetRect();
   // If we have a non-intrinsic computed height, our kids should have sized
   // themselves properly on their own.
   if (aReflowState.mComputedHeight == NS_INTRINSICSIZE) {
     // The display frame is going to be the right height and width at this
     // point. Use its height as the button height.
-    nsRect buttonRect = mButtonFrame->GetRect();
     nsRect displayRect = mDisplayFrame->GetRect();
     buttonRect.height = displayRect.height;
     buttonRect.y = displayRect.y;
-
-    mButtonFrame->SetRect(buttonRect);
   }
 #ifdef DEBUG
   else {
@@ -686,6 +686,9 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
                  "Different heights?");
   }
 #endif
+  
+  buttonRect.width = buttonWidth;
+  mButtonFrame->SetRect(buttonRect);
   
   return rv;
 }
