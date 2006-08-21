@@ -652,11 +652,11 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
 
   nscoord oldVisibleHeight;
   if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
-    NS_ASSERTION(mLastDropdownComputedHeight != NS_UNCONSTRAINEDSIZE,
-                 "Why do we not have a height set?");
-    
     // When not doing an initial reflow, and when the height is auto, start off
     // with our computed height set to what we'd expect our height to be.
+    // Note: At this point, mLastDropdownComputedHeight can be
+    // NS_UNCONSTRAINEDSIZE in cases when last time we didn't have to constrain
+    // the height.  That's fine; just do the same thing as last time.
     state.mComputedHeight = mLastDropdownComputedHeight;
     oldVisibleHeight = GetScrolledFrame()->GetSize().height;
   } else {
@@ -758,6 +758,9 @@ nsListControlFrame::ReflowAsDropdown(nsPresContext*           aPresContext,
     state.mComputedHeight = heightOfARow;
   }
 
+  // Note: At this point, state.mComputedHeight can be NS_UNCONSTRAINEDSIZE in
+  // cases when there were some options, but not too many (so no scrollbar was
+  // needed).  That's fine; just store that.
   mLastDropdownComputedHeight = state.mComputedHeight;
 
   nsHTMLScrollFrame::WillReflow(aPresContext);
