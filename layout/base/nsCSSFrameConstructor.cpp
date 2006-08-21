@@ -3464,12 +3464,7 @@ nsCSSFrameConstructor::AdjustParentFrame(nsIContent* aChildContent,
       (!IsTableRelated(aChildDisplay->mDisplay, PR_TRUE) ||
        // Also need to create a pseudo-parent if the child is going to end up
        // with a frame based on something other than display.
-       IsSpecialContent(aChildContent, aTag, aNameSpaceID)) &&
-      // XXXbz evil hack for HTML forms.... see similar in
-      // nsCSSFrameConstructor::TableProcessChild.  It should just go away.
-      (!aChildContent->IsContentOfType(nsIContent::eHTML) ||
-       !aChildContent->GetNodeInfo()->Equals(nsHTMLAtoms::form,
-                                             kNameSpaceID_None))) {
+       IsSpecialContent(aChildContent, aTag, aNameSpaceID))) {
     nsTableCreator tableCreator(aState.mPresShell);
     nsresult rv = GetPseudoCellFrame(tableCreator, aState, *aParentFrame);
     if (NS_FAILED(rv)) {
@@ -4229,33 +4224,8 @@ nsCSSFrameConstructor::TableProcessChild(nsFrameConstructorState& aState,
 
   default:
     {
-
-      // if <form>'s parent is <tr>/<table>/<tbody>/<thead>/<tfoot> in html,
-      // NOT create pseudoframe for it.
-      // see bug 159359
-      nsINodeInfo *childNodeInfo = aChildContent->GetNodeInfo();
-      // Sometimes aChildContent is a #text node.  In those cases it
-      // does not have a nodeinfo, and in those cases we want to
-      // construct a foreign frame for it in any case.  So we can just
-      // null-check the nodeinfo here.
-      NS_ASSERTION(childNodeInfo ||
-                   aChildContent->IsContentOfType(nsIContent::eTEXT),
-                   "Non-#text nodes should have a nodeinfo here!");
-      if (aChildContent->IsContentOfType(nsIContent::eHTML) &&
-          childNodeInfo->Equals(nsHTMLAtoms::form, kNameSpaceID_None) &&
-          aParentContent->IsContentOfType(nsIContent::eHTML)) {
-        nsINodeInfo *parentNodeInfo = aParentContent->GetNodeInfo();
-
-        if (parentNodeInfo->Equals(nsHTMLAtoms::table) ||
-            parentNodeInfo->Equals(nsHTMLAtoms::tr)    ||
-            parentNodeInfo->Equals(nsHTMLAtoms::tbody) ||
-            parentNodeInfo->Equals(nsHTMLAtoms::thead) ||
-            parentNodeInfo->Equals(nsHTMLAtoms::tfoot)) {
-          break;
-        }
-      }
-
-      // ConstructTableForeignFrame puts the frame in the right child list and all that
+      // ConstructTableForeignFrame puts the frame in the right child list and
+      // all that
       return ConstructTableForeignFrame(aState, aChildContent, aParentFrame,
                                         childStyleContext, aTableCreator, 
                                         aChildItems);

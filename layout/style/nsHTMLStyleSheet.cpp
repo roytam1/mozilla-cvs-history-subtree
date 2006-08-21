@@ -85,6 +85,28 @@ nsHTMLStyleSheet::HTMLColorRule::List(FILE* out, PRInt32 aIndent) const
 }
 #endif
 
+
+NS_IMPL_ISUPPORTS1(nsHTMLStyleSheet::TableFormRule, nsIStyleRule)
+
+NS_IMETHODIMP
+nsHTMLStyleSheet::TableFormRule::MapRuleInfoInto(nsRuleData* aRuleData)
+{
+  if (aRuleData->mSID == eStyleStruct_Display &&
+      aRuleData->mDisplayData->mDisplay.GetUnit() == eCSSUnit_Null) {
+    nsCSSValue none(NS_STYLE_DISPLAY_NONE, eCSSUnit_Enumerated);
+    aRuleData->mDisplayData->mDisplay = none;
+  }
+  return NS_OK;
+}
+
+#ifdef DEBUG
+NS_IMETHODIMP
+nsHTMLStyleSheet::TableFormRule::List(FILE* out, PRInt32 aIndent) const
+{
+  return NS_OK;
+}
+#endif
+
 NS_IMPL_ISUPPORTS1(nsHTMLStyleSheet::GenericTableRule, nsIStyleRule)
 
 NS_IMETHODIMP
@@ -325,7 +347,8 @@ nsHTMLStyleSheet::nsHTMLStyleSheet(void)
     mLinkRule(nsnull),
     mVisitedRule(nsnull),
     mActiveRule(nsnull),
-    mDocumentColorRule(nsnull)
+    mDocumentColorRule(nsnull),
+    mTableFormRule(nsnull)
 {
   mMappedAttrTable.ops = nsnull;
 }
@@ -358,6 +381,10 @@ nsHTMLStyleSheet::Init()
     return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(mTableTHRule);
 
+  mTableFormRule = new TableFormRule();
+  if (!mTableFormRule)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(mTableFormRule);
   return NS_OK;
 }
 
@@ -369,6 +396,7 @@ nsHTMLStyleSheet::~nsHTMLStyleSheet()
   NS_IF_RELEASE(mVisitedRule);
   NS_IF_RELEASE(mActiveRule);
   NS_IF_RELEASE(mDocumentColorRule);
+  NS_IF_RELEASE(mTableFormRule);
   NS_IF_RELEASE(mTableTbodyRule);
   NS_IF_RELEASE(mTableRowRule);
   NS_IF_RELEASE(mTableColgroupRule);
@@ -464,6 +492,26 @@ nsHTMLStyleSheet::RulesMatching(ElementRuleProcessorData* aData)
           }
           if (mDocumentColorRule)
             ruleWalker->Forward(mDocumentColorRule);
+        }
+      }
+      else if (tag == nsHTMLAtoms::form) {
+        // suppress in html documents empty forms inside tables,
+        // they have been used as a hack
+        // to avoid the form top and bottom margin
+        nsIDocument* doc   = styledContent->GetOwnerDoc();
+        nsIContent* parent = styledContent->GetParent();
+        if (!styledContent->GetChildCount() &&  // form is empty
+            doc && !doc->IsCaseSensitive() && // document is not XHTML
+            parent && parent->IsContentOfType(nsIContent::eHTML)) { 
+            // parent is HTML
+          nsIAtom* parentTag = parent->Tag();
+          if ((nsHTMLAtoms::table == parentTag) ||
+             (nsHTMLAtoms::tr == parentTag) ||
+              (nsHTMLAtoms::tbody == parentTag) ||
+              (nsHTMLAtoms::thead == parentTag) ||
+              (nsHTMLAtoms::tfoot == parentTag)) {
+            ruleWalker->Forward(mTableFormRule);
+          }
         }
       }
     } // end html element
@@ -656,6 +704,7 @@ nsHTMLStyleSheet::Reset(nsIURI* aURL)
   NS_IF_RELEASE(mVisitedRule);
   NS_IF_RELEASE(mActiveRule);
   NS_IF_RELEASE(mDocumentColorRule);
+  NS_IF_RELEASE(mTableFormRule);
 
   if (mMappedAttrTable.ops) {
     PL_DHashTableFinish(&mMappedAttrTable);
