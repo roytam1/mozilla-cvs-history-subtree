@@ -132,7 +132,7 @@ SplashScreenDialogProc( HWND dlg, UINT msg, WPARAM wp, LPARAM lp )
       }
     }
 
-    SetTimer(dlg, 1, 100, NULL); 
+    SetTimer(dlg, 1, 1000, NULL); 
     return 1;
   } 
   
