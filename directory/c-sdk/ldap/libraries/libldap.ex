@@ -298,6 +298,11 @@
 534	ldap_x_realloc
 535	ldap_x_free
 536     ldap_create_proxiedauth_control
+#
+570 ldap_passwd
+571 ldap_parse_passwd
+573 ldap_passwd_s
+#
 1000	ldap_memcache_init
 1001	ldap_memcache_set
 1002	ldap_memcache_get

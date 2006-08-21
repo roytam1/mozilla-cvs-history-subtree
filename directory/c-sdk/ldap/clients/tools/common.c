@@ -159,7 +159,7 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -C cfgfile\tuse local database described by cfgfile\n" );
 #endif
     fprintf( stderr, "    -i charset\tcharacter set for command line input (default taken from locale)\n" );
-    fprintf( stderr, "    -k dir\tconversion routine directory (default: current directory)\n" );
+    fprintf( stderr, "    -k do not convert password to utf8 (use default from locale)\n" );
 #if 0
 /*
  * Suppress usage for -y (old proxied authorization control) even though
@@ -184,13 +184,14 @@ ldaptool_common_usage( int two_hosts )
 
 /* globals */
 char			*ldaptool_charset = NULL;
-char			*ldaptool_convdir = NULL;
 char			*ldaptool_host = LDAPTOOL_DEFHOST;
 char			*ldaptool_host2 = LDAPTOOL_DEFHOST;
 int			ldaptool_port = LDAP_PORT;
 int			ldaptool_port2 = LDAP_PORT;
 int			ldaptool_verbose = 0;
 int			ldaptool_not = 0;
+int			ldaptool_nobind = 0;
+int			ldaptool_noconv_passwd = 0;
 FILE			*ldaptool_fp = NULL;
 char			*ldaptool_progname = "";
 LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS] = {0};
@@ -237,6 +238,7 @@ static int		isW = 0;
 static int		isw = 0;
 static int		isD = 0;
 static int		isj = 0;
+static int		isk = 0;
 static int		ssl_strength = LDAPTOOL_DEFSSLSTRENGTH;
 static char		*ssl_certdbpath = NULL;
 static char		*ssl_keydbpath = NULL;
@@ -385,12 +387,12 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
 #ifdef HAVE_SASL_OPTIONS
 #ifdef HAVE_SASL_OPTIONS_2
-    common_opts = "gnvEMRHZ02:3d:D:f:h:j:I:K:N:O:P:p:W:w:V:X:m:i:y:Y:J:";
+    common_opts = "kgnvEMRHZ02:3d:D:f:h:j:I:K:N:O:P:p:W:w:V:X:m:i:y:Y:J:";
 #else
-    common_opts = "gnvEMRHZ03d:D:f:h:j:I:K:N:O:o:P:p:W:w:V:X:m:i:y:Y:J:";
+    common_opts = "kgnvEMRHZ03d:D:f:h:j:I:K:N:O:o:P:p:W:w:V:X:m:i:y:Y:J:";
 #endif
 #else
-    common_opts = "gnvEMRHZ03d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
+    common_opts = "kgnvEMRHZ03d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
 #endif  /* HAVE_SASL_OPTIONS */
 
     /* note: optstring must include room for liblcache "C:" option */
@@ -610,13 +612,9 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    }
 		
 	    break;
-	case 'k':   /* conversion directory */
-	    ldaptool_convdir = strdup( optarg );
-	    if (NULL == ldaptool_convdir)
-	    {
-		perror( "malloc" );
-		exit( LDAP_NO_MEMORY );
-	    }
+	case 'k':   /* bypass passwd conversion to utf8 */
+	    isk = 1;
+	    ldaptool_noconv_passwd = 1; /* tell the tool about it */
 	    break;
 	case 'y':   /* old (version 1) proxied authorization control */
 		proxyauth_version = 1;
@@ -729,34 +727,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	char *password_string = "Enter bind password: ";
         passwd = ldaptool_getpass( password_string );
     } else if (password_fp != NULL) {
-	char *linep = NULL;
-	int   increment = 0;
-	int   c, index;
-
-	/* allocate initial block of memory */
-	if ((linep = (char *)malloc(BUFSIZ)) == NULL) {
-	    fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
-	    exit( LDAP_NO_MEMORY );
-	}
-	increment++;
-	index = 0;
-	while ((c = fgetc( password_fp )) != '\n' && c != EOF) {
-
-	    /* check if we will overflow the buffer */
-	    if ((c != EOF) && (index == ((increment * BUFSIZ) -1))) {
-
-		/* if we did, add another BUFSIZ worth of bytes */
-		if ((linep = (char *)
-		    realloc(linep, (increment + 1) * BUFSIZ)) == NULL) {
-			fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
-			exit( LDAP_NO_MEMORY );
-		}
-	 	increment++;
-	    }
-	    linep[index++] = c;
-	}
-	linep[index] = '\0';
-	passwd = linep;
+	passwd = ldaptool_read_password( password_fp );
     }
 
     /*
@@ -1115,7 +1086,8 @@ void
 ldaptool_bind( LDAP *ld )
 {
     int		rc, ctrl_index = 0;
-    char	*conv;
+    char	*conv_binddn;
+    char	*conv_passwd = NULL;
     LDAPControl	auth_resp_ctrl, *ctrl_array[ 3 ], **bindctrls;
     LDAPControl pwpolicy_req_ctrl;
     LDAPControl     **ctrls = NULL;
@@ -1159,7 +1131,9 @@ ldaptool_bind( LDAP *ld )
 #ifdef HAVE_SASL_OPTIONS
         if ( ldapauth != LDAP_AUTH_SASL ) {
 #endif
-                return;
+            /* let the tool know we did no bind */
+            ldaptool_nobind = 1;
+            return;
 #ifdef HAVE_SASL_OPTIONS
         }
 #endif
@@ -1168,7 +1142,15 @@ ldaptool_bind( LDAP *ld )
     /*
      * do the bind, backing off one LDAP version if necessary
      */
-    conv = ldaptool_local2UTF8( binddn, "bind DN" );
+    conv_binddn = ldaptool_local2UTF8( binddn, "bind DN" );
+
+    if ( passwd != NULL ) {
+        if ( isk ) {
+            conv_passwd = strdup( passwd );
+        } else {
+            conv_passwd = ldaptool_local2UTF8( passwd, "password" );
+        }
+    }
 
 #ifdef HAVE_SASL_OPTIONS
     if ( ldapauth == LDAP_AUTH_SASL) {
@@ -1217,14 +1199,19 @@ ldaptool_bind( LDAP *ld )
 	rc = ldaptool_sasl_bind_s( ld, NULL, LDAP_SASL_EXTERNAL, NULL,
 		bindctrls, NULL, NULL, "ldap_sasl_bind" );
     } else {
-	rc = ldaptool_simple_bind_s( ld, conv, passwd, bindctrls, NULL,
+	rc = ldaptool_simple_bind_s( ld, conv_binddn, conv_passwd, bindctrls, NULL,
 		    "ldap_simple_bind" );
     }
 
     if ( rc == LDAP_SUCCESS ) {
-        if ( conv != NULL ) {
-           free( conv );
+        if ( conv_binddn != NULL ) {
+            free( conv_binddn );
 	}
+
+        if ( conv_passwd != NULL ) {
+            free( conv_passwd );
+        }
+
 	return;			/* success */
     }
 
@@ -1242,10 +1229,16 @@ ldaptool_bind( LDAP *ld )
 		" trying LDAPv%d instead...\n", ldaptool_progname,
 		ldversion + 1, ldversion );
 	ldap_set_option( ld, LDAP_OPT_PROTOCOL_VERSION, &ldversion );
-	if (( rc = ldaptool_simple_bind_s( ld, conv, passwd,
+	if (( rc = ldaptool_simple_bind_s( ld, conv_binddn, conv_passwd,
 		bindctrls, NULL, "ldap_simple_bind" )) == LDAP_SUCCESS ) {
-            if( conv != NULL )
-                free( conv );
+            if ( conv_binddn != NULL ) {
+                free( conv_binddn );
+            }
+
+            if ( conv_passwd != NULL ) {
+                free( conv_passwd );
+            }
+
 	    return;		/* a qualified success */
 	}
     }
@@ -1253,8 +1246,12 @@ ldaptool_bind( LDAP *ld )
   }
 #endif  /* HAVE_SASL_OPTIONS */
 
-    if ( conv != NULL ) {
-        free( conv );
+    if ( conv_binddn != NULL ) {
+        free( conv_binddn );
+    }
+
+    if ( conv_passwd != NULL ) {
+        free( conv_passwd );
     }
 
     /*
@@ -1972,9 +1969,29 @@ get_rebind_credentials( LDAP *ld, char **whop, char **credp,
         int *methodp, int freeit, void* arg )
 {
     if ( !freeit ) {
-	*whop = binddn;
-	*credp = passwd;
+        if ( binddn != NULL ) {
+	    *whop = ldaptool_local2UTF8( binddn, "bind DN" );
+        }
+
+        if ( passwd != NULL ) {
+            if ( isk ) {
+	        *credp = strdup( passwd );
+            } else {
+                *credp = ldaptool_local2UTF8( passwd, "password" );
+            }
+        }
+
 	*methodp = LDAP_AUTH_SIMPLE;
+    } else {
+        if ( *whop != NULL ) {
+            free( *whop );
+        }
+
+        if ( *credp != NULL ) {
+            free( *credp );
+        }
+
+        *methodp = LDAP_AUTH_NONE;
     }
 
     return( LDAP_SUCCESS );
@@ -2612,6 +2629,45 @@ ldaptool_getpass ( const char *prompt )
 #endif
 
     return pass;
+}
+
+/*
+ * ldaptool_read_password
+ *
+ * Reads the password in from a file.
+ */
+char *
+ldaptool_read_password( FILE *mod_password_fp )
+{
+        int   increment = 0;
+        int   c, index;
+        char  *mod_passwd = NULL;
+
+        /* allocate initial block of memory */
+        if ((mod_passwd = (char *)malloc(BUFSIZ)) == NULL) {
+            fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
+            exit( LDAP_NO_MEMORY );
+        }
+        increment++;
+        index = 0;
+        while ((c = fgetc( mod_password_fp )) != '\n' && c != EOF) {
+
+            /* check if we will overflow the buffer */
+            if ((c != EOF) && (index == ((increment * BUFSIZ) -1))) {
+
+                        /* if we did, add another BUFSIZ worth of bytes */
+                        if ((mod_passwd = (char *)
+                                 realloc(mod_passwd, (increment + 1) * BUFSIZ)) == NULL) {
+                                fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
+                                exit( LDAP_NO_MEMORY );
+                        }
+                        increment++;
+            }
+            mod_passwd[index++] = c;
+        }
+        mod_passwd[index] = '\0';
+
+        return( (char *)mod_passwd );
 }
 
 int
