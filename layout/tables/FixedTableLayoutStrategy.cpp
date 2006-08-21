@@ -81,6 +81,8 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 
     nscoord result = 0;
 
+    // XXX Consider widths on columns or column groups?
+
     if (colCount > 0) {
         // XXX Should only add columns that have cells originating in them!
         result += spacing * (colCount + 1);
@@ -173,6 +175,8 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
 
     // XXX This ignores the 'min-width' and 'max-width' properties
     // throughout.  Then again, that's what the CSS spec says to do.
+
+    // XXX Consider widths on columns or column groups?
 
     PRUint32 unassignedCount = 0;
     nscoord unassignedSpace = tableWidth;
