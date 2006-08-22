@@ -372,7 +372,8 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 {
 	BerElement	ber;
 	ber_len_t	len;
-	int			berrc, err, errcode;
+	ber_int_t   errcode;
+	int			berrc, err;
 	char		*m, *e;
 
 	/*

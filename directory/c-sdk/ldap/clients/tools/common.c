@@ -1351,7 +1351,7 @@ ldaptool_print_extended_response( LDAP *ld, LDAPMessage *res, char *msg )
 	}
 
 	if ( data != NULL ) {
-	    fprintf( stderr, "%s: Data (length %ld):\n", msg, data->bv_len );
+	    fprintf( stderr, "%s: Data (length %d):\n", msg, data->bv_len );
 #if 0
 /* XXXmcs: maybe we should display the actual data? */
 	    lber_bprint( data->bv_val, data->bv_len );
@@ -1674,10 +1674,10 @@ check_response_controls( LDAP *ld, char *msg, LDAPControl **ctrls, int freeit )
 
             if ( 0 == strcmp( ctrls[i]->ldctl_oid,
                 LDAP_X_CONTROL_PWPOLICY_RESPONSE )) {
-                unsigned long tag1=0, tag2=0, tag3=0;
-                long warnvalue=0;
+                ber_tag_t tag1=0, tag2=0, tag3=0;
+                ber_int_t warnvalue=0;
                 int grclogins=-1, secsleft=-1;
-                long errvalue=-1;
+                ber_int_t errvalue=-1;
                 static int err2str_size = sizeof(pwpolicy_err2str)/sizeof(pwpolicy_err2str[0]);
 
                 if ( ( ber = ber_init(&(ctrls[i]->ldctl_value)) ) == NULL ) {

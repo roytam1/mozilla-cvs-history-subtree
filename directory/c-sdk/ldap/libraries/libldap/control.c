@@ -108,7 +108,7 @@ nsldapi_put_controls( LDAP *ld, LDAPControl **ctrls, int closeseq,
 
 		if ( c->ldctl_value.bv_val != NULL ) {
 			if ( ber_printf( ber, "o", c->ldctl_value.bv_val,
-			    (int)c->ldctl_value.bv_len /* XXX lossy cast */ )
+			    c->ldctl_value.bv_len )
 			    == -1 ) {
 				goto error_exit;
 			}

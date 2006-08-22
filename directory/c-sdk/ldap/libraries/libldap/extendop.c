@@ -120,7 +120,7 @@ ldap_extended_operation(
 	if ( exdata ) {
 		if ( ber_printf( ber, "{it{tsto}", msgid, LDAP_REQ_EXTENDED,
 						 LDAP_TAG_EXOP_REQ_OID, exoid, LDAP_TAG_EXOP_REQ_VALUE,
-						 exdata->bv_val, (int)exdata->bv_len /* XXX lossy cast */ ) == -1 ) {
+						 exdata->bv_val, exdata->bv_len ) == -1 ) {
 			rc = LDAP_ENCODING_ERROR;
 			LDAP_SET_LDERRNO( ld, rc, NULL, NULL );
 			ber_free( ber, 1 );

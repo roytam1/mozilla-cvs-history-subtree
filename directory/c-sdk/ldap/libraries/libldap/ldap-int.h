@@ -165,7 +165,7 @@ typedef enum {
 
 struct ldapmsg {
 	int		lm_msgid;	/* the message id */
-	int		lm_msgtype;	/* the message type */
+	ber_tag_t	lm_msgtype;	/* the message type */
 	BerElement	*lm_ber;	/* the ber encoded message contents */
 	struct ldapmsg	*lm_chain;	/* for search - next msg in the resp */
 	struct ldapmsg	*lm_next;	/* next response */
@@ -222,7 +222,7 @@ typedef struct ldapreq {
 	int		lr_outrefcnt;	/* count of outstanding referrals */
 	int		lr_origid;	/* original request's message id */
 	int		lr_parentcnt;	/* count of parent requests */
-	int		lr_res_msgtype;	/* result message type */
+	ber_tag_t	lr_res_msgtype;	/* result message type */
 	int		lr_expect_resp;	/* if non-zero, expect a response */
 	int		lr_res_errno;	/* result LDAP errno */
 	char		*lr_res_error;	/* result error string */

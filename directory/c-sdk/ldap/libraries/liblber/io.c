@@ -396,7 +396,7 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 #ifdef LDAP_DEBUG
 	if ( lber_debug ) {
 		char msg[80];
-		sprintf( msg, "ber_flush: %ld bytes to sd %ld%s\n", towrite,
+		sprintf( msg, "ber_flush: %d bytes to sd %ld%s\n", towrite,
 		    sb->sb_sd, ber->ber_rwptr != ber->ber_buf ? " (re-flush)"
 		    : "" );
 		ber_err_print( msg );
@@ -667,17 +667,17 @@ void
 ber_dump( BerElement *ber, int inout )
 {
 	char msg[128];
-	sprintf( msg, "ber_dump: buf 0x%lx, ptr 0x%lx, rwptr 0x%lx, end 0x%lx\n",
+	sprintf( msg, "ber_dump: buf 0x%p, ptr 0x%p, rwptr 0x%p, end 0x%p\n",
 	    ber->ber_buf, ber->ber_ptr, ber->ber_rwptr, ber->ber_end );
 	ber_err_print( msg );
 	if ( inout == 1 ) {
 		sprintf( msg, "          current len %ld, contents:\n",
-		    ber->ber_end - ber->ber_ptr );
+                 (long)(ber->ber_end - ber->ber_ptr) );
 		ber_err_print( msg );
 		lber_bprint( ber->ber_ptr, ber->ber_end - ber->ber_ptr );
 	} else {
 		sprintf( msg, "          current len %ld, contents:\n",
-		    ber->ber_ptr - ber->ber_buf );
+                 (long)(ber->ber_ptr - ber->ber_buf) );
 		ber_err_print( msg );
 		lber_bprint( ber->ber_buf, ber->ber_ptr - ber->ber_buf );
 	}
@@ -689,11 +689,11 @@ ber_sos_dump( Seqorset *sos )
 	char msg[80];
 	ber_err_print ( "*** sos dump ***\n" );
 	while ( sos != NULLSEQORSET ) {
-		sprintf( msg, "ber_sos_dump: clen %ld first 0x%lx ptr 0x%lx\n",
+		sprintf( msg, "ber_sos_dump: clen %d first 0x%p ptr 0x%p\n",
 		    sos->sos_clen, sos->sos_first, sos->sos_ptr );
 		ber_err_print( msg );
 		sprintf( msg, "              current len %ld contents:\n",
-		    sos->sos_ptr - sos->sos_first );
+                 (long)(sos->sos_ptr - sos->sos_first) );
 		ber_err_print( msg );
 		lber_bprint( sos->sos_first, sos->sos_ptr - sos->sos_first );
 
@@ -901,7 +901,7 @@ ber_get_next( Sockbuf *sb, ber_len_t *len, BerElement *ber )
 #ifdef LDAP_DEBUG
 	if ( lber_debug ) {
 	    char msg[80];
-	    sprintf( msg, "ber_get_next: tag 0x%lx len %ld contents:\n",
+	    sprintf( msg, "ber_get_next: tag 0x%x len %d contents:\n",
 		     ber->ber_tag, ber->ber_len );
 	    ber_err_print( msg );
 	    if ( lber_debug > 1 )

@@ -485,7 +485,7 @@ nsldapi_sasl_do_bind( LDAP *ld, const char *dn,
                             } else {
                                 /* but server provided us with data! */
                                 LDAPDebug(LDAP_DEBUG_TRACE,
-                                          "SASL BIND complete but invalid because server responded with credentials - length [%lu]\n",
+                                          "SASL BIND complete but invalid because server responded with credentials - length [%u]\n",
                                           scred->bv_len, 0, 0);
                                 ber_bvfree( scred );
                                 LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR,
@@ -657,7 +657,7 @@ ldap_sasl_bind(
 		}
 		rc = ber_printf( ber, "{it{isto}", msgid, LDAP_REQ_BIND,
 		    ldapversion, dn, LDAP_AUTH_SIMPLE, cred->bv_val,
-		    (int)cred->bv_len /* XXX lossy cast */ );
+		    cred->bv_len );
 
 	} else {		/* SASL bind; requires LDAPv3 or better */
 		if ( cred == NULL ) {
@@ -668,7 +668,7 @@ ldap_sasl_bind(
 			rc = ber_printf( ber, "{it{ist{so}}", msgid,
 			    LDAP_REQ_BIND, ldapversion, dn, LDAP_AUTH_SASL,
 			    mechanism, cred->bv_val,
-			    (int)cred->bv_len /* XXX lossy cast */ );
+			    cred->bv_len );
 		}
 	}
 

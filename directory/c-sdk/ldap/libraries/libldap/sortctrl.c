@@ -166,6 +166,7 @@ ldap_parse_sort_control (
 	ber_len_t	len;
 	ber_tag_t	tag;
 	char		*attr;
+	ber_int_t   iresult;
 
 	if ( !NSLDAPI_VALID_LDAP_POINTER( ld ) || result == NULL ||
 		attribute == NULL ) {
@@ -197,12 +198,13 @@ ldap_parse_sort_control (
 	}		
 
 	/* decode the result from the Berelement */
-	if ( ber_scanf( ber, "{i", result ) == LBER_ERROR ) {
+	if ( ber_scanf( ber, "{i", &iresult ) == LBER_ERROR ) {
 		LDAP_SET_LDERRNO( ld, LDAP_DECODING_ERROR, NULL, NULL );
 		ber_free( ber, 1 );
 		return( LDAP_DECODING_ERROR );
 	}
 
+	*result = (unsigned long)iresult;
 	/* if the server returned one, decode the attribute from the Ber element */
 	if ( ber_peek_tag( ber, &len ) == LDAP_TAG_SR_ATTRTYPE ) {
 		if ( ber_scanf( ber, "ta", &tag, &attr ) == LBER_ERROR ) {
