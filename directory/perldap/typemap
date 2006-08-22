@@ -41,6 +41,7 @@ BerElement *		T_PTR
 LDAPControl *		T_PTR
 LDAPVersion *		T_PTR
 struct berval 		T_berval
+struct berval *		T_bervalptr
 struct berval **	T_bervalptrptr
 FriendlyMap *		T_PTR
 LDAPsortkey **		T_PTR
@@ -67,10 +68,17 @@ T_berval
 	$var.bv_len = PL_na
 T_charptrptr
         $var = (char **)avref2charptrptr($arg)
+T_bervalptr
+    $var = NULL
 T_bervalptrptr
 	$var = (struct berval **)avref2berptrptr($arg)
 OUTPUT
 T_charptrptr
 	$arg = charptrptr2avref($var);
+T_bervalptr
+    if ($var) {
+        sv_setpvn($arg,$var->bv_val,$var->bv_len);
+        ber_bvfree($var);
+    }
 T_bervalptrptr
 	$arg = berptrptr2avref((struct berval **)$var);

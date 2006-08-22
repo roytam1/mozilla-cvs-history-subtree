@@ -67,6 +67,9 @@ sub new
       $self->{"version"} = $hash->{"vers"} || $hash->{"version"} || LDAP_VERSION3;
       $self->{"usenspr"} = 1 if (defined($hash->{"nspr"}) && $hash->{"nspr"});
       $self->{"callback"} = $hash->{"callback"} if defined($hash->{"callback"});
+      $self->{"certname"} = $hash->{"certname"} if defined($hash->{"certname"});
+      $self->{"keypwd"} = $hash->{"keypwd"} if defined($hash->{"keypwd"});
+      $self->{"starttls"} = $hash->{"starttls"} if defined($hash->{"starttls"});
       $self->{"entryclass"} = $hash->{"entryclass"} || 'Mozilla::LDAP::Entry';
       if (defined($hash->{"timeout"})) {
         die "Can only use the timeout option with NSPR enabled connections"
@@ -138,11 +141,29 @@ sub init
   return 0 unless (defined($self->{"port"}));
 
   if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
-    {
+    { #use SSL
       $ret = ldapssl_client_init($self->{"certdb"}, 0);
       return 0 if ($ret < 0);
 
-      $ld = ldapssl_init($self->{"host"}, $self->{"port"}, 1);
+      if ($self->{"starttls"}) {
+          $ld = ldap_init($self->{"host"}, $self->{"port"});
+          return 0 unless $ld;
+
+          $ret = prldap_install_routines($ld, 0);
+          return 0 unless ($ret == LDAP_SUCCESS);
+      } else { # regular ssl
+          $ld = ldapssl_init($self->{"host"}, $self->{"port"}, 1);
+      }
+
+      if ($self->{"certname"}) { # enable clientauth
+          $ret = ldapssl_enable_clientauth($ld, 0, $self->{"keypwd"}, $self->{"certname"});
+          return 0 unless ($ret == LDAP_SUCCESS);
+      }
+
+      if ($self->{"starttls"}) {
+          $ret = ldap_start_tls_s($ld, 0, 0);
+          return 0 unless ($ret == LDAP_SUCCESS);
+      }
     }
   else
     {
@@ -152,8 +173,10 @@ sub init
   $self->{"ld"} = $ld;
 
   if (defined($self->{"usenspr"})) {
-    $ret = prldap_install_routines($self->{"ld"}, 0);
-    return 0 unless ($ret == LDAP_SUCCESS);
+    if (!$self->{"starttls"}) { # already did this above for starttls
+        $ret = prldap_install_routines($self->{"ld"}, 0);
+        return 0 unless ($ret == LDAP_SUCCESS);
+    }
     if (defined($self->{"timeout"})) {
       $ret = prldap_set_session_option($self->{"ld"}, 0,
                                        PRLDAP_OPT_IO_MAX_TIMEOUT,
@@ -163,7 +186,18 @@ sub init
   }
 
   $self->setVersion($self->{"version"});
-  if (defined($self->{"callback"}))
+
+  if ($self->{"certname"}) # client auth - must use sasl bind
+    {
+      my $rc = ldap_sasl_bind_s($ld, "", "EXTERNAL", 0, 0, 0, 0);
+      if ($rc != LDAP_SUCCESS) {
+          my ($dn, $errmsg);
+          $rc = $self->getErrorCode(\$dn, \$errmsg);
+          print "Error: $rc - ", $self->getErrorString(), ": $errmsg for certname ", $self->{"certname"}, "\n";
+      }
+      return (($rc == LDAP_SUCCESS) ? 1 : 0);
+    }
+  elsif (defined($self->{"callback"}))
     {
       my ($result, $ret);
       my $id = ldap_simple_bind($ld, $self->{"binddn"}, $self->{"bindpasswd"});

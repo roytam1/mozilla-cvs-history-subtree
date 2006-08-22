@@ -123,6 +123,7 @@ require AutoLoader;
                                 LDAP_OPT_CACHE_FN_PTRS
                                 LDAP_OPT_CACHE_STRATEGY
                                 LDAP_OPT_CLIENT_CONTROLS
+                                LDAP_OPT_DEBUG_LEVEL
                                 LDAP_OPT_DEREF
                                 LDAP_OPT_DESC
                                 LDAP_OPT_DNS
@@ -203,6 +204,9 @@ require AutoLoader;
                                 LDAP_VERSION3
                                 LDAP_VERSION_MAX
                                 PRLDAP_OPT_IO_MAX_TIMEOUT
+                                LDAPSSL_AUTH_WEAK
+                                LDAPSSL_AUTH_CERT
+                                LDAPSSL_AUTH_CNCHECK
                                 )],
                 api => [qw(
                            ldap_abandon
@@ -323,11 +327,14 @@ require AutoLoader;
                              ldap_search_ext_s
                              )],
                 ssl => [qw(
+                           ldap_start_tls_s
                            ldapssl_client_init
-                           ldapssl_enable_clientauth
                            ldapssl_clientauth_init
+                           ldapssl_enable_clientauth
+                           ldapssl_err2string
                            ldapssl_init
                            ldapssl_install_routines
+                           ldapssl_set_strength
                            )],
                 nspr => [qw(
                             prldap_install_routines

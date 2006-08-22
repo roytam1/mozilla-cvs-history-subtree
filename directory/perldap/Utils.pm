@@ -200,12 +200,19 @@ sub str2Scope
 sub askPassword
 {
   my ($prompt) = shift;
+  my ($promptstr) = shift;
   my ($hasReadKey) = 0;
 
   eval "use Term::ReadKey";
   $hasReadKey=1 unless ($@);
 
-  print "LDAP password: " if $prompt;
+  if ($prompt) {
+      if ($promptstr) {
+          print $promptstr;
+      } else {
+          print "LDAP password: ";
+      }
+  }
   if ($hasReadKey)
     {
       ReadMode(2);
@@ -246,6 +253,9 @@ sub ldapArgs
   $ld{"bind"} = $main::opt_D || $bind || "";
   $ld{"pswd"} = $main::opt_w || "";
   $ld{"cert"} = $main::opt_P || "";
+  $ld{"certname"} = $main::opt_N || "";
+  $ld{"keypwd"} = $main::opt_W || "";
+  $ld{"starttls"} = (defined($main::opt_Z) ? 1 : 0);
   $ld{"scope"} = (defined($main::opt_s) ? $main::opt_s : LDAP_SCOPE_SUBTREE);
   $ld{"vers"} = (defined($main::opt_V) && $main::opt_V eq "2") ?
     LDAP_VERSION2 : LDAP_VERSION3;
@@ -253,6 +263,11 @@ sub ldapArgs
   if (($ld{"bind"} ne "") && ($ld{"pswd"} eq ""))
     {
       $ld{pswd} = askPassword(1);
+    }
+
+  if (($ld{"certname"} ne "") && ($ld{"keypwd"} eq ""))
+    {
+      $ld{keypwd} = askPassword(1, "Enter PIN for " . $ld{"certname"} . ": ");
     }
 
   return %ld;
@@ -288,7 +303,7 @@ sub userCredentials
       my ($base) = $ld->{"base"} || $ld->{"root"};
 
       $conn = Mozilla::LDAP::Conn->new($ld);
-      die "Could't connect to LDAP server " . $ld->{"host"} unless $conn;
+      die "Couldn't connect to LDAP server " . $ld->{"host"} unless $conn;
 
       $search = "(&(objectclass=inetOrgPerson)(uid=$ENV{USER}))";
       $entry = $conn->search($base, "subtree", $search, 0, ("uid"));

@@ -41,6 +41,10 @@ extern "C" {
 #include <ldappr.h>
 #endif
 
+#ifdef USE_SSL
+# include <ldap_ssl.h>
+#endif
+
 static int
 not_here(s)
 char *s;
@@ -473,6 +477,12 @@ int arg;
         if (strEQ(name, "LDAP_OPT_CLIENT_CONTROLS"))
 #ifdef LDAP_OPT_CLIENT_CONTROLS
             return LDAP_OPT_CLIENT_CONTROLS;
+#else
+            goto not_there;
+#endif
+        if (strEQ(name, "LDAP_OPT_DEBUG_LEVEL"))
+#ifdef LDAP_OPT_DEBUG_LEVEL
+            return LDAP_OPT_DEBUG_LEVEL;
 #else
             goto not_there;
 #endif
@@ -950,6 +960,24 @@ int arg;
       if (strEQ(name, "PRLDAP_OPT_IO_MAX_TIMEOUT"))
 #ifdef PRLDAP_OPT_IO_MAX_TIMEOUT
           return PRLDAP_OPT_IO_MAX_TIMEOUT;
+#else
+          goto not_there;
+#endif
+      if (strEQ(name, "LDAPSSL_AUTH_WEAK"))
+#ifdef LDAPSSL_AUTH_WEAK
+          return LDAPSSL_AUTH_WEAK;
+#else
+          goto not_there;
+#endif
+      if (strEQ(name, "LDAPSSL_AUTH_CERT"))
+#ifdef LDAPSSL_AUTH_CERT
+          return LDAPSSL_AUTH_CERT;
+#else
+          goto not_there;
+#endif
+      if (strEQ(name, "LDAPSSL_AUTH_CNCHECK"))
+#ifdef LDAPSSL_AUTH_CNCHECK
+          return LDAPSSL_AUTH_CNCHECK;
 #else
           goto not_there;
 #endif

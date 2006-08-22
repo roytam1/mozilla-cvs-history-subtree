@@ -905,14 +905,11 @@ ldap_extended_operation_s(ld,requestoid,requestdata,serverctrls,clientctrls,reto
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
 	char *		&retoidp = NO_INIT
-	struct berval **retdatap = NO_INIT
+	struct berval *&retdatap = NO_INIT
 	OUTPUT:
 	RETVAL
 	retoidp
 	retdatap
-	CLEANUP:
-	if (retdatap)
-	  ldap_value_free_len(retdatap);
 
 char *
 ldap_first_attribute(ld,entry,ber)
@@ -1312,7 +1309,7 @@ ldap_parse_extended_result(ld,res,retoidp,retdatap,freeit)
 	LDAP *		ld
 	LDAPMessage *	res
 	char *		&retoidp = NO_INIT
-	struct berval **retdatap = NO_INIT
+	struct berval *&retdatap = NO_INIT
 	int		freeit
 	OUTPUT:
 	RETVAL
@@ -1353,11 +1350,8 @@ int
 ldap_parse_sasl_bind_result(ld,res,servercredp,freeit)
 	LDAP *		ld
 	LDAPMessage *	res
-	struct berval **servercredp = NO_INIT
+	struct berval * &servercredp
 	int freeit
-	OUTPUT:
-	RETVAL
-	servercredp
 
 int
 ldap_parse_sort_control(ld,ctrls,result,attribute)
@@ -1449,7 +1443,7 @@ ldap_sasl_bind_s(ld,dn,mechanism,cred,serverctrls,clientctrls,servercredp)
 	struct berval 	&cred
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
-	struct berval **servercredp = NO_INIT
+	struct berval *&servercredp
 	OUTPUT:
 	RETVAL
 	servercredp
@@ -1766,6 +1760,21 @@ ldapssl_init(host,port,secure)
 int
 ldapssl_install_routines(ld)
 	LDAP *		ld
+
+int
+ldap_start_tls_s(ld,serverctrls,clientctrls)
+    LDAP *ld
+	LDAPControl **serverctrls
+	LDAPControl **clientctrls
+
+const char *
+ldapssl_err2string(prerrno)
+	const int prerrno
+
+int
+ldapssl_set_strength(ld,sslstrength)
+	   LDAP *ld
+	   int sslstrength
 
 #endif
 
