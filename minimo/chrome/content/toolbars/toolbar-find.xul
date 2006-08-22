@@ -48,14 +48,13 @@
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <toolbox id="mini-toolbars">
     <toolbar id="toolbar-find" flex="1" collapsed="true" >
-	  <hbox flex="1" style="margin-top:4px ! important">
-            <toolbarbutton tabindex="17" accessrule="focus_toolbar-find" id="find-close" class="button-close"  align="top" flex="0" command="cmd_ViewFind"/>  
-            <label value="&findText.label;"  />
-            <textbox tabindex="18" accessrule="focus_toolbar-find"  id="toolbar-find-tag" flex="1" onchange="return DoBrowserFind();"/> 
-            <toolbarbutton tabindex="19" accessrule="focus_toolbar-find" id="find-button-next" align="top" flex="0" label='&nextText.label;' oncommand="DoBrowserFindNext()"/>  
-        
-	  </hbox>
+      <hbox flex="1" style="margin-top:4px ! important">
+         <toolbarbutton id="find-close" class="button-close" align="top" flex="0" command="cmd_ViewFind"/>  
+         <label value="&findText.label;"  />
+         <textbox id="toolbar-find-tag" flex="1" onchange="return DoBrowserFind();"/> 
+         <toolbarbutton id="find-button-next" align="top" flex="0" label='&nextText.label;' oncommand="DoBrowserFindNext()"/>  
+      </hbox>
     </toolbar>   
-</toolbox>
+  </toolbox>
 </overlay>
 
