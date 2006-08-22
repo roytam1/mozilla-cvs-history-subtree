@@ -51,7 +51,7 @@
       <hbox flex="1" style="margin-top:4px ! important">
          <toolbarbutton id="find-close" class="button-close" align="top" flex="0" command="cmd_ViewFind"/>  
          <label value="&findText.label;"  />
-         <textbox id="toolbar-find-tag" flex="1" onchange="return DoBrowserFind();"/> 
+         <textbox id="toolbar-find-tag" flex="1"  onchange="return DoBrowserFind();" onkeypress="onFindBarKeyPress(event)"/> 
          <toolbarbutton id="find-button-next" align="top" flex="0" label='&nextText.label;' oncommand="DoBrowserFindNext()"/>  
       </hbox>
     </toolbar>   
