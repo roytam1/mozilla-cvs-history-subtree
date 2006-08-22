@@ -1327,8 +1327,10 @@ function DoBrowserGM(xmlRef) {
   }  
 }
 
-/* Toolbar specific code - to be removed from here */ 
 
+/*
+ * Toolbar Find section
+ */
 
 function DoBrowserFind() {
   //  BrowserViewFind();
@@ -1351,7 +1353,11 @@ function DoBrowserFind() {
   }  
 }
 
-/* Toolbar specific code - to be removed from here */ 
+function onFindBarKeyPress(evt) {
+  if(evt.keyCode == KeyEvent.DOM_VK_RETURN) {
+    DoBrowserFindNext();
+  }
+}
 
 function DoBrowserFindNext() {
   try { 
