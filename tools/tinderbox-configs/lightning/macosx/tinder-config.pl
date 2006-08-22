@@ -1,6 +1,6 @@
 #
-## hilo
-## Darwin hilo.local 7.9.0 Darwin Kernel Version 7.9.0: Wed Mar 30 20:11:17 PST 2005; root:xnu/xnu-517.12.7.obj~1/RELEASE_PPC  Power Macintosh powerpc
+## hostname: trampoline
+## uname: Linux trampoline.office.mozilla.org 2.6.9-34.ELsmp #1 SMP Fri Feb 24 16:54:53 EST 2006 i686 i686 i386 GNU/Linux
 #
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
@@ -159,10 +159,10 @@ $BuildNameExtra = 'Lt-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Sunbird';
+$BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -198,7 +198,7 @@ $ftp_path      = "/home/ftp/pub/calendar/lightning/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/nightly";
 #$tbox_ftp_path = $ftp_path;
 #$tbox_url_path = $url_path;
-#$milestone     = "trunk";
+$milestone     = "mozilla1.8";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
