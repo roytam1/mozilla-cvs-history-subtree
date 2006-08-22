@@ -515,6 +515,10 @@ typedef struct mozce_OUTLINETEXTMETRIC
 #define WM_MOUSEACTIVATE WM_ACTIVATE
 #endif
 
+#ifndef GCL_HBRBACKGROUND
+#define GCL_HBRBACKGROUND (-10)
+#endif
+
 typedef struct WINDOWPLACEMENT
 {
   UINT  length;

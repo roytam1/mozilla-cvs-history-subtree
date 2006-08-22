@@ -713,6 +713,11 @@
 #endif
 #define SetArcDirection           mozce_SetArcDirection
 
+#ifdef SetClassLongA
+#undef SetClassLongA
+#endif
+#define SetClassLongA SetClassLongW
+
 #ifdef SetDIBits
 #undef SetDIBits
 #endif
