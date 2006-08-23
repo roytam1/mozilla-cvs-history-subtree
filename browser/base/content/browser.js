@@ -4943,7 +4943,6 @@ nsContextMenu.prototype = {
         savedmenu.toggleImageBlocking(!aBlock);
       }
 
-      var uri = gBrowser.selectedBrowser.webNavigation.currentURI;
       var brandBundle = document.getElementById("bundle_brand");
       var app = brandBundle.getString("brandShortName");
       var bundle_browser = document.getElementById("bundle_browser");
