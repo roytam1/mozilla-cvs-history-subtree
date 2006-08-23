@@ -2097,8 +2097,9 @@ nsDocument::EnsureCatalogStyleSheet(const char *aStyleSheetURI)
     nsCOMPtr<nsIURI> uri;
     NS_NewURI(getter_AddRefs(uri), aStyleSheetURI);
     if (uri) {
+      nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_QueryInterface(cssLoader);
       nsCOMPtr<nsICSSStyleSheet> sheet;
-      cssLoader->LoadAgentSheet(uri, getter_AddRefs(sheet));
+      loader->LoadSheetSync(uri, PR_TRUE, getter_AddRefs(sheet));
       if (sheet) {
         BeginUpdate(UPDATE_STYLE);
         AddCatalogStyleSheet(sheet);
