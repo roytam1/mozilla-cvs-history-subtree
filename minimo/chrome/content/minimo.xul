@@ -76,19 +76,6 @@
     <popup type="autocomplete" id="PopupAutoComplete"/>
   </popupset>
   
-  <keyset>
-    <!-- ***** IMPORTANT ***** 
-         Everytime you edit these keys, you may also consider
-         to check/edit the key assignment on minimo.js/MenuHandleMenuEscape
-      -->
-   
-    <key id="left-softkey" keycode="VK_F10"  oncommand="spinCycle()"/>
-    <key id="left-softkey-shift"  keycode="VK_F10" oncommand="DoLeftSoftkeyWithModifier()" modifiers="shift"/>
-          
-    <key id="right-softkey" keycode="VK_F20"  oncommand="DoToggleSoftwareKeyboard()"/>
-    <key id="right-softkey" keycode="VK_F20"  oncommand="DoRightSoftkeyWithModifier()" modifiers="shift"/>
-
-  </keyset>
   
     <hbox id="appcontent" flex="1" >
     

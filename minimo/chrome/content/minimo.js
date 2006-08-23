@@ -548,7 +548,25 @@ function MiniNavStartup()
             DoHomebar(false);
         }
       }
-
+      else if (topic=="softkey")
+      {
+        if (data=="left")
+        {
+          spinCycle();
+        }
+        else if (data=="left+shift")
+        {
+          DoLeftSoftkeyWithModifier();
+        }
+        else if (data=="right")
+        {
+          DoToggleSoftwareKeyboard();
+        }
+        else if (data=="right+shift")
+        {
+          DoRightSoftkeyWithModifier();
+        }
+      }
     }
   };
      
@@ -561,6 +579,8 @@ function MiniNavStartup()
     os.addObserver(minimoAppObserver,"open-url", false);
     os.addObserver(minimoAppObserver,"add-bm", false);
     os.addObserver(minimoAppObserver,"low-mem", false);
+
+    os.addObserver(minimoAppObserver,"softkey", false);
 
 
     var pbi = gPref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
@@ -2109,14 +2129,3 @@ function MenuDisableEscapeKeys() {
 
 }
 
-function MenuHandleMenuEscape(e) {
-
-  /* This applies because our <key /> handlers would not work when Menu popups are active */ 
-  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F10 ) {
-    spinCycle();
-  }
-  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F20 ) {
-    DoToggleSoftwareKeyboard();
-  }
-
-}
