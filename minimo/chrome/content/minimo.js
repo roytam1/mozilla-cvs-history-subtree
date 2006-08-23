@@ -1077,6 +1077,11 @@ function BrowserResetZoomMinus() {
 }
 
 
+function Menu2PopupShowing() {
+
+}
+
+
 function MenuMainPopupShowing () {
 
    try {
@@ -1900,6 +1905,17 @@ function BrowserPanMouseHandlerDestroy(e) {
   }
 }
 
+
+function DoLeftSoftkeyWithModifier()
+{
+  alert("DoLeftSoftkeyWithModifier");
+}
+
+function DoRightSoftkeyWithModifier()
+{
+  alert("DoRightSoftkeyWithModifier");
+}
+
 /*
  * Keyboard Spin Menu Control 
  * --
@@ -2096,9 +2112,6 @@ function MenuDisableEscapeKeys() {
 function MenuHandleMenuEscape(e) {
 
   /* This applies because our <key /> handlers would not work when Menu popups are active */ 
-  if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F19 ) {
-    spinCycle();
-  }
   if( gShowingMenuCurrent &&  e.keyCode==e.DOM_VK_F10 ) {
     spinCycle();
   }
