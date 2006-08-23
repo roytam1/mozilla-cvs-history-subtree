@@ -1493,52 +1493,48 @@ js_DefineCompileTimeConstant(JSContext *cx, JSCodeGenerator *cg, JSAtom *atom,
     return JS_TRUE;
 }
 
-/*
- * Find a lexically scoped variable (one declared by let, catch, or an array
- * comprehension) named by atom, looking in tc's compile-time scopes.
- *
- * Return null on error.  If atom is found, return the statement info record
- * in which it was found directly, and set *slotp to its stack slot (if any).
- * If atom is not found, return &LL_NOT_FOUND.
- */
-static JSStmtInfo LL_NOT_FOUND;
-
-static JSStmtInfo *
-LexicalLookup(JSContext *cx, JSTreeContext *tc, JSAtom *atom, jsint *slotp)
+JSStmtInfo *
+js_LexicalLookup(JSTreeContext *tc, JSAtom *atom, jsint *slotp)
 {
     JSStmtInfo *stmt;
-    JSObject *obj, *pobj;
-    JSProperty *prop;
+    JSObject *obj;
+    JSScope *scope;
     JSScopeProperty *sprop;
+    jsval v;
 
-    *slotp = -1;
     for (stmt = tc->topScopeStmt; stmt; stmt = stmt->downScope) {
         if (stmt->type == STMT_WITH)
-            return stmt;
+            break;
         if (stmt->type == STMT_CATCH) {
             if (stmt->label == atom)
-                return stmt;
+                break;
             continue;
         }
 
         JS_ASSERT(stmt->flags & SIF_SCOPE);
         obj = stmt->blockObj;
-        if (!js_LookupProperty(cx, obj, ATOM_TO_JSID(atom), &pobj, &prop))
-            return NULL;
-        if (prop) {
-            if (pobj != obj) {
-                stmt = &LL_NOT_FOUND;
-            } else {
-                sprop = (JSScopeProperty *) prop;
-                JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
-                *slotp = OBJ_BLOCK_DEPTH(cx, obj) + sprop->shortid;
+        JS_ASSERT(LOCKED_OBJ_GET_CLASS(obj) == &js_BlockClass);
+        scope = OBJ_SCOPE(obj);
+        sprop = SCOPE_GET_PROPERTY(scope, ATOM_TO_JSID(atom));
+        if (sprop) {
+            JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
+
+            if (slotp) {
+                /*
+                 * Use LOCKED_OBJ_GET_SLOT since we know obj is single-
+                 * threaded and owned by this compiler activation.
+                 */
+                v = LOCKED_OBJ_GET_SLOT(obj, JSSLOT_BLOCK_DEPTH);
+                JS_ASSERT(JSVAL_IS_INT(v) && JSVAL_TO_INT(v) >= 0);
+                *slotp = JSVAL_TO_INT(v) + sprop->shortid;
             }
-            OBJ_DROP_PROPERTY(cx, pobj, prop);
             return stmt;
         }
     }
 
-    return &LL_NOT_FOUND;
+    if (slotp)
+        *slotp = -1;
+    return stmt;
 }
 
 JSBool
@@ -1570,13 +1566,9 @@ js_LookupCompileTimeConstant(JSContext *cx, JSCodeGenerator *cg, JSAtom *atom,
         obj = fp->varobj;
         if (obj == fp->scopeChain) {
             /* XXX this will need revising when 'let const' is added. */
-            stmt = LexicalLookup(cx, &cg->treeContext, atom, &slot);
-            if (!stmt)
-                return JS_FALSE;
-            if (stmt != &LL_NOT_FOUND) {
-                fp = fp->down;
-                continue;
-            }
+            stmt = js_LexicalLookup(&cg->treeContext, atom, &slot);
+            if (stmt)
+                return JS_TRUE;
 
             ATOM_LIST_SEARCH(ale, &cg->constList, atom);
             if (ale) {
@@ -1866,11 +1858,8 @@ BindNameToSlot(JSContext *cx, JSTreeContext *tc, JSParseNode *pn)
      * block-locals.
      */
     atom = pn->pn_atom;
-    stmt = LexicalLookup(cx, tc, atom, &slot);
-    if (!stmt)
-        return JS_FALSE;
-
-    if (stmt != &LL_NOT_FOUND) {
+    stmt = js_LexicalLookup(tc, atom, &slot);
+    if (stmt) {
         if (stmt->type == STMT_WITH)
             return JS_TRUE;
         if (stmt->type == STMT_CATCH) {

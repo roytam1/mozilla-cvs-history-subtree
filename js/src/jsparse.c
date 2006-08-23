@@ -1372,26 +1372,30 @@ static JSBool
 DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args)
 {
     JSObject *blockObj;
-    JSScope *scope;
     JSScopeProperty *sprop;
+    JSAtomListElement *ale;
 
     JS_ASSERT(args->let);
 
     blockObj = args->obj;
-    scope = OBJ_SCOPE(blockObj);
-    sprop = SCOPE_GET_PROPERTY(scope, ATOM_TO_JSID(atom));
-    if (sprop) {
+    sprop = SCOPE_GET_PROPERTY(OBJ_SCOPE(blockObj), ATOM_TO_JSID(atom));
+    ATOM_LIST_SEARCH(ale, &tc->decls, atom);
+    if (sprop || (ale && ALE_JSOP(ale) == JSOP_DEFCONST)) {
         const char *name;
 
-        JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
-        JS_ASSERT((uint16)sprop->shortid < args->u.let.index);
-        OBJ_DROP_PROPERTY(cx, blockObj, (JSProperty *) sprop);
+        if (sprop) {
+            JS_ASSERT(sprop->flags & SPROP_HAS_SHORTID);
+            JS_ASSERT((uint16)sprop->shortid < args->u.let.index);
+        }
 
         name = js_AtomToPrintableString(cx, atom);
         if (name) {
             js_ReportCompileErrorNumber(cx, args->ts,
                                         JSREPORT_TS | JSREPORT_ERROR,
-                                        JSMSG_REDECLARED_VAR, "variable",
+                                        JSMSG_REDECLARED_VAR,
+                                        (ale && ALE_JSOP(ale) == JSOP_DEFCONST)
+                                        ? js_const_str
+                                        : "variable",
                                         name);
         }
         return JS_FALSE;
@@ -1418,6 +1422,7 @@ DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args)
 static JSBool
 BindVariable(JSContext *cx, BindVarArgs *args, JSAtom *atom, JSTreeContext *tc)
 {
+    JSStmtInfo *stmt;
     JSAtomListElement *ale;
     JSOp op, prevop;
     const char *name;
@@ -1431,10 +1436,11 @@ BindVariable(JSContext *cx, BindVarArgs *args, JSAtom *atom, JSTreeContext *tc)
     if (args->let)
         return DeclareLetVar(cx, atom, args);
 
+    stmt = js_LexicalLookup(tc, atom, NULL);
     ATOM_LIST_SEARCH(ale, &tc->decls, atom);
     op = args->op;
-    if (ale) {
-        prevop = ALE_JSOP(ale);
+    if ((stmt && stmt->type != STMT_WITH) || ale) {
+        prevop = ale ? ALE_JSOP(ale) : JSOP_DEFVAR;
         if (JS_HAS_STRICT_OPTION(cx)
             ? op != JSOP_DEFVAR || prevop != JSOP_DEFVAR
             : op == JSOP_DEFCONST || prevop == JSOP_DEFCONST) {
@@ -1460,7 +1466,8 @@ BindVariable(JSContext *cx, BindVarArgs *args, JSAtom *atom, JSTreeContext *tc)
         }
         if (op == JSOP_DEFVAR && prevop == JSOP_CLOSURE)
             tc->flags |= TCF_FUN_CLOSURE_VS_VAR;
-    } else {
+    }
+    if (!ale) {
         ale = js_IndexAtom(cx, atom, &tc->decls);
         if (!ale)
             return JS_FALSE;
