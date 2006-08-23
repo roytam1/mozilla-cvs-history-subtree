@@ -950,10 +950,6 @@ statusbarpanel#statusbar-display {
   -moz-image-region: rect(0px, 25px, 25px, 0px);
 }
 
-#go-button[chromedir="rtl"] {
-  list-style-image: url("chrome://browser/skin/Go-rtl.png");
-}
-
 #go-button:hover {
   -moz-image-region: rect(0px, 50px, 25px, 25px);
 }
@@ -1070,17 +1066,6 @@ sidebarheader {
   -moz-image-region: rect(19px, 36px, 35px, 18px);
 }
 #feed-button[feeds]:active {
-  -moz-image-region: rect(55px, 36px, 71px, 18px);
-}
-
-#feed-button[chromedir="rtl"][feeds] {
-  list-style-image: url("chrome://browser/skin/livemark-item-rtl.png");
-  -moz-image-region: rect(1px, 36px, 17px, 18px);
-}
-#feed-button[chromedir="rtl"][feeds]:hover {
-  -moz-image-region: rect(19px, 36px, 35px, 18px);
-}
-#feed-button[chromedir="rtl"][feeds]:active {
   -moz-image-region: rect(55px, 36px, 71px, 18px);
 }
 

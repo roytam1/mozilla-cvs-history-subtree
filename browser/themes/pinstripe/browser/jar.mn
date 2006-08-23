@@ -15,7 +15,6 @@ classic.jar:
   skin/classic/browser/find.png
   skin/classic/browser/find-bar-background.png
   skin/classic/browser/Go.png
-  skin/classic/browser/Go-rtl.png
   skin/classic/browser/Info.png
   skin/classic/browser/lock-insecure.gif
   skin/classic/browser/lock-mixed.gif
@@ -26,9 +25,7 @@ classic.jar:
   skin/classic/browser/searchbar.css
   skin/classic/browser/search-bar-background-mid.png
   skin/classic/browser/Search-go.png
-  skin/classic/browser/Search-go-rtl.png
   skin/classic/browser/Search-provider-bkgnd.png
-  skin/classic/browser/Search-provider-bkgnd-rtl.png
   skin/classic/browser/Secure.png
   skin/classic/browser/Security-broken.png
   skin/classic/browser/Secure-urlbar.png
