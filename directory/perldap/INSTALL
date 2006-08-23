@@ -27,7 +27,18 @@ information available on
 
 	http://www.mozilla.org/directory/
 
-and the FAQ (this is semi-obsolote) at
+RedHat also provide C-SDK builds, available at
+
+	ftp://ftp.redhat.com/pub/redhat/ldapsdk/
+
+For NSPR and NSS (SSL) support, you might also need to download those
+SDKs, for instance
+
+      ftp://ftp.mozilla.org/pub/mozilla.org/nspr/releases/v4.6.1/
+      ftp://ftp.mozilla.org/pub/mozilla.org/security/nss/releases/NSS_3_11_RTM/
+
+
+There's also a semi-obsoloete FAQ at
 
 	http://www.mozilla.org/directory/faq/perldap-faq.html
 
