@@ -3170,7 +3170,8 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     JS_ASSERT(let || tt == TOK_VAR);
 
     /* Make sure that Statement set the tree context up correctly. */
-    JS_ASSERT(!let || tc->topStmt == tc->topScopeStmt);
+    JS_ASSERT(!let ||
+              (tc->topScopeStmt && (tc->topScopeStmt->flags & SIF_SCOPE)));
 
     args.ts = ts;
     args.let = let;
