@@ -101,7 +101,9 @@ else
 _APPNAME	= $(MOZ_APP_DISPLAYNAME).app
 endif
 endif
+ifndef _BINPATH
 _BINPATH	= /$(_APPNAME)/Contents/MacOS
+endif # _BINPATH
 PKG_SUFFIX	= .dmg
 PKG_DMG_FLAGS	=
 ifneq (,$(MOZ_PKG_MAC_DSSTORE))
@@ -227,7 +229,7 @@ NO_PKG_FILES += \
 # browser/locales/Makefile uses this makefile for it's variable defs, but
 # doesn't want the libs:: rule.
 ifndef PACKAGER_NO_LIBS
-libs:: $(PACKAGE)
+libs:: make-package
 endif
 
 DEFINES += -DDLL_PREFIX=$(DLL_PREFIX) -DDLL_SUFFIX=$(DLL_SUFFIX)
@@ -240,12 +242,6 @@ $(MOZ_PKG_REMOVALS_GEN): $(MOZ_PKG_REMOVALS) Makefile Makefile.in
 endif
 
 GARBAGE		+= $(DIST)/$(PACKAGE) $(PACKAGE)
-
-ifdef USE_SHORT_LIBNAME
-MOZILLA_BIN	= $(DIST)/bin/$(MOZ_PKG_APPNAME)$(BIN_SUFFIX)
-else
-MOZILLA_BIN	= $(DIST)/bin/$(MOZ_PKG_APPNAME)-bin
-endif
 
 ifeq ($(OS_ARCH),IRIX)
 STRIP_FLAGS	= -f
@@ -300,7 +296,7 @@ endif
 	    $(foreach pkg,$(MOZ_OPTIONAL_PKG_LIST),$(PKG_ARG)) );'
 	$(PERL) $(topsrcdir)/xpinstall/packager/xptlink.pl -s $(DIST) -d $(DIST)/xpt -f $(DEPTH)/installer-stage/nonlocalized/components -v
 
-$(PACKAGE): $(MOZILLA_BIN) $(MOZ_PKG_MANIFEST) $(MOZ_PKG_REMOVALS_GEN)
+stage-package: $(MOZ_PKG_MANIFEST) $(MOZ_PKG_REMOVALS_GEN)
 	@rm -rf $(DIST)/$(MOZ_PKG_APPNAME) $(DIST)/$(PKG_BASENAME).tar $(DIST)/$(PKG_BASENAME).dmg $@ $(EXCLUDE_LIST)
 # NOTE: this must be a tar now that dist links into the tree so that we
 # do not strip the binaries actually in the tree.
@@ -357,5 +353,7 @@ endif
 ifdef MOZ_PKG_REMOVALS
 	$(SYSINSTALL) $(MOZ_PKG_REMOVALS_GEN) $(DIST)/$(STAGEPATH)$(MOZ_PKG_APPNAME)$(_BINPATH)
 endif # MOZ_PKG_REMOVALS
+
+make-package: stage-package
 	@echo "Compressing..."
 	cd $(DIST); $(MAKE_PACKAGE)
