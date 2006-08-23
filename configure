@@ -37,7 +37,7 @@ ac_help="$ac_help
 ac_help="$ac_help
   --with-pthreads         Force use of system pthread library with NSPR "
 ac_help="$ac_help
-  --enable-macos-target=VER (default=10.2/ppc, 10.4/x86)
+  --enable-macos-target=VER (default=10.3/ppc, 10.4/x86)
                           Set the minimum MacOS version needed at runtime"
 ac_help="$ac_help
   --with-libxul-sdk=PFX   Use the libXUL SDK at <PFX>"
@@ -9772,7 +9772,7 @@ case "$target" in
     elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
                                 case "${target_cpu}" in
             powerpc*)
-                                export MACOSX_DEPLOYMENT_TARGET=10.2
+                                                export MACOSX_DEPLOYMENT_TARGET=10.2
                 ;;
             i*86*)
                                 export MACOSX_DEPLOYMENT_TARGET=10.4
