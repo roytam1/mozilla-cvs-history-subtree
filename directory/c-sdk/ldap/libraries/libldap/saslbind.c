@@ -809,7 +809,27 @@ ldap_sasl_interactive_bind_ext_s( LDAP *ld, const char *dn,
         LDAP_MUTEX_UNLOCK(ld, LDAP_SASL_LOCK );
         return( rc );
 }
+#else /* LDAP_SASLIO_HOOKS */
+/* stubs for platforms that do not support SASL */
+int
+LDAP_CALL
+ldap_sasl_interactive_bind_s( LDAP *ld, const char *dn,
+        const char *saslMechanism,
+        LDAPControl **sctrl, LDAPControl **cctrl, unsigned flags,
+        LDAP_SASL_INTERACT_PROC *callback, void *defaults )
+{
+  return LDAP_SUCCESS;
+}
 
+int
+LDAP_CALL
+ldap_sasl_interactive_bind_ext_s( LDAP *ld, const char *dn,
+        const char *saslMechanism,
+        LDAPControl **sctrl, LDAPControl **cctrl, unsigned flags,
+        LDAP_SASL_INTERACT_PROC *callback, void *defaults, LDAPControl ***rctrl )
+{
+  return LDAP_SUCCESS;
+}
 #endif /* LDAP_SASLIO_HOOKS */
 
 
