@@ -2249,11 +2249,9 @@ var urlbarObserver = {
 
         try {
           gURLBar.value = url;
-          var uri = makeURI(gURLBar.value);
-          const secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
-                                   .getService(Components.interfaces.nsIScriptSecurityManager);
           const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
-          secMan.checkLoadURI(gBrowser.currentURI, uri, nsIScriptSecMan.DISALLOW_SCRIPT_OR_DATA);
+          urlSecurityCheck(gURLBar.value, gBrowser.currentURI.spec,
+                           nsIScriptSecMan.DISALLOW_SCRIPT_OR_DATA);
           handleURLBarCommand();
         } catch (ex) {}
       }
@@ -2675,12 +2673,11 @@ var goButtonObserver = {
       var url = xferData[0] ? xferData[0] : xferData[1];
       try {
         getBrowser().dragDropSecurityCheck(aEvent, aDragSession, url);
-        var uri = makeURI(url);
-        const secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
-                                 .getService(Components.interfaces.nsIScriptSecurityManager);
+
         const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
-        secMan.checkLoadURI(gBrowser.currentURI, uri, nsIScriptSecMan.DISALLOW_SCRIPT_OR_DATA);
-        loadURI(uri.spec, null, null);
+        urlSecurityCheck(url, gBrowser.currentURI.spec,
+                         nsIScriptSecMan.DISALLOW_SCRIPT_OR_DATA);
+        loadURI(url, null, null);
       } catch (ex) {}
     },
   getSupportedFlavours: function ()
@@ -4409,14 +4406,14 @@ nsContextMenu.prototype = {
     },
     // Open clicked-in frame in the same window.
     showOnlyThisFrame : function () {
-        try {
-          const secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
-                         .getService(Components.interfaces.nsIScriptSecurityManager);
-          const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
-          secMan.checkLoadURI(gBrowser.currentURI, makeURI(this.target.ownerDocument.location.href),
-                              nsIScriptSecMan.DISALLOW_SCRIPT);
-          window.loadURI(this.target.ownerDocument.location.href, null, null);
-        } catch(e) {}
+      const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
+      var frameURL = this.target.ownerDocument.location.href;
+
+      try {
+        urlSecurityCheck(frameURL, gBrowser.currentURI.spec,
+                         nsIScriptSecMan.DISALLOW_SCRIPT);
+        window.loadURI(frameURL, null, null);
+      } catch(e) {}
     },
     // View Partial Source
     viewPartialSource : function ( context ) {
@@ -4455,31 +4452,17 @@ nsContextMenu.prototype = {
     },
     // Change current window to the URL of the image.
     viewImage : function (e) {
-        urlSecurityCheck( this.imageURL, this.docURL );
-        try {
-          if (this.docURL != gBrowser.currentURI) {
-            const secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
-                           .getService(Components.interfaces.nsIScriptSecurityManager);
-            const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
-            secMan.checkLoadURI(gBrowser.currentURI, makeURI(this.imageURL),
-                                nsIScriptSecMan.DISALLOW_SCRIPT);
-          }
-          openUILink( this.imageURL, e );
-        } catch(e) {}
+        const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
+        urlSecurityCheck( this.imageURL, gBrowser.currentURI.spec,
+                          nsIScriptSecMan.DISALLOW_SCRIPT );
+        openUILink( this.imageURL, e );
     },
     // Change current window to the URL of the background image.
     viewBGImage : function (e) {
-        urlSecurityCheck( this.bgImageURL, this.docURL );
-        try {
-          if (this.docURL != gBrowser.currentURI) {
-            const secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
-                           .getService(Components.interfaces.nsIScriptSecurityManager);
-            const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
-            secMan.checkLoadURI(gBrowser.currentURI, makeURI(this.bgImageURL),
-                                nsIScriptSecMan.DISALLOW_SCRIPT);
-          }
-          openUILink( this.bgImageURL, e );
-        } catch(e) {}
+        const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
+        urlSecurityCheck( this.bgImageURL, gBrowser.currentURI.spec,
+                          nsIScriptSecMan.DISALLOW_SCRIPT );
+        openUILink( this.bgImageURL, e );
     },
     disableSetDesktopBackground: function() {
         // Disable the Set as Desktop Background menu item if we're still trying
