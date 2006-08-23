@@ -88,7 +88,7 @@ NS_NewSVGCairoPathBuilder(nsISVGRendererPathBuilder **result,
                           cairo_t *ctx)
 {
   *result = new nsSVGCairoPathBuilder(ctx);
-  if (!result)
+  if (!*result)
     return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(*result);
