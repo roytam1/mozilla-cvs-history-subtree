@@ -205,7 +205,12 @@ static inline PRBool IsAlphaTranslucencySupported() { return pUpdateLayeredWindo
 
 
 #ifdef WINCE
+
+static UINT   gSoftkeyTimerId = 0;
+static UINT   gSoftkeyTimerHit = 0;
 static PRBool gOverrideHWKeys = PR_TRUE;
+static PRInt32 gSoftkeyContextDelay = 1000;
+static PRInt32 gBackRepeatDelay = 500;
 
 typedef BOOL (__stdcall *UnregisterFunc1Proc)( UINT, UINT );
 static UnregisterFunc1Proc gProcUnregisterFunc = NULL;
@@ -275,6 +280,34 @@ static void UnmapHardwareButtons()
 
     gProcUnregisterFunc(mod, kc);
   }
+}
+
+// We want the back key to be able to repeat while the key is held down.
+VOID CALLBACK BackSoftkeyTimer(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime)
+{
+  keybd_event(VK_BACK, 0, 0, 0);
+  keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, 0);
+}
+
+// for the soft keys, we want to generate a different event when they are held down.
+VOID CALLBACK RightSoftkeyTimer(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime)
+{
+  gSoftkeyTimerHit=1;
+
+  keybd_event(VK_SHIFT, 0, 0, 0);
+  keybd_event(VK_F20, 0, 0, 0);
+  keybd_event(VK_F20, 0, KEYEVENTF_KEYUP, 0);
+  keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+}
+
+VOID CALLBACK LeftSoftkeyTimer(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime)
+{
+  gSoftkeyTimerHit=1;
+
+  keybd_event(VK_SHIFT, 0, 0, 0);
+  keybd_event(VK_F10, 0, 0, 0);
+  keybd_event(VK_F10, 0, KEYEVENTF_KEYUP, 0);
+  keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
 }
 
 void CreateSoftKeyMenuBar(HWND wnd)
@@ -1093,6 +1126,8 @@ nsWindow::nsWindow() : nsBaseWidget()
     if (prefBranch)
     {
       prefBranch->GetBoolPref("config.wince.overrideHWKeys", &gOverrideHWKeys);
+      prefBranch->GetIntPref("config.wince.backRepeatDelay", &gBackRepeatDelay);
+      prefBranch->GetIntPref("config.wince.softKeyContextDelay", &gSoftkeyContextDelay);
     }
   }
 #endif
@@ -2606,11 +2641,9 @@ NS_METHOD nsWindow::SetBackgroundColor(const nscolor &aColor)
     ::DeleteObject(mBrush);
 
   mBrush = ::CreateSolidBrush(NSRGB_2_COLOREF(mBackground));
-#ifndef WINCE
   if (mWnd != NULL) {
     SetClassLong(mWnd, GCL_HBRBACKGROUND, (LONG)mBrush);
   }
-#endif
   return NS_OK;
 }
 
@@ -4601,26 +4634,72 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       // fire hotkey events.  See
       // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/win_ce/html/pwc_TheBackButtonandOtherInterestingButtons.asp
       
-      if (VK_TSOFT1 == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam))))
+      if (VK_TSOFT1 == HIWORD(lParam))
       {
-        keybd_event(VK_F19, 0, 0, 0);
-        keybd_event(VK_F19, 0, KEYEVENTF_KEYUP, 0);
+        if (MOD_KEYUP & LOWORD(lParam))
+        {
+          KillTimer(NULL, gSoftkeyTimerId);
+          gSoftkeyTimerId = 0;
+
+          if (gSoftkeyTimerHit == 0)
+          {
+            keybd_event(VK_F10, 0, 0, 0);
+            keybd_event(VK_F10, 0, KEYEVENTF_KEYUP, 0);
+          } 
+
+        }
+        else
+        {
+          if (!gSoftkeyTimerId)
+          {
+            gSoftkeyTimerHit = 0;
+            gSoftkeyTimerId = SetTimer(NULL, 0, gSoftkeyContextDelay, LeftSoftkeyTimer);
+          }
+        }
         result = 0;
         break;
       }
       
-      if (VK_TSOFT2 == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam))))
+      if (VK_TSOFT2 == HIWORD(lParam))
       {
-        keybd_event(VK_F20, 0, 0, 0);
-        keybd_event(VK_F20, 0, KEYEVENTF_KEYUP, 0);
+        if (MOD_KEYUP & LOWORD(lParam))
+        {
+          KillTimer(NULL, gSoftkeyTimerId);
+          gSoftkeyTimerId = 0;
+
+          if (gSoftkeyTimerHit == 0)
+          {
+            keybd_event(VK_F20, 0, 0, 0);
+            keybd_event(VK_F20, 0, KEYEVENTF_KEYUP, 0);
+          }
+        }
+        else
+        {
+          if (!gSoftkeyTimerId)
+          {
+            gSoftkeyTimerHit = 0;
+            gSoftkeyTimerId = SetTimer(NULL, 0, gSoftkeyContextDelay, RightSoftkeyTimer);
+          }
+        }
         result = 0;
         break;
       }
       
-      if (VK_TBACK == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam))))
+      if (VK_TBACK == HIWORD(lParam))
       {
-        keybd_event(VK_BACK, 0, 0, 0);
-        keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, 0);
+        if (MOD_KEYUP & LOWORD(lParam))
+        {
+          KillTimer(NULL, gSoftkeyTimerId);
+          gSoftkeyTimerId = 0;
+        }
+        else
+        {
+          keybd_event(VK_BACK, 0, 0, 0);
+          keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, 0);
+
+          if (!gSoftkeyTimerId)
+            gSoftkeyTimerId = SetTimer(NULL, 0, gBackRepeatDelay, BackSoftkeyTimer);
+        }
         result = 0;
         break;
       }
