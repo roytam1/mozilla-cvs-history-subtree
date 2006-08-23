@@ -257,11 +257,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = SEAMONKEY_1_1a_RELEASE
-NSPR_CO_TAG          = SEAMONKEY_1_1a_RELEASE
-NSS_CO_TAG           = SEAMONKEY_1_1a_RELEASE
-LDAPCSDK_CO_TAG      = SEAMONKEY_1_1a_RELEASE
-LOCALES_CO_TAG       = SEAMONKEY_1_1a_RELEASE
+MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
+NSPR_CO_TAG          = MOZILLA_1_8_BRANCH
+NSS_CO_TAG           = MOZILLA_1_8_BRANCH
+LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
+LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
 
 BUILD_MODULES = all
 
