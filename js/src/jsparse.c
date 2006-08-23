@@ -1366,10 +1366,8 @@ typedef struct BindVarArgs {
     } u;
 } BindVarArgs;
 
-#if JS_HAS_BLOCK_SCOPE
-
 static JSBool
-DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args)
+DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args, JSTreeContext *tc)
 {
     JSObject *blockObj;
     JSScopeProperty *sprop;
@@ -1417,8 +1415,6 @@ DeclareLetVar(JSContext *cx, JSAtom *atom, BindVarArgs *args)
                                    NULL);
 }
 
-#endif
-
 static JSBool
 BindVariable(JSContext *cx, BindVarArgs *args, JSAtom *atom, JSTreeContext *tc)
 {
@@ -1434,7 +1430,7 @@ BindVariable(JSContext *cx, BindVarArgs *args, JSAtom *atom, JSTreeContext *tc)
     JSScopeProperty *sprop;
 
     if (args->let)
-        return DeclareLetVar(cx, atom, args);
+        return DeclareLetVar(cx, atom, args, tc);
 
     stmt = js_LexicalLookup(tc, atom, NULL);
     ATOM_LIST_SEARCH(ale, &tc->decls, atom);
@@ -2067,8 +2063,6 @@ ReturnOrYield(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     return pn;
 }
 
-#if JS_HAS_BLOCK_SCOPE
-
 static JSStmtInfo *
 FindMaybeScopeStatement(JSTreeContext *tc)
 {
@@ -2116,6 +2110,8 @@ SetupLexicalBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     return JS_TRUE;
 }
 
+#if JS_HAS_BLOCK_SCOPE
+
 static JSParseNode *
 LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
 {
@@ -2132,7 +2128,7 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
 
     MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_BEFORE_LET);
 
-    /* This is a let block of the form: let (a, b, c) { ... }. */
+    /* This is a let block or expression of the form: let (a, b, c) .... */
     if (!SetupLexicalBlock(cx, ts, tc, &stmtInfo, &pnblock, &obj))
         return NULL;
     pn = pnblock;
@@ -2147,20 +2143,17 @@ LetBlock(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool statement)
 
     ts->flags |= TSF_OPERAND;
     if (statement && !js_MatchToken(cx, ts, TOK_LC)) {
-        JSParseNode *pn1;
-
         /*
          * If this is really an expression in let statement guise, then we
          * need to wrap the TOK_LET node in a TOK_SEMI node so that we pop
          * the return value of the expression.
          */
-        pn1 = NewParseNode(cx, ts, PN_UNARY, tc);
-        if (!pn1)
+        pn = NewParseNode(cx, ts, PN_UNARY, tc);
+        if (!pn)
             return NULL;
-        pn1->pn_type = TOK_SEMI;
-        pn1->pn_num = -1;
-        pn1->pn_kid = pn;
-        pn = pn1;
+        pn->pn_type = TOK_SEMI;
+        pn->pn_num = -1;
+        pn->pn_kid = pnblock;
 
         statement = JS_FALSE;
     }
@@ -2936,7 +2929,9 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             pn = LetBlock(cx, ts, tc, JS_TRUE);
             if (!pn || !(pn->pn_extra & PNX_BLOCKEXPR))
                 return pn;
+
             /* Let expressions require automatic semicolon insertion. */
+            JS_ASSERT(pn->pn_op == JSOP_LEAVEBLOCKEXPR);
             break;
         }
 
@@ -3015,7 +3010,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         pn->pn_extra = PNX_POPVAR;
         break;
       }
-#endif
+#endif /* JS_HAS_BLOCK_SCOPE */
 
       case TOK_RETURN:
         pn = ReturnOrYield(cx, ts, tc, Expr);
@@ -3157,11 +3152,11 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 static JSParseNode *
 Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 {
-    BindVarArgs args;
+    JSTokenType tt;
     JSBool let;
+    BindVarArgs args;
     JSParseNode *pn, *pn2;
     JSStackFrame *fp;
-    JSTokenType tt;
     JSAtom *atom;
 
     /*
@@ -3170,9 +3165,9 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
      * - TOK_LP: We are parsing the head of a let block.
      * - Otherwise, we're parsing var declarations.
      */
-    let = (CURRENT_TOKEN(ts).type == TOK_LET ||
-           CURRENT_TOKEN(ts).type == TOK_LP);
-    JS_ASSERT(let || CURRENT_TOKEN(ts).type == TOK_VAR);
+    tt = CURRENT_TOKEN(ts).type;
+    let = (tt == TOK_LET || tt == TOK_LP);
+    JS_ASSERT(let || tt == TOK_VAR);
 
     /* Make sure that Statement set the tree context up correctly. */
     JS_ASSERT(!let || tc->topStmt == tc->topScopeStmt);
@@ -4903,7 +4898,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 
                       case TOK_NAME:
                         atom = CURRENT_TOKEN(ts).t_atom;
-                        if (!DeclareLetVar(cx, atom, &args))
+                        if (!DeclareLetVar(cx, atom, &args, tc))
                             return NULL;
 
                         /*
@@ -4981,7 +4976,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         if (!pn)
             return NULL;
         break;
-#endif /* JS_HAS_BLOCK_SCOPE */
+#endif
 
       case TOK_LC:
         pn = NewParseNode(cx, ts, PN_LIST, tc);

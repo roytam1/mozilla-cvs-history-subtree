@@ -216,9 +216,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
         break;
 
       case JOF_UINT16:
-#if JS_HAS_BLOCK_SCOPE
       case JOF_LOCAL:
-#endif
         fprintf(fp, " %u", GET_UINT16(pc));
         break;
 
@@ -1460,8 +1458,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 js_printf(jp, "\t}\n");
                 break;
 
-#if JS_HAS_BLOCK_SCOPE
-              case JSOP_ENTERBLOCK:
+              BEGIN_LITOPX_CASE(JSOP_ENTERBLOCK)
               {
                 JSAtom **atomv, *smallv[5];
                 JSScopeProperty *sprop;
@@ -1495,13 +1492,14 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     }
                 }
 
+                todo = -2;
+
                 if (atomv != smallv)
                     JS_free(cx, atomv);
                 if (!ok)
                     return JS_FALSE;
-                todo = -2;
-                break;
               }
+              END_LITOPX_CASE
 
               case JSOP_LEAVEBLOCK:
               case JSOP_LEAVEBLOCKEXPR:
@@ -1599,7 +1597,6 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 lval = OFF2STR(&ss->sprinter, ss->offsets[i]);
                 atom = NULL;
                 goto do_forlvalinloop;
-#endif
 
               case JSOP_SETRVAL:
                 op = JSOP_RETURN;
@@ -2442,6 +2439,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                   case JSOP_XMLOBJECT:    goto do_JSOP_XMLOBJECT;
                   case JSOP_XMLPI:        goto do_JSOP_XMLPI;
 #endif
+                  case JSOP_ENTERBLOCK:   goto do_JSOP_ENTERBLOCK;
                   default:                JS_ASSERT(0);
                 }
                 /* NOTREACHED */
