@@ -110,6 +110,7 @@ nsBufferedStream::Close()
         mBufferSize = 0;
         mBufferStartOffset = 0;
         mCursor = 0;
+        mFillPoint = 0;
     }
 #ifdef METERING
     {
