@@ -294,20 +294,19 @@ VOID CALLBACK RightSoftkeyTimer(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime
 {
   gSoftkeyTimerHit=1;
 
-  keybd_event(VK_SHIFT, 0, 0, 0);
-  keybd_event(VK_F20, 0, 0, 0);
-  keybd_event(VK_F20, 0, KEYEVENTF_KEYUP, 0);
-  keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+  nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
+  if (observerService)
+    observerService->NotifyObservers(nsnull, "softkey", NS_LITERAL_STRING("right+shift").get());
+
 }
 
 VOID CALLBACK LeftSoftkeyTimer(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime)
 {
   gSoftkeyTimerHit=1;
 
-  keybd_event(VK_SHIFT, 0, 0, 0);
-  keybd_event(VK_F10, 0, 0, 0);
-  keybd_event(VK_F10, 0, KEYEVENTF_KEYUP, 0);
-  keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+  nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
+  if (observerService)
+    observerService->NotifyObservers(nsnull, "softkey", NS_LITERAL_STRING("left+shift").get());
 }
 
 void CreateSoftKeyMenuBar(HWND wnd)
@@ -4643,8 +4642,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
           if (gSoftkeyTimerHit == 0)
           {
-            keybd_event(VK_F10, 0, 0, 0);
-            keybd_event(VK_F10, 0, KEYEVENTF_KEYUP, 0);
+            nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
+            if (observerService)
+              observerService->NotifyObservers(nsnull, "softkey", NS_LITERAL_STRING("left").get());
           } 
 
         }
@@ -4669,8 +4669,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
           if (gSoftkeyTimerHit == 0)
           {
-            keybd_event(VK_F20, 0, 0, 0);
-            keybd_event(VK_F20, 0, KEYEVENTF_KEYUP, 0);
+            nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
+            if (observerService)
+              observerService->NotifyObservers(nsnull, "softkey", NS_LITERAL_STRING("right").get());
           }
         }
         else
@@ -4704,44 +4705,43 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         break;
       }
 
+      nsString key;
+      
       switch (wParam) 
       {
         case VK_APP1:
-          keybd_event(VK_F1, 0, 0, 0);
-          keybd_event(VK_F1, 0, KEYEVENTF_KEYUP, 0);
-          result = 0;
+          key = NS_LITERAL_STRING("VK_APP1");
           break;
 
         case VK_APP2:
-          keybd_event(VK_F2, 0, 0, 0);
-          keybd_event(VK_F2, 0, KEYEVENTF_KEYUP, 0);
-          result = 0;
+          key = NS_LITERAL_STRING("VK_APP2");
           break;
 
         case VK_APP3:
-          keybd_event(VK_F3, 0, 0, 0);
-          keybd_event(VK_F3, 0, KEYEVENTF_KEYUP, 0);
-          result = 0;
+          key = NS_LITERAL_STRING("VK_APP3");
           break;
 
         case VK_APP4:
-          keybd_event(VK_F4, 0, 0, 0);
-          keybd_event(VK_F4, 0, KEYEVENTF_KEYUP, 0);
-          result = 0;
+          key = NS_LITERAL_STRING("VK_APP4");
           break;
 
         case VK_APP5:
-          keybd_event(VK_F5, 0, 0, 0);
-          keybd_event(VK_F5, 0, KEYEVENTF_KEYUP, 0);
-          result = 0;
+          key = NS_LITERAL_STRING("VK_APP5");
           break;
 
         case VK_APP6:
-          keybd_event(VK_F6, 0, 0, 0);
-          keybd_event(VK_F6, 0, KEYEVENTF_KEYUP, 0);
-          result = 0;
+          key = NS_LITERAL_STRING("VK_APP6");
           break;
+        default:
+          key = NS_LITERAL_STRING("unknown");
       }
+
+      result = 0;
+      
+      nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
+      if (observerService)
+        observerService->NotifyObservers(nsnull, "hardware-key", key.get());
+
     }
     break;
 #endif
