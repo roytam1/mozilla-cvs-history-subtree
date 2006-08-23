@@ -858,7 +858,8 @@ txMozillaXSLTProcessor::SetParameter(const nsAString & aNamespaceURI,
 
                 if (NS_FAILED(rv)) {
                     while (i < count) {
-                        NS_RELEASE(values[i++]);
+                        NS_RELEASE(values[i]);
+                        ++i;
                     }
                     nsMemory::Free(array);
 
