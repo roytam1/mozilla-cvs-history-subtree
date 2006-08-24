@@ -387,9 +387,8 @@ SessionStoreService.prototype = {
   onLoad: function sss_onLoad(aWindow) {
     var _this = this;
 
-    // ignore non-browser windows and windows opened while shutting down
-    if (aWindow.document.documentElement.getAttribute("windowtype") != "navigator:browser" ||
-      this._loadState == STATE_QUITTING)
+    // ignore non-browser windows
+    if (aWindow.document.documentElement.getAttribute("windowtype") != "navigator:browser")
       return;
 
     // assign it a unique identifier (timestamp)
@@ -442,8 +441,7 @@ SessionStoreService.prototype = {
    *        Window reference
    */
   onClose: function sss_onClose(aWindow) {
-    // ignore windows not tracked by SessionStore
-    if (!aWindow.__SSi || !this._windows[aWindow.__SSi]) {
+    if (aWindow.document.documentElement.getAttribute("windowtype") != "navigator:browser") {
       return;
     }
     
@@ -1183,17 +1181,12 @@ SessionStoreService.prototype = {
       return;
     }
     
-    var winData;
     // open new windows for all further window entries of a multi-window session
-    // (unless they don't contain any tab data)
     for (var w = 1; w < root.windows.length; w++) {
-      winData = root.windows[w];
-      if (winData && winData.tabs && winData.tabs[0]) {
-        this._openWindowWithState({ windows: [winData], opener: aWindow });
-      }
+      this._openWindowWithState({ windows: [root.windows[w]], opener: aWindow });
     }
     
-    winData = root.windows[0];
+    var winData = root.windows[0];
     if (!winData.tabs) {
       winData.tabs = [];
     }
