@@ -13700,12 +13700,20 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsFrameConstructorState& aState,
   // Otherwise, aFrame is inline. Split it, and recurse to find the
   // containing block frame.
   nsIContent* content = aFrame->GetContent();
+  PRBool isPositioned = (frameType == nsLayoutAtoms::positionedInlineFrame);
 
   // Create an "anonymous block" frame that will parent
   // aBlockChildFrame. The new frame won't have a parent yet: the recursion
   // will parent it.
   nsIFrame* blockFrame;
-  NS_NewBlockFrame(mPresShell, &blockFrame);
+  nsIAtom* blockStyle;
+  if (isPositioned) {
+    NS_NewRelativeItemWrapperFrame(mPresShell, &blockFrame);
+    blockStyle = nsCSSAnonBoxes::mozAnonymousPositionedBlock;
+  } else {
+    NS_NewBlockFrame(mPresShell, &blockFrame);
+    blockStyle = nsCSSAnonBoxes::mozAnonymousBlock;
+  }
   if (! blockFrame)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -13713,30 +13721,64 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsFrameConstructorState& aState,
 
   nsRefPtr<nsStyleContext> blockSC;
   blockSC = mPresShell->StyleSet()->
-    ResolvePseudoStyleFor(content, nsCSSAnonBoxes::mozAnonymousBlock,
-                          styleContext);
+    ResolvePseudoStyleFor(content, blockStyle, styleContext);
 
-  InitAndRestoreFrame(aState, content, nsnull, blockSC, nsnull, blockFrame,
-                      PR_FALSE);
+  InitAndRestoreFrame(aState, content, aFrame->GetParent(), blockSC, nsnull,
+                      blockFrame, PR_FALSE);
+
+  // Any inline frame could have a view (e.g., opacity)
+  // XXXbz should we be passing in a non-null aContentParentFrame?
+  nsHTMLContainerFrame::CreateViewForFrame(blockFrame, nsnull, PR_FALSE);
+
+  if (blockFrame->HasView() || aFrame->HasView()) {
+    // Move aBlockChildFrame's frames into the new view
+    nsHTMLContainerFrame::ReparentFrameViewList(aState.mPresContext,
+                                                aBlockChildFrame,
+                                                aBlockChildFrame->GetParent(),
+                                                blockFrame);
+  }
 
   blockFrame->SetInitialChildList(aState.mPresContext, nsnull, aBlockChildFrame);
+
+  // XXXbz do we need to pass in states here?  Hard to tell... :(
   MoveChildrenTo(aState.mFrameManager, blockSC, blockFrame, aBlockChildFrame,
                  nsnull, nsnull);
+
+  nsIFrame* inlineFrame = nsnull;
 
   // Create an anonymous inline frame that will parent
   // aRightInlineChildFrame. The new frame won't have a parent yet:
   // the recursion will parent it.
   // XXXldb Why bother if |aRightInlineChildFrame| is null?
-  nsIFrame* inlineFrame = nsnull;
-  NS_NewInlineFrame(mPresShell, &inlineFrame);
+  // XXXbz the aTransfer == PR_TRUE code seems to depend on it.  :(
+  if (isPositioned) {
+    NS_NewPositionedInlineFrame(mPresShell, &inlineFrame);      
+  } else {
+    NS_NewInlineFrame(mPresShell, &inlineFrame);
+  }
   if (! inlineFrame)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  InitAndRestoreFrame(aState, content, nsnull, styleContext, nsnull,
-                      inlineFrame, PR_FALSE);
+  InitAndRestoreFrame(aState, content, aFrame->GetParent(), styleContext,
+                      nsnull, inlineFrame, PR_FALSE);
+
+  // Any frame might need a view
+  // XXXbz should we be passing in a non-null aContentParentFrame?
+  nsHTMLContainerFrame::CreateViewForFrame(inlineFrame, nsnull, PR_FALSE);
+
+  if (aRightInlineChildFrame &&
+      (inlineFrame->HasView() || aFrame->HasView())) {
+    // Move aRightInlineChildFrame's frames into the new view
+    nsHTMLContainerFrame::ReparentFrameViewList(aState.mPresContext,
+                                                aRightInlineChildFrame,
+                                                aRightInlineChildFrame->GetParent(),
+                                                inlineFrame);
+  }
 
   inlineFrame->SetInitialChildList(aState.mPresContext, nsnull,
                                    aRightInlineChildFrame);
+
+  // XXXbz again, what about states?
   MoveChildrenTo(aState.mFrameManager, nsnull, inlineFrame,
                  aRightInlineChildFrame, nsnull, nsnull);
 
