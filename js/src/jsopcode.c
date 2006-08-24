@@ -2906,8 +2906,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               BEGIN_LITOPX_CASE(JSOP_QNAMEPART)
-                if (pc[JSOP_QNAMEPART_LENGTH] == JSOP_TOATTRNAME) {
-                    len += JSOP_TOATTRNAME_LENGTH;
+                if (pc[len] == JSOP_TOATTRNAME) {
+                    len += js_CodeSpec[JSOP_TOATTRNAME].length;
                     lval = "@";
                     goto do_qname;
                 }
