@@ -5771,12 +5771,6 @@ found_frame:;
     printf(" prevSibling=%p deletedNextInFlow=%p\n", prevSibling, deletedNextInFlow);
 #endif
 
-    if (!aDeletedFrame->IsFloatContainingBlock()) {
-      // Clear the float cache from placeholders that are descendants
-      // of aDeletedFrame (bug 337883).
-      line->RemovePlaceholderDescendantsOf(aDeletedFrame);
-    }
-
     if (aDestroyFrames) {
       aDeletedFrame->Destroy(presContext);
     } else {
