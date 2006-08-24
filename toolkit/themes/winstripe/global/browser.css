@@ -53,11 +53,9 @@
 .tabbrowser-tab[selected="true"] {
   font-weight: bold;
   margin-bottom: 0px;
-  cursor: -moz-grab;
 }
 
 .tabbrowser-tab[selected="true"] > .tab-image-middle > .tab-text {
-  cursor: -moz-grab !important;
   opacity: 1.0 !important;
 }
 

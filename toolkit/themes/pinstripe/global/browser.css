@@ -58,10 +58,6 @@ tab {
 
 tab[selected="true"] {
   -moz-user-focus: normal;
-  cursor: -moz-grab;
-}
-tab[selected="true"]  .tab-image-middle > .tab-text{
-  cursor: -moz-grab !important;
 }
 
 tab > .tab-image-middle > .tab-text {
