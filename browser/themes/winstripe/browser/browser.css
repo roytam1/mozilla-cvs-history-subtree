@@ -297,7 +297,12 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 /* set up extended binding for the back & forward buttons */
 toolbar:not([mode="text"]) #back-button,
 toolbar:not([mode="text"]) #forward-button {
-  -moz-binding: url(chrome://browser/skin/browser.xml#toolbar-menubutton);
+  -moz-binding: url(chrome://browser/skin/browser.xml#bf-menu-button);
+}
+
+toolbar:not([mode="text"]) #back-button .allowevents-box,
+toolbar:not([mode="text"]) #forward-button .allowevents-box {
+  -moz-binding: url(chrome://browser/skin/browser.xml#bf-menu-button-allowevents-box);
 }
 
 toolbar:not([mode="text"]) #back-button .toolbarbutton-menubutton-button,
