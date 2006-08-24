@@ -10,7 +10,6 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         onload="AddFeedReader.init();"
         ondialogaccept="AddFeedReader.add();"
-        style="width: 30em;"
         buttons="accept,cancel">
 
   <script type="application/x-javascript"

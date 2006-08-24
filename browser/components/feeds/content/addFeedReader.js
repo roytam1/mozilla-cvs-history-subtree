@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Ben Goodger <beng@google.com>
+ *   Asaf Romano <mozilla.mano@sent.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -69,7 +70,7 @@ var AddFeedReader = {
 
   init: function AFR_init() {
     this._result = window.arguments[0].QueryInterface(Ci.nsIDialogParamBlock);
-    this._uri = window.arguments[1];
+    this._uri = window.arguments[1].QueryInterface(Ci.nsIURI);
     this._title = window.arguments[2];
     this._type = window.arguments[3];
     this._typeType = window.arguments[4];
@@ -82,8 +83,8 @@ var AddFeedReader = {
         Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
         getService(Ci.nsIWebContentConverterService);
     var handler = 
-        wccr.getWebContentHandlerByURI(this._type, this._uri);
-    
+        wccr.getWebContentHandlerByURI(this._type, this._uri.spec);
+
     var key = handler != null ? "handlerRegistered" : "addHandler";
     var message = strings.getFormattedString(key, [this._title]);
     addQuestion.setAttribute("value", message);
@@ -98,9 +99,8 @@ var AddFeedReader = {
       var imageBox = document.getElementById("imageBox");
       imageBox.style.backgroundImage = "url('moz-icon://goat." + ext + "?size=32');";
     }
-        
-    var site = document.getElementById("site");
-    site.value = this._uri;
+
+    document.getElementById("site").value = this._uri.host;
     
     if (handler)
       dlg.getButton("accept").focus();
@@ -109,6 +109,8 @@ var AddFeedReader = {
       dlg.getButton("cancel").label = strings.getString("addHandlerNo");
       dlg.getButton("cancel").focus();
     }
+
+    window.sizeToContent();
   },
   
   _updateAddAsDefaultCheckbox: function AFR__updateAddAsDefaultCheckbox() {
