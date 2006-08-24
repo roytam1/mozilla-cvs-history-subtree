@@ -70,7 +70,7 @@ interface nsPIWidgetMac : nsISupports
   
 }; // nsPIWidgetMac
 
-[scriptable, uuid(64F88F6F-3C5B-4F03-8CC0-8844E246CB3A)]
+[scriptable, uuid(0DB8C108-D642-49A2-87F6-ED548DD032E2)]
 interface nsPIWidgetMac_MOZILLA_1_8_BRANCH : nsPIWidgetMac
 {
   // Find the displayed child sheet (if aShown) or a child sheet that
@@ -79,4 +79,7 @@ interface nsPIWidgetMac_MOZILLA_1_8_BRANCH : nsPIWidgetMac
 
   // The event dispatch handler associated with a window
   readonly attribute nsMacEventDispatchHandler eventDispatchHandler;
+
+  // If the window is a sheet, whether or not it is actually displayed
+  attribute boolean sheetShown;
 }; // nsPIWidgetMac_MOZILLA_1_8_BRANCH

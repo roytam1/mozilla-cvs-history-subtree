@@ -243,6 +243,7 @@ nsMacWindow::nsMacWindow() : Inherited()
   , mResizeIsFromUs(PR_FALSE)
   , mShown(PR_FALSE)
   , mSheetNeedsShow(PR_FALSE)
+  , mSheetShown(PR_FALSE)
   , mInPixelMouseScroll(PR_FALSE)
   , mMacEventHandler(nsnull)
 #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
@@ -903,6 +904,20 @@ nsMacWindow::WindowEventHandler ( EventHandlerCallRef inHandlerChain, EventRef i
       break;
 
       case kEventWindowActivated:
+      {
+        // This cooperates with the sheet case in Show to avoid activating
+        // sheets prematurely.  The activate event sent by ShowSheetWindow
+        // will be ignored, but Show will set mSheetShown and send another
+        // activate event to ensure that activation occurs.
+        if (self->mWindowType != eWindowType_sheet ||
+            self->mSheetShown) {
+          self->mMacEventHandler->HandleActivateEvent(inEvent);
+        }
+        ::CallNextEventHandler(inHandlerChain, inEvent);
+        retVal = noErr; // do default processing, but consume
+      }
+      break;
+
       case kEventWindowDeactivated:
       {
         self->mMacEventHandler->HandleActivateEvent(inEvent);
@@ -978,6 +993,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
             // be displayed again when it has no more child sheets.
             ::GetSheetWindowParent(parentWindowRef, &top);
             ::HideSheetWindow(parentWindowRef);
+            piParentWidget->SetSheetShown(PR_FALSE);
           }
         }
 
@@ -997,6 +1013,16 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
             mSheetNeedsShow = PR_FALSE;
 
             ::ShowSheetWindow(mWindowPtr, top);
+
+            // ShowSheetWindow sends an activate event, which could potentially
+            // cause the modal loop to run.  In some cases, this will occur
+            // before the sheet is actually displayed, resulting in a loop
+            // waiting for input from the user that is impossible to achieve.
+            // As a workaround, the activate event sent by ShowSheetWindow
+            // will not be handled by Gecko, and instead another activate
+            // event will be sent once the sheet is known to be displayed.
+            mSheetShown = PR_TRUE;
+            ::ActivateWindow(mWindowPtr, true);
           }
           UpdateWindowMenubar(parentWindowRef, PR_FALSE);
           mMacEventHandler->GetEventDispatchHandler()->DispatchGuiEvent(this, NS_GOTFOCUS);
@@ -1056,6 +1082,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
         ::GetSheetWindowParent(mWindowPtr, &sheetParent);
 
         ::HideSheetWindow(mWindowPtr);
+        mSheetShown = PR_FALSE;
 
         mMacEventHandler->GetEventDispatchHandler()->DispatchGuiEvent(this, NS_DEACTIVATE);
 
@@ -1077,6 +1104,11 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
           // it.  It wasn't sent any deactivate events when it was hidden, so
           // don't call through Show, just let the OS put it back up.
           ::ShowSheetWindow(parentWindowRef, sheetParent);
+
+          // See the other ShowSheetWindow call above for an explanation of
+          // why this is done.
+          piParentWidget->SetSheetShown(PR_TRUE);
+          ::ActivateWindow(parentWindowRef, true);
         }
         else {
           // Sheet, that was hard.  No more siblings or parents, going back
@@ -2405,5 +2437,19 @@ nsMacWindow::KeyEventHandler(EventHandlerCallRef aHandlerCallRef,
 NS_IMETHODIMP
 nsMacWindow::GetEventDispatchHandler(nsMacEventDispatchHandler** aEventDispatchHandler) {
   *aEventDispatchHandler = mMacEventHandler->GetEventDispatchHandler();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMacWindow::GetSheetShown(PRBool *aSheetShown)
+{
+  *aSheetShown = mSheetShown;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMacWindow::SetSheetShown(PRBool aSheetShown)
+{
+  mSheetShown = aSheetShown;
   return NS_OK;
 }
