@@ -66,48 +66,39 @@ WindowCreator::CreateChromeWindow2(nsIWebBrowserChrome *aParent,
                                    PRBool *aCancel,
                                    nsIWebBrowserChrome **aNewWindow)
 {
-  NS_ENSURE_ARG_POINTER(aCancel);
-  NS_ENSURE_ARG_POINTER(aNewWindow);
-  *aCancel = PR_FALSE;
-  *aNewWindow = 0;
+    *aCancel = PR_FALSE;
 
-  unsigned long x, y;
-  GetScreenSize(&x, &y);
+	if (!mAppShell)
+        return NS_ERROR_NOT_INITIALIZED;
 
-  nsCOMPtr<nsIXULWindow> newWindow;
-
-  if (aParent) {
-    nsCOMPtr<nsIXULWindow> xulParent(do_GetInterface(aParent));
-    NS_ASSERTION(xulParent, "window created using non-XUL parent. that's unexpected, but may work.");
-
-    if (xulParent)
-      xulParent->CreateNewWindow(aChromeFlags, mAppShell, getter_AddRefs(newWindow));
-    // And if it fails, don't try again without a parent. It could fail
-    // intentionally (bug 115969).
-  } else { // try using basic methods:
-    /* You really shouldn't be making dependent windows without a parent.
-      But unparented modal (and therefore dependent) windows happen
-      in our codebase, so we allow it after some bellyaching: */
-    if (aChromeFlags & nsIWebBrowserChrome::CHROME_DEPENDENT)
-      NS_WARNING("dependent window created without a parent");
-
+    unsigned long x, y;
+    GetScreenSize(&x, &y);
+    
+    nsCOMPtr<nsIXULWindow> newWindow;
+    
     nsCOMPtr<nsIAppShellService> appShell(do_GetService(NS_APPSHELLSERVICE_CONTRACTID));
     if (!appShell)
       return NS_ERROR_FAILURE;
     
-    appShell->CreateTopLevelWindow(0, 0, aChromeFlags,
+    nsCOMPtr<nsIXULWindow> xulParent(do_GetInterface(aParent));
+    
+    
+    appShell->CreateTopLevelWindow(xulParent,
+                                   0, 
+                                   aChromeFlags,
                                    x,
                                    y,
-                                   mAppShell, getter_AddRefs(newWindow));
-  }
+                                   mAppShell, 
+                                   getter_AddRefs(newWindow));
 
-  // if anybody gave us anything to work with, use it
-  if (newWindow) {
-    newWindow->SetContextFlags(aContextFlags);
-    nsCOMPtr<nsIInterfaceRequestor> thing(do_QueryInterface(newWindow));
-    if (thing)
-      CallGetInterface(thing.get(), aNewWindow);
-  }
+    // if anybody gave us anything to work with, use it
+    if (newWindow) 
+    {
+      newWindow->SetContextFlags(aContextFlags);
+      nsCOMPtr<nsIInterfaceRequestor> thing(do_QueryInterface(newWindow));
+      if (thing)
+        CallGetInterface(thing.get(), aNewWindow);
+    }
 
-  return *aNewWindow ? NS_OK : NS_ERROR_FAILURE;
+    return *aNewWindow ? NS_OK : NS_ERROR_FAILURE;
 }
