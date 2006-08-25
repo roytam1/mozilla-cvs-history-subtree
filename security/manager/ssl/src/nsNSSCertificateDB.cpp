@@ -1311,9 +1311,12 @@ nsNSSCertificateDB::getCertNames(CERTCertList *certList,
         namestr = node->cert->emailAddr;
       } else {
         namestr = node->cert->nickname;
-        char *sc = strchr(namestr, ':');
-        if (sc) *sc = DELIM;
+        if (namestr) {
+          char *sc = strchr(namestr, ':');
+          if (sc) *sc = DELIM;
+        }
       }
+      if (!namestr) namestr = "";
       nsAutoString certname = NS_ConvertASCIItoUCS2(namestr);
       certstr.Append(PRUnichar(DELIM));
       certstr += certname;
