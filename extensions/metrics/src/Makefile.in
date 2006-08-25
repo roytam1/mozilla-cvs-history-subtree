@@ -103,6 +103,11 @@ FORCE_STATIC_LIB = 1
 # md5.c requires NSS headers
 LOCAL_INCLUDES = -I$(DIST)/public/nss -I$(DIST)/private/nss
 
+# Enable logging in release builds
+ifneq (,$(findstring -DMOZ_LOGGING=1, $(ACDEFINES)))
+DEFINES += -DFORCE_PR_LOG
+endif
+
 include $(topsrcdir)/config/rules.mk
 
 export:: $(topsrcdir)/security/nss/lib/freebl/md5.c
