@@ -78,6 +78,8 @@
 #include "nsIAtom.h"
 #include "nsContentUtils.h"
 #include "jscntxt.h"
+#include "nsIDocument.h"
+#include "nsIContent.h"
 
 // For locale aware string methods
 #include "plstr.h"
@@ -1402,6 +1404,49 @@ nsJSContext::CallEventHandler(JSObject *aTarget, JSObject *aHandler,
 
   // check if the event handler can be run on the object in question
   rv = sSecurityManager->CheckFunctionAccess(mContext, aHandler, aTarget);
+  if (NS_SUCCEEDED(rv)) {
+    // We're not done yet!  Some event listeners are confused about their
+    // script context, so check whether we might actually be the wrong script
+    // context.  To be safe, do CheckFunctionAccess checks for both.
+    nsCOMPtr<nsIContent> content;
+    const JSClass *jsClass = JS_GET_CLASS(mContext, aTarget);
+    if (jsClass &&
+        !((~jsClass->flags) & (JSCLASS_HAS_PRIVATE |
+                               JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
+      nsISupports *priv =
+        NS_STATIC_CAST(nsISupports *, JS_GetPrivate(mContext, aTarget));
+      nsCOMPtr<nsIXPConnectWrappedNative> xpcWrapper = do_QueryInterface(priv);
+      if (xpcWrapper) {
+        content = do_QueryWrappedNative(xpcWrapper);
+      }
+    }
+    if (content) {
+      // XXXbz XBL2/sXBL issue
+      nsIDocument* ownerDoc = content->GetOwnerDoc();
+      if (ownerDoc) {
+        nsIScriptGlobalObject* global = ownerDoc->GetScriptGlobalObject();
+        if (global) {
+          nsIScriptContext* context = global->GetContext();
+          if (context && context != this) {
+            JSContext* cx =
+              NS_STATIC_CAST(JSContext*, context->GetNativeContext());
+            rv = stack->Push(cx);
+            if (NS_SUCCEEDED(rv)) {
+              rv = sSecurityManager->CheckFunctionAccess(cx, aHandler,
+                                                         aTarget);
+              // Here we lose no matter what; we don't want to leave the wrong
+              // cx on the stack.  I guess default to leaving mContext, to
+              // cover those cases when we really do have a different context
+              // for the handler and the node.  That's probably safer.
+              if (NS_FAILED(stack->Pop(nsnull))) {
+                return NS_ERROR_FAILURE;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   nsJSContext::TerminationFuncHolder holder(this);
 
