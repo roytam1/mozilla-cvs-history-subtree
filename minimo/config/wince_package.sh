@@ -106,7 +106,7 @@ chmod +x run
 ./run
 rm run
 rm -rf *.jar
-zip -r -9 minimo.jar skin locale branding content
+zip -r -0 minimo.jar skin locale branding content
 rm -rf skin locale branding content
 
 cd ..
