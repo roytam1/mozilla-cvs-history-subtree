@@ -1239,13 +1239,6 @@ nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder* aBuilder,
   return rv;
 }
 
-static nsIFrame* GetParentOrPlaceholderFor(nsFrameManager* aFrameManager, nsIFrame* aFrame) {
-  if (aFrame->GetStateBits() & NS_FRAME_OUT_OF_FLOW) {
-    return aFrameManager->GetPlaceholderFrameFor(aFrame);
-  }
-  return aFrame->GetParent();
-}
-
 #ifdef NS_DEBUG
 static void PaintDebugBorder(nsIFrame* aFrame, nsIRenderingContext* aCtx,
      const nsRect& aDirtyRect, nsPoint aPt) {
@@ -2737,10 +2730,15 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                            nsIFrame::InlineMinWidthData *aData)
 {
+  PRBool canBreak = !CanContinueTextRun();
+  if (canBreak)
+    aData->Break(aRenderingContext);
   aData->trailingWhitespace = 0;
   aData->skipWhitespace = PR_FALSE;
   aData->currentLine += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                             this, nsLayoutUtils::MIN_WIDTH);
+  if (canBreak)
+    aData->Break(aRenderingContext);
 }
 
 /* virtual */ void
