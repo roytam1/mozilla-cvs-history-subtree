@@ -314,6 +314,11 @@ toolbar:not([mode="text"]) #forward-button .toolbarbutton-menubutton-button {
   min-width: 0;
 }
 
+toolbar[mode="icons"] #back-button .toolbarbutton-text-box,
+toolbar[mode="icons"] #forward-button .toolbarbutton-text-box {
+  display: none;
+}
+
 /* ::::: 24px primary toolbar buttons ::::: */
 
 /* back button-- */

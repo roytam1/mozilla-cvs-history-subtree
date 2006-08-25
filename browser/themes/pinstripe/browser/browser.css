@@ -276,6 +276,11 @@ toolbar:not([mode="text"]) #forward-button .toolbarbutton-menubutton-dropmarker 
   margin-top: 1px;
 }
 
+toolbar[mode="icons"] #back-button .toolbarbutton-text-box,
+toolbar[mode="icons"] #forward-button .toolbarbutton-text-box {
+  display: none;
+}
+
 /* ----- DEFAULT PRIMARY TOOLBAR BUTTONS ----- */	
 
 /* ----- DEFAULT BACK BUTTON ----- */	

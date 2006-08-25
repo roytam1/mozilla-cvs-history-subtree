@@ -33,7 +33,7 @@
                           class="toolbarbutton-menubutton-dropmarker"
                           xbl:inherits="align,dir,pack,orient,disabled,toolbarmode,buttonstyle,label"/>
         </xul:hbox>
-        <xul:hbox flex="1" class="allowevents-box">
+        <xul:hbox flex="1" class="toolbarbutton-text-box allowevents-box">
            <xul:label class="toolbarbutton-text"
                       crop="right"
                       xbl:inherits="value=label,accesskey,crop,toolbarmode,buttonstyle"
