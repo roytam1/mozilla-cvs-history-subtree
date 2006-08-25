@@ -206,4 +206,6 @@ protected:
   PRBool mProcessingAttachedStack;
 };
 
+PRBool PR_CALLBACK ReleaseInsertionPoint(void* aElement, void* aData);
+
 #endif
