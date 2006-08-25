@@ -7505,8 +7505,8 @@ nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
 void nsBlockFrame::CollectFloats(nsIFrame* aFrame, nsFrameList& aList, nsIFrame** aTail,
                                  PRBool aFromOverflow) {
   while (aFrame) {
-    // Don't descend into block children
-    if (!aFrame->GetStyleDisplay()->IsBlockLevel()) {
+    // Don't descend into float containing blocks.
+    if (!aFrame->IsFloatContainingBlock()) {
       nsIFrame *outOfFlowFrame = nsLayoutUtils::GetFloatFromPlaceholder(aFrame);
       if (outOfFlowFrame) {
         // Make sure that its parent is us. Otherwise we don't want
