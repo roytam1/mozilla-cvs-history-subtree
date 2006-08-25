@@ -2879,9 +2879,7 @@ nsLineLayout::FindNextText(nsPresContext* aPresContext, nsIFrame* aFrame)
     nsIFrame* top = NS_STATIC_CAST(nsIFrame*, stack.ElementAt(lastIndex));
 
     // If this is a frame that'll break a word, then bail.
-    PRBool canContinue;
-    top->CanContinueTextRun(canContinue);
-    if (! canContinue)
+    if (! top->CanContinueTextRun())
       return nsnull;
 
     // Advance to top's next sibling
@@ -2904,8 +2902,7 @@ nsLineLayout::FindNextText(nsPresContext* aPresContext, nsIFrame* aFrame)
     // ...and prowl down to next's deepest child. We'll need to check
     // for potential run-busters "on the way down", too.
     for (;;) {
-      next->CanContinueTextRun(canContinue);
-      if (! canContinue)
+      if (! next->CanContinueTextRun())
         return nsnull;
 
       nsIFrame* child = next->GetFirstChild(nsnull);

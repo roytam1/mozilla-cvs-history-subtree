@@ -2857,13 +2857,12 @@ nsFrame::DidReflow(nsPresContext*           aPresContext,
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
+/* virtual */ PRBool
+nsFrame::CanContinueTextRun() const
 {
   // By default, a frame will *not* allow a text run to be continued
   // through it.
-  aContinueTextRun = PR_FALSE;
-  return NS_OK;
+  return PR_FALSE;
 }
 
 NS_IMETHODIMP

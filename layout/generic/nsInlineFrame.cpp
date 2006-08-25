@@ -470,12 +470,11 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
   return rv;
 }
 
-NS_IMETHODIMP
-nsInlineFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
+/* virtual */ PRBool
+nsInlineFrame::CanContinueTextRun() const
 {
   // We can continue a text run through an inline frame
-  aContinueTextRun = PR_TRUE;
-  return NS_OK;
+  return PR_TRUE;
 }
 
 nsresult

@@ -69,7 +69,7 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
-  NS_IMETHOD CanContinueTextRun(PRBool& aContinueTextRun) const;
+  virtual PRBool CanContinueTextRun() const;
 
   NS_IMETHOD SetSelected(nsPresContext* aPresContext, nsIDOMRange *aRange,PRBool aSelected, nsSpread aSpread);
 
@@ -277,12 +277,11 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
   return rv;
 }
 
-NS_IMETHODIMP
-nsFirstLetterFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
+/* virtual */ PRBool
+nsFirstLetterFrame::CanContinueTextRun() const
 {
   // We can continue a text run through a first-letter frame.
-  aContinueTextRun = PR_TRUE;
-  return NS_OK;
+  return PR_TRUE;
 }
 
 void
