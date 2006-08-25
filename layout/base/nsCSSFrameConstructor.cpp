@@ -11144,7 +11144,13 @@ nsCSSFrameConstructor::CreateContinuingOuterTableFrame(nsIPresShell*    aPresShe
         nsIFrame* continuingTableFrame;
 
         // It's the inner table frame, so create a continuing frame
-        CreateContinuingFrame(aPresContext, childFrame, newFrame, &continuingTableFrame);
+        rv = CreateContinuingFrame(aPresContext, childFrame, newFrame,
+                                   &continuingTableFrame);
+        if (NS_FAILED(rv)) {
+          newFrame->Destroy(aPresContext);
+          *aContinuingFrame = nsnull;
+          return rv;
+        }
         newChildFrames.AddChild(continuingTableFrame);
       } else {
         // XXX remove this code and the above checks. We don't want to replicate 
@@ -11356,8 +11362,15 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
         // See if it's a table cell frame
         if (IS_TABLE_CELL(cellFrame->GetType())) {
           nsIFrame* continuingCellFrame;
-
-          CreateContinuingFrame(aPresContext, cellFrame, newFrame, &continuingCellFrame);
+          rv = CreateContinuingFrame(aPresContext, cellFrame, newFrame,
+                                     &continuingCellFrame);
+          if (NS_FAILED(rv)) {
+            nsFrameList tmp(newChildList.childList);
+            tmp.DestroyFrames(aPresContext);
+            newFrame->Destroy(aPresContext);
+            *aContinuingFrame = nsnull;
+            return NS_ERROR_OUT_OF_MEMORY;
+          }
           newChildList.AddChild(continuingCellFrame);
         }
         cellFrame = cellFrame->GetNextSibling();
@@ -11377,7 +11390,13 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // Create a continuing area frame
       nsIFrame* continuingAreaFrame;
       nsIFrame* areaFrame = aFrame->GetFirstChild(nsnull);
-      CreateContinuingFrame(aPresContext, areaFrame, newFrame, &continuingAreaFrame);
+      rv = CreateContinuingFrame(aPresContext, areaFrame, newFrame,
+                                 &continuingAreaFrame);
+      if (NS_FAILED(rv)) {
+        newFrame->Destroy(aPresContext);
+        *aContinuingFrame = nsnull;
+        return rv;
+      }
 
       // Set the table cell's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, continuingAreaFrame);
@@ -11408,15 +11427,20 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     // create a continuing out of flow frame
     nsIFrame* oofFrame = nsPlaceholderFrame::GetRealFrameForPlaceholder(aFrame);
     nsIFrame* oofContFrame;
-    CreateContinuingFrame(aPresContext, oofFrame, aParentFrame, &oofContFrame);
-    if (!oofContFrame) 
-      return NS_ERROR_NULL_POINTER;
+    rv = CreateContinuingFrame(aPresContext, oofFrame, aParentFrame, &oofContFrame);
+    if (NS_FAILED(rv)) {
+      *aContinuingFrame = nsnull;
+      return rv;
+    }
     // create a continuing placeholder frame
-    CreatePlaceholderFrameFor(shell, aPresContext,
-                              shell->FrameManager(), content, 
-                              oofContFrame, styleContext, aParentFrame, &newFrame);
-    if (!newFrame) 
-      return NS_ERROR_NULL_POINTER;
+    rv = CreatePlaceholderFrameFor(shell, aPresContext, shell->FrameManager(),
+                                   content, oofContFrame, styleContext,
+                                   aParentFrame, &newFrame);
+    if (NS_FAILED(rv)) {
+      oofContFrame->Destroy(aPresContext);
+      *aContinuingFrame = nsnull;
+      return rv;
+    }
     newFrame->Init(aPresContext, content, aParentFrame, styleContext, aFrame);
   } else if (nsLayoutAtoms::fieldSetFrame == frameType) {
     rv = NS_NewFieldSetFrame(aPresContext->PresShell(), &newFrame,
@@ -11432,19 +11456,25 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // XXXbz we really shouldn't have to do this by hand!
       nsIFrame* continuingAreaFrame;
       nsIFrame* areaFrame = GetFieldSetAreaFrame(aFrame);
-      CreateContinuingFrame(aPresContext, areaFrame, newFrame, &continuingAreaFrame);
-
+      rv = CreateContinuingFrame(aPresContext, areaFrame, newFrame,
+                                 &continuingAreaFrame);
+      if (NS_FAILED(rv)) {
+        newFrame->Destroy(aPresContext);
+        *aContinuingFrame = nsnull;
+        return rv;
+      }
       // Set the fieldset's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, continuingAreaFrame);
     }
   } else {
-    NS_ASSERTION(PR_FALSE, "unexpected frame type");
+    NS_NOTREACHED("unexpected frame type");
     rv = NS_ERROR_UNEXPECTED;
   }
 
   *aContinuingFrame = newFrame;
 
   if (NS_FAILED(rv)) {
+    *aContinuingFrame = nsnull;
     return rv;
   }
 
@@ -11468,6 +11498,8 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
   nsIFrame* pageFrame = aParentFrame->GetParent();
   if (!pageFrame) {
     NS_ERROR("pageContentFrame does not have parent!");
+    newFrame->Destroy(aPresContext);
+    *aContinuingFrame = nsnull;
     return NS_ERROR_UNEXPECTED;
   }
 
@@ -11481,6 +11513,8 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
   nsIFrame* prevPageContentFrame = prevPage->GetFirstChild(nsnull);
 
   if (!prevPageContentFrame) {
+    newFrame->Destroy(aPresContext);
+    *aContinuingFrame = nsnull;
     return NS_ERROR_UNEXPECTED;
   }
   
@@ -11498,8 +11532,11 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
   for (nsIFrame* fixed = firstFixed; fixed; fixed = fixed->GetNextSibling()) {
     rv = ConstructFrame(state, fixed->GetContent(),
                         newFrame, fixedPlaceholders);
-    if (NS_FAILED(rv))
+    if (NS_FAILED(rv)) {
+      newFrame->Destroy(aPresContext);
+      *aContinuingFrame = nsnull;
       return rv;
+    }
   }
 
   // Add the placeholders to our primary child list.
@@ -12513,6 +12550,7 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   nsFrameItems& aResult)
 {
   // Create the first-letter-frame
+  nsresult rv;
   nsIFrame* letterFrame;
   nsStyleSet *styleSet = mPresShell->StyleSet();
 
@@ -12546,9 +12584,12 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   nsIFrame* nextTextFrame = nsnull;
   if (NeedFirstLetterContinuation(aTextContent)) {
     // Create continuation
-    CreateContinuingFrame(aState.mPresContext, aTextFrame, aParentFrame,
-                          &nextTextFrame);
-
+    rv = CreateContinuingFrame(aState.mPresContext, aTextFrame, aParentFrame,
+                               &nextTextFrame);
+    if (NS_FAILED(rv)) {
+      letterFrame->Destroy(aState.mPresContext);
+      return;
+    }
     // Repair the continuations style context
     nsStyleContext* parentStyleContext = aStyleContext->GetParent();
     if (parentStyleContext) {
