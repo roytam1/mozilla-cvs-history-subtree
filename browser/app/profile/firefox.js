@@ -50,26 +50,30 @@
 
 #ifdef OFFICIAL_BRANDING
 
-pref("startup.homepage_override_url","http://%LOCALE%.www.mozilla.com/%LOCALE%/firefox/%VERSION%/whatsnew/");
-pref("startup.homepage_welcome_url","http://%LOCALE%.www.mozilla.com/%LOCALE%/firefox/%VERSION%/firstrun/");
+pref("startup.homepage_override_url","http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/%VERSION%/whatsnew/");
+pref("startup.homepage_welcome_url","http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/%VERSION%/firstrun/");
 // URL user can browse to manually if for some reason all update installation
 // attempts fail.
-pref("app.update.url.manual", "http://%LOCALE%.www.mozilla.com/%LOCALE%/products/firefox/");
+pref("app.update.url.manual", "http://%LOCALE%.www.mozilla.com/%LOCALE%/products/%APP%/");
 // A default value for the "More information about this update" link
 // supplied in the "An update is available" page of the update wizard. 
-pref("app.update.url.details", "http://%LOCALE%.www.mozilla.com/%LOCALE%/firefox/releases/");
+pref("app.update.url.details", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/releases/");
 
+// Release notes URL
+pref("app.releaseNotesURL", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/%VERSION%/releasenotes/");
 #else
 
-pref("startup.homepage_override_url","http://www.mozilla.org/projects/firefox/%VERSION%/whatsnew/");
-pref("startup.homepage_welcome_url","http://www.mozilla.org/projects/firefox/%VERSION%/firstrun/");
+pref("startup.homepage_override_url","http://www.mozilla.org/projects/%APP%/%VERSION%/whatsnew/");
+pref("startup.homepage_welcome_url","http://www.mozilla.org/projects/%APP%/%VERSION%/firstrun/");
 // URL user can browse to manually if for some reason all update installation
 // attempts fail.
-pref("app.update.url.manual", "http://www.mozilla.org/products/firefox/");
+pref("app.update.url.manual", "http://www.mozilla.org/products/%APP%/");
 // A default value for the "More information about this update" link
 // supplied in the "An update is available" page of the update wizard. 
-pref("app.update.url.details", "http://www.mozilla.org/projects/firefox/");
+pref("app.update.url.details", "http://www.mozilla.org/projects/%APP%/");
 
+// Release notes URL
+pref("app.releaseNotesURL", "http://www.mozilla.org/projects/%APP%/%VERSION%/releasenotes/");
 #endif
 
 pref("general.startup.browser", true);
@@ -530,4 +534,7 @@ pref("browser.safebrowsing.provider.0.privacy.url", "chrome://browser/content/pr
 pref("browser.safebrowsing.provider.0.reportGenericURL", "http://{moz:locale}.phish-generic.mozilla.com/?hl={moz:locale}");
 pref("browser.safebrowsing.provider.0.reportErrorURL", "http://{moz:locale}.phish-error.mozilla.com/?hl={moz:locale}");
 pref("browser.safebrowsing.provider.0.reportPhishURL", "http://{moz:locale}.phish-report.mozilla.com/?hl={moz:locale}");
+
+// FAQ URL
+pref("browser.safebrowsing.warning.infoURL", "http://%LOCALE%.www.mozilla.com/%LOCALE%/firefox/phishing-protection/");
 #endif
