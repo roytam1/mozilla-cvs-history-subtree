@@ -106,8 +106,8 @@
       </toolbar>
 
       <toolbar id="dialog-bar">
-        <toolbarbutton hidden="true" accessrule="pref-bar"  id="cancel-button"  command="cmd_PrefCancel"><label class='dialog-button' value="&cancelButton.label;" /></toolbarbutton>  
-        <toolbarbutton id="okay-button" tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></toolbarbutton>     
+        <toolbarbutton id="cancel-button" hidden="true"  command="cmd_PrefCancel"><label class='dialog-button' value="&cancelButton.label;" /></toolbarbutton>  
+        <toolbarbutton id="okay-button"   tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></toolbarbutton>     
       </toolbar>
     </hbox>
     
