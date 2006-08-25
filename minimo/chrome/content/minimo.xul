@@ -87,7 +87,6 @@
         <tabbrowser id="content" 
                     contentcontextmenu="contentAreaContextMenu"
                     disablehistory="false"
-                    accessrule="access_content" 
                     src="about:blank"
                     flex="1" 
                     autocompletepopup="PopupAutoComplete"
@@ -139,7 +138,7 @@
         
     <toolbar id="nav-bar" >
       
-      <toolbarbutton tabindex="1" accessrule="focus_nav-bar" class="menu-button"  id="menu-button" command="cmd_BrowserMenu" />  
+      <toolbarbutton tabindex="1" class="menu-button"  id="menu-button" command="cmd_BrowserMenu" />  
       
       <!-- WARNING: don't add tabindex to the following element. Somehow it conflicts with the popup history open --> 
       
@@ -161,7 +160,7 @@
         </hbox>
       </textbox>
       
-      <toolbarbutton tabindex="2" accessrule="focus_nav-bar" class="nav-button"  id="nav-menu-button" command="cmd_BrowserNavMenu" />  
+      <toolbarbutton tabindex="2" class="nav-button"  id="nav-menu-button" command="cmd_BrowserNavMenu" />  
       
     </toolbar>
 
