@@ -870,15 +870,7 @@ function findChildShell(aDocument, aDocShell, aSoughtURI) {
  **/
 function browserInit(refTab)  
 {
-  /* 
-   * addRule access navigational rule to each tab 
-   */
-  
-  refTab.setAttribute("accessrule","focus_content");
-  
-  /*
-   * 
-   */
+
   var refBrowser=gBrowser.getBrowserForTab(refTab);
   
   try {
