@@ -1917,12 +1917,7 @@ nsGenericHTMLElement::SetAttrAndNotify(PRInt32 aNamespaceID,
   
   if (aNotify && aNamespaceID == kNameSpaceID_None &&
       aAttribute == nsHTMLAtoms::spellcheck) {
-    nsCOMPtr<nsIEditor> editor = GetAssociatedEditor();
-    nsCOMPtr<nsIEditor_MOZILLA_1_8_BRANCH> editor_1_8 =
-      do_QueryInterface(editor);
-    if (editor_1_8) {
-      editor_1_8->SyncRealTimeSpell();
-    }
+    SyncEditorsOnSubtree(this);
   } else if (aNamespaceID == kNameSpaceID_XMLEvents && 
       aAttribute == nsHTMLAtoms::_event && mNodeInfo->GetDocument()) {
     mNodeInfo->GetDocument()->AddXMLEventsContent(this);
@@ -4289,4 +4284,31 @@ nsGenericHTMLElement::IsCurrentBodyElement()
   nsCOMPtr<nsIDOMHTMLElement> htmlElement;
   htmlDocument->GetBody(getter_AddRefs(htmlElement));
   return htmlElement == bodyElement;
+}
+
+// static
+void
+nsGenericHTMLElement::SyncEditorsOnSubtree(nsIContent* content)
+{
+  /* Sync this node */
+  nsGenericHTMLElement* element = FromContent(content);
+  if (element) {
+    nsCOMPtr<nsIEditor> editor = element->GetAssociatedEditor();
+    nsCOMPtr<nsIEditor_MOZILLA_1_8_BRANCH> editor_1_8 =
+      do_QueryInterface(editor);
+    if (editor_1_8) {
+      editor_1_8->SyncRealTimeSpell();
+    }
+  }
+
+  /* Sync all children */
+  PRUint32 childCount = content->GetChildCount();
+  for (PRUint32 i = 0; i < childCount; ++i) {
+    nsIContent* childContent = content->GetChildAt(i);
+    NS_ASSERTION(childContent,
+                 "DOM mutated unexpectedly while syncing editors!");
+    if (childContent) {
+      SyncEditorsOnSubtree(childContent);
+    }
+  }
 }

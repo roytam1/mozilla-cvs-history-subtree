@@ -821,6 +821,12 @@ protected:
    * Returns true if this is the current document's body element
    */
   PRBool IsCurrentBodyElement();
+
+  /**
+   * Ensures all editors associated with a subtree are synced, for purposes of
+   * spellchecking.
+   */
+  static void SyncEditorsOnSubtree(nsIContent* content);
 };
 
 
