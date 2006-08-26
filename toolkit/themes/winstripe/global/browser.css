@@ -249,6 +249,7 @@ tabpanels {
   background-repeat: no-repeat;
   opacity: 0.4;
 }
+
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up{
   background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png") !important;
 }
@@ -315,7 +316,7 @@ tabpanels {
 .tabs-alltabs-box {
   margin-top: 2px;
   margin-bottom: 2px;
-  width: 20px !important;
+  width: 18px !important;
   height: 25px !important;
   background-image: url("chrome://global/skin/icons/alltabs-box-end-bkgnd.png");
   background-repeat: no-repeat;
@@ -341,7 +342,7 @@ tabpanels {
   border: 0px !important;
   margin-top: 2px;
   margin-bottom: 2px;
-  width: 20px !important;
+  width: 18px !important;
   height: 25px !important;
   border: 0px !important;
   -moz-padding-start: 4px !important;
@@ -350,6 +351,10 @@ tabpanels {
 
 .tabs-alltabs-button  > .toolbarbutton-text {
   display: none;
+}
+
+.tabs-alltabs-button > .toolbarbutton-icon {
+  -moz-margin-end: 2px;
 }
 
 .tabs-alltabs-button:hover {
@@ -365,7 +370,7 @@ tabpanels {
 .tabs-alltabs-box-animate{
   margin-top: 2px;
   margin-bottom: 2px;
-  width: 20px !important;
+  width: 18px !important;
   height: 25px !important;
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd-animate.png");
   background-repeat: no-repeat;
