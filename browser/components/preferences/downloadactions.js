@@ -293,7 +293,7 @@ var gDownloadActionsWindow = {
     }
 #endif
 #ifdef XP_MACOSX
-    var lfm = aFile.QueryInterface(Components.interfaces.nsILocalFileMac);
+    var lfm = aFile.QueryInterface(Components.interfaces.nsILocalFileMac_MOZILLA_1_8_BRANCH);
     try {
       return lfm.bundleDisplayName;
     }
