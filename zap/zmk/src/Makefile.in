@@ -125,7 +125,7 @@ OS_LIBS += dsound.lib winmm.lib
 endif
 
 ifeq ($(OS_ARCH),Darwin)
-OS_LIBS += -framework CoreAudio  -framework AudioToolbox
+OS_LIBS += -framework CoreAudio  -framework AudioToolbox -framework Carbon
 endif
 
 

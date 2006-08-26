@@ -43,7 +43,7 @@ CSRCS		+=\
 		pablio/ringbuffer.c\
 		$(NULL)
 
-OS_LIBS += -framework CoreAudio -framework AudioToolbox
+OS_LIBS += -framework CoreAudio -framework AudioToolbox -framework Carbon
 endif
 
 
