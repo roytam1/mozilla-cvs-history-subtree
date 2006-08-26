@@ -243,6 +243,7 @@ tabpanels {
   width: 18px !important;
   height: 25px !important;
   -moz-margin-start: 0px !important;
+  -moz-margin-end: 0px !important;
   list-style-image: url("chrome://global/skin/icons/tab-arrow-start.png") !important;
   background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png") !important;
   background-repeat: no-repeat;

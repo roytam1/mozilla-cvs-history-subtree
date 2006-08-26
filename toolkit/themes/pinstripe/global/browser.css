@@ -270,6 +270,7 @@ tabbrowser > tabbox > tabpanels {
   height: 25px;
   margin-left: 0px !important;
   padding-left: 0px !important;
+  -moz-margin-end: 0px !important;
   list-style-image: url("chrome://global/skin/tab-arrow-start.png") !important;
   background-image: url("chrome://global/skin/tab-arrow-start-bkgnd.png") !important;
   opacity: 0.65;
