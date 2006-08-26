@@ -319,7 +319,8 @@ toolbar[mode="icons"] #forward-button .toolbarbutton-text-box {
 }
 
 #back-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-#back-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
+#back-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker,
+#back-button[open="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(72px, 14px, 96px, 0px);
 }
 
@@ -338,7 +339,9 @@ toolbar[mode="icons"] #forward-button .toolbarbutton-text-box {
 #forward-button[disabled="true"] {
  -moz-image-region: rect(48px, 48px, 72px, 24px) !important;
 }
-#forward-button:hover:active {
+#forward-button:hover:active,
+#forward-button[buttondown="true"],
+#forward-button[open="true"] {
   -moz-image-region: rect(96px, 48px, 120px, 24px);
 }
 
@@ -357,7 +360,8 @@ toolbar[mode="icons"] #forward-button .toolbarbutton-text-box {
   -moz-image-region: rect(48px, 14px, 72px, 0px) !important;
 }
 #forward-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-#forward-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
+#forward-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker,
+#forward-button[open="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(72px, 14px, 96px, 0px);
 }
 
@@ -564,7 +568,8 @@ toolbar[iconsize="small"] #back-button[disabled="true"] {
   -moz-image-region: rect(32px, 16px, 48px, 0px) !important;
 }
 toolbar[iconsize="small"] #back-button:hover:active,
-toolbar[iconsize="small"] #back-button[buttondown="true"] {
+toolbar[iconsize="small"] #back-button[buttondown="true"],
+toolbar[iconsize="small"] #back-button[open="true"] {
   -moz-image-region: rect(64px, 16px, 80px, 0px);
 }
 
@@ -586,7 +591,8 @@ toolbar[iconsize="small"] #back-button[disabled="true"] .toolbarbutton-menubutto
 }
 
 toolbar[iconsize="small"] #back-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-toolbar[iconsize="small"] #back-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
+toolbar[iconsize="small"] #back-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #back-button[open="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(48px, 14px, 64px, 0px);
 }
 
@@ -602,7 +608,8 @@ toolbar[iconsize="small"] #forward-button[disabled="true"] {
   -moz-image-region: rect(32px, 32px, 48px, 16px) !important;
 }
 toolbar[iconsize="small"] #forward-button:hover:active,
-toolbar[iconsize="small"] #forward-button[buttondown="true"] {
+toolbar[iconsize="small"] #forward-button[buttondown="true"],
+toolbar[iconsize="small"] #forward-button[open="true"] {
   -moz-image-region: rect(64px, 32px, 80px, 16px);
 }
 
@@ -624,7 +631,8 @@ toolbar[iconsize="small"] #forward-button[disabled="true"] .toolbarbutton-menubu
 }
 
 toolbar[iconsize="small"] #forward-button:hover:active .toolbarbutton-menubutton-dropmarker, 
-toolbar[iconsize="small"] #forward-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker {
+toolbar[iconsize="small"] #forward-button[buttondown="true"] .toolbarbutton-menubutton-dropmarker,
+toolbar[iconsize="small"] #forward-button[open="true"] .toolbarbutton-menubutton-dropmarker {
   -moz-image-region: rect(48px, 14px, 64px, 0px);
 }
 
