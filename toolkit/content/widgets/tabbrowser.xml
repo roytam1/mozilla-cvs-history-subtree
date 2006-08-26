@@ -2515,7 +2515,7 @@
       <xul:scrollbox xbl:inherits="orient,align,pack,dir" flex="1" anonid="scrollbox">
         <children/>
       </xul:scrollbox>
-      <xul:stack align="center" pack="end">
+      <xul:stack align="center" pack="end" class="scrollbutton-down-stack">
         <!-- XXXsspitzer hack
              this extra hbox with position: relative
              is needed to work around two bugs.
