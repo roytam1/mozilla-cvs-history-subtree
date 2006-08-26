@@ -1033,6 +1033,9 @@ nsresult
 nsUrlClassifierDBService::Shutdown()
 {
   nsresult rv;
+  
+  EnsureThreadStarted();
+  
   // First close the db connection.
   if (mWorker) {
     LOG(("Sending close request\n"));
