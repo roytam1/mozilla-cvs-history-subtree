@@ -3178,6 +3178,12 @@ static PRBool SelectorMatches(RuleProcessorData &data,
     else if (nsCSSPseudoClasses::mozReadWrite == pseudoClass->mAtom) {
       result = STATE_CHECK(NS_EVENT_STATE_MOZ_READWRITE);
     }
+    else if (nsCSSPseudoClasses::mozIsHTML == pseudoClass->mAtom) {
+      result =
+        (data.mIsHTMLContent &&
+         data.mContent->GetNameSpaceID() == kNameSpaceID_None) ? localTrue :
+                                                                 localFalse;
+    }
     else {
       NS_ERROR("CSS parser parsed a pseudo-class that we do not handle");
       result = PR_FALSE;  // unknown pseudo class
