@@ -123,7 +123,7 @@ nsCSSValue::nsCSSValue(const nsCSSValue& aCopy)
 {
   if ((eCSSUnit_String <= mUnit) && (mUnit <= eCSSUnit_Attr)) {
     if (nsnull != aCopy.mValue.mString) {
-      mValue.mString = nsCRT::strdup(aCopy.mValue.mString);
+      mValue.mString = ToNewUnicode(nsDependentString(aCopy.mValue.mString));
     }
     else {
       mValue.mString = nsnull;

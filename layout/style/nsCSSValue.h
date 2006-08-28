@@ -249,7 +249,7 @@ public:
   {
     if ((eCSSUnit_String <= mUnit) && (mUnit <= eCSSUnit_Attr) &&
         (nsnull != mValue.mString)) {
-      nsCRT::free(mValue.mString);
+      NS_Free(mValue.mString);
     } else if (eCSSUnit_Array <= mUnit && mUnit <= eCSSUnit_Counters) {
       mValue.mArray->Release();
     } else if (eCSSUnit_URL == mUnit) {
@@ -386,7 +386,7 @@ public:
     // |mString| fails.
     URL(nsIURI* aURI, const PRUnichar* aString, nsIURI* aReferrer)
       : mURI(aURI),
-        mString(nsCRT::strdup(aString)),
+        mString(ToNewUnicode(nsDependentString(aString))),
         mReferrer(aReferrer),
         mRefCnt(0)
     {
@@ -398,7 +398,7 @@ public:
       // null |mString| isn't valid normally, but is checked by callers
       // of the constructor
       if (mString)
-        nsCRT::free(mString);
+        NS_Free(mString);
       MOZ_COUNT_DTOR(nsCSSValue::URL);
     }
 
