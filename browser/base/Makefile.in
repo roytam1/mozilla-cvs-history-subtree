@@ -56,6 +56,10 @@ ifneq (,$(filter windows gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
 DEFINES += -DHAVE_SHELL_SERVICE=1
 endif
 
+ifneq (,$(filter mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
+DEFINES += -DTOOLBAR_CUSTOMIZATION_SHEET
+endif
+
 ifndef MOZ_BRANDING_DIRECTORY
 libs locale::
 	$(INSTALL) $(srcdir)/content/browserconfig.properties $(DIST)/bin

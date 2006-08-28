@@ -3366,12 +3366,38 @@ function BrowserCustomizeToolbar()
   var cmd = document.getElementById("cmd_CustomizeToolbars");
   cmd.setAttribute("disabled", "true");
 
-  window.openDialog("chrome://global/content/customizeToolbar.xul", "CustomizeToolbar",
-                    "chrome,all,dependent", document.getElementById("navigator-toolbox"));
+#ifdef TOOLBAR_CUSTOMIZATION_SHEET
+  document.getElementById("customizeToolbarSheetBox").hidden = false;
+
+  /**
+   * XXXmano hack: when a new tab is added while the sheet is visible,
+   * the new tabpanel is overlaying the sheet. We workaround this issue by
+   * hiding and reopening the sheet when a new tab is added.
+   */
+  function TabOpenSheetHandler(aEvent) {
+    getBrowser().removeEventListener("TabOpen", TabOpenSheetHandler, false);
+
+    document.getElementById("customizeToolbarSheetIFrame")
+            .contentWindow.gCustomizeToolbarSheet.done();
+    document.getElementById("customizeToolbarSheetBox").hidden = true;
+    BrowserCustomizeToolbar();
+    
+  }
+  getBrowser().addEventListener("TabOpen", TabOpenSheetHandler, false);
+#else
+  window.openDialog("chrome://global/content/customizeToolbar.xul",
+                    "CustomizeToolbar",
+                    "chrome,all,dependent",
+                    document.getElementById("navigator-toolbox"));
+#endif
 }
 
 function BrowserToolboxCustomizeDone(aToolboxChanged)
 {
+#ifdef TOOLBAR_CUSTOMIZATION_SHEET
+  document.getElementById("customizeToolbarSheetBox").hidden = true;
+#endif
+
   // Update global UI elements that may have been added or removed
   if (aToolboxChanged) {
     gURLBar = document.getElementById("urlbar");
@@ -3441,8 +3467,10 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
   bookmarksBar._init();
 #endif
 
+#ifndef TOOLBAR_CUSTOMIZATION_SHEET
   // XXX Shouldn't have to do this, but I do
   window.focus();
+#endif
 }
 
 var FullScreen =
