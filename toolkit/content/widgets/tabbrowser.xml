@@ -1305,18 +1305,17 @@
         <parameter name="aTab"/>
         <body>
           <![CDATA[
-              if (this.warnAboutClosingTabs(false)) {
-                if (aTab.localName != "tab")
-                  aTab = this.mCurrentTab;
-                else
-                  this.mTabContainer.selectedItem = aTab;
+            if (this.warnAboutClosingTabs(false)) {
+              if (aTab.localName != "tab")
+                aTab = this.mCurrentTab;
+              else
+                this.mTabContainer.selectedItem = aTab;
 
-                var childNodes = this.mTabContainer.childNodes;
+              var childNodes = this.mTabContainer.childNodes;
 
-                for (var i = childNodes.length - 1; i >= 0; --i) {
-                  if (childNodes[i] != aTab)
-                    this.removeTab(childNodes[i]);
-                }
+              for (var i = childNodes.length - 1; i >= 0; --i) {
+                if (childNodes[i] != aTab)
+                  this.removeTab(childNodes[i]);
               }
             }
           ]]>
@@ -1506,7 +1505,6 @@
             // see comment above destroy above
             oldBrowser.focusedWindow = null;
             oldBrowser.focusedElement = null;
-            }
           ]]>
         </body>
       </method>
