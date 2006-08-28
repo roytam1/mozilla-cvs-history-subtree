@@ -2546,17 +2546,15 @@ SearchService.prototype = {
       return engine._isInAppDir;
     };
     var engines = this._sortedEngines.filter(isDefault);
-    var prefB = Cc["@mozilla.org/preferences-service;1"].
-                getService(Ci.nsIPrefService).
-                getBranch(BROWSER_SEARCH_PREF + "order.");
     var engineOrder = {};
     var i = 1;
+
     while (true) {
-      try {
-        engineOrder[prefB.getCharPref(i)] = i++;
-      } catch (ex) {
+      var name = getLocalizedPref(BROWSER_SEARCH_PREF + "order." + i);
+      if (!name)
         break;
-      }
+
+      engineOrder[name] = i++;
     }
 
     function compareEngines (a, b) {
@@ -2671,6 +2669,9 @@ SearchService.prototype = {
     var currentIndex = this._sortedEngines.indexOf(engine);
     ENSURE(currentIndex != -1, "moveEngine: Can't find engine to move!",
            Cr.NS_ERROR_UNEXPECTED);
+
+    if (currentIndex == aNewIndex)
+      return; // nothing to do!
 
     // Move the engine
     var movedEngine = this._sortedEngines.splice(currentIndex, 1)[0];
