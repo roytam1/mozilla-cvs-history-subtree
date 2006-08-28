@@ -12,7 +12,7 @@
   -moz-padding-start: 0px;
 }
 
-.tabbrowser-tabs[overflow="true"]{
+.tabbrowser-tabs[overflow="true"] {
   -moz-padding-start: 0px;
 }
 
@@ -231,80 +231,109 @@ tabpanels {
  * Tab Scrollbox Arrow Buttons
  */
 
-.tabbrowser-tabs[overflow="true"] .tabs-left{
+.tabbrowser-tabs[overflow="true"] .tabs-left {
   display: none;
 }
 
-.tabbrowser-arrowscrollbox > .scrollbutton-up{
+.tabbrowser-arrowscrollbox > .scrollbutton-up {
   -moz-appearance: none !important;
   border: none !important;
   margin-top: 2px;
   padding: 0px;
-  width: 18px !important;
-  height: 25px !important;
-  -moz-margin-start: 0px !important;
-  -moz-margin-end: 0px !important;
-  list-style-image: url("chrome://global/skin/icons/tab-arrow-start.png") !important;
-  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png") !important;
+  width: 18px;
+  height: 25px;
+  -moz-margin-start: 0px;
+  list-style-image: url("chrome://global/skin/icons/tab-arrow-start.png");
+  -moz-image-region: rect(0, 11px, 14px, 0);
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
   background-repeat: no-repeat;
   opacity: 0.4;
 }
 
-.tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up{
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png") !important;
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up {
+  list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png");
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
 }
 
-.tabbrowser-arrowscrollbox > .scrollbutton-up:hover{
-  opacity: 1.0;
+.tabbrowser-arrowscrollbox > .scrollbutton-up[disabled="true"] {
+  -moz-image-region: rect(0, 33px, 14px, 22px);
 }
 
-.scrollbutton-rel-box > .scrollbutton-down-box{
+.tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover {
+  -moz-image-region: rect(0, 22px, 14px, 11px);
+}
+
+.tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover:active {
+  -moz-image-region: rect(0, 44px, 14px, 33px);
+}
+
+.scrollbutton-rel-box > .scrollbutton-down-box {
   -moz-appearance: none !important;
   border: none !important;
   margin-top: 2px;
   margin-bottom: 2px;
-  width: 18px !important;
-  height: 25px !important;
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png") !important;
+  width: 18px;
+  height: 25px;
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
   background-repeat: no-repeat;	
   opacity: 0.4;
 }
 
-.scrollbutton-rel-box > .scrollbutton-down-box-animate{
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down-box {
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
+}
+
+.scrollbutton-rel-box > .scrollbutton-down-box-animate {
   margin-top: 2px;
   margin-bottom: 2px;
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-animate.png") !important;
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-animate.png");
   background-repeat: no-repeat;
   opacity: 0.0;
 }
 
-.scrollbutton-rel-box > .scrollbutton-down{
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down-box-animate {
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-animate.png");
+}
+
+.scrollbutton-rel-box > .scrollbutton-down {
   -moz-appearance: none !important;
-  border: 0px !important;
-  list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png") !important;
-  opacity: 0.4;
+  border: none !important;
   margin-top: 2px;
   margin-bottom: 2px;
-  width: 18px !important;
-  -moz-margin-start: 0px !important;
-  -moz-margin-end: 0px !important;
-  -moz-padding-end: 0px !important;
+  width: 18px;
+  -moz-margin-start: 0;
+  -moz-margin-end: 0;
+  -moz-padding-end: 0;
+  opacity: 0.4;
+  list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png");
+  -moz-image-region: rect(0, 11px, 14px, 0);
 }
 
-.scrollbutton-rel-box > .scrollbutton-down:hover{
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png") !important;
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down {
+  list-style-image: url("chrome://global/skin/icons/tab-arrow-start.png");
+}
+
+.scrollbutton-rel-box > .scrollbutton-down[disabled="true"] {
+  -moz-image-region: rect(0, 33px, 14px, 22px);
+}
+
+.scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover {
+  -moz-image-region: rect(0, 22px, 14px, 11px);
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
   background-repeat: no-repeat;
   background-position: top left;
-  opacity: 1.0;
 }
 
-.tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-down{
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover {
   -moz-padding-end: 0px !important;
-  background-position: top left;
-  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png") !important;
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
 }
 
-.scrollbutton-rel-box > .scrollbutton-down > .toolbarbutton-icon{
+.scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover:active {
+  -moz-image-region: rect(0, 44px, 14px, 33px);
+}
+
+.scrollbutton-rel-box > .scrollbutton-down > .toolbarbutton-icon {
   -moz-padding-end: 0px !important;
   -moz-margin-end: 0px !important;
 }
