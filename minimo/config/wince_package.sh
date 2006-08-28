@@ -38,31 +38,31 @@ cp -a bin/chrome/minimo.manifest                         minimo/chrome
 cp -a bin/chrome/toolkit.jar                             minimo/chrome
 cp -a bin/chrome/toolkit.manifest                        minimo/chrome
 
-echo Copying over some minimo extensions
-
-cp -a bin/chrome/history.jar                            minimo/chrome
-cp -a bin/chrome/history.manifest                       minimo/chrome
-
-cp -a bin/chrome/map.jar                                minimo/chrome
-cp -a bin/chrome/map.manifest                           minimo/chrome
-
-cp -a bin/chrome/mobile.jar                             minimo/chrome
-cp -a bin/chrome/mobile.manifest                        minimo/chrome
-
-cp -a bin/chrome/shopping.jar                           minimo/chrome
-cp -a bin/chrome/shopping.manifest                      minimo/chrome
-
-cp -a bin/chrome/technorati.jar                         minimo/chrome
-cp -a bin/chrome/technorati.manifest                    minimo/chrome
-
-cp -a bin/chrome/update.jar                             minimo/chrome
-cp -a bin/chrome/update.manifest                        minimo/chrome
-
-cp -a bin/chrome/wunderground.jar                       minimo/chrome
-cp -a bin/chrome/wunderground.manifest                  minimo/chrome
-
-cp -a bin/chrome/yokel.jar                              minimo/chrome
-cp -a bin/chrome/yokel.manifest                         minimo/chrome
+#echo Copying over some minimo extensions
+#
+#cp -a bin/chrome/history.jar                            minimo/chrome
+#cp -a bin/chrome/history.manifest                       minimo/chrome
+#
+#cp -a bin/chrome/map.jar                                minimo/chrome
+#cp -a bin/chrome/map.manifest                           minimo/chrome
+#
+#cp -a bin/chrome/mobile.jar                             minimo/chrome
+#cp -a bin/chrome/mobile.manifest                        minimo/chrome
+#
+#cp -a bin/chrome/shopping.jar                           minimo/chrome
+#cp -a bin/chrome/shopping.manifest                      minimo/chrome
+#
+#cp -a bin/chrome/technorati.jar                         minimo/chrome
+#cp -a bin/chrome/technorati.manifest                    minimo/chrome
+#
+#cp -a bin/chrome/update.jar                             minimo/chrome
+#cp -a bin/chrome/update.manifest                        minimo/chrome
+#
+#cp -a bin/chrome/wunderground.jar                       minimo/chrome
+#cp -a bin/chrome/wunderground.manifest                  minimo/chrome
+#
+#cp -a bin/chrome/yokel.jar                              minimo/chrome
+#cp -a bin/chrome/yokel.manifest                         minimo/chrome
 
 
 mkdir -p minimo/components

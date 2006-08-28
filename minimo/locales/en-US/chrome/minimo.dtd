@@ -39,7 +39,7 @@
 <!ENTITY forwardCmd.label             "Forward">
 <!ENTITY stopCmd.label                "Stop">
 <!ENTITY goCmd.label                  "Go">
-<!ENTITY panCmd.label                 "Pan">
+<!ENTITY panCmd.label                 "Pan...">
 <!ENTITY reloadCmd.label              "Reload">
 <!ENTITY linknewtab.label             "Open link in New Tab">
 <!ENTITY bookmarks.label              "Bookmarks...">

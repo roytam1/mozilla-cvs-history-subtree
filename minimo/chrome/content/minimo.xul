@@ -79,10 +79,6 @@
   
     <hbox id="appcontent" flex="1" >
     
-      <vbox id="homebar" style="overflow:hidden" >
-
-      </vbox>
-      
       <vbox id="browser" context="context" flex="1">
         <tabbrowser id="content" 
                     contentcontextmenu="contentAreaContextMenu"
@@ -102,11 +98,8 @@
   </statusbar>
 
 
-
   <toolbox id="mini-toolbars" >
     
-
-  
     <command id="cmd_BrowserOpenTab"          oncommand="BrowserOpenTab()"/>
     <command id="cmd_BrowserCloseTab"         oncommand="BrowserCloseTab()"/>
     <command id="cmd_BrowserScreenRotate"     oncommand="BrowserScreenRotate()"/>
@@ -133,7 +126,6 @@
     <command id="cmd_Go"                      oncommand="URLBarEntered()" />
     <command id="cmd_BrowserBookmark"         oncommand="BrowserBookmark()" />
     <command id="cmd_BrowserBookmarkThis"     oncommand="BrowserBookmarkThis()" />
-    <command id="cmd_BrowserHomeBar"          oncommand="BrowserHomeBar()" />
     <command id="cmd_Pan"                     oncommand="BrowserPan()" />
         
     <toolbar id="nav-bar" >
@@ -244,14 +236,14 @@
                oncommand="spinSetnext(gSpinFirst)" >
       
       <menuitem id="command_BrowserOpenTab" 
-                command="cmd_BrowserOpenTab"  accesskey="1"
+                command="cmd_BrowserOpenTab"  
                 label="&newtab.label;"  /> 
 
       <menuitem id="command_BrowserCloseTab" 
-                command="cmd_BrowserCloseTab" accesskey="2"
+                command="cmd_BrowserCloseTab" 
                 label="&closetab.label;"  /> 
       
-      <menu     id="command_TabFocus" accesskey="3"
+      <menu     id="command_TabFocus" 
                 label="&tabs.label;"  >
         
         <menupopup id="MenuTabsContainer" 
@@ -260,50 +252,31 @@
           
         </menupopup>
       </menu>
-          
-      <menu     id="command_Homebase" accesskey="4"
-                label="&homebase.label;"  hidden="true" >
-        <menupopup id="MenuHomebaseContainer" />
-      </menu>
         
       <menuseparator/>
-      
-      <!-- this shouldn't be an option on smartphones -->
-      
-	  <menuitem id="snav_toggle"  accesskey="5"
-                label="" 
-                oncommand="DoSNavToggle()"/>
-      
-	  <menuitem id="ssr_toggle" accesskey="6"
-                label="" 
-                oncommand="DoSSRToggle()"/>
-      
-      <menuitem id="togglet_google" accesskey="7"
+    
+      <menuitem id="togglet_google" 
                 label="&togglet_google.label;" 
                 oncommand="DoGoogleToggle()"/>
       
       
-      <menuseparator/>
-      
-	  <menuitem id="textplus" accesskey="8"
+	  <menuitem id="textplus" 
                 label="&textSizePlus.label;" 
                 oncommand="BrowserResetZoomPlus()"/>
       
-	  <menuitem id="testminus" accesskey="9"
+	  <menuitem id="testminus" 
                 label="&textSizeMinus.label;" 
                 oncommand="BrowserResetZoomMinus()"/>
       
       <menuseparator/>
       
-      <menuitem id="command_DoPanelPreferences" accesskey="0"
-                command="cmd_DoPanelPreferences" 
-                label="&prefs.label;"  /> 
-      
       <menuitem id="command_ViewFind"
                 command="cmd_ViewFind" 
                 label="&findToolbar.label;"  /> 
       
-      <menuseparator/>
+      <menuitem id="command_pan"
+                command="cmd_Pan"  
+                label="&panCmd.label;"  /> 
       
       <menuitem id="command_Quit" 
                 class="separator-menu"  
@@ -319,43 +292,42 @@
                onpopupshowing="Menu2PopupShowing()"
                oncommand="spinSetnext(gSpinLast)" >
       
+
+      <menuitem id="command_DoPanelPreferences" 
+                  command="cmd_DoPanelPreferences" 
+                label="&prefs.label;"  /> 
+    
+      <menuseparator/>
+      
 	  <menuitem id="command_BrowserBookmark"
-	            command="cmd_BrowserBookmark" accesskey="1"
+	            command="cmd_BrowserBookmark" 
 	            label="&bookmarks.label;" />
       
       <menuitem id="item-bookmark-page" 
-                label="&bookmarkthispage.label;" accesskey="2"
+                label="&bookmarkthispage.label;" 
                 command="cmd_BrowserBookmarkThis"/>
       
       <menuseparator/>
       
-      <menuitem id="command_home"    accesskey="3" 
+      <menuitem id="command_home"     
                 command="cmd_BrowserHome"                label="&homeCmd.label;"  /> 
       
-      <!--            class="menuitem-iconic" image="chrome://minimo/skin/back-color.png" -->
       <menuitem id="command_back"    
-                command="cmd_BrowserBack"  accesskey="4"
+                command="cmd_BrowserBack"  
                 label="&backCmd.label;"  /> 
       
-      <!--            class="menuitem-iconic" image="chrome://minimo/skin/forward-color.png" -->
       <menuitem id="command_forward" 
-                command="cmd_BrowserForward"  accesskey="5"
+                command="cmd_BrowserForward"  
                 label="&forwardCmd.label;"  /> 
       
-      <!--            class="menuitem-iconic" image="chrome://minimo/skin/reload-color.png" -->
       <menuitem id="command_reload"  
-                command="cmd_BrowserReload"  accesskey="6"
+                command="cmd_BrowserReload"  
                 label="&reloadCmd.label;"  /> 
       
-      <!--            class="menuitem-iconic" image="chrome://minimo/skin/go-color.png" -->
       <menuitem id="command_go"
-                command="cmd_BrowserGo"  accesskey="7"
+                command="cmd_Go"  
                 label="&goCmd.label;"  /> 
-      
-      <menuitem id="command_pan"
-                command="cmd_Pan"  accesskey="8"
-                label="&panCmd.label;"  /> 
-      
+            
     </menupopup>  
     
     

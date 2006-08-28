@@ -6,7 +6,7 @@ pref("keyword.URL", "http://www.google.com/xhtml?q=");
 pref("browser.cache.disk.enable",           false);
 pref("browser.cache.disk.capacity",         1024);
 pref("browser.cache.memory.enable",         true);
-pref("browser.cache.memory.capacity",       1024);
+pref("browser.cache.memory.capacity",       2048);
 
 // -1 = determine dynamically, 0 = none, n = memory capacity in kilobytes
 pref("browser.cache.disk_cache_ssl",        false);
@@ -260,7 +260,7 @@ pref("network.http.proxy.keep-alive", true);
 pref("network.http.keep-alive.timeout", 600);
 
 // limit the absolute number of http connections.
-pref("network.http.max-connections", 24);
+pref("network.http.max-connections", 6);
 
 // limit the absolute number of http connections that can be established per
 // host.  if a http proxy server is enabled, then the "server" is the proxy
@@ -298,11 +298,11 @@ pref("network.http.redirection-limit", 20);
 // NOTE: support for "compress" has been disabled per bug 196406.
 pref("network.http.accept-encoding" ,"gzip,deflate");
 
-pref("network.http.pipelining"      , false);
+pref("network.http.pipelining"      , true);
 pref("network.http.proxy.pipelining", false);
 
 // Max number of requests in the pipeline
-pref("network.http.pipelining.maxrequests" , 4);
+pref("network.http.pipelining.maxrequests" , 20);
 
 // </http>
 
@@ -646,11 +646,6 @@ pref("content.switch.threshold", 3000);
 pref("nglayout.initialpaint.delay", 0);
 pref("content.interrupt.parsing", true);
 
-pref("network.http.max-connections", 4);
-pref("network.http.max-connections-per-server", 4);
-pref("network.http.max-persistent-connections-per-proxy", 4);
-pref("network.http.max-persistent-connections-per-server", 4);
-
 pref("dom.disable_window_status_change", true);
 
 pref("browser.chrome.favicons",true);
@@ -659,9 +654,6 @@ pref("browser.chrome.site_icons",true);
 pref("dom.max_script_run_time", 60);
 
 /* Bookmark store as a pref for now, homebar section as well */
-
-pref("browser.bookmark.store","<bm></bm>");
-pref("browser.bookmark.homebar","<bm><li iconsrc='chrome://minimo/skin/extensions/icon-star.png'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li iconsrc='chrome://minimo/skin/extensions/icon-history.png'>chrome://minimo/content/history/historyview.xhtml</li><li iconsrc='chrome://minimo/skin/extensions/icon-map.png'>http://people.mozilla.com/~chofmann/map.html</li><li iconsrc='chrome://minimo/skin/extensions/icon-google.png'>http://www.google.com/ig</li><li iconsrc='chrome://minimo/skin/extensions/icon-yokel.png'>http://www.yokel.com</li><li iconsrc='chrome://minimo/skin/extensions/icon-shopping.png'>http://www.inner-browsing.com/shop/newshop.xhtml</li><li iconsrc='http://m.technorati.com/favicon.ico'>http://m.technorati.com/</li><li iconsrc='http://mobile.wunderground.com/favicon.ico'>http://mobile.wunderground.com/</li><li iconsrc='http://www.meer.net/dougt/minimo_ce/start/update.cgi'>http://www.mozilla.org/projects/minimo/update/latest-update.xhtml</li></bm>");
 
 pref("browser.download.dir", "\\Storage Card");
 pref("browser.download.progressDnlgDialog.dontAskForLaunch", false);
