@@ -58,7 +58,7 @@ static int SetTransport(int xid, int* pmsg_id)
   int msg_id;
 
   g_xid = xid;
-  /* create msg queue used by extension to recieve messages */
+  /* create msg queue used by extension to receive messages */
   if ((msg_id = 
        JVMP_msgget (0, IPC_CREAT | IPC_PRIVATE | IPC_EXCL | 0770)) == -1)
     {

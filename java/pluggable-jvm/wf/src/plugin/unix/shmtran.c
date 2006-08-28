@@ -571,7 +571,7 @@ int JVMP_RecvShmRequest(int msg_id, int sync,
   void* shmbuf;
   int len;
   
-  /* this msgrcv() won't recieve system messages */
+  /* this msgrcv() won't receive system messages */
  restart:
   if ((msgrcv(msg_id, 
 	      (struct msgbuf *)&msg, 
