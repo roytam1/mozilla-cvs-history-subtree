@@ -48,17 +48,27 @@
       <handler event="DOMMouseScroll" action="this.scrollByIndex(event.detail); event.preventBubble();"/>
 
       <handler event="underflow"><![CDATA[
-        var kids = document.getAnonymousNodes(this);
-        kids[0].collapsed = true;
-        kids[2].collapsed = true;
-        event.preventBubble();
+        // See bug 341047 and comments in overflow handler why this check is
+        // needed.
+        if (this.boxObject.width > 0) {
+          var kids = document.getAnonymousNodes(this);
+          kids[0].collapsed = true;
+          kids[2].collapsed = true;
+          event.preventBubble();
+        }
       ]]></handler>
 
       <handler event="overflow"><![CDATA[
-        var kids = document.getAnonymousNodes(this);
-        kids[0].collapsed = false;
-        kids[2].collapsed = false;
-        event.preventBubble();
+        // See bug 341047, the overflow event is dispatched when the scrollbox
+        // already is mostly destroyed, that should not be happening.
+        // In that case, the below code should not be executed.
+        // That is what this boxObject check is doing.
+        if (this.boxObject.width > 0) {
+          var kids = document.getAnonymousNodes(this);
+          kids[0].collapsed = false;
+          kids[2].collapsed = false;
+          event.preventBubble();
+        }
       ]]></handler>
     </handlers>
   </binding>
