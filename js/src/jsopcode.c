@@ -2097,6 +2097,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 if (!lval)
                     return JS_FALSE;
                 RETRACT(&ss->sprinter, lval);
+              do_delete_lval:
                 todo = Sprint(&ss->sprinter, "%s %s", js_delete_str, lval);
                 break;
 
@@ -2109,6 +2110,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_DELELEM:
                 xval = POP_STR();
                 lval = POP_STR();
+                if (*xval == '\0')
+                    goto do_delete_lval;
                 todo = Sprint(&ss->sprinter,
                               (js_CodeSpec[lastop].format & JOF_XMLNAME)
                               ? "%s %s.%s"
