@@ -2813,6 +2813,14 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
                 pc = ReadCompactIndex(pc, &parenIndex);
                 JS_ASSERT(parenIndex < gData->regexp->parenCount);
                 cap = &x->parens[parenIndex];
+
+                /*
+                 * FIXME: https://bugzilla.mozilla.org/show_bug.cgi?id=346090
+                 * This wallpaper prevents a case where we somehow took a step
+                 * backward in input while minimally-matching an empty string.
+                 */
+                if (x->cp < gData->cpbegin + cap->index)
+                    cap->index = -1;
                 cap->length = x->cp - (gData->cpbegin + cap->index);
                 op = (REOp) *pc++;
                 continue;
