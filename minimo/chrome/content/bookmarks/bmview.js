@@ -66,7 +66,6 @@ function bmProcessor(prefStore) {
 
 bmProcessor.prototype.xmlLoaded = function () {
 	this.xmlLoadedState=true;	
-alert('loaded');
 	this.apply();
 }
 

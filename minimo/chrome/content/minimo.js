@@ -1952,14 +1952,6 @@ function spinCreate() {
     }
   }
 
-  var spinHomebaseMenu = { 
-    SpinIn:function () {
-      document.getElementById("firstbase").focus();
-    }, 
-    SpinOut:function () {
-    }
-  }
-  
   var spinDocument = { 
     SpinIn:function () {
       if(gKeySpinLastFocused) {
@@ -1977,12 +1969,13 @@ function spinCreate() {
     SpinOut:function () { }
   }
 
-  gKeySpinCurrent = spinHomebaseMenu;
+  gKeySpinCurrent = spinRightMenu;
+
   spinLeftMenu.next=spinUrlBar;
   spinUrlBar.next=spinRightMenu;
-  spinRightMenu.next=spinHomebaseMenu;
-  spinHomebaseMenu.next=spinLeftMenu;
+  spinRightMenu.next=spinLeftMenu;
   spinDocument.next=spinLeftMenu;   // this may show up in the middle. 
+
   gSpinLast=spinRightMenu;
   gSpinDocument = spinDocument;
   gSpinFirst=spinLeftMenu;
