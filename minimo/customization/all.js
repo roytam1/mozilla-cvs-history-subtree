@@ -668,3 +668,5 @@ pref("ui.fullscreen",false);
 
 
 pref("gps.enabled", true);
+
+pref("browser.bookmark.store", "<bm><li title='Del.icio.us Mobile Sites...' iconsrc='chrome://mobile/skin/favicon.png'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li title='History...' iconsrc='chrome://history/skin/favicon.png'>chrome://history/content/historyview.xhtml</li><li title='Map...' iconsrc='chrome://map/skin/favicon.png'>http://people.mozilla.com/~chofmann/map.html</li><li title='Weather...' iconsrc='chrome://wunderground/skin/favicon.png'>http://mobile.wunderground.com</li></bm>");
