@@ -230,6 +230,7 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
         // Consider the widths on the column-group.  Note that we follow
         // what the HTML spec says here, and make the width apply to
         // each column in the group, not the group as a whole.
+        // XXX Should we be doing this when we have widths on the column?
         NS_ASSERTION(colFrame->GetParent()->GetType() ==
                          nsLayoutAtoms::tableColGroupFrame,
                      "expected a column-group");
