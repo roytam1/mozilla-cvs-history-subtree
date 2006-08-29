@@ -52,6 +52,10 @@ PREF_JS_EXPORTS = $(srcdir)/profile/firefox.js \
 		  $(srcdir)/profile/channel-prefs.js \
 		  $(NULL)
 
+ifndef MOZ_BRANDING_DIRECTORY
+PREF_JS_EXPORTS += $(srcdir)/firefox-branding.js
+endif
+
 # hardcode en-US for the moment
 AB_CD = en-US
 
@@ -345,6 +349,6 @@ libs::
 
 libs:: $(srcdir)/profile/prefs.js
 	$(INSTALL) $^ $(DIST)/bin/defaults/profile
-
+	
 install:: $(srcdir)/profile/prefs.js
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile
