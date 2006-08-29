@@ -1034,22 +1034,9 @@ function Menu2PopupShowing() {
 function MenuMainPopupShowing () {
 
    try {
-    var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(nsIPrefBranch);
-
-    if (pref.getBoolPref("snav.enabled"))
-      document.getElementById("snav_toggle").label = gMinimoBundle.getString("snavToggleEnableKeyScrolling");
-    else
-      document.getElementById("snav_toggle").label = gMinimoBundle.getString("snavToggleEnableJumpToLinks");
-
-    if (pref.getBoolPref("ssr.enabled"))
-      document.getElementById("ssr_toggle").label = gMinimoBundle.getString("ssrDesktopLayout");
-    else
-      document.getElementById("ssr_toggle").label = gMinimoBundle.getString("ssrSingleColumn"); 
-
     var hasTabs = (gBrowser.tabContainer.childNodes.length > 1);
     document.getElementById("command_BrowserCloseTab").hidden=!hasTabs;
     document.getElementById("command_TabFocus").hidden=!hasTabs;
-
   }
   catch(ex) { onErrorHandler(ex); }
 }
@@ -2041,12 +2028,11 @@ function MenuEnableEscapeKeys() {
 	// call the menu again. 
 
 	document.getElementById("menu_MainPopup").focus();
-	document.addEventListener("keydown",MenuHandleMenuEscape,true); 
+    //	document.addEventListener("keydown",MenuHandleMenuEscape,true); 
 }
 
 function MenuDisableEscapeKeys() {
-
-  document.removeEventListener("keydown",MenuHandleMenuEscape,true); 
+  //  document.removeEventListener("keydown",MenuHandleMenuEscape,true); 
 
 }
 
