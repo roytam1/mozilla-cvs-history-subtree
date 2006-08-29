@@ -281,8 +281,8 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
             info.minCoord -= spacing * (colSpan - 1);
             info.prefCoord -= spacing * (colSpan - 1);
 
-            // Accumulate information about the spanned columns.
-            float unusedSPct = info.prefPercent;
+            // Accumulate information about the spanned columns, and
+            // subtract the already-used space from |info|.
             nscoord totalSPref = 0, totalSNonPctPref = 0;
             PRInt32 nonPctCount = 0;
             PRInt32 scol, scol_end;
@@ -295,19 +295,27 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
                     totalSNonPctPref += scolFrame->GetPrefCoord();
                     ++nonPctCount;
                 } else {
-                    unusedSPct -= scolPct;
+                    info.prefPercent -= scolPct;
                 }
+                info.minCoord -= scolFrame->GetMinCoord();
+                info.prefCoord -= scolFrame->GetPrefCoord();
             }
 
-            if (unusedSPct < 0.0f)
-                unusedSPct = 0.0f;
+            if (info.minCoord < 0)
+                info.minCoord = 0;
+            if (info.prefCoord < 0)
+                info.prefCoord = 0;
+            if (info.prefPercent < 0.0f)
+                info.prefPercent = 0.0f;
 
             // Compute the ratios used to distribute this cell's width
             // appropriately among the spanned columns.
             float pctRatio = 0.0f;
-            if (nonPctCount && unusedSPct > 0.0f) {
+            if (nonPctCount && info.prefPercent > 0.0f) {
                 if (totalSNonPctPref > 0) {
-                    pctRatio = unusedSPct / float(totalSNonPctPref);
+                    pctRatio = info.prefPercent / float(totalSNonPctPref);
+                } else {
+                    pctRatio = info.prefPercent / float(nonPctCount);
                 }
             }
 
@@ -320,8 +328,7 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
                     if (totalSNonPctPref > 0) {
                         spp = pctRatio * scolFrame->GetPrefCoord();
                     } else {
-                        spp = unusedSPct / float(nonPctCount);
-                                
+                        spp = pctRatio;
                     }
                     scolFrame->AddSpanPrefPercent(spp);
                 }
@@ -352,8 +359,14 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
     for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
         nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
 
-        colFrame->AddMinCoord(colFrame->GetSpanMinCoord());
-        colFrame->AddPrefCoord(colFrame->GetSpanPrefCoord(), PR_FALSE);
+        colFrame->AddMinCoord(colFrame->GetMinCoord() +
+                              colFrame->GetSpanMinCoord());
+        colFrame->AddPrefCoord(colFrame->GetPrefCoord() +
+                               PR_MAX(colFrame->GetSpanMinCoord(),
+                                      colFrame->GetSpanPrefCoord()),
+                               PR_FALSE);
+        NS_ASSERTION(colFrame->GetMinCoord() <= colFrame->GetPrefCoord(),
+                     "min larger than pref");
         colFrame->AddPrefPercent(colFrame->GetSpanPrefPercent());
 
         colFrame->AdjustPrefPercent(&pct_used);
