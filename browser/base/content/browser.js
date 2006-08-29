@@ -6899,17 +6899,12 @@ HistoryMenu.populateUndoSubmenu = function PHM_populateUndoSubmenu() {
   undoPopup.parentNode.removeAttribute("disabled");
 
   // populate menu
-  var undoItems = ss.getClosedTabData(window);
-  var keys = undoItems.getKeys({});
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    var tabData = undoItems.getValue(key).wrappedJSObject;
-    var m = undoPopup.appendChild(document.createElement("menuitem"));
-    m.setAttribute("label", tabData.title);
-    m.setAttribute("value", key);
-    m.addEventListener("command", function(aEvent) { 
-      undoCloseTab(aEvent.originalTarget.getAttribute("value"));
-    }, false);
+  var undoItems = eval("(" + ss.getClosedTabData(window) + ")");
+  for (var i = 0; i < undoItems.length; i++) {
+      var m = undoPopup.appendChild(document.createElement("menuitem"));
+    m.setAttribute("label", undoItems[i].title);
+    m.setAttribute("value", i);
+    m.setAttribute("oncommand", "undoCloseTab(" + i + ");");
   }
 
   // "open in tabs"
@@ -6921,7 +6916,7 @@ HistoryMenu.populateUndoSubmenu = function PHM_populateUndoSubmenu() {
   m.setAttribute("label", stringBundle.GetStringFromName("cmd_bm_openfolder"));
   m.setAttribute("accesskey", stringBundle.GetStringFromName("cmd_bm_openfolder_accesskey"));
   m.addEventListener("command", function() {
-    for (var i = 0; i < keys.length; i++)
+    for (var i = 0; i < undoItems.length; i++)
       undoCloseTab();
   }, false);
 }
