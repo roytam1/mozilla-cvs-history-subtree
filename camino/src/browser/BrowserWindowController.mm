@@ -436,6 +436,7 @@ enum BWCOpenDest {
 - (void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
 - (BOOL)isPageTextFieldFocused;
 - (void)performSearch:(SearchTextField *)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
+- (int)historyIndexOfPageBeforeBookmarkManager;
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
 
 - (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper;
@@ -1333,12 +1334,8 @@ enum BWCOpenDest {
     [theItem setEnabled:enable];
     return enable;
   }
-  else if (action == @selector(manageBookmarks:)) {
-    BOOL enable = [[mBrowserView getBrowserView] canGoBack];
-    if (!enable && ![self bookmarkManagerIsVisible])
-      enable = true;
-    return enable;
-  }
+  else if (action == @selector(manageBookmarks:))
+    return ![self bookmarkManagerIsVisible] || [self canHideBookmarks];
   else if (action == @selector(forward:)) {
     // we have to handle all the enabling/disabling ourselves because this
     // toolbar button is a view item. Note the return value is ignored.
@@ -1714,8 +1711,11 @@ enum BWCOpenDest {
 //
 -(IBAction)manageBookmarks:(id)aSender
 {
-  if ([self bookmarkManagerIsVisible])
-    [self back:aSender];
+  if ([self bookmarkManagerIsVisible]) {
+    int previousPage = [self historyIndexOfPageBeforeBookmarkManager];
+    if (previousPage != -1)
+      [[[self getBrowserWrapper] getBrowserView] goToSessionHistoryIndex:previousPage];
+  }
   else
     [self loadURL:@"about:bookmarks" referrer:nil activate:YES allowPopups:NO];
 
@@ -1746,6 +1746,45 @@ enum BWCOpenDest {
   // an item that we wish to reveal. However, it belongs to a different
   // data source than the one we just created. need a way to find the one
   // to reveal...
+}
+
+//
+// historyIndexOfPageBeforeBookmarkManager
+//
+// Returns the index in session history of the last page visited before viewing the bookmarks manager
+//
+- (int)historyIndexOfPageBeforeBookmarkManager
+{
+  if (![self bookmarkManagerIsVisible])
+    return -1;
+
+  nsIWebNavigation* webNav = [self currentWebNavigation];
+  if (!webNav)
+    return -1;
+
+  nsCOMPtr<nsISHistory> sessionHistory;
+  webNav->GetSessionHistory(getter_AddRefs(sessionHistory));
+  if (!sessionHistory)
+    return -1;
+
+  PRInt32 curEntryIndex;
+  sessionHistory->GetIndex(&curEntryIndex);
+
+  for (int i = curEntryIndex - 1; i >= 0; --i) {
+    nsCOMPtr<nsIHistoryEntry> entry;
+    sessionHistory->GetEntryAtIndex(i, PR_FALSE, getter_AddRefs(entry));
+
+    nsCAutoString uriSpec;
+    nsCOMPtr<nsIURI> entryURI;
+    entry->GetURI(getter_AddRefs(entryURI));
+    if (entryURI)
+      entryURI->GetSpec(uriSpec);
+
+    if (!(uriSpec.EqualsLiteral("about:bookmarks") || uriSpec.EqualsLiteral("about:history")))
+      return i;
+  }
+
+  return -1;
 }
 
 - (IBAction)goToLocationFromToolbarURLField:(id)sender
@@ -2115,7 +2154,7 @@ enum BWCOpenDest {
 
 - (BOOL)canHideBookmarks
 {
-  return [self bookmarkManagerIsVisible] && [[mBrowserView getBrowserView] canGoBack];
+  return [self historyIndexOfPageBeforeBookmarkManager] != -1;
 }
 
 - (BOOL)singleBookmarkIsSelected
