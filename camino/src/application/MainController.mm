@@ -1709,7 +1709,7 @@ Otherwise, we return the URL we originally got. Right now this supports .url and
                       NSLocalizedString(@"CancelButtonText", nil),
                       nil) == NSAlertDefaultReturn)
   {
-    
+
     // close all windows
     {
       NSArray* openWindows = [[NSApp orderedWindows] copy];
@@ -1720,13 +1720,13 @@ Otherwise, we return the URL we originally got. Right now this supports .url and
         // we don't want the "you are closing a window with multiple tabs" warning to show up.
         if ([[curWindow windowController] isMemberOfClass:[BrowserWindowController class]])
           [(BrowserWindowController*)[curWindow windowController] setWindowClosesQuietly:YES];
-        
-        if ([curWindow isVisible])
+
+        if ([curWindow isVisible] || [curWindow isMiniaturized])
           [curWindow performClose:self];
       }
       [openWindows release];
     }
-    
+
     // remove cache
     nsCOMPtr<nsICacheService> cacheServ (do_GetService("@mozilla.org/network/cache-service;1"));
     if (cacheServ)
