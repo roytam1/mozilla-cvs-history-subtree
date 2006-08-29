@@ -4939,12 +4939,18 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             break;
 
           case JSOP_GOSUB:
+            JS_ASSERT(cx->exception != JSVAL_HOLE);
+            lval = cx->throwing ? cx->exception : JSVAL_HOLE;
+            PUSH(lval);
             i = PTRDIFF(pc, script->main, jsbytecode) + len;
             len = GET_JUMP_OFFSET(pc);
             PUSH(INT_TO_JSVAL(i));
             break;
 
           case JSOP_GOSUBX:
+            JS_ASSERT(cx->exception != JSVAL_HOLE);
+            lval = cx->throwing ? cx->exception : JSVAL_HOLE;
+            PUSH(lval);
             i = PTRDIFF(pc, script->main, jsbytecode) + len;
             len = GET_JUMPX_OFFSET(pc);
             PUSH(INT_TO_JSVAL(i));
@@ -4953,6 +4959,19 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           case JSOP_RETSUB:
             rval = POP();
             JS_ASSERT(JSVAL_IS_INT(rval));
+            lval = POP();
+            if (lval != JSVAL_HOLE) {
+                /*
+                 * Exception was pending during finally, throw it *before* we
+                 * adjust pc, because pc indexes into script->trynotes.  This
+                 * turns out not to be necessary, but it seems clearer.  And
+                 * it points out a FIXME: 350509, due to Igor Bukanov.
+                 */
+                cx->throwing = JS_TRUE;
+                cx->exception = lval;
+                ok = JS_FALSE;
+                goto out;
+            }
             i = JSVAL_TO_INT(rval);
             pc = script->main + i;
             len = 0;
@@ -4961,6 +4980,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           case JSOP_EXCEPTION:
             PUSH(cx->exception);
             cx->throwing = JS_FALSE;
+            break;
+
+          case JSOP_THROWING:
+            JS_ASSERT(!cx->throwing);
+            cx->throwing = JS_TRUE;
             break;
 
           case JSOP_THROW:

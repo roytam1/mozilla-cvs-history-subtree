@@ -64,9 +64,6 @@
 #define MAXINDEX 4294967295u
 #define MAXSTR   "4294967295"
 
-/* A useful value for identifying a hole in an array */
-#define JSVAL_HOLE BOOLEAN_TO_JSVAL(2)
-
 /*
  * Determine if the id represents an array index or an XML property index.
  *
