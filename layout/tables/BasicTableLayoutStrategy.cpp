@@ -379,8 +379,8 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     ComputeColumnIntrinsicWidths(aRenderingContext);
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
-    nscoord min = 0, pref = 0, max_small_pct_pref = 0, pct_running_nonpct = 0;
-    float pct_running_pct = 0.0f; // always from 0.0f - 1.0f
+    nscoord min = 0, pref = 0, max_small_pct_pref = 0, nonpct_pref_total = 0;
+    float pct_total = 0.0f; // always from 0.0f - 1.0f
     PRInt32 colCount = cellMap->GetColCount();
     nscoord spacing = mTableFrame->GetCellSpacingX();
 
@@ -398,15 +398,15 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
             if (new_small_pct_expand > max_small_pct_pref) {
                 max_small_pct_pref = new_small_pct_expand;
             }
-            pct_running_pct += p;
-            pct_running_nonpct += colFrame->GetPrefCoord();
+            pct_total += p;
+        } else {
+            nonpct_pref_total += colFrame->GetPrefCoord();
         }
     }
 
     // Account for small percentages expanding the preferred width of
     // *other* columns.
     if (max_small_pct_pref > pref) {
-        pct_running_nonpct += (max_small_pct_pref - pref);
         pref = max_small_pct_pref;
     }
 
@@ -417,17 +417,17 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
     // to even so, but it seems ok, I think because any cases where the
     // result would be different have a stronger small percentage
     // effect.)
-    NS_ASSERTION(0.0f <= pct_running_pct && pct_running_pct <= 1.0f,
+    NS_ASSERTION(0.0f <= pct_total && pct_total <= 1.0f,
                  "column percentage widths not adjusted down to 100%");
-    if (pct_running_pct == 1.0f) {
-        if (pref - pct_running_nonpct > 0) {
+    if (pct_total == 1.0f) {
+        if (nonpct_pref_total > 0) {
             pref = nscoord_MAX;
             // XXX Or should I use some smaller value?  (Test this using
             // nested tables!)
         }
     } else {
-        nscoord large_pct_pref = nscoord(float(pref - pct_running_nonpct) /
-                                         (1.0f - pct_running_pct));
+        nscoord large_pct_pref = nscoord(float(nonpct_pref_total) /
+                                         (1.0f - pct_total));
         if (large_pct_pref > pref)
             pref = large_pct_pref;
     }
