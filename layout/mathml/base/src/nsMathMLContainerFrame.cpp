@@ -116,9 +116,6 @@ nsMathMLContainerFrame::ReflowError(nsIRenderingContext& aRenderingContext,
   aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
 
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
-  }
   // Also return our bounding metrics
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 
@@ -221,7 +218,7 @@ nsMathMLContainerFrame::GetPreferredStretchSize(nsIRenderingContext& aRenderingC
   }
   else if (aOptions & STRETCH_CONSIDER_EMBELLISHMENTS) {
     // compute our up-to-date size using Place()
-    nsHTMLReflowMetrics metrics(nsnull);
+    nsHTMLReflowMetrics metrics;
     Place(aRenderingContext, PR_FALSE, metrics);
     aPreferredStretchSize = metrics.mBoundingMetrics;
   }
@@ -519,9 +516,6 @@ nsMathMLContainerFrame::FinalizeReflow(nsIRenderingContext& aRenderingContext,
       Stretch(aRenderingContext, NS_STRETCH_DIRECTION_DEFAULT, defaultSize,
               aDesiredSize);
     }
-  }
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
   }
   // Also return our bounding metrics
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
@@ -823,6 +817,7 @@ nsMathMLContainerFrame::ReLayoutChildren(nsIFrame* aParentFrame)
     NS_ASSERTION(content, "dangling frame without a content node");
     if (!content)
       break;
+    // XXXldb This should check namespaces too.
     if (content->Tag() == nsMathMLAtoms::math)
       break;
 
@@ -857,7 +852,8 @@ nsMathMLContainerFrame::ReLayoutChildren(nsIFrame* aParentFrame)
   if (!parent)
     return NS_OK;
 
-  return parent->ReflowDirtyChild(frame->GetPresContext()->PresShell(), frame);
+  return frame->GetPresContext()->PresShell()->
+           FrameNeedsReflow(frame, nsIPresShell::eStyleChange);
 }
 
 // There are precise rules governing children of a MathML frame,
@@ -941,32 +937,9 @@ nsMathMLContainerFrame::AttributeChanged(PRInt32         aNameSpaceID,
     MapAttributesIntoCSS(GetPresContext(), this);
   }
 
-  return ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
-}
-
-// We are an inline frame, so we handle dirty request like nsInlineFrame
-NS_IMETHODIMP
-nsMathMLContainerFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
-{
-  // The inline container frame does not handle the reflow
-  // request.  It passes it up to its parent container.
-
-  // If you don't already have dirty children,
-  if (!(mState & NS_FRAME_HAS_DIRTY_CHILDREN)) {
-    if (mParent) {
-      // Record that you are dirty and have dirty children
-      mState |= NS_FRAME_IS_DIRTY;
-      mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-      // Pass the reflow request up to the parent
-      mParent->ReflowDirtyChild(aPresShell, (nsIFrame*) this);
-    }
-    else {
-      NS_ASSERTION(0, "No parent to pass the reflow request up to.");
-    }
-  }
-
-  return NS_OK;
+  // XXXldb This should only do work for attributes that cause changes!
+  return GetPresContext()->PresShell()->
+           FrameNeedsReflow(this, nsIPresShell::eStyleChange);
 }
 
 nsresult 
@@ -1015,8 +988,8 @@ nsMathMLContainerFrame::ReflowForeignChild(nsIFrame*                aChildFrame,
 
   // provide a local, self-contained linelayout where to reflow the nsInlineFrame
   nsSize availSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
-  nsLineLayout ll(aPresContext, aReflowState.mSpaceManager, aReflowState.parentReflowState,
-                  aDesiredSize.mComputeMEW);
+  nsLineLayout ll(aPresContext, aReflowState.mSpaceManager,
+                  aReflowState.parentReflowState, PR_FALSE);
   ll.BeginLineReflow(0, 0, availSize.width, availSize.height, PR_FALSE, PR_FALSE);
   PRBool pushedFrame;
   ll.ReflowFrame(aChildFrame, aStatus, &aDesiredSize, pushedFrame);
@@ -1048,29 +1021,18 @@ nsMathMLContainerFrame::Reflow(nsPresContext*          aPresContext,
   aDesiredSize.ascent = aDesiredSize.descent = 0;
   aDesiredSize.mBoundingMetrics.Clear();
 
-  // See if this is an incremental reflow
-  if (aReflowState.reason == eReflowReason_Incremental) {
-#ifdef MATHML_NOISY_INCREMENTAL_REFLOW
-printf("nsMathMLContainerFrame::Reflow:IncrementalReflow received by: ");
-nsFrame::ListTag(stdout, this);
-printf("\n");
-#endif
-  }
-
   /////////////
   // Reflow children
   // Asking each child to cache its bounding metrics
 
   nsReflowStatus childStatus;
   nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
-  nsHTMLReflowMetrics childDesiredSize(aDesiredSize.mComputeMEW,
+  nsHTMLReflowMetrics childDesiredSize(
                       aDesiredSize.mFlags | NS_REFLOW_CALC_BOUNDING_METRICS);
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
-    nsReflowReason reason = (childFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW)
-      ? eReflowReason_Initial : aReflowState.reason;
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
-                                       childFrame, availSize, reason);
+                                       childFrame, availSize);
     rv = ReflowChild(childFrame, aPresContext, childDesiredSize,
                      childReflowState, childStatus);
     //NS_ASSERTION(NS_FRAME_IS_COMPLETE(childStatus), "bad status");
@@ -1127,10 +1089,6 @@ printf("\n");
       }
       childFrame = childFrame->GetNextSibling();
     }
-  }
-
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = childDesiredSize.mMaxElementWidth;
   }
 
   /////////////
@@ -1270,7 +1228,7 @@ nsMathMLContainerFrame::Place(nsIRenderingContext& aRenderingContext,
 
   PRInt32 count = 0;
   PRInt32 carrySpace = 0;
-  nsHTMLReflowMetrics childSize (nsnull);
+  nsHTMLReflowMetrics childSize;
   nsBoundingMetrics bmChild;
   nscoord leftCorrection = 0, italicCorrection = 0;
   eMathMLFrameType fromFrameType = eMathMLFrameType_UNKNOWN;
@@ -1409,6 +1367,7 @@ nsMathMLContainerFrame::FixInterFrameSpacing(nsHTMLReflowMetrics& aDesiredSize)
 {
   nscoord gap = 0;
   nsIContent* parentContent = mParent->GetContent();
+  // XXXldb This should check namespaces too.
   nsIAtom *parentTag = parentContent->Tag();
   if (parentTag == nsMathMLAtoms::math ||
       parentTag == nsMathMLAtoms::mtd_) {

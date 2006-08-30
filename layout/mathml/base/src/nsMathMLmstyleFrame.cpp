@@ -205,7 +205,10 @@ nsMathMLmstyleFrame::AttributeChanged(PRInt32         aNameSpaceID,
       aAttribute == nsMathMLAtoms::mathbackground_ ||
       aAttribute == nsMathMLAtoms::background) {
     MapAttributesIntoCSS(GetPresContext(), this);
-    return ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    return GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
 
   // Other attributes can affect too many things, ask our parent to re-layout

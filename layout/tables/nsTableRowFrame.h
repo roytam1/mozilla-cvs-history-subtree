@@ -45,10 +45,6 @@ class  nsTableFrame;
 class  nsTableCellFrame;
 struct nsTableCellReflowState;
 
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-class nsReflowTimer;
-#endif
-
 #define NS_ROW_NEED_SPECIAL_REFLOW          0x20000000
 #define NS_TABLE_ROW_HAS_UNPAGINATED_HEIGHT 0x40000000
 // This is also used on rows, from nsTableRowGroupFrame.h
@@ -260,43 +256,10 @@ protected:
                             const nsSize&           aAvailSize,
                             PRBool                  aBorderCollapse,
                             float                   aPixelsToTwips,
-                            nsTableCellReflowState& aReflowState,
-                            PRBool                  aResetComputedWidth = PR_FALSE);
+                            nsTableCellReflowState& aReflowState);
   
   /** implement abstract method on nsHTMLContainerFrame */
   virtual PRIntn GetSkipSides() const;
-
-  /** Incremental Reflow attempts to do column balancing with the minimum number of reflow
-    * commands to child elements.  This is done by processing the reflow command,
-    * rebalancing column widths (if necessary), then comparing the resulting column widths
-    * to the prior column widths and reflowing only those cells that require a reflow.
-    *
-    * @see Reflow
-    */
-  NS_IMETHOD IncrementalReflow(nsPresContext*          aPresContext,
-                               nsHTMLReflowMetrics&     aDesiredSize,
-                               const nsHTMLReflowState& aReflowState,
-                               nsTableFrame&            aTableFrame,
-                               nsReflowStatus&          aStatus);
-
-  NS_IMETHOD IR_TargetIsChild(nsPresContext*          aPresContext,
-                              nsHTMLReflowMetrics&     aDesiredSize,
-                              const nsHTMLReflowState& aReflowState,
-                              nsTableFrame&            aTableFrame,
-                              nsReflowStatus&          aStatus,
-                              nsIFrame*                aNextFrame);
-
-  NS_IMETHOD IR_TargetIsMe(nsPresContext*          aPresContext,
-                           nsHTMLReflowMetrics&     aDesiredSize,
-                           const nsHTMLReflowState& aReflowState,
-                           nsTableFrame&            aTableFrame,
-                           nsReflowStatus&          aStatus);
-
-  NS_IMETHOD IR_StyleChanged(nsPresContext*          aPresContext,
-                             nsHTMLReflowMetrics&     aDesiredSize,
-                             const nsHTMLReflowState& aReflowState,
-                             nsTableFrame&            aTableFrame,
-                             nsReflowStatus&          aStatus);
 
   // row-specific methods
 
@@ -311,8 +274,7 @@ protected:
                             nsHTMLReflowMetrics&     aDesiredSize,
                             const nsHTMLReflowState& aReflowState,
                             nsTableFrame&            aTableFrame,
-                            nsReflowStatus&          aStatus,
-                            PRBool                   aDirtyOnly = PR_FALSE);
+                            nsReflowStatus&          aStatus);
 
 private:
   struct RowBits {
@@ -342,11 +304,6 @@ private:
   BCPixelSize mRightContBorderWidth;
   BCPixelSize mTopContBorderWidth;
   BCPixelSize mLeftContBorderWidth;
-
-#ifdef DEBUG_TABLE_REFLOW_TIMING
-public:
-  nsReflowTimer* mTimer;
-#endif
 };
 
 inline PRInt32 nsTableRowFrame::GetRowIndex() const

@@ -404,28 +404,30 @@ nsIFrame*
 nsMathMLmtableOuterFrame::GetRowFrameAt(nsPresContext* aPresContext,
                                         PRInt32         aRowIndex)
 {
-  // To find the row at the given index, we will iterate downwards or
-  // upwards depending on the sign of the index
-  nsTableIteration dir = eTableLTR;
-  if (aRowIndex < 0) {
-    aRowIndex = -aRowIndex;
-    dir = eTableRTL;
-  }
-  // if our inner table says that the index is valid, find the row now
   PRInt32 rowCount, colCount;
   GetTableSize(rowCount, colCount);
-  if (aRowIndex <= rowCount) {
+
+  // Negative indices mean to find upwards from the end.
+  if (aRowIndex < 0) {
+    aRowIndex = rowCount + aRowIndex;
+  }
+  // aRowIndex is 1-based, so convert it to a 0-based index
+  --aRowIndex;
+
+  // if our inner table says that the index is valid, find the row now
+  if (aRowIndex <= 0 && aRowIndex < rowCount) {
     nsIFrame* innerTableFrame = mFrames.FirstChild();
-    nsTableIterator rowgroupIter(*innerTableFrame, dir);
+    nsTableIterator rowgroupIter(*innerTableFrame);
     nsIFrame* rowgroupFrame = rowgroupIter.First();
     while (rowgroupFrame) {
-      nsTableIterator rowIter(*rowgroupFrame, dir);
+      nsTableIterator rowIter(*rowgroupFrame);
       nsIFrame* rowFrame = rowIter.First();
       while (rowFrame) {
-        if (--aRowIndex == 0) {
+        if (aRowIndex == 0) {
           DEBUG_VERIFY_THAT_FRAME_IS(rowFrame, TABLE_ROW);
           return rowFrame;
         }
+        --aRowIndex;
         rowFrame = rowIter.Next();
       }
       rowgroupFrame = rowgroupIter.Next();
@@ -440,19 +442,18 @@ nsMathMLmtableOuterFrame::DEBUG_VerifyTableRelatedFrames()
 {
   PRInt32 rowCount, colCount;
   GetTableSize(rowCount, colCount);
-  nsTableIteration dir = eTableLTR;
   nsIFrame* innerTableFrame = mFrames.FirstChild();
-  nsTableIterator rowgroupIter(*innerTableFrame, dir);
+  nsTableIterator rowgroupIter(*innerTableFrame);
   nsIFrame* rowgroupFrame = rowgroupIter.First();
   for ( ; rowgroupFrame; rowgroupFrame = rowgroupIter.Next()) {
-    nsTableIterator rowIter(*rowgroupFrame, dir);
+    nsTableIterator rowIter(*rowgroupFrame);
     nsIFrame* rowFrame = rowIter.First();
     for ( ; rowFrame; rowFrame = rowIter.Next()) {
       DEBUG_VERIFY_THAT_FRAME_IS(rowFrame, TABLE_ROW);
       //XXX uncomment this if <mtr> ever gets its own MathML frame implementation
       //NS_ASSERTION(rowFrame->IsFrameOfType(nsIFrame::eMathML), 
       //             "non MathML row frame");
-      nsTableIterator cellIter(*rowFrame, dir);
+      nsTableIterator cellIter(*rowFrame);
       nsIFrame* cellFrame = cellIter.First();
       for ( ; cellFrame; cellFrame = cellIter.Next()) {
         DEBUG_VERIFY_THAT_FRAME_IS(cellFrame, TABLE_CELL);
@@ -477,32 +478,8 @@ nsMathMLmtableOuterFrame::Reflow(nsPresContext*          aPresContext,
   nsAutoString value;
   // we want to return a table that is anchored according to the align attribute
 
-  nsHTMLReflowState reflowState(aReflowState);
-  if ((NS_FRAME_FIRST_REFLOW & mState) &&
-      (NS_UNCONSTRAINEDSIZE == reflowState.availableWidth)) {
-    // We are going to reflow twice because the table frame code is
-    // skipping the Pass 2 reflow when, at the Pass 1 reflow, the available
-    // size is unconstrained. Skipping the Pass2 messes the MathML vertical
-    // alignments that are resolved during the reflow of cell frames.
-
-    nscoord oldComputedWidth = reflowState.mComputedWidth;
-    reflowState.mComputedWidth = NS_UNCONSTRAINEDSIZE;
-    reflowState.reason = eReflowReason_Initial;
-
-    rv = nsTableOuterFrame::Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
-
-    // The second reflow will just be a reflow with a constrained width
-    reflowState.availableWidth = aDesiredSize.width;
-    reflowState.mComputedWidth = oldComputedWidth;
-    reflowState.reason = eReflowReason_StyleChange;
-
-    mState &= ~NS_FRAME_FIRST_REFLOW;
-  }
-  else if (mRect.width) {
-    reflowState.availableWidth = mRect.width;
-  }
-
-  rv = nsTableOuterFrame::Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+  rv = nsTableOuterFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
+                                 aStatus);
   NS_ASSERTION(aDesiredSize.height >= 0, "illegal height for mtable");
   NS_ASSERTION(aDesiredSize.width >= 0, "illegal width for mtable");
 
