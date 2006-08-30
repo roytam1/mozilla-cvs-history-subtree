@@ -222,7 +222,7 @@ struct sockbuf {
 
 	int		sb_options;	/* to support copying ber elements */
 	LBER_SOCKET	sb_copyfd;	/* for LBER_SOCKBUF_OPT_TO_FILE* opts */
-	ber_uint_t	sb_max_incoming;
+	ber_len_t	sb_max_incoming;
 	ber_tag_t   sb_valid_tag;	/* valid tag to accept */
 	struct nslberi_io_fns
 			sb_io_fns;	/* classic I/O callback functions */

@@ -805,7 +805,7 @@ LDAP_CALL
 ber_get_next( Sockbuf *sb, ber_len_t *len, BerElement *ber )
 {
 	ber_len_t	newlen;
-	ber_uint_t  toread;
+	ber_len_t	toread;
 	ber_int_t	rc;
 	ber_len_t   orig_taglen_read = 0;
 	char * orig_rwptr = ber->ber_rwptr ? ber->ber_rwptr : ber->ber_buf;
@@ -887,7 +887,7 @@ ber_get_next( Sockbuf *sb, ber_len_t *len, BerElement *ber )
 	}
 	
 	/* OK, we've malloc-ed the buffer; now read the rest of the expected length */
-	toread = (ber_uint_t)ber->ber_end - (ber_uint_t)ber->ber_rwptr;
+	toread = (ber_len_t)ber->ber_end - (ber_len_t)ber->ber_rwptr;
 	do {
 	    if ( (rc = BerRead( sb, ber->ber_rwptr, (ber_int_t)toread )) <= 0 ) {
 		*len = (ber_len_t) ber->ber_rwptr - (ber_len_t) orig_rwptr;
@@ -992,13 +992,13 @@ ber_set_option( struct berelement *ber, int option, void *value )
 		}
 		break;
 	case LBER_OPT_REMAINING_BYTES:
-		ber->ber_end = ber->ber_ptr + *((ber_uint_t *)value);
+		ber->ber_end = ber->ber_ptr + *((ber_len_t *)value);
 		break;
 	case LBER_OPT_TOTAL_BYTES:
-		ber->ber_end = ber->ber_buf + *((ber_uint_t *)value);
+		ber->ber_end = ber->ber_buf + *((ber_len_t *)value);
 		break;
 	case LBER_OPT_BYTES_TO_WRITE:
-		ber->ber_ptr = ber->ber_buf + *((ber_uint_t *)value);
+		ber->ber_ptr = ber->ber_buf + *((ber_len_t *)value);
 		break;
 	default:
 		return( -1 );
@@ -1057,13 +1057,13 @@ ber_get_option( struct berelement *ber, int option, void *value )
 		*((int *) value) = (ber->ber_options & option);
 		break;
 	case LBER_OPT_REMAINING_BYTES:
-		*((ber_uint_t *) value) = ber->ber_end - ber->ber_ptr;
+		*((ber_len_t *) value) = ber->ber_end - ber->ber_ptr;
 		break;
 	case LBER_OPT_TOTAL_BYTES:
-		*((ber_uint_t *) value) = ber->ber_end - ber->ber_buf;
+		*((ber_len_t *) value) = ber->ber_end - ber->ber_buf;
 		break;
 	case LBER_OPT_BYTES_TO_WRITE:
-		*((ber_uint_t *) value) = ber->ber_ptr - ber->ber_buf;
+		*((ber_len_t *) value) = ber->ber_ptr - ber->ber_buf;
 		break;
 	default:
 		return( -1 );
@@ -1114,7 +1114,7 @@ ber_sockbuf_set_option( Sockbuf *sb, int option, void *value )
 		break;
 	case LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE:
 		if ( value != NULL ) {
-		    sb->sb_max_incoming = *((ber_uint_t *) value);
+		    sb->sb_max_incoming = *((ber_len_t *) value);
 		    sb->sb_options |= option;
 		} else {
 		    /* setting the max incoming to 0 seems to be the only
@@ -1201,7 +1201,7 @@ ber_sockbuf_get_option( Sockbuf *sb, int option, void *value )
 		*((ber_tag_t *) value) = sb->sb_valid_tag;
 		break;
 	case LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE:
-		*((ber_uint_t *) value) = sb->sb_max_incoming;
+		*((ber_len_t *) value) = sb->sb_max_incoming;
 		break;
 	case LBER_SOCKBUF_OPT_TO_FILE:
 	case LBER_SOCKBUF_OPT_TO_FILE_ONLY:
@@ -1401,7 +1401,7 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, ber_len_t *len,
 {
 	ber_tag_t		tag = 0; 
 	ber_len_t		netlen;
-	ber_uint_t		toread;
+	ber_len_t		toread;
 	unsigned char	lc;
 	ssize_t			rc;
 	int				noctets, diff;
@@ -1555,7 +1555,7 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, ber_len_t *len,
 		ber->ber_rwptr = ber->ber_buf;
 	}
 
-	toread = (ber_uint_t)ber->ber_end - (ber_uint_t)ber->ber_rwptr;
+	toread = (ber_len_t)ber->ber_end - (ber_len_t)ber->ber_rwptr;
 	do {
 		if ( (rc = read_bytes( &sb, (unsigned char *)ber->ber_rwptr,
 		    (ber_int_t)toread )) <= 0 ) {
