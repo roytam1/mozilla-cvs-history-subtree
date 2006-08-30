@@ -277,6 +277,9 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 .toolbarbutton-menubutton-button:hover:active {
   border: 0 !important;
   display: -moz-box;
+%ifdef MOZ_WIDGET_GTK2
+  -moz-appearance: none;
+%endif
 }
 
 /* set up extended binding for the back & forward buttons */
