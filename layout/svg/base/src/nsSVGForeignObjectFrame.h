@@ -133,7 +133,7 @@ public:
 protected:
   // implementation helpers:
   void DoReflow();
-  void PostReflowCommand();
+  void PostChildDirty();
   void UpdateGraphic();
   float GetPxPerTwips();
   float GetTwipsPerPx();
