@@ -227,18 +227,10 @@ nsContainerFrame::BuildDisplayListForNonBlockChildren(nsDisplayListBuilder*   aB
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsContainerFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
+/* virtual */ void
+nsContainerFrame::ChildIsDirty(nsIFrame* aChild)
 {
-  // The container frame always generates a reflow command
-  // targeted at its child
-  // Note that even if this flag is already set, we still need to reflow the
-  // child because the frame may have more than one child
-  mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-  aPresShell->AppendReflowCommand(aChild, eReflowType_ReflowDirty, nsnull);
-
-  return NS_OK;
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
 }
 
 PRBool
@@ -717,14 +709,6 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
 
   nsresult  result;
 
-#ifdef DEBUG
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = nscoord(0xdeadbeef);
-  }
-#endif
-#endif
-
   // Send the WillReflow() notification, and position the child frame
   // and its view if requested
   aKidFrame->WillReflow(aPresContext);
@@ -740,17 +724,6 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
   // Reflow the child frame
   result = aKidFrame->Reflow(aPresContext, aDesiredSize, aReflowState,
                              aStatus);
-
-#ifdef DEBUG
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-  if (aDesiredSize.mComputeMEW &&
-      (nscoord(0xdeadbeef) == aDesiredSize.mMaxElementWidth)) {
-    printf("nsContainerFrame: ");
-    nsFrame::ListTag(stdout, aKidFrame);
-    printf(" didn't set max-element-width!\n");
-  }
-#endif
-#endif
 
   // If the reflow was successful and the child frame is complete, delete any
   // next-in-flows

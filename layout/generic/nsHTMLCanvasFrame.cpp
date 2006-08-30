@@ -59,13 +59,23 @@ nsHTMLCanvasFrame::~nsHTMLCanvasFrame()
 {
 }
 
-// We really want a PR_MINMAX to go along with PR_MIN/PR_MAX
-#define MINMAX(_value,_min,_max) \
-    ((_value) < (_min)           \
-     ? (_min)                    \
-     : ((_value) > (_max)        \
-        ? (_max)                 \
-        : (_value)))
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  float p2t = GetPresContext()->PixelsToTwips();
+  nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
+  DISPLAY_MIN_WIDTH(this, result);
+  return result;
+}
+
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  float p2t = GetPresContext()->PixelsToTwips();
+  nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
+  DISPLAY_PREF_WIDTH(this, result);
+  return result;
+}
 
 NS_IMETHODIMP
 nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
@@ -73,7 +83,7 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
                           const nsHTMLReflowState& aReflowState,
                           nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLCanvasFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLCanvasFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                   ("enter nsHTMLCanvasFrame::Reflow: availSize=%d,%d",
@@ -105,8 +115,8 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
     aMetrics.height = aReflowState.mComputedHeight;
 
   // clamp
-  aMetrics.height = MINMAX(aMetrics.height, aReflowState.mComputedMinHeight, aReflowState.mComputedMaxHeight);
-  aMetrics.width = MINMAX(aMetrics.width, aReflowState.mComputedMinWidth, aReflowState.mComputedMaxWidth);
+  aMetrics.height = NS_CSS_MINMAX(aMetrics.height, aReflowState.mComputedMinHeight, aReflowState.mComputedMaxHeight);
+  aMetrics.width = NS_CSS_MINMAX(aMetrics.width, aReflowState.mComputedMinWidth, aReflowState.mComputedMaxWidth);
 
   // stash this away so we can compute our inner area later
   mBorderPadding   = aReflowState.mComputedBorderPadding;
@@ -123,13 +133,6 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
   aMetrics.ascent  = aMetrics.height;
   aMetrics.descent = 0;
 
-  if (aMetrics.mComputeMEW) {
-    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-  }
-  
-  if (aMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aMetrics.mMaximumWidth = aMetrics.width;
-  }
   aMetrics.mOverflowArea.SetRect(0, 0, aMetrics.width, aMetrics.height);
   FinishAndStoreOverflow(&aMetrics);
 
@@ -218,8 +221,8 @@ nsHTMLCanvasFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
                                  nsISelectionDisplay::DISPLAY_IMAGES);
 }
 
-NS_IMETHODIMP
-nsHTMLCanvasFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
+/* virtual */ PRBool
+nsHTMLCanvasFrame::CanContinueTextRun() const
 {
   // stolen from nsImageFrame.cpp
   // images really CAN continue text runs, but the textFrame needs to be 
@@ -228,8 +231,7 @@ nsHTMLCanvasFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
   // this can be eliminated and the textFrame can be convinced to handle inlines
   // that take up space in text runs.
 
-  aContinueTextRun = PR_FALSE;
-  return NS_OK;
+  return PR_FALSE;
 }
 
 NS_IMETHODIMP  
@@ -247,6 +249,12 @@ nsIAtom*
 nsHTMLCanvasFrame::GetType() const
 {
   return nsLayoutAtoms::HTMLCanvasFrame;
+}
+
+PRBool
+nsHTMLCanvasFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~(eReplaced));
 }
 
 // get the offset into the content area of the image where aImg starts if it is a continuation.
