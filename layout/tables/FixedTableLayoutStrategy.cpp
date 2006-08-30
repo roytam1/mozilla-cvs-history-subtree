@@ -123,6 +123,8 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
                     result += cellWidth;
                 } else if (styleWidth->GetUnit() == eStyleUnit_Percent) {
                     if (colSpan > 1) {
+                        // XXX Can this force columns to negative
+                        // widths?
                         result -= spacing * (colSpan - 1);
                     }
                 }
