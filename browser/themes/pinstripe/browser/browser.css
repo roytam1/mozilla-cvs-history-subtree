@@ -41,6 +41,7 @@
 @import url("chrome://global/skin/");
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace html url("http://www.w3.org/1999/xhtml");
 
 #toolbar-menubar {
 	display: none;
@@ -55,7 +56,11 @@
 #searchbar[empty="true"] .searchbar-textbox {
   color: GrayText;
 }
-	
+
+#wrapper-search-container #searchbar html|*.textbox-input {
+  visibility: hidden;
+}
+
 /* ----- BOOKMARK BUTTONS ----- */	
 
 .bookmark-item[container] {
