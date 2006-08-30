@@ -1026,13 +1026,13 @@ sidebarheader {
 
 #security-button[level="high"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(36px, 18px, 54px, 0px);
+  -moz-image-region: rect(32px, 16px, 48px, 0px);
   display: -moz-box;
 }
 
 #security-button[level="low"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(36px, 18px, 54px, 0px);
+  -moz-image-region: rect(32px, 16px, 48px, 0px);
   display: -moz-box;
 }
 
