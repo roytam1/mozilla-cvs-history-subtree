@@ -8,7 +8,7 @@
 .tabbrowser-tabs {
   -moz-binding: url("chrome://global/skin/globalBindings.xml#tabbrowser-tabs") !important;
   padding-top: 0px;
-  background: #e0dccf url("chrome://global/skin/icons/tabbrowser-tabs-bkgnd.png") repeat-x bottom center !important;
+  background: #e0dccf url("chrome://global/skin/icons/tabbrowser-tabs-bkgnd.png") !important;
   -moz-padding-start: 0px;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .tabbrowser-tab > .tab-image-left {
-  width: 8px;
+  width: 10px;
   height: 24px;
   background: url("chrome://global/skin/icons/tab-left.png") no-repeat;
 }
@@ -63,11 +63,13 @@
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-image-left {
-  opacity: 0.60;
+  height: 23px;
+  margin-bottom: 1px;
+  background: url("chrome://global/skin/icons/tab-left-bkgnd.png") no-repeat;
 }
 
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-left {
-  opacity: 0.85;
+  background: url("chrome://global/skin/icons/tab-left-hover.png") no-repeat;
 }
 
 .tabbrowser-tab > .tab-image-middle {
@@ -76,15 +78,17 @@
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-image-middle {
-  opacity: 0.60;
+  height: 23px;
+  margin-bottom: 1px;
+  background: url("chrome://global/skin/icons/tab-middle-bkgnd.png") repeat-x;
 }
 
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-middle {
-  opacity: 0.85;
+  background: url("chrome://global/skin/icons/tab-middle-hover.png") repeat-x;
 }
 
 .tabbrowser-tab > .tab-image-right {
-  width: 8px;
+  width: 10px;
   height: 24px;
   background: url("chrome://global/skin/icons/tab-right.png") no-repeat;
 }
@@ -94,11 +98,13 @@
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-image-right {
-  opacity: 0.60;
+  height: 23px;
+  margin-bottom: 1px;
+  background: url("chrome://global/skin/icons/tab-right-bkgnd.png") no-repeat;
 }
 
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-right {
-  opacity: 0.85;
+  background: url("chrome://global/skin/icons/tab-right-hover.png") no-repeat;
 }
 
 .tab-icon-image {
@@ -177,6 +183,15 @@ tabpanels {
   list-style-image: url("chrome://global/skin/icons/close.png");
 }
 
+.tabbrowser-tab:not([selected="true"]) > .tab-close-button {
+  height: 23px;
+  margin-bottom: 1px;
+}
+
+.tabbrowser-tab:not([selected="true"]) > .tab-close-button > .toolbarbutton-icon {
+  margin-top: 2px;
+}
+
 .tab-close-button:hover,
 .tabbrowser-tab[selected="true"] > .tab-close-button:hover {
   -moz-image-region: rect(0px, 32px, 16px, 16px);
@@ -190,12 +205,11 @@ tabpanels {
 }
 
 .tabbrowser-tab > .tab-close-button {
-  background-image: url("chrome://global/skin/icons/tab-middle.png");
-  background-repeat: no-repeat;
-  opacity: 0.6;
+  background-image: url("chrome://global/skin/icons/tab-middle-bkgnd.png");
 }
+
 .tabbrowser-tab:hover > .tab-close-button {
-  opacity: 0.85;
+  background-image: url("chrome://global/skin/icons/tab-middle-hover.png");
 }
 
 .tab-close-button-placeholder {
@@ -209,7 +223,7 @@ tabpanels {
 }
 
 .tabbrowser-tab[selected="true"] > .tab-close-button {
-  opacity: 1.0;
+  background-image: url("chrome://global/skin/icons/tab-middle.png");
   -moz-image-region: rect(0px, 16px, 16px, 0px);
   /* Make this button focusable so clicking on it will not focus the tab while
      it's getting closed */
