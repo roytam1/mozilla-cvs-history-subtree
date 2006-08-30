@@ -1924,6 +1924,12 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
     if (accProv) {
       accProv->GetAccessible(getter_AddRefs(newAcc));
     }
+    if (newAcc) {
+      // We have an accessible, no need to check further
+      // newAcc may have been null from accProv->GetAccessible
+      // if nsIAccessibleProvider is being used from content --
+      // it's not a blessed interface.
+    }
     else if (!role.IsEmpty() ||
              content->HasAttr(kNameSpaceID_None, nsAccessibilityAtoms::tabindex)) {
       newAcc = new nsAccessibleWrap(aNode, aWeakShell); // Create generic accessible
