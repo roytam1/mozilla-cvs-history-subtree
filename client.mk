@@ -257,11 +257,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = FIREFOX_2_0b2_RELEASE
-NSPR_CO_TAG          = FIREFOX_2_0b2_RELEASE
-NSS_CO_TAG           = FIREFOX_2_0b2_RELEASE
-LDAPCSDK_CO_TAG      = FIREFOX_2_0b2_RELEASE
-LOCALES_CO_TAG       = FIREFOX_2_0b2_RELEASE
+MOZ_CO_TAG           = SONGBIRD_0_2A_20060830_BRANCH
+NSPR_CO_TAG          = SONGBIRD_0_2A_20060830_BRANCH
+NSS_CO_TAG           = SONGBIRD_0_2A_20060830_BRANCH
+LDAPCSDK_CO_TAG      = SONGBIRD_0_2A_20060830_BRANCH
+LOCALES_CO_TAG       = SONGBIRD_0_2A_20060830_BRANCH
 
 BUILD_MODULES = all
 
