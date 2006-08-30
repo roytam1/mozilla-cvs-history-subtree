@@ -8,8 +8,9 @@
 <dialog id="addFeedReader"
         title="&addFeedReader.title;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        onload="AddFeedReader.init();"
-        ondialogaccept="AddFeedReader.add();"
+        onload="gAddFeedReader.init();"
+        defaultButton="cancel"
+        ondialogaccept="gAddFeedReader.onDialogAccept();"
         buttons="accept,cancel">
 
   <script type="application/x-javascript"
@@ -22,20 +23,10 @@
     <vbox id="imageBox"/>
     <vbox flex="1" id="content">
       <label id="addQuestion" flex="1"/>
-      
-      <hbox align="center">
+      <hbox align="center" id="siteBox">
         <label id="siteLabel">&forSite.label;</label>
         <textbox id="site" readonly="true" flex="1" class="plain"/>
       </hbox>
-      
-      <separator class="thin"/>
-      
-      <hbox>
-        <checkbox id="addAsDefaultCheckbox"
-                  label="&addAsDefault.label;" 
-                  accesskey="&addAsDefault.accesskey;"/>
-      </hbox>
     </vbox>
   </hbox>
-
 </dialog>

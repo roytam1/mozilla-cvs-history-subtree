@@ -58,6 +58,7 @@ const PREF_CONTENTHANDLERS_AUTO = "browser.contentHandlers.auto.";
 const PREF_CONTENTHANDLERS_BRANCH = "browser.contentHandlers.types.";
 const PREF_SELECTED_WEB = "browser.feeds.handlers.webservice";
 const PREF_SELECTED_ACTION = "browser.feeds.handler";
+const PREF_SELECTED_READER = "browser.feeds.handler.default";
 
 function WebContentConverter() {
 }
@@ -300,34 +301,13 @@ var WebContentConverterRegistrar = {
     return supportsString;
   },
 
-  _updateDefaultReader: function WCCR__updateDefaultReader(uri) {
-    var ps = 
-        Cc["@mozilla.org/preferences-service;1"].
-        getService(Ci.nsIPrefBranch);
-    var localizedString = 
-        Cc["@mozilla.org/pref-localizedstring;1"].
-        createInstance(Ci.nsIPrefLocalizedString);
-    localizedString.data = uri;
-    ps.setComplexValue(PREF_SELECTED_WEB, Ci.nsIPrefLocalizedString, 
-                       localizedString);
-    
-    var needToUpdateHandler = true;
-    try {
-      needToUpdateHandler = ps.getCharPref(PREF_SELECTED_ACTION) != "web";
-    }
-    catch (e) {
-    }
-    if (needToUpdateHandler)
-      ps.setCharPref(PREF_SELECTED_ACTION, "web");
-  },
-
   _makeURI: function(aURL, aOriginCharset, aBaseURI) {
     var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                               .getService(Components.interfaces.nsIIOService);
     return ioService.newURI(aURL, aOriginCharset, aBaseURI);
   },
 
-  _confirmAddHandler: function WCCR__confirmAddHandler(contentType, title, uriString, contentWindow) {
+  _confirmAddHandler: function WCCR__confirmAddHandler(contentType, title, uri, contentWindow) {
     var args =
         Cc["@mozilla.org/supports-array;1"].
         createInstance(Ci.nsISupportsArray);
@@ -336,17 +316,11 @@ var WebContentConverterRegistrar = {
         Cc["@mozilla.org/embedcomp/dialogparam;1"].
         createInstance(Ci.nsIDialogParamBlock);
     // Used to tell the WCCR that the user chose to add the handler (rather 
-    // than canceling) and whether or not they made it their default handler.
+    // than canceling).
     const PARAM_SHOULD_ADD_HANDLER = 0;
-    const PARAM_SHOULD_MAKE_DEFAULT = 1;
     paramBlock.SetInt(PARAM_SHOULD_ADD_HANDLER, 0);
-    paramBlock.SetInt(PARAM_SHOULD_MAKE_DEFAULT, 0);
     args.AppendElement(paramBlock);
 
-    try {
-      var uri = this._makeURI(uriString);
-    }
-    catch(ex) { return false; }
     args.AppendElement(uri);
     args.AppendElement(this._wrapString(title));
     args.AppendElement(this._wrapString(contentType));
@@ -382,20 +356,13 @@ var WebContentConverterRegistrar = {
     event.initEvent("DOMModalDialogClosed", true, true);
     browserContentWindow.dispatchEvent(event);
 
-    var shouldAdd = paramBlock.GetInt(PARAM_SHOULD_ADD_HANDLER) == 1;
-    if (shouldAdd&& contentType == TYPE_MAYBE_FEED && 
-        paramBlock.GetInt(PARAM_SHOULD_MAKE_DEFAULT) == 1) {
-      // User chose to use the reader as their default, so update the 
-      // chosen reader preference, too.
-      this._updateDefaultReader(uri.spec);
-    }
-    return shouldAdd;
+    return paramBlock.GetInt(PARAM_SHOULD_ADD_HANDLER);
   },
 
   _checkForDuplicateContentType: 
   function WCCR__checkForDuplicateContentType(contentType, uri, title, contentWindow) {
     contentType = this._resolveContentType(contentType);
-    if (this._typeIsRegistered(contentType, uri)) {
+    if (this._typeIsRegistered(contentType, uri.spec)) {
       // Show a special dialog for the feed case (XXXben - generalize at some 
       // point to allow other types to register specialized prompts).
       this._confirmAddHandler(contentType, title, uri, contentWindow);
@@ -408,13 +375,18 @@ var WebContentConverterRegistrar = {
    * See nsIWebContentHandlerRegistrar
    */
   registerProtocolHandler: 
-  function WCCR_registerProtocolHandler(protocol, uri, title, contentWindow) {
-    // XXXben - for Firefox 2 we only support feed types
-    return;
-    
+  function WCCR_registerProtocolHandler(protocol, uriString, title, contentWindow) {
+# XXXben - for Firefox 2 we only support feed types
+#ifdef REGISTER_PROTOCOL_HANDLER_IMPL
+    try {
+      var uri = this._makeURI(uriString);
+    }
+    catch(ex) { return; }
+
     LOG("registerProtocolHandler(" + protocol + "," + uri + "," + title + ")");
     if (this._confirmAddHandler(protocol, title, uri, contentWindow))
       this._protocols[protocol] = uri;
+#endif
   },
 
   /**
@@ -424,8 +396,13 @@ var WebContentConverterRegistrar = {
    * preferences.
    */
   registerContentHandler: 
-  function WCCR_registerContentHandler(contentType, uri, title, contentWindow) {
+  function WCCR_registerContentHandler(contentType, uriString, title, contentWindow) {
     LOG("registerContentHandler(" + contentType + "," + uri + "," + title + ")");
+
+    try {
+      var uri = this._makeURI(uriString);
+    }
+    catch(ex) { return; }
 
     // XXXben - for Firefox 2 we only support feed types
     contentType = this._resolveContentType(contentType);
@@ -436,13 +413,9 @@ var WebContentConverterRegistrar = {
         !this._confirmAddHandler(contentType, title, uri, contentWindow))
       return;
 
-    // Reset the auto handler so that the user is asked again the next time
-    // they load content of this type.
-    if (this.getAutoHandler(contentType)) 
-      this.setAutoHandler(contentType, null);
-
-    this._registerContentHandler(contentType, uri, title);
-    this._saveContentHandlerToPrefs(contentType, uri, title);    
+    var spec = uri.spec;
+    this._registerContentHandler(contentType, spec, title);
+    this._saveContentHandlerToPrefs(contentType, spec, title);    
   },
 
   /**
@@ -491,6 +464,13 @@ var WebContentConverterRegistrar = {
 
       ps.savePrefFile(null);
     }
+
+    // Make the new handler the last-selected handler for the preview page
+    // and make sure the preview page is shown the next time a feed is visited
+    var pb = ps.getBranch(null);
+    pb.setCharPref(PREF_SELECTED_READER, "web");
+    pb.setCharPref(PREF_SELECTED_WEB, uri);
+    pb.setCharPref(PREF_SELECTED_ACTION, "ask");
   },
 
   /**

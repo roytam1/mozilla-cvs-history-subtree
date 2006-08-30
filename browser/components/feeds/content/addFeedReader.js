@@ -60,13 +60,13 @@ const TYPETYPE_PROTOCOL = 2;
 // 4          integer 1 = content type 2 = protocol
 
 
-var AddFeedReader = {
+var gAddFeedReader = {
   _result: null,
   _uri: null,
   _title: null,
   _type: null,
   _typeType: null,
-  
+  _handlerInstalled: false,
 
   init: function AFR_init() {
     this._result = window.arguments[0].QueryInterface(Ci.nsIDialogParamBlock);
@@ -84,12 +84,11 @@ var AddFeedReader = {
         getService(Ci.nsIWebContentConverterService);
     var handler = 
         wccr.getWebContentHandlerByURI(this._type, this._uri.spec);
+    this._handlerInstalled = handler != null;
 
-    var key = handler != null ? "handlerRegistered" : "addHandler";
+    var key = this._handlerInstalled ? "handlerRegistered" : "addHandler";
     var message = strings.getFormattedString(key, [this._title]);
     addQuestion.setAttribute("value", message);
-
-    this._updateAddAsDefaultCheckbox();
     
     if (this._type != TYPE_MAYBE_FEED && this._typeType == TYPETYPE_MIME) {
       var mimeService = 
@@ -102,51 +101,25 @@ var AddFeedReader = {
 
     document.getElementById("site").value = this._uri.host;
     
-    if (handler)
-      dlg.getButton("accept").focus();
+    if (handler) {
+      dlg.getButton("cancel").hidden = true;
+      dlg.defaultButton = "accept";
+      document.getElementById("siteBox").hidden = true;
+    }
     else {
       dlg.getButton("accept").label = strings.getString("addHandlerYes");
       dlg.getButton("cancel").label = strings.getString("addHandlerNo");
-      dlg.getButton("cancel").focus();
     }
 
     window.sizeToContent();
   },
-  
-  _updateAddAsDefaultCheckbox: function AFR__updateAddAsDefaultCheckbox() {
-    var addAsDefaultCheckbox = 
-        document.getElementById("addAsDefaultCheckbox");
-    if (this._type != TYPE_MAYBE_FEED) {
-      addAsDefaultCheckbox.hidden = true;
-      return;
-    }
-    
-    try {
-      var ps = 
-          Cc["@mozilla.org/preferences-service;1"].
-          getService(Ci.nsIPrefBranch);
-      var webHandler = 
-          ps.getComplexValue(PREF_SELECTED_WEB, Ci.nsIPrefLocalizedString);
-      if (webHandler.data == window.arguments[0]) {
-        addAsDefaultCheckbox.checked = true;
-        addAsDefaultCheckbox.disabled = true;
-      }
-    }
-    catch (e) {
-    }
-  },
-  
-  add: function AFR_add() {
+
+  onDialogAccept: function AFR_onDialogAccept() {
     // Used to tell the WCCR that the user chose to add the handler (rather 
-    // than canceling) and whether or not they made it their default handler.
+    // than canceling).
     const PARAM_SHOULD_ADD_HANDLER = 0;
-    const PARAM_SHOULD_MAKE_DEFAULT = 1;
-  
-    this._result.SetInt(PARAM_SHOULD_ADD_HANDLER, 1);
-    if (this._type == TYPE_MAYBE_FEED) {
-      var addAsDefaultCheckbox = document.getElementById("addAsDefaultCheckbox");
-      this._result.SetInt(PARAM_SHOULD_MAKE_DEFAULT, 
-                          addAsDefaultCheckbox.checked ? 1 : 0);
-    }
+
+    // We don't need to add an already-installed handler
+    this._result.SetInt(PARAM_SHOULD_ADD_HANDLER, !this._handlerInstalled);
   }
 };
