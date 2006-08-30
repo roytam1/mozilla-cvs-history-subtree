@@ -56,7 +56,9 @@ function onLoad()
   dialog.open           = document.documentElement.getButton("accept");
   dialog.openAppList    = document.getElementById("openAppList");
   dialog.openTopWindow  = document.getElementById("currentWindow");
+  dialog.openNewWindow  = document.getElementById("newWindow");
   dialog.openEditWindow = document.getElementById("editWindow");
+  dialog.openNewTab     = document.getElementById("newTab");
   dialog.bundle         = document.getElementById("openLocationBundle");
   gNavigatorBundle      = document.getElementById("navigatorBundle");
 
@@ -77,8 +79,10 @@ function onLoad()
       browser = windowManagerInterface.getMostRecentWindow( "navigator:browser" );
 
     // Disable "current browser" item if no browser is open
-    if (!browser)
+    if (!browser) {
       dialog.openTopWindow.setAttribute("disabled", "true");
+      dialog.openNewTab.setAttribute("disabled", "true");
+    }
   }
   else {
     dialog.openAppList.selectedItem = dialog.openTopWindow;
