@@ -144,7 +144,6 @@ nsMenuPopupFrame::nsMenuPopupFrame(nsIPresShell* aShell, nsStyleContext* aContex
   mShouldRollup(PR_TRUE),
   mConsumeRollupEvent(nsIPopupBoxObject::ROLLUP_DEFAULT)
 {
-  AddStateBits(NS_FRAME_REFLOW_ROOT);
   SetIsContextMenu(PR_FALSE);   // we're not a context menu by default
 } // ctor
 
