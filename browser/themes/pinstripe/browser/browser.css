@@ -89,6 +89,12 @@ toolbarbutton.bookmark-item:not([container]) > .toolbarbutton-text {
   padding-right: 7px;
 }
 
+#find-next > .toolbarbutton-text,
+#find-previous > .toolbarbutton-text,
+#highlight > .toolbarbutton-text {
+  -moz-margin-start: 0px;
+}
+
 toolbarbutton.bookmark-item:not([container]):hover > .toolbarbutton-text,
 toolbarbutton.bookmark-item[container]:not([open]):hover > .toolbarbutton-menu-dropmarker,
 #find-next:not([disabled]):hover > .toolbarbutton-text, 
