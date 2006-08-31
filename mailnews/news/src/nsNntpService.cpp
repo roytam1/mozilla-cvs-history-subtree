@@ -1509,7 +1509,7 @@ NS_IMETHODIMP
 nsNntpService::GetCanLoginAtStartUp(PRBool *aCanLoginAtStartUp)
 {
   NS_ENSURE_ARG_POINTER(aCanLoginAtStartUp);
-  *aCanLoginAtStartUp = PR_FALSE;
+  *aCanLoginAtStartUp = PR_TRUE;
   return NS_OK;
 }
 
