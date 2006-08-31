@@ -96,6 +96,7 @@
 #include "nsIDocShell.h"
 
 static PRBool gUseSoftwareKeyboard;
+static PRBool gNotifyOnly;
 
 class nsSoftKeyBoard : public nsIDOMEventListener
 {
@@ -308,31 +309,33 @@ nsSoftKeyBoardService::OpenSIP()
   if (!gUseSoftwareKeyboard)
     return;
 
-  if (gTimer)
+  if (!gNotifyOnly)
   {
-    gTimer->Cancel();
-    gTimer = nsnull;
-  }
-
+    if (gTimer)
+    {
+      gTimer->Cancel();
+      gTimer = nsnull;
+    }
+    
 #ifdef WINCE
-  HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
-  if (hWndSIP)
-    ::ShowWindow( hWndSIP, SW_SHOW);
-
-  SHSipPreference(NULL, SIP_UP);
-
-  //  SHFullScreen(GetForegroundWindow(), SHFS_SHOWSIPBUTTON);
-
-  // keep the sip button hidden!
-  
-  hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
-  if (hWndSIP) 
-  {
-    ShowWindow( hWndSIP, SW_HIDE );
-    SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-  }
-
+    HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
+    if (hWndSIP)
+      ::ShowWindow( hWndSIP, SW_SHOW);
+    
+    SHSipPreference(NULL, SIP_UP);
+    
+    //  SHFullScreen(GetForegroundWindow(), SHFS_SHOWSIPBUTTON);
+    
+    // keep the sip button hidden!
+    
+    hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
+    if (hWndSIP) 
+    {
+      ShowWindow( hWndSIP, SW_HIDE );
+      SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+    }
 #endif
+  }
 
   nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
   if (observerService)
@@ -370,30 +373,32 @@ nsSoftKeyBoardService::DelayCloseSIP()
 void
 nsSoftKeyBoardService::CloseSIP()
 {
+  if (!gNotifyOnly)
+  {
 #ifdef WINCE
-
-  HWND hWndSIP = FindWindow( _T( "SipWndClass" ), NULL );
-  if (hWndSIP)
-  {
-    ShowWindow( hWndSIP, SW_HIDE );
-  }
-
-  hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
-  if (hWndSIP) 
-  {
-    ShowWindow( hWndSIP, SW_HIDE );
-    SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-  }
-
-  SHSipPreference(NULL, SIP_DOWN);
-
-  SHFullScreen(GetForegroundWindow(), SHFS_HIDESIPBUTTON);
+    HWND hWndSIP = FindWindow( _T( "SipWndClass" ), NULL );
+    if (hWndSIP)
+    {
+      ShowWindow( hWndSIP, SW_HIDE );
+    }
+    
+    hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
+    if (hWndSIP) 
+    {
+      ShowWindow( hWndSIP, SW_HIDE );
+      SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+    }
+    
+    SHSipPreference(NULL, SIP_DOWN);
+    
+    SHFullScreen(GetForegroundWindow(), SHFS_HIDESIPBUTTON);
 #endif
+  }
 
   nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
   if (observerService)
     observerService->NotifyObservers(nsnull, "software-keyboard", NS_LITERAL_STRING("close").get());
-
+  
 }
 
 NS_IMETHODIMP
@@ -414,6 +419,8 @@ nsSoftKeyBoardService::Hide(void)
 NS_IMETHODIMP
 nsSoftKeyBoardService::GetWindowRect(PRInt32 *top, PRInt32 *bottom, PRInt32 *left, PRInt32 *right)
 {
+  if (!gNotifyOnly)
+  {
 #ifdef WINCE
   if (!top || !bottom || !left || !right)
     return NS_ERROR_INVALID_ARG;
@@ -434,13 +441,16 @@ nsSoftKeyBoardService::GetWindowRect(PRInt32 *top, PRInt32 *bottom, PRInt32 *lef
 
   return NS_OK;
 #endif
-
+  }
+  
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsSoftKeyBoardService::SetWindowRect(PRInt32 top, PRInt32 bottom, PRInt32 left, PRInt32 right)
 {
+  if (!gNotifyOnly)
+  {
 #ifdef WINCE
   HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
   if (!hWndSIP)
@@ -449,7 +459,7 @@ nsSoftKeyBoardService::SetWindowRect(PRInt32 top, PRInt32 bottom, PRInt32 left, 
   SetWindowPos(hWndSIP, HWND_TOP, left, top, right-left, bottom-top, SWP_SHOWWINDOW);
   return NS_OK;
 #endif
- 
+  }
 
  return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -540,6 +550,7 @@ nsSoftKeyBoard::GetAttachedWindow(nsIDOMWindow * *aAttachedWindow)
 nsSoftKeyBoardService::nsSoftKeyBoardService()  
 {
   gUseSoftwareKeyboard = PR_FALSE;
+  gNotifyOnly = PR_FALSE;
 }  
 
 nsSoftKeyBoardService::~nsSoftKeyBoardService()  
@@ -557,6 +568,14 @@ nsSoftKeyBoardService::HandlePref(const char* pref, nsIPrefBranch2* prefBranch)
     prefBranch->GetBoolPref(pref, &enabled);
     gUseSoftwareKeyboard = enabled;
   }
+
+  if (!strcmp(pref, "skey.notifyOnly"))
+  {
+    PRBool enabled;
+    prefBranch->GetBoolPref(pref, &enabled);
+    gNotifyOnly = enabled;
+  }
+
 }
 
 NS_IMETHODIMP
@@ -614,6 +633,7 @@ nsSoftKeyBoardService::Observe(nsISupports *aSubject, const char *aTopic, const 
     prefBranch->AddObserver("skey.", this, PR_FALSE);
 
     HandlePref("skey.enabled", prefBranch);
+    HandlePref("skey.notifyOnly", prefBranch);
     return NS_OK;
   }
 
