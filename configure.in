@@ -4103,12 +4103,16 @@ MOZ_ARG_ENABLE_STRING(application,
                             calendar (Sunbird)
                             xulrunner
                             zap (SIP client)
-                            macbrowser (Camino)
+                            camino
                             content/xslt (Standalone Transformiix XSLT)
                             tools/update-packaging (AUS-related packaging tools)
                             standalone (use this for standalone
                               xpcom/xpconnect or to manually drive a build)],
 [ MOZ_BUILD_APP=$enableval ] )
+
+if test "$MOZ_BUILD_APP" = "macbrowser"; then
+    MOZ_BUILD_APP=camino
+fi
 
 case "$MOZ_BUILD_APP" in
 minimo)
@@ -4389,7 +4393,7 @@ zap)
   ;;
 
 
-macbrowser) 
+camino) 
   MOZ_APP_NAME=mozilla
   _PLATFORM_DEFAULT_TOOLKIT=cocoa
   ENABLE_TESTS=
@@ -5454,6 +5458,11 @@ if test -n "${MOZ_JAVAXPCOM}"; then
         JAVA_HOME=`cygpath -u \`cygpath -m -s "$JAVA_HOME"\``
       fi
       ;;
+    *mingw*)
+      if test -n "$JAVA_HOME"; then
+        JAVA_HOME=`cd "$JAVA_HOME" && pwd`
+      fi
+      ;;
   esac
 
   if test -n "${JAVA_INCLUDE_PATH}"; then
@@ -5485,8 +5494,8 @@ if test -n "${MOZ_JAVAXPCOM}"; then
     JAVA_PATH="$JAVA_HOME/bin:$PATH"
   fi
 
-  AC_PATH_PROG(JAVAC, javac, :, $JAVA_PATH)
-  AC_PATH_PROG(JAR, jar, :, $JAVA_PATH)
+  AC_PATH_PROG(JAVAC, javac, :, "$JAVA_PATH")
+  AC_PATH_PROG(JAR, jar, :, "$JAVA_PATH")
   if test -z "$JAVAC" || test "$JAVAC" = ":" || test -z "$JAR" || test "$JAR" = ":"; then
     AC_MSG_ERROR([The programs javac and jar were not found.  Set \$JAVA_HOME or use --with-java-bin-path={java-bin-dir}.])
   fi
@@ -5741,6 +5750,21 @@ MOZ_ARG_DISABLE_BOOL(installer,
 [  --disable-installer     Disable building of installer],
     MOZ_INSTALLER=,
     MOZ_INSTALLER=1 )
+if test -n "$MOZ_INSTALLER" -a -n "$MOZ_XUL_APP" -a "$OS_ARCH" = "WINNT"; then
+    # Disable installer for Windows builds that use the new toolkit if NSIS
+    # isn't in the path.
+    AC_PATH_PROGS(MAKENSIS, makensis)
+    if test -z "$MAKENSIS" || test "$MAKENSIS" = ":"; then
+        AC_MSG_ERROR([To build the installer makensis is required in your path. To build without the installer reconfigure using --disable-installer.])
+    fi
+    # The Windows build for NSIS requires the iconv command line utility to
+    # convert the charset of the locale files.
+    AC_PATH_PROGS(HOST_ICONV, $HOST_ICONV "iconv", "")
+    if test -z "$HOST_ICONV"; then
+        AC_MSG_ERROR([To build the installer iconv is required in your path. To build without the installer reconfigure using --disable-installer.])
+    fi
+fi
+
 # Automatically disable installer if xpinstall isn't built
 if test -z "$MOZ_XPINSTALL"; then
     MOZ_INSTALLER=
@@ -7042,7 +7066,7 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "mac" -o "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
            QUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_SURFACE 1"
-           QUARTZGL_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZGL_SURFACE 1"
+           NQUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_NQUARTZ_SURFACE 1"
            ATSUI_FONT_FEATURE="#define CAIRO_HAS_ATSUI_FONT 1"
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
@@ -7081,7 +7105,7 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
        AC_SUBST(SVG_SURFACE_FEATURE)
        AC_SUBST(XLIB_SURFACE_FEATURE)
        AC_SUBST(QUARTZ_SURFACE_FEATURE)
-       AC_SUBST(QUARTZGL_SURFACE_FEATURE)
+       AC_SUBST(NQUARTZ_SURFACE_FEATURE)
        AC_SUBST(XCB_SURFACE_FEATURE)
        AC_SUBST(WIN32_SURFACE_FEATURE)
        AC_SUBST(OS2_SURFACE_FEATURE)
