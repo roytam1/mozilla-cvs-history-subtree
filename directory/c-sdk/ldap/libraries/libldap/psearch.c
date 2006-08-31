@@ -94,11 +94,12 @@ report_error_and_return:
 
 int
 LDAP_CALL
-ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
-    char **prevdnp, int *chgnumpresentp, long *chgnump )
+ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, ber_int_t *chgtypep,
+    char **prevdnp, int *chgnumpresentp, ber_int_t *chgnump )
 {
     BerElement		*ber;
-    int				rc, i, changetype;
+    int				rc, i;
+    ber_int_t       changetype;
     ber_len_t		len;
     ber_int_t		along;
     char			*previousdn;
@@ -146,7 +147,7 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
 	rc = LDAP_DECODING_ERROR;
 	goto report_error_and_return;
     }
-    changetype = (int)along;	/* XXX lossy cast */
+    changetype = along;
 
     if ( changetype == LDAP_CHANGETYPE_MODDN ) {
 	if ( ber_scanf( ber, "a", &previousdn ) == LBER_ERROR ) {
@@ -168,9 +169,8 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
     }
 
     if ( chgnump != NULL ) {	/* check for optional changenumber */
-	ber_int_t ichangenum = 0;
 	if ( ber_peek_tag( ber, &len ) == LBER_INTEGER
-		&& ber_get_int( ber, &ichangenum ) != LBER_ERROR ) {
+		&& ber_get_int( ber, chgnump ) != LBER_ERROR ) {
 	    if ( chgnumpresentp != NULL ) {
 		*chgnumpresentp = 1;
 	    }
@@ -179,7 +179,6 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
 		*chgnumpresentp = 0;
 	    }
 	}
-	*chgnump = (long)ichangenum;
     }
 
     ber_free( ber, 1 );

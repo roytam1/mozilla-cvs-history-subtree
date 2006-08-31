@@ -53,8 +53,8 @@ static void write_ldif_value( char *type, char *value, unsigned long vallen,
 static void print_entry( LDAP *ld, LDAPMessage *entry, int attrsonly );
 static void options_callback( int option, char *optarg );
 static void parse_and_display_reference( LDAP *ld, LDAPMessage *ref );
-static char *sortresult2string(unsigned long result);
-static char *changetype_num2string( int chgtype );
+static char *sortresult2string(ber_int_t result);
+static char *changetype_num2string( ber_int_t chgtype );
 static char *msgtype2str( int msgtype );
 
 /*
@@ -766,7 +766,7 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     } 
     /* Parse the returned sort control */
     if (server_sort) {
-	unsigned long result = 0;
+	ber_int_t result = 0;
 	char *attribute;
 	
 	if ( LDAP_SUCCESS != ldap_parse_sort_control(ld,ctrl_response_array,&result,&attribute) ) {
@@ -784,9 +784,9 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	    }
 	} else {
 	    if (NULL != attribute) {
-		printf("Server reported sorting error %ld: %s, attribute in error\"%s\"\n",result,sortresult2string(result),attribute);
+		printf("Server reported sorting error %d: %s, attribute in error\"%s\"\n",result,sortresult2string(result),attribute);
 	    } else {
-		printf("Server reported sorting error %ld: %s\n",result,sortresult2string(result));
+		printf("Server reported sorting error %d: %s\n",result,sortresult2string(result));
 	    }
 	}
 
@@ -794,7 +794,7 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 
     if (use_vlv)
     {
-	unsigned long vpos, vcount;
+	ber_int_t vpos, vcount;
 	int vresult;
 	if ( LDAP_SUCCESS != ldap_parse_virtuallist_control(ld,ctrl_response_array,&vpos, &vcount,&vresult) ) {
 	    (void)ldaptool_print_lderror( ld, "ldap_parse_virtuallist_control",
@@ -809,10 +809,10 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	    if ( ldaptool_verbose ) {
 		printf( "Server indicated virtual list positioning OK\n");
 	    }
-	    printf("index %lu content count %lu\n", vpos, vcount);
+	    printf("index %d content count %d\n", vpos, vcount);
 	    
 	} else {
-	    printf("Server reported sorting error %d: %s\n",vresult,sortresult2string(vresult));
+	    printf("Server reported sorting error %d: %s\n",vresult,sortresult2string((ber_int_t)vresult));
 
 	}
 
@@ -892,8 +892,9 @@ print_entry( ld, entry, attrsonly )
 
     if ( use_psearch ) {
 	LDAPControl	**ectrls = NULL;
-	int		chgtype, chgnumpresent;
-	long		chgnum;
+	int         chgnumpresent;
+    ber_int_t   chgtype;
+	ber_int_t	chgnum;
 	char		*prevdn, longbuf[ 128 ];
 
 	if ( ldap_get_entry_controls( ld, entry, &ectrls ) == LDAP_SUCCESS ) {
@@ -903,7 +904,7 @@ print_entry( ld, entry, attrsonly )
 			LDAPTOOL_PSEARCH_ATTR_PREFIX "changeType",
 			changetype_num2string( chgtype ), 0 );
 		if ( chgnumpresent ) {
-		    sprintf( longbuf, "%ld", chgnum );
+		    sprintf( longbuf, "%d", chgnum );
 		    write_string_attr_value(
 			    LDAPTOOL_PSEARCH_ATTR_PREFIX "changeNumber",
 			    longbuf, 0 );
@@ -1063,7 +1064,7 @@ write_ldif_value( char *type, char *value, unsigned long vallen,
 
 
 static char *
-sortresult2string(unsigned long result)
+sortresult2string(ber_int_t result)
 {
 	/*
             success                   (0), -- results are sorted
@@ -1202,7 +1203,7 @@ msgtype2str( int msgtype )
  * Return a descriptive string given a Persistent Search change type
  */
 static char *
-changetype_num2string( int chgtype )
+changetype_num2string( ber_int_t chgtype )
 {
     char	*s = "unknown";
 

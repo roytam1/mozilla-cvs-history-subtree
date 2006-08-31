@@ -143,7 +143,7 @@ LDAP_API(int) LDAP_CALL ldap_create_sort_control( LDAP *ld,
         LDAPsortkey **sortKeyList, const char ctl_iscritical,
         LDAPControl **ctrlp );
 LDAP_API(int) LDAP_CALL ldap_parse_sort_control( LDAP *ld,
-        LDAPControl **ctrls, unsigned long *result, char **attribute );
+        LDAPControl **ctrls, ber_int_t *result, char **attribute );
 
 LDAP_API(void) LDAP_CALL ldap_free_sort_keylist( LDAPsortkey **sortKeyList );
 LDAP_API(int) LDAP_CALL ldap_create_sort_keylist( LDAPsortkey ***sortKeyList,
@@ -159,12 +159,12 @@ LDAP_API(int) LDAP_CALL ldap_create_sort_keylist( LDAPsortkey ***sortKeyList,
  * ldap_create_virtuallist_control() if ldvlist_attrvalue is NULL.
  */
 typedef struct ldapvirtuallist {
-    unsigned long   ldvlist_before_count;       /* # entries before target */
-    unsigned long   ldvlist_after_count;        /* # entries after target */
-    char            *ldvlist_attrvalue;         /* jump to this value */
-    unsigned long   ldvlist_index;              /* list offset */
-    unsigned long   ldvlist_size;               /* number of items in vlist */
-    void            *ldvlist_extradata;         /* for use by application */
+    ber_int_t   ldvlist_before_count;       /* # entries before target */
+    ber_int_t   ldvlist_after_count;        /* # entries after target */
+    char        *ldvlist_attrvalue;         /* jump to this value */
+    ber_int_t   ldvlist_index;              /* list offset */
+    ber_int_t   ldvlist_size;               /* number of items in vlist */
+    void        *ldvlist_extradata;         /* for use by application */
 } LDAPVirtualList;
 
 /*
@@ -174,8 +174,8 @@ LDAP_API(int) LDAP_CALL ldap_create_virtuallist_control( LDAP *ld,
         LDAPVirtualList *ldvlistp, LDAPControl **ctrlp );
 
 LDAP_API(int) LDAP_CALL ldap_parse_virtuallist_control( LDAP *ld,
-        LDAPControl **ctrls, unsigned long *target_posp,
-        unsigned long *list_sizep, int *errcodep );
+        LDAPControl **ctrls, ber_int_t *target_posp,
+        ber_int_t *list_sizep, int *errcodep );
 
 /*
  * Routines for creating persistent search controls and for handling
@@ -191,8 +191,8 @@ LDAP_API(int) LDAP_CALL ldap_create_persistentsearch_control( LDAP *ld,
         int changetypes, int changesonly, int return_echg_ctls,
         char ctl_iscritical, LDAPControl **ctrlp );
 LDAP_API(int) LDAP_CALL ldap_parse_entrychange_control( LDAP *ld,
-        LDAPControl **ctrls, int *chgtypep, char **prevdnp,
-        int *chgnumpresentp, long *chgnump );
+        LDAPControl **ctrls, ber_int_t *chgtypep, char **prevdnp,
+        int *chgnumpresentp, ber_int_t *chgnump );
 
 /*
  * Routines for creating Proxied Authorization controls (an LDAPv3

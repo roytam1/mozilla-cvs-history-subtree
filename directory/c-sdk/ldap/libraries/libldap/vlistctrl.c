@@ -107,8 +107,8 @@ ldap_create_virtuallist_control(
 
     if ( LBER_ERROR == ber_printf( ber, 
                                    "{ii", 
-                                   (int)ldvlistp->ldvlist_before_count,
-                                   (int)ldvlistp->ldvlist_after_count )) 
+                                   ldvlistp->ldvlist_before_count,
+                                   ldvlistp->ldvlist_after_count )) 
 				    /* XXX lossy casts */
     {
         LDAP_SET_LDERRNO( ld, LDAP_ENCODING_ERROR, NULL, NULL );
@@ -121,8 +121,8 @@ ldap_create_virtuallist_control(
         if ( LBER_ERROR == ber_printf( ber, 
                                        "t{ii}}", 
 				       LDAP_TAG_VLV_BY_INDEX,
-                                       (int)ldvlistp->ldvlist_index, 
-                                       (int)ldvlistp->ldvlist_size ) ) 
+                                       ldvlistp->ldvlist_index, 
+                                       ldvlistp->ldvlist_size ) ) 
 				       /* XXX lossy casts */
         {
             LDAP_SET_LDERRNO( ld, LDAP_ENCODING_ERROR, NULL, NULL );
@@ -187,8 +187,8 @@ ldap_parse_virtuallist_control
 ( 
     LDAP *ld, 
     LDAPControl **ctrls,
-    unsigned long *target_posp, 
-    unsigned long *list_sizep, 
+    ber_int_t *target_posp, 
+    ber_int_t *list_sizep, 
     int *errcodep
 )
 {
@@ -242,13 +242,13 @@ ldap_parse_virtuallist_control
     }
 
     if ( target_posp != NULL ) {
-        *target_posp = (unsigned long)target_pos;
+        *target_posp = target_pos;
     }
     if ( list_sizep != NULL ) {
-	*list_sizep = (unsigned long)list_size;
+        *list_sizep = list_size;
     }
     if ( errcodep != NULL ) {
-	*errcodep = (int)errcode;
+        *errcodep = (int)errcode;
     }
 
     /* the ber encoding is no longer needed */
