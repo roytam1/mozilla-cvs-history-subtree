@@ -297,7 +297,7 @@
                     chromedir="&locale.dir;"
                     align="center" class="chromeclass-toolbar-additional"
                     flex="100">
-        <searchbar id="searchbar" flex="1"/>
+        <searchbar id="searchbar" flex="1" chromedir="&locale.dir;"/>
       </toolbaritem>
       
       <toolbarbutton id="print-button" class="toolbarbutton-1 chromeclass-toolbar-additional"

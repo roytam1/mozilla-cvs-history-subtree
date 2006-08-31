@@ -57,6 +57,11 @@
   color: GrayText;
 }
 
+#searchbar[empty="true"]  html|input {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
 #wrapper-search-container #searchbar html|*.textbox-input {
   visibility: hidden;
 }
