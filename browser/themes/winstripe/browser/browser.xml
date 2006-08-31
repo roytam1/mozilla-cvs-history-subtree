@@ -27,9 +27,9 @@
   <binding id="bf-menu-button" extends="chrome://global/content/bindings/toolbarbutton.xml#menu-button">
     <content>
       <children includes="observes|template|menupopup|tooltip"/>
-      <xul:hbox flex="1" class="allowevents-box"/>
       <xul:vbox>
-        <xul:hbox align="center" flex="1">
+        <xul:hbox flex="1" class="allowevents-box"/>
+        <xul:hbox align="center">
            <xul:toolbarbutton class="box-inherit toolbarbutton-menubutton-button"
                               anonid="button"
                               allowevents="true"
@@ -42,15 +42,14 @@
                            xbl:inherits="align,dir,pack,orient,disabled,toolbarmode,buttonstyle,label"/>
         </xul:hbox>
         <xul:hbox flex="1"
-                  class="toolbarbutton-text-box allowevents-box"
-                  align="center">
+                  class="toolbarbutton-text-box allowevents-box">
            <xul:label class="toolbarbutton-text"
                       crop="right"
                       xbl:inherits="value=label,accesskey,crop,toolbarmode,buttonstyle"
                       flex="1"/>
         </xul:hbox>
+        <xul:hbox flex="1" class="allowevents-box"/>
       </xul:vbox>
-      <xul:hbox flex="1" class="allowevents-box"/>
     </content>
   </binding>
 </bindings>
