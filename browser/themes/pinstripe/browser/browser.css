@@ -963,7 +963,7 @@ statusbarpanel#statusbar-display {
 #go-button {
   -moz-appearance: toolbarbutton;
   -moz-padding-end: 5px;
-  height: 25px;
+  height: 24px;
 }
 
 #go-button,
@@ -975,19 +975,19 @@ statusbarpanel#statusbar-display {
   border-left: 0 !important;
   min-width: 0;
   list-style-image: url("chrome://browser/skin/Go.png");
-  -moz-image-region: rect(0px, 25px, 25px, 0px);
+  -moz-image-region: rect(0px, 25px, 24px, 0px);
 }
 
 #go-button:hover {
-  -moz-image-region: rect(0px, 50px, 25px, 25px);
+  -moz-image-region: rect(0px, 50px, 24px, 25px);
 }
 
 #go-button[disabled="true"] {
-  -moz-image-region: rect(0px, 75px, 25px, 50px);
+  -moz-image-region: rect(0px, 75px, 24px, 50px);
 }
 
 #go-button:hover:active {
-  -moz-image-region: rect(0px, 100px, 25px, 75px);
+  -moz-image-region: rect(0px, 100px, 24px, 75px);
 }
 
 toolbar:not([mode="text"]) #go-button,
@@ -999,6 +999,10 @@ toolbarpaletteitem:not([place="toolbar"]) .search-go-button {
 
 #go-button > .button-box {
   border: none;
+}
+
+#go-button > .toolbarbutton-icon {
+  padding: 0px;
 }
 
 /* ----- SIDEBAR ELEMENTS ----- */
