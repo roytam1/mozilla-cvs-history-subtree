@@ -42,6 +42,7 @@
                            xbl:inherits="align,dir,pack,orient,disabled,toolbarmode,buttonstyle,label"/>
         </xul:hbox>
         <xul:hbox flex="1"
+                  align="center"
                   class="toolbarbutton-text-box allowevents-box">
            <xul:label class="toolbarbutton-text"
                       crop="right"
