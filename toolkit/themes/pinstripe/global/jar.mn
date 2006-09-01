@@ -58,6 +58,12 @@ classic.jar:
 +  skin/classic/global/tab-left.png
 +  skin/classic/global/tab-middle.png
 +  skin/classic/global/tab-right.png
++  skin/classic/global/tab-left-bkgnd.png
++  skin/classic/global/tab-middle-bkgnd.png
++  skin/classic/global/tab-right-bkgnd.png
++  skin/classic/global/tab-left-hover.png
++  skin/classic/global/tab-middle-hover.png
++  skin/classic/global/tab-right-hover.png
 +  skin/classic/global/tabbox.css
 +  skin/classic/global/tabbrowser-tabs-bkgnd.png
 +  skin/classic/global/tabs-bottom-bg.png
