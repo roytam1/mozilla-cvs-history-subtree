@@ -1,3 +1,33 @@
+/*
+ * Utils 
+ */ 
+
+function catchScroll(e) {
+
+	try {
+
+		scb=document.getElementById("scroller").boxObject.QueryInterface(Components.interfaces.nsIScrollBoxObject);
+	
+		try {	
+			focusedElementBoxObject = document.getBoxObjectFor(e.target);
+			if(focusedElementBoxObject) {
+				if(focusedElementBoxObject.y>10) {
+					scb.scrollTo(0,focusedElementBoxObject.y-9);
+				} else {
+					scb.scrollTo(0,focusedElementBoxObject.y);
+				}
+			}
+
+		} catch (i) {
+
+		}
+
+	} catch (i) {
+
+	}
+}
+
+
 /* 
  * Translators - When Read, When Write
  * =====
@@ -407,8 +437,8 @@ function prefShutdown() {
  * we dispatch a focus to an item. 
  */ 
 
-function focusTo(elementId) {
-	document.getElementById(elementId).focus();
+function focusTo(refElement,toUncollapse,elementId) {
+	document.getElementById(toUncollapse).collapsed=!document.getElementById(toUncollapse).collapsed;
 }
 
 
