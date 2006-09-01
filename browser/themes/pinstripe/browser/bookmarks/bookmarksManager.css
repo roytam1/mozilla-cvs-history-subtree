@@ -7,7 +7,7 @@ toolbarbutton#newbookmark {
   -moz-image-region: rect(0px, 168px, 24px, 144px);
 }
 toolbarbutton#newbookmark:hover {
-  -moz-image-region: rect(24px, 168px, 48x, 144px);
+  -moz-image-region: rect(24px, 168px, 48px, 144px);
 }
 toolbarbutton#newbookmark[disabled="true"] {
   -moz-image-region: rect(48px, 168px, 72px, 144px);
