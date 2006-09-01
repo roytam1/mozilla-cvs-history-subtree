@@ -97,10 +97,8 @@
 
       <vbox id="pref-panes" onfocus="catchScroll(event)" flex="1"  >
 
-	      <toolbar id="dialog-bar">
-	        <button id="okay-button"   style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#eeeeff" tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></button>     
-	      </toolbar>
-
+	        <button id="okay-button"   style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#ffffff" tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></button>     
+	   
 	</vbox>
 
   </scrollbox>
