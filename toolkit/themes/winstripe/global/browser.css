@@ -103,8 +103,16 @@
   background: url("chrome://global/skin/icons/tab-right-bkgnd.png") no-repeat;
 }
 
+.tabbrowser-tab[chromedir="rtl"]:not([selected="true"]) > .tab-image-right {
+  background: url("chrome://global/skin/icons/tab-left-bkgnd.png") no-repeat;
+}
+
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-right {
   background: url("chrome://global/skin/icons/tab-right-hover.png") no-repeat;
+}
+
+.tabbrowser-tab[chromedir="rtl"]:hover:not([selected="true"]) > .tab-image-right {
+  background: url("chrome://global/skin/icons/tab-left-hover.png") no-repeat;
 }
 
 .tab-icon-image {
@@ -359,16 +367,16 @@ tabpanels {
   opacity: 0.40;
 }
 
-.tabs-alltabs-box[chromedir="rtl"] {
+stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-start-bkgnd.png");
 }
 
-.tabbrowser-tabs[overflow="true"] .tabs-alltabs-box{
+.tabbrowser-tabs[overflow="true"] .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd.png");
   opacity: 0.40;
 }
 
-.tabbrowser-tabs[overflow="true"] .tabs-alltabs-box[chromedir="rtl"]{
+.tabbrowser-tabs[overflow="true"] stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-start-bkgnd.png");
   opacity: 0.40;
 }
@@ -399,11 +407,19 @@ tabpanels {
   opacity: 1.0;
 }
 
-.tabbrowser-tabs[overflow="true"] .tabs-alltabs-button:hover{
+stack[chromedir="rtl"] > hbox > .tabs-alltabs-button:hover {
+  background-image: url("chrome://global/skin/icons/alltabs-box-start-bkgnd.png");
+}
+
+.tabbrowser-tabs[overflow="true"] .tabs-alltabs-button:hover {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd.png");
 }
 
-.tabs-alltabs-box-animate{
+.tabbrowser-tabs[overflow="true"] stack[chromedir="rtl"] > hbox > .tabs-alltabs-button:hover {
+  background-image: url("chrome://global/skin/icons/alltabs-box-overflow-start-bkgnd.png");
+}
+
+.tabs-alltabs-box-animate {
   margin-top: 2px;
   margin-bottom: 2px;
   width: 18px !important;
@@ -411,6 +427,10 @@ tabpanels {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd-animate.png");
   background-repeat: no-repeat;
   opacity: 0.0;
+}
+
+stack[chromedir="rtl"] > hbox > .tabs-alltabs-box-animate {
+  background-image: url("chrome://global/skin/icons/alltabs-box-overflow-start-bkgnd-animate.png");
 }
 
 /**

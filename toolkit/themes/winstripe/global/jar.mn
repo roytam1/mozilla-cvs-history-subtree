@@ -64,6 +64,7 @@ classic.jar:
 	skin/classic/global/icons/alltabs-box-end-bkgnd.png         (icons/alltabs-box-end-bkgnd.png)
 	skin/classic/global/icons/alltabs-box-start-bkgnd.png       (icons/alltabs-box-start-bkgnd.png)
 	skin/classic/global/icons/alltabs-box-overflow-end-bkgnd.png   (icons/alltabs-box-overflow-end-bkgnd.png)
+    skin/classic/global/icons/alltabs-box-overflow-start-bkgnd-animate.png   (icons/alltabs-box-overflow-start-bkgnd-animate.png)
 	skin/classic/global/icons/alltabs-box-overflow-end-bkgnd-animate.png   (icons/alltabs-box-overflow-end-bkgnd-animate.png)
 	skin/classic/global/icons/alltabs-box-overflow-start-bkgnd.png (icons/alltabs-box-overflow-start-bkgnd.png)
         skin/classic/global/icons/Close.gif                         (icons/Close.gif)
@@ -140,4 +141,3 @@ classic.jar:
         skin/classic/global/console/console-error-caret.gif         (console/console-error-caret.gif)
         skin/classic/global/console/console-error-dash.gif          (console/console-error-dash.gif)
 #endif
-

@@ -110,14 +110,15 @@
                                 class="tabbrowser-arrowscrollbox">
               <children/>
             </xul:arrowscrollbox>
-            <xul:stack align="center" pack="end">
+            <xul:stack align="center" pack="end" chromedir="&locale.dir;">
               <!-- XXXsspitzer hack
                    this extra hbox with position: relative
                    is needed to work around two bugs.
                    see bugs #346307 and #346035 
               -->
               <xul:hbox style="position: relative;">
-                <xul:hbox flex="1" class="tabs-alltabs-box" 
+                <xul:hbox flex="1"
+                          class="tabs-alltabs-box"
                           anonid="alltabs-box"/>
               </xul:hbox>
               <!-- XXXsspitzer hack
