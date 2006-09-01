@@ -74,6 +74,7 @@ const FW_CLASSID = Components.ID("{49bb6593-3aff-4eb3-a068-2712c28bd58e}");
 const FW_CLASSNAME = "Feed Writer";
 const FW_CONTRACTID = "@mozilla.org/browser/feeds/result-writer;1";
 
+
 function FeedWriter() {
 }
 FeedWriter.prototype = {
@@ -304,7 +305,7 @@ FeedWriter.prototype = {
    * @returns The display name of the application represented by the file.
    */
   _getFileDisplayName: function FW__getFileDisplayName(file) {
-#ifdef ENABLE_SYSTEM_FEED_READER_CODE
+#ifdef XP_WIN
     if (file instanceof Ci.nsILocalFileWin) {
       try {
         return file.getVersionInfoField("FileDescription");
@@ -485,14 +486,14 @@ FeedWriter.prototype = {
             selectedAppMenuItem.wrappedJSObject.hidden = false;
             selectedAppMenuItem.doCommand();
 
-#ifdef ENABLE_SYSTEM_FEED_READER_CODE
+#ifdef XP_WIN
             // Only show the default reader menuitem if the default reader
             // isn't the selected application
             var defaultHandlerMenuItem =
             this._document.getElementById("defaultHandlerMenuItem");
             if (defaultHandlerMenuItem) {
               defaultHandlerMenuItem.wrappedJSObject.hidden =
-                defaultHandlerMenuItem.file.path == selectedApp.path;
+                defaultHandlerMenuItem.wrappedJSObject.file.path == selectedApp.path;
             }
 #endif
             break;
@@ -544,7 +545,7 @@ FeedWriter.prototype = {
     }
     handlersMenuPopup.appendChild(menuItem);
 
-#ifdef ENABLE_SYSTEM_FEED_READER_CODE
+#ifdef XP_WIN
     // On Windows, also list the default feed reader
     var defaultReader;
     try {
@@ -581,7 +582,7 @@ FeedWriter.prototype = {
 
         // Hide the default reader item if it points to the same application
         // as the last-selected application
-        if (defaultReader.path == selectedApp.path)
+        if (selectedApp && selectedApp.path == defaultReader.path )
           menuItem.setAttribute("hidden", "true");
   
         handlersMenuPopup.appendChild(menuItem);
@@ -763,7 +764,7 @@ FeedWriter.prototype = {
     else {
       switch (selectedHandler.id) {
         case "selectedAppMenuItem":
-#ifdef ENABLE_SYSTEM_FEED_READER_CODE
+#ifdef XP_WIN
         case "defaultHandlerMenuItem":
 #endif
           prefs.setCharPref(PREF_SELECTED_READER, "client");
