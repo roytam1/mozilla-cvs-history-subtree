@@ -53,7 +53,7 @@
 }
 
 .tabbrowser-tab > .tab-image-left {
-  width: 10px;
+  width: 8px;
   height: 24px;
   background: url("chrome://global/skin/icons/tab-left.png") no-repeat;
 }
@@ -88,7 +88,7 @@
 }
 
 .tabbrowser-tab > .tab-image-right {
-  width: 10px;
+  width: 8px;
   height: 24px;
   background: url("chrome://global/skin/icons/tab-right.png") no-repeat;
 }
