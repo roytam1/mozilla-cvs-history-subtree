@@ -473,6 +473,7 @@ public:
                                 nsIFrame*             aPrevCol,
                                 nsIFrame**            aFirstNewFrame);
 
+  void MatchCellMapToColCache(nsTableCellMap* aCellMap);
   /** empty the column frame cache */
   void ClearColCache();
 
