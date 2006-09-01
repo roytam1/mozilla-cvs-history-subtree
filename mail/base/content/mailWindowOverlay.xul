@@ -470,7 +470,29 @@
         sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
         sortDirection="ascending"
         datasources="rdf:null">
-      <menupopup/>
+      <menupopup>
+        <menu label="&contextMoveCopyMsgRecentMenu.label;" accesskey="&contextMoveCopyMsgRecentMenu.accesskey;" 
+              sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
+              sortDirection="ascending"
+              datasources="rdf:mailnewsrecentfolders"
+              ref="mailnewsrecentfolders:/">
+          <menupopup/>
+          <template>
+            <rule nc:CanFileMessages="true">
+              <menupopup>
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                  oncommand="MsgCopyMessage(event.target.id)" 
+                  SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                  BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                  IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                  IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                  ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"/>
+              </menupopup>
+            </rule>
+          </template>
+        </menu>
+        <menuseparator/>
+      </menupopup>
       <template> 
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
           <menupopup>
@@ -532,13 +554,36 @@
         </rule>
       </template>
     </menu>
+   
     <menu id="threadPaneContext-copyMenu"
       label="&contextCopyMsgMenu.label;"
       accesskey="&contextCopyMsgMenu.accesskey;"
       sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
       sortDirection="ascending"
       datasources="rdf:null">
-      <menupopup/>
+      <menupopup>
+        <menu label="&contextMoveCopyMsgRecentMenu.label;" accesskey="&contextMoveCopyMsgRecentMenu.accesskey;" 
+              sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
+              sortDirection="ascending"
+              datasources="rdf:mailnewsrecentfolders"
+              ref="mailnewsrecentfolders:/">
+          <menupopup/>
+          <template>
+            <rule nc:CanFileMessages="true">
+              <menupopup>
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                  oncommand="MsgCopyMessage(event.target.id)" 
+                  SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                  BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                  IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                  IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                  ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"/>
+              </menupopup>
+            </rule>
+          </template>
+        </menu>
+        <menuseparator/>
+      </menupopup>
       <template>
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
           <menupopup>
@@ -786,7 +831,29 @@
         sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
         sortDirection="ascending"
         datasources="rdf:null">
-      <menupopup/>
+      <menupopup>
+        <menu label="&contextMoveCopyMsgRecentMenu.label;" accesskey="&contextMoveCopyMsgRecentMenu.accesskey;" 
+              sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
+              sortDirection="ascending"
+              datasources="rdf:mailnewsrecentfolders"
+              ref="mailnewsrecentfolders:/">
+          <menupopup/>
+          <template>
+            <rule nc:CanFileMessages="true">
+              <menupopup>
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                  oncommand="MsgCopyMessage(event.target.id)" 
+                  SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                  BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                  IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                  IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                  ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"/>
+              </menupopup>
+            </rule>
+          </template>
+        </menu>
+        <menuseparator/>
+      </menupopup>
       <template> 
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
           <menupopup>
@@ -854,7 +921,29 @@
       sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
       sortDirection="ascending"
       datasources="rdf:null">
-      <menupopup/>
+      <menupopup>
+        <menu label="&contextMoveCopyMsgRecentMenu.label;" accesskey="&contextMoveCopyMsgRecentMenu.accesskey;" 
+              sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
+              sortDirection="ascending"
+              datasources="rdf:mailnewsrecentfolders"
+              ref="mailnewsrecentfolders:/">
+          <menupopup/>
+          <template>
+            <rule nc:CanFileMessages="true">
+              <menupopup>
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                  oncommand="MsgCopyMessage(event.target.id)" 
+                  SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                  BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                  IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                  IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                  ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"/>
+              </menupopup>
+            </rule>
+          </template>
+        </menu>
+        <menuseparator/>
+      </menupopup>
       <template>
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
           <menupopup>
@@ -1426,7 +1515,29 @@
             <menu label="&moveMsgMenu.label;" accesskey="&moveMsgMenu.accesskey;" id="moveMenu" datasources="rdf:null"
                 sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
                 sortDirection="ascending">
-              <menupopup/>
+              <menupopup>
+                <menu label="&moveCopyMsgRecentMenu.label;" accesskey="&moveCopyMsgRecentMenu.accesskey;" 
+                      sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
+                      sortDirection="ascending"
+                      datasources="rdf:mailnewsrecentfolders"
+                      ref="mailnewsrecentfolders:/">
+                  <menupopup/>
+                  <template>
+                    <rule nc:CanFileMessages="true">
+                      <menupopup>
+                        <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                          oncommand="MsgCopyMessage(event.target.id)" 
+                          SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                          BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                          IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                          IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                          ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"/>
+                      </menupopup>
+                    </rule>
+                  </template>
+                </menu>
+                <menuseparator/>
+              </menupopup>
               <template> 
                 <rule nc:NoSelect="true" iscontainer="true" isempty="false">
                   <menupopup>
@@ -1492,7 +1603,29 @@
             <menu label="&copyMsgMenu.label;" accesskey="&copyMsgMenu.accesskey;" id="copyMenu" datasources="rdf:null"
              sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
              sortDirection="ascending">
-              <menupopup/>
+              <menupopup>
+                <menu label="&moveCopyMsgRecentMenu.label;" accesskey="&moveCopyMsgRecentMenu.accesskey;" 
+                      sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
+                      sortDirection="ascending"
+                      datasources="rdf:mailnewsrecentfolders"
+                      ref="mailnewsrecentfolders:/">
+                  <menupopup/>
+                  <template>
+                    <rule nc:CanFileMessages="true">
+                      <menupopup>
+                        <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                          oncommand="MsgCopyMessage(event.target.id)" 
+                          SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                          BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                          IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                          IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                          ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"/>
+                      </menupopup>
+                    </rule>
+                  </template>
+                </menu>
+                <menuseparator/>
+              </menupopup>
               <template>
               <rule nc:NoSelect="true" iscontainer="true" isempty="false">
                   <menupopup>
