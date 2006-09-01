@@ -249,8 +249,10 @@ nsFormFillController::SetPopupOpen(PRBool aPopupOpen)
       // make sure input field is visible before showing popup (bug 320938)
       nsCOMPtr<nsIContent> content = do_QueryInterface(mFocusedInput);
       nsCOMPtr<nsIDocShell> docShell = GetDocShellForInput(mFocusedInput);
+      NS_ENSURE_STATE(docShell);
       nsCOMPtr<nsIPresShell> presShell;
       docShell->GetPresShell(getter_AddRefs(presShell));
+      NS_ENSURE_STATE(presShell);
       nsIFrame *frame = nsnull;
       presShell->GetPrimaryFrameFor(content.get(), &frame);
       if (frame)
