@@ -90,38 +90,19 @@
       
   </preferenceset>
   
-
-
   <command id="cmd_PrefOkay"      oncommand="PrefOkay()" />
   <command id="cmd_PrefCancel"    oncommand="PrefCancel();" />
-  <vbox flex="1">
 
-    <hbox class="pref-toolbar">
+  <scrollbox id="scroller" style="overflow:-moz-scrollbars-vertical" flex="1">
 
-      <toolbar id="pref-bar" flex="1"  >    
-        <toolbarbutton class="base-button"  tabindex="1" oncommand="focusTo('browserStartupHomepage')"   onfocus="show('general-pane',this)" id="general-button" ></toolbarbutton>  
-        <toolbarbutton class="base-button"  tabindex="1" oncommand="focusTo('useDiskCache')"             onfocus="show('advanced-pane',this)"  id="advanced-button" />  
-        <toolbarbutton class="base-button"  tabindex="1" oncommand="focusTo('privacySanitize')"          onfocus="show('privacy-pane',this)"  id="privacy-button"   />  
-        <toolbarbutton class="base-button"  tabindex="1" oncommand="focusTo('UseProxy')"                 onfocus="show('connection-pane',this)" id="connection-button"  />  
-      </toolbar>
+      <vbox id="pref-panes" onfocus="catchScroll(event)" flex="1"  >
 
-      <toolbar id="dialog-bar">
-        <toolbarbutton id="cancel-button" hidden="true"  command="cmd_PrefCancel"><label class='dialog-button' value="&cancelButton.label;" /></toolbarbutton>  
-        <toolbarbutton id="okay-button"   tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></toolbarbutton>     
-      </toolbar>
-    </hbox>
-    
-    <!-- MINIMO PREFERENCES XUL, NOT IN XBL, SO INSTRUCTIONS --> 
-    <!-- =================================================== -->
-    <!-- For each pref use attribute preference="prefname"   --> 
-    <!-- and onchange="syncPref(this)" or onclick="syncPref( --> 
-    <!-- the syncPref tells the OKAY function to push prefs  --> 
-    <!-- =================================================== -->
-    
-    <box id="pref-panes" flex="1">  
+	      <toolbar id="dialog-bar">
+	        <button id="okay-button"   style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#eeeeff" tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></button>     
+	      </toolbar>
 
+	</vbox>
 
-    </box>
+  </scrollbox>
 
-  </vbox>
 </window>
