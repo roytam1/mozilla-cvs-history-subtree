@@ -35,7 +35,10 @@
 }
 
 .searchbar-engine-image {
-  margin: 0px 0px 0px 3px;
+  margin-top: 0;
+  margin-bottom: 0;
+  -moz-margin-start: 3px;
+  -moz-margin-end: 0;
   height: 16px;
   width: 16px;
   list-style-image: url("chrome://global/skin/icons/folder-item.png");
