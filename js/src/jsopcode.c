@@ -943,6 +943,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     static const char exception_cookie[] = "/*EXCEPTION*/";
     static const char retsub_pc_cookie[] = "/*RETSUB_PC*/";
     static const char iter_cookie[]      = "/*ITER*/";
+    static const char forelem_cookie[]   = "/*FORELEM*/";
     static const char with_cookie[]      = "/*WITH*/";
     static const char dot_format[]       = "%s.%s";
     static const char index_format[]     = "%s[%s]";
@@ -1875,6 +1876,21 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 tail = js_GetSrcNoteOffset(sn2, 0);
 
               do_forinhead:
+                if (!atom && xval) {
+                    /*
+                     * If xval is not a dummy empty string, we have to strdup
+                     * it to save it from being clobbered by the first Sprint
+                     * below.  Standard dumb decompiler operating procedure!
+                     */
+                    if (*xval == '\0') {
+                        xval = NULL;
+                    } else {
+                        xval = JS_strdup(cx, xval);
+                        if (!xval)
+                            return JS_FALSE;
+                    }
+                }
+
 #if JS_HAS_XML_SUPPORT
                 if (foreach) {
                     foreach = JS_FALSE;
@@ -1892,13 +1908,21 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     xval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
                     if (!xval)
                         return JS_FALSE;
-                } else if (xval && *xval) {
-                    Sprint(&ss->sprinter,
-                           (js_CodeSpec[lastop].format & JOF_XMLNAME)
-                           ? ".%s"
-                           : "[%s]",
-                           xval);
+                } else if (xval) {
+                    JS_ASSERT(*xval != '\0');
+                    ok = (Sprint(&ss->sprinter,
+                                 (js_CodeSpec[lastop].format & JOF_XMLNAME)
+                                 ? ".%s"
+                                 : "[%s]",
+                                 xval)
+                          >= 0);
+                    JS_free(cx, (char *)xval);
+                    if (!ok)
+                        return JS_FALSE;
                 }
+                if (todo < 0)
+                    return JS_FALSE;
+
                 lval = OFF2STR(&ss->sprinter, todo);
                 rval = OFF2STR(&ss->sprinter, ss->offsets[ss->top-1]);
                 RETRACT(&ss->sprinter, rval);
@@ -1931,7 +1955,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                  * bound the recursively decompiled loop body.
                  */
                 sn = js_GetSrcNote(jp->script, pc);
-                JS_ASSERT(!forelem_tail);
+                LOCAL_ASSERT(!forelem_tail);
                 forelem_tail = pc + js_GetSrcNoteOffset(sn, 0);
 
                 /*
@@ -1946,8 +1970,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                  * state from JSOP_FORELEM to JSOP_ENUMELEM, thence (via goto)
                  * to label do_forinhead.
                  */
-                JS_ASSERT(!forelem_done);
+                LOCAL_ASSERT(!forelem_done);
                 forelem_done = pc + GetJumpOffset(pc, pc);
+
+                /* Our net stack balance after forelem;ifeq is +1. */
+                todo = SprintCString(&ss->sprinter, forelem_cookie);
                 break;
 
               case JSOP_ENUMELEM:
@@ -1961,11 +1988,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 atom = NULL;
                 xval = POP_STR();
                 lval = POP_STR();
-                rval = OFF2STR(&ss->sprinter, ss->offsets[ss->top-1]);
-                JS_ASSERT(forelem_tail > pc);
+                rval = POP_STR();
+                LOCAL_ASSERT(strcmp(rval, forelem_cookie) == 0);
+                LOCAL_ASSERT(forelem_tail > pc);
                 tail = forelem_tail - pc;
                 forelem_tail = NULL;
-                JS_ASSERT(forelem_done > pc);
+                LOCAL_ASSERT(forelem_done > pc);
                 len = forelem_done - pc;
                 forelem_done = NULL;
                 goto do_forinhead;
