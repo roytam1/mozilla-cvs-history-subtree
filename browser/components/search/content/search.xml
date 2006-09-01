@@ -40,7 +40,12 @@
 #
 # ***** END LICENSE BLOCK *****
 
-<!DOCTYPE bindings SYSTEM "chrome://browser/locale/searchbar.dtd">
+<!DOCTYPE bindings [
+<!ENTITY % searchBarDTD SYSTEM "chrome://browser/locale/searchbar.dtd" >
+%searchBarDTD;
+<!ENTITY % globalDTD SYSTEM "chrome://global/locale/global.dtd">
+%globalDTD;
+]>
 
 <bindings id="SearchBindings"
       xmlns="http://www.mozilla.org/xbl"
@@ -95,6 +100,7 @@
           <xul:hbox class="search-go-button-container">
             <xul:toolbarbutton class="search-go-button"
                                anonid="search-go-button" 
+                               chromedir="&locale.dir;"
                                label="&searchEndCap.label;" />
           </xul:hbox>
         </xul:box>
