@@ -282,6 +282,10 @@ tabpanels {
   -moz-image-region: rect(0, 44px, 14px, 33px);
 }
 
+.tabbrowser-arrowscrollbox > .scrollbutton-up > .toolbarbutton-icon {    
+  margin-top: 4px;                  
+}                                                                            
+
 .scrollbutton-rel-box > .scrollbutton-down-box {
   -moz-appearance: none !important;
   border: none !important;
@@ -351,6 +355,7 @@ tabpanels {
 .scrollbutton-rel-box > .scrollbutton-down > .toolbarbutton-icon {
   -moz-padding-end: 0px !important;
   -moz-margin-end: 0px !important;
+  margin-top: 4px;
 }
 
 /**
