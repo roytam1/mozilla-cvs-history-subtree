@@ -27,6 +27,7 @@
   <binding id="bf-menu-button" extends="chrome://global/content/bindings/toolbarbutton.xml#menu-button">
     <content>
       <children includes="observes|template|menupopup|tooltip"/>
+      <xul:hbox flex="1" class="allowevents-box"/>
       <xul:vbox>
         <xul:hbox flex="1" class="allowevents-box"/>
         <xul:hbox align="center">
@@ -51,6 +52,7 @@
         </xul:hbox>
         <xul:hbox flex="1" class="allowevents-box"/>
       </xul:vbox>
+      <xul:hbox flex="1"/>
     </content>
   </binding>
 </bindings>
