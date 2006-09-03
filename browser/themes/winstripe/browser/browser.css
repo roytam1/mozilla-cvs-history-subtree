@@ -1015,6 +1015,24 @@ toolbar[iconsize="small"] #paste-button:hover:active {
   display: none;
 }
 
+/* Keep the URL bar LTR */
+
+#urlbar .autocomplete-textbox-container {
+  direction: ltr;
+}
+
+#PopupAutoComplete {
+  direction: ltr !important;
+}
+
+#PopupAutoComplete[chromedir="rtl"] > tree > treerows {
+  direction: rtl;
+}
+
+#PopupAutoComplete .autocomplete-treebody {
+  direction: ltr;
+}
+
 /* ::::: page proxy icon ::::: */
 
 #page-proxy-deck,
