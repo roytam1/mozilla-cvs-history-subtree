@@ -39,6 +39,7 @@
 
 #include "msgCore.h"
 #include "nsReadableUtils.h"
+#include "nsIMsgCustomColumnHandler.h"
 #include "nsMsgDBView.h"
 #include "nsISupports.h"
 #include "nsIMsgFolder.h"
@@ -912,6 +913,18 @@ nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
 
 NS_IMETHODIMP nsMsgDBView::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool* _retval)
 {
+  //attempt to retreive a custom column handler. If it exists call it and return
+  const PRUnichar* colID;
+  col->GetIdConst(&colID);
+  
+  nsIMsgCustomColumnHandler* colHandler = GetColumnHandler(colID);
+
+  if (colHandler) 
+  {
+  	colHandler->IsEditable(row, col, _retval);
+  	return NS_OK;
+  }
+  
   *_retval = PR_FALSE;
   return NS_OK;
 }
@@ -1344,6 +1357,16 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, nsITreeColumn *col, n
     }
   }     
 
+  //custom column handlers are called at the end of getCellProperties
+  //to make life easier for extension writers
+  nsIMsgCustomColumnHandler* colHandler = GetColumnHandler(colID);
+
+  if (colHandler != nsnull) 
+  {
+    colHandler->GetCellProperties(aRow, col, properties);
+  	return NS_OK;
+  }
+  
   return NS_OK;
 }
 
@@ -1499,6 +1522,18 @@ nsresult nsMsgDBView::GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **d
 
 NS_IMETHODIMP nsMsgDBView::GetImageSrc(PRInt32 aRow, nsITreeColumn* aCol, nsAString& aValue)
 {
+  //attempt to retreive a custom column handler. If it exists call it and return
+  const PRUnichar* colID;
+  aCol->GetIdConst(&colID);
+  
+  nsIMsgCustomColumnHandler* colHandler = GetColumnHandler(colID);
+
+  if (colHandler) 
+  {
+  	colHandler->GetImageSrc(aRow, aCol, aValue);
+  	return NS_OK;
+  }
+    
   return NS_OK;
 }
 
@@ -1513,6 +1548,82 @@ NS_IMETHODIMP nsMsgDBView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsASt
   return NS_OK;
 }
 
+//add a custom column handler
+NS_IMETHODIMP nsMsgDBView::AddColumnHandler(const nsAString& column, nsIMsgCustomColumnHandler* handler)
+{
+
+  PRInt32 index = m_customColumnHandlerIDs.IndexOf(column);
+    
+  nsAutoString strColID(column);    
+  
+  //does not exist
+  if (index == -1) 
+  {
+    m_customColumnHandlerIDs.AppendString(strColID);
+    m_customColumnHandlers.AppendObject(handler);    
+  }
+  else
+  {
+    //insert new handler into the appropriate place in the COMPtr array
+    //no need to replace the column ID (it's the same)
+    m_customColumnHandlers.ReplaceObjectAt(handler, index);    
+    
+  }
+  
+  return NS_OK;
+}
+
+//remove a custom column handler
+NS_IMETHODIMP nsMsgDBView::RemoveColumnHandler(const nsAString& aColID)
+{
+
+  PRInt32 index = m_customColumnHandlerIDs.IndexOf(aColID);
+  
+  if (index != -1)
+  {
+    m_customColumnHandlerIDs.RemoveStringAt(index);
+    m_customColumnHandlers.RemoveObjectAt(index);
+    
+    return NS_OK;
+  }
+  
+  return NS_ERROR_FAILURE; //can't remove a column that isn't currently custom handled
+}  
+
+//TODO: NS_ENSURE_SUCCESS
+nsIMsgCustomColumnHandler* nsMsgDBView::GetCurColumnHandlerFromDBInfo()
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsIDBFolderInfo>  dbInfo;
+  m_db->GetDBFolderInfo(getter_AddRefs(dbInfo));
+  
+  nsAutoString colID;
+  rv = dbInfo->GetProperty("customSortCol", colID);            
+
+  return GetColumnHandler(colID.get());
+}
+
+nsIMsgCustomColumnHandler* nsMsgDBView::GetColumnHandler(const PRUnichar *colID)
+{
+  nsIMsgCustomColumnHandler* columnHandler = nsnull;
+
+  PRInt32 index = m_customColumnHandlerIDs.IndexOf(nsDependentString(colID));
+  
+  if (index > -1)
+    columnHandler =  m_customColumnHandlers[index];
+  
+  return columnHandler;
+}  
+
+NS_IMETHODIMP nsMsgDBView::GetColumnHandler(const nsAString& aColID, nsIMsgCustomColumnHandler** aHandler)
+{
+  NS_ENSURE_ARG_POINTER(aHandler);
+  nsAutoString column(aColID);
+  NS_IF_ADDREF(*aHandler = GetColumnHandler(column.get()));
+  return (*aHandler) ? NS_OK : NS_ERROR_FAILURE;
+}
+
 NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAString& aValue)
 {
   nsresult rv = NS_OK;
@@ -1523,7 +1634,8 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
   nsCOMPtr <nsIMsgDBHdr> msgHdr;
   rv = GetMsgHdrForViewIndex(aRow, getter_AddRefs(msgHdr));
   
-  if (NS_FAILED(rv) || !msgHdr) {
+  if (NS_FAILED(rv) || !msgHdr) 
+  {
     ClearHdrCache();
     return NS_MSG_INVALID_DBVIEW_INDEX;
   }
@@ -1535,6 +1647,16 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
 
   const PRUnichar* colID;
   aCol->GetIdConst(&colID);
+  
+  //attempt to retreive a custom column handler. If it exists call it and return
+  nsIMsgCustomColumnHandler* colHandler = GetColumnHandler(colID);
+      
+  if (colHandler) 
+  {
+  	colHandler->GetCellText(aRow, aCol, aValue);
+  	return NS_OK;
+  }
+  
   switch (colID[0])
   {
   case 's':
@@ -1665,6 +1787,16 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, nsITreeColumn* col)
 
   const PRUnichar* colID;
   col->GetIdConst(&colID);
+  
+  //attempt to retreive a custom column handler. If it exists call it and return
+  nsIMsgCustomColumnHandler* colHandler = GetColumnHandler(colID);
+      
+  if (colHandler) 
+  {
+  	colHandler->CycleCell(row, col);
+  	return NS_OK;
+  }  
+  
   switch (colID[0])
   {
   case 'u': // unreadButtonColHeader
@@ -3142,7 +3274,8 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
     NS_ENSURE_ARG_POINTER(pMaxLen);
     NS_ENSURE_ARG_POINTER(pFieldType);
 
-    switch (sortType) {
+    switch (sortType) 
+    {
         case nsMsgViewSortType::bySubject:
             *pFieldType = kCollationKey;
             *pMaxLen = kMaxSubjectKey;
@@ -3174,6 +3307,28 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
             *pFieldType = kU32;
             *pMaxLen = 0;
             break;
+        case nsMsgViewSortType::byCustom:
+        {        
+          nsIMsgCustomColumnHandler* colHandler = GetCurColumnHandlerFromDBInfo();
+          
+          if (colHandler != nsnull)
+          {
+            PRBool isString;
+            colHandler->IsString(&isString);
+            
+            if (isString)
+            {
+              *pFieldType = kCollationKey;
+              *pMaxLen = kMaxRecipientKey; //80 - do we need a seperate k?
+            } 
+            else
+            {
+              *pFieldType = kU32;
+              *pMaxLen = 0;
+            }
+          }
+          break;
+        }
         default:
             return NS_ERROR_UNEXPECTED;
     }
@@ -3218,7 +3373,7 @@ nsresult nsMsgDBView::GetStatusSortValue(nsIMsgDBHdr *msgHdr, PRUint32 *result)
     return NS_OK;
 }
 
-nsresult nsMsgDBView::GetLongField(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result)
+nsresult nsMsgDBView::GetLongField(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result, nsIMsgCustomColumnHandler* colHandler)
 {
   nsresult rv;
   NS_ENSURE_ARG_POINTER(msgHdr);
@@ -3286,6 +3441,18 @@ nsresult nsMsgDBView::GetLongField(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue s
       else
         rv = msgHdr->GetDateInSeconds(result);
       break;
+    case nsMsgViewSortType::byCustom:
+      if (colHandler != nsnull)
+      {
+        colHandler->GetSortLongForRow(msgHdr, result);
+        rv = NS_OK;
+      } 
+      else 
+      {
+        NS_ASSERTION(PR_FALSE, "should not be here (Sort Type: byCustom (Long), but no custom handler)");
+        rv = NS_ERROR_UNEXPECTED;
+      }
+      break;
     case nsMsgViewSortType::byId:
         // handled by caller, since caller knows the key
     default:
@@ -3298,9 +3465,8 @@ nsresult nsMsgDBView::GetLongField(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue s
     return NS_OK;
 }
 
-
 nsresult 
-nsMsgDBView::GetCollationKey(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint8 **result, PRUint32 *len)
+nsMsgDBView::GetCollationKey(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint8 **result, PRUint32 *len, nsIMsgCustomColumnHandler* colHandler)
 {
   nsresult rv;
   NS_ENSURE_ARG_POINTER(msgHdr);
@@ -3335,6 +3501,22 @@ nsMsgDBView::GetCollationKey(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue sortTyp
 
         if (NS_SUCCEEDED(rv) && dbToUse)
           rv = dbToUse->CreateCollationKey(str, result, len);
+      }
+      break;
+    case nsMsgViewSortType::byCustom:
+      if (colHandler != nsnull)
+      {
+        nsAutoString strKey;
+        rv = colHandler->GetSortStringForRow(msgHdr, strKey);
+        NS_ASSERTION(NS_SUCCEEDED(rv),"failed to get sort string for custom row");
+        nsAutoString strTemp(strKey);
+        
+        rv = m_db->CreateCollationKey(strKey, result, len);
+      } 
+      else
+      {
+        NS_ASSERTION(PR_FALSE,"should not be here (Sort Type: byCustom (String), but no custom handler)");
+        //rv = NS_ERROR_UNEXPECTED;
       }
       break;
     default:
@@ -3494,11 +3676,15 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       msgHdr = nsnull;
     }
     
+    //check if a custom column handler exists. If it does then grab it and pass it in 
+    //to either GetCollationKey or GetLongField
+    nsIMsgCustomColumnHandler* colHandler = GetCurColumnHandlerFromDBInfo();
+
     // could be a problem here if the ones that appear here are different than the ones already in the array
     PRUint32 actualFieldLen = 0;
     if (fieldType == kCollationKey) 
     {
-      rv = GetCollationKey(msgHdr, sortType, &keyValue, &actualFieldLen);
+      rv = GetCollationKey(msgHdr, sortType, &keyValue, &actualFieldLen, colHandler);
       NS_ENSURE_SUCCESS(rv,rv);
 
       longValue = actualFieldLen;
@@ -3511,7 +3697,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       }
       else 
       {
-        rv = GetLongField(msgHdr, sortType, &longValue);
+        rv = GetLongField(msgHdr, sortType, &longValue, colHandler);
         NS_ENSURE_SUCCESS(rv,rv);
       }
     }
@@ -4158,10 +4344,15 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
   int (* PR_CALLBACK comparisonFun) (const void *pItem1, const void *pItem2, void *privateData)=nsnull;
   int retStatus = 0;
   msgHdr->GetMessageKey(&EntryInfo1.id);
+  
+  //check if a custom column handler exists. If it does then grab it and pass it in 
+  //to either GetCollationKey or GetLongField
+  nsIMsgCustomColumnHandler* colHandler = GetCurColumnHandlerFromDBInfo();
+  
   switch (fieldType)
   {
     case kCollationKey:
-      rv = GetCollationKey(msgHdr, sortType, &EntryInfo1.key, &EntryInfo1.dword);
+      rv = GetCollationKey(msgHdr, sortType, &EntryInfo1.key, &EntryInfo1.dword, colHandler);
       NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
       comparisonFun = FnSortIdKeyPtr;
       comparisonContext = m_db.get();
@@ -4170,7 +4361,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
       if (sortType == nsMsgViewSortType::byId) 
         EntryInfo1.dword = EntryInfo1.id;
       else
-        GetLongField(msgHdr, sortType, &EntryInfo1.dword);
+        GetLongField(msgHdr, sortType, &EntryInfo1.dword, colHandler);
       comparisonFun = FnSortIdDWord;
       break;
     default:
@@ -4190,7 +4381,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
     if (fieldType == kCollationKey)
     {
       PR_FREEIF(EntryInfo2.key);
-      rv = GetCollationKey(tryHdr, sortType, &EntryInfo2.key, &EntryInfo2.dword);
+      rv = GetCollationKey(tryHdr, sortType, &EntryInfo2.key, &EntryInfo2.dword, colHandler);
       NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
     }
     else if (fieldType == kU32)
@@ -4199,7 +4390,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
         EntryInfo2.dword = EntryInfo2.id;
       }
       else {
-        GetLongField(tryHdr, sortType, &EntryInfo2.dword);
+        GetLongField(tryHdr, sortType, &EntryInfo2.dword, colHandler);
       }
     }
     retStatus = (*comparisonFun)(&pValue1, &pValue2, comparisonContext);
