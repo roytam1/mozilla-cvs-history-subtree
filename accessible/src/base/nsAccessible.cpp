@@ -1519,7 +1519,8 @@ nsresult nsAccessible::GetTextFromRelationID(nsIAtom *aIDAttrib, nsString &aName
   NS_ASSERTION(content, "Called from shutdown accessible");
 
   nsAutoString ids;
-  if (!content->GetAttr(kNameSpaceID_WAIProperties, aIDAttrib, ids)) {
+  if (NS_CONTENT_ATTR_NOT_THERE ==
+      content->GetAttr(kNameSpaceID_WAIProperties, aIDAttrib, ids)) {
     return NS_ERROR_FAILURE;
   }
   ids.CompressWhitespace(PR_TRUE, PR_TRUE);
