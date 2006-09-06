@@ -3729,15 +3729,6 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         if (pn->pn_kid3 ||
             (catchJump != -1 && iter->pn_kid1->pn_expr)) {
             /*
-             * Emit another stack fixup, because the catch could itself
-             * throw an exception in an unbalanced state, and the finally
-             * may need to call functions.  If there is no finally, only
-             * guarded catches, the rethrow code below nevertheless needs
-             * stack fixup.
-             */
-            finallyCatch = CG_OFFSET(cg);
-
-            /*
              * Last discriminant jumps to the rethrow code sequence if no
              * discriminants match.  Target catchJump at the beginning of the
              * rethrow sequence, just in case a guard expression throws and
@@ -3749,6 +3740,14 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     return JS_FALSE;
             }
 
+            /*
+             * Emit another stack fixup, because the catch could itself
+             * throw an exception in an unbalanced state, and the finally
+             * may need to call functions.  If there is no finally, only
+             * guarded catches, the rethrow code below nevertheless needs
+             * stack fixup.
+             */
+            finallyCatch = CG_OFFSET(cg);
             EMIT_UINT16_IMM_OP(JSOP_SETSP, (jsatomid)depth);
             cg->stackDepth = depth;
 
