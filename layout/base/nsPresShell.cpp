@@ -1975,6 +1975,18 @@ PresShell::Destroy()
     mDocument->DeleteShell(this);
   }
 
+  // Revoke pending events.  We need to do this and cancel reflow commands
+  // before we destroy the frame manager, since apparently frame destruction
+  // sometimes spins the event queue when plug-ins are involved(!).
+  mPostedReplaces = nsnull;
+  mReflowEventQueue = nsnull;
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                                           getter_AddRefs(eventQueue));
+  eventQueue->RevokeEvents(this);
+
+  CancelAllReflowCommands();
+
   // Destroy the frame manager. This will destroy the frame hierarchy
   mFrameConstructor->WillDestroyFrameTree();
   FrameManager()->Destroy();
@@ -2008,16 +2020,6 @@ PresShell::Destroy()
     mViewEventListener->SetPresShell((nsIPresShell*)nsnull);
     NS_RELEASE(mViewEventListener);
   }
-
-  // Revoke pending events
-  mPostedReplaces = nsnull;
-  mReflowEventQueue = nsnull;
-  nsCOMPtr<nsIEventQueue> eventQueue;
-  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
-                                           getter_AddRefs(eventQueue));
-  eventQueue->RevokeEvents(this);
-
-  CancelAllReflowCommands();
 
   RemoveDummyLayoutRequest();
   
