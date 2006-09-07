@@ -1780,7 +1780,7 @@ nsRoleMapEntry nsAccessible::gWAIRoleMap[] =
             {"selected", BOOL_STATE, STATE_SELECTED | STATE_SELECTABLE},
             {"selected", "false", STATE_SELECTABLE},
             {"readonly", BOOL_STATE, STATE_READONLY}, END_ENTRY},
-  {"combobox", ROLE_COMBOBOX, eNameLabelOrTitle, eNoValue, eNoReqStates,
+  {"combobox", ROLE_COMBOBOX, eNameLabelOrTitle, eHasValueMinMax, eNoReqStates,
             {"readonly", BOOL_STATE, STATE_READONLY},
             {"multiselect", BOOL_STATE, STATE_MULTISELECTABLE | STATE_EXTSELECTABLE}, END_ENTRY},
   {"description", ROLE_STATICTEXT, eNameOkFromChildren, eNoValue, eNoReqStates, END_ENTRY},
