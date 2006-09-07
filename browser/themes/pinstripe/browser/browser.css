@@ -1037,6 +1037,10 @@ sidebarheader {
   list-style-image: url("chrome://global/skin/icons/loading_16.gif");
 }
 
+sidebarheader > .tabs-closebutton > .toolbarbutton-text {
+  display: none;
+}
+
 /* ----- SECURITY DISPLAY ----- */
 
 #security-button {
@@ -1180,6 +1184,7 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 	background-image: none !important;
 }
 
+.tabs-closebutton:hover,
 .tabs-closebutton:hover:active {
 	list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
 }

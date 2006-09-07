@@ -46,3 +46,14 @@ notification[type="critical"] {
   list-style-image: url("chrome://global/skin/icons/closetab.png") !important;
   border: none;
 }
+
+.messageCloseButton > .toolbarbutton-text {
+  display: none;
+}
+
+.messageCloseButton:hover,
+.messageCloseButton:hover:active {
+  list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
+}
+
+
