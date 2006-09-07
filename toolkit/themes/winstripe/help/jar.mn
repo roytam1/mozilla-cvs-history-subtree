@@ -3,6 +3,7 @@ classic.jar:
 #ifndef MINIMO
   skin/classic/help/help.css
   skin/classic/help/Toolbar.png
+  skin/classic/help/Toolbar-rtl.png
   skin/classic/help/helpFileLayout.css
   skin/classic/help/Weblink.png
   skin/classic/help/Weblink-rtl.png
