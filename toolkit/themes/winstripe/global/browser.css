@@ -8,7 +8,7 @@
 .tabbrowser-tabs {
   -moz-binding: url("chrome://global/skin/globalBindings.xml#tabbrowser-tabs") !important;
   padding-top: 0px;
-  background: #e0dccf url("chrome://global/skin/icons/tabbrowser-tabs-bkgnd.png") !important;
+  background: -moz-dialog url("chrome://global/skin/icons/tabbrowser-tabs-bkgnd.png") !important;
   -moz-padding-start: 0px;
 }
 
@@ -33,9 +33,6 @@
 
 .tabbrowser-tab > .tab-image-middle {
   padding-top: 1px;
-}
-
-.tabbrowser-tab > .tab-image-middle {
   -moz-padding-start: 1px;
 }
 
@@ -56,63 +53,92 @@
   width: 8px;
   height: 24px;
   background: url("chrome://global/skin/icons/tab-left.png") no-repeat;
+  background-color: -moz-dialog;
+  -moz-border-radius-topleft: 3px;
 }
 
-.tabbrowser-tab[chromedir="rtl"] > .tab-image-left{
+.tabbrowser-tab[chromedir="rtl"] > .tab-image-left {
   background: url("chrome://global/skin/icons/tab-right.png") no-repeat;
+  background-color: -moz-dialog;
+  -moz-border-radius-topleft: 0px;
+  -moz-border-radius-topright: 3px;
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-image-left {
   height: 23px;
   margin-bottom: 1px;
   background: url("chrome://global/skin/icons/tab-left-bkgnd.png") no-repeat;
+  background-color: -moz-dialog;
+}
+
+.tabbrowser-tab[chromedir="rtl"]:not([selected="true"]) > .tab-image-left {
+  background: url("chrome://global/skin/icons/tab-right-bkgnd.png") no-repeat;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-left {
   background: url("chrome://global/skin/icons/tab-left-hover.png") no-repeat;
+  background-color: -moz-dialog;
+}
+
+.tabbrowser-tab[chromedir="rtl"]:hover:not([selected="true"]) > .tab-image-left {
+  background: url("chrome://global/skin/icons/tab-right-hover.png") no-repeat;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab > .tab-image-middle {
   height: 24px;
   background: url("chrome://global/skin/icons/tab-middle.png") repeat-x;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-image-middle {
   height: 23px;
   margin-bottom: 1px;
   background: url("chrome://global/skin/icons/tab-middle-bkgnd.png") repeat-x;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-middle {
   background: url("chrome://global/skin/icons/tab-middle-hover.png") repeat-x;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab > .tab-image-right {
   width: 8px;
   height: 24px;
   background: url("chrome://global/skin/icons/tab-right.png") no-repeat;
+  background-color: -moz-dialog;
+  -moz-border-radius-topright: 3px;
 }
 
-.tabbrowser-tab[chromedir="rtl"] > .tab-image-right{
+.tabbrowser-tab[chromedir="rtl"] > .tab-image-right {
   background: url("chrome://global/skin/icons/tab-left.png") no-repeat;
+  background-color: -moz-dialog;
+  -moz-border-radius-topleft: 3px;
+  -moz-border-radius-topright: 0px;
 }
 
 .tabbrowser-tab:not([selected="true"]) > .tab-image-right {
   height: 23px;
   margin-bottom: 1px;
   background: url("chrome://global/skin/icons/tab-right-bkgnd.png") no-repeat;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab[chromedir="rtl"]:not([selected="true"]) > .tab-image-right {
   background: url("chrome://global/skin/icons/tab-left-bkgnd.png") no-repeat;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab:hover:not([selected="true"]) > .tab-image-right {
   background: url("chrome://global/skin/icons/tab-right-hover.png") no-repeat;
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab[chromedir="rtl"]:hover:not([selected="true"]) > .tab-image-right {
   background: url("chrome://global/skin/icons/tab-left-hover.png") no-repeat;
+  background-color: -moz-dialog;
 }
 
 .tab-icon-image {
@@ -125,10 +151,11 @@
 }
 
 .tabs-bottom {
-  border: none;
   height: 4px !important;
-  background: url("chrome://global/skin/icons/tabstrip-bottom.png") repeat !important;
   margin: 0px !important;
+  background: -moz-dialog url("chrome://global/skin/icons/tabstrip-bottom.png") repeat !important;
+  border-top: 1px solid threedshadow; 
+  border-bottom: 1px solid threedshadow;
 }
 
 tabpanels {
@@ -214,6 +241,7 @@ tabpanels {
 
 .tabbrowser-tab > .tab-close-button {
   background-image: url("chrome://global/skin/icons/tab-middle-bkgnd.png");
+  background-color: -moz-dialog;
 }
 
 .tabbrowser-tab:hover > .tab-close-button {
