@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Joe Hewitt (hewitt@netscape.com)
+ *   Pamela Greene (pamg.bugs@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -70,30 +71,78 @@ textbox.padded {
 /* ::::: history button ::::: */
 
 .autocomplete-history-dropmarker {
-  -moz-appearance: menulist-button;
-  min-width: 17px;
-  -moz-box-align: center;
-  -moz-box-pack: center;
-  border: 2px solid;
-  -moz-border-top-colors: ThreeDLightShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDLightShadow ThreeDHighlight;
-  background-color: -moz-Dialog;
-  padding: 1px;
-  list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
+  width: 16px;
+  height: 20px;
+  margin: 0px;
+  padding: 0px;
+  list-style-image: url("chrome://global/skin/autocomplete-dropmark-arrow.png");
+  -moz-image-region: rect(0px, 16px, 20px, 0px);
 }
 
-.autocomplete-history-dropmarker:hover:active,
-.autocomplete-history-dropmarker[open="true"] {
-  -moz-border-top-colors: ThreeDShadow ThreeDFace;
-  -moz-border-right-colors: ThreeDShadow ThreeDFace;
-  -moz-border-bottom-colors: ThreeDShadow ThreeDFace;
-  -moz-border-left-colors: ThreeDShadow ThreeDFace;
-  padding-top: 2px;
-  padding-bottom: 0px;
-  -moz-padding-start: 2px;
-  -moz-padding-end: 0px;
+.autocomplete-history-dropmarker:hover {
+  -moz-image-region: rect(0px, 32px, 20px, 16px);
+}
+
+.autocomplete-history-dropmarker:active {
+  -moz-image-region: rect(0px, 64px, 20px, 48px);
+}
+
+.autocomplete-dropmarker-bkgnd {
+  list-style-image: url("chrome://global/skin/autocomplete-dropmark-bkgnd.png");
+}
+
+.autocomplete-dropmarker-bkgnd-top {
+  -moz-image-region: rect(0px, 16px, 9px, 0px);
+  height: 9px;
+}
+
+.autocomplete-dropmarker-bkgnd-mid-top {
+  -moz-image-region: rect(9px, 16px, 10px, 0px);
+}
+
+.autocomplete-dropmarker-bkgnd-mid-bottom {
+  -moz-image-region: rect(10px, 16px, 11px, 0px);
+}
+
+.autocomplete-dropmarker-bkgnd-bottom {
+  -moz-image-region: rect(11px, 16px, 20px, 0px);
+  height: 9px;
+}
+
+.autocomplete-history-dropmarker:hover .autocomplete-dropmarker-bkgnd-top {
+  -moz-image-region: rect(0px, 32px, 9px, 16px);
+  height: 9px;
+}
+
+.autocomplete-history-dropmarker:hover .autocomplete-dropmarker-bkgnd-mid-top {
+  -moz-image-region: rect(9px, 32px, 10px, 16px);
+}
+
+.autocomplete-history-dropmarker:hover .autocomplete-bkgnd-mid-bottom {
+  -moz-image-region: rect(10px, 32px, 11px, 16px);
+}
+
+.autocomplete-history-dropmarker:hover .autocomplete-dropmarker-bkgnd-bottom {
+  -moz-image-region: rect(11px, 32px, 20px, 16px);
+  height: 9px;
+}
+
+.autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-top {
+  -moz-image-region: rect(0px, 64px, 9px, 48px);
+  height: 9px;
+}
+
+.autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-mid-top {
+  -moz-image-region: rect(9px, 64px, 10px, 48px);
+}
+
+.autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-mid-bottom {
+  -moz-image-region: rect(10px, 64px, 11px, 48px);
+}
+
+.autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-bottom {
+  -moz-image-region: rect(11px, 64px, 20px, 48px);
+  height: 9px;
 }
 
 /* ::::: autocomplete popups ::::: */

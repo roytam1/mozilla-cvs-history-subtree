@@ -804,9 +804,12 @@ popup[type="autocomplete"] {
   -moz-binding: url("chrome://global/content/bindings/autocomplete.xml#history-dropmarker");
 }
 
+/* To be overridden by themes that use a background for the dropmarker (e.g. winstripe): */
+.autocomplete-dropmarker-bkgnd {
+  list-style-image: none;
+}
+
 %endif
-
-
 
 /* the C++ implementation of widgets is too eager to make popups visible.
    this causes problems (bug 120155 and others), thus this workaround: */
