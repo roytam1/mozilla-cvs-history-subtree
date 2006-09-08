@@ -2536,7 +2536,7 @@ GeneratePrefix(JSContext *cx, JSString *uri, JSXMLArray *decls)
     length = PTRDIFF(end, cp, jschar);
 
     /*
-     * If the namespace consisted only of non-XML names or names which begin
+     * If the namespace consisted only of non-XML names or names that begin
      * case-insensitively with "xml", arbitrarily create a prefix consisting
      * of 'a's of size length (allowing dp-calculating code to work with or
      * without this branch executing) plus the space for storing a hyphen and
