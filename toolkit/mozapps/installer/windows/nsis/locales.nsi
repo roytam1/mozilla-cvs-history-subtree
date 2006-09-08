@@ -34,30 +34,61 @@
 #
 # ***** END LICENSE BLOCK *****
 
-/**
- * "One off" locale configuration settings for font name, font size, and RTL
- * (e.g. locale text is read right to left).
- */
+; The fonts for the ja and ko locales are wider and shorter than western fonts.
+; This will increase the width and lessen the height of the window which
+; increases the width and lessens the height of the bitmaps since they stretch
+; to fit so they look correct under various dpi settings. IMAGE_SUFFIX is used
+; to specify a different bitmap by adding a suffix to the bitmap name to
+; workaround this issue.
+!define WIZ_IMAGE_SUFFIX ""
+; Besides the ja and ko issue noted above this is also used to append RTL to the
+; header image for RTL locales.
+!define HDR_IMAGE_SUFFIX ""
 
-; Arabic
-!define ar_rtl
+; Appends _RTL to MUI_HEADERIMAGE_BITMAP for RTL locales.
+!define MUI_HEADER_SUFFIX ""
 
-; Hebrew
-!define he_rtl
+; Locales that require a font specified.
+!if ${AB_CD} == "ja"
+!undef WIZ_IMAGE_SUFFIX
+!define WIZ_IMAGE_SUFFIX "2"
+!undef HDR_IMAGE_SUFFIX
+!define HDR_IMAGE_SUFFIX "2"
+!endif
 
-; Japanese
-!define ja_font  "ＭＳ Ｐゴシック"
-!define ja_size  "9"
+!if ${AB_CD} == "ko"
+!undef WIZ_IMAGE_SUFFIX
+!define WIZ_IMAGE_SUFFIX "2"
+!undef HDR_IMAGE_SUFFIX
+!define HDR_IMAGE_SUFFIX "2"
+!endif
 
-;Korean
-;define ko_font  "굴림"
-;define ko_size  "9"
+!if ${AB_CD} == "zh-CN"
+!undef WIZ_IMAGE_SUFFIX
+!define WIZ_IMAGE_SUFFIX "3"
+!undef HDR_IMAGE_SUFFIX
+!define HDR_IMAGE_SUFFIX "3"
+!endif
 
-; Chinese Simplified, China
-!define zh-CN_font  "宋体"
-!define zh-CN_size  "9"
+!if ${AB_CD} == "zh-TW"
+!undef WIZ_IMAGE_SUFFIX
+!define WIZ_IMAGE_SUFFIX "3"
+!undef HDR_IMAGE_SUFFIX
+!define HDR_IMAGE_SUFFIX "3"
+!endif
 
-; Chinese Traditional, Taiwan
-!define zh-TW_font  "新細明體"
-!define zh-TW_size  "9"
+; RTL Locales
+!if ${AB_CD} == "ar"
+!undef MUI_HEADER_SUFFIX
+!define MUI_HEADER_SUFFIX "_RTL"
+!undef HDR_IMAGE_SUFFIX
+!define HDR_IMAGE_SUFFIX "RTL"
+!endif
+
+!if ${AB_CD} == "he"
+!undef MUI_HEADER_SUFFIX
+!define MUI_HEADER_SUFFIX "_RTL"
+!undef HDR_IMAGE_SUFFIX
+!define HDR_IMAGE_SUFFIX "RTL"
+!endif
 
