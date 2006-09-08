@@ -61,8 +61,12 @@ BRANDING_FILES = \
 	branding.nsi \
 	license.txt \
 	wizHeader.bmp \
+	wizHeader2.bmp \
+	wizHeader3.bmp \
 	wizHeaderRTL.bmp \
 	wizWatermark.bmp \
+	wizWatermark2.bmp \
+	wizWatermark3.bmp \
 	$(NULL)
 
 DEFINES += \
@@ -123,6 +127,10 @@ ifndef MOZ_BRANDING_DIRECTORY
 	cp $(srcdir)/nsis/branding.nsi $(DIST)/branding/branding.nsi
 	cp $(srcdir)/license.txt  $(DIST)/branding/license.txt
 	cp $(srcdir)/wizHeader.bmp     $(DIST)/branding/wizHeader.bmp
+	cp $(srcdir)/wizHeader2.bmp    $(DIST)/branding/wizHeader2.bmp
+	cp $(srcdir)/wizHeader3.bmp    $(DIST)/branding/wizHeader3.bmp
 	cp $(srcdir)/wizHeaderRTL.bmp  $(DIST)/branding/wizHeaderRTL.bmp
 	cp $(srcdir)/wizWatermark.bmp  $(DIST)/branding/wizWatermark.bmp
+	cp $(srcdir)/wizWatermark2.bmp $(DIST)/branding/wizWatermark2.bmp
+	cp $(srcdir)/wizWatermark3.bmp $(DIST)/branding/wizWatermark3.bmp
 endif
