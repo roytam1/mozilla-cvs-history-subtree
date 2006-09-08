@@ -548,7 +548,7 @@
             var disabled = this.mPanelContainer.childNodes.length == 1;
             var menuItems = aPopupMenu.getElementsByAttribute("tbattr", "tabbrowser-multiple");
             for (var i = 0; i < menuItems.length; i++)
-              menuItems[i].disabled = disabled;
+              menuItems[i].setAttribute("disabled", disabled);
           ]]>
         </body>
       </method>
