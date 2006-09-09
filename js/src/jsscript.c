@@ -1539,13 +1539,13 @@ js_FindFinallyHandler(JSScript *script, jsbytecode *pc)
             /*
              * We have a handler: is it the finally one, or a catch handler?
              *
-             * Catch bytecode begins with:   JSOP_SETSP JSOP_NOP
+             * Catch bytecode begins with:   JSOP_SETSP JSOP_ENTERBLOCK
              * Finally bytecode begins with: JSOP_SETSP JSOP_(GOSUB|EXCEPTION)
              */
             pc = script->main + tn->catchStart;
             JS_ASSERT(*pc == JSOP_SETSP);
             op2 = pc[JSOP_SETSP_LENGTH];
-            if (op2 != JSOP_NOP) {
+            if (op2 != JSOP_ENTERBLOCK) {
                 JS_ASSERT(op2 == JSOP_GOSUB || op2 == JSOP_EXCEPTION);
                 return pc;
             }

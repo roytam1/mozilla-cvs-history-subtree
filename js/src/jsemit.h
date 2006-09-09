@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -77,14 +78,21 @@ typedef enum JSStmtType {
     STMT_WHILE_LOOP             /* while loop statement */
 } JSStmtType;
 
-#define STMT_TYPE_MAYBE_SCOPE(type) \
-    ((type) >= STMT_BLOCK && (type) <= STMT_FINALLY)
+#define STMT_TYPE_IN_RANGE(t,b,e) ((uint)((t) - (b)) <= (uintN)((e) - (b)))
+
+#define STMT_TYPE_MAYBE_SCOPE(type)                                           \
+    STMT_TYPE_IN_RANGE(type, STMT_BLOCK, STMT_SUBROUTINE)
+#define STMT_TYPE_IS_SCOPE(type)                                              \
+    STMT_TYPE_IN_RANGE(type, STMT_WITH, STMT_CATCH)
+#define STMT_TYPE_IS_TRYING(type)                                             \
+    STMT_TYPE_IN_RANGE(type, STMT_TRY, STMT_SUBROUTINE)
+
 #define STMT_TYPE_IS_LOOP(type) ((type) >= STMT_DO_LOOP)
 
-#define STMT_MAYBE_SCOPE(stmt) STMT_TYPE_MAYBE_SCOPE((stmt)->type)
-#define STMT_IS_SCOPE(stmt) \
-    ((uintN)(((stmt)->type) - STMT_WITH) <= (uintN)(STMT_CATCH - STMT_WITH) ||\
-     ((stmt)->flags & SIF_SCOPE))
+#define STMT_MAYBE_SCOPE(stmt)  STMT_TYPE_MAYBE_SCOPE((stmt)->type)
+#define STMT_IS_SCOPE(stmt)     (STMT_TYPE_IS_SCOPE((stmt)->type) ||          \
+                                 ((stmt)->flags & SIF_SCOPE))
+#define STMT_IS_TRYING(stmt)    STMT_TYPE_IS_TRYING((stmt)->type)
 #define STMT_IS_LOOP(stmt)      STMT_TYPE_IS_LOOP((stmt)->type)
 
 typedef struct JSStmtInfo JSStmtInfo;
@@ -95,23 +103,31 @@ struct JSStmtInfo {
     ptrdiff_t       update;         /* loop update offset (top if none) */
     ptrdiff_t       breaks;         /* offset of last break in loop */
     ptrdiff_t       continues;      /* offset of last continue in loop */
-    ptrdiff_t       gosub;          /* offset of last GOSUB for this finally */
-    ptrdiff_t       catchJump;      /* offset of last end-of-catch jump */
-    JSAtom          *label;         /* name of LABEL or CATCH var */
+    JSAtom          *atom;          /* name of LABEL, or block scope object */
     JSStmtInfo      *down;          /* info for enclosing statement */
     JSStmtInfo      *downScope;     /* next enclosing lexical scope */
-    JSObject        *blockObj;      /* block object if BLOCK_SCOPE */
 };
 
-#define SIF_BODY_BLOCK  0x0001      /* STMT_BLOCK type is a function body */
-#define SIF_SCOPE       0x0002      /* This statement contains a scope. */
+#define SIF_SCOPE        0x0002     /* statement has its own lexical scope */
+#define SIF_BODY_BLOCK   0x0001     /* STMT_BLOCK type is a function body */
+
+/*
+ * To reuse space in JSStmtInfo, rename breaks and continues for use during
+ * try/catch/finally code generation and backpatching.  To match most common
+ * use cases, the macro argument is a struct, not a struct pointer.  Only a
+ * loop, switch, or label statement info record can have breaks and continues,
+ * and only a for loop has an update backpatch chain, so it's safe to overlay
+ * these for the "trying" JSStmtTypes.
+ */
+#define CATCHNOTE(stmt)  ((stmt).update)
+#define GOSUBS(stmt)     ((stmt).breaks)
+#define GUARDJUMP(stmt)  ((stmt).continues)
 
 #define AT_TOP_LEVEL(tc)                                                      \
     (!(tc)->topStmt || ((tc)->topStmt->flags & SIF_BODY_BLOCK))
 
 #define SET_STATEMENT_TOP(stmt, top)                                          \
-    ((stmt)->update = (top), (stmt)->breaks =                                 \
-     (stmt)->continues = (stmt)->catchJump = (stmt)->gosub = (-1))
+    ((stmt)->update = (top), (stmt)->breaks = (stmt)->continues = (-1))
 
 struct JSTreeContext {              /* tree context for semantic checks */
     uint16          flags;          /* statement state flags, see below */
@@ -353,9 +369,13 @@ js_InStatement(JSTreeContext *tc, JSStmtType type);
 /* Test whether we're in a with statement. */
 #define js_InWithStatement(tc)      js_InStatement(tc, STMT_WITH)
 
-/* Test whether we're in a catch block with exception named by atom. */
+/*
+ * Test whether atom refers to a global variable (or is a reference error).
+ * Return true in *loopyp if any loops enclose the lexical reference, false
+ * otherwise.
+ */
 extern JSBool
-js_InCatchBlock(JSTreeContext *tc, JSAtom *atom);
+js_IsGlobalReference(JSTreeContext *tc, JSAtom *atom, JSBool *loopyp);
 
 /*
  * Push the C-stack-allocated struct at stmt onto the stmtInfo stack.
@@ -365,12 +385,12 @@ js_PushStatement(JSTreeContext *tc, JSStmtInfo *stmt, JSStmtType type,
                  ptrdiff_t top);
 
 /*
- * Push a block scope statement and link blockObj into tc->blockChain.  To pop
- * this statement info record, use js_PopStatement as usual, or if appropriate
- * (if generating code), js_PopStatementCG.
+ * Push a block scope statement and link blockAtom's object-valued key into
+ * tc->blockChain.  To pop this statement info record, use js_PopStatement as
+ * usual, or if appropriate (if generating code), js_PopStatementCG.
  */
 extern void
-js_PushBlockScope(JSTreeContext *tc, JSStmtInfo *stmt, JSObject *blockObj,
+js_PushBlockScope(JSTreeContext *tc, JSStmtInfo *stmt, JSAtom *blockAtom,
                   ptrdiff_t top);
 
 /*
@@ -381,7 +401,8 @@ extern void
 js_PopStatement(JSTreeContext *tc);
 
 /*
- * Like js_PopStatement(&cg->treeContext), also patch breaks and continues.
+ * Like js_PopStatement(&cg->treeContext), also patch breaks and continues
+ * unless the top statement info record represents a try-catch-finally suite.
  * May fail if a jump offset overflows.
  */
 extern JSBool
