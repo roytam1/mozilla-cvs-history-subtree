@@ -37,7 +37,7 @@
 # NSIS defines for release builds.
 # The nightly build branding.nsi is located in browser/installer/windows/nsis/
 !define BrandShortName        "Firefox"
-!define BrandFullName         "Mozilla Firefox 2 Beta 2"
+!define BrandFullName         "Mozilla Firefox"
 # BrandFullNameInternal is used for some registry and file system values that
 # should not contain release that may be in the BrandFullName (e.g. Beta 1, etc.)
 !define BrandFullNameInternal "Mozilla Firefox"
@@ -49,4 +49,4 @@
 # Set to 75 for Firefox 2.0 beta releases and should be changed to 10 for the
 # Firefox 2.0 Official Release.
 # Percentage of new "Standard" installs to enable talkback for
-!define RandomPercent         "75"
+!define RandomPercent         "10"
