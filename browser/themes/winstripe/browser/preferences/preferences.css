@@ -259,3 +259,8 @@ filefield[disabled="true"] .fileFieldIcon {
   -moz-margin-start: 6px !important; 
   font-weight: bold;
 }
+
+/* Feeds pane */
+#chooseClientAppCell {
+  -moz-padding-end: 12px;
+}
