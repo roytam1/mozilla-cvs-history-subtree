@@ -75,7 +75,7 @@ textbox.padded {
   height: 20px;
   margin: 0px;
   padding: 0px;
-  list-style-image: url("chrome://global/skin/autocomplete-dropmark-arrow.png");
+  list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-arrow.png");
   -moz-image-region: rect(0px, 16px, 20px, 0px);
 }
 
@@ -88,7 +88,7 @@ textbox.padded {
 }
 
 .autocomplete-dropmarker-bkgnd {
-  list-style-image: url("chrome://global/skin/autocomplete-dropmark-bkgnd.png");
+  list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-bkgnd.png");
 }
 
 .autocomplete-dropmarker-bkgnd-top {
