@@ -702,7 +702,7 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
     JSStackFrame *fp, frame;
     JSObject *funobj;
     JSStmtInfo stmtInfo;
-    uintN oldflags;
+    uintN oldflags, firstLine;
     JSParseNode *pn;
 
     fp = cx->fp;
@@ -730,6 +730,13 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
     oldflags = tc->flags;
     tc->flags &= ~(TCF_RETURN_EXPR | TCF_RETURN_VOID);
     tc->flags |= TCF_IN_FUNCTION;
+
+    /*
+     * Save the body's first line, and store it in pn->pn_pos.begin.lineno
+     * later, because we may have not peeked in ts yet, so Statements won't
+     * acquire a valid pn->pn_pos.begin from the current token.
+     */
+    firstLine = ts->lineno;
     pn = Statements(cx, ts, tc);
 
     js_PopStatement(tc);
@@ -745,14 +752,17 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
      * function's code.  We must do this here, not in js_CompileFunctionBody,
      * in order to detect TCF_IN_FUNCTION among tc->flags.
      */
-    if (pn && (tc->flags & TCF_COMPILING)) {
-        JSCodeGenerator *cg = (JSCodeGenerator *) tc;
+    if (pn) {
+        pn->pn_pos.begin.lineno = firstLine;
+        if ((tc->flags & TCF_COMPILING)) {
+            JSCodeGenerator *cg = (JSCodeGenerator *) tc;
 
-        if (!js_FoldConstants(cx, pn, tc) ||
-            !js_AllocTryNotes(cx, cg) ||
-            !js_EmitTree(cx, cg, pn) ||
-            js_Emit1(cx, cg, JSOP_STOP) < 0) {
-            pn = NULL;
+            if (!js_FoldConstants(cx, pn, tc) ||
+                !js_AllocTryNotes(cx, cg) ||
+                !js_EmitTree(cx, cg, pn) ||
+                js_Emit1(cx, cg, JSOP_STOP) < 0) {
+                pn = NULL;
+            }
         }
     }
 
@@ -1364,6 +1374,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
          * sub-statement.
          */
         op = JSOP_CLOSURE;
+        tc->flags |= TCF_HAS_CLOSURE;
     } else {
         op = JSOP_NOP;
     }
@@ -2532,7 +2543,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 
       case TOK_SWITCH:
       {
-        JSParseNode *pn5;
+        JSParseNode *pn5, *saveBlock;
         JSBool seenDefault = JS_FALSE;
 
         pn = NewParseNode(cx, ts, PN_BINARY, tc);
@@ -2552,6 +2563,8 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         pn2 = NewParseNode(cx, ts, PN_LIST, tc);
         if (!pn2)
             return NULL;
+        saveBlock = tc->blockNode;
+        tc->blockNode = pn2;
         PN_INIT_LIST(pn2);
 
         js_PushStatement(tc, &stmtInfo, STMT_SWITCH, -1);
@@ -2626,11 +2639,20 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             pn3->pn_right = pn4;
         }
 
+        /*
+         * Handle the case where there was a let declaration in any case in
+         * the switch body, but not within an inner block.  If it replaced
+         * tc->blockNode with a new block node then we must refresh pn2 and
+         * then restore tc->blockNode.
+         */
+        if (tc->blockNode != pn2)
+            pn2 = tc->blockNode;
+        tc->blockNode = saveBlock;
         js_PopStatement(tc);
 
         pn->pn_pos.end = pn2->pn_pos.end = CURRENT_TOKEN(ts).pos.end;
-        pn->pn_kid1 = pn1;
-        pn->pn_kid2 = pn2;
+        pn->pn_left = pn1;
+        pn->pn_right = pn2;
         return pn;
       }
 
@@ -3350,6 +3372,11 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 
       case TOK_LC:
+      {
+        uintN oldflags;
+
+        oldflags = tc->flags;
+        tc->flags = oldflags & ~TCF_HAS_CLOSURE;
         js_PushStatement(tc, &stmtInfo, STMT_BLOCK, -1);
         pn = Statements(cx, ts, tc);
         if (!pn)
@@ -3357,7 +3384,18 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 
         MUST_MATCH_TOKEN(TOK_RC, JSMSG_CURLY_IN_COMPOUND);
         js_PopStatement(tc);
+
+        /*
+         * If we contain a function statement and our container is top-level
+         * or another block, flag pn to preserve braces when decompiling.
+         */
+        if ((tc->flags & TCF_HAS_CLOSURE) &&
+            (!tc->topStmt || tc->topStmt->type == STMT_BLOCK)) {
+            pn->pn_extra |= PNX_NEEDBRACES;
+        }
+        tc->flags = oldflags | (tc->flags & TCF_FUN_FLAGS);
         return pn;
+      }
 
       case TOK_EOL:
       case TOK_SEMI:
