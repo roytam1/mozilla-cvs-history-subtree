@@ -4160,11 +4160,14 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             top = CG_OFFSET(cg);
             SET_STATEMENT_TOP(&stmtInfo, top);
 
-#if JS_HAS_XML_SUPPORT
-            /* Emit a prefix opcode if 'for each (... in ...)' was used. */
-            if (pn->pn_op != JSOP_NOP && js_Emit1(cx, cg, pn->pn_op) < 0)
+            /*
+             * Emit a prefix bytecode to set flags distinguishing kinds of
+             * for-in loops (for-in, for-each-in, destructuring for-in) for
+             * the immediately subsequent JSOP_FOR* bytecode.
+             */
+            JS_ASSERT(pn->pn_op != JSOP_NOP);
+            if (js_Emit1(cx, cg, pn->pn_op) < 0)
                 return JS_FALSE;
-#endif
 
             /* Compile a JSOP_FOR* bytecode based on the left hand side. */
             emitIFEQ = JS_TRUE;
