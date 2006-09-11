@@ -744,6 +744,12 @@ LDAP_API(int) LDAP_CALL ldap_passwd_s( LDAP *ld, struct berval *userid,
 
 LDAP_API(int) LDAP_CALL ldap_parse_passwd( LDAP *ld, LDAPMessage *result,
 	struct berval *genpasswd );
+    
+/*
+ * in reslist.c
+ */
+LDAP_API(LDAPMessage *) LDAP_CALL ldap_delete_result_entry( LDAPMessage **list, LDAPMessage *e );
+LDAP_API(void) LDAP_CALL ldap_add_result_entry( LDAPMessage **list, LDAPMessage *e );
 
 #ifdef __cplusplus
 }

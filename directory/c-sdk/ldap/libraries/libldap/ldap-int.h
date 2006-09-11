@@ -814,12 +814,6 @@ char **nsldapi_getdxbyname( char *domain );
 void nsldapi_hex_unescape( char *s );
 
 /*
- * in reslist.c
- */
-LDAPMessage *ldap_delete_result_entry( LDAPMessage **list, LDAPMessage *e );
-void ldap_add_result_entry( LDAPMessage **list, LDAPMessage *e );
-
-/*
  * in compat.c
  */
 #ifdef hpux

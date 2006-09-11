@@ -303,6 +303,9 @@
 571 ldap_parse_passwd
 573 ldap_passwd_s
 #
+580 ldap_delete_result_entry
+581 ldap_add_result_entry
+#
 1000	ldap_memcache_init
 1001	ldap_memcache_set
 1002	ldap_memcache_get
