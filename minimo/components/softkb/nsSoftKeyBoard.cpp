@@ -564,14 +564,14 @@ nsSoftKeyBoardService::HandlePref(const char* pref, nsIPrefBranch2* prefBranch)
 {
   if (!strcmp(pref, "skey.enabled"))
   {
-    PRBool enabled;
+    PRBool enabled = gUseSoftwareKeyboard;
     prefBranch->GetBoolPref(pref, &enabled);
     gUseSoftwareKeyboard = enabled;
   }
 
   if (!strcmp(pref, "skey.notifyOnly"))
   {
-    PRBool enabled;
+    PRBool enabled = gNotifyOnly;
     prefBranch->GetBoolPref(pref, &enabled);
     gNotifyOnly = enabled;
   }
