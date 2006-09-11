@@ -42,6 +42,8 @@ USE_AUTOCONF	= 1
 @SHELL_OVERRIDE@
 MOZILLA_CLIENT	= @MOZILLA_CLIENT@
 
+MFLAGS	= @MFLAGS@
+
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
 bindir		= @bindir@

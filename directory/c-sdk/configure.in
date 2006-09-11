@@ -62,6 +62,7 @@ _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 MOZ_DEBUG=1
 MOZ_OPTIMIZE=
+MFLAGS=
 OBJDIR=.
 OBJDIR_NAME=.
 NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
@@ -549,9 +550,11 @@ if test -n "$MOZ_DEBUG"; then
         DEFINES="$MOZ_DEBUG_ENABLE_DEFS -DDEBUG_`$WHOAMI`"
         ;;
     esac
+    MFLAGS="BUILD_DEBUG=full"
 else
     AC_DEFINE(NDEBUG)
     DEFINES="$DEFINES -UDEBUG"
+    MFLAGS="BUILD_DEBUG=optimize"
 fi
 
 dnl Use mozilla's nsinstall
@@ -2551,6 +2554,8 @@ AC_SUBST(OS_DLLFLAGS)
 AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(WIN_TOP_SRC)
 AC_SUBST(NEXT_ROOT)
+
+AC_SUBST(MFLAGS)
 
 dnl ========================================================
 dnl Generate output files.
