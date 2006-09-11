@@ -936,7 +936,6 @@ function AddExtraAddressProcessing(emailAddress, addressNode)
   {
     if (useDisplayNameForAddress(emailAddress))
       addressNode.setAttribute("label", displayName);
-    addressNode.setAttribute("label", displayName); 
     addressNode.setAttribute("tooltiptext", emailAddress);
     addressNode.setAttribute("tooltip", "emailAddressTooltip");
   }
