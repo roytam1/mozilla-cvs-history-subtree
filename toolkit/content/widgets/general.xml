@@ -308,8 +308,14 @@
       <property name="accessible">
         <getter>
           <![CDATA[
-            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
-            return accService.createXULImageAccessible(this);
+            try {
+              var accService = Components.classes["@mozilla.org/accessibilityService;1"]
+                                         .getService(Components.interfaces.nsIAccessibilityService);
+              return accService.createXULImageAccessible(this);
+            }
+            catch(ex) { /* no chrome privileges */ }
+
+            return null;
           ]]>
         </getter>
       </property>
@@ -362,8 +368,14 @@
       <property name="accessible">
         <getter>
           <![CDATA[
-            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
-            return accService.createXULDropmarkerAccessible(this);
+            try {
+              var accService = Components.classes["@mozilla.org/accessibilityService;1"]
+                                         .getService(Components.interfaces.nsIAccessibilityService);
+              return accService.createXULDropmarkerAccessible(this);
+            }
+            catch(ex) { /* no chrome privileges */ }
+
+            return null;
           ]]>
         </getter>
       </property>

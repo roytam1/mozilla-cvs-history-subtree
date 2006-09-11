@@ -61,6 +61,7 @@ function LOG(str) {
 const XML_NS = "http://www.w3.org/XML/1998/namespace"
 const HTML_NS = "http://www.w3.org/1999/xhtml";
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+const AAA_NS = "http://www.w3.org/2005/07/aaa";
 const TYPE_MAYBE_FEED = "application/vnd.mozilla.maybe.feed";
 const URI_BUNDLE = "chrome://browser/locale/feeds/subscribe.properties";
 
@@ -348,6 +349,26 @@ FeedWriter.prototype = {
   },
 
   /**
+   * Helper method to set the selected application and system default
+   * reader menuitems details from a file object
+   *   @param aMenuItem
+   *          The menuitem on which the attributes should be set
+   *   @param aFile
+   *          the menuitem associated file object
+   */
+  _initMenuItemWithFile: function(aMenuItem, aFile) {
+    var label = this._getFileDisplayName(aFile);
+    aMenuItem.setAttribute("label", label);
+    aMenuItem.setAttribute("src",
+                          this._getFileIconURL(aFile));
+    aMenuItem.setAttribute("handlerType", "client");
+    aMenuItem.wrappedJSObject.file = aFile;
+
+    // a11y
+    aMenuItem.setAttribute("title", label);
+  },
+
+  /**
    * Displays a prompt from which the user may choose a (client) feed reader.
    * @return - true if a feed reader was selected, false otherwise.
    */
@@ -377,11 +398,7 @@ FeedWriter.prototype = {
             var selectedAppMenuItem =
               this._document.getElementById("selectedAppMenuItem");
 
-            selectedAppMenuItem.wrappedJSObject.file = selectedApp;
-            selectedAppMenuItem.setAttribute("label",
-                                             this._getFileDisplayName(selectedApp));
-            selectedAppMenuItem.setAttribute("src",
-                                             this._getFileIconURL(selectedApp));
+            this._initMenuItemWithFile(selectedAppMenuItem, selectedApp);
 
             // Show and select the selected application menuitem
             selectedAppMenuItem.wrappedJSObject.hidden = false;
@@ -417,7 +434,11 @@ FeedWriter.prototype = {
       var handlersMenuList = this._document.getElementById("handlersMenuList");
       if (handlersMenuList) {
         var handlerName = handlersMenuList.wrappedJSObject.selectedItem.getAttribute("label");
-        checkbox.wrappedJSObject.label = this._getFormattedString("alwaysUse", [handlerName]);
+        var label = this._getFormattedString("alwaysUse", [handlerName]);
+        checkbox.wrappedJSObject.label = label;
+
+        // Needed for a11y
+        checkbox.setAttribute("title", label);
       }
     }
   },
@@ -431,9 +452,9 @@ FeedWriter.prototype = {
       return;
     }
 
-    switch(event.type) {
+    switch (event.type) {
       case "command" : {
-        switch(event.target.id) {
+        switch (event.target.id) {
           case "subscribeButton":
             this.subscribe();
             break;
@@ -443,6 +464,9 @@ FeedWriter.prototype = {
             // mouse-case.
             break;
           default:
+            event.target.parentNode.parentNode.setAttributeNS
+              (AAA_NS, "valuenow", event.target.getAttribute("label"));
+
             this._setAlwaysUseLabel();
         }
         break;
@@ -455,6 +479,14 @@ FeedWriter.prototype = {
           }
         }
       }
+      case "CheckboxStateChange": {
+        // Needed for a11y
+        var checkbox = this._document.getElementById("alwaysUse");
+        if (checkbox.wrappedJSObject.getAttributeNS("", "checked") == "true")
+          checkbox.wrappedJSObject.setAttributeNS(AAA_NS, "checked", "true");
+        else
+          checkbox.wrappedJSObject.setAttributeNS(AAA_NS, "checked", "false");
+       }
     }
   },
 
@@ -495,12 +527,7 @@ FeedWriter.prototype = {
           } catch(ex) { }
 
           if (selectedApp) {
-            selectedAppMenuItem.file = selectedApp;
-            selectedAppMenuItem.setAttribute("label",
-                                             this._getFileDisplayName(selectedApp));
-            selectedAppMenuItem.setAttribute("src",
-                                             this._getFileIconURL(selectedApp));
-
+            this._initMenuItemWithFile(selectedAppMenuItem, selectedApp);
             selectedAppMenuItem.wrappedJSObject.hidden = false;
             selectedAppMenuItem.doCommand();
 
@@ -539,19 +566,18 @@ FeedWriter.prototype = {
     menuItem = this._document.createElementNS(XUL_NS, "menuitem");
     menuItem.id = "selectedAppMenuItem";
     menuItem.className = "menuitem-iconic";
+
+    // a11y
+    menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                            "role", "wairole:listitem");
+    menuItem.setAttributeNS(AAA_NS, "selected", "false");
     try {
       var prefs = Cc["@mozilla.org/preferences-service;1"].
                   getService(Ci.nsIPrefBranch);
       selectedApp = prefs.getComplexValue(PREF_SELECTED_APP,
                                           Ci.nsILocalFile);
-      if (selectedApp.exists()) {
-        menuItem.setAttribute("label",
-                              this._getFileDisplayName(selectedApp));
-        menuItem.setAttribute("src",
-                              this._getFileIconURL(selectedApp));
-        menuItem.setAttribute("handlerType", "client");
-        menuItem.wrappedJSObject.file = selectedApp;
-      }
+      if (selectedApp.exists())
+        this._initMenuItemWithFile(menuItem, selectedApp);
       else {
         // Hide the menuitem if the last selected application doesn't exist
         menuItem.setAttribute("hidden", "true");
@@ -591,18 +617,17 @@ FeedWriter.prototype = {
         menuItem = this._document.createElementNS(XUL_NS, "menuitem");
         menuItem.id = "defaultHandlerMenuItem";
         menuItem.className = "menuitem-iconic";
-        menuItem.setAttribute("label",
-                              this._getFileDisplayName(defaultReader));
-        menuItem.setAttribute("src",
-                              this._getFileIconURL(defaultReader));
-        menuItem.setAttribute("handlerType", "client");
-        menuItem.wrappedJSObject.file = defaultReader;
+        // a11y
+        menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                                "role", "wairole:listitem");
+        this._initMenuItemWithFile(menuItem, defaultReader);
+
 
         // Hide the default reader item if it points to the same application
         // as the last-selected application
         if (selectedApp && selectedApp.path == defaultReader.path )
           menuItem.setAttribute("hidden", "true");
-  
+
         handlersMenuPopup.appendChild(menuItem);
       }
     }
@@ -614,8 +639,15 @@ FeedWriter.prototype = {
     // "Choose Application..." menuitem
     menuItem = this._document.createElementNS(XUL_NS, "menuitem");
     menuItem.id = "chooseApplicationMenuItem";
-    menuItem.setAttribute("label", this._getString("chooseApplicationMenuItem"));
+
+    var chooseAppItemLabel = this._getString("chooseApplicationMenuItem");
+    menuItem.setAttribute("label", chooseAppItemLabel);
+    // a11y
+    menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                            "role", "wairole:listitem");
+    menuItem.setAttribute("title", chooseAppItemLabel);
     menuItem.addEventListener("click", this, false);
+
     handlersMenuPopup.appendChild(menuItem);
 
     // separator
@@ -640,19 +672,26 @@ FeedWriter.prototype = {
         var uri = ios.newURI(handlers[i].uri, null, null);
         menuItem.setAttribute("src", uri.prePath + "/favicon.ico");
 
+        // a11y
+        menuItem.setAttribute("title", handlers[i].name);
+        menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                                "role", "wairole:listitem");
+
         handlersMenuPopup.appendChild(menuItem);
       }
     }
 
+    // We update the "Always use.." checkbox label whenever the selected item
+    // in the list is changed
+    handlersMenuPopup.addEventListener("command", this, false);
     this._setSelectedHandler();
 
     // "Always use..." checkbox initial state
     this._setAlwaysUseCheckedState();
-    this._setAlwaysUseLabel();
 
-    // We update the "Always use.." checkbox label whenever the selected item
-    // in the list is changed
-    handlersMenuPopup.addEventListener("command", this, false);
+    // Syncs xul:checked with aaa:checked, needed for a11y
+    var checkbox = this._document.getElementById("alwaysUse");
+    checkbox.addEventListener("CheckboxStateChange", this, false);
 
     // Set up the "Subscribe Now" button
     this._document

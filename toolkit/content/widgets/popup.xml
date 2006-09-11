@@ -22,11 +22,15 @@
       <property name="accessible">
         <getter>
           <![CDATA[
-            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
-            if (this.localName == "popup" || this.localName == "menupopup")
-              return accService.createXULMenupopupAccessible(this);
-            else if (this.localName == "tooltip")
-              return accService.createXULTooltipAccessible(this);
+            try {
+              var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+              if (this.localName == "popup" || this.localName == "menupopup")
+                return accService.createXULMenupopupAccessible(this);
+              else if (this.localName == "tooltip")
+                return accService.createXULTooltipAccessible(this);
+            }
+            catch(ex) { /* no chrome privileges */ }
+
             return null;
           ]]>
         </getter>
@@ -667,4 +671,3 @@
   </binding>
 
 </bindings>
-

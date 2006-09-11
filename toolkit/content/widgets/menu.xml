@@ -18,10 +18,16 @@
       <property name="accessible">
         <getter>
           <![CDATA[
-            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
-            if (this.localName == "menuseparator")
-              return accService.createXULMenuSeparatorAccessible(this);
-            return accService.createXULMenuitemAccessible(this);
+            try {
+              var accService = Components.classes["@mozilla.org/accessibilityService;1"]
+                                         .getService(Components.interfaces.nsIAccessibilityService);
+              if (this.localName == "menuseparator")
+                return accService.createXULMenuSeparatorAccessible(this);
+              return accService.createXULMenuitemAccessible(this);
+            }
+            catch(ex) { /* no chrome privileges */ }
+
+            return null;
           ]]>
         </getter>
       </property>
