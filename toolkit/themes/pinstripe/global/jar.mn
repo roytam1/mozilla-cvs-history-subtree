@@ -110,6 +110,7 @@ classic.jar:
 +  skin/classic/global/icons/chevron.png                              (icons/chevron.png)
 +  skin/classic/global/icons/close.gif                                (icons/close.gif)
 +  skin/classic/global/icons/closetab-active.png                      (icons/closetab-active.png)
++  skin/classic/global/icons/closetab-hover.png                       (icons/closetab-hover.png)
 +  skin/classic/global/icons/closetab.png                             (icons/closetab.png)
 +  skin/classic/global/icons/find.png                                 (icons/find.png)
 +  skin/classic/global/icons/find-bar-background.png                  (icons/find-bar-background.png)

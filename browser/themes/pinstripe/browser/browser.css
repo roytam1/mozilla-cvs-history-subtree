@@ -981,19 +981,19 @@ statusbarpanel#statusbar-display {
   border-left: 0 !important;
   min-width: 0;
   list-style-image: url("chrome://browser/skin/Go.png");
-  -moz-image-region: rect(0px, 25px, 24px, 0px);
+  -moz-image-region: rect(0px, 25px, 22px, 0px);
 }
 
 #go-button:hover {
-  -moz-image-region: rect(0px, 50px, 24px, 25px);
+  -moz-image-region: rect(0px, 50px, 22px, 25px);
 }
 
 #go-button[disabled="true"] {
-  -moz-image-region: rect(0px, 75px, 24px, 50px);
+  -moz-image-region: rect(0px, 75px, 22px, 50px);
 }
 
 #go-button:hover:active {
-  -moz-image-region: rect(0px, 100px, 24px, 75px);
+  -moz-image-region: rect(0px, 100px, 22px, 75px);
 }
 
 toolbar:not([mode="text"]) #go-button,
@@ -1184,7 +1184,10 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 	background-image: none !important;
 }
 
-.tabs-closebutton:hover,
+.tabs-closebutton:hover {
+  list-style-image: url("chrome://global/skin/icons/closetab-hover.png") !important;
+}
+
 .tabs-closebutton:hover:active {
 	list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
 }

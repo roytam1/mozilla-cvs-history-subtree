@@ -51,7 +51,10 @@ notification[type="critical"] {
   display: none;
 }
 
-.messageCloseButton:hover,
+.messageCloseButton:hover {
+  list-style-image: url("chrome://global/skin/icons/closetab-hover.png") !important;
+}
+
 .messageCloseButton:hover:active {
   list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
 }
