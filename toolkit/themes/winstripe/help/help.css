@@ -41,26 +41,12 @@ toolbar toolbarbutton {
   -moz-box-orient: horizontal !important;
   min-width: 0px;
   list-style-image: url("chrome://help/skin/Toolbar.png");
-  -moz-appearance: none;
-  border: 0;
+  margin: 0 !important;
+  padding: 4px 5px;
 }
 
 toolbar[chromedir="rtl"] toolbarbutton {
   list-style-image: url("chrome://help/skin/Toolbar-rtl.png");
-}
-
-toolbarbutton:not([disabled="true"]):hover,
-menubutton:not([disabled="true"]):hover {
-  color: -moz-buttonhovertext;
-}
-
-toolbarbutton:not([disabled="true"]):hover,
-menubutton:not([disabled="true"]):hover,
-toolbarbutton:not([disabled="true"]):active,
-menubutton:not([disabled="true"]):active {
-  margin: 0px;
-  padding: 3px;
-  color: ButtonText !important;
 }
 
 /* Hide labels for the toolbar because we really don't need them what with the
@@ -72,24 +58,9 @@ toolbar#HelpToolbar .toolbarbutton-text{
 /* Set the minimum sidebar width so the help contents aren't squeezed together.*/
 #help-sidebar { min-width: 15em; width: 20em; max-width: 25em; }
 
-/* ----- BACK AND FORWARD BUTTONS ----- */
-
-#help-back-button > toolbarbutton,
-#help-forward-button > toolbarbutton {
-  -moz-padding-start: 0px !important;
-  -moz-padding-end: 0px !important;
-}
-
-#help-back-button > toolbarbutton > image,
-#help-forward-button > toolbarbutton > image {
-	-moz-margin-end: 0px;
-}
-
 /* ----- BACK BUTTON ----- */
 
 #help-back-button {
-  -moz-margin-start: 5px !important;
-  -moz-margin-end: 2px;
   -moz-image-region: rect(0px 24px 24px 0px); 
 }
 
@@ -105,44 +76,8 @@ toolbar#HelpToolbar .toolbarbutton-text{
   -moz-image-region: rect(72px 24px 96px 0px); 
 }
 
-#help-back-button .toolbarbutton-text {
-  display:none !important;
-}
-
 #help-back-button .toolbarbutton-menubutton-button {
   -moz-box-align: end !important;
-}
-
-/* ----- BACK BUTTON DROPMARKER ----- */
-
-#help-back-button > .toolbarbutton-menubutton-dropmarker {
-  margin-top: 4px;
-  list-style-image: url("chrome://browser/skin/dropmark-nav.png");
-  -moz-image-region: rect(0px 14px 24px 0px);
-  padding: 0;
-}
-
-#help-back-button[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png");
-}
-
-#help-back-button:not([disabled="true"]):hover > .toolbarbutton-menubutton-dropmarker,
-#help-back-button:not([disabled="true"])[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(24px 14px 48px 0px);
-}
-
-#help-back-button[disabled="true"] > .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
-  -moz-image-region: rect(48px 14px 72px 0px);
-}
-
-#help-back-button[chromedir="rtl"][disabled="true"] > .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png") !important;
-}
-
-#help-back-button:not([disabled="true"])[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
-#help-back-button:not([disabled="true"]):hover:active > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(72px 14px 96px 0px);
 }
 
 /* ----- FORWARD BUTTON ----- */
@@ -163,43 +98,6 @@ toolbar#HelpToolbar .toolbarbutton-text{
   -moz-image-region: rect(72px 48px 96px 24px); 
 }
 
-#help-forward-button .toolbarbutton-text {
-  display:none !important;
-}
-
-/* ----- FORWARD BUTTON DROPMARKER ----- */
-
-#help-forward-button > .toolbarbutton-menubutton-dropmarker {
-  margin-top: 4px;
-  list-style-image: url("chrome://browser/skin/dropmark-nav.png");
-  -moz-image-region: rect(0px 14px 24px 0px);
-  padding: 0;
-}
-
-#help-forward-button[chromedir="rtl"] > .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png");
-}
-
-#help-forward-button:not([disabled="true"]):hover > .toolbarbutton-menubutton-dropmarker,
-#help-forward-button:not([disabled="true"])[buttonover="true"] > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(24px 14px 48px 0px);
-}
-
-#help-forward-button[disabled="true"] > .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/dropmark-nav.png") !important;
-  -moz-image-region: rect(48px 14px 72px 0px);
-}
-
-#help-forward-button[chromedir="rtl"][disabled="true"] > .toolbarbutton-menubutton-dropmarker {
-  list-style-image: url("chrome://browser/skin/dropmark-nav-rtl.png") !important;
-}
-
-#help-forward-button:not([disabled="true"])[buttondown="true"] > .toolbarbutton-menubutton-dropmarker,
-#help-forward-button:not([disabled="true"]):hover:active > .toolbarbutton-menubutton-dropmarker {
-  -moz-image-region: rect(72px 14px 96px 0px);
-}
-
-
 /* ----- HOME BUTTON ----- */
 
 #help-home-button { 
@@ -218,11 +116,6 @@ toolbar#HelpToolbar .toolbarbutton-text{
   -moz-image-region: rect(72px 72px 96px 48px); 
 }
 
-#help-home-button .toolbarbutton-text {
-  display:none !important;
-}
-
-
 /* ----- PRINT BUTTON ----- */
 
 #help-print-button { 
@@ -239,10 +132,6 @@ toolbar#HelpToolbar .toolbarbutton-text{
 
 #help-print-button:not([disabled="true"]):hover:active { 
   -moz-image-region: rect(72px 96px 96px 72px); 
-}
-
-#help-print-button .toolbarbutton-text {
-  display:none !important;
 }
 
 /* ----- OTHER ----- */

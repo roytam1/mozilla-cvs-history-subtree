@@ -6,9 +6,8 @@
 }
 %endif
 
-#searchbar .search-go-button,
-#searchbar .searchbar-textbox {
-	border: 0px !important;
+#searchbar .search-go-button {
+  border: 0px !important;
 }
 
 .searchbar-textbox {
@@ -17,16 +16,18 @@
   margin-right: 0px;
   margin-left: 0px;
   background-color: -moz-field;
-  border: none;
-}
 
-.autocomplete-textbox-container {
   -moz-appearance: none;
   -moz-border-top-colors: #96969D;
   -moz-border-bottom-colors: #96969D;
   -moz-border-right-colors: #96969D;
-  border-width: 1px 1px 1px 0px;
-  margin: 0px;
+  -moz-border-left-colors: #96969D;
+  border-width: 1px 1px 1px 0;
+}
+
+#search-container[chromedir="rtl"] .searchbar-textbox {
+  border-right-width: 0;
+  border-left-width: 1px;
 }
 
 .textbox-input {
