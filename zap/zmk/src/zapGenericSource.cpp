@@ -42,8 +42,8 @@
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapGenericSource)
-NS_IMPL_RELEASE(zapGenericSource)
+NS_IMPL_THREADSAFE_ADDREF(zapGenericSource)
+NS_IMPL_THREADSAFE_RELEASE(zapGenericSource)
 
 NS_INTERFACE_MAP_BEGIN(zapGenericSource)
   NS_INTERFACE_MAP_ENTRY(nsISupports)

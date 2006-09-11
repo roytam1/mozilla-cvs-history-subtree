@@ -333,13 +333,17 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
     *result = nsnull;
     return NS_ERROR_FAILURE;
   }
+
+  PRInt32 proxyType = 0; // NS_PROXY_ALWAYS | NS_PROXY_AUTOPROXIFY | NS_PROXY_ISUPPORTS
+  
   if (synchronous)
-    return nd->node->QueryInterface(uuid, result);
+    proxyType |= NS_PROXY_SYNC;
   else
-    return NS_GetProxyForObject(mMediaThread, uuid, nd->node,
-                                NS_PROXY_ASYNC | NS_PROXY_ALWAYS |
-                                NS_PROXY_AUTOPROXIFY /*| NS_PROXY_ISUPPORTS*/,
-                                result);
+    proxyType |= NS_PROXY_ASYNC;
+
+  return NS_GetProxyForObject(mMediaThread, uuid, nd->node,
+                              proxyType,
+                              result);
 }
 
 /* void setAlias (in ACString alias, in ACString id_or_alias); */
@@ -562,7 +566,9 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
 
   // Return a proxy for the media graph:
   rv = NS_GetProxyForObject(mediaThread, aIID, mediaGraph,
-                            NS_PROXY_SYNC | NS_PROXY_ALWAYS | NS_PROXY_AUTOPROXIFY
+                            NS_PROXY_SYNC
+                            /* | NS_PROXY_ALWAYS */
+                            /* | NS_PROXY_AUTOPROXIFY */
                             /* | NS_PROXY_ISUPPORTS */,
                             result);
   

@@ -85,8 +85,8 @@ zapDTMFGenerator::~zapDTMFGenerator()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapDTMFGenerator)
-NS_IMPL_RELEASE(zapDTMFGenerator)
+NS_IMPL_THREADSAFE_ADDREF(zapDTMFGenerator)
+NS_IMPL_THREADSAFE_RELEASE(zapDTMFGenerator)
 
 NS_INTERFACE_MAP_BEGIN(zapDTMFGenerator)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

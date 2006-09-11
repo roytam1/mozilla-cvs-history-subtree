@@ -39,6 +39,8 @@ Components.utils.importModule("gre:FunctionUtils.js");
 
 
 EXPORTED_SYMBOLS = [ "getMainThread",
+                     "getSyncProxyOnMainThread",
+                     "getAsyncProxyOnMainThread",
                      "makeOneShotTimer",
                      "resetOneShotTimer",
                      "schedule",
@@ -51,9 +53,29 @@ EXPORTED_SYMBOLS = [ "getMainThread",
 var getThreadManager = makeServiceGetter("@mozilla.org/thread-manager;1",
                                          Components.interfaces.nsIThreadManager);
 
+var IProxyManager = Components.interfaces.nsIProxyObjectManager;
+var getProxyManager = makeServiceGetter("@mozilla.org/xpcomproxy;1",
+                                        IProxyManager);
+
 defun(
   function getMainThread() {
     return getThreadManager().mainThread;
+  });
+
+defun(
+  function getSyncProxyOnMainThread(obj, itf) {
+    return getProxyManager().getProxyForObject(getMainThread(),
+                                               itf, obj,
+                                               IProxyManager.INVOKE_SYNC |
+                                               IProxyManager.FORCE_PROXY_CREATION);
+  });
+
+defun(
+  function getAsyncProxyOnMainThread(obj, itf) {
+    return getProxyManager().getProxyForObject(getMainThread(),
+                                               itf, obj,
+                                               IProxyManager.INVOKE_ASYNC |
+                                               IProxyManager.FORCE_PROXY_CREATION);
   });
 
 ////////////////////////////////////////////////////////////////////////

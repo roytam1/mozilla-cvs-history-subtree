@@ -9,7 +9,7 @@ var adev = Components.classes["@mozilla.org/zap/audiodevicemanager;1"].getServic
 
 var g = Components.classes["@mozilla.org/zap/mediagraph;1"].createInstance(Components.interfaces.zapIMediaGraph);
 
-var PB = makePropertyBag;
+var PB = makePropertyBag2Proxy;
 
 var audioio = g.addNode("audioio",null);
 //var buf = g.addNode("buffer", null);

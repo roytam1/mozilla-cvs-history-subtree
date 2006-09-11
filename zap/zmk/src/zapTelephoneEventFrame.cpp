@@ -134,8 +134,8 @@ zapTelephoneEventFrame::Init()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapTelephoneEventFrame)
-NS_IMPL_RELEASE(zapTelephoneEventFrame)
+NS_IMPL_THREADSAFE_ADDREF(zapTelephoneEventFrame)
+NS_IMPL_THREADSAFE_RELEASE(zapTelephoneEventFrame)
 
 NS_INTERFACE_MAP_BEGIN(zapTelephoneEventFrame)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapITelephoneEventFrame)

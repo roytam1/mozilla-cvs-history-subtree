@@ -49,7 +49,7 @@ Components.utils.importModule("gre:zapCodecRegistry.js");
 // name our global object:
 function toString() { return "[MediaSession.js]"; }
 
-var PB = makePropertyBag;
+var PB = makePropertyBag2Proxy;
 
 ////////////////////////////////////////////////////////////////////////
 // gSdpService: global sdp service instance

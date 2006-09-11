@@ -46,7 +46,7 @@ EXPORTED_SYMBOLS = [ "createCodecInstance" ];
 // name our global object:
 function toString() { return "[zapCodecRegistry.js]"; }
 
-var PB = makePropertyBag;
+var PB = makePropertyBag2Proxy;
 
 ////////////////////////////////////////////////////////////////////////
 // gSdpService: global sdp service instance

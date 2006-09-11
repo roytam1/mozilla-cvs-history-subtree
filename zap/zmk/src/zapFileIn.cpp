@@ -68,8 +68,8 @@ zapFileIn::~zapFileIn()
 //----------------------------------------------------------------------
 // nsISupports implementation:
 
-NS_IMPL_ADDREF(zapFileIn)
-NS_IMPL_RELEASE(zapFileIn)
+NS_IMPL_THREADSAFE_ADDREF(zapFileIn)
+NS_IMPL_THREADSAFE_RELEASE(zapFileIn)
 
 NS_INTERFACE_MAP_BEGIN(zapFileIn)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

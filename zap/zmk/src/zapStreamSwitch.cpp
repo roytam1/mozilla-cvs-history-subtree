@@ -187,8 +187,8 @@ zapStreamSwitch::~zapStreamSwitch()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapStreamSwitch)
-NS_IMPL_RELEASE(zapStreamSwitch)
+NS_IMPL_THREADSAFE_ADDREF(zapStreamSwitch)
+NS_IMPL_THREADSAFE_RELEASE(zapStreamSwitch)
 
 NS_INTERFACE_MAP_BEGIN(zapStreamSwitch)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

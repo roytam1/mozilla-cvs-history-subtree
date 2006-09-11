@@ -140,6 +140,7 @@ interface zapIMediaGraph : nsISupports
    * The event target for this media graph
    */
   readonly attribute nsIEventTarget eventTarget;
+
 };
 
 %{ C++

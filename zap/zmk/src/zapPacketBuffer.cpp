@@ -80,8 +80,8 @@ zapPacketBuffer::~zapPacketBuffer()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapPacketBuffer)
-NS_IMPL_RELEASE(zapPacketBuffer)
+NS_IMPL_THREADSAFE_ADDREF(zapPacketBuffer)
+NS_IMPL_THREADSAFE_RELEASE(zapPacketBuffer)
 
 NS_INTERFACE_MAP_BEGIN(zapPacketBuffer)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

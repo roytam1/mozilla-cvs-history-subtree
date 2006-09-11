@@ -9,7 +9,7 @@ var dev3 = adev.getDeviceAt(3);
 
 var g = Components.classes["@mozilla.org/zap/mediagraph;1"].createInstance(Components.interfaces.zapIMediaGraph);
 
-var PB = makePropertyBag;
+var PB = makePropertyBag2Proxy;
 
 //var a = g.addNode("testsource", null);
 var ain= g.addNode("audioin", PB({$device:dev0}));
@@ -45,7 +45,7 @@ var F = g.connect(dec, null, aout, null);
 // var ain2= g.addNode("audioin", null);
 // var aout2 = g.addNode("audioout", null);
 // var inp2 = g.getNode(ain2, Components.interfaces.zapIAudioIn, true);
-// var buf2 = g.addNode("buffer", makePropertyBag({$prefill_size:70}));
+// var buf2 = g.addNode("buffer", makePropertyBagTS({$prefill_size:70}));
 //  var C = g.connect(ain2, null, buf2, null);
 //  var D = g.connect(buf2, null, aout2, null);
 

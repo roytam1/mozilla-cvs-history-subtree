@@ -48,8 +48,10 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "SupportsImpl",
                      "AttributeParser",
                      "Unwrappable",
+                     "ClassInfoImpl",
                      "PropertyBag",
                      "makePropertyBag",
+                     "makePropertyBag2Proxy",
                      "StateMachine",
                      "AsyncObject",
                      "Scheduler",
@@ -572,6 +574,8 @@ SupportsImpl.obj(
   "interfaces",
   [Components.interfaces.nsISupports]);
 
+var NS_ERROR_NO_INTERFACE = Components.results.NS_ERROR_NO_INTERFACE;
+
 SupportsImpl.fun(
   function QueryInterface(iid) {
     var itfs = this.interfaces;
@@ -579,7 +583,7 @@ SupportsImpl.fun(
     for (var i=0, l=itfs.length; i<l; ++i) {
       if (itfs[i].equals(iid)) return this;
     }
-    throw Components.results.NS_ERROR_NO_INTERFACE;
+    throw NS_ERROR_NO_INTERFACE;
   });
 
 SupportsImpl.metafun(
@@ -641,6 +645,43 @@ var Unwrappable = makeClass("Unwrappable");
 
 Unwrappable.getter("wrappedJSObject", function() { return this; });
 
+////////////////////////////////////////////////////////////////////////
+// Class ClassInfoImpl: implements nsIClassInfo
+var ClassInfoImpl = makeClass("ClassInfoImpl", SupportsImpl);
+ClassInfoImpl.addInterfaces(Components.interfaces.nsIClassInfo);
+
+ClassInfoImpl.metafun(
+  function markThreadsafe() {
+    this.prototype.flags |= Components.interfaces.nsIClassInfo.THREADSAFE;
+  });
+
+ClassInfoImpl.fun(
+  function getInterfaces(count) {
+    // expose all of our interfaces from SupportsImpl::interfaces array:
+    if (count) count.value = this.interfaces.length;
+    return this.interfaces;
+  });
+
+ClassInfoImpl.fun(
+  function getHelperForLanguage(language) {
+    return null;
+  });
+
+ClassInfoImpl.obj("contractID", null);
+
+ClassInfoImpl.getter(
+  "classDescription",
+  function get_classDescription() {
+    return this._class_.toString();
+  });
+
+ClassInfoImpl.obj("classID", null);
+
+ClassInfoImpl.obj("implementationLanguage",
+                  Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT);
+
+ClassInfoImpl.obj("flags", 0);
+
 
 ////////////////////////////////////////////////////////////////////////
 // Class PropertyBag: a class implementing nsIPropertyBag, 
@@ -656,6 +697,8 @@ PropertyBag.addInterfaces(Components.interfaces.nsIPropertyBag,
 //----------------------------------------------------------------------
 // nsIPropertyBag implementation:
 
+var NS_ERROR_FAILURE = Components.results.NS_ERROR_FAILURE;
+
 /* readonly attribute nsISimpleEnumerator enumerator; */
 PropertyBag.getter(
   "enumerator",
@@ -666,7 +709,7 @@ PropertyBag.getter(
     return { // object implementing nsISimpleEnumerator
       hasMoreElements : function() { return i<keys.length; },
       getNext : function() {
-        if (i>keys.length) throw Components.results.NS_ERROR_FAILURE;
+        if (i>keys.length) throw NS_ERROR_FAILURE;
         var prop = { name: keys[i], value: bag.getProperty(keys[i]) };
         ++i;
         return prop;
@@ -678,7 +721,7 @@ PropertyBag.getter(
 PropertyBag.fun(
   function getProperty(key) {
     var val = hashget(this, key);
-    if (val === undefined) throw(Components.results.NS_ERROR_FAILURE);
+    if (val === undefined) throw(NS_ERROR_FAILURE);
     return val;
   });
 
@@ -743,7 +786,7 @@ PropertyBag.fun(
 PropertyBag.fun(
   function deleteProperty(key) {
     if (!hashhas(this, key))
-      throw(Components.results.NS_ERROR_FAILURE);
+      throw(NS_ERROR_FAILURE);
     hashdel(this, key);
   });
 
@@ -755,6 +798,28 @@ function makePropertyBag(obj) {
   return obj;
 }
 
+//----------------------------------------------------------------------
+
+// In theory it should be enough to implement nsIClassInfo and mark
+// PropertyBag as THREADSAFE, to get a threadsafe version. In practice
+// xpconnect appears to choke up and there are problems with the
+// marshalling of the iid parameter of getPropertyAsInterface()
+//
+// var PropertyBagThreadsafe = makeClass("PropertyBagThreadsafe",
+//                                       PropertyBag,
+//                                       ClassInfoImpl);
+// PropertyBagThreadsafe.markThreadsafe();
+
+// // wrap 'obj' with nsIPropertyBag/nsIWritablePropertyBag interfaces
+// function makePropertyBagTS(obj) {
+//   obj.__proto__ = PropertyBagThreadsafe.prototype;
+//   return obj;
+// }
+
+function makePropertyBag2Proxy(obj) {
+  obj.__proto__ = PropertyBag.prototype;
+  return getSyncProxyOnMainThread(obj, Components.interfaces.nsIPropertyBag2);
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Class StateMachine

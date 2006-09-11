@@ -60,8 +60,8 @@ zapAudioDeviceManager::~zapAudioDeviceManager()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioDeviceManager)
-NS_IMPL_RELEASE(zapAudioDeviceManager)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioDeviceManager)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioDeviceManager)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioDeviceManager)
   NS_INTERFACE_MAP_ENTRY(nsISupports)

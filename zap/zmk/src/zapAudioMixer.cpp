@@ -97,8 +97,8 @@ void zapAudioMixerInput::Init(zapAudioMixer* mixer) {
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioMixerInput)
-NS_IMPL_RELEASE(zapAudioMixerInput)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioMixerInput)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioMixerInput)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioMixerInput)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaSink)

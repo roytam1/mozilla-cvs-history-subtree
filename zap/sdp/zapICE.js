@@ -52,7 +52,7 @@ EXPORTED_SYMBOLS = ["produceICECandidates",
                     "extractICECandidates",
                     "createCandidatePairList"];
 
-var PB = makePropertyBag;
+var PB = makePropertyBag2Proxy;
 
 var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",
                                     Components.interfaces.zapINetUtils);
@@ -411,7 +411,8 @@ zapICEStunReflexiveCandidateFactory.fun(
     var comp = lc.componentAt(this.currentComponent);
     var serv = this.stunServers[this.currentServer];
     try {
-      var req = comp.stunClientCtl.sendBindingRequest(this, serv, null, null);
+      var req = comp.stunClientCtl.sendBindingRequest(getAsyncProxyOnMainThread(this, Components.interfaces.zapIStunClientListener),
+                                                      serv, null, null);
       this.activeRequests[Components.utils.getObjectId(req, true)] =
         [lc, this.currentComponent, serv, req]; // It is important here to keep
                                                 // 'req' in our activeRequests hash to

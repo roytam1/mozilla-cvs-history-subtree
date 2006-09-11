@@ -55,8 +55,8 @@ zapAudioReformatter::~zapAudioReformatter()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioReformatter)
-NS_IMPL_RELEASE(zapAudioReformatter)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioReformatter)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioReformatter)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioReformatter)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

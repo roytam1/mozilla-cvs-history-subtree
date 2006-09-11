@@ -67,8 +67,8 @@ PRBool zapStunFrame::Init(nsIDatagram* datagram, nsIPropertyBag2* streamInfo)
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapStunFrame)
-NS_IMPL_RELEASE(zapStunFrame)
+NS_IMPL_THREADSAFE_ADDREF(zapStunFrame)
+NS_IMPL_THREADSAFE_RELEASE(zapStunFrame)
 
 NS_INTERFACE_MAP_BEGIN(zapStunFrame)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaFrame)

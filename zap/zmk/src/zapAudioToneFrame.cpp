@@ -153,8 +153,8 @@ zapAudioToneFrame::Init()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioToneFrame)
-NS_IMPL_RELEASE(zapAudioToneFrame)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioToneFrame)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioToneFrame)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioToneFrame)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIAudioToneFrame)

@@ -63,8 +63,8 @@ zapUDPSocketPair::~zapUDPSocketPair()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapUDPSocketPair)
-NS_IMPL_RELEASE(zapUDPSocketPair)
+NS_IMPL_THREADSAFE_ADDREF(zapUDPSocketPair)
+NS_IMPL_THREADSAFE_RELEASE(zapUDPSocketPair)
 
 NS_INTERFACE_MAP_BEGIN(zapUDPSocketPair)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

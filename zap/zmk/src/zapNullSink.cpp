@@ -42,8 +42,8 @@
 //----------------------------------------------------------------------
 // nsISupports implementation:
 
-NS_IMPL_ADDREF(zapNullSink)
-NS_IMPL_RELEASE(zapNullSink)
+NS_IMPL_THREADSAFE_ADDREF(zapNullSink)
+NS_IMPL_THREADSAFE_RELEASE(zapNullSink)
 
 NS_INTERFACE_MAP_BEGIN(zapNullSink)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

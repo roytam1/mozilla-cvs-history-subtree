@@ -57,8 +57,8 @@ zapStunServer::~zapStunServer()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapStunServer)
-NS_IMPL_RELEASE(zapStunServer)
+NS_IMPL_THREADSAFE_ADDREF(zapStunServer)
+NS_IMPL_THREADSAFE_RELEASE(zapStunServer)
 
 NS_INTERFACE_MAP_BEGIN(zapStunServer)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)

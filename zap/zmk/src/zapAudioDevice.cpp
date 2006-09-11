@@ -57,8 +57,8 @@ zapAudioDevice::~zapAudioDevice()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioDevice)
-NS_IMPL_RELEASE(zapAudioDevice)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioDevice)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioDevice)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioDevice)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIAudioDevice)

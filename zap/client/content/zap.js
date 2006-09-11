@@ -95,7 +95,7 @@ function warning(message) {
   ErrorReporterSink.reporterFunction(message);
 }
 
-var PB = makePropertyBag;
+var PB = makePropertyBag2Proxy;
 
 ////////////////////////////////////////////////////////////////////////
 // Initialization:
@@ -2415,13 +2415,13 @@ function initSipStack() {
   }
   
   wSipStack.init(wUAHandler,
-                 makePropertyBag({$instance_id:wConfig["urn:mozilla:zap:instance_id"],
-                                  $port_base:wConfig["urn:mozilla:zap:sip_port_base"],
-                                     $short_branch_parameters:(wConfig["urn:mozilla:zap:short_branch_parameters"]=="true"),
-                                  $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE,NOTIFY",
-                                  $extensions: "path,gruu", // path: RFC3327, gruu: draft-ietf-sip-gruu-05.txt
-                                  $user_agent: wUserAgent
-                                 }));
+                 PB({$instance_id:wConfig["urn:mozilla:zap:instance_id"],
+                     $port_base:wConfig["urn:mozilla:zap:sip_port_base"],
+                     $short_branch_parameters:(wConfig["urn:mozilla:zap:short_branch_parameters"]=="true"),
+                     $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE,NOTIFY",
+                     $extensions: "path,gruu", // path: RFC3327, gruu: draft-ietf-sip-gruu-05.txt
+                     $user_agent: wUserAgent
+                 }));
   document.getElementById("status_text").label = "Listening for UDP/TCP SIP traffic on port "+wSipStack.listeningPort;
 
   // set up logging to profile_dir/zap.sbox:
@@ -3141,7 +3141,7 @@ InboundCallHandler.fun(
 
     // start the ringer:
     this.ringer = wMediaPipeline.mediagraph.addNode("rtttl-player",
-                                                    makePropertyBag(
+                                                    PB(
                                                       {$rtttl:wConfig["urn:mozilla:zap:ringtone"]}));
     wMediaPipeline.mediagraph.connect(this.ringer, null,
                                       "aout", null);

@@ -87,8 +87,8 @@ void zapAudioIOMonitor::Init(zapAudioIO* audioIO) {
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioIOMonitor)
-NS_IMPL_RELEASE(zapAudioIOMonitor)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioIOMonitor)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioIOMonitor)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioIOMonitor)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaSource)

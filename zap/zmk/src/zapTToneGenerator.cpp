@@ -87,8 +87,8 @@ zapTToneGenerator::~zapTToneGenerator()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapTToneGenerator)
-NS_IMPL_RELEASE(zapTToneGenerator)
+NS_IMPL_THREADSAFE_ADDREF(zapTToneGenerator)
+NS_IMPL_THREADSAFE_RELEASE(zapTToneGenerator)
 
 NS_INTERFACE_MAP_BEGIN(zapTToneGenerator)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
