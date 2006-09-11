@@ -1041,11 +1041,11 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 {
     JSOp op, prevop;
     JSParseNode *pn, *body, *result;
+    JSTokenType tt;
     JSAtom *funAtom, *objAtom;
     JSStackFrame *fp;
     JSObject *varobj, *pobj;
     JSAtomListElement *ale;
-    JSTokenType tt;
     JSProperty *prop;
     JSFunction *fun;
     JSTreeContext funtc;
@@ -1062,7 +1062,15 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         return NULL;
 
     /* Scan the optional function name into funAtom. */
-    funAtom = js_MatchToken(cx, ts, TOK_NAME) ? CURRENT_TOKEN(ts).t_atom : NULL;
+    ts->flags |= TSF_KEYWORD_IS_NAME;
+    tt = js_GetToken(cx, ts);
+    ts->flags &= ~TSF_KEYWORD_IS_NAME;
+    if (tt == TOK_NAME) {
+        funAtom = CURRENT_TOKEN(ts).t_atom;
+    } else {
+        funAtom = NULL;
+        js_UngetToken(ts);
+    }
 
     /* Find the nearest variable-declaring scope and use it as our parent. */
     fp = cx->fp;
@@ -2508,7 +2516,10 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 
       case TOK_FUNCTION:
 #if JS_HAS_XML_SUPPORT
-        if (js_PeekToken(cx, ts) == TOK_DBLCOLON)
+        ts->flags |= TSF_KEYWORD_IS_NAME;
+        tt = js_PeekToken(cx, ts);
+        ts->flags &= ~TSF_KEYWORD_IS_NAME;
+        if (tt == TOK_DBLCOLON)
             goto expression;
 #endif
         return FunctionStmt(cx, ts, tc);
@@ -5091,7 +5102,9 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     switch (tt) {
       case TOK_FUNCTION:
 #if JS_HAS_XML_SUPPORT
+        ts->flags |= TSF_KEYWORD_IS_NAME;
         if (js_MatchToken(cx, ts, TOK_DBLCOLON)) {
+            ts->flags &= ~TSF_KEYWORD_IS_NAME;
             pn2 = NewParseNode(cx, ts, PN_NULLARY, tc);
             if (!pn2)
                 return NULL;
@@ -5101,6 +5114,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 return NULL;
             break;
         }
+        ts->flags &= ~TSF_KEYWORD_IS_NAME;
 #endif
         pn = FunctionExpr(cx, ts, tc);
         if (!pn)
