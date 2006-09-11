@@ -1184,13 +1184,15 @@ nsHTMLInputElement::SetFocus(nsPresContext* aPresContext)
     do_QueryInterface(doc->GetScriptGlobalObject());
   if (win) {
     nsIFocusController *focusController = win->GetRootFocusController();
-    PRBool isActive = PR_FALSE;
-    focusController->GetActive(&isActive);
-    if (!isActive) {
-      focusController->SetFocusedWindow(win);
-      focusController->SetFocusedElement(this);
+    if (focusController) {
+      PRBool isActive = PR_FALSE;
+      focusController->GetActive(&isActive);
+      if (!isActive) {
+        focusController->SetFocusedWindow(win);
+        focusController->SetFocusedElement(this);
 
-      return;
+        return;
+      }
     }
   }
 
@@ -1236,13 +1238,15 @@ nsHTMLInputElement::Select()
       do_QueryInterface(doc->GetScriptGlobalObject());
     if (win) {
       nsIFocusController *focusController = win->GetRootFocusController();
-      PRBool isActive = PR_FALSE;
-      focusController->GetActive(&isActive);
-      if (!isActive) {
-        focusController->SetFocusedWindow(win);
-        focusController->SetFocusedElement(this);
-        SelectAll(presContext);
-        return NS_OK;
+      if (focusController) {
+        PRBool isActive = PR_FALSE;
+        focusController->GetActive(&isActive);
+        if (!isActive) {
+          focusController->SetFocusedWindow(win);
+          focusController->SetFocusedElement(this);
+          SelectAll(presContext);
+          return NS_OK;
+        }
       }
     }
 
