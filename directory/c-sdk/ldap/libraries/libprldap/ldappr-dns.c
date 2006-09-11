@@ -97,20 +97,33 @@ prldap_gethostbyaddr( const char *addr, int length, int type,
 	LDAPHostEnt *result, char *buffer, int buflen, int *statusp,
 	void *extradata )
 {
+    int		err = 0;
     PRHostEnt	prhent;
     PRNetAddr	iaddr;
+    PRAddrInfo	*infop = NULL;
 
+    memset( &iaddr, 0, sizeof( iaddr ));
     if ( PR_SetNetAddr(PR_IpAddrNull, PRLDAP_DEFAULT_ADDRESS_FAMILY,
-		0, &iaddr) == PR_FAILURE
-		|| PR_StringToNetAddr( addr, &iaddr ) == PR_FAILURE ) {
-	return( NULL );
+		0, &iaddr) == PR_FAILURE ) {
+	return ( NULL );
     }
 
-    if( !statusp || (*statusp = PR_GetHostByAddr(&iaddr, buffer,
-	     buflen, &prhent )) == PR_FAILURE ) {
-	return( NULL );
+    if ( NULL != ( infop =
+		PR_GetAddrInfoByName( addr, PR_AF_UNSPEC, PR_AI_ADDRCONFIG ))) {
+	void *enump = NULL;
+        enump = PR_EnumerateAddrInfo( enump, infop, 0, &iaddr );
+	PR_FreeAddrInfo( infop );
+        if ( NULL == enump ) {
+	    return ( NULL );
+        }
+    } else if ( PR_StringToNetAddr( NULL, &iaddr ) == PR_FAILURE ) {
+	return ( NULL );
     }
 
+    if ( !statusp || ( *statusp = PR_GetHostByAddr( &iaddr, buffer,
+					buflen, &prhent )) == PR_FAILURE ) {
+	return ( NULL );
+    }
     return( prldap_convert_hostent( result, &prhent ));
 }
 
