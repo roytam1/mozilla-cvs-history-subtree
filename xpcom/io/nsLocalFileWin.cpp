@@ -1411,13 +1411,15 @@ nsLocalFile::GetVersionInfoField(const char* aField, nsAString& _retval)
 
                 LPVOID value = nsnull;
                 UINT size;
+                // XXX : we should use 'W' API on Win 2k or later to cope 
+                // with presumably rare cases where the default system 
+                // codepage is  different from the codepage of a string 
+                // returned by |VerQueryValueA| (bug 344630)
                 queryResult = ::VerQueryValueA(ver, subBlock, &value, &size);
                 if (queryResult && value)
                 {
-                    NS_ASSERTION(nsCRT::IsAscii((const char*) value),
-                                 "Version string has non-ASCII characters");
-                    CopyASCIItoUTF16(nsDependentCString((const char*) value),
-                                     _retval);
+                    NS_CopyNativeToUnicode(
+                            nsDependentCString((const char*) value), _retval);
                     if (!_retval.IsEmpty()) 
                     {
                         rv = NS_OK;
