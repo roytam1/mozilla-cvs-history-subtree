@@ -49,9 +49,6 @@ Components.utils.importModule("gre:zapCodecRegistry.js");
 // name our global object:
 function toString() { return "[MediaSession.js]"; }
 
-// object to hold component's documentation:
-var _doc_ = {};
-
 var PB = makePropertyBag;
 
 ////////////////////////////////////////////////////////////////////////

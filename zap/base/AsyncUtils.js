@@ -45,62 +45,59 @@ EXPORTED_SYMBOLS = [ "getMainThread",
                      "schedulePeriodic",
                      "callAsync"];
 
-// object to hold module's documentation:
-var _doc_ = {};
-
-
 ////////////////////////////////////////////////////////////////////////
 // Threads
 
 var getThreadManager = makeServiceGetter("@mozilla.org/thread-manager;1",
                                          Components.interfaces.nsIThreadManager);
 
-function getMainThread() {
-  return getThreadManager().mainThread;
-}
+defun(
+  function getMainThread() {
+    return getThreadManager().mainThread;
+  });
 
 ////////////////////////////////////////////////////////////////////////
 // Timer utilities:
 
 var CLASS_TIMER = "@mozilla.org/timer;1";
 
-/** Create a new one-shot timer
- *
- * 'callback' must implement nsITimerCallback
- * 'duration' is the time in ms after which the timer fires
- *
- * The timer can be cancelled with timer.cancel() and reset with a
- * different duration using resetOneShotTimer(.).
- */
-function makeOneShotTimer(callback, duration) {
-  // We need to use 'this.Components' to ensure that xpconnect wraps
-  // the timer for the caller's global object (assuming that the
-  // callback has the same global object). See also the comments in
-  // ClassUtils.js, function makeClass().
-  var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
-  timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
-  return timer;
-}
+defun(
+  "Create a new one-shot timer\n"+
+  "  'callback' must implement nsITimerCallback\n"+
+  "  'duration' is the time in ms after which the timer fires\n"+
+  "The timer can be cancelled with timer.cancel() and reset with a "+
+  "different duration using resetOneShotTimer(.).",
+  function makeOneShotTimer(callback, duration) {
+    // We need to use 'this.Components' to ensure that xpconnect wraps
+    // the timer for the caller's global object (assuming that the
+    // callback has the same global object). See also the comments in
+    // ClassUtils.js, function makeClass().
+    var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
+    timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+    return timer;
+  });
 
-function resetOneShotTimer(timer, duration) {
-  timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
-  return timer;
-}
+defun(
+  function resetOneShotTimer(timer, duration) {
+    timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+    return timer;
+  });
 
-// Asynchronously call 'fct' after 'interval' ms. 
-function schedule(fct, interval) {
-  // We'll hold onto the timer object in the closure to prevent it
-  // from being garbarge collected.
-  var timer = makeOneShotTimer(
-    {
-      notify : function(t) {
-        fct();
-        // Now make sure that the timer can be garbage collected:
-        timer = null;
-      }
-    },
-    interval);
-}
+defun(
+  "Asynchronously call 'fct' after 'interval' ms. ",
+  function schedule(fct, interval) {
+    // We'll hold onto the timer object in the closure to prevent it
+    // from being garbarge collected.
+    var timer = makeOneShotTimer(
+      {
+        notify : function(t) {
+          fct();
+          // Now make sure that the timer can be garbage collected:
+          timer = null;
+        }
+      },
+      interval);
+  });
 
 // helper for schedulePeriodic:
 function callback(fct) {
@@ -108,27 +105,29 @@ function callback(fct) {
 }
 callback.prototype.notify = function(t) { this.fct(); };
 
-// Periodically make an asynchronous call to 'fct' every 'period'
-// ms. Return timer object. Calling 'cancel()' on the return value
-// will cancel the schedule.
-// The caller must hold onto the timer object for as long as the timer is
-// supposed to run (otherwise it might be garbage collected).
-function schedulePeriodic(fct, period) {
-  var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
-  // to prevent a reference cycle it is important here that the
-  // callback object is not created with the 'schedulePeriodic'
-  // closure (because this closure will keep the timer alive through
-  // the 'timer' variable).
-  timer.initWithCallback(new callback(fct),
-                         period,
-                         this.Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
-  return timer;
-}
+defun(
+  "Periodically make an asynchronous call to 'fct' every 'period' "+
+  "ms. Return timer object. Calling 'cancel()' on the return value "+
+  "will cancel the schedule.\n"+
+  "The caller must hold onto the timer object for as long as the timer is "+
+  "supposed to run (otherwise it might be garbage collected).",
+  function schedulePeriodic(fct, period) {
+    var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
+    // to prevent a reference cycle it is important here that the
+    // callback object is not created with the 'schedulePeriodic'
+    // closure (because this closure will keep the timer alive through
+    // the 'timer' variable).
+    timer.initWithCallback(new callback(fct),
+                           period,
+                           this.Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
+    return timer;
+  });
 
 
-// Call 'fct' asynchronously:
-function callAsync(fct) {
-  schedule(fct, 0);
+defun(
+  "Call 'fct' asynchronously.",
+  function callAsync(fct) {
+    schedule(fct, 0);
 //   // XXX we *really* want a new method on nsIEventTarget for posting
 //   // from JS here. setTimeout is not a good idea, since, among other
 //   // things, it sets up a 10ms timer even if the timeout value is 0ms.
@@ -140,4 +139,4 @@ function callAsync(fct) {
 //   var retval = [];
 //   if (!enumerator.hasMoreElements()) return; // can't post
 //   enumerator.getNext().setTimeout(fct, 0);
-}
+  });

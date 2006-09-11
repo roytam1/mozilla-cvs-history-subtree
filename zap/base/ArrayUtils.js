@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+Components.utils.importModule("gre:FunctionUtils.js");
+
 EXPORTED_SYMBOLS = [ "arraymerge",
                      "arrayclone",
                      "arraysplit",
@@ -53,221 +55,203 @@ EXPORTED_SYMBOLS = [ "arraymerge",
 // name our global object:
 function toString() { return "[ArrayUtils.js]"; }
 
-// object to hold module's documentation:
-var _doc_ = {};
-
 //----------------------------------------------------------------------
 // arraymerge
 
-_doc_.arraymerge = "\
- Append elements from array 'src' to array 'dest', ommitting elements\n\
- that are present in both 'src' and 'dest' and equal under 'eq'      \n\
- (default: '==').                                                    \n\
- Returns 'dest' array.                                               ";
-
-function arraymerge(dest, src, /*[opt]*/ eq) {
-  if (!eq)
-    eq = function(a,b) {return a==b;};
-  
-  for (var i=0, sl=src.length; i<sl; ++i) {
-    for (var j=0, dl=dest.length; j<dl; ++j) {
-      if (eq(src[i], dest[j])) break;
+defun(
+  "Append elements from array 'src' to array 'dest', ommitting elements "+
+  "that are present in both 'src' and 'dest' and equal under 'eq' "+
+  "(default: '=='). Returns 'dest' array.",
+  function arraymerge(dest, src, /*[opt]*/ eq) {
+    if (!eq)
+      eq = function(a,b) {return a==b;};
+    
+    for (var i=0, sl=src.length; i<sl; ++i) {
+      for (var j=0, dl=dest.length; j<dl; ++j) {
+        if (eq(src[i], dest[j])) break;
+      }
+      if (j==dl)
+        dest.push(src[i]);
     }
-    if (j==dl)
-      dest.push(src[i]);
-  }
-  return dest;
-}
+    return dest;
+  });
 
 //----------------------------------------------------------------------
 // arrayclone
 
-_doc_.arrayclone = "\
- Returns a shallow copy of array 'src'.                               ";
-
-function arrayclone(src) {
-  return src.slice(0);
-}
+defun(
+  "Returns a shallow copy of array 'src'.",
+  function arrayclone(src) {
+    return src.slice(0);
+  });
 
 //----------------------------------------------------------------------
 // arraysplit
 
-_doc_.arraysplit = "\
- Destructively remove items satisfying 'predicate' from 'array'.     \n\
- Returns array of removed items.                                      ";
-
-function arraysplit(predicate, array) {
-  var removed = [];
-  for (var i=array.length-1; i>=0; --i) {
-    if (predicate(array[i]))
-      removed.unshift(array.splice(i,1)[0]);
-  }
-  return removed;
-}
+defun(
+  "Destructively remove items satisfying 'predicate' from 'array'. "+
+  "Returns array of removed items.",
+  function arraysplit(predicate, array) {
+    var removed = [];
+    for (var i=array.length-1; i>=0; --i) {
+      if (predicate(array[i]))
+        removed.unshift(array.splice(i,1)[0]);
+    }
+    return removed;
+  });
 
 //----------------------------------------------------------------------
 // member
 
-_doc_.member = "\
- Returns true if 'array' contains at least one element equal ('==')  \n\
- to 'element'.                                                        ";
-
-function member(element, array) {
-  return array.some(function(e) {return e==element;});
-}
+defun(
+  "Returns true if 'array' contains at least one element equal ('==') "+
+  "to 'element'.",
+  function member(element, array) {
+    return array.some(function(e) {return e==element;});
+  });
 
 //----------------------------------------------------------------------
 // findif
 
-_doc_.findif = "\
- Returns the first element in 'array' that satisfies 'predicate', or \n\
- null if no matching element is found.                                ";
-
-function findif(predicate, array) {
-  for (var i=0, l=array.length; i<l; ++i) {
-    if (predicate(array[i]))
-      return array[i];
-  }
-  return null;
-}
+defun(
+  "Returns the first element in 'array' that satisfies 'predicate', or "+
+  "null if no matching element is found.",
+  function findif(predicate, array) {
+    for (var i=0, l=array.length; i<l; ++i) {
+      if (predicate(array[i]))
+        return array[i];
+    }
+    return null;
+  });
 
 //----------------------------------------------------------------------
 // isarray
 
-_doc_.isarray = "\
-  Check whether 'obj' is of array type. More reliable than           \n\
-  'obj instanceof Array' which gives false negatives if the context  \n\
-  that 'obj' was created in is different to the content that the test\n\
-  is performed in.                                                    ";
-  
-function isarray(obj) {
-  // XXX ideally we would like to use 'instanceof' to test whether
-  // something is an array. Unfortunately, arrays might be instances
-  // of different 'Array' objects, depending on the context that they
-  // were created in. We have to use the following hack instead:
-  if (obj && obj.length!=null && obj.push)
-    return true;
-  return false;
-}
+defun(
+  "Check whether 'obj' is of array type. More reliable than "+
+  "'obj instanceof Array' which gives false negatives if the context "+
+  "that 'obj' was created in is different to the content that the test "+
+  "is performed in.",
+  function isarray(obj) {
+    // XXX ideally we would like to use 'instanceof' to test whether
+    // something is an array. Unfortunately, arrays might be instances
+    // of different 'Array' objects, depending on the context that they
+    // were created in. We have to use the following hack instead:
+    if (obj && obj.length!=null && obj.push)
+      return true;
+    return false;
+  });
 
 //----------------------------------------------------------------------
 // flatten
 
-_doc_.flatten = "\
- Returns a flattened version of 'array'.                              ";
-
-function flatten(array) {
-  var l = array.length;
-  var retval = [];
-  for (var i=0; i<l; ++i) {
-    if (isarray(array[i])) {
-      array[i].forEach(function(e){retval.push(e);});
+defun(
+  "Returns a flattened version of 'array'.",
+  function flatten(array) {
+    var l = array.length;
+    var retval = [];
+    for (var i=0; i<l; ++i) {
+      if (isarray(array[i])) {
+        array[i].forEach(function(e){retval.push(e);});
+      }
+      else
+        retval.push(array[i]);
     }
-    else
-      retval.push(array[i]);
-  }
-  return retval;
-}
+    return retval;
+  });
 
 //----------------------------------------------------------------------
 // dflatten
 
-_doc_.dflatten = "\
- Destructively flattens 'array': Any members of 'array' which are    \n\
- arrays themselves are spliced into 'array'.                          ";
-
-function dflatten(array) {
-  for (var i=array.length-1; i>=0; --i) {
-    if (isarray(array[i])) {
-      var a = array.splice(i,1)[0];
-      for (var k=0,l=a.length; k<l; ++k)
-        array.splice(i+k,0,a[k]);
+defun(
+  "Destructively flattens 'array': Any members of 'array' which are "+
+  "arrays themselves are spliced into 'array'.",
+  function dflatten(array) {
+    for (var i=array.length-1; i>=0; --i) {
+      if (isarray(array[i])) {
+        var a = array.splice(i,1)[0];
+        for (var k=0,l=a.length; k<l; ++k)
+          array.splice(i+k,0,a[k]);
+      }
     }
-  }
-  return array;
-}
+    return array;
+  });
 
 //----------------------------------------------------------------------
 // arraysubst
 
-_doc_.arraysubst = "\
- Destructively substitute 'newelem' for 'oldelem' in 'array'.         ";
-
-function arraysubst(newelem, oldelem, array) {
-  for (var i=0, l=array.length; i<l; ++i) {
-    if (array[i]==oldelem)
-      array[i]=newelem;
-  }
-}
+defun(
+  "Destructively substitute 'newelem' for 'oldelem' in 'array'.",
+  function arraysubst(newelem, oldelem, array) {
+    for (var i=0, l=array.length; i<l; ++i) {
+      if (array[i]==oldelem)
+        array[i]=newelem;
+    }
+  });
 
 //----------------------------------------------------------------------
 // arrayequal
 
-_doc_.arrayequal = "\
- Returns true iff arrays 'arr1' and 'arr2' have the same length and  \n\
- their elements are equal under 'eq' (default: '==').                 ";
-
-function arrayequal(arr1, arr2, /*[opt]*/ eq) {
-  if (arr1.length!=arr2.length) return false;
-  if (!eq)
-    eq = function(a,b) {return a==b;};
-  for (var i=0, l=arr1.length; i<l; ++i) {
-    if (!eq(arr1[i],arr2[i]))
-      return false;
-  }
-  return true;
-}
+defun(
+  "Returns true iff arrays 'arr1' and 'arr2' have the same length and "+
+  "their elements are equal under 'eq' (default: '==').",
+  function arrayequal(arr1, arr2, /*[opt]*/ eq) {
+    if (arr1.length!=arr2.length) return false;
+    if (!eq)
+      eq = function(a,b) {return a==b;};
+    for (var i=0, l=arr1.length; i<l; ++i) {
+      if (!eq(arr1[i],arr2[i]))
+        return false;
+    }
+    return true;
+  });
 
 //----------------------------------------------------------------------
 // union
 
-_doc_.union = "\
- Returns the union of the given arrays.                               ";
-
-function union(arr1, arr2) {
-  var retval = [];
-  arraymerge(retval, arr1);
-  arraymerge(retval, arr2);
-  return retval;
-}
+defun(
+  "Returns the union of the given arrays.",
+  function union(arr1, arr2) {
+    var retval = [];
+    arraymerge(retval, arr1);
+    arraymerge(retval, arr2);
+    return retval;
+  });
 
 //----------------------------------------------------------------------
 // intersection
 
-_doc_.intersection = "\
- Returns the intersection of the given arrays.                        ";
-
-function intersection(arr1, arr2) {
-  var retval = [];
-  arr1.forEach(function(item) {
-                 if (member(item, arr2)) arraymerge(retval, [item]);});
-  return retval;
-}
+defun(
+  "Returns the intersection of the given arrays.",
+  function intersection(arr1, arr2) {
+    var retval = [];
+    arr1.forEach(function(item) {
+                   if (member(item, arr2)) arraymerge(retval, [item]);});
+    return retval;
+  });
 
 //----------------------------------------------------------------------
 // difference
 
-_doc_.difference = "\
- Returns the set difference 'arr1'-'arr2'.                            ";
-
-function difference(arr1, arr2) {
-  var retval = [];
-  arr1.forEach(function(item) {
-                 if (!member(item, arr2)) retval.push(item);});
-  return retval;
-}
+defun(
+  "Returns the set difference 'arr1'-'arr2'.",
+  function difference(arr1, arr2) {
+    var retval = [];
+    arr1.forEach(function(item) {
+                   if (!member(item, arr2)) retval.push(item);});
+    return retval;
+  });
 
 //----------------------------------------------------------------------
 // makeArrayIterator
 
-_doc_.makeArrayIterator = "\
- Returns an iterator with methods getNext() and hasMore()           \n\
- for the given array.                                                 ";
-
-function makeArrayIterator(arr) {
-  var index = 0;
-  return {
-    getNext: function() { return arr[index++]; },
-    hasMore: function() { return index<arr.length; }
-  };
-}
+defun(
+  "Returns an iterator with methods getNext() and hasMore() "+
+  "for the given array.",
+  function makeArrayIterator(arr) {
+    var index = 0;
+    return {
+      getNext: function() { return arr[index++]; },
+        hasMore: function() { return index<arr.length; }
+    };
+  });

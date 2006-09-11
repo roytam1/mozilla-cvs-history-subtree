@@ -46,9 +46,6 @@ EXPORTED_SYMBOLS = [ "createCodecInstance" ];
 // name our global object:
 function toString() { return "[zapCodecRegistry.js]"; }
 
-// object to hold component's documentation:
-var _doc_ = {};
-
 var PB = makePropertyBag;
 
 ////////////////////////////////////////////////////////////////////////

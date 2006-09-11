@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+Components.utils.importModule("gre:FunctionUtils.js");
+
 EXPORTED_SYMBOLS = [ "hasproperty",
                      "hasgettersetter",
                      "propcopy",
@@ -47,167 +49,158 @@ EXPORTED_SYMBOLS = [ "hasproperty",
                      "hashkeys",
                      "hashmap"];
 
-// object to hold module's documentation:
-var _doc_ = {};
-
 //----------------------------------------------------------------------
 // hasproperty
 
-_doc_.hasproperty = "\
- Returns true iff 'obj' has a property, getter or setter with name   \n\
- 'prop'; false otherwise.                                             ";
-
-function hasproperty(obj, prop) {
-  return (hasgettersetter(obj, prop) ||
-          obj[prop] !== undefined);
-}
-
+defun(
+  "Returns true iff 'obj' has a property, getter or setter with name "+
+  "'prop'; false otherwise.",
+  function hasproperty(obj, prop) {
+    return (hasgettersetter(obj, prop) ||
+            obj[prop] !== undefined);
+  });
+  
 //----------------------------------------------------------------------
 // hasgettersetter
 
-_doc_.hasgettersetter  ="\
- Returns true iff 'obj' has a getter or getter/setter with name      \n\
- 'prop'; false otherwise.                                             ";
-
-function hasgettersetter(obj, prop) {
-  return (obj.__lookupGetter__(prop) ||
-          obj.__lookupSetter__(prop));
-}
+defun(
+  "Returns true iff 'obj' has a getter or getter/setter with name "+
+  "'prop'; false otherwise.",
+  function hasgettersetter(obj, prop) {
+    return (obj.__lookupGetter__(prop) ||
+            obj.__lookupSetter__(prop));
+  });
 
 //----------------------------------------------------------------------
 // propcopy
 
-_doc_.propcopy = "\
- Copies property 'prop' from object 'src' to object 'dest'. 'prop'   \n\
- can name a 'normal' property or a getter/setter.                    \n\
- Returns true.                                                        ";
-
-function propcopy(dest, src, prop) {
-  // src[prop] might be a getter and/or setter:
-  var getter = src.__lookupGetter__(prop);
-  var setter = src.__lookupSetter__(prop);
-  if (getter || setter) {
-    if (getter)
-      dest.__defineGetter__(prop, getter);
-    if (setter)
-      dest.__defineSetter__(prop, setter);
-  }
-  else 
-    dest[prop] = src[prop];
-  
-  return true;
-}
+defun(
+  "Copies property 'prop' from object 'src' to object 'dest'. 'prop' "+
+  "can name a 'normal' property or a getter/setter. "+
+  "Returns true.",
+  function propcopy(dest, src, prop) {
+    // src[prop] might be a getter and/or setter:
+    var getter = src.__lookupGetter__(prop);
+    var setter = src.__lookupSetter__(prop);
+    if (getter || setter) {
+      if (getter)
+        dest.__defineGetter__(prop, getter);
+      if (setter)
+        dest.__defineSetter__(prop, setter);
+    }
+    else 
+      dest[prop] = src[prop];
+    
+    return true;
+  });
 
 //----------------------------------------------------------------------
 // objclone
 
-_doc_.objclone = "\
- Returns a shallow copy of the given object. The copy includes all   \n\
- own and inherited properties of 'src' as well as any getters and    \n\
- setters.                                                             ";
-
-function objclone(src) {
-  if (src == null) return null;
-  var dest = {};
-  for (var p in src) {
-    propcopy(dest, src, p);
-  }
-  return dest;
-}
+defun(
+  "Returns a shallow copy of the given object. The copy includes all "+
+  "own and inherited properties of 'src' as well as any getters and "+
+  "setters.",
+  function objclone(src) {
+    if (src == null) return null;
+    var dest = {};
+    for (var p in src) {
+      propcopy(dest, src, p);
+    }
+    return dest;
+  });
 
 //----------------------------------------------------------------------
 // objmerge
 
-_doc_.objmerge = "\
- Merge properties from object 'src' into object 'dest'. Only copy    \n\
- properties that aren't present in 'dest'. Merging can be customized \n\
- by providing an optional function mergefun(dest, src, prop) which   \n\
- will be called for each property in turn. If this function returns  \n\
- true, the given property will not be copied by objmerge.             ";
-
-function objmerge(dest, src, /*[opt]*/ mergefun) {
-  for (var p in src) {
-    if (mergefun && mergefun(dest, src, p))
-      continue; // merging handled by mergefun
-    if (!hasproperty(dest, p))
-      propcopy(dest, src, p);
-  }
-}
+defun(
+  "Merge properties from object 'src' into object 'dest'. Only copy "+
+  "properties that aren't present in 'dest'. Merging can be customized "+
+  "by providing an optional function mergefun(dest, src, prop) which "+
+  "will be called for each property in turn. If this function returns "+
+  "true, the given property will not be copied by objmerge. ",
+  function objmerge(dest, src, /*[opt]*/ mergefun) {
+    for (var p in src) {
+      if (mergefun && mergefun(dest, src, p))
+        continue; // merging handled by mergefun
+      if (!hasproperty(dest, p))
+        propcopy(dest, src, p);
+    }
+  });
 
 //----------------------------------------------------------------------
 // hashget
 
-_doc_.hashget = "\
- Normal JS objects can be used as hashes, but we need to take care to\n\
- avoid reserved names such as __prototype__, etc. as key values.     \n\
- hashget(obj, key), hashhas(obj, key), hashset(obj, key, value),     \n\
- hashdel(obj, key) translate key values appropriately.               \n\
- hashkeys(obj) returns an array of all keys in the hash.             \n\
- hashmap(obj, fct) can be used to map 'fct(key,value)' over all      \n\
- hash elements. Mapping stops when 'fct' returns a value != false    \n\
- and that value will be returned by the hashmap().                    ";
-
-function hashget(obj, key) {
-  return obj["$"+key];
-}
+defun(
+  "Normal JS objects can be used as hashes, but we need to take care to "+
+  "avoid reserved names such as __prototype__, etc. as key values. "+
+  "hashget(obj, key), hashhas(obj, key), hashset(obj, key, value), "+
+  "hashdel(obj, key) translate key values appropriately. "+
+  "hashkeys(obj) returns an array of all keys in the hash. "+
+  "hashmap(obj, fct) can be used to map 'fct(key,value)' over all "+
+  "hash elements. Mapping stops when 'fct' returns a value != false "+
+  "and that value will be returned by the hashmap(). ",
+  function hashget(obj, key) {
+    return obj["$"+key];
+  });
 
 //----------------------------------------------------------------------
 // hashhas
 
-_doc_hashhas = _doc_.hashget;
-
-function hashhas(obj, key) {
-  return obj["$"+key] !== undefined;
-}
+defun(
+  "see hashget()",
+  function hashhas(obj, key) {
+    return obj["$"+key] !== undefined;
+  });
 
 //----------------------------------------------------------------------
 // hashset
 
-_doc_hashset = _doc_.hashget;
-
-function hashset(obj, key, value) {
-  return obj["$"+key] = value;
-}
+defun(
+  "see hashget()",
+  function hashset(obj, key, value) {
+    return obj["$"+key] = value;
+  });
 
 //----------------------------------------------------------------------
 // hashdel
 
-_doc_hashdel = _doc_.hashget;
-
-function hashdel(obj, key) {
-  delete obj["$"+key];
-}
+defun(
+  "see hashget()",
+  function hashdel(obj, key) {
+    delete obj["$"+key];
+  });
 
 //----------------------------------------------------------------------
 // hashkeys
 
-_doc_hashkeys = _doc_.hashget;
-
 var REGEXP_HASHKEY = /^\$(.*)$/;
 
-function hashkeys(obj) {
-  var rv = [];
-  var match;
-  for (var k in obj) {
-    if ((match = REGEXP_HASHKEY(k)))
+defun(
+  "see hashget()",
+  function hashkeys(obj) {
+    var rv = [];
+    var match;
+    for (var k in obj) {
+      if ((match = REGEXP_HASHKEY(k)))
         rv.push(match[1]);
-  }
-  return rv;
-}
+    }
+    return rv;
+  });
 
 //----------------------------------------------------------------------
 // hashmap
 
-_doc_hashmap = _doc_.hashfind;
-
-function hashmap(obj, fct) {
-  var match;
-  var rv;
-  for (var k in obj) {
-    if ((match = REGEXP_HASHKEY(k))) {
-      if ((rv = fct(match[1], obj[k])))
-        return rv;
+defun(
+  "see hashget()",
+  function hashmap(obj, fct) {
+    var match;
+    var rv;
+    for (var k in obj) {
+      if ((match = REGEXP_HASHKEY(k))) {
+        if ((rv = fct(match[1], obj[k])))
+          return rv;
+      }
     }
-  }
-  return null;
-}
+    return null;
+  });

@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+Components.utils.importModule("gre:FunctionUtils.js");
+
 EXPORTED_SYMBOLS = [ "utf8ToUnicode",
                      "unicodeToUTF8",
                      "octetToHex",
@@ -44,9 +46,6 @@ EXPORTED_SYMBOLS = [ "utf8ToUnicode",
                      "padright",
                      "padleft"
                      ];
-
-// object to hold module's documentation:
-var _doc_ = {};
 
 //----------------------------------------------------------------------
 // Globals
@@ -78,118 +77,117 @@ function getCryptoHash() {
 //----------------------------------------------------------------------
 // utf8ToUnicode
 
-_doc_.utf8ToUnicode = "\
- Converts the JS unicode string 'str' to UTF-8.                       ";
-
-function utf8ToUnicode(str) {
-  return getUTF8Converter().ConvertToUnicode(str);
-}
+defun(
+  "Converts the JS unicode string 'str' to UTF-8.",
+  function utf8ToUnicode(str) {
+    return getUTF8Converter().ConvertToUnicode(str);
+  });
 
 //----------------------------------------------------------------------
 // unicodeToUTF8
 
-_doc_.utf8ToUnicode = "\
- Converts the given UTF-8 encoded string 'str' to a JS unicode string.";
-
-function unicodeToUTF8(str) {
-  var converter = getUTF8Converter();
-  var rv = converter.ConvertFromUnicode(str);
-  rv += converter.Finish();
-  return rv;
-}
+defun(
+  "Converts the given UTF-8 encoded string 'str' to a JS unicode string.",
+  function unicodeToUTF8(str) {
+    var converter = getUTF8Converter();
+    var rv = converter.ConvertFromUnicode(str);
+    rv += converter.Finish();
+    return rv;
+  });
 
 //----------------------------------------------------------------------
 // octetToHex
 
 var hexDigits = "0123456789abcdef";
 
-_doc_.octetToHex = "octetToHex(str, [opt] separator, [opt] octets_per_line) returns the lower-case hexadecimal octet representation of the 'str'. 'str' must be a string of characters with codes between 0 and 255. Codes outside of this range will be truncated. 'separator' is an optional string to insert between the hex octets of the output (default=''). 'octets_per_line' is an optional count determining how many octets should be placed into the output string before a newline is inserted (default=0, don't place newlines). hexToOctet(octetToHex(s)) == s, if the separator string doesn't contain characters in the range [0-9a-fA-F].";
-function octetToHex(str, separator, octets_per_line) {
-  var rv = "";
-  for (var i=0, l=str.length; i<l; ++i) {
-    var code = str.charCodeAt(i);
-    rv += hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
-    if (octets_per_line &&
-        i % octets_per_line == octets_per_line-1)
-      rv += "\n";
-    else if (separator && i!=l-1) rv += separator;
-  }
-  return rv;
-}
+defun(
+  "octetToHex(str, [opt] separator, [opt] octets_per_line) returns the lower-case hexadecimal octet representation of the 'str'. 'str' must be a string of characters with codes between 0 and 255. Codes outside of this range will be truncated. 'separator' is an optional string to insert between the hex octets of the output (default=''). 'octets_per_line' is an optional count determining how many octets should be placed into the output string before a newline is inserted (default=0, don't place newlines). hexToOctet(octetToHex(s)) == s, if the separator string doesn't contain characters in the range [0-9a-fA-F].",
+  function octetToHex(str, separator, octets_per_line) {
+    var rv = "";
+    for (var i=0, l=str.length; i<l; ++i) {
+      var code = str.charCodeAt(i);
+      rv += hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
+      if (octets_per_line &&
+          i % octets_per_line == octets_per_line-1)
+        rv += "\n";
+      else if (separator && i!=l-1) rv += separator;
+    }
+    return rv;
+  });
 
 //----------------------------------------------------------------------
 // hexToOctet
 
 var hexTokenizer = /[0-9a-fA-F][0-9a-fA-F]/g;
 
-_doc_.hexToOctet = "hexToOctet(str) converts the given string of hexadecimal octets (as encoded by octetToHex) into a string of characters with codes between 0 and 255. characters outside of [0-9a-fA-F] will be skipped.";
-function hexToOctet(str) {
-  var rv = "";
-  hexTokenizer.lastIndex = 0;
-  var match;
-  while ((match = hexTokenizer(str))) {
-    rv += String.fromCharCode(parseInt(match[0], 16));
-  };
-  return rv;
-}
+defun(
+  "hexToOctet(str) converts the given string of hexadecimal octets (as encoded by octetToHex) into a string of characters with codes between 0 and 255. characters outside of [0-9a-fA-F] will be skipped.",
+  function hexToOctet(str) {
+    var rv = "";
+    hexTokenizer.lastIndex = 0;
+    var match;
+    while ((match = hexTokenizer(str))) {
+      rv += String.fromCharCode(parseInt(match[0], 16));
+    };
+    return rv;
+  });
 
 //----------------------------------------------------------------------
 // hexCharCodeAt
 
-_doc_.hexCharCodeAt = "hexCharCodeAt(str, i) returns the charcode of str[i] as a 2 digit lower-case hexadecimal value. The charcode must be between 0 and 255 or it will be truncated.";
-function hexCharCodeAt(str, i) {
-  var code = str.charCodeAt(i);
-  return hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
-}
+defun(
+  "hexCharCodeAt(str, i) returns the charcode of str[i] as a 2 digit lower-case hexadecimal value. The charcode must be between 0 and 255 or it will be truncated.",
+  function hexCharCodeAt(str, i) {
+    var code = str.charCodeAt(i);
+    return hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
+  });
 
 //----------------------------------------------------------------------
-// MD5Hex:
-// calculate MD5 hash of data and convert to hex representation as
-// explained in RFC2617:
+// MD5Hex
 
-function MD5Hex(data) {
-  getCryptoHash().initWithString("md5");
-  if (data) {
-    // XXX add update(ACString) method to nsICryptoHash interface so
-    // that we don't have to jump through these hoops
-    var stream = Components.classes["@mozilla.org/io/string-input-stream;1"].createInstance(Components.interfaces.nsIStringInputStream);
-    stream.setData(data, data.length);
-    getCryptoHash().updateFromStream(stream, data.length);
-  }
-  var hash = getCryptoHash().finish(false);
-  var hashHex = "";
-  for (var i=0,l=hash.length; i<l; ++i) {
-    hashHex += hexCharCodeAt(hash, i);
-  }
-  return hashHex;
-}
+defun(
+  "calculate MD5 hash of data and convert to hex representation as explained in RFC2617",
+  function MD5Hex(data) {
+    getCryptoHash().initWithString("md5");
+    if (data) {
+      // XXX add update(ACString) method to nsICryptoHash interface so
+      // that we don't have to jump through these hoops
+      var stream = Components.classes["@mozilla.org/io/string-input-stream;1"].createInstance(Components.interfaces.nsIStringInputStream);
+      stream.setData(data, data.length);
+      getCryptoHash().updateFromStream(stream, data.length);
+    }
+    var hash = getCryptoHash().finish(false);
+    var hashHex = "";
+    for (var i=0,l=hash.length; i<l; ++i) {
+      hashHex += hexCharCodeAt(hash, i);
+    }
+    return hashHex;
+  });
 
 
 //----------------------------------------------------------------------
 // padright
 
-_doc_.padright = "\
- Pads a string 'str' with char 'c' up to a total string length 'l'.  \n\
- Returns padded string. String will be padded on the right.           ";
-
-function padright(str, c, l) {
-  var i = l - str.length;
-  while (--i>=0)
-    str += c;
-  return str;
-}
+defun(
+  "Pads a string 'str' with char 'c' up to a total string length 'l'. "+
+  "Returns padded string. String will be padded on the right.",
+  function padright(str, c, l) {
+    var i = l - str.length;
+    while (--i>=0)
+      str += c;
+    return str;
+  });
 
 //----------------------------------------------------------------------
 // padleft
 
-_doc_.padleft = "\
- Pads a string 'str' with char 'c' up to a total string length 'l'.  \n\
- Returns padded string. String will be padded on the left.            ";
-
-function padleft(str, c, l) {
-  var i = l - str.length;
-  while (--i>=0)
-    str = c + str;
-  return str;
-}
+defun(
+  "Pads a string 'str' with char 'c' up to a total string length 'l'. "+
+  "Returns padded string. String will be padded on the left.",
+  function padleft(str, c, l) {
+    var i = l - str.length;
+    while (--i>=0)
+      str = c + str;
+    return str;
+  });
 

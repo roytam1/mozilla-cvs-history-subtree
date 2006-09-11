@@ -35,32 +35,45 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-EXPORTED_SYMBOLS = [ "noop",
+EXPORTED_SYMBOLS = [ "defun",
+                     "noop",
                      "makeServiceGetter" ];
 
-// object to hold module's documentation:
-var _doc_ = {};
+// name our global object:
+function toString() { return "[FunctionUtils.js]"; }
 
+//----------------------------------------------------------------------
+// defun
+
+function defun(/* [opt] docstring, fun */) {
+  var i = arguments.length;
+  var fun = arguments[--i];
+  this[fun.name] = fun;
+  if (i > 0)
+    fun._doc_ = arguments[--i];
+}
+defun._doc_ = "defun([opt] docstring, fun) defines a function 'fun' on "+
+  "the current global object and installs the optional 'docstring' on 'fun'";
+  
 //----------------------------------------------------------------------
 // noop
 
-_doc_.noop = "\
- A function that does nothing.                                        ";
 
-function noop() {}
+defun(
+  "A function that does nothing.",
+  function noop() {});
 
 //----------------------------------------------------------------------
 // makeServiceGetter
 
-_doc_.makeServiceGetter = "\
- Returns a function that returns and caches the service (clsid,itf)   ";
-
-function makeServiceGetter(clsid, itf) {
-  var theService;
-  return function() {
-    if (!theService) {
-      theService = Components.classes[clsid].getService(itf);
-    }
-    return theService;
-  };
-}
+defun(
+  "Returns a function that returns and caches the service (clsid,itf)",
+  function makeServiceGetter(clsid, itf) {
+    var theService;
+    return function() {
+      if (!theService) {
+        theService = Components.classes[clsid].getService(itf);
+      }
+      return theService;
+    };
+  });

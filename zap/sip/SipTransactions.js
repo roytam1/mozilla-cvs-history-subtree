@@ -47,8 +47,6 @@ Components.utils.importModule("gre:SipUtils.js");
 // name our global object:
 function toString() { return "[SipTransactions.js]"; }
 
-// object to hold component's documentation:
-var _doc_ = {};
 
 //----------------------------------------------------------------------
 // helpers

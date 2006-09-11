@@ -44,8 +44,6 @@ EXPORTED_SYMBOLS = [ "PersistentRDFObject"];
 // name our global object:
 function toString() { return "[RDFUtils.js]"; }
 
-// object to hold module's documentation:
-var _doc_ = {};
 
 ////////////////////////////////////////////////////////////////////////
 // Globals

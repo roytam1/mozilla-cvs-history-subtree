@@ -52,9 +52,6 @@ Components.utils.importModule("gre:SipUARequestCore.js");
 // name our global object:
 function toString() { return "[SipDialog.js]"; }
 
-// object to hold component's documentation:
-var _doc_ = {};
-
 
 ////////////////////////////////////////////////////////////////////////
 // SipDialog

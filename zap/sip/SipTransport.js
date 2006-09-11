@@ -47,9 +47,6 @@ Components.utils.importModule("gre:AsyncUtils.js");
 
 debug("*** SipTransport 1\n");
 
-// object to hold component's documentation:
-var _doc_ = {};
-
 ////////////////////////////////////////////////////////////////////////
 // globals
 

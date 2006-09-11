@@ -35,17 +35,178 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+Components.utils.importModule("gre:FunctionUtils.js");
 Components.utils.importModule("gre:StringUtils.js");
+Components.utils.importModule("gre:ArrayUtils.js");
 
-EXPORTED_SYMBOLS = [ "describe" ];
+EXPORTED_SYMBOLS = [ "describe",
+                     "gendoc" ];
 
-// object to hold module's documentation:
-var _doc_ = {};
+//----------------------------------------------------------------------
+// Generic object introspection
 
-function describe(symbol, base) {
-  if (!base) base = this;
-  if (base._doc_ && base._doc_[symbol])
-    return symbol+":"+base._doc_[symbol]+"\n";
-  return "No documentation for '"+symbol+"'.\n"
-}
+defun(
+  "Returns true if the object has any properties not inherited from its prototype.",
+  function hasAnyOwnProperties(obj) {
+    for (let p in obj) {
+      if (obj.hasOwnProperty(p)) return true;
+    }
+    return false;
+  });
+
+//----------------------------------------------------------------------
+// Function introspection:
+
+defun(
+  "Returns true if 'fun' is an anonymous function.",
+  function isAnonymousFunction(fun) {
+    return ((typeof fun == "function") && fun.name == "");
+  });
+
+defun(
+  "Returns true if 'fun' is a native function.",
+  function isNativeFunction(fun) {
+    return ((typeof fun == "function") &&
+            fun.toString().match(/\[native code\]/)!=null);
+  });
+
+defun(
+  "Returns true if 'fun' is a regular expression.",
+  function isRegexp(fun) {
+    return (fun.__proto__.toString() == "/(?:)/");
+  });
+
+defun(
+  function functionName(fun) {
+    if (isRegexp(fun))
+      return fun.toString();
+    if (isAnonymousFunction(fun))
+      return "/\\";
+    else
+      return fun.name;
+  });
+
+defun(
+  function functionSignature(fun, omitName) {
+    var signature = "";
+    
+    if (isNativeFunction(fun))
+      signature += "[native] ";
+
+    if (hasAnyOwnProperties(fun.prototype))
+      signature += "[ctor] ";
+    
+    if (!omitName)
+      signature += functionName(fun);
+
+    if (!isRegexp(fun)) {
+      var arglist = fun.toString().match(/\((.*)\)/)[1];
+      if (arglist != "") {
+        signature += "("+arglist+")";
+      }
+      else {
+        signature += "(";
+        for (let i=0, argc=fun.arity; i<argc; ++i) {
+          if (i) signature += ",";
+          signature += "_";
+        }
+        signature += ")";
+      }
+    }
+    
+    return signature;
+  });
+
+//----------------------------------------------------------------------
+// describe
+
+defun(
+  function describe(obj) {
+    var docs = gendoc(obj, { depth: 0 });
+    // filterXXX(docs);
+    return docs;
+  });
+
+//----------------------------------------------------------------------
+
+defun(
+  function gendoc(obj, ctx) {
+    if (obj && obj.__docgen__)
+      return obj.__docgen__(ctx);
+    if (typeof obj == "function")
+      return gendoc_function(obj, ctx);
+    else if (isarray(obj))
+      return gendoc_array(obj, ctx);
+    else if (typeof obj == "object")
+      return gendoc_object(obj, ctx);
+    else
+      return gendoc_primitive(obj, ctx);
+  });
+
+defun(
+  function gendoc_function(fun, ctx) {
+    return {
+      obj         : fun,
+      type        : "Function",
+      synopsis    : functionSignature(fun),
+      description : fun._doc_
+        };
+  });
+
+defun(
+  function gendoc_array(arr, ctx) {
+    var children = [];
+    for (let i=0, l=arr.length; i<l; ++i) {
+      children.push(gendoc(arr[i], {__proto__:ctx, depth:ctx.depth+1}));
+    }
+
+    return {
+      obj         : arr,
+      type        : "Array",
+      synopsis    : "[."+arr.length+".]",
+      description : arr._doc_,
+      members     : { synopsis : "Members", objects : children }
+        };
+  });
+
+defun(
+  function gendoc_object(obj, ctx) {
+    var doc = "{";
+    if (ctx.depth == 0) {
+      let first = true;
+      for (let p in obj) {
+        if (p == "_doc_") continue;
+        if (!first)
+          doc += ", ";
+        else
+          first = false;
+        doc += p + ":" + gendoc(obj[p], {__proto__:ctx, depth:ctx.depth+1});
+      }
+      if (obj._doc_) {
+        doc += ": " + obj._doc_;
+      }
+      doc += "}";
+    }
+    else {
+      doc += "...}";
+    }
+  
+    return doc;
+  });
+
+defun(
+  function gendoc_primitive(val, ctx) {
+    if (val === null) return "null";
+    if (val === undefined) return "undefined";
+
+    if (typeof val == "number") return val.toString();
+    
+    var doc = typeof val;
+
+    if (ctx.depth == 0) {
+      doc += " '"+val.toString()+"'";
+    }
+
+    return doc;
+  });
 

@@ -46,8 +46,6 @@ Components.utils.importModule("gre:ObjectUtils.js");
 // name our global object:
 function toString() { return "[SipSyntaxFactory.js]"; }
 
-// object to hold component's documentation:
-var _doc_ = {};
 
 ////////////////////////////////////////////////////////////////////////
 // global constants

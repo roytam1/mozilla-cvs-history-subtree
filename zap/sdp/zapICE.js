@@ -52,9 +52,6 @@ EXPORTED_SYMBOLS = ["produceICECandidates",
                     "extractICECandidates",
                     "createCandidatePairList"];
 
-// object to hold component's documentation:
-var _doc_ = {};
-
 var PB = makePropertyBag;
 
 var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",

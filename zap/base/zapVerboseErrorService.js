@@ -46,10 +46,6 @@ Components.utils.importModule("gre:ObjectUtils.js");
 // name our global object:
 function toString() { return "[zapVerboseErrorService.js]"; }
 
-// object to hold component's documentation:
-var _doc_ = {};
-
-
 // XXX 51 is the GENERAL error module. We should define our own
 // NS_ERROR_MODULE_ZAP in xpcom/base/nsError.h at some point
 var ERROR_MODULE = 51;

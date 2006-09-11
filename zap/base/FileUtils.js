@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+Components.utils.importModule("gre:FunctionUtils.js");
+
 EXPORTED_SYMBOLS = [ "urlToFile",
                      "fileToURL",
                      "openFileForWriting",
@@ -53,8 +55,6 @@ EXPORTED_SYMBOLS = [ "urlToFile",
 // name our global object:
 function toString() { return "[FileUtils.js]"; }
 
-// object to hold module's documentation:
-var _doc_ = {};
 
 ////////////////////////////////////////////////////////////////////////
 // Globals
@@ -88,159 +88,171 @@ var IO_IXOTH = 00001;  /* execute/search permission, others */
 ////////////////////////////////////////////////////////////////////////
 //
 
-// convert a url string to an nsIFile object
-function urlToFile(url) {
-  try {
-    return gIOService.newURI(url, null, null)
-      .QueryInterface(Components.interfaces.nsIFileURL).file;
-  }
-  catch(e) {
-    // doesn't appear to be a file
-    return null;
-  }
-}
+defun(
+  "convert a url string to an nsIFile object",
+  function urlToFile(url) {
+    try {
+      return gIOService.newURI(url, null, null)
+        .QueryInterface(Components.interfaces.nsIFileURL).file;
+    }
+    catch(e) {
+      // doesn't appear to be a file
+      return null;
+    }
+  });
 
-// convert an nsIFile object to a url string
-function fileToURL(file) {
-  return gFileProtocolHandler.getURLSpecFromFile(file);
-}
 
-// Open a file for overwriting or appending. Returns an
-// nsIFileOutputStream object. Permissions should be a 9 character
-// string describing the permissions as 'ls -l' would display
-// them. Default permissions are "rw-r--r--".
-function openFileForWriting(file, append, /* optional */ permissions)
-{
-  var fos;
-  var perms = 0;
-  if (permissions) {
-    if (permissions[0] == "r") perms |= IO_IRUSR;
-    if (permissions[1] == "w") perms |= IO_IWUSR;
-    if (permissions[2] == "x") perms |= IO_IXUSR;
-    if (permissions[3] == "r") perms |= IO_IRGRP;
-    if (permissions[4] == "w") perms |= IO_IWGRP;
-    if (permissions[5] == "x") perms |= IO_IXGRP;
-    if (permissions[6] == "r") perms |= IO_IROTH;
-    if (permissions[7] == "w") perms |= IO_IWOTH;
-    if (permissions[8] == "x") perms |= IO_IXOTH;
-  }
-  else
-    perms = IO_IRUSR | IO_IWUSR | IO_IRGRP | IO_IROTH;
-  
-  try {
-    fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
-      .createInstance(Components.interfaces.nsIFileOutputStream);
-    var ioflags = IO_WRONLY | IO_CREATE_FILE;
-    if (append)
-      ioflags |= IO_APPEND;
+defun(
+  "convert an nsIFile object to a url string.",
+  function fileToURL(file) {
+    return gFileProtocolHandler.getURLSpecFromFile(file);
+  });
+
+defun(
+  "Open a file for overwriting or appending. Returns an "+
+  "nsIFileOutputStream object. Permissions should be a 9 character "+
+  "string describing the permissions as 'ls -l' would display "+
+  "them. Default permissions are 'rw-r--r--'.",
+  function openFileForWriting(file, append, /* optional */ permissions)
+  {
+    var fos;
+    var perms = 0;
+    if (permissions) {
+      if (permissions[0] == "r") perms |= IO_IRUSR;
+      if (permissions[1] == "w") perms |= IO_IWUSR;
+      if (permissions[2] == "x") perms |= IO_IXUSR;
+      if (permissions[3] == "r") perms |= IO_IRGRP;
+      if (permissions[4] == "w") perms |= IO_IWGRP;
+      if (permissions[5] == "x") perms |= IO_IXGRP;
+      if (permissions[6] == "r") perms |= IO_IROTH;
+      if (permissions[7] == "w") perms |= IO_IWOTH;
+      if (permissions[8] == "x") perms |= IO_IXOTH;
+    }
     else
-      ioflags |= IO_TRUNCATE;
-    fos.init(file, ioflags, perms, null);
-  }
-  catch(e) {
-    if (fos)
-      fos.close();
-    fos = null;
-  }
-  return fos;
-}
+      perms = IO_IRUSR | IO_IWUSR | IO_IRGRP | IO_IROTH;
+    
+    try {
+      fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
+        .createInstance(Components.interfaces.nsIFileOutputStream);
+      var ioflags = IO_WRONLY | IO_CREATE_FILE;
+      if (append)
+        ioflags |= IO_APPEND;
+      else
+        ioflags |= IO_TRUNCATE;
+      fos.init(file, ioflags, perms, null);
+    }
+    catch(e) {
+      if (fos)
+        fos.close();
+      fos = null;
+    }
+    return fos;
+  });
 
-// Open a file for reading. Returns an nsIScriptableInputStreamEx object.
-function openFileForReading(file) {
-  try {
-    var fis = Components.classes["@mozilla.org/network/file-input-stream;1"]
-      .createInstance(Components.interfaces.nsIFileInputStream);
-    var ioflags = IO_RDONLY;
-    fis.init(file, ioflags, 0, 0);
-  }
-  catch(e) {
-    if (fis)
-      fis.close();
-    fis = null;
-  }
-  var sis = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance(Components.interfaces.nsIScriptableInputStreamEx);
-  sis.init(fis);
-  return sis;  
-}
+defun(
+  "Open a file for reading. Returns an nsIScriptableInputStreamEx object.",
+  function openFileForReading(file) {
+    try {
+      var fis = Components.classes["@mozilla.org/network/file-input-stream;1"]
+        .createInstance(Components.interfaces.nsIFileInputStream);
+      var ioflags = IO_RDONLY;
+      fis.init(file, ioflags, 0, 0);
+    }
+    catch(e) {
+      if (fis)
+        fis.close();
+      fis = null;
+    }
+    var sis = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance(Components.interfaces.nsIScriptableInputStreamEx);
+    sis.init(fis);
+    return sis;  
+  });
 
-// Returns a string with the content of the given file.
-// Throws an exception if the file can't be read
-function readFile(file) {
-  var sis = openFileForReading(file);
-  if (!sis) throw("Can't open file");
-  var rv = "";
-  var avail;
-  while ((avail = sis.available()))
-    rv += sis.readEx(avail);
+defun(
+  "Returns a string with the content of the given file. "+
+  "Throws an exception if the file can't be read.",
+  function readFile(file) {
+    var sis = openFileForReading(file);
+    if (!sis) throw("Can't open file");
+    var rv = "";
+    var avail;
+    while ((avail = sis.available()))
+      rv += sis.readEx(avail);
+    
+    return rv;
+  });
 
-  return rv;
-}
+defun(
+  "returns the profile directory",
+  function getProfileDir()
+  {
+    return gDirectoryService.get("ProfD", Components.interfaces.nsIFile);
+  });
 
-// returns the profile directory
-function getProfileDir()
-{
-  return gDirectoryService.get("ProfD", Components.interfaces.nsIFile);
-}
+defun(
+  "get a file in the profile directory",
+  function getProfileFile(name)
+  {
+    var file = gDirectoryService.get("ProfD",
+                                     Components.interfaces.nsIFile);
+    file.append(name);
+    return file;
+  });
 
+defun(
+  "get a file in the profile defaults directory",
+  function getProfileDefaultsFile(name)
+  {
+    var file = gDirectoryService.get("ProfDefNoLoc",
+                                     Components.interfaces.nsIFile);
+    file.append(name);
+    return file;
+  });
 
-// get a file in the profile directory:
-function getProfileFile(name)
-{
-  var file = gDirectoryService.get("ProfD",
-                                   Components.interfaces.nsIFile);
-  file.append(name);
-  return file;
-}
+defun(
+  "get the url of a file in the profile directory (e.g. for opening a "+
+  "datasource)",
+  function getProfileFileURL(name)
+  {
+    return gFileProtocolHandler.getURLSpecFromFile(getProfileFile(name));
+  });
 
-// get a file in the profile defaults directory:
-function getProfileDefaultsFile(name)
-{
-  var file = gDirectoryService.get("ProfDefNoLoc",
-                                   Components.interfaces.nsIFile);
-  file.append(name);
-  return file;
-}
+defun(
+  "Ensure the given profile file exists; copying it from the profile "+
+  "defaults directory if necessary. Returns 'false' if the file "+
+  "doesn't exist or can't be copied; 'true' otherwise. ",
+  function ensureProfileFile(name)
+  {
+    var file = getProfileFile(name);
+    if (file.exists()) return true;
+    
+    // file doesn't exist. try copying from profile defaults directory:
+    var dfile = getProfileDefaultsFile(name);
+    if (!dfile.exists()) return false;
+    try {
+      dfile.copyTo(getProfileDir(), "");
+    }
+    catch(e) {
+      return false;
+    }
+    return true;
+  });
 
-// get the url of a file in the profile directory (e.g. for opening a
-// datasource):
-function getProfileFileURL(name)
-{
-  return gFileProtocolHandler.getURLSpecFromFile(getProfileFile(name));
-}
+defun(
+  "returns the xulrunner staging directory",
+  function getStageDir()
+  {
+    // XXX is XCurProcD correct here?
+    return gDirectoryService.get("XCurProcD", Components.interfaces.nsIFile);
+  });
 
-// Ensure the given profile file exists; copying it from the profile
-// defaults directory if necessary. Returns 'false' if the file
-// doesn't exist or can't be copied; 'true' otherwise.
-function ensureProfileFile(name)
-{
-  var file = getProfileFile(name);
-  if (file.exists()) return true;
-
-  // file doesn't exist. try copying from profile defaults directory:
-  var dfile = getProfileDefaultsFile(name);
-  if (!dfile.exists()) return false;
-  try {
-    dfile.copyTo(getProfileDir(), "");
-  }
-  catch(e) {
-    return false;
-  }
-  return true;
-}
-
-// returns the xulrunner staging directory
-function getStageDir()
-{
-  // XXX is XCurProcD correct here?
-  return gDirectoryService.get("XCurProcD", Components.interfaces.nsIFile);
-}
-
-// get a file in the staging directory:
-function getStageFile(name)
-{
-  // XXX is XCurProcD correct here?
-  var file = gDirectoryService.get("XCurProcD",
-                                   Components.interfaces.nsIFile);
-  file.append(name);
-  return file;
-}
+defun(
+  "get a file in the staging directory",
+  function getStageFile(name)
+  {
+    // XXX is XCurProcD correct here?
+    var file = gDirectoryService.get("XCurProcD",
+                                     Components.interfaces.nsIFile);
+    file.append(name);
+    return file;
+  });
