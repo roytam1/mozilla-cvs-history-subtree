@@ -1780,7 +1780,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 todo = (*rval != '\0')
                        ? Sprint(&ss->sprinter,
                                 (strncmp(rval, js_yield_str, 5) == 0 &&
-                                 rval[5] == ' ')
+                                 (rval[5] == ' ' || rval[5] == '\0'))
                                 ? "%s (%s)"
                                 : "%s %s",
                                 js_yield_str, rval)
