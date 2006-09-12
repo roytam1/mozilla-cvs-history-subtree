@@ -3158,8 +3158,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     return JS_FALSE;
                 todo = SprintPut(&ss->sprinter, "<?", 2);
                 ok = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0) &&
-                     SprintPut(&ss->sprinter, " ", 1) >= 0 &&
-                     SprintCString(&ss->sprinter, rval);
+                     (*rval == '\0' ||
+                      (SprintPut(&ss->sprinter, " ", 1) >= 0 &&
+                       SprintCString(&ss->sprinter, rval)));
                 JS_free(cx, (char *)rval);
                 if (!ok)
                     return JS_FALSE;
