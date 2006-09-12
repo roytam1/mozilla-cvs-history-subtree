@@ -146,5 +146,7 @@ NS_MSG_BASE PRBool MsgFindKeyword(const nsACString &keyword, nsACString &keyword
                                   nsACString::const_iterator &start, 
                                   nsACString::const_iterator &end);
 
+NS_MSG_BASE PRBool MsgHostDomainIsTrusted(nsCString &host, nsCString &trustedMailDomains);
+
 #endif
 
