@@ -282,15 +282,16 @@ tabpanels {
   -moz-appearance: none !important;
   border: none !important;
   margin-top: 2px;
+  margin-bottom: 4px !important;
   padding: 0px;
   width: 18px;
-  height: 25px;
+  height: 23px;
   -moz-margin-start: 0px;
+  -moz-margin-end: 0px;
   list-style-image: url("chrome://global/skin/icons/tab-arrow-start.png");
   -moz-image-region: rect(0, 11px, 14px, 0);
   background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
   background-repeat: no-repeat;
-  opacity: 0.4;
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up {
@@ -300,6 +301,11 @@ tabpanels {
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up[disabled="true"] {
   -moz-image-region: rect(0, 33px, 14px, 22px);
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-disabled.png");
+}
+
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up[disabled="true"] {
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-disabled.png");
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover {
@@ -311,19 +317,21 @@ tabpanels {
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up > .toolbarbutton-icon {    
-  margin-top: 4px;                  
+  margin: 6px 0px 0px 0px;
 }                                                                            
+
+.tabbrowser-arrowscrollbox > .scrollbutton-down-stack {
+  margin-top: 2px;
+  margin-bottom: 4px;
+  height: 23px;
+}
 
 .scrollbutton-rel-box > .scrollbutton-down-box {
   -moz-appearance: none !important;
   border: none !important;
-  margin-top: 2px;
-  margin-bottom: 2px;
   width: 18px;
-  height: 25px;
   background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
   background-repeat: no-repeat;	
-  opacity: 0.4;
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down-box {
@@ -331,8 +339,6 @@ tabpanels {
 }
 
 .scrollbutton-rel-box > .scrollbutton-down-box-animate {
-  margin-top: 2px;
-  margin-bottom: 2px;
   background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-animate.png");
   background-repeat: no-repeat;
   opacity: 0.0;
@@ -345,15 +351,11 @@ tabpanels {
 .scrollbutton-rel-box > .scrollbutton-down {
   -moz-appearance: none !important;
   border: none !important;
-  margin-top: 2px;
-  margin-bottom: 2px;
   width: 18px;
-  -moz-margin-start: 0;
-  -moz-margin-end: 0;
-  -moz-padding-end: 0;
-  opacity: 0.4;
   list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png");
   -moz-image-region: rect(0, 11px, 14px, 0);
+  margin: 0px;
+  padding: 0px;
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down {
@@ -372,7 +374,6 @@ tabpanels {
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover {
-  -moz-padding-end: 0px !important;
   background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
 }
 
@@ -381,9 +382,7 @@ tabpanels {
 }
 
 .scrollbutton-rel-box > .scrollbutton-down > .toolbarbutton-icon {
-  -moz-padding-end: 0px !important;
-  -moz-margin-end: 0px !important;
-  margin-top: 4px;
+  margin: 6px 0px 0px 1px;
 }
 
 /**
@@ -392,12 +391,11 @@ tabpanels {
 
 .tabs-alltabs-box {
   margin-top: 2px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   width: 18px !important;
-  height: 25px !important;
+  height: 23px !important;
   background-image: url("chrome://global/skin/icons/alltabs-box-end-bkgnd.png");
   background-repeat: no-repeat;
-  opacity: 0.40;
 }
 
 stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
@@ -406,27 +404,26 @@ stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
 
 .tabbrowser-tabs[overflow="true"] .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd.png");
-  opacity: 0.40;
 }
 
 .tabbrowser-tabs[overflow="true"] stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-start-bkgnd.png");
-  opacity: 0.40;
 }
 
 .tabs-alltabs-button {
   -moz-appearance: none !important;
   border: 0px !important;
   margin-top: 2px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   width: 18px !important;
-  height: 25px !important;
+  height: 23px !important;
   border: 0px !important;
   -moz-padding-start: 4px !important;
   -moz-padding-end: 4px !important;
+  padding: 0px;
 }
 
-.tabs-alltabs-button  > .toolbarbutton-text {
+.tabs-alltabs-button > .toolbarbutton-text {
   display: none;
 }
 
@@ -434,29 +431,32 @@ stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
   -moz-margin-end: 2px;
 }
 
+.tabs-alltabs-button > .toolbarbutton-menu-dropmarker {
+  margin-top: 3px !important;
+}
+
 .tabs-alltabs-button:hover {
-  background-image: url("chrome://global/skin/icons/alltabs-box-end-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/alltabs-box-end-bkgnd-hover.png");
   background-repeat: no-repeat;
-  opacity: 1.0;
 }
 
 stack[chromedir="rtl"] > hbox > .tabs-alltabs-button:hover {
-  background-image: url("chrome://global/skin/icons/alltabs-box-start-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/alltabs-box-start-bkgnd-hover.png");
 }
 
 .tabbrowser-tabs[overflow="true"] .tabs-alltabs-button:hover {
-  background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd-hover.png");
 }
 
 .tabbrowser-tabs[overflow="true"] stack[chromedir="rtl"] > hbox > .tabs-alltabs-button:hover {
-  background-image: url("chrome://global/skin/icons/alltabs-box-overflow-start-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/alltabs-box-overflow-start-bkgnd-hover.png");
 }
 
 .tabs-alltabs-box-animate {
   margin-top: 2px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   width: 18px !important;
-  height: 25px !important;
+  height: 23px !important;
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd-animate.png");
   background-repeat: no-repeat;
   opacity: 0.0;
