@@ -2551,6 +2551,16 @@ EmitSwitch(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
         obj = ATOM_TO_OBJECT(atom);
         OBJ_SET_BLOCK_DEPTH(cx, obj, cg->stackDepth);
 
+        /*
+         * Push the body's block scope before discriminant code-gen for proper
+         * static block scope linkage in case the discriminant contains a let
+         * expression.  The block's locals must lie under the discriminant on
+         * the stack so that case-dispatch bytecodes can find the discriminant
+         * on top of stack.
+         */
+        js_PushBlockScope(&cg->treeContext, stmtInfo, atom, -1);
+        stmtInfo->type = STMT_SWITCH;
+
         count = OBJ_BLOCK_COUNT(cx, obj);
         cg->stackDepth += count;
         if ((uintN)cg->stackDepth > cg->maxStackDepth)
@@ -2561,6 +2571,15 @@ EmitSwitch(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
         if (!ale)
             return JS_FALSE;
         EMIT_ATOM_INDEX_OP(JSOP_ENTERBLOCK, ALE_INDEX(ale));
+
+        /*
+         * Pop the switch's statement info around discriminant code-gen.  Note
+         * how this leaves cg->treeContext.blockChain referencing the switch's
+         * block scope object, which is necessary for correct block parenting
+         * in the case where the discriminant contains a let expression.
+         */
+        cg->treeContext.topStmt = stmtInfo->down;
+        cg->treeContext.topScopeStmt = stmtInfo->downScope;
     }
 #ifdef __GNUC__
     else {
@@ -2585,12 +2604,11 @@ EmitSwitch(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
     if (pn2->pn_type == TOK_LC) {
         js_PushStatement(&cg->treeContext, stmtInfo, STMT_SWITCH, top);
     } else {
-        /* Recompute top now that the JSOP_ENTERBLOCK has been emitted. */
-        top = CG_OFFSET(cg);
+        /* Re-push the switch's statement info record. */
+        cg->treeContext.topStmt = cg->treeContext.topScopeStmt = stmtInfo;
 
-        /* Push the body's block scope after emitting the discriminant. */
-        js_PushBlockScope(&cg->treeContext, stmtInfo, atom, top);
-        stmtInfo->type = STMT_SWITCH;
+        /* Set the statement info record's idea of top. */
+        stmtInfo->update = top;
 
         /* Advance pn2 to refer to the switch case list. */
         pn2 = pn2->pn_expr;
