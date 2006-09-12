@@ -2151,7 +2151,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                  */
                 atom = NULL;
                 xval = POP_STR();
+                op = JSOP_GETELEM;      /* lval must have high precedence */
                 lval = POP_STR();
+                op = saveop;
                 rval = POP_STR();
                 LOCAL_ASSERT(strcmp(rval, forelem_cookie) == 0);
                 LOCAL_ASSERT(forelem_tail > pc);
@@ -2549,7 +2551,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_GETELEM:
               case JSOP_GETXELEM:
-                op = JSOP_NOP;           /* turn off parens */
+                op = JSOP_NOP;          /* turn off parens */
                 xval = POP_STR();
                 op = saveop;
                 lval = POP_STR();
@@ -2566,11 +2568,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_SETELEM:
                 rval = POP_STR();
-                op = JSOP_NOP;           /* turn off parens */
+                op = JSOP_NOP;          /* turn off parens */
                 xval = POP_STR();
                 cs = &js_CodeSpec[ss->opcodes[ss->top]];
-                op = saveop;
+                op = JSOP_GETELEM;      /* lval must have high precedence */
                 lval = POP_STR();
+                op = saveop;
                 if (*xval == '\0')
                     goto do_setlval;
                 sn = js_GetSrcNote(jp->script, pc - 1);
