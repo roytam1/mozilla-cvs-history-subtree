@@ -293,6 +293,10 @@ static void
 GetScrollbarMetrics(nsBoxLayoutState& aState, nsIBox* aBox, nsSize* aMin,
                     nsSize* aPref, PRBool aVertical)
 {
+  NS_ASSERTION(aState.GetRenderingContext(),
+               "Must have rendering context in layout state for size "
+               "computations");
+  
   if (aMin) {
     aBox->GetMinSize(aState, *aMin);
     nsBox::AddMargin(aBox, *aMin);
@@ -667,7 +671,7 @@ nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
   if (ss.mVertical == NS_STYLE_OVERFLOW_SCROLL && // ideal?
       mInner.mVScrollbarBox) {
-    nsBoxLayoutState bls(GetPresContext());
+    nsBoxLayoutState bls(GetPresContext(), aRenderingContext);
     nsSize vScrollbarMinSize(0, 0);
     GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
                         &vScrollbarMinSize, nsnull, PR_TRUE);
@@ -689,7 +693,7 @@ nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
   if (ss.mVertical != NS_STYLE_OVERFLOW_HIDDEN && // ideal?
       mInner.mVScrollbarBox) {
-    nsBoxLayoutState bls(GetPresContext());
+    nsBoxLayoutState bls(GetPresContext(), aRenderingContext);
     nsSize vScrollbarMinSize(0, 0);
     GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
                         &vScrollbarMinSize, nsnull, PR_TRUE);
@@ -924,6 +928,10 @@ nsMargin nsXULScrollFrame::GetDesiredScrollbarSizes(nsBoxLayoutState* aState) {
 }
 
 nsMargin nsGfxScrollFrameInner::GetDesiredScrollbarSizes(nsBoxLayoutState* aState) {
+  NS_ASSERTION(aState && aState->GetRenderingContext(),
+               "Must have rendering context in layout state for size "
+               "computations");
+  
   nsMargin result(0, 0, 0, 0);
 
   if (mVScrollbarBox) {

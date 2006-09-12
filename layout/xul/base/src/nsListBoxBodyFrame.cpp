@@ -259,8 +259,6 @@ nsListBoxBodyFrame::Init(nsIContent*     aContent,
   nsCOMPtr<nsIScrollbarFrame> scrollbarFrame(do_QueryInterface(verticalScrollbar));
   scrollbarFrame->SetScrollbarMediator(this);
 
-  nsBoxLayoutState boxLayoutState(presContext);
-
   nsCOMPtr<nsIFontMetrics> fm;
   presContext->DeviceContext()->GetMetricsFor(
     GetStyleContext()->GetStyleFont()->mFont, *getter_AddRefs(fm)

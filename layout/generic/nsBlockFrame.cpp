@@ -759,7 +759,8 @@ CalculateContainingBlockSizeForAbsolutes(const nsHTMLReflowState& aReflowState,
       CallQueryInterface(aLastRS->frame, &scrollFrame);
       nsMargin scrollbars(0,0,0,0);
       if (scrollFrame) {
-        nsBoxLayoutState dummyState(aLastRS->frame->GetPresContext());
+        nsBoxLayoutState dummyState(aLastRS->frame->GetPresContext(),
+                                    aLastRS->rendContext);
         scrollbars = scrollFrame->GetDesiredScrollbarSizes(&dummyState);
         // XXX We should account for the horizontal scrollbar too --- but currently
         // nsGfxScrollFrame assumes nothing depends on the presence (or absence) of
