@@ -72,6 +72,10 @@ pref("mailnews.headers.showUserAgent",       false);
 // is displayed in the message pane or not...
 pref("mailnews.headers.showOrganization",    false);
 
+// If true, delete will use the direction of the sort order
+// in determining the next message to select. 
+pref("mail.delete_matches_sort_order", false);
+
 // mailnews tcp read+write timeout in seconds.
 pref("mailnews.tcptimeout", 60);
 
