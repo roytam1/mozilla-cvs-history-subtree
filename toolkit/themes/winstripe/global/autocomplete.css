@@ -74,9 +74,15 @@ textbox.padded {
   width: 16px;
   height: 20px;
   margin: 0px;
+  border-left: 1px solid #96969D;
   padding: 0px;
   list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-arrow.png");
   -moz-image-region: rect(0px, 16px, 20px, 0px);
+}
+
+textbox[chromedir="rtl"] .autocomplete-history-dropmarker {
+  border-left: none;
+  border-right: 1px solid #96969D;
 }
 
 .autocomplete-history-dropmarker:hover {

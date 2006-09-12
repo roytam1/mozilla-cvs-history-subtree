@@ -223,6 +223,7 @@
              it would be if both icons were visible. -->
         <stack id="urlbar-sizing-deck" flex="1">
           <textbox id="urlbar" flex="1"
+                   chromedir="&locale.dir;"
                    type="autocomplete"
                    autocompletesearch="history" 
                    autocompletepopup="PopupAutoComplete"
