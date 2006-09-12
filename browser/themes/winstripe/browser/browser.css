@@ -257,24 +257,11 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 }
 
 .toolbarbutton-1, .toolbarbutton-menubutton-button {
-  border: 0 !important;
   padding: 5px;
 }
 
-.toolbarbutton-1:hover:active:not([disabled]),
-.toolbarbutton-1[open="true"], 
-.toolbarbutton-menubutton-button:hover:active:not([disabled]),
-.toolbarbutton-menubutton-button[open="true"] {
-  border: 0 !important;
-}
-
 .toolbarbutton-1[checked="true"] {
-  border: 0 !important;
   padding: 5px !important;
-}
-
-.toolbarbutton-1[type="menu-button"] {
-  border: 0 !important;
 }
 
 .toolbarbutton-menubutton-stack,
@@ -283,7 +270,6 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 .toolbarbutton-menubutton-button:hover,
 .toolbarbutton-menubutton-stack:hover:active,
 .toolbarbutton-menubutton-button:hover:active {
-  border: 0 !important;
   display: -moz-box;
 }
 
@@ -522,22 +508,6 @@ toolbar[iconsize="small"] .toolbarbutton-1 .toolbarbutton-icon {
   -moz-margin-end: 0px;
 }
 
-toolbar[iconsize="small"] .toolbarbutton-1, 
-.toolbarbutton-menubutton-button {
-  border: 0 !important;
-}
-
-toolbar[iconsize="small"] .toolbarbutton-1:hover:active:not([disabled]),
-toolbar[iconsize="small"] .toolbarbutton-1[open="true"], 
-toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active:not([disabled]),
-toolbar[iconsize="small"] .toolbarbutton-menubutton-button[open="true"] {
-  border: 0 !important;
-}
-
-toolbar[iconsize="small"] .toolbarbutton-1[checked="true"] {
-  border: 0 !important;
-}
-
 toolbar[iconsize="small"] .toolbarbutton-1[type="menu-button"] {
   border: 0 !important;
 }
@@ -548,7 +518,6 @@ toolbar[iconsize="small"] .toolbarbutton-menubutton-stack:hover,
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover,
 toolbar[iconsize="small"] .toolbarbutton-menubutton-stack:hover:active,
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active {
-  border: 0 !important;
   display: -moz-box;
 }
 /* ::::: small back button ::::: */
