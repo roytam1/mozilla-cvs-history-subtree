@@ -241,15 +241,6 @@ tabbrowser > tabbox > tabpanels {
   background-image: url("chrome://global/skin/tab-middle-hover.png");
 }
 
-.tab-close-button-placeholder {
-  list-style-image: url("chrome://global/skin/icons/closetab.png");
-  opacity: 0.5;
-  -moz-margin-start: -5px;
-  -moz-padding-end: 3px;
-  border: none !important;
-  padding: 0px;
-}
-
 /**
  * Tab Scrollbox Arrow Buttons
  */
