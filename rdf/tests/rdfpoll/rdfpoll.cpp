@@ -150,7 +150,7 @@ rdf_WriteOp(const char* aOp,
         
         printf("       ->\"%s\"\n", p);
 
-        nsCRT::free(p);
+        NS_Free(p);
     }
     else if ((date = do_QueryInterface(aTarget)) != nsnull) {
         PRTime value;

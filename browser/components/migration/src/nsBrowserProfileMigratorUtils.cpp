@@ -58,7 +58,6 @@
 #include "nsIStringBundle.h"
 #include "nsISupportsArray.h"
 #include "nsXPCOMCID.h"
-#include "nsCRT.h"
 
 #define MIGRATION_BUNDLE "chrome://browser/locale/migration/migration.properties"
 
@@ -147,7 +146,7 @@ void GetMigrateDataFromArray(MigrationData* aDataArray, PRInt32 aDataArrayLength
       if (exists)
         *aResult |= cursor->sourceFlag;
     }
-    nsCRT::free(cursor->fileName);
+    NS_Free(cursor->fileName);
     cursor->fileName = nsnull;
   }
 }

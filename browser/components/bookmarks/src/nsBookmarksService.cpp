@@ -1791,7 +1791,7 @@ nsBookmarksService::getLocaleString(const char *key, nsString &str)
         && (keyUni))
     {
         str = keyUni;
-        nsCRT::free(keyUni);
+        NS_Free(keyUni);
     }
     else
     {
@@ -5222,7 +5222,7 @@ nsBookmarksService::WriteBookmarkIdAndName(nsIRDFDataSource *aDs,
             rv |= aStrm->Write(kIDEquals, sizeof(kIDEquals)-1, &dummy);
             rv |= aStrm->Write(escapedID, strlen(escapedID), &dummy);
             rv |= aStrm->Write(kQuoteStr, sizeof(kQuoteStr)-1, &dummy);
-            nsCRT::free(escapedID);
+            NS_Free(escapedID);
         }
     }
 
@@ -5254,7 +5254,7 @@ nsBookmarksService::WriteBookmarkIdAndName(nsIRDFDataSource *aDs,
     if (escapedAttrib)
     {
         rv = aStrm->Write(escapedAttrib, strlen(escapedAttrib), &dummy);
-        nsCRT::free(escapedAttrib);
+        NS_Free(escapedAttrib);
     }
     return rv;
 }
@@ -5318,12 +5318,12 @@ nsBookmarksService::WriteBookmarkProperties(nsIRDFDataSource *aDs,
                             {
                                 rv |= aStrm->Write(kQuoteStr, sizeof(kQuoteStr)-1, &dummy);
                             }
-                            nsCRT::free(escapedAttrib);
+                            NS_Free(escapedAttrib);
                             escapedAttrib = nsnull;
                         }
                     }
                 }
-                nsCRT::free(attribute);
+                NS_Free(attribute);
                 attribute = nsnull;
             }
         }

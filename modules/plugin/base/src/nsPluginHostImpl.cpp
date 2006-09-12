@@ -2992,7 +2992,7 @@ NS_IMETHODIMP nsPluginHostImpl::PostURL(nsISupports* pluginInst,
                                 (const char*)dataToPost, isFile, postDataLen,
                                 postHeaders, postHeadersLength);
       if (isFile) {
-        nsCRT::free(dataToPost);
+        NS_Free(dataToPost);
       }
   }
 

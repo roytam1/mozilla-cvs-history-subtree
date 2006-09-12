@@ -147,7 +147,7 @@ nsPrintData::~nsPrintData()
   }
 
   if (mBrandName) {
-    nsCRT::free(mBrandName);
+    NS_Free(mBrandName);
   }
 
   for (PRInt32 i=0;i<mPrintProgressListeners.Count();i++) {
