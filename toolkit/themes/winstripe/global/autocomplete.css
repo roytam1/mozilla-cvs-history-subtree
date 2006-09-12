@@ -76,6 +76,7 @@ textbox.padded {
   margin: 0px;
   border-left: 1px solid #96969D;
   padding: 0px;
+  background-color: -moz-dialog; 
   list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-arrow.png");
   -moz-image-region: rect(0px, 16px, 20px, 0px);
 }
