@@ -280,6 +280,8 @@ toolbar:not([mode="text"]) #forward-button .toolbarbutton-menubutton-button {
   -moz-binding: url('chrome://global/content/bindings/toolbarbutton.xml#toolbarbutton-image');
   margin: 0;
   padding: 0;
+  border-left: 0;
+  border-right: 0;
 }
 
 toolbar:not([mode="text"]) #back-button .allowevents-box,
@@ -446,7 +448,7 @@ toolbar[mode="icons"] #forward-button .toolbarbutton-text-box {
 #history-button {
   -moz-image-region: rect(0px, 168px, 24px, 144px);
 }
-#history-button:hover:active {
+#history-button:hover {
   -moz-image-region: rect(24px, 168px, 48px, 144px);
 }
 #history-button[disabled="true"] {
@@ -592,6 +594,7 @@ toolbar[iconsize="small"] #back-button[open="true"] {
 /* ----- SMALL BACK BUTTON DROPMARKER ----- */
 
 toolbar[iconsize="small"] #back-button .toolbarbutton-menubutton-dropmarker {
+   margin-top: 0px;
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
   -moz-image-region: rect(0px, 14px, 16px, 0px);
 }
@@ -631,7 +634,8 @@ toolbar[iconsize="small"] #forward-button[open="true"] {
 
 /* ----- SMALL FORWARD BUTTON DROPMARKER ----- */
 
-toolbar[iconsize="small"] #forward-button .toolbarbutton-menubutton-dropmarker {  
+toolbar[iconsize="small"] #forward-button .toolbarbutton-menubutton-dropmarker { 
+  margin-top: 0px; 
   list-style-image: url("chrome://browser/skin/dropmark-nav-small.png");
   -moz-image-region: rect(0px, 14px, 16px, 0px);
 }
@@ -868,25 +872,27 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 }
 
 #urlbar[level="high"] #lock-icon {
+  margin: -1px;
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(0px, 16px, 16px, 0px);
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
 }
 #urlbar[level="high"] #lock-icon:hover {
-  -moz-image-region: rect(16px, 16px, 32px, 0px);
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
 }
 #urlbar[level="high"] #lock-icon:active {
-  -moz-image-region: rect(32px, 16px, 48px, 0px);
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
 }
 
 #urlbar[level="low"] #lock-icon {
+  margin: -1px;
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(0px, 16px, 16px, 0px);
+  -moz-image-region: rect(0px, 18px, 18px, 0px);
 }
 #urlbar[level="low"] #lock-icon:hover {
-  -moz-image-region: rect(16px, 16px, 32px, 0px);
+  -moz-image-region: rect(18px, 18px, 36px, 0px);
 }
 #urlbar[level="low"] #lock-icon:active {
-  -moz-image-region: rect(32px, 16px, 48px, 0px);
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
 }
 
 #urlbar[level="broken"] #lock-icon {
@@ -1083,7 +1089,7 @@ sidebarheader > .tabs-closebutton > .toolbarbutton-text {
 #feed-button, #feed-button > .button-box,
 #feed-button:hover:active > .button-box {
   padding: 0px;
-  margin: 0px;
+  margin: -1px;
   border: 0px; 
   background-color: transparent;
 }
@@ -1102,13 +1108,13 @@ sidebarheader > .tabs-closebutton > .toolbarbutton-text {
 
 #feed-button[feeds] {
   list-style-image: url("chrome://browser/skin/livemark-item.png");
-  -moz-image-region: rect(1px, 36px, 17px, 18px);
+  -moz-image-region: rect(0px, 36px, 18px, 18px);
 }
 #feed-button[feeds]:hover {
-  -moz-image-region: rect(19px, 36px, 35px, 18px);
+  -moz-image-region: rect(18px, 36px, 36px, 18px);
 }
 #feed-button[feeds]:active {
-  -moz-image-region: rect(55px, 36px, 71px, 18px);
+  -moz-image-region: rect(54px, 36px, 72px, 18px);
 }
 
 /* ----- THROBBER ----- */
