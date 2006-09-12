@@ -374,13 +374,13 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #history-button {
   -moz-image-region: rect(0px 168px 24px 144px);
 }
-#history-button:not([disabled="true"]):hover {
+#history-button:not([disabled="true"]):not([checked="true"]):hover {
   -moz-image-region: rect(24px 168px 48px 144px);
 }
 #history-button[disabled="true"] {
   -moz-image-region: rect(48px 168px 72px 144px);
 }
-#history-button:not([disabled="true"]):hover:active {
+#history-button:not([disabled="true"]):not([checked="true"]):hover:active {
   -moz-image-region: rect(96px 168px 120px 144px);
 }
 
@@ -389,16 +389,16 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #bookmarks-button {
   -moz-image-region: rect(0px 192px 24px 168px);
 }
-#bookmarks-button:not([disabled="true"]):hover {
+#bookmarks-button:not([disabled="true"]):not([checked="true"]):hover {
   -moz-image-region: rect(24px 192px 48px 168px);
 }
 #bookmarks-button[disabled="true"] {
   -moz-image-region: rect(48px 192px 72px 168px);
 }
 #bookmarks-button[checked="true"] {
-  -moz-image-region: rect(72px 192px 96px 168px) !important;
+  -moz-image-region: rect(72px 192px 96px 168px);
 }
-#bookmarks-button:not([disabled="true"]):hover:active {
+#bookmarks-button:not([disabled="true"]):not([checked="true"]):hover:active {
   -moz-image-region: rect(96px 192px 120px 168px);
 }
 
