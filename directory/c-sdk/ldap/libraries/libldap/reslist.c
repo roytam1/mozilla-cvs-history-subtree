@@ -51,6 +51,7 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #include "ldap-int.h"
 
 LDAPMessage *
+LDAP_CALL
 ldap_delete_result_entry( LDAPMessage **list, LDAPMessage *e )
 {
 	LDAPMessage	*tmp, *prev = NULL;
@@ -75,6 +76,7 @@ ldap_delete_result_entry( LDAPMessage **list, LDAPMessage *e )
 }
 
 void
+LDAP_CALL
 ldap_add_result_entry( LDAPMessage **list, LDAPMessage *e )
 {
     if ( list != NULL && e != NULL ) {
