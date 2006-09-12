@@ -58,6 +58,10 @@
 
 /* ..... fix searchbar "add engine" padding issue ..... */
 
+#searchbar {
+  -moz-margin-start: 3px;
+}
+
 #searchbar .searchbar-popup .open-engine-manager { 
   -moz-padding-start: 4px; 
 }
@@ -761,10 +765,10 @@ toolbar[iconsize="small"] #paste-button:not([disabled="true"]):hover:active {
 /* ::::: nav-bar-inner ::::: */
 
 #urlbar {
-  margin: 2px 0 2px 0;
-%ifdef MOZ_WIDGET_GTK2
+  margin-bottom: 2px;
+  margin-top: 2px;
+  -moz-margin-end: 0px;
   -moz-margin-start: 3px;
-%endif
 
   -moz-appearance: none;
   -moz-border-top-colors: #96969D;
