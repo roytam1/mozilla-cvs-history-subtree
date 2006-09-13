@@ -384,6 +384,9 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 #history-button[disabled="true"] {
   -moz-image-region: rect(48px 168px 72px 144px);
 }
+#history-button[checked="true"] {
+  -moz-image-region: rect(72px 168px 96px 144px);
+}
 #history-button:not([disabled="true"]):not([checked="true"]):hover:active {
   -moz-image-region: rect(96px 168px 120px 144px);
 }
@@ -622,13 +625,16 @@ toolbar[iconsize="small"] #downloads-button:not([disabled="true"]):hover:active 
 toolbar[iconsize="small"] #history-button {
   -moz-image-region: rect(0px 112px 16px 96px);
 }
-toolbar[iconsize="small"] #history-button:not([disabled="true"]):hover {
+toolbar[iconsize="small"] #history-button:not([disabled="true"]):not([checked="true"]):hover {
   -moz-image-region: rect(16px 112px 32px 96px);
 }
 toolbar[iconsize="small"] #history-button[disabled="true"] {
   -moz-image-region: rect(32px 112px 48px 96px);
 }
-toolbar[iconsize="small"] #history-button:not([disabled="true"]):hover:active {
+toolbar[iconsize="small"] #history-button[checked="true"] {
+  -moz-image-region: rect(48px 112px 64px 96px);
+}
+toolbar[iconsize="small"] #history-button:not([disabled="true"]):not([checked="true"]):hover:active {
   -moz-image-region: rect(64px 112px 80px 96px);
 }
 
@@ -637,16 +643,16 @@ toolbar[iconsize="small"] #history-button:not([disabled="true"]):hover:active {
 toolbar[iconsize="small"] #bookmarks-button {
   -moz-image-region: rect(0px 128px 16px 112px);
 }
-toolbar[iconsize="small"] #bookmarks-button:not([disabled="true"]):hover {
+toolbar[iconsize="small"] #bookmarks-button:not([disabled="true"]):not([checked="true"]):hover {
   -moz-image-region: rect(16px 128px 32px 112px);
 }
 toolbar[iconsize="small"] #bookmarks-button[disabled="true"] {
   -moz-image-region: rect(32px 128px 48px 112px);
 }
 toolbar[iconsize="small"] #bookmarks-button[checked="true"] {
-  -moz-image-region: rect(48px 128px 64px 112px) !important;
+  -moz-image-region: rect(48px 128px 64px 112px);
 }
-toolbar[iconsize="small"] #bookmarks-button:not([disabled="true"]):hover:active {
+toolbar[iconsize="small"] #bookmarks-button:not([disabled="true"]):not([checked="true"]):hover:active {
   -moz-image-region: rect(64px 128px 80px 112px);
 }
 
