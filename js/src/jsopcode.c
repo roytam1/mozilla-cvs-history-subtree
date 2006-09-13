@@ -1784,6 +1784,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
 #if JS_HAS_GENERATORS
               case JSOP_YIELD:
+                op = JSOP_SETNAME;      /* turn off most parens */
                 rval = POP_STR();
                 todo = (*rval != '\0')
                        ? Sprint(&ss->sprinter,
