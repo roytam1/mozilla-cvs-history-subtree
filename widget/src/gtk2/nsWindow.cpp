@@ -420,6 +420,11 @@ nsWindow::Destroy(void)
     // window this isn't going to harm anything.
     mWindowGroup = nsnull;
 
+    if (mDragMotionTimerID) {
+        gtk_timeout_remove(mDragMotionTimerID);
+        mDragMotionTimerID = 0;
+    }
+
     if (mShell) {
         gtk_widget_destroy(mShell);
         mShell = nsnull;
