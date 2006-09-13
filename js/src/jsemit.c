@@ -5079,7 +5079,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             return JS_FALSE;
         pn2 = pn->pn_expr;
         noteIndex = js_NewSrcNote2(cx, cg,
-                                   (pn2->pn_type == TOK_LC)
+                                   (pn2->pn_type == TOK_LC ||
+                                    pn2->pn_type == TOK_LEXICALSCOPE)
                                    ? SRC_LABELBRACE
                                    : SRC_LABEL,
                                    (ptrdiff_t) ALE_INDEX(ale));
@@ -5098,7 +5099,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             return JS_FALSE;
 
         /* If the statement was compound, emit a note for the end brace. */
-        if (pn2->pn_type == TOK_LC) {
+        if (pn2->pn_type == TOK_LC || pn2->pn_type == TOK_LEXICALSCOPE) {
             if (js_NewSrcNote(cx, cg, SRC_ENDBRACE) < 0 ||
                 js_Emit1(cx, cg, JSOP_NOP) < 0) {
                 return JS_FALSE;
