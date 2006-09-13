@@ -174,7 +174,7 @@ tabpanels {
 }
 
 .tabbrowser-tab:focus > .tab-image-middle > .tab-text {
-  border: 1px dotted black;
+  border: 1px dotted -moz-DialogText;
 }
 
 /**
