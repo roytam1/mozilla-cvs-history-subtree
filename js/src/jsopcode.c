@@ -1318,13 +1318,21 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_GROUP:
-                /*
-                 * Don't explicitly parenthesize -- just fix the top opcode so
-                 * that the auto-parens magic in PopOff can do its thing.
-                 */
-                LOCAL_ASSERT(ss->top != 0);
-                ss->opcodes[ss->top-1] = saveop = lastop;
-                todo = -2;
+                cs = &js_CodeSpec[lastop];
+                if (cs->prec != 0 && cs->prec == js_CodeSpec[pc[1]].prec) {
+                    op = JSOP_NAME;     /* force parens */
+                    rval = POP_STR();
+                    todo = SprintCString(&ss->sprinter, rval);
+                } else {
+                    /*
+                     * Don't explicitly parenthesize -- just fix the top
+                     * opcode so that the auto-parens magic in PopOff can do
+                     * its thing.
+                     */
+                    LOCAL_ASSERT(ss->top != 0);
+                    ss->opcodes[ss->top-1] = saveop = lastop;
+                    todo = -2;
+                }
                 break;
 
               case JSOP_STARTITER:
@@ -2335,7 +2343,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_DELELEM:
+                op = JSOP_NOP;          /* turn off parens */
                 xval = POP_STR();
+                op = saveop;
                 lval = POP_STR();
                 if (*xval == '\0')
                     goto do_delete_lval;
@@ -2407,7 +2417,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_INCELEM:
               case JSOP_DECELEM:
+                op = JSOP_NOP;          /* turn off parens */
                 xval = POP_STR();
+                op = saveop;
                 lval = POP_STR();
                 if (*xval != '\0') {
                     todo = Sprint(&ss->sprinter,
@@ -2466,7 +2478,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_ELEMINC:
               case JSOP_ELEMDEC:
+                op = JSOP_NOP;          /* turn off parens */
                 xval = POP_STR();
+                op = saveop;
                 lval = POP_STR();
                 if (*xval != '\0') {
                     todo = Sprint(&ss->sprinter,
