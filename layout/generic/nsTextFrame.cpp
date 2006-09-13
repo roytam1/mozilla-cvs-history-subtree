@@ -722,12 +722,17 @@ public:
   void ComputeExtraJustificationSpacing(nsIRenderingContext& aRenderingContext,
                                         TextStyle& aTextStyle,
                                         PRUnichar* aBuffer, PRInt32 aLength, PRInt32 aNumJustifiableCharacter);
-
+ 
+  /**
+   * @param aRightToLeftText whether the rendering context is reversing text
+   *                         using its native right-to-left capability
+   */
   void PaintTextDecorations(nsIRenderingContext& aRenderingContext,
                             nsStyleContext* aStyleContext,
                             nsPresContext* aPresContext,
                             TextPaintStyle& aStyle,
                             nscoord aX, nscoord aY, nscoord aWidth,
+                            PRBool aRightToLeftText,
                             PRUnichar* aText = nsnull,
                             SelectionDetails *aDetails = nsnull,
                             PRUint32 aIndex = 0,
@@ -742,10 +747,15 @@ public:
 
   // The passed-in rendering context must have its color set to the color the
   // text should be rendered in.
+  /**
+   * @param aRightToLeftText whether the rendering context is reversing text
+   *                         using its native right-to-left capability
+   */
   void RenderString(nsIRenderingContext& aRenderingContext,
                     nsStyleContext* aStyleContext,
                     nsPresContext* aPresContext,
                     TextPaintStyle& aStyle,
+                    PRBool aRightToLeftText,
                     PRUnichar* aBuffer, PRInt32 aLength, PRBool aIsEndOfFrame,
                     nscoord aX, nscoord aY,
                     nscoord aWidth,
@@ -2018,6 +2028,7 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
                                   nsPresContext* aPresContext,
                                   TextPaintStyle& aTextStyle,
                                   nscoord aX, nscoord aY, nscoord aWidth,
+                                  PRBool aRightToLeftText,
                                   PRUnichar *aText, /*=nsnull*/
                                   SelectionDetails *aDetails,/*= nsnull*/
                                   PRUint32 aIndex,  /*= 0*/
@@ -2168,12 +2179,30 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetLineStyle(nsLineStyle_kDotted);
               aRenderingContext.SetColor(NS_RGB(255,0,0));
-              aRenderingContext.DrawLine(aX + startOffset, aY + baseline - offset, aX + startOffset + textWidth, aY + baseline - offset);
+              /*
+               * If the rendering context is drawing text from right to left,
+               * reverse the coordinates of the underline to match.
+               */
+              if (aRightToLeftText) {
+                nscoord rightEdge = aX + aWidth;
+                aRenderingContext.DrawLine(rightEdge - textWidth - startOffset,
+                                           aY + baseline - offset,
+                                           rightEdge - startOffset,
+                                           aY + baseline - offset);
+              }
+              else {
+                aRenderingContext.DrawLine(aX + startOffset,
+                                           aY + baseline - offset,
+                                           aX + startOffset + textWidth,
+                                           aY + baseline - offset);
+              }
                                 }break;
 
 #ifdef NO_INVERT
            case nsISelectionController::SELECTION_IME_SELECTEDRAWTEXT:
            case nsISelectionController::SELECTION_IME_SELECTEDCONVERTEDTEXT:{
+              NS_ASSERTION(!aRightToLeftText, 
+                           "Right-to-left text in IME not handled");
               aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetColor(IME_SELECTED_UNDERLINECOLOR);
 #ifdef XP_MACOSX // underline thickness is 2 pixel
@@ -2184,6 +2213,8 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
                                 }break;
            case nsISelectionController::SELECTION_IME_RAWINPUT:
            case nsISelectionController::SELECTION_IME_CONVERTEDTEXT:{
+              NS_ASSERTION(!aRightToLeftText, 
+                           "Right-to-left text in IME not handled");
               aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetColor(IME_UNDERLINECOLOR);
 #ifdef XP_MACOSX // underline thicness is 2 pixel
@@ -2196,6 +2227,8 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
 
 #else             
            case nsISelectionController::SELECTION_IME_SELECTEDRAWTEXT:{
+              NS_ASSERTION(!aRightToLeftText, 
+                           "Right-to-left text in IME not handled");
 #ifdef USE_INVERT_FOR_SELECTION
               aRenderingContext.SetColor(NS_RGB(255,255,255));
               aRenderingContext.InvertRect(aX + startOffset, aY, textWidth, rect.height);
@@ -2208,11 +2241,15 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
                                 }break;
           case nsISelectionController::SELECTION_IME_RAWINPUT:{
+              NS_ASSERTION(!aRightToLeftText, 
+                           "Right-to-left text in IME not handled");
               aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetColor(IME_RAW_COLOR);
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
                                 }break;
           case nsISelectionController::SELECTION_IME_SELECTEDCONVERTEDTEXT:{
+              NS_ASSERTION(!aRightToLeftText, 
+                           "Right-to-left text in IME not handled");
 #ifdef USE_INVERT_FOR_SELECTION
               aRenderingContext.SetColor(NS_RGB(255,255,255));
               aRenderingContext.InvertRect(aX + startOffset, aY, textWidth, rect.height);
@@ -2225,6 +2262,8 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
                                 }break;
           case nsISelectionController::SELECTION_IME_CONVERTEDTEXT:{
+              NS_ASSERTION(!aRightToLeftText, 
+                           "Right-to-left text in IME not handled");
               aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetColor(IME_CONVERTED_COLOR);
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
@@ -2602,7 +2641,7 @@ nsTextFrame::PaintUnicodeText(nsPresContext* aPresContext,
       aRenderingContext.SetColor(nsCSSRendering::TransformColor(aTextStyle.mColor->mColor,canDarkenColor));
       aRenderingContext.DrawString(text, PRUint32(textLength), dx, dy + mAscent);
       PaintTextDecorations(aRenderingContext, aStyleContext, aPresContext,
-                           aTextStyle, dx, dy, width);
+                           aTextStyle, dx, dy, width, PR_FALSE);
     }
     else 
     { //we draw according to selection rules
@@ -2774,8 +2813,9 @@ nsTextFrame::PaintUnicodeText(nsPresContext* aPresContext,
       }
       }
       PaintTextDecorations(aRenderingContext, aStyleContext, aPresContext,
-                           aTextStyle, dx, dy, width, text, details, 0,
-                           (PRUint32)textLength);
+                           aTextStyle, dx, dy, width,
+                           isRightToLeftOnBidiPlatform, text, details, 0,
+                           (PRUint32)textLength, nsnull);
       sdptr = details;
       if (details){
         while ((sdptr = details->mNext) != nsnull) {
@@ -2943,6 +2983,7 @@ nsTextFrame::RenderString(nsIRenderingContext& aRenderingContext,
                           nsStyleContext* aStyleContext,
                           nsPresContext* aPresContext,
                           TextPaintStyle& aTextStyle,
+                          PRBool aRightToLeftText,
                           PRUnichar* aBuffer, PRInt32 aLength, PRBool aIsEndOfFrame,
                           nscoord aX, nscoord aY,
                           nscoord aWidth, 
@@ -3014,7 +3055,8 @@ nsTextFrame::RenderString(nsIRenderingContext& aRenderingContext,
         // Note: use aY not small-y so that decorations are drawn with
         // respect to the normal-font not the current font.
         PaintTextDecorations(aRenderingContext, aStyleContext, aPresContext,
-                             aTextStyle, aX, aY, width, runStart, aDetails,
+                             aTextStyle, aX, aY, width,
+                             aRightToLeftText, runStart, aDetails,
                              countSoFar, pendingCount, spacing ? sp0 : nsnull);
         countSoFar += pendingCount;
         aWidth -= width;
@@ -3094,7 +3136,8 @@ nsTextFrame::RenderString(nsIRenderingContext& aRenderingContext,
     // Note: use aY not small-y so that decorations are drawn with
     // respect to the normal-font not the current font.
     PaintTextDecorations(aRenderingContext, aStyleContext, aPresContext,
-                         aTextStyle, aX, aY, aWidth, runStart, aDetails,
+                         aTextStyle, aX, aY, aWidth,
+                         aRightToLeftText, runStart, aDetails,
                          countSoFar, pendingCount, spacing ? sp0 : nsnull);
   }
   aTextStyle.mLastFont = lastFont;
@@ -3370,7 +3413,7 @@ nsTextFrame::PaintTextSlowly(nsPresContext* aPresContext,
       // simplest rendering approach
       aRenderingContext.SetColor(nsCSSRendering::TransformColor(aTextStyle.mColor->mColor,canDarkenColor));
       RenderString(aRenderingContext, aStyleContext, aPresContext, aTextStyle,
-                   text, textLength, PR_TRUE, dx, dy, width);
+                   PR_FALSE, text, textLength, PR_TRUE, dx, dy, width);
     }
     else 
     {
@@ -3452,12 +3495,14 @@ nsTextFrame::PaintTextSlowly(nsPresContext* aPresContext,
           if (isPaginated && !iter.IsBeforeOrAfter()) {
             aRenderingContext.SetColor(nsCSSRendering::TransformColor(aTextStyle.mColor->mColor, canDarkenColor));
             RenderString(aRenderingContext, aStyleContext, aPresContext,
-                         aTextStyle, currenttext, currentlength, isEndOfFrame,
+                         aTextStyle, isRightToLeftOnBidiPlatform, 
+                         currenttext, currentlength, isEndOfFrame,
                          currentX, dy, newDimensions.width, details);
           } else if (!isPaginated) {
             aRenderingContext.SetColor(nsCSSRendering::TransformColor(currentFGColor, canDarkenColor));
             RenderString(aRenderingContext,aStyleContext, aPresContext,
-                         aTextStyle, currenttext, currentlength, isEndOfFrame,
+                         aTextStyle, isRightToLeftOnBidiPlatform, 
+                         currenttext, currentlength, isEndOfFrame,
                          currentX, dy, newDimensions.width, details);
           }
 
@@ -3475,8 +3520,8 @@ nsTextFrame::PaintTextSlowly(nsPresContext* aPresContext,
       {
         aRenderingContext.SetColor(nsCSSRendering::TransformColor(aTextStyle.mColor->mColor,canDarkenColor));
         RenderString(aRenderingContext, aStyleContext, aPresContext,
-                     aTextStyle, text, PRUint32(textLength), PR_TRUE,
-                     dx, dy, width, details);
+                     aTextStyle, isRightToLeftOnBidiPlatform, text, 
+                     PRUint32(textLength), PR_TRUE, dx, dy, width, details);
       }
       sdptr = details;
       if (details){
@@ -3626,7 +3671,7 @@ nsTextFrame::PaintAsciiText(nsPresContext* aPresContext,
       aRenderingContext.SetColor(nsCSSRendering::TransformColor(aTextStyle.mColor->mColor,canDarkenColor));
       aRenderingContext.DrawString(text, PRUint32(textLength), dx, dy + mAscent);
       PaintTextDecorations(aRenderingContext, aStyleContext,
-                           aPresContext, aTextStyle, dx, dy, width);
+                           aPresContext, aTextStyle, dx, dy, width, PR_FALSE);
     }
     else {
       SelectionDetails *details;
@@ -3739,7 +3784,7 @@ nsTextFrame::PaintAsciiText(nsPresContext* aPresContext,
       }
 
       PaintTextDecorations(aRenderingContext, aStyleContext, aPresContext,
-                           aTextStyle, dx, dy, width,
+                           aTextStyle, dx, dy, width, PR_FALSE,
                            unicodePaintBuffer.mBuffer,
                            details, 0, textLength);
       sdptr = details;
