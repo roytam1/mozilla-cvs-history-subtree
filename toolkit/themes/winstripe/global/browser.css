@@ -282,11 +282,15 @@ tabpanels {
   -moz-image-region: rect(0, 11px, 14px, 0);
   background-repeat: no-repeat;
   background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-enabled.png");
+  background-color: -moz-dialog;
+  -moz-border-radius-topright: 5px;
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up {
   list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png");
   background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-enabled.png");
+  -moz-border-radius-topleft: 5px;
+  -moz-border-radius-topright: 0px;
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up[disabled="true"] {
@@ -327,10 +331,14 @@ tabpanels {
   width: 18px;
   background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-enabled.png");
   background-repeat: no-repeat;	
+  background-color: -moz-dialog;
+  -moz-border-radius-topleft: 5px;
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down-box {
   background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-enabled.png");
+  -moz-border-radius-topleft: 0px;
+  -moz-border-radius-topright: 5px;
 }
 
 .scrollbutton-rel-box > .scrollbutton-down-box-animate {
@@ -391,14 +399,20 @@ tabpanels {
   height: 23px !important;
   background-image: url("chrome://global/skin/icons/alltabs-box-end-bkgnd.png");
   background-repeat: no-repeat;
+  background-color: -moz-dialog; 
+  -moz-border-radius-topleft: 5px;
 }
 
 stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-start-bkgnd.png");
+  -moz-border-radius-topleft: 0px;
+  -moz-border-radius-topright: 5px;
 }
 
 .tabbrowser-tabs[overflow="true"] .tabs-alltabs-box {
   background-image: url("chrome://global/skin/icons/alltabs-box-overflow-end-bkgnd.png");
+  -moz-border-radius-topleft: 0px;
+  -moz-border-radius-topright: 0px;
 }
 
 .tabbrowser-tabs[overflow="true"] stack[chromedir="rtl"] > hbox > .tabs-alltabs-box {
