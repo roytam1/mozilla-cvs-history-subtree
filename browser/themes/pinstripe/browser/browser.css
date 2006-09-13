@@ -23,6 +23,7 @@
  *   Jason Kersey (kerz@netscape.com)
  *   Pierre Chanial (chanial@noos.fr)
  *   Kevin Gerich (webmail@kmgerich.com)
+ *   Pamela Greene (pamg.bugs@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -1056,13 +1057,13 @@ sidebarheader > .tabs-closebutton > .toolbarbutton-text {
 
 #security-button[level="high"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(32px, 16px, 48px, 0px);
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   display: -moz-box;
 }
 
 #security-button[level="low"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  -moz-image-region: rect(32px, 16px, 48px, 0px);
+  -moz-image-region: rect(36px, 18px, 54px, 0px);
   display: -moz-box;
 }
 
