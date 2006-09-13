@@ -687,6 +687,7 @@ FeedWriter.prototype = {
     this._setSelectedHandler();
 
     // "Always use..." checkbox initial state
+    this._setAlwaysUseLabel();
     this._setAlwaysUseCheckedState();
 
     // Syncs xul:checked with aaa:checked, needed for a11y
