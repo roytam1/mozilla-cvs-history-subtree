@@ -4940,7 +4940,12 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
           case JSOP_GOSUB:
             JS_ASSERT(cx->exception != JSVAL_HOLE);
-            lval = cx->throwing ? cx->exception : JSVAL_HOLE;
+            if (!cx->throwing) {
+                lval = JSVAL_HOLE;
+            } else {
+                lval = cx->exception;
+                cx->throwing = JS_FALSE;
+            }
             PUSH(lval);
             i = PTRDIFF(pc, script->main, jsbytecode) + len;
             len = GET_JUMP_OFFSET(pc);
