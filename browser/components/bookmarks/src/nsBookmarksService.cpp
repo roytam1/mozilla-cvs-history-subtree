@@ -3515,7 +3515,7 @@ nsBookmarksService::RequestCharset(nsIWebNavigation* aWebNavigation,
 
     nsCOMPtr<nsIRDFNode> nodeType;
     GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
-    if (nodeType == kNC_Bookmark) {
+    if (nodeType == kNC_Bookmark || nodeType == kNC_MicsumBookmark) {
         nsCOMPtr<nsIRDFNode> charsetNode;
         rv = GetTarget(bookmark, kWEB_LastCharset, PR_TRUE,
                        getter_AddRefs(charsetNode));
@@ -3564,7 +3564,7 @@ nsBookmarksService::GetLastCharset(const nsACString &aURL, nsAString &aCharset)
 
     nsCOMPtr<nsIRDFNode> nodeType;
     GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
-    if (nodeType == kNC_Bookmark || nodeType == kNC_Bookmark) {
+    if (nodeType == kNC_Bookmark || nodeType == kNC_MicsumBookmark) {
         nsCOMPtr<nsIRDFNode> charsetNode;
         rv = GetTarget(bookmark, kWEB_LastCharset, PR_TRUE,
                        getter_AddRefs(charsetNode));
