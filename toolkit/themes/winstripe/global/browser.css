@@ -341,6 +341,14 @@ tabpanels {
   -moz-border-radius-topright: 5px;
 }
 
+.scrollbutton-rel-box > .scrollbutton-down-box[disabled="true"] {
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-disabled.png");
+}
+
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down-box[disabled="true"] {
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-disabled.png");
+}
+
 .scrollbutton-rel-box > .scrollbutton-down-box-animate {
   background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-animate.png");
   background-repeat: no-repeat;

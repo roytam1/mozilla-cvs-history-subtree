@@ -2586,6 +2586,24 @@
         this._scrollButtonDownBox.collapsed = false;
         this._scrollButtonDownBoxAnimate.collapsed = false;
       ]]></handler>
+
+      <handler event="UpdatedScrollButtonsDisabledState"><![CDATA[
+        // filter underflow events which were dispatched on nested scrollboxes
+        if (event.target != this)
+          return;
+
+        // fix for bug #352353
+        // unlike the scrollup button on the tab strip (which is a 
+        // simple toolbarbutton) the scrolldown button is 
+        // a more complicated stack of boxes and a toolbarbutton
+        // so that we can animate when a tab is opened offscreen.
+        // in order to style the box with the actual background image
+        // we need to manually set the disable state to match the
+        // disable state of the toolbarbutton.
+        this._scrollButtonDownBox
+            .setAttribute("disabled", this._scrollButtonDown.disabled);
+      ]]></handler>
+
     </handlers>
   </binding>
 
@@ -2797,6 +2815,7 @@
               break;
             case "underflow":
               this.removeAttribute("overflow");
+              break;
           }
         ]]></body>
       </method>
