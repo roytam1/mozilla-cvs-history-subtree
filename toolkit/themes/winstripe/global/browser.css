@@ -280,13 +280,13 @@ tabpanels {
   -moz-margin-end: 0px;
   list-style-image: url("chrome://global/skin/icons/tab-arrow-start.png");
   -moz-image-region: rect(0, 11px, 14px, 0);
-  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
   background-repeat: no-repeat;
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-enabled.png");
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up {
   list-style-image: url("chrome://global/skin/icons/tab-arrow-end.png");
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-enabled.png");
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up[disabled="true"] {
@@ -299,7 +299,12 @@ tabpanels {
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover {
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-hover.png");
   -moz-image-region: rect(0, 22px, 14px, 11px);
+}
+
+.tabbrowser-arrowscrollbox[chromedir="rtl"] > .scrollbutton-up:not([disabled="true"]):hover {
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-hover.png");
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover:active {
@@ -320,12 +325,12 @@ tabpanels {
   -moz-appearance: none !important;
   border: none !important;
   width: 18px;
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-enabled.png");
   background-repeat: no-repeat;	
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down-box {
-  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-enabled.png");
 }
 
 .scrollbutton-rel-box > .scrollbutton-down-box-animate {
@@ -358,13 +363,13 @@ tabpanels {
 
 .scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover {
   -moz-image-region: rect(0, 22px, 14px, 11px);
-  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/tab-arrow-end-bkgnd-hover.png");
   background-repeat: no-repeat;
   background-position: top left;
 }
 
 .tabbrowser-arrowscrollbox[chromedir="rtl"] > stack > .scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover {
-  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd.png");
+  background-image: url("chrome://global/skin/icons/tab-arrow-start-bkgnd-hover.png");
 }
 
 .scrollbutton-rel-box > .scrollbutton-down:not([disabled="true"]):hover:active {
