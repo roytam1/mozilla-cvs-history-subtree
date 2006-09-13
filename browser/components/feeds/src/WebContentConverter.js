@@ -585,6 +585,20 @@ var WebContentConverterRegistrar = {
    * Registers a handler from the settings on a branch
    */
   _registerContentHandlerWithBranch: function(branch) {
+
+    /**
+     * Since we support up to six predefined readers, we need to handle gaps 
+     * better, since the first branch with user-added values will be .6
+     * 
+     * How we deal with that is to check to see if there's no prefs in the 
+     * branch and stop cycling once that's true.  This doesn't fix the case
+     * where a user manually removes a reader, but that's not supported yet!
+     */
+    
+    var vals = branch.getChildList("", {});
+    if (vals.length == 0)
+      return false;
+
     try {
       var type = branch.getCharPref("type");
       var uri = 
@@ -594,7 +608,7 @@ var WebContentConverterRegistrar = {
       this._registerContentHandler(type, uri, title);
     }
     catch (e) {
-      return false;
+      // do nothing, the next branch might have values
     }
     return true;
   },
