@@ -1242,7 +1242,7 @@ js_PushStatement(JSTreeContext *tc, JSStmtInfo *stmt, JSStmtType type,
     stmt->atom = NULL;
     stmt->down = tc->topStmt;
     tc->topStmt = stmt;
-    if (STMT_IS_SCOPE(stmt)) {
+    if (STMT_LINKS_SCOPE(stmt)) {
         stmt->downScope = tc->topScopeStmt;
         tc->topScopeStmt = stmt;
     } else {
@@ -1458,7 +1458,7 @@ js_PopStatement(JSTreeContext *tc)
 
     stmt = tc->topStmt;
     tc->topStmt = stmt->down;
-    if (STMT_IS_SCOPE(stmt)) {
+    if (STMT_LINKS_SCOPE(stmt)) {
         tc->topScopeStmt = stmt->downScope;
         if (stmt->flags & SIF_SCOPE) {
             blockObj = ATOM_TO_OBJECT(stmt->atom);
@@ -1509,7 +1509,7 @@ js_DefineCompileTimeConstant(JSContext *cx, JSCodeGenerator *cg, JSAtom *atom,
 }
 
 JSStmtInfo *
-js_LexicalLookup(JSTreeContext *tc, JSAtom *atom, jsint *slotp)
+js_LexicalLookup(JSTreeContext *tc, JSAtom *atom, jsint *slotp, JSBool letdecl)
 {
     JSStmtInfo *stmt;
     JSObject *obj;
@@ -1518,8 +1518,12 @@ js_LexicalLookup(JSTreeContext *tc, JSAtom *atom, jsint *slotp)
     jsval v;
 
     for (stmt = tc->topScopeStmt; stmt; stmt = stmt->downScope) {
-        if (stmt->type == STMT_WITH)
+        if (stmt->type == STMT_WITH) {
+            /* Ignore with statements enclosing a single let declaration. */
+            if (letdecl)
+                continue;
             break;
+        }
 
         /* Skip "maybe scope" statements that don't contain let bindings. */
         if (!(stmt->flags & SIF_SCOPE))
@@ -1579,7 +1583,7 @@ js_LookupCompileTimeConstant(JSContext *cx, JSCodeGenerator *cg, JSAtom *atom,
         obj = fp->varobj;
         if (obj == fp->scopeChain) {
             /* XXX this will need revising when 'let const' is added. */
-            stmt = js_LexicalLookup(&cg->treeContext, atom, &slot);
+            stmt = js_LexicalLookup(&cg->treeContext, atom, &slot, JS_FALSE);
             if (stmt)
                 return JS_TRUE;
 
@@ -1840,7 +1844,8 @@ EmitAtomOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
  * in js_EmitTree.
  */
 static JSBool
-BindNameToSlot(JSContext *cx, JSTreeContext *tc, JSParseNode *pn)
+BindNameToSlot(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
+               JSBool letdecl)
 {
     JSAtom *atom;
     JSStmtInfo *stmt;
@@ -1871,7 +1876,7 @@ BindNameToSlot(JSContext *cx, JSTreeContext *tc, JSParseNode *pn)
      * block-locals.
      */
     atom = pn->pn_atom;
-    stmt = js_LexicalLookup(tc, atom, &slot);
+    stmt = js_LexicalLookup(tc, atom, &slot, letdecl);
     if (stmt) {
         if (stmt->type == STMT_WITH)
             return JS_TRUE;
@@ -2153,7 +2158,7 @@ CheckSideEffects(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
             if (pn2->pn_type != TOK_NAME) {
                 *answer = JS_TRUE;
             } else {
-                if (!BindNameToSlot(cx, tc, pn2))
+                if (!BindNameToSlot(cx, tc, pn2, JS_FALSE))
                     return JS_FALSE;
                 if (!CheckSideEffects(cx, tc, pn->pn_right, answer))
                     return JS_FALSE;
@@ -2165,8 +2170,10 @@ CheckSideEffects(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
         } else {
             if (pn->pn_type == TOK_LB) {
                 pn2 = pn->pn_left;
-                if (pn2->pn_type == TOK_NAME && !BindNameToSlot(cx, tc, pn2))
+                if (pn2->pn_type == TOK_NAME &&
+                    !BindNameToSlot(cx, tc, pn2, JS_FALSE)) {
                     return JS_FALSE;
+                }
                 if (pn2->pn_op != JSOP_ARGUMENTS) {
                     /*
                      * Any indexed property reference could call a getter with
@@ -2221,7 +2228,7 @@ CheckSideEffects(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
          * defaulted to JSOP_NOP).
          */
         if (pn->pn_type == TOK_NAME && pn->pn_op != JSOP_NOP) {
-            if (!BindNameToSlot(cx, tc, pn))
+            if (!BindNameToSlot(cx, tc, pn, JS_FALSE))
                 return JS_FALSE;
             if (pn->pn_slot < 0 && pn->pn_op != JSOP_ARGUMENTS) {
                 /*
@@ -2233,8 +2240,10 @@ CheckSideEffects(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
         }
         pn2 = pn->pn_expr;
         if (pn->pn_type == TOK_DOT) {
-            if (pn2->pn_type == TOK_NAME && !BindNameToSlot(cx, tc, pn2))
+            if (pn2->pn_type == TOK_NAME &&
+                !BindNameToSlot(cx, tc, pn2, JS_FALSE)) {
                 return JS_FALSE;
+            }
             if (!(pn2->pn_op == JSOP_ARGUMENTS &&
                   pn->pn_atom == cx->runtime->atomState.lengthAtom)) {
                 /*
@@ -2285,7 +2294,7 @@ EmitPropOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
         pn->pn_type == TOK_DOT &&
         pn2->pn_type == TOK_NAME) {
         /* Try to optimize arguments.length into JSOP_ARGCNT. */
-        if (!BindNameToSlot(cx, &cg->treeContext, pn2))
+        if (!BindNameToSlot(cx, &cg->treeContext, pn2, JS_FALSE))
             return JS_FALSE;
         if (pn2->pn_op == JSOP_ARGUMENTS &&
             pn->pn_atom == cx->runtime->atomState.lengthAtom) {
@@ -2373,7 +2382,7 @@ EmitElemOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
          * one or more index expression and JSOP_GETELEM op pairs.
          */
         if (left->pn_type == TOK_NAME && next->pn_type == TOK_NUMBER) {
-            if (!BindNameToSlot(cx, &cg->treeContext, left))
+            if (!BindNameToSlot(cx, &cg->treeContext, left, JS_FALSE))
                 return JS_FALSE;
             if (left->pn_op == JSOP_ARGUMENTS &&
                 JSDOUBLE_IS_INT(next->pn_dval, slot) &&
@@ -2440,7 +2449,7 @@ EmitElemOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
         if (op == JSOP_GETELEM &&
             left->pn_type == TOK_NAME &&
             right->pn_type == TOK_NUMBER) {
-            if (!BindNameToSlot(cx, &cg->treeContext, left))
+            if (!BindNameToSlot(cx, &cg->treeContext, left, JS_FALSE))
                 return JS_FALSE;
             if (left->pn_op == JSOP_ARGUMENTS &&
                 JSDOUBLE_IS_INT(right->pn_dval, slot) &&
@@ -3170,7 +3179,7 @@ EmitDestructuringDecl(JSContext *cx, JSCodeGenerator *cg, JSOp prologOp,
                       JSParseNode *pn)
 {
     JS_ASSERT(pn->pn_type == TOK_NAME);
-    if (!BindNameToSlot(cx, &cg->treeContext, pn))
+    if (!BindNameToSlot(cx, &cg->treeContext, pn, prologOp == JSOP_NOP))
         return JS_FALSE;
 
     JS_ASSERT(pn->pn_op != JSOP_ARGUMENTS);
@@ -3234,7 +3243,7 @@ EmitDestructuringLHS(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
             return JS_FALSE;
     } else {
         if (pn->pn_type == TOK_NAME &&
-            !BindNameToSlot(cx, &cg->treeContext, pn)) {
+            !BindNameToSlot(cx, &cg->treeContext, pn, JS_FALSE)) {
             return JS_FALSE;
         }
 
@@ -3633,7 +3642,7 @@ EmitVariables(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
         JS_ASSERT(pn2->pn_type == TOK_NAME);
 #endif
 
-        if (!BindNameToSlot(cx, &cg->treeContext, pn2))
+        if (!BindNameToSlot(cx, &cg->treeContext, pn2, let))
             return JS_FALSE;
         JS_ASSERT(pn2->pn_slot >= 0 || !let);
 
@@ -4248,7 +4257,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     }
                 } else {
                     pn3->pn_op = JSOP_FORNAME;
-                    if (!BindNameToSlot(cx, &cg->treeContext, pn3))
+                    if (!BindNameToSlot(cx, &cg->treeContext, pn3, JS_FALSE))
                         return JS_FALSE;
                     op = pn3->pn_op;
                 }
@@ -5144,7 +5153,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         atomIndex = (jsatomid) -1;              /* quell GCC overwarning */
         switch (pn2->pn_type) {
           case TOK_NAME:
-            if (!BindNameToSlot(cx, &cg->treeContext, pn2))
+            if (!BindNameToSlot(cx, &cg->treeContext, pn2, JS_FALSE))
                 return JS_FALSE;
             if (pn2->pn_slot >= 0) {
                 atomIndex = (jsatomid) pn2->pn_slot;
@@ -5503,7 +5512,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         switch (pn2->pn_type) {
           case TOK_NAME:
             pn2->pn_op = op;
-            if (!BindNameToSlot(cx, &cg->treeContext, pn2))
+            if (!BindNameToSlot(cx, &cg->treeContext, pn2, JS_FALSE))
                 return JS_FALSE;
             op = pn2->pn_op;
             if (pn2->pn_slot >= 0) {
@@ -5583,7 +5592,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         switch (pn2->pn_type) {
           case TOK_NAME:
             pn2->pn_op = JSOP_DELNAME;
-            if (!BindNameToSlot(cx, &cg->treeContext, pn2))
+            if (!BindNameToSlot(cx, &cg->treeContext, pn2, JS_FALSE))
                 return JS_FALSE;
             op = pn2->pn_op;
             if (op == JSOP_FALSE) {
@@ -6028,7 +6037,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       }
 
       case TOK_NAME:
-        if (!BindNameToSlot(cx, &cg->treeContext, pn))
+        if (!BindNameToSlot(cx, &cg->treeContext, pn, JS_FALSE))
             return JS_FALSE;
         op = pn->pn_op;
         if (op == JSOP_ARGUMENTS) {
