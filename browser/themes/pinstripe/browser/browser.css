@@ -872,6 +872,11 @@ toolbar[iconsize="small"] #paste-button:hover:active {
   background: url("chrome://browser/skin/Secure-background.gif") #FFFED8 repeat-x;
 }
 
+#urlbar #lock-icon {
+  height: 18px;
+  width: 18px;
+}
+
 #urlbar[level="high"] #lock-icon {
   margin: -1px;
   list-style-image: url("chrome://browser/skin/Secure.png");
