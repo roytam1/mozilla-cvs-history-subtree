@@ -984,6 +984,10 @@ statusbarpanel#statusbar-display {
   -moz-image-region: rect(0px, 25px, 22px, 0px);
 }
 
+.go-button-background {
+  list-style-image: none;
+}
+
 #go-button:hover {
   -moz-image-region: rect(0px, 50px, 22px, 25px);
 }

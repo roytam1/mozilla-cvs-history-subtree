@@ -1,5 +1,10 @@
 /* *** pinstripe *** */
 
+.search-go-button-bkgnd,
+.searchbar-engine-button-bkgnd {
+  list-style-image: none;
+}
+
 .searchbar-textbox {
   background: url("chrome://browser/skin/search-bar-background-mid.png") repeat-x;
   margin: 4px 0px 4px 0px;
@@ -11,8 +16,16 @@
   border: none !important;
 }
 
-.searchbar-left {
+.searchbar-box {
   -moz-margin-start: 3px;
+}
+
+.searchbar-engine-button-stack {
+  padding: 2px 0px 2px 0px;
+}
+
+.searchbar-engine-image-container {
+  -moz-box-pack: center;
 }
 
 .searchbar-engine-image {
@@ -22,14 +35,17 @@
   list-style-image: url("chrome://browser/skin/bookmarks/bookmark-item.png");
 }
 
+.searchbar-engine-button-top {
+  list-style-image: url("chrome://browser/skin/Search-provider-bkgnd.png");
+  -moz-image-region: rect(0px, 37px, 22px, 0px);
+  margin-top: 2px;
+  height: 22px;
+  width: 37px;
+}
+
 .searchbar-engine-button {
-  background-image: url("chrome://browser/skin/Search-provider-bkgnd.png");
-  background-position: 0px 0px;
-  background-repeat: no-repeat;
   margin: 0px;
   padding: 0px;
-  width: 37px;
-  height: 22px;
 }
 
 .searchbar-engine-button:hover {
@@ -46,10 +62,7 @@
 
 .searchbar-dropmarker-image {
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
-  padding-top: 9px;
-  padding-bottom: 8px;
-  -moz-padding-start: 29px;
-  -moz-padding-end: 3px;
+  -moz-margin-start: 2px;
 }
 
 .autocomplete-textbox-container {

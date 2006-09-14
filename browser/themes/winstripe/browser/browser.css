@@ -24,6 +24,7 @@
  *   Pierre Chanial (chanial@noos.fr)
  *   Dean Tessman (dean_tessman@hotmail.com)
  *   Blake Ross (blake@cs.stanford.edu)
+ *   Pamela Greene (pamg.bugs@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -786,6 +787,19 @@ toolbar[iconsize="small"] #paste-button:not([disabled="true"]):hover:active {
   border: 1px solid;
 }
 
+#urlbar-container {
+  -moz-box-orient: horizontal;
+  -moz-box-align: stretch;
+}
+
+/* This needs to be at least as large as the maximum possible width
+   of the container that holds the icons in the right side of the urlbar.
+   This is a spacer so that the urlbar/searchbar boundary doesn't shift
+   (due to flex calculations) when the urlbar icons appear and disappear. */
+#urlbar-icons-spacer {
+  width: 100px;
+}
+
 #urlbar-icons {
   height: 18px;
 }
@@ -868,27 +882,118 @@ statusbarpanel#statusbar-display {
 
 /* ::::: go button ::::: */
 
-#go-container {
-  -moz-box-orient: vertical; /* for go button flex hack */
+toolbar[mode="text"] #go-button,
+toolbar[mode="text"] #go-button-stack .go-button-background {
+  list-style-image: none;
+}
+
+toolbar[mode="text"] #go-button-stack {
+  padding: 0;
+}
+
+#go-button-stack {
   -moz-margin-end: 5px;
+  padding: 2px 0px 2px 0px;
 }
 
 #go-button {
-  /* -moz-box-flex: 1;  expand to fill toolbar height */
   -moz-appearance: none;
-  list-style-image: url("chrome://browser/skin/Go.png");
+  list-style-image: url("chrome://browser/skin/Go-arrow.png");
   -moz-image-region: rect(0px 25px 22px 0px);
   border: 0px;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  -moz-padding-start: 0;
-  -moz-padding-end: 5px;
+  padding: 0px;
+  margin: 0px;
 }
 
 #go-button[chromedir="rtl"] {
-  list-style-image: url("chrome://browser/skin/Go-rtl.png");
+  list-style-image: url("chrome://browser/skin/Go-arrow-rtl.png");
 }
 
+#go-button-top {
+  list-style-image: url("chrome://browser/skin/Go-bkgnd.png");
+  -moz-image-region: rect(0px, 25px, 10px, 0px);
+  height: 10px;
+}
+
+/* GTK does not stretch image regions properly, so use background
+   images instead.  See bugs 351764 and 254659. */
+#go-button-mid-top {
+  background-image: url("chrome://browser/skin/Go-mid-top.png");
+}
+
+#go-button-mid-bottom {
+  background-image: url("chrome://browser/skin/Go-mid-bottom.png");
+}
+
+#go-button-bottom {
+  list-style-image: url("chrome://browser/skin/Go-bkgnd.png");
+  -moz-image-region: rect(12px, 25px, 22px, 0px);
+  height: 10px;
+}
+
+#go-button-top[chromedir="rtl"],
+#go-button-bottom[chromedir="rtl"] {
+  list-style-image: url("chrome://browser/skin/Go-bkgnd-rtl.png");
+}
+
+#go-button-mid-top[chromedir="rtl"] {
+  background-image: url("chrome://browser/skin/Go-mid-top-rtl.png");
+}
+
+#go-button-mid-bottom[chromedir="rtl"] {
+  background-image: url("chrome://browser/skin/Go-mid-bottom-rtl.png");
+}
+
+
+#go-button-stack:hover #go-button-top {
+  -moz-image-region: rect(0px, 50px, 10px, 25px);
+}
+
+#go-button-stack:hover #go-button-mid-top,
+#go-button-stack:hover #go-button-mid-bottom {
+  background-position: -25px 0px;
+}
+
+#go-button-stack:hover #go-button-bottom {
+  -moz-image-region: rect(12px, 50px, 22px, 25px);
+}
+
+
+/* Disabled images are not used. */
+#go-button-stack[disabled="true"] #go-button-top {
+  -moz-image-region: rect(0px, 75px, 10px, 50px) !important;
+}
+
+#go-button-stack[disabled="true"] #go-button-mid-top,
+#go-button-stack[disabled="true"] #go-button-mid-bottom {
+  background-position: -50px 0px;
+}
+
+#go-button-stack[disabled="true"] #go-button-bottom {
+  -moz-image-region: rect(12px, 75px, 22px, 50px) !important;
+}
+
+
+#go-button-stack:hover:active #go-button-top {
+  -moz-image-region: rect(0px, 100px, 10px, 75px);
+}
+
+#go-button-stack:hover:active #go-button-mid-top,
+#go-button-stack:hover:active #go-button-mid-bottom {
+  background-position: -75px;
+}
+
+#go-button-stack:hover:active #go-button-bottom {
+  -moz-image-region: rect(12px, 100px, 22px, 75px);
+}
+
+
+toolbar[mode="text"] #go-button > .toolbarbutton-text {
+  display: -moz-box !important;
+  -moz-margin-start: 4px !important;
+}
+
+/* Not used. */
 #go-button:not([disabled="true"]):hover {
   -moz-image-region: rect(0px 50px 22px 25px);
 }
@@ -899,7 +1004,6 @@ statusbarpanel#statusbar-display {
 
 #go-button:not([disabled="true"]):hover:active {
   -moz-image-region: rect(0px 100px 22px 75px);
- /* padding: 3px 4px 1px 0; */
 }
 
 #go-button > .toolbarbutton-icon {

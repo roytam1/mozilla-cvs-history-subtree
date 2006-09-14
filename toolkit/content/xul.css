@@ -794,6 +794,7 @@ popup[type="autocomplete"] {
 
 /* To be overridden by themes that use a background for the dropmarker (e.g. winstripe): */
 .autocomplete-dropmarker-bkgnd {
+  background-image: none;
   list-style-image: none;
 }
 
