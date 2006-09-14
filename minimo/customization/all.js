@@ -260,28 +260,28 @@ pref("network.http.proxy.keep-alive", true);
 pref("network.http.keep-alive.timeout", 600);
 
 // limit the absolute number of http connections.
-pref("network.http.max-connections", 6);
+pref("network.http.max-connections", 24);
 
 // limit the absolute number of http connections that can be established per
 // host.  if a http proxy server is enabled, then the "server" is the proxy
 // server.  Otherwise, "server" is the http origin server.
-pref("network.http.max-connections-per-server", 8);
+pref("network.http.max-connections-per-server", 24);
 
 // if network.http.keep-alive is true, and if NOT connecting via a proxy, then
 // a new connection will only be attempted if the number of active persistent
 // connections to the server is less then max-persistent-connections-per-server.
-pref("network.http.max-persistent-connections-per-server", 2);
+pref("network.http.max-persistent-connections-per-server", 24);
 
 // if network.http.keep-alive is true, and if connecting via a proxy, then a
 // new connection will only be attempted if the number of active persistent
 // connections to the proxy is less then max-persistent-connections-per-proxy.
-pref("network.http.max-persistent-connections-per-proxy", 4);
+pref("network.http.max-persistent-connections-per-proxy", 24);
 
 // amount of time (in seconds) to suspend pending requests, before spawning a
 // new connection, once the limit on the number of persistent connections per
 // host has been reached.  however, a new connection will not be created if
 // max-connections or max-connections-per-server has also been reached.
-pref("network.http.request.max-start-delay", 10);
+pref("network.http.request.max-start-delay", 1);
 
 // Headers
 pref("network.http.accept.default", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5");
@@ -298,11 +298,11 @@ pref("network.http.redirection-limit", 20);
 // NOTE: support for "compress" has been disabled per bug 196406.
 pref("network.http.accept-encoding" ,"gzip,deflate");
 
-pref("network.http.pipelining"      , true);
+pref("network.http.pipelining"      , false);
 pref("network.http.proxy.pipelining", false);
 
 // Max number of requests in the pipeline
-pref("network.http.pipelining.maxrequests" , 20);
+pref("network.http.pipelining.maxrequests" , 24);
 
 // </http>
 
@@ -643,7 +643,7 @@ pref("browser.formfill.enable", true);
 pref("content.max.tokenizing.time", 3000);
 pref("content.notify.ontimer", true);
 pref("content.switch.threshold", 3000);
-pref("nglayout.initialpaint.delay", 0);
+pref("nglayout.initialpaint.delay", 20);
 pref("content.interrupt.parsing", true);
 
 pref("dom.disable_window_status_change", true);
