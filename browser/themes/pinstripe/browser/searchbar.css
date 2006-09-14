@@ -43,21 +43,21 @@
   width: 37px;
 }
 
+.searchbar-engine-button:hover .searchbar-engine-button-top {
+  -moz-image-region: rect(0px, 74px, 22px, 37px);
+}
+
+.searchbar-engine-button[open="true"] .searchbar-engine-button-top {
+  -moz-image-region: rect(0px, 111px, 22px, 74px);
+}
+
+.searchbar-engine-button[addengines="true"] .searchbar-engine-button-top {
+  -moz-image-region: rect(0px, 148px, 22px, 111px);
+}
+
 .searchbar-engine-button {
   margin: 0px;
   padding: 0px;
-}
-
-.searchbar-engine-button:hover {
-  background-position: -37px 0px;
-}
-
-.searchbar-engine-button[addengines="true"] {
-  background-position: -111px 0px;
-}
-
-.searchbar-engine-button[open="true"] {
-  background-position: -74px 0px;
 }
 
 .searchbar-dropmarker-image {
