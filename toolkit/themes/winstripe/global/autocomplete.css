@@ -94,24 +94,29 @@ textbox[chromedir="rtl"] .autocomplete-history-dropmarker {
   -moz-image-region: rect(0px, 64px, 20px, 48px);
 }
 
-.autocomplete-dropmarker-bkgnd {
-  list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-bkgnd.png");
-}
-
 .autocomplete-dropmarker-bkgnd-top {
+  list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-bkgnd.png");
   -moz-image-region: rect(0px, 16px, 9px, 0px);
   height: 9px;
 }
 
+/* GTK does not stretch image regions properly, so use background images instead.
+   See bugs 351764 and 254659. */
 .autocomplete-dropmarker-bkgnd-mid-top {
-  -moz-image-region: rect(9px, 16px, 10px, 0px);
+  background-image: url("chrome://global/skin/icons/autocomplete-dropmark-bkgnd-mid-top.png");
+  background-repeat: repeat;
+  -moz-background-clip: padding;
 }
 
 .autocomplete-dropmarker-bkgnd-mid-bottom {
-  -moz-image-region: rect(10px, 16px, 11px, 0px);
+  background-image: url("chrome://global/skin/icons/autocomplete-dropmark-bkgnd-mid-bottom.png");
+  background-repeat: repeat;
+  -moz-background-clip: padding;
+  list-style-image: none;
 }
 
 .autocomplete-dropmarker-bkgnd-bottom {
+  list-style-image: url("chrome://global/skin/icons/autocomplete-dropmark-bkgnd.png");
   -moz-image-region: rect(11px, 16px, 20px, 0px);
   height: 9px;
 }
@@ -122,11 +127,11 @@ textbox[chromedir="rtl"] .autocomplete-history-dropmarker {
 }
 
 .autocomplete-history-dropmarker:hover .autocomplete-dropmarker-bkgnd-mid-top {
-  -moz-image-region: rect(9px, 32px, 10px, 16px);
+  background-position: -16px 0px;
 }
 
-.autocomplete-history-dropmarker:hover .autocomplete-bkgnd-mid-bottom {
-  -moz-image-region: rect(10px, 32px, 11px, 16px);
+.autocomplete-history-dropmarker:hover .autocomplete-dropmarker-bkgnd-mid-bottom {
+  background-position: -16px 0px;
 }
 
 .autocomplete-history-dropmarker:hover .autocomplete-dropmarker-bkgnd-bottom {
@@ -140,11 +145,11 @@ textbox[chromedir="rtl"] .autocomplete-history-dropmarker {
 }
 
 .autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-mid-top {
-  -moz-image-region: rect(9px, 64px, 10px, 48px);
+  background-position: -48px 0px;
 }
 
 .autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-mid-bottom {
-  -moz-image-region: rect(10px, 64px, 11px, 48px);
+  background-position: -48px 0px;
 }
 
 .autocomplete-history-dropmarker:hover:active .autocomplete-dropmarker-bkgnd-bottom {

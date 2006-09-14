@@ -73,6 +73,8 @@ classic.jar:
 	skin/classic/global/icons/alltabs-box-overflow-start-bkgnd.png (icons/alltabs-box-overflow-start-bkgnd.png)
         skin/classic/global/icons/autocomplete-dropmark-arrow.png   (icons/autocomplete-dropmark-arrow.png)
         skin/classic/global/icons/autocomplete-dropmark-bkgnd.png   (icons/autocomplete-dropmark-bkgnd.png)
+        skin/classic/global/icons/autocomplete-dropmark-bkgnd-mid-top.png    (icons/autocomplete-dropmark-bkgnd-mid-top.png)
+        skin/classic/global/icons/autocomplete-dropmark-bkgnd-mid-bottom.png (icons/autocomplete-dropmark-bkgnd-mid-bottom.png)
         skin/classic/global/icons/Close.gif                         (icons/Close.gif)
         skin/classic/global/icons/close.png                         (icons/close.png)
         skin/classic/global/icons/alltabs.png                       (icons/alltabs.png)
