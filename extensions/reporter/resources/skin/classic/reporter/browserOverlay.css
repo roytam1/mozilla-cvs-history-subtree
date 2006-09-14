@@ -27,18 +27,17 @@ toolbar[iconsize="small"] #reporterMenuButton {
 }
 
 toolbar[iconsize="small"] #reporterMenuButton {
-  -moz-image-region: rect(0px 14px 15px 0px);
+  -moz-image-region: rect(0px 16px 15px 0px);
 }
 
 toolbar[iconsize="small"] #reporterMenuButton:hover {
-  -moz-image-region: rect(0px 28px 15px 14px);
+  -moz-image-region: rect(0px 32px 15px 16px);
 }
 
 toolbar[iconsize="small"] #reporterMenuButton:hover:active {
-  -moz-image-region: rect(0px 42px 15px 28px);
+  -moz-image-region: rect(0px 48px 15px 32px);
 }
 
 toolbar[iconsize="small"] #reporterMenuButton[disabled="true"] {
-  -moz-image-region: rect(0px 56px 15px 42px) !important;
+  -moz-image-region: rect(0px 64px 15px 48px) !important;
 }
-
