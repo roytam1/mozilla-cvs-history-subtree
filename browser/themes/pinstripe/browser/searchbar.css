@@ -6,7 +6,8 @@
   -moz-appearance: none;
   font: icon;
   height: 22px !important;
-  width: 182px !important;
+  width: 4em;
+  min-width: 4em;
   border: none !important;
 }
 

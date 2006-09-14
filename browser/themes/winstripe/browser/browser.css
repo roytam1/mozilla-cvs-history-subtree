@@ -775,6 +775,8 @@ toolbar[iconsize="small"] #paste-button:not([disabled="true"]):hover:active {
   margin-top: 2px;
   -moz-margin-end: 0px;
   -moz-margin-start: 3px;
+  width: 7em;
+  min-width: 7em;
 
   -moz-appearance: none;
   -moz-border-top-colors: #96969D;
@@ -784,21 +786,8 @@ toolbar[iconsize="small"] #paste-button:not([disabled="true"]):hover:active {
   border: 1px solid;
 }
 
-/* This needs to be at least as large as the maximum possible width
-   of the container that holds the icons in the right side of the urlbar.
-   This is a spacer so that the urlbar/searchbar boundary doesn't shift
-   (due to flex calculations) when the urlbar icons appear and disappear. */
-#urlbar-icons-spacer {
-  width: 100px;
-}
-
 #urlbar-icons {
   height: 18px;
-}
-
-#urlbar-spacer {
-  visibility: hidden;
-  height: 0px;  /* We just want this widget's horizontal size behavior */
 }
 
 #wrapper-urlbar-container #urlbar {

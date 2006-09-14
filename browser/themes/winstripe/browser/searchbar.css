@@ -12,7 +12,8 @@
 
 .searchbar-textbox {
   min-height: 22px;
-  width: 15em;
+  width: 4em;
+  min-width: 4em;
   margin-right: 0px;
   margin-left: 0px;
   background-color: -moz-field;

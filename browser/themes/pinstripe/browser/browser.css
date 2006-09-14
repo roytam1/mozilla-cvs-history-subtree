@@ -851,6 +851,8 @@ toolbar[iconsize="small"] #paste-button:hover:active {
   margin-bottom: 5px;
   -moz-margin-start: 4px;
   -moz-margin-end: 0px;
+  width: 7em;
+  min-width: 7em;
   padding: 0px;
   font: icon !important;
 }
@@ -901,18 +903,6 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 
 #urlbar[level="broken"] #lock-icon {
   list-style-image: url("chrome://browser/skin/Secure-urlbar-broken.png");
-}
-
-/* This needs to be at least as large as the maximum possible width
-   of the container that holds the icons in the right side of the urlbar.
-   This is a spacer so that the urlbar/searchbar boundary doesn't shift
-   (due to flex calculations) when the urlbar icons appear and disappear. */
-#urlbar-icons-spacer {
-  width: 100px;
-}
-
-#urlbar-spacer {
-  visibility: hidden;
 }
 
 #wrapper-urlbar-container #urlbar {
