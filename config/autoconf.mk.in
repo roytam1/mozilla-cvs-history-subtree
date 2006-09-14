@@ -150,9 +150,9 @@ MOZ_NO_XPCOM_OBSOLETE = @MOZ_NO_XPCOM_OBSOLETE@
 MOZ_NO_FAST_LOAD = @MOZ_NO_FAST_LOAD@
 
 MOZ_JAVAXPCOM = @MOZ_JAVAXPCOM@
-JAVA_INCLUDE_PATH=@JAVA_INCLUDE_PATH@
-JAVAC=@JAVAC@
-JAR=@JAR@
+JAVA_INCLUDE_PATH="@JAVA_INCLUDE_PATH@"
+JAVAC="@JAVAC@"
+JAR="@JAR@"
 
 # The MOZ_UI_LOCALE var is used to build a particular locale. Do *not*
 # use the var to change any binary files. Do *not* use this var unless you

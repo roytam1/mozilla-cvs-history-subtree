@@ -516,6 +516,11 @@ XPIDL_COMPILE 	= $(CYGWIN_WRAPPER) $(DIST)/bin/xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(CYGWIN_WRAPPER) $(DIST)/bin/xpt_link$(BIN_SUFFIX)
 endif
 
+# Java macros
+JAVA_GEN_DIR  = _javagen
+JAVA_DIST_DIR = $(DEPTH)/$(JAVA_GEN_DIR)
+JAVA_IFACES_PKG_NAME = org/mozilla/xpcom
+
 REQ_INCLUDES	= $(foreach d,$(REQUIRES),-I$(DIST)/include/$d)
 
 INCLUDES	= $(LOCAL_INCLUDES) $(REQ_INCLUDES) -I$(PUBLIC) -I$(DIST)/include $(OS_INCLUDES)

@@ -127,6 +127,7 @@ typedef struct IncludePathEntry {
 
 struct TreeState {
     FILE             *file;
+    char             *filename;
     /* Maybe supplied by -o. Not related to (g_)basename from string.h or glib */
     char             *basename;
     IDL_ns           ns;
@@ -134,6 +135,13 @@ struct TreeState {
     GSList           *base_includes;
     nodeHandler      *dispatch;
     void             *priv;     /* mode-private data */
+};
+
+struct java_priv_data {
+    GHashTable *typedefTable;
+    GHashTable *keywords;
+    char       *filename;
+    GHashTable *nonIDLIfaces;
 };
 
 /*
