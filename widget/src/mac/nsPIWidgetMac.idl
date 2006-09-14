@@ -39,9 +39,15 @@
 
 #include "nsISupports.idl"
 
+%{ C++
+class nsMacWindow;
+class nsMacEventDispatchHandler;
+%}
+
+[ptr] native nsMacWindowPtr(nsMacWindow);
+[ptr] native nsMacEventDispatchHandlerPtr(nsMacEventDispatchHandler);
+
 interface nsIMenuBar;
-interface nsMacWindow;
-interface nsMacEventDispatchHandler;
 
 //
 // nsPIWidgetMac
@@ -70,15 +76,15 @@ interface nsPIWidgetMac : nsISupports
   
 }; // nsPIWidgetMac
 
-[scriptable, uuid(0DB8C108-D642-49A2-87F6-ED548DD032E2)]
+[uuid(0DB8C108-D642-49A2-87F6-ED548DD032E2)]
 interface nsPIWidgetMac_MOZILLA_1_8_BRANCH : nsPIWidgetMac
 {
   // Find the displayed child sheet (if aShown) or a child sheet that
   // wants to be displayed (if !aShown)
-  nsMacWindow GetChildSheet ( in boolean aShown );
+  nsMacWindowPtr GetChildSheet ( in boolean aShown );
 
   // The event dispatch handler associated with a window
-  readonly attribute nsMacEventDispatchHandler eventDispatchHandler;
+  readonly attribute nsMacEventDispatchHandlerPtr eventDispatchHandler;
 
   // If the window is a sheet, whether or not it is actually displayed
   attribute boolean sheetShown;
