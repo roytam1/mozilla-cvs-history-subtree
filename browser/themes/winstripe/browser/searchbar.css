@@ -118,7 +118,7 @@
 
 .searchbar-dropmarker-image {
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
-  -moz-margin-start: 2px;
+  -moz-margin-start: 3px;
 }
 
 /* ::::: search-go-button ::::: */
