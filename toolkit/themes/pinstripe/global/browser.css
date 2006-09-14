@@ -1,11 +1,5 @@
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
-/*
-.tabbrowser-tab:not([selected="true"]) > .tab-image-middle > .tab-icon {
-  background: url("chrome://global/skin/inactivetab-icon-black.png") repeat;
-}
-*/
-
 .tabbrowser-tab:not([selected="true"]):hover {
   background: url("chrome://global/skin/tabbrowser-tabs-bkgnd.png") repeat-x;
 }
@@ -256,6 +250,7 @@ tabbrowser > tabbox > tabpanels {
   background-image: url("chrome://global/skin/tab-arrow-start-bkgnd.png");
   background-repeat: no-repeat;
   -moz-image-region: rect(0, 11px, 14px, 0);
+  opacity: 0.65;
 }
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up[disabled="true"] {
@@ -264,6 +259,7 @@ tabbrowser > tabbox > tabpanels {
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover {
   -moz-image-region: rect(0, 22px, 14px, 11px);
+  opacity: 1.0;
 }
  
 .tabbrowser-arrowscrollbox > .scrollbutton-up:not([disabled="true"]):hover:active {
@@ -319,6 +315,7 @@ tabbrowser > tabbox > tabpanels {
 
 .scrollbutton-rel-box > .scrollbutton-down > .toolbarbutton-icon {
   margin-top: 4px;
+  -moz-margin-start: 1px;
 }
 
 /**
