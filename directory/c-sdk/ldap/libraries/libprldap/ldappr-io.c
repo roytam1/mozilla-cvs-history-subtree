@@ -428,7 +428,8 @@ prldap_connect( const char *hostlist, int defport, int timeout,
 	 * address was not successfully handled in PR_GetAddrInfoByName.
 	 */
 	if ( NULL != ( infop =
-	      PR_GetAddrInfoByName( host, PR_AF_UNSPEC, PR_AI_ADDRCONFIG ))) {
+	      PR_GetAddrInfoByName( host, PR_AF_UNSPEC, 
+				    (PR_AI_ADDRCONFIG|PR_AI_NOCANONNAME) ))) {
 	    void *enump = NULL;
 	    do {
 		memset( &addr, 0, sizeof( addr ));
@@ -440,12 +441,10 @@ prldap_connect( const char *hostlist, int defport, int timeout,
 	    } while ( rc < 0 );
 	    PR_FreeAddrInfo( infop );
 	} else if ( PR_SUCCESS == PR_StringToNetAddr( host, &addr )) {
-	    if ( PR_SUCCESS != PR_SetNetAddr( PR_IpAddrNull, /* don't touch IP addr. */
-		PR_NetAddrFamily( &addr ), (PRUint16)port, &addr )) { 
-		return( -1 );
-	    }
+	    PRLDAP_SET_PORT( &addr, port );
 	    rc = prldap_try_one_address( prsockp, &addr, timeout, options );
 	}
+	ldap_memfree( host );
     }
 
     ldap_x_hostlist_statusfree( status );
