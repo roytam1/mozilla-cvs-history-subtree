@@ -874,11 +874,10 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 
 #urlbar #lock-icon {
   height: 18px;
-  width: 18px;
+  margin: -1px;
 }
 
 #urlbar[level="high"] #lock-icon {
-  margin: -1px;
   list-style-image: url("chrome://browser/skin/Secure.png");
   -moz-image-region: rect(0px, 18px, 18px, 0px);
 }
@@ -890,7 +889,6 @@ toolbar[iconsize="small"] #paste-button:hover:active {
 }
 
 #urlbar[level="low"] #lock-icon {
-  margin: -1px;
   list-style-image: url("chrome://browser/skin/Secure.png");
   -moz-image-region: rect(0px, 18px, 18px, 0px);
 }
