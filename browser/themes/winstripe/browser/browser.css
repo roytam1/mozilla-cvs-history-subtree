@@ -280,6 +280,10 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 
 /* ::::: 24px primary toolbar buttons ::::: */
 
+toolbar:not([iconsize="small"]) .toolbarbutton-1 .toolbarbutton-icon {
+  padding-top: 1px;
+}
+
 /* back button-- */
 
 #back-button {
@@ -427,6 +431,9 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 
 /* new tab button */
 
+toolbar:not([iconsize="small"]) #new-tab-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 #new-tab-button {
   -moz-image-region: rect(0px 240px 24px 216px);
 }
@@ -442,6 +449,9 @@ toolbar[mode="full"] .toolbarbutton-menubutton-button {
 
 /* new window button */
 
+toolbar:not([iconsize="small"]) #new-window-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 #new-window-button {
   -moz-image-region: rect(0px 264px 24px 240px);
 }
@@ -532,6 +542,9 @@ toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active {
 
 /* back button-- */
 
+toolbar[iconsize="small"] #back-button .toolbarbutton-icon {
+  padding-right: 1px;
+}
 toolbar[iconsize="small"] #back-button {
   -moz-image-region: rect(0px 16px 16px 0px);
 }
@@ -549,6 +562,9 @@ toolbar[iconsize="small"] #back-button:not([disabled="true"]):hover:active {
 
 /* small forward button-- */
 
+toolbar[iconsize="small"] #forward-button .toolbarbutton-icon {
+  padding-right: 1px;
+}
 toolbar[iconsize="small"] #forward-button {
   -moz-image-region: rect(0px 32px 16px 16px);
 }
@@ -565,6 +581,9 @@ toolbar[iconsize="small"] #forward-button:not([disabled="true"]):hover:active {
 
 /* stop button */
 
+toolbar[iconsize="small"] #stop-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #stop-button {
   -moz-image-region: rect(0px 48px 16px 32px);
 }
@@ -577,8 +596,12 @@ toolbar[iconsize="small"] #stop-button[disabled="true"] {
 toolbar[iconsize="small"] #stop-button:not([disabled="true"]):hover:active {
   -moz-image-region: rect(64px 48px 80px 32px);
 }
+
 /* reload button */
 
+toolbar[iconsize="small"] #reload-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #reload-button {
   -moz-image-region: rect(0px 64px 16px 48px);
 }
@@ -593,6 +616,9 @@ toolbar[iconsize="small"] #reload-button:not([disabled="true"]):hover:active {
 }
 /* home button */
 
+toolbar[iconsize="small"] #home-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #home-button {
   -moz-image-region: rect(0px 80px 16px 64px);
 }
@@ -608,6 +634,9 @@ toolbar[iconsize="small"] #home-button:not([disabled="true"]):hover:active {
 
 /* download manager button */
 
+toolbar[iconsize="small"] #downloads-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #downloads-button {
   -moz-image-region: rect(0px 96px 16px 80px);
 }
@@ -623,6 +652,9 @@ toolbar[iconsize="small"] #downloads-button:not([disabled="true"]):hover:active 
 
 /* history sidebar button */
 
+toolbar[iconsize="small"] #history-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #history-button {
   -moz-image-region: rect(0px 112px 16px 96px);
 }
@@ -641,6 +673,9 @@ toolbar[iconsize="small"] #history-button:not([disabled="true"]):not([checked="t
 
 /* bookmark sidebar button */
 
+toolbar[iconsize="small"] #bookmarks-button .toolbarbutton-icon {
+  padding-left: 2px;
+}
 toolbar[iconsize="small"] #bookmarks-button {
   -moz-image-region: rect(0px 128px 16px 112px);
 }
@@ -659,6 +694,9 @@ toolbar[iconsize="small"] #bookmarks-button:not([disabled="true"]):not([checked=
 
 /* print button */
 
+toolbar[iconsize="small"] #print-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #print-button {
   -moz-image-region: rect(0px 144px 16px 128px);
 }
@@ -674,6 +712,9 @@ toolbar[iconsize="small"] #print-button:not([disabled="true"]):hover:active {
 
 /* new tab button */
 
+toolbar[iconsize="small"] #new-tab-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #new-tab-button {
   -moz-image-region: rect(0px 160px 16px 144px);
 }
@@ -704,6 +745,9 @@ toolbar[iconsize="small"] #new-window-button:not([disabled="true"]):hover:active
 
 /* cut button */
 
+toolbar[iconsize="small"] #cut-button .toolbarbutton-icon {
+  padding-right: 1px;
+}
 toolbar[iconsize="small"] #cut-button {
   -moz-image-region: rect(0px 192px 16px 176px);
 }
@@ -719,6 +763,9 @@ toolbar[iconsize="small"] #cut-button:not([disabled="true"]):hover:active {
 
 /* copy button */
 
+toolbar[iconsize="small"] #copy-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #copy-button {
   -moz-image-region: rect(0px 208px 16px 192px);
 }
@@ -734,6 +781,9 @@ toolbar[iconsize="small"] #copy-button:not([disabled="true"]):hover:active {
 
 /* paste button */
 
+toolbar[iconsize="small"] #paste-button .toolbarbutton-icon {
+  padding-left: 1px;
+}
 toolbar[iconsize="small"] #paste-button {
   -moz-image-region: rect(0px 224px 16px 208px);
 }
