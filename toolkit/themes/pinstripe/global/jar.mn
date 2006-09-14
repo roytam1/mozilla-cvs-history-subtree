@@ -51,9 +51,11 @@ classic.jar:
 +  skin/classic/global/splitter.css
 +  skin/classic/global/tab-arrow-start.png
 +  skin/classic/global/tab-arrow-start-bkgnd.png
++  skin/classic/global/tab-arrow-start-bkgnd-hover.png
 +  skin/classic/global/tab-arrow-start-bkgnd-animate.png
 +  skin/classic/global/tab-arrow-end.png
 +  skin/classic/global/tab-arrow-end-bkgnd.png
++  skin/classic/global/tab-arrow-end-bkgnd-hover.png
 +  skin/classic/global/tab-arrow-end-bkgnd-animate.png
 +  skin/classic/global/tab-left.png
 +  skin/classic/global/tab-middle.png
