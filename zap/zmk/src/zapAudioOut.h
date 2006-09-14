@@ -79,10 +79,9 @@ private:
                               unsigned long framesPerBuffer,
                               PaTimestamp outTime, void* userData);
 
-  void PlayFrame(void* outputBuffer);
+  nsresult PlayFrame(void* outputBuffer);
   PRBool ValidateFrame(zapIMediaFrame* frame);
   nsresult StartStream();
-  void CloseStream();
     
   nsCOMPtr<zapIMediaGraph> mGraph;
   nsCOMPtr<nsIEventTarget> mEventTarget;   // media graph event target

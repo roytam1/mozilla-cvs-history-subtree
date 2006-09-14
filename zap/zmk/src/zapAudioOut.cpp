@@ -57,10 +57,8 @@ public:
   
   NS_IMETHODIMP Run()
   {
-    if (!mAudioOut) return NS_OK;
-    mAudioOut->PlayFrame(mOutputBuffer);
-
-    return NS_OK;
+    NS_ASSERTION(mAudioOut, "uh-oh, no audio out!");
+    return mAudioOut->PlayFrame(mOutputBuffer);
   }
   
 private:
@@ -151,7 +149,11 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
   mClockStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("clock_cycle"),
                                         mStreamParameters.GetFrameDuration() );
   
-  return mStreamParameters.InitWithProperties(node_pars);
+  nsresult rv =  mStreamParameters.InitWithProperties(node_pars);
+  if (NS_FAILED(rv)) return rv;
+
+  StartStream();
+  return NS_OK;
 }
 
 /* void removedFromGraph (in zapIMediaGraph graph); */
@@ -161,8 +163,6 @@ zapAudioOut::RemovedFromGraph(zapIMediaGraph *graph)
 #ifdef DEBUG_afri_zmk
   printf("(audioout removed from graph)");
 #endif
-  CloseStream();
-  mEventTarget = nsnull;
   return NS_OK;
 }
 
@@ -205,7 +205,6 @@ zapAudioOut::ConnectSource(zapIMediaSource *source,
   NS_ASSERTION(!mInput, "already connected");
 
   mInput = source;
-  StartStream();
   
   return NS_OK;
 }
@@ -216,7 +215,6 @@ zapAudioOut::DisconnectSource(zapIMediaSource *source,
                               const nsACString & connection_id)
 {
   mInput = nsnull;
-  CloseStream();
   return NS_OK;
 }
 
@@ -238,7 +236,6 @@ zapAudioOut::ConnectSink(zapIMediaSink *sink,
 {
   NS_ASSERTION(!mClockOutput, "already connected");
   mClockOutput = sink;
-  StartStream();
   
   return NS_OK;
 }
@@ -286,22 +283,32 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
                      PaTimestamp outTime, void* userData)
 {
   zapAudioOut* audioout = (zapAudioOut*)userData;
+
+  if (audioout->mRefCnt == 1) {
+    // audioout is only being held alive by the portaudiostream.
+    // -> stop stream and release, so that we can shutdown
+    audioout->mStream = nsnull;
+    audioout->Release();
+    return 1; // 1 == stop stream
+  }
   
   nsRefPtr<zapAudioOutPlayFrameEvent> ev = new zapAudioOutPlayFrameEvent(audioout,
                                                                          outputBuffer);
-  //XXX possible deadlock when stream is closed while we wait for
-  //event to be served???
-  audioout->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
 
-  return 0;
+  audioout->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
+  
+  return 0; // 0 == continue stream
 }
 
 //----------------------------------------------------------------------
 // Implementation helpers:
 
 // called from portaudio callback:
-void zapAudioOut::PlayFrame(void* outputBuffer)
+nsresult zapAudioOut::PlayFrame(void* outputBuffer)
 {
+  if (!mStream)
+    return NS_ERROR_FAILURE;
+  
   nsCOMPtr<zapIMediaFrame> frame;
   if (mInput)
     mInput->ProduceFrame(getter_AddRefs(frame));
@@ -366,6 +373,8 @@ void zapAudioOut::PlayFrame(void* outputBuffer)
     frame->mTimestamp = 0; // XXX
     mClockOutput->ConsumeFrame(frame);
   }
+
+  return NS_OK;
 }
 
 PRBool zapAudioOut::ValidateFrame(zapIMediaFrame* frame)
@@ -443,6 +452,10 @@ nsresult zapAudioOut::StartStream()
 #endif
     return NS_ERROR_FAILURE;
   }
+
+  // AddRef ourselves. Portaudio will close stream and Release ref
+  // when there is only one reference left
+  AddRef();
   
   // start playing stream:
   Pa_StartStream(mStream);
@@ -450,14 +463,5 @@ nsresult zapAudioOut::StartStream()
   return NS_OK;
 }
 
-void zapAudioOut::CloseStream()
-{
-  if (!mStream) return; // stream already stopped
 
-  Pa_CloseStream(mStream);
-  mStream = nsnull;
-#ifdef DEBUG_afri_zmk
-  printf("(audioout stream closed)");
-#endif
-}
 
