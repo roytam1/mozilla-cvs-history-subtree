@@ -161,11 +161,6 @@ ApplicationObserver::Observe(nsISupports *aSubject, const char *aTopic, const PR
   } 
   else if (!strcmp(aTopic, "xul-window-visible"))
   {
-#ifdef WINCE
-  // EVIL?
-  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
- 
     KillSplashScreen();
   }
   
