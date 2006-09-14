@@ -287,8 +287,8 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
 {
   zapAudioOut* audioout = (zapAudioOut*)userData;
   
-  zapAudioOutPlayFrameEvent* ev = new zapAudioOutPlayFrameEvent(audioout,
-                                                                outputBuffer);
+  nsRefPtr<zapAudioOutPlayFrameEvent> ev = new zapAudioOutPlayFrameEvent(audioout,
+                                                                         outputBuffer);
   //XXX possible deadlock when stream is closed while we wait for
   //event to be served???
   audioout->mEventTarget->Dispatch(ev, NS_DISPATCH_SYNC);
