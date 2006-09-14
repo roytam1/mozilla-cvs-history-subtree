@@ -44,8 +44,10 @@
 <!DOCTYPE wizard [
 <!ENTITY % updateDTD SYSTEM "chrome://mozapps/locale/update/updates.dtd">
 <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+<!ENTITY % pippkiDTD SYSTEM "chrome://pippki/locale/pippki.dtd">
 %updateDTD;
 %brandDTD;
+%pippkiDTD;
 ]>
 
 <wizard id="updates"
@@ -100,9 +102,9 @@
     <separator id="upgradeEvangelismSep"/>
     <deck id="detailsDeck" flex="1">
       <vbox align="start">
-        <button id="moreDetails" 
-                label="&moreDetails.label;" accesskey="&moreDetails.accesskey;"
-                oncommand="gUpdatesAvailablePage.onShowMoreDetails();"/>
+        <!-- since we are after the string freeze, re-use the "Please Wait..."
+             string from pippki.dtd -->
+        <description>&createCertInfo.msg2;</description>
       </vbox>
       <vbox>
         <vbox id="moreInfoContent" flex="1">
