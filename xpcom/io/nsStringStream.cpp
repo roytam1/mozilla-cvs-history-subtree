@@ -140,6 +140,8 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsStringInputStream,
 NS_IMETHODIMP
 nsStringInputStream::SetData(const char *data, PRInt32 dataLen)
 {
+    NS_ENSURE_ARG_POINTER(data);
+
     if (dataLen < 0)
         dataLen = strlen(data);
 
