@@ -57,6 +57,10 @@ LDAPMod **		T_PTR
 LDAP_CMP_CALLBACK *	T_PTR
 LDAP_REBINDPROC_CALLBACK *	T_PTR
 struct timeval		T_timeval
+my_chgtype_t    T_IV
+my_chgnum_t     T_IV
+my_result_t     T_IV
+my_vlvint_t     T_IV
 
 #########
 INPUT

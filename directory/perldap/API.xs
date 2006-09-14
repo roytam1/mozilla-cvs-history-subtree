@@ -43,6 +43,19 @@ extern "C" {
 #include <lber.h>
 #include <ldap.h>
 
+/* need to define ber types for old version of api */
+#if LDAP_VENDOR_VERSION < 600
+typedef int my_chgtype_t;
+typedef long my_chgnum_t;
+typedef unsigned long my_result_t;
+typedef unsigned long my_vlvint_t;
+#else
+typedef ber_int_t my_chgtype_t;
+typedef ber_int_t my_chgnum_t;
+typedef ber_int_t my_result_t;
+typedef ber_int_t my_vlvint_t;
+#endif /* LDAP_VENDOR_VERSION < 600 */
+
 /* SSL is only available in Binary */
 #ifdef USE_SSL
 # include <ldap_ssl.h>
@@ -1293,10 +1306,10 @@ int
 ldap_parse_entrychange_control(ld,ctrls,chgtypep,prevdnp,chgnumpresentp,chgnump)
 	LDAP *		ld
 	LDAPControl **	ctrls
-	int 		&chgtypep = NO_INIT
-	char *		&prevdnp = NO_INIT
-	int 		&chgnumpresentp = NO_INIT
-	long 		&chgnump = NO_INIT
+	my_chgtype_t	&chgtypep = NO_INIT
+	char *			&prevdnp = NO_INIT
+	int 			&chgnumpresentp = NO_INIT
+	my_chgnum_t 	&chgnump = NO_INIT
 	OUTPUT:
 	RETVAL
 	chgtypep
@@ -1355,10 +1368,10 @@ ldap_parse_sasl_bind_result(ld,res,servercredp,freeit)
 
 int
 ldap_parse_sort_control(ld,ctrls,result,attribute)
-	LDAP *		ld
-	LDAPControl **	ctrls
-	unsigned long 	&result = NO_INIT
-	char *		&attribute = NO_INIT
+	LDAP *			ld
+	LDAPControl 	**	ctrls
+	my_result_t 	&result = NO_INIT
+	char *			&attribute = NO_INIT
 	OUTPUT:
 	RETVAL
 	result
@@ -1368,8 +1381,8 @@ int
 ldap_parse_virtuallist_control(ld,ctrls,target_posp,list_sizep,errcodep)
 	LDAP *		ld
 	LDAPControl **	ctrls
-	unsigned long 	&target_posp = NO_INIT
-	unsigned long 	&list_sizep = NO_INIT
+	my_vlvint_t 	&target_posp = NO_INIT
+	my_vlvint_t 	&list_sizep = NO_INIT
 	int		&errcodep = NO_INIT
 	OUTPUT:
 	target_posp
