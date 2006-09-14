@@ -246,11 +246,12 @@ tabbrowser > tabbox > tabpanels {
  */
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up {
-  width: 19px;
+  width: 18px;
   height: 18px;
   margin: 2px 0px 3px 0px;
   padding-left: 0;
   padding-right: 0;
+  border: none;
   list-style-image: url("chrome://global/skin/tab-arrow-start.png");
   background-image: url("chrome://global/skin/tab-arrow-start-bkgnd.png");
   background-repeat: no-repeat;
@@ -275,7 +276,7 @@ tabbrowser > tabbox > tabpanels {
 
 .scrollbutton-rel-box > .scrollbutton-down-box {
   margin: 2px 0px 3px 0px;
-  width: 19px;
+  width: 18px;
   height: 18px;
   background-image: url("chrome://global/skin/tab-arrow-end-bkgnd.png") !important;
   background-repeat: no-repeat;
@@ -284,7 +285,7 @@ tabbrowser > tabbox > tabpanels {
 
 .scrollbutton-rel-box > .scrollbutton-down-box-animate {
   margin: 2px 0px 3px 0px;
-  width: 19px;
+  width: 18px;
   height: 18px;
   background-image: url("chrome://global/skin/tab-arrow-end-bkgnd-animate.png") !important;
   background-repeat: no-repeat;
@@ -293,7 +294,7 @@ tabbrowser > tabbox > tabpanels {
 
 .scrollbutton-rel-box > .scrollbutton-down {
   margin: 2px 0px 3px 0px;
-  width: 19px;
+  width: 18px;
   height: 18px;
   padding-left: 0;
   padding-right: 0;
