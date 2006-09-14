@@ -22,12 +22,7 @@
   -moz-border-bottom-colors: #96969D;
   -moz-border-right-colors: #96969D;
   -moz-border-left-colors: #96969D;
-  border-width: 1px 1px 1px 0;
-}
-
-#search-container[chromedir="rtl"] .searchbar-textbox {
-  border-right-width: 0;
-  border-left-width: 1px;
+  border-width: 1px;
 }
 
 .textbox-input {
