@@ -935,6 +935,7 @@ statusbarpanel#statusbar-display {
 toolbar[mode="text"] #go-button,
 toolbar[mode="text"] #go-button-stack .go-button-background {
   list-style-image: none;
+  background-image: none;
 }
 
 toolbar[mode="text"] #go-button-stack {
