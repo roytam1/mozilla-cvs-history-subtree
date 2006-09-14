@@ -52,15 +52,6 @@ toolbar#HelpToolbar toolbarbutton[type="menu-button"] {
   padding: 0px;
 }
 
-toolbarbutton:not([disabled="true"]):hover,
-menubutton:not([disabled="true"]):hover,
-toolbarbutton:not([disabled="true"]):hover:active,
-menubutton:not([disabled="true"]):hover:active {
-  margin: 0px;
-  padding: 3px;
-  color: ButtonText !important;
-}
-
 /* this element contains the icon and the label */
 toolbar#HelpToolbar .toolbarbutton-menubutton-button {
   margin: 0px !important;
