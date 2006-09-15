@@ -840,6 +840,7 @@ toolbar[iconsize="small"] #paste-button:not([disabled="true"]):hover:active {
 #urlbar-container {
   -moz-box-orient: horizontal;
   -moz-box-align: stretch;
+  -moz-margin-end: 5px;
 }
 
 /* This needs to be at least as large as the maximum possible width
@@ -943,7 +944,6 @@ toolbar[mode="text"] #go-button-stack {
 }
 
 #go-button-stack {
-  -moz-margin-end: 5px;
   padding: 2px 0px 2px 0px;
 }
 

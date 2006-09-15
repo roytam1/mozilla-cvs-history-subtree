@@ -184,6 +184,7 @@ pref("browser.cache.disk.capacity",         50000);
 pref("browser.enable_automatic_image_resizing", true);
 pref("browser.urlbar.autoFill", false);
 pref("browser.urlbar.matchOnlyTyped", false);
+pref("browser.urlbar.hideGoButton", false);
 pref("browser.chrome.site_icons", true);
 pref("browser.chrome.favicons", true);
 pref("browser.formfill.enable", true);

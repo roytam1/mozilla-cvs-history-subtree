@@ -905,6 +905,10 @@ toolbar[iconsize="small"] #paste-button:hover:active {
   list-style-image: url("chrome://browser/skin/Secure-urlbar-broken.png");
 }
 
+#urlbar-container {
+  -moz-padding-end: 5px;
+}
+
 #wrapper-urlbar-container #urlbar {
   -moz-user-input: disabled;
   cursor: -moz-grab;
@@ -968,7 +972,6 @@ statusbarpanel#statusbar-display {
 
 #go-button {
   -moz-appearance: toolbarbutton;
-  -moz-padding-end: 5px;
   height: 24px;
 }
 

@@ -125,6 +125,7 @@ var gFormFillEnabled = true;
 
 var gURLBarAutoFillPrefListener = null;
 var gAutoHideTabbarPrefListener = null;
+var gGoButtonPrefListener = null;
 
 #ifdef XP_MACOSX
 var gClickAndHoldTimer = null;
@@ -1057,6 +1058,10 @@ function delayedStartup()
   gAutoHideTabbarPrefListener = new AutoHideTabbarPrefListener();
   pbi.addObserver(gAutoHideTabbarPrefListener.domain, gAutoHideTabbarPrefListener, false);
 
+  // Enable/Disable Go button
+  gGoButtonPrefListener = new GoButtonPrefListener();
+  pbi.addObserver(gGoButtonPrefListener.domain, gGoButtonPrefListener, false);
+
   pbi.addObserver(gHomeButton.prefDomain, gHomeButton, false);
   gHomeButton.updateTooltip();
 
@@ -1169,6 +1174,7 @@ function BrowserShutdown()
     pbi.removeObserver(gFormFillPrefListener.domain, gFormFillPrefListener);
     pbi.removeObserver(gURLBarAutoFillPrefListener.domain, gURLBarAutoFillPrefListener);
     pbi.removeObserver(gAutoHideTabbarPrefListener.domain, gAutoHideTabbarPrefListener);
+    pbi.removeObserver(gGoButtonPrefListener.domain, gGoButtonPrefListener);
     pbi.removeObserver(gHomeButton.prefDomain, gHomeButton);
   } catch (ex) {
   }
@@ -1361,6 +1367,34 @@ AutoHideTabbarPrefListener.prototype =
       gBrowser.setStripVisibilityTo(aVisible);
       gPrefService.setBoolPref("browser.tabs.forceHide", false);
     }
+  }
+}
+
+function GoButtonPrefListener()
+{
+  this.toggleGoButton();
+}
+
+GoButtonPrefListener.prototype =
+{
+  domain: "browser.urlbar.hideGoButton",
+  observe: function (aSubject, aTopic, aPrefName)
+  {
+    if (aTopic != "nsPref:changed" || aPrefName != this.domain)
+      return;
+
+    this.toggleGoButton();
+  },
+
+  toggleGoButton: function ()
+  {
+    var aHide = false;
+    try {
+      aHide = gPrefService.getBoolPref(this.domain);
+    }
+    catch (e) {
+    }
+    document.getElementById("go-button-stack").hidden = aHide;
   }
 }
 
