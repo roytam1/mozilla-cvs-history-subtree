@@ -116,6 +116,7 @@
 #include "nsMsgCompCID.h"
 #include "nsICacheEntryDescriptor.h"
 
+
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kCImapDB, NS_IMAPDB_CID);
@@ -4723,7 +4724,7 @@ nsImapMailFolder::SetImageCacheSessionForUrl(nsIMsgMailNewsUrl *mailurl)
   return rv;
 }
 
-NS_IMETHODIMP nsImapMailFolder::GetCurMoveCopyMessageFlags(nsIImapUrl *runningUrl, PRUint32 *aResult)
+NS_IMETHODIMP nsImapMailFolder::GetCurMoveCopyMessageInfo(nsIImapUrl *runningUrl, PRTime *aDate, PRUint32 *aResult)
 {
   nsCOMPtr <nsISupports> copyState;
   runningUrl->GetCopyState(getter_AddRefs(copyState));
@@ -4737,6 +4738,8 @@ NS_IMETHODIMP nsImapMailFolder::GetCurMoveCopyMessageFlags(nsIImapUrl *runningUr
       mailCopyState->m_message->GetLabel(&label);
       if (label != 0)
         *aResult |= label << 25;
+      if (aDate)
+        mailCopyState->m_message->GetDate(aDate);
     }
     // if we don't have a source header, and it's not the drafts folder,
     // then mark the message read, since it must be an append to the 
