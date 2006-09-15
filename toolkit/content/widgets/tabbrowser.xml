@@ -2613,7 +2613,7 @@
       <xul:arrowscrollbox anonid="arrowscrollbox" orient="horizontal" flex="1" style="min-width: 1px;" class="tabbrowser-arrowscrollbox">
         <children includes="tab"/>
       </xul:arrowscrollbox>
-      <xul:stack align="center" pack="end">
+      <xul:stack align="center" pack="end" class="tabs-alltabs-stack">
         <!-- XXXsspitzer hack
              this extra hbox with position: relative
              is needed to work around two bugs.

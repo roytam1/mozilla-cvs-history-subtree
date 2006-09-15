@@ -241,10 +241,8 @@ tabbrowser > tabbox > tabpanels {
 
 .tabbrowser-arrowscrollbox > .scrollbutton-up {
   width: 18px;
-  height: 18px;
-  margin: 2px 0px 3px 0px;
-  padding-left: 0;
-  padding-right: 0;
+  margin: 2px 0px 4px 0px;
+  padding: 0px;
   border: none;
   list-style-image: url("chrome://global/skin/tab-arrow-start.png");
   background-image: url("chrome://global/skin/tab-arrow-start-bkgnd.png");
@@ -269,30 +267,28 @@ tabbrowser > tabbox > tabpanels {
   margin-top: 4px;
 }
 
+.scrollbutton-down-stack {
+  margin: 2px 0px 4px 0px;
+}
+
 .scrollbutton-rel-box > .scrollbutton-down-box {
-  margin: 2px 0px 3px 0px;
   width: 18px;
-  height: 18px;
   background-image: url("chrome://global/skin/tab-arrow-end-bkgnd.png") !important;
   background-repeat: no-repeat;
 }
 
 .scrollbutton-rel-box > .scrollbutton-down-box-animate {
-  margin: 2px 0px 3px 0px;
   width: 18px;
-  height: 18px;
   background-image: url("chrome://global/skin/tab-arrow-end-bkgnd-animate.png") !important;
   background-repeat: no-repeat;
   opacity: 0.0;
 }
 
 .scrollbutton-rel-box > .scrollbutton-down {
-  margin: 2px 0px 3px 0px;
   width: 18px;
-  height: 18px;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0px;
   border: none;
+  margin: 0px;
   list-style-image: url("chrome://global/skin/tab-arrow-end.png") !important;
   -moz-image-region: rect(0, 11px, 14px, 0);
 }
@@ -320,10 +316,12 @@ tabbrowser > tabbox > tabpanels {
  * All Tabs Button
  */
 
+.tabs-alltabs-stack {
+  margin: 2px 0px 4px 0px;
+}
+
 .tabs-alltabs-box {
-  margin: 2px 0px 3px 0px;
   width: 16px;
-  height: 18px;
   background-image: url("chrome://global/skin/alltabs-box-bkgnd.png");
   background-repeat: no-repeat;
   opacity: 0.65;
@@ -334,12 +332,11 @@ tabbrowser > tabbox > tabpanels {
 }
 
 .tabs-alltabs-button {
-  margin: 2px 0px 3px 0px;
   width: 16px;
-  height: 18px;
   padding-left: 0;
   padding-right: 0;
   border: none;
+  margin: 0;
 }
 
 .tabs-alltabs-button  > .toolbarbutton-menu-dropmarker {
@@ -356,7 +353,6 @@ tabbrowser > tabbox > tabpanels {
 }
 
 .tabs-alltabs-button:hover {
-  margin: 2px 0px 3px 0px;
   background-image: url("chrome://global/skin/alltabs-box-bkgnd.png");
   background-repeat: no-repeat;
   opacity: 1.0;
@@ -367,9 +363,7 @@ tabbrowser > tabbox > tabpanels {
 }
 
 .tabs-alltabs-box-animate {
-  margin: 2px 0px 3px 0px;
   width: 16px;
-  height: 18px;
   background-image: url("chrome://global/skin/alltabs-box-overflow-bkgnd-animate.png");
   background-repeat: no-repeat;
   opacity: 0.0;
