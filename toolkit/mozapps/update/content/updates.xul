@@ -99,12 +99,17 @@
     <label id="updateName" crop="right"/>
     <separator id="updateNameSep" class="thin"/>
     <description id="upgradeEvangelism">&upgrade.evangelism;</description>
-    <separator id="upgradeEvangelismSep"/>
+    <separator id="upgradeEvangelismSep" flex="1"/>
     <deck id="detailsDeck" flex="1">
       <vbox align="start">
-        <!-- since we are after the string freeze, re-use the "Please Wait..."
-             string from pippki.dtd -->
-        <description>&createCertInfo.msg2;</description>
+        <hbox align="start">
+          <image id="incompatibleCheckingThrobber"/>
+          <vbox flex="1">
+            <!-- since we are after the string freeze, re-use the "Please Wait..."
+                 string from pippki.dtd -->
+            <description>&createCertInfo.msg2;</description>
+          </vbox>
+        </hbox>
       </vbox>
       <vbox>
         <vbox id="moreInfoContent" flex="1">
