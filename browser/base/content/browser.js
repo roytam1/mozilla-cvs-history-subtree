@@ -3450,7 +3450,8 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
   if (gURLBar) {
     gURLBar.value = url == "about:blank" ? "" : url;
     SetPageProxyState("valid");
-    XULBrowserWindow.asyncUpdateUI();    
+    XULBrowserWindow.asyncUpdateUI();
+    gGoButtonPrefListener.toggleGoButton();
   }
 
   // Re-enable parts of the UI we disabled during the dialog
