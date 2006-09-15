@@ -78,7 +78,7 @@
  ** RETURN: none
  */
 #define PRLDAP_SET_PORT(myaddr,myport) \
-    ((myaddr)->raw.family == PR_AF_INET6 ? ((myaddr)->ipv6.port = (myport)) : ((myaddr)->inet.port = (myport)))
+    ((myaddr)->raw.family == PR_AF_INET6 ? ((myaddr)->ipv6.port = PR_htons(myport)) : ((myaddr)->inet.port = PR_htons(myport)))
 
 /*
  * Data structures:
