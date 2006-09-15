@@ -1590,6 +1590,7 @@ case "$target" in
     HOST_LD=link
     HOST_AR='lib -OUT:$@'
     HOST_RANLIB='echo ranlib'
+    HOST_CFLAGS="$HOST_CFLAGS -D_X86_"
         
 	MOZ_OPTIMIZE_FLAGS='-O1'
     AR_FLAGS='-NOLOGO -OUT:"$@"'
