@@ -963,7 +963,7 @@ SessionStoreService.prototype = {
           }
         }
         if (aBrowser.currentURI.spec == "about:config") {
-          text = ["#textbox=" + encodeURI(aBrowser.contentDocument.getElementById("textbox").value)];
+          text = ["#textbox=" + encodeURI(aBrowser.contentDocument.getElementById("textbox").wrappedJSObject.value)];
         }
         tabData.text = text.join(" ");
         
@@ -1460,8 +1460,9 @@ SessionStoreService.prototype = {
     
     var content = XPCNativeWrapper(aEvent.originalTarget).defaultView;
     if (this.currentURI.spec == "about:config") {
-      //XXXzeniko why ever this doesn't work with an XPCNativeWrapper...
-      content = aEvent.originalTarget.defaultView;
+      // unwrap the document for about:config because otherwise the properties
+      // of the XBL bindings - as the textbox - aren't accessible (see bug 350718)
+      content = content.wrappedJSObject;
     }
     restoreTextDataAndScrolling(content, this.__SS_restore_data, "");
     
