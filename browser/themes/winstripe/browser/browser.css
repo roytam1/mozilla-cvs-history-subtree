@@ -933,6 +933,21 @@ statusbarpanel#statusbar-display {
 
 /* ::::: go button ::::: */
 
+/* In text icon mode, the Go button scales independently of the location bar,
+ * and the button can be much taller, so we have to center align the elements
+ * (instead of stretching them) to prevent the location bar from stretching
+ * vertically to match the button's height and growing too tall. Despite this
+ * center alignment, the history dropmarker still stretches to the location
+ * bar's height, as it's inside the location bar's textbox, which is stretchy.
+ */
+toolbar[mode="text"] #urlbar-button-box {
+  -moz-box-align: center;
+}
+
+toolbar[mode="text"] #go-button {
+  -moz-margin-start: 5px;
+}
+
 toolbar[mode="text"] #go-button,
 toolbar[mode="text"] #go-button-stack .go-button-background {
   list-style-image: none;
@@ -947,7 +962,7 @@ toolbar[mode="text"] #go-button-stack {
   padding: 2px 0px 2px 0px;
 }
 
-#go-button {
+toolbar:not([mode="text"]) #go-button {
   -moz-appearance: none;
   list-style-image: url("chrome://browser/skin/Go-arrow.png");
   -moz-image-region: rect(0px 25px 22px 0px);
@@ -956,11 +971,11 @@ toolbar[mode="text"] #go-button-stack {
   margin: 0px;
 }
 
-#go-button[chromedir="rtl"] {
+toolbar:not([mode="text"]) #go-button[chromedir="rtl"] {
   list-style-image: url("chrome://browser/skin/Go-arrow-rtl.png");
 }
 
-#go-button-top {
+toolbar:not([mode="text"]) #go-button-top {
   list-style-image: url("chrome://browser/skin/Go-bkgnd.png");
   -moz-image-region: rect(0px, 25px, 10px, 0px);
   height: 10px;
@@ -968,30 +983,30 @@ toolbar[mode="text"] #go-button-stack {
 
 /* GTK does not stretch image regions properly, so use background
    images instead.  See bugs 351764 and 254659. */
-#go-button-mid-top {
+toolbar:not([mode="text"]) #go-button-mid-top {
   background-image: url("chrome://browser/skin/Go-mid-top.png");
 }
 
-#go-button-mid-bottom {
+toolbar:not([mode="text"]) #go-button-mid-bottom {
   background-image: url("chrome://browser/skin/Go-mid-bottom.png");
 }
 
-#go-button-bottom {
+toolbar:not([mode="text"]) #go-button-bottom {
   list-style-image: url("chrome://browser/skin/Go-bkgnd.png");
   -moz-image-region: rect(12px, 25px, 22px, 0px);
   height: 10px;
 }
 
-#go-button-top[chromedir="rtl"],
-#go-button-bottom[chromedir="rtl"] {
+toolbar:not([mode="text"]) #go-button-top[chromedir="rtl"],
+toolbar:not([mode="text"]) #go-button-bottom[chromedir="rtl"] {
   list-style-image: url("chrome://browser/skin/Go-bkgnd-rtl.png");
 }
 
-#go-button-mid-top[chromedir="rtl"] {
+toolbar:not([mode="text"]) #go-button-mid-top[chromedir="rtl"] {
   background-image: url("chrome://browser/skin/Go-mid-top-rtl.png");
 }
 
-#go-button-mid-bottom[chromedir="rtl"] {
+toolbar:not([mode="text"]) #go-button-mid-bottom[chromedir="rtl"] {
   background-image: url("chrome://browser/skin/Go-mid-bottom-rtl.png");
 }
 

@@ -123,20 +123,35 @@
 
 /* ::::: search-go-button ::::: */
 
-.search-go-button {
+/* In text icon mode, the Search Go button scales independently of the field,
+ * and the button can be much taller, so we have to center align the elements
+ * (instead of stretching them) to prevent the field from stretching vertically
+ * to match the button's height and growing too tall.  We still stretch
+ * the search engine dropmarker to the height of the field via a stretchy box
+ * around just those two elements.
+ */
+toolbar[mode="text"] .searchbar-box {
+  -moz-box-align: center;
+}
+
+toolbar:not([mode="text"]) .search-go-button {
   list-style-image: url("chrome://browser/skin/Search-glass.png");
   padding: 0px;
   -moz-appearance: none;
   -moz-image-region: rect(0px 25px 22px 0px);
 }
 
-.search-go-button[chromedir="rtl"] {
+toolbar:not([mode="text"]) .search-go-button[chromedir="rtl"] {
   list-style-image: url("chrome://browser/skin/Search-glass-rtl.png");
 }
 
 .search-go-button-stack {
   padding: 2px 0px 2px 0px;
   -moz-padding-end: 5px;
+}
+
+toolbar[mode="text"] .search-go-button {
+  -moz-margin-start: 5px;
 }
 
 toolbar[mode="text"] .search-go-button-stack {

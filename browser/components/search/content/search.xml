@@ -66,36 +66,38 @@
                         anonid="searchbar-stringbundle"/>
 
       <xul:hbox class="searchbar-box" flex="1">
-        <xul:button class="searchbar-engine-button"
-                    type="menu"
-                    anonid="searchbar-engine-button"
-                    popup="_child"
-                    xbl:inherits="src">
-          <xul:menupopup class="searchbar-popup"
-                         anonid="searchbar-popup"
-                         position="after_start">
-            <xul:menuseparator/>
-            <xul:menuitem class="open-engine-manager"
-                          anonid="open-engine-manager"
-                          label="&cmd_engineManager.label;"
-                          accesskey="&cmd_engineManager.accesskey;"/>
-          </xul:menupopup>
-        </xul:button>
-
-        <xul:textbox class="searchbar-textbox"
-                     anonid="searchbar-textbox"
-                     type="autocomplete"
-                     flex="1"
-                     autocompletepopup="PopupAutoComplete"
-                     autocompletesearch="search-autocomplete"
-                     autocompletesearchparam="searchbar-history"
-                     timeout="250"
-                     maxrows="10"
-                     completeselectedindex="true"
-                     showcommentcolumn="true"
-                     tabscrolling="true"
-                     xbl:inherits="disabled,disableautocomplete,searchengine,src">
-        </xul:textbox>
+        <xul:hbox flex="1">
+          <xul:button class="searchbar-engine-button"
+                      type="menu"
+                      anonid="searchbar-engine-button"
+                      popup="_child"
+                      xbl:inherits="src">
+            <xul:menupopup class="searchbar-popup"
+                           anonid="searchbar-popup"
+                           position="after_start">
+              <xul:menuseparator/>
+              <xul:menuitem class="open-engine-manager"
+                            anonid="open-engine-manager"
+                            label="&cmd_engineManager.label;"
+                            accesskey="&cmd_engineManager.accesskey;"/>
+            </xul:menupopup>
+          </xul:button>
+  
+          <xul:textbox class="searchbar-textbox"
+                       anonid="searchbar-textbox"
+                       type="autocomplete"
+                       flex="1"
+                       autocompletepopup="PopupAutoComplete"
+                       autocompletesearch="search-autocomplete"
+                       autocompletesearchparam="searchbar-history"
+                       timeout="250"
+                       maxrows="10"
+                       completeselectedindex="true"
+                       showcommentcolumn="true"
+                       tabscrolling="true"
+                       xbl:inherits="disabled,disableautocomplete,searchengine,src">
+          </xul:textbox>
+        </xul:hbox>
 
         <xul:stack class="search-go-button-stack">
           <xul:vbox>
