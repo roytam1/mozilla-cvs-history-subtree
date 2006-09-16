@@ -20,7 +20,6 @@ toolkit.jar:
         content/global/aboutAbout.html              (resources/content/aboutAbout.html) 
         content/global/about.xul                    (resources/content/about.xul) 
         content/global/config.xul                   (resources/content/config.xul) 
-        content/global/config.css                   (resources/content/config.css) 
         content/global/config.js                    (resources/content/config.js) 
         content/global/mozilla.xhtml                (resources/content/mozilla.xhtml) 
         content/global/charsetOverlay.xul           (resources/content/charsetOverlay.xul) 

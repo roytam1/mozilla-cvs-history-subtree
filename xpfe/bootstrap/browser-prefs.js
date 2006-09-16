@@ -57,6 +57,8 @@ pref("general.open_location.last_window_choice", 0);
 pref("general.smoothScroll", false);
 pref("general.autoScroll", true);
 
+pref("general.warnOnAboutConfig", true);
+
 #expand pref("general.useragent.extra.__MOZ_APP_NAME__", "__MOZ_APP_DISPLAYNAME__/__MOZ_APP_VERSION__");
 
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
