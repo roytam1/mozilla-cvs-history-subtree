@@ -863,7 +863,6 @@
           <xul:image class="searchbar-engine-button-bottom searchbar-engine-button-bkgnd"/>
         </xul:vbox>
         <xul:hbox align="center"
-                  pack="center"
                   class="searchbar-engine-image-container">
           <xul:image class="searchbar-engine-image" xbl:inherits="src"/>
           <xul:image class="searchbar-dropmarker-image"/>

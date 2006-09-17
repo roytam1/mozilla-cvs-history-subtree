@@ -103,6 +103,7 @@
   width: 16px;
   list-style-image: url("chrome://global/skin/icons/folder-item.png");
   -moz-image-region: rect(0px, 16px, 16px, 0px);
+  -moz-margin-start: 4px;
 }
 
 .searchbar-engine-button {

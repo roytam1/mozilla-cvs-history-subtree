@@ -24,10 +24,6 @@
   padding: 2px 0px 2px 0px;
 }
 
-.searchbar-engine-image-container {
-  -moz-box-pack: center;
-}
-
 .searchbar-engine-image {
   width: 16px;
   height: 16px;
@@ -62,7 +58,7 @@
 
 .searchbar-dropmarker-image {
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
-  -moz-margin-start: 2px;
+  -moz-margin-start: 4px;
 }
 
 .autocomplete-textbox-container {
