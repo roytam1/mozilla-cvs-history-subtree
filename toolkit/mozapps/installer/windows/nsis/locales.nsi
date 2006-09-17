@@ -51,9 +51,9 @@
 ; Locales that require a font specified.
 !if ${AB_CD} == "ja"
 !undef WIZ_IMAGE_SUFFIX
-!define WIZ_IMAGE_SUFFIX "2"
+!define WIZ_IMAGE_SUFFIX "4"
 !undef HDR_IMAGE_SUFFIX
-!define HDR_IMAGE_SUFFIX "2"
+!define HDR_IMAGE_SUFFIX "4"
 !endif
 
 !if ${AB_CD} == "ko"

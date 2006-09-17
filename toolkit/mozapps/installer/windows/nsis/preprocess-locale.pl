@@ -61,7 +61,7 @@ if ($AB_CD eq "ar" || $AB_CD eq "he") {
 # changes the window size an image should also be specified in locales.nsi.
 if ($AB_CD eq "ja") {
   $fontName = "‚l‚r ‚oƒSƒVƒbƒN";
-  $fontSize = "9";
+  $fontSize = "10";
 }
 elsif ($AB_CD eq "ko") {
   $fontName = "±¼¸²";
