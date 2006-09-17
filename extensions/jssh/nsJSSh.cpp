@@ -586,6 +586,9 @@ NS_IMETHODIMP nsJSSh::Init()
   // Enable js1.7 features (let, yield, etc - see bug#351515)
   JS_SetVersion(mJSContext, JSVERSION_1_7);
   
+  // Enable js1.7 features (let, yield, etc - see bug#351515)
+  JS_SetVersion(mJSContext, JSVERSION_1_7);
+  
   mContextStack = do_GetService("@mozilla.org/js/xpc/ContextStack;1");
   if (!mContextStack) {
     NS_ERROR("failed to get the nsThreadJSContextStack service");
