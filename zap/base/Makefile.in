@@ -17,7 +17,7 @@ MOZILLA_INTERNAL_API = 1
 REQUIRES     	= \
 		xpcom \
 		string \
-		caps \
+		necko \
 		$(NULL)
 
 CPPSRCS		= \
