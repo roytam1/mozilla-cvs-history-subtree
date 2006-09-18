@@ -76,6 +76,7 @@
 #include "nsTextTransformer.h"
 #include "nsXBLAtoms.h"
 #include "nsXBLWindowKeyHandler.h"
+#include "nsDOMStorage.h"
 
 #ifdef MOZ_XUL
 #include "nsXULContentUtils.h"
@@ -182,6 +183,12 @@ nsLayoutStatics::Initialize()
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsDOMAttribute::Initialize();
+
+  rv = nsDOMStorageManager::Initialize();
+  if (NS_FAILED(rv)) {
+    NS_ERROR("Could not initialize nsDOMStorageManager");
+    return rv;
+  }
 
   return NS_OK;
 }
