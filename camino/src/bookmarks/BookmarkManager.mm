@@ -1231,9 +1231,16 @@ static BookmarkManager* gBookmarkManager = nil;
     else
     {
       // save the corrupted bookmarks to a backup file
+      long long bmFileSize = [fM sizeOfFileAtPath:bookmarkPath traverseLink:YES];
+      NSLog(@"Corrupted bookmarks.plist is %qi bytes", bmFileSize);
+      NSDictionary* fileAttributesDict = [fM fileAttributesAtPath:bookmarkPath traverseLink:YES];
+      NSDate* modificationDate = [fileAttributesDict objectForKey:NSFileModificationDate];
+      NSLog(@"Corrupted bookmarks.plist was last modified %@", modificationDate);
+
       NSString* uniqueName = [fM backupFileNameFromPath:bookmarkPath withSuffix:@"-corrupted"];
-      [fM copyPath:bookmarkPath toPath:uniqueName handler:nil];
-      NSLog(@"Copied corrupted bookmarks file to %@", uniqueName);
+      BOOL withSuccess = [fM copyPath:bookmarkPath toPath:uniqueName handler:nil];
+
+      NSLog(@"Copied corrupted bookmarks file to %@ (OK? %d)", uniqueName, withSuccess);
     }
   }
   else if ([fM isReadableFileAtPath:[profileDir stringByAppendingPathComponent:@"bookmarks.xml"]])
@@ -1884,6 +1891,14 @@ static BookmarkManager* gBookmarkManager = nil;
 //
 -(void)writePropertyListFile:(NSString *)pathToFile
 {
+  NSLog(@"writePropertyListFile: method entered");
+
+  if (![NSThread inMainThread])
+  {
+    NSLog(@"writePropertyListFile: called from background thread");
+    return;
+  }
+
   if (!pathToFile)
   {
     NSLog(@"writePropertyListFile: nil path argument");
@@ -1910,8 +1925,14 @@ static BookmarkManager* gBookmarkManager = nil;
     long long bmFileSize = [fm sizeOfFileAtPath:backupFile traverseLink:YES];
     if (bmFileSize > 0)
     {
+      NSLog(@"writePropertyListFile: file before moving was %qi bytes", bmFileSize);
+
       BOOL removedOld = [fm removeFileAtPath:stdPath handler:self];               // out with the old...
       BOOL movedNew   = [fm movePath:backupFile toPath:stdPath handler:self];     //  ... in with the new
+
+      bmFileSize = [fm sizeOfFileAtPath:stdPath traverseLink:YES];
+      NSLog(@"writePropertyListFile: file after moving was %qi bytes", bmFileSize);
+
       if (!removedOld || !movedNew)
         NSLog(@"writePropertyList: move failed (removed old file at %@ (OK %d), moved new file from %@ (OK %d)",
                       stdPath, removedOld,
@@ -1922,6 +1943,8 @@ static BookmarkManager* gBookmarkManager = nil;
   }
   else
     NSLog(@"writePropertyList: Failed to write file %@", pathToFile);
+
+  NSLog(@"writePropertyListFile: method exited");
 }
 
 - (BOOL)fileManager:(NSFileManager *)manager shouldProceedAfterError:(NSDictionary *)errorInfo
