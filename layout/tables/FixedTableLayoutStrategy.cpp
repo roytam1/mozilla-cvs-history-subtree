@@ -173,6 +173,9 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
         // XXX Should only add columns that have cells originating in them!
         nscoord subtract = spacing * (colCount + 1);
         tableWidth -= subtract;
+    } else {
+        // No Columns - nothing to compute
+	return;
     }
 
     // XXX This ignores the 'min-width' and 'max-width' properties
