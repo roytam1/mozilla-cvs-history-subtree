@@ -300,15 +300,7 @@ nsLineLayout::BeginLineReflow(nscoord aX, nscoord aY,
 
   mTopEdge = aY;
 
-  switch (mStyleText->mWhiteSpace) {
-  case NS_STYLE_WHITESPACE_PRE:
-  case NS_STYLE_WHITESPACE_NOWRAP:
-    psd->mNoWrap = PR_TRUE;
-    break;
-  default:
-    psd->mNoWrap = PR_FALSE;
-    break;
-  }
+  psd->mNoWrap = !mStyleText->CanBreakAtWhiteSpace();
   psd->mDirection = mBlockReflowState->mStyleVisibility->mDirection;
   psd->mChangedFrameDirection = PR_FALSE;
 
@@ -530,16 +522,8 @@ nsLineLayout::BeginSpan(nsIFrame* aFrame,
     psd->mX = aLeftEdge;
     psd->mRightEdge = aRightEdge;
 
-    const nsStyleText* styleText = aSpanReflowState->frame->GetStyleText();
-    switch (styleText->mWhiteSpace) {
-    case NS_STYLE_WHITESPACE_PRE:
-    case NS_STYLE_WHITESPACE_NOWRAP:
-        psd->mNoWrap = PR_TRUE;
-        break;
-    default:
-        psd->mNoWrap = PR_FALSE;
-        break;
-    }
+    psd->mNoWrap =
+      !aSpanReflowState->frame->GetStyleText()->CanBreakAtWhiteSpace();
     psd->mDirection = aSpanReflowState->mStyleVisibility->mDirection;
     psd->mChangedFrameDirection = PR_FALSE;
 

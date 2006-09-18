@@ -2747,7 +2747,10 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                            nsIFrame::InlineMinWidthData *aData)
 {
-  PRBool canBreak = !CanContinueTextRun();
+  NS_ASSERTION(GetParent(), "Must have a parent if we get here!");
+  PRBool canBreak = !CanContinueTextRun() &&
+    GetParent()->GetStyleText()->CanBreakAtWhiteSpace();
+  
   if (canBreak)
     aData->Break(aRenderingContext);
   aData->trailingWhitespace = 0;
