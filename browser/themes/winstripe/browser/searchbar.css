@@ -6,10 +6,6 @@
 }
 %endif
 
-#searchbar .search-go-button {
-  border: 0px !important;
-}
-
 .searchbar-textbox {
   min-height: 22px;
   width: 4em;
@@ -137,6 +133,7 @@ toolbar[mode="text"] .searchbar-box {
 
 toolbar:not([mode="text"]) .search-go-button {
   list-style-image: url("chrome://browser/skin/Search-glass.png");
+  border: 0px !important;
   padding: 0px;
   -moz-appearance: none;
 }
