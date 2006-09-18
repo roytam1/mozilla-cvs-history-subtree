@@ -499,7 +499,7 @@ function flushDataSource()
 function noUpdatesDismiss(aEvent)
 {
   window.removeEventListener("command", noUpdatesDismiss, true);
-  if (aEvent.target.localName == "notification")
+  if (aEvent.target.localName != "notification")
     return;
 
   var children = gExtensionsView.children;
@@ -508,7 +508,6 @@ function noUpdatesDismiss(aEvent)
     if (child.hasAttribute("updateStatus"))
       child.removeAttribute("updateStatus");
   }
-  document.getElementById("addonsMsg").removeCurrentNotification();
 }
 
 function setRestartMessage(aItem)
