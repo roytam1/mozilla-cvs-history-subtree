@@ -5754,12 +5754,19 @@ function MultiplexHandler(event)
         var charset = node.getAttribute('id');
         charset = charset.substring('charset.'.length, charset.length)
         SetForcedCharset(charset);
+        SetDefaultCharacterSet(charset);
     } else if (name == 'charsetCustomize') {
         //do nothing - please remove this else statement, once the charset prefs moves to the pref window
     } else {
         SetForcedCharset(node.getAttribute('id'));
+        SetDefaultCharacterSet(node.getAttribute('id'));
     }
     } catch(ex) { alert(ex); }
+}
+
+function SetDefaultCharacterSet(charset)
+{
+    BrowserSetDefaultCharacterSet(charset);
 }
 
 function SelectDetector(event, doReload)
@@ -5794,6 +5801,11 @@ function SetForcedDetector(doReload)
 function SetForcedCharset(charset)
 {
     BrowserSetForcedCharacterSet(charset);
+}
+
+function BrowserSetDefaultCharacterSet(aCharset)
+{
+  // no longer needed; set when setting Force; see bug 79608
 }
 
 function BrowserSetForcedCharacterSet(aCharset)
