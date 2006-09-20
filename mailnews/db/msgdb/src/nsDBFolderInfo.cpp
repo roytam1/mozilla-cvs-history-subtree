@@ -1004,8 +1004,6 @@ NS_IMETHODIMP nsDBFolderInfo::InitFromTransferInfo(nsIDBFolderInfo *aTransferInf
     SetCharPtrProperty(transferInfo->m_properties[i]->get(), transferInfo->m_values[i]->get());
 
   LoadMemberVariables();
-  SetNumMessages(0);
-  SetNumUnreadMessages(0);
   return NS_OK;
 }
 
