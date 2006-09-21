@@ -2829,6 +2829,44 @@ nsIFrame::InlinePrefWidthData::Break(nsIRenderingContext *aRenderingContext)
   currentLine = trailingWhitespace = 0;
 }
 
+static void
+AddCoord(const nsStyleCoord& aStyle, nscoord* aCoord, float* aPercent)
+{
+  switch (aStyle.GetUnit()) {
+    case eStyleUnit_Coord:
+      *aCoord += aStyle.GetCoordValue();
+      break;
+    case eStyleUnit_Percent:
+      *aPercent += aStyle.GetPercentValue();
+      break;
+  }
+}
+
+/* virtual */ nsIFrame::IntrinsicWidthOffsetData
+nsFrame::IntrinsicWidthOffsets()
+{
+  IntrinsicWidthOffsetData result;
+  nsStyleCoord tmp;
+
+  const nsStyleMargin *styleMargin = GetStyleMargin();
+  AddCoord(styleMargin->mMargin.GetLeft(tmp),
+           &result.hMargin, &result.hPctMargin);
+  AddCoord(styleMargin->mMargin.GetRight(tmp),
+           &result.hMargin, &result.hPctMargin);
+
+  const nsStylePadding *stylePadding = GetStylePadding();
+  AddCoord(stylePadding->mPadding.GetLeft(tmp),
+           &result.hPadding, &result.hPctPadding);
+  AddCoord(stylePadding->mPadding.GetRight(tmp),
+           &result.hPadding, &result.hPctPadding);
+
+  const nsStyleBorder *styleBorder = GetStyleBorder();
+  result.hBorder += styleBorder->GetBorderWidth(NS_SIDE_LEFT);
+  result.hBorder += styleBorder->GetBorderWidth(NS_SIDE_RIGHT);
+
+  return result;
+}
+
 NS_IMETHODIMP
 nsFrame::WillReflow(nsPresContext* aPresContext)
 {

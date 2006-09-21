@@ -540,21 +540,7 @@ nsTableOuterFrame::InvalidateDamage(PRUint8         aCaptionSide,
 nsTableOuterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nscoord width = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                    mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
-                    nsLayoutUtils::CONTENT);
-  nscoord tableMin = mInnerTableFrame->GetMinWidth(aRenderingContext);
-  if (width < tableMin)
-    width = tableMin;
-  nsLayoutUtils::IntrinsicWidthPart insetPart =
-    mInnerTableFrame->IsBorderCollapse() ? nsLayoutUtils::MARGIN
-                                         : nsLayoutUtils::PBM_PARTS;
-  width += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-             mInnerTableFrame, nsLayoutUtils::MIN_WIDTH,
-             insetPart);
-  // Include the outer part of the collapsed border that is part of the
-  // table's border-box (in quirks mode).
-  nsMargin outerBC = mInnerTableFrame->GetIncludedOuterBCBorder();
-  width += outerBC.LeftRight();
+                    mInnerTableFrame, nsLayoutUtils::MIN_WIDTH);
   DISPLAY_MIN_WIDTH(this, width);
   if (mCaptionFrame) {
     nscoord capWidth =
@@ -581,21 +567,7 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   DISPLAY_PREF_WIDTH(this, maxWidth);
 
   maxWidth = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-               mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
-               nsLayoutUtils::CONTENT);
-  nscoord tableMin = mInnerTableFrame->GetMinWidth(aRenderingContext);
-  if (maxWidth < tableMin)
-    maxWidth = tableMin;
-  PRBool isBorderCollapse = mInnerTableFrame->IsBorderCollapse();
-  nsLayoutUtils::IntrinsicWidthPart insetPart =
-     isBorderCollapse ? nsLayoutUtils::MARGIN : nsLayoutUtils::PBM_PARTS;
-  maxWidth += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                mInnerTableFrame, nsLayoutUtils::PREF_WIDTH,
-                insetPart);
-  // Include the outer part of the collapsed border that is part of the
-  // table's border-box (in quirks mode).
-  nsMargin outerBC = mInnerTableFrame->GetIncludedOuterBCBorder();
-  maxWidth += outerBC.LeftRight();
+               mInnerTableFrame, nsLayoutUtils::PREF_WIDTH);
   if (mCaptionFrame) {
     PRUint8 captionSide = GetCaptionSide();
     switch(captionSide) {

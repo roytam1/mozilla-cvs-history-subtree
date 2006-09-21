@@ -259,6 +259,7 @@ public:
   // border to the results of these functions.
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
   // XXXldb REWRITE THIS COMMENT!
   /** inner tables are reflowed in two steps.

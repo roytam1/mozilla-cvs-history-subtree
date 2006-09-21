@@ -644,19 +644,19 @@ nsTableCellFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return result;
 }
 
-nscoord
-nsTableCellFrame::GetIntrinsicBorderPadding(nsIRenderingContext *aRenderingContext,
-                                            nsLayoutUtils::IntrinsicWidthType aType)
+/* virtual */ nsIFrame::IntrinsicWidthOffsetData
+nsTableCellFrame::IntrinsicWidthOffsets()
 {
-  nscoord result =
-    nsLayoutUtils::IntrinsicForContainer(aRenderingContext, this, aType,
-                                         nsLayoutUtils::PADDING);
+  IntrinsicWidthOffsetData result =
+    nsHTMLContainerFrame::IntrinsicWidthOffsets();
 
-  float p2t = GetPresContext()->ScaledPixelsToTwips();
+  result.hMargin = 0;
+  result.hPctMargin = 0;
 
+  GET_PIXELS_TO_TWIPS(GetPresContext(), p2t);
   nsMargin border;
   GetBorderWidth(p2t, border);
-  result += border.LeftRight();
+  result.hBorder = border.LeftRight();
 
   return result;
 }

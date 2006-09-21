@@ -73,6 +73,8 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
     //   'width' property for the table element and the sum of the
     //   column widths (plus cell spacing or borders).
 
+    // XXX Should we really ignore 'min-width' and 'max-width'?
+
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     PRInt32 colCount = cellMap->GetColCount();
     nscoord spacing = mTableFrame->GetCellSpacingX();
@@ -108,11 +110,8 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
             if (cellFrame) {
                 styleWidth = &cellFrame->GetStylePosition()->mWidth;
                 if (styleWidth->GetUnit() == eStyleUnit_Coord) {
-                    nscoord cellWidth = styleWidth->GetCoordValue();
-                    // Add in cell's padding and border.
-                    cellWidth += cellFrame->GetIntrinsicBorderPadding(
-                                  aRenderingContext, nsLayoutUtils::MIN_WIDTH);
-
+                    nscoord cellWidth = nsLayoutUtils::IntrinsicForContainer(
+                        aRenderingContext, cellFrame, nsLayoutUtils::MIN_WIDTH);
                     if (colSpan > 1) {
                         // If a column-spanning cell is in the first
                         // row, split up the space evenly.  (XXX This
@@ -229,10 +228,10 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
                 }
                 if (colWidth != unassignedMarker) {
                     // Add in cell's padding and border.
-                    // XXX This should use real percentage padding, not
-                    // the intrinsic width estimate for percentages!
-                    colWidth += cellFrame->GetIntrinsicBorderPadding(
-                                  aReflowState.rendContext, nsLayoutUtils::MIN_WIDTH);
+                    // XXX This should use real percentage padding
+                    nsIFrame::IntrinsicWidthOffsetData offsets =
+                        cellFrame->IntrinsicWidthOffsets();
+                    colWidth += offsets.hPadding + offsets.hBorder;
 
                     if (colSpan > 1) {
                         // If a column-spanning cell is in the first

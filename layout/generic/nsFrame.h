@@ -275,6 +275,7 @@ public:
                                  InlineMinWidthData *aData);
   virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                   InlinePrefWidthData *aData);
+  virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,

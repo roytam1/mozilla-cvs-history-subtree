@@ -100,10 +100,10 @@ struct nsMargin;
 typedef class nsIFrame nsIBox;
 
 // IID for the nsIFrame interface 
-// 6dd7201e-42d5-4857-b907-6ee1b9691e02
+// 1040c5ea-8ba7-4a2d-80f1-5890e8439641
 #define NS_IFRAME_IID \
-{ 0x6dd7201e, 0x42d5, 0x4857, \
-  { 0xb9, 0x07, 0x6e, 0xe1, 0xb9, 0x69, 0x1e, 0x02 } }
+{ 0x1040c5ea, 0x8ba7, 0x4a2d, \
+  { 0x80, 0xf1, 0x58, 0x90, 0xe8, 0x43, 0x96, 0x41 } }
 
 /**
  * Indication of how the frame can be split. This is used when doing runaround
@@ -1098,6 +1098,21 @@ public:
   virtual void
   AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                      InlinePrefWidthData *aData) = 0;
+
+  /**
+   * Return the horizontal components of padding, border, and margin
+   * that contribute to the intrinsic width that applies to the parent.
+   */
+  struct IntrinsicWidthOffsetData {
+    nscoord hPadding, hBorder, hMargin;
+    float hPctPadding, hPctMargin;
+
+    IntrinsicWidthOffsetData()
+      : hPadding(0), hBorder(0), hMargin(0)
+      , hPctPadding(0.0f), hPctMargin(0.0f)
+    {}
+  };
+  virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets() = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.

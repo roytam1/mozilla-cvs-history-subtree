@@ -1623,6 +1623,23 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return LayoutStrategy()->GetPrefWidth(aRenderingContext);
 }
 
+/* virtual */ nsIFrame::IntrinsicWidthOffsetData
+nsTableFrame::IntrinsicWidthOffsets()
+{
+  IntrinsicWidthOffsetData result =
+    nsHTMLContainerFrame::IntrinsicWidthOffsets();
+
+  if (IsBorderCollapse()) {
+    result.hPadding = 0;
+    result.hPctPadding = 0;
+
+    nsMargin outerBC = GetIncludedOuterBCBorder();
+    result.hBorder = outerBC.LeftRight();
+  }
+
+  return result;
+}
+
 
 // Return true if aStylePosition has a pct height
 static PRBool 
