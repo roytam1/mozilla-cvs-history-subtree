@@ -53,7 +53,7 @@ EXPORTED_SYMBOLS = [ "arraymerge",
                      "makeArrayIterator"];
 
 // name our global object:
-function toString() { return "[ArrayUtils.js]"; }
+// function toString() { return "[ArrayUtils.js]"; }
 
 //----------------------------------------------------------------------
 // arraymerge

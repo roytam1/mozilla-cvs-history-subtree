@@ -40,7 +40,7 @@ EXPORTED_SYMBOLS = [ "defun",
                      "makeServiceGetter" ];
 
 // name our global object:
-function toString() { return "[FunctionUtils.js]"; }
+// function toString() { return "[FunctionUtils.js]"; }
 
 //----------------------------------------------------------------------
 // defun

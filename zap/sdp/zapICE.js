@@ -45,7 +45,7 @@ Components.utils.importModule("gre:ObjectUtils.js");
 Components.utils.importModule("gre:FunctionUtils.js");
 
 // name our global object:
-function toString() { return "[zapICE.js]"; }
+// function toString() { return "[zapICE.js]"; }
 
 EXPORTED_SYMBOLS = ["produceICECandidates",
                     "encodeICECandidates",

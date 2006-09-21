@@ -53,7 +53,7 @@ EXPORTED_SYMBOLS = [ "urlToFile",
 
 
 // name our global object:
-function toString() { return "[FileUtils.js]"; }
+// function toString() { return "[FileUtils.js]"; }
 
 
 ////////////////////////////////////////////////////////////////////////

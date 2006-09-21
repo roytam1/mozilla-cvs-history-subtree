@@ -65,7 +65,7 @@ EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     ];
 
 // name our global object:
-function toString() { return "[SipUtils.js]"; }
+// function toString() { return "[SipUtils.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // Constants:

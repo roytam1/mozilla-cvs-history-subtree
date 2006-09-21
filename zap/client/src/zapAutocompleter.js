@@ -46,7 +46,7 @@ Components.utils.importModule("gre:ObjectUtils.js");
 Components.utils.importModule("gre:FileUtils.js");
 
 // name our global object:
-function toString() { return "[zapAutocompleter.js]"; }
+// function toString() { return "[zapAutocompleter.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // Globals

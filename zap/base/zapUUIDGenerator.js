@@ -44,7 +44,7 @@ Components.utils.importModule("gre:StringUtils.js");
 Components.utils.importModule("gre:ObjectUtils.js");
 
 // name our global object:
-function toString() { return "[zapUUIDGenerator.js]"; }
+// function toString() { return "[zapUUIDGenerator.js]"; }
 
 // helpers:
 

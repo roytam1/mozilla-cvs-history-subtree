@@ -47,7 +47,7 @@ Components.utils.importModule("gre:zapICE.js");
 Components.utils.importModule("gre:zapCodecRegistry.js");
 
 // name our global object:
-function toString() { return "[MediaSession.js]"; }
+// function toString() { return "[MediaSession.js]"; }
 
 var PB = makePropertyBag2Proxy;
 

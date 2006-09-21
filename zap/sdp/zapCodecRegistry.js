@@ -44,7 +44,7 @@ Components.utils.importModule("gre:ObjectUtils.js");
 EXPORTED_SYMBOLS = [ "createCodecInstance" ];
 
 // name our global object:
-function toString() { return "[zapCodecRegistry.js]"; }
+// function toString() { return "[zapCodecRegistry.js]"; }
 
 var PB = makePropertyBag2Proxy;
 

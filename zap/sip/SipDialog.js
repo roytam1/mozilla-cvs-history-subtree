@@ -50,7 +50,7 @@ Components.utils.importModule("gre:SipUtils.js");
 Components.utils.importModule("gre:SipUARequestCore.js");
 
 // name our global object:
-function toString() { return "[SipDialog.js]"; }
+// function toString() { return "[SipDialog.js]"; }
 
 
 ////////////////////////////////////////////////////////////////////////

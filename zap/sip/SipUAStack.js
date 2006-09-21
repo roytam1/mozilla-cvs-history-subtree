@@ -49,7 +49,7 @@ Components.utils.importModule("gre:SipDialog.js");
 Components.utils.importModule("gre:FunctionUtils.js");
 
 // name our global object:
-function toString() { return "[SipUAStack.js]"; }
+// function toString() { return "[SipUAStack.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // globals

@@ -58,7 +58,7 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "WeakHash"];
 
 // name our global object:
-function toString() { return "[ClassUtils.js]"; }
+// function toString() { return "[ClassUtils.js]"; }
 
 // object to hold module's documentation:
 var _doc_ = {};

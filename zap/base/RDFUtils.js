@@ -42,7 +42,7 @@ Components.utils.importModule("gre:ObjectUtils.js");
 EXPORTED_SYMBOLS = [ "PersistentRDFObject"];
 
 // name our global object:
-function toString() { return "[RDFUtils.js]"; }
+// function toString() { return "[RDFUtils.js]"; }
 
 
 ////////////////////////////////////////////////////////////////////////
