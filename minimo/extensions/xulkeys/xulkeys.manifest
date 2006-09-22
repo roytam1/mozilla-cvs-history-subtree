@@ -1,0 +1,5 @@
+overlay chrome://minimo/content/minimo.xul chrome://xulkeys/content/minimoOverlay.xul
+content xulkeys jar:xulkeys.jar!/content/
+
+skin    xulkeys	classic/1.0 jar:xulkeys.jar!/skin/
+skin    xulkeys	classic-vga/1.0 jar:xulkeys.jar!/skin-vga/
