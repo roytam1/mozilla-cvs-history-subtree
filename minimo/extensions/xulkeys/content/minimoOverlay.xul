@@ -45,7 +45,7 @@
 
 <vbox id="keyboardContainer" >
 
-<vbox id="keyboardContainer_xulkeys"> 
+<vbox id="keyboardContainer_xulkeys" hidden="true"> 
   
 <box id="keymap1">
 <grid flex="1">
