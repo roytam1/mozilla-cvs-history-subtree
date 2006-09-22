@@ -6,10 +6,20 @@ var xulkeys_keyboardObserver= {
 
   observe:function (subj, topic, data) {
 
-    if(data=="open")  {  
-      document.getElementById("keyboardContainer_xulkeys").setAttribute("hidden","false");      
+   var skeyNotifyOnly = null;
+   try {
+     skeyNotifyOnly = gPref.getBoolPref("skey.notifyOnly");
+   } 
+   catch(e) {skeyNotifyOnly=false;}
+   
+    if(data=="open")  { 
+      if (skeyNotifyOnly==true) {
+		 document.getElementById("keyboardContainer_xulkeys").setAttribute("hidden","false");      
+      }
     } else if(data=="close")  {
-      document.getElementById("keyboardContainer_xulkeys").setAttribute("hidden","true");
+      if (skeyNotifyOnly==true) {
+          document.getElementById("keyboardContainer_xulkeys").setAttribute("hidden","true");
+      }
     }  
   }    
 };
