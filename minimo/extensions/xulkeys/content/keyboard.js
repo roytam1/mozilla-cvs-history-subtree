@@ -1,3 +1,29 @@
+/*
+ * We observe the keyboard notification ( open || close ) 
+ */
+ 
+var xulkeys_keyboardObserver= { 
+
+  observe:function (subj, topic, data) {
+
+    if(data=="open")  {  
+      document.getElementById("keyboardContainer_xulkeys").setAttribute("hidden","false");      
+    } else if(data=="close")  {
+      document.getElementById("keyboardContainer_xulkeys").setAttribute("hidden","true");
+    }  
+  }    
+};
+
+try {
+  var os = Components.classes["@mozilla.org/observer-service;1"]
+                     .getService(nsIObserverService);
+                     
+  os.addObserver(xulkeys_keyboardObserver,"software-keyboard", false);
+
+} catch (e) {
+
+} 
+
 
 var keyMap = 1;
 
