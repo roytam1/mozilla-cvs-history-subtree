@@ -74,10 +74,16 @@ void *
 ldaptool_set_sasl_defaults ( LDAP *ld, unsigned flags, char *mech, char *authid, char *username,
 				 char *passwd, char *realm )
 {
-	ldaptoolSASLdefaults *defaults;
+	ldaptoolSASLdefaults	*defaults;
+	char			*login = NULL;
 
 	if ((defaults = calloc(sizeof(ldaptoolSASLdefaults), 1)) == NULL) {
 		return NULL;
+	}
+
+	/* Try to get the login name */
+	if ((login = getlogin()) == NULL) {
+		login = "";
 	}
 
 	if (mech) {
@@ -92,7 +98,7 @@ ldaptool_set_sasl_defaults ( LDAP *ld, unsigned flags, char *mech, char *authid,
 		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHCID, &defaults->authid);
 		if (!defaults->authid) {
 			/* Default to the login name that is running the command */
-			defaults->authid = strdup( getlogin() );
+			defaults->authid = strdup( login );
 		}
 	}
 
@@ -102,7 +108,7 @@ ldaptool_set_sasl_defaults ( LDAP *ld, unsigned flags, char *mech, char *authid,
 		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHZID, &defaults->username);
 		if (!defaults->username && (flags == LDAP_SASL_INTERACTIVE)) {
 			/* Default to the login name that is running the command */
-			defaults->username = strdup( getlogin() );
+			defaults->username = strdup( login );
 		} else if (!defaults->username) { /* not interactive - use default sasl value */
 			defaults->username = strdup( "" );
 		}
