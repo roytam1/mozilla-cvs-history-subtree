@@ -993,13 +993,21 @@ nsLayoutUtils::GetFontMetricsForFrame(nsIFrame* aFrame,
                   *aFontMetrics);
 }
 
-static nscoord GetCoord(const nsStyleCoord& aCoord, nscoord aIfNotCoord)
+static nscoord AddPercents(nsLayoutUtils::IntrinsicWidthType aType,
+                           nscoord aCurrent, float aPercent)
 {
-  return aCoord.GetUnit() == eStyleUnit_Coord
-           ? aCoord.GetCoordValue()
-           : aIfNotCoord;
+  nscoord result = aCurrent;
+  if (aPercent > 0.0f && aType == nsLayoutUtils::PREF_WIDTH) {
+    // XXX Should we also consider percentages for min widths, up to a
+    // limit?
+    if (aPercent >= 1.0f)
+      result = nscoord_MAX;
+    else
+      result = NSToCoordRound(float(result) / (1.0f - aPercent));
+  }
+  return result;
 }
-
+ 
 #undef  DEBUG_INTRINSIC_WIDTH
 
 #ifdef DEBUG_INTRINSIC_WIDTH
@@ -1021,97 +1029,126 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
          aType == MIN_WIDTH ? "min" : "pref");
 #endif
 
-  nscoord result = 0;
   nsIFrame::IntrinsicWidthOffsetData offsets = aFrame->IntrinsicWidthOffsets();
 
   const nsStylePosition *stylePos = aFrame->GetStylePosition();
-  PRUint8 boxSizing = stylePos->mBoxSizing;
+  const PRUint8 boxSizing = stylePos->mBoxSizing;
+  const nsStyleCoord &styleWidth = stylePos->mWidth;
+  const nsStyleCoord &styleMinWidth = stylePos->mMinWidth;
+  const nsStyleCoord &styleMaxWidth = stylePos->mMaxWidth;
 
-  nscoord min = GetCoord(stylePos->mMinWidth, 0),
-          max = GetCoord(stylePos->mMaxWidth, nscoord_MAX);
+  // We build up two values starting with the content box, and then
+  // adding padding, border and margin.  The result is normally
+  // |result|.  Then, when we handle 'width', 'min-width', and
+  // 'max-width', we use the results we've been building in |min| as a
+  // minimum, overriding 'min-width'.  This ensures two things:
+  //   * that we don't let a value of 'box-sizing' specifying a width
+  //     smaller than the padding/border inside the box-sizing box give
+  //     a content width less than zero
+  //   * that we prevent tables from becoming smaller than their
+  //     intrinsic minimum width
+  nscoord result = 0, min = 0;
 
-  if (min < max) {
-    const nsStyleCoord &styleWidth = stylePos->mWidth;
-    if (styleWidth.GetUnit() == eStyleUnit_Coord) {
-      // XXXbz for frames that override their CSS widths
-      // (e.g. tables) this gives the wrong answer.
-      result = styleWidth.GetCoordValue();
-    // XXX If it's a percent, should we use 0 for min-width?
-    } else {
+  // If we have a specified width (or a specified 'min-width' greater
+  // than the specified 'max-width', which works out to the same thing),
+  // don't even bother getting the frame's intrinsic width.
+  if (styleWidth.GetUnit() != eStyleUnit_Coord &&
+      (styleMinWidth.GetUnit() != eStyleUnit_Coord ||
+       styleMaxWidth.GetUnit() != eStyleUnit_Coord ||
+       styleMaxWidth.GetCoordValue() > styleMinWidth.GetCoordValue())) {
 #ifdef DEBUG_INTRINSIC_WIDTH
-      ++gNoiseIndent;
+    ++gNoiseIndent;
 #endif
-      if (aType == MIN_WIDTH)
-        result = aFrame->GetMinWidth(aRenderingContext);
-      else
-        result = aFrame->GetPrefWidth(aRenderingContext);
+    if (aType == MIN_WIDTH)
+      result = aFrame->GetMinWidth(aRenderingContext);
+    else
+      result = aFrame->GetPrefWidth(aRenderingContext);
 #ifdef DEBUG_INTRINSIC_WIDTH
-      --gNoiseIndent;
-      nsFrame::IndentBy(stdout, gNoiseIndent);
-      NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
-      printf(" %s intrinsic width from frame is %d.\n",
-             aType == MIN_WIDTH ? "min" : "pref", result);
+    --gNoiseIndent;
+    nsFrame::IndentBy(stdout, gNoiseIndent);
+    NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
+    printf(" %s intrinsic width from frame is %d.\n",
+           aType == MIN_WIDTH ? "min" : "pref", result);
 #endif
-      // Now adjust for the box-sizing, since min-width and
-      // max-width take it into account
-      switch (boxSizing) {
-        case NS_STYLE_BOX_SIZING_BORDER:
-          result += offsets.hBorder;
-          // Fall through
-        case NS_STYLE_BOX_SIZING_PADDING:
-          result += offsets.hPadding;
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (result > max)
-      result = max;
-    if (result < min)
-      result = min;
-  } else {
-    // width is determined by 'max-width' and 'min-width'
-    result = min;
   }
-
-  // Now deal with the box-sizing stuff, since we just want the
-  // content area width here
-  switch (boxSizing) {
-    case NS_STYLE_BOX_SIZING_BORDER:
-      result -= offsets.hBorder;
-      // Fall through
-    case NS_STYLE_BOX_SIZING_PADDING:
-      result -= offsets.hPadding;
-      break;
-    default:
-      break;
-  }
-
-  result = PR_MAX(result, 0);
-
+      
   if (aFrame->GetType() == nsLayoutAtoms::tableFrame) {
-    nscoord intrinsicMin = aFrame->GetMinWidth(aRenderingContext);
-    if (result < intrinsicMin)
-      result = intrinsicMin;
+    // Tables can't shrink smaller than their intrinsic minimum width,
+    // no matter what.
+    min = aFrame->GetMinWidth(aRenderingContext);
   }
-  
+
+  // We also need to track what has been added on outside of the box
+  // (controlled by 'box-sizing') where 'width', 'min-width' and
+  // 'max-width' are applied.  We have to account for these properties
+  // after getting all the offsets (margin, border, padding) because
+  // percentages do not operate linearly.
+  // Doing this is ok because although percentages aren't handled
+  // linearly, they are handled monotonically.
+  nscoord coordOutsideWidth = offsets.hPadding;
+  float pctOutsideWidth = offsets.hPctPadding;
+
+  float pctTotal = 0.0f;
+
+  if (boxSizing == NS_STYLE_BOX_SIZING_PADDING) {
+    min += coordOutsideWidth;
+    result += coordOutsideWidth;
+    pctTotal += pctOutsideWidth;
+
+    coordOutsideWidth = 0;
+    pctOutsideWidth = 0.0f;
+  }
+
+  coordOutsideWidth += offsets.hBorder;
+
+  if (boxSizing == NS_STYLE_BOX_SIZING_BORDER) {
+    min += coordOutsideWidth;
+    result += coordOutsideWidth;
+    pctTotal += pctOutsideWidth;
+
+    coordOutsideWidth = 0;
+    pctOutsideWidth = 0.0f;
+  }
+
+  coordOutsideWidth += offsets.hMargin;
+  pctOutsideWidth += offsets.hPctMargin;
+
+  min += coordOutsideWidth;
+  result += coordOutsideWidth;
+  pctTotal += pctOutsideWidth;
+
+  result = AddPercents(aType, result, pctTotal);
+
+  if (styleWidth.GetUnit() == eStyleUnit_Coord) {
+    result = AddPercents(aType,
+                         styleWidth.GetCoordValue() + coordOutsideWidth,
+                         pctOutsideWidth);
+  }
+  // XXX If it's a percent, should we use 0 for min-width?
+
+  if (styleMaxWidth.GetUnit() == eStyleUnit_Coord) {
+    nscoord maxw = AddPercents(aType,
+      styleMaxWidth.GetCoordValue() + coordOutsideWidth, pctOutsideWidth);
+    if (result > maxw)
+      result = maxw;
+  }
+
+  if (styleMinWidth.GetUnit() == eStyleUnit_Coord) {
+    nscoord minw = AddPercents(aType,
+      styleMinWidth.GetCoordValue() + coordOutsideWidth, pctOutsideWidth);
+    if (result < minw)
+      result = minw;
+  }
+
+  min = AddPercents(aType, min, pctTotal);
+  if (result < min)
+    result = min;
+
 #ifdef DEBUG_INTRINSIC_WIDTH
   nsFrame::IndentBy(stdout, gNoiseIndent);
   NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
-  printf(" %s intrinsic width for content box is %d.\n",
+  printf(" %s intrinsic width for container is %d twips.\n",
          aType == MIN_WIDTH ? "min" : "pref", result);
-#endif
-
-  result += offsets.hBorder;
-  result += offsets.hPadding;
-  result += offsets.hMargin;
-
-#ifdef DEBUG_INTRINSIC_WIDTH
-  nsFrame::IndentBy(stdout, gNoiseIndent);
-  NS_STATIC_CAST(nsFrame*, aFrame)->ListTag(stdout);
-  printf(" %s intrinsic width (parts 0x%X) for container is %d twips.\n",
-         aType == MIN_WIDTH ? "min" : "pref", aPart, result);
 #endif
 
   return result;
