@@ -15,6 +15,17 @@ sudoku.jar:
 %   skin    sudoku   classic-vga/1.0 %skin/classic-vga/sudoku/
 	skin/classic-vga/sudoku/favicon.png      (sudoku/skin-vga/favicon.png)
 
+xulkeys.jar:
+%   content xulkeys               %content/xulkeys/
+%   overlay chrome://minimo/content/minimo.xul chrome://xulkeys/content/minimoOverlay.xul
+    content/xulkeys/keyboars.js         (xulkeys/content/keyboard.js)
+    content/xulkeys/minimoOverlay.xul   (xulkeys/content/minimoOverlay.xul)
+%   skin    xulkeys   classic/1.0 %skin/classic/xulkeys/
+	skin/classic/xulkeys/xulkeys.css          (xulkeys/skin/xulkeys.css)
+%   skin    xulkeys   classic-vga/1.0 %skin/classic-vga/xulkeys/
+	skin/classic-vga/xulkeys/xulkeys.css      (xulkeys/skin-vga/xulkeys.css)
+
+
 flickr.jar:
 %   content flickr               %content/flickr/
 %   overlay chrome://minimo/content/minimo.xul chrome://flicker/content/homebaseOverlay.xul
