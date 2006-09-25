@@ -256,11 +256,11 @@ nsPropertyTable::PropertyList::DeletePropertyFor(const void* aObject)
   if (!PL_DHASH_ENTRY_IS_BUSY(entry))
     return PR_FALSE;
 
-  if (mDtorFunc)
-    mDtorFunc(NS_CONST_CAST(void*, aObject), mName,
-              entry->value, mDtorData);
-
+  void* value = entry->value;
   PL_DHashTableRawRemove(&mObjectValueMap, entry);
+
+  if (mDtorFunc)
+    mDtorFunc(NS_CONST_CAST(void*, aObject), mName, value, mDtorData);
 
   return PR_TRUE;
 }
