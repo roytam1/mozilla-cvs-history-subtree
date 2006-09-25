@@ -214,6 +214,10 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
     PRInt32 col, col_end;
     for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
         nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
         colFrame->ResetMinCoord();
         colFrame->ResetPrefCoord();
         colFrame->ResetPrefPercent();
@@ -291,6 +295,10 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
             for (scol = col, scol_end = col + colSpan;
                  scol < scol_end; ++scol) {
                 nsTableColFrame *scolFrame = tableFrame->GetColFrame(scol);
+                if (!scolFrame) {
+                    NS_ERROR("column frames out of sync with cell map");
+                    continue;
+                }
                 totalSPref += scolFrame->GetPrefCoord();
                 float scolPct = scolFrame->GetPrefPercent();
                 if (scolPct == 0.0f) {
@@ -325,6 +333,10 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
             for (scol = col, scol_end = col + colSpan;
                  scol < scol_end; ++scol) {
                 nsTableColFrame *scolFrame = tableFrame->GetColFrame(scol);
+                if (!scolFrame) {
+                    NS_ERROR("column frames out of sync with cell map");
+                    continue;
+                }
                 if (scolFrame->GetPrefPercent() == 0.0f) {
                     float spp;
                     if (totalSNonPctPref > 0) {
@@ -360,6 +372,10 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
     float pct_used = 0.0f;
     for (col = 0, col_end = cellMap->GetColCount(); col < col_end; ++col) {
         nsTableColFrame *colFrame = tableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
 
         colFrame->AddMinCoord(colFrame->GetMinCoord() +
                               colFrame->GetSpanMinCoord());
@@ -388,6 +404,10 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
 
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
         min += colFrame->GetMinCoord();
         pref += colFrame->GetPrefCoord();
 
@@ -497,6 +517,10 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
     PRInt32 col;
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
         nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
         nscoord min_width = colFrame->GetMinCoord();
         // XXX Is it OK that pct_width isn't rounded to pixel?
@@ -587,6 +611,10 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
 
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
         nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
         nscoord min_width = colFrame->GetMinCoord();
         // recompute |val| from the loop above

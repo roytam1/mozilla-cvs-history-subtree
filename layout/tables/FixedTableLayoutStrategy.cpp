@@ -92,6 +92,10 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
         const nsStyleCoord *styleWidth =
             &colFrame->GetStylePosition()->mWidth;
         if (styleWidth->GetUnit() == eStyleUnit_Coord) {
@@ -193,6 +197,10 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
 
     for (PRInt32 col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+        if (!colFrame) {
+            NS_ERROR("column frames out of sync with cell map");
+            continue;
+        }
         colFrame->ResetPrefPercent();
         const nsStyleCoord *styleWidth =
             &colFrame->GetStylePosition()->mWidth;
@@ -267,6 +275,10 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
             float reduceRatio = float(reduce) / pctTotal;
             for (PRInt32 col = 0; col < colCount; ++col) {
                 nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+                if (!colFrame) {
+                    NS_ERROR("column frames out of sync with cell map");
+                    continue;
+                }
                 nscoord colWidth = colFrame->GetFinalWidth();
                 colWidth -= NSToCoordFloor(colFrame->GetPrefPercent() *
                                            reduceRatio);
@@ -282,6 +294,10 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
         nscoord toAssign = unassignedSpace / unassignedCount;
         for (PRInt32 col = 0; col < colCount; ++col) {
             nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+            if (!colFrame) {
+                NS_ERROR("column frames out of sync with cell map");
+                continue;
+            }
             if (colFrame->GetFinalWidth() == unassignedMarker)
                 colFrame->SetFinalWidth(toAssign);
         }
@@ -292,6 +308,10 @@ FixedTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
         nscoord toAdd = unassignedSpace / colCount;
         for (PRInt32 col = 0; col < colCount; ++col) {
             nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
+            if (!colFrame) {
+                NS_ERROR("column frames out of sync with cell map");
+                continue;
+            }
             colFrame->SetFinalWidth(colFrame->GetFinalWidth() + toAdd);
         }
     }
