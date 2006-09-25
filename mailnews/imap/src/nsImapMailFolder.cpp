@@ -3110,15 +3110,15 @@ NS_IMETHODIMP nsImapMailFolder::BeginCopy(nsIMsgDBHdr *message)
     m_copyState->m_message = do_QueryInterface(message, &rv);
 
   nsSpecialSystemDirectory tmpFileSpec(nsSpecialSystemDirectory::OS_TemporaryDirectory);
-  
-  tmpFileSpec += "nscpmsg.txt";
+
+  tmpFileSpec += "nscpmsg.txt";  
   tmpFileSpec.MakeUnique();
   rv = NS_NewFileSpecWithSpec(tmpFileSpec,
                                 getter_AddRefs(m_copyState->m_tmpFileSpec));
   nsCOMPtr<nsILocalFile> msgFile;
   if (NS_SUCCEEDED(rv))
     rv = NS_FileSpecToIFile(&tmpFileSpec, getter_AddRefs(msgFile));
-  NS_ENSURE_SUCCESS(rv,rv);
+  NS_ENSURE_SUCCESS(rv, rv);
   nsCOMPtr<nsIOutputStream> fileOutputStream;
   rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutputStream), msgFile, -1, 00600);
   NS_ENSURE_SUCCESS(rv,rv);
@@ -7842,6 +7842,18 @@ NS_IMETHODIMP nsImapMailFolder::SetFolderQuotaData(const nsACString &aFolderQuot
   m_folderQuotaRoot = aFolderQuotaRoot;
   m_folderQuotaUsedKB = aFolderQuotaUsedKB;
   m_folderQuotaMaxKB = aFolderQuotaMaxKB;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImapMailFolder::GetQuota(PRBool* aValid,
+                                         PRUint32* aUsed, PRUint32* aMax)
+{
+  NS_ENSURE_ARG_POINTER(aValid);
+  NS_ENSURE_ARG_POINTER(aUsed);
+  NS_ENSURE_ARG_POINTER(aMax);
+  *aValid = m_folderQuotaDataIsValid;
+  *aUsed = m_folderQuotaUsedKB;
+  *aMax = m_folderQuotaMaxKB;
   return NS_OK;
 }
 
