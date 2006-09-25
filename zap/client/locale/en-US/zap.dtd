@@ -110,6 +110,9 @@
 
 <!-- debug-shell.xul -->
 <!ENTITY debugShell.title "zap debug shell">
+<!ENTITY exec.button "Exec">
+<!ENTITY execscript.button "Execute script...">
+<!ENTITY newshell.button "New shell">
 <!ENTITY clear.button "Clear">
 <!ENTITY print.button "Print...">
 

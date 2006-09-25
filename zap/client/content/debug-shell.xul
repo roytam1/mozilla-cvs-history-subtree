@@ -56,12 +56,15 @@
   <![CDATA[
   Components.utils.importModule("gre:ClassUtils.js");
   Components.utils.importModule("gre:SipUtils.js");
+  Components.utils.importModule("gre:FileUtils.js");
 
   var wOutput;
   var wOutputStream;
   var wInput;
   var wPipeInput;
   var wJSSh;
+  var wHistory = [];
+  var wHistoryPointer = -1;
 
   var OutputStream = makeClass("OutputStream", SupportsImpl);
   OutputStream.addInterfaces(Components.interfaces.nsIOutputStream);
@@ -70,6 +73,7 @@
       var str = buf;
       str = str.replace(/&/g, "&amp;");
       str = str.replace(/</g, "&lt;");
+      str = str.replace(/ /g, "&nbsp;");
       str = str.replace(/\n/g, "<br/>"); 
 
       wOutput.write(str);
@@ -80,20 +84,31 @@
   function windowInit() {
     wOutput = document.getElementById("output").contentDocument;
     wOutput.open("text/html");
+    wOutput.write("<style> * { font-size:10pt;font-family:monospace; }</style>");
     wOutputStream = getProxyOnSIPThread(OutputStream.instantiate(), Components.interfaces.nsIOutputStream);
     wInput = document.getElementById("input");
-    wInput.focus();
+    createShell("chrome://zap/content/debug-shell-init.js");
+  }
 
+  function createShell(url) {
+    if (wPipeInput) {
+      wOutput.write("<hr/>");
+      wPipeInput.close();
+    }
     var pipe = Components.classes["@mozilla.org/pipe;1"].createInstance(Components.interfaces.nsIPipe);
     pipe.init(false, true, 0, 0, null);
     wPipeInput = pipe.outputStream;
-
-    wJSSh = Components.classes["@mozilla.org/jssh-server;1"].createInstance(Components.interfaces.nsIJSShServer);
-    wJSSh.runShell(pipe.inputStream, wOutputStream, "chrome://zap/content/debug-shell-init.js", false);
+    if (!wJSSh)
+      wJSSh = Components.classes["@mozilla.org/jssh-server;1"].createInstance(Components.interfaces.nsIJSShServer);
+    wJSSh.runShell(pipe.inputStream, wOutputStream, url, false);
+    wInput.focus();
   }
 
   function executeInputBuffer() {
+    wHistory.unshift(wInput.value);
+    wHistoryPointer = -1;
     wPipeInput.write(wInput.value+"\n", wInput.value.length+1);
+    wOutput.write("<hr/>");
     wInput.value = "";
     wInput.focus();
   }
@@ -102,14 +117,40 @@
     wOutput.close();
     wOutput.open("text/html");
     wOutput.writeln("");
+    wOutput.write("<style> * { font-size:10pt;font-family:monospace; }</style>");
   }
 
   function keyCapture(e) {
     //dump(e.keyCode+" --- "+e.charCode+"\n");
-    if (e.shiftKey && e.keyCode == 13) { // shift-return
+    if (e.keyCode == 13 && !e.shiftKey) { // return w/o shift
       e.preventDefault();
       executeInputBuffer();
     }
+    else if (e.keyCode == 38 && e.ctrlKey) { // ctrl + up
+      ++wHistoryPointer;
+      wInput.value = wHistory[wHistoryPointer % wHistory.length];
+    }
+    else if (e.keyCode == 40 && e.ctrlKey) { // ctrl + up
+      --wHistoryPointer;
+      wHistoryPointer %= wHistory.length;
+      if (wHistoryPointer < 0)
+        wHistoryPointer += wHistory.length;
+      wInput.value = wHistory[wHistoryPointer];
+    }
+  }
+
+  function loadScript() {
+    var IFilePicker = Components.interfaces.nsIFilePicker;
+    var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(IFilePicker);
+    fp.init(window, "Choose script to execute", IFilePicker.modeOpen);
+
+    var defaultDir = getStageDir();
+    //defaultDir.append("testscripts");
+    fp.displayDirectory = defaultDir;
+    fp.appendFilter("js files", "*.js");
+    fp.appendFilters(IFilePicker.filterAll);
+    if (fp.show() != IFilePicker.returnOK) return;
+    createShell(fileToURL(fp.file));
   }
 
   ]]>
@@ -118,14 +159,16 @@
   <label class="zap-form-title" crop="end" id="title" value="&debugShell.title;"/>
   <iframe id="output" flex="1" />
     <hbox>
-      <textbox style="border:1px solid grey;margin:2px;" 
+      <textbox style="border:1px solid grey;margin:2px;font-size:10pt;font-family:monospace;" 
                id="input"
                flex="1"
                multiline="true"/>
-      <button label="Exec" oncommand="executeInputBuffer()"/>
+      <button label="&exec.button;" oncommand="executeInputBuffer()"/>
     </hbox>
     <hbox>
       <spacer flex="1"/>
+      <button label="&execscript.button;" oncommand="loadScript();"/>
+      <button label="&newshell.button;" oncommand="createShell('chrome://zap/content/debug-shell-init.js');"/>
       <button label="&clear.button;" oncommand="clearOutput()"/>
       <button label="&print.button;" oncommand="wOutput.defaultView.print()"/>
     </hbox>

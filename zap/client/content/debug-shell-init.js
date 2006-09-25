@@ -622,7 +622,8 @@ function dialogs() {
 
 //----------------------------------------------------------------------
 print("done.\n");
-print("Type js command line at the prompt. Shift-Enter executes it.\n");
+print("Type js command line at the prompt. Enter executes it.\n");
 print("Type 'help()<shift-enter>' for available commands\n");
-print("Examples: 'inspect(getWindows()[0])<shift-enter>' dumps all js ");
-print("objects defined on the main zap window.\n");
+print("CTRL+UP/CTRL+DOWN move around in the command history\n");
+print("Examples: 'inspect(getWindows()[0])<shift-enter>'\n");
+print("dumps all js objects defined on the main zap window.\n");
