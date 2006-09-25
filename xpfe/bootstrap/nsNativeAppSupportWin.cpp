@@ -20,7 +20,8 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Bill Law       law@netscape.com
+ *   Bill Law <law@netscape.com>
+ *   Masayuki Nakano <masayuki@d-toybox.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -78,6 +79,8 @@
 #include "nsXPCOM.h"
 #include "nsXPFEComponentsCID.h"
 #include "nsEmbedCID.h"
+#include "nsIURIFixup.h"
+#include "nsCDefaultURIFixup.h"
 
 struct JSContext;
 
@@ -402,8 +405,12 @@ private:
     static PRBool   InitTopicStrings();
     static int      FindTopic( HSZ topic );
     static nsresult GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResult );
-    static nsresult OpenWindow( const char *urlstr, const char *args, nsIDOMWindow **aResult );
-    static nsresult OpenBrowserWindow( const char *args, PRBool newWindow, nsIDOMWindow **aResult );
+    static nsresult OpenWindow( const char *urlstr,
+                                const nsAString& aArgs,
+                                nsIDOMWindow **aResult );
+    static nsresult OpenBrowserWindow( const nsAString& aArgs,
+                                       PRBool newWindow,
+                                       nsIDOMWindow **aResult );
     static nsresult ReParent( nsISupports *window, HWND newParent );
     static nsresult GetStartupURL(nsICmdLineService *args, nsCString& taskURL);
     static void     SetupSysTrayIcon();
@@ -1767,7 +1774,8 @@ void nsNativeAppSupportWin::ActivateLastWindow() {
     } else {
         // Need to create a Navigator window, then.
         nsCOMPtr<nsIDOMWindow> newWin;
-        OpenBrowserWindow( "about:blank", PR_TRUE, getter_AddRefs( newWin ) );
+        OpenBrowserWindow( NS_LITERAL_STRING( "about:blank" ),
+                           PR_TRUE, getter_AddRefs( newWin ) );
     }
 }
 
@@ -1828,8 +1836,11 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
       printf( "Launching browser on url [%s]...\n", arg.get() );
 #endif
       rv = nativeApp->EnsureProfile(args);
-      if (NS_SUCCEEDED(rv))
-        rv = OpenBrowserWindow( arg.get(), newWindow, aResult );
+      if (NS_SUCCEEDED(rv)) {
+        nsAutoString tmpArg;
+        NS_CopyNativeToUnicode( arg, tmpArg );
+        rv = OpenBrowserWindow( tmpArg, newWindow, aResult );
+      }
       return rv;
     }
 
@@ -1843,7 +1854,7 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
 #endif
       rv = nativeApp->EnsureProfile(args);
       if (NS_SUCCEEDED(rv))
-        rv = OpenWindow( arg.get(), "", aResult );
+        rv = OpenWindow( arg.get(), EmptyString(), aResult );
       return rv;
     }
 
@@ -1895,32 +1906,8 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
     // This will tell us whether the command line processing opened a window.
     PRBool windowOpened = PR_FALSE;
 
-    // If there are no command line arguments, then we want to open windows
-    // based on startup prefs (which say to open navigator and/or mailnews
-    // and/or composer), or, open just a Navigator window.  We do the former
-    // if there are no open windows (i.e., we're in turbo mode), the latter
-    // if there are open windows.  Note that we call DoCommandLines in the
-    // case where there are no command line args but there are windows open
-    // (i.e., with heedStartupPrefs==PR_FALSE) despite the fact that it may
-    // not actually do anything in that case.  That way we're covered if the
-    // logic in DoCommandLines changes.  Note that we cover this case below
-    // by opening a navigator window if DoCommandLines doesn't open one.  We
-    // have to cover that case anyway, because DoCommandLines won't open a
-    // window when given "seamonkey -foobar" or the like.
-    PRBool heedStartupPrefs = PR_FALSE;
-    PRInt32 argc = 0;
-    args->GetArgc( &argc );
-    if ( argc <= 1 ) {
-        // Use startup prefs iff there are no windows currently open.
-        nsCOMPtr<nsIDOMWindowInternal> win;
-        GetMostRecentWindow( 0, getter_AddRefs( win ) );
-        if ( !win ) {
-            heedStartupPrefs = PR_TRUE;
-        }
-    }
-
     // Process command line options.
-    rv = DoCommandLines( args, heedStartupPrefs, &windowOpened );
+    rv = DoCommandLines( args, &windowOpened );
 
     // If a window was opened, then we're done.
     // Note that we keep on trying in the unlikely event of an error.
@@ -1946,8 +1933,7 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
     if (FindCharInString(defaultArgs, '\n') != kNotFound)
         newWindow = PR_TRUE;
 
-    NS_ConvertUTF16toUTF8 url( defaultArgs );
-    return OpenBrowserWindow(url.get(), newWindow, aResult);
+    return OpenBrowserWindow(defaultArgs, newWindow, aResult);
 }
 
 // Parse command line args according to MS spec
@@ -2203,14 +2189,18 @@ printf( "Setting ddexec subkey entries\n" );
 }
 
 nsresult
-nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args, nsIDOMWindow **aResult ) {
+nsNativeAppSupportWin::OpenWindow( const char *urlstr,
+                                   const nsAString& aArgs,
+                                   nsIDOMWindow **aResult )
+{
 
   nsresult rv = NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
-  nsCOMPtr<nsISupportsCString> sarg(do_CreateInstance(NS_SUPPORTS_CSTRING_CONTRACTID));
+  nsCOMPtr<nsISupportsString>
+    sarg(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID));
   if (sarg)
-    sarg->SetData(nsDependentCString(args));
+    sarg->SetData(aArgs);
 
   if (wwatch && sarg) {
     rv = wwatch->OpenWindow(0, urlstr, "_blank", "chrome,dialog=no,all",
@@ -2343,7 +2333,10 @@ nsresult SafeJSContext::Push() {
 
 
 nsresult
-nsNativeAppSupportWin::OpenBrowserWindow( const char *args, PRBool newWindow, nsIDOMWindow **aResult ) {
+nsNativeAppSupportWin::OpenBrowserWindow( const nsAString& aArgs,
+                                          PRBool newWindow,
+                                          nsIDOMWindow **aResult )
+{
     nsresult rv = NS_OK;
     // Open the argument URL according to the external link preference.
     // If there is no Nav window, or newWindow is PR_TRUE, open a new one.
@@ -2372,13 +2365,15 @@ nsNativeAppSupportWin::OpenBrowserWindow( const char *args, PRBool newWindow, ns
         if ( !bwin ) {
             break;
         }
-        nsCOMPtr<nsIIOService> io( do_GetService( "@mozilla.org/network/io-service;1" ) );
-        if ( !io ) {
+        nsCOMPtr<nsIURIFixup> fixup( do_GetService( NS_URIFIXUP_CONTRACTID ) );
+        if ( !fixup ) {
             break;
         }
         nsCOMPtr<nsIURI> uri;
-        io->NewURI( nsDependentCString( args ), nsnull, nsnull, getter_AddRefs( uri ) );
-        if ( !uri ) {
+        rv = fixup->CreateFixupURI( NS_ConvertUTF16toUTF8( aArgs ),
+                                    nsIURIFixup::FIXUP_FLAG_NONE,
+                                    getter_AddRefs( uri ) );
+        if ( NS_FAILED(rv) || !uri ) {
             break;
         }
         return bwin->OpenURI( uri, nsnull, nsIBrowserDOMWindow::OPEN_DEFAULTWINDOW, nsIBrowserDOMWindow::OPEN_EXTERNAL, aResult );
@@ -2392,7 +2387,7 @@ nsNativeAppSupportWin::OpenBrowserWindow( const char *args, PRBool newWindow, ns
     if (NS_FAILED(rv)) return rv;
 
     // Last resort is to open a brand new window.
-    return OpenWindow( chromeUrlForTask.get(), args, aResult );
+    return OpenWindow( chromeUrlForTask.get(), aArgs, aResult );
 }
 
 void AppendMenuItem( HMENU& menu, PRInt32 aIdentifier, const nsString& aText ) {
