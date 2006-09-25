@@ -196,6 +196,7 @@ nsLayoutStatics::Initialize()
 void
 nsLayoutStatics::Shutdown()
 {
+  nsDOMStorageManager::Shutdown();
   nsDOMAttribute::Shutdown();
   nsGenericElement::Shutdown();
   nsEventListenerManager::Shutdown();

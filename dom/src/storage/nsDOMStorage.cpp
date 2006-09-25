@@ -135,14 +135,27 @@ nsDOMStorageManager::Initialize()
   if (!gStorageManager)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  if (!gStorageManager->mStorages.Init())
+  if (!gStorageManager->mStorages.Init()) {
+    delete gStorageManager;
+    gStorageManager = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  NS_ADDREF(gStorageManager);
 
   nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
   if (os)
     os->AddObserver(gStorageManager, "cookie-changed", PR_FALSE);
 
   return NS_OK;
+}
+
+//static
+void
+nsDOMStorageManager::Shutdown()
+{
+  NS_IF_RELEASE(gStorageManager);
+  gStorageManager = nsnull;
 }
 
 PR_STATIC_CALLBACK(PLDHashOperator)
@@ -183,7 +196,7 @@ nsDOMStorageManager::RemoveFromStoragesHash(nsDOMStorage* aStorage)
 {
  nsDOMStorageEntry* entry = mStorages.GetEntry(aStorage);
   if (entry)
-    mStorages.RemoveEntry(entry);
+    mStorages.RemoveEntry(aStorage);
 }
 
 //
