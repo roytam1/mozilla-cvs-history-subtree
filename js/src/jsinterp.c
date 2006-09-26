@@ -3295,7 +3295,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                      * or decrement result, if converted to a jsdouble from
                      * a non-number value, from GC nesting in the setter.
                      */
-                    vp = sp++;
+                    vp = sp;
+                    PUSH(JSVAL_VOID);
                     SAVE_SP(fp);
                     --i;
                 }
@@ -4763,6 +4764,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             /* Ensure that id has a type suitable for use with obj. */
             CHECK_ELEMENT_ID(obj, id);
 
+            SAVE_SP(fp);
             if (JS_TypeOfValue(cx, rval) != JSTYPE_FUNCTION) {
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                      JSMSG_BAD_GETTER_OR_SETTER,
@@ -4777,7 +4779,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
              * Getters and setters are just like watchpoints from an access
              * control point of view.
              */
-            SAVE_SP(fp);
             ok = OBJ_CHECK_ACCESS(cx, obj, id, JSACC_WATCH, &rtmp, &attrs);
             if (!ok)
                 goto out;
