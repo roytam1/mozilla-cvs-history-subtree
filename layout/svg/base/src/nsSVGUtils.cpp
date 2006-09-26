@@ -124,6 +124,8 @@ nsSVGUtils::CoordToFloat(nsPresContext *aPresContext, nsIContent *aContent,
 
   case eStyleUnit_Percent: {
       nsCOMPtr<nsIDOMSVGElement> element = do_QueryInterface(aContent);
+      if (!element)
+        break;
       nsCOMPtr<nsIDOMSVGSVGElement> owner;
       element->GetOwnerSVGElement(getter_AddRefs(owner));
       nsCOMPtr<nsSVGCoordCtxProvider> ctx = do_QueryInterface(owner);

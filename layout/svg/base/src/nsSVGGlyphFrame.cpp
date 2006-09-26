@@ -654,9 +654,12 @@ nsSVGGlyphFrame::GetStrokeOpacity(float *aStrokeOpacity)
 NS_IMETHODIMP
 nsSVGGlyphFrame::GetStrokeWidth(float *aStrokeWidth)
 {
-  *aStrokeWidth = 
+  // We use mContent->GetParent() rather than mContent because we're
+  // looking for the containing text container rather than the text node
+  *aStrokeWidth =
     nsSVGUtils::CoordToFloat(nsSVGGlyphFrameBase::GetPresContext(),
-                             mContent, GetStyleSVG()->mStrokeWidth);
+                             mContent->GetParent(),
+                             GetStyleSVG()->mStrokeWidth);
   return NS_OK;
 }
 
