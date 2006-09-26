@@ -2856,6 +2856,8 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun)
     js_puts(jp, "(");
 
     if (fun->interpreted && fun->object) {
+        size_t paramsize;
+
         /*
          * Print the parameters.
          *
@@ -2869,12 +2871,13 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun)
         cx = jp->sprinter.context;
         nargs = fun->nargs;
         mark = JS_ARENA_MARK(&cx->tempPool);
-        JS_ARENA_ALLOCATE_CAST(params, JSAtom **, &cx->tempPool,
-                               nargs * sizeof(JSAtom *));
+        paramsize = nargs * sizeof(JSAtom *);
+        JS_ARENA_ALLOCATE_CAST(params, JSAtom **, &cx->tempPool, paramsize);
         if (!params) {
             JS_ReportOutOfMemory(cx);
             return JS_FALSE;
         }
+        memset(params, 0, paramsize);
         scope = OBJ_SCOPE(fun->object);
         for (sprop = SCOPE_LAST_PROP(scope); sprop; sprop = sprop->parent) {
             if (sprop->getter != js_GetArgument)
