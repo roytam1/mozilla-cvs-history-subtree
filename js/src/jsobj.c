@@ -532,8 +532,10 @@ js_EnterSharpObject(JSContext *cx, JSObject *obj, JSIdArray **idap,
             return NULL;
         }
         map->table = table;
+        JS_KEEP_ATOMS(cx->runtime);
     }
 
+    /* From this point the control must flow either through out: or bad:. */
     ida = NULL;
     if (map->depth == 0) {
         he = MarkSharpObjects(cx, obj, &ida);
@@ -603,6 +605,7 @@ out:
 bad:
     /* Clean up the sharpObjectMap table on outermost error. */
     if (map->depth == 0) {
+        JS_UNKEEP_ATOMS(cx->runtime);
         map->sharpgen = 0;
         JS_HashTableDestroy(map->table);
         map->table = NULL;
@@ -619,6 +622,7 @@ js_LeaveSharpObject(JSContext *cx, JSIdArray **idap)
     map = &cx->sharpObjectMap;
     JS_ASSERT(map->depth > 0);
     if (--map->depth == 0) {
+        JS_UNKEEP_ATOMS(cx->runtime);
         map->sharpgen = 0;
         JS_HashTableDestroy(map->table);
         map->table = NULL;
