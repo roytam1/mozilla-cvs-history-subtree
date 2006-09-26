@@ -82,6 +82,8 @@ public:
   virtual void ParentChainChanged();
 
 protected:
+  // nsSVGElement overrides
+  virtual PRBool IsEventName(nsIAtom* aName);
 
   // nsIDOMSVGTextPositioning properties:
   nsCOMPtr<nsIDOMSVGAnimatedLengthList> mX;
@@ -427,3 +429,12 @@ void nsSVGTSpanElement::ParentChainChanged()
   // recurse into child content:
   nsSVGTSpanElementBase::ParentChainChanged();
 }  
+
+//----------------------------------------------------------------------
+// nsSVGElement overrides
+
+PRBool
+nsSVGTSpanElement::IsEventName(nsIAtom* aName)
+{
+  return IsGraphicElementEventName(aName);
+}
