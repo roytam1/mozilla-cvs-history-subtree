@@ -7120,15 +7120,21 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
       newFrame->AddStateBits(NS_FRAME_EXCLUDE_IGNORABLE_WHITESPACE);
     }
 
-    InitAndRestoreFrame(aState, aContent, 
-                        aState.GetGeometricParent(disp, aParentFrame),
-                        aStyleContext, nsnull, newFrame);
+    // Only <math> elements can be floated or positioned.  All other MathML
+    // should be in-flow.
+    PRBool isMath = aTag == nsMathMLAtoms::math;
+
+    nsIFrame* geometricParent =
+      isMath ? aState.GetGeometricParent(disp, aParentFrame) : aParentFrame;
+    
+    InitAndRestoreFrame(aState, aContent, geometricParent, aStyleContext,
+                        nsnull, newFrame);
 
     // See if we need to create a view, e.g. the frame is absolutely positioned
     nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, PR_FALSE);
 
     rv = aState.AddChild(newFrame, aFrameItems, disp, aContent, aStyleContext,
-                         aParentFrame);
+                         aParentFrame, isMath, isMath);
     if (NS_FAILED(rv)) {
       return rv;
     }
