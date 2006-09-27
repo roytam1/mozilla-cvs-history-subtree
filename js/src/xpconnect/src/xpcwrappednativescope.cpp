@@ -121,8 +121,9 @@ XPCWrappedNativeScope::GetNewOrUsed(XPCCallContext& ccx, JSObject* aGlobal)
     else
     {
         // We need to call SetGlobal in order to refresh our cached 
-        // mPrototypeJSObject in the case where the global object is being 
-        // reused (JS_ClearScope has been called).
+        // mPrototypeJSObject and mPrototypeJSFunction in the case where
+        // the global object is being reused (JS_ClearScope has been
+        // called).
         // NOTE: We are only called by nsXPConnect::InitClasses. 
         scope->SetGlobal(ccx, aGlobal);
     }
@@ -139,7 +140,8 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
         mComponents(nsnull),
         mNext(nsnull),
         mGlobalJSObject(nsnull),
-        mPrototypeJSObject(nsnull)
+        mPrototypeJSObject(nsnull),
+        mPrototypeJSFunction(nsnull)
 {
     // add ourselves to the scopes list
     {   // scoped lock
@@ -289,10 +291,18 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
             gDyingScopes = cur;
             cur = nsnull;
         }
-        else if(cur->mPrototypeJSObject &&
-                JS_IsAboutToBeFinalized(cx, cur->mPrototypeJSObject))
+        else
         {
-            cur->mPrototypeJSObject = nsnull;
+            if(cur->mPrototypeJSObject &&
+               JS_IsAboutToBeFinalized(cx, cur->mPrototypeJSObject))
+            {
+                cur->mPrototypeJSObject = nsnull;
+            }
+            if(cur->mPrototypeJSFunction &&
+               JS_IsAboutToBeFinalized(cx, cur->mPrototypeJSFunction))
+            {
+                cur->mPrototypeJSFunction = nsnull;
+            }
         }
         if(cur)
             prev = cur;
@@ -734,6 +744,7 @@ XPCWrappedNativeScope::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mComponents @ %x", mComponents));
         XPC_LOG_ALWAYS(("mGlobalJSObject @ %x", mGlobalJSObject));
         XPC_LOG_ALWAYS(("mPrototypeJSObject @ %x", mPrototypeJSObject));
+        XPC_LOG_ALWAYS(("mPrototypeJSFunction @ %x", mPrototypeJSFunction));
 
         XPC_LOG_ALWAYS(("mWrappedNativeMap @ %x with %d wrappers(s)", \
                          mWrappedNativeMap, \
