@@ -505,7 +505,7 @@ nsFtpState::OnDataAvailable(nsIRequest *request,
     mControlReadCarryOverBuf.Truncate();
 
     const char* currLine = lines.get();
-    while (*currLine) {
+    while (*currLine && mKeepRunning) {
         PRInt32 eolLength = strcspn(currLine, CRLF);
         PRInt32 currLineLength = strlen(currLine);
 
