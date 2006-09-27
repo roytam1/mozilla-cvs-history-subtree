@@ -1093,7 +1093,10 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
   ResetStylesheetsToURI(aURI);
   
   // Release the listener manager
-  mListenerManager = nsnull;
+  if (mListenerManager) {
+    mListenerManager->Disconnect();
+    mListenerManager = nsnull;
+  }
 
   // Release the stylesheets list.
   mDOMStyleSheets = nsnull;
