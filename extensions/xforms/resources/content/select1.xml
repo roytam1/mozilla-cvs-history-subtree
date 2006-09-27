@@ -67,7 +67,7 @@
                  onblur="this.parentNode.parentNode.handleBlur(); this.parentNode.parentNode.dispatchDOMUIEvent('DOMFocusOut');"
                  onclick="this.parentNode.parentNode.handleControlClick();"
                  onkeypress="this.parentNode.parentNode.handleKeyPress(event);"
-                 onkeyup="this.parentNode.parentNode.handleKeyUp(event);"
+                 oninput="this.parentNode.parentNode.handleInput();"
       /><html:input class="-moz-xforms-select1-dropdown"
                     type="button"
                     anonid="dropmarker"
@@ -169,11 +169,17 @@
         <parameter name="aEvent"/>
         <body>
           <![CDATA[
-          if (this.selectionOpen && !this._selected && this.incremental) {
-            this._handleSelection(false);
-          } else {
-            this.togglePopup();
+          if (this.selectionOpen) {
+            if (!this._selected && this.incremental) {
+              this._handleSelection(false);
+              return;
+            }
+            if (this.popupOpen) {
+              this.hidePopup();
+            }
+            return;
           }
+          this.togglePopup();
           ]]>
         </body>
       </method>
@@ -183,7 +189,9 @@
         <body>
           <![CDATA[
             var key = aEvent.keyCode;
-            if (key == aEvent.DOM_VK_RETURN || key == aEvent.DOM_VK_ENTER) {
+            if (key == aEvent.DOM_VK_RETURN || key == aEvent.DOM_VK_ENTER ||
+                key == aEvent.DOM_VK_F4 || aEvent.altKey &&
+                (key == aEvent.DOM_VK_UP || key == aEvent.DOM_VK_DOWN)) {
               var open = this.popupOpen;
               this.togglePopup();
               if (open && this._selected) {
@@ -194,8 +202,14 @@
                   this.dispatchSelectEvents();
                 }
               }
-            } else if (key == aEvent.DOM_VK_UP ||
-                       key == aEvent.DOM_VK_DOWN) {
+              if (aEvent.altKey && (key == aEvent.DOM_VK_UP ||
+                  key == aEvent.DOM_VK_DOWN)) {
+                aEvent.preventDefault();
+              }
+            } else if (key == aEvent.DOM_VK_UP || key == aEvent.DOM_VK_DOWN) {
+              if (this.selectionOpen && !this.popupOpen) {
+                this.togglePopup();
+              }
               this.internalScroll(aEvent.keyCode == aEvent.DOM_VK_DOWN);
               if (this._selected && this.popupOpen) {
                 var el = this._selected.QueryInterface(Components.interfaces.nsIDOMElement);
@@ -210,6 +224,7 @@
                 }
                 this._handleSelection(true);
               }
+              aEvent.preventDefault();
             } else if (key == aEvent.DOM_VK_TAB) {
               // Hiding popup when user uses keyboard to focus out
               // from <select1>. No need to update the value of the control
@@ -223,34 +238,36 @@
                   this._selected.setActive(true);
                 }
               }
+            } else if (aEvent.charCode && !this.selectionOpen) {
+              // Cache sequence of last pressed keys and search it in value of
+              // xforms:label inside xforms:item elements.
+              var currtime = new Date().valueOf();
+              var char = String.fromCharCode(aEvent.charCode);
+              if (currtime - this.searchKeypressTime <= 1000)
+                this.searchValue += char;
+              else
+                this.searchValue = char;
+
+              this.selectItemByLabel(this.searchValue);
+              this.searchKeypressTime = currtime;
             }
             return true;
           ]]>
         </body>
       </method>
 
-      <method name="handleKeyUp">
-        <parameter name="aEvent"/>
+      <field name="searchValue">""</field>
+      <field name="searchKeypressTime">0</field>
+
+      <method name="handleInput">
         <body>
           <![CDATA[
-            // These events are handled in handleKeyPress...
-            if (aEvent.keyCode == aEvent.DOM_VK_RETURN ||
-                aEvent.keyCode == aEvent.DOM_VK_ENTER ||
-                aEvent.keyCode == aEvent.DOM_VK_UP ||
-                aEvent.keyCode == aEvent.DOM_VK_DOWN) {
-              return true;
+            if (this._selected) {
+              this._selected.setActive(false);
+              this._selected = null;
             }
-
-            // ..other key events are handled in keyUp, because otherwise
-            // this.inputField.value doesn't show the just updated value.
-            if (this.selectionOpen) {
-              if (this._selected) {
-                this._selected.setActive(false);
-                this._selected = null;
-              }
-              if (this.incremental) {
-                this._handleSelection(false);
-              }
+            if (this.incremental) {
+              this._handleSelection(false);
             }
 
             return true;
@@ -348,7 +365,7 @@
                   node.localName == "label") {
                 label = node;
                 break;
-              }       
+              }
               node = node.nextSibling;
             }
 
@@ -372,17 +389,10 @@
               if (nextItem) {
                 this._selected = nextItem;
                 this._selected.setActive(true);
-                this.updateInputField();
+                if (!this.selectionOpen)
+                  this.updateInputField();
               }
               return true;
-            }
-
-            if (!aDown && this.selectionOpen) {
-              if (this._selected) {
-                this._selected.setActive(false);
-                this._selected = null;
-              }
-              this.inputField.value = "";
             }
           ]]>
         </body>
@@ -710,6 +720,68 @@
         </body>
       </method>
 
+      <method name="getCurrentValue">
+        <body>
+          throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+        </body>
+      </method>
+
+      <method name="selectItemByLabel">
+        <parameter name="aValue"/>
+        <parameter name="aContextNode"/>
+        <body>
+        <![CDATA[
+          var item =
+            this.searchItemByLabel(new RegExp("^" + aValue, "i"), this);
+
+          if (this._selected) {
+            this._selected.setActive(false);
+            this._selected = null;
+          }
+          this._selected = item;
+          if (this._selected) {
+            this._selected.setActive(true);
+            this.updateInputField();
+          }
+        ]]>
+        </body>
+      </method>
+
+      <method name="searchItemByLabel">
+        <parameter name="aExp"/>
+        <parameter name="aContextNode"/>
+        <body>
+        <![CDATA[
+          for (var child = aContextNode.firstChild; child;
+               child = child.nextSibling) {
+            if (child.namespaceURI != this.XFORMS_NS)
+              continue;
+
+            switch (child.localName) {
+              case "item":
+                child = child.
+                  QueryInterface(Components.interfaces.nsIXFormsItemElement);
+                if (child.labelText.search(aExp) != -1) {
+                  return child;
+                }
+                break;
+              case "choices":
+                var item = this.searchItemByLabel(aExp, child);
+                if (item)
+                  return item;
+                break;
+              case "itemset":
+                var item =
+                  this.searchItemByLabel(aExp, child.anonymousItemSetContent);
+                if (item)
+                  return item;
+                break;
+            }
+          }
+        ]]>
+        </body>
+      </method>
+
       <method name="selectItemByValue">
         <parameter name="aValue"/>
         <body>
@@ -926,8 +998,6 @@
             this._outOfRange = false;
             this.accessors.setInRange(true);
           }
-
-          }
           ]]>
         </body>
       </method>
@@ -1028,6 +1098,21 @@
         </body>
       </method>
     </implementation>
+
+    <handlers>
+      <handler event="keypress" keycode="VK_ESCAPE">
+        if (this.popupOpen) {
+          this.hidePopup();
+          if (this._selected)
+            this._selected.setActive(false);
+            this._selected = this._tmpSelected;
+            this._tmpSelected = null;
+            if (this._selected)
+              this._selected.setActive(true);
+          }
+        }
+      </handler>
+    </handlers>
   </binding>
 
   <binding id="xformswidget-itemset"

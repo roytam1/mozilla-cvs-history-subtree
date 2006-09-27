@@ -251,7 +251,7 @@ protected:
    * single node binding attribute for this control.  Called by AttributeSet
    * and AttributeRemoved.
    */
-  void AfterSetAttribute(nsIAtom *aName);
+  virtual void AfterSetAttribute(nsIAtom *aName);
 
   /**
    * Removes this control from its model's list of controls if a single node
@@ -281,6 +281,12 @@ protected:
    */
   nsresult MaybeAddToModel(nsIModelElementPrivate *aOldModel,
                            nsIXFormsControl       *aParent);
+
+  /**
+   * Returns the nsISchemaBuiltinType of the node to which this element is
+   * bound.
+   */
+  nsresult GetBoundBuiltinType(PRUint16 *aBuiltinType);
 };
 
 /**

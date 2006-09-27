@@ -117,7 +117,7 @@
       netscape.security.PrivilegeManager.enablePrivilege('UniversalXPConnect');
 
      try{
-        myValidator = Components.classes["@mozilla.org/schemavalidator;1"].getService(Components.interfaces.nsISchemaValidator);
+        myValidator = Components.classes["@mozilla.org/schemavalidator;1"].createInstance(Components.interfaces.nsISchemaValidator);
 
       }catch(e){ alert(e) }
 
@@ -156,6 +156,29 @@
         validate("-34", "integer-test-2", true);
         validate("002", "integer-test-2", true);
 
+        validate("-1", "nonPositiveInteger-test-1", true);
+        validate("0", "nonPositiveInteger-test-1", true);
+        validate("1", "nonPositiveInteger-test-1", false);
+        validate("-3452", "nonPositiveInteger-test-1", false);
+
+        validate("-1", "nonNegativeInteger-test-1", false);
+        validate("0", "nonNegativeInteger-test-1", true);
+        validate("1", "nonNegativeInteger-test-1", true);
+        validate("501", "nonNegativeInteger-test-1", false);
+        validate("499", "nonNegativeInteger-test-1", true);
+
+        validate("-1", "negativeInteger-test-1", true);
+        validate("-22", "negativeInteger-test-1", true);
+        validate("0", "negativeInteger-test-1", false);
+        validate("1", "negativeInteger-test-1", false);
+        validate("-3452", "negativeInteger-test-1", false);
+
+        validate("1", "positiveInteger-test-1", true);
+        validate("22", "positiveInteger-test-1", true);
+        validate("0", "positiveInteger-test-1", false);
+        validate("-12", "positiveInteger-test-1", false);
+        validate("3452", "positiveInteger-test-1", false);
+
         validate("127", "byte-test-1", true);
         validate("-128", "byte-test-1", true);
         validate("-12", "byte-test-1", true);
@@ -184,6 +207,7 @@
         validate("0.1", "float-test-1", false);
         validate("0.98", "float-test-1", false);
         validate("1.02", "float-test-1", true);
+        validate("2011.0E-3", "float-test-1", true);
 
         validate("8.342", "float-test-2", false);
         validate("-3.46", "float-test-2", false);
@@ -192,6 +216,33 @@
         validate("-1.98", "float-test-2", true);
         validate("-1.99", "float-test-2", false);
         validate("-5.32", "float-test-2", false);
+
+        validate("-INF", "float-test-3", true);
+        validate("INF", "float-test-3", false);
+        validate("NaN", "float-test-3", false);
+        validate("4.21e4", "float-test-3", true);
+
+        validate("-1", "double-test-1", false);
+        validate("1.230", "double-test-1", true);
+        validate("3.34", "double-test-1", false);
+        validate("0.98", "double-test-1", false);
+        validate("2011.0E-3", "double-test-1", true);
+
+        validate("1.98e-14", "double-test-2", false);
+        validate("0", "double-test-2", false);
+        validate("1.230", "double-test-2", true);
+        validate("1.230E42", "double-test-2", true);
+
+        validate("-INF", "double-test-3", true);
+        validate("NaN", "double-test-3", true);
+        validate("a3a", "double-test-3", false);
+        validate("3a", "double-test-3", false);
+
+        validate("-INF", "double-test-4", true);
+        validate("INF", "double-test-4", false);
+        validate("NaN", "double-test-4", false);
+        validate("1.0E12", "double-test-4", true);
+        validate("-0", "double-test-4", true);
 
         validate("220.343434", "decimal-test-1", true);
         validate("220.3434a34", "decimal-test-1", false);
@@ -460,7 +511,11 @@
         validate("21:30:45", "time-test-3", true);
 
         validate("http://www.foo.com", "anyuri-test-1", true);
-        validate("bar..com", "anyuri-test-1", false);
+        validate("", "anyuri-test-1", true);
+        validate("f", "anyuri-test-1", true);
+        validate("bar..com", "anyuri-test-1", true);
+        // XXX This should probably not validate
+        validate("http://ftp://#.#?###.", "anyuri-test-1", true);
 
         validate("http://www.foo.com", "anyuri-test-2", true);
         validate("http://www.f.com", "anyuri-test-2", false);
@@ -550,6 +605,43 @@
         validate("2004-02-18T12:21:03-02:00", "datetime-test-3", false);
         validate("2004-02-18T12:21:03+02:00", "datetime-test-3", true);
 
+        validate("test:foo", "name-test-1", true);
+        validate(":fooasdad", "name-test-1", true);
+        validate("n:s", "name-test-1", true);
+        validate("-test", "name-test-1", false);
+        validate("t", "name-test-1", false);
+
+        validate("foo", "ncname-test-1", true);
+        validate("_fooasdad", "ncname-test-1", true);
+        validate("1foo", "ncname-test-1", false);
+        validate("test:foo", "ncname-test-1", false);
+        validate("t", "ncname-test-1", false);
+
+        validate("t123", "id-test-1", true);
+        validate("n:s", "id-test-1", false);
+        validate("-test", "id-test-1", false);
+        validate("t", "id-test-1", false);
+
+        validate("t123", "idref-test-1", true);
+        validate("n:s", "idref-test-1", false);
+        validate("-test", "idref-test-1", false);
+        validate("t", "idref-test-1", false);
+
+        validate("t123", "idrefs-test-1", true);
+        validate("ns _123", "idrefs-test-1", true);
+        validate("test \tfoo", "idrefs-test-1", true);
+        validate("test t123 u456 v789", "idrefs-test-1", false);
+
+        validate("t123", "nmtoken-test-1", true);
+        validate("n:s-1", "nmtoken-test-1", true);
+        validate("tes t", "nmtoken-test-1", false);
+        validate("t", "nmtoken-test-1", false);
+
+        validate("t123", "nmtokens-test-1", true);
+        validate("ns _123", "nmtokens-test-1", true);
+        validate("test \tfoo", "nmtokens-test-1", true);
+        validate("test t123 u456 v789", "nmtokens-test-1", false);
+
   validate("true false 0 1", "list-test-1", true);
         validate("true false e 1", "list-test-1", false);
 
@@ -595,6 +687,7 @@
 
         validate("Applicant Trustee Supplier", "IndividualRoleListType5", false);
         validate("Applicant Trustee", "IndividualRoleListType5", true);
+
       }
 
       end = new Date();

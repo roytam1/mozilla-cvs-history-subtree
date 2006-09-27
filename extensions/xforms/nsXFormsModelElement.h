@@ -57,6 +57,7 @@
 #include "nsISchemaLoader.h"
 #include "nsISchema.h"
 #include "nsIXFormsContextControl.h"
+#include "nsDataHashtable.h"
 
 class nsIDOMElement;
 class nsIDOMNode;
@@ -136,8 +137,19 @@ class nsXFormsControlListItem
   /** The first child of the node */
   nsXFormsControlListItem        *mFirstChild;
 
+  nsDataHashtable<nsISupportsHashKey,nsXFormsControlListItem *> *mControlListHash;
+
 public:
-  nsXFormsControlListItem(nsIXFormsControl* aControl);
+
+  /** The constructor takes a hashtable pointer, which needs to point to the
+   *  model's hashtable.  This is so that each item in the control list has
+   *  access to the same hashtable and can add/remove items from it and find
+   *  items in it.
+   */
+  nsXFormsControlListItem(
+    nsIXFormsControl* aControl,
+    nsDataHashtable<nsISupportsHashKey,nsXFormsControlListItem *> *aHash);
+  nsXFormsControlListItem();
   ~nsXFormsControlListItem();
   nsXFormsControlListItem(const nsXFormsControlListItem& aCopy);
 
@@ -271,11 +283,9 @@ public:
    * by storing it as a property on the document.  The models will run through
    * this list when they are ready for binding.
    *
-   * @param aDoc              Document that contains aElement
    * @param aControl          XForms control waiting to be bound
    */
-  static NS_HIDDEN_(nsresult) DeferElementBind(nsIDOMDocument    *aDoc,
-                                               nsIXFormsControl  *aControl);
+  static NS_HIDDEN_(nsresult) DeferElementBind(nsIXFormsControl  *aControl);
 
   static nsresult NeedsPostRefresh(nsIXFormsControl* aControl);
 
@@ -387,10 +397,38 @@ private:
    */
   void ValidateInstanceDocuments();
 
+  /**
+   * Starting with aType, walks through the builtin derived types back to the
+   * builtin primative type, appending the datatype URIs to the string array as
+   * it goes
+   */
+  NS_HIDDEN_(nsresult) AppendBuiltinTypes(PRUint16       aType,
+                                          nsStringArray *aBuiltinType);
+  /**
+   * Starting from aType, walks the chain of datatype extension/derivation to
+   * gather information.
+   *
+   * @param aType        The type we are trying to find datatype information
+   *                     for
+   * @param aBuiltinType If non-null, we'll return the root primative type
+   *                     of aType in this buffer
+   * @param aTypeArray   If aBuiltinType is nsnull, we'll build a string
+   *                     array of datatype URIs and put them in aTypeArray.
+   */
+  NS_HIDDEN_(nsresult) WalkTypeChainInternal(nsISchemaType *aType,
+                                             PRUint16      *aBuiltinType,
+                                             nsStringArray *aTypeArray);
+  /**
+   * Returns the primative type that aSchemaType is derived/extended from
+   */
+  NS_HIDDEN_(nsresult) BuiltinTypeToPrimative(nsISchemaBuiltinType *aSchemaType,
+                                              PRUint16             *aPrimType);
+
   nsIDOMElement            *mElement;
   nsCOMPtr<nsISchemaLoader> mSchemas;
   nsStringArray             mPendingInlineSchemas;
   nsXFormsControlListItem   mFormControls;
+  nsDataHashtable<nsISupportsHashKey,nsXFormsControlListItem *> mControlListHash;
 
   PRInt32 mSchemaCount;
   PRInt32 mSchemaTotal;
