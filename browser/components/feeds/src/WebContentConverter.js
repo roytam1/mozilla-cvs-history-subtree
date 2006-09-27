@@ -404,6 +404,11 @@ var WebContentConverterRegistrar = {
     }
     catch(ex) { return; }
 
+    // For security reasons we reject non-http(s) urls (see bug Bug 354316),
+    // we may need to revise this once we support more content types
+    if (uri.scheme != "http" &&  uri.scheme != "https")
+      throw("Permission denied to add " + uri.spec + "as a content handler");
+
     // XXXben - for Firefox 2 we only support feed types
     contentType = this._resolveContentType(contentType);
     if (contentType != TYPE_MAYBE_FEED)
