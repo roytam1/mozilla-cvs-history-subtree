@@ -1158,12 +1158,8 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
   display: none;
 }
 
-
-#PersonalToolbar {
-	background-image: url("chrome://browser/skin/bookmark_toolbar_background.gif");
-	background-repeat: repeat-x;
-	background-position: top right;
-	background-color: rgb(235, 235, 235);
+#nav-bar {
+	background-image: none !important;
 }
 
 .bookmark-item {
