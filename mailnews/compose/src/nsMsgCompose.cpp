@@ -1360,11 +1360,13 @@ NS_IMETHODIMP nsMsgCompose::InitEditor(nsIEditor* aEditor, nsIDOMWindow* aConten
   PRBool quotingToFollow = PR_FALSE;
   GetQuotingToFollow(&quotingToFollow);
   if (quotingToFollow)
-   return BuildQuotedMessageAndSignature();
+    return BuildQuotedMessageAndSignature();
   else
   {
     NotifyStateListeners(eComposeFieldsReady, NS_OK);
-    return BuildBodyMessageAndSignature();
+    nsresult rv = BuildBodyMessageAndSignature();
+    NotifyStateListeners(eComposeBodyReady, NS_OK);
+    return rv;
   }
 } 
 
@@ -2430,6 +2432,9 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIRequest *request, ns
       else
         InsertToCompose(editor, composeHTML);
     }
+
+    if (mQuoteOriginal)
+      compose->NotifyStateListeners(eComposeBodyReady, NS_OK);
   }
   return rv;
 }
@@ -3832,6 +3837,10 @@ nsresult nsMsgCompose::NotifyStateListeners(TStateListenerNotification aNotifica
         
         case eSaveInFolderDone:
           thisListener->SaveInFolderDone(m_folderName.get());
+          break;
+
+        case eComposeBodyReady:
+          thisListener->NotifyComposeBodyReady();
           break;
 
         default:

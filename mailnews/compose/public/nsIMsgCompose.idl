@@ -101,13 +101,14 @@ interface nsIMsgCompConvertible/*ToTXT*/ {
        must be true, i.e. the higher value counts. */
 };
 
-[scriptable, uuid(e72c6981-992a-11d3-a449-eb15bb19bc7c)]
+[scriptable, uuid(6ce49b2a-07dc-4783-b307-9a355423163f)]
 interface nsIMsgComposeStateListener : nsISupports
 {
 	/* ... */
 	void        NotifyComposeFieldsReady();
 	void        ComposeProcessDone(in nsresult aResult);
 	void        SaveInFolderDone(in string folderName);
+	void        NotifyComposeBodyReady();
 };
 
 %{ C++
@@ -115,7 +116,8 @@ interface nsIMsgComposeStateListener : nsISupports
 typedef enum {
    eComposeFieldsReady,
    eComposeProcessDone,
-   eSaveInFolderDone
+   eSaveInFolderDone,
+   eComposeBodyReady
 } TStateListenerNotification;
 %}
 
