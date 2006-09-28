@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,11 +11,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Netscape Portable Runtime (NSPR).
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2000
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,10 +35,45 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * A dummy header file that is a dependency for all the object files.
- * Used to force a full recompilation of NSPR in Mozilla's Tinderbox
- * depend builds.  See comments in rules.mk.
+ *  jarevil.h
+ *
+ *  dot H file for calls to mozilla thread
+ *  from within jarver.c 
+ *
  */
 
-#error "Do not include this header file."
+#include "certt.h"
+#include "secpkcs7.h"
+
+extern SECStatus jar_moz_encode
+      (
+      SEC_PKCS7ContentInfo *cinfo,
+      SEC_PKCS7EncoderOutputCallback  outputfn,
+      void *outputarg,
+      PK11SymKey *bulkkey,
+      SECKEYGetPasswordKey pwfn,
+      void *pwfnarg
+      );
+
+extern SECStatus jar_moz_verify
+      (
+      SEC_PKCS7ContentInfo *cinfo,
+      SECCertUsage certusage,
+      SECItem *detached_digest,
+      HASH_HashType digest_type,
+      PRBool keepcerts
+      );
+
+extern CERTCertificate *jar_moz_nickname 
+   (CERTCertDBHandle *certdb, char *nickname);
+
+extern SECStatus jar_moz_perm 
+  (CERTCertificate *cert, char *nickname, CERTCertTrust *trust);
+ 
+extern CERTCertificate *jar_moz_certkey 
+  (CERTCertDBHandle *certdb, CERTIssuerAndSN *seckey);
+
+extern CERTCertificate *jar_moz_issuer (CERTCertificate *cert);
+
+extern CERTCertificate *jar_moz_dup (CERTCertificate *cert);
 

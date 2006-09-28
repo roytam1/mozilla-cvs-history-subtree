@@ -103,11 +103,12 @@ AC_DEFUN(AM_PATH_SVRCORE,
         AC_MSG_CHECKING(Trying pkg-config svrcore)
         AC_PATH_PROG(PKG_CONFIG, pkg-config)
         if test -n "$PKG_CONFIG"; then
-            if $PKG_CONFIG --exists svrcore-devel; then
+            if $PKG_CONFIG --exists svrcore; then
                 AC_MSG_CHECKING(using SVRCORE from package svrcore)
-                SVRCORE_CFLAGS=`$PKG_CONFIG --cflags-only-I svrcore-devel`
-                SVRCORE_LIBS=`$PKG_CONFIG --libs-only-L svrcore-devel`
+                SVRCORE_CFLAGS=`$PKG_CONFIG --cflags-only-I svrcore`
+                SVRCORE_LIBS=`$PKG_CONFIG --libs-only-L svrcore`
             else
+#            AC_MSG_NOTICE([system SVRCORE not found])
                 no_svrcore="yes"
             fi
         else

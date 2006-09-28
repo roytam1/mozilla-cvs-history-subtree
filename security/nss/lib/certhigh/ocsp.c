@@ -1280,7 +1280,7 @@ ocsp_CertStatusTypeByTag(int derTag)
  * have allocated; it expects its caller to do that.
  */
 static SECStatus
-ocsp_FinishDecodingSingleResponses(PRArenaPool *reqArena,
+ocsp_FinishDecodingSingleResponses(PRArenaPool *arena,
 				   CERTOCSPSingleResponse **responses)
 {
     ocspCertStatus *certStatus;
@@ -1290,16 +1290,10 @@ ocsp_FinishDecodingSingleResponses(PRArenaPool *reqArena,
     int i;
     SECStatus rv = SECFailure;
 
-    if (!reqArena) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
-    }
-
     if (responses == NULL)			/* nothing to do */
 	return SECSuccess;
 
     for (i = 0; responses[i] != NULL; i++) {
-        SECItem* newStatus;
 	/*
 	 * The following assert points out internal errors (problems in
 	 * the template definitions or in the ASN.1 decoder itself, etc.).
@@ -1310,16 +1304,12 @@ ocsp_FinishDecodingSingleResponses(PRArenaPool *reqArena,
 	certStatusType = ocsp_CertStatusTypeByTag(derTag);
 	certStatusTemplate = ocsp_CertStatusTemplateByType(certStatusType);
 
-	certStatus = PORT_ArenaZAlloc(reqArena, sizeof(ocspCertStatus));
+	certStatus = PORT_ArenaZAlloc(arena, sizeof(ocspCertStatus));
 	if (certStatus == NULL) {
 	    goto loser;
 	}
-        newStatus = SECITEM_ArenaDupItem(reqArena, &responses[i]->derCertStatus);
-        if (!newStatus) {
-            goto loser;
-        }
-	rv = SEC_QuickDERDecodeItem(reqArena, certStatus, certStatusTemplate,
-				newStatus);
+	rv = SEC_ASN1DecodeItem(arena, certStatus, certStatusTemplate,
+				&responses[i]->derCertStatus);
 	if (rv != SECSuccess) {
 	    if (PORT_GetError() == SEC_ERROR_BAD_DER)
 		PORT_SetError(SEC_ERROR_OCSP_MALFORMED_RESPONSE);
@@ -2692,7 +2682,8 @@ ocsp_CheckSignature(ocspSignature *signature, void *tbs,
 
     rv = VFY_VerifyDataWithAlgorithmID(encodedTBS->data, encodedTBS->len, 
 			signerKey, &rawSignature,
-			&signature->signatureAlgorithm, NULL, pwArg);
+			&signature->signatureAlgorithm, NULL,
+			pwArg);
 
 finish:
     if (signature->wasChecked)

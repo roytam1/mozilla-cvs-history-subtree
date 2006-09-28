@@ -1005,7 +1005,7 @@ ldaptool_ldap_init( int second_host )
     }
 
 #ifdef LDAP_TOOL_ARGPIN
-    if (secure || isZZ) {
+    if (secure) {
 	if (PinArgRegistration( )) {
 	    exit( LDAP_LOCAL_ERROR);
 	}
@@ -1049,21 +1049,24 @@ ldaptool_ldap_init( int second_host )
 		exit( LDAP_LOCAL_ERROR );
 	}
 
-	if ( ssl_certname != NULL ) {
-		if (ldapssl_enable_clientauth( ld, ssl_keydbpath, ssl_passwd,
-					       ssl_certname ) != 0 ) {
-			exit ( ldaptool_print_lderror( ld, "ldapssl_enable_clientauth",
-						       LDAPTOOL_CHECK4SSL_ALWAYS ));
-		}
-	}
-	/* Call to startTLS over the current clear-text connection */
-	if ( ( rc = ldap_start_tls_s( ld, NULL, NULL ) ) != LDAP_SUCCESS ) {
+       /* Call to startTLS over the current clear-text connection */
+       if ( ( rc = ldap_start_tls_s( ld, NULL, NULL ) ) != LDAP_SUCCESS ) {
 		fprintf( stderr, "ldap_start_tls_s failed: (%s)\n",ldap_err2string(rc));
 		if( isZZZ ) {
 			ldap_unbind( ld );
 			exit( rc );
 		}
 	}
+	
+	/* Provide client authentication if -N option is used */
+       if ( ssl_certname != NULL ) {
+          if (ldapssl_enable_clientauth( ld, ssl_keydbpath, ssl_passwd,
+              ssl_certname ) < 0 ) {
+               exit ( ldaptool_print_lderror( ld, "ldapssl_enable_clientauth",
+		      LDAPTOOL_CHECK4SSL_ALWAYS ));
+	     }   
+       }
+        
     } /* End startTLS case */
     else {
 	/* In order to support IPv6, we use NSPR I/O */

@@ -2916,8 +2916,8 @@ void sha_test(char *reqfn)
     unsigned char seed[HASH_LENGTH_MAX];   /* max size of seed 64 bytes */
     unsigned char MD[HASH_LENGTH_MAX];     /* message digest */
 
-    FILE *req = NULL;  /* input stream from the REQUEST file */
-    FILE *resp;        /* output stream to the RESPONSE file */
+    FILE *req;       /* input stream from the REQUEST file */
+    FILE *resp;      /* output stream to the RESPONSE file */
 
     buf = PORT_ZAlloc(bufSize);
     if (buf == NULL) {
@@ -3013,9 +3013,7 @@ void sha_test(char *reqfn)
         }
     }
 loser:
-    if (req) {
-        fclose(req);
-    }  
+    fclose(req);
     if (buf) {
         PORT_ZFree(buf, bufSize);
     }
@@ -3090,8 +3088,8 @@ void hmac_test(char *reqfn)
     unsigned char HMAC[HASH_LENGTH_MAX];  /* computed HMAC */
     HASH_HashType hash_alg;       /* HMAC type */
 
-    FILE *req = NULL;  /* input stream from the REQUEST file */
-    FILE *resp;        /* output stream to the RESPONSE file */
+    FILE *req;       /* input stream from the REQUEST file */
+    FILE *resp;      /* output stream to the RESPONSE file */
 
     buf = PORT_ZAlloc(bufSize);
     if (buf == NULL) {
@@ -3203,9 +3201,7 @@ void hmac_test(char *reqfn)
         }
     }
 loser:
-    if (req) {
-        fclose(req);
-    }
+    fclose(req);
     if (buf) {
         PORT_ZFree(buf, bufSize);
     }

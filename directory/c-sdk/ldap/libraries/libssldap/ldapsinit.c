@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  * 
  * Contributor(s):
- *   Sun Microsystems
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -500,27 +499,25 @@ ldaptls_complete(LDAP *ld)
     PRLDAPSessionInfo	sei;
     PRLDAPSocketInfo	soi;
     LDAPSSLSocketInfo	*ssoip = NULL;
-    LDAPSSLSessionInfo	*sseip = NULL;
+    LDAPSSLSessionInfo	*sseip;
     PRFileDesc		*sslfd = NULL;
     int 		intfd = -1;
     int			rc = LDAP_LOCAL_ERROR;
-    char 		*hostlist = NULL;
-    struct lextiof_socket_private *socketargp = NULL;
+    char 		*hostlist;
+    struct lextiof_socket_private *socketargp;
         
     /*
      * Get hostlist from LDAP Handle
      */
     if ( ldap_get_option(ld, LDAP_OPT_HOST_NAME, &hostlist) < 0 ) {
-	rc = ldap_get_lderrno( ld, NULL, NULL );
-	goto close_socket_and_exit_with_error;
+	 return( ldap_get_lderrno( ld, NULL, NULL ));
     }
      
     /*
      * Get File Desc from current connection
      */
     if ( ldap_get_option(ld, LDAP_OPT_DESC, &intfd) < 0 ) {
-	rc = ldap_get_lderrno( ld, NULL, NULL );
-	goto close_socket_and_exit_with_error;
+	 return( ldap_get_lderrno( ld, NULL, NULL ));
     }
 
      
@@ -528,8 +525,7 @@ ldaptls_complete(LDAP *ld)
       * Get Socket Arg Pointer
       */
     if ( ldap_get_option(ld, LDAP_X_OPT_SOCKETARG, &socketargp) < 0 ) {
-	rc = ldap_get_lderrno( ld, NULL, NULL );
-	goto close_socket_and_exit_with_error;
+	 return( ldap_get_lderrno( ld, NULL, NULL ));
     }
 
 
@@ -540,7 +536,7 @@ ldaptls_complete(LDAP *ld)
     memset( &sei, 0, sizeof(sei));
     sei.seinfo_size = PRLDAP_SESSIONINFO_SIZE;
     if (LDAP_SUCCESS != (rc = prldap_get_session_info(ld, NULL, &sei))) {
-	goto close_socket_and_exit_with_error;
+	return( rc );
     }
     sseip = (LDAPSSLSessionInfo *)sei.seinfo_appdata;
 
@@ -587,8 +583,6 @@ ldaptls_complete(LDAP *ld)
 	rc = LDAP_LOCAL_ERROR;
 	goto close_socket_and_exit_with_error;
     }
-    ldap_memfree(hostlist);
-    hostlist = NULL;
 
     /*
      * Set any SSL options that were modified by a previous call to
@@ -630,17 +624,13 @@ ldaptls_complete(LDAP *ld)
     return( LDAP_SUCCESS );	/* success */
 
   close_socket_and_exit_with_error:
-
-      ldap_memfree(hostlist);
-      hostlist = NULL;
-
       if ( NULL != sslfd && sslfd != soi.soinfo_prfd ) {
                PR_Close( sslfd );
       }
       if ( NULL != ssoip ) {
                 ldapssl_free_socket_info( &ssoip );
       }
-      if ( intfd >= 0 && NULL != socketargp && sseip != NULL ) {
+      if ( intfd >= 0 && NULL != socketargp ) {
                 (*(sseip->lssei_std_functions.lssf_close_fn))( intfd,
                 socketargp );
       }
@@ -681,34 +671,24 @@ ldaptls_setup( LDAP *ld )
 	    return( rc );
     	}
     }
-
-    memset( &sei, 0, sizeof(sei));
+    
+    if ( (ssip = ldapssl_alloc_sessioninfo()) == NULL ) {
+     	ldap_set_lderrno( ld, LDAP_NO_MEMORY, NULL, NULL );
+	return( LDAP_NO_MEMORY );
+    }
+     
+     ssip->lssei_tls_init= PR_TRUE;
+    
+    /*
+     * Store session info. for later retrieval.
+     */
     sei.seinfo_size = PRLDAP_SESSIONINFO_SIZE;
-    if ( (rc = prldap_get_session_info( ld, NULL, &sei )) == LDAP_SUCCESS ) {
-	ssip = (LDAPSSLSessionInfo *)sei.seinfo_appdata;
-    } else {
+    sei.seinfo_appdata = (void *)ssip;
+    if (LDAP_SUCCESS != (rc = prldap_set_session_info( ld, NULL, &sei ))) {
+	ldapssl_free_session_info( &ssip );
 	return( rc );
     }
-	
-    if ( NULL == ssip ) {
-	if ( (ssip = ldapssl_alloc_sessioninfo()) == NULL ) {
-	    ldap_set_lderrno( ld, LDAP_NO_MEMORY, NULL, NULL );
-	    return( LDAP_NO_MEMORY );
-	}
 
-	/*
-	 * Store session info. for later retrieval.
-	 */
-	sei.seinfo_size = PRLDAP_SESSIONINFO_SIZE;
-	sei.seinfo_appdata = (void *)ssip;
-	if (LDAP_SUCCESS != (rc = prldap_set_session_info( ld, NULL, &sei ))) {
-	    ldapssl_free_session_info( &ssip );
-	    return( rc );
-	}
-    }
-
-    ssip->lssei_tls_init= PR_TRUE;
-    	
     return( LDAP_SUCCESS );
 } /* ldaptls_setup()*/
 
@@ -724,6 +704,8 @@ ldap_start_tls_s(LDAP *ld,
 		 LDAPControl **clientctrls)
 {
 	int 				rc = -1;
+	struct berval			*dataptr;
+	char				*oidptr = NULL;
 	int				version = LDAP_VERSION3;
 
 	/* Error check on LDAP handle */
@@ -739,10 +721,13 @@ ldap_start_tls_s(LDAP *ld,
 	}
 		
 	/* Issue the Start TLS extended operation */
-	rc = ldap_extended_operation_s( ld, LDAP_EXOP_START_TLS, NULL, serverctrls,
-									clientctrls, NULL, NULL );
-	if ( rc != LDAP_SUCCESS )
+	oidptr	= NULL;
+	dataptr	= NULL;
+	if ( ( rc = ldap_extended_operation_s( ld, LDAP_EXOP_START_TLS, NULL, serverctrls,
+		clientctrls, &oidptr, &dataptr ) ) != LDAP_SUCCESS )
 	{
+		ber_bvfree( dataptr );
+		ldap_memfree( oidptr );
 		return( rc );
 	}
 
@@ -770,17 +755,32 @@ LDAP_CALL
 ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
         char *keypasswd, char *certnickname )
 {
-    LDAPSSLSessionInfo			*ssip;
-    PRLDAPSessionInfo			sei;
-    int	new_session_allocated	= 0;
+    LDAPSSLSessionInfo		*ssip;
+    PRLDAPSessionInfo		sei;
 
     /*
-     * Check parameters
-     * allow keypasswd to be NULL in case PK11_SetPasswordFunc()
-     * already set by the user to their own private pin callback.
-     * there is no proper way to test if PK11_SetPasswordFunc()
-     * callback is already set apart from NSS private interfaces
+     * Get session info. data structure.
      */
+    sei.seinfo_size = PRLDAP_SESSIONINFO_SIZE;
+    if ( prldap_get_session_info( ld, NULL, &sei ) != LDAP_SUCCESS ) {
+	return( -1 );
+    }
+    
+    ssip = (LDAPSSLSessionInfo *)sei.seinfo_appdata;
+    
+    if ( NULL == ssip ) { /* Failed to get ssl session info pointer */
+	ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL, NULL );
+	return( -1 );
+    }
+    
+     if ( !(ssip->lssei_ssl_ready) ) {
+	/* standard SSL setup has not yet done */
+	ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL,
+		ldapssl_libldap_compat_strdup(
+		"An SSL-ready LDAP session handle is required" ));
+	return( -1 );
+    }
+
     if ( certnickname == NULL ) {
 	ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL,
 		ldapssl_libldap_compat_strdup(
@@ -789,60 +789,32 @@ ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
     }
 
     /*
-     * get session info. data structure.
+     * Update session info. data structure.
      */
-    memset( &sei, 0, sizeof( sei ));
     sei.seinfo_size = PRLDAP_SESSIONINFO_SIZE;
-    if ( prldap_get_session_info( ld, NULL, &sei ) == LDAP_SUCCESS ) {
-	ssip = (LDAPSSLSessionInfo *)sei.seinfo_appdata;
-    } else {
+    if ( prldap_get_session_info( ld, NULL, &sei ) != LDAP_SUCCESS ) {
 	return( -1 );
     }
-
-    if ( NULL == ssip ) {		
-	/*
-	 * Allocate our own session information.
-	 */
-	if ( NULL == ( ssip = ldapssl_alloc_sessioninfo())) {
-	    ldap_set_lderrno( ld, LDAP_NO_MEMORY, NULL, NULL );
-	    return( -1 );
-	}
-	/*
-	 * Store session info. for later retrieval.
-	 */
-	sei.seinfo_size = PRLDAP_SESSIONINFO_SIZE;
-	sei.seinfo_appdata = (void *)ssip;
-	if ( prldap_set_session_info( ld, NULL, &sei ) != LDAP_SUCCESS ) {
-	    return( -1 );
-	}
-	new_session_allocated = 1;
-    }
-
-    if ( !(ssip->lssei_ssl_ready) && !new_session_allocated ) {
-	/* standard SSL setup has not yet done */
-	ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL,
-			  ldapssl_libldap_compat_strdup(
-			      "An SSL-ready LDAP session handle is required" ));
+    ssip = (LDAPSSLSessionInfo *)sei.seinfo_appdata;
+    if ( NULL == ssip ) {
+	ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL, NULL );
 	return( -1 );
     }
     ssip->lssei_certnickname = PL_strdup( certnickname );
-    if ( keypasswd ) {
+    if ( NULL != keypasswd ) {
 	ssip->lssei_keypasswd = PL_strdup( keypasswd );
     } else {
-	/* set lssei_using_pcks_fns to prevent our own PK11_SetPasswordFunc()
-	 * callback being installed in get_keyandcert() if keypasswd is NULL
-	 * workaround for now til NSS comes up with proper check interface 
-	 */ 
-	ssip->lssei_using_pcks_fns = 1;
+	ssip->lssei_keypasswd = NULL;	/* assume pre-authenticated */
     }
 
-    if ( NULL == ssip->lssei_certnickname || 
-	 ( keypasswd && ( NULL == ssip->lssei_keypasswd ) ) ) {
+    if ( NULL == ssip->lssei_certnickname ||
+		( NULL != keypasswd && NULL == ssip->lssei_keypasswd )) {
 	ldap_set_lderrno( ld, LDAP_NO_MEMORY, NULL, NULL );
 	return( -1 );
     }
 
     if ( check_clientauth_nicknames_and_passwd( ld, ssip ) != SECSuccess ) {
+	/* LDAP errno is set by check_clientauth_nicknames_and_passwd() */
 	return( -1 );
     }
 
@@ -1197,6 +1169,14 @@ get_keyandcert( LDAPSSLSessionInfo *ssip,
     CERTCertificate	*cert;
     SECKEYPrivateKey	*key;
 
+    if (( cert = PK11_FindCertFromNickname( ssip->lssei_certnickname, NULL ))
+		== NULL ) {
+	if ( errmsgp != NULL ) {
+	    *errmsgp = "unable to find certificate";
+	}
+	return( SECFailure );
+    }
+
     if (!ssip->lssei_using_pcks_fns && NULL != ssip->lssei_keypasswd) {
 	/*
 	 * XXX: This function should be called only once, and probably
@@ -1205,14 +1185,7 @@ get_keyandcert( LDAPSSLSessionInfo *ssip,
 	PK11_SetPasswordFunc( get_keypassword );
     }
     
-    if (( cert = CERT_FindUserCertByUsage( CERT_GetDefaultCertDB(), ssip->lssei_certnickname,
-					   certUsageSSLClient, PR_FALSE, (void *)ssip ))
-		== NULL ) {
-	if ( errmsgp != NULL ) {
-	    *errmsgp = "unable to find certificate";
-	}
-	return( SECFailure );
-    }
+
 
     if (( key = PK11_FindKeyByAnyCert( cert, (void *)ssip )) == NULL ) {
 	CERT_DestroyCertificate( cert );

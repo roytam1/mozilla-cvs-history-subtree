@@ -245,8 +245,8 @@ EnumSystemFiles(PRInt32 (*func)(const char *))
     char                szSysDir[_MAX_PATH];
     char                szFileName[_MAX_PATH];
 #ifdef _WIN32
-    WIN32_FIND_DATA     fdData;
-    HANDLE              lFindHandle;
+    struct _finddata_t  fdData;
+    long                lFindHandle;
 #else
     struct _find_t  fdData;
 #endif
@@ -260,27 +260,28 @@ EnumSystemFiles(PRInt32 (*func)(const char *))
     strcat(szFileName, "\\*.*");
 
 #ifdef _WIN32
-    lFindHandle = FindFirstFile(szFileName, &fdData);
-    if (lFindHandle == INVALID_HANDLE_VALUE)
+    lFindHandle = _findfirst(szFileName, &fdData);
+    if (lFindHandle == -1)
         return FALSE;
-    do {
-        // pass the full pathname to the callback
-        sprintf(szFileName, "%s\\%s", szSysDir, fdData.cFileName);
-        (*func)(szFileName);
-        iStatus = FindNextFile(lFindHandle, &fdData);
-    } while (iStatus != 0);
-    FindClose(lFindHandle);
 #else
-    if (_dos_findfirst(szFileName, 
-             _A_NORMAL | _A_RDONLY | _A_ARCH | _A_SUBDIR, &fdData) != 0)
+    if (_dos_findfirst(szFileName, _A_NORMAL | _A_RDONLY | _A_ARCH | _A_SUBDIR, &fdData) != 0)
         return FALSE;
+#endif
+
     do {
         // pass the full pathname to the callback
         sprintf(szFileName, "%s\\%s", szSysDir, fdData.name);
         (*func)(szFileName);
+
+#ifdef _WIN32
+        iStatus = _findnext(lFindHandle, &fdData);
+#else
         iStatus = _dos_findnext(&fdData);
+#endif
     } while (iStatus == 0);
-    _dos_findclose(&fdData);
+
+#ifdef _WIN32
+    _findclose(lFindHandle);
 #endif
 
     return TRUE;

@@ -1807,11 +1807,10 @@ main(int argc, char **argv)
     }
 
     if ((nickName == NULL) && (fNickName == NULL) 
- #ifdef NSS_ENABLE_ECC
+#ifdef NSS_ENABLE_ECC
 						&& (ecNickName == NULL)
- #endif
+#endif
     ) {
-
 	fprintf(stderr, "Required arg '-n' (rsa nickname) not supplied.\n");
 	fprintf(stderr, "Run '%s -h' for usage information.\n", progName);
         exit(6);
