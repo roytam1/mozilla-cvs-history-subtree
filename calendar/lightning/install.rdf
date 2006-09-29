@@ -21,6 +21,8 @@
       </Description>
     </em:targetApplication>
 
+#ifdef XXX_TURNED_OFF_FOR_SHIPPING_0.3
+
     <!-- We only allow installation of Lightning into Firefox for ease of
        - development. You can edit the JS and then click reload in Firefox as
        - opposed to having to restart Thunderbird after each edit. -->
@@ -37,6 +39,8 @@
 #endif
       </Description>
     </em:targetApplication>
+
+#endif
 
     <em:id>{e2fda1a4-762b-4020-b5ad-a41df1933103}</em:id>
     <em:name>Lightning</em:name>
