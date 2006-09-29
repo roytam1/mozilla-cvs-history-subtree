@@ -166,7 +166,7 @@ FeedWriter.prototype = {
       aCheckbox.removeAttributeNS('', 'checked');
 
     if (change) {
-      var event = document.createEvent('Events');
+      var event = this._document.createEvent('Events');
       event.initEvent('CheckboxStateChange', true, true);
       aCheckbox.dispatchEvent(event);
     }
