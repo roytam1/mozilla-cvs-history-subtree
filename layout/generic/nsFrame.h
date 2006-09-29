@@ -277,6 +277,10 @@ public:
                                   InlinePrefWidthData *aData);
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
+  virtual nsSize ComputeSize(nscoord aCBWidth, nscoord aMargin,
+                             nscoord aBorder, nscoord aPadding,
+                             PRBool aShrinkWrap);
+
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,

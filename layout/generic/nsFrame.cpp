@@ -2867,6 +2867,13 @@ nsFrame::IntrinsicWidthOffsets()
   return result;
 }
 
+/* virtual */ nsSize
+nsFrame::ComputeSize(nscoord aCBWidth, nscoord aMargin, nscoord aBorder,
+                     nscoord aPadding, PRBool aShrinkWrap)
+{
+  return nsSize(0, NS_UNCONSTRAINEDSIZE);
+}
+
 NS_IMETHODIMP
 nsFrame::WillReflow(nsPresContext* aPresContext)
 {

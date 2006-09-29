@@ -196,11 +196,18 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
 
   InitResizeFlags(aPresContext);
 
+#if 0 // XXX replace once ComputeSize conversion is done!
+  NS_ASSERTION((mFrameType == NS_CSS_FRAME_TYPE_INLINE &&
+                !NS_FRAME_IS_REPLACED(mFrameType)) ||
+               mComputedWidth != NS_UNCONSTRAINEDSIZE,
+               "shouldn't use unconstrained widths anymore");
+#else
   NS_ASSERTION(NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType) ||
                (mFrameType == NS_CSS_FRAME_TYPE_INLINE &&
                 !NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) ||
                mComputedWidth != NS_UNCONSTRAINEDSIZE,
                "shouldn't use unconstrained widths anymore");
+#endif
 }
 
 void nsHTMLReflowState::InitCBReflowState()

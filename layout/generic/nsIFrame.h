@@ -100,10 +100,10 @@ struct nsMargin;
 typedef class nsIFrame nsIBox;
 
 // IID for the nsIFrame interface 
-// 1040c5ea-8ba7-4a2d-80f1-5890e8439641
+// a9f5c633-5148-4f78-a112-4517e5764bc9
 #define NS_IFRAME_IID \
-{ 0x1040c5ea, 0x8ba7, 0x4a2d, \
-  { 0x80, 0xf1, 0x58, 0x90, 0xe8, 0x43, 0x96, 0x41 } }
+{ 0xa9f5c633, 0x5148, 0x4f78, \
+  { 0xa1, 0x12, 0x45, 0x17, 0xe5, 0x76, 0x4b, 0xc9 } }
 
 /**
  * Indication of how the frame can be split. This is used when doing runaround
@@ -1113,6 +1113,34 @@ public:
     {}
   };
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets() = 0;
+
+  /**
+   * Compute the size that a frame will occupy.  Called while
+   * constructing the nsHTMLReflowState to be used to Reflow the frame,
+   * in order to fill its mComputedWidth and mComputedHeight member
+   * variables.
+   *
+   * The |height| member of the return value may be
+   * NS_UNCONSTRAINEDSIZE, but the |width| member must not be.
+   *
+   * @param aCBWidth  The width of the element's containing block.
+   * @param aMargin  The sum of the left and right margins of the
+   *                 frame, including actual values resulting from
+   *                 percentages, but not including actual values
+   *                 resulting from 'auto'.
+   * @param aBorder  The sum of the left and right border widths of the
+   *                 frame.
+   * @param aPadding  The sum of the left and right margins of the
+   *                  frame, including actual values resulting from
+   *                  percentages.
+   * @param aShrinkWrap  Whether the frame is in a context where
+   *                     non-replaced blocks should shrink-wrap (e.g.,
+   *                     it's floating, absolutely positioned, or
+   *                     inline-block).
+   */
+  virtual nsSize ComputeSize(nscoord aCBWidth, nscoord aMargin,
+                             nscoord aBorder, nscoord aPadding,
+                             PRBool aShrinkWrap) = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.
