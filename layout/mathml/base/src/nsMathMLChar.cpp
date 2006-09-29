@@ -2190,7 +2190,8 @@ nsMathMLChar::PaintVertically(nsPresContext*      aPresContext,
     }
   }
   else { // glue is present
-    nscoord overlap;
+    nscoord overlap = onePixel;
+#if 0
     nsCOMPtr<nsIFontMetrics> fm;
     aRenderingContext.GetFontMetrics(*getter_AddRefs(fm));
     nsMathMLFrame::GetRuleThickness(fm, overlap);
@@ -2202,6 +2203,7 @@ nsMathMLChar::PaintVertically(nsPresContext*      aPresContext,
     // it says to allow a small overlap when adjoining it
     bmdata[3].ascent -= overlap;
     bmdata[3].descent -= overlap;
+#endif
 
     for (i = 0; i < 2; i++) {
       PRInt32 count = 0;
@@ -2378,7 +2380,8 @@ nsMathMLChar::PaintHorizontally(nsPresContext*      aPresContext,
     }
   }
   else { // glue is present
-    nscoord overlap;
+    nscoord overlap = onePixel;
+#if 0
     nsCOMPtr<nsIFontMetrics> fm;
     aRenderingContext.GetFontMetrics(*getter_AddRefs(fm));
     nsMathMLFrame::GetRuleThickness(fm, overlap);
@@ -2390,6 +2393,7 @@ nsMathMLChar::PaintHorizontally(nsPresContext*      aPresContext,
     // it says to allow a small overlap when adjoining it
     bmdata[3].leftBearing += overlap;
     bmdata[3].rightBearing -= overlap;
+#endif
 
     for (i = 0; i < 2; i++) {
       PRInt32 count = 0;
