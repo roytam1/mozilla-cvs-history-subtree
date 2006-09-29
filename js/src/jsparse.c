@@ -821,8 +821,7 @@ js_CompileFunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun)
     CURRENT_TOKEN(ts).type = TOK_LC;
     pn = FunctionBody(cx, ts, fun, &funcg.treeContext);
     if (pn) {
-        fun->u.i.script = js_NewScriptFromCG(cx, &funcg, fun);
-        if (!fun->u.i.script) {
+        if (!js_NewScriptFromCG(cx, &funcg, fun)) {
             pn = NULL;
         } else {
             if (funcg.treeContext.flags & TCF_FUN_HEAVYWEIGHT)
