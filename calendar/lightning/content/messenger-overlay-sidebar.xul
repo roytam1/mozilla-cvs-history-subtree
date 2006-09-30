@@ -152,11 +152,13 @@
       <minimonth id="ltnMinimonth" onchange="ltnMinimonthPick(this);" flex="2"/>
       <spacer flex="1"/>
     </hbox>
+<!-- Commented out for 0.3 release
     <hbox id="ltnDateTextPickerBox">
       <spacer flex="1"/>
       <datepicker id="ltnDateTextPicker" oncommand="ltnGoToDate()"/>
       <spacer flex="1"/> 
     </hbox>
+-->
 
     <tabbox id="ltnTabpanelBox" flex="1">
       <tabs>
