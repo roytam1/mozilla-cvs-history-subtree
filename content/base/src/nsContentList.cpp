@@ -508,7 +508,7 @@ nsContentList::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
         // We match aContent now, and it's not in our list already.  Just dirty
         // ourselves; this is simpler than trying to figure out where to insert
         // aContent.
-        SetDirty();
+        mState = LIST_DIRTY;
       }
     } else {
       // We no longer match aContent.  Remove it from our list.  If
@@ -582,7 +582,7 @@ nsContentList::ContentAppended(nsIDocument *aDocument, nsIContent* aContainer,
         if (MatchSelf(aContainer->GetChildAt(i))) {
           // Uh-oh.  We're gonna have to add elements into the middle
           // of our list. That's not worth the effort.
-          SetDirty();
+          mState = LIST_DIRTY;
           break;
         }
       }
@@ -623,7 +623,7 @@ nsContentList::ContentInserted(nsIDocument *aDocument,
     return;
 
   if (MayContainRelevantNodes(aContainer) && MatchSelf(aChild))
-    SetDirty();
+    mState = LIST_DIRTY;
 }
  
 void
@@ -638,7 +638,7 @@ nsContentList::ContentRemoved(nsIDocument *aDocument,
   if (mState != LIST_DIRTY) {
     if (MayContainRelevantNodes(aContainer)) {
       if (!IsContentAnonymous(aChild) && MatchSelf(aChild)) {
-        SetDirty();
+        mState = LIST_DIRTY;
       }
       return;
     }
@@ -696,7 +696,7 @@ nsContentList::CheckDocumentExistence()
     mDocument = mRootContent->GetDocument();
     if (mDocument) {
       mDocument->AddObserver(this);
-      SetDirty();
+      mState = LIST_DIRTY;
     }
   }
 }
@@ -810,8 +810,6 @@ nsContentList::PopulateSelf(PRUint32 aNeededLength)
     Reset();
   }
   PRUint32 count = mElements.Count();
-  NS_ASSERTION(mState != LIST_DIRTY || count == 0,
-               "Reset() not called when setting state to LIST_DIRTY?");
 
   if (count >= aNeededLength) // We're all set
     return;
@@ -846,7 +844,7 @@ nsContentList::PopulateSelf(PRUint32 aNeededLength)
   } else {
     // No document means we have to stay on our toes since we don't
     // get content notifications.
-    SetDirty();
+    mState = LIST_DIRTY;
   }
 }
 
@@ -903,7 +901,7 @@ nsContentList::DisconnectFromDocument()
 
   // We will get no more updates, so we can never know we're up to
   // date
-  SetDirty();
+  mState = LIST_DIRTY;
 }
 
 void
