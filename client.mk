@@ -113,21 +113,36 @@ AVAILABLE_PROJECTS = \
   xulrunner \
   zap \
   camino \
+  necko \
   $(NULL)
 
 # Trailing / on top-level mozilla dir required to stop fast-update thinking
 # it is a module name.
-MODULES_NS_core :=                              \
+MODULES_NS_necko :=                             \
   mozilla/                                      \
+  $(NULL)
+
+MODULES_necko :=                                \
+  mozilla/README                                \
+  mozilla/config                                \
+  mozilla/build                                 \
+  mozilla/intl                                  \
+  mozilla/modules/libpref                       \
+  mozilla/modules/zlib                          \
+  mozilla/netwerk                               \
+  mozilla/xpcom                                 \
+  mozilla/tools/test-harness                    \
+  $(NULL)
+
+MODULES_NS_core :=                              \
+  $(MODULES_NS_necko)                           \
   mozilla/js                                    \
   mozilla/js/src                                \
   mozilla/js/jsd                                \
   $(NULL)                                       \
 
 MODULES_core :=                                 \
-  mozilla/README                                \
-  mozilla/config                                \
-  mozilla/build                                 \
+  $(MODULES_necko)                              \
   mozilla/caps                                  \
   mozilla/content                               \
   mozilla/db/.cvsignore                         \
@@ -143,7 +158,6 @@ MODULES_core :=                                 \
   mozilla/gfx                                   \
   mozilla/parser                                \
   mozilla/layout                                \
-  mozilla/intl                                  \
   mozilla/jpeg                                  \
   mozilla/js/src/fdlibm                         \
   mozilla/js/src/liveconnect                    \
@@ -152,14 +166,11 @@ MODULES_core :=                                 \
   mozilla/modules/libimg                        \
   mozilla/modules/libjar                        \
   mozilla/modules/libpr0n                       \
-  mozilla/modules/libpref                       \
   mozilla/modules/libreg                        \
   mozilla/modules/libutil                       \
   mozilla/modules/oji                           \
   mozilla/modules/plugin                        \
-  mozilla/modules/zlib                          \
   mozilla/modules/staticmod                     \
-  mozilla/netwerk                               \
   mozilla/plugin/oji                            \
   mozilla/profile                               \
   mozilla/rdf                                   \
@@ -177,7 +188,6 @@ MODULES_core :=                                 \
   mozilla/view                                  \
   mozilla/webshell                              \
   mozilla/widget                                \
-  mozilla/xpcom                                 \
   mozilla/xpfe                                  \
   mozilla/xpinstall                             \
   mozilla/toolkit                               \
@@ -185,11 +195,14 @@ MODULES_core :=                                 \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
   mozilla/tools/cross-commit                    \
-  mozilla/tools/test-harness                    \
+  $(NULL)
+
+LOCALES_necko :=                                \
+  netwerk                                       \
   $(NULL)
 
 LOCALES_core :=                                 \
-  netwerk                                       \
+  $(LOCALES_necko)                              \
   dom                                           \
   $(NULL)
 
@@ -198,6 +211,10 @@ BOOTSTRAP_core :=                               \
   mozilla/mail/config/version.txt               \
   mozilla/calendar/sunbird/config/version.txt   \
   mozilla/suite/config/version.txt              \
+  $(NULL)
+
+BOOTSTRAP_core :=                               \
+  $(BOOTSTRAP_necko)                            \
   $(NULL)
 
 MODULES_NS_toolkit :=                           \
@@ -408,7 +425,7 @@ MODULES_all :=                                  \
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_3_11_3_RTM
+NSS_CO_TAG           = NSS_3_11_20060929_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
 LOCALES_CO_TAG       =
 
@@ -793,8 +810,9 @@ real_checkout:
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_LOCALES);
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
-# update the NSS checkout timestamp
-	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
+# update the NSS checkout timestamp, if we checked PSM out
+	@if test -d $(TOPSRCDIR)/security/manager -a \
+		 `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
 		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
 #	@: Check the log for conflicts. ;
