@@ -954,6 +954,22 @@ BindLocalVariable(JSContext *cx, BindData *data, JSAtom *atom)
 {
     JSFunction *fun;
 
+    /*
+     * Can't increase fun->nvars in an active frame, so insist that getter is
+     * js_GetLocalVariable, not js_GetCallVariable or anything else.
+     */
+    if (data->u.var.getter != js_GetLocalVariable)
+        return JS_TRUE;
+
+    /*
+     * Don't bind a variable with the hidden name 'arguments', per ECMA-262.
+     * Instead 'var arguments' always restates the predefined property of the
+     * activation objects with unhidden name 'arguments'.  Assignment to such
+     * a variable must be handled specially.
+     */
+    if (atom == cx->runtime->atomState.argumentsAtom)
+        return JS_TRUE;
+
     fun = data->u.var.fun;
     if (!js_AddHiddenProperty(cx, data->obj, ATOM_TO_JSID(atom),
                               data->u.var.getter, data->u.var.setter,
@@ -1016,16 +1032,8 @@ BindDestructuringArg(JSContext *cx, BindData *data, JSAtom *atom,
         }
         OBJ_DROP_PROPERTY(cx, pobj, prop);
     } else {
-        /*
-         * Don't bind a variable with hidden name 'arguments', per ECMA-262.
-         * Instead, var arguments always restates the predefined property of
-         * the activation objects with unhidden name 'arguments'.  Assignment
-         * to such a variable must be handled specially.
-         */
-        if (atom != cx->runtime->atomState.argumentsAtom &&
-            !BindLocalVariable(cx, data, atom)) {
+        if (!BindLocalVariable(cx, data, atom))
             return JS_FALSE;
-        }
     }
     return JS_TRUE;
 }
@@ -1302,10 +1310,28 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 #if JS_HAS_DESTRUCTURING
     /*
      * If there were destructuring formal parameters, prepend the initializing
-     * comma expression that we synthesized to body.
+     * comma expression that we synthesized to body.  If the body is a lexical
+     * scope node, we must make a special TOK_BODY node, to prepend the formal
+     * parameter destructuring code without bracing the decompilation of the
+     * function body's lexical scope.
      */
     if (list) {
-        JS_ASSERT(body->pn_arity == PN_LIST);
+        if (body->pn_arity != PN_LIST) {
+            JSParseNode *block;
+
+            JS_ASSERT(body->pn_type == TOK_LEXICALSCOPE);
+            JS_ASSERT(body->pn_arity == PN_NAME);
+
+            block = NewParseNode(cx, ts, PN_LIST, tc);
+            if (!block)
+                return NULL;
+            block->pn_type = TOK_BODY;
+            block->pn_pos = body->pn_pos;
+            PN_INIT_LIST_1(block, body);
+
+            body = block;
+        }
+
         item = NewParseNode(cx, ts, PN_UNARY, tc);
         if (!item)
             return NULL;
@@ -1699,7 +1725,7 @@ BindVarOrConst(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
     JSObject *obj, *pobj;
     JSProperty *prop;
     JSBool ok;
-    JSPropertyOp currentGetter, currentSetter;
+    JSPropertyOp getter, setter;
     JSScopeProperty *sprop;
 
     stmt = js_LexicalLookup(tc, atom, NULL, JS_FALSE);
@@ -1754,8 +1780,8 @@ BindVarOrConst(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
     }
 
     ok = JS_TRUE;
-    currentGetter = data->u.var.getter;
-    currentSetter = data->u.var.setter;
+    getter = data->u.var.getter;
+    setter = data->u.var.setter;
 
     if (prop && pobj == obj && OBJ_IS_NATIVE(pobj)) {
         sprop = (JSScopeProperty *)prop;
@@ -1771,8 +1797,8 @@ BindVarOrConst(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
                                             name);
                 ok = JS_FALSE;
             } else {
-                currentGetter = js_GetArgument;
-                currentSetter = js_SetArgument;
+                getter = js_GetArgument;
+                setter = js_SetArgument;
                 ok = js_ReportCompileErrorNumber(cx,
                                                  BIND_DATA_REPORT_ARGS(data,
                                                      JSREPORT_WARNING |
@@ -1781,6 +1807,8 @@ BindVarOrConst(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
                                                  name);
             }
         } else {
+            JS_ASSERT(getter == js_GetLocalVariable);
+
             if (fun) {
                 /* Not an argument, must be a redeclared local var. */
                 if (data->u.var.clasp == &js_FunctionClass) {
@@ -1802,16 +1830,15 @@ BindVarOrConst(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
                          * use the special getters and setters since we can't
                          * allocate a slot in the frame.
                          */
-                        currentGetter = sprop->getter;
-                        currentSetter = sprop->setter;
+                        getter = sprop->getter;
+                        setter = sprop->setter;
                     }
                 }
 
                 /* Override the old getter and setter, to handle eval. */
                 sprop = js_ChangeNativePropertyAttrs(cx, obj, sprop,
                                                      0, sprop->attrs,
-                                                     currentGetter,
-                                                     currentSetter);
+                                                     getter, setter);
                 if (!sprop)
                     ok = JS_FALSE;
             }
@@ -1832,14 +1859,8 @@ BindVarOrConst(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
             OBJ_DROP_PROPERTY(cx, pobj, prop);
             prop = NULL;
         }
-        if (currentGetter == js_GetCallVariable) {
-            /* Can't increase fun->nvars in an active frame! */
-            currentGetter = data->u.var.clasp->getProperty;
-            currentSetter = data->u.var.clasp->setProperty;
-        }
-        if (currentGetter == js_GetLocalVariable &&
-            atom != cx->runtime->atomState.argumentsAtom &&
-            cx->fp->scopeChain == obj &&
+
+        if (cx->fp->scopeChain == obj &&
             !js_InWithStatement(tc) &&
             !BindLocalVariable(cx, data, atom)) {
             return JS_FALSE;
@@ -2094,7 +2115,6 @@ CheckDestructuring(JSContext *cx, BindData *data,
     JSBool ok;
     FindPropValData fpvd;
     JSParseNode *lhs, *rhs, *pn, *pn2;
-    uint32 count;
 
     if (left->pn_type == TOK_ARRAYCOMP) {
         js_ReportCompileErrorNumber(cx, left, JSREPORT_PN | JSREPORT_ERROR,
@@ -2105,8 +2125,8 @@ CheckDestructuring(JSContext *cx, BindData *data,
     ok = JS_TRUE;
     fpvd.table.ops = NULL;
     lhs = left->pn_head;
-    if (left->pn_count == 0 || lhs->pn_type == TOK_DEFSHARP) {
-        pn = left;
+    if (lhs && lhs->pn_type == TOK_DEFSHARP) {
+        pn = lhs;
         goto no_var_name;
     }
 
@@ -2115,7 +2135,6 @@ CheckDestructuring(JSContext *cx, BindData *data,
               ? right->pn_head
               : NULL;
 
-        count = 0;
         while (lhs) {
             pn = lhs, pn2 = rhs;
             if (!data) {
@@ -2144,17 +2163,11 @@ CheckDestructuring(JSContext *cx, BindData *data,
                 }
                 if (!ok)
                     goto out;
-                ++count;
             }
 
             lhs = lhs->pn_next;
             if (rhs)
                 rhs = rhs->pn_next;
-        }
-
-        if (count == 0) {
-            pn = left;
-            goto no_var_name;
         }
     } else {
         JS_ASSERT(left->pn_type == TOK_RC);
@@ -2266,6 +2279,8 @@ ContainsStmt(JSParseNode *pn, JSTokenType tt)
         if (pn->pn_op != JSOP_NOP)
             return NULL;
         return ContainsStmt(pn->pn_kid, tt);
+      case PN_NAME:
+        return ContainsStmt(pn->pn_expr, tt);
       default:;
     }
     return NULL;
@@ -2803,11 +2818,22 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             /* Check that the left side of the 'in' is valid. */
             JS_ASSERT(!TOKEN_TYPE_IS_DECL(tt) || pn1->pn_type == tt);
             if (TOKEN_TYPE_IS_DECL(tt)
-                ? (pn1->pn_count > 1 || pn1->pn_op == JSOP_DEFCONST)
+                ? (pn1->pn_count > 1 || pn1->pn_op == JSOP_DEFCONST
+#if JS_HAS_DESTRUCTURING
+                   || (pn->pn_op == JSOP_FORIN &&
+                       (pn1->pn_head->pn_type == TOK_RC ||
+                        (pn1->pn_head->pn_type == TOK_RB &&
+                         pn1->pn_head->pn_count != 2) ||
+                        (pn1->pn_head->pn_type == TOK_ASSIGN &&
+                         (pn1->pn_head->pn_left->pn_type != TOK_RB ||
+                          pn1->pn_head->pn_left->pn_count != 2))))
+#endif
+                  )
                 : (pn1->pn_type != TOK_NAME &&
                    pn1->pn_type != TOK_DOT &&
 #if JS_HAS_DESTRUCTURING
-                   pn1->pn_type != TOK_RB && pn1->pn_type != TOK_RC &&
+                   (pn->pn_op == JSOP_FORIN &&
+                    (pn1->pn_type != TOK_RB || pn1->pn_count != 2)) &&
 #endif
 #if JS_HAS_LVALUE_RETURN
                    pn1->pn_type != TOK_LP &&
@@ -5332,6 +5358,14 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                         pnlet = DestructuringExpr(cx, &data, tc, tt);
                         if (!pnlet)
                             return NULL;
+
+                        if (pnlet->pn_type != TOK_RB || pnlet->pn_count != 2) {
+                            js_ReportCompileErrorNumber(cx, ts,
+                                                        JSREPORT_TS |
+                                                        JSREPORT_ERROR,
+                                                        JSMSG_BAD_FOR_LEFTSIDE);
+                            return NULL;
+                        }
 
                         /* Destructuring requires [key, value] enumeration. */
                         if (pn2->pn_op != JSOP_FOREACH)
