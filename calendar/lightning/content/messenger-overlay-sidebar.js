@@ -106,7 +106,8 @@ function ltnMinimonthPick(minimonth)
         return;
 
     var jsDate = minimonth.value;
-    document.getElementById("ltnDateTextPicker").value = jsDate;
+    //XXX Disable for 0.3 release (Bug 355028)
+    //document.getElementById("ltnDateTextPicker").value = jsDate;
     var cdt = new CalDateTime();
     cdt.year = jsDate.getFullYear();
     cdt.month = jsDate.getMonth();
