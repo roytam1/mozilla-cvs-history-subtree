@@ -413,6 +413,7 @@ nsXMLDocument::Load(const nsAString& aUrl, PRBool *aReturn)
   // be loaded.
   nsCOMPtr<nsIPrincipal> principal(mPrincipal);
   nsCOMPtr<nsIEventListenerManager> elm(mListenerManager);
+  mListenerManager = nsnull;
 
   ResetToURI(uri, nsnull);
 
