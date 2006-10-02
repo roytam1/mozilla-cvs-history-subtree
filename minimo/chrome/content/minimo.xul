@@ -127,6 +127,7 @@
     <command id="cmd_BrowserBookmark"         oncommand="BrowserBookmark()" />
     <command id="cmd_BrowserBookmarkThis"     oncommand="BrowserBookmarkThis()" />
     <command id="cmd_Pan"                     oncommand="BrowserPan()" />
+    <command id="cmd_BrowserFileOpen"         oncommand="BrowserFileOpen()" />
         
     <toolbar id="nav-bar" >
       
@@ -242,7 +243,11 @@
       <menuitem id="command_BrowserCloseTab" 
                 command="cmd_BrowserCloseTab" 
                 label="&closetab.label;"  /> 
-      
+
+      <menuitem id="command_BrowserFileOpen" 
+                command="cmd_BrowserFileOpen" 
+                label="&fileopen.label;"  /> 
+                      
       <menu     id="command_TabFocus" 
                 label="&tabs.label;"  >
         
