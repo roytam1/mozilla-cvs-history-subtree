@@ -69,6 +69,9 @@ const nsIComponentRegistrar    = Components.interfaces.nsIComponentRegistrar;
 const nsISoftKeyBoard          = Components.interfaces.nsISoftKeyBoard;
 const nsIObserverService       = Components.interfaces.nsIObserverService;
 const nsIPrefBranch2           = Components.interfaces.nsIPrefBranch2;
+const nsIFile                  = Components.interfaces.nsIFile;
+const nsILocalFile             = Components.interfaces.nsILocalFile;
+const nsIFilePicker            = Components.interfaces.nsIFilePicker;
 
 const NS_BINDING_ABORTED = 0x804b0002;
 
@@ -1710,8 +1713,10 @@ function DownloadLaunch() {
  
   const fileUrl = ioSvc.newURI(url, null, null).QueryInterface(Components.interfaces.nsIFileURL);
 
-  fileUrl.file.QueryInterface(Components.interfaces.nsILocalFile).launch();
+  fileUrl.file.QueryInterface(nsILocalFile).launch();
+  
   //  fileUrl.file.QueryInterface(Components.interfaces.nsILocalFile).reveal();
+  
 }
 
 function TransferItemFactory() {
@@ -2071,3 +2076,37 @@ function MenuDisableEscapeKeys() {
 
 }
 
+/*
+ * File Open Functionality. For now we allow multiple selections and 
+ * we open multiple tabs at the same time. 
+ */ 
+ 
+function BrowserFileOpen() {
+
+  var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+  var refLocalFile = Components.classes["@mozilla.org/file/local;1"].createInstance(nsIFile);
+  fp.init(window, null, nsIFilePicker.modeOpenMultiple);
+
+  var fileCustomDirFile= refLocalFile.QueryInterface(nsILocalFile);
+  fileCustomDirFile.initWithPath("\\");
+  fp.displayDirectory = fileCustomDirFile;
+
+  fp.appendFilters(nsIFilePicker.filterAll);
+
+  var returnFilePickerValue=fp.show();
+
+  if (returnFilePickerValue == nsIFilePicker.returnOK) {
+
+    entries =(fp.files);
+    while(entries.hasMoreElements()) {
+      var entry = entries.getNext();
+      entry.QueryInterface(nsIFile);
+      try { 
+        gBrowser.selectedTab = gBrowser.addTab("file:///"+entry.path);    
+        browserInit(gBrowser.selectedTab);
+      } catch (e) {}  
+    }
+    
+  }
+  
+}
