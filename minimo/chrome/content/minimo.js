@@ -78,6 +78,7 @@ const NS_BINDING_ABORTED = 0x804b0002;
 var gkeyBoardService = null;
 var gKeyBoardToggle = true;
 
+var gTextSize = null;
 var gPanMode = null;
 var appCore = null;
 var gBrowser = null;
@@ -595,6 +596,15 @@ function MiniNavStartup()
   */
   setTimeout("setScreenUpTimeout()",10);
  
+ /*
+  *  Stores the initial page ( defined currently in CSS )
+  *  text size value in a global gTextSize. If we are to use 
+  *  preferences, then we can associate this initialization 
+  *  with the pref value load. 
+  */
+
+  BrowserInitializeTextSizeValue();
+ 
 }
 
 function setScreenUpTimeout() {
@@ -1026,6 +1036,34 @@ function BrowserResetZoomMinus() {
 }
 
 
+/* 
+ * Text Size functions - works accross all the Tabs 
+ */
+function BrowserResetZoomPlus() {
+  gTextSize+= .1;
+  BrowsersZoomUpdate();
+}
+
+function BrowserResetZoomMinus() {
+  gTextSize-= .1;
+  BrowsersZoomUpdate();
+}
+
+function BrowsersZoomUpdate() {
+ for (var i = 0; i < gBrowser.mPanelContainer.childNodes.length; i++) {
+    tabItem=gBrowser.mTabContainer.childNodes[i];
+    gBrowser.getBrowserForTab(tabItem).markupDocumentViewer.textZoom=gTextSize;
+  }
+}
+
+function BrowserInitializeTextSizeValue() {
+  gTextSize = gBrowser.selectedBrowser.markupDocumentViewer.textZoom;
+}
+
+/* 
+ * End of text size operations
+ */
+ 
 function Menu2PopupShowing() {
 
 }
