@@ -1325,7 +1325,7 @@ function DoBrowserFind() {
          http://lxr.mozilla.org/mozilla/source/toolkit/components/typeaheadfind/content/findBar.js
       */
       gBrowser.fastFind.find(vQuery,0);
-      document.getElementById("toolbar-find-tag").focus();
+      document.getElementById("toolbar-find-tag").inputField.focus();
     }
   } catch (e) {
     onErrorHandler(e);
@@ -1341,14 +1341,11 @@ function onFindBarKeyPress(evt) {
 function DoBrowserFindNext() {
   try { 
 	gBrowser.fastFind.findNext();
-    document.getElementById("toolbar-find-tag").focus();
+    document.getElementById("toolbar-find-tag").inputField.focus();
   } catch (e) {
     onErrorHandler(e);
   }  
 }
-
-
-
 
 function DoPanelPreferences() {
   window.openDialog("chrome://minimo/content/preferences/preferences.xul","preferences","modal,centerscreeen,chrome,resizable=no");
