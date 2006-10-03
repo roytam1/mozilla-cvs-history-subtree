@@ -8400,6 +8400,20 @@ nsCSSFrameConstructor::FindPreviousSibling(nsIContent*       aContainer,
                                             prevSibling);
       }
 
+      // The frame may have bidi continuations. Get the last bidi continuation
+      if (prevSibling->GetStateBits() & NS_FRAME_IS_BIDI) {
+        nsIFrame* nextBidi;
+        for (;;) {
+          nextBidi =
+            NS_STATIC_CAST(nsIFrame*, 
+                           prevSibling->GetProperty(nsLayoutAtoms::nextBidi));
+          if (!nextBidi) {
+            break;
+          }
+          prevSibling = nextBidi;
+        }
+      }
+
       // The frame may have a continuation. Get the last-in-flow
       prevSibling = prevSibling->GetLastInFlow();
 
