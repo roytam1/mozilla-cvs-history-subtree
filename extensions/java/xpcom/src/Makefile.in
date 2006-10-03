@@ -80,7 +80,11 @@ LOCAL_INCLUDES	= -I$(JAVA_INCLUDE_PATH)
 ifeq ($(OS_ARCH),WINNT)
 LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/win32
 else
+ifeq ($(OS_ARCH),OS2)
+LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/OS2
+else
 LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/linux
+endif
 endif
 
 # necessary until we do 'cvs move' to put files in correct directories
