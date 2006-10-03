@@ -147,7 +147,7 @@ InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
 
   // create Java proxy for service manager returned by NS_InitXPCOM2
   return GetNewOrUsedJavaObject(env, servMan, NS_GET_IID(nsIServiceManager),
-                                aResult);
+                                nsnull, aResult);
 }
 
 extern "C" NS_EXPORT jobject
@@ -211,7 +211,7 @@ XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jobject, jstring aPath,
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
     rv = GetNewOrUsedJavaObject(env, file, NS_GET_IID(nsILocalFile),
-                                &javaProxy);
+                                nsnull, &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
@@ -230,7 +230,7 @@ XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jobject)
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
     rv = GetNewOrUsedJavaObject(env, cm, NS_GET_IID(nsIComponentManager),
-                                &javaProxy);
+                                nsnull, &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
@@ -249,7 +249,7 @@ XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jobject)
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
     rv = GetNewOrUsedJavaObject(env, cr, NS_GET_IID(nsIComponentRegistrar),
-                                &javaProxy);
+                                nsnull, &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
@@ -268,7 +268,7 @@ XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jobject)
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
     rv = GetNewOrUsedJavaObject(env, sm, NS_GET_IID(nsIServiceManager),
-                                &javaProxy);
+                                nsnull, &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
