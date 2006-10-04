@@ -1153,3 +1153,67 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
 
   return result;
 }
+
+/* static */ nscoord
+nsLayoutUtils::ComputeHorizontalValue(nsIRenderingContext* aRenderingContext,
+                                      nsIFrame* aFrame,
+                                      nscoord aContainingBlockWidth,
+                                      const nsStyleCoord& aCoord)
+{
+  NS_PRECONDITION(aFrame, "non-null frame expected");
+  NS_PRECONDITION(aRenderingContext, "non-null rendering context expected");
+
+  nscoord result = 0;
+  nsStyleUnit unit = aCoord.GetUnit();
+  if (eStyleUnit_Percent == unit) {
+    if (NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) {
+      result = 0;
+    } else {
+      float pct = aCoord.GetPercentValue();
+      result = NSToCoordFloor(aContainingBlockWidth * pct);
+    }
+  
+  } else if (eStyleUnit_Coord == unit) {
+    result = aCoord.GetCoordValue();
+  }
+  else if (eStyleUnit_Chars == unit) {
+    SetFontFromStyle(aRenderingContext, aFrame->GetStyleContext());
+    nscoord fontWidth;
+    aRenderingContext->GetWidth('M', fontWidth);
+    result = aCoord.GetIntValue() * fontWidth;
+  }
+  return result;
+}
+
+/* static */ nscoord
+nsLayoutUtils::ComputeVerticalValue(nsIRenderingContext* aRenderingContext,
+                                    nsIFrame* aFrame,
+                                    nscoord aContainingBlockHeight,
+                                    const nsStyleCoord& aCoord)
+{
+  NS_PRECONDITION(aFrame, "non-null frame expected");
+  NS_PRECONDITION(aRenderingContext, "non-null rendering context expected");
+
+  nscoord result = 0;
+  nsStyleUnit unit = aCoord.GetUnit();
+  if (eStyleUnit_Percent == unit) {
+    // Verify no one is trying to calculate a percentage based height
+    // against a height that's shrink wrapping to its content.  In that
+    // case they should treat the specified value like 'auto'.
+    NS_ASSERTION(NS_AUTOHEIGHT != aContainingBlockHeight,
+                 "unexpected containing block height");
+    if (NS_AUTOHEIGHT != aContainingBlockHeight)
+    {
+      float pct = aCoord.GetPercentValue();
+      result = NSToCoordFloor(aContainingBlockHeight * pct);
+    }
+    else {  // safest thing to do for an undefined height is to make it 0
+      result = 0;
+    }
+
+  } else if (eStyleUnit_Coord == unit) {
+    result = aCoord.GetCoordValue();
+  }
+  return result;
+}
+

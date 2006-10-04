@@ -442,6 +442,17 @@ public:
   static nscoord IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
                                        nsIFrame *aFrame,
                                        IntrinsicWidthType aType);
+
+  static nscoord ComputeHorizontalValue(nsIRenderingContext* aRenderingContext,
+                                        nsIFrame *aFrame,
+                                        nscoord aContainingBlockWidth,
+                                        const nsStyleCoord& aCoord);
+
+  static nscoord ComputeVerticalValue(nsIRenderingContext* aRenderingContext,
+                                      nsIFrame *aFrame,
+                                      nscoord aContainingBlockHeight,
+                                      const nsStyleCoord& aCoord);
+
 };
 
 #endif // nsLayoutUtils_h__

@@ -2100,59 +2100,6 @@ nsHTMLReflowState::CalcLineHeight(nsPresContext* aPresContext,
 }
 
 void
-nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
-                                          nsStyleUnit aUnit,
-                                          const nsStyleCoord& aCoord,
-                                          nscoord& aResult)
-{
-  aResult = 0;
-  if (eStyleUnit_Percent == aUnit) {
-    if (NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) {
-      aResult = 0;
-    } else {
-      float pct = aCoord.GetPercentValue();
-      aResult = NSToCoordFloor(aContainingBlockWidth * pct);
-    }
-  
-  } else if (eStyleUnit_Coord == aUnit) {
-    aResult = aCoord.GetCoordValue();
-  }
-  else if (eStyleUnit_Chars == aUnit) {
-    nsStyleContext* styleContext = frame->GetStyleContext();
-    SetFontFromStyle(rendContext, styleContext);
-    nscoord fontWidth;
-    rendContext->GetWidth('M', fontWidth);
-    aResult = aCoord.GetIntValue() * fontWidth;
-  }
-}
-
-void
-nsHTMLReflowState::ComputeVerticalValue(nscoord aContainingBlockHeight,
-                                        nsStyleUnit aUnit,
-                                        const nsStyleCoord& aCoord,
-                                        nscoord& aResult)
-{
-  aResult = 0;
-  if (eStyleUnit_Percent == aUnit) {
-    // Verify no one is trying to calculate a percentage based height against
-    // a height that's shrink wrapping to its content. In that case they should
-    // treat the specified value like 'auto'
-    NS_ASSERTION(NS_AUTOHEIGHT != aContainingBlockHeight, "unexpected containing block height");
-    if (NS_AUTOHEIGHT!=aContainingBlockHeight)
-    {
-      float pct = aCoord.GetPercentValue();
-      aResult = NSToCoordFloor(aContainingBlockHeight * pct);
-    }
-    else {  // safest thing to do for an undefined height is to make it 0
-      aResult = 0;
-    }
-
-  } else if (eStyleUnit_Coord == aUnit) {
-    aResult = aCoord.GetCoordValue();
-  }
-}
-
-void
 nsHTMLReflowState::ComputeMargin(nscoord aContainingBlockWidth,
                                  const nsHTMLReflowState* aContainingBlockRS)
 {
