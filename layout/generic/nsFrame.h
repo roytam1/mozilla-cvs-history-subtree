@@ -114,6 +114,7 @@
 #endif
 
 // handy utilities
+// XXXldb Move to nsLayoutUtils!
 void SetFontFromStyle(nsIRenderingContext* aRC, nsStyleContext* aSC);
 
 //----------------------------------------------------------------------
