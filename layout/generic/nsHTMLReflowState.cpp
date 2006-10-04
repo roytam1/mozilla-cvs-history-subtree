@@ -1848,55 +1848,53 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                                        nscoord aContainingBlockHeight)
 {
   // Compute the content width
+  PRBool calcSideMargins = PR_TRUE;
   if (eStyleUnit_Auto == aWidthUnit) {
+    nsIAtom *fType;
     if (NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType)) {
       // Block-level replaced element in the flow. A specified value of 
       // 'auto' uses the element's intrinsic width (CSS2 10.3.4)
 
       // XXXbz this breaks auto margins on block-level replaced
       // elements, since we never call CalculateBlockSideMargins()
+      calcSideMargins = PR_FALSE;
       mComputedWidth = NS_INTRINSICSIZE;
     } else if (NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) {
       // Width is shrink-to-fit
 
       // XXXbz this breaks auto margins on block-level replaced
       // elements, since we never call CalculateBlockSideMargins()
+      calcSideMargins = PR_FALSE;
+      ShrinkWidthToFit(availableWidth);
+    } else if (nsLayoutAtoms::tableCaptionFrame == (fType = frame->GetType()) &&
+               IsSideCaption(frame)) {
+      mComputedWidth = frame->GetMinWidth(rendContext);
+      AdjustComputedWidth(PR_FALSE);
+    } else if (nsLayoutAtoms::tableFrame == fType) {
+      // The width is shrink-to-fit
       ShrinkWidthToFit(availableWidth);
     } else {
       // Block-level non-replaced element in the flow. 'auto' values
       // for margin-left and margin-right become 0, and the sum of the
       // areas must equal the width of the content-area of the parent
       // element.
-      nsIAtom* fType = frame->GetType();
-      if (nsLayoutAtoms::tableCaptionFrame == fType &&
-          IsSideCaption(frame)) {
-        mComputedWidth = frame->GetMinWidth(rendContext);
-        AdjustComputedWidth(PR_FALSE);
-      } else {
-        if (nsLayoutAtoms::tableFrame == fType) {
-          // The width is shrink-to-fit
-          ShrinkWidthToFit(availableWidth);
-        } else {
-          nscoord inset = mComputedMargin.LeftRight() +
-                          mComputedBorderPadding.LeftRight();
-          mComputedWidth = availableWidth - inset;
-          mComputedWidth = PR_MAX(mComputedWidth, 0);
+      nscoord inset = mComputedMargin.LeftRight() +
+                      mComputedBorderPadding.LeftRight();
+      mComputedWidth = availableWidth - inset;
+      mComputedWidth = PR_MAX(mComputedWidth, 0);
 
-          AdjustComputedWidth(PR_FALSE);
-        }
-      }
-
-      CalculateBlockSideMargins(aAvailWidth, mComputedWidth);
+      AdjustComputedWidth(PR_FALSE);
     }
   } else {
     ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
                            mStylePosition->mWidth, mComputedWidth);
 
     AdjustComputedWidth(PR_TRUE); 
-
-    // Now that we have the computed-width, compute the side margins
-    CalculateBlockSideMargins(aAvailWidth, mComputedWidth);
   }
+
+  // Now that we have the computed-width, compute the side margins
+  if (calcSideMargins) // XXX Should always be true
+    CalculateBlockSideMargins(aAvailWidth, mComputedWidth);
 
   // Compute the content height
   if (eStyleUnit_Auto == aHeightUnit) {
