@@ -402,7 +402,7 @@ function MiniNavStartup()
            homepages = page.split("|");
       } else {
         if (page != null) {
-            var fixedUpURI = gURIFixup.createFixupURI(page, 2 /*fixup url*/ );
+            var fixedUpURI = gURIFixup.createFixupURI(page, 0);
             homepage = fixedUpURI.spec;
         }
       }
@@ -864,7 +864,7 @@ function BrowserHome()
   var page = gPref.getCharPref("browser.startup.homepage");
   if (page != null)
   {
-    var fixedUpURI = gURIFixup.createFixupURI(page, 2 /*fixup url*/ );
+    var fixedUpURI = gURIFixup.createFixupURI(page, 0);
     homepage = fixedUpURI.spec;
   }
 
@@ -1604,7 +1604,7 @@ function URLBarEntered()
     
     if (gURLBar.value.indexOf(" ") == -1)
     {
-      var fixedUpURI = gURIFixup.createFixupURI(url, 2 /*fixup url*/ );
+      var fixedUpURI = gURIFixup.createFixupURI(url, 0);
       gGlobalHistory.markPageAsTyped(fixedUpURI);
       
       // Notify anyone interested that we are loading.
