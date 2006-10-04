@@ -90,7 +90,9 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*       aPresContext,
                                      const nsSize&        aAvailableSpace)
   : mReflowDepth(0)
 {
-  NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");
+  NS_PRECONDITION(aPresContext, "no pres context");
+  NS_PRECONDITION(aRenderingContext, "no rendering context");
+  NS_PRECONDITION(aFrame, "no frame");
   parentReflowState = nsnull;
   frame = aFrame;
   availableWidth = aAvailableSpace.width;
@@ -133,6 +135,8 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
+  NS_PRECONDITION(aPresContext, "no pres context");
+  NS_PRECONDITION(aFrame, "no frame");
   NS_ASSERTION((aContainingBlockWidth == -1) == (aContainingBlockHeight == -1),
                "cb width and height should only be non-default together");
 
@@ -2114,17 +2118,11 @@ nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
     aResult = aCoord.GetCoordValue();
   }
   else if (eStyleUnit_Chars == aUnit) {
-    if ((nsnull == rendContext) || (nsnull == frame)) {
-      // We can't compute it without a rendering context or frame, so
-      // pretend its zero...
-    }
-    else {
-      nsStyleContext* styleContext = frame->GetStyleContext();
-      SetFontFromStyle(rendContext, styleContext);
-      nscoord fontWidth;
-      rendContext->GetWidth('M', fontWidth);
-      aResult = aCoord.GetIntValue() * fontWidth;
-    }
+    nsStyleContext* styleContext = frame->GetStyleContext();
+    SetFontFromStyle(rendContext, styleContext);
+    nscoord fontWidth;
+    rendContext->GetWidth('M', fontWidth);
+    aResult = aCoord.GetIntValue() * fontWidth;
   }
 }
 
