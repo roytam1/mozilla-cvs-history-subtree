@@ -1123,7 +1123,8 @@ public:
    * The |height| member of the return value may be
    * NS_UNCONSTRAINEDSIZE, but the |width| member must not be.
    *
-   * @param aCBWidth  The width of the element's containing block.
+   * @param aCBSize  The size of the element's containing block.  (Well,
+   *                 the |height| component isn't really.)
    * @param aMargin  The sum of the left and right margins of the
    *                 frame, including actual values resulting from
    *                 percentages, but not including actual values
@@ -1138,7 +1139,7 @@ public:
    *                     it's floating, absolutely positioned, or
    *                     inline-block).
    */
-  virtual nsSize ComputeSize(nscoord aCBWidth, nscoord aMargin,
+  virtual nsSize ComputeSize(nsSize aCBSize, nscoord aMargin,
                              nscoord aBorder, nscoord aPadding,
                              PRBool aShrinkWrap) = 0;
 

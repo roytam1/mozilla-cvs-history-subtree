@@ -2868,7 +2868,7 @@ nsFrame::IntrinsicWidthOffsets()
 }
 
 /* virtual */ nsSize
-nsFrame::ComputeSize(nscoord aCBWidth, nscoord aMargin, nscoord aBorder,
+nsFrame::ComputeSize(nsSize aCBSize, nscoord aMargin, nscoord aBorder,
                      nscoord aPadding, PRBool aShrinkWrap)
 {
   return nsSize(0, NS_UNCONSTRAINEDSIZE);

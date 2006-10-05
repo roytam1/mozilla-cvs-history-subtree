@@ -278,7 +278,7 @@ public:
                                   InlinePrefWidthData *aData);
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
-  virtual nsSize ComputeSize(nscoord aCBWidth, nscoord aMargin,
+  virtual nsSize ComputeSize(nsSize aCBSize, nscoord aMargin,
                              nscoord aBorder, nscoord aPadding,
                              PRBool aShrinkWrap);
 
