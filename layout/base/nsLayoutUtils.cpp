@@ -1162,17 +1162,13 @@ nsLayoutUtils::ComputeHorizontalValue(nsIRenderingContext* aRenderingContext,
 {
   NS_PRECONDITION(aFrame, "non-null frame expected");
   NS_PRECONDITION(aRenderingContext, "non-null rendering context expected");
+  NS_PRECONDITION(aContainingBlockWidth != NS_UNCONSTRAINEDSIZE,
+                  "unconstrained widths no longer supported");
 
   nscoord result = 0;
   nsStyleUnit unit = aCoord.GetUnit();
   if (eStyleUnit_Percent == unit) {
-    if (NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) {
-      result = 0;
-    } else {
-      float pct = aCoord.GetPercentValue();
-      result = NSToCoordFloor(aContainingBlockWidth * pct);
-    }
-  
+    result = NSToCoordFloor(aContainingBlockWidth * aCoord.GetPercentValue());
   } else if (eStyleUnit_Coord == unit) {
     result = aCoord.GetCoordValue();
   }
@@ -1193,6 +1189,12 @@ nsLayoutUtils::ComputeVerticalValue(nsIRenderingContext* aRenderingContext,
 {
   NS_PRECONDITION(aFrame, "non-null frame expected");
   NS_PRECONDITION(aRenderingContext, "non-null rendering context expected");
+  // XXXldb Some callers explicitly check aContainingBlockHeight against
+  // NS_AUTOHEIGHT *and* unit against eStyleUnit_Percent before calling this
+  // function, so this assertion probably needs to be moved back inside the
+  // percentage case.
+  // XXXldb Many callers pass a non-'auto' containing block height when
+  // according to CSS2.1 they should be passing 'auto'.
   NS_PRECONDITION(NS_AUTOHEIGHT != aContainingBlockHeight,
                   "unexpected 'containing block height'");
 
