@@ -1851,6 +1851,16 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                                        nscoord aContainingBlockWidth,
                                        nscoord aContainingBlockHeight)
 {
+#if 0
+  nsSize size = frame->ComputeSize(nsSize(aContainingBlockWidth,
+                                          aContainingBlockHeight),
+                                   mComputedMargin.LeftRight(),
+                                   mComputedBorderPadding.LeftRight() -
+                                     mComputedPadding.LeftRight(),
+                                   mComputedPadding.LeftRight(),
+                                   PR_FALSE);
+#endif
+
   // Compute the content width
   PRBool calcSideMargins = PR_TRUE;
   if (eStyleUnit_Auto == aWidthUnit) {
