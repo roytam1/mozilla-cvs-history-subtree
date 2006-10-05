@@ -137,8 +137,11 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
 {
   NS_PRECONDITION(aPresContext, "no pres context");
   NS_PRECONDITION(aFrame, "no frame");
-  NS_ASSERTION((aContainingBlockWidth == -1) == (aContainingBlockHeight == -1),
-               "cb width and height should only be non-default together");
+  NS_PRECONDITION((aContainingBlockWidth == -1) ==
+                    (aContainingBlockHeight == -1),
+                  "cb width and height should only be non-default together");
+  NS_PRECONDITION(aInit == PR_TRUE || aInit == PR_FALSE,
+                  "aInit out of range for PRBool");
 
   parentReflowState = &aParentReflowState;
   frame = aFrame;
