@@ -1615,6 +1615,9 @@ function URLBarEntered()
         os.notifyObservers(null, "loading-domain", host);
       }
       catch(e) {onErrorHandler(e);}
+      
+      gURLBar.value = fixedUpURI.spec;
+      
     }
     
     loadURI(gURLBar.value);
