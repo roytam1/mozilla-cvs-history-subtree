@@ -1082,10 +1082,9 @@ MakeNew4xStreamInternal(NPP npp, const char *relativeURL, const char *target,
   NS_ASSERTION(pm, "failed to get plugin manager");
   if (!pm) return NPERR_GENERIC_ERROR;
 
-  nsCOMPtr<nsIPluginStreamListener> listener;
+  nsIPluginStreamListener* listener = nsnull;
   if (target == nsnull)
-    ((ns4xPluginInstance*)inst)->NewNotifyStream(getter_AddRefs(listener),
-                                                 notifyData,
+    ((ns4xPluginInstance*)inst)->NewNotifyStream(&listener, notifyData,
                                                  bDoNotify, relativeURL);
 
   switch (type) {
