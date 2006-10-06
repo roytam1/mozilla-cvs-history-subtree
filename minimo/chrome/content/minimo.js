@@ -402,8 +402,9 @@ function MiniNavStartup()
            homepages = page.split("|");
       } else {
         if (page != null) {
-            var fixedUpURI = gURIFixup.createFixupURI(page, 0);
-            homepage = fixedUpURI.spec;
+
+          homepage = BrowserFixUpURI(page);
+
         }
       }
 
@@ -864,8 +865,7 @@ function BrowserHome()
   var page = gPref.getCharPref("browser.startup.homepage");
   if (page != null)
   {
-    var fixedUpURI = gURIFixup.createFixupURI(page, 0);
-    homepage = fixedUpURI.spec;
+    homepage = BrowserFixUpURI(page);
   }
 
   loadURI(homepage);
@@ -1604,8 +1604,8 @@ function URLBarEntered()
     
     if (gURLBar.value.indexOf(" ") == -1)
     {
-      var fixedUpURI = gURIFixup.createFixupURI(url, 0);
-      gGlobalHistory.markPageAsTyped(fixedUpURI);
+
+      gURLBar.value = BrowserFixUpURI(url);
       
       // Notify anyone interested that we are loading.
       try {
@@ -1615,9 +1615,7 @@ function URLBarEntered()
         os.notifyObservers(null, "loading-domain", host);
       }
       catch(e) {onErrorHandler(e);}
-      
-      gURLBar.value = fixedUpURI.spec;
-      
+
     }
     
     loadURI(gURLBar.value);
@@ -2112,4 +2110,15 @@ function BrowserFileOpen() {
     
   }
   
+}
+
+/*
+ * URI canonizer / fix up util 
+ */
+
+function BrowserFixUpURI(pageURI) {
+
+  var fixedUpURI = gURIFixup.createFixupURI(pageURI, 0);
+  return fixedUpURI.spec;
+
 }
