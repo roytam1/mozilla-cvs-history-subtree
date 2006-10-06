@@ -1574,8 +1574,8 @@ void nsCellMap::InsertCells(nsTableCellMap& aMap,
   if (aCellFrames.Count() == 0) return;
   PRInt32 numCols = aMap.GetColCount();
   if (aColIndexBefore >= numCols) {
-    NS_ASSERTION(PR_FALSE, "bad arg in nsCellMap::InsertCellAt");
-    return;
+    NS_ERROR("Inserting instead of appending cells indicates a serious cellmap error");
+    aColIndexBefore = numCols - 1;
   }
 
   // get the starting col index of the 1st new cells 
