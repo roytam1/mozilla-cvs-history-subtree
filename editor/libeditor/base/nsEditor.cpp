@@ -4620,6 +4620,9 @@ nsEditor::DeleteSelectionImpl(nsIEditor::EDirection aAction)
       selection->GetFocusOffset(&deleteCharOffset);
       if (!deleteCharData) {
         nsCOMPtr<nsINode> parentNode(do_QueryInterface(deleteNode));
+        PRUint32 childCount = parentNode->GetChildCount();
+        if (deleteCharOffset >= childCount)
+          deleteCharOffset = childCount - 1;
         deleteNode = do_QueryInterface(parentNode->GetChildAt(deleteCharOffset));
         deleteCharData = do_QueryInterface(deleteNode);
         deleteCharOffset = 0;
