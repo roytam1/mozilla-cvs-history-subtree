@@ -43,7 +43,6 @@
 #include "nsMargin.h"
 #include "nsStyleCoord.h"
 #include "nsIFrame.h"
-#include "nsLayoutUtils.h"
 
 class nsPresContext;
 class nsIRenderingContext;
@@ -421,27 +420,14 @@ protected:
                            nscoord aContainingBlockWidth,
                            nscoord aContainingBlockHeight);
 
-  void ComputeHorizontalValue(nscoord aContainingBlockWidth,
-                              nsStyleUnit aUnit,
-                              const nsStyleCoord& aCoord,
-                              nscoord& aResult)
-  {
-    NS_ASSERTION(aUnit == aCoord.GetUnit(), "unit mismatch");
-    aResult = nsLayoutUtils::ComputeHorizontalValue(rendContext, frame,
-                                                    aContainingBlockWidth,
-                                                    aCoord);
-  }
-
-  void ComputeVerticalValue(nscoord aContainingBlockHeight,
-                            nsStyleUnit aUnit,
-                            const nsStyleCoord& aCoord,
-                            nscoord& aResult)
-  {
-    NS_ASSERTION(aUnit == aCoord.GetUnit(), "unit mismatch");
-    aResult = nsLayoutUtils::ComputeVerticalValue(rendContext, frame,
-                                                  aContainingBlockHeight,
-                                                  aCoord);
-  }
+  inline void ComputeHorizontalValue(nscoord aContainingBlockWidth,
+                                     nsStyleUnit aUnit,
+                                     const nsStyleCoord& aCoord,
+                                     nscoord& aResult);
+  inline void ComputeVerticalValue(nscoord aContainingBlockHeight,
+                                   nsStyleUnit aUnit,
+                                   const nsStyleCoord& aCoord,
+                                   nscoord& aResult);
 
   // Computes margin values from the specified margin style information, and
   // fills in the mComputedMargin member

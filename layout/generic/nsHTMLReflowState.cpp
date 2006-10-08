@@ -178,6 +178,30 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
 #endif // IBMBIDI
 }
 
+inline void
+nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
+                                          nsStyleUnit aUnit,
+                                          const nsStyleCoord& aCoord,
+                                          nscoord& aResult)
+{
+  NS_ASSERTION(aUnit == aCoord.GetUnit(), "unit mismatch");
+  aResult = nsLayoutUtils::ComputeHorizontalValue(rendContext, frame,
+                                                  aContainingBlockWidth,
+                                                  aCoord);
+}
+
+inline void
+nsHTMLReflowState::ComputeVerticalValue(nscoord aContainingBlockHeight,
+                                        nsStyleUnit aUnit,
+                                        const nsStyleCoord& aCoord,
+                                        nscoord& aResult)
+{
+  NS_ASSERTION(aUnit == aCoord.GetUnit(), "unit mismatch");
+  aResult = nsLayoutUtils::ComputeVerticalValue(rendContext, frame,
+                                                aContainingBlockHeight,
+                                                aCoord);
+}
+
 void
 nsHTMLReflowState::Init(nsPresContext* aPresContext,
                         nscoord         aContainingBlockWidth,
