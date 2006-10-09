@@ -160,7 +160,6 @@ Iterator(JSContext *cx, JSObject *iterobj, uintN argc, jsval *argv, jsval *rval)
     JSObject *obj;
     JSBool keyonly;
     jsid id;
-    JSObject *obj2;
     jsval fval;
 
     /* XXX work around old valueOf call hidden beneath js_ValueToObject */
@@ -181,8 +180,16 @@ Iterator(JSContext *cx, JSObject *iterobj, uintN argc, jsval *argv, jsval *rval)
     }
 
     id = ATOM_TO_JSID(cx->runtime->atomState.iteratorAtom);
-    if (!JS_GetMethodById(cx, obj, id, &obj2, &fval))
-        return JS_FALSE;
+#if JS_HAS_XML_SUPPORT
+    if (OBJECT_IS_XML(cx, obj)) {
+        if (!js_GetXMLFunction(cx, obj, id, &fval))
+            return JS_FALSE;
+    } else
+#endif
+    {
+        if (!OBJ_GET_PROPERTY(cx, obj, id, &fval))
+            return JS_FALSE;
+    }
 
     if (JSVAL_IS_VOID(fval)) {
         /* Fail over to the default enumerating native iterator. */
@@ -192,8 +199,7 @@ Iterator(JSContext *cx, JSObject *iterobj, uintN argc, jsval *argv, jsval *rval)
                                     keyonly ? 0 : JSITER_FOREACH,
                                     rval);
     }
-    argv[0] = OBJECT_TO_JSVAL(obj2);
-    return js_InternalCall(cx, obj2, fval, argc - 1, argv + 1, rval);
+    return js_InternalCall(cx, obj, fval, argc - 1, argv + 1, rval);
 }
 
 static JSBool
@@ -426,8 +432,18 @@ js_ValueToIterator(JSContext *cx, jsval v, uintN flags)
     }
 
     JS_PUSH_SINGLE_TEMP_ROOT(cx, obj, &tvr);
-    if (!JS_GetMethodById(cx, obj, ATOM_TO_JSID(atom), &obj, &fval))
-        goto bad;
+
+#if JS_HAS_XML_SUPPORT
+    if (OBJECT_IS_XML(cx, obj)) {
+        if (!js_GetXMLFunction(cx, obj, ATOM_TO_JSID(atom), &fval))
+            goto bad;
+    } else
+#endif
+    {
+        if (!OBJ_GET_PROPERTY(cx, obj, ATOM_TO_JSID(atom), &fval))
+            goto bad;
+    }
+
     if (JSVAL_IS_VOID(fval)) {
         /* Fail over to the default enumerating native iterator. */
         if (!js_NewNativeIterator(cx, obj,

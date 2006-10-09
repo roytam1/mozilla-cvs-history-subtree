@@ -7909,6 +7909,16 @@ js_GetXMLProperty(JSContext *cx, JSObject *obj, jsval name, jsval *vp)
     return GetProperty(cx, obj, name, vp);
 }
 
+extern JSBool
+js_GetXMLFunction(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
+{
+    JSXML *xml;
+
+    JS_ASSERT(OBJECT_IS_XML(cx, obj));
+    xml = (JSXML *) JS_GetPrivate(cx, obj);
+    return GetFunction(cx, obj, xml, id, vp);
+}
+
 JSBool
 js_SetXMLProperty(JSContext *cx, JSObject *obj, jsval name, jsval *vp)
 {
