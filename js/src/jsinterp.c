@@ -2765,9 +2765,11 @@ interrupt:
 #ifdef DEBUG
             fid = JSVAL_NULL;
 #endif
+            JS_KEEP_ATOMS(rt);
             ok = js_CallIteratorNext(cx, iterobj, flags,
                                      (flags & JSITER_ENUMERATE) ? &fid : NULL,
                                      &rval);
+            JS_UNKEEP_ATOMS(rt);
             if (!ok) {
                 /* Nothing more to iterate in obj, or some other exception? */
                 if (!cx->throwing ||
