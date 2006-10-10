@@ -1334,8 +1334,7 @@ function CCKZip(zipfile, location)
 
 function CCKWriteXULOverlay(destdir)
 {
-  var tooltipXUL  = '  <button id="navigator-throbber" tooltiptext="&throbber.tooltip;"/>\n';
-
+  var tooltipXUL  = '  <button id="navigator-throbber" oncommand="goClickThrobber(\'browser.throbber.url\', event)" onclick="checkForMiddleClick(this, event);" tooltiptext="&throbber.tooltip;"/>\n';
   var titlebarXUL = '  <window id="main-window" titlemodifier="&mainWindow.titlemodifier;"/>\n';
 
   var helpmenu1   = '  <menupopup id="menu_HelpPopup">\n';
