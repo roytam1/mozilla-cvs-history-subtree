@@ -172,6 +172,7 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode,
         aRegion->GetRegion(getter_AddRefs(geckoRegion));
     
     // if we were given a scriptable region, let's get a box for it for dragging
+    // TODO. Region may represent multiple rects - when dragging multiple items.
     if (nsnull != geckoRegion)
     {
         BRegion dragRegion;
