@@ -1807,11 +1807,13 @@ restart:
         if (acx->localRootStack)
             js_MarkLocalRoots(cx, acx->localRootStack);
         for (tvr = acx->tempValueRooters; tvr; tvr = tvr->down) {
-            if (tvr->count < 0) {
+            if (tvr->count == -1) {
                 if (JSVAL_IS_GCTHING(tvr->u.value)) {
-                    GC_MARK(cx, JSVAL_TO_GCTHING(tvr->u.value), "tvr->u.value",
-                            NULL);
+                    GC_MARK(cx, JSVAL_TO_GCTHING(tvr->u.value),
+                            "tvr->u.value", NULL);
                 }
+            } else if (tvr->count == -2) {
+                tvr->u.marker(cx, tvr);
             } else {
                 GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");
             }
