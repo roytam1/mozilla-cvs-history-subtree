@@ -72,7 +72,9 @@ private:
 // zapAudioOut
 
 zapAudioOut::zapAudioOut()
-    : mStream(nsnull)
+    : mStream(nsnull),
+      mClockMS(0),
+      mSampleClockRemainder(0)
 {
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
@@ -366,11 +368,14 @@ nsresult zapAudioOut::PlayFrame(void* outputBuffer)
       memcpy(outputBuffer, data.BeginReading(), l);
     }
   }
+
+  mClockMS += (mStreamParameters.samples + mSampleClockRemainder) * 1000 / mStreamParameters.sample_rate;
+  mSampleClockRemainder = (mStreamParameters.samples + mSampleClockRemainder) * 1000 % mStreamParameters.sample_rate;
   
   if (mClockOutput) {
     nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
     frame->mStreamInfo = mClockStreamInfo;
-    frame->mTimestamp = 0; // XXX
+    frame->mTimestamp = mClockMS;
     mClockOutput->ConsumeFrame(frame);
   }
 

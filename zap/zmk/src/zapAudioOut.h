@@ -102,6 +102,9 @@ private:
 
   nsCOMPtr<zapIMediaSink> mClockOutput;
   nsCOMPtr<nsIWritablePropertyBag2> mClockStreamInfo;
+
+  PRUint32 mClockMS;
+  PRUint32 mSampleClockRemainder;
 };
 
 #endif // __ZAP_AUDIOOUT_H__

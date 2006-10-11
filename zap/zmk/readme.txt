@@ -220,6 +220,8 @@ zapIMediaFrame::streamInfo :
 - ACString "type" := "clock"
 - double "clock_cycle" := 1/clock rate in seconds
 
+zapIMediaFrame::timestamp incremented in ms.
+
 zapIMediaFrame::data : empty
 
 
@@ -293,6 +295,7 @@ audio/pcm frames with
 Output stream:
 clock frames with
 - double "clock_cycle" : duration of one clock cycle in seconds.
+- zapIMediaFrame::timestamp incremented in ms.
 
 
 ----------------------------------------------------------------------
