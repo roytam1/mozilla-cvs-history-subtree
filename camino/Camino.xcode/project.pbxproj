@@ -4700,6 +4700,7 @@
 				DE09CE210ACB9BB8008A8D9C,
 				DE09CE220ACB9BB8008A8D9C,
 				DE09CE230ACB9BB8008A8D9C,
+				DE8AD7400ADB4F67009D44F6,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8622,6 +8623,7 @@
 				DE09CE260ACB9BB8008A8D9C,
 				DE09CE270ACB9BB8008A8D9C,
 				DE09CE280ACB9BB8008A8D9C,
+				DE8AD7410ADB4F67009D44F6,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -14260,6 +14262,26 @@
 			settings = {
 			};
 		};
+		DE8AD73F0ADB4F67009D44F6 = {
+			isa = PBXFileReference;
+			lastKnownFileType = image.tiff;
+			name = bm_horizontal_separator.tif;
+			path = resources/images/chrome/bm_horizontal_separator.tif;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE8AD7400ADB4F67009D44F6 = {
+			fileRef = DE8AD73F0ADB4F67009D44F6;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE8AD7410ADB4F67009D44F6 = {
+			fileRef = DE8AD73F0ADB4F67009D44F6;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		DE8C629E0AB67E8A00078871 = {
 			isa = PBXFileReference;
 			lastKnownFileType = image.tiff;
@@ -14964,6 +14986,7 @@
 				0FFE0A80079B147F00966027,
 				0FB6D99A089B276100414498,
 				0F01117308F2FE7C00423C02,
+				DE8AD73F0ADB4F67009D44F6,
 				0FE7703308C799BB00AFB850,
 				0FE7703408C799BB00AFB850,
 				0FE7703508C799BB00AFB850,
