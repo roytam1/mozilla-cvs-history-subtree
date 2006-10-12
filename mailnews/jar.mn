@@ -244,6 +244,7 @@ en-US.jar:
     locale/en-US/messenger/messengercompose/addressingWidgetOverlay.dtd (compose/resources/locale/en-US/addressingWidgetOverlay.dtd)
     locale/en-US/messenger/messengercompose/askSendFormat.dtd           (compose/resources/locale/en-US/askSendFormat.dtd)
     locale/en-US/messenger/messengercompose/sendProgress.dtd            (compose/resources/locale/en-US/sendProgress.dtd)
+    locale/en-US/messenger/messengercompose/mailComposeEditorOverlay.dtd (compose/resources/locale/en-US/mailComposeEditorOverlay.dtd)
     locale/en-US/messenger/messengercompose/MsgAttachPage.dtd           (compose/resources/locale/en-US/MsgAttachPage.dtd)
     locale/en-US/messenger/messengercompose/composeMsgs.properties      (compose/resources/locale/en-US/composeMsgs.properties)
     locale/en-US/messenger/imapMsgs.properties                          (imap/resources/locale/en-US/imapMsgs.properties)
