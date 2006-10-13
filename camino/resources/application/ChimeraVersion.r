@@ -53,12 +53,12 @@
 #define     VERSION_MAJOR           1
 #define     VERSION_MINOR           0x10    // revision & fix in BCD
 #define     VERSION_KIND            alpha   // alpha, beta, or final
-#define     VERSION_MICRO           0       // internal stage: alpha or beta number
+#define     VERSION_MICRO           1       // internal stage: alpha or beta number
 
 
 // Version Strings (Finder's Get Info dialog box) //
 
-#define     VERSION_STRING          "1.0+"
+#define     VERSION_STRING          "1.1a1"
 
 #define     COPYRIGHT_STRING        "© 1998-2006 Contributors"
 #define     GETINFO_VERSION         VERSION_STRING ", " COPYRIGHT_STRING
