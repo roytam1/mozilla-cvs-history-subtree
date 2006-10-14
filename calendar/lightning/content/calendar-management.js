@@ -105,6 +105,8 @@ var ltnCalendarManagerObserver = {
     },
 
     onCalendarUnregistering: function(aCalendar) {
+        removeCalendarFromTree(aCalendar);
+        getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
     onCalendarDeleting: function(aCalendar) {
