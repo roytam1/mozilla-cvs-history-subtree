@@ -599,8 +599,8 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:preference", "0.1");
-Identity.rdfLiteralAttrib("urn:mozilla:zap:feature-class", "feature-class-personal");
-Identity.rdfLiteralAttrib("urn:mozilla:zap:feature-priority", "feature-priority-normal");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:feature-class", "urn:mozilla:zap:feature-class-personal");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:feature-priority", "urn:mozilla:zap:feature-priority-normal");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "true");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
