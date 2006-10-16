@@ -1984,7 +1984,7 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
         if (!myGetter.IsEmpty())
         {
           nsCAutoString buf;
-          mCiteReference.AssignLiteral("mid");
+          mCiteReference.AssignLiteral("mid:");
           AppendASCIItoUTF16(NS_EscapeURL(myGetter, esc_FileBaseName | esc_Forced, buf),
                              mCiteReference);
         }
