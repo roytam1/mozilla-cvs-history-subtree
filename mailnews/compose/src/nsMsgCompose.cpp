@@ -1339,7 +1339,7 @@ NS_IMETHODIMP nsMsgCompose::InitEditor(nsIEditor* aEditor, nsIDOMWindow* aConten
   const nsDependentCString msgCharSet(m_compFields->GetCharacterSet());
   m_editor->SetDocumentCharacterSet(msgCharSet);
 
-  nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(m_window);
+  nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(aContentWindow);
 
   nsIDocShell *docShell = globalObj->GetDocShell();
   NS_ENSURE_TRUE(docShell, NS_ERROR_UNEXPECTED);
