@@ -23,6 +23,8 @@ extensions/{641d8d09-7dda-4850-8228-ac0ab65e2ac9}/install.rdf
 extensions/{641d8d09-7dda-4850-8228-ac0ab65e2ac9}/
 searchplugins/dictionary.src
 searchplugins/dictionary.png
+searchplugins/tr-tdk.src
+searchplugins/tr-tdk.png
 searchplugins/
 components/component.reg
 components/compreg.dat
