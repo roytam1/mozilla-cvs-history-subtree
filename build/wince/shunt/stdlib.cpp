@@ -111,7 +111,7 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
     
     if(NULL != inPath && '\0' != *inPath)
     {
-        char* dup = (char*) malloc(strlen(inPath));
+        char* dup = (char*) malloc(strlen(inPath)+1);
         if(NULL != dup)
         {
             strcpy(dup, inPath);
