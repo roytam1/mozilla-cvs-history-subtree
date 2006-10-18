@@ -99,3 +99,5 @@ $(JARFILE_SRC): $(JARFILE)
 # Build the implementation Java classes, which depend on these interfaces
 export:: $(JARFILE) $(JARFILE_SRC)
 	$(MAKE) -C ../src jarfile
+
+.NOTPARALLEL::
