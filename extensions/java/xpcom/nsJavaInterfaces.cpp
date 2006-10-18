@@ -13,9 +13,8 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is
- * IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * The Initial Developer of the Original Code is IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -51,14 +50,47 @@
 #include "nsXULAppAPI.h"
 #include "nsILocalFile.h"
 
+// profile support
+#include "nsIObserverService.h"
+#include "nsIProfileChangeStatus.h"
+#include "jsapi.h"
+#include "nsIJSContextStack.h"
+#include "nsIToolkitProfile.h"
+
+PRBool profileNotified = PR_FALSE;
+
+extern nsresult
+NS_LockProfilePath(nsILocalFile* aPath, nsILocalFile* aTempPath,
+                   nsIProfileUnlocker* *aUnlocker, nsIProfileLock* *aResult);
+
+class ProfileChangeStatusImpl : public nsIProfileChangeStatus
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIPROFILECHANGESTATUS
+  ProfileChangeStatusImpl() { }
+private:
+  ~ProfileChangeStatusImpl() { }
+};
+
+
+extern "C" NS_EXPORT void
+MOZILLA_NATIVE(initialize) (JNIEnv* env, jobject)
+{
+  if (!InitializeJavaGlobals(env)) {
+    jclass clazz =
+        env->FindClass("org/mozilla/xpcom/XPCOMInitializationException");
+    if (clazz) {
+      env->ThrowNew(clazz, "Failed to initialize JavaXPCOM");
+    }
+  }
+}
 
 nsresult
 InitEmbedding_Impl(JNIEnv* env, jobject aLibXULDirectory,
                    jobject aAppDirectory, jobject aAppDirProvider)
 {
   nsresult rv;
-  if (!InitializeJavaGlobals(env))
-    return NS_ERROR_FAILURE;
 
   // create an nsILocalFile from given java.io.File
   nsCOMPtr<nsILocalFile> libXULDir;
@@ -100,6 +132,37 @@ GRE_NATIVE(initEmbedding) (JNIEnv* env, jobject, jobject aLibXULDirectory,
 extern "C" NS_EXPORT void
 GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject)
 {
+  if (profileNotified) {
+    nsCOMPtr<nsIObserverService> obssvc
+      (do_GetService("@mozilla.org/observer-service;1"));
+    NS_ASSERTION(obssvc, "No observer service?");
+    if (obssvc) {
+      nsCOMPtr<nsIProfileChangeStatus> cs = new ProfileChangeStatusImpl();
+      static const PRUnichar kShutdownPersist[] =
+        {'s','h','u','t','d','o','w','n','-','p','e','r','s','i','s','t','\0'};
+      obssvc->NotifyObservers(cs, "profile-change-net-teardown",
+                              kShutdownPersist);
+      obssvc->NotifyObservers(cs, "profile-change-teardown", kShutdownPersist);
+
+      // Now that things are torn down, force JS GC so that things
+      // which depend on resources which are about to go away in
+      // "profile-before-change" are destroyed first.
+      nsCOMPtr<nsIThreadJSContextStack> stack
+        (do_GetService("@mozilla.org/js/xpc/ContextStack;1"));
+      if (stack)
+      {
+        JSContext *cx = nsnull;
+        stack->GetSafeJSContext(&cx);
+        if (cx)
+          ::JS_GC(cx);
+      }
+
+      // Notify observers of a profile change
+      obssvc->NotifyObservers(cs, "profile-before-change", kShutdownPersist);
+    }
+    profileNotified = PR_FALSE;
+  }
+
   // Free globals before calling XRE_TermEmbedding(), since we need some
   // XPCOM services.
   FreeJavaGlobals(env);
@@ -107,13 +170,61 @@ GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject)
   XRE_TermEmbedding();
 }
 
+extern "C" NS_EXPORT jobject
+GRE_NATIVE(lockProfileDirectory) (JNIEnv* env, jobject, jobject aDirectory)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+
+  if (aDirectory) {
+    nsCOMPtr<nsILocalFile> profileDir;
+    rv = File_to_nsILocalFile(env, aDirectory, getter_AddRefs(profileDir));
+
+    if (NS_SUCCEEDED(rv)) {
+      nsIProfileLock* lock;
+      rv = NS_LockProfilePath(profileDir, nsnull, nsnull, &lock);
+
+      if (NS_SUCCEEDED(rv)) {
+        jclass clazz =
+            env->FindClass("org/mozilla/xpcom/ProfileLock");
+        if (clazz) {
+          jmethodID mid = env->GetMethodID(clazz, "<init>", "(J)V");
+          if (mid) {
+            return env->NewObject(clazz, mid, NS_REINTERPRET_CAST(jlong, lock));
+          }
+        }
+
+        // if we get here, then something failed
+        rv = NS_ERROR_FAILURE;
+      }
+    }
+  }
+
+  ThrowException(env, rv, "Failure in lockProfileDirectory");
+  return nsnull;
+}
+
+extern "C" NS_EXPORT void
+GRE_NATIVE(notifyProfile) (JNIEnv *env, jobject)
+{
+  if (!profileNotified) {
+    nsCOMPtr<nsIObserverService> obsSvc
+      (do_GetService("@mozilla.org/observer-service;1"));
+
+    if (obsSvc) {
+      profileNotified = PR_TRUE;
+
+      static const PRUnichar kStartup[] = {'s','t','a','r','t','u','p','\0'};
+      obsSvc->NotifyObservers(nsnull, "profile-do-change", kStartup);
+      obsSvc->NotifyObservers(nsnull, "profile-after-change", kStartup);
+    }
+  }
+}
+
 nsresult
 InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
                jobject aAppFileLocProvider, jobject* aResult)
 {
   nsresult rv;
-  if (!InitializeJavaGlobals(env))
-    return NS_ERROR_FAILURE;
 
   // create an nsILocalFile from given java.io.File
   nsCOMPtr<nsILocalFile> directory;

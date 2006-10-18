@@ -13,9 +13,8 @@
 #
 # The Original Code is Java XPCOM Bindings.
 #
-# The Initial Developer of the Original Code is
-# IBM Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2004
+# The Initial Developer of the Original Code is IBM Corporation.
+# Portions created by the Initial Developer are Copyright (C) 2006
 # IBM Corporation. All Rights Reserved.
 #
 # Contributor(s):
@@ -48,12 +47,15 @@ JARFILE_SRC = $(patsubst %.jar,%-src.jar,$(JARFILE))
 JAVA_SRCS = \
 		$(srcdir)/Mozilla.java \
 		$(srcdir)/GREVersionRange.java \
+		$(srcdir)/IMozilla.java \
 		$(srcdir)/IGRE.java \
 		$(srcdir)/IXPCOM.java \
-		$(srcdir)/../XPCOMException.java \
 		$(srcdir)/IAppFileLocProvider.java \
 		$(srcdir)/INIParser.java \
 		$(srcdir)/VersionComparator.java \
+		$(srcdir)/ProfileLock.java \
+		$(srcdir)/../XPCOMException.java \
+		$(srcdir)/XPCOMInitializationException.java \
 		$(NULL)
 
 # install jars into SDK

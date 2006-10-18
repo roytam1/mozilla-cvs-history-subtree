@@ -37,7 +37,7 @@
 
 package org.mozilla.xpcom;
 
-import java.io.*;
+import java.io.File;
 
 
 public interface IXPCOM {
@@ -58,7 +58,7 @@ public interface IXPCOM {
    *
    * @return the service manager
    *
-   * @exception XPCOMException <ul>
+   * @throws XPCOMException <ul>
    *      <li> NS_ERROR_NOT_INITIALIZED - if static globals were not initialied,
    *            which can happen if XPCOM is reloaded, but did not completly
    *            shutdown. </li>
@@ -75,7 +75,7 @@ public interface IXPCOM {
    * @param aServMgr    The service manager which was returned by initXPCOM.
    *                    This will release servMgr.
    *
-   * @exception XPCOMException  if a failure occurred during termination
+   * @throws XPCOMException  if a failure occurred during termination
    */
   void shutdownXPCOM(nsIServiceManager aServMgr) throws XPCOMException;
 
@@ -84,7 +84,7 @@ public interface IXPCOM {
    *
    * @return the service manager
    *
-   * @exception XPCOMException
+   * @throws XPCOMException
    */
   nsIServiceManager getServiceManager() throws XPCOMException;
 
@@ -93,7 +93,7 @@ public interface IXPCOM {
    *
    * @return the component manager
    *
-   * @exception XPCOMException
+   * @throws XPCOMException
    */
   nsIComponentManager getComponentManager() throws XPCOMException;
 
@@ -102,7 +102,7 @@ public interface IXPCOM {
    * 
    * @return the component registration manager
    *
-   * @exception XPCOMException
+   * @throws XPCOMException
    */
   nsIComponentRegistrar getComponentRegistrar() throws XPCOMException;
 
@@ -119,7 +119,7 @@ public interface IXPCOM {
    *
    * @return an instance of an nsILocalFile that points to given path
    *
-   * @exception XPCOMException <ul>
+   * @throws XPCOMException <ul>
    *      <li> NS_ERROR_FILE_UNRECOGNIZED_PATH - raised for unrecognized paths
    *           or relative paths (must supply full file path) </li>
    * </ul>

@@ -13,9 +13,8 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is
- * IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * The Initial Developer of the Original Code is IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -37,7 +36,7 @@
 
 package org.mozilla.xpcom;
 
-import java.io.*;
+import java.io.File;
 
 
 public interface IGRE {
@@ -70,11 +69,57 @@ public interface IGRE {
    * <p>
    * NOTE: Release any references to XPCOM objects that you may be holding
    *       before calling this function.
-   *
-   * @throws XPCOMException  if a failure occurred during initialization
    */
-  void termEmbedding() throws XPCOMException;
+  void termEmbedding();
+
+  /**
+   * Lock a profile directory using platform-specific semantics.
+   *
+   * @param aDirectory  The profile directory to lock.
+   *
+   * @return  A lock object. The directory will remain locked until the lock is
+   *          released by invoking the <code>release</code> method, or by the
+   *          termination of the JVM, whichever comes first.
+   *
+   * @throws XPCOMException if a failure occurred
+   */
+  ProfileLock lockProfileDirectory(File aDirectory) throws XPCOMException;
+
+ /**
+   * Fire notifications to inform the toolkit about a new profile. This
+   * method should be called after <code>initEmbedding</code> if the
+   * embedder wishes to run with a profile.
+   * <p>
+   * Normally the embedder should call <code>lockProfileDirectory</code>
+   * to lock the directory before calling this method.
+   * <p>
+   * NOTE: There are two possibilities for selecting a profile:
+   * <ul>
+   * <li>
+   *    Select the profile before calling <code>initEmbedding</code>.
+   *    The aAppDirProvider object passed to <code>initEmbedding</code>
+   *    should provide the NS_APP_USER_PROFILE_50_DIR key, and
+   *    may also provide the following keys:
+   *      <ul>
+   *        <li>NS_APP_USER_PROFILE_LOCAL_50_DIR
+   *        <li>NS_APP_PROFILE_DIR_STARTUP
+   *        <li>NS_APP_PROFILE_LOCAL_DIR_STARTUP
+   *      </ul>
+   *    In this scenario <code>notifyProfile</code> should be called
+   *    immediately after <code>initEmbedding</code>. Component
+   *    registration information will be stored in the profile and
+   *    JS components may be stored in the fastload cache.
+   * </li>
+   * <li>
+   * 	Select a profile some time after calling <code>initEmbedding</code>.
+   *    In this case the embedder must install a directory service 
+   *    provider which provides NS_APP_USER_PROFILE_50_DIR and optionally
+   *    NS_APP_USER_PROFILE_LOCAL_50_DIR. Component registration information
+   *    will be stored in the application directory and JS components will not
+   *    fastload.
+   * </li>
+   * </ul>
+   */
+  void notifyProfile();
 
 }
-
-

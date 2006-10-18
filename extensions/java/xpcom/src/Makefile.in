@@ -53,6 +53,8 @@ endif
 REQUIRES	= xpcom \
 		  string \
 		  xulapp \
+			js \
+			xpconnect \
 		  $(NULL)
 
 CPPSRCS		= \
@@ -70,6 +72,7 @@ JARFILE_SRC = $(patsubst %.jar,%-src.jar,$(JARFILE))
 JAVA_SRCS = \
 		$(srcdir)/../XPCOMJavaProxy.java \
 		$(srcdir)/../XPCOMJavaProxyBase.java \
+		$(srcdir)/MozillaImpl.java \
 		$(srcdir)/GREImpl.java \
 		$(srcdir)/XPCOMImpl.java \
 		$(srcdir)/JavaXPCOMMethods.java \
