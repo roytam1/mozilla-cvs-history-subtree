@@ -299,6 +299,13 @@ public:
                                  nsSize aBorder, nsSize aPadding,
                                  PRBool aShrinkWrap);
 
+  /**
+   * Utility function for ComputeAutoSize implementations.  Return
+   * max(GetMinWidth(), min(aWidthInCB, GetPrefWidth()))
+   */
+  nscoord ShrinkWidthToFit(nsIRenderingContext *aRenderingContext,
+                           nscoord aWidthInCB);
+
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,

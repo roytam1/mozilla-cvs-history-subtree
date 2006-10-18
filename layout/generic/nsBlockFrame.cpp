@@ -721,17 +721,7 @@ nsBlockFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   if (aShrinkWrap) {
     // don't bother setting it if the result won't be used
     if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
-      nscoord minWidth = GetMinWidth(aRenderingContext);
-      if (minWidth > cbBased) {
-        result.width = minWidth;
-      } else {
-        nscoord prefWidth = GetPrefWidth(aRenderingContext);
-        if (prefWidth > cbBased) {
-          result.width = cbBased;
-        } else {
-          result.width = prefWidth;
-        }
-      }
+      result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
     }
   } else {
     result.width = cbBased;

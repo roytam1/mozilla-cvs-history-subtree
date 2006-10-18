@@ -2950,6 +2950,25 @@ nsFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   return nsSize(0, NS_UNCONSTRAINEDSIZE);
 }
 
+nscoord
+nsFrame::ShrinkWidthToFit(nsIRenderingContext *aRenderingContext,
+                          nscoord aWidthInCB)
+{
+  nscoord result;
+  nscoord minWidth = GetMinWidth(aRenderingContext);
+  if (minWidth > aWidthInCB) {
+    result = minWidth;
+  } else {
+    nscoord prefWidth = GetPrefWidth(aRenderingContext);
+    if (prefWidth > aWidthInCB) {
+      result = aWidthInCB;
+    } else {
+      result = prefWidth;
+    }
+  }
+  return result;
+}
+
 NS_IMETHODIMP
 nsFrame::WillReflow(nsPresContext* aPresContext)
 {
