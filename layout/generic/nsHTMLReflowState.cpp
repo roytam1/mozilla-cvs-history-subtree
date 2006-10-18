@@ -1862,12 +1862,6 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
   }
 }
 
-inline PRBool IsSideCaption(nsIFrame* aCaptionFrame)
-{
-  PRUint8 captionSide = aCaptionFrame->GetStyleTableBorder()->mCaptionSide;
-  return captionSide == NS_SIDE_LEFT || captionSide == NS_SIDE_RIGHT;
-}
-
 // Compute the box data for block and block-replaced elements in the
 // normal flow.
 void
@@ -1878,7 +1872,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                                        nscoord aContainingBlockWidth,
                                        nscoord aContainingBlockHeight)
 {
-#if 0
+  // XXX This function should end up using only |size|.
   nsSize size = frame->ComputeSize(rendContext,
                                    nsSize(aContainingBlockWidth,
                                           aContainingBlockHeight),
@@ -1891,7 +1885,6 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                                    nsSize(mComputedPadding.LeftRight(),
                                           mComputedPadding.TopBottom()),
                                    PR_FALSE);
-#endif
 
   // Compute the content width
   PRBool calcSideMargins = PR_TRUE;
@@ -1912,24 +1905,8 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       // elements, since we never call CalculateBlockSideMargins()
       calcSideMargins = PR_FALSE;
       ShrinkWidthToFit(availableWidth);
-    } else if (nsLayoutAtoms::tableCaptionFrame == (fType = frame->GetType()) &&
-               IsSideCaption(frame)) {
-      mComputedWidth = frame->GetMinWidth(rendContext);
-      AdjustComputedWidth(PR_FALSE);
-    } else if (nsLayoutAtoms::tableFrame == fType) {
-      // The width is shrink-to-fit
-      ShrinkWidthToFit(availableWidth);
     } else {
-      // Block-level non-replaced element in the flow. 'auto' values
-      // for margin-left and margin-right become 0, and the sum of the
-      // areas must equal the width of the content-area of the parent
-      // element.
-      nscoord inset = mComputedMargin.LeftRight() +
-                      mComputedBorderPadding.LeftRight();
-      mComputedWidth = availableWidth - inset;
-      mComputedWidth = PR_MAX(mComputedWidth, 0);
-
-      AdjustComputedWidth(PR_FALSE);
+      mComputedWidth = size.width;
     }
   } else {
     ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
