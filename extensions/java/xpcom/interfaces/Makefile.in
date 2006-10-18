@@ -78,7 +78,7 @@ $(JAVA_SRCS_DIR)::
 COPIED_JAVA_SRCS = $(addprefix $(JAVA_SRCS_DIR)/,$(notdir $(JAVA_SRCS)))
 $(COPIED_JAVA_SRCS): $(JAVA_SRCS) $(JAVA_SRCS_DIR)
 	@echo Copying Java source files
-	cp $^
+	$(NSINSTALL) -m 644 $^
 
 $(JAVA_SRCS_DIR)/IXPCOMError.java: $(topsrcdir)/xpcom/base/nsError.h gen-nsError.pl Makefile Makefile.in $(JAVA_SRCS_DIR)
 	$(PERL) $(srcdir)/../gen-nsError.pl < $< > $@
