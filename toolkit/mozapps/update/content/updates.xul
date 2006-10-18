@@ -44,8 +44,10 @@
 <!DOCTYPE wizard [
 <!ENTITY % updateDTD SYSTEM "chrome://mozapps/locale/update/updates.dtd">
 <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+<!ENTITY % pippkiDTD SYSTEM "chrome://pippki/locale/pippki.dtd">
 %updateDTD;
 %brandDTD;
+%pippkiDTD;
 ]>
 
 <wizard id="updates"
@@ -69,7 +71,10 @@
     <stringbundle id="updateStrings" src="chrome://mozapps/locale/update/updates.properties"/>
   </stringbundleset>
   
-  <wizardpage id="dummy" pageid="dummy" firstpage="true"/>
+  <wizardpage id="dummy" pageid="dummy" firstpage="true" 
+              updatesfoundTitle="&updatesfound.title;"
+              cancelLabel="&cancel.label;"
+              downloadLabel="&download.label;"/>
 
   <wizardpage id="checking" pageid="checking" next="updatesfound"
               label="&checking.title;" object="gCheckingPage"
@@ -85,25 +90,39 @@
     <label>&noupdatesfound.intro;</label>
   </wizardpage>
   
+  <!-- next is "downloading" by default, but could change to "license"
+       if we have a licenseURL on the update and this is a major update -->
   <wizardpage id="updatesfound" pageid="updatesfound" next="downloading"
-              object="gUpdatesAvailablePage" label="&updatesfound.title;"
+              object="gUpdatesAvailablePage" label=""
               onpageshow="gUpdatesAvailablePage.onPageShow();"
-              onextra1="dump('+++++++++++++ GOAT\n');gUpdates.wiz.cancel()"
-              downloadNowLabel="&download.label;"
-              downloadLaterLabel="&later.label;">
+              onextra1="gUpdates.later()"
+              onextra2="gUpdates.never()">
     <description id="updateType"/>
     <separator class="thin"/>
     <label id="updateName" crop="right"/>
-    <separator class="thin"/>
-    <description>&upgrade.evangelism;</description>
-    <separator/>
-    <deck id="detailsDeck">
+    <separator id="updateNameSep" class="thin"/>
+    <description id="upgradeEvangelism">&upgrade.evangelism;</description>
+    <separator id="upgradeEvangelismSep" flex="1"/>
+    <deck id="detailsDeck" flex="1">
       <vbox align="start">
-        <button id="moreDetails" 
-                label="&moreDetails.label;" accesskey="&moreDetails.accesskey;"
-                oncommand="gUpdatesAvailablePage.onShowMoreDetails();"/>
+        <hbox align="start">
+          <image id="incompatibleCheckingThrobber"/>
+          <vbox flex="1">
+            <!-- since we are after the string freeze, re-use the "Please Wait..."
+                 string from pippki.dtd -->
+            <description>&createCertInfo.msg2;</description>
+          </vbox>
+        </hbox>
       </vbox>
       <vbox>
+        <vbox id="moreInfoContent" flex="1">
+          <!-- XXX hack sspitzer not a "license", but using this for the
+               display details of a major update (using a remote web page) -->
+          <!-- note, the localized properties for this are prefixed by 
+               the id.  examples:  updateMoreInfoContentNotFound
+               and updateMoreInfoContentDownloading -->
+          <license id="updateMoreInfoContent" flex="1"/>
+        </vbox>
         <hbox align="start" id="incompatibleWarning" hidden="true">
           <image id="alertImage"/>
           <vbox flex="1">
@@ -114,8 +133,9 @@
             </hbox>
           </vbox>
         </hbox>
-        <hbox>
-          <label class="text-link" id="updateMoreInfoURL" value="&clickHere.label;"/>
+        <hbox id="moreInfoURL">
+          <label class="text-link" id="updateMoreInfoURL" 
+                 value="&clickHere.label;"/> 
         </hbox>
       </vbox>
     </deck>
@@ -124,11 +144,18 @@
   <wizardpage id="license" pageid="license" next="downloading"
               object="gLicensePage" label="&license.title;"
               onpageshow="gLicensePage.onPageShow();">
-    <label>&license.intro;</label>
+    <label>&license.instructions;</label>
     <separator class="thin"/>
+    <!-- note, the localized properties for this are prefixed by 
+         the id.  examples:  licenseContentNotFound
+         and licenseContentDownloading -->
     <license id="licenseContent" flex="1"/>
     <separator class="thin"/>
-    <label>&license.instructions;</label>
+    <radiogroup id="acceptDeclineLicense" 
+       onselect="gLicensePage.onAcceptDeclineRadio();">
+      <radio id="accept"/>
+      <radio id="decline" selected="true"/>
+    </radiogroup>
   </wizardpage>
   
   <wizardpage id="downloading" pageid="downloading" next="finished"
