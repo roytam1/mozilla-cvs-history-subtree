@@ -1640,6 +1640,35 @@ nsTableFrame::IntrinsicWidthOffsets()
   return result;
 }
 
+/* virtual */ nsSize
+nsTableFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                          nsSize aCBSize, nsSize aMargin,
+                          nsSize aBorder, nsSize aPadding,
+                          PRBool aShrinkWrap)
+{
+  nsSize result = nsHTMLContainerFrame::ComputeSize(aRenderingContext,
+                    aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+
+  // Tables never shrink below their min width.
+  nscoord minWidth = GetMinWidth(aRenderingContext);
+  if (minWidth > result.width)
+    result.width = minWidth;
+
+  return result;
+}
+
+/* virtual */ nsSize
+nsTableFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                              nsSize aCBSize, nsSize aMargin,
+                              nsSize aBorder, nsSize aPadding,
+                              PRBool aShrinkWrap)
+{
+  // Tables always shrink-wrap.
+  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
+                    aPadding.width;
+  return nsSize(ShrinkWidthToFit(aRenderingContext, cbBased),
+                NS_UNCONSTRAINEDSIZE);
+}
 
 // Return true if aStylePosition has a pct height
 static PRBool 

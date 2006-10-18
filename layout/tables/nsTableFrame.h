@@ -261,6 +261,15 @@ public:
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap);
+  virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                 nsSize aCBSize, nsSize aMargin,
+                                 nsSize aBorder, nsSize aPadding,
+                                 PRBool aShrinkWrap);
+
   // XXXldb REWRITE THIS COMMENT!
   /** inner tables are reflowed in two steps.
     * <pre>
