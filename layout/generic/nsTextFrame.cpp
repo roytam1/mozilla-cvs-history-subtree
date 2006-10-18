@@ -385,6 +385,10 @@ public:
                                  InlineMinWidthData *aData);
   virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                   InlinePrefWidthData *aData);
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
@@ -6039,6 +6043,15 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
       aData->trailingWhitespace = 0;
     }
   }
+}
+
+/* virtual */ nsSize
+nsTextFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                         nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+                         nsSize aPadding, PRBool aShrinkWrap)
+{
+  // Inlines and text don't compute size before reflow.
+  return nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
 }
 
 NS_IMETHODIMP

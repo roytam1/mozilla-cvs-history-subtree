@@ -383,6 +383,15 @@ nsInlineFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
   DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::PREF_WIDTH);
 }
 
+/* virtual */ nsSize
+nsInlineFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                           nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+                           nsSize aPadding, PRBool aShrinkWrap)
+{
+  // Inlines and text don't compute size before reflow.
+  return nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
+}
+
 NS_IMETHODIMP
 nsInlineFrame::Reflow(nsPresContext*          aPresContext,
                       nsHTMLReflowMetrics&     aMetrics,
