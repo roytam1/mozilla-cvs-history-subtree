@@ -290,7 +290,7 @@ public:
    * min/max-width/height are all 'auto' or equivalent.
    *
    * In general, frames that can accept any computed width/height should
-   * override only ComputeAutoSize, and frames that cannot need to
+   * override only ComputeAutoSize, and frames that cannot do so need to
    * override ComputeSize to enforce their width/height invariants.
    *
    * Implementations may optimize by returning a garbage width if
