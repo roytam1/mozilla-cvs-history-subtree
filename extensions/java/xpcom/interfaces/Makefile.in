@@ -75,18 +75,15 @@ GARBAGE_DIRS += _java
 $(JAVA_SRCS_DIR)::
 	$(NSINSTALL) -D $@
 
-COPIED_JAVA_SRCS = $(addprefix $(JAVA_SRCS_DIR)/,$(notdir $(JAVA_SRCS)))
-$(COPIED_JAVA_SRCS): $(JAVA_SRCS) $(JAVA_SRCS_DIR)
-	@echo Copying Java source files
-	$(NSINSTALL) -m 644 $^
-
 $(JAVA_SRCS_DIR)/IXPCOMError.java: $(topsrcdir)/xpcom/base/nsError.h gen-nsError.pl Makefile Makefile.in $(JAVA_SRCS_DIR)
 	$(PERL) $(srcdir)/../gen-nsError.pl < $< > $@
 
 # Using the temporary "java.files" avoids an "argument list too long"
 # error on Windows when using *.java
 COMPILED_JAVA_CLASSES = $(addprefix org/mozilla/xpcom/,$(notdir $(JAVA_SRCS:.java=.class)))
-$(COMPILED_JAVA_CLASSES): $(JAVA_SRCS_DIR)/IXPCOMError.java $(COPIED_JAVA_SRCS)
+$(COMPILED_JAVA_CLASSES): $(JAVA_SRCS_DIR)/IXPCOMError.java $(JAVA_SRCS)
+	@echo Copying Java source files
+	$(NSINSTALL) -m 644 $(JAVA_SRCS) $(JAVA_SRCS_DIR)
 	@echo Compiling Java classes
 	find _java -name "*.java" > java.files
 	find $(JAVA_DIST_DIR)/default -name "*.java" >> java.files
