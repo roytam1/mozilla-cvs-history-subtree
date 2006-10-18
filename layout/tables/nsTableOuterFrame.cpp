@@ -78,6 +78,26 @@ nsTableCaptionFrame::GetType() const
   return nsLayoutAtoms::tableCaptionFrame;
 }
 
+inline PRBool IsSideCaption(nsIFrame* aCaptionFrame)
+{
+  PRUint8 captionSide = aCaptionFrame->GetStyleTableBorder()->mCaptionSide;
+  return captionSide == NS_SIDE_LEFT || captionSide == NS_SIDE_RIGHT;
+}
+
+/* virtual */ nsSize
+nsTableCaptionFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                     nsSize aCBSize, nsSize aMargin,
+                                     nsSize aBorder, nsSize aPadding,
+                                     PRBool aShrinkWrap)
+{
+  nsSize result = nsBlockFrame::ComputeAutoSize(aRenderingContext,
+                    aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+  if (IsSideCaption(this)) {
+    result.width = GetMinWidth(aRenderingContext);
+  }
+  return result;
+}
+
 #ifdef NS_DEBUG
 NS_IMETHODIMP
 nsTableCaptionFrame::GetFrameName(nsAString& aResult) const
