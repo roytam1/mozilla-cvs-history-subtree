@@ -74,9 +74,9 @@ $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
 $LayoutPerformanceTest    = 1;  # Tp
-#$DHTMLPerformanceTest     = 0;  # Tdhtml
+$DHTMLPerformanceTest     = 1;  # Tdhtml
 #$QATest                   = 0;  
-#$XULWindowOpenTest        = 1;  # Txul
+$XULWindowOpenTest        = 1;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
