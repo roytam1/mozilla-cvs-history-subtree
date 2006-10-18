@@ -288,8 +288,14 @@ public:
    * override only this part of ComputeSize), that computes the size
    * that should be returned when 'width', 'height', and
    * min/max-width/height are all 'auto' or equivalent.
+   *
+   * Implementations may optimize by returning a garbage width if
+   * GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto, and
+   * likewise for height, since in such cases the result is guaranteed
+   * to be unused.
    */
-  virtual nsSize ComputeAutoSize(nsSize aCBSize, nsSize aMargin,
+  virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                 nsSize aCBSize, nsSize aMargin,
                                  nsSize aBorder, nsSize aPadding,
                                  PRBool aShrinkWrap);
 

@@ -2874,8 +2874,8 @@ nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
                      nsSize aCBSize, nsSize aMargin, nsSize aBorder,
                      nsSize aPadding, PRBool aShrinkWrap)
 {
-  nsSize result =
-    ComputeAutoSize(aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+  nsSize result = ComputeAutoSize(aRenderingContext, aCBSize,
+                                  aMargin, aBorder, aPadding, aShrinkWrap);
   nsSize boxSizingAdjust(0,0);
   const nsStylePosition *stylePos = GetStylePosition();
 
@@ -2943,7 +2943,8 @@ nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
 }
 
 /* virtual */ nsSize
-nsFrame::ComputeAutoSize(nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+nsFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                         nsSize aCBSize, nsSize aMargin, nsSize aBorder,
                          nsSize aPadding, PRBool aShrinkWrap)
 {
   return nsSize(0, NS_UNCONSTRAINEDSIZE);
