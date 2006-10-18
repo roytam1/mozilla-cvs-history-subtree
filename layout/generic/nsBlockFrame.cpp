@@ -710,25 +710,6 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return mPrefWidth;
 }
 
-/* virtual */ nsSize
-nsBlockFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                              nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                              nsSize aPadding, PRBool aShrinkWrap)
-{
-  nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
-  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
-                    aPadding.width;
-  if (aShrinkWrap) {
-    // don't bother setting it if the result won't be used
-    if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
-      result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
-    }
-  } else {
-    result.width = cbBased;
-  }
-  return result;
-}
-
 static nsSize
 CalculateContainingBlockSizeForAbsolutes(const nsHTMLReflowState& aReflowState,
                                          nsSize aFrameSize)

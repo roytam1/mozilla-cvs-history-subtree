@@ -125,6 +125,15 @@ public:
   static PRBool FrameNeedsView(nsIFrame* aFrame);
   
   /**
+   * This is the CSS block concept of computing 'auto' widths, which most
+   * classes derived from nsContainerFrame want.
+   */
+  virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                 nsSize aCBSize, nsSize aMargin,
+                                 nsSize aBorder, nsSize aPadding,
+                                 PRBool aShrinkWrap);
+
+  /**
    * Invokes the WillReflow() function, positions the frame and its view (if
    * requested), and then calls Reflow(). If the reflow succeeds and the child
    * frame is complete, deletes any next-in-flows using DeleteNextInFlowChild()

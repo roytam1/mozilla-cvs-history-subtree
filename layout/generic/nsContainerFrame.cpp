@@ -690,6 +690,26 @@ nsContainerFrame::FrameNeedsView(nsIFrame* aFrame)
   return PR_FALSE;
 }
 
+/* virtual */ nsSize
+nsContainerFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                  nsSize aCBSize, nsSize aMargin,
+                                  nsSize aBorder, nsSize aPadding,
+                                  PRBool aShrinkWrap)
+{
+  nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
+  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
+                    aPadding.width;
+  if (aShrinkWrap) {
+    // don't bother setting it if the result won't be used
+    if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
+      result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
+    }
+  } else {
+    result.width = cbBased;
+  }
+  return result;
+}
+
 /**
  * Invokes the WillReflow() function, positions the frame and its view (if
  * requested), and then calls Reflow(). If the reflow succeeds and the child
