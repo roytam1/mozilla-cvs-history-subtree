@@ -74,9 +74,9 @@
   
   <popupset id="mainPopupSet">
     <popup type="autocomplete" id="PopupAutoComplete"/>
+    <popup type="autocomplete" id="PopupAutoCompleteBrowser"/>
   </popupset>
-  
-  
+    
     <hbox id="appcontent" flex="1" >
     
       <vbox id="browser" context="context" flex="1">
@@ -85,7 +85,7 @@
                     disablehistory="false"
                     src="about:blank"
                     flex="1" 
-                    autocompletepopup="PopupAutoComplete"
+                    autocompletepopup="PopupAutoCompleteBrowser"
                     onnewtab="BrowserOpenTab()"/>
       </vbox>
       <vbox id="browserrightbar" >
