@@ -1879,12 +1879,17 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                                        nscoord aContainingBlockHeight)
 {
 #if 0
-  nsSize size = frame->ComputeSize(nsSize(aContainingBlockWidth,
+  nsSize size = frame->ComputeSize(rendContext,
+                                   nsSize(aContainingBlockWidth,
                                           aContainingBlockHeight),
-                                   mComputedMargin.LeftRight(),
-                                   mComputedBorderPadding.LeftRight() -
-                                     mComputedPadding.LeftRight(),
-                                   mComputedPadding.LeftRight(),
+                                   nsSize(mComputedMargin.LeftRight(),
+                                          mComputedMargin.TopBottom()),
+                                   nsSize(mComputedBorderPadding.LeftRight() -
+                                            mComputedPadding.LeftRight(),
+                                          mComputedBorderPadding.TopBottom() -
+                                            mComputedPadding.TopBottom()),
+                                   nsSize(mComputedPadding.LeftRight(),
+                                          mComputedPadding.TopBottom()),
                                    PR_FALSE);
 #endif
 

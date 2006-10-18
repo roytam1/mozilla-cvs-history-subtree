@@ -2839,6 +2839,8 @@ AddCoord(const nsStyleCoord& aStyle, nscoord* aCoord, float* aPercent)
     case eStyleUnit_Percent:
       *aPercent += aStyle.GetPercentValue();
       break;
+    default:
+      break;
   }
 }
 
@@ -2868,8 +2870,81 @@ nsFrame::IntrinsicWidthOffsets()
 }
 
 /* virtual */ nsSize
-nsFrame::ComputeSize(nsSize aCBSize, nscoord aMargin, nscoord aBorder,
-                     nscoord aPadding, PRBool aShrinkWrap)
+nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                     nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+                     nsSize aPadding, PRBool aShrinkWrap)
+{
+  nsSize result =
+    ComputeAutoSize(aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+  nsSize boxSizingAdjust(0,0);
+  const nsStylePosition *stylePos = GetStylePosition();
+
+  switch (stylePos->mBoxSizing) {
+    case NS_STYLE_BOX_SIZING_BORDER:
+      boxSizingAdjust += aBorder;
+      // fall through
+    case NS_STYLE_BOX_SIZING_PADDING:
+      boxSizingAdjust += aPadding;
+  }
+
+  // Compute width
+
+  if (stylePos->mWidth.GetUnit() != eStyleUnit_Auto) {
+    result.width = nsLayoutUtils::ComputeHorizontalValue(aRenderingContext,
+                     this, aCBSize.width, stylePos->mWidth) -
+                   boxSizingAdjust.width;
+  }
+
+  if (stylePos->mMaxWidth.GetUnit() != eStyleUnit_Null) {
+    nscoord maxWidth = nsLayoutUtils::ComputeHorizontalValue(aRenderingContext,
+                         this, aCBSize.width, stylePos->mMaxWidth) -
+                       boxSizingAdjust.width;
+    if (maxWidth < result.width)
+      result.width = maxWidth;
+  }
+
+  nscoord minWidth = nsLayoutUtils::ComputeHorizontalValue(aRenderingContext,
+                       this, aCBSize.width, stylePos->mMinWidth) -
+                     boxSizingAdjust.width;
+  if (minWidth > result.width)
+    result.width = minWidth;
+
+  if (result.width < 0)
+    result.width = 0;
+
+  // Compute height
+
+  if (stylePos->mHeight.GetUnit() != eStyleUnit_Auto) {
+    result.height = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+                      this, aCBSize.height, stylePos->mHeight) -
+                    boxSizingAdjust.height;
+  }
+
+  if (result.height != NS_UNCONSTRAINEDSIZE) {
+    if (stylePos->mMaxHeight.GetUnit() != eStyleUnit_Null) {
+      nscoord maxHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+                            this, aCBSize.height, stylePos->mMaxHeight) -
+                          boxSizingAdjust.height;
+      if (maxHeight < result.height)
+        result.height = maxHeight;
+    }
+
+    nscoord minHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+                          this, aCBSize.height, stylePos->mMinHeight) -
+                        boxSizingAdjust.height;
+    if (minHeight > result.height)
+      result.height = minHeight;
+  }
+
+  if (result.height < 0)
+    result.height = 0;
+
+  return result;
+}
+
+/* virtual */ nsSize
+nsFrame::ComputeAutoSize(nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+                         nsSize aPadding, PRBool aShrinkWrap)
 {
   return nsSize(0, NS_UNCONSTRAINEDSIZE);
 }

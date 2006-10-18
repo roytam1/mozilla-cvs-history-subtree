@@ -278,9 +278,20 @@ public:
                                   InlinePrefWidthData *aData);
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
-  virtual nsSize ComputeSize(nsSize aCBSize, nscoord aMargin,
-                             nscoord aBorder, nscoord aPadding,
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
                              PRBool aShrinkWrap);
+
+  /**
+   * A helper, used by |nsFrame::ComputeSize| (for frames that need to
+   * override only this part of ComputeSize), that computes the size
+   * that should be returned when 'width', 'height', and
+   * min/max-width/height are all 'auto' or equivalent.
+   */
+  virtual nsSize ComputeAutoSize(nsSize aCBSize, nsSize aMargin,
+                                 nsSize aBorder, nsSize aPadding,
+                                 PRBool aShrinkWrap);
 
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,

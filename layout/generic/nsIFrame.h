@@ -1125,22 +1125,23 @@ public:
    *
    * @param aCBSize  The size of the element's containing block.  (Well,
    *                 the |height| component isn't really.)
-   * @param aMargin  The sum of the left and right margins of the
+   * @param aMargin  The sum of the vertical / horizontal margins of the
    *                 frame, including actual values resulting from
    *                 percentages, but not including actual values
    *                 resulting from 'auto'.
-   * @param aBorder  The sum of the left and right border widths of the
-   *                 frame.
-   * @param aPadding  The sum of the left and right margins of the
-   *                  frame, including actual values resulting from
+   * @param aBorder  The sum of the vertical / horizontal border widths
+   *                 of the frame.
+   * @param aPadding  The sum of the vertical / horizontal margins of
+   *                  the frame, including actual values resulting from
    *                  percentages.
    * @param aShrinkWrap  Whether the frame is in a context where
    *                     non-replaced blocks should shrink-wrap (e.g.,
    *                     it's floating, absolutely positioned, or
    *                     inline-block).
    */
-  virtual nsSize ComputeSize(nsSize aCBSize, nscoord aMargin,
-                             nscoord aBorder, nscoord aPadding,
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
                              PRBool aShrinkWrap) = 0;
 
   /**
