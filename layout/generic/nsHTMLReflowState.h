@@ -413,13 +413,6 @@ protected:
                               nscoord aContainingBlockWidth,
                               nscoord aContainingBlockHeight);
 
-  void ComputeBlockBoxData(nsPresContext* aPresContext,
-                           nscoord aAvailWidth,
-                           nsStyleUnit aWidthUnit,
-                           nsStyleUnit aHeightUnit,
-                           nscoord aContainingBlockWidth,
-                           nscoord aContainingBlockHeight);
-
   inline void ComputeHorizontalValue(nscoord aContainingBlockWidth,
                                      nsStyleUnit aUnit,
                                      const nsStyleCoord& aCoord,

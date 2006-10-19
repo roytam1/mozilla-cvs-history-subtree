@@ -1719,67 +1719,8 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     ComputeMinMaxValues(aContainingBlockWidth, aContainingBlockHeight, cbrs);
 
     // Calculate the computed width and height. This varies by frame type
-    if (NS_FRAME_IS_REPLACED(mFrameType) &&
-        (NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_INLINE ||
-         NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_FLOATING)) {
-      // Inline replaced element and floating replaced element are basically
-      // treated the same. First calculate the computed width
-      if (eStyleUnit_Auto == widthUnit) {
-        if (NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) {
-          // The width is shrink-to-fit
-          ShrinkWidthToFit(availableWidth);
-        } else {
-          // A specified value of 'auto' uses the element's intrinsic width
-          mComputedWidth = NS_INTRINSICSIZE;
-        }
-      } else {
-        ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
-                               mStylePosition->mWidth, mComputedWidth);
 
-        AdjustComputedWidth(PR_TRUE);
-      }
-
-      // Now calculate the computed height
-      if (eStyleUnit_Auto == heightUnit) {
-        // A specified value of 'auto' uses the element's intrinsic height
-        mComputedHeight = NS_INTRINSICSIZE;
-      } else {
-        ComputeVerticalValue(aContainingBlockHeight, heightUnit,
-                             mStylePosition->mHeight,
-                             mComputedHeight);
-      }
-
-      AdjustComputedHeight(PR_TRUE);
-
-    } else if (NS_CSS_FRAME_TYPE_FLOATING == mFrameType) {
-      // Floating non-replaced element. First calculate the computed width
-      if (eStyleUnit_Auto == widthUnit) {
-        nscoord availWidth = ((eCompatibility_NavQuirks == aPresContext->CompatibilityMode())
-                               ? availableWidth
-                               : aContainingBlockWidth);
-        // The width is shrink-to-fit.
-        ShrinkWidthToFit(availWidth);
-      } else {
-        // XXXldb Do tables come through this codepath?
-        ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
-                               mStylePosition->mWidth, mComputedWidth);
-
-        // Take into account minimum and maximum sizes
-        AdjustComputedWidth(PR_TRUE);
-      }
-
-      // Now calculate the computed height
-      if (eStyleUnit_Auto == heightUnit) {
-        mComputedHeight = NS_AUTOHEIGHT;  // let it choose its height
-      } else {
-        ComputeVerticalValue(aContainingBlockHeight, heightUnit,
-                             mStylePosition->mHeight,
-                             mComputedHeight);
-      }
-
-      AdjustComputedHeight(PR_TRUE);
-    
-    } else if (NS_CSS_FRAME_TYPE_INTERNAL_TABLE == mFrameType) {
+    if (NS_CSS_FRAME_TYPE_INTERNAL_TABLE == mFrameType) {
       // Internal table elements. The rules vary depending on the type.
       // Calculate the computed width
       PRBool rowOrRowGroup = PR_FALSE;
@@ -1827,30 +1768,38 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       // XXX not sure if this belongs here or somewhere else - cwk
       InitAbsoluteConstraints(aPresContext, cbrs, aContainingBlockWidth,
                               aContainingBlockHeight);
-    } else if (NS_CSS_FRAME_TYPE_INLINE == mFrameType) {
-      if (frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
-        // Inline fieldsets do shrink-to-fit width (no matter what the
-        // specified width) and auto height (no matter what the
-        // specified height).
-        // XXXbz this is just what we used to do...  It's not clear
-        // that we _want_ to be doing this.
-        ShrinkWidthToFit(availableWidth);
+    } else if (NS_CSS_FRAME_TYPE_INLINE == mFrameType &&
+               frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
+      // Inline fieldsets do shrink-to-fit width (no matter what the
+      // specified width) and auto height (no matter what the
+      // specified height).
+      // XXXbz this is just what we used to do...  It's not clear
+      // that we _want_ to be doing this.
+      ShrinkWidthToFit(availableWidth);
 
-        mComputedHeight = NS_INTRINSICSIZE;
-      } else {
-        // Inline non-replaced elements do not have computed widths or heights
-        // XXX add this check to HaveFixedContentHeight/Width too
-        mComputedWidth = NS_UNCONSTRAINEDSIZE;
-        mComputedHeight = NS_UNCONSTRAINEDSIZE;
-        mComputedMargin.top = 0;
-        mComputedMargin.bottom = 0;
-        mComputedMinWidth = mComputedMinHeight = 0;
-        mComputedMaxWidth = mComputedMaxHeight = NS_UNCONSTRAINEDSIZE;
-      }
+      mComputedHeight = NS_INTRINSICSIZE;
     } else {
-      ComputeBlockBoxData(aPresContext, availableWidth, widthUnit, heightUnit,
-                          aContainingBlockWidth,
-                          aContainingBlockHeight);
+      PRBool isBlock =
+        NS_CSS_FRAME_TYPE_BLOCK != NS_FRAME_GET_TYPE(mFrameType);
+      nsSize size =
+        frame->ComputeSize(rendContext,
+                           nsSize(aContainingBlockWidth,
+                                  aContainingBlockHeight),
+                           nsSize(mComputedMargin.LeftRight(),
+                                  mComputedMargin.TopBottom()),
+                           nsSize(mComputedBorderPadding.LeftRight() -
+                                    mComputedPadding.LeftRight(),
+                                  mComputedBorderPadding.TopBottom() -
+                                    mComputedPadding.TopBottom()),
+                           nsSize(mComputedPadding.LeftRight(),
+                                  mComputedPadding.TopBottom()),
+                           !isBlock);
+
+      mComputedWidth = size.width;
+      mComputedHeight = size.height;
+
+      if (isBlock)
+        CalculateBlockSideMargins(availableWidth, mComputedWidth);
     }
   }
   // Check for blinking text and permission to display it
@@ -1860,74 +1809,6 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     mFlags.mBlinks = 
       ((st->mTextDecoration & NS_STYLE_TEXT_DECORATION_BLINK) != 0);
   }
-}
-
-// Compute the box data for block and block-replaced elements in the
-// normal flow.
-void
-nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
-                                       nscoord aAvailWidth,
-                                       nsStyleUnit aWidthUnit,
-                                       nsStyleUnit aHeightUnit,
-                                       nscoord aContainingBlockWidth,
-                                       nscoord aContainingBlockHeight)
-{
-  // XXX This function should end up using only |size|.
-  nsSize size = frame->ComputeSize(rendContext,
-                                   nsSize(aContainingBlockWidth,
-                                          aContainingBlockHeight),
-                                   nsSize(mComputedMargin.LeftRight(),
-                                          mComputedMargin.TopBottom()),
-                                   nsSize(mComputedBorderPadding.LeftRight() -
-                                            mComputedPadding.LeftRight(),
-                                          mComputedBorderPadding.TopBottom() -
-                                            mComputedPadding.TopBottom()),
-                                   nsSize(mComputedPadding.LeftRight(),
-                                          mComputedPadding.TopBottom()),
-                                   PR_FALSE);
-
-  mComputedWidth = size.width;
-
-  // Compute the content width
-  // XXX Remove all of this
-  PRBool calcSideMargins = PR_TRUE;
-  if (eStyleUnit_Auto == aWidthUnit) {
-    if (NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType)) {
-      // Block-level replaced element in the flow. A specified value of 
-      // 'auto' uses the element's intrinsic width (CSS2 10.3.4)
-
-      // XXXbz this breaks auto margins on block-level replaced
-      // elements, since we never call CalculateBlockSideMargins()
-      calcSideMargins = PR_FALSE;
-      mComputedWidth = NS_INTRINSICSIZE;
-    } else if (NS_FRAME_IS_REPLACED_CONTAINS_BLOCK(mFrameType)) {
-      // Width is shrink-to-fit
-
-      // XXXbz this breaks auto margins on block-level replaced
-      // elements, since we never call CalculateBlockSideMargins()
-      calcSideMargins = PR_FALSE;
-      ShrinkWidthToFit(availableWidth);
-    }
-  }
-
-  // Now that we have the computed-width, compute the side margins
-  if (calcSideMargins) // XXX Should always be true
-    CalculateBlockSideMargins(aAvailWidth, mComputedWidth);
-
-  // Compute the content height
-  if (eStyleUnit_Auto == aHeightUnit) {
-    if (NS_FRAME_IS_REPLACED(mFrameType)) {
-      // For replaced elements use the intrinsic size for "auto"
-      mComputedHeight = NS_INTRINSICSIZE;
-    } else {
-      // For non-replaced elements auto means unconstrained
-      mComputedHeight = NS_UNCONSTRAINEDSIZE;
-    }
-  } else {
-    ComputeVerticalValue(aContainingBlockHeight, aHeightUnit,
-                         mStylePosition->mHeight, mComputedHeight);
-  }
-  AdjustComputedHeight(PR_TRUE);
 }
 
 // This code enforces section 10.3.3 of the CSS2 spec for this formula:
