@@ -586,6 +586,8 @@ function MiniNavStartup()
  spinCreate();
 
  /* 
+  * XUL hack to the Toolkit ( bug 341017 )
+  * -----------------------
   * We trap the showPopup method for the element id=PopupAutoComplete ( see minimo.xul )
   * so we can force the showPopup to be called with the right parameters. 
   * See bug: 341017
@@ -594,6 +596,15 @@ function MiniNavStartup()
  document.getElementById("PopupAutoComplete").StoredShowPopup = document.getElementById("PopupAutoComplete").showPopup;
  document.getElementById("PopupAutoComplete").showPopup = PopupAutoCompleteShowPop;
 
+ /* 
+  * XUL hack to the Toolkit ( bug 355320 )
+  * -----------------------
+  * Now the Context menu on URLbar goes up. 
+  */
+  
+  var urlBarTextInputBox = (document.getAnonymousElementByAttribute(document.getElementById("urlbar"),"anonid","textbox-input-box"));
+  var urlBarTextInputBoxContextMenu = (document.getAnonymousElementByAttribute(urlBarTextInputBox ,"anonid","input-box-contextmenu"));
+  urlBarTextInputBoxContextMenu.setAttribute("position","before_start");
 
  /*
   * Setup the screen for fullscreen or not
