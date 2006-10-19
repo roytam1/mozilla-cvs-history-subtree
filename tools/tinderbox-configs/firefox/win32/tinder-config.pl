@@ -30,8 +30,8 @@ $BuildNameExtra = 'FF-XR';
 $BinaryName = 'application.ini';
 $RequireExecutableBinary = 0;
 
-$LogCompression = 'bzip2';
-$LogEncoding = 'base64';
+#$LogCompression = 'bzip2';
+#$LogEncoding = 'base64';
 
 $blat = 'c:/Util/blat.exe';
 $use_blat = 1;
