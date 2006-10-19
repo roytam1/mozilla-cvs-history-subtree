@@ -699,7 +699,8 @@ nsContainerFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
   nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
                     aPadding.width;
-  if (aShrinkWrap) {
+  // replaced elements always shrink-wrap
+  if (aShrinkWrap || IsFrameOfType(eReplaced)) {
     // don't bother setting it if the result won't be used
     if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
       result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
