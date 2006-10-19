@@ -33,7 +33,7 @@ $RequireExecutableBinary = 0;
 #$LogCompression = 'bzip2';
 #$LogEncoding = 'base64';
 
-$blat = 'c:/Util/blat.exe';
+$blat = 'd:/moztools/bin/blat.exe';
 $use_blat = 1;
 
 $Make = 'make';
