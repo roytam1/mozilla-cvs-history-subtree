@@ -2951,7 +2951,7 @@ nsFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
 
   // don't bother setting it if the result won't be used
-  if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
+  if (GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto) {
     nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
                       aPadding.width;
     result.width = ShrinkWidthToFit(aRenderingContext, cbBased);

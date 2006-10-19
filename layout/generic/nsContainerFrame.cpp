@@ -702,7 +702,7 @@ nsContainerFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   // replaced elements always shrink-wrap
   if (aShrinkWrap || IsFrameOfType(eReplaced)) {
     // don't bother setting it if the result won't be used
-    if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
+    if (GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto) {
       result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
     }
   } else {
