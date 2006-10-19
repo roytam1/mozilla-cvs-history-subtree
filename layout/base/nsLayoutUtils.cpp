@@ -1396,4 +1396,5 @@ nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(
     }
   }
 
+  return nsSize(width, height);
 }
