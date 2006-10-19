@@ -1,0 +1,13 @@
+# Make flags
+mk_add_options MOZ_CO_PROJECT=xulrunner,browser
+mk_add_options MOZ_BUILD_PROJECTS='xulrunner browser'
+
+# Configure flags
+ac_add_options --enable-optimize --disable-debug
+ac_add_options --disable-tests
+
+ac_add_app_options browser --disable-installer
+ac_add_app_options browser --with-libxul-sdk=../xulrunner/dist
+ac_add_app_options browser --enable-extensions=default,-inspector
+ac_add_app_options browser --disable-activex
+ac_add_app_options browser --disable-activex-scripting
