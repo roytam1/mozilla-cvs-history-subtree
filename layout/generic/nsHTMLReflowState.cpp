@@ -1768,16 +1768,6 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       // XXX not sure if this belongs here or somewhere else - cwk
       InitAbsoluteConstraints(aPresContext, cbrs, aContainingBlockWidth,
                               aContainingBlockHeight);
-    } else if (NS_CSS_FRAME_TYPE_INLINE == mFrameType &&
-               frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
-      // Inline fieldsets do shrink-to-fit width (no matter what the
-      // specified width) and auto height (no matter what the
-      // specified height).
-      // XXXbz this is just what we used to do...  It's not clear
-      // that we _want_ to be doing this.
-      ShrinkWidthToFit(availableWidth);
-
-      mComputedHeight = NS_INTRINSICSIZE;
     } else {
       PRBool isBlock =
         NS_CSS_FRAME_TYPE_BLOCK != NS_FRAME_GET_TYPE(mFrameType);
