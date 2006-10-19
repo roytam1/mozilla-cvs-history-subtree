@@ -1886,10 +1886,12 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                                           mComputedPadding.TopBottom()),
                                    PR_FALSE);
 
+  mComputedWidth = size.width;
+
   // Compute the content width
+  // XXX Remove all of this
   PRBool calcSideMargins = PR_TRUE;
   if (eStyleUnit_Auto == aWidthUnit) {
-    nsIAtom *fType;
     if (NS_FRAME_IS_REPLACED_NOBLOCK(mFrameType)) {
       // Block-level replaced element in the flow. A specified value of 
       // 'auto' uses the element's intrinsic width (CSS2 10.3.4)
@@ -1905,14 +1907,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       // elements, since we never call CalculateBlockSideMargins()
       calcSideMargins = PR_FALSE;
       ShrinkWidthToFit(availableWidth);
-    } else {
-      mComputedWidth = size.width;
     }
-  } else {
-    ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
-                           mStylePosition->mWidth, mComputedWidth);
-
-    AdjustComputedWidth(PR_TRUE); 
   }
 
   // Now that we have the computed-width, compute the side margins
@@ -2259,9 +2254,9 @@ nsHTMLReflowState::ComputeMinMaxValues(nscoord aContainingBlockWidth,
   ComputeHorizontalValue(aContainingBlockWidth, minWidthUnit,
                          mStylePosition->mMinWidth, mComputedMinWidth);
 
-  if (frame->GetType() == nsLayoutAtoms::tableFrame ||
-      frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
-    // Tables and fieldsets don't go below their intrinsic min width.
+  if (frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
+    // fieldsets don't go below their intrinsic min width.
+    // XXX Move this to ComputeSize
     nscoord minwidth =
       AdjustIntrinsicWidthForBoxSizing(frame->GetMinWidth(rendContext));
     mComputedMinWidth = PR_MAX(mComputedMinWidth, minwidth);
