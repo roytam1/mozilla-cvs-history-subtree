@@ -2948,10 +2948,15 @@ nsFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
                          nsSize aPadding, PRBool aShrinkWrap)
 {
   // Use basic shrink-wrapping as a default implementation.
-  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
-                    aPadding.width;
-  return nsSize(ShrinkWidthToFit(aRenderingContext, cbBased),
-                NS_UNCONSTRAINEDSIZE);
+  nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
+
+  // don't bother setting it if the result won't be used
+  if (GetStylePosition()->mWidth.GetUnit() != eStyleUnit_Auto) {
+    nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
+                      aPadding.width;
+    result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
+  }
+  return result;
 }
 
 nscoord
