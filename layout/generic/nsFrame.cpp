@@ -2869,6 +2869,16 @@ nsFrame::IntrinsicWidthOffsets()
   return result;
 }
 
+inline PRBool
+IsAutoHeight(const nsStyleCoord &aCoord, nscoord aCBHeight)
+{
+  nsStyleUnit unit = aCoord.GetUnit();
+  return unit == eStyleUnit_Auto ||  // only for 'height'
+         unit == eStyleUnit_Null ||  // only for 'max-height'
+         (unit == eStyleUnit_Percent && 
+          aCBHeight == NS_AUTOHEIGHT);
+}
+
 /* virtual */ nsSize
 nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
                      nsSize aCBSize, nsSize aMargin, nsSize aBorder,
@@ -2914,14 +2924,14 @@ nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
 
   // Compute height
 
-  if (stylePos->mHeight.GetUnit() != eStyleUnit_Auto) {
+  if (!IsAutoHeight(stylePos->mHeight, aCBSize.height)) {
     result.height = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
                       this, aCBSize.height, stylePos->mHeight) -
                     boxSizingAdjust.height;
   }
 
   if (result.height != NS_UNCONSTRAINEDSIZE) {
-    if (stylePos->mMaxHeight.GetUnit() != eStyleUnit_Null) {
+    if (!IsAutoHeight(stylePos->mMaxHeight, aCBSize.height)) {
       nscoord maxHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
                             this, aCBSize.height, stylePos->mMaxHeight) -
                           boxSizingAdjust.height;
@@ -2929,11 +2939,13 @@ nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
         result.height = maxHeight;
     }
 
-    nscoord minHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
-                          this, aCBSize.height, stylePos->mMinHeight) -
-                        boxSizingAdjust.height;
-    if (minHeight > result.height)
-      result.height = minHeight;
+    if (!IsAutoHeight(stylePos->mMinHeight, aCBSize.height)) {
+      nscoord minHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+                            this, aCBSize.height, stylePos->mMinHeight) -
+                          boxSizingAdjust.height;
+      if (minHeight > result.height)
+        result.height = minHeight;
+    }
   }
 
   if (result.height < 0)
