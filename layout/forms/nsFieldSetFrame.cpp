@@ -79,6 +79,10 @@ public:
     GetContentMinWidth(nsIRenderingContext* aRenderingContext);
   virtual nscoord GetMinWidth(nsIRenderingContext* aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext* aRenderingContext);
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap);
 
   NS_IMETHOD Reflow(nsPresContext*           aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -399,6 +403,23 @@ nsFieldSetFrame::GetPrefWidth(nsIRenderingContext* aRenderingContext)
   }
       
   result = PR_MAX(legendPrefWidth, contentPrefWidth);
+  return result;
+}
+
+/* virtual */ nsSize
+nsFieldSetFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap)
+{
+  nsSize result = nsHTMLContainerFrame::ComputeSize(aRenderingContext,
+                    aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+
+  // Fieldsets never shrink below their min width.
+  nscoord minWidth = GetMinWidth(aRenderingContext);
+  if (minWidth > result.width)
+    result.width = minWidth;
+
   return result;
 }
 

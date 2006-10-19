@@ -2125,14 +2125,6 @@ nsHTMLReflowState::ComputeMinMaxValues(nscoord aContainingBlockWidth,
   ComputeHorizontalValue(aContainingBlockWidth, minWidthUnit,
                          mStylePosition->mMinWidth, mComputedMinWidth);
 
-  if (frame->GetType() == nsLayoutAtoms::fieldSetFrame) {
-    // fieldsets don't go below their intrinsic min width.
-    // XXX Move this to ComputeSize
-    nscoord minwidth =
-      AdjustIntrinsicWidthForBoxSizing(frame->GetMinWidth(rendContext));
-    mComputedMinWidth = PR_MAX(mComputedMinWidth, minwidth);
-  }
-  
   nsStyleUnit maxWidthUnit = mStylePosition->mMaxWidth.GetUnit();
   if (eStyleUnit_Null == maxWidthUnit) {
     // Specified value of 'none'
