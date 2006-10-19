@@ -62,6 +62,8 @@ nsHTMLCanvasFrame::~nsHTMLCanvasFrame()
 /* virtual */ nscoord
 nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  // XXX The caller doesn't account for constraints of the height,
+  // min-height, and max-height properties.
   float p2t = GetPresContext()->PixelsToTwips();
   nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
   DISPLAY_MIN_WIDTH(this, result);
@@ -71,10 +73,40 @@ nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  // XXX The caller doesn't account for constraints of the height,
+  // min-height, and max-height properties.
   float p2t = GetPresContext()->PixelsToTwips();
   nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
   DISPLAY_PREF_WIDTH(this, result);
   return result;
+}
+
+/* virtual */ nsSize
+nsHTMLCanvasFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                               nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+                               nsSize aPadding, PRBool aShrinkWrap)
+{
+  PRUint32 w, h;
+  nsresult rv;
+  nsCOMPtr<nsICanvasElement> canvas(do_QueryInterface(GetContent()));
+  if (canvas) {
+    rv = canvas->GetSize(&w, &h);
+  } else {
+    rv = NS_ERROR_NULL_POINTER;
+  }
+
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("couldn't get canvas size");
+    h = w = 1;
+  }
+
+  float p2t = GetPresContext()->PixelsToTwips();
+
+  mCanvasSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+
+  return nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(
+                            aRenderingContext, this, mCanvasSize,
+                            aCBSize, aBorder, aPadding);
 }
 
 NS_IMETHODIMP
@@ -93,30 +125,8 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
 
   aStatus = NS_FRAME_COMPLETE;
 
-  nsCOMPtr<nsICanvasElement> canvas(do_QueryInterface(GetContent()));
-  NS_ENSURE_TRUE(canvas, NS_ERROR_FAILURE);
-
-  PRUint32 w, h;
-  nsresult rv = canvas->GetSize (&w, &h);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  float p2t = GetPresContext()->PixelsToTwips();
-
-  mCanvasSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
-
-  if (aReflowState.mComputedWidth == NS_INTRINSICSIZE)
-    aMetrics.width = mCanvasSize.width;
-  else
-    aMetrics.width = aReflowState.mComputedWidth;
-
-  if (aReflowState.mComputedHeight == NS_INTRINSICSIZE)
-    aMetrics.height = mCanvasSize.height;
-  else
-    aMetrics.height = aReflowState.mComputedHeight;
-
-  // clamp
-  aMetrics.height = NS_CSS_MINMAX(aMetrics.height, aReflowState.mComputedMinHeight, aReflowState.mComputedMaxHeight);
-  aMetrics.width = NS_CSS_MINMAX(aMetrics.width, aReflowState.mComputedMinWidth, aReflowState.mComputedMaxWidth);
+  aMetrics.width = aReflowState.mComputedWidth;
+  aMetrics.height = aReflowState.mComputedHeight;
 
   // stash this away so we can compute our inner area later
   mBorderPadding   = aReflowState.mComputedBorderPadding;

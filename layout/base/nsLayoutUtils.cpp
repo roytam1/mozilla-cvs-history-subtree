@@ -1212,3 +1212,188 @@ nsLayoutUtils::ComputeVerticalValue(nsIRenderingContext* aRenderingContext,
   return result;
 }
 
+/* static */ nsSize
+nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(
+                   nsIRenderingContext* aRenderingContext,
+                   nsIFrame* aFrame, nsSize aIntrinsicSize, nsSize aCBSize,
+                   nsSize aBorder, nsSize aPadding)
+{
+  const nsStylePosition *stylePos = aFrame->GetStylePosition();
+  // Handle intrinsic sizes and their interaction with
+  // {min-,max-,}{width,height} according to the rules in
+  // http://www.w3.org/TR/CSS21/visudet.html#min-max-widths
+
+  // Note: throughout the following section of the function, I avoid
+  // a * (b / c) because of its reduced accuracy relative to a * b / c
+  // or (a * b) / c (which are equivalent).
+
+  PRBool isAutoWidth = stylePos->mWidth.GetUnit() == eStyleUnit_Auto;
+  PRBool isAutoHeight = stylePos->mHeight.GetUnit() == eStyleUnit_Auto;
+
+  nsSize boxSizingAdjust(0,0);
+  switch (stylePos->mBoxSizing) {
+    case NS_STYLE_BOX_SIZING_BORDER:
+      boxSizingAdjust += aBorder;
+      // fall through
+    case NS_STYLE_BOX_SIZING_PADDING:
+      boxSizingAdjust += aPadding;
+  }
+
+  nscoord width, minWidth, maxWidth, height, minHeight, maxHeight;
+
+  if (!isAutoWidth) {
+    width = nsLayoutUtils::ComputeHorizontalValue(aRenderingContext,
+              aFrame, aCBSize.width, stylePos->mWidth) -
+            boxSizingAdjust.width;
+    if (width < 0)
+      width = 0;
+  }
+
+  if (stylePos->mMaxWidth.GetUnit() != eStyleUnit_Null) {
+    maxWidth = nsLayoutUtils::ComputeHorizontalValue(aRenderingContext,
+                 aFrame, aCBSize.width, stylePos->mMaxWidth) -
+               boxSizingAdjust.width;
+    if (maxWidth < 0)
+      maxWidth = 0;
+  } else {
+    maxWidth = nscoord_MAX;
+  }
+
+  minWidth = nsLayoutUtils::ComputeHorizontalValue(aRenderingContext,
+               aFrame, aCBSize.width, stylePos->mMinWidth) -
+             boxSizingAdjust.width;
+  if (minWidth < 0)
+    minWidth = 0;
+
+  if (!isAutoHeight) {
+    height = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+               aFrame, aCBSize.height, stylePos->mHeight) -
+             boxSizingAdjust.height;
+    if (height < 0)
+      height = 0;
+  }
+
+  if (stylePos->mMaxHeight.GetUnit() != eStyleUnit_Null) {
+    maxHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+                  aFrame, aCBSize.height, stylePos->mMaxHeight) -
+                boxSizingAdjust.height;
+    if (maxHeight < 0)
+      maxHeight = 0;
+  } else {
+    maxHeight = nscoord_MAX;
+  }
+
+  minHeight = nsLayoutUtils::ComputeVerticalValue(aRenderingContext,
+                aFrame, aCBSize.height, stylePos->mMinHeight) -
+              boxSizingAdjust.height;
+  if (minHeight < 0)
+    minHeight = 0;
+
+  if (isAutoWidth) {
+    if (isAutoHeight) {
+
+      // 'auto' width, 'auto' height
+      if (minWidth > maxWidth)
+        maxWidth = minWidth;
+      if (minHeight > maxHeight)
+        maxHeight = minHeight;
+
+      nscoord heightAtMaxWidth, heightAtMinWidth,
+              widthAtMaxHeight, widthAtMinHeight;
+      if (aIntrinsicSize.width > 0) {
+        heightAtMaxWidth = maxWidth * aIntrinsicSize.height / aIntrinsicSize.width;
+        if (heightAtMaxWidth < minHeight)
+          heightAtMaxWidth = minHeight;
+        heightAtMinWidth = minWidth * aIntrinsicSize.height / aIntrinsicSize.width;
+        if (heightAtMinWidth > maxHeight)
+          heightAtMinWidth = maxHeight;
+      } else {
+        heightAtMaxWidth = aIntrinsicSize.height;
+        heightAtMinWidth = aIntrinsicSize.height;
+      }
+
+      if (aIntrinsicSize.height > 0) {
+        widthAtMaxHeight = maxHeight * aIntrinsicSize.width / aIntrinsicSize.height;
+        if (widthAtMaxHeight < minWidth)
+          widthAtMaxHeight = minWidth;
+        widthAtMinHeight = minHeight * aIntrinsicSize.width / aIntrinsicSize.height;
+        if (widthAtMinHeight > maxWidth)
+          widthAtMinHeight = maxWidth;
+      } else {
+        widthAtMaxHeight = aIntrinsicSize.width;
+        widthAtMinHeight = aIntrinsicSize.width;
+      }
+
+      if (aIntrinsicSize.width > maxWidth) {
+        if (aIntrinsicSize.height > maxHeight) {
+          if (maxWidth * aIntrinsicSize.height <= maxHeight * aIntrinsicSize.width) {
+            width = maxWidth;
+            height = heightAtMaxWidth;
+          } else {
+            height = maxHeight;
+            width = widthAtMaxHeight;
+          }
+        } else {
+          width = maxWidth;
+          height = heightAtMaxWidth;
+        }
+      } else if (aIntrinsicSize.width < minWidth) {
+        if (aIntrinsicSize.height < minHeight) {
+          if (minWidth * aIntrinsicSize.height <= minHeight * aIntrinsicSize.width) {
+            height = minHeight;
+            width = widthAtMinHeight;
+          } else {
+            width = minWidth;
+            height = heightAtMinWidth;
+          }
+        } else {
+          width = minWidth;
+          height = heightAtMinWidth;
+        }
+      } else {
+        if (aIntrinsicSize.height > maxHeight) {
+          height = maxHeight;
+          width = widthAtMaxHeight;
+        } else if (aIntrinsicSize.height < minHeight) {
+          height = minHeight;
+          width = widthAtMinHeight;
+        } else {
+          width = aIntrinsicSize.width;
+          height = aIntrinsicSize.height;
+        }
+      }
+
+    } else {
+
+      // 'auto' width, non-'auto' height
+      height = NS_CSS_MINMAX(height, minHeight, maxHeight);
+      if (aIntrinsicSize.height != 0) {
+        width = aIntrinsicSize.width * height / aIntrinsicSize.height;
+      } else {
+        width = aIntrinsicSize.width;
+      }
+      width = NS_CSS_MINMAX(width, minWidth, maxWidth);
+
+    }
+  } else {
+    if (isAutoHeight) {
+
+      // non-'auto' width, 'auto' height
+      width = NS_CSS_MINMAX(width, minWidth, maxWidth);
+      if (aIntrinsicSize.width != 0) {
+        height = aIntrinsicSize.height * width / aIntrinsicSize.width;
+      } else {
+        height = aIntrinsicSize.height;
+      }
+      height = NS_CSS_MINMAX(height, minHeight, maxHeight);
+
+    } else {
+
+      // non-'auto' width, non-'auto' height
+      height = NS_CSS_MINMAX(height, minHeight, maxHeight);
+      width = NS_CSS_MINMAX(width, minWidth, maxWidth);
+
+    }
+  }
+
+}

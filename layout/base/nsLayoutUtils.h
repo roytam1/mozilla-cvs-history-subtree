@@ -439,8 +439,8 @@ public:
    * and margin.
    */
   enum IntrinsicWidthType { MIN_WIDTH, PREF_WIDTH };
-  static nscoord IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
-                                       nsIFrame *aFrame,
+  static nscoord IntrinsicForContainer(nsIRenderingContext* aRenderingContext,
+                                       nsIFrame* aFrame,
                                        IntrinsicWidthType aType);
 
   static nscoord ComputeHorizontalValue(nsIRenderingContext* aRenderingContext,
@@ -453,6 +453,10 @@ public:
                                       nscoord aContainingBlockHeight,
                                       const nsStyleCoord& aCoord);
 
+  static nsSize ComputeSizeWithIntrinsicDimensions(
+                    nsIRenderingContext* aRenderingContext,
+                    nsIFrame* aFrame, nsSize aIntrinsicSize, nsSize aCBSize,
+                    nsSize aBorder, nsSize aPadding);
 };
 
 #endif // nsLayoutUtils_h__

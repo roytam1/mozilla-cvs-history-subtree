@@ -174,9 +174,11 @@ protected:
   virtual ~nsImageFrame();
 
   void EnsureIntrinsicSize(nsPresContext* aPresContext);
-  virtual void GetDesiredSize(nsPresContext* aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics& aDesiredSize);
+
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap);
 
   void TriggerLink(nsPresContext* aPresContext,
                    nsIURI* aURI,
