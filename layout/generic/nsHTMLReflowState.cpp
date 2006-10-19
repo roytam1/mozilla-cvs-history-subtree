@@ -1770,7 +1770,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
                               aContainingBlockHeight);
     } else {
       PRBool isBlock =
-        NS_CSS_FRAME_TYPE_BLOCK != NS_FRAME_GET_TYPE(mFrameType);
+        NS_CSS_FRAME_TYPE_BLOCK == NS_FRAME_GET_TYPE(mFrameType);
       nsSize size =
         frame->ComputeSize(rendContext,
                            nsSize(aContainingBlockWidth,
