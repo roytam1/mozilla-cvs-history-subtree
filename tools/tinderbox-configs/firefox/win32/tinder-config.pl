@@ -7,7 +7,7 @@ $VendorName               = 'Mozilla';
 
 $RunMozillaTests          = 0;
 
-$CVSCheckoutTimeout               = 600;
+$CVSCheckoutTimeout       = 600;
 
 $MozConfigFileName = 'mozconfig';
 
@@ -24,7 +24,7 @@ $SubObjDir = 'browser/';
 
 $UserComment = 'bsmedberg';
 
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'MozillaExperimental';
 $BuildNameExtra = 'FF-XR';
 
 $BinaryName = 'application.ini';
