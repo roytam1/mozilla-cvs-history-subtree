@@ -2947,7 +2947,11 @@ nsFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
                          nsSize aCBSize, nsSize aMargin, nsSize aBorder,
                          nsSize aPadding, PRBool aShrinkWrap)
 {
-  return nsSize(0, NS_UNCONSTRAINEDSIZE);
+  // Use basic shrink-wrapping as a default implementation.
+  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
+                    aPadding.width;
+  return nsSize(ShrinkWidthToFit(aRenderingContext, cbBased),
+                NS_UNCONSTRAINEDSIZE);
 }
 
 nscoord
