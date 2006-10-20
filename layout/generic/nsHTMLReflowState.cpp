@@ -1047,7 +1047,9 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     // box code above.
     // Solve for 'left'.
     if (widthIsAuto) {
-      // XXXldb This clause could probably go away now.
+      // XXXldb This, and the corresponding code in
+      // nsAbsoluteContainingBlock.cpp, could probably go away now that
+      // we always compute widths.
       mComputedOffsets.left = NS_AUTOOFFSET;
     } else {
       mComputedOffsets.left = containingBlockWidth - mComputedMargin.left -
@@ -1060,7 +1062,9 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     // box code above.
     // Solve for 'right'.
     if (widthIsAuto) {
-      // XXXldb This clause could probably go away now.
+      // XXXldb This, and the corresponding code in
+      // nsAbsoluteContainingBlock.cpp, could probably go away now that
+      // we always compute widths.
       mComputedOffsets.right = NS_AUTOOFFSET;
     } else {
       mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
