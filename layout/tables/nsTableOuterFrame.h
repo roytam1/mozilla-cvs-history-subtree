@@ -135,6 +135,10 @@ public:
 
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                 nsSize aCBSize, nsSize aMargin,
+                                 nsSize aBorder, nsSize aPadding,
+                                 PRBool aShrinkWrap);
 
   /** process a reflow command for the table.
     * This involves reflowing the caption and the inner table.

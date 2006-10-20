@@ -614,6 +614,63 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return maxWidth;
 }
 
+/* virtual */ nsSize
+nsTableOuterFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
+                                   nsSize aCBSize, nsSize aMargin,
+                                   nsSize aBorder, nsSize aPadding,
+                                   PRBool aShrinkWrap)
+{
+  if (!aShrinkWrap)
+    return nsHTMLContainerFrame::ComputeAutoSize(aRenderingContext,
+               aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+
+  // When we're shrink-wrapping, our auto size needs to wrap around the
+  // actual size of the table, which (if it is specified as a percent)
+  // could be something that is not reflected in our GetMinWidth and
+  // GetPrefWidth.  See bug 349457 for an example.
+
+  // The outer table's children do not use it as a containing block.
+  nsCSSOffsetState innerOffsets(mInnerTableFrame, aRenderingContext,
+                                aCBSize.width);
+  nsSize tableSize = mInnerTableFrame->ComputeSize(aRenderingContext, aCBSize,
+                       nsSize(innerOffsets.mComputedMargin.LeftRight(),
+                              innerOffsets.mComputedMargin.TopBottom()),
+                       nsSize(innerOffsets.mComputedBorderPadding.LeftRight() -
+                                innerOffsets.mComputedPadding.LeftRight(),
+                              innerOffsets.mComputedBorderPadding.TopBottom() -
+                                innerOffsets.mComputedPadding.TopBottom()),
+                       nsSize(innerOffsets.mComputedPadding.LeftRight(),
+                              innerOffsets.mComputedPadding.TopBottom()),
+                       aShrinkWrap);
+  nscoord width = tableSize.width + innerOffsets.mComputedMargin.LeftRight() +
+                  innerOffsets.mComputedBorderPadding.LeftRight();
+
+  if (mCaptionFrame) {
+    nsCSSOffsetState capOffsets(mCaptionFrame, aRenderingContext,
+                                    aCBSize.width);
+    nsSize capSize = mCaptionFrame->ComputeSize(aRenderingContext, aCBSize,
+                       nsSize(capOffsets.mComputedMargin.LeftRight(),
+                              capOffsets.mComputedMargin.TopBottom()),
+                       nsSize(capOffsets.mComputedBorderPadding.LeftRight() -
+                                capOffsets.mComputedPadding.LeftRight(),
+                              capOffsets.mComputedBorderPadding.TopBottom() -
+                                capOffsets.mComputedPadding.TopBottom()),
+                       nsSize(capOffsets.mComputedPadding.LeftRight(),
+                              capOffsets.mComputedPadding.TopBottom()),
+                       aShrinkWrap);
+    PRUint8 captionSide = GetCaptionSide();
+    nscoord capWidth = capSize.width + capOffsets.mComputedMargin.LeftRight() +
+                       capOffsets.mComputedBorderPadding.LeftRight();
+    if (captionSide == NS_SIDE_LEFT || captionSide == NS_SIDE_RIGHT) {
+      width += capWidth;
+    } else {
+      if (capWidth > width)
+        width = capWidth;
+    }
+  }
+
+  return nsSize(width, NS_UNCONSTRAINEDSIZE);
+}
 
 PRUint8
 nsTableOuterFrame::GetCaptionSide()
