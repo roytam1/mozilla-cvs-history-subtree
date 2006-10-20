@@ -1665,6 +1665,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
 
     // Check for a percentage based height and a containing block height
     // that depends on the content height
+    // XXX twiddling heightUnit doesn't help anymore
     if (eStyleUnit_Percent == heightUnit) {
       if (NS_AUTOHEIGHT == aContainingBlockHeight) {
         // this if clause enables %-height on replaced inline frames,
@@ -2097,6 +2098,7 @@ nsHTMLReflowState::ComputePadding(nscoord aContainingBlockWidth,
   }
 }
 
+// XXX remove me eventually
 void
 nsHTMLReflowState::ApplyMinMaxConstraints(nscoord* aFrameWidth,
                                           nscoord* aFrameHeight) const
@@ -2116,6 +2118,7 @@ nsHTMLReflowState::ApplyMinMaxConstraints(nscoord* aFrameWidth,
   }
 }
 
+// XXX remove me eventually
 void
 nsHTMLReflowState::ComputeMinMaxValues(nscoord aContainingBlockWidth,
                                        nscoord aContainingBlockHeight,
@@ -2174,6 +2177,7 @@ nsHTMLReflowState::ComputeMinMaxValues(nscoord aContainingBlockWidth,
 }
 
 
+// XXX remove me
 void nsHTMLReflowState::AdjustComputedHeight(PRBool aAdjustForBoxSizing)
 {
   // only do the math if the height  is not a symbolic value
@@ -2208,6 +2212,7 @@ void nsHTMLReflowState::AdjustComputedHeight(PRBool aAdjustForBoxSizing)
   }  
 }
 
+// XXX remove me
 void nsHTMLReflowState::AdjustComputedWidth(PRBool aAdjustForBoxSizing)
 {
   // only do the math if the width is not a symbolic value
@@ -2242,6 +2247,7 @@ void nsHTMLReflowState::AdjustComputedWidth(PRBool aAdjustForBoxSizing)
   }
 }
 
+// XXX remove me
 void
 nsHTMLReflowState::ShrinkWidthToFit(nscoord aAvailWidth)
 {
@@ -2271,6 +2277,7 @@ nsHTMLReflowState::ShrinkWidthToFit(nscoord aAvailWidth)
   AdjustComputedWidth(PR_TRUE);
 }
 
+// XXX remove me
 nscoord
 nsHTMLReflowState::AdjustIntrinsicWidthForBoxSizing(nscoord aIntrinsicWidth)
 {
