@@ -978,6 +978,34 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     AdjustComputedWidth(PR_TRUE);
   }
 
+  // Use the horizontal component of the hypothetical box in the cases
+  // where it's needed.
+  if (leftIsAuto && rightIsAuto) {
+    // Use the 'direction' to dictate whether 'left' or 'right' is
+    // treated like 'static-position'
+    if (NS_STYLE_DIRECTION_LTR == direction) {
+      if (hypotheticalBox.mLeftIsExact) {
+        mComputedOffsets.left = hypotheticalBox.mLeft;
+        leftIsAuto = PR_FALSE;
+      } else {
+        // Well, we don't know 'left' so we have to use 'right' and
+        // then solve for 'left'
+        mComputedOffsets.right = hypotheticalBox.mRight;
+        rightIsAuto = PR_FALSE;
+      }
+    } else {
+      if (hypotheticalBox.mRightIsExact) {
+        mComputedOffsets.right = containingBlockWidth - hypotheticalBox.mRight;
+        rightIsAuto = PR_FALSE;
+      } else {
+        // Well, we don't know 'right' so we have to use 'left' and
+        // then solve for 'right'
+        mComputedOffsets.left = hypotheticalBox.mLeft;
+        leftIsAuto = PR_FALSE;
+      }
+    }
+  }
+
   // See if none of 'left', 'width', and 'right', is 'auto'
   if (!leftIsAuto && !widthIsAuto && !rightIsAuto) {
     // See whether we're over-constrained
@@ -1021,33 +1049,6 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     }
 
   } else {
-    // See if all three of 'left', 'width', and 'right', are 'auto'
-    if (leftIsAuto && widthIsAuto && rightIsAuto) {
-      // Use the 'direction' to dictate whether 'left' or 'right' is
-      // treated like 'static-position'
-      if (NS_STYLE_DIRECTION_LTR == direction) {
-        if (hypotheticalBox.mLeftIsExact) {
-          mComputedOffsets.left = hypotheticalBox.mLeft;
-          leftIsAuto = PR_FALSE;
-        } else {
-          // Well, we don't know 'left' so we have to use 'right' and
-          // then solve for 'left'
-          mComputedOffsets.right = hypotheticalBox.mRight;
-          rightIsAuto = PR_FALSE;
-        }
-      } else {
-        if (hypotheticalBox.mRightIsExact) {
-          mComputedOffsets.right = containingBlockWidth - hypotheticalBox.mRight;
-          rightIsAuto = PR_FALSE;
-        } else {
-          // Well, we don't know 'right' so we have to use 'left' and
-          // then solve for 'right'
-          mComputedOffsets.left = hypotheticalBox.mLeft;
-          leftIsAuto = PR_FALSE;
-        }
-      }
-    }
-
     // At this point we know that at least one of 'left', 'width', and 'right'
     // is 'auto', but not all three. Examine the various combinations
     if (widthIsAuto) {
@@ -1118,33 +1119,6 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
 
     } else {
       // XXXldb Do tables come through this codepath?
-      // Either 'left' or 'right' or both is 'auto'
-      if (leftIsAuto && rightIsAuto) {
-        // Use the 'direction' to dictate whether 'left' or 'right' is treated like
-        // 'static-position'
-        if (NS_STYLE_DIRECTION_LTR == direction) {
-          if (hypotheticalBox.mLeftIsExact) {
-            mComputedOffsets.left = hypotheticalBox.mLeft;
-            leftIsAuto = PR_FALSE;
-          } else {
-            // Well, we don't know 'left' so we have to use 'right' and
-            // then solve for 'left'
-            mComputedOffsets.right = hypotheticalBox.mRight;
-            rightIsAuto = PR_FALSE;
-          }
-        } else {
-          if (hypotheticalBox.mRightIsExact) {
-            mComputedOffsets.right = containingBlockWidth - hypotheticalBox.mRight;
-            rightIsAuto = PR_FALSE;
-          } else {
-            // Well, we don't know 'right' so we have to use 'left' and
-            // then solve for 'right'
-            mComputedOffsets.left = hypotheticalBox.mLeft;
-            leftIsAuto = PR_FALSE;
-          }
-        }
-      }
-
       if (leftIsAuto) {
         // Solve for 'left'
         mComputedOffsets.left = containingBlockWidth - mComputedMargin.left -
