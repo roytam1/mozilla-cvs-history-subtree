@@ -988,8 +988,37 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     }
   }
 
-  nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
-  PRBool      widthIsAuto = (eStyleUnit_Auto == widthUnit);
+  // Initialize the 'top' and 'bottom' computed offsets
+  PRBool      topIsAuto = PR_FALSE, bottomIsAuto = PR_FALSE;
+  if (eStyleUnit_Auto == mStylePosition->mOffset.GetTopUnit()) {
+    mComputedOffsets.top = 0;
+    topIsAuto = PR_TRUE;
+  } else {
+    nsStyleCoord c;
+    ComputeVerticalValue(containingBlockHeight,
+                         mStylePosition->mOffset.GetTopUnit(),
+                         mStylePosition->mOffset.GetTop(c),
+                         mComputedOffsets.top);
+  }
+  if (eStyleUnit_Auto == mStylePosition->mOffset.GetBottomUnit()) {
+    mComputedOffsets.bottom = 0;        
+    bottomIsAuto = PR_TRUE;
+  } else {
+    nsStyleCoord c;
+    ComputeVerticalValue(containingBlockHeight,
+                         mStylePosition->mOffset.GetBottomUnit(),
+                         mStylePosition->mOffset.GetBottom(c),
+                         mComputedOffsets.bottom);
+  }
+
+  if (topIsAuto && bottomIsAuto) {
+    // Treat 'top' like 'static-position'
+    mComputedOffsets.top = hypotheticalBox.mTop;
+    topIsAuto = PR_FALSE;
+  }
+
+  PRBool widthIsAuto = eStyleUnit_Auto == mStylePosition->mWidth.GetUnit();
+  PRBool heightIsAuto = eStyleUnit_Auto == mStylePosition->mHeight.GetUnit();
 
   PRBool shrinkWrap = !leftIsAuto && !rightIsAuto;
   nsSize size =
@@ -1125,32 +1154,6 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     }
   }
 
-  // Initialize the 'top' and 'bottom' computed offsets
-  nsStyleUnit heightUnit = mStylePosition->mHeight.GetUnit();
-  PRBool      topIsAuto = PR_FALSE, bottomIsAuto = PR_FALSE;
-  if (eStyleUnit_Auto == mStylePosition->mOffset.GetTopUnit()) {
-    mComputedOffsets.top = 0;
-    topIsAuto = PR_TRUE;
-  } else {
-    nsStyleCoord c;
-    ComputeVerticalValue(containingBlockHeight,
-                         mStylePosition->mOffset.GetTopUnit(),
-                         mStylePosition->mOffset.GetTop(c),
-                         mComputedOffsets.top);
-  }
-  if (eStyleUnit_Auto == mStylePosition->mOffset.GetBottomUnit()) {
-    mComputedOffsets.bottom = 0;        
-    bottomIsAuto = PR_TRUE;
-  } else {
-    nsStyleCoord c;
-    ComputeVerticalValue(containingBlockHeight,
-                         mStylePosition->mOffset.GetBottomUnit(),
-                         mStylePosition->mOffset.GetBottom(c),
-                         mComputedOffsets.bottom);
-  }
-
-  PRBool  heightIsAuto = (eStyleUnit_Auto == heightUnit);
-
   // See if none of 'top', 'height', and 'bottom', is 'auto'
   if (!topIsAuto && !heightIsAuto && !bottomIsAuto) {
     // See whether we're over-constrained
@@ -1189,13 +1192,6 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     }
 
   } else {
-    // See if all three of 'top', 'height', and 'bottom', are 'auto'
-    if (topIsAuto && heightIsAuto && bottomIsAuto) {
-      // Treat 'top' like 'static-position'
-      mComputedOffsets.top = hypotheticalBox.mTop;
-      topIsAuto = PR_FALSE;
-    }
-
     // At this point we know that at least one of 'top', 'height', and 'bottom'
     // is 'auto', but not all three. Examine the various combinations
     if (heightIsAuto) {
@@ -1254,12 +1250,6 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
       }
     } else {
       // Either 'top' or 'bottom' or both is 'auto'
-      if (topIsAuto && bottomIsAuto) {
-        // Treat 'top' like 'static-position'
-        mComputedOffsets.top = hypotheticalBox.mTop;
-        topIsAuto = PR_FALSE;
-      }
-
       if (topIsAuto) {
         // Solve for 'top'
         mComputedOffsets.top = containingBlockHeight - mComputedMargin.top -
