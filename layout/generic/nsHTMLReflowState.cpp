@@ -1042,226 +1042,145 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
   // XXX Now that we have ComputeSize, can we condense many of the
   // branches off of widthIsAuto?
 
-  // See if none of 'left', 'width', and 'right', is 'auto'
-  if (!leftIsAuto && !widthIsAuto && !rightIsAuto) {
-    // See whether we're over-constrained
-    // XXXldb What about margins?
-    nscoord availContentSpace = containingBlockWidth -
-                                mComputedOffsets.left -
-                                mComputedOffsets.right -
-                                mComputedBorderPadding.left -
-                                mComputedBorderPadding.right;
-
-    if (availContentSpace < mComputedWidth) {
-      // We're over-constrained so use 'direction' to dictate which value to
-      // ignore
-      if (NS_STYLE_DIRECTION_LTR == direction) {
-        // Ignore the specified value for 'right'
-        mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
-          mComputedBorderPadding.left - mComputedWidth - mComputedBorderPadding.right;
-      } else {
-        // Ignore the specified value for 'left'
-        mComputedOffsets.left = containingBlockWidth - mComputedBorderPadding.left -
-          mComputedWidth - mComputedBorderPadding.right - mComputedOffsets.right;
-      }
-
-    } else {
-      // Calculate any 'auto' margin values
-      PRBool  marginLeftIsAuto = (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit());
-      PRBool  marginRightIsAuto = (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit());
-      nscoord availMarginSpace = availContentSpace - mComputedWidth;
-
-      if (marginLeftIsAuto) {
-        if (marginRightIsAuto) {
-          // Both 'margin-left' and 'margin-right' are 'auto', so they get
-          // equal values
-          mComputedMargin.left = availMarginSpace / 2;
-          mComputedMargin.right = availMarginSpace - mComputedMargin.left;
-        } else {
-          // Just 'margin-left' is 'auto'
-          mComputedMargin.left = availMarginSpace - mComputedMargin.right;
-        }
-      } else {
-        // Just 'margin-right' is 'auto'
-        mComputedMargin.right = availMarginSpace - mComputedMargin.left;
-      }
-    }
-
-  } else {
-    // At this point we know that at least one of 'left', 'width', and 'right'
-    // is 'auto', but not all three. Examine the various combinations
+  if (leftIsAuto) {
+    // We know 'right' is not 'auto' anymore thanks to the hypothetical
+    // box code above.
     if (widthIsAuto) {
-      if (leftIsAuto || rightIsAuto) {
-        if (leftIsAuto) {
-          mComputedOffsets.left = NS_AUTOOFFSET;   // solve for 'left'
-        } else {
-          mComputedOffsets.right = NS_AUTOOFFSET;  // solve for 'right'
-        }
-      } else {
-        // Calculate any 'auto' margin values since the computed width
-        // was adjusted by a 'min-width' or 'max-width', or we're
-        // dealing with a replaced element.
-        nscoord availMarginSpace = containingBlockWidth -
-                                   mComputedOffsets.LeftRight() -
-                                   mComputedMargin.LeftRight() -
-                                   mComputedBorderPadding.LeftRight() -
-                                   mComputedWidth;
-
-        if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
-          if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
-            // Both margins are 'auto' so their computed values are equal.
-            mComputedMargin.left = availMarginSpace / 2;
-            mComputedMargin.right = availMarginSpace - mComputedMargin.left;
-          } else {
-            mComputedMargin.left = availMarginSpace - mComputedMargin.right;
-          }
-        } else if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
-          mComputedMargin.right = availMarginSpace - mComputedMargin.left;
-        } else {
-          // We're over-constrained - ignore the value for 'left' or 'right'
-          // and solve for that value.
-          // XXX Does this still make sense?
-          if (NS_STYLE_DIRECTION_LTR == direction) {
-            // ignore 'right'
-            mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
-              mComputedMargin.left - mComputedBorderPadding.left -
-              mComputedWidth - mComputedBorderPadding.right -
-              mComputedMargin.right;
-          } else {
-            // ignore 'left'
-            mComputedOffsets.left = containingBlockWidth - 
-              mComputedMargin.left - mComputedBorderPadding.left -
-              mComputedWidth - mComputedBorderPadding.right -
-              mComputedMargin.right - mComputedOffsets.right;
-          }
-        }
-      }
-
+      // XXXldb This clause could probably go away now.
+      mComputedOffsets.left = NS_AUTOOFFSET;   // solve for 'left'
     } else {
-      // XXXldb Do tables come through this codepath?
-      if (leftIsAuto) {
-        // Solve for 'left'
-        mComputedOffsets.left = containingBlockWidth - mComputedMargin.left -
-          mComputedBorderPadding.left - mComputedWidth - mComputedBorderPadding.right - 
-          mComputedMargin.right - mComputedOffsets.right;
+      // Solve for 'left'
+      mComputedOffsets.left = containingBlockWidth - mComputedMargin.left -
+        mComputedBorderPadding.left - mComputedWidth - mComputedBorderPadding.right - 
+        mComputedMargin.right - mComputedOffsets.right;
 
-      } else if (rightIsAuto) {
-        // Solve for 'right'
-        mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
-          mComputedMargin.left - mComputedBorderPadding.left - mComputedWidth -
-          mComputedBorderPadding.right - mComputedMargin.right;
+    }
+  } else if (rightIsAuto) {
+    // We know 'left' is not 'auto' anymore thanks to the hypothetical
+    // box code above.
+    if (widthIsAuto) {
+      // XXXldb This clause could probably go away now.
+      mComputedOffsets.right = NS_AUTOOFFSET;  // solve for 'right'
+    } else {
+      // Solve for 'right'
+      mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
+        mComputedMargin.left - mComputedBorderPadding.left - mComputedWidth -
+        mComputedBorderPadding.right - mComputedMargin.right;
+    }
+  } else {
+    // Neither 'left' nor 'right' is 'auto'.  However, the width might
+    // still not fill all the available space (even though we didn't
+    // shrink-wrap) in case:
+    //  * width was specified
+    //  * we're dealing with a replaced element
+    //  * width was constrained by min-width or max-width.
+
+    nscoord availMarginSpace = containingBlockWidth -
+                               mComputedOffsets.LeftRight() -
+                               mComputedMargin.LeftRight() -
+                               mComputedBorderPadding.LeftRight() -
+                               mComputedWidth;
+    PRBool marginLeftIsAuto =
+      eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit();
+    PRBool marginRightIsAuto =
+      eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit();
+
+    if (availMarginSpace < 0 ||
+        (!marginLeftIsAuto && !marginRightIsAuto)) {
+      // We're over-constrained so use 'direction' to dictate which
+      // value to ignore.  (And note that the spec says to ignore 'left'
+      // or 'right' rather than 'margin-left' or 'margin-right'.)
+      if (NS_STYLE_DIRECTION_LTR == direction) {
+        // Ignore the specified value for 'right'.
+        mComputedOffsets.right += availMarginSpace;
+      } else {
+        // Ignore the specified value for 'left'.
+        mComputedOffsets.left += availMarginSpace;
       }
+    } else if (marginLeftIsAuto) {
+      if (marginRightIsAuto) {
+        // Both 'margin-left' and 'margin-right' are 'auto', so they get
+        // equal values
+        mComputedMargin.left = availMarginSpace / 2;
+        mComputedMargin.right = availMarginSpace - mComputedMargin.left;
+      } else {
+        // Just 'margin-left' is 'auto'
+        mComputedMargin.left = availMarginSpace - mComputedMargin.right;
+      }
+    } else {
+      // Just 'margin-right' is 'auto'
+      mComputedMargin.right = availMarginSpace - mComputedMargin.left;
     }
   }
 
-  // See if none of 'top', 'height', and 'bottom', is 'auto'
-  if (!topIsAuto && !heightIsAuto && !bottomIsAuto) {
-    // See whether we're over-constrained
-    // XXXldb What about margins?
-    nscoord availContentSpace = containingBlockHeight -
-                                mComputedOffsets.top -
-                                mComputedOffsets.bottom -
-                                mComputedBorderPadding.top -
-                                mComputedBorderPadding.bottom;
-
-    if (availContentSpace < mComputedHeight) {
-      // We're over-constrained so ignore the specified value for 'bottom'
-      mComputedOffsets.bottom = containingBlockHeight - mComputedOffsets.top -
-        mComputedBorderPadding.top - mComputedHeight - mComputedBorderPadding.bottom;
-
+  if (topIsAuto) {
+    // solve for 'top'
+    if (heightIsAuto) {
+      mComputedOffsets.top = NS_AUTOOFFSET;
     } else {
-      // Calculate any 'auto' margin values
-      PRBool  marginTopIsAuto = (eStyleUnit_Auto == mStyleMargin->mMargin.GetTopUnit());
-      PRBool  marginBottomIsAuto = (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit());
-      nscoord availMarginSpace = availContentSpace - mComputedHeight;
-
-      if (marginTopIsAuto) {
-        if (marginBottomIsAuto) {
-          // Both 'margin-top' and 'margin-bottom' are 'auto', so they get
-          // equal values
-          mComputedMargin.top = availMarginSpace / 2;
-          mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
-        } else {
-          // Just 'margin-top' is 'auto'
-          mComputedMargin.top = availMarginSpace - mComputedMargin.bottom;
-        }
-      } else {
-        // Just 'margin-bottom' is 'auto'
-        mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
-      }
+      mComputedOffsets.top = containingBlockHeight - mComputedMargin.top -
+        mComputedBorderPadding.top - mComputedHeight - mComputedBorderPadding.bottom - 
+        mComputedMargin.bottom - mComputedOffsets.bottom;
+    }
+  } else if (bottomIsAuto) {
+    // solve for 'bottom'
+    if (heightIsAuto) {
+      mComputedOffsets.bottom = NS_AUTOOFFSET;
+    } else {
+      mComputedOffsets.bottom = containingBlockHeight - mComputedOffsets.top -
+        mComputedMargin.top - mComputedBorderPadding.top - mComputedHeight -
+        mComputedBorderPadding.bottom - mComputedMargin.bottom;
+    }
+  } else {
+    // Neither 'top' nor 'bottom' is 'auto'.
+    nscoord autoHeight = containingBlockHeight -
+                         mComputedOffsets.TopBottom() -
+                         mComputedMargin.TopBottom() -
+                         mComputedBorderPadding.TopBottom();
+    if (autoHeight < 0) {
+      autoHeight = 0;
     }
 
-  } else {
-    // At this point we know that at least one of 'top', 'height', and 'bottom'
-    // is 'auto', but not all three. Examine the various combinations
-    if (heightIsAuto) {
-      if (topIsAuto || bottomIsAuto) {
-        if (topIsAuto) {
-          mComputedOffsets.top = NS_AUTOOFFSET;     // solve for 'top'
-        } else {
-          mComputedOffsets.bottom = NS_AUTOOFFSET;  // solve for 'bottom'
-        }
+    if (mComputedHeight == NS_UNCONSTRAINEDSIZE) {
+      // For non-replaced elements with 'height' auto, the 'height'
+      // fills the remaining space.
+      mComputedHeight = autoHeight;
 
+      // XXX Do these need box-sizing adjustments?
+      if (mComputedHeight > mComputedMaxHeight)
+        mComputedHeight = mComputedMaxHeight;
+      if (mComputedHeight < mComputedMinHeight)
+        mComputedHeight = mComputedMinHeight;
+    }
+
+    // The height might still not fill all the available space in case:
+    //  * height was specified
+    //  * we're dealing with a replaced element
+    //  * height was constrained by min-height or max-height.
+    nscoord availMarginSpace = autoHeight - mComputedHeight;
+    PRBool marginTopIsAuto =
+      eStyleUnit_Auto == mStyleMargin->mMargin.GetTopUnit();
+    PRBool marginBottomIsAuto =
+      eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit();
+
+    if (availMarginSpace < 0 || (!marginTopIsAuto && !marginBottomIsAuto)) {
+      // We're over-constrained so ignore the specified value for
+      // 'bottom'.  (And note that the spec says to ignore 'bottom'
+      // rather than 'margin-bottom'.)
+      mComputedOffsets.bottom += availMarginSpace;
+    } else if (marginTopIsAuto) {
+      if (marginBottomIsAuto) {
+        // Both 'margin-top' and 'margin-bottom' are 'auto', so they get
+        // equal values
+        mComputedMargin.top = availMarginSpace / 2;
+        mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
       } else {
-        PRInt32 autoHeight = containingBlockHeight - mComputedOffsets.top -
-          mComputedMargin.top - mComputedBorderPadding.top -
-          mComputedBorderPadding.bottom -
-          mComputedMargin.bottom - mComputedOffsets.bottom;
-
-        if (autoHeight < 0) {
-          autoHeight = 0;
-        }
-
-        if (mComputedHeight == NS_UNCONSTRAINEDSIZE) {
-          mComputedHeight = autoHeight;
-
-          // XXX Do these have box-sizing adjustments?
-          if (mComputedHeight > mComputedMaxHeight)
-            mComputedHeight = mComputedMaxHeight;
-          if (mComputedHeight < mComputedMinHeight)
-            mComputedHeight = mComputedMinHeight;
-        }
-
-        nscoord availMarginSpace = autoHeight - mComputedHeight;
-        if (availMarginSpace != 0) {
-          // Calculate any 'auto' margin values (otherwise assumed to be
-          // zero) since the computed height was adjusted by a
-          // 'min-height' or 'max-height', or since this is a replaced
-          // element.
-
-          if (eStyleUnit_Auto == mStyleMargin->mMargin.GetTopUnit()) {
-            if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
-              // Both margins are 'auto' so their computed values are equal
-              mComputedMargin.top = availMarginSpace / 2;
-              mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
-            } else {
-              mComputedMargin.top = availMarginSpace - mComputedMargin.bottom;
-            }
-          } else if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
-            mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
-          } else {
-            // We're over-constrained - ignore 'bottom'.
-            mComputedOffsets.bottom = containingBlockHeight - mComputedOffsets.top -
-              mComputedMargin.top - mComputedBorderPadding.top -
-              mComputedHeight - mComputedBorderPadding.bottom -
-              mComputedMargin.bottom;
-          }
-        }
+        // Just 'margin-top' is 'auto'
+        mComputedMargin.top = availMarginSpace - mComputedMargin.bottom;
       }
     } else {
-      // Either 'top' or 'bottom' or both is 'auto'
-      if (topIsAuto) {
-        // Solve for 'top'
-        mComputedOffsets.top = containingBlockHeight - mComputedMargin.top -
-          mComputedBorderPadding.top - mComputedHeight - mComputedBorderPadding.bottom - 
-          mComputedMargin.bottom - mComputedOffsets.bottom;
-
-      } else if (bottomIsAuto) {
-        // Solve for 'bottom'
-        mComputedOffsets.bottom = containingBlockHeight - mComputedOffsets.top -
-          mComputedMargin.top - mComputedBorderPadding.top - mComputedHeight -
-          mComputedBorderPadding.bottom - mComputedMargin.bottom;
-      }
+      // Just 'margin-bottom' is 'auto'
+      mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
     }
   }
 }
