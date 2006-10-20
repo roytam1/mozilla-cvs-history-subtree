@@ -1202,35 +1202,47 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
           mComputedOffsets.bottom = NS_AUTOOFFSET;  // solve for 'bottom'
         }
 
-      } else {
-        // Re-calculate any 'auto' margin values since the computed height
-        // was adjusted by a 'min-height' or 'max-height'.
-        // XXX Remove me?  But why is this "re-calculate"?
-        nscoord availMarginSpace = containingBlockHeight -
-                                   mComputedOffsets.top -
-                                   mComputedMargin.top -
-                                   mComputedBorderPadding.top -
-                                   mComputedBorderPadding.bottom -
-                                   mComputedMargin.bottom -
-                                   mComputedOffsets.bottom -
-                                   mComputedHeight;
-  
-        if (eStyleUnit_Auto == mStyleMargin->mMargin.GetTopUnit()) {
-          if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
-            // Both margins are 'auto' so their computed values are equal
-            mComputedMargin.top = availMarginSpace / 2;
+      } else if (mComputedHeight == NS_UNCONSTRAINEDSIZE) {
+        PRInt32 autoHeight = containingBlockHeight - mComputedOffsets.top -
+          mComputedMargin.top - mComputedBorderPadding.top -
+          mComputedBorderPadding.bottom -
+          mComputedMargin.bottom - mComputedOffsets.bottom;
+
+        if (autoHeight < 0) {
+          autoHeight = 0;
+        }
+
+        mComputedHeight = autoHeight;
+
+        // XXX Do these have box-sizing adjustments?
+        if (mComputedHeight > mComputedMaxHeight)
+          mComputedHeight = mComputedMaxHeight;
+        if (mComputedHeight < mComputedMinHeight)
+          mComputedHeight = mComputedMinHeight;
+
+        if (autoHeight != mComputedHeight) {
+          // Re-calculate any 'auto' margin values since the computed height
+          // was adjusted by a 'min-height' or 'max-height'.
+          // XXX Where was the first pass?
+          nscoord availMarginSpace = autoHeight - mComputedHeight;
+    
+          if (eStyleUnit_Auto == mStyleMargin->mMargin.GetTopUnit()) {
+            if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
+              // Both margins are 'auto' so their computed values are equal
+              mComputedMargin.top = availMarginSpace / 2;
+              mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
+            } else {
+              mComputedMargin.top = availMarginSpace - mComputedMargin.bottom;
+            }
+          } else if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
             mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
           } else {
-            mComputedMargin.top = availMarginSpace - mComputedMargin.bottom;
+            // We're over-constrained - ignore 'bottom'.
+            mComputedOffsets.bottom = containingBlockHeight - mComputedOffsets.top -
+              mComputedMargin.top - mComputedBorderPadding.top -
+              mComputedHeight - mComputedBorderPadding.bottom -
+              mComputedMargin.bottom;
           }
-        } else if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
-          mComputedMargin.bottom = availMarginSpace - mComputedMargin.top;
-        } else {
-          // We're over-constrained - ignore 'bottom'.
-          mComputedOffsets.bottom = containingBlockHeight - mComputedOffsets.top -
-            mComputedMargin.top - mComputedBorderPadding.top -
-            mComputedHeight - mComputedBorderPadding.bottom -
-            mComputedMargin.bottom;
         }
       }
     } else {
