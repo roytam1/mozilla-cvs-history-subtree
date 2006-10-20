@@ -1020,7 +1020,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
   PRBool widthIsAuto = eStyleUnit_Auto == mStylePosition->mWidth.GetUnit();
   PRBool heightIsAuto = eStyleUnit_Auto == mStylePosition->mHeight.GetUnit();
 
-  PRBool shrinkWrap = !leftIsAuto && !rightIsAuto;
+  PRBool shrinkWrap = leftIsAuto || rightIsAuto;
   nsSize size =
     frame->ComputeSize(rendContext,
                        nsSize(containingBlockWidth,
