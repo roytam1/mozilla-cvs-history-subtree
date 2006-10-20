@@ -88,16 +88,15 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*       aPresContext,
                                      nsIFrame*            aFrame,
                                      nsIRenderingContext* aRenderingContext,
                                      const nsSize&        aAvailableSpace)
-  : mReflowDepth(0)
+  : nsCSSOffsetState(aFrame, aRenderingContext)
+  , mReflowDepth(0)
 {
   NS_PRECONDITION(aPresContext, "no pres context");
   NS_PRECONDITION(aRenderingContext, "no rendering context");
   NS_PRECONDITION(aFrame, "no frame");
   parentReflowState = nsnull;
-  frame = aFrame;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
-  rendContext = aRenderingContext;
   mSpaceManager = nsnull;
   mLineLayout = nsnull;
   mFlags.mSpecialHeightReflow = PR_FALSE;
@@ -132,8 +131,9 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
                                      nscoord                  aContainingBlockWidth,
                                      nscoord                  aContainingBlockHeight,
                                      PRBool                   aInit)
-  : mReflowDepth(aParentReflowState.mReflowDepth + 1),
-    mFlags(aParentReflowState.mFlags)
+  : nsCSSOffsetState(aFrame, aParentReflowState.rendContext)
+  , mReflowDepth(aParentReflowState.mReflowDepth + 1)
+  , mFlags(aParentReflowState.mFlags)
 {
   NS_PRECONDITION(aPresContext, "no pres context");
   NS_PRECONDITION(aFrame, "no frame");
@@ -144,7 +144,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
                   "aInit out of range for PRBool");
 
   parentReflowState = &aParentReflowState;
-  frame = aFrame;
 
   // If the parent is dirty, then the child is as well.
   frame->AddStateBits(parentReflowState->frame->GetStateBits() &
@@ -153,7 +152,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
-  rendContext = aParentReflowState.rendContext;
   mSpaceManager = aParentReflowState.mSpaceManager;
   mLineLayout = aParentReflowState.mLineLayout;
   mFlags.mIsTopOfPage = aParentReflowState.mFlags.mIsTopOfPage;
@@ -179,10 +177,10 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
 }
 
 inline void
-nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
-                                          nsStyleUnit aUnit,
-                                          const nsStyleCoord& aCoord,
-                                          nscoord& aResult)
+nsCSSOffsetState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
+                                         nsStyleUnit aUnit,
+                                         const nsStyleCoord& aCoord,
+                                         nscoord& aResult)
 {
   NS_ASSERTION(aUnit == aCoord.GetUnit(), "unit mismatch");
   aResult = nsLayoutUtils::ComputeHorizontalValue(rendContext, frame,
@@ -191,10 +189,10 @@ nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
 }
 
 inline void
-nsHTMLReflowState::ComputeVerticalValue(nscoord aContainingBlockHeight,
-                                        nsStyleUnit aUnit,
-                                        const nsStyleCoord& aCoord,
-                                        nscoord& aResult)
+nsCSSOffsetState::ComputeVerticalValue(nscoord aContainingBlockHeight,
+                                       nsStyleUnit aUnit,
+                                       const nsStyleCoord& aCoord,
+                                       nscoord& aResult)
 {
   NS_ASSERTION(aUnit == aCoord.GetUnit(), "unit mismatch");
   aResult = nsLayoutUtils::ComputeVerticalValue(rendContext, frame,
@@ -300,13 +298,6 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
       rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
     } while (rs != mCBReflowState);
   }
-}
-
-const nsHTMLReflowState*
-nsHTMLReflowState::GetPageBoxReflowState(const nsHTMLReflowState* aParentRS)
-{
-  // XXX write me as soon as we can ask a frame if it's a page frame...
-  return nsnull;
 }
 
 /* static */
@@ -1497,40 +1488,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
       }
     }
 
-    // Compute margins from the specified margin style information. These
-    // become the default computed values, and may be adjusted below
-    // XXX fix to provide 0,0 for the top&bottom margins for
-    // inline-non-replaced elements
-    ComputeMargin(aContainingBlockWidth, cbrs);
-    if (aPadding) { // padding is an input arg
-      mComputedPadding.top    = aPadding->top;
-      mComputedPadding.right  = aPadding->right;
-      mComputedPadding.bottom = aPadding->bottom;
-      mComputedPadding.left   = aPadding->left;
-    }
-    else {
-      ComputePadding(aContainingBlockWidth, cbrs);
-    }
-    if (aBorder) {  // border is an input arg
-      mComputedBorderPadding = *aBorder;
-    }
-    else {
-      mComputedBorderPadding = mStyleBorder->GetBorder();
-    }
-    mComputedBorderPadding += mComputedPadding;
-
-    if (frame->GetType() == nsLayoutAtoms::tableFrame) {
-      nsTableFrame *tableFrame = NS_STATIC_CAST(nsTableFrame*, frame);
-
-      if (tableFrame->IsBorderCollapse()) {
-        // border-collapsed tables don't use any of their padding, and
-        // only part of their border.  We need to do this here before we
-        // try to do anything like handling 'auto' widths,
-        // '-moz-box-sizing', or 'auto' margins.
-        mComputedPadding.SizeTo(0,0,0,0);
-        mComputedBorderPadding = tableFrame->GetExcludedOuterBCBorder();
-      }
-    }
+    InitOffsets(aContainingBlockWidth, aBorder, aPadding);
 
     nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
     nsStyleUnit heightUnit = mStylePosition->mHeight.GetUnit();
@@ -1671,6 +1629,46 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     const nsStyleTextReset* st = frame->GetStyleTextReset();
     mFlags.mBlinks = 
       ((st->mTextDecoration & NS_STYLE_TEXT_DECORATION_BLINK) != 0);
+  }
+}
+
+void
+nsCSSOffsetState::InitOffsets(nscoord aContainingBlockWidth,
+                              nsMargin *aBorder, nsMargin *aPadding)
+{
+  // Compute margins from the specified margin style information. These
+  // become the default computed values, and may be adjusted below
+  // XXX fix to provide 0,0 for the top&bottom margins for
+  // inline-non-replaced elements
+  ComputeMargin(aContainingBlockWidth);
+  if (aPadding) { // padding is an input arg
+    mComputedPadding.top    = aPadding->top;
+    mComputedPadding.right  = aPadding->right;
+    mComputedPadding.bottom = aPadding->bottom;
+    mComputedPadding.left   = aPadding->left;
+  }
+  else {
+    ComputePadding(aContainingBlockWidth);
+  }
+  if (aBorder) {  // border is an input arg
+    mComputedBorderPadding = *aBorder;
+  }
+  else {
+    mComputedBorderPadding = frame->GetStyleBorder()->GetBorder();
+  }
+  mComputedBorderPadding += mComputedPadding;
+
+  if (frame->GetType() == nsLayoutAtoms::tableFrame) {
+    nsTableFrame *tableFrame = NS_STATIC_CAST(nsTableFrame*, frame);
+
+    if (tableFrame->IsBorderCollapse()) {
+      // border-collapsed tables don't use any of their padding, and
+      // only part of their border.  We need to do this here before we
+      // try to do anything like handling 'auto' widths,
+      // '-moz-box-sizing', or 'auto' margins.
+      mComputedPadding.SizeTo(0,0,0,0);
+      mComputedBorderPadding = tableFrame->GetExcludedOuterBCBorder();
+    }
   }
 }
 
@@ -1858,26 +1856,26 @@ nsHTMLReflowState::CalcLineHeight(nsPresContext* aPresContext,
 }
 
 void
-nsHTMLReflowState::ComputeMargin(nscoord aContainingBlockWidth,
-                                 const nsHTMLReflowState* aContainingBlockRS)
+nsCSSOffsetState::ComputeMargin(nscoord aContainingBlockWidth)
 {
   // If style style can provide us the margin directly, then use it.
-  if (!mStyleMargin->GetMargin(mComputedMargin)) {
+  const nsStyleMargin *styleMargin = frame->GetStyleMargin();
+  if (!styleMargin->GetMargin(mComputedMargin)) {
     // We have to compute the value
     if (NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) {
       mComputedMargin.left = 0;
       mComputedMargin.right = 0;
 
-      if (eStyleUnit_Coord == mStyleMargin->mMargin.GetLeftUnit()) {
+      if (eStyleUnit_Coord == styleMargin->mMargin.GetLeftUnit()) {
         nsStyleCoord left;
         
-        mStyleMargin->mMargin.GetLeft(left),
+        styleMargin->mMargin.GetLeft(left),
         mComputedMargin.left = left.GetCoordValue();
       }
-      if (eStyleUnit_Coord == mStyleMargin->mMargin.GetRightUnit()) {
+      if (eStyleUnit_Coord == styleMargin->mMargin.GetRightUnit()) {
         nsStyleCoord right;
         
-        mStyleMargin->mMargin.GetRight(right),
+        styleMargin->mMargin.GetRight(right),
         mComputedMargin.right = right.GetCoordValue();
       }
 
@@ -1885,88 +1883,70 @@ nsHTMLReflowState::ComputeMargin(nscoord aContainingBlockWidth,
       nsStyleCoord left, right;
 
       ComputeHorizontalValue(aContainingBlockWidth,
-                             mStyleMargin->mMargin.GetLeftUnit(),
-                             mStyleMargin->mMargin.GetLeft(left),
+                             styleMargin->mMargin.GetLeftUnit(),
+                             styleMargin->mMargin.GetLeft(left),
                              mComputedMargin.left);
       ComputeHorizontalValue(aContainingBlockWidth,
-                             mStyleMargin->mMargin.GetRightUnit(),
-                             mStyleMargin->mMargin.GetRight(right),
+                             styleMargin->mMargin.GetRightUnit(),
+                             styleMargin->mMargin.GetRight(right),
                              mComputedMargin.right);
     }
 
-    const nsHTMLReflowState* rs2 = GetPageBoxReflowState(parentReflowState);
     nsStyleCoord top, bottom;
-    if (nsnull != rs2) {
-      // According to the CSS2 spec, margin percentages are
-      // calculated with respect to the *height* of the containing
-      // block when in a paginated context.
-      ComputeVerticalValue(rs2->mComputedHeight,
-                           mStyleMargin->mMargin.GetTopUnit(),
-                           mStyleMargin->mMargin.GetTop(top),
+    // According to the CSS2 spec, margin percentages are
+    // calculated with respect to the *width* of the containing
+    // block, even for margin-top and margin-bottom.
+    // XXX This isn't true for page boxes, if we implement them.
+    ComputeHorizontalValue(aContainingBlockWidth,
+                           styleMargin->mMargin.GetTopUnit(),
+                           styleMargin->mMargin.GetTop(top),
                            mComputedMargin.top);
-      ComputeVerticalValue(rs2->mComputedHeight,
-                           mStyleMargin->mMargin.GetBottomUnit(),
-                           mStyleMargin->mMargin.GetBottom(bottom),
+    ComputeHorizontalValue(aContainingBlockWidth,
+                           styleMargin->mMargin.GetBottomUnit(),
+                           styleMargin->mMargin.GetBottom(bottom),
                            mComputedMargin.bottom);
-    }
-    else {
-      // According to the CSS2 spec, margin percentages are
-      // calculated with respect to the *width* of the containing
-      // block, even for margin-top and margin-bottom.
-      ComputeHorizontalValue(aContainingBlockWidth,
-                             mStyleMargin->mMargin.GetTopUnit(),
-                             mStyleMargin->mMargin.GetTop(top),
-                             mComputedMargin.top);
-      ComputeHorizontalValue(aContainingBlockWidth,
-                             mStyleMargin->mMargin.GetBottomUnit(),
-                             mStyleMargin->mMargin.GetBottom(bottom),
-                             mComputedMargin.bottom);
-    }
   }
 }
 
 void
-nsHTMLReflowState::ComputePadding(nscoord aContainingBlockWidth,
-                                  const nsHTMLReflowState* aContainingBlockRS)
-
+nsCSSOffsetState::ComputePadding(nscoord aContainingBlockWidth)
 {
   // If style can provide us the padding directly, then use it.
-  if (!mStylePadding->GetPadding(mComputedPadding)) {
+  const nsStylePadding *stylePadding = frame->GetStylePadding();
+  if (!stylePadding->GetPadding(mComputedPadding)) {
     // We have to compute the value
     nsStyleCoord left, right, top, bottom;
 
     ComputeHorizontalValue(aContainingBlockWidth,
-                           mStylePadding->mPadding.GetLeftUnit(),
-                           mStylePadding->mPadding.GetLeft(left),
+                           stylePadding->mPadding.GetLeftUnit(),
+                           stylePadding->mPadding.GetLeft(left),
                            mComputedPadding.left);
     ComputeHorizontalValue(aContainingBlockWidth,
-                           mStylePadding->mPadding.GetRightUnit(),
-                           mStylePadding->mPadding.GetRight(right),
+                           stylePadding->mPadding.GetRightUnit(),
+                           stylePadding->mPadding.GetRight(right),
                            mComputedPadding.right);
 
     // According to the CSS2 spec, percentages are calculated with respect to
     // containing block width for padding-top and padding-bottom
     ComputeHorizontalValue(aContainingBlockWidth,
-                           mStylePadding->mPadding.GetTopUnit(),
-                           mStylePadding->mPadding.GetTop(top),
+                           stylePadding->mPadding.GetTopUnit(),
+                           stylePadding->mPadding.GetTop(top),
                            mComputedPadding.top);
     ComputeHorizontalValue(aContainingBlockWidth,
-                           mStylePadding->mPadding.GetBottomUnit(),
-                           mStylePadding->mPadding.GetBottom(bottom),
+                           stylePadding->mPadding.GetBottomUnit(),
+                           stylePadding->mPadding.GetBottom(bottom),
                            mComputedPadding.bottom);
   }
   // a table row/col group, row/col doesn't have padding
-  if (frame) {
-    nsIAtom* frameType = frame->GetType();
-    if ((nsLayoutAtoms::tableRowGroupFrame == frameType) ||
-        (nsLayoutAtoms::tableColGroupFrame == frameType) ||
-        (nsLayoutAtoms::tableRowFrame      == frameType) ||
-        (nsLayoutAtoms::tableColFrame      == frameType)) {
-      mComputedPadding.top    = 0;
-      mComputedPadding.right  = 0;
-      mComputedPadding.bottom = 0;
-      mComputedPadding.left   = 0;
-    }
+  nsIAtom* frameType = frame->GetType();
+  if (nsLayoutAtoms::tableRowGroupFrame == frameType ||
+      nsLayoutAtoms::tableColGroupFrame == frameType ||
+      nsLayoutAtoms::tableRowFrame      == frameType ||
+      nsLayoutAtoms::tableColFrame      == frameType) {
+    mComputedPadding.top    = 0;
+    mComputedPadding.right  = 0;
+    mComputedPadding.bottom = 0;
+    mComputedPadding.left   = 0;
   }
 }
 

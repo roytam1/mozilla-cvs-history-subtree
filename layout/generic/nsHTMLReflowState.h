@@ -134,6 +134,63 @@ typedef PRUint32  nsCSSFrameType;
 //       if any are changed to be a value other than NS_UNCONSTRAINEDSIZE
 //       at least update AdjustComputedHeight/Width and test ad nauseum
 
+// A base class of nsHTMLReflowState that computes only the padding,
+// border, and margin, since those values are needed more often.
+struct nsCSSOffsetState {
+public:
+  // the frame being reflowed
+  nsIFrame*           frame;
+
+  // rendering context to use for measurement
+  nsIRenderingContext* rendContext;
+
+  // Computed margin values
+  nsMargin         mComputedMargin;
+
+  // Cached copy of the border + padding values
+  nsMargin         mComputedBorderPadding;
+
+  // Computed padding values
+  nsMargin         mComputedPadding;
+
+  // Callers using this constructor must call InitOffsets on their own.
+  nsCSSOffsetState(nsIFrame *aFrame, nsIRenderingContext *aRenderingContext)
+    : frame(aFrame)
+    , rendContext(aRenderingContext)
+  {
+  }
+
+  nsCSSOffsetState(nsIFrame *aFrame, nsIRenderingContext *aRenderingContext,
+                   nscoord aContainingBlockWidth)
+    : frame(aFrame)
+    , rendContext(aRenderingContext)
+  {
+    InitOffsets(aContainingBlockWidth);
+  }
+
+  void InitOffsets(nscoord aContainingBlockWidth,
+                   nsMargin *aBorder = nsnull, nsMargin *aPadding = nsnull);
+
+private:
+  // Computes margin values from the specified margin style information, and
+  // fills in the mComputedMargin member
+  void ComputeMargin(nscoord aContainingBlockWidth);
+  
+  // Computes padding values from the specified padding style information, and
+  // fills in the mComputedPadding member
+  void ComputePadding(nscoord aContainingBlockWidth);
+
+protected:
+  inline void ComputeHorizontalValue(nscoord aContainingBlockWidth,
+                                     nsStyleUnit aUnit,
+                                     const nsStyleCoord& aCoord,
+                                     nscoord& aResult);
+  inline void ComputeVerticalValue(nscoord aContainingBlockHeight,
+                                   nsStyleUnit aUnit,
+                                   const nsStyleCoord& aCoord,
+                                   nscoord& aResult);
+};
+
 /**
  * State passed to a frame during reflow or intrinsic size calculation.
  *
@@ -142,13 +199,10 @@ typedef PRUint32  nsCSSFrameType;
  *
  * @see nsIFrame#Reflow()
  */
-struct nsHTMLReflowState {
+struct nsHTMLReflowState : public nsCSSOffsetState {
   // the reflow states are linked together. this is the pointer to the
   // parent's reflow state
   const nsHTMLReflowState* parentReflowState;
-
-  // the frame being reflowed
-  nsIFrame*           frame;
 
   // the available width in which to reflow the frame. The space
   // represents the amount of room for the frame's border, padding,
@@ -166,9 +220,6 @@ struct nsHTMLReflowState {
   // and margin (and similar for its complete ancestors) will need to
   // fit in this height.
   nscoord              availableHeight;
-
-  // rendering context to use for measurement
-  nsIRenderingContext* rendContext;
 
   // The type of frame, from css's perspective. This value is
   // initialized by the Init method below.
@@ -208,15 +259,6 @@ struct nsHTMLReflowState {
   // For replaced block-level frames, a value of NS_INTRINSICSIZE
   // means you use your intrinsic height as the computed height
   nscoord          mComputedHeight;
-
-  // Computed margin values
-  nsMargin         mComputedMargin;
-
-  // Cached copy of the border values
-  nsMargin         mComputedBorderPadding;
-
-  // Computed padding values
-  nsMargin         mComputedPadding;
 
   // Computed values for 'left/top/right/bottom' offsets. Only applies to
   // 'positioned' elements
@@ -328,26 +370,6 @@ struct nsHTMLReflowState {
   static nsIFrame* GetContainingBlockFor(const nsIFrame* aFrame);
 
   /**
-   * Get the page box reflow state, starting from a frames
-   * <B>parent</B> reflow state (the parent reflow state may or may not end
-   * up being the containing block reflow state)
-   */
-  static const nsHTMLReflowState*
-    GetPageBoxReflowState(const nsHTMLReflowState* aParentRS);
-
-  /**
-   * Compute the border plus padding for <TT>aFrame</TT>. If a
-   * percentage needs to be computed it will be computed by finding
-   * the containing block, use GetContainingBlockReflowState.
-   * aParentReflowState is aFrame's
-   * parent's reflow state. The resulting computed border plus padding
-   * is returned in aResult.
-   */
-  static void ComputeBorderPaddingFor(nsIFrame* aFrame,
-                                      const nsHTMLReflowState* aParentRS,
-                                      nsMargin& aResult);
-
-  /**
    * Calculate the raw line-height property for the given frame. The return
    * value, if line-height was applied and is valid will be >= 0. Otherwise,
    * the return value will be <0 which is illegal (CSS2 spec: section 10.8.1).
@@ -412,25 +434,6 @@ protected:
   void ComputeRelativeOffsets(const nsHTMLReflowState* cbrs,
                               nscoord aContainingBlockWidth,
                               nscoord aContainingBlockHeight);
-
-  inline void ComputeHorizontalValue(nscoord aContainingBlockWidth,
-                                     nsStyleUnit aUnit,
-                                     const nsStyleCoord& aCoord,
-                                     nscoord& aResult);
-  inline void ComputeVerticalValue(nscoord aContainingBlockHeight,
-                                   nsStyleUnit aUnit,
-                                   const nsStyleCoord& aCoord,
-                                   nscoord& aResult);
-
-  // Computes margin values from the specified margin style information, and
-  // fills in the mComputedMargin member
-  void ComputeMargin(nscoord aContainingBlockWidth,
-                     const nsHTMLReflowState* aContainingBlockRS);
-  
-  // Computes padding values from the specified padding style information, and
-  // fills in the mComputedPadding member
-  void ComputePadding(nscoord aContainingBlockWidth,
-                      const nsHTMLReflowState* aContainingBlockRS);
 
   // Calculates the computed values for the 'min-Width', 'max-Width',
   // 'min-Height', and 'max-Height' properties, and stores them in the assorted
