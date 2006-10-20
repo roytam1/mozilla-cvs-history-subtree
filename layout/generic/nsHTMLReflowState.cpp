@@ -1010,6 +1010,9 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
   mComputedWidth = size.width;
   mComputedHeight = size.height;
 
+  // XXX Now that we have ComputeSize, can we condense many of the
+  // branches off of widthIsAuto?
+
   // See if none of 'left', 'width', and 'right', is 'auto'
   if (!leftIsAuto && !widthIsAuto && !rightIsAuto) {
     // See whether we're over-constrained
@@ -1066,9 +1069,9 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
           mComputedOffsets.right = NS_AUTOOFFSET;  // solve for 'right'
         }
       } else {
-        // Re-calculate any 'auto' margin values since the computed width
-        // was adjusted by a 'min-width' or 'max-width'.
-        // XXX Remove me?  But why is this "re-calculate"?
+        // Calculate any 'auto' margin values since the computed width
+        // was adjusted by a 'min-width' or 'max-width', or we're
+        // dealing with a replaced element.
         nscoord availMarginSpace = containingBlockWidth -
                                    mComputedOffsets.LeftRight() -
                                    mComputedMargin.LeftRight() -
@@ -1088,6 +1091,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
         } else {
           // We're over-constrained - ignore the value for 'left' or 'right'
           // and solve for that value.
+          // XXX Does this still make sense?
           if (NS_STYLE_DIRECTION_LTR == direction) {
             // ignore 'right'
             mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
@@ -1202,7 +1206,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
           mComputedOffsets.bottom = NS_AUTOOFFSET;  // solve for 'bottom'
         }
 
-      } else if (mComputedHeight == NS_UNCONSTRAINEDSIZE) {
+      } else {
         PRInt32 autoHeight = containingBlockHeight - mComputedOffsets.top -
           mComputedMargin.top - mComputedBorderPadding.top -
           mComputedBorderPadding.bottom -
@@ -1212,20 +1216,23 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
           autoHeight = 0;
         }
 
-        mComputedHeight = autoHeight;
+        if (mComputedHeight == NS_UNCONSTRAINEDSIZE) {
+          mComputedHeight = autoHeight;
 
-        // XXX Do these have box-sizing adjustments?
-        if (mComputedHeight > mComputedMaxHeight)
-          mComputedHeight = mComputedMaxHeight;
-        if (mComputedHeight < mComputedMinHeight)
-          mComputedHeight = mComputedMinHeight;
+          // XXX Do these have box-sizing adjustments?
+          if (mComputedHeight > mComputedMaxHeight)
+            mComputedHeight = mComputedMaxHeight;
+          if (mComputedHeight < mComputedMinHeight)
+            mComputedHeight = mComputedMinHeight;
+        }
 
-        if (autoHeight != mComputedHeight) {
-          // Re-calculate any 'auto' margin values since the computed height
-          // was adjusted by a 'min-height' or 'max-height'.
-          // XXX Where was the first pass?
-          nscoord availMarginSpace = autoHeight - mComputedHeight;
-    
+        nscoord availMarginSpace = autoHeight - mComputedHeight;
+        if (availMarginSpace != 0) {
+          // Calculate any 'auto' margin values (otherwise assumed to be
+          // zero) since the computed height was adjusted by a
+          // 'min-height' or 'max-height', or since this is a replaced
+          // element.
+
           if (eStyleUnit_Auto == mStyleMargin->mMargin.GetTopUnit()) {
             if (eStyleUnit_Auto == mStyleMargin->mMargin.GetBottomUnit()) {
               // Both margins are 'auto' so their computed values are equal
