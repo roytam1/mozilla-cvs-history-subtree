@@ -441,27 +441,6 @@ protected:
 
   nscoord CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWidth);
 
-  // Adjust Computed sizes for Min/Max Width and box-Sizing (if
-  // aAdjustForBoxSizing is true)  
-  // - guarantees that the computed height/width will be non-negative
-  //   If the value goes negative (because the padding or border is greater than
-  //   the width/height and it is removed due to box sizing) then it is driven to 0
-  void AdjustComputedHeight(PRBool aAdjustForBoxSizing);
-  void AdjustComputedWidth(PRBool aAdjustForBoxSizing);
-
-  // Calculate the shrink-wrap width if the available width is aAvailWidth.
-  // This method will set mComputedWidth to the result and call
-  // AdjustComputedWidth, passing PR_FALSE to it.  Note that the available
-  // width passed to this method should not have had the computed margin,
-  // border, and padding subtracted from it -- this method will handle that
-  // itself.
-  void ShrinkWidthToFit(nscoord aAvailWidth);
-
-  // AdjustIntrinsicWidthForBoxSizing takes an intrinsic width and returns a
-  // value that can be compared to the min and max computed widths, no matter
-  // what our box-sizing is.
-  nscoord AdjustIntrinsicWidthForBoxSizing(nscoord aIntrinsicWidth);
-  
 #ifdef IBMBIDI
   /**
    * Test whether the frame is a form control in a visual Bidi page.

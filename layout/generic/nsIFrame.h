@@ -1123,12 +1123,20 @@ public:
    * The |height| member of the return value may be
    * NS_UNCONSTRAINEDSIZE, but the |width| member must not be.
    *
+   * Note that the reason that border and padding need to be passed
+   * separately is so that the 'box-sizing' property can be handled.
+   * Thus aMargin includes absolute positioning offsets as well.
+   *
    * @param aCBSize  The size of the element's containing block.  (Well,
    *                 the |height| component isn't really.)
-   * @param aMargin  The sum of the vertical / horizontal margins of the
-   *                 frame, including actual values resulting from
-   *                 percentages, but not including actual values
-   *                 resulting from 'auto'.
+   * @param aMargin  The sum of the vertical / horizontal margins
+   *                 ***AND*** absolute positioning offsets (top, right,
+   *                 bottom, left) of the frame, including actual values
+   *                 resulting from percentages and from the
+   *                 "hypothetical box" for absolute positioning, but
+   *                 not including actual values resulting from 'auto'
+   *                 margins or ignored 'auto' values in absolute
+   *                 positioning.
    * @param aBorder  The sum of the vertical / horizontal border widths
    *                 of the frame.
    * @param aPadding  The sum of the vertical / horizontal margins of
