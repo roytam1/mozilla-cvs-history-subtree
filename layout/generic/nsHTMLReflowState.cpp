@@ -1045,11 +1045,11 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
   if (leftIsAuto) {
     // We know 'right' is not 'auto' anymore thanks to the hypothetical
     // box code above.
+    // Solve for 'left'.
     if (widthIsAuto) {
       // XXXldb This clause could probably go away now.
-      mComputedOffsets.left = NS_AUTOOFFSET;   // solve for 'left'
+      mComputedOffsets.left = NS_AUTOOFFSET;
     } else {
-      // Solve for 'left'
       mComputedOffsets.left = containingBlockWidth - mComputedMargin.left -
         mComputedBorderPadding.left - mComputedWidth - mComputedBorderPadding.right - 
         mComputedMargin.right - mComputedOffsets.right;
@@ -1058,11 +1058,11 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
   } else if (rightIsAuto) {
     // We know 'left' is not 'auto' anymore thanks to the hypothetical
     // box code above.
+    // Solve for 'right'.
     if (widthIsAuto) {
       // XXXldb This clause could probably go away now.
-      mComputedOffsets.right = NS_AUTOOFFSET;  // solve for 'right'
+      mComputedOffsets.right = NS_AUTOOFFSET;
     } else {
-      // Solve for 'right'
       mComputedOffsets.right = containingBlockWidth - mComputedOffsets.left -
         mComputedMargin.left - mComputedBorderPadding.left - mComputedWidth -
         mComputedBorderPadding.right - mComputedMargin.right;
