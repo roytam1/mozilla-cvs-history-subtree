@@ -266,9 +266,12 @@ function FillInHTMLTooltip(tipElement)
     var t = texts[i];
     if (t && t.search(/\S/) >= 0) {
       var hbox = document.getElementById("aHTMLTooltip").firstChild;
-      hbox.style.direction = direction;
-      var label = hbox.firstChild;
+      const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+      var label = document.createElementNS(XUL_NS, "label");
       label.textContent = t;
+      label.flex = 1;
+      label.className = "htmltooltip-label";
+      hbox.replaceChild(label, hbox.firstChild);
 
       // Work around reflow bugs
       hbox.width = "";
