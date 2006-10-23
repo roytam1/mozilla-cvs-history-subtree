@@ -62,6 +62,7 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsNativeCharsetUtils.h"
 #include "nsEmbedCID.h"
+#include "nsIMapiSupport.h"
 #include <mbstring.h>
 
 #define EXE_EXTENSION ".EXE" 
