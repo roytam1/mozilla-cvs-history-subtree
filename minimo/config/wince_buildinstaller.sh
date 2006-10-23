@@ -43,5 +43,7 @@ cat minimo.log
 
 cp -a minimo_wince_setup.exe $OBJDIR/dist/
 cp -a minimo.CAB $OBJDIR/dist/minimo.cab
+
+rm -rf minimo.zip
 zip -r minimo.zip minimo
 cp -a minimo.zip $OBJDIR/dist/
