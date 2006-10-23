@@ -90,6 +90,7 @@ bin\components\import.xpt
 bin\components\impComm4xMail.xpt
 bin\components\mailview.xpt
 bin\components\mailprofilemigration.xpt
+bin\components\shellservice.xpt
 
 bin\chrome\toolkit.jar
 bin\chrome\toolkit.manifest
@@ -112,7 +113,6 @@ bin\MapiProxy.dll
 bin\mozMapi32.dll
 bin\components\mapihook.xpt
 bin\components\nsSetDefaultMail.js
-bin\components\nsUnsetDefaultMail.js
 bin\components\offlineStartup.js
 bin\components\nsMailDefaultHandler.js
 

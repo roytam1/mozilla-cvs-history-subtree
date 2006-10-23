@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Asaf Romano <mozilla.mano@sent.com>
+ *   Scott MacGregor <mscott@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -59,23 +60,69 @@ extern "C" {
   extern OSStatus _LSSaveAndRefresh(void);
 }
 
-NS_IMPL_ISUPPORTS1(nsMailMacIntegration, nsIMapiRegistry)
+NS_IMPL_ISUPPORTS1(nsMailMacIntegration, nsIShellService)
 
-nsMailMacIntegration::nsMailMacIntegration()
+nsMailMacIntegration::nsMailMacIntegration(): mCheckedThisSession(PR_FALSE)
+{}
+
+NS_IMETHODIMP
+nsMailMacIntegration::IsDefaultClient(PRBool aStartupCheck, PRUint16 aApps, PRBool * aIsDefaultClient)
 {
-  PRBool isDefault;
-  GetIsDefaultMailClient(&isDefault);
-  mShowMailDialog = !isDefault;
-  GetIsDefaultNewsClient(&isDefault);
-  mShowNewsDialog = !isDefault;
-  GetIsDefaultFeedClient(&isDefault);
-  mShowFeedDialog = !isDefault;
+  *aIsDefaultClient = PR_TRUE;
+  if (aApps & nsIShellService::MAIL)
+    *aIsDefaultClient &= isDefaultHandlerForProtocol(CFSTR("mailto"));
+  if (aApps & nsIShellService::NEWS)
+    *aIsDefaultClient &= isDefaultHandlerForProtocol(CFSTR("news"));
+  if (aApps & nsIShellService::RSS)
+    *aIsDefaultClient &= isDefaultHandlerForProtocol(CFSTR("feed"));
+  
+  // if this is the first mail window, maintain internal state that we've
+  // checked this session (so that subsequent window opens don't show the 
+  // default client dialog.
+  
+  if (aStartupCheck)
+    mCheckedThisSession = PR_TRUE;
+  return NS_OK;
 }
 
-nsresult
-nsMailMacIntegration::IsDefaultHandlerForProtocol(CFStringRef aScheme,
-                                                  PRBool *aIsDefault)
+NS_IMETHODIMP
+nsMailMacIntegration::SetDefaultClient(PRBool aForAllUsers, PRUint16 aApps)
 {
+  nsresult rv = NS_OK;
+  if (aApps & nsIShellService::MAIL)
+    rv |= setAsDefaultHandlerForProtocol(CFSTR("mailto"));
+  if (aApps & nsIShellService::RSS)
+    rv |= setAsDefaultHandlerForProtocol(CFSTR("news"));
+  if (aApps & nsIShellService::RSS)
+    rv |= setAsDefaultHandlerForProtocol(CFSTR("feed"));
+  
+  return rv;	
+}
+
+NS_IMETHODIMP
+nsMailMacIntegration::GetShouldCheckDefaultClient(PRBool* aResult)
+{
+  if (mCheckedThisSession) 
+  {
+    *aResult = PR_FALSE;
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  return prefs->GetBoolPref("mail.shell.checkDefaultClient", aResult);
+}
+
+NS_IMETHODIMP
+nsMailMacIntegration::SetShouldCheckDefaultClient(PRBool aShouldCheck)
+{
+  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  return prefs->SetBoolPref("mail.shell.checkDefaultClient", aShouldCheck);
+}
+
+PRBool
+nsMailMacIntegration::isDefaultHandlerForProtocol(CFStringRef aScheme)
+{
+  PRBool isDefault = PR_FALSE;
   // Since neither Launch Services nor Internet Config actually differ between 
   // bundles which have the same bundle identifier (That is, if we set our
   // URL of our bundle as the default handler for the given protocol,
@@ -88,7 +135,7 @@ nsMailMacIntegration::IsDefaultHandlerForProtocol(CFStringRef aScheme,
     // CFBundleGetIdentifier is expected to return NULL only if the specified
     // bundle doesn't have a bundle identifier in its dictionary. In this case,
     // that means a failure, since our bundle does have an identifier.
-    return NS_ERROR_FAILURE;
+    return isDefault;
   }
 
   ::CFRetain(tbirdID);
@@ -109,18 +156,17 @@ nsMailMacIntegration::IsDefaultHandlerForProtocol(CFStringRef aScheme,
       if (defaultHandlerID) {
         ::CFRetain(defaultHandlerID);
         // and compare it to our bundle identifier
-        *aIsDefault = ::CFStringCompare(tbirdID, defaultHandlerID, 0)
+        isDefault = ::CFStringCompare(tbirdID, defaultHandlerID, 0)
                        == kCFCompareEqualTo;
         ::CFRelease(defaultHandlerID);
       }
       else {
         // If the bundle doesn't have an identifier in its info property list,
         // it's not our bundle.
-        *aIsDefault = PR_FALSE;
+        isDefault = PR_FALSE;
       }
 
       ::CFRelease(defaultHandlerBundle);
-      rv = NS_OK;
     }
 
     ::CFRelease(defaultHandlerURL);
@@ -128,16 +174,15 @@ nsMailMacIntegration::IsDefaultHandlerForProtocol(CFStringRef aScheme,
   else {
     // If |_LSCopyDefaultSchemeHandlerURL| failed, there's no default
     // handler for the given protocol
-    *aIsDefault = PR_FALSE;
-    rv = NS_OK;
+    isDefault = PR_FALSE;
   }
 
   ::CFRelease(tbirdID);
-  return rv;
+  return isDefault;
 }
 
 nsresult
-nsMailMacIntegration::SetAsDefaultHandlerForProtocol(CFStringRef aScheme)
+nsMailMacIntegration::setAsDefaultHandlerForProtocol(CFStringRef aScheme)
 {
   CFURLRef tbirdURL = ::CFBundleCopyBundleURL(CFBundleGetMainBundle());
 
