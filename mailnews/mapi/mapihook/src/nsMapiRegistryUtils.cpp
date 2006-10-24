@@ -1199,7 +1199,7 @@ nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
                           MOZ_HWND_BROADCAST_MSG_TIMEOUT,
                           NULL);
     // Tell the MAPI Service to register the mapi proxy dll now that we are the default mail application
-    nsCOMPtr<nsIMapiSupport> mapiService (do_GetService(NS_IMAPISUPPORT_CONTRACTID, &rv));
+    nsCOMPtr<nsIMapiSupport> mapiService (do_GetService(NS_IMAPISUPPORT_CONTRACTID, &result));
     NS_ENSURE_SUCCESS(result, result);
     mapiService->UnRegisterServer();
     return mailKeySet;
