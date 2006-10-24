@@ -15,6 +15,10 @@
     <menuitem id="prevMsgMenuItem" key="key_previousMsg"/>
     <menuitem id="prevUnreadMsgMenuItem" key="key_previousUnreadMsg"/>
 
+    <!-- Message menu -->
+    <menuitem id="killThread" key="key_killThread"/>
+    <menuitem id="watchThread" key="key_watchThread"/>
+
     <!-- Message submenu (Mark) -->
     <menuitem id="markReadMenuItem" key="key_toggleRead"/>
     <menuitem id="markThreadReadMenuItem" key="key_markThreadAsRead"/>
