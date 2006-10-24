@@ -61,6 +61,15 @@
  */
 #define PRLDAP_DEFAULT_ADDRESS_FAMILY	PR_AF_INET6
 
+/*
+ * Macro to set port to the 'port' field of a NSPR PRNetAddr union.
+ ** INPUTS:
+ ** PRNetAddr *addr   A network address.
+ ** PRUint16          port to set to the 'port' field of 'addr'.
+ ** RETURN: none
+ */
+#define PRLDAP_SET_PORT(myaddr,myport) \
+    ((myaddr)->raw.family == PR_AF_INET6 ? ((myaddr)->ipv6.port = PR_htons(myport)) : ((myaddr)->inet.port = PR_htons(myport)))
 
 /*
  * Data structures:

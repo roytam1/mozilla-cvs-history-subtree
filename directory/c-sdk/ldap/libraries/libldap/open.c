@@ -507,6 +507,10 @@ ldap_open( const char *host, int port )
  * future communication is returned on success, NULL on failure.
  * "defhost" may be a space-separated list of hosts or IP addresses
  *
+ * NOTE: If you want to use IPv6, you must use prldap creating a LDAP handle
+ * with prldap_init instead of ldap_init. Or install the NSPR functions
+ * by calling prldap_install_routines. (See the nspr samples in examples)
+ *
  * Example:
  *	LDAP	*ld;
  *	ld = ldap_init( default_hostname, default_port );
