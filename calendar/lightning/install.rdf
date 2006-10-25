@@ -21,6 +21,23 @@
       </Description>
     </em:targetApplication>
 
+    <!-- We only allow installation of Lightning into Firefox for ease of
+       - development. You can edit the JS and then click reload in Firefox as
+       - opposed to having to restart Thunderbird after each edit. -->
+    <em:targetApplication>
+      <Description>
+        <!-- firefox -->
+        <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+#ifdef MOZILLA_1_8_BRANCH
+        <em:minVersion>1.5</em:minVersion>
+        <em:maxVersion>2.0.*</em:maxVersion>
+#else
+        <em:minVersion>@FIREFOX_VERSION@</em:minVersion>
+        <em:maxVersion>@FIREFOX_VERSION@</em:maxVersion>
+#endif
+      </Description>
+    </em:targetApplication>
+
     <em:id>{e2fda1a4-762b-4020-b5ad-a41df1933103}</em:id>
     <em:name>Lightning</em:name>
     <em:version>@LIGHTNING_VERSION@</em:version>
