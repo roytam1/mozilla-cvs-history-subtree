@@ -2686,6 +2686,7 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
   nscoord   cellSpacingY = GetCellSpacingY();
 
   nsPresContext* presContext = GetPresContext();
+  // XXXldb Should we be checking constrained height instead?
   PRBool isPaginated = presContext->IsPaginated();
 
   aOverflowArea = nsRect (0, 0, 0, 0);
@@ -2702,8 +2703,12 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
     // Get the frame state bits
     // See if we should only reflow the dirty child frames
-    if (reflowAllKids || (kidFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
-                                          NS_FRAME_HAS_DIRTY_CHILDREN))) {
+    if (reflowAllKids ||
+        (kidFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
+                                     NS_FRAME_HAS_DIRTY_CHILDREN)) ||
+        (aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
+         (isPaginated || NS_STATIC_CAST(nsTableRowGroupFrame*, kidFrame)->
+                           NeedSpecialReflow()))) {
       if (pageBreak) {
         PushChildren(rowGroups, childX);
         aStatus = NS_FRAME_NOT_COMPLETE;
@@ -2712,6 +2717,8 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
 
       nsSize kidAvailSize(aReflowState.availSize);
       // if the child is a tbody in paginated mode reduce the height by a repeated footer
+      // XXXldb Shouldn't this check against |thead| and |tfoot| from
+      // OrderRowGroups?
       nsIFrame* repeatedFooter = nsnull;
       nscoord repeatedFooterHeight = 0;
       if (isPaginated && (NS_UNCONSTRAINEDSIZE != kidAvailSize.height)) {

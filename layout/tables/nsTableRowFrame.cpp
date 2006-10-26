@@ -857,7 +857,8 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
     if (!aReflowState.ShouldReflowAllKids() &&
         !(kidFrame->GetStateBits() &
           (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
-      doReflowChild = PR_FALSE;
+      if (!aReflowState.mFlags.mSpecialHeightReflow)
+        doReflowChild = PR_FALSE;
     }
     else if ((NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)) {
       // We don't reflow a rowspan >1 cell here with a constrained height. 

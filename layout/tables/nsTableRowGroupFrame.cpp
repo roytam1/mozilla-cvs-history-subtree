@@ -333,12 +333,11 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
     haveRow = PR_TRUE;
 
     // Reflow the row frame
-    if ((reflowAllKids ||
-         (kidFrame->GetStateBits() &
-          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) &&
-        !(aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
-          !isPaginated &&
-          !((nsTableRowFrame*)kidFrame)->NeedSpecialReflow())) {
+    if (reflowAllKids ||
+        (kidFrame->GetStateBits() &
+         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
+        (aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
+         (isPaginated || ((nsTableRowFrame*)kidFrame)->NeedSpecialReflow()))) {
       nsSize oldKidSize = kidFrame->GetSize();
 
       // XXXldb We used to only pass aDesiredSize.mFlags through for the

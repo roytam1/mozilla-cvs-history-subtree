@@ -122,22 +122,27 @@ nsTableCellFrame::Init(nsIContent*      aContent,
 void
 nsTableCellFrame::NotifyPercentHeight(const nsHTMLReflowState& aReflowState)
 {
-  if (!NeedSpecialReflow()) {
-    // Only initiate a special reflow if we will be able to construct a computed height 
-    // on the cell that will result in the frame getting a computed height. This can only 
-    // happen (but not sufficient) if there is no computed height already set between the 
-    // initiating frame and the cell.
-    for (const nsHTMLReflowState* rs = aReflowState.parentReflowState; rs; rs = rs->parentReflowState) {
-      if ((NS_UNCONSTRAINEDSIZE != rs->mComputedHeight) && (0 != rs->mComputedHeight)) {
-        return;
-      }
-      // stop when we reach the cell frame
-      if (rs->frame == this) {
-        nsTableFrame::RequestSpecialHeightReflow(*rs);
-        return;
-      }
+  const nsHTMLReflowState *cellRS;
+  if (aReflowState.mCBReflowState &&
+      // nsHTMLReflowState ensures the mCBReflowState of blocks inside a
+      // cell is the cell frame, not the inner-cell block
+      (cellRS = aReflowState.mCBReflowState) &&
+      cellRS->frame == this &&
+      (cellRS->mComputedHeight == NS_UNCONSTRAINEDSIZE ||
+       cellRS->mComputedHeight == 0)) { // XXXldb Why 0?
+    // This is a percentage height on a frame whose percentage heights
+    // are based on the height of the cell, since its containing block
+    // is the inner cell frame.
+
+    for (const nsHTMLReflowState *rs = aReflowState.parentReflowState;
+         rs != cellRS;
+         rs = rs->parentReflowState) {
+      rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
     }
-    NS_ASSERTION(PR_FALSE, "program error in NotifyPercentHeight");
+
+    if (!NeedSpecialReflow()) {
+      nsTableFrame::RequestSpecialHeightReflow(*cellRS);
+    }
   }
 }
 
@@ -792,6 +797,9 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
                                    availSize);
   // mIPercentHeightObserver is for non table related frames inside cells in quirks mode
   kidReflowState.mPercentHeightObserver = (eCompatibility_NavQuirks == compatMode) ? (nsIPercentHeightObserver *)this : nsnull;
+  if (aReflowState.mFlags.mSpecialHeightReflow) {
+    kidReflowState.mFlags.mVResize = PR_TRUE;
+  }
 
   nsPoint kidOrigin(leftInset, topInset);
 
