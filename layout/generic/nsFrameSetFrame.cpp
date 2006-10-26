@@ -1259,6 +1259,14 @@ nsHTMLFramesetFrame::GetType() const
   return nsLayoutAtoms::frameSetFrame;
 }
 
+#ifdef DEBUG
+NS_IMETHODIMP
+nsHTMLFramesetFrame::GetFrameName(nsAString& aResult) const
+{
+  return MakeFrameName(NS_LITERAL_STRING("Frameset"), aResult);
+}
+#endif
+
 PRBool
 nsHTMLFramesetFrame::IsLeaf() const
 {
@@ -1612,6 +1620,7 @@ nsHTMLFramesetBorderFrame::Reflow(nsPresContext*          aPresContext,
                                   nsReflowStatus&          aStatus)
 {
   DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBorderFrame");
+  DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   // Override Reflow(), since we don't want to deal with what our
   // computed values are.
