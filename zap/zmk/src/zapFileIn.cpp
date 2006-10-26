@@ -125,6 +125,8 @@ zapFileIn::AddedToGraph(zapIMediaGraph *graph,
 
   localFile->OpenNSPRFileDesc(PR_RDONLY, 0, &mFile);
   if (!mFile) return NS_ERROR_FAILURE;
+
+  mOffset = 0;
   
   // create a new stream info:
   mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
@@ -201,13 +203,14 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   // construct raw frame:
   nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
   frame->mStreamInfo = mStreamInfo;
-  frame->mTimestamp = 0; // XXX
+  frame->mTimestamp = mOffset;
 
   if (mLoop && PR_Available(mFile) <= 0) {
     // Create a new stream info, so that downstream nodes get the
     // stream break.
     mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
     PR_Seek(mFile, 0, PR_SEEK_SET); // rewind
+    mOffset = 0;
   }
   
   // write frame data:
@@ -222,6 +225,9 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
     }
     else
       return NS_ERROR_FAILURE;
+  }
+  else {
+    mOffset += bytesRead;
   }
   
   frame->mData.SetLength(bytesRead);

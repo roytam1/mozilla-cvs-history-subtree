@@ -204,6 +204,9 @@ Interfaces: zapIMediaFrame
 zapIMediaFrame::streamInfo :
 - ACString "type" : = "raw"
 
+zapIMediaFrame::timestamp :
+usage varies. see generating nodes for more detail.
+
 zapIMediaFrame::data :
 - raw binary data
 
@@ -296,7 +299,6 @@ Output stream:
 clock frames with
 - double "clock_cycle" : duration of one clock cycle in seconds.
 - zapIMediaFrame::timestamp incremented in ms.
-
 
 ----------------------------------------------------------------------
 
@@ -1126,8 +1128,12 @@ Node parameters:
                            will be generated whenever the stream is rewound) 
                            (default: true)
 Output stream:
-raw binary frames (type = "raw"). Size of frame data with be <=
+
+- raw binary frames (type = "raw"). Size of frame data with be <=
 block_size
+
+- timestamps give the byte offset to the beginning of the file (and roll
+over at 4GB!)
 
 ----------------------------------------------------------------------
 

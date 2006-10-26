@@ -72,6 +72,7 @@ private:
   PRFileDesc *mFile;
   PRBool mLoop;
   PRBool mGenerateEOF;
+  PRUint32 mOffset; // current byte off into the file
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   nsCOMPtr<zapIMediaSink> mOutput;

@@ -47,7 +47,9 @@ interface zapIMediaFrame : nsISupports
   readonly attribute nsIPropertyBag2 streamInfo;
 
   /**
-   * Timestamp in sample clock units.
+   * Generalized timestamp. Usually in sample clock units unless noted
+   * otherwise for a particular frame type (e.g. clock frames have
+   * millisecond timestamps).
    */
   attribute unsigned long timestamp;
   
