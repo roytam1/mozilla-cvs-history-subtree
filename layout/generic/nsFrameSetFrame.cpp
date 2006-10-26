@@ -321,6 +321,10 @@ nsHTMLFramesetFrame::Init(nsIContent*      aContent,
       break;
     }
   }
+
+  if (mTopLevelFrameset == this) {
+    aParent->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+  }
   
   nsPresContext* aPresContext = GetPresContext();
 
