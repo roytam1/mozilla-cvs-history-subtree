@@ -142,6 +142,10 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
                   "cb width and height should only be non-default together");
   NS_PRECONDITION(aInit == PR_TRUE || aInit == PR_FALSE,
                   "aInit out of range for PRBool");
+  NS_PRECONDITION(!mFlags.mSpecialHeightReflow ||
+                  !(aFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
+                                              NS_FRAME_HAS_DIRTY_CHILDREN)),
+                  "frame should be clean when getting special height reflow");
 
   parentReflowState = &aParentReflowState;
 
