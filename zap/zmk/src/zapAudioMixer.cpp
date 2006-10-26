@@ -97,8 +97,8 @@ void zapAudioMixerInput::Init(zapAudioMixer* mixer) {
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_THREADSAFE_ADDREF(zapAudioMixerInput)
-NS_IMPL_THREADSAFE_RELEASE(zapAudioMixerInput)
+NS_IMPL_ADDREF(zapAudioMixerInput)
+NS_IMPL_RELEASE(zapAudioMixerInput)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioMixerInput)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaSink)
@@ -196,8 +196,8 @@ zapAudioMixer::~zapAudioMixer()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapAudioMixer)
-NS_IMPL_RELEASE(zapAudioMixer)
+NS_IMPL_THREADSAFE_ADDREF(zapAudioMixer)
+NS_IMPL_THREADSAFE_RELEASE(zapAudioMixer)
 
 NS_INTERFACE_MAP_BEGIN(zapAudioMixer)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
