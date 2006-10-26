@@ -290,8 +290,14 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
                         mComputedHeight + mComputedBorderPadding.TopBottom();
   }
 
-  if (((mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent &&
-        mComputedHeight != NS_AUTOHEIGHT) ||
+  // It would be nice to check that |mComputedHeight != NS_AUTOHEIGHT|
+  // &&ed with the percentage height check.  However, this doesn't get
+  // along with table special height reflows, since a special height
+  // reflow (a quirk that makes such percentage heights work on children
+  // of table cells) can cause not just a single percentage height to
+  // become fixed, but an entire descendant chain of percentage heights
+  // to become fixed.
+  if ((mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent ||
        frame->IsBoxFrame()) &&
       mCBReflowState) {
     const nsHTMLReflowState *rs = this;
