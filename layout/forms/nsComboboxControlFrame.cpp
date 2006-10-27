@@ -716,7 +716,7 @@ nsComboboxControlFrame::GetType() const
 PRBool
 nsComboboxControlFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~(eReplacedContainsBlock));
+  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
 }
 
 #ifdef NS_DEBUG
