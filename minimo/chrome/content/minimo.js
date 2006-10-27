@@ -144,6 +144,9 @@ nsBrowserStatusHandler.prototype =
     this.urlBar= document.getElementById("urlbar");
     this.progressBGPosition = 0;  /* To be removed, fix in onProgressChange ... */ 
 
+    this.currentTotalProgress = 0;
+    this.maxTotalProgress     = 0;
+
     var securityUI = gBrowser.securityUI;
     this.onSecurityChange(null, null, nsIWebProgressListener.STATE_IS_INSECURE);
   },
@@ -230,6 +233,8 @@ nsBrowserStatusHandler.prototype =
 
     //    document.getElementById("statusbar-text").label= "dbg:onProgressChange " + aCurTotalProgress + " " + aMaxTotalProgress;
 
+    this.currentTotalProgress = aCurTotalProgress;
+    this.maxTotalProgress     = aMaxTotalProgress;
 
     var percentage = parseInt((aCurTotalProgress/aMaxTotalProgress)*parseInt(gURLBarBoxObject.width));
     if(percentage<0) percentage=10;
@@ -274,7 +279,12 @@ nsBrowserStatusHandler.prototype =
   
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
   {
-    document.getElementById("statusbar-text").label=aMessage;
+    document.getElementById("statusbar-text").label= aMessage +
+                                                     " (" +
+                                                     this.currentTotalProgress +
+                                                     "/" +
+                                                     this.maxTotalProgress +
+                                                     ")";
   },
   startDocumentLoad : function(aRequest)
   {
