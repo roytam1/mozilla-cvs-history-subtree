@@ -197,7 +197,7 @@ select > input[type="button"] {
     want the baseline of the combobox to match the baseline of the
     display frame, so the dropmarker is what gets the vertical-align.
   */
-  vertical-align: bottom !important;
+  vertical-align: top !important;
 }
 
 select > input[type="button"]:active {
