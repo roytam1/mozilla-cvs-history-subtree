@@ -421,6 +421,10 @@ nsSubDocumentFrame::Reflow(nsPresContext*          aPresContext,
   }
 
   nsSize innerSize(aDesiredSize.width, aDesiredSize.height);
+  if (IsInline()) {
+    innerSize.width  -= aReflowState.mComputedBorderPadding.LeftRight();
+    innerSize.height -= aReflowState.mComputedBorderPadding.TopBottom();
+  }
 
   nsIViewManager* vm = mInnerView->GetViewManager();
   vm->MoveViewTo(mInnerView, offset.x, offset.y);
