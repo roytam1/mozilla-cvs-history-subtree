@@ -125,6 +125,8 @@ public:
 
   virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
+  virtual PRBool IsContainingBlock() const;
+
   virtual void InvalidateInternal(const nsRect& aDamageRect,
                                   nscoord aX, nscoord aY, nsIFrame* aForChild,
                                   PRBool aImmediate);
