@@ -49,12 +49,14 @@
 
 // Global variables
 
+
+static char* start_url_override = nsnull;
 const static char* start_url = "chrome://minimo/content/minimo.xul";
 
-//const static char* start_url = "http://www.mozilla.org";
-//const static char* start_url = "http://www.meer.net/~dougt/test.html";
-//const static char* start_url = "resource://gre/res/start.html";
-//const static char* start_url = "resource://gre/res/1.html";
+//static char* start_url = "http://www.mozilla.org";
+//static char* start_url = "http://www.meer.net/~dougt/test.html";
+//static char* start_url = "resource://gre/res/start.html";
+//static char* start_url = "resource://gre/res/1.html";
 
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
@@ -529,8 +531,16 @@ LRESULT CALLBACK BrowserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
       return 0;
     }
 
+    if (!strncmp(command, "CRM", 3))
+    {
+      start_url_override = strdup(command+3);
+      return 0;
+    }
+
     if (!strncmp(command, "OOM", 3))
     {
+      MessageBox(0, "OOM", "OOM", 0);
+
 #ifdef WINCE
       SHCloseApps(512*1024); // Ask the system for another 512kb.
 #endif
@@ -796,7 +806,6 @@ void UnloadKnownLibs()
 
 int main(int argc, char *argv[])
 {
-
 #ifdef WINCE
   CreateListenerWindow();
 #endif
@@ -901,7 +910,18 @@ int main(int argc, char *argv[])
   wwatch->SetWindowCreator(creatorCallback);
   
   nsCOMPtr<nsIDOMWindow> newWindow;
-  nsresult rv = wwatch->OpenWindow(nsnull, start_url, "_blank", "chrome,dialog=no,all", nsnull, getter_AddRefs(newWindow));
+  nsresult rv = wwatch->OpenWindow(nsnull,
+                                   start_url_override ? start_url_override : start_url,
+                                   "_blank",
+                                   "chrome,dialog=no,all",
+                                   nsnull,
+                                   getter_AddRefs(newWindow));
+
+  if (start_url_override)
+  {
+    free(start_url_override);
+    start_url_override = nsnull;
+  }
 
   if (NS_FAILED(rv))
   {

@@ -83,6 +83,10 @@ int main(int argc, char *argv[])
     else if (!strcmp("-bm", argv[1]))
       SentCommandRequest("ABM", argv[2]);
 
+    else if (!strcmp("-chrome", argv[1]))
+      SentCommandRequest("CRM", argv[2]);
+
+
   }
 
   SetCursor(NULL);
