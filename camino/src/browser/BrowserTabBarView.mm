@@ -57,7 +57,7 @@
 -(void)unregisterTabButtonsForTracking;
 -(void)initOverflowMenu;
 -(NSRect)tabsRect;
--(BOOL)isMouseInside;
+-(BrowserTabViewItem *)tabViewItemUnderMouse;
 -(NSString*)view:(NSView*)view stringForToolTip:(NSToolTipTag)tag point:(NSPoint)point userData:(void*)userData;
 
 @end
@@ -210,7 +210,7 @@ static const int kOverflowButtonMargin = 1;
     }*/
 }
 
-// returns the tab at the specified point
+// returns the tab at the specified point (in tab bar view coordinates)
 -(TabButtonCell*)buttonAtPoint:(NSPoint)clickPoint
 {
   BrowserTabViewItem *tab = nil;
@@ -380,16 +380,24 @@ static const int kOverflowButtonMargin = 1;
 
 - (void)handleWindowIsKey:(NSWindow *)inWindow
 {
-  // set tab bar dirty because the location of the mouse is inside the tab bar
-  if ([self isMouseInside])
-    [self setNeedsDisplay:YES];
+  // the mouse isn't tracked when the window isn't key, so update the tab hover
+  // state manually if the mouse is in a tab
+  BrowserTabViewItem *tab = [self tabViewItemUnderMouse];
+  if (tab) {
+    [mTabView refreshTab:tab];
+    [[tab tabButtonCell] updateHoverState:YES];
+  }
 }
 
 - (void)handleWindowResignKey:(NSWindow *)inWindow
 {
-  // set tab bar dirty when the mouse is inside because the window does not respond to mouse hovering events when it is not key
-  if ([self isMouseInside])
-    [self setNeedsDisplay:YES];
+  // the mouse isn't tracked when the window isn't key, so update the tab hover
+  // state manually if the mouse is in a tab
+  BrowserTabViewItem *tab = [self tabViewItemUnderMouse];
+  if (tab) {
+    [mTabView refreshTab:tab];
+    [[tab tabButtonCell] updateHoverState:NO];
+  }
 }
 
 // causes tab buttons to stop reacting to mouse events
@@ -413,10 +421,22 @@ static const int kOverflowButtonMargin = 1;
   return kTabBarDefaultHeight;
 }
 
+// finds the tab under the given point (in window coordinates), if any
 -(BrowserTabViewItem *)tabViewItemAtPoint:(NSPoint)location
 {
-  TabButtonCell *button = [self buttonAtPoint:[self convertPoint:location fromView:nil]];
+  NSPoint mousePointInView = [self convertPoint:location fromView:nil];
+  // Don't bother checking each tab's frame if the point isn't in the tab bar
+  if (!NSMouseInRect(mousePointInView, [self bounds], NO))
+    return nil;
+  TabButtonCell *button = [self buttonAtPoint:mousePointInView];
   return (button) ? [button tabViewItem] : nil;
+}
+
+// finds the tab currently under the mouse, if any
+-(BrowserTabViewItem *)tabViewItemUnderMouse
+{
+  NSPoint mousePointInWindow = [[self window] convertScreenToBase:[NSEvent mouseLocation]];
+  return [self tabViewItemAtPoint:mousePointInWindow];
 }
 
 // sets the tab buttons to the largest kMinTabWidth <= size <= kMaxTabWidth where they all fit
@@ -526,13 +546,6 @@ static const int kOverflowButtonMargin = 1;
   rect.origin.x += kTabBarMargin;
   rect.size.width -= 2 * kTabBarMargin + (mOverflowTabs ? kOverflowButtonWidth : 0.0);
   return rect;
-}
-
--(BOOL)isMouseInside
-{
-  NSPoint mousePointInWindow = [[self window] convertScreenToBase:[NSEvent mouseLocation]];
-  NSPoint mousePointInView = [[self superview] convertPoint:mousePointInWindow fromView:nil];
-  return NSMouseInRect(mousePointInView, [self frame], NO);
 }
 
 -(BOOL)isVisible
