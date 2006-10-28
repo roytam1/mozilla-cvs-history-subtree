@@ -457,10 +457,11 @@ function SelectLanguage()
       gLastSelectedLang = item;
     }
     else {
-      var uri = Components.classes["@mozilla.org/network/standard-url;1"].createInstance(Components.interfaces.nsIURI);
-      uri.spec = xlateURL('urn:clienturl:composer:spellcheckers');
-
-      var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"].getService(Components.interfaces.nsIExternalProtocolService);
+      var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+      var uri = ioService.newURI(getDictionaryURL(), null, null);
+      var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
+                                  .getService(Components.interfaces.nsIExternalProtocolService);
       protocolSvc.loadUrl(uri);
       if (gLastSelectedLang)
         gDialog.LanguageMenulist.selectedItem = gLastSelectedLang;
@@ -468,6 +469,14 @@ function SelectLanguage()
   } catch (ex) {
     dump(ex);
   }
+}
+
+function getDictionaryURL()
+{
+  var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
+                  .getService(Components.interfaces.nsIURLFormatter);
+                 
+  return formatter.formatURLPref("spellchecker.dictionaries.download.url");
 }
 
 function Recheck()
