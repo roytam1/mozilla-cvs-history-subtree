@@ -126,9 +126,9 @@ zapTEventRTPPacketizer::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   teframe->GetM(&M);
   frame->SetMarker(M);
   
-  PRUint32 timestamp;
+  PRUint64 timestamp;
   input->GetTimestamp(&timestamp);
-  frame->SetRtpTimestamp(timestamp);
+  frame->SetRtpTimestamp((PRUint32)timestamp);
     
   *output = frame;
 

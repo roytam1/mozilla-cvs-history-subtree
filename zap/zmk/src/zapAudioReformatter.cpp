@@ -44,7 +44,8 @@
 // zapAudioReformatter
 
 zapAudioReformatter::zapAudioReformatter()
-    : mInBufferPointer(0)
+    : mInBufferPointer(0),
+      mSampleClock(0)
 {
 }
 
@@ -262,7 +263,7 @@ zapAudioReformatter::ProduceSamples(float *out, PRUint32 sampleCount)
   if (mInStreamPars.sample_format == mOutStreamPars.sample_format &&
       mInStreamPars.channels == mOutStreamPars.channels) {
     // fast special case. just copy across samples:
-    PRUint32 byteCount = PR_MIN(sampleCount*GetZapAudioSampleSize(mInStreamPars.sample_format),
+    PRUint32 byteCount = (PRUint32)PR_MIN(sampleCount*GetZapAudioSampleSize(mInStreamPars.sample_format),
                                 endp - inp);
     memcpy(out, inp, byteCount);
     mInBufferPointer += byteCount;

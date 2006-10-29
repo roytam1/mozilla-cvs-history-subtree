@@ -115,9 +115,9 @@ zapSpeexRTPPacketizer::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   frame->SetPayload(data);
   frame->SetPayloadType(mPayloadType);
   
-  PRUint32 timestamp;
+  PRUint64 timestamp;
   input->GetTimestamp(&timestamp);
-  frame->SetRtpTimestamp(timestamp);
+  frame->SetRtpTimestamp((PRUint32)timestamp);
     
   *output = frame;
   return NS_OK;

@@ -228,15 +228,15 @@ zapTelephoneEventFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
   return NS_OK;
 }
 
-/* attribute unsigned long timestamp; */
+/* attribute unsigned long long timestamp; */
 NS_IMETHODIMP
-zapTelephoneEventFrame::GetTimestamp(PRUint32 *aTimestamp)
+zapTelephoneEventFrame::GetTimestamp(PRUint64 *aTimestamp)
 {
   *aTimestamp = mTimestamp;
   return NS_OK;
 }
 NS_IMETHODIMP
-zapTelephoneEventFrame::SetTimestamp(PRUint32 aTimestamp)
+zapTelephoneEventFrame::SetTimestamp(PRUint64 aTimestamp)
 {
   mTimestamp = aTimestamp;
   return NS_OK;

@@ -41,7 +41,7 @@ interface nsIPropertyBag2;
 /**
  * \ingroup ZMK_MODULE
  */
-[scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
+[scriptable, uuid(866288d7-0cd1-417a-8c35-b02a8a076824)]
 interface zapIMediaFrame : nsISupports
 {
   readonly attribute nsIPropertyBag2 streamInfo;
@@ -51,8 +51,8 @@ interface zapIMediaFrame : nsISupports
    * otherwise for a particular frame type (e.g. clock frames have
    * millisecond timestamps).
    */
-  attribute unsigned long timestamp;
-  
+  attribute unsigned long long timestamp;
+
   readonly attribute ACString data;
 };
 

@@ -263,17 +263,18 @@ zapRTPFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
   return NS_OK;
 }
 
-/* attribute unsigned long timestamp; */
+/* attribute unsigned long long timestamp; */
 NS_IMETHODIMP
-zapRTPFrame::GetTimestamp(PRUint32 *aTimestamp)
+zapRTPFrame::GetTimestamp(PRUint64 *aTimestamp)
 {
-  return GetRtpTimestamp(aTimestamp);
+  *aTimestamp = 0;
+  return NS_OK;
 }
 NS_IMETHODIMP
-zapRTPFrame::SetTimestamp(PRUint32 aTimestamp)
+zapRTPFrame::SetTimestamp(PRUint64 aTimestamp)
 {
-  SetRtpTimestamp(aTimestamp);
-  return NS_OK;
+  NS_ERROR("RTP frames currently only have 32 bit RTP timestamps");
+  return NS_ERROR_FAILURE;
 }
 
 /* readonly attribute ACString data; */

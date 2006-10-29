@@ -80,7 +80,7 @@ private:
   nsDeque mBuffer; // tone buffer
   PRUint32 mToneSamplesPlayed; // samples played for current tone
   PRBool mLoop; // true: loop the buffer
-  PRUint32 mSampleClock;
+  PRUint64 mSampleClock;
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
 

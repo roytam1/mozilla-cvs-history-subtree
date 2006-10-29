@@ -58,8 +58,11 @@ Interfaces: zapIMediaFrame,
 zapIMediaFrame::streamInfo :
 - ACString "type" : = "datagram"
 
+zapIMediaFrame::timestamp : not used
+
 zapIMediaFrame::data :
 - same as nsIDatagram::data
+
 
 ----------------------------------------------------------------------
 
@@ -87,6 +90,8 @@ Interfaces: zapIRTPFrame (spec of zapIMediaFrame)
 
 zapIMediaFrame::streamInfo :
 - ACString "type" : = "rtp"
+
+zapIMediaFrame::timestamp : currently fixed to 0.
 
 zapIMediaFrame::data : 
 - raw rtp packet data including header
@@ -190,6 +195,8 @@ Interfaces: zapIMediaFrame,
 
 zapIMediaFrame::streamInfo :
 - ACString "type" : = "stun"
+
+zapIMediaFrame::timestamp : fixed to 0.
 
 zapIMediaFrame::data :
 - same as zapIStunMessage::serialize()
@@ -311,6 +318,10 @@ master volume will be 0dB and the mixer will initially be unmuted.
 This is a locking node. Trying to modify the mediagraph while this
 node is processing a frame will throw an exception.
 
+Timestamps increase monotonously in sample clock units for every frame
+requested. Streambreaks from input streams will not be propagated. If
+no input streams are connected, silence frames will be generated.
+
 Control interfaces: zapIAudioMixer
 
 Sinks: n (active)
@@ -336,6 +347,7 @@ audio/pcm frames with
 - unsigned long "samples" == corresponding node parameter
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
+
 
 ----------------------------------------------------------------------
 
@@ -1132,8 +1144,7 @@ Output stream:
 - raw binary frames (type = "raw"). Size of frame data with be <=
 block_size
 
-- timestamps give the byte offset to the beginning of the file (and roll
-over at 4GB!)
+- timestamps give the byte offset to the beginning of the file
 
 ----------------------------------------------------------------------
 
@@ -1225,7 +1236,7 @@ Input stream:
 any frames.
 
 Output stream:
-raw binary frames (type = "raw").
+raw binary frames (type = "raw") with timestamps set to 0.
 
 ----------------------------------------------------------------------
 

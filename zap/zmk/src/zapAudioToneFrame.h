@@ -82,7 +82,7 @@ public:
   
   PRBool mMarkerBit;
   zapAudioTone mToneData;
-  PRUint32 mTimestamp;
+  PRUint64 mTimestamp;
   nsCOMPtr<nsIPropertyBag2> mStreamInfo;
 };
 

@@ -369,7 +369,7 @@ void zapAudioIn::CreateFrame(const nsACString& data, double timestamp)
     frame->mData = data;
   }
   frame->mStreamInfo = mStreamInfo;
-  frame->mTimestamp = (PRUint32)timestamp;
+  frame->mTimestamp = (PRUint64)timestamp;
 
   mOutput->ConsumeFrame(frame);
 }

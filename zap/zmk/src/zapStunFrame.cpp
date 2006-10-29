@@ -88,18 +88,19 @@ zapStunFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
   return NS_OK;
 }
 
-/* attribute unsigned long timestamp; */
+/* attribute unsigned long long timestamp; */
 NS_IMETHODIMP
-zapStunFrame::GetTimestamp(PRUint32 *aTimestamp)
+zapStunFrame::GetTimestamp(PRUint64 *aTimestamp)
 {
   *aTimestamp = 0;
   // shouldn't be called for stun frames
   return NS_ERROR_FAILURE;
 }
 NS_IMETHODIMP
-zapStunFrame::SetTimestamp(PRUint32 aTimestamp)
+zapStunFrame::SetTimestamp(PRUint64 aTimestamp)
 {
   // shouldn't be called for stun frames
+  NS_ERROR("Can't set timestamp for STUN frames");
   return NS_ERROR_FAILURE;
 }
 

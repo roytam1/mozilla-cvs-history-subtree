@@ -113,6 +113,8 @@ zapPCMPing::AddedToGraph(zapIMediaGraph *graph,
     sample_time += sample_step;
     amplitude -= amplitude_step;
   }
+
+  return NS_OK;
 }
 
 /* void removedFromGraph (in zapIMediaGraph graph); */

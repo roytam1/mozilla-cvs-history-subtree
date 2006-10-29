@@ -231,6 +231,8 @@ zapAudioMixer::AddedToGraph(zapIMediaGraph *graph,
 
   // create a new stream info:
   mStreamInfo = mStreamParameters.CreateStreamInfo();
+
+  mSampleClock = 0;
   
   return NS_OK;
 }
@@ -295,13 +297,8 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
   zapMediaGraphAutoLock lock(mGraph);
   
   PRUint32 samplesPerFrame = mStreamParameters.samples * mStreamParameters.channels;
-  mSampleClock += mStreamParameters.samples;
   
-  PRInt32 activeInputs = mInputs.Count();//XXX
-  if (!activeInputs) {
-    *_retval = nsnull;
-    return NS_ERROR_FAILURE;
-  }
+  PRInt32 activeInputs = mInputs.Count(); //XXX
   
   // construct audio frame:
   zapMediaFrame* frame = new zapMediaFrame();
@@ -334,6 +331,8 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
       d[sp] *= scalefactor;
       }
   }
+
+  mSampleClock += mStreamParameters.samples;
   
   *_retval = frame;
   return NS_OK;

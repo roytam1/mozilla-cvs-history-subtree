@@ -177,20 +177,20 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
     // GetNextInputFrame(), above, might have changed the sample clock
     // to resynchronize with a new input stream. Hence we need to
     // recalculate the sampling window here:
-    PRUint32 windowStart = mSampleClock + samplesPerFrame - samplesToWrite;
-    PRUint32 windowEnd = mSampleClock + samplesPerFrame;
+    PRUint64 windowStart = mSampleClock + samplesPerFrame - samplesToWrite;
+    PRUint64 windowEnd = mSampleClock + samplesPerFrame;
     
-    PRUint32 frameStart;
+    PRUint64 frameStart;
     PRUint16 frameDuration;
     mCurrentInputFrame->GetTimestamp(&frameStart);
     mCurrentInputFrame->GetDuration(&frameDuration);
-    PRUint32 frameEnd = frameStart + frameDuration;
+    PRUint64 frameEnd = frameStart + frameDuration;
     if (frameDuration == 0) {
       // ignore zero length frame
       mCurrentInputFrame = nsnull;
       continue;
     }
-    else if ((PRInt32)(frameEnd - windowStart) <= 0) {
+    else if ((PRInt64)(frameEnd - windowStart) <= 0) {
       // frame ends in the past.
       // resynchronize clock:
       // XXX is this the right strategy? should we instead expect that
@@ -201,7 +201,7 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
 #endif
       continue;
     }
-    else if ((PRInt32)(windowEnd - frameStart) <= 0) {
+    else if ((PRInt64)(windowEnd - frameStart) <= 0) {
 #ifdef DEBUG_afri_zmk
       //printf("P<future %d,%d>", windowEnd, frameStart);
 #endif
@@ -243,7 +243,7 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
       }
 
       // write any silence at beginning of frame:
-      while ((PRInt32)(windowStart - frameStart) < 0) {
+      while ((PRInt64)(windowStart - frameStart) < 0) {
         *d++ = 0.0f;
         --samplesToWrite;
         ++windowStart;
@@ -251,11 +251,11 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
                      "ran out of samples to write. this can't happen!");
       }
 
-      NS_ASSERTION((PRInt32)(windowStart - frameStart) >= 0,
+      NS_ASSERTION((PRInt64)(windowStart - frameStart) >= 0,
                    "this can't happen!");
       
       // write frame samples:
-      PRInt32 frameSamplesLeft = (PRInt32)(frameEnd - windowStart);
+      PRInt64 frameSamplesLeft = (PRInt64)(frameEnd - windowStart);
       NS_ASSERTION(frameSamplesLeft > 0,
                    "no samples left in frame. this can't happen!");
       PRUint32 c = PR_MIN(samplesToWrite, (PRUint32)frameSamplesLeft);

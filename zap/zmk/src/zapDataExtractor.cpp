@@ -98,6 +98,7 @@ zapDataExtractor::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   zapMediaFrame* frame = new zapMediaFrame();
   frame->AddRef();
   frame->mStreamInfo = mStreamInfo;
+  frame->mTimestamp = 0;
   nsCString data;
   input->GetData(data);
   if (data.Length() > mStart)

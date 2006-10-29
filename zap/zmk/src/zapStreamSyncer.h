@@ -71,7 +71,7 @@ private:
 
   void RebaseFrame(zapIMediaFrame* frame);
   
-  PRUint32 mOffset;
+  PRInt64 mOffset;
   PRBool mOffsetStale;
   
   zapStreamSyncerTimebase *mTimebase; // weak reference managed by object itself

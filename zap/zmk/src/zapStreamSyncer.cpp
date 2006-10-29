@@ -324,17 +324,17 @@ zapStreamSyncer::RebaseFrame(zapIMediaFrame* frame)
     mInputStreamInfo = streamInfo;
   }
   if (mOffsetStale) {
-    PRUint32 Tbase = 0;
+    PRUint64 Tbase = 0;
     if (mTimebase && mTimebase->mLastFrame) {
       mTimebase->mLastFrame->GetTimestamp(&Tbase);
     }
-    PRUint32 Tinput;
+    PRUint64 Tinput;
     frame->GetTimestamp(&Tinput);
     mOffset = Tbase - Tinput;
     mOffsetStale = PR_FALSE;
   }
 
-  PRUint32 oldTS;
+  PRUint64 oldTS;
   frame->GetTimestamp(&oldTS);
   frame->SetTimestamp(oldTS + mOffset);
 }

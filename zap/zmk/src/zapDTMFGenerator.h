@@ -82,7 +82,7 @@ private:
 
   nsDeque mBuffer; // tevent buffer
   PRUint32 mTEventSamplesPlayed; // samples played for current tevent 
-  PRUint32 mSampleClock;
+  PRUint64 mSampleClock;
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
 

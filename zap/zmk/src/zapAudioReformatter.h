@@ -80,6 +80,8 @@ private:
   nsCString mInBuffer;
   PRUint32 mInBufferPointer;
   
+  PRUint64 mSampleClock;
+  
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   
   nsCOMPtr<zapIMediaSink> mOutput;

@@ -77,15 +77,15 @@ zapMediaFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
   return NS_OK;
 }
 
-/* attribute unsigned long timestamp; */
+/* attribute unsigned long long timestamp; */
 NS_IMETHODIMP
-zapMediaFrame::GetTimestamp(PRUint32 *aTimestamp)
+zapMediaFrame::GetTimestamp(PRUint64 *aTimestamp)
 {
   *aTimestamp = mTimestamp;
   return NS_OK;
 }
 NS_IMETHODIMP
-zapMediaFrame::SetTimestamp(PRUint32 aTimestamp)
+zapMediaFrame::SetTimestamp(PRUint64 aTimestamp)
 {
   mTimestamp = aTimestamp;
   return NS_OK;

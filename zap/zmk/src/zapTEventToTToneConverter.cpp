@@ -96,7 +96,7 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
 
   PRBool M;
   PRBool E;
-  PRUint32 timestamp;
+  PRUint64 timestamp;
   PRUint16 duration;
   PRUint16 volume;
   PRUint16 event;

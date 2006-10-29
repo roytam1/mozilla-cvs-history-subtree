@@ -52,7 +52,7 @@ public:
   ~zapMediaFrame();
 
   nsCString mData;
-  PRUint32 mTimestamp;
+  PRUint64 mTimestamp;
   nsCOMPtr<nsIPropertyBag2> mStreamInfo;
 };
 

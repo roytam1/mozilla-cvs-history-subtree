@@ -79,7 +79,7 @@ private:
 
   nsCOMPtr<nsIPropertyBag2> mCurrentInputStreamInfo;
   nsCOMPtr<zapIAudioToneFrame> mCurrentInputFrame;
-  PRUint32 mSampleClock; // sample clock advances for every requested
+  PRUint64 mSampleClock; // sample clock advances for every requested
                          // frame and is synchronized to input stream
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;

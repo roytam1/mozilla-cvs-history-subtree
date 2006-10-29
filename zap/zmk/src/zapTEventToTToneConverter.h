@@ -66,7 +66,7 @@ public:
 private:
   nsresult SetFrequenciesForEvent(zapAudioToneFrame* frame, PRUint16 event);
   
-  PRUint32 mCurrentFrameTimestamp;
+  PRUint64 mCurrentFrameTimestamp;
   PRUint16 mCurrentFrameSent; // duration sent for current frame
   PRBool mCurrentFrameEndSent; // flag for ignoring end frame retransmissions
   
