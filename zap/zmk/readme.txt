@@ -1267,6 +1267,9 @@ audio/pcm frames with
 - unsigned long "channels" == corresponding node parameter
 - unsigned long "sample_format" == corresponding node parameter
 
+If a streambreak results in a partially output frame, it will be
+padded with silence. Any new stream will begin with the next frame.
+
 ----------------------------------------------------------------------
 
 43) clock-reducer

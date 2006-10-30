@@ -36,16 +36,13 @@
 
 #include "zapAudioReformatter.h"
 #include "zapIMediaGraph.h"
-#include "nsAutoPtr.h"
-#include "zapMediaFrame.h"
 #include "math.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioReformatter
 
 zapAudioReformatter::zapAudioReformatter()
-    : mInBufferPointer(0),
-      mSampleClock(0)
+    : mInBufferPointer(0)
 {
 }
 
@@ -82,12 +79,10 @@ zapAudioReformatter::AddedToGraph(zapIMediaGraph *graph,
   if ( (mOutStreamPars.sample_format != sf_float32_32768 &&
         mOutStreamPars.sample_format != sf_float32_1 &&
         mOutStreamPars.sample_format != sf_int16) ||
-      mOutStreamPars.channels > 2) {
+       mOutStreamPars.channels > 2) {
     NS_ERROR("Unsupported sample format! Write me!");
     return NS_ERROR_FAILURE;
   }
-  
-  mStreamInfo = mOutStreamPars.CreateStreamInfo();
   
   return NS_OK;
 }
@@ -153,32 +148,54 @@ zapAudioReformatter::DisconnectSink(zapIMediaSink *sink,
 NS_IMETHODIMP
 zapAudioReformatter::ProduceFrame(zapIMediaFrame ** _retval)
 {
-  PRUint32 samplesLeft = mOutStreamPars.samples * mOutStreamPars.channels;
-
-  nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
-  frame->mData.SetLength(mOutStreamPars.GetFrameLength());
-  float *outputBuf = (float*)frame->mData.BeginWriting();
-
-  while (samplesLeft) {
-    if (IsInBufferEmpty() && !GetNextInputFrame()) {
-      *_retval = nsnull;
-      return NS_ERROR_FAILURE;
+  do {
+    if (IsInBufferEmpty()) {
+      InputState is = GetNextInputFrame();
+      if (is == NO_DATA) {
+        *_retval = nsnull;
+        return NS_ERROR_FAILURE;
+      }
+      else if (is == END_OF_STREAM) {
+        if (!mOutFrame) {
+          *_retval = nsnull;
+          return NS_ERROR_FAILURE;
+        }
+        // pad current output buffer with silence:
+        memset(mOutBufferPointer, 0,
+               mOutSamplesLeft * GetZapAudioSampleSize(mInStreamPars.sample_format));
+        mOutSamplesLeft = 0;
+        break;
+      }
+      // else ... input buffer contains some data now
     }
-    
-    PRUint32 samplesWritten = ProduceSamples(outputBuf, samplesLeft);
+
+    if (!mOutFrame) {
+      mOutFrame = new zapMediaFrame();
+      mOutFrame->mTimestamp = mInBufferTimestamp;
+      mOutFrame->mStreamInfo = mStreamInfo;
+      mOutFrame->mData.SetLength(mOutStreamPars.GetFrameLength());
+      mOutBufferPointer = (float*)mOutFrame->mData.BeginWriting();
+      mOutSamplesLeft = mOutStreamPars.samples * mOutStreamPars.channels;
+    }
+
+    PRUint32 samplesWritten = ProduceSamples(mOutBufferPointer, mOutSamplesLeft);
     if (!samplesWritten) {
       *_retval = nsnull;
       return NS_ERROR_FAILURE;
     }
     
-    outputBuf += samplesWritten;
-    samplesLeft -= samplesWritten;
-  }
+    mOutBufferPointer += samplesWritten;
+    mOutSamplesLeft -= samplesWritten;
+    mInBufferTimestamp += samplesWritten/mOutStreamPars.channels;
+  } while (mOutSamplesLeft);
 
-  frame->mStreamInfo = mStreamInfo;
-
-  *_retval = frame;
+  // success; we have a full frame
+  NS_ASSERTION(!mOutSamplesLeft, "uh-oh, samples left to write");
+  
+  *_retval = mOutFrame;
   NS_ADDREF(*_retval);
+  mOutFrame = nsnull;
+  
   return NS_OK;
 }
 
@@ -223,35 +240,51 @@ zapAudioReformatter::IsInBufferEmpty()
   return mInBuffer.Length() <= mInBufferPointer;
 }
 
-PRBool
+zapAudioReformatter::InputState
 zapAudioReformatter::GetNextInputFrame()
 {
-  if (!mInput) return PR_FALSE;
+  if (!mInput) return NO_DATA;
   
   nsCOMPtr<zapIMediaFrame> frame;
   if (NS_FAILED(mInput->ProduceFrame(getter_AddRefs(frame))))
-    return PR_FALSE;
+    return NO_DATA;
   NS_ASSERTION(frame, "null frame");
-  
-  nsCOMPtr<nsIPropertyBag2> streamInfo;
-  frame->GetStreamInfo(getter_AddRefs(streamInfo));
-  NS_ASSERTION(streamInfo, "null stream info!");
-  
-  if (streamInfo != mInStreamInfo) {
-    // this is a new stream.
-    if (NS_FAILED(mInStreamPars.InitWithProperties(streamInfo)))
-      return PR_FALSE;
-    if (mInStreamPars.sample_rate != mOutStreamPars.sample_rate) {
-      NS_ERROR("node can't resample; only reformat!");
-      return NS_ERROR_FAILURE;
-    }    
-    mInStreamInfo = streamInfo;
-  }
 
   frame->GetData(mInBuffer);
   mInBufferPointer = 0;
   
-  return mInBuffer.Length();
+  nsCOMPtr<nsIPropertyBag2> streamInfo;
+  frame->GetStreamInfo(getter_AddRefs(streamInfo));
+  NS_ASSERTION(streamInfo, "null stream info!");
+
+#ifdef DEBUG
+  if (mStreamInfo && (streamInfo != mInStreamInfo)) {
+    PRUint64 ts;
+    frame->GetTimestamp(&ts);
+    NS_ASSERTION(ts == mInBufferTimestamp, "discontinuous stream");
+  }
+#endif
+      
+  frame->GetTimestamp(&mInBufferTimestamp);
+      
+  if (streamInfo != mInStreamInfo) {
+    // this is a new stream.
+    if (NS_FAILED(mInStreamPars.InitWithProperties(streamInfo)))
+      return END_OF_STREAM;
+    if (mInStreamPars.sample_rate != mOutStreamPars.sample_rate) {
+      NS_ERROR("node can't resample; only reformat!");
+      return END_OF_STREAM;
+    }
+    mInStreamInfo = streamInfo;
+    if (mStreamInfo) {
+      mStreamInfo = mOutStreamPars.CreateStreamInfo();
+      return END_OF_STREAM;
+    }
+    // else ... this is the first stream we see
+    mStreamInfo = mOutStreamPars.CreateStreamInfo();
+  }
+
+  return mInBuffer.Length() ? NEW_DATA : NO_DATA;
 }
 
 PRUint32
@@ -264,7 +297,7 @@ zapAudioReformatter::ProduceSamples(float *out, PRUint32 sampleCount)
       mInStreamPars.channels == mOutStreamPars.channels) {
     // fast special case. just copy across samples:
     PRUint32 byteCount = (PRUint32)PR_MIN(sampleCount*GetZapAudioSampleSize(mInStreamPars.sample_format),
-                                endp - inp);
+                                          endp - inp);
     memcpy(out, inp, byteCount);
     mInBufferPointer += byteCount;
     return byteCount/GetZapAudioSampleSize(mInStreamPars.sample_format);

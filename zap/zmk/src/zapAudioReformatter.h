@@ -45,6 +45,8 @@
 #include "nsVoidArray.h"
 #include "nsIWritablePropertyBag2.h"
 #include "zapAudioStreamUtils.h"
+#include "nsAutoPtr.h"
+#include "zapMediaFrame.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioReformatter
@@ -70,7 +72,9 @@ public:
 
 private:
   PRBool IsInBufferEmpty();
-  PRBool GetNextInputFrame();
+
+  enum InputState { END_OF_STREAM, NEW_DATA, NO_DATA };
+  InputState GetNextInputFrame();
   PRUint32 ProduceSamples(float *out, PRUint32 sampleCount);
   
   zapAudioStreamParameters mOutStreamPars;
@@ -79,8 +83,11 @@ private:
   zapAudioStreamParameters mInStreamPars;
   nsCString mInBuffer;
   PRUint32 mInBufferPointer;
-  
-  PRUint64 mSampleClock;
+  PRUint64 mInBufferTimestamp;
+
+  nsRefPtr<zapMediaFrame> mOutFrame;
+  float* mOutBufferPointer;
+  PRUint32 mOutSamplesLeft;
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   
