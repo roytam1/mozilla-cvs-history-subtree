@@ -322,6 +322,7 @@ static PRBool gUseLiteralPlus = PR_TRUE;
 static PRBool gExpungeAfterDelete = PR_FALSE;
 static PRBool gCheckDeletedBeforeExpunge = PR_FALSE; //bug 235004
 static PRInt32 gResponseTimeout = 60;
+static nsCStringArray gCustomDBHeaders;
 
 nsresult nsImapProtocol::GlobalInitialization()
 {
@@ -347,6 +348,9 @@ nsresult nsImapProtocol::GlobalInitialization()
     prefBranch->GetBoolPref("mail.imap.expunge_after_delete", &gExpungeAfterDelete);
     prefBranch->GetBoolPref("mail.imap.check_deleted_before_expunge", &gCheckDeletedBeforeExpunge);
     prefBranch->GetIntPref("mailnews.tcptimeout", &gResponseTimeout);
+    nsXPIDLCString customDBHeaders;
+    prefBranch->GetCharPref("mailnews.customDBHeaders", getter_Copies(customDBHeaders));
+    gCustomDBHeaders.ParseString(customDBHeaders, ", ");
     return NS_OK;
 }
 
@@ -2988,6 +2992,15 @@ nsImapProtocol::FetchMessage(const char * messageIds,
         const char *dbHeaders = (gUseEnvelopeCmd) ? IMAP_DB_HEADERS : IMAP_ENV_AND_DB_HEADERS;
         nsXPIDLCString arbitraryHeaders;
         GetArbitraryHeadersToDownload(getter_Copies(arbitraryHeaders));
+        for (PRInt32 i = 0; i < gCustomDBHeaders.Count(); i++)
+        {
+          if (arbitraryHeaders.Find(* (gCustomDBHeaders[i]), PR_TRUE) == kNotFound)
+          {
+            if (!arbitraryHeaders.IsEmpty())
+              arbitraryHeaders.Append(' ');
+            arbitraryHeaders.Append(gCustomDBHeaders[i]->get());
+          }
+        }   
         if (arbitraryHeaders.IsEmpty())
           headersToDL = nsCRT::strdup(dbHeaders);
         else
