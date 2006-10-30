@@ -47,35 +47,25 @@
 
       <!-- PRIVACY PANE --> 
 
-      <button class="base-button"  style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#ffffff"  oncommand="focusTo(this,'privacy-pane','privacySanitize')"  id="privacy-button"   />  
-
-      <hbox id="privacy-pane" class="panel-container" flex="1" collapsed="true">
+      <vbox id="privacy-pane" class="panel-container" flex="1" collapsed="true">
           
-        <groupbox flex="1" class="box-floatoptions " >
             <caption label="&privacy.label;" /> 
 
-            <hbox flex="1" >
-                    <vbox flex="1" style="padding:4px ! important">
-                        <groupbox class='box-prefgroupitem' id='sanitize-box'>
-			            <box class="box-prefpadding">
-      			          <button id="privacySanitize" 
-			                        class='box-prefgroupitem'
+            	      <groupbox class='box-prefgroupitem2' >
+
+                            <button id="privacySanitize" 
+			                        class='box-prefgroupitem' 
 			                        label="&sanitizeButton.label;" 
 			                        oncommand="sanitizeAll();"/>
-			            </box>
-				</groupbox>
-            	      <groupbox class='box-prefgroupitem' id='bookmarks-box'>
-			            <box class="box-prefpadding">
-      			          <button id="bookmarksSanitize" 
+
+                            <button id="bookmarksSanitize" 
 			                        class='box-prefgroupitem'
 			                        label="&sanitizeBookmarks.label;" 
 			                        oncommand="sanitizeBookmarks();"/>
-			            </box>
+
 				</groupbox>
-			</vbox>
-		</hbox>
-        </groupbox> 
-      </hbox>
+  
+      </vbox>
 
 </box>
 </overlay>

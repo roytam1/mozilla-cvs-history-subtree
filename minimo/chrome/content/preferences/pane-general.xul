@@ -43,17 +43,16 @@
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-      <box id="pref-panes">  
+  <box id="pref-panes">  
 
-      <!-- GENERAL PANE -->
-   
-      <button class="base-button"   style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#ffffff" oncommand="focusTo(this,'general-pane','browserStartupHomepage')" id="general-button" ></button>  
+  <!-- GENERAL PANE -->
 
-	<hbox class="panel-container" flex="1" id="general-pane" collapsed="true">
-            
-            <groupbox flex="1" class="box-floatoptions"   >
-                <caption label="&general.label;" /> 
+    <vbox class="panel-container" flex="1" id="general-pane" collapsed="true">
+
+                <label value="&general.label;" /> 
+
                 <hbox flex="1" >
+
                     <vbox flex="1" style="padding:4px ! important">
                         <groupbox class='box-prefgroupitem' id='home-box'>
 
@@ -65,7 +64,7 @@
                                              onchange="syncPref(this)" preference="browser.startup.homepage" preftype="string"/>
                                 </box>
 
-                                <hbox class="box-prefpadding" flex="1">
+                                <vbox class="box-prefpadding">
                                 
                                     <button id="browserSetHomePage" 
                                              class='box-prefgroupitem'
@@ -77,7 +76,7 @@
                                              label="&loadHomePageBlank.label;" 
                                              oncommand="loadHomePageBlank();"/>
                                              
-                                </hbox>
+                                </vbox>
 
                         </groupbox>
                         
@@ -143,8 +142,9 @@
                         </groupbox>
                         
                     </vbox>
+
                 </hbox>
-            </groupbox> 
-	</hbox>	
-</box>
+
+	</vbox>	
+  </box>
 </overlay>
