@@ -93,14 +93,29 @@
   <command id="cmd_PrefOkay"      oncommand="PrefOkay()" />
   <command id="cmd_PrefCancel"    oncommand="PrefCancel();" />
 
-  <scrollbox id="scroller" style="overflow:-moz-scrollbars-vertical" flex="1">
+<!-- Preferences panel -->
 
-      <vbox id="pref-panes" onfocus="catchScroll(event)" flex="1"  >
+<vbox flex="1" class="base" >
 
-	        <button id="okay-button"   style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#ffffff" tabindex="1" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></button>     
-	   
-	</vbox>
+  <hbox class="pref-toolbar">
+		
+    <button  oncommand="focusSkipToPanel()" onfocus="show('general-pane',this)"    id="general-button" />  
+    <button  oncommand="focusSkipToPanel()" onfocus="show('advanced-pane',this)"   id="advanced-button" />  
+    <button  oncommand="focusSkipToPanel()" onfocus="show('connection-pane',this)" id="connection-button"  />  
+    <button  oncommand="focusSkipToPanel()" onfocus="show('privacy-pane',this)"    id="privacy-button"   />  
+    <button  oncommand="focusSkipToPanel()" onfocus="show('summary-pane',this)"    id="okay-button" command="cmd_PrefOkay"><label  class='dialog-button' value="&okayButton.label;" /></button >     
 
-  </scrollbox>
+  </hbox >      
+  
+  <hbox style="height:6px" />
+  
+    <scrollbox id="scroller" style="overflow:-moz-scrollbars-vertical" flex="1">
+      <vbox id="pref-panes" onfocus="fixXULAutoScroll(event)" >
+      	<!-- here we get the panels --> 
+      </vbox>
+    </scrollbox>
+    
+  <hbox id="refBottom" />
 
+</vbox>
 </window>
