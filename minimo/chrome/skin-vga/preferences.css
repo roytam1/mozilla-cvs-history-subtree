@@ -38,14 +38,44 @@
 groupbox.scrolling {
   overflow:auto;
 }
- 
-toolbarbutton.base-button {
-  padding-left:2px ! important;
-  padding-right:2px ! important;
-}
+
+.base { background-color:white } 
 
 .pref-toolbar {
-  background-color:white;
+  background-color:lightblue;
+}
+
+groupbox {
+  padding:0px ! important;
+}
+
+.pref-toolbar button {
+ -moz-appearance: none;
+ background-color:lightblue;
+ min-width:0px;
+ border:0px;
+ margin:0px;
+ padding:2px;
+}
+
+.dialog-button {
+   font-weight:bold;
+   font-size:105%;
+   border:1px outset #cccccc;
+   background-color: #cccccc;
+   padding:2px ! important;
+   margin:2px ! important;
+}
+
+
+/* This is the feedback class that gets applied to the icons on top 
+ * When an item is selected. When an item is selected, the
+ * .prefselectedbutton gets applied to the toolbarbutton element. 
+ */
+
+.prefselectedbutton {
+
+   background-color:white ! important;   
 }
 
 #general-button {
@@ -64,61 +94,30 @@ toolbarbutton.base-button {
   list-style-image: url("chrome://minimo/skin/preferences/icon-pref-networking.png");
 }
 
-toolbar {
-  border:0px;
-}
-
 .panel-container {
   margin:3px ! important;
+  background-color:transparent;
 }
-
-/* 
- * OKAY / CANCEL buttons look 
- */ 
-.dialog-button {
-   font-weight:bold;
-   font-size:105%;
-   border:1px outset #cccccc;
-   background-color: #cccccc;
-   padding:2px ! important;
-   margin:2px ! important;
-}
-
-/* This is the feedback class that gets applied to the icons on top 
- * When an item is selected. When an item is selected, the
- * .prefselectedbutton gets applied to the toolbarbutton element. 
- */
-#pref-bar .prefselectedbutton {
-
-   background-color:rgb(212,208,200);   
-}
-
-#dialog-bar .prefselectedbutton .dialog-button {
-   background-color:rgb(212,208,200);   
-}
-
-/*
- * 
- */
 
 .box-prefgroupitem {
   margin:2px ! important;
+  background-color:#cccccc;
+  border-color:#cccccc;
 }
 
 .box-prefgroupitem2 {
   margin:2px ! important;
-  background-color:white;
+  background-color:#cccccc;
+  border-color:#cccccc;
 }
 
 .box-prefpadding {
-  margin:4px ! important;
+  margin:2px ! important;
 }
 
 checkbox > * {
   margin-left:2px ! important;
 }
-
-
 
 /*
  * OKAY-panel 
