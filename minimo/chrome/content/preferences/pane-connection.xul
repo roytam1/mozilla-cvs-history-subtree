@@ -42,24 +42,22 @@
 ]>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-    <box id="pref-panes">  
+
+  <box id="pref-panes">  
 
    <!-- CONNECTION PANE --> 
 
-    <button class="base-button"  style="-moz-appearance:none; border:1px solid gray; margin:1px; background-color:#ffffff" oncommand="focusTo(this,'connection-pane','UseProxy')"  id="connection-button"  />  
-
-    <hbox id="connection-pane"
+    <vbox id="connection-pane"
           class="panel-container"
           flex="1"
           collapsed="true"  >
           
-          <groupbox flex="1" class="box-floatoptions ">
 
-            <caption label="&networkCaption.label;"/>
+            <label value="&networkCaption.label;"/>
 
-            <vbox class="box-prefpadding" flex="1">  
+            <vbox class="box-prefpadding" >  
 
-              <groupbox class='box-prefgroupitem' >
+              <groupbox class='box-prefgroupitem' flex="1">
 
                 <caption label="&proxyCaption.label;"/>
  
@@ -75,17 +73,18 @@
 
                        <grid>
                          <columns>
-                           <column flex="1"/>
-                           <column flex="1"/>
+                           <column/>
+                           <column />
                          </columns>
                          <rows>
                            <row>
                              <label value="&proxyURL.label;"></label>
                              <label value="&proxyPortCaption.label;" />
                            </row>
-                           <row>
+                           <row flex="1">
+
                              <textbox onchange="syncPref(this)" 
-                                 flex="1" 
+                                 
                                  style="margin:3px ! important;" 
                                  id="networkProxyHTTP"
                                  preference="network.proxy.http"
@@ -111,19 +110,20 @@
                   <vbox class="box-prefpadding">
 
                     <box id="dontAskForLaunch" 
-	                              preference="browser.download.progressDnlgDialog.dontAskForLaunch" 
-	                              onclick="syncPref(this);" />
+	                     preference="browser.download.progressDnlgDialog.dontAskForLaunch" 
+	                     onclick="syncPref(this);" />
 
                     <hbox flex="1">
 
-                      <box onchange="syncPref(this)"  
-                                 id="downloadDir" onreadpref="downloadSetTextbox();" 
+                      <box       id="downloadDir"  
+                                 onchange="syncPref(this)"
+                                 onreadpref="downloadSetTextbox();" 
                                  preference="browser.download.dir"
                                  />          
 
                       <menulist flex="1"  label="&setSaveDirectory.label;" hidden="true" id="menuDownloadOptions" ignorekeys="true" >
                         <menupopup id="downloadOptionsList">
-					<menuitem label="&downloadPrompt.label;" id="downloadPromptOption" oncommand="downloadSelectPrompt()" />
+                           <menuitem label="&downloadPrompt.label;" id="downloadPromptOption" oncommand="downloadSelectPrompt()" />
                         </menupopup>
                       </menulist>
 
@@ -133,8 +133,7 @@
               </groupbox>
 
             </vbox>
-        </groupbox>
-    </hbox>
-</box>
+    </vbox>
+  </box>
 
 </overlay>
