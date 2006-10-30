@@ -1294,3 +1294,29 @@ any
 
 ----------------------------------------------------------------------
 
+44) timestamper
+---------------
+
+Filter for adding timestamps to frames.
+Note: Warning: this node mutates frames. XXX maybe we need cloning.
+
+Input frame n will be timestamped with
+  TS = offset + (incr_num*n)/incr_denom.
+n is initially 0 and reset to 0 after each stream break.
+
+
+Node parameters:
+
+- unsigned long long "offset" : Timestamp of first frame in input
+                                stream (default: 0)
+- long "incr_num" : Increment numerator. See description
+                    above. (default: 1)
+- long "incr_denom" : Increment denominator. See description above
+                      (default: 1)
+
+Input stream:
+- any with mutable timestamps
+
+Output stream:
+- as input stream, with timestamps set according to offset, incr_num,
+incr_denom

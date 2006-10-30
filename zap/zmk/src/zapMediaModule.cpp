@@ -80,6 +80,7 @@
 #include "zapDataExtractor.h"
 #include "zapAudioReformatter.h"
 #include "zapClockReducer.h"
+#include "zapTimestamper.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -125,6 +126,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapUDPPacketizer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapDataExtractor)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioReformatter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapClockReducer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapTimestamper)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -358,6 +360,12 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_CLOCKREDUCER_CID,
     ZAP_CLOCKREDUCER_CONTRACTID,
     zapClockReducerConstructor
+  },
+  {
+    "Mozilla ZMK Timestamper",
+    ZAP_TIMESTAMPER_CID,
+    ZAP_TIMESTAMPER_CONTRACTID,
+    zapTimestamperConstructor
   }
 };
 
