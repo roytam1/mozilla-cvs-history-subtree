@@ -2,28 +2,32 @@
  * Utils 
  */ 
 
-function catchScroll(e) {
+function fixXULAutoScroll(e) {
+
+      var referenceScrollerBoxObject = document.getElementById("scroller").boxObject;
+      var referenceBottomBoxObject = document.getElementById("refBottom").boxObject;
+      var refTopY = referenceScrollerBoxObject.y;
 
 	try {
-
-		scb=document.getElementById("scroller").boxObject.QueryInterface(Components.interfaces.nsIScrollBoxObject);
-	
+		scb = referenceScrollerBoxObject.QueryInterface(Components.interfaces.nsIScrollBoxObject);
 		try {	
 			focusedElementBoxObject = document.getBoxObjectFor(e.target);
+			var vx={}; var vy={};
+			var currentPosY = scb.getPosition(vx,vy);
+			var toPos = parseInt(focusedElementBoxObject.y-refTopY);
+
 			if(focusedElementBoxObject) {
-				if(focusedElementBoxObject.y>10) {
-					scb.scrollTo(0,focusedElementBoxObject.y-9);
-				} else {
-					scb.scrollTo(0,focusedElementBoxObject.y);
+				if(parseInt(focusedElementBoxObject.y-(vy.value))>referenceBottomBoxObject.y) {
+					scb.scrollToElement(e.target);
+
+					scb.scrollTo(0,parseInt(focusedElementBoxObject.y-referenceBottomBoxObject.y+focusedElementBoxObject.height+2));
 				}
 			}
 
 		} catch (i) {
-
 		}
 
 	} catch (i) {
-
 	}
 }
 
@@ -437,8 +441,14 @@ function prefShutdown() {
  * we dispatch a focus to an item. 
  */ 
 
-function focusTo(refElement,toUncollapse,elementId) {
-	document.getElementById(toUncollapse).collapsed=!document.getElementById(toUncollapse).collapsed;
+function focusSkipToPanel() {
+	
+	try {
+
+		document.commandDispatcher.advanceFocusIntoSubtree(document.getElementById("pref-panes"));
+
+	} catch (e) { alert(e) }
+
 }
 
 
