@@ -1717,17 +1717,12 @@ AncestorsHaveStyleHeight(const nsHTMLReflowState& aReflowState)
 void
 nsTableFrame::CheckRequestSpecialHeightReflow(const nsHTMLReflowState& aReflowState)
 {
-  if (!aReflowState.frame) ABORT0();
-  nsIFrame* prevInFlow = aReflowState.frame->GetPrevInFlow();
-
-  if (!prevInFlow                                             &&   // 1st in flow                                            && // 1st in flow
-      ((NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight) ||   // no computed height
-       (0                    == aReflowState.mComputedHeight))  && 
-      ::IsPctStyleHeight(aReflowState.mStylePosition)) {           // pct height
-
-    if (::AncestorsHaveStyleHeight(aReflowState)) {
-      nsTableFrame::RequestSpecialHeightReflow(aReflowState);
-    }
+  if (!aReflowState.frame->GetPrevInFlow() &&  // 1st in flow
+      (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight ||  // no computed height
+       0                    == aReflowState.mComputedHeight) && 
+      ::IsPctStyleHeight(aReflowState.mStylePosition) && // pct height
+      ::AncestorsHaveStyleHeight(aReflowState)) {
+    nsTableFrame::RequestSpecialHeightReflow(aReflowState);
   }
 }
 
