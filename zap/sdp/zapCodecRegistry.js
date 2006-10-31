@@ -264,7 +264,7 @@ TEventCodec.fun(
     
     this.tevent2rtp = session.mediaGraph.addNode("tevent-rtp-packetizer",
                                                  PB({$payload_type:this.remotePayloadType}));
-    this.sync = session.mediaGraph.addNode("stream-syncer", null);
+    this.sync = session.mediaGraph.addNode("timestamp-syncer", null);
     
     session.mediaGraph.connect(session.callTEventIn, null, this.sync, PB({$name:"input"}));
     session.mediaGraph.connect(session.callAudioIn, null, this.sync, PB({$name:"timebase"}));

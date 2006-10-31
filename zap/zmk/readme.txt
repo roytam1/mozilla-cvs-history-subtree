@@ -875,8 +875,8 @@ as input streams
 
 ----------------------------------------------------------------------
 
-27) stream-syncer
------------------
+27) timestamp-syncer
+--------------------
 
 Adds an offset to the timestamp of input frames, so that the timestamp
 of the first frame of an input stream coincides with the last
