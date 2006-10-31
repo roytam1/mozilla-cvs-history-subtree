@@ -1871,10 +1871,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   }
   nsresult rv = NS_OK;
 
-  // see if a special height reflow needs to occur due to having a pct height
-  if (!NeedSpecialReflow()) 
-    nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
-
   // see if collapsing borders need to be calculated
   if (!GetPrevInFlow() && IsBorderCollapse() && NeedToCalcBCBorders()) {
     GET_TWIPS_TO_PIXELS(aPresContext, p2t);
