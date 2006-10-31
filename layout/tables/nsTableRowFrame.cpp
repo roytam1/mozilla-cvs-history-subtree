@@ -857,7 +857,6 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
     }
     if (aReflowState.mFlags.mSpecialHeightReflow) {
       if (!isPaginated && !cellFrame->NeedSpecialReflow()) {
-        kidFrame = iter.Next(); 
         continue;
       }
     }
