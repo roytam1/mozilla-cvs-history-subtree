@@ -152,8 +152,8 @@ public:
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
 
-  virtual void VerticallyAlignChild(const nsHTMLReflowState& aReflowState,
-                                    nscoord                  aMaxAscent);
+  void VerticallyAlignChild(const nsHTMLReflowState& aReflowState,
+                            nscoord                  aMaxAscent);
 
   PRBool HasVerticalAlignBaseline();
 
