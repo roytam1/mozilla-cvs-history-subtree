@@ -336,24 +336,12 @@ nsTableRowFrame::DidResize(const nsHTMLReflowState& aReflowState)
       // resize the cell's height
       //if (cellFrameSize.height!=cellHeight)
       {
-        // XXX If the cell frame has a view, then we need to resize
-        // it as well. We would like to only do that if the cell's size
-        // is changing. Why is the 'if' stmt above commented out?
         cellFrame->SetSize(nsSize(cellFrame->GetSize().width, cellHeight));
         // realign cell content based on the new height
-        /*nsHTMLReflowMetrics desiredSize;
-        nsHTMLReflowState kidReflowState(aPresContext, aReflowState,
-                                         cellFrame,
-                                         nsSize(cellFrameSize.width, cellHeight),
-                                         eReflowReason_Resize);*/
-        //XXX: the following reflow is necessary for any content of the cell
-        //     whose height is a percent of the cell's height (maybe indirectly.)
-        //     But some content crashes when this reflow is issued, to be investigated
-        //XXX nsReflowStatus status;
-        //ReflowChild(cellFrame, aPresContext, desiredSize, kidReflowState, status);
-
         cellFrame->VerticallyAlignChild(aReflowState, mMaxCellAscent);
         ConsiderChildOverflow(desiredSize.mOverflowArea, cellFrame);
+        // Note that if the cell's *content* needs to change in response
+        // to this height, it will get a special height reflow.
       }
     }
     // Get the next child
