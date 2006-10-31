@@ -3303,6 +3303,9 @@ nsTableFrame::GetBorderPadding(const nsHTMLReflowState& aReflowState,
                                float                    aPixelToTwips,
                                const nsTableCellFrame*  aCellFrame)
 {
+  // XXX When we have a more sensible border/padding API (bug 332922),
+  // we can get rid of the aReflowState parameters here and on all the
+  // DidResize* functions.
   const nsStylePadding* paddingData = aCellFrame->GetStylePadding();
   nsMargin padding(0,0,0,0);
   if (!paddingData->GetPadding(padding)) {
