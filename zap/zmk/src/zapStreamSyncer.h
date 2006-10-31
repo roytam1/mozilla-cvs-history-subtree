@@ -43,14 +43,14 @@
 #include "nsCOMPtr.h"
 #include "nsIPropertyBag2.h"
 
-class zapStreamSyncerTimebase;
+class zapStreamSyncerClock;
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamSyncer
 
-// {925EDCAB-657E-444B-87CD-A48DE1E2BB25}
+// {A2FC365E-4D72-4421-A443-C99A1FB7D15C}
 #define ZAP_STREAMSYNCER_CID                             \
-  { 0x925edcab, 0x657e, 0x444b, { 0x87, 0xcd, 0xa4, 0x8d, 0xe1, 0xe2, 0xbb, 0x25 } }
+  { 0xa2fc365e, 0x4d72, 0x4421, { 0xa4, 0x43, 0xc9, 0x9a, 0x1f, 0xb7, 0xd1, 0x5c } }
 
 #define ZAP_STREAMSYNCER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "stream-syncer"
 
@@ -67,14 +67,17 @@ class zapStreamSyncer : public zapIMediaNode,
   ~zapStreamSyncer();
 
 private:
-  friend class zapStreamSyncerTimebase;
-
-  void RebaseFrame(zapIMediaFrame* frame);
+  friend class zapStreamSyncerClock;
+  friend class zapStreamSyncerWakeupEvent;
   
-  PRInt64 mOffset;
-  PRBool mOffsetStale;
+  void Wakeup();
+  void ScheduleWakeup();
   
-  zapStreamSyncerTimebase *mTimebase; // weak reference managed by object itself
+  PRUint64 mCurrentTime;
+  nsCOMPtr<zapIMediaFrame> mNextFrame;
+  PRBool mWakeupPosted;
+  
+  zapStreamSyncerClock *mClock; // weak reference managed by object itself
 
   nsCOMPtr<nsIPropertyBag2> mInputStreamInfo;
   

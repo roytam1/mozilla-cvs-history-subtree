@@ -42,15 +42,16 @@
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
+#include "nsThreadUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
-// zapStreamSyncerTimebase
+// zapStreamSyncerClock
 
-class zapStreamSyncerTimebase : public zapIMediaSink
+class zapStreamSyncerClock : public zapIMediaSink
 {
 public:
-  zapStreamSyncerTimebase();
-  ~zapStreamSyncerTimebase();
+  zapStreamSyncerClock();
+  ~zapStreamSyncerClock();
 
   void Init(zapStreamSyncer* syncer);
 
@@ -60,34 +61,33 @@ public:
   nsRefPtr<zapStreamSyncer> mSyncer;
   nsCOMPtr<zapIMediaSource> mInput;
   
-  nsCOMPtr<zapIMediaFrame> mLastFrame;
   nsCOMPtr<nsIPropertyBag2> mStreamInfo;
 };
 
 //----------------------------------------------------------------------
 
-zapStreamSyncerTimebase::zapStreamSyncerTimebase()
+zapStreamSyncerClock::zapStreamSyncerClock()
 {
 }
 
-zapStreamSyncerTimebase::~zapStreamSyncerTimebase()
+zapStreamSyncerClock::~zapStreamSyncerClock()
 {
   NS_ASSERTION(mSyncer, "Never initialized");
-  mSyncer->mTimebase = nsnull;
+  mSyncer->mClock = nsnull;
 }
 
-void zapStreamSyncerTimebase::Init(zapStreamSyncer* syncer) {
+void zapStreamSyncerClock::Init(zapStreamSyncer* syncer) {
   mSyncer = syncer;
-  mSyncer->mTimebase = this;
+  mSyncer->mClock = this;
 }
 
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(zapStreamSyncerTimebase)
-NS_IMPL_RELEASE(zapStreamSyncerTimebase)
+NS_IMPL_ADDREF(zapStreamSyncerClock)
+NS_IMPL_RELEASE(zapStreamSyncerClock)
 
-NS_INTERFACE_MAP_BEGIN(zapStreamSyncerTimebase)
+NS_INTERFACE_MAP_BEGIN(zapStreamSyncerClock)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaSink)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
 NS_INTERFACE_MAP_END
@@ -97,8 +97,8 @@ NS_INTERFACE_MAP_END
 
 /* void connectSource (in zapIMediaSource source, in ACString connection_id); */
 NS_IMETHODIMP
-zapStreamSyncerTimebase::ConnectSource(zapIMediaSource *source,
-                                  const nsACString & connection_id)
+zapStreamSyncerClock::ConnectSource(zapIMediaSource *source,
+                                    const nsACString & connection_id)
 {
   NS_ASSERTION(!mInput, "already connected");
   mInput = source;
@@ -108,8 +108,8 @@ zapStreamSyncerTimebase::ConnectSource(zapIMediaSource *source,
 
 /* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
 NS_IMETHODIMP
-zapStreamSyncerTimebase::DisconnectSource(zapIMediaSource *source,
-                                     const nsACString & connection_id)
+zapStreamSyncerClock::DisconnectSource(zapIMediaSource *source,
+                                       const nsACString & connection_id)
 {
   mInput = nsnull;
   return NS_OK;
@@ -117,18 +117,10 @@ zapStreamSyncerTimebase::DisconnectSource(zapIMediaSource *source,
 
 /* void consumeFrame (in zapIMediaFrame frame); */
 NS_IMETHODIMP
-zapStreamSyncerTimebase::ConsumeFrame(zapIMediaFrame * frame)
+zapStreamSyncerClock::ConsumeFrame(zapIMediaFrame * frame)
 {
-  mLastFrame = frame;
-  
-  // check if the offset is stale
-  nsCOMPtr<nsIPropertyBag2> streamInfo;
-  frame->GetStreamInfo(getter_AddRefs(streamInfo));
-  if (streamInfo != mStreamInfo) {
-    mSyncer->mOffsetStale = PR_TRUE;
-    mStreamInfo = streamInfo;
-  }
-  
+  frame->GetTimestamp(&mSyncer->mCurrentTime);
+  mSyncer->Wakeup();
   return NS_OK;
 }
 
@@ -137,9 +129,10 @@ zapStreamSyncerTimebase::ConsumeFrame(zapIMediaFrame * frame)
 // zapStreamSyncer
 
 zapStreamSyncer::zapStreamSyncer()
-    : mTimebase(nsnull),
-      mOffsetStale(PR_TRUE),
-      mOffset(0)
+    : mClock(nsnull),
+      mCurrentTime(0xFFFFFFFFFFFFFFFF),
+      mWakeupPosted(PR_FALSE)
+      
 {
 #ifdef DEBUG_afri_zmk
   printf("zapStreamSyncer::zapStreamSyncer()\n");
@@ -188,7 +181,7 @@ zapStreamSyncer::RemovedFromGraph(zapIMediaGraph *graph)
 /* zapIMediaSource getSource (in nsIPropertyBag2 source_pars); */
 NS_IMETHODIMP
 zapStreamSyncer::GetSource(nsIPropertyBag2 *source_pars,
-                         zapIMediaSource **_retval)
+                           zapIMediaSource **_retval)
 {
   if (mOutput) {
     NS_ERROR("output end already connected");
@@ -221,16 +214,16 @@ zapStreamSyncer::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
     NS_ADDREF(*_retval);
     return NS_OK;
   }
-  else if (sinkName == NS_LITERAL_CSTRING("timebase")) {
-    if (mTimebase) {
-      NS_ERROR("timebase already connected");
+  else if (sinkName == NS_LITERAL_CSTRING("clock")) {
+    if (mClock) {
+      NS_ERROR("clock already connected");
       return NS_ERROR_FAILURE;
     }
 
-    zapStreamSyncerTimebase* timebaseSink = new zapStreamSyncerTimebase();
-    timebaseSink->AddRef();
-    timebaseSink->Init(this);
-    *_retval = timebaseSink;
+    zapStreamSyncerClock* clockSink = new zapStreamSyncerClock();
+    clockSink->AddRef();
+    clockSink->Init(this);
+    *_retval = clockSink;
     return NS_OK;
   }
 
@@ -267,10 +260,8 @@ zapStreamSyncer::DisconnectSource(zapIMediaSource *source,
 NS_IMETHODIMP
 zapStreamSyncer::ConsumeFrame(zapIMediaFrame * frame)
 {
-  if (!mOutput) return NS_ERROR_FAILURE;
-  
-  RebaseFrame(frame);
-  return mOutput->ConsumeFrame(frame);
+  NS_ERROR("stream-syncer is an active source. Maybe you need some buffering?");
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
@@ -302,39 +293,57 @@ zapStreamSyncer::DisconnectSink(zapIMediaSink *sink,
 NS_IMETHODIMP
 zapStreamSyncer::ProduceFrame(zapIMediaFrame ** frame)
 {
-  if (!mInput) return NS_ERROR_FAILURE;
-  
-  if (NS_FAILED(mInput->ProduceFrame(frame)))
-    return NS_ERROR_FAILURE;
-  
-  RebaseFrame(*frame);
-  return NS_OK;
+  NS_ERROR("stream-syncer:input is an active sink. Maybe you need some buffering?");
+  *frame = nsnull;
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
 // Implementation helpers:
 
 void
-zapStreamSyncer::RebaseFrame(zapIMediaFrame* frame)
+zapStreamSyncer::Wakeup()
 {
-  nsCOMPtr<nsIPropertyBag2> streamInfo;
-  frame->GetStreamInfo(getter_AddRefs(streamInfo));
-  if (streamInfo != mInputStreamInfo) {
-    mOffsetStale = PR_TRUE;
-    mInputStreamInfo = streamInfo;
+  if (!mNextFrame && mInput) {
+    mInput->ProduceFrame(getter_AddRefs(mNextFrame));
   }
-  if (mOffsetStale) {
-    PRUint64 Tbase = 0;
-    if (mTimebase && mTimebase->mLastFrame) {
-      mTimebase->mLastFrame->GetTimestamp(&Tbase);
+  
+  if (mNextFrame) {
+    PRUint64 ts;
+    mNextFrame->GetTimestamp(&ts);
+    if (ts <= mCurrentTime) {
+      if (mOutput)
+        mOutput->ConsumeFrame(mNextFrame);
+      mNextFrame = nsnull;
+      ScheduleWakeup();
     }
-    PRUint64 Tinput;
-    frame->GetTimestamp(&Tinput);
-    mOffset = Tbase - Tinput;
-    mOffsetStale = PR_FALSE;
+  }
+}
+
+class zapStreamSyncerWakeupEvent : public nsRunnable
+{
+public:
+  zapStreamSyncerWakeupEvent(zapStreamSyncer* syncer)
+      : mSyncer(syncer)
+  {
   }
 
-  PRUint64 oldTS;
-  frame->GetTimestamp(&oldTS);
-  frame->SetTimestamp(oldTS + mOffset);
+  NS_IMETHODIMP Run()
+  {
+    NS_ASSERTION(mSyncer, "uh-oh, no syncer!");
+    mSyncer->mWakeupPosted = PR_FALSE;
+    mSyncer->Wakeup();
+    return NS_OK;
+  }
+
+private:
+  nsRefPtr<zapStreamSyncer> mSyncer;
+};
+
+void
+zapStreamSyncer::ScheduleWakeup()
+{
+  if (mWakeupPosted) return;
+  nsRefPtr<zapStreamSyncerWakeupEvent> ev = new zapStreamSyncerWakeupEvent(this);
+  NS_DispatchToCurrentThread(ev);
 }

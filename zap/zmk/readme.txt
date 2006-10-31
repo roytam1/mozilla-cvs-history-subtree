@@ -1320,3 +1320,20 @@ Input stream:
 Output stream:
 - as input stream, with timestamps set according to offset, incr_num,
 incr_denom
+
+----------------------------------------------------------------------
+
+45) stream-syncer
+-----------------
+
+Synchronizes a stream to a clock stream. 
+
+Sinks: 2
+
+- ACString "name" == "input" : input stream (any type) (active)
+- ACString "name" == "clock" : clock stream (any type) (passive)
+
+Sources: 1 (active)
+
+Output stream:
+as input stream
