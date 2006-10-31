@@ -1815,7 +1815,7 @@ nsTableFrame::IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowSta
  *    NotifyPercentHeight() calls RequestSpecialHeightReflow().
  *
  * 2) After the pass 2 reflow, if the table's NeedToInitiateSpecialReflow(true) was called, it
- *    will do the special height reflow, setting the reflow state's mFlages.mSpecialHeightReflow
+ *    will do the special height reflow, setting the reflow state's mFlags.mSpecialHeightReflow
  *    to true and mSpecialHeightInitiator to itself. It won't do this if IsPrematureSpecialHeightReflow()
  *    returns true because in that case another special height reflow will be coming along with the
  *    containing table as the mSpecialHeightInitiator. It is only relevant to do the reflow when
@@ -1859,7 +1859,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // may not have been called if reflow was a result of having a height on the containing table
   // XXXldb Set aStatus or other members of aDesiredSize?
   if (IsPrematureSpecialHeightReflow(aReflowState, mRect, NeedSpecialReflow() || isPaginated, aDesiredSize)) 
-    // XXXldb But dirty bits will be cleared!
     return NS_OK;
 
   aStatus = NS_FRAME_COMPLETE; 
@@ -1921,14 +1920,11 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       reflowedChildren = PR_TRUE;
     }
     // reevaluate special height reflow conditions
-    // XXXldb If these conditions are false, our dirty bits will still be
-    // cleared!
+    // XXXldb Are all these conditions correct?
     if ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) &&
         (aReflowState.mFlags.mSpecialHeightReflow || !NeedSpecialReflow()) &&
         NS_FRAME_IS_COMPLETE(aStatus)) {
-      // XXXldb Mark DIRTY?  This used to always be a resize, but it's
-      // a resize for height, and the new resize optimizations may cause
-      // skipping (although why wouldn't they have before?).
+      // XXXldb Do we need to set the mVResize flag on any reflow states?
 
       // distribute extra vertical space to rows
       CalcDesiredHeight(aReflowState, aDesiredSize); 
