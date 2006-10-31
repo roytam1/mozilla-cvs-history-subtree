@@ -1764,6 +1764,9 @@ nsTableFrame::RequestSpecialHeightReflow(const nsHTMLReflowState& aReflowState)
 // was initiated by an ancestor of aReflowState.frame's containing table. In that case, 
 // aFrame's containing table will eventually initiate a special height reflow which 
 // will cause this method to return false. 
+// XXXldb That special height reflow isn't necessarily a full resize
+// anymore, so these conditions might need to be changed or removed
+// entirely.
 PRBool
 nsTableFrame::IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowState,
                                              const nsRect&            aRect,
