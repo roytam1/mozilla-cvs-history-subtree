@@ -222,7 +222,7 @@ public:
   // A flag indicating that we've scheduled a special height reflow but
   // not done it yet.
   PRBool NeedSpecialReflow();
-  void SetNeedSpecialReflow(PRBool aContentEmpty);
+  void SetNeedSpecialReflow(PRBool aValue);
 
   // A flag indicating that we have had a special height reflow since
   // the last complete reflow (i.e., one where this frame was
