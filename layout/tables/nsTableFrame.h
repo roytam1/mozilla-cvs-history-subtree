@@ -122,13 +122,6 @@ public:
   // height reflow will occur. 
   static void RequestSpecialHeightReflow(const nsHTMLReflowState& aReflowState);
 
-  // Return true (and set aMetrics's desiredSize to aRect) if the special height reflow
-  // was not initiated by aReflowState.frame's containing table.
-  static PRBool IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowState,
-                                               const nsRect&            aRect,
-                                               PRBool                   aNeedSpecialHeightReflow,
-                                               nsHTMLReflowMetrics&     aMetrics);
-
   virtual PRBool IsContainingBlock() const;
 
   static void RePositionViews(nsIFrame* aFrame);

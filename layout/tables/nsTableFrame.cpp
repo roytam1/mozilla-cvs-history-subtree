@@ -1760,38 +1760,6 @@ nsTableFrame::RequestSpecialHeightReflow(const nsHTMLReflowState& aReflowState)
   }
 }
 
-// Return true (and set aMetrics's desiredSize to aRect) if the special height reflow
-// was initiated by an ancestor of aReflowState.frame's containing table. In that case, 
-// aFrame's containing table will eventually initiate a special height reflow which 
-// will cause this method to return false. 
-// XXXldb That special height reflow isn't necessarily a full resize
-// anymore, so these conditions might need to be changed or removed
-// entirely.
-PRBool
-nsTableFrame::IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowState,
-                                             const nsRect&            aRect,
-                                             PRBool                   aNeedSpecialHeightReflow,
-                                             nsHTMLReflowMetrics&     aMetrics)
-{
-  PRBool premature = PR_FALSE; 
-  if (aReflowState.mFlags.mSpecialHeightReflow) { 
-    if (aNeedSpecialHeightReflow) { 
-      nsTableFrame* tableFrame = nsTableFrame::GetTableFrame(aReflowState.frame);
-      if (tableFrame && (tableFrame != aReflowState.mPercentHeightReflowInitiator)) { 
-        premature = PR_TRUE; 
-      } 
-    } 
-    else { 
-      premature = PR_TRUE; 
-    } 
-    if (premature) { 
-      aMetrics.width  = aRect.width; 
-      aMetrics.height = aRect.height; 
-    } 
-  }
-  return premature;
-}
-
 /******************************************************************************************
  * Before reflow, intrinsic width calculation is done using GetMinWidth
  * and GetPrefWidth.  This used to be known as pass 1 reflow.
@@ -1845,6 +1813,10 @@ nsTableFrame::IsPrematureSpecialHeightReflow(const nsHTMLReflowState& aReflowSta
  * 2) When a cell contains frames whose percent heights > 100%, there is data loss (see bug 115245). 
  *    However, this can also occur if a cell has a fixed height and there is no special height reflow. 
  *
+ * XXXldb Special height reflow should really be its own method, not
+ * part of nsIFrame::Reflow.  It should then call nsIFrame::Reflow on
+ * the contents of the cells to do the necessary vertical resizing.
+ *
  ******************************************************************************************/
 
 /* Layout the entire inner table. */
@@ -1856,13 +1828,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   DO_GLOBAL_REFLOW_COUNT("nsTableFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   PRBool isPaginated = aPresContext->IsPaginated();
-
-  // If this is a special height reflow, set our desired size to what is was previously and return
-  // if we will be getting another special height reflow. In paginated mode, SetNeedSpecialReflow(PR_TRUE) 
-  // may not have been called if reflow was a result of having a height on the containing table
-  // XXXldb Set aStatus or other members of aDesiredSize?
-  if (IsPrematureSpecialHeightReflow(aReflowState, mRect, NeedSpecialReflow() || isPaginated, aDesiredSize)) 
-    return NS_OK;
 
   aStatus = NS_FRAME_COMPLETE; 
   if (!GetPrevInFlow() && !mTableLayoutStrategy) {
@@ -1885,13 +1850,15 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   PRBool haveDesiredHeight = PR_FALSE;
   PRBool reflowedChildren  = PR_FALSE;
 
+  // XXXldb Would it be better to ignore whether there was a special
+  // height reflow coming from outside the table?
+
   // Reflow the entire table (pass 2 and possibly pass 3). This phase is necessary during a 
   // constrained initial reflow and other reflows which require either a strategy init or balance. 
   // This isn't done during an unconstrained reflow, because it will occur later when the parent 
   // reflows with a constrained width.
   if ((GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
-      !aReflowState.mFlags.mSpecialHeightReflow ||
-      NeedSpecialReflow() ||
+      !aReflowState.ShouldReflowAllKids() ||
       NeedToInitiateSpecialReflow()) {
     // see if an extra reflow will be necessary in pagination mode when there is a specified table height 
     if (isPaginated && !GetPrevInFlow() && (NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)) {
@@ -1949,13 +1916,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       haveDesiredHeight = PR_TRUE;
       reflowedChildren  = PR_TRUE;
     }
-  }
-  else if (aReflowState.mFlags.mSpecialHeightReflow) {
-    aDesiredSize.width  = mRect.width;
-    aDesiredSize.height = mRect.height;
-    SetNeedSpecialReflow(PR_FALSE);
-    SetNeedToInitiateSpecialReflow(PR_FALSE);
-    return NS_OK;
   }
 
   aDesiredSize.width = aReflowState.mComputedWidth +
