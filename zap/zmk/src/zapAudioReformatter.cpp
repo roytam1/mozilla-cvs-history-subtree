@@ -151,11 +151,11 @@ zapAudioReformatter::ProduceFrame(zapIMediaFrame ** _retval)
   do {
     if (IsInBufferEmpty()) {
       InputState is = GetNextInputFrame();
-      if (is == NO_DATA) {
+      if (is == ZAP_NO_DATA) {
         *_retval = nsnull;
         return NS_ERROR_FAILURE;
       }
-      else if (is == END_OF_STREAM) {
+      else if (is == ZAP_END_OF_STREAM) {
         if (!mOutFrame) {
           *_retval = nsnull;
           return NS_ERROR_FAILURE;
@@ -243,11 +243,11 @@ zapAudioReformatter::IsInBufferEmpty()
 zapAudioReformatter::InputState
 zapAudioReformatter::GetNextInputFrame()
 {
-  if (!mInput) return NO_DATA;
+  if (!mInput) return ZAP_NO_DATA;
   
   nsCOMPtr<zapIMediaFrame> frame;
   if (NS_FAILED(mInput->ProduceFrame(getter_AddRefs(frame))))
-    return NO_DATA;
+    return ZAP_NO_DATA;
   NS_ASSERTION(frame, "null frame");
 
   frame->GetData(mInBuffer);
@@ -270,21 +270,21 @@ zapAudioReformatter::GetNextInputFrame()
   if (streamInfo != mInStreamInfo) {
     // this is a new stream.
     if (NS_FAILED(mInStreamPars.InitWithProperties(streamInfo)))
-      return END_OF_STREAM;
+      return ZAP_END_OF_STREAM;
     if (mInStreamPars.sample_rate != mOutStreamPars.sample_rate) {
       NS_ERROR("node can't resample; only reformat!");
-      return END_OF_STREAM;
+      return ZAP_END_OF_STREAM;
     }
     mInStreamInfo = streamInfo;
     if (mStreamInfo) {
       mStreamInfo = mOutStreamPars.CreateStreamInfo();
-      return END_OF_STREAM;
+      return ZAP_END_OF_STREAM;
     }
     // else ... this is the first stream we see
     mStreamInfo = mOutStreamPars.CreateStreamInfo();
   }
 
-  return mInBuffer.Length() ? NEW_DATA : NO_DATA;
+  return mInBuffer.Length() ? ZAP_NEW_DATA : ZAP_NO_DATA;
 }
 
 PRUint32

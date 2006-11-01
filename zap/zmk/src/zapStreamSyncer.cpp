@@ -130,7 +130,7 @@ zapStreamSyncerClock::ConsumeFrame(zapIMediaFrame * frame)
 
 zapStreamSyncer::zapStreamSyncer()
     : mClock(nsnull),
-      mCurrentTime(0xFFFFFFFFFFFFFFFF),
+      mCurrentTime(-1),
       mWakeupPosted(PR_FALSE)
       
 {

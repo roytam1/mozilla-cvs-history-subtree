@@ -73,7 +73,7 @@ public:
 private:
   PRBool IsInBufferEmpty();
 
-  enum InputState { END_OF_STREAM, NEW_DATA, NO_DATA };
+  enum InputState { ZAP_END_OF_STREAM, ZAP_NEW_DATA, ZAP_NO_DATA };
   InputState GetNextInputFrame();
   PRUint32 ProduceSamples(float *out, PRUint32 sampleCount);
   
