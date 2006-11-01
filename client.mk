@@ -440,7 +440,7 @@ MODULES_microb :=                               \
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_3_11_20060929_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
-MICROB_CO_TAG        =
+MICROB_CO_TAG        = MICROB_20061031_BRANCH
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
