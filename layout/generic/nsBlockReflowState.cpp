@@ -511,8 +511,7 @@ nsBlockReflowState::AddFloat(nsLineLayout&       aLineLayout,
   // Allocate a nsFloatCache for the float
   nsFloatCache* fc = mFloatCacheFreeList.Alloc();
   fc->mPlaceholder = aPlaceholder;
-  fc->mIsCurrentLineFloat = !aLineLayout.GetIntrinsicWidthPass() &&
-                            aLineLayout.CanPlaceFloatNow();
+  fc->mIsCurrentLineFloat = aLineLayout.CanPlaceFloatNow();
 
   PRBool placed;
 

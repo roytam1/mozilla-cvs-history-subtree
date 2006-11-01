@@ -94,8 +94,7 @@
 
 nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
                            nsSpaceManager* aSpaceManager,
-                           const nsHTMLReflowState* aOuterReflowState,
-                           PRBool aIntrinsicWidthPass)
+                           const nsHTMLReflowState* aOuterReflowState)
   : mPresContext(aPresContext),
     mSpaceManager(aSpaceManager),
     mBlockReflowState(aOuterReflowState),
@@ -106,11 +105,9 @@ nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
     mTrailingTextFrame(nsnull),
     mBlockRS(nsnull),/* XXX temporary */
     mMinLineHeight(0),
-    mIntrinsicWidthPass(aIntrinsicWidthPass),
     mTextIndent(0)
 {
-  NS_ASSERTION(!aSpaceManager == aIntrinsicWidthPass,
-    "space manager should be present iff not doing intrinsic widths");
+  NS_ASSERTION(aSpaceManager, "space manager should be present");
   MOZ_COUNT_CTOR(nsLineLayout);
 
   // Stash away some style data that we need
@@ -797,8 +794,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 #endif
   nscoord tx = x - psd->mReflowState->mComputedBorderPadding.left;
   nscoord ty = y - psd->mReflowState->mComputedBorderPadding.top;
-  if (!mIntrinsicWidthPass)
-    mSpaceManager->Translate(tx, ty);
+  mSpaceManager->Translate(tx, ty);
 
 #ifdef IBMBIDI
   PRInt32 start, end;
@@ -891,8 +887,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
     }
   }
 
-  if (!mIntrinsicWidthPass)
-    mSpaceManager->Translate(-tx, -ty);
+  mSpaceManager->Translate(-tx, -ty);
 
   NS_ASSERTION(metrics.width>=0, "bad width");
   NS_ASSERTION(metrics.height>=0,"bad height");

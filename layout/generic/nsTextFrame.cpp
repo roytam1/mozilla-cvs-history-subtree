@@ -5253,7 +5253,6 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
       } //(aTextData.mMeasureText)
     }
     else {
-      PRBool currentWordIsFirstThing = firstThing;
       firstThing = PR_FALSE;
 
       aTextData.mSkipWhitespace = PR_FALSE;
@@ -5994,7 +5993,6 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   }
   if (!GetNextInFlow() &&
       (mState & TEXT_OPTIMIZE_RESIZE) &&
-      !lineLayout.GetIntrinsicWidthPass() &&
       lineLayout.GetForcedBreakPosition(GetContent()) == -1 &&
       (lastTimeWeSkippedLeadingWS == skipWhitespace) &&
       ((wrapping && (maxWidth >= realWidth)) ||

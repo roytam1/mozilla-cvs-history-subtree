@@ -66,8 +66,7 @@ class nsLineLayout {
 public:
   nsLineLayout(nsPresContext* aPresContext,
                nsSpaceManager* aSpaceManager,
-               const nsHTMLReflowState* aOuterReflowState,
-               PRBool aIntrinsicWidthPass);
+               const nsHTMLReflowState* aOuterReflowState);
   ~nsLineLayout();
 
   void Init(nsBlockReflowState* aState, nscoord aMinLineHeight,
@@ -88,8 +87,6 @@ public:
   PRInt32 GetLineNumber() const {
     return mLineNumber;
   }
-
-  PRBool GetIntrinsicWidthPass() const { return mIntrinsicWidthPass; }
 
   void BeginLineReflow(nscoord aX, nscoord aY,
                        nscoord aWidth, nscoord aHeight,
@@ -420,7 +417,6 @@ protected:
   nsBlockReflowState* mBlockRS;/* XXX hack! */
   nsCompatibility mCompatMode;
   nscoord mMinLineHeight;
-  PRPackedBool mIntrinsicWidthPass;
   PRUint8 mTextAlign;
 
   PRUint8 mPlacedFloats;

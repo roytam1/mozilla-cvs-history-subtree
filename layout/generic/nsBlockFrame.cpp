@@ -1401,7 +1401,6 @@ nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
   }
   if (gNoisyReflow) {
     if (!tryAndSkipLines) {
-      const nsStyleText* styleText = GetStyleText();
       IndentBy(stdout, gNoiseIndent);
       ListTag(stdout);
       printf(": marking all lines dirty: availWidth=%d textAlign=%d\n",
@@ -3111,8 +3110,7 @@ nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
       // no longer makes sense.  Now we always allocate on the stack
       nsLineLayout lineLayout(aState.mPresContext,
                               aState.mReflowState.mSpaceManager,
-                              &aState.mReflowState,
-                              PR_FALSE);
+                              &aState.mReflowState);
       lineLayout.Init(&aState, aState.mMinLineHeight, aState.mLineNumber);
       if (forceBreakInContent) {
         lineLayout.ForceBreakAtPosition(forceBreakInContent, forceBreakOffset);
@@ -3205,41 +3203,34 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   aLine->FreeFloats(aState.mFloatCacheFreeList);
   aState.mFloatCombinedArea.SetRect(0, 0, 0, 0);
 
-  PRBool impactedByFloats = PR_FALSE;
-  if (!aLineLayout.GetIntrinsicWidthPass()) {
-    // Setup initial coordinate system for reflowing the inline frames
-    // into. Apply a previous block frame's bottom margin first.
-    if (ShouldApplyTopMargin(aState, aLine)) {
-      aState.mY += aState.mPrevBottomMargin.get();
-    }
-    aState.GetAvailableSpace();
-    impactedByFloats = aState.IsImpactedByFloat() ? PR_TRUE : PR_FALSE;
-    aLine->SetLineIsImpactedByFloat(impactedByFloats);
+  // Setup initial coordinate system for reflowing the inline frames
+  // into. Apply a previous block frame's bottom margin first.
+  if (ShouldApplyTopMargin(aState, aLine)) {
+    aState.mY += aState.mPrevBottomMargin.get();
+  }
+  aState.GetAvailableSpace();
+  PRBool impactedByFloats = aState.IsImpactedByFloat() ? PR_TRUE : PR_FALSE;
+  aLine->SetLineIsImpactedByFloat(impactedByFloats);
 #ifdef REALLY_NOISY_REFLOW
-    printf("nsBlockFrame::DoReflowInlineFrames %p impacted = %d\n",
-           this, impactedByFloats);
+  printf("nsBlockFrame::DoReflowInlineFrames %p impacted = %d\n",
+         this, impactedByFloats);
 #endif
 
-    const nsMargin& borderPadding = aState.BorderPadding();
-    nscoord x = aState.mAvailSpaceRect.x + borderPadding.left;
-    nscoord availWidth = aState.mAvailSpaceRect.width;
-    nscoord availHeight;
-    if (aState.GetFlag(BRS_UNCONSTRAINEDHEIGHT)) {
-      availHeight = NS_UNCONSTRAINEDSIZE;
-    }
-    else {
-      /* XXX get the height right! */
-      availHeight = aState.mAvailSpaceRect.height;
-    }
-    aLineLayout.BeginLineReflow(x, aState.mY,
-                                availWidth, availHeight,
-                                impactedByFloats,
-                                PR_FALSE /*XXX isTopOfPage*/);
-  } else {
-    aLineLayout.BeginLineReflow(0, 0,
-                                NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
-                                PR_FALSE, PR_FALSE);
+  const nsMargin& borderPadding = aState.BorderPadding();
+  nscoord x = aState.mAvailSpaceRect.x + borderPadding.left;
+  nscoord availWidth = aState.mAvailSpaceRect.width;
+  nscoord availHeight;
+  if (aState.GetFlag(BRS_UNCONSTRAINEDHEIGHT)) {
+    availHeight = NS_UNCONSTRAINEDSIZE;
   }
+  else {
+    /* XXX get the height right! */
+    availHeight = aState.mAvailSpaceRect.height;
+  }
+  aLineLayout.BeginLineReflow(x, aState.mY,
+                              availWidth, availHeight,
+                              impactedByFloats,
+                              PR_FALSE /*XXX isTopOfPage*/);
 
   // XXX Unfortunately we need to know this before reflowing the first
   // inline frame in the line. FIX ME.
@@ -3813,9 +3804,6 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
 {
   // Trim extra white-space from the line before placing the frames
   aLineLayout.TrimTrailingWhiteSpace();
-
-  if (aLineLayout.GetIntrinsicWidthPass())
-    return PR_FALSE;
 
   // Vertically align the frames on this line.
   //
