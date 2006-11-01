@@ -1884,7 +1884,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // This isn't done during an unconstrained reflow, because it will occur later when the parent 
   // reflows with a constrained width.
   if ((GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
-      !aReflowState.ShouldReflowAllKids() ||
+      aReflowState.ShouldReflowAllKids() ||
       NeedToInitiateSpecialReflow()) {
     // see if an extra reflow will be necessary in pagination mode when there is a specified table height 
     if (isPaginated && !GetPrevInFlow() && (NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)) {
