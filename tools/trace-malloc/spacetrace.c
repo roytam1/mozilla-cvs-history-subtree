@@ -678,7 +678,7 @@ byteSize(STOptions * inOptions, STAllocation * aAlloc)
 ** recalculateAllocationCost
 **
 ** Given an allocation, does a recalculation of Cost - weight, heapcount etc.
-** and does the right thing to propogate the cost upwards.
+** and does the right thing to propagate the cost upwards.
 */
 int
 recalculateAllocationCost(STOptions * inOptions, STContext * inContext,
@@ -1060,7 +1060,7 @@ harvestRun(const STRun * aInRun, STRun * aOutRun,
 /*
 ** recalculateRunCost
 **
-** Goes over all allocations of a run and recalculates and propogates
+** Goes over all allocations of a run and recalculates and propagates
 ** the allocation costs - weight, heapcount, size
 */
 int

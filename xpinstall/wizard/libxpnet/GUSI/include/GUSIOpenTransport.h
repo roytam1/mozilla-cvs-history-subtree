@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                        
+// % $Log$
+// % Revision 1.1  2001/03/11 22:37:24  sgehani%netscape.com
+// % First Checked In.
+// %                                        
 // % Revision 1.18  2001/01/17 08:58:06  neeri                             
 // % Releasing 2.1.4                                                       
 // %                                                                       
@@ -327,7 +330,7 @@ public:
  virtual int getpeername(void * name, socklen_t * namelen);
  // [[accept]] may become quite complex, because connections could nest. The
  // listening socket calls [[OTListen]], queues candidates by their         
- // [[fNextListener]] field, and then trys calling [[OTAccept]] on the first
+ // [[fNextListener]] field, and then tries calling [[OTAccept]] on the first
  // candidate.                                                              
  //                                                                         
  // <Overridden member functions for [[GUSIOTStreamSocket]]>=               
