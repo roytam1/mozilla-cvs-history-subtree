@@ -398,13 +398,10 @@ protected:
    * @param aState           the current reflow state
    * @param aLine            the line to reflow.  can contain a single block frame
    *                         or contain 1 or more inline frames.
-   * @param aTryPull         controls whether we are allowed to try pulling
-   *                         frames from the next-in-flow
    * @param aKeepReflowGoing [OUT] indicates whether the caller should continue to reflow more lines
    */
   nsresult ReflowLine(nsBlockReflowState& aState,
                       line_iterator aLine,
-                      PRBool aTryPull,
                       PRBool* aKeepReflowGoing);
 
   // Return PR_TRUE if aLine gets pushed.
@@ -439,7 +436,6 @@ protected:
 
   nsresult ReflowInlineFrames(nsBlockReflowState& aState,
                               line_iterator aLine,
-                              PRBool aTryPull,
                               PRBool* aKeepLineGoing);
 
   nsresult DoReflowInlineFrames(nsBlockReflowState& aState,

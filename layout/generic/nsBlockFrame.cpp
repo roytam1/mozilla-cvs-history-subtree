@@ -1770,7 +1770,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
 
       // Reflow the dirty line. If it's an incremental reflow, then force
       // it to invalidate the dirty area if necessary
-      rv = ReflowLine(aState, line, aTryPull, &keepGoing);
+      rv = ReflowLine(aState, line, &keepGoing);
       NS_ENSURE_SUCCESS(rv, rv);
       
       if (line->HasFloats()) {
@@ -1988,8 +1988,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
       // line to be created; see SplitLine's callers for examples of
       // when this happens).
       while (line != end_lines()) {
-        NS_ASSERTION(aTryPull, "We shouldn't be in here if we can't pull!");
-        rv = ReflowLine(aState, line, PR_TRUE, &keepGoing);
+        rv = ReflowLine(aState, line, &keepGoing);
         NS_ENSURE_SUCCESS(rv, rv);
         DumpLine(aState, line, deltaY, -1);
         if (!keepGoing) {
@@ -2092,7 +2091,6 @@ static void GetRectDifferenceStrips(const nsRect& aR1, const nsRect& aR2,
 nsresult
 nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
                          line_iterator aLine,
-                         PRBool aTryPull,
                          PRBool* aKeepReflowGoing)
 {
   nsresult rv = NS_OK;
@@ -2161,7 +2159,7 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
     nsRect oldCombinedArea(aLine->GetCombinedArea());
     aLine->SetLineWrapped(PR_FALSE);
 
-    rv = ReflowInlineFrames(aState, aLine, aTryPull, aKeepReflowGoing);
+    rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing);
 
     // We don't really know what changed in the line, so use the union
     // of the old and new combined areas
@@ -3086,7 +3084,6 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
 nsresult
 nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
                                  line_iterator aLine,
-                                 PRBool aTryPull,
                                  PRBool* aKeepReflowGoing)
 {
   nsresult rv = NS_OK;
@@ -3098,7 +3095,7 @@ nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
   LineReflowStatus lineReflowStatus = LINE_REFLOW_REDO_NEXT_BAND;
   PRBool movedPastFloat = PR_FALSE;
   do {
-    PRBool allowPullUp = aTryPull;
+    PRBool allowPullUp = PR_TRUE;
     nsIContent* forceBreakInContent = nsnull;
     PRInt32 forceBreakOffset = -1;
     do {
