@@ -143,7 +143,6 @@ MODULES_NS_core :=                              \
 MODULES_core :=                                 \
   $(MODULES_necko)                              \
   mozilla/caps                                  \
-  mozilla/content                               \
   mozilla/db/.cvsignore                         \
   mozilla/db/Makefile.in                        \
   mozilla/db/README.html                        \
@@ -156,7 +155,6 @@ MODULES_core :=                                 \
   mozilla/extensions                            \
   mozilla/gfx                                   \
   mozilla/parser                                \
-  mozilla/layout                                \
   mozilla/jpeg                                  \
   mozilla/js/src/fdlibm                         \
   mozilla/js/src/liveconnect                    \
@@ -402,6 +400,7 @@ MODULES_all :=                                  \
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_3_11_20060929_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
+LAYOUT_CO_TAG        = REFLOW_20061031_BRANCH
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
@@ -468,7 +467,7 @@ ifneq ($(CVS_ROOT_IN_TREE),$(CVSROOT))
 endif
 endif
 
-CVS_CO_DATE_FLAGS = $(if $(MOZ_CO_DATE),-D "$(MOZ_CO_DATE)")
+CVS_CO_DATE_FLAGS = -D "2006-10-31 20:30 -0800"
 CVS_CO_LOCALES_DATE_FLAGS = $(if $(MOZ_CO_LOCALES_DATE),-D "$(MOZ_CO_LOCALES_DATE)")
 CVSCO = $(CVS) $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(if $(MOZ_CO_TAG),-r $(MOZ_CO_TAG)) $(CVS_CO_DATE_FLAGS)
 
@@ -612,6 +611,17 @@ ifdef MOZ_CO_FLAGS
 endif
 LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) $(if $(LDAPCSDK_CO_TAG),-r $(LDAPCSDK_CO_TAG),-A)
 CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
+
+########################
+# CVS defines for layout
+#
+LAYOUT_CO_MODULE = mozilla/content mozilla/layout
+LAYOUT_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  LAYOUT_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+LAYOUT_CO_FLAGS := $(LAYOUT_CO_FLAGS) $(if $(LAYOUT_CO_TAG),-r $(LAYOUT_CO_TAG),-A)
+CVSCO_LAYOUT = $(CVS) $(CVS_FLAGS) co $(LAYOUT_CO_FLAGS) $(LAYOUT_CO_MODULE)
 
 ####################################
 # CVS defines for standalone modules
@@ -767,9 +777,11 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
+	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)' && \
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -781,7 +793,10 @@ real_checkout:
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
 	cvs_co $(CVSCO_LDAPCSDK); \
+	cvs_co $(CVSCO_LAYOUT); \
 	$(CHECKOUT_MODULES_NS); \
+	echo '$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk; \
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_LOCALES);
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
