@@ -1850,9 +1850,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   PRBool haveDesiredHeight = PR_FALSE;
   PRBool reflowedChildren  = PR_FALSE;
 
-  // XXXldb Would it be better to ignore whether there was a special
-  // height reflow coming from outside the table?
-
   // Reflow the entire table (pass 2 and possibly pass 3). This phase is necessary during a 
   // constrained initial reflow and other reflows which require either a strategy init or balance. 
   // This isn't done during an unconstrained reflow, because it will occur later when the parent 
@@ -1870,40 +1867,42 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
     }
     nsIFrame* lastChildReflowed = nsnull;
     PRBool willInitiateSpecialReflow = 
-      ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) && 
-       (aReflowState.mFlags.mSpecialHeightReflow || !NeedSpecialReflow()));
+      NeedToInitiateSpecialReflow() || InitiatedSpecialReflow();
+
+    nsHTMLReflowState &mutable_rs =
+      NS_CONST_CAST(nsHTMLReflowState&, aReflowState);
+    PRBool oldSpecialHeightReflow = mutable_rs.mFlags.mSpecialHeightReflow;
+    mutable_rs.mFlags.mSpecialHeightReflow = PR_FALSE;
 
     // do the pass 2 reflow unless this is a special height reflow and we will be 
     // initiating a special height reflow
-    if (!(aReflowState.mFlags.mSpecialHeightReflow && willInitiateSpecialReflow)) {
-      // if we need to initiate a special height reflow, then don't constrain the 
-      // height of the reflow before that
-      nscoord availHeight = (willInitiateSpecialReflow)
-                            ? NS_UNCONSTRAINEDSIZE : aReflowState.availableHeight;
 
-      ReflowTable(aDesiredSize, aReflowState, availHeight,
-                  lastChildReflowed, aStatus);
-      reflowedChildren = PR_TRUE;
-    }
+    // if we need to initiate a special height reflow, then don't constrain the 
+    // height of the reflow before that
+    nscoord availHeight = (willInitiateSpecialReflow)
+                          ? NS_UNCONSTRAINEDSIZE : aReflowState.availableHeight;
+
+    ReflowTable(aDesiredSize, aReflowState, availHeight,
+                lastChildReflowed, aStatus);
+    reflowedChildren = PR_TRUE;
+
     // reevaluate special height reflow conditions
     // XXXldb Are all these conditions correct?
     if ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) &&
-        (aReflowState.mFlags.mSpecialHeightReflow || !NeedSpecialReflow()) &&
         NS_FRAME_IS_COMPLETE(aStatus)) {
       // XXXldb Do we need to set the mVResize flag on any reflow states?
 
       // distribute extra vertical space to rows
       CalcDesiredHeight(aReflowState, aDesiredSize); 
-      ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
+      mutable_rs.mFlags.mSpecialHeightReflow = PR_TRUE;
       // save the previous special height reflow initiator, install us as the new one
       nsIFrame* specialReflowInitiator = aReflowState.mPercentHeightReflowInitiator;
-      ((nsHTMLReflowState&)aReflowState).mPercentHeightReflowInitiator = this;
+      mutable_rs.mPercentHeightReflowInitiator = this;
 
-      ((nsHTMLReflowState::ReflowStateFlags&)aReflowState.mFlags).mSpecialHeightReflow = PR_TRUE;
       ReflowTable(aDesiredSize, aReflowState, aReflowState.availableHeight, 
                   lastChildReflowed, aStatus);
       // restore the previous special height reflow initiator
-      ((nsHTMLReflowState&)aReflowState).mPercentHeightReflowInitiator = specialReflowInitiator;
+      mutable_rs.mPercentHeightReflowInitiator = specialReflowInitiator;
       // XXX We should call SetInitiatedSpecialReflow(PR_FALSE) at some point, but it is difficult to tell when
       SetInitiatedSpecialReflow(PR_TRUE);
 
@@ -1916,6 +1915,8 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
       haveDesiredHeight = PR_TRUE;
       reflowedChildren  = PR_TRUE;
     }
+
+    mutable_rs.mFlags.mSpecialHeightReflow = oldSpecialHeightReflow;
   }
 
   aDesiredSize.width = aReflowState.mComputedWidth +
