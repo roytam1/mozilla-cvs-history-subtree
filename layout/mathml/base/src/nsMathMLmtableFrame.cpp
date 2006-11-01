@@ -448,7 +448,7 @@ nsMathMLmtableOuterFrame::AttributeChanged(PRInt32  aNameSpaceID,
   // align - just need to issue a dirty (resize) reflow command
   if (aAttribute == nsMathMLAtoms::align) {
     GetPresContext()->PresShell()->
-      AppendReflowCommand(this, eReflowType_ReflowDirty, nsnull);
+      FrameNeedsReflow(this, nsIPresShell::eResize);
     return NS_OK;
   }
 
@@ -459,7 +459,7 @@ nsMathMLmtableOuterFrame::AttributeChanged(PRInt32  aNameSpaceID,
     nsMathMLContainerFrame::RebuildAutomaticDataForChildren(mParent);
     nsMathMLContainerFrame::PropagateScriptStyleFor(tableFrame, mPresentationData.scriptLevel);
     GetPresContext()->PresShell()->
-      AppendReflowCommand(mParent, eReflowType_StyleChanged, nsnull);
+      FrameNeedsReflow(mParent, nsIPresShell::eStyleChange);
     return NS_OK;
   }
 
@@ -693,9 +693,6 @@ nsMathMLmtableFrame::SetInitialChildList(nsIAtom*  aListName,
 void
 nsMathMLmtableFrame::RestyleTable()
 {
-  // Cancel any reflow command that may be pending for this table
-  GetPresContext()->PresShell()->CancelReflowCommand(this, nsnull);
-
   // re-sync MathML specific style data that may have changed
   MapAllAttributesIntoCSS(this);
 
