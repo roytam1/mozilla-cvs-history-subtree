@@ -135,13 +135,48 @@ MODULES_necko :=                                \
 
 MODULES_NS_core :=                              \
   $(MODULES_NS_necko)                           \
+  $(MODULES_NS_embedding)                       \
   mozilla/js                                    \
   mozilla/js/src                                \
   mozilla/js/jsd                                \
-  $(NULL)                                       \
+  $(NULL)
+
+MODULES_NS_embedding :=                         \
+  mozilla/embedding                             \
+  mozilla/embedding/browser                     \
+  mozilla/embedding/browser/gtk                 \
+  $(NULL)
+
+MODULES_embedding :=                            \
+  mozilla/embedding/componentlib                \
+  mozilla/embedding/components                  \
+  mozilla/embedding/config                      \
+  mozilla/embedding/examples                    \
+  mozilla/embedding/lite                        \
+  mozilla/embedding/minimo                      \
+  mozilla/embedding/qa                          \
+  mozilla/embedding/tests                       \
+  mozilla/embedding/wrappers                    \
+  mozilla/embedding/Makefile.in                 \
+  mozilla/embedding/embed.pkg                   \
+  mozilla/embedding/browser/activex             \
+  mozilla/embedding/browser/build               \
+  mozilla/embedding/browser/chrome              \
+  mozilla/embedding/browser/cocoa               \
+  mozilla/embedding/browser/photon              \
+  mozilla/embedding/browser/powerplant          \
+  mozilla/embedding/browser/qt                  \
+  mozilla/embedding/browser/webBrowser          \
+  mozilla/embedding/browser/Makefile.in         \
+  mozilla/embedding/browser/gtk/src             \
+  mozilla/embedding/browser/gtk/tests           \
+  mozilla/embedding/browser/gtk/Makefile.in     \
+  mozilla/embedding/browser/gtk/gtkembed.pkg    \
+  $(NULL)
 
 MODULES_core :=                                 \
   $(MODULES_necko)                              \
+  $(MODULES_embedding)                          \
   mozilla/caps                                  \
   mozilla/content                               \
   mozilla/db/.cvsignore                         \
@@ -152,7 +187,6 @@ MODULES_core :=                                 \
   mozilla/docshell                              \
   mozilla/dom                                   \
   mozilla/editor                                \
-  mozilla/embedding                             \
   mozilla/extensions                            \
   mozilla/gfx                                   \
   mozilla/parser                                \
@@ -393,6 +427,10 @@ MODULES_all :=                                  \
   mozilla/tools/update-packaging                \
   $(NULL)
 
+MODULES_microb :=                               \
+  mozilla/embedding/browser/gtk/microb          \
+  $(NULL)
+
 #######################################################################
 # Checkout Tags
 #
@@ -402,6 +440,7 @@ MODULES_all :=                                  \
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_3_11_20060929_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
+MICROB_CO_TAG        =
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
@@ -614,6 +653,17 @@ LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) $(if $(LDAPCSDK_CO_TAG),-r $(LDAPCSDK_
 CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
 
 ####################################
+# CVS defines for microb
+#
+MICROB_CO_MODULE = mozilla/embedding/browser/gtk/microb
+MICROB_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  MICROB_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+MICROB_CO_FLAGS := $(MICROB_CO_FLAGS) $(if $(MICROB_CO_TAG),-r $(MICROB_CO_TAG), -A)
+CVSCO_MICROB = $(CVS) $(CVS_FLAGS) co $(MICROB_CO_FLAGS) $(MICROB_CO_MODULE)
+
+####################################
 # CVS defines for standalone modules
 #
 ifeq ($(BUILD_MODULES),all)
@@ -781,6 +831,7 @@ real_checkout:
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
 	cvs_co $(CVSCO_LDAPCSDK); \
+	cvs_co $(CVSCO_MICROB); \
 	$(CHECKOUT_MODULES_NS); \
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_LOCALES);
