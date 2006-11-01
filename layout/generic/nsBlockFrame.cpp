@@ -3205,6 +3205,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   aLine->FreeFloats(aState.mFloatCacheFreeList);
   aState.mFloatCombinedArea.SetRect(0, 0, 0, 0);
 
+  PRBool impactedByFloats = PR_FALSE;
   if (!aLineLayout.GetIntrinsicWidthPass()) {
     // Setup initial coordinate system for reflowing the inline frames
     // into. Apply a previous block frame's bottom margin first.
@@ -3212,7 +3213,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
       aState.mY += aState.mPrevBottomMargin.get();
     }
     aState.GetAvailableSpace();
-    PRBool impactedByFloats = aState.IsImpactedByFloat() ? PR_TRUE : PR_FALSE;
+    impactedByFloats = aState.IsImpactedByFloat() ? PR_TRUE : PR_FALSE;
     aLine->SetLineIsImpactedByFloat(impactedByFloats);
 #ifdef REALLY_NOISY_REFLOW
     printf("nsBlockFrame::DoReflowInlineFrames %p impacted = %d\n",
