@@ -2788,6 +2788,7 @@ nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
     aData->Break(aRenderingContext);
   aData->trailingWhitespace = 0;
   aData->skipWhitespace = PR_FALSE;
+  aData->trailingTextFrame = nsnull;
   aData->currentLine += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                             this, nsLayoutUtils::MIN_WIDTH);
   if (canBreak)
@@ -2820,6 +2821,7 @@ nsIFrame::InlineMinWidthData::Break(nsIRenderingContext *aRenderingContext)
       prevLines = float_min;
   }
   floats.Clear();
+  trailingTextFrame = nsnull;
 }
 
 void

@@ -1053,7 +1053,16 @@ public:
   };
 
   struct InlineMinWidthData : public InlineIntrinsicWidthData {
+    InlineMinWidthData()
+      : trailingTextFrame(nsnull)
+    {}
+
     void Break(nsIRenderingContext *aRenderingContext);
+
+    // The last text frame processed so far in the current line, when
+    // the last characters in that text frame are relevant for line
+    // break opportunities.
+    nsIFrame *trailingTextFrame;
   };
 
   struct InlinePrefWidthData : public InlineIntrinsicWidthData {

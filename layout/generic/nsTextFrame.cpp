@@ -5648,6 +5648,10 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
     // got non-whitespace text and whether we end in whitespace.
     return;
 
+  const nsStyleText *styleText = GetStyleText();
+  PRBool wrapping = styleText->WhiteSpaceCanWrap();
+  PRBool wsSignificant = styleText->WhiteSpaceIsSignificant();
+  PRBool atStart = PR_TRUE;
   PRBool forceArabicShaping = (ts.mSmallCaps ||
                                (0 != ts.mWordSpacing) ||
                                (0 != ts.mLetterSpacing) ||
@@ -5661,6 +5665,17 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
   if (NS_FAILED(rv)) {
     NS_NOTREACHED("failure initializing text transformer");
     return;
+  }
+
+  if (aData->trailingTextFrame &&
+      CanBreakBetween(NS_STATIC_CAST(nsTextFrame*, aData->trailingTextFrame),
+                      aData->trailingTextFrame->
+                        GetStyleText()->WhiteSpaceCanWrap(),
+                      this, wrapping,
+                      aData->skipWhitespace, // XXX ???
+                      nsnull)) // XXX Better to pass real frame
+  {
+    aData->Break(aRenderingContext);
   }
 
   for (;;) {
@@ -5683,14 +5698,13 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
     // XXX Watch mContentLength!
 
     if (isWhitespace) {
-      const nsStyleText *styleText = GetStyleText();
       PRUnichar firstChar;
       if (tx.TransformedTextIsAscii()) {
         firstChar = *bp1;
       } else {
         firstChar = *bp2;
       }
-      if ('\n' == firstChar || styleText->WhiteSpaceCanWrap()) {
+      if ('\n' == firstChar) {
         aData->Break(aRenderingContext);
       } else if (!aData->skipWhitespace) {
         nscoord width;
@@ -5706,14 +5720,22 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
             wordLen*(ts.mWordSpacing + ts.mLetterSpacing + ts.mSpaceWidth);// XXX simplistic
         }
         aData->currentLine += width;
-        if (styleText->WhiteSpaceIsSignificant())
+        if (wsSignificant) {
           // XXX Should we also subtract the old value of
           // trailingWhitespace from currentLine?
           aData->trailingWhitespace = 0;
-        else
+          atStart = PR_FALSE;
+        } else {
           aData->trailingWhitespace += width;
+        }
       }
     } else {
+      if (!atStart && wrapping) {
+        aData->Break(aRenderingContext);
+      }
+
+      atStart = PR_FALSE;
+
       nsTextDimensions dimensions;
       if (ts.mSmallCaps) {
         MeasureSmallCapsText(aRenderingContext, ts, bp2, wordLen, PR_FALSE,
@@ -5732,6 +5754,8 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
       aData->trailingWhitespace = 0;
     }
   }
+
+  aData->trailingTextFrame = this;
 }
 
 /* virtual */ void
