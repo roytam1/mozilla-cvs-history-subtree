@@ -92,62 +92,6 @@
 #define PLACED_LEFT  0x1
 #define PLACED_RIGHT 0x2
 
-#define HACK_MEW
-//#undef HACK_MEW
-#ifdef HACK_MEW
-static nscoord AccumulateImageSizes(nsPresContext& aPresContext, nsIFrame& aFrame)
-{
-  nscoord sizes = 0;
-
-  // see if aFrame is an image frame first
-  if (aFrame.GetType() == nsLayoutAtoms::imageFrame) {
-    sizes += aFrame.GetSize().width;
-  } else {
-    // see if there are children to process
-    // XXX: process alternate child lists?
-    nsIFrame* child = aFrame.GetFirstChild(nsnull);
-    while (child) {
-      // recurse: note that we already know we are in a child frame, so no need to track further
-      sizes += AccumulateImageSizes(aPresContext, *child);
-      // now next sibling
-      child = child->GetNextSibling();
-    }
-  }
-
-  return sizes;
-}
-
-static PRBool InUnconstrainedTableCell(const nsHTMLReflowState& aBlockReflowState)
-{
-  PRBool result = PR_FALSE;
-
-  // get the parent reflow state
-  const nsHTMLReflowState* parentReflowState = aBlockReflowState.parentReflowState;
-  if (parentReflowState) {
-    // check if the frame is a tablecell
-    NS_ASSERTION(parentReflowState->mStyleDisplay, "null styleDisplay in parentReflowState unexpected");
-    if (parentReflowState->mStyleDisplay &&
-        parentReflowState->mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL) {
-      // see if width is unconstrained or percent
-      NS_ASSERTION(parentReflowState->mStylePosition, "null stylePosition in parentReflowState unexpected");
-      if(parentReflowState->mStylePosition) {
-        switch(parentReflowState->mStylePosition->mWidth.GetUnit()) {
-          case eStyleUnit_Auto :
-          case eStyleUnit_Null :
-            result = PR_TRUE;
-            break;
-          default:
-            result = PR_FALSE;
-            break;
-        }
-      }
-    }
-  }
-  return result;
-}
-
-#endif
-
 nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
                            nsSpaceManager* aSpaceManager,
                            const nsHTMLReflowState* aOuterReflowState,
@@ -1015,8 +959,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
     // Check whether this frame breaks up text runs. All frames break up text
     // runs (hence return false here) except for text frames and inline containers.
-    PRBool continuingTextRun;
-    aFrame->CanContinueTextRun(continuingTextRun);
+    PRBool continuingTextRun = aFrame->CanContinueTextRun();
     
     // See if we can place the frame. If we can't fit it, then we
     // return now.

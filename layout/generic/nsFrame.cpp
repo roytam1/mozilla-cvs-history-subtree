@@ -1283,7 +1283,7 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
   if ((aFlags & DISPLAY_CHILD_INLINE) &&
       (disp->mDisplay != NS_STYLE_DISPLAY_INLINE ||
        aChild->IsContainingBlock() ||
-       (aChild->GetStateBits() & NS_FRAME_REPLACED_ELEMENT))) {
+       (aChild->IsFrameOfType(eReplaced)))) {
     // child is a non-inline frame in an inline context, i.e.,
     // it acts like inline-block or inline-table. Therefore it is a
     // pseudo-stacking-context.
