@@ -60,6 +60,14 @@ public:
   void PaintCanvas(nsIRenderingContext& aRenderingContext,
                    const nsRect& aDirtyRect, nsPoint aPt);
                               
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nsSize aMargin,
+                             nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap);
+
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -76,6 +84,7 @@ public:
 #endif
 
   virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
   NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;

@@ -59,7 +59,6 @@
 #include "nsRect.h"
 #include "nsColor.h"
 #include "nsEvent.h"
-#include "nsReflowType.h"
 #include "nsCompatibility.h"
 #include "nsFrameManagerBase.h"
 #include "mozFlushType.h"
@@ -98,10 +97,10 @@ class nsWeakFrame;
 
 typedef short SelectionType;
 
-// 0d8a87aa-3e6f-409f-a518-96fd8a29b423
+// 491bae35-da5d-4d96-b884-39a300b0db57
 #define NS_IPRESSHELL_IID     \
-{ 0x79433b66, 0xe8a4, 0x442f, \
-  { 0x9c, 0x6e, 0x2f, 0xb2, 0x8d, 0x5e, 0x84, 0xd7 } }
+{ 0x491bae35, 0xda5d, 0x4d96, \
+  { 0xb8, 0x84, 0x39, 0xa3, 0x00, 0xb0, 0xdb, 0x57 } }
 
 // Constants uses for ScrollFrameIntoView() function
 #define NS_PRESSHELL_SCROLL_TOP      0
@@ -338,14 +337,21 @@ public:
                                     nsIFrame** aPlaceholderFrame) const = 0;
 
   /**
-   * Reflow commands
+   * Tell the pres shell that a frame is dirty (as indicated by bits)
+   * and needs Reflow.  It's OK if this is an ancestor of the frame needing
+   * reflow as long as the ancestor chain between them doesn't cross a reflow
+   * root.
    */
-  NS_IMETHOD AppendReflowCommand(nsIFrame*    aTargetFrame,
-                                 nsReflowType aReflowType,
-                                 nsIAtom*     aChildListName) = 0;
-  // XXXbz don't we need a child list name on this too?
-  NS_IMETHOD CancelReflowCommand(nsIFrame* aTargetFrame, nsReflowType* aCmdType) = 0;
-  NS_IMETHOD CancelAllReflowCommands() = 0;
+  enum IntrinsicDirty {
+    // XXXldb eResize should be renamed
+    eResize,     // don't mark any intrinsic widths dirty
+    eTreeChange, // mark intrinsic widths dirty on aFrame and its ancestors
+    eStyleChange // Do eTreeChange, plus all of aFrame's descendants
+  };
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame,
+                              IntrinsicDirty aIntrinsicDirty) = 0;
+
+  NS_IMETHOD CancelAllPendingReflows() = 0;
 
   /**
    * Recreates the frames for a node
@@ -645,7 +651,7 @@ public:
 
 #ifdef MOZ_REFLOW_PERF
   NS_IMETHOD DumpReflows() = 0;
-  NS_IMETHOD CountReflows(const char * aName, PRUint32 aType, nsIFrame * aFrame) = 0;
+  NS_IMETHOD CountReflows(const char * aName, nsIFrame * aFrame) = 0;
   NS_IMETHOD PaintCount(const char * aName, 
                         nsIRenderingContext* aRenderingContext, 
                         nsPresContext * aPresContext, 

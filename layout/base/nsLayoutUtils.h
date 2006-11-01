@@ -452,6 +452,32 @@ public:
   static nsIFrame*
   GetClosestCommonAncestorViaPlaceholders(nsIFrame* aFrame1, nsIFrame* aFrame2,
                                           nsIFrame* aKnownCommonAncestorHint);
+
+  /**
+   * Get the contribution of aFrame to its containing block's intrinsic
+   * width.  This considers the child's intrinsic width, its 'width',
+   * 'min-width', and 'max-width' properties, and its padding, border,
+   * and margin.
+   */
+  enum IntrinsicWidthType { MIN_WIDTH, PREF_WIDTH };
+  static nscoord IntrinsicForContainer(nsIRenderingContext* aRenderingContext,
+                                       nsIFrame* aFrame,
+                                       IntrinsicWidthType aType);
+
+  static nscoord ComputeHorizontalValue(nsIRenderingContext* aRenderingContext,
+                                        nsIFrame *aFrame,
+                                        nscoord aContainingBlockWidth,
+                                        const nsStyleCoord& aCoord);
+
+  static nscoord ComputeVerticalValue(nsIRenderingContext* aRenderingContext,
+                                      nsIFrame *aFrame,
+                                      nscoord aContainingBlockHeight,
+                                      const nsStyleCoord& aCoord);
+
+  static nsSize ComputeSizeWithIntrinsicDimensions(
+                    nsIRenderingContext* aRenderingContext,
+                    nsIFrame* aFrame, nsSize aIntrinsicSize, nsSize aCBSize,
+                    nsSize aBorder, nsSize aPadding);
 };
 
 #endif // nsLayoutUtils_h__

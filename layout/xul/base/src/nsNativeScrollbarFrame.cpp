@@ -254,6 +254,7 @@ nsNativeScrollbarFrame::AttributeChanged(PRInt32 aNameSpaceID,
 NS_IMETHODIMP
 nsNativeScrollbarFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   float p2t = 0.0;
   p2t = aState.PresContext()->PixelsToTwips();
   

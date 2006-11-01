@@ -43,7 +43,6 @@
 #include "nsSVGTextFrame.h"
 #include "nsIServiceManager.h"
 #include "nsIViewManager.h"
-#include "nsReflowPath.h"
 #include "nsSVGRect.h"
 #include "nsDisplayList.h"
 #include "nsISVGRendererCanvas.h"
@@ -233,8 +232,7 @@ nsSVGOuterSVGFrame::Reflow(nsPresContext*          aPresContext,
   }
 #endif
   
-  if (aReflowState.reason == eReflowReason_Incremental &&
-      !aReflowState.path->mReflowCommand) {
+  if (!aReflowState.ShouldReflowAllKids()) {
     // We're not the target of the incremental reflow, so just bail.
     // This means that something happened to one of our descendants
     // (excluding those inside svg:foreignObject, since
@@ -728,9 +726,8 @@ void nsSVGOuterSVGFrame::InitiateReflow()
 {
   mNeedsReflow = PR_FALSE;
   
-  // Generate a reflow command to reflow ourselves
   nsIPresShell* presShell = GetPresContext()->PresShell();
-  presShell->AppendReflowCommand(this, eReflowType_ReflowDirty, nsnull);
+  presShell->FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   // XXXbz why is this synchronously flushing reflows, exactly?  If it
   // needs to, why is it not using the presshell's reflow batching
   // instead of hacking its own?
