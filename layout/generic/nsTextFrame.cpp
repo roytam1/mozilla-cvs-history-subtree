@@ -5706,7 +5706,7 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
       }
       if ('\n' == firstChar) {
         aData->Break(aRenderingContext);
-      } else if (!aData->skipWhitespace) {
+      } else if (!aData->skipWhitespace || wsSignificant) {
         nscoord width;
         if ('\t' == firstChar) {
           // XXX Need to track column!
@@ -5727,6 +5727,12 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
           atStart = PR_FALSE;
         } else {
           aData->trailingWhitespace += width;
+          aData->skipWhitespace = PR_TRUE;
+        }
+
+        if (wrapping) {
+          // XXX If whitespace is significant, we really don't want to break yet.
+          aData->Break(aRenderingContext);
         }
       }
     } else {
