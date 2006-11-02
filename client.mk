@@ -168,7 +168,6 @@ MODULES_embedding :=                            \
   mozilla/embedding/browser/qt                  \
   mozilla/embedding/browser/webBrowser          \
   mozilla/embedding/browser/Makefile.in         \
-  mozilla/embedding/browser/gtk/src             \
   mozilla/embedding/browser/gtk/tests           \
   mozilla/embedding/browser/gtk/Makefile.in     \
   mozilla/embedding/browser/gtk/gtkembed.pkg    \
@@ -428,7 +427,7 @@ MODULES_all :=                                  \
   $(NULL)
 
 MODULES_microb :=                               \
-  mozilla/embedding/browser/gtk/microb          \
+  mozilla/embedding/browser/gtk/src             \
   $(NULL)
 
 #######################################################################
