@@ -1,6 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cindent: */
-/* ***** BEGIN LICENSE BLOCK *****
+/* vim:set ts=2 sw=2 sts=2 tw=80 et cindent: */
+/*
+ * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -15,13 +16,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Christopher Blizzard. Portions created by Christopher Blizzard are Copyright (C) Christopher Blizzard.  All Rights Reserved.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
- *
  * Contributor(s):
- *   Christopher Blizzard <blizzard@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,32 +32,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __EmbedProgress_h
-#define __EmbedProgress_h
+#ifndef __EmbedFilePicker_h
+#define __EmbedFilePicker_h
 
-#include <nsIWebProgressListener.h>
-#include <nsWeakReference.h>
-#include "EmbedPrivate.h"
+#include <nsIFilePicker.h>
+#include <nsISupports.h>
 
-class EmbedProgress : public nsIWebProgressListener,
-                      public nsSupportsWeakReference
+#define EMBED_FILEPICKER_CID           \
+{ /* f097d33b-1c97-48a6-af4c-07022857eb7c */         \
+    0xf097d33b,                                      \
+    0x1c97,                                          \
+    0x48a6,                                          \
+    {0xaf, 0x4c, 0x07, 0x02, 0x28, 0x57, 0xeb, 0x7c} \
+}
+
+#define EMBED_FILEPICKER_CONTRACTID  "@mozilla.org/filepicker;1"
+#define EMBED_FILEPICKER_CLASSNAME  "File Picker Implementation"
+
+class EmbedFilePicker : public nsIFilePicker
 {
- public:
-  EmbedProgress();
-  virtual ~EmbedProgress();
-
-  nsresult Init(EmbedPrivate *aOwner);
-
+public:
   NS_DECL_ISUPPORTS
-
-  NS_DECL_NSIWEBPROGRESSLISTENER
-
- private:
-
-  static void RequestToURIString (nsIRequest *aRequest, nsACString &aURIString);
-
-  EmbedPrivate *mOwner;
-
+  NS_DECL_NSIFILEPICKER
+  EmbedFilePicker ();
+  virtual ~EmbedFilePicker();
+private:
+  nsIDOMWindow *mParent;
+  PRInt16 mMode;
+  char *mFilename;
 };
-
-#endif /* __EmbedProgress_h */
+#endif

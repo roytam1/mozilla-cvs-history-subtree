@@ -1,3 +1,5 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 tw=80 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,11 +40,17 @@
 #include <nsCOMPtr.h>
 #include <nsIDOMMouseEvent.h>
 
+#include <nsIDOMNSEvent.h>
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMUIEvent.h"
 
 #include "EmbedEventListener.h"
 #include "EmbedPrivate.h"
+#include "gtkmozembed_internal.h"
+
+static PRInt32 sLongPressTimer = 0, mLongMPressDelay = 1000;
+static PRInt32 sX = 0, sY = 0;
+static PRBool  sMPressed = PR_FALSE, sIsScrolling = PR_FALSE;
 
 EmbedEventListener::EmbedEventListener(void)
 {
@@ -61,18 +69,36 @@ NS_INTERFACE_MAP_BEGIN(EmbedEventListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMKeyListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMMouseListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMUIListener)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMMouseMotionListener)
 NS_INTERFACE_MAP_END
 
 nsresult
 EmbedEventListener::Init(EmbedPrivate *aOwner)
 {
   mOwner = aOwner;
+  mCtxInfo = new EmbedContextMenuInfo(aOwner);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 EmbedEventListener::HandleEvent(nsIDOMEvent* aDOMEvent)
 {
+  nsString eventType;
+  aDOMEvent->GetType(eventType);
+  if (eventType.EqualsLiteral ("focus"))
+    if (mCtxInfo->GetFormControlType(aDOMEvent)) {
+      if (mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_INPUT)
+      {
+        gint return_val = FALSE;
+        gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                        moz_embed_signals[DOM_FOCUS],
+                        (void *)aDOMEvent, &return_val);
+        if (return_val) {
+          aDOMEvent->StopPropagation();
+          aDOMEvent->PreventDefault();
+        }
+      }
+    }
   return NS_OK;
 }
 
@@ -87,8 +113,8 @@ EmbedEventListener::KeyDown(nsIDOMEvent* aDOMEvent)
   // consumed...
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_KEY_DOWN],
-		  (void *)keyEvent, &return_val);
+                  moz_embed_signals[DOM_KEY_DOWN],
+                  (void *)keyEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
@@ -107,11 +133,13 @@ EmbedEventListener::KeyUp(nsIDOMEvent* aDOMEvent)
   // consumed...
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_KEY_UP],
-		  (void *)keyEvent, &return_val);
+                  moz_embed_signals[DOM_KEY_UP],
+                  (void *)keyEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
+  } else {
+    //mCtxInfo->UpdateContextData(aDOMEvent);
   }
   return NS_OK;
 }
@@ -126,13 +154,30 @@ EmbedEventListener::KeyPress(nsIDOMEvent* aDOMEvent)
   // Return TRUE from your signal handler to mark the event as consumed.
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_KEY_PRESS],
-		  (void *)keyEvent, &return_val);
+                  moz_embed_signals[DOM_KEY_PRESS],
+                  (void *)keyEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
   }
   return NS_OK;
+}
+
+static gboolean
+sLongMPress(void *aOwningWidget)
+{
+  // Return TRUE from your signal handler to mark the event as consumed.
+  if (!sMPressed || sIsScrolling)
+    return FALSE;
+  sMPressed = PR_FALSE;
+  gint return_val = FALSE;
+  gtk_signal_emit(GTK_OBJECT(aOwningWidget),
+                  moz_embed_signals[DOM_MOUSE_LONG_PRESS],
+                  (void *)0, &return_val);
+  if (return_val) {
+    sMPressed = PR_FALSE;
+  }
+  return FALSE;
 }
 
 NS_IMETHODIMP
@@ -143,13 +188,19 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
   if (!mouseEvent)
     return NS_OK;
   // Return TRUE from your signal handler to mark the event as consumed.
+  sMPressed = PR_TRUE;
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_MOUSE_DOWN],
-		  (void *)mouseEvent, &return_val);
+                  moz_embed_signals[DOM_MOUSE_DOWN],
+                  (void *)mouseEvent, &return_val);
   if (return_val) {
+    sMPressed = PR_FALSE;
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
+  } else {
+    sLongPressTimer = g_timeout_add(mLongMPressDelay, sLongMPress, mOwner->mOwningWidget);
+    ((nsIDOMMouseEvent*)mouseEvent)->GetScreenX(&sX);
+    ((nsIDOMMouseEvent*)mouseEvent)->GetScreenY(&sY);        
   }
   return NS_OK;
 }
@@ -162,10 +213,15 @@ EmbedEventListener::MouseUp(nsIDOMEvent* aDOMEvent)
   if (!mouseEvent)
     return NS_OK;
   // Return TRUE from your signal handler to mark the event as consumed.
+  if (sLongPressTimer)
+    g_source_remove (sLongPressTimer);
+  sMPressed = PR_FALSE;
+  mOwner->mOpenBlock = sIsScrolling;
+  sIsScrolling = sMPressed;
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_MOUSE_UP],
-		  (void *)mouseEvent, &return_val);
+                  moz_embed_signals[DOM_MOUSE_UP],
+                  (void *)mouseEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
@@ -181,10 +237,11 @@ EmbedEventListener::MouseClick(nsIDOMEvent* aDOMEvent)
   if (!mouseEvent)
     return NS_OK;
   // Return TRUE from your signal handler to mark the event as consumed.
+  sMPressed = PR_FALSE;
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_MOUSE_CLICK],
-		  (void *)mouseEvent, &return_val);
+                  moz_embed_signals[DOM_MOUSE_CLICK],
+                  (void *)mouseEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
@@ -200,14 +257,17 @@ EmbedEventListener::MouseDblClick(nsIDOMEvent* aDOMEvent)
   if (!mouseEvent)
     return NS_OK;
   // Return TRUE from your signal handler to mark the event as consumed.
+  if (sLongPressTimer)
+    g_source_remove (sLongPressTimer);
+  sMPressed = PR_FALSE;
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_MOUSE_DBL_CLICK],
-		  (void *)mouseEvent, &return_val);
+                  moz_embed_signals[DOM_MOUSE_DBL_CLICK],
+                  (void *)mouseEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
-  }
+  } 
   return NS_OK;
 }
 
@@ -221,11 +281,13 @@ EmbedEventListener::MouseOver(nsIDOMEvent* aDOMEvent)
   // Return TRUE from your signal handler to mark the event as consumed.
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_MOUSE_OVER],
-		  (void *)mouseEvent, &return_val);
+                  moz_embed_signals[DOM_MOUSE_OVER],
+                  (void *)mouseEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
+  } else {
+    //mCtxInfo->UpdateContextData(aDOMEvent);
   }
   return NS_OK;
 }
@@ -240,8 +302,8 @@ EmbedEventListener::MouseOut(nsIDOMEvent* aDOMEvent)
   // Return TRUE from your signal handler to mark the event as consumed.
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[DOM_MOUSE_OUT],
-		  (void *)mouseEvent, &return_val);
+                  moz_embed_signals[DOM_MOUSE_OUT],
+                  (void *)mouseEvent, &return_val);
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
@@ -300,5 +362,72 @@ EmbedEventListener::FocusOut(nsIDOMEvent* aDOMEvent)
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
   }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
+{
+  if (sMPressed &&
+      gtk_signal_handler_pending(
+        GTK_OBJECT(mOwner->mOwningWidget),
+        moz_embed_signals[DOM_MOUSE_SCROLL],
+        TRUE)) {
+    // Return TRUE from your signal handler to mark the event as consumed.
+    nsCOMPtr <nsIDOMMouseEvent> mouseEvent = do_QueryInterface(aDOMEvent);
+    if (!mouseEvent)
+      return NS_OK;
+    PRInt32  newX, newY, subX, subY;
+    ((nsIDOMMouseEvent*)mouseEvent)->GetScreenX(&newX);
+    ((nsIDOMMouseEvent*)mouseEvent)->GetScreenY(&newY);
+    subX = newX - sX;
+    subY = newY - sY;
+    nsresult rv = NS_OK;
+    if (ABS(subX) > 10 || ABS(subY) > 10 || (sIsScrolling && sMPressed)) {
+      if (!sIsScrolling) {
+        gint return_val = FALSE;
+        gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                        moz_embed_signals[DOM_MOUSE_SCROLL],
+                        (void *)mouseEvent, &return_val);
+        if (!return_val) {
+          sIsScrolling = PR_TRUE;
+          if (mCtxInfo)
+            rv = mCtxInfo->GetElementForScroll(aDOMEvent);
+        } else {
+          sMPressed = PR_FALSE;
+          sIsScrolling = PR_FALSE;
+        }
+      }
+      if (sIsScrolling) 
+      {
+        if (sLongPressTimer)
+          g_source_remove (sLongPressTimer);
+        if (mCtxInfo->mNSHHTMLElementSc) {
+          PRInt32 x, y;
+          mCtxInfo->mNSHHTMLElementSc->GetScrollTop(&y);
+          mCtxInfo->mNSHHTMLElementSc->GetScrollLeft(&x);
+          rv = mCtxInfo->mNSHHTMLElementSc->ScrollTopLeft (y - subY, x - subX);
+        } else {
+          rv = NS_ERROR_UNEXPECTED;
+        }
+        if (rv == NS_ERROR_UNEXPECTED) {
+          nsCOMPtr<nsIDOMWindow> DOMWindow;
+          nsIWebBrowser *webBrowser = nsnull;
+          gtk_moz_embed_get_nsIWebBrowser(mOwner->mOwningWidget, &webBrowser);
+          webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+          DOMWindow->ScrollBy(-subX, -subY);
+        }
+      }
+      sX = newX;
+      sY = newY;
+      sIsScrolling = sMPressed;
+    }
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+EmbedEventListener::DragMove(nsIDOMEvent* aMouseEvent)
+{
   return NS_OK;
 }

@@ -1,3 +1,5 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 tw=80 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,13 +39,16 @@
 
 #include "EmbedProgress.h"
 
+#ifdef MOZILLA_INTERNAL_API
 #include <nsXPIDLString.h>
+#endif
 #include <nsIChannel.h>
 #include <nsIWebProgress.h>
 #include <nsIDOMWindow.h>
 
 #include "nsIURI.h"
 #include "nsCRT.h"
+#include "EmbedPasswordMgr.h"
 
 EmbedProgress::EmbedProgress(void)
 {
@@ -55,8 +60,8 @@ EmbedProgress::~EmbedProgress()
 }
 
 NS_IMPL_ISUPPORTS2(EmbedProgress,
-		   nsIWebProgressListener,
-		   nsISupportsWeakReference)
+                   nsIWebProgressListener,
+                   nsISupportsWeakReference)
 
 nsresult
 EmbedProgress::Init(EmbedPrivate *aOwner)
@@ -67,84 +72,104 @@ EmbedProgress::Init(EmbedPrivate *aOwner)
 
 NS_IMETHODIMP
 EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
-			     nsIRequest     *aRequest,
-			     PRUint32        aStateFlags,
-			     nsresult        aStatus)
+           nsIRequest     *aRequest,
+           PRUint32        aStateFlags,
+           nsresult        aStatus)
 {
   // give the widget a chance to attach any listeners
   mOwner->ContentStateChange();
+  EmbedCommon * common = EmbedCommon::GetInstance();
   // if we've got the start flag, emit the signal
   if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) && 
       (aStateFlags & GTK_MOZ_EMBED_FLAG_START))
   {
+    // FIXME: workaround for broken progress values.
+    mOwner->mOwningWidget->current_number_of_requests = 0;
+    mOwner->mOwningWidget->total_number_of_requests = 0;
     gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		    moz_embed_signals[NET_START]);
+        moz_embed_signals[NET_START]);
+    if (common)
+  common->mFormAttachCount = false;
   }
-
   // get the uri for this request
-  nsXPIDLCString uriString;
-  RequestToURIString(aRequest, getter_Copies(uriString));
   nsString tmpString;
+  nsCString uriString;
+  RequestToURIString(aRequest, uriString);
   CopyUTF8toUTF16(uriString, tmpString);
-
+  // FIXME: workaround for broken progress values.
+  if (mOwner->mOwningWidget) {
+    if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_REQUEST)
+    {
+      if (aStateFlags & GTK_MOZ_EMBED_FLAG_START)
+        mOwner->mOwningWidget->total_number_of_requests ++;
+      else if (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP)
+        mOwner->mOwningWidget->current_number_of_requests++;
+     }
+     gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                        moz_embed_signals[PROGRESS_ALL],
+                        (const char *) uriString.get (),
+                        mOwner->mOwningWidget->current_number_of_requests,
+                        mOwner->mOwningWidget->total_number_of_requests);
+  }
   // is it the same as the current URI?
   if (mOwner->mURI.Equals(tmpString))
   {
     // for people who know what they are doing
     gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		    moz_embed_signals[NET_STATE],
-		    aStateFlags, aStatus);
+        moz_embed_signals[NET_STATE],
+        aStateFlags, aStatus);
   }
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[NET_STATE_ALL],
-		  (const char *)uriString,
-		  (gint)aStateFlags, (gint)aStatus);
+      moz_embed_signals[NET_STATE_ALL],
+      (const char *)uriString.get (),
+      (gint)aStateFlags, (gint)aStatus);
   // and for stop, too
   if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) && 
       (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP))
   {
     gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		    moz_embed_signals[NET_STOP]);
+        moz_embed_signals[NET_STOP]);
     // let our owner know that the load finished
     mOwner->ContentFinishedLoading();
+    if (common && common->mFormAttachCount) 
+    {
+  gtk_moz_embed_common_login(GTK_WIDGET(mOwner->mOwningWidget));
+  common->mFormAttachCount = false;
+    }
   }
-
   return NS_OK;
 }
 
 NS_IMETHODIMP
 EmbedProgress::OnProgressChange(nsIWebProgress *aWebProgress,
-				nsIRequest     *aRequest,
-				PRInt32         aCurSelfProgress,
-				PRInt32         aMaxSelfProgress,
-				PRInt32         aCurTotalProgress,
-				PRInt32         aMaxTotalProgress)
+        nsIRequest     *aRequest,
+        PRInt32         aCurSelfProgress,
+        PRInt32         aMaxSelfProgress,
+        PRInt32         aCurTotalProgress,
+        PRInt32         aMaxTotalProgress)
 {
-
-  nsXPIDLCString uriString;
-  RequestToURIString(aRequest, getter_Copies(uriString));
-  
   nsString tmpString;
+  nsCString uriString;
+  RequestToURIString(aRequest, uriString);
   CopyUTF8toUTF16(uriString, tmpString);
-
   // is it the same as the current uri?
   if (mOwner->mURI.Equals(tmpString)) {
     gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		    moz_embed_signals[PROGRESS],
-		    aCurTotalProgress, aMaxTotalProgress);
+        moz_embed_signals[PROGRESS],
+        aCurTotalProgress, aMaxTotalProgress);
   }
-
-  gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[PROGRESS_ALL],
-		  (const char *)uriString,
-		  aCurTotalProgress, aMaxTotalProgress);
+  // FIXME: workaround for broken progress values. This signal is being fired off above.
+  /*gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+      moz_embed_signals[PROGRESS_ALL],
+      (const char *)uriString,
+      aCurTotalProgress, aMaxTotalProgress);*/
   return NS_OK;
 }
 
 NS_IMETHODIMP
 EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
-				nsIRequest     *aRequest,
-				nsIURI         *aLocation)
+        nsIRequest     *aRequest,
+        nsIURI         *aLocation)
 {
   nsCAutoString newURI;
   NS_ENSURE_ARG_POINTER(aLocation);
@@ -169,8 +194,9 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
 
   if (!isSubFrameLoad) {
     mOwner->SetURI(newURI.get());
-    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		    moz_embed_signals[LOCATION]);
+    gtk_signal_emit(
+      GTK_OBJECT(mOwner->mOwningWidget),
+      moz_embed_signals[LOCATION]);
   }
 
   return NS_OK;
@@ -178,18 +204,19 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
 
 NS_IMETHODIMP
 EmbedProgress::OnStatusChange(nsIWebProgress  *aWebProgress,
-			      nsIRequest      *aRequest,
-			      nsresult         aStatus,
-			      const PRUnichar *aMessage)
+            nsIRequest      *aRequest,
+            nsresult         aStatus,
+            const PRUnichar *aMessage)
 {
   // need to make a copy so we can safely cast to a void *
   PRUnichar *tmpString = nsCRT::strdup(aMessage);
 
-  gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[STATUS_CHANGE],
-		  NS_STATIC_CAST(void *, aRequest),
-		  NS_STATIC_CAST(int, aStatus),
-		  NS_STATIC_CAST(void *, tmpString));
+  gtk_signal_emit(
+    GTK_OBJECT(mOwner->mOwningWidget),
+    moz_embed_signals[STATUS_CHANGE],
+    NS_STATIC_CAST(void *, aRequest),
+    NS_STATIC_CAST(int, aStatus),
+    NS_STATIC_CAST(void *, tmpString));
 
   nsMemory::Free(tmpString);
 
@@ -198,19 +225,19 @@ EmbedProgress::OnStatusChange(nsIWebProgress  *aWebProgress,
 
 NS_IMETHODIMP
 EmbedProgress::OnSecurityChange(nsIWebProgress *aWebProgress,
-				nsIRequest     *aRequest,
-				PRUint32         aState)
+        nsIRequest     *aRequest,
+        PRUint32         aState)
 {
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[SECURITY_CHANGE],
-		  NS_STATIC_CAST(void *, aRequest),
-		  aState);
+      moz_embed_signals[SECURITY_CHANGE],
+      NS_STATIC_CAST(void *, aRequest),
+      aState);
   return NS_OK;
 }
 
 /* static */
 void
-EmbedProgress::RequestToURIString(nsIRequest *aRequest, char **aString)
+EmbedProgress::RequestToURIString(nsIRequest *aRequest, nsACString &aURIString)
 {
   // is it a channel
   nsCOMPtr<nsIChannel> channel;
@@ -223,8 +250,5 @@ EmbedProgress::RequestToURIString(nsIRequest *aRequest, char **aString)
   if (!uri)
     return;
   
-  nsCAutoString uriString;
-  uri->GetSpec(uriString);
-
-  *aString = strdup(uriString.get());
+  uri->GetSpec(aURIString);
 }

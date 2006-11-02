@@ -1,3 +1,5 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 tw=80 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -69,10 +71,15 @@ EmbedContentListener::Init(EmbedPrivate *aOwner)
 
 NS_IMETHODIMP
 EmbedContentListener::OnStartURIOpen(nsIURI     *aURI,
-				     PRBool     *aAbortOpen)
+             PRBool     *aAbortOpen)
 {
   nsresult rv;
 
+  if (mOwner->mOpenBlock) {
+     *aAbortOpen = mOwner->mOpenBlock;
+     mOwner->mOpenBlock = PR_FALSE;
+     return NS_OK;
+  }
   nsCAutoString specString;
   rv = aURI->GetSpec(specString);
 
@@ -81,8 +88,8 @@ EmbedContentListener::OnStartURIOpen(nsIURI     *aURI,
 
   gint return_val = FALSE;
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-		  moz_embed_signals[OPEN_URI],
-		  specString.get(), &return_val);
+      moz_embed_signals[OPEN_URI],
+      specString.get(), &return_val);
 
   *aAbortOpen = return_val;
 
@@ -91,28 +98,28 @@ EmbedContentListener::OnStartURIOpen(nsIURI     *aURI,
 
 NS_IMETHODIMP
 EmbedContentListener::DoContent(const char         *aContentType,
-				PRBool             aIsContentPreferred,
-				nsIRequest         *aRequest,
-				nsIStreamListener **aContentHandler,
-				PRBool             *aAbortProcess)
+        PRBool             aIsContentPreferred,
+        nsIRequest         *aRequest,
+        nsIStreamListener **aContentHandler,
+        PRBool             *aAbortProcess)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 EmbedContentListener::IsPreferred(const char        *aContentType,
-				  char             **aDesiredContentType,
-				  PRBool            *aCanHandleContent)
+          char             **aDesiredContentType,
+          PRBool            *aCanHandleContent)
 {
   return CanHandleContent(aContentType, PR_TRUE, aDesiredContentType,
-			  aCanHandleContent);
+        aCanHandleContent);
 }
 
 NS_IMETHODIMP
 EmbedContentListener::CanHandleContent(const char        *aContentType,
-				       PRBool           aIsContentPreferred,
-				       char             **aDesiredContentType,
-				       PRBool            *_retval)
+               PRBool           aIsContentPreferred,
+               char             **aDesiredContentType,
+               PRBool            *_retval)
 {
   *_retval = PR_FALSE;
   *aDesiredContentType = nsnull;
@@ -123,9 +130,9 @@ EmbedContentListener::CanHandleContent(const char        *aContentType,
     if (webNavInfo) {
       PRUint32 canHandle;
       nsresult rv =
-	webNavInfo->IsTypeSupported(nsDependentCString(aContentType),
-				    mOwner ? mOwner->mNavigation.get() : nsnull,
-				    &canHandle);
+  webNavInfo->IsTypeSupported(nsDependentCString(aContentType),
+            mOwner ? mOwner->mNavigation.get() : nsnull,
+            &canHandle);
       NS_ENSURE_SUCCESS(rv, rv);
       *_retval = (canHandle != nsIWebNavigationInfo::UNSUPPORTED);
     }

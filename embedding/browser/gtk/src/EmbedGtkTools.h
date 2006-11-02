@@ -16,12 +16,12 @@
  * The Original Code is mozilla.org code.
  *
  * The Initial Developer of the Original Code is
- * Christopher Blizzard. Portions created by Christopher Blizzard are Copyright (C) Christopher Blizzard.  All Rights Reserved.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * Oleg Romashin. Portions created by Oleg Romashin are Copyright (C) Oleg Romashin.  All Rights Reserved.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Christopher Blizzard <blizzard@mozilla.org>
+ *   Oleg Romashin <romaxa@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,33 +36,27 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-#ifndef __EmbedProgress_h
-#define __EmbedProgress_h
-
-#include <nsIWebProgressListener.h>
-#include <nsWeakReference.h>
-#include "EmbedPrivate.h"
-
-class EmbedProgress : public nsIWebProgressListener,
-                      public nsSupportsWeakReference
-{
- public:
-  EmbedProgress();
-  virtual ~EmbedProgress();
-
-  nsresult Init(EmbedPrivate *aOwner);
-
-  NS_DECL_ISUPPORTS
-
-  NS_DECL_NSIWEBPROGRESSLISTENER
-
- private:
-
-  static void RequestToURIString (nsIRequest *aRequest, nsACString &aURIString);
-
-  EmbedPrivate *mOwner;
-
-};
-
-#endif /* __EmbedProgress_h */
+#include <nsCOMPtr.h>
+#ifdef MOZILLA_INTERNAL_API
+#include "nsString.h"
+#else
+#include "nsStringAPI.h"
+#endif
+#include <nsIDOMWindow.h>
+#include <nsIWindowWatcher.h>
+#include <nsIWebBrowserChrome.h>
+#include <nsIEmbeddingSiteWindow.h>
+#include <nsIServiceManager.h>
+#include <nsIContentViewer.h>
+#include <nsIDocShell.h>
+#include <nsIInterfaceRequestorUtils.h>
+#include <gtk/gtk.h>
+#ifndef __EmbedTools_h
+#define __EmbedTools_h
+GtkWidget*
+GetGtkWidgetForDOMWindow(nsIDOMWindow* aDOMWindow);
+GtkWindow*
+GetGtkWindowForDOMWindow(nsIDOMWindow* aDOMWindow);
+nsresult 
+GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer);
+#endif /* __EmbedTools_h */

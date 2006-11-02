@@ -1,3 +1,5 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -42,11 +44,15 @@
 #include <nsIDOMMouseListener.h>
 #include <nsIDOMUIListener.h>
 
+#include <nsIDOMMouseMotionListener.h>
+#include <nsIDOMEventListener.h>
+#include "EmbedContextMenuInfo.h"
 class EmbedPrivate;
 
 class EmbedEventListener : public nsIDOMKeyListener,
                            public nsIDOMMouseListener,
-                           public nsIDOMUIListener
+                           public nsIDOMUIListener,
+                           public nsIDOMMouseMotionListener
 {
  public:
 
@@ -57,6 +63,7 @@ class EmbedEventListener : public nsIDOMKeyListener,
 
   NS_DECL_ISUPPORTS
 
+//  NS_DECL_NSIDOMEVENTLISTENER
   // nsIDOMEventListener
 
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
@@ -82,9 +89,14 @@ class EmbedEventListener : public nsIDOMKeyListener,
   NS_IMETHOD FocusIn(nsIDOMEvent* aDOMEvent);
   NS_IMETHOD FocusOut(nsIDOMEvent* aDOMEvent);
 
+  // nsIDOMMouseMotionListener
+  NS_IMETHOD MouseMove(nsIDOMEvent* aDOMEvent);
+  NS_IMETHOD DragMove(nsIDOMEvent* aMouseEvent);
+  EmbedContextMenuInfo* GetContextInfo() { return mCtxInfo; };
  private:
 
   EmbedPrivate *mOwner;
+  EmbedContextMenuInfo *mCtxInfo;
 };
 
 #endif /* __EmbedEventListener_h */
