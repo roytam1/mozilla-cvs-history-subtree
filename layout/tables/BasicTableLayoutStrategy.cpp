@@ -492,28 +492,74 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
     PRInt32 colCount = cellMap->GetColCount();
+    if (colCount <= 0)
+        return; // nothing to do
+
     nscoord spacing = mTableFrame->GetCellSpacingX();
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
 
     nscoord min = mMinWidth;
 
     // border-spacing isn't part of the basis for percentages.
-    if (colCount > 0) {
-        // XXX Should only add columns that have cells originating in them!
-        nscoord subtract = spacing * (colCount + 1);
-        width -= subtract;
-        min -= subtract;
-    }
+    // XXX Should only add columns that have cells originating in them!
+    nscoord subtract = spacing * (colCount + 1);
+    width -= subtract;
+    min -= subtract;
 
     // XXX is |width| the right basis for percentage widths?
 
-    // Loop #1 over the columns, initially assigning them the larger of
-    // their percentage pref width or min width.
-    nscoord assigned = 0;
-    nscoord grow_basis = 0;
-    nscoord zoom_basis = 0;
-    nscoord zoom_fixed_basis = 0;
-    float pct_basis = 0.0f; // 0.0f through 1.0f
+    /*
+     * The goal of this function is to allocate |width| to the columns
+     * by making an appropriate SetFinalWidth call to each column.
+     *
+     * The idea is to either assign one of the following sets of widths
+     * or a weighted average of two adjacent sets of widths.  It is not
+     * possible to assign values smaller than the smallest set of
+     * widths.  However, see below for handling the case of assigning
+     * values larger than the largest set of widths.  From smallest to
+     * largest, these are:
+     *
+     * 1. [guess_min] Assign all columns their min width.
+     *
+     * 2. [guess_min_pct] Assign all columns with percentage widths
+     * their percentage width, and all other columns their min width.
+     *
+     * 3. [guess_min_spec] Assign all columns with percentage widths
+     * their percentage width, all columns with specified coordinate
+     * widths their pref width (since it doesn't matter whether it's the
+     * largest contributor to the pref width that was the specified
+     * contributor), and all other columns their min width.
+     *
+     * 4. [guess_pref] Assign all columns with percentage widths their
+     * specified width, and all other columns their pref width.
+     *
+     * If |width| is *larger* than what we would assign in (4), then we
+     * expand the columns:
+     *
+     *   a. if any columns without a specified coordinate width or
+     *   percent width have nonzero pref width, in proportion to pref
+     *   width [total_flex_pref]
+     *
+     *   b. otherwise, if any columns without percent width have nonzero
+     *   pref width, in proportion to pref width [total_fixed_pref]
+     *
+     *   c. otherwise, if any columns have nonzero percentage widths, in
+     *   proportion to the percentage widths [total_pct]
+     *
+     *   d. otherwise, equally.
+     */
+
+    // Loop #1 over the columns, to figure out the four values above so
+    // we know which case we're dealing with.
+
+    nscoord guess_min = 0,
+            guess_min_pct = 0,
+            guess_min_spec = 0,
+            guess_pref = 0,
+            total_flex_pref = 0,
+            total_fixed_pref = 0;
+    float total_pct = 0.0f; // 0.0f to 1.0f
+
     PRInt32 col;
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
@@ -521,93 +567,63 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
             NS_ERROR("column frames out of sync with cell map");
             continue;
         }
-        nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
         nscoord min_width = colFrame->GetMinCoord();
-        // XXX Is it OK that pct_width isn't rounded to pixel?
-        // (What's the point anyway?)
-        nscoord val = PR_MAX(pct_width, min_width);
-        // Note that we re-compute |val| in the loop below.
-
-        if (colFrame->GetPrefPercent() == 0.0f) {
-            nscoord pref_width = colFrame->GetPrefCoord();
-            grow_basis += pref_width - min_width;
-            if (!colFrame->GetHasSpecifiedCoord()) {
-              zoom_basis += pref_width;
-            }
-            zoom_fixed_basis += pref_width;
+        guess_min += min_width;
+        if (colFrame->GetPrefPercent() != 0.0f) {
+            float pct = colFrame->GetPrefPercent();
+            total_pct += pct;
+            nscoord val = nscoord(float(width) * pct);
+            guess_min_pct += val;
+            guess_pref += val;
         } else {
-            pct_basis += colFrame->GetPrefPercent();
+            nscoord pref_width = colFrame->GetPrefCoord();
+            guess_pref += pref_width;
+            guess_min_pct += min_width;
+            if (colFrame->GetHasSpecifiedCoord()) {
+                // we'll add on the rest of guess_min_spec outside the
+                // loop
+                guess_min_spec += pref_width - min_width;
+                total_fixed_pref += pref_width;
+            } else {
+                total_flex_pref += pref_width;
+            }
         }
-        assigned += val;
     }
+    guess_min_spec += guess_min_pct;
 
-    // Loop #2 over the columns:
-    // 1. If we have too little space, by shrinking the percentage width
-    //    columns based on how far they are above their min width.
-    // *  If we have extra space, give it all to the columns previously
-    //    given their min width:
-    //    2. in proportion to the difference between their min width and
-    //       pref width up until all columns reach pref width,
-    //    3. once columns reach pref width, in proportion to pref width
-    //    4. if those are all zero, instead increase the percentage
-    //       width columns in proportion to their percentages
-    //    5. if there are no percentage width columns, equally
+    // Determine what we're flexing:
     enum Loop2Type {
-        SHRINK, GROW, ZOOM_GROW, ZOOM_FIXED_GROW, PCT_GROW, EQUAL_GROW, NOOP
+        FLEX_PCT_SMALL, // between (1) and (2) above
+        FLEX_SPEC_SMALL, // between (2) and (3) above
+        FLEX_FLEX_SMALL, // between (3) and (4) above
+        FLEX_FLEX_LARGE, // above (4) above, case (a)
+        FLEX_FIXED_LARGE, // above (4) above, case (b)
+        FLEX_PCT_LARGE, // above (4) above, case (c)
+        FLEX_ALL_LARGE // above (4) above, case (d)
     };
 
     Loop2Type l2t;
-    if (assigned > width) {
-        if (assigned != min)
-            l2t = SHRINK;
+    if (width < guess_pref) {
+        NS_ASSERTION(width >= guess_min, "bad width");
+        if (width < guess_min_pct)
+            l2t = FLEX_PCT_SMALL;
+        else if (width < guess_min_spec)
+            l2t = FLEX_SPEC_SMALL;
         else
-            l2t = NOOP;
+            l2t = FLEX_FLEX_SMALL;
     } else {
-        if (grow_basis > 0 && assigned + grow_basis > width)
-            l2t = GROW;
-        else if (zoom_basis > 0)
-            l2t = ZOOM_GROW;
-        else if (zoom_fixed_basis > 0)
-            l2t = ZOOM_FIXED_GROW;
-        else if (pct_basis > 0.0f)
-            l2t = PCT_GROW;
-        else if (colCount > 0)
-            l2t = EQUAL_GROW;
+        if (total_flex_pref > 0)
+            l2t = FLEX_FLEX_LARGE;
+        else if (total_fixed_pref > 0)
+            l2t = FLEX_FIXED_LARGE;
+        else if (total_pct > 0.0f)
+            l2t = FLEX_PCT_LARGE;
         else
-            l2t = NOOP;
+            l2t = FLEX_ALL_LARGE;
     }
- 
+
     // Hold previous to avoid accumulating rounding error.
     nscoord prev_x = 0, prev_x_round = 0;
-
-    union {
-        float f;
-        nscoord c;
-    } u;
-    switch (l2t) {
-        case SHRINK: // u.f is negative
-            u.f = float(width - assigned) / float(assigned - min);
-            break;
-        case GROW:
-            u.f = float(width - assigned) / float(grow_basis);
-            break;
-        case ZOOM_GROW:
-            u.f = 1.0f + (float(width - assigned - grow_basis) /
-                          float(zoom_basis));
-            break;
-        case ZOOM_FIXED_GROW:
-            u.f = 1.0f + (float(width - assigned - grow_basis) /
-                          float(zoom_fixed_basis));
-            break;
-        case PCT_GROW:
-            u.f = float(width - assigned) / float(pct_basis);
-            break;
-        case EQUAL_GROW:
-            u.c = width / cellMap->GetColCount();
-            break;
-        case NOOP:
-            break;
-    }
 
     for (col = 0; col < colCount; ++col) {
         nsTableColFrame *colFrame = mTableFrame->GetColFrame(col);
@@ -615,45 +631,82 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
             NS_ERROR("column frames out of sync with cell map");
             continue;
         }
-        nscoord pct_width = nscoord(float(width) * colFrame->GetPrefPercent());
-        nscoord min_width = colFrame->GetMinCoord();
-        // recompute |val| from the loop above
-        nscoord col_width = PR_MAX(pct_width, min_width);
+        nscoord col_width;
+
+        float pct = colFrame->GetPrefPercent();
+        if (pct != 0.0f)
+            col_width = nscoord(float(width) * pct);
+        else
+            col_width = colFrame->GetPrefCoord();
 
         switch (l2t) {
-            case SHRINK: // u.f is negative
-                col_width += NSToCoordRound(u.f * (col_width - min_width));
+            case FLEX_PCT_SMALL:
+                col_width = colFrame->GetMinCoord();
+                if (pct != 0.0f)
+                    col_width += NSToCoordRound(
+                        float(nscoord(float(width) * pct) - col_width) *
+                        (float(width - guess_min) /
+                         float(guess_min_pct - guess_min)));
                 break;
-            case GROW:
-                if (colFrame->GetPrefPercent() == 0.0f)
-                    col_width += NSToCoordRound(u.f *
-                                                (colFrame->GetPrefCoord() -
-                                                 min_width));
-                break;
-            case ZOOM_GROW:
-                if (colFrame->GetPrefPercent() == 0.0f) {
-                    if (colFrame->GetHasSpecifiedCoord())
-                        // XXX It's usually already the pref coord; is
-                        // it always?
-                        col_width = colFrame->GetPrefCoord();
-                    else
-                        col_width = NSToCoordRound(u.f *
-                                                   colFrame->GetPrefCoord());
+            case FLEX_SPEC_SMALL:
+                if (pct == 0.0f) {
+                    NS_ASSERTION(col_width == colFrame->GetPrefCoord(),
+                                 "wrong width assigned");
+                    if (colFrame->GetHasSpecifiedCoord()) {
+                        nscoord col_min = colFrame->GetMinCoord();
+                        col_width = col_min + NSToCoordRound(
+                            float(col_width - col_min) *
+                            (float(width - guess_min_pct) /
+                             float(guess_min_spec - guess_min_pct)));
+                    } else
+                        col_width = colFrame->GetMinCoord();
                 }
                 break;
-            case ZOOM_FIXED_GROW:
-                if (colFrame->GetPrefPercent() == 0.0f)
-                    col_width = NSToCoordRound(u.f *
-                                               colFrame->GetPrefCoord());
+            case FLEX_FLEX_SMALL:
+                if (pct == 0.0f &&
+                    !colFrame->GetHasSpecifiedCoord()) {
+                    NS_ASSERTION(col_width == colFrame->GetPrefCoord(),
+                                 "wrong width assigned");
+                    nscoord col_min = colFrame->GetMinCoord();
+                    col_width = col_min + NSToCoordRound(
+                        float(col_width - col_min) *
+                        (float(width - guess_min_spec) /
+                         float(guess_pref - guess_min_spec)));
+                }
                 break;
-            case PCT_GROW:
-                col_width += NSToCoordRound(u.f * colFrame->GetPrefPercent());
+            case FLEX_FLEX_LARGE:
+                if (pct == 0.0f &&
+                    !colFrame->GetHasSpecifiedCoord()) {
+                    NS_ASSERTION(col_width == colFrame->GetPrefCoord(),
+                                 "wrong width assigned");
+                    col_width += NSToCoordRound(
+                        float(col_width) *
+                        (float(width - guess_pref) /
+                         float(total_flex_pref)));
+                }
                 break;
-            case EQUAL_GROW:
-                col_width += u.c;
-                NS_ASSERTION(min_width == 0, "yikes");
+            case FLEX_FIXED_LARGE:
+                if (pct == 0.0f) {
+                    NS_ASSERTION(col_width == colFrame->GetPrefCoord(),
+                                 "wrong width assigned");
+                    NS_ASSERTION(colFrame->GetHasSpecifiedCoord() ||
+                                 colFrame->GetPrefCoord() == 0,
+                                 "wrong case");
+                    col_width += NSToCoordRound(
+                        float(col_width) *
+                        (float(width - guess_pref) /
+                         float(total_fixed_pref)));
+                }
                 break;
-            case NOOP:
+            case FLEX_PCT_LARGE:
+                NS_ASSERTION(pct != 0.0f || colFrame->GetPrefCoord() == 0,
+                             "wrong case");
+                col_width += NSToCoordRound(pct *
+                    (float(width - guess_pref) / float(total_pct)));
+                break;
+            case FLEX_ALL_LARGE:
+                col_width += NSToCoordRound(
+                    float(width - guess_pref) / float(colCount));
                 break;
         }
 
