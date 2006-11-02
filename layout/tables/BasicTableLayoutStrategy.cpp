@@ -594,7 +594,7 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
     // Determine what we're flexing:
     enum Loop2Type {
         FLEX_PCT_SMALL, // between (1) and (2) above
-        FLEX_SPEC_SMALL, // between (2) and (3) above
+        FLEX_FIXED_SMALL, // between (2) and (3) above
         FLEX_FLEX_SMALL, // between (3) and (4) above
         FLEX_FLEX_LARGE, // above (4) above, case (a)
         FLEX_FIXED_LARGE, // above (4) above, case (b)
@@ -611,7 +611,7 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
             c = float(width - guess_min) /
                 float(guess_min_pct - guess_min);
         } else if (width < guess_min_spec) {
-            l2t = FLEX_SPEC_SMALL;
+            l2t = FLEX_FIXED_SMALL;
             c = float(width - guess_min_pct) /
                 float(guess_min_spec - guess_min_pct);
         } else {
@@ -659,7 +659,7 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
                     col_width += NSToCoordRound(
                         float(nscoord(float(width) * pct) - col_width) * c);
                 break;
-            case FLEX_SPEC_SMALL:
+            case FLEX_FIXED_SMALL:
                 if (pct == 0.0f) {
                     NS_ASSERTION(col_width == colFrame->GetPrefCoord(),
                                  "wrong width assigned");
