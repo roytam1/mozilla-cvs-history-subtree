@@ -573,6 +573,8 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
             float pct = colFrame->GetPrefPercent();
             total_pct += pct;
             nscoord val = nscoord(float(width) * pct);
+            if (val < min_width)
+                val = min_width;
             guess_min_pct += val;
             guess_pref += val;
         } else {
@@ -635,6 +637,16 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
         }
     }
 
+#ifdef DEBUG_dbaron_off
+    printf("ComputeColumnWidths: %d columns in width %d,\n"
+           "  guesses=[%d,%d,%d,%d], totals=[%d,%d,%f],\n"
+           "  l2t=%d, c=%f\n",
+           colCount, width,
+           guess_min, guess_min_pct, guess_min_spec, guess_pref,
+           total_flex_pref, total_fixed_pref, total_pct,
+           l2t, c);
+#endif
+
     // Hold previous to avoid accumulating rounding error.
     nscoord prev_x = 0, prev_x_round = 0;
 
@@ -647,17 +659,25 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
         nscoord col_width;
 
         float pct = colFrame->GetPrefPercent();
-        if (pct != 0.0f)
+        if (pct != 0.0f) {
             col_width = nscoord(float(width) * pct);
-        else
+            nscoord min = colFrame->GetMinCoord();
+            if (col_width < min)
+                col_width = min;
+        } else {
             col_width = colFrame->GetPrefCoord();
+        }
 
         switch (l2t) {
             case FLEX_PCT_SMALL:
                 col_width = colFrame->GetMinCoord();
-                if (pct != 0.0f)
-                    col_width += NSToCoordRound(
-                        float(nscoord(float(width) * pct) - col_width) * c);
+                if (pct != 0.0f) {
+                    nscoord width_from_pct = nscoord(float(width) * pct);
+                    if (width_from_pct > col_width) {
+                        col_width += NSToCoordRound(
+                            float(width_from_pct - col_width) * c);
+                    }
+                }
                 break;
             case FLEX_FIXED_SMALL:
                 if (pct == 0.0f) {
@@ -708,6 +728,9 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
                 col_width += NSToCoordRound(float(width - guess_pref) * c);
                 break;
         }
+
+        NS_ASSERTION(col_width >= colFrame->GetMinCoord(),
+                     "assigned width smaller than min");
 
         nscoord new_x = prev_x + col_width;
         nscoord new_x_round = nsTableFrame::RoundToPixel(new_x, p2t);
