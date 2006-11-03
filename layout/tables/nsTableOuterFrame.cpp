@@ -1047,9 +1047,10 @@ nsTableOuterFrame::IsNested(const nsHTMLReflowState& aReflowState) const
 }
 
 nsresult
-nsTableOuterFrame::OuterReflowChild(nsPresContext*            aPresContext,
+nsTableOuterFrame::OuterReflowChild(nsPresContext*             aPresContext,
                                     nsIFrame*                  aChildFrame,
                                     const nsHTMLReflowState&   aOuterRS,
+                                    void*                      aChildRSSpace,
                                     nsHTMLReflowMetrics&       aMetrics,
                                     nscoord                    aAvailWidth, 
                                     nsSize&                    aDesiredSize,
@@ -1076,11 +1077,13 @@ nsTableOuterFrame::OuterReflowChild(nsPresContext*            aPresContext,
                                              eAlwaysRoundDown);
   }
   nsSize availSize(aAvailWidth, availHeight);
-  // create and init the child reflow state
-  nsHTMLReflowState childRS(aPresContext, aOuterRS, aChildFrame, availSize,
-                            -1, -1, PR_FALSE);
+  // create and init the child reflow state, using placement new on
+  // stack space allocated by the caller, so that the caller can destroy
+  // it
+  nsHTMLReflowState &childRS = * new (aChildRSSpace)
+    nsHTMLReflowState(aPresContext, aOuterRS, aChildFrame, availSize,
+                      -1, -1, PR_FALSE);
   InitChildReflowState(*aPresContext, childRS);
-  childRS.mPercentHeightObserver = nsnull; // the observer is for non table related frames inside cells
 
   // see if we need to reset top of page due to a caption
   if (mCaptionFrame) {
@@ -1168,10 +1171,15 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   nsHTMLReflowMetrics captionMet;
   nsSize captionSize;
   nsMargin captionMargin;
+  // Use longs to get more-aligned space.
+  #define LONGS_IN_HTMLRS \
+    ((sizeof(nsHTMLReflowState) + sizeof(long) - 1) / sizeof(long))
+  long captionRSSpace[LONGS_IN_HTMLRS];
   if (reflowCaption) {
     nsReflowStatus capStatus; // don't let the caption cause incomplete
     rv = OuterReflowChild(aPresContext, mCaptionFrame, aOuterRS,
-                          captionMet, aOuterRS.mComputedWidth, captionSize,
+                          captionRSSpace, captionMet,
+                          aOuterRS.mComputedWidth, captionSize,
                           captionMargin, capStatus);
     if (NS_FAILED(rv)) return rv;
   } else if (mCaptionFrame) {
@@ -1194,9 +1202,11 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   nsHTMLReflowMetrics innerMet;
   nsSize innerSize;
   nsMargin innerMargin;
+  long innerRSSpace[LONGS_IN_HTMLRS];
   if (reflowInner) {
-    rv = OuterReflowChild(aPresContext, mInnerTableFrame, aOuterRS, innerMet,
-                          innerAvailWidth, innerSize, innerMargin, aStatus);
+    rv = OuterReflowChild(aPresContext, mInnerTableFrame, aOuterRS,
+                          innerRSSpace, innerMet, innerAvailWidth,
+                          innerSize, innerMargin, aStatus);
     if (NS_FAILED(rv)) return rv;
   } else {
     innerSize = mInnerTableFrame->GetSize();
@@ -1217,8 +1227,11 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
     GetCaptionOrigin(captionSide, containSize, innerSize, 
                      innerMargin, captionSize, captionMargin, captionOrigin);
     if (reflowCaption) {
-      FinishReflowChild(mCaptionFrame, aPresContext, nsnull, captionMet,
+      nsHTMLReflowState *captionRS =
+        NS_STATIC_CAST(nsHTMLReflowState*, (void*)captionRSSpace);
+      FinishReflowChild(mCaptionFrame, aPresContext, captionRS, captionMet,
                         captionOrigin.x, captionOrigin.y, 0);
+      captionRS->~nsHTMLReflowState();
     } else {
       mCaptionFrame->SetPosition(captionOrigin);
       nsTableFrame::RePositionViews(mCaptionFrame);
@@ -1231,8 +1244,11 @@ NS_METHOD nsTableOuterFrame::Reflow(nsPresContext*           aPresContext,
   GetInnerOrigin(captionSide, containSize, captionSize, 
                  captionMargin, innerSize, innerMargin, innerOrigin);
   if (reflowInner) {
-    FinishReflowChild(mInnerTableFrame, aPresContext, nsnull, innerMet,
+    nsHTMLReflowState *innerRS =
+      NS_STATIC_CAST(nsHTMLReflowState*, (void*) innerRSSpace);
+    FinishReflowChild(mInnerTableFrame, aPresContext, innerRS, innerMet,
                       innerOrigin.x, innerOrigin.y, 0);
+    innerRS->~nsHTMLReflowState();
   } else {
     mInnerTableFrame->SetPosition(innerOrigin);
     nsTableFrame::RePositionViews(mInnerTableFrame);

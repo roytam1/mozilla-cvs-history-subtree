@@ -125,7 +125,10 @@ nsTableCellFrame::NotifyPercentHeight(const nsHTMLReflowState& aReflowState)
   const nsHTMLReflowState *cellRS;
   if (aReflowState.mCBReflowState &&
       // nsHTMLReflowState ensures the mCBReflowState of blocks inside a
-      // cell is the cell frame, not the inner-cell block
+      // cell is the cell frame, not the inner-cell block, and that the
+      // containing block of an inner table is the containing block of
+      // its outer table.  So all this check really skips (given
+      // NeedsToObserve) is the block directly inside the cell.
       (cellRS = aReflowState.mCBReflowState) &&
       cellRS->frame == this &&
       (cellRS->mComputedHeight == NS_UNCONSTRAINEDSIZE ||
@@ -150,20 +153,33 @@ nsTableCellFrame::NotifyPercentHeight(const nsHTMLReflowState& aReflowState)
 PRBool 
 nsTableCellFrame::NeedsToObserve(const nsHTMLReflowState& aReflowState)
 {
-  PRBool result = PR_FALSE;
-  const nsHTMLReflowState* parentRS = aReflowState.parentReflowState;
-  if (parentRS && (parentRS->mPercentHeightObserver == this)) { // cell observes the parent
-    result = PR_TRUE;
-    parentRS = parentRS->parentReflowState;
-    if (parentRS && (parentRS->mPercentHeightObserver == this)) { // cell observers the grand parent
-      parentRS = parentRS->parentReflowState;
-      if (parentRS && (parentRS->mPercentHeightObserver == this)) { 
-        // cell observes the great grand parent, so we have gone too deep
-        result = PR_FALSE;
-      }
-    }
+  const nsHTMLReflowState *rs = aReflowState.parentReflowState;
+  if (!rs)
+    return PR_FALSE;
+  if (rs->frame == this) {
+    // We always observe the child block.  It will never send any
+    // notifications, but we need this so that the observer gets
+    // propagated to its kids.
+    return PR_TRUE;
   }
-  return result;
+  rs = rs->parentReflowState;
+  if (!rs) {
+    return PR_FALSE;
+  }
+
+  // We always need to let the percent height observer be propagated
+  // from an outer table frame to an inner table frame.
+  nsIAtom *fType = aReflowState.frame->GetType();
+  if (fType == nsLayoutAtoms::tableFrame) {
+    return PR_TRUE;
+  }
+
+  // We need the observer to be propagated to all children of the cell
+  // (i.e., children of the child block) in quirks mode, but only to
+  // tables in standards mode.
+  return rs->frame == this &&
+         (GetPresContext()->CompatibilityMode() == eCompatibility_NavQuirks ||
+          fType == nsLayoutAtoms::tableOuterFrame);
 }
 
 nsresult 
@@ -734,9 +750,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   if (!NeedSpecialReflow()) 
     nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
 
-  // this should probably be cached somewhere
-  nsCompatibility compatMode = aPresContext->CompatibilityMode();
-
   aStatus = NS_FRAME_COMPLETE;
   nsSize availSize(aReflowState.availableWidth, availHeight);
 
@@ -797,8 +810,10 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid,
                                    availSize);
-  // mIPercentHeightObserver is for non table related frames inside cells in quirks mode
-  kidReflowState.mPercentHeightObserver = (eCompatibility_NavQuirks == compatMode) ? (nsIPercentHeightObserver *)this : nsnull;
+  // mIPercentHeightObserver is for children of cells in quirks mode,
+  // but only those than are tables in standards mode.  NeedsToObserve
+  // will determine how far this is propagated to descendants.
+  kidReflowState.mPercentHeightObserver = this;
   if (aReflowState.mFlags.mSpecialHeightReflow) {
     kidReflowState.mFlags.mVResize = PR_TRUE;
   }

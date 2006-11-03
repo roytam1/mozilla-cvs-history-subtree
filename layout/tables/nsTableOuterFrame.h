@@ -254,9 +254,10 @@ protected:
                             nsPoint&         aOrigin);
   
   // reflow the child (caption or innertable frame)
-  NS_IMETHOD OuterReflowChild(nsPresContext*           aPresContext,
+  NS_IMETHOD OuterReflowChild(nsPresContext*            aPresContext,
                               nsIFrame*                 aChildFrame,
                               const nsHTMLReflowState&  aOuterRS,
+                              void*                     aChildRSSpace,
                               nsHTMLReflowMetrics&      aMetrics,
                               nscoord                   aAvailWidth,
                               nsSize&                   aDesiredSize,
