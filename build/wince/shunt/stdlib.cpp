@@ -344,6 +344,8 @@ MOZCE_SHUNT_API void *mozce_realloc(void* a, unsigned b)
     if (!buffer)
     {
         SHCloseApps(b);
+        buffer = realloc(a,b);
+
         if (!buffer)
             oom();
     }
@@ -360,6 +362,8 @@ MOZCE_SHUNT_API void *mozce_calloc(size_t n, size_t nelem)
     if (!buffer)
     {
         SHCloseApps(n*nelem);
+        buffer = calloc(n, nelem);
+
         if (!buffer)
             oom();
     }
