@@ -17,6 +17,23 @@ $::Version = '$Revision$ ';
 {    
     TinderUtils::Setup();
     tree_specific_overides();
+
+    # This code assumes that the build process will alter the mtime of the
+    # "build directory" (i.e. WINNT_5.2_Dep, Darwin_8.1.0_Clbr, etc.) by
+    # dumping a log file or some such in the directory. If that's not the
+    # case, then this "feature" won't work.
+    if (defined($Settings::BuildInterval) && $Settings::BuildInterval > 0) {
+        print STDERR "Build interval of $Settings::BuildInterval seconds requested\n";
+        my $lastBuilt = (stat($Settings::DirName))[9]; ## Magic 9 is st_mtime
+        my $now = time();
+
+        if (($now - $Settings::BuildInterval) < $lastBuilt) {
+            print STDERR 'Last built at ' . scalar(localtime($lastBuilt)) . 
+             ', ' . ($now - $lastBuilt) . " seconds ago; not building.\n";
+            TinderUtils::stop_tinderbox(reason => 'Build interval not expired');
+        }
+    }
+
     TinderUtils::Build();
 }
 

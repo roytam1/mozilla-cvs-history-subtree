@@ -144,6 +144,7 @@ Options:
   --config-cvsup-dir DIR Provide a directory of configuration files 
                           (mozconfig, etc.) to run a "cvs update" in before 
                           a build begins.
+  --interval             Limit this build to building once every N seconds
   --version              Print the version number (same as cvs revision).
   --help
 More details:
@@ -179,6 +180,7 @@ sub ParseArgs {
             -t BuildTree
             --mozconfig MozConfigFileName
             --config-cvsup-dir TboxBuildConfigDir 
+            --interval BuildInterval
         );
         if (defined $args_with_options{$arg}) {
             my $arg_arg = shift @ARGV;
