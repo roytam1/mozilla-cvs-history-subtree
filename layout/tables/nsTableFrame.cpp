@@ -6635,5 +6635,4 @@ nsTableFrame::DumpTableFrames(nsIFrame* aFrame)
     tableFrame = NS_STATIC_CAST(nsTableFrame*, tableFrame->GetNextInFlow());
   }
 }
-
 #endif
