@@ -1776,15 +1776,13 @@ nsTableFrame::RequestSpecialHeightReflow(const nsHTMLReflowState& aReflowState)
       ((nsTableRowGroupFrame*)rs->frame)->SetNeedSpecialReflow(PR_TRUE);
     }
     else if (nsLayoutAtoms::tableFrame == frameType) {
-      if (rs == &aReflowState) {
-        // don't stop because we started with this table 
-        ((nsTableFrame*)rs->frame)->SetNeedSpecialReflow(PR_TRUE);
-      }
-      else {
-        ((nsTableFrame*)rs->frame)->SetNeedToInitiateSpecialReflow(PR_TRUE);
-        // always stop when we reach a table that we didn't start with
-        break;
-      }
+      NS_ASSERTION(rs != &aReflowState,
+                   "should not request special height reflow for table");
+      ((nsTableFrame*)rs->frame)->SetNeedToInitiateSpecialReflow(PR_TRUE);
+      // always stop when we reach a table
+      break;
+    } else {
+      NS_NOTREACHED("unexpected frame type");
     }
   }
 }
@@ -6639,6 +6637,3 @@ nsTableFrame::DumpTableFrames(nsIFrame* aFrame)
 }
 
 #endif
-
-
-
