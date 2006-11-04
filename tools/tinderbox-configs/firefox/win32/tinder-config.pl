@@ -192,7 +192,7 @@ $BinaryName = 'firefox.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
@@ -200,7 +200,7 @@ $package_creation_path = "/browser/installer";
 $ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/places";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/places";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
