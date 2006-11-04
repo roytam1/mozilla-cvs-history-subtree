@@ -659,22 +659,8 @@ nsHTMLScrollFrame::PlaceScrollArea(const ScrollReflowState& aState)
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord result;
+  nscoord result = 0;
   DISPLAY_MIN_WIDTH(this, result);
-  // XXX Might this make us count padding/border/margin twice?
-  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                              mInner.mScrolledFrame, nsLayoutUtils::MIN_WIDTH);
-
-  nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
-  if (ss.mVertical == NS_STYLE_OVERFLOW_SCROLL && // ideal?
-      mInner.mVScrollbarBox) {
-    nsBoxLayoutState bls(GetPresContext(), aRenderingContext);
-    nsSize vScrollbarMinSize(0, 0);
-    GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
-                        &vScrollbarMinSize, nsnull, PR_TRUE);
-    result += vScrollbarMinSize.width;
-  }
-
   return result;
 }
 
