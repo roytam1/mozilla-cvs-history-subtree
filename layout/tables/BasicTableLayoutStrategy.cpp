@@ -382,7 +382,7 @@ BasicTableLayoutStrategy::ComputeColumnIntrinsicWidths(nsIRenderingContext* aRen
         colFrame->AddPrefCoord(colFrame->GetPrefCoord() +
                                PR_MAX(colFrame->GetSpanMinCoord(),
                                       colFrame->GetSpanPrefCoord()),
-                               PR_FALSE);
+                               colFrame->GetHasSpecifiedCoord());
         NS_ASSERTION(colFrame->GetMinCoord() <= colFrame->GetPrefCoord(),
                      "min larger than pref");
         colFrame->AddPrefPercent(colFrame->GetSpanPrefPercent());

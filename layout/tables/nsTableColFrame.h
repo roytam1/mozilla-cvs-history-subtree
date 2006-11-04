@@ -143,6 +143,9 @@ public:
   void AddMinCoord(nscoord aMinCoord) {
     if (aMinCoord > mMinCoord)
       mMinCoord = aMinCoord;
+    // Needed in case mHasSpecifiedCoord is true.
+    if (aMinCoord > mPrefCoord)
+      mPrefCoord = aMinCoord;
   }
   nscoord GetMinCoord() {
     return mMinCoord;
@@ -154,15 +157,15 @@ public:
     mHasSpecifiedCoord = PR_FALSE;
   }
   void AddPrefCoord(nscoord aPrefCoord, PRBool aHasSpecifiedCoord) {
-    if (aPrefCoord > mPrefCoord) {
-      // It's a little weird that we do this even if aHasSpecifiedCoord
-      // is false and mHasSpecifiedCoord is true, but this is probably
-      // the most Web-compatible way that doesn't introduce row order
-      // dependence.
-      mPrefCoord = aPrefCoord;
-    }
     if (aHasSpecifiedCoord) {
+      if (!mHasSpecifiedCoord) {
+        mPrefCoord = mMinCoord;
+      }
       mHasSpecifiedCoord = PR_TRUE;
+    }
+    if (aPrefCoord > mPrefCoord &&
+        (aHasSpecifiedCoord || !mHasSpecifiedCoord)) {
+      mPrefCoord = aPrefCoord;
     }
   }
   nscoord GetPrefCoord() {
