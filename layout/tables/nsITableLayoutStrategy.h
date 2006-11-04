@@ -59,7 +59,8 @@ public:
     virtual nscoord GetMinWidth(nsIRenderingContext* aRenderingContext) = 0;
 
     /** Implement nsIFrame::GetPrefWidth for the table */
-    virtual nscoord GetPrefWidth(nsIRenderingContext* aRenderingContext) = 0;
+    virtual nscoord GetPrefWidth(nsIRenderingContext* aRenderingContext,
+                                 PRBool aComputingSize) = 0;
 
     /** Implement nsIFrame::MarkIntrinsicWidthsDirty for the table */
     virtual void MarkIntrinsicWidthsDirty() = 0;

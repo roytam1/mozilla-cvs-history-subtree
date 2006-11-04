@@ -1649,7 +1649,7 @@ nsTableFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
   ReflowColGroups(aRenderingContext);
 
-  return LayoutStrategy()->GetPrefWidth(aRenderingContext);
+  return LayoutStrategy()->GetPrefWidth(aRenderingContext, PR_FALSE);
 }
 
 /* virtual */ nsIFrame::IntrinsicWidthOffsetData
@@ -1686,6 +1686,33 @@ nsTableFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
   return result;
 }
 
+nscoord
+nsTableFrame::TableShrinkWidthToFit(nsIRenderingContext *aRenderingContext,
+                                    nscoord aWidthInCB)
+{
+  nscoord result;
+  nscoord minWidth = GetMinWidth(aRenderingContext);
+  if (minWidth > aWidthInCB) {
+    result = minWidth;
+  } else {
+    // Tables shrink width to fit with a slightly different algorithm
+    // from the one they use for their intrinsic widths (the difference
+    // relates to handling of percentage widths on columns).  So this
+    // function differs from nsFrame::ShrinkWidthToFit by only the
+    // following line.
+    // Since we've already called GetMinWidth, we don't need to do any
+    // of the other stuff GetPrefWidth does.
+    nscoord prefWidth =
+      LayoutStrategy()->GetPrefWidth(aRenderingContext, PR_TRUE);
+    if (prefWidth > aWidthInCB) {
+      result = aWidthInCB;
+    } else {
+      result = prefWidth;
+    }
+  }
+  return result;
+}
+
 /* virtual */ nsSize
 nsTableFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
                               nsSize aCBSize, nsSize aMargin,
@@ -1695,7 +1722,7 @@ nsTableFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   // Tables always shrink-wrap.
   nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
                     aPadding.width;
-  return nsSize(ShrinkWidthToFit(aRenderingContext, cbBased),
+  return nsSize(TableShrinkWidthToFit(aRenderingContext, cbBased),
                 NS_UNCONSTRAINEDSIZE);
 }
 

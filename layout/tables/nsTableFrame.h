@@ -272,6 +272,12 @@ public:
                                  nsSize aCBSize, nsSize aMargin,
                                  nsSize aBorder, nsSize aPadding,
                                  PRBool aShrinkWrap);
+  /**
+   * A copy of nsFrame::ShrinkWidthToFit that calls a different
+   * GetPrefWidth, since tables have two different ones.
+   */
+  nscoord TableShrinkWidthToFit(nsIRenderingContext *aRenderingContext,
+                                nscoord aWidthInCB);
 
   // XXXldb REWRITE THIS COMMENT!
   /** inner tables are reflowed in two steps.

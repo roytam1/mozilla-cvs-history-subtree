@@ -139,7 +139,8 @@ FixedTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 }
 
 /* virtual */ nscoord
-FixedTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
+FixedTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext,
+                                       PRBool aComputingSize)
 {
     // It's theoretically possible to do something much better here that
     // depends only on the columns and the first row, but it wouldn't be

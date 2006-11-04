@@ -67,12 +67,16 @@ BasicTableLayoutStrategy::GetMinWidth(nsIRenderingContext* aRenderingContext)
 }
 
 /* virtual */ nscoord
-BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext)
+BasicTableLayoutStrategy::GetPrefWidth(nsIRenderingContext* aRenderingContext,
+                                       PRBool aComputingSize)
 {
     DISPLAY_PREF_WIDTH(mTableFrame, mPrefWidth);
+    NS_ASSERTION((mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
+                 (mPrefWidthPctExpand == NS_INTRINSIC_WIDTH_UNKNOWN),
+                 "dirtyness out of sync");
     if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
         ComputeIntrinsicWidths(aRenderingContext);
-    return mPrefWidth;
+    return aComputingSize ? mPrefWidthPctExpand : mPrefWidth;
 }
 
 struct CellWidthInfo {
@@ -426,10 +430,12 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
         }
     }
 
+    nscoord pref_pct_expand = pref;
+
     // Account for small percentages expanding the preferred width of
     // *other* columns.
-    if (max_small_pct_pref > pref) {
-        pref = max_small_pct_pref;
+    if (max_small_pct_pref > pref_pct_expand) {
+        pref_pct_expand = max_small_pct_pref;
     }
 
     // Account for large percentages expanding the preferred width of
@@ -440,30 +446,33 @@ BasicTableLayoutStrategy::ComputeIntrinsicWidths(nsIRenderingContext* aRendering
                  "column percentage widths not adjusted down to 100%");
     if (pct_total == 1.0f) {
         if (nonpct_pref_total > 0) {
-            pref = nscoord_MAX;
+            pref_pct_expand = nscoord_MAX;
             // XXX Or should I use some smaller value?  (Test this using
             // nested tables!)
         }
     } else {
         nscoord large_pct_pref = nscoord(float(nonpct_pref_total) /
                                          (1.0f - pct_total));
-        if (large_pct_pref > pref)
-            pref = large_pct_pref;
+        if (large_pct_pref > pref_pct_expand)
+            pref_pct_expand = large_pct_pref;
     }
 
     // border-spacing isn't part of the basis for percentages
     if (colCount > 0) {
         nscoord add = spacing * (colCount + 1);
-        pref += add;
         min += add;
+        pref += add;
+        pref_pct_expand += add;
     }
 
     float p2t = mTableFrame->GetPresContext()->ScaledPixelsToTwips();
     min = nsTableFrame::RoundToPixel(min, p2t);
     pref = nsTableFrame::RoundToPixel(pref, p2t);
+    pref_pct_expand = nsTableFrame::RoundToPixel(pref_pct_expand, p2t);
 
     mMinWidth = min;
     mPrefWidth = pref;
+    mPrefWidthPctExpand = pref_pct_expand;
 }
 
 /* virtual */ void
@@ -471,6 +480,7 @@ BasicTableLayoutStrategy::MarkIntrinsicWidthsDirty()
 {
     mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
     mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+    mPrefWidthPctExpand = NS_INTRINSIC_WIDTH_UNKNOWN;
     mLastCalcWidth = nscoord_MIN;
 }
 
@@ -483,11 +493,14 @@ BasicTableLayoutStrategy::ComputeColumnWidths(const nsHTMLReflowState& aReflowSt
         return;
     mLastCalcWidth = width;
 
-    // XXX Is this needed?
     NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
                  (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN),
                  "dirtyness out of sync");
-    if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+    NS_ASSERTION((mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN) ==
+                 (mPrefWidthPctExpand == NS_INTRINSIC_WIDTH_UNKNOWN),
+                 "dirtyness out of sync");
+    // XXX Is this needed?
+    if (mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
         ComputeIntrinsicWidths(aReflowState.rendContext);
 
     nsTableCellMap *cellMap = mTableFrame->GetCellMap();
