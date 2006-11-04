@@ -1189,12 +1189,19 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
 
   result = AddPercents(aType, result, pctTotal);
 
-  if (styleWidth.GetUnit() == eStyleUnit_Coord) {
-    result = AddPercents(aType,
-                         styleWidth.GetCoordValue() + coordOutsideWidth,
-                         pctOutsideWidth);
+  switch (styleWidth.GetUnit()) {
+    case eStyleUnit_Coord:
+      result = AddPercents(aType,
+                           styleWidth.GetCoordValue() + coordOutsideWidth,
+                           pctOutsideWidth);
+      break;
+    case eStyleUnit_Percent:
+      if (aType == MIN_WIDTH && aFrame->IsFrameOfType(nsIFrame::eReplaced)) {
+        // A percentage width on replaced elements means they can shrink to 0.
+        result = 0; // let |min| handle padding/border/margin
+      }
+      break;
   }
-  // XXX If it's a percent, should we use 0 for min-width?
 
   if (styleMaxWidth.GetUnit() == eStyleUnit_Coord) {
     nscoord maxw = AddPercents(aType,
