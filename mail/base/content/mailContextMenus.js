@@ -148,6 +148,8 @@ function fillThreadPaneContextMenu()
   SetupAddAllToABMenuItem("threadPaneContext-addAllToAddressBook", numSelected, false);
 
   ShowMenuItem("threadPaneContext-sep-edit", (numSelected <= 1));
+  
+  EnableMenuItem('downloadSelected', GetNumSelectedMessages() > 0);
 
   return(true);
 }

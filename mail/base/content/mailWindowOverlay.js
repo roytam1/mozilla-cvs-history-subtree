@@ -982,11 +982,11 @@ function GetMessagesForInboxOnServer(server)
 function MsgGetMessage()
 {
   // if offline, prompt for getting messages
-  if(CheckOnline())
+  if (CheckOnline())
     GetFolderMessages();
   else if (DoGetNewMailWhenOffline())
-      GetFolderMessages();
-    }
+    GetFolderMessages();
+}
 
 function MsgGetMessagesForAllServers(defaultServer)
 {

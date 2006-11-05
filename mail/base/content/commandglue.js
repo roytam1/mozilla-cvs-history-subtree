@@ -1006,11 +1006,12 @@ function Redo()
 {
     messenger.Redo(msgWindow);
 }
+
 var mailOfflineObserver = {
   observe: function(subject, topic, state) {
     // sanity checks
-    if (topic != "network:offline-status-changed") return;
-    MailOfflineStateChanged(state == "offline");
+    if (topic == "network:offline-status-changed")
+      MailOfflineStateChanged(state == "offline");
   }
 }
 
