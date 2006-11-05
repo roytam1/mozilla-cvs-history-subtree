@@ -67,7 +67,6 @@
 #include "nsMsgComposeStringBundle.h"
 #include "nsSpecialSystemDirectory.h"
 #include "nsMsgSend.h"
-#include "nsMsgCreate.h"
 #include "nsMailHeaders.h"
 #include "nsMsgPrompts.h"
 #include "nsMimeTypes.h"
@@ -732,6 +731,10 @@ nsMsgCompose::Initialize(nsIDOMWindowInternal *aWindow, nsIMsgComposeParams *par
   params->GetSmtpPassword(getter_Copies(smtpPassword));
   mSmtpPassword = (const char *)smtpPassword;
 
+  // register the compose object with the compose service
+  rv = composeService->RegisterComposeWindow(aWindow, this);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   return CreateMessage(originalMsgURI, type, composeFields);
 }
 
@@ -1234,6 +1237,10 @@ NS_IMETHODIMP nsMsgCompose::CloseWindow(PRBool recycleIt)
   nsCOMPtr<nsIMsgComposeService> composeService = do_GetService(NS_MSGCOMPOSESERVICE_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
   
+  // unregister the compose object with the compose service
+  rv = composeService->UnregisterComposeWindow(m_window);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
 #if !defined(XP_MAC)
   recycleIt = recycleIt && !IsLastWindow();
 #endif /* XP_MAC */
@@ -1293,9 +1300,9 @@ NS_IMETHODIMP nsMsgCompose::CloseWindow(PRBool recycleIt)
          */
       m_editor = nsnull;
     }
-    nsIBaseWindow * aWindow = m_baseWindow;
+    nsIBaseWindow * window = m_baseWindow;
     m_baseWindow = nsnull;
-    rv = aWindow->Destroy();
+    rv = window->Destroy();
   }
   
   return rv;
