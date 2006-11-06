@@ -1,15 +1,11 @@
 #
-## hostname: fx-win32-tbox
-## uname: CYGWIN_NT-5.2 fx-win32-tbox 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
+#### hostname: bl-bldxp01.office.mozilla.org
+#### uname: CYGWIN_NT-5.1 bl-bldxp01 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
+###
 #
-
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
-
-$ENV{MOZ_INSTALLER_USE_7ZIP} = '1';
-$ENV{NO_EM_RESTART} = '1';
-$ENV{MOZ_PACKAGE_NSIS} = '1';
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -29,7 +25,6 @@ $ENV{MOZ_PACKAGE_NSIS} = '1';
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
@@ -44,40 +39,44 @@ $BuildAdministrator = 'build@mozilla.org';
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
 #$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
-#$TestOnly          = 0;      # Only run tests, don't pull/build
+$TestOnly          = 1;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
+#$SkipCheckout      = 0;      # Use to debug build process without checking out new source.
 #$BuildLocales      = 0;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = "Firefox";
-$VendorName               = "Mozilla";
+#$ProductName              = "Mozilla";
+$VendorName               = 'mozilla';
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
+#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RegxpcomTest             = 0;
 $AliveTest                = 1;
-$JavaTest                 = 0;
-$ViewerTest               = 0;
-$BloatTest                = 0;  # warren memory bloat test
-$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
-$DomToTextConversionTest  = 0;  
-$XpcomGlueTest            = 0;
+#$JavaTest                 = 0;
+#$ViewerTest               = 0;
+#$BloatTest                = 0;  # warren memory bloat test
+#$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
+#$DomToTextConversionTest  = 0;  
+#$XpcomGlueTest            = 0;
 $CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
-$MailBloatTest            = 0;
-$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
-$QATest                   = 0;  
-$XULWindowOpenTest        = 0;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
-$NeckoUnitTest            = 0;
-$RenderPerformanceTest    = 0;  # Tgfx
+#$MailBloatTest            = 0;
+#$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
+$LayoutPerformanceTest    = 1;  # Tp
+$LayoutPerformanceLocalTest = 1;  # Tp2
+$DHTMLPerformanceTest     = 1;  # Tdhtml
+#$QATest                   = 0;  
+$XULWindowOpenTest        = 1;  # Txul
+$StartupPerformanceTest   = 1;  # Ts
 
-$TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = 'fx-win32-tbox';
+$TestsPhoneHome           = 1;  # Should test report back to server?
+# If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
+# parseable format
+$TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
+$MatchBuildname = 'WINNT 5.2 fx-win32-tbox Depend Nightly';
+#$GraphNameOverride        = 'Fx-Trunk-win32-test1'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -87,7 +86,8 @@ $GraphNameOverride        = 'fx-win32-tbox';
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "axolotl.mozilla.org";  # localhost
+#$pageload_server          = "axolotl.mozilla.org";  # localhost
+$pageload_server          = "spider";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -96,7 +96,7 @@ $pageload_server          = "axolotl.mozilla.org";  # localhost
 #$CreateProfileTimeout             = 45;
 #$RegxpcomTestTimeout              = 120;
 
-#$AliveTestTimeout                 = 30;
+$AliveTestTimeout                 = 45;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
 #$BloatTestTimeout                 = 120;   # seconds
@@ -106,14 +106,14 @@ $pageload_server          = "axolotl.mozilla.org";  # localhost
 #$XpcomGlueTestTimeout             = 15;
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
-$LayoutPerformanceTestTimeout     = 800;  # entire test, seconds
+#$LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
+#$LayoutPerformanceLocalTestTimeout     = 1200;  # entire test, seconds
 #$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
-#$StartupPerformanceTestTimeout    = 20;    # seconds
-#$XULWindowOpenTestTimeout	      = 90;   # seconds
-#$NeckoUnitTestTimeout             = 30;    # seconds
-$RenderPerformanceTestTimeout     = 1800;  # seconds
+#$StartupPerformanceTestTimeout    = 15;    # seconds
+#$XULWindowOpenTestTimeout	      = 150;   # seconds
+
 
 #$MozConfigFileName = 'mozconfig';
 
@@ -121,15 +121,15 @@ $RenderPerformanceTestTimeout     = 1800;  # seconds
 #$MozProfileName = 'default';
 
 #- Set these to what makes sense for your system
-$Make          = 'make';       # Must be GNU make
+#$Make          = 'gmake';       # Must be GNU make
 #$MakeOverrides = '';
 #$mail          = '/bin/mail';
 #$CVS           = 'cvs -q';
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'd:/moztools/bin/blat';
-$use_blat       = 0;
+#$blat           = 'c:/nstools/bin/blat';
+#$use_blat       = 0;
 
 # Set moz_cvsroot to something like:
 # :pserver:$ENV{USER}%netscape.com\@cvs.mozilla.org:/cvsroot
@@ -139,7 +139,6 @@ $use_blat       = 0;
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -148,10 +147,10 @@ $moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-#$ObjDir = 'fx-trunk-cairo';
+#$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'fx-win32-tbox perf test';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -166,11 +165,9 @@ $BuildNameExtra = 'Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-#$BuildTree  = 'MozillaTest';
 $BuildTree  = 'Firefox';
 
-#$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'HEAD';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -190,34 +187,29 @@ $BinaryName = 'firefox.exe';
 #$ShellOverride = '';
 
 # Release build options
-$ReleaseBuild  = 1;
-$shiptalkback  = 1;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "4";
-$package_creation_path = "/browser/installer";
+#$ReleaseBuild  = 1;
+#$clean_objdir = 1; # remove objdir when starting release cycle?
+#$clean_srcdir = 1; # remove srcdir when starting release cycle?
+#$shiptalkback  = 1;
+#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+#$ReleaseGroup = ''; # group to set uploaded files to
+#$build_hour    = "8";
+#$package_creation_path = "/xpinstall/packager";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
-$ssh_version   = "2";
+#$ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
-$notify_list   = 'build-announce@mozilla.org';
-$stub_installer = 0;
-$sea_installer = 1;
-$archive       = 1;
-$push_raw_xpis = 1;
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "trunk";
-$update_platform = "WINNT_x86-msvc";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
+#$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
+#$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
+#$tbox_ftp_path = $ftp_path;
+#$tbox_url_path = $url_path;
+#$milestone     = "trunk";
+#$notify_list   = "cmp\@mozilla.org";
+#$stub_installer = 1;
+#$sea_installer = 1;
+#$archive       = 0;
+#$push_raw_xpis = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -243,6 +235,10 @@ $update_pushinfo = 1;
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
+# If tinderbox is running in a test-only mode, it needs to be able to download
+# the latest build and unpack it rather than building it.
+$TestOnlyTinderbox = 1;
+$DownloadBuildFile = 'firefox-3.0a1.en-US.win32.zip';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/fx-win32-tbox-trunk';
+$DownloadBuildDir = 'firefox';
 
-# Build XForms
-$BuildXForms = 1;
