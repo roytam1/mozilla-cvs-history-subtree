@@ -1,25 +1,22 @@
 #
-## hostname: xserve03.build.mozilla.org
-## uname: Darwin xserve03.build.mozilla.org 8.1.0 Darwin Kernel Version 8.1.0: Tue May 10 18:16:08 PDT 2005; root:xnu-792.1.5.obj~4/RELEASE_PPC Power Macintosh powerpc
+## hostname: boomer
+## uname: Darwin boomer.mozilla.org 7.9.0 Darwin Kernel Version 7.9.0: Wed Mar 30 20:11:17 PST 2005; root:xnu/xnu-517.12.7.obj~1/RELEASE_PPC  Power Macintosh powerpc
 #
 
-. $topsrcdir/build/macosx/universal/mozconfig
+# . $topsrcdir/browser/config/mozconfig
 
-mk_add_options MOZ_MAKE_FLAGS="-j4"
-mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
-mk_add_options MOZ_CO_PROJECT="browser"
-mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../build/universal
+mk_add_options MOZ_CO_PROJECT=browser
+mk_add_options MOZ_CO_LOCALES=all
+mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
+# mk_add_options LOCALES_CO_TAG=AVIARY_1_0_20040515_BRANCH
 
 ac_add_options --enable-application=browser
-ac_add_options --enable-update-channel=nightly
 ac_add_options --enable-optimize="-O2 -g"
 ac_add_options --disable-debug
 ac_add_options --disable-tests
-ac_add_options --enable-update-packaging
-
+# ac_add_options --enable-official-branding
 ac_add_options --enable-static
 ac_add_options --disable-shared
-# ac_add_options --enable-official-branding
-ac_add_app_options ppc --enable-prebinding
-ac_add_options --enable-svg
-ac_add_options --enable-canvas
+ac_add_options --enable-prebinding
+
+ac_add_options --with-macos-sdk=/Developer/SDKs/MacOSX10.2.8.sdk
