@@ -1,6 +1,6 @@
 #
-## hostname: xserve03.build.mozilla.org
-## uname: Darwin xserve03.build.mozilla.org 8.1.0 Darwin Kernel Version 8.1.0: Tue May 10 18:16:08 PDT 2005; root:xnu-792.1.5.obj~4/RELEASE_PPC Power Macintosh powerpc
+## hostname: xserve04
+## uname: Darwin xserve04.build.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -8,6 +8,9 @@
 #-    The default values are the same as the commented variables.
 
 $MacUniversalBinary = 1;
+
+## See bug 323197 -jpr
+$ENV{'MOZ_MILESTONE_RELEASE'} = 1;
 
 $ENV{CHOWN_ROOT} = "/builds/tinderbox/bin/chown_root";
 $ENV{REVERT_ROOT} = "/builds/tinderbox/bin/revert_root";
@@ -161,7 +164,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'XR-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -176,10 +179,10 @@ $BuildNameExtra = 'Universal Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'XULRunner';
+$BuildTree  = 'XULRunner-Mozilla1.8.0';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -215,7 +218,7 @@ $ftp_path      = "/home/ftp/pub/xulrunner/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
 $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
-#$milestone     = "trunk";
+$milestone     = "mozilla1.8.0";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;

@@ -1,11 +1,9 @@
-#
-# hostname: fxexp-win32-tbox
-# uname: CYGWIN_NT-5.2 fxexp-win32-tbox 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
-#
-
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
+
+## See bug 323197 -jpr
+$ENV{'MOZ_MILESTONE_RELEASE'} = 1;
 
 $ENV{NO_EM_RESTART} = "1";
 $ENV{MOZ_INSTALLER_USE_7ZIP} = "1";
@@ -124,7 +122,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'd:/moztools/bin/blat.exe';
+$blat           = 'c:/moztools/bin/blat';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
@@ -147,7 +145,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'XR-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -162,10 +160,10 @@ $BuildNameExtra = 'release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'XULRunner';
+$BuildTree  = 'XULRunner-Mozilla1.8.0';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -199,7 +197,7 @@ $ftp_path      = "/home/ftp/pub/xulrunner/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
 $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
-#$milestone     = "trunk";
+$milestone     = "mozilla1.8.0";
 #$notify_list   = "cmp\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
