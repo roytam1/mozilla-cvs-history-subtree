@@ -273,7 +273,8 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
 
   // XXX Should we really need to null check mCBReflowState?  (We do for
   // at least nsBoxFrame).
-  if (mFlags.mSpecialHeightReflow && IS_TABLE_CELL(frame->GetType())) {
+  if (mFlags.mSpecialHeightReflow && IS_TABLE_CELL(frame->GetType()) &&
+      (frame->GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT)) {
     mFlags.mVResize = PR_TRUE;
   } else if (mCBReflowState && !frame->IsContainingBlock()) {
     // XXX Is this problematic for relatively positioned inlines acting
