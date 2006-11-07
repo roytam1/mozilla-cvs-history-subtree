@@ -7,6 +7,9 @@
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
+## See bug 323197 -jpr
+$ENV{'MOZ_MILESTONE_RELEASE'} = 1;
+
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
 #  Default: 0
@@ -38,7 +41,7 @@ $BuildAdministrator = "build\@mozilla.org";
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$ConfigureOnly     = 0;      # Configure, but do not build.
 #$TestOnly          = 0;      # Only run tests, don't pull/build
@@ -155,7 +158,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'XR-Release-Clbr';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -170,10 +173,10 @@ $BuildNameExtra = 'release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'XULRunner';
+$BuildTree  = 'XULRunner-Mozilla1.8.0';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'XULRUNNER_1_8_0_5_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -196,7 +199,7 @@ $BinaryName = 'xulrunner-bin';
 $ReleaseBuild  = 1;
 #$LocaleProduct = "browser";
 $shiptalkback  = 0;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$build_hour    = "8";
 $package_creation_path = "/xulrunner/installer";
@@ -208,7 +211,7 @@ $ftp_path      = "/home/ftp/pub/xulrunner/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
 $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
-#$milestone     = "trunk";
+$milestone     = "xulrunner1.8.0.4";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
