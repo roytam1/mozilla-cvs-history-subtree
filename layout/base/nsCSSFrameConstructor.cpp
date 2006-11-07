@@ -1914,6 +1914,7 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument,
   , mUpdateCount(0)
   , mQuotesDirty(PR_FALSE)
   , mCountersDirty(PR_FALSE)
+  , mInitialContainingBlockIsAbsPosContainer(PR_FALSE)
 {
   if (!gGotXBLFormPrefs) {
     gGotXBLFormPrefs = PR_TRUE;
@@ -4556,6 +4557,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
   }
 
   mInitialContainingBlock = contentFrame;
+  mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
 
   // if it was a table then we don't need to process our children.
   if (!docElemIsTable) {
@@ -4568,6 +4570,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
       PRBool haveFirstLetterStyle, haveFirstLineStyle;
       HaveSpecialBlockStyle(aDocElement, styleContext,
                             &haveFirstLetterStyle, &haveFirstLineStyle);
+      mInitialContainingBlockIsAbsPosContainer = PR_TRUE;
       aState.PushAbsoluteContainingBlock(contentFrame, absoluteSaveState);
       aState.PushFloatContainingBlock(contentFrame, floatSaveState,
                                       haveFirstLetterStyle,
@@ -8042,8 +8045,9 @@ nsCSSFrameConstructor::GetAbsoluteContainingBlock(nsIFrame* aFrame)
     return AdjustAbsoluteContainingBlock(mPresShell->GetPresContext(),
                                          containingBlock);
 
-  // If we didn't find it, then there isn't one.
-  return nsnull;
+  // If we didn't find it, then use the initial containing block if it
+  // supports abs pos kids.
+  return mInitialContainingBlockIsAbsPosContainer ? mInitialContainingBlock : nsnull;
 }
 
 nsIFrame*
@@ -10075,6 +10079,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
 
       if (mInitialContainingBlock == childFrame) {
         mInitialContainingBlock = nsnull;
+        mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
       }
 
       if (haveFLS && mInitialContainingBlock) {
