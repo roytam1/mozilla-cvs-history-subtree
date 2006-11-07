@@ -1,6 +1,6 @@
 #
-## hostname: argo
-## uname: Linux argo.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname: prometheus-vm.mozilla.org
+## uname:  Linux prometheus-vm.mozilla.org 2.4.21-27.0.4.EL #1 Sat Apr 16 19:00:33 EDT 2005 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -10,7 +10,7 @@
 $BuildXForms = "1";
 $ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
-#$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
+$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
 # $ENV{PAGELOAD_URL} = "http://spider/page-loader";
 
 # To ensure Talkback client builds properly on some Linux boxen where LANG
@@ -43,7 +43,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
-$DisplayServer = ':0.0';
+$DisplayServer = ':1.0';
 
 #- Default values of command-line opts
 #-
@@ -59,32 +59,31 @@ $DisplayServer = ':0.0';
 #$BuildLocales      = 0;      # Do l10n packaging?
 
 # Tests
-$CleanProfile             = 1;
+#$CleanProfile             = 0;
 #$ResetHomeDirForTests     = 1;
 $ProductName              = "Firefox";
-$VendorName               = 'Mozilla';
+#$VendorName               = '';
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
-$AliveTest                = 1;
+$RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
+#$RegxpcomTest             = 1;
+#$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
-$EmbedCodesizeTest        = 1;  # mZ, require mozilla/tools/codesigns
+#$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
+#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
+#$LayoutPerformanceTest    = 0;  # Tp
+#$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
+#$StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
-$GraphNameOverride        = 'argo-vm';
+#$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -95,8 +94,7 @@ $GraphNameOverride        = 'argo-vm';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
-$pageload_server      = "axolotl.mozilla.org";
-
+$pageload_server          = "axolotl.mozilla.org";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -147,7 +145,7 @@ $pageload_server      = "axolotl.mozilla.org";
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -159,7 +157,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Fx-Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -174,10 +172,10 @@ $BuildNameExtra = 'Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -201,7 +199,7 @@ $ReleaseBuild  = 1;
 $shiptalkback  = 1;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = 4;
+$build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
@@ -211,20 +209,20 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
+$milestone     = "mozilla1.8";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-$update_pushinfo = 1;
 $update_package = 1;
 $update_product = "Firefox";
-$update_version = "trunk";
+$update_version = "2.0";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
-$update_filehost = 'ftp.mozilla.org';
-$update_ver_file = 'browser/config/version.txt';
+$update_filehost = "ftp.mozilla.org";
+$update_ver_file = "browser/config/version.txt";
+$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -250,3 +248,6 @@ $update_ver_file = 'browser/config/version.txt';
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
+
+# Build XForms
+$BuildXForms = 1;
