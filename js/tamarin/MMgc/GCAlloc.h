@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __GCAlloc__
 #define __GCAlloc__
 
@@ -66,11 +67,11 @@ namespace MMgc
 	 * heap size / minimim heap size ratio.
 	 * 
 	 */
-	class GCAlloc : public GCAllocObject
+	class GCAlloc : public GCAllocBase
 	{
 		friend class GC;
 	public:
-		enum ItemBit { kMark=1, kQueued=2, kFinalize=4, kHasWeakRef=8, kFreelist=kMark|kQueued };
+		enum ItemBit { kMark=1, kQueued=2, kFinalize=4, kHasWeakRef=8 };
 
 		GCAlloc(GC* gc, int itemSize, bool containsPointers, bool isRC, int sizeClassIndex);
 		~GCAlloc();
@@ -78,25 +79,17 @@ namespace MMgc
 		void* Alloc(size_t size, int flags);
 		static void Free(void *ptr);
 		void Finalize();
+		void Sweep(bool force=false);
 		size_t GetItemSize() { return m_itemSize; }
 		void ClearMarks();
-#ifdef _DEBUG
-		void CheckMarks();
-#endif
 
 		static int SetMark(const void *item)
 		{
 			// Zero low 12 bits of address to get to the Block header
 			GCBlock *block = (GCBlock*) ((uint32)item & ~0xFFF);
-			int index = GetIndex(block, item);
-			int mask = kMark << ((index&7)<<2);
-			uint32 *bits = &block->GetBits()[index>>3];
-			int set = *bits & mask;
-			*bits |= mask;
-			*bits &= ~(kQueued << ((index&7)<<2));
-			return set;
+			return SetBit(block, GetIndex(block, item), kMark);
 		}
-
+		
 		static int SetQueued(const void *item)
 		{
 			// Zero low 12 bits of address to get to the Block header
@@ -205,22 +198,21 @@ namespace MMgc
 		struct GCBlock;
 
 		friend struct GCAlloc::GCBlock;
-
+		
 		struct GCBlock
 		{
 			GC *gc;
 			uint32 size;
-			GCAlloc *alloc;			
-			GCBlock* next;
-			GCBlock* prev;
+			GCAlloc *alloc;
 			char*  nextItem;
 			void*  firstFree;        // first item on free list
+			GCBlock* next;
+			GCBlock* prev;
 			GCBlock *prevFree;
 			GCBlock *nextFree;
 			uint32* bits;
 			short numItems;
-			bool needsSweeping:1; 
-			bool finalizeState:1;  // whether we've been visited during the Finalize stage
+			bool needsSweeping;
 			char   *items;
 
 			int GetCount() const
@@ -239,7 +231,7 @@ namespace MMgc
 			
 			void FreeItem(void *item, int index);
 
-			bool IsFull() const
+			bool IsFull() 
 			{
 				bool full = (nextItem == firstFree);
 				// the only time nextItem and firstFree should be equal is when they
@@ -256,9 +248,6 @@ namespace MMgc
 
 		// The lowest priority block that has free items		
 		GCBlock* m_firstFree;
-
-		// List of blocks that need sweeping
-		GCBlock* m_needsSweeping;
 
 		int    m_itemsPerBlock;
 		size_t    m_itemSize;
@@ -277,23 +266,19 @@ namespace MMgc
 
 		bool containsPointers;
 		bool containsRCObjects;
-		bool m_finalized;
+
 		
-		bool IsOnEitherList(GCBlock *b)
-		{
-			return b->nextFree != NULL || b->prevFree != NULL || b == m_firstFree || b == m_needsSweeping;
-		}
 
 		GCBlock* CreateChunk();
 		void UnlinkChunk(GCBlock *b);
 		void FreeChunk(GCBlock* b);
 		void AddToFreeList(GCBlock *b)
 		{
-			GCAssert(!IsOnEitherList(b));
+			GCAssert(b->nextFree == NULL && b->prevFree == NULL);
 			b->prevFree = NULL;
 			b->nextFree = m_firstFree;
 			if (m_firstFree) {
-				GCAssert(m_firstFree->prevFree == 0 && m_firstFree != b);
+				GCAssert(m_firstFree->prevFree == 0);
 				m_firstFree->prevFree = b;
 			}
 			m_firstFree = b;			
@@ -309,42 +294,8 @@ namespace MMgc
 			
 			if (b->nextFree)
 				b->nextFree->prevFree = b->prevFree;
-			b->nextFree = b->prevFree = NULL;
 		}
-
-		void AddToSweepList(GCBlock *b)
-		{
-			GCAssert(!IsOnEitherList(b) && !b->needsSweeping);
-			b->prevFree = NULL;
-			b->nextFree = m_needsSweeping;
-			if (m_needsSweeping) {
-				GCAssert(m_needsSweeping->prevFree == 0);
-				m_needsSweeping->prevFree = b;
-			}
-			m_needsSweeping = b;
-			b->needsSweeping = true;
-		}
-
-		void RemoveFromSweepList(GCBlock *b)
-		{
-			GCAssert(m_needsSweeping == b || b->prevFree != NULL);
-			if ( m_needsSweeping == b )
-				m_needsSweeping = b->nextFree;
-			else
-				b->prevFree->nextFree = b->nextFree;
-			
-			if (b->nextFree)
-				b->nextFree->prevFree = b->prevFree;
-			b->needsSweeping = false;
-			b->nextFree = b->prevFree = NULL;
-		}
-
 		bool Sweep(GCBlock *b);
-		void SweepGuts(GCBlock *b);
-		
-
-		void ClearMarks(GCAlloc::GCBlock* block);
-		void SweepNeedsSweeping();
 
 		bool IsLastFreeBlock(GCBlock *b) { return m_firstFree == NULL || (m_firstFree == b && b->nextFree == NULL); }
 
@@ -385,10 +336,6 @@ namespace MMgc
 		}
 
 		void ComputeMultiplyShift(uint16 d, uint16 &muli, uint16 &shft);
-
-	protected:
-		GC *m_gc;
-
 	};
 }
 

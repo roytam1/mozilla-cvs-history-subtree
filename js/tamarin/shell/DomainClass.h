@@ -46,7 +46,7 @@ namespace avmshell
 		ClassClosure* getClass(Stringp name);
 		
 		DWB(DomainEnv*) domainEnv;
-		DRCWB(Toplevel*) domainToplevel;
+		DWB(Toplevel*) domainToplevel;
 
 	  private:
 	    ScriptObject* finddef(Multiname* multiname, DomainEnv* domainEnv);

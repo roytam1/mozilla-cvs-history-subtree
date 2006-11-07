@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_MultinameHashtable__
 #define __avmplus_MultinameHashtable__
 

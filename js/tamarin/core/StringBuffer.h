@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_StringBuffer__
 #define __avmplus_StringBuffer__
 
@@ -71,7 +72,7 @@ namespace avmplus
 	{
 	public:
 		StringBuffer(AvmCore* core) :
-			PrintWriter(core), m_stream(core->GetGC())
+			PrintWriter(core), m_stream(core->gc)
 		{
 			setOutputStream(&m_stream);
 		}

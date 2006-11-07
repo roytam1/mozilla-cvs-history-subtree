@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_BitSet__
 #define __avmplus_BitSet__
 

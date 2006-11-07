@@ -104,8 +104,7 @@ extern "C"
 
 namespace avmplus
 {
-	GrowableBuffer::GrowableBuffer(MMgc::GCHeap *gcheap)
-		: heap(gcheap)
+	GrowableBuffer::GrowableBuffer()
 	{
 		init();
 		AvmAssert( (size_t)MathUtils::nextPowerOfTwo(pageSize()-1) == pageSize() );
@@ -127,6 +126,7 @@ namespace avmplus
 	byte* GrowableBuffer::reserve(size_t amt)
 	{
 		// attempt to reserve space 
+		MMgc::GCHeap* heap = MMgc::GCHeap::GetGCHeap();
 		amt = (size_t)pageAfter((byte*)amt);   // align to page
 		first = (byte*)heap->ReserveCodeMemory(0, amt);
 		last = first + amt;
@@ -146,6 +146,7 @@ namespace avmplus
 		if (current + pageSize() < uncommit) 
 		{
 			// get rid of pages
+			MMgc::GCHeap* heap = MMgc::GCHeap::GetGCHeap();
 			byte* after = pageAfter(current);
 #ifdef MEMORY_INFO
 			MMgc::ChangeSizeForObject(this, -1 * (uncommit-after));
@@ -166,6 +167,7 @@ namespace avmplus
 	byte* GrowableBuffer::growBy(size_t amt)
 	{
 		AvmAssertMsg(amt % pageSize() == 0, "amt must be multiple of pageSize");
+		MMgc::GCHeap* heap = MMgc::GCHeap::GetGCHeap();
 		size_t grow = ( (uncommit + amt) < last) ? amt : last - uncommit;
 #ifdef MEMORY_INFO
 		MMgc::ChangeSizeForObject(this, grow);
@@ -184,6 +186,7 @@ namespace avmplus
 	byte* GrowableBuffer::shrinkTo(size_t amt)
 	{
 		AvmAssertMsg(amt % pageSize() == 0, "amt must be multiple of pageSize");
+		MMgc::GCHeap* heap = MMgc::GCHeap::GetGCHeap();
 		byte* shrinkTo = start() + amt;
 		size_t size = (shrinkTo < uncommit) ? uncommit - shrinkTo : 0;
 		if (size > 0)
@@ -207,6 +210,7 @@ namespace avmplus
 		// get rid of the whole shebang
 		if (first != 0)
 		{
+			MMgc::GCHeap* heap = MMgc::GCHeap::GetGCHeap();
 #ifdef MEMORY_INFO
 			MMgc::ChangeSizeForObject(this, -1 * (uncommit-first));
 			heap->DecommitCodeMemory(first, uncommit-first);
@@ -376,6 +380,74 @@ namespace avmplus
 	}
 
 	#ifdef AVMPLUS_ROSETTA
+
+	/*-*-------------------------------------------------------------------------
+	/ Function
+	/   LoadFrameworkBundle
+	/
+	/ Purpose
+	/   Samething as GetSharedLibrary but for OS X and for non-CFM.
+	/
+	/ Entry
+	/   framework  =>  A CFStringRef to the name of the framework you want to load.
+	/ 	bundlePtr  =>  if non NULL upon return it will contain the reference to the framework you loaded.
+	/--------------------------------------------*/
+	static OSStatus LoadFrameworkBundle( CFStringRef framework, CFBundleRef *bundlePtr )
+	{
+		OSStatus 	err;
+		FSRef 		frameworksFolderRef;
+		CFURLRef	baseURL;
+		CFURLRef	bundleURL;
+		
+		// clear out the result
+		*bundlePtr = NULL;
+		
+		baseURL = NULL;
+		bundleURL = NULL;
+		
+		err = ::FSFindFolder( kOnAppropriateDisk, kFrameworksFolderType, true, &frameworksFolderRef );
+		if( err == noErr ) 
+		{
+			baseURL = ::CFURLCreateFromFSRef( kCFAllocatorSystemDefault, &frameworksFolderRef );
+			if( !baseURL )
+				err = coreFoundationUnknownErr;
+		}
+		
+		if( !err ) 
+		{
+			bundleURL = ::CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, baseURL, framework, false );
+			if( !bundleURL )
+				err = coreFoundationUnknownErr;
+		}
+
+		if( !err )
+		{
+			*bundlePtr = ::CFBundleCreate( kCFAllocatorSystemDefault, bundleURL );
+			if( !*bundlePtr)
+				err = coreFoundationUnknownErr;
+		}
+		
+		if( !err && !::CFBundleLoadExecutable( *bundlePtr ) )
+				err = coreFoundationUnknownErr;
+
+		// Clean up.
+		if( err && *bundlePtr ) 
+		{
+			::CFRelease( *bundlePtr );
+			*bundlePtr = NULL;
+		}
+		
+		if( bundleURL != NULL )
+			::CFRelease( bundleURL );
+
+		if( baseURL != NULL)
+			::CFRelease( baseURL );
+		
+		return err;
+	}
+
+	typedef int (*f_sysctlnametomib)(const char *name, int *mibp, size_t *sizep);
+
 	bool GenericGuard::rosetta = false;
 
 	/**
@@ -388,6 +460,9 @@ namespace avmplus
 									 void *oldp, size_t *oldlenp, 
 									 void *newp, size_t newlen)
 	{
+	
+	
+	
 		if (pid == 0) {
 			if (sysctlbyname(name, oldp, oldlenp, newp, newlen) == -1)  {
 				AvmAssertMsg(false, "sysctlbyname_with_pid(0): sysctlbyname failed");
@@ -396,8 +471,21 @@ namespace avmplus
 		} else {
 			int mib[CTL_MAXNAME];
 			size_t len = CTL_MAXNAME;
-			if (sysctlnametomib(name, mib, &len) == -1) {
-				AvmAssertMsg(false, "sysctlbyname_with_pid(0): sysctlnametomib failed");				
+
+			CFBundleRef sysBundle;
+			if ( LoadFrameworkBundle( CFSTR("System.framework"), &sysBundle ) == noErr ) {
+				f_sysctlnametomib p_sysctlnametomib = (f_sysctlnametomib)CFBundleGetFunctionPointerForName( sysBundle, CFSTR("sysctlnametomib") );
+				if ( p_sysctlnametomib ) {
+					if (p_sysctlnametomib(name, mib, &len) == -1) {
+						AvmAssertMsg(false, "sysctlbyname_with_pid(0): sysctlnametomib failed");				
+						return -1;
+					}
+				} else {
+					AvmAssertMsg(false, "CFBundleGetFunctionPointerForName(0): CFBundleGetFunctionPointerForName failed");				
+					return -1;
+				}
+			} else {
+				AvmAssertMsg(false, "LoadFrameworkBundle(0): LoadFrameworkBundle failed");				
 				return -1;
 			}
 			mib[len] = pid;

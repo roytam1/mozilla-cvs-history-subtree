@@ -86,8 +86,7 @@ namespace avmshell
 		{ 
 			m_endian = kBigEndian;
 		}
-		
-		
+
 		Endian GetEndian() const { return m_endian; }
 		void SetEndian(Endian endian) { m_endian = endian; }
 

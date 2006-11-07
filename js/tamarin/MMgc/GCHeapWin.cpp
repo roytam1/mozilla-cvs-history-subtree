@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include <windows.h>
 
 #include "MMgc.h"
@@ -270,8 +271,8 @@ namespace MMgc
 	 * If executableFlag is true, the memory is made executable and read-only.
 	 *
 	 * If executableFlag is false, the memory is made non-executable and
-	 * read-write.
-	 *
+	 * read-write.  
+	 * 
 	 * [rickr] bug #182323  The codegen can bail in the middle of generating 
 	 * code for any number of reasons.  When this occurs we need to ensure 
 	 * that any code that was previously on the page still executes, so we 

@@ -225,12 +225,9 @@ namespace avmplus
 		// whether this sequence is interruptable or not.
 		bool interruptable = (info->flags & AbstractFunction::NON_INTERRUPTABLE) ? false : true;
 
-		core->branchCheck(env, interruptable, -1);
-
 	  MainLoop:
 		TRY_UNLESS(core, !info->exceptions, kCatchAction_SearchForActionScriptExceptionHandler) {
 
-		
 		// the verifier ensures we don't fall off the end of a method.  so
 		// we dont have to check the end pointer here.
         for (;;)
@@ -252,10 +249,10 @@ namespace avmplus
 			#endif
 
 			#ifdef AVMPLUS_PROFILE
-			if (core->dprof.dprofile)
-				core->dprof.mark(opcode);
+			if (DynamicProfiler::dprofile)
+				DynamicProfiler::mark(opcode);
 			#endif
-
+ 
             switch (opcode)
             {
             case OP_returnvoid:
@@ -337,12 +334,10 @@ namespace avmplus
 				continue;
 			}
 
-			case OP_jump:
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += 3+j;
-				}
+            case OP_jump:
+				if (interruptable && core->interrupted)
+					env->interrupt();
+	            pc += 3+readS24(pc);
                 continue;
 
             case OP_pushnull:
@@ -612,9 +607,9 @@ namespace avmplus
             case OP_iftrue:
 				if (core->booleanAtom(*(sp--)) & booleanNotMask)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += 3+j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += 3+readS24(pc);
 				}
 				else
                     pc += 3;
@@ -623,9 +618,9 @@ namespace avmplus
             case OP_iffalse:
 				if (!(core->booleanAtom(*(sp--)) & booleanNotMask))
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += 3+j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += 3+readS24(pc);
 				}
 				else
                     pc += 3;
@@ -635,9 +630,9 @@ namespace avmplus
 				sp -= 2;
 				if (core->eq(sp[1], sp[2]) == trueAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+					pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -646,9 +641,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->eq(sp[1], sp[2]) == falseAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -657,9 +652,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->stricteq(sp[1], sp[2]) == trueAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -668,9 +663,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->stricteq(sp[1], sp[2]) == falseAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -679,9 +674,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[1], sp[2]) == trueAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -690,9 +685,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[1], sp[2]) != trueAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -701,9 +696,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[2], sp[1]) == falseAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -712,9 +707,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[2], sp[1]) != falseAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -723,9 +718,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[2], sp[1]) == trueAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -734,9 +729,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[2], sp[1]) != trueAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -745,9 +740,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[1], sp[2]) == falseAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -756,9 +751,9 @@ namespace avmplus
 				sp -= 2;
                 if (core->compare(sp[1], sp[2]) != falseAtom)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (interruptable && core->interrupted)
+						env->interrupt();
+                    pc += readS24(pc);
 				}
 				pc += 3;
                 continue;
@@ -1472,7 +1467,7 @@ namespace avmplus
 				if (core->isXMLList(index))
 				{
 					// Error according to E4X spec, section 11.3.1
-					env->toplevel()->throwTypeError(kDeleteTypeError, core->toErrorString(env->toplevel()->toTraits(index)));
+					env->toplevel()->typeErrorClass()->throwError(kDeleteTypeError, core->toErrorString(env->toplevel()->toTraits(index)));
 				}
 			}
 			
@@ -1543,7 +1538,7 @@ namespace avmplus
 #ifdef DEBUGGER
 		if (core->debugger && core->callStack && core->callStack->filename)
 		{
-			core->console << '[' << core->callStack->filename << ':' << (uint32)core->callStack->linenum << "] ";
+			core->console << '[' << core->callStack->filename << ':' << (int32)core->callStack->linenum << "] ";
 		}
 #endif
 		core->console << off << ':';

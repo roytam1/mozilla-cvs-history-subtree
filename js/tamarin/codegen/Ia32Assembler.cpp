@@ -1105,7 +1105,7 @@ namespace avmplus
 			JMP (offsetof(MethodEnv, impl32), EAX); // invoke real method indirectly
 			patchip[-1] = mip-patchip;
 
-			pool->core->GetGC()->Free(e);
+			pool->core->gc->Free(e);
 			e = next;
 		}
 

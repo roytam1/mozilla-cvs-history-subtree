@@ -53,7 +53,7 @@ namespace avmshell
 	ScriptObject* ShortArrayClass::createInstance(VTable *ivtable,
 												 ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) ShortArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) ShortArrayObject(ivtable, prototype);
     }
 
 	//
@@ -74,7 +74,7 @@ namespace avmshell
 	ScriptObject* UShortArrayClass::createInstance(VTable *ivtable,
 												 ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) UShortArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) UShortArrayObject(ivtable, prototype);
     }
 
 	//
@@ -95,7 +95,7 @@ namespace avmshell
 	ScriptObject* IntArrayClass::createInstance(VTable *ivtable,
 												 ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) IntArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) IntArrayObject(ivtable, prototype);
     }
 
 	//
@@ -116,7 +116,7 @@ namespace avmshell
 	ScriptObject* UIntArrayClass::createInstance(VTable *ivtable,
 												 ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) UIntArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) UIntArrayObject(ivtable, prototype);
     }
 
 	//
@@ -137,7 +137,7 @@ namespace avmshell
 	ScriptObject* FloatArrayClass::createInstance(VTable *ivtable,
 												 ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) FloatArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) FloatArrayObject(ivtable, prototype);
     }
 
 	//
@@ -158,6 +158,6 @@ namespace avmshell
 	ScriptObject* DoubleArrayClass::createInstance(VTable *ivtable,
 												   ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) DoubleArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) DoubleArrayObject(ivtable, prototype);
     }
 }

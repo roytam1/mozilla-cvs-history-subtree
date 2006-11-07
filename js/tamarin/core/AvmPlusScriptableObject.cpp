@@ -36,38 +36,4 @@ using namespace MMgc;
 
 namespace avmplus
 {
-#ifdef DEBUGGER
-	AvmPlusScriptableObject::AvmPlusScriptableObject()
-	{
-
-		AvmCore *core = this->core();		
-		if(core->allocationTracking && core->callStack)
-		{
-			StackTrace *st = core->getStackTrace();
-			// turn off allocation tracking while we're creating these strings
-			core->allocationTracking = false;
-			WB(GC::GetGC(this), this, &allocationStackTrace, st);
-			core->allocationTracking = true;
-			creationTimestamp = GC::GetPerformanceCounter();
-		}
-	}
-
-	AvmPlusScriptableObject::~AvmPlusScriptableObject()
-	{
-		Atom me = Atom(this) | (allocationStackTrace&7);
-		if(creator)
-			creator->removeInstance(me);
-		creator = NULL;
-		WB(GC::GetGC(this), this, &allocationStackTrace, NULL);
-		creationTimestamp = 0;
-	}
-
-	Stringp AvmPlusScriptableObject::getAllocationTrace() const
-	{
-		StackTrace *st = (StackTrace*) (allocationStackTrace&~7);
-		if(st)
-			return st->format(core()); 
-		return NULL;
-	}
-#endif
 }

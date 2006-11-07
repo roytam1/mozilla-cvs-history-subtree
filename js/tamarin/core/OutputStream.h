@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_OutputStream__
 #define __avmplus_OutputStream__
 

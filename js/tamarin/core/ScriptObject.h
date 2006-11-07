@@ -29,15 +29,13 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_ScriptObject__
 #define __avmplus_ScriptObject__
 
 
 namespace avmplus
 {
-#ifdef DEBUGGER
-	class GCHashtableScriptObject;
-#endif
 	/**
 	 * one actionscript object.  might or might not be a function.
 	 * Base class for all objects visible to script code.
@@ -76,7 +74,7 @@ namespace avmplus
 		}
 
 		MMgc::GC* gc() const {
-			return core()->GetGC();
+			return core()->gc;
 		}
 
 		Toplevel* toplevel() const {
@@ -193,17 +191,7 @@ namespace avmplus
 		virtual Stringp format(AvmCore* core) const;
 #endif
 	private:
-        ScriptObject* delegate;     // __proto__ in AS2, archetype in semantics
-		
-#ifdef DEBUGGER
-		DRCWB(GCHashtableScriptObject*) instances;
-	public:
-		void addInstance(Atom a);
-		void removeInstance(Atom a);
-		ScriptObject *getInstances();
-		ScriptObject *getSlotIterator();
-		uint32 size() const;
-#endif
+		ScriptObject* delegate;     // __proto__ in AS2, archetype in semantics
 	};
 }
 

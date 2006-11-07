@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_ErrorClass__
 #define __avmplus_ErrorClass__
 
@@ -57,7 +58,7 @@ namespace avmplus
 		 * an exception with a formatted error message,
 		 * printf-style
 		 */
-		void throwError(int errorID, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0);
+		void throwError(int errorID, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0, Stringp arg4=0, Stringp arg5=0, Stringp arg6=0);
 
 		/** @name static methods */
 		/*@{*/

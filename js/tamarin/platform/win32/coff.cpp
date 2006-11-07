@@ -35,9 +35,6 @@
 #include <stdio.h>
 #include "coff.h"
 
-// ignore deprecated function warnings from msc
-#pragma warning(disable:4996)
-
 	// Implementation of basic coff file format library
 namespace avmplus
 {

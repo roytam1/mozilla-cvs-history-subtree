@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __GCLargeAlloc__
 #define __GCLargeAlloc__
 
@@ -37,7 +38,7 @@ namespace MMgc
 	/**
 	 * This is a garbage collecting allocator for large memory blocks.
 	 */
-	class GCLargeAlloc : public GCAllocObject
+	class GCLargeAlloc : public GCAllocBase
 	{
 		friend class GC;
 	private:
@@ -57,6 +58,7 @@ namespace MMgc
 		void* Alloc(size_t size, int flags);
 		void Free(void *ptr);
 		void Finalize();
+		size_t Sweep();
 		void ClearMarks();
 
 		static void SetHasWeakRef(const void *item, bool to)
@@ -168,12 +170,7 @@ namespace MMgc
 		
 		// The list of chunk blocks
 		LargeBlock* m_blocks;
-		bool m_startedFinalize;
 		static bool ConservativeGetMark(const void *item, bool bogusPointerReturnValue);
-
-	protected:
-		GC *m_gc;
-	
 	};
 }
 

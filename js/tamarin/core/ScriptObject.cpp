@@ -34,71 +34,6 @@
 
 namespace avmplus
 {
-	#ifdef DEBUGGER
-	// helper object to store class instances
-	class GCHashtableScriptObject : public ScriptObject
-	{
-	public:
-		GCHashtableScriptObject(VTable *vtable) : ScriptObject(vtable, vtable->toplevel->objectClass->prototype) {}	
-		
-		int nextNameIndex(int index) 
-		{ 
-			return ht.nextIndex(index); 
-		}
-		
-		Atom nextValue(int index) 
-		{ 
-			Atom a = (Atom)ht.keyAt(index-1);
-			return a;
-		}
-		
-		// so we don't count these
-		ClassClosure* cc() const { return NULL; }
-
-		MMgc::GCHashtable ht;
-	};
-
-	class SlotIterator : public ScriptObject
-	{
-	public:
-		SlotIterator(ScriptObject *obj, VTable *vtable)
-			: obj(obj),
-			ScriptObject(vtable, vtable->toplevel->objectClass->prototype) {}
-
-		int nextNameIndex(int index)
-		{
-			if(index == 0)
-				currTraits = obj->traits();
-
-			while (currTraits != NULL)
-			{
-				while ((index = currTraits->next(index)) != 0)
-				{
-					if (AvmCore::isSlotBinding(currTraits->valueAt(index)))
-						return index;
-				}
-
-				currTraits = currTraits->base;
-			}
-
-			return 0;
-		}
-
-		Atom nextValue(int index)
-		{
-			Multiname mn(currTraits->nsAt(index), currTraits->keyAt(index), true);
-			QNameObject *qname = new (gc(), toplevel()->qnameClass()->ivtable()->getExtraSize())
-									QNameObject(toplevel()->qnameClass(), mn);
-
-			return qname->atom();
-		}
-
-	private:
-		DRCWB(ScriptObject *) obj;
-		DWB(Traits *) currTraits;
-	};
-	#endif
-
 	ScriptObject::ScriptObject(VTable *vtable,
 							   ScriptObject *delegate,
 	                           int capacity /*=Hashtable::kDefaultCapacity*/)
@@ -130,6 +65,12 @@ namespace avmplus
 
 	ScriptObject::~ScriptObject()
 	{
+#if 0
+		if (vtable->toplevel && vtable->toplevel->scriptObjectTable)
+		{
+			vtable->toplevel->scriptObjectTable->deleteScriptObject(this);
+		}
+#endif
 #ifdef MMGC_DRC
 		setDelegate(NULL);
 		vtable->traits->destroyInstance(this);
@@ -199,7 +140,7 @@ namespace avmplus
 			while ((o = o->delegate) != NULL);
 		}
 		Multiname multiname(core()->publicNamespace,AvmCore::atomToString(name));
-		toplevel()->throwReferenceError(kReadSealedError, &multiname, origObjTraits);
+		toplevel()->referenceErrorClass()->throwError(kReadSealedError, core()->toErrorString(&multiname), core()->toErrorString(origObjTraits));
 		// unreached
 		return undefinedAtom;
 	}
@@ -265,7 +206,7 @@ namespace avmplus
 		{
 			Multiname multiname(core()->publicNamespace, AvmCore::atomToString(name));
 			// cannot create properties on a sealed object.
-			toplevel()->throwReferenceError(kWriteSealedError, &multiname, traits());
+			toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(&multiname), core()->toErrorString(traits()));
 		}
     }
 
@@ -278,7 +219,7 @@ namespace avmplus
 		else
 		{
 			// cannot create properties on a sealed object.
-			toplevel()->throwReferenceError(kWriteSealedError, name, traits());
+			toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(name), core()->toErrorString(traits()));
 		}
 	}
 
@@ -321,7 +262,7 @@ namespace avmplus
 		{
 			// cannot create properties on a sealed object.
 			Multiname multiname(core()->publicNamespace, AvmCore::atomToString(name));
-			toplevel()->throwReferenceError(kWriteSealedError, &multiname, traits());
+			toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(&multiname), core()->toErrorString(traits()));
 		}
 	}
 	
@@ -408,7 +349,7 @@ namespace avmplus
 			{
 				Multiname multiname(core->publicNamespace, core->internUint32(i));
 				// cannot create properties on a sealed object.
-				toplevel()->throwReferenceError(kWriteSealedError, &multiname, traits());
+				toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core->toErrorString(&multiname), core->toErrorString(traits()));
 			}
 		}
 		else
@@ -469,12 +410,10 @@ namespace avmplus
 		}
 		else
 		{
-			Toplevel* toplevel = this->toplevel();
-
 			if (multiname->isNsset())
-				toplevel->throwReferenceError(kReadSealedErrorNs, multiname, traits());
+				toplevel()->referenceErrorClass()->throwError(kReadSealedErrorNs, toplevel()->core()->toErrorString(multiname), toplevel()->core()->toErrorString(multiname));
 			else
-				toplevel->throwReferenceError(kReadSealedError, multiname, traits());
+				toplevel()->referenceErrorClass()->throwError(kReadSealedError, toplevel()->core()->toErrorString(multiname), toplevel()->core()->toErrorString(traits()));
 			return undefinedAtom;
 		}
 	}
@@ -484,12 +423,11 @@ namespace avmplus
 	// argN = argv[argc]
 	Atom ScriptObject::callProperty(Multiname* multiname, int argc, Atom* argv)
 	{
-		Toplevel* toplevel = this->toplevel();
 		Atom method = getProperty(multiname);
 		if (!AvmCore::isObject(method))
-			toplevel->throwTypeError(kCallOfNonFunctionError, core()->toErrorString(multiname));
+			toplevel()->typeErrorClass()->throwError(kCallOfNonFunctionError, core()->toErrorString(multiname));
 		argv[0] = atom(); // replace receiver
-		return toplevel->op_call(method, argc, argv);
+		return toplevel()->op_call(method, argc, argv);
 	}
 
 	Atom ScriptObject::constructProperty(Multiname* multiname, int argc, Atom* argv)
@@ -501,7 +439,7 @@ namespace avmplus
 	
 	Atom ScriptObject::getDescendants(Multiname* /*name*/) const
 	{
-		toplevel()->throwTypeError(kDescendentsError, core()->toErrorString(traits()));
+		toplevel()->typeErrorClass()->throwError(kDescendentsError, core()->toErrorString(traits()));
 		return undefinedAtom;// not reached
 	}
 
@@ -545,7 +483,7 @@ namespace avmplus
 			return result;
 
 		// could not convert to primitive.
-		toplevel->throwTypeError(kConvertToPrimitiveError, core->toErrorString(traits()));
+		toplevel->typeErrorClass()->throwError(kConvertToPrimitiveError, core->toErrorString(traits()));
 		return undefinedAtom;
 	}
 
@@ -580,7 +518,7 @@ namespace avmplus
 			return core->string(result)->atom();
 
 		// could not convert to primitive.
-		toplevel->throwTypeError(kConvertToPrimitiveError, core->toErrorString(traits()));
+		toplevel->typeErrorClass()->throwError(kConvertToPrimitiveError, core->toErrorString(traits()));
 		return undefinedAtom;
 	}
 
@@ -591,7 +529,7 @@ namespace avmplus
 	{
 		// TypeError in ECMA to execute a non-function
 		Multiname name(core()->publicNamespace, core()->constantString("value"));
-		toplevel()->throwTypeError(kCallOfNonFunctionError, core()->toErrorString(&name));
+		toplevel()->typeErrorClass()->throwError(kCallOfNonFunctionError, core()->toErrorString(&name));
 		return undefinedAtom;
 	}
 
@@ -601,7 +539,7 @@ namespace avmplus
 	Atom ScriptObject::construct(int /*argc*/, Atom* /*argv*/)
 	{
 		// TypeError in ECMA to execute a non-function
-		toplevel()->throwTypeError(kConstructOfNonFunctionError);
+		toplevel()->typeErrorClass()->throwError(kConstructOfNonFunctionError);
 		return undefinedAtom;
 	}
 
@@ -659,7 +597,7 @@ namespace avmplus
 		if (!t || t == OBJECT_TYPE)
 		{
 			//*((Atom*)p) = value;
-			WBATOM(core->GetGC(), this, p, value);
+			WBATOM(core->gc, this, p, value);
 		}
 		else if (t == NUMBER_TYPE)
 		{
@@ -680,7 +618,7 @@ namespace avmplus
 		else
 		{
 			//*((int32*)p) = value & ~7;
-			WBRC(core->GetGC(), this, p, value & ~7);
+			WBRC(core->gc, this, p, value & ~7);
 		}
 	}
 
@@ -751,7 +689,7 @@ namespace avmplus
 			{
 				Atom baseAtom = scope->getScope(scope->getSize()-1);
 				if (!AvmCore::isObject(baseAtom))
-					toplevel()->throwVerifyError(kCorruptABCError);
+					toplevel()->verifyErrorClass()->throwError(kCorruptABCError);
 
 				ScriptObject *base = AvmCore::atomToScriptObject(baseAtom);
 				// make sure scope object is base type's class object
@@ -796,12 +734,13 @@ namespace avmplus
 		// when argArray == undefined or null, same as not being there at all
 		// see Function/e15_3_4_3_1.as 
 	
+		Toplevel* toplevel = this->toplevel();
 		if (!AvmCore::isNullOrUndefined(argArray))
 		{
 			AvmCore* core = this->core();
 
 			if (!core->istype(argArray, ARRAY_TYPE))
-				toplevel()->throwTypeError(kApplyError);
+				toplevel->typeErrorClass()->throwError(kApplyError);
 
 			ArrayObject *a = (ArrayObject*)AvmCore::atomToScriptObject(argArray);
 			
@@ -820,55 +759,4 @@ namespace avmplus
 		}
 	}
  
-#ifdef DEBUGGER
-	void ScriptObject::addInstance(Atom a)
-	{
-		if(!instances) {			
-			if(!toplevel()->objectClass->ivtable())
-				return;
-			VTable *vt = toplevel()->objectClass->ivtable();
-			instances = new (gc(), vt->getExtraSize()) GCHashtableScriptObject(vt);
-		}
-		if(AvmCore::isPointer(a) && !AvmCore::isNumber(a))
-		{
-			instances->ht.add(a, NULL);
-			// tell the thing about its atom rep so it can properly remove itself later
-			AvmPlusScriptableObject *o = (AvmPlusScriptableObject*)(a&~7);
-			o->setType(a&7);
-			o->setCreator(this);
-		}
-
-	}
-
-	void ScriptObject::removeInstance(Atom a)
-	{
-		if(instances && instances->ht.count() > 0)
-		{
-			instances->ht.remove((const void*)a);
-		}
-	}
-
-	ScriptObject* ScriptObject::getInstances()
-	{
-		return instances;
-	}
-
-	ScriptObject* ScriptObject::getSlotIterator()
-	{
-		VTable *vt = toplevel()->objectClass->ivtable();
-		return new (gc(), vt->getExtraSize()) SlotIterator(this, vt);
-	}
-	
-	uint32 ScriptObject::size() const
-	{
-		uint32 size = traits()->getTotalSize();
-		if(traits()->needsHashtable)
-		{
-			Hashtable *ht = getTable();
-			size += ht->getSize() * 2 * sizeof(Atom);
-		}
-		size -= sizeof(AvmPlusScriptableObject);
-		return size;
-	}
-#endif
 }

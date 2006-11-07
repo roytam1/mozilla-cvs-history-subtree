@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_Verifier__
 #define __avmplus_Verifier__
 
@@ -81,11 +82,7 @@ namespace avmplus
 		PoolObject *pool;
 		int labelCount;
 
-		Verifier(MethodInfo *info, Toplevel* toplevel
-#ifdef AVMPLUS_VERBOSE
-			, bool secondTry=false
-#endif
-			);
+		Verifier(MethodInfo *info, Toplevel* toplevel);
 		~Verifier();
 
 		/**
@@ -127,8 +124,7 @@ namespace avmplus
 		void checkCallMultiname(AbcOpcode opcode, Multiname* multiname) const;
 		void checkPropertyMultiname(uint32 &depth, Multiname& multiname);
 		void parseExceptionHandlers();
-		void checkStack(uint32 pop, uint32 push);
-		void checkStackMulti(uint32 pop, uint32 push, Multiname* m);
+		void checkStack(uint32 pop, uint32 push, Multiname* m=NULL);
 
 		void emitCoerce(Traits* target, int i);
 		void emitToString(AbcOpcode opcode, int index);
@@ -148,7 +144,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 	public:
 		bool verbose;
-		bool secondTry;
+		static bool secondTry;
 		void showState(FrameState* state, const byte* pc, bool unreachable);
 		void verifyWarn(int errorId, ...);
 		#endif

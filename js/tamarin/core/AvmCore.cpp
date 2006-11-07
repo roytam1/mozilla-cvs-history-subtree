@@ -35,12 +35,48 @@
 namespace avmplus
 {
 	using namespace MMgc;
+	#include "builtin.cpp"
 
-#ifdef DEBUGGER	
-		bool AvmCore::sampling = false;
-		bool AvmCore::autoStartSampling = false;
+#ifdef AVMPLUS_VERBOSE
+	bool AvmCore::verbose = false;
 #endif
 
+#ifdef AVMPLUS_INTERP
+	// turbo flag only available if interpreter is there
+	bool AvmCore::turbo = true;
+#endif
+
+#ifdef AVMPLUS_VERIFYALL
+	bool AvmCore::verifyall = false;
+#endif
+
+#ifdef AVMPLUS_MIR
+
+	#ifdef AVMPLUS_INTERP
+	    // forcemir flag forces use of MIR instead of interpreter
+	    bool AvmCore::forcemir = false;
+	#endif
+	
+	bool AvmCore::cseopt = true;
+	bool AvmCore::dceopt = true;
+
+    #ifdef AVMPLUS_IA32
+    	#ifdef _MAC
+	    // Our SSE2 code path doesn't work right on MacTel yet
+    	bool AvmCore::sse2 = true;
+    	#else
+    	bool AvmCore::sse2 = true;	
+    	#endif
+    #endif
+	
+    #ifdef AVMPLUS_VERBOSE
+        bool AvmCore::bbgraph = false;
+    #endif //AVMPLUS_VERBOSE
+
+#endif // AVMPLUS_MIR
+
+	bool AvmCore::interrupts = false;
+	
 	BEGIN_NATIVE_CLASSES(AvmCore)
 		NATIVE_CLASS(abcclass_Object,				ObjectClass,	ScriptObject)
 		NATIVE_CLASS(abcclass_Class,				ClassClass,		ClassClosure)
@@ -85,48 +121,8 @@ namespace avmplus
 		NATIVE_SCRIPT(0, Toplevel)
 	END_NATIVE_SCRIPTS()
 
-	AvmCore::AvmCore(GC *g) : GCRoot(g), console(NULL), mirBuffers(g, 4), gcInterface(g)
+	AvmCore::AvmCore(GC *g) : GCRoot(g), console(NULL), gc(g), mirBuffers(g, 4), gcInterface(g)
     {
-		// set default mode flags
-		#ifdef AVMPLUS_VERBOSE
-		verbose = false;
-		#endif
-
-		#ifdef AVMPLUS_INTERP
-		// turbo flag only available if interpreter is there
-		turbo = true;
-		#endif
-
-		#ifdef AVMPLUS_VERIFYALL
-		verifyall = false;
-		#endif
-
-		#ifdef AVMPLUS_MIR
-
-			#ifdef AVMPLUS_INTERP
-			// forcemir flag forces use of MIR instead of interpreter
-			forcemir = false;
-			#endif
-	
-			cseopt = true;
-			dceopt = true;
-
-		    #ifdef AVMPLUS_IA32
-    		sse2 = true;
-			#endif
-
-			#ifdef AVMPLUS_VERBOSE
-			bbgraph = false;
-			#endif
-
-		#endif // AVMPLUS_MIR
-
-		#ifdef DEBUGGER	
-		allocationTracking = false;
-		#endif
-
-		interrupts = false;
-
 		gcInterface.SetCore(this);
 		resources          = NULL;
 		xmlEntities        = NULL;
@@ -134,7 +130,7 @@ namespace avmplus
 		builtinPool        = NULL;
 		builtinDomain      = NULL;
 
-		GetGC()->SetGCContextVariable (MMgc::GC::GCV_AVMCORE, this);
+		gc->SetGCContextVariable (MMgc::GC::GCV_AVMCORE, this);
 
 		minstack           = 0;
 		
@@ -145,11 +141,6 @@ namespace avmplus
 		callStack          = NULL;
 		stackTraces        = NULL;
 		numTraces          = NULL;
-		samples            = NULL;
-		takeSample         = false;
-		samplingNow        = false;
-		numSamples         = 0;
-		fakeMethodInfos    = 0;
         #endif /* DEBUGGER */
 
 		interrupted        = false;
@@ -220,42 +211,39 @@ namespace avmplus
 		codegenMethodNames = CodegenMIR::initMethodNames(this);
 		#endif
 
-		#ifdef FEATURE_JNI
-		java = NULL;
-		#endif
+#ifdef DEBUGGER
+		stackTraces        = (StackTrace**)gc->Alloc(sizeof(StackTrace*) * 1024, GC::kZero);
+#endif
+
 	}
 
 	AvmCore::~AvmCore()
 	{		
-#ifdef DEBUGGER
-		stopSampling();
-#endif
-
-		// Free the numbers and strings tables
-		delete [] strings;
-		if (GetGC()) 
+		//delete heap;
+		if (gc) 
 		{
-			GetGC()->SetGCContextVariable(GC::GCV_AVMCORE, NULL);
+			//gc->SetTracer(NULL);
+
+			// Free the numbers and strings tables
+			delete [] strings;
+
+			#if defined(AVMPLUS_MIR) && defined(AVMPLUS_VERBOSE)
+			delete codegenMethodNames;
+			#endif
+
+			strings = NULL;
+
+			delete [] namespaces;
+			namespaces = NULL;
+
+			// free all the mir buffers
+			while(mirBuffers.size() > 0)
+				mirBuffers.removeFirst()->free();
 		}
-
-		#if defined(AVMPLUS_MIR) && defined(AVMPLUS_VERBOSE)
-		delete codegenMethodNames;
-		#endif
-
-		strings = NULL;
-
-		delete [] namespaces;
-		namespaces = NULL;
-
-		// free all the mir buffers
-		while(mirBuffers.size() > 0)
-			mirBuffers.removeFirst()->free();
 	}
 
 	void AvmCore::initBuiltinPool()
 	{
-		using namespace NativeID;
-
 		// stack allocated array of pointers
 		AbstractFunction* nativeMethods[builtin_abc_method_count];
 		NativeClassInfo* nativeClasses[builtin_abc_class_count];
@@ -268,9 +256,9 @@ namespace avmplus
 		initNativeTables(classEntries, scriptEntries,
 			nativeMethods, nativeClasses, nativeScripts);
 
-		ScriptBuffer code = ScriptBuffer(new (GetGC()) ReadOnlyScriptBufferImpl (builtin_abc_data, builtin_abc_length));
+		ScriptBuffer code = ScriptBuffer(new (gc) ReadOnlyScriptBufferImpl (builtin_abc_data, builtin_abc_length));
 
-		builtinDomain = new (GetGC()) Domain(this, NULL);
+		builtinDomain = new (gc) Domain(this, NULL);
 		
 		builtinPool = parseActionBlock(code, 0, NULL,
 									   builtinDomain,
@@ -287,11 +275,6 @@ namespace avmplus
 
 		for(int i=0, size=builtinPool->scripts.size(); i<size; i++)
 			builtinPool->scripts[i]->flags |= AbstractFunction::NON_INTERRUPTABLE;
-
-#ifdef DEBUGGER
-		// sampling can begin now, requires builtinPool
-		initSampling();
-#endif
 	}
 	
 	Toplevel* AvmCore::initTopLevel()
@@ -317,16 +300,16 @@ namespace avmplus
 		if (domainEnv == NULL)
 		{
 			// create a new DomainEnv based on the builtinDomain
-			domainEnv = new (GetGC()) DomainEnv(this, builtinDomain, NULL);
+			domainEnv = new (gc) DomainEnv(this, builtinDomain, NULL);
 		}
 
-		AbcEnv* abcEnv = new (GetGC(), AbcEnv::calcExtra(pool)) AbcEnv(pool, domainEnv, codeContext);
+		AbcEnv* abcEnv = new (gc, AbcEnv::calcExtra(pool)) AbcEnv(pool, domainEnv, codeContext);
 
 		// entry point is the last script in the file
 		Traits* mainTraits = pool->scripts[pool->scriptCount-1]->declaringTraits;
 
 		// ISSUE can we just make this the public namespace?
-		ScopeChain* emptyScope = ScopeChain::create(GetGC(), mainTraits->scope, NULL, newNamespace(kEmptyString));
+		ScopeChain* emptyScope = ScopeChain::create(gc, mainTraits->scope, NULL, newNamespace(kEmptyString));
 
 		VTable* object_vtable;
 		if (toplevel == NULL)
@@ -346,7 +329,7 @@ namespace avmplus
 
 		// global objects are subclasses of Object
 		VTable* mainVTable = newVTable(mainTraits, object_vtable, emptyScope, abcEnv, toplevel);
-		ScriptEnv* main = new (GetGC()) ScriptEnv(mainTraits->init, mainVTable);
+		ScriptEnv* main = new (gc) ScriptEnv(mainTraits->init, mainVTable);
 		mainVTable->init = main;
 
 		if (toplevel == NULL)
@@ -381,7 +364,7 @@ namespace avmplus
 			//AvmAssert(scriptTraits->needsHashtable);
 
 			VTable* scriptVTable = newVTable(scriptTraits, object_vtable, emptyScope, abcEnv, toplevel);
-			ScriptEnv* scriptEnv = new (GetGC()) ScriptEnv(scriptTraits->init, scriptVTable);
+			ScriptEnv* scriptEnv = new (gc) ScriptEnv(scriptTraits->init, scriptVTable);
 			scriptVTable->init = scriptEnv;
 			exportDefs(scriptTraits, scriptEnv);
 		}
@@ -412,15 +395,15 @@ namespace avmplus
 		{
 			result = main->coerceEnter(0, argv);
 			#ifdef AVMPLUS_PROFILE
-			if (dprof.dprofile)
-				dprof.mark((AbcOpcode)0);
+			if (DynamicProfiler::dprofile)
+				DynamicProfiler::mark((AbcOpcode)0);
 			#endif
 		}
 		CATCH(Exception *exception)
 		{
 			#ifdef AVMPLUS_PROFILE
-			if (dprof.dprofile)
-				dprof.mark((AbcOpcode)0);
+			if (DynamicProfiler::dprofile)
+				DynamicProfiler::mark((AbcOpcode)0);
 			#endif
 			// Re-throw exception
 			throwException(exception);
@@ -506,7 +489,7 @@ namespace avmplus
 										 NativeScriptInfo *nativeScripts[],
 										 CodeContext *codeContext)
     {
-		resources = new (GetGC()) Hashtable(GetGC());
+		resources = new (gc) Hashtable(gc);
 
 		// have we parsed this before?
 		PoolObject* pool;
@@ -797,10 +780,6 @@ return the result of the comparison ToPrimitive(x) == y.
 				else
 					exception->flags &= ~Exception::SEEN_BY_DEBUGGER;
 			}
-			else
-			{
-				exception->flags &= ~Exception::SEEN_BY_DEBUGGER;
-			}
 		}
 		#endif
 
@@ -819,7 +798,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	 */
 	void AvmCore::throwAtom(Atom atom)
 	{
-		throwException(new (GetGC()) Exception(atom
+		throwException(new (gc) Exception(atom
 #ifdef DEBUGGER
 			, this
 #endif
@@ -1102,7 +1081,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		#endif /* DEBUGGER */
 	}
 
-	String* AvmCore::formatErrorMessageV( int errorID, Stringp arg1, Stringp arg2, Stringp arg3)
+	String* AvmCore::formatErrorMessageV( int errorID, Stringp arg1, Stringp arg2, Stringp arg3, Stringp arg4, Stringp arg5, Stringp arg6 )
 	{
 		Stringp out = NULL;
 
@@ -1117,7 +1096,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			// StringBuffer destructor to unwind.
 			{
 				StringBuffer buffer(this);
-				buffer.formatP( format, arg1, arg2, arg3);
+				buffer.formatP( format, arg1, arg2, arg3, arg4, arg5, arg6 );
 				out = newString(buffer.c_str());
 			}
 			#else	
@@ -1128,6 +1107,9 @@ return the result of the comparison ToPrimitive(x) == y.
 			(void)arg1; 
 			(void)arg2; 
 			(void)arg3; 
+			(void)arg4; 
+			(void)arg5; 
+			(void)arg6;
 			out = errorMessage;
 			#endif /* DEBUGGER*/
 		}
@@ -1139,9 +1121,9 @@ return the result of the comparison ToPrimitive(x) == y.
 		return out;
 	}
 		
-	void AvmCore::throwErrorV(ClassClosure *type, int errorID, Stringp arg1, Stringp arg2, Stringp arg3)
+	void AvmCore::throwErrorV(ClassClosure *type, int errorID, Stringp arg1, Stringp arg2, Stringp arg3, Stringp arg4, Stringp arg5, Stringp arg6)
 	{
-		Stringp out = formatErrorMessageV( errorID, arg1, arg2, arg3);
+		Stringp out = formatErrorMessageV( errorID, arg1, arg2, arg3, arg4, arg5, arg6 );
 
 		#ifdef DEBUGGER
 		if (type == NULL)
@@ -1743,8 +1725,8 @@ return the result of the comparison ToPrimitive(x) == y.
 #ifdef AVMPLUS_PROFILE
 	void AvmCore::dump()
 	{
-		sprof.dump(console);
-		dprof.dump(console);
+		StaticProfiler::dump(console);
+		DynamicProfiler::dump(console);
 	}
 #endif
 
@@ -1763,16 +1745,16 @@ return the result of the comparison ToPrimitive(x) == y.
 			switch (nativeMap->type)
 			{
 			case NativeTableEntry::kNativeMethod:
-				f = new (GetGC()) NativeMethod(nativeMap->flags, (NativeMethod::Handler)nativeMap->handler);
+				f = new (gc) NativeMethod(nativeMap->flags, (NativeMethod::Handler)nativeMap->handler);
 				break;
 			case NativeTableEntry::kNativeMethod1:
-				f = new (GetGC()) NativeMethod(nativeMap->flags, (NativeMethod::Handler)nativeMap->handler, nativeMap->cookie);
+				f = new (gc) NativeMethod(nativeMap->flags, (NativeMethod::Handler)nativeMap->handler, nativeMap->cookie);
 				break;
 			case NativeTableEntry::kNativeMethodV:
-				f = new (GetGC()) NativeMethodV((NativeMethodV::Handler32)nativeMap->handler, nativeMap->flags);
+				f = new (gc) NativeMethodV((NativeMethodV::Handler32)nativeMap->handler, nativeMap->flags);
 				break;			
 			case NativeTableEntry::kNativeMethodV1:
-				f = new (GetGC()) NativeMethodV((NativeMethodV::Handler32)nativeMap->handler, nativeMap->cookie, nativeMap->flags);
+				f = new (gc) NativeMethodV((NativeMethodV::Handler32)nativeMap->handler, nativeMap->cookie, nativeMap->flags);
 				break;
 			default:
 				AvmAssert(false);
@@ -2484,7 +2466,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	
 	Toplevel* AvmCore::createToplevel(VTable *vtable)
 	{
-		return new (GetGC(), vtable->getExtraSize()) Toplevel(vtable, NULL);
+		return new (gc, vtable->getExtraSize()) Toplevel(vtable, NULL);
 	}
 
 	void AvmCore::presweep()
@@ -2493,7 +2475,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		{
 			for (int i=0, n=numStrings; i < n; i++)
 			{
-				if (strings[i] > AVMPLUS_STRING_DELETED && !GetGC()->GetMark(strings[i]))
+				if (strings[i] > AVMPLUS_STRING_DELETED && !gc->GetMark(strings[i]))
 				{
 					strings[i] = AVMPLUS_STRING_DELETED;
 					deletedCount++;
@@ -2508,7 +2490,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			bool rehashFlag = false;
 			for (int i=0, n=numNamespaces; i < n; i++)
 			{
-				if (namespaces[i] != NULL && !GetGC()->GetMark(namespaces[i]))
+				if (namespaces[i] != NULL && !gc->GetMark(namespaces[i]))
 				{
 					rehashFlag = true;
 					namespaces[i] = NULL;
@@ -2524,12 +2506,12 @@ return the result of the comparison ToPrimitive(x) == y.
 #ifdef DEBUGGER
 		if(stackTraces)
 		{
-			uint32 n = GetGC()->Size(stackTraces)/sizeof(StackTrace*);
-			n = 1<<FindOneBit(n);
+			uint32 n = gc->Size(stackTraces)/sizeof(StackTrace*);
+			n = 1<<GCAllocBase::FindOneBit(n);
 			bool rehash= false;
 			for (uint32 i=0; i<n; i++)
 			{
-				if(stackTraces[i] && !GetGC()->GetMark(stackTraces[i]))
+				if(stackTraces[i] && !gc->GetMark(stackTraces[i]))
 				{
 					rehash = true;
 					stackTraces[i] = NULL;
@@ -2751,7 +2733,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	Stringp AvmCore::internAllocUtf8(const byte *cs, int len8)
 	{
 		int len16 = UnicodeUtils::Utf8Count((const uint8*)cs, len8);
-		Stringp s = new (GetGC()) String((const char *)cs, len8, len16);
+		Stringp s = new (gc) String((const char *)cs, len8, len16);
 
 		int i = findString(s->c_str(), len16);
 		Stringp other;
@@ -2776,37 +2758,6 @@ return the result of the comparison ToPrimitive(x) == y.
 		}
 	}
 
-	
-	Stringp AvmCore::internAllocAscii(const char *cs)
-	{
-		int len = strlen(cs);
-		wchar buffer[256];
-
-		AvmAssert(len < 256);
-		
-		for(int j=0; j<len; j++)
-		{
-			buffer[j] = cs[j];
-		}
-		buffer[len] = 0;
-
-		int i = findString(buffer, len);
-		Stringp s;
-		if ((s=strings[i]) <= AVMPLUS_STRING_DELETED)
-		{
-			if (s == AVMPLUS_STRING_DELETED)
-			{
-				deletedCount--;
-				AvmAssert(deletedCount >= 0);
-			}
-			s = new (GetGC()) String(buffer, len);
-			stringCount++;
-			strings[i] = s;
-			s->setInterned(this);
-		}
-		return s;
-	}
-
 
 	Stringp AvmCore::internAlloc(const wchar *s, int len)
 	{
@@ -2824,7 +2775,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			DRC(Stringp) *oldStrings = strings;
 #endif
 
-			other = new (GetGC()) String(s,len);
+			other = new (gc) String(s,len);
 			
 #ifdef DEBUGGER
 			// re-find if String ctor caused rehash
@@ -2925,32 +2876,32 @@ return the result of the comparison ToPrimitive(x) == y.
 		
 	ScriptBufferImpl* AvmCore::newScriptBuffer(size_t size)
 	{
-		return new (GetGC(), size) BasicScriptBufferImpl(size);
+		return new (gc, size) BasicScriptBufferImpl(size);
 	}
 	
 	VTable* AvmCore::newVTable(Traits* traits, VTable* base, ScopeChain* scope,
 		AbcEnv* abcEnv, Toplevel* toplevel)
 	{
 		size_t extraSize = sizeof(MethodEnv*)*(traits->methodCount > 0 ? traits->methodCount-1 : 0);
-		return new (GetGC(), extraSize) VTable(traits, base, scope, abcEnv, toplevel);
+		return new (gc, extraSize) VTable(traits, base, scope, abcEnv, toplevel);
 	}
 
 	RegExpObject* AvmCore::newRegExp(RegExpClass* regexpClass,
 								  Stringp pattern,
 								  Stringp options)
 	{
-		return new (GetGC(), regexpClass->ivtable()->getExtraSize()) RegExpObject(regexpClass,
+		return new (gc, regexpClass->ivtable()->getExtraSize()) RegExpObject(regexpClass,
 														 pattern, options);
 	}
 	
 	ScriptObject* AvmCore::newObject(VTable *vtable, ScriptObject *delegate)
 	{
-		return new (GetGC(), vtable->getExtraSize()) ScriptObject(vtable, delegate);
+		return new (gc, vtable->getExtraSize()) ScriptObject(vtable, delegate);
 	}
 
 	ScriptObject* AvmCore::newActivation(VTable *vtable, ScriptObject *delegate)
 	{
-		ScriptObject* obj = new (GetGC(), vtable->getExtraSize()) ScriptObject(vtable, delegate);
+		ScriptObject* obj = new (gc, vtable->getExtraSize()) ScriptObject(vtable, delegate);
 		if(vtable->init)
 		{
 			Atom argv[1];
@@ -3001,7 +2952,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			p = internString (string (prefix))->atom();
 		}
 
-        return new (GetGC()) Namespace(p, u, type);
+        return new (gc) Namespace(p, u, type);
 	}
 
 	Namespace* AvmCore::newNamespace(Atom uri, Namespace::NamespaceType type)
@@ -3012,17 +2963,17 @@ return the result of the comparison ToPrimitive(x) == y.
 		if (isNamespace (uri))
 		{
 			Namespace *ns = atomToNamespace (uri);
-			return new (GetGC()) Namespace (ns->getPrefix(), ns->getURI(), type);
+			return new (gc) Namespace (ns->getPrefix(), ns->getURI(), type);
 		}
 		else if (isObject(uri) && isQName (uri) && !isNull(atomToQName (uri)->getURI()))
 		{
-			return new (GetGC()) Namespace (undefinedAtom, atomToString(atomToQName (uri)->getURI()), type);
+			return new (gc) Namespace (undefinedAtom, atomToString(atomToQName (uri)->getURI()), type);
 		}
 		else
 		{
 			Stringp u = internString (string (uri));
 			Atom prefix = (u == kEmptyString) ? kEmptyString->atom() : undefinedAtom;
-			return new (GetGC()) Namespace (prefix, u, type);
+			return new (gc) Namespace (prefix, u, type);
 		}
 	}
 
@@ -3030,13 +2981,13 @@ return the result of the comparison ToPrimitive(x) == y.
 	{
 		uri = internString(uri);
 		Atom prefix = (uri == kEmptyString) ? kEmptyString->atom() : undefinedAtom;
-		return new (GetGC()) Namespace(prefix, uri, type);
+		return new (gc) Namespace(prefix, uri, type);
 	}
 
 	NamespaceSet* AvmCore::newNamespaceSet(int nsCount)
 	{
 		size_t extra = (nsCount >= 1 ? nsCount-1 : 0)*sizeof(Atom);
-		return new (GetGC(), extra) NamespaceSet(nsCount);
+		return new (gc, extra) NamespaceSet(nsCount);
 	}
 
 	Atom AvmCore::uintToAtom(uint32 n)
@@ -3064,13 +3015,11 @@ return the result of the comparison ToPrimitive(x) == y.
 	}
 
 #ifdef AVMPLUS_IA32
-	// ignore warning that inline asm disables global optimization in this function
-	#pragma warning(disable: 4740) 
 	Atom AvmCore::doubleToAtom_sse2(double n)
 	{
 		#ifdef AVMPLUS_PROFILE
-		if (dprof.dprofile)
-			DynamicProfiler::StackMark mark(OP_doubletoatom, &dprof);
+		if (DynamicProfiler::dprofile)
+			DynamicProfiler::StackMark mark(OP_doubletoatom);
 		#endif
 
 		// handle integer values w/out allocation
@@ -3123,8 +3072,8 @@ return the result of the comparison ToPrimitive(x) == y.
 	Atom AvmCore::doubleToAtom(double n)
 	{
 		#ifdef AVMPLUS_PROFILE
-		if (dprof.dprofile)
-			DynamicProfiler::StackMark mark(OP_doubletoatom, &dprof);
+		if (DynamicProfiler::dprofile)
+			DynamicProfiler::StackMark mark(OP_doubletoatom);
 		#endif
 
 		// There is no need for special logic for NaN or +/-Inf since we don't
@@ -3208,7 +3157,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		wchar buffer[256];
 		int len;
 		MathUtils::convertIntegerToString((int)atom, buffer, len, 16);
-		return new (GetGC()) String(buffer, len);
+		return new (gc) String(buffer, len);
 	}
 #endif
 
@@ -3243,98 +3192,6 @@ return the result of the comparison ToPrimitive(x) == y.
 
 		return size;
 	}
-
-	void AvmCore::sample()
-	{
-		if(!AvmCore::sampling) return;
-		if(!callStack)
-		{
-			return;
-		}
-
-		uint64 time = GC::GetPerformanceCounter();
-
-		size_t sampleSize = sizeof(uint64) + sizeof(uint32) + 
-			callStack->depth * (sizeof(void*) + sizeof(void*) + sizeof(int));
-
-		if(currentSample + sampleSize > samples->uncommitted())
-		{
-			samples->grow();
-			if(currentSample + sampleSize > samples->uncommitted())
-			{
-				// exhausted buffer
-				return;
-			}
-		}
-
-		CallStackNode *csn = callStack;
-		byte *p = currentSample;
-		*(uint64*)p = time;
-		p += sizeof(uint64);
-		*(uint32*)p = callStack->depth;
-		p += sizeof(uint32);
-		while(csn)
-		{
-			// FIXME: this is essentially a 12 byte copy, faster way?
-			*(AbstractFunction**)p = csn->info;
-			p += sizeof(AbstractFunction*);
-			*(Stringp*)p = csn->filename;
-			p += sizeof(Stringp);
-			*(int*)p = csn->linenum;
-			p += sizeof(int);
-			csn = csn->next;
-		}
-		currentSample = p;
-		numSamples++;		
-		takeSample = 0;			
-	}
-
-	void AvmCore::clearSamples()
-	{
-		currentSample = samples->start();
-		numSamples = 0;
-	}
-
-	void AvmCore::startSampling()
-	{
-		if(!AvmCore::sampling) return;
-		if(samplingNow)
-			return;
-		numSamples = 0;
-		samplingNow = true;
-		if(!samples->start())
-			currentSample = samples->reserve(512 * 1024 * 1024);
-		timerHandle = OSDep::startIntWriteTimer(1, &takeSample);
-	}
-
-	void AvmCore::stopSampling()
-	{
-		if(!AvmCore::sampling) return;
-		if(!samplingNow)
-			return;
-		OSDep::stopTimer(timerHandle);
-		currentSample = samples->start();
-		samplingNow = false;
-	}
-
-	void AvmCore::initSampling()
-	{
-		if(AvmCore::sampling)
-		{
-			samples = new (GetGC()) GrowableBuffer(GetGC()->GetGCHeap());
-			fakeMethodInfos = new (GetGC()) Hashtable(GetGC());
-		}
-		if(AvmCore::sampling || allocationTracking)
-		{
-			stackTraces = (StackTrace**)GetGC()->Alloc(sizeof(StackTrace*) * 1024, GC::kZero);
-		}
-
-		if(AvmCore::sampling && autoStartSampling)
-		{
-			startSampling();
-		}
-	}
-
 #endif
 
     /**
@@ -3352,34 +3209,40 @@ return the result of the comparison ToPrimitive(x) == y.
 			interfaceCount += base->interfaceCount+1; // +1 b/c base is added
 		int interfaceCapacity = MathUtils::nextPowerOfTwo((5*interfaceCount >> 2) + 1);
 		size_t extra = interfaceCapacity*sizeof(Traits*);
-		Traits* traits = new (GetGC(), extra) Traits(this, base,
+		Traits* traits = new (gc, extra) Traits(this, base,
 											  nameCount,
 											  interfaceCount,
 											  interfaceCapacity,
 											  objectSize);
 		return traits;
 	}
+
+	ExceptionHandlerTable* AvmCore::newExceptionHandlerTable(int exception_count)
+	{
+		size_t extra = sizeof(ExceptionHandler)*(exception_count-1);
+		return new (gc, extra) ExceptionHandlerTable(exception_count);
+	}
 	
-	Stringp AvmCore::newString(const char *s) const
+	Stringp AvmCore::newString(const char *s)
 	{
 		int len = String::Length(s);
 		int utf16len = UnicodeUtils::Utf8ToUtf16((const uint8*)s, len, NULL, 0);
-		return new (GetGC()) String(s, len, utf16len);
+		return new (gc) String(s, len, utf16len);
 	}
 
-	Stringp AvmCore::newString(const char *s, int len) const
+	Stringp AvmCore::newString(const char *s, int len)
 	{
 		int utf16len = UnicodeUtils::Utf8ToUtf16((const uint8*)s, len, NULL, 0);
-		return new (GetGC()) String(s, len, utf16len);
+		return new (gc) String(s, len, utf16len);
 	}
 
-	Stringp AvmCore::newString(const wchar *s) const
+	Stringp AvmCore::newString(const wchar *s)
 	{
 		int len = String::Length(s);
-		return new (GetGC()) String(s, len);
+		return new (gc) String(s, len);
 	}
 
-	Stringp AvmCore::concatStrings(Stringp s1, Stringp s2) const
+	Stringp AvmCore::concatStrings(Stringp s1, Stringp s2)
 	{
 		if (!s1) s1 = knull;
 		if (!s2) s2 = knull;
@@ -3388,7 +3251,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		} else if (s2->length() == 0) {
 			return s1;
 		}
-		return new (GetGC()) String(s1, s2);
+		return new (gc) String(s1, s2);
 	}
 
 	Stringp AvmCore::intToString(int value)
@@ -3396,7 +3259,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		wchar buffer[40];
 		int len;
 		MathUtils::convertIntegerToString(value, buffer, len);
-		return new (GetGC()) String(buffer, len);
+		return new (gc) String(buffer, len);
 	}
 
 	Stringp AvmCore::uintToString(uint32 value)
@@ -3407,7 +3270,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			MathUtils::convertIntegerToString(value, buffer, len);
 		else
 			MathUtils::convertDoubleToString(value, buffer, len);
-		return new (GetGC()) String(buffer, len);
+		return new (gc) String(buffer, len);
 	}
 
 	Stringp AvmCore::doubleToString(double d)
@@ -3415,7 +3278,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		wchar buffer[256];
 		int len;
 		MathUtils::convertDoubleToString(d, buffer, len, MathUtils::DTOSTR_NORMAL,15);
-		return new (GetGC()) String(buffer, len);
+		return new (gc) String(buffer, len);
 	}
 
 	#ifdef DEBUGGER
@@ -3423,7 +3286,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	{
 		int depth = callStack ? callStack->depth : 0;
 		int extra = depth > 0 ? sizeof(StackTrace::Element) * (depth-1) : 0;
-		StackTrace* stackTrace = new (GetGC(), extra) StackTrace();
+		StackTrace* stackTrace = new (gc, extra) StackTrace();
 		if (stackTrace)
 		{
 			stackTrace->depth = depth;
@@ -3445,7 +3308,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		uint32 oldNumTraces = numTraces;
 		numTraces = 0;
 		StackTrace **oldStackTraces = stackTraces;
-		stackTraces = (StackTrace**)GetGC()->Calloc(newSize, sizeof(StackTrace*), GC::kZero);
+		stackTraces = (StackTrace**)gc->Calloc(newSize, sizeof(StackTrace*), GC::kZero);
 
 		uint32 bitMask = newSize-1;
 
@@ -3468,14 +3331,14 @@ return the result of the comparison ToPrimitive(x) == y.
 	int AvmCore::findTrace(void /*StackTrace::Element*/ *ve, int depth)
 	{
 		StackTrace::Element *e = (StackTrace::Element*)ve;
-		uint32 sizeTraces = GetGC()->Size(stackTraces)/sizeof(StackTrace*);
-		uint32 shift = FindOneBit(sizeTraces);
+		uint32 sizeTraces = gc->Size(stackTraces)/sizeof(StackTrace*);
+		uint32 shift = GCAllocBase::FindOneBit(sizeTraces);
 		uint32 bitMask = (1<<shift)-1;
 		if(numTraces*4 > bitMask*3)
 		{
 			rehashTraces((bitMask+1)*2);
-			sizeTraces = GetGC()->Size(stackTraces)/sizeof(StackTrace*);
-			shift = FindOneBit(sizeTraces);
+			sizeTraces = gc->Size(stackTraces)/sizeof(StackTrace*);
+			shift = GCAllocBase::FindOneBit(sizeTraces);
 			bitMask = (1<<shift)-1;
 		}
 
@@ -3486,24 +3349,6 @@ return the result of the comparison ToPrimitive(x) == y.
 			j = (j + (n++)) & bitMask; // quadratic probe
 		}
 		return j;
-	}
-
-
-	StackTrace* AvmCore::getStackTrace(void /*StackTrace::Element*/ *ve, int depth)
-	{
-		StackTrace::Element *e = (StackTrace::Element*)ve;
-		int i = findTrace(e, depth);
-		StackTrace *t = stackTraces[i];
-		if(t)
-			return t;
-
-		int extra = depth > 0 ? sizeof(StackTrace::Element) * (depth-1) : 0;
-		t = new (GetGC(), extra) StackTrace();
-		t->depth = depth;
-		memcpy(t->elements, e, extra + sizeof(StackTrace::Element));
-		stackTraces[i] = t;
-		numTraces++;
-		return t;
 	}
 
 	StackTrace* AvmCore::getStackTrace()
@@ -3541,31 +3386,6 @@ return the result of the comparison ToPrimitive(x) == y.
 		AvmDebugMsg(false, buffer.c_str());
 	}
 	#endif
-
-	/*static*/
-	void AvmCore::chargeAllocation(Atom a)
-	{
-		GC *gc = GC::GetGC((const void*)a);
-		AvmCore *core = (AvmCore*)gc->GetGCContextVariable(GC::GCV_AVMCORE);
-		if(!core->callStack || !core->callStack->env)
-			return;
-
-		Toplevel *toplevel = core->callStack->env->toplevel();
-		ClassClosure *clazz = NULL;
-		switch(a&7)
-		{
-		case kStringType:
-			clazz = toplevel->stringClass;
-			break;
-		case kNamespaceType:
-			clazz = toplevel->namespaceClass;
-			break;
-		}
-		if(clazz)
-		{
-			clazz->addInstance(a);
-		}
-	}
     #endif /* DEBUGGER */
 
 	int AvmCore::integer(Atom atom) const
@@ -3771,7 +3591,7 @@ return the result of the comparison ToPrimitive(x) == y.
 
 	GrowableBuffer* AvmCore::requestNewMirBuffer()
 	{
-		return new (GetGC()) GrowableBuffer(GetGC()->GetGCHeap());
+		return new (gc) GrowableBuffer();
 	}
 
 	void AvmCore::releaseMirBuffer(GrowableBuffer* buffer)

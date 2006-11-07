@@ -225,7 +225,7 @@ namespace avmplus
 		#endif
 		if(method->declaringTraits != vtable->traits){
 			AvmAssertMsg(0, "(method->declaringTraits != vtable->traits)");
-			toplevel()->throwVerifyError(kCorruptABCError);
+			toplevel()->verifyErrorClass()->throwError(kCorruptABCError);
 		}
 
 		if (method->flags & AbstractFunction::NEED_ACTIVATION)
@@ -272,8 +272,6 @@ namespace avmplus
 		if (frameTraits) memset(&frameTraits[firstLocalAt], 0, (localCount-firstLocalAt)*sizeof(Traits*));
 		if (callstack) callstack->initialize(this, method, framep, frameTraits, argc, ap, eip);
 		core->debugger->_debugMethod(this);
-
-		core->sampleCheck();
 	}
 
 	void MethodEnv::debugExit(CallStackNode* callstack)
@@ -321,13 +319,13 @@ namespace avmplus
 					(atom == undefinedAtom) ? kConvertUndefinedToObjectError :
 										kConvertNullToObjectError);
 		} else {
-			toplevel()->throwVerifyError(kCorruptABCError);
+			toplevel()->verifyErrorClass()->throwError(kCorruptABCError);
 		}
     }
 
 	void MethodEnv::npe()
 	{
-		toplevel()->throwTypeError(kConvertNullToObjectError);
+		toplevel()->typeErrorClass()->throwError(kConvertNullToObjectError);
 	}
 
 	void MethodEnv::interrupt()
@@ -345,7 +343,7 @@ namespace avmplus
 			{
 				Traits* itraits = AvmCore::atomToScriptObject(atom)->traits()->itraits;
 				if (itraits == NULL)
-					toplevel()->throwTypeError(kIsTypeMustBeClassError);
+					toplevel()->typeErrorClass()->throwError(kIsTypeMustBeClassError);
 				return itraits;
 			}
 			// else fall through and report an error
@@ -353,7 +351,7 @@ namespace avmplus
 		default:
             // TypeError in ECMA
 			// ISSUE the error message should say "whatever" is not a class
-			toplevel()->throwTypeError(
+			toplevel()->typeErrorClass()->throwError(
 					   (atom == undefinedAtom) ? kConvertUndefinedToObjectError :
 											kConvertNullToObjectError);
 			return NULL;
@@ -379,7 +377,7 @@ namespace avmplus
 
 		if ((index&7) == kDoubleType)
 		{
-			int i = AvmCore::integer_i(index);
+			int i = core()->integer_i(index);
 			if ((double)i == AvmCore::atomToDouble(index))
 			{
 				return getpropertylate_i(obj, i);
@@ -515,7 +513,7 @@ namespace avmplus
             if( core->isXMLList(index) )
             {
                 // Error according to E4X spec, section 11.3.1
-                toplevel()->throwTypeError(kDeleteTypeError, core->toErrorString(toplevel()->toTraits(index)));
+                toplevel()->typeErrorClass()->throwError(kDeleteTypeError, core->toErrorString(toplevel()->toTraits(index)));
             }
 			ScriptObject* i = AvmCore::atomToScriptObject(index);
 			if (i->traits() == core->traits.qName_itraits)
@@ -550,7 +548,7 @@ namespace avmplus
             if (core->isXMLList(index))
             {
                 // Error according to E4X spec, section 11.3.1
-                toplevel()->throwTypeError(kDeleteTypeError, core->toErrorString(toplevel()->toTraits(index)));
+                toplevel()->typeErrorClass()->throwError(kDeleteTypeError, core->toErrorString(toplevel()->toTraits(index)));
             }
 			
 			ScriptObject* i = AvmCore::atomToScriptObject(index);
@@ -664,12 +662,12 @@ namespace avmplus
 	{
 		Toplevel* toplevel = vtable->toplevel;
 
-		ScriptEnv* script = getScriptEnv(multiname);
+		ScriptEnv* script = (ScriptEnv*) abcEnv()->getScriptEnv(multiname);
 		if (script == (ScriptEnv*)BIND_AMBIGUOUS)
-            toplevel->throwReferenceError(kAmbiguousBindingError, multiname);
+            toplevel->referenceErrorClass()->throwError(kAmbiguousBindingError, core()->toErrorString(multiname));
 
 		if (script == (ScriptEnv*)BIND_NONE)
-            toplevel->throwReferenceError(kUndefinedVarError, multiname);
+            toplevel->referenceErrorClass()->throwError(kUndefinedVarError, core()->toErrorString(multiname));
 
 		ScriptObject* global = script->global;
 		if (!global)
@@ -679,17 +677,6 @@ namespace avmplus
 			script->coerceEnter(0, argv);
 		}
 		return global;
-	}
-
-	ScriptEnv* MethodEnv::getScriptEnv(Multiname *multiname) const
-	{
-		ScriptEnv *se = (ScriptEnv*)abcEnv()->domainEnv->getScriptInit(multiname);
-		if(!se)
-		{	
-			// check privates
-			se = (ScriptEnv*)abcEnv()->privateScriptEnvs.getMulti(multiname);
-		}
-		return se;
 	}
 
 	ScriptObject* MethodEnv::finddefNsset(NamespaceSet* nsset, Stringp name) const
@@ -734,7 +721,7 @@ namespace avmplus
 		VTable* object_vtable = toplevel()->object_vtable;
 		AvmCore* core = method->core();
 
-		ScriptObject* o = new (core->GetGC(), object_vtable->getExtraSize()) 
+		ScriptObject* o = new (core->gc, object_vtable->getExtraSize()) 
 			ScriptObject(object_vtable, toplevel()->objectClass->prototype,
 					2*argc+1);
 
@@ -747,12 +734,6 @@ namespace avmplus
 
 			o->setProperty(core->internString(name)->atom(), sp[0]);
 		}
-#ifdef DEBUGGER
-		if( core->allocationTracking )
-		{
-			toplevel()->objectClass->addInstance(o->atom());
-		}
-#endif
 		return o;
     }
 
@@ -917,7 +898,7 @@ namespace avmplus
 		AvmAssert(ftraits != NULL);
 		AvmAssert(ftraits->scope != NULL);
 
-		ScopeChain* scope = ScopeChain::create(core->GetGC(), ftraits->scope, outer, *core->dxnsAddr);
+		ScopeChain* scope = ScopeChain::create(core->gc, ftraits->scope, outer, *core->dxnsAddr);
 
 		for (int i=outer->getSize(), n=scope->getSize(); i < n; i++)
 		{
@@ -929,11 +910,11 @@ namespace avmplus
 		// the vtable for the new function object
 		VTable* fvtable = core->newVTable(ftraits, functionClass->ivtable(), scope, abcEnv, toplevel());
 		fvtable->resolveSignatures();
-		FunctionEnv *fenv = new (core->GetGC()) FunctionEnv(function, fvtable);
+		FunctionEnv *fenv = new (core->gc) FunctionEnv(function, fvtable);
 		fvtable->call = fenv;
 		fvtable->ivtable = toplevel()->object_vtable;
 
-		ClassClosure* c = new (core->GetGC(), fvtable->getExtraSize()) ClassClosure(fvtable);
+		ClassClosure* c = new (core->gc, fvtable->getExtraSize()) ClassClosure(fvtable);
 		c->setDelegate( functionClass->prototype );
 
 		c->createVanillaPrototype();
@@ -968,7 +949,7 @@ namespace avmplus
 			if( error )
 				error->throwError(kConvertNullToObjectError);
 			else
-				toplevel->throwTypeError(kCorruptABCError);
+				toplevel->typeErrorClass()->throwError(kCorruptABCError);
 		}
 
 		// make sure the traits of the base vtable matches the base traits
@@ -978,14 +959,14 @@ namespace avmplus
 			if( error )
 				error->throwError(kInvalidBaseClassError);
 			else
-				toplevel->throwTypeError(kCorruptABCError);
+				toplevel->typeErrorClass()->throwError(kCorruptABCError);
 		}
 
 		ctraits->resolveSignatures(toplevel);
 		itraits->resolveSignatures(toplevel);
 
 		// class scopechain = [..., class]
-		ScopeChain* cscope = ScopeChain::create(core->GetGC(), ctraits->scope, outer, *core->dxnsAddr);
+		ScopeChain* cscope = ScopeChain::create(core->gc, ctraits->scope, outer, *core->dxnsAddr);
 
 		int staticScopesCount = 0;
 
@@ -995,7 +976,7 @@ namespace avmplus
 			cscope->setScope(i, *scopes++);
 		}
 
-		ScopeChain* iscope = ScopeChain::create(core->GetGC(), itraits->scope, cscope, *core->dxnsAddr);
+		ScopeChain* iscope = ScopeChain::create(core->gc, itraits->scope, cscope, *core->dxnsAddr);
 
 		AbcEnv *abcEnv = vtable->abcEnv;
 		VTable* cvtable = core->newVTable(ctraits, toplevel->class_vtable, cscope, abcEnv, toplevel);
@@ -1023,7 +1004,7 @@ namespace avmplus
 		}
 		else
 		{
-			cc = new (core->GetGC(), cvtable->getExtraSize()) ClassClosure(cvtable);
+			cc = new (core->gc, cvtable->getExtraSize()) ClassClosure(cvtable);
 			AvmAssert(cc->prototype == NULL);
 			cc->createVanillaPrototype();
 		}
@@ -1046,13 +1027,6 @@ namespace avmplus
 			cc->setDelegate( toplevel->classClass->prototype );
 		}
 
-#ifdef DEBUGGER
-		if(toplevel->classClass && core->allocationTracking)
-		{
-			toplevel->classClass->addInstance(cc->atom());
-		}
-#endif
-
 		// Invoke the class init function.
 		Atom argv[1] = { cc->atom() };
 		cvtable->init->coerceEnter(0, argv);
@@ -1063,13 +1037,96 @@ namespace avmplus
     {
 		Toplevel* toplevel = this->toplevel();
 		Binding b = toplevel->getBinding(vtable->traits, multiname);
-		if ((b&7) == BIND_CONST)
+        switch (b&7)
+        {
+		case BIND_METHOD: 
+		{
+			#ifdef DEBUG_EARLY_BINDING
+			core()->console << "initproperty method " << vtable->traits << " " << multiname->getName() << "\n";
+			#endif
+			if (multiname->contains(core()->publicNamespace) && toplevel->isXmlBase(obj))
+			{
+				// dynamic props should hide declared methods
+				ScriptObject* so = AvmCore::atomToScriptObject(obj);
+				so->setProperty(multiname, value);
+				return;
+			}
+			// trying to assign to a method.  error.
+			toplevel->referenceErrorClass()->throwError(kCannotAssignToMethodError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+		}
+
+		case BIND_CONST:
 		{
 			if (vtable->init != this)
-				toplevel->throwReferenceError(kConstWriteError, multiname, vtable->traits);
-			b = (b & ~7) | BIND_VAR;
+			{
+				toplevel->referenceErrorClass()->throwError(kConstWriteError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+				return;
+			}
+			else
+			{
+				// const slot is being set from init function; fall through to var case.
+			}
 		}
-		toplevel->setproperty_b(obj, multiname, value, vtable, b);
+		case BIND_VAR:
+		{
+			#ifdef DEBUG_EARLY_BINDING
+			core()->console << "initproperty slot " << vtable->traits << " " << multiname->getName() << "\n";
+			#endif
+			int slot = urshift(b,3);
+			AvmCore::atomToScriptObject(obj)->setSlotAtom(slot, 
+				toplevel->coerce(value, vtable->traits->getSlotTraits(slot)));
+            return;
+		}
+
+		case BIND_ACCESSOR: 
+		{
+			#ifdef DEBUG_EARLY_BINDING
+			core()->console << "initproperty accessor " << vtable->traits << " " << multiname->getName() << "\n";
+			#endif
+			// Invoke the setter or write to the slot number
+			Accessor *acc = AvmCore::bindingToAccessor(b);
+			Binding ref = acc->set;
+
+			if (ref == BIND_NONE)
+			{
+				toplevel->referenceErrorClass()->throwError(kConstWriteError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+				return;
+			}
+
+			AvmAssert((ref&7)==BIND_METHOD);
+			// Invoke the setter
+			uint32 m = urshift(ref,3);
+			AvmAssert(m < vtable->traits->methodCount);
+			MethodEnv* method = vtable->methods[m];
+			Atom atomv_out[2] = { obj, value };
+			method->coerceEnter(1, atomv_out);
+			return;
+		}
+
+		case BIND_NONE:
+		{
+			#ifdef DEBUG_EARLY_BINDING
+			core()->console << "initproperty dynamic " << vtable->traits << " " << multiname->getName() << "\n";
+			#endif
+			if (AvmCore::isObject(obj))
+			{
+				AvmCore::atomToScriptObject(obj)->setProperty(multiname, value);
+			}
+			else
+			{
+				// obj represents a primitive Number, Boolean, int, or String, and primitives
+				// are sealed and final.  Cannot add dynamic vars to them.
+
+				// throw a ReferenceError exception  Property not found and could not be created.
+				toplevel->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+			}
+			return;
+		}
+
+		default:
+			// internal error if we get here
+			AvmAssert(false);
+        }
     }
 
 	void MethodEnv::setpropertylate_i(Atom obj, int index, Atom value) const
@@ -1094,7 +1151,7 @@ namespace avmplus
 
 			// throw a ReferenceError exception  Property not found and could not be created.
 			Multiname tempname(core()->publicNamespace, core()->internInt(index));
-			toplevel()->throwReferenceError(kWriteSealedError, &tempname, toplevel()->toTraits(obj));
+			toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(&tempname), core()->toErrorString(toplevel()->toTraits(obj)));
 		}
 	}
 
@@ -1111,7 +1168,7 @@ namespace avmplus
 
 			// throw a ReferenceError exception  Property not found and could not be created.
 			Multiname tempname(core()->publicNamespace, core()->internUint32(index));
-			toplevel()->throwReferenceError(kWriteSealedError, &tempname, toplevel()->toTraits(obj));
+			toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(&tempname), core()->toErrorString(toplevel()->toTraits(obj)));
 		}
 	}
 
@@ -1123,14 +1180,14 @@ namespace avmplus
 		switch (b&7)
 		{
 		default:
-			toplevel->throwReferenceError(kCallNotFoundError, multiname, base->traits);
+			toplevel->referenceErrorClass()->throwError(kCallNotFoundError, core()->toErrorString(multiname), core()->toErrorString((Traits*)base->traits));
 
 		case BIND_METHOD:
 		{
 			#ifdef DEBUG_EARLY_BINDING
 			core()->console << "callsuper method " << base->traits << " " << multiname->name << "\n";
 			#endif
-			MethodEnv* superenv = base->methods[AvmCore::bindingToMethodId(b)];
+			MethodEnv* superenv = base->methods[urshift(b,3)];
 			return superenv->coerceEnter(argc, atomv);
 		}
 		case BIND_VAR:
@@ -1139,26 +1196,25 @@ namespace avmplus
 			#ifdef DEBUG_EARLY_BINDING
 			core()->console << "callsuper slot " << base->traits << " " << multiname->name << "\n";
 			#endif
-			uint32 slot = AvmCore::bindingToSlotId(b);
-			Atom method = AvmCore::atomToScriptObject(atomv[0])->getSlotAtom(slot);
+			Atom method = AvmCore::atomToScriptObject(atomv[0])->getSlotAtom(urshift(b,3));
 			return toplevel->op_call(method, argc, atomv);
 		}
-		case BIND_SET:
+		case BIND_ACCESSOR:
 		{
 			#ifdef DEBUG_EARLY_BINDING
-			core()->console << "callsuper setter " << base->traits << " " << multiname->name << "\n";
+			core()->console << "callsuper accessor " << base->traits << " " << multiname->name << "\n";
 			#endif
-			// read on write-only property
-			toplevel->throwReferenceError(kWriteOnlyError, multiname, base->traits);
-		}
-		case BIND_GET:
-		case BIND_GETSET:
-		{
-			#ifdef DEBUG_EARLY_BINDING
-			core()->console << "callsuper getter " << base->traits << " " << multiname->name << "\n";
-			#endif
+			Accessor *acc = AvmCore::bindingToAccessor(b);
+	        Binding ref = acc->get;
+			if (ref == BIND_NONE)
+			{
+				// read on write-only property
+				toplevel->referenceErrorClass()->throwError(kWriteOnlyError, core()->toErrorString(multiname), core()->toErrorString((Traits*)base->traits));
+			}
+
+			AvmAssert((ref&7)==BIND_METHOD);
 			// Invoke the getter
-			int m = AvmCore::bindingToGetterId(b);
+			int m = urshift(ref,3);
 			MethodEnv *f = base->methods[m];
 			Atom atomv_out[1] = { atomv[0] };
 			Atom method = f->coerceEnter(0, atomv_out);
@@ -1174,12 +1230,12 @@ namespace avmplus
 		if (AvmCore::isObject(obj))
 		{
 			Binding b = toplevel->getBinding(traits, multiname);
-			if (b == BIND_NONE) 
+			if ((b&7)==BIND_NONE) 
 			{
 				bool b = AvmCore::atomToScriptObject(obj)->deleteProperty(multiname);
 				return b ? trueAtom : falseAtom;
 			}
-			else if (AvmCore::isMethodBinding(b))
+			else if ((b&7) == BIND_METHOD)
 			{
 				if (multiname->contains(core()->publicNamespace) && toplevel->isXmlBase(obj))
 				{
@@ -1192,7 +1248,7 @@ namespace avmplus
 		}
 		else
 		{
-			toplevel->throwReferenceError(kDeleteSealedError, multiname, traits);
+			toplevel->referenceErrorClass()->throwError(kDeleteSealedError, core()->toErrorString(multiname), core()->toErrorString(traits));
 		}
 
 		return falseAtom;
@@ -1206,7 +1262,7 @@ namespace avmplus
         switch (b&7)
         {
 		default:
-			toplevel->throwReferenceError(kReadSealedError, multiname, vtable->traits);
+			toplevel->referenceErrorClass()->throwError(kReadSealedError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
 
 		case BIND_METHOD: 
 		{
@@ -1214,7 +1270,7 @@ namespace avmplus
 			core->console << "getsuper method " << vtable->traits << " " << multiname->name << "\n";
 			#endif
 			// extracting a virtual method
-			MethodEnv *m = vtable->methods[AvmCore::bindingToMethodId(b)];
+			MethodEnv *m = vtable->methods[urshift(b,3)];
 			return toplevel->methodClosureClass->create(m, obj)->atom();
 		}
 
@@ -1223,24 +1279,24 @@ namespace avmplus
 			#ifdef DEBUG_EARLY_BINDING
 			core->console << "getsuper slot " << vtable->traits << " " << multiname->name << "\n";
 			#endif
-			return AvmCore::atomToScriptObject(obj)->getSlotAtom(AvmCore::bindingToSlotId(b));
+			return AvmCore::atomToScriptObject(obj)->getSlotAtom(urshift(b,3));
 
-		case BIND_SET:
+		case BIND_ACCESSOR:
 		{
 			#ifdef DEBUG_EARLY_BINDING
-			core->console << "getsuper setter " << vtable->traits << " " << multiname->name << "\n";
+			core->console << "getsuper accessor " << vtable->traits << " " << multiname->name << "\n";
 			#endif
-			// read on write-only property
-			toplevel->throwReferenceError(kWriteOnlyError, multiname, vtable->traits);
-		}
-		case BIND_GET:
-		case BIND_GETSET:
-		{
-			#ifdef DEBUG_EARLY_BINDING
-			core->console << "getsuper getter " << vtable->traits << " " << multiname->name << "\n";
-			#endif
+			Accessor *acc = AvmCore::bindingToAccessor(b);
+	        Binding ref = acc->get;
+			if (ref == BIND_NONE)
+			{
+				// read on write-only property
+				toplevel->referenceErrorClass()->throwError(kWriteOnlyError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+			}
+
+			AvmAssert((ref&7)==BIND_METHOD);
 			// Invoke the getter
-			int m = AvmCore::bindingToGetterId(b);
+			int m = urshift(ref,3);
 			MethodEnv *f = vtable->methods[m];
 			Atom atomv_out[1] = { obj };
 			return f->coerceEnter(0, atomv_out);
@@ -1257,35 +1313,39 @@ namespace avmplus
         switch (b&7)
         {
 		default:
-			toplevel->throwReferenceError(kWriteSealedError, multiname, vtable->traits);
+			toplevel->referenceErrorClass()->throwError(kWriteSealedError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
 
 		case BIND_CONST:
-			toplevel->throwReferenceError(kConstWriteError, multiname, vtable->traits);
+			toplevel->referenceErrorClass()->throwError(kConstWriteError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+			return;
 
 		case BIND_METHOD: 
-			toplevel->throwReferenceError(kCannotAssignToMethodError, multiname, vtable->traits);
-
-		case BIND_GET: 
-			#ifdef DEBUG_EARLY_BINDING
-			core()->console << "setsuper getter " << vtable->traits << " " << multiname->name << "\n";
-			#endif
-			toplevel->throwReferenceError(kConstWriteError, multiname, vtable->traits);
+			toplevel->referenceErrorClass()->throwError(kCannotAssignToMethodError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
 
 		case BIND_VAR:
 			#ifdef DEBUG_EARLY_BINDING
 			core()->console << "setsuper slot " << vtable->traits << " " << multiname->name << "\n";
 			#endif
-			AvmCore::atomToScriptObject(obj)->setSlotAtom(AvmCore::bindingToSlotId(b), value);
+			AvmCore::atomToScriptObject(obj)->setSlotAtom(urshift(b,3), value);
             return;
 
-		case BIND_SET: 
-		case BIND_GETSET: 
+		case BIND_ACCESSOR: 
 		{
 			#ifdef DEBUG_EARLY_BINDING
-			core()->console << "setsuper setter " << vtable->traits << " " << multiname->name << "\n";
+			core()->console << "setsuper accessor " << vtable->traits << " " << multiname->name << "\n";
 			#endif
+			// Invoke the setter or write to the slot number
+			Accessor *acc = AvmCore::bindingToAccessor(b);
+			Binding ref = acc->set;
+			if (ref == BIND_NONE)
+			{
+				toplevel->referenceErrorClass()->throwError(kConstWriteError, core()->toErrorString(multiname), core()->toErrorString((Traits*)vtable->traits));
+				return;
+			}
+
+			AvmAssert((ref&7)==BIND_METHOD);
 			// Invoke the setter
-			uint32 m = AvmCore::bindingToSetterId(b);
+			uint32 m = urshift(ref,3);
 			AvmAssert(m < vtable->traits->methodCount);
 			MethodEnv* method = vtable->methods[m];
 			Atom atomv_out[2] = { obj, value };
@@ -1441,7 +1501,7 @@ namespace avmplus
 		if (multiname->isAttr())
 		{
 			if (strict)
-				toplevel->throwReferenceError(kUndefinedVarError, multiname);
+				toplevel->referenceErrorClass()->throwError(kUndefinedVarError, core()->toErrorString(multiname));
 			return undefinedAtom;
 		}
 
@@ -1449,11 +1509,11 @@ namespace avmplus
 		
 		// look for imported definition (similar logic to OP_finddef).  This will
 		// find definitions in this script and in other scripts.
-		ScriptEnv* script = getScriptEnv(multiname);
+		ScriptEnv* script = (ScriptEnv*) abcEnv()->getScriptEnv(multiname);
 		if (script != (ScriptEnv*)BIND_NONE)
 		{
 			if (script == (ScriptEnv*)BIND_AMBIGUOUS)
-				toplevel->throwReferenceError(kAmbiguousBindingError, multiname);
+				toplevel->referenceErrorClass()->throwError(kAmbiguousBindingError, core()->toErrorString(multiname));
 
 			ScriptObject* global = script->global;
 			if (global == NULL)
@@ -1488,7 +1548,7 @@ namespace avmplus
 		// throw reference error if strict
 
 		if (strict)
-			toplevel->throwReferenceError(kUndefinedVarError, multiname);
+			toplevel->referenceErrorClass()->throwError(kUndefinedVarError, core()->toErrorString(multiname));
 
 		return global->atom();
     }
@@ -1496,7 +1556,7 @@ namespace avmplus
 	Namespace* MethodEnv::internRtns(Atom nsAtom)
 	{
 		if ((nsAtom&7) != kNamespaceType)
-			toplevel()->throwTypeError(kIllegalNamespaceError);
+			toplevel()->typeErrorClass()->throwError(kIllegalNamespaceError);
 		return core()->internNamespace(AvmCore::atomToNamespace(nsAtom));
 	}
 
@@ -1528,7 +1588,7 @@ namespace avmplus
 		{
 			// Rhino simply returns undefined for other Atom types
 			// SpiderMonkey throws TypeError.  We're doing TypeError.
-			toplevel()->throwTypeError(kDescendentsError, core()->toErrorString(toplevel()->toTraits(obj)));
+			toplevel()->typeErrorClass()->throwError(kDescendentsError, core()->toErrorString(toplevel()->toTraits(obj)));
 			return undefinedAtom; // not reached
 		}
 	}
@@ -1562,7 +1622,7 @@ namespace avmplus
 	{
 		if ( !toplevel()->isXmlBase(obj) )
 		{
-			toplevel()->throwTypeError(kFilterError, core()->toErrorString(toplevel()->toTraits(obj)));
+			toplevel()->typeErrorClass()->throwError(kFilterError, core()->toErrorString(toplevel()->toTraits(obj)));
 		}
 	}
 
@@ -1593,7 +1653,7 @@ namespace avmplus
 #ifdef AVMPLUS_VERBOSE
 			//core->console << "checktype failed " << expected << " <- " << atom << "\n";
 #endif
-			toplevel()->throwTypeError(kCheckTypeFailedError, core()->atomToErrorString(atom), core()->toErrorString(expected));
+			toplevel()->typeErrorClass()->throwError(kCheckTypeFailedError, core()->atomToErrorString(atom), core()->toErrorString(expected));
 			return NULL;
 		}
     }
@@ -1625,14 +1685,14 @@ namespace avmplus
 		int type = getType();
 		if(!activationOrMCTable)
 		{
-			WeakKeyHashtable *wkh = new (core()->GetGC()) WeakKeyHashtable(core()->GetGC());			
+			WeakKeyHashtable *wkh = new (core()->gc) WeakKeyHashtable(core()->gc);			
 			setActivationOrMCTable(wkh, kMethodTable);
 			return wkh;
 		}
 		else if(type == kActivation)
 		{
-			WeakKeyHashtable *wkh = new (core()->GetGC()) WeakKeyHashtable(core()->GetGC());
-			ActivationMethodTablePair *amtp = new (core()->GetGC()) ActivationMethodTablePair(getActivation(), wkh);					
+			WeakKeyHashtable *wkh = new (core()->gc) WeakKeyHashtable(core()->gc);
+			ActivationMethodTablePair *amtp = new (core()->gc) ActivationMethodTablePair(getActivation(), wkh);					
 			setActivationOrMCTable(amtp, kActivationMethodTablePair);
 			return wkh;
 		}

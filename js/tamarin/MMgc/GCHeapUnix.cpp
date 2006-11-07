@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,7 +130,7 @@ namespace MMgc
 		size_t sizePaged = (size_t)endPage - (size_t)beginPage;
 
 		int retval = mprotect(beginPage, sizePaged,
-							  executableFlag ? (PROT_READ|PROT_EXEC) : (PROT_READ|PROT_WRITE|PROT_EXEC));
+							  executableFlag ? (PROT_READ|PROT_EXEC) : (PROT_READ|PROT_WRITE));
 
 		GCAssert(retval == 0);
 	}

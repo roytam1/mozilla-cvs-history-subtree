@@ -192,14 +192,13 @@ package abcdump
 	const OP_convert_o:int = 0x77
 	const OP_coerce:int = 0x80
 	const OP_coerce_b:int = 0x81
-	const OP_coerce_a:int = 0x82
+	const OP_coerce_o:int = 0x82
 	const OP_coerce_i:int = 0x83
 	const OP_coerce_d:int = 0x84
 	const OP_coerce_s:int = 0x85
 	const OP_astype:int = 0x86
 	const OP_astypelate:int = 0x87
 	const OP_coerce_u:int = 0x88
-	const OP_coerce_o:int = 0x89
 	const OP_negate:int = 0x90
 	const OP_increment:int = 0x91
 	const OP_inclocal:int = 0x92
@@ -383,14 +382,14 @@ package abcdump
 	    "OP_0x7F       ",
 	    "coerce        ",
 	    "coerce_b      ",
-	    "coerce_a      ",
+	    "coerce_o      ",
 	    "coerce_i      ",
 	    "coerce_d      ",
 	    "coerce_s      ",
 	    "astype        ",
 	    "astypelate    ",
 	    "coerce_u      ",
-	    "coerce_o      ",
+	    "OP_0x89       ",
 	    "OP_0x8A       ",
 	    "OP_0x8B       ",
 	    "OP_0x8C       ",

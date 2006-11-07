@@ -60,14 +60,14 @@ namespace avmplus
 	Atom MathClass::construct(int /*argc*/, Atom* /*argv*/)
 	{
 		// according to ES3 15.8, Math cannot be used as a function or constructor.
-		toplevel()->throwTypeError(kMathNotConstructorError);
+		toplevel()->typeErrorClass()->throwError(kMathNotConstructorError);
 		return 0;
 	}
 	
 	Atom MathClass::call(int /*argc*/, Atom* /*argv*/)
 	{
 		// according to ES3 15.8, Math cannot be used as a function or constructor.
-		toplevel()->throwTypeError(kMathNotFunctionError);
+		toplevel()->typeErrorClass()->throwError(kMathNotFunctionError);
 		return 0;
 	}
 

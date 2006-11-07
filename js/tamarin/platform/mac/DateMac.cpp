@@ -50,14 +50,28 @@ namespace avmplus
 		const unsigned long kMacEpochBias = 2082844800;
 		const double kTwoPower32          = (4294967296.0); /* 2^32 */
 
+		/**
+		 * Internal state
+		 */
+		enum
+		{
+			kNotInitialized,
+			kClassicMode,
+			kCoreFoundationMode
+		};
+
+		int          g_mode = kNotInitialized;
 		double       g_timeAtStartup;
 		UnsignedWide g_microsecondsAtStartup;
 
 		/**
 		 * Core Foundation internal functions
 		 */
+#if TARGET_API_MAC_CARBON
+		bool UseCoreFoundation() { return g_mode == kCoreFoundationMode; }
 		CFAbsoluteTime ECMADateToCFAbsoluteTime(double ecmaDate);
 		double CFAbsoluteTimeToECMADate(CFAbsoluteTime time);
+#endif
 	
 		/**
 		 * Classic internal functions
@@ -66,7 +80,45 @@ namespace avmplus
 		void MicrosecondDelta(register const UnsignedWide *startPtr,
 							  register const UnsignedWide *endPtr,
 							  register UnsignedWide *resultPtr);					  
+		double MicrosecondToDouble(register const UnsignedWide* epochPtr);			
 
+		/**
+		 * MacDateTime::Initialize
+		 *
+		 * Initializes Flash's date/time API's for the Mac.
+		 * Determines whether to use Classic API's (Microseconds, ReadLocation)
+		 * or OS X Core Foundation services (CFDate, CFTimeZone)
+		 */
+		void MacDateTime::Initialize()
+		{
+			if (g_mode != kNotInitialized) {
+				return;
+			}
+
+#if TARGET_API_MAC_CARBON
+			// Use Core Foundation API only if running on OS X.
+			// On OS 8/9 CarbonLib, CFTimeZone is not fully supported.
+			long version;
+			const long kOSXVersion = 0x1000;
+			::Gestalt( gestaltSystemVersion, &version);
+			if ( version >= kOSXVersion) {
+				g_mode = kCoreFoundationMode;
+			} else {
+				g_mode = kClassicMode;
+			}
+#else
+			g_mode = kClassicMode;
+#endif
+	
+			if (MacDateTime::g_mode == kClassicMode) {
+				unsigned long secs;
+				::Microseconds(&g_microsecondsAtStartup);
+				::GetDateTime(&secs);
+				g_timeAtStartup = (double) (secs - kMacEpochBias) * kMsecPerSecond;
+			}
+		}
+
+#if TARGET_API_MAC_CARBON
 		/**
 		 * MacDateTime::ECMADateToCFAbsoluteTime
 		 *
@@ -106,6 +158,7 @@ namespace avmplus
 	
 			return result;
 		}
+#endif
 
 		/**
 		 * MacDateTime::ReadMachineLocation
@@ -131,21 +184,32 @@ namespace avmplus
 		 */
 		double MacDateTime::LocalTZA(double time)
 		{
-			CFTimeZoneRef tz = CFTimeZoneCopySystem();
-			if (tz) 
-			{			
-				CFAbsoluteTime at = ECMADateToCFAbsoluteTime(time);
-				// pass now as the reference. 
-				// This will include any daylight savings offsets in the result.
-				CFTimeInterval result = CFTimeZoneGetSecondsFromGMT(tz, at);
-						
-				CFRelease(tz);	
+			MacDateTime::Initialize();
+	
+#if TARGET_API_MAC_CARBON
+			// On Mac OS X, we can use Core Foundation to determine 
+			// the time zone offset.
+			// If CFTimeZoneCopySystem returns NULL, we are likely running
+			// under Mac OS 8/9 CarbonLib, where the CFTimeZone API's are
+			// not available.  In this case, fall back on our Classic behavior.
+			if (MacDateTime::UseCoreFoundation()) {
+				CFTimeZoneRef tz = CFTimeZoneCopySystem();
+				if (tz) 
+				{			
+					CFAbsoluteTime at = ECMADateToCFAbsoluteTime(time);
+					// pass now as the reference. 
+					// This will include any daylight savings offsets in the result.
+					CFTimeInterval result = CFTimeZoneGetSecondsFromGMT(tz, at);
+							
+					CFRelease(tz);	
 
-				result *= kMsecPerSecond;
-		
-				// Remove the effects of daylight saving time
-				return ( result -= MacDateTime::DaylightSavingTA(time) );
+					result *= kMsecPerSecond;
+			
+					// Remove the effects of daylight saving time
+					return ( result -= MacDateTime::DaylightSavingTA(time) );
+				}
 			}
+#endif
 
 			MachineLocation location;
 			ReadMachineLocation(&location);
@@ -172,13 +236,24 @@ namespace avmplus
 		 */
 		double MacDateTime::DaylightSavingTA(double time)
 		{
-			CFTimeZoneRef tz = CFTimeZoneCopyDefault();
-			if (tz) {
-				CFAbsoluteTime at = ECMADateToCFAbsoluteTime(time);
-				Boolean isDST = CFTimeZoneIsDaylightSavingTime(tz, at);
-				CFRelease(tz);	
-				return (isDST ? kMsecPerHour : 0);
+			Initialize();
+
+#if TARGET_API_MAC_CARBON
+			// On Mac OS X, we can use Core Foundation to determine if a
+			// date/time is in Daylight Saving Time.
+			// If CFTimeZoneCopyDefault returns NULL, we are likely running
+			// under Mac OS 8/9 CarbonLib, where the CFTimeZone API's are
+			// not available.  In this case, fall back on our Classic behavior.
+			if (UseCoreFoundation()) {
+				CFTimeZoneRef tz = CFTimeZoneCopyDefault();
+				if (tz) {
+					CFAbsoluteTime at = ECMADateToCFAbsoluteTime(time);
+					Boolean isDST = CFTimeZoneIsDaylightSavingTime(tz, at);
+					CFRelease(tz);	
+					return (isDST ? kMsecPerHour : 0);
+				}
 			}
+#endif
 
 			time;
 	
@@ -189,6 +264,19 @@ namespace avmplus
 			MachineLocation location;
 			ReadMachineLocation(&location);
 			return (location.u.dlsDelta < 0) ? kMsecPerHour : 0;
+		}
+
+		/**
+		 * MacDateTime::MicrosecondToDouble
+		 *
+		 * Converts a Macintosh "Microseconds" 64-bit quantity to a
+		 * double-precision number.
+		 */
+		double MacDateTime::MicrosecondToDouble(register const UnsignedWide* epochPtr)
+		{
+			register double result;
+			result = (((double)epochPtr->hi)*kTwoPower32) + epochPtr->lo;
+			return result;
 		}
 
 		/**
@@ -216,8 +304,25 @@ namespace avmplus
 		 */
 		double MacDateTime::GetTime()
 		{
-			CFAbsoluteTime at = CFAbsoluteTimeGetCurrent();
-			return CFAbsoluteTimeToECMADate(at);
+			Initialize();
+ 
+#if TARGET_API_MAC_CARBON
+			if (UseCoreFoundation()) {
+				CFAbsoluteTime at = CFAbsoluteTimeGetCurrent();
+				return CFAbsoluteTimeToECMADate(at);
+			}
+#endif
+	
+			UnsignedWide microsecs;
+			UnsignedWide delta;
+			::Microseconds(&microsecs);
+			MicrosecondDelta(&g_microsecondsAtStartup, &microsecs, &delta);
+
+			double dblDelta = MicrosecondToDouble((UnsignedWide*)&delta) / 1000.0;
+
+			// GetDateTime returns LOCAL time.  So we must adjust
+			// it into UTC.
+			return UTC(g_timeAtStartup + dblDelta);
 		}
 
 		/**
@@ -228,6 +333,8 @@ namespace avmplus
 		 */
 		uint64 MacDateTime::GetMsecCount()
 		{
+			Initialize();
+ 
 			UnsignedWide microsecs;
 			::Microseconds(&microsecs);
 

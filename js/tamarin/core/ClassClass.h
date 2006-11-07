@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_ClassClass__
 #define __avmplus_ClassClass__
 

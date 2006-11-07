@@ -69,7 +69,7 @@ namespace avmplus
         // can't invoke method closure as constructor:
         //     m = o.m;
         //     new m(); // error
-		toplevel()->throwTypeError(kCannotCallMethodAsConstructor, core()->toErrorString(env->method));		
+		toplevel()->typeErrorClass()->throwError(kCannotCallMethodAsConstructor, core()->toErrorString(env->method));		
         return undefinedAtom;
     }
 
@@ -119,7 +119,7 @@ namespace avmplus
 		if(!ref || !ref->get())
 		{
 			VTable* ivtable = this->ivtable();
-			mc = (new (core()->GetGC(), ivtable->getExtraSize()) MethodClosure(ivtable, prototype, m, obj));
+			mc = (new (core()->gc, ivtable->getExtraSize()) MethodClosure(ivtable, prototype, m, obj));
 			mcWeakAtom = AvmCore::gcObjectToAtom(mc->GetWeakRef());
 			mcTable->add(obj, mcWeakAtom);
 		}

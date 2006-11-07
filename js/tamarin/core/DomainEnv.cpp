@@ -38,7 +38,7 @@ namespace avmplus
 		: domain(domain),
 		  base(base)
 	{
-		namedScripts = new (core->GetGC()) MultinameHashtable();
+		namedScripts = new (core->gc) MultinameHashtable();
 	}
 
 	MethodEnv* DomainEnv::getScriptInit(Namespace* ns, Stringp name) const

@@ -66,10 +66,8 @@ package
 
 		AS3 native function exec(s:String="")
 
-		prototype.exec = function(s="")
+		prototype.exec = function(s:String="")
 		{
-			// arg not typed String, so that null and undefined convert
-			// to "null" and "undefined", respectively
 			var r:RegExp = this // TypeError if not
 			return r.AS3::exec(String(s))
 		}
@@ -79,12 +77,10 @@ package
 			return AS3::exec(s) != null
 		}
 		
-		prototype.test = function(s=""):Boolean
+		prototype.test = function(s:String=""):Boolean
 		{
-			// arg not typed String, so that null and undefined convert
-			// to "null" and "undefined", respectively
 			var r:RegExp = this
-			return r.AS3::test(String(s))
+			return r.AS3::test(s)
 		}
 
         // Dummy constructor function - This is neccessary so the compiler can do arg # checking for the ctor in strict mode

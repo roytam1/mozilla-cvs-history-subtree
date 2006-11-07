@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AvmProfiler__
 #define __avmplus_AvmProfiler__
 

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_Hashtable__
 #define __avmplus_Hashtable__
 
@@ -38,7 +39,7 @@ namespace avmplus
 	/**
 	 * common base class for hashtable-like objects.
 	 */
-	class Hashtable : public MMgc::GCFinalizedObject
+	class Hashtable : public MMgc::GCObject
 	{
 	public:
 		/**
@@ -47,7 +48,7 @@ namespace avmplus
 		 */
 		const static Atom EMPTY = 0;
 
-		/** DELETED is stored as the key for deleted items5 */
+		/** DELETED is stored as the key for deleted items */
 		const static Atom DELETED = undefinedAtom;
 
 		/** kDefaultCapacity must be a power of 2 */
@@ -86,60 +87,9 @@ namespace avmplus
 
 		void setNumAtoms(int numAtoms)
 		{
-			logNumAtoms = numAtoms ? (short)(FindOneBit(numAtoms)+1) : 0;
+			logNumAtoms = numAtoms ? (short)(MMgc::GCAllocBase::FindOneBit(numAtoms)+1) : 0;
 			AvmAssert(getNumAtoms() == numAtoms);
-		}
-
-#if defined(AVMPLUS_IA32)
-		static inline uint32 FindOneBit(uint32 value)
-		{
-#ifndef __GNUC__
-			_asm
-			{
-				bsr eax,[value];
-			}
-#else
-			// DBC - This gets rid of a compiler warning and matchs PPC results where value = 0
-			register int	result = ~0;
-			
-			if (value)
-			{
-				asm (
-					"bsr %1, %0"
-					: "=r" (result)
-					: "m"(value)
-					);
-			}
-			return result;
-#endif
-		}
-	#elif defined(AVMPLUS_PPC)
-
-		static inline int FindOneBit(uint32 value)
-		{
-			register int index;
-			#ifdef DARWIN
-			asm ("cntlzw %0,%1" : "=r" (index) : "r" (value));
-			#else
-			register uint32 in = value;
-			asm { cntlzw index, in; }
-			#endif
-			return 31-index;
-		}
-
-		#else // generic platform
-
-		static int FindOneBit(uint32 value)
-		{
-			for (int i=0; i < 32; i++)
-				if (value & (1<<i))
-					return i;
-			// asm versions of this function are undefined if no bits are set
-			GCAssert(false);
-			return 0;
-		}
-
-#endif
+		}		
 		
 		void setAtoms(Atom *atoms);
 
@@ -246,7 +196,7 @@ namespace avmplus
 		int next(int index);
 		Atom keyAt(int index);
 		Atom valueAt(int index);
-		//void removeAt(int index);
+		void removeAt(int index);
 
 		void setHasDeletedItems(bool val) { flags = (short)((flags & ~kHasDeletedItems) | (val ? kHasDeletedItems : 0)); }
 

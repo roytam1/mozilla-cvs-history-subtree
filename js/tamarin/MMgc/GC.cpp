@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 // For memset
 #include <string.h>
 
@@ -58,38 +59,51 @@
 #include <pthread.h>
 #endif
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-// we turn on exceptions in DEBUG builds
-#pragma warning(disable:4291) // no matching operator delete found; memory will not be freed if initialization throws an exception
-#endif
-
-#ifdef DEBUGGER
-// sampling support
-#include "avmplus.h"
-#else
-#define SAMPLE_FRAME(_x, _s) 
-#define SAMPLE_CHECK() 
-#endif
-
 namespace MMgc
 {
+	bool GC::nogc = false;
+	bool GC::greedy = false;	
+	bool GC::findUnmarkedPointers = false;
+	bool GC::validateDefRef = false;	
+	bool GC::keepDRCHistory = false;
+
+	bool GC::gcstats = false;
+
+#ifdef WRITE_BARRIERS
+	bool GC::incremental = true;
+#else
+	bool GC::incremental = false;
+#endif
 
 #ifdef MMGC_DRC
 
 	// how many objects trigger a reap, should be high
 	// enough that the stack scan time is noise but low enough
 	// so that objects to away in a timely manner
-	const int ZCT::ZCT_REAP_THRESHOLD = 512;
+	int ZCT::ZCT_REAP_THRESHOLD = 512;
 
 	// size of table in pages
-	const int ZCT::ZCT_START_SIZE = 1;
+	int ZCT::ZCT_START_SIZE = 1;
+#endif
+
+
+#ifdef _DEBUG
+	// this doens't hurt performance too much so alway leave it on in DEBUG builds
+	// before sweeping we check for missing write barriers
+	bool GC::incrementalValidation = false;
+
+	// check for missing write barriers at every Alloc
+	bool GC::incrementalValidationPedantic = false;
+
+	// dump memory profile after sweeps
+	bool GC::enableMemoryProfiling = false;
 #endif
 
 	// get detailed info on each size class allocators
-	const bool dumpSizeClassState = false;
+	bool dumpSizeClassState = false;
 	
 	// Expand, don't collect, until we hit this threshold
-	const size_t GC::collectThreshold = 256;
+	size_t GC::collectThreshold = 256;
 
 	/**
 	 * Free Space Divisor.  This value may be tuned for optimum
@@ -102,7 +116,7 @@ namespace MMgc
 	/**
 	 * delay between GC incremental marks
 	 */
-	const static int kIncrementalMarkDelayTicks = int(10 * GC::GetPerformanceFrequency() / 1000);
+	const static int kIncrementalMarkDelayTicks = (int)(10 * GC::GetPerformanceFrequency() / 1000);
 
 	const static int kMarkSweepBurstTicks = 1515909; // 200 ms on a 2ghz machine
 
@@ -113,82 +127,23 @@ namespace MMgc
 	// Above that, the size classes have been chosen to maximize the
 	// number of items that fit in a 4096-byte block, given our block
 	// header information.
-	const int16 GC::kSizeClasses[kNumSizeClasses] = {
+	int16 GC::kSizeClasses[kNumSizeClasses] = {
 		8, 16, 24, 32, 40, 48, 56, 64, 72, 80, //0-9
 		88, 96, 104, 112, 120, 128,	144, 160, 168, 176,  //10-19
 		184, 192, 200, 216, 224, 240, 256, 280, 296, 328, //20-29
 		352, 392, 432, 488, 560, 656, 784, 984, 1312, 1968 //30-39
 	};
 
-	/* kSizeClassIndex[] generated with this code:
-	    kSizeClassIndex[0] = 0;
-	    for (var i:int = 1; i < kNumSizeClasses; i++)
-			for (var j:int = (kSizeClasses[i-1]>>3), n=(kSizeClasses[i]>>3); j < n; j++)
-				kSizeClassIndex[j] = i;
-	*/
-
 	// index'd by size>>3 - 1
-	const uint8 GC::kSizeClassIndex[246] = {
-		0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-		10, 11, 12, 13, 14, 15, 16, 16, 17, 17,
-		18, 19, 20, 21, 22, 23, 23, 24, 25, 25,
-		26, 26, 27, 27, 27, 28, 28, 29, 29, 29,
-		29, 30, 30, 30, 31, 31, 31, 31, 31, 32,
-		32, 32, 32, 32, 33, 33, 33, 33, 33, 33,
-		33, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-		35, 35, 35, 35, 35, 35, 35, 35, 35, 35,
-		35, 35, 36, 36, 36, 36, 36, 36, 36, 36,
-		36, 36, 36, 36, 36, 36, 36, 36, 37, 37,
-		37, 37, 37, 37, 37, 37, 37, 37, 37, 37,
-		37, 37, 37, 37, 37, 37, 37, 37, 37, 37,
-		37, 37, 37, 38, 38, 38, 38, 38, 38, 38,
-		38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
-		38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
-		38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
-		38, 38, 38, 38, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
-		39, 39, 39, 39, 39, 39	
-	};
+	uint8 GC::kSizeClassIndex[246];
+
 	const int kLargestAlloc = 1968;
-
-
-#ifdef _DEBUG
-  // dump memory profile after sweeps
-	const bool GC::enableMemoryProfiling = false;
-#endif
 
 	GC::GC(GCHeap *gcheap)
 		: disableThreadCheck(false),
 #ifdef MMGC_DRC
 		  zct(gcheap),
 #endif
-		  nogc(false),
-		  greedy(false),
-		  findUnmarkedPointers(false),
-		  validateDefRef(false),
-		  keepDRCHistory(false),
-		  gcstats(false),
-#ifdef WRITE_BARRIERS
-		  incremental(true),
-#else
-		  incremental(false),
-#endif
-
-#ifdef _DEBUG
-		  // this doens't hurt performance too much so alway leave it on in DEBUG builds
-		  // before sweeping we check for missing write barriers
-		  incrementalValidation(false),
-
-		  // check for missing write barriers at every Alloc
-		  incrementalValidationPedantic(false),
-#endif
-
 		  marking(false),
 		  memStart(0xffffffff),
 		  memEnd(0),
@@ -213,11 +168,9 @@ namespace MMgc
 		  dontAddToZCTDuringCollection(false),
 		  numObjects(0),
 		  hitZeroObjects(false),
-		  smallEmptyPageList(NULL),
-		  largeEmptyPageList(NULL),
+		  sweepList(NULL),
 		  sweepStart(0),
-		  heapSizeAtLastAlloc(gcheap->GetTotalHeapSize()),
-		  finalizedValue(true)
+		  heapSizeAtLastAlloc(gcheap->GetTotalHeapSize())
 	{		
 #ifdef MMGC_DRC
 		zct.gc = this;
@@ -225,12 +178,17 @@ namespace MMgc
 		// Create all the allocators up front (not lazy)
 		// so that we don't have to check the pointers for
 		// NULL on every allocation.
+		kSizeClassIndex[0]=0;
 		for (int i=0; i<kNumSizeClasses; i++) {			
 			containsPointersAllocs[i] = new GCAlloc(this, kSizeClasses[i], true, false, i);
 #ifdef MMGC_DRC
 			containsPointersRCAllocs[i] = new GCAlloc(this, kSizeClasses[i], true, true, i);
 #endif
 			noPointersAllocs[i] = new GCAlloc(this, kSizeClasses[i], false, false, i);
+			if(i>0) {
+				for(int j=(kSizeClasses[i-1]>>3), n=(kSizeClasses[i]>>3); j < n; j++)
+					kSizeClassIndex[j] = (uint8)i;
+			}
 		}
 		
 		largeAlloc = new GCLargeAlloc(this);
@@ -240,14 +198,6 @@ namespace MMgc
 		memset(m_bitsFreelists, 0, sizeof(uint32*) * kNumSizeClasses);
 		m_bitsNext = (uint32*)heap->Alloc(1);
 
-		// precondition for emptyPageList 
-		GCAssert(offsetof(GCLargeAlloc::LargeBlock, next) == offsetof(GCAlloc::GCBlock, next));
-
-		
-		for(int i=0; i<GCV_COUNT; i++)
-		{
-			SetGCContextVariable(i, NULL);
-		}
 
 #ifdef _DEBUG
 		msgBuf = new char[32];
@@ -256,8 +206,9 @@ namespace MMgc
 #endif
 #endif
 
-		// keep GC::Size honest
-		GCAssert(offsetof(GCLargeAlloc::LargeBlock, usableSize) == offsetof(GCAlloc::GCBlock, size));
+#ifdef ALLOC_LOG
+		allocLog = fopen( "alloc.log", "wb");
+#endif /*ALLOC_LOG*/
 
 #ifndef MMGC_ARM // TODO MMGC_ARM
 #ifdef _DEBUG
@@ -282,8 +233,10 @@ namespace MMgc
 	{
 		// Force all objects to be destroyed
 		destroying = true;
+		collecting = true;
 		ClearMarks();
 		ForceSweep();
+		collecting = false;
 
 		// Go through m_bitsFreelist and collect list of all pointers
 		// that are on page boundaries into new list, pageList
@@ -332,6 +285,11 @@ namespace MMgc
 
 		GCAssert(!m_roots);
 		GCAssert(!m_callbacks);
+
+#ifdef ALLOC_LOG
+		fflush(allocLog);
+		fclose(allocLog);
+#endif /*ALLOC_LOG*/
 	}
 
 	void GC::Collect()
@@ -344,10 +302,9 @@ namespace MMgc
 		// Don't start a collection if we are in the midst of a ZCT reap.
 		if (zct.reaping)
 		{
-
 			return;
 		}
-
+		
 		ReapZCT();
 
 		// if we're in the middle of an incremental mark kill it
@@ -361,6 +318,7 @@ namespace MMgc
 #ifdef DEBUGGER
 		StartGCActivity();
 #endif
+		collecting = true;
 
 		// Dumping the stack trace at GC time can be very helpful with stack walk bugs
 		// where something was created, stored away in untraced, unmanaged memory and not 
@@ -375,6 +333,9 @@ namespace MMgc
 		FindUnmarkedPointers();
 #endif
 
+		collecting = false;
+		marking = false;
+
 		CheckThread();
 
 #ifdef DEBUGGER
@@ -384,12 +345,8 @@ namespace MMgc
 
 	void GC::Trace(const void *stackStart/*=NULL*/, size_t stackSize/*=0*/)
 	{
-		SAMPLE_FRAME("[mark]", core());
-
 		// Clear all mark bits.
 		ClearMarks();
-
-		SAMPLE_CHECK();
 
 		GCStack<GCWorkItem> work;
 		{
@@ -399,33 +356,24 @@ namespace MMgc
 			GCRoot *r = m_roots;
 			while(r) {
 				GCWorkItem item = r->GetWorkItem();
-				MarkItem(item, work);
+				MarkItem(item.ptr, item.size, work);
 				r = r->next;
 			}
 		}
-
-		SAMPLE_CHECK();
-
 		if(stackStart == NULL) {
 			MarkQueueAndStack(work);
 		} else {
-			GCWorkItem item(stackStart, stackSize, false);
+			GCWorkItem item(stackStart, stackSize);
 			PushWorkItem(work, item);
 			Mark(work);
 		}
-		
-		SAMPLE_CHECK();
 	}
 
 	void *GC::Alloc(size_t size, int flags/*0*/, int skip/*3*/)
 	{
-#ifdef DEBUGGER
-		avmplus::AvmCore *core = (avmplus::AvmCore*)GetGCContextVariable(GCV_AVMCORE);
-		if(core)
-			core->sampleCheck();
-#endif
 		(void)skip;
-		(void)skip;
+		
+		PROFILE(OP_alloc);
 		GCAssertMsg(size > 0, "cannot allocate a 0 sized block\n");
 
 #ifdef _DEBUG
@@ -457,7 +405,7 @@ namespace MMgc
 			allocs = containsPointersRCAllocs;
 		} else 
 #endif
-		if(flags & kContainsPointers) {
+		if(flags & (kContainsPointers|kFinalize)) {
 			allocs = containsPointersAllocs;
 		}
 
@@ -498,6 +446,16 @@ namespace MMgc
 			memset(item, 0, Size(item));
 		}
 #endif
+		
+#ifdef ALLOC_LOG
+		LogAlloc(item, size - GCHeap::DebugSize(), flags);
+#endif
+
+		// don't remove this its really necessary
+		if(collecting)
+		{
+			SetMark(item);
+		}
 
 		return item;
 	}
@@ -525,6 +483,10 @@ namespace MMgc
 		if(collecting) {
 			goto bail;
 		}
+
+#ifdef ALLOC_LOG
+		LogFree(GetRealPointer(item));
+#endif
 
 		bool isLarge = GCLargeAlloc::IsLargeBlock(GetRealPointer(item));
 
@@ -587,40 +549,37 @@ bail:
 			containsPointersRCAllocs[i]->Finalize();
 #endif
 			containsPointersAllocs[i]->Finalize();
-			noPointersAllocs[i]->Finalize();
 		}
 		largeAlloc->Finalize();
-		finalizedValue = !finalizedValue;
-
-		
-		for(int i=0; i < kNumSizeClasses; i++) {
-#ifdef MMGC_DRC
-			containsPointersRCAllocs[i]->m_finalized = false;
-#endif
-			containsPointersAllocs[i]->m_finalized = false;
-			noPointersAllocs[i]->m_finalized = false;
-		}
 	}
 
 	void GC::Sweep(bool force)
-	{	
-		SAMPLE_FRAME("[sweep]", core());
+	{		
+		PROFILE(OP_sweep);
 		sweeps++;
 
 		int heapSize = heap->GetUsedHeapSize();
-
+		(void)heapSize;	// silence compiler warnings about unused var
 #ifdef MEMORY_INFO
 		if(enableMemoryProfiling) {
 			GCDebugMsg(false, "Pre sweep memory info:\n");
 			DumpMemoryInfo();
 		}
 #endif
-		
-		// collecting must be true because it indicates allocations should
-		// start out marked, we can't rely on write barriers below since 
-		// presweep could write a new GC object to a root
-		collecting = true;
 
+		if(useNewSweep) {
+			while(sweepList) {
+				GCAlloc::GCBlock *next = sweepList->next;
+	#ifdef _DEBUG
+				sweepList->alloc->Sweep(sweepList);
+	#endif
+				GCAssert(sweepList->numItems == 0);
+				// FIXME: this makes for some chatty locking 
+				sweepList->alloc->FreeChunk(sweepList);
+				sweepList = next;
+			}
+		}
+		
 		// invoke presweep on all callbacks
 		GCCallback *cb = m_callbacks;
 		while(cb) {
@@ -628,11 +587,7 @@ bail:
 			cb = cb->nextCB;
 		}
 
-		SAMPLE_CHECK();
-
 		Finalize();
-		
-		SAMPLE_CHECK();
 		
 		// if force is true we're being called from ~GC and this isn't necessary
 		if(!force) {
@@ -640,31 +595,62 @@ bail:
 			Mark(m_incrementalWork);
 		}
 
-		// ISSUE: this could be done lazily at the expense other GC's potentially expanding
-		// unnecessarily, not sure its worth it as this should be pretty fast
-		GCAlloc::GCBlock *b = smallEmptyPageList;
-		while(b) {
-			GCAlloc::GCBlock *next = b->next;
-#ifdef _DEBUG
-			b->alloc->SweepGuts(b);
+		// clean weak ref table
+		// this is the same pattern as the various AVM's intern tables, maybe
+		// that could all be generalized and moved into the GC
+		if(weakRefs.count() > 0) {
+			GCHashtableIterator iter(&weakRefs);
+			const void *obj;
+			while((obj = iter.nextKey()) != 0) {
+
+				// we shouldn't be here if obj was garbage
+				GCAssert(GetMark(obj));
+
+				const void *wr = iter.value();
+				GCAssert(((GCWeakRef*)wr)->get() == obj || ((GCWeakRef*)wr)->get() == NULL);
+				wr = GetRealPointer(wr);
+
+				if(!GCAlloc::GetMark(wr)) {
+					// remove from HT
+					iter.remove();
+
+					// unset weak ref flag
+					obj = GetRealPointer(obj);
+					if (GCLargeAlloc::IsLargeBlock(obj)) {
+						GCLargeAlloc::SetHasWeakRef(obj, false);
+					} else {
+						GCAlloc::SetHasWeakRef(obj, false);
+					}
+				}
+			}
+		}
+
+		if(force || !useNewSweep)
+		{
+			for (int i=0; i < kNumSizeClasses; i++) {
+				containsPointersAllocs[i]->Sweep(force);
+#ifdef MMGC_DRC
+				containsPointersRCAllocs[i]->Sweep(force);
 #endif
-			b->alloc->FreeChunk(b);
-			b = next;
+				noPointersAllocs[i]->Sweep(force);
+			}
 		}
-		smallEmptyPageList = NULL;
+		largeAlloc->Sweep();
 
-		SAMPLE_CHECK();
+			
+		if(force && useNewSweep) {
+			while(sweepList) {
+				GCAlloc::GCBlock *next = sweepList->next;
+	#ifdef _DEBUG
+				sweepList->alloc->Sweep(sweepList);
+	#endif
+				GCAssert(sweepList->numItems == 0);
+				// FIXME: this makes for some chatty locking 
+				sweepList->alloc->FreeChunk(sweepList);
+				sweepList = next;
+			}
+		}		
 
-		GCLargeAlloc::LargeBlock *lb = largeEmptyPageList;		
-		while(lb) {
-			GCLargeAlloc::LargeBlock *next = lb->next;
-			// FIXME: this makes for some chatty locking, maybe not a problem?
-			FreeBlock(lb, lb->GetNumBlocks());
-			lb = next;
-		}
-		largeEmptyPageList = NULL;
-
-		SAMPLE_CHECK();
 
 #ifdef MEMORY_INFO
 		if(enableMemoryProfiling) {			
@@ -675,32 +661,26 @@ bail:
 
 		// don't want postsweep to fire WB's
 		marking = false;
-		collecting = false;
-
+		
 		// invoke postsweep callback
 		cb = m_callbacks;
 		while(cb) {
 			cb->postsweep();
 			cb = cb->nextCB;
 		}
-		
-		SAMPLE_CHECK();
 
 		allocsSinceCollect = 0;
 		lastSweepTicks = GetPerformanceCounter();
 
+#ifdef DEBUGGER
 		if(GC::gcstats) {
 			int sweepResults = 0;
-			GCAlloc::GCBlock *b = smallEmptyPageList;
-			while(b) {
-				sweepResults++;
-				b = b->next;
-			}
-			
-			GCLargeAlloc::LargeBlock *lb = largeEmptyPageList;
-			while(lb) {
-				sweepResults += lb->GetNumBlocks();
-				lb = lb->next;
+			if(useNewSweep) {
+				GCAlloc::GCBlock *b = sweepList;
+				while(b) {
+					sweepResults++;
+					b = b->next;
+				}
 			}
 			// include large pages given back
 			sweepResults += (heapSize - heap->GetUsedHeapSize());
@@ -709,7 +689,6 @@ bail:
 				sweeps, sweepResults, sweepResults*GCHeap::kBlockSize>>10, millis,
 				duration(t0)/1000);\
 		}
-#ifdef DEBUGGER
 		StopGCActivity();
 #endif
 
@@ -723,7 +702,30 @@ bail:
 #ifdef DEBUGGER
 		AllocActivity(size);
 #endif
-		GCAssert(size > 0);
+		GCAssert(size > 0);		
+
+		// moved here from Sweep, in theory should be no difference
+		if(useNewSweep && sweepList && !collecting)
+		{
+			int sweptCount = 0;
+			// don't burn lots of time here if the list is super long
+			// in theory we could just free one at a time for the ultimate
+			// incremental behavior but we could be hogging memory from 
+			// other GC instances so compromise and give back a chunk
+			const static int kSweepLimit = 32;
+			while(sweepList && sweptCount < kSweepLimit)
+			{
+				GCAlloc::GCBlock *next = sweepList->next;
+#ifdef _DEBUG
+				sweepList->alloc->Sweep(sweepList);
+#endif
+				GCAssert(sweepList->numItems == 0);
+				// FIXME: this makes for some chatty locking 
+				sweepList->alloc->FreeChunk(sweepList);
+				sweepList = next;
+				sweptCount++;
+			}
+		}
 	
 		// perform gc if heap expanded due to fixed memory allocations
 		// utilize burst logic to prevent this from happening back to back
@@ -746,6 +748,22 @@ bail:
 			item = AllocBlockIncremental(size, zero);
 		else
 			item = AllocBlockNonIncremental(size, zero);
+	
+		if(useNewSweep && !item && sweepList && !collecting)
+		{			
+			while(sweepList)
+			{
+				GCAlloc::GCBlock *next = sweepList->next;
+#ifdef _DEBUG
+				sweepList->alloc->Sweep(sweepList);
+#endif
+				GCAssert(sweepList->numItems == 0);
+				// FIXME: this makes for some chatty locking 
+				sweepList->alloc->FreeChunk(sweepList);
+				sweepList = next;
+			}
+			item = heap->Alloc(size, false, zero);
+		}
 
 		if(!item) {				
 			int incr = size + totalGCPages / kFreeSpaceDivisor;
@@ -844,8 +862,16 @@ bail:
 		pageMap[index >> 2] &= ~(3<<((index&0x3)*2));
 	}	
 
+	void GC::ConservativeMarkRegion(const void *base, size_t bytes)
+	{
+		GCStack<GCWorkItem> work;
+		PushWorkItem(work, GCWorkItem(base, bytes));
+		Mark(work);
+	}
+
 	void GC::Mark(GCStack<GCWorkItem> &work)
 	{
+		PROFILE(OP_mark);
 		while(work.Count()) {
 			MarkItem(work);
 		}
@@ -951,7 +977,7 @@ bail:
 	{
 		GCWorkItem item;
 
-		MMGC_GET_STACK_EXENTS(this, item.ptr, item._size);
+		MMGC_GET_STACK_EXENTS(this, item.ptr, item.size);
 
 		// this is where we will clear to when CleanStack is called
 		if(rememberedStackTop == 0 || rememberedStackTop > item.ptr) {
@@ -967,7 +993,7 @@ bail:
 		// I think this makes some non-guaranteed assumptions about object layout,
 		// like with multiple inheritance this might not be the beginning
 		object = this;
-		size = FixedMalloc::GetInstance()->Size(this);
+		size = FixedMalloc::Size(this);
 		gc->AddRoot(this);
 	}
 
@@ -1122,7 +1148,7 @@ bail:
 			GCAssert(!zctFreelist);
 		}
 	}
-
+		
 	void ZCT::Remove(RCObject *obj)
 	{
 		int index = obj->getZCTIndex();
@@ -1244,6 +1270,7 @@ bail:
 		if(gc->collecting || reaping || count == 0)
 			return;
 
+		//int origCount = count;
 #ifdef DEBUGGER
 		uint64 start = GC::GetPerformanceCounter();
 		uint32 pagesStart = gc->totalGCPages;
@@ -1252,13 +1279,11 @@ bail:
 #endif
 
 		reaping = true;
-		
-		SAMPLE_FRAME("[reap]", gc->core());
 
 		// start by pinning live stack objects
 		GCWorkItem item;
-		MMGC_GET_STACK_EXENTS(gc, item.ptr, item._size);
-		PinStackObjects(item.ptr, item._size);
+		MMGC_GET_STACK_EXENTS(gc, item.ptr, item.size);
+		PinStackObjects(item.ptr, item.size);
 
 		// important to do this before calling prereap
 		// use index to iterate in case it grows, as we go through the list we
@@ -1275,13 +1300,13 @@ bail:
 		}
 
 #ifdef _DEBUG
-		if(gc->validateDefRef) {
+		if(GC::validateDefRef) {
 			// kill incremental mark since we're gonna wipe the marks
 			gc->marking = false;
 			gc->m_incrementalWork.Keep(0);
 
 			CleanEntireStack();
-			gc->Trace(item.ptr, item._size);
+			gc->Trace(item.ptr, item.size);
 		}
 #endif
 
@@ -1295,14 +1320,13 @@ bail:
 		}
 		
 		while(zct+zctIndex < zctNext) {
-			SAMPLE_CHECK();
 			RCObject *rcobj = zct[zctIndex++];
 			if(rcobj && !rcobj->IsPinned()) {
 				rcobj->ClearZCTFlag();
 				zct[zctIndex-1] = NULL;
 				count--;
 #ifdef _DEBUG
-				if(gc->validateDefRef) {
+				if(GC::validateDefRef) {
 					if(gc->GetMark(rcobj)) {	
 						rcobj->DumpHistory();
 						GCDebugMsg(false, "Back pointer chain:");
@@ -1355,7 +1379,7 @@ bail:
 			cb = cb->nextCB;
 		}
 #ifdef DEBUGGER
-		if(gc->gcstats && numObjects) {
+		if(GC::gcstats && numObjects) {
 			gc->gclog("[GC] DRC reaped %d objects (%d kb) freeing %d pages (%d kb) in %f millis (%f s)", 
 				numObjects, objSize>>10, pagesStart - gc->totalGCPages, gc->totalGCPages*GCHeap::kBlockSize >> 10, 
 				GC::duration(start), gc->duration(gc->t0)/1000);
@@ -1366,6 +1390,7 @@ bail:
 
 //#define ENABLE_GC_LOG
 
+#ifdef DEBUGGER
 	#if defined(WIN32) && defined(ENABLE_GC_LOG)
 	static bool called_cfltcvt_init = false;
 	extern "C" void _cfltcvt_init();
@@ -1373,7 +1398,6 @@ bail:
 
 	void GC::gclog(const char *format, ...)
 	{
-		(void)format;
 #ifdef ENABLE_GC_LOG
 		char buf[4096];
 		va_list argptr;
@@ -1396,8 +1420,11 @@ bail:
 			cb->log(buf);
 			cb = cb->nextCB;
 		}
+#else
+		(void)format;
 #endif
 	}
+#endif
 
 #ifdef MEMORY_INFO
 	void GC::DumpBackPointerChain(void *o)
@@ -1424,20 +1451,6 @@ bail:
 				PrintStackTrace(container);
 		}
 	}
-
-	void GC::WriteBackPointer(const void *item, const void *container, size_t itemSize)
-	{
-		GCAssert(container != NULL);
-		int *p = (int*) item;
-		size_t size = *p++;
-		if(size && size <= itemSize) {
-			// skip traceIndex + data + endMarker
-			p += (2 + (size>>2));
-			GCAssert(sizeof(int) == sizeof(void*));
-			*p = (int) container;
-		}
-	}
-
 #endif
 
 	bool GC::IsRCObject(const void *item)
@@ -1465,7 +1478,7 @@ bail:
 	
 #ifdef MEMORY_INFO
 	
-	int DumpAlloc(GCAlloc *a)
+	int DumpAlloc(GCAlloc *a, int /*i*/)
 	{
 		int inUse =  a->GetNumAlloc() * a->GetItemSize();
 		int maxAlloc =  a->GetMaxAlloc()* a->GetItemSize();
@@ -1486,11 +1499,11 @@ bail:
 				int waste=0;
 				for(int i=0; i < kNumSizeClasses; i++)
 				{
-					waste += DumpAlloc(containsPointersAllocs[i]);
+					waste += DumpAlloc(containsPointersAllocs[i], i);
 #ifdef MMGC_DRC
-					waste += DumpAlloc(containsPointersRCAllocs[i]);
+					waste += DumpAlloc(containsPointersRCAllocs[i], i);
 #endif
-					waste += DumpAlloc(noPointersAllocs[i]);
+					waste += DumpAlloc(noPointersAllocs[i], i);
 				}
 				GCDebugMsg(false, "Wasted %d kb\n", waste>>10);
 
@@ -1776,6 +1789,7 @@ bail:
 
 	void GC::StartIncrementalMark()
 	{
+		PROFILE(OP_mark);
 		GCAssert(!marking);
 		GCAssert(!collecting);
 
@@ -1786,29 +1800,16 @@ bail:
 
 		marking = true;
 
+		// FIXME: can we remove this somehow? ie reset marks during sweep instead
+		// problem is that with lazy sweeping we could start setting marks on a
+		// page without having swept it, so we'd need need sweep any un swept pages
+		// now or check in SetMark if a page needs sweeping and do it there
+		// either way it would be good to avoid 
+		ClearMarks();
+
 		GCAssert(m_incrementalWork.Count() == 0);
 	
 		uint64 start = GetPerformanceCounter();
-
-		// clean up any pages that need sweeping
-		for(int i=0; i < kNumSizeClasses; i++) {
-#ifdef MMGC_DRC
-			containsPointersRCAllocs[i]->SweepNeedsSweeping();
-#endif
-			containsPointersAllocs[i]->SweepNeedsSweeping();
-			noPointersAllocs[i]->SweepNeedsSweeping();
-		}
-
-		// at this point every object should have no marks or be marked kFreelist
-#ifdef _DEBUG		
-		for(int i=0; i < kNumSizeClasses; i++) {
-#ifdef MMGC_DRC
-			containsPointersRCAllocs[i]->CheckMarks();
-#endif
-			containsPointersAllocs[i]->CheckMarks();
-			noPointersAllocs[i]->CheckMarks();
-		}
-#endif
 	
 		{
 #ifdef GCHEAP_LOCK
@@ -1817,7 +1818,7 @@ bail:
 			GCRoot *r = m_roots;
 			while(r) {
 				GCWorkItem item = r->GetWorkItem();
-				MarkItem(item, m_incrementalWork);
+				MarkItem(item.ptr, item.size, m_incrementalWork);
 				r = r->next;
 			}
 		}
@@ -1826,7 +1827,6 @@ bail:
 	}
 
 #if 0
-	// TODO: SSE2 version
 	void GC::MarkItem_MMX(const void *ptr, size_t size, GCStack<GCWorkItem> &work)
 	{
 		 intptr *p = (intptr*) ptr;
@@ -1929,10 +1929,12 @@ bail:
 
 #endif
 
-	void GC::MarkItem(GCWorkItem &wi, GCStack<GCWorkItem> &work)
+	void GC::MarkItem(const void *ptr, size_t size, GCStack<GCWorkItem> &work)
 	{
-		size_t size = wi.GetSize();
-		intptr *p = (intptr*) wi.ptr;
+		intptr *p = (intptr*) ptr;
+		// deleted things are removed from the queue by setting them to null
+		if(!p)
+			return;
 
 		bytesMarked += size;
 		marks++;
@@ -1940,11 +1942,10 @@ bail:
 		intptr *end = p + (size / sizeof(void*));
 		intptr thisPage = (intptr)p & ~0xfff;
 
-		// set the mark bits on this guy
-		if(wi.IsGCItem())
+		// since MarkItem recurses we have to do this before entering the loop
+		if(IsPointerToGCPage(ptr)) 
 		{
-			int b = SetMark(wi.ptr);
-			(void)b;
+			int b = SetMark(ptr);
 #ifdef _DEBUG
 			// def ref validation does a Trace which can 
 			// cause things on the work queue to be already marked
@@ -1952,11 +1953,9 @@ bail:
 			if(!validateDefRef) {
 				GCAssert(!b);
 			}
-#endif			
-		}
-		else
-		{
-			GCAssert(!IsPointerToGCPage(wi.ptr));
+#else
+			(void)b;
+#endif
 		}
 
 		intptr _memStart = memStart;
@@ -2016,29 +2015,23 @@ bail:
 						#endif
 						if(((intptr)realItem & ~0xfff) != thisPage)
 						{							
+							//GCAlloc::SetBit(block, itemNum, GCAlloc::kQueued);
 							*pbits = bits | (GCAlloc::kQueued << shift);
-							block->gc->PushWorkItem(work, GCWorkItem(realItem, itemSize, true));
+							block->gc->PushWorkItem(work, GCWorkItem(realItem, itemSize));
 						}
 						else
 						{
-							// clear queued bit
-							*pbits = bits & ~(GCAlloc::kQueued << shift);
-							// skip stack for same page items, this recursion is naturally limited by
-							// how many item can appear on a page, worst case is 8 byte linked list or
-							// 512
-							GCWorkItem newItem(realItem, itemSize, true);
-							MarkItem(newItem, work);
+							// skip stack for same page items
+							MarkItem(realItem, itemSize, work);
 						}
 					}
 					else
 					{
 						//GCAlloc::SetBit(block, itemNum, GCAlloc::kMark);
-						// clear queued bit
-						*pbits = bits & ~(GCAlloc::kQueued << shift);
 						*pbits = bits | (GCAlloc::kMark << shift);
 					}
-					#if defined(MEMORY_INFO)
-					GC::WriteBackPointer(item, (end==(void*)0x130000) ? p-1 : wi.ptr, block->size);
+					#if !defined(ALLOC_LOG) && defined(MEMORY_INFO)
+					GCAlloc::WriteBackPointer(item, (end==(void*)0x130000) ? p-1 : ptr, block->size);
 					#endif
 				}
 			}
@@ -2046,6 +2039,8 @@ bail:
 			{
 				//largeAlloc->ConservativeMark(work, (void*) (val&~7), workitem.ptr);
 				const void* item = (void*) (val&~7);
+				const void *container = ptr;
+				(void)container;	// silence compiler warnings about unused var
 
 				// back up to real beginning
 				item = GetRealPointer((const void*) item);
@@ -2064,15 +2059,15 @@ bail:
 							realItem = GetUserPointer(item);
 							size -= DebugSize();
 							#endif
-							b->gc->PushWorkItem(work, GCWorkItem(realItem, size, true));
+							b->gc->PushWorkItem(work, GCWorkItem(realItem, size));
 						} 
 						else
 						{
 							// doesn't need marking go right to black
 							b->flags |= GCLargeAlloc::kMarkFlag;
 						}
-						#if defined(MEMORY_INFO)
-						GC::WriteBackPointer(item, end==(void*)0x130000 ? p-1 : wi.ptr, size);
+						#if !defined(ALLOC_LOG) && defined(MEMORY_INFO)
+						GCLargeAlloc::WriteBackPointer(item, end==(void*)0x130000 ? p-1 : ptr, size);
 						#endif
 					}
 				}
@@ -2115,12 +2110,12 @@ bail:
 	
 	void GC::IncrementalMark(uint32 time)
 	{
-		SAMPLE_FRAME("[mark]", core());
 		if(m_incrementalWork.Count() == 0 || hitZeroObjects) {
 			FinishIncrementalMark();
 			return;
 		} 
 
+		PROFILE(OP_mark);
 #ifdef DEBUGGER
 		StartGCActivity();
 #endif
@@ -2149,7 +2144,6 @@ bail:
 			{
  				MarkItem(m_incrementalWork);
 			}
-			SAMPLE_CHECK();
 		} while(GetPerformanceCounter() < ticks);
 
 		lastMarkTicks = GetPerformanceCounter();
@@ -2194,7 +2188,7 @@ bail:
 				// need to do this while holding the root lock so we don't end 
 				// up trying to scan a deleted item later, another reason to keep
 				// the root set small
-				MarkItem(item, m_incrementalWork);
+				MarkItem(item.ptr, item.size, m_incrementalWork);
 				r = r->next;
 			}
 		}
@@ -2299,6 +2293,7 @@ bail:
 
 	void GC::TrapWrite(const void *black, const void *white)
 	{
+		PROFILE(OP_wb);
 		// assert fast path preconditions
 		(void)black;
 		GCAssert(marking);
@@ -2313,7 +2308,7 @@ bail:
 		// region of the black object as needing to be re-marked)
 		if(ContainsPointers(white)) {
 			SetQueued(white);
-			PushWorkItem(m_incrementalWork, GCWorkItem(white, Size(white), true));
+			PushWorkItem(m_incrementalWork, GCWorkItem(white, Size(white)));
 		} else {
 			SetMark(white);
 		}
@@ -2338,6 +2333,18 @@ bail:
 	bool GC::IsQueued(const void *item)
 	{
 		return !GetMark(item) && !IsWhite(item);
+	}
+
+	void GC::RemoveFromQueue(const void *item)
+	{
+		GCWorkItem *data = m_incrementalWork.GetData();
+		for(int i=0, n=m_incrementalWork.Count(); i < n; i++)
+		{
+			if(data[i].ptr == item) {
+				data[i].ptr = 0;
+				return;
+			}
+		}
 	}
 
 	uint32 *GC::GetBits(int numBytes, int sizeClass)
@@ -2463,7 +2470,7 @@ bail:
 		GCAssert(ref != NULL);
 		GCAssert(ref->get() == item || ref->get() == NULL);
 		if(ref) {
-			ref->m_obj = NULL;
+			ref->clear();
 			item = GetRealPointer(item);
 			if (GCLargeAlloc::IsLargeBlock(item)) {
 				GCLargeAlloc::SetHasWeakRef(item, false);
@@ -2476,7 +2483,11 @@ bail:
 #ifdef _DEBUG
 	
 	void GC::WhitePointerScan(const void *mem, size_t size)
-	{		
+	{
+		//void *start = GetRealPointer(mem);
+		//intptr lowerBound = memStart;
+		//intptr upperBound = memEnd;
+		
 		intptr *p = (intptr *) mem;
 		// the minus 8 skips the deadbeef and back pointer 
 		intptr *end = p + ((size) / sizeof(void*));
@@ -2591,6 +2602,35 @@ bail:
 	}
 #endif  /* DEBUGGER*/
 
+#ifdef ALLOC_LOG
+	using namespace avmplus;
+	void GC::LogAlloc(void *item, size_t size, int flags)
+	{
+		if (!item) return;
+
+		static int counter = 0;
+		// use write back pointer spot
+		int *ip = (int*)GCHeap::GetRealPointer(item);
+		int allocSize = *ip;
+		ip += (allocSize>>2) + 3;
+		*ip = counter++;
+		size|=flags;
+		fwrite(&size, 4, 1, allocLog);		
+	}
+
+	void GC::LogFree(void *item)
+	{
+		int *ip = (int*)item;
+		int size = *ip;
+		if(size == 0)
+			return;
+		// skip size, alloc trace, space and deadbeef
+		ip += (size>>2) + 3;
+		int allocIndex = -*ip;
+		fwrite(&allocIndex, 4, 1, allocLog);
+	}
+#endif /*ALLOC_LOG*/
+
 #if defined(_MAC) && defined(MMGC_IA32)
 	// FIXME: 64 bit problem, use intptr
 	int GC::GetStackTop() const
@@ -2598,6 +2638,4 @@ bail:
 		return (int)pthread_get_stackaddr_np(pthread_self());
 	}
 #endif
-
-
 }

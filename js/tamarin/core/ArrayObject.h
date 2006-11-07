@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_ArrayObject__
 #define __avmplus_ArrayObject__
 

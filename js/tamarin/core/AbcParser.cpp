@@ -47,16 +47,16 @@ namespace avmplus
 		NativeScriptInfo *nativeScripts[])
     {
 		if (code.getSize() < 4)
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		int version = AvmCore::readU16(&code[0]) | AvmCore::readU16(&code[2])<<16;
 
 		#ifdef AVMPLUS_PROFILE
-		DynamicProfiler::StackMark mark(OP_decode, &core->dprof);
+		DynamicProfiler::StackMark mark(OP_decode);
 		#endif
 
 		#ifdef AVMPLUS_VERBOSE
-		if (core->verbose)
+		if (AvmCore::verbose)
 			core->console << "major=" << (version&0xFFFF) << " minor=" << (version>>16) << "\n";
 		#endif
 
@@ -67,12 +67,12 @@ namespace avmplus
 			AbcParser parser(core, code, toplevel, domain, nativeMethods, nativeClasses, nativeScripts);
 			PoolObject *pObject = parser.parse();
  			if ( !pObject )
- 				toplevel->throwVerifyError( kCorruptABCError );
+ 				toplevel->verifyErrorClass()->throwError( kCorruptABCError );
  			else
  				return pObject;
 		}
 		default:
-			toplevel->throwVerifyError(kInvalidMagicError, core->toErrorString(version>>16), core->toErrorString(version&0xFFFF));
+			toplevel->verifyErrorClass()->throwError(kInvalidMagicError, core->toErrorString(version>>16), core->toErrorString(version&0xFFFF));
 			return NULL;
 		}
     }
@@ -85,7 +85,7 @@ namespace avmplus
 		NativeScriptInfo *nativeScripts[]) 
 		: toplevel(toplevel),
 		  domain(domain),
-		  instances(core->GetGC(), 0)
+		  instances(core->gc, 0)
 	{
 		this->core = core;
 		this->code = code;
@@ -106,7 +106,7 @@ namespace avmplus
 	AbcParser::~AbcParser()
 	{
 		if (metaNames)
-			core->GetGC()->Free(metaNames);
+			core->gc->Free(metaNames);
 	}
 
 	int AbcParser::computeInstanceSize(int class_id, 
@@ -143,7 +143,7 @@ namespace avmplus
 		}
 
 		if (index >= pool->constantNsCount)
-			toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantNsCount));
+			toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantNsCount));
 		return pool->cpool_ns[index];
 	}
 
@@ -161,7 +161,7 @@ namespace avmplus
 		}
 
 		if (index >= pool->constantMnCount)
-			toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantMnCount));
+			toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantMnCount));
 
 		pool->parseMultiname(m, index);
 	}
@@ -171,13 +171,13 @@ namespace avmplus
 	{
 		uint32 index = readU30(p);
 		if (index == 0 || index >= pool->constantMnCount)
-			toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantCount));
+			toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantCount));
 
 		Atom a = pool->cpool_mn[index];
 
 		pool->parseMultiname(a, m);
 		if (!m.isQName())
-			toplevel->throwVerifyError(kCpoolEntryWrongTypeError, core->toErrorString(index));
+			toplevel->verifyErrorClass()->throwError(kCpoolEntryWrongTypeError, core->toErrorString(index));
 
 		return a;
 	}
@@ -185,11 +185,11 @@ namespace avmplus
 	AbstractFunction *AbcParser::resolveMethodInfo(uint32 index) const
 	{
 		if (index >= pool->methodCount)
-			toplevel->throwVerifyError(kMethodInfoExceedsCountError, core->toErrorString(index), core->toErrorString(pool->methodCount));
+			toplevel->verifyErrorClass()->throwError(kMethodInfoExceedsCountError, core->toErrorString(index), core->toErrorString(pool->methodCount));
 
 		AbstractFunction *f = pool->getMethodInfo(index);
 		if (!f)
-			toplevel->throwVerifyError(kMethodInfoOrderError, core->toErrorString(index));
+			toplevel->verifyErrorClass()->throwError(kMethodInfoOrderError, core->toErrorString(index));
 
 		return f;
 	}
@@ -200,7 +200,7 @@ namespace avmplus
 		{
 			return pool->cpool_string[index];
 		}
-		toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantStringCount));
+		toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantStringCount));
 		return NULL;
 	}
 
@@ -274,7 +274,7 @@ namespace avmplus
 				core->throwException(exception);
 			else
 				// create new exception
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 		}
 		END_CATCH
 		END_TRY
@@ -331,8 +331,9 @@ namespace avmplus
 		}
 
 		bool earlySlotBinding;
+		bool earlyMethodBinding;
 		
-		pool->allowEarlyBinding(base, earlySlotBinding);
+		pool->allowEarlyBinding(base, earlySlotBinding, earlyMethodBinding);
 
         for (int i=0; i < nameCount; i++)
         {
@@ -346,7 +347,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 			// check to see if we are trying to read past the file end or the beginning.
 			if (pos < abcStart || pos >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif //SAFE_PARSE
             int tag = *pos++;
             TraitKind kind = (TraitKind) (tag & 0x0f);
@@ -377,12 +378,12 @@ namespace avmplus
 				if (base && slot_id < base->slotCount)
 				{
 					// slots are final.
-					toplevel->throwVerifyError(kIllegalOverrideError, core->toErrorString(&qn), core->toErrorString(base));
+					toplevel->verifyErrorClass()->throwError(kIllegalOverrideError, core->toErrorString(&qn), core->toErrorString(base));
 				}
 
 				// a slot cannot override anything else.
 				if (traits->get(name, ns) != BIND_NONE)
-					toplevel->throwVerifyError(kCorruptABCError);
+					toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 				
 				if (script)
 					addNamedScript(ns, name, script);
@@ -402,7 +403,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 						// check to see if we are trying to read past the file end or the beginning.
 						if (pos < abcStart || pos >= abcEnd )
-							toplevel->throwVerifyError(kCorruptABCError);
+							toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif //SAFE_PARSE
 						value_kind = (CPoolKind)*(pos++);
 					}
@@ -435,11 +436,11 @@ namespace avmplus
 					// get the class type
 					int class_info = readU30(pos);
 					if (class_info >= classCount)
-						toplevel->throwVerifyError(kClassInfoExceedsCountError, core->toErrorString(class_info), core->toErrorString(classCount));
+						toplevel->verifyErrorClass()->throwError(kClassInfoExceedsCountError, core->toErrorString(class_info), core->toErrorString(classCount));
 
 					AbstractFunction* cinit = pool->cinits[class_info];
 					if (!cinit) 
-						toplevel->throwVerifyError(kClassInfoOrderError, core->toErrorString(class_info));
+						toplevel->verifyErrorClass()->throwError(kClassInfoOrderError, core->toErrorString(class_info));
 
 					Traits* ctraits = cinit->declaringTraits;
 
@@ -508,8 +509,8 @@ namespace avmplus
 			case TRAIT_Setter:
             case TRAIT_Method:
 			{
-				int earlyDispId = readU30( pos );
-                (void)earlyDispId;
+				uint32 earlyDispId = readU30( pos );
+                if( !earlyMethodBinding ) earlyDispId = 0;
 				uint32 method_info = readU30(pos);
 
 				#ifdef AVMPLUS_VERBOSE
@@ -517,7 +518,7 @@ namespace avmplus
 				{
 					core->console << "            " << traitNames[kind]
 						<< " name=" << Multiname::format(core, ns, name)
-						<< " disp_id=" << earlyDispId << " (ignored)"
+						<< " disp_id=" << earlyDispId
 					    << " method_info=" << method_info
 						<< " attr=" << ((tag&ATTR_final)?"final":"virtual");
 					if (tag&ATTR_override)
@@ -543,7 +544,7 @@ namespace avmplus
 				// since this function is ref'ed here, we know the receiver type.
 				if (!f->makeMethodOf(traits))
 				{
-					toplevel->throwVerifyError(kCorruptABCError);
+					toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 				}
 
 				if (tag & ATTR_final)
@@ -552,91 +553,146 @@ namespace avmplus
 				if (tag & ATTR_override)
 					f->flags |= AbstractFunction::OVERRIDE;
 				
-				Binding baseBinding = traits->getOverride(ns, name, tag, toplevel);
+				Binding b = traits->getOverride(ns, name, tag, toplevel);
 
 				// issue can you ever import a getter/setter?
 				// is it okay to call this more than once on the same
 				// name/script pair?
-
-				// only export one name for an accessor 
-				if (script && !domain->getNamedScript(name,ns))
-					addNamedScript(ns, name, script);
-
 				if (kind == TRAIT_Method)
 				{
-					if (baseBinding == BIND_NONE)
+					if (script)
+						addNamedScript(ns, name, script);
+
+					if (earlyDispId != 0)
 					{
-						traits->defineSlot(name, ns, methodCount, BIND_METHOD);
-						// accessors require 2 vtable slots, methods only need 1.
-						methodCount ++;
-					}
-					else if (AvmCore::isMethodBinding(baseBinding))
-					{
-						// something got overridden, need new name entry for this subclass
-						// but keep the existing disp_id
-						int disp_id = AvmCore::bindingToMethodId(baseBinding);
-						traits->defineSlot(name, ns, disp_id, BIND_METHOD);
+						// compiler assigned disp_id
+						if (earlyDispId > methodCount)
+							methodCount = earlyDispId;
+						earlyDispId--;
+
+						// if compiler defines disp_id then it better match disp_id of base method
+						if (b != BIND_NONE && (b != (Binding)(earlyDispId<<3 | BIND_METHOD)))
+						{
+							// can't change the disp_id
+							toplevel->verifyErrorClass()->throwError(kIllegalOverrideError, core->toErrorString(&qn), core->toErrorString(traits));
+						}
+
+						// compiler-defined disp_id
+						traits->defineVirtualCall(name, ns, earlyDispId);
 					}
 					else
 					{
-						toplevel->throwVerifyError(kCorruptABCError);
+						// vm assigns disp_id
+
+						// if base is Object, we will create a stub that overrides the
+						// base method and unboxes the receiver, and also add a new
+						// disp_id binding to a new disp_id, that expects the unboxed
+						// receiver.  
+
+						if (b != BIND_NONE)
+						{
+							// override virtual; disp_id is already set in base class
+							// compatible signature checked in Traits::resolveSignatures
+							AvmAssert((b&7)==BIND_METHOD);
+
+							// override, vm-assigned disp_id (same as base)
+							int disp_id = urshift(b,3);
+							traits->defineVirtualCall(name, ns, disp_id);
+						}
+						else
+						{
+							// new definition, vm-defined disp_id
+							traits->defineVirtualCall(name, ns, methodCount);
+							methodCount++;
+						}
 					}
 				}
-				else if (kind == TRAIT_Getter)
+				else
 				{
-					// if nothing in base class, look for existing binding on this class,
-					// in case setter has already been defined.
-					if (baseBinding == BIND_NONE)
-						baseBinding = traits->get(name, ns);
+					// getter or setter
 
-					if (baseBinding == BIND_NONE)
+					// only export one name for an accessor 
+					if (script && !domain->getNamedScript(name,ns))
+						addNamedScript(ns, name, script);
+
+					// Our accessor is trying to override something already defined.
+					Binding b_accessor = traits->get(name, ns);
+					if ((b_accessor != BIND_NONE && ((b_accessor&7) != BIND_ACCESSOR)))
+						toplevel->verifyErrorClass()->throwError(kCorruptABCError);
+
+					Accessor* accessor = (Accessor*) traits->getAccessor(name, ns);
+					if (accessor == NULL) 
 					{
-						traits->defineSlot(name, ns, methodCount, BIND_GET);
-						// accessors require 2 vtable slots, methods only need 1.
-						methodCount += 2;
+						// getter and setter on the same class share a single Accessor object,
+						// but if the base class has a getter/setter, create a new Accessor and
+						// copy down its bindings.  Don't want to put our bindings into the base
+						// class's Accessor object!
+
+						accessor = new (core->gc) Accessor();
+						Binding b2 = traits->findBinding(name, ns);
+						if (b2 != BIND_NONE)
+						{
+							if ((b2&7) != BIND_ACCESSOR)
+								return NULL; //parse failed
+
+							Accessor *baseAccessor = AvmCore::bindingToAccessor(b2);
+							accessor->get = baseAccessor ? baseAccessor->get : 0;
+							accessor->set = baseAccessor ? baseAccessor->set : 0;
+						}
+
+						// only sets hashtable
+						traits->defineAccessor(name, ns, accessor);
 					}
-					else if (AvmCore::isAccessorBinding(baseBinding))
+
+					if (earlyDispId > 0)
 					{
-						// something maybe got overridden, need new name entry for this subclass
-						// but keep the existing disp_id
-						int disp_id = urshift(baseBinding,3);
-						int bkind = baseBinding & 7;
-						if (bkind == BIND_SET)
-							bkind = BIND_GETSET;
-						traits->defineSlot(name, ns, disp_id, bkind);
+						// compiler figured out early binding
+						if (earlyDispId > methodCount)
+							methodCount = earlyDispId;
+
+						earlyDispId--;
+
+						if (b != BIND_NONE)
+						{
+							// we are overriding, earlyDispId must match base disp_id
+							if (b != (Binding)(earlyDispId<<3 | BIND_METHOD))
+							{
+								// can't change the disp_id
+								toplevel->verifyErrorClass()->throwError(kIllegalOverrideError, core->toErrorString(&qn), core->toErrorString(traits));
+							}
+							// we have already copied the disp id into accessor so
+							// there is nothing else to do now
+						}
+						else
+						{
+							if (kind == TRAIT_Getter)
+								accessor->get = earlyDispId << 3 | BIND_METHOD;
+							else
+								accessor->set = earlyDispId << 3 | BIND_METHOD;
+						}
 					}
 					else
 					{
-						toplevel->throwVerifyError(kCorruptABCError);
-					}
-				}
-				else // TRAIT_Setter
-				{
-					// if nothing in base class, look for existing binding on this class,
-					// in case getter has already been defined.
-					if (baseBinding == BIND_NONE)
-						baseBinding = traits->get(name, ns);
+						// vm assigns disp_id
+						if (b != BIND_NONE)
+						{
+							AvmAssert((b&7)==BIND_METHOD);
+							AvmAssertMsg(base != OBJECT_TYPE, "object has no accessors");
 
-					if (baseBinding == BIND_NONE)
-					{
-						traits->defineSlot(name, ns, methodCount, BIND_SET);
-						// accessors require 2 vtable slots, methods only need 1.
-						methodCount += 2;
-					}
-					else if (AvmCore::isAccessorBinding(baseBinding))
-					{
-						// something maybe got overridden, need new name entry for this subclass
-						// but keep the existing disp_id
-						// both get & set bindings use the get id.  set_id = get_id + 1.
-						int disp_id = urshift(baseBinding,3);
-						int bkind = baseBinding & 7;
-						if (bkind == BIND_GET) 
-							bkind = BIND_GETSET;
-						traits->defineSlot(name, ns, disp_id, bkind);
-					}
-					else
-					{
-						toplevel->throwVerifyError(kCorruptABCError);
+							// shouldn't we set accessor bindings here anyway?
+							// no, we don't have to since we copied the binding down
+							// from the base class into our new Accessor object
+						}
+						else 
+						{
+							// new definition
+							// check compatible signature done in Traits::resolveSignatures
+							if (kind == TRAIT_Getter)
+								accessor->get = methodCount << 3 | BIND_METHOD;
+							else
+								accessor->set = methodCount << 3 | BIND_METHOD;
+							methodCount++;
+						}
 					}
 				}
                 break;
@@ -644,7 +700,7 @@ namespace avmplus
 
 			default:
 				// unsupported traits type
-				toplevel->throwVerifyError(kUnsupportedTraitsKindError, core->toErrorString(kind));
+				toplevel->verifyErrorClass()->throwError(kUnsupportedTraitsKindError, core->toErrorString(kind));
             }
 
             if ( tag & ATTR_metadata )
@@ -683,7 +739,7 @@ namespace avmplus
 		int size = methodCount == 0 ? 1 : methodCount;
 
 		if (size > (abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		MMGC_MEM_TYPE(pool);
 		pool->methods.ensureCapacity(size);
@@ -734,7 +790,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 			// check to see if we are trying to read past the file end or the beginning.
 			if (pos < abcStart || pos >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif //SAFE_PARSE
 			int flags = *pos++;
 
@@ -751,7 +807,7 @@ namespace avmplus
 			AbstractFunction *info;			
 			if (!(flags & AbstractFunction::NATIVE))
 			{
-				MethodInfo *methodInfo = new (core->GetGC()) MethodInfo();
+				MethodInfo *methodInfo = new (core->gc) MethodInfo();
 				
 				#ifdef AVMPLUS_VERBOSE
 				if (name_index != 0)
@@ -765,7 +821,7 @@ namespace avmplus
 			{
 				if (!nativeMethods)
 				{
-					toplevel->throwVerifyError(kIllegalNativeMethodError);
+					toplevel->verifyErrorClass()->throwError(kIllegalNativeMethodError);
 				}
 				info = nativeMethods[i];
 
@@ -799,7 +855,7 @@ namespace avmplus
 				if (optional_count > param_count)
 				{
 					// cannot have more optional params than total params
-					toplevel->throwVerifyError(kCorruptABCError);
+					toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 				}
 			}
 
@@ -816,7 +872,7 @@ namespace avmplus
 			pool->methods.set(i, info);
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.methodsSize += (pos-startpos);
+		StaticProfiler::methodsSize += (pos-startpos);
 		#endif
     }
 	
@@ -831,14 +887,14 @@ namespace avmplus
 #endif
 
 		if (metadataCount > (abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		pool->metadata_infos.ensureCapacity(metadataCount);
 		pool->metadataCount = metadataCount;
 
 		if (metadataCount > 0)
 		{
-			metaNames = (Stringp*) core->GetGC()->Calloc(metadataCount, sizeof(Stringp), MMgc::GC::kContainsPointers);
+			metaNames = (Stringp*) core->gc->Calloc(metadataCount, sizeof(Stringp), MMgc::GC::kContainsPointers);
 
 #ifdef AVMPLUS_VERBOSE
 			kVerboseVerify = core->constantString("VerboseVerify");
@@ -929,7 +985,7 @@ namespace avmplus
 			if (local_count < info->param_count+1)
 			{
 				// must have enough locals to hold all parameters including this
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 			}
 
 			// TODO change file format, just want local max_scope
@@ -944,12 +1000,12 @@ namespace avmplus
 
 			if (code_length <= 0) 
 			{
-				toplevel->throwVerifyError(kInvalidCodeLengthError, core->toErrorString(code_length));
+				toplevel->verifyErrorClass()->throwError(kInvalidCodeLengthError, core->toErrorString(code_length));
 			}
 
 			// check to see if we are trying to jump past the file end or the beginning.
 			if ( pos < abcStart || pos+code_length >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
             pos += code_length;
 
             int exception_count = readU30(pos);
@@ -987,7 +1043,7 @@ namespace avmplus
 					if (name_index != 0)
 					{
 						if (name_index >= pool->constantMnCount)
-							toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(name_index), core->toErrorString(pool->constantCount));
+							toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(name_index), core->toErrorString(pool->constantCount));
 						pool->parseMultiname(qn, name_index);
 					}
 
@@ -1028,7 +1084,7 @@ namespace avmplus
 				// Interface methods should not have bodies
 				if (info->declaringTraits && info->declaringTraits->isInterface)
 				{
-					toplevel->throwVerifyError(kIllegalInterfaceMethodBodyError, core->toErrorString(info));
+					toplevel->verifyErrorClass()->throwError(kIllegalInterfaceMethodBodyError, core->toErrorString(info));
 				}
 
 #ifdef DEBUGGER
@@ -1040,7 +1096,7 @@ namespace avmplus
 				// if non-zero, we have a duplicate method body - throw a verify error
 				if (methodInfo->body_pos)
 				{
-					toplevel->throwVerifyError(kDuplicateMethodBodyError, core->toErrorString(info));
+					toplevel->verifyErrorClass()->throwError(kDuplicateMethodBodyError, core->toErrorString(info));
 				}
 
 				methodInfo->body_pos = body_pos;
@@ -1075,32 +1131,32 @@ namespace avmplus
 			else
 			{
 				// native methods should not have bodies!
-				toplevel->throwVerifyError(kIllegalNativeMethodBodyError, core->toErrorString(info));
+				toplevel->verifyErrorClass()->throwError(kIllegalNativeMethodBodyError, core->toErrorString(info));
 			}
 		}
 
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.bodiesSize += (pos-startpos);
+		StaticProfiler::bodiesSize += (pos-startpos);
 		#endif
     }
 
     void AbcParser::parseCpool()
     {
-		pool = new (core->GetGC()) PoolObject(core, code, pos);
+		pool = new (core->gc) PoolObject(core, code, pos);
 		pool->domain = domain;
 		pool->isBuiltin = (nativeMethods != NULL);
 
 		uint32 int_count = readU30(pos);
 		// sanity check to prevent huge allocations
 		if (int_count > (uint32)(abcEnd - pos)) 
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		List<int,LIST_NonGCObjects>& cpool_int = pool->cpool_int;
 		cpool_int.ensureCapacity(int_count);
 		pool->constantIntCount = int_count;
 
 #ifdef AVMPLUS_VERBOSE
-		pool->verbose = core->verbose;
+		pool->verbose = AvmCore::verbose;
 #endif
 
 #if defined(AVMPLUS_PROFILE) || defined(AVMPLUS_VERBOSE) || defined(DEBUGGER)
@@ -1125,12 +1181,12 @@ namespace avmplus
 
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolIntSize = (pos-startpos);
+		StaticProfiler::cpoolIntSize = (pos-startpos);
 		#endif
 
 		uint32 uint_count = readU30(pos);
 		if (uint_count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		List<uint32,LIST_NonGCObjects>& cpool_uint = pool->cpool_uint;
 		cpool_uint.ensureCapacity(uint_count);
@@ -1160,12 +1216,12 @@ namespace avmplus
 
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolUIntSize = (pos-startpos);
+		StaticProfiler::cpoolUIntSize = (pos-startpos);
 		#endif
 
 		uint32 double_count = readU30(pos);
 		if (double_count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		List<double*, LIST_GCObjects>& cpool_double = pool->cpool_double;
 		cpool_double.ensureCapacity(double_count);
@@ -1208,12 +1264,12 @@ namespace avmplus
 		}
 
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolDoubleSize = (pos-startpos);
+		StaticProfiler::cpoolDoubleSize = (pos-startpos);
 		#endif
 
 		uint32 string_count = readU30(pos);
 		if (string_count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		List<Stringp, LIST_RCObjects> &cpool_string = pool->cpool_string;
 		MMGC_MEM_TYPE(pool);
@@ -1236,7 +1292,7 @@ namespace avmplus
 
 			// check to see if we are trying to read past the file end or the beginning.
 			if (pos < abcStart || pos+len >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 			// don't need to create an atom for this now, because
 			// each caller will take care of it.
 			Stringp s = core->internAllocUtf8(pos, len);
@@ -1259,12 +1315,12 @@ namespace avmplus
 
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolStrSize = (pos-startpos);
+		StaticProfiler::cpoolStrSize = (pos-startpos);
 		#endif
 
 		uint32 ns_count = readU30(pos);
 		if (ns_count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		List<Namespace*, LIST_RCObjects> &cpool_ns = pool->cpool_ns;
 
@@ -1283,7 +1339,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 			// check to see if we are trying to read past the file end or the beginning.
 			if ( pos < abcStart || pos >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif // SAFE_PARSE
 			CPoolKind kind = (CPoolKind) *(pos++);
 			switch(kind)
@@ -1331,13 +1387,13 @@ namespace avmplus
 				{
 					uint32 index =  readU30(pos);
 					Stringp uri = index ? resolveUtf8(index) : (Stringp)core->kEmptyString;
-                    Namespace* ns = new (core->GetGC()) Namespace(nullStringAtom, uri, Namespace::NS_Private);
+                    Namespace* ns = new (core->gc) Namespace(nullStringAtom, uri, Namespace::NS_Private);
 					cpool_ns.set(i, ns);
 					break;
 				}
 				default:
 				{
-					toplevel->throwVerifyError(kCpoolEntryWrongTypeError, core->toErrorString(i));
+					toplevel->verifyErrorClass()->throwError(kCpoolEntryWrongTypeError, core->toErrorString(i));
 				}
 			}
 #ifdef AVMPLUS_VERBOSE
@@ -1351,13 +1407,13 @@ namespace avmplus
 #endif
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolNsSize = (pos-startpos);
+		StaticProfiler::cpoolNsSize = (pos-startpos);
 		#endif
 
 
 		uint32 ns_set_count = readU30(pos);
 		if (ns_set_count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		List<NamespaceSet*, LIST_GCObjects>& cpool_ns_set = pool->cpool_ns_set;
 		cpool_ns_set.ensureCapacity(ns_set_count);
@@ -1375,7 +1431,7 @@ namespace avmplus
 			uint32 ns_count = readU30(pos);
 			
 			if (ns_count > (uint32)(abcEnd - pos))
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 			NamespaceSet* namespace_set = core->newNamespaceSet(ns_count);
 
 			Namespace** nss = namespace_set->namespaces;
@@ -1383,9 +1439,9 @@ namespace avmplus
 			{
 				Namespace* ns = parseNsRef(pos);
 				if (!ns)
-					toplevel->throwVerifyError(kIllegalNamespaceError);
+					toplevel->verifyErrorClass()->throwError(kIllegalNamespaceError);
 				//namespace_set->namespaces[j] = ns;
-				WBRC(core->GetGC(), namespace_set, &nss[j], ns);
+				WBRC(core->gc, namespace_set, &nss[j], ns);
 			}
 			cpool_ns_set.set(i, namespace_set);
 
@@ -1400,12 +1456,12 @@ namespace avmplus
 #endif
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolNsSetSize = (pos-startpos);
+		StaticProfiler::cpoolNsSetSize = (pos-startpos);
 		#endif
 
 		uint32 mn_count = readU30(pos);
 		if (mn_count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		// TODO: why Atom?  its actually a list of positions
 		List<Atom,LIST_NonGCObjects>& cpool_mn = pool->cpool_mn;
@@ -1424,7 +1480,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 			// check to see if we are trying to read past the file end or the beginning.
 			if ( pos < abcStart || pos >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif // SAFE_PARSE
 			CPoolKind kind = (CPoolKind) *(pos++);
 			switch(kind)
@@ -1467,7 +1523,7 @@ namespace avmplus
 				uint32 index = readU30(pos);
 
 				if (!index || index >= pool->constantNsSetCount)
-					toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantNsSetCount));
+					toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantNsSetCount));
 
 				// If it is in the range of Namespace Sets then it must be a namespace set/
 				break;
@@ -1481,7 +1537,7 @@ namespace avmplus
 				uint32 index = readU30(pos);
 
 				if (!index || index >= pool->constantNsSetCount)
-					toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantNsSetCount));
+					toplevel->verifyErrorClass()->throwError(kCpoolIndexRangeError, core->toErrorString(index), core->toErrorString(pool->constantNsSetCount));
 
 				// If it is in the range of Namespace Sets then it must be a namespace set.
 
@@ -1489,7 +1545,7 @@ namespace avmplus
 			}
 			
 			default:
-				toplevel->throwVerifyError(kCpoolEntryWrongTypeError, core->toErrorString(i));
+				toplevel->verifyErrorClass()->throwError(kCpoolEntryWrongTypeError, core->toErrorString(i));
 			}
 #ifdef AVMPLUS_VERBOSE
 			if (pool->verbose)
@@ -1504,7 +1560,7 @@ namespace avmplus
 #endif
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.cpoolMnSize = (pos-startpos);
+		StaticProfiler::cpoolMnSize = (pos-startpos);
 		#endif
 
     }
@@ -1575,7 +1631,7 @@ namespace avmplus
 		}
 
 		if (count > (uint32)(abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		pool->scripts.ensureCapacity(count);
 		pool->scriptCount = count;
@@ -1605,7 +1661,7 @@ namespace avmplus
 			{
 				// method has already been bound to a different type.  Can't bind it twice because
 				// it can only have one environment, for its scope chain and super references.
-				toplevel->throwVerifyError(kAlreadyBoundError, core->toErrorString(script), core->toErrorString((Traits*)script->declaringTraits));
+				toplevel->verifyErrorClass()->throwError(kAlreadyBoundError, core->toErrorString(script), core->toErrorString((Traits*)script->declaringTraits));
 			}
 
 			Traits* traits = parseTraits(OBJECT_TYPE, 
@@ -1638,7 +1694,7 @@ namespace avmplus
 			#endif
 
             #if defined(AVMPLUS_INTERP) && defined(AVMPLUS_MIR)
-			if (!core->forcemir)
+			if (!AvmCore::forcemir)
 			{
 				// suggest that we don't jit the $init methods
 				script->flags |= AbstractFunction::SUGGEST_INTERP;
@@ -1648,17 +1704,17 @@ namespace avmplus
 			pool->scripts.set(i, script);
 
 			// initial scope chain is []
-			traits->scope = ScopeTypeChain::create(core->GetGC(),NULL,0);
+			traits->scope = ScopeTypeChain::create(core->gc,NULL,0);
 		}
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.scriptsSize = (pos-startpos);
+		StaticProfiler::scriptsSize = (pos-startpos);
 		#endif
 
 		return true;
 	}
 
 	// helper for interface flattening
-	void AbcParser::addTraits(Hashtable *ht, Traits *traits, Traits *baseTraits)
+	void addTraits(Hashtable *ht, Traits *traits, Traits *baseTraits)
 	{
 		if(!baseTraits || !baseTraits->containsInterface(traits))
 		{
@@ -1692,7 +1748,7 @@ namespace avmplus
 		}
 
 		if (classCount > (abcEnd - pos))
-			toplevel->throwVerifyError(kCorruptABCError);
+			toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 
 		// allocate room for class infos early, to handle nested classes
 		pool->cinits.ensureCapacity(classCount);
@@ -1727,13 +1783,13 @@ namespace avmplus
 				if (pool->verbose)
 					core->console << &qname << " can't extend final class " << baseTraits << "\n";
 				#endif
-				toplevel->throwVerifyError(kCannotExtendFinalClass, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kCannotExtendFinalClass, core->toErrorString(&qname));
 			}
 
 			if (baseTraits && baseTraits->isInterface)
 			{
 				// error, can't extend interface
-				toplevel->throwVerifyError(kCannotExtendError, core->toErrorString(&qname), core->toErrorString(baseTraits));
+				toplevel->verifyErrorClass()->throwError(kCannotExtendError, core->toErrorString(&qname), core->toErrorString(baseTraits));
 			}
 
             // read flags:	bit 0: sealed
@@ -1743,7 +1799,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 			// check to see if we are trying to read past the file end or the beginning.
 			if ( pos < abcStart || pos >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif // SAFE_PARSE
 			int flags = *pos++;
 
@@ -1760,7 +1816,7 @@ namespace avmplus
 
 			if(interfaceCount)
 			{
-				Hashtable *ht = new (core->GetGC()) Hashtable(core->GetGC(), interfaceCount*2);
+				Hashtable *ht = new (core->gc) Hashtable(core->gc, interfaceCount*2);
 				for( int x = 0; x < interfaceCount; ++ x )
 				{
 					Traits *t = pool->resolveTypeName(pos, toplevel);
@@ -1768,7 +1824,7 @@ namespace avmplus
 					if (!t || !t->isInterface)
 					{
 						// error, can't extend interface
-						toplevel->throwVerifyError(kCannotImplementError, core->toErrorString(&qname), core->toErrorString(t));
+						toplevel->verifyErrorClass()->throwError(kCannotImplementError, core->toErrorString(&qname), core->toErrorString(t));
 					}
 					
 					addTraits(ht, t, baseTraits);
@@ -1826,14 +1882,14 @@ namespace avmplus
 
 				if (itraits->slotCount != 0)
 				{
-					toplevel->throwVerifyError(kIllegalSlotError, core->toErrorString(itraits));
+					toplevel->verifyErrorClass()->throwError(kIllegalSlotError, core->toErrorString(itraits));
 				}
 
 				// interface base must be *
 				if (baseTraits)
 				{
 					// error, can't extend this type
-					toplevel->throwVerifyError(kCannotExtendError, core->toErrorString(&qname), core->toErrorString(baseTraits));
+					toplevel->verifyErrorClass()->throwError(kCannotExtendError, core->toErrorString(&qname), core->toErrorString(baseTraits));
 				}
 			}
 
@@ -1841,7 +1897,7 @@ namespace avmplus
 			{
 				// method has already been bound to a different type.  Can't bind it twice because
 				// it can only have one environment, for its scope chain and super references.
-				toplevel->throwVerifyError(kAlreadyBoundError, core->toErrorString(iinit), core->toErrorString((Traits*)iinit->declaringTraits));
+				toplevel->verifyErrorClass()->throwError(kAlreadyBoundError, core->toErrorString(iinit), core->toErrorString((Traits*)iinit->declaringTraits));
 			}
 
 			iinit->makeMethodOf(itraits);
@@ -1875,7 +1931,7 @@ namespace avmplus
         }
 
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.instancesSize = (pos-startpos);
+		StaticProfiler::instancesSize = (pos-startpos);
 		#endif
 
 		return true;
@@ -1944,7 +2000,7 @@ namespace avmplus
 			{
 				// method has already been bound to a different type.  Can't bind it twice because
 				// it can only have one environment, for its scope chain and super references.
-				toplevel->throwVerifyError(kAlreadyBoundError, core->toErrorString(cinit), core->toErrorString((Traits*)cinit->declaringTraits));
+				toplevel->verifyErrorClass()->throwError(kAlreadyBoundError, core->toErrorString(cinit), core->toErrorString((Traits*)cinit->declaringTraits));
 			}
 			
 			cinit->makeMethodOf(ctraits);
@@ -1954,7 +2010,7 @@ namespace avmplus
 			ctraits->needsHashtable = true;
 
             #if defined(AVMPLUS_INTERP) && defined(AVMPLUS_MIR)
-			if (!core->forcemir)
+			if (!AvmCore::forcemir)
 			{
 				// suggest that we don't jit the class initializer
 				cinit->flags |= AbstractFunction::SUGGEST_INTERP;
@@ -1965,22 +2021,7 @@ namespace avmplus
         }
 
 		#ifdef AVMPLUS_PROFILE
-		core->sprof.classesSize = (pos-startpos);
+		StaticProfiler::classesSize = (pos-startpos);
 		#endif
     }
-
-	unsigned int AbcParser::readU30(const byte *&p) const
-	{
-#ifdef SAFE_PARSE
-		// We have added kBufferPadding bytes to the end of the main swf buffer.
-		// Why?  Here we can read from 1 to 5 bytes.  If we were to
-		// put the required safety checks at each byte read, we would slow
-		// parsing of the file down.  With this buffer, only one check at the
-		// top of this function is necessary. (we will read on into our own memory)
-		if ( p >= abcEnd || p < abcStart )
-			toplevel->throwVerifyError(kCorruptABCError);
-#endif //SAFE_PARSE
-		return toplevel->readU30(p);
-	}
-
 }

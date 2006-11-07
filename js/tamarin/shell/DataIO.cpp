@@ -117,10 +117,10 @@ namespace avmshell
 		uint32 available = Available();
 		
 		if (count == 0) {
-			count = available;
+			count = Available();
 		}
 		
-		if (count > available) {
+		if (count > Available()) {
 			ThrowEOFError();
 		}
 
@@ -141,12 +141,12 @@ namespace avmshell
 
 	void DataInput::ThrowEOFError()
 	{
-		m_toplevel->throwError(kEndOfFileError);
+		m_toplevel->errorClass()->throwError(kEndOfFileError);
 	}
 
 	void DataInput::ThrowMemoryError()
 	{
-		m_toplevel->throwError(kOutOfMemoryError);
+		m_toplevel->errorClass()->throwError(kOutOfMemoryError);
 	}
 	
 	//
@@ -155,7 +155,7 @@ namespace avmshell
 
 	void DataOutput::ThrowRangeError()
 	{
-		m_toplevel->throwRangeError(kInvalidRangeError);
+		m_toplevel->rangeErrorClass()->throwError(kInvalidRangeError);
 	}
 	
 	void DataOutput::WriteBoolean(bool value)

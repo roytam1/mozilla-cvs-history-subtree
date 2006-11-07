@@ -12,7 +12,7 @@
 # The Original Code is [Open Source Virtual Machine.] 
 #
 # The Initial Developer of the Original Code is Adobe System Incorporated.  Portions created 
-# by the Initial Developer are Copyright (C)[ 2005 ] Adobe Systems Incorporated. All Rights 
+# by the Initial Developer are Copyright (C)[ 2004-2006 ] Adobe Systems Incorporated. All Rights 
 # Reserved. 
 #
 # Contributor(s): Adobe AS3 Team
@@ -33,12 +33,12 @@
 AVMPLUS_DEBUG_CFLAGS     := -g
 AVMPLUS_RELEASE_CFLAGS   := -O3
 
-AVMPLUS_DEBUG_CXXFLAGS   := ${AVMPLUS_DEBUG_CFLAGS} -DAVMPLUS_NOVIRTUAL -DAVMPLUS_SHELL -fno-exceptions -fno-rtti -Wno-invalid-offsetof -rdynamic
-AVMPLUS_RELEASE_CXXFLAGS := ${AVMPLUS_RELEASE_CFLAGS} -DAVMPLUS_NOVIRTUAL -DAVMPLUS_SHELL -fno-exceptions -fno-rtti -Wno-invalid-offsetof
+AVMPLUS_DEBUG_CXXFLAGS   := ${AVMPLUS_DEBUG_CFLAGS} -fno-exceptions -fno-rtti
+AVMPLUS_RELEASE_CXXFLAGS := ${AVMPLUS_RELEASE_CFLAGS} -fno-exceptions -fno-rtti
 
 ifeq (YES, ${DEBUG})
-   AVMPLUS_CFLAGS       := ${AVMPLUS_DEBUG_CFLAGS} -D_DEBUG -DDEBUG
-   AVMPLUS_CXXFLAGS     := ${AVMPLUS_DEBUG_CXXFLAGS} -D_DEBUG -DDEBUG
+   AVMPLUS_CFLAGS       := ${AVMPLUS_DEBUG_CFLAGS}
+   AVMPLUS_CXXFLAGS     := ${AVMPLUS_DEBUG_CXXFLAGS}
 else
    AVMPLUS_CFLAGS       := ${AVMPLUS_RELEASE_CFLAGS}
    AVMPLUS_CXXFLAGS     := ${AVMPLUS_RELEASE_CXXFLAGS}
@@ -48,13 +48,13 @@ endif
 # Include paths
 #****************************************************************************
 
-AVMPLUS_INCS := -I${AVMPLUS_ROOT}/core -I${AVMPLUS_ROOT}/pcre -I${AVMPLUS_ROOT}/MMgc -I${AVMPLUS_ROOT}/codegen -I${AVMPLUS_ROOT}/regexp -I${AVMPLUS_ROOT}/extensions -I${AVMPLUS_ROOT}/shell
+AVMPLUS_INCS := -I${AVMPLUS_ROOT}/core -I${AVMPLUS_ROOT}/MMgc -I${AVMPLUS_ROOT}/codegen -I${AVMPLUS_ROOT}/regexp
 
 #****************************************************************************
 # Libraries
 #****************************************************************************
 
-AVMPLUS_LIBS := -L. -L${AVMPLUS_ROOT}/MMgc -lavmplus -lmmgc -lpthread
+AVMPLUS_LIBS := -L. -L../../MMgc -lavmplus -lmmgc -lpthread
 
 #****************************************************************************
 # Source files
@@ -83,7 +83,6 @@ AVMPLUS_SRCS := ${AVMPLUS_ROOT}/core/AbcEnv.cpp \
 	${AVMPLUS_ROOT}/core/AtomArray.cpp \
 	${AVMPLUS_ROOT}/core/AtomConstants.cpp \
 	${AVMPLUS_ROOT}/core/AvmCore.cpp \
-	${AVMPLUS_ROOT}/core/AvmDebugUnix.cpp \
 	${AVMPLUS_ROOT}/core/avmplus.cpp \
 	${AVMPLUS_ROOT}/core/avmplusDebugger.cpp \
 	${AVMPLUS_ROOT}/core/avmplusHashtable.cpp \
@@ -147,24 +146,8 @@ AVMPLUS_SRCS := ${AVMPLUS_ROOT}/core/AbcEnv.cpp \
 	${AVMPLUS_ROOT}/core/XMLListObject.cpp \
 	${AVMPLUS_ROOT}/core/XMLObject.cpp \
 	${AVMPLUS_ROOT}/core/XMLParser16.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_chartables.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_compile.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_config.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_dfa_exec.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_exec.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_fullinfo.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_get.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_globals.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_info.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_maketables.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_ord2utf8.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_refcount.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_study.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_tables.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_try_flipped.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_valid_utf8.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_version.cpp \
-	${AVMPLUS_ROOT}/pcre/pcre_xclass.cpp \
+	${AVMPLUS_ROOT}/regexp/chartables.cpp \
+	${AVMPLUS_ROOT}/regexp/pcre.cpp \
 	${AVMPLUS_ROOT}/platform/unix/DateUnix.cpp \
 	${AVMPLUS_ROOT}/platform/unix/MathUtilsUnix.cpp \
 	${AVMPLUS_ROOT}/platform/unix/OSDepUnix.cpp 
@@ -173,11 +156,7 @@ AVMPLUS_SRCS := ${AVMPLUS_ROOT}/core/AbcEnv.cpp \
 # Preprocessor directives
 #****************************************************************************
 
-ifeq (YES, ${DEBUGGER})
 AVMPLUS_DEFS := -DUNIX -DCYGWIN -DAVMPLUS_IA32 -DDEBUGGER -DENABLE_COMPILER -DAVMPLUS_CDECL -DAVMPLUS_LINUX
-else
-	AVMPLUS_DEFS := -DUNIX -DCYGWIN -DAVMPLUS_IA32 -DENABLE_COMPILER -DAVMPLUS_CDECL -DAVMPLUS_LINUX
-endif
 
 AVMPLUS_CFLAGS   := ${AVMPLUS_CFLAGS} ${AVMPLUS_DEFS}
 AVMPLUS_CXXFLAGS := ${AVMPLUS_CXXFLAGS} ${AVMPLUS_DEFS}
@@ -185,15 +164,13 @@ AVMPLUS_CXXFLAGS := ${AVMPLUS_CXXFLAGS} ${AVMPLUS_DEFS}
 #********************************************************************************
 # Rules
 #********************************************************************************
+
 define avmplus-cmd
-	@echo "=== compiling avmplus: ===" $@ ${OPT} ${AVMPLUS_CXXFLAGS}
+	@echo "=== compiling avmplus: ===" $@ ${OPT}
 	@${CXX} -c ${OPT} ${AVMPLUS_CXXFLAGS} -Wa,-ahld=$(addsuffix .s, $(basename $<)) ${AVMPLUS_INCS} $< -o $@
 endef
 
 ${AVMPLUS_ROOT}/core/%.o : ${AVMPLUS_ROOT}/core/%.cpp
-	$(avmplus-cmd)
-
-${AVMPLUS_ROOT}/extensions/%.o : ${AVMPLUS_ROOT}/extensions/%.cpp
 	$(avmplus-cmd)
 
 ${AVMPLUS_ROOT}/shell/%.o : ${AVMPLUS_ROOT}/shell/%.cpp
@@ -208,7 +185,7 @@ ${AVMPLUS_ROOT}/platform/%.o : ${AVMPLUS_ROOT}/platform/%.cpp
 ${AVMPLUS_ROOT}/platform/unix/%.o : ${AVMPLUS_ROOT}/platform/unix/%.cpp
 	$(avmplus-cmd)
 
-${AVMPLUS_ROOT}/pcre/%.o : ${AVMPLUS_ROOT}/pcre/%.cpp
+${AVMPLUS_ROOT}/regexp/%.o : ${AVMPLUS_ROOT}/regexp/%.cpp
 	$(avmplus-cmd)
 
 ${AVMPLUS_ROOT}/utils/%.o : ${AVMPLUS_ROOT}/utils/%.cpp

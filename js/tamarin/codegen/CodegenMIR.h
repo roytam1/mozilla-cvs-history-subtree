@@ -65,7 +65,7 @@ namespace avmplus
 		MethodInfo * const info;
 		FrameState *state;
 
-		#ifdef AVMPLUS_MAC_CARBON
+		#ifdef AVMPLUS_MAC_CLASSIC_OR_CARBON
 		static int setjmpDummy(jmp_buf buf);
 		static int setjmpAddress;
 		static void setjmpInit();
@@ -348,6 +348,8 @@ namespace avmplus
 
 		#ifdef AVMPLUS_ARM
 		static const int MAX_REGISTERS = 16;
+		static const int NonVolatileMask = R4_mask | R5_mask | R6_mask | R7_mask | R8_mask | R9_mask | R10_mask;
+		static const int NonVolatileCount = 7;
         #endif
 		
 		#ifdef AVMPLUS_IA32
@@ -529,7 +531,6 @@ namespace avmplus
 		#define TOPLEVELADDR(f) toplevelAddr((int (Toplevel::*)())(&f))
 		#define CALLSTACKADDR(f) callStackAddr((int (CallStackNode::*)())(&f))	
 		#define SCRIPTADDR(f) scriptAddr((int (ScriptObject::*)())(&f))
-		#define ARRAYADDR(f) arrayAddr((int (ArrayObject::*)())(&f))
 		#define EFADDR(f)   efAddr((int (ExceptionFrame::*)())(&f))
 		#define DEBUGGERADDR(f)   debuggerAddr((int (Debugger::*)())(&f))
 
@@ -543,7 +544,6 @@ namespace avmplus
 	#endif
 		static int efAddr( int (ExceptionFrame::*f)() );
 		static int scriptAddr( int (ScriptObject::*f)() );
-		static int arrayAddr( int (ArrayObject::*f)() );
 
 		friend class Verifier;
 
@@ -627,7 +627,6 @@ namespace avmplus
 		#endif /* AVMPLUS_IA32 */
 
 		#ifdef AVMPLUS_ARM
-		uint32 *patch_stmfd;
 		uint32 *patch_frame_size;
 
 		/**
@@ -635,8 +634,6 @@ namespace avmplus
 		 * after the generation of MIR opcodes.
 		 */
 		int calleeAreaSize() const { return 8*maxArgCount; }
-
-		int countBits(uint32);
         #endif
 		
 		#ifdef AVMPLUS_PPC
@@ -680,9 +677,7 @@ namespace avmplus
 		#endif /* _DEBUG */
 
 		#else
-
-		#define incInstructionCount()
-		
+		#define incInstructionCount() 
 		#endif /* AVMPLUS_PROFILE */
 
 		// pointer to list of argument definitions
@@ -759,11 +754,6 @@ namespace avmplus
 
 		OP*   cmpOptimization (int lhs, int rhs);
 
-		OP*   i2dIns(OP* v);
-		OP*   u2dIns(OP* v);
-		OP*   fcmpIns(OP* a1, OP* a2);
-		OP*   binaryFcmpIns(OP* a1, OP* a2);
-
 		OP*   cmpLt(int lhs, int rhs);
 		OP*   cmpLe(int lhs, int rhs);
 		OP*	  cmpEq(int funcaddr, int lhs, int rhs);
@@ -803,10 +793,6 @@ namespace avmplus
 		OP*  ptrToNativeRep(Traits*, OP* ptr);
 
 		OP*  initMultiname(Multiname* multiname, int& csp, bool isDelete = false);
-
-#ifdef DEBUGGER
-		void emitSampleCheck();
-#endif
 
 		//
 		// -- MD Specific stuff
@@ -865,9 +851,6 @@ namespace avmplus
 			uint32 calleeSaved; // 1 = callee-saved, 0=caller-saved
 #ifdef AVMPLUS_PPC
 			unsigned LowerBound;
-#endif
-#ifdef AVMPLUS_ARM
-			unsigned nonVolatileMask;
 #endif
 			OP* active[MAX_REGISTERS];  // active[r] = OP that defines r
 
@@ -1481,19 +1464,9 @@ namespace avmplus
             #endif
 
 			#ifdef AVMPLUS_ARM
-			int disp = (MDInstruction*)addr - mip - 2;
-			if (!(disp & 0xFF000000))
-			{
-				// Branch displacement fits in 24-bits, use BL instruction.
-				BL(addr - (int)mip);
-			}
-			else
-			{
-				// Branch displacement doesn't fit
-				MOV_imm32(IP, addr);
-				MOV(LR, PC);
-				MOV(PC, IP);
-			}
+			MOV_imm32(IP, addr);
+			MOV(LR, PC);
+			MOV(PC, IP);
 			#endif
 			
 			#ifdef AVMPLUS_IA32
@@ -1512,8 +1485,8 @@ namespace avmplus
 	#endif
 
 	#ifdef AVMPLUS_ARM
-	static const int md_prologue_size		= 256;
-	static const int md_epilogue_size		= 128;
+	static const int md_prologue_size		= 96;
+	static const int md_epilogue_size		= 280;
 	static const int md_native_thunk_size	= 1024;
     #endif /* AVMPLUS_ARM */
 	

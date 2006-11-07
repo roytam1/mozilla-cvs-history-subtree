@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __GCTypes__
 #define __GCTypes__
 
@@ -75,12 +76,10 @@ namespace MMgc
     class GCWorkItem
 	{
 	public:
-		GCWorkItem() : ptr(0), _size(0) {}
-		GCWorkItem(const void *p, uint32 s, bool isGCItem) : ptr(p), _size(s | uint32(isGCItem)) {}
-		uint32 GetSize() const { return _size & ~1; }
-		int IsGCItem() const { return _size & 1; }
+		GCWorkItem() : ptr(0), size(0) {}
+		GCWorkItem(const void *p, uint32 s) : ptr(p), size(s) {}
 		const void *ptr;
-		uint32 _size;
+		uint32 size;
 	};	
 
     

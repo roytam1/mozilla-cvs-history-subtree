@@ -64,7 +64,7 @@ namespace avmplus
 
 		#ifdef AVMPLUS_VERIFYALL
 		f->flags |= VERIFIED;
-		if (f->pool->core->verifyall && f->pool)
+		if (AvmCore::verifyall && f->pool)
 			f->pool->processVerifyQueue(env->toplevel());
 		#endif
 
@@ -81,7 +81,7 @@ namespace avmplus
 		CodegenMIR cgen(this);
 		cgen.emitNativeThunk(this);
 		if (cgen.overflow)
-			toplevel->throwError(kOutOfMemoryError);
+			toplevel->errorClass()->throwError(kOutOfMemoryError);
 	}
 
 	int NativeMethodV::verifyEnter(MethodEnv* env, int argc, va_list ap)
@@ -92,7 +92,7 @@ namespace avmplus
 
 		#ifdef AVMPLUS_VERIFYALL
 		f->flags |= VERIFIED;
-		if (f->pool->core->verifyall && f->pool)
+		if (AvmCore::verifyall && f->pool)
 			f->pool->processVerifyQueue(env->toplevel());
 		#endif
 

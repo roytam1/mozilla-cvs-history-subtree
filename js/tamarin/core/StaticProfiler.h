@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_StaticProfiler__
 #define __avmplus_StaticProfiler__
 
@@ -42,31 +43,29 @@ namespace avmplus
 	class StaticProfiler
 	{
 	public:
-		StaticProfiler();
-
-		bool sprofile;
+		static bool sprofile;
 		
-		int counts[256];
-		int sizes[256];
-		int totalCount;
-		int totalSize;
-		int cpoolSize;
-		int cpoolIntSize;
-		int cpoolUIntSize;
-		int cpoolDoubleSize;
-		int cpoolStrSize;
-		int cpoolNsSize;
-		int cpoolNsSetSize;
-		int cpoolMnSize;
-		int methodsSize;
-		int bodiesSize;
-		int classesSize;
-		int instancesSize;
-		int scriptsSize;
+		static int counts[];
+		static int sizes[];
+		static int totalCount;
+		static int totalSize;
+		static int cpoolSize;
+		static int cpoolIntSize;
+		static int cpoolUIntSize;
+		static int cpoolDoubleSize;
+		static int cpoolStrSize;
+		static int cpoolNsSize;
+		static int cpoolNsSetSize;
+		static int cpoolMnSize;
+		static int methodsSize;
+		static int bodiesSize;
+		static int classesSize;
+		static int instancesSize;
+		static int scriptsSize;
 
-		void dump(PrintWriter& console);
+		static void dump(PrintWriter& console);
 
-		void tally(AbcOpcode opcode, int size)
+		static void tally(AbcOpcode opcode, int size)
 		{
 			counts[opcode]++;
 			totalCount++;

@@ -45,17 +45,14 @@ bool P4Available();
 
 // Custom new and delete operators
 // User-defined operator new.
-
-static MMgc::FixedMalloc* fm;
-
 void *operator new(size_t size)
 {
-    return fm->Alloc(size);
+    return MMgc::FixedMalloc::GetInstance()->Alloc(size);
 }
 
 void *operator new[](size_t size)
 {
-    return fm->Alloc(size);
+    return MMgc::FixedMalloc::GetInstance()->Alloc(size);
 }
 
 // User-defined operator delete.
@@ -67,7 +64,7 @@ void *operator new[](size_t size)
 	void operator delete( void *p)
 #endif
 	{
-		fm->Free(p);
+		MMgc::FixedMalloc::GetInstance()->Free(p);
 	}
 
 #ifdef _MAC
@@ -78,7 +75,7 @@ void *operator new[](size_t size)
     void operator delete[]( void *p )
 #endif
     {
-        fm->Free(p);
+        MMgc::FixedMalloc::GetInstance()->Free(p);
     }
 
 
@@ -94,7 +91,6 @@ namespace avmshell
 		NATIVE_CLASS(abcclass_avmplus_File,            FileClass,          ScriptObject)
 		NATIVE_CLASS(abcclass_avmplus_Domain,          DomainClass,        DomainObject)
 		NATIVE_CLASS(abcclass_avmplus_StringBuilder,   StringBuilderClass, StringBuilderObject)		
-		NATIVE_CLASS(abcclass_avmplus_JObject,         JObjectClass,		JObject)
 		NATIVE_CLASS(abcclass_flash_utils_ByteArray,    ByteArrayClass,     ByteArrayObject)		
 		NATIVE_CLASS(abcclass_flash_utils_ShortArray,   ShortArrayClass,    ShortArrayObject)		
 		NATIVE_CLASS(abcclass_flash_utils_UShortArray,  UShortArrayClass,   UShortArrayObject)		
@@ -217,7 +213,6 @@ namespace avmshell
 		#endif //AVMPLUS_INTERACTIVE
 		printf("          [-log]\n");
 		printf("          [-- args]     args passed to AS3 program\n");
-		printf("          [-jargs ... ;] args passed to Java runtime\n");
 		printf("          filename.abc ...\n");
 		printf("          [--] application args\n");
 		exit(1);
@@ -243,7 +238,7 @@ namespace avmshell
 		Stringp errorMessage = getErrorMessage(kStackOverflowError);
 		Atom args[2] = { nullObjectAtom, errorMessage->atom() };
 		Atom errorAtom = toplevel->errorClass()->construct(1, args);
-		Exception *exception = new (GetGC()) Exception(errorAtom
+		Exception *exception = new (gc) Exception(errorAtom
                                                   #ifdef DEBUGGER
 												  ,this
                                                   #endif
@@ -269,7 +264,7 @@ namespace avmshell
 			Stringp errorMessage = getErrorMessage(kScriptTerminatedError);
 			Atom args[2] = { nullObjectAtom, errorMessage->atom() };
 			Atom errorAtom = toplevel->errorClass()->construct(1, args);
-			Exception *exception = new (GetGC()) Exception(errorAtom
+			Exception *exception = new (gc) Exception(errorAtom
 													  #ifdef DEBUGGER
 													  ,this
 													  #endif
@@ -294,7 +289,7 @@ namespace avmshell
 		#endif
 		#endif
 
-		toplevel->throwError(kScriptTimeoutError);
+		toplevel->errorClass()->throwError(kScriptTimeoutError);
 	}
 	
 	void Shell::initShellPool()
@@ -393,11 +388,11 @@ namespace avmshell
 
 			#ifdef DEBUGGER
 			// Create the debugger
-			debugCLI = new (GetGC()) DebugCLI(this);
+			debugCLI = new (gc) DebugCLI(this);
 			debugger = debugCLI;
 
 			// Create the profiler
-			profiler = new Profiler(GetGC());
+			profiler = new Profiler(gc);
 			#endif
 
 			SystemClass::user_argc = argc-1;
@@ -407,15 +402,15 @@ namespace avmshell
 			Toplevel* toplevel = initShellBuiltins();
 
 			// Create a new Domain for the user code
-			Domain* domain = new (GetGC()) Domain(this,
+			Domain* domain = new (gc) Domain(this,
 											 builtinDomain);
 
 			// Return a new DomainEnv for the user code
-			DomainEnv* domainEnv = new (GetGC()) DomainEnv(this,
+			DomainEnv* domainEnv = new (gc) DomainEnv(this,
 													  domain,
 													  toplevel->domainEnv());
 
-			ShellCodeContext* codeContext = new (GetGC()) ShellCodeContext();
+			ShellCodeContext* codeContext = new (gc) ShellCodeContext();
 			codeContext->domainEnv = domainEnv;
 				
 			// parse new bytecode
@@ -460,7 +455,7 @@ namespace avmshell
 		{
 			#ifdef WIN32
 			if (!P4Available()) {
-				sse2 = false;
+				AvmCore::sse2 = false;
 			}
 			#endif
 
@@ -474,15 +469,16 @@ namespace avmshell
 				usage();
 			}
 
+#ifdef AVMPLUS_VERBOSE
+			bool verbose = AvmCore::verbose;
+#endif
+
 			int filenamesPos = -1;
 			int endFilenamePos = -1;
 			char *filename = NULL;
 			bool do_log = false;
 			bool do_debugger = false;
 			bool do_interactive = false;
-#ifdef AVMPLUS_VERBOSE
-			bool do_verbose = false;
-#endif
 
 			for (int i=1; i<argc; i++) {
 				char *arg = argv[i];
@@ -491,64 +487,64 @@ namespace avmshell
 				{
 					if (arg[1] == 'D') {
 						if (!strcmp(arg+2, "timeout")) {
-							interrupts = true;
+							AvmCore::interrupts = true;
 
 						#ifdef AVMPLUS_IA32
 						} else if (!strcmp(arg+2, "nosse")) {
-							sse2 = false;
+							AvmCore::sse2 = false;
 						#endif
 
 	                    #ifdef AVMPLUS_VERIFYALL
 						} else if (!strcmp(arg+2, "verifyall")) {
-							verifyall = true;
+							AvmCore::verifyall = true;
 		                #endif /* AVMPLUS_VERIFYALL */
 
 	                    #ifdef _DEBUG
 						} else if (!strcmp(arg+2, "greedy")) {
-							GetGC()->greedy = true;
+							MMgc::GC::greedy = true;
 		                #endif /* _DEBUG */
 
 						#ifdef AVMPLUS_PROFILE
 						} else if (!strcmp(arg+2, "dprofile")) {
-							dprof.dprofile = true;
+							DynamicProfiler::dprofile = true;
 						} else if (!strcmp(arg+2, "sprofile")) {
-							sprof.sprofile = true;
+							StaticProfiler::sprofile = true;
 						#endif /* AVMPLUS_PROFILE */
 
 	                    #ifdef DEBUGGER
 						} else if (!strcmp(arg+2, "gcstats")) {
-							GetGC()->gcstats = true;
+							MMgc::GC::gcstats = true;
 						} else if (!strcmp(arg+2, "nogc")) {
-							GetGC()->nogc = true;
+							MMgc::GC::nogc = true;
 						} else if (!strcmp(arg+2, "noincgc")) {
-							GetGC()->incremental = false;
+							MMgc::GC::incremental = false;
 						} else if (!strcmp(arg+2, "astrace")) {
 							avmplus::Debugger::astrace = (avmplus::Debugger::TraceLevel) strtol(argv[++i], 0, 10);
                     	#endif /* DEBUGGER */
 						#ifdef AVMPLUS_INTERP
 						} else if (!strcmp(arg+2, "interp")) {
-							turbo = false;
+							AvmCore::turbo = false;
 		                #endif /* AVMPLUS_INTERP */
 						#ifdef AVMPLUS_VERBOSE
 						} else if (!strcmp(arg+2, "verbose")) {
-							do_verbose = true;
+							verbose = true;
 						#endif
 
 	                #ifdef AVMPLUS_MIR
 						#ifdef AVMPLUS_INTERP
 						} else if (!strcmp(arg+2, "forcemir")) {
-							forcemir = true;
+							AvmCore::forcemir = true;
                         #endif /* AVMPLUS_INTERP */
 
 						} else if (!strcmp(arg+2, "nodce")) {
-							dceopt = false;
+							AvmCore::dceopt = false;
 							
 						} else if (!strcmp(arg+2, "nocse")) {
-							cseopt = false;
+							AvmCore::cseopt = false;
 
                         #ifdef AVMPLUS_VERBOSE
 						} else if (!strcmp(arg+2, "bbgraph")) {
-							bbgraph = true;  // generate basic block graph (only valid with mir switch)
+							AvmCore::bbgraph = true;  // generate basic block graph (only valid with mir switch)
                         #endif
                     #endif /* AVMPLUS_MIR */
 
@@ -568,22 +564,11 @@ namespace avmshell
 						SetErrorMode(0);  // set to default
 						#endif // WIN32
 					}
-					else if (!strcmp(arg, "-jargs")) {
-						// all the following args until the semi colon is for java.
-						//@todo fix up this hard limit
-						bool first = true;
-						Java::startup_options = new char[256];
-						memset(Java::startup_options, 0, 256);
-
-						for(i++; i<argc; i++)
-						{
-							if (*argv[i] == ';')
-								break;
-							if (!first) strcat(Java::startup_options, " ");
-							strcat(Java::startup_options, argv[i]);
-							first = false;
-						}
-						AvmAssert(strlen(Java::startup_options) < 256);
+					else if (!strcmp(arg, "-error")) {
+						show_error = true;
+						#ifdef WIN32
+						SetErrorMode(0);  // set to default
+						#endif // WIN32
 					}
 
 	                #ifdef DEBUGGER
@@ -629,18 +614,13 @@ namespace avmshell
 			initBuiltinPool();
 			initShellPool();
 
-#ifdef AVMPLUS_VERBOSE
-			if (do_verbose)
-				verbose = true;
-#endif
-
 			#ifdef DEBUGGER
 			// Create the debugger
-			debugCLI = new (GetGC()) DebugCLI(this);
+			debugCLI = new (gc) DebugCLI(this);
 			debugger = debugCLI;
 
 			// Create the profiler
-			profiler = new Profiler(GetGC());
+			profiler = new Profiler(gc);
 
 			if (do_debugger)
 			{
@@ -652,7 +632,7 @@ namespace avmshell
 			#endif
 
 			// start the 15 second timeout if applicable
-			if (interrupts) {
+			if (AvmCore::interrupts) {
 				#ifdef WIN32
 				timeSetEvent(kScriptTimeout*1000,
 							 kScriptTimeout*1000,
@@ -676,15 +656,19 @@ namespace avmshell
 			Toplevel* toplevel = initShellBuiltins();
 
 			// Create a new Domain for the user code
-			Domain* domain = new (GetGC()) Domain(this,
+			Domain* domain = new (gc) Domain(this,
 											 builtinDomain);
 
 			// Return a new DomainEnv for the user code
-			DomainEnv* domainEnv = new (GetGC()) DomainEnv(this,
+			DomainEnv* domainEnv = new (gc) DomainEnv(this,
 													  domain,
 													  toplevel->domainEnv());
 
 			ShellCodeContext* lastCodeContext = 0;
+
+			#ifdef AVMPLUS_VERBOSE
+			AvmCore::verbose = verbose;
+			#endif
 
 			// execute each abc file
 			for (int i=filenamesPos; filename && i < endFilenamePos; i++)
@@ -708,7 +692,7 @@ namespace avmshell
 						return(1);
 				}
 
-				ShellCodeContext* codeContext = new (GetGC()) ShellCodeContext();
+				ShellCodeContext* codeContext = new (gc) ShellCodeContext();
 				codeContext->domainEnv = domainEnv;
 				
 				// parse new bytecode
@@ -975,7 +959,6 @@ namespace avmshell
 		#ifdef AVMPLUS_PROFILE
 			dump();
 		#endif
-		if (Java::startup_options) delete Java::startup_options;
 		return 0;
 	}
 
@@ -1005,9 +988,6 @@ int _main(int argc, char *argv[])
 	MMgc::GCHeap::Init();
 	MMgc::FixedMalloc::Init();
 
-	fm = MMgc::FixedMalloc::GetInstance();
-	MMgc::GCHeap* heap = MMgc::GCHeap::GetGCHeap();
-
 	// memory zero'ing check
 /*	int *foo = new int[2];
 	AvmAssert(memcmp(foo, "\0\0\0\0\0\0\0\0\0\0\0\0", 2*sizeof(int)) == 0);
@@ -1015,12 +995,11 @@ int _main(int argc, char *argv[])
 
 	int exitCode = 0;
 	{
-		MMgc::GC gc(heap);
+		MMgc::GC gc(MMgc::GCHeap::GetGCHeap());
 		avmshell::shell = new avmshell::Shell(&gc);
 		exitCode = avmshell::shell->main(argc, argv);
 		delete avmshell::shell;
 	}
-
 	MMgc::FixedMalloc::Destroy();
 	MMgc::GCHeap::Destroy();
  	return exitCode;

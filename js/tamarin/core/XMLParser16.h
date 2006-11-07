@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_XMLParser16__
 #define __avmplus_XMLParser16__
 

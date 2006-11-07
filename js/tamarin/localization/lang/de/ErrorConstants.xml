@@ -41,7 +41,7 @@
   </error>
   <error id="1001" label="kNotImplementedError">Die Methode %1 wird nicht implementiert.</error>
   <error id="1002" label="kInvalidPrecisionError">
-    Das Genauigkeitsargument muss zwischen %2 und %3 liegen; %1 ist ungültig.
+    Das Genauigkeitsargument muss zwischen 0 und 20 liegen; %1 ist ungültig.
     <description><![CDATA[
 		You specified a value less than 0 or greater than 20 for the precision argument 
 		of a method or property. Pass a value between 0 and 20 as a precision argument.
@@ -241,7 +241,6 @@ trace(obj.b.prop);</code></pre>
 	]]></description>
   </error>
   <error id="1033" label="kCpoolEntryWrongTypeError">Cpool-Eintrag %1 hat den falschen Typ.</error>
-  <error id="1034" label="kCheckTypeFailedError">Typumwandlung fehlgeschlagen: %1 kann nicht in %2 umgewandelt werden.</error>
   <error id="1035" label="kIllegalSuperCallError">
     Unzulässiger super-Ausdruck in Methode %1 gefunden.
     <description><![CDATA[

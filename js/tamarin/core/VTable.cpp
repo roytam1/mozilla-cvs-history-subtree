@@ -62,7 +62,7 @@ namespace avmplus
 
 		if (traits->init && !this->init)
 		{
-			this->init = new (core->GetGC()) MethodEnv(traits->init, this);
+			this->init = new (core->gc) MethodEnv(traits->init, this);
 		}
 
 		// populate method table
@@ -79,15 +79,15 @@ namespace avmplus
 				{
 					// inherited method
 					//this->methods[i] = base->methods[i];
-					WB(core->GetGC(), this, &methods[i], base->methods[i]);
+					WB(core->gc, this, &methods[i], base->methods[i]);
 				}
 				else
 				{
 					// new definition
 					if (method != NULL)
 					{
-						//this->methods[i] = new (core->GetGC()) MethodEnv(method, this);
-						WB(core->GetGC(), this, &methods[i], new (core->GetGC()) MethodEnv(method, this));
+						//this->methods[i] = new (core->gc) MethodEnv(method, this);
+						WB(core->gc, this, &methods[i], new (core->gc) MethodEnv(method, this));
 					}
 					#ifdef AVMPLUS_VERBOSE
 					else if (traits->pool->verbose)
@@ -111,9 +111,9 @@ namespace avmplus
 				AbstractFunction* method = traits->getMethod(i);
 				if (method != NULL)
 				{
-					MethodEnv *env = new (core->GetGC()) MethodEnv(method, this);
+					MethodEnv *env = new (core->gc) MethodEnv(method, this);
 					//this->methods[i] = env;
-					WB(core->GetGC(), this, &methods[i], env);
+					WB(core->gc, this, &methods[i], env);
 				}
 				#ifdef AVMPLUS_VERBOSE
 				else if (traits->pool->verbose)
@@ -130,10 +130,10 @@ namespace avmplus
 			for (int i=0; i < Traits::IMT_SIZE; i++)
 			{
 				Binding b = traits->getIMT()[i];
-				if (AvmCore::isMethodBinding(b))
+				if ((b&7) == BIND_METHOD)
 				{
-					//imt[i] = methods[AvmCore::bindingToMethodId(b)];
-					WB(core->GetGC(), this, &imt[i], methods[AvmCore::bindingToMethodId(b)]);
+					//imt[i] = methods[urshift(b,3)];
+					WB(core->gc, this, &imt[i], methods[urshift(b,3)]);
 				}
 				else if ((b&7) == BIND_ITRAMP)
 				{
@@ -141,13 +141,13 @@ namespace avmplus
 					{
 						// copy down imt stub from base class
 						//imt[i] = base->imt[i];
-						WB(core->GetGC(), this, &imt[i], base->imt[i]);
+						WB(core->gc, this, &imt[i], base->imt[i]);
 					}
 					else
 					{
 						// create new imt stub
-						//imt[i] = new (core->GetGC()) MethodEnv((void*)(b&~7));
-						WB(core->GetGC(), this, &imt[i], new (core->GetGC()) MethodEnv((void*)(b&~7), this));
+						//imt[i] = new (core->gc) MethodEnv((void*)(b&~7));
+						WB(core->gc, this, &imt[i], new (core->gc) MethodEnv((void*)(b&~7), this));
 					}
 				}
 			}

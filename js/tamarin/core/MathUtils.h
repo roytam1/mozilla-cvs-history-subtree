@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_MathUtils__
 #define __avmplus_MathUtils__
 

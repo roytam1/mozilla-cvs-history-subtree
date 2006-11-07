@@ -29,12 +29,13 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmsetjmp__
 #define __avmsetjmp__
 
-#ifdef AVMPLUS_MAC_CARBON
+#ifdef AVMPLUS_MAC_CLASSIC_OR_CARBON
     /**
-	 * On Mac Carbon, if you compile with Altivec support,
+	 * On Mac Classic and Carbon, if you compile with Altivec support,
 	 * setjmp is redirected to __vec_setjmp and longjmp is redirected
 	 * to __vec_longjmp.  These routines do not gracefully degrade if
 	 * the CPU does not have Altivec... they just crash.

@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include <string.h>
 
 #if defined(DARWIN) || defined(MMGC_ARM)
@@ -52,6 +53,12 @@ namespace MMgc
 	// happening too frequently
 	const bool decommitStress = false;
 
+	bool GCHeap::heapVerbose = false;
+
+	int GCHeap::kInitialHeapSize = 128;
+
+	int GCHeap::kNativePageSize = 0; // just to get space
+
 	void GCHeap::Init(GCMallocFuncPtr m, GCFreeFuncPtr f)
 	{
 		GCAssert(instance == NULL);
@@ -65,11 +72,7 @@ namespace MMgc
 		instance = NULL;
 	}
 
-	const int GCHeap::kInitialHeapSize = 128;
-
 	GCHeap::GCHeap(GCMallocFuncPtr m, GCFreeFuncPtr f)
-		: heapVerbose(false),
-		  kNativePageSize(0)
 	{
 #if defined(_MAC) || defined(MMGC_ARM)
 		m_malloc = m ? m : malloc;

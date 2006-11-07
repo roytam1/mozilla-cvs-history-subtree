@@ -41,24 +41,9 @@
 
 namespace avmplus
 {
+
 	uint64 OSDep::currentTimeMillis()
 	{
 		return timeGetTime();
-	}
-
-	void CALLBACK intWriteTimerProc(UINT, UINT, DWORD_PTR dwUser, DWORD_PTR, DWORD_PTR)
-	{
-		int *i = (int*)dwUser;
-		*i = 1;
-	}
-
-	intptr OSDep::startIntWriteTimer(uint32 millis, int *addr)
-	{
-		return (intptr) timeSetEvent(millis, millis, (LPTIMECALLBACK)intWriteTimerProc, (DWORD_PTR)addr, 1);
-	}
-
-	void OSDep::stopTimer(intptr handle)
-	{
-		timeKillEvent((UINT)handle);
 	}
 }

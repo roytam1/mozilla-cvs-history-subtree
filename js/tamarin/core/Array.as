@@ -62,7 +62,6 @@ package
 			}
 			else
 			{
-			// FIXME why not just return args?
 				length = n
 				for (var i:uint=0; i < n; i++)
 					this[i] = args[i]

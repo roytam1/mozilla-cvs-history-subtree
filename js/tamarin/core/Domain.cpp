@@ -36,8 +36,8 @@ namespace avmplus
 {
 	Domain::Domain(AvmCore *core, Domain* base) : base(base)
 	{
-		namedTraits  = new (core->GetGC()) MultinameHashtable();
-		namedScripts = new (core->GetGC()) MultinameHashtable();
+		namedTraits  = new (core->gc) MultinameHashtable();
+		namedScripts = new (core->gc) MultinameHashtable();
 	}
 
 	Traits* Domain::getNamedTraits(Stringp name, Namespace* ns, bool recursive/*=true*/) const

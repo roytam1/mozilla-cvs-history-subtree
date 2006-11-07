@@ -23,15 +23,14 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="..\core;..\codegen"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;WIN32;AVMPLUS_IA32"
 				MinimalRebuild="TRUE"
 				ExceptionHandling="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="3"
-				PrecompiledHeaderThrough="MMgc.h"
+				UsePrecompiledHeader="0"
 				ProgramDataBaseFileName="$(IntDir)/MMgc.pdb"
 				BrowseInformation="0"
 				WarningLevel="4"
@@ -70,17 +69,16 @@
 			CharacterSet="0">
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				FavorSizeOrSpeed="2"
-				OptimizeForProcessor="2"
-				AdditionalIncludeDirectories=""
+				Optimization="2"
+				FavorSizeOrSpeed="0"
+				OptimizeForProcessor="0"
+				AdditionalIncludeDirectories=".;..\core;..\codegen"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;WIN32;AVMPLUS_IA32"
 				StringPooling="TRUE"
 				ExceptionHandling="FALSE"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
-				UsePrecompiledHeader="3"
-				PrecompiledHeaderThrough="MMgc.h"
+				UsePrecompiledHeader="0"
 				AssemblerOutput="4"
 				ProgramDataBaseFileName="$(IntDir)/MMgc.pdb"
 				BrowseInformation="0"
@@ -128,8 +126,7 @@
 				ExceptionHandling="FALSE"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
-				UsePrecompiledHeader="3"
-				PrecompiledHeaderThrough="MMgc.h"
+				UsePrecompiledHeader="0"
 				ProgramDataBaseFileName="$(IntDir)/MMgc.pdb"
 				BrowseInformation="0"
 				WarningLevel="4"
@@ -167,17 +164,13 @@
 			ConfigurationType="4">
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				FavorSizeOrSpeed="2"
-				OptimizeForProcessor="2"
+				Optimization="2"
 				AdditionalIncludeDirectories="..\core;..\codegen"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;WIN32;DEBUGGER;AVMPLUS_IA32"
 				StringPooling="TRUE"
 				ExceptionHandling="FALSE"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
-				UsePrecompiledHeader="3"
-				PrecompiledHeaderThrough="MMgc.h"
 				ProgramDataBaseFileName="$(IntDir)/MMgc.pdb"
 				BrowseInformation="0"
 				WarningLevel="4"
@@ -214,15 +207,14 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../core;../codegen"
+				AdditionalIncludeDirectories="..\core;..\codegen"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;WIN32;DEBUGGER;AVMPLUS_IA32"
 				MinimalRebuild="TRUE"
 				ExceptionHandling="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="3"
-				PrecompiledHeaderThrough="MMgc.h"
+				UsePrecompiledHeader="0"
 				ProgramDataBaseFileName="$(IntDir)/MMgc.pdb"
 				BrowseInformation="0"
 				WarningLevel="4"
@@ -274,6 +266,9 @@
 				RelativePath="GCAlloc.cpp">
 			</File>
 			<File
+				RelativePath="GCAllocBase.cpp">
+			</File>
+			<File
 				RelativePath=".\GCAllocObjectWin.cpp">
 			</File>
 			<File
@@ -300,39 +295,6 @@
 			<File
 				RelativePath=".\GCTests.cpp">
 			</File>
-			<File
-				RelativePath=".\MMgc.cpp">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="VTune|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release Debugger|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug Debugger|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -349,6 +311,9 @@
 			</File>
 			<File
 				RelativePath="GCAlloc.h">
+			</File>
+			<File
+				RelativePath="GCAllocBase.h">
 			</File>
 			<File
 				RelativePath=".\GCAllocObject.h">

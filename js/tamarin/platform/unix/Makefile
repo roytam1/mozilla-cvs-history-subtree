@@ -32,7 +32,6 @@
 
 # DEBUG can be set to YES to include debugging info, or NO otherwise
 DEBUG := YES
-DEBUGGER := YES
 
 CC     := gcc
 CXX    := g++
@@ -40,7 +39,7 @@ AR     := ar
 
 MMGC_ROOT := ../../MMgc
 AVMPLUS_ROOT := ../..
-ZLIB_ROOT := ../../..
+ZLIB_ROOT := ../../../../..
 
 # avmplus and MMgc make files
 include makecommon
@@ -71,7 +70,7 @@ SHELL_SRCS := ../../shell/TypedArrayClass.cpp \
 	../../shell/ConsoleOutputStream.cpp \
 	../../shell/ByteArrayGlue.cpp \
 	../../shell/avmshell.cpp \
-	../../extensions/DictionaryGlue.cpp
+	../../extensions/Dictionary.cpp
 
 # Use this target to generate a list of source files
 gensrclist : 

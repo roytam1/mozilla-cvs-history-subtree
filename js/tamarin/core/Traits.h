@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_Traits__
 #define __avmplus_Traits__
 
@@ -247,6 +248,25 @@ namespace avmplus
 			add(name, ns, slot<<3|kind);
 		}
 		
+		/**
+		 * Defines a virtual method on this traits object.
+		 * This method assumes that the names hash table is not full.
+		 */
+		void defineVirtualCall(Stringp name, Namespace* ns,
+							   int method_id);
+
+		/**
+		 * Defines an accessor on this traits object.
+		 * This method assumes that the names hash table is not full.
+		 */		 
+		void defineAccessor(Stringp name, Namespace* ns, Accessor *accessor)
+		{
+			add(name, ns, BIND_ACCESSOR | (int)accessor);
+		}
+
+		/** Retrieves an Accessor on this traits object by name/ns */
+		Accessor* getAccessor(Stringp name, Namespace* ns) const;
+
 		Binding findBinding(Stringp name, Namespace* ns) const;
 		Binding findBinding(Stringp name, NamespaceSet* ns) const;
 		Binding getOverride(Namespace* ns, Stringp name, int tag, const Toplevel *toplevel) const;
@@ -305,7 +325,7 @@ namespace avmplus
 		{
 			AvmAssert(i < methodCount && getMethods() != NULL);
 			//methods[i] = method;
-			WB(core->GetGC(), instanceData, &getMethods()[i], method);
+			WB(core->gc, instanceData, &getMethods()[i], method);
 		}
 
 
@@ -334,11 +354,14 @@ namespace avmplus
 		virtual Stringp format(AvmCore* core) const;
 #endif
 
+#ifdef DEBUGGER
+		// for debugging
 		Traits* getInterface(uint32 i) const
 		{
 			AvmAssert(i < interfaceCapacity);
 			return getInterfaces()[i];
 		}
+#endif
 
 	};
 

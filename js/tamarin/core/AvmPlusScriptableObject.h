@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AvmPlusScriptableObject__
 #define __avmplus_AvmPlusScriptableObject__
 
@@ -38,32 +39,8 @@ namespace avmplus
 	class AvmPlusScriptableObject : public MMgc::RCFinalizedObject
 	{
 	public:
-#ifdef DEBUGGER
-		AvmPlusScriptableObject();
-		~AvmPlusScriptableObject();
-		virtual uint32 size() const = 0;
-#endif
-		
 		// used by WeakValueHashtable to correctly atom'ize a pointer to one of these
-		virtual Atom toAtom() const = 0;
-		
-#ifdef DEBUGGER
-		
-		AvmCore *core() const
-		{
-			MMgc::GC *gc = MMgc::GC::GetGC(this);
-			AvmCore *core = (AvmCore*)gc->GetGCContextVariable(MMgc::GC::GCV_AVMCORE);
-			return core;
-		}
-		Stringp getAllocationTrace() const;
-		void setType(unsigned int type) { allocationStackTrace |= type; }
-		void setCreator(ScriptObject *c) { creator = c; }
-		uint64 getAllocationTime() const { return creationTimestamp; }
-	private:		
-		DRCWB(ScriptObject*) creator;
-		unsigned int allocationStackTrace;
-		uint64 creationTimestamp;
-#endif
+		virtual Atom toAtom() const { return undefinedAtom; }
 	};
 }
 

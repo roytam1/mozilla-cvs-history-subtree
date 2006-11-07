@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_NativeFunction__
 #define __avmplus_NativeFunction__
 

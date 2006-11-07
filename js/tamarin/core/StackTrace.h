@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_CallStackNode__
 #define __avmplus_CallStackNode__
 
@@ -156,36 +157,7 @@ namespace avmplus
 		#ifdef AVMPLUS_INTERP
 		int*		scopeDepth; // Only used by the interpreter! With MIR, look for NULL entires in the scopeBase array.
 		#endif
-	protected:
-		// allow more flexibility to subclasses
-		CallStackNode(){}
 	};
-	
-
-	class FakeAbstractFunction : public AbstractFunction
-	{
-	public:
-		void verify(Toplevel *) {}
-	};
-
-	class FakeCallStackNode : public CallStackNode
-	{
-	public:
-		FakeCallStackNode(AvmCore *core, const char *name);
-		~FakeCallStackNode();
-		void sampleCheck() { if(core) core->sampleCheck(); }
-	private:
-		AvmCore *core;
-	};
-
-#define SAMPLE_FRAME(_strp, _core) avmplus::FakeCallStackNode __fcsn((avmplus::AvmCore*)_core, _strp)
-#define SAMPLE_CHECK()  __fcsn.sampleCheck();
-
-#else
-
-#define SAMPLE_FRAME(_x, _s) 
-#define SAMPLE_CHECK()
-
 #endif /* DEBUGGER */
 }
 

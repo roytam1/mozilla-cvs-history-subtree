@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AvmCore__
 #define __avmplus_AvmCore__
 
@@ -86,6 +87,11 @@ const int kBufferPadding = 16;
 		 */
 		PrintWriter console;
 
+		/**
+		 * The GC used by this AVM instance
+		 */
+		MMgc::GC * const gc;
+
 		#ifdef DEBUGGER
 		/**
 		 * For debugger versions of the VM, this is a pointer to
@@ -93,38 +99,7 @@ const int kBufferPadding = 16;
 		 */
 		Debugger *debugger;
 		Profiler *profiler;
-		bool allocationTracking;
-		static bool sampling;
-		// call startSampling in AvmCore ctor
-		static bool autoStartSampling;
-
-		bool samplingNow;
-		int takeSample;
-		uint32 numSamples;
-		GrowableBuffer *samples;
-		byte *currentSample;
-		void sample();
-		void sampleCheck() { if(takeSample) sample(); }
-		void startSampling();
-		void stopSampling();
-		void clearSamples();
-
-		intptr timerHandle;
-		Hashtable *fakeMethodInfos;
-		void initSampling();
 		#endif
-
-		void branchCheck(MethodEnv *env, bool interruptable, int go)
-		{
-			if(go < 0)
-			{
-#ifdef DEBUGGER
-				sampleCheck();
-#endif
-				if (interruptable && interrupted)
-						interrupt(env);
-			}
-		}
 
 		#ifdef AVMPLUS_MIR
 		// MIR intermediate buffer pool
@@ -141,11 +116,6 @@ const int kBufferPadding = 16;
 		void initMultinameLate(Multiname& name, Atom index);
 
 		#endif /* MIR */
-
-#ifdef AVMPLUS_PROFILE
-		StaticProfiler sprof;
-		DynamicProfiler dprof;
-#endif
 
 		/**
 		 * Redirects the standard output of the VM to the specified
@@ -168,7 +138,7 @@ const int kBufferPadding = 16;
 		 * the state of the stack and scope chain.
 		 * Caution!  This shoots out a ton of output!
 		 */
-		bool verbose;
+		static bool verbose;
 		#endif /* AVMPLUS_VERBOSE */
 
 		#ifdef AVMPLUS_INTERP
@@ -183,7 +153,7 @@ const int kBufferPadding = 16;
 		 * have it turned on.  This means we can only build release
 		 * builds on supported platforms.
 		 */
-		bool turbo;
+		static bool turbo;
 		#endif /* AVMPLUS_INTERP */
 
 		#ifdef AVMPLUS_MIR
@@ -197,14 +167,14 @@ const int kBufferPadding = 16;
 		 * forcemir switch forces all code to run through MIR
 		 * instead of interp.
 		 */
-		bool forcemir;
+		static bool forcemir;
 		#endif
 
-		bool cseopt;
-		bool dceopt;
+		static bool cseopt;
+		static bool dceopt;
 
 		#ifdef AVMPLUS_IA32
-		bool sse2;
+		static bool sse2;
 		#endif
 
 		/**
@@ -212,7 +182,7 @@ const int kBufferPadding = 16;
 		 * "interrupted" flag to see whether an interrupt needs
 		 * to be handled.
 		 */
-		bool interrupts;
+		static bool interrupts;
 
 		/**
 		 * If this is set to a nonzero value, executing code
@@ -233,13 +203,13 @@ const int kBufferPadding = 16;
 		 * 'dot' utility to generate a jpg.
 		 */
 		#ifdef AVMPLUS_VERBOSE
-		bool bbgraph;
+		static bool bbgraph;
 		#endif //AVMPLUS_VERBOSE
 
 		#endif // AVMPLUS_MIR
 
 #ifdef AVMPLUS_VERIFYALL
-		bool verifyall;
+		static bool verifyall;
 #endif
 
 		/** Internal table of strings for boolean type ("true", "false") */
@@ -270,10 +240,6 @@ const int kBufferPadding = 16;
 		 */
 		DRC(Namespace*) publicNamespace;
 		VTable* namespaceVTable;
-
-		#ifdef FEATURE_JNI
-		Java* java;     /* java vm control */
-		#endif
 
 		/**
 		 * Execute an ABC file that has been parsed into a
@@ -400,50 +366,6 @@ const int kBufferPadding = 16;
 		static bool isNamespace(Atom atom)
 		{
 			return (atom&7) == kNamespaceType && !isNull(atom);
-		}
-
-		static bool isMethodBinding(Binding b)
-		{
-			return (b&7) == BIND_METHOD;
-		}
-
-		static bool isAccessorBinding(Binding b)
-		{
-			return (b&7) >= BIND_GET;
-		}
-
-		static bool hasSetterBinding(Binding b)
-		{
-			return (b&6) == BIND_SET;
-		}
-
-		static bool hasGetterBinding(Binding b)
-		{
-			return (b&5) == BIND_GET;
-		}
-
-		static int bindingToGetterId(Binding b)
-		{
-			AvmAssert(hasGetterBinding(b));
-			return urshift(b,3);
-		}
-
-		static int bindingToSetterId(Binding b)
-		{
-			AvmAssert(hasSetterBinding(b));
-			return 1+urshift(b,3);
-		}
-
-		static int bindingToMethodId(Binding b)
-		{
-			AvmAssert(isMethodBinding(b));
-			return urshift(b,3);
-		}
-
-		static int bindingToSlotId(Binding b)
-		{
-			AvmAssert(isSlotBinding(b));
-			return urshift(b,3);
 		}
 
 		/** true if b is a var or a const */
@@ -936,13 +858,13 @@ const int kBufferPadding = 16;
 		 * throwErrorV is a convenience function for throwing
 		 * an exception with a formatted error message,
 		 */
-		void throwErrorV(ClassClosure *type, int errorID, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0);
+		void throwErrorV(ClassClosure *type, int errorID, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0, Stringp arg4=0, Stringp arg5=0, Stringp arg6=0);
 
 		/**
 		 * formatErrorMessageV is a convenience function for
 		 * assembling an error message with varags.
 		 */
-		String* formatErrorMessageV( int errorID, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0);
+		String* formatErrorMessageV( int errorID, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0, Stringp arg4=0, Stringp arg5=0, Stringp arg6=0);
 
 		/**
 		 * Convenience methods for converting various objects into value 
@@ -997,7 +919,6 @@ const int kBufferPadding = 16;
 		StackTrace* newStackTrace();
 
 		StackTrace *getStackTrace();
-		StackTrace *getStackTrace(void/*StackTrace::Element*/ *e, int depth);
 		void rehashTraces(int newSize);
 		int findTrace(void/*StackTrace::Element*/ *e, int depth);
 		StackTrace **stackTraces;
@@ -1178,6 +1099,12 @@ const int kBufferPadding = 16;
 			return (Stringp)(atom&~7);
 		}
 
+		static Accessor* bindingToAccessor(Binding b)
+		{
+			AvmAssert((b&7)==BIND_ACCESSOR);
+			return (Accessor*)(b&~7);
+		}
+
 		// Avoid adding validation checks here and returning NULL.  If this
 		// is returning a bad value, the higher level function should be fixed
 		// or AbcParser/Verifier should be enhanced to catch this case.
@@ -1201,60 +1128,6 @@ const int kBufferPadding = 16;
 		/** search the namespace intern table */
 		int findNamespace(const Namespace *ns);
 
-#ifdef DEBUGGER
-#if defined(MMGC_IA32)
-		static inline uint32 FindOneBit(uint32 value)
-		{
-#ifndef __GNUC__
-			_asm
-			{
-				bsr eax,[value];
-			}
-#else
-			// DBC - This gets rid of a compiler warning and matchs PPC results where value = 0
-			register int	result = ~0;
-			
-			if (value)
-			{
-				asm (
-					"bsr %1, %0"
-					: "=r" (result)
-					: "m"(value)
-					);
-			}
-			return result;
-#endif
-		}
-
-		#elif defined(MMGC_PPC)
-
-		static inline int FindOneBit(uint32 value)
-		{
-			register int index;
-			#ifdef DARWIN
-			asm ("cntlzw %0,%1" : "=r" (index) : "r" (value));
-			#else
-			register uint32 in = value;
-			asm { cntlzw index, in; }
-			#endif
-			return 31-index;
-		}
-
-		#else // generic platform
-
-		static int FindOneBit(uint32 value)
-		{
-			for (int i=0; i < 32; i++)
-				if (value & (1<<i))
-					return i;
-			// asm versions of this function are undefined if no bits are set
-			GCAssert(false);
-			return 0;
-		}
-
-		#endif  // MMGC_platform
-#endif
-
 	public:
 		/**
 		 * intern the given string atom which has already been allocated
@@ -1274,9 +1147,6 @@ const int kBufferPadding = 16;
 		 */
 		Stringp internAlloc(const wchar *s, int len);
 		Stringp internAllocUtf8(const byte *s, int len);
-
-		// doesn't do any heap allocations if the string is interned
-		Stringp internAllocAscii(const char *str);
 
 		bool getIndexFromAtom (Atom a, uint32 *result) const
 		{
@@ -1314,6 +1184,7 @@ const int kBufferPadding = 16;
 						  int interfaceCount,
 						  size_t sizeofInstance);
 		
+		ExceptionHandlerTable* newExceptionHandlerTable(int exception_count);
 		FrameState* newFrameState(int frameSize, int scopeBase, int stackBase);
         Namespace* newNamespace(Atom prefix, Atom uri, Namespace::NamespaceType type = Namespace::NS_Public);
 		Namespace* newNamespace(Atom uri, Namespace::NamespaceType type = Namespace::NS_Public);
@@ -1322,14 +1193,14 @@ const int kBufferPadding = 16;
 		NamespaceSet* newNamespaceSet(int nsCount);
 
 		// String creation
-		Stringp newString(const char *str) const;
-		Stringp newString(const wchar *str) const;
-		Stringp newString(const char *str, int len) const;		
+		Stringp newString(const char *str);
+		Stringp newString(const wchar *str);
+		Stringp newString(const char *str, int len);		
 
 		Stringp uintToString(uint32 i);
 		Stringp intToString(int i);
 		Stringp doubleToString(double d);
-		Stringp concatStrings(Stringp s1, Stringp s2) const;
+		Stringp concatStrings(Stringp s1, Stringp s2);
 		
 		Atom doubleToAtom(double n);
 		Atom uintToAtom(uint32 n);
@@ -1337,7 +1208,7 @@ const int kBufferPadding = 16;
 
 		Atom allocDouble(double n)
 		{
-			double *ptr = (double*)GetGC()->Alloc(sizeof(double), 0);
+			double *ptr = (double*)gc->Alloc(sizeof(double), 0);
 			*ptr = n;
 			return kDoubleType | (uint32)ptr;
 		}
@@ -1378,7 +1249,6 @@ const int kBufferPadding = 16;
 			void SetCore(AvmCore*core) { this->core = core; }
 			void presweep() { core->presweep(); }
 			void postsweep() { core->postsweep(); }
-			void log(const char *str) { core->console << str; }
 		private:
 			AvmCore *core;
 		};

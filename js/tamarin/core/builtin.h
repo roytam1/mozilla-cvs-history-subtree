@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 const int unescape = 0;
 const int escape = 1;
 const int parseFloat = 2;
@@ -292,8 +293,3 @@ const int QName_localName_get = 583;
 const int QName_uri_get = 584;
 const int abcclass_QName = 28;
 const int abcpackage_XML_as = 5;
-const int builtin_abc_length = 26281;
-const int builtin_abc_method_count = 585;
-const int builtin_abc_class_count = 29;
-const int builtin_abc_script_count = 6;
-extern const unsigned char builtin_abc_data[];

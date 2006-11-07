@@ -110,7 +110,6 @@ PlatformZlibStream::PlatformZlibStream()
 {
 	memset(&m_zstream, 0, sizeof m_zstream);
 	int error = inflateInit(&m_zstream);
-	(void)error;
 	PLAYERASSERT(error == Z_OK);
 }
 
@@ -118,7 +117,6 @@ PlatformZlibStream::PlatformZlibStream()
 PlatformZlibStream::~PlatformZlibStream()
 {
 	int error = inflateEnd(&m_zstream);
-	(void)error;
 	PLAYERASSERT(error == Z_OK);
 }
 

@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+
 # ***** BEGIN LICENSE BLOCK ***** 
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1 
 #
@@ -13,7 +14,7 @@
 # The Original Code is [Open Source Virtual Machine.] 
 #
 # The Initial Developer of the Original Code is Adobe System Incorporated.  Portions created 
-# by the Initial Developer are Copyright (C)[ #YEARS# ] Adobe Systems Incorporated. All Rights 
+# by the Initial Developer are Copyright (C)[ 2004-2006 ] Adobe Systems Incorporated. All Rights 
 # Reserved. 
 #
 # Contributor(s): Adobe AS3 Team
@@ -29,6 +30,7 @@
 # under the terms of any one of the MPL, the GPL or the LGPL. 
 # 
 # ***** END LICENSE BLOCK ***** */
+
 #
 #  Copy files from server to local directories
 #

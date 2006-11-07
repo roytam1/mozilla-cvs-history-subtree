@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __MMgc__
 #define __MMgc__
 
@@ -50,6 +51,13 @@
 
 #ifdef MMGC_ARM
 #include "armbuild.h"
+#endif
+
+//define this to get an alloc log
+//#define ALLOC_LOG
+
+#if defined(ALLOC_LOG) || defined(GC_STATS)
+#include <stdio.h>
 #endif
 
 #ifdef SCRIPT_DEBUGGER
@@ -92,6 +100,7 @@
 
 namespace MMgc
 {
+	class GCAllocBase;
 	class GC;
 	class GCTraceObject;
 	class RCObject;
@@ -102,9 +111,14 @@ namespace MMgc
 	class GCAlloc;
 }
 
+#ifdef _MSC_VER
+#pragma warning(disable:4291) // no matching operator delete found; memory will not be freed if initialization throws an exception
+#endif
+
 #include "GCTypes.h"
 #include "GCStack.h"
 #include "GCAllocObject.h"
+#include "GCAllocBase.h"
 #include "GCHeap.h"
 #include "GCAlloc.h"
 #include "GCLargeAlloc.h"
@@ -116,6 +130,18 @@ namespace MMgc
 #include "GCObject.h"
 #include "GCWeakRef.h"
 #include "WriteBarrier.h"
+
+#ifdef MMGC_AVMPLUS
+    #include "avmbuild.h"
+    #include "avmplus.h"
+    #ifdef AVMPLUS_PROFILE
+        #define PROFILE(x) avmplus::DynamicProfiler::StackMark mark(x)
+    #else
+        #define PROFILE(x)
+    #endif
+#else
+    #define PROFILE(x)
+#endif
 
 #if defined(MMGC_DRC) && !defined(WRITE_BARRIERS)
 #error "Need write barriers for DRC"

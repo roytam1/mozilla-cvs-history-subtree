@@ -262,9 +262,6 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath="..\..\core\AbcData.cpp">
-			</File>
-			<File
 				RelativePath="..\..\core\AbcEnv.cpp">
 			</File>
 			<File
@@ -275,6 +272,9 @@
 			</File>
 			<File
 				RelativePath="..\..\core\AbstractFunction.cpp">
+			</File>
+			<File
+				RelativePath="..\..\core\Accessor.cpp">
 			</File>
 			<File
 				RelativePath="..\..\core\ActionBlockConstants.cpp">
@@ -919,9 +919,6 @@
 		</Filter>
 		<File
 			RelativePath="..\..\core\abcFormat.txt">
-		</File>
-		<File
-			RelativePath=".\VTune\avmplus.vpj">
 		</File>
 		<File
 			RelativePath="..\..\core\ErrorConstants.xml">

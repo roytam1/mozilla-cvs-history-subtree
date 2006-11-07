@@ -51,19 +51,12 @@ namespace avmplus
 		AvmAssert(traits()->sizeofInstance == sizeof(ClassClass));
 
 		createVanillaPrototype();
-#ifdef DEBUGGER
-		if(core()->allocationTracking)
-		{
-			// add ObjectClass and which predate me
-			addInstance(toplevel()->objectClass->atom());
-		}
-#endif
 	}
 
 	Atom ClassClass::construct(int /*argc*/, Atom* /*argv*/)
 	{
 		Multiname multiname(core()->publicNamespace, core()->constantString("Class$"));
-		toplevel()->throwTypeError(kNotConstructorError, core()->toErrorString(&multiname));
+		toplevel()->typeErrorClass()->throwError(kNotConstructorError, core()->toErrorString(&multiname));
 		return nullObjectAtom;
 	}
 }

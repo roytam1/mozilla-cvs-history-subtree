@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmbuild__
 #define __avmbuild__
 
@@ -113,7 +114,7 @@
 
 #ifdef AVMPLUS_MAC
 #if !TARGET_RT_MAC_MACHO
-#define AVMPLUS_MAC_CARBON
+#define AVMPLUS_MAC_CLASSIC_OR_CARBON
 #endif
 #endif
 
@@ -163,7 +164,4 @@
 // Mobile players that may not be able to use guard pages(exceptions) so will 
 //want to turn this on
 #define SAFE_PARSE
-
-// Enable interfacing Java
-#define FEATURE_JNI
 #endif /* __avmbuild__ */

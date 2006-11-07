@@ -83,7 +83,7 @@ namespace avmshell
 	int SystemClass::exec(Stringp command)
 	{
 		if (!command) {
-			toplevel()->throwArgumentError(kNullArgumentError, "command");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("command"));
 		}
 		UTF8String *commandUTF8 = command->toUTF8String();
 		return system(commandUTF8->c_str());
@@ -97,14 +97,14 @@ namespace avmshell
 	void SystemClass::write(Stringp s)
 	{
 		if (!s)
-			toplevel()->throwArgumentError(kNullArgumentError, "string");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("string"));
 		core()->console << s;
 	}
 
 	void SystemClass::trace(ArrayObject* a)
 	{
 		if (!a)
-			toplevel()->throwArgumentError(kNullArgumentError, "array");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("array"));
 		AvmCore* core = this->core();
 		PrintWriter& console = core->console;
 		for (int i=0, n = a->getLength(); i < n; i++)
@@ -193,7 +193,6 @@ namespace avmshell
 			if (i == 63) {
 				wc[i] = 0;
 				s = core->concatStrings(s, core->newString(wc));
-				i = 0;
 			}
 		}
 		if (i > 0) {

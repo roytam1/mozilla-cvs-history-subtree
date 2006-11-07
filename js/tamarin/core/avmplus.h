@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus__
 #define __avmplus__
 
@@ -37,7 +38,7 @@
  *
  * \section intro Introduction
  *
- * AVM+ is the ActionScript Virtual Machine
+ * AVM+ is the new ActionScript Virtual Machine
  *
  * AVM+ offers an order of magnitude performance increase over
  * the "Classic AVM" in Flash Player 7.  Our performance target is 10X.
@@ -147,7 +148,6 @@ namespace avmplus
 	class Hashtable;
 	class HeapMultiname;
 	class Interpreter;
-	class Java;
 	class MathClass;
 	class MathUtils;
 	class MethodClosure;
@@ -233,8 +233,6 @@ namespace avmplus
 #include "BuiltinTraits.h"
 #include "NamespaceSet.h"
 #include "Multiname.h"
-#include "DynamicProfiler.h"
-#include "StaticProfiler.h"
 #include "AvmCore.h"
 #include "AtomWriteBarrier.h"
 #include "avmplusHashtable.h"
@@ -243,6 +241,7 @@ namespace avmplus
 #include "PoolObject.h"
 #include "AbcEnv.h"
 #include "AbstractFunction.h"
+#include "Accessor.h"
 #include "Traits.h"
 #include "TraitsIterator.h"
 #include "VTable.h"
@@ -274,6 +273,8 @@ namespace avmplus
 #include "NamespaceClass.h"
 #include "ArrayObject.h"
 #include "MethodClosure.h"
+#include "DynamicProfiler.h"
+#include "StaticProfiler.h"
 #include "BooleanClass.h"
 #include "NumberClass.h"
 #include "IntClass.h"

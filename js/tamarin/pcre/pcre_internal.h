@@ -793,7 +793,7 @@ doing traditional NFA matching, so that they are thread-safe. */
 typedef struct match_data {
   unsigned long int match_call_count; /* As it says */
   unsigned long int match_limit;/* As it says */
-  int   *offset_vector;         /* Offset vector */  
+  int   *offset_vector;         /* Offset vector */
   int    offset_end;            /* One past the end */
   int    offset_max;            /* The maximum usable for return data */
   const uschar *lcc;            /* Points to lower casing table */

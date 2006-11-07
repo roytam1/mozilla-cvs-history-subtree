@@ -23,7 +23,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\..\zlib;..\..\core;."
+				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\zlib;..\..\..\..\..\zlib;..\..\core"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;AVMPLUS_SHELL;WIN32;AVMPLUS_IA32;_DEBUG;_CONSOLE;USE_REAL2INT"
 				MinimalRebuild="TRUE"
 				ExceptionHandling="FALSE"
@@ -80,7 +80,7 @@
 				Optimization="3"
 				FavorSizeOrSpeed="2"
 				OptimizeForProcessor="2"
-				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\..\zlib;..\..\core;."
+				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\zlib;..\..\..\..\..\zlib;..\..\core"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;AVMPLUS_SHELL;WIN32;AVMPLUS_IA32;NDEBUG;_CONSOLE;USE_REAL2INT"
 				StringPooling="TRUE"
 				ExceptionHandling="FALSE"
@@ -101,7 +101,7 @@
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"
 				GenerateMapFile="TRUE"
-				OptimizeReferences="2"
+				OptimizeReferences="0"
 				EnableCOMDATFolding="0"
 				OptimizeForWindows98="0"/>
 			<Tool
@@ -135,7 +135,7 @@
 				Optimization="2"
 				InlineFunctionExpansion="1"
 				OptimizeForProcessor="2"
-				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\..\zlib;..\..\core;."
+				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\zlib;..\..\..\..\..\zlib;..\..\core"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;AVMPLUS_SHELL;WIN32;AVMPLUS_IA32;VTUNE;NDEBUG;_CONSOLE;USE_REAL2INT"
 				ExceptionHandling="FALSE"
 				RuntimeLibrary="0"
@@ -157,8 +157,7 @@
 				GenerateMapFile="TRUE"
 				MapFileName="$(IntDir)/$(ProjectName).map"
 				MapExports="TRUE"
-				MapLines="TRUE"
-				OptimizeReferences="2"/>
+				MapLines="TRUE"/>
 			<Tool
 				Name="VCMIDLTool"/>
 			<Tool
@@ -191,7 +190,7 @@
 				Optimization="3"
 				FavorSizeOrSpeed="2"
 				OptimizeForProcessor="2"
-				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\..\zlib;..\..\core;."
+				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\zlib;..\..\..\..\..\zlib;..\..\core"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;AVMPLUS_SHELL;WIN32;AVMPLUS_IA32;NDEBUG;_CONSOLE;USE_REAL2INT;DEBUGGER"
 				StringPooling="TRUE"
 				ExceptionHandling="FALSE"
@@ -211,8 +210,7 @@
 				OutputFile="$(OutDir)/avmplus.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"
-				GenerateMapFile="TRUE"
-				OptimizeReferences="2"/>
+				GenerateMapFile="TRUE"/>
 			<Tool
 				Name="VCMIDLTool"/>
 			<Tool
@@ -243,7 +241,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\..\zlib;..\..\core;."
+				AdditionalIncludeDirectories="..\..\shell;..\..\extensions;..\..\MMgc;..\..\codegen;..\..\zlib;..\..\..\..\..\zlib;..\..\core"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;AVMPLUS_SHELL;WIN32;AVMPLUS_IA32;_DEBUG;_CONSOLE;USE_REAL2INT;DEBUGGER"
 				MinimalRebuild="TRUE"
 				ExceptionHandling="FALSE"
@@ -325,9 +323,6 @@
 				RelativePath="..\..\shell\FileInputStream.cpp">
 			</File>
 			<File
-				RelativePath="..\..\extensions\JavaGlue.cpp">
-			</File>
-			<File
 				RelativePath="..\..\shell\StringBuilderClass.cpp">
 			</File>
 			<File
@@ -375,9 +370,6 @@
 				RelativePath="..\..\shell\genericzlib.h">
 			</File>
 			<File
-				RelativePath="..\..\extensions\JavaGlue.h">
-			</File>
-			<File
 				RelativePath="..\..\shell\SystemClass.h">
 			</File>
 			<File
@@ -396,73 +388,73 @@
 			Name="zlib"
 			Filter="">
 			<File
-				RelativePath="..\..\..\zlib\adler32.cpp">
+				RelativePath="..\..\..\..\..\zlib\adler32.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\compress.cpp">
+				RelativePath="..\..\..\..\..\zlib\compress.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\crc32.cpp">
+				RelativePath="..\..\..\..\..\zlib\crc32.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\crc32.h">
+				RelativePath="..\..\..\..\..\zlib\crc32.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\deflate.cpp">
+				RelativePath="..\..\..\..\..\zlib\deflate.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\deflate.h">
+				RelativePath="..\..\..\..\..\zlib\deflate.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\infback.cpp">
+				RelativePath="..\..\..\..\..\zlib\infback.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inffas86.cpp">
+				RelativePath="..\..\..\..\..\zlib\inffas86.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inffast.h">
+				RelativePath="..\..\..\..\..\zlib\inffast.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inffixed.h">
+				RelativePath="..\..\..\..\..\zlib\inffixed.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inflate.cpp">
+				RelativePath="..\..\..\..\..\zlib\inflate.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inflate.h">
+				RelativePath="..\..\..\..\..\zlib\inflate.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inftrees.cpp">
+				RelativePath="..\..\..\..\..\zlib\inftrees.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\inftrees.h">
+				RelativePath="..\..\..\..\..\zlib\inftrees.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\stdafx.h">
+				RelativePath="..\..\..\..\..\zlib\stdafx.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\trees.cpp">
+				RelativePath="..\..\..\..\..\zlib\trees.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\trees.h">
+				RelativePath="..\..\..\..\..\zlib\trees.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\uncompr.cpp">
+				RelativePath="..\..\..\..\..\zlib\uncompr.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\zconf.h">
+				RelativePath="..\..\..\..\..\zlib\zconf.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\zconf.in.h">
+				RelativePath="..\..\..\..\..\zlib\zconf.in.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\zlib.h">
+				RelativePath="..\..\..\..\..\zlib\zlib.h">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\zutil.cpp">
+				RelativePath="..\..\..\..\..\zlib\zutil.cpp">
 			</File>
 			<File
-				RelativePath="..\..\..\zlib\zutil.h">
+				RelativePath="..\..\..\..\..\zlib\zutil.h">
 			</File>
 		</Filter>
 		<Filter

@@ -61,7 +61,7 @@ namespace avmshell
 		m_buffer = new wchar[kInitialCapacity];
 		if (!m_buffer)
 		{
-			toplevel()->throwError(kOutOfMemoryError);
+			toplevel()->errorClass()->throwError(kOutOfMemoryError);
 		}
 		m_length = 0;
 		m_capacity = kInitialCapacity;
@@ -97,7 +97,7 @@ namespace avmshell
 	{
 		if (index >= m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		return new (gc()) String(m_buffer+index, 1);
 	}
@@ -106,7 +106,7 @@ namespace avmshell
 	{
 		if (index > m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		return m_buffer[index];
 	}
@@ -128,7 +128,7 @@ namespace avmshell
 			wchar *newBuffer = new wchar[newCapacity];
 			if (newBuffer == NULL)
 			{
-				toplevel()->throwError(kOutOfMemoryError);
+				toplevel()->errorClass()->throwError(kOutOfMemoryError);
 			}
 			
 			memcpy(newBuffer, m_buffer, m_length*sizeof(wchar));
@@ -141,7 +141,7 @@ namespace avmshell
 	int StringBuilderObject::indexOf(Stringp str, uint32 index)
 	{
 		if (!str) {
-			toplevel()->throwArgumentError(kNullArgumentError, "str");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("str"));
 		}
 		
 		uint32 sublen = str->length();
@@ -175,7 +175,7 @@ namespace avmshell
 
 		if (index > m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		
 		ensureCapacity(m_length + len);
@@ -187,7 +187,7 @@ namespace avmshell
 	int StringBuilderObject::lastIndexOf(Stringp substr, uint32 index)
 	{
 		if (!substr) {
-			toplevel()->throwArgumentError(kNullArgumentError, "str");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("str"));
 		}
 		
 		uint32 sublen = substr->length();
@@ -202,7 +202,7 @@ namespace avmshell
 		}
 		if (index > m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		if (index > endIndex)
 		{
@@ -240,15 +240,15 @@ namespace avmshell
 	{
 		if (start > end)
 		{
-			toplevel()->throwRangeError(kInvalidRangeError);
+			toplevel()->rangeErrorClass()->throwError(kInvalidRangeError);
 		}
 		if (start >= m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(start), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(start), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		if (end > m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(end), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(end), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		if (start == end)
 		{
@@ -262,7 +262,7 @@ namespace avmshell
 	{
 		if (index >= m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(index), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		memcpy(m_buffer+index, m_buffer+index+1, (m_length-index-1)*sizeof(wchar));
 		m_length--;
@@ -271,20 +271,20 @@ namespace avmshell
 	void StringBuilderObject::replace(uint32 start, uint32 end, Stringp replacement)
 	{
 		if (!replacement) {
-			toplevel()->throwArgumentError(kNullArgumentError, "replacement");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("replacement"));
 		}
 		
 		if (start > end)
 		{
-			toplevel()->throwRangeError(kInvalidRangeError);
+			toplevel()->rangeErrorClass()->throwError(kInvalidRangeError);
 		}
 		if (start >= m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(start), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(start), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		if (end > m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(end), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(end), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 
 		uint32 replacementLength = replacement->length();
@@ -324,7 +324,7 @@ namespace avmshell
 	void StringBuilderObject::setCharAt(uint32 index, Stringp ch)
 	{
 		if (!ch || !ch->length()) {
-			toplevel()->throwArgumentError(kNullArgumentError, "ch");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("ch"));
 		}
 		
 		ensureCapacity(index+1);
@@ -339,15 +339,15 @@ namespace avmshell
 	{
 		if (start > end)
 		{
-			toplevel()->throwRangeError(kInvalidRangeError);
+			toplevel()->rangeErrorClass()->throwError(kInvalidRangeError);
 		}
 		if (start >= m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(start), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(start), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		if (end > m_length)
 		{
-			toplevel()->throwRangeError(kStringIndexOutOfBoundsError, core()->toErrorString(end), core()->toErrorString(0), core()->toErrorString(m_length));
+			toplevel()->rangeErrorClass()->throwError(kStringIndexOutOfBoundsError, core()->toErrorString(end), core()->toErrorString(0), core()->toErrorString(m_length));
 		}
 		if (start == end)
 		{
@@ -394,6 +394,6 @@ namespace avmshell
 	ScriptObject* StringBuilderClass::createInstance(VTable *ivtable,
 													 ScriptObject *prototype)
 	{
-		return new (core()->GetGC(), ivtable->getExtraSize()) StringBuilderObject(ivtable, prototype);
+		return new (core()->gc, ivtable->getExtraSize()) StringBuilderObject(ivtable, prototype);
 	}
 }

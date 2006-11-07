@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 namespace avmplus
 {
 
@@ -125,7 +126,7 @@ namespace avmplus
 		}
 
 		Namespace** getDefaultNamespaceAddr() const { 
-			return (Namespace**)&defaultXmlNamespace;
+			return (Namespace**)((char*)this + offsetof(ScopeChain, defaultXmlNamespace));
 		}
 		
 		static ScopeChain* create(MMgc::GC* gc, ScopeTypeChain *scopeTraits, ScopeChain* outer, Namespace *dxns)

@@ -159,7 +159,7 @@ namespace avmplus
 				{
 					// We have the end of the XML declaration
 					// !!@ changed to not return <?...?> parts
-					tag.text = new (core->GetGC()) String(start + 2, m_ptr - start - 2);
+					tag.text = new (core->gc) String(start + 2, m_ptr - start - 2);
 					m_ptr += 2;
 					tag.nodeType = XMLTag::kXMLDeclaration;
 					return XMLParser::kNoError;
@@ -186,7 +186,7 @@ namespace avmplus
 					if (!depth) {
 						// We've reached the end of the DOCTYPE.
 						m_ptr++;
-						tag.text = new (core->GetGC()) String(start, m_ptr-start);
+						tag.text = new (core->gc) String(start, m_ptr-start);
 						tag.nodeType = XMLTag::kDocTypeDeclaration;
 						return XMLParser::kNoError;
 					}
@@ -205,7 +205,7 @@ namespace avmplus
 			while (*m_ptr) {
 				if (m_ptr[0] == ']' && m_ptr[1] == ']' && m_ptr[2] == '>') {
 					// We have the end of the CDATA section.
-					tag.text = new (core->GetGC()) String(cdata, m_ptr-cdata);
+					tag.text = new (core->gc) String(cdata, m_ptr-cdata);
 					tag.nodeType = XMLTag::kCDataSection;
 					m_ptr += 3;
 					return XMLParser::kNoError;
@@ -223,7 +223,7 @@ namespace avmplus
 			while (*m_ptr) {
 				if (m_ptr[0] == '?' && m_ptr[1] == '>') {
 					// We have the end of the processing instruction.
-					tag.text = new (core->GetGC()) String(pi, m_ptr - pi);
+					tag.text = new (core->gc) String(pi, m_ptr - pi);
 					tag.nodeType = XMLTag::kProcessingInstruction;
 					m_ptr += 2;
 					return XMLParser::kNoError;
@@ -245,7 +245,7 @@ namespace avmplus
 			while (*m_ptr) {
 				if (m_ptr[0] == '-' && m_ptr[1] == '-' && m_ptr[2] == '>') 
 				{
-					tag.text = new (core->GetGC()) String(comment, m_ptr-comment);
+					tag.text = new (core->gc) String(comment, m_ptr-comment);
 					tag.nodeType = XMLTag::kComment;
 					m_ptr += 3;
 					return XMLParser::kNoError;
@@ -466,7 +466,7 @@ namespace avmplus
 		if (!core->xmlEntities)
 		{
 			// Lazy creation of the XML entities table.
-			core->xmlEntities = new (core->GetGC()) Hashtable(core->GetGC());
+			core->xmlEntities = new (core->gc) Hashtable(core->gc);
 
 			const char *entities = "&amp\0\"quot\0'apos\0<lt\0>gt\0\xA0nbsp\0";
 		

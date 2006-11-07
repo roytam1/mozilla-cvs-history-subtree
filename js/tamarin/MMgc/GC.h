@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __GC__
 #define __GC__
 
@@ -120,13 +121,6 @@
 
 #endif
 
-#ifdef DEBUGGER
-namespace avmplus
-{
-	class AvmCore;
-}
-#endif
-
 namespace MMgc
 {
 	/**
@@ -162,14 +156,13 @@ namespace MMgc
 		void Destroy();
 	
 	private:
-		FixedMalloc* fm;
-		GC * gc;
+		GC *gc;
 		GCRoot *next;
 		GCRoot *prev;
 		const void *object;
 		size_t size;
 
-		GCWorkItem GetWorkItem() const { return GCWorkItem(object, size, false); }
+		GCWorkItem GetWorkItem() const { return GCWorkItem(object, size); }
 	};
 
 	/**
@@ -268,10 +261,10 @@ namespace MMgc
 	{
 		friend class GC;
 		// how many items there have to be to trigger a Reap
-		static const int ZCT_REAP_THRESHOLD;
+		static int ZCT_REAP_THRESHOLD;
 
 		// size of table in pages
-		static const int ZCT_START_SIZE;
+		static int ZCT_START_SIZE;
 	public:
 		ZCT(GCHeap *heap);
 		~ZCT();
@@ -368,12 +361,8 @@ namespace MMgc
 			GCV_AVMCORE,
 			GCV_COUNT
 		};
-		void *GetGCContextVariable(int var) const { return m_contextVars[var]; }
+		void *GetGCContextVariable(int var) { return m_contextVars[var]; }
 		void SetGCContextVariable(int var, void *val) { m_contextVars[var] = val; }
-		
-#ifdef DEBUGGER
-		avmplus::AvmCore *core() const { return (avmplus::AvmCore*)GetGCContextVariable(GCV_AVMCORE); }
-#endif
 
 		/**
 		 * greedy is a debugging flag.  When set, every allocation
@@ -381,50 +370,52 @@ namespace MMgc
 		 * abysmally slow, but can be useful for detecting mark
 		 * bugs.
 		 */
-		bool greedy;
+		static bool greedy;
 
 		/**
 		 * nogc is a debugging flag.  When set, garbage collection
 		 * never happens.
 		 */
-		bool nogc;
+		static bool nogc;
 
 		/**
 	      * findUnmarkedPointers is a debugging flag, only 
 		  */
-		bool findUnmarkedPointers;
+		static bool findUnmarkedPointers;
 
 		/**
 		* turns on code that does a trace before reaping zero count object and asserting on
 		* any objects that get marked, debug builds only
 		*/
-		bool validateDefRef;		
-		bool keepDRCHistory;
+		static bool validateDefRef;		
+		static bool keepDRCHistory;
 
 		/**
 		 * incremental space divisor
 		 */
-		int ISD;
+		static int ISD;
 
-		const static size_t collectThreshold;
+		static size_t collectThreshold;
 
-		bool gcstats;
+		static bool gcstats;
 
 		bool dontAddToZCTDuringCollection;
 
 #ifdef _DEBUG
-		bool incrementalValidation;
-		bool incrementalValidationPedantic;
+		static bool incrementalValidation;
+		static bool incrementalValidationPedantic;
 #endif
 
-		bool incremental;
+		static bool incremental;
 
 #ifdef _DEBUG
 		/**
 		 * turn on memory profiling
 		 */
-		const static bool enableMemoryProfiling;
+		static bool enableMemoryProfiling;
 #endif
+
+		const static bool useNewSweep = false;
 
 		// -- Interface
 		GC(GCHeap *heap);
@@ -503,7 +494,8 @@ namespace MMgc
 
 		static int SetMark(const void *item)
 		{
-			GCAssert(item != NULL);
+			if(item == NULL)
+				return true;
 #ifdef MEMORY_INFO
 			GC *gc = GetGC(item);	
 			item = GetRealPointer(item);
@@ -725,6 +717,7 @@ namespace MMgc
 		bool IsGCMemory (const void *);
 
 		bool IsQueued(const void *item);
+		void RemoveFromQueue(const void *item);
 
 		static uint64 GetPerformanceCounter();
 		static uint64 GetPerformanceFrequency();
@@ -743,9 +736,7 @@ namespace MMgc
 		const char *msg();
 #endif
 
-		static uint64 ticksToMicros(uint64 ticks) { return (ticks*1000000)/GetPerformanceFrequency(); }
-
-		static uint64 ticksToMillis(uint64 ticks) { return (ticks*1000)/GetPerformanceFrequency(); }
+		static uint64 ticksToMillis(uint64 ticks) { return (ticks)/GetPerformanceFrequency(); }
 
 		// marking rate counter
 		uint64 bytesMarked;
@@ -780,7 +771,9 @@ namespace MMgc
 
 	private:
 
+#ifdef DEBUGGER
 		void gclog(const char *format, ...);
+#endif
 
 		const static int kNumSizeClasses = 40;
 
@@ -827,8 +820,8 @@ namespace MMgc
 		uint64 lastMarkTicks;
 		uint64 lastSweepTicks;
 
-		const static int16 kSizeClasses[kNumSizeClasses];		
-		const static uint8 kSizeClassIndex[246];
+		static int16 kSizeClasses[kNumSizeClasses];		
+		static uint8 kSizeClassIndex[246];
 
 		void *m_contextVars[GCV_COUNT];
 
@@ -896,9 +889,9 @@ namespace MMgc
 		void MarkItem(GCStack<GCWorkItem> &work)
 		{
 			GCWorkItem workitem = work.Pop();
-			MarkItem(workitem, work);
+			MarkItem(workitem.ptr, workitem.size, work);
 		}
-		void MarkItem(GCWorkItem &workitem, GCStack<GCWorkItem> &work);
+		void MarkItem(const void *item, size_t size, GCStack<GCWorkItem> &work);
 		// Write barrier slow path
 
 		void TrapWrite(const void *black, const void *white);
@@ -907,23 +900,13 @@ namespace MMgc
 		// The collecting flag prevents an unwanted recursive collection.
 		bool collecting;
  
-		bool finalizedValue;
+		GCAlloc::GCBlock *sweepList;
 
-		// list of pages to be swept, built up in Finalize
-		void AddToSmallEmptyBlockList(GCAlloc::GCBlock *b)
-		{
-			b->next = smallEmptyPageList;
-			smallEmptyPageList = b;
+		void AddToSweepList(GCAlloc::GCBlock *block) 
+		{			
+			block->next = sweepList;
+			sweepList = block;
 		}
-		GCAlloc::GCBlock *smallEmptyPageList;
-		
-		// list of pages to be swept, built up in Finalize
-		void AddToLargeEmptyBlockList(GCLargeAlloc::LargeBlock *lb)
-		{
-			lb->next = largeEmptyPageList;
-			largeEmptyPageList = lb;
-		}
-		GCLargeAlloc::LargeBlock *largeEmptyPageList;
 		
 #ifdef GCHEAP_LOCK
 		GCSpinLock m_rootListLock;
@@ -991,15 +974,15 @@ private:
 #endif
 #endif
 
+#ifdef ALLOC_LOG
+		FILE *allocLog;
+		void LogAlloc(void *item, size_t size, int flags);
+		void LogFree(void *item);
+#endif /*ALLOC_LOG*/
+
 public:
 #ifdef MEMORY_INFO
 		void DumpBackPointerChain(void *o);
-
-		// debugging routine that records who marked who, can be used to
-		// answer the question, how did I get marked?  also could be used to
-		// find false positives by verifying the back pointer chain gets back
-		// to a GC root
-		static void WriteBackPointer(const void *item, const void *container, size_t itemSize);
 #endif
 #ifdef _DEBUG
 		// Dump a list of objects that have pointers to the given location.
@@ -1025,6 +1008,7 @@ public:
 		int *v;
 		size_t size;
 	};
+
 }
 
 #endif /* __GC__ */

@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
@@ -40,9 +41,9 @@
 
 namespace MMgc
 {
-	FixedAlloc::FixedAlloc(int itemSize, GCHeap* heap)
+	FixedAlloc::FixedAlloc(int itemSize)
 	{
-		m_heap = heap;
+		m_heap = GCHeap::GetGCHeap();
 
 		m_firstBlock    = NULL;
 		m_lastBlock     = NULL;

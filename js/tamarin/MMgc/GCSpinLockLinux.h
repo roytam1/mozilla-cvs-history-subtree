@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __GCSpinLock__
 #define __GCSpinLock__
 

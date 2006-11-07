@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_OSDep__
 #define __avmplus_OSDep__
 
@@ -48,9 +49,6 @@ namespace avmplus
 		static double localTZA(double time);
 		static double daylightSavingTA(double time);
 		static uint64 currentTimeMillis();
-
-		static intptr startIntWriteTimer(uint32 millis, int *addr);
-		static void stopTimer(intptr handle);
 	};
 }
 

@@ -101,7 +101,7 @@ namespace avmplus
 
 		AvmCore *core = this->core();
 		Toplevel* toplevel = this->toplevel();
-		MMgc::GC *gc = core->GetGC();
+		MMgc::GC *gc = core->gc;
 
 		AvmAssert(traits()->sizeofInstance == sizeof(XMLObject));
 
@@ -177,7 +177,7 @@ namespace avmplus
 							// (Emulating Rhino behavior)
 							if (p == m_node)
 							{
-								toplevel->throwTypeError(kXMLMarkupMustBeWellFormed);
+								toplevel->typeErrorClass()->throwError(kXMLMarkupMustBeWellFormed);
 							}
 							else
 							{
@@ -205,13 +205,13 @@ namespace avmplus
 									}
 									else
 									{
-										toplevel->throwTypeError(kXMLUnterminatedElementTag, parentName, parentName);
+										toplevel->typeErrorClass()->throwError(kXMLUnterminatedElementTag, parentName, parentName);
 									}
 								}
 								else
 								#endif
 								{
-									toplevel->throwTypeError(kXMLUnterminatedElementTag, parentName, parentName);
+									toplevel->typeErrorClass()->throwError(kXMLUnterminatedElementTag, parentName, parentName);
 								}
 							}
 						}
@@ -222,7 +222,7 @@ namespace avmplus
 							{
 								if (p == m_node)
 								{
-									toplevel->throwTypeError(kXMLMarkupMustBeWellFormed);
+									toplevel->typeErrorClass()->throwError(kXMLMarkupMustBeWellFormed);
 								}
 							}
 
@@ -329,7 +329,7 @@ namespace avmplus
 					while (!String::isSpace(nameEnd[0]) && (nameEnd[0]))
 						nameEnd++;
 
-					Stringp name = core->internString (new (core->GetGC()) String(nameStart, nameEnd - nameStart));
+					Stringp name = core->internString (new (core->gc) String(nameStart, nameEnd - nameStart));
 
 					// Skip over any white space between name and rest of PI
 					while (String::isSpace(nameEnd[0]) && nameEnd[0])
@@ -370,28 +370,28 @@ namespace avmplus
 			switch (m_status)
 			{
 			case XMLParser::kMalformedElement:
-				toplevel->throwTypeError(kXMLMalformedElement);
+				toplevel->typeErrorClass()->throwError(kXMLMalformedElement);
 				break;
 			case XMLParser::kUnterminatedCDataSection:
-				toplevel->throwTypeError(kXMLUnterminatedCData);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedCData);
 				break;
 			case XMLParser::kUnterminatedXMLDeclaration:
-				toplevel->throwTypeError(kXMLUnterminatedXMLDecl);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedXMLDecl);
 				break;
 			case XMLParser::kUnterminatedDocTypeDeclaration:
-				toplevel->throwTypeError(kXMLUnterminatedDocTypeDecl);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedDocTypeDecl);
 				break;
 			case XMLParser::kUnterminatedComment:
-				toplevel->throwTypeError(kXMLUnterminatedComment);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedComment);
 				break;
 			case XMLParser::kUnterminatedAttributeValue:
-				toplevel->throwTypeError(kXMLUnterminatedAttribute);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedAttribute);
 				break;
 			case XMLParser::kUnterminatedElement:
-				toplevel->throwTypeError(kXMLUnterminatedElement);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedElement);
 				break;
 			case XMLParser::kUnterminatedProcessingInstruction:
-				toplevel->throwTypeError(kXMLUnterminatedProcessingInstruction);
+				toplevel->typeErrorClass()->throwError(kXMLUnterminatedProcessingInstruction);
 				break;
 			case XMLParser::kOutOfMemory:
 			case XMLParser::kElementNeverBegun:
@@ -408,7 +408,7 @@ namespace avmplus
 			// Get our parents qualified name string here
 			Stringp parentName = m.getName();
 
-			toplevel->throwTypeError(kXMLUnterminatedElementTag, parentName, parentName);
+			toplevel->typeErrorClass()->throwError(kXMLUnterminatedElementTag, parentName, parentName);
 		}
 	}
 
@@ -517,7 +517,7 @@ namespace avmplus
 			}
 		}
 
-		XMLListObject *xl = new (core->GetGC()) XMLListObject(toplevel->xmlListClass(), this->atom(), &name);
+		XMLListObject *xl = new (core->gc) XMLListObject(toplevel->xmlListClass(), this->atom(), &name);
 
 		if (name.isAttr())
 		{
@@ -590,7 +590,7 @@ namespace avmplus
 			if (AvmCore::getIndexFromString (name, &index))
 			{
 				// Spec says: NOTE: this operation is reserved for future versions of E4X
-				toplevel->throwTypeError(kXMLAssignmentToIndexedXMLNotAllowed);
+				toplevel->typeErrorClass()->throwError(kXMLAssignmentToIndexedXMLNotAllowed);
 			}
 		}
 
@@ -682,7 +682,7 @@ namespace avmplus
 			}
 			if (a == -1) // step 7f
 			{
-				E4XNode *e = new (core->GetGC()) AttributeE4XNode(this->m_node, sc);
+				E4XNode *e = new (core->gc) AttributeE4XNode(this->m_node, sc);
 				Namespace *ns = 0;
 				if (m.namespaceCount() == 1)
 					ns = m.getNamespace();
@@ -749,7 +749,7 @@ namespace avmplus
 					// notify 
 					if (notify && (was->getClass() == E4XNode::kElement))
 					{
-						XMLObject* nd = new (core->GetGC())  XMLObject (toplevel->xmlClass(), was);
+						XMLObject* nd = new (core->gc)  XMLObject (toplevel->xmlClass(), was);
 						childChanges(xmlClass()->kNodeRemoved, nd->atom());
 					}
 				}
@@ -764,7 +764,7 @@ namespace avmplus
 			i = _length();
 			if (primitiveAssign)
 			{
-				E4XNode *e = new (core->GetGC()) ElementE4XNode (m_node);
+				E4XNode *e = new (core->gc) ElementE4XNode (m_node);
 				// We use m->namespaceCount here to choose to use the default xml namespace
 				// name here for an unqualified prop access. For a qualified access,
 				// there will be only one namespace
@@ -776,7 +776,7 @@ namespace avmplus
 					ns = toplevel->getDefaultNamespace();
 				e->setQName (core, name, ns);
 				
-				XMLObject *y = new (core->GetGC())  XMLObject (toplevel->xmlClass(), e);
+				XMLObject *y = new (core->gc)  XMLObject (toplevel->xmlClass(), e);
 
 				m_node->_replace (core, toplevel, i, y->atom());
 				e->_addInScopeNamespace (core, ns);
@@ -790,7 +790,7 @@ namespace avmplus
 
 			// children are being removed notify parent if necc.
 			bool notify = notifyNeeded(xi);
-			XMLObject* target = (notify) ? new (core->GetGC()) XMLObject(xmlClass(), xi) : 0;
+			XMLObject* target = (notify) ? new (core->gc) XMLObject(xmlClass(), xi) : 0;
 
 			int count = xi->numChildren();
 			for(int r=0;notify && (r<count); r++)
@@ -798,7 +798,7 @@ namespace avmplus
 				E4XNode* ild = xi->_getAt(r);
 				if (ild->getClass() == E4XNode::kElement)
 				{
-					XMLObject* nd = new (core->GetGC())  XMLObject (toplevel->xmlClass(), ild);
+					XMLObject* nd = new (core->gc)  XMLObject (toplevel->xmlClass(), ild);
 					target->childChanges(xmlClass()->kNodeRemoved, nd->atom());
 				}
 			}
@@ -807,7 +807,7 @@ namespace avmplus
 			Atom prior = undefinedAtom;
 			if (notify && count > 0) 
 			{
-				XMLObject* nd = new (core->GetGC())  XMLObject (toplevel->xmlClass(), xi->_getAt(0));
+				XMLObject* nd = new (core->gc)  XMLObject (toplevel->xmlClass(), xi->_getAt(0));
 				prior = nd->atom();
 			}
 
@@ -826,7 +826,7 @@ namespace avmplus
 
 			if (notifyNeeded(getNode()))
 			{
-				XMLObject* xml = new (core->GetGC()) XMLObject(xmlClass(), m_node->_getAt(i));
+				XMLObject* xml = new (core->gc) XMLObject(xmlClass(), m_node->_getAt(i));
 				childChanges( (prior) ? xmlClass()->kNodeChanged : xmlClass()->kNodeAdded, xml->atom(), prior);
 			}
 		}
@@ -904,7 +904,7 @@ namespace avmplus
 
 				if (notify && isElem)
 				{
-					XMLObject *r = new (core->GetGC())  XMLObject (xmlClass(), x);
+					XMLObject *r = new (core->gc)  XMLObject (xmlClass(), x);
 					childChanges(xmlClass()->kNodeRemoved, r->atom());
 				}
 			}
@@ -930,7 +930,7 @@ namespace avmplus
 		Multiname m;
 		toplevel->CoerceE4XMultiname(name_in, m);
 
-		XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel->xmlListClass()); 
+		XMLListObject *l = new (core->gc) XMLListObject(toplevel->xmlListClass()); 
 
 		if (m.isAttr())
 		{
@@ -968,7 +968,7 @@ namespace avmplus
 				}
 			}
 
-			XMLObject *co = new (core->GetGC()) XMLObject(toplevel->xmlClass(), child);
+			XMLObject *co = new (core->gc) XMLObject(toplevel->xmlClass(), child);
 			Atom dq = co->getDescendants (&m); 
 			delete co;
 			XMLListObject *dql = core->atomToXMLList (dq);
@@ -1003,7 +1003,7 @@ namespace avmplus
 	void XMLObject::setUintProperty(uint32 /*i*/, Atom /*value*/)
 	{
 		// Spec says: NOTE: this operation is reserved for future versions of E4X
-		toplevel()->throwTypeError(kXMLAssignmentToIndexedXMLNotAllowed);
+		toplevel()->typeErrorClass()->throwError(kXMLAssignmentToIndexedXMLNotAllowed);
 	}
 
 	bool XMLObject::delUintProperty(uint32 /*i*/)
@@ -1097,7 +1097,7 @@ namespace avmplus
 
 		E4XNode *e = m_node->_deepCopy (core, toplevel());
 
-		XMLObject *y = new (core->GetGC()) XMLObject(xmlClass(), e);
+		XMLObject *y = new (core->gc) XMLObject(xmlClass(), e);
 
 		return y;
 	}
@@ -1240,7 +1240,7 @@ namespace avmplus
 		// So when were converting to a string, we need to build the inScopeNamespace
 		// list here.
 
-		AtomArray *inScopeNS = new (core->GetGC()) AtomArray();
+		AtomArray *inScopeNS = new (core->gc) AtomArray();
 		m_node->BuildInScopeNamespaceList (core, inScopeNS);
 		uint32 origLength = AncestorNamespaces->getLength();
 
@@ -1422,7 +1422,7 @@ namespace avmplus
 		// The namespace for menuName should be output even though the identical namespace
 		// was output for the top node.  (Since the item node is using an incompatible 
 		// namespace with the same prefix.)
-		AtomArray *newNamespaceArray = new (core->GetGC()) AtomArray();
+		AtomArray *newNamespaceArray = new (core->gc) AtomArray();
 		uint32 anLen = AncestorNamespaces->getLength();
 		for (uint32 i = 0; i < anLen; i++)
 		{
@@ -1457,7 +1457,7 @@ namespace avmplus
 		{
 			// step 23b
 			E4XNode *child = m_node->_getAt(i);
-			XMLObject *xo = new (core->GetGC()) XMLObject(toplevel()->xmlClass(), child);
+			XMLObject *xo = new (core->gc) XMLObject(toplevel()->xmlClass(), child);
 			if (toplevel()->xmlClass()->okToPrettyPrint() && bIndentChildren)
 			{
 				s << "\n";
@@ -1607,7 +1607,7 @@ namespace avmplus
 		uint32 index;
 		if (AvmCore::getIndexFromString (core->string(P), &index))
 		{
-			XMLListObject *xl = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass());
+			XMLListObject *xl = new (core->gc) XMLListObject(toplevel()->xmlListClass());
 			if ((index >= 0) && (index < m_node->numChildren()))
 			{
 				xl->_append (m_node->_getAt(index));
@@ -1653,7 +1653,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 
-		XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *l = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		for (uint32 i = 0; i < m_node->_length(); i++)
 		{
@@ -1704,7 +1704,7 @@ namespace avmplus
 		Multiname m;
 		toplevel()->ToXMLName(name, m);
 
-		XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *l = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		for (uint32 i = 0; i < _length(); i++)
 		{
@@ -1785,7 +1785,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 		// step 2
-		AtomArray *inScopeNS = new (core->GetGC()) AtomArray();
+		AtomArray *inScopeNS = new (core->gc) AtomArray();
 
 		// step 3
 		m_node->BuildInScopeNamespaceList (core, inScopeNS);
@@ -1943,7 +1943,7 @@ namespace avmplus
 		if (!m_node->getQName(core, &m))
 			return nullObjectAtom;
 
-		return (new (core->GetGC(), toplevel()->qnameClass()->ivtable()->getExtraSize()) QNameObject(toplevel()->qnameClass(), m))->atom();
+		return (new (core->gc, toplevel()->qnameClass()->ivtable()->getExtraSize()) QNameObject(toplevel()->qnameClass(), m))->atom();
 	}
 
 	// E4X 13.4.4.23, page 80
@@ -1952,7 +1952,7 @@ namespace avmplus
 		AvmCore *core = this->core();
 
 		// step 2
-		AtomArray *inScopeNS = new (core->GetGC()) AtomArray();
+		AtomArray *inScopeNS = new (core->gc) AtomArray();
 
 		// step 3
 		m_node->BuildInScopeNamespaceList (core, inScopeNS);
@@ -2001,7 +2001,7 @@ namespace avmplus
 		E4XNode *y = m_node->getParent();
 
 		// step 4+5
-		AtomArray *ancestorNS = new (core->GetGC()) AtomArray();
+		AtomArray *ancestorNS = new (core->gc) AtomArray();
 		if (y)	
 			y->BuildInScopeNamespaceList (core, ancestorNS);
 
@@ -2089,7 +2089,7 @@ namespace avmplus
 			E4XNode *x = m_node->_getAt(i);
 			if (x->getClass() == E4XNode::kElement)
 			{
-				XMLObject *xo = new (core->GetGC()) XMLObject(toplevel()->xmlClass(), x);
+				XMLObject *xo = new (core->gc) XMLObject(toplevel()->xmlClass(), x);
 				xo->normalize();
 				delete xo;
 				i++;
@@ -2105,7 +2105,7 @@ namespace avmplus
 
 					if (notify)
 					{
-						XMLObject *nd = new (core->GetGC())  XMLObject (xmlClass(), x2);
+						XMLObject *nd = new (core->gc)  XMLObject (xmlClass(), x2);
 						childChanges(xmlClass()->kNodeRemoved, nd->atom());
 					}
 				}
@@ -2118,7 +2118,7 @@ namespace avmplus
 
 					if (notify)
 					{
-						XMLObject *nd = new (core->GetGC())  XMLObject (xmlClass(), prior);
+						XMLObject *nd = new (core->gc)  XMLObject (xmlClass(), prior);
 						childChanges(xmlClass()->kNodeRemoved, nd->atom());
 					}
 				}
@@ -2131,7 +2131,7 @@ namespace avmplus
 				Stringp current = x->getValue();
 				if ((current != prior) && notify)
 				{
-					XMLObject *xo = new (core->GetGC())  XMLObject (xmlClass(), x);
+					XMLObject *xo = new (core->gc)  XMLObject (xmlClass(), x);
 					xo->nonChildChanges(xmlClass()->kTextSet, current->atom(), (prior) ? prior->atom() : undefinedAtom);
 				}
 			}
@@ -2147,7 +2147,7 @@ namespace avmplus
 	Atom XMLObject::parent ()
 	{
 		if (m_node->getParent())
-			return (new (core()->GetGC()) XMLObject (toplevel()->xmlClass(), m_node->getParent()))->atom();
+			return (new (core()->gc) XMLObject (toplevel()->xmlClass(), m_node->getParent()))->atom();
 		else
 			return undefinedAtom;
 	}
@@ -2159,7 +2159,7 @@ namespace avmplus
 		Multiname m;
 		toplevel()->ToXMLName(name, m);
 
-		XMLListObject *xl = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *xl = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		if (m.isAttr())
 			return xl;
@@ -2261,7 +2261,7 @@ namespace avmplus
 			E4XNode *p = m_node->_getAt(k);
 			if (p->getClass() == E4XNode::kElement)
 			{
-				XMLObject *xo = new (core->GetGC()) XMLObject(toplevel()->xmlClass(), p);
+				XMLObject *xo = new (core->gc) XMLObject(toplevel()->xmlClass(), p);
 				xo->removeNamespace (ns->atom());
 				delete xo;
 			}
@@ -2305,7 +2305,7 @@ namespace avmplus
 			return this;
 		}
 
-		QNameObject *qn1 = new (core->GetGC(), toplevel->qnameClass()->ivtable()->getExtraSize()) QNameObject(toplevel->qnameClass(), P);
+		QNameObject *qn1 = new (core->gc, toplevel->qnameClass()->ivtable()->getExtraSize()) QNameObject(toplevel->qnameClass(), P);
 		Multiname m;
 		qn1->getMultiname(m);
 		bool notify = notifyNeeded(getNode());
@@ -2334,7 +2334,7 @@ namespace avmplus
 					// notify 
 					if (notify && was->getClass() == E4XNode::kElement)
 					{
-						XMLObject* nd = new (core->GetGC())  XMLObject (xmlClass(), was);
+						XMLObject* nd = new (core->gc)  XMLObject (xmlClass(), was);
 						childChanges(xmlClass()->kNodeRemoved, nd->atom());
 					}
 				}
@@ -2377,7 +2377,7 @@ namespace avmplus
 		}
 
 		if (!core->isXMLName (newname->atom()))
-			toplevel()->throwTypeError(kXMLInvalidName, newname);
+			toplevel()->typeErrorClass()->throwError(kXMLInvalidName, newname);
 
 		Multiname m;
 		if (this->getNode()->getQName(core, &m))
@@ -2410,11 +2410,11 @@ namespace avmplus
 			}
 		}
 
-		QNameObject *n = new (core->GetGC(), toplevel()->qnameClass()->ivtable()->getExtraSize()) QNameObject(toplevel()->qnameClass(), name); 
+		QNameObject *n = new (core->gc, toplevel()->qnameClass()->ivtable()->getExtraSize()) QNameObject(toplevel()->qnameClass(), name); 
 
 		Stringp s = n->getLocalName();
 		if (!core->isXMLName (s->atom()))
-			toplevel()->throwTypeError(kXMLInvalidName, s);
+			toplevel()->typeErrorClass()->throwError(kXMLInvalidName, s);
 
 		Multiname m;
 		if (m_node->getQName(core, &m))
@@ -2515,7 +2515,7 @@ namespace avmplus
 				if ((child->getClass() != E4XNode::kComment) && (child->getClass() != E4XNode::kProcessingInstruction))
 				{
 
-					XMLObject *xo = new (core->GetGC()) XMLObject(toplevel()->xmlClass(), child);
+					XMLObject *xo = new (core->gc) XMLObject(toplevel()->xmlClass(), child);
 					s = core->concatStrings(s, core->string(xo->toString())); 
 					delete xo;
 				}
@@ -2525,7 +2525,7 @@ namespace avmplus
 		}
 		else
 		{
-			AtomArray *AncestorNamespaces = new (core->GetGC()) AtomArray();
+			AtomArray *AncestorNamespaces = new (core->gc) AtomArray();
 			StringBuffer s(core);
 			__toXMLString(s, AncestorNamespaces, 0);
 			return core->newString(s.c_str())->atom();
@@ -2558,7 +2558,7 @@ namespace avmplus
 		//
 		//		"XML@hexaddr nodeKind text_to_display"
 		//
-		AtomArray *AncestorNamespaces = new (core->GetGC()) AtomArray();
+		AtomArray *AncestorNamespaces = new (core->gc) AtomArray();
 		StringBuffer openTag(core);
 		__toXMLString(openTag, AncestorNamespaces, 0, false);
 		Stringp openingTag = core->newString (openTag.c_str());
@@ -2586,7 +2586,7 @@ namespace avmplus
 	XMLObject *XMLObject::getParent()
 	{
 		if (m_node->getParent())
-			return new (core()->GetGC()) XMLObject (toplevel()->xmlClass(), m_node->getParent());
+			return new (core()->gc) XMLObject (toplevel()->xmlClass(), m_node->getParent());
 		else
 			return 0;
 	}
@@ -2612,7 +2612,7 @@ namespace avmplus
 
 		// Notifiers MUST be functions or null
 		if (f && !core->istype(f->atom(), core->traits.function_itraits)) 
-			toplevel()->throwArgumentError( kInvalidArgumentError, "f");
+			toplevel()->argumentErrorClass()->throwError( kInvalidArgumentError, core->toErrorString("f"));
 		else
 			m_node->setNotification(core, f);
 	}
@@ -2650,11 +2650,11 @@ namespace avmplus
 
 		if (notifyNeeded(initialTarget))
 		{
-			XMLObject* target = new (core->GetGC()) XMLObject(top->xmlClass(), initialTarget);
+			XMLObject* target = new (core->gc) XMLObject(top->xmlClass(), initialTarget);
 			Atom detail = undefinedAtom;
 			if (prior)
 			{
-				XMLObject* xml = new (core->GetGC()) XMLObject(xmlClass(), prior);
+				XMLObject* xml = new (core->gc) XMLObject(xmlClass(), prior);
 				detail = xml->atom();
 			}
 
@@ -2689,7 +2689,7 @@ namespace avmplus
 		E4XNode* initialTarget = m_node;
 		if (notifyNeeded(initialTarget))
 		{
-			XMLObject* target = new (core->GetGC()) XMLObject(top->xmlClass(), initialTarget);
+			XMLObject* target = new (core->gc) XMLObject(top->xmlClass(), initialTarget);
 			issueNotifications(core, top, initialTarget, target->atom(), type, value, detail);
 		}
 	}
@@ -2708,7 +2708,7 @@ namespace avmplus
 			ScriptObject* methodObj = node->getNotification();
 			if (methodObj) 
 			{
-				XMLObject* currentTarget = new (core->GetGC())  XMLObject(top->xmlClass(), node);
+				XMLObject* currentTarget = new (core->gc)  XMLObject(top->xmlClass(), node);
 				Atom argv[6] = { top->atom(), currentTarget->atom(), type, target, value, detail };
 				int argc = 5;
 

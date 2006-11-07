@@ -71,7 +71,7 @@ namespace avmplus
 		AvmCore* core = this->core();
 
 		ScriptObject* object_prototype = toplevel()->objectClass->prototype;
-		prototype = new (core->GetGC(), ivtable()->getExtraSize()) RegExpObject(this,object_prototype);
+		prototype = new (core->gc, ivtable()->getExtraSize()) RegExpObject(this,object_prototype);
 
 		kindex = core->constant("index");
 		kinput = core->constant("input");		
@@ -110,11 +110,11 @@ namespace avmplus
 			// Pattern is a RegExp object
 			if (optionsAtom != undefinedAtom) {
 				// ECMA 15.10.4.1 says to throw an error if flags specified
-				toplevel()->throwTypeError(kRegExpFlagsArgumentError);
+				toplevel()->typeErrorClass()->throwError(kRegExpFlagsArgumentError);
 			}
 			// Return a clone of the RegExp object
 			RegExpObject* regExpObject = (RegExpObject*)AvmCore::atomToScriptObject(patternAtom);
-			return (new (core->GetGC(), ivtable()->getExtraSize()) RegExpObject(regExpObject))->atom();
+			return (new (core->gc, ivtable()->getExtraSize()) RegExpObject(regExpObject))->atom();
 		} else {
 			if (patternAtom != undefinedAtom) {
 				pattern = core->string(argv[1]);
@@ -129,7 +129,7 @@ namespace avmplus
 			options = core->string(optionsAtom);
 		}
 
-		RegExpObject* inst = new (core->GetGC(), ivtable()->getExtraSize()) RegExpObject(this, pattern, options);
+		RegExpObject* inst = new (core->gc, ivtable()->getExtraSize()) RegExpObject(this, pattern, options);
 		return inst->atom();
 	}
 }

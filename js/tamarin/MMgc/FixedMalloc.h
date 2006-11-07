@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __Malloc__
 #define __Malloc__
 
@@ -48,11 +49,7 @@ namespace MMgc
 		* return the number of bytes of memory issued
 		*/
 		size_t Allocated();
-
-		static FixedMalloc *GetInstance() { 
-			GCAssert(instance != NULL);
-			return instance;
-		}
+		static FixedMalloc *GetInstance() { return instance; }
 
 		inline void* Alloc(size_t size)
 		{
@@ -84,7 +81,7 @@ namespace MMgc
 			}
 		}
 
-		size_t Size(const void *item)
+		static size_t Size(const void *item)
 		{
 			size_t size;
 			if(IsLargeAlloc(item)) {
@@ -98,27 +95,16 @@ namespace MMgc
 			return size;
 		}
 
-		void *Calloc(size_t num, size_t elsize)
-		{
-			uint64 size = (uint64)num * (uint64)elsize;
-			if(size > 0xfffffff0) 
-			{
-				GCAssertMsg(false, "Attempted allocation overflows size_t\n");
-				return NULL;
-			}
-			return Alloc(num * elsize);
-		}
-
 //	private:
-		FixedMalloc(GCHeap* heap);
+		FixedMalloc();
 		~FixedMalloc();
 		static FixedMalloc *instance;
 		const static int kLargestAlloc = 2032;	
 		const static int kNumSizeClasses = 41;
 		const static int kPageUsableSpace = GCHeap::kBlockSize - offsetof(MMgc::FixedAlloc::FixedBlock, items);
 
-		const static int16 kSizeClasses[kNumSizeClasses];
-		const static uint8 kSizeClassIndex[32];
+		static int16 kSizeClasses[kNumSizeClasses];
+		static uint8 kSizeClassIndex[32];
 
 		GCHeap *m_heap;
 		FixedAllocSafe *m_allocs[kNumSizeClasses];	
@@ -159,9 +145,9 @@ namespace MMgc
 			m_heap->Free(item);
 		}
 
-		size_t LargeSize(const void *item)
+		static size_t LargeSize(const void *item)
 		{
-			return m_heap->Size(item) * GCHeap::kBlockSize;
+			return GCHeap::GetGCHeap()->Size(item) * GCHeap::kBlockSize;
 		}
 	};
 }

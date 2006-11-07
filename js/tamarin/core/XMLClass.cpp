@@ -203,7 +203,7 @@ namespace avmplus
 
 		if (AvmCore::isNullOrUndefined(arg))
 		{
-			toplevel->throwTypeError(
+			toplevel->typeErrorClass()->throwError(
 					   (arg == undefinedAtom) ? kConvertUndefinedToObjectError :
 											kConvertNullToObjectError);
 			return arg;
@@ -221,7 +221,7 @@ namespace avmplus
 			}
 			else
 			{
-				toplevel->throwTypeError(kXMLMarkupMustBeWellFormed);
+				toplevel->typeErrorClass()->throwError(kXMLMarkupMustBeWellFormed);
 				return 0;//notreached
 			}
 		}
@@ -235,14 +235,14 @@ namespace avmplus
 			//parentString = core->concatStrings(parentString, core->newString("</parent>"));
 			// 2. Parse parentString as a W3C element information info e
 			// 3. If the parse fails, throw a SyntaxError exception
-			XMLObject *x = new (core->GetGC()) XMLObject(toplevel->xmlClass(), core->string(arg), defaultNamespace);
+			XMLObject *x = new (core->gc) XMLObject(toplevel->xmlClass(), core->string(arg), defaultNamespace);
 
 			// 4. x = toXML(e);
 			// 5. if x.length == 0
 			//       return new xml object
 			if (!x->getNode()->_length())
 			{
-				x->setNode( new (core->GetGC()) TextE4XNode(0, core->kEmptyString) );
+				x->setNode( new (core->gc) TextE4XNode(0, core->kEmptyString) );
 			}
 			// 6. else if x.length == 1
 			//       x[0].parent = null
@@ -261,14 +261,14 @@ namespace avmplus
 				E4XNode *node = x->getNode();
 				E4XNode *lastNode = node->_getAt (node->_length() - 1);
 				if (lastNode->getClass() != E4XNode::kElement)
-					toplevel->throwTypeError(kXMLMarkupMustBeWellFormed);
+					toplevel->typeErrorClass()->throwError(kXMLMarkupMustBeWellFormed);
 
 				for (uint32 i = 0; i < node->_length() - 1; i++)
 				{
 					if ((node->_getAt (i)->getClass() != E4XNode::kProcessingInstruction) &&
 						(node->_getAt (i)->getClass() != E4XNode::kComment))
 
-						toplevel->throwTypeError(kXMLMarkupMustBeWellFormed);
+						toplevel->typeErrorClass()->throwError(kXMLMarkupMustBeWellFormed);
 				}
 
 				x->setNode( lastNode ); // discard parent node
@@ -383,14 +383,14 @@ namespace avmplus
 		AvmCore* core = this->core();
 
 		if (argc == 0)
-			return (new (core->GetGC(), ivtable()->getExtraSize()) QNameObject(this, undefinedAtom))->atom();
+			return (new (core->gc, ivtable()->getExtraSize()) QNameObject(this, undefinedAtom))->atom();
 
 		if (argc == 1)
 		{
 			if (core->isObject(argv[1]) && core->istype(argv[1], core->traits.qName_itraits))
 				return argv[1];
 
-			return (new (core->GetGC(), ivtable()->getExtraSize()) QNameObject(this, argv[1]))->atom();
+			return (new (core->gc, ivtable()->getExtraSize()) QNameObject(this, argv[1]))->atom();
 		}
 		else
 		{
@@ -398,7 +398,7 @@ namespace avmplus
 			if (a == undefinedAtom)
 			{
 				// ns undefined same as unspecified
-				return (new (core->GetGC(), ivtable()->getExtraSize()) QNameObject(this, argv[2]))->atom();
+				return (new (core->gc, ivtable()->getExtraSize()) QNameObject(this, argv[2]))->atom();
 			}
 			else
 			{
@@ -414,7 +414,7 @@ namespace avmplus
 					ns = core->atomToNamespace(a);				
 				else
 					ns = core->newNamespace (a);
-				return (new (core->GetGC(), ivtable()->getExtraSize()) QNameObject(this, ns, argv[2]))->atom();
+				return (new (core->gc, ivtable()->getExtraSize()) QNameObject(this, ns, argv[2]))->atom();
 			}
 		}
 	}

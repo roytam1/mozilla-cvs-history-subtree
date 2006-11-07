@@ -181,7 +181,7 @@ namespace avmplus
 #ifdef AVM10_BIG_ENDIAN
 		unsigned long nan[2]={0x7fffffff, 0xffffffff};
 #else
-		unsigned long nan[2]= {0xffffffff, 0x7fffffff}; 
+		unsigned long nan[2]={0xffffffff, 0x7fffffff};
 #endif
 		double g = *(double*)nan;
 		return g;
@@ -490,20 +490,12 @@ namespace avmplus
 	static double powInt(double base, int exponent)
 	{
 		double value = 1.0;
-		double original_base = base;
-		int original_exponent = exponent;
 
 		if (exponent < 0) {
 			exponent = -exponent;
 			while (exponent) {
 				if (exponent & 1) {
 					value /= base;
-				    // cn: max double value is magnitude 1e308 (base 10), but min double value is magnitude 1e-324
-				    // That means we can't invert the exponent when the base ten value exponent is < 307.  
-				    //  We could first check if powerOfTwo(base)*exp > 1074, but that would
-				    //  slow down all powInts calls.  This limits the xtra work to just very small numbers.
-					if (value == 0 && base != 0) // double check by calling the real thing
-						return MathUtils::powInternal(original_base,(double)original_exponent);
 				}
 				exponent >>= 1;
 				base *= base;
@@ -761,7 +753,7 @@ namespace avmplus
 		}
 
 		int len = srcEnd-src-1;
-		return new (core->GetGC()) String(src+1, len);
+		return new (core->gc) String(src+1, len);
 	}
 	
 	void MathUtils::convertDoubleToString(double value,
@@ -1216,12 +1208,7 @@ namespace avmplus
 			//   the algorithm commented out below 
 			result = exactInt.doubleValueOf();
 			if (exp10 < 0) {
-				if (exp10 < -307) { // max positive value is e308. min neg value is e-324  Avoid overflow
-					int diff = exp10 + 307;
-					result /= quickPowTen(-diff);
-					exp10 -= diff;
-				}
-				result /= quickPowTen(-exp10); // actually more accurate than multiplying by negative power of 10
+				result /= quickPowTen(-exp10); // todo: find better way, this is susceptable to error in multiple ways
 			}
 		}
 		else // we can use double
@@ -1243,13 +1230,7 @@ namespace avmplus
 			}
 			if (exp10 >= 0) {
 				result *= quickPowTen(exp10);
-			
-			} else {			
-				if (exp10 < -307) { // max positive value is e308.  min neg value is e-324. Avoid overflow
-					int diff = exp10 + 307;
-					result /= quickPowTen(-diff);
-					exp10 -= diff;
-				}
+			} else {
 				result /= quickPowTen(-exp10); // actually more accurate than multiplying by negative power of 10
 			}
 		}

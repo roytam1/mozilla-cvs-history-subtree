@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_GrowableBuffer_H_
 #define __avmplus_GrowableBuffer_H_
 
@@ -47,7 +48,7 @@ namespace avmplus
 	class GrowableBuffer : public MMgc::GCObject
 	{
 	public:
-		GrowableBuffer(MMgc::GCHeap* heap);
+		GrowableBuffer();
 		virtual ~GrowableBuffer();
 
 		byte* reserve(size_t amt);
@@ -57,7 +58,7 @@ namespace avmplus
 		byte* grow();
 		byte* shrinkTo(size_t amt);
 
-		size_t	pageSize()		{ return heap->kNativePageSize; }
+		size_t	pageSize()		{ return MMgc::GCHeap::kNativePageSize; }
 		byte*	start()			{ return first; }
 		byte*	end()			{ return last; }
 		size_t	size()			{ return last-first; }
@@ -70,7 +71,6 @@ namespace avmplus
 		byte*	pageFor(byte* addr)		{ return (byte*) ( (size_t)addr & ~(pageSize()-1) ); }
 		byte*	pageAfter(byte* addr)	{ return (byte*) ( (size_t)(addr+pageSize()) & ~(pageSize()-1) ); }
 
-		MMgc::GCHeap* const heap;
 		byte* first;		// reservation starting address
 		byte* last;			// reservation ending address
 		byte* uncommit;		// next uncommitted page in region
@@ -85,8 +85,8 @@ namespace avmplus
 	class GenericGuard
 	{
 	public:
-		void disable()	{ registerHandler(); }
-		void enable()	{ unregisterHandler(); }
+		void enable()	{ registerHandler(); }
+		void disable()	{ unregisterHandler(); }
 
 		#ifdef AVMPLUS_MACH_EXCEPTIONS
 		static void staticInit();

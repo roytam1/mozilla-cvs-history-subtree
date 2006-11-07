@@ -501,15 +501,4 @@ namespace avmplus
 
 		return getLength();
 	}
-
-#ifdef DEBUGGER
-	uint32 ArrayObject::size() const
-	{
-		if(isSimpleDense())
-		{
-			return ScriptObject::size() + getLength()*sizeof(Atom);
-		}
-		return ScriptObject::size();
-	}
-#endif
 }

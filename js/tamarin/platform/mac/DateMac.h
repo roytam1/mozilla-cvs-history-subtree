@@ -42,6 +42,7 @@ namespace avmplus
 	namespace MacDateTime
 	{
 		// Entry points
+		void Initialize();
 		double LocalTZA(double time);
 		double GetTime();
 		double DaylightSavingTA(double time);

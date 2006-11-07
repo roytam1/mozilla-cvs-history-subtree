@@ -252,13 +252,13 @@ namespace avmplus
 		return atoms[((index-1)<<1)+1];
 	}
 
-/*	void Hashtable::removeAt(int index)
+	void Hashtable::removeAt(int index)
 	{
 		int i = (index-1)<<1;
         atoms[i] = DELETED;
 		atoms[i+1] = DELETED;
 		setHasDeletedItems(true);
-	}*/
+	}
 
 	// call this method using the previous value returned
 	// by this method starting with 0, until 0 is returned.

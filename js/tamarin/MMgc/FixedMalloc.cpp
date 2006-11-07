@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 // For memset
 #include <string.h>
 
@@ -41,17 +42,16 @@ namespace MMgc
 
 	// Size classes for our Malloc.  We start with a 4 byte allocator and then from
 	// 8 to 128, size classes are spaced evenly 8 bytes apart, then from 128 to 1968 they
-	const int16 FixedMalloc::kSizeClasses[kNumSizeClasses] = {
+	int16 FixedMalloc::kSizeClasses[kNumSizeClasses] = {
 		4, 8, 16, 24, 32, 40, 48, 56, 64, 72, //0-9
 		80, 88, 96, 104, 112, 120, 128,	144, 160, 176, //10-19
         184, 192, 200, 208, 224, 232, 248, 264, 288, 312, //20-29
 		336, 368, 400, 448, 504, 576, 672, 808, 1016, 1352, //30-39
 		2032, //40
 	};
-
 	// This is an index which indicates that allocator i should be used
 	// if kSizeClassIndex[i] items fit into a 4096 byte page.
-	const uint8 FixedMalloc::kSizeClassIndex[32] = {
+	uint8 FixedMalloc::kSizeClassIndex[32] = {
 		40, 40, 40, 39, 38, 37, 36, 35, 34, 33, //0-10
 		32, 31, 30, 29, 28, 27, 26, 25, 24, 23, //10-19
 		22, 21, 20, 19, 19, 18, 18, 18, 17, 17, //20-29
@@ -61,7 +61,7 @@ namespace MMgc
 	void FixedMalloc::Init()
 	{
 		GCAssert(instance == NULL);
-		instance = new FixedMalloc(GCHeap::GetGCHeap());
+		instance = new FixedMalloc();
 	}
 
 	void FixedMalloc::Destroy()
@@ -71,9 +71,9 @@ namespace MMgc
 		instance = NULL;
 	}
 
-	FixedMalloc::FixedMalloc(GCHeap* heap)
+	FixedMalloc::FixedMalloc()
 	{
-		m_heap = heap;
+		m_heap = GCHeap::GetGCHeap();
 		// Create all the allocators up front (not lazy)
 		// so that we don't have to check the pointers for
 		// NULL on every allocation.
@@ -82,7 +82,7 @@ namespace MMgc
 			// more common size classes maybe we should use 8/16/32.
 			// FIXME: we could use FixedAllocLarge for the bigger size 
 			// classes but how to call the right Free would need to be work out
-			m_allocs[i] = new FixedAllocSafe(kSizeClasses[i], heap);
+			m_allocs[i] = new FixedAllocSafe(kSizeClasses[i]);
 		}
 	}
 

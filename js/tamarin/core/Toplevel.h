@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_Toplevel__
 #define __avmplus_Toplevel__
 
@@ -84,37 +85,9 @@ namespace avmplus
 		ErrorClass *referenceErrorClass() const { return getErrorClass(avmplus::NativeID::abcclass_ReferenceError); }
 		ErrorClass *securityErrorClass() const { return getErrorClass(avmplus::NativeID::abcclass_SecurityError); }
 		ErrorClass *verifyErrorClass() const { return getErrorClass(avmplus::NativeID::abcclass_VerifyError); }
+		ErrorClass *definitionErrorClass() const { return getErrorClass(avmplus::NativeID::abcclass_DefinitionError); }
+		ErrorClass *uninitializedErrorClass() const { return getErrorClass(avmplus::NativeID::abcclass_UninitializedError); }
 		/*@}*/
-
-		void throwVerifyError(int id) const;
-
-#ifdef DEBUGGER
-		void throwVerifyError(int id, Stringp arg1) const;
-		void throwVerifyError(int id, Stringp arg1, Stringp arg2) const;
-#else
-		void throwVerifyError(int id, Stringp arg1) const { throwVerifyError(id); (void)arg1; }
-		void throwVerifyError(int id, Stringp arg1, Stringp arg2) const { throwVerifyError(id); (void)arg1;(void)arg2; }
-#endif
-
-		void throwTypeError(int id) const;
-		void throwTypeError(int id, Stringp arg1) const;
-		void throwTypeError(int id, Stringp arg1, Stringp arg2) const;
-
-		void throwError(int id) const;
-		void throwError(int id, Stringp arg1) const;
-		void throwError(int id, Stringp arg1, Stringp arg2) const;
-
-		void throwArgumentError(int id) const;
-		void throwArgumentError(int id, Stringp arg1) const;
-		void throwArgumentError(int id, const char *arg1) const;
-		void throwArgumentError(int id, Stringp arg1, Stringp arg2) const;
-
-		void throwRangeError(int id) const;
-		void throwRangeError(int id, Stringp arg1) const;
-		void throwRangeError(int id, Stringp arg1, Stringp arg2, Stringp arg3) const;
-
-		void throwReferenceError(int id, Multiname* multiname, const Traits* traits) const;
-		void throwReferenceError(int id, Multiname* multiname) const;
 
 		DWB(VTable*) object_vtable; // instance vtable
 		DWB(VTable*) class_vtable; // instance vtable
@@ -211,7 +184,6 @@ namespace avmplus
 		Atom getproperty(Atom obj, Multiname* name, VTable* vtable);
 
 	    void setproperty(Atom obj, Multiname* multiname, Atom value, VTable* vtable) const;
-	    void setproperty_b(Atom obj, Multiname* multiname, Atom value, VTable* vtable, Binding b) const;
 
 		bool isXmlBase(Atom obj) const
 		{
@@ -248,7 +220,7 @@ namespace avmplus
 		Atom getBinding(Traits* traits, Multiname* multiname) const;
 
 		#ifdef DEBUGGER
-		ScriptObjectTable *scriptObjectTable;		
+		ScriptObjectTable *scriptObjectTable;
 		#endif
 
 		/**

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __GCObject__
 #define __GCObject__
 
@@ -185,9 +186,8 @@ namespace MMgc
 				return;
 
 #ifdef _DEBUG
-			GC* gc = GC::GetGC(this);
-			GCAssert(gc->IsRCObject(this));
-			GCAssert(this == gc->FindBeginning(this));
+			GCAssert(GC::GetGC(this)->IsRCObject(this));
+			GCAssert(this == GC::GetGC(this)->FindBeginning(this));
 			// don't touch swept objects
 			if(composite == 0xcacacaca || composite == 0xbabababa)
 				return;
@@ -201,7 +201,7 @@ namespace MMgc
 				GC::GetGC(this)->RemoveFromZCT(this);
 			}
 #ifdef _DEBUG
-			if(gc->keepDRCHistory)
+			if(GC::keepDRCHistory)
 				history.Push(GetStackTraceIndex(2));
 #endif
 		}
@@ -211,14 +211,13 @@ namespace MMgc
 			if(Sticky() || composite == 0)
 				return;
 #ifdef _DEBUG
-			GC* gc = GC::GetGC(this);
-			GCAssert(gc->IsRCObject(this));
-			GCAssert(this == gc->FindBeginning(this));
+			GCAssert(GC::GetGC(this)->IsRCObject(this));
+			GCAssert(this == GC::GetGC(this)->FindBeginning(this));
 			// don't touch swept objects
 			if(composite == 0xcacacaca || composite == 0xbabababa)
 				return;
 		
-			if(gc->Destroying())
+			if(GC::GetGC(this)->Destroying())
 				return;
 
 			if(RefCount() == 0) {
@@ -251,7 +250,7 @@ namespace MMgc
 			// ~FunctionScriptObject during a sweep, but since ScopeChain's
 			// are smaller the ScopeChain was already finalized, thus the
 			// push crashes b/c the history object has been destructed.
-			if(gc->keepDRCHistory)
+			if(GC::keepDRCHistory)
 				history.Push(GetStackTraceIndex(1));
 #endif
 			// composite == 1 is the same as (rc == 1 && !notSticky && !notInZCT)

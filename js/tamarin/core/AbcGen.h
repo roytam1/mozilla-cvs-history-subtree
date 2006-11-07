@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AbcGen__
 #define __avmplus_AbcGen__
 

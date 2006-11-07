@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_String__
 #define __avmplus_String__
 
@@ -345,11 +346,7 @@ namespace avmplus
 		// Useful utilities used by the core code.
 		static wchar wCharToUpper (wchar ch);
 		static wchar wCharToLower (wchar ch);
-		
-#ifdef DEBUGGER
-		uint32 size() const;
-#endif
-
+	
 	private:
 		int			m_length; // { interned: 1, length:31 }
 		class StringBuf : public MMgc::RCObject
@@ -408,12 +405,6 @@ namespace avmplus
 
 		void setPrefixOrOffsetOrNumber(int value);
 
-		static const wchar lowerCaseBase[];
-		static const wchar upperCaseBase[];
-		static const wchar lowerCaseConversion[];
-		static const wchar upperCaseConversion[];
-		static const unsigned char tolower_map[];
-		static const unsigned char toupper_map[];
 public:
 		// This returns a kIntegerAtom Atom
 		// for use in our ScriptObject HashTable implementation.  If we have a valid 
@@ -429,8 +420,6 @@ public:
 		StringBuf* allocBuf(int numChars);
 		wchar *getData() const { return m_buf->m_buf; }
 		void setBuf(StringBuf *buf) { WBRC(MMgc::GC::GetGC(this), this, &m_buf, buf); }
-
-
 	};
 
 	// Compare helpers

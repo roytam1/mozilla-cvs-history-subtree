@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AbcEnv__
 #define __avmplus_AbcEnv__
 
@@ -57,7 +58,7 @@ namespace avmplus
 
 		void setMethod(int i, MethodEnv* env)
 		{
-			WB(pool->core->GetGC(), this, &methods[i], env);
+			WB(pool->core->gc, this, &methods[i], env);
 		}
 
 		static size_t calcExtra(PoolObject* pool)

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_VTable__
 #define __avmplus_VTable__
 
@@ -38,6 +39,7 @@ namespace avmplus
 
 	class VTable : public MMgc::GCObject
 	{
+		void populateInterfaces();
 		void addInterface(AbstractFunction* virt, int disp_id);
 
 		bool linked;
@@ -58,7 +60,7 @@ namespace avmplus
 		void resolveSignatures();
 
 		size_t getExtraSize() const { return traits->getTotalSize() - traits->sizeofInstance; }
-		MMgc::GC *gc() const { return traits->core->GetGC(); }
+		MMgc::GC *gc() const { return traits->core->gc; }
 
 #ifdef AVMPLUS_VERBOSE
 		Stringp format(AvmCore* core) const

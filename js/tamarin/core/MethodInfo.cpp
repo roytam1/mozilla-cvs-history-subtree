@@ -57,7 +57,7 @@ namespace avmplus
 
 		#ifdef AVMPLUS_VERIFYALL
 		f->flags |= VERIFIED;
-		if (f->pool->core->verifyall && f->pool)
+		if (AvmCore::verifyall && f->pool)
 			f->pool->processVerifyQueue(env->toplevel());
 		#endif
 
@@ -77,15 +77,14 @@ namespace avmplus
 		if (!body_pos)
 		{
 			// no body was supplied in abc
-			toplevel->throwVerifyError(kNotImplementedError, toplevel->core()->toErrorString(this));
+			toplevel->verifyErrorClass()->throwError(kNotImplementedError, toplevel->core()->toErrorString(this));
 		}
 
 		#ifdef AVMPLUS_MIR
 
 		Verifier verifier(this, toplevel);
 
-		AvmCore* core = this->core();
-		if (core->turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
+		if (AvmCore::turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
 		{
 			CodegenMIR mir(this);
 			verifier.verify(&mir);	// pass 2 - data flow
@@ -106,7 +105,7 @@ namespace avmplus
 				else
 					impl32 = Interpreter::interp32;
 				#else
-				toplevel()->throwError(kOutOfMemoryError);
+				toplevel()->errorClass()->throwError(kOutOfMemoryError);
 				#endif //AVMPLUS_INTERP
 			}
 		}
@@ -158,17 +157,17 @@ namespace avmplus
 			return;
 
 		//localNames[slot] = core->internString(name);
-		WBRC(core->GetGC(), localNames, &localNames[slot], core->internString(name));
+		WBRC(core->gc, localNames, &localNames[slot], core->internString(name));
 	}
 
 	void MethodInfo::initLocalNames()
 	{
 		AvmCore* core = this->core();
-		localNames = (Stringp*) core->GetGC()->Calloc(local_count, sizeof(Stringp), GC::kZero|GC::kContainsPointers);
+		localNames = (Stringp*) core->gc->Calloc(local_count, sizeof(Stringp), GC::kZero|GC::kContainsPointers);
 		for(int i=0; i<local_count; i++)
 		{
 			//localNames[i] = core->kundefined;
-			WBRC(core->GetGC(), localNames, &localNames[i], core->kundefined);
+			WBRC(core->gc, localNames, &localNames[i], core->kundefined);
 		}
 	}
 

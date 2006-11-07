@@ -436,7 +436,7 @@ namespace avmshell
 						  << filename
 						  << ", " << (targetLine) << ".\n";
 
-			BreakAction *breakAction = new (core->GetGC()) BreakAction(sourceFile,
+			BreakAction *breakAction = new (core->gc) BreakAction(sourceFile,
 																  breakpointId,
 																  filename,
 																  targetLine);

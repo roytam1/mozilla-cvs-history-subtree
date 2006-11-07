@@ -45,19 +45,19 @@ namespace avmplus
 	void AbstractFunction::initParamTypes(int count)
 	{
 		MMGC_MEM_TYPE(this);
-		m_types = (Traits**)core()->GetGC()->Calloc(count, sizeof(Traits*), GC::kContainsPointers|GC::kZero);
+		m_types = (Traits**)core()->gc->Calloc(count, sizeof(Traits*), GC::kContainsPointers|GC::kZero);
 	}
 
 	void AbstractFunction::initDefaultValues(int count)
 	{
 		MMGC_MEM_TYPE(this);
-		m_values = (Atom*)core()->GetGC()->Calloc(count, sizeof(Atom), GC::kContainsPointers|GC::kZero);
+		m_values = (Atom*)core()->gc->Calloc(count, sizeof(Atom), GC::kContainsPointers|GC::kZero);
 	}
 	
 	void AbstractFunction::setParamType(int index, Traits* t)
 	{
 		AvmAssert(index >= 0 && index <= param_count);
-		WB(core()->GetGC(), m_types, &m_types[index], t);
+		WB(core()->gc, m_types, &m_types[index], t);
 	}
 
 	void AbstractFunction::setDefaultValue(int index, Atom value)
@@ -65,11 +65,11 @@ namespace avmplus
 		AvmAssert(index > (param_count-optional_count) && index <= param_count);
 		int i = index-(param_count-optional_count)-1;
 		AvmAssert(i >= 0 && i < optional_count);
-		WBATOM(core()->GetGC(), m_values, &m_values[i], value);
+		WBATOM(core()->gc, m_values, &m_values[i], value);
 	}
 	
 	#ifdef AVMPLUS_VERBOSE
-	Stringp AbstractFunction::format(const AvmCore* core) const
+	Stringp AbstractFunction::format(AvmCore* core) const
 	{
 		return core->concatStrings(name ? (Stringp)name : core->newString("?"),
 			core->newString("()"));
@@ -322,7 +322,7 @@ namespace avmplus
 						if (value == undefinedAtom)
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else if (t == NUMBER_TYPE)
@@ -331,7 +331,7 @@ namespace avmplus
 						if (!(AvmCore::isInteger(value)||AvmCore::isDouble(value)))
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else if (t == BOOLEAN_TYPE)
@@ -340,7 +340,7 @@ namespace avmplus
 						if (!AvmCore::isBoolean(value))
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else if (t == UINT_TYPE)
@@ -349,13 +349,13 @@ namespace avmplus
 						if (!AvmCore::isInteger(value) && !AvmCore::isDouble(value)) 
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 						double d = AvmCore::number_d(value);
 						if (d != (uint32)d) 
 						{								
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else if (t == INT_TYPE)
@@ -364,13 +364,13 @@ namespace avmplus
 						if (!AvmCore::isInteger(value) && !AvmCore::isDouble(value)) 
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 						double d = AvmCore::number_d(value);
 						if (d != (int)d)
 						{								
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else if (t == STRING_TYPE)
@@ -379,7 +379,7 @@ namespace avmplus
 						if (!(AvmCore::isNull(value) || AvmCore::isString(value)))
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else if (t == NAMESPACE_TYPE)
@@ -388,7 +388,7 @@ namespace avmplus
 						if (!(AvmCore::isNull(value) || AvmCore::isNamespace(value)))
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					else
@@ -398,7 +398,7 @@ namespace avmplus
 						if (!AvmCore::isNull(value))
 						{
 							Multiname qname(t->ns, t->name);
-							toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+							toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 						}
 					}
 					

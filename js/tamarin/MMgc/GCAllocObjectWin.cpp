@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #include <windows.h>
 
 #include "MMgc.h"

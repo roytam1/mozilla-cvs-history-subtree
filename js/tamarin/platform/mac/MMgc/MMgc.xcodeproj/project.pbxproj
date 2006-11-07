@@ -15,6 +15,8 @@
 		1E60774109733377007D0E1E /* GC.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E60771609733377007D0E1E /* GC.h */; };
 		1E60774209733377007D0E1E /* GCAlloc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E60771709733377007D0E1E /* GCAlloc.cpp */; };
 		1E60774309733377007D0E1E /* GCAlloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E60771809733377007D0E1E /* GCAlloc.h */; };
+		1E60774409733377007D0E1E /* GCAllocBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E60771909733377007D0E1E /* GCAllocBase.cpp */; };
+		1E60774509733377007D0E1E /* GCAllocBase.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E60771A09733377007D0E1E /* GCAllocBase.h */; };
 		1E60774609733377007D0E1E /* GCAllocObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E60771B09733377007D0E1E /* GCAllocObject.h */; };
 		1E60774709733377007D0E1E /* GCAllocObjectMac.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E60771C09733377007D0E1E /* GCAllocObjectMac.cpp */; };
 		1E60774A09733377007D0E1E /* GCDebug.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E60771F09733377007D0E1E /* GCDebug.h */; };
@@ -50,6 +52,8 @@
 		1E60771609733377007D0E1E /* GC.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GC.h; path = ../../../MMgc/GC.h; sourceTree = SOURCE_ROOT; };
 		1E60771709733377007D0E1E /* GCAlloc.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = GCAlloc.cpp; path = ../../../MMgc/GCAlloc.cpp; sourceTree = SOURCE_ROOT; };
 		1E60771809733377007D0E1E /* GCAlloc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GCAlloc.h; path = ../../../MMgc/GCAlloc.h; sourceTree = SOURCE_ROOT; };
+		1E60771909733377007D0E1E /* GCAllocBase.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = GCAllocBase.cpp; path = ../../../MMgc/GCAllocBase.cpp; sourceTree = SOURCE_ROOT; };
+		1E60771A09733377007D0E1E /* GCAllocBase.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GCAllocBase.h; path = ../../../MMgc/GCAllocBase.h; sourceTree = SOURCE_ROOT; };
 		1E60771B09733377007D0E1E /* GCAllocObject.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GCAllocObject.h; path = ../../../MMgc/GCAllocObject.h; sourceTree = SOURCE_ROOT; };
 		1E60771C09733377007D0E1E /* GCAllocObjectMac.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = GCAllocObjectMac.cpp; path = ../../../MMgc/GCAllocObjectMac.cpp; sourceTree = SOURCE_ROOT; };
 		1E60771F09733377007D0E1E /* GCDebug.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GCDebug.h; path = ../../../MMgc/GCDebug.h; sourceTree = SOURCE_ROOT; };
@@ -109,6 +113,8 @@
 				1E60771609733377007D0E1E /* GC.h */,
 				1E60771709733377007D0E1E /* GCAlloc.cpp */,
 				1E60771809733377007D0E1E /* GCAlloc.h */,
+				1E60771909733377007D0E1E /* GCAllocBase.cpp */,
+				1E60771A09733377007D0E1E /* GCAllocBase.h */,
 				1E60771B09733377007D0E1E /* GCAllocObject.h */,
 				1E60771C09733377007D0E1E /* GCAllocObjectMac.cpp */,
 				1E60771F09733377007D0E1E /* GCDebug.h */,
@@ -163,6 +169,7 @@
 				1E60773F09733377007D0E1E /* FixedMalloc.h in Headers */,
 				1E60774109733377007D0E1E /* GC.h in Headers */,
 				1E60774309733377007D0E1E /* GCAlloc.h in Headers */,
+				1E60774509733377007D0E1E /* GCAllocBase.h in Headers */,
 				1E60774609733377007D0E1E /* GCAllocObject.h in Headers */,
 				1E60774A09733377007D0E1E /* GCDebug.h in Headers */,
 				1E60774F09733377007D0E1E /* GCHashtable.h in Headers */,
@@ -225,6 +232,7 @@
 				1E60773E09733377007D0E1E /* FixedMalloc.cpp in Sources */,
 				1E60774009733377007D0E1E /* GC.cpp in Sources */,
 				1E60774209733377007D0E1E /* GCAlloc.cpp in Sources */,
+				1E60774409733377007D0E1E /* GCAllocBase.cpp in Sources */,
 				1E60774709733377007D0E1E /* GCAllocObjectMac.cpp in Sources */,
 				1E60774B09733377007D0E1E /* GCDebugMac.cpp in Sources */,
 				1E60774E09733377007D0E1E /* GCHashtable.cpp in Sources */,
@@ -285,6 +293,7 @@
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -297,6 +306,7 @@
 					USE_MMAP,
 					_MAC,
 				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				INSTALL_PATH = /usr/local/lib;
 				OTHER_CFLAGS = (
 					"-finline-functions",
@@ -397,6 +407,7 @@
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -409,6 +420,7 @@
 					USE_MMAP,
 					_MAC,
 				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				INSTALL_PATH = /usr/local/lib;
 				OTHER_CFLAGS = (
 					"-finline-functions",

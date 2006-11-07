@@ -355,7 +355,7 @@ namespace avmshell
 				//UTF-16 big endian
 				c += 2;
 				len = (len - 2) >> 1;
-				Stringp out = new (core()->GetGC()) String(len);
+				Stringp out = new (core()->gc) String(len);
 				wchar *buffer = out->lockBuffer();
 				for (uint32 i = 0; i < len; i++)
 				{
@@ -371,7 +371,7 @@ namespace avmshell
 				//UTF-16 little endian
 				c += 2;
 				len = (len - 2) >> 1;
-				Stringp out = new (core()->GetGC()) String(len);
+				Stringp out = new (core()->gc) String(len);
 				wchar *buffer = out->lockBuffer();
 				for (uint32 i = 0; i < len; i++)
 				{
@@ -527,14 +527,14 @@ namespace avmshell
 		m_byteArray.Seek(0);
 
         if (error != Z_OK && error != Z_STREAM_END) {
-            toplevel()->throwError(kShellCompressedDataError);
+            toplevel()->errorClass()->throwError(kShellCompressedDataError);
         }
     }
 
 	void ByteArrayObject::checkNull(void *instance, const char *name)
 	{
 		if (instance == NULL) {
-			toplevel()->throwTypeError(kNullArgumentError, core()->toErrorString(name));
+			toplevel()->typeErrorClass()->throwError(kNullArgumentError, core()->toErrorString(name));
 		}
 	}	
 	void ByteArrayObject::writeBytes(ByteArrayObject *bytes,
@@ -607,20 +607,19 @@ namespace avmshell
 	ScriptObject* ByteArrayClass::createInstance(VTable *ivtable,
 												 ScriptObject *prototype)
     {
-        return new (core()->GetGC(), ivtable->getExtraSize()) ByteArrayObject(ivtable, prototype);
+        return new (core()->gc, ivtable->getExtraSize()) ByteArrayObject(ivtable, prototype);
     }
 
 
 	ByteArrayObject * ByteArrayClass::readFile(Stringp filename)
 	{
-		Toplevel* toplevel = this->toplevel();
 		if (!filename) {
-			toplevel->throwArgumentError(kNullArgumentError, "filename");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, toplevel()->core()->toErrorString("filename"));
 		}
 		UTF8String* filenameUTF8 = filename->toUTF8String();
 		FILE *fp = fopen(filenameUTF8->c_str(), "rb");
 		if (fp == NULL) {
-			toplevel->throwError(kFileOpenError, filename);
+			toplevel()->errorClass()->throwError(kFileOpenError, filename);
 		}
 		fseek(fp, 0L, SEEK_END);
 		long len = ftell(fp);
@@ -658,33 +657,31 @@ namespace avmshell
 
 	void ByteArrayObject::set_endian(Stringp type)
 	{
-		AvmCore* core = this->core();
-		type = core->internString(type);
-		if (type == core->constantString("bigEndian"))
+		type = core()->internString(type);
+		if (type == core()->constantString("bigEndian"))
 		{
 			m_byteArray.SetEndian(kBigEndian);
 		}
-		else if (type == core->constantString("littleEndian"))
+		else if (type == core()->constantString("littleEndian"))
 		{
 			m_byteArray.SetEndian(kLittleEndian);
 		}
 		else
 		{
-			toplevel()->throwArgumentError(kInvalidArgumentError, "type");
+			toplevel()->argumentErrorClass()->throwError(kInvalidArgumentError, toplevel()->core()->toErrorString("type"));
 		}
 	}
 
 	void ByteArrayObject::writeFile(Stringp filename)
 	{
-		Toplevel* toplevel = this->toplevel();
 		if (!filename) {
-			toplevel->throwArgumentError(kNullArgumentError, "filename");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, toplevel()->core()->toErrorString("filename"));
 		}
 
 		UTF8String* filenameUTF8 = filename->toUTF8String();
-		FILE *fp = fopen(filenameUTF8->c_str(), "wb");
+		FILE *fp = fopen(filenameUTF8->c_str(), "w");
 		if (fp == NULL) {
-			toplevel->throwError(kFileWriteError, filename);
+			toplevel()->errorClass()->throwError(kFileWriteError, filename);
 		}
 
 		fwrite(&(this->GetByteArray())[0], this->get_length(), 1, fp);

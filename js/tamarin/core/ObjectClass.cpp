@@ -172,7 +172,7 @@ namespace avmplus
 		{
 			// cannot create properties on a sealed object.
 			Multiname multiname(core->publicNamespace, name);
-			toplevel()->throwReferenceError(kWriteSealedError, &multiname, traits());
+			toplevel()->referenceErrorClass()->throwError(kWriteSealedError, core->toErrorString(&multiname), core->toErrorString(traits()));
 		}
 	}		
 	

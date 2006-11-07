@@ -40,15 +40,15 @@ namespace avmplus
         #ifdef DEBUGGER
 		LangName languageNames[kLanguages] =
 		{
-            { "en",     LANG_en },
-            { "de",     LANG_de },
-            { "es",     LANG_es },
-            { "fr",     LANG_fr },
-            { "it",     LANG_it },
-            { "ja",     LANG_ja },
-            { "ko",     LANG_ko },
-            { "zh-CN",  LANG_zh_CN },
-            { "zh-TW",  LANG_zh_TW },
+            { "en",       LANG_en },
+            { "de",       LANG_de },
+            { "es",       LANG_es },
+            { "fr",       LANG_fr },
+            { "it",       LANG_it },
+            { "ja",       LANG_ja },
+            { "ko",       LANG_ko },
+            { "zh-CN",    LANG_zh_CN },
+            { "zh-TW",    LANG_zh_TW },
 
 		};
 
@@ -191,7 +191,7 @@ namespace avmplus
             {
                 /*1000,0*/ "The system is out of memory.",
                 /*1001,1*/ "The method %1 is not implemented.",
-                /*1002,2*/ "The precision argument must be between %2 and %3; %1 is invalid.",
+                /*1002,2*/ "The precision argument must be between 0 and 20; %1 is invalid.",
                 /*1003,3*/ "The radix argument must be between 2 and 36; got %1.",
                 /*1004,4*/ "Method %1 was invoked on an incompatible object.",
                 /*1005,5*/ "Array index is not a positive integer (%1).",
@@ -323,7 +323,7 @@ namespace avmplus
             {
                 /*1000,0*/ "Nicht genügend Speicher vorhanden.",
                 /*1001,1*/ "Die Methode %1 wird nicht implementiert.",
-                /*1002,2*/ "Das Genauigkeitsargument muss zwischen %2 und %3 liegen; %1 ist ungültig.",
+                /*1002,2*/ "Das Genauigkeitsargument muss zwischen 0 und 20 liegen; %1 ist ungültig.",
                 /*1003,3*/ "Das Grundzahlargument muss zwischen 2 und 36 liegen; %1 erhalten.",
                 /*1004,4*/ "Methode %1 wurde für ein nicht kompatibles Objekt aufgerufen.",
                 /*1005,5*/ "Array-Index ist keine positive Ganzzahl (%1).",
@@ -455,7 +455,7 @@ namespace avmplus
             {
                 /*1000,0*/ "El sistema no tiene memoria disponible.",
                 /*1001,1*/ "El método %1 no se ha implementado.",
-                /*1002,2*/ "El argumento de precisión debe estar entre %2 y %3; %1 no es válido.",
+                /*1002,2*/ "El argumento de precisión debe estar entre 0 y 20; %1 no es válido.",
                 /*1003,3*/ "El argumento de base debe estar entre 2 y 36; se obtuvo %1.",
                 /*1004,4*/ "Se invocó el método %1 en un objeto no compatible.",
                 /*1005,5*/ "El índice de matriz no es un entero positivo (%1).",
@@ -587,7 +587,7 @@ namespace avmplus
             {
                 /*1000,0*/ "La mémoire du système est saturée.",
                 /*1001,1*/ "La méthode %1 n'est pas mise en oeuvre.",
-                /*1002,2*/ "L'argument precision doit être compris entre %2 et %3. %1 n'est pas valide.",
+                /*1002,2*/ "L'argument precision doit être compris entre 0 et 20. %1 n'est pas valide.",
                 /*1003,3*/ "L'argument radix doit être compris entre 2 et 36. %1 détecté.",
                 /*1004,4*/ "La méthode %1 a été invoquée pour un objet non compatible.",
                 /*1005,5*/ "L'index du tableau n'est pas un entier positif (%1).",
@@ -719,7 +719,7 @@ namespace avmplus
             {
                 /*1000,0*/ "Memoria del sistema esaurita.",
                 /*1001,1*/ "Il metodo %1 non è implementato.",
-                /*1002,2*/ "L'argomento precision deve essere compreso tra %2 e %3; %1 non è un valore valido.",
+                /*1002,2*/ "L'argomento precision deve essere compreso tra 0 e 20; %1 non è un valore valido.",
                 /*1003,3*/ "L'argomento radix deve essere compreso tra 2 e 36; valore ricevuto: %1.",
                 /*1004,4*/ "È stato richiamato il metodo %1 su un oggetto incompatibile.",
                 /*1005,5*/ "L'indice della matrice non è un numero intero positivo (%1).",
@@ -851,7 +851,7 @@ namespace avmplus
             {
                 /*1000,0*/ "システムのメモリ不足です。",
                 /*1001,1*/ "メソッド %1 は実装されていません。",
-                /*1002,2*/ "精度の引数には %2 ～ %3 の値を指定してください。%1 は不正な値です。",
+                /*1002,2*/ "精度の引数には 0 ～ 20 の値を指定してください。%1 は不正な値です。",
                 /*1003,3*/ "基数の引数には 2 ～ 36 の値を指定してください。%1 は不正な値です。",
                 /*1004,4*/ "メソッド %1 が対応していないオブジェクトで呼び出されました。",
                 /*1005,5*/ "配列インデックスが正の整数 (%1) ではありません。",
@@ -983,7 +983,7 @@ namespace avmplus
             {
                 /*1000,0*/ "시스템의 메모리가 부족합니다.",
                 /*1001,1*/ "메서드 %1이(가) 구현되지 않습니다.",
-                /*1002,2*/ "정밀도 인수는 %2과 %3 사이의 값이어야 합니다. %1은(는) 유효하지 않습니다.",
+                /*1002,2*/ "정밀도 인수는 0과 20 사이의 값이어야 합니다. %1은(는) 유효하지 않습니다.",
                 /*1003,3*/ "기수 인수는 2와 36 사이의 값이어야 하지만 %1입니다.",
                 /*1004,4*/ "호환되지 않는 객체에서 메서드 %1을(를) 호출했습니다.",
                 /*1005,5*/ "배열 인덱스가 양의 정수(%1)가 아닙니다.",
@@ -1115,7 +1115,7 @@ namespace avmplus
             {
                 /*1000,0*/ "系统内存不足。",
                 /*1001,1*/ "未实现 %1 方法。",
-                /*1002,2*/ "精度参数必须介于 %2 到 %3 之间；%1 无效。",
+                /*1002,2*/ "精度参数必须介于 0 到 20 之间；%1 无效。",
                 /*1003,3*/ "基数参数必须介于 2 到 36 之间；当前值为 %1。",
                 /*1004,4*/ "对不兼容的对象调用了方法 %1。",
                 /*1005,5*/ "数组索引不是正整数 (%1)。",
@@ -1247,7 +1247,7 @@ namespace avmplus
             {
                 /*1000,0*/ "系統記憶體不足。",
                 /*1001,1*/ "未實作方法 %1。",
-                /*1002,2*/ "精確度引數必須介於 %2 和 %3 之間；%1 無效。",
+                /*1002,2*/ "精確度引數必須介於 0 和 20 之間；%1 無效。",
                 /*1003,3*/ "基數引數必須介於 2 和 36 之間；目前引數為 %1。",
                 /*1004,4*/ "在不相容的物件上呼叫了 %1 方法。",
                 /*1005,5*/ "陣列索引不是正整數 (%1)。",

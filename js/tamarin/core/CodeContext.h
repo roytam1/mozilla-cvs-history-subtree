@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_CodeContext__
 #define __avmplus_CodeContext__
 
@@ -42,10 +43,6 @@ namespace avmplus
 	// When an AS3 method is called, the AS3 method will set core->codeContext to its code context.
 	class CodeContext : public MMgc::GCFinalizedObject
 	{
-	public:		
-#ifdef DEBUGGER
-		virtual Toplevel *toplevel() const = 0;
-#endif
 	};
 
 	class EnterCodeContext

@@ -29,19 +29,20 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 // build version info
 
 // build number counts 1-n for development builds, and restarts at 1-n for release builds
 
 // the visible build code d for development, r for release candidate
-#define AVMPLUS_BUILD_CODE		"d684"
+#define AVMPLUS_BUILD_CODE		"d688"
 
 #define AVMPLUS_VERSION_USER		"1.0"
 
 // Version codes
 // Major version, minor version, build number high order value, build number low order value
-#define AVMPLUS_VERSION_NUMBER		1,0,0,684
-#define AVMPLUS_VERSION_STRING		"1,0,0,684"
+#define AVMPLUS_VERSION_NUMBER		1,0,0,688
+#define AVMPLUS_VERSION_STRING		"1,0,0,688"
 #define AVMPLUS_MAJOR_VERSION		1
 #define AVMPLUS_MINOR_VERSION		0
 #define AVMPLUS_BUILD_NUMBER		0

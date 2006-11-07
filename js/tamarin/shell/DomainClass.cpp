@@ -61,7 +61,7 @@ namespace avmshell
 			baseDomain = core->builtinDomain;
 		}
 		
-		Domain* domain = new (core->GetGC()) Domain(core, baseDomain);
+		Domain* domain = new (core->gc) Domain(core, baseDomain);
 
 		if (parentDomain) {
 			domainToplevel = parentDomain->domainToplevel;
@@ -69,24 +69,23 @@ namespace avmshell
 			domainToplevel = core->initShellBuiltins();
 		}
 		
-		domainEnv = new (core->GetGC()) DomainEnv(core, domain, parentDomain->domainEnv);
+		domainEnv = new (core->gc) DomainEnv(core, domain, parentDomain->domainEnv);
 	}
 
 	Atom DomainObject::loadBytes(ByteArrayObject *b)
 	{
-		AvmCore* core = this->core();
 		if (!b)
-			toplevel()->throwTypeError(kNullArgumentError, core->toErrorString("bytes"));
+			toplevel()->typeErrorClass()->throwError(kNullArgumentError, core()->toErrorString("bytes"));
 
-		ShellCodeContext* codeContext = new (core->GetGC()) ShellCodeContext();
+		ShellCodeContext* codeContext = new (core()->gc) ShellCodeContext();
 		codeContext->domainEnv = domainEnv;
 
 		// parse new bytecode
 		size_t len = b->get_length();
-		ScriptBuffer code = core->newScriptBuffer(len);
+		ScriptBuffer code = core()->newScriptBuffer(len);
 		memcpy(code.getBuffer(), &b->GetByteArray()[0], len); 
 		Toplevel *toplevel = domainToplevel;
-		return core->handleActionBlock(code, 0,
+		return core()->handleActionBlock(code, 0,
 								  domainEnv,
 								  toplevel,
 								  NULL, NULL, NULL, codeContext);
@@ -99,10 +98,10 @@ namespace avmshell
 
 		ScriptEnv* script = (ScriptEnv*) domainEnv->getScriptInit(multiname);
 		if (script == (ScriptEnv*)BIND_AMBIGUOUS)
-            toplevel->throwReferenceError(kAmbiguousBindingError, multiname);
+            toplevel->referenceErrorClass()->throwError(kAmbiguousBindingError, core()->toErrorString(multiname));
 
 		if (script == (ScriptEnv*)BIND_NONE)
-            toplevel->throwReferenceError(kUndefinedVarError, multiname);
+            toplevel->referenceErrorClass()->throwError(kUndefinedVarError, core()->toErrorString(multiname));
 
 		if (script->global == NULL)
 		{
@@ -119,7 +118,7 @@ namespace avmshell
 		AvmCore *core = this->core();
 
 		if (name == NULL) {
-			toplevel()->throwArgumentError(kNullArgumentError, core->toErrorString("name"));
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, toplevel()->core()->toErrorString("name"));
 		}
 			
 		// Search for a dot from the end.
@@ -134,9 +133,9 @@ namespace avmshell
 		Namespace* ns;
 		Stringp className;
 		if (dot != -1) {
-			Stringp uri = core->internString(new (core->GetGC()) String(name, 0, dot));
+			Stringp uri = core->internString(new (core->gc) String(name, 0, dot));
 			ns = core->internNamespace(core->newNamespace(uri));
-			className = core->internString(new (core->GetGC()) String(name, dot+1, name->length()-(dot+1)));
+			className = core->internString(new (core->gc) String(name, dot+1, name->length()-(dot+1)));
 		} else {
 			ns = core->publicNamespace;
 			className = core->internString(name);
@@ -148,14 +147,14 @@ namespace avmshell
 		
 		ScriptObject *container = finddef(&multiname, codeContext->domainEnv);
 		if (!container) {
-			toplevel()->throwTypeError(kClassNotFoundError, core->toErrorString(&multiname));
+			toplevel()->typeErrorClass()->throwError(kClassNotFoundError, core->toErrorString(&multiname));
 		}
 		Atom atom = toplevel()->getproperty(container->atom(),
 											&multiname,
 											container->vtable);
 
 		if (!core->istype(atom, core->traits.class_itraits)) {
-			toplevel()->throwTypeError(kClassNotFoundError, core->toErrorString(&multiname));
+			toplevel()->typeErrorClass()->throwError(kClassNotFoundError, core->toErrorString(&multiname));
 		}			
 		return (ClassClosure*)AvmCore::atomToScriptObject(atom);
 	}
@@ -169,7 +168,7 @@ namespace avmshell
 	ScriptObject* DomainClass::createInstance(VTable *ivtable,
 											  ScriptObject *prototype)
 	{
-		return new (core()->GetGC(), ivtable->getExtraSize()) DomainObject(ivtable, prototype);
+		return new (core()->gc, ivtable->getExtraSize()) DomainObject(ivtable, prototype);
 	}
 
 	DomainObject* DomainClass::get_currentDomain()

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AtomWriteBarrier__
 #define __avmplus_AtomWriteBarrier__
 

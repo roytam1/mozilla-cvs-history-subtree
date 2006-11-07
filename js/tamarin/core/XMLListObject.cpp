@@ -100,8 +100,8 @@ namespace avmplus
 		}
 
 		// step 2
-		//QNameObject* qname = new (core->GetGC()) QNameObject(toplevel->qnameClass(), *m);
-		XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel->xmlListClass(), this->atom(), m);
+		//QNameObject* qname = new (core->gc) QNameObject(toplevel->qnameClass(), *m);
+		XMLListObject *l = new (core->gc) XMLListObject(toplevel->xmlListClass(), this->atom(), m);
 
 		// step 3
 		for (uint32 i = 0; i < _length(); i++)
@@ -166,7 +166,7 @@ namespace avmplus
 		}
 		else if (_length() > 1)
 		{
-			toplevel->throwTypeError(kXMLAssigmentOneItemLists);
+			toplevel->typeErrorClass()->throwError(kXMLAssigmentOneItemLists);
 		}
 
 #ifdef _DEBUG
@@ -208,7 +208,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 
-		XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass());
+		XMLListObject *l = new (core->gc) XMLListObject(toplevel()->xmlListClass());
 		for (uint32 i = 0; i < numChildren(); i++)
 		{
 			XMLObject *xm = _getAt(i);
@@ -304,7 +304,7 @@ namespace avmplus
 				if (core->isXMLList (attributesExist) && (core->atomToXMLList (attributesExist)->_length() > 0))
 					return;
 
-				y = new (core->GetGC()) AttributeE4XNode (core->atomToXML (r), 0);
+				y = new (core->gc) AttributeE4XNode (core->atomToXML (r), 0);
 				y->setQName (core, m_targetProperty);
 
 				// warning: it looks like this is sent prior to the attribute being added.
@@ -315,11 +315,11 @@ namespace avmplus
 				// Added because of bug 145184 - appendChild with a text node not working right
 				(core->isXML(V) && core->atomToXML(V)->getClass() == E4XNode::kText))
 			{
-				y = new (core->GetGC()) TextE4XNode (core->atomToXML(r), 0);
+				y = new (core->gc) TextE4XNode (core->atomToXML(r), 0);
 			}
 			else
 			{
-				y = new (core->GetGC()) ElementE4XNode (core->atomToXML (r));
+				y = new (core->gc) ElementE4XNode (core->atomToXML (r));
 				y->setQName (core, this->m_targetProperty);
 			}
 
@@ -400,9 +400,9 @@ namespace avmplus
 		{
 			// create a shallow copy c of V
 			XMLListObject *src = core->atomToXMLList (V);
-			XMLListObject *c = new (core->GetGC()) XMLListObject(toplevel->xmlListClass());
+			XMLListObject *c = new (core->gc) XMLListObject(toplevel->xmlListClass());
 
-			//c->m_children = new (core->GetGC()) AtomArray (src->numChildren());
+			//c->m_children = new (core->gc) AtomArray (src->numChildren());
 			c->m_children.checkCapacity(src->numChildren());
 			for (uint32 i2 = 0; i2 < src->numChildren(); i2++)
 				c->m_children.push (src->m_children.getAt(i2));
@@ -419,7 +419,7 @@ namespace avmplus
 						parent->_replace (core, toplevel, q, c->atom());
 						for (uint32 j = 0; j < c->_length(); j++)
 						{
-							XMLObject *xo = new (core->GetGC()) XMLObject(toplevel->xmlClass(), parent->_getAt(q + j));
+							XMLObject *xo = new (core->gc) XMLObject(toplevel->xmlClass(), parent->_getAt(q + j));
 							c->m_children.setAt (j, xo->atom());
 						}
 
@@ -434,7 +434,7 @@ namespace avmplus
 
 			bool notify = (parent && XMLObject::notifyNeeded(parent));
 			XMLObject* prior =  (notify) ? _getAt(i) : 0;
-			XMLObject* target = (notify) ? (new (core->GetGC())  XMLObject (toplevel->xmlClass(), parent)) : 0;
+			XMLObject* target = (notify) ? (new (core->gc)  XMLObject (toplevel->xmlClass(), parent)) : 0;
 
 			m_children.removeAt (i);
 			for (uint32 i2 = 0; i2 < src->numChildren(); i2++)
@@ -479,12 +479,12 @@ namespace avmplus
 					if (parent->_getAt(q) == _getAt(i)->getNode())
 					{
 						parent->_replace (core, toplevel, q, V);
-						XMLObject *xo = new (core->GetGC()) XMLObject (toplevel->xmlClass(), parent->_getAt(q));
+						XMLObject *xo = new (core->gc) XMLObject (toplevel->xmlClass(), parent->_getAt(q));
 						V = xo->atom();
 
 						if (XMLObject::notifyNeeded(parent))
 						{
-							XMLObject *po = new (core->GetGC()) XMLObject (toplevel->xmlClass(), parent);
+							XMLObject *po = new (core->gc) XMLObject (toplevel->xmlClass(), parent);
 							po->childChanges(xmlClass()->kNodeAdded, xo->atom());
 						}
 						break;
@@ -544,7 +544,7 @@ namespace avmplus
 					if (XMLObject::notifyNeeded(px->getNode()) && x->getClass() == E4XNode::kElement)
 					{
 						AvmCore *core = this->core();
-						XMLObject *r = new (core->GetGC())  XMLObject (xmlClass(), x);
+						XMLObject *r = new (core->gc)  XMLObject (xmlClass(), x);
 						px->childChanges(xmlClass()->kNodeRemoved, r->atom());
 					}
 				}
@@ -606,11 +606,11 @@ namespace avmplus
 	void XMLListObject::_append(E4XNode *v)
 	{
 		AvmCore *core = this->core();
-		XMLObject *x = new (core->GetGC()) XMLObject (toplevel()->xmlClass(), v);
+		XMLObject *x = new (core->gc) XMLObject (toplevel()->xmlClass(), v);
 
 		if (v->getParent())
 		{
-			XMLObject *p = new (core->GetGC()) XMLObject (toplevel()->xmlClass(), v->getParent());
+			XMLObject *p = new (core->gc) XMLObject (toplevel()->xmlClass(), v->getParent());
 			setTargetObject(p->atom());
 		}
 		else
@@ -662,7 +662,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 
-		XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), m_targetObject, &m_targetProperty.getMultiname());
+		XMLListObject *l = new (core->gc) XMLListObject(toplevel()->xmlListClass(), m_targetObject, &m_targetProperty.getMultiname());
 
 		l->m_children.checkCapacity(numChildren());
 		for (uint32 i = 0; i < numChildren(); i++)
@@ -762,7 +762,7 @@ namespace avmplus
 		{
 			if (core->isXMLList (base) && core->atomToXMLList(base)->_length() > 1)
 			{
-				toplevel()->throwTypeError(kXMLAssigmentOneItemLists);
+				toplevel()->typeErrorClass()->throwError(kXMLAssigmentOneItemLists);
 				return nullObjectAtom;
 			}
 
@@ -855,7 +855,7 @@ namespace avmplus
 				// but always occurs (comparing to Rhino)
 				if (/*xmlClass()->getPrettyPrinting() && */i)
 					output << "\n";	
-					AtomArray *AncestorNamespaces = new (core->GetGC()) AtomArray();
+					AtomArray *AncestorNamespaces = new (core->gc) AtomArray();
 					xm->__toXMLString(output, AncestorNamespaces, 0);
 			}
 		}
@@ -887,7 +887,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 
-		XMLListObject *m = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *m = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		for (uint32 i = 0; i < _length(); i++)
 		{
@@ -911,7 +911,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 
-		XMLListObject *m = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *m = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		for (uint32 i = 0; i < _length(); i++)
 		{
@@ -956,7 +956,7 @@ namespace avmplus
 		Multiname m;
 		toplevel->ToXMLName (name, m);
 
-		XMLListObject *xl = new (core->GetGC()) XMLListObject(toplevel->xmlListClass(), this->atom(), &m);
+		XMLListObject *xl = new (core->gc) XMLListObject(toplevel->xmlListClass(), this->atom(), &m);
 
 		for (uint32 i = 0; i < _length(); i++)
 		{
@@ -1109,7 +1109,7 @@ namespace avmplus
 	XMLListObject *XMLListObject::processingInstructions (Atom name) // name defaults to '*'
 	{
 		AvmCore *core = this->core();
-		XMLListObject *m = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *m = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		for (uint32 i = 0; i < _length(); i++)
 		{
@@ -1141,7 +1141,7 @@ namespace avmplus
 	{
 		AvmCore *core = this->core();
 
-		XMLListObject *m = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), this->atom());
+		XMLListObject *m = new (core->gc) XMLListObject(toplevel()->xmlListClass(), this->atom());
 
 		for (uint32 i = 0; i < _length(); i++)
 		{
@@ -1221,7 +1221,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("addNamespace"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("addNamespace"));
 			return 0;
 		}
 	}
@@ -1235,7 +1235,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("appendChild"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("appendChild"));
 			return 0;
 		}
 	}
@@ -1249,7 +1249,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("childIndex"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("childIndex"));
 			return -1;
 		}
 	}
@@ -1263,7 +1263,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("inScopeNamespaces"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("inScopeNamespaces"));
 			return 0;
 		}
 	}
@@ -1277,7 +1277,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("insertChildAfter"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("insertChildAfter"));
 			return undefinedAtom;
 		}
 	}
@@ -1291,7 +1291,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("insertChildBefore"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("insertChildBefore"));
 			return undefinedAtom;
 		}
 	}
@@ -1305,7 +1305,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("name"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("name"));
 			return nullStringAtom;
 		}
 	}
@@ -1320,7 +1320,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("namespace"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("namespace"));
 			return nullStringAtom;
 		}
 	}
@@ -1334,7 +1334,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("localName"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("localName"));
 			return nullStringAtom;
 		}
 	}
@@ -1348,7 +1348,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("namespaceDeclarations"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("namespaceDeclarations"));
 			return 0;
 		}
 	}
@@ -1363,7 +1363,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("nodeKind"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("nodeKind"));
 			return 0;
 		}
 	}
@@ -1377,7 +1377,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("prependChild"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("prependChild"));
 			return 0;
 		}
 	}
@@ -1391,7 +1391,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("removeNamespace"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("removeNamespace"));
 			return 0;
 		}
 	}
@@ -1405,7 +1405,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("replace"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("replace"));
 			return 0;
 		}
 	}
@@ -1419,7 +1419,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setChildren"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setChildren"));
 			return 0;
 		}
 	}
@@ -1433,7 +1433,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setLocalName"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setLocalName"));
 		}
 	}
 
@@ -1446,7 +1446,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setName"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setName"));
 		}
 	}
 
@@ -1459,7 +1459,7 @@ namespace avmplus
 		else
 		{
 			// throw type error
-			toplevel()->throwTypeError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setNamespace"));
+			toplevel()->typeErrorClass()->throwError(kXMLOnlyWorksWithOneItemLists, core()->toErrorString("setNamespace"));
 		}
 	}
 

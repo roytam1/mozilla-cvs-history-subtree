@@ -306,7 +306,7 @@ namespace avmplus
 	}
 
 #ifdef AVMPLUS_VERBOSE
-	void PrintWriter::formatP(const char* format, Stringp arg1, Stringp arg2, Stringp arg3)
+	void PrintWriter::formatP(const char* format, Stringp arg1, Stringp arg2, Stringp arg3, Stringp arg4, Stringp arg5, Stringp arg6)
 	{
 		while (*format) 
 		{
@@ -329,8 +329,23 @@ namespace avmplus
 						if (arg3) *this << arg3;
 						break;
 
+					case '4':
+						AvmAssertMsg(arg4!=0, "Expected argument got null");
+						if (arg4) *this << arg4;
+						break;
+
+					case '5':
+						AvmAssertMsg(arg5!=0, "Expected argument got null");
+						if (arg5) *this << arg5;
+						break;
+
+					case '6':
+						AvmAssertMsg(arg6!=0, "Expected argument got null");
+						if (arg6) *this << arg6;
+						break;
+
 					default:
-						AvmAssertMsg(0, "Invalid specifier; should be between '1' and '3'");
+						AvmAssertMsg(0, "Invalid specifier; should be between '1' and '6'");
 						break;
 				}
 			}

@@ -66,13 +66,13 @@ namespace avmplus
 		if (mode == MathUtils::DTOSTR_PRECISION)
 		{
 			if (precision < 1 || precision > 21) {
-				toplevel()->throwRangeError(kInvalidPrecisionError, core->toErrorString(precision), core->toErrorString(1), core->toErrorString(21));
+				toplevel()->rangeErrorClass()->throwError(kInvalidPrecisionError, core->toErrorString(precision));
 			}
 		}
 		else
 		{
 			if (precision < 0 || precision > 20) {
-				toplevel()->throwRangeError(kInvalidPrecisionError, core->toErrorString(precision), core->toErrorString(0), core->toErrorString(20));
+				toplevel()->rangeErrorClass()->throwError(kInvalidPrecisionError, core->toErrorString(precision));
 			}
 		}
 
@@ -84,7 +84,7 @@ namespace avmplus
 										 mode,
 										 precision);
 
-		return new (core->GetGC()) String(buffer,len);
+		return new (core->gc) String(buffer,len);
 	}
 	
 	Stringp NumberClass::toString(double dVal, int radix)
@@ -95,7 +95,7 @@ namespace avmplus
 			return core->doubleToString(dVal);
 
 		if (radix < 2 || radix > 36)
-			toplevel()->throwRangeError(kInvalidRadixError, core->toErrorString(radix));
+			toplevel()->rangeErrorClass()->throwError(kInvalidRadixError, core->toErrorString(radix));
 
 		// convertDoubleToStringRadix will convert the integer part of dVal
 		// to a string in the specified radix, and it will handle large numbers

@@ -284,7 +284,6 @@ namespace avmplus
 		}
 	}
 
-
 	ArrayObject* RegExpObject::split(Stringp subject, uint32 limit)
 	{
 		AvmCore *core = this->core();

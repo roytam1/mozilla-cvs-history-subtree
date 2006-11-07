@@ -164,7 +164,6 @@ namespace avmplus
 		
 		void SET_CONDITION_CODE(ConditionCode conditionCode);
 		
-		void IMM32(int value);
 		void MOV(Register dst, Register src);
 		void STMFD_bang(Register dst, int mask);
 		void SUB_imm8(Register dst, Register src, int imm8);
@@ -174,50 +173,34 @@ namespace avmplus
 		void LDR(Register dst, int offset, Register base);
 		void BIC_imm8(Register dst, Register src, int imm8);
 		void MOV_imm8(Register dst, int imm8);
-		void MOV_imm16(Register dst, int imm16);
 		void CMP_imm8(Register src, int imm8);
 		void ADD(Register dst, Register src1, Register src2);
 		void SUB(Register dst, Register src1, Register src2);
 		void AND(Register dst, Register src1, Register src2);
-		void ORR(Register dst, Register src1, Register src2);
-		void EOR(Register dst, Register src1, Register src2);
+		void OR(Register dst, Register src1, Register src2);
+		void XOR(Register dst, Register src1, Register src2);
 		void MUL(Register dst, Register src1, Register src2);
 		void CMP(Register Rn, Register Rm);		
 		void LSL(Register dst, Register src, Register rShift);
 		void LSR(Register dst, Register src, Register rShift);
-		void ASR(Register dst, Register src, Register rShift);
-		void LSL_i(Register dst, Register src, int iShift);
-		void LSR_i(Register dst, Register src, int iShift);
-		void ASR_i(Register dst, Register src, int iShift);
+		void ASR(Register dst, Register src, Register rShift);		
 		void STR(Register src, int offset, Register base);
 		void ADD_imm8(Register dst, Register src, int imm8);
-		void ADD_imm8_hi(Register dst, Register src, int imm8);
-		void ADD_imm16(Register dst, Register src, int imm16);
 		void AND_imm8(Register dst, Register src, int imm8);
-		void ORR_imm8(Register dst, Register src, int imm8);
-		void EOR_imm8(Register dst, Register src, int imm8);
 		void LDMFD(Register src, int mask);
-		void LDMFD_bang(Register src, int mask);		
 
 		// Cheeseball way of doing imm32.
 		void MOV_imm32(Register dst, int imm32);
-
-		void flushDataCache(void *start, int len);
-		
+				   
 		// Set if verbose output desired
 		#ifdef AVMPLUS_VERBOSE
 		bool verboseFlag;
 		#endif
 		PrintWriter *console;
 
-		// Immediate pool
-		MDInstruction *immediatePool;
-		int immediatePoolCount;
-		const static int kImmediatePoolMax = 16;
-		
-		static const char* const regNames[];
+		static const char* regNames[];
 #define gpregNames regNames
-		static const char* const conditionCodes[];
+		static const char* conditionCodes[];
 	};
 }
 

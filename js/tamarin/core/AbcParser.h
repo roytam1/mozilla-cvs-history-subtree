@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AbcParser__
 #define __avmplus_AbcParser__
 
@@ -41,7 +42,7 @@ namespace avmplus
 	class AbcParser
 	{
 	public:
-		AbcParser(AvmCore* core, ScriptBuffer code, 
+		AbcParser(AvmCore* core, ScriptBuffer code,
 			Toplevel* toplevel,
 			Domain* domain,
 			AbstractFunction *nativeMethods[],
@@ -103,7 +104,7 @@ namespace avmplus
 #ifdef SAFE_PARSE
 			// check to see if we are trying to read past the file end.
 			if (p < abcStart || p+7 >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif //SAFE_PARSE
 			unsigned first  = p[0] | p[1]<<8 | p[2]<<16 | p[3]<<24;
 			unsigned second = p[4] | p[5]<<8 | p[6]<<16 | p[7]<<24;
@@ -119,7 +120,7 @@ namespace avmplus
 		{
 #ifdef SAFE_PARSE
 			if (p < abcStart || p+1 >= abcEnd)
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif //SAFE_PARSE
 			return p[0] | p[1]<<8;
 		}
@@ -142,7 +143,7 @@ namespace avmplus
 			// parsing of the file down.  With this buffer, only one check at the
 			// top of this function is necessary. (we will read on into our own memory)
 		    if ( p < abcStart || p >= abcEnd )
-				toplevel->throwVerifyError(kCorruptABCError);
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
 #endif //SAFE_PARSE
 
 			int result = p[0];
@@ -165,7 +166,7 @@ namespace avmplus
 			}
 			result = (result & 0x001fffff) | p[3]<<21;
 			if (!(result & 0x10000000))
-		{
+			{
 				p += 4;
 				return result;
 			}
@@ -174,7 +175,19 @@ namespace avmplus
 			return result;
 		}
 
-		unsigned int readU30(const byte *&p) const;
+		unsigned int readU30(const byte *&p) const
+		{
+#ifdef SAFE_PARSE
+			// We have added kBufferPadding bytes to the end of the main swf buffer.
+			// Why?  Here we can read from 1 to 5 bytes.  If we were to
+			// put the required safety checks at each byte read, we would slow
+			// parsing of the file down.  With this buffer, only one check at the
+			// top of this function is necessary. (we will read on into our own memory)
+			if ( p < abcStart || p >= abcEnd )
+				toplevel->verifyErrorClass()->throwError(kCorruptABCError);
+#endif //SAFE_PARSE
+			return toplevel->readU30(p);
+		}
 
 	private:
 		Toplevel* const		toplevel;
@@ -199,8 +212,6 @@ namespace avmplus
 #ifdef FEATURE_BUFFER_GUARD // no Carbon
 		BufferGuard *guard;
 #endif
-		void addTraits(Hashtable *ht, Traits *traits, Traits *baseTraits);
-
 	};
 
 }

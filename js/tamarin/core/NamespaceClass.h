@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_NamespaceClass__
 #define __avmplus_NamespaceClass__
 

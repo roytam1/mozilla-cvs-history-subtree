@@ -67,9 +67,6 @@ namespace avmplus
 #include "ByteArrayGlue.h"
 #include "TypedArrayClass.h"
 #include "DictionaryGlue.h"
-#include "JavaGlue.h"
-
-#pragma warning(disable:4996)
 
 namespace avmplus
 {
@@ -85,9 +82,6 @@ namespace avmshell
 	{
 	  public:
 		DWB(DomainEnv*) domainEnv;
-#ifdef DEBUGGER
-		virtual Toplevel *toplevel() const { return domainEnv->toplevel(); }
-#endif
 	};
 	
 	/**

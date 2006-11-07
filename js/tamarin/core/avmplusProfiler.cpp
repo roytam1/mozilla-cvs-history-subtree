@@ -38,7 +38,7 @@ namespace avmplus
 	ScriptObjectTable::ScriptObjectTable(AvmCore *core)
 	{
 		this->core = core;
-		table = new (core->GetGC()) Hashtable(core->GetGC());
+		table = new (core->gc) Hashtable(core->gc);
 	}
 	
 	void ScriptObjectTable::addScriptObject(ScriptObject *object)

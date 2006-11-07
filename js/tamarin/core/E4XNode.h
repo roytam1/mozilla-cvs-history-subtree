@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_E4XNode__
 #define __avmplus_E4XNode__
 

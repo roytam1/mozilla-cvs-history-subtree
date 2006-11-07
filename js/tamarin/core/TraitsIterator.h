@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_TraitsIterator__
 #define __avmplus_TraitsIterator__
 

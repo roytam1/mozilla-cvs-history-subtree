@@ -29,12 +29,14 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #include <stdlib.h>
 
 #include "MMgc.h"
 
 namespace MMgc
 {
+#if TARGET_API_MAC_CARBON
 	void* GCAllocObject::operator new (size_t size)
 	{
 		return malloc(size);
@@ -54,5 +56,26 @@ namespace MMgc
 	{
 		free(ptr);
 	}
+#else
+	void* GCAllocObject::operator new (size_t size)
+	{
+		return NewPtr(size);
+	}
+
+	void* GCAllocObject::operator new[] (size_t size)
+	{
+		return NewPtr(size);
+	}
+	
+	void GCAllocObject::operator delete (void *ptr)
+	{
+		DisposePtr((char*) ptr);
+	}
+
+	void GCAllocObject::operator delete[](void *ptr)
+	{
+		DisposePtr((char*) ptr);
+	}
+#endif
 }
 

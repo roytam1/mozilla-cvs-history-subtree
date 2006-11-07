@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_ScriptBuffer__
 #define __avmplus_ScriptBuffer__
 
@@ -87,9 +88,9 @@ namespace avmplus
 	class ReadOnlyScriptBufferImpl : public ScriptBufferImpl
 	{
 	public:
-		ReadOnlyScriptBufferImpl(const byte *buf, size_t size) {
+		ReadOnlyScriptBufferImpl(byte *buf, size_t size) {
 			this->size = size;
-			this->buffer = (byte*) buf;;
+			this->buffer = buf;;
 		}
 	};
 	/**

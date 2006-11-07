@@ -36,27 +36,60 @@
 #ifdef AVMPLUS_PROFILE
 namespace avmplus
 {
-	StaticProfiler::StaticProfiler()
-	{
-		sprofile = false;
-		memset(counts, 0, 256*sizeof(int));
-		memset(sizes, 0, 256*sizeof(int));
-		totalCount = 0;
-		totalSize = 0;
-		cpoolSize = 0;
-		cpoolIntSize = 0;
-		cpoolUIntSize = 0;
-		cpoolDoubleSize = 0;
-		cpoolStrSize = 0;
-		cpoolNsSize = 0;
-		cpoolNsSetSize = 0;
-		cpoolMnSize = 0;
-		bodiesSize = 0;
-		methodsSize = 0;
-		instancesSize = 0;
-		classesSize = 0;
-		scriptsSize = 0;
-	}
+	bool StaticProfiler::sprofile = false;
+
+	int StaticProfiler::counts[256] = {
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	};		
+	int StaticProfiler::sizes[256] = {
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	};
+	int StaticProfiler::totalCount = 0;
+	int StaticProfiler::totalSize = 0;
+
+	int StaticProfiler::cpoolSize = 0;
+	int StaticProfiler::cpoolIntSize = 0;
+	int StaticProfiler::cpoolUIntSize = 0;
+	int StaticProfiler::cpoolDoubleSize = 0;
+	int StaticProfiler::cpoolStrSize = 0;
+	int StaticProfiler::cpoolNsSize = 0;
+	int StaticProfiler::cpoolNsSetSize = 0;
+	int StaticProfiler::cpoolMnSize = 0;
+	int StaticProfiler::bodiesSize = 0;
+	int StaticProfiler::methodsSize = 0;
+	int StaticProfiler::instancesSize = 0;
+	int StaticProfiler::classesSize = 0;
+	int StaticProfiler::scriptsSize = 0;
 
 	void StaticProfiler::dump(PrintWriter& console)
     {

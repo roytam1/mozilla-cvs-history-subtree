@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_Debugger__
 #define __avmplus_Debugger__
 
@@ -355,13 +356,6 @@ namespace avmplus
 		 * @param k is the type of watch; one of read, write, readwrite.
 		 */
 		//bool watchpointClear(Atom context, Atom memberName);
-
-		/**
-		 * Checks whether any variables that are being watched have
-		 * changed.  Returns true if at least one has changed, or
-		 * false if none of them have changed.
-		 */
-		virtual bool hitWatchpoint() = 0;
 
 		/**
 		 * --------------------------------------------------

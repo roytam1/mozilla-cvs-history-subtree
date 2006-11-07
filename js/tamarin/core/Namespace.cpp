@@ -45,13 +45,6 @@ namespace avmplus
 		AvmAssert (AvmCore::isName(prefix) || AvmCore::isNullOrUndefined(prefix));
 		setPrefix(prefix);
 		setUri(uri, flags);
-#ifdef DEBUGGER
-		AvmCore *core = (AvmCore *) GC::GetGC(this)->GetGCContextVariable (MMgc::GC::GCV_AVMCORE);
-		if(core->allocationTracking)
-		{
-			AvmCore::chargeAllocation(atom());
-		}
-#endif
 	}
 
 	Namespace::~Namespace()

@@ -188,7 +188,7 @@ namespace avmplus
 	Stringp StringClass::fromCharCode(Atom *argv, int argc)
 	{
 		AvmCore* core = this->core();
-		Stringp out = new (core->GetGC()) String(argc);
+		Stringp out = new (core->gc) String(argc);
 		wchar *ptr = out->lockBuffer();
 
 		for (int i=0; i<argc; i++) {
@@ -261,7 +261,7 @@ namespace avmplus
 
 			int newlen = subject->length() - searchString->length() + replacement->length();
 
-			Stringp out = new (core->GetGC()) String(newlen);
+			Stringp out = new (core->gc) String(newlen);
 
 			wchar *buffer = out->lockBuffer();
 			memcpy(buffer, subject->c_str(), index*sizeof(wchar));
@@ -327,7 +327,7 @@ namespace avmplus
 			// delim is empty string, split on each char
 			for (int i = 0; i < ilen && (unsigned)i < limit; i++)
 			{
-				Stringp sub = new (core->GetGC()) String(in, i, 1);
+				Stringp sub = new (core->gc) String(in, i, 1);
 				out->setUintProperty(count++, sub->atom());
 			}
 			return out;
@@ -363,7 +363,7 @@ namespace avmplus
 						break;
 
 					int sublen=k+1-start;
-					Stringp sub = new (core->GetGC()) String(in, start, sublen);
+					Stringp sub = new (core->gc) String(in, start, sublen);
 
 					out->setUintProperty(count++, sub->atom());
 					
@@ -377,7 +377,7 @@ namespace avmplus
 		// the string to the last element of the array
 		if( numSeg < limit )
         {
-			Stringp sub = new (core->GetGC()) String(in, start, ilen);
+			Stringp sub = new (core->gc) String(in, start, ilen);
             out->setUintProperty(count, sub->atom());
         }
         return out;

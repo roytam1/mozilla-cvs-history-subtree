@@ -92,23 +92,41 @@ namespace avmplus
 	{
 		AvmAssert(ifc != this && ifc != NULL);
 		//*(findInterface(ifc)) = ifc;
-		WB(core->GetGC(), this, findInterface(ifc), ifc);
+		WB(core->gc, this, findInterface(ifc), ifc);
 
 		if(ifc->isInterface)
 			hasInterfaces = true;
 
 		for (int i=0, n=ifc->interfaceCapacity; i < n; i++)
 		{
-			Traits* t = ifc->getInterface(i);
+			Traits* t = ifc->getInterfaces()[i];
 			if (t != NULL)
 			{
 				AvmAssert(ifc != this);
 				if(t->isInterface)
 					hasInterfaces = true;
 				//*(findInterface(t)) = t;
-				WB(core->GetGC(), this, findInterface(t), t);
+				WB(core->gc, this, findInterface(t), t);
 			}			
 		}
+	}
+
+	void Traits::defineVirtualCall(Stringp name, Namespace* ns,
+								int disp_id)
+	{
+		add(name, ns, disp_id<<3|BIND_METHOD);
+	}
+
+	Accessor* Traits::getAccessor(Stringp name, Namespace* ns) const
+	{
+		// do not walk the inheritance tree!  We don't want subclass accessors to be bound in
+		// the base class traits via its Accessor object.
+		Binding b = get(name, ns);
+		if( !(b == BIND_NONE || (b&7)==BIND_ACCESSOR) ){
+ 			AvmAssertMsg(0, "(b == BIND_NONE || (b&7)==BIND_ACCESSOR)");
+ 			return (Accessor*)NULL;
+ 		}
+		return (Accessor*) (b&~7);
 	}
 
 	Binding Traits::findBinding(Stringp name, Namespace* ns) const
@@ -140,7 +158,7 @@ namespace avmplus
 		// copy down info from base class
 		AvmAssert(!linked);
 
-		MMgc::GC* gc = core->GetGC();
+		MMgc::GC* gc = core->gc;
 
 		if (slotCount > 0 || methodCount > 0 || hasInterfaces)
 		{
@@ -198,7 +216,7 @@ namespace avmplus
 	{
 		if( !slot_metadata_pos )
 		{	
-			MMgc::GC* gc = core->GetGC();
+			MMgc::GC* gc = core->gc;
 			// Lots of things won't have any metadata, so only alloc the space if we really need it
 			MMGC_MEM_TYPE(this);
 			const byte** idata = (const byte**)gc->Calloc(slotCount+methodCount, sizeof(const byte*), GC::kZero | GC::kContainsPointers);
@@ -282,7 +300,7 @@ namespace avmplus
 
 			initTables();
 
-			pool->resolveTraits(this, firstSlot, toplevel);
+			pool->resolveTraits(this, firstSlot, firstMethod, toplevel);
 
 			// make sure all the methods have resolved types
 			for (int i=0, n=methodCount; i < n; i++)
@@ -312,7 +330,7 @@ namespace avmplus
 
 			if (hasInterfaces && legal && !this->isInterface)
 			{
-				ImtBuilder imtBuilder(core->GetGC());
+				ImtBuilder imtBuilder(core->gc);
 
 				// make sure every interface method is implemented
 				for (int i=0, n=interfaceCapacity; i < n; i++)
@@ -329,26 +347,25 @@ namespace avmplus
 							Namespace* ns = ifc->nsAt(j);
 							Binding iBinding = ifc->valueAt(j);
 
-							if (AvmCore::isMethodBinding(iBinding))
+							if ((iBinding&7) == BIND_METHOD)
 							{
-								virt = ifc->getMethod(AvmCore::bindingToMethodId(iBinding));
+								virt = ifc->getMethod(urshift(iBinding,3));
 
 								Binding cBinding = findBinding(name, ns);
 
-								if (!AvmCore::isMethodBinding(cBinding))
+								if ((cBinding & 7) != BIND_METHOD)
 								{
 									// Try again with public namespace
-									Binding pBinding = findBinding(name, core->publicNamespace);
+									cBinding = findBinding(name, core->publicNamespace);
 
 									// If that worked, add a trait.
-									if (AvmCore::isMethodBinding(pBinding))
+									if ((cBinding & 7) == BIND_METHOD)
 									{
-										add(name, ns, pBinding);
-										cBinding = pBinding;
+										add(name, ns, cBinding);
 									}
 								}
 
-								if (!AvmCore::isMethodBinding(cBinding))
+								if ((cBinding & 7) != BIND_METHOD)
 								{
 									#ifdef AVMPLUS_VERBOSE
 									core->console << "\n";
@@ -360,32 +377,31 @@ namespace avmplus
 								}
 								else
 								{
-									int disp_id = AvmCore::bindingToMethodId(cBinding);
+									int disp_id = urshift(cBinding,3);
 									over = getMethod(disp_id);
 									if (over != virt)
 										legal &= checkOverride(virt, over);
 									imtBuilder.addEntry(virt, disp_id);
 								}
 							}
-							else if (AvmCore::isAccessorBinding(iBinding))
+							else if ((iBinding&7) == BIND_ACCESSOR)
 							{
-								//virtAcc = bindingToAccessor(iBinding)
+								Accessor* virtAcc = AvmCore::bindingToAccessor(iBinding);
 								Binding cBinding = findBinding(name, ns);
 
-								if (!AvmCore::isAccessorBinding(cBinding))
+								if ((cBinding & 7) != BIND_ACCESSOR)
 								{
 									// Try again with public namespace
-									Binding pBinding = findBinding(name, core->publicNamespace);
+									cBinding = findBinding(name, core->publicNamespace);
 
 									// If that worked, add a trait.
-									if (AvmCore::isAccessorBinding(pBinding))
+									if ((cBinding & 7) == BIND_ACCESSOR)
 									{
-										add(name, ns, pBinding);
-										cBinding = pBinding;
+										add(name, ns, cBinding);
 									}
 								}
 
-								if (!AvmCore::isAccessorBinding(cBinding))
+								if ((cBinding&7) != BIND_ACCESSOR)
 								{
 									#ifdef AVMPLUS_VERBOSE
 									core->console << "\n";
@@ -397,11 +413,22 @@ namespace avmplus
 								}
 								else
 								{
-									// check getter & setter overrides
-									if (AvmCore::hasGetterBinding(iBinding))
+									Accessor* overAcc = AvmCore::bindingToAccessor(cBinding);
+									if (virtAcc->get)
 									{
-										virt = ifc->getMethod(AvmCore::bindingToGetterId(iBinding));
-										if (!AvmCore::hasGetterBinding(cBinding))
+										virt = ifc->getMethod(urshift(virtAcc->get,3));
+										if (!overAcc->get)
+										{
+											// Try to inherit a public getter
+											Binding baseBinding = findBinding(name, core->publicNamespace);
+
+											if ((baseBinding & 7) == BIND_ACCESSOR)
+											{
+												Accessor* baseAcc = AvmCore::bindingToAccessor(baseBinding);
+												overAcc->get = baseAcc->get;
+											}
+										}											
+										if (!overAcc->get)
 										{
 											// missing getter
 											#ifdef AVMPLUS_VERBOSE
@@ -414,7 +441,7 @@ namespace avmplus
 										}
 										else
 										{
-											int disp_id = AvmCore::bindingToGetterId(cBinding);
+											int disp_id = urshift(overAcc->get,3);
 											over = getMethod(disp_id);
 											if (over != virt)
 												legal &= checkOverride(virt,over);
@@ -422,10 +449,21 @@ namespace avmplus
 										}
 									}
 
-									if (AvmCore::hasSetterBinding(iBinding))
+									if (virtAcc->set)
 									{
-										virt = ifc->getMethod(AvmCore::bindingToSetterId(iBinding));
-										if (!AvmCore::hasSetterBinding(cBinding))
+										virt = ifc->getMethod(urshift(virtAcc->set,3));
+										if (!overAcc->set)
+										{
+											// Try to inherit a public setter
+											Binding baseBinding = findBinding(name, core->publicNamespace);
+
+											if ((baseBinding & 7) == BIND_ACCESSOR)
+											{
+												Accessor* baseAcc = AvmCore::bindingToAccessor(baseBinding);
+												overAcc->set = baseAcc->set;
+											}
+										}											
+										if (!overAcc->set)
 										{
 											// missing setter
 											#ifdef AVMPLUS_VERBOSE
@@ -438,7 +476,7 @@ namespace avmplus
 										}
 										else
 										{
-											int disp_id = AvmCore::bindingToSetterId(cBinding);
+											int disp_id = urshift(overAcc->set,3);
 											over = getMethod(disp_id);
 											if (over != virt)
 												legal &= checkOverride(virt,over);
@@ -455,7 +493,7 @@ namespace avmplus
             if (!legal)
             {
                 Multiname qname(ns, name);
-                toplevel->throwVerifyError(kIllegalOverrideError, core->toErrorString(&qname), core->toErrorString(this));
+                toplevel->verifyErrorClass()->throwError(kIllegalOverrideError, core->toErrorString(&qname), core->toErrorString(this));
             }
 			linked = true;
 		}
@@ -591,7 +629,7 @@ namespace avmplus
 		int *offsets = getOffsets();
 
 		// slotTypes[slot_id] = t;
-		WB(core->GetGC(), instanceData, &slotTypes[slot_id], t);
+		WB(core->gc, instanceData, &slotTypes[slot_id], t);
 		offsets[slot_id] = offset;
 
 		if (!t)
@@ -616,7 +654,7 @@ namespace avmplus
 			if (value == undefinedAtom)
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			if(value != 0)
@@ -635,7 +673,7 @@ namespace avmplus
 			if (!(AvmCore::isInteger(value)||AvmCore::isDouble(value)))
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			if(AvmCore::number_d(value) != 0)
@@ -654,7 +692,7 @@ namespace avmplus
 			if (!AvmCore::isBoolean(value))
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			AvmAssert(urshift(falseAtom,3) == 0);
@@ -671,14 +709,14 @@ namespace avmplus
 			if (!AvmCore::isInteger(value) && !AvmCore::isDouble(value)) 
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			double d = AvmCore::number_d(value);
 			if (d != (uint32)d) 
 			{								
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			if(value != (0|kIntegerType))
@@ -694,14 +732,14 @@ namespace avmplus
 			if (!AvmCore::isInteger(value) && !AvmCore::isDouble(value)) 
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			double d = AvmCore::number_d(value);
 			if (d != (int)d)
 			{								
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 		
 			if(value != (0|kIntegerType))
@@ -717,7 +755,7 @@ namespace avmplus
 			if (!(AvmCore::isNull(value) || AvmCore::isString(value)))
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			if(!AvmCore::isNull(value))
@@ -733,7 +771,7 @@ namespace avmplus
 			if (!(AvmCore::isNull(value) || AvmCore::isNamespace(value)))
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 
 			if(!AvmCore::isNull(value))
@@ -750,7 +788,7 @@ namespace avmplus
 			if (!AvmCore::isNull(value))
 			{
 				Multiname qname(t->ns, t->name);
-				toplevel->throwVerifyError(kIllegalDefaultValue, core->toErrorString(&qname));
+				toplevel->verifyErrorClass()->throwError(kIllegalDefaultValue, core->toErrorString(&qname));
 			}
 		}
 	}

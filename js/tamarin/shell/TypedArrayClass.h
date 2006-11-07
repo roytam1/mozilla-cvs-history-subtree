@@ -187,7 +187,7 @@ namespace avmshell
 				T *newArray = new T[newCapacity];
 				if (!newArray)
 				{
-					toplevel()->throwError(kOutOfMemoryError);
+					toplevel()->errorClass()->throwError(kOutOfMemoryError);
 				}
 				if (m_array)
 				{

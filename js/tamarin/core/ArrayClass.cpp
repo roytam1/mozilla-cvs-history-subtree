@@ -94,7 +94,7 @@ namespace avmplus
 
 		VTable* ivtable = this->ivtable();
 		ScriptObject* objectPrototype = toplevel->objectClass->prototype;
-		prototype = new (core->GetGC(), ivtable->getExtraSize()) ArrayObject(ivtable, objectPrototype, 0);
+		prototype = new (core->gc, ivtable->getExtraSize()) ArrayObject(ivtable, objectPrototype, 0);
 
 		// According to ECMAscript spec (ECMA-262.pdf)
 		// generic support: concat, join, pop, push, reverse, shift, slice, sort, splice, unshift
@@ -156,8 +156,7 @@ namespace avmplus
 	}
 	
 	/**
-	15.4.4.4 Array.prototype.concat ( [ item1 [ , item2 [ , 
- ] ] ] )
+	15.4.4.4 Array.prototype.concat ( [ item1 [ , item2 [ ,  ] ] ] )
 	When the concat method is called with zero or more arguments item1, item2, etc., it returns an array containing
 	the array elements of the object followed by the array elements of each argument in order.
 	The following steps are taken:
@@ -553,7 +552,7 @@ namespace avmplus
 		{
 
 			index = new uint32[len];
-			atoms = new (core->GetGC()) AtomArray(len);
+			atoms = new (core->gc) AtomArray(len);
 			atoms->setLength(len);
 		}
 
@@ -573,7 +572,7 @@ namespace avmplus
 		// One field value - pre-get our field values so we can just do a regular sort
 		if (cmpFunc == ArraySort::FieldCompareFunc && numFields == 1)
 		{
-			fieldatoms = new (core->GetGC()) AtomArray(len);
+			fieldatoms = new (core->gc) AtomArray(len);
 			fieldatoms->setLength(len);
 
 			// note, loop needs to go until i = -1, but i is unsigned. 0xffffffff is a valid index, so check (i+1) != 0.
@@ -642,7 +641,7 @@ namespace avmplus
 					double val = core->number(atoms->getAt(i));
 					if(MathUtils::isNaN(val))
 						// throw exception (not a Number)
-						toplevel->throwTypeError(kCheckTypeFailedError, core->atomToErrorString(atoms->getAt(i)), core->toErrorString(core->traits.number_itraits));
+						toplevel->typeErrorClass()->throwError(kCheckTypeFailedError, core->atomToErrorString(atoms->getAt(i)), core->toErrorString(core->traits.number_itraits));
 
 				}
 
@@ -744,12 +743,12 @@ namespace avmplus
 		delete [] index;
 		if(atoms) {
 			atoms->clear();
-			core->GetGC()->Free(atoms);
+			core->gc->Free(atoms);
 			atoms = NULL;
 		}
 		if(fieldatoms) {
 			fieldatoms->clear();
-			core->GetGC()->Free(fieldatoms);
+			core->gc->Free(fieldatoms);
 			fieldatoms = NULL;
 		}
 		if(fields) {
@@ -757,7 +756,7 @@ namespace avmplus
 			for(int i=0; i<numFields; i++) {
 				fields[i].name = NULL;
 			}
-			core->GetGC()->Free(fields);
+			core->gc->Free(fields);
 			fields = NULL;
 		}
 	}
@@ -1007,7 +1006,7 @@ namespace avmplus
 			 *  does null checking, apparently expecting this function to return null when the item
 			 *  isn't an object (and thus can't have custom properties added to it). */
             // TypeError in ECMA 
-			toplevel->throwTypeError(
+			toplevel->typeErrorClass()->throwError(
 					   (atom == undefinedAtom) ? kConvertUndefinedToObjectError :
 											kConvertNullToObjectError);
 			#endif
@@ -1170,7 +1169,7 @@ namespace avmplus
 					else
 					{
 						// throw exception (not a Number)
-						toplevel()->throwTypeError(kCheckTypeFailedError, core->atomToErrorString(arg1), core->toErrorString(core->traits.number_itraits));
+						toplevel()->typeErrorClass()->throwError(kCheckTypeFailedError, core->atomToErrorString(arg1), core->toErrorString(core->traits.number_itraits));
 					}
 				}
 			}
@@ -1181,7 +1180,7 @@ namespace avmplus
 			else
 			{
 				// throw exception (not a function)
-				toplevel()->throwTypeError(kCheckTypeFailedError, core->atomToErrorString(arg0), core->toErrorString(core->traits.function_itraits));
+				toplevel()->typeErrorClass()->throwError(kCheckTypeFailedError, core->atomToErrorString(arg0), core->toErrorString(core->traits.function_itraits));
 			}
 		}
 
@@ -1239,7 +1238,7 @@ namespace avmplus
 
 			options = core->integer(optionsAtom);
 
-			fn = (ArraySort::FieldName*) core->GetGC()->Alloc(sizeof(ArraySort::FieldName), GC::kZero|GC::kContainsPointers);
+			fn = (ArraySort::FieldName*) core->gc->Alloc(sizeof(ArraySort::FieldName), GC::kZero|GC::kContainsPointers);
 			fn[0].name = core->internString(namesAtom);
 			fn[0].options = options;
 		}
@@ -1248,7 +1247,7 @@ namespace avmplus
 			ArrayObject *obj = (ArrayObject *)AvmCore::atomToScriptObject(namesAtom);
 
 			nFields = obj->getLength();
-			fn = (ArraySort::FieldName*) core->GetGC()->Calloc(nFields, sizeof(ArraySort::FieldName), GC::kZero|GC::kContainsPointers);
+			fn = (ArraySort::FieldName*) core->gc->Calloc(nFields, sizeof(ArraySort::FieldName), GC::kZero|GC::kContainsPointers);
 
 			for (uint32 i = 0; i < nFields; i++)
 			{
@@ -1387,21 +1386,14 @@ namespace avmplus
 	ArrayObject* ArrayClass::newArray(uint32 capacity)
 	{
 		VTable* ivtable = this->ivtable();
-		ArrayObject *a = new (core()->GetGC(), ivtable->getExtraSize()) 
+		ArrayObject *a = new (core()->gc, ivtable->getExtraSize()) 
 			ArrayObject(ivtable, prototype, capacity);
-#ifdef DEBUGGER
-		if( core()->allocationTracking )
-		{
-			toplevel()->arrayClass->addInstance(a->atom());
-		}
-#endif
 		return a;
 	}
 
-
 	ArrayObject* ArrayClass::createInstance(VTable *ivtable, ScriptObject* prototype)
 	{
-		return new (core()->GetGC(), ivtable->getExtraSize()) ArrayObject(ivtable, prototype, 0);
+		return new (core()->gc, ivtable->getExtraSize()) ArrayObject(ivtable, prototype, 0);
 	}
 
 	int ArrayClass::indexOf (Atom thisAtom, Atom searchElement, int startIndex)
@@ -1456,7 +1448,7 @@ namespace avmplus
 
 		if (callback->isMethodClosure() && !AvmCore::isNull(thisObject)) 
 		{
-			toplevel()->throwTypeError(kArrayFilterNonNullObjectError);
+			toplevel()->typeErrorClass()->throwError(kArrayFilterNonNullObjectError);
 		}
 
 		ScriptObject *d = AvmCore::atomToScriptObject(thisAtom);
@@ -1488,7 +1480,7 @@ namespace avmplus
 
 		if (callback->isMethodClosure() && !AvmCore::isNull(thisObject)) 
 		{
-			toplevel()->throwTypeError(kArrayFilterNonNullObjectError);
+			toplevel()->typeErrorClass()->throwError(kArrayFilterNonNullObjectError);
 		}
 
 		ScriptObject *d = AvmCore::atomToScriptObject(thisAtom);
@@ -1520,7 +1512,7 @@ namespace avmplus
 
 		if (callback->isMethodClosure() && !AvmCore::isNull(thisObject)) 
 		{
-			toplevel()->throwTypeError(kArrayFilterNonNullObjectError);
+			toplevel()->typeErrorClass()->throwError(kArrayFilterNonNullObjectError);
 		}
 
 		ScriptObject *d = AvmCore::atomToScriptObject(thisAtom);
@@ -1546,7 +1538,7 @@ namespace avmplus
 
 		if (callback->isMethodClosure() && !AvmCore::isNull(thisObject)) 
 		{
-			toplevel()->throwTypeError(kArrayFilterNonNullObjectError);
+			toplevel()->typeErrorClass()->throwError(kArrayFilterNonNullObjectError);
 		}
 
 		ScriptObject *d = AvmCore::atomToScriptObject(thisAtom);

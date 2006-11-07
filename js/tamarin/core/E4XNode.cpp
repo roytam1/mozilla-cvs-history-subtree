@@ -255,13 +255,13 @@ namespace avmplus
 			(ns->getPrefix() == core->kEmptyString->atom() && ns->getURI() == core->kEmptyString))
 		{
 			//m_nameOrAux = int (name);
-			WBRC(core->GetGC(), this, &m_nameOrAux, int(name));
+			WBRC(core->gc, this, &m_nameOrAux, int(name));
 			return;
 		}
 
-		E4XNodeAux *aux = new (core->GetGC()) E4XNodeAux (name, ns);
+		E4XNodeAux *aux = new (core->gc) E4XNodeAux (name, ns);
 		//m_nameOrAux = AUXBIT | int(aux);
-		WB(core->GetGC(), this, &m_nameOrAux, AUXBIT | int(aux));
+		WB(core->gc, this, &m_nameOrAux, AUXBIT | int(aux));
 	}
 
 	void E4XNode::setQName (AvmCore *core, Multiname *mn)
@@ -318,7 +318,7 @@ namespace avmplus
 
 		// step 2e - add namespace to inscopenamespaces
 		if (!m_namespaces)
-			m_namespaces = new (core->GetGC()) AtomArray(1);
+			m_namespaces = new (core->gc) AtomArray(1);
 
 		m_namespaces->push (ns->atom());
 
@@ -381,7 +381,7 @@ namespace avmplus
 				// handle case of ":name"
 				if (ptr == tagName)
 				{
-					toplevel->throwTypeError(kXMLBadQName, core->toErrorString(tagName));
+					toplevel->typeErrorClass()->throwError(kXMLBadQName, core->toErrorString(tagName));
 				}
 
 				*localName = (ptr + 1);
@@ -389,7 +389,7 @@ namespace avmplus
 				{
 					// throw error - badly formed prefix:localName pair
 					// where is the localName?
-					toplevel->throwTypeError(kXMLBadQName, core->toErrorString(tagName));
+					toplevel->typeErrorClass()->throwError(kXMLBadQName, core->toErrorString(tagName));
 				}
 
 				prefix = core->internAlloc (tagName, (ptr - tagName));
@@ -430,7 +430,7 @@ namespace avmplus
 		// throw error because we didn't match this prefix
 		if (prefix != core->kEmptyString)
 		{
-			toplevel->throwTypeError(kXMLPrefixNotBound, prefix, core->toErrorString(tagName));
+			toplevel->typeErrorClass()->throwError(kXMLPrefixNotBound, prefix, core->toErrorString(tagName));
 		}
 		return 0;
 	}
@@ -509,14 +509,14 @@ namespace avmplus
 					// handle case of ":name"
 					if (xmlns == attributeName->c_str())
 					{
-						toplevel->throwTypeError(kXMLBadQName, attributeName);
+						toplevel->typeErrorClass()->throwError(kXMLBadQName, attributeName);
 					}
 
 					prefix = xmlns + 1;
 					if (!prefix[0])
 					{
 						// throw exception because of badly formed XML???
-						toplevel->throwTypeError(kXMLBadQName, attributeName);
+						toplevel->typeErrorClass()->throwError(kXMLBadQName, attributeName);
 					}
 				}
 
@@ -543,7 +543,7 @@ namespace avmplus
 		if (!numAttr)
 			return;
 
-		m_attributes = new (core->GetGC()) AtomArray (numAttr);
+		m_attributes = new (core->gc) AtomArray (numAttr);
 
 		// Now we read the attributes
 		index = 0;
@@ -553,7 +553,7 @@ namespace avmplus
 			if (!xmlns) // it's an attribute
 			{
 				// !!@ intern our attributeValue??
-				E4XNode *attrObj = new (core->GetGC()) AttributeE4XNode(this, attributeValue);
+				E4XNode *attrObj = new (core->gc) AttributeE4XNode(this, attributeValue);
 
 				const wchar *localName = attributeName->c_str();
 				Namespace *ns = this->FindNamespace (core, toplevel, attributeName->c_str(), &localName, true);
@@ -610,22 +610,22 @@ namespace avmplus
 		switch (this->getClass())
 		{
 		case kAttribute:
-			x = new (core->GetGC()) AttributeE4XNode (0, getValue());
+			x = new (core->gc) AttributeE4XNode (0, getValue());
 			break;
 		case kText:
-			x = new (core->GetGC()) TextE4XNode (0, getValue());
+			x = new (core->gc) TextE4XNode (0, getValue());
 			break;
 		case kCDATA:
-			x = new (core->GetGC()) CDATAE4XNode (0, getValue());
+			x = new (core->gc) CDATAE4XNode (0, getValue());
 			break;
 		case kComment:
-			x = new (core->GetGC()) CommentE4XNode (0, getValue());
+			x = new (core->gc) CommentE4XNode (0, getValue());
 			break;
 		case kProcessingInstruction:
-			x = new (core->GetGC()) PIE4XNode (0, getValue());
+			x = new (core->gc) PIE4XNode (0, getValue());
 			break;
 		case kElement:
-			x = new (core->GetGC()) ElementE4XNode (0);
+			x = new (core->gc) ElementE4XNode (0);
 			break;
 		}
 
@@ -642,7 +642,7 @@ namespace avmplus
 			// step 2 - for each ns in inScopeNamespaces
 			if (numNamespaces())
 			{
-				y->m_namespaces = new (core->GetGC()) AtomArray (numNamespaces());
+				y->m_namespaces = new (core->gc) AtomArray (numNamespaces());
 				uint32 i;
 				for (i = 0; i < numNamespaces(); i++)
 				{
@@ -653,7 +653,7 @@ namespace avmplus
 			// step 3 - duplicate attribute nodes
 			if (numAttributes())
 			{
-				y->m_attributes = new (core->GetGC()) AtomArray (numAttributes());
+				y->m_attributes = new (core->gc) AtomArray (numAttributes());
 				uint32 i;
 				for (i = 0; i < numAttributes(); i++)
 				{
@@ -668,7 +668,7 @@ namespace avmplus
 			if (numChildren())
 			{
 				AvmAssert(y->m_children == 0);
-				y->m_children = int(new (core->GetGC()) AtomArray (numChildren()));
+				y->m_children = int(new (core->gc) AtomArray (numChildren()));
 				for (uint32 k = 0; k < _length(); k++)
 				{
 					E4XNode *child = _getAt(k);
@@ -822,7 +822,7 @@ namespace avmplus
 				while (n)
 				{
 					if (x == n)
-						toplevel->throwTypeError(kXMLIllegalCyclicalLoop);
+						toplevel->typeErrorClass()->throwError(kXMLIllegalCyclicalLoop);
 					n = n->getParent();
 				}
 
@@ -834,7 +834,7 @@ namespace avmplus
 
 		if (!m_children)
 		{
-			m_children = int(new (core->GetGC()) AtomArray (n));
+			m_children = int(new (core->gc) AtomArray (n));
 		}
 
 		if (xl)
@@ -849,7 +849,7 @@ namespace avmplus
 				while (n)
 				{
 					if (child == n)
-						toplevel->throwTypeError(kXMLIllegalCyclicalLoop);
+						toplevel->typeErrorClass()->throwError(kXMLIllegalCyclicalLoop);
 					n = n->getParent();
 				}
 
@@ -890,7 +890,7 @@ namespace avmplus
 			i = _length();
 			// add a blank spot for this child
 			if (!m_children)
-				m_children = int(new (core->GetGC()) AtomArray (1));
+				m_children = int(new (core->gc) AtomArray (1));
 			convertToAtomArray();
 			AtomArray *aa = ((AtomArray *)(int)m_children);
 			aa->push (Atom(0));
@@ -909,7 +909,7 @@ namespace avmplus
 				while (n)
 				{
 					if (xml == n)
-						toplevel->throwTypeError(kXMLIllegalCyclicalLoop);
+						toplevel->typeErrorClass()->throwError(kXMLIllegalCyclicalLoop);
 					n = n->getParent();
 				}
 			}
@@ -933,7 +933,7 @@ namespace avmplus
 		else
 		{
 			Stringp s = core->string(V);
-			E4XNode *newXML = new (core->GetGC()) TextE4XNode(this, s);
+			E4XNode *newXML = new (core->gc) TextE4XNode(this, s);
 			// if this[i] is going away, clear its parent
 			if (prior)
 			{
@@ -945,7 +945,7 @@ namespace avmplus
 			if (XMLObject::notifyNeeded(newXML))
 			{
 				Atom detail = prior ? prior->getValue()->atom() : NULL;
-				XMLObject* target = new (core->GetGC()) XMLObject(toplevel->xmlClass(), newXML);
+				XMLObject* target = new (core->gc) XMLObject(toplevel->xmlClass(), newXML);
 				target->nonChildChanges(toplevel->xmlClass()->kTextSet, newXML->getValue()->atom(), detail);
 			}
 		}
@@ -966,9 +966,9 @@ namespace avmplus
 		else
 		{
 			Stringp str = (String *)(nameOrAux);
-			E4XNodeAux *aux = new (core->GetGC()) E4XNodeAux (str, core->publicNamespace, f);
+			E4XNodeAux *aux = new (core->gc) E4XNodeAux (str, core->publicNamespace, f);
 			//m_nameOrAux = AUXBIT | int(aux);
-			WB(core->GetGC(), this, &m_nameOrAux, AUXBIT | int(aux));
+			WB(core->gc, this, &m_nameOrAux, AUXBIT | int(aux));
 		}
 	}
 

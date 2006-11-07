@@ -1243,7 +1243,7 @@ namespace avmplus
 			BCTR ();
 			patchRelativeBranch(patchip, mip);
 
-			pool->core->GetGC()->Free(e);
+			pool->core->gc->Free(e);
 			e = next;
 		}
 

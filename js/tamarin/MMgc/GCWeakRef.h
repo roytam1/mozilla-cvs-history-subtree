@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 //
 // GCWeakRef.h
 // GC weak references (aka safe handles) as template classes
@@ -40,22 +41,17 @@
 namespace MMgc
 {
 	// new improved weak ref
-	class GCWeakRef : public GCFinalizedObject
+	class GCWeakRef : public GCObject
 	{
 		friend class GC;
 	public:
 		GCObject *get() { return (GCObject*)m_obj; }
-		~GCWeakRef() 
-		{ 
-			if(m_obj) {
-				GC::GetGC(this)->ClearWeakRef(m_obj); 
-			}
-		}
+		void clear() { m_obj = 0; }
 	private:
 		// override new so we can be tell the GC we don't contain pointers
 		static void *operator new(size_t size, GC *gc)
 		{
-			return gc->Alloc(size, GC::kFinalize, 4);
+			return gc->Alloc(size, 0, 4);
 		}
 		// private, only GC can access
 		GCWeakRef(const void *obj) : m_obj(obj) 

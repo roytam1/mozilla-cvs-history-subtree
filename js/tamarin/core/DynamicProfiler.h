@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_DynamicProfiler__
 #define __avmplus_DynamicProfiler__
 
@@ -49,11 +50,11 @@ namespace avmplus
 		}
 		#endif
 
-		int counts2[256];		
-		int totalCount;
-		AbcOpcode lastOp;
-		uint64 times[256];
-		int lastTime;
+		static int counts2[256];		
+		static int totalCount;
+		static AbcOpcode lastOp;
+		static uint64 times[256];
+		static int lastTime;
 
 		/**
 		 * 1. set markOverhead=0
@@ -66,8 +67,6 @@ namespace avmplus
 		static const int markOverhead = 61;
 
 	public:
-		DynamicProfiler();
-
 		/**
 		 * When dprofile is set to true, the VM performs dynamic
 		 * profiling.  Every instruction is timed and the VM
@@ -77,7 +76,7 @@ namespace avmplus
 		 * the performance characteristics of different
 		 * bytecode instructions.
 		 */
-		bool dprofile;
+		static bool dprofile;
 
 		/**
 		 * When sprofile is set to true, the VM performs static
@@ -85,17 +84,17 @@ namespace avmplus
 		 * to determine how many instructions of each type
 		 * are used in the program.
 		 */
-		bool sprofile;
+		static bool sprofile;
 
 		/**
 		 * Dumps the static and dynamic profiling reports to
 		 * the specified console output stream.
 		 */
-		void dump(PrintWriter& console);
+		static void dump(PrintWriter& console);
 
-		void endmark() { mark((AbcOpcode)0); }
+		static void endmark() { mark((AbcOpcode)0); }
 
-		void mark(AbcOpcode op)
+		static void mark(AbcOpcode op)
 		{
 			#ifdef WIN32
 				int now = rdtsc();
@@ -108,6 +107,8 @@ namespace avmplus
 			lastTime = now;
 			lastOp = op;
 		}
+		static uint32 maxGCPauseTime;
+		static uint32 maxGCPauseCause;
 
 		class StackMark;
 		friend class DynamicProfiler::StackMark;
@@ -115,29 +116,23 @@ namespace avmplus
 		class StackMark
 		{
 			AbcOpcode savedOp;
-			DynamicProfiler* dprof;
 
 		public:
-			StackMark(AbcOpcode op, DynamicProfiler* dprof) : savedOp(OP_nop)	// init to make GCC happy
+			StackMark(AbcOpcode op) : savedOp(OP_nop)	// init to make GCC happy
 			{
-				if (dprof->dprofile)
+				if (dprofile)
 				{
-					savedOp = dprof->lastOp;
-					dprof->mark(op);
-					this->dprof = dprof;
-				}
-				else
-				{
-					this->dprof = NULL;
+					savedOp = DynamicProfiler::lastOp;
+					DynamicProfiler::mark(op);
 				}
 			}
 			~StackMark()
 			{
-				if(dprof) 
+				if(dprofile) 
 				{
-					dprof->mark(savedOp);
-					dprof->totalCount--;
-					dprof->counts2[savedOp]--;
+					DynamicProfiler::mark(savedOp);
+					DynamicProfiler::totalCount--;
+					DynamicProfiler::counts2[savedOp]--;
 				}
 			}
 		};

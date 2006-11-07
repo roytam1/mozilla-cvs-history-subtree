@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_AbstractFunction__
 #define __avmplus_AbstractFunction__
 
@@ -280,7 +281,7 @@ namespace avmplus
 		/** Dummy destructor to avoid warnings */
 		virtual ~AbstractFunction() {}
 	public:
-		virtual Stringp format(const AvmCore* core) const;
+		virtual Stringp format(AvmCore* core) const;
 #endif
 
 #if defined(AVMPLUS_VERBOSE) || defined(DEBUGGER)

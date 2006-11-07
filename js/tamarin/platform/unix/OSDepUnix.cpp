@@ -34,12 +34,6 @@
 
 #include "avmplus.h"
 
-#ifdef DEBUGGER
-#include <unistd.h>
-#include <pthread.h>
-#include <CoreServices/CoreServices.h>
-#endif
-
 namespace avmplus
 {
 	uint64 OSDep::currentTimeMillis()
@@ -49,46 +43,4 @@ namespace avmplus
 		uint64 result = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 		return result;
 	}
-
-#ifdef DEBUGGER
-	struct IntWriteTimerData
-	{
-		uint32 interval; // in microseconds
-		pthread_t thread;
-		int *addr;
-	};
-
-	void *timerThread(void *arg)
-	{
-		IntWriteTimerData *data = (IntWriteTimerData*)arg;
-		int *addr = data->addr;
-		uint32 interval = data->interval;
-		while(data->addr)
-		{
-			usleep(interval);
-			*addr = 1;
-		}
-		pthread_exit(NULL);
-		return NULL;
-	}
-
-	intptr OSDep::startIntWriteTimer(uint32 millis, int *addr)
-	{
-		pthread_t p;
-		IntWriteTimerData *data = new IntWriteTimerData();
-		data->interval = millis*1000;
-		data->addr = addr;
-		pthread_create(&p, NULL, timerThread, data);
-		data->thread = p;		
-		return (intptr)data;
-	}
-
-	void OSDep::stopTimer(intptr handle)
-	{
-		IntWriteTimerData *data = (IntWriteTimerData*) handle;
-		data->addr = NULL;
-		pthread_join(data->thread, NULL);
-		delete data;
-	}
-#endif DEBUGGER
 }

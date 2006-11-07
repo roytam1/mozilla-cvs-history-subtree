@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_UnicodeUtils__
 #define __avmplus_UnicodeUtils__
 

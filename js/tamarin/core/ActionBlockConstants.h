@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_ActionBlockConstants__
 #define __avmplus_ActionBlockConstants__
 
@@ -82,7 +83,6 @@ namespace avmplus
 			TRAIT_Class			= 0x04,
 			TRAIT_Function		= 0x05,
 			TRAIT_Const			= 0x06,
-			TRAIT_mask			= 15,
 		};
 		/*@}*/
 

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_PrintWriter__
 #define __avmplus_PrintWriter__
 
@@ -132,7 +133,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		void format(const char *format, ...);
 		void formatV(const char *format, va_list ap);
-		void formatP(const char* format, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0);
+		void formatP(const char* format, Stringp arg1=0, Stringp arg2=0, Stringp arg3=0, Stringp arg4=0, Stringp arg5=0, Stringp arg6=0);
 		#endif
 		
 	private:

@@ -92,7 +92,7 @@ namespace avmplus
 
 		if (AvmCore::isNullOrUndefined(arg))
 		{
-			toplevel()->throwTypeError(
+			toplevel()->typeErrorClass()->throwError(
 					   (arg == undefinedAtom) ? kConvertUndefinedToObjectError :
 											kConvertNullToObjectError);
 			return arg;
@@ -107,7 +107,7 @@ namespace avmplus
 			XMLObject *x = core->atomToXMLObject(arg);
 			Multiname m;
 			bool bFound = x->getQName (&m);
-			XMLListObject *xl = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass(), x->parent(), bFound ? &m : 0);
+			XMLListObject *xl = new (core->gc) XMLListObject(toplevel()->xmlListClass(), x->parent(), bFound ? &m : 0);
 			xl->_append (arg);
 			return xl->atom();
 		}
@@ -117,12 +117,12 @@ namespace avmplus
 	
 			Stringp s = core->string(arg);
 
-			Stringp startTag = new (core->GetGC()) String(s, 0, 2);
-			Stringp endTag = new (core->GetGC()) String(s, s->length() - 3, 3);
+			Stringp startTag = new (core->gc) String(s, 0, 2);
+			Stringp endTag = new (core->gc) String(s, s->length() - 3, 3);
 
 			if (startTag->Equals("<>") && endTag->Equals("</>"))
 			{
-				s = new (core->GetGC()) String(s, 2, s->length() - 5);
+				s = new (core->gc) String(s, 2, s->length() - 5);
 			}
 
 			Namespace *defaultNamespace = toplevel->getDefaultNamespace();
@@ -137,9 +137,9 @@ namespace avmplus
 			//parentString << "\">";
 			//parentString << s;
 			//parentString << "</parent>";
-			XMLObject *x = new (core->GetGC()) XMLObject(toplevel->xmlClass(), s, defaultNamespace);
+			XMLObject *x = new (core->gc) XMLObject(toplevel->xmlClass(), s, defaultNamespace);
 
-			XMLListObject *xl = new (core->GetGC()) XMLListObject(toplevel->xmlListClass());
+			XMLListObject *xl = new (core->gc) XMLListObject(toplevel->xmlListClass());
 			for (uint32 i = 0; i < x->getNode()->_length(); i++)
 			{
 				E4XNode *c = x->getNode()->_getAt (i);
@@ -171,7 +171,7 @@ namespace avmplus
 		// if args[0] is xmllist, create new list and call append
 		if (core->isXMLList(argv[1]))
 		{
-			XMLListObject *l = new (core->GetGC()) XMLListObject(toplevel()->xmlListClass());
+			XMLListObject *l = new (core->gc) XMLListObject(toplevel()->xmlListClass());
 			l->_append (argv[1]);
 			return l->atom();
 		}

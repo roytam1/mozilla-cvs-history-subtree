@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __FixedAlloc__
 #define __FixedAlloc__
 
@@ -51,7 +52,7 @@ namespace MMgc
 		friend class FastAllocator;
 		friend class GC;
 	public:
-		FixedAlloc(int itemSize, GCHeap* heap);
+		FixedAlloc(int itemSize);
 		~FixedAlloc();
 
 		inline void* Alloc(size_t size)
@@ -241,7 +242,7 @@ namespace MMgc
 	class FixedAllocSafe : public FixedAlloc
 	{
 	public:
-		FixedAllocSafe(int itemSize, GCHeap* heap) : FixedAlloc(itemSize, heap) {}
+		FixedAllocSafe(int itemSize) : FixedAlloc(itemSize) {}
 		
 		void* Alloc(size_t size)
 		{ 		

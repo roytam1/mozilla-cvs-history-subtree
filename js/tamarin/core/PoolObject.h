@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_PoolObject__
 #define __avmplus_PoolObject__
 
@@ -123,7 +124,7 @@ namespace avmplus
 		//
 
 		void parseMultiname(const byte *pos, Multiname& m) const;
-		void resolveTraits(Traits *traits, int firstSlot, const Toplevel* toplevel);
+		void resolveTraits(Traits *traits, int firstSlot, int firstMethod, const Toplevel* toplevel);
 		Traits* resolveTypeName(const byte* &pc, const Toplevel* toplevel, bool allowVoid=false) const;
 		Atom resolveQName(const byte* &p, Multiname &m, const Toplevel* toplevel) const;
 
@@ -135,7 +136,7 @@ namespace avmplus
 		* specially marked to allow early binding by making it's
 		* Traits->pool pointer be null.  We only do this for Object
 		*/
-		void allowEarlyBinding(Traits* t, bool& slot) const;
+		void allowEarlyBinding(Traits* t, bool& slot, bool&method) const;
 
 		void parseMultiname(Multiname& m, int index) const
 		{

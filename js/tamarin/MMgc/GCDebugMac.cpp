@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include "MMgc.h"
 
 #ifndef __MWERKS__
@@ -51,7 +52,54 @@ namespace MMgc
 		va_list args;
 		va_start(args, format);
 
+#if TARGET_API_MAC_CARBON
 		vsprintf(buf, format, args);
+#else
+		char *bufptr = buf;
+		// copied from flashstring
+		while (*format) {
+			if (*format == '%') {
+				switch (*++format) {
+				case 's':
+					strcpy(bufptr, va_arg(args, char *));
+					break;
+				case 'd':
+				{
+					int i = va_arg(args, int);
+					if (!i) {
+						*bufptr++ = '0';
+					} else {
+						if (i < 0) {
+							*bufptr++ = '-';
+							i = -i;
+						}
+						int n = 0;
+						char m_buf[128];
+						while (i > 0) {
+							int v = (i % 10);
+							m_buf[n++] = (v<10) ? (v+'0') : (v-10+'a');
+							i /= 10;
+						}
+						char* c = m_buf+n;
+						while (n--) {
+							*bufptr++ = (*--c);
+						}
+					}
+					break;
+				}
+				case 'c':
+					*bufptr++ = va_arg(args, char);
+					break;
+				case 0:
+					return;
+				}
+			} else {
+				*bufptr = *format;
+			}
+			format++;
+			bufptr++;
+		}
+#endif
 		va_end(args);
 		GCDebugMsg(buf, debuggerBreak);
 	}
@@ -61,7 +109,11 @@ namespace MMgc
 		char buf[256];
 		strcpy(buf, p);
 		if(debugBreak) {
+#if TARGET_API_MAC_CARBON
 			::CopyCStringToPascal(buf, (StringPtr)buf);
+#else
+			c2pstr(buf);
+#endif
 			DebugStr((StringPtr) buf);
 		} else {
 			CFStringRef cfStr = ::CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);

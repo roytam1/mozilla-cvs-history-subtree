@@ -63,9 +63,9 @@ namespace avmplus
 		#endif
 	}
 
-	void ErrorClass::throwError(int errorID, Stringp arg1, Stringp arg2, Stringp arg3)
+	void ErrorClass::throwError(int errorID, Stringp arg1, Stringp arg2, Stringp arg3, Stringp arg4, Stringp arg5, Stringp arg6)
 	{
-		core()->throwErrorV(this, errorID, arg1, arg2, arg3);
+		core()->throwErrorV(this, errorID, arg1, arg2, arg3, arg4, arg5, arg6);
 	}
 
 	Stringp ErrorObject::stackTraceToString() const

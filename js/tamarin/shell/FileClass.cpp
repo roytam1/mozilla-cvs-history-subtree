@@ -51,7 +51,7 @@ namespace avmshell
 	bool FileClass::exists(Stringp filename)
 	{
 		if (!filename) {
-			toplevel()->throwArgumentError(kNullArgumentError, "filename");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, core()->toErrorString("filename"));
 		}
 		UTF8String* filenameUTF8 = filename->toUTF8String();
 		FILE *fp = fopen(filenameUTF8->c_str(), "r");
@@ -64,16 +64,13 @@ namespace avmshell
 
 	Stringp FileClass::read(Stringp filename)
 	{
-		Toplevel* toplevel = this->toplevel();
-		AvmCore* core = this->core();
-
 		if (!filename) {
-			toplevel->throwArgumentError(kNullArgumentError, "filename");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, toplevel()->core()->toErrorString("filename"));
 		}
 		UTF8String* filenameUTF8 = filename->toUTF8String();
 		FILE *fp = fopen(filenameUTF8->c_str(), "r");
 		if (fp == NULL) {
-			toplevel->throwError(kFileOpenError, filename);
+			toplevel()->errorClass()->throwError(kFileOpenError, filename);
 		}
 		fseek(fp, 0L, SEEK_END);
 		long len = ftell(fp);
@@ -90,14 +87,14 @@ namespace avmshell
 			// UTF8 BOM
 			if ((c[0] == 0xef) && (c[1] == 0xbb) && (c[2] == 0xbf))
 			{
-				return core->newString(((char *)c) + 3, len - 3);
+				return core()->newString(((char *)c) + 3, len - 3);
 			}
 			else if ((c[0] == 0xfe) && (c[1] == 0xff))
 			{
 				//UTF-16 big endian
 				c += 2;
 				len = (len - 2) >> 1;
-				Stringp out = new (core->GetGC()) String(len);
+				Stringp out = new (gc()) String(len);
 				wchar *buffer = out->lockBuffer();
 				for (long i = 0; i < len; i++)
 				{
@@ -113,7 +110,7 @@ namespace avmshell
 				//UTF-16 little endian
 				c += 2;
 				len = (len - 2) >> 1;
-				Stringp out = new (core->GetGC()) String(len);
+				Stringp out = new (gc()) String(len);
 				wchar *buffer = out->lockBuffer();
 				for (long i = 0; i < len; i++)
 				{
@@ -125,7 +122,7 @@ namespace avmshell
 			}
 		}
 
-		Stringp out = core->newString((char *) c);
+		Stringp out = core()->newString((char *) c);
 		delete [] c;
 		
 		return out;
@@ -134,18 +131,16 @@ namespace avmshell
 	void FileClass::write(Stringp filename,
 						  Stringp data)
 	{
-		Toplevel* toplevel = this->toplevel();
-
 		if (!filename) {
-			toplevel->throwArgumentError(kNullArgumentError, "filename");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, toplevel()->core()->toErrorString("filename"));
 		}
 		if (!data) {
-			toplevel->throwArgumentError(kNullArgumentError, "data");
+			toplevel()->argumentErrorClass()->throwError(kNullArgumentError, toplevel()->core()->toErrorString("data"));
 		}
 		UTF8String* filenameUTF8 = filename->toUTF8String();
 		FILE *fp = fopen(filenameUTF8->c_str(), "w");
 		if (fp == NULL) {
-			toplevel->throwError(kFileWriteError, filename);
+			toplevel()->errorClass()->throwError(kFileWriteError, filename);
 		}
 		UTF8String* dataUTF8 = data->toUTF8String();
 		fwrite(dataUTF8->c_str(), dataUTF8->length(), 1, fp);

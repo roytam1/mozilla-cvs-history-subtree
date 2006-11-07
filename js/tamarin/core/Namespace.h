@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_Namespace__
 #define __avmplus_Namespace__
 
@@ -89,10 +90,6 @@ namespace avmplus
 		Atom nextName(const AvmCore *core, int index);
 		Atom nextValue(int index);
 		int nextNameIndex(int index);
-
-#ifdef DEBUGGER
-		uint32 size() const { return sizeof(Namespace) - sizeof(AvmPlusScriptableObject); }
-#endif
 
 //#ifdef AVMPLUS_VERBOSE
 	public:

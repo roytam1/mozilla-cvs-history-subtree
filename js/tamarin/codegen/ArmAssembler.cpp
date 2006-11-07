@@ -33,10 +33,6 @@
 #include "avmplus.h"
 
 //hack
-#if !defined(AVMPLUS_SYMBIAN) && !defined(UNDER_CE)
-#include <sys/mman.h>
-#endif
-
 #include <stdio.h>
 
 namespace avmplus
@@ -44,7 +40,7 @@ namespace avmplus
 #ifdef AVMPLUS_ARM
 
 	#ifdef AVMPLUS_VERBOSE
-	const char* const ArmAssembler::conditionCodes[] =
+	const char* ArmAssembler::conditionCodes[] =
 	{
 		"eq",
 		"ne",
@@ -60,11 +56,11 @@ namespace avmplus
 		"lt",
 		"gt",
 		"le",
-		"  ",
+		"al",
 		"nv"
 	};
 			
-	const char* const ArmAssembler::regNames[] =
+	const char* ArmAssembler::regNames[] =
 	{
 		"r0",
 		"r1",
@@ -90,33 +86,20 @@ namespace avmplus
 		mip = 0;
 		mipStart = 0;
 		mInstructionCount = 0;
-		#ifdef AVMPLUS_VERBOSE
 		verboseFlag = false;
-		#endif
 		console = 0;
 		conditionCode = AL;
-		immediatePool = 0;
-		immediatePoolCount = 0;
 	}
 
 	#define PRINT_LAST_INSTRUCTION()
 	//#define PRINT_LAST_INSTRUCTION() console->format("%A\n", mip[-1])
-
-	void ArmAssembler::IMM32(int value)
-	{
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  %d // 0x%A\n", mip, value, value);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = value;
-	}
 	
 	void ArmAssembler::MOV(Register dst, Register src)
 	{
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  mov%s   %R, %R\n", mip, conditionCodes[conditionCode], dst, src);
+			console->format("    %A  mov %R, %R\n", mip, dst, src);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x01A00000 | (conditionCode<<28) | (dst<<12) | src;
 
@@ -128,9 +111,9 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  lsl%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src, rShift);
+			console->format("    %A  lsl %R, %R, %R\n", mip, dst, src, rShift);
         #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01A00010 | (conditionCode<<28) | (dst<<12) | src | (rShift<<8);
+		*mip++ = 0x01A00010 | (conditionCode<<28) | (dst<<12) | src | (rShift<<7);
 
 		PRINT_LAST_INSTRUCTION();
 	}
@@ -140,9 +123,9 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  lsr%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src, rShift);
+			console->format("    %A  lsr %R, %R, %R\n", mip, dst, src, rShift);
         #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01A00030 | (conditionCode<<28) | (dst<<12) | src | (rShift<<8);
+		*mip++ = 0x01A00030 | (conditionCode<<28) | (dst<<12) | src | (rShift<<7);
 
 		PRINT_LAST_INSTRUCTION();
 	}
@@ -152,45 +135,9 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  asr%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src, rShift);
+			console->format("    %A  asr %R, %R, %R\n", mip, dst, src, rShift);
         #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01A00050 | (conditionCode<<28) | (dst<<12) | src | (rShift<<8);
-
-		PRINT_LAST_INSTRUCTION();
-	}
-
-	void ArmAssembler::LSL_i(Register dst, Register src, int iShift)
-	{
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  lsl%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, iShift);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01A00000 | (conditionCode<<28) | (dst<<12) | src | (iShift<<7);
-
-		PRINT_LAST_INSTRUCTION();
-	}
-	
-	void ArmAssembler::LSR_i(Register dst, Register src, int iShift)
-	{
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  lsr%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, iShift);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01A00020 | (conditionCode<<28) | (dst<<12) | src | (iShift<<7);
-
-		PRINT_LAST_INSTRUCTION();
-	}
-
-	void ArmAssembler::ASR_i(Register dst, Register src, int iShift)
-	{
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  asr%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, iShift);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01A00040 | (conditionCode<<28) | (dst<<12) | src | (iShift<<7);
+		*mip++ = 0x01A00050 | (conditionCode<<28) | (dst<<12) | src | (rShift<<7);
 
 		PRINT_LAST_INSTRUCTION();
 	}
@@ -200,9 +147,9 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  cmp%s   %R, %R\n", mip, conditionCodes[conditionCode], Rn, Rm);
+			console->format("    %A  cmp %R, %R\n", mip, Rn, Rm);
         #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x01500000 | (conditionCode<<28) | (Rn<<16) | Rm;
+		*mip++ = 0x01400000 | (conditionCode<<28) | (Rn<<16) | Rm;
 
 		PRINT_LAST_INSTRUCTION();
 	}
@@ -212,7 +159,7 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  add%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src1, src2);
+			console->format("    %A  add %R, %R, %R\n", mip, dst, src1, src2);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x00800000 | (conditionCode<<28) | (dst<<12) | (src1<<16) | src2;
 
@@ -224,31 +171,31 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  and%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src1, src2);
+			console->format("    %A  and %R, %R, %R\n", mip, dst, src1, src2);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x00000000 | (conditionCode<<28) | (dst<<12) | (src1<<16) | src2;
 
 		PRINT_LAST_INSTRUCTION();
 	}
 	
-	void ArmAssembler::ORR(Register dst, Register src1, Register src2)
+	void ArmAssembler::OR(Register dst, Register src1, Register src2)
 	{
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  orr%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src1, src2);
+			console->format("    %A  or %R, %R, %R\n", mip, dst, src1, src2);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x01800000 | (conditionCode<<28) | (dst<<12) | (src1<<16) | src2;
 
 		PRINT_LAST_INSTRUCTION();
 	}	
 
-	void ArmAssembler::EOR(Register dst, Register src1, Register src2)
+	void ArmAssembler::XOR(Register dst, Register src1, Register src2)
 	{
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  eor%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src1, src2);
+			console->format("    %A  xor %R, %R, %R\n", mip, dst, src1, src2);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x00200000 | (conditionCode<<28) | (dst<<12) | (src1<<16) | src2;
 
@@ -260,7 +207,7 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  mul%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src1, src2);
+			console->format("    %A  mul %R, %R, %R\n", mip, dst, src1, src2);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x00000090 | (conditionCode<<28) | (dst<<16) | (src1<<8) | src2;
 
@@ -272,7 +219,7 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  sub%s   %R, %R, %R\n", mip, conditionCodes[conditionCode], dst, src1, src2);
+			console->format("    %A  sub %R, %R, %R\n", mip, dst, src1, src2);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x00400000 | (conditionCode<<28) | (dst<<12) | (src1<<16) | src2;
 
@@ -284,7 +231,7 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  stmfd%s %R!, %A\n", mip, conditionCodes[conditionCode], dst, mask);
+			console->format("    %A  stmfd %R!, %A\n", mip, dst, mask);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x09200000 | (conditionCode<<28) | (dst<<16) | mask;
 
@@ -293,51 +240,21 @@ namespace avmplus
 
 	void ArmAssembler::SUB_imm8(Register dst, Register src, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  sub%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
+			console->format("    %A  sub %R, %R, %d\n", mip, dst, src, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x02400000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);		
 		PRINT_LAST_INSTRUCTION();
 	}
 
-	void ArmAssembler::EOR_imm8(Register dst, Register src, int imm8)
-	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  eor%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x02200000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);		
-		PRINT_LAST_INSTRUCTION();
-	}
-
-	void ArmAssembler::ORR_imm8(Register dst, Register src, int imm8)
-	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  orr%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x03800000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);		
-		PRINT_LAST_INSTRUCTION();
-	}
-	
 	void ArmAssembler::RSB_imm8(Register dst, Register src, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  rsb%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
+			console->format("    %A  rsb %R, %R, %d\n", mip, dst, src, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x02600000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);		
 		PRINT_LAST_INSTRUCTION();
@@ -348,7 +265,7 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  bl%s    %A\n", mip, conditionCodes[conditionCode], offset24);
+			console->format("    %A  bl %A\n", mip, offset24);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x0B000000 | (conditionCode<<28) | ((offset24-8)>>2)&0xFFFFFF;
 		PRINT_LAST_INSTRUCTION();
@@ -359,7 +276,7 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  b%s     %A\n", mip, conditionCodes[conditionCode], offset24);
+			console->format("    %A  b %A\n", mip, offset24);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x0A000000 | (conditionCode<<28) | ((offset24-8)>>2)&0xFFFFFF;
 		PRINT_LAST_INSTRUCTION();
@@ -367,50 +284,25 @@ namespace avmplus
 	
 	void ArmAssembler::LDR(Register dst, int offset, Register base)
 	{
-		int off = offset;
-		int opcode;
-		if (off<0) {
-			off = -off;
-			opcode = 0x05100000;
-		} else {
-			opcode = 0x05900000;
-		}
-
-		if (off > 0xFFF)
-		{
-			AvmAssert(base != IP);
-			AvmAssert(base != PC);
-			MOV_imm32(IP, off);
-			off = (int)IP;
-			opcode |= 0x02000000;
-		}
-
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag) {
-			if (base == PC) {
-				console->format("    %A  ldr%s   %R, %d(%R) // %A\n",
-					mip, conditionCodes[conditionCode], dst, offset, base, offset+8+(int)mip);
-			} else if (opcode & 0x02000000) {
-				console->format("    %A  ldr%s   %R, %R(%R)\n", mip, conditionCodes[conditionCode], dst, off, base);
-			} else {
-				console->format("    %A  ldr%s   %R, %d(%R)\n", mip, conditionCodes[conditionCode], dst, offset, base);
-			}
-		}
+		if (verboseFlag)
+			console->format("    %A  ldr %R, %d(%R)\n", mip, dst, offset, base);
         #endif /* AVMPLUS_VERBOSE */
-		AvmAssert(off <= 0xFFF);
-		*mip++ = opcode | (conditionCode<<28) | (base<<16) | (dst<<12) | (off&0xFFF);
+		if (offset<0) {
+			*mip++ = 0x05100000 | (conditionCode<<28) | (base<<16) | (dst<<12) | (-offset&0x7FF);
+		} else {
+			*mip++ = 0x05900000 | (conditionCode<<28) | (base<<16) | (dst<<12) | (offset&0x7FF);
+		}
 		PRINT_LAST_INSTRUCTION();
 	}
 
 	void ArmAssembler::BIC_imm8(Register dst, Register src, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  bic%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
+			console->format("    %A  bic %R, %R, %d\n", mip, dst, src, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x03C00000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);
 		PRINT_LAST_INSTRUCTION();
@@ -418,96 +310,34 @@ namespace avmplus
 	
 	void ArmAssembler::MOV_imm8(Register dst, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  mov%s   %R, %d\n", mip, conditionCodes[conditionCode], dst, imm8);
+			console->format("    %A  mov %R, %d\n", mip, dst, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x03A00000 | (conditionCode<<28) | (dst<<12) | (imm8&0xFF);
 		PRINT_LAST_INSTRUCTION();
 	}
 
-	void ArmAssembler::MOV_imm16(Register dst, int imm16)
-	{
-		AvmAssert((imm16 & 0xFFFF0000) == 0);
-
-		MOV_imm8 (dst, imm16 & 0xFF);
-
-		if (imm16 & 0xFF00)
-		{
-			ADD_imm8_hi (dst, dst, (imm16 >> 8) & 0xFF);
-		}
-	}
-
-	void ArmAssembler::ADD_imm16(Register dst, Register src, int imm16)
-	{
-		AvmAssert((imm16 & 0xFFFF0000) == 0);
-
-		ADD_imm8 (dst, src, imm16 & 0xFF);
-
-		if (imm16 & 0xFF00)
-		{
-			ADD_imm8_hi (dst, dst, (imm16 >> 8) & 0xFF);
-		}
-	}
-	
 	// Cheesy macro for doing IMM32.  Needs work.
 	void ArmAssembler::MOV_imm32(Register dst, int imm32)
 	{
-		if ((imm32&0xFFFF0000) == 0)
-		{
-			// Use imm8/imm16 instead
-			MOV_imm16(dst, imm32);
-			return;
-		}
-		
-		// If there is still immediate pool available, and it is in range of LDR,
-		// use it.
-		if (immediatePool != 0 && mip-immediatePool < 500)
-		{
-			// Use existing immediate pool
-		}
-		else
-		{
-			// Allocate immediate pool
-			
-			// - Branch to instruction after immediate pool
-			B(4+kImmediatePoolMax*4);
-
-			// - New immediate pool starts here
-			immediatePool = mip;
-			immediatePoolCount = kImmediatePoolMax;
-			mip += immediatePoolCount;
-		}
-
-		MDInstruction *savedMip = mip;
-		mip = immediatePool;
+		// Branch to instruction after constant
+		B(8);
 
 		// Write the constant
-		IMM32(imm32);
+		*mip++ = imm32;
 
-		mip = savedMip;
-
-		// Load the constant (-8 due to ARM pipeline's +8 bias)
-		LDR(dst, -8-(mip-immediatePool)*4, PC);
-
-		immediatePool++;
-		if (!--immediatePoolCount)
-		{
-			immediatePool = 0;
-		}
+		// Load the constant (-12 due to ARM pipeline's +8 bias)
+		LDR(dst, -12, PC);
 	}
 
 	void ArmAssembler::CMP_imm8(Register src, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  cmp%s   %R, %d\n", mip, conditionCodes[conditionCode], src, imm8);
+			console->format("    %A  cmp %R, %d\n", mip, src, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x03500000 | (conditionCode<<28) | (src<<16) | (imm8&0xFF);
 		PRINT_LAST_INSTRUCTION();
@@ -515,77 +345,36 @@ namespace avmplus
 
 	void ArmAssembler::STR(Register src, int offset, Register base)
 	{
-		int off = offset;
-		int opcode;
-		if (off<0) {
-			off = -off;
-			opcode = 0x05000000;
-		} else {
-			opcode = 0x05800000;
-		}
-
-		if (off > 0xFFF)
-		{
-			AvmAssert(base != IP);
-			AvmAssert(src != IP);
-			AvmAssert(base != PC);
-			MOV_imm32(IP, off);
-			off = (int)IP;
-			opcode |= 0x02000000;
-		}
-
 		incInstructionCount();
-		#ifdef AVMPLUS_VERBOSE
-		if (verboseFlag) {
-			if (base == PC) {
-				console->format("    %A  str%s   %R, %d(%R) // %A\n", mip, conditionCodes[conditionCode], src, offset, base,
-							offset+8+(int)mip);
-			} else if (opcode & 0x02000000) {
-				console->format("    %A  str%s   %R, %R(%R)\n", mip, conditionCodes[conditionCode], src, off, base);
-			} else {
-				console->format("    %A  str%s   %R, %d(%R)\n", mip, conditionCodes[conditionCode], src, offset, base);
-			}
-		}
-		#endif /* AVMPLUS_VERBOSE */
-		AvmAssert(off <= 0xFFF);
-		*mip++ = opcode | (conditionCode<<28) | (base<<16) | (src<<12) | (off&0xFFF);
+        #ifdef AVMPLUS_VERBOSE
+		if (verboseFlag)
+			console->format("    %A  str %R, %d(%R)\n", mip, src, offset, base);
+        #endif /* AVMPLUS_VERBOSE */
+		if (offset<0) {
+			*mip++ = 0x05000000 | (conditionCode<<28) | (base<<16) | (src<<12) | (-offset&0x7FF);
+		} else {
+			*mip++ = 0x05800000 | (conditionCode<<28) | (base<<16) | (src<<12) | (offset&0x7FF);
+		}			
 		PRINT_LAST_INSTRUCTION();
 	}
 	
 	void ArmAssembler::ADD_imm8(Register dst, Register src, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  add%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
+			console->format("    %A  add %R, %R, %d\n", mip, dst, src, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x02800000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);
 		PRINT_LAST_INSTRUCTION();
 	}
 
-	void ArmAssembler::ADD_imm8_hi(Register dst, Register src, int imm8)
-	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  add%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8 << 8);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x02800C00 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);
-		PRINT_LAST_INSTRUCTION();
-	}
-	
 	void ArmAssembler::AND_imm8(Register dst, Register src, int imm8)
 	{
-		AvmAssert((imm8 & 0xFFFFFF00) == 0);
-		
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  and%s   %R, %R, %d\n", mip, conditionCodes[conditionCode], dst, src, imm8);
+			console->format("    %A  and %R, %R, %d\n", mip, dst, src, imm8);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x02000000 | (conditionCode<<28) | (src<<16) | (dst<<12) | (imm8&0xFF);
 		PRINT_LAST_INSTRUCTION();
@@ -596,39 +385,35 @@ namespace avmplus
 		incInstructionCount();
         #ifdef AVMPLUS_VERBOSE
 		if (verboseFlag)
-			console->format("    %A  ldmfd%s %R, %A\n", mip, conditionCodes[conditionCode], src, mask);
+			console->format("    %A  ldmfd %R, %A\n", mip, src, mask);
         #endif /* AVMPLUS_VERBOSE */
 		*mip++ = 0x08900000 | (conditionCode<<28) | (src<<16) | mask;
-		PRINT_LAST_INSTRUCTION();
-	}
-
-	void ArmAssembler::LDMFD_bang(Register src, int mask)
-	{
-		incInstructionCount();
-        #ifdef AVMPLUS_VERBOSE
-		if (verboseFlag)
-			console->format("    %A  ldmfd%s! %R, %A\n", mip, conditionCodes[conditionCode], src, mask);
-        #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x08B00000 | (conditionCode<<28) | (src<<16) | mask;
 		PRINT_LAST_INSTRUCTION();
 	}
 
 	void ArmAssembler::SET_CONDITION_CODE(ConditionCode conditionCode)
 	{
 		this->conditionCode = conditionCode;
+		#ifdef AVMPLUS_VERBOSE
+		if (verboseFlag)
+			console->format("%s:", conditionCodes[conditionCode]);
+        #endif /* AVMPLUS_VERBOSE */
 	}
 
 #ifdef AVMPLUS_MIR
+	bool CodegenMIR::canImmFold(OP *ins, OP *imm) const
+	{
+		bool can = false;
+		return can;
+	}
 
 	void CodegenMIR::emitNativeThunk(NativeMethod *info)
 	{
 		SET_CONDITION_CODE(AL);
 		
 		// Hack to see what instructions we're generating
-		//bool hack = true;
-		//verboseFlag = true;
-		//core->console << " native thunk for " << info << "\n";
-
+		//verbose = true;
+		
 		const Register TEMP  = R7;
 		const Register AP    = R6;
 		const Register ARGC  = R5;
@@ -663,29 +448,24 @@ namespace avmplus
 
 		int in_arg_offset = 0;
 
-		const int kMaxGPRIndex = 4;
+		const int kMaxGPRIndex = 3;
 
 		#ifdef DEBUGGER
 		uint32 *sendEnterAddr = mip;
-		IMM32(ENVADDR(MethodEnv::sendEnter));
+		*mip++ = ENVADDR(MethodEnv::sendEnter);
 
 		uint32 *sendExitAddr = mip;
-		IMM32(ENVADDR(MethodEnv::sendExit));
+		*mip++ = ENVADDR(MethodEnv::sendExit);
 		#endif
 
-#ifdef _MSC_VER
-		uint32 *handlerAddr = mip;
-		IMM32(info->m_handler_addr);
-#else
 		union {
-			int handler_addr[2];
+			int handler_addr;
 			NativeMethod::Handler handler;
 		};
 		handler = info->m_handler;
 
 		uint32 *handlerAddr = mip;
-		IMM32(handler_addr[1]);
-#endif
+		*mip++ = handler_addr;
 		
 		// scan for double optional arguments; these will
 		// be constants stored up front
@@ -698,35 +478,37 @@ namespace avmplus
 			
 			if (type == OBJECT_TYPE || type == VOID_TYPE)
 			{
-				IMM32(arg);
+				*mip++ = arg;
 			}
 			else if (type == BOOLEAN_TYPE)
 			{
-				IMM32(arg>>3);
+				*mip++ = (arg>>3);
 			}
 			else if (type == NUMBER_TYPE)
 			{
 				double d = core->number_d(arg);
 				int *dp = (int*)&d;
-				IMM32(dp[0]);
-				IMM32(dp[1]);
+				*mip++ = dp[0];
+				*mip++ = dp[1];
 			}
 			else if (type == INT_TYPE)
 			{
+				Atom arg = info->getDefaultValue(i-first_optional);
 				int i = core->integer_i(arg);
-				IMM32(i);
+				*mip++ = i;
 			}
 			else if (type == UINT_TYPE)
 			{
+				Atom arg = info->getDefaultValue(i-first_optional);
 				uint32 u = core->integer_u(arg);
-				IMM32(u);
+				*mip++ = u;
 			}
 			else
 			{
 				// push pointer type
 				// this case includes kStringType, kObjectType, and kNamespaceType
 				int p = (arg&7)==kSpecialType ? 0 : arg & ~7;
-				IMM32(p);
+				*mip++ = p;
 			}				
 		}
 
@@ -789,9 +571,6 @@ namespace avmplus
 			Traits* type = info->paramTraits(i);
 
 			if (i >= first_optional) {
-#ifdef AVMPLUS_VERBOSE
-				if (verboseFlag) core->console << "optional " << i << "\n";
-#endif /* AVMPLUS_VERBOSE */
 				// emit code to check whether argument
 				// was specified
 				CMP_imm8 (ARGC, i);
@@ -804,10 +583,10 @@ namespace avmplus
 				// the arguments have already been coerced to the right type
 				// by the caller.  We do not do type conversions here.
 
-				int offset = (int)const_ip - (int)mip - 8; // -8 for pc-relative bias
-
 				if (type == NUMBER_TYPE)
 				{
+					int offset = (int)const_ip - (int)mip;
+					
 					// Do first word of double
 					if (GPRIndex < kMaxGPRIndex) {
 						LDR ((Register)(R0+GPRIndex), offset, PC);
@@ -818,7 +597,7 @@ namespace avmplus
 
 					// Do second word of double
 					if ((GPRIndex+1) < kMaxGPRIndex) {
-						LDR ((Register)(R0+GPRIndex+1), offset+4, PC);
+						LDR ((Register)(R0+GPRIndex+1), offset, PC);
 					} else {
 						LDR (TEMP, offset+4, PC);
 						STR (TEMP, (GPRIndex+1-kMaxGPRIndex)*4, SP);
@@ -828,6 +607,7 @@ namespace avmplus
 				}
 				else
 				{
+					int offset = (int)const_ip - (int)mip;
 					if (GPRIndex < kMaxGPRIndex) {
 						LDR ((Register)(R0+GPRIndex), offset, PC);
 					} else {
@@ -884,10 +664,6 @@ namespace avmplus
 		}
 
 		if (need_rest) {
-#ifdef AVMPLUS_VERBOSE
-			if (verboseFlag)
-				core->console << "need_rest\n";
-#endif /* AVMPLUS_VERBOSE */
 			// If the method signature ends with "...",
 			// deliver any arguments after the explicitly
 			// specified ones as (Atom *argv, int argc)
@@ -1011,58 +787,10 @@ namespace avmplus
 			int frameSize = (GPRIndex-kMaxGPRIndex)*4;
 			*patch_frame_size |= (frameSize & 0xFF);
 		}
-
+		
 		bindMethod(info);
-
-		//if (hack)
-			//verboseFlag = false;
 	}
 
-	void ArmAssembler::flushDataCache(void *start, int len)
-	{
-		#ifdef AVMPLUS_SYMBIAN
-
-		// Adjust start and len to page boundaries
-		start = (void*) ((int)start & ~0xFFF);
-		len = (len+8192) & ~0xFFF;
-		void *end = (void*)((int)start+len);
-
-		User::IMB_Range(start, end);
-		
-		#elif defined AVMPLUS_IYONIX
-		
-		// Adjust start and len to page boundaries
-		start = (void*) ((int)start & ~0xFFF);
-		len = (len+8192) & ~0xFFF;
-		void *end = (void*)((int)start+len);
-
-		register unsigned long _beg __asm ("a1") = (unsigned long)(start);
-        register unsigned long _end __asm ("a2") = (unsigned long)(end);
-        register unsigned long _flg __asm ("a3") = 0;
-        __asm __volatile ("swi 0x9f0002		@ sys_cacheflush"
-		    : /* no outputs */
-		    : /* no inputs */
-		    : "a1");
-
-        #elif defined(UNDER_CE)
-
-		// This seems to work, but might not be correct
-		// Might be better to call CacheSync(...)
-		FlushInstructionCache(GetCurrentProcess(), 0, 0);
-
-		#else
-
-		// Flush the data cache crudely
-		#define SCRATCH_SIZE 32768
-		volatile int scratch[SCRATCH_SIZE];
-		int sum = 0;
-		for (int i=0; i<SCRATCH_SIZE; i++) {
-			sum += scratch[i];
-		}
-
-        #endif
-	}
-	
 	void* CodegenMIR::emitImtThunk(ImtBuilder::ImtEntry *e)
 	{
 		SET_CONDITION_CODE(AL);
@@ -1080,11 +808,16 @@ namespace avmplus
 		// free to use eax, ecx, edx as scratch regs without touchning the
 		// stack.
 		
-		// in: R0 = MethodEnv for interface thunk
+		// in: R3 = iid
+		//     R0 = MethodEnv
 		//     R1 = argc
 		//     R2 = ap
-		//     R3 = iid
 		//     0(ap)  = ScriptObject (concrete instance of class)
+		
+		// local register allocation:
+		// R4 = iid parameter
+		// R5 = vtable of receiver obj
+		// R6 = temp
 
 #ifdef AVMPLUS_VERBOSE
 		if (pool->verbose)
@@ -1092,6 +825,9 @@ namespace avmplus
 			core->console << "imt thunk\n";
 		}
 #endif
+
+		LDR (IP, 0, R2); // obj
+		LDR (IP, offsetof(ScriptObject, vtable), IP); // vtable
 
 		AvmAssert(e->next != NULL); // must have 2 or more entries
 
@@ -1105,15 +841,27 @@ namespace avmplus
 				core->console << "              disp_id="<< e->disp_id << " " << e->virt << "\n";
 			}
 			#endif
+			int iid = e->virt->iid();
 
-			MOV_imm32(IP, e->virt->iid());
-			CMP(R3, IP);
+			CMP_imm8 (R3, iid);
+
+			#if 0
+			// todo
+			if (isUIMM(iid))
+			{
+				CMP (R3, iid);
+			}
+			else
+			{
+				//LI32(R0, iid);
+				//CMP (R3, R0);
+			}
+			#endif
 
 			SET_CONDITION_CODE(EQ);
-			LDR (IP, 0, R2); // obj
-			LDR (IP, offsetof(ScriptObject, vtable), IP); // vtable
-			LDR (R0, offsetof(VTable,methods)+4*e->disp_id, IP); // load concrete env
-			LDR (PC, offsetof(MethodEnv, impl32), R0); // invoke real method indirectly
+			LDR (IP, offsetof(VTable,methods)+4*e->disp_id, IP); // load concrete env
+			LDR (IP, offsetof(MethodEnv, impl32), IP); // invoke real method indirectly
+			MOV (PC, IP);
 			SET_CONDITION_CODE(AL);
 
 			pool->core->gc->Free(e);
@@ -1127,10 +875,9 @@ namespace avmplus
 			core->console << "              disp_id="<< e->disp_id << " " << e->virt << "\n";
 		}
 		#endif
-		LDR (IP, 0, R2); // obj
-		LDR (IP, offsetof(ScriptObject, vtable), IP); // vtable
-		LDR (R0, offsetof(VTable,methods)+4*e->disp_id, IP); // load concrete env
-		LDR (PC, offsetof(MethodEnv, impl32), R0); // invoke real method indirectly
+		LDR (IP, offsetof(VTable,methods)+4*e->disp_id, IP); // load concrete env
+		LDR (IP, offsetof(MethodEnv, impl32), IP); // invoke real method indirectly
+		MOV (PC, IP);
 
 		MDInstruction *retval;
 		
@@ -1140,29 +887,6 @@ namespace avmplus
 		pool->codeBuffer->setPos((byte*) ( (size_t)mip+15 & ~15 ));
 
 		return retval;
-	}
-
-	bool CodegenMIR::canImmFold(OP* ins, OP* rhs) const
-	{
-		if (rhs->code != MIR_imm)
-			return false;
-		if (rhs->imm & 0xFFFFFF00)
-			return false;
-		switch (ins->code)
-		{
-		case MIR_add:
-			return (rhs->imm & 0xFFFF0000) == 0;			
-		case MIR_and:
-		case MIR_or:
-		case MIR_xor:
-		case MIR_sub:
-			return (rhs->imm & 0xFFFFFF00) == 0;
-		case MIR_lsh:
-		case MIR_rsh:
-		case MIR_ush:
-			return true;
-		}
-		return false;
 	}
 #endif /* AVMPLUS_MIR */
 	

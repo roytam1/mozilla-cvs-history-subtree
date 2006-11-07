@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_MethodEnv__
 #define __avmplus_MethodEnv__
 
@@ -72,8 +73,6 @@ namespace avmplus
 		{
 			return vtable->abcEnv;
 		}
-
-		ScriptEnv* getScriptEnv(Multiname *m) const;
 
 		DomainEnv* domainEnv() const
 		{
@@ -266,7 +265,7 @@ namespace avmplus
 		int getType() const { return activationOrMCTable&3; }
 		void setActivationOrMCTable(void *ptr, int type) 
 		{
-			WB(core()->GetGC(), this, &activationOrMCTable, (intptr)ptr|type);
+			WB(core()->gc, this, &activationOrMCTable, (intptr)ptr|type);
 		}
 	};
 

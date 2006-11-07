@@ -87,7 +87,7 @@ namespace avmplus
 			String *u = core->string (argv[2]);
 			if (p->length() && !u->length())
 			{
-				toplevel()->throwTypeError(kXMLNamespaceWithPrefixAndNoURI, p);
+				toplevel()->typeErrorClass()->throwError(kXMLNamespaceWithPrefixAndNoURI, p);
 			}
 
 			return core->newNamespace(argv[1], argv[2])->atom();

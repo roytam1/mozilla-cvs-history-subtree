@@ -43,7 +43,7 @@ namespace avmplus
 
 	Debugger::Debugger(AvmCore *core)
 		: core(core)
-		, abcList(core->GetGC())
+		, abcList(core->gc)
 		, pool2abcIndex()
 	{
 	}
@@ -162,13 +162,6 @@ namespace avmplus
 					}
 				}
 			}
-		}
-
-		// we still haven't decided to stop; check our watchpoints
-		if (!stop && !exited)
-		{
-			if (hitWatchpoint())
-				stop = true;
 		}
 
 		if (stop)
@@ -296,7 +289,7 @@ namespace avmplus
 	void Debugger::processAbc(PoolObject* pool, ScriptBuffer code)
 	{
 		// first off we build an AbcInfo object 
-		AbcFile* abc = new (core->GetGC()) AbcFile(core, code.getSize());
+		AbcFile* abc = new (core->gc) AbcFile(core, code.getSize());
 		
 		// now let's scan the abc resources pulling out what we need
 		scanResources(abc, pool);
@@ -378,6 +371,7 @@ namespace avmplus
 					// variable length instruction
 					const byte *pc2 = pc+4;
 					int case_count = 1 + readU30(pc2);
+                    size += pc2-(pc+4);
                     size += case_count*3;
 					break;
 				}
@@ -429,7 +423,7 @@ namespace avmplus
 					active = file->sourceNamed(name);
 					if (active == NULL)
 					{
-						active = new (core->GetGC()) SourceFile(core->GetGC(), name);
+						active = new (core->gc) SourceFile(core->gc, name);
 						file->sourceAdd(active);
 					}
 					break;
@@ -464,7 +458,7 @@ namespace avmplus
 		{
 			CallStackNode* trace = locateTrace(frameNbr);
 			if (trace)
-				frame = new (core->GetGC()) DebugStackFrame(frameNbr, trace, this);
+				frame = new (core->gc) DebugStackFrame(frameNbr, trace, this);
 		}
 		return frame;
 	}
@@ -506,10 +500,10 @@ namespace avmplus
 	 */
 	AbcFile::AbcFile(AvmCore* core, int size)
 		: core(core),
-		  source(core->GetGC()),
+		  source(core->gc),
 		  byteCount(size)
 	{
-		sourcemap = new (core->GetGC()) Hashtable(core->GetGC());
+		sourcemap = new (core->gc) Hashtable(core->gc);
 	}
 
 	int AbcFile::sourceCount() const
@@ -589,7 +583,7 @@ namespace avmplus
 			func->lastSourceLine = linenum;
 
 		if (sourceLines == NULL)
-			sourceLines = new (core->GetGC()) BitSet();
+			sourceLines = new (core->gc) BitSet();
 		sourceLines->set(linenum);
 	}
 
@@ -689,7 +683,7 @@ namespace avmplus
 			if (count > 0)
 			{
 				// pull the args into an array -- skip [0] which is [this]
-				ar = (Atom*) debugger->core->GetGC()->Calloc(count, sizeof(Atom), GC::kContainsPointers|GC::kZero);
+				ar = (Atom*) debugger->core->gc->Calloc(count, sizeof(Atom), GC::kContainsPointers|GC::kZero);
 				MethodInfo* info = (MethodInfo*)trace->info;
 				info->boxLocals(trace->framep, firstArgument, trace->traits, ar, 0, count);
 			}
@@ -737,7 +731,7 @@ namespace avmplus
 			if (count > 0)
 			{
 				// frame looks like [this][param0...paramN][local0...localN]
-				ar = (Atom*) debugger->core->GetGC()->Calloc(count, sizeof(Atom), GC::kContainsPointers|GC::kZero);
+				ar = (Atom*) debugger->core->gc->Calloc(count, sizeof(Atom), GC::kContainsPointers|GC::kZero);
 				MethodInfo* info = (MethodInfo*)trace->info;
 				info->boxLocals(trace->framep, firstLocal, trace->traits, ar, 0, count);
 

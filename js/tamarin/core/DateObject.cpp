@@ -112,7 +112,7 @@ namespace avmplus
 		int len;
 		date.toString(buffer, Date::kToString, len);
 		Stringp result = core->newString("<");
-		result = core->concatStrings(result, new (core->GetGC()) String(buffer,len));
+		result = core->concatStrings(result, new (core->gc) String(buffer,len));
 		result = core->concatStrings(result, core->newString(">@"));
 		result = core->concatStrings(result, core->formatAtomPtr(atom()));
 		return result;

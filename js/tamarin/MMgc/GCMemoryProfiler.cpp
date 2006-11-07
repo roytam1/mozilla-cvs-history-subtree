@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include "MMgc.h"
 
 #ifdef MEMORY_INFO
@@ -233,16 +234,10 @@ namespace MMgc
 			}
 		}
 
-		int codeSize = 0;
-
-		GCHeap* heap = GCHeap::GetGCHeap();
-		
-#ifdef MMGC_AVMPLUS
-		codeSize = heap->GetCodeMemorySize();
-#endif
-		int inUse = heap->GetUsedHeapSize() * GCHeap::kBlockSize;
-		int committed = heap->GetTotalHeapSize() * GCHeap::kBlockSize + codeSize;
-		int free = heap->GetFreeHeapSize() * GCHeap::kBlockSize;
+		int codeSize = GCHeap::GetGCHeap()->GetCodeMemorySize();
+		int inUse = GCHeap::GetGCHeap()->GetUsedHeapSize() * GCHeap::kBlockSize;
+		int committed = GCHeap::GetGCHeap()->GetTotalHeapSize() * GCHeap::kBlockSize + codeSize;
+		int free = GCHeap::GetGCHeap()->GetFreeHeapSize() * GCHeap::kBlockSize;
 
 		int memInfo = residentCount*16;
 
@@ -437,7 +432,7 @@ namespace MMgc
 		if(poison == 0xca || poison == 0xba)
 			size = GC::Size(ip);
 		else
-			size = FixedMalloc::GetInstance()->Size(ip);
+			size = FixedMalloc::Size(ip);
 
 		// size is the non-Debug size, so add 4 to get last 4 bytes, don't
 		// touch write back pointer space

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_MethodInfo__
 #define __avmplus_MethodInfo__
 

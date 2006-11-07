@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #ifndef __avmplus_BuiltinTraits__
 #define __avmplus_BuiltinTraits__
 

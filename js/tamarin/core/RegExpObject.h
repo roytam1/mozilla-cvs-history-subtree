@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_RegExpObject__
 #define __avmplus_RegExpObject__
 

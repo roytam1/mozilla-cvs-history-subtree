@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_FrameState__
 #define __avmplus_FrameState__
 
@@ -122,7 +123,7 @@ namespace avmplus
 		void setType(int i, Traits* t, bool notNull=false, bool isWith=false)
 		{
 			//this->traits = t;
-			WB(verifier->core->GetGC(), this, &locals[i].traits, t);
+			WB(verifier->core->gc, this, &locals[i].traits, t);
 			locals[i].notNull = notNull;
 			locals[i].isWith = isWith;
 		}

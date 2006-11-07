@@ -69,9 +69,4 @@ namespace avmplus
 	{
 		return MacDateTime::GetMsecCount();
 	}
-
-#ifdef DEBUGGER
-	intptr OSDep::startIntWriteTimer(uint32 millis, int *addr) { return 0; }
-	void OSDep::stopTimer(intptr handle) {}
-#endif
 }

@@ -68,7 +68,7 @@ namespace avmplus
 		{
 			if (!AvmCore::isObject(value))
 			{
-				toplevel()->throwTypeError(kPrototypeTypeError);
+				toplevel()->typeErrorClass()->throwError(kPrototypeTypeError);
 			}
 
 			// allow any prototype object.  if the object has methods or slots, so be it
@@ -129,7 +129,6 @@ namespace avmplus
 	Atom ClassClosure::call(int argc, Atom* argv)
 	{
 		MethodEnv* call = vtable->call;
-		Toplevel* toplevel = this->toplevel();
 		if (call)
 		{
 			// invoke function body
@@ -143,7 +142,7 @@ namespace avmplus
 			}
 
 			// make sure receiver is legal for callee
-			argv[0] = toplevel->coerce(argv[0], call->method->paramTraits(0));
+			argv[0] = toplevel()->coerce(argv[0], call->method->paramTraits(0));
 
 			return call->coerceEnter(argc, argv);
 		}
@@ -152,9 +151,9 @@ namespace avmplus
 			// explicit coercion of a class object.
 			if (argc != 1)
 			{
-				toplevel->throwArgumentError(kCoerceArgumentCountError, toplevel->core()->toErrorString(argc));
+				toplevel()->argumentErrorClass()->throwError(kCoerceArgumentCountError, toplevel()->core()->toErrorString(argc));
 			}
-			return toplevel->coerce(argv[1], (Traits*)ivtable()->traits);
+			return toplevel()->coerce(argv[1], (Traits*)ivtable()->traits);
 		}
 	}
 
@@ -166,15 +165,6 @@ namespace avmplus
 		else
 			return vtable->init->method->param_count;
 	}
-
-#ifdef DEBUGGER
-	uint32 ClassClosure::size() const
-	{
-		uint32 size = ScriptObject::size();
-		size += vtable->size();
-		return size;
-	}
-#endif
 
 #ifdef AVMPLUS_VERBOSE
 	Stringp ClassClosure::format(AvmCore* core) const

@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __avmplus_BooleanClass__
 #define __avmplus_BooleanClass__
 

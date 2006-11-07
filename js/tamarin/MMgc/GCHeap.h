@@ -29,6 +29,7 @@
  * 
  ***** END LICENSE BLOCK ***** */
 
+
 #ifndef __GCHeap__
 #define __GCHeap__
 
@@ -82,7 +83,7 @@ namespace MMgc
 		const static int kBlockSize = 4096;
 
 		/** Initial heap size, in blocks */
-		const static int kInitialHeapSize;
+		static int kInitialHeapSize;
 
 		/** Default size of address space reserved per region */
 		const static int kDefaultReserve = 4096;
@@ -109,12 +110,12 @@ namespace MMgc
 		const static int kDecommitThresholdPercentage = 25;
 
 		
-		const static int kDecommitThresholdMillis = 1000;
+		static const int kDecommitThresholdMillis = 1000;
 
 		/** The native VM page size (in bytes) for the current architecture */
-		int kNativePageSize;
+		static int kNativePageSize;
 
-		bool heapVerbose;
+		static bool heapVerbose;
 
 		/**
 		 * Init must be called to set up the GCHeap singleton

@@ -30,6 +30,7 @@
  ***** END LICENSE BLOCK ***** */
 
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -39,10 +40,9 @@
 
 namespace MMgc
 {
-	GCLargeAlloc::GCLargeAlloc(GC* gc) : m_gc(gc)
+	GCLargeAlloc::GCLargeAlloc(GC* gc) : GCAllocBase(gc)
 	{
 		m_blocks = NULL;
-		m_startedFinalize = false;
 	}
 
 	void* GCLargeAlloc::Alloc(size_t size, int flags)
@@ -63,9 +63,6 @@ namespace MMgc
 			m_blocks = block;
 			
 			item = (void*)(block+1);
-
-			if(m_gc->collecting && !m_startedFinalize)
-				block->flags |= kMarkFlag;
 
 #ifdef _DEBUG
 			if (flags & GC::kZero)
@@ -114,10 +111,8 @@ namespace MMgc
 
 	void GCLargeAlloc::Finalize()
 	{
-		m_startedFinalize = true;
-		LargeBlock **prev = &m_blocks;
-		while (*prev) {			
-			LargeBlock *b = *prev;
+		LargeBlock *b = m_blocks;
+		while (b) {
 			if ((b->flags & kMarkFlag) == 0) {
 				void *item = b+1;
 				if (NeedsFinalize(b)) {
@@ -133,17 +128,39 @@ namespace MMgc
 				if(b->flags & kHasWeakRef) {
 					b->gc->ClearWeakRef(GetUserPointer(item));
 				}
-				// unlink from list
-				*prev = b->next;
-				b->gc->AddToLargeEmptyBlockList(b);
-				continue;
 			}
-			// clear marks
-			b->flags &= ~(kMarkFlag|kQueuedFlag);
-			prev = &b->next;
+			b = b->next;
 		}
-		m_startedFinalize = false;
 	}
+
+	size_t GCLargeAlloc::Sweep()
+	{
+		size_t visitedSize=0;
+		LargeBlock **prev = &m_blocks;
+		while (*prev) {
+			LargeBlock *block = *prev;
+			visitedSize += block->GetNumBlocks();
+			LargeBlock *next = block->next;			
+			if ((block->flags & kMarkFlag) == 0) {
+				// Destroy this block
+				*prev = block->next;
+				void *item = block+1;
+				(void)item;
+#ifdef ALLOC_LOG
+				m_gc->LogFree(item);
+#endif			
+#ifdef MEMORY_INFO
+				DebugFreeReverse(item, 0xba, 3);
+#endif
+				m_gc->FreeBlock(block, block->GetNumBlocks());
+			} else {
+				prev = &block->next;
+			}
+			block = next;
+		}
+		return visitedSize;
+	}
+
 
 	GCLargeAlloc::~GCLargeAlloc()
 	{
