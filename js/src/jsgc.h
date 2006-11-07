@@ -228,9 +228,6 @@ js_MarkGCThing(JSContext *cx, void *thing);
 extern void
 js_MarkNamedGCThing(JSContext *cx, void *thing, const char *name);
 
-extern JS_FRIEND_DATA(FILE *) js_DumpGCHeap;
-JS_EXTERN_DATA(void *) js_LiveThingToFind;
-
 #else
 
 # define GC_MARK(cx, thing, name) js_MarkGCThing(cx, thing)
