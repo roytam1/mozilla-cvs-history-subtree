@@ -76,8 +76,6 @@ nsTableCellFrame::nsTableCellFrame(nsStyleContext* aContext) :
   mPriorAvailWidth = 0;
 
   SetContentEmpty(PR_FALSE);
-  SetNeedSpecialReflow(PR_FALSE);
-  SetHadSpecialReflow(PR_FALSE);
   SetHasPctOverHeight(PR_FALSE);
 }
 
@@ -143,9 +141,7 @@ nsTableCellFrame::NotifyPercentHeight(const nsHTMLReflowState& aReflowState)
       rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
     }
 
-    if (!NeedSpecialReflow()) {
-      nsTableFrame::RequestSpecialHeightReflow(*cellRS);
-    }
+    nsTableFrame::RequestSpecialHeightReflow(*cellRS);
   }
 }
 
@@ -747,8 +743,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   }
 
   // see if a special height reflow needs to occur due to having a pct height
-  if (!NeedSpecialReflow()) 
-    nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
+  nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
 
   aStatus = NS_FRAME_COMPLETE;
   nsSize availSize(aReflowState.availableWidth, availHeight);
@@ -799,13 +794,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
   }      
   else {
     SetHasPctOverHeight(PR_FALSE);
-  }
-
-  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
-    // If we're reflowing everything, then we'll find out if we need
-    // to re-set this.
-    // XXXldb Should this (also?) be SetNeedSpecialReflow(PR_FALSE)?
-    SetHadSpecialReflow(PR_FALSE);
   }
 
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, firstKid,
@@ -877,14 +865,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
     if (NS_UNCONSTRAINEDSIZE == aReflowState.availableHeight) {
       aDesiredSize.height = mRect.height;
     }
-    SetNeedSpecialReflow(PR_FALSE);
-    SetHadSpecialReflow(PR_TRUE);
-  }
-  else if (HadSpecialReflow()) {
-    // If this is not a special reflow, but we've had one before (and
-    // this frame wasn't dirty, i.e., a descendant was and not
-    // everything was reflowed), then request a special reflow.
-    nsTableFrame::RequestSpecialHeightReflow(aReflowState);
   }
 
   // remember the desired size for this reflow

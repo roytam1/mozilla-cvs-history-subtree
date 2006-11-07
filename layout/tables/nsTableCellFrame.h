@@ -52,8 +52,6 @@ class nsTableFrame;
  * Additional frame-state bits
  */
 #define NS_TABLE_CELL_CONTENT_EMPTY       0x80000000
-#define NS_TABLE_CELL_NEED_SPECIAL_REFLOW 0x40000000
-#define NS_TABLE_CELL_HAD_SPECIAL_REFLOW  0x20000000
 #define NS_TABLE_CELL_HAS_PCT_OVER_HEIGHT 0x10000000
 
 /**
@@ -219,19 +217,6 @@ public:
   PRBool GetContentEmpty();
   void SetContentEmpty(PRBool aContentEmpty);
 
-  // A flag indicating that we've scheduled a special height reflow but
-  // not done it yet.
-  PRBool NeedSpecialReflow();
-  void SetNeedSpecialReflow(PRBool aValue);
-
-  // A flag indicating that we have had a special height reflow since
-  // the last complete reflow (i.e., one where this frame was
-  // NS_FRAME_IS_DIRTY).  We track this because it means that any time
-  // we reflow some but not all of our descendants, we have to assume
-  // that we need to schedule another special height reflow.
-  PRBool HadSpecialReflow();
-  void SetHadSpecialReflow(PRBool aValue);
-
   PRBool HasPctOverHeight();
   void SetHasPctOverHeight(PRBool aValue);
 
@@ -310,36 +295,6 @@ inline void nsTableCellFrame::SetContentEmpty(PRBool aContentEmpty)
     mState |= NS_TABLE_CELL_CONTENT_EMPTY;
   } else {
     mState &= ~NS_TABLE_CELL_CONTENT_EMPTY;
-  }
-}
-
-inline PRBool nsTableCellFrame::NeedSpecialReflow()
-{
-  return (mState & NS_TABLE_CELL_NEED_SPECIAL_REFLOW) ==
-         NS_TABLE_CELL_NEED_SPECIAL_REFLOW;
-}
-
-inline void nsTableCellFrame::SetNeedSpecialReflow(PRBool aValue)
-{
-  if (aValue) {
-    mState |= NS_TABLE_CELL_NEED_SPECIAL_REFLOW;
-  } else {
-    mState &= ~NS_TABLE_CELL_NEED_SPECIAL_REFLOW;
-  }
-}
-
-inline PRBool nsTableCellFrame::HadSpecialReflow()
-{
-  return (mState & NS_TABLE_CELL_HAD_SPECIAL_REFLOW) ==
-         NS_TABLE_CELL_HAD_SPECIAL_REFLOW;
-}
-
-inline void nsTableCellFrame::SetHadSpecialReflow(PRBool aValue)
-{
-  if (aValue) {
-    mState |= NS_TABLE_CELL_HAD_SPECIAL_REFLOW;
-  } else {
-    mState &= ~NS_TABLE_CELL_HAD_SPECIAL_REFLOW;
   }
 }
 

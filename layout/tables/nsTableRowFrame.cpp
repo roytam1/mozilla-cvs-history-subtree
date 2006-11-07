@@ -856,7 +856,8 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
       }
     }
     if (aReflowState.mFlags.mSpecialHeightReflow) {
-      if (!isPaginated && !cellFrame->NeedSpecialReflow()) {
+      if (!isPaginated && !(cellFrame->GetStateBits() &
+                            NS_FRAME_CONTAINS_RELATIVE_HEIGHT)) {
         continue;
       }
     }
@@ -896,8 +897,8 @@ nsTableRowFrame::ReflowChildren(nsPresContext*          aPresContext,
           isPaginated                                               ||
           (cellFrame->GetStateBits() &
            (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))       ||
-          (aReflowState.mFlags.mSpecialHeightReflow && cellFrame->NeedSpecialReflow()) ||
-          (!aReflowState.mFlags.mSpecialHeightReflow && cellFrame->HadSpecialReflow()) ||
+          // See if it needs a special reflow, or if it had one that we need to undo.
+          (cellFrame->GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT) ||
           HasPctHeight()) {
         // Reflow the cell to fit the available width, height
         // XXX The old IR_ChildIsDirty code used availCellWidth here.
@@ -1055,18 +1056,13 @@ nsTableRowFrame::Reflow(nsPresContext*          aPresContext,
   }
 
   // see if a special height reflow needs to occur due to having a pct height
-  if (!NeedSpecialReflow()) 
-    nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
+  nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
 
   rv = ReflowChildren(aPresContext, aDesiredSize, aReflowState, *tableFrame,
                       aStatus);
 
   // just set our width to what was available. The table will calculate the width and not use our value.
   aDesiredSize.width = aReflowState.availableWidth;
-
-  if (aReflowState.mFlags.mSpecialHeightReflow) {
-    SetNeedSpecialReflow(PR_FALSE);
-  }
 
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return rv;

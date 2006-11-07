@@ -150,8 +150,11 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   parentReflowState = &aParentReflowState;
 
   // If the parent is dirty, then the child is as well.
-  frame->AddStateBits(parentReflowState->frame->GetStateBits() &
-                      NS_FRAME_IS_DIRTY);
+  // XXX Are the other cases where the parent reflows a child a second
+  // time, as a resize?
+  if (!mFlags.mSpecialHeightReflow)
+    frame->AddStateBits(parentReflowState->frame->GetStateBits() &
+                        NS_FRAME_IS_DIRTY);
 
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
@@ -270,7 +273,9 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
 
   // XXX Should we really need to null check mCBReflowState?  (We do for
   // at least nsBoxFrame).
-  if (mCBReflowState && !frame->IsContainingBlock()) {
+  if (mFlags.mSpecialHeightReflow && IS_TABLE_CELL(frame->GetType())) {
+    mFlags.mVResize = PR_TRUE;
+  } else if (mCBReflowState && !frame->IsContainingBlock()) {
     // XXX Is this problematic for relatively positioned inlines acting
     // as containing block for absolutely positioned elements?
     mFlags.mVResize = mCBReflowState->mFlags.mVResize;
@@ -307,6 +312,12 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
         break; // no need to go further
       rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
     } while (rs != mCBReflowState);
+  }
+
+  if (frame->GetStateBits() & NS_FRAME_IS_DIRTY) {
+    // If we're reflowing everything, then we'll find out if we need
+    // to re-set this.
+    frame->RemoveStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
   }
 }
 

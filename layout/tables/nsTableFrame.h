@@ -485,15 +485,6 @@ public:
   PRBool HasCellSpanningPctCol() const;
   void SetHasCellSpanningPctCol(PRBool aValue);
 
-  PRBool NeedSpecialReflow() const;
-  void   SetNeedSpecialReflow(PRBool aValue);
-
-  PRBool NeedToInitiateSpecialReflow() const;
-  void   SetNeedToInitiateSpecialReflow(PRBool aValue);
-
-  PRBool InitiatedSpecialReflow() const;
-  void   SetInitiatedSpecialReflow(PRBool aValue);
-
 protected:
 
   /** protected constructor. 
@@ -744,9 +735,6 @@ protected:
     PRUint32 mCellSpansPctCol:1;       // does any cell span a col with a pct width (or containing a cell with a pct width)
     PRUint32 mIsBorderCollapse:1;      // border collapsing model vs. separate model
     PRUint32 mRowInserted:1;
-    PRUint32 mNeedSpecialReflow:1;
-    PRUint32 mNeedToInitiateSpecialReflow:1;
-    PRUint32 mInitiatedSpecialReflow:1;
     PRUint32 mNeedToCalcBCBorders:1;
     PRUint32 mLeftContBCBorder:8;
     PRUint32 mNeedToCollapse:1;    // rows, cols that have visibility:collapse need to be collapsed
@@ -797,36 +785,6 @@ inline PRBool nsTableFrame::HasCellSpanningPctCol() const
 inline void nsTableFrame::SetHasCellSpanningPctCol(PRBool aValue)
 {
   mBits.mCellSpansPctCol = (unsigned)aValue;
-}
-
-inline PRBool nsTableFrame::NeedSpecialReflow() const
-{
-  return (PRBool)mBits.mNeedSpecialReflow;
-}
-
-inline void nsTableFrame::SetNeedSpecialReflow(PRBool aValue)
-{
-  mBits.mNeedSpecialReflow = (unsigned)aValue;
-}
-
-inline PRBool nsTableFrame::NeedToInitiateSpecialReflow() const
-{
-  return (PRBool)mBits.mNeedToInitiateSpecialReflow;
-}
-
-inline void nsTableFrame::SetNeedToInitiateSpecialReflow(PRBool aValue)
-{
-  mBits.mNeedToInitiateSpecialReflow = (unsigned)aValue;
-}
-
-inline PRBool nsTableFrame::InitiatedSpecialReflow() const
-{
-  return (PRBool)mBits.mInitiatedSpecialReflow;
-}
-
-inline void nsTableFrame::SetInitiatedSpecialReflow(PRBool aValue)
-{
-  mBits.mInitiatedSpecialReflow = (unsigned)aValue;
 }
 
 inline PRBool nsTableFrame::IsRowInserted() const

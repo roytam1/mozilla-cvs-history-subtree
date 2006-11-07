@@ -1793,23 +1793,18 @@ nsTableFrame::RequestSpecialHeightReflow(const nsHTMLReflowState& aReflowState)
   // notify the frame and its ancestors of the special reflow, stopping at the containing table
   for (const nsHTMLReflowState* rs = &aReflowState; rs && rs->frame; rs = rs->parentReflowState) {
     nsIAtom* frameType = rs->frame->GetType();
-    if (IS_TABLE_CELL(frameType)) {
-      ((nsTableCellFrame*)rs->frame)->SetNeedSpecialReflow(PR_TRUE);
-    }
-    else if (nsLayoutAtoms::tableRowFrame == frameType) {
-      ((nsTableRowFrame*)rs->frame)->SetNeedSpecialReflow(PR_TRUE);
-    }
-    else if (nsLayoutAtoms::tableRowGroupFrame == frameType) {
-      ((nsTableRowGroupFrame*)rs->frame)->SetNeedSpecialReflow(PR_TRUE);
-    }
-    else if (nsLayoutAtoms::tableFrame == frameType) {
+    NS_ASSERTION(IS_TABLE_CELL(frameType) ||
+                 nsLayoutAtoms::tableRowFrame == frameType ||
+                 nsLayoutAtoms::tableRowGroupFrame == frameType ||
+                 nsLayoutAtoms::tableFrame == frameType,
+                 "unexpected frame type");
+                 
+    rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+    if (nsLayoutAtoms::tableFrame == frameType) {
       NS_ASSERTION(rs != &aReflowState,
                    "should not request special height reflow for table");
-      ((nsTableFrame*)rs->frame)->SetNeedToInitiateSpecialReflow(PR_TRUE);
       // always stop when we reach a table
       break;
-    } else {
-      NS_NOTREACHED("unexpected frame type");
     }
   }
 }
@@ -1908,20 +1903,20 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   // constrained initial reflow and other reflows which require either a strategy init or balance. 
   // This isn't done during an unconstrained reflow, because it will occur later when the parent 
   // reflows with a constrained width.
+  PRBool needToInitiateSpecialReflow =
+    !!(GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
   if ((GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
       aReflowState.ShouldReflowAllKids() ||
-      NeedToInitiateSpecialReflow()) {
+      needToInitiateSpecialReflow) {
     // see if an extra reflow will be necessary in pagination mode when there is a specified table height 
     if (isPaginated && !GetPrevInFlow() && (NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)) {
       nscoord tableSpecifiedHeight = CalcBorderBoxHeight(aReflowState);
       if ((tableSpecifiedHeight > 0) && 
           (tableSpecifiedHeight != NS_UNCONSTRAINEDSIZE)) {
-        SetNeedToInitiateSpecialReflow(PR_TRUE);
+        needToInitiateSpecialReflow = PR_TRUE;
       }
     }
     nsIFrame* lastChildReflowed = nsnull;
-    PRBool willInitiateSpecialReflow = 
-      NeedToInitiateSpecialReflow() || InitiatedSpecialReflow();
 
     nsHTMLReflowState &mutable_rs =
       NS_CONST_CAST(nsHTMLReflowState&, aReflowState);
@@ -1933,7 +1928,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
     // if we need to initiate a special height reflow, then don't constrain the 
     // height of the reflow before that
-    nscoord availHeight = (willInitiateSpecialReflow)
+    nscoord availHeight = needToInitiateSpecialReflow 
                           ? NS_UNCONSTRAINEDSIZE : aReflowState.availableHeight;
 
     ReflowTable(aDesiredSize, aReflowState, availHeight,
@@ -1941,9 +1936,11 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
     reflowedChildren = PR_TRUE;
 
     // reevaluate special height reflow conditions
+    if (GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT)
+      needToInitiateSpecialReflow = PR_TRUE;
+
     // XXXldb Are all these conditions correct?
-    if ((NeedToInitiateSpecialReflow() || InitiatedSpecialReflow()) &&
-        NS_FRAME_IS_COMPLETE(aStatus)) {
+    if (needToInitiateSpecialReflow && NS_FRAME_IS_COMPLETE(aStatus)) {
       // XXXldb Do we need to set the mVResize flag on any reflow states?
 
       // distribute extra vertical space to rows
@@ -1957,8 +1954,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
                   lastChildReflowed, aStatus);
       // restore the previous special height reflow initiator
       mutable_rs.mPercentHeightReflowInitiator = specialReflowInitiator;
-      // XXX We should call SetInitiatedSpecialReflow(PR_FALSE) at some point, but it is difficult to tell when
-      SetInitiatedSpecialReflow(PR_TRUE);
 
       if (lastChildReflowed && NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
         // if there is an incomplete child, then set the desired height to include it but not the next one
@@ -1999,11 +1994,6 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
   }
   aDesiredSize.mOverflowArea.UnionRect(aDesiredSize.mOverflowArea, tableRect);
   
-  if (aReflowState.mFlags.mSpecialHeightReflow) {
-    SetNeedSpecialReflow(PR_FALSE);
-    SetNeedToInitiateSpecialReflow(PR_FALSE);
-  }
-
   // If we reflowed all the rows, then invalidate the largest possible area that either the
   // table occupied before this reflow or will occupy after.
   if (reflowedChildren) {
@@ -2712,8 +2702,8 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
         (kidFrame->GetStateBits() & (NS_FRAME_IS_DIRTY |
                                      NS_FRAME_HAS_DIRTY_CHILDREN)) ||
         (aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
-         (isPaginated || NS_STATIC_CAST(nsTableRowGroupFrame*, kidFrame)->
-                           NeedSpecialReflow()))) {
+         (isPaginated || (kidFrame->GetStateBits() &
+                          NS_FRAME_CONTAINS_RELATIVE_HEIGHT)))) {
       if (pageBreak) {
         PushChildren(rowGroups, childX);
         aStatus = NS_FRAME_NOT_COMPLETE;

@@ -390,7 +390,8 @@ nsTableRowGroupFrame::ReflowChildren(nsPresContext*        aPresContext,
         (kidFrame->GetStateBits() &
          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
         (aReflowState.reflowState.mFlags.mSpecialHeightReflow &&
-         (isPaginated || ((nsTableRowFrame*)kidFrame)->NeedSpecialReflow()))) {
+         (isPaginated || (kidFrame->GetStateBits() &
+                          NS_FRAME_CONTAINS_RELATIVE_HEIGHT)))) {
       nsSize oldKidSize = kidFrame->GetSize();
 
       // XXXldb We used to only pass aDesiredSize.mFlags through for the
@@ -1266,8 +1267,7 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
   ClearRowCursor();
 
   // see if a special height reflow needs to occur due to having a pct height
-  if (!NeedSpecialReflow()) 
-    nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
+  nsTableFrame::CheckRequestSpecialHeightReflow(aReflowState);
 
   nsRowGroupReflowState state(aReflowState, tableFrame);
   const nsStyleVisibility* groupVis = GetStyleVisibility();
@@ -1307,10 +1307,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
   SetHasStyleHeight((NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) &&
                     (aReflowState.mComputedHeight > 0)); 
   
-  if (aReflowState.mFlags.mSpecialHeightReflow) {
-    SetNeedSpecialReflow(PR_FALSE);
-  }
-
   // just set our width to what was available. The table will calculate the width and not use our value.
   aDesiredSize.width = aReflowState.availableWidth;
 

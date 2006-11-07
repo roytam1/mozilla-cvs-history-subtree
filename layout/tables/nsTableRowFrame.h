@@ -45,7 +45,6 @@ class  nsTableFrame;
 class  nsTableCellFrame;
 struct nsTableCellReflowState;
 
-#define NS_ROW_NEED_SPECIAL_REFLOW          0x20000000
 #define NS_TABLE_ROW_HAS_UNPAGINATED_HEIGHT 0x40000000
 // This is also used on rows, from nsTableRowGroupFrame.h
 // #define NS_REPEATED_ROW_OR_ROWGROUP      0x10000000
@@ -188,9 +187,6 @@ public:
 
   PRBool IsFirstInserted() const;
   void   SetFirstInserted(PRBool aValue);
-
-  PRBool NeedSpecialReflow() const;
-  void   SetNeedSpecialReflow(PRBool aValue);
 
   PRBool GetContentHeight() const;
   void   SetContentHeight(nscoord aTwipValue);
@@ -375,20 +371,6 @@ inline float nsTableRowFrame::GetPctHeight() const
     return (float)mStylePctHeight / 100.0f;
   else
     return 0.0f;
-}
-
-inline PRBool nsTableRowFrame::NeedSpecialReflow() const
-{
-  return (mState & NS_ROW_NEED_SPECIAL_REFLOW) == NS_ROW_NEED_SPECIAL_REFLOW;
-}
-
-inline void nsTableRowFrame::SetNeedSpecialReflow(PRBool aValue)
-{
-  if (aValue) {
-    mState |= NS_ROW_NEED_SPECIAL_REFLOW;
-  } else {
-    mState &= ~NS_ROW_NEED_SPECIAL_REFLOW;
-  }
 }
 
 inline PRBool nsTableRowFrame::HasUnpaginatedHeight()

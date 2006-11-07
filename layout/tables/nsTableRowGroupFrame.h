@@ -80,8 +80,6 @@ struct nsRowGroupReflowState {
 // thead or tfoot should be repeated on every printed page
 #define NS_ROWGROUP_REPEATABLE           0x80000000
 #define NS_ROWGROUP_HAS_STYLE_HEIGHT     0x40000000
-// we need a 3rd pass reflow to deal with pct height nested tables 
-#define NS_ROWGROUP_NEED_SPECIAL_REFLOW  0x20000000
 // the next is also used on rows (see nsTableRowGroupFrame::InitRepeatedFrame)
 #define NS_REPEATED_ROW_OR_ROWGROUP      0x10000000
 #define NS_ROWGROUP_HAS_ROW_CURSOR       0x08000000
@@ -384,8 +382,6 @@ public:
   void   SetRepeatable(PRBool aRepeatable);
   PRBool HasStyleHeight() const;
   void   SetHasStyleHeight(PRBool aValue);
-  PRBool NeedSpecialReflow() const;
-  void   SetNeedSpecialReflow(PRBool aValue);
 };
 
 
@@ -400,20 +396,6 @@ inline void nsTableRowGroupFrame::SetRepeatable(PRBool aRepeatable)
     mState |= NS_ROWGROUP_REPEATABLE;
   } else {
     mState &= ~NS_ROWGROUP_REPEATABLE;
-  }
-}
-
-inline PRBool nsTableRowGroupFrame::NeedSpecialReflow() const
-{
-  return (mState & NS_ROWGROUP_NEED_SPECIAL_REFLOW) == NS_ROWGROUP_NEED_SPECIAL_REFLOW;
-}
-
-inline void nsTableRowGroupFrame::SetNeedSpecialReflow(PRBool aValue)
-{
-  if (aValue) {
-    mState |= NS_ROWGROUP_NEED_SPECIAL_REFLOW;
-  } else {
-    mState &= ~NS_ROWGROUP_NEED_SPECIAL_REFLOW;
   }
 }
 
