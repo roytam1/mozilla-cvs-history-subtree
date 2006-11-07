@@ -187,9 +187,6 @@ struct GCMarkNode {
         js_MarkGCThing(cx_, thing_, &node_);                                  \
     JS_END_MACRO
 
-extern JS_FRIEND_DATA(FILE *) js_DumpGCHeap;
-JS_EXTERN_DATA(void *) js_LiveThingToFind;
-
 #else  /* !GC_MARK_DEBUG */
 
 #define GC_MARK(cx, thing, name, prev)   js_MarkGCThing(cx, thing, NULL)
