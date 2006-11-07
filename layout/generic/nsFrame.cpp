@@ -6953,6 +6953,9 @@ static void DisplayReflowEnterPrint(nsPresContext*          aPresContext,
     if (aFrame->GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN)
       printf("dirty-children ");
 
+    if (aReflowState.mFlags.mSpecialHeightReflow)
+      printf("special-height ");
+
     if (aReflowState.mFlags.mHResize)
       printf("h-resize ");
 
