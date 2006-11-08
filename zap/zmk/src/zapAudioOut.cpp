@@ -146,14 +146,14 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
 #ifdef DEBUG_afri_zmk
   printf("(audioout using device %d)", mOutputDevice);
 #endif
+  
+  nsresult rv =  mStreamParameters.InitWithProperties(node_pars);
+  if (NS_FAILED(rv)) return rv;
 
   mClockStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("clock"));
   mClockStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("clock_cycle"),
                                         mStreamParameters.GetFrameDuration() );
   
-  nsresult rv =  mStreamParameters.InitWithProperties(node_pars);
-  if (NS_FAILED(rv)) return rv;
-
   StartStream();
   return NS_OK;
 }
