@@ -1,6 +1,6 @@
 #
-## hostname: xserve03.build.mozilla.org
-## uname: Darwin xserve03.build.mozilla.org 8.1.0 Darwin Kernel Version 8.1.0: Tue May 10 18:16:08 PDT 2005; root:xnu-792.1.5.obj~4/RELEASE_PPC Power Macintosh powerpc
+## hostname: bm-xserve02.mozilla.org
+## uname: Darwin bm-xserve02.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -31,7 +31,7 @@ $MacUniversalBinary = 1;
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = "chase\@mozilla.org";
+$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
@@ -137,7 +137,7 @@ $AliveTest                = 1;
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -149,7 +149,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'Tb-Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -165,10 +165,10 @@ $BuildNameExtra = 'Universal Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 #$BuildTree  = 'MozillaTest';
-$BuildTree  = 'Thunderbird';
+$BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -192,7 +192,7 @@ $ReleaseBuild  = 1;
 $shiptalkback  = 1;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "4";
+$build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/mail/app";
@@ -203,21 +203,20 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$milestone     = "mozilla1.8";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
 $update_package = 1;
 $update_product = "Thunderbird";
-$update_version = "trunk";
+$update_version = "2.0";
 $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "md5";
 $update_filehost = "ftp.mozilla.org";
-$update_appv = "3.0a1";
-$update_extv = "3.0a1";
 $update_pushinfo = 1;
+$update_ver_file = "mail/config/version.txt";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
