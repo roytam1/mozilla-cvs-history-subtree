@@ -1,20 +1,15 @@
 #
-## hostname: xserve06.build.mozilla.org
-## uname: Darwin xserve06.build.mozilla.org 8.7.2 Darwin Kernel Version 8.7.2: Tue Jul 25 23:14:47 PDT 2006; root:xnu-792.10.96.obj~3/RELEASE_PPC Power Macintosh powerpc
+## hostname: xserve04.build.mozilla.org
+## uname:    Darwin xserve04.build.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
+
+$ENV{'CVS_RSH'} = 'ssh';
+$ENV{'MOZILLA_OFFICIAL'} = 1;
+$ENV{'PATH'} = "/opt/local/bin:$ENV{'PATH'}";
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
-
-$ENV{NO_EM_RESTART} = "1";
-$ENV{DYLD_NO_FIX_PREBINDING} = "1";
-$ENV{LD_PREBIND_ALLOW_OVERLAP} = "1";
-$ENV{CVS_RSH} = "ssh";
-
-$MacUniversalBinary = 1;
-
-$BuildXForms = 1;
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -34,31 +29,46 @@ $BuildXForms = 1;
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
+
+$BuildAdministrator = 'build@mozilla.org';
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
 
 #- Default values of command-line opts
 #-
-#$BuildDepend       = 1;      # Depend or Clobber
+$BuildDepend       = 0;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$BuildLocales      = 0;      # Do l10n packaging?
+#$SkipCheckout      = 0;      # Use to debug build process without checking out new source.
+$BuildLocales      = 1;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'Minefield';
-$VendorName               = "";
+$ProductName              = 'Firefox';
+$VendorName               = 'Mozilla';
+
+@CompareLocaleDirs = (
+  "netwerk",
+  "browser",
+  "dom",
+  "toolkit",
+  "security/manager",
+  "other-licenses/branding/firefox",
+);
+$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
+                                # aviary directory structure?
+
+
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
@@ -69,19 +79,18 @@ $VendorName               = "";
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-#$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
-#$EmbedCodesizeTest        = 1;  # mZ, require mozilla/tools/codesigns
+#$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
+#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 1;  # Tp
+#$LayoutPerformanceTest    = 0;  # Tp
 #$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
-#$XULWindowOpenTest        = 1;  # Txul
-$StartupPerformanceTest   = 1;  # Ts
+#$XULWindowOpenTest        = 0;  # Txul
+#$StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
-
-$GraphNameOverride        = 'xserve06.build.mozilla.org_Fx-Trunk';
+#$TestsPhoneHome           = 0;  # Should test report back to server?
+#$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -92,7 +101,6 @@ $GraphNameOverride        = 'xserve06.build.mozilla.org_Fx-Trunk';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
-$pageload_server          = "axolotl.mozilla.org";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -122,7 +130,7 @@ $pageload_server          = "axolotl.mozilla.org";  # localhost
 #$MozConfigFileName = 'mozconfig';
 
 #$UseMozillaProfile = 1;
-#$MozProfileName = 'default';
+$MozProfileName = 'Moz1.8.0-MacUniversal-l10n';
 
 #- Set these to what makes sense for your system
 #$Make          = 'gmake';       # Must be GNU make
@@ -143,8 +151,7 @@ $pageload_server          = "axolotl.mozilla.org";  # localhost
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
-#$moz_cvsroot   = "/builds/cvs.hourly/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -153,14 +160,25 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = '../build/universal';
+#$ObjDir = '../build/unifox';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'Fx-Nightly-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
 #$UserComment = 0;
+
+# Configure only, don't build.
+$ConfigureOnly = 1;
+$LocalizationVersionFile = 'browser/config/version.txt';
+
+%WGetFiles = (
+             "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.8.0/firefox-%version%.en-US.mac.dmg" =>
+             "/builds/tinderbox/Fx-Moz1.8.0-universal-l10n/Darwin_8.7.0_Depend/firefox.dmg"
+             );
+
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Moz1.8.0-universal-l10n/Darwin_8.7.0_Depend/firefox.dmg";
 
 #-
 #- The rest should not need to be changed
@@ -171,10 +189,10 @@ $BuildNameExtra = 'Universal Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'Mozilla1.8.0-l10n';
 
-#$BuildName = '';
-#$BuildTag = '';
+$BuildName = 'Moz1.8.0-MacUniversal-l10n';
+$BuildTag = 'MOZILLA_1_8_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -195,35 +213,41 @@ $BinaryName = 'firefox-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "4";
+$LocaleProduct = "browser";
+
+#$clean_objdir = 1; # remove objdir when starting release cycle?
+#$clean_srcdir = 1; # remove srcdir when starting release cycle?
+$shiptalkback  = 0;
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+#$ReleaseGroup = ''; # group to set uploaded files to
+$build_hour    = '5';
 $package_creation_path = "/browser/installer";
-# needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
+# needs setting for mac + talkback:
 $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-#$ssh_user      = "cltbld";
-#$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$ssh_user      = "cltbld";
+$ssh_server    = "stage.mozilla.org";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/universal-binaries";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/universal-binaries";
+$tbox_ftp_path = $ftp_path;
+$tbox_url_path = $url_path;
+$milestone     = "mozilla1.8.0-l10n";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
-#$push_raw_xpis = 1;
+$push_raw_xpis = 1;
+
 $update_package = 1;
 $update_product = "Firefox";
-$update_version = "trunk";
-$update_platform = "Darwin_Universal-gcc3";
+$update_version = "1.5.0.5";
+$update_platform = "Darwin_uni-gcc3";
 $update_hash = "md5";
 $update_filehost = "ftp.mozilla.org";
-$update_appv = "3.0a1";
-$update_extv = "3.0a1";
-$update_pushinfo = 1;
+$update_appv = "1.5.0.5";
+$update_extv = "1.5.0.5";
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -249,3 +273,5 @@ $update_pushinfo = 1;
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
+
+$MacUniversalBinary = 1;
