@@ -654,7 +654,7 @@ CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS
 ####################################
 # CVS defines for microb
 #
-MICROB_CO_MODULE = mozilla/embedding/browser/gtk/microb
+MICROB_CO_MODULE = $(MODULES_microb)
 MICROB_CO_FLAGS := -P
 ifdef MOZ_CO_FLAGS
   MICROB_CO_FLAGS := $(MOZ_CO_FLAGS)
