@@ -2801,7 +2801,7 @@ nsCSSFrameConstructor::CreatePseudoTableFrame(nsTableCreator&          aTableCre
   nsFrameItems items;
   rv = ConstructTableFrame(aState, parentContent,
                            parentFrame, childStyle, aTableCreator,
-                           PR_TRUE, items, pseudoOuter.mFrame, 
+                           PR_TRUE, items, PR_TRUE, pseudoOuter.mFrame, 
                            pseudoInner.mFrame);
 
   if (NS_FAILED(rv)) return rv;
@@ -3502,6 +3502,7 @@ nsCSSFrameConstructor::ConstructTableFrame(nsFrameConstructorState& aState,
                                            nsTableCreator&          aTableCreator,
                                            PRBool                   aIsPseudo,
                                            nsFrameItems&            aChildItems,
+                                           PRBool                   aAllowOutOfFlow,
                                            nsIFrame*&               aNewOuterFrame,
                                            nsIFrame*&               aNewInnerFrame)
 {
@@ -3538,7 +3539,9 @@ nsCSSFrameConstructor::ConstructTableFrame(nsFrameConstructorState& aState,
     ResolvePseudoStyleFor(aContent, nsCSSAnonBoxes::tableOuter, aStyleContext);
 
   const nsStyleDisplay* disp = outerStyleContext->GetStyleDisplay();
-  nsIFrame* geometricParent = aState.GetGeometricParent(disp, parentFrame);
+  nsIFrame* geometricParent =
+    aAllowOutOfFlow ? aState.GetGeometricParent(disp, parentFrame) :
+                      parentFrame;
 
   // Init the table outer frame and see if we need to create a view, e.g.
   // the frame is absolutely positioned  
@@ -3557,8 +3560,10 @@ nsCSSFrameConstructor::ConstructTableFrame(nsFrameConstructorState& aState,
     // Put the newly created frames into the right child list
     aNewOuterFrame->SetInitialChildList(aState.mPresContext, nsnull,
                                         aNewInnerFrame);
+
     rv = aState.AddChild(aNewOuterFrame, *frameItems, disp, aContent,
-                         outerStyleContext, parentFrame);
+                         outerStyleContext, parentFrame, aAllowOutOfFlow,
+                         aAllowOutOfFlow);
     if (NS_FAILED(rv)) {
       return rv;
     }
@@ -4163,7 +4168,7 @@ nsCSSFrameConstructor::TableProcessChild(nsFrameConstructorState& aState,
       rv = ConstructTableFrame(aState, aChildContent,
                                aParentFrame, childStyleContext,
                                aTableCreator, PR_FALSE, aChildItems,
-                               childFrame, innerTableFrame);
+                               PR_TRUE, childFrame, innerTableFrame);
       if (NS_SUCCEEDED(rv) && pageBreakAfter) {
         // Construct the page break after
         ConstructPageBreakFrame(aState, aChildContent, aParentFrame,
@@ -6779,8 +6784,8 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
       nsIFrame* innerTable;
       rv = ConstructTableFrame(aState, aContent, 
                                aParentFrame, aStyleContext,
-                               tableCreator, PR_FALSE, aFrameItems, newFrame,
-                               innerTable);
+                               tableCreator, PR_FALSE, aFrameItems, PR_TRUE,
+                               newFrame, innerTable);
       addedToFrameList = PR_TRUE;
       // Note: table construction function takes care of initializing
       // the frame, processing children, and setting the initial child
@@ -7085,8 +7090,8 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
     nsIFrame* innerTable;
     nsMathMLmtableCreator mathTableCreator(mPresShell);
     rv = ConstructTableFrame(aState, aContent, blockFrame, tableContext,
-                             mathTableCreator, PR_FALSE, tempItems, outerTable,
-                             innerTable);
+                             mathTableCreator, PR_FALSE, tempItems, PR_FALSE,
+                             outerTable, innerTable);
     // Note: table construction function takes care of initializing the frame,
     // processing children, and setting the initial child list
 
