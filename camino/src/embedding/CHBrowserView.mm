@@ -1413,6 +1413,8 @@ const long NSFindPanelActionSetFindString = 7;
   else if (action == @selector(selectAll:))
     return YES;
   else if (action == @selector(performFindPanelAction:)) {
+    if (![self isTextBasedContent])
+      return NO;
     long tag = [aMenuItem tag];
     if (tag == NSFindPanelActionNext || tag == NSFindPanelActionPrevious)
       return ([[self lastFindText] length] > 0);
