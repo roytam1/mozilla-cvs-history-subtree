@@ -670,14 +670,14 @@ function updateEditItems()
   goUpdateCommand("cmd_findPrev");
 }
 
-var messageComposeOfflineObserver = {
-  observe: function(subject, topic, state) {
+var messageComposeOfflineObserver = 
+{
+  observe: function(subject, topic, state) 
+  {
     // sanity checks
-    if (topic != "network:offline-status-changed") return;
-    if (state == "offline")
-      gIsOffline = true;
-    else
-      gIsOffline = false;
+    if (topic != "network:offline-status-changed") 
+      return;
+    gIsOffline = state == "offline";
     MessageComposeOfflineStateChanged(gIsOffline);
 
     try {
