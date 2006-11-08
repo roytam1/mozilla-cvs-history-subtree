@@ -1490,6 +1490,7 @@ nsHTMLFramesetFrame::MouseDrag(nsPresContext* aPresContext,
                                nsGUIEvent*     aEvent)
 {
   PRInt32 change; // measured positive from left-to-right or top-to-bottom
+  nsWeakFrame weakFrame(this);
   if (mDragger->mVertical) {
     change = aEvent->point.x - mFirstDragPoint.x;
     if (change > mNextNeighborOrigSize - mMinDrag) {
@@ -1538,6 +1539,7 @@ nsHTMLFramesetFrame::MouseDrag(nsPresContext* aPresContext,
     }
   }
 
+  ENSURE_TRUE(weakFrame.IsAlive());
   if (change != 0) {
     mDrag.Reset(mDragger->mVertical, mDragger->mPrevNeighbor, change, this);
     nsIFrame* parentFrame = GetParent();
