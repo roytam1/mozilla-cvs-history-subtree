@@ -1,6 +1,6 @@
 #
-## hostname: galactica
-## uname: Linux galactica.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname: lightning-linux-tbox
+## uname: Linux lightning-linux-tbox.mozilla.org 2.4.21-37.EL #1 Wed Sep 7 13:37:20 EDT 2005 i686 athlon i386 GNU/Linux 
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -137,7 +137,6 @@ $ProductName              = "Thunderbird";
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
-#$moz_cvsroot   = ":pserver:anonymous\@cvs-mirror.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -164,10 +163,10 @@ $BuildNameExtra = 'Lt-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Sunbird';
+$BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -203,7 +202,7 @@ $ftp_path      = "/home/ftp/pub/calendar/lightning/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/nightly";
 #$tbox_ftp_path = $ftp_path;
 #$tbox_url_path = $url_path;
-#$milestone     = "trunk";
+$milestone     = "mozilla1.8";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
