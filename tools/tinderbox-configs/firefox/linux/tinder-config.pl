@@ -1,17 +1,11 @@
 #
-## hostname: argo
-## uname: Linux argo.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname: moz180-linux-tbox.mozilla.org
+## uname: Linux moz180-linux-tbox.mozilla.org 2.4.21-37.EL #1 Wed Sep 7 13:37:20 EDT 2005 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
-
-$BuildXForms = "1";
-$ENV{MOZILLA_OFFICIAL} = 1;
-$ENV{CVS_RSH} = "ssh";
-#$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
-# $ENV{PAGELOAD_URL} = "http://spider/page-loader";
 
 # To ensure Talkback client builds properly on some Linux boxen where LANG
 # is set to "en_US.UTF-8" by default, override that setting here by setting
@@ -19,84 +13,68 @@ $ENV{CVS_RSH} = "ssh";
 # where xrestool is called in the build system so that 'LANG=C' in its
 # environment, according to bryner.
 $ENV{LANG} = "en_US.iso885915";
-
-# $ENV{MOZ_PACKAGE_MSI}
-#-----------------------------------------------------------------------------
-#  Default: 0
-#   Values: 0 | 1
-#  Purpose: Controls whether a MSI package is made.
-# Requires: Windows and a local MakeMSI installation.
-#$ENV{MOZ_PACKAGE_MSI} = 0;
-
-# $ENV{MOZ_SYMBOLS_TRANSFER_TYPE}
-#-----------------------------------------------------------------------------
-#  Default: scp
-#   Values: scp | rsync
-#  Purpose: Use scp or rsync to transfer symbols to the Talkback server.
-# Requires: The selected type requires the command be available both locally
-#           and on the Talkback server.
-#$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
+$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "rsync";
+$ENV{CVS_RSH} = "ssh";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
-$DisplayServer = ':0.0';
+#$DisplayServer = ':0.0';
 
 #- Default values of command-line opts
 #-
-#$BuildDepend       = 1;      # Depend or Clobber
+$BuildDepend       = 0;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
-#$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$BuildLocales      = 0;      # Do l10n packaging?
+#$SkipMozilla       = 1;      # Use to debug post-mozilla.pl scripts.
+$BuildLocales       = 1;
 
 # Tests
 $CleanProfile             = 1;
-#$ResetHomeDirForTests     = 1;
+$ResetHomeDirForTests     = 1;
 $ProductName              = "Firefox";
 $VendorName               = 'Mozilla';
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
-$AliveTest                = 1;
+#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+#$RegxpcomTest             = 1;
+#$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
-$EmbedCodesizeTest        = 1;  # mZ, require mozilla/tools/codesigns
+#$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
+#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
+#$LayoutPerformanceTest    = 0;  # Tp
+#$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
+#$StartupPerformanceTest   = 0;  # Ts
+#@CompareLocaleDirs        = (); # Run compare-locales test on these directories
+@CompareLocaleDirs = (
+  "netwerk",
+  "browser",
+  "dom",
+  "toolkit",
+  "security/manager",
+  "other-licenses/branding/firefox",
+);
+#$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
+#                                # aviary directory structure?
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
-$GraphNameOverride        = 'argo-vm';
-
-# $results_server
-#----------------------------------------------------------------------------
-# Server on which test results will be accessible.  This was originally tegu,
-# then became axolotl.  Once we moved services from axolotl, it was time
-# to give this service its own hostname to make future transitions easier.
-# - cmp@mozilla.org
-#$results_server           = "build-graphs.mozilla.org";
-
+#$TestsPhoneHome           = 0;  # Should test report back to server?
+#$results_server           = "axolotl.mozilla.org"; # was tegu
 #$pageload_server          = "spider";  # localhost
-$pageload_server      = "axolotl.mozilla.org";
-
 
 #
 # Timeouts, values are in seconds.
@@ -119,7 +97,7 @@ $pageload_server      = "axolotl.mozilla.org";
 #$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
-#$StartupPerformanceTestTimeout    = 15;    # seconds
+#$StartupPerformanceTestTimeout    = 60;    # seconds
 #$XULWindowOpenTestTimeout	      = 150;   # seconds
 
 
@@ -159,11 +137,22 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Fx-Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
 #$UserComment = 0;
+
+# Configure only, don't build.
+$ConfigureOnly = 1;
+$LocalizationVersionFile = 'browser/config/version.txt';
+
+%WGetFiles = (
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.8.0/firefox-%version%.en-US.linux-i686.tar.gz",
+	      "/builds/tinderbox/Fx-Mozilla1.8.0-l10n/Linux_2.4.21-37.EL_Depend/firefox.tar.gz"
+	      );
+
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8.0-l10n/Linux_2.4.21-37.EL_Depend/firefox.tar.gz";
 
 #-
 #- The rest should not need to be changed
@@ -174,10 +163,10 @@ $BuildNameExtra = 'Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -196,12 +185,15 @@ $BinaryName = 'firefox-bin';
 #$NSPRArgs = '';
 #$ShellOverride = '';
 
+# allow override of timezone value (for win32 POSIX::strftime)
+#$Timezone = '';
+
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 1;
+$shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = 4;
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$build_hour    = "9";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
@@ -209,22 +201,23 @@ $ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
-$notify_list   = 'build-announce@mozilla.org';
+$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox";
+$milestone     = "mozilla1.8.0-l10n";
+$notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
-$sea_installer = 0;
+$sea_installer = 1;
 $archive       = 1;
-$push_raw_xpis = 0;
-$update_pushinfo = 1;
+$push_raw_xpis = 1;
 $update_package = 1;
 $update_product = "Firefox";
-$update_version = "trunk";
+$update_version = "1.5.0.7";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
-$update_filehost = 'ftp.mozilla.org';
-$update_ver_file = 'browser/config/version.txt';
+$update_filehost = "ftp.mozilla.org";
+$update_appv = "1.5.0.7";
+$update_extv = "1.5.0.7";
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
