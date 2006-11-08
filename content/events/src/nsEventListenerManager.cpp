@@ -2227,7 +2227,12 @@ nsEventListenerManager::FixContextMenuEvent(nsPresContext* aPresContext,
   // from the focus controller.
   nsCOMPtr<nsIDOMEventTarget> currentTarget(aCurrentTarget);
   nsCOMPtr<nsIDOMElement> currentFocus;
-  nsIPresShell* shell = aPresContext->PresShell();
+  nsIPresShell* shell = aPresContext->GetPresShell();
+  if (!shell) {
+    // Nothing to do.
+    return NS_OK;
+  }
+
 
   if (aEvent->message == NS_CONTEXTMENU_KEY) {
     nsIDocument *doc = shell->GetDocument();
