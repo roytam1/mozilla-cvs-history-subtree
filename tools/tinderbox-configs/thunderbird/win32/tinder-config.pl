@@ -1,6 +1,6 @@
 #
-## hostname: tb-win32-tbox
-## CYGWIN_NT-5.2 win2k3-ref-img 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
+## hostname: patrocles
+## uname: WINNT PATROCLES 5.0 2195 xx I386
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -14,6 +14,8 @@ $ENV{MOZ_PACKAGE_MSI} = 0;
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
+
+$BuildAdministrator = 'build@mozilla.org';
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
@@ -98,7 +100,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'd:/moztools/bin/blat';
+$blat           = 'c:/moztools/bin/blat';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
@@ -120,7 +122,7 @@ $moz_cvsroot   = $ENV{CVSROOT};
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'Tb-Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -135,10 +137,10 @@ $BuildNameExtra = 'release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Thunderbird';
+$BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -170,7 +172,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path      = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "trunk";
+$milestone     = "mozilla1.8";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
@@ -179,12 +181,12 @@ $push_raw_xpis = 1;
 
 $update_package = 1;
 $update_product = "Thunderbird";
-$update_version = "trunk";
-$update_ver_file = "mail/config/version.txt";
+$update_version = "2.0";
 $update_platform = "WINNT_x86-msvc";
-$update_hash = "md5";
+$update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_pushinfo = 1;
+$update_ver_file = "mail/config/version.txt";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
