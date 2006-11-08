@@ -38,7 +38,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include <strings.h>
-#include <nsXPIDLString.h>
 
 #include "nsIURI.h"
 
@@ -163,4 +162,3 @@ EmbedContentListener::SetParentContentListener(nsIURIContentListener *aParent)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
-

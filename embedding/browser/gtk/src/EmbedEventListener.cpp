@@ -195,8 +195,11 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
                   (void *)mouseEvent, &return_val);
   if (return_val) {
     sMPressed = PR_FALSE;
-    aDOMEvent->StopPropagation();
-    aDOMEvent->PreventDefault();
+    if (sLongPressTimer)
+      g_source_remove (sLongPressTimer);
+//FIXME
+//    aDOMEvent->StopPropagation();
+//    aDOMEvent->PreventDefault();
   } else {
     sLongPressTimer = g_timeout_add(mLongMPressDelay, sLongMPress, mOwner->mOwningWidget);
     ((nsIDOMMouseEvent*)mouseEvent)->GetScreenX(&sX);
@@ -368,11 +371,10 @@ EmbedEventListener::FocusOut(nsIDOMEvent* aDOMEvent)
 NS_IMETHODIMP
 EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
 {
-  if (sMPressed &&
-      gtk_signal_handler_pending(
-        GTK_OBJECT(mOwner->mOwningWidget),
-        moz_embed_signals[DOM_MOUSE_SCROLL],
-        TRUE)) {
+  if (sMPressed && 
+      gtk_signal_handler_pending(GTK_OBJECT(mOwner->mOwningWidget),
+                                 moz_embed_signals[DOM_MOUSE_SCROLL],
+				 TRUE)) {
     // Return TRUE from your signal handler to mark the event as consumed.
     nsCOMPtr <nsIDOMMouseEvent> mouseEvent = do_QueryInterface(aDOMEvent);
     if (!mouseEvent)

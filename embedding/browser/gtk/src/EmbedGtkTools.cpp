@@ -77,3 +77,20 @@ nsresult GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer
   NS_ENSURE_TRUE(docShell, NS_ERROR_FAILURE);
   return docShell->GetContentViewer(aViewer);
 }
+
+PRUnichar *LocaleToUnicode (const char *locStr)
+{
+  if (!locStr)
+    return (NULL);
+
+  nsAutoString autoStr;
+#ifdef MOZILLA_INTERNAL_API //FIXME?
+
+  autoStr.AssignWithConversion (locStr);
+#else
+  autoStr.AssignLiteral (locStr);
+#endif
+  PRUnichar *uniStr = ToNewUnicode(autoStr);
+
+  return (uniStr);
+}
