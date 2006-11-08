@@ -57,9 +57,7 @@
 @class BookmarkFolder;
 @class BookmarkItem;
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
-@class NSSearchField;
-#endif
+@class SearchTextField;
 
 // Tags for arrange menu items
 enum
@@ -119,7 +117,7 @@ enum
   IBOutlet NSMenu*          mQuickSearchMenuBookmarks;
   IBOutlet NSMenu*          mQuickSearchMenuHistory;
   
-  IBOutlet NSSearchField*   mSearchField;
+  IBOutlet SearchTextField* mSearchField;
 
   IBOutlet NSSplitView*     mContainersSplit;
 
@@ -149,7 +147,6 @@ enum
   BookmarkFolder*         mActiveRootCollection;
   BookmarkFolder*         mRootBookmarks;
   NSArray*                mSearchResultArray;
-  int                     mSearchTag;
   int                     mOpenActionFlag;
   
   BookmarkItem*           mItemToReveal;
@@ -181,7 +178,6 @@ enum
 -(IBAction) copy:(id)aSender;
 -(IBAction) paste:(id)aSender;
 -(IBAction) delete:(id)aSender;
--(IBAction) searchStringChanged:(id)aSender;
 
 // uses the tag of the sender to determine the sort order
 -(IBAction) arrange:(id)aSender;
