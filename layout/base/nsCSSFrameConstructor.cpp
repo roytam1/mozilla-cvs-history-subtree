@@ -13325,6 +13325,10 @@ nsCSSFrameConstructor::ConstructInline(nsFrameConstructorState& aState,
   blockSC = mPresShell->StyleSet()->ResolvePseudoStyleFor(aContent, blockStyle,
                                                           aStyleContext);
 
+  if (! aState.mFloatedItems.containingBlock) {
+    blockFrame->AddStateBits(NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT);
+  }
+
   InitAndRestoreFrame(aState, aContent, aParentFrame, blockSC, nsnull,
                       blockFrame, PR_FALSE);  
 
