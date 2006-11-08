@@ -1,29 +1,24 @@
-#
-## hostname: argo
-## uname: Linux argo.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
-#
-
+. $topsrcdir/browser/config/mozconfig
+ 
 export MOZILLA_OFFICIAL=1
+ 
+#mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
+#mk_add_options PROFILE_GEN_SCRIPT=@TOPSRCDIR@/build/profile_pageloader.pl
 
-mk_add_options MOZ_CO_PROJECT=browser
-mk_add_options PROFILE_GEN_SCRIPT=@TOPSRCDIR@/build/profile_pageloader.pl
-mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging mozilla/tools/codesighs"
-ac_add_options --enable-application=browser
-
-ac_add_options --enable-update-channel=nightly
-ac_add_options --enable-update-packaging
-
-ac_add_options --enable-optimize
+mk_add_options MOZ_CO_LOCALES=all
+mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
+#mk_add_options LOCALES_CO_TAG=AVIARY_1_0_20040515_BRANCH
+mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
+#mk_add_options MOZ_CO_LOCALES_DATE="11/17/2005 18:00:00 PST"
+ 
 ac_add_options --disable-debug
+ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
 ac_add_options --disable-tests
-#not yet
-#ac_add_options --enable-glitz
-ac_add_options --enable-canvas
-ac_add_options --enable-svg
-ac_add_options --enable-pango
-ac_add_options --enable-default-toolkit=cairo-gtk2
-
+ac_add_options --enable-official-branding
+ac_add_options --enable-default-toolkit=gtk2
+ac_add_options --enable-xft
+ac_add_options --disable-freetype2
+ 
 ac_add_options --enable-static
 ac_add_options --disable-shared
-
-ac_add_options --enable-codesighs
+ac_add_options --enable-update-packaging
