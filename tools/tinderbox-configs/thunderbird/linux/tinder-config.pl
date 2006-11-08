@@ -1,11 +1,14 @@
-#
-## hostname: crazyhorse
-## uname: Linux crazyhorse 2.4.18-14 #1 Wed Sep 4 13:35:50 EDT 2002 i686 i686 i386 GNU/Linux
-#
-
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
+
+# To ensure Talkback client builds properly on some Linux boxen where LANG
+# is set to "en_US.UTF-8" by default, override that setting here by setting
+# it to "en_US.iso885915" (the setting on ocean).  Proper fix is to update
+# where xrestool is called in the build system so that 'LANG=C' in its
+# environment, according to bryner.
+$ENV{LANG} = "en_US.iso885915";
+$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "rsync";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
@@ -20,19 +23,20 @@ $BuildDepend       = 0;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
-#$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
+#$SkipMozilla       = 1;      # Use to debug post-mozilla.pl scripts.
+$BuildLocales       = 1;
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
 $ProductName              = "Thunderbird";
-#$VendorName               = "";
+#$VendorName               = 'Mozilla';
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
 #$AliveTest                = 1;
 #$JavaTest                 = 0;
@@ -46,9 +50,22 @@ $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
 #$LayoutPerformanceTest    = 0;  # Tp
+#$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
 #$StartupPerformanceTest   = 0;  # Ts
+#@CompareLocaleDirs        = (); # Run compare-locales test on these directories
+@CompareLocaleDirs = (
+  "netwerk",
+  "dom",
+  "toolkit",
+  "security/manager",
+  "other-licenses/branding/thunderbird",
+  "editor/ui",
+  "mail",
+);
+#$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
+#                                # aviary directory structure?
 
 #$TestsPhoneHome           = 0;  # Should test report back to server?
 #$results_server           = "axolotl.mozilla.org"; # was tegu
@@ -59,7 +76,7 @@ $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #
 #$CVSCheckoutTimeout               = 3600;
 #$CreateProfileTimeout             = 45;
-#$RegxpcomTestTimeout              = 15;
+#$RegxpcomTestTimeout              = 120;
 
 #$AliveTestTimeout                 = 45;
 #$ViewerTestTimeout                = 45;
@@ -72,6 +89,7 @@ $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
 #$LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
+#$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
 #$StartupPerformanceTestTimeout    = 60;    # seconds
@@ -101,7 +119,7 @@ $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+#$moz_cvsroot   = $ENV{CVSROOT};
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -113,11 +131,22 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'Tb-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
 #$UserComment = 0;
+
+# Configure only, don't build
+$ConfigureOnly = 1;
+
+$LocalizationVersionFile = 'mail/config/version.txt';
+%WGetFiles = (
+	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.linux-i686.tar.gz" =>
+	      "/builds/tinderbox/Tb-Mozilla1.8-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.gz"
+	      );
+
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.gz";
 
 #-
 #- The rest should not need to be changed
@@ -128,10 +157,12 @@ $BuildNameExtra = 'release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Thunderbird';
+$BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
+#$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -155,30 +186,33 @@ $BinaryName = 'thunderbird-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
-#$shiptalkback  = 1;
-$build_hour    = "3";
+$LocaleProduct = "mail";
+$shiptalkback  = 0;
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$build_hour    = "9";
 $package_creation_path = "/mail/installer";
+# needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-#$ssh_user      = "cltbld";
-#$ssh_server    = "stage.mozilla.org";
+$ssh_user      = "cltbld";
+$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
-$tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "trunk";
+$tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox";
+$milestone     = "mozilla1.8-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
+$push_raw_xpis = 1;
 $update_package = 1;
 $update_product = "Thunderbird";
-$update_version = "trunk";
+$update_version = "2.0";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
-$update_appv = "3.0a1";
-$update_extv = "3.0a1";
-$update_pushinfo = 1;
+$update_ver_file = "mail/config/version.txt";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -193,12 +227,14 @@ $update_pushinfo = 1;
 # Valid options are 'gzip', and 'bzip2'. Please make sure the binaries
 # for 'gzip' or 'bzip2' are in the user's path before setting this
 # option.
-#$LogCompression = 'bzip2';
+#$LogCompression = '';
 
 # LogEncoding specifies the encoding format used for the logs. Valid
 # options are 'base64', and 'uuencode'. If $LogCompression is set above,
 # this needs to be set to 'base64' or 'uuencode' to ensure that the
 # binary data is transferred properly.
-#$LogEncoding = 'base64';
+#$LogEncoding = '';
 
-$ENV{CVS_RSH} = "ssh";
+# Prevent Extension Manager from spawning child processes during tests
+# - processes that tbox scripts cannot kill. 
+#$ENV{NO_EM_RESTART} = '1';
