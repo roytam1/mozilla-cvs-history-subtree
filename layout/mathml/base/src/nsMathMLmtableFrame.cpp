@@ -680,6 +680,8 @@ NS_NewMathMLmtdInnerFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 
 nsMathMLmtdInnerFrame::nsMathMLmtdInnerFrame()
 {
+  // Set the right bits -- see what NS_NewTableCellInnerFrame does
+  AddStateBits(NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT);
 }
 
 nsMathMLmtdInnerFrame::~nsMathMLmtdInnerFrame()
