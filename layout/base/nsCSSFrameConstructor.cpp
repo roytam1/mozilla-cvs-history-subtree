@@ -7066,7 +7066,8 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
 
     // then, create a block frame that will wrap the table frame
     nsIFrame* blockFrame;
-    rv = NS_NewBlockFrame(mPresShell, &blockFrame);
+    rv = NS_NewBlockFrame(mPresShell, &blockFrame,
+                          NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT);
     if (NS_FAILED(rv)) return rv;
     nsRefPtr<nsStyleContext> blockContext;
     blockContext = styleSet->ResolvePseudoStyleFor(aContent,
