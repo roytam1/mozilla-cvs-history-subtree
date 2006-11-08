@@ -1,29 +1,32 @@
 #
-## hostname: argo
-## uname: Linux argo.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname: moz180-linux-tbox.mozilla.org
+## uname: Linux moz180-linux-tbox.mozilla.org 2.4.21-37.EL #1 Wed Sep 7 13:37:20 EDT 2005 i686 athlon i386 GNU/Linux
 #
+
+#. $topsrcdir/browser/config/mozconfig
 
 export MOZILLA_OFFICIAL=1
 
-mk_add_options MOZ_CO_PROJECT=browser
+mk_add_options MOZ_CO_PROJECT="browser"
+#mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 mk_add_options PROFILE_GEN_SCRIPT=@TOPSRCDIR@/build/profile_pageloader.pl
-mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging mozilla/tools/codesighs"
-ac_add_options --enable-application=browser
+# -j1: 49 minutes, -j6: 35 minutes, -j8: 31 minutes, -j10: 31 minutes
+# mk_add_options MOZ_MAKE_FLAGS="-j8"
+mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 
-ac_add_options --enable-update-channel=nightly
+ac_add_options --enable-application="browser"
+ac_add_options --enable-update-channel="nightly"
 ac_add_options --enable-update-packaging
-
-ac_add_options --enable-optimize
 ac_add_options --disable-debug
+ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
+#ac_add_options --enable-optimize="-Os"
 ac_add_options --disable-tests
-#not yet
-#ac_add_options --enable-glitz
-ac_add_options --enable-canvas
+ac_add_options --enable-official-branding
+ac_add_options --enable-default-toolkit=gtk2
+ac_add_options --enable-xft
+ac_add_options --disable-freetype2
 ac_add_options --enable-svg
-ac_add_options --enable-pango
-ac_add_options --enable-default-toolkit=cairo-gtk2
+ac_add_options --enable-canvas
 
 ac_add_options --enable-static
 ac_add_options --disable-shared
-
-ac_add_options --enable-codesighs
