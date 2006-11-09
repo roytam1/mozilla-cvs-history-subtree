@@ -127,6 +127,19 @@ typedef enum
   GTK_MOZ_EMBED_EMAIL_CERT,
   GTK_MOZ_EMBED_SERVER_CERT
 */
+
+/** GtkMozEmbedSecurityMode.
+  * Enumerates security modes.
+  */
+typedef enum
+{
+  GTK_MOZ_EMBED_NO_SECURITY = 0,
+  GTK_MOZ_EMBED_LOW_SECURITY,
+  GTK_MOZ_EMBED_MEDIUM_SECURITY,
+  GTK_MOZ_EMBED_HIGH_SECURITY,
+  GTK_MOZ_EMBED_UNKNOWN_SECURITY
+} GtkMozEmbedSecurityMode;
+
 /** @struct GtkWebHistoryItem.
   * Defines a web history item.
   */
@@ -178,6 +191,8 @@ GTKMOZEMBED_API(gint,       gtk_moz_embed_common_delete_all_cookies,(GSList *del
 GTKMOZEMBED_API(unsigned char*, gtk_moz_embed_common_nsx509_to_raw, (void *nsIX509Ptr, guint *len))
 GTKMOZEMBED_API(void,       gtk_moz_embed_common_get_plugins_list,  (GtkMozPlugin **pluginArray, gint*))
 GTKMOZEMBED_API(void,       gtk_moz_embed_common_reload_plugins,    (void))
+GTKMOZEMBED_API(guint,      gtk_moz_embed_common_get_security_mode, (guint sec_state))
+
 /*typedef struct _GtkMozEmbedCertContext GtkMozEmbedCertContext;
 struct _GtkMozEmbedCertContext
 {

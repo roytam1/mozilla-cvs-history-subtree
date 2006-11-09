@@ -345,13 +345,12 @@ GtkPromptService::PromptUsernameAndPassword(
     gchar * aGUsername = g_strdup(retUsername.get());
     gchar * aGPassword = g_strdup(retPassword.get());
     // FIXME: it is not working. CheckValue has no effect.
-    PRBool discardedCheckValue = PR_FALSE;
     if (!aCheckValue)
-      aCheckValue = &discardedCheckValue;
+      aCheckValue = (PRBool *) malloc (sizeof (PRBool));
     gtk_signal_emit(GTK_OBJECT(parentWidget),
         moz_embed_signals[PROMPT_AUTH],
-        dialogTitle.get(), dialogText.get(), &aGUsername, 
-        &aGPassword, checkMsg.get(), discardedCheckValue, aConfirm);
+        dialogTitle.get(), dialogText.get(), &aGUsername,
+	&aGPassword, checkMsg.get(), aCheckValue, aConfirm);
     if (*aConfirm) {
       if (*aUsername)
         NS_Free(*aUsername);

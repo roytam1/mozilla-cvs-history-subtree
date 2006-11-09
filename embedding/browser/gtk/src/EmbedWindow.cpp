@@ -299,10 +299,10 @@ EmbedWindow::SetDimensions(PRUint32 aFlags, PRInt32 aX, PRInt32 aY,
      nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER))) {
     return mBaseWindow->SetPositionAndSize(aX, aY, aCX, aCY, PR_TRUE);
   }
-  if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
+  else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
     return mBaseWindow->SetPosition(aX, aY);
   }
-  if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
+  else if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
          nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {
     return mBaseWindow->SetSize(aCX, aCY, PR_TRUE);
   }
@@ -318,10 +318,10 @@ EmbedWindow::GetDimensions(PRUint32 aFlags, PRInt32 *aX,
      nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER))) {
     return mBaseWindow->GetPositionAndSize(aX, aY, aCX, aCY);
   }
-  if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
+  else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
     return mBaseWindow->GetPosition(aX, aY);
   }
-  if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
+  else if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
          nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {
     return mBaseWindow->GetSize(aCX, aCY);
   }

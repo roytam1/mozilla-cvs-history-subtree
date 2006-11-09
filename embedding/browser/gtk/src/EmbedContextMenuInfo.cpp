@@ -514,11 +514,13 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
   mCtxDocument->GetDocumentElement (getter_AddRefs (targetDOMElement));
   if (!targetDOMElement) return NS_ERROR_UNEXPECTED;
   nsCOMPtr<nsIDOMNSHTMLDocument> htmlDoc = do_QueryInterface(mCtxDocument);
-  nsString DMode;
-  htmlDoc->GetDesignMode(DMode);
-  if (DMode.EqualsLiteral ("on")) {
-    mEmbedCtxType |= GTK_MOZ_EMBED_CTX_INPUT;
-    mEmbedCtxType |= GTK_MOZ_EMBED_CTX_RICHEDIT;
+  if (htmlDoc) {
+    nsString DMode;
+    htmlDoc->GetDesignMode(DMode);
+    if (DMode.EqualsLiteral ("on")) {
+      mEmbedCtxType |= GTK_MOZ_EMBED_CTX_INPUT;
+      mEmbedCtxType |= GTK_MOZ_EMBED_CTX_RICHEDIT;
+    }
   }
   nsCOMPtr<nsIDocument> doc = do_QueryInterface(mCtxDocument);
   if (!doc)

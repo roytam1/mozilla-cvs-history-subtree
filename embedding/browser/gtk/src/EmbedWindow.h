@@ -54,7 +54,6 @@
 #include <nsIBaseWindow.h>
 #include <nsIInterfaceRequestor.h>
 #include <nsCOMPtr.h>
-#include "nsString.h"
 
 #include <gtk/gtk.h>
 

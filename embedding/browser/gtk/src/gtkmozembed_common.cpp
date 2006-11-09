@@ -75,6 +75,9 @@
 #include <nsString.h>
 #include <nsIDOMMimeType.h>
 
+//for security
+#include <nsIWebProgressListener.h>
+
 #ifdef MOZ_WIDGET_GTK2
 #include "gtkmozembedmarshal.h"
 #define NEW_TOOLKIT_STRING(x) g_strdup(NS_ConvertUTF16toUTF8(x).get())
@@ -106,8 +109,8 @@
 #define GET_OBJECT_CLASS_TYPE(x) (GTK_OBJECT_CLASS(x)->type)
 #endif /* MOZ_WIDGET_GTK */
 
-// Contract ID used to get the plugin manager
-#define NS_PLUGINMANAGER_CONTRACTID "@mozilla.org/plugin/manager;1"
+// CID used to get the plugin manager
+static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
 
 // class and instance initialization
 
@@ -308,14 +311,16 @@ gboolean
 gtk_moz_embed_common_set_pref(GtkType type, gchar *name, gpointer value)
 {
   g_return_val_if_fail (name != NULL, FALSE);
-  nsCOMPtr<nsIPref> pref = do_GetService(PREF_ID);
+
+  nsCOMPtr<nsIPref> pref = do_CreateInstance(PREF_ID);
+
   if (pref) {
     nsresult rv = NS_ERROR_FAILURE;
     switch (type) {
       case GTK_TYPE_BOOL:
       {
         /* I doubt this cast pair is correct */
-        rv = pref->SetBoolPref (name, (int)(int*)value != 0);
+	rv = pref->SetBoolPref (name, (int)(int*)value != 0 ? PR_TRUE : PR_FALSE);
         break;
       }
       case GTK_TYPE_INT:
@@ -333,16 +338,18 @@ gtk_moz_embed_common_set_pref(GtkType type, gchar *name, gpointer value)
       default:
         break;
     }
-    return NS_SUCCEEDED(rv);
+    return ( NS_SUCCEEDED (rv) ? TRUE : FALSE );
   }
-  return FALSE;
+  return (FALSE);
 }
 
 gboolean
 gtk_moz_embed_common_get_pref(GtkType type, gchar *name, gpointer value)
 {
   g_return_val_if_fail (name != NULL, FALSE);
-  nsCOMPtr<nsIPref> pref = do_GetService(PREF_ID);
+
+  nsCOMPtr<nsIPref> pref = do_CreateInstance(PREF_ID);
+
   nsresult rv = NS_ERROR_FAILURE;
   if (pref){
     switch (type) {
@@ -387,8 +394,9 @@ gtk_moz_embed_common_get_logins(const char* uri, nsIPasswordManager *passwordMan
   nsCOMPtr<nsISimpleEnumerator> passwordEnumerator;
   nsresult result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
   PRBool enumResult;
-  while(NS_SUCCEEDED(passwordEnumerator->HasMoreElements(&enumResult)) &&
-        enumResult)
+  for (passwordEnumerator->HasMoreElements(&enumResult) ;
+       enumResult == PR_TRUE ;
+       passwordEnumerator->HasMoreElements(&enumResult))
   {
     nsCOMPtr<nsIPassword> nsPassword;
     result = passwordEnumerator->GetNext
@@ -482,8 +490,10 @@ gtk_moz_embed_common_get_cookie_list(void)
   nsCOMPtr<nsISimpleEnumerator> cookieEnumerator;
   result = cookieManager->GetEnumerator(getter_AddRefs(cookieEnumerator));
   g_return_val_if_fail(NS_SUCCEEDED(result), NULL);
-  while(NS_SUCCEEDED(cookieEnumerator->HasMoreElements(&enumResult)) &&
-        enumResult)
+  PRBool enumResult;
+  for (cookieEnumerator->HasMoreElements(&enumResult);
+       enumResult == PR_TRUE;
+       cookieEnumerator->HasMoreElements(&enumResult))
   {
     GtkMozCookieList *c;
     nsCOMPtr<nsICookie> nsCookie;
@@ -591,4 +601,42 @@ gtk_moz_embed_common_reload_plugins ()
   nsCOMPtr<nsIPluginManager> pluginMan = 
       do_GetService(NS_PLUGINMANAGER_CONTRACTID, &rv);
   pluginMan->ReloadPlugins(PR_TRUE);
+}
+
+guint
+gtk_moz_embed_common_get_security_mode (guint sec_state)
+{
+    GtkMozEmbedSecurityMode sec_mode;
+
+    switch (sec_state)
+    {
+        case nsIWebProgressListener::STATE_IS_INSECURE:
+                sec_mode = GTK_MOZ_EMBED_NO_SECURITY;
+                //g_print("GTK_MOZ_EMBED_NO_SECURITY\n");
+                break;
+        case nsIWebProgressListener::STATE_IS_BROKEN:
+                sec_mode = GTK_MOZ_EMBED_NO_SECURITY;
+                //g_print("GTK_MOZ_EMBED_NO_SECURITY\n");
+                break;
+        case nsIWebProgressListener::STATE_IS_SECURE|
+             nsIWebProgressListener::STATE_SECURE_HIGH:
+                sec_mode = GTK_MOZ_EMBED_HIGH_SECURITY;
+                //g_print("GTK_MOZ_EMBED_HIGH_SECURITY");
+                break;
+        case nsIWebProgressListener::STATE_IS_SECURE|
+             nsIWebProgressListener::STATE_SECURE_MED:
+                sec_mode = GTK_MOZ_EMBED_MEDIUM_SECURITY;
+                //g_print("GTK_MOZ_EMBED_MEDIUM_SECURITY\n");
+                break;
+        case nsIWebProgressListener::STATE_IS_SECURE|
+             nsIWebProgressListener::STATE_SECURE_LOW:
+                sec_mode = GTK_MOZ_EMBED_LOW_SECURITY;
+                //g_print("GTK_MOZ_EMBED_LOW_SECURITY\n");
+                break;
+        default:
+                sec_mode = GTK_MOZ_EMBED_UNKNOWN_SECURITY;
+                //g_print("GTK_MOZ_EMBED_UNKNOWN_SECURITY\n");
+                break;
+    }
+    return sec_mode;
 }

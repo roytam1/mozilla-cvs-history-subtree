@@ -406,10 +406,11 @@ EmbedPasswordMgr::AddUser(
 NS_IMETHODIMP
 EmbedPasswordMgr::InsertLogin(const char* username, const char* password)
 {
-  if (!username)
-    return NS_ERROR_FAILURE
-
-  mGlobalUserField->SetValue (NS_ConvertUTF8toUTF16(username));  
+  if (username)
+    mGlobalUserField->SetValue (NS_ConvertUTF8toUTF16(username));
+  else
+    return NS_ERROR_FAILURE;
+  
   if (password)
     mGlobalPassField->SetValue (NS_ConvertUTF8toUTF16(password));
   else
@@ -432,7 +433,7 @@ EmbedPasswordMgr::GetNumberOfSavedPassword (PRInt32 *aNum)
   if (NS_FAILED(result)) return NS_ERROR_FAILURE; 
   PRBool enumResult;
   for (passwordEnumerator->HasMoreElements(&enumResult); 
-       enumResult == PR_TRUE ;
+       enumResult == PR_TRUE;
        passwordEnumerator->HasMoreElements(&enumResult))
   {
     nsCOMPtr<nsIPassword> nsPassword;
@@ -459,15 +460,13 @@ EmbedPasswordMgr::RemovePasswordsByIndex(gint aIndex)
   result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
   if (NS_FAILED(result))
     return result; 
-  gchar *tempHost, *tempUserName;
+  gchar *tempHost = nsnull, *tempUserName = nsnull;
   PRBool enumResult;
-  PRUint32 i;
+  PRUint32 i = 0;
   nsCOMPtr<nsIPassword> nsPassword;
-  for (i = 0;
-       NS_SUCCEEDED(passwordEnumerator->HasMoreElements(&enumResult)) &&
-       enumResult &&
-       i <= aIndex; 
-       i++)
+  for (passwordEnumerator->HasMoreElements(&enumResult);
+       enumResult == PR_TRUE && i <= aIndex;
+       passwordEnumerator->HasMoreElements(&enumResult), i++)
   {
     result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
     if (NS_FAILED(result))
@@ -516,18 +515,17 @@ EmbedPasswordMgr::RemovePasswords(const char *aHostName, const char *aUserName)
     return result; 
   gchar *tempHost, *tempUserName;
   PRBool enumResult;
-  while (NS_SUCCEEDED(passwordEnumerator->HasMoreElements(&enumResult)) &&
-         enumResult)
+  for (passwordEnumerator->HasMoreElements(&enumResult);
+            enumResult == PR_TRUE ; passwordEnumerator->HasMoreElements(&enumResult))
   {
-    nsCOMPtr<nsIPassword> passwordEntry;
-    result = passwordEnumerator->GetNext (getter_AddRefs(passwordEntry));
-    if (NS_FAILED(result))
-      return result;
+    nsCOMPtr<nsIPassword> nsPassword;
+    result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
+    if (NS_FAILED(result)) return FALSE;
     nsEmbedCString transfer;
-    passwordEntry->GetHost (transfer);
+    nsPassword->GetHost (transfer);
     tempHost = g_strdup (transfer.get());
     nsEmbedString unicodeName;
-    passwordEntry->GetUser (unicodeName);
+    nsPassword->GetUser (unicodeName);
     nsEmbedCString userName;
     NS_UTF16ToCString(unicodeName,NS_CSTRING_ENCODING_UTF8, userName);
     tempUserName = g_strdup(userName.get());
@@ -625,9 +623,9 @@ EmbedPasswordMgr::BuildRejectArrayEnumerator(
 {
   nsIMutableArray* array = NS_STATIC_CAST(nsIMutableArray*, aUserData);
   nsCOMPtr<nsIPassword> passwordEntry = new PasswordEntry(aKey, nsnull);
-  if (!passwordEntry) {
-    /* XXX handle oom */
-  }
+//  if (!passwordEntry) {
+//    // XXX handle oom 
+//  }
   array->AppendElement(passwordEntry, PR_FALSE);
   return PL_DHASH_NEXT;
 }
@@ -644,9 +642,8 @@ EmbedPasswordMgr::GetRejectEnumerator(nsISimpleEnumerator** aEnumerator)
 }
 
 // nsIPasswordManagerInternal implementation
-class FindEntryContext
+struct findEntryContext
 {
-public:
   EmbedPasswordMgr* manager;
   const nsACString& hostURI;
   const nsAString&  username;
@@ -656,22 +653,16 @@ public:
   nsAString&  passwordFound;
   PRBool matched;
 
-  FindEntryContext(
-    EmbedPasswordMgr* aManager,
+  findEntryContext(EmbedPasswordMgr* aManager,
     const nsACString& aHostURI,
     const nsAString&  aUsername,
     const nsAString&  aPassword,
     nsACString& aHostURIFound,
     nsAString&  aUsernameFound,
-    nsAString&  aPasswordFound
-  ) :
-    manager(aManager),
-    hostURI(aHostURI),
-    username(aUsername),
-    password(aPassword),
-    hostURIFound(aHostURIFound),
-    usernameFound(aUsernameFound),
-    passwordFound(aPasswordFound),
+    nsAString&  aPasswordFound)
+  : manager(aManager), hostURI(aHostURI), username(aUsername),
+    password(aPassword), hostURIFound(aHostURIFound),
+    usernameFound(aUsernameFound), passwordFound(aPasswordFound),
     matched(PR_FALSE)
   {
   }
@@ -684,7 +675,7 @@ EmbedPasswordMgr::FindEntryEnumerator(
   SignonHashEntry* aEntry,
   void* aUserData)
 {
-  FindEntryContext* context = NS_STATIC_CAST(FindEntryContext*, aUserData);
+  findEntryContext* context = NS_STATIC_CAST(findEntryContext*, aUserData);
   EmbedPasswordMgr* manager = context->manager;
   nsresult rv;
   SignonDataEntry* entry = nsnull;
@@ -694,21 +685,22 @@ EmbedPasswordMgr::FindEntryEnumerator(
          context->password,
          EmptyString(),
          &entry);
-  if (NS_FAILED(rv) || !entry)
-    return PL_DHASH_NEXT;
-
-  if (NS_SUCCEEDED(DecryptData(entry->userValue, context->usernameFound)) &&
-      NS_SUCCEEDED(DecryptData(entry->passValue, context->passwordFound)))
+  if (NS_SUCCEEDED(rv) && entry)
   {
-    context->matched = PR_TRUE;
-    context->hostURIFound.Assign(context->hostURI);
+    if (NS_SUCCEEDED(DecryptData(entry->userValue, context->usernameFound)) &&
+        NS_SUCCEEDED(DecryptData(entry->passValue, context->passwordFound)))
+    {
+      context->matched = PR_TRUE;
+      context->hostURIFound.Assign(context->hostURI);
+    }
+    /* XXX The logic here doesn't make sense, but the author
+     * returned STOP instead of NEXT, so ...
+     */
     return PL_DHASH_STOP;
   }
-  /* XXX The logic here doesn't make sense, but the author
-   * returned STOP instead of NEXT, so ...
-   */
-  return PL_DHASH_STOP;
+  return PL_DHASH_NEXT;
 }
+
 
 NS_IMETHODIMP
 EmbedPasswordMgr::FindPasswordEntry(
@@ -742,14 +734,12 @@ EmbedPasswordMgr::FindPasswordEntry(
           return NS_ERROR_FAILURE;
         }
       }
-      /* XXX it doesn't make sense to return NS_OK for !entry
-       */
       return rv;
     }
     return NS_ERROR_FAILURE;
   }
   // No host given, so enumerate all entries in the hashtable
-  FindEntryContext context(this, aHostURI, aUsername, aPassword,
+  findEntryContext context(this, aHostURI, aUsername, aPassword,
                            aHostURIFound, aUsernameFound, aPasswordFound);
   mSignonTable.EnumerateRead(FindEntryEnumerator, &context);
   return NS_OK;
@@ -788,9 +778,9 @@ EmbedPasswordMgr::AddUserFull(
     }
   }
   SignonDataEntry* entry = new SignonDataEntry();
-  if (!entry) {
-    /* XXX handle oom */
-  }
+//  if (!entry) {
+//    // XXX handle oom
+//  }
   entry->userField.Assign(aUserFieldName);
   entry->passField.Assign(aPassFieldName);
   EncryptDataUCS2(aUser, entry->userValue);
@@ -1343,12 +1333,24 @@ EmbedPasswordMgr::Notify(
         gtk_signal_emit (GTK_OBJECT (GTK_MOZ_EMBED(parentWidget)->common), 
                 moz_embed_common_signals[COMMON_REMEMBER_LOGIN], &selection);
       // FIXME These values (0,1,2,3,4) need constant variable.
-      if (selection == GTK_MOZ_EMBED_LOGIN_REMEMBER_FOR_THIS_SITE || selection == GTK_MOZ_EMBED_LOGIN_REMEMBER_FOR_THIS_SERVER )
+      if (selection == GTK_MOZ_EMBED_LOGIN_REMEMBER_FOR_THIS_SITE )
       {
         SignonDataEntry* entry = new SignonDataEntry();
-        if (!entry) {
-          /* XXX handle oom */
+        entry->userField.Assign(userFieldName);
+        entry->passField.Assign(passFieldName);
+        if (NS_FAILED(EncryptDataUCS2(userValue, entry->userValue)) ||
+            NS_FAILED(EncryptDataUCS2(passValue, entry->passValue)))
+        {
+          delete entry;
+          return NS_OK;
         }
+        AddSignonData(realm, entry);
+        WritePasswords(mSignonFile);
+      }
+      else if (selection == GTK_MOZ_EMBED_LOGIN_REMEMBER_FOR_THIS_SERVER )
+      {
+         SignonDataEntry* entry = new SignonDataEntry();
+
         entry->userField.Assign(userFieldName);
         entry->passField.Assign(passFieldName);
         if (NS_FAILED(EncryptDataUCS2(userValue, entry->userValue)) ||
@@ -1441,10 +1443,9 @@ EmbedPasswordMgr::Notify(
             else
             {
               nsAutoString dialogTitle, dialogText, ptUser;
-              if (NS_FAILED(DecryptData(entry->userValue, ptUser))) {
-                /* XXX this almost certainly leaks entry */
+              if (NS_FAILED(DecryptData(entry->userValue, ptUser)))
                 return NS_OK;
-              }
+
               const PRUnichar* formatArgs[1] =
                 {
                   ptUser.get()
@@ -1674,7 +1675,7 @@ EmbedPasswordMgr::DecryptData(
   }
   aPlaintext.Assign(NS_ConvertUTF8toUTF16(buffer));
   /* sdr::descryptstring is a proper xpcom creature, it uses nsmemory */
-  nsMemory::Free(buffer);
+  NS_Free(buffer);
   return NS_OK;
 }
 
@@ -1694,6 +1695,7 @@ EmbedPasswordMgr::EncryptData(const nsAString& aPlaintext,
   /* XXX [not our fault] we intentionally leak here because SDR is so buggy that we could
    * only corrupt the heap if we tried to do something about it. Bug 359209
    */
+  NS_Free(buffer);
   return NS_OK;
 }
 

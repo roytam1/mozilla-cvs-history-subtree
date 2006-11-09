@@ -610,6 +610,7 @@ gtk_moz_embed_init(GtkMozEmbed *embed)
 {
   EmbedPrivate *priv = new EmbedPrivate();
   embed->data = priv;
+  embed->common = NULL;
   gtk_widget_set_name(GTK_WIDGET(embed), "gtkmozembed");
 
 #ifdef MOZ_WIDGET_GTK2
