@@ -1,6 +1,6 @@
 #
-## hostname: fx-win32-tbox
-## uname: CYGWIN_NT-5.2 fx-win32-tbox 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
+## hostname: fxexp-win32-tbox
+## CYGWIN_NT-5.2 fxexp-win32-tbox 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -29,9 +29,11 @@ $ENV{MOZ_PACKAGE_NSIS} = '1';
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = 'build@mozilla.org';
+$BuildAdministrator = "build\@mozilla.org";
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
+
+$BuildXForms = 1;
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
@@ -55,29 +57,28 @@ $CleanProfile             = 1;
 $ProductName              = "Firefox";
 $VendorName               = "Mozilla";
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
-$JavaTest                 = 0;
-$ViewerTest               = 0;
-$BloatTest                = 0;  # warren memory bloat test
-$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
-$DomToTextConversionTest  = 0;  
-$XpcomGlueTest            = 0;
-$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
-$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
-$MailBloatTest            = 0;
-$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
-$QATest                   = 0;  
-$XULWindowOpenTest        = 0;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
-$NeckoUnitTest            = 0;
-$RenderPerformanceTest    = 0;  # Tgfx
+#$JavaTest                 = 0;
+#$ViewerTest               = 0;
+#$BloatTest                = 0;  # warren memory bloat test
+#$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
+#$DomToTextConversionTest  = 0;  
+#$XpcomGlueTest            = 0;
+#$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
+#$EmbedCodesizeTest        = 1;  # mZ, require mozilla/tools/codesigns
+#$MailBloatTest            = 0;
+#$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
+#$LayoutPerformanceTest    = 1;  # Tp
+#$DHTMLPerformanceTest     = 1;  # Tdhtml
+#$QATest                   = 0;  
+#$XULWindowOpenTest        = 1;  # Txul
+#$StartupPerformanceTest   = 1;  # Ts
+#$NeckoUnitTest            = 0;
+$RenderPerformanceTest     = 1;  # Tgfx
 
-$TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = 'fx-win32-tbox';
+$TestsPhoneHome           = 1;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -129,7 +130,7 @@ $Make          = 'make';       # Must be GNU make
 
 # win32 usually doesn't have /bin/mail
 $blat           = 'd:/moztools/bin/blat';
-$use_blat       = 0;
+$use_blat       = 1;
 
 # Set moz_cvsroot to something like:
 # :pserver:$ENV{USER}%netscape.com\@cvs.mozilla.org:/cvsroot
@@ -151,7 +152,7 @@ $moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = 'fx-trunk-cairo';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'reflow-refactor';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -167,10 +168,11 @@ $BuildNameExtra = 'Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 #$BuildTree  = 'MozillaTest';
-$BuildTree  = 'Firefox';
+#$BuildTree  = 'Firefox-Cairo';
+$BuildTree  = 'MozillaExperimental';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'REFLOW_20061031_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -192,32 +194,32 @@ $BinaryName = 'firefox.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/reflow-refactor";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/reflow-refactor";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
-$notify_list   = 'build-announce@mozilla.org';
+$notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
 $archive       = 1;
 $push_raw_xpis = 1;
-$update_package = 1;
+$update_package = 0;
 $update_product = "Firefox";
 $update_version = "trunk";
 $update_platform = "WINNT_x86-msvc";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
-$update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
+$update_ver_file = "browser/config/version.txt";
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -245,4 +247,4 @@ $update_pushinfo = 1;
 #$ENV{NO_EM_RESTART} = '1';
 
 # Build XForms
-$BuildXForms = 1;
+#$BuildXForms = 1;
