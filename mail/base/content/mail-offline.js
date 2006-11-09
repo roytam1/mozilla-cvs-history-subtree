@@ -46,12 +46,6 @@ var MailOfflineMgr = {
     var os = Components.classes["@mozilla.org/observer-service;1"]
               .getService(Components.interfaces.nsIObserverService);
     os.addObserver(this, "network:offline-status-changed", false);
-    var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                      .getService(Components.interfaces.nsIIOService2);  
-
-    // Stop automatic management of the offline status.
-    ioService.manageOfflineStatus = false;
-
     this.offlineManager = Components.classes["@mozilla.org/messenger/offline-manager;1"]                 
                         .getService(Components.interfaces.nsIMsgOfflineManager);
     this.offlineBundle = document.getElementById("bundle_offlinePrompts");
@@ -70,12 +64,12 @@ var MailOfflineMgr = {
   /** 
    * @return true if we are online
    */
-   isOnline: function()
-{
-      var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                             .getService(Components.interfaces.nsIIOService);
-      return (!ioService.offline);
-   },
+  isOnline: function()
+  {
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                           .getService(Components.interfaces.nsIIOService);
+    return (!ioService.offline);
+  },
 
   /**
    * Toggles the online / offline state, initiated by the user. Depending on user settings
@@ -84,6 +78,8 @@ var MailOfflineMgr = {
    */
   toggleOfflineStatus: function()
   {
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                      .getService(Components.interfaces.nsIIOService2);
     // the offline manager(goOnline and synchronizeForOffline) actually does the dirty work of 
     // changing the offline state with the networking service.
     if (!this.isOnline()) 
@@ -93,9 +89,14 @@ var MailOfflineMgr = {
       var sendUnsentMessages = (prefSendUnsentMessages == 0 && this.haveUnsentMessages() 
                                 && this.confirmSendUnsentMessages()) || prefSendUnsentMessages == 1;
       this.offlineManager.goOnline(sendUnsentMessages, true /* playbackOfflineImapOperations */, msgWindow);
+      // resume managing offline status now that we are going back online.
+      ioService.manageOfflineStatus = gPrefBranch.getBoolPref("offline.autoDetect");       
     }
     else // going offline
     {
+      // Stop automatic management of the offline status since the user as decided to go offline.
+      ioService.manageOfflineStatus = false;
+      
       var prefDownloadMessages = gPrefBranch.getIntPref("offline.download.download_messages");
       // 0 == Ask, 1 == Always Download, 2 == Never Download
       var downloadForOfflineUse = (prefDownloadMessages == 0 && this.confirmDownloadMessagesForOfflineUse())
