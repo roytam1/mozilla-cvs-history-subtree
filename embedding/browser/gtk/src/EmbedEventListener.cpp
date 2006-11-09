@@ -22,6 +22,7 @@
  *
  * Contributor(s):
  *   Christopher Blizzard <blizzard@mozilla.org>
+ *   Oleg Romashin <romaxa@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
