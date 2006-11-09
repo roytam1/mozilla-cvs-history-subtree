@@ -529,7 +529,8 @@ nsGlobalWindow::FreeInnerObjects(JSContext *cx)
   mDocument = nsnull;
 
   if (mJSObject && cx) {
-    ::JS_ClearScope(cx, mJSObject);
+    for (JSObject *o = mJSObject; o; o = ::JS_GetPrototype(cx, o))
+      ::JS_ClearScope(cx, o);
     ::JS_ClearWatchPointsForObject(cx, mJSObject);
 
     nsWindowSH::InvalidateGlobalScopePolluter(cx, mJSObject);
@@ -1204,7 +1205,9 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         // held in the bfcache.
         if (!currentInner->IsFrozen()) {
           if (!termFuncSet) {
-            ::JS_ClearScope(cx, currentInner->mJSObject);
+            for (JSObject *o = currentInner->mJSObject; o;
+                 o = ::JS_GetPrototype(cx, o))
+              ::JS_ClearScope(cx, o);
             ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
           }
 
@@ -1407,7 +1410,8 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       mDocument = nsnull;
 
       if (mJSObject) {
-        ::JS_ClearScope(cx, mJSObject);
+        for (JSObject *o = mJSObject; o; o = ::JS_GetPrototype(cx, o))
+          ::JS_ClearScope(cx, o);
         ::JS_ClearWatchPointsForObject(cx, mJSObject);
 
         // An outer window shouldn't have a global scope polluter, but
@@ -6282,7 +6286,8 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
     JSObject *global = sgo->GetGlobalJSObject();
 
     if (global) {
-      ::JS_ClearScope(cx, global);
+      for (JSObject *o = global; o; o = ::JS_GetPrototype(cx, o))
+        ::JS_ClearScope(cx, o);
       ::JS_ClearWatchPointsForObject(cx, global);
     }
 
