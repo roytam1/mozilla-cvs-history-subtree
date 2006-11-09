@@ -94,6 +94,7 @@ XPIDLSRCS	= \
 		zapIAudioToneFrame.idl \
 		zapIClientSink.idl \
 		zapIDTMFGenerator.idl \
+		zapIFileIn.idl \
 		zapIMediaFrame.idl \
 		zapIMediaGraph.idl \
 		zapIMediaNode.idl \

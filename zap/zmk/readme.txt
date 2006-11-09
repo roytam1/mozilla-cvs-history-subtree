@@ -1127,6 +1127,8 @@ Reads a file as a sequence of raw data packets.
 Sinks: none
 Sources: 1 (passive)
 
+Control interfaces: zapIFileIn
+
 Node parameters:
 - AUTF8String "file_url" : url pointing to the file to read. Must resolve
                            to a local file. The scheme can be file:/ or 
@@ -1135,10 +1137,11 @@ Node parameters:
 - boolean "loop" : if true, the file will be looped (i.e. seeked to the 
                    beginning once the end has been reached) (default: false)
 - boolean "generate_eof" : if true, an empty frame with a new stream info 
-                           will be generated at the end of the file (or, 
+                           will be generated at the end of the file (or,
                            if the file is being looped, a new stream info
                            will be generated whenever the stream is rewound) 
                            (default: true)
+
 Output stream:
 
 - raw binary frames (type = "raw"). Size of frame data with be <=

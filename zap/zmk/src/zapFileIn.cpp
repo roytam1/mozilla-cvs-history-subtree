@@ -75,6 +75,7 @@ NS_INTERFACE_MAP_BEGIN(zapFileIn)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIFileIn)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
@@ -208,7 +209,8 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   if (mLoop && PR_Available(mFile) <= 0) {
     // Create a new stream info, so that downstream nodes get the
     // stream break.
-    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+    if (mGenerateEOF)
+      mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
     PR_Seek(mFile, 0, PR_SEEK_SET); // rewind
     mOffset = 0;
   }
@@ -233,5 +235,22 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   frame->mData.SetLength(bytesRead);
   *_retval = frame;
   NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// zapIFileIn:
+
+/* void seek (in long long offset, in short origin); */
+NS_IMETHODIMP
+zapFileIn::Seek(PRInt64 offset, PRInt16 origin)
+{
+  if (!mFile) return NS_ERROR_FAILURE;
+  if (origin<0 || origin>2) return NS_ERROR_FAILURE;
+  
+  if (mGenerateEOF)
+    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+  PR_Seek(mFile, offset, (PRSeekWhence)origin);
+  mOffset = offset;
   return NS_OK;
 }

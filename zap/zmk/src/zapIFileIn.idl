@@ -34,51 +34,25 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_FILEIN_H__
-#define __ZAP_FILEIN_H__
+#include "nsISupports.idl"
 
-#include "zapIMediaNode.h"
-#include "zapIMediaSource.h"
-#include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
-#include "nsCOMPtr.h"
-#include "nsIWritablePropertyBag2.h"
-#include "nsString.h"
-#include "prio.h"
-#include "zapIFileIn.h"
-
-////////////////////////////////////////////////////////////////////////
-// zapFileIn
-
-// {43BC5A84-20D9-49B4-9AD1-240BB009A93F}
-#define ZAP_FILEIN_CID                             \
-  { 0x43bc5a84, 0x20d9, 0x49b4, { 0x9a, 0xd1, 0x24, 0x0b, 0xb0, 0x09, 0xa9, 0x3f } }
-
-#define ZAP_FILEIN_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "filein"
-
-class zapFileIn : public zapIMediaNode,
-                  public zapIMediaSource,
-                  public zapIFileIn
+/**
+ * \ingroup ZMK_MODULE
+ */
+[scriptable, uuid(d7cd89d1-1d26-4f6a-a52c-209d739d6596)]
+interface zapIFileIn : nsISupports
 {
-public:
-  zapFileIn();
-  ~zapFileIn();
+  /**
+   * Origins for seeking.
+   */
+  const short ZAP_FILEIN_SEEK_SET = 0; /* = PR_SEEK_SET */
+  const short ZAP_FILEIN_SEEK_CUR = 1; /* = PR_SEEK_CUR */
+  const short ZAP_FILEIN_SEEK_END = 2; /* = PR_SEEK_END */
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_ZAPIMEDIANODE
-  NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIFILEIN
-
-private:
-  // node parameters (set from zapIMediaGraph::AddNode()):
-  PRUint32 mBlockSize;
-  PRFileDesc *mFile;
-  PRBool mLoop;
-  PRBool mGenerateEOF;
-  PRUint64 mOffset; // current byte offset into the file
-  
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  nsCOMPtr<zapIMediaSink> mOutput;
+  /**
+   * Seek to the given position or by the given offset. A new
+   * streaminfo will be set, if this filein node was opened with
+   * generateEOF==true.
+   */
+  void seek(in long long offset, in short origin);
 };
-
-#endif // __ZAP_FILEIN_H__
