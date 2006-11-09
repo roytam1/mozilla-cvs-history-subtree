@@ -1,14 +1,9 @@
-#
-## hostname: tb-win32-tbox
-## CYGWIN_NT-5.2 win2k3-ref-img 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
-#
-
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$ENV{CVSROOT}=":ext:cltbld\@cvs.mozilla.org:/cvsroot";
-$ENV{MOZ_INSTALLER_USE_7ZIP}="1";
+$ENV{CVSROOT} = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$ENV{MOZ_INSTALLER_USE_7ZIP} = "1";
 $ENV{MOZ_PACKAGE_MSI} = 0;
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
@@ -20,7 +15,7 @@ $ENV{MOZ_PACKAGE_MSI} = 0;
 
 #- Default values of command-line opts
 #-
-$BuildDepend       = 0;      # Depend or Clobber
+#$BuildDepend       = 0;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
@@ -98,7 +93,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'd:/moztools/bin/blat';
+$blat           = 'c:/moztools/bin/blat';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
@@ -108,7 +103,7 @@ $use_blat       = 1;
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = $ENV{CVSROOT};
+$moz_cvsroot   = $ENV{'CVSROOT'};
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -120,7 +115,7 @@ $moz_cvsroot   = $ENV{CVSROOT};
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'Tb-Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -135,10 +130,11 @@ $BuildNameExtra = 'release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Thunderbird';
+$BuildTree  = 'Mozilla1.8.0';
+#$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_8_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -170,7 +166,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path      = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "trunk";
+$milestone     = "mozilla1.8.0";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
@@ -179,7 +175,7 @@ $push_raw_xpis = 1;
 
 $update_package = 1;
 $update_product = "Thunderbird";
-$update_version = "trunk";
+$update_version = "1.5.0.x";
 $update_ver_file = "mail/config/version.txt";
 $update_platform = "WINNT_x86-msvc";
 $update_hash = "md5";
