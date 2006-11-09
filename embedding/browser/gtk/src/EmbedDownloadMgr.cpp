@@ -216,6 +216,8 @@ NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress
                                                     PRInt64 aMaxSelfProgress, PRInt64 aCurTotalProgress,
                                                     PRInt64 aMaxTotalProgress)
 {
+  nsresult rv;
+  
   if (!mDownload) return NS_OK;
   if (mDownload->started == 0) {
     mDownload->request = aRequest;

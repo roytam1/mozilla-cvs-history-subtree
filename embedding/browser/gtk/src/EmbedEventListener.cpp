@@ -48,6 +48,8 @@
 #include "EmbedPrivate.h"
 #include "gtkmozembed_internal.h"
 
+//#define MOZ_SCROLL_TOP_LEFT_HACK
+
 static PRInt32 sLongPressTimer = 0, mLongMPressDelay = 1000;
 static PRInt32 sX = 0, sY = 0;
 static PRBool  sMPressed = PR_FALSE, sIsScrolling = PR_FALSE;
@@ -408,7 +410,9 @@ EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
           PRInt32 x, y;
           mCtxInfo->mNSHHTMLElementSc->GetScrollTop(&y);
           mCtxInfo->mNSHHTMLElementSc->GetScrollLeft(&x);
+#ifdef MOZ_SCROLL_TOP_LEFT_HACK
           rv = mCtxInfo->mNSHHTMLElementSc->ScrollTopLeft (y - subY, x - subX);
+#endif
         } else {
           rv = NS_ERROR_UNEXPECTED;
         }

@@ -69,7 +69,7 @@ static EmbedGlobalHistory *sEmbedGlobalHistory = nsnull;
 typedef struct _HistoryEntry {
   PRInt64         mLastVisitTime;     // Millisecs
   PRPackedBool    mWritten;           // TRUE if ever persisted
-  nsCString       mTitle;             // The entry title
+  nsAutoString    mTitle;             // The entry title
   char            *url;               // The url itself
 } HistoryEntry;
 
@@ -761,15 +761,14 @@ nsresult EmbedGlobalHistory::GetEntry(char *entry)
       pos++;
       continue;
     }
+    
     if (numStrings==1)
       url[urlLength++] = entry[pos];
     else if (numStrings==2) 
       title[titleLength++] = entry[pos];
-  }
- else
+    else
         break;
-
-  pos++;            
+    pos++;            
   }
   url[urlLength]='\0';
   title[titleLength]='\0';

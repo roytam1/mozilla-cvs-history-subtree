@@ -553,7 +553,7 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
 {
   nsresult rv; 
   nsCOMPtr<nsIPluginManager> pluginMan = 
-      do_GetService(NS_PLUGINMANAGER_CONTRACTID, &rv);
+      do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
     g_print("Could not get the plugin manager\n");
     return;
@@ -562,7 +562,7 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
   gchar *disabled[10];
   gint num_disabled;
   nsCOMPtr<nsIPluginHost> pluginHost = 
-      do_GetService(NS_PLUGINMANAGER_CONTRACTID, &rv);
+      do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
     return;
   }
@@ -599,7 +599,7 @@ gtk_moz_embed_common_reload_plugins ()
 {
   nsresult rv;
   nsCOMPtr<nsIPluginManager> pluginMan = 
-      do_GetService(NS_PLUGINMANAGER_CONTRACTID, &rv);
+      do_GetService(kPluginManagerCID, &rv);
   pluginMan->ReloadPlugins(PR_TRUE);
 }
 
