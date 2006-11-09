@@ -338,8 +338,13 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
 
   if (aOuterWindow) {
     // |this| is an inner window, add this inner window to the outer
-    // |window list of inners.
+    // window list of inners.
     PR_INSERT_AFTER(this, aOuterWindow);
+  } else {
+    // |this| is an outer window. Outer windows start out frozen and
+    // remain frozen until they get an inner window, so freeze this
+    // outer window here.
+    Freeze();
   }
 
   // We could have failed the first time through trying
@@ -890,6 +895,13 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     PR_LogPrint("DOMWINDOW %p SetNewDocument %s", this, spec.get());
   }
 #endif
+
+  if (IsOuterWindow() && IsFrozen()) {
+    // This outer is now getting its first inner, thaw the outer now
+    // that it's ready and is getting an inner window.
+
+    Thaw();
+  }
 
   if (!aIsInternalCall && IsInnerWindow()) {
     if (!mOuterWindow) {
@@ -1793,13 +1805,7 @@ nsGlobalWindow::SetNewArguments(PRUint32 aArgc, void* aArgv)
 
   NS_ASSERTION(argv, "Must have argv!");
 
-  // Freeze the outer here so that we don't create a bogus new inner
-  // just because we're trying to resolve the Array class on cx.
-  // Resolving it for window.arguments on the outer window should be
-  // fine, I think.
-  Freeze();
   JSObject *argArray = ::JS_NewArrayObject(cx, aArgc, argv);
-  Thaw();
 
   NS_ENSURE_TRUE(argArray, NS_ERROR_OUT_OF_MEMORY);
   
@@ -5891,7 +5897,7 @@ nsGlobalWindow::Observe(nsISupports *aSubject, const char *aTopic,
 
     nsAutoString domain(someData);
 
-    if (mIsFrozen) {
+    if (IsFrozen()) {
       // This window is frozen, rather than firing the events here,
       // store the domain in which the change happened and fire the
       // events if we're ever thawed.

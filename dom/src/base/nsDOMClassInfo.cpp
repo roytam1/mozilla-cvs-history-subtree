@@ -6385,8 +6385,9 @@ nsWindowSH::InnerObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
-  if (win->IsInnerWindow()) {
-    // Return the inner window.
+  if (win->IsInnerWindow() || win->IsFrozen()) {
+    // Return the inner window, or the outer if we're dealing with a
+    // frozen outer.
 
     *_retval = obj;
   } else {
