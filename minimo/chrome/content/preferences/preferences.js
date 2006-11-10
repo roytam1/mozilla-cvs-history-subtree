@@ -405,6 +405,13 @@ var gPref=null;
 
 function prefStartup() {
 
+    /* fix the size of the scrollbox contents */
+
+	//marcio 4000
+ 
+    innerWidth = document.getBoxObjectFor(document.getElementById("scroller")).width;
+    document.getElementById("pref-panes").style.width=innerWidth+"px";
+
     /* Pre select the general pane */ 
 
     gPanelSelected=document.getElementById("general-pane");

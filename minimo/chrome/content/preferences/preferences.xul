@@ -108,13 +108,13 @@
   </hbox >      
   
   <hbox style="height:6px" />
-  
-    <scrollbox id="scroller" style="overflow:-moz-scrollbars-vertical" flex="1">
-      <vbox id="pref-panes" onfocus="fixXULAutoScroll(event)" >
-      	<!-- here we get the panels --> 
-      </vbox>
-    </scrollbox>
-    
+
+    <scrollbox id="scroller"  onfocus="fixXULAutoScroll(event)"  style="" flex="1">
+       <hbox id="pref-panes" flex="1" >
+
+	 </hbox>
+ </scrollbox>
+
   <hbox id="refBottom" />
 
 </vbox>

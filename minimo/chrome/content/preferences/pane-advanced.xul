@@ -43,7 +43,7 @@
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-  <box id="pref-panes">  
+  <hbox id="pref-panes">  
 
   <!-- ADVANCED PANE --> 
 
@@ -136,6 +136,6 @@
                 </vbox>
             </hbox>
     </vbox>	
-  </box>
+  </hbox>
   
 </overlay>
