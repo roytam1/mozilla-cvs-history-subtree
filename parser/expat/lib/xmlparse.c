@@ -1470,9 +1470,9 @@ XML_Parse(XML_Parser parser, const char *s, int len, int isFinal)
       return XML_STATUS_OK;
 /* BEGIN MOZILLA CHANGE (Blocking parser) */
     if (errorCode == XML_ERROR_SUSPENDED) {
-      bufferPtr = eventPtr;
-      parseEndPtr = eventEndPtr;
-      XmlUpdatePosition(encoding, positionPtr, eventEndPtr, &position);
+      parseEndByteIndex -= parseEndPtr - eventPtr; /* Remove what we haven't read. */
+      parseEndPtr = bufferPtr = eventPtr;
+      XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
       return XML_STATUS_ERROR;
     }
 /* END MOZILLA CHANGE */
@@ -1498,9 +1498,9 @@ XML_Parse(XML_Parser parser, const char *s, int len, int isFinal)
     if (errorCode != XML_ERROR_NONE) {
 /* BEGIN MOZILLA CHANGE (Blocking parser) */
       if (blocked) {
-        parseEndPtr = eventEndPtr;
-        parseEndByteIndex -= len - (eventPtr - s); /* This is how much we've read thus far*/
-        XmlUpdatePosition(encoding, positionPtr, eventEndPtr, &position);
+        parseEndByteIndex -= parseEndPtr - eventPtr; /* Remove what we haven't read. */
+        parseEndPtr = eventPtr;
+        XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
         eventEndPtr = eventPtr;
         return XML_STATUS_ERROR;
       }
@@ -1568,12 +1568,9 @@ XML_ParseBuffer(XML_Parser parser, int len, int isFinal)
   }
 /* BEGIN MOZILLA CHANGE (Blocking parser) */
   else if (errorCode == XML_ERROR_SUSPENDED) {
-    int unparsed = bufferEnd - eventEndPtr;
-    bufferPtr = eventPtr;
-    parseEndPtr = eventEndPtr;
-    bufferEnd -= unparsed; /* Substract what we haven't parsed */
-    parseEndByteIndex -= unparsed;
-    XmlUpdatePosition(encoding, positionPtr, eventEndPtr, &position);
+    parseEndByteIndex -= parseEndPtr - eventPtr; /* Remove what we haven't read. */
+    parseEndPtr = bufferPtr = eventPtr;
+    XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
     return XML_STATUS_ERROR;
   }
 /* END MOZILLA CHANGE */
@@ -2283,6 +2280,7 @@ doContent(XML_Parser parser,
         poolClear(&tempPool);
 /* BEGIN MOZILLA CHANGE (Blocking parser) */
         if (blocked) {
+          *eventPP = *eventEndPP;
           return XML_ERROR_SUSPENDED;
         }
 /* END MOZILLA CHANGE */
@@ -2310,6 +2308,9 @@ doContent(XML_Parser parser,
           startElementHandler(handlerArg, name.str, (const XML_Char **)atts);
 /* BEGIN MOZILLA CHANGE (Blocking parser) */
           if (blocked) {
+            /* Hopefully this won't happen, since we can't really call  */
+            /* endElementHandler seperately from startElementHandler in */
+            /* this case. */
             return XML_ERROR_SUSPENDED;
           }
 /* END MOZILLA CHANGE */
@@ -2418,7 +2419,7 @@ doContent(XML_Parser parser,
         }
 /* BEGIN MOZILLA CHANGE (Blocking parser) */
         if (blocked) {
-          *eventPP = s = next; /* fix bug 119727 */
+          *eventPP = next; /* fix bug 119727 */
           return XML_ERROR_SUSPENDED;
         }
 /* END MOZILLA CHANGE */
@@ -2530,8 +2531,20 @@ doContent(XML_Parser parser,
         reportDefault(parser, enc, s, next);
       break;
     case XML_TOK_PI:
+/* BEGIN MOZILLA CHANGE (Blocking parser) */
+#if 0
       if (!reportProcessingInstruction(parser, enc, s, next))
         return XML_ERROR_NO_MEMORY;
+#else
+      if (!reportProcessingInstruction(parser, enc, s, next)) {
+        if (blocked) {
+          *eventPP = next;
+          return XML_ERROR_SUSPENDED;
+        }
+        return XML_ERROR_NO_MEMORY;
+      }
+#endif
+/* END MOZILLA CHANGE */
       break;
     case XML_TOK_COMMENT:
       if (!reportComment(parser, enc, s, next))
@@ -4602,8 +4615,20 @@ epilogProcessor(XML_Parser parser,
         reportDefault(parser, encoding, s, next);
       break;
     case XML_TOK_PI:
+/* BEGIN MOZILLA CHANGE (Blocking parser) */
+#if 0
       if (!reportProcessingInstruction(parser, encoding, s, next))
         return XML_ERROR_NO_MEMORY;
+#else
+      if (!reportProcessingInstruction(parser, encoding, s, next)) {
+        if (blocked) {
+          eventPtr = next;
+          return XML_ERROR_SUSPENDED;
+        }
+        return XML_ERROR_NO_MEMORY;
+      }
+#endif
+/* END MOZILLA CHANGE */
       break;
     case XML_TOK_COMMENT:
       if (!reportComment(parser, encoding, s, next))
