@@ -1052,6 +1052,10 @@ MOZCE_SHUNT_API LRESULT mozce_SendMessageA(HWND hWnd, UINT msg, WPARAM wParam, L
         lpNewText[0] = 0;
     }
 #ifdef DEBUG
+    else if (msg == 1029)
+    {
+        ;//PBM_STEPIT
+    }
     else if (msg >= WM_USER)
     {
         // user message -- how the heck can this be converted, or does it need to??
@@ -1076,7 +1080,7 @@ MOZCE_SHUNT_API LRESULT mozce_SendMessageA(HWND hWnd, UINT msg, WPARAM wParam, L
         w2a_buffer(lpNewText, -1, (char*) lParamOrig, 512);
     }
 #ifdef DEBUG
-    else if (msg == CB_ADDSTRING)
+    else if (msg == CB_ADDSTRING || msg == 1029 /*PBM_STEPIT*/)
     {
     }
     else
@@ -1117,7 +1121,7 @@ MOZCE_SHUNT_API LRESULT mozce_PostMessageA(HWND hWnd, UINT msg, WPARAM wParam, L
     MOZCE_PRECHECK
 
 #ifdef DEBUG
-    mozce_printf("mozce_PostMessageA called\n");
+    mozce_printf("mozce_PostMessageA called (%d %d %d)\n", msg, wParam, lParam);
 #endif
 
     return PostMessageW(hWnd, msg, wParam, lParam);
