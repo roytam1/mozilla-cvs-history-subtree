@@ -47,25 +47,31 @@
 
       <!-- PRIVACY PANE --> 
 
-      <vbox id="privacy-pane" class="panel-container" flex="1" collapsed="true">
-          
-            <caption label="&privacy.label;" /> 
+      <vbox id="privacy-pane" flex="1" collapsed="true">
+             <label value="&privacy.label;" /> 
+            	    <groupbox class='box-prefgroupitem' >
+            	      
+            	      <grid flex="1"  class="box-prefpadding" style="padding:4px">
+            	          <columns>
+            	            <column/>
+            	          </columns>
+            	          <rows>
+            	            <row>
+            	              <button id="privacySanitize" 
+                                      label="&sanitizeButton.label;" 
+                                      oncommand="sanitizeAll();"/>
 
-            	      <groupbox class='box-prefgroupitem2' >
+            	            </row>
+            	            <row>
+            	              <button id="bookmarksSanitize" 
+                                      class='box-prefgroupitem'
+                                      label="&sanitizeBookmarks.label;" 
+                                      oncommand="sanitizeBookmarks();"/>
+            	            </row>
 
-                            <button id="privacySanitize" 
-			                        class='box-prefgroupitem' 
-			                        label="&sanitizeButton.label;" 
-			                        oncommand="sanitizeAll();"/>
-
-                            <button id="bookmarksSanitize" 
-			                        class='box-prefgroupitem'
-			                        label="&sanitizeBookmarks.label;" 
-			                        oncommand="sanitizeBookmarks();"/>
-
-				</groupbox>
-  
+            	          </rows>
+            	      </grid>
+            	    </groupbox>
       </vbox>
-
 </hbox>
 </overlay>
