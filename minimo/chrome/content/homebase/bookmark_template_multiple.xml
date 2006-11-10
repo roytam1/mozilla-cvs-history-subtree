@@ -16,11 +16,8 @@ xmlns:rss="http://purl.org/rss/1.0/"
 
 <div id="container" >
 
-
-
 		<xsl:for-each select="/bmgroup/bm/li">
 
-	
 
 <xsl:choose>
 
@@ -32,8 +29,6 @@ xmlns:rss="http://purl.org/rss/1.0/"
 	                         <xsl:value-of select="@iconsrc"/>
 				</xsl:attribute> 	
 			</img>
-
-
 
 			<a >
 				<xsl:attribute name="href">javascript:</xsl:attribute> 	
@@ -53,19 +48,15 @@ xmlns:rss="http://purl.org/rss/1.0/"
 
 		<div class="item pagelink" >
 
-
   			<img>
 				<xsl:attribute name="src" >
 	                         <xsl:value-of select="@iconsrc"/>
 				</xsl:attribute> 	
 			</img>
 
-
-
-
 			<a >
-				<xsl:attribute name="href"><xsl:value-of select="."/>
-				</xsl:attribute> 	
+				<xsl:attribute name="href">javascript:</xsl:attribute> 	
+				<xsl:attribute name="onclick">hbOpenAsTab('<xsl:value-of select="."/>');return false</xsl:attribute>
 	                  <xsl:value-of select="@title"/>
 			</a>
 
@@ -79,19 +70,13 @@ xmlns:rss="http://purl.org/rss/1.0/"
 
 <xsl:when test="@hbhistory" >
 
-
 		<div  class="item timehistory"  >
 
-
-   <img src="chrome://minimo/skin/m-nav.png" />
-
-
-
-
+        <img src="chrome://minimo/skin/m-nav.png" />
 
 			<a >
-				<xsl:attribute name="href"><xsl:value-of select="."/>
-				</xsl:attribute> 	
+				<xsl:attribute name="href">javascript:</xsl:attribute> 	
+				<xsl:attribute name="onclick">hbOpenAsTab('<xsl:value-of select="."/>');return false</xsl:attribute>
 	                  <xsl:value-of select="@title"/>
 			</a>
 
