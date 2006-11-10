@@ -1,23 +1,53 @@
+  .rsslink  {
 
-td.item {
-    font-family:verdana;
-    font-size:74%;
-    -moz-border-radius:4px;
-    background-color:#ffffff;
-    margin:4px;
-} 
- 	 
-td.item a {
-    text-decoration:none;
-    color:black;
+  }
+
+  .pagelink {
+
+  }
+
+  .extensions {
+
+  }
+
+  .timehistory {
+
+  }
+
+div.item {
+	border-bottom:1px solid gray;
+ 	margin:2px;
+      
+      padding-bottom:3px;
 }
+
+div.item img {
+	padding-right:3px;
+ 	padding-left:3px;
+}
+
+a {
+  text-decoration:none;
+  color:black;
+}
+ 	 
+
 
 bookmarks {
-    background-color:#dddddd;
 }
 	
+.flavor {
+ float:left;
+
+ opacity:.5;
+
+}
+
 body {
     padding:0px;margin:0px;
+    font-family:verdana;
+    font-size:80%;
+    background-color:white;
 }
 
 .warning  {	
@@ -31,4 +61,41 @@ body {
     padding:.5em;
     padding-left:36px;
     margin:.5em;
+}
+
+.header  {	
+    background-color:rgb(229,96,10);
+    padding:2px;
+    padding-top:4px;
+    position:fixed;
+    top:0px;
+    width:100%;
+    padding-bottom:4px;
+}
+
+.header-icons {
+    width:18px;
+    height:18px;
+}
+
+.header td {
+   padding-right:3px; 
+     font-weight:bold;
+
+   padding-left:3px;
+}
+
+#container {
+	
+   margin-top:5em;
+}
+
+.header a {
+  text-decoration:none;
+color:white;
+
+}
+
+.header a:hover {
+  color:white;
 }
