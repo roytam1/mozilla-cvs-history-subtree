@@ -14,8 +14,8 @@
  * The Original Code is Mozilla JSIRC Library.
  *
  * The Initial Developer of the Original Code is
- * New Dimensions Consulting, Inc.
- * Portions created by the Initial Developer are Copyright (C) 1999
+ * Mozilla Foundation
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,27 +35,41 @@
  *
  * ***** END LICENSE BLOCK ***** */
  
-groupbox.scrolling {
-  overflow:auto;
-}
-
 .base { background-color:white } 
 
 .pref-toolbar {
-  background-color:lightblue;
+  padding-top:6px ! important;
+  padding-left:6px ! important;
+  background-color:rgb(229,96,0);
+}
+
+caption {
+	border-top:1px solid gray;
+	background-color:white;
+      padding:4px ! important;
+      padding-bottom:6px ! important;
+      color:rgb(229,96,0);
+      font-size:100%;
+      font-weight:bold;
+      float:right;
 }
 
 groupbox {
-  padding:0px ! important;
+  padding:4px ! important;
+  -moz-border-radius:0px;
+  margin:0px ! important;
+  border:0px;
+  border-top:1px solid gray;
 }
 
 .pref-toolbar button {
  -moz-appearance: none;
- background-color:lightblue;
+ background-color:rgb(229,96,0);
  min-width:0px;
  border:0px;
  margin:0px;
  padding:2px;
+
 }
 
 .dialog-button {
@@ -76,6 +90,8 @@ groupbox {
 .prefselectedbutton {
 
    background-color:white ! important;   
+-moz-border-radius:9px ! important;
+
 }
 
 #general-button {
@@ -94,25 +110,16 @@ groupbox {
   list-style-image: url("chrome://minimo/skin/preferences/icon-pref-networking.png");
 }
 
-.panel-container {
-  margin:3px ! important;
-  background-color:transparent;
-}
-
 .box-prefgroupitem {
-  margin:2px ! important;
-  background-color:#cccccc;
-  border-color:#cccccc;
+  padding:2px ! important;
 }
 
 .box-prefgroupitem2 {
-  margin:2px ! important;
-  background-color:#cccccc;
-  border-color:#cccccc;
+  padding:2px ! important;
 }
 
 .box-prefpadding {
-  margin:2px ! important;
+  padding:2px ! important;
 }
 
 checkbox > * {
