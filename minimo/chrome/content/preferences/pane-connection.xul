@@ -55,8 +55,6 @@
 
             <label value="&networkCaption.label;"/>
 
-            <vbox class="box-prefpadding" >  
-
               <groupbox class='box-prefgroupitem' flex="1">
 
                 <caption label="&proxyCaption.label;"/>
@@ -132,7 +130,6 @@
                   </vbox>
               </groupbox>
 
-            </vbox>
     </vbox>
   </hbox>
 

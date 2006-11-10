@@ -53,10 +53,7 @@
           collapsed="true" >
           
             <label value="&advanced.label;" /> 
-               <hbox flex="1" >
-                <vbox flex="1" style="padding:4px ! important">
 
-  
                       <groupbox class='box-prefgroupitem'>
 
                         <caption label="&cacheSettings.label;"/>
@@ -133,8 +130,7 @@
                         </vbox>
 
                       </groupbox>
-                </vbox>
-            </hbox>
+
     </vbox>	
   </hbox>
   
