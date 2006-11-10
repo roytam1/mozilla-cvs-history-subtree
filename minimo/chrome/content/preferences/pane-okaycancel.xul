@@ -42,7 +42,7 @@
 ]>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-    <hbox id="pref-panes">  
+  <hbox id="pref-panes">  
 
   <!-- SUMMARY OKAY CANCEL PANE -->
 
@@ -54,5 +54,5 @@
 
     </vbox>
 
-</hbox>
+  </hbox>
 </overlay>
