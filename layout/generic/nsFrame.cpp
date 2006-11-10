@@ -5957,18 +5957,20 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
 
     // mComputedWidth and mComputedHeight are content-box, not
     // border-box
-    reflowState.mComputedWidth = size.width;
-    reflowState.mComputedHeight = size.height;
+    if (size.width != NS_INTRINSICSIZE)
+      reflowState.mComputedWidth = size.width;
+    if (size.height != NS_INTRINSICSIZE)
+      reflowState.mComputedHeight = size.height;
 
     // Box layout calls SetRect before Layout, whereas non-box layout
     // calls SetRect after Reflow.
     // XXX Perhaps we should be doing this by twiddling the rect back to
     // mLastSize before calling Reflow and then switching it back, but
-    // I'm not sure mLastSize is guaranteed to be what it was before
-    // LayoutChildAt changed it.
-    if (metrics->mLastSize.width != GetSize().width)
+    // However, mLastSize can also be the size passed to BoxReflow by
+    // RefreshSizeCache, so that doesn't really make sense.
+    if (metrics->mLastSize.width != aWidth)
       reflowState.mFlags.mHResize = PR_TRUE;
-    if (metrics->mLastSize.height != GetSize().height)
+    if (metrics->mLastSize.height != aHeight)
       reflowState.mFlags.mVResize = PR_TRUE;
 
     #ifdef DEBUG_REFLOW
