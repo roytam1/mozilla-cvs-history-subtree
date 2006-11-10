@@ -64,20 +64,25 @@
                                              onchange="syncPref(this)" preference="browser.startup.homepage" preftype="string"/>
                                 </box>
 
-                                <vbox class="box-prefpadding">
-                                
-                                    <button id="browserSetHomePage" 
-                                             class='box-prefgroupitem'
-                                             label="&loadHomePageCurrent.label;" 
-                                             oncommand="loadHomePageFromBrowser();"/>
-			                        
-                                    <button id="browserSetHomePage2" 
-                                             class='box-prefgroupitem'
-                                             label="&loadHomePageBlank.label;" 
-                                             oncommand="loadHomePageBlank();"/>
-                                             
-                                </vbox>
-
+                                <grid flex="100%"  class="box-prefpadding" style="padding:1em ! important">
+                                  <columns>
+                                    <column/>
+                                    <column/>
+                                  </columns>
+                                  <rows>
+                                    <row>
+                                      <button id="browserSetHomePage" 
+                                              class='box-prefgroupitem'
+                                              label="&loadHomePageCurrent.label;" 
+                                              oncommand="loadHomePageFromBrowser();"/>
+                                      <button id="browserSetHomePage2" 
+                                              class='box-prefgroupitem'
+                                              label="&loadHomePageBlank.label;" 
+                                              oncommand="loadHomePageBlank();"/>
+                                    </row>
+                                  </rows>
+                                </grid>
+               
                         </groupbox>
                         
                         <groupbox  class='box-prefgroupitem' id='ssrimage-box'>
@@ -112,7 +117,7 @@
 
                             <vbox class="box-prefpadding">
 
-                                  <!-- NOTE WARNING: We use the same pref as in FF but we use with a different 
+                                <!-- NOTE WARNING: We use the same pref as in FF but we use with a different 
                                      meaning. Our check is actually a *set* -->                    
 
                                 <checkbox id="setDefaultBrowser" 
