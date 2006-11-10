@@ -394,7 +394,6 @@ function MiniNavStartup()
     try {
       gPref = Components.classes["@mozilla.org/preferences-service;1"]
         .getService(nsIPrefBranch);
-
       var page = null;
       try {
         page = gPref.getCharPref("browser.startup.homepage.override");
@@ -405,21 +404,16 @@ function MiniNavStartup()
         page = gPref.getCharPref("browser.startup.homepage");
 
       gPref.clearUserPref("browser.startup.homepage.override");
-      
-      var bookmarkstore = gPref.getCharPref("browser.bookmark.store");
-      
+
       if ( page.split("|").length > 1 ) {
            homepages = page.split("|");
       } else {
         if (page != null) {
-
           homepage = BrowserFixUpURI(page);
-
         }
       }
+    } catch (ignore) { }
 
-    } catch (ignore) {}
-    
   } catch (e) {
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }
@@ -435,6 +429,12 @@ function MiniNavStartup()
   } else {
     loadURI(homepage);
   }
+
+  try { 
+     bookmarkstore = gPref.getCharPref("browser.bookmark.store");
+  } catch (e) {
+  }
+
   loadBookmarks(bookmarkstore);
   
   /*
@@ -1195,7 +1195,11 @@ function BrowserBookmarkURL (uri, title, icon) {
 	newLi.setAttribute("iconsrc",icon);
   else
 	newLi.setAttribute("iconsrc","chrome://minimo/skin/m.gif");
-
+	
+  if(uri.indexOf("rss")==24) { newLi.setAttribute("rss","yes") } 
+  else {
+   newLi.setAttribute("page","yes") 
+  }
 
   var bmContent=gBookmarksDoc.createTextNode(uri);
 
@@ -1203,6 +1207,7 @@ function BrowserBookmarkURL (uri, title, icon) {
   gBookmarksDoc.getElementsByTagName("bm")[0].appendChild(newLi);
   storeBookmarks();	
   refreshBookmarks();
+
 }
 
 function BrowserBookmarkThis() {
@@ -1216,7 +1221,7 @@ function BrowserBookmarkThis() {
 
 function BrowserBookmark() {
   try {  
-    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/bookmarks/bmview.xhtml');   
+    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/homebase/bmview.xhtml');   
     browserInit(gBrowser.selectedTab);
   } catch (e) {
   }  
