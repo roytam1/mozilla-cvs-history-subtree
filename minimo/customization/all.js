@@ -640,10 +640,11 @@ pref("browser.formfill.enable", true);
 
 
 /* slow computer, slow connection */
-pref("content.max.tokenizing.time", 3000);
+pref("nglayout.initialpaint.delay", 15000);
+pref("layout.reflow.timeslice", 15000000);
+pref("content.max.tokenizing.time", 15000);
 pref("content.notify.ontimer", true);
-pref("content.switch.threshold", 3000);
-pref("nglayout.initialpaint.delay", 20);
+pref("content.switch.threshold", 15000);
 pref("content.interrupt.parsing", true);
 
 pref("dom.disable_window_status_change", true);
