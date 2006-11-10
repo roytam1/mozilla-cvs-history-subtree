@@ -1221,7 +1221,7 @@ function BrowserBookmarkThis() {
 
 function BrowserBookmark() {
   try {  
-    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/homebase/bmview.xhtml');   
+    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/bookmarks/bmview.xhtml');   
     browserInit(gBrowser.selectedTab);
   } catch (e) {
   }  
