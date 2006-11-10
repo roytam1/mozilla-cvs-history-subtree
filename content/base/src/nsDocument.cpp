@@ -1968,7 +1968,7 @@ void
 nsDocument::UpdateStyleSheets(nsCOMArray<nsIStyleSheet>& aOldSheets,
                               nsCOMArray<nsIStyleSheet>& aNewSheets)
 {
-  NS_DOCUMENT_NOTIFY_OBSERVERS(BeginUpdate, (this, UPDATE_STYLE));
+  BeginUpdate(UPDATE_STYLE);
 
   // XXX Need to set the sheet on the ownernode, if any
   NS_PRECONDITION(aOldSheets.Count() == aNewSheets.Count(),
@@ -2000,7 +2000,7 @@ nsDocument::UpdateStyleSheets(nsCOMArray<nsIStyleSheet>& aOldSheets,
     }
   }
 
-  NS_DOCUMENT_NOTIFY_OBSERVERS(EndUpdate, (this, UPDATE_STYLE));
+  EndUpdate(UPDATE_STYLE);
 }
 
 void
@@ -2222,6 +2222,11 @@ nsDocument::RemoveObserver(nsIDocumentObserver* aObserver)
 void
 nsDocument::BeginUpdate(nsUpdateType aUpdateType)
 {
+  if (mScriptLoader) {
+    NS_STATIC_CAST(nsScriptLoader*,
+                   NS_STATIC_CAST(nsIScriptLoader*,
+                                  mScriptLoader))->AddExecuteBlocker();
+  }
   NS_DOCUMENT_NOTIFY_OBSERVERS(BeginUpdate, (this, aUpdateType));
 }
 
@@ -2229,6 +2234,11 @@ void
 nsDocument::EndUpdate(nsUpdateType aUpdateType)
 {
   NS_DOCUMENT_NOTIFY_OBSERVERS(EndUpdate, (this, aUpdateType));
+  if (mScriptLoader) {
+    NS_STATIC_CAST(nsScriptLoader*,
+                   NS_STATIC_CAST(nsIScriptLoader*,
+                                  mScriptLoader))->RemoveExecuteBlocker();
+  }
 }
 
 void
