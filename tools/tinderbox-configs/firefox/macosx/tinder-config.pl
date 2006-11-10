@@ -80,7 +80,7 @@ $XULWindowOpenTest        = 1;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-$GraphNameOverride        = 'xserve03.build.mozilla.org_Fx-Trunk-Cairo-Cocoa';
+$GraphNameOverride        = 'xserve06.build.mozilla.org_Fx-Trunk-Cairo-Cocoa';
 
 # $results_server
 #----------------------------------------------------------------------------
