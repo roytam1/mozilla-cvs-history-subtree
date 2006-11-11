@@ -13864,12 +13864,18 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsFrameConstructorState& aState,
 
   MarkIBSpecialPrevSibling(aState.mPresContext, blockFrame, firstInFlow);
 
-  // If we have a continuation frame, then we need to break the
-  // continuation.
+  // If we have a continuation frame, then we need to blow it away.  Otherwise
+  // the flow will get all confused, with dangling in-flows around, and things
+  // pointing to the wrong things as in-flows.  So just nuke the flow and we'll
+  // recover it when we reflow.
   nsIFrame* nextInFlow = aFrame->GetNextInFlow();
   if (nextInFlow) {
     aFrame->SetNextInFlow(nsnull);
     nextInFlow->SetPrevInFlow(nsnull);
+    nsIFrame* parent = nextInFlow->GetParent();
+    nsCOMPtr<nsIAtom> listName;
+    GetChildListNameFor(parent, nextInFlow, getter_AddRefs(listName));
+    parent->RemoveFrame(listName, nextInFlow);
   }
 
   // This is where the mothership lands and we start to get a bit
