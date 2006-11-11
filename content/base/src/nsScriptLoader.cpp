@@ -176,7 +176,9 @@ nsScriptLoadRequest::FireScriptEvaluated(nsresult aResult)
 //////////////////////////////////////////////////////////////
 
 nsScriptLoader::nsScriptLoader()
-  : mDocument(nsnull), mEnabled(PR_TRUE)
+  : mDocument(nsnull),
+    mEnabled(PR_TRUE),
+    mBlockerCount(0)
 {
 }
 
@@ -595,7 +597,7 @@ nsScriptLoader::DoProcessScriptElement(nsIScriptElement *aElement,
 
     // If we've got existing pending requests, add ourselves
     // to this list.
-    if (mPendingRequests.Count() > 0) {
+    if (mPendingRequests.Count() > 0 || mBlockerCount > 0) {
       request->mWasPending = PR_TRUE;
       NS_ENSURE_TRUE(mPendingRequests.AppendObject(request),
                      NS_ERROR_OUT_OF_MEMORY);
@@ -794,18 +796,11 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
 void
 nsScriptLoader::ProcessPendingReqests()
 {
-  if (mPendingRequests.Count() == 0) {
-    return;
-  }
-
-  nsRefPtr<nsScriptLoadRequest> request = mPendingRequests[0];
-  while (request && !request->mLoading) {
+  nsRefPtr<nsScriptLoadRequest> request = mPendingRequests.SafeObjectAt(0);
+  while (request && !request->mLoading && mBlockerCount == 0) {
     mPendingRequests.RemoveObjectAt(0);
     ProcessRequest(request);
-    if (mPendingRequests.Count() == 0) {
-      return;
-    }
-    request = mPendingRequests[0];
+    request = mPendingRequests.SafeObjectAt(0);
   }
 }
 

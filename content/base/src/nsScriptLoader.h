@@ -81,6 +81,24 @@ public:
                                  const nsString& aHintCharset,
                                  nsIDocument* aDocument, nsString& aString);
 
+  /**
+   * Add/remove blocker. Blockers will stop scripts from executing, but not
+   * from loading.
+   * NOTE! Calling RemoveExecuteBlocker could potentially execute pending
+   * scripts synchronously. In other words, it should not be done at 'unsafe'
+   * times
+   */
+  void AddExecuteBlocker()
+  {
+    ++mBlockerCount;
+  }
+  void RemoveExecuteBlocker()
+  {
+    if (!--mBlockerCount) {
+      ProcessPendingReqests();
+    }
+  }
+
 protected:
   PRBool InNonScriptingContainer(nsIScriptElement* aScriptElement);
   PRBool IsScriptEventHandler(nsIScriptElement* aScriptElement);
@@ -109,6 +127,7 @@ protected:
   nsCOMArray<nsScriptLoadRequest> mPendingRequests;
   nsCOMPtr<nsIScriptElement> mCurrentScript;
   PRBool mEnabled;
+  PRUint32 mBlockerCount;
 };
 
 #endif //__nsScriptLoader_h__
