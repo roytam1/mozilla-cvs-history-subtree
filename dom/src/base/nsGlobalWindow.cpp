@@ -1395,11 +1395,19 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
     NS_ASSERTION(!mTimeouts, "Uh, outer window holds timeouts!");
 
     JSContext *cx = (JSContext *)mContext->GetNativeContext();
+    // Call FreeInnerObjects on all inner windows, not just the current
+    // one, since some could be held by WindowStateHolder objects that
+    // are GC-owned.
+    for (nsGlobalWindow *inner = (nsGlobalWindow *)PR_LIST_HEAD(this);
+         inner != this;
+         inner = (nsGlobalWindow*)PR_NEXT_LINK(inner)) {
+      NS_ASSERTION(inner->mOuterWindow == this, "bad outer window pointer");
+      inner->FreeInnerObjects(cx);
+    }
+
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
     if (currentInner) {
-      currentInner->FreeInnerObjects(cx);
-
       nsCOMPtr<nsIDocument> doc =
         do_QueryInterface(mDocument);
 
