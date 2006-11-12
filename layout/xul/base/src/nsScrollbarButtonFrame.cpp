@@ -156,7 +156,7 @@ nsScrollbarButtonFrame::MouseClicked()
        return;
 
    // get the scrollbars content node
-   nsIContent* content = scrollbar->GetContent();
+   nsCOMPtr<nsIContent> content = scrollbar->GetContent();
 
    // get the current pos
    PRInt32 curpos = nsSliderFrame::GetCurrentPosition(content);
