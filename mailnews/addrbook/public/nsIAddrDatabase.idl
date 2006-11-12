@@ -69,6 +69,7 @@ interface nsIMdbRow;
 #define kCardTypeColumn           "CardType"
 #define kPreferMailFormatColumn   "PreferMailFormat"
 #define kPopularityIndexColumn    "PopularityIndex"
+#define kAllowRemoteContentColumn "AllowRemoteContent"
 #define kWorkPhoneColumn          "WorkPhone"
 #define kHomePhoneColumn          "HomePhone"
 #define kFaxColumn                "FaxNumber"
@@ -138,7 +139,7 @@ interface nsAddrDBCommitType
   const long kCompressCommit = 3;
 };
 
-[scriptable, uuid(4B4C5384-1852-4f33-AA2D-CAB5D4C6E6BC)]
+[scriptable, uuid(E59ABE11-1E97-46ec-A1C4-500971BBC4B4)]
 interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 
 	[noscript] attribute nsFileSpec dbPath;
@@ -236,6 +237,7 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addNotes(in nsIMdbRow row, in string value);
 	[noscript] void addPreferMailFormat(in nsIMdbRow row, in unsigned long value);
 	[noscript] void addPopularityIndex(in nsIMdbRow row, in unsigned long value);
+  [noscript] void addAllowRemoteContent(in nsIMdbRow row, in boolean value);
 
 	[noscript] void addListName(in nsIMdbRow row, in string value);
 	[noscript] void addListNickName(in nsIMdbRow row, in string value);

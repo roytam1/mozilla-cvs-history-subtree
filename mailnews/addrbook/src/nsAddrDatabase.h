@@ -69,67 +69,68 @@ typedef enum
 class nsAddrDatabase : public nsIAddrDatabase 
 {
 public:
-	NS_DECL_ISUPPORTS
-    NS_DECL_NSIADDRDBANNOUNCER
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIADDRDBANNOUNCER
+
 	//////////////////////////////////////////////////////////////////////////////
 	// nsIAddrDatabase methods:
 
-	NS_IMETHOD GetDbPath(nsFileSpec * *aDbPath);
-	NS_IMETHOD SetDbPath(nsFileSpec * aDbPath);
-	NS_IMETHOD Open(nsIFile *aMabFile, PRBool aCreate, PRBool upgrading, nsIAddrDatabase **pCardDB);
-	NS_IMETHOD Close(PRBool forceCommit);
-	NS_IMETHOD OpenMDB(nsFileSpec *dbName, PRBool create);
-	NS_IMETHOD CloseMDB(PRBool commit);
-	NS_IMETHOD Commit(PRUint32 commitType);
-	NS_IMETHOD ForceClosed();
+  NS_IMETHOD GetDbPath(nsFileSpec * *aDbPath);
+  NS_IMETHOD SetDbPath(nsFileSpec * aDbPath);
+  NS_IMETHOD Open(nsIFile *aMabFile, PRBool aCreate, PRBool upgrading, nsIAddrDatabase **pCardDB);
+  NS_IMETHOD Close(PRBool forceCommit);
+  NS_IMETHOD OpenMDB(nsFileSpec *dbName, PRBool create);
+  NS_IMETHOD CloseMDB(PRBool commit);
+  NS_IMETHOD Commit(PRUint32 commitType);
+  NS_IMETHOD ForceClosed();
 
-	NS_IMETHOD CreateNewCardAndAddToDB(nsIAbCard *newCard, PRBool notify);
-	NS_IMETHOD CreateNewCardAndAddToDBWithKey(nsIAbCard *newCard, PRBool notify, PRUint32 *key);	
-	NS_IMETHOD CreateNewListCardAndAddToDB(nsIAbDirectory *list, PRUint32 listRowID, nsIAbCard *newCard, PRBool notify);
-	NS_IMETHOD CreateMailListAndAddToDB(nsIAbDirectory *newList, PRBool notify);
+  NS_IMETHOD CreateNewCardAndAddToDB(nsIAbCard *newCard, PRBool notify);
+  NS_IMETHOD CreateNewCardAndAddToDBWithKey(nsIAbCard *newCard, PRBool notify, PRUint32 *key);	
+  NS_IMETHOD CreateNewListCardAndAddToDB(nsIAbDirectory *list, PRUint32 listRowID, nsIAbCard *newCard, PRBool notify);
+  NS_IMETHOD CreateMailListAndAddToDB(nsIAbDirectory *newList, PRBool notify);
   NS_IMETHOD CreateMailListAndAddToDBWithKey(nsIAbDirectory *newList, PRBool notify, PRUint32 *key);
-	NS_IMETHOD EnumerateCards(nsIAbDirectory *directory, nsIEnumerator **result);
-	NS_IMETHOD GetMailingListsFromDB(nsIAbDirectory *parentDir);
-	NS_IMETHOD EnumerateListAddresses(nsIAbDirectory *directory, nsIEnumerator **result);
-	NS_IMETHOD DeleteCard(nsIAbCard *newCard, PRBool notify);
-	NS_IMETHOD EditCard(nsIAbCard *card, PRBool notify);
-	NS_IMETHOD ContainsCard(nsIAbCard *card, PRBool *hasCard);
-	NS_IMETHOD DeleteMailList(nsIAbDirectory *mailList, PRBool notify);
-	NS_IMETHOD EditMailList(nsIAbDirectory *mailList, nsIAbCard *listCard, PRBool notify);
-	NS_IMETHOD ContainsMailList(nsIAbDirectory *mailList, PRBool *hasCard);
-	NS_IMETHOD DeleteCardFromMailList(nsIAbDirectory *mailList, nsIAbCard *card, PRBool aNotify);
+  NS_IMETHOD EnumerateCards(nsIAbDirectory *directory, nsIEnumerator **result);
+  NS_IMETHOD GetMailingListsFromDB(nsIAbDirectory *parentDir);
+  NS_IMETHOD EnumerateListAddresses(nsIAbDirectory *directory, nsIEnumerator **result);
+  NS_IMETHOD DeleteCard(nsIAbCard *newCard, PRBool notify);
+  NS_IMETHOD EditCard(nsIAbCard *card, PRBool notify);
+  NS_IMETHOD ContainsCard(nsIAbCard *card, PRBool *hasCard);
+  NS_IMETHOD DeleteMailList(nsIAbDirectory *mailList, PRBool notify);
+  NS_IMETHOD EditMailList(nsIAbDirectory *mailList, nsIAbCard *listCard, PRBool notify);
+  NS_IMETHOD ContainsMailList(nsIAbDirectory *mailList, PRBool *hasCard);
+  NS_IMETHOD DeleteCardFromMailList(nsIAbDirectory *mailList, nsIAbCard *card, PRBool aNotify);
   NS_IMETHOD GetCardFromAttribute(nsIAbDirectory *directory, const char *aName, const char *aValue, PRBool aCaseInsensitive, nsIAbCard **card);	
-	NS_IMETHOD GetNewRow(nsIMdbRow * *newRow); 
-	NS_IMETHOD GetNewListRow(nsIMdbRow * *newRow); 
-	NS_IMETHOD AddCardRowToDB(nsIMdbRow *newRow);
-	NS_IMETHOD AddLdifListMember(nsIMdbRow* row, const char * value);
+  NS_IMETHOD GetNewRow(nsIMdbRow * *newRow); 
+  NS_IMETHOD GetNewListRow(nsIMdbRow * *newRow); 
+  NS_IMETHOD AddCardRowToDB(nsIMdbRow *newRow);
+  NS_IMETHOD AddLdifListMember(nsIMdbRow* row, const char * value);
 
   NS_IMETHOD GetDeletedCardList(PRUint32 *aCount, nsISupportsArray **aDeletedList);
   NS_IMETHOD GetDeletedCardCount(PRUint32 *count);
   NS_IMETHOD PurgeDeletedCardTable();
+  
+  NS_IMETHOD AddFirstName(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_FirstNameColumnToken, value); }
 
-	NS_IMETHOD AddFirstName(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_FirstNameColumnToken, value); }
+  NS_IMETHOD AddLastName(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_LastNameColumnToken, value); }
 
-	NS_IMETHOD AddLastName(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_LastNameColumnToken, value); }
+  NS_IMETHOD AddPhoneticFirstName(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_PhoneticFirstNameColumnToken, value); }
 
-	NS_IMETHOD AddPhoneticFirstName(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_PhoneticFirstNameColumnToken, value); }
+  NS_IMETHOD AddPhoneticLastName(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_PhoneticLastNameColumnToken, value); }
 
-	NS_IMETHOD AddPhoneticLastName(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_PhoneticLastNameColumnToken, value); }
+  NS_IMETHOD AddDisplayName(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_DisplayNameColumnToken, value); }
 
-	NS_IMETHOD AddDisplayName(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_DisplayNameColumnToken, value); }
+  NS_IMETHOD AddNickName(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_NickNameColumnToken, value); }
 
-	NS_IMETHOD AddNickName(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_NickNameColumnToken, value); }
+  NS_IMETHOD AddPrimaryEmail(nsIMdbRow * row, const char * value);
 
-	NS_IMETHOD AddPrimaryEmail(nsIMdbRow * row, const char * value);
-
-	NS_IMETHOD Add2ndEmail(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_2ndEmailColumnToken, value); }
+  NS_IMETHOD Add2ndEmail(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_2ndEmailColumnToken, value); }
 
   NS_IMETHOD AddDefaultEmail(nsIMdbRow * row, const char * value)
   { return AddCharStringColumn(row, m_DefaultEmailColumnToken, value); }
@@ -137,26 +138,29 @@ public:
   NS_IMETHOD AddCardType(nsIMdbRow * row, const char * value)
   { return AddCharStringColumn(row, m_CardTypeColumnToken, value); }
 
-	NS_IMETHOD AddPreferMailFormat(nsIMdbRow * row, PRUint32 value)
-	{ return AddIntColumn(row, m_MailFormatColumnToken, value); }
+  NS_IMETHOD AddPreferMailFormat(nsIMdbRow * row, PRUint32 value)
+  { return AddIntColumn(row, m_MailFormatColumnToken, value); }
 
-	NS_IMETHOD AddPopularityIndex(nsIMdbRow * row, PRUint32 value)
-	{ return AddIntColumn(row, m_PopularityIndexColumnToken, value); }
+  NS_IMETHOD AddPopularityIndex(nsIMdbRow * row, PRUint32 value)
+  { return AddIntColumn(row, m_PopularityIndexColumnToken, value); }
 
-	NS_IMETHOD AddWorkPhone(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_WorkPhoneColumnToken, value); }
+  NS_IMETHOD AddAllowRemoteContent(nsIMdbRow * row, PRBool value)
+  { return AddBoolColumn(row, m_AllowRemoteContentColumnToken, value); }
 
-	NS_IMETHOD AddHomePhone(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_HomePhoneColumnToken, value); }
+  NS_IMETHOD AddWorkPhone(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_WorkPhoneColumnToken, value); }
 
-	NS_IMETHOD AddFaxNumber(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_FaxColumnToken, value); }
+  NS_IMETHOD AddHomePhone(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_HomePhoneColumnToken, value); }
 
-	NS_IMETHOD AddPagerNumber(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_PagerColumnToken, value); }
+  NS_IMETHOD AddFaxNumber(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_FaxColumnToken, value); }
 
-	NS_IMETHOD AddCellularNumber(nsIMdbRow * row, const char * value)
-	{ return AddCharStringColumn(row, m_CellularColumnToken, value); }
+  NS_IMETHOD AddPagerNumber(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_PagerColumnToken, value); }
+
+  NS_IMETHOD AddCellularNumber(nsIMdbRow * row, const char * value)
+  { return AddCharStringColumn(row, m_CellularColumnToken, value); }
 
   NS_IMETHOD AddWorkPhoneType(nsIMdbRow * row, const char * value)
   { return AddCharStringColumn(row, m_WorkPhoneTypeColumnToken, value); }
@@ -367,77 +371,75 @@ protected:
 	static nsVoidArray/*<nsAddrDatabase>*/ * m_dbCache;
 
 	// mdb bookkeeping stuff
-	nsresult			InitExistingDB();
-	nsresult			InitNewDB();
-	nsresult			InitMDBInfo();
-	nsresult			InitPabTable();
+  nsresult			InitExistingDB();
+  nsresult			InitNewDB();
+  nsresult			InitMDBInfo();
+  nsresult			InitPabTable();
   nsresult      InitDeletedCardsTable(PRBool aCreate);
   nsresult			AddRowToDeletedCardsTable(nsIAbCard *card, nsIMdbRow **pCardRow);
-  nsresult			DeleteRowFromDeletedCardsTable(nsIMdbRow *pCardRow);
-
-	nsresult			InitLastRecorKey();
-	nsresult			GetDataRow(nsIMdbRow **pDataRow);
-	nsresult			GetLastRecordKey();
-	nsresult			UpdateLastRecordKey();
-	nsresult			CheckAndUpdateRecordKey();
-	nsresult			UpdateLowercaseEmailListName();
-	nsresult			ConvertAndAddLowercaseColumn(nsIMdbRow * row, mdb_token fromCol, mdb_token toCol);
-	nsresult			AddUnicodeToColumn(nsIMdbRow * row, mdb_token colToken, mdb_token lowerCaseColToken, const PRUnichar* pUnicodeStr);
-	nsresult			CreateCardsForMailList(nsIMdbRow *pListRow, nsIEnumerator **result);
-
-	nsresult			DeleteRow(nsIMdbTable* dbTable, nsIMdbRow* dbRow);
+  nsresult			DeleteRowFromDeletedCardsTable(nsIMdbRow *pCardRow);  
+  nsresult			InitLastRecorKey();
+  nsresult			GetDataRow(nsIMdbRow **pDataRow);
+  nsresult			GetLastRecordKey();
+  nsresult			UpdateLastRecordKey();
+  nsresult			CheckAndUpdateRecordKey();
+  nsresult			UpdateLowercaseEmailListName();
+  nsresult			ConvertAndAddLowercaseColumn(nsIMdbRow * row, mdb_token fromCol, mdb_token toCol);
+  nsresult			AddUnicodeToColumn(nsIMdbRow * row, mdb_token colToken, mdb_token lowerCaseColToken, const PRUnichar* pUnicodeStr);
+  nsresult			CreateCardsForMailList(nsIMdbRow *pListRow, nsIEnumerator **result);  
+  nsresult			DeleteRow(nsIMdbTable* dbTable, nsIMdbRow* dbRow);
 
   nsIMdbEnv   *m_mdbEnv;	// to be used in all the db calls.
   nsIMdbStore *m_mdbStore;
   nsIMdbTable *m_mdbPabTable;
   nsIMdbTable *m_mdbDeletedCardsTable;
-	nsFileSpec		    m_dbName;
-	PRBool				m_mdbTokensInitialized;
-    nsVoidArray /*<nsIAddrDBListener>*/ *m_ChangeListeners;
+  nsFileSpec		    m_dbName;
+  PRBool				m_mdbTokensInitialized;
+  nsVoidArray /*<nsIAddrDBListener>*/ *m_ChangeListeners;
 
-	mdb_kind			m_PabTableKind;
-	mdb_kind			m_MailListTableKind;
-	mdb_kind			m_DeletedCardsTableKind;
+  mdb_kind			m_PabTableKind;
+  mdb_kind			m_MailListTableKind;
+  mdb_kind			m_DeletedCardsTableKind;
 
-	mdb_scope			m_CardRowScopeToken;
-	mdb_scope			m_ListRowScopeToken;
-	mdb_scope			m_DataRowScopeToken;
+  mdb_scope			m_CardRowScopeToken;
+  mdb_scope			m_ListRowScopeToken;
+  mdb_scope			m_DataRowScopeToken;
 
-	mdb_token			m_FirstNameColumnToken;
-	mdb_token			m_LastNameColumnToken;
-	mdb_token			m_PhoneticFirstNameColumnToken;
-	mdb_token			m_PhoneticLastNameColumnToken;
-	mdb_token			m_DisplayNameColumnToken;
-	mdb_token			m_NickNameColumnToken;
-	mdb_token			m_PriEmailColumnToken;
-	mdb_token			m_2ndEmailColumnToken;
+  mdb_token			m_FirstNameColumnToken;
+  mdb_token			m_LastNameColumnToken;
+  mdb_token			m_PhoneticFirstNameColumnToken;
+  mdb_token			m_PhoneticLastNameColumnToken;
+  mdb_token			m_DisplayNameColumnToken;
+  mdb_token			m_NickNameColumnToken;
+  mdb_token			m_PriEmailColumnToken;
+  mdb_token			m_2ndEmailColumnToken;
   mdb_token			m_DefaultEmailColumnToken;
   mdb_token			m_CardTypeColumnToken;
-	mdb_token			m_WorkPhoneColumnToken;
-	mdb_token			m_HomePhoneColumnToken;
-	mdb_token			m_FaxColumnToken;
-	mdb_token			m_PagerColumnToken;
-	mdb_token			m_CellularColumnToken;
+  mdb_token			m_WorkPhoneColumnToken;
+  mdb_token			m_HomePhoneColumnToken;
+  mdb_token			m_FaxColumnToken;
+  mdb_token			m_PagerColumnToken;
+  mdb_token			m_CellularColumnToken;
   mdb_token			m_WorkPhoneTypeColumnToken;
-	mdb_token			m_HomePhoneTypeColumnToken;
-	mdb_token			m_FaxTypeColumnToken;
-	mdb_token			m_PagerTypeColumnToken;
-	mdb_token			m_CellularTypeColumnToken;
-	mdb_token			m_HomeAddressColumnToken;
-	mdb_token			m_HomeAddress2ColumnToken;
-	mdb_token			m_HomeCityColumnToken;
-	mdb_token			m_HomeStateColumnToken;
-	mdb_token			m_HomeZipCodeColumnToken;
-	mdb_token			m_HomeCountryColumnToken;
-	mdb_token			m_WorkAddressColumnToken;
-	mdb_token			m_WorkAddress2ColumnToken;
-	mdb_token			m_WorkCityColumnToken;
-	mdb_token			m_WorkStateColumnToken;
-	mdb_token			m_WorkZipCodeColumnToken;
-	mdb_token			m_WorkCountryColumnToken;
-	mdb_token			m_JobTitleColumnToken;
-	mdb_token			m_DepartmentColumnToken;
-	mdb_token			m_CompanyColumnToken;
+  mdb_token			m_HomePhoneTypeColumnToken;
+  mdb_token			m_FaxTypeColumnToken;
+  mdb_token			m_PagerTypeColumnToken;
+  mdb_token			m_CellularTypeColumnToken;
+  mdb_token			m_HomeAddressColumnToken;
+  mdb_token			m_HomeAddress2ColumnToken;
+  mdb_token			m_HomeCityColumnToken;
+  mdb_token			m_HomeStateColumnToken;
+  mdb_token			m_HomeZipCodeColumnToken;
+  mdb_token			m_HomeCountryColumnToken;
+  mdb_token			m_WorkAddressColumnToken;
+  mdb_token			m_WorkAddress2ColumnToken;
+  mdb_token			m_WorkCityColumnToken;
+  mdb_token			m_WorkStateColumnToken;
+  mdb_token			m_WorkZipCodeColumnToken;
+  mdb_token			m_WorkCountryColumnToken;
+  mdb_token			m_JobTitleColumnToken;
+  mdb_token			m_DepartmentColumnToken;
+  mdb_token			m_CompanyColumnToken;
   mdb_token			m_AimScreenNameColumnToken;
   mdb_token			m_AnniversaryYearColumnToken;
   mdb_token			m_AnniversaryMonthColumnToken;
@@ -446,34 +448,35 @@ protected:
   mdb_token			m_FamilyNameColumnToken;
   mdb_token			m_DefaultAddressColumnToken;
   mdb_token			m_CategoryColumnToken;
-	mdb_token			m_WebPage1ColumnToken;
-	mdb_token			m_WebPage2ColumnToken;
-	mdb_token			m_BirthYearColumnToken;
-	mdb_token			m_BirthMonthColumnToken;
-	mdb_token			m_BirthDayColumnToken;
-	mdb_token			m_Custom1ColumnToken;
-	mdb_token			m_Custom2ColumnToken;
-	mdb_token			m_Custom3ColumnToken;
-	mdb_token			m_Custom4ColumnToken;
-	mdb_token			m_NotesColumnToken;
-	mdb_token			m_LastModDateColumnToken;
-	mdb_token			m_RecordKeyColumnToken;
-	mdb_token			m_LowerPriEmailColumnToken;
+  mdb_token			m_WebPage1ColumnToken;
+  mdb_token			m_WebPage2ColumnToken;
+  mdb_token			m_BirthYearColumnToken;
+  mdb_token			m_BirthMonthColumnToken;
+  mdb_token			m_BirthDayColumnToken;
+  mdb_token			m_Custom1ColumnToken;
+  mdb_token			m_Custom2ColumnToken;
+  mdb_token			m_Custom3ColumnToken;
+  mdb_token			m_Custom4ColumnToken;
+  mdb_token			m_NotesColumnToken;
+  mdb_token			m_LastModDateColumnToken;
+  mdb_token			m_RecordKeyColumnToken;
+  mdb_token			m_LowerPriEmailColumnToken;
 
-	mdb_token			m_MailFormatColumnToken;
-	mdb_token     m_PopularityIndexColumnToken;
+  mdb_token			m_MailFormatColumnToken;
+  mdb_token     m_PopularityIndexColumnToken;
+  mdb_token     m_AllowRemoteContentColumnToken;
 						
-	mdb_token			m_AddressCharSetColumnToken;
-	mdb_token			m_LastRecordKeyColumnToken;
+  mdb_token			m_AddressCharSetColumnToken;
+  mdb_token			m_LastRecordKeyColumnToken;
 
-	mdb_token			m_ListNameColumnToken;
-	mdb_token			m_ListNickNameColumnToken;
-	mdb_token			m_ListDescriptionColumnToken;
-	mdb_token			m_ListTotalColumnToken;
-	mdb_token			m_LowerListNameColumnToken;
+  mdb_token			m_ListNameColumnToken;
+  mdb_token			m_ListNickNameColumnToken;
+  mdb_token			m_ListDescriptionColumnToken;
+  mdb_token			m_ListTotalColumnToken;
+  mdb_token			m_LowerListNameColumnToken;
 
-	PRUint32			m_LastRecordKey;
-	nsIAbDirectory*		m_dbDirectory;
+  PRUint32			m_LastRecordKey;
+  nsIAbDirectory*		m_dbDirectory;
 
 private:
   nsresult GetRowForCharColumn(const PRUnichar *unicodeStr, mdb_column findColumn, PRBool bIsCard, nsIMdbRow **findRow);
