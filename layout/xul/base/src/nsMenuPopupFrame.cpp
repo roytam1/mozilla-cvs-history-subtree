@@ -77,9 +77,13 @@
 #include "nsUnicharUtils.h"
 #include "nsCSSFrameConstructor.h"
 #include "nsIBoxLayout.h"
+#include "nsIEventQueueService.h"
+#include "nsIServiceManager.h"
 #ifdef XP_WIN
 #include "nsISound.h"
 #endif
+
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 const PRInt32 kMaxZ = 0x7fffffff; //XXX: Shouldn't there be a define somewhere for MaxInt for PRInt32
 
@@ -733,7 +737,37 @@ nsMenuPopupFrame::MovePopupToOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt
 
 } // MovePopupToOtherSideOfParent
 
+struct nsASyncMenuActivation : public PLEvent
+{
+  nsASyncMenuActivation(nsIContent* aContent)
+    : mContent(aContent)
+  {
+  }
 
+  void HandleEvent() {
+    nsAutoString shouldDisplay, menuActive;
+    mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, menuActive);
+    if (!menuActive.EqualsLiteral("true")) {
+      mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menutobedisplayed,
+                        shouldDisplay);
+      if(shouldDisplay.EqualsLiteral("true")) {
+        mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::menuactive,
+                          NS_LITERAL_STRING("true"), PR_TRUE);
+      }
+    }
+  }
+
+  nsCOMPtr<nsIContent> mContent;
+};
+
+static void PR_CALLBACK HandleASyncMenuActivation(nsASyncMenuActivation* aEvent)
+{
+  aEvent->HandleEvent();
+}
+static void PR_CALLBACK DestroyASyncMenuActivation(nsASyncMenuActivation* aEvent)
+{
+  delete aEvent;
+}
 
 nsresult 
 nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
@@ -1116,8 +1150,25 @@ nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
   mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, menuActive);
   if (!menuActive.EqualsLiteral("true")) {
     mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menutobedisplayed, shouldDisplay);
-    if ( shouldDisplay.EqualsLiteral("true") )
-      mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, NS_LITERAL_STRING("true"), PR_TRUE);
+    if ( shouldDisplay.EqualsLiteral("true") ) {
+      nsCOMPtr<nsIEventQueueService> eventService =
+        do_GetService(kEventQueueServiceCID);
+      NS_ENSURE_TRUE(eventService, NS_ERROR_FAILURE);
+      nsCOMPtr<nsIEventQueue> eventQueue;
+      eventService->GetThreadEventQueue(PR_GetCurrentThread(),
+                                        getter_AddRefs(eventQueue));
+      if (eventQueue) {
+        nsASyncMenuActivation* activation = new nsASyncMenuActivation(mContent);
+        if (activation) {
+          PL_InitEvent(activation, nsnull,
+                       (PLHandleEventProc) ::HandleASyncMenuActivation,
+                       (PLDestroyEventProc) ::DestroyASyncMenuActivation);
+          if (NS_FAILED(eventQueue->PostEvent(activation))) {
+            PL_DestroyEvent(activation);
+          }
+        }
+      }
+    }
   }
 
   return NS_OK;
@@ -1654,10 +1705,14 @@ nsMenuPopupFrame::ShortcutNavigation(nsIDOMKeyEvent* aKeyEvent, PRBool& aHandled
   nsIMenuFrame* result = FindMenuWithShortcut(aKeyEvent, action);
   if (result) {
     // We got one!
+    nsIFrame* frame = nsnull;
+    CallQueryInterface(result, &frame);
+    nsWeakFrame weakResult(frame);
     aHandledFlag = PR_TRUE;
     SetCurrentMenuItem(result);
-    if (action)
+    if (action && weakResult.IsAlive()) {
       result->Enter();
+    }
   }
 
   return NS_OK;
@@ -1693,6 +1748,7 @@ nsMenuPopupFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
   PRBool isContainer = PR_FALSE;
   PRBool isOpen = PR_FALSE;
   PRBool isDisabled = PR_FALSE;
+  nsWeakFrame weakFrame(this);
   if (mCurrentMenu) {
     mCurrentMenu->MenuIsContainer(isContainer);
     mCurrentMenu->MenuIsOpen(isOpen);
@@ -1701,13 +1757,19 @@ nsMenuPopupFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
     if (isOpen) {
       // Give our child a shot.
       mCurrentMenu->KeyboardNavigation(aKeyCode, aHandledFlag);
+      NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
     }
     else if (theDirection == eNavigationDirection_End &&
              isContainer && !isDisabled) {
       // The menu is not yet open. Open it and select the first item.
       aHandledFlag = PR_TRUE;
+      nsIFrame* frame = nsnull;
+      CallQueryInterface(mCurrentMenu, &frame);
+      nsWeakFrame weakCurrentFrame(frame);
       mCurrentMenu->OpenMenu(PR_TRUE);
+      NS_ENSURE_TRUE(weakCurrentFrame.IsAlive(), NS_OK);
       mCurrentMenu->SelectFirstItem();
+      NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
     }
   }
 
@@ -1738,6 +1800,7 @@ nsMenuPopupFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
     if (theDirection == eNavigationDirection_Start) {
       // Close it up.
       mCurrentMenu->OpenMenu(PR_FALSE);
+      NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
       // SelectMenu() so DOMMenuItemActive is fired for accessibility
       mCurrentMenu->SelectMenu(PR_TRUE);
       aHandledFlag = PR_TRUE;
@@ -1775,6 +1838,7 @@ nsMenuPopupFrame::HideChain()
   
   nsIFrame* frame = GetParent();
   if (frame) {
+    nsWeakFrame weakMenu(frame);
     nsIMenuFrame* menuFrame;
     if (NS_FAILED(CallQueryInterface(frame, &menuFrame))) {
       nsIPopupSetFrame* popupSetFrame = GetPopupSetFrame(mPresContext);
@@ -1785,7 +1849,9 @@ nsMenuPopupFrame::HideChain()
     }
    
     menuFrame->ActivateMenu(PR_FALSE);
+    NS_ENSURE_TRUE(weakMenu.IsAlive(), NS_OK);
     menuFrame->SelectMenu(PR_FALSE);
+    NS_ENSURE_TRUE(weakMenu.IsAlive(), NS_OK);
 
     // Get the parent.
     nsIMenuParent *menuParent = menuFrame->GetMenuParent();
@@ -1950,8 +2016,9 @@ nsMenuPopupFrame::MoveToAttributePosition()
   xPos = left.ToInteger(&err1);
   yPos = top.ToInteger(&err2);
 
-  if (NS_SUCCEEDED(err1) && NS_SUCCEEDED(err2))
-    MoveTo(xPos, yPos);
+  if (NS_SUCCEEDED(err1) && NS_SUCCEEDED(err2)) {
+    MoveToInternal(xPos, yPos);
+  }
 }
 
 
@@ -2101,9 +2168,22 @@ nsMenuPopupFrame::MoveTo(PRInt32 aLeft, PRInt32 aTop)
   left.AppendInt(aLeft);
   top.AppendInt(aTop);
 
+  nsWeakFrame weakFrame(this);
   mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::left, left, PR_FALSE);
+  if (!weakFrame.IsAlive()) {
+    return;
+  }
   mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::top, top, PR_FALSE);
+  if (!weakFrame.IsAlive()) {
+    return;
+  }
 
+  MoveToInternal(aLeft, aTop);
+}
+
+void
+nsMenuPopupFrame::MoveToInternal(PRInt32 aLeft, PRInt32 aTop)
+{
   nsIView* view = GetView();
   NS_ASSERTION(view->GetParent(), "Must have parent!");
   

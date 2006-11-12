@@ -792,10 +792,10 @@ nsTreeBodyFrame::InvalidateScrollbar(const ScrollParts& aParts)
 {
   if (mUpdateBatchNest || !mView || mRowCount <= mPageLength)
     return;
-
+  nsWeakFrame weakFrame(this);
   if (aParts.mVScrollbar) {
     // Do Vertical Scrollbar
-    nsIContent* scrollbar = aParts.mVScrollbarContent;
+    nsCOMPtr<nsIContent> scrollbar = aParts.mVScrollbarContent;
     nsAutoString maxposStr;
 
     float t2p = GetPresContext()->TwipsToPixels();
@@ -804,6 +804,7 @@ nsTreeBodyFrame::InvalidateScrollbar(const ScrollParts& aParts)
     PRInt32 size = rowHeightAsPixels * (mRowCount > mPageLength ? mRowCount - mPageLength : 0);
     maxposStr.AppendInt(size);
     scrollbar->SetAttr(kNameSpaceID_None, nsXULAtoms::maxpos, maxposStr, PR_TRUE);
+    ENSURE_TRUE(weakFrame.IsAlive());
 
     // Also set our page increment and decrement.
     nscoord pageincrement = mPageLength*rowHeightAsPixels;

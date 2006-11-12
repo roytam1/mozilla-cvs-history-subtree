@@ -1097,7 +1097,9 @@ nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildB
   if (oldValue.Equals(prefValue))
      return;
 
+  nsWeakFrame weakBox(aChildBox);
   content->SetAttr(kNameSpaceID_None, attribute, prefValue, PR_TRUE);
+  ENSURE_TRUE(weakBox.IsAlive());
   aChildBox->MarkDirty(aState);
 }
 

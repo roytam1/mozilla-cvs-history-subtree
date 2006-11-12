@@ -137,14 +137,14 @@ nsTreeUtils::UpdateSortIndicators(nsIContent* aColumn, const nsAString& aDirecti
   aColumn->SetAttr(kNameSpaceID_None, nsXULAtoms::sortActive, NS_LITERAL_STRING("true"), PR_TRUE);
 
   // Unset sort attribute(s) on the other columns
-  nsIContent* parentContent = aColumn->GetParent();
+  nsCOMPtr<nsIContent> parentContent = aColumn->GetParent();
   if (parentContent) {
     nsINodeInfo *ni = parentContent->GetNodeInfo();
 
     if (ni && ni->Equals(nsXULAtoms::treecols, kNameSpaceID_XUL)) {
       PRUint32 numChildren = parentContent->GetChildCount();
       for (PRUint32 i = 0; i < numChildren; ++i) {
-        nsIContent *childContent = parentContent->GetChildAt(i);
+        nsCOMPtr<nsIContent> childContent = parentContent->GetChildAt(i);
 
         if (childContent) {
           ni = childContent->GetNodeInfo();

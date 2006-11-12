@@ -174,6 +174,8 @@ public:
 
   void EnsureMenuItemIsVisible(nsIMenuFrame* aMenuFrame);
 
+  // This sets 'left' and 'top' attributes.
+  // May kill the frame.
   void MoveTo(PRInt32 aLeft, PRInt32 aTop);
 
   void GetAutoPosition(PRBool* aShouldAutoPosition);
@@ -183,6 +185,9 @@ public:
   nsIScrollableView* GetScrollableView(nsIFrame* aStart);
   
 protected:
+  // Move without updating attributes.
+  void MoveToInternal(PRInt32 aLeft, PRInt32 aTop);
+
   // redefine to tell the box system not to move the
   // views.
   virtual void GetLayoutFlags(PRUint32& aFlags);

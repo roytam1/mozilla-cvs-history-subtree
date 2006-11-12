@@ -120,6 +120,8 @@ nsProgressMeterFrame::AttributeChanged(nsIContent* aChild,
     if (!barChild) return NS_OK;
     nsIFrame* remainderChild = barChild->GetNextSibling();
     if (!remainderChild) return NS_OK;
+    nsCOMPtr<nsIContent> remainderContent = remainderChild->GetContent();
+    if (!remainderContent) return NS_OK;
 
     nsAutoString value;
     mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, value);
@@ -134,11 +136,14 @@ nsProgressMeterFrame::AttributeChanged(nsIContent* aChild,
     nsAutoString leftFlex, rightFlex;
     leftFlex.AppendInt(flex);
     rightFlex.AppendInt(remainder);
+    nsWeakFrame weakFrame(this);
     barChild->GetContent()->SetAttr(kNameSpaceID_None, nsXULAtoms::flex, leftFlex, PR_TRUE);
-    remainderChild->GetContent()->SetAttr(kNameSpaceID_None, nsXULAtoms::flex, rightFlex, PR_TRUE);
+    remainderContent->SetAttr(kNameSpaceID_None, nsXULAtoms::flex, rightFlex, PR_TRUE);
 
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    if (weakFrame.IsAlive()) {
+      nsBoxLayoutState state(GetPresContext());
+      MarkDirty(state);
+    }
   }
   return NS_OK;
 }
