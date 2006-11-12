@@ -209,30 +209,34 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   if (mLoop && PR_Available(mFile) <= 0) {
     // Create a new stream info, so that downstream nodes get the
     // stream break.
-    if (mGenerateEOF)
-      mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
     PR_Seek(mFile, 0, PR_SEEK_SET); // rewind
     mOffset = 0;
+    if (mGenerateEOF)
+      goto done; // emit an empty frame with the old stream info
+    else {
+      // fall through to emit a new frame, but make sure it gets the
+      // new streaminfo:
+      frame->mStreamInfo = mStreamInfo;
+    }
   }
   
   // write frame data:
   frame->mData.SetLength(mBlockSize);
   PRUint32 bytesRead = PR_Read(mFile, frame->mData.BeginWriting(), mBlockSize);
   if (bytesRead <= 0) {
-    PR_Close(mFile);
-    mFile = nsnull;
-    if (mGenerateEOF) {
-      mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
-      // fall through to emit the frame.
-    }
-    else
+    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+    if (!mGenerateEOF)
       return NS_ERROR_FAILURE;
+    // ... else fall through to emit the frame.
   }
   else {
     mOffset += bytesRead;
   }
   
   frame->mData.SetLength(bytesRead);
+
+  done:
   *_retval = frame;
   NS_ADDREF(*_retval);
   return NS_OK;

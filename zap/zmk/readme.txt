@@ -1124,6 +1124,12 @@ udp frames ("other")
 
 Reads a file as a sequence of raw data packets.
 
+Frames will contain between 1 and <= block_size bytes, apart from eof
+frames which contain 0 bytes. When the file is looped or seeked, a new
+streaminfo will be set. In addition, if 'generate_eof' is set to true,
+an eof frame (with the previous streaminfo) will be emitted before
+resuming at the new position.
+
 Sinks: none
 Sources: 1 (passive)
 
@@ -1136,11 +1142,10 @@ Node parameters:
 - unsigned long "block_size" : max size of data packets (default: 8192).
 - boolean "loop" : if true, the file will be looped (i.e. seeked to the 
                    beginning once the end has been reached) (default: false)
-- boolean "generate_eof" : if true, an empty frame with a new stream info 
-                           will be generated at the end of the file (or,
-                           if the file is being looped, a new stream info
-                           will be generated whenever the stream is rewound) 
-                           (default: true)
+- boolean "generate_eof" : If true, an empty frame will be generated when 
+                           the end of the file is reached or when
+                           a new stream position is set using 
+                           'zapIFileIn::Seek'. (default: true)
 
 Output stream:
 
