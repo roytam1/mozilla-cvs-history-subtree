@@ -11111,10 +11111,12 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIFrame* aFrame)
           // Create "special" inline-block linkage between the frames
           // XXXldb Do we really need to do this?  It doesn't seem
           // consistent with the use in ConstructInline.
-          SetFrameIsSpecial(list1, list2);
-          SetFrameIsSpecial(list2, list3);
-          if (list3) {
-            SetFrameIsSpecial(list3, nsnull);
+          if (list1) {
+            SetFrameIsSpecial(list1, list2);
+            SetFrameIsSpecial(list2, list3);
+            if (list3) {
+              SetFrameIsSpecial(list3, nsnull);
+            }
           }
 
           // Recursively split inlines back up to the first containing
@@ -13735,8 +13737,10 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsFrameConstructorState& aState,
       aRightInlineChildFrame->SetParent(aFrame);
 
     aBlockChildFrame->SetNextSibling(aRightInlineChildFrame);
-    aFrame->InsertFrames(nsnull, aLeftInlineChildFrame, aBlockChildFrame);
-
+    if (aLeftInlineChildFrame) {
+      aFrame->InsertFrames(nsnull, aLeftInlineChildFrame, aBlockChildFrame);
+    }
+    
     // If aLeftInlineChild has a view...
     if (aLeftInlineChildFrame && aLeftInlineChildFrame->HasView()) {
       // ...create a new view for the block child, and reparent views
