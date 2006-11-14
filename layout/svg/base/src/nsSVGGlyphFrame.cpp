@@ -446,7 +446,16 @@ nsSVGGlyphFrame::UpdateCoveredRegion()
 NS_IMETHODIMP
 nsSVGGlyphFrame::InitialUpdate()
 {
-  return UpdateGraphic();
+  nsresult rv = UpdateGraphic();
+
+  NS_ASSERTION(!(mState & NS_FRAME_IN_REFLOW),
+               "We don't actually participate in reflow");
+  
+  // Do unset the various reflow bits, though.
+  mState &= ~(NS_FRAME_FIRST_REFLOW | NS_FRAME_IS_DIRTY |
+              NS_FRAME_HAS_DIRTY_CHILDREN);
+  
+  return rv;
 }  
 
 NS_IMETHODIMP

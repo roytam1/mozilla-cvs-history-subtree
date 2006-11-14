@@ -305,6 +305,14 @@ nsSVGForeignObjectFrame::InitialUpdate()
 {
   UpdateCoveredRegion();
   DoReflow();
+
+  NS_ASSERTION(!(mState & NS_FRAME_IN_REFLOW),
+               "We don't actually participate in reflow");
+  
+  // Do unset the various reflow bits, though.
+  mState &= ~(NS_FRAME_FIRST_REFLOW | NS_FRAME_IS_DIRTY |
+              NS_FRAME_HAS_DIRTY_CHILDREN);
+
   return NS_OK;
 }
 
