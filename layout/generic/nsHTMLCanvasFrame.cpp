@@ -59,32 +59,8 @@ nsHTMLCanvasFrame::~nsHTMLCanvasFrame()
 {
 }
 
-/* virtual */ nscoord
-nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
-{
-  // XXX The caller doesn't account for constraints of the height,
-  // min-height, and max-height properties.
-  float p2t = GetPresContext()->PixelsToTwips();
-  nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
-  DISPLAY_MIN_WIDTH(this, result);
-  return result;
-}
-
-/* virtual */ nscoord
-nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
-{
-  // XXX The caller doesn't account for constraints of the height,
-  // min-height, and max-height properties.
-  float p2t = GetPresContext()->PixelsToTwips();
-  nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
-  DISPLAY_PREF_WIDTH(this, result);
-  return result;
-}
-
-/* virtual */ nsSize
-nsHTMLCanvasFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
-                               nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                               nsSize aPadding, PRBool aShrinkWrap)
+nsSize
+nsHTMLCanvasFrame::GetCanvasSize()
 {
   PRUint32 w, h;
   nsresult rv;
@@ -102,7 +78,35 @@ nsHTMLCanvasFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
 
   float p2t = GetPresContext()->PixelsToTwips();
 
-  mCanvasSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+  return nsSize(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+}
+
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  // XXX The caller doesn't account for constraints of the height,
+  // min-height, and max-height properties.
+  nscoord result = GetCanvasSize().width;
+  DISPLAY_MIN_WIDTH(this, result);
+  return result;
+}
+
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  // XXX The caller doesn't account for constraints of the height,
+  // min-height, and max-height properties.
+  nscoord result = GetCanvasSize().width;
+  DISPLAY_PREF_WIDTH(this, result);
+  return result;
+}
+
+/* virtual */ nsSize
+nsHTMLCanvasFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                               nsSize aCBSize, nsSize aMargin, nsSize aBorder,
+                               nsSize aPadding, PRBool aShrinkWrap)
+{
+  mCanvasSize = GetCanvasSize();
 
   return nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(
                             aRenderingContext, this, mCanvasSize,
