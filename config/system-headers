@@ -65,7 +65,27 @@ bstring.h
 builtin.h
 Button.h
 byteswap.h
+#if MOZ_ENABLE_LIBXUL!=1
+#define WRAP_CAIRO_HEADERS
+#endif
+#if MOZ_TREE_CAIRO!=1
+#define WRAP_CAIRO_HEADERS
+#endif
+#ifdef WRAP_CAIRO_HEADERS
 cairo.h
+cairo-atsui.h
+cairo-beos.h
+cairo-ft.h
+cairo-glitz.h
+cairo-nquartz.h
+cairo-os2.h
+cairo-pdf.h
+cairo-ps.h
+cairo-quartz.h
+cairo-win32.h
+cairo-xlib.h
+cairo-xlib-xrender.h
+#endif
 callconv.h
 Carbon/Carbon.h
 CarbonEvents.h
@@ -176,7 +196,7 @@ frame/req.h
 freetype/freetype.h
 freetype/ftcache.h
 freetype/ftglyph.h
-freetype/ftoutlin.h
+freetype/ftoutln.h
 freetype/ttnameid.h
 freetype/tttables.h
 fribidi/fribidi.h
@@ -212,7 +232,10 @@ gtk/gtkclipboard.h
 gtk/gtkcontainer.h
 gtk/gtkdialog.h
 gtk/gtkentry.h
+gtk/gtkfixed.h
 gtk/gtk.h
+gtk/gtkiconfactory.h
+gtk/gtkimage.h
 gtk/gtkimmulticontext.h
 gtk/gtkinvisible.h
 gtk/gtkmain.h
@@ -228,6 +251,7 @@ gtk/gtktextview.h
 gtk/gtkvscrollbar.h
 gtk/gtkwidget.h
 gtk/gtkwindow.h
+gtk/gtkversion.h
 HIToolbox/HIToolbox.h
 hlink.h
 htiface.h
@@ -900,3 +924,9 @@ nssckbi.h
 pkcs12.h
 p12plcy.h
 pk11sdr.h
+#if MOZ_NATIVE_PNG==1
+png.h
+#endif
+#if MOZ_NATIVE_ZLIB==1
+zlib.h
+#endif
