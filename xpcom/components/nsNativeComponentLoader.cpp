@@ -67,7 +67,7 @@
 #endif
 
 #include "prlog.h"
-extern PRLogModuleInfo *nsComponentManagerLog;
+extern NS_COM PRLogModuleInfo *nsComponentManagerLog;
 
 static PRBool PR_CALLBACK
 DLLStore_Destroy(nsHashKey *aKey, void *aData, void* closure)
