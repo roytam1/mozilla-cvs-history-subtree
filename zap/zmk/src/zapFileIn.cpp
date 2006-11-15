@@ -205,7 +205,8 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
   frame->mStreamInfo = mStreamInfo;
   frame->mTimestamp = mOffset;
-
+  PRUint32 bytesRead;
+  
   if (mLoop && PR_Available(mFile) <= 0) {
     // Create a new stream info, so that downstream nodes get the
     // stream break.
@@ -223,7 +224,7 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   
   // write frame data:
   frame->mData.SetLength(mBlockSize);
-  PRUint32 bytesRead = PR_Read(mFile, frame->mData.BeginWriting(), mBlockSize);
+  bytesRead = PR_Read(mFile, frame->mData.BeginWriting(), mBlockSize);
   if (bytesRead <= 0) {
     mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
     if (!mGenerateEOF)
