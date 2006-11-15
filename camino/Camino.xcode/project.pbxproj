@@ -4065,6 +4065,7 @@
 				DE1179DE0A15F92A00006DD6,
 				DE74F8B90AB2709E00FD1D5B,
 				DE74F8BC0AB270B800FD1D5B,
+				DEE9EC4E0AF5C613002BC511,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5215,6 +5216,7 @@
 				DEA548F00A25227200186C93,
 				DE74F8C30AB270D800FD1D5B,
 				DE74F8C60AB270F200FD1D5B,
+				DEE9EC510AF5C654002BC511,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7989,6 +7991,7 @@
 				DE1179DF0A15F92A00006DD6,
 				DE74F8BA0AB2709E00FD1D5B,
 				DE74F8BD0AB270B800FD1D5B,
+				DEE9EC4F0AF5C613002BC511,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9139,6 +9142,7 @@
 				DEA548F10A25227200186C93,
 				DE74F8C40AB270D800FD1D5B,
 				DE74F8C70AB270F200FD1D5B,
+				DEE9EC520AF5C654002BC511,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -14323,6 +14327,48 @@
 			settings = {
 			};
 		};
+		DEE9EC4D0AF5C613002BC511 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = SessionManager.h;
+			path = src/application/SessionManager.h;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DEE9EC4E0AF5C613002BC511 = {
+			fileRef = DEE9EC4D0AF5C613002BC511;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DEE9EC4F0AF5C613002BC511 = {
+			fileRef = DEE9EC4D0AF5C613002BC511;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DEE9EC500AF5C654002BC511 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.objcpp;
+			name = SessionManager.mm;
+			path = src/application/SessionManager.mm;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DEE9EC510AF5C654002BC511 = {
+			fileRef = DEE9EC500AF5C654002BC511;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DEE9EC520AF5C654002BC511 = {
+			fileRef = DEE9EC500AF5C654002BC511;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 //DE0
 //DE1
 //DE2
@@ -15242,6 +15288,7 @@
 				F52D5CD8027D3D5001A80166,
 				F5D33CBD02EF61A901A967F3,
 				F58DB2D30381FD3301A9666E,
+				DEE9EC500AF5C654002BC511,
 			);
 			isa = PBXGroup;
 			name = Application;
@@ -15474,6 +15521,7 @@
 				3003B8930445144100B85BF3,
 				3003B8940445144100B85BF3,
 				F5D33CBC02EF61A901A967F3,
+				DEE9EC4D0AF5C613002BC511,
 				F558137A030AEF9B0176F207,
 				F549ACE70302DEF001026D5D,
 				F55C4DD302D2864D0130B065,
