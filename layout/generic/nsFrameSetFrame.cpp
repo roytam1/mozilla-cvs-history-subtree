@@ -322,10 +322,6 @@ nsHTMLFramesetFrame::Init(nsIContent*      aContent,
     }
   }
 
-  if (mTopLevelFrameset == this) {
-    aParent->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
-  }
-  
   nsPresContext* aPresContext = GetPresContext();
 
   // create the view. a view is needed since it needs to be a mouse grabber
@@ -978,6 +974,8 @@ nsHTMLFramesetFrame::Reflow(nsPresContext*          aPresContext,
   nsIPresShell *shell = aPresContext->PresShell();
   nsStyleSet *styleSet = shell->StyleSet();
 
+  mParent->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+  
   //printf("FramesetFrame2::Reflow %X (%d,%d) \n", this, aReflowState.availableWidth, aReflowState.availableHeight); 
   // Always get the size so that the caller knows how big we are
   GetDesiredSize(aPresContext, aReflowState, aDesiredSize);
