@@ -62,10 +62,6 @@ ViewportFrame::Init(nsIContent*      aContent,
                     nsIFrame*        aParent,
                     nsIFrame*        aPrevInFlow)
 {
-  // Because |Reflow| sets mComputedHeight on the child to
-  // availableHeight.
-  AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
-  
   return Super::Init(aContent, aParent, aPrevInFlow);
 }
 
@@ -261,6 +257,10 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
   // Initialize OUT parameters
   aStatus = NS_FRAME_COMPLETE;
 
+  // Because |Reflow| sets mComputedHeight on the child to
+  // availableHeight.
+  AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+  
   // Reflow the main content first so that the placeholders of the
   // fixed-position frames will be in the right places on an initial
   // reflow.
