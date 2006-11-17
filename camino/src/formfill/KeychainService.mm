@@ -898,7 +898,7 @@ NSWindow*
 KeychainFormSubmitObserver::GetNSWindow(nsIDOMWindowInternal* inWindow)
 {
   CHBrowserView* browserView = [CHBrowserView browserViewFromDOMWindow:inWindow];
-  return [browserView nativeWindow];
+  return [browserView getNativeWindow];
 }
 
 KeychainPromptResult
