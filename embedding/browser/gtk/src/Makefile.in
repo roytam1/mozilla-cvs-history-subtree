@@ -66,8 +66,6 @@ MOZILLA_INTERNAL_API = 1
 DEFINES += -DMOZILLA_INTERNAL_API
 endif
 
-MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT = 1
-DEFINES += -DMOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
 DEFINES += -DIMPL_XREAPI
 
 # New Stuff in GtkMozEmbed
@@ -75,6 +73,12 @@ ifdef MOZ_MICROBEMBED
 DEFINES += -DBAD_CERT_LISTENER2
 #Probably scrolling can be fixed without this hack
 DEFINES += -DMOZ_SCROLL_TOP_LEFT_HACK
+
+MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT = 1
+DEFINES += -DMOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
+
+MOZ_GTKPASSWORD_INTERFACE = 1
+DEFINES += -DMOZ_GTKPASSWORD_INTERFACE
 endif
 
 REQUIRES	= xpcom \
@@ -129,10 +133,21 @@ CPPSRCS		= \
 		EmbedWindowCreator.cpp \
 		EmbedCertificates.cpp \
 		EmbedDownloadMgr.cpp \
-		EmbedPasswordMgr.cpp \
 		EmbedGlobalHistory.cpp \
 		EmbedFilePicker.cpp \
 		$(NULL)
+
+ifdef MOZ_GTKPASSWORD_INTERFACE
+CPPSRCS		= \
+		EmbedPasswordMgr.cpp \
+		$(NULL)
+
+XPIDLSRCS       = \
+	        nsIPassword.idl \
+		nsIPasswordInternal.idl \
+		$(NULL)
+
+endif
 
 ifdef MOZ_ENABLE_GTK2
 CSRCS           = \
@@ -152,17 +167,19 @@ endif
 
 include $(topsrcdir)/config/config.mk
 
+ifdef MOZILLA_1_8_BRANCH
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/libembed_base_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/libprofdirserviceprovider_s.$(LIB_SUFFIX) \
+		$(NULL)
+endif
+
 EXPORTS		= \
 		gtkmozembed.h \
 		gtkmozembed_common.h \
 		gtkmozembed_download.h \
 		gtkmozembed_glue.cpp \
 		gtkmozembed_internal.h
-
-XPIDLSRCS       = \
-	        nsIPassword.idl \
-		nsIPasswordInternal.idl \
-		$(NULL)
 
 ifdef MOZ_GTKEMBED_DYN
 ifdef MOZ_ENABLE_GTK
@@ -191,7 +208,6 @@ endif
 CXXFLAGS        += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS) $(MOZ_GNOMEVFS_CFLAGS)
 CFLAGS          += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS) $(MOZ_GNOMEVFS_CFLAGS)
 DEFINES         += -D_IMPL_GTKMOZEMBED
-
 
 
 MARSHAL_FILE = gtkmozembedmarshal

@@ -51,7 +51,6 @@
 
 #include "nsIURI.h"
 #include "nsCRT.h"
-#include "EmbedPasswordMgr.h"
 
 EmbedProgress::EmbedProgress(void)
 {

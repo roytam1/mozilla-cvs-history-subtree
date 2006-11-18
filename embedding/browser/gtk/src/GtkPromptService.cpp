@@ -581,10 +581,10 @@ GtkPromptService::GetButtonLabel(
     aLabel.AssignLiteral(GTK_STOCK_SAVE);
     break;
   case BUTTON_TITLE_DONT_SAVE:
-    aLabel.Assign("Don't Save");
+    aLabel.AssignLiteral("Don't Save");
     break;
   case BUTTON_TITLE_REVERT:
-    aLabel.Assign("Revert");
+    aLabel.AssignLiteral("Revert");
     break;
   case BUTTON_TITLE_IS_STRING:
     aLabel = aStringValue;

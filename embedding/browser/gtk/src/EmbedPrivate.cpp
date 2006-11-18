@@ -75,6 +75,15 @@
 #include <nsIFormControl.h>
 // for the clipboard actions we need to do
 #include "nsIClipboardCommands.h"
+
+#ifdef MOZILLA_1_8_BRANCH
+// for profiles
+#include <nsProfileDirServiceProvider.h>
+#include <nsEmbedAPI.h>
+// for NS_APPSHELL_CID
+#include <nsWidgetsCID.h>
+#endif
+
 // app component registration
 #include <nsIGenericFactory.h>
 #include <nsIComponentRegistrar.h>
@@ -111,7 +120,9 @@
 #include "nsEditorCID.h"
 #include "EmbedCertificates.h"
 #include "EmbedDownloadMgr.h"
+#ifdef MOZ_GTKPASSWORD_INTERFACE
 #include "EmbedPasswordMgr.h"
+#endif
 #include "EmbedGlobalHistory.h"
 #include "EmbedFilePicker.h"
 static EmbedCommon* sEmbedCommon = nsnull;
@@ -159,6 +170,14 @@ char        *EmbedPrivate::sCompPath    = nsnull;
 nsVoidArray *EmbedPrivate::sWindowList  = nsnull;
 nsILocalFile *EmbedPrivate::sProfileDir  = nsnull;
 nsISupports  *EmbedPrivate::sProfileLock = nsnull;
+#ifdef MOZILLA_1_8_BRANCH
+char        *EmbedPrivate::sProfileDirS  = nsnull;
+char        *EmbedPrivate::sProfileName = nsnull;
+nsIPref     *EmbedPrivate::sPrefs       = nsnull;
+nsIAppShell *EmbedPrivate::sAppShell    = nsnull;
+nsProfileDirServiceProvider *EmbedPrivate::sProfileDirServiceProvider = nsnull;
+static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
+#endif
 GtkWidget   *EmbedPrivate::sOffscreenWindow = 0;
 GtkWidget   *EmbedPrivate::sOffscreenFixed  = 0;
 
@@ -226,13 +245,15 @@ GTKEmbedDirectoryProvider::GetFiles(const char *aKey,
 NS_GENERIC_FACTORY_CONSTRUCTOR(GtkPromptService)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(EmbedCertificates, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(EmbedDownloadMgr)
+#ifdef MOZ_GTKPASSWORD_INTERFACE
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(EmbedPasswordMgr, EmbedPasswordMgr::GetInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(EmbedSignonPrompt)
+#endif
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(EmbedGlobalHistory, EmbedGlobalHistory::GetInstance)
-//NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(EmbedGlobalHistory, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(EmbedFilePicker)
 
 static const nsModuleComponentInfo defaultAppComps[] = {
+#ifdef MOZ_GTKPASSWORD_INTERFACE
   {
     EMBED_PASSWORDMANAGER_DESCRIPTION,
     EMBED_PASSWORDMANAGER_CID,
@@ -247,6 +268,7 @@ static const nsModuleComponentInfo defaultAppComps[] = {
     "@mozilla.org/wallet/single-sign-on-prompt;1",
     EmbedSignonPromptConstructor
   },
+#endif
   { "Prompt Service",
     NS_PROMPTSERVICE_CID,
     NS_COOKIEPROMPTSERVICE_CONTRACTID,
@@ -717,7 +739,6 @@ EmbedPrivate::PushStartup(void)
   // if this is the first widget, fire up xpcom
   if (sWidgetCount == 1) {
     nsresult rv;
-
     nsCOMPtr<nsILocalFile> binDir;
     nsCOMPtr<nsILocalFile> compDir;
     if (EmbedPrivate::sCompPath) {
@@ -732,9 +753,13 @@ EmbedPrivate::PushStartup(void)
         rv = compDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
       if (NS_FAILED(rv))
         return;
-    }
+    } else
+      NS_ASSERTION(EmbedPrivate::sCompPath, "Warning: Failed to init Component Path.\n");
+
+#ifndef MOZILLA_1_8_BRANCH
 
     const char *grePath = sPath;
+    NS_ASSERTION(grePath, "Warning: Failed to init grePath.\n");
 
     if (!grePath)
       grePath = getenv("MOZILLA_FIVE_HOME");
@@ -755,10 +780,34 @@ EmbedPrivate::PushStartup(void)
     if (NS_FAILED(rv))
       return;
 
-#ifndef MOZILLA_1_8_BRANCH
     if (EmbedPrivate::sProfileDir) {
       XRE_NotifyProfile();
     }
+#else
+
+    rv = NS_InitEmbedding(binDir, sAppFileLocProvider);
+    if (NS_FAILED(rv))
+      return;
+
+    // we no longer need a reference to the DirectoryServiceProvider
+    if (sAppFileLocProvider) {
+      NS_RELEASE(sAppFileLocProvider);
+      sAppFileLocProvider = nsnull;
+    }
+
+    rv = StartupProfile();
+    NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Warning: Failed to start up profiles.\n");
+
+    nsCOMPtr<nsIAppShell> appShell;
+    appShell = do_CreateInstance(kAppShellCID);
+    if (!appShell) {
+      NS_WARNING("Failed to create appshell in EmbedPrivate::PushStartup!\n");
+      return;
+    }
+    sAppShell = appShell.get();
+    NS_ADDREF(sAppShell);
+    sAppShell->Create(0, nsnull);
+    sAppShell->Spinup();
 #endif
 
     rv = RegisterAppComponents();
@@ -774,6 +823,21 @@ EmbedPrivate::PopStartup(void)
   if (sWidgetCount == 0) {
     // destroy the offscreen window
     DestroyOffscreenWindow();
+    
+#ifdef MOZILLA_1_8_BRANCH
+    // shut down the profiles
+    ShutdownProfile();
+    
+    if (sAppShell) {
+      // Shutdown the appshell service.
+      sAppShell->Spindown();
+      NS_RELEASE(sAppShell);
+      sAppShell = 0;
+    }
+
+    // shut down XPCOM/Embedding
+    NS_TermEmbedding();					
+#endif
 
     // we no longer need a reference to the DirectoryServiceProvider
     if (EmbedPrivate::sAppFileLocProvider) {
@@ -854,13 +918,29 @@ EmbedPrivate::SetProfilePath(const char *aDir, const char *aName)
       XRE_NotifyProfile();
 
     return;
-  }
+  }  
   NS_WARNING("Failed to lock profile.");
-#endif
 
   // Failed
   NS_IF_RELEASE(EmbedPrivate::sProfileDir);
   NS_IF_RELEASE(EmbedPrivate::sProfileLock);
+#else
+  if (sProfileDir) {
+    nsMemory::Free(sProfileDirS);
+    sProfileDir = nsnull;
+  }
+
+  if (sProfileName) {
+    nsMemory::Free(sProfileName);
+    sProfileName = nsnull;
+  }
+
+  if (aDir)
+    sProfileDirS = (char *)nsMemory::Clone(aDir, strlen(aDir) + 1);
+
+  if (aName)
+    sProfileName = (char *)nsMemory::Clone(aName, strlen(aName) + 1);
+#endif
 }
 
 void
@@ -1305,6 +1385,62 @@ EmbedPrivate::GetAtkObjectForCurrentDocument()
 }
 #endif /* MOZ_ACCESSIBILITY_ATK */
 
+#ifdef MOZILLA_1_8_BRANCH
+/* static */
+nsresult
+EmbedPrivate::StartupProfile(void)
+{
+  // initialize profiles
+  if (sProfileDirS && sProfileName) {
+    nsresult rv;
+    nsCOMPtr<nsILocalFile> profileDir;
+    NS_NewNativeLocalFile(nsDependentCString(sProfileDirS), PR_TRUE,
+                          getter_AddRefs(profileDir));
+    if (!profileDir)
+      return NS_ERROR_FAILURE;
+    rv = profileDir->AppendNative(nsDependentCString(sProfileName));
+    if (NS_FAILED(rv))
+      return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsProfileDirServiceProvider> locProvider;
+    NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(locProvider));
+    if (!locProvider)
+      return NS_ERROR_FAILURE;
+    rv = locProvider->Register();
+    if (NS_FAILED(rv))
+      return rv;
+    rv = locProvider->SetProfileDir(profileDir);
+    if (NS_FAILED(rv))
+      return rv;
+    // Keep a ref so we can shut it down.
+    NS_ADDREF(sProfileDirServiceProvider = locProvider);
+    // get prefs
+    nsCOMPtr<nsIPref> pref;
+    pref = do_GetService(NS_PREF_CONTRACTID);
+    if (!pref)
+      return NS_ERROR_FAILURE;
+        sPrefs = pref.get();
+        NS_ADDREF(sPrefs);
+  }
+  return NS_OK;
+}
+
+/* static */
+void
+EmbedPrivate::ShutdownProfile(void)
+{
+  if (sProfileDirServiceProvider) {
+    sProfileDirServiceProvider->Shutdown();
+    NS_RELEASE(sProfileDirServiceProvider);
+    sProfileDirServiceProvider = 0;
+  }
+  if (sPrefs) {
+    NS_RELEASE(sPrefs);
+    sPrefs = 0;
+  }
+}
+#endif
+
 /* static */
 nsresult
 EmbedPrivate::RegisterAppComponents(void)
@@ -1497,16 +1633,20 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
 {
   nsIDOMNode *targetNode = nsnull;
   nsresult rv;
+
   EmbedContextMenuInfo * ctx_menu = mEventListener->GetContextInfo();
   if (ctx_menu && ctx_menu->mEventNode && (ctx_menu->mEmbedCtxType & GTK_MOZ_EMBED_CTX_INPUT)) {
     targetNode = ctx_menu->mEventNode;
   }
+
   if (!targetNode)
     return NS_ERROR_FAILURE;
+
   nsString nodeName;
   targetNode->GetNodeName(nodeName);
   PRInt32 selectionStart = 0, selectionEnd = 0, textLength = 0;
   nsString buffer;
+
   if (ctx_menu->mCtxFormType == NS_FORM_TEXTAREA) {
     nsCOMPtr <nsIDOMHTMLTextAreaElement> input;
     input = do_QueryInterface(targetNode, &rv);
@@ -1514,7 +1654,8 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
     PRBool rdonly = PR_FALSE;
     input->GetReadOnly(&rdonly);
     if (rdonly)
-  return NS_ERROR_FAILURE;
+      return NS_ERROR_FAILURE;
+
     nsCOMPtr <nsIDOMNSHTMLTextAreaElement> nsinput;
     nsinput = do_QueryInterface(targetNode, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1524,6 +1665,7 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
       rv = input->GetValue(buffer);
       nsinput->GetSelectionStart (&selectionStart);
       nsinput->GetSelectionEnd (&selectionEnd);
+
       if (selectionStart != selectionEnd) 
         buffer.Cut(selectionStart, selectionEnd - selectionStart);
 #ifdef MOZILLA_INTERNAL_API
@@ -1540,26 +1682,31 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
       buffer.AssignLiteral(string);
 #endif
     }
+
     input->SetValue(buffer);
     int len = strlen(string);
     nsinput->SetSelectionRange(selectionStart + len, selectionStart + len);
-  } else if (ctx_menu->mCtxFormType) {
+  }
+  else if (ctx_menu->mCtxFormType) {
     nsCOMPtr <nsIDOMHTMLInputElement> input;
     input = do_QueryInterface(targetNode, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
     PRBool rdonly = PR_FALSE;
     input->GetReadOnly(&rdonly);
     if (rdonly)
-  return NS_ERROR_FAILURE;
+      return NS_ERROR_FAILURE;
+
     nsCOMPtr <nsIDOMNSHTMLInputElement> nsinput;
     nsinput = do_QueryInterface(targetNode, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
     nsinput->GetTextLength(&textLength);
+
     if (textLength > 0) {  
       NS_ENSURE_SUCCESS(rv, rv);
       rv = input->GetValue(buffer);
       nsinput->GetSelectionStart (&selectionStart);
       nsinput->GetSelectionEnd (&selectionEnd);
+
       if (selectionStart != selectionEnd) {    
         buffer.Cut(selectionStart, selectionEnd - selectionStart);
       }
@@ -1580,12 +1727,14 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
     input->SetValue(buffer);
     int len = strlen(string);
     nsinput->SetSelectionRange(selectionStart + len, selectionStart + len);
-  } else {
+  }
+  else {
     nsIWebBrowser *retval = nsnull;
     mWindow->GetWebBrowser(&retval);
     nsCOMPtr<nsIEditingSession> editingSession = do_GetInterface(retval);
     if (!editingSession)
       return NS_ERROR_FAILURE;
+  
     nsCOMPtr<nsIEditor> theEditor;
     nsCOMPtr<nsPIDOMWindow> piWin;
     nsCOMPtr<nsIDocument> doc = do_QueryInterface(ctx_menu->mCtxDocument);
@@ -1596,10 +1745,12 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
     if (!theEditor) {
       return NS_ERROR_FAILURE;
     }
+    
     nsCOMPtr<nsIHTMLEditor> htmlEditor;
     htmlEditor = do_QueryInterface(theEditor, &rv);
     if (!htmlEditor)
       return NS_ERROR_FAILURE;
+
 #ifdef MOZILLA_INTERNAL_API
     CopyUTF8toUTF16(string, buffer);
 #else

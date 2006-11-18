@@ -54,6 +54,12 @@
 #include <nsIAppShell.h>
 #include <nsIDOMEventReceiver.h>
 #include <nsVoidArray.h>
+
+#ifdef MOZILLA_1_8_BRANCH
+// for profiles
+#include <nsIPref.h>
+#endif
+
 // app component registration
 #include <nsIGenericFactory.h>
 #include <nsIComponentRegistrar.h>
@@ -76,6 +82,9 @@ class EmbedEventListener;
 
 class nsPIDOMWindow;
 class nsIDirectoryServiceProvider;
+#ifdef MOZILLA_1_8_BRANCH
+class nsProfileDirServiceProvider;
+#endif
 
 class EmbedCommon {
  public:
@@ -113,6 +122,12 @@ class EmbedPrivate {
   static void PopStartup      (void);
   static void SetPath         (const char *aPath);
   static void SetCompPath     (const char *aPath);
+
+#ifdef MOZILLA_1_8_BRANCH
+  static nsresult StartupProfile (void);
+  static void     ShutdownProfile(void);
+#endif
+
   static void SetAppComponents (const nsModuleComponentInfo* aComps,
                                 int aNumComponents);
   static void SetProfilePath  (const char *aDir, const char *aName);
@@ -202,6 +217,15 @@ class EmbedPrivate {
   // what is our profile path?
   static nsILocalFile           *sProfileDir;
   static nsISupports            *sProfileLock;
+
+#ifdef MOZILLA_1_8_BRANCH
+  // what is our profile path?
+  static char                   *sProfileDirS;
+  static char                   *sProfileName;
+  // for profiles
+  static nsProfileDirServiceProvider *sProfileDirServiceProvider;
+  static nsIPref                *sPrefs;
+#endif
 
   static nsIDirectoryServiceProvider * sAppFileLocProvider;
 

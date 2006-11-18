@@ -329,7 +329,7 @@ EmbedPrompter::SetItems(const PRUnichar** aItemArray, PRUint32 aCount)
   mItemList = new nsCString[aCount];
   for (PRUint32 i = 0; i < aCount; ++i)
     CopyUTF16toUTF8(aItemArray[i], mItemList[i]);
-
+}
 
 void
 EmbedPrompter::SetButtons(const PRUnichar* aButton0Label,

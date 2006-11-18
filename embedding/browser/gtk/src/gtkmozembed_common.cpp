@@ -46,8 +46,12 @@
 #include "gtkmozembed_internal.h"
 #include "EmbedPrivate.h"
 #include "EmbedWindow.h"
+
+#ifdef MOZ_GTKPASSWORD_INTERFACE
 #include "EmbedPasswordMgr.h"
 #include "nsIPassword.h"
+#endif
+
 #include "EmbedGlobalHistory.h"
 //#include "EmbedDownloadMgr.h"
 // so we can do our get_nsIWebBrowser later...
@@ -388,6 +392,7 @@ gtk_moz_embed_common_save_prefs()
   return NS_SUCCEEDED (rv) ? TRUE : FALSE;
 }
 
+#ifdef MOZ_GTKPASSWORD_INTERFACE
 static GList *
 gtk_moz_embed_common_get_logins(const char* uri, nsIPasswordManager *passwordManager)
 {
@@ -416,11 +421,13 @@ gtk_moz_embed_common_get_logins(const char* uri, nsIPasswordManager *passwordMan
   }
   return logins;
 }
+#endif
 
 gboolean
 gtk_moz_embed_common_login(GtkWidget *embed)
 {
-  gint retval = 0;
+  gint retval = -1;
+#ifdef MOZ_GTKPASSWORD_INTERFACE
   EmbedPasswordMgr *passwordManager = EmbedPasswordMgr::GetInstance();
   GList * list = gtk_moz_embed_common_get_logins(gtk_moz_embed_get_location(GTK_MOZ_EMBED(embed)), passwordManager);
   gtk_signal_emit(
@@ -432,30 +439,38 @@ gtk_moz_embed_common_login(GtkWidget *embed)
     passwordManager->InsertLogin((const gchar*)g_list_nth_data(list, retval));
   }
   g_list_free(list);
+#endif
   return retval != -1;
 }
 
 gboolean
 gtk_moz_embed_common_remove_passwords(const gchar *host, const gchar *user)
 {
+#ifdef MOZ_GTKPASSWORD_INTERFACE
   EmbedPasswordMgr *passwordManager = EmbedPasswordMgr::GetInstance();
   passwordManager->RemovePasswords(host, user);
+#endif
   return TRUE;
 }
 
 gboolean
 gtk_moz_embed_common_remove_passwords_by_index (gint index)
 {
+#ifdef MOZ_GTKPASSWORD_INTERFACE
   EmbedPasswordMgr *passwordManager = EmbedPasswordMgr::GetInstance();
   passwordManager->RemovePasswordsByIndex(index);
+#endif
   return TRUE;
 }
 
 gint
-gtk_moz_embed_common_get_number_of_saved_passwords () {
+gtk_moz_embed_common_get_number_of_saved_passwords ()
+{
   gint saved_passwd_num = 0;
+#ifdef MOZ_GTKPASSWORD_INTERFACE
   EmbedPasswordMgr *passwordManager = EmbedPasswordMgr::GetInstance();
   passwordManager->GetNumberOfSavedPassword ( &saved_passwd_num);
+#endif
   return saved_passwd_num;
 }
 
