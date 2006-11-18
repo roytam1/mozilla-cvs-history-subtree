@@ -94,3 +94,4 @@ PRUnichar *LocaleToUnicode (const char *locStr)
 
   return (uniStr);
 }
+

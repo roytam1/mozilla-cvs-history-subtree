@@ -53,12 +53,17 @@
 #include <gtk/gtk.h>
 #ifndef __EmbedTools_h
 #define __EmbedTools_h
+
 GtkWidget*
 GetGtkWidgetForDOMWindow(nsIDOMWindow* aDOMWindow);
+
 GtkWindow*
 GetGtkWindowForDOMWindow(nsIDOMWindow* aDOMWindow);
+
 nsresult 
 GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer);
+
 PRUnichar*
 LocaleToUnicode (const char *locStr);
+
 #endif /* __EmbedTools_h */

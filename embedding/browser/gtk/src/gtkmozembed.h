@@ -23,6 +23,8 @@
  * Contributor(s):
  *   Christopher Blizzard <blizzard@mozilla.org>
  *   Ramiro Estrugo <ramiro@eazel.com>
+ *   Oleg Romashin <romaxa@gmail.com>
+ *   Antonio Gomes <tonikitoo@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -111,6 +113,8 @@ struct _GtkMozEmbed
   // being passed up. Oleg has mentioned something about a bug in JS.
   gint current_number_of_requests;
   gint total_number_of_requests;
+  gint number_of_frames_loaded;
+
 };
 
 struct _GtkMozEmbedClass
@@ -123,10 +127,10 @@ struct _GtkMozEmbedClass
   void (* title)               (GtkMozEmbed *embed);
   void (* progress)            (GtkMozEmbed *embed, gint curprogress,
                                 gint maxprogress);
-  void (* progress_all)        (GtkMozEmbed *embed, const char *aURI,
+  void (* progress_all)        (GtkMozEmbed *embed, const gchar *aURI,
                                 gint curprogress, gint maxprogress);
   void (* net_state)           (GtkMozEmbed *embed, gint state, guint status);
-  void (* net_state_all)       (GtkMozEmbed *embed, const char *aURI,
+  void (* net_state_all)       (GtkMozEmbed *embed, const gchar *aURI,
                                 gint state, guint status);
   void (* net_start)           (GtkMozEmbed *embed);
   void (* net_stop)            (GtkMozEmbed *embed);
@@ -174,6 +178,7 @@ struct _GtkMozEmbedClass
                                 GList *list, gint *selected_item);
   void     (* download_request)(GtkMozEmbed *, const char *, const char *, const char *, long, int, gpointer);
   gboolean (* upload_dialog)   (GtkMozEmbed *, const char *, const char *, char **);
+  void     (* icon_changed)    (GtkMozEmbed *, gpointer*);
 };
 
 GTKMOZEMBED_API(GtkType,    gtk_moz_embed_get_type,        (void))
@@ -226,6 +231,7 @@ GTKMOZEMBED_API(gboolean, gtk_moz_embed_get_doc_info,   (GtkMozEmbed *embed, gin
                                                          const gchar**location, const gchar **file_type, guint *file_size))
 GTKMOZEMBED_API(gboolean, gtk_moz_embed_insert_text,    (GtkMozEmbed *embed, const gchar*, gpointer node))
 GTKMOZEMBED_API(gboolean,gtk_moz_embed_save_target,     (GtkMozEmbed *embed, gchar*, gchar*, gint))
+GTKMOZEMBED_API(void,gtk_moz_embed_get_image_dimensions,(GtkMozEmbed *embed, gint*, gint*, gpointer))
 
 /* Defines used by download and upload components */
 #define GTK_MOZ_EMBED_COMMON_FILE_SCHEME "file://"

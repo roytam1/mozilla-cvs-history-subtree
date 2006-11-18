@@ -49,7 +49,7 @@
 #include "EmbedPrivate.h"
 #include "gtkmozembed_internal.h"
 
-//#define MOZ_SCROLL_TOP_LEFT_HACK
+#define MOZ_SCROLL_TOP_LEFT_HACK
 
 static PRInt32 sLongPressTimer = 0, mLongMPressDelay = 1000;
 static PRInt32 sX = 0, sY = 0;

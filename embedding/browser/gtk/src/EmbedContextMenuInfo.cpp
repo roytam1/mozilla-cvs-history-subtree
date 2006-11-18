@@ -314,7 +314,6 @@ EmbedContextMenuInfo::CheckDomImageElement(nsIDOMNode *node, nsString& aHref,
     }
     rv = image->GetWidth (aWidth);
     rv = image->GetHeight (aHeight);
-    mEmbedCtxType |= GTK_MOZ_EMBED_CTX_IMAGE;
     rv = NS_OK;
   }
   return rv;
@@ -359,7 +358,11 @@ EmbedContextMenuInfo::CheckDomHtmlNode(nsIDOMNode *node)
         if (childNode) {
           PRInt32 width, height;
           rv = CheckDomImageElement(node, mCtxImgHref, &width, &height);
+	  if (NS_SUCCEEDED(rv))
+	    mEmbedCtxType |= GTK_MOZ_EMBED_CTX_IMAGE;
         }
+      } else if (StringBeginsWith(mCtxHref, NS_LITERAL_STRING("mailto:"))) {
+          mEmbedCtxType |= GTK_MOZ_EMBED_CTX_EMAIL;
       }
     }
   }
@@ -379,6 +382,8 @@ EmbedContextMenuInfo::CheckDomHtmlNode(nsIDOMNode *node)
   else if (uTag.LowerCaseEqualsLiteral("img")) {
     PRInt32 width, height;
     rv = CheckDomImageElement(node, mCtxImgHref, &width, &height);
+    if (NS_SUCCEEDED(rv))
+      mEmbedCtxType |= GTK_MOZ_EMBED_CTX_IMAGE;
   } else {
     rv = NS_ERROR_FAILURE;
   }

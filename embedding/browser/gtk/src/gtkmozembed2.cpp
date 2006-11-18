@@ -24,6 +24,8 @@
  * Contributor(s):
  *   Christopher Blizzard <blizzard@mozilla.org>
  *   Ramiro Estrugo <ramiro@eazel.com>
+ *   Oleg Romashin <romaxa@gmail.com>
+ *   Antonio Gomes <tonikitoo@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -598,6 +600,16 @@ gtk_moz_embed_class_init(GtkMozEmbedClass *klass)
                    GTK_TYPE_STRING,
                    GTK_TYPE_STRING,
                    GTK_TYPE_POINTER);
+  moz_embed_signals[ICON_CHANGED] =
+    gtk_signal_new("icon_changed",
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedClass, icon_changed),
+                   gtkmozembed_VOID__POINTER,
+                   GTK_TYPE_NONE,
+                   1,
+                   GTK_TYPE_POINTER);
+
 #ifdef MOZ_WIDGET_GTK
   gtk_object_class_add_signals(object_class, moz_embed_signals,
              EMBED_LAST_SIGNAL);
@@ -1644,4 +1656,26 @@ gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, char* aUrl, char* aDestination, 
     return FALSE;
   }
   return FALSE;
+}
+
+void
+gtk_moz_embed_get_image_dimensions (GtkMozEmbed *embed, gint *width, gint *height, gpointer node)
+{
+  g_return_if_fail(embed != NULL);
+  g_return_if_fail(GTK_IS_MOZ_EMBED(embed));
+  g_return_if_fail(width);
+  g_return_if_fail(height);
+
+  EmbedPrivate *embedPrivate;
+  embedPrivate = (EmbedPrivate *)embed->data;
+
+  if ( !embedPrivate || !embedPrivate->mEventListener)
+    return;
+
+  EmbedContextMenuInfo * ctx_menu = embedPrivate->mEventListener->GetContextInfo();
+  if (!ctx_menu)
+    return;
+
+  nsString imgSrc;
+  ctx_menu->CheckDomImageElement((nsIDOMNode*)node, imgSrc, width, height);
 }

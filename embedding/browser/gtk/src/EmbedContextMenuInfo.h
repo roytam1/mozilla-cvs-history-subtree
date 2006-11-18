@@ -71,6 +71,9 @@ public:
   const char*       GetSelectedText();
   nsresult          GetElementForScroll(nsIDOMDocument *targetDOMDocument);
   nsresult          GetElementForScroll(nsIDOMEvent *aEvent);
+  nsresult          CheckDomImageElement(nsIDOMNode *node, nsString& aHref,
+                                       PRInt32 *aWidth, PRInt32 *aHeight);
+
   PRInt32                 mX, mY, mObjWidth, mObjHeight, mCtxFrameNum;
   nsString                mCtxURI, mCtxHref, mCtxImgHref;  
   PRUint32                mEmbedCtxType;
@@ -87,9 +90,7 @@ private:
   nsresult          SetFrameIndex();
   nsresult          SetFormControlType(nsIDOMEventTarget *originalTarget);
   nsresult          CheckDomHtmlNode(nsIDOMNode *node);
-  nsresult          CheckDomImageElement(nsIDOMNode *node, nsString& aHref,
-                                       PRInt32 *aWidth, PRInt32 *aHeight);
-private:
+
   EmbedPrivate           *mOwner;
   nsCOMPtr<nsIDOMNode>    mOrigNode;
   nsString                mSOrigNode;
