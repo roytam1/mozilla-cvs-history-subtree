@@ -273,6 +273,7 @@ EmbedCertificates::ConfirmKeyEscrow(nsIX509Cert *escrowAuthority, PRBool *_retva
   return NS_OK;
 }
 
+#ifdef BAD_CERT_LISTENER2
 NS_IMETHODIMP
 EmbedCertificates::ConfirmBadCertificate(
   nsIInterfaceRequestor *ctx,
@@ -345,3 +346,4 @@ EmbedCertificates::ConfirmBadCertificate(
   }
   return rv;
 }
+#endif

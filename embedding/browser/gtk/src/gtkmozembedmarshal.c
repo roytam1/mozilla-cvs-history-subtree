@@ -1,6 +1,6 @@
-
 #include "gtkmozembedmarshal.h"
-#include  <glib-object.h>
+
+#include	<glib-object.h>
 
 
 #ifdef G_ENABLE_DEBUG
@@ -104,8 +104,10 @@ gtkmozembed_BOOLEAN__STRING_STRING (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gboolean v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 3);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -117,10 +119,12 @@ gtkmozembed_BOOLEAN__STRING_STRING (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_BOOLEAN__STRING_STRING) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
 
@@ -163,6 +167,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER (GClosure     *closure,
                        g_marshal_value_peek_string (param_values + 2),
                        g_marshal_value_peek_pointer (param_values + 3),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
 
@@ -185,8 +190,10 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_INT (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gboolean v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 5);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -198,12 +205,14 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_INT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_BOOLEAN__STRING_STRING_POINTER_INT) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
                        g_marshal_value_peek_pointer (param_values + 3),
                        g_marshal_value_peek_int (param_values + 4),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
 
@@ -228,8 +237,10 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_POINTER_STRING_POINTER (GClosure     
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gboolean v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 7);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -241,6 +252,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_POINTER_STRING_POINTER (GClosure     
       data2 = closure->data;
     }
   callback = (GMarshalFunc_BOOLEAN__STRING_STRING_POINTER_POINTER_STRING_POINTER) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
@@ -249,6 +261,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_POINTER_STRING_POINTER (GClosure     
                        g_marshal_value_peek_string (param_values + 5),
                        g_marshal_value_peek_pointer (param_values + 6),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
 
@@ -272,8 +285,10 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_STRING_POINTER (GClosure     *closure
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gboolean v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 6);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -285,6 +300,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_STRING_POINTER (GClosure     *closure
       data2 = closure->data;
     }
   callback = (GMarshalFunc_BOOLEAN__STRING_STRING_POINTER_STRING_POINTER) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
@@ -292,8 +308,10 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_STRING_POINTER (GClosure     *closure
                        g_marshal_value_peek_string (param_values + 4),
                        g_marshal_value_peek_pointer (param_values + 5),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
+
 /* BOOL:STRING,STRING,STRING,POINTER (gtkmozembedmarshal.list:7) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING_STRING_POINTER (GClosure     *closure,
@@ -313,8 +331,10 @@ gtkmozembed_BOOLEAN__STRING_STRING_STRING_POINTER (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gboolean v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 5);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -326,12 +346,14 @@ gtkmozembed_BOOLEAN__STRING_STRING_STRING_POINTER (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_BOOLEAN__STRING_STRING_STRING_POINTER) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
                        g_marshal_value_peek_string (param_values + 3),
                        g_marshal_value_peek_pointer (param_values + 4),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
 
@@ -356,8 +378,10 @@ gtkmozembed_INT__STRING_INT_INT_INT_INT_INT (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gint v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 7);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -369,6 +393,7 @@ gtkmozembed_INT__STRING_INT_INT_INT_INT_INT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_INT__STRING_INT_INT_INT_INT_INT) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_int (param_values + 2),
@@ -377,6 +402,7 @@ gtkmozembed_INT__STRING_INT_INT_INT_INT_INT (GClosure     *closure,
                        g_marshal_value_peek_int (param_values + 5),
                        g_marshal_value_peek_int (param_values + 6),
                        data2);
+
   g_value_set_int (return_value, v_return);
 }
 
@@ -401,8 +427,10 @@ gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gint v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 7);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -414,6 +442,7 @@ gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_INT__STRING_STRING_INT_INT_INT_INT) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
@@ -422,6 +451,7 @@ gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT (GClosure     *closure,
                        g_marshal_value_peek_int (param_values + 5),
                        g_marshal_value_peek_int (param_values + 6),
                        data2);
+
   g_value_set_int (return_value, v_return);
 }
 
@@ -448,8 +478,10 @@ gtkmozembed_INT__STRING_STRING_UINT_STRING_STRING_STRING_STRING_POINTER (GClosur
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gint v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 9);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -461,6 +493,7 @@ gtkmozembed_INT__STRING_STRING_UINT_STRING_STRING_STRING_STRING_POINTER (GClosur
       data2 = closure->data;
     }
   callback = (GMarshalFunc_INT__STRING_STRING_UINT_STRING_STRING_STRING_STRING_POINTER) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
@@ -471,6 +504,7 @@ gtkmozembed_INT__STRING_STRING_UINT_STRING_STRING_STRING_STRING_POINTER (GClosur
                        g_marshal_value_peek_string (param_values + 7),
                        g_marshal_value_peek_pointer (param_values + 8),
                        data2);
+
   g_value_set_int (return_value, v_return);
 }
 
@@ -489,8 +523,10 @@ gtkmozembed_INT__VOID (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gint v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 1);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -502,8 +538,10 @@ gtkmozembed_INT__VOID (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_INT__VOID) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        data2);
+
   g_value_set_int (return_value, v_return);
 }
 
@@ -524,8 +562,10 @@ gtkmozembed_STRING__STRING_STRING (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gchar* v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 3);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -537,14 +577,17 @@ gtkmozembed_STRING__STRING_STRING (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_STRING__STRING_STRING) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_string (param_values + 1),
                        g_marshal_value_peek_string (param_values + 2),
                        data2);
+
   g_value_take_string (return_value, v_return);
 }
 
 /* VOID:BOOL (gtkmozembedmarshal.list:13) */
+
 /* VOID:INT,INT,BOOL (gtkmozembedmarshal.list:14) */
 void
 gtkmozembed_VOID__INT_INT_BOOLEAN (GClosure     *closure,
@@ -576,6 +619,7 @@ gtkmozembed_VOID__INT_INT_BOOLEAN (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__INT_INT_BOOLEAN) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_int (param_values + 1),
             g_marshal_value_peek_int (param_values + 2),
@@ -599,7 +643,9 @@ gtkmozembed_VOID__INT_STRING (GClosure     *closure,
   register GMarshalFunc_VOID__INT_STRING callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 3);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -611,6 +657,7 @@ gtkmozembed_VOID__INT_STRING (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__INT_STRING) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_int (param_values + 1),
             g_marshal_value_peek_string (param_values + 2),
@@ -648,6 +695,7 @@ gtkmozembed_VOID__INT_STRING_STRING (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__INT_STRING_STRING) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_int (param_values + 1),
             g_marshal_value_peek_string (param_values + 2),
@@ -671,7 +719,9 @@ gtkmozembed_VOID__INT_UINT (GClosure     *closure,
   register GMarshalFunc_VOID__INT_UINT callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 3);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -683,6 +733,7 @@ gtkmozembed_VOID__INT_UINT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__INT_UINT) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_int (param_values + 1),
             g_marshal_value_peek_uint (param_values + 2),
@@ -719,8 +770,8 @@ gtkmozembed_VOID__POINTER_INT_POINTER (GClosure     *closure,
       data1 = g_value_peek_pointer (param_values + 0);
       data2 = closure->data;
     }
-
   callback = (GMarshalFunc_VOID__POINTER_INT_POINTER) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_pointer (param_values + 1),
             g_marshal_value_peek_int (param_values + 2),
@@ -797,7 +848,9 @@ gtkmozembed_VOID__POINTER_STRING_BOOLEAN_BOOLEAN (GClosure     *closure,
   register GMarshalFunc_VOID__POINTER_STRING_BOOLEAN_BOOLEAN callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 5);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -809,6 +862,7 @@ gtkmozembed_VOID__POINTER_STRING_BOOLEAN_BOOLEAN (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__POINTER_STRING_BOOLEAN_BOOLEAN) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_pointer (param_values + 1),
             g_marshal_value_peek_string (param_values + 2),
@@ -848,6 +902,7 @@ gtkmozembed_VOID__STRING_INT_INT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__STRING_INT_INT) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_string (param_values + 1),
             g_marshal_value_peek_int (param_values + 2),
@@ -910,7 +965,9 @@ gtkmozembed_VOID__STRING_STRING (GClosure     *closure,
   register GMarshalFunc_VOID__STRING_STRING callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 3);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -922,6 +979,7 @@ gtkmozembed_VOID__STRING_STRING (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__STRING_STRING) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_string (param_values + 1),
             g_marshal_value_peek_string (param_values + 2),
@@ -954,7 +1012,6 @@ gtkmozembed_VOID__STRING_STRING_POINTER (GClosure     *closure,
       data2 = g_value_peek_pointer (param_values + 0);
     }
   else
-
     {
       data1 = g_value_peek_pointer (param_values + 0);
       data2 = closure->data;
@@ -987,7 +1044,9 @@ gtkmozembed_VOID__STRING_STRING_STRING_ULONG_INT (GClosure     *closure,
   register GMarshalFunc_VOID__STRING_STRING_STRING_ULONG_INT callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 6);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -999,6 +1058,7 @@ gtkmozembed_VOID__STRING_STRING_STRING_ULONG_INT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__STRING_STRING_STRING_ULONG_INT) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_string (param_values + 1),
             g_marshal_value_peek_string (param_values + 2),
@@ -1026,7 +1086,9 @@ gtkmozembed_VOID__STRING_STRING_STRING_POINTER (GClosure     *closure,
   register GMarshalFunc_VOID__STRING_STRING_STRING_POINTER callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 5);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -1038,6 +1100,7 @@ gtkmozembed_VOID__STRING_STRING_STRING_POINTER (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__STRING_STRING_STRING_POINTER) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_string (param_values + 1),
             g_marshal_value_peek_string (param_values + 2),
@@ -1067,7 +1130,9 @@ gtkmozembed_VOID__UINT_INT_INT_STRING_STRING_STRING_STRING (GClosure     *closur
   register GMarshalFunc_VOID__UINT_INT_INT_STRING_STRING_STRING_STRING callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
+
   g_return_if_fail (n_param_values == 8);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -1079,6 +1144,7 @@ gtkmozembed_VOID__UINT_INT_INT_STRING_STRING_STRING_STRING (GClosure     *closur
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__UINT_INT_INT_STRING_STRING_STRING_STRING) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_uint (param_values + 1),
             g_marshal_value_peek_int (param_values + 2),
@@ -1121,6 +1187,7 @@ gtkmozembed_VOID__ULONG_ULONG_ULONG (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_VOID__ULONG_ULONG_ULONG) (marshal_data ? marshal_data : cc->callback);
+
   callback (data1,
             g_marshal_value_peek_ulong (param_values + 1),
             g_marshal_value_peek_ulong (param_values + 2),
@@ -1145,8 +1212,10 @@ gtkmozembed_BOOLEAN__POINTER_UINT (GClosure     *closure,
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
   gboolean v_return;
+
   g_return_if_fail (return_value != NULL);
   g_return_if_fail (n_param_values == 3);
+
   if (G_CCLOSURE_SWAP_DATA (closure))
     {
       data1 = closure->data;
@@ -1158,12 +1227,16 @@ gtkmozembed_BOOLEAN__POINTER_UINT (GClosure     *closure,
       data2 = closure->data;
     }
   callback = (GMarshalFunc_BOOLEAN__POINTER_UINT) (marshal_data ? marshal_data : cc->callback);
+
   v_return = callback (data1,
                        g_marshal_value_peek_pointer (param_values + 1),
                        g_marshal_value_peek_uint (param_values + 2),
                        data2);
+
   g_value_set_boolean (return_value, v_return);
 }
 
 /* VOID:POINTER (gtkmozembedmarshal.list:30) */
+
 /* BOOL:STRING,STRING,POINTER (gtkmozembedmarshal.list:31) */
+

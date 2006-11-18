@@ -47,7 +47,20 @@ MODULE		= gtkembedmoz
 LIBRARY_NAME	= gtkembedmoz
 LIBXUL_LIBRARY	= 1
 FORCE_STATIC_LIB = 1
+
+#Define for building GtkmozEmbed with MOZILLA_1_8_BRANCH
+#MOZILLA_1_8_BRANCH = 1
+
+ifdef MOZILLA_1_8_BRANCH
+MOZ_GTKEMBED_DYN = 1
+DEFINES += -DMOZILLA_1_8_BRANCH
+endif
+
 ifdef MOZ_MICROBEMBED_DYN
+MOZ_GTKEMBED_DYN = 1
+endif
+
+ifdef MOZ_GTKEMBED_DYN
 FORCE_SHARED_LIB = 1
 MOZILLA_INTERNAL_API = 1
 DEFINES += -DMOZILLA_INTERNAL_API
@@ -56,6 +69,13 @@ endif
 MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT = 1
 DEFINES += -DMOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
 DEFINES += -DIMPL_XREAPI
+
+# New Stuff in GtkMozEmbed
+ifdef MOZ_MICROBEMBED
+DEFINES += -DBAD_CERT_LISTENER2
+#Probably scrolling can be fixed without this hack
+DEFINES += -DMOZ_SCROLL_TOP_LEFT_HACK
+endif
 
 REQUIRES	= xpcom \
 		  string \
@@ -139,7 +159,12 @@ EXPORTS		= \
 		gtkmozembed_glue.cpp \
 		gtkmozembed_internal.h
 
-ifdef MOZ_MICROBEMBED_DYN
+XPIDLSRCS       = \
+	        nsIPassword.idl \
+		nsIPasswordInternal.idl \
+		$(NULL)
+
+ifdef MOZ_GTKEMBED_DYN
 ifdef MOZ_ENABLE_GTK
 EXTRA_DSO_LDOPTS += -L$(DIST)/lib -lgtksuperwin
 endif
@@ -163,8 +188,8 @@ DEFINES         += -D_TIME_H=1
 endif
 endif
 
-CXXFLAGS        += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS) $(MOZ_GNOMEVFS_CFLAGS) -O2 -g
-CFLAGS          += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS) $(MOZ_GNOMEVFS_CFLAGS) -O2 -g
+CXXFLAGS        += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS) $(MOZ_GNOMEVFS_CFLAGS)
+CFLAGS          += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS) $(MOZ_GNOMEVFS_CFLAGS)
 DEFINES         += -D_IMPL_GTKMOZEMBED
 
 

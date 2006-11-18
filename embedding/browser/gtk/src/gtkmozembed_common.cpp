@@ -47,6 +47,7 @@
 #include "EmbedPrivate.h"
 #include "EmbedWindow.h"
 #include "EmbedPasswordMgr.h"
+#include "nsIPassword.h"
 #include "EmbedGlobalHistory.h"
 //#include "EmbedDownloadMgr.h"
 // so we can do our get_nsIWebBrowser later...

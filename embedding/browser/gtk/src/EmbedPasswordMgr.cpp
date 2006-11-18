@@ -49,7 +49,12 @@
 #include "nsIPrefBranch2.h"
 #include "prmem.h"
 #include "nsIStringBundle.h"
+#ifdef MOZILLA_1_8_BRANCH
+#include "nsIArray.h"
+#include "nsObserverService.h"
+#else
 #include "nsIMutableArray.h"
+#endif
 #include "nsICategoryManager.h"
 #include "nsIObserverService.h"
 #include "nsIWebProgress.h"
@@ -58,18 +63,6 @@
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDocument.h"
 #include "nsIDOMHTMLCollection.h"
-#ifdef MOZILLA_INTERNAL_API
-#include <nsXPIDLString.h>
-#include "nsIForm.h"
-#else
-#include "nsDirectoryServiceUtils.h"
-//FIXME
-typedef char* nsXPIDLCString;
-typedef PRUnichar* nsXPIDLString;
-#define getter_Copies(str) &str
-#include "nsComponentManagerUtils.h"
-#include "nsIForm.h"
-#endif
 #include "nsIDOMHTMLInputElement.h"
 #include "nsIContent.h"
 #include "nsIFormControl.h"
@@ -86,14 +79,25 @@ typedef PRUnichar* nsXPIDLString;
 #include "nsIIDNService.h"
 #include "EmbedPrivate.h"
 #include "gtkmozembedprivate.h"
-#include "nsXPCOMStrings.h"
-#undef MOZILLA_INTERNAL_API
-#define nsStringAPI_h__ 1
-#include <nsEmbedString.h>
-#include <nsStringAPI.h>
-#define MOZILLA_INTERNAL_API
-#undef nsStringAPI_h__
+#ifdef MOZILLA_INTERNAL_API
+#include "nsString.h"
+#include <nsXPIDLString.h>
+#include "nsIForm.h"
+#else
+#include "nsDirectoryServiceUtils.h"
+//FIXME
+typedef char* nsXPIDLCString;
+typedef PRUnichar* nsXPIDLString;
+#define getter_Copies(str) &str
+#include "nsComponentManagerUtils.h"
+#include "nsIForm.h"
+#include "nsStringAPI.h"
+#endif
+#include "nsIPassword.h"
+#include "nsIPasswordInternal.h"
 #include <string.h>
+
+
 static const char kPMPropertiesURL[] = "chrome://passwordmgr/locale/passwordmgr.properties";
 static PRBool sRememberPasswords = PR_FALSE;
 static PRBool sForceAutocompletion = PR_FALSE;
@@ -461,7 +465,6 @@ EmbedPasswordMgr::RemovePasswordsByIndex(gint aIndex)
   result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
   if (NS_FAILED(result))
     return result; 
-  gchar *tempHost = nsnull, *tempUserName = nsnull;
   PRBool enumResult;
   PRUint32 i = 0;
   nsCOMPtr<nsIPassword> nsPassword;
@@ -475,27 +478,15 @@ EmbedPasswordMgr::RemovePasswordsByIndex(gint aIndex)
   }
   // if we found the right object to delete
   if (nsPassword) {
-    nsEmbedCString transfer;
-    nsPassword->GetHost (transfer);
-    tempHost = g_strdup (transfer.get());
-    nsEmbedString unicodeName;
+    
+    nsCString host, idn_host;
+    nsString unicodeName;
+
+    nsPassword->GetHost (host);
     nsPassword->GetUser (unicodeName);
-    nsEmbedCString userName;
-    NS_UTF16ToCString(unicodeName,NS_CSTRING_ENCODING_UTF8, userName);
-    tempUserName = g_strdup(userName.get());
-    nsEmbedCString host2;
-    result = idnService->ConvertUTF8toACE (nsEmbedCString(tempHost), host2);
-    nsEmbedString userName2;
-    NS_CStringToUTF16(nsEmbedCString (tempUserName), NS_CSTRING_ENCODING_UTF8, userName2);
-    result = passwordManager->RemoveUser(host2, userName2);
-    if (tempUserName) {
-      g_free (tempUserName);
-      tempUserName = nsnull;
-    }
-    if (tempHost) {
-      g_free (tempHost);
-      tempHost = nsnull;
-    }
+    result = idnService->ConvertUTF8toACE (host, idn_host);
+    
+    result = passwordManager->RemoveUser(idn_host, unicodeName);
   }
   return NS_OK;
 }
@@ -514,7 +505,6 @@ EmbedPasswordMgr::RemovePasswords(const char *aHostName, const char *aUserName)
   result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
   if (NS_FAILED(result))
     return result; 
-  gchar *tempHost, *tempUserName;
   PRBool enumResult;
   for (passwordEnumerator->HasMoreElements(&enumResult);
             enumResult == PR_TRUE ; passwordEnumerator->HasMoreElements(&enumResult))
@@ -522,27 +512,13 @@ EmbedPasswordMgr::RemovePasswords(const char *aHostName, const char *aUserName)
     nsCOMPtr<nsIPassword> nsPassword;
     result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
     if (NS_FAILED(result)) return FALSE;
-    nsEmbedCString transfer;
-    nsPassword->GetHost (transfer);
-    tempHost = g_strdup (transfer.get());
-    nsEmbedString unicodeName;
+    nsCString host, idn_host;
+    
+    nsPassword->GetHost (host);
+    nsString unicodeName;
     nsPassword->GetUser (unicodeName);
-    nsEmbedCString userName;
-    NS_UTF16ToCString(unicodeName,NS_CSTRING_ENCODING_UTF8, userName);
-    tempUserName = g_strdup(userName.get());
-    nsEmbedCString host2;
-    result = idnService->ConvertUTF8toACE (nsEmbedCString(tempHost), host2);
-    nsEmbedString userName2;
-    NS_CStringToUTF16(nsEmbedCString (tempUserName), NS_CSTRING_ENCODING_UTF8, userName2);
-    result = passwordManager->RemoveUser(host2, userName2);
-    if (tempUserName) {
-      g_free (tempUserName);
-      tempUserName = nsnull;
-    }
-    if (tempHost) {
-      g_free (tempHost);
-      tempHost = nsnull;
-    }
+    result = idnService->ConvertUTF8toACE (host, idn_host);
+    result = passwordManager->RemoveUser(idn_host, unicodeName);
   }
   return NS_OK;
 }

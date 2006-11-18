@@ -455,7 +455,8 @@ EmbedPrivate::Realize(PRBool *aAlreadyRealized)
   // to use it.  We need to do this before we create the web browser
   // window.
   mSessionHistory = do_CreateInstance(NS_SHISTORY_CONTRACTID);
-  mNavigation->SetSessionHistory(mSessionHistory);
+  if (mSessionHistory)
+    mNavigation->SetSessionHistory(mSessionHistory);
 
   // create the window
   mWindow->CreateWindow();
@@ -754,9 +755,11 @@ EmbedPrivate::PushStartup(void)
     if (NS_FAILED(rv))
       return;
 
+#ifndef MOZILLA_1_8_BRANCH
     if (EmbedPrivate::sProfileDir) {
       XRE_NotifyProfile();
     }
+#endif
 
     rv = RegisterAppComponents();
     NS_ASSERTION(NS_SUCCEEDED(rv), "Warning: Failed to register app components.\n");
@@ -841,16 +844,19 @@ EmbedPrivate::SetProfilePath(const char *aDir, const char *aName)
     if (!exists) {
       rv = EmbedPrivate::sProfileDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
     }
+#ifndef MOZILLA_1_8_BRANCH
     rv = XRE_LockProfileDirectory(EmbedPrivate::sProfileDir, &EmbedPrivate::sProfileLock);
+#endif
   }
+#ifndef MOZILLA_1_8_BRANCH
   if (NS_SUCCEEDED(rv)) {
     if (sWidgetCount)
       XRE_NotifyProfile();
 
     return;
   }
-
   NS_WARNING("Failed to lock profile.");
+#endif
 
   // Failed
   NS_IF_RELEASE(EmbedPrivate::sProfileDir);

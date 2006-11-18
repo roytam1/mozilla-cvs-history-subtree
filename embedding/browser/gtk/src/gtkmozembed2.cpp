@@ -56,7 +56,6 @@
 #include "nsCWebBrowserPersist.h"
 #include "EmbedDownloadMgr.h"
 #include "nsIDOMDocument.h"
-#include "nsXPCOMStrings.h"
 #include "nsNetCID.h"
 #include "nsIIOService.h"
 #include "nsIFileURL.h"
