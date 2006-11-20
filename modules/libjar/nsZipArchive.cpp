@@ -556,6 +556,9 @@ PRInt32 nsZipArchive::CloseArchive()
   // Hence, destroying the Arena is like destroying all the memory
   // for all the nsZipItem in one shot. But if the ~nsZipItem is doing
   // anything more than cleaning up memory, we should start calling it.
+
+  memset(mFiles, 0, sizeof(mFiles));
+
 #else
   // delete nsZipItems in table
   nsZipItem* pItem;
