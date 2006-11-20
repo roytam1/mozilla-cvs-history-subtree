@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -112,6 +113,8 @@
 
 - (void)flushRect:(NSRect)inRect;
 - (BOOL)isRectObscuredBySubview:(NSRect)inRect;
+
+- (void)processPendingRedraws;
 
 #if USE_CLICK_HOLD_CONTEXTMENU
  // called on a timer two seconds after a mouse down to see if we should display
@@ -1168,7 +1171,7 @@ NS_IMETHODIMP nsChildView::Invalidate(PRBool aIsSynchronous)
   {
     // if a view is focussed (i.e. being drawn), then postpone the invalidate so that we
     // don't lose it.
-    [mView performSelector:@selector(setNeedsDisplayWithValue:) withObject:nil afterDelay:0];
+    [mView setNeedsPendingDisplay];
   }
   else
     [mView setNeedsDisplay:YES];
@@ -1195,7 +1198,7 @@ NS_IMETHODIMP nsChildView::Invalidate(const nsRect &aRect, PRBool aIsSynchronous
   {
     // if a view is focussed (i.e. being drawn), then postpone the invalidate so that we
     // don't lose it.
-    [mView performSelector:@selector(setNeedsDisplayWithValue:) withObject:[NSValue valueWithRect:r] afterDelay:0];
+    [mView setNeedsPendingDisplayInRect:r];
   }
   else
     [mView setNeedsDisplayInRect:r];
@@ -2146,23 +2149,40 @@ nsChildView::Idle()
   mWindow = aWindow;
 }
 
-//
-// -setNeedsDisplayWithValue:
-//
-//
-- (void)setNeedsDisplayWithValue:(NSValue*)inRectValue
+- (void)setNeedsPendingDisplay
 {
-  if (inRectValue)
-  {
-    NSRect theRect = [inRectValue rectValue];
-    [self setNeedsDisplayInRect:theRect];
-  }
-  else
-  {
-    [self setNeedsDisplay:YES];
-  }
+  mPendingFullDisplay = YES;
+  [self performSelector:@selector(processPendingRedraws) withObject:nil afterDelay:0];
 }
 
+- (void)setNeedsPendingDisplayInRect:(NSRect)invalidRect
+{
+  if (!mPendingDirtyRects)
+    mPendingDirtyRects = [[NSMutableArray alloc] initWithCapacity:1];
+  [mPendingDirtyRects addObject:[NSValue valueWithRect:invalidRect]];
+  [self performSelector:@selector(processPendingRedraws) withObject:nil afterDelay:0];
+}
+
+//
+// -processPendingRedraws
+//
+// Clears the queue of any pending invalides
+//
+- (void)processPendingRedraws
+{
+  if (mPendingFullDisplay) {
+    [self setNeedsDisplay:YES];
+  }
+  else {
+    unsigned int count = [mPendingDirtyRects count];
+    for (unsigned int i = 0; i < count; ++i) {
+      [self setNeedsDisplayInRect:[[mPendingDirtyRects objectAtIndex:i] rectValue]];
+    }
+  }
+  mPendingFullDisplay = NO;
+  [mPendingDirtyRects release];
+  mPendingDirtyRects = nil;
+}
 
 - (NSString*)description
 {
@@ -2372,6 +2392,21 @@ nsChildView::Idle()
     mGeckoChild->LiveResizeEnded();
 
   [super viewDidEndLiveResize];
+}
+
+- (void)scrollRect:(NSRect)aRect by:(NSSize)offset
+{
+  // Update any pending dirty rects to reflect the new scroll position
+  if (mPendingDirtyRects) {
+    unsigned int count = [mPendingDirtyRects count];
+    for (unsigned int i = 0; i < count; ++i) {
+      NSRect oldRect = [[mPendingDirtyRects objectAtIndex:i] rectValue];
+      NSRect newRect = NSOffsetRect(oldRect, offset.width, offset.height);
+      [mPendingDirtyRects replaceObjectAtIndex:i
+                                    withObject:[NSValue valueWithRect:newRect]];
+    }
+  }
+  [super scrollRect:aRect by:offset];
 }
 
 - (BOOL)mouseDownCanMoveWindow

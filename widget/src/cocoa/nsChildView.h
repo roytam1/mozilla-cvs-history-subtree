@@ -102,6 +102,10 @@ class nsChildView;
   // hand scroll locations
   NSPoint mHandScrollStartMouseLoc;
   nscoord mHandScrollStartScrollX, mHandScrollStartScrollY;
+
+  // rects that were invalidated during a draw, so have pending drawing
+  NSMutableArray* mPendingDirtyRects;
+  BOOL mPendingFullDisplay;
 }
 
 // these are sent to the first responder when the window key status
