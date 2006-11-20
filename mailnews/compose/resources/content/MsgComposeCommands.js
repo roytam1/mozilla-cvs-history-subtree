@@ -3292,7 +3292,7 @@ function loadHTMLMsgPrefs()
 
   try { 
     textColor = pref.getCharPref("msgcompose.text_color");
-    if (!bodyElement.getAttribute("text"))
+    if (!bodyElement.hasAttribute("text"))
     {
       bodyElement.setAttribute("text", textColor);
       gDefaultTextColor = textColor;
@@ -3303,7 +3303,7 @@ function loadHTMLMsgPrefs()
 
   try { 
     bgColor = pref.getCharPref("msgcompose.background_color");
-    if (!bodyElement.getAttribute("bgcolor"))
+    if (!bodyElement.hasAttribute("bgcolor"))
     {
       bodyElement.setAttribute("bgcolor", bgColor);
       gDefaultBackgroundColor = bgColor;

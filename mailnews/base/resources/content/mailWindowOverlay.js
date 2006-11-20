@@ -2324,7 +2324,9 @@ function OnMsgLoaded(aUrl)
     // nsIMsgMailNewsUrl.folder throws an error when opening .eml files.
     try {
       var folder = aUrl.folder;
-    } catch (ex) {return;}
+    } catch (ex) {
+      return;
+    }
 
     var msgURI = GetLoadedMessage();
     if (!msgURI)
