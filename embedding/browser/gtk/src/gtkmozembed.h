@@ -179,59 +179,60 @@ struct _GtkMozEmbedClass
   void     (* download_request)(GtkMozEmbed *, const char *, const char *, const char *, long, int, gpointer);
   gboolean (* upload_dialog)   (GtkMozEmbed *, const char *, const char *, char **);
   void     (* icon_changed)    (GtkMozEmbed *, gpointer*);
+  void     (* mailto)          (GtkMozEmbed *, gchar *);
 };
 
-GTKMOZEMBED_API(GtkType,    gtk_moz_embed_get_type,        (void))
-GTKMOZEMBED_API(GtkWidget*, gtk_moz_embed_new,             (void))
-GTKMOZEMBED_API(void,       gtk_moz_embed_push_startup,    (void))
-GTKMOZEMBED_API(void,       gtk_moz_embed_pop_startup,     (void))
+GTKMOZEMBED_API(GtkType,       gtk_moz_embed_get_type,            (void))
+GTKMOZEMBED_API(GtkWidget*,    gtk_moz_embed_new,                 (void))
+GTKMOZEMBED_API(void,          gtk_moz_embed_push_startup,        (void))
+GTKMOZEMBED_API(void,          gtk_moz_embed_pop_startup,         (void))
 
 /* Tell gtkmozembed where the gtkmozembed libs live. If this is not specified,
    The MOZILLA_FIVE_HOME environment variable is checked. */
-GTKMOZEMBED_API(void,       gtk_moz_embed_set_path,        (const char *aPath))
+GTKMOZEMBED_API(void,          gtk_moz_embed_set_path,            (const char *aPath))
 
-GTKMOZEMBED_API(void,       gtk_moz_embed_set_comp_path,   (const char *aPath))
-GTKMOZEMBED_API(void,       gtk_moz_embed_set_profile_path, (const char *aDir,
-                                                            const char *aName))
-GTKMOZEMBED_API(void,     gtk_moz_embed_load_url,        (GtkMozEmbed *embed,
-                                                            const char *url))
-GTKMOZEMBED_API(void,     gtk_moz_embed_stop_load,       (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gboolean, gtk_moz_embed_can_go_back,     (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gboolean, gtk_moz_embed_can_go_forward,  (GtkMozEmbed *embed))
-GTKMOZEMBED_API(void,     gtk_moz_embed_go_back,         (GtkMozEmbed *embed))
-GTKMOZEMBED_API(void,     gtk_moz_embed_go_forward,      (GtkMozEmbed *embed))
-GTKMOZEMBED_API(void,     gtk_moz_embed_render_data,     (GtkMozEmbed *embed, const char *data, guint32 len, 
-                                                            const char *base_uri, const char *mime_type))
-GTKMOZEMBED_API(void,   gtk_moz_embed_open_stream,     (GtkMozEmbed *embed, 
-                                                            const char *base_uri, const char *mime_type))
-GTKMOZEMBED_API(void,   gtk_moz_embed_append_data,      (GtkMozEmbed *embed,
-                                                             const char *data, guint32 len))
-GTKMOZEMBED_API(void,   gtk_moz_embed_close_stream,     (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gchar*, gtk_moz_embed_get_link_message, (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gchar*, gtk_moz_embed_get_js_status,    (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gchar*, gtk_moz_embed_get_title,        (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gchar*, gtk_moz_embed_get_location,     (GtkMozEmbed *embed))
-GTKMOZEMBED_API(void,   gtk_moz_embed_reload,           (GtkMozEmbed *embed, gint32 flags))
-GTKMOZEMBED_API(void,   gtk_moz_embed_set_chrome_mask,  (GtkMozEmbed *embed, guint32 flags))
-GTKMOZEMBED_API(guint32, gtk_moz_embed_get_chrome_mask, (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gint,    gtk_moz_embed_get_zoom_level,  (GtkMozEmbed *embed, GtkMozEmbedZoomType, gint*))
-GTKMOZEMBED_API(gboolean,gtk_moz_embed_set_zoom_level,  (GtkMozEmbed *embed, GtkMozEmbedZoomType, gint, gint, gint, guint*, gint))
-GTKMOZEMBED_API(gboolean,gtk_moz_embed_load_image,      (GtkMozEmbed *embed, const gchar*))
-GTKMOZEMBED_API(gboolean,gtk_moz_embed_find_text,       (GtkMozEmbed *embed, const gchar*, gboolean, gboolean, gboolean, gboolean, gint))
-GTKMOZEMBED_API(gboolean,gtk_moz_embed_clipboard,       (GtkMozEmbed *embed, guint, gint))
-GTKMOZEMBED_API(void,    gtk_moz_embed_notify_plugins,  (GtkMozEmbed *embed, guint))
-GTKMOZEMBED_API(void,    gtk_moz_embed_check_logins,    (GtkMozEmbed *embed))
-GTKMOZEMBED_API(char*,   gtk_moz_embed_get_encoding,    (GtkMozEmbed *embed, gint))
-GTKMOZEMBED_API(void,    gtk_moz_embed_set_encoding,    (GtkMozEmbed *embed, const gchar *, gint))
-GTKMOZEMBED_API(guint,   gtk_moz_embed_get_context_info,(GtkMozEmbed *embed, gpointer event, gpointer *node, 
-                                                         gint *x, gint *y, gint *docindex, 
-                                                         const gchar **url, const gchar **objurl, const gchar **docurl))
-GTKMOZEMBED_API(const gchar*, gtk_moz_embed_get_selection, (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gboolean, gtk_moz_embed_get_doc_info,   (GtkMozEmbed *embed, gint docindex, const gchar**title, 
-                                                         const gchar**location, const gchar **file_type, guint *file_size))
-GTKMOZEMBED_API(gboolean, gtk_moz_embed_insert_text,    (GtkMozEmbed *embed, const gchar*, gpointer node))
-GTKMOZEMBED_API(gboolean,gtk_moz_embed_save_target,     (GtkMozEmbed *embed, gchar*, gchar*, gint))
-GTKMOZEMBED_API(void,gtk_moz_embed_get_image_dimensions,(GtkMozEmbed *embed, gint*, gint*, gpointer))
+GTKMOZEMBED_API(void,          gtk_moz_embed_set_comp_path,       (const char *aPath))
+GTKMOZEMBED_API(void,          gtk_moz_embed_set_profile_path,    (const char *aDir,
+                                                                   const char *aName))
+GTKMOZEMBED_API(void,          gtk_moz_embed_load_url,            (GtkMozEmbed *embed,
+                                                                   const char *url))
+GTKMOZEMBED_API(void,          gtk_moz_embed_stop_load,           (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_can_go_back,         (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_can_go_forward,      (GtkMozEmbed *embed))
+GTKMOZEMBED_API(void,          gtk_moz_embed_go_back,             (GtkMozEmbed *embed))
+GTKMOZEMBED_API(void,          gtk_moz_embed_go_forward,          (GtkMozEmbed *embed))
+GTKMOZEMBED_API(void,          gtk_moz_embed_render_data,         (GtkMozEmbed *embed, const char *data, guint32 len, 
+                                                                   const char *base_uri, const char *mime_type))
+GTKMOZEMBED_API(void,          gtk_moz_embed_open_stream,         (GtkMozEmbed *embed, 
+                                                                   const char *base_uri, const char *mime_type))
+GTKMOZEMBED_API(void,          gtk_moz_embed_append_data,         (GtkMozEmbed *embed,
+                                                                   const char *data, guint32 len))
+GTKMOZEMBED_API(void,          gtk_moz_embed_close_stream,        (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gchar*,        gtk_moz_embed_get_link_message,    (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gchar*,        gtk_moz_embed_get_js_status,       (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gchar*,        gtk_moz_embed_get_title,           (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gchar*,        gtk_moz_embed_get_location,        (GtkMozEmbed *embed))
+GTKMOZEMBED_API(void,          gtk_moz_embed_reload,              (GtkMozEmbed *embed, gint32 flags))
+GTKMOZEMBED_API(void,          gtk_moz_embed_set_chrome_mask,     (GtkMozEmbed *embed, guint32 flags))
+GTKMOZEMBED_API(guint32,       gtk_moz_embed_get_chrome_mask,     (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gint,          gtk_moz_embed_get_zoom_level,      (GtkMozEmbed *embed, GtkMozEmbedZoomType, gint*))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_set_zoom_level,      (GtkMozEmbed *embed, GtkMozEmbedZoomType, gint, gint, gint, guint*, gint))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_load_image,          (GtkMozEmbed *embed, const gchar*))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_find_text,           (GtkMozEmbed *embed, const gchar*, gboolean, gboolean, gboolean, gboolean, gint))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_clipboard,           (GtkMozEmbed *embed, guint, gint))
+GTKMOZEMBED_API(void,          gtk_moz_embed_notify_plugins,      (GtkMozEmbed *embed, guint))
+GTKMOZEMBED_API(void,          gtk_moz_embed_check_logins,        (GtkMozEmbed *embed))
+GTKMOZEMBED_API(char*,         gtk_moz_embed_get_encoding,        (GtkMozEmbed *embed, gint))
+GTKMOZEMBED_API(void,          gtk_moz_embed_set_encoding,        (GtkMozEmbed *embed, const gchar *, gint))
+GTKMOZEMBED_API(guint,         gtk_moz_embed_get_context_info,    (GtkMozEmbed *embed, gpointer event, gpointer *node, 
+                                                                   gint *x, gint *y, gint *docindex, 
+                                                                   const gchar **url, const gchar **objurl, const gchar **docurl))
+GTKMOZEMBED_API(const gchar*,  gtk_moz_embed_get_selection,       (GtkMozEmbed *embed))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_doc_info,        (GtkMozEmbed *embed, gint docindex, const gchar**title, 
+                                                                   const gchar**location, const gchar **file_type, guint *file_size))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_insert_text,         (GtkMozEmbed *embed, const gchar*, gpointer node))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_save_target,         (GtkMozEmbed *embed, gchar*, gchar*, gint))
+GTKMOZEMBED_API(void,          gtk_moz_embed_get_image_dimensions,(GtkMozEmbed *embed, gint*, gint*, gpointer))
 
 /* Defines used by download and upload components */
 #define GTK_MOZ_EMBED_COMMON_FILE_SCHEME "file://"

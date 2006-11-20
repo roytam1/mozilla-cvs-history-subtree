@@ -292,6 +292,14 @@ static const nsModuleComponentInfo defaultAppComps[] = {
     NS_BADCERTLISTENER_CONTRACTID,
     EmbedCertificatesConstructor
   },
+#ifdef BAD_CERT_LISTENER2
+  {
+    EMBED_CERTIFICATES_DESCRIPTION,
+    EMBED_CERTIFICATES_CID,
+    NS_BADCERTLISTENER2_CONTRACTID,
+    EmbedCertificatesConstructor
+  },
+#endif
   {
     EMBED_CERTIFICATES_DESCRIPTION,
     EMBED_CERTIFICATES_CID,
@@ -370,6 +378,7 @@ EmbedPrivate::EmbedPrivate(void)
   mChromeMask       = nsIWebBrowserChrome::CHROME_ALL;
   mIsChrome         = PR_FALSE;
   mChromeLoaded     = PR_FALSE;
+  mLoadFinished     = PR_TRUE;
   mListenersAttached = PR_FALSE;
   mMozWindowWidget  = 0;
   mIsDestroyed      = PR_FALSE;

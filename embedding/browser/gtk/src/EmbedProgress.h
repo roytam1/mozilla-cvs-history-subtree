@@ -62,7 +62,7 @@ class EmbedProgress : public nsIWebProgressListener,
   static void RequestToURIString (nsIRequest *aRequest, char **aString);
 
   EmbedPrivate *mOwner;
-
+  PRBool mStopLevel;
 };
 
 #endif /* __EmbedProgress_h */

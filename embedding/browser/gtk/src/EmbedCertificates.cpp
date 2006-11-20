@@ -85,9 +85,17 @@ EmbedCertificates::~EmbedCertificates()
 {
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS8(EmbedCertificates,
+#ifdef BAD_CERT_LISTENER2
+NS_IMPL_THREADSAFE_ISUPPORTS9(
+#else
+NS_IMPL_THREADSAFE_ISUPPORTS8(
+#endif
+                              EmbedCertificates,
                               nsITokenPasswordDialogs,
                               nsIBadCertListener,
+#ifdef BAD_CERT_LISTENER2
+                              nsIBadCertListener2,
+#endif
                               nsICertificateDialogs,
                               nsIClientAuthDialogs,
                               nsICertPickDialogs,
@@ -286,7 +294,16 @@ EmbedCertificates::ConfirmBadCertificate(
   gpointer pCert = NULL;
   guint messint = 0;
   nsCOMPtr<nsIDOMWindow> parent (do_GetInterface (ctx));
+
+  GtkMozEmbedCommon * common = nsnull;
   GtkMozEmbed *parentWidget = GTK_MOZ_EMBED(GetGtkWidgetForDOMWindow(parent));
+
+  if (!parentWidget) {
+    EmbedCommon * embedcommon = EmbedCommon::GetInstance();
+    if (embedcommon)
+      common = embedcommon->mCommon;
+  }
+  
   if (!(aError & nsIX509Cert::VERIFIED_OK)) {
     pCert = (gpointer)cert;
     messint = GTK_MOZ_EMBED_CERT_VERIFIED_OK;
@@ -329,8 +346,8 @@ EmbedCertificates::ConfirmBadCertificate(
     if (aError & nsIX509Cert::USAGE_NOT_ALLOWED) {
     }
     PRBool retVal = PR_FALSE;
-    if (parentWidget->common) {
-      g_signal_emit_by_name(parentWidget->common, "certificate-error", pCert, messint, &retVal);
+    if (common) {
+      g_signal_emit_by_name(common, "certificate-error", pCert, messint, &retVal);
     }
     if (retVal == PR_TRUE) {
       *_retval = PR_FALSE;

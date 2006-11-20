@@ -64,6 +64,9 @@ class EmbedPrivate;
 class EmbedCertificates
 : public nsITokenPasswordDialogs,
   public nsIBadCertListener,
+#ifdef BAD_CERT_LISTENER2
+  public nsIBadCertListener2,
+#endif
   public nsICertificateDialogs,
   public nsIClientAuthDialogs,
   public nsICertPickDialogs,

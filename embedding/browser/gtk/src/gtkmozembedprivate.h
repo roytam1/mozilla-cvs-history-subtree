@@ -93,6 +93,7 @@ enum {
   DOM_BLUR,
   UPLOAD_DIALOG,
   ICON_CHANGED,
+  MAILTO,
   EMBED_LAST_SIGNAL
 };
 
@@ -134,11 +135,11 @@ enum
 };
 
 extern guint moz_embed_download_signals[DOWNLOAD_LAST_SIGNAL];
-extern void gtk_moz_embed_single_create_window(
-  GtkMozEmbed **aNewEmbed,
-  guint aChromeFlags);
+extern void gtk_moz_embed_single_create_window(GtkMozEmbed **aNewEmbed,
+                                               guint aChromeFlags);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* gtkmozembedprivate_h */
+

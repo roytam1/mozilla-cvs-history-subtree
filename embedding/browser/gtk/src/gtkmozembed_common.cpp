@@ -60,6 +60,7 @@
 #include <nsIServiceManager.h>
 #include "nsIPref.h"
 #include <nsICookieManager.h>
+#include <nsIPermissionManager.h>
 #include <nsNetCID.h>
 #include <nsICookie.h>
 #include <nsIX509Cert.h>
@@ -166,40 +167,40 @@ gtk_moz_embed_common_class_init(GtkMozEmbedCommonClass *klass)
   object_class->destroy = gtk_moz_embed_common_destroy;
   moz_embed_common_signals[COMMON_CERT_ERROR] =
     gtk_signal_new("certificate-error",
-       GTK_RUN_LAST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             certificate_error),
-       gtkmozembed_BOOL__POINTER_UINT,
-       G_TYPE_BOOLEAN,
-       2,
-       GTK_TYPE_POINTER,
-       GTK_TYPE_UINT);
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     certificate_error),
+                   gtkmozembed_BOOL__POINTER_UINT,
+                   G_TYPE_BOOLEAN,
+                   2,
+                   GTK_TYPE_POINTER,
+                   GTK_TYPE_UINT);
   moz_embed_common_signals[COMMON_SELECT_LOGIN] =
     gtk_signal_new("select-login",
-       GTK_RUN_LAST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             select_login),
-       gtk_marshal_INT__POINTER,
-       G_TYPE_INT,
-       1,
-       G_TYPE_POINTER);
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     select_login),
+                   gtk_marshal_INT__POINTER,
+                   G_TYPE_INT,
+                   1,
+                   G_TYPE_POINTER);
   moz_embed_common_signals[COMMON_REMEMBER_LOGIN] =
     gtk_signal_new("remember-login",
-       GTK_RUN_LAST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             remember_login),
-       gtkmozembed_INT__VOID,
-       G_TYPE_INT, 0);
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     remember_login),
+                   gtkmozembed_INT__VOID,
+                   G_TYPE_INT, 0);
   // set up our signals
   moz_embed_common_signals[COMMON_ASK_COOKIE] =
     gtk_signal_new("ask-cookie",
-       GTK_RUN_FIRST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass, ask_cookie),
-        gtkmozembed_VOID__POINTER_INT_STRING_STRING_STRING_STRING_STRING_BOOLEAN_INT,
+                   GTK_RUN_FIRST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass, ask_cookie),
+                   gtkmozembed_VOID__POINTER_INT_STRING_STRING_STRING_STRING_STRING_BOOLEAN_INT,
                    G_TYPE_NONE, 9,
                    GTK_TYPE_POINTER,
                    GTK_TYPE_INT,
@@ -210,70 +211,71 @@ gtk_moz_embed_common_class_init(GtkMozEmbedCommonClass *klass)
                    GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE,
                    GTK_TYPE_BOOL,
                    GTK_TYPE_INT);
-  /*moz_embed_common_signals[COMMON_CERT_DIALOG] =
+/*  
+  moz_embed_common_signals[COMMON_CERT_DIALOG] =
     gtk_signal_new("certificate-dialog",
-       GTK_RUN_LAST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             certificate_dialog),
-       gtk_marshal_BOOL__POINTER,
-       G_TYPE_BOOLEAN, 1, GTK_TYPE_POINTER);
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     certificate_dialog),
+                   gtk_marshal_BOOL__POINTER,
+                   G_TYPE_BOOLEAN, 1, GTK_TYPE_POINTER);
   moz_embed_common_signals[COMMON_CERT_PASSWD_DIALOG] =
     gtk_signal_new("certificate-password-dialog",
-       GTK_RUN_FIRST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             certificate_password_dialog),
-       gtkmozembed_VOID__STRING_STRING_POINTER,
-       G_TYPE_NONE,
-       3,
-       GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE,
-       GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE,
-       GTK_TYPE_POINTER);
+                   GTK_RUN_FIRST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     certificate_password_dialog),
+                   gtkmozembed_VOID__STRING_STRING_POINTER,
+                   G_TYPE_NONE,
+                   3,
+                   GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE,
+                   GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE,
+                   GTK_TYPE_POINTER);
   moz_embed_common_signals[COMMON_CERT_DETAILS_DIALOG] =
     gtk_signal_new("certificate-details",
-       GTK_RUN_FIRST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             certificate_details),
-       gtk_marshal_VOID__POINTER,
-       G_TYPE_NONE,
-       1,
-       GTK_TYPE_POINTER);
+                   GTK_RUN_FIRST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     certificate_details),
+                   gtk_marshal_VOID__POINTER,
+                   G_TYPE_NONE,
+                   1,
+                   GTK_TYPE_POINTER);
   moz_embed_common_signals[COMMON_HISTORY_ADDED] =
     gtk_signal_new("global-history-item-added",
-       GTK_RUN_FIRST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             history_added),
-       gtk_marshal_VOID__STRING,
-       G_TYPE_NONE,
-       1,
-       GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE);
+                   GTK_RUN_FIRST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     history_added),
+                   gtk_marshal_VOID__STRING,
+                   G_TYPE_NONE,
+                   1,
+                   GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE);
   moz_embed_common_signals[COMMON_ON_SUBMIT_SIGNAL] =
     gtk_signal_new("on-submit",
-       GTK_RUN_LAST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             on_submit),
-       gtkmozembed_INT__VOID,
-       G_TYPE_INT, 0);
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                                     on_submit),
+                   gtkmozembed_INT__VOID,
+                   G_TYPE_INT, 0);
   moz_embed_common_signals[COMMON_MODAL_DIALOG] =
     gtk_signal_new("modal_dialog",
-       GTK_RUN_LAST,
-       GET_OBJECT_CLASS_TYPE(klass),
-       GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
-             modal_dialog),
-       gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT,
-       G_TYPE_INT,
-       6,
-       G_TYPE_STRING, G_TYPE_STRING, 
-       G_TYPE_INT, G_TYPE_INT,
-       G_TYPE_INT, G_TYPE_INT);
-*/
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedCommonClass,
+                      modal_dialog),
+                   gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT,
+                   G_TYPE_INT,
+                   6,
+                   G_TYPE_STRING, G_TYPE_STRING, 
+                   G_TYPE_INT, G_TYPE_INT,
+                   G_TYPE_INT, G_TYPE_INT);
+  */
 #ifdef MOZ_WIDGET_GTK
-  gtk_object_class_add_signals(object_class, moz_embed_common_signals,
-             COMMON_LAST_SIGNAL);
+    gtk_object_class_add_signals(object_class, moz_embed_common_signals,
+                                 COMMON_LAST_SIGNAL);
 #endif /* MOZ_WIDGET_GTK */
 }
 
@@ -292,10 +294,10 @@ gtk_moz_embed_common_init(GtkMozEmbedCommon *common)
 static void
 gtk_moz_embed_common_destroy(GtkObject *object)
 {
-  GtkMozEmbedCommon  *embed;
-  EmbedCommon *commonPrivate;
   g_return_if_fail(object != NULL);
   g_return_if_fail(GTK_IS_MOZ_EMBED_COMMON(object));
+  GtkMozEmbedCommon  *embed = nsnull;
+  EmbedCommon *commonPrivate = nsnull;
   embed = GTK_MOZ_EMBED_COMMON(object);
   commonPrivate = (EmbedCommon *)embed->data;
   if (commonPrivate) {
@@ -322,26 +324,26 @@ gtk_moz_embed_common_set_pref(GtkType type, gchar *name, gpointer value)
   if (pref) {
     nsresult rv = NS_ERROR_FAILURE;
     switch (type) {
-      case GTK_TYPE_BOOL:
+    case GTK_TYPE_BOOL:
       {
         /* I doubt this cast pair is correct */
-	rv = pref->SetBoolPref (name, (int)(int*)value != 0 ? PR_TRUE : PR_FALSE);
+        rv = pref->SetBoolPref (name, (int)(int*)value != 0 ? PR_TRUE : PR_FALSE);
         break;
       }
-      case GTK_TYPE_INT:
+    case GTK_TYPE_INT:
       {
         /* I doubt this cast pair is correct */
         rv = pref->SetIntPref (name, (int)(int*)value);
         break;
       }
-      case GTK_TYPE_STRING:
+    case GTK_TYPE_STRING:
       {
         g_return_val_if_fail (value, FALSE);
         rv = pref->SetCharPref (name, (gchar*)value);
         break;
       }
-      default:
-        break;
+    default:
+      break;
     }
     return ( NS_SUCCEEDED (rv) ? TRUE : FALSE );
   }
@@ -358,23 +360,23 @@ gtk_moz_embed_common_get_pref(GtkType type, gchar *name, gpointer value)
   nsresult rv = NS_ERROR_FAILURE;
   if (pref){
     switch (type) {
-      case GTK_TYPE_BOOL:
+    case GTK_TYPE_BOOL:
       {
         rv = pref->GetBoolPref (name, (gboolean*)value);
         break;
       }
-      case GTK_TYPE_INT:
+    case GTK_TYPE_INT:
       {
         rv = pref->GetIntPref (name, (gint*)value);
         break;
       }
-      case GTK_TYPE_STRING:
+    case GTK_TYPE_STRING:
       {
         rv = pref->GetCharPref (name, (gchar**)value);
         break;
       }
-      default:
-        break;
+    default:
+      break;
     }
     return ( NS_SUCCEEDED (rv) ? TRUE : FALSE );
   }
@@ -406,7 +408,7 @@ gtk_moz_embed_common_get_logins(const char* uri, nsIPasswordManager *passwordMan
   {
     nsCOMPtr<nsIPassword> nsPassword;
     result = passwordEnumerator->GetNext
-         (getter_AddRefs(nsPassword));
+      (getter_AddRefs(nsPassword));
     if (NS_FAILED(result)) {
       /* this almost certainly leaks logins */
       return NULL;
@@ -431,10 +433,10 @@ gtk_moz_embed_common_login(GtkWidget *embed)
   EmbedPasswordMgr *passwordManager = EmbedPasswordMgr::GetInstance();
   GList * list = gtk_moz_embed_common_get_logins(gtk_moz_embed_get_location(GTK_MOZ_EMBED(embed)), passwordManager);
   gtk_signal_emit(
-    GTK_OBJECT(GTK_MOZ_EMBED(embed)->common),
-    moz_embed_common_signals[COMMON_SELECT_LOGIN],
-    list,
-    &retval);
+      GTK_OBJECT(GTK_MOZ_EMBED(embed)->common),
+      moz_embed_common_signals[COMMON_SELECT_LOGIN],
+      list,
+      &retval);
   if (retval != -1) {
     passwordManager->InsertLogin((const gchar*)g_list_nth_data(list, retval));
   }
@@ -538,18 +540,26 @@ gtk_moz_embed_common_get_cookie_list(void)
 gint
 gtk_moz_embed_common_delete_all_cookies (GSList *deletedCookies)
 {
-  if (!deletedCookies)
-  {
+  if (!deletedCookies) 
     return 1;
-  }
-  else
-  {
-    nsCOMPtr<nsICookieManager> cookieManager =
-      do_GetService(NS_COOKIEMANAGER_CONTRACTID);
-    cookieManager->RemoveAll();
-    g_slist_free (deletedCookies);
+
+  nsCOMPtr<nsICookieManager> cookieManager =
+    do_GetService(NS_COOKIEMANAGER_CONTRACTID);
+
+  if (!cookieManager) 
+    return 1;
+  cookieManager->RemoveAll();
+
+  nsCOMPtr<nsIPermissionManager> permissionManager =
+    do_GetService(NS_PERMISSIONMANAGER_CONTRACTID);
+
+  if (!permissionManager)
+    return 1;
+
+  permissionManager->RemoveAll ();
+
+  g_slist_free (deletedCookies);
     return 0;//False in GWebStatus means OK, as opposed to gboolean in C
-  }
 }
 
 unsigned char *
@@ -569,7 +579,7 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
 {
   nsresult rv; 
   nsCOMPtr<nsIPluginManager> pluginMan = 
-      do_GetService(kPluginManagerCID, &rv);
+    do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
     g_print("Could not get the plugin manager\n");
     return;
@@ -578,7 +588,7 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
   gchar *disabled[10];
   gint num_disabled;
   nsCOMPtr<nsIPluginHost> pluginHost = 
-      do_GetService(kPluginManagerCID, &rv);
+    do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
     return;
   }
@@ -615,44 +625,44 @@ gtk_moz_embed_common_reload_plugins ()
 {
   nsresult rv;
   nsCOMPtr<nsIPluginManager> pluginMan = 
-      do_GetService(kPluginManagerCID, &rv);
+    do_GetService(kPluginManagerCID, &rv);
   pluginMan->ReloadPlugins(PR_TRUE);
 }
 
 guint
 gtk_moz_embed_common_get_security_mode (guint sec_state)
 {
-    GtkMozEmbedSecurityMode sec_mode;
+  GtkMozEmbedSecurityMode sec_mode;
 
-    switch (sec_state)
-    {
-        case nsIWebProgressListener::STATE_IS_INSECURE:
-                sec_mode = GTK_MOZ_EMBED_NO_SECURITY;
-                //g_print("GTK_MOZ_EMBED_NO_SECURITY\n");
-                break;
-        case nsIWebProgressListener::STATE_IS_BROKEN:
-                sec_mode = GTK_MOZ_EMBED_NO_SECURITY;
-                //g_print("GTK_MOZ_EMBED_NO_SECURITY\n");
-                break;
-        case nsIWebProgressListener::STATE_IS_SECURE|
-             nsIWebProgressListener::STATE_SECURE_HIGH:
-                sec_mode = GTK_MOZ_EMBED_HIGH_SECURITY;
-                //g_print("GTK_MOZ_EMBED_HIGH_SECURITY");
-                break;
-        case nsIWebProgressListener::STATE_IS_SECURE|
-             nsIWebProgressListener::STATE_SECURE_MED:
-                sec_mode = GTK_MOZ_EMBED_MEDIUM_SECURITY;
-                //g_print("GTK_MOZ_EMBED_MEDIUM_SECURITY\n");
-                break;
-        case nsIWebProgressListener::STATE_IS_SECURE|
-             nsIWebProgressListener::STATE_SECURE_LOW:
-                sec_mode = GTK_MOZ_EMBED_LOW_SECURITY;
-                //g_print("GTK_MOZ_EMBED_LOW_SECURITY\n");
-                break;
-        default:
-                sec_mode = GTK_MOZ_EMBED_UNKNOWN_SECURITY;
-                //g_print("GTK_MOZ_EMBED_UNKNOWN_SECURITY\n");
-                break;
-    }
-    return sec_mode;
+  switch (sec_state) {
+    case nsIWebProgressListener::STATE_IS_INSECURE:
+      sec_mode = GTK_MOZ_EMBED_NO_SECURITY;
+      //g_print("GTK_MOZ_EMBED_NO_SECURITY\n");
+      break;
+    case nsIWebProgressListener::STATE_IS_BROKEN:
+      sec_mode = GTK_MOZ_EMBED_NO_SECURITY;
+      //g_print("GTK_MOZ_EMBED_NO_SECURITY\n");
+      break;
+    case nsIWebProgressListener::STATE_IS_SECURE|
+      nsIWebProgressListener::STATE_SECURE_HIGH:
+      sec_mode = GTK_MOZ_EMBED_HIGH_SECURITY;
+      //g_print("GTK_MOZ_EMBED_HIGH_SECURITY");
+      break;
+    case nsIWebProgressListener::STATE_IS_SECURE|
+      nsIWebProgressListener::STATE_SECURE_MED:
+      sec_mode = GTK_MOZ_EMBED_MEDIUM_SECURITY;
+      //g_print("GTK_MOZ_EMBED_MEDIUM_SECURITY\n");
+      break;
+    case nsIWebProgressListener::STATE_IS_SECURE|
+      nsIWebProgressListener::STATE_SECURE_LOW:
+      sec_mode = GTK_MOZ_EMBED_LOW_SECURITY;
+      //g_print("GTK_MOZ_EMBED_LOW_SECURITY\n");
+      break;
+    default:
+      sec_mode = GTK_MOZ_EMBED_UNKNOWN_SECURITY;
+      //g_print("GTK_MOZ_EMBED_UNKNOWN_SECURITY\n");
+      break;
+  }
+  return sec_mode;
 }
+

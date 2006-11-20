@@ -52,6 +52,20 @@
 #include "nsIURI.h"
 #include "nsCRT.h"
 
+static PRInt32 sStopSignalTimer = 0;
+static gboolean
+progress_emit_stop(void * data)
+{
+    g_return_val_if_fail(data, FALSE);
+    EmbedPrivate *owner = (EmbedPrivate*)data;
+    if (!owner->mLoadFinished) {
+      owner->mLoadFinished = PR_TRUE;
+      gtk_signal_emit(GTK_OBJECT(owner->mOwningWidget),
+                      moz_embed_signals[NET_STOP]);
+    }
+    return FALSE;
+}
+
 EmbedProgress::EmbedProgress(void)
 {
   mOwner = nsnull;
@@ -69,6 +83,7 @@ nsresult
 EmbedProgress::Init(EmbedPrivate *aOwner)
 {
   mOwner = aOwner;
+  mStopLevel = 0;
   return NS_OK;
 }
 
@@ -81,6 +96,21 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   // give the widget a chance to attach any listeners
   mOwner->ContentStateChange();
   EmbedCommon * common = EmbedCommon::GetInstance();
+
+  if (sStopSignalTimer && 
+      (
+       (aStateFlags & GTK_MOZ_EMBED_FLAG_TRANSFERRING)
+       || (aStateFlags & GTK_MOZ_EMBED_FLAG_REDIRECTING)
+       || (aStateFlags & GTK_MOZ_EMBED_FLAG_NEGOTIATING)
+      )
+     ) {
+      g_source_remove(sStopSignalTimer);
+      mStopLevel = 0;
+      gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                      moz_embed_signals[NET_START]);
+      mOwner->mLoadFinished = PR_FALSE;
+  }
+
   // if we've got the start flag, emit the signal
   if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) && 
       (aStateFlags & GTK_MOZ_EMBED_FLAG_START))
@@ -88,8 +118,13 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
     // FIXME: workaround for broken progress values.
     mOwner->mOwningWidget->current_number_of_requests = 0;
     mOwner->mOwningWidget->total_number_of_requests = 0;
-    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-                    moz_embed_signals[NET_START]);
+    
+    if (mOwner->mLoadFinished) {
+      mOwner->mLoadFinished = PR_FALSE;
+      mStopLevel = 0;
+      gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                      moz_embed_signals[NET_START]);
+    }
     if (common)
       common->mFormAttachCount = false;
   }
@@ -133,17 +168,33 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
                   (gint)aStateFlags, (gint)aStatus);
   
   // and for stop, too
-  if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) && 
-      (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP)) {
-    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-                    moz_embed_signals[NET_STOP]);
-    
-    // let our owner know that the load finished
-    mOwner->ContentFinishedLoading();
-
-    if (common && common->mFormAttachCount) {
-      gtk_moz_embed_common_login(GTK_WIDGET(mOwner->mOwningWidget));
-      common->mFormAttachCount = false;
+  if (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP) {
+    if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_REQUEST)
+        mStopLevel = 1;
+    if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_DOCUMENT)
+       mStopLevel = mStopLevel == 1 ? 2 : 0;
+    if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_WINDOW) {
+       mStopLevel = mStopLevel == 2 ? 3 : 0;
+    }
+  }
+  
+  if (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP) {
+    if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) {
+      if (sStopSignalTimer)
+        g_source_remove(sStopSignalTimer);
+      progress_emit_stop(mOwner);    
+      // let our owner know that the load finished
+      mOwner->ContentFinishedLoading();
+          
+      if (common && common->mFormAttachCount) {
+        gtk_moz_embed_common_login(GTK_WIDGET(mOwner->mOwningWidget));
+        common->mFormAttachCount = false;
+      }    
+    } else if (mStopLevel == 3) {
+      if (sStopSignalTimer)
+        g_source_remove(sStopSignalTimer);
+      mStopLevel = 0;
+      sStopSignalTimer = g_timeout_add(1000, progress_emit_stop, mOwner);      
     }
   }
   return NS_OK;

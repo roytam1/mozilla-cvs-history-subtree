@@ -235,6 +235,10 @@ class EmbedPrivate {
   PRBool                         mIsChrome;
   // has the chrome finished loading?
   PRBool                         mChromeLoaded;
+
+  // has the network finished loading?  
+  PRBool                         mLoadFinished;
+  
   // saved window ID for reparenting later
   GtkWidget                     *mMozWindowWidget;
   // has someone called Destroy() on us?
