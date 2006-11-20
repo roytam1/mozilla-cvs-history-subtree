@@ -2189,8 +2189,8 @@ nsListControlFrame::FireOnChange()
   
   if (mComboboxFrame) {
     // Return hit without changing anything
-    PRInt32 index = mComboboxFrame->UpdateRecentIndex(-1);
-    if (index == -1)
+    PRInt32 index = mComboboxFrame->UpdateRecentIndex(NS_SKIP_NOTIFY_INDEX);
+    if (index == NS_SKIP_NOTIFY_INDEX)
       return NS_OK;
 
     // See if the selection actually changed
@@ -2242,9 +2242,9 @@ NS_IMETHODIMP
 nsListControlFrame::OnSetSelectedIndex(PRInt32 aOldIndex, PRInt32 aNewIndex)
 {
   if (mComboboxFrame) {
-    // UpdateRecentIndex with -1, so that we won't fire an onchange
+    // UpdateRecentIndex with NS_SKIP_NOTIFY_INDEX, so that we won't fire an onchange
     // event for this setting of selectedIndex.
-    mComboboxFrame->UpdateRecentIndex(-1);
+    mComboboxFrame->UpdateRecentIndex(NS_SKIP_NOTIFY_INDEX);
   }
 
   ScrollToIndex(aNewIndex);
