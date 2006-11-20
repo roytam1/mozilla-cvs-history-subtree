@@ -3292,18 +3292,24 @@ function loadHTMLMsgPrefs()
 
   try { 
     textColor = pref.getCharPref("msgcompose.text_color");
-    bodyElement.setAttribute("text", textColor);
-    gDefaultTextColor = textColor;
-    document.getElementById("cmd_fontColor").setAttribute("state", textColor);    
-    onFontColorChange();
+    if (!bodyElement.getAttribute("text"))
+    {
+      bodyElement.setAttribute("text", textColor);
+      gDefaultTextColor = textColor;
+      document.getElementById("cmd_fontColor").setAttribute("state", textColor);
+      onFontColorChange();
+    }
   } catch (e) {}
 
   try { 
     bgColor = pref.getCharPref("msgcompose.background_color");
-    bodyElement.setAttribute("bgcolor", bgColor);
-    gDefaultBackgroundColor = bgColor;
-    document.getElementById("cmd_backgroundColor").setAttribute("state", bgColor);
-    onBackgroundColorChange();
+    if (!bodyElement.getAttribute("bgcolor"))
+    {
+      bodyElement.setAttribute("bgcolor", bgColor);
+      gDefaultBackgroundColor = bgColor;
+      document.getElementById("cmd_backgroundColor").setAttribute("state", bgColor);
+      onBackgroundColorChange();
+    }
   } catch (e) {}
 }
 
