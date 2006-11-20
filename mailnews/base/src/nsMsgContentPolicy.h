@@ -78,13 +78,11 @@ public:
 
 protected:
   PRBool   mBlockRemoteImages;
-  PRBool   mUseRemoteImageWhiteList;
-  nsXPIDLCString mRemoteImageWhiteListURI;
   PRBool   mAllowPlugins;
   nsAdoptingCString  mTrustedMailDomains;
 
   PRBool IsTrustedDomain(nsIURI * aContentLocation);
-  nsresult IsSenderInWhiteList(nsIMsgDBHdr * aMsgHdr, PRBool * aWhiteListed);
+  nsresult AllowRemoteContentForSender(nsIMsgDBHdr * aMsgHdr, PRBool * aAllowForSender);
   nsresult AllowRemoteContentForMsgHdr(nsIMsgDBHdr * aMsgHdr, nsIURI * aRequestingLocation, nsIURI * aContentLocation, PRInt16 *aDecision);
   nsresult MailShouldLoad(nsIURI * aRequestingLocation, nsIURI * aContentLocation, PRInt16 * aDecision);
   nsresult ComposeShouldLoad(nsIDocShell * aRootDocShell, nsIURI * aContentLocation, PRInt16 * aDecision);

@@ -556,6 +556,23 @@ pref("mailnews.html_domains","");
 pref("mailnews.plaintext_domains","");
 pref("mailnews.global_html_domains.version",1);
 
+/////////////////////////////////////////////////////////////////
+// Privacy Controls for Handling Remote Content
+///////////////////////////////////////////////////////////////// 
+pref("mailnews.message_display.allow.plugins", false); // disable plugins by default
+pref("mailnews.message_display.disable_remote_image", true);
+
+/////////////////////////////////////////////////////////////////
+// Trusted Mail Domains
+//
+// Specific domains can be white listed to bypass various privacy controls in Thunderbird
+// such as blocking remote images, the phishing detector, etc. This is particularly
+// useful for business deployments where images or links reference servers inside a 
+// corporate intranet. For multiple domains, separate them with a comma. i.e.
+// pref("mail.trusteddomains", "mozilla.org,mozillafoundation.org");
+///////////////////////////////////////////////////////////////// 
+pref("mail.trusteddomains", "");
+
 pref("mail.imap.use_status_for_biff", true);
 
 // Pref controlling confirmation of folder deletion on empty trash
@@ -648,12 +665,6 @@ pref("mailnews.customHeaders", "");
 
 pref("mailnews.fakeaccount.show", false);
 pref("mailnews.fakeaccount.server", "");
-
-// message display properties
-pref("mailnews.message_display.allow.plugins", false);
-pref("mailnews.message_display.disable_remote_image", true);
-pref("mailnews.message_display.disable_remote_images.useWhitelist", true);
-pref("mailnews.message_display.disable_remote_images.whiteListAbURI","moz-abmdbdirectory://abook.mab");
 
 // default msg compose font prefs
 pref("msgcompose.font_face",                "");
