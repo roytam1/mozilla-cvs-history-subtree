@@ -689,6 +689,16 @@ nsToolkit::Startup(HMODULE hModule)
     wc.lpszClassName    = L"nsToolkitClass";
     VERIFY(nsToolkit::mRegisterClass(&wc));
 
+    // Vista API.  Mozilla is DPI Aware.
+    typedef BOOL (*SetProcessDPIAwareFunc)(VOID);
+ 
+    SetProcessDPIAwareFunc setDPIAware = (SetProcessDPIAwareFunc)
+      GetProcAddress(LoadLibrary("user32.dll"),
+                     "SetProcessDPIAware");
+    
+    if (setDPIAware)
+      setDPIAware();
+
 #ifdef WINCE
     nsToolkit::mUseImeApiW  = PR_TRUE;
 #endif
