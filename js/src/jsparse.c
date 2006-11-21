@@ -389,8 +389,10 @@ js_ParseTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts)
                 frame.varobj = chain;
         }
         frame.down = fp;
-        if (fp)
-            frame.flags = fp->flags & (JSFRAME_SPECIAL | JSFRAME_COMPILE_N_GO);
+        if (fp) {
+            frame.flags = fp->flags & (JSFRAME_SPECIAL | JSFRAME_COMPILE_N_GO |
+                                       JSFRAME_SCRIPT_OBJECT);
+        }
         cx->fp = &frame;
     }
 
@@ -452,8 +454,10 @@ js_CompileTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
                 frame.varobj = chain;
         }
         frame.down = fp;
-        if (fp)
-            frame.flags = fp->flags & (JSFRAME_SPECIAL | JSFRAME_COMPILE_N_GO);
+        if (fp) {
+            frame.flags = fp->flags & (JSFRAME_SPECIAL | JSFRAME_COMPILE_N_GO |
+                                       JSFRAME_SCRIPT_OBJECT);
+        }
         cx->fp = &frame;
     }
     flags = cx->fp->flags;
@@ -3734,8 +3738,10 @@ js_ParseXMLTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
                 frame.varobj = chain;
         }
         frame.down = fp;
-        if (fp)
-            frame.flags = fp->flags & (JSFRAME_SPECIAL | JSFRAME_COMPILE_N_GO);
+        if (fp) {
+            frame.flags = fp->flags & (JSFRAME_SPECIAL | JSFRAME_COMPILE_N_GO |
+                                       JSFRAME_SCRIPT_OBJECT);
+        }
         cx->fp = &frame;
     }
 
