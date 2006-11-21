@@ -819,14 +819,8 @@ js_CompileFunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun)
      */
     CURRENT_TOKEN(ts).type = TOK_LC;
     pn = FunctionBody(cx, ts, fun, &funcg.treeContext);
-    if (pn) {
-        if (!js_NewScriptFromCG(cx, &funcg, fun)) {
-            pn = NULL;
-        } else {
-            if (funcg.treeContext.flags & TCF_FUN_HEAVYWEIGHT)
-                fun->flags |= JSFUN_HEAVYWEIGHT;
-        }
-    }
+    if (pn && !js_NewScriptFromCG(cx, &funcg, fun))
+        pn = NULL;
 
     /* Restore saved state and release code generation arenas. */
     cx->fp = fp;
