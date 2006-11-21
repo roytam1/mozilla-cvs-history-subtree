@@ -1700,7 +1700,7 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
  */
 #define EMIT_ATOM_INDEX_OP(op, atomIndex)                                     \
     JS_BEGIN_MACRO                                                            \
-        if (!EmitAtomIndexOp(cx, op, atomIndex, cg) < 0)                      \
+        if (!EmitAtomIndexOp(cx, op, atomIndex, cg))                          \
             return JS_FALSE;                                                  \
     JS_END_MACRO
 

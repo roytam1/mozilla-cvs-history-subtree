@@ -179,6 +179,9 @@ JS_ArenaAllocate(JSArenaPool *pool, size_t nb)
             extra = (nb > pool->arenasize) ? HEADER_SIZE(pool) : 0;
             hdrsz = sizeof *a + extra + pool->mask;
             gross = hdrsz + JS_MAX(nb, pool->arenasize);
+            if (gross < nb)
+                return NULL;
+
             bp = &arena_freelist;
             JS_ACQUIRE_LOCK(arena_freelist_lock);
             while ((b = *bp) != NULL) {
@@ -201,7 +204,7 @@ JS_ArenaAllocate(JSArenaPool *pool, size_t nb)
             JS_RELEASE_LOCK(arena_freelist_lock);
             b = (JSArena *) malloc(gross);
             if (!b)
-                return 0;
+                return NULL;
             b->next = NULL;
             b->limit = (jsuword)b + gross;
             JS_COUNT_ARENA(pool,++);
@@ -255,6 +258,7 @@ JS_ArenaRealloc(JSArenaPool *pool, void *p, size_t size, size_t incr)
     extra = HEADER_SIZE(pool);                  /* oversized header holds ap */
     hdrsz = sizeof *a + extra + pool->mask;     /* header and alignment slop */
     gross = hdrsz + aoff;
+    JS_ASSERT(gross > aoff);
     a = (JSArena *) realloc(a, gross);
     if (!a)
         return NULL;
