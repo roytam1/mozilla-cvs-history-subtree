@@ -1754,6 +1754,8 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
                                                     PRBool *aIsHidden,
                                                     nsIAccessible **aAccessible)
 {
+  NS_ENSURE_ARG_POINTER(aAccessible);
+  NS_ENSURE_ARG_POINTER(aFrameHint);
   *aAccessible = nsnull;
   if (!aPresShell || !aWeakShell) {
     return NS_ERROR_FAILURE;
@@ -1822,8 +1824,10 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
     }
     else {
       CreateRootAccessible(aPresShell, nodeIsDoc, getter_AddRefs(newAcc)); // Does Init() for us
-      NS_ASSERTION(newAcc, "No root/doc accessible created");
+      NS_WARN_IF_FALSE(newAcc, "No root/doc accessible created");
     }
+
+    NS_ENSURE_STATE(newAcc);
 
     *aFrameHint = aPresShell->GetRootFrame();
     NS_ADDREF(*aAccessible = newAcc );
