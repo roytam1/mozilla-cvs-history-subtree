@@ -1112,7 +1112,7 @@ nsListBoxBodyFrame::GetFirstItemBox(PRInt32 aOffset, PRBool* aCreated)
   mBottomFrame = mTopFrame;
 
   if (mTopFrame) {
-    return mTopFrame->IsBoxFrame() ? mTopFrame : nsnull;
+    return mTopFrame->IsBoxFrame() ? NS_STATIC_CAST(nsIBox*, mTopFrame) : nsnull;
   }
 
   // top frame was cleared out
@@ -1120,7 +1120,7 @@ nsListBoxBodyFrame::GetFirstItemBox(PRInt32 aOffset, PRBool* aCreated)
   mBottomFrame = mTopFrame;
 
   if (mTopFrame && mRowsToPrepend <= 0) {
-    return mTopFrame->IsBoxFrame() ? mTopFrame : nsnull;
+    return mTopFrame->IsBoxFrame() ? NS_STATIC_CAST(nsIBox*, mTopFrame) : nsnull;
   }
 
   // At this point, we either have no frames at all, 
@@ -1149,16 +1149,17 @@ nsListBoxBodyFrame::GetFirstItemBox(PRInt32 aOffset, PRBool* aCreated)
     // XXX check here if frame was even created, it may not have been if
     //     display: none was on listitem content
     PRBool isAppend = mRowsToPrepend <= 0;
+    nsIFrame* topFrame = nsnull;
     mFrameConstructor->CreateListBoxContent(mPresContext, this, nsnull, startContent,
-                                            &mTopFrame, isAppend, PR_FALSE, nsnull);
-    
+                                            &topFrame, isAppend, PR_FALSE, nsnull);
+    mTopFrame = topFrame;
     if (mTopFrame) {
       if (aCreated)
         *aCreated = PR_TRUE;
 
       mBottomFrame = mTopFrame;
 
-      return mTopFrame->IsBoxFrame() ? mTopFrame : nsnull;
+      return mTopFrame->IsBoxFrame() ? NS_STATIC_CAST(nsIBox*, mTopFrame) : nsnull;
     } else
       return GetFirstItemBox(++aOffset, 0);
   }
