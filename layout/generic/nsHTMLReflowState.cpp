@@ -1623,7 +1623,12 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
                               aContainingBlockHeight);
     } else {
       PRBool isBlock =
-        NS_CSS_FRAME_TYPE_BLOCK == NS_FRAME_GET_TYPE(mFrameType);
+        NS_CSS_FRAME_TYPE_BLOCK == NS_FRAME_GET_TYPE(mFrameType) &&
+        // Hack to work around the fact that we have some tables that
+        // _should_ be inline-table but aren't
+        (frame->GetType() != nsLayoutAtoms::tableOuterFrame ||
+         !parentReflowState ||
+         NS_CSS_FRAME_TYPE_BLOCK == NS_FRAME_GET_TYPE(parentReflowState->mFrameType));
       nsSize size =
         frame->ComputeSize(rendContext,
                            nsSize(aContainingBlockWidth,
