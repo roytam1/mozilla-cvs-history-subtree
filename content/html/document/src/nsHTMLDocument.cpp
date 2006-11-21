@@ -1593,7 +1593,9 @@ nsHTMLDocument::SetDomain(const nsAString& aDomain)
   if (NS_FAILED(NS_NewURI(getter_AddRefs(newURI), newURIString)))
     return NS_ERROR_FAILURE;
 
-  nsresult rv = mPrincipal->SetDomain(newURI);
+  nsIPrincipal* principal = GetPrincipal();
+  NS_ENSURE_STATE(principal);
+  nsresult rv = principal->SetDomain(newURI);
 
   // Bug 13871: Frameset spoofing - note that document.domain was set
   if (NS_SUCCEEDED(rv)) {
@@ -1826,7 +1828,9 @@ nsHTMLDocument::GetCookie(nsAString& aCookie)
     // Get a URI from the document principal. We use the original
     // codebase in case the codebase was changed by SetDomain
     nsCOMPtr<nsIURI> codebaseURI;
-    mPrincipal->GetURI(getter_AddRefs(codebaseURI));
+    nsIPrincipal* principal = GetPrincipal();
+    NS_ENSURE_STATE(principal);
+    principal->GetURI(getter_AddRefs(codebaseURI));
 
     if (!codebaseURI) {
       // Document's principal is not a codebase (may be system), so
@@ -1857,7 +1861,9 @@ nsHTMLDocument::SetCookie(const nsAString& aCookie)
     }
 
     nsCOMPtr<nsIURI> codebaseURI;
-    mPrincipal->GetURI(getter_AddRefs(codebaseURI));
+    nsIPrincipal* principal = GetPrincipal();
+    NS_ENSURE_STATE(principal);
+    principal->GetURI(getter_AddRefs(codebaseURI));
 
     if (!codebaseURI) {
       // Document's principal is not a codebase (may be system), so
