@@ -516,6 +516,16 @@ nsEditor::GetDesiredSpellCheckState()
     return PR_FALSE;
   }
 
+  nsCOMPtr<nsIPresShell> presShell;
+  rv = GetPresShell(getter_AddRefs(presShell));
+  if (NS_SUCCEEDED(rv)) {
+    nsPresContext* context = presShell->GetPresContext();
+    if (context->Type() == nsPresContext::eContext_PrintPreview ||
+        context->Type() == nsPresContext::eContext_Print) {
+      return PR_FALSE;
+    }
+  }
+
   // Check DOM state
   nsCOMPtr<nsIContent> content = do_QueryInterface(GetRoot());
   if (!content) {
