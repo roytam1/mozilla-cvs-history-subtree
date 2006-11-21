@@ -59,6 +59,7 @@
 #include "jsarena.h" /* Added by JSIFY */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsapi.h"
+#include "jsarray.h"
 #include "jsatom.h"
 #include "jscntxt.h"
 #include "jsconfig.h"
@@ -5129,9 +5130,6 @@ js_ParseXMLTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
 }
 
 #endif /* JS_HAS_XMLSUPPORT */
-
-/* Generous sanity-bound on length (in elements) of array initialiser. */
-#define ARRAY_INIT_LIMIT        JS_BIT(24)
 
 static JSParseNode *
 PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
