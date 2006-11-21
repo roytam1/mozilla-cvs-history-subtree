@@ -317,6 +317,7 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mHavePendingClose(PR_FALSE),
     mHadOriginalOpener(PR_FALSE),
     mIsPopupSpam(PR_FALSE),
+    mCreatingInnerWindow(PR_FALSE),
     mModalStateDepth(0),
     mArguments(nsnull),
     mGlobalObjectOwner(nsnull),
@@ -1148,10 +1149,12 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         mInnerWindow = nsnull;
 
         Freeze();
+        mCreatingInnerWindow = PR_TRUE;
         rv = xpc->
           InitClassesWithNewWrappedGlobal(cx, sgo, NS_GET_IID(nsISupports),
                                           flags,
                                           getter_AddRefs(mInnerWindowHolder));
+        mCreatingInnerWindow = PR_FALSE;
         Thaw();
 
         NS_ENSURE_SUCCESS(rv, rv);

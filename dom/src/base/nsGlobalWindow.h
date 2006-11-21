@@ -304,6 +304,11 @@ public:
     return mIsFrozen;
   }
 
+  PRBool IsCreatingInnerWindow() const
+  {
+    return  mCreatingInnerWindow;
+  }
+
   static void ShutDown();
   static PRBool IsCallerChrome();
 
@@ -501,6 +506,10 @@ protected:
   PRPackedBool                  mHavePendingClose : 1;
   PRPackedBool                  mHadOriginalOpener : 1;
   PRPackedBool                  mIsPopupSpam : 1;
+
+  // Indicates whether we're in the middle of creating an initializing
+  // a new inner window object.
+  PRPackedBool                  mCreatingInnerWindow : 1;
 
   PRUint32                      mModalStateDepth;
 
