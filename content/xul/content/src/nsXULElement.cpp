@@ -1637,7 +1637,8 @@ nsXULElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, PRBool aNotify)
       slots->mAttributeMap->DropAttribute(aNameSpaceID, aName);
     }
 
-    rv = mAttrsAndChildren.RemoveAttrAt(index);
+    nsAttrValue ignored;
+    rv = mAttrsAndChildren.RemoveAttrAt(index, ignored);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // XXX if the RemoveAttrAt() call fails, we might end up having removed

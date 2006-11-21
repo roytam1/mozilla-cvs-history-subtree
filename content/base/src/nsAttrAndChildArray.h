@@ -96,7 +96,10 @@ public:
   nsresult SetAttr(nsIAtom* aLocalName, const nsAString& aValue);
   nsresult SetAndTakeAttr(nsIAtom* aLocalName, nsAttrValue& aValue);
   nsresult SetAndTakeAttr(nsINodeInfo* aName, nsAttrValue& aValue);
-  nsresult RemoveAttrAt(PRUint32 aPos);
+
+  // Remove the attr at position aPos.  The value of the attr is placed in
+  // aValue; any value that was already in aValue is destroyed.
+  nsresult RemoveAttrAt(PRUint32 aPos, nsAttrValue& aValue);
   const nsAttrName* GetSafeAttrNameAt(PRUint32 aPos) const;
   // aName is UTF-8 encoded
   const nsAttrName* GetExistingAttrNameFromQName(const nsACString& aName) const;

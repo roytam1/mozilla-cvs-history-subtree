@@ -4067,6 +4067,12 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 
   nsIDocument *document = GetCurrentDoc();    
   mozAutoDocUpdate updateBatch(document, UPDATE_CONTENT_MODEL, aNotify);
+
+  PRBool hasMutationListeners = document &&
+    HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED);
+  // Grab the attr node if needed before we remove it from the attr map
+  nsCOMPtr<nsIDOMAttr> attrNode;
+  
   if (document) {
     if (kNameSpaceID_XLink == aNameSpaceID && nsHTMLAtoms::href == aName) {
       // XLink URI might be changing.
@@ -4077,30 +4083,10 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
       document->AttributeWillChange(this, aNameSpaceID, aName);
     }
 
-    if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
-      nsCOMPtr<nsIDOMEventTarget> node =
-        do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
-      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
-
+    if (hasMutationListeners) {
       nsAutoString attrName;
       aName->ToString(attrName);
-      nsCOMPtr<nsIDOMAttr> attrNode;
       GetAttributeNode(attrName, getter_AddRefs(attrNode));
-      mutation.mRelatedNode = attrNode;
-      mutation.mAttrName = aName;
-
-      nsAutoString value;
-      // It sucks that we have to call GetAttr here, but HTML can't always
-      // get the value from the nsAttrAndChildArray. Specifically enums and
-      // nsISupports can't be converted to strings.
-      GetAttr(aNameSpaceID, aName, value);
-      if (!value.IsEmpty())
-        mutation.mPrevAttrValue = do_GetAtom(value);
-      mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
-
-      nsEventStatus status = nsEventStatus_eIgnore;
-      HandleDOMEvent(nsnull, &mutation, nsnull,
-                     NS_EVENT_FLAG_INIT, &status);
     }
   }
 
@@ -4110,7 +4096,8 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     slots->mAttributeMap->DropAttribute(aNameSpaceID, aName);
   }
 
-  nsresult rv = mAttrsAndChildren.RemoveAttrAt(index);
+  nsAttrValue oldValue;
+  nsresult rv = mAttrsAndChildren.RemoveAttrAt(index, oldValue);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (document) {
@@ -4121,6 +4108,25 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     if (aNotify) {
       document->AttributeChanged(this, aNameSpaceID, aName,
                                  nsIDOMMutationEvent::REMOVAL);
+    }
+
+    if (hasMutationListeners) {
+      nsCOMPtr<nsIDOMEventTarget> node =
+        do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
+      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
+
+      mutation.mRelatedNode = attrNode;
+      mutation.mAttrName = aName;
+
+      nsAutoString value;
+      oldValue.ToString(value);
+      if (!value.IsEmpty())
+        mutation.mPrevAttrValue = do_GetAtom(value);
+      mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
+
+      nsEventStatus status = nsEventStatus_eIgnore;
+      HandleDOMEvent(nsnull, &mutation, nsnull,
+                     NS_EVENT_FLAG_INIT, &status);
     }
   }
 
