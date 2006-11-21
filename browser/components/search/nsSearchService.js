@@ -629,6 +629,23 @@ function getLocalizedPref(aPrefName, aDefault) {
 }
 
 /**
+ * Wrapper for nsIPrefBranch::setComplexValue.
+ * @param aPrefName
+ *        The name of the pref to set.
+ */
+function setLocalizedPref(aPrefName, aValue) {
+  var prefB = Cc["@mozilla.org/preferences-service;1"].
+              getService(Ci.nsIPrefBranch);
+  const nsIPLS = Ci.nsIPrefLocalizedString;
+  try {
+    var pls = Components.classes["@mozilla.org/pref-localizedstring;1"]
+                        .createInstance(Ci.nsIPrefLocalizedString);
+    pls.data = aValue;
+    prefB.setComplexValue(aPrefName, nsIPLS, pls);
+  } catch (ex) {}
+}
+
+/**
  * Wrapper for nsIPrefBranch::getBoolPref.
  * @param aPrefName
  *        The name of the pref to get.
@@ -2777,7 +2794,7 @@ SearchService.prototype = {
         prefB.clearUserPref(currentEnginePref);
     }
     else {
-      prefB.setCharPref(currentEnginePref, this._currentEngine.name);
+      setLocalizedPref(currentEnginePref, this._currentEngine.name);
     }
 
     notifyAction(this._currentEngine, SEARCH_ENGINE_CURRENT);
