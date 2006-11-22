@@ -139,14 +139,9 @@ function keyTap(vv) {
 
   } 
 
-
-
 }
 
-
 function timeAnim() {
-
-
 
   if(ccc <200) {
 	   colorRed++;
@@ -158,10 +153,10 @@ function timeAnim() {
 
   } else {
 
- colorGreen=255;
- colorRed=0;
- ccc = 0;
-	   document.getElementById("timetap").style.backgroundColor="rgb("+0+","+255+",0)";
+   colorGreen=255;
+   colorRed=0;
+   ccc = 0;
+   document.getElementById("timetap").style.backgroundColor="rgb("+0+","+255+",0)";
 
    timeOver(); 
 
@@ -170,13 +165,10 @@ function timeAnim() {
 }
 
 function timeOver() {
-
       execTap();
-
 }
 
 function execTap() {
-
 
   vForward = 0;
 
@@ -253,11 +245,7 @@ function execTap() {
   accu=-1;
 
   typing=false;
-
 }
-
-
-
 
 var prevFocused = null;
 
@@ -287,14 +275,9 @@ function keyDispatch(vv,state) {
   e.initKeyEvent("keypress",true,true,null,false,false, vShiftState,false, vCode,vForward );
   prevFocused.dispatchEvent(e);
 
-
-
 }
 
-
-
 function dispatchTest() {
-
 
   var e = document.createEvent("KeyEvents");
 
@@ -311,16 +294,13 @@ function keyboardEventCreate(kk,cc) {
   var e = document.createEvent("KeyEvents");
   e.initKeyEvent("keypress",true,true,null,false,false,true,false, 0,e.DOM_VK_A);
 
-
   prevFocused.dispatchEvent(e);
-
 
 }
 
-
 function keyboardIntercept_init() {
 
-window.addEventListener("keydown",testGet2,true);
+  window.addEventListener("keydown",testGet2,true);
 
 }
 
@@ -336,15 +316,11 @@ function testGet(e) {
 
  debug(" will dispatch " + e.keyCode +"  and " + e.charCode);
 
-
  window.removeEventListener("keypress",testGet,true);
 
  keyboardEventCreate(e.keyCode,e.charCode);
 
-
 }
-
-
 
 function debug(ss) {
        document.getElementById("debug").innerHTML=ss;
@@ -352,14 +328,13 @@ function debug(ss) {
 
 function initKeyboard() {
 
-       document.getElementById('q1').addEventListener("mousedown",hq1,true);
+  document.getElementById('q1').addEventListener("mousedown",hq1,true);
 
-       //keyboardIntercept_init();
+  //keyboardIntercept_init();
 
-       document.getElementById("source").focus();
+  document.getElementById("source").focus();
 
- keyboardEventCreate(0,113);
-
+  keyboardEventCreate(0,113);
 
 }
 
@@ -367,9 +342,7 @@ function hq1(e) {
 
  e.stopPropagation();
 
-
  keyboardEventCreate(0,113);
-
 
 }
 
