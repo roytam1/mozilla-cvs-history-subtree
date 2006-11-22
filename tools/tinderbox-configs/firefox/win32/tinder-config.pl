@@ -12,7 +12,7 @@
 #  Default: 0
 #   Values: 0 | 1
 #  Purpose: Turn graydon's cycle collector on/off
-$ENV{XPCOM_CC_DO_NOTHING} = 1;
+#$ENV{XPCOM_CC_DO_NOTHING} = 0;
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
