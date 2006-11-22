@@ -230,7 +230,8 @@
 <!ENTITY elideRoute.description "Zap uses preloaded routes to set the first hop destination of outbound packets.  This means that outgoing requests outside of a dialog will contain a top Route header that is identical to the first hop. While this behavior is compliant to RFC3261, some registrars get confused by it and end up forwarding the request to themselves over and over until the Max-Forwards count is exhausted.  To fix these buggy registrars, setting this checkbox will instruct zap to remove the top Route header of outgoing outside-of-dialog requests.">
 <!ENTITY registerGrid.label "Match REGISTER contact address by grid only">
 <!ENTITY registerGrid.description "Some services (e.g. Wengo) send REGISTER responses with contact addresses that have an incorrect host part.  This option provides a workaround for this behaviour.">
-
+<!ENTITY asterisk_stale_nonce_hack.label "Asterisk stale nonce hack">
+<!ENTITY asterisk_stale_nonce_hack.description "Some servers (most notably some common versions of Asterisk) forget to set the 'nonce=stale' parameter when rejecting a request with a stale nonce. The effect is that zap will periodically ask for the username and password when connected to such a server. With this flag set, zap will use a different method to determine whether a challange has been reissued because the nonce has become stale or whether the credentials are rejected as invalid: zap will compare the nonces of the request and the challange, and pop up the username/password dialog only if the nonces are the same.">
 <!-- sidebar.xul -->
 
 <!-- subscribe-request.xul -->

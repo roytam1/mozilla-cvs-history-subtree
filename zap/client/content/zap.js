@@ -449,13 +449,24 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:elide_destination_route_header", "fals
 // whether or not to match contact addresses in REGISTER responses
 // solely by grid (needed for Wengo compatibility):
 Service.rdfLiteralAttrib("urn:mozilla:zap:register_grid_only_match", "false");
-
+// whether or not to base the stale nonce check on a comparison of
+// nonces in the request and response (rather than relying on
+// stale=true parameter)
+Service.rdfLiteralAttrib("urn:mozilla:zap:asterisk_stale_nonce_hack", "false");
 
 Service.fun(
   function getStunServer() {
     var s = this["urn:mozilla:zap:stun_server"];
     if (!s) s = this["urn:mozilla:zap:domain"];
     return s;
+  });
+
+Service.fun(
+  function getAuthFlags() {
+    var flags = 0;
+    if (this["urn:mozilla:zap:asterisk_stale_nonce_hack"]=="true")
+      flags |= Components.interfaces.zapISipAuthentication.ASTERISK_STALE_NONCE_HACK;
+    return flags;
   });
 
 Service.fun(
@@ -1053,7 +1064,8 @@ Subscription.fun(
                       if (wSipStack.authentication.
                           addAuthorizationHeaders(me.identity,
                                                   response,
-                                                  rc.request)) {
+                                                  rc.request,
+                                                  me.identity.service.getAuthFlags())) {
                         rc.sendSubscribe(handler);
                       }
                     });
@@ -1125,7 +1137,8 @@ Subscription.fun(
           // retry with credentials:
           callAsync(function() {
                       if (wSipStack.authentication.addAuthorizationHeaders(
-                            this.identity, response, rc.request)) {
+                            me.identity, response, rc.request,
+                            me.identity.service.getAuthFlags())) {
                         rc.sendSubscribe(listener);
                       }
                     });
@@ -1596,7 +1609,8 @@ Registration.fun(
                           if (wSipStack.authentication.
                               addAuthorizationHeaders(me.group.identity,
                                                       response,
-                                                      rc.request)) {
+                                                      rc.request,
+                                                      me.group.identity.service.getAuthFlags())) {
                                 // retry with credentials:
                                 rc.sendRequest(listener);
                           }
@@ -1705,7 +1719,8 @@ Registration.fun(
       callAsync(function() {
                   if (wSipStack.authentication.addAuthorizationHeaders(me.group.identity,
                                                                        response,
-                                                                       rc.request)) {
+                                                                       rc.request,
+                                                                       me.group.identity.service.getAuthFlags())) {
                     // retry with credentials:
                     rc.sendRequest(me);
                     return;
@@ -2938,7 +2953,8 @@ OutboundCallHandler.fun(
                   if (wSipStack.authentication.
                       addAuthorizationHeaders(wCurrentIdentity,
                                               response,
-                                              rc.request)) {
+                                              rc.request,
+                                              wCurrentIdentity.service.getAuthFlags())) {
                     // we've got new credentials -> retry
                     rc.sendInvite(me);
                   }

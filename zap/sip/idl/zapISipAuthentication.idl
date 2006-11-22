@@ -46,9 +46,28 @@ interface zapISipResponse;
  *
  * Implemented by component <b>'\@mozilla.org/zap/sipauth;1'</b>
  */
-[scriptable, uuid(459207eb-b28c-47cf-9e58-4ecb81cd5d22)]
+[scriptable, uuid(36ce7b69-ab76-433f-8b3c-83e16b379afc)]
 interface zapISipAuthentication : nsISupports
 {
+  /**
+   * \name authFlags flag constants for addAuthorizationHeaders
+   */
+  //@{
+
+  /**
+   * Some servers (most notably some common versions of Asterisk)
+   * forget to set the nonce=stale parameter when rejecting a request
+   * with a stale nonce. When ASTERISK_STALE_NONCE_HACK is set,
+   * addAuthorizationHeaders() will compare the nonces of request and
+   * response, and when they don't match, set the
+   * hasRejectedCredentials parameter to getCredentialsForRealm() to
+   * false.
+   *
+   */
+  const unsigned long ASTERISK_STALE_NONCE_HACK = 0x0001;
+  
+  //@}
+  
   /**
    * Add authorization headers to 'request' for all WWW-Authenticate
    * and Proxy-Authenticate challenges in 'response' for which
@@ -57,7 +76,8 @@ interface zapISipAuthentication : nsISupports
    */
   boolean addAuthorizationHeaders(in zapISipCredentialsProvider credentials,
                                   in zapISipResponse response,
-                                  in zapISipRequest request);
+                                  in zapISipRequest request,
+                                  in unsigned long authFlags);
 };
 
 

@@ -58,9 +58,11 @@ SipAuthentication.addInterfaces(Components.interfaces.zapISipAuthentication);
 
 //  boolean addAuthorizationHeaders(in zapISipCredentialsProvider credentials,
 //                                  in zapISipResponse response,
-//                                  in zapISipRequest request);
+//                                  in zapISipRequest request,
+//                                  in unsigned long authFlags);
 SipAuthentication.fun(
-  function addAuthorizationHeaders(credentials, response, request) {
+  function addAuthorizationHeaders(credentials, response,
+                                   request, authFlags) {
     var headersAdded = false;
     headersAdded = this.addAuthorizationHeadersInner("WWW-Authenticate",
                                                      Components.interfaces.zapISipWWWAuthenticateHeader,
@@ -68,7 +70,8 @@ SipAuthentication.fun(
                                                      Components.interfaces.zapISipAuthorizationHeader,
                                                      credentials,
                                                      response,
-                                                     request);
+                                                     request,
+                                                     authFlags);
     headersAdded = headersAdded |
       this.addAuthorizationHeadersInner("Proxy-Authenticate",
                                         Components.interfaces.zapISipProxyAuthenticateHeader,
@@ -76,7 +79,8 @@ SipAuthentication.fun(
                                         Components.interfaces.zapISipProxyAuthorizationHeader,
                                         credentials,
                                         response,
-                                        request);
+                                        request,
+                                        authFlags);
 
     return headersAdded;
   });
@@ -147,7 +151,8 @@ SipAuthentication.fun(
                                         authorizationHeaderInterface,
                                         credentials,
                                         response,
-                                        request) {
+                                        request,
+                                        authFlags) {
     var headersAdded = false;
 
     var requestURI = request.requestURI.serialize();
@@ -171,6 +176,14 @@ SipAuthentication.fun(
           // whether the credentials were rejected or whether the
           // nonce was just stale:
           var hasRejectedCredentials = (unquote(header.getParameter("stale")).toLowerCase() != "true");
+
+          if (hasRejectedCredentials &&
+              (authFlags&Components.interfaces.zapISipAuthentication.ASTERISK_STALE_NONCE_HACK)) {
+            // compare nonces to determine hasRejectedCredentials
+            if (header.getParameter("nonce") !=
+                authorizationHeaders[j].getParameter("nonce"))
+              hasRejectedCredentials = false;
+          }
           
           // remove authorization header from request and try
           // new credentials again:

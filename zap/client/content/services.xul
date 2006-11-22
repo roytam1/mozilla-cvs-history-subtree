@@ -304,6 +304,13 @@
             <description>&registerGrid.description;</description>
           </info>      
         </igroup>
+        <igroup>
+          <checkbox type="zap-formwidget" label="&asterisk_stale_nonce_hack.label;" 
+                    id="urn:mozilla:zap:asterisk_stale_nonce_hack"/>
+          <info>
+            <description>&asterisk_stale_nonce_hack.description;</description>
+          </info>      
+        </igroup>
       </groupbox>
     </vbox>
   </vbox>
