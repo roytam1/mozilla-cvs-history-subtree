@@ -1815,6 +1815,7 @@ restart:
             } else if (tvr->count == -2) {
                 tvr->u.marker(cx, tvr);
             } else {
+                JS_ASSERT(tvr->count >= 0);
                 GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");
             }
         }

@@ -164,24 +164,28 @@ ValueIsLength(JSContext *cx, jsval v, jsuint *lengthp)
 JSBool
 js_GetLengthProperty(JSContext *cx, JSObject *obj, jsuint *lengthp)
 {
+    JSTempValueRooter tvr;
     jsid id;
+    JSBool ok;
     jsint i;
-    jsval v;
 
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, JSVAL_NULL, &tvr);
     id = ATOM_TO_JSID(cx->runtime->atomState.lengthAtom);
-    if (!OBJ_GET_PROPERTY(cx, obj, id, &v))
-        return JS_FALSE;
-
-    /* Short-circuit, because js_ValueToECMAUint32 fails when
-     * called during init time.
-     */
-    if (JSVAL_IS_INT(v)) {
-        i = JSVAL_TO_INT(v);
-        /* jsuint cast does ToUint32. */
-        *lengthp = (jsuint)i;
-        return JS_TRUE;
+    ok = OBJ_GET_PROPERTY(cx, obj, id, &tvr.u.value);
+    if (ok) {
+        /*
+         * Short-circuit, because js_ValueToECMAUint32 fails when called
+         * during init time.
+         */
+        if (JSVAL_IS_INT(tvr.u.value)) {
+            i = JSVAL_TO_INT(tvr.u.value);
+            *lengthp = (jsuint)i;       /* jsuint cast does ToUint32 */
+        } else {
+            ok = js_ValueToECMAUint32(cx, tvr.u.value, (uint32 *)lengthp);
+        }
     }
-    return js_ValueToECMAUint32(cx, v, (uint32 *)lengthp);
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
 }
 
 static JSBool
@@ -264,17 +268,19 @@ JSBool
 js_HasLengthProperty(JSContext *cx, JSObject *obj, jsuint *lengthp)
 {
     JSErrorReporter older;
+    JSTempValueRooter tvr;
     jsid id;
     JSBool ok;
-    jsval v;
 
     older = JS_SetErrorReporter(cx, NULL);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, JSVAL_NULL, &tvr);
     id = ATOM_TO_JSID(cx->runtime->atomState.lengthAtom);
-    ok = OBJ_GET_PROPERTY(cx, obj, id, &v);
+    ok = OBJ_GET_PROPERTY(cx, obj, id, &tvr.u.value);
     JS_SetErrorReporter(cx, older);
-    if (!ok)
-        return JS_FALSE;
-    return ValueIsLength(cx, v, lengthp);
+    if (ok)
+        ok = ValueIsLength(cx, tvr.u.value, lengthp);
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
 }
 
 /*
@@ -366,7 +372,8 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
     const jschar *sepstr;
     JSString *str;
     JSHashEntry *he;
-    JSObject *obj2;
+    JSTempValueRooter tvr;
+    JSAtom *atom;
     int stackDummy;
 
     if (!JS_CHECK_STACK_SIZE(cx, stackDummy)) {
@@ -454,14 +461,14 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
             str = cx->runtime->emptyString;
         } else {
             if (localeString) {
-                if (!js_ValueToObject(cx, v, &obj2) ||
-                    !js_TryMethod(cx, obj2,
-                                  cx->runtime->atomState.toLocaleStringAtom,
-                                  0, NULL, &v)) {
-                    str = NULL;
-                } else {
-                    str = js_ValueToString(cx, v);
-                }
+                atom = cx->runtime->atomState.toLocaleStringAtom;
+                JS_PUSH_TEMP_ROOT_OBJECT(cx, NULL, &tvr);
+                ok = js_ValueToObject(cx, v, &tvr.u.object) &&
+                     js_TryMethod(cx, tvr.u.object, atom, 0, NULL, &v);
+                JS_POP_TEMP_ROOT(cx, &tvr);
+                if (!ok)
+                    goto done;
+                str = js_ValueToString(cx, v);
             } else {
                 str = (literalize ? js_ValueToSource : js_ValueToString)(cx, v);
             }
@@ -829,7 +836,7 @@ sort_compare(const void *a, const void *b, void *arg)
     CompareArgs *ca = (CompareArgs *) arg;
     JSContext *cx = ca->context;
     jsdouble cmp = -1;
-    jsval fval, argv[2], rval, special;
+    jsval fval, argv[2], special;
     JSBool ok;
 
     fval = ca->fval;
@@ -877,9 +884,9 @@ sort_compare(const void *a, const void *b, void *arg)
         argv[1] = bv;
         ok = js_InternalCall(cx,
                              OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(fval)),
-                             fval, 2, argv, &rval);
+                             fval, 2, argv, ca->localroot);
         if (ok) {
-            ok = js_ValueToNumber(cx, rval, &cmp);
+            ok = js_ValueToNumber(cx, *ca->localroot, &cmp);
 
             /* Clamp cmp to -1, 0, 1. */
             if (ok) {
