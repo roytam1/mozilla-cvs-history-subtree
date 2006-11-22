@@ -407,16 +407,8 @@ function prefStartup() {
 
     /* fix the size of the scrollbox contents */
 
-	//marcio 4000
- 
     innerWidth = document.getBoxObjectFor(document.getElementById("scroller")).width;
     document.getElementById("pref-panes").style.width=innerWidth+"px";
-
-    /* Pre select the general pane */ 
-
-    gPanelSelected=document.getElementById("general-pane");
-    gToolbarButtonSelected=document.getElementById("general-button");
-    gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css (may have to be promoted minimo.css)
 
     /* Initialize the pref service instance */ 
 
@@ -428,7 +420,30 @@ function prefStartup() {
 
     syncPrefLoadDOM(document.getElementById("prefsInstance").prefArray);
 
-    gToolbarButtonSelected.focus();
+    /*
+     * If there is a target, then we want to select it 
+     * Example: chrome://minimo/content/preferences/preferences.xul#general
+     */
+
+
+     var targetURI = document.location;
+
+     var keyTarget = targetURI.toString().split("#")[1];
+
+     try {
+
+        if(keyTarget) {
+
+		  gPanelSelected = document.getElementById(keyTarget+"-pane");
+	        gToolbarButtonSelected = document.getElementById(keyTarget+"-button");
+
+	        gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css (may have to be promoted minimo.css)
+    		  gToolbarButtonSelected.focus();
+
+	  } else { };
+
+     } catch (i) {  }
+
 }
 
 /*
