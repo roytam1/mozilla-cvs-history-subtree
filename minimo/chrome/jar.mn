@@ -88,3 +88,4 @@ minimo.jar:
 	content/minimo/bindings/preferences.xml  (content/bindings/preferences.xml)
 	content/minimo/bindings/keynav.css       (content/bindings/keynav.css)
 	content/minimo/bindings/keynav.xml       (content/bindings/keynav.xml)
+	content/minimo/temporary-license.txt     (content/temporary-license.txt)
