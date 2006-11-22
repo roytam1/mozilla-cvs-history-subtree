@@ -425,7 +425,6 @@ function prefStartup() {
      * Example: chrome://minimo/content/preferences/preferences.xul#general
      */
 
-
      var targetURI = document.location;
 
      var keyTarget = targetURI.toString().split("#")[1];
@@ -434,11 +433,11 @@ function prefStartup() {
 
         if(keyTarget) {
 
-		  gPanelSelected = document.getElementById(keyTarget+"-pane");
-	        gToolbarButtonSelected = document.getElementById(keyTarget+"-button");
+          gPanelSelected = document.getElementById(keyTarget+"-pane");
+          gToolbarButtonSelected = document.getElementById(keyTarget+"-button");
 
-	        gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css (may have to be promoted minimo.css)
-    		  gToolbarButtonSelected.focus();
+          gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css (may have to be promoted minimo.css)
+          gToolbarButtonSelected.focus();
 
 	  } else { };
 
@@ -472,7 +471,6 @@ function focusSkipToPanel() {
 	} catch (e) { alert(e) }
 
 }
-
 
 /* 
  * Called from the XUL 
@@ -512,7 +510,6 @@ function syncPref(refElement) {
 	
 }
 
-
 /*
  * Okay, just close the window with sync mode. 
  */
@@ -530,7 +527,6 @@ function PrefOkay() {
 function PrefCancel() {
     gCancelSync=true;
 }
-
 
 function syncPrefSaveDOM() {
 	try {
@@ -588,11 +584,10 @@ function syncPrefSaveDOM() {
                    // }
 	             //else lf = prefSETValue.QueryInterface(Components.interfaces.nsILocalFile);
 
-	             lf = prefSETValue.QueryInterface(Components.interfaces.nsILocalFile);
+                   lf = prefSETValue.QueryInterface(Components.interfaces.nsILocalFile);
                    gPref.setComplexValue(prefName, Components.interfaces.nsILocalFile, lf);
 	 
                    }	
-
 		}
 
 		psvc.savePrefFile(null);
@@ -703,8 +698,6 @@ function syncPrefLoadDOM(elementList) {
 	}
 	UIdependencyCheck();
 }
-
-
 
 function prefFocus(el) {
 	document.getElementById(el).className="box-prefgroupitem2";
