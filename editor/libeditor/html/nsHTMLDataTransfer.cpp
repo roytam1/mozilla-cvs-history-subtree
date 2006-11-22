@@ -105,6 +105,9 @@
 #include "nsITransferable.h"
 #include "nsIDragService.h"
 #include "nsIDOMNSUIEvent.h"
+#include "nsIOutputStream.h"
+#include "nsIInputStream.h"
+#include "nsDirectoryServiceDefs.h"
 
 // for relativization
 #include "nsUnicharUtils.h"
@@ -130,10 +133,6 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsIContentFilter.h"
-#include "imgIEncoder.h"
-
-#include "nsIExternalHelperAppService.h"
-#include "nsCExternalHandlerService.h"
 
 const PRUnichar nbsp = 160;
 
@@ -1149,9 +1148,8 @@ NS_IMETHODIMP nsHTMLEditor::PrepareHTMLTransferable(nsITransferable **aTransfera
       (*aTransferable)->AddDataFlavor(kHTMLMime);
       (*aTransferable)->AddDataFlavor(kFileMime);
 #ifdef XP_WIN32
-      // we only support copy and paste of clipboard images on Windows
+      // image pasting from the clipboard is only implemented on Windows right now.
       (*aTransferable)->AddDataFlavor(kJPEGImageMime);
-      (*aTransferable)->AddDataFlavor(kNativeImageMime);
 #endif
     }
     (*aTransferable)->AddDataFlavor(kUnicodeMime);
@@ -1292,10 +1290,10 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
                                                    PRBool aDoDeleteSelection)
 {
   nsresult rv = NS_OK;
-  char* bestFlavor = nsnull;
+  nsXPIDLCString bestFlavor;
   nsCOMPtr<nsISupports> genericDataObj;
   PRUint32 len = 0;
-  if ( NS_SUCCEEDED(transferable->GetAnyTransferData(&bestFlavor, getter_AddRefs(genericDataObj), &len)) )
+  if ( NS_SUCCEEDED(transferable->GetAnyTransferData(getter_Copies(bestFlavor), getter_AddRefs(genericDataObj), &len)) )
   {
     nsAutoTxnsConserveSelection dontSpazMySelection(this);
     nsAutoString flavor;
@@ -1416,61 +1414,60 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         }
       }
     }
-    else if (flavor.Equals(NS_LITERAL_STRING(kNativeImageMime)))
-    {
-      nsXPIDLString htmlstr;
-      nsAutoEditBatch beginBatching(this);
-      rv = InsertHTMLWithContext(htmlstr, EmptyString(), EmptyString(), flavor, aSourceDoc, aDestinationNode, aDestOffset, aDoDeleteSelection);
-    }
     else if (0 == nsCRT::strcmp(bestFlavor, kJPEGImageMime))
     {
-      // Insert Image code
-      nsCOMPtr<nsIClipboardImage> clipboardImage (do_QueryInterface(genericDataObj));
-      if (clipboardImage)
-      {
-        // invoke image encoder
-        nsCOMPtr<imgIEncoder> imgEncoder (do_CreateInstance("@mozilla.org/image/encoder;2?type=image/jpeg"));
-        if (imgEncoder)
-        {
-          nsCOMPtr<nsIFile> clipboardImageFile;
-          rv = imgEncoder->EncodeClipboardImage(clipboardImage, getter_AddRefs(clipboardImageFile));
+      nsCOMPtr<nsIInputStream> imageStream(do_QueryInterface(genericDataObj));
+      NS_ENSURE_TRUE(imageStream, NS_ERROR_FAILURE);
 
-          if (NS_FAILED(rv) || !clipboardImageFile) 
-            return rv;
-          
-          nsCOMPtr<nsIURI> uri;
-          rv = NS_NewFileURI(getter_AddRefs(uri), clipboardImageFile);
-          NS_ENSURE_SUCCESS(rv, rv);
-        
-          nsCOMPtr<nsIURL> fileURL(do_QueryInterface(uri));
-          if (fileURL)
-          {
-            nsCAutoString urltext;
-            rv = fileURL->GetSpec(urltext);
-            if (NS_SUCCEEDED(rv) && !urltext.IsEmpty())
-            {
-              stuffToPaste.AssignLiteral("<IMG src=\"");
-              AppendUTF8toUTF16(urltext, stuffToPaste);
-              stuffToPaste.AppendLiteral("\" alt=\"\" >");
-              nsAutoEditBatch beginBatching(this);
-              rv = InsertHTMLWithContext(stuffToPaste,
-                                       nsString(), nsString(), NS_LITERAL_STRING(kFileMime), 
-                                       aSourceDoc,
-                                       aDestinationNode, aDestOffset,
-                                       aDoDeleteSelection);
-            }
-          }
-          
-          nsCOMPtr<nsPIExternalAppLauncher> tempFileManager (do_GetService(NS_EXTERNALHELPERAPPSERVICE_CONTRACTID));
-          if (tempFileManager)
-            tempFileManager->DeleteTemporaryFileOnExit(clipboardImageFile);
+      nsCOMPtr<nsIFile> fileToUse;
+      NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(fileToUse));
+      fileToUse->Append(NS_LITERAL_STRING("moz-screenshot.jpg"));
+      nsCOMPtr<nsILocalFile> path = do_QueryInterface(fileToUse);
+      path->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+
+      nsCOMPtr<nsIOutputStream> outputStream;
+      rv = NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), fileToUse);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      PRUint32 length;
+      imageStream->Available(&length);
+
+      nsCOMPtr<nsIOutputStream> bufferedOutputStream;
+      rv = NS_NewBufferedOutputStream(getter_AddRefs(bufferedOutputStream), outputStream, length);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      PRUint32 numWritten;
+      rv = bufferedOutputStream->WriteFrom(imageStream, length, &numWritten);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // force the stream close before we try to insert the image
+      // into the document.
+      rv = bufferedOutputStream->Close();
+      NS_ENSURE_SUCCESS(rv, rv);
+      
+      nsCOMPtr<nsIURI> uri;
+      rv = NS_NewFileURI(getter_AddRefs(uri), fileToUse);
+      NS_ENSURE_SUCCESS(rv, rv);
+      nsCOMPtr<nsIURL> fileURL(do_QueryInterface(uri));
+      if (fileURL)
+      {
+        nsCAutoString urltext;
+        rv = fileURL->GetSpec(urltext);
+        if (NS_SUCCEEDED(rv) && !urltext.IsEmpty())
+        {
+          stuffToPaste.AssignLiteral("<IMG src=\"");
+          AppendUTF8toUTF16(urltext, stuffToPaste);
+          stuffToPaste.AppendLiteral("\" alt=\"\" >");
+          nsAutoEditBatch beginBatching(this);
+          rv = InsertHTMLWithContext(stuffToPaste, EmptyString(), EmptyString(), 
+                                     NS_LITERAL_STRING(kFileMime),
+                                     aSourceDoc,
+                                     aDestinationNode, aDestOffset,
+                                     aDoDeleteSelection);
         }
-        else
-          rv = NS_ERROR_NOT_IMPLEMENTED; // for now give error code, we don't know how to handle the image format from the clipboard
       }
     }
   }
-  NS_Free(bestFlavor);
       
   // Try to scroll the selection into view if the paste/drop succeeded
   if (NS_SUCCEEDED(rv))
@@ -1980,7 +1977,7 @@ NS_IMETHODIMP nsHTMLEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPaste)
   
   // the flavors that we can deal with
   const char* const textEditorFlavors[] = { kUnicodeMime, nsnull };
-  const char* const htmlEditorFlavors[] = { kHTMLMime, kJPEGImageMime, kNativeImageMime, nsnull };
+  const char* const htmlEditorFlavors[] = { kHTMLMime, kJPEGImageMime, nsnull };
 
   nsCOMPtr<nsISupportsArray> flavorsList =
                            do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
