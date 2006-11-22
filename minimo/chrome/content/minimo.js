@@ -348,7 +348,9 @@ nsBrowserStatusHandler.prototype =
   
 function MiniNavStartup()
 {
-  var homepage = "http://www.mozilla.org";
+
+  // Chris suggestion - defaults to the homebase in startup time. 
+  var homepage = "chrome://minimo/content/bookmarks/bmview.xhtml";
   var homepages = null; 
     
   try {
