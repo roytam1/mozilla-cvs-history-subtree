@@ -1329,10 +1329,6 @@ function DoBrowserSB(sKey) {
   }  
 }
 
-
-/* marcio 4000 */
-
-
 function DoBrowserTarget(sKey) {
   
   /* skey format: handler,value */
@@ -1340,26 +1336,17 @@ function DoBrowserTarget(sKey) {
   var baseHandler=sKey.split(",");
 
   if(baseHandler[0]=="home") {
-
-     var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
-
+    var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
   }
-
   var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
-
   if(baseHandler[0]=="preferences") {
 	baseURL="chrome://minimo/content/preferences/preferences.xul#"
   } 
-  
   try { 
-	
     gBrowser.selectedTab = gBrowser.addTab(baseURL+baseHandler[1]);
     browserInit(gBrowser.selectedTab);
-
   } catch (e) {
-    
   }  
-
 }
 
 function DoBrowserGM(xmlRef) {
