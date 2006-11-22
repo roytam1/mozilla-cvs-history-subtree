@@ -37,6 +37,7 @@
  */
 
 @namespace url(http://www.w3.org/2002/xforms);
+@namespace xf url(http://www.w3.org/2002/xforms);
 @namespace html url(http://www.w3.org/1999/xhtml);
 @namespace xul url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul);
 @namespace mozType url(http://www.mozilla.org/projects/xforms/2005/type);
@@ -55,8 +56,8 @@ bind {
 html|*:root repeat,
 html|*:root repeatitem,
 html|*:root contextcontainer,
-html|*:root group,
-html|*:root switch,
+html|*:root group:not(:disabled),
+html|*:root switch:not(:disabled),
 html|*:root case,
 html|*:root select1:not([appearance]) item,
 html|*:root select1[appearance='minimal'] item,
@@ -68,7 +69,8 @@ html|*:root select1[appearance='minimal'] choices {
 }
 
 /* default MIP styling */
-*:disabled {
+*:disabled,
+xf|*[mozType|rejectedtype="true"] {
   display: none;
 }
 
@@ -104,11 +106,11 @@ html|*:root select1[appearance='full'] choices {
   display: none;
 }
 
-message, alert {
+message, alert, help {
   display: none;
 }
 
-action, message[level="ephemeral"], hint {
+html|*:root message[level="ephemeral"], html|*:root hint {
   position: absolute;
   z-index: 2147481647;
   visibility: hidden;
@@ -119,25 +121,33 @@ action, message[level="ephemeral"], hint {
   display: block;
 }
 
-alert {
-  -moz-binding: url('chrome://xforms/content/xforms.xml#inline-alert');
+html|*:root alert {
+  -moz-binding: url('chrome://xforms/content/xforms-xhtml.xml#xformswidget-alert');
+}
+xul|*:root alert {
+  -moz-binding: url('chrome://xforms/content/xforms-xul.xml#xformswidget-alert');
 }
 
-message[level="ephemeral"], hint {
-  -moz-binding: url('chrome://xforms/content/xforms.xml#ephemeral-message');
+html|*:root message[level="ephemeral"], html|*:root hint {
+  -moz-binding: url('chrome://xforms/content/xforms-xhtml.xml#xformswidget-ephemeral-message');
+}
+xul|*:root message[level="ephemeral"], xul|*:root hint {
+  -moz-binding: url('chrome://xforms/content/xforms-xul.xml#xformswidget-ephemeral-message');
+}
+
+html|*:root message[level="ephemeral"], html|*:root hint {
   background-color: InfoBackground;
   color: InfoText;
   border: 1px black solid;
   padding: 2px 3px;
   font: message-box;
-  position: absolute !important;
   width: auto;
   height: auto;
   display: block;
 }
 
-message[level="ephemeral"] > html|div.-moz-xforms-message-container,
-hint > html|div.-moz-xforms-message-container {
+html|*:root message[level="ephemeral"] > html|div.-moz-xforms-message-container,
+html|*:root hint > html|div.-moz-xforms-message-container {
   background-color: inherit;
   color: inherit;
   border: inherit;
@@ -165,25 +175,33 @@ xul|*:root output {
 }
 
   /* output type='xsd:date', appearance='full' */
-html|*:root output[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
+html|*:root output[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
   -moz-binding: url('chrome://xforms/content/xforms-xhtml.xml#xformswidget-output-date-full');
 }
-html|*:root output[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"]
+html|*:root output[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"][appearance="full"]
     html|span[mozType|calendar] {
   -moz-binding: url('chrome://xforms/content/widgets-xhtml.xml#calendar-full');
 }
 
-xul|*:root output[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
+xul|*:root output[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
   -moz-binding: url('chrome://xforms/content/xforms-xul.xml#xformswidget-output-date-full');
 }
-xul|*:root output[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"]
+xul|*:root output[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"][appearance="full"]
     xul|box[mozType|calendar] {
   -moz-binding: url('chrome://xforms/content/widgets-xul.xml#calendar-full');
 }
 
 /* range widgets */
-range {
-  -moz-binding: url('chrome://xforms/content/range.xml#xformswidget-range');
+html|*:root range[mozType|typelist~="http://www.w3.org/2001/XMLSchema#decimal"],
+html|*:root range[mozType|typelist~="http://www.w3.org/2001/XMLSchema#float"],
+html|*:root range[mozType|typelist~="http://www.w3.org/2001/XMLSchema#double"] {
+  -moz-binding: url('chrome://xforms/content/range-xhtml.xml#xformswidget-range-numeric');
+}
+
+html|*:root range[mozType|typelist~="http://www.w3.org/2001/XMLSchema#decimal"] html|span[mozType|slider],
+html|*:root range[mozType|typelist~="http://www.w3.org/2001/XMLSchema#float"] html|span[mozType|slider],
+html|*:root range[mozType|typelist~="http://www.w3.org/2001/XMLSchema#double"] html|span[mozType|slider] {
+  -moz-binding: url('chrome://xforms/content/widgets-xhtml.xml#slider');
 }
 
 /* input widgets */
@@ -198,24 +216,25 @@ xul|*:root input {
 }
 
   /* input type="xsd:boolean" */
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#boolean"] {
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#boolean"] {
   -moz-binding: url('chrome://xforms/content/input-xhtml.xml#xformswidget-input-boolean');
 }
 
-xul|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#boolean"] {
+xul|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#boolean"] {
   -moz-binding: url('chrome://xforms/content/input-xul.xml#xformswidget-input-boolean');
 }
 
   /* input type="xsd:date" */
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"] html|span[mozType|calendar] {
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"] html|span[mozType|calendar] {
   -moz-binding: url('chrome://xforms/content/widgets-xhtml.xml#calendar-full');
+  z-index: 2147481647;
 }
 
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"] {
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"] {
   -moz-binding: url('chrome://xforms/content/input-xhtml.xml#xformswidget-input-date');
 }
 
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"] html|input[anonid="dropmarker"] {
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"] html|input[anonid="dropmarker"] {
   min-width:27px;
   min-height: 1.3em;
   background-image: url(chrome://xforms/content/calendar.png) !important;
@@ -223,26 +242,36 @@ html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"] html|inp
   background-repeat: no-repeat !important;
 }
 
-  /* input type="xsd:date", appearance="full" */
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
-  -moz-binding: url('chrome://xforms/content/input-xhtml.xml#xformswidget-input-date-full');
+xul|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"] xul|toolbarbutton[anonid="dropmarker"] {
+  min-width:27px;
+  min-height: 1.3em;
+  list-style-image: url('chrome://xforms/content/calendar.png');
 }
 
-xul|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
-  -moz-binding: url('chrome://xforms/content/input-xul.xml#xformswidget-input-date-full');
+xul|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"] {
+  -moz-binding: url('chrome://xforms/content/input-xul.xml#xformswidget-input-date');
 }
-xul|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#date"][appearance="full"]
-    xul|box[mozType|calendar] {
+
+xul|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"] xul|box[mozType|calendar] {
   -moz-binding: url('chrome://xforms/content/widgets-xul.xml#calendar-full');
 }
 
+  /* input type="xsd:date", appearance="full" */
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
+  -moz-binding: url('chrome://xforms/content/input-xhtml.xml#xformswidget-input-date-full');
+}
+
+xul|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#date"][appearance="full"] {
+  -moz-binding: url('chrome://xforms/content/input-xul.xml#xformswidget-input-date-full');
+}
+
   /* input type="xsd:gMonth" */
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#gMonth"] {
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#gMonth"] {
   -moz-binding: url('chrome://xforms/content/input-xhtml.xml#xformswidget-input-month');
 }
 
   /* input type="xsd:gDay" */
-html|*:root input[mozType|type="http://www.w3.org/2001/XMLSchema#gDay"] {
+html|*:root input[mozType|typelist~="http://www.w3.org/2001/XMLSchema#gDay"] {
   -moz-binding: url('chrome://xforms/content/input-xhtml.xml#xformswidget-input-day');
 }
 
@@ -586,9 +615,15 @@ select *|*.select-choice-content, select1 *|*.select-choice-content {
   padding-left: 10px;
 }
 
+/* XXX: selectors are wrong, styles don't work (bug 351797). */
 xul|*:root select1[appearance="full"] xul|box xul|radiogroup:focus xul|radio[selected] + label,
 xul|*:root select[appearance="full"] xul|box xul|checkbox:focus + label {
   outline: 1px dotted invert;
+}
+
+xul|*:root select[appearance="full"] xul|*.checkbox-label-box,
+xul|*:root select1[appearance="full"] xul|*.radio-label-box {
+  display: none;
 }
 
 xul|*:root select, xul|*:root select1 {
@@ -601,13 +636,22 @@ html|*:root upload {
   -moz-binding: url('chrome://xforms/content/xforms-xhtml.xml#xformswidget-upload-disabled');
 }
 
-html|*:root upload[mozType|type="http://www.w3.org/2001/XMLSchema#anyURI"],
-html|*:root upload[mozType|type="http://www.w3.org/2001/XMLSchema#base64Binary"],
-html|*:root upload[mozType|type="http://www.w3.org/2001/XMLSchema#hexBinary"] {
+html|*:root upload[mozType|typelist~="http://www.w3.org/2001/XMLSchema#anyURI"],
+html|*:root upload[mozType|typelist~="http://www.w3.org/2001/XMLSchema#base64Binary"],
+html|*:root upload[mozType|typelist~="http://www.w3.org/2001/XMLSchema#hexBinary"] {
   -moz-binding: url('chrome://xforms/content/xforms-xhtml.xml#xformswidget-upload');
+  display: inline;
 }
 
 /* repeat widgets */
+*|*[xf|repeat-bind] {
+  -moz-binding: url('chrome://xforms/content/xforms.xml#xformswidget-attr-repeat');
+}
+
+*|*[xf|repeat-nodeset] {
+  -moz-binding: url('chrome://xforms/content/xforms.xml#xformswidget-attr-repeat');
+}
+
 html|*:root repeat {
   -moz-binding: url('chrome://xforms/content/xforms-xhtml.xml#xformswidget-repeat');
 }
@@ -627,3 +671,4 @@ xul|*:root repeat[appearance="compact"] *|*[anonid="insertion"] {
 xul|*:root repeat .xf-repeat-item {
   -moz-box-flex: 1;
 }
+

@@ -177,6 +177,12 @@
         </body>
       </method>
 
+      <method name="getCurrentValue">
+        <body>
+          throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+        </body>
+      </method>
+
       <property name="incremental">
         <getter>
           <![CDATA[
@@ -201,9 +207,9 @@
           this.setAttribute("selection", val);
 
           if (val == "open")
-            this.control.allowFreeEnry(true);
+            this.control.allowFreeEntry(true);
           else
-            this.control.allowFreeEnry(false);
+            this.control.allowFreeEntry(false);
         </setter>
       </property>
 
@@ -304,21 +310,7 @@
           this._selectedElementArray = new Array();
 
           if (!aContainsNonText) {
-            // replace new line (\n), tabs (\t) and carriage returns (\r) with
-            // "".
-            var value = "";
-            var accessValue = this.accessors.getValue();
-            if (accessValue)
-              value = accessValue.replace(/\n|\t|\r/g, " ");
-
-            // get an array of values selected in the bound node
-            var selectedArray = value.split(/\s/);
-
-            // when the string is empty, split returns an array containing
-            // one empty string, rather than an empty array.  We'll allow that
-            // into the defaultHash so that xforms-out-of-range will be
-            // correctly generated if none of the items in the select have
-            // an empty string as a value
+            var selectedArray = this._getValuesArray();
 
             for (var run = 0; run < selectedArray.length; run++) {
               this._defaultHash[selectedArray[run]] = {hits: 0}
@@ -329,6 +321,7 @@
           var boundNode = this.accessors.getBoundNode();
           var child = boundNode ? boundNode.firstChild : null;
 
+          var childcount = 0;
           for (; child; child = child.nextSibling) {
             var type = child.nodeType;
 
@@ -343,28 +336,38 @@
                 nonWhitespace = !(/^\s*$/.test(string));
               }
               if (nonWhitespace) {
-                // replace new line (\n), tabs (\t) and carriage returns (\r)
-                // with " ".
-                var value = string.replace(/\n|\t|\r/g, " ");
+                if (++childcount > 1 && this.localName == "select1")
+                  break;
 
-                // get an array of values selected in the bound node
-                var selectedArray = value.split(" ");
+                // When the string is empty, the method returns an array
+                // containing one empty string, rather than an empty array.
+                // We'll allow that into the defaultHash so that
+                // 'xforms-out-of-range' will be correctly generated if none of
+                // the items in the select have an empty string as a value.
+                var selectedArray = this._getValuesArray(string);
 
-                // when the string is empty, split returns an array containing
-                // one empty string, rather than an empty array.  We'll allow
-                // that into the defaultHash so that xforms-out-of-range will be
-                // correctly generated if none of the items in the select have
-                // an empty string as a value
-    
                 for (var run = 0; run < selectedArray.length; run++) {
                   this._defaultHash[selectedArray[run]] = {hits: 0}
                 }
               }
             } else {
+              if (++childcount > 1 && this.localName == "select1")
+                  break;
+
               // if it's not a text node, we'll assume that we are looking at
               // a node worth comparing.  As such, look for an
               // item with a copy element that might match this node.
               this._selectedElementArray.push({element: child, hits: 0});
+            }
+          }
+
+          if (this.localName == "select1") {
+            var outOfRange = childcount > 1;
+            if (outOfRange != this._outOfRange) {
+              this._outOfRange = outOfRange;
+              this.accessors.setInRange(!outOfRange);
+              if (outOfRange)
+                return;
             }
           }
         ]]></body>
@@ -472,7 +475,7 @@
             var labelText = item.labelText;
             var textNode = this.ownerDocument.createTextNode(labelText);
 
-            var controlitem = 
+            var controlitem =
               this.control.appendItem(textNode, valueText);
 
             var selected = false;
@@ -579,18 +582,50 @@
 
       <method name="_updateDefaultValues">
         <body>
-          <![CDATA[
-          // get an array of values selected in the bound node
-          var selectedArray = new Array();
-          if (this.accessors.getValue())
-            selectedArray = this.accessors.getValue().split(" ");
+        <![CDATA[
+          var selectedArray = this._getValuesArray();
 
           // store the values in a hash for quick access
           this._defaultHash = new Object();
           for (var run = 0; run < selectedArray.length; run++) {
             this._defaultHash[selectedArray[run]] = {hits: 0}
           }
-          ]]>
+        ]]>
+        </body>
+      </method>
+
+      <!-- Return an array of values to be selected for the given string or of
+        the bound node if string argument is omitted. -->
+      <method name="_getValuesArray">
+        <parameter name="aValue"/>
+        <body>
+          // When the instance value is empty, then we return an array
+          // containing one empty string, rather than an empty array.  We'll
+          // allow that into the defaultHash so that 'xforms-out-of-range' event
+          // will be correctly generated if none of the items in the select have
+          // an empty string as a value.
+
+          if (!aValue) {
+            aValue = this.accessors.getValue();
+            if (!aValue) {
+              aValue = "";
+            }
+          }
+
+          if (this.localName == "select1")
+            return [aValue];
+
+          // A limitation of the XML Schema list datatypes is that white space
+          // characters in the storage values (the value element) are always
+          // interpreted as separators between individual data values.
+          // Therefore, authors should avoid using white space characters within
+          // storage values with list simpleContent.
+
+          // Replace new line (\n), tabs (\t) and carriage returns (\r) with
+          // space (" ").
+          aValue = aValue.replace(/\n|\t|\r/g, " ");
+
+          return aValue.split(/\s/);
         </body>
       </method>
 
@@ -898,6 +933,13 @@
         </setter>
       </property>
 
+      <!-- Advance focus to native widget. -->
+      <method name="focus">
+        <body>
+          this.control.focus();
+        </body>
+      </method>
+
       <!-- Update instance data to native control widget value.
         @param aIncremental - will be true if this function is called because
           the user selected a new value in the native control widget. It will be
@@ -987,6 +1029,63 @@
       </constructor>
 
     </implementation>
+  </binding>
+
+
+  <!-- The 'controlwidget-nonativewidget-base' is the base binding for underlying
+    controls which represents the xforms control. This binding is supposed to
+    be used for underlying control that actually haven't native widget. For
+    example, underlying control for select @appearance='full' is represented by
+    checkboxes bundle.
+    This binding implements the 'focus' method to advance focus to the
+    underlying control.
+
+    The widget assumes successors bindings have additional methods:
+
+      advanceFocusToItem(aItem) - makes item focused
+        @param aItem - item element
+
+      isItemElement(aElement) - returns true if element is item
+        @param aElement - DOMElement
+  -->
+  <binding id="controlwidget-nonativewidget-base"
+           extends="#controlwidget-base">
+
+    <implementation>
+      <!-- Advance focus to native widget. -->
+      <method name="focus">
+        <body>
+        <![CDATA[
+          var item = this.currentItem;
+          if (!item) {
+            var options = this.parentControl._controlArray;
+            // If there are selected items then advance focus to first of them
+            for (var i = 0; i < options.length; i++) {
+              item = options[i].option;
+              var selected = this.isItemSelected(item);
+              if (selected)
+                break;
+            }
+            // otherwise we focus first item.
+            if (options.length && i == options.length)
+              item = options[0].option;
+          }
+
+          if (item)
+            this.advanceFocusToItem(item);
+        ]]>
+        </body>
+      </method>
+
+      <field name="currentItem">null</field>
+    </implementation>
+
+    <handlers>
+      <handler event="focus" phase="capturing">
+        if (this.isItemElement(event.originalTarget))
+          this.currentItem = event.originalTarget;
+      </handler>
+    </handlers>
   </binding>
 
 </bindings>

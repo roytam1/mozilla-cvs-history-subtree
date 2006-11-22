@@ -157,7 +157,7 @@ nsXFormsControlStubBase::ResetBoundNode(const nsString &aBindAttribute,
   RemoveIndexListeners();
 
   if (!mHasParent || !HasBindingAttribute())
-    return NS_OK;
+    return NS_OK_XFORMS_NOTREADY;
 
   nsCOMPtr<nsIDOMXPathResult> result;
   nsresult rv = ProcessNodeBinding(aBindAttribute, aResultType,
@@ -335,16 +335,8 @@ nsXFormsControlStubBase::ProcessNodeBinding(const nsString          &aBindingAtt
   // to return NS_OK so that we don't start complaining about binding
   // failures in this situation.
 
-  nsCOMPtr<nsIDOMDocument> domDoc;
-  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
-  if (!domDoc) {
-    // We are not in a document, so we'll "defer the binding" for now. When
-    // the control gets inserted into a document, we'll Bind() again.
-    return NS_OK_XFORMS_DEFERRED;
-  }
-
-  if (!nsXFormsUtils::IsDocumentReadyForBind(domDoc)) {
-    nsXFormsModelElement::DeferElementBind(domDoc, this);
+  if (!nsXFormsUtils::IsDocumentReadyForBind(mElement)) {
+    nsXFormsModelElement::DeferElementBind(this);
     return NS_OK_XFORMS_DEFERRED;
   }
 
@@ -372,6 +364,12 @@ nsXFormsControlStubBase::ProcessNodeBinding(const nsString          &aBindingAtt
   if (aModel)
     NS_ADDREF(*aModel = mModel);
   mUsesModelBinding = usesModelBinding;
+
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mElement));
+  NS_ENSURE_STATE(content);
+  nsCOMPtr<nsIDocument> doc = content->GetCurrentDoc();
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(doc));
+  NS_ENSURE_STATE(domDoc);
 
   if (NS_SUCCEEDED(rv) && indexesUsed.Count()) {
     // add index listeners on repeat elements
@@ -791,7 +789,8 @@ nsXFormsControlStubBase::AfterSetAttribute(nsIAtom *aName)
   if (IsBindingAttribute(aName)) {
     PRBool dummy;
     nsresult rv = Bind(&dummy);
-    if (NS_SUCCEEDED(rv) &&  rv != NS_OK_XFORMS_DEFERRED)
+    if (NS_SUCCEEDED(rv) &&
+        rv != NS_OK_XFORMS_DEFERRED && rv != NS_OK_XFORMS_NOTREADY)
       Refresh();
   }
 
@@ -805,6 +804,23 @@ nsXFormsControlStubBase::BeforeSetAttribute(nsIAtom         *aName,
     AddRemoveSNBAttr(aName, aValue);
   }
 }
+
+nsresult
+nsXFormsControlStubBase::GetBoundBuiltinType(PRUint16 *aBuiltinType)
+{
+  NS_ENSURE_ARG_POINTER(aBuiltinType);
+  *aBuiltinType = 0;
+
+  NS_ENSURE_STATE(mModel);
+
+  // get type of bound instance data
+  nsCOMPtr<nsISchemaType> schemaType;
+  nsresult rv = mModel->GetTypeForControl(this, getter_AddRefs(schemaType));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return mModel->GetRootBuiltinType(schemaType, aBuiltinType);
+}
+
 
 NS_IMPL_ISUPPORTS_INHERITED3(nsXFormsBindableControlStub,
                              nsXFormsBindableStub,

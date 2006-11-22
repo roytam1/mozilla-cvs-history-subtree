@@ -81,6 +81,7 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsIEventStateManager.h"
+#include "nsStringEnumerator.h"
 
 #define XFORMS_LAZY_INSTANCE_BINDING \
   "chrome://xforms/content/xforms.xml#xforms-lazy-instance"
@@ -245,10 +246,13 @@ nsXFormsControlListItem::iterator::operator*()
   return mCur;
 }
 
-nsXFormsControlListItem::nsXFormsControlListItem(nsIXFormsControl* aControl)
+nsXFormsControlListItem::nsXFormsControlListItem(
+  nsIXFormsControl* aControl,
+  nsDataHashtable<nsISupportsHashKey,nsXFormsControlListItem *>* aHashtable)
   : mNode(aControl),
     mNextSibling(nsnull),
-    mFirstChild(nsnull)
+    mFirstChild(nsnull),
+    mControlListHash(aHashtable)
 {
   
 }
@@ -293,8 +297,15 @@ nsXFormsControlListItem::Clear()
     delete mNextSibling;
     mNextSibling = nsnull;
   }
-  if (mNode)
+  if (mNode) {
+    /* we won't bother removing each item one by one from the hashtable.  This
+     * approach assumes that we are clearing the whole model's list of controls
+     * due to the model going away.  After the model clears this list, it will
+     * clear the hashtable all at once.
+     */
+    mControlListHash = nsnull;
     mNode = nsnull;
+  }
 }
 
 nsresult
@@ -310,12 +321,17 @@ nsXFormsControlListItem::AddControl(nsIXFormsControl *aControl,
 
   // 2) control with no parent
   if (!aParent) {
-    nsXFormsControlListItem* newNode = new nsXFormsControlListItem(aControl);
+    nsXFormsControlListItem* newNode =
+      new nsXFormsControlListItem(aControl, mControlListHash);
+
     NS_ENSURE_STATE(newNode);
 
     // Empty tree (we have already checked mFirstChild)
     if (!mNode) {
       mFirstChild = newNode;
+      nsCOMPtr<nsIDOMElement> ele;
+      aControl->GetElement(getter_AddRefs(ele));
+      mControlListHash->Put(ele, newNode);
       return NS_OK;
     }
 
@@ -323,6 +339,9 @@ nsXFormsControlListItem::AddControl(nsIXFormsControl *aControl,
       newNode->mNextSibling = mNextSibling;
     }
     mNextSibling = newNode;
+    nsCOMPtr<nsIDOMElement> ele;
+    aControl->GetElement(getter_AddRefs(ele));
+    mControlListHash->Put(ele, newNode);
 #ifdef DEBUG
     nsXFormsControlListItem* next = newNode->mNextSibling;
     while (next) {
@@ -345,9 +364,14 @@ nsXFormsControlListItem::AddControl(nsIXFormsControl *aControl,
   }
 
   // 4) first child for parentControl
-  nsXFormsControlListItem* newNode = new nsXFormsControlListItem(aControl);
+  nsXFormsControlListItem* newNode =
+    new nsXFormsControlListItem(aControl, mControlListHash);
+
   NS_ENSURE_STATE(newNode);
   parentControl->mFirstChild = newNode;
+  nsCOMPtr<nsIDOMElement> ele;
+  aControl->GetElement(getter_AddRefs(ele));
+  mControlListHash->Put(ele, newNode);
 
   return NS_OK;
 }
@@ -430,6 +454,9 @@ nsXFormsControlListItem::RemoveControl(nsIXFormsControl *aControl,
                  "Deleted control should not have siblings!");
     NS_ASSERTION(!(deleteMe->mFirstChild),
                  "Deleted control should not have children!");
+    nsCOMPtr<nsIDOMElement> element;
+    deleteMe->mNode->GetElement(getter_AddRefs(element));
+    mControlListHash->Remove(element);
     delete deleteMe;
     aRemoved = PR_TRUE;
   }
@@ -443,25 +470,14 @@ nsXFormsControlListItem::FindControl(nsIXFormsControl *aControl)
   if (!aControl)
     return nsnull;
 
-  // this should only be false for the root
-  if (mNode) {
-    // XXX: *sigh* pointer comparision of nsIXFormsControl would be nice...
-    nsCOMPtr<nsIDOMElement> el1, el2;
-    aControl->GetElement(getter_AddRefs(el1));
-    mNode->GetElement(getter_AddRefs(el2));
-
-    if (el1 == el2)
-      return this;
+  nsXFormsControlListItem *listItem;
+  nsCOMPtr<nsIDOMElement> element;
+  aControl->GetElement(getter_AddRefs(element));
+  if (mControlListHash->Get(element, &listItem)) {
+    return listItem;
   }
 
-  nsXFormsControlListItem* cur = nsnull;
-  if (mFirstChild) {
-    cur = mFirstChild->FindControl(aControl);
-  }
-  if (!cur && mNextSibling) {
-    cur = mNextSibling->FindControl(aControl);
-  }
-  return cur;
+  return nsnull;
 }
 
 already_AddRefed<nsIXFormsControl>
@@ -554,19 +570,17 @@ nsPostRefresh::~nsPostRefresh()
   // container->refresh below could ask for ContainerNeedsPostRefresh which
   // will add an item to the sContainerPostRefreshList if sRefreshing > 0.
   // So keeping this under sRefreshing-- will avoid an infinite loop.
-  if (sContainerPostRefreshList) {
-    while (sContainerPostRefreshList->Count()) {
-      PRInt32 last = sContainerPostRefreshList->Count() - 1;
-      nsIXFormsControl* container =
-        NS_STATIC_CAST(nsIXFormsControl*, sContainerPostRefreshList->ElementAt(last));
-      sContainerPostRefreshList->RemoveElementAt(last);
-      if (container) {
-        container->Refresh();
-      }
+  while (sContainerPostRefreshList && sContainerPostRefreshList->Count()) {
+    PRInt32 last = sContainerPostRefreshList->Count() - 1;
+    nsIXFormsControl* container =
+      NS_STATIC_CAST(nsIXFormsControl*, sContainerPostRefreshList->ElementAt(last));
+    sContainerPostRefreshList->RemoveElementAt(last);
+    if (container) {
+      container->Refresh();
     }
-    delete sContainerPostRefreshList;
-    sContainerPostRefreshList = nsnull;
   }
+  delete sContainerPostRefreshList;
+  sContainerPostRefreshList = nsnull;
 }
 
 const nsVoidArray* 
@@ -636,7 +650,7 @@ nsXFormsModelElement::CancelPostRefresh(nsIXFormsControl* aControl)
 
 nsXFormsModelElement::nsXFormsModelElement()
   : mElement(nsnull),
-    mFormControls(nsnull),
+    mFormControls(nsnull, &mControlListHash),
     mSchemaCount(0),
     mSchemaTotal(0),
     mPendingInstanceCount(0),
@@ -650,6 +664,7 @@ nsXFormsModelElement::nsXFormsModelElement()
     mLoopMax(600),
     mInstanceDocuments(nsnull)
 {
+  mControlListHash.Init();
 }
 
 NS_INTERFACE_MAP_BEGIN(nsXFormsModelElement)
@@ -675,6 +690,7 @@ nsXFormsModelElement::OnDestroyed()
     mInstanceDocuments->DropReferences();
 
   mFormControls.Clear();
+  mControlListHash.Clear();
 
   return NS_OK;
 }
@@ -1470,7 +1486,9 @@ nsXFormsModelElement::GetTypeForControl(nsIXFormsControl  *aControl,
       validator.LoadSchema(schema);
   }
 
-  return validator.GetType(schemaTypeName, schemaTypeNamespace, aType);
+  PRBool foundType = validator.GetType(schemaTypeName, schemaTypeNamespace,
+                                       aType);
+  return foundType ? NS_OK : NS_ERROR_FAILURE;
 }
 
 /* static */ nsresult
@@ -2572,6 +2590,442 @@ nsXFormsModelElement::ForceRebind(nsIXFormsControl* aControl)
   return RefreshSubTree(controlItem->FirstChild(), rebindChildren);
 }
 
+nsresult
+nsXFormsModelElement::AppendBuiltinTypes(PRUint16       aType,
+                                         nsStringArray *aTypeArray)
+{
+  // This function recursively appends aType (and its base types) to
+  // aTypeArray.  So it assumes aType isn't in the array already.
+  nsAutoString typeString, builtString;
+  PRUint16 parentType = 0;
+
+  // We won't append xsd:anyType as the base of every type since that is kinda
+  // redundant.
+
+  switch (aType) {
+    case nsISchemaBuiltinType::BUILTIN_TYPE_STRING:
+      typeString.AppendLiteral("string");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_BOOLEAN:
+      typeString.AppendLiteral("boolean");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DECIMAL:
+      typeString.AppendLiteral("decimal");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_FLOAT:
+      typeString.AppendLiteral("float");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DOUBLE:
+      typeString.AppendLiteral("double");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DURATION:
+      typeString.AppendLiteral("duration");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DATETIME:
+      typeString.AppendLiteral("dateTime");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_TIME:
+      typeString.AppendLiteral("time");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DATE:
+      typeString.AppendLiteral("date");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GYEARMONTH:
+      typeString.AppendLiteral("gYearMonth");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GYEAR:
+      typeString.AppendLiteral("gYear");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GMONTHDAY:
+      typeString.AppendLiteral("gMonthDay");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GDAY:
+      typeString.AppendLiteral("gDay");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GMONTH:
+      typeString.AppendLiteral("gMonth");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_HEXBINARY:
+      typeString.AppendLiteral("hexBinary");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_BASE64BINARY:
+      typeString.AppendLiteral("base64Binary");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ANYURI:
+      typeString.AppendLiteral("anyURI");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_QNAME:
+      typeString.AppendLiteral("QName");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NOTATION:
+      typeString.AppendLiteral("NOTATION");
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NORMALIZED_STRING:
+      typeString.AppendLiteral("normalizedString");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_STRING;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_TOKEN:
+      typeString.AppendLiteral("token");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NORMALIZED_STRING;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_BYTE:
+      typeString.AppendLiteral("byte");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_SHORT;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDBYTE:
+      typeString.AppendLiteral("unsignedByte");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDSHORT;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_INTEGER:
+      typeString.AppendLiteral("integer");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_DECIMAL;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NEGATIVEINTEGER:
+      typeString.AppendLiteral("negativeInteger");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NONPOSITIVEINTEGER;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NONPOSITIVEINTEGER:
+      typeString.AppendLiteral("nonPositiveInteger");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_INTEGER;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_LONG:
+      typeString.AppendLiteral("long");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_INTEGER;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NONNEGATIVEINTEGER:
+      typeString.AppendLiteral("nonNegativeInteger");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_INTEGER;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_INT:
+      typeString.AppendLiteral("int");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_LONG;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDINT:
+      typeString.AppendLiteral("unsignedInt");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDLONG;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDLONG:
+      typeString.AppendLiteral("unsignedLong");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NONNEGATIVEINTEGER;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_POSITIVEINTEGER:
+      typeString.AppendLiteral("positiveInteger");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NONNEGATIVEINTEGER;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_SHORT:
+      typeString.AppendLiteral("short");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_INT;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDSHORT:
+      typeString.AppendLiteral("unsignedShort");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDINT;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_LANGUAGE:
+      typeString.AppendLiteral("language");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_TOKEN;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKEN:
+      typeString.AppendLiteral("NMTOKEN");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_TOKEN;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NAME:
+      typeString.AppendLiteral("Name");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_TOKEN;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME:
+      typeString.AppendLiteral("NCName");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NAME;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ID:
+      typeString.AppendLiteral("ID");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREF:
+      typeString.AppendLiteral("IDREF");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ENTITY:
+      typeString.AppendLiteral("ENTITY");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREFS:
+      typeString.AppendLiteral("IDREFS");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_IDREF;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ENTITIES:
+      typeString.AppendLiteral("ENTITIES");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_ENTITY;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKENS:
+      typeString.AppendLiteral("NMTOKENS");
+      parentType = nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKEN;
+      break;
+    default:
+      // should never hit here
+      NS_WARNING("nsXFormsModelElement::AppendBuiltinTypes: Unknown builtin type encountered.");
+      return NS_ERROR_FAILURE;
+  }
+
+  builtString.AppendLiteral(NS_NAMESPACE_XML_SCHEMA);
+  builtString.AppendLiteral("#");
+  builtString.Append(typeString);
+  aTypeArray->AppendString(builtString);
+
+  nsresult rv = NS_OK;
+  if (parentType) {
+    rv = AppendBuiltinTypes(parentType, aTypeArray);
+  }
+
+  return rv;
+}
+
+nsresult
+nsXFormsModelElement::WalkTypeChainInternal(nsISchemaType *aType,
+                                            PRUint16      *aBuiltinType,
+                                            nsStringArray *aTypeArray)
+{
+  // If aBuiltinType is !nsnull, then we are only looking for the root
+  // primative type for aType.  Otherwise build the whole string array.
+  PRBool onlyFindBuiltinRoot = aBuiltinType ? PR_TRUE : PR_FALSE;
+
+  PRUint16 schemaTypeValue = 0;
+  aType->GetSchemaType(&schemaTypeValue);
+  NS_ENSURE_STATE(schemaTypeValue);
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsISchemaSimpleType> simpleType;
+
+  if (schemaTypeValue == nsISchemaType::SCHEMA_TYPE_SIMPLE) {
+    simpleType = do_QueryInterface(aType);
+    NS_ENSURE_STATE(simpleType);
+    PRUint16 simpleTypeValue;
+    simpleType->GetSimpleType(&simpleTypeValue);
+    NS_ENSURE_STATE(simpleTypeValue);
+
+    switch (simpleTypeValue) {
+      case nsISchemaSimpleType::SIMPLE_TYPE_BUILTIN:
+      {
+        nsCOMPtr<nsISchemaBuiltinType> builtinType(do_QueryInterface(aType));
+        NS_ENSURE_STATE(builtinType);
+
+        if (onlyFindBuiltinRoot) {
+          return BuiltinTypeToPrimative(builtinType, aBuiltinType);
+        }
+        // the datatype URI for aType will be added to the array by
+        // AppendBuiltinTypes
+        PRUint16 builtinTypeVal;
+        rv = builtinType->GetBuiltinType(&builtinTypeVal);
+        NS_ENSURE_SUCCESS(rv, rv);
+        return AppendBuiltinTypes(builtinTypeVal, aTypeArray);
+      }
+      case nsISchemaSimpleType::SIMPLE_TYPE_RESTRICTION:
+      {
+        nsCOMPtr<nsISchemaRestrictionType> restType(do_QueryInterface(aType));
+        NS_ENSURE_STATE(restType);
+        restType->GetBaseType(getter_AddRefs(simpleType));
+
+        break;
+      }
+      case nsISchemaSimpleType::SIMPLE_TYPE_LIST:
+      {
+        nsCOMPtr<nsISchemaListType> listType(do_QueryInterface(aType));
+        NS_ENSURE_STATE(listType);
+        listType->GetListType(getter_AddRefs(simpleType));
+
+        break;
+      }
+      case nsISchemaSimpleType::SIMPLE_TYPE_UNION:
+      {
+        // For now union types aren't supported.  A union means that the type
+        // could be of any type listed in the union and still be valid.  But we
+        // don't know which path it will take since we'd basically have to
+        // validate the node value to know.  Someday we may have to figure out
+        // how to properly handle this, though we may never need to if no other
+        // processor supports it.  Strictly interpreting the spec, we don't
+        // need to handle unions as far as determining whether a control can
+        // bind to data of a given type.  Just the types defined in the spec
+        // and restrictions of those types.
+        return NS_ERROR_XFORMS_UNION_TYPE;
+      }
+      default:
+        // We only anticipate the 4 types listed above.  Definitely an error
+        // if we get something else.
+        return NS_ERROR_FAILURE;
+    }
+
+  } else if (schemaTypeValue == nsISchemaType::SCHEMA_TYPE_COMPLEX) {
+    nsCOMPtr<nsISchemaComplexType> complexType(do_QueryInterface(aType));
+    NS_ENSURE_STATE(complexType);
+    PRUint16 complexTypeValue = 0;
+    complexType->GetDerivation(&complexTypeValue);
+    NS_ENSURE_STATE(complexTypeValue);
+    if ((complexTypeValue ==
+         nsISchemaComplexType::DERIVATION_RESTRICTION_SIMPLE) ||
+        (complexTypeValue ==
+         nsISchemaComplexType::DERIVATION_EXTENSION_SIMPLE)) {
+      complexType->GetSimpleBaseType(getter_AddRefs(simpleType));
+    } else {
+      return NS_ERROR_FAILURE;
+    }
+  } else {
+    return NS_ERROR_FAILURE;
+  }
+
+  // For SIMPLE_TYPE_LIST and SIMPLE_TYPE_RESTRICTION we need to go around
+  // the horn again with the next simpleType.  Same with
+  // DERIVATION_RESTRICTION_SIMPLE and DERIVATION_EXTENSION_SIMPLE.  All other
+  // types should not reach here.
+
+  NS_ENSURE_STATE(simpleType);
+
+  if (!onlyFindBuiltinRoot) {
+    nsAutoString builtString;
+    rv = aType->GetTargetNamespace(builtString);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsAutoString typeName;
+    rv = aType->GetName(typeName);
+    NS_ENSURE_SUCCESS(rv, rv);
+    builtString.AppendLiteral("#");
+    builtString.Append(typeName);
+    aTypeArray->AppendString(builtString);
+  }
+
+  return WalkTypeChainInternal(simpleType, aBuiltinType, aTypeArray);
+
+}
+
+nsresult
+nsXFormsModelElement::BuiltinTypeToPrimative(nsISchemaBuiltinType *aSchemaType,
+                                             PRUint16             *aPrimType)
+{
+  NS_ENSURE_ARG(aSchemaType);
+  NS_ENSURE_ARG_POINTER(aPrimType);
+
+  PRUint16 builtinType = 0;
+  nsresult rv = aSchemaType->GetBuiltinType(&builtinType);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Note: this won't return BUILTIN_TYPE_ANY since that is the root of all
+  // types.
+
+  switch (builtinType) {
+    case nsISchemaBuiltinType::BUILTIN_TYPE_STRING:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_BOOLEAN:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DECIMAL:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_FLOAT:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DOUBLE:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DURATION:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DATETIME:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_TIME:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DATE:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GYEARMONTH:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GYEAR:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GMONTHDAY:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GDAY:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_GMONTH:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_HEXBINARY:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_BASE64BINARY:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ANYURI:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_QNAME:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NOTATION:
+      *aPrimType = builtinType;
+      break;
+
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NORMALIZED_STRING:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_TOKEN:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_LANGUAGE:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKEN:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NAME:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ID:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREF:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ENTITY:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREFS:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ENTITIES:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKENS:
+      *aPrimType = nsISchemaBuiltinType::BUILTIN_TYPE_STRING;
+      break;
+    case nsISchemaBuiltinType::BUILTIN_TYPE_BYTE:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDBYTE:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_INTEGER:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NEGATIVEINTEGER:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NONPOSITIVEINTEGER:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_LONG:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NONNEGATIVEINTEGER:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_INT:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDINT:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDLONG:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_POSITIVEINTEGER:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_SHORT:
+    case nsISchemaBuiltinType::BUILTIN_TYPE_UNSIGNEDSHORT:
+      *aPrimType = nsISchemaBuiltinType::BUILTIN_TYPE_DECIMAL;
+      break;
+    default:
+      // should never hit here
+      NS_WARNING("nsXFormsModelElement::BuiltinTypeToPrimative: Unknown builtin type encountered.");
+      return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelElement::GetDerivedTypeList(const nsAString &aType,
+                                         const nsAString &aNamespace,
+                                         nsAString       &aBuiltinType)
+{
+  nsCOMPtr<nsISchemaCollection> schemaColl = do_QueryInterface(mSchemas);
+  NS_ENSURE_STATE(schemaColl);
+
+  nsCOMPtr<nsISchemaType> schemaType;
+  schemaColl->GetType(aType, aNamespace, getter_AddRefs(schemaType));
+  NS_ENSURE_STATE(schemaType);
+  nsStringArray typeArray;
+
+  nsresult rv = WalkTypeChainInternal(schemaType, nsnull, &typeArray);
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsIStringEnumerator> stringEnum;
+    rv = NS_NewStringEnumerator(getter_AddRefs(stringEnum), &typeArray);
+    if (NS_SUCCEEDED(rv)) {
+      nsAutoString constructorString;
+      PRBool hasMore = PR_FALSE;
+      rv = stringEnum->HasMore(&hasMore);
+      while (NS_SUCCEEDED(rv) && hasMore) {
+        nsAutoString tempString;
+        rv = stringEnum->GetNext(tempString);
+        if (NS_SUCCEEDED(rv)) {
+          constructorString.Append(tempString);
+          stringEnum->HasMore(&hasMore);
+          if (hasMore) {
+            constructorString.AppendLiteral(" ");
+          }
+        }
+      }
+
+      if (NS_SUCCEEDED(rv)) {
+        aBuiltinType.Assign(constructorString);
+      }
+    }
+  }
+
+  if (NS_FAILED(rv)) {
+    aBuiltinType.Assign(EmptyString());
+  }
+
+  typeArray.Clear();
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsXFormsModelElement::GetRootBuiltinType(nsISchemaType *aType,
+                                         PRUint16      *aBuiltinType)
+{
+  NS_ENSURE_ARG(aType);
+  NS_ENSURE_ARG_POINTER(aBuiltinType);
+
+  return WalkTypeChainInternal(aType, aBuiltinType, nsnull);
+}
+
 /* static */ void
 nsXFormsModelElement::Startup()
 {
@@ -2602,13 +3056,21 @@ DeleteBindList(void    *aObject,
 }
 
 /* static */ nsresult
-nsXFormsModelElement::DeferElementBind(nsIDOMDocument   *aDoc,
-                                       nsIXFormsControl *aControl)
+nsXFormsModelElement::DeferElementBind(nsIXFormsControl *aControl)
 {
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDoc);
+  NS_ENSURE_ARG_POINTER(aControl);
+  nsCOMPtr<nsIDOMElement> element;
+  nsresult rv = aControl->GetElement(getter_AddRefs(element));
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  nsCOMPtr<nsIContent> content(do_QueryInterface(element));
+  NS_ASSERTION(content, "nsIDOMElement not implementing nsIContent?!");
 
-  if (!doc || !aControl) {
-    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDocument> doc = content->GetCurrentDoc();
+  if (!doc) {
+    // We do not care about elements without a document. If they get added to
+    // a document at some point in time, they'll try to bind again.
+    return NS_OK;
   }
 
   // We are using a PRBool on each control to mark whether the control is on the
@@ -2618,11 +3080,8 @@ nsXFormsModelElement::DeferElementBind(nsIDOMDocument   *aDoc,
   // We need to keep the document order of the controls AND don't want
   // to walk the deferredBindList every time we want to check about adding a
   // control.
-  nsCOMPtr<nsIXFormsControl> controlBase(do_QueryInterface(aControl));
-  NS_ENSURE_STATE(controlBase);
-    
   PRBool onList = PR_FALSE;
-  controlBase->GetOnDeferredBindList(&onList);
+  aControl->GetOnDeferredBindList(&onList);
   if (onList) {
     return NS_OK;
   }
@@ -2644,7 +3103,7 @@ nsXFormsModelElement::DeferElementBind(nsIDOMDocument   *aDoc,
   // when an element is trying to bind and should use its parent as a context
   // for the xpath evaluation but the parent isn't bound yet.
   deferredBindList->AppendObject(aControl);
-  controlBase->SetOnDeferredBindList(PR_TRUE);
+  aControl->SetOnDeferredBindList(PR_TRUE);
 
   return NS_OK;
 }

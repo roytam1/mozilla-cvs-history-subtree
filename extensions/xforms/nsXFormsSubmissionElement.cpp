@@ -66,6 +66,7 @@
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMParser.h"
+#include "nsIAttribute.h"
 #include "nsComponentManagerUtils.h"
 #include "nsStringStream.h"
 #include "nsIDocShell.h"
@@ -1142,20 +1143,33 @@ nsXFormsSubmissionElement::CreatePurgedDoc(nsIDOMNode      *source,
   }
 
   // recursively walk the source document, copying nodes as appropriate
-  nsCOMPtr<nsIDOMNode> startNode;
-  // if it is a document, get the root element
-  if (sourceDoc) {
-    nsCOMPtr<nsIDOMElement> elm;
-    sourceDoc->GetDocumentElement(getter_AddRefs(elm));
-    startNode = elm;
-  } else {
-    startNode = source;
-  }
-
   nsCOMPtr<nsIModelElementPrivate> model = GetModel();
   NS_ENSURE_STATE(model);
-  nsresult rv = CopyChildren(model, startNode, doc, doc, cdataElements, 0);
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsresult rv = NS_OK;
+  // if it is a document, get the root element
+  if (sourceDoc) {
+    // Iterate over document child nodes to preserve document level
+    // processing instructions and comment nodes.
+    nsCOMPtr<nsIDOMNode> curDocNode, node, destChild;
+    sourceDoc->GetFirstChild(getter_AddRefs(curDocNode));
+    PRUint16 type;
+    while (curDocNode) {
+      curDocNode->GetNodeType(&type);
+      if (type == nsIDOMNode::ELEMENT_NODE) {
+        rv = CopyChildren(model, curDocNode, doc, doc, cdataElements, 0);
+        NS_ENSURE_SUCCESS(rv, rv);
+      } else {
+        doc->ImportNode(curDocNode, PR_FALSE, getter_AddRefs(destChild));
+        doc->AppendChild(destChild, getter_AddRefs(node));
+      }
+
+      curDocNode->GetNextSibling(getter_AddRefs(node));
+      curDocNode.swap(node);
+    }
+  } else {
+    rv = CopyChildren(model, source, doc, doc, cdataElements, 0);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   NS_ADDREF(*result = doc);
   return NS_OK;
@@ -1179,12 +1193,19 @@ nsXFormsSubmissionElement::CreateAttachments(nsIModelElementPrivate *aModel,
         encType == ELEMENT_ENCTYPE_URI) {
       // ok, looks like we have a local file to upload
 
+      void* uploadFileProperty = nsnull;
       nsCOMPtr<nsIContent> content = do_QueryInterface(currentNode);
-      NS_ENSURE_STATE(content);
+      if (content) {
+        uploadFileProperty =
+          content->GetProperty(nsXFormsAtoms::uploadFileProperty);
+      } else {
+        nsCOMPtr<nsIAttribute> attr = do_QueryInterface(currentNode);
+        NS_ENSURE_STATE(attr);
+        uploadFileProperty =
+          attr->GetProperty(nsXFormsAtoms::uploadFileProperty);
+      }
 
-      nsIFile *file =
-        NS_STATIC_CAST(nsIFile *,
-                       content->GetProperty(nsXFormsAtoms::uploadFileProperty));
+      nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
       // NOTE: this value may be null if a file hasn't been selected.
 
       nsCString cid;
@@ -1277,6 +1298,8 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
             aDest->AppendChild(destChild, getter_AddRefs(node));
           }
         }
+
+        break;
       }
 
       default: {
@@ -1298,6 +1321,46 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
           nsXFormsUtils::ReportError(NS_LITERAL_STRING("warnSubmitInvalidNode"),
                                      currentNode, nsIScriptError::warningFlag);
           return NS_ERROR_ILLEGAL_VALUE;
+        }
+
+        // If this node has attributes, make sure that we don't copy any
+        // that aren't relevant, etc.
+        PRBool hasAttrs = PR_FALSE;
+        currentNode->HasAttributes(&hasAttrs);
+        if ((type == nsIDOMNode::ELEMENT_NODE) && hasAttrs) {
+          nsCOMPtr<nsIDOMNamedNodeMap> attrMap;
+          nsCOMPtr<nsIDOMNode> attrNode, tempNode;
+        
+          currentNode->GetAttributes(getter_AddRefs(attrMap));
+          NS_ENSURE_STATE(attrMap);
+        
+          nsresult rv = NS_OK;
+          PRUint32 length;
+          nsCOMPtr<nsIDOMElement> destElem(do_QueryInterface(destChild));
+          attrMap->GetLength(&length);
+        
+          for (PRUint32 run = 0; run < length; ++run) {
+            attrMap->Item(run, getter_AddRefs(attrNode));
+            NS_ENSURE_STATE(attrNode);
+            aModel->HandleInstanceDataNode(attrNode, &handleNodeResult);
+
+            if (handleNodeResult == nsIModelElementPrivate::SUBMIT_SKIP_NODE) {
+              nsAutoString localName, namespaceURI;
+
+              rv = attrNode->GetLocalName(localName);
+              NS_ENSURE_SUCCESS(rv, rv);
+              rv = attrNode->GetNamespaceURI(namespaceURI);
+              NS_ENSURE_SUCCESS(rv, rv);
+              rv = destElem->RemoveAttributeNS(namespaceURI, localName);
+              NS_ENSURE_SUCCESS(rv, rv);
+            } else if (handleNodeResult ==
+                       nsIModelElementPrivate::SUBMIT_ABORT_SUBMISSION) {
+              // abort
+              nsXFormsUtils::ReportError(NS_LITERAL_STRING("warnSubmitInvalidNode"),
+                                         currentNode, nsIScriptError::warningFlag);
+              return NS_ERROR_ILLEGAL_VALUE;
+            }
+          }
         }
 
         aDest->AppendChild(destChild, getter_AddRefs(node));
@@ -1656,12 +1719,19 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
     nsCOMPtr<nsIInputStream> fileStream;
     if (encType == ELEMENT_ENCTYPE_URI)
     {
+      void* uploadFileProperty = nsnull;
       nsCOMPtr<nsIContent> content = do_QueryInterface(data);
-      NS_ENSURE_STATE(content);
-
-      nsIFile *file =
-          NS_STATIC_CAST(nsIFile *,
-                         content->GetProperty(nsXFormsAtoms::uploadFileProperty));
+      if (content) {
+        uploadFileProperty =
+          content->GetProperty(nsXFormsAtoms::uploadFileProperty);
+      } else {
+        nsCOMPtr<nsIAttribute> attr = do_QueryInterface(data);
+        NS_ENSURE_STATE(attr);
+        uploadFileProperty =
+          attr->GetProperty(nsXFormsAtoms::uploadFileProperty);
+      }
+      
+      nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
 
       nsAutoString leafName;
       if (file)
@@ -1754,9 +1824,6 @@ nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode             *node,
                                                   nsIModelElementPrivate *aModel)
 {
   *encType = ELEMENT_ENCTYPE_STRING; // default
-
-  nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
-  NS_ENSURE_STATE(element);
 
   // check for 'xsd:base64Binary', 'xsd:hexBinary', or 'xsd:anyURI'
   nsAutoString type, nsuri;

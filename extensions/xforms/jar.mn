@@ -5,6 +5,7 @@ xforms.jar:
 % skin	xforms	classic/1.0	%skin/xforms/
   content/xforms/contents.rdf                  (resources/content/contents.rdf)
 * content/xforms/xforms.css                    (resources/content/xforms.css)
+* content/xforms/xforms-message.xul            (resources/content/xforms-message.xul)
 * content/xforms/xforms-prefs.xul              (resources/content/xforms-prefs.xul)
 * content/xforms/xforms-prefs-ui.xul           (resources/content/xforms-prefs-ui.xul)
 * content/xforms/xforms-prefs.js               (resources/content/xforms-prefs.js)
@@ -21,6 +22,7 @@ xforms.jar:
   content/xforms/input-xul.xml                 (resources/content/input-xul.xml)
   content/xforms/select1.xml                   (resources/content/select1.xml)
   content/xforms/range.xml                     (resources/content/range.xml)
+  content/xforms/range-xhtml.xml               (resources/content/range-xhtml.xml)
   content/xforms/select.xml                    (resources/content/select.xml)
   content/xforms/select-xhtml.xml              (resources/content/select-xhtml.xml)
   content/xforms/select-xul.xml                (resources/content/select-xul.xml)

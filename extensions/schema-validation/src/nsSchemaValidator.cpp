@@ -70,6 +70,7 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 #include "prprf.h"
 #include "prtime.h"
 #include "plbase64.h"
@@ -714,6 +715,25 @@ nsSchemaValidator::ValidateDerivedBuiltinType(const nsAString & aNodeValue,
       break;
     }
 
+    /* http://w3.org/TR/xmlschema-2/#nonNegativeInteger */
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NONNEGATIVEINTEGER: {
+      if (aDerived->minExclusive.value.IsEmpty()) {
+        aDerived->minExclusive.value.AssignLiteral("-1");
+      } else if (aDerived->minInclusive.value.IsEmpty()) {
+        aDerived->minInclusive.value.AssignLiteral("0");
+      }
+
+      rv = ValidateBuiltinTypeInteger(aNodeValue,
+                                      aDerived->totalDigits.value,
+                                      aDerived->maxExclusive.value,
+                                      aDerived->minExclusive.value,
+                                      aDerived->maxInclusive.value,
+                                      aDerived->minInclusive.value,
+                                      &aDerived->enumerationList,
+                                      &isValid);
+      break;
+    }
+
     /* http://www.w3.org/TR/xmlschema-2/#negativeInteger */
     case nsISchemaBuiltinType::BUILTIN_TYPE_NEGATIVEINTEGER: {
       if (aDerived->maxExclusive.value.IsEmpty()) {
@@ -923,6 +943,18 @@ nsSchemaValidator::ValidateDerivedBuiltinType(const nsAString & aNodeValue,
       break;
     }
 
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DOUBLE: {
+      rv = ValidateBuiltinTypeDouble(aNodeValue,
+                                    aDerived->totalDigits.value,
+                                    aDerived->maxExclusive.value,
+                                    aDerived->minExclusive.value,
+                                    aDerived->maxInclusive.value,
+                                    aDerived->minInclusive.value,
+                                    &aDerived->enumerationList,
+                                    &isValid);
+      break;
+    }
+
     case nsISchemaBuiltinType::BUILTIN_TYPE_DECIMAL: {
       rv = ValidateBuiltinTypeDecimal(aNodeValue,
                                       aDerived->totalDigits.value,
@@ -983,6 +1015,105 @@ nsSchemaValidator::ValidateDerivedBuiltinType(const nsAString & aNodeValue,
                                     aDerived->maxLength.isDefined,
                                     &aDerived->enumerationList,
                                     &isValid);
+      break;
+    }
+    /* http://www.w3.org/TR/xmlschema-2/#name */
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NAME: {
+      if (nsSchemaValidatorUtils::IsValidSchemaName(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME: {
+      if (nsSchemaValidatorUtils::IsValidSchemaNCName(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ID: {
+      if (nsSchemaValidatorUtils::IsValidSchemaID(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREF: {
+      if (nsSchemaValidatorUtils::IsValidSchemaIDRef(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREFS: {
+      if (nsSchemaValidatorUtils::IsValidSchemaIDRefs(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKEN: {
+      if (nsSchemaValidatorUtils::IsValidSchemaNMToken(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKENS: {
+      if (nsSchemaValidatorUtils::IsValidSchemaNMTokens(aNodeValue)) {
+        rv = ValidateBuiltinTypeString(aNodeValue,
+                                       aDerived->length.value,
+                                       aDerived->length.isDefined,
+                                       aDerived->minLength.value,
+                                       aDerived->minLength.isDefined,
+                                       aDerived->maxLength.value,
+                                       aDerived->maxLength.isDefined,
+                                       &aDerived->enumerationList,
+                                       &isValid);
+      }
       break;
     }
 
@@ -1134,6 +1265,16 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
       break;
     }
 
+    /* http://w3.org/TR/xmlschema-2/#nonNegativeInteger */
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NONNEGATIVEINTEGER: {
+      // nonNegativeInteger inherits from integer, with minInclusive
+      // being 0 (only positive integers)
+      ValidateBuiltinTypeInteger(aNodeValue, nsnull, EmptyString(),
+                                 EmptyString(), EmptyString(),
+                                 NS_LITERAL_STRING("0"), nsnull, &isValid);
+      break;
+    }
+
     /* http://www.w3.org/TR/xmlschema-2/#negativeInteger */
     case nsISchemaBuiltinType::BUILTIN_TYPE_NEGATIVEINTEGER: {
       // negativeInteger inherits from integer, with maxInclusive
@@ -1242,6 +1383,11 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
       break;
     }
 
+    case nsISchemaBuiltinType::BUILTIN_TYPE_DOUBLE: {
+      isValid = IsValidSchemaDouble(aNodeValue, nsnull);
+      break;
+    }
+
     case nsISchemaBuiltinType::BUILTIN_TYPE_DECIMAL: {
       nsAutoString wholePart, fractionPart;
       isValid = IsValidSchemaDecimal(aNodeValue, wholePart, fractionPart);
@@ -1267,6 +1413,35 @@ nsSchemaValidator::ValidateBuiltinType(const nsAString & aNodeValue,
 
     case nsISchemaBuiltinType::BUILTIN_TYPE_QNAME: {
       isValid = IsValidSchemaQName(aNodeValue);
+      break;
+    }
+    /* http://www.w3.org/TR/xmlschema-2/#name */
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NAME: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaName(aNodeValue);
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NCNAME: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaNCName(aNodeValue);
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_ID: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaID(aNodeValue);
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREF: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaIDRef(aNodeValue);
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_IDREFS: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaIDRefs(aNodeValue);
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKEN: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaNMToken(aNodeValue);
+      break;
+    }
+    case nsISchemaBuiltinType::BUILTIN_TYPE_NMTOKENS: {
+      isValid = nsSchemaValidatorUtils::IsValidSchemaNMTokens(aNodeValue);
       break;
     }
 
@@ -2800,42 +2975,70 @@ nsSchemaValidator::ValidateBuiltinTypeFloat(const nsAString & aNodeValue,
   isValid = IsValidSchemaFloat(aNodeValue, &floatValue);
 
   if (isValid && !aMaxExclusive.IsEmpty()){
-    float maxExclusive;
-
-    if (IsValidSchemaFloat(aMaxExclusive, &maxExclusive) &&
-        (floatValue >= maxExclusive)) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
       isValid = PR_FALSE;
-      LOG(("  Not valid: Value (%f) is too big", floatValue));
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      float maxExclusive;
+
+      if (IsValidSchemaFloat(aMaxExclusive, &maxExclusive) &&
+          (floatValue >= maxExclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too big", floatValue));
+      }
     }
   }
 
   if (isValid && !aMinExclusive.IsEmpty()){
-    float minExclusive;
-
-    if (IsValidSchemaFloat(aMinExclusive, &minExclusive) &&
-        (floatValue <= minExclusive)) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
       isValid = PR_FALSE;
-      LOG(("  Not valid: Value (%f) is too small", floatValue));
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      float minExclusive;
+
+      if (IsValidSchemaFloat(aMinExclusive, &minExclusive) &&
+          (floatValue <= minExclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too small", floatValue));
+      }
     }
   }
 
   if (isValid && !aMaxInclusive.IsEmpty()){
-    float maxInclusive;
-
-    if (IsValidSchemaFloat(aMaxInclusive, &maxInclusive) &&
-        (floatValue > maxInclusive)) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
       isValid = PR_FALSE;
-      LOG(("  Not valid: Value (%f) is too big", floatValue));
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      float maxInclusive;
+
+      if (IsValidSchemaFloat(aMaxInclusive, &maxInclusive) &&
+          (floatValue > maxInclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too big", floatValue));
+      }
     }
   }
 
   if (isValid && !aMinInclusive.IsEmpty()){
-    float minInclusive;
-
-    if (IsValidSchemaFloat(aMinInclusive, &minInclusive) &&
-        (floatValue < minInclusive)) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
       isValid = PR_FALSE;
-      LOG(("  Not valid: Value (%f) is too small", floatValue));
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      float minInclusive;
+
+      if (IsValidSchemaFloat(aMinInclusive, &minInclusive) &&
+          (floatValue < minInclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too small", floatValue));
+      }
     }
   }
 
@@ -2863,8 +3066,11 @@ nsSchemaValidator::IsValidSchemaFloat(const nsAString & aNodeValue,
   float floatValue = temp.ToFloat(&errorCode);
   if (NS_FAILED(errorCode)) {
     // floats may be INF, -INF and NaN
-    if (!aNodeValue.EqualsLiteral("INF") && !aNodeValue.EqualsLiteral("-INF") &&
-        !aNodeValue.EqualsLiteral("NaN")) {
+    if (aNodeValue.EqualsLiteral("INF")) {
+      floatValue = FLT_MAX;
+    } else if (aNodeValue.EqualsLiteral("-INF")) {
+      floatValue = - FLT_MAX;
+    } else if (!aNodeValue.EqualsLiteral("NaN")) {
       isValid = PR_FALSE;
     }
   }
@@ -2873,6 +3079,110 @@ nsSchemaValidator::IsValidSchemaFloat(const nsAString & aNodeValue,
     *aResult = floatValue;
 
   return isValid;
+}
+
+/* http://www.w3.org/TR/xmlschema-2/#double */
+nsresult
+nsSchemaValidator::ValidateBuiltinTypeDouble(const nsAString & aNodeValue,
+                                            PRUint32 aTotalDigits,
+                                            const nsAString & aMaxExclusive,
+                                            const nsAString & aMinExclusive,
+                                            const nsAString & aMaxInclusive,
+                                            const nsAString & aMinInclusive,
+                                            nsStringArray *aEnumerationList,
+                                            PRBool *aResult)
+{
+  PRBool isValid = PR_FALSE;
+
+  double doubleValue;
+  isValid = IsValidSchemaDouble(aNodeValue, &doubleValue);
+
+  if (isValid && !aMaxExclusive.IsEmpty()) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
+      isValid = PR_FALSE;
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      double maxExclusive;
+
+      if (IsValidSchemaDouble(aMaxExclusive, &maxExclusive) &&
+          (doubleValue >= maxExclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too big", doubleValue));
+      }
+    }
+  }
+
+  if (isValid && !aMinExclusive.IsEmpty()) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
+      isValid = PR_FALSE;
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      double minExclusive;
+
+      if (IsValidSchemaDouble(aMinExclusive, &minExclusive) &&
+          (doubleValue <= minExclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too small", doubleValue));
+      }
+    }
+  }
+
+  if (isValid && !aMaxInclusive.IsEmpty()) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
+      isValid = PR_FALSE;
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      double maxInclusive;
+
+      if (IsValidSchemaDouble(aMaxInclusive, &maxInclusive) &&
+          (doubleValue > maxInclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too big", doubleValue));
+      }
+    }
+  }
+
+  if (isValid && !aMinInclusive.IsEmpty()) {
+    // If there is a facet and value is NaN,
+    // then it is not valid.
+    if (aNodeValue.EqualsLiteral("NaN")) {
+      isValid = PR_FALSE;
+      LOG(("  Not valid: Value NaN can't be constrained by facets"));
+    } else {
+      double minInclusive;
+
+      if (IsValidSchemaDouble(aMinInclusive, &minInclusive) &&
+          (doubleValue < minInclusive)) {
+        isValid = PR_FALSE;
+        LOG(("  Not valid: Value (%f) is too small", doubleValue));
+      }
+    }
+  }
+
+  if (isValid && aEnumerationList && (aEnumerationList->Count() > 0)) {
+    isValid = nsSchemaValidatorUtils::HandleEnumeration(aNodeValue,
+                                                        *aEnumerationList);
+  }
+
+#ifdef PR_LOGGING
+  LOG((isValid ? ("  Value is valid!") : ("  Value is not valid!")));
+#endif
+
+ *aResult = isValid;
+  return NS_OK;
+}
+
+PRBool
+nsSchemaValidator::IsValidSchemaDouble(const nsAString & aNodeValue,
+                                      double *aResult)
+{
+  return nsSchemaValidatorUtils::IsValidSchemaDouble(aNodeValue, aResult);
 }
 
 /* http://www.w3.org/TR/xmlschema-2/#decimal */
@@ -3126,11 +3436,19 @@ nsSchemaValidator::IsValidSchemaAnyURI(const nsAString & aString)
 {
   PRBool isValid = PR_FALSE;
 
-  nsCOMPtr<nsIURI> uri;
-  nsresult rv = NS_NewURI(getter_AddRefs(uri), aString);
-
-  if (rv == NS_OK)
+  if (aString.IsEmpty()) {
     isValid = PR_TRUE;
+  } else {
+    nsCOMPtr<nsIURI> uri, absUri;
+
+    // Need to supply a baseURI to allow relative URIs
+    NS_NewURI(getter_AddRefs(absUri), NS_LITERAL_STRING("http://a"));
+    nsresult rv = NS_NewURI(getter_AddRefs(uri), aString,
+                            (const char*)nsnull, absUri);
+
+    if (rv == NS_OK)
+      isValid = PR_TRUE;
+  }
 
   return isValid;
 }

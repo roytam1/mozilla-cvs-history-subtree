@@ -73,6 +73,11 @@ class nsIDOMEvent;
 NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 1)
 #define NS_OK_XFORMS_DEFERRED \
 NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 2)
+#define NS_OK_XFORMS_NOTREADY \
+NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 3)
+
+#define NS_ERROR_XFORMS_UNION_TYPE \
+NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_GENERAL, 3002)
 
 /**
  * XForms event types
@@ -289,6 +294,17 @@ public:
     GetSingleNodeBindingValue(nsIDOMElement* aElement, nsString& aValue);
 
   /**
+   * Convenience method.  Evaluates the single node binding expression for the
+   * given xforms element and then sets the resulting single node to aValue.
+   * This allows elements like xf:filename and xf:mediatype to function
+   * properly without needing the overhead of being nsIXFormsControls.
+   *
+   * Returns PR_TRUE if the evaluation and node value setting both succeeded.
+   */
+  static NS_HIDDEN_(PRBool)
+    SetSingleNodeBindingValue(nsIDOMElement *aElement, const nsAString &aValue,
+                              PRBool *aChanged);
+  /**
    * Dispatch an XForms event.  aDefaultActionEnabled is returned indicating
    * if the default action of the dispatched event was enabled.  aSrcElement
    * is passed for events targeted at models.  If the model doesn't exist, yet,
@@ -437,8 +453,10 @@ public:
   /**
    * Outputs to the Error console.
    *
-   * @param aMessageName      Name of string to output, which is loaded from
-                              xforms.properties
+   * @param aMessage          If aLiteralMessage is PR_FALSE, then this is the
+   *                          name of string to output, which is loaded from
+   *                          xforms.properties.
+   *                          Otherwise this message is used 'as is'.
    * @param aParams           Optional parameters for the loaded string
    * @param aParamLength      Amount of params in aParams
    * @param aElement          If set, is used to determine and output the
@@ -446,13 +464,17 @@ public:
    * @param aContext          If set, the node is used to output what element
                               caused the error
    * @param aErrorType        Type of error in form of an nsIScriptError flag
+   * @param aLiteralMessage   If true, then message string is used literally,
+   *                          without going through xforms.properties and
+   *                          without formatting.
    */
-  static NS_HIDDEN_(void) ReportError(const nsString   &aMessageName,
+  static NS_HIDDEN_(void) ReportError(const nsAString  &aMessageName,
                                       const PRUnichar **aParams,
                                       PRUint32          aParamLength,
                                       nsIDOMNode       *aElement,
                                       nsIDOMNode       *aContext,
-                                      PRUint32          aErrorFlag = nsIScriptError::errorFlag);
+                                      PRUint32          aErrorFlag = nsIScriptError::errorFlag,
+                                      PRBool            aLiteralMessage = PR_FALSE);
 
   /**
    * Simple version of ReportError(), used when reporting without message
@@ -463,20 +485,39 @@ public:
    * @param aElement          Element to use for location and context
    * @param aErrorType        Type of error in form of an nsIScriptError flag
    */
-  static NS_HIDDEN_(void) ReportError(const nsString &aMessageName,
-                                      nsIDOMNode     *aElement = nsnull,
-                                      PRUint32        aErrorFlag = nsIScriptError::errorFlag)
+  static NS_HIDDEN_(void) ReportError(const nsAString &aMessageName,
+                                      nsIDOMNode      *aElement = nsnull,
+                                      PRUint32         aErrorFlag = nsIScriptError::errorFlag)
     {
-      nsXFormsUtils::ReportError(aMessageName, nsnull, 0, aElement, aElement, aErrorFlag);
+      nsXFormsUtils::ReportError(aMessageName, nsnull, 0, aElement, aElement, aErrorFlag, PR_FALSE);
     }
 
   /**
-   * Returns whether the aDocument is ready to bind data (all instance documents
-   * loaded).
+   * Similar to ReportError(), used when reporting an error directly to the
+   * console.
    *
-   * @param aDocument      Document to check
+   * @param aMessage       The literal message to be displayed.  Any necessary      
+   *                       translation/string formatting needs to have been
+   *                       done already
+   * @param aElement       Element to use for location and context
+   * @param aContext       If set, the node is used to output what element
+   *                       caused the error
+   * @param aErrorType     Type of error in form of an nsIScriptError flag
    */
-  static NS_HIDDEN_(PRBool) IsDocumentReadyForBind(nsIDOMDocument *aDocument);
+  static NS_HIDDEN_(void) ReportErrorMessage(const nsAString &aMessage,
+                                             nsIDOMNode      *aElement = nsnull,
+                                             PRUint32         aErrorFlag = nsIScriptError::errorFlag)
+    {
+      nsXFormsUtils::ReportError(aMessage, nsnull, 0, aElement, aElement, aErrorFlag, PR_TRUE);
+    }
+
+  /**
+   * Returns whether the an elements document is ready to bind data (all
+   * instance documents loaded, etc.).
+   *
+   * @param aElement         The element to check for
+   */
+  static NS_HIDDEN_(PRBool) IsDocumentReadyForBind(nsIDOMElement *aElement);
 
   /**
    * Retrieve an element by id, handling (cloned) elements inside repeats.

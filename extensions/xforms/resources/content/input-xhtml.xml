@@ -126,7 +126,8 @@
            extends="chrome://xforms/content/input.xml#xformswidget-input-boolean-base">
     <content>
       <children includes="label"/>
-      <html:input anonid="control" xbl:inherits="accesskey" type="checkbox"/>
+      <html:input anonid="control" xbl:inherits="accesskey" type="checkbox"
+                  class="xf-value"/>
       <children/>
     </content>
 
@@ -254,13 +255,36 @@
           // 100% width, and innerWidth will always give use the browser size
           var windowWidth = this.ownerDocument.defaultView.innerWidth;
 
-          var position = dropmarkerBox.x - pickerWidth + dropmarkerBox.width;
+          var p = this.control.offsetParent;
+          var compStyle =
+            this.ownerDocument.defaultView.getComputedStyle(p, null);
+          var relative = compStyle.getPropertyValue("position") == "relative";
+          if (!relative) {
+            relative = compStyle.getPropertyValue("position") == "absolute";
+          }
 
-          // reset position if it will bleed to the left or right
+          var position;
+          if (relative) {
+            position = this.dropmarker.offsetLeft - pickerWidth + dropmarkerBox.width;
+          } else {
+            position = dropmarkerBox.x - pickerWidth + dropmarkerBox.width;
+          }
+
+          // Reset the position if it will bleed to the left or right.
           if (position < 0) {
             position = 0;
           } else if ((position + pickerWidth) > windowWidth) {
-            position = windowWidth - pickerWidth;
+            if (relative) {
+              // Can't base our position on the window width since our position
+              // will be set relative to the offsetParent.  So let's set the
+              // position to be the left-most part of the button that triggers
+              // the dropdown.  We'll assume that at least that much of the
+              // button is visible since the user navigated to it and triggered
+              // it.
+              position = this.dropmarker.offsetLeft - pickerWidth;
+            } else {
+              position = windowWidth - pickerWidth;
+            }
           }
 
           this.picker.style.left = position + "px";
@@ -442,7 +466,7 @@
 
     <handlers>
       <handler event="keypress" keycode="VK_ESCAPE">
-        this.hidePicker();
+        this.hidePicker(true);
       </handler>
 
       <handler event="keypress" keycode="VK_RETURN">
@@ -454,10 +478,12 @@
 
       <handler event="keypress">
       <![CDATA[
-        if (event.keyCode == event.DOM_VK_F4 ||
-            event.altKey && (event.keyCode == event.DOM_VK_DOWN ||
-                             event.keyCode == event.DOM_VK_UP)) {
+        if (event.keyCode == event.DOM_VK_F4) {
           this.togglePicker();
+        } else if (event.altKey && (event.keyCode == event.DOM_VK_DOWN ||
+                   event.keyCode == event.DOM_VK_UP)) {
+          this.togglePicker();
+          event.preventDefault();
         }
       ]]>
       </handler>

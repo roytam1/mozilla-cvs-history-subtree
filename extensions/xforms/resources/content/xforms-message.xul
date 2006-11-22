@@ -50,19 +50,12 @@
     function loadMessageURL()
     {
       var url = window.arguments[0];
-      if (url) {
-        var frame = document.getElementById("frame");
-        frame.setAttribute("src", url);
-        frame.setAttribute("style", "display: inline;");
-      }
+      if (url)
+        document.getElementById("browser").loadURI(url);
     }
   </script>
 
-  <iframe xmlns:xhtml="http://www.w3.org/1999/xhtml"
-          xmlns:wairole="http://www.w3.org/2005/01/wai-rdf/GUIRoleTaxonomy#"
-          id="frame" flex="1"
-          style="display: none;"
-          xhtml:role="wairole:alert"/>
+  <browser flex="1" id="browser"/>
 
 </dialog>
 
