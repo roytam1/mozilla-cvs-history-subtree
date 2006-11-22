@@ -1252,7 +1252,7 @@ function DoBrowserSearch() {
 function DoBrowserPreferences() {
   
   try { 
-    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/preferences/preferences.xul');    
+    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/preferences/preferences.xul#general');    
     browserInit(gBrowser.selectedTab);
   } catch (e) {
     
@@ -1327,6 +1327,39 @@ function DoBrowserSB(sKey) {
   } catch (e) {
     
   }  
+}
+
+
+/* marcio 4000 */
+
+
+function DoBrowserTarget(sKey) {
+  
+  /* skey format: handler,value */
+
+  var baseHandler=sKey.split(",");
+
+  if(baseHandler[0]=="home") {
+
+     var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
+
+  }
+
+  var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
+
+  if(baseHandler[0]=="preferences") {
+	baseURL="chrome://minimo/content/preferences/preferences.xul#"
+  } 
+  
+  try { 
+	
+    gBrowser.selectedTab = gBrowser.addTab(baseURL+baseHandler[1]);
+    browserInit(gBrowser.selectedTab);
+
+  } catch (e) {
+    
+  }  
+
 }
 
 function DoBrowserGM(xmlRef) {
@@ -1594,6 +1627,13 @@ function URLBarEntered()
     
     if(gURLBar.value.substring(0,3)=="sb:") {
       DoBrowserSB(gURLBar.value.split("sb:")[1]);
+      return;
+    }
+
+    /* Trap to chrome targets 'target' */ 
+    
+    if(gURLBar.value.substring(0,3)=="go:") {
+      DoBrowserTarget(gURLBar.value.split("go:")[1]);
       return;
     }
     
