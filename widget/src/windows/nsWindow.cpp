@@ -167,6 +167,13 @@ static const char kMozHeapDumpMessageString[] = "MOZ_HeapDump";
 #define SPI_GETWHEELSCROLLLINES 104
 #endif
 
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL 0x020E
+#endif
+
+#ifndef SPI_GETWHEELSCROLLCHARS
+#define SPI_GETWHEELSCROLLCHARS 0x006C
+#endif
 
 #ifdef MOZ_XUL
 
@@ -4241,6 +4248,7 @@ EventMsgInfo gAllEvents[] = {
   {"WM_MBUTTONUP",              0x0208},
   {"WM_MBUTTONDBLCLK",          0x0209},
   {"WM_MOUSEWHEEL",             0x020A},
+  {"WM_MOUSEHWHEEL",            0x020E},
   {"WM_MOUSELAST",              0x020A},
   {"WM_MOUSELAST",              0x0209},
   {"WM_PARENTNOTIFY",           0x0210},
@@ -5455,9 +5463,15 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
     {
       // Handle both flavors of mouse wheel events.
 #ifndef WINCE
-      if ((msg == WM_MOUSEWHEEL) || (msg == uMSH_MOUSEWHEEL)) {
-        static int iDeltaPerLine;
-        static ULONG ulScrollLines;
+      if ((msg == WM_MOUSEWHEEL) || (msg == uMSH_MOUSEWHEEL) ||
+          (msg == WM_MOUSEHWHEEL))
+      {
+        static int iDeltaPerLine, iDeltaPerChar;
+        static ULONG ulScrollLines, ulScrollChars = 1;
+        static int currentVDelta, currentHDelta;
+        static HWND currentWindow = 0;
+
+        PRBool isVertical = (msg == WM_MOUSEWHEEL) || (msg == uMSH_MOUSEWHEEL);
 
         // Get mouse wheel metrics (but only once).
         if (getWheelInfo) {
@@ -5509,9 +5523,25 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
               ulScrollLines = WHEEL_PAGESCROLL;
             }
           }
+
+          if (!SystemParametersInfo(SPI_GETWHEELSCROLLCHARS, 0,
+                                    &ulScrollChars, 0)) {
+            // Note that we may always fail to get the value before Win Vista.
+            ulScrollChars = 1;
+          }
+
+          iDeltaPerChar = 0;
+          if (ulScrollChars) {
+            if (ulScrollChars <= WHEEL_DELTA) {
+              iDeltaPerChar = WHEEL_DELTA / ulScrollChars;
+            } else {
+              ulScrollChars = WHEEL_PAGESCROLL;
+            }
+          }
         }
 
-        if ((ulScrollLines != WHEEL_PAGESCROLL) && (!iDeltaPerLine))
+        if ((isVertical  && ulScrollLines != WHEEL_PAGESCROLL && !iDeltaPerLine) ||
+            (!isVertical && ulScrollChars != WHEEL_PAGESCROLL && !iDeltaPerChar))
           return 0;
 
         // The mousewheel event will be dispatched to the toplevel
@@ -5593,19 +5623,40 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 #endif
         }
 
+        // We should cancel the surplus delta if the current window is not
+        // same as previous.
+        if (currentWindow != mWnd) {
+          currentVDelta = 0;
+          currentHDelta = 0;
+          currentWindow = mWnd;
+        }
+
         nsMouseScrollEvent scrollEvent(PR_TRUE, NS_MOUSE_SCROLL, this);
-        scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
-        if (ulScrollLines == WHEEL_PAGESCROLL) {
-          scrollEvent.scrollFlags |= nsMouseScrollEvent::kIsFullPage;
-          if (msg == WM_MOUSEWHEEL)
+        scrollEvent.delta = 0;
+        if (isVertical) {
+          scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
+          if (ulScrollLines == WHEEL_PAGESCROLL) {
+            scrollEvent.scrollFlags |= nsMouseScrollEvent::kIsFullPage;
             scrollEvent.delta = (((short) HIWORD (wParam)) > 0) ? -1 : 1;
-          else
-            scrollEvent.delta = ((int) wParam > 0) ? -1 : 1;
+          } else {
+            currentVDelta -= (short) HIWORD (wParam);
+            if (PR_ABS(currentVDelta) >= iDeltaPerLine) {
+              scrollEvent.delta = currentVDelta / iDeltaPerLine;
+              currentVDelta %= iDeltaPerLine;
+            }
+          }
         } else {
-          if (msg == WM_MOUSEWHEEL)
-            scrollEvent.delta = -((short) HIWORD (wParam) / iDeltaPerLine);
-          else
-            scrollEvent.delta = -((int) wParam / iDeltaPerLine);
+          scrollEvent.scrollFlags = nsMouseScrollEvent::kIsHorizontal;
+          if (ulScrollChars == WHEEL_PAGESCROLL) {
+            scrollEvent.scrollFlags |= nsMouseScrollEvent::kIsFullPage;
+            scrollEvent.delta = (((short) HIWORD (wParam)) > 0) ? 1 : -1;
+          } else {
+            currentHDelta += (short) HIWORD (wParam);
+            if (PR_ABS(currentHDelta) >= iDeltaPerChar) {
+              scrollEvent.delta = currentHDelta / iDeltaPerChar;
+              currentHDelta %= iDeltaPerChar;
+            }
+          }
         }
 
         scrollEvent.isShift   = IS_VK_DOWN(NS_VK_SHIFT);
@@ -5617,7 +5668,11 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           result = DispatchWindowEvent(&scrollEvent);
         }
         NS_RELEASE(scrollEvent.widget);
-      } // WM_MOUSEWHEEL || uMSH_MOUSEWHEEL
+        // Note that we should return zero if we process WM_MOUSEWHEEL.
+        // But if we process WM_MOUSEHWHEEL, we should return non-zero.
+        if (result)
+          *aRetValue = isVertical ? 0 : TRUE;
+      } // WM_MOUSEWHEEL || uMSH_MOUSEWHEEL || WM_MOUSEHWHEEL
 
       //
       // reconvert message for Windows 95 / NT 4.0
@@ -8242,7 +8297,8 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
   if (gRollupListener && gRollupWidget && ::IsWindowVisible(inWnd)) {
 
     if (inMsg == WM_LBUTTONDOWN || inMsg == WM_RBUTTONDOWN || inMsg == WM_MBUTTONDOWN ||
-        inMsg == WM_MOUSEWHEEL  || inMsg == uMSH_MOUSEWHEEL || inMsg == WM_ACTIVATE
+        inMsg == WM_MOUSEWHEEL  || inMsg == uMSH_MOUSEWHEEL || inMsg == WM_MOUSEHWHEEL ||
+        inMsg == WM_ACTIVATE
 #ifndef WINCE
         || 
         inMsg == WM_NCRBUTTONDOWN || 
@@ -8261,7 +8317,8 @@ nsWindow :: DealWithPopups ( HWND inWnd, UINT inMsg, WPARAM inWParam, LPARAM inL
       // Rollup if the event is outside the popup.
       PRBool rollup = !nsWindow::EventIsInsideWindow(inMsg, (nsWindow*)gRollupWidget);
 
-      if (rollup && (inMsg == WM_MOUSEWHEEL || inMsg == uMSH_MOUSEWHEEL))
+      if (rollup && (inMsg == WM_MOUSEWHEEL || inMsg == uMSH_MOUSEWHEEL ||
+                     inMsg == WM_MOUSEHWHEEL))
       {
         gRollupListener->ShouldRollupOnMouseWheelEvent(&rollup);
         *outResult = PR_TRUE;
