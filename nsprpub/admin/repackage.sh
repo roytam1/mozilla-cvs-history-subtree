@@ -179,7 +179,7 @@ for OBJDIR in $WIN_OBJDIRS; do
     cp -r $FROMTOP/$OBJDIR/bin $NSPRDIR
 
     echo "creating directory $TOTOP/$OBJDIR"
-    mkdir $TOTOP/$OBJDIR
+    mkdir -p $TOTOP/$OBJDIR
     echo "creating $TOTOP/$OBJDIR/$NSPRDIR.zip"
     zip -r $TOTOP/$OBJDIR/$NSPRDIR.zip $NSPRDIR
 done
