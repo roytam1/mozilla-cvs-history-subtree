@@ -1,18 +1,50 @@
+/* Dont remove te follwing classes */
+
   .rsslink  {
+
 
   }
 
   .pagelink {
 
+
   }
 
   .extensions {
+
 
   }
 
   .timehistory {
 
+
   }
+
+  .rsslinkFeedback  {
+
+
+  }
+
+  .pagelinkFeedback {
+
+
+  }
+
+  .extensionsFeedback {
+
+
+  }
+
+  .timehistoryFeedback {
+
+
+  }
+
+  .allFeedback {
+
+
+  }
+
 
 div.item {
 	border-bottom:1px solid gray;
@@ -92,7 +124,6 @@ body {
 
 .header a {
   text-decoration:none;
-color:white;
 
 }
 
