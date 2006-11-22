@@ -43,11 +43,18 @@
 
 
 var hbArrayClasses = new Array();
+var hbArrayClassesFeedback= new Array();
 
 hbArrayClasses["rsslink"]=0;
 hbArrayClasses["pagelink"]=1;
 hbArrayClasses["extensions"]=2;
 hbArrayClasses["timehistory"]=3;
+
+hbArrayClassesFeedback["rsslink"]=4;
+hbArrayClassesFeedback["pagelink"]=5;
+hbArrayClassesFeedback["extensions"]=6;
+hbArrayClassesFeedback["timehistory"]=7;
+hbArrayClassesFeedback["allFeedback"]=8;
 
 function hbSelect(refShow) {
 
@@ -56,6 +63,7 @@ function hbSelect(refShow) {
 	}
 
 	document.styleSheets[0].cssRules[hbArrayClasses[refShow]].style.display="block";
+      hbFeedback(refShow);
 
 }
 
@@ -64,6 +72,19 @@ function hbSelectAll() {
 	for (var key in hbArrayClasses) {
 	    document.styleSheets[0].cssRules[hbArrayClasses[key]].style.display="block";
 	}
+      hbFeedback("allFeedback");
+
+}
+
+function hbFeedback(refShow) {
+
+	for (var key in hbArrayClassesFeedback) {
+	    document.styleSheets[0].cssRules[hbArrayClassesFeedback[key]].style.backgroundColor="transparent";
+	    document.styleSheets[0].cssRules[hbArrayClassesFeedback[key]].style.color="white";
+	}
+
+	document.styleSheets[0].cssRules[hbArrayClassesFeedback[refShow]].style.color="black";
+	document.styleSheets[0].cssRules[hbArrayClassesFeedback[refShow]].style.backgroundColor="white";
 
 }
 
@@ -151,6 +172,27 @@ function bmInit(targetDoc, targetElement) {
 	testLoad.setTargetDocument(targetDoc);
 	testLoad.setTargetElement(targetElement);
 	testLoad.run();
+
+
+
+  /*
+   * preselection of the style rule 
+   * marcio 4000
+   */
+
+   var targetLink = document.location.toString();
+
+   var keywordLink = targetLink.split("#")[1];
+   try {
+	   if(keywordLink) {
+		hbSelect(keywordLink);
+	   } else {
+		hbSelectAll();
+	   }
+	
+   } catch(i) {
+		hbSelectAll();
+   } 
 
 }
 
