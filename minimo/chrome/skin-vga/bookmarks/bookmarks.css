@@ -47,10 +47,9 @@
 
 
 div.item {
-	border-bottom:1px solid gray;
- 	margin:2px;
-      
-      padding-bottom:3px;
+  border-bottom:1px solid gray;
+  margin:2px;    
+  padding-bottom:3px;
 }
 
 div.item img {
@@ -63,16 +62,12 @@ a {
   color:black;
 }
  	 
-
-
 bookmarks {
 }
 	
 .flavor {
  float:left;
-
  opacity:.5;
-
 }
 
 body {
@@ -106,25 +101,22 @@ body {
 }
 
 .header-icons {
-    width:18px;
-    height:18px;
+    width:24px;
+    height:24px;
 }
 
 .header td {
-   padding-right:3px; 
-     font-weight:bold;
-
-   padding-left:3px;
+  padding-right:3px; 
+  font-weight:bold;
+  padding-left:3px;
 }
 
 #container {
-	
    margin-top:5em;
 }
 
 .header a {
   text-decoration:none;
-
 }
 
 .header a:hover {
