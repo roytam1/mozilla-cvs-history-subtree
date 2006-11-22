@@ -475,14 +475,27 @@ typedef struct JSTempValueRooter JSTempValueRooter;
 typedef void
 (* JS_DLL_CALLBACK JSTempValueMarker)(JSContext *cx, JSTempValueRooter *tvr);
 
+typedef union JSTempValueUnion {
+    jsval               value;
+    JSObject            *object;
+    JSTempValueMarker   marker;
+    jsval               *array;
+} JSTempValueUnion;
+
+/*
+ * The following allows to reinterpret JSTempValueUnion.object as jsval using
+ * the tagging property of a generic jsval described below.
+ */
+JS_STATIC_ASSERT(sizeof(JSTempValueUnion) == sizeof(jsval));
+JS_STATIC_ASSERT(sizeof(JSTempValueUnion) == sizeof(JSObject *));
+
 /*
  * Context-linked stack of temporary GC roots.
  *
- * If count is -1, then u.value contains the single value to root. If count is
- * -2, then u.marker holds a mark hook that is executed to mark the values.
- * Otherwise u.array points to a stack-allocated vector of jsvals.  Note that
- * the vector may have length 0 or 1 for full generality, so we need -1 to
- * discriminate the union.
+ * If count is -1, then u.value contains the single value to root.
+ * If count is -2, then u.marker holds a mark hook that is executed to mark
+ * the values.
+ * If count >= 0, then u.array points to a stack-allocated vector of jsvals.
  *
  * To root a single GC-thing pointer, which need not be tagged and stored as a
  * jsval, use JS_PUSH_SINGLE_TEMP_ROOT.  The (jsval)(val) cast works because a
@@ -493,20 +506,20 @@ typedef void
  * consults GC-thing flags stored separately from the thing to decide the type
  * of thing).
  *
+ * Alternatively, if a single pointer to rooted JSObject * is required, use
+ * JS_PUSH_TEMP_ROOT_OBJECT(cx, NULL, &tvr). Then &tvr.u.object gives the
+ * necessary pointer, which puns tvr.u.value safely because object tag bits
+ * are all zeroes.
+ *
  * If you need to protect a result value that flows out of a C function across
  * several layers of other functions, use the js_LeaveLocalRootScopeWithResult
  * internal API (see further below) instead.
  */
 struct JSTempValueRooter {
-    JSTempValueRooter       *down;
-    jsint                   count;
-    union {
-        jsval               value;
-        jsval               *array;
-        JSTempValueMarker   marker;
-    } u;
+    JSTempValueRooter   *down;
+    ptrdiff_t           count;
+    JSTempValueUnion    u;
 };
-
 
 #define JS_PUSH_TEMP_ROOT_COMMON(cx,tvr)                                      \
     JS_BEGIN_MACRO                                                            \
@@ -525,7 +538,8 @@ struct JSTempValueRooter {
 #define JS_PUSH_TEMP_ROOT(cx,cnt,arr,tvr)                                     \
     JS_BEGIN_MACRO                                                            \
         JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
-        (tvr)->count = (cnt);                                                 \
+        JS_ASSERT((ptrdiff_t)(cnt) >= 0);                                     \
+        (tvr)->count = (ptrdiff_t)(cnt);                                      \
         (tvr)->u.array = (arr);                                               \
     JS_END_MACRO
 
@@ -534,6 +548,13 @@ struct JSTempValueRooter {
         JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
         (tvr)->count = -2;                                                    \
         (tvr)->u.marker = (marker_);                                          \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT_OBJECT(cx,obj,tvr)                                  \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = -1;                                                    \
+        (tvr)->u.object = (obj);                                              \
     JS_END_MACRO
 
 #define JS_POP_TEMP_ROOT(cx,tvr)                                              \
