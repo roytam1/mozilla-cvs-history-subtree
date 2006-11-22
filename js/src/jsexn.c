@@ -957,6 +957,8 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
 {
     JSErrNum errorNumber;
     JSExnType exn;
+    jsval tv[4];
+    JSTempValueRooter tvr;
     JSBool ok;
     JSObject *errProto, *errObject;
     JSString *messageStr, *filenameStr;
@@ -999,12 +1001,13 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
      */
     if (cx->creatingException)
         return JS_FALSE;
+
+    /* After this point the control must flow through the label out. */
     cx->creatingException = JS_TRUE;
 
     /* Protect the newly-created strings below from nesting GCs. */
-    ok = js_EnterLocalRootScope(cx);
-    if (!ok)
-        goto out;
+    memset(tv, 0, sizeof tv);
+    JS_PUSH_TEMP_ROOT(cx, sizeof tv / sizeof tv[0], tv, &tvr);
 
     /*
      * Try to get an appropriate prototype by looking up the corresponding
@@ -1014,27 +1017,21 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     ok = js_GetClassPrototype(cx, exceptions[exn].name, &errProto);
     if (!ok)
         goto out;
+    tv[0] = OBJECT_TO_JSVAL(errProto);
 
     errObject = js_NewObject(cx, &ExceptionClass, errProto, NULL);
     if (!errObject) {
         ok = JS_FALSE;
         goto out;
     }
-
-    /*
-     * Set the generated Exception object early, so it won't be GC'd by a last
-     * ditch attempt to collect garbage, or a GC that otherwise nests or races
-     * under any of the following calls.  If one of the following calls fails,
-     * it will overwrite this exception object with one of its own (except in
-     * case of OOM errors, of course).
-     */
-    JS_SetPendingException(cx, OBJECT_TO_JSVAL(errObject));
+    tv[1] = OBJECT_TO_JSVAL(errObject);
 
     messageStr = JS_NewStringCopyZ(cx, message);
     if (!messageStr) {
         ok = JS_FALSE;
         goto out;
     }
+    tv[2] = STRING_TO_JSVAL(messageStr);
 
     if (reportp) {
         filenameStr = JS_NewStringCopyZ(cx, reportp->filename);
@@ -1042,6 +1039,7 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
             ok = JS_FALSE;
             goto out;
         }
+        tv[3] = STRING_TO_JSVAL(filenameStr);
         lineno = reportp->lineno;
     } else {
         filenameStr = cx->runtime->emptyString;
@@ -1064,11 +1062,13 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     }
     OBJ_SET_SLOT(cx, errObject, JSSLOT_PRIVATE, PRIVATE_TO_JSVAL(privateData));
 
+    JS_SetPendingException(cx, OBJECT_TO_JSVAL(errObject));
+
     /* Flag the error report passed in to indicate an exception was raised. */
     reportp->flags |= JSREPORT_EXCEPTION;
 
 out:
-    js_LeaveLocalRootScope(cx);
+    JS_POP_TEMP_ROOT(cx, &tvr);
     cx->creatingException = JS_FALSE;
     return ok;
 }
