@@ -243,9 +243,14 @@ nsSVGCairoGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 
   nsAutoString text;
   mSource->GetCharacterData(text);
-  cairo_text_extents(mCT, 
-                     NS_ConvertUCS2toUTF8(text).get(),
-                     &mExtents);
+
+  if (!text.Length()) {
+    memset(&mExtents, 0, sizeof(cairo_text_extents_t));
+  } else {
+    cairo_text_extents(mCT, 
+                       NS_ConvertUCS2toUTF8(text).get(),
+                       &mExtents);
+  }
   
   return NS_OK;
 }
