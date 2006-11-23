@@ -71,7 +71,7 @@
 #include "nsNetUtil.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsDOMError.h"
-#include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIJSContextStack.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
@@ -970,6 +970,31 @@ nsContentUtils::GetDocShellFromCaller()
 
 nsIDOMDocument *
 nsContentUtils::GetDocumentFromCaller()
+{
+  JSContext *cx = nsnull;
+  sThreadJSContextStack->Peek(&cx);
+
+  nsIDOMDocument *doc = nsnull;
+
+  if (cx) {
+    JSObject *callee = nsnull;
+    JSStackFrame *fp = nsnull;
+    while (!callee && (fp = ::JS_FrameIterator(cx, &fp))) {
+      callee = ::JS_GetFrameCalleeObject(cx, fp);
+    }
+
+    nsCOMPtr<nsPIDOMWindow> win =
+      do_QueryInterface(nsJSUtils::GetStaticScriptGlobal(cx, callee));
+    if (win) {
+      doc = win->GetExtantDocument();
+    }
+  }
+
+  return doc;
+}
+
+nsIDOMDocument *
+nsContentUtils::GetDocumentFromContext()
 {
   if (!sThreadJSContextStack) {
     return nsnull;
