@@ -1898,7 +1898,7 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
   }
 
   nsCOMPtr<nsIDocument> callerDoc =
-    do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
+    do_QueryInterface(nsContentUtils::GetDocumentFromContext());
 
   // Grab a reference to the calling documents security info (if any)
   // and principal as it may be lost in the call to Reset().
