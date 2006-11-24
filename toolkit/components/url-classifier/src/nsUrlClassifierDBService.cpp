@@ -125,7 +125,7 @@ Rot13Line(nsCString &line)
   line.BeginWriting(start);
   line.EndWriting(end);
   while (start != end) {
-    *start = kRot13Table[*start];
+    *start = kRot13Table[NS_STATIC_CAST(PRInt32, *start)];
     ++start;
   }
 }
@@ -893,13 +893,13 @@ nsUrlClassifierDBService::Exists(const nsACString& tableName,
                                  const nsACString& key,
                                  nsIUrlClassifierCallback *c)
 {
-  EnsureThreadStarted();
+  nsresult rv = EnsureThreadStarted();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIUrlClassifierCallback> wrapper =
       new nsUrlClassifierCallbackWrapper(c);
   NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
 
-  nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
@@ -925,13 +925,13 @@ NS_IMETHODIMP
 nsUrlClassifierDBService::CheckTables(const nsACString & tableNames,
                                       nsIUrlClassifierCallback *c)
 {
-  EnsureThreadStarted();
+  nsresult rv = EnsureThreadStarted();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIUrlClassifierCallback> wrapper =
       new nsUrlClassifierCallbackWrapper(c);
   NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
 
-  nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
@@ -957,13 +957,13 @@ NS_IMETHODIMP
 nsUrlClassifierDBService::UpdateTables(const nsACString& updateString,
                                        nsIUrlClassifierCallback *c)
 {
-  EnsureThreadStarted();
+  nsresult rv = EnsureThreadStarted();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIUrlClassifierCallback> wrapper =
       new nsUrlClassifierCallbackWrapper(c);
   NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
 
-  nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
@@ -988,9 +988,8 @@ nsUrlClassifierDBService::UpdateTables(const nsACString& updateString,
 NS_IMETHODIMP
 nsUrlClassifierDBService::Update(const nsACString& aUpdateChunk)
 {
-  EnsureThreadStarted();
-
-  nsresult rv;
+  nsresult rv = EnsureThreadStarted();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // The actual worker uses the background thread.
   nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
@@ -1007,13 +1006,13 @@ nsUrlClassifierDBService::Update(const nsACString& aUpdateChunk)
 NS_IMETHODIMP
 nsUrlClassifierDBService::Finish(nsIUrlClassifierCallback *c)
 {
-  EnsureThreadStarted();
+  nsresult rv = EnsureThreadStarted();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIUrlClassifierCallback> wrapper =
       new nsUrlClassifierCallbackWrapper(c);
   NS_ENSURE_TRUE(wrapper, NS_ERROR_OUT_OF_MEMORY);
 
-  nsresult rv;
   // The proxy callback uses the current thread.
   nsCOMPtr<nsIUrlClassifierCallback> proxyCallback;
   rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
@@ -1038,9 +1037,8 @@ nsUrlClassifierDBService::Finish(nsIUrlClassifierCallback *c)
 NS_IMETHODIMP
 nsUrlClassifierDBService::CancelStream()
 {
-  EnsureThreadStarted();
-
-  nsresult rv;
+  nsresult rv = EnsureThreadStarted();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // The actual worker uses the background thread.
   nsCOMPtr<nsIUrlClassifierDBServiceWorker> proxy;
@@ -1065,12 +1063,19 @@ nsUrlClassifierDBService::Observe(nsISupports *aSubject, const char *aTopic,
 }
 
 // Make sure the event queue is intialized before we use it.
-void
+nsresult
 nsUrlClassifierDBService::EnsureThreadStarted()
 {
+  // xpcom-shutdown has triggered, the thread is already gone.
+  if (!gKeepRunning) {
+    return NS_ERROR_FAILURE;
+  }
+
   nsAutoMonitor mon(gMonitor);
   while (!gEventQ)
     mon.Wait();
+
+  return NS_OK;
 }
 
 // Join the background thread if it exists.

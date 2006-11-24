@@ -170,10 +170,12 @@ TableUpdateListener::OnStopRequest(nsIRequest *request, nsISupports* context,
 
   // If we got the whole stream, call Finish to commit the changes.
   // Otherwise, call Cancel to rollback the changes.
+  nsresult rv;
   if (NS_SUCCEEDED(aStatus))
-    mDBService->Finish(mTableCallback);
+    rv = mDBService->Finish(mTableCallback);
   else
-    mDBService->CancelStream();
+    rv = mDBService->CancelStream();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsUrlClassifierStreamUpdater* updater =
         NS_STATIC_CAST(nsUrlClassifierStreamUpdater*, context);
