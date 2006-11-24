@@ -376,6 +376,9 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                 jsval argv[2];
                 JSStackFrame frame;
 
+                argv[0] = OBJECT_TO_JSVAL(funobj);
+                argv[1] = JSVAL_NULL;
+
                 memset(&frame, 0, sizeof(frame));
                 frame.script = FUN_SCRIPT(fun);
                 frame.fun = fun;
