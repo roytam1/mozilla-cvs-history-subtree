@@ -716,20 +716,21 @@
               this._paneDeck.setAttribute("selectedIndex", i);
               
               if (this.type != "child") {
-                var oldPane = this.lastSelected ? document.getElementById(this.lastSelected) : this.preferencePanes[0];
-                oldPane.selected = !(aPaneElement.selected = true);
-                this.lastSelected = aPaneElement.id;
-                this.currentPane = aPaneElement;
-                this._initialized = true;
-
-                // Only animate if we've switched between prefpanes
-                if (this._shouldAnimate && oldPane.id != aPaneElement.id) {
-                  // Don't let the new pane content flex to the current window
-                  // height if we're animating 
+                // Don't let the new pane content flex to the current window
+                // height if we're animating
+                if (this._shouldAnimate)
                   aPaneElement.removeAttribute("flex");
 
-                  aPaneElement.style.opacity = 0.0;
-                  this.animate(oldPane, aPaneElement);
+                var oldPane = this.lastSelected ? document.getElementById(this.lastSelected) : this.preferencePanes[0];
+                oldPane.selected = !(aPaneElement.selected = true);
+                if (!this._initialized || oldPane.id != aPaneElement.id) {
+                  this.lastSelected = aPaneElement.id;
+                  this.currentPane = aPaneElement;
+                  if (this._shouldAnimate) {
+                    aPaneElement.style.opacity = 0.0;
+                    this.animate(oldPane, aPaneElement);
+                  }
+                  this._initialized = true;
                 }
               }
               break;
