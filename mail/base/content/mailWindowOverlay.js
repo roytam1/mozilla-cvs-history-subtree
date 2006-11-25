@@ -2392,8 +2392,7 @@ function loadMsgWithRemoteContent()
 function msgHdrForCurrentMessage()
 {
   var msgURI = GetLoadedMessage();
-  if (msgURI && !(/type=application\/x-message-display/.test(msgURI)))
-    return (msgURI && !(/type=application\/x-message-display/.test(msgURI))) ? messenger.msgHdrFromURI(msgURI) : null;
+  return (msgURI && !(/type=application\/x-message-display/.test(msgURI))) ? messenger.msgHdrFromURI(msgURI) : null;
 }
 
 /**
