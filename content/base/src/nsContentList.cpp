@@ -371,7 +371,13 @@ nsContentList::Length(PRBool aDoFlush)
   CheckDocumentExistence();
   BringSelfUpToDate(aDoFlush);
     
-  return mElements.Count();
+  PRInt32 count = mElements.Count();
+
+  if (!mDocument) {
+    SetDirty();
+  }
+
+  return count;
 }
 
 nsIContent *
@@ -390,7 +396,13 @@ nsContentList::Item(PRUint32 aIndex, PRBool aDoFlush)
   NS_ASSERTION(!mDocument || mState != LIST_DIRTY,
                "PopulateSelf left the list in a dirty (useless) state!");
 
-  return mElements.SafeObjectAt(aIndex);
+  nsIContent* content = mElements.SafeObjectAt(aIndex);
+
+  if (!mDocument) {
+    SetDirty();
+  }
+
+  return content;
 }
 
 nsIContent *
@@ -402,6 +414,7 @@ nsContentList::NamedItem(const nsAString& aName, PRBool aDoFlush)
     
   PRInt32 i, count = mElements.Count();
 
+  nsIContent* returnContent = nsnull;
   for (i = 0; i < count; i++) {
     nsIContent *content = mElements[i];
     if (content) {
@@ -413,12 +426,17 @@ nsContentList::NamedItem(const nsAString& aName, PRBool aDoFlush)
           ((content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::id,
                              name) == NS_CONTENT_ATTR_HAS_VALUE) &&
            aName.Equals(name))) {
-        return content;
+        returnContent = content;
+        break;
       }
     }
   }
 
-  return nsnull;
+  if (!mDocument) {
+    SetDirty();
+  }
+  
+  return returnContent;
 }
 
 PRInt32
@@ -427,7 +445,13 @@ nsContentList::IndexOf(nsIContent *aContent, PRBool aDoFlush)
   CheckDocumentExistence();
   BringSelfUpToDate(aDoFlush);
     
-  return mElements.IndexOf(aContent);
+  PRInt32 index = mElements.IndexOf(aContent);
+
+  if (!mDocument) {
+    SetDirty();
+  }
+
+  return index;
 }
 
 void
@@ -508,7 +532,7 @@ nsContentList::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
         // We match aContent now, and it's not in our list already.  Just dirty
         // ourselves; this is simpler than trying to figure out where to insert
         // aContent.
-        mState = LIST_DIRTY;
+        SetDirty();
       }
     } else {
       // We no longer match aContent.  Remove it from our list.  If
@@ -582,7 +606,7 @@ nsContentList::ContentAppended(nsIDocument *aDocument, nsIContent* aContainer,
         if (MatchSelf(aContainer->GetChildAt(i))) {
           // Uh-oh.  We're gonna have to add elements into the middle
           // of our list. That's not worth the effort.
-          mState = LIST_DIRTY;
+          SetDirty();
           break;
         }
       }
@@ -623,7 +647,7 @@ nsContentList::ContentInserted(nsIDocument *aDocument,
     return;
 
   if (MayContainRelevantNodes(aContainer) && MatchSelf(aChild))
-    mState = LIST_DIRTY;
+    SetDirty();
 }
  
 void
@@ -638,7 +662,7 @@ nsContentList::ContentRemoved(nsIDocument *aDocument,
   if (mState != LIST_DIRTY) {
     if (MayContainRelevantNodes(aContainer)) {
       if (!IsContentAnonymous(aChild) && MatchSelf(aChild)) {
-        mState = LIST_DIRTY;
+        SetDirty();
       }
       return;
     }
@@ -696,7 +720,7 @@ nsContentList::CheckDocumentExistence()
     mDocument = mRootContent->GetDocument();
     if (mDocument) {
       mDocument->AddObserver(this);
-      mState = LIST_DIRTY;
+      SetDirty();
     }
   }
 }
@@ -810,6 +834,8 @@ nsContentList::PopulateSelf(PRUint32 aNeededLength)
     Reset();
   }
   PRUint32 count = mElements.Count();
+  NS_ASSERTION(mState != LIST_DIRTY || count == 0,
+               "Reset() not called when setting state to LIST_DIRTY?");
 
   if (count >= aNeededLength) // We're all set
     return;
@@ -841,11 +867,10 @@ nsContentList::PopulateSelf(PRUint32 aNeededLength)
       mState = LIST_UP_TO_DATE;
     else
       mState = LIST_LAZY;
-  } else {
-    // No document means we have to stay on our toes since we don't
-    // get content notifications.
-    mState = LIST_DIRTY;
   }
+  // Else no document, so we have to stay on our toes since we don't get
+  // content notifications.  Caller will call SetDirty(); see documentation for
+  // PopulateSelf() in the header.
 }
 
 PRBool
@@ -901,7 +926,7 @@ nsContentList::DisconnectFromDocument()
 
   // We will get no more updates, so we can never know we're up to
   // date
-  mState = LIST_DIRTY;
+  SetDirty();
 }
 
 void
