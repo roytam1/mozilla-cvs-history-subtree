@@ -1488,7 +1488,7 @@ case "$target" in
     DLL_SUFFIX=".dylib"
     DSO_LDOPTS=''
     STRIP="$STRIP -x -S"
-    _PLATFORM_DEFAULT_TOOLKIT='cocoa'
+    _PLATFORM_DEFAULT_TOOLKIT='cairo-cocoa'
     MOZ_ENABLE_POSTSCRIPT=
     TARGET_NSPR_MDCPUCFG='\"md/_darwin.cfg\"'
     # set MACOSX to generate lib/mac/MoreFiles/Makefile
@@ -5770,7 +5770,11 @@ MOZ_ARG_DISABLE_BOOL(svg,
     MOZ_SVG=,
     MOZ_SVG=1 )
 if test -n "$MOZ_SVG"; then
-  AC_DEFINE(MOZ_SVG)
+  if test -z "$MOZ_ENABLE_CAIRO_GFX"; then
+    AC_MSG_ERROR([SVG requires cairo gfx])
+  else
+    AC_DEFINE(MOZ_SVG)
+  fi
 fi
 
 MOZ_SVG_FOREIGNOBJECT=$MOZ_ENABLE_CAIRO_GFX

@@ -1064,7 +1064,6 @@ mail/components/shell/Makefile
 mail/components/shell/public/Makefile
 mail/extensions/Makefile
 mail/extensions/smime/Makefile
-mail/extensions/offline/Makefile
 mail/config/Makefile
 mail/installer/Makefile
 mail/installer/windows/Makefile
@@ -1344,10 +1343,6 @@ if [ "$MOZ_SVG" ]; then
 	layout/svg/Makefile
 	layout/svg/base/Makefile
 	layout/svg/base/src/Makefile
-	layout/svg/renderer/Makefile
-	layout/svg/renderer/public/Makefile
-	layout/svg/renderer/src/Makefile
-	layout/svg/renderer/src/cairo/Makefile
 "
 fi
 
