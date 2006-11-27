@@ -409,6 +409,9 @@ var gEditorDocumentObserver =
         // Things for just the Web Composer application
         if (IsWebComposer())
         {
+          InlineSpellCheckerUI.init(editor);
+          document.getElementById('menu_inlinespellcheck').setAttribute('disabled', !InlineSpellCheckerUI.canSpellCheck);
+
           var prefs = GetPrefs();
           editor.returnInParagraphCreatesNewParagraph = prefs.getBoolPref(kCRInParagraphsPref);
 
@@ -1716,6 +1719,7 @@ function SetEditMode(mode)
 
   // must have editor if here!
   var editor = GetCurrentEditor();
+  var inlineSpellCheckItem = document.getElementById('menu_inlinespellcheck');
 
   // Switch the UI mode before inserting contents
   //   so user can't type in source window while new window is being filled
@@ -1788,6 +1792,10 @@ function SetEditMode(mode)
     // Only rebuild document if a change was made in source window
     if (IsHTMLSourceChanged())
     {
+      // Disable spell checking when rebuilding source
+      InlineSpellCheckerUI.enabled = false;
+      inlineSpellCheckItem.removeAttribute('checked');
+
       // Reduce the undo count so we don't use too much memory
       //   during multiple uses of source window 
       //   (reinserting entire doc caches all nodes)
@@ -1835,6 +1843,20 @@ function SetEditMode(mode)
     gSourceTextEditor.resetModificationCount();
 
     gContentWindow.focus();
+  }
+
+  switch (mode) {
+    case kDisplayModePreview:
+      // Disable spell checking when previewing
+      InlineSpellCheckerUI.enabled = false;
+      inlineSpellCheckItem.removeAttribute('checked');
+      // fall through
+    case kDisplayModeSource:
+      inlineSpellCheckItem.setAttribute('disabled', 'true');
+      break;
+    default:
+      inlineSpellCheckItem.setAttribute('disabled', !InlineSpellCheckerUI.canSpellCheck);
+      break;
   }
 }
 
