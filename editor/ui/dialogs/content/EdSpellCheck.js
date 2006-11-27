@@ -199,6 +199,9 @@ function InitLanguageMenu(curLang)
           dictList[i][0] = dictList[i][0] + "/" + menuStr2;
       }
 
+      if (dictList[i][0] && isoStrArray.length > 2 && isoStrArray[2])
+        dictList[i][0] += " (" + isoStrArray[2] + ")";
+
       if (!dictList[i][0])
         dictList[i][0] = dictList[i][1];
     } catch (ex) {

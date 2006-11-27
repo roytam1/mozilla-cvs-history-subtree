@@ -2194,8 +2194,13 @@ function initLanguageMenu()
       // English (US) and English (UK)
       if (!dictList[i][0])
         dictList[i][0] = dictList[i][1];
-      else if (isoStrArray.length > 1 && isoStrArray[1]) // if we have a language ID like US or UK, append it to the menu item
-        dictList[i][0] += ' (' + isoStrArray[1] + ')';
+      // if we have a language ID like US or UK, append it to the menu item, and any sub-variety
+      else if (isoStrArray.length > 1 && isoStrArray[1]) {
+        dictList[i][0] += ' (' + isoStrArray[1];
+        if (isoStrArray.length > 2 && isoStrArray[2])
+          dictList[i][0] += '-' + isoStrArray[2];
+        dictList[i][0] += ')';
+      }
     } catch (ex) {
       // GetString throws an exception when
       // a key is not found in the bundle. In that
