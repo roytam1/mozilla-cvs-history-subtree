@@ -5346,6 +5346,17 @@ nsBlockFrame::InsertFrames(nsIAtom*  aListName,
   return rv;
 }
 
+static PRBool
+ShouldPutNextSiblingOnNewLine(nsIFrame* aLastFrame)
+{
+  nsIAtom* type = aLastFrame->GetType();
+  if (type == nsLayoutAtoms::brFrame)
+    return PR_TRUE;
+  if (type == nsLayoutAtoms::placeholderFrame)
+    return IsContinuationPlaceholder(aLastFrame);
+  return PR_FALSE;
+}
+
 nsresult
 nsBlockFrame::AddFrames(nsIFrame* aFrameList,
                         nsIFrame* aPrevSibling)
@@ -5423,7 +5434,7 @@ nsBlockFrame::AddFrames(nsIFrame* aFrameList,
     // If the frame is a block frame, or if there is no previous line or if the
     // previous line is a block line or ended with a <br> then make a new line.
     if (isBlock || prevSibLine == end_lines() || prevSibLine->IsBlock() ||
-        (aPrevSibling && aPrevSibling->GetType() == nsLayoutAtoms::brFrame)) {
+        (aPrevSibling && ShouldPutNextSiblingOnNewLine(aPrevSibling))) {
       // Create a new line for the frame and add its line to the line
       // list.
       nsLineBox* line = NS_NewLineBox(presShell, newFrame, 1, isBlock);
