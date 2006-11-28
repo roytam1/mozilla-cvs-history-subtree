@@ -2287,7 +2287,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState, PRBool aTryPull)
 
       // Reflow the dirty line. If it's an incremental reflow, then force
       // it to invalidate the dirty area if necessary
-      rv = ReflowLine(aState, line, &keepGoing, doInvalidate);
+      rv = ReflowLine(aState, line, aTryPull, &keepGoing, doInvalidate);
       if (NS_FAILED(rv)) {
         return rv;
       }
@@ -2513,7 +2513,8 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState, PRBool aTryPull)
       // line to be created; see SplitLine's callers for examples of
       // when this happens).
       while (line != end_lines()) {
-        rv = ReflowLine(aState, line, &keepGoing, doInvalidate);
+        NS_ASSERTION(aTryPull, "We shouldn't be in here if we can't pull!");
+        rv = ReflowLine(aState, line, PR_TRUE, &keepGoing, doInvalidate);
         if (NS_FAILED(rv)) {
           NS_WARNING("Line reflow failed");
           return rv;
@@ -2619,6 +2620,7 @@ static void GetRectDifferenceStrips(const nsRect& aR1, const nsRect& aR2,
 nsresult
 nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
                          line_iterator aLine,
+                         PRBool aTryPull,
                          PRBool* aKeepReflowGoing,
                          PRBool aDamageDirtyArea)
 {
@@ -2702,7 +2704,9 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
     PRBool isBeginningLine = aState.mCurrentLine == begin_lines() ||
                              !aState.mCurrentLine.prev()->IsLineWrapped();
     // XXXldb Add &&!aState.GetFlag(BRS_UNCONSTRAINEDWIDTH)
-    if (aState.GetFlag(BRS_COMPUTEMAXWIDTH) && isBeginningLine) {
+    // If we're not allowed to pull frames from our next-in-flow (e.g., during
+    // shrinkwrap) then we shouldn't be doing this.
+    if (aState.GetFlag(BRS_COMPUTEMAXWIDTH) && isBeginningLine && aTryPull) {
       // First reflow the line with an unconstrained width. 
       nscoord oldY = aState.mY;
       nsCollapsingMargin oldPrevBottomMargin(aState.mPrevBottomMargin);
@@ -2727,7 +2731,7 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
       // width is unconstrained...
       aState.mSpaceManager->PushState();
       aState.SetFlag(BRS_UNCONSTRAINEDWIDTH, PR_TRUE);
-      ReflowInlineFrames(aState, aLine, aKeepReflowGoing, aDamageDirtyArea, PR_TRUE);
+      ReflowInlineFrames(aState, aLine, PR_TRUE, aKeepReflowGoing, aDamageDirtyArea, PR_TRUE);
       aState.mY = oldY;
       aState.mPrevBottomMargin = oldPrevBottomMargin;
       aState.SetFlag(BRS_UNCONSTRAINEDWIDTH, oldUnconstrainedWidth);
@@ -2749,11 +2753,11 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
       nscoord oldComputeMaximumWidth = aState.GetFlag(BRS_COMPUTEMAXWIDTH);
 
       aState.SetFlag(BRS_COMPUTEMAXWIDTH, PR_FALSE);
-      rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing, aDamageDirtyArea);
+      rv = ReflowInlineFrames(aState, aLine, PR_TRUE, aKeepReflowGoing, aDamageDirtyArea);
       aState.SetFlag(BRS_COMPUTEMAXWIDTH, oldComputeMaximumWidth);
 
     } else {
-      rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing, aDamageDirtyArea);
+      rv = ReflowInlineFrames(aState, aLine, aTryPull, aKeepReflowGoing, aDamageDirtyArea);
       if (NS_SUCCEEDED(rv))
       {
         if (aState.GetFlag(BRS_COMPUTEMAXWIDTH))
@@ -3731,6 +3735,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
 nsresult
 nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
                                  line_iterator aLine,
+                                 PRBool aTryPull,
                                  PRBool* aKeepReflowGoing,
                                  PRBool aDamageDirtyArea,
                                  PRBool aUpdateMaximumWidth)
@@ -3759,7 +3764,7 @@ nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
     lineLayout.Init(&aState, aState.mMinLineHeight, aState.mLineNumber);
     rv = DoReflowInlineFrames(aState, lineLayout, aLine,
                               aKeepReflowGoing, &lineReflowStatus,
-                              aUpdateMaximumWidth, aDamageDirtyArea);
+                              aUpdateMaximumWidth, aDamageDirtyArea, aTryPull);
     lineLayout.EndLineReflow();
     
     if (LINE_REFLOW_REDO == lineReflowStatus) {
@@ -3812,7 +3817,8 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
                                    PRBool* aKeepReflowGoing,
                                    PRUint8* aLineReflowStatus,
                                    PRBool aUpdateMaximumWidth,
-                                   PRBool aDamageDirtyArea)
+                                   PRBool aDamageDirtyArea
+                                   PRBool aAllowPullUp)
 {
   // Forget all of the floats on the line
   aLine->FreeFloats(aState.mFloatCacheFreeList);
@@ -3909,7 +3915,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   }
 
   // Don't pull up new frames into lines with continuation placeholders
-  if (!isContinuingPlaceholders) {
+  if (!isContinuingPlaceholders && aAllowPullUp) {
     // Pull frames and reflow them until we can't
     while (LINE_REFLOW_OK == lineReflowStatus) {
       rv = PullFrame(aState, aLine, aDamageDirtyArea, frame);
@@ -3939,7 +3945,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
         }
       }
     }
-  }
+  } 
 
   if (LINE_REFLOW_REDO == lineReflowStatus) {
     // This happens only when we have a line that is impacted by
