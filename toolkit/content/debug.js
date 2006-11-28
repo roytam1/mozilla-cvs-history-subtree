@@ -65,8 +65,14 @@ function NS_ASSERT(condition, message) {
   if (condition)
     return;
 
-  var caller = arguments.callee.caller;
   var assertionText = "ASSERT: " + message + "\n";
+
+#ifndef DEBUG
+# Just report the error to the console
+  Components.util.reportError(assertionText);
+  return;
+#else
+  var caller = arguments.callee.caller;
   dump(assertionText);
 
   var stackText = "";
@@ -98,4 +104,5 @@ function NS_ASSERT(condition, message) {
   var ps = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].
            getService(Components.interfaces.nsIPromptService);
   ps.alert(source, "Assertion Failed", assertionText + stackText);
+#endif
 }
