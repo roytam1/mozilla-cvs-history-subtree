@@ -171,18 +171,6 @@ public:
                                          nsXPTCVariant **fullParam,
                                          uint8 *outParamCount);
 
-    nsresult AutoproxifyInParameterList(nsXPTCVariant *params,
-                                        uint8 paramCount,
-                                        const nsXPTMethodInfo *methodInfo,
-                                        PRUint32 methodIndex,
-                                        nsIInterfaceInfo* interfaceInfo);
-    nsresult AutoproxifyOutParameterList(nsXPTCVariant *params,
-                                         uint8 paramCount,
-                                         const nsXPTMethodInfo *methodInfo,
-                                         PRUint32 methodIndex,
-                                         nsIInterfaceInfo* interfaceInfo,
-                                         PRBool proxifyOutPars = PR_TRUE);
-    
     nsProxyEventObject(nsProxyObject *aParent,
                        nsProxyEventClass *aClass,
                        already_AddRefed<nsISomeInterface> aRealInterface,
@@ -230,8 +218,6 @@ public:
 
     ~nsProxyObjectCallInfo();
 
-    nsresult Init();
-    
     PRUint32            GetMethodIndex() const { return mMethodIndex; }
     nsXPTCVariant*      GetParameterList() const { return mParameterList; }
     PRUint32            GetParameterCount() const { return mParameterCount; }

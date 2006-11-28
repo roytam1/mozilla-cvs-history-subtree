@@ -142,38 +142,21 @@ nsProxyObjectCallInfo::nsProxyObjectCallInfo(nsProxyEventObject* owner,
     NS_ASSERTION(owner, "No nsProxyObject!");
     NS_ASSERTION(methodInfo, "No nsXPTMethodInfo!");
 
+    RefCountInInterfacePointers(PR_TRUE);
     if (mOwner->GetProxyType() & NS_PROXY_ASYNC)
         CopyStrings(PR_TRUE);
 }
 
 nsProxyObjectCallInfo::~nsProxyObjectCallInfo()
 {
-    if (mOwner->GetProxyType() & NS_PROXY_ASYNC) {
-        if (!(mOwner->GetProxyType() * NS_PROXY_AUTOPROXIFY))
-            RefCountInInterfacePointers(PR_FALSE);
+    RefCountInInterfacePointers(PR_FALSE);
+    if (mOwner->GetProxyType() & NS_PROXY_ASYNC)
         CopyStrings(PR_FALSE);
-    }
 
     mOwner = nsnull;
     
     if (mParameterList)  
         free(mParameterList);
-}
-
-nsresult
-nsProxyObjectCallInfo::Init()
-{
-    if (mOwner->GetProxyType() & NS_PROXY_AUTOPROXIFY) {
-        nsresult rv;
-        rv = mOwner->AutoproxifyInParameterList(mParameterList, mParameterCount,
-                                                mMethodInfo, mMethodIndex,
-                                                mOwner->GetClass()->GetInterfaceInfo());
-        if (NS_FAILED(rv)) return rv;
-    }
-    else if (mOwner->GetProxyType() & NS_PROXY_ASYNC)
-        RefCountInInterfacePointers(PR_TRUE);
-
-    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -325,16 +308,6 @@ nsProxyObjectCallInfo::PostCompleted()
 {
     PROXY_LOG(("PROXY(%p): PostCompleted\n", this));
 
-    // perform autoproxification cleanup and proxification of 'out'
-    // params on proxied object's thread:
-    if (mOwner->GetProxyType() & NS_PROXY_AUTOPROXIFY) {
-        mOwner->AutoproxifyOutParameterList(mParameterList, mParameterCount,
-                                            mMethodInfo, mMethodIndex,
-                                            mOwner->GetClass()->GetInterfaceInfo(),
-                                            !(mOwner->GetProxyType() & NS_PROXY_ASYNC) &&
-                                            NS_SUCCEEDED(mResult));
-    }
-    
     if (mCallersTarget) {
         nsCOMPtr<nsIRunnable> event =
                 new nsProxyCallCompletedEvent(this);

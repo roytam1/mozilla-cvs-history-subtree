@@ -153,179 +153,6 @@ nsProxyEventObject::convertMiniVariantToVariant(const XPTMethodDescriptor *metho
     return NS_OK;
 }
 
-// Helper returning the iid for a given method parameter. 
-static PRBool GetIIDForParam(nsXPTCVariant *params, PRUint32 paramIndex,
-                             const nsXPTMethodInfo *methodInfo, PRUint32 methodIndex,
-                             nsIInterfaceInfo* interfaceInfo, nsIID*retval)
-{
-    nsXPTParamInfo paramInfo = methodInfo->GetParam(paramIndex);
-    if (paramInfo.GetType().TagPart() == nsXPTType::T_INTERFACE_IS) {
-        uint8 iidIndex;
-        if (NS_FAILED(interfaceInfo->GetInterfaceIsArgNumberForParam(methodIndex, &paramInfo, &iidIndex))) {
-            NS_ERROR("Could not get index of iid arg");
-            return PR_FALSE;
-        }
-        nsXPTParamInfo iidParam = methodInfo->GetParam(iidIndex);
-        NS_ASSERTION(iidParam.GetType().TagPart() == nsXPTType::T_IID, "iid parameter error");
-        if (iidParam.IsOut()) {
-            nsIID** p = (nsIID**)params[iidIndex].ptr;
-            if (!p || !*p) return PR_FALSE;
-            *retval = **p;
-        }
-        else {
-            // in parameter
-            nsIID* p = (nsIID*)params[iidIndex].val.p;
-            if (!p) return PR_FALSE;
-            *retval = *p;
-        }
-    }
-    else { // nsXPTType::T_INTERFACE
-        if (NS_FAILED(interfaceInfo->GetIIDForParamNoAlloc(methodIndex, &paramInfo, retval)))
-            return PR_FALSE;
-    }
-    return PR_TRUE;
-}
-
-nsresult
-nsProxyEventObject::AutoproxifyInParameterList(nsXPTCVariant *params,
-                                               uint8 paramCount,
-                                               const nsXPTMethodInfo *methodInfo,
-                                               PRUint32 methodIndex,
-                                               nsIInterfaceInfo* interfaceInfo)
-{
-    for (uint8 i=0; i<paramCount; ++i)
-    {
-        if (!params[i].type.IsInterfacePointer())
-            continue;
-        
-        if (params[i].IsPtrData()) {
-            // this is an 'out' or 'inout' parameter
-            NS_ASSERTION(!methodInfo->GetParam(i).IsIn(), "inout parameter will not be autoproxied!");
-            
-            continue;
-        }
-        
-        nsISupports* itf = (nsISupports*)params[i].val.p;
-        
-        if (itf == nsnull)
-            continue;
-        
-        // check if this parameter is already proxied:
-        nsCOMPtr<nsProxyObject> proxyObj = do_QueryInterface(itf);
-        
-        if (proxyObj) {
-            // this parameter is already proxied; we'll assume that it
-            // wants to be accessed via this existing proxy
-            continue;
-        }
-        
-        nsIID iid;
-      
-        if (!GetIIDForParam(params, i, methodInfo, methodIndex, interfaceInfo, &iid)) {
-            NS_WARNING("Couldn't get IID for parameter");
-            return NS_ERROR_FAILURE;
-        }
-
-        // get a proxy for the given object:
-        nsISupports* proxy;
-        
-        NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD, iid, itf,
-                             GetProxyType(), (void**)&proxy);
-
-        if (!proxy) {
-            NS_ERROR("failed to create proxy");
-            return NS_ERROR_FAILURE;
-        }
-
-        // stuff proxy into val.p and mark parameter as needing cleanup
-        params[i].val.p = proxy;
-        params[i].SetValIsProxied();
-    }
-    
-    return NS_OK;
-}
-
-nsresult
-nsProxyEventObject::AutoproxifyOutParameterList(nsXPTCVariant *params,
-                                                uint8 paramCount,
-                                                const nsXPTMethodInfo *methodInfo,
-                                                PRUint32 methodIndex, 
-                                                nsIInterfaceInfo* interfaceInfo,
-                                                PRBool proxifyOutPars)
-{
-    nsresult rv = NS_OK;
-    
-    for (uint8 i=0; i<paramCount; ++i)
-    {
-        if (!params[i].type.IsInterfacePointer())
-            continue;
-
-        if (params[i].IsPtrData() && proxifyOutPars && params[i].ptr != nsnull) {
-            if(methodInfo->GetParam(i).IsIn()) {
-                NS_WARNING("inout parameter will not be autoproxied!");
-                continue;
-            }
-            
-            // this is an out parameter that needs to be proxied
-            nsISupports* itf = *((nsISupports**)params[i].ptr);
-
-            if (itf == nsnull)
-                continue;
-
-            // check if this parameter is already proxied:
-            nsCOMPtr<nsProxyObject> proxyObj = do_QueryInterface(itf);
-
-            if (proxyObj) {
-                // this parameter is already proxied; we'll assume
-                // that it want to be accessed via this existing proxy
-                continue;
-            }
-
-            nsIID iid;
-            if (!GetIIDForParam(params, i, methodInfo, methodIndex, interfaceInfo, &iid)) {
-                NS_WARNING("couldn't get iid for parameter");
-                // we want to continue despite the failure so that
-                // cleanup of proxied 'in' pars is still taken care
-                // of.
-                rv = NS_ERROR_FAILURE;
-                continue;
-            }
-
-            // get a proxy for the given object:
-            nsISupports* proxy;
-            
-            NS_GetProxyForObject(GetTarget(), iid, itf,
-                                 GetProxyType(), (void**)&proxy);
-
-            if (!proxy) {
-                NS_ERROR("failed to create proxy");
-                // continue; see comment above
-                rv = NS_ERROR_FAILURE;
-                continue;
-            }
-
-            // stuff proxy into parameter:
-            *((nsISupports**)params[i].ptr) = proxy;
-
-            // release original obj so that proxy gets ownership:
-            itf->Release();
-        }
-        else if (params[i].IsValProxied()) {
-            // this is a proxied 'in' parameter needing cleanup
-
-            nsProxyEventObject* proxy = (nsProxyEventObject*)params[i].val.p;
-            NS_ASSERTION(proxy, "uh-oh. null proxy? this can't happen.");
-            
-            // replace by real object and release proxy:
-            params[i].val.p = proxy->GetProxiedInterface();
-
-            proxy->Release();
-        }
-    }
-    return rv;
-}
-
-
 class nsProxyThreadFilter : public nsIThreadEventFilter
 {
 public:
@@ -376,24 +203,10 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
         NS_SUCCEEDED(GetTarget()->IsOnCurrentThread(&callDirectly)) &&
         callDirectly) {
 
-        if (GetProxyType() & NS_PROXY_AUTOPROXIFY &&
-            NS_FAILED(AutoproxifyInParameterList(fullParam, paramCount,
-                                                 methodInfo, methodIndex,
-                                                 mClass->GetInterfaceInfo()))) {
-            if (fullParam) free(fullParam);
-            return NS_ERROR_FAILURE;
-        }
-        
         // invoke directly using xptc
         rv = NS_InvokeByIndex(mRealInterface, methodIndex,
                               paramCount, fullParam);
 
-        if (GetProxyType() & NS_PROXY_AUTOPROXIFY) {
-            AutoproxifyOutParameterList(fullParam, paramCount,
-                                        methodInfo, methodIndex,
-                                        mClass->GetInterfaceInfo());
-        }
-        
         if (fullParam)
             free(fullParam);
 
@@ -406,9 +219,6 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
     if (!proxyInfo)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    if (NS_FAILED(proxyInfo->Init()))
-        return NS_ERROR_FAILURE;
-    
     if (! (GetProxyType() & NS_PROXY_SYNC)) {
         return GetTarget()->Dispatch(proxyInfo, NS_DISPATCH_NORMAL);
     }
