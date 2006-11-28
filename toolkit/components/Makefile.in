@@ -48,6 +48,7 @@ include $(DEPTH)/config/autoconf.mk
 ifdef MOZ_ENABLE_XREMOTE
 DIRS += remote
 endif
+DIRS += urlformatter
 
 # These component dirs are built only for XUL apps
 
@@ -60,7 +61,6 @@ DIRS += \
 	printing \
 	viewsource \
 	viewconfig \
-	urlformatter \
 	$(NULL)
 
 ifdef MOZ_THUNDERBIRD
