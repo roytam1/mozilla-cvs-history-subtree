@@ -2009,14 +2009,14 @@
       
       <toolbarbutton class="toolbarbutton-1" id="button-previous" label="&previousButton.label;" oncommand="goDoCommand('button_previous')" tooltiptext="&previousButton.tooltip;" observes="button_previous"/>      
       <toolbarbutton class="toolbarbutton-1" id="button-next"     label="&nextButton.label;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
-      <toolbarbutton class="toolbarbutton-1" type="menu-button" id="button-goback" label="&backButton.label;" chromedir="&locale.dir;" oncommand="goDoCommand('cmd_goBack')" tooltiptext="&goBackButton.tooltip;" observes="button_goBack">
+      <toolbarbutton class="toolbarbutton-1" type="menu-button" id="button-goback" label="&backButton1.label;" chromedir="&locale.dir;" oncommand="goDoCommand('cmd_goBack')" tooltiptext="&goBackButton.tooltip;" observes="button_goBack">
          <menupopup onpopupshowing="backToolbarMenu_init(this)">
           <menuitem label="&goBackCmd.label;" observes="cmd_goBack"/>
           <menuseparator/>
         </menupopup>
       </toolbarbutton>  
           
-      <toolbarbutton class="toolbarbutton-1" type="menu-button" id="button-goforward" label="&goForwardButton.label;" chromedir="&locale.dir;" oncommand="goDoCommand('cmd_goForward')" tooltiptext="&goForwardButton.tooltip;" observes="button_goForward">
+      <toolbarbutton class="toolbarbutton-1" type="menu-button" id="button-goforward" label="&goForwardButton1.label;" chromedir="&locale.dir;" oncommand="goDoCommand('cmd_goForward')" tooltiptext="&goForwardButton.tooltip;" observes="button_goForward">
         <menupopup onpopupshowing="forwardToolbarMenu_init(this)">
           <menuitem label="&goForwardCmd.label;" observes="cmd_goForward"/>
           <menuseparator/>
