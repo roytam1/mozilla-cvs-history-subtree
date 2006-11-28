@@ -166,15 +166,45 @@ PROT_EnchashDecrypter.prototype.parseRegExps = function(data) {
   return res;
 }
 
-PROT_EnchashDecrypter.prototype.getCanonicalHost = function(str) {
-  var ioservice = Cc["@mozilla.org/network/io-service;1"]
+/**
+ * Get the canonical version of the given URL for lookup in a table of 
+ * type -url.
+ *
+ * @param url String to canonicalize
+ *
+ * @returns String containing the canonicalized url (maximally url-decoded
+ *          with hostname normalized, then specially url-encoded)
+ */
+PROT_EnchashDecrypter.prototype.getCanonicalUrl = function(url) {
+  var escapedUrl = PROT_URLCanonicalizer.canonicalizeURL_(url);
+  // Normalize the host
+  var host = this.getCanonicalHost(escapedUrl);
+  if (!host) {
+    // Probably an invalid url, return what we have so far.
+    return escapedUrl;
+  }
+
+  // Combine our normalized host with our escaped url.
+  var ioService = Cc["@mozilla.org/network/io-service;1"]
                   .getService(Ci.nsIIOService);
-                  
-  var urlObj = ioservice.newURI(str, null, null);
-  var asciiHost = '';
+  var urlObj = ioService.newURI(escapedUrl, null, null);
+  urlObj.host = host;
+  return urlObj.asciiSpec;
+}
+
+/**
+ * @param opt_maxDots Number maximum number of dots to include.
+ */
+PROT_EnchashDecrypter.prototype.getCanonicalHost = function(str, opt_maxDots) {
+  var ioService = Cc["@mozilla.org/network/io-service;1"]
+                  .getService(Ci.nsIIOService);
   try {
-    asciiHost = urlObj.asciiHost;
-  } catch (e) { }
+    var urlObj = ioService.newURI(str, null, null);
+    var asciiHost = urlObj.asciiHost;
+  } catch (e) {
+    G_Debug(this, "Unable to get hostname: " + str);
+    return "";
+  }
 
   var unescaped = this.hexDecode_(asciiHost);
 
@@ -190,19 +220,22 @@ PROT_EnchashDecrypter.prototype.getCanonicalHost = function(str) {
   // ":", "/", ";", and "?"
   var escaped = encodeURI(unescaped);
 
-  var k;
-  var index = escaped.length;
-  for (k = 0; k < PROT_EnchashDecrypter.MAX_DOTS + 1; k++) {
-    temp = escaped.lastIndexOf(".", index - 1);
-    if (temp == -1) {
-      break;
-    } else {
-      index = temp;
+  if (opt_maxDots) {
+    // Limit the number of dots
+    var k;
+    var index = escaped.length;
+    for (k = 0; k < opt_maxDots + 1; k++) {
+      temp = escaped.lastIndexOf(".", index - 1);
+      if (temp == -1) {
+        break;
+      } else {
+        index = temp;
+      }
     }
-  }
-  
-  if (k == PROT_EnchashDecrypter.MAX_DOTS + 1 && index != -1) {
-    escaped = escaped.substring(index + 1);
+    
+    if (k == opt_maxDots + 1 && index != -1) {
+      escaped = escaped.substring(index + 1);
+    }
   }
 
   escaped = escaped.toLowerCase();
@@ -273,9 +306,11 @@ PROT_EnchashDecrypter.prototype.canonicalNum_ = function(num, bytes, octal) {
   if (temp_num == -1) 
     return "";
 
+  // Since we mod the number, we're removing the least significant bits.  We
+  // Want to push them into the front of the array to preserve the order.
   var parts = [];
   while (bytes--) {
-    parts.push("" + (temp_num % 256));
+    parts.unshift("" + (temp_num % 256));
     temp_num -= temp_num % 256;
     temp_num /= 256;
   }
@@ -457,27 +492,31 @@ function TEST_PROT_EnchashDecrypter() {
        "", "0x45", -1, true,
        "45", "45", 1, true,
        "16", "0x10", 1, true,
-       "111.1", "367", 2, true,
-       "229.20.0", "012345", 3, true,
+       "1.111", "367", 2, true,
+       "0.20.229", "012345", 3, true,
        "123", "0173", 1, true,
        "9", "09", 1, false,
        "", "0x120x34", 2, true,
-       "252.18", "0x12fc", 2, true];
+       "18.252", "0x12fc", 2, true];
     for (var i = 0; i < tests.length; i+= 4)
       G_Assert(z, tests[i] === l.canonicalNum_(tests[i + 1], 
                                                tests[i + 2], 
                                                tests[i + 3]),
                "canonicalNum broken on: " + tests[i + 1]);
 
-    // Test parseIPAddress
+    // Test parseIPAddress (these are all verifiable using ping)
     var testing = {};
     testing["123.123.0.0.1"] = "";
     testing["255.0.0.1"] = "255.0.0.1";
-    testing["12.0x12.01234"] = "12.18.156.2";
-    testing["276.2.3"] = "20.2.3.0";
+    testing["12.0x12.01234"] = "12.18.2.156";
     testing["012.034.01.055"] = "10.28.1.45";
     testing["0x12.0x43.0x44.0x01"] = "18.67.68.1";
-    
+    testing["0x12434401"] = "18.67.68.1";
+    testing["413960661"] = "24.172.137.213";
+    testing["03053104725"] = "24.172.137.213";
+    testing["030.0254.0x89d5"] = "24.172.137.213";
+    testing["1.234.4.0377"] = "1.234.4.255";
+
     for (var key in testing) 
       G_Assert(z, l.parseIPAddress_(key) === testing[key], 
                "parseIPAddress broken on " + key + "(got: " +
@@ -485,17 +524,42 @@ function TEST_PROT_EnchashDecrypter() {
 
     // Test getCanonicalHost
     var testing = {};
-    testing["completely.bogus.url.with.a.whole.lot.of.dots"] = 
+    testing["http://completely.bogus.url.with.a.whole.lot.of.dots"] =
       "with.a.whole.lot.of.dots";
     testing["http://poseidon.marinet.gr/~elani"] = "poseidon.marinet.gr";
     testing["http://www.google.com.."] = "www.google.com";
     testing["https://www.yaho%6F.com"] = "www.yahoo.com";
     testing["http://012.034.01.0xa"] = "10.28.1.10";
     testing["ftp://wierd..chars...%0f,%fa"] = "wierd.chars.,";
+    testing["http://0x18ac89d5/http.www.paypal.com/"] = "24.172.137.213";
+    testing["http://413960661/http.www.paypal.com/"] = "24.172.137.213";
+    testing["http://03053104725/http.www.paypal.com/"] = "24.172.137.213";
+    testing["http://www.barclays.co.uk.brccontrol.assruspede.org.bz/"
+                    + "detailsconfirm"] = "co.uk.brccontrol.assruspede.org.bz";
     for (var key in testing)
-      G_Assert(z, l.getCanonicalHost(key) == testing[key], 
+      G_Assert(z, l.getCanonicalHost(key, PROT_EnchashDecrypter.MAX_DOTS) ==
+                                                                testing[key],
                "getCanonicalHost broken on: " + key + 
                "(got: " + l.getCanonicalHost(key) + ")");
+
+    // Test getCanonicalUrl
+    testing = {};
+    testing["http://0x18.0xac.0x89.0xd5/http.www.paypal.com/"] =
+                                "http://24.172.137.213/http.www.paypal.com/";
+    testing["http://0x18ac89d5/http.www.paypal.com/"] =
+                                "http://24.172.137.213/http.www.paypal.com/";
+    testing["http://413960661/http.www.paypal.com/"] =
+                                "http://24.172.137.213/http.www.paypal.com/";
+    testing["http://03053104725/http.www.paypal.com/"] =
+                                "http://24.172.137.213/http.www.paypal.com/";
+    testing["http://03053104725/%68t%74p.www.paypal.c%6fm/"] =
+                                "http://24.172.137.213/http.www.paypal.com/";
+    testing["http://www.barclays.co.uk.brccontrol.assruspede.org.bz/detailsconfirm"] =
+      "http://www.barclays.co.uk.brccontrol.assruspede.org.bz/detailsconfirm";
+    for (var key in testing)
+      G_Assert(z, l.getCanonicalUrl(key) == testing[key], 
+               "getCanonicalUrl broken on: " + key + 
+               "(got: " + l.getCanonicalUrl(key) + ")");
 
     // Test getlookupkey
     var testing = {};
@@ -543,7 +607,6 @@ function TEST_PROT_EnchashDecrypter() {
                "decryptdata broken on " + tests[i] + " (got: " + dec + 
                ", expected: " + tests[i + 2] + ")");
     }
-
 
     G_Debug(z, "PASSED");
   }
