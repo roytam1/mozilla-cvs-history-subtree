@@ -1,3 +1,4 @@
+#include "gtkmozembedmarshal.h"
 
 #include	<glib-object.h>
 
@@ -47,7 +48,7 @@
 #endif /* !G_ENABLE_DEBUG */
 
 
-/* BOOL:STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:1) */
+/* BOOL:STRING (gtkmozembedmarshal.list:1) */
 void
 gtkmozembed_BOOLEAN__STRING (GClosure     *closure,
                              GValue       *return_value,
@@ -86,7 +87,7 @@ gtkmozembed_BOOLEAN__STRING (GClosure     *closure,
   g_value_set_boolean (return_value, v_return);
 }
 
-/* BOOL:STRING,STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:2) */
+/* BOOL:STRING,STRING (gtkmozembedmarshal.list:2) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING (GClosure     *closure,
                                     GValue       *return_value,
@@ -127,7 +128,7 @@ gtkmozembed_BOOLEAN__STRING_STRING (GClosure     *closure,
   g_value_set_boolean (return_value, v_return);
 }
 
-/* BOOL:STRING,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:3) */
+/* BOOL:STRING,STRING,POINTER (gtkmozembedmarshal.list:3) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING_POINTER (GClosure     *closure,
                                             GValue       *return_value,
@@ -170,7 +171,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER (GClosure     *closure,
   g_value_set_boolean (return_value, v_return);
 }
 
-/* BOOL:STRING,STRING,POINTER,INT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:4) */
+/* BOOL:STRING,STRING,POINTER,INT (gtkmozembedmarshal.list:4) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING_POINTER_INT (GClosure     *closure,
                                                 GValue       *return_value,
@@ -215,7 +216,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_INT (GClosure     *closure,
   g_value_set_boolean (return_value, v_return);
 }
 
-/* BOOL:STRING,STRING,POINTER,POINTER,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:5) */
+/* BOOL:STRING,STRING,POINTER,POINTER,STRING,POINTER (gtkmozembedmarshal.list:5) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING_POINTER_POINTER_STRING_POINTER (GClosure     *closure,
                                                                    GValue       *return_value,
@@ -264,7 +265,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_POINTER_STRING_POINTER (GClosure     
   g_value_set_boolean (return_value, v_return);
 }
 
-/* BOOL:STRING,STRING,POINTER,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:6) */
+/* BOOL:STRING,STRING,POINTER,STRING,POINTER (gtkmozembedmarshal.list:6) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING_POINTER_STRING_POINTER (GClosure     *closure,
                                                            GValue       *return_value,
@@ -311,7 +312,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_POINTER_STRING_POINTER (GClosure     *closure
   g_value_set_boolean (return_value, v_return);
 }
 
-/* BOOL:STRING,STRING,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:7) */
+/* BOOL:STRING,STRING,STRING,POINTER (gtkmozembedmarshal.list:7) */
 void
 gtkmozembed_BOOLEAN__STRING_STRING_STRING_POINTER (GClosure     *closure,
                                                    GValue       *return_value,
@@ -356,7 +357,7 @@ gtkmozembed_BOOLEAN__STRING_STRING_STRING_POINTER (GClosure     *closure,
   g_value_set_boolean (return_value, v_return);
 }
 
-/* INT:STRING,INT,INT,INT,INT,INT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:8) */
+/* INT:STRING,INT,INT,INT,INT,INT (gtkmozembedmarshal.list:8) */
 void
 gtkmozembed_INT__STRING_INT_INT_INT_INT_INT (GClosure     *closure,
                                              GValue       *return_value,
@@ -405,7 +406,7 @@ gtkmozembed_INT__STRING_INT_INT_INT_INT_INT (GClosure     *closure,
   g_value_set_int (return_value, v_return);
 }
 
-/* INT:STRING,STRING,INT,INT,INT,INT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:9) */
+/* INT:STRING,STRING,INT,INT,INT,INT (gtkmozembedmarshal.list:9) */
 void
 gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT (GClosure     *closure,
                                                 GValue       *return_value,
@@ -454,7 +455,7 @@ gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT (GClosure     *closure,
   g_value_set_int (return_value, v_return);
 }
 
-/* INT:STRING,STRING,UINT,STRING,STRING,STRING,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:10) */
+/* INT:STRING,STRING,UINT,STRING,STRING,STRING,STRING,POINTER (gtkmozembedmarshal.list:10) */
 void
 gtkmozembed_INT__STRING_STRING_UINT_STRING_STRING_STRING_STRING_POINTER (GClosure     *closure,
                                                                          GValue       *return_value,
@@ -507,7 +508,7 @@ gtkmozembed_INT__STRING_STRING_UINT_STRING_STRING_STRING_STRING_POINTER (GClosur
   g_value_set_int (return_value, v_return);
 }
 
-/* INT:VOID (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:11) */
+/* INT:VOID (gtkmozembedmarshal.list:11) */
 void
 gtkmozembed_INT__VOID (GClosure     *closure,
                        GValue       *return_value,
@@ -544,7 +545,7 @@ gtkmozembed_INT__VOID (GClosure     *closure,
   g_value_set_int (return_value, v_return);
 }
 
-/* STRING:STRING,STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:12) */
+/* STRING:STRING,STRING (gtkmozembedmarshal.list:12) */
 void
 gtkmozembed_STRING__STRING_STRING (GClosure     *closure,
                                    GValue       *return_value,
@@ -585,9 +586,9 @@ gtkmozembed_STRING__STRING_STRING (GClosure     *closure,
   g_value_take_string (return_value, v_return);
 }
 
-/* VOID:BOOL (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:13) */
+/* VOID:BOOL (gtkmozembedmarshal.list:13) */
 
-/* VOID:INT,INT,BOOL (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:14) */
+/* VOID:INT,INT,BOOL (gtkmozembedmarshal.list:14) */
 void
 gtkmozembed_VOID__INT_INT_BOOLEAN (GClosure     *closure,
                                    GValue       *return_value,
@@ -626,7 +627,7 @@ gtkmozembed_VOID__INT_INT_BOOLEAN (GClosure     *closure,
             data2);
 }
 
-/* VOID:INT,STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:15) */
+/* VOID:INT,STRING (gtkmozembedmarshal.list:15) */
 void
 gtkmozembed_VOID__INT_STRING (GClosure     *closure,
                               GValue       *return_value,
@@ -663,7 +664,7 @@ gtkmozembed_VOID__INT_STRING (GClosure     *closure,
             data2);
 }
 
-/* VOID:INT,STRING,STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:16) */
+/* VOID:INT,STRING,STRING (gtkmozembedmarshal.list:16) */
 void
 gtkmozembed_VOID__INT_STRING_STRING (GClosure     *closure,
                                      GValue       *return_value,
@@ -702,7 +703,7 @@ gtkmozembed_VOID__INT_STRING_STRING (GClosure     *closure,
             data2);
 }
 
-/* VOID:INT,UINT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:17) */
+/* VOID:INT,UINT (gtkmozembedmarshal.list:17) */
 void
 gtkmozembed_VOID__INT_UINT (GClosure     *closure,
                             GValue       *return_value,
@@ -739,7 +740,7 @@ gtkmozembed_VOID__INT_UINT (GClosure     *closure,
             data2);
 }
 
-/* VOID:POINTER,INT,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:18) */
+/* VOID:POINTER,INT,POINTER (gtkmozembedmarshal.list:18) */
 void
 gtkmozembed_VOID__POINTER_INT_POINTER (GClosure     *closure,
                                        GValue       *return_value,
@@ -778,7 +779,7 @@ gtkmozembed_VOID__POINTER_INT_POINTER (GClosure     *closure,
             data2);
 }
 
-/* VOID:POINTER,INT,STRING,STRING,STRING,STRING,STRING,BOOLEAN,INT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:19) */
+/* VOID:POINTER,INT,STRING,STRING,STRING,STRING,STRING,BOOLEAN,INT (gtkmozembedmarshal.list:19) */
 void
 gtkmozembed_VOID__POINTER_INT_STRING_STRING_STRING_STRING_STRING_BOOLEAN_INT (GClosure     *closure,
                                                                               GValue       *return_value,
@@ -829,7 +830,7 @@ gtkmozembed_VOID__POINTER_INT_STRING_STRING_STRING_STRING_STRING_BOOLEAN_INT (GC
             data2);
 }
 
-/* VOID:POINTER,STRING,BOOL,BOOL (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:20) */
+/* VOID:POINTER,STRING,BOOL,BOOL (gtkmozembedmarshal.list:20) */
 void
 gtkmozembed_VOID__POINTER_STRING_BOOLEAN_BOOLEAN (GClosure     *closure,
                                                   GValue       *return_value,
@@ -870,7 +871,7 @@ gtkmozembed_VOID__POINTER_STRING_BOOLEAN_BOOLEAN (GClosure     *closure,
             data2);
 }
 
-/* VOID:STRING,INT,INT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:21) */
+/* VOID:STRING,INT,INT (gtkmozembedmarshal.list:21) */
 void
 gtkmozembed_VOID__STRING_INT_INT (GClosure     *closure,
                                   GValue       *return_value,
@@ -909,7 +910,7 @@ gtkmozembed_VOID__STRING_INT_INT (GClosure     *closure,
             data2);
 }
 
-/* VOID:STRING,INT,UINT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:22) */
+/* VOID:STRING,INT,UINT (gtkmozembedmarshal.list:22) */
 void
 gtkmozembed_VOID__STRING_INT_UINT (GClosure     *closure,
                                    GValue       *return_value,
@@ -948,7 +949,7 @@ gtkmozembed_VOID__STRING_INT_UINT (GClosure     *closure,
             data2);
 }
 
-/* VOID:STRING,STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:23) */
+/* VOID:STRING,STRING (gtkmozembedmarshal.list:23) */
 void
 gtkmozembed_VOID__STRING_STRING (GClosure     *closure,
                                  GValue       *return_value,
@@ -985,7 +986,7 @@ gtkmozembed_VOID__STRING_STRING (GClosure     *closure,
             data2);
 }
 
-/* VOID:STRING,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:24) */
+/* VOID:STRING,STRING,POINTER (gtkmozembedmarshal.list:24) */
 void
 gtkmozembed_VOID__STRING_STRING_POINTER (GClosure     *closure,
                                          GValue       *return_value,
@@ -1024,7 +1025,7 @@ gtkmozembed_VOID__STRING_STRING_POINTER (GClosure     *closure,
             data2);
 }
 
-/* VOID:STRING,STRING,STRING,ULONG,INT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:25) */
+/* VOID:STRING,STRING,STRING,ULONG,INT (gtkmozembedmarshal.list:25) */
 void
 gtkmozembed_VOID__STRING_STRING_STRING_ULONG_INT (GClosure     *closure,
                                                   GValue       *return_value,
@@ -1067,7 +1068,7 @@ gtkmozembed_VOID__STRING_STRING_STRING_ULONG_INT (GClosure     *closure,
             data2);
 }
 
-/* VOID:STRING,STRING,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:26) */
+/* VOID:STRING,STRING,STRING,POINTER (gtkmozembedmarshal.list:26) */
 void
 gtkmozembed_VOID__STRING_STRING_STRING_POINTER (GClosure     *closure,
                                                 GValue       *return_value,
@@ -1108,7 +1109,7 @@ gtkmozembed_VOID__STRING_STRING_STRING_POINTER (GClosure     *closure,
             data2);
 }
 
-/* VOID:UINT,INT,INT,STRING,STRING,STRING,STRING (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:27) */
+/* VOID:UINT,INT,INT,STRING,STRING,STRING,STRING (gtkmozembedmarshal.list:27) */
 void
 gtkmozembed_VOID__UINT_INT_INT_STRING_STRING_STRING_STRING (GClosure     *closure,
                                                             GValue       *return_value,
@@ -1155,7 +1156,7 @@ gtkmozembed_VOID__UINT_INT_INT_STRING_STRING_STRING_STRING (GClosure     *closur
             data2);
 }
 
-/* VOID:ULONG,ULONG,ULONG (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:28) */
+/* VOID:ULONG,ULONG,ULONG (gtkmozembedmarshal.list:28) */
 void
 gtkmozembed_VOID__ULONG_ULONG_ULONG (GClosure     *closure,
                                      GValue       *return_value,
@@ -1194,7 +1195,7 @@ gtkmozembed_VOID__ULONG_ULONG_ULONG (GClosure     *closure,
             data2);
 }
 
-/* BOOL:POINTER,UINT (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:29) */
+/* BOOL:POINTER,UINT (gtkmozembedmarshal.list:29) */
 void
 gtkmozembed_BOOLEAN__POINTER_UINT (GClosure     *closure,
                                    GValue       *return_value,
@@ -1235,7 +1236,7 @@ gtkmozembed_BOOLEAN__POINTER_UINT (GClosure     *closure,
   g_value_set_boolean (return_value, v_return);
 }
 
-/* VOID:POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:30) */
+/* VOID:POINTER (gtkmozembedmarshal.list:30) */
 
-/* BOOL:STRING,STRING,POINTER (/home/romaxa/microbcomponent/maemo-browser-mozilla-engine/build-tree/mozilla/embedding/browser/gtk/microb/gtkmozembedmarshal.list:31) */
+/* BOOL:STRING,STRING,POINTER (gtkmozembedmarshal.list:31) */
 
