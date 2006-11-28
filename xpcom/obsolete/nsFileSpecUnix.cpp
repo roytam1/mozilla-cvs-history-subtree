@@ -157,8 +157,7 @@ char* nsFileSpec::GetLeafName() const
 PRBool nsFileSpec::Exists() const
 //----------------------------------------------------------------------------------------
 {
-    struct stat st;
-    return !mPath.IsEmpty() && 0 == stat(mPath, &st); 
+    return !mPath.IsEmpty() && 0 == access(mPath, F_OK); 
 } // nsFileSpec::Exists
 
 //----------------------------------------------------------------------------------------
