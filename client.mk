@@ -258,8 +258,8 @@ MODULES_all :=                                  \
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
-NSPR_CO_TAG          = MOZILLA_1_8_BRANCH
-NSS_CO_TAG           = MOZILLA_1_8_BRANCH
+NSPR_CO_TAG          = NSPR_4_6_4_RTM
+NSS_CO_TAG           = NSS_3_11_4_RTM
 LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
 LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
 
@@ -433,11 +433,11 @@ ifdef MOZ_CO_FLAGS
 endif
 NSS_CO_FLAGS := $(NSS_CO_FLAGS) $(if $(NSS_CO_TAG),-r $(NSS_CO_TAG),-A)
 
-# Cannot pull static tags by date
-ifeq ($(NSS_CO_TAG),NSS_CLIENT_TAG)
-CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(NSS_CO_MODULE)
-else
+# Can only pull the tip or branch tags by date
+ifeq (,$(filter-out HEAD %BRANCH,$(NSS_CO_TAG)))
 CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO_MODULE)
+else
+CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(NSS_CO_MODULE)
 endif
 
 ####################################
@@ -450,11 +450,11 @@ ifdef MOZ_CO_FLAGS
 endif
 NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) $(if $(NSPR_CO_TAG),-r $(NSPR_CO_TAG),-A)
 
-# Cannot pull static tags by date
-ifeq ($(NSPR_CO_TAG),NSPRPUB_CLIENT_TAG)
-CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(NSPR_CO_MODULE)
-else
+# Can only pull the tip or branch tags by date
+ifeq (,$(filter-out HEAD %BRANCH,$(NSPR_CO_TAG)))
 CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR_CO_MODULE)
+else
+CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(NSPR_CO_MODULE)
 endif
 
 ####################################
