@@ -210,7 +210,8 @@ nsresult nsMimeTypeArray::GetMimeTypes()
       PRUint32 i;
       for (i = 0; i < pluginCount; i++) {
         nsIDOMPlugin* plugin = nsnull;
-        if (pluginArray->Item(i, &plugin) == NS_OK) {
+        if (NS_SUCCEEDED(pluginArray->Item(i, &plugin)) &&
+            plugin) {
           PRUint32 mimeTypeCount = 0;
           if (plugin->GetLength(&mimeTypeCount) == NS_OK)
             mMimeTypeCount += mimeTypeCount;
