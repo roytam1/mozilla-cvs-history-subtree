@@ -1812,15 +1812,6 @@ FORCE:
 # Delete target if error occurs when building target
 .DELETE_ON_ERROR:
 
-# pdbfiles are written to by every file when debugging in enabled,
-# so the files must be built serially
-# This requires a recent version of gmake 
-ifeq ($(OS_ARCH),WINNT)
-ifneq (,$(MOZ_DEBUG)$(MOZ_PROFILE)$(MOZ_COVERAGE))
-.NOTPARALLEL::
-endif
-endif
-
 tags: TAGS
 
 TAGS: $(SUBMAKEFILES) $(CSRCS) $(CPPSRCS) $(wildcard *.h)
