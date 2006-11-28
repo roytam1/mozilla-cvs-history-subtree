@@ -2806,7 +2806,7 @@ NS_IMETHODIMP nsImapMailFolder::ParseMsgHdrs(nsIImapProtocol *aProtocol, nsIImap
     const char *msgHdrs;
     headerInfo->GetMsgSize(&msgSize);
     headerInfo->GetMsgUid(&msgKey);
-    if (msgKey == nsMsgKey_None) // not a valid uid.
+    if (msgKey == nsMsgKey_None || !msgKey) // not a valid uid.
       continue;
     if (mDatabase && NS_SUCCEEDED(mDatabase->ContainsKey(msgKey, &containsKey)) && containsKey)
     {
@@ -3788,7 +3788,7 @@ void nsImapMailFolder::FindKeysToDelete(const nsMsgKeyArray &existingKeys, nsMsg
        ((flags & kImapMsgDeletedFlag) && !showDeletedMessages) )
     {
       nsMsgKey doomedKey = existingKeys[keyIndex];
-      if ((PRInt32) doomedKey < 0 && doomedKey != nsMsgKey_None)
+      if ((PRInt32) doomedKey <= 0 && doomedKey != nsMsgKey_None)
         continue;
       else
         keysToDelete.Add(existingKeys[keyIndex]);
@@ -3826,7 +3826,7 @@ void nsImapMailFolder::FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKey
       imapMessageFlagsType flags;
       flagState->GetMessageFlags(flagIndex, &flags);
       NS_ASSERTION(uidOfMessage != nsMsgKey_None, "got invalid msg key");
-      if (uidOfMessage != nsMsgKey_None && (showDeletedMessages || ! (flags & kImapMsgDeletedFlag)))
+      if (uidOfMessage && uidOfMessage != nsMsgKey_None && (showDeletedMessages || ! (flags & kImapMsgDeletedFlag)))
       {
         if (mDatabase)
         {

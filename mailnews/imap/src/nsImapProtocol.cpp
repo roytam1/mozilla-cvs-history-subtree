@@ -1387,6 +1387,8 @@ PRBool nsImapProtocol::ProcessCurrentURL()
     if (m_runningUrl)
       m_runningUrl->GetRequiredImapState(&imapState);
     
+    Log("ProcessCurrentURL", "requiredState = ", 
+      (imapState == nsIImapUrl::nsImapAuthenticatedState) ? "authenticated" : "selected");
     if (imapState == nsIImapUrl::nsImapAuthenticatedState)
       ProcessAuthenticatedStateURL();
     else   // must be a url that requires us to be in the selected stae 
@@ -1891,6 +1893,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
   
   res = CreateServerSourceFolderPathString(getter_Copies(mailboxName));
   
+  Log("ProcessCurrentURL", mailboxName.get(), " = selected mailbox");
   if (NS_SUCCEEDED(res) && !DeathSignalReceived())
   {
     // OK, code here used to check explicitly for multiple connections to the inbox,
@@ -1967,6 +1970,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
       
       if (GetServerStateParser().CurrentFolderReadOnly())
       {
+        Log("ProcessSelectedStateURL", "current folder", " readonly");
         if (m_imapAction == nsIImapUrl::nsImapAddMsgFlags ||
           m_imapAction == nsIImapUrl::nsImapSubtractMsgFlags) 
         {
@@ -2010,6 +2014,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
         {
           nsXPIDLCString messageIdString;
           m_runningUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
+          Log("ProcessSelectedStateURL", messageIdString.get(), " fetching");
           // we dont want to send the flags back in a group
           // GetServerStateParser().ResetFlagInfo(0);
           if (HandlingMultipleMessages(messageIdString) || m_imapAction == nsIImapUrl::nsImapMsgDownloadForOffline
@@ -3312,7 +3317,8 @@ void nsImapProtocol::HandleMessageDownLoadLine(const char *line, PRBool chunkEnd
   {
     if (!m_curHdrInfo)
       BeginMessageDownLoad(GetServerStateParser().SizeOfMostRecentMessage(), MESSAGE_RFC822);
-    m_curHdrInfo->CacheLine(localMessageLine, GetServerStateParser().CurrentResponseUID());
+    if (m_curHdrInfo)
+      m_curHdrInfo->CacheLine(localMessageLine, GetServerStateParser().CurrentResponseUID());
     PR_Free( localMessageLine);
     return;
   }
@@ -3371,7 +3377,7 @@ void nsImapProtocol::NormalMessageEndDownload()
     m_hdrDownloadCache.FinishCurrentHdr();
     PRInt32 numHdrsCached;
     m_hdrDownloadCache.GetNumHeaders(&numHdrsCached);
-    if (numHdrsCached == kNumHdrsToXfer)
+    if (numHdrsCached >= kNumHdrsToXfer)
     {
       m_imapMailFolderSink->ParseMsgHdrs(this, &m_hdrDownloadCache);
       m_hdrDownloadCache.ResetAll();
