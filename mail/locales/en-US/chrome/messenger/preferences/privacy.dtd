@@ -3,7 +3,6 @@
 <!ENTITY itemPhishing.label      "E-mail Scams">
 <!ENTITY itemPasswords.label     "Passwords">
 <!ENTITY itemAntiVirus.label     "Anti-Virus">
-<!ENTITY itemSecurity.label      "Security">
 
 <!ENTITY disableImageInMailNews.label  "Block loading of remote images in mail messages">
 <!ENTITY disableImageInMailNews.accesskey "B">
@@ -42,18 +41,6 @@
 <!ENTITY  removeMasterPassword.accesskey "R">
 <!ENTITY  viewPasswords.label         "View Saved Passwords">
 <!ENTITY  viewPasswords.accesskey     "V">
-
-<!-- Security -->
-<!ENTITY certificates.label             "Certificates">
-<!ENTITY certificatesInfo.label         "Manage certificates, revocation lists, certificate verification and security devices.">
-<!ENTITY viewCertificates.label         "View Certificates">
-<!ENTITY viewCertificates.accesskey     "i">
-<!ENTITY viewCRLs.label                 "Revocation Lists">
-<!ENTITY viewCRLs.accesskey             "e">
-<!ENTITY viewOCSP.label                 "Verification">
-<!ENTITY viewOCSP.accesskey             "f">
-<!ENTITY viewSecurityDevices.label      "Security Devices">
-<!ENTITY viewSecurityDevices.accesskey  "u">
 
 <!-- Anti Virus -->
 <!ENTITY antiVirus.intro      "&brandShortName; can make it easy for anti-virus software to analyze incoming mail messages for viruses before they are stored locally.">
