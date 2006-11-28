@@ -3826,7 +3826,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
                                    PRBool* aKeepReflowGoing,
                                    PRUint8* aLineReflowStatus,
                                    PRBool aUpdateMaximumWidth,
-                                   PRBool aDamageDirtyArea
+                                   PRBool aDamageDirtyArea,
                                    PRBool aAllowPullUp)
 {
   // Forget all of the floats on the line
