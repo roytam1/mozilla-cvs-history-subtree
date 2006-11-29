@@ -84,6 +84,11 @@ Var fhUninstallLog
 !insertmacro GetRoot
 !insertmacro DriveSpace
 
+; NSIS provided macros that we have overridden
+!include overrides.nsh
+!insertmacro LocateNoDetails
+!insertmacro TextCompareNoDetails
+
 ; The following includes are custom.
 !include branding.nsi
 !include defines.nsi
@@ -100,10 +105,7 @@ Var fhUninstallLog
 !insertmacro CreateRegKey
 !insertmacro CanWriteToInstallDir
 !insertmacro CheckDiskSpace
-
-!include overrides.nsh
-!insertmacro LocateNoDetails
-!insertmacro TextCompareNoDetails
+!insertmacro DisplayCopyErrMsg
 
 Name "${BrandFullName}"
 OutFile "setup.exe"
@@ -185,8 +187,9 @@ Section "-Application" Section1
   SetDetailsPrint none
   SetOutPath $INSTDIR
 
-  ; Try to delete the app executable and if we can't delete it try to close the
-  ; app. This allows running an instance that is located in another directory.
+  ; Try to delete the app's main executable and if we can't delete it try to
+  ; close the app. This allows running an instance that is located in another
+  ; directory and prevents the launching of the app during the installation.
   ClearErrors
   ${If} ${FileExists} "$INSTDIR\${FileMainEXE}"
     ${DeleteFile} "$INSTDIR\${FileMainEXE}"
@@ -196,8 +199,21 @@ Section "-Application" Section1
     ${CloseApp} "true" $(WARN_APP_RUNNING_INSTALL)
     ; Try to delete it again to prevent launching the app while we are
     ; installing.
-    ${DeleteFile} "$INSTDIR\${FileMainEXE}"
     ClearErrors
+    ${DeleteFile} "$INSTDIR\${FileMainEXE}"
+    ${If} ${Errors}
+      ClearErrors
+      ; Try closing the app a second time
+      ${CloseApp} "true" $(WARN_APP_RUNNING_INSTALL)
+      retry:
+      ClearErrors
+      ${DeleteFile} "$INSTDIR\${FileMainEXE}"
+      ${If} ${Errors}
+        ; Fallback to the FileError_NoIgnore error with retry/cancel options
+        ${DisplayCopyErrMsg} "${FileMainEXE}"
+        GoTo retry
+      ${EndIf}
+    ${EndIf}
   ${EndIf}
 
   ; For a "Standard" upgrade without talkback installed add the InstallDisabled
@@ -655,12 +671,16 @@ FunctionEnd
 
 Function CopyFile
   StrCpy $R3 $R8 "" $R2
+  retry:
+  ClearErrors
   ${If} $R6 ==  ""
     ${Unless} ${FileExists} "$R1$R3\$R7"
       ClearErrors
       CreateDirectory "$R1$R3\$R7"
       ${If} ${Errors}
         ${LogMsg}  "** ERROR Creating Directory: $R1$R3\$R7 **"
+        ${DisplayCopyErrMsg} "$R7"
+        GoTo retry
       ${Else}
         ${LogMsg}  "Created Directory: $R1$R3\$R7"
       ${EndIf}
@@ -671,18 +691,25 @@ Function CopyFile
       CreateDirectory "$R1$R3"
       ${If} ${Errors}
         ${LogMsg}  "** ERROR Creating Directory: $R1$R3 **"
+        ${DisplayCopyErrMsg} "$R3"
+        GoTo retry
       ${Else}
         ${LogMsg}  "Created Directory: $R1$R3"
       ${EndIf}
     ${EndUnless}
     ${If} ${FileExists} "$R1$R3\$R7"
       Delete "$R1$R3\$R7"
+      ${If} ${Errors}
+        ${DisplayCopyErrMsg} "$R7"
+        GoTo retry
+      ${EndIf}
     ${EndIf}
     ClearErrors
     CopyFiles /SILENT $R9 "$R1$R3"
     ${If} ${Errors}
-      ; XXXrstrong - what should we do if there is an error installing a file?
       ${LogMsg} "** ERROR Installing File: $R1$R3\$R7 **"
+      ${DisplayCopyErrMsg} "$R7"
+      GoTo retry
     ${Else}
       ${LogMsg} "Installed File: $R1$R3\$R7"
     ${EndIf}
@@ -995,6 +1022,7 @@ Function .onInit
 
           ReadINIStr $0 $R1 "Install" "CloseAppNoPrompt"
           ${If} $0 == "true"
+            ; Try to close the app if the exe is in use.
             ClearErrors
             ${If} ${FileExists} "$INSTDIR\${FileMainEXE}"
               ${DeleteFile} "$INSTDIR\${FileMainEXE}"
@@ -1002,7 +1030,18 @@ Function .onInit
             ${If} ${Errors}
               ClearErrors
               ${CloseApp} "false" ""
+              ClearErrors
               ${DeleteFile} "$INSTDIR\${FileMainEXE}"
+              ; If unsuccessful try one more time and if it still fails Quit
+              ${If} ${Errors}
+                ClearErrors
+                ${CloseApp} "false" ""
+                ClearErrors
+                ${DeleteFile} "$INSTDIR\${FileMainEXE}"
+                ${If} ${Errors}
+                  Quit
+                ${EndIf}
+              ${EndIf}
             ${EndIf}
           ${EndIf}
 
