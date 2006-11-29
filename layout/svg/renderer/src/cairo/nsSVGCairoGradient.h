@@ -48,6 +48,7 @@
 cairo_pattern_t *
 CairoGradient(cairo_t *ctx,
               nsISVGGradient *aGrad,
-              nsISVGGeometrySource *aSource);
+              nsISVGGeometrySource *aSource,
+              float aOpacity);
 
 #endif
