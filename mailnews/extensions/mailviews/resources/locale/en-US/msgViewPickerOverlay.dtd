@@ -2,22 +2,6 @@
 
 <!ENTITY viewPicker.label "View:">
 <!ENTITY viewPicker.accesskey "i">
-
-<!--LOCALIZATION NOTE 
-    the next 4 entities will go away in SM 1.1 final, but they're needed in SM 1.1 beta
-    see bug 349991 for details
-  -->
-<!ENTITY viewPickerSaveAsVirtualFolder.label "Save View as a Folder...">
-<!ENTITY viewPickerCustomView.label "Customize...">
-<!ENTITY viewPickerAll.label "All">
-<!ENTITY viewPickerUnread.label "Unread">
-
-<!--LOCALIZATION NOTE 
-    the next 12 entities will *not* be used in SM 1.1 beta, but in SM 1.1 final
-    they are mostly verbatim copies from messenger.dtd or above, 
-    but with different entity names
-    see bug 349991 for details
-  -->
 <!ENTITY viewAll.label "All">
 <!ENTITY viewAll.accesskey "A">
 <!ENTITY viewUnread.label "Unread">
