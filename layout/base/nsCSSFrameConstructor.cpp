@@ -1811,7 +1811,9 @@ nsresult
 nsMathMLmtableCreator::CreateTableCellFrame(nsIFrame*  aParentFrame,
                                             nsIFrame** aNewFrame)
 {
-  NS_ASSERTION(!IsBorderCollapse(aParentFrame), "not implemented");
+  if (IsBorderCollapse(aParentFrame))
+    return NS_NewTableCellFrame(mPresShell, PR_TRUE, aNewFrame);
+
   return NS_NewMathMLmtdFrame(mPresShell, aNewFrame);
 }
 
