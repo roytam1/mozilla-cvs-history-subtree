@@ -1682,8 +1682,27 @@ nsCanvasRenderingContext2D::CairoSurfaceFromElement(nsIDOMElement *imgElt,
     // The gtk backend optimizes away the alpha mask of images
     // with a fully opaque alpha, but doesn't update its format (bug?);
     // you end up with a RGB_A8 image with GetHasAlphaMask() == false.
-    // We need to treat that case as RGB.
+    // We need to treat that case as RGB.  We also need to understand
+    // that with 1-bit alpha the data is actually RGB_A1, not RGB_A8,
+    // no matter what the format says.
+#ifdef MOZ_WIDGET_GTK2
+    PRInt8 alphaDepth = img->GetAlphaDepth();
+    if (alphaDepth == 0) {
+        if (format == gfxIFormats::RGB_A8)
+            format = gfxIFormats::RGB;
+        else if (format == gfxIFormats::BGR_A8)
+            format = gfxIFormats::BGR;
+    } else if (alphaDepth == 1) {
+        if (format == gfxIFormats::RGB_A8)
+            format = gfxIFormats::RGB_A1;
+        else if (format == gfxIFormats::BGR_A8)
+            format = gfxIFormats::BGR_A1;
+    }
+#endif
 
+    // We probably don't need the GetHasAlphaMask check here, because it
+    // should've been handled up above, but as this patch is going into
+    // the release branch I don't want to change this code unnecessarily.
     if ((format == gfxIFormats::RGB || format == gfxIFormats::BGR) ||
         (!(img->GetHasAlphaMask()) && (format == gfxIFormats::RGB_A8 || format == gfxIFormats::BGR_A8)))
     {
