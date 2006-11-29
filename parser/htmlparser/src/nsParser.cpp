@@ -1873,13 +1873,21 @@ nsParser::ParseFragment(const nsAString& aSourceBuffer,
   }
 
   nsCOMPtr<nsIFragmentContentSink> fragSink = do_QueryInterface(mSink);
-  NS_ASSERTION(fragSink, "ParseFragment requires a fragment content sink");
+  if (!fragSink) {
+    NS_ERROR("ParseFragment requires a fragment content sink");
+    mFlags |= NS_PARSER_FLAG_OBSERVERS_ENABLED;
+    return NS_ERROR_HTMLPARSER_UNKNOWN;
+  }
 
   if (!aXMLMode) {
     // First, we have to flush any tags that don't belong in the head if there
     // was no <body> in the context.
     // XXX This is extremely ugly. Maybe CNavDTD should have FlushMisplaced()?
-    NS_ASSERTION(mParserContext, "Parsing didn't create a parser context?");
+    if (!mParserContext) {
+      NS_ERROR("Parsing didn't create a parser context?");
+      mFlags |= NS_PARSER_FLAG_OBSERVERS_ENABLED;
+      return NS_ERROR_HTMLPARSER_INVALIDPARSERCONTEXT;
+    }
     nsCOMPtr<CNavDTD> dtd = do_QueryInterface(mParserContext->mDTD);
 
     if (dtd) {
