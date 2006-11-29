@@ -564,7 +564,7 @@
 #ifdef GetMessageA
 #undef GetMessageA
 #endif
-#define GetMessageA               GetMessageW
+#define GetMessageA               mozce_GetMessage
 
 #ifdef GetMessageTime
 #undef GetMessageTime
@@ -700,7 +700,7 @@
 #ifdef PeekMessageA
 #undef PeekMessageA
 #endif
-#define PeekMessageA              PeekMessageW
+#define PeekMessageA              mozce_PeekMessage
 
 
 #ifdef RegCreateKey
@@ -1284,6 +1284,11 @@
 #undef SetWindowLongA
 #endif
 #define SetWindowLongA             SetWindowLongW
+
+#ifdef MapVirtualKeyA
+#undef MapVirtualKeyA
+#endif
+#define MapVirtualKeyA             MapVirtualKeyW
 
 
 #undef FindFirstFile
