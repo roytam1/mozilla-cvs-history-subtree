@@ -1345,3 +1345,23 @@ Sources: 1 (active)
 
 Output stream:
 as input stream
+
+----------------------------------------------------------------------
+
+46) timestamp-scaler
+--------------------
+
+Filter for modifying the timestamps t of input frames to
+(numerator*t)/denominator+offset.
+Note: Warning: this node mutates frames. XXX maybe we need cloning.
+
+Node parameters:
+- unsigned long long "offset": Offset to add to timestamps (default: 0)
+- long "numerator" : See description above (default: 1)
+- long "denominator" : See description above (default: 1)
+
+Input stream:
+any
+
+Output stream:
+any

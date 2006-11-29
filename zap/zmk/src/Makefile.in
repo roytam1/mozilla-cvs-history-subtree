@@ -77,6 +77,7 @@ CPPSRCS		= \
 		zapTToneToPCMConverter.cpp \
 		zapTelephoneEventFrame.cpp \
 		zapTimestamper.cpp \
+		zapTimestampScaler.cpp \
 		zapTimestampSyncer.cpp \
 		zapUDPPacketizer.cpp \
 		zapUDPSocket.cpp \
