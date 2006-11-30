@@ -2386,24 +2386,25 @@ nsFtpState::KillControlConnection()
 nsresult
 nsFtpState::StopProcessing()
 {
+    // Only do this function once.
+    if (!mKeepRunning)
+        return NS_OK;
+    mKeepRunning = PR_FALSE;
+
     LOG_ALWAYS(("(%x) nsFtpState stopping", this));
 
 #ifdef DEBUG_dougt
     printf("FTP Stopped: [response code %d] [response msg follows:]\n%s\n", mResponseCode, mResponseMsg.get());
 #endif
 
-    if (NS_FAILED(mInternalError) && !mResponseMsg.IsEmpty()) 
-    {
-        // check to see if the control status is bad.
-        // web shell wont throw an alert.  we better:
-
-        // XXX(darin): this code should not be dictating UI like this!
-        nsCOMPtr<nsIPrompt> prompter;
+    // We do this check here because the value of mInternalError changes during
+    // this function. However, we only show the actual alert once we are done
+    // changing member variables, because showing the dialog can process events
+    // and we don't want to risk reentering this function. (compare bug 343371)
+    nsCOMPtr<nsIPrompt> prompter;
+    if (NS_FAILED(mInternalError) && !mResponseMsg.IsEmpty())
         mChannel->GetCallback(prompter);
-        if (prompter)
-            prompter->Alert(nsnull, NS_ConvertASCIItoUCS2(mResponseMsg).get());
-    }
-    
+   
     nsresult broadcastErrorCode = mControlStatus;
     if ( NS_SUCCEEDED(broadcastErrorCode))
         broadcastErrorCode = mInternalError;
@@ -2433,9 +2434,6 @@ nsFtpState::StopProcessing()
 
     }
 
-    // Clean up the event loop
-    mKeepRunning = PR_FALSE;
-
     KillControlConnection();
 
     mChannel->OnStatus(nsnull, nsnull, NS_NET_STATUS_END_FTP_TRANSACTION, nsnull);
@@ -2446,6 +2444,16 @@ nsFtpState::StopProcessing()
     mChannel = 0;
     mProxyInfo = 0;
 
+    // This code must be at the end of this function. See the comment about
+    // prompter for why.
+    if (prompter) 
+    {
+        // web shell wont throw an alert.  we better:
+
+        // XXX(darin): this code should not be dictating UI like this!
+        prompter->Alert(nsnull, NS_ConvertASCIItoUCS2(mResponseMsg).get());
+    }
+ 
     return NS_OK;
 }
 
