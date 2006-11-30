@@ -221,11 +221,27 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
   widgetData.mBorderStyle = eBorderStyle_default;
   widgetData.clipSiblings = PR_TRUE;
 
+  PRBool isCanvas;
+  const nsStyleBackground* bg;
+  PRBool hasBG =
+    nsCSSRendering::FindBackground(aPresContext, this, &bg, &isCanvas);
+  PRBool viewHasTransparentContent = hasBG &&
+    (bg->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) &&
+    !GetStyleDisplay()->mAppearance;
+  if (viewHasTransparentContent) {
+    nsCOMPtr<nsISupports> cont = GetPresContext()->GetContainer();
+    nsCOMPtr<nsIDocShellTreeItem> dsti = do_QueryInterface(cont);
+    PRInt32 type = -1;
+    if (!dsti || NS_FAILED(dsti->GetItemType(&type)) ||
+        type != nsIDocShellTreeItem::typeChrome)
+      viewHasTransparentContent = PR_FALSE;
+  }
+
   nsIContent* parentContent = aContent->GetParent();
   nsIAtom *tag = nsnull;
   if (parentContent)
     tag = parentContent->Tag();
-  widgetData.mDropShadow = !(tag && tag == nsXULAtoms::menulist);
+  widgetData.mDropShadow = !(viewHasTransparentContent || tag == nsXULAtoms::menulist);
   
   // XXX make sure we are hidden (shouldn't this be done automatically?)
   viewManager->SetViewVisibility(ourView, nsViewVisibility_kHide);
@@ -238,6 +254,7 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
   ourView->CreateWidget(kCChildCID, &widgetData, nsnull, PR_TRUE, PR_TRUE);
 #endif   
 
+  ourView->GetWidget()->SetWindowTranslucency(viewHasTransparentContent);
   MoveToAttributePosition();
 
   return rv;
