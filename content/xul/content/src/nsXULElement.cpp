@@ -2589,7 +2589,9 @@ nsXULElement::GetBoxObject(nsIBoxObject** aResult)
   *aResult = nsnull;
 
   // XXX sXBL/XBL2 issue! Owner or current document?
-  nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(GetCurrentDoc()));
+  // Be sure to get the same document as the NS_ENSURE_TRUE uses in
+  // nsDocument.cpp::GetBoxObjectFor().
+  nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(GetOwnerDoc()));
   NS_ENSURE_TRUE(nsDoc, NS_ERROR_FAILURE);
   return nsDoc->GetBoxObjectFor(this, aResult);
 }
