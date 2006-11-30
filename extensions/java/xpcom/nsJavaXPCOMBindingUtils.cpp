@@ -1054,7 +1054,12 @@ jstring_to_nsAString(JNIEnv* env, jstring aString)
   }
 
   nsString* str = new nsString(buf);
-  env->ReleaseStringChars(aString, buf);
+
+  if (aString) {
+    env->ReleaseStringChars(aString, buf);
+  } else {
+    str->SetIsVoid(PR_TRUE);
+  }
 
   // returns string, or nsnull if 'new' failed
   return str;
@@ -1071,7 +1076,12 @@ jstring_to_nsACString(JNIEnv* env, jstring aString)
   }
 
   nsCString* str = new nsCString(buf);
-  env->ReleaseStringUTFChars(aString, buf);
+
+  if (aString) {
+    env->ReleaseStringUTFChars(aString, buf);
+  } else {
+    str->SetIsVoid(PR_TRUE);
+  }
 
   // returns string, or nsnull if 'new' failed
   return str;
