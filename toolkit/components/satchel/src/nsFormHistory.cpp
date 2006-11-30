@@ -240,11 +240,15 @@ nsFormHistory::Notify(nsIContent* aFormNode, nsIDOMWindowInternal* aWindow, nsIU
   nsCOMPtr<nsIDOMHTMLFormElement> formElt = do_QueryInterface(aFormNode);
   NS_ENSURE_TRUE(formElt, NS_ERROR_FAILURE);
 
+  NS_NAMED_LITERAL_STRING(kAutoComplete, "autocomplete");
+  nsAutoString autocomplete;
+  formElt->GetAttribute(kAutoComplete, autocomplete);
+  if (autocomplete.LowerCaseEqualsLiteral("off"))
+    return NS_OK;
+
   nsCOMPtr<nsIDOMHTMLCollection> elts;
   formElt->GetElements(getter_AddRefs(elts));
-  
-  const char *textString = "text";
-  
+
   PRUint32 length;
   elts->GetLength(&length);
   for (PRUint32 i = 0; i < length; ++i) {
@@ -252,10 +256,15 @@ nsFormHistory::Notify(nsIContent* aFormNode, nsIDOMWindowInternal* aWindow, nsIU
     elts->Item(i, getter_AddRefs(node));
     nsCOMPtr<nsIDOMHTMLInputElement> inputElt = do_QueryInterface(node);
     if (inputElt) {
-      // Filter only inputs that are of type "text"
+      // Filter only inputs that are of type "text" without autocomplete="off"
       nsAutoString type;
       inputElt->GetType(type);
-      if (type.EqualsIgnoreCase(textString)) {
+      if (!type.LowerCaseEqualsLiteral("text"))
+        continue;
+
+      nsAutoString autocomplete;
+      inputElt->GetAttribute(kAutoComplete, autocomplete);
+      if (!autocomplete.LowerCaseEqualsLiteral("off")) {
         // If this input has a name/id and value, add it to the database
         nsAutoString value;
         inputElt->GetValue(value);
@@ -264,7 +273,6 @@ nsFormHistory::Notify(nsIContent* aFormNode, nsIDOMWindowInternal* aWindow, nsIU
           inputElt->GetName(name);
           if (name.IsEmpty())
             inputElt->GetId(name);
-          
           if (!name.IsEmpty())
             AppendRow(name, value, nsnull);
         }
