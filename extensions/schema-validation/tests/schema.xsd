@@ -4,6 +4,7 @@
         xmlns:test="http://www.mozilla.org/schema/test"
         xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <import namespace="http://schemas.xmlsoap.org/soap/encoding/" />
+  <import namespace="http://www.mozilla.org/schema/test_imported" schemaLocation="schema_imported.xsd" />
 
   <simpleType name="integer-test-1">
     <restriction base='integer'>

@@ -42,6 +42,7 @@
 
 // content includes
 #include "nsIContent.h"
+#include "nsIDocument.h"
 #include "nsINodeInfo.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOM3Node.h"
@@ -661,47 +662,17 @@ nsSchemaLoader::GetResolvedURI(const nsAString& aSchemaURI,
 
 /* nsISchema load (in AString schemaURI); */
 NS_IMETHODIMP 
-nsSchemaLoader::Load(const nsAString& schemaURI, 
+nsSchemaLoader::Load(const nsAString& schemaURI,
                      nsISchema **_retval)
 {
   NS_ENSURE_ARG_POINTER(_retval);
-  
-  nsCOMPtr<nsIURI> resolvedURI;
-  nsresult rv = GetResolvedURI(schemaURI, "load", getter_AddRefs(resolvedURI));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-  nsCAutoString spec;
-  resolvedURI->GetSpec(spec);
-  
-  nsCOMPtr<nsIXMLHttpRequest> request(do_CreateInstance(NS_XMLHTTPREQUEST_CONTRACTID, &rv));
-  if (!request) {
-    return rv;
-  }
-
-  const nsAString& empty = EmptyString();
-  rv = request->OpenRequest(NS_LITERAL_CSTRING("GET"), spec, PR_FALSE, empty,
-                            empty);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  // Force the mimetype of the returned stream to be xml.
-  rv = request->OverrideMimeType(NS_LITERAL_CSTRING("application/xml"));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  rv = request->Send(nsnull);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
 
   nsCOMPtr<nsIDOMDocument> document;
-  rv = request->GetResponseXML(getter_AddRefs(document));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  nsresult rv = GetDocumentFromURI(schemaURI, getter_AddRefs(document));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!document)
+    return NS_ERROR_SCHEMA_LOADING_ERROR;
 
   nsCOMPtr<nsIDOMElement> element;
   document->GetDocumentElement(getter_AddRefs(element));
@@ -712,7 +683,7 @@ nsSchemaLoader::Load(const nsAString& schemaURI,
   else {
     rv = NS_ERROR_SCHEMA_NOT_SCHEMA_ELEMENT;
   }
-  
+
   return rv;
 }
 
@@ -784,7 +755,7 @@ static const char* kSchemaNamespaces[] = {NS_SCHEMA_1999_NAMESPACE,
 static PRUint32 kSchemaNamespacesLength = sizeof(kSchemaNamespaces) / sizeof(const char*);
 
 /* nsISchema processSchemaElement (in nsIDOMElement element, in nsIWebServiceErrorHandler aErrorHandler); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsSchemaLoader::ProcessSchemaElement(nsIDOMElement* aElement,
                                      nsIWebServiceErrorHandler* aErrorHandler,
                                      nsISchema **aResult)
@@ -816,8 +787,6 @@ nsSchemaLoader::ProcessSchemaElement(nsIDOMElement* aElement,
 
   // For now, ignore the following
   // annotations
-  // include
-  // import
   // redefine
   // notation
   // identity-constraint elements
@@ -872,9 +841,168 @@ nsSchemaLoader::ProcessSchemaElement(nsIDOMElement* aElement,
       if (NS_SUCCEEDED(rv)) {
         rv = schemaInst->AddModelGroup(modelGroup);
       }
+    }
+    else if (tagName == nsSchemaAtoms::sInclude_atom ||
+             tagName == nsSchemaAtoms::sImport_atom) {
+      /* Mixing the handling of <include> and <import> as they are very similar,
+        other than a few requirements regarding namespaces.
+       
+        http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-include
+         If we include a schema, it must either
+           (a) have the same targetNamespace as the including schema document or
+           (b) no targetNamespace at all
+
+        http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-import
+         When importing a schema, it must either
+           (a) if namespace is defined, then namespace == imported
+               targetNamespace
+           (b) if namespace is not defined, then imported schema must NOT
+               have a targetNamespace
+
+         If the uri to load doesn't resolve, it isn't a error.  It is if its an
+         invalid XML document or not a schema file
+       */
+
+      NS_NAMED_LITERAL_STRING(schemaLocationStr, "schemaLocation");
+      PRBool hasSchemaLocationAttr = PR_FALSE;
+      childElement->HasAttribute(schemaLocationStr, &hasSchemaLocationAttr);
+
+      // no schema location attribute, skip it
+      if (!hasSchemaLocationAttr)
+        continue;
+
+      nsAutoString schemalocation;
+      childElement->GetAttribute(schemaLocationStr, schemalocation);
+
+      // if empty, skip it
+      if (schemalocation.IsEmpty())
+        continue;
+
+      nsCOMPtr<nsIIOService> ios = do_GetIOService();
+      NS_ENSURE_STATE(ios);
+
+      nsCOMPtr<nsIDOMDocument> document;
+      aElement->GetOwnerDocument(getter_AddRefs(document));
+
+      nsCOMPtr<nsIDocument> doc = do_QueryInterface(document);
+      NS_ENSURE_STATE(doc);
+
+      nsCOMPtr<nsIURI> uri;
+
+      ios->NewURI(NS_ConvertUTF16toUTF8(schemalocation),
+                  doc->GetDocumentCharacterSet().get(),
+                  doc->GetDocumentURI(),
+                  getter_AddRefs(uri));
+      NS_ENSURE_STATE(uri);
+
+      // since we could be going cross-domain, make sure we can load it by doing
+      // a principal same origin check.
+
+      // get the base document's principal
+      nsIPrincipal *basePrincipal = doc->GetPrincipal();
+      NS_ENSURE_STATE(basePrincipal);
+
+      // check the security manager and do a same original check on the principal
+      nsCOMPtr<nsIScriptSecurityManager> secMan =
+        do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+      NS_ENSURE_STATE(secMan);
+
+      // get a principal for the uri we are testing
+      nsCOMPtr<nsIPrincipal> testPrincipal;
+      rv = secMan->GetCodebasePrincipal(uri, getter_AddRefs(testPrincipal));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      rv = secMan->CheckSameOriginPrincipal(basePrincipal, testPrincipal);
+      // if not allowed, continue onwards
+      if (NS_FAILED(rv))
+        continue;
+
+      // get the url
+      nsCAutoString spec;
+      uri->GetSpec(spec);
+
+      nsCOMPtr<nsIDOMDocument> includedDocument;
+      rv = GetDocumentFromURI(NS_ConvertUTF8toUTF16(spec), getter_AddRefs(includedDocument));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // if no document, it is an error
+      NS_ENSURE_STATE(includedDocument);
+
+      // get the document element - it should be a xsd:schema
+      nsCOMPtr<nsIDOMElement> element;
+      includedDocument->GetDocumentElement(getter_AddRefs(element));
+
+      nsAutoString localName, nsUri;
+      element->GetLocalName(localName);
+      element->GetNamespaceURI(nsUri);
+
+      PRBool correctNamespace = PR_FALSE;
+      PRUint32 i;
+      for (i = 0; i < kSchemaNamespacesLength; i++) {
+        if (nsUri.Equals(NS_ConvertASCIItoUTF16(kSchemaNamespaces[i]))) {
+          correctNamespace = PR_TRUE;
+          break;
+        }
+      }
+
+      if (!correctNamespace || !localName.EqualsLiteral("schema")) {
+        // not a valid schema file
+        return NS_ERROR_SCHEMA_NOT_SCHEMA_ELEMENT;
+      }
+
+      // XXX: check the target namespace requirements
+
+      // If <import>, simply call self to do all the heavy lifting
+      if (tagName == nsSchemaAtoms::sImport_atom) {
+        rv = ProcessSchemaElement(element, nsnull, aResult);
+        NS_ENSURE_SUCCESS(rv, rv);
+        continue;
+      }
+
+      // import/append all elements in the included file to our schema element
+      nsCOMPtr<nsIDOMDocument> ownerDoc;
+      rv = childElement->GetOwnerDocument(getter_AddRefs(ownerDoc));
+      NS_ENSURE_SUCCESS(rv, rv);
+      NS_ENSURE_STATE(ownerDoc);
+
+      nsCOMPtr<nsIDOMNode> tmpNode, importedNode, dummy;
+      element->GetFirstChild(getter_AddRefs(tmpNode));
+
+      // get the child element's next sibling so we have something to insert
+      // before while we are appending to the current schema document
+      unsigned short nodeType;
+      nsCOMPtr<nsIDOMNode> nextSibling;
+      childElement->GetNextSibling(getter_AddRefs(nextSibling));
+
+      while (tmpNode) {
+        tmpNode->GetNodeType(&nodeType);
+
+        if (nodeType == nsIDOMNode::ELEMENT_NODE) {
+          rv = ownerDoc->ImportNode(tmpNode, PR_TRUE,
+                                    getter_AddRefs(importedNode));
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          if (nextSibling) {
+            rv = aElement->InsertBefore(importedNode, nextSibling,
+                                        getter_AddRefs(dummy));
+            NS_ENSURE_SUCCESS(rv, rv);
+          } else {
+            rv = aElement->AppendChild(importedNode, getter_AddRefs(dummy));
+            NS_ENSURE_SUCCESS(rv, rv);
+          }
+        }
+
+        tmpNode->GetNextSibling(getter_AddRefs(dummy));
+        tmpNode = dummy;
+      }
+
+      // we twidle the iterator (reset), making sure to point it at the right
+      // place.  We do this because the iterator takes a snapshot the DOMList,
+      // so we tell it to reinit itself and then reset it to the original index.
+      PRUint32 index = iterator.GetCurrentIndex();
+      iterator.SetElement(aElement);
+      iterator.Reset(index);
     } else if (tagName != nsSchemaAtoms::sAnnotation_atom &&
-               tagName != nsSchemaAtoms::sInclude_atom &&
-               tagName != nsSchemaAtoms::sImport_atom &&
                tagName != nsSchemaAtoms::sRedefine_atom &&
                tagName != nsSchemaAtoms::sNotation_atom) {
       // if it is none of these, unexpected element.
@@ -3227,4 +3355,41 @@ nsSchemaLoader::ParseNameAndNS(const nsAString& aName, nsIDOMElement* aElement,
   }
 
   return rv;
+}
+
+nsresult
+nsSchemaLoader::GetDocumentFromURI(const nsAString& aUri,
+                                   nsIDOMDocument** aDocument)
+{
+  nsCOMPtr<nsIURI> resolvedURI;
+  nsresult rv = GetResolvedURI(aUri, "load", getter_AddRefs(resolvedURI));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXMLHttpRequest> request(do_CreateInstance(NS_XMLHTTPREQUEST_CONTRACTID, &rv));
+  NS_ENSURE_TRUE(request, rv);
+
+  nsCAutoString spec;
+  resolvedURI->GetSpec(spec);
+
+  const nsAString& empty = EmptyString();
+  rv = request->OpenRequest(NS_LITERAL_CSTRING("GET"), spec, PR_FALSE, empty,
+                            empty);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Force the mimetype of the returned stream to be xml.
+  rv = request->OverrideMimeType(NS_LITERAL_CSTRING("application/xml"));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = request->Send(nsnull);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMDocument> document;
+  rv = request->GetResponseXML(getter_AddRefs(document));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (document) {
+    document.swap(*aDocument);
+  }
+
+  return NS_OK;
 }
