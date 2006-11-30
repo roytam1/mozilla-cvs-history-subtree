@@ -75,6 +75,12 @@ nsMathMLmspaceFrame::~nsMathMLmspaceFrame()
 {
 }
 
+PRBool
+nsMathMLmspaceFrame::IsLeaf() const
+{
+  return PR_TRUE;
+}
+
 void
 nsMathMLmspaceFrame::ProcessAttributes(nsPresContext* aPresContext)
 {

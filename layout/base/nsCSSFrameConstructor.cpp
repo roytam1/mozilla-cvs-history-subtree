@@ -7034,7 +7034,9 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
     rv = NS_NewMathMLmphantomFrame(mPresShell, &newFrame);
   else if (aTag == nsMathMLAtoms::mpadded_)
     rv = NS_NewMathMLmpaddedFrame(mPresShell, &newFrame);
-  else if (aTag == nsMathMLAtoms::mspace_)
+  else if (aTag == nsMathMLAtoms::mspace_ ||
+           aTag == nsMathMLAtoms::none_   ||
+           aTag == nsMathMLAtoms::mprescripts_ )
     rv = NS_NewMathMLmspaceFrame(mPresShell, &newFrame);
   else if (aTag == nsMathMLAtoms::mfenced_)
     rv = NS_NewMathMLmfencedFrame(mPresShell, &newFrame);
@@ -7049,9 +7051,7 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
   else if (aTag == nsMathMLAtoms::maction_)
     rv = NS_NewMathMLmactionFrame(mPresShell, &newFrame);
   else if (aTag == nsMathMLAtoms::mrow_   ||
-           aTag == nsMathMLAtoms::merror_ ||
-           aTag == nsMathMLAtoms::none_   ||
-           aTag == nsMathMLAtoms::mprescripts_ )
+           aTag == nsMathMLAtoms::merror_)
     rv = NS_NewMathMLmrowFrame(mPresShell, &newFrame);
   // CONSTRUCTION of MTABLE elements
   else if (aTag == nsMathMLAtoms::mtable_ &&
@@ -7168,8 +7168,10 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
 
     // MathML frames are inline frames, so just process their kids
     nsFrameItems childItems;
-    rv = ProcessChildren(aState, aContent, newFrame, PR_TRUE,
-                         childItems, PR_FALSE);
+    if (!newFrame->IsLeaf()) {
+      rv = ProcessChildren(aState, aContent, newFrame, PR_TRUE,
+                           childItems, PR_FALSE);
+    }
 
     CreateAnonymousFrames(aTag, aState, aContent, newFrame, PR_FALSE,
                           childItems);
@@ -7178,7 +7180,9 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
     newFrame->SetInitialChildList(aState.mPresContext, nsnull,
                                   childItems.childList);
 
-    rv = CreateInsertionPointChildren(aState, newFrame, aContent);
+    if (!newFrame->IsLeaf()) {
+      rv = CreateInsertionPointChildren(aState, newFrame, aContent);
+    }
   }
   return rv;
 }
