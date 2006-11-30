@@ -2652,8 +2652,13 @@ nsGenericElement::SetFocus(nsPresContext* aPresContext)
   if (frame && frame->IsFocusable()) {
     aPresContext->EventStateManager()->SetContentState(this,
                                                         NS_EVENT_STATE_FOCUS);
-    presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,
-                                   NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
+    // Setting content state can cause the frame to be destroyed because of
+    // style changes so we need to lookup the frame again (bug 330367).
+    presShell->GetPrimaryFrameFor(this, &frame);
+    if (frame) {
+      presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,
+                                     NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
+    }
   }
 }
 
