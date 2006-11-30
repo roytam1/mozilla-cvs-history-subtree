@@ -1920,28 +1920,44 @@ nsParser::ParseFragment(const nsAString& aSourceBuffer,
   }
 
   fragSink->WillBuildContent();
-  // Now, parse the actual content. Note that this is the last call for HTML
-  // content, but for XML, we will want to build and parse the end tags.
-  result = Parse(aSourceBuffer, (void*)&theContext, aMimeType,
-                 PR_FALSE, !aXMLMode, aMode);
-  fragSink->DidBuildContent();
-
-  if (aXMLMode && NS_SUCCEEDED(result)) {
-    nsAutoString endContext;
-
-    for (theIndex = 0; theIndex < theCount; theIndex++) {
-      endContext.AppendLiteral("</");
-      nsAutoString thisTag( (PRUnichar*)aTagStack.ElementAt(theIndex) );
-      PRInt32 endOfTag = thisTag.FindChar(PRUnichar(' '));  // was there an xmlns=?
-      if (endOfTag == -1)
-        endContext.Append( thisTag );
-      else
-        endContext.Append( Substring(thisTag,0,endOfTag) );
-      endContext.AppendLiteral(">");
-    }
-
-    result = Parse(endContext, (void*)&theContext, aMimeType,
+  // Now, parse the actual content. Note that this is the last call
+  // for HTML content, but for XML, we will want to build and parse
+  // the end tags.  However, if tagStack is empty, it's the last call
+  // for XML as well.
+  if (!aXMLMode || (theCount == 0)) {
+    result = Parse(aSourceBuffer, (void*)&theContext, aMimeType,
                    PR_FALSE, PR_TRUE, aMode);
+    fragSink->DidBuildContent();
+  } else {
+    // Add an end tag chunk, so expat will read the whole source buffer,
+    // and not worry about ']]' etc.
+    result = Parse(aSourceBuffer + NS_LITERAL_STRING("</"),
+                   (void*)&theContext, aMimeType, PR_FALSE, PR_FALSE, aMode);
+    fragSink->DidBuildContent();
+ 
+    if (NS_SUCCEEDED(result)) {
+      nsAutoString endContext;       
+      for (theIndex = 0; theIndex < theCount; theIndex++) {
+         // we already added an end tag chunk above
+        if (theIndex > 0) {
+          endContext.AppendLiteral("</");
+        }
+
+        nsAutoString thisTag( (PRUnichar*)aTagStack.ElementAt(theIndex) );
+        // was there an xmlns=?
+        PRInt32 endOfTag = thisTag.FindChar(PRUnichar(' '));
+        if (endOfTag == -1) {
+          endContext.Append(thisTag);
+        } else {
+          endContext.Append(Substring(thisTag,0,endOfTag));
+        }
+
+        endContext.AppendLiteral(">");
+      }
+       
+      result = Parse(endContext, (void*)&theContext, aMimeType,
+                     PR_FALSE, PR_TRUE, aMode);
+    }
   }
     
   mFlags |= NS_PARSER_FLAG_OBSERVERS_ENABLED; //now reenable.
