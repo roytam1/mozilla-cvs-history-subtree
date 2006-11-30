@@ -180,6 +180,7 @@ struct _GtkMozEmbedClass
   gboolean (* upload_dialog)   (GtkMozEmbed *, const char *, const char *, char **);
   void     (* icon_changed)    (GtkMozEmbed *, gpointer*);
   void     (* mailto)          (GtkMozEmbed *, gchar *);
+  void     (* unknown_protocol)(GtkMozEmbed *, gchar *);
 };
 
 GTKMOZEMBED_API(GtkType,       gtk_moz_embed_get_type,            (void))
@@ -233,6 +234,7 @@ GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_doc_info,        (GtkMozEmbed *
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_insert_text,         (GtkMozEmbed *embed, const gchar*, gpointer node))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_save_target,         (GtkMozEmbed *embed, gchar*, gchar*, gint))
 GTKMOZEMBED_API(void,          gtk_moz_embed_get_image_dimensions,(GtkMozEmbed *embed, gint*, gint*, gpointer))
+GTKMOZEMBED_API(char*,         gtk_moz_embed_get_mime_type,       (GtkMozEmbed *embed))
 
 /* Defines used by download and upload components */
 #define GTK_MOZ_EMBED_COMMON_FILE_SCHEME "file://"

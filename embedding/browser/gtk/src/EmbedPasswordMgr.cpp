@@ -21,8 +21,10 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Brian Ryner <bryner@brianryner.com>
- *  Changes: romaxa@gmail.com (from original:  mozilla/toolkit/components/passwordmgr/base/nsPasswordManager.cpp)
+ *      Brian Ryner <bryner@brianryner.com>
+ * Modified by:
+ *      romaxa@gmail.com (from original:  mozilla/toolkit/components/passwordmgr/base/nsPasswordManager.cpp)
+ *      Antonio Gomes <tonikitoo@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -427,15 +429,27 @@ EmbedPasswordMgr::InsertLogin(const char* username, const char* password)
 NS_IMETHODIMP
 EmbedPasswordMgr::GetNumberOfSavedPassword (PRInt32 *aNum)
 {
+  // default return value in case of errors.
+  *aNum = 0;
+
   nsCOMPtr<nsIPasswordManager> passwordManager = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
-  if (!passwordManager) return NS_ERROR_NULL_POINTER;
+  if (!passwordManager) 
+    return NS_ERROR_NULL_POINTER;
+
   nsCOMPtr<nsIIDNService> idnService (do_GetService ("@mozilla.org/network/idn-service;1"));
-  if (!idnService) return NS_ERROR_NULL_POINTER;
+  if (!idnService) 
+    return NS_ERROR_NULL_POINTER;
+
+  if (mLastHostQuery.Equals (""))
+    return NS_ERROR_FAILURE; 
+
   nsresult result = NS_ERROR_FAILURE;
-  PRUint32 aCount = 0;
   nsCOMPtr<nsISimpleEnumerator> passwordEnumerator;
   result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
-  if (NS_FAILED(result)) return NS_ERROR_FAILURE; 
+  if (NS_FAILED (result)) 
+    return NS_ERROR_FAILURE; 
+
+  PRUint32 aCount = 0;
   PRBool enumResult;
   for (passwordEnumerator->HasMoreElements(&enumResult); 
        enumResult == PR_TRUE;
@@ -445,14 +459,27 @@ EmbedPasswordMgr::GetNumberOfSavedPassword (PRInt32 *aNum)
     result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
     if (NS_FAILED(result)) 
       break;
-    aCount++;
+
+    nsCString host;
+    nsString unicodeName;
+
+    nsPassword->GetHost (host);
+    nsPassword->GetUser (unicodeName);
+
+    if (StringBeginsWith (host, mLastHostQuery)){
+#ifdef NS_DEBUG
+        printf ("HOST = '%s' LAST REALM '%s'\n", host.get(), mLastHostQuery.get ());
+#endif
+        aCount++;
+    }
   }
+
   *aNum = aCount;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-EmbedPasswordMgr::RemovePasswordsByIndex(gint aIndex)
+EmbedPasswordMgr::RemovePasswordsByIndex(PRInt32 aIndex)
 {
   nsCOMPtr<nsIPasswordManager> passwordManager = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
   if (!passwordManager)
@@ -470,22 +497,28 @@ EmbedPasswordMgr::RemovePasswordsByIndex(gint aIndex)
   nsCOMPtr<nsIPassword> nsPassword;
   for (passwordEnumerator->HasMoreElements(&enumResult);
        enumResult == PR_TRUE && i <= aIndex;
-       passwordEnumerator->HasMoreElements(&enumResult), i++)
+       passwordEnumerator->HasMoreElements(&enumResult))
   {
     result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
-    if (NS_FAILED(result))
+    if (NS_FAILED(result) || !nsPassword)
       return result;
+
+    nsCString host;
+    nsPassword->GetHost (host);
+
+    if (StringBeginsWith (host, mLastHostQuery)) 
+        i++;
   }
   // if we found the right object to delete
   if (nsPassword) {
-    
+
     nsCString host, idn_host;
     nsString unicodeName;
 
     nsPassword->GetHost (host);
     nsPassword->GetUser (unicodeName);
     result = idnService->ConvertUTF8toACE (host, idn_host);
-    
+
     result = passwordManager->RemoveUser(idn_host, unicodeName);
   }
   return NS_OK;
@@ -513,7 +546,7 @@ EmbedPasswordMgr::RemovePasswords(const char *aHostName, const char *aUserName)
     result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
     if (NS_FAILED(result)) return FALSE;
     nsCString host, idn_host;
-    
+
     nsPassword->GetHost (host);
     nsString unicodeName;
     nsPassword->GetUser (unicodeName);
@@ -927,6 +960,9 @@ EmbedPasswordMgr::OnStateChange(
   nsCAutoString realm;
   if (!GetPasswordRealm(doc->GetDocumentURI(), realm))
     return NS_OK;
+
+  mLastHostQuery.Assign (realm);
+
   SignonHashEntry* hashEnt;
   if (!mSignonTable.Get(realm, &hashEnt))
     return NS_OK;

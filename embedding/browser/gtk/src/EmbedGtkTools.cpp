@@ -41,6 +41,7 @@
 #ifndef MOZILLA_INTERNAL_API
 #include "nsServiceManagerUtils.h"
 #endif
+#include "EmbedPrivate.h"
 
 GtkWidget * GetGtkWidgetForDOMWindow(nsIDOMWindow* aDOMWindow)
 {
@@ -49,9 +50,17 @@ GtkWidget * GetGtkWidgetForDOMWindow(nsIDOMWindow* aDOMWindow)
     return NULL;
   nsCOMPtr<nsIWebBrowserChrome> chrome;
   wwatch->GetChromeForWindow(aDOMWindow, getter_AddRefs(chrome));
-  nsCOMPtr<nsIEmbeddingSiteWindow> siteWindow = do_QueryInterface(chrome);
-  if (!siteWindow)
-    return NULL;
+  if (!chrome) {
+    return GTK_WIDGET(EmbedCommon::GetAnyLiveWidget());
+  }
+
+  nsCOMPtr<nsIEmbeddingSiteWindow> siteWindow = nsnull;
+  siteWindow = do_QueryInterface(chrome);
+  
+  if (!siteWindow) {
+    return GTK_WIDGET(EmbedCommon::GetAnyLiveWidget());
+  }
+  
   GtkWidget* parentWidget;
   siteWindow->GetSiteWindow((void**)&parentWidget);
   if (GTK_IS_WIDGET(parentWidget))

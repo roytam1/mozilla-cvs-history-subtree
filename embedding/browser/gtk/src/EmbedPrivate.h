@@ -96,6 +96,7 @@ class EmbedCommon {
   nsresult    Init (void);
   bool mFormAttachCount;
   GtkMozEmbedCommon* mCommon;
+  static GtkMozEmbed* GetAnyLiveWidget();
 };
 class EmbedPrivate {
 
@@ -175,6 +176,7 @@ class EmbedPrivate {
   nsresult    GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel);
   nsresult    SetZoom (gint zoomLevel);
   nsresult    HasFrames  (PRUint32 *numberOfFrames);
+  char*       GetMime ();
 
 #ifdef MOZ_ACCESSIBILITY_ATK
   void *GetAtkObjectForCurrentDocument();
@@ -200,6 +202,7 @@ class EmbedPrivate {
 
   // the currently loaded uri
   nsString                       mURI;
+  nsCString                      mPrePath;
 
   // the number of widgets that have been created
   static PRUint32                sWidgetCount;
@@ -247,6 +250,7 @@ class EmbedPrivate {
   //Open Blocker for Create Window class //Fixme...
   //I just tried to block it on earlier moment
   PRBool                         mOpenBlock;
+  PRBool                         mNeedFav;
  private:
 
   // is the chrome listener attached yet?

@@ -47,13 +47,40 @@
 
 #include <nsIDOMMouseMotionListener.h>
 #include <nsIDOMEventListener.h>
+#include <nsIDOMFocusListener.h>
 #include "EmbedContextMenuInfo.h"
+
+#include "nsIDOMNode.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMElement.h"
+#include "nsIURI.h"
+#include "nsIDOMEventTarget.h"
+#include "nsIDOMEvent.h"
+#include "nsIDOM3Node.h"
+
+#include "nsIURI.h"
+#include "nsIIOService.h"
+#include "nsNetCID.h"
+#include "nsCOMPtr.h"
+#include "nsIFileURL.h"
+#include "nsILocalFile.h"
+#include "nsIFile.h"
+#include "nsIWebBrowserPersist.h"
+#include "nsCWebBrowserPersist.h"
+#include "nsIWebProgressListener.h"
+#include "nsISelectionController.h"
+#include "nsIDOMMouseEvent.h"
+#include "nsXPCOMStrings.h"
+#include "nsCRTGlue.h"
+
 class EmbedPrivate;
 
 class EmbedEventListener : public nsIDOMKeyListener,
                            public nsIDOMMouseListener,
                            public nsIDOMUIListener,
-                           public nsIDOMMouseMotionListener
+                           public nsIDOMMouseMotionListener,
+                           public nsIWebProgressListener,
+                           public nsIDOMFocusListener
 {
  public:
 
@@ -66,9 +93,9 @@ class EmbedEventListener : public nsIDOMKeyListener,
 
 //  NS_DECL_NSIDOMEVENTLISTENER
   // nsIDOMEventListener
-
+  NS_DECL_NSIWEBPROGRESSLISTENER
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
-
+  NS_IMETHOD HandleLink (nsIDOMNode* node);
   // nsIDOMKeyListener
   
   NS_IMETHOD KeyDown(nsIDOMEvent* aDOMEvent);
@@ -94,10 +121,30 @@ class EmbedEventListener : public nsIDOMKeyListener,
   NS_IMETHOD MouseMove(nsIDOMEvent* aDOMEvent);
   NS_IMETHOD DragMove(nsIDOMEvent* aMouseEvent);
   EmbedContextMenuInfo* GetContextInfo() { return mCtxInfo; };
+
+  // nsIDOMFocusListener
+  NS_IMETHOD Focus(nsIDOMEvent* aEvent);
+  NS_IMETHOD Blur(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent);
+
+  // FIXME: dont not use nsCOMPtr<...> as param !! and how to ?
+  nsresult   GetLinkAttribute  (nsCOMPtr <nsIDOMElement>& linkElement,
+                                const char *name,
+                                nsString *value);
+  void       NewURI            (nsIURI **result,
+                                const char *spec);
+  nsresult   GetIOService      (nsIIOService **ioService);
+  
+  void       GeneratePixBuf    ();
+  
+  void       GetFaviconFromURI (const char*  aURI);
  private:
 
   EmbedPrivate *mOwner;
   EmbedContextMenuInfo *mCtxInfo;
+
+  // Selection and some clipboard stuff
+  nsCOMPtr <nsISelectionController> mSelCon;
 };
 
 #endif /* __EmbedEventListener_h */

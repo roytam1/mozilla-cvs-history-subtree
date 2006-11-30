@@ -194,7 +194,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
       if (sStopSignalTimer)
         g_source_remove(sStopSignalTimer);
       mStopLevel = 0;
-      sStopSignalTimer = g_timeout_add(1000, progress_emit_stop, mOwner);      
+      sStopSignalTimer = g_timeout_add(1000, progress_emit_stop, mOwner);
     }
   }
   return NS_OK;
@@ -239,8 +239,10 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
         nsIURI         *aLocation)
 {
   nsCAutoString newURI;
+  nsCAutoString prePath;
   NS_ENSURE_ARG_POINTER(aLocation);
   aLocation->GetSpec(newURI);
+  aLocation->GetPrePath(prePath);
 
   // Make sure that this is the primary frame change and not
   // just a subframe.
@@ -259,12 +261,32 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
       isSubFrameLoad = PR_TRUE;
   }
 
+  nsresult rv;
+  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest, &rv));
+  if (!httpChannel) 
+    return NS_ERROR_FAILURE;
+  PRUint32 responseCode = 0;
+
+  if (NS_SUCCEEDED(rv)) {
+    rv = httpChannel->GetResponseStatus(&responseCode);
+  }
+  // it has to handle more http errors code ??? 401 ?
+  if (responseCode >= 500 && responseCode <= 505) {
+    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                               moz_embed_signals[UNKNOWN_PROTOCOL],
+                               newURI.get());
+    mOwner->mNeedFav = PR_FALSE;
+    return NS_OK;
+  }
+
   if (!isSubFrameLoad) {
     mOwner->SetURI(newURI.get());
+    mOwner->mPrePath.Assign(prePath.get());
     gtk_signal_emit(
       GTK_OBJECT(mOwner->mOwningWidget),
       moz_embed_signals[LOCATION]);
   }
+  mOwner->mNeedFav = PR_TRUE;
 
   return NS_OK;
 }
