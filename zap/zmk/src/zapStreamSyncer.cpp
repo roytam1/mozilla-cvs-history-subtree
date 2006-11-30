@@ -42,7 +42,6 @@
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
-#include "nsThreadUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamSyncerClock
@@ -124,15 +123,31 @@ zapStreamSyncerClock::ConsumeFrame(zapIMediaFrame * frame)
   return NS_OK;
 }
 
+////////////////////////////////////////////////////////////////////////
+// zapStreamSyncerWakeupEvent
+
+NS_IMETHODIMP
+zapStreamSyncerWakeupEvent::Run()
+{
+  if (!mSyncer) return NS_OK;
+  mSyncer->mWakeupEvent.Forget();
+  mSyncer->Wakeup();
+  
+  return NS_OK;
+}
+
+void
+zapStreamSyncerWakeupEvent::Revoke()
+{
+  mSyncer = nsnull;
+}
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamSyncer
 
 zapStreamSyncer::zapStreamSyncer()
     : mClock(nsnull),
-      mCurrentTime(-1),
-      mWakeupPosted(PR_FALSE)
-      
+      mCurrentTime(-1)      
 {
 #ifdef DEBUG_afri_zmk
   printf("zapStreamSyncer::zapStreamSyncer()\n");
@@ -157,6 +172,7 @@ NS_INTERFACE_MAP_BEGIN(zapStreamSyncer)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIStreamSyncer)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
@@ -175,6 +191,7 @@ zapStreamSyncer::AddedToGraph(zapIMediaGraph *graph,
 NS_IMETHODIMP
 zapStreamSyncer::RemovedFromGraph(zapIMediaGraph *graph)
 {
+  mWakeupEvent.Revoke();
   return NS_OK;
 }
 
@@ -299,6 +316,22 @@ zapStreamSyncer::ProduceFrame(zapIMediaFrame ** frame)
 }
 
 //----------------------------------------------------------------------
+// zapIStreamSyncer:
+
+/* void reset (); */
+NS_IMETHODIMP
+zapStreamSyncer::Reset()
+{
+  mWakeupEvent.Revoke();
+  mWakeupEvent.Forget();
+  mNextFrame = nsnull;
+  mCurrentTime = -1;
+  
+  return NS_OK;
+}
+
+
+//----------------------------------------------------------------------
 // Implementation helpers:
 
 void
@@ -312,6 +345,8 @@ zapStreamSyncer::Wakeup()
     PRUint64 ts;
     mNextFrame->GetTimestamp(&ts);
     if (ts <= mCurrentTime) {
+      printf("[%d", ts);
+      printf("<=%d]", mCurrentTime);
       if (mOutput)
         mOutput->ConsumeFrame(mNextFrame);
       mNextFrame = nsnull;
@@ -320,30 +355,11 @@ zapStreamSyncer::Wakeup()
   }
 }
 
-class zapStreamSyncerWakeupEvent : public nsRunnable
-{
-public:
-  zapStreamSyncerWakeupEvent(zapStreamSyncer* syncer)
-      : mSyncer(syncer)
-  {
-  }
-
-  NS_IMETHODIMP Run()
-  {
-    NS_ASSERTION(mSyncer, "uh-oh, no syncer!");
-    mSyncer->mWakeupPosted = PR_FALSE;
-    mSyncer->Wakeup();
-    return NS_OK;
-  }
-
-private:
-  nsRefPtr<zapStreamSyncer> mSyncer;
-};
-
 void
 zapStreamSyncer::ScheduleWakeup()
 {
-  if (mWakeupPosted) return;
+  if (mWakeupEvent.IsPending()) return;
   nsRefPtr<zapStreamSyncerWakeupEvent> ev = new zapStreamSyncerWakeupEvent(this);
-  NS_DispatchToCurrentThread(ev);
+  if (NS_SUCCEEDED(NS_DispatchToCurrentThread(ev)))
+    mWakeupEvent = ev;
 }

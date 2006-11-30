@@ -1343,6 +1343,8 @@ Sinks: 2
 
 Sources: 1 (active)
 
+Control interfaces: zapIStreamSyncer
+
 Output stream:
 as input stream
 

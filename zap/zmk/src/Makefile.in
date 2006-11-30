@@ -108,6 +108,7 @@ XPIDLSRCS	= \
 		zapISpeexDecoder.idl \
 		zapISpeexEncoder.idl \
 		zapIStreamSwitch.idl \
+		zapIStreamSyncer.idl \
 		zapIStunClient.idl \
 		zapIStunClientListener.idl \
 		zapIStunServer.idl \

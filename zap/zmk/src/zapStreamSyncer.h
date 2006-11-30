@@ -42,8 +42,30 @@
 #include "zapIMediaSink.h"
 #include "nsCOMPtr.h"
 #include "nsIPropertyBag2.h"
+#include "nsThreadUtils.h"
+#include "zapIStreamSyncer.h"
 
 class zapStreamSyncerClock;
+class zapStreamSyncer;
+
+////////////////////////////////////////////////////////////////////////
+// zapStreamSyncerWakeupEvent : helper event class
+
+class zapStreamSyncerWakeupEvent : public nsRunnable
+{
+public:
+  zapStreamSyncerWakeupEvent(zapStreamSyncer* syncer)
+      : mSyncer(syncer)
+  {
+  }
+
+  NS_IMETHOD Run();
+  void Revoke();
+
+private:
+  zapStreamSyncer* mSyncer;
+};
+
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamSyncer
@@ -56,12 +78,14 @@ class zapStreamSyncerClock;
 
 class zapStreamSyncer : public zapIMediaNode,
                         public zapIMediaSource,
-                        public zapIMediaSink
+                        public zapIMediaSink,
+                        public zapIStreamSyncer
 {
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
   NS_DECL_ZAPIMEDIASOURCE
   NS_DECL_ZAPIMEDIASINK
+  NS_DECL_ZAPISTREAMSYNCER
   
   zapStreamSyncer();
   ~zapStreamSyncer();
@@ -75,7 +99,7 @@ private:
   
   PRUint64 mCurrentTime;
   nsCOMPtr<zapIMediaFrame> mNextFrame;
-  PRBool mWakeupPosted;
+  nsRevocableEventPtr<zapStreamSyncerWakeupEvent> mWakeupEvent;
   
   zapStreamSyncerClock *mClock; // weak reference managed by object itself
 
