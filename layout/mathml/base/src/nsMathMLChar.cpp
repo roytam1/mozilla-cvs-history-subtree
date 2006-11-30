@@ -2190,26 +2190,27 @@ nsMathMLChar::PaintVertically(nsPresContext*      aPresContext,
     }
   }
   else { // glue is present
-    nscoord overlap = onePixel;
-#if 0
+    nscoord overlap;
     nsCOMPtr<nsIFontMetrics> fm;
     aRenderingContext.GetFontMetrics(*getter_AddRefs(fm));
     nsMathMLFrame::GetRuleThickness(fm, overlap);
     overlap = 2 * PR_MAX(overlap, onePixel);
-    while (overlap > onePixel && bmdata[3].ascent + bmdata[3].descent <= 2*overlap)
+    while (overlap > 0 && bmdata[3].ascent + bmdata[3].descent <= 2*overlap + onePixel)
       overlap -= onePixel;
 
-    // to protect against gaps, pretend the glue is smaller than 
-    // it says to allow a small overlap when adjoining it
-    bmdata[3].ascent -= overlap;
-    bmdata[3].descent -= overlap;
-#endif
+    if (overlap > 0) {
+      // to protect against gaps, pretend the glue is smaller than 
+      // it says to allow a small overlap when adjoining it
+      bmdata[3].ascent -= overlap;
+      bmdata[3].descent -= overlap;
+    }
+    nscoord edge = PR_MAX(overlap, onePixel);
 
     for (i = 0; i < 2; i++) {
       PRInt32 count = 0;
       dy = offset[i];
       clipRect.SetRect(dx, end[i], width, start[i+1]-end[i]);
-      clipRect.Inflate(overlap, overlap);
+      clipRect.Inflate(edge, edge);
 #ifdef SHOW_BORDERS
       // exact area to fill
       aRenderingContext.SetColor(NS_RGB(255,0,0));
@@ -2226,7 +2227,10 @@ nsMathMLChar::PaintVertically(nsPresContext*      aPresContext,
         }
         // defensive code against odd things such as a smallish TextZoom...
         NS_ASSERTION(1000 != count, "something is probably wrong somewhere");
-        if (stride < onePixel || 1000 == count) return NS_ERROR_UNEXPECTED;
+        if (stride < onePixel || 1000 == count) {
+          aRenderingContext.PopState();
+          return NS_ERROR_UNEXPECTED;
+        }
         dy += stride;
         aGlyphTable->DrawGlyph(aRenderingContext, aFont, glue, dx, dy);
       }
@@ -2380,26 +2384,27 @@ nsMathMLChar::PaintHorizontally(nsPresContext*      aPresContext,
     }
   }
   else { // glue is present
-    nscoord overlap = onePixel;
-#if 0
+    nscoord overlap;
     nsCOMPtr<nsIFontMetrics> fm;
     aRenderingContext.GetFontMetrics(*getter_AddRefs(fm));
     nsMathMLFrame::GetRuleThickness(fm, overlap);
     overlap = 2 * PR_MAX(overlap, onePixel);
-    while (overlap > onePixel && bmdata[3].rightBearing - bmdata[3].leftBearing <= 2*overlap)
+    while (overlap > 0 && bmdata[3].rightBearing - bmdata[3].leftBearing <= 2*overlap + onePixel)
       overlap -= onePixel;
 
-    // to protect against gaps, pretend the glue is smaller than 
-    // it says to allow a small overlap when adjoining it
-    bmdata[3].leftBearing += overlap;
-    bmdata[3].rightBearing -= overlap;
-#endif
+    if (overlap > 0) {
+      // to protect against gaps, pretend the glue is smaller than 
+      // it says to allow a small overlap when adjoining it
+      bmdata[3].leftBearing += overlap;
+      bmdata[3].rightBearing -= overlap;
+    }
+    nscoord edge = PR_MAX(overlap, onePixel);
 
     for (i = 0; i < 2; i++) {
       PRInt32 count = 0;
       dx = offset[i];
       clipRect.SetRect(end[i], aRect.y, start[i+1]-end[i], aRect.height);
-      clipRect.Inflate(overlap, overlap);
+      clipRect.Inflate(edge, edge);
 #ifdef SHOW_BORDERS
       // rectangles in-between that are to be filled
       aRenderingContext.SetColor(NS_RGB(255,0,0));
@@ -2416,7 +2421,10 @@ nsMathMLChar::PaintHorizontally(nsPresContext*      aPresContext,
         }
         // defensive code against odd things such as a smallish TextZoom...
         NS_ASSERTION(1000 != count, "something is probably wrong somewhere");
-        if (stride < onePixel || 1000 == count) return NS_ERROR_UNEXPECTED;
+        if (stride < onePixel || 1000 == count) {
+          aRenderingContext.PopState();
+          return NS_ERROR_UNEXPECTED;
+        }
         dx += stride;
         aGlyphTable->DrawGlyph(aRenderingContext, aFont, glue, dx, dy);
       }
