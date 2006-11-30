@@ -965,14 +965,15 @@ JS_EvaluateUCInStackFrame(JSContext *cx, JSStackFrame *fp,
 
 JS_PUBLIC_API(JSBool)
 JS_EvaluateInStackFrame(JSContext *cx, JSStackFrame *fp,
-                        const char *bytes, uintN length,
+                        const char *bytes, uintN nbytes,
                         const char *filename, uintN lineno,
                         jsval *rval)
 {
+    size_t length = nbytes;
     jschar *chars;
     JSBool ok;
 
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_FALSE;
     ok = JS_EvaluateUCInStackFrame(cx, fp, chars, length, filename, lineno,
