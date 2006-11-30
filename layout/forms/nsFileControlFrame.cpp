@@ -102,12 +102,6 @@ nsFileControlFrame::nsFileControlFrame():
 
 nsFileControlFrame::~nsFileControlFrame()
 {
-  // remove ourself as a listener of the button (bug 40533)
-  if (mBrowse) {
-    nsCOMPtr<nsIDOMEventReceiver> reciever(do_QueryInterface(mBrowse));
-    reciever->RemoveEventListenerByIID(this, NS_GET_IID(nsIDOMMouseListener));
-  }
-
   if (mCachedState) {
     delete mCachedState;
     mCachedState = nsnull;
@@ -115,9 +109,35 @@ nsFileControlFrame::~nsFileControlFrame()
 }
 
 NS_IMETHODIMP
+nsFileControlFrame::Init(nsPresContext*  aPresContext,
+                         nsIContent*      aContent,
+                         nsIFrame*        aParent,
+                         nsStyleContext*  aContext,
+                         nsIFrame*        aPrevInFlow)
+{
+  mPresContext = aPresContext;
+  nsresult rv = nsAreaFrame::Init(aPresContext, aContent, aParent, aContext,
+                                  aPrevInFlow);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mMouseListener = new MouseListener(this);
+  NS_ENSURE_TRUE(mMouseListener, NS_ERROR_OUT_OF_MEMORY);
+
+  return rv;
+}
+
+NS_IMETHODIMP
 nsFileControlFrame::Destroy(nsPresContext* aPresContext)
 {
   mTextFrame = nsnull;
+  // remove mMouseListener as a mouse event listener (bug 40533, bug 355931)
+  if (mBrowse) {
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(mBrowse));
+    receiver->RemoveEventListenerByIID(mMouseListener,
+                                       NS_GET_IID(nsIDOMMouseListener));
+  }
+
+  mMouseListener->ForgetFrame();
   return nsAreaFrame::Destroy(aPresContext);
 }
 
@@ -181,7 +201,8 @@ nsFileControlFrame::CreateAnonymousContent(nsPresContext* aPresContext,
 
     // register as an event listener of the button to open file dialog on mouse click
     nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(mBrowse));
-    receiver->AddEventListenerByIID(this, NS_GET_IID(nsIDOMMouseListener));
+    receiver->AddEventListenerByIID(mMouseListener,
+                                    NS_GET_IID(nsIDOMMouseListener));
   }
 
   SyncAttr(kNameSpaceID_None, nsHTMLAtoms::size,     SYNC_TEXT);
@@ -202,9 +223,6 @@ nsFileControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     return NS_OK;
   } else if (aIID.Equals(NS_GET_IID(nsIFormControlFrame))) {
     *aInstancePtr = (void*) ((nsIFormControlFrame*) this);
-    return NS_OK;
-  } else  if (aIID.Equals(NS_GET_IID(nsIDOMMouseListener))) {
-    *aInstancePtr = (void*)(nsIDOMMouseListener*) this;
     return NS_OK;
   }
   return nsHTMLContainerFrame::QueryInterface(aIID, aInstancePtr);
@@ -641,3 +659,19 @@ nsFileControlFrame::OnContentReset()
 {
   return NS_OK;
 }
+
+////////////////////////////////////////////////////////////
+// Mouse listener implementation
+
+NS_IMPL_ISUPPORTS1(nsFileControlFrame::MouseListener, nsIDOMMouseListener)
+
+NS_IMETHODIMP
+nsFileControlFrame::MouseListener::MouseClick(nsIDOMEvent* aMouseEvent)
+{
+  if (mFrame) {
+    return mFrame->MouseClick(aMouseEvent);
+  }
+
+  return NS_OK;
+}
+
