@@ -48,6 +48,10 @@ ifneq (,$(filter windows gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
 DIRS += shell
 endif
 
+ifdef MOZ_SAFE_BROWSING
+DIRS += phishing 
+endif
+
 DIRS += build
 
 EXTRA_PP_COMPONENTS = nsMailDefaultHandler.js
