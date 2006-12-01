@@ -843,8 +843,8 @@ protected:
 
 // IID for the nsIDocument interface
 #define NS_IDOCUMENT_MOZILLA_1_8_0_BRANCH_IID      \
-{ 0xf7e62f7e, 0x394b, 0x44ad, \
-  { 0x85, 0x51, 0x9c, 0x61, 0x8c, 0xab, 0x80, 0x70 } }
+{ 0x7d001ad2, 0x01ac, 0x4bf2, \
+  { 0xb8, 0x3a, 0x50, 0xaa, 0xed, 0xc6, 0x1d, 0xfa } }
 
 class nsIDocument_MOZILLA_1_8_0_BRANCH : public nsISupports
 {
@@ -859,6 +859,15 @@ public:
    * content wrapper in XPConnect.
    */
   virtual nsIScriptGlobalObject* GetScopeObject() = 0;
+
+  /**
+   * Remove a child from this document.
+   *
+   * @param aIndex the index of the child to remove
+   * @param aNotify whether to notify the document that the remove has
+   *        occurred
+   */
+  virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify) = 0;
 };
 
 /**

@@ -143,7 +143,7 @@ doInsertChildAt(nsIContent* aKid, PRUint32 aIndex, PRBool aNotify,
  *                  aParent->GetCurrentDoc() if aParent is not null.
  * @param aChildArray The child array to work with
  */
-static nsresult
+extern nsresult
 doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
                 nsIContent* aParent, nsIDocument* aDocument,
                 nsAttrAndChildArray& aChildArray);
@@ -2922,8 +2922,7 @@ struct nsContentOrDocument {
       doInsertChildAt(aKid, aIndex, aNotify, mContent, mDocument, aChildArray);
   }
 
-  nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify,
-                         nsAttrAndChildArray& aChildArray)
+  nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
   {
     // XXXbz can't quite use doRemoveChildAt because RemoveChildAt has this
     // random subclass notification it now does... and because subclasses
@@ -2932,13 +2931,10 @@ struct nsContentOrDocument {
       return mContent->RemoveChildAt(aIndex, aNotify);
     }
 
-    nsIContent* kid = GetChildAt(aIndex);
-    if (kid) {
-      return doRemoveChildAt(aIndex, aNotify, kid, mContent, mDocument,
-                             aChildArray);
-    }
+    nsCOMPtr<nsIDocument_MOZILLA_1_8_0_BRANCH> doc =
+      do_QueryInterface(mDocument);
 
-    return NS_OK;
+    return doc->RemoveChildAt(aIndex, aNotify);
   }
   
   PRBool Equals(nsContentOrDocument& aOther)
@@ -2952,7 +2948,7 @@ struct nsContentOrDocument {
 };
 
 
-static nsresult
+nsresult
 doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
                 nsIContent* aParent, nsIDocument* aDocument,
                 nsAttrAndChildArray& aChildArray)
@@ -3387,7 +3383,7 @@ nsGenericElement::doReplaceOrInsertBefore(PRBool aReplace,
 
     nsMutationGuard guard;
 
-    res = container.RemoveChildAt(insPos, PR_TRUE, aChildArray);
+    res = container.RemoveChildAt(insPos, PR_TRUE);
     NS_ENSURE_SUCCESS(res, res);
 
     if (guard.Mutated(1)) {
@@ -3553,7 +3549,7 @@ nsGenericElement::doReplaceOrInsertBefore(PRBool aReplace,
 
       nsMutationGuard guard;
 
-      res = oldParent.RemoveChildAt(removeIndex, PR_TRUE, aChildArray);
+      res = oldParent.RemoveChildAt(removeIndex, PR_TRUE);
       NS_ENSURE_SUCCESS(res, res);
 
       // Adjust insert index if the node we ripped out was a sibling
