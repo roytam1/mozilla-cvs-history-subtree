@@ -405,9 +405,11 @@ GetSpecialSystemDirectory(SystemDirectories aSystemSystemDirectory,
                 if( c) strcpy( buffer, c);
             }
 
-            return NS_NewNativeLocalFile(nsDependentCString(buffer), 
-                                         PR_TRUE, 
-                                         aFile);
+            nsCString tString = nsDependentCString(buffer);
+            if (tString.Find("/", PR_FALSE, 0, -1)) {
+                tString.ReplaceChar('/','\\');
+            }
+            return NS_NewNativeLocalFile(tString, PR_TRUE, aFile);
         } 
 #elif defined(XP_MACOSX)
         {
