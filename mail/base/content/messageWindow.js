@@ -320,6 +320,7 @@ function delayedOnLoadMessageWindow()
   CreateView(originalView);
   
   gFindBar.initFindBar();
+  gPhishingDetector.init();
   
   // initialize the customizeDone method on the customizeable toolbar
   var toolbox = document.getElementById("mail-toolbox");

@@ -837,7 +837,9 @@ function delayedOnLoadMessenger()
   accountManager.setSpecialFolders();
   accountManager.loadVirtualFolders();
   accountManager.addIncomingServerListener(gThreePaneIncomingServerListener);
-
+  
+  gPhishingDetector.init();
+  
   AddToSession();
 
   //need to add to session before trying to load start folder otherwise listeners aren't
