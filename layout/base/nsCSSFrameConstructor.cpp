@@ -14158,6 +14158,11 @@ nsCSSFrameConstructor::ProcessPendingRestyles()
   // view updates at the very end.  Note that this serves as the view
   // update batch we need around our ProcessRestyledFrames calls too.
   viewManager->BeginUpdateViewBatch();
+
+  // Make sure to not rebuild quote or counter lists while we're
+  // processing restyles
+  BeginUpdate();
+
   for (nsCSSFrameConstructor::RestyleEnumerateData* currentRestyle =
          restylesToProcess;
        currentRestyle != lastRestyle;
@@ -14166,6 +14171,9 @@ nsCSSFrameConstructor::ProcessPendingRestyles()
                       currentRestyle->mRestyleHint,
                       currentRestyle->mChangeHint);
   }
+
+  EndUpdate();
+
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 
   delete [] restylesToProcess;
