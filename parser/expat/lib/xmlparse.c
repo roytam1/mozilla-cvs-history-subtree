@@ -1472,6 +1472,7 @@ XML_Parse(XML_Parser parser, const char *s, int len, int isFinal)
     if (errorCode == XML_ERROR_SUSPENDED) {
       parseEndByteIndex -= parseEndPtr - eventPtr; /* Remove what we haven't read. */
       parseEndPtr = bufferPtr = eventPtr;
+      bufferEnd = (char*)bufferPtr; /* We'll pass in the same data again later. */
       XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
       return XML_STATUS_ERROR;
     }
@@ -1570,6 +1571,7 @@ XML_ParseBuffer(XML_Parser parser, int len, int isFinal)
   else if (errorCode == XML_ERROR_SUSPENDED) {
     parseEndByteIndex -= parseEndPtr - eventPtr; /* Remove what we haven't read. */
     parseEndPtr = bufferPtr = eventPtr;
+    bufferEnd = (char*)bufferPtr; /* We'll pass in the same data again later. */
     XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
     return XML_STATUS_ERROR;
   }
