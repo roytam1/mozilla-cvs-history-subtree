@@ -119,7 +119,7 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
 
   nsCOMPtr<nsIURI> baseURI;
   result = NewURI(getter_AddRefs(baseURI), cSpec.get());
-  if ((NS_FAILED(result) || !baseURI) return NS_ERROR_FAILURE;
+  if (NS_FAILED(result) || !baseURI) return NS_ERROR_FAILURE;
 
   nsCString linkstring;
   NS_UTF16ToCString(link, NS_CSTRING_ENCODING_UTF8, linkstring);
@@ -560,10 +560,7 @@ EmbedEventListener::Focus(nsIDOMEvent* aEvent)
 NS_IMETHODIMP 
 EmbedEventListener::Blur(nsIDOMEvent* aEvent)
 {
-  nsresult rv;
-  if (mSelCon)
-    rv = mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
-
+  mFocusInternalFrame = PR_FALSE;
   return NS_OK;
  }
 
@@ -571,6 +568,10 @@ NS_IMETHODIMP
 EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
 {
   nsresult rv;
+
+  /* This function gets called everytime that a mousedown or a mouseup 
+   * event occurs.
+   */
   nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDOMMouseEvent));
 
   nsCOMPtr<nsIDOMEventTarget> target;
@@ -587,37 +588,70 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
   nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
   nsIPresShell *presShell = doc->GetShellAt(0);
 
-  mSelCon = do_QueryInterface(presShell);
+  /* Gets nsISelectionController interface for the current context */
+  mCurSelCon = do_QueryInterface(presShell);
+  if (!mCurSelCon)
+    return NS_ERROR_FAILURE;
 
+  /* Gets event type */
   nsString eventType;
   rv = aDOMMouseEvent->GetType(eventType);
   if (NS_FAILED(rv))
     return rv;
 
-  PRInt32 clickCount;
-  rv = aDOMMouseEvent->GetDetail(&clickCount);
-  if (NS_FAILED(rv))
-    return rv;  
-
+  /* Updates context to check which context is being clicked on */
   mCtxInfo->UpdateContextData(aDOMMouseEvent);
 
-  if (eventType.EqualsLiteral("mousedown")) {
-    if (clickCount == 1) {
-      if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL))
-        rv = mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_OFF);
-    }
-    return rv;
-  }
+  /* If a mousedown after 1 click is done (and if clicked context is not a XUL
+  * one (e.g. scrollbar), the selection is disabled for that context. 
+  */
+  if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL)) {
 
-  if (eventType.EqualsLiteral("mouseup")) {
-    rv = mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
-    if (clickCount == 1) {
-      nsCOMPtr<nsISelection> domSel;
-      mSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
-                            getter_AddRefs(domSel));
-      rv = domSel->RemoveAllRanges();
-      return rv;
-    }
+    if (eventType.EqualsLiteral("mousedown")) {
+
+      /* Gets number of clicks done for event */
+      rv = aDOMMouseEvent->GetDetail(&mClickCount);
+      if (NS_FAILED(rv))
+        return rv; 
+
+      if (mClickCount == 1)
+        rv = mCurSelCon->SetDisplaySelection(nsISelectionController::SELECTION_OFF);
+
+    } // mousedown
+
+    /* If a mouseup occurs, the selection for context is enabled again (despite of
+     * number of clicks). If this event occurs after 1 click, the selection of 
+     * both last and current context is cleaned up. 
+     */
+    if (eventType.EqualsLiteral("mouseup")) {
+
+      /* Selection controller of current event context */
+      if (mCurSelCon) {
+        rv = mCurSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
+        if (mClickCount == 1) {
+          nsCOMPtr<nsISelection> domSel;
+          mCurSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
+                                   getter_AddRefs(domSel));
+          rv = domSel->RemoveAllRanges();
+        }
+      }
+      /* Selection controller of previous event context */
+      if (mLastSelCon) {
+        rv = mLastSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
+        if (mClickCount == 1) {
+          nsCOMPtr<nsISelection> domSel;
+          mLastSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
+                                    getter_AddRefs(domSel));
+          rv = domSel->RemoveAllRanges();
+        }
+      }
+
+      /* If 1 click was done (despite the event type), sets the last context's 
+       * selection controller with current one 
+       */
+      if (mClickCount == 1)
+        mLastSelCon = mCurSelCon;
+    } // mouseup
   }
 
   return rv;

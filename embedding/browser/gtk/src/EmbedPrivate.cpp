@@ -1812,7 +1812,7 @@ EmbedPrivate::GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel) {
   float zoomLevelFloat;
   rv = DOMWindow->GetTextZoom(&zoomLevelFloat);
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  *zoomLevel = round (zoomLevelFloat * 100.);
+  *zoomLevel = (int)round (zoomLevelFloat * 100.);
   if (compareFramesZoomLevel) { 
     *compareFramesZoomLevel = GTK_MOZ_EMBED_EQUAL_ZOOM_LEVEL;
     // get frames.
@@ -1828,11 +1828,11 @@ EmbedPrivate::GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel) {
       nsCOMPtr <nsIDOMWindow> currentFrameDOMWindow;
       gint currentFrameIntZoomLevel;
       gfloat currentFrameFloatZoomLevel;
-      for (gint i= 0; i < numberOfFrames; i++) {
+      for (guint i= 0; i < numberOfFrames; i++) {
         frameCollection->Item(i, getter_AddRefs (currentFrameDOMWindow));
         if (!currentFrameDOMWindow) continue;
         currentFrameDOMWindow->GetTextZoom(&currentFrameFloatZoomLevel);
-        currentFrameIntZoomLevel = ((float) currentFrameFloatZoomLevel) * 100.;
+        currentFrameIntZoomLevel = (gint)round(currentFrameFloatZoomLevel * 100.);
         if (currentFrameIntZoomLevel != *zoomLevel) { 
           *compareFramesZoomLevel = GTK_MOZ_EMBED_DIFFERENT_ZOOM_LEVEL;
           break ;
@@ -1887,13 +1887,13 @@ EmbedPrivate::GetMIMEInfo (nsString& info)
 {
   nsresult rv;
   nsCOMPtr<nsIWebBrowser> webBrowser;
-  mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
+  rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
 
   nsCOMPtr<nsIDOMWindow> DOMWindow;
-  webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
 
   nsCOMPtr<nsIDOMDocument> doc;
-  DOMWindow->GetDocument (getter_AddRefs(doc));
+  rv = DOMWindow->GetDocument (getter_AddRefs(doc));
 
   nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(doc);
   

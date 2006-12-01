@@ -585,8 +585,6 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
     return;
   }
   pluginMan->ReloadPlugins(PR_TRUE);
-  gchar *disabled[10];
-  gint num_disabled;
   nsCOMPtr<nsIPluginHost> pluginHost = 
     do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {

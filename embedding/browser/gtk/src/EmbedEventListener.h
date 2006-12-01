@@ -131,7 +131,7 @@ class EmbedEventListener : public nsIDOMKeyListener,
   nsresult   GetLinkAttribute  (nsCOMPtr <nsIDOMElement>& linkElement,
                                 const char *name,
                                 nsString *value);
-  void       NewURI            (nsIURI **result,
+  nsresult   NewURI            (nsIURI **result,
                                 const char *spec);
   nsresult   GetIOService      (nsIIOService **ioService);
   

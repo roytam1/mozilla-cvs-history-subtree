@@ -106,7 +106,7 @@ public:
                                   nsAString& aEncrypted);
   nsresult InsertLogin(const char* username, const char* password = nsnull);
   nsresult RemovePasswords(const char *aHostName, const char *aUserName);
-  nsresult RemovePasswordsByIndex(PRInt32 aIndex);
+  nsresult RemovePasswordsByIndex(PRUint32 aIndex);
   nsresult GetNumberOfSavedPassword(PRInt32 *aNum);
   NS_DECL_ISUPPORTS
   NS_DECL_NSIPASSWORDMANAGER

@@ -479,7 +479,7 @@ EmbedPasswordMgr::GetNumberOfSavedPassword (PRInt32 *aNum)
 }
 
 NS_IMETHODIMP
-EmbedPasswordMgr::RemovePasswordsByIndex(PRInt32 aIndex)
+EmbedPasswordMgr::RemovePasswordsByIndex(PRUint32 aIndex)
 {
   nsCOMPtr<nsIPasswordManager> passwordManager = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
   if (!passwordManager)
