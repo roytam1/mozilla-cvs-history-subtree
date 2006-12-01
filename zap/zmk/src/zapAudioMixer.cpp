@@ -324,12 +324,13 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
     }
   }
 
-  // scale data
-  if (!mMute && (activeInputs > 1 || mVolumeFactor != 1.0)) {
+  if (!mMute && activeInputs != 0 &&
+      (mVolumeFactor != 1.0 || activeInputs > 1)) {
+    // scale data
     float scalefactor = mVolumeFactor / sqrt((float)activeInputs);
     for (unsigned int sp=0; sp < samplesPerFrame; ++sp) {
       d[sp] *= scalefactor;
-      }
+    }
   }
 
   mSampleClock += mStreamParameters.samples;
