@@ -35,9 +35,9 @@
 ; 
 ; ***** END LICENSE BLOCK ***** 
 
-LIBRARY         LDAP326
+LIBRARY         LDAP3250
 DESCRIPTION     'Lightweight Directory Access Protocol Client API for 32-bit Windows'
-VERSION		6.0
+VERSION		5.0
 HEAPSIZE        4096
 
 EXPORTS

@@ -3028,7 +3028,10 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
     SECItem *newCertKeys, *newKeyIDs;
     unsigned int i, new_i;
     SECStatus rv;
+    NSSLOWCERTCertificate *cmpcert;
+    unsigned int nnlen;
     unsigned int ncerts;
+    PRBool added = PR_FALSE;
 
     PORT_Assert(entry);    
     ncerts = entry->ncerts;
@@ -3040,24 +3043,25 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
 
     if ( ( entry->nickname == NULL ) && ( nickname != NULL ) ) {
 	/* copy nickname into the entry */
-	entry->nickname = PORT_ArenaStrdup(entry->common.arena, nickname);
+	nnlen = PORT_Strlen(nickname) + 1;
+	entry->nickname = (char *)PORT_ArenaAlloc(entry->common.arena,nnlen);
 	if ( entry->nickname == NULL ) {
 	    return(SECFailure);
 	}
+	PORT_Memcpy(entry->nickname, nickname, nnlen);
     }
 	
     /* a DB entry already exists, so add this cert */
-    newCertKeys = PORT_ArenaZNewArray(entry->common.arena, SECItem, ncerts + 1);
-    newKeyIDs   = PORT_ArenaZNewArray(entry->common.arena, SECItem, ncerts + 1);
+    newCertKeys = (SECItem *)PORT_ArenaAlloc(entry->common.arena,
+					 sizeof(SECItem) * ( ncerts + 1 ) );
+    newKeyIDs = (SECItem *)PORT_ArenaAlloc(entry->common.arena,
+					 sizeof(SECItem) * ( ncerts + 1 ) );
 
     if ( ( newCertKeys == NULL ) || ( newKeyIDs == NULL ) ) {
 	    return(SECFailure);
     }
 
-    /* Step 1: copy certs older than "cert" into new entry. */
     for ( i = 0, new_i=0; i < ncerts; i++ ) {
-	NSSLOWCERTCertificate *cmpcert;
-	PRBool isNewer;
 	cmpcert = nsslowcert_FindCertByKey(cert->dbhandle,
 						  &entry->certKeys[i]);
 	/* The entry has been corrupted, remove it from the list */
@@ -3065,42 +3069,63 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
 	    continue;
 	}
 
-	isNewer = nsslowcert_IsNewer(cert, cmpcert);
-	nsslowcert_DestroyCertificate(cmpcert);
-	if ( isNewer ) 
+	if ( nsslowcert_IsNewer(cert, cmpcert) ) {
+	    nsslowcert_DestroyCertificate(cmpcert);
+	    /* insert before cmpcert */
+	    rv = SECITEM_CopyItem(entry->common.arena, &newCertKeys[new_i],
+				      &cert->certKey);
+	    if ( rv != SECSuccess ) {
+		return(SECFailure);
+	    }
+	    rv = SECITEM_CopyItem(entry->common.arena, &newKeyIDs[new_i],
+				      &cert->subjectKeyID);
+	    if ( rv != SECSuccess ) {
+		return(SECFailure);
+	    }
+	    new_i++;
+	    /* copy the rest of the entry */
+	    for ( ; i < ncerts; i++ ,new_i++) {
+		newCertKeys[new_i] = entry->certKeys[i];
+		newKeyIDs[new_i] = entry->keyIDs[i];
+	    }
+
+	    /* update certKeys and keyIDs */
+	    entry->certKeys = newCertKeys;
+	    entry->keyIDs = newKeyIDs;
+		
+	    /* set new count value */
+	    entry->ncerts = new_i;
+	    added = PR_TRUE;
 	    break;
+	}
+	nsslowcert_DestroyCertificate(cmpcert);
 	/* copy this cert entry */
 	newCertKeys[new_i] = entry->certKeys[i];
-	newKeyIDs[new_i]   = entry->keyIDs[i];
-	new_i++; 
+	newKeyIDs[new_i] = entry->keyIDs[i];
+	new_i++; /* only increment if we copied the entries */
     }
 
-    /* Step 2: Add "cert" to the entry. */
-    rv = SECITEM_CopyItem(entry->common.arena, &newCertKeys[new_i],
-			      &cert->certKey);
-    if ( rv != SECSuccess ) {
-	return(SECFailure);
+    if ( !added ) {
+	/* insert new one at end */
+	rv = SECITEM_CopyItem(entry->common.arena, &newCertKeys[new_i],
+				  &cert->certKey);
+	if ( rv != SECSuccess ) {
+	    return(SECFailure);
+	}
+	rv = SECITEM_CopyItem(entry->common.arena, &newKeyIDs[new_i],
+				  &cert->subjectKeyID);
+	if ( rv != SECSuccess ) {
+	    return(SECFailure);
+	}
+	new_i++;
+
+	/* update certKeys and keyIDs */
+	entry->certKeys = newCertKeys;
+	entry->keyIDs = newKeyIDs;
+		
+	/* increment count */
+	entry->ncerts = new_i;
     }
-    rv = SECITEM_CopyItem(entry->common.arena, &newKeyIDs[new_i],
-			      &cert->subjectKeyID);
-    if ( rv != SECSuccess ) {
-	return(SECFailure);
-    }
-    new_i++;
-
-    /* Step 3: copy remaining certs (if any) from old entry to new. */
-    for ( ; i < ncerts; i++ ,new_i++) {
-	newCertKeys[new_i] = entry->certKeys[i];
-	newKeyIDs[new_i]   = entry->keyIDs[i];
-    }
-
-    /* update certKeys and keyIDs */
-    entry->certKeys = newCertKeys;
-    entry->keyIDs   = newKeyIDs;
-
-    /* set new count value */
-    entry->ncerts = new_i;
-
     DeleteDBSubjectEntry(cert->dbhandle, &cert->derSubject);
     rv = WriteDBSubjectEntry(cert->dbhandle, entry);
     return(rv);
