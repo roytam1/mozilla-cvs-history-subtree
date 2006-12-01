@@ -1885,6 +1885,23 @@ nsDocument::GetChildCount() const
   return mChildren.ChildCount();
 }
 
+nsresult
+nsDocument::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
+{
+  extern nsresult
+  doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
+                  nsIContent* aParent, nsIDocument* aDocument,
+                  nsAttrAndChildArray& aChildArray);
+
+  nsIContent* kid = GetChildAt(aIndex);
+  if (kid) {
+    return doRemoveChildAt(aIndex, aNotify, kid, nsnull, this,
+                           mChildren);
+  }
+  
+  return NS_OK;
+}
+
 PRInt32
 nsDocument::GetNumberOfStyleSheets() const
 {

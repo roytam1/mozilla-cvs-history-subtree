@@ -488,6 +488,7 @@ public:
   virtual nsIContent *GetChildAt(PRUint32 aIndex) const;
   virtual PRInt32 IndexOf(nsIContent* aPossibleChild) const;
   virtual PRUint32 GetChildCount() const;
+  virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
 
   /**
    * Get the style sheets owned by this document.
