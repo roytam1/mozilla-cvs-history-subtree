@@ -345,8 +345,6 @@ zapStreamSyncer::Wakeup()
     PRUint64 ts;
     mNextFrame->GetTimestamp(&ts);
     if (ts <= mCurrentTime) {
-      printf("[%d", ts);
-      printf("<=%d]", mCurrentTime);
       if (mOutput)
         mOutput->ConsumeFrame(mNextFrame);
       mNextFrame = nsnull;
