@@ -48,12 +48,7 @@
 #define _PR_SI_ARCHITECTURE "ia64"
 #define PR_DLL_SUFFIX        ".so"
 #else
-/*
- * _PR_SI_ARCHITECTURE must be "hppa1.1" for backward compatibility.
- * It was changed to "hppa" in NSPR 4.6.2, but was changed back in
- * NSPR 4.6.4.
- */
-#define _PR_SI_ARCHITECTURE "hppa1.1"
+#define _PR_SI_ARCHITECTURE "hppa"
 #define PR_DLL_SUFFIX        ".sl"
 #endif
 

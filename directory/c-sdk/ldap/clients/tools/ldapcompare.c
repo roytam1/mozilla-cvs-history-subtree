@@ -176,10 +176,10 @@ docompare( LDAP *ld, const char *dn, const char *attrtype,
 		valuestr = bvalue->bv_val;
 	} else {
 #ifdef HAVE_SNPRINTF
-	    snprintf( tmpbuf, sizeof(tmpbuf), "NOT ASCII (%d bytes)",
+	    snprintf( tmpbuf, sizeof(tmpbuf), "NOT ASCII (%ld bytes)",
 			bvalue->bv_len );
 #else
-	    sprintf( tmpbuf, "NOT ASCII (%d bytes)",
+	    sprintf( tmpbuf, "NOT ASCII (%ld bytes)",
 			bvalue->bv_len );
 #endif
 	    valuestr = tmpbuf;
