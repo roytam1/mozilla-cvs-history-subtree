@@ -118,8 +118,8 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   NS_UTF16ToCString(spec, NS_CSTRING_ENCODING_UTF8, cSpec);
 
   nsCOMPtr<nsIURI> baseURI;
-  NewURI(getter_AddRefs(baseURI), cSpec.get());
-  if (!baseURI) return NS_ERROR_FAILURE;
+  result = NewURI(getter_AddRefs(baseURI), cSpec.get());
+  if ((NS_FAILED(result) || !baseURI) return NS_ERROR_FAILURE;
 
   nsCString linkstring;
   NS_UTF16ToCString(link, NS_CSTRING_ENCODING_UTF8, linkstring);
@@ -603,21 +603,20 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
 
   if (eventType.EqualsLiteral("mousedown")) {
     if (clickCount == 1) {
-      if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL)) {     
+      if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL))
         rv = mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_OFF);
-      }
-     }
+    }
     return rv;
   }
 
   if (eventType.EqualsLiteral("mouseup")) {
     rv = mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
     if (clickCount == 1) {
-        nsCOMPtr<nsISelection> domSel;
-        mSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
-                             getter_AddRefs(domSel));
-        rv = domSel->RemoveAllRanges();
-        return rv;
+      nsCOMPtr<nsISelection> domSel;
+      mSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
+                            getter_AddRefs(domSel));
+      rv = domSel->RemoveAllRanges();
+      return rv;
     }
   }
 
@@ -636,7 +635,7 @@ EmbedEventListener::GetLinkAttribute (nsCOMPtr<nsIDOMElement>& linkElement,
   return linkElement->GetAttribute(n_name, *value);
 }
 
-void
+nsresult
 EmbedEventListener::NewURI (nsIURI **result,
                             const char *spec)
 {
@@ -644,10 +643,11 @@ EmbedEventListener::NewURI (nsIURI **result,
   nsCString cSpec(spec);
   nsCOMPtr<nsIIOService> ioService;
   rv = GetIOService (getter_AddRefs (ioService));
+  if (NS_FAILED(rv))
+    return rv;
 
   rv = ioService->NewURI (cSpec, nsnull, nsnull, result);
-  if (NS_FAILED(rv))
-    return;
+  return rv;
 }
 
 nsresult

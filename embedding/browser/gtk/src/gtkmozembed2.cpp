@@ -992,14 +992,14 @@ gtk_moz_embed_can_go_back(GtkMozEmbed *embed)
   PRBool retval = PR_FALSE;
   EmbedPrivate *embedPrivate;
 
-  g_return_val_if_fail ((embed != NULL), PR_FALSE);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), PR_FALSE);
+  g_return_val_if_fail ((embed != NULL), FALSE);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), FALSE);
 
   embedPrivate = (EmbedPrivate *)embed->data;
 
   if (embedPrivate->mNavigation)
     embedPrivate->mNavigation->GetCanGoBack(&retval);
-  return retval;
+  return retval ? TRUE : FALSE;
 }
 
 gboolean
@@ -1008,14 +1008,14 @@ gtk_moz_embed_can_go_forward(GtkMozEmbed *embed)
   PRBool retval = PR_FALSE;
   EmbedPrivate *embedPrivate;
 
-  g_return_val_if_fail ((embed != NULL), PR_FALSE);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), PR_FALSE);
+  g_return_val_if_fail ((embed != NULL), FALSE);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), FALSE);
 
   embedPrivate = (EmbedPrivate *)embed->data;
 
   if (embedPrivate->mNavigation)
     embedPrivate->mNavigation->GetCanGoForward(&retval);
-  return retval;
+  return retval ? TRUE : FALSE;
 }
 
 void
@@ -1419,9 +1419,9 @@ gboolean
 gtk_moz_embed_set_zoom_level (GtkMozEmbed *embed, GtkMozEmbedZoomType zoom_type, gint zoom_level,
                               gint x, gint y, guint *legal_levels, gint layout_part)
 {
-  g_return_val_if_fail (embed != NULL, PR_FALSE);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), PR_FALSE);
-  g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), PR_FALSE);
+  g_return_val_if_fail (embed != NULL, FALSE);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), FALSE);
+  g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), FALSE);
   EmbedPrivate *embedPrivate;
   embedPrivate = (EmbedPrivate *) embed->data;
   switch (zoom_type) {
@@ -1447,7 +1447,7 @@ gtk_moz_embed_set_zoom_level (GtkMozEmbed *embed, GtkMozEmbedZoomType zoom_type,
       break;
   }
 
-  return PR_TRUE;
+  return TRUE;
 }
 
 gint
@@ -1455,9 +1455,9 @@ gtk_moz_embed_get_zoom_level (GtkMozEmbed *embed,
                               GtkMozEmbedZoomType zoom_type,
                               gint *compare_frames)
 {
-  g_return_val_if_fail (embed != NULL, PR_FALSE);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), PR_FALSE);
-  g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), PR_FALSE);
+  g_return_val_if_fail (embed != NULL, -1);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), -1);
+  g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), -1);
   EmbedPrivate *embedPrivate;
   embedPrivate = (EmbedPrivate *) embed->data;
   gint zoom_level = 0;
@@ -1490,12 +1490,12 @@ gtk_moz_embed_get_zoom_level (GtkMozEmbed *embed,
 gboolean
 gtk_moz_embed_load_image (GtkMozEmbed *embed, const gchar *url)
 {
-  g_return_val_if_fail (embed != NULL, PR_FALSE);
-  g_return_val_if_fail (embed, PR_FALSE);
+  g_return_val_if_fail (embed != NULL, FALSE);
+  g_return_val_if_fail (embed, FALSE);
 
   gtk_moz_embed_load_url (embed, url);
 
-  return PR_TRUE;
+  return TRUE;
 }
 
 gboolean
@@ -1504,24 +1504,24 @@ gtk_moz_embed_find_text (GtkMozEmbed *embed, const gchar *string,
                          gboolean case_sensitive, gboolean restart, gint target)
 {
   EmbedPrivate *embedPrivate;
-  g_return_val_if_fail (embed != NULL, PR_FALSE);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), PR_FALSE);
-  g_return_val_if_fail (GTK_WIDGET_REALIZED(GTK_WIDGET(embed)), PR_FALSE);
+  g_return_val_if_fail (embed != NULL, FALSE);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), FALSE);
+  g_return_val_if_fail (GTK_WIDGET_REALIZED(GTK_WIDGET(embed)), FALSE);
   embedPrivate = (EmbedPrivate *)embed->data;
   if (embedPrivate->mWindow)
     return embedPrivate->FindText (string, reverse, whole_word, case_sensitive, restart);
-  return PR_FALSE;
+  return FALSE;
 }
 
 gboolean
 gtk_moz_embed_clipboard (GtkMozEmbed *embed, guint action, gint target)
 {
   EmbedPrivate *embedPrivate;
-  g_return_val_if_fail (embed != NULL, PR_FALSE);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), PR_FALSE);
-  g_return_val_if_fail (GTK_WIDGET_REALIZED(GTK_WIDGET(embed)), PR_FALSE);
+  g_return_val_if_fail (embed != NULL, FALSE);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), FALSE);
+  g_return_val_if_fail (GTK_WIDGET_REALIZED(GTK_WIDGET(embed)), FALSE);
   embedPrivate = (EmbedPrivate *)embed->data;
-  return embedPrivate->ClipBoardAction((GtkMozEmbedClipboard)action) ? PR_TRUE : PR_FALSE;
+  return embedPrivate->ClipBoardAction((GtkMozEmbedClipboard)action) ? TRUE : FALSE;
 }
 
 void
@@ -1608,27 +1608,27 @@ gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gint docindex,
                            const gchar**title, const gchar**location,
                            const gchar **file_type, guint *file_size)
 {
-  return PR_FALSE;
+  return FALSE;
 }
 
 gboolean
 gtk_moz_embed_insert_text(GtkMozEmbed *embed, const gchar *string, gpointer node)
 {
   EmbedPrivate *embedPrivate;
-  g_return_val_if_fail(embed != NULL, PR_FALSE);
-  g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), PR_FALSE);
+  g_return_val_if_fail(embed != NULL, FALSE);
+  g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), FALSE);
   embedPrivate = (EmbedPrivate *)embed->data;
   if ( !embedPrivate || !embedPrivate->mEventListener)
-    return PR_FALSE;
+    return FALSE;
   if (!string && node) {
     embedPrivate->ScrollToSelectedNode((nsIDOMNode*)node);
-    return PR_TRUE;
+    return TRUE;
   }
   if (string) {
     embedPrivate->InsertTextToNode((nsIDOMNode*)node, string);
-    return PR_TRUE;
+    return TRUE;
   }
-  return PR_FALSE;
+  return FALSE;
 }
 
 gboolean  
@@ -1638,50 +1638,50 @@ gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, gchar* aUrl,
   //FIXME 
   nsresult rv;
 
-  g_return_val_if_fail (aEmbed != NULL, PR_FALSE);
+  g_return_val_if_fail (aEmbed != NULL, FALSE);
   nsIWebBrowser *webBrowser = nsnull;
   gtk_moz_embed_get_nsIWebBrowser (GTK_MOZ_EMBED (aEmbed), &webBrowser);
-  g_return_val_if_fail  (webBrowser != NULL, PR_FALSE);
+  g_return_val_if_fail  (webBrowser != NULL, FALSE);
 
   nsCOMPtr<nsIDOMWindow> DOMWindow;
   webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
-  g_return_val_if_fail (DOMWindow != NULL, PR_FALSE);
+  g_return_val_if_fail (DOMWindow != NULL, FALSE);
 
   nsCOMPtr<nsIDOMDocument> doc;
   DOMWindow->GetDocument (getter_AddRefs(doc));
-  g_return_val_if_fail (doc != NULL, PR_FALSE);
+  g_return_val_if_fail (doc != NULL, FALSE);
 
   nsCOMPtr<nsIWebBrowserPersist> persist = 
     do_CreateInstance(NS_WEBBROWSERPERSIST_CONTRACTID);
   if (!persist)
-    return PR_FALSE;
+    return FALSE;
 
   nsCOMPtr<nsIIOService> ios (do_GetService(NS_IOSERVICE_CONTRACTID));
   if (!ios)
-    return PR_FALSE;
+    return FALSE;
 
   nsCOMPtr<nsIURI> uri;
   rv = ios->NewURI(nsDependentCString(aDestination), "", nsnull, getter_AddRefs(uri));
   if (!uri)
-    return PR_FALSE;
+    return FALSE;
 
   nsCOMPtr<nsIFileURL> fileURL(do_QueryInterface(uri));
   if (!fileURL)
-    return PR_FALSE;
+    return FALSE;
 
   nsCOMPtr<nsIFile> file;
   rv = fileURL->GetFile(getter_AddRefs(file));
   if (!file)
-    return PR_FALSE;
+    return FALSE;
 
   if (aSetting == 0)
   {
     rv = ios->NewURI(nsDependentCString(aUrl), "", nsnull, getter_AddRefs(uri));
     if (!uri)
-      return PR_FALSE;
+      return FALSE;
     rv = persist->SaveURI(uri, nsnull, nsnull, nsnull, "", file);
     if (NS_SUCCEEDED(rv))
-      return PR_TRUE;
+      return TRUE;
 
   } else if (aSetting == 1)
   {
@@ -1691,16 +1691,16 @@ gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, gchar* aUrl,
     contentFolderPath.Append("_content");
     rv = NS_NewNativeLocalFile(contentFolderPath, PR_TRUE, getter_AddRefs(contentFolder));
     if (NS_FAILED(rv))
-      return PR_FALSE;
+      return FALSE;
     rv = persist->SaveDocument(doc, file, contentFolder, nsnull, 0, 0);
     if (NS_SUCCEEDED(rv))
-      return PR_TRUE;
+      return TRUE;
   } else if (aSetting == 2)
   {
     // FIXME: How should I handle this option G_WEBENGINE_SAVE_FRAMES ?
-    return PR_FALSE;
+    return FALSE;
   }
-  return PR_FALSE;
+  return FALSE;
 }
 
 void
@@ -1728,12 +1728,16 @@ gtk_moz_embed_get_image_dimensions (GtkMozEmbed *embed, gint *width, gint *heigh
 gchar *
 gtk_moz_embed_get_mime_type (GtkMozEmbed *embed)
 {
-  gchar *retval = nsnull;
-  EmbedPrivate *embedPrivate;
   g_return_val_if_fail ((embed != NULL), (gchar *)NULL);
   g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), (gchar *)NULL);
+  gchar *retval = NULL;
+  EmbedPrivate *embedPrivate = nsnull;
   embedPrivate = (EmbedPrivate *)embed->data;
-  if (embedPrivate->mWindow)
-    retval = embedPrivate->GetMime();
+  if (embedPrivate && embedPrivate->mWindow) {
+    nsString mime;
+    if (NS_SUCCEEDED(embedPrivate->GetMIMEInfo(mime)))
+        retval = g_strdup((char*)NS_LossyConvertUTF16toASCII(mime).get());
+  }
   return retval;
 }
+

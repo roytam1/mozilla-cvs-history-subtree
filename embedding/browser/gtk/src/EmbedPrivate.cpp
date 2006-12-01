@@ -187,25 +187,22 @@ nsIDirectoryServiceProvider *EmbedPrivate::sAppFileLocProvider = nsnull;
 GtkMozEmbed*
 EmbedCommon::GetAnyLiveWidget()
 {
-    if (!EmbedPrivate::sWidgetCount)
-	return nsnull;
+  if (!EmbedPrivate::sWidgetCount || !EmbedPrivate::sWindowList)
+    return nsnull;
 
-    if (!EmbedPrivate::sWindowList)
-        return nsnull;
-
-    // Get the number of browser windows.
-    PRInt32 count = EmbedPrivate::sWindowList->Count();
-    // This function doesn't get called very often at all ( only when
-    // creating a new window ) so it's OK to walk the list of open
-    // windows.
-    //FIXME need to choose right window
-    GtkMozEmbed *ret = nsnull;
-    for (int i = 0; i < count; i++) {
-      EmbedPrivate *tmpPrivate = NS_STATIC_CAST(EmbedPrivate *,
-                EmbedPrivate::sWindowList->ElementAt(i));
-      ret = tmpPrivate->mOwningWidget;
-    }
-    return ret;
+  // Get the number of browser windows.
+  PRInt32 count = EmbedPrivate::sWindowList->Count();
+  // This function doesn't get called very often at all ( only when
+  // creating a new window ) so it's OK to walk the list of open
+  // windows.
+  //FIXME need to choose right window
+  GtkMozEmbed *ret = nsnull;
+  for (int i = 0; i < count; i++) {
+    EmbedPrivate *tmpPrivate = NS_STATIC_CAST(EmbedPrivate *,
+                                              EmbedPrivate::sWindowList->ElementAt(i));
+    ret = tmpPrivate->mOwningWidget;
+  }
+  return ret;
 }
 
 class GTKEmbedDirectoryProvider : public nsIDirectoryServiceProvider2
@@ -1885,9 +1882,10 @@ EmbedPrivate::HasFrames  (PRUint32 *numberOfFrames)
   return rv;
 }
 
-char*
-EmbedPrivate::GetMime ()
+nsresult
+EmbedPrivate::GetMIMEInfo (nsString& info)
 {
+  nsresult rv;
   nsCOMPtr<nsIWebBrowser> webBrowser;
   mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
 
@@ -1898,8 +1896,9 @@ EmbedPrivate::GetMime ()
   DOMWindow->GetDocument (getter_AddRefs(doc));
 
   nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(doc);
-
-  nsString mime;
-  nsDoc->GetContentType(mime);
-  return (char*)NS_LossyConvertUTF16toASCII(mime).get();
+  
+  if (nsDoc)
+    rv = nsDoc->GetContentType(info);
+  return rv;
 }
+

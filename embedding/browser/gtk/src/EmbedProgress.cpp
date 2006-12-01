@@ -177,7 +177,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
        mStopLevel = mStopLevel == 2 ? 3 : 0;
     }
   }
-  
+
   if (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP) {
     if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) {
       if (sStopSignalTimer)
@@ -185,7 +185,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
       progress_emit_stop(mOwner);    
       // let our owner know that the load finished
       mOwner->ContentFinishedLoading();
-          
+
       if (common && common->mFormAttachCount) {
         gtk_moz_embed_common_login(GTK_WIDGET(mOwner->mOwningWidget));
         common->mFormAttachCount = false;
@@ -202,11 +202,11 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
 
 NS_IMETHODIMP
 EmbedProgress::OnProgressChange(nsIWebProgress *aWebProgress,
-        nsIRequest     *aRequest,
-        PRInt32         aCurSelfProgress,
-        PRInt32         aMaxSelfProgress,
-        PRInt32         aCurTotalProgress,
-        PRInt32         aMaxTotalProgress)
+                                nsIRequest     *aRequest,
+                                PRInt32         aCurSelfProgress,
+                                PRInt32         aMaxSelfProgress,
+                                PRInt32         aCurTotalProgress,
+                                PRInt32         aMaxTotalProgress)
 {
   nsString tmpString;
 #ifdef MOZILLA_INTERNAL_API
@@ -263,13 +263,15 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
 
   nsresult rv;
   nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest, &rv));
-  if (!httpChannel) 
+  if (NS_FAILED(rv) || !httpChannel) 
     return NS_ERROR_FAILURE;
+
   PRUint32 responseCode = 0;
 
-  if (NS_SUCCEEDED(rv)) {
-    rv = httpChannel->GetResponseStatus(&responseCode);
-  }
+  rv = httpChannel->GetResponseStatus(&responseCode);
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE;
+
   // it has to handle more http errors code ??? 401 ?
   if (responseCode >= 500 && responseCode <= 505) {
     gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
@@ -282,9 +284,8 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
   if (!isSubFrameLoad) {
     mOwner->SetURI(newURI.get());
     mOwner->mPrePath.Assign(prePath.get());
-    gtk_signal_emit(
-      GTK_OBJECT(mOwner->mOwningWidget),
-      moz_embed_signals[LOCATION]);
+    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                    moz_embed_signals[LOCATION]);
   }
   mOwner->mNeedFav = PR_TRUE;
 
@@ -293,12 +294,12 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
 
 NS_IMETHODIMP
 EmbedProgress::OnStatusChange(nsIWebProgress  *aWebProgress,
-            nsIRequest      *aRequest,
-            nsresult         aStatus,
-            const PRUnichar *aMessage)
+                              nsIRequest      *aRequest,
+                              nsresult         aStatus,
+                              const PRUnichar *aMessage)
 {
   // need to make a copy so we can safely cast to a void *
-  PRUnichar *tmpString = nsCRT::strdup(aMessage);
+  PRUnichar *tmpString = NS_strdup(aMessage);
 
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
                   moz_embed_signals[STATUS_CHANGE],
@@ -306,15 +307,15 @@ EmbedProgress::OnStatusChange(nsIWebProgress  *aWebProgress,
                   NS_STATIC_CAST(gint, aStatus),
                   NS_STATIC_CAST(void *, tmpString));
 
-  nsMemory::Free(tmpString);
+  NS_Free(tmpString);
 
   return NS_OK;
 }
 
 NS_IMETHODIMP
 EmbedProgress::OnSecurityChange(nsIWebProgress *aWebProgress,
-        nsIRequest     *aRequest,
-        PRUint32         aState)
+                                nsIRequest     *aRequest,
+                                PRUint32         aState)
 {
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
                   moz_embed_signals[SECURITY_CHANGE],
@@ -332,7 +333,7 @@ EmbedProgress::RequestToURIString(nsIRequest *aRequest, gchar **aString)
   channel = do_QueryInterface(aRequest);
   if (!channel)
     return;
-  
+
   nsCOMPtr<nsIURI> uri;
   channel->GetURI(getter_AddRefs(uri));
   if (!uri)
@@ -341,6 +342,6 @@ EmbedProgress::RequestToURIString(nsIRequest *aRequest, gchar **aString)
   nsCAutoString uriString;
   uri->GetSpec(uriString);
 
-  *aString = strdup(uriString.get());
+  *aString = g_strdup(uriString.get());
 }
 

@@ -176,7 +176,7 @@ class EmbedPrivate {
   nsresult    GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel);
   nsresult    SetZoom (gint zoomLevel);
   nsresult    HasFrames  (PRUint32 *numberOfFrames);
-  char*       GetMime ();
+  nsresult    GetMIMEInfo (nsString& info);
 
 #ifdef MOZ_ACCESSIBILITY_ATK
   void *GetAtkObjectForCurrentDocument();
