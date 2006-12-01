@@ -484,8 +484,8 @@ EmbedEventListener::FocusOut(nsIDOMEvent* aDOMEvent)
 NS_IMETHODIMP
 EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
 {
-  if (mSelCon)
-    mSelCon->SetDisplaySelection (nsISelectionController::SELECTION_ON);
+  if (mCurSelCon)
+    mCurSelCon->SetDisplaySelection (nsISelectionController::SELECTION_ON);
 
   if (sMPressed && 
       gtk_signal_handler_pending(GTK_OBJECT(mOwner->mOwningWidget),

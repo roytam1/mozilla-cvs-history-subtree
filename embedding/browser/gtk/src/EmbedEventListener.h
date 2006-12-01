@@ -144,7 +144,10 @@ class EmbedEventListener : public nsIDOMKeyListener,
   EmbedContextMenuInfo *mCtxInfo;
 
   // Selection and some clipboard stuff
-  nsCOMPtr <nsISelectionController> mSelCon;
+  nsCOMPtr <nsISelectionController> mCurSelCon;
+  nsCOMPtr <nsISelectionController> mLastSelCon;
+  PRBool mFocusInternalFrame;
+  PRInt32 mClickCount;
 };
 
 #endif /* __EmbedEventListener_h */
