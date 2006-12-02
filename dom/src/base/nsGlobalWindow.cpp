@@ -1264,7 +1264,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
     if (!aState) {
       if (reUseInnerWindow) {
-        if (newInnerWindow->mDoc != aDocument) {
+        if (newInnerWindow->mDocument != aDocument) {
           newInnerWindow->mDocument = aDocument;
 
           // We're reusing the inner window for a new document. In this
