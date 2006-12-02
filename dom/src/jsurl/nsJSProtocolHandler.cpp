@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* vim: set ts=2 sw=4 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -70,6 +70,9 @@
 #include "nsIWebNavigation.h"
 #include "nsIDocShell.h"
 #include "nsIContentViewer.h"
+#include "nsIXPConnect.h"
+#include "nsContentUtils.h"
+#include "nsJSUtils.h"
 
 static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
@@ -211,6 +214,8 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
     if (NS_FAILED(rv))
         return rv;
 
+    PRBool useSandbox = PR_TRUE;
+
     if (owner) {
         principal = do_QueryInterface(owner, &rv);
         NS_ASSERTION(principal, "Channel's owner is not a principal");
@@ -234,76 +239,84 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         if (principal != systemPrincipal) {
             rv = securityManager->CheckSameOriginPrincipal(principal,
                                                            objectPrincipal);
-            if (NS_FAILED(rv)) {
-                nsCOMPtr<nsIConsoleService> console =
-                    do_GetService("@mozilla.org/consoleservice;1");
-                if (console) {
-                    // XXX Localize me!
-                    console->LogStringMessage(
-                        NS_LITERAL_STRING("Attempt to load a javascript: URL from one host\nin a window displaying content from another host\nwas blocked by the security manager.").get());
-                }
-
-                return NS_ERROR_DOM_RETVAL_UNDEFINED;
-            }
-        }
-    }
-    else {
-        // No owner from channel, use the object principals.
-        rv = securityManager->GetObjectPrincipal(
-                                (JSContext*)scriptContext->GetNativeContext(),
-                                globalJSObject,
-                                getter_AddRefs(principal));
-
-        // Paranoia check: If we don't have an owner, make sure that we're
-        // not giving this javascript URL the principals of some other
-        // random page, so if the principals aren't for about:blank, don't use
-        // them.
-        // XXX We can't just create new about:blank principals since caps
-        // refuses to treat two about:blank principals as equal.
-        if (principal) {
-            nsCOMPtr<nsIURI> uri;
-            rv = principal->GetURI(getter_AddRefs(uri));
-            if (!uri) {
-                rv = NS_ERROR_NOT_AVAILABLE;
-            }
-            
             if (NS_SUCCEEDED(rv)) {
-                nsCAutoString spec;
-                uri->GetSpec(spec);
-                if (!spec.EqualsLiteral("about:blank")) {
-                    rv = NS_ERROR_FAILURE;
-                }
+                useSandbox = PR_FALSE;
             }
-        }
-
-        if (NS_FAILED(rv) || !principal) {
-            // If all else fails, use the current URI to generate a principal.
-            rv = securityManager->GetCodebasePrincipal(mURI,
-                                                       getter_AddRefs(principal));
-        }
-
-        if (NS_FAILED(rv) || !principal) {
-            return NS_ERROR_FAILURE;
+        } else {
+            useSandbox = PR_FALSE;
         }
     }
+
+    nsString result;
+    PRBool isUndefined;
 
     // Finally, we have everything needed to evaluate the expression.
-    nsString result;
-    PRBool bIsUndefined;
 
-    rv = scriptContext->EvaluateString(NS_ConvertUTF8toUCS2(script),
-                                       globalJSObject, // obj
-                                       principal,
-                                       url.get(),      // url
-                                       1,              // line no
-                                       nsnull,
-                                       &result,
-                                       &bIsUndefined);
+    if (useSandbox) {
+        // No owner from channel, or we have a principal
+        // mismatch. Evaluate the javascript URL in a sandbox to
+        // prevent it from accessing data it doesn't have permissions
+        // to access.
+
+        nsIXPConnect *xpc = nsContentUtils::XPConnect();
+        nsCOMPtr<nsIXPConnect_MOZILLA_1_8_BRANCH> xpc_18 =
+            do_QueryInterface(xpc);
+
+        JSContext *cx = (JSContext*)scriptContext->GetNativeContext();
+        nsCOMPtr<nsIXPConnectJSObjectHolder> sandbox;
+        rv = xpc_18->CreateSandbox(cx, principal, getter_AddRefs(sandbox));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        jsval rval = JSVAL_VOID;
+        nsAutoGCRoot root(&rval, &rv);
+        if (NS_FAILED(rv)) {
+            return rv;
+        }
+
+        rv = xpc_18->EvalInSandboxObject(NS_ConvertUTF8toUTF16(script), cx,
+                                         sandbox, &rval);
+
+        // Propagate and report exceptions that happened in the
+        // sandbox.
+        if (JS_IsExceptionPending(cx)) {
+            JS_ReportPendingException(cx);
+        }
+
+        isUndefined = rval == JSVAL_VOID;
+
+        if (!isUndefined && NS_SUCCEEDED(rv)) {
+            JSString *str = JS_ValueToString(cx, rval);
+            if (!str) {
+                // Report any pending exceptions.
+                if (JS_IsExceptionPending(cx)) {
+                    JS_ReportPendingException(cx);
+                }
+
+                // We don't know why this failed, so just use a
+                // generic error code. It'll be translated to a
+                // different one below anyways.
+                rv = NS_ERROR_FAILURE;
+            } else {
+                result = nsDependentJSString(str);
+            }
+        }
+    } else {
+        // No need to use the sandbox, evaluate the script directly in
+        // the given scope.
+        rv = scriptContext->EvaluateString(NS_ConvertUTF8toUTF16(script),
+                                           globalJSObject, // obj
+                                           principal,
+                                           url.get(),      // url
+                                           1,              // line no
+                                           nsnull,
+                                           &result,
+                                           &isUndefined);
+    }
 
     if (NS_FAILED(rv)) {
         rv = NS_ERROR_MALFORMED_URI;
     }
-    else if (bIsUndefined) {
+    else if (isUndefined) {
         rv = NS_ERROR_DOM_RETVAL_UNDEFINED;
     }
     else {
@@ -311,6 +324,7 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         // XXXbe this should not decimate! pass back UCS-2 to necko
         rv = NS_NewStringInputStream(getter_AddRefs(mInnerStream), result);
     }
+
     return rv;
 }
 
