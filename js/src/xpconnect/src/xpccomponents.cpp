@@ -2272,6 +2272,96 @@ NS_IMPL_THREADSAFE_RELEASE(nsXPCComponents_utils_Sandbox)
 #define XPC_MAP_FLAGS               0
 #include "xpc_map_end.h" /* This #undef's the above. */
 
+#ifndef XPCONNECT_STANDALONE
+nsresult
+xpc_CreateSandboxObject(JSContext * cx, jsval * vp, nsISupports *prinOrSop)
+{
+    // Create the sandbox global object
+    nsresult rv;
+    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+    if(NS_FAILED(rv))
+        return NS_ERROR_XPC_UNEXPECTED;
+
+    XPCAutoJSContext tempcx(JS_NewContext(JS_GetRuntime(cx), 1024), PR_FALSE);
+    if (!tempcx)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    AutoJSRequestWithNoCallContext req(tempcx);
+    JSObject *sandbox = JS_NewObject(tempcx, &SandboxClass, nsnull, nsnull);
+    if (!sandbox)
+        return NS_ERROR_XPC_UNEXPECTED;
+
+    JS_SetGlobalObject(tempcx, sandbox);
+
+    nsCOMPtr<nsIScriptObjectPrincipal> sop(do_QueryInterface(prinOrSop));
+
+    if (!sop) {
+        nsCOMPtr<nsIPrincipal> principal(do_QueryInterface(prinOrSop));
+
+        if (!principal) {
+            // Create a mostly unique URI that has access to
+            // nothing other itself.
+            static PRBool doneSeed = PR_FALSE;
+
+            if (!doneSeed) {
+                srand((int)(PR_Now() & 0xffffffff));
+
+                doneSeed = PR_TRUE;
+            }
+
+            char buf[128];
+            sprintf(buf, "about:noaccess-%ul", rand());
+
+            nsCOMPtr<nsIURI> uri;
+            rv = NS_NewURI(getter_AddRefs(uri), buf);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            nsCOMPtr<nsIScriptSecurityManager> secman =
+                do_GetService(kScriptSecurityManagerContractID);
+            NS_ENSURE_TRUE(secman, NS_ERROR_UNEXPECTED);
+
+            rv = secman->GetCodebasePrincipal(uri, getter_AddRefs(principal));
+
+            if (!principal || NS_FAILED(rv)) {
+                if (NS_SUCCEEDED(rv))
+                    rv = NS_ERROR_FAILURE;
+                
+                return rv;
+            }
+        }
+
+        sop = new PrincipalHolder(principal);
+        if (!sop)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    // Pass on ownership of sop to |sandbox|.
+
+    {
+        nsIScriptObjectPrincipal *tmp = sop;
+
+        if (!JS_SetPrivate(cx, sandbox, tmp)) {
+            return NS_ERROR_XPC_UNEXPECTED;
+        }
+
+        NS_ADDREF(tmp);
+    }
+
+    rv = xpc->InitClasses(cx, sandbox);
+    if (NS_SUCCEEDED(rv) &&
+        !JS_DefineFunctions(cx, sandbox, SandboxFunctions)) {
+        rv = NS_ERROR_FAILURE;
+    }
+    if (NS_FAILED(rv))
+        return NS_ERROR_XPC_UNEXPECTED;
+
+    if (vp)
+        *vp = OBJECT_TO_JSVAL(sandbox);
+
+    return NS_OK;
+}
+#endif /* !XPCONNECT_STANDALONE */
+
 /* PRBool call(in nsIXPConnectWrappedNative wrapper,
                in JSContextPtr cx,
                in JSObjectPtr obj,
@@ -2318,36 +2408,16 @@ nsXPCComponents_utils_Sandbox::CallOrConstruct(nsIXPConnectWrappedNative *wrappe
 {
 #ifdef XPCONNECT_STANDALONE
     return NS_ERROR_NOT_AVAILABLE;
-#else
+#else /* XPCONNECT_STANDALONE */
     if (argc < 1)
         return ThrowAndFail(NS_ERROR_XPC_NOT_ENOUGH_ARGS, cx, _retval);
 
-    // Create the sandbox global object
     nsresult rv;
-    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-    if(NS_FAILED(rv))
-        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
 
-    XPCAutoJSContext tempcx(JS_NewContext(JS_GetRuntime(cx), 1024), PR_FALSE);
-    if (!tempcx)
-        return ThrowAndFail(NS_ERROR_OUT_OF_MEMORY, cx, _retval);
-
-    JSObject *sandbox = JS_NewObject(tempcx, &SandboxClass, nsnull, nsnull);
-    if (!sandbox)
-        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
-
-    JS_SetGlobalObject(tempcx, sandbox);
-
-    rv = xpc->InitClasses(cx, sandbox);
-    if (NS_SUCCEEDED(rv) &&
-        !JS_DefineFunctions(cx, sandbox, SandboxFunctions)) {
-        rv = NS_ERROR_FAILURE;
-    }
-    if (NS_FAILED(rv))
-        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
-
-    nsIScriptObjectPrincipal *sop = nsnull;
-
+    // Make sure to set up principals on the sandbox before initing classes
+    nsCOMPtr<nsIScriptObjectPrincipal> sop;
+    nsCOMPtr<nsIPrincipal> principal;
+    nsISupports *prinOrSop = nsnull;
     if (JSVAL_IS_STRING(argv[0])) {
         JSString *codebasestr = JSVAL_TO_STRING(argv[0]);
         nsCAutoString codebase(JS_GetStringBytes(codebasestr),
@@ -2358,13 +2428,12 @@ nsXPCComponents_utils_Sandbox::CallOrConstruct(nsIXPConnectWrappedNative *wrappe
         if (!stdUrl ||
             NS_FAILED(rv = stdUrl->Init(nsIStandardURL::URLTYPE_STANDARD, 80,
                                         codebase, nsnull, nsnull)) ||
-           !(iURL = do_QueryInterface(stdUrl, &rv))) {
+            !(iURL = do_QueryInterface(stdUrl, &rv))) {
             if (NS_SUCCEEDED(rv))
                 rv = NS_ERROR_FAILURE;
             return ThrowAndFail(rv, cx, _retval);
         }
-        
-        nsCOMPtr<nsIPrincipal> principal;
+
         nsCOMPtr<nsIScriptSecurityManager> secman =
             do_GetService(kScriptSecurityManagerContractID);
         if (!secman ||
@@ -2375,41 +2444,37 @@ nsXPCComponents_utils_Sandbox::CallOrConstruct(nsIXPConnectWrappedNative *wrappe
             return ThrowAndFail(rv, cx, _retval);
         }
 
-        sop = new PrincipalHolder(principal);
-        if (!sop)
-            return ThrowAndFail(NS_ERROR_OUT_OF_MEMORY, cx, _retval);
-
-        NS_ADDREF(sop);
+        prinOrSop = principal;
     } else {
-        if (JSVAL_IS_OBJECT(argv[0])) {
+        if (!JSVAL_IS_PRIMITIVE(argv[0])) {
+            nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
+            if(!xpc)
+                return NS_ERROR_XPC_UNEXPECTED;
             nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
             xpc->GetWrappedNativeOfJSObject(cx, JSVAL_TO_OBJECT(argv[0]),
                                             getter_AddRefs(wrapper));
 
             if (wrapper) {
-                nsCOMPtr<nsIDOMWindow> win = do_QueryWrappedNative(wrapper);
-                if (win)
-                    CallQueryInterface(win, &sop);
+                sop = do_QueryWrappedNative(wrapper);
+
+                prinOrSop = sop;
             }
         }
 
-        if (!sop)
+        if (!prinOrSop)
             return ThrowAndFail(NS_ERROR_INVALID_ARG, cx, _retval);
-
-        // Note: if we're here, then sop has been AddRef'd by CallQueryInterface
     }
 
-    if (!JS_SetPrivate(cx, sandbox, sop)) {
-        NS_RELEASE(sop);
-        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
+    rv = xpc_CreateSandboxObject(cx, vp, prinOrSop);
+
+    if (NS_FAILED(rv)) {
+        return ThrowAndFail(rv, cx, _retval);
     }
 
-    if (vp)
-        *vp = OBJECT_TO_JSVAL(sandbox);
+    *_retval = PR_TRUE;
 
-    *_retval = JS_TRUE;
-    return NS_OK;
-#endif
+    return rv;
+#endif /* XPCONNECT_STANDALONE */
 }
 
 
@@ -2477,7 +2542,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
 {
 #ifdef XPCONNECT_STANDALONE
     return NS_ERROR_NOT_AVAILABLE;
-#else
+#else /* XPCONNECT_STANDALONE */
     nsresult rv;
 
     nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
@@ -2519,6 +2584,38 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
     if (JSVAL_IS_PRIMITIVE(argv[1]))
         return NS_ERROR_INVALID_ARG;
     JSObject *sandbox = JSVAL_TO_OBJECT(argv[1]);
+
+    // Get the current source info from xpc.
+    nsXPIDLCString filename;
+    PRInt32 lineNo = 0;
+    {
+        nsCOMPtr<nsIStackFrame> frame;
+        xpc->GetCurrentJSStack(getter_AddRefs(frame));
+        if (frame) {
+            frame->GetFilename(getter_Copies(filename));
+            frame->GetLineNumber(&lineNo);
+        }
+    }
+
+    rv = xpc_EvalInSandbox(cx, sandbox, source, filename.get(), lineNo, rval);
+
+    if (NS_SUCCEEDED(rv)) {
+        if (JS_IsExceptionPending(cx)) {
+            cc->SetExceptionWasThrown(PR_TRUE);
+        } else {
+            cc->SetReturnValueWasSet(PR_TRUE);
+        }
+    }
+
+    return rv;
+#endif /* XPCONNECT_STANDALONE */
+}
+
+#ifndef XPCONNECT_STANDALONE
+nsresult
+xpc_EvalInSandbox(JSContext *cx, JSObject *sandbox, const nsAString& source,
+                  const char *filename, PRInt32 lineNo, jsval *rval)
+{
     if (JS_GetClass(cx, sandbox) != &SandboxClass)
         return NS_ERROR_INVALID_ARG;
 
@@ -2543,8 +2640,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
     }
 
     XPCPerThreadData *data = XPCPerThreadData::GetData();
-    XPCJSContextStack *stack;
-    PRBool popContext = PR_FALSE;
+    XPCJSContextStack *stack = nsnull;
     if (data && (stack = data->GetJSContextStack())) {
         if (NS_FAILED(stack->Push(sandcx->GetJSContext()))) {
             JS_ReportError(cx,
@@ -2552,8 +2648,6 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
             JSPRINCIPALS_DROP(cx, jsPrincipals);
             return NS_ERROR_FAILURE;
         }
-
-        popContext = PR_TRUE;
     }
 
 
@@ -2564,40 +2658,29 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
 
     sandcx->GetJSContext()->fp = &frame;
 
-    // Get the current source info from xpc. Use the codebase as a fallback,
-    // though.
-    nsXPIDLCString filename;
-    PRInt32 lineNo = 0;
-    {
-        nsCOMPtr<nsIStackFrame> frame;
-        xpc->GetCurrentJSStack(getter_AddRefs(frame));
-        if (frame) {
-            frame->GetFilename(getter_Copies(filename));
-            frame->GetLineNumber(&lineNo);
-        } else {
-            filename.Assign(jsPrincipals->codebase);
-            lineNo = 1;
-        }
+    if (!filename) {
+        // Default the filename to the codebase.
+        filename = jsPrincipals->codebase;
+        lineNo = 1;
     }
+
+    nsresult rv = NS_OK;
 
     if (!JS_EvaluateUCScriptForPrincipals(sandcx->GetJSContext(), sandbox,
                                           jsPrincipals,
                                           NS_REINTERPRET_CAST(const jschar *,
                                               PromiseFlatString(source).get()),
-                                          source.Length(), filename.get(),
-                                          lineNo, rval)) {
+                                          source.Length(), filename, lineNo,
+                                          rval)) {
         jsval exn;
         if (JS_GetPendingException(sandcx->GetJSContext(), &exn)) {
             JS_SetPendingException(cx, exn);
-            cc->SetExceptionWasThrown(PR_TRUE);
         } else {
             rv = NS_ERROR_OUT_OF_MEMORY;
         }
-    } else {
-        cc->SetReturnValueWasSet(PR_TRUE);
     }
 
-    if (popContext) {
+    if (stack) {
         stack->Pop(nsnull);
     }
 
@@ -2607,9 +2690,10 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
     sandcx->DidEval();
 
     JSPRINCIPALS_DROP(cx, jsPrincipals);
+
     return rv;
-#endif /* !XPCONNECT_STANDALONE */
 }
+#endif /* !XPCONNECT_STANDALONE */
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
 /* string canCreateWrapper (in nsIIDPtr iid); */
