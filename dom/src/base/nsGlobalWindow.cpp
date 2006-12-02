@@ -1324,13 +1324,15 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
     if (!aState) {
       if (reUseInnerWindow) {
-        newInnerWindow->mDocument = aDocument;
+        if (newInnerWindow->mDoc != aDocument) {
+          newInnerWindow->mDocument = aDocument;
 
-        // We're reusing the inner window for a new document. In this
-        // case we don't clear the inner window's scope, but we must
-        // make sure the cached document property gets updated.
+          // We're reusing the inner window for a new document. In this
+          // case we don't clear the inner window's scope, but we must
+          // make sure the cached document property gets updated.
 
-        ::JS_DeleteProperty(cx, currentInner->mJSObject, "document");
+          ::JS_DeleteProperty(cx, currentInner->mJSObject, "document");
+        }
       } else {
         rv = newInnerWindow->SetNewDocument(aDocument, nsnull,
                                             aRemoveEventListeners,
