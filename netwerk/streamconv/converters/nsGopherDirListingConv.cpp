@@ -231,8 +231,16 @@ nsGopherDirListingConv::OnDataAvailable(nsIRequest *request,
 // nsIRequestObserver implementation
 NS_IMETHODIMP
 nsGopherDirListingConv::OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
-    // we don't care about start. move along... but start masqeurading 
-    // as the http-index channel now.
+
+    // If the underlying transport failed, we need to
+    // propogate it to the consumer by canceling our part
+    // channel.
+    nsresult status;
+    request->GetStatus(&status);
+    
+    if (NS_FAILED(status))
+        mPartChannel->Cancel(status);
+
     return mFinalListener->OnStartRequest(mPartChannel, ctxt);
 }
 
