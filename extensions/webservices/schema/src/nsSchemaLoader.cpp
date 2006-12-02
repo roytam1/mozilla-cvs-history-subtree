@@ -1975,29 +1975,37 @@ nsSchemaLoader::ProcessSimpleContentRestriction(nsIWebServiceErrorHandler* aErro
   // The base type must actually be a complex type (which itself must
   // have a simple base type.
   nsCOMPtr<nsISchemaComplexType> complexBase = do_QueryInterface(aBaseType);
-  if (!complexBase) {
-    nsAutoString baseStr;
-    rv = aBaseType->GetName(baseStr);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (!complexBase) {
+    // if base type is a place holder, this is ok
+    PRUint16 schemaType;
+    aBaseType->GetSchemaType(&schemaType);
 
-    nsAutoString errorMsg;
-    errorMsg.AppendLiteral("Failure processing schema, base type \"");
-    errorMsg.Append(baseStr);
-    errorMsg.AppendLiteral("\" of restriction must be a complex type ");
-    errorMsg.AppendLiteral("which itself must be based on a simple type");
+    if (schemaType == nsISchemaType::SCHEMA_TYPE_PLACEHOLDER) {
+      simpleBase = do_QueryInterface(aBaseType);
+    } else {
+      nsAutoString baseStr;
+      rv = aBaseType->GetName(baseStr);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-    NS_SCHEMALOADER_FIRE_ERROR(NS_ERROR_SCHEMA_INVALID_TYPE_USAGE, errorMsg);
+      nsAutoString errorMsg;
+      errorMsg.AppendLiteral("Failure processing schema, base type \"");
+      errorMsg.Append(baseStr);
+      errorMsg.AppendLiteral("\" of restriction must be a complex type ");
+      errorMsg.AppendLiteral("which itself must be based on a simple type");
 
-    return NS_ERROR_SCHEMA_INVALID_TYPE_USAGE;
-  }
+      NS_SCHEMALOADER_FIRE_ERROR(NS_ERROR_SCHEMA_INVALID_TYPE_USAGE, errorMsg);
 
-  nsCOMPtr<nsISchemaSimpleType> parentSimpleBase;
-  complexBase->GetSimpleBaseType(getter_AddRefs(parentSimpleBase));
+      return NS_ERROR_SCHEMA_INVALID_TYPE_USAGE;
+    }
+  } else {
+    nsCOMPtr<nsISchemaSimpleType> parentSimpleBase;
+    complexBase->GetSimpleBaseType(getter_AddRefs(parentSimpleBase));
   
-  if (parentSimpleBase) {
-    rv = restrictionInst->SetBaseType(parentSimpleBase);
-    if (NS_FAILED(rv)) {
-      return rv;
+    if (parentSimpleBase) {
+      rv = restrictionInst->SetBaseType(parentSimpleBase);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
     }
   }
 
