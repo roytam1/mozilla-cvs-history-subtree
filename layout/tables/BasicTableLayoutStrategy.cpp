@@ -45,6 +45,7 @@
 #include "nsTableFrame.h"
 #include "nsTableCellFrame.h"
 #include "nsLayoutUtils.h"
+#include "nsGkAtoms.h"
 
 BasicTableLayoutStrategy::BasicTableLayoutStrategy(nsTableFrame *aTableFrame)
   : mTableFrame(aTableFrame)
@@ -117,6 +118,16 @@ GetWidthInfo(nsIRenderingContext *aRenderingContext,
         case eStyleUnit_Coord: {
                 hasSpecifiedWidth = PR_TRUE;
                 nscoord w = aStylePos->mWidth.GetCoordValue();
+                // Quirk: A cell with "nowrap" set and a coord value for the
+                // width which is bigger than the intrinsic minimum width uses
+                // that coord value as the minimum width.
+                if (aCellFrame && w > minCoord &&
+                    aCellFrame->GetPresContext()->CompatibilityMode() ==
+                      eCompatibility_NavQuirks &&
+                    aCellFrame->GetContent()->HasAttr(kNameSpaceID_None,
+                                                      nsGkAtoms::nowrap)) {
+                    minCoord = w;
+                }
                 prefCoord = PR_MAX(w, minCoord);
             }
             break;
