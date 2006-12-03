@@ -1064,7 +1064,7 @@ JS_ToggleOptions(JSContext *cx, uint32 options)
 JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void)
 {
-    return "JavaScript-C 1.5 pre-release 6a 2004-06-09";
+    return "JavaScript-C 1.6 2006-11-19";
 }
 
 
@@ -1843,7 +1843,7 @@ JS_MaybeGC(JSContext *cx)
     bytes = rt->gcBytes;
     lastBytes = rt->gcLastBytes;
     if ((bytes > 8192 && bytes > lastBytes + lastBytes / 2) ||
-        rt->gcMallocBytes > rt->gcMaxBytes) {
+        rt->gcMallocBytes > rt->gcMaxMallocBytes) {
         /*
          * Run the GC if we have half again as many bytes of GC-things as
          * the last time we GC'd, or if we have malloc'd more bytes through
@@ -1875,6 +1875,19 @@ JS_IsAboutToBeFinalized(JSContext *cx, void *thing)
 {
     JS_ASSERT(thing);
     return js_IsAboutToBeFinalized(cx, thing);
+}
+
+JS_PUBLIC_API(void)
+JS_SetGCParameter(JSRuntime *rt, JSGCParamKey key, uint32 value)
+{
+    switch (key) {
+      case JSGC_MAX_BYTES:
+        rt->gcMaxBytes = value;
+        break;
+      case JSGC_MAX_MALLOC_BYTES:
+        rt->gcMaxMallocBytes = value;
+        break;
+    }
 }
 
 JS_PUBLIC_API(intN)
@@ -2001,6 +2014,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 {
     JSAtom *atom;
     JSObject *proto, *ctor;
+    JSTempValueRooter tvr;
     jsval cval, rval;
     JSBool named;
     JSFunction *fun;
@@ -2015,8 +2029,8 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
     if (!proto)
         return NULL;
 
-    if (!js_EnterLocalRootScope(cx))
-        goto bad2;
+    /* After this point, control must exit via label bad or out. */
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(proto), &tvr);
 
     if (!constructor) {
         /* Lacking a constructor, name the prototype (e.g., Math). */
@@ -2078,17 +2092,16 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
         (static_fs && !JS_DefineFunctions(cx, ctor, static_fs))) {
         goto bad;
     }
-    js_LeaveLocalRootScope(cx);
+
+out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
     return proto;
 
 bad:
-    js_LeaveLocalRootScope(cx);
     if (named)
         (void) OBJ_DELETE_PROPERTY(cx, obj, ATOM_TO_JSID(atom), &rval);
-
-bad2:
-    cx->newborn[GCX_OBJECT] = NULL;
-    return NULL;
+    proto = NULL;
+    goto out;
 }
 
 #ifdef JS_THREADSAFE
@@ -3199,17 +3212,26 @@ JS_NewPropertyIterator(JSContext *cx, JSObject *obj)
         pdata = (scope->object == obj) ? scope->lastProp : NULL;
         index = -1;
     } else {
-        /* Non-native case: enumerate a JSIdArray and keep it via private. */
+        JSTempValueRooter tvr;
+
+        /*
+         * Non-native case: enumerate a JSIdArray and keep it via private.
+         *
+         * Note: we have to make sure that we root obj around the call to
+         * JS_Enumerate to protect against multiple allocations under it.
+         */
+        JS_PUSH_SINGLE_TEMP_ROOT(cx, OBJECT_TO_JSVAL(iterobj), &tvr);
         ida = JS_Enumerate(cx, obj);
+        JS_POP_TEMP_ROOT(cx, &tvr);
         if (!ida)
             goto bad;
         pdata = ida;
         index = ida->length;
     }
 
-    if (!JS_SetPrivate(cx, iterobj, pdata))
-        goto bad;
-    OBJ_SET_SLOT(cx, iterobj, JSSLOT_ITER_INDEX, INT_TO_JSVAL(index));
+    /* iterobj can not escape to other threads here. */
+    iterobj->slots[JSSLOT_PRIVATE] = PRIVATE_TO_JSVAL(pdata);
+    iterobj->slots[JSSLOT_ITER_INDEX] = INT_TO_JSVAL(index);
     return iterobj;
 
 bad:
@@ -3428,6 +3450,12 @@ JS_GetFunctionFlags(JSFunction *fun)
     return fun->flags;
 }
 
+JS_PUBLIC_API(uint16)
+JS_GetFunctionArity(JSFunction *fun)
+{
+    return fun->nargs;
+}
+
 JS_PUBLIC_API(JSBool)
 JS_ObjectIsFunction(JSContext *cx, JSObject *obj)
 {
@@ -3607,7 +3635,7 @@ JS_CompileScript(JSContext *cx, JSObject *obj,
     JSScript *script;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     script = JS_CompileUCScript(cx, obj, chars, length, filename, lineno);
@@ -3625,7 +3653,7 @@ JS_CompileScriptForPrincipals(JSContext *cx, JSObject *obj,
     JSScript *script;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     script = JS_CompileUCScriptForPrincipals(cx, obj, principals,
@@ -3694,7 +3722,7 @@ JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
     JSErrorReporter older;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_TRUE;
 
@@ -3817,7 +3845,7 @@ JS_CompileFunction(JSContext *cx, JSObject *obj, const char *name,
     JSFunction *fun;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     fun = JS_CompileUCFunction(cx, obj, name, nargs, argnames, chars, length,
@@ -3837,7 +3865,7 @@ JS_CompileFunctionForPrincipals(JSContext *cx, JSObject *obj,
     JSFunction *fun;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     fun = JS_CompileUCFunctionForPrincipals(cx, obj, principals, name,
@@ -4034,15 +4062,16 @@ JS_ExecuteScriptPart(JSContext *cx, JSObject *obj, JSScript *script,
 
 JS_PUBLIC_API(JSBool)
 JS_EvaluateScript(JSContext *cx, JSObject *obj,
-                  const char *bytes, uintN length,
+                  const char *bytes, uintN nbytes,
                   const char *filename, uintN lineno,
                   jsval *rval)
 {
+    size_t length = nbytes;
     jschar *chars;
     JSBool ok;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_FALSE;
     ok = JS_EvaluateUCScript(cx, obj, chars, length, filename, lineno, rval);
@@ -4053,15 +4082,16 @@ JS_EvaluateScript(JSContext *cx, JSObject *obj,
 JS_PUBLIC_API(JSBool)
 JS_EvaluateScriptForPrincipals(JSContext *cx, JSObject *obj,
                                JSPrincipals *principals,
-                               const char *bytes, uintN length,
+                               const char *bytes, uintN nbytes,
                                const char *filename, uintN lineno,
                                jsval *rval)
 {
+    size_t length = nbytes;
     jschar *chars;
     JSBool ok;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_FALSE;
     ok = JS_EvaluateUCScriptForPrincipals(cx, obj, principals, chars, length,
@@ -4145,7 +4175,7 @@ JS_CallFunctionName(JSContext *cx, JSObject *obj, const char *name, uintN argc,
         return JS_FALSE;
     ok = js_InternalCall(cx, obj, fval, argc, argv, rval);
     LAST_FRAME_CHECKS(cx, ok);
-    return JS_TRUE;
+    return ok;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -4211,15 +4241,16 @@ JS_NewString(JSContext *cx, char *bytes, size_t length)
 {
     jschar *chars;
     JSString *str;
+    size_t charsLength = length;
 
     CHECK_REQUEST(cx);
     /* Make a Unicode vector from the 8-bit char codes in bytes. */
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &charsLength);
     if (!chars)
         return NULL;
 
     /* Free chars (but not bytes, which caller frees on error) if we fail. */
-    str = js_NewString(cx, chars, length, 0);
+    str = js_NewString(cx, chars, charsLength, 0);
     if (!str) {
         JS_free(cx, chars);
         return NULL;
@@ -4238,7 +4269,7 @@ JS_NewStringCopyN(JSContext *cx, const char *s, size_t n)
     JSString *str;
 
     CHECK_REQUEST(cx);
-    js = js_InflateString(cx, s, n);
+    js = js_InflateString(cx, s, &n);
     if (!js)
         return NULL;
     str = js_NewString(cx, js, n, 0);
@@ -4258,7 +4289,7 @@ JS_NewStringCopyZ(JSContext *cx, const char *s)
     if (!s)
         return cx->runtime->emptyString;
     n = strlen(s);
-    js = js_InflateString(cx, s, n);
+    js = js_InflateString(cx, s, &n);
     if (!js)
         return NULL;
     str = js_NewString(cx, js, n, 0);
@@ -4402,6 +4433,30 @@ JS_MakeStringImmutable(JSContext *cx, JSString *str)
     return JS_TRUE;
 }
 
+JS_PUBLIC_API(JSBool)
+JS_EncodeCharacters(JSContext *cx, const jschar *src, size_t srclen, char *dst,
+                    size_t *dstlenp)
+{
+    return js_DeflateStringToBuffer(cx, src, srclen, dst, dstlenp);
+}
+
+JS_PUBLIC_API(JSBool)
+JS_DecodeBytes(JSContext *cx, const char *src, size_t srclen, jschar *dst,
+               size_t *dstlenp)
+{
+    return js_InflateStringToBuffer(cx, src, srclen, dst, dstlenp);
+}
+
+JS_PUBLIC_API(JSBool)
+JS_StringsAreUTF8 ()
+{
+#ifdef JS_C_STRINGS_ARE_UTF8
+    return JS_TRUE;
+#else
+    return JS_FALSE;
+#endif
+}
+
 /************************************************************************/
 
 JS_PUBLIC_API(void)
@@ -4509,7 +4564,7 @@ JS_NewRegExpObject(JSContext *cx, char *bytes, size_t length, uintN flags)
     JSObject *obj;
 
     CHECK_REQUEST(cx);
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return NULL;
     obj = js_NewRegExpObject(cx, NULL, chars, length, flags);
@@ -4637,8 +4692,21 @@ JS_PUBLIC_API(JSBool)
 JS_ReportPendingException(JSContext *cx)
 {
 #if JS_HAS_EXCEPTIONS
+    JSBool save, ok;
+
     CHECK_REQUEST(cx);
-    return js_ReportUncaughtException(cx);
+
+    /*
+     * Set cx->creatingException to suppress the standard error-to-exception
+     * conversion done by all {js,JS}_Report* functions except for OOM.  The
+     * cx->creatingException flag was added to suppress recursive divergence
+     * under js_ErrorToException, but it serves for our purposes here too.
+     */
+    save = cx->creatingException;
+    cx->creatingException = JS_TRUE;
+    ok = js_ReportUncaughtException(cx);
+    cx->creatingException = save;
+    return ok;
 #else
     return JS_TRUE;
 #endif

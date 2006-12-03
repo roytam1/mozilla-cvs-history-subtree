@@ -1336,11 +1336,13 @@ doSimple:
             }
             if (*state->cp == '\\') {
                 state->cp++;
-            } else {
-                if (*state->cp == ']') {
-                    state->result->u.ucclass.kidlen = state->cp - termStart;
-                    break;
-                }
+                if (state->cp != state->cpend)
+                    state->cp++;
+                continue;
+            }
+            if (*state->cp == ']') {
+                state->result->u.ucclass.kidlen = state->cp - termStart;
+                break;
             }
             state->cp++;
         }
@@ -2033,10 +2035,6 @@ js_NewRegExpOpt(JSContext *cx, JSTokenStream *ts,
     }
     return js_NewRegExp(cx, ts, str, flags, flat);
 }
-
-
-#define HOLD_REGEXP(cx, re) JS_ATOMIC_INCREMENT(&(re)->nrefs)
-#define DROP_REGEXP(cx, re) js_DestroyRegExp(cx, re)
 
 /*
  * Save the current state of the match - the position in the input
@@ -2815,6 +2813,14 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
                 pc = ReadCompactIndex(pc, &parenIndex);
                 JS_ASSERT(parenIndex < gData->regexp->parenCount);
                 cap = &x->parens[parenIndex];
+
+                /*
+                 * FIXME: https://bugzilla.mozilla.org/show_bug.cgi?id=346090
+                 * This wallpaper prevents a case where we somehow took a step
+                 * backward in input while minimally-matching an empty string.
+                 */
+                if (x->cp < gData->cpbegin + cap->index)
+                    cap->index = -1;
                 cap->length = x->cp - (gData->cpbegin + cap->index);
                 op = (REOp) *pc++;
                 continue;
@@ -4068,6 +4074,12 @@ RegExp(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         obj = js_NewObject(cx, &js_RegExpClass, NULL, NULL);
         if (!obj)
             return JS_FALSE;
+
+        /*
+         * regexp_compile does not use rval to root its temporaries
+         * so we can use it to root obj.
+         */
+        *rval = OBJECT_TO_JSVAL(obj);
     }
     return regexp_compile(cx, obj, argc, argv, rval);
 }
@@ -4110,6 +4122,7 @@ js_NewRegExpObject(JSContext *cx, JSTokenStream *ts,
     JSString *str;
     JSObject *obj;
     JSRegExp *re;
+    JSTempValueRooter tvr;
 
     str = js_NewStringCopyN(cx, chars, length, 0);
     if (!str)
@@ -4117,11 +4130,13 @@ js_NewRegExpObject(JSContext *cx, JSTokenStream *ts,
     re = js_NewRegExp(cx, ts,  str, flags, JS_FALSE);
     if (!re)
         return NULL;
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, STRING_TO_JSVAL(str), &tvr);
     obj = js_NewObject(cx, &js_RegExpClass, NULL, NULL);
     if (!obj || !JS_SetPrivate(cx, obj, re) || !js_SetLastIndex(cx, obj, 0)) {
         js_DestroyRegExp(cx, re);
-        return NULL;
+        obj = NULL;
     }
+    JS_POP_TEMP_ROOT(cx, &tvr);
     return obj;
 }
 

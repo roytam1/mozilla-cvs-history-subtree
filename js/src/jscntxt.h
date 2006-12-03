@@ -54,6 +54,7 @@
 #include "jsprvtd.h"
 #include "jspubtd.h"
 #include "jsregexp.h"
+#include "jsutil.h"
 
 JS_BEGIN_EXTERN_C
 
@@ -71,6 +72,11 @@ typedef struct JSPropertyTreeEntry {
     JSScopeProperty     *child;
 } JSPropertyTreeEntry;
 
+/*
+ * Forward declaration for opaque JSRuntime.nativeIteratorStates.
+ */
+typedef struct JSNativeIteratorState JSNativeIteratorState;
+
 struct JSRuntime {
     /* Runtime state, synchronized by the stateChange/gcLock condvar/lock. */
     JSRuntimeState      state;
@@ -84,6 +90,7 @@ struct JSRuntime {
     uint32              gcBytes;
     uint32              gcLastBytes;
     uint32              gcMaxBytes;
+    uint32              gcMaxMallocBytes;
     uint32              gcLevel;
     uint32              gcNumber;
     JSPackedBool        gcPoke;
@@ -244,9 +251,21 @@ struct JSRuntime {
     const char          *decimalSeparator;
     const char          *numGrouping;
 
-    /* Weak references to lazily-created, well-known XML singletons. */
+    /*
+     * Weak references to lazily-created, well-known XML singletons.
+     *
+     * NB: Singleton objects must be carefully disconnected from the rest of
+     * the object graph usually associated with a JSContext's global object,
+     * including the set of standard class objects.  See jsxml.c for details.
+     */
     JSObject            *anynameObject;
     JSObject            *functionNamespaceObject;
+
+    /*
+     * A helper list for the GC, so it can mark native iterator states. See
+     * js_MarkNativeIteratorStates for details.
+     */
+    JSNativeIteratorState *nativeIteratorStates;
 
 #ifdef DEBUG
     /* Function invocation metering. */
@@ -355,6 +374,99 @@ typedef struct JSLocalRootStack {
 } JSLocalRootStack;
 
 #define JSLRS_NULL_MARK ((uint32) -1)
+
+typedef struct JSTempValueRooter JSTempValueRooter;
+typedef void
+(* JS_DLL_CALLBACK JSTempValueMarker)(JSContext *cx, JSTempValueRooter *tvr);
+
+typedef union JSTempValueUnion {
+    jsval               value;
+    JSObject            *object;
+    JSTempValueMarker   marker;
+    jsval               *array;
+} JSTempValueUnion;
+
+/*
+ * Context-linked stack of temporary GC roots.
+ *
+ * If count is -1, then u.value contains the single value to root.
+ * If count is -2, then u.marker holds a mark hook that is executed to mark
+ * the values.
+ * If count >= 0, then u.array points to a stack-allocated vector of jsvals.
+ *
+ * To root a single GC-thing pointer, which need not be tagged and stored as a
+ * jsval, use JS_PUSH_SINGLE_TEMP_ROOT.  The (jsval)(val) cast works because a
+ * GC-thing is aligned on a 0 mod 8 boundary, and object has the 0 jsval tag.
+ * So any GC-thing may be tagged as if it were an object and untagged, if it's
+ * then used only as an opaque pointer until discriminated by other means than
+ * tag bits (this is how the GC mark function uses its |thing| parameter -- it
+ * consults GC-thing flags stored separately from the thing to decide the type
+ * of thing).
+ *
+ * Alternatively, if a single pointer to rooted JSObject * is required, use
+ * JS_PUSH_TEMP_ROOT_OBJECT(cx, NULL, &tvr). Then &tvr.u.object gives the
+ * necessary pointer, which puns tvr.u.value safely because object tag bits
+ * are all zeroes.
+ *
+ * If you need to protect a result value that flows out of a C function across
+ * several layers of other functions, use the js_LeaveLocalRootScopeWithResult
+ * internal API (see further below) instead.
+ */
+struct JSTempValueRooter {
+    JSTempValueRooter   *down;
+    ptrdiff_t           count;
+    JSTempValueUnion    u;
+};
+
+#define JS_PUSH_TEMP_ROOT_COMMON(cx,tvr)                                      \
+    JS_BEGIN_MACRO                                                            \
+        JS_ASSERT((cx)->tempValueRooters != (tvr));                           \
+        (tvr)->down = (cx)->tempValueRooters;                                 \
+        (cx)->tempValueRooters = (tvr);                                       \
+    JS_END_MACRO
+
+#define JS_PUSH_SINGLE_TEMP_ROOT(cx,val,tvr)                                  \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = -1;                                                    \
+        (tvr)->u.value = (val);                                               \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT(cx,cnt,arr,tvr)                                     \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        JS_ASSERT((ptrdiff_t)(cnt) >= 0);                                     \
+        (tvr)->count = (ptrdiff_t)(cnt);                                      \
+        (tvr)->u.array = (arr);                                               \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT_MARKER(cx,marker_,tvr)                              \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = -2;                                                    \
+        (tvr)->u.marker = (marker_);                                          \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT_OBJECT(cx,obj,tvr)                                  \
+    JS_BEGIN_MACRO                                                            \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+        (tvr)->count = -1;                                                    \
+        (tvr)->u.object = (obj);                                              \
+    JS_END_MACRO
+
+#define JS_POP_TEMP_ROOT(cx,tvr)                                              \
+    JS_BEGIN_MACRO                                                            \
+        JS_ASSERT((cx)->tempValueRooters == (tvr));                           \
+        (cx)->tempValueRooters = (tvr)->down;                                 \
+    JS_END_MACRO
+
+#define JS_TEMP_ROOT_EVAL(cx,cnt,val,expr)                                    \
+    JS_BEGIN_MACRO                                                            \
+        JSTempValueRooter tvr;                                                \
+        JS_PUSH_TEMP_ROOT(cx, cnt, val, &tvr);                                \
+        (expr);                                                               \
+        JS_POP_TEMP_ROOT(cx, &tvr);                                           \
+    JS_END_MACRO
 
 struct JSContext {
     JSCList             links;
@@ -476,9 +588,39 @@ struct JSContext {
     /* PDL of stack headers describing stack slots not rooted by argv, etc. */
     JSStackHeader       *stackHeaders;
 
-    /* Optional stack of scoped local GC roots. */
+    /* Optional stack of heap-allocated scoped local GC roots. */
     JSLocalRootStack    *localRootStack;
+
+    /* Stack of thread-stack-allocated temporary GC roots. */
+    JSTempValueRooter   *tempValueRooters;
 };
+
+#ifdef __cplusplus
+/* FIXME(bug 332648): Move this into a public header. */
+class JSAutoTempValueRooter
+{
+  public:
+    JSAutoTempValueRooter(JSContext *cx, size_t len, jsval *vec)
+        : mContext(cx) {
+        JS_PUSH_TEMP_ROOT(mContext, len, vec, &mTvr);
+    }
+    JSAutoTempValueRooter(JSContext *cx, jsval v)
+        : mContext(cx) {
+        JS_PUSH_SINGLE_TEMP_ROOT(mContext, v, &mTvr);
+    }
+
+    ~JSAutoTempValueRooter() {
+        JS_POP_TEMP_ROOT(mContext, &mTvr);
+    }
+
+  private:
+    static void *operator new(size_t) { return 0; }
+    static void operator delete(void *, size_t) { }
+
+    JSContext *mContext;
+    JSTempValueRooter mTvr;
+};
+#endif
 
 /*
  * Slightly more readable macros for testing per-context option settings (also
@@ -500,7 +642,7 @@ struct JSContext {
  *
  * Note that JS_SetVersion API calls never pass JSVERSION_HAS_XML or'd into
  * that API's version parameter.
- * 
+ *
  * Note also that script->version must contain this XML option flag in order
  * for XDR'ed scripts to serialize and deserialize with that option preserved
  * for detection at run-time.  We can't copy other compile-time options into

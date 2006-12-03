@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set sw=4 ts=8 et tw=80:
+ * vim: set sw=4 ts=8 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -529,6 +529,11 @@ PeekChar(JSTokenStream *ts)
     return c;
 }
 
+/*
+ * Peek n chars ahead into ts.  Return true if n chars were read, false if
+ * there weren't enough characters in the input stream.  This function cannot
+ * be used to peek into or past a newline.
+ */
 static JSBool
 PeekChars(JSTokenStream *ts, intN n, jschar *cp)
 {
@@ -539,6 +544,10 @@ PeekChars(JSTokenStream *ts, intN n, jschar *cp)
         c = GetChar(ts);
         if (c == EOF)
             break;
+        if (c == '\n') {
+            UngetChar(ts, c);
+            break;
+        }
         cp[i] = (jschar)c;
     }
     for (j = i - 1; j >= 0; j--)
@@ -643,9 +652,22 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
                 if (pn)
                     tp = &pn->pn_pos;
 #endif
-                index = (tp->begin.lineno == tp->end.lineno)
-                        ? tp->begin.index - ts->linepos
-                        : 0;
+                /*
+                 * FIXME: What should instead happen here is that we should
+                 * find error-tokens in userbuf, if !ts->file.  That will
+                 * allow us to deliver a more helpful error message, which
+                 * includes all or part of the bad string or bad token.  The
+                 * code here yields something that looks truncated.
+                 * See https://bugzilla.mozilla.org/show_bug.cgi?id=352970
+                 */ 
+                index = 0;
+                if (tp->begin.lineno == tp->end.lineno) {
+                    if (tp->begin.index < ts->linepos)
+                        break;
+
+                    index = tp->begin.index - ts->linepos;
+                }
+
                 report->tokenptr = linestr ? report->linebuf + index : NULL;
                 report->uclinebuf = linestr ? JS_GetStringChars(linestr) : NULL;
                 report->uctokenptr = linestr ? report->uclinebuf + index : NULL;
@@ -798,8 +820,12 @@ GrowStringBuffer(JSStringBuffer *sb, size_t newlength)
     jschar *bp;
 
     offset = PTRDIFF(sb->ptr, sb->base, jschar);
-    newlength += offset;
-    bp = (jschar *) realloc(sb->base, (newlength + 1) * sizeof(jschar));
+    JS_ASSERT(offset >= 0);
+    newlength += offset + 1;
+    if ((size_t)offset < newlength && newlength < ~(size_t)0 / sizeof(jschar))
+        bp = realloc(sb->base, newlength * sizeof(jschar));
+    else
+        bp = NULL;
     if (!bp) {
         free(sb->base);
         sb->base = STRING_BUFFER_ERROR_BASE;
@@ -807,7 +833,7 @@ GrowStringBuffer(JSStringBuffer *sb, size_t newlength)
     }
     sb->base = bp;
     sb->ptr = bp + offset;
-    sb->limit = bp + newlength;
+    sb->limit = bp + newlength - 1;
     return JS_TRUE;
 }
 
@@ -1020,9 +1046,8 @@ badncr:
     msg = JSMSG_BAD_XML_NCR;
 bad:
     /* No match: throw a TypeError per ECMA-357 10.3.2.1 step 8(a). */
-    FastAppendChar(&ts->tokenbuf, ';');
     bytes = js_DeflateString(cx, bp + 1,
-                             PTRDIFF(ts->tokenbuf.ptr, bp, jschar) - 2);
+                             PTRDIFF(ts->tokenbuf.ptr, bp, jschar) - 1);
     if (bytes) {
         js_ReportCompileErrorNumber(cx, ts, JSREPORT_TS | JSREPORT_ERROR,
                                     msg, bytes);
@@ -1112,16 +1137,21 @@ js_GetToken(JSContext *cx, JSTokenStream *ts)
     JSBool hadUnicodeEscape;
 
 #define INIT_TOKENBUF()     (ts->tokenbuf.ptr = ts->tokenbuf.base)
-#define NUL_TERM_TOKENBUF() (*ts->tokenbuf.ptr = 0)
-#define TRIM_TOKENBUF(i)    (ts->tokenbuf.ptr = ts->tokenbuf.base + i)
 #define TOKENBUF_LENGTH()   PTRDIFF(ts->tokenbuf.ptr, ts->tokenbuf.base, jschar)
+#define TOKENBUF_OK()       STRING_BUFFER_OK(&ts->tokenbuf)
+#define TOKENBUF_TO_ATOM()  (TOKENBUF_OK()                                    \
+                             ? js_AtomizeChars(cx,                            \
+                                               TOKENBUF_BASE(),               \
+                                               TOKENBUF_LENGTH(),             \
+                                               0)                             \
+                             : NULL)
+#define ADD_TO_TOKENBUF(c)  FastAppendChar(&ts->tokenbuf, (jschar) (c))
+
+/* The following 4 macros should only be used when TOKENBUF_OK() is true. */
 #define TOKENBUF_BASE()     (ts->tokenbuf.base)
 #define TOKENBUF_CHAR(i)    (ts->tokenbuf.base[i])
-#define TOKENBUF_TO_ATOM()  js_AtomizeChars(cx,                               \
-                                            TOKENBUF_BASE(),                  \
-                                            TOKENBUF_LENGTH(),                \
-                                            0)
-#define ADD_TO_TOKENBUF(c)  FastAppendChar(&ts->tokenbuf, (jschar) (c))
+#define TRIM_TOKENBUF(i)    (ts->tokenbuf.ptr = ts->tokenbuf.base + i)
+#define NUL_TERM_TOKENBUF() (*ts->tokenbuf.ptr = 0)
 
     /* If there was a fatal error, keep returning TOK_ERROR. */
     if (ts->flags & TSF_ERROR)
@@ -1195,7 +1225,12 @@ js_GetToken(JSContext *cx, JSTokenStream *ts)
             ADD_TO_TOKENBUF(c);
             while ((c = GetChar(ts)) != EOF && JS_ISXMLNAME(c)) {
                 if (c == ':') {
-                    if (sawColon || !JS_ISXMLNAME(PeekChar(ts))) {
+                    int nextc;
+
+                    if (sawColon ||
+                        (nextc = PeekChar(ts),
+                         ((ts->flags & TSF_XMLONLYMODE) || nextc != '{') &&
+                         !JS_ISXMLNAME(nextc))) {
                         js_ReportCompileErrorNumber(cx, ts,
                                                     JSREPORT_TS |
                                                     JSREPORT_ERROR,
@@ -1245,7 +1280,7 @@ js_GetToken(JSContext *cx, JSTokenStream *ts)
                  * so escape " if it is expressed directly in a single-quoted
                  * attribute value.
                  */
-                if (c == '"') {
+                if (c == '"' && !(ts->flags & TSF_XMLONLYMODE)) {
                     JS_ASSERT(qc == '\'');
                     js_AppendCString(&ts->tokenbuf, js_quot_entity_str);
                     continue;
@@ -1336,9 +1371,11 @@ retry:
             kw = ATOM_KEYWORD(atom);
             if (kw->tokentype == TOK_RESERVED) {
                 char buf[MAX_KEYWORD_LENGTH + 1];
-
-                js_DeflateStringToBuffer(buf, TOKENBUF_BASE(),
-                                              TOKENBUF_LENGTH());
+                size_t buflen = sizeof(buf) - 1;
+                if (!js_DeflateStringToBuffer(cx, TOKENBUF_BASE(), TOKENBUF_LENGTH(),
+                                                  buf, &buflen))
+                    goto error;
+                buf [buflen] = 0;
                 if (!js_ReportCompileErrorNumber(cx, ts,
                                                  JSREPORT_TS |
                                                  JSREPORT_WARNING |
@@ -1435,6 +1472,8 @@ retry:
         UngetChar(ts, c);
         ADD_TO_TOKENBUF(0);
 
+        if (!TOKENBUF_OK())
+            goto error;
         if (radix == 10) {
             if (!js_strtod(cx, TOKENBUF_BASE(), &endptr, &dval)) {
                 js_ReportCompileErrorNumber(cx, ts,
@@ -1687,11 +1726,14 @@ retry:
                         cp[5] == '[') {
                         SkipChars(ts, 6);
                         while ((c = GetChar(ts)) != ']' ||
-                               !MatchChar(ts, ']')) {
+                               !PeekChars(ts, 2, cp) ||
+                               cp[0] != ']' ||
+                               cp[1] != '>') {
                             if (c == EOF)
                                 goto bad_xml_markup;
                             ADD_TO_TOKENBUF(c);
                         }
+                        GetChar(ts);            /* discard ] but not > */
                         tt = TOK_XMLCDATA;
                         tp->t_op = JSOP_XMLCDATA;
                         goto finish_xml_markup;
@@ -1732,6 +1774,8 @@ retry:
                 if (contentIndex < 0) {
                     atom = cx->runtime->atomState.emptyAtom;
                 } else {
+                    if (!TOKENBUF_OK())
+                        goto error;
                     atom = js_AtomizeChars(cx,
                                            &TOKENBUF_CHAR(contentIndex),
                                            TOKENBUF_LENGTH() - contentIndex,
@@ -1948,6 +1992,8 @@ skipline:
                 goto error;
             }
             /* XXXbe fix jsregexp.c so it doesn't depend on NUL termination */
+            if (!TOKENBUF_OK())
+                goto error;
             NUL_TERM_TOKENBUF();
             obj = js_NewRegExpObject(cx, ts,
                                      TOKENBUF_BASE(),
@@ -2094,12 +2140,14 @@ error:
     goto out;
 
 #undef INIT_TOKENBUF
-#undef TRIM_TOKENBUF
 #undef TOKENBUF_LENGTH
-#undef TOKENBUF_BASE
-#undef TOKENBUF_CHAR
+#undef TOKENBUF_OK
 #undef TOKENBUF_TO_ATOM
 #undef ADD_TO_TOKENBUF
+#undef TOKENBUF_BASE
+#undef TOKENBUF_CHAR
+#undef TRIM_TOKENBUF
+#undef NUL_TERM_TOKENBUF
 }
 
 void

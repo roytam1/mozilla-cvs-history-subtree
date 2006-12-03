@@ -547,8 +547,14 @@ typedef void
                                     JSErrorReport *report);
 
 typedef struct JSErrorFormatString {
+    /* The error format string (UTF-8 if JS_C_STRINGS_ARE_UTF8 is defined). */
     const char *format;
-    uintN argCount;
+
+    /* The number of arguments to expand in the formatted error message. */
+    uint16 argCount;
+
+    /* One of the JSExnType constants above. */
+    int16 exnType;
 } JSErrorFormatString;
 
 typedef const JSErrorFormatString *

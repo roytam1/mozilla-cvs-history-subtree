@@ -739,6 +739,14 @@ JS_SetGCCallbackRT(JSRuntime *rt, JSGCCallback cb);
 extern JS_PUBLIC_API(JSBool)
 JS_IsAboutToBeFinalized(JSContext *cx, void *thing);
 
+typedef enum JSGCParamKey {
+    JSGC_MAX_BYTES        = 0,  /* maximum nominal heap before last ditch GC */
+    JSGC_MAX_MALLOC_BYTES = 1   /* # of JS_malloc bytes before last ditch GC */
+} JSGCParamKey;
+
+extern JS_PUBLIC_API(void)
+JS_SetGCParameter(JSRuntime *rt, JSGCParamKey key, uint32 value);
+
 /*
  * Add a finalizer for external strings created by JS_NewExternalString (see
  * below) using a type-code returned from this function, and that understands
@@ -1385,6 +1393,12 @@ extern JS_PUBLIC_API(uintN)
 JS_GetFunctionFlags(JSFunction *fun);
 
 /*
+ * Return the arity (length) of fun.
+ */
+extern JS_PUBLIC_API(uint16)
+JS_GetFunctionArity(JSFunction *fun);
+
+/*
  * Infallible predicate to test whether obj is a function object (faster than
  * comparing obj's class name to "Function", but equivalent unless someone has
  * overwritten the "Function" identifier with a different constructor and then
@@ -1749,6 +1763,44 @@ JS_UndependString(JSContext *cx, JSString *str);
  */
 extern JS_PUBLIC_API(JSBool)
 JS_MakeStringImmutable(JSContext *cx, JSString *str);
+
+/*
+ * Return JS_TRUE if C (char []) strings passed via the API and internally
+ * are UTF-8. The source must be compiled with JS_C_STRINGS_ARE_UTF8 defined
+ * to get UTF-8 support.
+ */
+JS_PUBLIC_API(JSBool)
+JS_StringsAreUTF8();
+
+/*
+ * Character encoding support.
+ *
+ * For both JS_EncodeCharacters and JS_DecodeBytes, set *dstlenp to the size
+ * of the destination buffer before the call; on return, *dstlenp contains the
+ * number of bytes (JS_EncodeCharacters) or jschars (JS_DecodeBytes) actually
+ * stored.  To determine the necessary destination buffer size, make a sizing
+ * call that passes NULL for dst.
+ *
+ * On errors, the functions report the error. In that case, *dstlenp contains
+ * the number of characters or bytes transferred so far.  If cx is NULL, no
+ * error is reported on failure, and the functions simply return JS_FALSE.
+ *
+ * NB: Neither function stores an additional zero byte or jschar after the
+ * transcoded string.
+ *
+ * If the source has been compiled with the #define JS_C_STRINGS_ARE_UTF8 to
+ * enable UTF-8 interpretation of C char[] strings, then JS_EncodeCharacters
+ * encodes to UTF-8, and JS_DecodeBytes decodes from UTF-8, which may create
+ * addititional errors if the character sequence is malformed.  If UTF-8
+ * support is disabled, the functions deflate and inflate, respectively.
+ */
+JS_PUBLIC_API(JSBool)
+JS_EncodeCharacters(JSContext *cx, const jschar *src, size_t srclen, char *dst,
+                    size_t *dstlenp);
+
+JS_PUBLIC_API(JSBool)
+JS_DecodeBytes(JSContext *cx, const char *src, size_t srclen, jschar *dst,
+               size_t *dstlenp);
 
 /************************************************************************/
 

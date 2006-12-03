@@ -64,9 +64,6 @@
 #define MAXINDEX 4294967295u
 #define MAXSTR   "4294967295"
 
-/* A useful value for identifying a hole in an array */
-#define JSVAL_HOLE BOOLEAN_TO_JSVAL(2)
-
 /*
  * Determine if the id represents an array index or an XML property index.
  *
@@ -167,24 +164,28 @@ ValueIsLength(JSContext *cx, jsval v, jsuint *lengthp)
 JSBool
 js_GetLengthProperty(JSContext *cx, JSObject *obj, jsuint *lengthp)
 {
+    JSTempValueRooter tvr;
     jsid id;
+    JSBool ok;
     jsint i;
-    jsval v;
 
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, JSVAL_NULL, &tvr);
     id = ATOM_TO_JSID(cx->runtime->atomState.lengthAtom);
-    if (!OBJ_GET_PROPERTY(cx, obj, id, &v))
-        return JS_FALSE;
-
-    /* Short-circuit, because js_ValueToECMAUint32 fails when
-     * called during init time.
-     */
-    if (JSVAL_IS_INT(v)) {
-        i = JSVAL_TO_INT(v);
-        /* jsuint cast does ToUint32. */
-        *lengthp = (jsuint)i;
-        return JS_TRUE;
+    ok = OBJ_GET_PROPERTY(cx, obj, id, &tvr.u.value);
+    if (ok) {
+        /*
+         * Short-circuit, because js_ValueToECMAUint32 fails when called
+         * during init time.
+         */
+        if (JSVAL_IS_INT(tvr.u.value)) {
+            i = JSVAL_TO_INT(tvr.u.value);
+            *lengthp = (jsuint)i;       /* jsuint cast does ToUint32 */
+        } else {
+            ok = js_ValueToECMAUint32(cx, tvr.u.value, (uint32 *)lengthp);
+        }
     }
-    return js_ValueToECMAUint32(cx, v, (uint32 *)lengthp);
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
 }
 
 static JSBool
@@ -267,17 +268,19 @@ JSBool
 js_HasLengthProperty(JSContext *cx, JSObject *obj, jsuint *lengthp)
 {
     JSErrorReporter older;
+    JSTempValueRooter tvr;
     jsid id;
     JSBool ok;
-    jsval v;
 
     older = JS_SetErrorReporter(cx, NULL);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, JSVAL_NULL, &tvr);
     id = ATOM_TO_JSID(cx->runtime->atomState.lengthAtom);
-    ok = OBJ_GET_PROPERTY(cx, obj, id, &v);
+    ok = OBJ_GET_PROPERTY(cx, obj, id, &tvr.u.value);
     JS_SetErrorReporter(cx, older);
-    if (!ok)
-        return JS_FALSE;
-    return ValueIsLength(cx, v, lengthp);
+    if (ok)
+        ok = ValueIsLength(cx, tvr.u.value, lengthp);
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
 }
 
 /*
@@ -369,7 +372,8 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
     const jschar *sepstr;
     JSString *str;
     JSHashEntry *he;
-    JSObject *obj2;
+    JSTempValueRooter tvr;
+    JSAtom *atom;
     int stackDummy;
 
     if (!JS_CHECK_STACK_SIZE(cx, stackDummy)) {
@@ -457,14 +461,14 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
             str = cx->runtime->emptyString;
         } else {
             if (localeString) {
-                if (!js_ValueToObject(cx, v, &obj2) ||
-                    !js_TryMethod(cx, obj2,
-                                  cx->runtime->atomState.toLocaleStringAtom,
-                                  0, NULL, &v)) {
-                    str = NULL;
-                } else {
-                    str = js_ValueToString(cx, v);
-                }
+                atom = cx->runtime->atomState.toLocaleStringAtom;
+                JS_PUSH_TEMP_ROOT_OBJECT(cx, NULL, &tvr);
+                ok = js_ValueToObject(cx, v, &tvr.u.object) &&
+                     js_TryMethod(cx, tvr.u.object, atom, 0, NULL, &v);
+                JS_POP_TEMP_ROOT(cx, &tvr);
+                if (!ok)
+                    goto done;
+                str = js_ValueToString(cx, v);
             } else {
                 str = (literalize ? js_ValueToSource : js_ValueToString)(cx, v);
             }
@@ -475,9 +479,18 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
         }
 
         /* Allocate 3 + 1 at end for ", ", closing bracket, and zero. */
-        growth = (nchars + (sepstr ? seplen : 0) +
-                  JSSTRING_LENGTH(str) +
-                  3 + 1) * sizeof(jschar);
+        tmplen = JSSTRING_LENGTH(str);
+        growth = (nchars + (sepstr ? seplen : 0) + tmplen + 3 + 1);
+        if (nchars > growth || tmplen > growth ||
+            growth > (size_t)-1 / sizeof(jschar)) {
+            if (chars) {
+                free(chars);
+                chars = NULL;
+            }
+            JS_ReportOutOfMemory(cx);
+            goto done;
+        }
+        growth *= sizeof(jschar);
         if (!chars) {
             chars = (jschar *) malloc(growth);
             if (!chars)
@@ -496,7 +509,6 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
         }
         sepstr = JSSTRING_CHARS(sep);
 
-        tmplen = JSSTRING_LENGTH(str);
         js_strncpy(&chars[nchars], JSSTRING_CHARS(str), tmplen);
         nchars += tmplen;
     }
@@ -639,10 +651,21 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     jsuint len, half, i;
     jsid id, id2;
     jsval *tmproot, *tmproot2;
-    JSBool idexists, id2exists;
+    JSBool idexists, id2exists, ok;
 
     if (!js_GetLengthProperty(cx, obj, &len))
         return JS_FALSE;
+
+    /*
+     * When len > JSVAL_INT_MAX + 1 the loop below accesses indexes greater
+     * than JSVAL_INT_MAX. For such indexes the corresponding ids are atoms.
+     * We use JS_KEEP_ATOMS to protect them against GC since OBJ_GET_PROPERTY
+     * can potentially execute an arbitrary script. See bug 341956.
+     *
+     * After this point control must flow through label out: to exit.
+     */
+    if (len > JSVAL_INT_MAX + 1)
+        JS_KEEP_ATOMS(cx->runtime);
 
     /*
      * Use argv[argc] and argv[argc + 1] as local roots to hold temporarily
@@ -652,44 +675,51 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     tmproot2 = argv + argc + 1;
     half = len / 2;
     for (i = 0; i < half; i++) {
-        if (!IndexToId(cx, i, &id))
-            return JS_FALSE;
-        if (!IndexToId(cx, len - i - 1, &id2))
-            return JS_FALSE;
-
-        /* Check for holes to make sure they don't get filled. */
-        if (!PropertyExists(cx, obj, id, &idexists) ||
-            !PropertyExists(cx, obj, id2, &id2exists)) {
-            return JS_FALSE;
-        }
-
         /*
-         * Get both of the values now. Note that we don't use v, or v2 based on
-         * idexists and id2exists.
+         * Get both values while checking for holes to make sure they don't
+         * get filled.
          */
-        if (!OBJ_GET_PROPERTY(cx, obj, id, tmproot) ||
-            !OBJ_GET_PROPERTY(cx, obj, id2, tmproot2)) {
-            return JS_FALSE;
-        }
+        if (!IndexToId(cx, i, &id))
+            goto bad;
+        if (!PropertyExists(cx, obj, id, &idexists))
+            goto bad;
+        if (idexists && !OBJ_GET_PROPERTY(cx, obj, id, tmproot))
+            goto bad;
 
+        if (!IndexToId(cx, len - i - 1, &id2))
+            goto bad;
+        if (!PropertyExists(cx, obj, id2, &id2exists))
+            goto bad;
+        if (id2exists && !OBJ_GET_PROPERTY(cx, obj, id2, tmproot2))
+            goto bad;
+
+        /* Exchange the values. */
         if (idexists) {
             if (!OBJ_SET_PROPERTY(cx, obj, id2, tmproot))
-                return JS_FALSE;
+                goto bad;
         } else {
             if (!OBJ_DELETE_PROPERTY(cx, obj, id2, tmproot))
-                return JS_FALSE;
+                goto bad;
         }
         if (id2exists) {
             if (!OBJ_SET_PROPERTY(cx, obj, id, tmproot2))
-                return JS_FALSE;
+                goto bad;
         } else {
             if (!OBJ_DELETE_PROPERTY(cx, obj, id, tmproot2))
-                return JS_FALSE;
+                goto bad;
         }
     }
+    ok = JS_TRUE;
 
+  out:
+    if (len > JSVAL_INT_MAX + 1)
+        JS_UNKEEP_ATOMS(cx->runtime);
     *rval = OBJECT_TO_JSVAL(obj);
-    return JS_TRUE;
+    return ok;
+
+  bad:
+    ok = JS_FALSE;
+    goto out;
 }
 
 typedef struct HSortArgs {
@@ -806,7 +836,7 @@ sort_compare(const void *a, const void *b, void *arg)
     CompareArgs *ca = (CompareArgs *) arg;
     JSContext *cx = ca->context;
     jsdouble cmp = -1;
-    jsval fval, argv[2], rval, special;
+    jsval fval, argv[2], special;
     JSBool ok;
 
     fval = ca->fval;
@@ -854,9 +884,9 @@ sort_compare(const void *a, const void *b, void *arg)
         argv[1] = bv;
         ok = js_InternalCall(cx,
                              OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(fval)),
-                             fval, 2, argv, &rval);
+                             fval, 2, argv, ca->localroot);
         if (ok) {
-            ok = js_ValueToNumber(cx, rval, &cmp);
+            ok = js_ValueToNumber(cx, *ca->localroot, &cmp);
 
             /* Clamp cmp to -1, 0, 1. */
             if (ok) {
@@ -1036,20 +1066,26 @@ array_pop(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsuint index;
     jsid id;
+    JSBool ok;
     jsval junk;
 
     if (!js_GetLengthProperty(cx, obj, &index))
         return JS_FALSE;
     if (index > 0) {
         index--;
+
+        /* Get the to-be-deleted property's value into rval. */
         if (!IndexToId(cx, index, &id))
             return JS_FALSE;
 
-        /* Get the to-be-deleted property's value into rval. */
-        if (!OBJ_GET_PROPERTY(cx, obj, id, rval))
-            return JS_FALSE;
-
-        if (!OBJ_DELETE_PROPERTY(cx, obj, id, &junk))
+        /* See comments in array_reverse. */
+        if (index > JSVAL_INT_MAX)
+            JS_KEEP_ATOMS(cx->runtime);
+        ok = OBJ_GET_PROPERTY(cx, obj, id, rval) &&
+             OBJ_DELETE_PROPERTY(cx, obj, id, &junk);
+        if (index > JSVAL_INT_MAX)
+            JS_UNKEEP_ATOMS(cx->runtime);
+        if (!ok)
             return JS_FALSE;
     }
     return js_SetLengthProperty(cx, obj, index);
@@ -1079,16 +1115,23 @@ array_shift(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             for (i = 1; i <= length; i++) {
                 if (!IndexToId(cx, i, &id))
                     return JS_FALSE;
-                if (!IndexToId(cx, i - 1, &id2))
-                    return JS_FALSE;
                 if (!OBJ_GET_PROPERTY(cx, obj, id, &argv[0]))
+                    return JS_FALSE;
+
+                /* Get id after value to avoid nested GC hazards. */
+                if (!IndexToId(cx, i - 1, &id2))
                     return JS_FALSE;
                 if (!OBJ_SET_PROPERTY(cx, obj, id2, &argv[0]))
                     return JS_FALSE;
             }
         }
 
-        /* Delete the only or last element. */
+        /*
+         * Delete the only or the last element. We recreate id when it is an
+         * atom to protect against a nested GC during the last iteration.
+         */
+        if (length > JSVAL_INT_MAX && !IndexToId(cx, length, &id))
+            return JS_FALSE;
         if (!OBJ_DELETE_PROPERTY(cx, obj, id, &junk))
             return JS_FALSE;
     }
@@ -1114,16 +1157,21 @@ array_unshift(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             while (last--) {
                 if (!IndexToExistingId(cx, obj, last, &id))
                     return JS_FALSE;
-                if (id == JSID_HOLE) {
-                    OBJ_DELETE_PROPERTY(cx, obj, id2, &junk);
-                    continue;
+                if (id != JSID_HOLE) {
+                    if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
+                        return JS_FALSE;
                 }
-                if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
-                    return JS_FALSE;
+
+                /* Get id after value to avoid nested GC hazards. */
                 if (!IndexToId(cx, last + argc, &id2))
                     return JS_FALSE;
-                if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
-                    return JS_FALSE;
+                if (id == JSID_HOLE) {
+                    if (!OBJ_DELETE_PROPERTY(cx, obj, id2, &junk))
+                        return JS_FALSE;
+                } else {
+                    if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
+                        return JS_FALSE;
+                }
             }
         }
 
@@ -1235,6 +1283,8 @@ array_splice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                         continue;       /* don't fill holes in the new array */
                     if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
                         return JS_FALSE;
+
+                    /* Get id after value to avoid nested GC hazards. */
                     if (!IndexToId(cx, last - begin, &id2))
                         return JS_FALSE;
                     if (!OBJ_SET_PROPERTY(cx, obj2, id2, vp))
@@ -1255,11 +1305,15 @@ array_splice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         while (last-- > end) {
             if (!IndexToExistingId(cx, obj, last, &id))
                 return JS_FALSE;
-            if (!IndexToId(cx, last + delta, &id2))
-                return JS_FALSE;
             if (id != JSID_HOLE) {
                 if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
                     return JS_FALSE;
+            }
+
+            /* Get id after value to avoid nested GC hazards. */
+            if (!IndexToId(cx, last + delta, &id2))
+                return JS_FALSE;
+            if (id != JSID_HOLE) {
                 if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
                     return JS_FALSE;
             } else {
@@ -1273,11 +1327,15 @@ array_splice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         for (last = end; last < length; last++) {
             if (!IndexToExistingId(cx, obj, last, &id))
                 return JS_FALSE;
-            if (!IndexToId(cx, last - delta, &id2))
-                return JS_FALSE;
             if (id != JSID_HOLE) {
                 if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
                     return JS_FALSE;
+            }
+
+            /* Get id after value to avoid nested GC hazards. */
+            if (!IndexToId(cx, last - delta, &id2))
+                return JS_FALSE;
+            if (id != JSID_HOLE) {
                 if (!OBJ_SET_PROPERTY(cx, obj, id2, vp))
                     return JS_FALSE;
             } else {
@@ -1354,6 +1412,8 @@ array_concat(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                     }
                     if (!OBJ_GET_PROPERTY(cx, aobj, id, vp))
                         return JS_FALSE;
+
+                    /* Get id after value to avoid nested GC hazards. */
                     if (!IndexToId(cx, length + slot, &id2))
                         return JS_FALSE;
                     if (!OBJ_SET_PROPERTY(cx, nobj, id2, vp))
@@ -1436,6 +1496,8 @@ array_slice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             continue;
         if (!OBJ_GET_PROPERTY(cx, obj, id, vp))
             return JS_FALSE;
+
+        /* Get id after value to avoid nested GC hazards. */
         if (!IndexToId(cx, slot - begin, &id2))
             return JS_FALSE;
         if (!OBJ_SET_PROPERTY(cx, nobj, id2, vp))
@@ -1592,10 +1654,7 @@ array_extra(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval,
             return JS_FALSE;
         argv[1] = OBJECT_TO_JSVAL(thisp);
     } else {
-        JSObject *tmp;
-        thisp = callable;
-        while ((tmp = OBJ_GET_PARENT(cx, thisp)) != NULL)
-            thisp = tmp;
+        thisp = NULL;
     }
 
     /* We call with 3 args (value, index, array), plus room for rval. */
@@ -1620,7 +1679,11 @@ array_extra(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval,
         if (!ok)
             break;
 
-        /* Push callable and 'this', then args. */
+        /*
+         * Push callable and 'this', then args. We must do this for every
+         * iteration around the loop since js_Invoke uses origsp[0] for rval
+         * storage and some native functions use origsp[1] for local rooting.
+         */
         sp = origsp;
         *sp++ = OBJECT_TO_JSVAL(callable);
         *sp++ = OBJECT_TO_JSVAL(thisp);
@@ -1652,6 +1715,15 @@ array_extra(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval,
           case FOREACH:
             break;
           case MAP:
+            /*
+             * We reconstruct id once again when it is a GC thing since scripts
+             * can trigger GC that collects it. See bug 341956.
+             */
+            if (i > JSVAL_INT_MAX) {
+                ok = IndexToId(cx, i, &id);
+                if (!ok)
+                    goto out;
+            }
             ok = OBJ_SET_PROPERTY(cx, newarr, id, &rval2);
             if (!ok)
                 goto out;

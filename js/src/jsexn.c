@@ -94,34 +94,118 @@ typedef struct JSExnPrivate {
     JSErrorReport *errorReport;
 } JSExnPrivate;
 
-/*
- * Undo all the damage done by exn_newPrivate.
- */
-static void
-exn_destroyPrivate(JSContext *cx, JSExnPrivate *privateData)
+static JSErrorReport *
+CopyErrorReport(JSContext *cx, JSErrorReport *report)
 {
-    JSErrorReport *report;
-    const jschar **args;
+    /*
+     * We use a single malloc block to make a deep copy of JSErrorReport with
+     * the following layout:
+     *   JSErrorReport
+     *   array of copies of report->messageArgs
+     *   jschar array with characters for all messageArgs
+     *   jschar array with characters for ucmessage
+     *   jschar array with characters for uclinebuf and uctokenptr
+     *   char array with characters for linebuf and tokenptr
+     *   char array with characters for filename
+     * Such layout does not need any extra alignment padding.
+     */
+    size_t filenameSize;
+    size_t linebufSize;
+    size_t uclinebufSize;
+    size_t ucmessageSize;
+    size_t i, argsArraySize, argsCopySize, argSize;
+    size_t mallocSize;
+    JSErrorReport *copy;
+    uint8 *cursor;
 
-    if (!privateData)
-        return;
-    report = privateData->errorReport;
-    if (report) {
-        if (report->uclinebuf)
-            JS_free(cx, (void *)report->uclinebuf);
-        if (report->filename)
-            JS_free(cx, (void *)report->filename);
-        if (report->ucmessage)
-            JS_free(cx, (void *)report->ucmessage);
+#define JS_CHARS_SIZE(jschars) ((js_strlen(jschars) + 1) * sizeof(jschar))
+
+    filenameSize = report->filename ? strlen(report->filename) + 1 : 0;
+    linebufSize = report->linebuf ? strlen(report->linebuf) + 1 : 0;
+    uclinebufSize = report->uclinebuf ? JS_CHARS_SIZE(report->uclinebuf) : 0;
+    ucmessageSize = 0;
+    argsArraySize = 0;
+    argsCopySize = 0;
+    if (report->ucmessage) {
+        ucmessageSize = JS_CHARS_SIZE(report->ucmessage);
         if (report->messageArgs) {
-            args = report->messageArgs;
-            while (*args)
-                JS_free(cx, (void *)*args++);
-            JS_free(cx, (void *)report->messageArgs);
+            for (i = 0; report->messageArgs[i]; ++i)
+                argsCopySize += JS_CHARS_SIZE(report->messageArgs[i]);
+
+            /* Non-null messageArgs should have at least one non-null arg. */
+            JS_ASSERT(i != 0);
+            argsArraySize = (i + 1) * sizeof(const jschar *);
         }
-        JS_free(cx, report);
     }
-    JS_free(cx, privateData);
+
+    /*
+     * The mallocSize can not overflow since it represents the sum of the
+     * sizes of already allocated objects.
+     */
+    mallocSize = sizeof(JSErrorReport) + argsArraySize + argsCopySize +
+                 ucmessageSize + uclinebufSize + linebufSize + filenameSize;
+    cursor = (uint8 *)JS_malloc(cx, mallocSize);
+    if (!cursor)
+        return NULL;
+
+    copy = (JSErrorReport *)cursor;
+    memset(cursor, 0, sizeof(JSErrorReport));
+    cursor += sizeof(JSErrorReport);
+
+    if (argsArraySize != 0) {
+        copy->messageArgs = (const jschar **)cursor;
+        cursor += argsArraySize;
+        for (i = 0; report->messageArgs[i]; ++i) {
+            copy->messageArgs[i] = (const jschar *)cursor;
+            argSize = JS_CHARS_SIZE(report->messageArgs[i]);
+            memcpy(cursor, report->messageArgs[i], argSize);
+            cursor += argSize;
+        }
+        copy->messageArgs[i] = NULL;
+        JS_ASSERT(cursor == (uint8 *)copy->messageArgs[0] + argsCopySize);
+    }
+
+    if (report->ucmessage) {
+        copy->ucmessage = (const jschar *)cursor;
+        memcpy(cursor, report->ucmessage, ucmessageSize);
+        cursor += ucmessageSize;
+    }
+
+    if (report->uclinebuf) {
+        copy->uclinebuf = (const jschar *)cursor;
+        memcpy(cursor, report->uclinebuf, uclinebufSize);
+        cursor += uclinebufSize;
+        if (report->uctokenptr) {
+            copy->uctokenptr = copy->uclinebuf + (report->uctokenptr -
+                                                  report->uclinebuf);
+        }
+    }
+
+    if (report->linebuf) {
+        copy->linebuf = (const char *)cursor;
+        memcpy(cursor, report->linebuf, linebufSize);
+        cursor += linebufSize;
+        if (report->tokenptr) {
+            copy->tokenptr = copy->linebuf + (report->tokenptr -
+                                              report->linebuf);
+        }
+    }
+
+    if (report->filename) {
+        copy->filename = (const char *)cursor;
+        memcpy(cursor, report->filename, filenameSize);
+    }
+    JS_ASSERT(cursor + filenameSize == (uint8 *)copy + mallocSize);
+
+    /* Copy non-pointer members. */
+    copy->lineno = report->lineno;
+    copy->errorNumber = report->errorNumber;
+
+    /* Note that this is before it gets flagged with JSREPORT_EXCEPTION */
+    copy->flags = report->flags;
+
+#undef JS_CHARS_SIZE
+    return copy;
 }
 
 /*
@@ -130,99 +214,17 @@ exn_destroyPrivate(JSContext *cx, JSExnPrivate *privateData)
 static JSExnPrivate *
 exn_newPrivate(JSContext *cx, JSErrorReport *report)
 {
-    intN i;
     JSExnPrivate *newPrivate;
-    JSErrorReport *newReport;
-    size_t capacity;
 
     newPrivate = (JSExnPrivate *)JS_malloc(cx, sizeof (JSExnPrivate));
     if (!newPrivate)
         return NULL;
-    memset(newPrivate, 0, sizeof (JSExnPrivate));
-
-    /* Copy the error report */
-    newReport = (JSErrorReport *)JS_malloc(cx, sizeof (JSErrorReport));
-    if (!newReport)
-        goto error;
-    memset(newReport, 0, sizeof (JSErrorReport));
-    newPrivate->errorReport = newReport;
-
-    if (report->filename) {
-        newReport->filename = JS_strdup(cx, report->filename);
-        if (!newReport->filename)
-            goto error;
-    } else {
-        newReport->filename = NULL;
+    newPrivate->errorReport = CopyErrorReport(cx, report);
+    if (!newPrivate->errorReport) {
+        JS_free(cx, newPrivate);
+        return NULL;
     }
-
-    newReport->lineno = report->lineno;
-
-    /*
-     * We don't need to copy linebuf and tokenptr, because they
-     * point into the deflated string cache.  (currently?)
-     */
-    newReport->linebuf = report->linebuf;
-    newReport->tokenptr = report->tokenptr;
-
-    /*
-     * But we do need to copy uclinebuf, uctokenptr, because they're
-     * pointers into internal tokenstream structs, and may go away.
-     */
-    if (report->uclinebuf) {
-        capacity = js_strlen(report->uclinebuf) + 1;
-        newReport->uclinebuf =
-            (const jschar *)JS_malloc(cx, capacity * sizeof(jschar));
-        if (!newReport->uclinebuf)
-            goto error;
-        js_strncpy((jschar *)newReport->uclinebuf, report->uclinebuf, capacity);
-        newReport->uctokenptr = newReport->uclinebuf + (report->uctokenptr -
-                                                        report->uclinebuf);
-    } else {
-        newReport->uclinebuf = newReport->uctokenptr = NULL;
-    }
-
-    if (report->ucmessage) {
-        capacity = js_strlen(report->ucmessage) + 1;
-        newReport->ucmessage = (const jschar *)
-            JS_malloc(cx, capacity * sizeof(jschar));
-        if (!newReport->ucmessage)
-            goto error;
-        js_strncpy((jschar *)newReport->ucmessage, report->ucmessage, capacity);
-
-        if (report->messageArgs) {
-            for (i = 0; report->messageArgs[i]; i++)
-                continue;
-            JS_ASSERT(i);
-            newReport->messageArgs =
-                (const jschar **)JS_malloc(cx, (i + 1) * sizeof(jschar *));
-            if (!newReport->messageArgs)
-                goto error;
-            for (i = 0; report->messageArgs[i]; i++) {
-                capacity = js_strlen(report->messageArgs[i]) + 1;
-                newReport->messageArgs[i] =
-                    (const jschar *)JS_malloc(cx, capacity * sizeof(jschar));
-                if (!newReport->messageArgs[i])
-                    goto error;
-                js_strncpy((jschar *)(newReport->messageArgs[i]),
-                           report->messageArgs[i], capacity);
-            }
-            newReport->messageArgs[i] = NULL;
-        } else {
-            newReport->messageArgs = NULL;
-        }
-    } else {
-        newReport->ucmessage = NULL;
-        newReport->messageArgs = NULL;
-    }
-    newReport->errorNumber = report->errorNumber;
-
-    /* Note that this is before it gets flagged with JSREPORT_EXCEPTION */
-    newReport->flags = report->flags;
-
     return newPrivate;
-error:
-    exn_destroyPrivate(cx, newPrivate);
-    return NULL;
 }
 
 static void
@@ -235,8 +237,11 @@ exn_finalize(JSContext *cx, JSObject *obj)
 
     if (!JSVAL_IS_VOID(privateValue)) {
         privateData = (JSExnPrivate*) JSVAL_TO_PRIVATE(privateValue);
-        if (privateData)
-            exn_destroyPrivate(cx, privateData);
+        if (privateData) {
+            if (privateData->errorReport)
+                JS_free(cx, privateData->errorReport);
+            JS_free(cx, privateData);
+        }
     }
 }
 
@@ -390,10 +395,15 @@ InitExceptionObject(JSContext *cx, JSObject *obj, JSString *message,
     stacklen = stackmax = 0;
     ok = JS_TRUE;
 
+/* Limit the stackbuf length to a reasonable value to avoid overflow checks. */
+#define STACK_LENGTH_LIMIT JS_BIT(20)
+
 #define APPEND_CHAR_TO_STACK(c)                                               \
     JS_BEGIN_MACRO                                                            \
         if (stacklen == stackmax) {                                           \
             void *ptr_;                                                       \
+            if (stackmax >= STACK_LENGTH_LIMIT)                               \
+                goto done;                                                    \
             stackmax = stackmax ? 2 * stackmax : 64;                          \
             ptr_ = JS_realloc(cx, stackbuf, (stackmax+1) * sizeof(jschar));   \
             if (!ptr_) {                                                      \
@@ -409,8 +419,12 @@ InitExceptionObject(JSContext *cx, JSObject *obj, JSString *message,
     JS_BEGIN_MACRO                                                            \
         JSString *str_ = str;                                                 \
         size_t length_ = JSSTRING_LENGTH(str_);                               \
-        if (stacklen + length_ > stackmax) {                                  \
+        if (length_ > stackmax - stacklen) {                                  \
             void *ptr_;                                                       \
+            if (stackmax >= STACK_LENGTH_LIMIT ||                             \
+                length_ >= STACK_LENGTH_LIMIT - stacklen) {                   \
+                goto done;                                                    \
+            }                                                                 \
             stackmax = JS_BIT(JS_CeilingLog2(stacklen + length_));            \
             ptr_ = JS_realloc(cx, stackbuf, (stackmax+1) * sizeof(jschar));   \
             if (!ptr_) {                                                      \
@@ -490,6 +504,7 @@ InitExceptionObject(JSContext *cx, JSObject *obj, JSString *message,
 
 #undef APPEND_CHAR_TO_STACK
 #undef APPEND_STRING_TO_STACK
+#undef STACK_LENGTH_LIMIT
 
 done:
     if (checkAccess) {
@@ -549,7 +564,6 @@ static JSBool
 Exception(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSBool ok;
-    jsval pval;
     uint32 lineno;
     JSString *message, *filename;
     JSStackFrame *fp;
@@ -569,10 +583,10 @@ Exception(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         ok = OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(argv[-2]),
                               ATOM_TO_JSID(cx->runtime->atomState
                                            .classPrototypeAtom),
-                              &pval);
+                              rval);
         if (!ok)
             goto out;
-        obj = js_NewObject(cx, &ExceptionClass, JSVAL_TO_OBJECT(pval), NULL);
+        obj = js_NewObject(cx, &ExceptionClass, JSVAL_TO_OBJECT(*rval), NULL);
         if (!obj) {
             ok = JS_FALSE;
             goto out;
@@ -943,6 +957,8 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
 {
     JSErrNum errorNumber;
     JSExnType exn;
+    jsval tv[4];
+    JSTempValueRooter tvr;
     JSBool ok;
     JSObject *errProto, *errObject;
     JSString *messageStr, *filenameStr;
@@ -985,12 +1001,13 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
      */
     if (cx->creatingException)
         return JS_FALSE;
+
+    /* After this point the control must flow through the label out. */
     cx->creatingException = JS_TRUE;
 
     /* Protect the newly-created strings below from nesting GCs. */
-    ok = js_EnterLocalRootScope(cx);
-    if (!ok)
-        goto out;
+    memset(tv, 0, sizeof tv);
+    JS_PUSH_TEMP_ROOT(cx, sizeof tv / sizeof tv[0], tv, &tvr);
 
     /*
      * Try to get an appropriate prototype by looking up the corresponding
@@ -1000,27 +1017,21 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     ok = js_GetClassPrototype(cx, exceptions[exn].name, &errProto);
     if (!ok)
         goto out;
+    tv[0] = OBJECT_TO_JSVAL(errProto);
 
     errObject = js_NewObject(cx, &ExceptionClass, errProto, NULL);
     if (!errObject) {
         ok = JS_FALSE;
         goto out;
     }
-
-    /*
-     * Set the generated Exception object early, so it won't be GC'd by a last
-     * ditch attempt to collect garbage, or a GC that otherwise nests or races
-     * under any of the following calls.  If one of the following calls fails,
-     * it will overwrite this exception object with one of its own (except in
-     * case of OOM errors, of course).
-     */
-    JS_SetPendingException(cx, OBJECT_TO_JSVAL(errObject));
+    tv[1] = OBJECT_TO_JSVAL(errObject);
 
     messageStr = JS_NewStringCopyZ(cx, message);
     if (!messageStr) {
         ok = JS_FALSE;
         goto out;
     }
+    tv[2] = STRING_TO_JSVAL(messageStr);
 
     if (reportp) {
         filenameStr = JS_NewStringCopyZ(cx, reportp->filename);
@@ -1028,6 +1039,7 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
             ok = JS_FALSE;
             goto out;
         }
+        tv[3] = STRING_TO_JSVAL(filenameStr);
         lineno = reportp->lineno;
     } else {
         filenameStr = cx->runtime->emptyString;
@@ -1050,11 +1062,13 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     }
     OBJ_SET_SLOT(cx, errObject, JSSLOT_PRIVATE, PRIVATE_TO_JSVAL(privateData));
 
+    JS_SetPendingException(cx, OBJECT_TO_JSVAL(errObject));
+
     /* Flag the error report passed in to indicate an exception was raised. */
     reportp->flags |= JSREPORT_EXCEPTION;
 
 out:
-    js_LeaveLocalRootScope(cx);
+    JS_POP_TEMP_ROOT(cx, &tvr);
     cx->creatingException = JS_FALSE;
     return ok;
 }

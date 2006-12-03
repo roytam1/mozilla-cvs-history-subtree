@@ -99,7 +99,7 @@ JS_ClearAllWatchPoints(JSContext *cx);
  * header file "jsconfig.h" has been included.
  */
 extern void
-js_MarkWatchPoints(JSRuntime *rt);
+js_MarkWatchPoints(JSContext *cx);
 
 extern JSScopeProperty *
 js_FindWatchPoint(JSRuntime *rt, JSScope *scope, jsid id);
@@ -357,6 +357,13 @@ JS_GetScriptTotalSize(JSContext *cx, JSScript *script);
  */
 extern JS_PUBLIC_API(uint32)
 JS_GetTopScriptFilenameFlags(JSContext *cx, JSStackFrame *fp);
+
+/*
+ * Get the script filename flags for the script.  If the script
+ * doesn't have a filename, return JSFILENAME_NULL.
+ */
+extern JS_PUBLIC_API(uint32)
+JS_GetScriptFilenameFlags(JSScript *script);
 
 /*
  * Associate flags with a script filename prefix in rt, so that any subsequent

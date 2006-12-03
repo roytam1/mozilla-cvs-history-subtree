@@ -333,17 +333,20 @@ js_InitGC(JSRuntime *rt, uint32 maxbytes)
     JS_ASSERT(GC_FLAGS_SIZE >= GC_PAGE_SIZE);
     JS_ASSERT(sizeof(JSStackHeader) >= 2 * sizeof(jsval));
 
-    for (i = 0; i < GC_NUM_FREELISTS; i++) {
-        JS_InitArenaPool(&rt->gcArenaPool[i], "gc-arena", GC_ARENA_SIZE,
-                         GC_FREELIST_NBYTES(i));
-    }
+    for (i = 0; i < GC_NUM_FREELISTS; i++)
+        JS_InitArenaPool(&rt->gcArenaPool[i], "gc-arena", GC_ARENA_SIZE, 1);
     if (!JS_DHashTableInit(&rt->gcRootsHash, JS_DHashGetStubOps(), NULL,
                            sizeof(JSGCRootHashEntry), GC_ROOTS_SIZE)) {
         rt->gcRootsHash.ops = NULL;
         return JS_FALSE;
     }
     rt->gcLocksHash = NULL;     /* create lazily */
-    rt->gcMaxBytes = maxbytes;
+
+    /*
+     * Separate gcMaxMallocBytes from gcMaxBytes but initialize to maxbytes
+     * for default backward API compatibility.
+     */
+    rt->gcMaxBytes = rt->gcMaxMallocBytes = maxbytes;
     return JS_TRUE;
 }
 
@@ -589,7 +592,7 @@ retry:
         METER(rt->gcStats.recycle[i]++);
     } else {
         if (rt->gcBytes < rt->gcMaxBytes &&
-            (tried_gc || rt->gcMallocBytes < rt->gcMaxBytes))
+            (tried_gc || rt->gcMallocBytes < rt->gcMaxMallocBytes))
         {
             /*
              * Inline form of JS_ARENA_ALLOCATE adapted to truncate the current
@@ -631,13 +634,6 @@ retry:
             if (!tried_gc) {
                 rt->gcPoke = JS_TRUE;
                 js_GC(cx, GC_KEEP_ATOMS | GC_ALREADY_LOCKED);
-                if (JS_HAS_NATIVE_BRANCH_CALLBACK_OPTION(cx) &&
-                    cx->branchCallback &&
-                    !cx->branchCallback(cx, NULL)) {
-                    METER(rt->gcStats.retryhalt++);
-                    JS_UNLOCK_GC(rt);
-                    return NULL;
-                }
                 tried_gc = JS_TRUE;
                 METER(rt->gcStats.retry++);
                 goto retry;
@@ -658,8 +654,17 @@ retry:
          * this reference, allowing thing to be GC'd if it has no other refs.
          * See JS_EnterLocalRootScope and related APIs.
          */
-        if (js_PushLocalRoot(cx, lrs, (jsval) thing) < 0)
+        if (js_PushLocalRoot(cx, lrs, (jsval) thing) < 0) {
+            /*
+             * When we fail for a thing allocated through the tail of
+             * the last arena, thing's flag byte is not initialized. So
+             * to prevent GC accessing the uninitialized flags during
+             * the finalization, we always mark the thing as final. See
+             * bug 337407.
+             */
+            *flagp = GCF_FINAL;
             goto fail;
+        }
     } else {
         /*
          * No local root scope, so we're stuck with the old, fragile model of
@@ -1530,6 +1535,7 @@ js_GC(JSContext *cx, uintN gcflags)
     JSStackFrame *fp, *chain;
     uintN i, depth, nslots, type;
     JSStackHeader *sh;
+    JSTempValueRooter *tvr;
     size_t nbytes, nflags;
     JSArena *a, **ap;
     uint8 flags, *flagp, *split;
@@ -1702,8 +1708,9 @@ restart:
     if (rt->gcLocksHash)
         JS_DHashTableEnumerate(rt->gcLocksHash, gc_lock_marker, cx);
     js_MarkAtomState(&rt->atomState, gcflags, gc_mark_atom_key_thing, cx);
-    js_MarkWatchPoints(rt);
+    js_MarkWatchPoints(cx);
     js_MarkScriptFilenames(rt, gcflags);
+    js_MarkNativeIteratorStates(cx);
 
     iter = NULL;
     while ((acx = js_ContextIterator(rt, JS_TRUE, &iter)) != NULL) {
@@ -1799,6 +1806,22 @@ restart:
 
         if (acx->localRootStack)
             js_MarkLocalRoots(cx, acx->localRootStack);
+        for (tvr = acx->tempValueRooters; tvr; tvr = tvr->down) {
+            if (tvr->count == -1) {
+                if (JSVAL_IS_GCTHING(tvr->u.value)) {
+                    GC_MARK(cx, JSVAL_TO_GCTHING(tvr->u.value),
+                            "tvr->u.value", NULL);
+                }
+            } else if (tvr->count == -2) {
+                tvr->u.marker(cx, tvr);
+            } else {
+                JS_ASSERT(tvr->count >= 0);
+                GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");
+            }
+        }
+
+        if (acx->sharpObjectMap.depth > 0)
+            js_GCMarkSharpMap(cx, &acx->sharpObjectMap);
     }
 #ifdef DUMP_CALL_TABLE
     js_DumpCallTable(cx);
@@ -1819,7 +1842,6 @@ restart:
      */
     js_SweepAtomState(&rt->atomState);
     js_SweepScopeProperties(rt);
-    js_SweepScriptFilenames(rt);
     for (i = 0; i < GC_NUM_FREELISTS; i++) {
         nbytes = GC_FREELIST_NBYTES(i);
         nflags = nbytes / sizeof(JSGCThing);
@@ -1862,6 +1884,14 @@ restart:
             }
         }
     }
+
+    /*
+     * Sweep script filenames after sweeping functions in the generic loop
+     * above. In this way when scripted function's finalizer destroys script
+     * triggering a call to rt->destroyScriptHook, the hook can still access
+     * script's filename. See bug 323267.
+     */
+    js_SweepScriptFilenames(rt);
 
     /*
      * Free phase.

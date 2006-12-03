@@ -118,11 +118,11 @@ JSClass perlClass = {
 };
 
 static JSFunctionSpec perlMethods[] = {
-    {"toString",  (JSNative)PerlToString, 0},
-    {"eval",  (JSNative)perl_eval, 0},
-    {"call",  (JSNative)perl_call, 0},
-    {"use",   (JSNative)perl_use,  0},
-    { NULL, NULL,0 }
+    {"toString",        (JSNative)PerlToString, 0,0,0},
+    {"eval",            (JSNative)perl_eval,    0,0,0},
+    {"call",            (JSNative)perl_call,    0,0,0},
+    {"use",             (JSNative)perl_use,     0,0,0},
+    {NULL, NULL, 0,0,0}
 };
 
 
@@ -134,8 +134,8 @@ JSClass perlModuleClass = {
 };
 
 JSFunctionSpec perlModuleMethods[] = {
-    {"toString",  (JSNative)PMToString, 0},
-    { NULL, NULL,0 }
+    {"toString",        (JSNative)PMToString,   0,0,0},
+    {NULL, NULL, 0,0,0}
 };
 
 
@@ -147,8 +147,8 @@ JSClass perlValueClass = {
 };
 
 JSFunctionSpec perlValueMethods[] = {
-    {"toString",  (JSNative)PVToString, 0},
-    { NULL, NULL,             0}
+    {"toString",  (JSNative)PVToString, 0,0,0},
+    {NULL, NULL, 0,0,0}
 };
 
 /*
@@ -410,7 +410,7 @@ checkError(JSContext *cx)
 }
 
 /*
-    Take the value of $JS::js and convert in to a jsval. It's stotred
+    Take the value of $JS::js and convert it to a jsval. It is stored
     in *rval. perl_eval and perl_call use $JS::js to store return results.
 */
 static JSBool

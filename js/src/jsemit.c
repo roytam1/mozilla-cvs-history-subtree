@@ -327,11 +327,10 @@ ReportStatementTooLarge(JSContext *cx, JSCodeGenerator *cg)
   Note that backpatch chains would present a problem for BuildSpanDepTable,
   which inspects bytecode to build cg->spanDeps on demand, when the first
   short jump offset overflows.  To solve this temporary problem, we emit a
-  proxy bytecode (JSOP_BACKPATCH; JSOP_BACKPATCH_PUSH for jumps that push a
-  result on the interpreter's stack, namely JSOP_GOSUB; or JSOP_BACKPATCH_POP
-  for branch ops) whose nuses/ndefs counts help keep the stack balanced, but
-  whose opcode format distinguishes its backpatch delta immediate operand from
-  a normal jump offset.
+  proxy bytecode (JSOP_BACKPATCH; JSOP_BACKPATCH_POP for branch ops) whose
+  nuses/ndefs counts help keep the stack balanced, but whose opcode format
+  distinguishes its backpatch delta immediate operand from a normal jump
+  offset.
  */
 static int
 BalanceJumpTargets(JSJumpTarget **jtp)
@@ -546,7 +545,7 @@ BuildSpanDepTable(JSContext *cx, JSCodeGenerator *cg)
     const JSCodeSpec *cs;
     ptrdiff_t len, off;
 
-    pc = CG_BASE(cg);
+    pc = CG_BASE(cg) + cg->spanDepTodo;
     end = CG_NEXT(cg);
     while (pc < end) {
         op = (JSOp)*pc;
@@ -611,6 +610,7 @@ BuildSpanDepTable(JSContext *cx, JSCodeGenerator *cg)
 #endif /* JS_HAS_SWITCH_STATEMENT */
         }
 
+        JS_ASSERT(len > 0);
         pc += len;
     }
 
@@ -1037,6 +1037,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
                 }
             }
         }
+        cg->main.lastNoteOffset += growth;
 
         /*
          * Fix try/catch notes (O(numTryNotes * log2(numSpanDeps)), but it's
@@ -1130,6 +1131,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
     FreeJumpTargets(cg, cg->jumpTargets);
     cg->jumpTargets = NULL;
     cg->numSpanDeps = cg->numJumpTargets = 0;
+    cg->spanDepTodo = CG_OFFSET(cg);
     return JS_TRUE;
 }
 
@@ -1300,7 +1302,7 @@ EmitNonLocalJumpFixup(JSContext *cx, JSCodeGenerator *cg, JSStmtInfo *toStmt,
           case STMT_FINALLY:
             if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0)
                 return JS_FALSE;
-            jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH_PUSH, &stmt->gosub);
+            jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH, &stmt->gosub);
             if (jmp < 0)
                 return JS_FALSE;
             break;
@@ -1324,10 +1326,13 @@ EmitNonLocalJumpFixup(JSContext *cx, JSCodeGenerator *cg, JSStmtInfo *toStmt,
             break;
 
           case STMT_SUBROUTINE:
-            /* There's a retsub pc-offset on the stack that we need to pop. */
+            /*
+             * There's a [exception or hole, retsub pc-index] pair on the
+             * stack that we need to pop.
+             */
             if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0)
                 return JS_FALSE;
-            if (js_Emit1(cx, cg, JSOP_POP) < 0)
+            if (js_Emit1(cx, cg, JSOP_POP2) < 0)
                 return JS_FALSE;
             break;
 
@@ -1645,16 +1650,18 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
 
     if (atomIndex >= JS_BIT(16)) {
         mode = (js_CodeSpec[op].format & JOF_MODEMASK);
-        prefixOp = (mode == JOF_NAME)
-                   ? JSOP_FINDNAME
-                   : (mode == JOF_PROP)
-                   ? JSOP_LITERAL
-                   : JSOP_LITOPX;
-        off = js_EmitN(cx, cg, prefixOp, 3);
-        if (off < 0)
-            return JS_FALSE;
-        pc = CG_CODE(cg, off);
-        SET_LITERAL_INDEX(pc, atomIndex);
+        if (op != JSOP_SETNAME) {
+            prefixOp = (mode == JOF_NAME)
+                       ? JSOP_FINDNAME
+                       : (mode == JOF_PROP)
+                       ? JSOP_LITERAL
+                       : JSOP_LITOPX;
+            off = js_EmitN(cx, cg, prefixOp, 3);
+            if (off < 0)
+                return JS_FALSE;
+            pc = CG_CODE(cg, off);
+            SET_LITERAL_INDEX(pc, atomIndex);
+        }
 
         switch (op) {
           case JSOP_DECNAME:    op = JSOP_DECELEM; break;
@@ -1673,6 +1680,7 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
           case JSOP_NAMEINC:    op = JSOP_ELEMINC; break;
           case JSOP_PROPDEC:    op = JSOP_ELEMDEC; break;
           case JSOP_PROPINC:    op = JSOP_ELEMINC; break;
+          case JSOP_BINDNAME:   return JS_TRUE;
           case JSOP_SETNAME:    op = JSOP_SETELEM; break;
           case JSOP_SETPROP:    op = JSOP_SETELEM; break;
           default:              JS_ASSERT(mode == 0); break;
@@ -1692,7 +1700,7 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
  */
 #define EMIT_ATOM_INDEX_OP(op, atomIndex)                                     \
     JS_BEGIN_MACRO                                                            \
-        if (!EmitAtomIndexOp(cx, op, atomIndex, cg) < 0)                      \
+        if (!EmitAtomIndexOp(cx, op, atomIndex, cg))                          \
             return JS_FALSE;                                                  \
     JS_END_MACRO
 
@@ -2836,7 +2844,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
     JSAtom *atom;
     JSAtomListElement *ale;
     jsatomid atomIndex;
-    intN noteIndex;
+    ptrdiff_t noteIndex;
     JSSrcNoteType noteType;
     jsbytecode *pc;
     JSOp op;
@@ -3261,6 +3269,12 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 }
                 /* FALL THROUGH */
 
+#if JS_HAS_XML_SUPPORT
+              case TOK_UNARYOP:
+#endif
+#if JS_HAS_LVALUE_RETURN
+              case TOK_LP:
+#endif
               case TOK_LB:
                 /*
                  * We separate the first/next bytecode from the enumerator
@@ -3285,6 +3299,27 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 beq = EmitJump(cx, cg, JSOP_IFEQ, 0);
                 if (beq < 0)
                     return JS_FALSE;
+
+#if JS_HAS_LVALUE_RETURN
+                if (pn3->pn_type == TOK_LP) {
+                    JS_ASSERT(pn3->pn_op == JSOP_SETCALL);
+                    if (!js_EmitTree(cx, cg, pn3))
+                        return JS_FALSE;
+                    if (!js_Emit1(cx, cg, JSOP_ENUMELEM))
+                        return JS_FALSE;
+                    break;
+                }
+#endif
+#if JS_HAS_XML_SUPPORT
+                if (pn3->pn_type == TOK_UNARYOP) {
+                    JS_ASSERT(pn3->pn_op == JSOP_BINDXMLNAME);
+                    if (!js_EmitTree(cx, cg, pn3))
+                        return JS_FALSE;
+                    if (!js_Emit1(cx, cg, JSOP_ENUMELEM))
+                        return JS_FALSE;
+                    break;
+                }
+#endif
 
                 /* Now that we're safely past the IFEQ, commit side effects. */
                 if (!EmitElemOp(cx, pn3, JSOP_ENUMELEM, cg))
@@ -3516,7 +3551,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         if (pn->pn_kid3) {
             if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0)
                 return JS_FALSE;
-            jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH_PUSH, &stmtInfo.gosub);
+            jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH, &stmtInfo.gosub);
             if (jmp < 0)
                 return JS_FALSE;
         }
@@ -3553,7 +3588,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
              *
              * If there's no catch block without a catchguard, the last
              * <offset to next catch block> points to rethrow code.  This
-             * code will GOSUB to the finally code if appropriate, and is
+             * code will [gosub] to the finally code if appropriate, and is
              * also used for the catch-all trynote for capturing exceptions
              * thrown from catch{} blocks.
              */
@@ -3566,8 +3601,14 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     return JS_FALSE;
 
                 if (catchJump != -1) {
+                    JS_ASSERT(cg->stackDepth == depth);
+
                     /* Fix up and clean up previous catch block. */
                     CHECK_AND_SET_JUMP_OFFSET_AT(cx, cg, catchJump);
+
+                    /* Set cx->throwing to protect cx->exception from the GC. */
+                    if (!js_Emit1(cx, cg, JSOP_THROWING) < 0)
+                        return JS_FALSE;
 
                     /* Compensate for the [leavewith]. */
                     cg->stackDepth++;
@@ -3652,10 +3693,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
                 /* gosub <finally>, if required */
                 if (pn->pn_kid3) {
-                    jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH_PUSH,
+                    jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH,
                                           &stmtInfo.gosub);
                     if (jmp < 0)
                         return JS_FALSE;
+                    JS_ASSERT(cg->stackDepth == depth);
                 }
 
                 /* This will get fixed up to jump to after catch/finally. */
@@ -3672,12 +3714,35 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         }
 
         /*
-         * We use a [setsp],[gosub],rethrow block for rethrowing when
-         * there's no unguarded catch, and also for running finally code
-         * while letting an uncaught exception pass through.
+         * We emit a [setsp][gosub] sequence for running finally code while
+         * letting an uncaught exception pass thrown from within the try in a
+         * try-finally.  The [gosub] and [retsub] opcodes will take care of
+         * stacking and rethrowing any exception pending across the finally.
+         *
+         * For rethrowing after a try-catch(guard)-finally, we have a problem:
+         * all the guards have mismatched, leaving cx->exception still set but
+         * cx->throwing clear, so that no exception appears to be pending for
+         * [gosub] to stack and [retsub] to rethrow.  We must emit a special
+         * [throwing] opcode in front of the [setsp][gosub]; this opcode will
+         * restore cx->throwing to true before running the finally.
+         * 
+         * For rethrowing after a try-catch(guard) without a finally, we emit
+         * [setsp][exception][throw].
          */
         if (pn->pn_kid3 ||
             (catchJump != -1 && iter->pn_kid1->pn_expr)) {
+            /*
+             * Last discriminant jumps to the rethrow code sequence if no
+             * discriminants match.  Target catchJump at the beginning of the
+             * rethrow sequence, just in case a guard expression throws and
+             * leaves the stack unbalanced.
+             */
+            if (catchJump != -1 && iter->pn_kid1->pn_expr) {
+                CHECK_AND_SET_JUMP_OFFSET_AT(cx, cg, catchJump);
+                if (pn->pn_kid3 && !js_Emit1(cx, cg, JSOP_THROWING) < 0)
+                    return JS_FALSE;
+            }
+
             /*
              * Emit another stack fixup, because the catch could itself
              * throw an exception in an unbalanced state, and the finally
@@ -3689,25 +3754,21 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             EMIT_UINT16_IMM_OP(JSOP_SETSP, (jsatomid)depth);
             cg->stackDepth = depth;
 
-            /* Last discriminant jumps to rethrow if none match. */
-            if (catchJump != -1 && iter->pn_kid1->pn_expr)
-                CHECK_AND_SET_JUMP_OFFSET_AT(cx, cg, catchJump);
-
             if (pn->pn_kid3) {
-                jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH_PUSH,
-                                      &stmtInfo.gosub);
+                jmp = EmitBackPatchOp(cx, cg, JSOP_BACKPATCH, &stmtInfo.gosub);
                 if (jmp < 0)
                     return JS_FALSE;
-                cg->stackDepth = depth;
-            }
 
-            if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0 ||
-                js_Emit1(cx, cg, JSOP_EXCEPTION) < 0 ||
-                js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0 ||
-                js_Emit1(cx, cg, JSOP_THROW) < 0) {
-                return JS_FALSE;
+                JS_ASSERT(cg->stackDepth == depth);
+                JS_ASSERT((uintN)depth <= cg->maxStackDepth);
+            } else {
+                if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0 ||
+                    js_Emit1(cx, cg, JSOP_EXCEPTION) < 0 ||
+                    js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0 ||
+                    js_Emit1(cx, cg, JSOP_THROW) < 0) {
+                    return JS_FALSE;
+                }
             }
-            JS_ASSERT(cg->stackDepth == depth);
         }
 
         /*
@@ -3719,12 +3780,14 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 return JS_FALSE;
 
             /*
-             * The stack budget must be balanced at this point, and we need
-             * one more slot for the JSOP_RETSUB return address pushed by a
-             * JSOP_GOSUB opcode that calls this finally clause.
+             * The stack budget must be balanced at this point.  All [gosub]
+             * calls emitted before this point will push two stack slots, one
+             * for the pending exception (or JSVAL_HOLE if there is no pending
+             * exception) and one for the [retsub] pc-index.
              */
             JS_ASSERT(cg->stackDepth == depth);
-            if ((uintN)++cg->stackDepth > cg->maxStackDepth)
+            cg->stackDepth += 2;
+            if ((uintN)cg->stackDepth > cg->maxStackDepth)
                 cg->maxStackDepth = cg->stackDepth;
 
             /* Now indicate that we're emitting a subroutine body. */
@@ -3736,8 +3799,13 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 js_Emit1(cx, cg, JSOP_RETSUB) < 0) {
                 return JS_FALSE;
             }
+
+            /* Restore stack depth budget to its balanced state. */
+            JS_ASSERT(cg->stackDepth == depth + 2);
+            cg->stackDepth = depth;
         }
-        js_PopStatementCG(cx, cg);
+        if (!js_PopStatementCG(cx, cg))
+            return JS_FALSE;
 
         if (js_NewSrcNote(cx, cg, SRC_ENDBRACE) < 0 ||
             js_Emit1(cx, cg, JSOP_NOP) < 0) {
@@ -4322,6 +4390,20 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         pn2 = pn->pn_kid;
         JS_ASSERT(pn2->pn_type != TOK_RP);
         op = pn->pn_op;
+
+        /*
+         * Allocate another stack slot for GC protection in case the initial
+         * value being post-incremented or -decremented is not a number, but
+         * converts to a jsdouble.  In the TOK_NAME cases, op has 0 operand
+         * uses and 1 definition, so we don't need an extra stack slot -- we
+         * can use the one allocated for the def.
+         */
+        if (pn2->pn_type != TOK_NAME &&
+            (js_CodeSpec[op].format & JOF_POST) &&
+            (uintN)++cg->stackDepth > cg->maxStackDepth) {
+            cg->maxStackDepth = cg->stackDepth;
+        }
+
         switch (pn2->pn_type) {
           case TOK_NAME:
             pn2->pn_op = op;
@@ -4376,6 +4458,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
           default:
             JS_ASSERT(0);
         }
+
+        if (pn2->pn_type != TOK_NAME && (js_CodeSpec[op].format & JOF_POST))
+            --cg->stackDepth;
         break;
 
       case TOK_DELETE:
@@ -4684,6 +4769,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
 #if JS_HAS_XML_SUPPORT
       case TOK_XMLATTR:
+      case TOK_XMLSPACE:
       case TOK_XMLTEXT:
       case TOK_XMLCDATA:
       case TOK_XMLCOMMENT:

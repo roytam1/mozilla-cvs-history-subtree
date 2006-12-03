@@ -1,5 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -460,8 +460,6 @@ js_SetLocalVariable(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 JSBool
 js_ComputeThis(JSContext *cx, JSObject *thisp, JSStackFrame *fp)
 {
-    JSObject *parent;
-
     if (thisp && OBJ_GET_CLASS(cx, thisp) != &js_CallClass) {
         /* Some objects (e.g., With) delegate 'this' to another object. */
         thisp = OBJ_THIS_OBJECT(cx, thisp);
@@ -490,13 +488,25 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, JSStackFrame *fp)
          */
         JS_ASSERT(!(fp->flags & JSFRAME_CONSTRUCTING));
         if (JSVAL_IS_PRIMITIVE(fp->argv[-2]) ||
-            !(parent = OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(fp->argv[-2])))) {
+            !OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(fp->argv[-2]))) {
             thisp = cx->globalObject;
         } else {
-            /* walk up to find the top-level object */
-            thisp = parent;
-            while ((parent = OBJ_GET_PARENT(cx, thisp)) != NULL)
-                thisp = parent;
+            jsid id;
+            jsval v;
+            uintN attrs;
+
+            /* Walk up the parent chain. */
+            thisp = JSVAL_TO_OBJECT(fp->argv[-2]);
+            id = ATOM_TO_JSID(cx->runtime->atomState.parentAtom);
+            for (;;) {
+                if (!OBJ_CHECK_ACCESS(cx, thisp, id, JSACC_PARENT, &v, &attrs))
+                    return JS_FALSE;
+                if (JSVAL_IS_VOID(v))
+                    v = OBJ_GET_SLOT(cx, thisp, JSSLOT_PARENT);
+                if (JSVAL_IS_NULL(v))
+                    break;
+                thisp = JSVAL_TO_OBJECT(v);
+            }
         }
     }
     fp->thisp = thisp;
@@ -1535,7 +1545,9 @@ ImportProperty(JSContext *cx, JSObject *obj, jsid id)
             ok = OBJ_SET_PROPERTY(cx, target, id, &value);
         } else {
             ok = OBJ_DEFINE_PROPERTY(cx, target, id, value, NULL, NULL,
-                                     attrs & ~JSPROP_EXPORTED,
+                                     attrs & ~(JSPROP_EXPORTED |
+                                               JSPROP_GETTER |
+                                               JSPROP_SETTER),
                                      NULL);
         }
         if (prop)
@@ -1908,7 +1920,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             break;
 
           case JSOP_GROUP:
-            obj = NULL;
             break;
 
           case JSOP_PUSH:
@@ -1940,11 +1951,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           case JSOP_ENTERWITH:
             FETCH_OBJECT(cx, -1, rval, obj);
             SAVE_SP(fp);
-            withobj = js_NewObject(cx, &js_WithClass, obj, fp->scopeChain);
+            withobj = js_NewWithObject(cx, obj, fp->scopeChain,
+                                       sp - fp->spbase - 1);
             if (!withobj)
                 goto out;
             rval = INT_TO_JSVAL(sp - fp->spbase);
-            OBJ_SET_SLOT(cx, withobj, JSSLOT_PRIVATE, rval);
             fp->scopeChain = withobj;
             STORE_OPND(-1, OBJECT_TO_JSVAL(withobj));
             break;
@@ -1958,6 +1969,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             rval = OBJ_GET_SLOT(cx, withobj, JSSLOT_PARENT);
             JS_ASSERT(JSVAL_IS_OBJECT(rval));
             fp->scopeChain = JSVAL_TO_OBJECT(rval);
+            JS_SetPrivate(cx, withobj, NULL);
             break;
 
           case JSOP_SETRVAL:
@@ -1983,6 +1995,17 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                         LOAD_INTERRUPT_HANDLER(rt);
                     }
                 }
+
+#if JS_HAS_CALL_OBJECT
+                /*
+                 * If frame has a call object, sync values and clear the back-
+                 * pointer. This can happen for a lightweight function if it
+                 * calls eval unexpectedly (in a way that is hidden from the
+                 * compiler). See bug 325540.
+                 */
+                if (fp->callobj)
+                    ok &= js_PutCallObject(cx, fp);
+#endif
 #if JS_HAS_ARGS_OBJECT
                 if (fp->argsobj)
                     ok &= js_PutArgsObject(cx, fp);
@@ -2259,12 +2282,23 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
             /* Is this the first iteration ? */
             if (JSVAL_IS_VOID(rval)) {
-                /* Yes, create a new JSObject to hold the iterator state */
-                propobj = js_NewObject(cx, &prop_iterator_class, NULL, obj);
+                /*
+                 * Yes, create a new JSObject to hold the iterator state.
+                 * Use NULL as the nominal parent in js_NewObject to ensure
+                 * that we use the correct scope chain lookup to try to find the
+                 * PropertyIterator constructor.
+                 */
+                propobj = js_NewObject(cx, &prop_iterator_class, NULL, NULL);
                 if (!propobj) {
                     ok = JS_FALSE;
                     goto out;
                 }
+
+                /*
+                 * Now that we've resolved the object, use the PARENT slot to
+                 * store the object that we're iterating over.
+                 */
+                propobj->slots[JSSLOT_PARENT] = OBJECT_TO_JSVAL(obj);
                 propobj->slots[JSSLOT_ITER_STATE] = JSVAL_NULL;
 
                 /*
@@ -2638,6 +2672,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 goto out;
             sp--;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
 #define INTEGER_OP(OP, EXTRA_CODE)                                            \
@@ -2684,6 +2719,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             }                                                                 \
         } else {                                                              \
             VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_NUMBER, &lval);               \
+            sp[-2] = lval;                                                    \
             VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_NUMBER, &rval);               \
             if (JSVAL_IS_STRING(lval) && JSVAL_IS_STRING(rval)) {             \
                 str  = JSVAL_TO_STRING(lval);                                 \
@@ -2770,10 +2806,12 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 cond = 1 OP 0;                                                \
             } else {                                                          \
                 if (ltmp == JSVAL_OBJECT) {                                   \
-                    VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &lval);         \
+                    VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &sp[-2]);       \
+                    lval = sp[-2];                                            \
                     ltmp = JSVAL_TAG(lval);                                   \
                 } else if (rtmp == JSVAL_OBJECT) {                            \
-                    VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &rval);         \
+                    VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &sp[-1]);       \
+                    rval = sp[-1];                                            \
                     rtmp = JSVAL_TAG(rval);                                   \
                 }                                                             \
                 if (ltmp == JSVAL_STRING && rtmp == JSVAL_STRING) {           \
@@ -2906,32 +2944,36 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 break;
             }
 #endif
-            VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &ltmp);
-            VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &rtmp);
-            if ((cond = JSVAL_IS_STRING(ltmp)) || JSVAL_IS_STRING(rtmp)) {
-                SAVE_SP(fp);
-                if (cond) {
-                    str = JSVAL_TO_STRING(ltmp);
-                    ok = (str2 = js_ValueToString(cx, rtmp)) != NULL;
+            {
+                VALUE_TO_PRIMITIVE(cx, lval, JSTYPE_VOID, &sp[-2]);
+                lval = sp[-2];
+                VALUE_TO_PRIMITIVE(cx, rval, JSTYPE_VOID, &sp[-1]);
+                rval = sp[-1];
+                if ((cond = JSVAL_IS_STRING(lval)) || JSVAL_IS_STRING(rval)) {
+                    SAVE_SP(fp);
+                    if (cond) {
+                        str = JSVAL_TO_STRING(lval);
+                        ok = (str2 = js_ValueToString(cx, rval)) != NULL;
+                    } else {
+                        str2 = JSVAL_TO_STRING(rval);
+                        ok = (str = js_ValueToString(cx, lval)) != NULL;
+                    }
+                    if (!ok)
+                        goto out;
+                    str = js_ConcatStrings(cx, str, str2);
+                    if (!str) {
+                        ok = JS_FALSE;
+                        goto out;
+                    }
+                    sp--;
+                    STORE_OPND(-1, STRING_TO_JSVAL(str));
                 } else {
-                    str2 = JSVAL_TO_STRING(rtmp);
-                    ok = (str = js_ValueToString(cx, ltmp)) != NULL;
+                    VALUE_TO_NUMBER(cx, lval, d);
+                    VALUE_TO_NUMBER(cx, rval, d2);
+                    d += d2;
+                    sp--;
+                    STORE_NUMBER(cx, -1, d);
                 }
-                if (!ok)
-                    goto out;
-                str = js_ConcatStrings(cx, str, str2);
-                if (!str) {
-                    ok = JS_FALSE;
-                    goto out;
-                }
-                sp--;
-                STORE_OPND(-1, STRING_TO_JSVAL(str));
-            } else {
-                VALUE_TO_NUMBER(cx, lval, d);
-                VALUE_TO_NUMBER(cx, rval, d2);
-                d += d2;
-                sp--;
-                STORE_NUMBER(cx, -1, d);
             }
             break;
 
@@ -3223,7 +3265,9 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 /*
  * Initially, rval contains the value to increment or decrement, which is not
  * yet converted.  As above, the expression result goes in rtmp, the updated
- * value goes in rval.
+ * value goes in rval.  Our caller must set vp to point at a GC-rooted jsval
+ * in which we home rtmp, to protect it from GC in case the unconverted rval
+ * is not a number.
  */
 #define NONINT_INCREMENT_OP_MIDDLE()                                          \
     JS_BEGIN_MACRO                                                            \
@@ -3234,6 +3278,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 ok = js_NewNumberValue(cx, d, &rtmp);                         \
                 if (!ok)                                                      \
                     goto out;                                                 \
+                *vp = rtmp;                                                   \
             }                                                                 \
             (cs->format & JOF_INC) ? d++ : d--;                               \
             ok = js_NewNumberValue(cx, d, &rval);                             \
@@ -3245,6 +3290,21 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
         if (!ok)                                                              \
             goto out;                                                         \
     JS_END_MACRO
+
+                if (cs->format & JOF_POST) {
+                    /*
+                     * We must push early to protect the postfix increment
+                     * or decrement result, if converted to a jsdouble from
+                     * a non-number value, from GC nesting in the setter.
+                     */
+                    vp = sp;
+                    PUSH(JSVAL_VOID);
+                    SAVE_SP(fp);
+                    --i;
+                }
+#ifdef __GNUC__
+                else vp = NULL; /* suppress bogus gcc warnings */
+#endif
 
                 NONINT_INCREMENT_OP_MIDDLE();
             }
@@ -3337,9 +3397,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 #undef FAST_GLOBAL_INCREMENT_OP
 
           do_nonint_fast_global_incop:
+            vp = sp++;
+            SAVE_SP(fp);
             NONINT_INCREMENT_OP_MIDDLE();
             OBJ_SET_SLOT(cx, obj, slot, rval);
-            PUSH_OPND(rtmp);
+            STORE_OPND(-1, rtmp);
             break;
 
           case JSOP_GETPROP:
@@ -3360,6 +3422,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             PROPERTY_OP(-2, CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval)));
             sp--;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
           case JSOP_GETELEM:
@@ -3373,6 +3436,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             ELEMENT_OP(-2, CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval)));
             sp -= 2;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
           case JSOP_ENUMELEM:
@@ -3777,6 +3841,15 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 obj2 = fp->scopeChain;
                 while ((parent = OBJ_GET_PARENT(cx, obj2)) != NULL)
                     obj2 = parent;
+
+                /*
+                 * We must home sp here, because either js_CloneRegExpObject
+                 * or JS_SetReservedSlot could nest a last-ditch GC.  We home
+                 * pc as well, in case js_CloneRegExpObject has to lookup the
+                 * "RegExp" class in the global object, which could entail a
+                 * JSNewResolveOp call.
+                 */
+                SAVE_SP(fp);
 
                 /*
                  * If obj's parent is not obj2, we must clone obj so that it
@@ -4247,6 +4320,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 GC_POKE(cx, obj->slots[slot]);
                 OBJ_SET_SLOT(cx, obj, slot, rval);
             }
+            obj = NULL;
             break;
 
           case JSOP_DEFCONST:
@@ -4265,6 +4339,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
             /* Lookup id in order to check for redeclaration problems. */
             id = ATOM_TO_JSID(atom);
+            SAVE_SP(fp);
             ok = js_CheckRedeclaration(cx, obj, id, attrs, &obj2, &prop);
             if (!ok)
                 goto out;
@@ -4390,6 +4465,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
              * as well as multiple HTML script tags.
              */
             parent = fp->varobj;
+            SAVE_SP(fp);
             ok = js_CheckRedeclaration(cx, parent, id, attrs, NULL, NULL);
             if (ok) {
                 ok = OBJ_DEFINE_PROPERTY(cx, parent, id, rval,
@@ -4483,8 +4559,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
              */
             SAVE_SP(fp);
             obj2 = fp->scopeChain;
-            parent = js_ConstructObject(cx, &js_ObjectClass, NULL, obj2,
-                                        0, NULL);
+            parent = js_NewObject(cx, &js_ObjectClass, NULL, obj2);
             if (!parent) {
                 ok = JS_FALSE;
                 goto out;
@@ -4691,6 +4766,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             /* Ensure that id has a type suitable for use with obj. */
             CHECK_ELEMENT_ID(obj, id);
 
+            SAVE_SP(fp);
             if (JS_TypeOfValue(cx, rval) != JSTYPE_FUNCTION) {
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                      JSMSG_BAD_GETTER_OR_SETTER,
@@ -4705,7 +4781,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
              * Getters and setters are just like watchpoints from an access
              * control point of view.
              */
-            SAVE_SP(fp);
             ok = OBJ_CHECK_ACCESS(cx, obj, id, JSACC_WATCH, &rtmp, &attrs);
             if (!ok)
                 goto out;
@@ -4731,6 +4806,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (!ok)
                 goto out;
 
+            obj = NULL;
             sp += i;
             if (cs->ndefs)
                 STORE_OPND(-1, rval);
@@ -4858,19 +4934,31 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
             obj = fp->scopeChain;
             while (OBJ_GET_CLASS(cx, obj) == &js_WithClass &&
-                   JSVAL_TO_INT(OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE)) > i) {
+                   JS_GetPrivate(cx, obj) == fp &&
+                   OBJ_BLOCK_DEPTH(cx, obj) >= i) {
                 obj = OBJ_GET_PARENT(cx, obj);
             }
             fp->scopeChain = obj;
             break;
 
           case JSOP_GOSUB:
+            JS_ASSERT(cx->exception != JSVAL_HOLE);
+            if (!cx->throwing) {
+                lval = JSVAL_HOLE;
+            } else {
+                lval = cx->exception;
+                cx->throwing = JS_FALSE;
+            }
+            PUSH(lval);
             i = PTRDIFF(pc, script->main, jsbytecode) + len;
             len = GET_JUMP_OFFSET(pc);
             PUSH(INT_TO_JSVAL(i));
             break;
 
           case JSOP_GOSUBX:
+            JS_ASSERT(cx->exception != JSVAL_HOLE);
+            lval = cx->throwing ? cx->exception : JSVAL_HOLE;
+            PUSH(lval);
             i = PTRDIFF(pc, script->main, jsbytecode) + len;
             len = GET_JUMPX_OFFSET(pc);
             PUSH(INT_TO_JSVAL(i));
@@ -4879,6 +4967,19 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           case JSOP_RETSUB:
             rval = POP();
             JS_ASSERT(JSVAL_IS_INT(rval));
+            lval = POP();
+            if (lval != JSVAL_HOLE) {
+                /*
+                 * Exception was pending during finally, throw it *before* we
+                 * adjust pc, because pc indexes into script->trynotes.  This
+                 * turns out not to be necessary, but it seems clearer.  And
+                 * it points out a FIXME: 350509, due to Igor Bukanov.
+                 */
+                cx->throwing = JS_TRUE;
+                cx->exception = lval;
+                ok = JS_FALSE;
+                goto out;
+            }
             i = JSVAL_TO_INT(rval);
             pc = script->main + i;
             len = 0;
@@ -4887,6 +4988,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           case JSOP_EXCEPTION:
             PUSH(cx->exception);
             cx->throwing = JS_FALSE;
+            break;
+
+          case JSOP_THROWING:
+            JS_ASSERT(!cx->throwing);
+            cx->throwing = JS_TRUE;
             break;
 
           case JSOP_THROW:
@@ -4909,12 +5015,24 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             JS_ASSERT(JSVAL_IS_OBJECT(lval));
             obj = JSVAL_TO_OBJECT(lval);
 
-            /* Define obj[id] to contain rval and to be permanent. */
             SAVE_SP(fp);
-            ok = OBJ_DEFINE_PROPERTY(cx, obj, id, rval, NULL, NULL,
-                                     JSPROP_PERMANENT, NULL);
+
+            /*
+             * It's possible for an evil script to substitute a random object
+             * for the new object. Check to make sure that we don't override a
+             * readonly property with the below OBJ_DEFINE_PROPERTY.
+             */
+            ok = OBJ_GET_ATTRIBUTES(cx, obj, id, NULL, &attrs);
             if (!ok)
                 goto out;
+            if (!(attrs & (JSPROP_READONLY | JSPROP_PERMANENT |
+                           JSPROP_GETTER | JSPROP_SETTER))) {
+                /* Define obj[id] to contain rval and to be permanent. */
+                ok = OBJ_DEFINE_PROPERTY(cx, obj, id, rval, NULL, NULL,
+                                         JSPROP_PERMANENT, NULL);
+                if (!ok)
+                    goto out;
+            }
 
             /* Now that we're done with rval, pop it. */
             sp--;
@@ -5081,6 +5199,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 goto out;
             sp -= 2;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
           case JSOP_XMLNAME:
@@ -5273,6 +5392,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 goto out;
             --sp;
             STORE_OPND(-1, rval);
+            obj = NULL;
           END_LITOPX_CASE
 
           case JSOP_GETFUNNS:
@@ -5414,7 +5534,6 @@ no_catch:;
         goto inline_return;
     }
 
-out2:
     /*
      * Reset sp before freeing stack slots, because our caller may GC soon.
      * Clear spbase to indicate that we've popped the 2 * depth operand slots.
@@ -5427,6 +5546,8 @@ out2:
     } else {
         SAVE_SP(fp);
     }
+
+out2:
     if (cx->version == currentVersion && currentVersion != originalVersion)
         js_SetVersion(cx, originalVersion);
     cx->interpLevel--;

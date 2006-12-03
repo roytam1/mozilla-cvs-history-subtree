@@ -278,14 +278,18 @@ DropWatchPoint(JSContext *cx, JSWatchPoint *wp)
 }
 
 void
-js_MarkWatchPoints(JSRuntime *rt)
+js_MarkWatchPoints(JSContext *cx)
 {
+    JSRuntime *rt;
     JSWatchPoint *wp;
 
+    rt = cx->runtime;
     for (wp = (JSWatchPoint *)rt->watchPointList.next;
          wp != (JSWatchPoint *)&rt->watchPointList;
          wp = (JSWatchPoint *)wp->links.next) {
         MARK_SCOPE_PROPERTY(wp->sprop);
+        if (wp->sprop->attrs & JSPROP_SETTER)
+            JS_MarkGCThing(cx, wp->setter, "wp->setter", NULL);
     }
 }
 
@@ -364,14 +368,58 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                  * stack-walking security code in the setter will correctly
                  * identify the guilty party.
                  */
-                JSObject *funobj = (JSObject *) wp->closure;
-                JSFunction *fun = (JSFunction *) JS_GetPrivate(cx, funobj);
+                JSObject *closure;
+                JSClass *clasp;
+                JSFunction *fun;
+                JSScript *script;
+                uintN nslots;
+                jsval smallv[5];
+                jsval *argv;
                 JSStackFrame frame;
 
+                closure = (JSObject *) wp->closure;
+                clasp = OBJ_GET_CLASS(cx, closure);
+                if (clasp == &js_FunctionClass) {
+                    fun = (JSFunction *) JS_GetPrivate(cx, closure);
+                    script = FUN_SCRIPT(fun);
+                } else if (clasp == &js_ScriptClass) {
+                    fun = NULL;
+                    script = (JSScript *) JS_GetPrivate(cx, closure);
+                } else {
+                    fun = NULL;
+                    script = NULL;
+                }
+
+                nslots = 2;
+                if (fun) {
+                    nslots += fun->nargs;
+                    if (FUN_NATIVE(fun))
+                        nslots += fun->extra;
+                }
+
+                if (nslots <= sizeof (smallv) / sizeof (smallv[0])) {
+                    argv = smallv;
+                } else {
+                    argv = JS_malloc(cx, nslots * sizeof(jsval));
+                    if (!argv) {
+                        DropWatchPoint(cx, wp);
+                        return JS_FALSE;
+                    }
+                }
+
+                argv[0] = OBJECT_TO_JSVAL(closure);
+                argv[1] = JSVAL_NULL;
+                memset(argv + 2, 0, (nslots - 2) * sizeof(jsval));
+
                 memset(&frame, 0, sizeof(frame));
-                frame.script = FUN_SCRIPT(fun);
+                frame.script = script;
+                if (script)
+                    frame.pc = script->code;
                 frame.fun = fun;
+                frame.argv = argv + 2;
                 frame.down = cx->fp;
+                frame.scopeChain = OBJ_GET_PARENT(cx, closure);
+
                 cx->fp = &frame;
                 ok = !wp->setter ||
                      ((sprop->attrs & JSPROP_SETTER)
@@ -379,6 +427,8 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                                         1, vp, vp)
                       : wp->setter(cx, OBJ_THIS_OBJECT(cx, obj), userid, vp));
                 cx->fp = frame.down;
+                if (argv != smallv)
+                    JS_free(cx, argv);
             }
             return DropWatchPoint(cx, wp);
         }
@@ -396,6 +446,7 @@ js_watch_set_wrapper(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     jsval userid;
 
     funobj = JSVAL_TO_OBJECT(argv[-2]);
+    JS_ASSERT(OBJ_GET_CLASS(cx, funobj) == &js_FunctionClass);
     wrapper = (JSFunction *) JS_GetPrivate(cx, funobj);
     userid = ATOM_KEY(wrapper->atom);
     *rval = argv[0];
@@ -535,10 +586,8 @@ JS_SetWatchPoint(JSContext *cx, JSObject *obj, jsval id,
             JS_free(cx, wp);
             goto out;
         }
-        JS_APPEND_LINK(&wp->links, &rt->watchPointList);
         wp->object = obj;
-        wp->sprop = sprop;
-        JS_ASSERT(sprop->setter != js_watch_set);
+        JS_ASSERT(sprop->setter != js_watch_set || pobj != obj);
         wp->setter = sprop->setter;
         wp->nrefs = 1;
 
@@ -546,10 +595,16 @@ JS_SetWatchPoint(JSContext *cx, JSObject *obj, jsval id,
         sprop = js_ChangeNativePropertyAttrs(cx, obj, sprop, 0, sprop->attrs,
                                              sprop->getter, watcher);
         if (!sprop) {
+            /* Self-link wp->links so DropWatchPoint can JS_REMOVE_LINK it. */
+            JS_INIT_CLIST(&wp->links);
             DropWatchPoint(cx, wp);
             ok = JS_FALSE;
             goto out;
         }
+        wp->sprop = sprop;
+
+        /* Now that wp is fully initialized, append it to rt's wp list. */
+        JS_APPEND_LINK(&wp->links, &rt->watchPointList);
     }
     wp->handler = handler;
     wp->closure = closure;
@@ -933,14 +988,15 @@ JS_EvaluateUCInStackFrame(JSContext *cx, JSStackFrame *fp,
 
 JS_PUBLIC_API(JSBool)
 JS_EvaluateInStackFrame(JSContext *cx, JSStackFrame *fp,
-                        const char *bytes, uintN length,
+                        const char *bytes, uintN nbytes,
                         const char *filename, uintN lineno,
                         jsval *rval)
 {
+    size_t length = nbytes;
     jschar *chars;
     JSBool ok;
 
-    chars = js_InflateString(cx, bytes, length);
+    chars = js_InflateString(cx, bytes, &length);
     if (!chars)
         return JS_FALSE;
     ok = JS_EvaluateUCInStackFrame(cx, fp, chars, length, filename, lineno,
@@ -1309,13 +1365,20 @@ JS_GetTopScriptFilenameFlags(JSContext *cx, JSStackFrame *fp)
         fp = cx->fp;
     while (fp) {
         if (fp->script) {
-            if (!fp->script->filename)
-                return JSFILENAME_NULL;
-            return js_GetScriptFilenameFlags(fp->script->filename);
+            return JS_GetScriptFilenameFlags(fp->script);
         }
         fp = fp->down;
     }
     return 0;
+ }
+
+JS_PUBLIC_API(uint32)
+JS_GetScriptFilenameFlags(JSScript *script)
+{
+    JS_ASSERT(script);
+    if (!script->filename)
+        return JSFILENAME_NULL;
+    return js_GetScriptFilenameFlags(script->filename);    
 }
 
 JS_PUBLIC_API(JSBool)
