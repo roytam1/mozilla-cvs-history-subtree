@@ -992,11 +992,14 @@ public:
   virtual void MarkIntrinsicWidthsDirty() = 0;
 
   /**
-   * Get the intrinsic minimum width of the frame.
+   * Get the intrinsic minimum width of the frame.  This must be less
+   * than or equal to the intrinsic width.
    *
    * This is *not* affected by the CSS 'min-width', 'width', and
    * 'max-width' properties on this frame, but it is affected by the
-   * values of those properties on this frame's descendants.
+   * values of those properties on this frame's descendants.  (It may be
+   * called during computation of the values of those properties, so it
+   * cannot depend on any values in the nsStylePosition for this frame.)
    *
    * The value returned should **NOT** include the space required for
    * padding and border.
@@ -1010,7 +1013,8 @@ public:
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext) = 0;
 
   /**
-   * Get the intrinsic width of the frame.
+   * Get the intrinsic width of the frame.  This must be greater than or
+   * equal to the intrinsic minimum width.
    *
    * Otherwise, all the comments for |GetMinWidth| above apply.
    */
