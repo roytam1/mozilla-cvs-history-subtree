@@ -2634,8 +2634,8 @@ void nsWindow::OnWheel(PRInt32 aDirection, uint32 aButtons, BPoint aPoint, nscoo
 		scrollEvent.scrollFlags = aDirection;
 		scrollEvent.delta = aDelta;
 		scrollEvent.time      = PR_IntervalNow();
-		scrollEvent.refPoint.x = nscoord(aPoint.x);
-		scrollEvent.refPoint.y = nscoord(aPoint.y);
+		scrollEvent.point.x = nscoord(aPoint.x);
+		scrollEvent.point.y = nscoord(aPoint.y);
 
 		nsEventStatus rv;
 		DispatchEvent (&scrollEvent, rv);
