@@ -699,6 +699,10 @@ nsComboboxControlFrame::Reflow(nsPresContext*          aPresContext,
   }
 #endif
   
+  if (GetStyleVisibility()->mDirection == NS_STYLE_DIRECTION_RTL) {
+    // Make sure the right edge of the button frame stays where it is now
+    buttonRect.x -= buttonWidth - buttonRect.width;
+  }
   buttonRect.width = buttonWidth;
   mButtonFrame->SetRect(buttonRect);
   
