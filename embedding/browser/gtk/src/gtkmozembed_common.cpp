@@ -326,13 +326,13 @@ gtk_moz_embed_common_set_pref(GtkType type, gchar *name, gpointer value)
     case GTK_TYPE_BOOL:
       {
         /* I doubt this cast pair is correct */
-        rv = pref->SetBoolPref (name, (int)(int*)value != 0 ? PR_TRUE : PR_FALSE);
+        rv = pref->SetBoolPref (name, !!*(int*)value);
         break;
       }
     case GTK_TYPE_INT:
       {
         /* I doubt this cast pair is correct */
-        rv = pref->SetIntPref (name, (int)(int*)value);
+        rv = pref->SetIntPref (name, *(int*)value);
         break;
       }
     case GTK_TYPE_STRING:
@@ -491,9 +491,9 @@ gtk_moz_embed_common_clean_all_history () {
   nsCOMPtr<nsIGlobalHistory2> globalHistory(do_GetService("@mozilla.org/browser/global-history;2"));
   if (!globalHistory) return NS_ERROR_NULL_POINTER; 
   // The browser history interface
-  nsCOMPtr<nsIBrowserHistory> myHistory = do_QueryInterface(globalHistory, &rv);
+  nsCOMPtr<nsIObserver> myHistory = do_QueryInterface(globalHistory, &rv);
   if (!myHistory) return NS_ERROR_NULL_POINTER ;
-  myHistory->RemoveAllPages();
+  myHistory->Observe(nsnull, "RemoveAllPages", nsnull);
   return 1;
 }
 
