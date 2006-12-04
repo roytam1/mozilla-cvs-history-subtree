@@ -236,16 +236,29 @@ NS_IMETHODIMP
 GTKEmbedDirectoryProvider::GetFile(const char *aKey, PRBool *aPersist,
                                    nsIFile* *aResult)
 {
+  nsresult rv;
   if (EmbedPrivate::sAppFileLocProvider) {
-    nsresult rv = EmbedPrivate::sAppFileLocProvider->GetFile(aKey, aPersist,
-                                                             aResult);
+    rv = EmbedPrivate::sAppFileLocProvider->GetFile(aKey, aPersist,
+                                                    aResult);
     if (NS_SUCCEEDED(rv))
       return rv;
   }
 
-  if (EmbedPrivate::sProfileDir && !strcmp(aKey, NS_APP_USER_PROFILE_50_DIR)) {
+  if (!strcmp(aKey, NS_APP_USER_PROFILE_50_DIR)) {
+#ifdef MOZ_ENABLE_LIBXUL
+    EmbedPrivate::sProfileDir && !strcmp(aKey, NS_APP_USER_PROFILE_50_DIR)) {
     *aPersist = PR_TRUE;
     return EmbedPrivate::sProfileDir->Clone(aResult);
+#else
+    nsCOMPtr<nsILocalFile> profDir =
+      do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
+    if (NS_FAILED(rv))
+      return rv;
+    rv = profDir->InitWithNativePath(nsDependentCString(EmbedPrivate::sProfileDirS));
+    if (NS_FAILED(rv))
+      return rv;
+    NS_ADDREF(*aResult = profDir);
+#endif
   }
 
   return NS_ERROR_FAILURE;
@@ -927,18 +940,16 @@ EmbedPrivate::SetAppComponents(const nsModuleComponentInfo* aComps,
 void
 EmbedPrivate::SetProfilePath(const char *aDir, const char *aName)
 {
+#ifdef MOZ_ENABLE_LIBXUL
   if (EmbedPrivate::sProfileDir) {
     if (sWidgetCount) {
       NS_ERROR("Cannot change profile directory during run.");
       return;
     }
-#ifdef MOZ_ENABLE_LIBXUL
     NS_RELEASE(EmbedPrivate::sProfileDir);
     NS_RELEASE(EmbedPrivate::sProfileLock);
-#endif
   }
 
-#ifdef MOZ_ENABLE_LIBXUL
   nsresult rv =
     NS_NewNativeLocalFile(nsDependentCString(aDir), PR_TRUE, &EmbedPrivate::sProfileDir);
 
@@ -964,9 +975,9 @@ EmbedPrivate::SetProfilePath(const char *aDir, const char *aName)
   NS_IF_RELEASE(EmbedPrivate::sProfileDir);
   NS_IF_RELEASE(EmbedPrivate::sProfileLock);
 #else
-  if (sProfileDir) {
+  if (sProfileDirS) {
     nsMemory::Free(sProfileDirS);
-    sProfileDir = nsnull;
+    sProfileDirS = nsnull;
   }
 
   if (sProfileName) {
