@@ -815,6 +815,10 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
 
   PRUint32 formCount;
   forms->GetLength(&formCount);
+  
+  // check to see if we should formfill.  failure is non-fatal
+  PRBool prefillForm = PR_TRUE;
+  mPrefBranch->GetBoolPref("prefillForms", &prefillForm);
 
   // We can auto-prefill the username and password if there is only
   // one stored login that matches the username and password field names
@@ -906,7 +910,7 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
         continue;
       }
 
-      if (!oldUserValue.IsEmpty()) {
+      if (!oldUserValue.IsEmpty() && prefillForm) {
         // The page has prefilled a username.
         // If it matches any of our saved usernames, prefill the password
         // for that username.  If there are multiple saved usernames,
@@ -940,18 +944,20 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
     }
 
     if (firstMatch && !attachedToInput) {
-      nsAutoString buffer;
-
-      if (NS_FAILED(DecryptData(firstMatch->userValue, buffer)))
-        goto done;
-
-      userField->SetValue(buffer);
-
-      if (NS_FAILED(DecryptData(firstMatch->passValue, buffer)))
-        goto done;
-
-      passField->SetValue(buffer);
       AttachToInput(userField);
+      
+      if (prefillForm) {
+        nsAutoString buffer;
+        if (NS_FAILED(DecryptData(firstMatch->userValue, buffer)))
+          goto done;
+
+        userField->SetValue(buffer);
+
+        if (NS_FAILED(DecryptData(firstMatch->passValue, buffer)))
+          goto done;
+
+        passField->SetValue(buffer);
+      }
     }
   }
 
