@@ -1,6 +1,6 @@
 #
-## hostname: karma
-## uname: Linux karma.mozilla.org 2.4.20-28.8 #1 Thu Dec 18 12:53:39 EST 2003 i686 athlon i386 GNU/Linux
+## hostname: argo-vm 
+## uname: Linux argo-vm.build.mozilla.org 2.4.21-32.0.1.EL #1 Tue May 17 18:01:37 EDT 2005 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -145,10 +145,10 @@ $BuildNameExtra = 'Fx Trunk l10n';
 $ConfigureOnly = 1;
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-3.0a1.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.20-28.8_Clobber/firefox.tar.bz2"
+	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/firefox.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.20-28.8_Clobber/firefox.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/firefox.tar.bz2";
 
 #-
 #- The rest should not need to be changed

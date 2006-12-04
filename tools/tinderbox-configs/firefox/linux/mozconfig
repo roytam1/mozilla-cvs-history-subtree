@@ -1,6 +1,6 @@
 #
-## hostname: karma
-## uname: Linux karma.mozilla.org 2.4.20-28.8 #1 Thu Dec 18 12:53:39 EST 2003 i686 athlon i386 GNU/Linux
+## hostname: argo-vm
+## uname: Linux argo-vm.build.mozilla.org 2.4.21-32.0.1.EL #1 Tue May 17 18:01:37 EDT 2005 i686 athlon i386 GNU/Linux
 #
 
 . $topsrcdir/browser/config/mozconfig
@@ -17,12 +17,13 @@ mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
  
 ac_add_options --enable-update-packaging
 ac_add_options --disable-debug
-ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
+#ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
 ac_add_options --disable-tests
 # ac_add_options --enable-official-branding
-ac_add_options --enable-default-toolkit=gtk2
-ac_add_options --enable-xft
-ac_add_options --disable-freetype2
+ac_add_options --enable-canvas
+ac_add_options --enable-svg
+ac_add_options --enable-pango
+ac_add_options --enable-default-toolkit=cairo-gtk2
  
 ac_add_options --enable-static
 ac_add_options --disable-shared
