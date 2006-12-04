@@ -2856,8 +2856,10 @@ SFTK_DestroySlotData(SFTKSlot *slot)
 
     /* OK everything has been disassembled, now we can finally get rid
      * of the locks */
-    PZ_DestroyLock(slot->slotLock);
-    slot->slotLock = NULL;
+    if (slot->slotLock) {
+	PZ_DestroyLock(slot->slotLock);
+	slot->slotLock = NULL;
+    }
     if (slot->sessionLock) {
 	for (i=0; i < slot->numSessionLocks; i++) {
 	    if (slot->sessionLock[i]) {
