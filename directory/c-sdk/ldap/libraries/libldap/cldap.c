@@ -152,7 +152,7 @@ cldap_open( char *host, int port )
     }	
     ld->ld_sbp->sb_sd = s;
     ld->ld_sbp->sb_naddr = 0;
-    ld->ld_version = LDAP_VERSION2;
+    ld->ld_version = LDAP_VERSION;
 
     sock.sin_family = AF_INET;
     sock.sin_port = htons( port );
@@ -335,7 +335,7 @@ cldap_result( LDAP *ld, int msgid, LDAPMessage **res,
     BerElement		ber;
     char		*logdn;
     int			ret, fromaddr, i;
-    ber_int_t		id;
+    long		id;
     struct timeval	tv;
 
     fromaddr = -1;
@@ -459,8 +459,7 @@ static int
 cldap_parsemsg( LDAP *ld, int msgid, BerElement *ber,
 	LDAPMessage **res, char *base )
 {
-    ber_tag_t	tag;
-    ber_len_t len;
+    unsigned long	tag, len;
     int			baselen, slen, rc;
     char		*dn, *p, *cookie;
     LDAPMessage		*chain, *prev, *ldm;
@@ -495,7 +494,7 @@ cldap_parsemsg( LDAP *ld, int msgid, BerElement *ber,
 	    }
 
 	    if ( ber_printf( ldm->lm_ber, "to", tag, bv->bv_val,
-		    bv->bv_len ) == -1 ) {
+		    (int)bv->bv_len /* XXX lossy cast */ ) == -1 ) {
 		break;	/* return w/error */
 	    }
 	    ber_bvfree( bv );
@@ -524,7 +523,7 @@ cldap_parsemsg( LDAP *ld, int msgid, BerElement *ber,
 	    }
 
 	    if ( ber_printf( ldm->lm_ber, "t{so}", tag, dn, bv->bv_val,
-		    bv->bv_len ) == -1 ) {
+		    (int)bv->bv_len /* XXX lossy cast */ ) == -1 ) {
 		break;	/* return w/error */
 	    }
 	    NSLDAPI_FREE( dn );
