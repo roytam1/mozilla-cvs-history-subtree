@@ -62,6 +62,9 @@
 #include "nsReadableUtils.h"
 #include "nsICloseAllWindows.h"
 #include "nsIPrefService.h"
+#ifdef MOZ_THUNDERBIRD
+#include "nsICommandLineRunner.h"
+#endif
 
 #include "nsAEEventHandling.h"
 #include "nsXPFEComponentsCID.h"
@@ -365,6 +368,29 @@ OSErr nsMacCommandLine::HandleOpenOneDoc(const FSSpec& inFileSpec, OSType inFile
   if (NS_FAILED(rv))
     return errAEEventNotHandled;
   
+#ifdef MOZ_THUNDERBIRD
+  nsCOMPtr<nsICommandLineRunner> cmdLine
+    (do_CreateInstance("@mozilla.org/toolkit/command-line;1"));
+  if (!cmdLine) {
+    NS_ERROR("Couldn't create command line!");
+    return errAEEventNotHandled;
+  }
+  nsCOMPtr<nsILocalFile> workingDir;
+  nsCString filePath;
+  rv = inFile->GetNativePath(filePath);
+  if (NS_FAILED(rv))
+    return errAEEventNotHandled;
+  char *urlPtr = ToNewCString(filePath);
+  char **argv = new char *[2];
+  argv[0] = nsnull;
+  argv[1] = urlPtr;
+  rv = cmdLine->Init(2, argv, workingDir, nsICommandLine::STATE_REMOTE_EXPLICIT);
+  nsMemory::Free(urlPtr);
+  delete [] argv;
+  if (NS_FAILED(rv))
+    return errAEEventNotHandled;
+  return cmdLine->Run();
+#endif // MOZ_THUNDERBIRD  
   return OpenURL(specBuf.get());
 }
 
