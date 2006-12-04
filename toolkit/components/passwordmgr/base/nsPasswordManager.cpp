@@ -309,7 +309,7 @@ nsPasswordManager::Register(nsIComponentManager* aCompMgr,
 {
   // By registering in NS_PASSWORDMANAGER_CATEGORY, an instance of the password
   // manager will be created when a password input is added to a form.  We
-  // can then register that singleton instance as a form submission observer.
+  // can then register that singleton instance as a form submission 			.
 
   nsresult rv;
   nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
@@ -1760,6 +1760,10 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
 
   PRUint32 formCount;
   forms->GetLength(&formCount);
+  
+  // check to see if we should formfill.  failure is non-fatal
+  PRBool prefillForm = PR_TRUE;
+  mPrefBranch->GetBoolPref("prefillForms", &prefillForm);
 
   // We can auto-prefill the username and password if there is only
   // one stored login that matches the username and password field names
@@ -1881,7 +1885,7 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
         continue;
       }
 
-      if (!oldUserValue.IsEmpty()) {
+      if (!oldUserValue.IsEmpty() && prefillForm) {
         // The page has prefilled a username.
         // If it matches any of our saved usernames, prefill the password
         // for that username.  If there are multiple saved usernames,
@@ -1923,7 +1927,7 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
       if (userField)
         AttachToInput(userField);
 
-      if (!prefilledUser){
+      if (!prefilledUser && prefillForm) {
         nsAutoString buffer;
 
         if (userField) {
