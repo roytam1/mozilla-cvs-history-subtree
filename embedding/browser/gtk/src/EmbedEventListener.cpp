@@ -605,8 +605,8 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
   mCtxInfo->UpdateContextData(aDOMMouseEvent);
 
   /* If a mousedown after 1 click is done (and if clicked context is not a XUL
-  * one (e.g. scrollbar), the selection is disabled for that context. 
-  */
+   * one (e.g. scrollbar), the selection is disabled for that context. 
+   */
   if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL)) {
 
     if (eventType.EqualsLiteral("mousedown")) {
