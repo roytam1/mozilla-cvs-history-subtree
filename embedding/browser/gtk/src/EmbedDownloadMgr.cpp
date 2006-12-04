@@ -293,7 +293,6 @@ NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress
   // storing current downloaded size.
   mDownload->downloaded_size = (gulong) aCurSelfProgress; 
   // moving the target file to the right place.
-  rv = mDownload->file_target->MoveToNative (NS_STATIC_CAST(nsIFile *, mDestFile), mLocalSaveFileName);
-
+  rv = mDownload->file_target->MoveToNative (mDestFile, mLocalSaveFileName);
   return NS_OK;
 }

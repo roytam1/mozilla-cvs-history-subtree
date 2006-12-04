@@ -304,11 +304,13 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
                   (void *)mouseEvent, &return_val);
   if (return_val) {
     sMPressed = PR_FALSE;
+#if 1
     if (sLongPressTimer)
       g_source_remove (sLongPressTimer);
-//FIXME
-//    aDOMEvent->StopPropagation();
-//    aDOMEvent->PreventDefault();
+#else
+    aDOMEvent->StopPropagation();
+    aDOMEvent->PreventDefault();
+#endif
   } else {
     sLongPressTimer = g_timeout_add(mLongMPressDelay, sLongMPress, mOwner->mOwningWidget);
     ((nsIDOMMouseEvent*)mouseEvent)->GetScreenX(&sX);

@@ -89,7 +89,6 @@
 #define NEW_TOOLKIT_STRING(x) g_strdup(NS_ConvertUTF16toUTF8(x).get())
 #define GET_TOOLKIT_STRING(x) NS_ConvertUTF16toUTF8(x).get()
 #define GET_OBJECT_CLASS_TYPE(x) G_OBJECT_CLASS_TYPE(x)
-#define PREF_ID NS_PREF_CONTRACTID
 #endif /* MOZ_WIDGET_GTK2 */
 
 #ifdef MOZ_WIDGET_GTK
@@ -319,7 +318,7 @@ gtk_moz_embed_common_set_pref(GtkType type, gchar *name, gpointer value)
 {
   g_return_val_if_fail (name != NULL, FALSE);
 
-  nsCOMPtr<nsIPref> pref = do_CreateInstance(PREF_ID);
+  nsCOMPtr<nsIPref> pref = do_GetService(NS_PREF_CONTRACTID);
 
   if (pref) {
     nsresult rv = NS_ERROR_FAILURE;
@@ -355,7 +354,7 @@ gtk_moz_embed_common_get_pref(GtkType type, gchar *name, gpointer value)
 {
   g_return_val_if_fail (name != NULL, FALSE);
 
-  nsCOMPtr<nsIPref> pref = do_CreateInstance(PREF_ID);
+  nsCOMPtr<nsIPref> pref = do_GetService(NS_PREF_CONTRACTID);
 
   nsresult rv = NS_ERROR_FAILURE;
   if (pref){
@@ -386,7 +385,7 @@ gtk_moz_embed_common_get_pref(GtkType type, gchar *name, gpointer value)
 gboolean
 gtk_moz_embed_common_save_prefs()
 {
-  nsCOMPtr<nsIPrefService> prefService = do_GetService(PREF_ID);
+  nsCOMPtr<nsIPrefService> prefService = do_GetService(NS_PREF_CONTRACTID);
   g_return_val_if_fail (prefService != nsnull, FALSE);
   if (prefService == nsnull)
     return FALSE;

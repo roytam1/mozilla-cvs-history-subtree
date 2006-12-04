@@ -159,7 +159,7 @@ NS_IMETHODIMP EmbedFilePicker::GetFile(nsILocalFile **aFile)
     nsCOMPtr<nsILocalFile> file = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID);
     if (!file) return NS_OK;
     file->InitWithNativePath (localSavePath);
-    NS_IF_ADDREF (*aFile = file);
+    NS_ADDREF (*aFile = file);
     g_free (strippedFileName);
     strippedFileName = nsnull;
   }
@@ -202,7 +202,7 @@ NS_IMETHODIMP EmbedFilePicker::Show(PRInt16 *_retval)
   g_signal_emit_by_name (
     GTK_OBJECT (parentWidget),
     "upload_dialog",
-    "/home/user", // ???? Antonio pls use genenv("HOME") istead this.
+    "/home/user", // XXX please use genenv("HOME") instead of this.
     "",
     &mFilename,
     &response,
