@@ -2833,7 +2833,8 @@ nsIFrame::InlinePrefWidthData::Break(nsIRenderingContext *aRenderingContext)
     nscoord floats_done = 0,
             // preferred widths accumulated for floats that have not yet
             // been cleared past
-            floats_cur = 0;
+            floats_cur_left = 0,
+            floats_cur_right = 0;
 
     for (PRInt32 i = 0, i_end = floats.Count(); i != i_end; ++i) {
       nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, floats[i]);
@@ -2841,16 +2842,23 @@ nsIFrame::InlinePrefWidthData::Break(nsIRenderingContext *aRenderingContext)
       if (floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT ||
           floatDisp->mBreakType == NS_STYLE_CLEAR_RIGHT ||
           floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT_AND_RIGHT) {
+        nscoord floats_cur = floats_cur_left + floats_cur_right;
         if (floats_cur > floats_done)
           floats_done = floats_cur;
-        floats_cur = 0;
+        if (floatDisp->mBreakType != NS_STYLE_CLEAR_RIGHT)
+          floats_cur_left = 0;
+        if (floatDisp->mBreakType != NS_STYLE_CLEAR_LEFT)
+          floats_cur_right = 0;
       }
 
+      nscoord &floats_cur = floatDisp->mFloats == NS_STYLE_FLOAT_LEFT
+                              ? floats_cur_left : floats_cur_right;
       floats_cur +=
         nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                       floatFrame, nsLayoutUtils::PREF_WIDTH);
     }
 
+    nscoord floats_cur = floats_cur_left + floats_cur_right;
     if (floats_cur > floats_done)
       floats_done = floats_cur;
 
