@@ -86,12 +86,12 @@ inline PRBool IsSideCaption(nsIFrame* aCaptionFrame)
 
 /* virtual */ nsSize
 nsTableCaptionFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                     nsSize aCBSize, nsSize aMargin,
-                                     nsSize aBorder, nsSize aPadding,
-                                     PRBool aShrinkWrap)
+                                     nsSize aCBSize, nscoord aAvailableWidth,
+                                     nsSize aMargin, nsSize aBorder,
+                                     nsSize aPadding, PRBool aShrinkWrap)
 {
-  nsSize result = nsBlockFrame::ComputeAutoSize(aRenderingContext,
-                    aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+  nsSize result = nsBlockFrame::ComputeAutoSize(aRenderingContext, aCBSize,
+                    aAvailableWidth, aMargin, aBorder, aPadding, aShrinkWrap);
   if (IsSideCaption(this)) {
     result.width = GetMinWidth(aRenderingContext);
   }
@@ -616,13 +616,13 @@ nsTableOuterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
 /* virtual */ nsSize
 nsTableOuterFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                   nsSize aCBSize, nsSize aMargin,
-                                   nsSize aBorder, nsSize aPadding,
-                                   PRBool aShrinkWrap)
+                                   nsSize aCBSize, nscoord aAvailableWidth,
+                                   nsSize aMargin, nsSize aBorder,
+                                   nsSize aPadding, PRBool aShrinkWrap)
 {
   if (!aShrinkWrap)
-    return nsHTMLContainerFrame::ComputeAutoSize(aRenderingContext,
-               aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+    return nsHTMLContainerFrame::ComputeAutoSize(aRenderingContext, aCBSize,
+               aAvailableWidth, aMargin, aBorder, aPadding, aShrinkWrap);
 
   // When we're shrink-wrapping, our auto size needs to wrap around the
   // actual size of the table, which (if it is specified as a percent)
@@ -633,6 +633,7 @@ nsTableOuterFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
   nsCSSOffsetState innerOffsets(mInnerTableFrame, aRenderingContext,
                                 aCBSize.width);
   nsSize tableSize = mInnerTableFrame->ComputeSize(aRenderingContext, aCBSize,
+                       aAvailableWidth,
                        nsSize(innerOffsets.mComputedMargin.LeftRight(),
                               innerOffsets.mComputedMargin.TopBottom()),
                        nsSize(innerOffsets.mComputedBorderPadding.LeftRight() -
@@ -647,8 +648,9 @@ nsTableOuterFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
 
   if (mCaptionFrame) {
     nsCSSOffsetState capOffsets(mCaptionFrame, aRenderingContext,
-                                    aCBSize.width);
+                                aCBSize.width);
     nsSize capSize = mCaptionFrame->ComputeSize(aRenderingContext, aCBSize,
+                       aAvailableWidth,
                        nsSize(capOffsets.mComputedMargin.LeftRight(),
                               capOffsets.mComputedMargin.TopBottom()),
                        nsSize(capOffsets.mComputedBorderPadding.LeftRight() -

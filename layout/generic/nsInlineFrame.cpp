@@ -401,8 +401,9 @@ nsInlineFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
 
 /* virtual */ nsSize
 nsInlineFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
-                           nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                           nsSize aPadding, PRBool aShrinkWrap)
+                           nsSize aCBSize, nscoord aAvailableWidth,
+                           nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                           PRBool aShrinkWrap)
 {
   // Inlines and text don't compute size before reflow.
   return nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);

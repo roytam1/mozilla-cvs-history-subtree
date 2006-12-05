@@ -265,13 +265,13 @@ public:
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
   virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nsSize aMargin,
-                             nsSize aBorder, nsSize aPadding,
+                             nsSize aCBSize, nscoord aAvailableWidth,
+                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
                              PRBool aShrinkWrap);
   virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nsSize aMargin,
-                                 nsSize aBorder, nsSize aPadding,
-                                 PRBool aShrinkWrap);
+                                 nsSize aCBSize, nscoord aAvailableWidth,
+                                 nsSize aMargin, nsSize aBorder,
+                                 nsSize aPadding, PRBool aShrinkWrap);
   /**
    * A copy of nsFrame::ShrinkWidthToFit that calls a different
    * GetPrefWidth, since tables have two different ones.

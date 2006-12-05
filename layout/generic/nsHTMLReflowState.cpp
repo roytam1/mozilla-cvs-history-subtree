@@ -1038,6 +1038,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     frame->ComputeSize(rendContext,
                        nsSize(containingBlockWidth,
                               containingBlockHeight),
+                       containingBlockWidth, // XXX or availableWidth?
                        nsSize(mComputedMargin.LeftRight() +
                                 mComputedOffsets.LeftRight(),
                               mComputedMargin.TopBottom() +
@@ -1633,6 +1634,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
         frame->ComputeSize(rendContext,
                            nsSize(aContainingBlockWidth,
                                   aContainingBlockHeight),
+                           availableWidth,
                            nsSize(mComputedMargin.LeftRight(),
                                   mComputedMargin.TopBottom()),
                            nsSize(mComputedBorderPadding.LeftRight() -

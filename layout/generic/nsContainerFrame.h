@@ -129,9 +129,9 @@ public:
    * classes derived from nsContainerFrame want.
    */
   virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nsSize aMargin,
-                                 nsSize aBorder, nsSize aPadding,
-                                 PRBool aShrinkWrap);
+                                 nsSize aCBSize, nscoord aAvailableWidth,
+                                 nsSize aMargin, nsSize aBorder,
+                                 nsSize aPadding, PRBool aShrinkWrap);
 
   /**
    * Invokes the WillReflow() function, positions the frame and its view (if

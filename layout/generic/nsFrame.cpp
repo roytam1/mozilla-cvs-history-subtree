@@ -2916,10 +2916,11 @@ IsAutoHeight(const nsStyleCoord &aCoord, nscoord aCBHeight)
 
 /* virtual */ nsSize
 nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
-                     nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                     nsSize aPadding, PRBool aShrinkWrap)
+                     nsSize aCBSize, nscoord aAvailableWidth,
+                     nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                     PRBool aShrinkWrap)
 {
-  nsSize result = ComputeAutoSize(aRenderingContext, aCBSize,
+  nsSize result = ComputeAutoSize(aRenderingContext, aCBSize, aAvailableWidth,
                                   aMargin, aBorder, aPadding, aShrinkWrap);
   nsSize boxSizingAdjust(0,0);
   const nsStylePosition *stylePos = GetStylePosition();
@@ -2991,17 +2992,18 @@ nsFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
 
 /* virtual */ nsSize
 nsFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                         nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                         nsSize aPadding, PRBool aShrinkWrap)
+                         nsSize aCBSize, nscoord aAvailableWidth,
+                         nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                         PRBool aShrinkWrap)
 {
   // Use basic shrink-wrapping as a default implementation.
   nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
 
   // don't bother setting it if the result won't be used
   if (GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto) {
-    nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
-                      aPadding.width;
-    result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
+    nscoord availBased = aAvailableWidth - aMargin.width - aBorder.width -
+                         aPadding.width;
+    result.width = ShrinkWidthToFit(aRenderingContext, availBased);
   }
   return result;
 }

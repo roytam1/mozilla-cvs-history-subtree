@@ -103,8 +103,9 @@ nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 
 /* virtual */ nsSize
 nsHTMLCanvasFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
-                               nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                               nsSize aPadding, PRBool aShrinkWrap)
+                               nsSize aCBSize, nscoord aAvailableWidth,
+                               nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                               PRBool aShrinkWrap)
 {
   mCanvasSize = GetCanvasSize();
 

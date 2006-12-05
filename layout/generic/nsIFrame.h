@@ -1138,6 +1138,12 @@ public:
    *
    * @param aCBSize  The size of the element's containing block.  (Well,
    *                 the |height| component isn't really.)
+   * @param aAvailableWidth  The available width for 'auto' widths.
+   *                         This is usually the same as aCBSize.width,
+   *                         but differs in cases such as block
+   *                         formatting context roots next to floats, or
+   *                         in some cases of float reflow in quirks
+   *                         mode.
    * @param aMargin  The sum of the vertical / horizontal margins
    *                 ***AND*** absolute positioning offsets (top, right,
    *                 bottom, left) of the frame, including actual values
@@ -1157,8 +1163,8 @@ public:
    *                     inline-block).
    */
   virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nsSize aMargin,
-                             nsSize aBorder, nsSize aPadding,
+                             nsSize aCBSize, nscoord aAvailableWidth,
+                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
                              PRBool aShrinkWrap) = 0;
 
   /**

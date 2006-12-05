@@ -53,9 +53,9 @@ public:
   friend nsIFrame* NS_NewTableCaptionFrame(nsIPresShell* aPresShell, nsStyleContext*  aContext);
 
   virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nsSize aMargin,
-                                 nsSize aBorder, nsSize aPadding,
-                                 PRBool aShrinkWrap);
+                                 nsSize aCBSize, nscoord aAvailableWidth,
+                                 nsSize aMargin, nsSize aBorder,
+                                 nsSize aPadding, PRBool aShrinkWrap);
 
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
@@ -136,9 +136,9 @@ public:
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nsSize aMargin,
-                                 nsSize aBorder, nsSize aPadding,
-                                 PRBool aShrinkWrap);
+                                 nsSize aCBSize, nscoord aAvailableWidth,
+                                 nsSize aMargin, nsSize aBorder,
+                                 nsSize aPadding, PRBool aShrinkWrap);
 
   /** process a reflow command for the table.
     * This involves reflowing the caption and the inner table.

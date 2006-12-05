@@ -67,8 +67,8 @@ public:
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
   virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nsSize aMargin,
-                             nsSize aBorder, nsSize aPadding,
+                             nsSize aCBSize, nscoord aAvailableWidth,
+                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
                              PRBool aShrinkWrap);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,

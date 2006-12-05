@@ -282,8 +282,8 @@ public:
   virtual IntrinsicWidthOffsetData IntrinsicWidthOffsets();
 
   virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nsSize aMargin,
-                             nsSize aBorder, nsSize aPadding,
+                             nsSize aCBSize, nscoord aAvailableWidth,
+                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
                              PRBool aShrinkWrap);
 
   /**
@@ -302,9 +302,9 @@ public:
    * to be unused.
    */
   virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nsSize aMargin,
-                                 nsSize aBorder, nsSize aPadding,
-                                 PRBool aShrinkWrap);
+                                 nsSize aCBSize, nscoord aAvailableWidth,
+                                 nsSize aMargin, nsSize aBorder,
+                                 nsSize aPadding, PRBool aShrinkWrap);
 
   /**
    * Utility function for ComputeAutoSize implementations.  Return

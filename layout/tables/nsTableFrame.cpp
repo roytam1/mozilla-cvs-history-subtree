@@ -1671,12 +1671,14 @@ nsTableFrame::IntrinsicWidthOffsets()
 
 /* virtual */ nsSize
 nsTableFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
-                          nsSize aCBSize, nsSize aMargin,
-                          nsSize aBorder, nsSize aPadding,
+                          nsSize aCBSize, nscoord aAvailableWidth,
+                          nsSize aMargin, nsSize aBorder, nsSize aPadding,
                           PRBool aShrinkWrap)
 {
-  nsSize result = nsHTMLContainerFrame::ComputeSize(aRenderingContext,
-                    aCBSize, aMargin, aBorder, aPadding, aShrinkWrap);
+  nsSize result =
+    nsHTMLContainerFrame::ComputeSize(aRenderingContext, aCBSize,
+                                      aAvailableWidth,
+                                      aMargin, aBorder, aPadding, aShrinkWrap);
 
   // Tables never shrink below their min width.
   nscoord minWidth = GetMinWidth(aRenderingContext);
@@ -1715,12 +1717,12 @@ nsTableFrame::TableShrinkWidthToFit(nsIRenderingContext *aRenderingContext,
 
 /* virtual */ nsSize
 nsTableFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                              nsSize aCBSize, nsSize aMargin,
-                              nsSize aBorder, nsSize aPadding,
+                              nsSize aCBSize, nscoord aAvailableWidth,
+                              nsSize aMargin, nsSize aBorder, nsSize aPadding,
                               PRBool aShrinkWrap)
 {
   // Tables always shrink-wrap.
-  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
+  nscoord cbBased = aAvailableWidth - aMargin.width - aBorder.width -
                     aPadding.width;
   return nsSize(TableShrinkWidthToFit(aRenderingContext, cbBased),
                 NS_UNCONSTRAINEDSIZE);

@@ -692,21 +692,21 @@ nsContainerFrame::FrameNeedsView(nsIFrame* aFrame)
 
 /* virtual */ nsSize
 nsContainerFrame::ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                  nsSize aCBSize, nsSize aMargin,
-                                  nsSize aBorder, nsSize aPadding,
-                                  PRBool aShrinkWrap)
+                                  nsSize aCBSize, nscoord aAvailableWidth,
+                                  nsSize aMargin, nsSize aBorder,
+                                  nsSize aPadding, PRBool aShrinkWrap)
 {
   nsSize result(0xdeadbeef, NS_UNCONSTRAINEDSIZE);
-  nscoord cbBased = aCBSize.width - aMargin.width - aBorder.width -
-                    aPadding.width;
+  nscoord availBased = aAvailableWidth - aMargin.width - aBorder.width -
+                       aPadding.width;
   // replaced elements always shrink-wrap
   if (aShrinkWrap || IsFrameOfType(eReplaced)) {
     // don't bother setting it if the result won't be used
     if (GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto) {
-      result.width = ShrinkWidthToFit(aRenderingContext, cbBased);
+      result.width = ShrinkWidthToFit(aRenderingContext, availBased);
     }
   } else {
-    result.width = cbBased;
+    result.width = availBased;
   }
   return result;
 }

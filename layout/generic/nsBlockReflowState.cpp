@@ -806,6 +806,9 @@ nsBlockReflowState::FlowAndPlaceFloat(nsFloatCache*   aFloatCache,
       mY += mAvailSpaceRect.height;
       GetAvailableSpace(mY, aForceFit);
       // reflow the float again now since we have more space
+      // XXXldb We really don't need to Reflow in a loop, we just need
+      // to ComputeSize in a loop (once ComputeSize depends on
+      // availableWidth, which should make this work again).
       mBlock->ReflowFloat(*this, placeholder, aFloatCache, aReflowStatus);
       // Get the floats bounding box and margin information
       floatSize = floatFrame->GetSize();

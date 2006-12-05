@@ -716,8 +716,9 @@ nsImageFrame::EnsureIntrinsicSize(nsPresContext* aPresContext)
 
 /* virtual */ nsSize
 nsImageFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
-                          nsSize aCBSize, nsSize aMargin, nsSize aBorder,
-                          nsSize aPadding, PRBool aShrinkWrap)
+                          nsSize aCBSize, nscoord aAvailableWidth,
+                          nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                          PRBool aShrinkWrap)
 {
   nsPresContext *presContext = GetPresContext();
   EnsureIntrinsicSize(presContext);
