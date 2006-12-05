@@ -430,7 +430,6 @@ nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
   nscoord paddingLR = aState.mReflowState.mComputedPadding.LeftRight();
 
   nscoord availWidth = aState.mReflowState.mComputedWidth + paddingLR;
-  nscoord origAvailWidth = availWidth;
 
   if (aAssumeVScroll) {
     nsSize vScrollbarPrefSize;
@@ -444,12 +443,6 @@ nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
 
   if (!aFirstPass)
     mInner.mScrolledFrame->AddStateBits(NS_FRAME_IS_DIRTY);
-
-  // We need to adjust mComputedWidth on the parent reflow state going
-  // in, since ComputeSize depends on it.
-  nsHTMLReflowState &mutableParentRS = NS_CONST_CAST(nsHTMLReflowState&,
-                                         aState.mReflowState);
-  mutableParentRS.mComputedWidth -= (origAvailWidth - availWidth);
 
   nsHTMLReflowState kidReflowState(GetPresContext(), aState.mReflowState,
                                    mInner.mScrolledFrame,
@@ -469,8 +462,6 @@ nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
   FinishReflowChild(mInner.mScrolledFrame, GetPresContext(),
                     &kidReflowState, *aMetrics, 0, 0,
                     NS_FRAME_NO_MOVE_FRAME | NS_FRAME_NO_MOVE_VIEW | NS_FRAME_NO_SIZE_VIEW);
-
-  mutableParentRS.mComputedWidth += (origAvailWidth - availWidth);
 
   // XXX Some frames (e.g., nsObjectFrame, nsFrameFrame, nsTextFrame) don't bother
   // setting their mOverflowArea. This is wrong because every frame should
