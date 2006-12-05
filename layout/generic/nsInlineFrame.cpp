@@ -350,17 +350,23 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
                   aType == nsLayoutUtils::PREF_WIDTH, "bad type");
 
   PRUint8 startSide, endSide;
-  // XXX set these correctly!  (not trivial, and GetSkipSides() and
-  // maybe some reflow logic needs this too, and should all be fixed at
-  // once)
-  startSide = NS_SIDE_LEFT;
-  endSide = NS_SIDE_RIGHT;
+  if (GetStyleVisibility()->mDirection == NS_STYLE_DIRECTION_LTR) {
+    startSide = NS_SIDE_LEFT;
+    endSide = NS_SIDE_RIGHT;
+  } else {
+    startSide = NS_SIDE_RIGHT;
+    endSide = NS_SIDE_LEFT;
+  }
 
   const nsStylePadding *stylePadding = GetStylePadding();
   const nsStyleBorder *styleBorder = GetStyleBorder();
   const nsStyleMargin *styleMargin = GetStyleMargin();
   nsStyleCoord tmp;
 
+  // This goes at the beginning no matter how things are broken and how
+  // messy the bidi situations are, since per CSS2.1 section 8.6
+  // (implemented in bug 328168), the startSide border is always on the
+  // first line.
   aData->currentLine +=
     GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0) +
     styleBorder->GetBorderWidth(startSide) +
@@ -379,6 +385,10 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
     }
   }
 
+  // This goes at the end no matter how things are broken and how
+  // messy the bidi situations are, since per CSS2.1 section 8.6
+  // (implemented in bug 328168), the endSide border is always on the
+  // last line.
   aData->currentLine +=
     GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0) +
     styleBorder->GetBorderWidth(endSide) +
@@ -876,11 +886,6 @@ nsInlineFrame::PushFrames(nsPresContext* aPresContext,
 PRIntn
 nsInlineFrame::GetSkipSides() const
 {
-  // XXX This is wrong for RTL (see bug 299063).  (Bidi cases will be
-  // fun, even once we fix bug 299065 and split inlines into multiple
-  // continuations.)
-  // DoInlineIntrinsicWidth needs to be fixed as well (and they should
-  // be fixed at the same time).
   PRIntn skip = 0;
   if (!IsLeftMost()) {
     nsInlineFrame* prev = (nsInlineFrame*) GetPrevContinuation();
