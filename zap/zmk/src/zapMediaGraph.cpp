@@ -334,7 +334,7 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
     return NS_ERROR_FAILURE;
   }
 
-  PRInt32 proxyType = 0; // NS_PROXY_ALWAYS | NS_PROXY_AUTOPROXIFY | NS_PROXY_ISUPPORTS
+  PRInt32 proxyType = NS_PROXY_ALWAYS;
   
   if (synchronous)
     proxyType |= NS_PROXY_SYNC;
