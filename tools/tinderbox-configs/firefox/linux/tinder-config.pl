@@ -171,7 +171,7 @@ $BuildTree  = 'Mozilla1.8.0';
 
 #$BuildName = '';
 
-$BuildTag = 'FIREFOX_1_5_0_8_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_9_RELEASE';
 
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -209,7 +209,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "firefox1.5.0.8";
+$milestone     = "firefox1.5.0.9";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
