@@ -267,6 +267,7 @@ struct ScrollReflowState {
   }
 };
 
+// XXXldb Can this go away?
 static nsSize ComputeInsideBorderSize(ScrollReflowState* aState,
                                       const nsSize& aDesiredInsideBorderSize)
 {
@@ -362,6 +363,7 @@ nsHTMLScrollFrame::TryLayout(ScrollReflowState* aState,
   nscoord hScrollbarDesiredWidth = aAssumeHScroll ? hScrollbarPrefSize.width : 0;
 
   // First, compute our inside-border size and scrollport size
+  // XXXldb Can we depend more on ComputeSize here?
   nsSize desiredInsideBorderSize;
   desiredInsideBorderSize.width = vScrollbarDesiredWidth +
     PR_MAX(aKidMetrics.width, hScrollbarDesiredWidth);
