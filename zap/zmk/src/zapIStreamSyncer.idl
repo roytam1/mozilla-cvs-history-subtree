@@ -44,4 +44,10 @@
 interface zapIStreamSyncer : nsISupports
 {
   void reset();
+
+  /**
+   * Immediately emit the current frame (or grab the first frame from the input)
+   * without removing it from the internal buffer. Return true if successful.
+   */
+  boolean peekFrame();
 };

@@ -330,6 +330,28 @@ zapStreamSyncer::Reset()
   return NS_OK;
 }
 
+/* boolean peekFrame (); */
+NS_IMETHODIMP
+zapStreamSyncer::PeekFrame(PRBool *_retval)
+{
+  *_retval = PR_FALSE;
+  
+  if (!mOutput) return NS_OK;
+  
+  if (!mNextFrame) {
+    if (!mInput ||
+        NS_FAILED(mInput->ProduceFrame(getter_AddRefs(mNextFrame))) ||
+        !mNextFrame)
+      return NS_OK;
+  }
+
+  if (NS_FAILED(mOutput->ConsumeFrame(mNextFrame))) return NS_OK;
+
+  // success
+  *_retval = PR_TRUE;
+  return NS_OK;
+}
+
 
 //----------------------------------------------------------------------
 // Implementation helpers:
