@@ -1925,6 +1925,7 @@ NS_METHOD nsTableFrame::Reflow(nsPresContext*          aPresContext,
 
     // do the pass 2 reflow unless this is a special height reflow and we will be 
     // initiating a special height reflow
+    // XXXldb I changed this.  Should I change it back?
 
     // if we need to initiate a special height reflow, then don't constrain the 
     // height of the reflow before that
