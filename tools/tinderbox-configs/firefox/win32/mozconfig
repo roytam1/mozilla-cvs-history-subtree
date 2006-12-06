@@ -7,7 +7,7 @@ mk_add_options MOZ_CO_PROJECT=browser
 mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
-mk_add_options LOCALES_CO_TAG=FIREFOX_2_0rc2_RELEASE
+mk_add_options LOCALES_CO_TAG=FIREFOX_2_0_0_1_RELEASE
 
 ac_add_options --enable-update-packaging
 ac_add_options --enable-application=browser
