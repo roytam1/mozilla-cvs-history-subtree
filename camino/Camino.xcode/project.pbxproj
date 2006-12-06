@@ -5,6 +5,78 @@
 	};
 	objectVersion = 39;
 	objects = {
+		008116E50B272204001CB3F0 = {
+			isa = PBXFileReference;
+			lastKnownFileType = wrapper.framework;
+			name = Security.framework;
+			path = /System/Library/Frameworks/Security.framework;
+			refType = 0;
+			sourceTree = "<absolute>";
+		};
+		008116E60B272204001CB3F0 = {
+			fileRef = 008116E50B272204001CB3F0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		008116E70B272204001CB3F0 = {
+			fileRef = 008116E50B272204001CB3F0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		008116EA0B2722EB001CB3F0 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = KeychainItem.h;
+			path = src/formfill/KeychainItem.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		008116EB0B2722EB001CB3F0 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.objc;
+			name = KeychainItem.m;
+			path = src/formfill/KeychainItem.m;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		008116EC0B2722EB001CB3F0 = {
+			fileRef = 008116EA0B2722EB001CB3F0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		008116ED0B2722EB001CB3F0 = {
+			fileRef = 008116EB0B2722EB001CB3F0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		008116EE0B2722EB001CB3F0 = {
+			fileRef = 008116EA0B2722EB001CB3F0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		008116EF0B2722EB001CB3F0 = {
+			fileRef = 008116EB0B2722EB001CB3F0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+//000
+//001
+//002
+//003
+//004
+//030
+//031
+//032
+//033
+//034
 		032FFDCC077351A800440548 = {
 			children = (
 				032FFDCD077351A800440548,
@@ -3101,6 +3173,7 @@
 //104
 		1058C7A0FEA54F0111CA2CBB = {
 			children = (
+				008116E50B272204001CB3F0,
 				34884A35074F7C5D000EA76B,
 				F55A4DED0380705A01A80166,
 				1058C7A1FEA54F0111CA2CBB,
@@ -4061,6 +4134,7 @@
 				DE74F8B90AB2709E00FD1D5B,
 				DE74F8BC0AB270B800FD1D5B,
 				DEE9EC4E0AF5C613002BC511,
+				008116EC0B2722EB001CB3F0,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5191,6 +5265,7 @@
 				DE74F8C30AB270D800FD1D5B,
 				DE74F8C60AB270F200FD1D5B,
 				DEE9EC510AF5C654002BC511,
+				008116ED0B2722EB001CB3F0,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5459,6 +5534,7 @@
 			fileRef = F5F94B910332532801026D5D;
 			isa = PBXBuildFile;
 			settings = {
+				COMPILER_FLAGS = "-DNO_NSPR_10_SUPPORT";
 			};
 		};
 		3F44ACB205BDFB9E00CB4B08 = {
@@ -6778,6 +6854,7 @@
 				3FECC8E605D1FE800068E7ED,
 				34884A36074F7C5D000EA76B,
 				0FF288560961EDDD007527B4,
+				008116E60B272204001CB3F0,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7966,6 +8043,7 @@
 				DE74F8BA0AB2709E00FD1D5B,
 				DE74F8BD0AB270B800FD1D5B,
 				DEE9EC4F0AF5C613002BC511,
+				008116EE0B2722EB001CB3F0,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9097,6 +9175,7 @@
 				DE74F8C40AB270D800FD1D5B,
 				DE74F8C70AB270F200FD1D5B,
 				DEE9EC520AF5C654002BC511,
+				008116EF0B2722EB001CB3F0,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9369,6 +9448,7 @@
 			fileRef = F5F94B910332532801026D5D;
 			isa = PBXBuildFile;
 			settings = {
+				COMPILER_FLAGS = "-DNO_NSPR_10_SUPPORT";
 			};
 		};
 		3F44AEEC05BDFBA000CB4B08 = {
@@ -10545,6 +10625,7 @@
 				0F518835088593F30091F3FB,
 				4DC28F5E099184B80081939B,
 				0FF288550961EDDD007527B4,
+				008116E70B272204001CB3F0,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -11475,6 +11556,7 @@
 		3FBDC7D608252CD600D7F8E0 = {
 			children = (
 				F5F94B910332532801026D5D,
+				008116EB0B2722EB001CB3F0,
 				3FBDC7D908252CF300D7F8E0,
 				3FBDC7DA08252CF300D7F8E0,
 			);
@@ -15225,6 +15307,7 @@
 				F52F87CB027D75C301A80165,
 				F58DB2D20381FD3301A9666E,
 				F5F94B900332532801026D5D,
+				008116EA0B2722EB001CB3F0,
 				F57074BD026D80DF01A80166,
 				F5AE04B60206A37C01A967DF,
 				2E293A00027F33604B000102,
