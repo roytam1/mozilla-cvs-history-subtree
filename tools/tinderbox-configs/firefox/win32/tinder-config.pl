@@ -34,8 +34,6 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
-$BuildXForms = 1;
-
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
 
@@ -45,7 +43,7 @@ $BuildXForms = 1;
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -55,11 +53,11 @@ $BuildXForms = 1;
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = "Firefox";
-$VendorName               = "Mozilla";
+$ProductName              = 'Firefox';
+$VendorName               = 'Mozilla';
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
+$RegxpcomTest             = 0;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
@@ -77,7 +75,7 @@ $LayoutPerformanceTest    = 0;  # Tp
 $XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
+$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -150,7 +148,7 @@ $moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Nightly';
+$BuildNameExtra = 'Fx-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -169,7 +167,7 @@ $BuildNameExtra = 'Fx-Nightly';
 $BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'FIREFOX_2_0_0_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -191,7 +189,7 @@ $BinaryName = 'firefox.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/browser/installer";
@@ -203,8 +201,8 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.8";
-$notify_list   = "build-announce\@mozilla.org";
+$milestone     = 'firefox2.0.0.1';
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
 $archive       = 1;
@@ -216,7 +214,7 @@ $update_platform = "WINNT_x86-msvc";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -243,5 +241,4 @@ $update_pushinfo = 1;
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
 
-# Build XForms
-$BuildXForms = 1;
+$BuildXForms = 0;

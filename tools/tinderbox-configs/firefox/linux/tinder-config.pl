@@ -7,7 +7,6 @@
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$BuildXForms = "1";
 $ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
 $ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
@@ -43,7 +42,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
-$DisplayServer = ':1.0';
+$DisplayServer = ':0.0';
 
 #- Default values of command-line opts
 #-
@@ -51,7 +50,7 @@ $DisplayServer = ':1.0';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -61,12 +60,12 @@ $DisplayServer = ':1.0';
 # Tests
 #$CleanProfile             = 0;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = "Firefox";
-#$VendorName               = '';
+$ProductName              = 'Firefox';
+$VendorName               = 'Mozilla';
 
-$RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
-#$AliveTest                = 1;
+$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
@@ -83,7 +82,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 #$XULWindowOpenTest        = 0;  # Txul
 #$StartupPerformanceTest   = 0;  # Ts
 
-#$TestsPhoneHome           = 0;  # Should test report back to server?
+$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -157,7 +156,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Nightly';
+$BuildNameExtra = 'Fx-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -175,7 +174,7 @@ $BuildNameExtra = 'Fx-Nightly';
 $BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'FIREFOX_2_0_0_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -197,7 +196,7 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
@@ -209,7 +208,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.8";
+$milestone     = 'firefox2.0.0.1';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
@@ -222,7 +221,7 @@ $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -249,5 +248,4 @@ $update_pushinfo = 1;
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
 
-# Build XForms
-$BuildXForms = 1;
+$BuildXForms = 0;
