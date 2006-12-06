@@ -353,6 +353,7 @@ EmbedGlobalHistory::EmbedGlobalHistory()
   if (!mURLList) {
     mDataIsLoaded = PR_FALSE;
     mEntriesAddedSinceFlush = 0;
+    mHistoryFile = nsnull;
     LL_I2L(mExpirationInterval, kDefaultExpirationIntervalDays);
     LL_MUL(mExpirationInterval, mExpirationInterval, kMSecsPerDay);
   }
@@ -608,12 +609,10 @@ NS_IMETHODIMP EmbedGlobalHistory::Observe(nsISupports *aSubject,
   return rv;
 }
 
-//*****************************************************************************
-// EmbedGlobalHistory
-//*****************************************************************************   
-// Open/Create the history.dat file if it does not exist
-nsresult EmbedGlobalHistory::InitFile()
+static nsresult
+GetHistoryFileName(char **aHistoryFile)
 {
+  NS_ENSURE_ARG_POINTER(aHistoryFile);
   // Get the history file in our profile dir.
   // Notice we are not just getting NS_APP_HISTORY_50_FILE
   // because it is used by the "real" global history component.
@@ -621,18 +620,32 @@ nsresult EmbedGlobalHistory::InitFile()
   if (EmbedPrivate::sProfileDir) {
     nsCString path;
     EmbedPrivate::sProfileDir->GetNativePath(path);
-    mHistoryFile = g_strdup_printf("%s/history.dat", path.get());
-    BROKEN_STRING_BUILDER(mHistoryFile);
+    *aHistoryFile = g_strdup_printf("%s/history.dat", path.get());
+    BROKEN_STRING_BUILDER(aHistoryFile);
   } else
 #else
-  if (EmbedPrivate::sProfileDirS) {
-    mHistoryFile = g_strdup_printf("%s/history.dat", EmbedPrivate::sProfileDirS);
-    BROKEN_STRING_BUILDER(mHistoryFile);
-  } else
+    if (EmbedPrivate::sProfileDirS) {
+      *aHistoryFile = g_strdup_printf("%s/history.dat", EmbedPrivate::sProfileDirS);
+      BROKEN_STRING_BUILDER(aHistoryFile);
+    } else
 #endif
   {
-    mHistoryFile = g_strdup_printf("%s/history.dat", g_get_tmp_dir());
+    *aHistoryFile = g_strdup_printf("%s/history.dat", g_get_tmp_dir());
+    BROKEN_STRING_BUILDER(aHistoryFile);
   }
+  return NS_OK;
+}
+//*****************************************************************************
+// EmbedGlobalHistory
+//*****************************************************************************   
+// Open/Create the history.dat file if it does not exist
+nsresult EmbedGlobalHistory::InitFile()
+{
+  if (!mHistoryFile) {
+     if (NS_FAILED(GetHistoryFileName(&mHistoryFile)))
+       return NS_ERROR_FAILURE;
+  }
+  
   void *uri = file_handle_uri_new(mHistoryFile);
   gboolean rs = FALSE;
   if (!file_handle_uri_exists(uri)) {
@@ -716,6 +729,7 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
   if (!mHistoryFile)
   {
     rv |= InitFile();
+    NS_ENSURE_SUCCESS(rv, rv);
     rv |= FlushData(kFlushModeFullWrite);
     BROKEN_RV_HANDLING_CODE(rv);
     return rv; 
@@ -728,6 +742,7 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
   }
   else {
     rv |= InitFile();
+    NS_ENSURE_SUCCESS(rv, rv);
     rv |= FlushData(kFlushModeFullWrite);
 
     return rv;
