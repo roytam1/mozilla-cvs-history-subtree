@@ -299,7 +299,7 @@ EmbedCertificates::ConfirmBadCertificate(
   if (!parentWidget) {
     EmbedCommon * embedcommon = EmbedCommon::GetInstance();
     if (embedcommon)
-      common = embedcommon->mCommon;
+      common = (GtkMozEmbedCommon*)embedcommon->mCommon;
   }
   
   if (!(aError & nsIX509Cert::VERIFIED_OK)) {
