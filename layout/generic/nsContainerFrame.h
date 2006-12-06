@@ -42,6 +42,7 @@
 
 #include "nsSplittableFrame.h"
 #include "nsFrameList.h"
+#include "nsLayoutUtils.h"
 
 // Option flags for ReflowChild() and FinishReflowChild()
 // member functions
@@ -124,6 +125,11 @@ public:
   // Returns PR_TRUE if the frame requires a view
   static PRBool FrameNeedsView(nsIFrame* aFrame);
   
+  // Used by both nsInlineFrame and nsFirstLetterFrame.
+  void DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
+                              InlineIntrinsicWidthData *aData,
+                              nsLayoutUtils::IntrinsicWidthType aType);
+
   /**
    * This is the CSS block concept of computing 'auto' widths, which most
    * classes derived from nsContainerFrame want.

@@ -66,6 +66,12 @@ public:
   virtual nsIAtom* GetType() const;
   virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineMinWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlinePrefWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -183,6 +189,54 @@ nsFirstLetterFrame::GetChildFrameContainingOffset(PRInt32 inContentOffset,
   }
   else
     return nsFrame::GetChildFrameContainingOffset(inContentOffset, inHint, outFrameContentOffset, outChildFrame);
+}
+
+// Needed for non-floating first-letter frames and for the continuations
+// following the first-letter that we also use nsFirstLetterFrame for.
+/* virtual */ void
+nsFirstLetterFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                      nsIFrame::InlineMinWidthData *aData)
+{
+  DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::MIN_WIDTH);
+}
+
+// Needed for non-floating first-letter frames and for the continuations
+// following the first-letter that we also use nsFirstLetterFrame for.
+/* virtual */ void
+nsFirstLetterFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                       nsIFrame::InlinePrefWidthData *aData)
+{
+  DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::PREF_WIDTH);
+}
+
+// Needed for floating first-letter frames.
+/* virtual */ nscoord
+nsFirstLetterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  InlineMinWidthData data;
+  DISPLAY_MIN_WIDTH(this, data.prevLines);
+
+  nsIFrame* kid = mFrames.FirstChild();
+  if (kid)
+    kid->AddInlineMinWidth(aRenderingContext, &data);
+  data.Break(aRenderingContext);
+
+  return data.prevLines;
+}
+
+// Needed for floating first-letter frames.
+/* virtual */ nscoord
+nsFirstLetterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  InlinePrefWidthData data;
+  DISPLAY_PREF_WIDTH(this, data.prevLines);
+
+  nsIFrame* kid = mFrames.FirstChild();
+  if (kid)
+    kid->AddInlinePrefWidth(aRenderingContext, &data);
+  data.Break(aRenderingContext);
+
+  return data.prevLines;
 }
 
 NS_IMETHODIMP
