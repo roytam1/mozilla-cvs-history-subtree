@@ -120,15 +120,17 @@ nsTableCellFrame::Init(nsIContent*      aContent,
 void
 nsTableCellFrame::NotifyPercentHeight(const nsHTMLReflowState& aReflowState)
 {
-  const nsHTMLReflowState *cellRS;
-  if (aReflowState.mCBReflowState &&
-      // nsHTMLReflowState ensures the mCBReflowState of blocks inside a
-      // cell is the cell frame, not the inner-cell block, and that the
-      // containing block of an inner table is the containing block of
-      // its outer table.  So all this check really skips (given
-      // NeedsToObserve) is the block directly inside the cell.
-      (cellRS = aReflowState.mCBReflowState) &&
-      cellRS->frame == this &&
+  // nsHTMLReflowState ensures the mCBReflowState of blocks inside a
+  // cell is the cell frame, not the inner-cell block, and that the
+  // containing block of an inner table is the containing block of its
+  // outer table.
+  // XXXldb Given the now-stricter |NeedsToObserve|, many if not all of
+  // these tests are probably unnecessary.
+
+  // Maybe the cell reflow state; we sure if we're inside the |if|.
+  const nsHTMLReflowState *cellRS = aReflowState.mCBReflowState;
+
+  if (cellRS && cellRS->frame == this &&
       (cellRS->mComputedHeight == NS_UNCONSTRAINEDSIZE ||
        cellRS->mComputedHeight == 0)) { // XXXldb Why 0?
     // This is a percentage height on a frame whose percentage heights
