@@ -41,7 +41,8 @@ bin\chrome\offline.manifest
 [newsblog]
 bin\chrome\newsblog.jar
 bin\chrome\newsblog.manifest
-bin\isp\rss.rdf
+
+bin\defaults\isp\rss.rdf
 bin\components\newsblog.js
 
 ; Optional Talkback
