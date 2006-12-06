@@ -139,7 +139,7 @@ $BuildNameExtra = 'Fx-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
-	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/2.0rc3-candidates/rc1/firefox-2.0.en-US.mac.dmg" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.1-candidates/rc1/firefox-2.0.0.1.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Darwin_8.7.0_Clobber/firefox.dmg"
 	      );
 
@@ -158,7 +158,7 @@ $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
 #
-$BuildTag = 'FIREFOX_2_0rc3_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -196,7 +196,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox";
-$milestone     = "firefox2.0rc3-l10n";
+$milestone     = "firefox2.0.0.1-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
