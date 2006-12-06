@@ -121,7 +121,7 @@ GLITZ_VERSION=0.4.0
 GTK2_VERSION=1.3.7
 MAKE_VERSION=3.78
 WINDRES_VERSION=2.14.90
-W32API_VERSION=3.7
+W32API_VERSION=3.8
 GNOMEVFS_VERSION=2.0
 GNOMEUI_VERSION=2.2.0
 GCONF_VERSION=1.2.1
@@ -386,21 +386,28 @@ case "$target" in
     WINVER=400
     ;;
 *)
-    WINVER=500
+    if test -n "$GNU_CC"; then  
+        WINVER=501
+    else    
+        WINVER=500
+    fi
     ;;
 esac
 
 MOZ_ARG_WITH_STRING(windows-version,
-[  --with-windows-version=400|500  Minimum Windows version to support
-                                  400: Windows 95; 500: Windows 2000],
+[  --with-windows-version=WINVER
+                          Minimum Windows version (WINVER) to support
+                              400: Windows 95
+                              500: Windows 2000
+                              501: Windows XP],
   WINVER=$withval)
 
 case "$WINVER" in
-400|500)
+400|500|501)
     ;;
 
 *)
-    AC_MSG_ERROR([Invalid value --with-windows-version, must be 400 or 500]);
+    AC_MSG_ERROR([Invalid value --with-windows-version, must be 400, 500 or 501]);
     ;;
 
 esac
@@ -551,6 +558,8 @@ case "$target" in
 
     AC_DEFINE_UNQUOTED(WINVER,0x$WINVER)
     AC_DEFINE_UNQUOTED(_WIN32_WINNT,0x$WINVER)
+    # Require OS features provided by IE 4.0
+    AC_DEFINE_UNQUOTED(_WIN32_IE,0x0400)
     ;;
 esac
 
@@ -4006,7 +4015,7 @@ MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_CANVAS=1
-MOZ_EXTENSIONS_ALL=" wallet xml-rpc help p3p venkman inspector irc typeaheadfind gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms schema-validation reporter safe-browsing"
+MOZ_EXTENSIONS_ALL=" wallet xml-rpc help p3p venkman inspector irc typeaheadfind gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms schema-validation reporter"
 MOZ_FEEDS=1
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm icon"
 MOZ_IMG_ENCODERS_DEFAULT="png jpeg"
@@ -4276,11 +4285,11 @@ suite)
 
 browser)
   MOZ_APP_NAME=firefox
-  MOZ_APP_DISPLAYNAME=Minefield
   MOZ_XUL_APP=1
   MOZ_UPDATER=1
   MOZ_PHOENIX=1
   MOZ_PLACES=
+  MOZ_PLACES_BOOKMARKS=
   # always enabled for form history
   MOZ_MORKREADER=1
   MOZ_SAFE_BROWSING=1
@@ -4288,6 +4297,7 @@ browser)
   MOZ_NO_XPCOM_OBSOLETE=1
   MOZ_EXTENSIONS_DEFAULT=" xml-rpc inspector gnomevfs reporter"
   AC_DEFINE(MOZ_PHOENIX)
+  # MOZ_APP_DISPLAYNAME will be set by branding/configure.sh
   ;;
 
 minimo)
@@ -4317,6 +4327,7 @@ mail)
   MOZ_LDAP_XPCOM=1
   MOZ_STATIC_MAIL_BUILD=1
   MOZ_COMPOSER=1
+  MOZ_SAFE_BROWSING=1
   MOZ_SVG=
   MOZ_APP_VERSION=$THUNDERBIRD_VERSION
   MOZ_EXTENSIONS_DEFAULT=" wallet"
@@ -4404,7 +4415,6 @@ zap)
 
 camino) 
   MOZ_APP_NAME=mozilla
-  _PLATFORM_DEFAULT_TOOLKIT=cocoa
   ENABLE_TESTS=
   ACCESSIBILITY=
   MOZ_JSDEBUGGER=
@@ -4893,6 +4903,15 @@ MOZ_ARG_WITH_STRING(branding,
 [  --with-branding=dir    Use branding from the specified directory.],
     MOZ_BRANDING_DIRECTORY=$withval)
 
+REAL_BRANDING_DIRECTORY="${MOZ_BRANDING_DIRECTORY}"
+if test -z "$REAL_BRANDING_DIRECTORY"; then
+  REAL_BRANDING_DIRECTORY=${MOZ_BUILD_APP}/branding/nightly
+fi
+
+if test -f "$topsrcdir/$REAL_BRANDING_DIRECTORY/configure.sh"; then
+  . "$topsrcdir/$REAL_BRANDING_DIRECTORY/configure.sh"
+fi
+
 AC_SUBST(MOZ_BRANDING_DIRECTORY)
 
 dnl ========================================================
@@ -5160,6 +5179,41 @@ fi
 AC_SUBST(MOZ_ENABLE_GNOMEUI)
 AC_SUBST(MOZ_GNOMEUI_CFLAGS)
 AC_SUBST(MOZ_GNOMEUI_LIBS)
+
+dnl ========================================================
+dnl = dbus support
+dnl ========================================================
+
+if test "$MOZ_ENABLE_GTK2"
+then
+    MOZ_ENABLE_DBUS=1
+
+    MOZ_ARG_DISABLE_BOOL(dbus,
+    [  --disable-dbus       Disable dbus support (default: auto, optional at runtime) ],
+        MOZ_ENABLE_DBUS=,
+        MOZ_ENABLE_DBUS=force)
+
+    if test "$MOZ_ENABLE_DBUS"
+    then
+        PKG_CHECK_MODULES(MOZ_DBUS_GLIB, dbus-glib-1,
+        [
+            MOZ_ENABLE_DBUS=1
+        ],[
+            if test "$MOZ_ENABLE_DBUS" = "force"
+            then
+                AC_MSG_ERROR([* * * Could not find dbus-glib-1])
+            fi
+            MOZ_ENABLE_DBUS=
+        ])
+    fi
+
+    if test "$MOZ_ENABLE_DBUS"; then
+        AC_DEFINE(MOZ_ENABLE_DBUS)
+    fi
+fi
+AC_SUBST(MOZ_ENABLE_DBUS)
+AC_SUBST(MOZ_DBUS_GLIB_CFLAGS)
+AC_SUBST(MOZ_DBUS_GLIB_LIBS)
 
 dnl ========================================================
 dnl = Setting MOZ_EXTRA_X11CONVERTERS turns on additional 
@@ -5523,7 +5577,7 @@ dnl ========================================================
 dnl = Airbag crash reporting (on by default on supported platforms)
 dnl ========================================================
 
-if test "$OS_ARCH" = "WINNT"; then
+if test "$OS_ARCH" = "WINNT" -a -z "$GNU_CC"; then
    MOZ_AIRBAG=1
 fi
 
@@ -5969,6 +6023,16 @@ if test -n "$MOZ_PLACES"; then
     MOZ_MORKREADER=1
 fi
 
+dnl ========================================================
+dnl = Enable places bookmarks (use places for bookmarks)
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(places-bookmarks,
+[  --enable-places_bookmarks        Enable 'places' for bookmarks backend],
+    MOZ_PLACES_BOOKMARKS=1,
+    MOZ_PLACES_BOOKMARKS= )
+if test -n "$MOZ_PLACES_BOOKMARKS"; then
+    AC_DEFINE(MOZ_PLACES_BOOKMARKS)
+fi
 
 dnl ========================================================
 dnl = Disable feed handling components
@@ -7597,6 +7661,7 @@ AC_SUBST(LDAP_CFLAGS)
 AC_SUBST(LDAP_LIBS)
 AC_SUBST(LIBICONV)
 AC_SUBST(MOZ_PLACES)
+AC_SUBST(MOZ_PLACES_BOOKMARKS)
 AC_SUBST(MOZ_STORAGE)
 AC_SUBST(MOZ_FEEDS)
 AC_SUBST(NS_PRINTING)
