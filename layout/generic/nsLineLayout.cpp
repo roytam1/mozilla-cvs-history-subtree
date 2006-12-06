@@ -241,8 +241,7 @@ nsLineLayout::BeginLineReflow(nscoord aX, nscoord aY,
       indent = mStyleText->mTextIndent.GetCoordValue();
     }
     else if (eStyleUnit_Percent == unit) {
-      nscoord width =
-        nsHTMLReflowState::GetContainingBlockContentWidth(mBlockReflowState);
+      nscoord width = mBlockReflowState->mCBComputedWidth;
       if ((0 != width) && (NS_UNCONSTRAINEDSIZE != width)) {
         indent = nscoord(mStyleText->mTextIndent.GetPercentValue() * width);
       }

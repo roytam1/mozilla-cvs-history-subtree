@@ -232,8 +232,18 @@ struct nsHTMLReflowState : public nsCSSOffsetState {
   nsLineLayout*    mLineLayout;
 
   // The appropriate reflow state for the containing block (for
-  // percentage widths, etc.) of this reflow state's frame.
+  // percentage widths, etc.) of this reflow state's frame.  This may be
+  // null even if we do have a containing block, but won't be if that
+  // containing block is actually being reflowed.
   const nsHTMLReflowState *mCBReflowState;
+
+  // The frame that establishes our containing block.
+  nsIFrame *mCBFrame;
+
+  // The content width of our containing block as of the end of the
+  // current reflow.
+  nscoord mCBComputedWidth;
+  nscoord mCBComputedHeight;
 
   // The computed width specifies the frame's content area width, and it does
   // not apply to inline non-replaced elements
@@ -356,11 +366,6 @@ struct nsHTMLReflowState : public nsCSSOffsetState {
             nscoord         aContainingBlockHeight = -1,
             nsMargin*       aBorder = nsnull,
             nsMargin*       aPadding = nsnull);
-  /**
-   * Find the content width of the containing block of aReflowState
-   */
-  static nscoord
-    GetContainingBlockContentWidth(const nsHTMLReflowState* aReflowState);
 
   /**
    * Find the containing block of aFrame.  This may return null if

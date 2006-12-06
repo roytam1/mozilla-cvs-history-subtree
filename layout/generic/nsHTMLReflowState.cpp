@@ -243,6 +243,14 @@ void nsHTMLReflowState::InitCBReflowState()
 {
   if (!parentReflowState) {
     mCBReflowState = nsnull;
+
+    // Can we create an invariant about reflow roots so we don't have to
+    // walk here?
+    mCBFrame = GetContainingBlockFor(frame);
+    // XXX Is this always correct?  (Especially mCBComputedHeight which
+    // could be unconstrained.)
+    mCBComputedWidth = availableWidth;
+    mCBComputedHeight = availableHeight;
     return;
   }
 
@@ -257,11 +265,17 @@ void nsHTMLReflowState::InitCBReflowState()
     } else {
       mCBReflowState = parentReflowState;
     }
-      
+    mCBFrame = mCBReflowState->frame;
+    mCBComputedWidth = mCBReflowState->mComputedWidth;
+    mCBComputedHeight = mCBReflowState->mComputedHeight;
+
     return;
   }
-  
+
   mCBReflowState = parentReflowState->mCBReflowState;
+  mCBFrame = parentReflowState->mCBFrame;
+  mCBComputedWidth = parentReflowState->mCBComputedWidth;
+  mCBComputedHeight = parentReflowState->mCBComputedHeight;
 }
 
 void
@@ -305,14 +319,14 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
   // to become fixed.
   if ((mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent ||
        frame->IsBoxFrame()) &&
-      mCBReflowState) {
-    const nsHTMLReflowState *rs = this;
+      mCBFrame) {
+    nsIFrame *f = frame;
     do {
-      rs = rs->parentReflowState;
-      if (rs->frame->GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT)
+      f = f->GetParent();
+      if (f->GetStateBits() & NS_FRAME_CONTAINS_RELATIVE_HEIGHT)
         break; // no need to go further
-      rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
-    } while (rs != mCBReflowState);
+      f->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+    } while (f != mCBFrame);
   }
 
   if (frame->GetStateBits() & NS_FRAME_IS_DIRTY) {
@@ -320,16 +334,6 @@ nsHTMLReflowState::InitResizeFlags(nsPresContext* aPresContext)
     // to re-set this.
     frame->RemoveStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
   }
-}
-
-/* static */
-nscoord
-nsHTMLReflowState::GetContainingBlockContentWidth(const nsHTMLReflowState* aReflowState)
-{
-  const nsHTMLReflowState* rs = aReflowState->mCBReflowState;
-  if (!rs)
-    return 0;
-  return rs->mComputedWidth;
 }
 
 /* static */
@@ -1471,6 +1475,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
   } else {
     // Get the containing block reflow state
     const nsHTMLReflowState* cbrs = mCBReflowState;
+    // XXX ASSERTION NOT VALID
     NS_ASSERTION(nsnull != cbrs, "no containing block");
 
     // If we weren't given a containing block width and height, then
