@@ -107,7 +107,9 @@ nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
     mMinLineHeight(0),
     mTextIndent(0)
 {
-  NS_ASSERTION(aSpaceManager, "space manager should be present");
+  NS_ASSERTION(aSpaceManager || aOuterReflowState->frame->GetType() ==
+                                  nsLayoutAtoms::letterFrame,
+               "space manager should be present");
   MOZ_COUNT_CTOR(nsLineLayout);
 
   // Stash away some style data that we need
