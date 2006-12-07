@@ -32,18 +32,16 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
-$BuildXForms = 1;
-
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
 
 #- Default values of command-line opts
 #-
-#$BuildDepend       = 1;      # Depend or Clobber
+$BuildDepend       = 1;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -148,7 +146,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Nightly';
+$BuildNameExtra = 'Fx-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -166,7 +164,7 @@ $BuildNameExtra = 'Fx-Nightly';
 $BuildTree  = 'Mozilla1.8.0';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_0_BRANCH';
+$BuildTag = 'FIREFOX_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -190,8 +188,8 @@ $ReleaseBuild  = 1;
 #$clean_objdir = 1; # remove objdir when starting release cycle?
 #$clean_srcdir = 1; # remove srcdir when starting release cycle?
 $shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$ReleaseGroup = ''; # group to set uploaded files to
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
@@ -203,12 +201,15 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.8.0";
+$milestone     = "firefox1.5.0.9";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
 $archive       = 1;
 $push_raw_xpis = 1;
+
+$update_package  = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -235,11 +236,7 @@ $push_raw_xpis = 1;
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
 
-$update_package = 1; # Turning off update for now.  It's not yet figured out on the 1.5.0.1 branch.
-$update_product = "Firefox";
-$update_version = "1.5.0.x";
-$update_platform = "WINNT_x86-msvc";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = "browser/config/version.txt";
-$update_pushinfo = 1;
+$update_product  = 'Firefox';
+$update_version  = '1.5.0.x';
+$update_platform = 'WINNT_x86-msvc';
+$update_ver_file = 'browser/config/version.txt';

@@ -15,7 +15,7 @@ mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 ac_add_options --enable-application=browser
 
 ac_add_options --enable-update-packaging
-ac_add_options --enable-update-channel="nightly"
+ac_add_options --enable-update-channel="release"
 
 ac_add_options --enable-optimize="-O2 -g"
 ac_add_options --disable-tests

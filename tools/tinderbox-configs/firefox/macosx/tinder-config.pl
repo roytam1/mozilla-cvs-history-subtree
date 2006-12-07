@@ -42,7 +42,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -149,7 +149,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 $ObjDir = '../build/unifox';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-UniversalBinaries';
+$BuildNameExtra = 'Fx-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -167,7 +167,7 @@ $BuildNameExtra = 'Fx-UniversalBinaries';
 $BuildTree  = 'Mozilla1.8.0';
 
 $BuildName = 'Moz1.8.0-MacUniversal';
-$BuildTag = 'MOZILLA_1_8_0_BRANCH';
+$BuildTag = 'FIREFOX_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -191,8 +191,8 @@ $ReleaseBuild  = 1;
 #$clean_objdir = 1; # remove objdir when starting release cycle?
 #$clean_srcdir = 1; # remove srcdir when starting release cycle?
 #$shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$ReleaseGroup = ''; # group to set uploaded files to
 $build_hour    = "3";
 $package_creation_path = "/browser/installer";
@@ -201,25 +201,19 @@ $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 $ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.8.0";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/";
+$tbox_ftp_path = $ftp_path;
+$tbox_url_path = $url_path;
+$milestone     = "firefox1.5.0.9";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 1;
 $sea_installer = 1;
 $archive       = 1;
 $push_raw_xpis = 1;
 
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "1.5.0.x";
-$update_ver_file = "browser/config/version.txt";
-$update_platform = "Darwin_Universal-gcc3";
-$update_hash = "md5";
-$update_filehost = "ftp.mozilla.org";
-$update_pushinfo = 1;
+$update_package  = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -249,4 +243,9 @@ $update_pushinfo = 1;
 $MacUniversalBinary = 1;
 
 # Build XForms
-$BuildXForms = 0
+$BuildXForms = 0;
+
+$update_product  = 'Firefox';
+$update_version  = '1.5.0.x';
+$update_platform = 'Darwin_Universal-gcc3';
+$update_ver_file = 'browser/config/version.txt';
