@@ -914,11 +914,7 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*     aPresContext,
   // The specified offsets are relative to the absolute containing block's
   // padding edge and our current values are relative to the border edge, so
   // translate.
-  // XXXldb This is wrong for cases where a frame passes |aBorder| to
-  // the reflow state Init method (I think that just matters for
-  // border-collapse tables).  Replace with better API created by 332922
-  // when it's created.
-  nsMargin border = aCBFrame->GetStyleBorder()->GetBorder();
+  nsMargin border = aCBFrame->GetUsedBorder();
   aHypotheticalBox.mLeft -= border.left;
   aHypotheticalBox.mRight -= border.right;
   aHypotheticalBox.mTop -= border.top;
