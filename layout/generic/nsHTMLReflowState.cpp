@@ -248,7 +248,8 @@ void nsHTMLReflowState::InitCBReflowState()
     // walk here?
     mCBFrame = GetContainingBlockFor(frame);
     // XXX Is this always correct?  (Especially mCBComputedHeight which
-    // could be unconstrained.)
+    // could be unconstrained.)  Bug 332922 might help here a little
+    // bit, but it won't solve that problem.
     mCBComputedWidth = availableWidth;
     mCBComputedHeight = availableHeight;
     return;
@@ -428,8 +429,7 @@ nsHTMLReflowState::InitFrameType()
 }
 
 void
-nsHTMLReflowState::ComputeRelativeOffsets(const nsHTMLReflowState* cbrs,
-                                          nscoord aContainingBlockWidth,
+nsHTMLReflowState::ComputeRelativeOffsets(nscoord aContainingBlockWidth,
                                           nscoord aContainingBlockHeight)
 {
   nsStyleCoord  coord;
@@ -709,11 +709,11 @@ static PRBool AreAllEarlierInFlowFramesEmpty(nsIFrame* aFrame,
 // the flow. The values returned are relative to the padding edge of the
 // absolute containing block
 void
-nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*    aPresContext,
+nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*     aPresContext,
                                             nsIFrame*          aPlaceholderFrame,
                                             nsIFrame*          aContainingBlock,
                                             nsMargin&          aBlockContentArea,
-                                            const nsHTMLReflowState* cbrs,
+                                            nsIFrame*          aCBFrame,
                                             nsHypotheticalBox& aHypotheticalBox)
 {
   NS_ASSERTION(mStyleDisplay->mOriginalDisplay != NS_STYLE_DISPLAY_NONE,
@@ -892,7 +892,7 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*    aPresContext,
   // that may have happened;
   nsPoint cbOffset;
   if (mStyleDisplay->mPosition == NS_STYLE_POSITION_FIXED) {
-    // In this case, cbrs->frame will always be an ancestor of
+    // In this case, aCBFrame will always be an ancestor of
     // aContainingBlock, so can just walk our way up the frame tree.
     // Make sure to not add positions of frames whose parent is a
     // scrollFrame, since we're doing fixed positioning, which assumes
@@ -900,12 +900,12 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*    aPresContext,
     cbOffset.MoveTo(0, 0);
     do {
       NS_ASSERTION(aContainingBlock,
-                   "Should hit cbrs->frame before we run off the frame tree!");
+                   "Should hit aCBFrame before we run off the frame tree!");
       cbOffset += aContainingBlock->GetPositionIgnoringScrolling();
       aContainingBlock = aContainingBlock->GetParent();
-    } while (aContainingBlock != cbrs->frame);
+    } while (aContainingBlock != aCBFrame);
   } else {
-    cbOffset = aContainingBlock->GetOffsetTo(cbrs->frame);
+    cbOffset = aContainingBlock->GetOffsetTo(aCBFrame);
   }
   aHypotheticalBox.mLeft += cbOffset.x;
   aHypotheticalBox.mTop += cbOffset.y;
@@ -914,7 +914,11 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*    aPresContext,
   // The specified offsets are relative to the absolute containing block's
   // padding edge and our current values are relative to the border edge, so
   // translate.
-  nsMargin border = cbrs->mComputedBorderPadding - cbrs->mComputedPadding;
+  // XXXldb This is wrong for cases where a frame passes |aBorder| to
+  // the reflow state Init method (I think that just matters for
+  // border-collapse tables).  Replace with better API created by 332922
+  // when it's created.
+  nsMargin border = aCBFrame->GetStyleBorder()->GetBorder();
   aHypotheticalBox.mLeft -= border.left;
   aHypotheticalBox.mRight -= border.right;
   aHypotheticalBox.mTop -= border.top;
@@ -922,7 +926,7 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsPresContext*    aPresContext,
 
 void
 nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
-                                           const nsHTMLReflowState* cbrs,
+                                           nsIFrame* aCBFrame,
                                            nscoord containingBlockWidth,
                                            nscoord containingBlockHeight)
 {
@@ -951,7 +955,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
        (eStyleUnit_Auto == mStylePosition->mOffset.GetBottomUnit()))) {
 
     CalculateHypotheticalBox(aPresContext, placeholderFrame, cbFrame,
-                             cbContentArea, cbrs, hypotheticalBox);
+                             cbContentArea, aCBFrame, hypotheticalBox);
   }
 
   // Initialize the 'left' and 'right' computed offsets
@@ -1567,7 +1571,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     // the correct containing block width and height here, which is why we need
     // to do it after all the quirks-n-such above.
     if (NS_STYLE_POSITION_RELATIVE == mStyleDisplay->mPosition) {
-      ComputeRelativeOffsets(cbrs, aContainingBlockWidth, aContainingBlockHeight);
+      ComputeRelativeOffsets(aContainingBlockWidth, aContainingBlockHeight);
     } else {
       // Initialize offsets to 0
       mComputedOffsets.SizeTo(0, 0, 0, 0);
@@ -1575,7 +1579,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
 
     // Calculate the computed values for min and max properties.  Note that
     // this MUST come after we've computed our border and padding.
-    ComputeMinMaxValues(aContainingBlockWidth, aContainingBlockHeight, cbrs);
+    ComputeMinMaxValues(aContainingBlockWidth, aContainingBlockHeight);
 
     // Calculate the computed width and height. This varies by frame type
 
@@ -1625,8 +1629,8 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
 
     } else if (NS_FRAME_GET_TYPE(mFrameType) == NS_CSS_FRAME_TYPE_ABSOLUTE) {
       // XXX not sure if this belongs here or somewhere else - cwk
-      InitAbsoluteConstraints(aPresContext, cbrs, aContainingBlockWidth,
-                              aContainingBlockHeight);
+      InitAbsoluteConstraints(aPresContext, cbrs->frame,
+                              aContainingBlockWidth, aContainingBlockHeight);
     } else {
       PRBool isBlock =
         NS_CSS_FRAME_TYPE_BLOCK == NS_FRAME_GET_TYPE(mFrameType) &&
@@ -2005,8 +2009,7 @@ nsHTMLReflowState::ApplyMinMaxConstraints(nscoord* aFrameWidth,
 
 void
 nsHTMLReflowState::ComputeMinMaxValues(nscoord aContainingBlockWidth,
-                                       nscoord aContainingBlockHeight,
-                                       const nsHTMLReflowState* aContainingBlockRS)
+                                       nscoord aContainingBlockHeight)
 {
   nsStyleUnit minWidthUnit = mStylePosition->mMinWidth.GetUnit();
   ComputeHorizontalValue(aContainingBlockWidth, minWidthUnit,

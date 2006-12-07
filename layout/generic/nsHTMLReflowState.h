@@ -419,33 +419,31 @@ protected:
   void InitResizeFlags(nsPresContext* aPresContext);
 
   void InitConstraints(nsPresContext* aPresContext,
-                       nscoord         aContainingBlockWidth,
-                       nscoord         aContainingBlockHeight,
-                       nsMargin*       aBorder,
-                       nsMargin*       aPadding);
+                       nscoord        aContainingBlockWidth,
+                       nscoord        aContainingBlockHeight,
+                       nsMargin*      aBorder,
+                       nsMargin*      aPadding);
 
-  void CalculateHypotheticalBox(nsPresContext*    aPresContext,
+  void CalculateHypotheticalBox(nsPresContext*     aPresContext,
                                 nsIFrame*          aPlaceholderFrame,
                                 nsIFrame*          aContainingBlock,
                                 nsMargin&          aBlockContentArea,
-                                const nsHTMLReflowState* cbrs,
+                                nsIFrame*          aCBFrame,
                                 nsHypotheticalBox& aHypotheticalBox);
 
   void InitAbsoluteConstraints(nsPresContext* aPresContext,
-                               const nsHTMLReflowState* cbrs,
+                               nsIFrame* aCBFrame,
                                nscoord aContainingBlockWidth,
                                nscoord aContainingBlockHeight);
 
-  void ComputeRelativeOffsets(const nsHTMLReflowState* cbrs,
-                              nscoord aContainingBlockWidth,
+  void ComputeRelativeOffsets(nscoord aContainingBlockWidth,
                               nscoord aContainingBlockHeight);
 
   // Calculates the computed values for the 'min-Width', 'max-Width',
   // 'min-Height', and 'max-Height' properties, and stores them in the assorted
   // data members
-  void ComputeMinMaxValues(nscoord                  aContainingBlockWidth,
-                           nscoord                  aContainingBlockHeight,
-                           const nsHTMLReflowState* aContainingBlockRS);
+  void ComputeMinMaxValues(nscoord aContainingBlockWidth,
+                           nscoord aContainingBlockHeight);
 
   nscoord CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWidth);
 
