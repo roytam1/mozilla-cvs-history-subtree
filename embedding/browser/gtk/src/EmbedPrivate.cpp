@@ -1712,6 +1712,7 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
                        PRBool  restart)
 {
   PRUnichar *text;
+  PRBool match;
   nsresult rv;
   nsCOMPtr<nsIWebBrowser> webBrowser;
   mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
@@ -1724,9 +1725,12 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
   finder->SetEntireWord (whole_word);
   finder->SetSearchFrames(TRUE); //SearchInFrames
   finder->SetMatchCase (case_sensitive);
-  rv = finder->FindNext (&restart);
+  rv = finder->FindNext (&match);
   NS_Free(text);
-  return ( !rv );
+  if (NS_FAILED (rv))
+    return FALSE;
+
+  return match;
 }
 
 nsresult
