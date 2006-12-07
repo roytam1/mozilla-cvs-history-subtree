@@ -201,6 +201,8 @@ GTKMOZEMBED_API(unsigned char*, gtk_moz_embed_common_nsx509_to_raw, (void *nsIX5
 GTKMOZEMBED_API(void,       gtk_moz_embed_common_get_plugins_list,  (GtkMozPlugin **pluginArray, gint*))
 GTKMOZEMBED_API(void,       gtk_moz_embed_common_reload_plugins,    (void))
 GTKMOZEMBED_API(guint,      gtk_moz_embed_common_get_security_mode, (guint sec_state))
+GTKMOZEMBED_API(gint,       gtk_moz_embed_common_clear_cache,       (void))
+
 
 /*typedef struct _GtkMozEmbedCertContext GtkMozEmbedCertContext;
 struct _GtkMozEmbedCertContext

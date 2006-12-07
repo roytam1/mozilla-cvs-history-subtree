@@ -84,6 +84,10 @@
 //for security
 #include <nsIWebProgressListener.h>
 
+//for cache
+#include <nsICacheService.h>
+#include <nsICache.h>
+
 #ifdef MOZ_WIDGET_GTK2
 #include "gtkmozembedmarshal.h"
 #define NEW_TOOLKIT_STRING(x) g_strdup(NS_ConvertUTF16toUTF8(x).get())
@@ -641,5 +645,22 @@ gtk_moz_embed_common_get_security_mode (guint sec_state)
       break;
   }
   return sec_mode;
+}
+
+gint
+gtk_moz_embed_common_clear_cache(void)
+{
+  nsCacheStoragePolicy storagePolicy;
+
+  nsCOMPtr<nsICacheService> cacheService = do_GetService (NS_CACHESERVICE_CONTRACTID);
+
+  if (cacheService)
+  {
+    //clean disk cache and memory cache
+    storagePolicy = nsICache::STORE_ANYWHERE;
+    cacheService->EvictEntries(storagePolicy);
+    return 0;
+  }
+  return 1;
 }
 

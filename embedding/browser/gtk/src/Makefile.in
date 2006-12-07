@@ -122,7 +122,8 @@ REQUIRES	= xpcom \
 		  chardet \
 		  find \
 		  webbrowserpersist \
-	 	  cookie \
+		  cookie \
+		  nkcache \
 		  $(NULL)
 
 ifdef ACCESSIBILITY
