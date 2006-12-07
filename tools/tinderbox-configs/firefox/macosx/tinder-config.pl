@@ -172,7 +172,7 @@ $BuildNameExtra = 'Fx-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
-             "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.8-candidates/rc2/firefox-1.5.0.8.en-US.mac.dmg" =>
+             "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.9-candidates/rc1/firefox-1.5.0.9.en-US.mac.dmg" =>
              "/builds/tinderbox/Fx-Moz1.8.0-universal-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg"
              );
 
@@ -190,7 +190,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Moz1.8.0-universal-l10n-Release
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 $BuildName = 'Moz1.8.0-MacUniversal-l10n';
-$BuildTag = 'FIREFOX_1_5_0_8_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -230,7 +230,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = $ftp_path;
 $tbox_url_path = $url_path;
-$milestone     = "firefox1.5.0.8";
+$milestone     = "firefox1.5.0.9";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;

@@ -12,7 +12,7 @@ export MOZILLA_OFFICIAL=1
 
 mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
-mk_add_options LOCALES_CO_TAG=FIREFOX_1_5_0_8_RELEASE
+mk_add_options LOCALES_CO_TAG=FIREFOX_1_5_0_9_RELEASE
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
  
 ac_add_options --disable-debug

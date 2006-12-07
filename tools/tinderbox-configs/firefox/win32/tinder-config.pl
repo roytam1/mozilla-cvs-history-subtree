@@ -135,9 +135,9 @@ $ConfigureOnly = 1;
 
 # Existing build files to download.
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.8-candidates/rc2/firefox-1.5.0.8.en-US.win32.installer.exe" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.9-candidates/rc1/firefox-1.5.0.9.en-US.win32.installer.exe" =>
 	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.8-candidates/rc2/firefox-1.5.0.8.en-US.win32.zip" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.9-candidates/rc1/firefox-1.5.0.9.en-US.win32.zip" =>
 	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip"
 	      );
 
@@ -155,7 +155,7 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Re
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
-$BuildTag = 'FIREFOX_1_5_0_8_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -192,7 +192,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox";
-$milestone     = "firefox1.5.0.8";
+$milestone     = "firefox1.5.0.9";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;

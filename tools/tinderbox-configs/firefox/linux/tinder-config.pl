@@ -146,7 +146,7 @@ $BuildNameExtra = 'Fx-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.8-candidates/rc2/firefox-1.5.0.8.en-US.linux-i686.tar.gz",
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.9-candidates/rc1/firefox-1.5.0.9.en-US.linux-i686.tar.gz",
 	      "/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/Linux_2.4.21-37.EL_Depend/firefox.tar.gz"
 	      );
 
@@ -164,7 +164,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/Linux
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
-$BuildTag = 'FIREFOX_1_5_0_8_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -201,7 +201,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox";
-$milestone     = "firefox1.5.0.8";
+$milestone     = "firefox1.5.0.9";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
@@ -209,12 +209,12 @@ $archive       = 1;
 $push_raw_xpis = 1;
 $update_package = 1;
 $update_product = "Firefox";
-$update_version = "1.5.0.7";
+$update_version = "1.5.0.9";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "mozilla.osuosl.org";
-$update_appv = "1.5.0.7";
-$update_extv = "1.5.0.7";
+$update_appv = "1.5.0.9";
+$update_extv = "1.5.0.9";
 $update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
