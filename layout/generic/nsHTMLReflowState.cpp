@@ -1464,6 +1464,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
   // If this is the root frame, then set the computed width and
   // height equal to the available space
   if (nsnull == parentReflowState) {
+    // XXXldb This doesn't mean what it used to!
     mComputedWidth = availableWidth;
     mComputedHeight = availableHeight;
     mComputedMargin.SizeTo(0, 0, 0, 0);
