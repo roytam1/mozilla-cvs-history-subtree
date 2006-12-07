@@ -176,7 +176,7 @@ $ConfigureOnly = 1;
              "/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg"
              );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Moz1.8.0-universal-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg";
 
 #-
 #- The rest should not need to be changed
