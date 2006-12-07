@@ -2252,7 +2252,8 @@ nsPrintEngine::ReflowPrintObject(nsPrintObject * aPO)
       return NS_OK;
 
     nsMargin borderPadding(0, 0, 0, 0);
-    frame->CalcBorderPadding(borderPadding);
+    borderPadding += frame->GetUsedPadding();
+    borderPadding += frame->GetUsedBorder();
     nsRect rect(frame->GetRect());
     rect.Deflate(borderPadding);
     adjSize = rect.Size();

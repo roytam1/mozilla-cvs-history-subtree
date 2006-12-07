@@ -1426,6 +1426,24 @@ nsTableRowGroupFrame::RemoveFrame(nsIAtom*        aListName,
   return NS_OK;
 }
 
+/* virtual */ nsMargin
+nsTableRowGroupFrame::GetUsedMargin() const
+{
+  return nsMargin(0,0,0,0);
+}
+
+/* virtual */ nsMargin
+nsTableRowGroupFrame::GetUsedBorder() const
+{
+  return nsMargin(0,0,0,0);
+}
+
+/* virtual */ nsMargin
+nsTableRowGroupFrame::GetUsedPadding() const
+{
+  return nsMargin(0,0,0,0);
+}
+
 nscoord 
 nsTableRowGroupFrame::GetHeightBasis(const nsHTMLReflowState& aReflowState)
 {
