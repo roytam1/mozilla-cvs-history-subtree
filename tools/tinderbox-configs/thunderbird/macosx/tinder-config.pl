@@ -147,7 +147,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/unifox';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Tb-UniversalBinaries';
+$BuildNameExtra = 'Tb-UniversalBinaries-Clbr';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -166,7 +166,7 @@ $BuildNameExtra = 'Tb-UniversalBinaries';
 $BuildTree  = 'Mozilla1.8.0';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_0_BRANCH';
+$BuildTag = 'THUNDERBIRD_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -188,8 +188,8 @@ $BinaryName = 'thunderbird-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -201,21 +201,14 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "mozilla1.8.0";
-$notify_list   = 'build-announce@mozilla.org';
+$milestone     = "thunderbird1.5.0.9";
+$notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
 
 $update_package = 1;
-$update_product = "Thunderbird";
-$update_version = "1.5.0.x";
-$update_ver_file = "mail/config/version.txt";
-$update_platform = "Darwin_Universal-gcc3";
-$update_hash = 'sha1';
-$update_filehost = "ftp.mozilla.org";
-$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -243,3 +236,10 @@ $update_pushinfo = 1;
 #$ENV{NO_EM_RESTART} = '1';
 
 $MacUniversalBinary = 1; 
+
+$update_product  = "Thunderbird";
+$update_version  = "1.5.0.x";
+$update_platform = "Darwin_ppc-gcc3";
+$update_ver_file = 'mail/config/version.txt';
+$update_pushinfo = 0;
+

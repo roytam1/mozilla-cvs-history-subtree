@@ -18,11 +18,11 @@ $DisplayServer = ':1.0';
 
 #- Default values of command-line opts
 #-
-#$BuildDepend       = 0;      # Depend or Clobber
+$BuildDepend       = 1;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -103,7 +103,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -115,7 +115,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Tb-Nightly';
+$BuildNameExtra = 'Tb-Release-Clobber';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -134,7 +134,7 @@ $BuildTree  = 'Mozilla1.8.0';
 #$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_0_BRANCH';
+$BuildTag = 'THUNDERBIRD_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -159,6 +159,8 @@ $BinaryName = 'thunderbird-bin';
 # Release build options
 $ReleaseBuild  = 1;
 #$shiptalkback  = 1;
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 $ssh_version   = "2";
@@ -168,21 +170,13 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "mozilla1.8.0";
+$milestone     = "thunderbird1.5.0.9";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 
 $update_package = 1;
-$update_product = "Thunderbird";
-$update_version = "1.5.0.x";
-$update_platform = "Linux_x86-gcc3";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_appv = "1.5.0.5";
-$update_extv = "1.5.0.5";
-$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -206,3 +200,10 @@ $update_pushinfo = 1;
 #$LogEncoding = 'base64';
 
 $ENV{CVS_RSH} = "ssh";
+
+$update_product  = "Thunderbird";
+$update_version  = "1.5.0.x";
+$update_platform = "Linux_x86-gcc3";
+$update_ver_file = 'mail/config/version.txt';
+$update_pushinfo = 0;
+
