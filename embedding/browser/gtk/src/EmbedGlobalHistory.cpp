@@ -388,7 +388,7 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
   /*GnomeVFS */
   if (!gnome_vfs_initialized())
     if (!gnome_vfs_init())
-      NS_WARNING("Could not init GnomeVFS!\n")
+      NS_WARNING("Could not init GnomeVFS!\n");
 #endif
   
   PRInt32 expireDays;
