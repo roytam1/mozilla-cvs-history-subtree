@@ -7,9 +7,7 @@
 
 /* Reset the default CSS rules for #newMailAlertNotification. */
 #newMailAlertNotification {
-  min-height: inherit;
   border: none;
-  background-color: inherit;
 }
 
 /* Apply the default CSS rules of #newMailAlertNotification on #alertContainer instead. */
