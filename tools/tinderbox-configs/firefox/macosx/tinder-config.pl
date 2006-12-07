@@ -173,7 +173,7 @@ $BuildNameExtra = 'Fx-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
              "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.9-candidates/rc1/firefox-1.5.0.9.en-US.mac.dmg" =>
-             "/builds/tinderbox/Fx-Moz1.8.0-universal-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg"
+             "/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg"
              );
 
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Moz1.8.0-universal-l10n-Release/Darwin_8.7.0_Depend/firefox.dmg";
