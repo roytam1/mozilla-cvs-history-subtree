@@ -1236,7 +1236,7 @@ GetVerticalMarginBorderPadding(const nsHTMLReflowState* aReflowState)
  *  When we encounter scrolledContent area frames, we skip over them, since they are guaranteed to not be useful for computing the containing block.
  */
 nscoord
-CalcQuirkContainingBlockHeight(const nsHTMLReflowState& aReflowState)
+CalcQuirkContainingBlockHeight(const nsHTMLReflowState* aCBReflowState)
 {
   nsHTMLReflowState* firstAncestorRS = nsnull; // a candidate for html frame
   nsHTMLReflowState* secondAncestorRS = nsnull; // a candidate for body frame
@@ -1246,7 +1246,7 @@ CalcQuirkContainingBlockHeight(const nsHTMLReflowState& aReflowState)
   // don't alter this height especially if we are restricted to one level
   nscoord result = NS_AUTOHEIGHT; 
                              
-  const nsHTMLReflowState* rs = &aReflowState;
+  const nsHTMLReflowState* rs = aCBReflowState;
   for (; rs && rs->frame; rs = (nsHTMLReflowState *)(rs->parentReflowState)) { 
     nsIAtom* frameType = rs->frame->GetType();
     // if the ancestor is auto height then skip it and continue up if it 
@@ -1406,7 +1406,7 @@ nsHTMLReflowState::ComputeContainingBlockRectangle(nsPresContext*          aPres
     if (NS_AUTOHEIGHT == aContainingBlockHeight) {
       if (eCompatibility_NavQuirks == aPresContext->CompatibilityMode() &&
           mStylePosition->mHeight.GetUnit() == eStyleUnit_Percent) {
-        aContainingBlockHeight = CalcQuirkContainingBlockHeight(*aContainingBlockRS);
+        aContainingBlockHeight = CalcQuirkContainingBlockHeight(aContainingBlockRS);
       }
     }
   }
@@ -1538,7 +1538,7 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
           // in quirks mode, get the cb height using the special quirk method
           if (eCompatibility_NavQuirks == aPresContext->CompatibilityMode()) {
             if (!IS_TABLE_CELL(fType)) {
-              aContainingBlockHeight = CalcQuirkContainingBlockHeight(*cbrs);
+              aContainingBlockHeight = CalcQuirkContainingBlockHeight(cbrs);
               if (aContainingBlockHeight == NS_AUTOHEIGHT) {
                 heightUnit = eStyleUnit_Auto;
               }
