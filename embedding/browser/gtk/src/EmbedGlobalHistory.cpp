@@ -383,6 +383,14 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
 {
   if (mURLList) return NS_OK;
   // Get Pref and convert to millisecs
+  
+#ifdef MOZ_ENABLE_GNOMEVFS
+  /*GnomeVFS */
+  if (!gnome_vfs_initialized())
+    if (!gnome_vfs_init())
+      NS_WARNING("Could not init GnomeVFS!\n")
+#endif
+  
   PRInt32 expireDays;
   int success = gtk_moz_embed_common_get_pref(G_TYPE_INT, EMBED_HISTORY_PREF_EXPIRE_DAYS, &expireDays);
   if (success) {
