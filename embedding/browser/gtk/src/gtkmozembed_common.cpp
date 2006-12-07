@@ -407,20 +407,21 @@ gtk_moz_embed_common_get_logins(const char* uri, GList **list)
        passwordEnumerator->HasMoreElements(&enumResult))
   {
     nsCOMPtr<nsIPassword> nsPassword;
-    result = passwordEnumerator->GetNext
-      (getter_AddRefs(nsPassword));
+    result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
     if (NS_FAILED(result)) {
       /* this almost certainly leaks logins */
       return ret;
     }
-    nsCString transfer;
-    nsPassword->GetHost (transfer);
+    nsCString host;
+    nsPassword->GetHost (host);
     nsCString nsCURI(uri);
-    if (uri)
-      if (!StringBeginsWith (nsCURI, transfer)
-          // && !StringBeginsWith (transfer, nsCURI)
+    if (uri) {
+      if (!StringBeginsWith (nsCURI, host)
+          // && !StringBeginsWith (host, nsCURI)
           )
         continue;
+    } else if (!passwordManager->IsEqualToLastHostQuery(host))
+      continue;
 
     if (list) {
       nsString unicodeName;
@@ -430,7 +431,7 @@ gtk_moz_embed_common_get_logins(const char* uri, GList **list)
       GtkMozLogin * login = g_new0(GtkMozLogin, 1);
       login->user = ToNewUTF8String(unicodeName);
       login->pass = ToNewUTF8String(unicodePassword);
-      login->host = NS_strdup(transfer.get());
+      login->host = NS_strdup(host.get());
       login->index = ret;
       *list = g_list_append(*list, login);
     }

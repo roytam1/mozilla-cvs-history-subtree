@@ -552,6 +552,12 @@ EmbedPasswordMgr::RemoveReject(const nsACString& aHost)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+EmbedPasswordMgr::IsEqualToLastHostQuery(nsCString& aHost)
+{
+  return StringBeginsWith (aHost, mLastHostQuery);
+}
+
 /* static */ PLDHashOperator PR_CALLBACK
 EmbedPasswordMgr::BuildArrayEnumerator(const nsACString& aKey,
                                        SignonHashEntry* aEntry,
