@@ -1375,8 +1375,6 @@ GK_ATOM(overflowPlaceholdersProperty, "OverflowPlaceholdersProperty")  // nsFram
 GK_ATOM(rowUnpaginatedHeightProperty, "RowUnpaginatedHeightProperty")  // nscoord*
 GK_ATOM(spaceManagerProperty, "SpaceManagerProperty")      // the space manager for a block
 GK_ATOM(tableBCProperty, "TableBCProperty")                // table border collapsing info (e.g. damage area, table border widths)
-GK_ATOM(usedMarginProperty, "UsedMarginProperty") // nsMargin*
-GK_ATOM(usedPaddingProperty, "UsedPaddingProperty") // nsMargin*
 GK_ATOM(viewProperty, "ViewProperty")                      
 
 // Languages for lang-specific transforms

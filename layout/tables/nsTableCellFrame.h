@@ -87,6 +87,7 @@ public:
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
 #endif
 
+
   NS_IMETHOD  AttributeChanged(PRInt32         aNameSpaceID,
                                nsIAtom*        aAttribute,
                                PRInt32         aModType);
@@ -105,8 +106,6 @@ public:
   virtual nsIFrame* GetContentInsertionFrame() {
     return GetFirstChild(nsnull)->GetContentInsertionFrame();
   }
-
-  virtual nsMargin GetUsedMargin() const;
 
   virtual void NotifyPercentHeight(const nsHTMLReflowState& aReflowState);
 
@@ -324,8 +323,6 @@ public:
   ~nsBCTableCellFrame();
 
   virtual nsIAtom* GetType() const;
-
-  virtual nsMargin GetUsedBorder() const;
 
   // Get the *inner half of the border only*, in twips.
   virtual nsMargin* GetBorderWidth(float     aPixelsToTwips,

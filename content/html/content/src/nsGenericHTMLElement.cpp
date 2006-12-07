@@ -1155,7 +1155,11 @@ const nsSize
 nsGenericHTMLElement::GetClientAreaSize(nsIFrame *aFrame)
 {
   nsRect rect = aFrame->GetRect();
-  nsMargin border_size = aFrame->GetUsedBorder();
+
+  const nsStyleBorder* border = aFrame->GetStyleBorder();
+
+  nsMargin border_size;
+  border->CalcBorderFor(aFrame, border_size);
 
   rect.Deflate(border_size);
 

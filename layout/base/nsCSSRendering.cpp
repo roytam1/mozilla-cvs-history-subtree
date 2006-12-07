@@ -1705,7 +1705,7 @@ void nsCSSRendering::PaintBorder(nsPresContext* aPresContext,
   if (aHardBorderSize > 0) {
     border.SizeTo(aHardBorderSize, aHardBorderSize, aHardBorderSize, aHardBorderSize);
   } else {
-    border = aBorderStyle.GetBorder();
+    aBorderStyle.CalcBorderFor(aForFrame, border);
   }
   if ((0 == border.left) && (0 == border.right) &&
       (0 == border.top) && (0 == border.bottom)) {
@@ -3007,7 +3007,9 @@ nsCSSRendering::PaintBackgroundWithSC(nsPresContext* aPresContext,
     // XXXldb What about SkipSides?
     bgOriginArea.Deflate(aBorder.GetBorder());
     if (aColor.mBackgroundOrigin != NS_STYLE_BG_ORIGIN_PADDING) {
-      nsMargin padding = aForFrame->GetUsedPadding();
+      nsMargin padding;
+      // XXX CalcPaddingFor is deprecated, but we need it for percentage padding
+      aPadding.CalcPaddingFor(aForFrame, padding);
       // XXXldb What about SkipSides?
       bgOriginArea.Deflate(padding);
       NS_ASSERTION(aColor.mBackgroundOrigin == NS_STYLE_BG_ORIGIN_CONTENT,
@@ -3512,7 +3514,7 @@ nsCSSRendering::PaintRoundedBorder(nsPresContext* aPresContext,
 
   NS_ASSERTION((aIsOutline && aOutlineStyle) || (!aIsOutline && aBorderStyle), "null params not allowed");
   if (!aIsOutline) {
-    border = aBorderStyle->GetBorder();
+    aBorderStyle->CalcBorderFor(aForFrame, border);
     if ((0 == border.left) && (0 == border.right) &&
         (0 == border.top) && (0 == border.bottom)) {
       return;

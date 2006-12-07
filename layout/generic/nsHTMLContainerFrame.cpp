@@ -205,10 +205,9 @@ nsHTMLContainerFrame::PaintTextDecorationLine(
                    nscoord aAscent, 
                    nscoord aSize) 
 {
-  nsMargin bp(0,0,0,0);
+  nsMargin bp;
   NS_ASSERTION(!aLine, "Should not have passed a linebox to a non-block frame");
-  bp += GetUsedBorder();
-  bp += GetUsedPadding();
+  CalcBorderPadding(bp);
   PRIntn skip = GetSkipSides();
   NS_FOR_CSS_SIDES(side) {
     if (skip & (1 << side)) {
