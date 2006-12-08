@@ -139,7 +139,7 @@ $BuildNameExtra = 'Fx-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.1-candidates/rc1/firefox-2.0.0.1.en-US.linux-i686.tar.gz" => 
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.1-candidates/rc2/firefox-2.0.0.1.en-US.linux-i686.tar.gz" => 
 	      "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Clobber/firefox.tar.gz"
 	      );
 
