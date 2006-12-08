@@ -5956,14 +5956,45 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
           size.width = 0;
     }
 
+    // Construct a bogus parent reflow state so that there's a usable
+    // containing block reflow state.
+    nsMargin margin(0,0,0,0);
+    GetMargin(margin);
+
+    nsSize parentSize(aWidth, aHeight);
+    if (parentSize.height != NS_INTRINSICSIZE)
+      parentSize.height += margin.TopBottom();
+    if (parentSize.width != NS_INTRINSICSIZE)
+      parentSize.width += margin.LeftRight();
+
+    nsIFrame *parentFrame = GetParent();
+    nsFrameState savedState = parentFrame->GetStateBits();
+    nsHTMLReflowState parentReflowState(aPresContext, parentFrame,
+                                        aRenderingContext,
+                                        parentSize);
+    parentFrame->RemoveStateBits(0xffffffff);
+    parentFrame->AddStateBits(savedState);
+
+    // This may not do very much useful, but it's probably worth trying.
+    if (parentSize.width != NS_INTRINSICSIZE)
+      parentReflowState.mComputedWidth = parentSize.width;
+    if (parentSize.height != NS_INTRINSICSIZE)
+      parentReflowState.mComputedHeight = parentSize.height;
+    parentReflowState.mComputedMargin.SizeTo(0, 0, 0, 0);
+    parentFrame->GetPadding(parentReflowState.mComputedPadding);
+    parentFrame->GetBorder(parentReflowState.mComputedBorderPadding);
+    parentReflowState.mComputedBorderPadding +=
+      parentReflowState.mComputedPadding;
+
     // XXX Is it OK that this reflow state has no parent reflow state?
     // (It used to have a bogus parent, skipping all the boxes).
     nsHTMLReflowState reflowState(aPresContext, this, aRenderingContext,
                                   nsSize(aWidth, NS_INTRINSICSIZE));
 
-    // a line layout from outside the box shouldn't be used for inline
-    // frames inside the box
-    reflowState.mLineLayout = nsnull;
+    // Construct the parent chain manually since constructing it normally
+    // messes up dimensions.
+    reflowState.parentReflowState = &parentReflowState;
+    reflowState.mCBReflowState = &parentReflowState;
 
     // mComputedWidth and mComputedHeight are content-box, not
     // border-box
