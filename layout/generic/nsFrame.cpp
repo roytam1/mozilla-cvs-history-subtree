@@ -5956,23 +5956,9 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
           size.width = 0;
     }
 
-    // Construct a bogus parent reflow state so that there's a usable
-    // containing block reflow state.
-    nsIFrame *parentFrame = GetParent();
-    nsFrameState savedState = parentFrame->GetStateBits();
-    nsHTMLReflowState parentReflowState(aPresContext, parentFrame,
-                                        aRenderingContext,
-                                        parentFrame->GetSize());
-    parentReflowState.mComputedWidth = parentReflowState.availableWidth;
-    parentReflowState.mComputedHeight = parentReflowState.availableHeight;
-    // to be copied to descendants:
-    parentReflowState.mCBReflowState = &parentReflowState;
-    parentFrame->RemoveStateBits(0xffffffff);
-    parentFrame->AddStateBits(savedState);
-
     // XXX Is it OK that this reflow state has no parent reflow state?
     // (It used to have a bogus parent, skipping all the boxes).
-    nsHTMLReflowState reflowState(aPresContext, parentReflowState, this,
+    nsHTMLReflowState reflowState(aPresContext, this, aRenderingContext,
                                   nsSize(aWidth, NS_INTRINSICSIZE));
 
     // a line layout from outside the box shouldn't be used for inline
