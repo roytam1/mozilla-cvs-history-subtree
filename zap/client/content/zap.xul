@@ -37,6 +37,8 @@
 
 <?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
 
+<?xul-overlay href="chrome://zap/content/sidebar.xul"?>
+
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <window id="zap"
@@ -48,9 +50,6 @@
         onload="windowInit();"
         onunload="windowClose();"
         xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-
-  <!-- Overlays -->
-  <?xul-overlay href="chrome://zap/content/sidebar.xul"?>
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
