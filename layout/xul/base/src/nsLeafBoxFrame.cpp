@@ -452,7 +452,8 @@ nsLeafBoxFrame::GetAscent(nsBoxLayoutState& aState, nscoord& aAscent)
 /* virtual */ void
 nsLeafBoxFrame::MarkIntrinsicWidthsDirty()
 {
-  return;
+  // Don't call base class method, since everything it does is within an
+  // IsBoxWrapped check.
 }
 
 NS_IMETHODIMP

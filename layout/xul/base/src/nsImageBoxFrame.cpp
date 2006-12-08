@@ -206,6 +206,7 @@ nsImageBoxFrame::~nsImageBoxFrame()
 nsImageBoxFrame::MarkIntrinsicWidthsDirty()
 {
   SizeNeedsRecalc(mImageSize);
+  nsLeafBoxFrame::MarkIntrinsicWidthsDirty();
 }
 
 void

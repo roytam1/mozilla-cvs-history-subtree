@@ -1079,6 +1079,9 @@ nsBoxFrame::MarkIntrinsicWidthsDirty()
     nsBoxLayoutState state(GetPresContext());
     mLayoutManager->IntrinsicWidthsDirty(this, state);
   }
+
+  // Don't call base class method, since everything it does is within an
+  // IsBoxWrapped check.
 }
 
 NS_IMETHODIMP

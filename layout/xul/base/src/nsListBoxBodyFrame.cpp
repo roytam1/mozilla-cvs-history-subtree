@@ -342,6 +342,7 @@ nsListBoxBodyFrame::AttributeChanged(PRInt32 aNameSpaceID,
 nsListBoxBodyFrame::MarkIntrinsicWidthsDirty()
 {
   mStringWidth = -1;
+  nsBoxFrame::MarkIntrinsicWidthsDirty();
 }
 
 /////////// nsBox ///////////////

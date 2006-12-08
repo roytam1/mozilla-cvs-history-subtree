@@ -824,6 +824,7 @@ nsTextBoxFrame::DoLayout(nsBoxLayoutState& aBoxLayoutState)
 nsTextBoxFrame::MarkIntrinsicWidthsDirty()
 {
     mNeedsRecalc = PR_TRUE;
+    nsTextBoxFrameSuper::MarkIntrinsicWidthsDirty();
 }
 
 void
