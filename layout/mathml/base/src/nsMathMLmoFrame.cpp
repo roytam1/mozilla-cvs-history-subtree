@@ -973,6 +973,8 @@ nsMathMLmoFrame::MarkIntrinsicWidthsDirty()
   // XXXldb This should really be marking dirty rather than rebuilding
   // so that we don't rebuild multiple times for the same change.
   RebuildAutomaticDataForChildren(target);
+
+  nsMathMLContainerFrame::MarkIntrinsicWidthsDirty();
 }
 
 NS_IMETHODIMP

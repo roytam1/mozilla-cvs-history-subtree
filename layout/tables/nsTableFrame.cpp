@@ -1628,6 +1628,8 @@ nsTableFrame::MarkIntrinsicWidthsDirty()
     mTableLayoutStrategy->MarkIntrinsicWidthsDirty();
 
   // XXXldb Call SetBCDamageArea?
+
+  nsHTMLContainerFrame::MarkIntrinsicWidthsDirty();
 }
 
 /* virtual */ nscoord

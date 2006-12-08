@@ -594,6 +594,8 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
 {
   mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+
+  nsBlockFrameSuper::MarkIntrinsicWidthsDirty();
 }
 
 /* virtual */ nscoord

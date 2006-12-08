@@ -5648,6 +5648,8 @@ nsTextFrame::MarkIntrinsicWidthsDirty()
   // Clear the TEXT_OPTIMIZE_RESIZE for the next time around.  It'll get
   // reset late in Reflow.
   RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
+
+  nsFrame::MarkIntrinsicWidthsDirty();
 }
 
 // XXX This should really share more code with the first half of MeasureText.

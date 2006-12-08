@@ -221,6 +221,8 @@ nsMathMLTokenFrame::MarkIntrinsicWidthsDirty()
   // this could be called due to changes in the nsTextFrame beneath us
   // when something changed in the text content. So re-process our text
   ProcessTextData(PR_TRUE);
+
+  nsMathMLContainerFrame::MarkIntrinsicWidthsDirty();
 }
 
 NS_IMETHODIMP
