@@ -60,9 +60,6 @@ EXPORTED_SYMBOLS = [ "StdClass",
 // name our global object:
 // function toString() { return "[ClassUtils.js]"; }
 
-// object to hold module's documentation:
-var _doc_ = {};
-
 ////////////////////////////////////////////////////////////////////////
 // StdClass bootstrapping
 //
