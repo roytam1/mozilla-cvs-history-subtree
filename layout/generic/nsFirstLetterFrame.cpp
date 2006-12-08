@@ -213,14 +213,14 @@ nsFirstLetterFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
 /* virtual */ nscoord
 nsFirstLetterFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  return nsLayoutUtils::MinWidthFromInline(aRenderingContext, this);
+  return nsLayoutUtils::MinWidthFromInline(this, aRenderingContext);
 }
 
 // Needed for floating first-letter frames.
 /* virtual */ nscoord
 nsFirstLetterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  return nsLayoutUtils::PrefWidthFromInline(aRenderingContext, this);
+  return nsLayoutUtils::PrefWidthFromInline(this, aRenderingContext);
 }
 
 NS_IMETHODIMP

@@ -1493,8 +1493,8 @@ nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(
 }
 
 /* static */ nscoord
-nsLayoutUtils::MinWidthFromInline(nsIRenderingContext *aRenderingContext,
-                                  nsIFrame *aFrame)
+nsLayoutUtils::MinWidthFromInline(nsIFrame *aFrame,
+                                  nsIRenderingContext *aRenderingContext)
 {
   nsIFrame::InlineMinWidthData data;
   DISPLAY_MIN_WIDTH(aFrame, data.prevLines);
@@ -1504,8 +1504,8 @@ nsLayoutUtils::MinWidthFromInline(nsIRenderingContext *aRenderingContext,
 }
 
 /* static */ nscoord
-nsLayoutUtils::PrefWidthFromInline(nsIRenderingContext *aRenderingContext,
-                                   nsIFrame *aFrame)
+nsLayoutUtils::PrefWidthFromInline(nsIFrame *aFrame,
+                                   nsIRenderingContext *aRenderingContext)
 {
   nsIFrame::InlinePrefWidthData data;
   DISPLAY_PREF_WIDTH(aFrame, data.prevLines);
