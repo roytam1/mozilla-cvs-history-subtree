@@ -2385,6 +2385,7 @@ nsGfxScrollFrameInner::LayoutScrollbars(nsBoxLayoutState& aState,
            parentFrame->GetFirstChild(nsLayoutAtoms::fixedList);
          fixedChild; fixedChild = fixedChild->GetNextSibling()) {
       // force a reflow of the fixed child
+      fixedChild->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
       // XXX Will this work given where we currently are in reflow?
       mOuter->GetPresContext()->PresShell()->
         FrameNeedsReflow(fixedChild, nsIPresShell::eResize);
