@@ -37,15 +37,14 @@
 
 <?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
 
+<?xul-overlay href="chrome://zap/content/call-form.xul"?>
+
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <page id="zap_calls"
       class="zap-form"
       xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="initPage()">
-
-  <!-- Overlays -->
-  <?xul-overlay href="chrome://zap/content/call-form.xul"?>
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
