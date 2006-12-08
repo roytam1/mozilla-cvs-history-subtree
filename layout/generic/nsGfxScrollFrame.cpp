@@ -68,7 +68,6 @@
 #include "nsGUIEvent.h"
 #include "nsContentCreatorFunctions.h"
 #include "nsISupportsPrimitives.h"
-#include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsPresState.h"
 #include "nsIGlobalHistory3.h"
