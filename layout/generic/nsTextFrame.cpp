@@ -385,6 +385,8 @@ public:
   
   // nsIHTMLReflow
   virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                                  InlineMinWidthData *aData);
   virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
@@ -1511,6 +1513,20 @@ nsContinuingTextFrame::GetFirstContinuation() const
 
 // XXX We really need to make :first-letter happen during frame
 // construction.
+
+// Needed for text frames in XUL.
+/* virtual */ nscoord
+nsTextFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  return nsLayoutUtils::MinWidthFromInline(this, aRenderingContext);
+}
+
+// Needed for text frames in XUL.
+/* virtual */ nscoord
+nsTextFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  return nsLayoutUtils::PrefWidthFromInline(this, aRenderingContext);
+}
 
 /* virtual */ void
 nsContinuingTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
