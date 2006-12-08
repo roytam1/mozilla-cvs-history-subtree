@@ -1491,3 +1491,26 @@ nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(
 
   return nsSize(width, height);
 }
+
+/* static */ nscoord
+nsLayoutUtils::MinWidthFromInline(nsIRenderingContext *aRenderingContext,
+                                  nsIFrame *aFrame)
+{
+  nsIFrame::InlineMinWidthData data;
+  DISPLAY_MIN_WIDTH(aFrame, data.prevLines);
+  aFrame->AddInlineMinWidth(aRenderingContext, &data);
+  data.Break(aRenderingContext);
+  return data.prevLines;
+}
+
+/* static */ nscoord
+nsLayoutUtils::PrefWidthFromInline(nsIRenderingContext *aRenderingContext,
+                                   nsIFrame *aFrame)
+{
+  nsIFrame::InlinePrefWidthData data;
+  DISPLAY_PREF_WIDTH(aFrame, data.prevLines);
+  aFrame->AddInlinePrefWidth(aRenderingContext, &data);
+  data.Break(aRenderingContext);
+  return data.prevLines;
+}
+

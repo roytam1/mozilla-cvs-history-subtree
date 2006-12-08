@@ -478,6 +478,14 @@ public:
                     nsIRenderingContext* aRenderingContext,
                     nsIFrame* aFrame, nsSize aIntrinsicSize, nsSize aCBSize,
                     nsSize aBorder, nsSize aPadding);
+
+  // Implement nsIFrame::GetPrefWidth in terms of nsIFrame::AddInlinePrefWidth
+  static nscoord PrefWidthFromInline(nsIRenderingContext* aRenderingContext,
+                                     nsIFrame* aFrame);
+
+  // Implement nsIFrame::GetMinWidth in terms of nsIFrame::AddInlineMinWidth
+  static nscoord MinWidthFromInline(nsIRenderingContext* aRenderingContext,
+                                     nsIFrame* aFrame);
 };
 
 #endif // nsLayoutUtils_h__
