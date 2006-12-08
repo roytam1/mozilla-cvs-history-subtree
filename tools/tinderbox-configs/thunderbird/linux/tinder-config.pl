@@ -147,7 +147,7 @@ $BuildNameExtra = 'Tb-Release-l10n-Release';
 $ConfigureOnly = 1;
 
 %WGetFiles = (
-	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.8-candidates/rc1/thunderbird-1.5.0.8.en-US.linux-i686.tar.gz' =>
+	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.9-candidates/rc1/thunderbird-1.5.0.9.en-US.linux-i686.tar.gz' =>
 	      '/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz'
 	      );
 
@@ -165,7 +165,7 @@ $BuildLocalesArgs = 'ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
-$BuildTag = 'THUNDERBIRD_1_5_0_8_RELEASE';
+$BuildTag = 'THUNDERBIRD_1_5_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -203,7 +203,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox";
-$milestone     = "thunderbird1.5.0.8";
+$milestone     = "thunderbird1.5.0.9";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
@@ -211,12 +211,12 @@ $archive       = 1;
 $push_raw_xpis = 1;
 $update_package = 1;
 $update_product = "Thunderbird";
-$update_version = "1.5.0.7";
+$update_version = "1.5.0.9";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "mozilla.osuosl.org";
-$update_appv = "1.5.0.7";
-$update_extv = "1.5.0.7";
+$update_appv = "1.5.0.9";
+$update_extv = "1.5.0.9";
 $update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
