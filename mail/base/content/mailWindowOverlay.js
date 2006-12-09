@@ -2434,6 +2434,12 @@ function ClearPendingReadTimer()
 // mail message. OnMsgLoaded is called when libmime is done parsing the message
 function OnMsgParsed(aUrl)
 {
+  var msgURI = GetLoadedMessage();
+  // notify anyone (e.g., extensions) who's interested in when a message is loaded.
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(msgWindow.msgHeaderSink, "MsgMsgDisplayed", msgURI);
+  
+  
   // browser doesn't do this, but I thought it could be a useful thing to test out...
   // If the find bar is visible and we just loaded a new message, re-run 
   // the find command. This means the new message will get highlighted and
