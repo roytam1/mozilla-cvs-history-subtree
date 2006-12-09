@@ -56,6 +56,7 @@
 #include "nsIURI.h"
 #include "nsIDialogParamBlock.h"
 #include "nsUnicharUtils.h"
+#include "nsMsgUtils.h"
 
 #ifdef MOZ_XUL_APP
 #include "nsICommandLine.h"
@@ -66,7 +67,6 @@
 #include "nsIRDFResource.h"
 #include "nsIRDFService.h"
 #include "nsIMsgHdr.h"
-#include "nsMsgUtils.h"
 #include "nsEscape.h"
 #endif // MOZ_XUL_APP
 
