@@ -64,6 +64,9 @@ EmbedEventListener::EmbedEventListener(void)
 
 EmbedEventListener::~EmbedEventListener()
 {
+  if (mCtxInfo)
+    delete mCtxInfo;
+  mCtxInfo = nsnull;  
 }
 
 NS_IMPL_ADDREF(EmbedEventListener)
@@ -148,8 +151,7 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   NS_UTF16ToCString(name, NS_CSTRING_ENCODING_UTF8, cName);
   
   // XXX This does not handle |BLAH ICON POWER" or "iCoN" or "IcOn"
-  if (!cName.EqualsLiteral("SHORTCUT ICON") ||
-      !cName.EqualsLiteral("ICON")) {
+  if (!cName.LowerCaseEqualsLiteral("icon")) {
 
     mOwner->mNeedFav = PR_FALSE;
     this->GetFaviconFromURI(url.get());
@@ -164,8 +166,8 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
     if (*navi_type == '\0')
       navi_type = NULL;
 
-    if (!cName.EqualsLiteral("ALTERNATE") &&
-        !cType.EqualsLiteral("application/rss+xml")) {
+    if (!cName.LowerCaseEqualsLiteral("alternate") &&
+        !cType.LowerCaseEqualsLiteral("application/rss+xml")) {
     }
     else {
     }

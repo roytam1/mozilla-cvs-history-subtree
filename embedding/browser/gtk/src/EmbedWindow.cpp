@@ -140,7 +140,7 @@ EmbedWindow::SetStatus(PRUint32 aStatusType, const PRUnichar *aStatus)
   switch (aStatusType) {
     case STATUS_SCRIPT: 
     {
-      mJSStatus = aStatus;
+      mJSStatus = aStatus; //FIXME MEMORY LEAK
       gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
           moz_embed_signals[JS_STATUS]);
     }

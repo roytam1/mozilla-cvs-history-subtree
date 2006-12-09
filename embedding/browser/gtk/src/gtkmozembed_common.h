@@ -146,8 +146,8 @@ typedef enum
 typedef struct _GtkMozHistoryItem GtkMozHistoryItem;
 struct _GtkMozHistoryItem
 {
-    gchar *title;    /** < URL title */
-    gchar *url;      /** < URL */
+    const gchar *title;    /** < URL title */
+    const gchar *url;      /** < URL */
     long accessed;   /** < The last time that the URL was accessed */
 };
 typedef struct _GtkMozCookieList GtkMozCookieList;

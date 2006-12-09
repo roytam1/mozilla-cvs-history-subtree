@@ -109,6 +109,17 @@ static void* file_handle_uri_new(const char *uri)
 #endif
 }
 
+static void file_handle_uri_delete(void *uri)
+{
+  g_return_if_fail(uri);
+#ifndef MOZ_ENABLE_GNOMEVFS
+  return;
+#else
+  gnome_vfs_uri_unref((GnomeVFSURI*)uri);
+#endif
+}
+
+
 static bool file_handle_create_uri(void *file_handle, const void *uri)
 {
   g_return_val_if_fail(file_handle, false);
@@ -136,7 +147,7 @@ static bool file_handle_open_uri(void *file_handle, const void *uri)
     (GnomeVFSURI*)uri,
     (GnomeVFSOpenMode)(GNOME_VFS_OPEN_WRITE
                       | GNOME_VFS_OPEN_RANDOM
-                      | GNOME_VFS_OPEN_READ));
+                      | GNOME_VFS_OPEN_READ)) == GNOME_VFS_OK;
 #endif
 }
 
@@ -147,7 +158,7 @@ static bool file_handle_seek(void *file_handle, gboolean end)
   return false;
 #else
   return gnome_vfs_seek((GnomeVFSHandle*)file_handle,
-                        end ? GNOME_VFS_SEEK_END : GNOME_VFS_SEEK_START, 0);
+                        end ? GNOME_VFS_SEEK_END : GNOME_VFS_SEEK_START, 0) == GNOME_VFS_OK;
 #endif
 }
 
@@ -157,22 +168,28 @@ static bool file_handle_truncate(void *file_handle)
 #ifndef MOZ_ENABLE_GNOMEVFS
   return false;
 #else
-  return gnome_vfs_truncate_handle ((GnomeVFSHandle*)file_handle, 0);
+  return gnome_vfs_truncate_handle ((GnomeVFSHandle*)file_handle, 0) == GNOME_VFS_OK;
 #endif
 }
 
-static int file_handle_file_info_block_size(void *file_handle)
+static int file_handle_file_info_block_size(void *file_handle,  guint64 *size)
 {
   g_return_val_if_fail(file_handle, 0);
+  int rtn = 0;
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return 0;
+
 #else
-  GnomeVFSFileInfo info;
-  gnome_vfs_get_file_info_from_handle ((GnomeVFSHandle *)file_handle,
-                                       &info,
-                                       GNOME_VFS_FILE_INFO_DEFAULT);
-  return info.io_block_size;
+  GnomeVFSFileInfo * fi = gnome_vfs_file_info_new ();
+
+  if (gnome_vfs_get_file_info_from_handle ((GnomeVFSHandle *)file_handle, fi,
+                                           GNOME_VFS_FILE_INFO_DEFAULT) == GNOME_VFS_OK)
+    *size = (int)fi->io_block_size;
+  else
+    rtn = -1;
+
+  gnome_vfs_file_info_unref (fi);
 #endif
+  return rtn;
 }
 
 static int64 file_handle_read(void *file_handle, gpointer buffer, guint64 bytes)
@@ -250,6 +267,7 @@ nsresult SetIsWritten(HistoryEntry *entry)
   return NS_OK;
 }
 
+
 // Change the entry title
 #define SET_TITLE(entry, aTitle) entry->mTitle.Assign (aTitle);
 
@@ -305,7 +323,10 @@ void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
 {
   HistoryEntry *entry = (HistoryEntry *) data;
   if (entry) {
+    if (entry->url)
+      g_free(entry->url);
     entry->url = NULL;
+    entry->mTitle.~nsCString();
     entry->mLastVisitTime = 0;
     g_free(entry);
   }
@@ -324,7 +345,7 @@ EmbedGlobalHistory::GetInstance()
     sEmbedGlobalHistory = new EmbedGlobalHistory();
     if (!sEmbedGlobalHistory)
       return nsnull;
-    sEmbedGlobalHistory->handle = NULL;
+    sEmbedGlobalHistory->mFileHandle = NULL;
     NS_ADDREF(sEmbedGlobalHistory);   // addref the global
     if (NS_FAILED(sEmbedGlobalHistory->Init()))
     {
@@ -367,10 +388,11 @@ EmbedGlobalHistory::~EmbedGlobalHistory()
   if (mURLList) {
     g_list_foreach(mURLList, (GFunc) history_entry_foreach_to_remove, NULL);
     g_list_free(mURLList);
+    mURLList = NULL;
   }
-  if (handle) {
-    close_file_handle(handle);
-    handle = NULL;
+  if (mFileHandle) {
+    close_file_handle(mFileHandle);
+    mFileHandle = NULL;
   }
   if (mHistoryFile) {
     g_free(mHistoryFile);
@@ -567,9 +589,7 @@ NS_IMETHODIMP EmbedGlobalHistory::SetPageTitle(nsIURI *aURI,
   if (node)
     entry = (HistoryEntry *)(node->data);
   if (entry) {
-    nsCString title;
-    CopyUTF16toUTF8(aTitle, title);
-    SET_TITLE(entry, title);
+    SET_TITLE(entry, NS_ConvertUTF16toUTF8(aTitle).get());
     BROKEN_RV_HANDLING_CODE(rv);
     if (++mEntriesAddedSinceFlush >= kNewEntriesBetweenFlush)
       rv |= FlushData(kFlushModeAppend);
@@ -608,9 +628,12 @@ NS_IMETHODIMP EmbedGlobalHistory::Observe(nsISupports *aSubject,
     if (mURLList) {
       g_list_foreach(mURLList, (GFunc) history_entry_foreach_to_remove, NULL);
       g_list_free(mURLList);
+      mURLList = NULL;
     }
-    if (handle)
-      close_file_handle(handle);
+    if (mFileHandle) {
+      close_file_handle(mFileHandle);
+      mFileHandle = NULL;
+    }
   } else if (strcmp(aTopic, "RemoveAllPages") == 0) {
     RemoveAllPages();
   }
@@ -655,19 +678,25 @@ nsresult EmbedGlobalHistory::InitFile()
   }
   
   void *uri = file_handle_uri_new(mHistoryFile);
+  if (!uri)
+    return NS_ERROR_FAILURE;
+  
   gboolean rs = FALSE;
   if (!file_handle_uri_exists(uri)) {
-    if (file_handle_create_uri(&handle, uri)) {
-      g_print("Could not create a history file\n");
+    if (file_handle_create_uri(&mFileHandle, uri)) {
+      printf("Could not create a history file\n");
+      file_handle_uri_delete(uri);
       return NS_ERROR_FAILURE;
     }
-    close_file_handle(handle);
+    close_file_handle(mFileHandle);
+    mFileHandle = NULL;
   }
-  rs = file_handle_open_uri(&handle, uri);
-  if (rs) {
-#ifdef MOZ_ENABLE_GNOMEVFS
-    //g_print("Could not open history URI. Result: %s\n", gnome_vfs_result_to_string(rs));
-#endif
+  rs = file_handle_open_uri(&mFileHandle, uri);  
+  
+  file_handle_uri_delete(uri);
+  
+  if (!rs) {
+    printf("Could not open a history file\n");
     return NS_ERROR_FAILURE;
   }
   return NS_OK;
@@ -680,13 +709,15 @@ nsresult EmbedGlobalHistory::LoadData()
   if (!mDataIsLoaded) {            
     mDataIsLoaded = PR_TRUE;
     void *uri = file_handle_uri_new(mHistoryFile);
-    if (!file_handle_uri_exists(uri)) {
+    bool exists = file_handle_uri_exists(uri);
+    file_handle_uri_delete(uri);
+    if (!exists) {
       rv = InitFile();
       if (NS_FAILED(rv))
         return NS_ERROR_FAILURE;
     }
-    file_handle_seek(handle, FALSE);
-    rv |= ReadEntries(handle);
+    if (file_handle_seek(mFileHandle, FALSE))
+      rv |= ReadEntries(mFileHandle);
   }
   return rv;
 }
@@ -743,17 +774,27 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
     return rv; 
   }
   void *uri = file_handle_uri_new(mHistoryFile);
-  if (!file_handle_uri_exists(uri)) {
-    rv = InitFile();
-    if (NS_FAILED(rv))
-      return NS_ERROR_FAILURE;
-  }
-  else {
-    rv |= InitFile();
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv |= FlushData(kFlushModeFullWrite);
+  if (!uri) return NS_ERROR_FAILURE;
+  
+  gboolean rs = file_handle_uri_exists(uri);
+  file_handle_uri_delete(uri);
+  
+  if (!rs && NS_FAILED(InitFile()))
+    return NS_ERROR_FAILURE;
 
-    return rv;
+  if (mode == kFlushModeAppend)
+  {
+    if (!file_handle_seek(mFileHandle, TRUE))
+      return NS_ERROR_FAILURE;
+    WriteEntryIfUnwritten(mURLList, mFileHandle);
+  }
+  else
+  {
+    if (!file_handle_seek(mFileHandle, FALSE))
+      return NS_ERROR_FAILURE;
+    if (!file_handle_truncate (mFileHandle))
+      return NS_ERROR_FAILURE;
+    WriteEntryIfWritten(mURLList, mFileHandle);
   }
   mEntriesAddedSinceFlush = 0;
   return NS_OK;
@@ -829,7 +870,7 @@ nsresult EmbedGlobalHistory::ReadEntries(void *file_handle)
   char separator = (char) defaultSeparator;
   int pos = 0;
   int numStrings = 0;
-  bytes = file_handle_file_info_block_size (file_handle);
+  file_handle_file_info_block_size (file_handle, &bytes);
   /* Optimal buffer size for reading/writing the file. */
   nsAutoArrayPtr<char> line(new char[bytes]);
   nsAutoArrayPtr<char> buffer(new char[bytes]);
@@ -919,7 +960,7 @@ nsresult EmbedGlobalHistory::GetContentList(GtkMozHistoryItem **GtkHI, int *coun
     LL_DIV(temp, outValue, PR_USEC_PER_SEC);
     LL_L2I(accessed, temp);
     // Set the EAL history list
-    item[num_items].title = g_strdup(GET_TITLE(entry).get());
+    item[num_items].title = GET_TITLE(entry).get();
     BROKEN_STRING_BUILDER(item[num_items].title);
     item[num_items].url = GetURL(entry);
     item[num_items].accessed = accessed;

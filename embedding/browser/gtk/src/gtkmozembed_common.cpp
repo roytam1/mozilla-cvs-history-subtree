@@ -567,7 +567,7 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
     g_print("Could not get the plugin manager\n");
     return;
   }
-  pluginMan->ReloadPlugins(PR_TRUE);
+  pluginMan->ReloadPlugins(PR_TRUE);  //FIXME XXX MEMLEAK
   nsCOMPtr<nsIPluginHost> pluginHost = 
     do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
@@ -579,6 +579,8 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
   *num_plugins = aLength;
   gint size = aLength;
   aItem = new nsIDOMPlugin*[aLength];
+  if (!aItem)
+    return; //NO MEMORY
   pluginHost->GetPlugins(aLength, aItem);
   *pluginArray = (GtkMozPlugin*) g_try_malloc(size*sizeof(GtkMozPlugin));
   for (int aIndex = 0; aIndex < (gint) aLength; aIndex++)
@@ -598,6 +600,7 @@ gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plu
     NS_ConvertUTF16toUTF8 utf8ValueDescription(aDescription);
     (*pluginArray)[aIndex].type = g_strdup((gchar *)utf8ValueDescription.get());
   }
+  delete aItem;
   return;
 }
 
@@ -607,7 +610,7 @@ gtk_moz_embed_common_reload_plugins ()
   nsresult rv;
   nsCOMPtr<nsIPluginManager> pluginMan = 
     do_GetService(kPluginManagerCID, &rv);
-  pluginMan->ReloadPlugins(PR_TRUE);
+  pluginMan->ReloadPlugins(PR_TRUE); //FIXME XXX MEMLEAK
 }
 
 guint

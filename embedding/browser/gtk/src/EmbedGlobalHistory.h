@@ -113,7 +113,7 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
   */
     nsresult          GetEntry(gchar *);
     protected:
-    void             *handle;                 /** < The GnomeVFS handler */
+    void             *mFileHandle;             /** < The GnomeVFS handler */
     PRBool            mDataIsLoaded;           /** < If the data is loaded */
     PRInt32           mEntriesAddedSinceFlush; /** < Number of entries added since flush */
     gchar*            mHistoryFile;            /** < The history file path */
