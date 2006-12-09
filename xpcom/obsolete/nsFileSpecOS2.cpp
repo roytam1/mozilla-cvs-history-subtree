@@ -592,13 +592,13 @@ nsFileSpec::Truncate(PRInt32 aNewFileLength) const
     ULONG actionTaken;
 
     rc = DosOpen(mPath,
-                       &hFile,
-                       &actionTaken,
-                       0,                 
-                       FILE_NORMAL,
-                       OPEN_ACTION_FAIL_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
-                       OPEN_SHARE_DENYREADWRITE | OPEN_ACCESS_READWRITE,
-                       NULL);
+                 &hFile,
+                 &actionTaken,
+                 0,                 
+                 FILE_NORMAL,
+                 OPEN_ACTION_FAIL_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
+                 OPEN_SHARE_DENYWRITE | OPEN_ACCESS_WRITEONLY,
+                 NULL);
                                  
     if (rc != NO_ERROR)
         return NS_FILE_FAILURE;
