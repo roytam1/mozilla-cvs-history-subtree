@@ -67,6 +67,7 @@
 #include "nsIRDFService.h"
 #include "nsIMsgHdr.h"
 #include "nsMsgUtils.h"
+#include "nsEscape.h"
 #endif // MOZ_XUL_APP
 
 NS_IMPL_THREADSAFE_ADDREF(nsMessengerBootstrap)
@@ -157,6 +158,12 @@ nsMessengerBootstrap::Handle(nsICommandLine* aCmdLine)
       nsCOMPtr<nsIMsgFolder> containingFolder;
       containingFolder = do_QueryInterface(res, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
+      // now we play a little game to deal with IMAP case-insensitivity of the INBOX.
+      nsCOMPtr <nsIMsgIncomingServer> server;
+      rv = containingFolder->GetServer(getter_AddRefs(server));
+      NS_ENSURE_SUCCESS(rv, rv);
+      rv = server->GetMsgFolderFromURI(containingFolder, folderUri.get(), getter_AddRefs(containingFolder));
+      NS_ENSURE_SUCCESS(rv, rv);
       // once we have the folder uri, open the db and search for the message id.
       nsAutoString unicodeMessageid;
       // strip off .mozeml at the end as well
@@ -165,6 +172,7 @@ nsMessengerBootstrap::Handle(nsICommandLine* aCmdLine)
       NS_CopyUnicodeToNative(unicodeMessageid, messageId);
       nsCOMPtr <nsIMsgDatabase> msgDB;
       containingFolder->GetMsgDatabase(nsnull, getter_AddRefs(msgDB));
+      NS_UnescapeURL(messageId);
       nsCOMPtr<nsIMsgDBHdr> msgHdr;
       if (msgDB)
         msgDB->GetMsgHdrForMessageID(messageId.get(), getter_AddRefs(msgHdr));
@@ -172,7 +180,7 @@ nsMessengerBootstrap::Handle(nsICommandLine* aCmdLine)
       {
         nsMsgKey msgKey;
         msgHdr->GetMessageKey(&msgKey);
-        rv = OpenMessengerWindowWithUri("mail:3pane", folderUri.get(), msgKey);  
+        rv = OpenMessengerWindowWithUri("mail:messageWindow", folderUri.get(), msgKey);  
         return rv;
       }
     }
@@ -248,9 +256,14 @@ NS_IMETHODIMP nsMessengerBootstrap::GetChromeUrlForTask(char **aChromeUrlForTask
 NS_IMETHODIMP nsMessengerBootstrap::OpenMessengerWindowWithUri(const char *windowType, const char * aFolderURI, nsMsgKey aMessageKey)
 {
   nsresult rv;
-
+  PRBool standAloneMsgWindow = PR_FALSE;
 #ifdef MOZ_XUL_APP
-  NS_NAMED_LITERAL_CSTRING(chromeurl, "chrome://messenger/content/");
+  nsCAutoString chromeurl("chrome://messenger/content/");
+  if (windowType && !strcmp(windowType, "mail:messageWindow"))
+  {
+    chromeurl.Append("messageWindow.xul");
+    standAloneMsgWindow = PR_TRUE;    
+  }
 #else
   nsXPIDLCString chromeurl;
   rv = GetChromeUrlForTask(getter_Copies(chromeurl));
@@ -264,16 +277,35 @@ NS_IMETHODIMP nsMessengerBootstrap::OpenMessengerWindowWithUri(const char *windo
   // create scriptable versions of our strings that we can store in our nsISupportsArray....
   if (aFolderURI)
   {
+    if (standAloneMsgWindow)
+    {
+      nsCOMPtr <nsIMsgFolder> folder;
+      rv = GetExistingFolder(aFolderURI, getter_AddRefs(folder));
+      NS_ENSURE_SUCCESS(rv, rv);
+      nsXPIDLCString msgUri;
+      folder->GetBaseMessageURI(getter_Copies(msgUri));
+
+      nsCOMPtr<nsISupportsCString> scriptableMsgURI (do_CreateInstance(NS_SUPPORTS_CSTRING_CONTRACTID));
+      NS_ENSURE_TRUE(scriptableMsgURI, NS_ERROR_FAILURE);
+      msgUri.Append('#');
+      msgUri.AppendInt(aMessageKey, 10);
+      scriptableMsgURI->SetData(msgUri);
+      argsArray->AppendElement(scriptableMsgURI);
+      
+    }
     nsCOMPtr<nsISupportsCString> scriptableFolderURI (do_CreateInstance(NS_SUPPORTS_CSTRING_CONTRACTID));
     NS_ENSURE_TRUE(scriptableFolderURI, NS_ERROR_FAILURE);
 
     scriptableFolderURI->SetData(nsDependentCString(aFolderURI));
     argsArray->AppendElement(scriptableFolderURI);
 
-    nsCOMPtr<nsISupportsPRUint32> scriptableMessageKey (do_CreateInstance(NS_SUPPORTS_PRUINT32_CONTRACTID));
-    NS_ENSURE_TRUE(scriptableMessageKey, NS_ERROR_FAILURE);
-    scriptableMessageKey->SetData(aMessageKey);
-    argsArray->AppendElement(scriptableMessageKey);
+    if (!standAloneMsgWindow)
+    {
+      nsCOMPtr<nsISupportsPRUint32> scriptableMessageKey (do_CreateInstance(NS_SUPPORTS_PRUINT32_CONTRACTID));
+      NS_ENSURE_TRUE(scriptableMessageKey, NS_ERROR_FAILURE);
+      scriptableMessageKey->SetData(aMessageKey);
+      argsArray->AppendElement(scriptableMessageKey);
+    }
   }
   
   nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv));
