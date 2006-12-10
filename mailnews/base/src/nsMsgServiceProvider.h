@@ -42,6 +42,7 @@
 #include "nsIRDFDataSource.h"
 #include "nsIRDFRemoteDataSource.h"
 #include "nsIRDFCompositeDataSource.h"
+#include "nsIFile.h"
 #include "nsCOMPtr.h"
 
 class nsMsgServiceProviderService : public nsIRDFDataSource
@@ -57,12 +58,12 @@ class nsMsgServiceProviderService : public nsIRDFDataSource
   NS_FORWARD_NSIRDFDATASOURCE(mInnerDataSource->)
   
  private:
-
   nsCOMPtr<nsIRDFCompositeDataSource> mInnerDataSource;
-
   nsresult LoadDataSource(const char *aURL);
   
+#ifdef MOZ_XUL_APP
+  void LoadISPFilesFromDir(nsIFile* aDir);
+  void LoadISPFiles();
+#endif
 };
-
-
 #endif

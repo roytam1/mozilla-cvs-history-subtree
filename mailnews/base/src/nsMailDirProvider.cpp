@@ -145,14 +145,17 @@ nsMailDirProvider::Register(nsIComponentManager* aCompMgr,
 				const char *aType,
 				const nsModuleComponentInfo *aInfo)
 {
+  nsresult rv;
+
   nsCOMPtr<nsICategoryManager> catMan =
     do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
   if (!catMan)
     return NS_ERROR_FAILURE;
 
-  return catMan->AddCategoryEntry(XPCOM_DIRECTORY_PROVIDER_CATEGORY,
+  rv = catMan->AddCategoryEntry(XPCOM_DIRECTORY_PROVIDER_CATEGORY,
 				"mail-directory-provider",
 				NS_MAILDIRPROVIDER_CONTRACTID, PR_TRUE, PR_TRUE, nsnull);
+  return rv;
 }
 
 NS_METHOD
@@ -161,12 +164,15 @@ nsMailDirProvider::Unregister(nsIComponentManager* aCompMgr,
 				  const char *aLoaderStr,
 				  const nsModuleComponentInfo *aInfo)
 {
+  nsresult rv;
+
   nsCOMPtr<nsICategoryManager> catMan =
     do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
   if (!catMan)
     return NS_ERROR_FAILURE;
 
-  return catMan->DeleteCategoryEntry(XPCOM_DIRECTORY_PROVIDER_CATEGORY,
+  rv = catMan->DeleteCategoryEntry(XPCOM_DIRECTORY_PROVIDER_CATEGORY,
 				   "mail-directory-provider",
 				   PR_TRUE);
+  return rv;
 }
