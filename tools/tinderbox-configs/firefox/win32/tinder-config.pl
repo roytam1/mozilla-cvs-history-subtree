@@ -88,7 +88,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "axolotl.mozilla.org";  # localhost
+$pageload_server          = "bm-tester01.build.mozilla.org";  # localhost
 
 #
 # Timeouts, values are in seconds.
