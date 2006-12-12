@@ -1,13 +1,22 @@
 #
-## hostname: galactica
-## uname: Linux galactica.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname:
+## uname:
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
+$ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
+#$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
+
+# To ensure Talkback client builds properly on some Linux boxen where LANG
+# is set to "en_US.UTF-8" by default, override that setting here by setting
+# it to "en_US.iso885915" (the setting on ocean).  Proper fix is to update
+# where xrestool is called in the build system so that 'LANG=C' in its
+# environment, according to bryner.
+$ENV{LANG} = "en_US.iso885915";
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -27,11 +36,12 @@ $ENV{CVS_RSH} = "ssh";
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
+$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
-#$DisplayServer = ':0.0';
+$DisplayServer = ':1.0';
 
 #- Default values of command-line opts
 #-
@@ -39,18 +49,18 @@ $ENV{CVS_RSH} = "ssh";
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = !;      # Use the CVS 'pull-by-timestamp' option, or not
+#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$BuildLocales      = 1;      # Do l10n packaging?
+#$BuildLocales      = 0;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
 $ProductName              = "Sunbird";
-$VendorName               = 'Mozilla';
+#$VendorName               = '';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
@@ -71,7 +81,6 @@ $VendorName               = 'Mozilla';
 #$XULWindowOpenTest        = 0;  # Txul
 #$StartupPerformanceTest   = 0;  # Ts
 #@CompareLocaleDirs        = (); # Run compare-locales test on these directories
-# ("network","dom","toolkit","security/manager");
 @CompareLocaleDirs = (
   "netwerk",
   "calendar",
@@ -80,8 +89,6 @@ $VendorName               = 'Mozilla';
   "security/manager",
   "other-licenses/branding/sunbird",
 );
-#$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
-                                # aviary directory structure?
 
 #$TestsPhoneHome           = 0;  # Should test report back to server?
 
@@ -144,7 +151,7 @@ $VendorName               = 'Mozilla';
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -165,11 +172,11 @@ $BuildNameExtra = 'Sb-Release';
 # Configure only, don't build.
 #$ConfigureOnly = 0;
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Sb-Trunk/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2"
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.linux-i686.tar.bz2" =>
+	      "/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2";
 
 #-
 #- The rest should not need to be changed
@@ -180,15 +187,10 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Linux_2.4.21-32.0.1.EL_De
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Sunbird';
-
-#- If you're building locales and would like locale messages reported to a
-#- tree other than $BuildTree-ab-CD, define the tree here. -ab-CD will be
-#- appended for you.
-$LocaleTree = 'Mozilla-l10n';
+$BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = 'SUNBIRD_0_3_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -223,20 +225,19 @@ $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 #$tbox_ftp_path = $ftp_path;
 #$tbox_url_path = $url_path;
-#$milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$milestone     = "mozilla1.8";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
 $update_package = 1;
 $update_product = "Sunbird";
-$update_version = "trunk";
+$update_version = "branch";
 $update_platform = "Linux_x86-gcc3";
-$update_hash = "md5";
+$update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
-$update_appv = "0.4a1";
-$update_extv = "0.4a1";
+$update_ver_file = "calendar/sunbird/config/version.txt";
 $update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
@@ -244,8 +245,8 @@ $update_pushinfo = 1;
 # locking up (and testing would be suspect even after a couple of cycles).
 # Right now, there is only code to force the reboot for Win9x, so even
 # setting this to 1, will not have an effect on other platforms. Setting
-# up win9x to automatically logon and begin running tinderbox is left 
-# as an exercise to the reader. 
+# up win9x to automatically logon and begin running tinderbox is left
+# as an exercise to the reader.
 #$RebootSystem = 0;
 
 # LogCompression specifies the type of compression used on the log file.
@@ -261,5 +262,5 @@ $update_pushinfo = 1;
 #$LogEncoding = '';
 
 # Prevent Extension Manager from spawning child processes during tests
-# - processes that tbox scripts cannot kill. 
+# - processes that tbox scripts cannot kill.
 #$ENV{NO_EM_RESTART} = '1';
