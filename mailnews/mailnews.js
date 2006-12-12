@@ -72,6 +72,9 @@ pref("mailnews.headers.showUserAgent",       false);
 // is displayed in the message pane or not...
 pref("mailnews.headers.showOrganization",    false);
 
+// space-delimited list of extra headers to show in msg header display area.
+pref("mailnews.headers.extraExpandedHeaders", "");
+
 // If true, delete will use the direction of the sort order
 // in determining the next message to select. 
 pref("mail.delete_matches_sort_order", false);
