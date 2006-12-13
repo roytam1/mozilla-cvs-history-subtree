@@ -43,11 +43,22 @@
 [scriptable, uuid(ba295e1e-a6de-48c9-b158-9aaf39c4b042)]
 interface zapIStreamSyncer : nsISupports
 {
+  /**
+   * Release any buffered frames. Reset current time to 2^64-1.
+   */
   void reset();
 
   /**
-   * Immediately emit the current frame (or grab the first frame from the input)
-   * without removing it from the internal buffer. Return true if successful.
+   * Immediately emit the current frame (or grab the first frame from
+   * the input) without removing it from the internal buffer. Set
+   * current time to the frame's timestamp and return true if
+   * successful.
    */
   boolean peekFrame();
+
+  /**
+   * Current synchronization time, as given by the most recent clock
+   * frame or peekFrame() call.
+   */
+  readonly attribute unsigned long long currentTime;
 };

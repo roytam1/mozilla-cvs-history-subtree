@@ -345,10 +345,20 @@ zapStreamSyncer::PeekFrame(PRBool *_retval)
       return NS_OK;
   }
 
+  mNextFrame->GetTimestamp(&mCurrentTime);
+  
   if (NS_FAILED(mOutput->ConsumeFrame(mNextFrame))) return NS_OK;
 
   // success
   *_retval = PR_TRUE;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned long long currentTime; */
+NS_IMETHODIMP
+zapStreamSyncer::GetCurrentTime(PRUint64 *aCurrentTime)
+{
+  *aCurrentTime = mCurrentTime;
   return NS_OK;
 }
 
