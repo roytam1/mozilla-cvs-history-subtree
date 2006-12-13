@@ -6,7 +6,7 @@
 # . $topsrcdir/browser/config/mozconfig
 
 mk_add_options MOZ_CO_PROJECT=browser
-mk_add_options MOZ_CO_LOCALES="pa-IN,ko"
+mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
 mk_add_options LOCALES_CO_TAG=FIREFOX_2_0_0_1_RELEASE
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
