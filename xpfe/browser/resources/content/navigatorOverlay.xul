@@ -493,7 +493,7 @@
   
   <menu accesskey="&helpMenuCmd.accesskey;" id="menu_Help"/>
 
-  <!-- Menu for testing. -->
+  <!-- Menu for testing. disabled for release
   <menu id="debugMenu" accesskey="U" label="Debug">
     <menupopup id="menu_Debug_Popup">
       <menu label="Verification">
@@ -622,6 +622,7 @@
       <menuitem label="Latest Builds" oncommand="loadURI('http://ftp.mozilla.org/pub/mozilla.org/seamonkey/nightly/latest-trunk/');"/>
     </menupopup>
   </menu>
+  end release comment --> 
 </menubar>
 
 </overlay>

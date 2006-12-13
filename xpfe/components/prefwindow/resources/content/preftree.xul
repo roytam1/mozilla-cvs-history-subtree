@@ -180,6 +180,7 @@
       </treechildren>
     </treeitem>
 
+    <!-- commented out for release
     <treeitem container="true" id="debugItem">
       <treerow>       
         <treecell url="chrome://communicator/content/pref/pref-debug.xul" label="&debug.label;"/> 
@@ -197,6 +198,7 @@
         </treeitem>
       </treechildren>
     </treeitem>
+    -->
 
     <!-- commented out until bug 82487 is fixed -->
     <!--
