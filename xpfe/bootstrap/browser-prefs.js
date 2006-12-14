@@ -261,6 +261,9 @@ pref("browser.downloadmanager.behavior", 1);
 
 // Turn on click-and-hold contextual menus
 pref("ui.click_hold_context_menus", true);
+
+// Turn off scrollbar snapping
+pref("slider.snapMultiplier", 0);
 #endif
 
 #ifndef XP_MACOSX
