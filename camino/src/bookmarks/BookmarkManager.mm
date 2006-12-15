@@ -1427,7 +1427,7 @@ static BookmarkManager* gBookmarkManager = nil;
   NSUndoManager *undoManager = [self undoManager];
   [undoManager beginUndoGrouping];
   BOOL success = NO;
-  NSString *extension =[pathToFile pathExtension];
+  NSString *extension = [[pathToFile pathExtension] lowercaseString];
   if ([extension isEqualToString:@""]) // we'll go out on a limb here
     success = [self readOperaFile:pathToFile intoFolder:aFolder];
   else if ([extension isEqualToString:@"html"] || [extension isEqualToString:@"htm"])

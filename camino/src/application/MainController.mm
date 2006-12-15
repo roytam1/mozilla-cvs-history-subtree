@@ -586,10 +586,11 @@ Otherwise, we return the URL we originally got. Right now this supports .url and
 +(NSURL*) decodeLocalFileURL:(NSURL*)url
 {  
   NSString *urlPathString = [url path];
+  NSString *ext = [[urlPathString pathExtension] lowercaseString];
 
-  if ([[urlPathString pathExtension] isEqualToString:@"url"])
+  if ([ext isEqualToString:@"url"])
     url = [NSURL urlFromIEURLFile:urlPathString];
-  else if ([[urlPathString pathExtension] isEqualToString:@"webloc"])
+  else if ([ext isEqualToString:@"webloc"])
     url = [NSURL urlFromWebloc:urlPathString];
 
   return url;

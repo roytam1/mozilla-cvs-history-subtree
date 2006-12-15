@@ -153,7 +153,7 @@ NSString* const kWebURLsWithTitlesPboardType  = @"WebURLsWithTitlesPboardType"; 
     *outTitles = [NSMutableArray arrayWithCapacity:[files count]];
     for ( unsigned int i = 0; i < [files count]; ++i ) {
       NSString *file = [files objectAtIndex:i];
-      NSString *ext = [file pathExtension];
+      NSString *ext = [[file pathExtension] lowercaseString];
       NSString *urlString = nil;
       NSString *title = @"";
       
@@ -164,7 +164,7 @@ NSString* const kWebURLsWithTitlesPboardType  = @"WebURLsWithTitlesPboardType"; 
           urlString = [urlFromWebloc absoluteString];
           title     = [[file lastPathComponent] stringByDeletingPathExtension];
         }
-      }  else if ([ext isEqualToString:@"url"]) {
+      } else if ([ext isEqualToString:@"url"]) {
         NSURL* urlFromIEURLFile = [NSURL urlFromIEURLFile:file];
         if (urlFromIEURLFile) {
           urlString = [urlFromIEURLFile absoluteString];
