@@ -537,7 +537,9 @@ enum BWCOpenDest {
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
 
 - (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper;
+- (void)closeTab:(NSTabViewItem *)tab;
 - (BookmarkViewController*)bookmarkViewControllerForCurrentTab;
+- (void)showAddBookmarkDialogForAllTabs:(BOOL)isTabGroup;
 - (void)sessionHistoryItemAtRelativeOffset:(int)indexOffset forWrapper:(BrowserWrapper*)inWrapper title:(NSString**)outTitle URL:(NSString**)outURLString;
 - (NSString *)locationToolTipWithFormat:(NSString *)format title:(NSString *)backTitle URL:(NSString *)backURL;
 
@@ -1699,14 +1701,19 @@ enum BWCOpenDest {
       action == @selector(closeSendersTab:) ||
       action == @selector(closeOtherTabs:) ||
       action == @selector(nextTab:) ||
-      action == @selector(previousTab:))
+      action == @selector(previousTab:) ||
+      action == @selector(addTabGroup:) ||
+      action == @selector(addTabGroupWithoutPrompt:))
   {
     return ([mTabBrowser numberOfTabViewItems] > 1);
   }
   if (action == @selector(closeCurrentTab:))
     return ([mTabBrowser numberOfTabViewItems] > 1 && [[self window] isKeyWindow]);
-  if (action == @selector(addBookmark:))
+  if (action == @selector(addBookmark:) ||
+      action == @selector(addBookmarkWithoutPrompt:))
+  {
     return ![mBrowserView isEmpty];
+  }
   if (action == @selector(makeTextBigger:))
     return [self canMakeTextBigger];
   if (action == @selector(makeTextSmaller:))
@@ -1742,24 +1749,23 @@ enum BWCOpenDest {
 
 - (void)loadingDone:(BOOL)activateContent
 {
-  if (activateContent)
-  {
+  if (activateContent) {
     // if we're the front/key window, focus the content area. If we're not,
     // set gecko as the first responder so that it will be activated when
     // the window is focused. If the user is typing in the urlBar, however,
     // don't mess with the focus at all.
-    if ([[self window] isKeyWindow])
-    {
+    if ([[self window] isKeyWindow]) {
       if (![self userChangedLocationField])
         [mBrowserView setBrowserActive:YES];
     }
     else
       [[self window] makeFirstResponder:[mBrowserView getBrowserView]];
   }
-  
+
   if ([[self window] isMainWindow])
     [[PageInfoWindowController visiblePageInfoWindowController] updateFromBrowserView:[self activeBrowserView]];
 
+  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
   [[SessionManager sharedInstance] windowStateChanged];
 }
 
@@ -2238,8 +2244,6 @@ enum BWCOpenDest {
   }
   else
     [self loadURL:@"about:bookmarks"];
-
-  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
 //
@@ -2743,6 +2747,16 @@ enum BWCOpenDest {
 
 - (IBAction)addBookmark:(id)aSender
 {
+  [self showAddBookmarkDialogForAllTabs:NO];
+}
+
+- (IBAction)addTabGroup:(id)aSender
+{
+  [self showAddBookmarkDialogForAllTabs:YES];
+}
+
+- (void)showAddBookmarkDialogForAllTabs:(BOOL)isTabGroup
+{
   int numTabs = [mTabBrowser numberOfTabViewItems];
   NSMutableArray* itemsArray = [NSMutableArray arrayWithCapacity:numTabs];
   for (int i = 0; i < numTabs; i++)
@@ -2757,7 +2771,7 @@ enum BWCOpenDest {
     // title can be nil (e.g. for text files)
     if (curTitleString)
       [itemInfo setObject:curTitleString forKey:kAddBookmarkItemTitleKey];
-    
+
     if (browserWrapper == mBrowserView)
       [itemInfo setObject:[NSNumber numberWithBool:YES] forKey:kAddBookmarkItemPrimaryTabKey];
 
@@ -2767,7 +2781,7 @@ enum BWCOpenDest {
   AddBookmarkDialogController* dlgController = [AddBookmarkDialogController sharedAddBookmarkDialogController];
   [dlgController showDialogWithLocationsAndTitles:itemsArray isFolder:NO onWindow:[self window]];
 
-  if (([aSender keyEquivalentModifierMask] & NSAlternateKeyMask) != 0)
+  if (isTabGroup)
     [dlgController makeTabGroup:YES];
 }
 
@@ -3266,19 +3280,15 @@ enum BWCOpenDest {
 //
 - (void)closeBrowserWindow:(BrowserWrapper*)inBrowser
 {
-  if ( [mTabBrowser numberOfTabViewItems] > 1 ) {
-    // close the appropriate browser (it may not be frontmost) and
-    // remove it from the tab UI
-    [inBrowser windowClosed];
-    [mTabBrowser removeTabViewItem:[inBrowser tab]];
+  if ([mTabBrowser numberOfTabViewItems] > 1) {
+    [self closeTab:[inBrowser tab]];
   }
-  else
-  {
-    // if a window unload handler calls window.close(), we
-    // can get here while the window is already being closed,
-    // so we don't want to close it again (and recurse).
-    if (!mClosingWindow)
-      [[self window] close];
+  // if a window unload handler calls window.close(), we
+  // can get here while the window is already being closed,
+  // so we don't want to close it again (and recurse).
+  else if (!mClosingWindow) {
+    [[self window] close];
+    [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
   }
 
   [[SessionManager sharedInstance] windowStateChanged];
@@ -3330,9 +3340,9 @@ enum BWCOpenDest {
 
       [newView loadURI:urlToLoad referrer:nil flags:NSLoadFlagsNone focusContent:!focusURLBar allowPopups:NO];
     }
-    
-    [mTabBrowser selectLastTabViewItem: self];
-    
+
+    [mTabBrowser selectLastTabViewItem:self];
+
     if (focusURLBar)
       [self focusURLBar];
 }
@@ -3344,11 +3354,8 @@ enum BWCOpenDest {
 
 -(IBAction)closeCurrentTab:(id)sender
 {
-  if ( [mTabBrowser numberOfTabViewItems] > 1 )
-  {
-    [[[mTabBrowser selectedTabViewItem] view] windowClosed];
-    [mTabBrowser removeTabViewItem:[mTabBrowser selectedTabViewItem]];
-  }
+  if ([mTabBrowser numberOfTabViewItems] > 1)
+    [self closeTab:[mTabBrowser selectedTabViewItem]];
 }
 
 - (IBAction)previousTab:(id)sender
@@ -3359,6 +3366,8 @@ enum BWCOpenDest {
     [mTabBrowser selectLastTabViewItem:sender];
   else
     [mTabBrowser selectPreviousTabViewItem:sender];
+
+  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
 - (IBAction)nextTab:(id)sender
@@ -3375,37 +3384,36 @@ enum BWCOpenDest {
 
 - (IBAction)closeSendersTab:(id)sender
 {
-  if ([sender isMemberOfClass:[NSMenuItem class]])
-  {
+  if ([sender isMemberOfClass:[NSMenuItem class]]) {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
     if (tabViewItem)
-    {
-      [[tabViewItem view] windowClosed];
-      [mTabBrowser removeTabViewItem:tabViewItem];
-    }
+      [self closeTab:tabViewItem];
   }
 }
 
 - (IBAction)closeOtherTabs:(id)sender
 {
-  if ([sender isMemberOfClass:[NSMenuItem class]])
-  {
+  if ([sender isMemberOfClass:[NSMenuItem class]]) {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem)
-    {
-      while ([mTabBrowser numberOfTabViewItems] > 1)
-      {
+    if (tabViewItem) {
+      while ([mTabBrowser numberOfTabViewItems] > 1) {
         NSTabViewItem* doomedItem = nil;
         if ([mTabBrowser indexOfTabViewItem:tabViewItem] == 0)
           doomedItem = [mTabBrowser tabViewItemAtIndex:1];
         else
           doomedItem = [mTabBrowser tabViewItemAtIndex:0];
-        
-        [[doomedItem view] windowClosed];
-        [mTabBrowser removeTabViewItem:doomedItem];
+
+        [self closeTab:doomedItem];
       }
     }
   }
+}
+
+- (void)closeTab:(NSTabViewItem *)tab
+{
+  [[tab view] windowClosed];
+  [mTabBrowser removeTabViewItem:tab];
+  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
 - (IBAction)reloadSendersTab:(id)sender
@@ -3446,18 +3454,15 @@ enum BWCOpenDest {
 
 - (IBAction)moveTabToNewWindow:(id)sender
 {
-  if ([sender isMemberOfClass:[NSMenuItem class]])
-  {
+  if ([sender isMemberOfClass:[NSMenuItem class]]) {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem)
-    {
+    if (tabViewItem) {
       NSString* url = [[tabViewItem view] getCurrentURI];
       BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:nil];
 
       [self openNewWindowWithURL:url referrer:nil loadInBackground:backgroundLoad allowPopups:NO];
 
-      [[tabViewItem view] windowClosed];
-      [mTabBrowser removeTabViewItem:tabViewItem];
+      [self closeTab:tabViewItem];
     }
   }
 }
