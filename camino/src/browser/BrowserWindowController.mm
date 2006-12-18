@@ -47,6 +47,7 @@
 
 #import "BrowserWindowController.h"
 #import "BrowserWindow.h"
+#import "SessionManager.h"
 
 #import "BookmarkToolbar.h"
 #import "BookmarkViewController.h"
@@ -1758,6 +1759,8 @@ enum BWCOpenDest {
   
   if ([[self window] isMainWindow])
     [[PageInfoWindowController visiblePageInfoWindowController] updateFromBrowserView:[self activeBrowserView]];
+
+  [[SessionManager sharedInstance] windowStateChanged];
 }
 
 - (void)setLoadingActive:(BOOL)active
@@ -3277,6 +3280,8 @@ enum BWCOpenDest {
     if (!mClosingWindow)
       [[self window] close];
   }
+
+  [[SessionManager sharedInstance] windowStateChanged];
 }
 
 - (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser
