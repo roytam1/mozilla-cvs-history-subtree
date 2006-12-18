@@ -2105,8 +2105,10 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
     };
 
     static void *interruptJumpTable[] = {
-# define OPDEF(op,val,name,token,length,nuses,ndefs,prec,format) \
-        JS_EXTENSION &&interrupt,
+# define OPDEF(op,val,name,token,length,nuses,ndefs,prec,format)              \
+        ((op != JSOP_PUSHOBJ)                                                 \
+         ? JS_EXTENSION &&interrupt                                           \
+         : JS_EXTENSION &&L_JSOP_PUSHOBJ),
 # include "jsopcode.tbl"
 # undef OPDEF
     };
@@ -2315,7 +2317,7 @@ interrupt:
         }
 #endif /* DEBUG */
 
-        if (interruptHandler) {
+        if (interruptHandler && op != JSOP_PUSHOBJ) {
             SAVE_SP_AND_PC(fp);
             switch (interruptHandler(cx, script, pc, &rval,
                                      rt->interruptHandlerData)) {
