@@ -6527,6 +6527,7 @@
 				3F44AD5C05BDFB9F00CB4B08,
 				3F44AD5D05BDFB9F00CB4B08,
 				3F44AD5E05BDFB9F00CB4B08,
+				DE10C5E80B37C94E00FF61E3,
 				3F44AD5F05BDFB9F00CB4B08,
 			);
 			isa = PBXCopyFilesBuildPhase;
@@ -10285,6 +10286,7 @@
 				3F44AF7705BDFBA000CB4B08,
 				3F44AF7805BDFBA000CB4B08,
 				3F44AF7905BDFBA000CB4B08,
+				DE10C5E90B37C94E00FF61E3,
 				3F44AF7A05BDFBA000CB4B08,
 			);
 			isa = PBXCopyFilesBuildPhase;
@@ -12907,11 +12909,6 @@
 			settings = {
 			};
 		};
-//4D0
-//4D1
-//4D2
-//4D3
-//4D4
 		4DD0EFF709918B3200B6BBFD = {
 			fileRef = 0E6A9886097DFFD4007962C1;
 			isa = PBXBuildFile;
@@ -13003,6 +13000,11 @@
 			settings = {
 			};
 		};
+//4D0
+//4D1
+//4D2
+//4D3
+//4D4
 //790
 //791
 //792
@@ -13917,6 +13919,36 @@
 //A72
 //A73
 //A74
+//DE0
+//DE1
+//DE2
+//DE3
+//DE4
+		DE10C5E70B37C94E00FF61E3 = {
+			isa = PBXFileReference;
+			lastKnownFileType = "compiled.mach-o.dylib";
+			name = libfreebl3.dylib;
+			path = ../dist/Embed/libfreebl3.dylib;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE10C5E80B37C94E00FF61E3 = {
+			fileRef = DE10C5E70B37C94E00FF61E3;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE10C5E90B37C94E00FF61E3 = {
+			fileRef = DE10C5E70B37C94E00FF61E3;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+//DE0
+//DE1
+//DE2
+//DE3
+//DE4
 //E00
 //E01
 //E02
@@ -15052,6 +15084,7 @@
 				F5247C340228B91F013DD99A,
 				F5247C350228B91F013DD99A,
 				F5247C360228B91F013DD99A,
+				DE10C5E70B37C94E00FF61E3,
 			);
 			isa = PBXGroup;
 			name = "Executable Level";
