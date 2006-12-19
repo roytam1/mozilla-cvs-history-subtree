@@ -239,6 +239,6 @@ $BinaryName = 'firefox.exe';
 # If tinderbox is running in a test-only mode, it needs to be able to download
 # the latest build and unpack it rather than building it.
 $TestOnlyTinderbox = 1;
-$DownloadBuildFile = 'firefox-2.0.0.1.en-US.win32.zip';
+$DownloadBuildFile = 'firefox-2.0.0.2pre.en-US.win32.zip';
 $DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/pacifica-vm-mozilla1.8';
 $DownloadBuildDir = 'firefox';
