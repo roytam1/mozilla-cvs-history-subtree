@@ -671,8 +671,7 @@ DoCleanupFrameReferences(nsPresContext*  aPresContext,
   nsIFrame* frame = nsPlaceholderFrame::GetRealFrameFor(aFrameIn);
 
   // Remove the mapping from the content object to its frame
-  aFrameManager->SetPrimaryFrameFor(content, nsnull);
-  frame->RemovedAsPrimaryFrame(aPresContext);
+  aFrameManager->RemoveAsPrimaryFrame(content, frame);
   aFrameManager->ClearAllUndisplayedContentIn(content);
 
   // Recursively walk the child frames.
@@ -9699,8 +9698,7 @@ DoDeletingFrameSubtree(nsPresContext*  aPresContext,
   // Remove the mapping from the content object to its frame.
   nsIContent* content = aFrame->GetContent();
   if (content) {
-    aFrameManager->SetPrimaryFrameFor(content, nsnull);
-    aFrame->RemovedAsPrimaryFrame(aPresContext);
+    aFrameManager->RemoveAsPrimaryFrame(content, aFrame);
     aFrameManager->ClearAllUndisplayedContentIn(content);
   }
 
