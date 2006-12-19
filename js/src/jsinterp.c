@@ -4385,8 +4385,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           {
             uintN flags;
 
-            atomIndex = GET_ATOM_INDEX(pc);
-            atom = js_GetAtom(cx, &script->atomMap, atomIndex);
             obj = ATOM_TO_OBJECT(atom);
             fun = (JSFunction *) JS_GetPrivate(cx, obj);
             id = ATOM_TO_JSID(fun->atom);
