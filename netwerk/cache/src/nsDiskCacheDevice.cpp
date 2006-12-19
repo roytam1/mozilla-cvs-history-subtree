@@ -427,7 +427,7 @@ nsDiskCacheDevice::GetDeviceID()
  *  NOTE: called while holding the cache service lock
  */
 nsCacheEntry *
-nsDiskCacheDevice::FindEntry(nsCString * key)
+nsDiskCacheDevice::FindEntry(nsCString * key, PRBool *collision)
 {
     if (!Initialized())  return nsnull;  // NS_ERROR_NOT_INITIALIZED
     nsresult                rv;
@@ -435,6 +435,8 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     nsCacheEntry *          entry   = nsnull;
     nsDiskCacheBinding *    binding = nsnull;
     PLDHashNumber           hashNumber = nsDiskCache::Hash(key->get());
+
+    *collision = PR_FALSE;
 
 #if DEBUG  /*because we shouldn't be called for active entries */
     binding = mBindery.FindActiveBinding(hashNumber);
@@ -453,6 +455,8 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     // compare key to be sure
     if (nsCRT::strcmp(diskEntry->mKeyStart, key->get()) == 0) {
         entry = diskEntry->CreateCacheEntry(this);
+    } else {
+        *collision = PR_TRUE;
     }
     delete [] (char *)diskEntry;
     
