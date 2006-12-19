@@ -287,6 +287,8 @@ nsPasswordManager::Init()
   NS_ASSERTION(!signonFile.IsEmpty(), "Fallback for signon filename not present");
 
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(mSignonFile));
+  if (!mSignonFile)
+    return NS_ERROR_FAILURE;
   mSignonFile->AppendNative(signonFile);
 
   nsCAutoString path;
