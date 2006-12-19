@@ -80,7 +80,7 @@ $StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
-$DownloadBuildFile = 'firefox-3.0a1.en-US.linux-i686.tar.bz2';
+$DownloadBuildFile = 'firefox-3.0a2pre.en-US.linux-i686.tar.bz2';
 $DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/argo-vm-trunk';
 $DownloadBuildDir = 'firefox';
 
