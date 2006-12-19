@@ -858,7 +858,7 @@ nsDiskCacheDevice::GetDeviceID()
 }
 
 nsCacheEntry *
-nsDiskCacheDevice::FindEntry(nsCString *fullKey)
+nsDiskCacheDevice::FindEntry(nsCString *fullKey, PRBool *collision)
 {
   LOG(("nsDiskCacheDevice::FindEntry [key=%s]\n", fullKey->get()));
 
