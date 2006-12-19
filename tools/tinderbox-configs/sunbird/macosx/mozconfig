@@ -26,3 +26,8 @@ ac_add_options --enable-static
 ac_add_options --disable-shared
 # Change to "ac_add_app_options ppc --enable-prebinding" when making universal
 ac_add_options --enable-prebinding
+
+ac_add_options --with-macos-sdk="/Developer/SDKs/MacOSX10.2.8.sdk"
+
+# Use Carbon widgets, regardless of what the default is
+ac_add_options --enable-default-toolkit=mac
