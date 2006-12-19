@@ -29,6 +29,7 @@ cp -a bin/plds4.dll                                      wince
 cp -a bin/xpcom.dll                                      wince
 cp -a bin/xpcom_core.dll                                 wince
 
+cp -a bin/freebl3.dll                                    wince
 cp -a bin/nss3.dll                                       wince
 cp -a bin/nssckbi.dll                                    wince
 cp -a bin/smime3.dll                                     wince
