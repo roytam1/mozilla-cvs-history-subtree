@@ -1510,6 +1510,7 @@ js_ForceGC(JSContext *cx, uintN gcflags)
 
     for (i = 0; i < GCX_NTYPES; i++)
         cx->newborn[i] = NULL;
+    cx->lastInternalResult = JSVAL_NULL;
     cx->lastAtom = NULL;
     cx->runtime->gcPoke = JS_TRUE;
     js_GC(cx, gcflags);
