@@ -599,7 +599,10 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc, &rv);
+  if (NS_FAILED(rv) || !doc)
+    return NS_ERROR_FAILURE;
+  
   nsIPresShell *presShell = doc->GetShellAt(0);
 
   /* Gets nsISelectionController interface for the current context */
