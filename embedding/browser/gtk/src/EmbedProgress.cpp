@@ -97,6 +97,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   // give the widget a chance to attach any listeners
   mOwner->ContentStateChange();
 
+
   if (sStopSignalTimer && 
       (
        (aStateFlags & GTK_MOZ_EMBED_FLAG_TRANSFERRING)
@@ -113,12 +114,11 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
 
   // if we've got the start flag, emit the signal
   if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) && 
-      (aStateFlags & GTK_MOZ_EMBED_FLAG_START))
-  {
+      (aStateFlags & GTK_MOZ_EMBED_FLAG_START)) {
     // FIXME: workaround for broken progress values.
     mOwner->mOwningWidget->current_number_of_requests = 0;
     mOwner->mOwningWidget->total_number_of_requests = 0;
-    
+
     if (mOwner->mLoadFinished) {
       mOwner->mLoadFinished = PR_FALSE;
       mStopLevel = 0;
@@ -137,6 +137,13 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   RequestToURIString(aRequest, &uriString);
   tmpString.AssignLiteral(uriString);
 #endif
+
+  PRBool succeeded = PR_TRUE;
+  HandleHTTPStatus(aRequest, (const char*)uriString, succeeded);
+  if (!succeeded) {
+    mOwner->mNeedFav = PR_FALSE;
+  }
+
   // FIXME: workaround for broken progress values.
   if (mOwner->mOwningWidget) {
     if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_REQUEST) {
@@ -164,15 +171,15 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
                   moz_embed_signals[NET_STATE_ALL],
                   (const gchar *)uriString,
                   (gint)aStateFlags, (gint)aStatus);
-  
+
   // and for stop, too
   if (aStateFlags & GTK_MOZ_EMBED_FLAG_STOP) {
     if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_REQUEST)
-        mStopLevel = 1;
+      mStopLevel = 1;
     if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_DOCUMENT)
        mStopLevel = mStopLevel == 1 ? 2 : 0;
     if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_WINDOW) {
-       mStopLevel = mStopLevel == 2 ? 3 : 0;
+      mStopLevel = mStopLevel == 2 ? 3 : 0;
     }
   }
 
@@ -219,11 +226,7 @@ EmbedProgress::OnProgressChange(nsIWebProgress *aWebProgress,
                     moz_embed_signals[PROGRESS],
                     aCurTotalProgress, aMaxTotalProgress);
   }
-  // FIXME: workaround for broken progress values. This signal is being fired off above.
-  /*gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-      moz_embed_signals[PROGRESS_ALL],
-      (const char *)uriString,
-      aCurTotalProgress, aMaxTotalProgress);*/
+
   return NS_OK;
 }
 
@@ -255,22 +258,9 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
       isSubFrameLoad = PR_TRUE;
   }
 
-  nsresult rv;
-  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest, &rv));
-  if (NS_FAILED(rv) || !httpChannel) 
-    return NS_ERROR_FAILURE;
-
-  PRUint32 responseCode = 0;
-
-  rv = httpChannel->GetResponseStatus(&responseCode);
-  if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;
-
-  // it has to handle more http errors code ??? 401 ?
-  if (responseCode >= 500 && responseCode <= 505) {
-    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-                               moz_embed_signals[UNKNOWN_PROTOCOL],
-                               newURI.get());
+  PRBool succeeded = PR_TRUE;
+  HandleHTTPStatus(aRequest, newURI.get(), succeeded);
+  if (!succeeded) {
     mOwner->mNeedFav = PR_FALSE;
     return NS_OK;
   }
@@ -337,5 +327,29 @@ EmbedProgress::RequestToURIString(nsIRequest *aRequest, gchar **aString)
   uri->GetSpec(uriString);
 
   *aString = g_strdup(uriString.get());
+}
+
+nsresult
+EmbedProgress::HandleHTTPStatus(nsIRequest *aRequest, const char *aUri, PRBool &aSucceeded)
+{
+  nsresult rv;
+  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest, &rv));
+
+  if (NS_SUCCEEDED(rv) && httpChannel) {
+    rv = httpChannel->GetRequestSucceeded(&aSucceeded);
+  }
+
+  if (aSucceeded)
+    return NS_OK;
+
+  PRUint32 responseCode = 0;
+  nsCString responseText;
+  rv = httpChannel->GetResponseStatus(&responseCode);
+  // it has to handle more http errors code ??? 401 ? responseCode >= 500 && responseCode <= 505
+  rv = httpChannel->GetResponseStatusText(responseText);
+  gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                             moz_embed_signals[NETWORK_ERROR],
+                             responseCode, responseText.get(), (const gchar*)aUri);
+  return rv;
 }
 

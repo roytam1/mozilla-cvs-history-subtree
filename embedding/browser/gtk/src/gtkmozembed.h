@@ -183,7 +183,7 @@ struct _GtkMozEmbedClass
   gboolean (* upload_dialog)   (GtkMozEmbed *, const char *, const char *, char **);
   void     (* icon_changed)    (GtkMozEmbed *, gpointer*);
   void     (* mailto)          (GtkMozEmbed *, gchar *);
-  void     (* unknown_protocol)(GtkMozEmbed *, gchar *);
+  void     (* network_error)   (GtkMozEmbed *, gchar *, const gint, const gchar **);
 };
 
 GTKMOZEMBED_API(GtkType,       gtk_moz_embed_get_type,            (void))

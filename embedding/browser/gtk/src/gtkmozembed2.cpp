@@ -618,15 +618,18 @@ gtk_moz_embed_class_init(GtkMozEmbedClass *klass)
                    1,
                    GTK_TYPE_STRING);
 
-  moz_embed_signals[UNKNOWN_PROTOCOL] =
-    gtk_signal_new("unknown_protocol",
+  moz_embed_signals[NETWORK_ERROR] =
+    gtk_signal_new("network_error",
                    GTK_RUN_LAST,
                    GET_OBJECT_CLASS_TYPE(klass),
-                   GTK_SIGNAL_OFFSET(GtkMozEmbedClass, unknown_protocol),
-                   gtk_marshal_VOID__STRING,
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedClass, network_error),
+                   gtkmozembed_VOID__INT_STRING_STRING,
                    GTK_TYPE_NONE,
-                   1,
+                   3,
+                   GTK_TYPE_INT,
+                   GTK_TYPE_STRING,
                    GTK_TYPE_STRING);
+
 #endif
 
 #ifdef MOZ_WIDGET_GTK
