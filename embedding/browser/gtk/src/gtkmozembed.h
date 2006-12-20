@@ -232,12 +232,11 @@ GTKMOZEMBED_API(guint,         gtk_moz_embed_get_context_info,    (GtkMozEmbed *
                                                                    gint *x, gint *y, gint *docindex, 
                                                                    const gchar **url, const gchar **objurl, const gchar **docurl))
 GTKMOZEMBED_API(const gchar*,  gtk_moz_embed_get_selection,       (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_doc_info,        (GtkMozEmbed *embed, gint docindex, const gchar**title, 
-                                                                   const gchar**location, const gchar **file_type, guint *file_size))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_doc_info,        (GtkMozEmbed *embed, gpointer node, gint docindex, const gchar**title, 
+                                                                   const gchar**location, const gchar **file_type, guint *file_size,
+                                                                   gint *width, gint *height))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_insert_text,         (GtkMozEmbed *embed, const gchar*, gpointer node))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_save_target,         (GtkMozEmbed *embed, gchar*, gchar*, gint))
-GTKMOZEMBED_API(void,          gtk_moz_embed_get_image_dimensions,(GtkMozEmbed *embed, gint*, gint*, gpointer))
-GTKMOZEMBED_API(char*,         gtk_moz_embed_get_mime_type,       (GtkMozEmbed *embed))
 
 /* Defines used by download and upload components */
 #define GTK_MOZ_EMBED_COMMON_FILE_SCHEME "file://"

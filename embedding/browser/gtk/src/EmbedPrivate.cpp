@@ -129,6 +129,14 @@
 
 #include "nsEmbedCID.h"
 
+//#include "nsICache.h"
+#include "nsICacheService.h"
+#include "nsICacheSession.h"
+//#include "nsICacheListener.h"
+static NS_DEFINE_CID(kCacheServiceCID,           NS_CACHESERVICE_CID);
+static nsCOMPtr<nsICacheService> gCacheService;
+
+
 #ifdef MOZ_WIDGET_GTK2
 static EmbedCommon* sEmbedCommon = nsnull;
 
@@ -1968,9 +1976,21 @@ EmbedPrivate::HasFrames  (PRUint32 *numberOfFrames)
 }
 
 nsresult
-EmbedPrivate::GetMIMEInfo (nsString& info)
+EmbedPrivate::GetMIMEInfo (const char **aMime, nsIDOMNode *aDOMNode)
 {
+  NS_ENSURE_ARG_POINTER(aMime);
   nsresult rv;
+  if (aDOMNode && mEventListener) {
+    EmbedContextMenuInfo * ctx = mEventListener->GetContextInfo();
+    if (!ctx)
+      return NS_ERROR_FAILURE;
+    nsCOMPtr<imgIRequest> request;
+    rv = ctx->GetImageRequest(getter_AddRefs(request), aDOMNode);
+    if (request)
+      rv = request->GetMimeType((char**)aMime);
+    return rv;
+  }
+  
   nsCOMPtr<nsIWebBrowser> webBrowser;
   rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
 
@@ -1982,8 +2002,46 @@ EmbedPrivate::GetMIMEInfo (nsString& info)
 
   nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(doc);
   
+  nsString nsmime;
   if (nsDoc)
-    rv = nsDoc->GetContentType(info);
+    rv = nsDoc->GetContentType(nsmime);
+  if (!NS_FAILED(rv) && !nsmime.IsEmpty())
+    *aMime = g_strdup((char*)NS_LossyConvertUTF16toASCII(nsmime).get());
   return rv;
+}
+
+nsresult
+EmbedPrivate::GetCacheEntry(const char *aStorage,
+                             const char *aKeyName,
+                             PRUint32 aAccess,
+                             PRBool aIsBlocking,
+                             nsICacheEntryDescriptor **aDescriptor)
+{
+    nsCOMPtr<nsICacheSession> session;
+    nsresult rv;
+
+    if (!gCacheService) {
+      gCacheService = do_GetService("@mozilla.org/network/cache-service;1", &rv);
+      if (NS_FAILED(rv) || !gCacheService) {
+        printf("do_GetService(kCacheServiceCID) failed : %x\n", rv);
+        return rv;
+      }
+    }
+    
+    rv = gCacheService->CreateSession("HTTP", 0, PR_TRUE,
+                                      getter_AddRefs(session));
+    
+    if (NS_FAILED(rv)) {
+      printf("nsCacheService::CreateSession() failed : %x\n", rv);
+      return rv;
+    }
+    rv = session->OpenCacheEntry(nsCString(aKeyName),
+                                 nsICache::ACCESS_READ,
+                                 PR_FALSE,
+                                 aDescriptor);
+                                 
+    if (rv != NS_ERROR_CACHE_KEY_NOT_FOUND)
+      printf("OpenCacheEntry(ACCESS_READ) returned: %x for non-existent entry\n", rv);
+    return rv;
 }
 

@@ -298,11 +298,12 @@ EmbedContextMenuInfo::GetSelectedText()
     }
   } else if (mCtxDocument) {
     nsCOMPtr<nsIDOMNSHTMLDocument> htmlDoc = do_QueryInterface(mCtxDocument, &rv);
-    if (NS_SUCCEEDED(rv) && htmlDoc)
-	htmlDoc->GetSelection(cString);
-    if ( cString.Length() > 0) {
-      rv = NS_OK;
-    }                      
+    if (NS_FAILED(rv) || !htmlDoc)
+      return nsnull;
+	rv = htmlDoc->GetSelection(cString);
+    if ( NS_FAILED(rv) || cString.Length() <= 0)
+      return nsnull;
+    rv = NS_OK;
   }
   if (rv == NS_OK) {
     return NS_ConvertUTF16toUTF8(cString).get();
@@ -327,6 +328,20 @@ EmbedContextMenuInfo::CheckDomImageElement(nsIDOMNode *node, nsString& aHref,
     rv = NS_OK;
   }
   return rv;
+}
+
+nsresult
+EmbedContextMenuInfo::GetImageRequest(imgIRequest **aRequest, nsIDOMNode *aDOMNode)
+{
+  NS_ENSURE_ARG(aDOMNode);
+  NS_ENSURE_ARG_POINTER(aRequest);
+  
+  // Get content
+  nsCOMPtr<nsIImageLoadingContent> content(do_QueryInterface(aDOMNode));
+  NS_ENSURE_TRUE(content, NS_ERROR_FAILURE);
+
+  return content->GetRequest(nsIImageLoadingContent::CURRENT_REQUEST,
+                             aRequest);
 }
 
 nsresult

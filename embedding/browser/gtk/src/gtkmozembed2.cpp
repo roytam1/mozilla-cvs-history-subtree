@@ -70,7 +70,6 @@
 #include <nsXPIDLString.h>
 #include <nsReadableUtils.h>
 #else
-
 #include <nsStringAPI.h>
 #endif
 
@@ -1608,15 +1607,6 @@ gtk_moz_embed_get_selection(GtkMozEmbed *embed)
 #endif
   return NULL;
 }
-
-gboolean
-gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gint docindex,
-                           const gchar**title, const gchar**location,
-                           const gchar **file_type, guint *file_size)
-{
-  return FALSE;
-}
-
 gboolean
 gtk_moz_embed_insert_text(GtkMozEmbed *embed, const gchar *string, gpointer node)
 {
@@ -1709,43 +1699,41 @@ gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, gchar* aUrl,
   return FALSE;
 }
 
-void
-gtk_moz_embed_get_image_dimensions (GtkMozEmbed *embed, gint *width, gint *height, gpointer node)
+gboolean
+gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gpointer node, gint docindex,
+                           const gchar**title, const gchar**location,
+                           const gchar **file_type, guint *file_size, gint *width, gint *height)
 {
-  g_return_if_fail(embed != NULL);
-  g_return_if_fail(GTK_IS_MOZ_EMBED(embed));
-  g_return_if_fail(width);
-  g_return_if_fail(height);
-
+  g_return_val_if_fail(embed != NULL, FALSE);
+  g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), FALSE);
   EmbedPrivate *embedPrivate;
   embedPrivate = (EmbedPrivate *)embed->data;
 
   if ( !embedPrivate || !embedPrivate->mEventListener)
-    return;
+    return FALSE;
 
 #ifdef MOZ_WIDGET_GTK2
-  EmbedContextMenuInfo * ctx_menu = embedPrivate->mEventListener->GetContextInfo();
-  if (!ctx_menu)
-    return;
 
-  nsString imgSrc;
-  ctx_menu->CheckDomImageElement((nsIDOMNode*)node, imgSrc, width, height);
-#endif
-}
-
-gchar *
-gtk_moz_embed_get_mime_type (GtkMozEmbed *embed)
-{
-  g_return_val_if_fail ((embed != NULL), (gchar *)NULL);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), (gchar *)NULL);
-  gchar *retval = NULL;
-  EmbedPrivate *embedPrivate = nsnull;
-  embedPrivate = (EmbedPrivate *)embed->data;
-  if (embedPrivate && embedPrivate->mWindow) {
-    nsString mime;
-    if (NS_SUCCEEDED(embedPrivate->GetMIMEInfo(mime)))
-        retval = g_strdup((char*)NS_LossyConvertUTF16toASCII(mime).get());
+  if (file_type) {
+    embedPrivate->GetMIMEInfo(file_type, (nsIDOMNode*)node);
   }
-  return retval;
-}
 
+  if (width && height) {
+    nsString imgSrc;
+    EmbedContextMenuInfo * ctx_menu = embedPrivate->mEventListener->GetContextInfo();
+    if (ctx_menu)
+      ctx_menu->CheckDomImageElement((nsIDOMNode*)node, imgSrc, width, height);    
+  }
+
+  if (file_size && location && *location != nsnull) {
+    nsCOMPtr<nsICacheEntryDescriptor> descriptor;
+    nsresult rv;
+    rv = embedPrivate->GetCacheEntry("HTTP", *location, nsICache::ACCESS_READ, PR_FALSE, getter_AddRefs(descriptor));
+    if (descriptor) {
+        rv = descriptor->GetDataSize(file_size);
+    }
+  }
+#endif
+
+  return TRUE;
+}

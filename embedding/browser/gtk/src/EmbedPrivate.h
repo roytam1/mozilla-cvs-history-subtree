@@ -74,6 +74,8 @@
 #include <nsIDOMWindowCollection.h>
 #include "gtkmozembedprivate.h"
 
+#include "nsICacheEntryDescriptor.h"
+
 #include "EmbedGtkTools.h"
 class EmbedProgress;
 class EmbedWindow;
@@ -175,7 +177,12 @@ class EmbedPrivate {
   nsresult    GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel);
   nsresult    SetZoom (gint zoomLevel);
   nsresult    HasFrames  (PRUint32 *numberOfFrames);
-  nsresult    GetMIMEInfo (nsString& info);
+  nsresult    GetMIMEInfo (const char **aMime, nsIDOMNode *aDOMNode = nsnull);
+  nsresult    GetCacheEntry (const char *aStorage,
+                             const char *aKeyName,
+                             PRUint32 aAccess,
+                             PRBool aIsBlocking,
+                             nsICacheEntryDescriptor **aDescriptor);
 
 #ifdef MOZ_ACCESSIBILITY_ATK
   void *GetAtkObjectForCurrentDocument();

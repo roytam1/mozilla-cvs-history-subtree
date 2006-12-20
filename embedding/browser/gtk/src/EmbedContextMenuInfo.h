@@ -73,6 +73,8 @@ public:
   nsresult          GetElementForScroll(nsIDOMEvent *aEvent);
   nsresult          CheckDomImageElement(nsIDOMNode *node, nsString& aHref,
                                        PRInt32 *aWidth, PRInt32 *aHeight);
+  nsresult          GetImageRequest(imgIRequest **aRequest, nsIDOMNode *aDOMNode);
+
 
   PRInt32                 mX, mY, mObjWidth, mObjHeight, mCtxFrameNum;
   nsString                mCtxURI, mCtxHref, mCtxImgHref;  
