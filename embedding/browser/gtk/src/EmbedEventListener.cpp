@@ -733,6 +733,7 @@ EmbedEventListener::GeneratePixBuf()
 
     if (!faviconFile) {
       NS_Free(::gFavLocation);
+      gFavLocation = nsnull;
       return;
     }
 
@@ -740,6 +741,7 @@ EmbedEventListener::GeneratePixBuf()
     faviconFile->InitWithNativePath(faviconLocation);
     faviconFile->Remove(FALSE);
     NS_Free(::gFavLocation);
+    gFavLocation = nsnull;
     return;
   }
   
@@ -749,6 +751,7 @@ EmbedEventListener::GeneratePixBuf()
                   pixbuf );
   //mOwner->mNeedFav = PR_FALSE;
   NS_Free(::gFavLocation);
+  gFavLocation = nsnull;
 }
 #endif
 
@@ -817,6 +820,7 @@ EmbedEventListener::GetFaviconFromURI(const char* aURI)
     NS_Free(file_name);
     NS_Free(favicon_uri);
     NS_Free(::gFavLocation);
+    gFavLocation = nsnull;
     return;
   }
 
@@ -827,6 +831,7 @@ EmbedEventListener::GetFaviconFromURI(const char* aURI)
     NS_Free(file_name);
     NS_Free(favicon_uri);
     NS_Free(::gFavLocation);
+    gFavLocation = nsnull;
     return;
   }
   NS_Free(file_name);
