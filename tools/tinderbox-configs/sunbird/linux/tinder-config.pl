@@ -9,7 +9,7 @@
 
 $ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
-#$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
+$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
 
 # To ensure Talkback client builds properly on some Linux boxen where LANG
 # is set to "en_US.UTF-8" by default, override that setting here by setting
