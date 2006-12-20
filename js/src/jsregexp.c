@@ -1969,6 +1969,8 @@ js_NewRegExp(JSContext *cx, JSTokenStream *ts,
             re = NULL;
             goto out;
         }
+        for (i = 0; i < re->classCount; i++)
+            re->classList[i].converted = JS_FALSE;
     } else {
         re->classList = NULL;
     }
