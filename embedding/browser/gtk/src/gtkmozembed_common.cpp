@@ -557,51 +557,66 @@ gtk_moz_embed_common_nsx509_to_raw(void *nsIX509Ptr, guint *len)
   return data;
 }
 
-void
-gtk_moz_embed_common_get_plugins_list (GtkMozPlugin **pluginArray, gint *num_plugins)
+gint
+gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
 {
   nsresult rv; 
   nsCOMPtr<nsIPluginManager> pluginMan = 
     do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
     g_print("Could not get the plugin manager\n");
-    return;
+    return -1;
   }
   pluginMan->ReloadPlugins(PR_TRUE);  //FIXME XXX MEMLEAK
+
   nsCOMPtr<nsIPluginHost> pluginHost = 
     do_GetService(kPluginManagerCID, &rv);
-  if (NS_FAILED(rv)) {
-    return;
-  }
+  if (NS_FAILED(rv))
+    return -1;
+
   PRUint32 aLength;
-  nsIDOMPlugin **aItem;
   pluginHost->GetPluginCount(&aLength);
-  *num_plugins = aLength;
-  gint size = aLength;
-  aItem = new nsIDOMPlugin*[aLength];
-  if (!aItem)
-    return; //NO MEMORY
-  pluginHost->GetPlugins(aLength, aItem);
-  *pluginArray = (GtkMozPlugin*) g_try_malloc(size*sizeof(GtkMozPlugin));
+
+  if (!pluginArray)
+    return (gint)aLength;
+
+  nsIDOMPlugin **aItems = nsnull;
+  aItems= new nsIDOMPlugin*[aLength];
+  if (!aItems)
+    return -1; //NO MEMORY
+
+  rv = pluginHost->GetPlugins(aLength, aItems);
+  if (NS_FAILED(rv)) {
+    delete [] aItems;
+    return -1;
+  }
+
+  nsString string;
   for (int aIndex = 0; aIndex < (gint) aLength; aIndex++)
   { 
-    nsAutoString aName;
-    aItem[aIndex]->GetName(aName);
-    NS_ConvertUTF16toUTF8 utf8ValueTitle(aName);
-    (*pluginArray)[aIndex].title = g_strdup((gchar *)utf8ValueTitle.get());
-    nsAutoString aFilename;
-    aItem[aIndex]->GetFilename(aFilename);
-    NS_ConvertUTF16toUTF8 utf8ValueFilename(aFilename);
-    (*pluginArray)[aIndex].path =g_strdup((gchar *)utf8ValueFilename.get());
+    GtkMozPlugin *list_item = g_new0(GtkMozPlugin, 1);
+
+    rv = aItems[aIndex]->GetName(string);
+    if (!NS_FAILED(rv))
+      list_item->title = g_strdup(NS_ConvertUTF16toUTF8(string).get());
+
+    aItems[aIndex]->GetFilename(string);
+    if (!NS_FAILED(rv))
+      list_item->path = g_strdup(NS_ConvertUTF16toUTF8(string).get());
+    
     nsCOMPtr<nsIDOMMimeType> mimeType;
-    aItem[aIndex]->Item(aIndex, getter_AddRefs(mimeType));
-    nsAutoString aDescription;
-    mimeType->GetDescription(aDescription);
-    NS_ConvertUTF16toUTF8 utf8ValueDescription(aDescription);
-    (*pluginArray)[aIndex].type = g_strdup((gchar *)utf8ValueDescription.get());
+    rv = aItems[aIndex]->Item(aIndex, getter_AddRefs(mimeType));
+    if (NS_FAILED(rv))
+      continue;
+
+    rv = mimeType->GetDescription(string);
+    if (!NS_FAILED(rv))
+      list_item->type = g_strdup(NS_ConvertUTF16toUTF8(string).get());
+    if (!NS_FAILED(rv))
+      *pluginArray = g_list_append(*pluginArray, list_item);
   }
-  delete aItem;
-  return;
+  delete [] aItems;
+  return (gint)aLength;
 }
 
 void
