@@ -48,6 +48,7 @@
 #include <nsIIOService.h>
 #include <nsNetUtil.h>
 #include "gtkmozembed_common.h"
+#include <nsISeekableStream.h>
 #ifndef MOZILLA_INTERNAL_API
 #include "nsCRT.h"
 #endif
@@ -83,6 +84,10 @@ static void close_file_handle(void *file_handle)
 {
   g_return_if_fail(file_handle);
 #ifndef MOZ_ENABLE_GNOMEVFS
+  nsresult rv;
+  nsCOMPtr<nsIOutputStream> fhandle = do_QueryInterface((nsISupports*)file_handle, &rv);
+  rv = fhandle->Close();
+  NS_RELEASE(fhandle);
   return;
 #else
   gnome_vfs_close((GnomeVFSHandle*) file_handle);
@@ -93,7 +98,9 @@ static bool file_handle_uri_exists(const void *uri)
 {
   g_return_val_if_fail(uri, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return false;
+  PRBool exists = PR_FALSE;
+  ((nsILocalFile*)uri)->Exists(&exists);
+  return exists ? true : false;
 #else
   return gnome_vfs_uri_exists((GnomeVFSURI*)uri);
 #endif
@@ -103,7 +110,12 @@ static void* file_handle_uri_new(const char *uri)
 {
   g_return_val_if_fail(uri, nsnull);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return nsnull;
+  nsresult rv;
+  nsILocalFile *historyFile = nsnull;
+  rv = NS_NewNativeLocalFile(nsDependentCString(uri), 1,  &historyFile);
+  if (NS_FAILED(rv))
+    return nsnull;
+  return historyFile;
 #else
   return gnome_vfs_uri_new(uri);
 #endif
@@ -113,6 +125,7 @@ static void file_handle_uri_delete(void *uri)
 {
   g_return_if_fail(uri);
 #ifndef MOZ_ENABLE_GNOMEVFS
+  delete (nsILocalFile*)uri;
   return;
 #else
   gnome_vfs_uri_unref((GnomeVFSURI*)uri);
@@ -124,7 +137,14 @@ static bool file_handle_create_uri(void *file_handle, const void *uri)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return false;
+  nsresult rv;
+  nsIOutputStream *outStr = nsnull;
+  rv = NS_NewLocalFileOutputStream(&outStr, (nsILocalFile*)uri, PR_RDWR | PR_APPEND | PR_CREATE_FILE, 0660);
+
+  if (NS_FAILED(rv))
+    return false;
+  *(nsIOutputStream **)file_handle = outStr;
+  return true;
 #else
   return gnome_vfs_create_uri(
     (GnomeVFSHandle**)file_handle,
@@ -140,7 +160,14 @@ static bool file_handle_open_uri(void *file_handle, const void *uri)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return false;
+  nsresult rv;
+  nsIOutputStream *outStr = nsnull;
+  rv = NS_NewLocalFileOutputStream(&outStr, (nsILocalFile*)uri, PR_RDWR | PR_APPEND, 0660);
+
+  if (NS_FAILED(rv))
+    return false;
+  *(nsIOutputStream **)file_handle = outStr;
+  return true;
 #else
   return gnome_vfs_open_uri(
     (GnomeVFSHandle**)file_handle,
@@ -155,7 +182,12 @@ static bool file_handle_seek(void *file_handle, gboolean end)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return false;
+  nsresult rv;
+  nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface((nsISupports*)file_handle, &rv);
+  rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, end ? -1 : 0);
+  if (NS_FAILED(rv))
+    return false;
+  return true;
 #else
   return gnome_vfs_seek((GnomeVFSHandle*)file_handle,
                         end ? GNOME_VFS_SEEK_END : GNOME_VFS_SEEK_START, 0) == GNOME_VFS_OK;
@@ -166,7 +198,7 @@ static bool file_handle_truncate(void *file_handle)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return false;
+  return true;
 #else
   return gnome_vfs_truncate_handle ((GnomeVFSHandle*)file_handle, 0) == GNOME_VFS_OK;
 #endif
@@ -177,7 +209,8 @@ static int file_handle_file_info_block_size(void *file_handle,  guint64 *size)
   g_return_val_if_fail(file_handle, 0);
   int rtn = 0;
 #ifndef MOZ_ENABLE_GNOMEVFS
-
+  *size = 512;
+  return rtn;
 #else
   GnomeVFSFileInfo * fi = gnome_vfs_file_info_new ();
 
@@ -196,7 +229,15 @@ static int64 file_handle_read(void *file_handle, gpointer buffer, guint64 bytes)
 {
   g_return_val_if_fail(file_handle, -1);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return -1;
+  PRUint32 amt = 0;
+  nsresult rv;
+  nsCOMPtr<nsIInputStream> seekable = do_QueryInterface((nsISupports*)file_handle, &rv);
+  if (NS_FAILED(rv))
+    return -1;
+  rv = seekable->Read(*(char**)buffer, bytes, &amt);
+  if (NS_FAILED(rv))
+    return -1;
+  return amt;
 #else
   GnomeVFSResult vfs_result = GNOME_VFS_OK;
   GnomeVFSFileSize read_bytes;
@@ -213,7 +254,13 @@ static guint64 file_handle_write(void *file_handle, gpointer line)
 {
   g_return_val_if_fail(file_handle, 0);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  return 0;
+  PRUint32 amt = 0;
+  nsresult rv;
+  nsCOMPtr<nsIOutputStream> seekable = do_QueryInterface((nsISupports*)file_handle, &rv);
+  rv = seekable->Write((char*)line, strlen((char*)line), &amt);
+  if (NS_FAILED(rv))
+    return false;
+  return true;
 #else
   GnomeVFSFileSize written;
   gnome_vfs_write ((GnomeVFSHandle *)file_handle,
