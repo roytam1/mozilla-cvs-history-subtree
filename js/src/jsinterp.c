@@ -1891,7 +1891,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
         }
 #endif
 
-        if (interruptHandler) {
+        if (interruptHandler && op != JSOP_PUSHOBJ) {
             SAVE_SP(fp);
             switch (interruptHandler(cx, script, pc, &rval,
                                      rt->interruptHandlerData)) {
