@@ -198,7 +198,7 @@ EmbedEventListener::HandleEvent(nsIDOMEvent* aDOMEvent)
 
   if (eventType.EqualsLiteral ("DOMLinkAdded") && mOwner->mNeedFav) {
 
-    nsresult result;	
+    nsresult result;
     nsCOMPtr<nsIDOMEventTarget> eventTarget;
 
     aDOMEvent->GetTarget(getter_AddRefs(eventTarget));

@@ -913,7 +913,7 @@ EmbedPrivate::PopStartup(void)
     }
 
     // shut down XPCOM/Embedding
-    NS_TermEmbedding();					
+    NS_TermEmbedding();
 #else
 
     // we no longer need a reference to the DirectoryServiceProvider

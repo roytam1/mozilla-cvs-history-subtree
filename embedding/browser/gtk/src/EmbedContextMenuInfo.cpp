@@ -300,7 +300,7 @@ EmbedContextMenuInfo::GetSelectedText()
     nsCOMPtr<nsIDOMNSHTMLDocument> htmlDoc = do_QueryInterface(mCtxDocument, &rv);
     if (NS_FAILED(rv) || !htmlDoc)
       return nsnull;
-	rv = htmlDoc->GetSelection(cString);
+    rv = htmlDoc->GetSelection(cString);
     if ( NS_FAILED(rv) || cString.Length() <= 0)
       return nsnull;
     rv = NS_OK;
@@ -383,11 +383,11 @@ EmbedContextMenuInfo::CheckDomHtmlNode(nsIDOMNode *node)
         if (childNode) {
           PRInt32 width, height;
           rv = CheckDomImageElement(node, mCtxImgHref, &width, &height);
-	  if (NS_SUCCEEDED(rv))
-	    mEmbedCtxType |= GTK_MOZ_EMBED_CTX_IMAGE;
+          if (NS_SUCCEEDED(rv))
+            mEmbedCtxType |= GTK_MOZ_EMBED_CTX_IMAGE;
         }
       } else if (StringBeginsWith(mCtxHref, NS_LITERAL_STRING("mailto:"))) {
-          mEmbedCtxType |= GTK_MOZ_EMBED_CTX_EMAIL;
+        mEmbedCtxType |= GTK_MOZ_EMBED_CTX_EMAIL;
       }
     }
   }
