@@ -407,7 +407,7 @@ NS_IMETHODIMP
 EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
          const PRUnichar *aTipText)
 {
-  nsAutoString tipText ( aTipText );
+  nsAutoString tipText (aTipText);
 
 #ifdef MOZ_WIDGET_GTK
   const char* tipString = ToNewCString(tipText);
@@ -473,7 +473,7 @@ EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
   gtk_widget_popup(sTipWindow, aXCoords + root_x, aYCoords + root_y); */
 #endif /* MOZ_WIDGET_GTK */
 
-  nsMemory::Free( (void*)tipString );
+  nsMemory::Free((void*)tipString);
 
   return NS_OK;
 }

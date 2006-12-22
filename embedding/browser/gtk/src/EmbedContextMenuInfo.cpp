@@ -301,7 +301,7 @@ EmbedContextMenuInfo::GetSelectedText()
     if (NS_FAILED(rv) || !htmlDoc)
       return nsnull;
     rv = htmlDoc->GetSelection(cString);
-    if ( NS_FAILED(rv) || cString.Length() <= 0)
+    if (NS_FAILED(rv) || cString.Length() <= 0)
       return nsnull;
     rv = NS_OK;
   }
@@ -474,7 +474,7 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
   if (!aEvent) {
     return NS_OK;
   }
-  nsCOMPtr<nsIDOMMouseEvent> mouseEvent (do_QueryInterface( mCtxEvent ));
+  nsCOMPtr<nsIDOMMouseEvent> mouseEvent (do_QueryInterface(mCtxEvent));
   if(mouseEvent) {
     ((nsIDOMMouseEvent*)mouseEvent)->GetClientX(&mX);
     ((nsIDOMMouseEvent*)mouseEvent)->GetClientY(&mY);

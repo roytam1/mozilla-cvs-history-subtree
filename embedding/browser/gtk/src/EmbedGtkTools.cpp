@@ -90,7 +90,7 @@ nsresult GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer
 PRUnichar *LocaleToUnicode (const char *locStr)
 {
   if (!locStr)
-    return (NULL);
+    return NULL;
 
   nsAutoString autoStr;
 #ifdef MOZILLA_INTERNAL_API //FIXME?
@@ -101,5 +101,5 @@ PRUnichar *LocaleToUnicode (const char *locStr)
 #endif
   PRUnichar *uniStr = ToNewUnicode(autoStr);
 
-  return (uniStr);
+  return uniStr;
 }

@@ -348,9 +348,9 @@ gtk_moz_embed_common_set_pref(GtkType type, gchar *name, gpointer value)
     default:
       break;
     }
-    return ( NS_SUCCEEDED (rv) ? TRUE : FALSE );
+    return NS_SUCCEEDED(rv);
   }
-  return (FALSE);
+  return FALSE;
 }
 
 gboolean
@@ -381,9 +381,9 @@ gtk_moz_embed_common_get_pref(GtkType type, gchar *name, gpointer value)
     default:
       break;
     }
-    return ( NS_SUCCEEDED (rv) ? TRUE : FALSE );
+    return NS_SUCCEEDED(rv);
   }
-  return (FALSE);
+  return FALSE;
 }
 
 gboolean
@@ -394,7 +394,7 @@ gtk_moz_embed_common_save_prefs()
   if (prefService == nsnull)
     return FALSE;
   nsresult rv = prefService->SavePrefFile (nsnull);
-  return NS_SUCCEEDED (rv) ? TRUE : FALSE;
+  return NS_SUCCEEDED(rv);
 }
 
 gint

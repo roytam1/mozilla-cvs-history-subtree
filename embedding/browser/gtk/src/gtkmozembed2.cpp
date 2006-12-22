@@ -1617,7 +1617,7 @@ gtk_moz_embed_insert_text(GtkMozEmbed *embed, const gchar *string, gpointer node
   g_return_val_if_fail(embed != NULL, FALSE);
   g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), FALSE);
   embedPrivate = (EmbedPrivate *)embed->data;
-  if ( !embedPrivate || !embedPrivate->mEventListener)
+  if (!embedPrivate || !embedPrivate->mEventListener)
     return FALSE;
   if (!string && node) {
     embedPrivate->ScrollToSelectedNode((nsIDOMNode*)node);
@@ -1712,7 +1712,7 @@ gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gpointer node, gint docindex,
   EmbedPrivate *embedPrivate;
   embedPrivate = (EmbedPrivate *)embed->data;
 
-  if ( !embedPrivate || !embedPrivate->mEventListener)
+  if (!embedPrivate || !embedPrivate->mEventListener)
     return FALSE;
 
 #ifdef MOZ_WIDGET_GTK2

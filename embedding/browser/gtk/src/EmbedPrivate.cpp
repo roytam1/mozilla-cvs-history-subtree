@@ -207,8 +207,8 @@ EmbedCommon::GetAnyLiveWidget()
 
   // Get the number of browser windows.
   PRInt32 count = EmbedPrivate::sWindowList->Count();
-  // This function doesn't get called very often at all ( only when
-  // creating a new window ) so it's OK to walk the list of open
+  // This function doesn't get called very often at all (only when
+  // creating a new window) so it's OK to walk the list of open
   // windows.
   //FIXME need to choose right window
   GtkMozEmbed *ret = nsnull;
@@ -500,7 +500,7 @@ EmbedPrivate::Init(GtkMozEmbed *aOwningWidget)
 
   // has the window creator service been set up?
   static int initialized = PR_FALSE;
-  // Set up our window creator ( only once )
+  // Set up our window creator (only once)
   if (!initialized) {
     // We set this flag here instead of on success.  If it failed we
     // don't want to keep trying and leaking window creator objects.
@@ -629,9 +629,9 @@ EmbedPrivate::Resize(PRUint32 aWidth, PRUint32 aHeight)
   } else {
 #ifdef MOZ_WIDGET_GTK2
     PRInt32 X, Y, W, H;
-    mWindow->GetDimensions( nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, &X, &Y, &W, &H);
+    mWindow->GetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, &X, &Y, &W, &H);
     if (Y < 0) {
-      mWindow->SetDimensions( nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, 0, 0, nsnull, nsnull);
+      mWindow->SetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, 0, 0, nsnull, nsnull);
       return;
     }
     EmbedContextMenuInfo * ctx_menu = mEventListener->GetContextInfo();
@@ -648,7 +648,7 @@ EmbedPrivate::Resize(PRUint32 aWidth, PRUint32 aHeight)
         PRInt32 diff = ctx_menu->mFormRect.y - sub;
 //        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!height: %i, Form.y: %i, Form.Height: %i, sub: %i, diff: %i\n", height, ctx_menu->mFormRect.y, ctx_menu->mFormRect.height, sub, diff);
         if (sub > 0 && diff >= 0)
-          mWindow->SetDimensions( nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, 0, -sub, nsnull, nsnull);
+          mWindow->SetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, 0, -sub, nsnull, nsnull);
       }
     }
 #endif
@@ -1087,8 +1087,8 @@ EmbedPrivate::FindPrivateForBrowser(nsIWebBrowserChrome *aBrowser)
 
   // Get the number of browser windows.
   PRInt32 count = sWindowList->Count();
-  // This function doesn't get called very often at all ( only when
-  // creating a new window ) so it's OK to walk the list of open
+  // This function doesn't get called very often at all (only when
+  // creating a new window) so it's OK to walk the list of open
   // windows.
   for (int i = 0; i < count; i++) {
     EmbedPrivate *tmpPrivate = NS_STATIC_CAST(EmbedPrivate *, sWindowList->ElementAt(i));
@@ -1721,7 +1721,7 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
   nsCOMPtr<nsIWebBrowser> webBrowser;
   mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
   nsCOMPtr<nsIWebBrowserFind> finder(do_GetInterface (webBrowser));
-  g_return_val_if_fail( finder != NULL, FALSE);
+  g_return_val_if_fail(finder != NULL, FALSE);
   text = LocaleToUnicode (exp);
   finder->SetSearchString (text);
   finder->SetFindBackwards (reverse);
