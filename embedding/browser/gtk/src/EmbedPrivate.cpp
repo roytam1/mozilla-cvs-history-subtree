@@ -134,8 +134,7 @@
 #include "nsICacheSession.h"
 //#include "nsICacheListener.h"
 static NS_DEFINE_CID(kCacheServiceCID,           NS_CACHESERVICE_CID);
-static nsCOMPtr<nsICacheService> gCacheService;
-
+static nsICacheService* sCacheService;
 
 #ifdef MOZ_WIDGET_GTK2
 static EmbedCommon* sEmbedCommon = nsnull;
@@ -896,6 +895,8 @@ EmbedPrivate::PopStartup(void)
 {
   sWidgetCount--;
   if (sWidgetCount == 0) {
+    NS_IF_RELEASE(sCacheService);
+
     // destroy the offscreen window
     DestroyOffscreenWindow();
 
@@ -2016,15 +2017,17 @@ EmbedPrivate::GetCacheEntry(const char *aStorage,
   nsCOMPtr<nsICacheSession> session;
   nsresult rv;
 
-  if (!gCacheService) {
-    gCacheService = do_GetService("@mozilla.org/network/cache-service;1", &rv);
-    if (NS_FAILED(rv) || !gCacheService) {
+  if (!sCacheService) {
+    nsCOMPtr<nsICacheService> cacheService
+      = do_GetService("@mozilla.org/network/cache-service;1", &rv);
+    if (NS_FAILED(rv) || !cacheService) {
       printf("do_GetService(kCacheServiceCID) failed : %x\n", rv);
       return rv;
     }
+    NS_ADDREF(sCacheService = cacheService);
   }
 
-  rv = gCacheService->CreateSession("HTTP", 0, PR_TRUE,
+  rv = sCacheService->CreateSession("HTTP", 0, PR_TRUE,
                                     getter_AddRefs(session));
 
   if (NS_FAILED(rv)) {

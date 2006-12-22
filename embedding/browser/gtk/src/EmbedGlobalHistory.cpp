@@ -313,7 +313,6 @@ nsresult SetIsWritten(HistoryEntry *entry)
   return NS_OK;
 }
 
-
 // Change the entry title
 #define SET_TITLE(entry, aTitle) entry->mTitle.Assign (aTitle);
 
@@ -372,6 +371,9 @@ void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
     if (entry->url)
       g_free(entry->url);
     entry->url = NULL;
+    /* XXX data should be a class and we should use new/delete instead of
+     * g_crash_happy.
+     */
     entry->mTitle.~nsCString();
     entry->mLastVisitTime = 0;
     g_free(entry);
@@ -453,9 +455,10 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
 
 #ifdef MOZ_ENABLE_GNOMEVFS
   /*GnomeVFS */
-  if (!gnome_vfs_initialized())
+  if (!gnome_vfs_initialized()) {
     if (!gnome_vfs_init())
       NS_WARNING("Could not init GnomeVFS!\n");
+  }
 #endif
 
   PRInt32 expireDays;
