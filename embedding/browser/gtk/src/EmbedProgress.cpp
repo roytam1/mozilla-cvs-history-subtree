@@ -97,7 +97,6 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   // give the widget a chance to attach any listeners
   mOwner->ContentStateChange();
 
-
   if (sStopSignalTimer &&
       (
        (aStateFlags & GTK_MOZ_EMBED_FLAG_TRANSFERRING)
@@ -334,6 +333,7 @@ EmbedProgress::HandleHTTPStatus(nsIRequest *aRequest, const char *aUri, PRBool &
 {
   nsresult rv;
   nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest, &rv));
+  aSucceeded = PR_FALSE;
 
   if (NS_SUCCEEDED(rv) && httpChannel) {
     rv = httpChannel->GetRequestSucceeded(&aSucceeded);
