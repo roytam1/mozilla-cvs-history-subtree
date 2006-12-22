@@ -531,6 +531,7 @@ EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
       {
         if (sLongPressTimer)
           g_source_remove (sLongPressTimer);
+#ifdef MOZ_WIDGET_GTK2
         if (mCtxInfo->mNSHHTMLElementSc) {
           PRInt32 x, y;
           mCtxInfo->mNSHHTMLElementSc->GetScrollTop(&y);
@@ -538,7 +539,9 @@ EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
 #ifdef MOZ_SCROLL_TOP_LEFT_HACK
           rv = mCtxInfo->mNSHHTMLElementSc->ScrollTopLeft (y - subY, x - subX);
 #endif
-        } else {
+        } else
+#endif
+        {
           rv = NS_ERROR_UNEXPECTED;
         }
         if (rv == NS_ERROR_UNEXPECTED) {
