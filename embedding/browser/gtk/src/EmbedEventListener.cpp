@@ -64,9 +64,7 @@ EmbedEventListener::EmbedEventListener(void)
 
 EmbedEventListener::~EmbedEventListener()
 {
-  if (mCtxInfo)
-    delete mCtxInfo;
-  mCtxInfo = nsnull;  
+  delete mCtxInfo;
 }
 
 NS_IMPL_ADDREF(EmbedEventListener)
