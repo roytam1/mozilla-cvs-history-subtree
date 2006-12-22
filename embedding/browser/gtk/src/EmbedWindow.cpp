@@ -38,9 +38,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <nsCWebBrowser.h>
-#include <nsIComponentManager.h>
-#include <nsIDocShellTreeItem.h>
+#include "nsCWebBrowser.h"
+#include "nsIComponentManager.h"
+#include "nsIDocShellTreeItem.h"
 #include "nsIWidget.h"
 #ifdef MOZILLA_INTERNAL_API
 #include "nsReadableUtils.h"

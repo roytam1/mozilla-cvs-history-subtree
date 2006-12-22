@@ -40,38 +40,38 @@
 #ifndef __EmbedPrivate_h
 #define __EmbedPrivate_h
 
-#include <nsCOMPtr.h>
+#include "nsCOMPtr.h"
 #ifdef MOZILLA_INTERNAL_API
-#include <nsString.h>
+#include "nsString.h"
 #else
-#include <nsStringAPI.h>
+#include "nsStringAPI.h"
 #endif
-#include <nsIWebNavigation.h>
-#include <nsISHistory.h>
+#include "nsIWebNavigation.h"
+#include "nsISHistory.h"
 // for our one function that gets the EmbedPrivate via the chrome
 // object.
-#include <nsIWebBrowserChrome.h>
-#include <nsIAppShell.h>
-#include <nsIDOMEventReceiver.h>
-#include <nsVoidArray.h>
+#include "nsIWebBrowserChrome.h"
+#include "nsIAppShell.h"
+#include "nsIDOMEventReceiver.h"
+#include "nsVoidArray.h"
 
 #ifndef MOZ_ENABLE_LIBXUL
 // for profiles
-#include <nsIPref.h>
+#include "nsIPref.h"
 #endif
 
 // app component registration
-#include <nsIGenericFactory.h>
-#include <nsIComponentRegistrar.h>
+#include "nsIGenericFactory.h"
+#include "nsIComponentRegistrar.h"
 
-#include <nsIDocCharset.h>
-#include <nsIMarkupDocumentViewer.h>
-#include <nsIInterfaceRequestorUtils.h>
-#include <nsIWebBrowserFind.h>
+#include "nsIDocCharset.h"
+#include "nsIMarkupDocumentViewer.h"
+#include "nsIInterfaceRequestorUtils.h"
+#include "nsIWebBrowserFind.h"
 // for the focus hacking we need to do
-#include <nsIFocusController.h>
+#include "nsIFocusController.h"
 // for frames
-#include <nsIDOMWindowCollection.h>
+#include "nsIDOMWindowCollection.h"
 #include "gtkmozembedprivate.h"
 
 #include "nsICacheEntryDescriptor.h"

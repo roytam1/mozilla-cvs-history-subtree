@@ -40,8 +40,8 @@
 #ifndef __EmbedContentListener_h
 #define __EmbedContentListener_h
 
-#include <nsIURIContentListener.h>
-#include <nsWeakReference.h>
+#include "nsIURIContentListener.h"
+#include "nsWeakReference.h"
 
 class EmbedPrivate;
 

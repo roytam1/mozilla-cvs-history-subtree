@@ -42,12 +42,12 @@
 #include "EmbedProgress.h"
 
 #ifdef MOZILLA_INTERNAL_API
-#include <nsXPIDLString.h>
+#include "nsXPIDLString.h"
 #endif
-#include <nsIChannel.h>
-#include <nsIHttpChannel.h>
-#include <nsIWebProgress.h>
-#include <nsIDOMWindow.h>
+#include "nsIChannel.h"
+#include "nsIHttpChannel.h"
+#include "nsIWebProgress.h"
+#include "nsIDOMWindow.h"
 #include "EmbedPasswordMgr.h"
 
 #include "nsIURI.h"

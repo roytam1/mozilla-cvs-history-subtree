@@ -55,38 +55,38 @@
 #include "EmbedGlobalHistory.h"
 //#include "EmbedDownloadMgr.h"
 // so we can do our get_nsIWebBrowser later...
-#include <nsIWebBrowser.h>
-#include <nsIComponentManager.h>
-#include <nsIServiceManager.h>
+#include "nsIWebBrowser.h"
+#include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
 #include "nsIPref.h"
-#include <nsICookieManager.h>
-#include <nsIPermissionManager.h>
-#include <nsNetCID.h>
-#include <nsICookie.h>
-#include <nsIX509Cert.h>
+#include "nsICookieManager.h"
+#include "nsIPermissionManager.h"
+#include "nsNetCID.h"
+#include "nsICookie.h"
+#include "nsIX509Cert.h"
 // for strings
 #ifdef MOZILLA_INTERNAL_API
-#include <nsXPIDLString.h>
-#include <nsReadableUtils.h>
+#include "nsXPIDLString.h"
+#include "nsReadableUtils.h"
 #else
-#include <nsStringAPI.h>
+#include "nsStringAPI.h"
 #include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
 #endif
 // for plugins
-#include <nsIDOMNavigator.h>
-#include <nsIDOMPluginArray.h>
-#include <nsIDOMPlugin.h>
+#include "nsIDOMNavigator.h"
+#include "nsIDOMPluginArray.h"
+#include "nsIDOMPlugin.h"
 #include <plugin/nsIPluginHost.h>
-#include <nsString.h>
-#include <nsIDOMMimeType.h>
+#include "nsString.h"
+#include "nsIDOMMimeType.h"
 
 //for security
-#include <nsIWebProgressListener.h>
+#include "nsIWebProgressListener.h"
 
 //for cache
-#include <nsICacheService.h>
-#include <nsICache.h>
+#include "nsICacheService.h"
+#include "nsICache.h"
 
 #ifdef MOZ_WIDGET_GTK2
 #include "gtkmozembedmarshal.h"

@@ -43,12 +43,12 @@
 #include "EmbedGlobalHistory.h"
 #include "nsIObserverService.h"
 #include "nsAutoPtr.h"
-#include <nsIURI.h>
-#include <nsInt64.h>
-#include <nsIIOService.h>
-#include <nsNetUtil.h>
+#include "nsIURI.h"
+#include "nsInt64.h"
+#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "gtkmozembed_common.h"
-#include <nsISeekableStream.h>
+#include "nsISeekableStream.h"
 #ifndef MOZILLA_INTERNAL_API
 #include "nsCRT.h"
 #endif

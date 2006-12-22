@@ -50,8 +50,8 @@
 #include "nsIFrame.h"
 // for strings
 #ifdef MOZILLA_INTERNAL_API
-#include <nsXPIDLString.h>
-#include <nsReadableUtils.h>
+#include "nsXPIDLString.h"
+#include "nsReadableUtils.h"
 #endif
 #include "EmbedWindow.h"
 #include "nsIDOMNSHTMLElement.h"

@@ -63,14 +63,14 @@
 #include "nsILocalFile.h"
 #include "nsIFile.h"
 // so we can do our get_nsIWebBrowser later...
-#include <nsIWebBrowser.h>
+#include "nsIWebBrowser.h"
 
 // for strings
 #ifdef MOZILLA_INTERNAL_API
-#include <nsXPIDLString.h>
-#include <nsReadableUtils.h>
+#include "nsXPIDLString.h"
+#include "nsReadableUtils.h"
 #else
-#include <nsStringAPI.h>
+#include "nsStringAPI.h"
 #endif
 
 #ifdef MOZ_WIDGET_GTK2

@@ -40,7 +40,7 @@
 #ifndef __EmbedWindowCreator_h
 #define __EmbedWindowCreator_h
 
-#include <nsIWindowCreator.h>
+#include "nsIWindowCreator.h"
 
 class EmbedWindowCreator : public nsIWindowCreator
 {

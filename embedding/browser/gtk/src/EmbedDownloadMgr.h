@@ -40,12 +40,12 @@
 #ifndef __EmbedDownloadMgr_h
 #define __EmbedDownloadMgr_h
 #include "EmbedPrivate.h"
-#include <nsIHelperAppLauncherDialog.h>
-#include <nsIMIMEInfo.h>
-#include <nsCOMPtr.h>
-#include <nsIExternalHelperAppService.h>
-#include <nsIRequest.h>
-#include <nsILocalFile.h>
+#include "nsIHelperAppLauncherDialog.h"
+#include "nsIMIMEInfo.h"
+#include "nsCOMPtr.h"
+#include "nsIExternalHelperAppService.h"
+#include "nsIRequest.h"
+#include "nsILocalFile.h"
 #include "nsWeakReference.h"
 #define EMBED_DOWNLOADMGR_DESCRIPTION "MicroB Download Manager"
 #define EMBED_DOWNLOADMGR_CID {0x53df12a2, 0x1f4a, 0x4382, {0x99, 0x4e, 0xed, 0x62, 0xcf, 0x0d, 0x6b, 0x3a}}

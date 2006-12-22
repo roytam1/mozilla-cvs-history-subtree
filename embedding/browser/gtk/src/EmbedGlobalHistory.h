@@ -38,12 +38,12 @@
  * ***** END LICENSE BLOCK ***** */
 #ifndef __EMBEDGLOBALHISTORY_h
 #define __EMBEDGLOBALHISTORY_h
-#include <nsIGlobalHistory2.h>
-#include <nsIObserver.h>
+#include "nsIGlobalHistory2.h"
+#include "nsIObserver.h"
 #include "EmbedPrivate.h"
 #include <prenv.h>
 #include <gtk/gtk.h>
-#include <nsDocShellCID.h>
+#include "nsDocShellCID.h"
 
 #ifdef MOZ_ENABLE_GNOMEVFS
 #define OUTPUT_STREAM GnomeVFSHandle

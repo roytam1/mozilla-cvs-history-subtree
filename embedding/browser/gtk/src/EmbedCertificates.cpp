@@ -50,7 +50,7 @@
 #include "nsCOMPtr.h"
 #ifdef MOZILLA_INTERNAL_API
 #include "nsString.h"
-#include <nsXPIDLString.h>
+#include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
 #else
 #include "nsStringAPI.h"

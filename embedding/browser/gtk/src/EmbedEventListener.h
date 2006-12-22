@@ -41,13 +41,13 @@
 #ifndef __EmbedEventListener_h
 #define __EmbedEventListener_h
 
-#include <nsIDOMKeyListener.h>
-#include <nsIDOMMouseListener.h>
-#include <nsIDOMUIListener.h>
+#include "nsIDOMKeyListener.h"
+#include "nsIDOMMouseListener.h"
+#include "nsIDOMUIListener.h"
 
-#include <nsIDOMMouseMotionListener.h>
-#include <nsIDOMEventListener.h>
-#include <nsIDOMFocusListener.h>
+#include "nsIDOMMouseMotionListener.h"
+#include "nsIDOMEventListener.h"
+#include "nsIDOMFocusListener.h"
 #include "EmbedContextMenuInfo.h"
 
 #include "nsIDOMNode.h"

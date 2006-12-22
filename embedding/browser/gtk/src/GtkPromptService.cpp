@@ -49,11 +49,11 @@
 #else
 #include "nsStringAPI.h"
 #endif
-#include <nsIWindowWatcher.h>
-#include <nsIWebBrowserChrome.h>
-#include <nsIEmbeddingSiteWindow.h>
-#include <nsCOMPtr.h>
-#include <nsIServiceManager.h>
+#include "nsIWindowWatcher.h"
+#include "nsIWebBrowserChrome.h"
+#include "nsIEmbeddingSiteWindow.h"
+#include "nsCOMPtr.h"
+#include "nsIServiceManager.h"
 
 GtkPromptService::GtkPromptService()
 {

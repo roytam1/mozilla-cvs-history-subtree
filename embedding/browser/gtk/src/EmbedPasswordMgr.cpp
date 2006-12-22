@@ -94,7 +94,7 @@
 #include "gtkmozembedprivate.h"
 #ifdef MOZILLA_INTERNAL_API
 #include "nsString.h"
-#include <nsXPIDLString.h>
+#include "nsXPIDLString.h"
 #include "nsIForm.h"
 #else
 #include "nsDirectoryServiceUtils.h"

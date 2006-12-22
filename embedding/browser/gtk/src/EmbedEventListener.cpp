@@ -39,10 +39,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <nsCOMPtr.h>
-#include <nsIDOMMouseEvent.h>
+#include "nsCOMPtr.h"
+#include "nsIDOMMouseEvent.h"
 
-#include <nsIDOMNSEvent.h>
+#include "nsIDOMNSEvent.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMUIEvent.h"
 #include "nsIDOMDocument.h"
@@ -148,7 +148,7 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   nsCString cName;
   NS_UTF16ToCString(name, NS_CSTRING_ENCODING_UTF8, cName);
 
-  // XXX This does not handle |BLAH ICON POWER" or "iCoN" or "IcOn"
+  // XXX This does not handle |BLAH ICON POWER"
   if (!cName.LowerCaseEqualsLiteral("icon")) {
 
     mOwner->mNeedFav = PR_FALSE;
