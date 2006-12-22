@@ -44,6 +44,13 @@
 #include <prenv.h>
 #include <gtk/gtk.h>
 #include <nsDocShellCID.h>
+
+#ifdef MOZ_ENABLE_GNOMEVFS
+#define OUTPUT_STREAM GnomeVFSHandle
+#else
+#define OUTPUT_STREAM nsIOutputStream
+#endif
+
 //#include "gtkmozembed_common.h"
 /* {2f977d51-5485-11d4-87e2-0010a4e75ef2} */
 #define NS_EMBEDGLOBALHISTORY_CID \
@@ -86,13 +93,13 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
   * @param handle A Gnome VFS handle.
   * @return NS_OK on the success.
 */
-    nsresult          WriteEntryIfWritten(GList *list, void *file_handle);
+    nsresult          WriteEntryIfWritten(GList *list, OUTPUT_STREAM *file_handle);
 /** Writes entries in the history file
  * @param list The internal history list.
  * @param handle A Gnome VFS handle.
  * @return NS_OK on the success.
 */
-    nsresult          WriteEntryIfUnwritten(GList *list, void *file_handle);
+    nsresult          WriteEntryIfUnwritten(GList *list, OUTPUT_STREAM *file_handle);
 /** Writes entries in the history file
   * @param mode How to write in the history file
   * @return NS_OK on the success.
@@ -106,7 +113,7 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
   * @param vfs_handle A Gnome VFS handle.
   * @return NS_OK on the success.
   */
-    nsresult          ReadEntries(void *file_handle);
+    nsresult          ReadEntries(OUTPUT_STREAM *file_handle);
 /** Gets a history entry 
   * @param name The history entry name.
   * @return NS_OK if the history entry name was gotten.

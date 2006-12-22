@@ -80,19 +80,28 @@ typedef struct _HistoryEntry {
   char            *url;               // The url itself
 } HistoryEntry;
 
-static void close_file_handle(void *file_handle)
-{
-  g_return_if_fail(file_handle);
-#ifndef MOZ_ENABLE_GNOMEVFS
-  nsresult rv;
-  nsCOMPtr<nsIOutputStream> fhandle = do_QueryInterface((nsISupports*)file_handle, &rv);
-  rv = fhandle->Close();
-  NS_RELEASE(fhandle);
-  return;
+#ifdef MOZ_ENABLE_GNOMEVFS
+#define CLOSE_FILE_HANDLE(file_handle) \
+  PR_BEGIN_MACRO \
+    if (file_handle) {\
+      gnome_vfs_close(file_handle); \
+    } \
+  PR_END_MACRO
 #else
-  gnome_vfs_close((GnomeVFSHandle*) file_handle);
-#endif
+#define CLOSE_FILE_HANDLE(file_handle) \
+  PR_BEGIN_MACRO \
+    if (file_handle) {\
+      close_output_stream(file_handle); \
+      NS_RELEASE(file_handle); \
+    } \
+  PR_END_MACRO
+
+static void close_output_stream(OUTPUT_STREAM *file_handle)
+{
+  file_handle->Close();
+  return;
 }
+#endif
 
 static bool file_handle_uri_exists(const void *uri)
 {
@@ -133,21 +142,17 @@ static void file_handle_uri_delete(void *uri)
 }
 
 
-static bool file_handle_create_uri(void *file_handle, const void *uri)
+static bool file_handle_create_uri(OUTPUT_STREAM **file_handle, const void *uri)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
-  nsIOutputStream *outStr = nsnull;
-  rv = NS_NewLocalFileOutputStream(&outStr, (nsILocalFile*)uri, PR_RDWR | PR_APPEND | PR_CREATE_FILE, 0660);
+  rv = NS_NewLocalFileOutputStream(file_handle, (nsILocalFile*)uri, PR_RDWR | PR_APPEND | PR_CREATE_FILE, 0660);
 
-  if (NS_FAILED(rv))
-    return false;
-  *(nsIOutputStream **)file_handle = outStr;
-  return true;
+  return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_create_uri(
-    (GnomeVFSHandle**)file_handle,
+    file_handle,
     (GnomeVFSURI*)uri,
     GNOME_VFS_OPEN_WRITE,
     1,
@@ -156,21 +161,17 @@ static bool file_handle_create_uri(void *file_handle, const void *uri)
 #endif
 }
 
-static bool file_handle_open_uri(void *file_handle, const void *uri)
+static bool file_handle_open_uri(OUTPUT_STREAM **file_handle, const void *uri)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
-  nsIOutputStream *outStr = nsnull;
-  rv = NS_NewLocalFileOutputStream(&outStr, (nsILocalFile*)uri, PR_RDWR | PR_APPEND, 0660);
+  rv = NS_NewLocalFileOutputStream(file_handle, (nsILocalFile*)uri, PR_RDWR | PR_APPEND, 0660);
 
-  if (NS_FAILED(rv))
-    return false;
-  *(nsIOutputStream **)file_handle = outStr;
-  return true;
+  return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_open_uri(
-    (GnomeVFSHandle**)file_handle,
+    file_handle,
     (GnomeVFSURI*)uri,
     (GnomeVFSOpenMode)(GNOME_VFS_OPEN_WRITE
                       | GNOME_VFS_OPEN_RANDOM
@@ -178,33 +179,33 @@ static bool file_handle_open_uri(void *file_handle, const void *uri)
 #endif
 }
 
-static bool file_handle_seek(void *file_handle, gboolean end)
+static bool file_handle_seek(OUTPUT_STREAM *file_handle, gboolean end)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
-  nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface((nsISupports*)file_handle, &rv);
+  nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(file_handle, &rv);
   rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, end ? -1 : 0);
   if (NS_FAILED(rv))
     return false;
   return true;
 #else
-  return gnome_vfs_seek((GnomeVFSHandle*)file_handle,
+  return gnome_vfs_seek(file_handle,
                         end ? GNOME_VFS_SEEK_END : GNOME_VFS_SEEK_START, 0) == GNOME_VFS_OK;
 #endif
 }
 
-static bool file_handle_truncate(void *file_handle)
+static bool file_handle_truncate(OUTPUT_STREAM *file_handle)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   return true;
 #else
-  return gnome_vfs_truncate_handle ((GnomeVFSHandle*)file_handle, 0) == GNOME_VFS_OK;
+  return gnome_vfs_truncate_handle (file_handle, 0) == GNOME_VFS_OK;
 #endif
 }
 
-static int file_handle_file_info_block_size(void *file_handle,  guint64 *size)
+static int file_handle_file_info_block_size(OUTPUT_STREAM *file_handle,  guint64 *size)
 {
   g_return_val_if_fail(file_handle, 0);
   int rtn = 0;
@@ -214,7 +215,7 @@ static int file_handle_file_info_block_size(void *file_handle,  guint64 *size)
 #else
   GnomeVFSFileInfo * fi = gnome_vfs_file_info_new ();
 
-  if (gnome_vfs_get_file_info_from_handle ((GnomeVFSHandle *)file_handle, fi,
+  if (gnome_vfs_get_file_info_from_handle (file_handle, fi,
                                            GNOME_VFS_FILE_INFO_DEFAULT) == GNOME_VFS_OK)
     *size = (int)fi->io_block_size;
   else
@@ -225,13 +226,13 @@ static int file_handle_file_info_block_size(void *file_handle,  guint64 *size)
   return rtn;
 }
 
-static int64 file_handle_read(void *file_handle, gpointer buffer, guint64 bytes)
+static int64 file_handle_read(OUTPUT_STREAM *file_handle, gpointer buffer, guint64 bytes)
 {
   g_return_val_if_fail(file_handle, -1);
 #ifndef MOZ_ENABLE_GNOMEVFS
   PRUint32 amt = 0;
   nsresult rv;
-  nsCOMPtr<nsIInputStream> seekable = do_QueryInterface((nsISupports*)file_handle, &rv);
+  nsCOMPtr<nsIInputStream> seekable = do_QueryInterface(file_handle, &rv);
   if (NS_FAILED(rv))
     return -1;
   rv = seekable->Read(*(char**)buffer, bytes, &amt);
@@ -241,7 +242,7 @@ static int64 file_handle_read(void *file_handle, gpointer buffer, guint64 bytes)
 #else
   GnomeVFSResult vfs_result = GNOME_VFS_OK;
   GnomeVFSFileSize read_bytes;
-  vfs_result = gnome_vfs_read((GnomeVFSHandle *)file_handle,
+  vfs_result = gnome_vfs_read(file_handle,
   (gpointer) buffer, (GnomeVFSFileSize)bytes-1, &read_bytes);
   if (vfs_result!=GNOME_VFS_OK)
     return -1;
@@ -250,20 +251,19 @@ static int64 file_handle_read(void *file_handle, gpointer buffer, guint64 bytes)
 #endif
 }
 
-static guint64 file_handle_write(void *file_handle, gpointer line)
+static guint64 file_handle_write(OUTPUT_STREAM *file_handle, gpointer line)
 {
   g_return_val_if_fail(file_handle, 0);
 #ifndef MOZ_ENABLE_GNOMEVFS
   PRUint32 amt = 0;
   nsresult rv;
-  nsCOMPtr<nsIOutputStream> seekable = do_QueryInterface((nsISupports*)file_handle, &rv);
-  rv = seekable->Write((char*)line, strlen((char*)line), &amt);
+  rv = file_handle->Write((char*)line, strlen((char*)line), &amt);
   if (NS_FAILED(rv))
     return false;
   return true;
 #else
   GnomeVFSFileSize written;
-  gnome_vfs_write ((GnomeVFSHandle *)file_handle,
+  gnome_vfs_write (file_handle,
                    (gpointer)line,
                    strlen((const char*)line),
                    &written);
@@ -273,7 +273,7 @@ static guint64 file_handle_write(void *file_handle, gpointer line)
 
 // Static Routine Prototypes
 //GnomeVFSHandle
-static nsresult writeEntry(void *file_handle, HistoryEntry *entry);
+static nsresult writeEntry(OUTPUT_STREAM *file_handle, HistoryEntry *entry);
 // when an entry is visited
 nsresult OnVisited(HistoryEntry *entry)
 {
@@ -438,8 +438,7 @@ EmbedGlobalHistory::~EmbedGlobalHistory()
     mURLList = NULL;
   }
   if (mFileHandle) {
-    close_file_handle(mFileHandle);
-    mFileHandle = NULL;
+    CLOSE_FILE_HANDLE(mFileHandle);
   }
   if (mHistoryFile) {
     g_free(mHistoryFile);
@@ -678,8 +677,7 @@ NS_IMETHODIMP EmbedGlobalHistory::Observe(nsISupports *aSubject,
       mURLList = NULL;
     }
     if (mFileHandle) {
-      close_file_handle(mFileHandle);
-      mFileHandle = NULL;
+      CLOSE_FILE_HANDLE(mFileHandle);
     }
   } else if (strcmp(aTopic, "RemoveAllPages") == 0) {
     RemoveAllPages();
@@ -735,8 +733,7 @@ nsresult EmbedGlobalHistory::InitFile()
       file_handle_uri_delete(uri);
       return NS_ERROR_FAILURE;
     }
-    close_file_handle(mFileHandle);
-    mFileHandle = NULL;
+    CLOSE_FILE_HANDLE(mFileHandle);
   }
   rs = file_handle_open_uri(&mFileHandle, uri);  
   
@@ -770,7 +767,7 @@ nsresult EmbedGlobalHistory::LoadData()
 }
 
 // Call a function to write each entry in the history hash table
-nsresult EmbedGlobalHistory::WriteEntryIfWritten(GList *list, void *file_handle)
+nsresult EmbedGlobalHistory::WriteEntryIfWritten(GList *list, OUTPUT_STREAM *file_handle)
 {
   if (!file_handle)
     return NS_ERROR_FAILURE;
@@ -788,7 +785,7 @@ nsresult EmbedGlobalHistory::WriteEntryIfWritten(GList *list, void *file_handle)
 }
 
 // Call a function to write each unwritten entry in the history hash table
-nsresult EmbedGlobalHistory::WriteEntryIfUnwritten(GList *list, void *file_handle)
+nsresult EmbedGlobalHistory::WriteEntryIfUnwritten(GList *list, OUTPUT_STREAM *file_handle)
 {
   if (!file_handle)
     return NS_ERROR_FAILURE;
@@ -906,7 +903,7 @@ nsresult EmbedGlobalHistory::GetEntry(char *entry)
 }
 
 // Get the history entries from history.dat file
-nsresult EmbedGlobalHistory::ReadEntries(void *file_handle)
+nsresult EmbedGlobalHistory::ReadEntries(OUTPUT_STREAM *file_handle)
 {
   if (!file_handle)
     return NS_ERROR_FAILURE;
@@ -971,7 +968,7 @@ static nsresult writePRInt64(char time[14], const PRInt64& inValue)
 }
 
 // Write an entry in the history.dat file
-nsresult writeEntry(void *file_handle, HistoryEntry *entry)
+nsresult writeEntry(OUTPUT_STREAM *file_handle, HistoryEntry *entry)
 {
   nsresult rv = NS_OK;
   char sep = (char) defaultSeparator;
