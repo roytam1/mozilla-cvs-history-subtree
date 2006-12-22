@@ -61,7 +61,7 @@ GetGtkWidgetForDOMWindow(nsIDOMWindow* aDOMWindow);
 GtkWindow*
 GetGtkWindowForDOMWindow(nsIDOMWindow* aDOMWindow);
 
-nsresult 
+nsresult
 GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer);
 
 PRUnichar*

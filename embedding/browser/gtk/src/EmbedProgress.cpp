@@ -98,7 +98,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   mOwner->ContentStateChange();
 
 
-  if (sStopSignalTimer && 
+  if (sStopSignalTimer &&
       (
        (aStateFlags & GTK_MOZ_EMBED_FLAG_TRANSFERRING)
        || (aStateFlags & GTK_MOZ_EMBED_FLAG_REDIRECTING)
@@ -113,7 +113,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   }
 
   // if we've got the start flag, emit the signal
-  if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) && 
+  if ((aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) &&
       (aStateFlags & GTK_MOZ_EMBED_FLAG_START)) {
     // FIXME: workaround for broken progress values.
     mOwner->mOwningWidget->current_number_of_requests = 0;
@@ -187,7 +187,7 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
     if (aStateFlags & GTK_MOZ_EMBED_FLAG_IS_NETWORK) {
       if (sStopSignalTimer)
         g_source_remove(sStopSignalTimer);
-      progress_emit_stop(mOwner);    
+      progress_emit_stop(mOwner);
       // let our owner know that the load finished
       mOwner->ContentFinishedLoading();
 

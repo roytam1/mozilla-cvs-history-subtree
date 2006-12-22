@@ -50,9 +50,9 @@ class EmbedWindowCreator : public nsIWindowCreator
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIWINDOWCREATOR
-  
+
  private:
-  PRBool *mOpenBlock; 
+  PRBool *mOpenBlock;
 };
 
 #endif /* __EmbedWindowCreator_h */

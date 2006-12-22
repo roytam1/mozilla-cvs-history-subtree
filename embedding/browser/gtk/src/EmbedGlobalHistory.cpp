@@ -72,7 +72,7 @@ static EmbedGlobalHistory *sEmbedGlobalHistory = nsnull;
 
 //*****************************************************************************
 // HistoryEntryOld: an entry object and its methods
-//*****************************************************************************   
+//*****************************************************************************
 typedef struct _HistoryEntry {
   PRInt64         mLastVisitTime;     // Millisecs
   PRPackedBool    mWritten;           // TRUE if ever persisted
@@ -278,7 +278,7 @@ static nsresult writeEntry(OUTPUT_STREAM *file_handle, HistoryEntry *entry);
 nsresult OnVisited(HistoryEntry *entry)
 {
   NS_ENSURE_ARG(entry);
-  entry->mLastVisitTime = PR_Now(); 
+  entry->mLastVisitTime = PR_Now();
   LL_DIV(entry->mLastVisitTime, entry->mLastVisitTime, kOneThousand);
   return NS_OK;
 }
@@ -334,7 +334,7 @@ nsresult SetURL(HistoryEntry *entry, const char *url)
 
 // Return the entry url
 char* GetURL(HistoryEntry *entry)
-{    
+{
   return entry->url;
 }
 
@@ -356,7 +356,7 @@ int find_insertion_place (gconstpointer a, gconstpointer b)
 PRBool entryHasExpired(HistoryEntry *entry)
 {
   // convert "now" from microsecs to millisecs
-  PRInt64 nowInMilliSecs = PR_Now(); 
+  PRInt64 nowInMilliSecs = PR_Now();
   LL_DIV(nowInMilliSecs, nowInMilliSecs, kOneThousand);
   // determine when the entry would have expired
   PRInt64 expirationIntervalAgo;
@@ -381,7 +381,7 @@ void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
 
 //*****************************************************************************
 // EmbedGlobalHistory - Creation/Destruction
-//*****************************************************************************   
+//*****************************************************************************
 NS_IMPL_ISUPPORTS2(EmbedGlobalHistory, nsIGlobalHistory2, nsIObserver)
 /* static */
 EmbedGlobalHistory*
@@ -451,14 +451,14 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
 {
   if (mURLList) return NS_OK;
   // Get Pref and convert to millisecs
-  
+
 #ifdef MOZ_ENABLE_GNOMEVFS
   /*GnomeVFS */
   if (!gnome_vfs_initialized())
     if (!gnome_vfs_init())
       NS_WARNING("Could not init GnomeVFS!\n");
 #endif
-  
+
   PRInt32 expireDays;
   int success = gtk_moz_embed_common_get_pref(G_TYPE_INT, EMBED_HISTORY_PREF_EXPIRE_DAYS, &expireDays);
   if (success) {
@@ -466,7 +466,7 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
     LL_MUL(mExpirationInterval, mExpirationInterval, kMSecsPerDay);
   }
   // register to observe profile changes
-  nsCOMPtr<nsIObserverService> observerService = 
+  nsCOMPtr<nsIObserverService> observerService =
     do_GetService(NS_OBSERVERSERVICE_CONTRACTID);
   NS_ASSERTION(observerService, "failed to get observer service");
   if (observerService)
@@ -501,7 +501,7 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
 
 //*****************************************************************************
 // EmbedGlobalHistory::nsIGlobalHistory
-//*****************************************************************************   
+//*****************************************************************************
 // Add a new URI to the history
 NS_IMETHODIMP EmbedGlobalHistory::AddURI(nsIURI *aURI, PRBool aRedirect, PRBool aToplevel, nsIURI *aReferrer)
 {
@@ -584,7 +584,7 @@ NS_IMETHODIMP EmbedGlobalHistory::AddURI(nsIURI *aURI, PRBool aRedirect, PRBool 
     SET_TITLE(entry, hostname);
     // Move the element to the start of the list
     BROKEN_RV_HANDLING_CODE(rv);
-    mURLList = g_list_remove (mURLList, entry);   
+    mURLList = g_list_remove (mURLList, entry);
     mURLList = g_list_insert_sorted(mURLList, entry, (GCompareFunc) find_insertion_place);
     // Flush after kNewEntriesBetweenFlush changes
     BROKEN_RV_HANDLING_CODE(rv);
@@ -660,7 +660,7 @@ nsresult EmbedGlobalHistory::RemoveAllPages()
 
 //*****************************************************************************
 // EmbedGlobalHistory::nsIObserver
-//*****************************************************************************   
+//*****************************************************************************
 NS_IMETHODIMP EmbedGlobalHistory::Observe(nsISupports *aSubject,
                                           const char *aTopic,
                                           const PRUnichar *aData)
@@ -713,7 +713,7 @@ GetHistoryFileName(char **aHistoryFile)
 }
 //*****************************************************************************
 // EmbedGlobalHistory
-//*****************************************************************************   
+//*****************************************************************************
 // Open/Create the history.dat file if it does not exist
 nsresult EmbedGlobalHistory::InitFile()
 {
@@ -721,11 +721,11 @@ nsresult EmbedGlobalHistory::InitFile()
      if (NS_FAILED(GetHistoryFileName(&mHistoryFile)))
        return NS_ERROR_FAILURE;
   }
-  
+
   void *uri = file_handle_uri_new(mHistoryFile);
   if (!uri)
     return NS_ERROR_FAILURE;
-  
+
   gboolean rs = FALSE;
   if (!file_handle_uri_exists(uri)) {
     if (file_handle_create_uri(&mFileHandle, uri)) {
@@ -735,10 +735,10 @@ nsresult EmbedGlobalHistory::InitFile()
     }
     CLOSE_FILE_HANDLE(mFileHandle);
   }
-  rs = file_handle_open_uri(&mFileHandle, uri);  
-  
+  rs = file_handle_open_uri(&mFileHandle, uri);
+
   file_handle_uri_delete(uri);
-  
+
   if (!rs) {
     printf("Could not open a history file\n");
     return NS_ERROR_FAILURE;
@@ -750,7 +750,7 @@ nsresult EmbedGlobalHistory::InitFile()
 nsresult EmbedGlobalHistory::LoadData()
 {
   nsresult rv = NS_OK;
-  if (!mDataIsLoaded) {            
+  if (!mDataIsLoaded) {
     mDataIsLoaded = PR_TRUE;
     void *uri = file_handle_uri_new(mHistoryFile);
     bool exists = file_handle_uri_exists(uri);
@@ -815,14 +815,14 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
     NS_ENSURE_SUCCESS(rv, rv);
     rv |= FlushData(kFlushModeFullWrite);
     BROKEN_RV_HANDLING_CODE(rv);
-    return rv; 
+    return rv;
   }
   void *uri = file_handle_uri_new(mHistoryFile);
   if (!uri) return NS_ERROR_FAILURE;
-  
+
   gboolean rs = file_handle_uri_exists(uri);
   file_handle_uri_delete(uri);
-  
+
   if (!rs && NS_FAILED(InitFile()))
     return NS_ERROR_FAILURE;
 
@@ -858,8 +858,8 @@ nsresult EmbedGlobalHistory::GetEntry(char *entry)
       break;
     }
     if (entry[pos] == '\0' || !isdigit(entry[pos]))
-      return NS_ERROR_FAILURE;    
-    digit = entry[pos] - '0';              
+      return NS_ERROR_FAILURE;
+    digit = entry[pos] - '0';
     outValue *= nsInt64(10);
     outValue += nsInt64(digit);
     pos++;
@@ -881,7 +881,7 @@ nsresult EmbedGlobalHistory::GetEntry(char *entry)
     } else {
       title[titleLength++] = entry[pos];
   }
-  pos++;            
+  pos++;
   }
   url[urlLength]='\0';
   title[titleLength]='\0';
@@ -943,12 +943,12 @@ nsresult EmbedGlobalHistory::ReadEntries(OUTPUT_STREAM *file_handle)
       buf_pos++;
     }
   } while (read_bytes != -1);
-  return rv; 
+  return rv;
 }
 
 //*****************************************************************************
 // Static Functions
-//*****************************************************************************   
+//*****************************************************************************
 // Get last visit time from a string
 static nsresult writePRInt64(char time[14], const PRInt64& inValue)
 {
@@ -973,7 +973,7 @@ nsresult writeEntry(OUTPUT_STREAM *file_handle, HistoryEntry *entry)
   nsresult rv = NS_OK;
   char sep = (char) defaultSeparator;
   char time[14];
-  writePRInt64(time, GetLastVisitTime(entry));  
+  writePRInt64(time, GetLastVisitTime(entry));
   char *line = g_strdup_printf("%s%c%s%c%s%c\n", time, sep, GetURL(entry), sep, GET_TITLE(entry).get(), sep);
   BROKEN_STRING_BUILDER(line);
   guint64 size = file_handle_write (file_handle, (gpointer)line);

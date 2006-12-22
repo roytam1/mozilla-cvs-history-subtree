@@ -245,9 +245,9 @@ class EmbedPrivate {
   // has the chrome finished loading?
   PRBool                         mChromeLoaded;
 
-  // has the network finished loading?  
+  // has the network finished loading?
   PRBool                         mLoadFinished;
-  
+
   // saved window ID for reparenting later
   GtkWidget                     *mMozWindowWidget;
   // has someone called Destroy() on us?
@@ -269,7 +269,7 @@ class EmbedPrivate {
 
   // this will get the PIDOMWindow for this widget
   nsresult        GetPIDOMWindow   (nsPIDOMWindow **aPIWin);
-  
+
   static nsresult RegisterAppComponents();
 
   // offscreen window methods and the offscreen widget
@@ -277,7 +277,7 @@ class EmbedPrivate {
   static void       DestroyOffscreenWindow(void);
   static GtkWidget *sOffscreenWindow;
   static GtkWidget *sOffscreenFixed;
- 
+
 };
 
 #endif /* __EmbedPrivate_h */

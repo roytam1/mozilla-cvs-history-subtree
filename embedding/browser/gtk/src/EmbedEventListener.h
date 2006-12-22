@@ -97,7 +97,7 @@ class EmbedEventListener : public nsIDOMKeyListener,
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
   NS_IMETHOD HandleLink (nsIDOMNode* node);
   // nsIDOMKeyListener
-  
+
   NS_IMETHOD KeyDown(nsIDOMEvent* aDOMEvent);
   NS_IMETHOD KeyUp(nsIDOMEvent* aDOMEvent);
   NS_IMETHOD KeyPress(nsIDOMEvent* aDOMEvent);
@@ -134,9 +134,9 @@ class EmbedEventListener : public nsIDOMKeyListener,
   nsresult   NewURI            (nsIURI **result,
                                 const char *spec);
   nsresult   GetIOService      (nsIIOService **ioService);
-  
+
   void       GeneratePixBuf    ();
-  
+
   void       GetFaviconFromURI (const char*  aURI);
  private:
 

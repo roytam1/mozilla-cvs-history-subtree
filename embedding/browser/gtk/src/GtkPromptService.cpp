@@ -68,7 +68,7 @@ NS_IMPL_ISUPPORTS2(GtkPromptService, nsIPromptService, nsICookiePromptService)
 NS_IMETHODIMP
 GtkPromptService::Alert(
   nsIDOMWindow* aParent,
-  const PRUnichar* aDialogTitle, 
+  const PRUnichar* aDialogTitle,
   const PRUnichar* aDialogText)
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
@@ -85,7 +85,7 @@ GtkPromptService::Alert(
   EmbedPrompter prompter;
   prompter.SetTitle(aDialogTitle ? aDialogTitle : NS_LITERAL_STRING("Alert").get());
   prompter.SetMessageText(aDialogText);
-  prompter.Create(EmbedPrompter::TYPE_ALERT, 
+  prompter.Create(EmbedPrompter::TYPE_ALERT,
           GetGtkWindowForDOMWindow(aParent));
   prompter.Run();
 #endif

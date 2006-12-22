@@ -76,13 +76,13 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
     nsresult RemoveAllPages();
 
     protected:
-    enum { 
+    enum {
         kFlushModeAppend,      /** < Add a new entry in the history file */
         kFlushModeFullWrite    /** < Rewrite all history file */
     };
 /** Initiates the history file
   * @return NS_OK on the success.
-  */  
+  */
     nsresult          InitFile();
 /** Loads the history file
   * @return NS_OK on the success.
@@ -107,7 +107,7 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
     nsresult          FlushData(PRIntn mode = kFlushModeFullWrite);
  /** Remove entries from the URL table
   * @return NS_OK on the success.
-  */   
+  */
     nsresult          ResetData();
 /** Reads the history entries using GnomeVFS
   * @param vfs_handle A Gnome VFS handle.

@@ -143,7 +143,7 @@ EmbedContextMenuInfo::GetFormControlType(nsIDOMEvent* aEvent)
       return NS_OK;
     }
     mEventNode = eventNode;
-    mCtxDocument = domDoc;          
+    mCtxDocument = domDoc;
     nsCOMPtr<nsIDocument> doc = do_QueryInterface(mCtxDocument);
     if (!doc)
       return NS_OK;
@@ -236,7 +236,7 @@ EmbedContextMenuInfo::SetFormControlType(nsIDOMEventTarget *originalTarget)
         if (mCtxFormType == NS_FORM_TEXTAREA) {
           nsCOMPtr <nsIDOMHTMLTextAreaElement> input;
           input = do_QueryInterface(mEventNode, &rv);
-          if (!NS_FAILED(rv) && input) 
+          if (!NS_FAILED(rv) && input)
             rv = input->GetReadOnly(&rdonly);
           if (!NS_FAILED(rv) && rdonly) {
             mEmbedCtxType |= GTK_MOZ_EMBED_CTX_ROINPUT;
@@ -244,11 +244,11 @@ EmbedContextMenuInfo::SetFormControlType(nsIDOMEventTarget *originalTarget)
         } else {
           nsCOMPtr <nsIDOMHTMLInputElement> input;
           input = do_QueryInterface(mEventNode, &rv);
-          if (!NS_FAILED(rv) && input) 
+          if (!NS_FAILED(rv) && input)
             rv = input->GetReadOnly(&rdonly);
           if (!NS_FAILED(rv) && rdonly) {
             mEmbedCtxType |= GTK_MOZ_EMBED_CTX_ROINPUT;
-          }  
+          }
         }
       }
       //#endif
@@ -335,7 +335,7 @@ EmbedContextMenuInfo::GetImageRequest(imgIRequest **aRequest, nsIDOMNode *aDOMNo
 {
   NS_ENSURE_ARG(aDOMNode);
   NS_ENSURE_ARG_POINTER(aRequest);
-  
+
   // Get content
   nsCOMPtr<nsIImageLoadingContent> content(do_QueryInterface(aDOMNode));
   NS_ENSURE_TRUE(content, NS_ERROR_FAILURE);
@@ -519,7 +519,7 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
   }
   if (NS_SUCCEEDED (rv) && domDoc && mCtxDocument != domDoc) {
     mCtxDocument = domDoc;
-    mNSHHTMLElementSc = nsnull;    
+    mNSHHTMLElementSc = nsnull;
 //    rv = GetElementForScroll(mCtxDocument);
 //    if (NS_ERROR_UNEXPECTED == rv) {
 //    }
@@ -534,12 +534,12 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
     if (!mainDocument) {
       return NS_OK;
     }
-    mCtxFrameNum = -1;  
+    mCtxFrameNum = -1;
     if (mainDocument != domDoc) {
       mEmbedCtxType |= GTK_MOZ_EMBED_CTX_IFRAME;
       SetFrameIndex();
     }
-  }  
+  }
   nsCOMPtr <nsIDOMElement> targetDOMElement;
   mCtxDocument->GetDocumentElement (getter_AddRefs (targetDOMElement));
   if (!targetDOMElement) return NS_ERROR_UNEXPECTED;
@@ -572,7 +572,7 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
   }
   if (frame) {
     mFormRect = frame->GetScreenRectExternal();
-  }  
+  }
   if (NS_SUCCEEDED(SetFormControlType(mEventTarget))) {
     return NS_OK;
   }

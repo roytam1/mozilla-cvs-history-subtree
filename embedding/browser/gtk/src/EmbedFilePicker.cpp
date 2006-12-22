@@ -208,7 +208,7 @@ NS_IMETHODIMP EmbedFilePicker::Show(PRInt16 *_retval)
     &response,
     NULL);
   if (response == 1 && mFilename != NULL)
-    *_retval = nsIFilePicker::returnOK; 
+    *_retval = nsIFilePicker::returnOK;
   else
     *_retval = nsIFilePicker::returnCancel;
   return NS_OK;

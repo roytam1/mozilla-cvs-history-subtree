@@ -214,7 +214,7 @@ gtk_moz_embed_common_class_init(GtkMozEmbedCommonClass *klass)
                    GTK_TYPE_STRING | G_SIGNAL_TYPE_STATIC_SCOPE,
                    GTK_TYPE_BOOL,
                    GTK_TYPE_INT);
-/*  
+/*
   moz_embed_common_signals[COMMON_CERT_DIALOG] =
     gtk_signal_new("certificate-dialog",
                    GTK_RUN_LAST,
@@ -272,7 +272,7 @@ gtk_moz_embed_common_class_init(GtkMozEmbedCommonClass *klass)
                    gtkmozembed_INT__STRING_STRING_INT_INT_INT_INT,
                    G_TYPE_INT,
                    6,
-                   G_TYPE_STRING, G_TYPE_STRING, 
+                   G_TYPE_STRING, G_TYPE_STRING,
                    G_TYPE_INT, G_TYPE_INT,
                    G_TYPE_INT, G_TYPE_INT);
   */
@@ -468,12 +468,12 @@ gtk_moz_embed_common_get_history_list (GtkMozHistoryItem **GtkHI)
   return count;
 }
 
-gint 
+gint
 gtk_moz_embed_common_clean_all_history () {
   nsresult rv;
   // The global history service
   nsCOMPtr<nsIGlobalHistory2> globalHistory(do_GetService("@mozilla.org/browser/global-history;2"));
-  if (!globalHistory) return NS_ERROR_NULL_POINTER; 
+  if (!globalHistory) return NS_ERROR_NULL_POINTER;
   // The browser history interface
   nsCOMPtr<nsIObserver> myHistory = do_QueryInterface(globalHistory, &rv);
   if (!myHistory) return NS_ERROR_NULL_POINTER ;
@@ -523,13 +523,13 @@ gtk_moz_embed_common_get_cookie_list(void)
 gint
 gtk_moz_embed_common_delete_all_cookies (GSList *deletedCookies)
 {
-  if (!deletedCookies) 
+  if (!deletedCookies)
     return 1;
 
   nsCOMPtr<nsICookieManager> cookieManager =
     do_GetService(NS_COOKIEMANAGER_CONTRACTID);
 
-  if (!cookieManager) 
+  if (!cookieManager)
     return 1;
   cookieManager->RemoveAll();
 
@@ -560,8 +560,8 @@ gtk_moz_embed_common_nsx509_to_raw(void *nsIX509Ptr, guint *len)
 gint
 gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
 {
-  nsresult rv; 
-  nsCOMPtr<nsIPluginManager> pluginMan = 
+  nsresult rv;
+  nsCOMPtr<nsIPluginManager> pluginMan =
     do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv)) {
     g_print("Could not get the plugin manager\n");
@@ -569,7 +569,7 @@ gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
   }
   pluginMan->ReloadPlugins(PR_TRUE);  //FIXME XXX MEMLEAK
 
-  nsCOMPtr<nsIPluginHost> pluginHost = 
+  nsCOMPtr<nsIPluginHost> pluginHost =
     do_GetService(kPluginManagerCID, &rv);
   if (NS_FAILED(rv))
     return -1;
@@ -593,7 +593,7 @@ gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
 
   nsString string;
   for (int aIndex = 0; aIndex < (gint) aLength; aIndex++)
-  { 
+  {
     GtkMozPlugin *list_item = g_new0(GtkMozPlugin, 1);
 
     rv = aItems[aIndex]->GetName(string);
@@ -603,7 +603,7 @@ gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
     aItems[aIndex]->GetFilename(string);
     if (!NS_FAILED(rv))
       list_item->path = g_strdup(NS_ConvertUTF16toUTF8(string).get());
-    
+
     nsCOMPtr<nsIDOMMimeType> mimeType;
     rv = aItems[aIndex]->Item(aIndex, getter_AddRefs(mimeType));
     if (NS_FAILED(rv))
@@ -623,7 +623,7 @@ void
 gtk_moz_embed_common_reload_plugins ()
 {
   nsresult rv;
-  nsCOMPtr<nsIPluginManager> pluginMan = 
+  nsCOMPtr<nsIPluginManager> pluginMan =
     do_GetService(kPluginManagerCID, &rv);
   pluginMan->ReloadPlugins(PR_TRUE); //FIXME XXX MEMLEAK
 }

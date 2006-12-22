@@ -353,7 +353,7 @@ EmbedPasswordMgr::Register(nsIComponentManager* aCompMgr,
                            PR_TRUE,
                            PR_TRUE,
                            getter_Copies(prevEntry));
-  
+
   return NS_OK;
 }
 
@@ -892,7 +892,7 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
   // check to see if we should formfill.  failure is non-fatal
   PRBool prefillForm = PR_TRUE;
   mPrefBranch->GetBoolPref("autofillForms", &prefillForm);
-  
+
   // We can auto-prefill the username and password if there is only
   // one stored login that matches the username and password field names
   // on the form in question.  Note that we only need to worry about a
@@ -1026,7 +1026,7 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
         gint retval = -1;
         gtk_signal_emit(GTK_OBJECT(mCommonObject->mCommon),
                         moz_embed_common_signals[COMMON_SELECT_LOGIN],
-                        logins, &retval);      
+                        logins, &retval);
         g_list_free(logins);
 
         if (retval != -1) {

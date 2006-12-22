@@ -135,7 +135,7 @@ NS_METHOD EmbedDownloadMgr::GetDownloadInfo (void)
   nsCAutoString aTempFileName;
   nsAutoString aSuggestedFileName;
   rv = mLauncher->GetSuggestedFileName (aSuggestedFileName);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE; 
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   aTempFileName = NS_ConvertUTF16toUTF8 (aSuggestedFileName);
   // get source url (concatened to file name)
   rv = mLauncher->GetSource (getter_AddRefs(mUri));
@@ -217,7 +217,7 @@ NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress
                                                     PRInt64 aMaxTotalProgress)
 {
   nsresult rv;
-  
+
   if (!mDownload) return NS_OK;
   if (mDownload->started == 0) {
     mDownload->request = aRequest;
@@ -235,7 +235,7 @@ NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress
                                     (gulong) mDownload->file_size,
                                     1);
     }
-  } 
+  }
   if (mDownload->started == 1) {
     // emit signal to get download progress and displays on download list dialog
     gtk_signal_emit(GTK_OBJECT(mDownload->parent),
@@ -291,7 +291,7 @@ NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress
                     (gulong) aCurSelfProgress, (gulong) aMaxSelfProgress, 1);
   }
   // storing current downloaded size.
-  mDownload->downloaded_size = (gulong) aCurSelfProgress; 
+  mDownload->downloaded_size = (gulong) aCurSelfProgress;
   // moving the target file to the right place.
   rv = mDownload->file_target->MoveToNative (mDestFile, mLocalSaveFileName);
   return NS_OK;

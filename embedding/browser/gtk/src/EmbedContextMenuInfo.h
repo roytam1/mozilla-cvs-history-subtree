@@ -77,7 +77,7 @@ public:
 
 
   PRInt32                 mX, mY, mObjWidth, mObjHeight, mCtxFrameNum;
-  nsString                mCtxURI, mCtxHref, mCtxImgHref;  
+  nsString                mCtxURI, mCtxHref, mCtxImgHref;
   PRUint32                mEmbedCtxType;
   PRInt32 mCtxFormType;
   nsCOMPtr<nsIDOMNode>    mEventNode;

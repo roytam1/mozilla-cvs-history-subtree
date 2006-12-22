@@ -112,7 +112,7 @@ struct _GtkMozEmbed
   GtkBin            bin;
   void              *data;
   GtkObject         *common;
-  // FIXME: This is a temporary solution for wrong progress values 
+  // FIXME: This is a temporary solution for wrong progress values
   // being passed up. Oleg has mentioned something about a bug in JS.
   gint current_number_of_requests;
   gint total_number_of_requests;
@@ -165,7 +165,7 @@ struct _GtkMozEmbedClass
   gint (* dom_focus_in)        (GtkMozEmbed *embed, gpointer dom_event);
   gint (* dom_focus_out)       (GtkMozEmbed *embed, gpointer dom_event);
   void (* alert)               (GtkMozEmbed *embed, const char *title, const char *text);
-  void (* alert_check)         (GtkMozEmbed *embed, const char *title, const char *text, 
+  void (* alert_check)         (GtkMozEmbed *embed, const char *title, const char *text,
                                 const char *check_msg, gboolean *check_val);
   gboolean (* confirm)         (GtkMozEmbed *embed, const char *title, const char *text);
   gboolean (* confirm_check)   (GtkMozEmbed *embed, const char *title, const char *text,
@@ -205,9 +205,9 @@ GTKMOZEMBED_API(gboolean,      gtk_moz_embed_can_go_back,         (GtkMozEmbed *
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_can_go_forward,      (GtkMozEmbed *embed))
 GTKMOZEMBED_API(void,          gtk_moz_embed_go_back,             (GtkMozEmbed *embed))
 GTKMOZEMBED_API(void,          gtk_moz_embed_go_forward,          (GtkMozEmbed *embed))
-GTKMOZEMBED_API(void,          gtk_moz_embed_render_data,         (GtkMozEmbed *embed, const char *data, guint32 len, 
+GTKMOZEMBED_API(void,          gtk_moz_embed_render_data,         (GtkMozEmbed *embed, const char *data, guint32 len,
                                                                    const char *base_uri, const char *mime_type))
-GTKMOZEMBED_API(void,          gtk_moz_embed_open_stream,         (GtkMozEmbed *embed, 
+GTKMOZEMBED_API(void,          gtk_moz_embed_open_stream,         (GtkMozEmbed *embed,
                                                                    const char *base_uri, const char *mime_type))
 GTKMOZEMBED_API(void,          gtk_moz_embed_append_data,         (GtkMozEmbed *embed,
                                                                    const char *data, guint32 len))
@@ -228,11 +228,11 @@ GTKMOZEMBED_API(void,          gtk_moz_embed_notify_plugins,      (GtkMozEmbed *
 GTKMOZEMBED_API(void,          gtk_moz_embed_check_logins,        (GtkMozEmbed *embed))
 GTKMOZEMBED_API(char*,         gtk_moz_embed_get_encoding,        (GtkMozEmbed *embed, gint))
 GTKMOZEMBED_API(void,          gtk_moz_embed_set_encoding,        (GtkMozEmbed *embed, const gchar *, gint))
-GTKMOZEMBED_API(guint,         gtk_moz_embed_get_context_info,    (GtkMozEmbed *embed, gpointer event, gpointer *node, 
-                                                                   gint *x, gint *y, gint *docindex, 
+GTKMOZEMBED_API(guint,         gtk_moz_embed_get_context_info,    (GtkMozEmbed *embed, gpointer event, gpointer *node,
+                                                                   gint *x, gint *y, gint *docindex,
                                                                    const gchar **url, const gchar **objurl, const gchar **docurl))
 GTKMOZEMBED_API(const gchar*,  gtk_moz_embed_get_selection,       (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_doc_info,        (GtkMozEmbed *embed, gpointer node, gint docindex, const gchar**title, 
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_doc_info,        (GtkMozEmbed *embed, gpointer node, gint docindex, const gchar**title,
                                                                    const gchar**location, const gchar **file_type, guint *file_size,
                                                                    gint *width, gint *height))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_insert_text,         (GtkMozEmbed *embed, const gchar*, gpointer node))
@@ -287,7 +287,7 @@ typedef enum
   GTK_MOZ_EMBED_FLAG_TRANSFERRING = 4,
   GTK_MOZ_EMBED_FLAG_NEGOTIATING = 8,
   GTK_MOZ_EMBED_FLAG_STOP = 16,
-  
+
   GTK_MOZ_EMBED_FLAG_IS_REQUEST = 65536,
   GTK_MOZ_EMBED_FLAG_IS_DOCUMENT = 131072,
   GTK_MOZ_EMBED_FLAG_IS_NETWORK = 262144,
@@ -316,7 +316,7 @@ typedef enum
    changed.  Now there's a mapping table that maps these values to the
    internal values. */
 
-typedef enum 
+typedef enum
 {
   GTK_MOZ_EMBED_FLAG_RELOADNORMAL = 0,
   GTK_MOZ_EMBED_FLAG_RELOADBYPASSCACHE = 1,
@@ -348,7 +348,7 @@ typedef enum
   GTK_MOZ_EMBED_FLAG_DEPENDENT = 268435456U,
   GTK_MOZ_EMBED_FLAG_MODAL = 536870912U,
   GTK_MOZ_EMBED_FLAG_OPENASDIALOG = 1073741824U,
-  GTK_MOZ_EMBED_FLAG_OPENASCHROME = 2147483648U 
+  GTK_MOZ_EMBED_FLAG_OPENASCHROME = 2147483648U
 } GtkMozEmbedChromeFlags;
 
 /* this is a singleton object that you can hook up to to get signals

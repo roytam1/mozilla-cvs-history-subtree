@@ -1,4 +1,4 @@
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -66,7 +66,7 @@ ifdef MOZ_MICROBEMBED_DYN
 MOZ_GTKEMBED_DYN = 1
 endif
 
-#ifdef MOZ_GNOMEVFS_CFLAGS 
+#ifdef MOZ_GNOMEVFS_CFLAGS
 #DEFINES += -DMOZ_ENABLE_GNOMEVFS
 #endif
 

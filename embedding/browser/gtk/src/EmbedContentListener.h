@@ -62,7 +62,7 @@ class EmbedContentListener : public nsIURIContentListener,
  private:
 
   EmbedPrivate *mOwner;
-  
+
 };
 
 #endif /* __EmbedContentListener_h */

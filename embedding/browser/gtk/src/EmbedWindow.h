@@ -102,6 +102,6 @@ private:
   PRBool                   mIsModal;
 
 };
-  
+
 
 #endif /* __EmbedWindow_h */

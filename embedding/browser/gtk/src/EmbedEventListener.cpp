@@ -147,7 +147,7 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
 
   nsCString cName;
   NS_UTF16ToCString(name, NS_CSTRING_ENCODING_UTF8, cName);
-  
+
   // XXX This does not handle |BLAH ICON POWER" or "iCoN" or "IcOn"
   if (!cName.LowerCaseEqualsLiteral("icon")) {
 
@@ -201,7 +201,7 @@ EmbedEventListener::HandleEvent(nsIDOMEvent* aDOMEvent)
 
     aDOMEvent->GetTarget(getter_AddRefs(eventTarget));
     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(eventTarget, &result);
-    if (NS_FAILED(result) || !node) 
+    if (NS_FAILED(result) || !node)
       return NS_ERROR_FAILURE;
     HandleLink (node);
   }
@@ -322,7 +322,7 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
   } else {
     sLongPressTimer = g_timeout_add(mLongMPressDelay, sLongMPress, mOwner->mOwningWidget);
     ((nsIDOMMouseEvent*)mouseEvent)->GetScreenX(&sX);
-    ((nsIDOMMouseEvent*)mouseEvent)->GetScreenY(&sY);        
+    ((nsIDOMMouseEvent*)mouseEvent)->GetScreenY(&sY);
   }
   return NS_OK;
 }
@@ -393,7 +393,7 @@ EmbedEventListener::MouseDblClick(nsIDOMEvent* aDOMEvent)
   if (return_val) {
     aDOMEvent->StopPropagation();
     aDOMEvent->PreventDefault();
-  } 
+  }
   return NS_OK;
 }
 
@@ -497,7 +497,7 @@ EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
   if (mCurSelCon)
     mCurSelCon->SetDisplaySelection (nsISelectionController::SELECTION_ON);
 
-  if (sMPressed && 
+  if (sMPressed &&
       gtk_signal_handler_pending(GTK_OBJECT(mOwner->mOwningWidget),
                                  moz_embed_signals[DOM_MOUSE_SCROLL], TRUE)) {
     // Return TRUE from your signal handler to mark the event as consumed.
@@ -527,7 +527,7 @@ EmbedEventListener::MouseMove(nsIDOMEvent* aDOMEvent)
           sIsScrolling = PR_FALSE;
         }
       }
-      if (sIsScrolling) 
+      if (sIsScrolling)
       {
         if (sLongPressTimer)
           g_source_remove (sLongPressTimer);
@@ -563,25 +563,25 @@ EmbedEventListener::DragMove(nsIDOMEvent* aMouseEvent)
   return NS_OK;
 }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 EmbedEventListener::Focus(nsIDOMEvent* aEvent)
 {
   return NS_OK;
 }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 EmbedEventListener::Blur(nsIDOMEvent* aEvent)
 {
   mFocusInternalFrame = PR_FALSE;
   return NS_OK;
  }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
 {
   nsresult rv;
 #ifdef MOZ_WIDGET_GTK2
-  /* This function gets called everytime that a mousedown or a mouseup 
+  /* This function gets called everytime that a mousedown or a mouseup
    * event occurs.
    */
   nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDOMMouseEvent));
@@ -593,14 +593,14 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
 
   nsCOMPtr<nsIDOMNode> eventNode = do_QueryInterface(target);
   nsCOMPtr<nsIDOMDocument> domDoc;
-  rv = eventNode->GetOwnerDocument(getter_AddRefs(domDoc));  
+  rv = eventNode->GetOwnerDocument(getter_AddRefs(domDoc));
   if (NS_FAILED(rv))
     return rv;
 
   nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc, &rv);
   if (NS_FAILED(rv) || !doc)
     return NS_ERROR_FAILURE;
-  
+
   nsIPresShell *presShell = doc->GetShellAt(0);
 
   /* Gets nsISelectionController interface for the current context */
@@ -618,7 +618,7 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
   mCtxInfo->UpdateContextData(aDOMMouseEvent);
 
   /* If a mousedown after 1 click is done (and if clicked context is not a XUL
-   * one (e.g. scrollbar), the selection is disabled for that context. 
+   * one (e.g. scrollbar), the selection is disabled for that context.
    */
   if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL)) {
 
@@ -627,7 +627,7 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
       /* Gets number of clicks done for event */
       rv = aDOMMouseEvent->GetDetail(&mClickCount);
       if (NS_FAILED(rv))
-        return rv; 
+        return rv;
 
       if (mClickCount == 1)
         rv = mCurSelCon->SetDisplaySelection(nsISelectionController::SELECTION_OFF);
@@ -635,8 +635,8 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
     } // mousedown
 
     /* If a mouseup occurs, the selection for context is enabled again (despite of
-     * number of clicks). If this event occurs after 1 click, the selection of 
-     * both last and current context is cleaned up. 
+     * number of clicks). If this event occurs after 1 click, the selection of
+     * both last and current context is cleaned up.
      */
     if (eventType.EqualsLiteral("mouseup")) {
 
@@ -645,7 +645,7 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
         rv = mCurSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
         if (mClickCount == 1) {
           nsCOMPtr<nsISelection> domSel;
-          mCurSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
+          mCurSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL,
                                    getter_AddRefs(domSel));
           rv = domSel->RemoveAllRanges();
         }
@@ -655,14 +655,14 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
         rv = mLastSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
         if (mClickCount == 1) {
           nsCOMPtr<nsISelection> domSel;
-          mLastSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL, 
+          mLastSelCon->GetSelection(nsISelectionController::SELECTION_NORMAL,
                                     getter_AddRefs(domSel));
           rv = domSel->RemoveAllRanges();
         }
       }
 
-      /* If 1 click was done (despite the event type), sets the last context's 
-       * selection controller with current one 
+      /* If 1 click was done (despite the event type), sets the last context's
+       * selection controller with current one
        */
       if (mClickCount == 1)
         mLastSelCon = mCurSelCon;
@@ -721,7 +721,7 @@ EmbedEventListener::GeneratePixBuf()
   GdkPixbuf *pixbuf = NULL;
   pixbuf = gdk_pixbuf_new_from_file(::gFavLocation, NULL);
   if(!pixbuf) {
-    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget), 
+    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
                     moz_embed_signals[ICON_CHANGED],
                     NULL );
 
@@ -742,9 +742,9 @@ EmbedEventListener::GeneratePixBuf()
     gFavLocation = nsnull;
     return;
   }
-  
+
   // now send the signal to eal then eal send another signal to UI
-  gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget), 
+  gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
                   moz_embed_signals[ICON_CHANGED],
                   pixbuf );
   //mOwner->mNeedFav = PR_FALSE;
@@ -852,14 +852,14 @@ EmbedEventListener::GetFaviconFromURI(const char* aURI)
 }
 
 NS_IMETHODIMP
-EmbedEventListener::OnStateChange(nsIWebProgress *aWebProgress, 
-                                  nsIRequest *aRequest, 
-                                  PRUint32 aStateFlags, 
+EmbedEventListener::OnStateChange(nsIWebProgress *aWebProgress,
+                                  nsIRequest *aRequest,
+                                  PRUint32 aStateFlags,
                                   nsresult aStatus)
 {
   /* if (!(aStateFlags & (STATE_STOP | STATE_IS_NETWORK | STATE_IS_DOCUMENT))){*/
 #ifdef MOZ_WIDGET_GTK2
-  if(aStateFlags & STATE_STOP) 
+  if(aStateFlags & STATE_STOP)
   {
     /* FINISH DOWNLOADING */
     if (NS_SUCCEEDED(aStatus)) {
@@ -875,38 +875,38 @@ EmbedEventListener::OnStateChange(nsIWebProgress *aWebProgress,
 }
 
 NS_IMETHODIMP
-EmbedEventListener::OnProgressChange(nsIWebProgress *aWebProgress, 
-                                     nsIRequest *aRequest, 
-                                     PRInt32 aCurSelfProgress, 
-                                     PRInt32 aMaxSelfProgress, 
-                                     PRInt32 aCurTotalProgress, 
+EmbedEventListener::OnProgressChange(nsIWebProgress *aWebProgress,
+                                     nsIRequest *aRequest,
+                                     PRInt32 aCurSelfProgress,
+                                     PRInt32 aMaxSelfProgress,
+                                     PRInt32 aCurTotalProgress,
                                      PRInt32 aMaxTotalProgress)
 {
   return NS_OK;
 }
 
-NS_IMETHODIMP 
-EmbedEventListener::OnLocationChange(nsIWebProgress *aWebProgress, 
-                                     nsIRequest *aRequest, 
+NS_IMETHODIMP
+EmbedEventListener::OnLocationChange(nsIWebProgress *aWebProgress,
+                                     nsIRequest *aRequest,
                                      nsIURI *aLocation)
 {
   return NS_OK;
 }
 
 
-NS_IMETHODIMP 
-EmbedEventListener::OnStatusChange(nsIWebProgress *aWebProgress, 
-                                   nsIRequest *aRequest, 
-                                   nsresult aStatus, 
+NS_IMETHODIMP
+EmbedEventListener::OnStatusChange(nsIWebProgress *aWebProgress,
+                                   nsIRequest *aRequest,
+                                   nsresult aStatus,
                                    const PRUnichar *aMessage)
 {
   return NS_OK;
 }
 
 
-NS_IMETHODIMP 
-EmbedEventListener::OnSecurityChange(nsIWebProgress *aWebProgress, 
-                                     nsIRequest *aRequest, 
+NS_IMETHODIMP
+EmbedEventListener::OnSecurityChange(nsIWebProgress *aWebProgress,
+                                     nsIRequest *aRequest,
                                      PRUint32 aState)
 {
   return NS_OK;
