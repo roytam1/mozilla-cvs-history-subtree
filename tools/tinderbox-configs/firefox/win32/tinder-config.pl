@@ -57,7 +57,7 @@ $CleanProfile             = 1;
 $ProductName              = "Firefox";
 $VendorName               = "Mozilla";
 
-$RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
@@ -70,7 +70,7 @@ $AliveTest                = 1;
 #$EmbedCodesizeTest        = 1;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-#$LayoutPerformanceTest    = 1;  # Tp
+$LayoutPerformanceTest    = 1;  # Tp
 #$DHTMLPerformanceTest     = 1;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 1;  # Txul
