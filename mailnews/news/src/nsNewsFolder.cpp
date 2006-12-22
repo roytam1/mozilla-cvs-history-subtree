@@ -614,7 +614,7 @@ NS_IMETHODIMP nsMsgNewsFolder::Delete()
   // Remove summary file.	
   nsNewsSummarySpec summarySpec(path);
   summarySpec.Delete(PR_FALSE);
-  
+ 
   nsCOMPtr <nsINntpIncomingServer> nntpServer;
   rv = GetNntpServer(getter_AddRefs(nntpServer));
   if (NS_FAILED(rv)) return rv;
@@ -977,8 +977,6 @@ nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages, nsIMsgWindow *aMsgWi
 
 NS_IMETHODIMP nsMsgNewsFolder::GetNewMessages(nsIMsgWindow *aMsgWindow, nsIUrlListener *aListener)
 {
-  ChangeNumPendingTotalMessages(-GetNumPendingTotalMessages());
-  ChangeNumPendingUnread(-GetNumPendingUnread());
   return GetNewsMessages(aMsgWindow, PR_FALSE, aListener);
 }
 
@@ -1793,6 +1791,13 @@ NS_IMETHODIMP nsMsgNewsFolder::NotifyDownloadedLine(const char *line, nsMsgKey k
   }
                                                                                 
   return rv;
+}
+
+NS_IMETHODIMP nsMsgNewsFolder::NotifyFinishedDownloadinghdrs()
+{
+  ChangeNumPendingTotalMessages(-GetNumPendingTotalMessages());
+  ChangeNumPendingUnread(-GetNumPendingUnread());
+  return NS_OK;  
 }
 
 NS_IMETHODIMP nsMsgNewsFolder::Compact(nsIUrlListener *aListener, nsIMsgWindow *aMsgWindow)
