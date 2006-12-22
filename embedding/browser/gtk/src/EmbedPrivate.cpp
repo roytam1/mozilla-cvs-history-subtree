@@ -1554,12 +1554,8 @@ EmbedPrivate::ShutdownProfile(void)
   if (sProfileDirServiceProvider) {
     sProfileDirServiceProvider->Shutdown();
     NS_RELEASE(sProfileDirServiceProvider);
-    sProfileDirServiceProvider = 0;
   }
-  if (sPrefs) {
-    NS_RELEASE(sPrefs);
-    sPrefs = 0;
-  }
+  NS_IF_RELEASE(sPrefs);
 }
 #endif
 
@@ -2044,4 +2040,3 @@ EmbedPrivate::GetCacheEntry(const char *aStorage,
       printf("OpenCacheEntry(ACCESS_READ) returned: %x for non-existent entry\n", rv);
     return rv;
 }
-
