@@ -103,24 +103,24 @@ static void close_output_stream(OUTPUT_STREAM *file_handle)
 }
 #endif
 
-static bool file_handle_uri_exists(const void *uri)
+static bool file_handle_uri_exists(LOCAL_FILE *uri)
 {
   g_return_val_if_fail(uri, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   PRBool exists = PR_FALSE;
-  ((nsILocalFile*)uri)->Exists(&exists);
-  return exists ? true : false;
+  uri->Exists(&exists);
+  return !!exists;
 #else
-  return gnome_vfs_uri_exists((GnomeVFSURI*)uri);
+  return gnome_vfs_uri_exists(uri);
 #endif
 }
 
-static void* file_handle_uri_new(const char *uri)
+static LOCAL_FILE* file_handle_uri_new(const char *uri)
 {
   g_return_val_if_fail(uri, nsnull);
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
-  nsILocalFile *historyFile = nsnull;
+  LOCAL_FILE *historyFile = nsnull;
   rv = NS_NewNativeLocalFile(nsDependentCString(uri), 1,  &historyFile);
   if (NS_FAILED(rv))
     return nsnull;
@@ -130,30 +130,29 @@ static void* file_handle_uri_new(const char *uri)
 #endif
 }
 
-static void file_handle_uri_delete(void *uri)
+static void file_handle_uri_release(LOCAL_FILE *uri)
 {
   g_return_if_fail(uri);
 #ifndef MOZ_ENABLE_GNOMEVFS
-  delete (nsILocalFile*)uri;
-  return;
+  NS_RELEASE(uri);
 #else
-  gnome_vfs_uri_unref((GnomeVFSURI*)uri);
+  gnome_vfs_uri_unref(uri);
 #endif
 }
 
 
-static bool file_handle_create_uri(OUTPUT_STREAM **file_handle, const void *uri)
+static bool file_handle_create_uri(OUTPUT_STREAM **file_handle, LOCAL_FILE *uri)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
-  rv = NS_NewLocalFileOutputStream(file_handle, (nsILocalFile*)uri, PR_RDWR | PR_APPEND | PR_CREATE_FILE, 0660);
+  rv = NS_NewLocalFileOutputStream(file_handle, uri, PR_RDWR | PR_APPEND | PR_CREATE_FILE, 0660);
 
   return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_create_uri(
     file_handle,
-    (GnomeVFSURI*)uri,
+    uri,
     GNOME_VFS_OPEN_WRITE,
     1,
     0600
@@ -161,18 +160,18 @@ static bool file_handle_create_uri(OUTPUT_STREAM **file_handle, const void *uri)
 #endif
 }
 
-static bool file_handle_open_uri(OUTPUT_STREAM **file_handle, const void *uri)
+static bool file_handle_open_uri(OUTPUT_STREAM **file_handle, LOCAL_FILE *uri)
 {
   g_return_val_if_fail(file_handle, false);
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
-  rv = NS_NewLocalFileOutputStream(file_handle, (nsILocalFile*)uri, PR_RDWR | PR_APPEND, 0660);
+  rv = NS_NewLocalFileOutputStream(file_handle, uri, PR_RDWR | PR_APPEND, 0660);
 
   return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_open_uri(
     file_handle,
-    (GnomeVFSURI*)uri,
+    uri,
     (GnomeVFSOpenMode)(GNOME_VFS_OPEN_WRITE
                       | GNOME_VFS_OPEN_RANDOM
                       | GNOME_VFS_OPEN_READ)) == GNOME_VFS_OK;
@@ -392,7 +391,6 @@ EmbedGlobalHistory::GetInstance()
     sEmbedGlobalHistory = new EmbedGlobalHistory();
     if (!sEmbedGlobalHistory)
       return nsnull;
-    sEmbedGlobalHistory->mFileHandle = NULL;
     NS_ADDREF(sEmbedGlobalHistory);   // addref the global
     if (NS_FAILED(sEmbedGlobalHistory->Init()))
     {
@@ -417,6 +415,7 @@ EmbedGlobalHistory::DeleteInstance()
 
 // The global history component constructor
 EmbedGlobalHistory::EmbedGlobalHistory()
+: mFileHandle(nsnull)
 {
   if (!mURLList) {
     mDataIsLoaded = PR_FALSE;
@@ -722,22 +721,22 @@ nsresult EmbedGlobalHistory::InitFile()
        return NS_ERROR_FAILURE;
   }
 
-  void *uri = file_handle_uri_new(mHistoryFile);
+  LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
   if (!uri)
     return NS_ERROR_FAILURE;
 
   gboolean rs = FALSE;
   if (!file_handle_uri_exists(uri)) {
-    if (file_handle_create_uri(&mFileHandle, uri)) {
+    if (!file_handle_create_uri(&mFileHandle, uri)) {
       printf("Could not create a history file\n");
-      file_handle_uri_delete(uri);
+      file_handle_uri_release(uri);
       return NS_ERROR_FAILURE;
     }
     CLOSE_FILE_HANDLE(mFileHandle);
   }
   rs = file_handle_open_uri(&mFileHandle, uri);
 
-  file_handle_uri_delete(uri);
+  file_handle_uri_release(uri);
 
   if (!rs) {
     printf("Could not open a history file\n");
@@ -752,9 +751,9 @@ nsresult EmbedGlobalHistory::LoadData()
   nsresult rv = NS_OK;
   if (!mDataIsLoaded) {
     mDataIsLoaded = PR_TRUE;
-    void *uri = file_handle_uri_new(mHistoryFile);
+    LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
     bool exists = file_handle_uri_exists(uri);
-    file_handle_uri_delete(uri);
+    file_handle_uri_release(uri);
     if (!exists) {
       rv = InitFile();
       if (NS_FAILED(rv))
@@ -817,11 +816,11 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
     BROKEN_RV_HANDLING_CODE(rv);
     return rv;
   }
-  void *uri = file_handle_uri_new(mHistoryFile);
+  LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
   if (!uri) return NS_ERROR_FAILURE;
 
   gboolean rs = file_handle_uri_exists(uri);
-  file_handle_uri_delete(uri);
+  file_handle_uri_release(uri);
 
   if (!rs && NS_FAILED(InitFile()))
     return NS_ERROR_FAILURE;

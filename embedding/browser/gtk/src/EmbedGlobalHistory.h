@@ -47,8 +47,10 @@
 
 #ifdef MOZ_ENABLE_GNOMEVFS
 #define OUTPUT_STREAM GnomeVFSHandle
+#define LOCAL_FILE GnomeVFSURI
 #else
 #define OUTPUT_STREAM nsIOutputStream
+#define LOCAL_FILE nsILocalFile
 #endif
 
 //#include "gtkmozembed_common.h"
@@ -120,7 +122,7 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
   */
     nsresult          GetEntry(gchar *);
     protected:
-    void             *mFileHandle;             /** < The History File handler */
+    OUTPUT_STREAM    *mFileHandle;             /** < The History File handle */
     PRBool            mDataIsLoaded;           /** < If the data is loaded */
     PRInt32           mEntriesAddedSinceFlush; /** < Number of entries added since flush */
     gchar*            mHistoryFile;            /** < The history file path */
