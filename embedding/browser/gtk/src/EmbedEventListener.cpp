@@ -85,6 +85,7 @@ EmbedEventListener::Init(EmbedPrivate *aOwner)
 {
   mOwner = aOwner;
   mCtxInfo = nsnull;
+  mClickCount = 1;
 #ifdef MOZ_WIDGET_GTK2
   mCtxInfo = new EmbedContextMenuInfo(aOwner);
 #endif
@@ -299,11 +300,6 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
   if (!mouseEvent)
     return NS_OK;
 
-  // handling event internally, first.
-#ifdef MOZ_WIDGET_GTK2
-  HandleSelection(mouseEvent);
-#endif
-
   // Return TRUE from your signal handler to mark the event as consumed.
   sMPressed = PR_TRUE;
   gint return_val = FALSE;
@@ -311,6 +307,7 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
                   moz_embed_signals[DOM_MOUSE_DOWN],
                   (void *)mouseEvent, &return_val);
   if (return_val) {
+    mClickCount = 2;
     sMPressed = PR_FALSE;
 #if 1
     if (sLongPressTimer)
@@ -320,10 +317,17 @@ EmbedEventListener::MouseDown(nsIDOMEvent* aDOMEvent)
     aDOMEvent->PreventDefault();
 #endif
   } else {
+    mClickCount = 1;
     sLongPressTimer = g_timeout_add(mLongMPressDelay, sLongMPress, mOwner->mOwningWidget);
     ((nsIDOMMouseEvent*)mouseEvent)->GetScreenX(&sX);
     ((nsIDOMMouseEvent*)mouseEvent)->GetScreenY(&sY);
   }
+
+  // handling event internally.
+#ifdef MOZ_WIDGET_GTK2
+  HandleSelection(mouseEvent);
+#endif
+
   return NS_OK;
 }
 
@@ -626,11 +630,6 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
   if (!(mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_XUL)) {
 
     if (eventType.EqualsLiteral("mousedown")) {
-
-      /* Gets number of clicks done for event */
-      rv = aDOMMouseEvent->GetDetail(&mClickCount);
-      if (NS_FAILED(rv))
-        return rv;
 
       if (mClickCount == 1)
         rv = mCurSelCon->SetDisplaySelection(nsISelectionController::SELECTION_OFF);
