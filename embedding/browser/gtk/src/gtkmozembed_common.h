@@ -194,7 +194,7 @@ GTKMOZEMBED_API(gboolean,   gtk_moz_embed_common_login,             (GtkWidget *
 GTKMOZEMBED_API(gboolean,   gtk_moz_embed_common_remove_passwords,  (const gchar *host, const gchar *user, gint index))
 GTKMOZEMBED_API(gint,       gtk_moz_embed_common_get_logins,        (const char* uri, GList **list))
 GTKMOZEMBED_API(gint,       gtk_moz_embed_common_get_history_list,  (GtkMozHistoryItem **GtkHI))
-GTKMOZEMBED_API(gint,       gtk_moz_embed_common_clean_all_history, (void))
+GTKMOZEMBED_API(gint,       gtk_moz_embed_common_remove_history,    (gchar *url, gint time))
 GTKMOZEMBED_API(GSList*,    gtk_moz_embed_common_get_cookie_list,   (void))
 GTKMOZEMBED_API(gint,       gtk_moz_embed_common_delete_all_cookies,(GSList *deletedCookies))
 GTKMOZEMBED_API(unsigned char*, gtk_moz_embed_common_nsx509_to_raw, (void *nsIX509Ptr, guint *len))

@@ -46,6 +46,7 @@
 #include "nsDocShellCID.h"
 
 #ifdef MOZ_ENABLE_GNOMEVFS
+#include <libgnomevfs/gnome-vfs.h>
 #define OUTPUT_STREAM GnomeVFSHandle
 #define LOCAL_FILE GnomeVFSURI
 #else
@@ -75,7 +76,7 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
     NS_DECL_ISUPPORTS
     NS_DECL_NSIGLOBALHISTORY2
     NS_DECL_NSIOBSERVER
-    nsresult RemoveAllPages();
+    nsresult RemoveEntries(const PRUnichar *url = nsnull, int time = 0);
 
     protected:
     enum {

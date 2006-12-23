@@ -469,7 +469,7 @@ gtk_moz_embed_common_get_history_list (GtkMozHistoryItem **GtkHI)
 }
 
 gint
-gtk_moz_embed_common_clean_all_history () {
+gtk_moz_embed_common_remove_history (gchar *url, gint time) {
   nsresult rv;
   // The global history service
   nsCOMPtr<nsIGlobalHistory2> globalHistory(do_GetService("@mozilla.org/browser/global-history;2"));
@@ -477,7 +477,14 @@ gtk_moz_embed_common_clean_all_history () {
   // The browser history interface
   nsCOMPtr<nsIObserver> myHistory = do_QueryInterface(globalHistory, &rv);
   if (!myHistory) return NS_ERROR_NULL_POINTER ;
-  myHistory->Observe(nsnull, "RemoveAllPages", nsnull);
+  if (!url)
+    myHistory->Observe(nsnull, "RemoveEntries", nsnull);
+  else {
+    EmbedGlobalHistory *history = EmbedGlobalHistory::GetInstance();
+    PRUnichar *uniurl = LocaleToUnicode(url);
+    rv = history->RemoveEntries (uniurl, time);
+    NS_Free(uniurl);
+  }    
   return 1;
 }
 

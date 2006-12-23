@@ -52,9 +52,6 @@
 #ifndef MOZILLA_INTERNAL_API
 #include "nsCRT.h"
 #endif
-#ifdef MOZ_ENABLE_GNOMEVFS
-#include <libgnomevfs/gnome-vfs.h>
-#endif
 
 // Constants
 #define defaultSeparator 1
@@ -122,9 +119,7 @@ static LOCAL_FILE* file_handle_uri_new(const char *uri)
   nsresult rv;
   LOCAL_FILE *historyFile = nsnull;
   rv = NS_NewNativeLocalFile(nsDependentCString(uri), 1,  &historyFile);
-  if (NS_FAILED(rv))
-    return nsnull;
-  return historyFile;
+  return NS_FAILED(rv) ? nsnull : historyFile;
 #else
   return gnome_vfs_uri_new(uri);
 #endif
@@ -166,7 +161,7 @@ static bool file_handle_open_uri(OUTPUT_STREAM **file_handle, LOCAL_FILE *uri)
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
   rv = NS_NewLocalFileOutputStream(file_handle, uri, PR_RDWR | PR_APPEND, 0660);
-
+  
   return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_open_uri(
@@ -185,9 +180,7 @@ static bool file_handle_seek(OUTPUT_STREAM *file_handle, gboolean end)
   nsresult rv;
   nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(file_handle, &rv);
   rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, end ? -1 : 0);
-  if (NS_FAILED(rv))
-    return false;
-  return true;
+  return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_seek(file_handle,
                         end ? GNOME_VFS_SEEK_END : GNOME_VFS_SEEK_START, 0) == GNOME_VFS_OK;
@@ -235,9 +228,7 @@ static int64 file_handle_read(OUTPUT_STREAM *file_handle, gpointer buffer, guint
   if (NS_FAILED(rv))
     return -1;
   rv = seekable->Read(*(char**)buffer, bytes, &amt);
-  if (NS_FAILED(rv))
-    return -1;
-  return amt;
+  return NS_FAILED(rv) ? -1 : amt;
 #else
   GnomeVFSResult vfs_result = GNOME_VFS_OK;
   GnomeVFSFileSize read_bytes;
@@ -257,9 +248,7 @@ static guint64 file_handle_write(OUTPUT_STREAM *file_handle, gpointer line)
   PRUint32 amt = 0;
   nsresult rv;
   rv = file_handle->Write((char*)line, strlen((char*)line), &amt);
-  if (NS_FAILED(rv))
-    return false;
-  return true;
+  return NS_SUCCEEDED(rv);
 #else
   GnomeVFSFileSize written;
   gnome_vfs_write (file_handle,
@@ -363,7 +352,7 @@ PRBool entryHasExpired(HistoryEntry *entry)
   return (LL_CMP(lastVisitTime, <, expirationIntervalAgo));
 }
 
-// Traverse the history list to get all the entries data and set the EAL history list
+// Traverse the history list to get all the entries data
 void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
 {
   HistoryEntry *entry = (HistoryEntry *) data;
@@ -646,15 +635,36 @@ NS_IMETHODIMP EmbedGlobalHistory::SetPageTitle(nsIURI *aURI,
   return rv;
 }
 
-nsresult EmbedGlobalHistory::RemoveAllPages()
+nsresult EmbedGlobalHistory::RemoveEntries(const PRUnichar *url, int time)
 {
-  nsresult rv;
-  if (mURLList) {
+  nsresult rv = NS_ERROR_FAILURE;
+  if (!mURLList)
+    return rv;
+
+  if (url) {
+    GList *node = g_list_find_custom(mURLList, NS_ConvertUTF16toUTF8(url).get(), (GCompareFunc) history_entry_find_exist);
+    if (!node) return rv;
+    if (node->data) {
+      HistoryEntry *entry = NS_STATIC_CAST(HistoryEntry *,
+                                           node->data);
+      if (entry->url) {
+        NS_Free(entry->url);
+        entry->url = nsnull;
+        NS_Free(entry);
+      }
+      entry->mTitle.~nsCString();
+      entry->mLastVisitTime = 0;
+      mURLList = g_list_remove (mURLList, entry);
+    }
+    // forcing flush.
+    mEntriesAddedSinceFlush = 1;
+  } else {
     g_list_foreach (mURLList, (GFunc) history_entry_foreach_to_remove, NULL);
     g_list_free(mURLList);
     mURLList = NULL;
   }
   mDataIsLoaded = PR_FALSE;
+
   rv = FlushData(kFlushModeFullWrite);
   mEntriesAddedSinceFlush = 0;
   return rv;
@@ -681,8 +691,8 @@ NS_IMETHODIMP EmbedGlobalHistory::Observe(nsISupports *aSubject,
     if (mFileHandle) {
       CLOSE_FILE_HANDLE(mFileHandle);
     }
-  } else if (strcmp(aTopic, "RemoveAllPages") == 0) {
-    RemoveAllPages();
+  } else if (strcmp(aTopic, "RemoveEntries") == 0) {
+    RemoveEntries(aData);
   }
   return rv;
 }
@@ -757,7 +767,7 @@ nsresult EmbedGlobalHistory::LoadData()
     LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
     bool exists = file_handle_uri_exists(uri);
     file_handle_uri_release(uri);
-    if (!exists) {
+    if (exists && !mFileHandle) {
       rv = InitFile();
       if (NS_FAILED(rv))
         return NS_ERROR_FAILURE;
