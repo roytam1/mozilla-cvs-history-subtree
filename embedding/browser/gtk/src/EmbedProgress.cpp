@@ -231,8 +231,8 @@ EmbedProgress::OnProgressChange(nsIWebProgress *aWebProgress,
 
 NS_IMETHODIMP
 EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
-        nsIRequest     *aRequest,
-        nsIURI         *aLocation)
+                                nsIRequest     *aRequest,
+                                nsIURI         *aLocation)
 {
   nsCAutoString newURI;
   nsCAutoString prePath;
@@ -257,13 +257,6 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
       isSubFrameLoad = PR_TRUE;
   }
 
-  PRBool succeeded = PR_TRUE;
-  HandleHTTPStatus(aRequest, newURI.get(), succeeded);
-  if (!succeeded) {
-    mOwner->mNeedFav = PR_FALSE;
-    return NS_OK;
-  }
-
   if (!isSubFrameLoad) {
     mOwner->SetURI(newURI.get());
     mOwner->mPrePath.Assign(prePath.get());
@@ -271,6 +264,11 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
                     moz_embed_signals[LOCATION]);
   }
   mOwner->mNeedFav = PR_TRUE;
+
+  PRBool succeeded = PR_TRUE;
+  HandleHTTPStatus(aRequest, newURI.get(), succeeded);
+  if (!succeeded)
+    mOwner->mNeedFav = PR_FALSE;
 
   return NS_OK;
 }
