@@ -1021,19 +1021,21 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
             goto done;
         }
 
-        GList * logins = nsnull;
-        logins = g_list_append(logins, (char*)NS_ConvertUTF16toUTF8(buffer).get());
-        gint retval = -1;
-        gtk_signal_emit(GTK_OBJECT(mCommonObject->mCommon),
-                        moz_embed_common_signals[COMMON_SELECT_LOGIN],
-                        logins, &retval);
-        g_list_free(logins);
+        if (!prefilledUser) {
+          GList * logins = nsnull;
+          logins = g_list_append(logins, (char*)NS_ConvertUTF16toUTF8(buffer).get());
+          gint retval = -1;
+          gtk_signal_emit(GTK_OBJECT(mCommonObject->mCommon),
+                          moz_embed_common_signals[COMMON_SELECT_LOGIN],
+                          logins, &retval);
+          g_list_free(logins);
 
-        if (retval != -1) {
-          userField->SetValue(buffer);
-          if (NS_FAILED(DecryptData(firstMatch->passValue, buffer)))
-            goto done;
-          passField->SetValue(buffer);
+          if (retval != -1) {
+            userField->SetValue(buffer);
+            if (NS_FAILED(DecryptData(firstMatch->passValue, buffer)))
+              goto done;
+            passField->SetValue(buffer);
+          }
         }
       }
     }
