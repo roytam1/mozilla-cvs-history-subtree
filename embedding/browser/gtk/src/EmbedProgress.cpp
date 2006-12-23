@@ -335,9 +335,10 @@ EmbedProgress::HandleHTTPStatus(nsIRequest *aRequest, const char *aUri, PRBool &
   nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest, &rv));
   aSucceeded = PR_FALSE;
 
-  if (NS_SUCCEEDED(rv) && httpChannel) {
-    rv = httpChannel->GetRequestSucceeded(&aSucceeded);
-  }
+  if (NS_FAILED(rv) || !httpChannel)
+    return NS_ERROR_FAILURE;
+
+  rv = httpChannel->GetRequestSucceeded(&aSucceeded);
 
   if (aSucceeded)
     return NS_OK;
@@ -348,8 +349,8 @@ EmbedProgress::HandleHTTPStatus(nsIRequest *aRequest, const char *aUri, PRBool &
   // it has to handle more http errors code ??? 401 ? responseCode >= 500 && responseCode <= 505
   rv = httpChannel->GetResponseStatusText(responseText);
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-                             moz_embed_signals[NETWORK_ERROR],
-                             responseCode, responseText.get(), (const gchar*)aUri);
+                  moz_embed_signals[NETWORK_ERROR],
+                  responseCode, responseText.get(), (const gchar*)aUri);
   return rv;
 }
 
