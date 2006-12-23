@@ -523,6 +523,14 @@ gtk_moz_embed_common_get_cookie_list(void)
 gint
 gtk_moz_embed_common_delete_all_cookies (GSList *deletedCookies)
 {
+  nsCOMPtr<nsIPermissionManager> permissionManager =
+    do_GetService(NS_PERMISSIONMANAGER_CONTRACTID);
+
+  if (!permissionManager)
+    return 1;
+
+  permissionManager->RemoveAll ();
+
   if (!deletedCookies)
     return 1;
 
@@ -532,14 +540,6 @@ gtk_moz_embed_common_delete_all_cookies (GSList *deletedCookies)
   if (!cookieManager)
     return 1;
   cookieManager->RemoveAll();
-
-  nsCOMPtr<nsIPermissionManager> permissionManager =
-    do_GetService(NS_PERMISSIONMANAGER_CONTRACTID);
-
-  if (!permissionManager)
-    return 1;
-
-  permissionManager->RemoveAll ();
 
   g_slist_free (deletedCookies);
     return 0;//False in GWebStatus means OK, as opposed to gboolean in C
