@@ -1686,9 +1686,12 @@ enum BWCOpenDest {
     return [[sendersTab view] canReload];
   }
 
-  if(action == @selector(getInfo:)) {
-    if([self bookmarkManagerIsVisible])
+  if (action == @selector(getInfo:)) {
+    if ([self bookmarkManagerIsVisible]) {
       [aMenuItem setTitle:NSLocalizedString(@"Bookmark Info", nil)];
+      // let the BookmarkViewController validate based on selection
+      return [[self bookmarkViewControllerForCurrentTab] validateMenuItem:aMenuItem];
+    }
     else
       [aMenuItem setTitle:NSLocalizedString(@"Page Info", nil)];
   }
