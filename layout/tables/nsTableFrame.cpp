@@ -1369,6 +1369,9 @@ nsTableFrame::GetAdditionalChildListName(PRInt32 aIndex) const
   if (aIndex == NS_TABLE_FRAME_COLGROUP_LIST_INDEX) {
     return nsLayoutAtoms::colGroupList;
   }
+  if (aIndex == NS_TABLE_FRAME_OVERFLOW_LIST_INDEX) {
+    return nsLayoutAtoms::overflowList;
+  } 
   return nsnull;
 }
 
