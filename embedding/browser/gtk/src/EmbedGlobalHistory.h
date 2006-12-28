@@ -116,12 +116,12 @@ class EmbedGlobalHistory: public nsIGlobalHistory2,
   * @param vfs_handle A Gnome VFS handle.
   * @return NS_OK on the success.
   */
-    nsresult          ReadEntries(OUTPUT_STREAM *file_handle);
+    nsresult          ReadEntries(LOCAL_FILE *file_uri);
 /** Gets a history entry 
   * @param name The history entry name.
   * @return NS_OK if the history entry name was gotten.
   */
-    nsresult          GetEntry(gchar *);
+    nsresult          GetEntry(const char *);
     protected:
     OUTPUT_STREAM    *mFileHandle;             /** < The History File handle */
     PRBool            mDataIsLoaded;           /** < If the data is loaded */

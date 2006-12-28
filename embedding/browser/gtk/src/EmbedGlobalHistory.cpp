@@ -765,15 +765,10 @@ nsresult EmbedGlobalHistory::LoadData()
   if (!mDataIsLoaded) {
     mDataIsLoaded = PR_TRUE;
     LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
-    bool exists = file_handle_uri_exists(uri);
-    file_handle_uri_release(uri);
-    if (exists && !mFileHandle) {
-      rv = InitFile();
-      if (NS_FAILED(rv))
-        return NS_ERROR_FAILURE;
+    if (uri) {
+      rv |= ReadEntries(uri);
+      file_handle_uri_release(uri);
     }
-    if (file_handle_seek(mFileHandle, FALSE))
-      rv |= ReadEntries(mFileHandle);
   }
   return rv;
 }
@@ -858,7 +853,7 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
 
 // Split an entry in last visit time, title and url.
 // Add a stored entry in the history.dat file in the history hash table
-nsresult EmbedGlobalHistory::GetEntry(char *entry)
+nsresult EmbedGlobalHistory::GetEntry(const char *entry)
 {
   char separator = (char) defaultSeparator;
   int pos = 0;
@@ -914,24 +909,58 @@ nsresult EmbedGlobalHistory::GetEntry(char *entry)
   return rv;
 }
 
+#include "nsILineInputStream.h"
+
 // Get the history entries from history.dat file
-nsresult EmbedGlobalHistory::ReadEntries(OUTPUT_STREAM *file_handle)
+nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
 {
-  if (!file_handle)
+  if (!file_uri)
     return NS_ERROR_FAILURE;
 
   nsresult rv = NS_OK;
+
+#ifndef MOZ_ENABLE_GNOMEVFS
+  nsCOMPtr<nsIInputStream> fileStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), file_uri);
+  if (!fileStream)
+    return NS_ERROR_OUT_OF_MEMORY;
+  nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream, &rv);
+  NS_ASSERTION(lineStream, "File stream is not an nsILineInputStream");
+  // Read the header
+  nsCString utf8Buffer;
+  PRBool moreData = PR_FALSE;
+
+  do {
+    rv = lineStream->ReadLine(utf8Buffer, &moreData);
+    if (NS_FAILED(rv))
+      return NS_OK;
+    if(utf8Buffer.IsEmpty())
+      continue;
+    rv = GetEntry(utf8Buffer.get());
+  } while (moreData);
+  fileStream->Close();
+
+#else
+  bool exists = file_handle_uri_exists(file_uri);
+  if (exists && !mFileHandle) {
+      rv = InitFile();
+      if (NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
+  }
+  if (!file_handle_seek(mFileHandle, FALSE))
+    return NS_ERROR_FAILURE;
+
   guint64 bytes;
   int64 read_bytes;
   char separator = (char) defaultSeparator;
   int pos = 0;
   int numStrings = 0;
-  file_handle_file_info_block_size (file_handle, &bytes);
+  file_handle_file_info_block_size (mFileHandle, &bytes);
   /* Optimal buffer size for reading/writing the file. */
   nsAutoArrayPtr<char> line(new char[bytes]);
   nsAutoArrayPtr<char> buffer(new char[bytes]);
   do {
-    read_bytes = file_handle_read(file_handle, (gpointer) buffer, bytes-1);
+    read_bytes = file_handle_read(mFileHandle, (gpointer) buffer, bytes-1);
     if (read_bytes < 0)
       break;
     buffer[read_bytes] = '\0';
@@ -955,6 +984,7 @@ nsresult EmbedGlobalHistory::ReadEntries(OUTPUT_STREAM *file_handle)
       buf_pos++;
     }
   } while (read_bytes != -1);
+#endif
   return rv;
 }
 
