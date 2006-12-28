@@ -318,14 +318,15 @@ txResultBuffer::addTransaction(txOutputTransaction* aTransaction)
 
 struct Holder
 {
-    txAXMLEventHandler* mHandler;
+    txAXMLEventHandler** mHandler;
     nsAFlatString::const_char_iterator mIter;
 };
 
 PR_STATIC_CALLBACK(PRBool)
 flushTransaction(void* aElement, void *aData)
 {
-    txAXMLEventHandler* handler = NS_STATIC_CAST(Holder*, aData)->mHandler;
+    Holder* holder = NS_STATIC_CAST(Holder*, aData);
+    txAXMLEventHandler* handler = *holder->mHandler;
     txOutputTransaction* transaction =
         NS_STATIC_CAST(txOutputTransaction*, aElement);
 
@@ -396,10 +397,9 @@ flushTransaction(void* aElement, void *aData)
 }
 
 nsresult
-txResultBuffer::flushToHandler(txAXMLEventHandler* aHandler)
+txResultBuffer::flushToHandler(txAXMLEventHandler** aHandler)
 {
-    Holder data;
-    data.mHandler = aHandler;
+    Holder data = { aHandler };
     mStringValue.BeginReading(data.mIter);
     mTransactions.EnumerateForwards(flushTransaction, &data);
     return NS_OK;
