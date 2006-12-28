@@ -52,6 +52,7 @@
 #ifndef MOZILLA_INTERNAL_API
 #include "nsCRT.h"
 #endif
+#include "nsILineInputStream.h"
 
 // Constants
 #define defaultSeparator 1
@@ -909,7 +910,6 @@ nsresult EmbedGlobalHistory::GetEntry(const char *entry)
   return rv;
 }
 
-#include "nsILineInputStream.h"
 
 // Get the history entries from history.dat file
 nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
