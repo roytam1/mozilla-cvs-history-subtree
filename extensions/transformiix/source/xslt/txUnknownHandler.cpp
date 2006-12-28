@@ -134,5 +134,5 @@ nsresult txUnknownHandler::createHandlerAndFlush(txOutputMethod aMethod,
     mEs->mOutputHandler = handler;
     mEs->mResultHandler = handler;
 
-    return mBuffer->flushToHandler(handler);
+    return mBuffer->flushToHandler(&handler);
 }

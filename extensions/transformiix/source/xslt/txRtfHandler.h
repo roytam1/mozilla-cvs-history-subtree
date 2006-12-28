@@ -51,7 +51,7 @@ public:
 
     TX_DECL_EXPRRESULT
 
-    nsresult flushToHandler(txAXMLEventHandler* aHandler);
+    nsresult flushToHandler(txAXMLEventHandler** aHandler);
 
 private:
     nsAutoPtr<txResultBuffer> mBuffer;

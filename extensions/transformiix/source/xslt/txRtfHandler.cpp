@@ -82,7 +82,7 @@ double txResultTreeFragment::numberValue()
     return Double::toDouble(mBuffer->mStringValue);
 }
 
-nsresult txResultTreeFragment::flushToHandler(txAXMLEventHandler* aHandler)
+nsresult txResultTreeFragment::flushToHandler(txAXMLEventHandler** aHandler)
 {
     if (!mBuffer) {
         return NS_ERROR_FAILURE;
