@@ -3359,9 +3359,6 @@ nsComputedDOMStyle::GetPaddingWidthCoordFor(PRUint8 aSide, nsIFrame* aFrame)
 nscoord
 nsComputedDOMStyle::GetBorderWidthCoordFor(PRUint8 aSide, nsIFrame *aFrame)
 {
-  nsROCSSPrimitiveValue* val = GetROCSSPrimitiveValue();
-  NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
-
   const nsStyleBorder* borderData = nsnull;
   GetStyleData(eStyleStruct_Border, (const nsStyleStruct*&)borderData, aFrame);
 
