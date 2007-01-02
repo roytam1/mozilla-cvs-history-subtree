@@ -614,7 +614,7 @@ gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
     return (gint)aLength;
 
   nsIDOMPlugin **aItems = nsnull;
-  aItems= new nsIDOMPlugin*[aLength];
+  aItems = new nsIDOMPlugin*[aLength];
   if (!aItems)
     return -1; //NO MEMORY
 
