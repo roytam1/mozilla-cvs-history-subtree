@@ -146,17 +146,17 @@ typedef enum
 typedef struct _GtkMozHistoryItem GtkMozHistoryItem;
 struct _GtkMozHistoryItem
 {
-    const gchar *title;    /** < URL title */
-    const gchar *url;      /** < URL */
-    long accessed;   /** < The last time that the URL was accessed */
+    const gchar *title; /** < URL title */
+    const gchar *url;   /** < URL */
+    long accessed;      /** < The last time that the URL was accessed */
 };
 typedef struct _GtkMozCookieList GtkMozCookieList;
 struct _GtkMozCookieList
 {
-    gchar *domain;   /** < The domain's name */
-    gchar *name;     /** < The cookie's name */
-    gchar *value;    /** < The cookie's value */
-    gchar *path;     /** < The cookie's path */
+    gchar *domain; /** < The domain's name */
+    gchar *name;   /** < The cookie's name */
+    gchar *value;  /** < The cookie's value */
+    gchar *path;   /** < The cookie's path */
 };
 typedef struct _GtkMozEmbedCookie GtkMozEmbedCookie;
 struct _GtkMozEmbedCookie
@@ -170,18 +170,18 @@ struct _GtkMozEmbedCookie
 typedef struct _GtkMozPlugin GtkMozPlugin;
 struct _GtkMozPlugin
 {
-    const gchar *title;     /** < Plugin title */
-    const gchar *path;      /** < Plugin path */
-    const gchar *type;      /** < Plugin type */
-    gboolean isDisabled;     /** < is plugin enabled */
+    const gchar *title;  /** < Plugin title */
+    const gchar *path;   /** < Plugin path */
+    const gchar *type;   /** < Plugin type */
+    gboolean isDisabled; /** < is plugin enabled */
 };
 
 typedef struct _GtkMozLogin GtkMozLogin;
 struct _GtkMozLogin
 {
-    const gchar *user;     /** < Plugin title */
+    const gchar *user; /** < Plugin title */
     const gchar *pass; /** < Plugin path */
-    const gchar *host;     /** < Plugin type */
+    const gchar *host; /** < Plugin type */
     guint index;
 };
 
