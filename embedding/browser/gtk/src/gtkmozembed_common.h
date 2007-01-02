@@ -202,6 +202,7 @@ GTKMOZEMBED_API(gint,       gtk_moz_embed_common_get_plugins_list,  (GList **plu
 GTKMOZEMBED_API(void,       gtk_moz_embed_common_reload_plugins,    (void))
 GTKMOZEMBED_API(guint,      gtk_moz_embed_common_get_security_mode, (guint sec_state))
 GTKMOZEMBED_API(gint,       gtk_moz_embed_common_clear_cache,       (void))
+GTKMOZEMBED_API(gboolean,   gtk_moz_embed_common_observe,           (const gchar*, gpointer, const gchar*, gunichar*))
 
 
 /*typedef struct _GtkMozEmbedCertContext GtkMozEmbedCertContext;

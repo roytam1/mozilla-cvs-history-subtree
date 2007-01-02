@@ -80,6 +80,7 @@
 #include <plugin/nsIPluginHost.h>
 #include "nsString.h"
 #include "nsIDOMMimeType.h"
+#include "nsIObserverService.h"
 
 //for security
 #include "nsIWebProgressListener.h"
@@ -689,3 +690,25 @@ gtk_moz_embed_common_clear_cache(void)
   return 1;
 }
 
+gboolean
+gtk_moz_embed_common_observe(const gchar* service_id,
+                             gpointer object,
+                             const gchar* topic,
+                             gunichar* data)
+{
+  nsresult rv;
+  if (service_id) {
+    nsCOMPtr<nsISupports> service = do_GetService(service_id, &rv);
+    NS_ENSURE_SUCCESS(rv, FALSE);
+    nsCOMPtr<nsIObserver> Observer = do_QueryInterface(service, &rv);
+    NS_ENSURE_SUCCESS(rv, FALSE);
+    rv = Observer->Observe((nsISupports*)object, topic, (PRUnichar*)data);
+  } else {
+    //This is the correct?
+    nsCOMPtr<nsIObserverService> obsService =
+      do_GetService("@mozilla.org/observer-service;1", &rv);
+    if (obsService)
+      rv = obsService->NotifyObservers((nsISupports*)object, topic, (PRUnichar*)data);
+  }
+  return NS_FAILED(rv) ? FALSE : TRUE;
+}
