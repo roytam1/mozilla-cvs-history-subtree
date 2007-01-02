@@ -1023,11 +1023,13 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
 
         if (!prefilledUser) {
           GList * logins = nsnull;
-          logins = g_list_append(logins, (char*)NS_ConvertUTF16toUTF8(buffer).get());
+          NS_ConvertUTF16toUTF8 login(buffer);
+          logins = g_list_append(logins, login.get());
           gint retval = -1;
           gtk_signal_emit(GTK_OBJECT(mCommonObject->mCommon),
                           moz_embed_common_signals[COMMON_SELECT_LOGIN],
                           logins, &retval);
+          
           g_list_free(logins);
 
           if (retval != -1) {
