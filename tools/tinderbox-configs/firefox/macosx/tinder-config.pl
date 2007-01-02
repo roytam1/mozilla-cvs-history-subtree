@@ -140,7 +140,7 @@ $BuildNameExtra = 'Fx Trunk l10n';
 $ConfigureOnly = 1;
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/atlantia-trunk/firefox-%version%.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Fx-Trunk-l10n/Darwin_8.7.0_Clobber/firefox.dmg"
 	      );
 
