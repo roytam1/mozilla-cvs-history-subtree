@@ -2299,7 +2299,7 @@ var gMessageNotificationBar =
   {
     var chunk = this.mBarFlagValues[aFlag];
     return this.mBarStatus & chunk;
-  },
+  }
 };
 
 /**

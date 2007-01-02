@@ -290,5 +290,5 @@ var MailOfflineMgr = {
 {
     gFolderJustSwitched = true;
     this.updateOfflineUI(aGoingOffline);
-  },  
+  }
 };
