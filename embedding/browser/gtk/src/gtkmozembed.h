@@ -104,8 +104,9 @@ struct _GtkMozEmbed
   GtkBin            bin;
   void              *data;
   GtkObject         *common;
-  /* FIXME: This is a temporary solution for wrong progress values
-     being passed up. Oleg has mentioned something about a bug in JS. */
+  /* FIXME: This is a temporary solution for incorrect progress values
+   * being passed up. Oleg has mentioned something about a bug in JS.
+   */
   gint current_number_of_requests;
   gint total_number_of_requests;
   gint number_of_frames_loaded;
