@@ -728,7 +728,7 @@ EmbedPrivate::SetURI(const char *aURI)
 void
 EmbedPrivate::LoadCurrentURI(void)
 {
-  if (mURI.Length()) {
+  if (!mURI.IsEmpty()) {
     nsCOMPtr<nsPIDOMWindow> piWin;
     GetPIDOMWindow(getter_AddRefs(piWin));
 
@@ -1732,7 +1732,7 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
   finder->SetMatchCase (case_sensitive);
   rv = finder->FindNext (&match);
   NS_Free(text);
-  if (NS_FAILED (rv))
+  if (NS_FAILED(rv))
     return FALSE;
 
   return match;
@@ -1942,7 +1942,7 @@ EmbedPrivate::GetZoom (PRInt32 *aZoomLevel, nsISupports *aContext)
   if (aContext) {
     nsCOMPtr <nsIDOMNode> node = do_QueryInterface(aContext, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-    
+
     rv = GetDOMWindowByNode(node, getter_AddRefs(DOMWindow));
   } else {
     nsCOMPtr<nsIWebBrowser> webBrowser;
@@ -1964,9 +1964,9 @@ EmbedPrivate::GetZoom (PRInt32 *aZoomLevel, nsISupports *aContext)
 nsresult
 EmbedPrivate::SetZoom (PRInt32 aZoomLevel, nsISupports *aContext)
 {
-  nsresult rv;  
+  nsresult rv;
   nsCOMPtr <nsIDOMWindow> DOMWindow;
-  
+
   if (aContext) {
     nsCOMPtr <nsIDOMNode> node = do_QueryInterface(aContext, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1980,7 +1980,7 @@ EmbedPrivate::SetZoom (PRInt32 aZoomLevel, nsISupports *aContext)
     rv = webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
     NS_ENSURE_SUCCESS(rv, rv);
   }
-  
+
   float zoomLevelFloat;
   zoomLevelFloat = (float) aZoomLevel / 100.;
 

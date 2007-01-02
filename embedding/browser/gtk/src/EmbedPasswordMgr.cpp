@@ -1029,7 +1029,7 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
           gtk_signal_emit(GTK_OBJECT(mCommonObject->mCommon),
                           moz_embed_common_signals[COMMON_SELECT_LOGIN],
                           logins, &retval);
-          
+
           g_list_free(logins);
 
           if (retval != -1) {

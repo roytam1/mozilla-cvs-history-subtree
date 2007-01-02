@@ -100,7 +100,7 @@ EmbedContextMenuInfo::~EmbedContextMenuInfo(void)
   mNSHHTMLElement = nsnull;
   mNSHHTMLElementSc = nsnull;
   mCtxEvent = nsnull;
-  mEventNode = nsnull; 
+  mEventNode = nsnull;
 }
 
 NS_IMPL_ADDREF(EmbedContextMenuInfo)
@@ -296,7 +296,7 @@ EmbedContextMenuInfo::GetSelectedText()
         }
       }
     }
-    if (NS_SUCCEEDED(rv) && cString.Length()) {
+    if (NS_SUCCEEDED(rv) && !cString.IsEmpty()) {
       if (selStart < selEnd) {
         cString.Cut(0, selStart);
         cString.Cut(selEnd-selStart, TextLength);
@@ -486,15 +486,15 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
     mCtxEvent = nsnull;
     return NS_ERROR_FAILURE;
   }
-  
+
   nsresult res = nsnull;
   nsCOMPtr<nsIDOMEventTarget> originalTarget = nsnull;
   nsCOMPtr<nsIDOMNode> originalNode = nsnull;
-  
+
   nsCOMPtr<nsIDOMNSEvent> aEvent = do_QueryInterface(mCtxEvent, &rv);
   if (NS_FAILED(rv) || !aEvent)
     return NS_OK;
-  
+
   nsCOMPtr<nsIDOMMouseEvent> mouseEvent (do_QueryInterface(mCtxEvent, &rv));
   if(mouseEvent) {
     ((nsIDOMMouseEvent*)mouseEvent)->GetClientX(&mX);

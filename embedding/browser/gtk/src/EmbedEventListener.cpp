@@ -107,7 +107,7 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
 
   nsString link;
   result = GetLinkAttribute(linkElement, "href", &link);
-  if (NS_FAILED (result) || !link.Length()) return NS_ERROR_FAILURE;
+  if (NS_FAILED(result) || link.IsEmpty()) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIDOMDocument> domDoc;
   result = node->GetOwnerDocument(getter_AddRefs(domDoc));
@@ -130,7 +130,7 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   NS_UTF16ToCString(link, NS_CSTRING_ENCODING_UTF8, linkstring);
   nsCString url;
   result = baseURI->Resolve (linkstring, url);
-  if (NS_FAILED (result)) return NS_ERROR_FAILURE;
+  if (NS_FAILED(result)) return NS_ERROR_FAILURE;
 
   nsString type;
   result = GetLinkAttribute(linkElement, "type", &type);

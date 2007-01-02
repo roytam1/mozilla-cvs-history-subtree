@@ -734,7 +734,7 @@ gtk_moz_embed_realize(GtkWidget *widget)
   if (alreadyRealized)
     return;
 
-  if (embedPrivate->mURI.Length())
+  if (!embedPrivate->mURI.IsEmpty())
     embedPrivate->LoadCurrentURI();
 
   // connect to the focus out event for the child
@@ -1525,7 +1525,7 @@ gtk_moz_embed_get_context_info(GtkMozEmbed *embed, gpointer event, gpointer *nod
   g_return_val_if_fail(embed != NULL, GTK_MOZ_EMBED_CTX_NONE);
   g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), GTK_MOZ_EMBED_CTX_NONE);
   embedPrivate = (EmbedPrivate *)embed->data;
-  
+
    if (!event) {
       nsIWebBrowser *webBrowser = nsnull;
       gtk_moz_embed_get_nsIWebBrowser (GTK_MOZ_EMBED (embed), &webBrowser);
@@ -1709,7 +1709,7 @@ gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gpointer node, gint docindex,
     nsresult rv;
     rv = embedPrivate->GetCacheEntry("HTTP", *location, nsICache::ACCESS_READ, PR_FALSE, getter_AddRefs(descriptor));
     if (descriptor) {
-        rv = descriptor->GetDataSize(file_size);
+      rv = descriptor->GetDataSize(file_size);
     }
   }
 #endif

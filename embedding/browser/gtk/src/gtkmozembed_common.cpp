@@ -509,7 +509,7 @@ gtk_moz_embed_common_remove_history (gchar *url, gint time) {
     PRUnichar *uniurl = LocaleToUnicode(url);
     rv = history->RemoveEntries (uniurl, time);
     NS_Free(uniurl);
-  }    
+  }
   return 1;
 }
 

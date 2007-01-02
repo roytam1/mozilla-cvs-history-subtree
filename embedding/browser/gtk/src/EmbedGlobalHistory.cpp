@@ -120,8 +120,8 @@ static LOCAL_FILE* file_handle_uri_new(const char *uri)
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
   LOCAL_FILE *historyFile = nsnull;
-  rv = NS_NewNativeLocalFile(nsDependentCString(uri), 1,  &historyFile);
-  return NS_FAILED(rv) ? nsnull : historyFile;
+  rv = NS_NewNativeLocalFile(nsDependentCString(uri), 1, &historyFile);
+  return historyFile;
 #else
   return gnome_vfs_uri_new(uri);
 #endif
@@ -163,7 +163,7 @@ static bool file_handle_open_uri(OUTPUT_STREAM **file_handle, LOCAL_FILE *uri)
 #ifndef MOZ_ENABLE_GNOMEVFS
   nsresult rv;
   rv = NS_NewLocalFileOutputStream(file_handle, uri, PR_RDWR | PR_APPEND, 0660);
-  
+
   return NS_SUCCEEDED(rv);
 #else
   return gnome_vfs_open_uri(
@@ -745,8 +745,8 @@ GetHistoryFileName(char **aHistoryFile)
 nsresult EmbedGlobalHistory::InitFile()
 {
   if (!mHistoryFile) {
-     if (NS_FAILED(GetHistoryFileName(&mHistoryFile)))
-       return NS_ERROR_FAILURE;
+    if (NS_FAILED(GetHistoryFileName(&mHistoryFile)))
+      return NS_ERROR_FAILURE;
   }
 
   LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
@@ -943,7 +943,7 @@ nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
   // Read the header
   nsCString utf8Buffer;
   PRBool moreData = PR_FALSE;
-  
+
   PRInt32 safe_limit = 0;
   do {
     rv = lineStream->ReadLine(utf8Buffer, &moreData);
@@ -951,7 +951,7 @@ nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
     if (NS_FAILED(rv))
       return NS_OK;
 
-    if(utf8Buffer.IsEmpty())
+    if (utf8Buffer.IsEmpty())
       continue;
     rv = GetEntry(utf8Buffer.get());
   } while (moreData && safe_limit < kMaxSafeReadEntriesCount);
@@ -960,9 +960,9 @@ nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
 #else
   bool exists = file_handle_uri_exists(file_uri);
   if (exists && !mFileHandle) {
-      rv = InitFile();
-      if (NS_FAILED(rv))
-        return NS_ERROR_FAILURE;
+    rv = InitFile();
+    if (NS_FAILED(rv))
+      return NS_ERROR_FAILURE;
   }
   if (!file_handle_seek(mFileHandle, FALSE))
     return NS_ERROR_FAILURE;
