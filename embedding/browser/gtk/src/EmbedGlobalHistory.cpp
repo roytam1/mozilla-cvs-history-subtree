@@ -58,6 +58,7 @@
 #define defaultSeparator 1
 // Number of changes in history before automatic flush
 static const PRInt32 kNewEntriesBetweenFlush = 10;
+static const PRInt32 kMaxSafeReadEntriesCount = 2000;
 // Default expiration interval: used if can't get preference service value
 static const PRUint32 kDefaultExpirationIntervalDays = 7;
 // Mozilla and EAL standard are different each other
@@ -929,15 +930,18 @@ nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
   // Read the header
   nsCString utf8Buffer;
   PRBool moreData = PR_FALSE;
-
+  
+  PRInt32 safe_limit = 0;
   do {
     rv = lineStream->ReadLine(utf8Buffer, &moreData);
+    safe_limit++;
     if (NS_FAILED(rv))
       return NS_OK;
+
     if(utf8Buffer.IsEmpty())
       continue;
     rv = GetEntry(utf8Buffer.get());
-  } while (moreData);
+  } while (moreData && safe_limit < kMaxSafeReadEntriesCount);
   fileStream->Close();
 
 #else
