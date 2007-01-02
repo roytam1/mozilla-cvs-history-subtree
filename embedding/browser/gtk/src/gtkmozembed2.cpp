@@ -1420,75 +1420,31 @@ gtk_moz_embed_single_create_window(GtkMozEmbed **aNewEmbed,
 }
 
 gboolean
-gtk_moz_embed_set_zoom_level (GtkMozEmbed *embed, GtkMozEmbedZoomType zoom_type, gint zoom_level,
-                              gint x, gint y, guint *legal_levels, gint layout_part)
+gtk_moz_embed_set_zoom_level (GtkMozEmbed *embed, gint zoom_level, gpointer context)
 {
   g_return_val_if_fail (embed != NULL, FALSE);
   g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), FALSE);
   g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), FALSE);
   EmbedPrivate *embedPrivate;
   embedPrivate = (EmbedPrivate *) embed->data;
-  switch (zoom_type) {
-
-    case ZOOM_SIMPLE:
-    {
-      embedPrivate->SetZoom (zoom_level);
-      break;
-    }
-    case ZOOM_AROUND_POINT:
-    {
-      break;
-    }
-    case ZOOM_STEPS:
-    {
-      break;
-    }
-    case ZOOM_FRAME:
-    {
-      break;
-    }
-    default:
-      break;
-  }
-
-  return TRUE;
+  nsresult rv = NS_OK;
+  if (embedPrivate)
+    rv = embedPrivate->SetZoom(zoom_level, (nsISupports*)context);
+  return NS_SUCCEEDED(rv);
 }
 
-gint
-gtk_moz_embed_get_zoom_level (GtkMozEmbed *embed,
-                              GtkMozEmbedZoomType zoom_type,
-                              gint *compare_frames)
+gboolean
+gtk_moz_embed_get_zoom_level (GtkMozEmbed *embed, gint *zoom_level, gpointer context)
 {
-  g_return_val_if_fail (embed != NULL, -1);
-  g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), -1);
-  g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), -1);
+  g_return_val_if_fail (embed != NULL, FALSE);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED (embed), FALSE);
+  g_return_val_if_fail (GTK_WIDGET_REALIZED (GTK_WIDGET(embed)), FALSE);
   EmbedPrivate *embedPrivate;
   embedPrivate = (EmbedPrivate *) embed->data;
-  gint zoom_level = 0;
-  switch (zoom_type) {
-
-    case ZOOM_SIMPLE:
-    {
-      embedPrivate->GetZoom (&zoom_level, compare_frames);
-      break;
-    }
-    case ZOOM_AROUND_POINT:
-    {
-      break;
-    }
-    case ZOOM_STEPS:
-    {
-      break;
-    }
-    case ZOOM_FRAME:
-    {
-      break;
-    }
-    default:
-      break;
-  }
-
-  return zoom_level;
+  nsresult rv = NS_OK;
+  if (embedPrivate)
+    rv = embedPrivate->GetZoom(zoom_level, (nsISupports*)context);
+  return NS_SUCCEEDED(rv);
 }
 
 gboolean
@@ -1569,8 +1525,28 @@ gtk_moz_embed_get_context_info(GtkMozEmbed *embed, gpointer event, gpointer *nod
   g_return_val_if_fail(embed != NULL, GTK_MOZ_EMBED_CTX_NONE);
   g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), GTK_MOZ_EMBED_CTX_NONE);
   embedPrivate = (EmbedPrivate *)embed->data;
+  
+   if (!event) {
+      nsIWebBrowser *webBrowser = nsnull;
+      gtk_moz_embed_get_nsIWebBrowser (GTK_MOZ_EMBED (embed), &webBrowser);
+      if (!webBrowser) return GTK_MOZ_EMBED_CTX_NONE;
+
+      nsCOMPtr<nsIDOMWindow> DOMWindow;
+      webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+      if (!DOMWindow) return GTK_MOZ_EMBED_CTX_NONE;
+
+      nsCOMPtr<nsIDOMDocument> doc;
+      DOMWindow->GetDocument (getter_AddRefs(doc));
+      if (!doc) return GTK_MOZ_EMBED_CTX_NONE;
+
+      nsCOMPtr<nsIDOMNode> docnode = do_QueryInterface(doc);
+      *node = docnode;
+      return GTK_MOZ_EMBED_CTX_DOCUMENT;
+  }
+
   if (embedPrivate->mEventListener) {
 #ifdef MOZILLA_INTERNAL_API //FIXME replace to using nsStringAPI
+
     EmbedContextMenuInfo * ctx_menu = embedPrivate->mEventListener->GetContextInfo();
     if (!ctx_menu)
       return 0;

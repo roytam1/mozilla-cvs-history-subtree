@@ -174,8 +174,9 @@ class EmbedPrivate {
   nsresult    ScrollToSelectedNode(nsIDOMNode *aDOMNode);
   nsresult    InsertTextToNode(nsIDOMNode *aDOMNode, const char *string);
   nsresult    GetFocusController(nsIFocusController **controller);
-  nsresult    GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel);
-  nsresult    SetZoom (gint zoomLevel);
+  nsresult    GetDOMWindowByNode(nsIDOMNode *aNode, nsIDOMWindow * *aDOMWindow);
+  nsresult    GetZoom (PRInt32 *aZoomLevel, nsISupports *aContext = nsnull);
+  nsresult    SetZoom (PRInt32 aZoomLevel, nsISupports *aContext = nsnull);
   nsresult    HasFrames  (PRUint32 *numberOfFrames);
   nsresult    GetMIMEInfo (const char **aMime, nsIDOMNode *aDOMNode = nsnull);
   nsresult    GetCacheEntry (const char *aStorage,

@@ -1884,70 +1884,109 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
   return NS_OK;
 }
 
-#define GTK_MOZ_EMBED_DIFFERENT_ZOOM_LEVEL 0
-#define GTK_MOZ_EMBED_EQUAL_ZOOM_LEVEL 1
-
 nsresult
-EmbedPrivate::GetZoom (gint *zoomLevel, gint *compareFramesZoomLevel) {
-  // setting default zoom value.
-  *zoomLevel = 100;
+EmbedPrivate::GetDOMWindowByNode(nsIDOMNode *aNode, nsIDOMWindow * *aDOMWindow)
+{
+  nsresult rv;
+  nsCOMPtr <nsIDOMDocument> nodeDoc;
+  rv = aNode->GetOwnerDocument(getter_AddRefs(nodeDoc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
   nsCOMPtr<nsIWebBrowser> webBrowser;
-  nsresult rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  // get main dom window
-  nsCOMPtr <nsIDOMWindow> DOMWindow;
-  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  // get window/document zoom
-  float zoomLevelFloat;
-  rv = DOMWindow->GetTextZoom(&zoomLevelFloat);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  *zoomLevel = (int)round (zoomLevelFloat * 100.);
-  if (compareFramesZoomLevel) {
-    *compareFramesZoomLevel = GTK_MOZ_EMBED_EQUAL_ZOOM_LEVEL;
-    // get frames.
-    nsCOMPtr <nsIDOMWindowCollection> frameCollection;
-    rv = DOMWindow->GetFrames (getter_AddRefs (frameCollection));
-    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-    // comparing frames' zoom level
-    PRUint32 numberOfFrames;
-    frameCollection->GetLength (&numberOfFrames);
-    if (numberOfFrames) {
-      //gint mainFrameCurrentIntZoomLevel = ((float) zoomLevelFloat) * 100.;
-      //gint mainFrameCurrentIntZoomLevel = zoomLevel;
-      nsCOMPtr <nsIDOMWindow> currentFrameDOMWindow;
-      gint currentFrameIntZoomLevel;
-      gfloat currentFrameFloatZoomLevel;
-      for (guint i= 0; i < numberOfFrames; i++) {
-        frameCollection->Item(i, getter_AddRefs (currentFrameDOMWindow));
-        if (!currentFrameDOMWindow) continue;
-        currentFrameDOMWindow->GetTextZoom(&currentFrameFloatZoomLevel);
-        currentFrameIntZoomLevel = (gint)round(currentFrameFloatZoomLevel * 100.);
-        if (currentFrameIntZoomLevel != *zoomLevel) {
-          *compareFramesZoomLevel = GTK_MOZ_EMBED_DIFFERENT_ZOOM_LEVEL;
-          break ;
-        }
-      } // for
-    } // if frames
-  } // if compareFramesZoomLevel
-  return NS_OK;
+  rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr <nsIDOMWindow> mainWindow;
+  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(mainWindow));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMDocument> mainDoc;
+  rv = mainWindow->GetDocument (getter_AddRefs(mainDoc));
+  if (mainDoc == nodeDoc) {
+    *aDOMWindow = mainWindow;
+    NS_IF_ADDREF(*aDOMWindow);
+    return NS_OK;
+  }
+
+  nsCOMPtr <nsIDOMWindowCollection> frames;
+  rv = mainWindow->GetFrames(getter_AddRefs (frames));
+  NS_ENSURE_SUCCESS(rv, rv);
+  PRUint32 frameCount = 0;
+  rv = frames->GetLength (&frameCount);
+  nsCOMPtr <nsIDOMWindow> curWindow;
+  for (unsigned int i= 0; i < frameCount; i++) {
+    rv = frames->Item(i, getter_AddRefs (curWindow));
+    if (!curWindow)
+      continue;
+    nsCOMPtr <nsIDOMDocument> currentDoc;
+    curWindow->GetDocument (getter_AddRefs(currentDoc));
+    if (currentDoc == nodeDoc) {
+      *aDOMWindow = curWindow;
+      NS_IF_ADDREF(*aDOMWindow);
+      break;
+    }
+  }
+  return rv;
 }
 
 nsresult
-EmbedPrivate::SetZoom (gint zoomLevel)
+EmbedPrivate::GetZoom (PRInt32 *aZoomLevel, nsISupports *aContext)
 {
+
+  NS_ENSURE_ARG_POINTER(aZoomLevel);
+
   nsresult rv;
-  nsCOMPtr<nsIWebBrowser> webBrowser;
-  rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  // get main dom window
+  *aZoomLevel = 100;
+
   nsCOMPtr <nsIDOMWindow> DOMWindow;
-  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  gfloat zoomLevelFloat; //, relativeScale;
-  zoomLevelFloat = (float) zoomLevel / 100.;
-  // performing text zooming first to get the user a faster visual response.
-  rv = DOMWindow->SetTextZoom(zoomLevelFloat);
+  if (aContext) {
+    nsCOMPtr <nsIDOMNode> node = do_QueryInterface(aContext, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    rv = GetDOMWindowByNode(node, getter_AddRefs(DOMWindow));
+  } else {
+    nsCOMPtr<nsIWebBrowser> webBrowser;
+    rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  float zoomLevelFloat;
+  if (DOMWindow)
+    rv = DOMWindow->GetTextZoom(&zoomLevelFloat);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  *aZoomLevel = (int)round (zoomLevelFloat * 100.);
+  return rv;
+}
+nsresult
+EmbedPrivate::SetZoom (PRInt32 aZoomLevel, nsISupports *aContext)
+{
+  nsresult rv;  
+  nsCOMPtr <nsIDOMWindow> DOMWindow;
+  
+  if (aContext) {
+    nsCOMPtr <nsIDOMNode> node = do_QueryInterface(aContext, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = GetDOMWindowByNode(node, getter_AddRefs(DOMWindow));
+  } else {
+    nsCOMPtr<nsIWebBrowser> webBrowser;
+    rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  
+  float zoomLevelFloat;
+  zoomLevelFloat = (float) aZoomLevel / 100.;
+
+  if (DOMWindow)
+    rv = DOMWindow->SetTextZoom(zoomLevelFloat);
+
   return rv;
 }
 
@@ -2021,7 +2060,7 @@ EmbedPrivate::GetCacheEntry(const char *aStorage,
     nsCOMPtr<nsICacheService> cacheService
       = do_GetService("@mozilla.org/network/cache-service;1", &rv);
     if (NS_FAILED(rv) || !cacheService) {
-      printf("do_GetService(kCacheServiceCID) failed : %x\n", rv);
+      NS_WARNING("do_GetService(kCacheServiceCID) failed\n");
       return rv;
     }
     NS_ADDREF(sCacheService = cacheService);
@@ -2031,7 +2070,7 @@ EmbedPrivate::GetCacheEntry(const char *aStorage,
                                     getter_AddRefs(session));
 
   if (NS_FAILED(rv)) {
-    printf("nsCacheService::CreateSession() failed : %x\n", rv);
+    NS_WARNING("nsCacheService::CreateSession() failed\n");
     return rv;
   }
   rv = session->OpenCacheEntry(nsCString(aKeyName),
@@ -2040,6 +2079,6 @@ EmbedPrivate::GetCacheEntry(const char *aStorage,
                                aDescriptor);
 
   if (rv != NS_ERROR_CACHE_KEY_NOT_FOUND)
-    printf("OpenCacheEntry(ACCESS_READ) returned: %x for non-existent entry\n", rv);
+    NS_WARNING("OpenCacheEntry(ACCESS_READ) returned error for non-existent entry\n");
   return rv;
 }

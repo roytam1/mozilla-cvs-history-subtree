@@ -96,14 +96,6 @@ extern "C" {
 #define GTK_IS_MOZ_EMBED(obj)          GTK_CHECK_TYPE((obj), GTK_TYPE_MOZ_EMBED)
 #define GTK_IS_MOZ_EMBED_CLASS(klass)  GTK_CHECK_CLASS_TYPE((klass), GTK_TYPE_MOZ_EMBED)
 
-typedef enum
-{
-  ZOOM_SIMPLE,
-  ZOOM_AROUND_POINT,
-  ZOOM_STEPS,
-  ZOOM_FRAME
-} GtkMozEmbedZoomType;
-
 typedef struct _GtkMozEmbed      GtkMozEmbed;
 typedef struct _GtkMozEmbedClass GtkMozEmbedClass;
 
@@ -219,8 +211,8 @@ GTKMOZEMBED_API(gchar*,        gtk_moz_embed_get_location,        (GtkMozEmbed *
 GTKMOZEMBED_API(void,          gtk_moz_embed_reload,              (GtkMozEmbed *embed, gint32 flags))
 GTKMOZEMBED_API(void,          gtk_moz_embed_set_chrome_mask,     (GtkMozEmbed *embed, guint32 flags))
 GTKMOZEMBED_API(guint32,       gtk_moz_embed_get_chrome_mask,     (GtkMozEmbed *embed))
-GTKMOZEMBED_API(gint,          gtk_moz_embed_get_zoom_level,      (GtkMozEmbed *embed, GtkMozEmbedZoomType, gint*))
-GTKMOZEMBED_API(gboolean,      gtk_moz_embed_set_zoom_level,      (GtkMozEmbed *embed, GtkMozEmbedZoomType, gint, gint, gint, guint*, gint))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_zoom_level,      (GtkMozEmbed *embed, gint*, gpointer))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_set_zoom_level,      (GtkMozEmbed *embed, gint, gpointer))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_load_image,          (GtkMozEmbed *embed, const gchar*))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_find_text,           (GtkMozEmbed *embed, const gchar*, gboolean, gboolean, gboolean, gboolean, gint))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_clipboard,           (GtkMozEmbed *embed, guint, gint))
