@@ -53,7 +53,7 @@
 #include "nsISVGCairoGlyphMetrics.h"
 #include "nsPresContext.h"
 #include "nsMemory.h"
-#include <cairo.h>
+#include "cairo.h"
 
 #include "nsISVGGradient.h"
 #include "nsSVGCairoGradient.h"

@@ -42,7 +42,7 @@
 #ifndef __NS_SVGCAIRO_PATHBUILDER_H__
 #define __NS_SVGCAIRO_PATHBUILDER_H__
 
-#include <cairo.h>
+#include "cairo.h"
 
 class nsISVGRendererPathBuilder;
 class nsISVGPathGeometrySource;

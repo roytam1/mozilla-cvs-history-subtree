@@ -88,7 +88,7 @@ CSRCS	= \
 	cairo-wideint.c \
 	$(NULL)
 
-EXPORTS		= cairo.h cairo-features.h
+EXPORTS		= cairo.h cairo-features.h cairo-rename.h
 
 
 ifeq ($(MOZ_GFX_TOOLKIT),windows)

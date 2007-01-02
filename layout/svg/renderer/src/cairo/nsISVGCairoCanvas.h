@@ -43,7 +43,7 @@
 #define __NS_ISVGCAIRO_CANVAS_H__
 
 #include "nsISVGRendererCanvas.h"
-#include <cairo.h>
+#include "cairo.h"
 
 // {590fdf19-7c06-4719-a17a-3706e2523fbc}
 #define NS_ISVGCAIROCANVAS_IID \

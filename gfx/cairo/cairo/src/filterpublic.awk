@@ -4,13 +4,21 @@
 # Usage:
 #   cat *.h | ./filterpublic.awk | sort > cairo-rename.h
 
-BEGIN { state = "public"; }
+BEGIN { state = "private"; }
 
-/^cairo_public/ { state = "function"; next; }
-/[a-zA-Z_]+/	{
-			if (state == "function") {
-				print "#define " $1 " _moz_" $1;
-				state = "public";
-			}
-		}
+/^CAIRO_BEGIN_DECLS/ {
+  state = "public";
+  next;
+}
+
+/^CAIRO_END_DECLS/ {
+  state = "private";
+  next;
+}
+
+/^cairo[a-zA-Z0-9_]+ \(.*/ {
+  if (state == "public") {
+    print "#define " $1 " _moz_" $1;
+  }
+}
 

@@ -38,7 +38,7 @@
 #define __NS_ISVGCAIRO_SURFACE_H__
 
 #include "nsISVGRendererSurface.h"
-#include <cairo.h>
+#include "cairo.h"
 
 #define NS_ISVGCAIROSURFACE_IID \
 { 0xc3a6c8d8, 0x36af, 0x47b1, { 0xac, 0xaf, 0xb3, 0x32, 0x32, 0x11, 0xbf, 0x39 } }
