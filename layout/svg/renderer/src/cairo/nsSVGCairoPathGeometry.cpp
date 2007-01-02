@@ -576,6 +576,7 @@ nsSVGCairoPathGeometry::Flatten(nsSVGPathData **aData)
 {
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
   GeneratePath(ctx, nsnull);
+  cairo_identity_matrix(ctx);
 
   *aData = new nsSVGPathData;
 

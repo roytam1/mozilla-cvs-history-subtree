@@ -1008,7 +1008,7 @@ GetSingleValue(nsISVGGlyphFragmentLeaf *fragment,
 
       if (textPath) {
         nsSVGPathData *data;
-        textPath->GetFlattenedPath(&data, nsnull);
+        textPath->GetFlattenedPath(&data);
 
         if (!data)
           return;

@@ -46,6 +46,7 @@
 #include "nsIDOMSVGAnimTransformList.h"
 #include "nsIDOMSVGTransformList.h"
 #include "nsSVGDefsFrame.h"
+#include "nsSVGMatrix.h"
 
 //----------------------------------------------------------------------
 // Implementation
@@ -64,7 +65,7 @@ NS_NewSVGDefsFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aN
   return NS_OK;
 }
 
-nsSVGDefsFrame::nsSVGDefsFrame()
+nsSVGDefsFrame::nsSVGDefsFrame() : mPropagateTransform(PR_TRUE)
 {
 }
 
@@ -328,6 +329,13 @@ nsSVGDefsFrame::NotifyRedrawUnsuspended()
 }
 
 NS_IMETHODIMP
+nsSVGDefsFrame::SetMatrixPropagation(PRBool aPropagate)
+{
+  mPropagateTransform = aPropagate;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsSVGDefsFrame::GetBBox(nsIDOMSVGRect **_retval)
 {
   *_retval = nsnull;
@@ -355,6 +363,12 @@ nsSVGDefsFrame::GetOuterSVGFrame()
 already_AddRefed<nsIDOMSVGMatrix>
 nsSVGDefsFrame::GetCanvasTM()
 {
+  if (!mPropagateTransform) {
+    nsIDOMSVGMatrix *retval;
+    NS_NewSVGMatrix(&retval);
+    return retval;
+  }
+
   if (!mCanvasTM) {
     // get our parent's tm and append local transforms (if any):
     NS_ASSERTION(mParent, "null parent");

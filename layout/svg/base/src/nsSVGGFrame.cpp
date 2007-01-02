@@ -222,22 +222,3 @@ nsSVGGFrame::GetBBox(nsIDOMSVGRect **_retval)
 {
   return nsSVGUtils::GetBBox(&mFrames, _retval);
 }
-
-NS_IMETHODIMP
-nsSVGGFrame::SetMatrixPropagation(PRBool aPropagate)
-{
-  mPropagateTransform = aPropagate;
-  return NS_OK;
-}
-
-already_AddRefed<nsIDOMSVGMatrix>
-nsSVGGFrame::GetCanvasTM()
-{
-  if (!mPropagateTransform) {
-    nsIDOMSVGMatrix *retval;
-    NS_NewSVGMatrix(&retval);
-    return retval;
-  }
-
-  return nsSVGDefsFrame::GetCanvasTM();
-}

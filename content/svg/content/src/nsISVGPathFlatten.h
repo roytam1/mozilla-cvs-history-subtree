@@ -45,7 +45,7 @@
 // nsISVGPathFlatten
 
 #define NS_ISVGPATHFLATTEN_IID \
-{ 0xefbe2079, 0x1d7b, 0x492c, { 0x90, 0x10, 0xa7, 0xf3, 0xe5, 0x8b, 0x35, 0xab } }
+{ 0x8bcaff8f, 0xb85e, 0x4138, { 0xaf, 0x29, 0x08, 0x9c, 0x96, 0x95, 0x8b, 0x5c } }
 
 #define NS_SVGPATHFLATTEN_LINE 0
 #define NS_SVGPATHFLATTEN_MOVE 1
@@ -110,8 +110,8 @@ class nsISVGPathFlatten : public nsISupports
 {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_ISVGPATHFLATTEN_IID; return iid; }
-  
-  NS_IMETHOD GetFlattenedPath(nsSVGPathData **_retval, nsIFrame *parent = nsnull)=0;
+
+  NS_IMETHOD GetFlattenedPath(nsSVGPathData **_retval, PRBool useLocalTransfrom = PR_FALSE)=0;
 };
 
 #endif // __NS_ISVGPATHFLATTEN_H__

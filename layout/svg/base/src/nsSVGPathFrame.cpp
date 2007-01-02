@@ -74,7 +74,7 @@ public:
   void GetMarkPoints(nsVoidArray *aMarks);
 
   // nsISVGPathFlatten interface
-  NS_IMETHOD GetFlattenedPath(nsSVGPathData **data, nsIFrame *parent);
+  NS_IMETHOD GetFlattenedPath(nsSVGPathData **data, PRBool useLocalTransform);
 
    // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -979,24 +979,26 @@ nsSVGPathFrame::GetType() const
 
 NS_IMETHODIMP
 nsSVGPathFrame::GetFlattenedPath(nsSVGPathData **data,
-                                 nsIFrame *parent)
+                                 PRBool useLocalTransform)
 {
-  nsIFrame *oldParent = mParent;
-  nsCOMPtr<nsISVGRendererRegion> dirty_region;
-
-  if (parent) {
-    mParent = parent;
-    GetGeometry()->Update(nsISVGGeometrySource::UPDATEMASK_CANVAS_TM,
-                          getter_AddRefs(dirty_region));
+  nsISVGChildFrame *svgParent = nsnull;
+  if (useLocalTransform) {
+    CallQueryInterface(mParent, &svgParent);
+    if (!svgParent)
+      return NS_ERROR_FAILURE;
   }
+
+  if (useLocalTransform)
+    svgParent->SetMatrixPropagation(PR_FALSE);
+  else
+    SetMatrixPropagation(PR_FALSE);
 
   GetGeometry()->Flatten(data);
 
-  if (parent) {
-    mParent = oldParent;
-    GetGeometry()->Update(nsISVGGeometrySource::UPDATEMASK_CANVAS_TM,
-                          getter_AddRefs(dirty_region));
-  }
+  if (useLocalTransform)
+    svgParent->SetMatrixPropagation(PR_TRUE);
+  else
+    SetMatrixPropagation(PR_TRUE);
 
   return NS_OK;
 }

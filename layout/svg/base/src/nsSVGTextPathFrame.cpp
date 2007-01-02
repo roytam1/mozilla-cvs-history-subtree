@@ -75,7 +75,7 @@ public:
                                     nsISVGValue::modificationType aModType);
 
   // nsISVGPathFlatten interface
-  NS_IMETHOD GetFlattenedPath(nsSVGPathData **data, nsIFrame *parent);
+  NS_IMETHOD GetFlattenedPath(nsSVGPathData **data, PRBool useLocalTransform);
 
    // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -269,7 +269,8 @@ nsresult GetReferencedFrame(nsIFrame **aServer, nsCAutoString& uriSpec, nsIConte
 }
 
 NS_IMETHODIMP
-nsSVGTextPathFrame::GetFlattenedPath(nsSVGPathData **data, nsIFrame *parent) {
+nsSVGTextPathFrame::GetFlattenedPath(nsSVGPathData **data,
+                                     PRBool useLocalTransform) {
   *data = nsnull;
   nsIFrame *path = nsnull;
 
@@ -299,7 +300,7 @@ nsSVGTextPathFrame::GetFlattenedPath(nsSVGPathData **data, nsIFrame *parent) {
   if (!flatten)
     return NS_ERROR_FAILURE;
 
-  return flatten->GetFlattenedPath(data, this);
+  return flatten->GetFlattenedPath(data, PR_TRUE);
 }
 
 //----------------------------------------------------------------------
