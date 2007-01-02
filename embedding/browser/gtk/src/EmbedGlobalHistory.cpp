@@ -354,7 +354,7 @@ PRBool entryHasExpired(HistoryEntry *entry)
   return (LL_CMP(lastVisitTime, <, expirationIntervalAgo));
 }
 
-// Traverse the history list to get all the entries data
+// Traverse the history list to get all the entry data
 void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
 {
   HistoryEntry *entry = (HistoryEntry *) data;
@@ -833,10 +833,9 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
     return NS_OK;
   if (!mHistoryFile)
   {
-    rv |= InitFile();
+    rv = InitFile();
     NS_ENSURE_SUCCESS(rv, rv);
-    rv |= FlushData(kFlushModeFullWrite);
-    BROKEN_RV_HANDLING_CODE(rv);
+    rv = FlushData(kFlushModeFullWrite);
     return rv;
   }
   LOCAL_FILE *uri = file_handle_uri_new(mHistoryFile);
@@ -977,6 +976,9 @@ nsresult EmbedGlobalHistory::ReadEntries(LOCAL_FILE *file_uri)
   /* Optimal buffer size for reading/writing the file. */
   nsAutoArrayPtr<char> line(new char[bytes]);
   nsAutoArrayPtr<char> buffer(new char[bytes]);
+  if (!line || !buffer)
+    return NS_ERROR_OUT_OF_MEMORY;
+
   do {
     read_bytes = file_handle_read(mFileHandle, (gpointer) buffer, bytes-1);
     if (read_bytes < 0)
