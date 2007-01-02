@@ -308,7 +308,7 @@ EmbedContextMenuInfo::GetSelectedText()
     if (NS_FAILED(rv) || !htmlDoc)
       return nsnull;
     rv = htmlDoc->GetSelection(cString);
-    if (NS_FAILED(rv) || cString.Length() <= 0)
+    if (NS_FAILED(rv) || cString.IsEmpty())
       return nsnull;
     rv = NS_OK;
   }
