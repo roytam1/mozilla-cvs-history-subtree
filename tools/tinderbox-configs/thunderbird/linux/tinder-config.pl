@@ -147,7 +147,7 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds/crazyhorse-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
 	      "/builds/tinderbox/Tb-Trunk-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.bz2"
 	      );
 
