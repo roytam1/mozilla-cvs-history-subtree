@@ -146,8 +146,9 @@ $BuildNameExtra = 'Tb-Release';
 # Configure only, don't build
 $ConfigureOnly = 1;
 
+$LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8.0/thunderbird-1.5.0.5.en-US.linux-i686.tar.gz' =>
+	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8.0/thunderbird-%version%.en-US.linux-i686.tar.gz' =>
 	      '/builds/tinderbox/Tb-Mozilla1.8.0-l10n/Linux_2.4.18-14_Depend/thunderbird.tar.gz'
 	      );
 
