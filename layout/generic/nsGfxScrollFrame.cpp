@@ -1832,8 +1832,8 @@ nsGfxScrollFrameInner::FireScrollEvent()
                           NS_EVENT_FLAG_INIT, &status);
     }
   } else {
-    content->HandleDOMEvent(prescontext, &event, nsnull,
-                            NS_EVENT_FLAG_INIT, &status);
+    prescontext->PresShell()->HandleEventWithTarget(&event, mOuter, content,
+                                                    NS_EVENT_FLAG_INIT, &status);
   }
 }
 
