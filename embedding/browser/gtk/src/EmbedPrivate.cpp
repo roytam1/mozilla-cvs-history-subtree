@@ -1172,11 +1172,11 @@ EmbedPrivate::ContentFinishedLoading(void)
         GtkMozLogin * login = NS_STATIC_CAST(GtkMozLogin*, ptr->data);
         if (login && login->user) {
           users_list = g_list_append(users_list, NS_strdup(login->user));
-          g_free((void*)login->user);
+          NS_Free((void*)login->user);
           if (login->pass)
-            g_free((void*)login->pass);
+            NS_Free((void*)login->pass);
           if (login->host)
-            g_free((void*)login->host);
+            NS_Free((void*)login->host);
         }
         else
           break;
