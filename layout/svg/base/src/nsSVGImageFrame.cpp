@@ -55,6 +55,7 @@
 #include "imgIRequest.h"
 #include "nsSVGClipPathFrame.h"
 #include "nsLayoutAtoms.h"
+#include "nsSVGUtils.h"
 
 #define NS_GET_BIT(rowptr, x) (rowptr[(x)>>3] &  (1<<(7-(x)&0x7)))
 
@@ -96,6 +97,7 @@ public:
 
   // nsISVGChildFrame interface:
   NS_IMETHOD PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
+  NS_IMETHOD GetFrameForPointSVG(float x, float y, nsIFrame** hit);
 
   // nsISVGGeometrySource interface:
   NS_IMETHOD GetStrokePaintType(PRUint16 *aStrokePaintType);
@@ -127,6 +129,7 @@ private:
   nsCOMPtr<nsISVGRendererSurface> mSurface;
 
   nsresult ConvertFrame(gfxIImageFrame *aNewFrame);
+  already_AddRefed<nsIDOMSVGMatrix> GetImageTransform();
 
   friend class nsSVGImageListener;
   PRBool mSurfaceInvalid;
@@ -302,6 +305,103 @@ NS_IMETHODIMP nsSVGImageFrame::ConstructPath(nsISVGRendererPathBuilder* pathBuil
   return NS_OK;
 }
 
+already_AddRefed<nsIDOMSVGMatrix>
+nsSVGImageFrame::GetImageTransform()
+{
+  nsCOMPtr<nsIDOMSVGMatrix> ctm;
+  GetCanvasTM(getter_AddRefs(ctm));
+
+  float x, y, width, height;
+  mX->GetValue(&x);
+  mY->GetValue(&y);
+  mWidth->GetValue(&width);
+  mHeight->GetValue(&height);
+
+  PRUint32 nativeWidth, nativeHeight;
+  mSurface->GetWidth(&nativeWidth);
+  mSurface->GetHeight(&nativeHeight);
+
+  PRUint16 align, meetOrSlice;
+  mPreserveAspectRatio->GetAlign(&align);
+  mPreserveAspectRatio->GetMeetOrSlice(&meetOrSlice);
+
+  // default to the defaults
+  if (align == nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_UNKNOWN)
+    align = nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMID;
+  if (meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_UNKNOWN)
+    meetOrSlice = nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_MEET;
+
+  float a, d, e, f;
+  a = width/nativeWidth;
+  d = height/nativeHeight;
+  e = 0.0f;
+  f = 0.0f;
+
+  if (align != nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_NONE &&
+      a != d) {
+    if (meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_MEET &&
+        a < d ||
+        meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_SLICE &&
+        d < a) {
+      d = a;
+      switch (align) {
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMIN:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMIN:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMIN:
+          break;
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMID:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMID:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMID:
+          f = (height - a * nativeHeight) / 2.0f;
+          break;
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMAX:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMAX:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMAX:
+          f = height - a * nativeHeight;
+          break;
+        default:
+          NS_NOTREACHED("Unknown value for align");
+      }
+    }
+    else if (
+      meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_MEET &&
+      d < a ||
+      meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_SLICE &&
+      a < d) {
+      a = d;
+      switch (align) {
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMIN:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMID:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMAX:
+          break;
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMIN:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMID:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMAX:
+          e = (width - a * nativeWidth) / 2.0f;
+          break;
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMIN:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMID:
+        case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMAX:
+          e = width - a * nativeWidth;
+          break;
+        default:
+          NS_NOTREACHED("Unknown value for align");
+      }
+    }
+    else NS_NOTREACHED("Unknown value for meetOrSlice");
+  }
+
+  nsCOMPtr<nsIDOMSVGMatrix> trans;
+  ctm->Translate(x + e, y + f, getter_AddRefs(trans));
+
+  nsCOMPtr<nsIDOMSVGMatrix> fini;
+  trans->ScaleNonUniform(a, d, getter_AddRefs(fini));
+
+  nsIDOMSVGMatrix *retval = nsnull;
+  fini.swap(retval);
+  return retval;
+}
+
 //----------------------------------------------------------------------
 // nsISVGChildFrame methods:
 NS_IMETHODIMP
@@ -362,85 +462,7 @@ nsSVGImageFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectT
     if (GetStyleDisplay()->IsScrollableOverflow())
       canvas->SetClipRect(ctm, x, y, width, height);
 
-    PRUint32 nativeWidth, nativeHeight;
-    mSurface->GetWidth(&nativeWidth);
-    mSurface->GetHeight(&nativeHeight);
-
-    PRUint16 align, meetOrSlice;
-    mPreserveAspectRatio->GetAlign(&align);
-    mPreserveAspectRatio->GetMeetOrSlice(&meetOrSlice);
-
-    // default to the defaults
-    if (align == nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_UNKNOWN)
-      align = nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMID;
-    if (meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_UNKNOWN)
-      meetOrSlice = nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_MEET;
-    
-    float a, d, e, f;
-    a = width/nativeWidth;
-    d = height/nativeHeight;
-    e = 0.0f;
-    f = 0.0f;
-
-    if (align != nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_NONE &&
-        a != d) {
-      if (meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_MEET &&
-          a < d ||
-          meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_SLICE &&
-          d < a) {
-        d = a;
-        switch (align) {
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMIN:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMIN:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMIN:
-            break;
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMID:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMID:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMID:
-            f = (height - a * nativeHeight) / 2.0f;
-            break;
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMAX:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMAX:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMAX:
-            f = height - a * nativeHeight;
-            break;
-          default:
-            NS_NOTREACHED("Unknown value for align");
-        }
-      }
-      else if (
-          meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_MEET &&
-          d < a ||
-          meetOrSlice == nsIDOMSVGPreserveAspectRatio::SVG_MEETORSLICE_SLICE &&
-          a < d) {
-        a = d;
-        switch (align) {
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMIN:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMID:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMINYMAX:
-            break;
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMIN:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMID:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMIDYMAX:
-            e = (width - a * nativeWidth) / 2.0f;
-            break;
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMIN:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMID:
-          case nsIDOMSVGPreserveAspectRatio::SVG_PRESERVEASPECTRATIO_XMAXYMAX:
-            e = width - a * nativeWidth;
-            break;
-          default:
-            NS_NOTREACHED("Unknown value for align");
-        }
-      }
-      else NS_NOTREACHED("Unknown value for meetOrSlice");
-    }
-
-    nsCOMPtr<nsIDOMSVGMatrix> trans;
-    ctm->Translate(x + e, y + f, getter_AddRefs(trans));
-
-    nsCOMPtr<nsIDOMSVGMatrix> fini;
-    trans->ScaleNonUniform(a, d, getter_AddRefs(fini));
+    nsCOMPtr<nsIDOMSVGMatrix> fini = GetImageTransform();
 
     canvas->CompositeSurfaceMatrix(mSurface,
                                    fini,
@@ -450,6 +472,27 @@ nsSVGImageFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectT
   canvas->PopClip();
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGImageFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
+{
+  if (GetStyleDisplay()->IsScrollableOverflow() && mSurface) {
+    PRUint32 nativeWidth, nativeHeight;
+    mSurface->GetWidth(&nativeWidth);
+    mSurface->GetHeight(&nativeHeight);
+
+    nsCOMPtr<nsIDOMSVGMatrix> fini = GetImageTransform();
+
+    if (!nsSVGUtils::HitTestRect(fini,
+                                 0, 0, nativeWidth, nativeHeight,
+                                 x, y)) {
+      *hit = nsnull;
+      return NS_OK;
+    }
+  }
+
+  return nsSVGPathGeometryFrame::GetFrameForPointSVG(x, y, hit);
 }
 
 nsIAtom *

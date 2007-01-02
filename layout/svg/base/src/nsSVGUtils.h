@@ -48,6 +48,7 @@ struct nsStyleSVGPaint;
 class nsIDOMSVGRect;
 class nsFrameList;
 class nsIDOMSVGLength;
+class nsIDOMSVGMatrix;
 
 class nsSVGUtils
 {
@@ -95,6 +96,14 @@ public:
   static float UserSpace(nsIContent *content,
                          nsIDOMSVGLength *length,
                          ctxDirection direction);
+
+  /*
+   * Hit test a given rectangle/matrix.
+   */
+  static PRBool
+  HitTestRect(nsIDOMSVGMatrix *aMatrix,
+              float aRX, float aRY, float aRWidth, float aRHeight,
+              float aX, float aY);
 };
 
 #endif

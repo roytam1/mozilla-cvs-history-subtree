@@ -54,6 +54,7 @@
 #include "nsWeakReference.h"
 #include "nsSVGMatrix.h"
 #include "nsLayoutAtoms.h"
+#include "nsSVGUtils.h"
 
 typedef nsContainerFrame nsSVGInnerSVGFrameBase;
 
@@ -149,6 +150,8 @@ protected:
 
   nsCOMPtr<nsIDOMSVGLength> mX;
   nsCOMPtr<nsIDOMSVGLength> mY;
+  nsCOMPtr<nsIDOMSVGLength> mWidth;
+  nsCOMPtr<nsIDOMSVGLength> mHeight;
 
   PRBool mPropagateTransform;
 };
@@ -180,6 +183,15 @@ nsSVGInnerSVGFrame::~nsSVGInnerSVGFrame()
 #ifdef DEBUG
 //  printf("~nsSVGInnerSVGFrame\n");
 #endif
+  nsCOMPtr<nsISVGValue> value;
+  if (mX && (value = do_QueryInterface(mX)))
+      value->RemoveObserver(this);
+  if (mY && (value = do_QueryInterface(mY)))
+      value->RemoveObserver(this);
+  if (mWidth && (value = do_QueryInterface(mWidth)))
+      value->RemoveObserver(this);
+  if (mHeight && (value = do_QueryInterface(mHeight)))
+      value->RemoveObserver(this);
 }
 
 nsresult nsSVGInnerSVGFrame::Init()
@@ -217,6 +229,28 @@ nsresult nsSVGInnerSVGFrame::Init()
     NS_ASSERTION(mY, "no y");
     if (!mY) return NS_ERROR_FAILURE;
     nsCOMPtr<nsISVGValue> value = do_QueryInterface(mY);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    SVGElement->GetWidth(getter_AddRefs(length));
+    length->GetAnimVal(getter_AddRefs(mWidth));
+    NS_ASSERTION(mWidth, "no width");
+    if (!mWidth) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mWidth);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    SVGElement->GetHeight(getter_AddRefs(length));
+    length->GetAnimVal(getter_AddRefs(mHeight));
+    NS_ASSERTION(mHeight, "no height");
+    if (!mHeight) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mHeight);
     if (value)
       value->AddObserver(this);
   }
@@ -367,19 +401,11 @@ nsSVGInnerSVGFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRe
   canvas->PushClip();
 
   if (GetStyleDisplay()->IsScrollableOverflow()) {
-    nsCOMPtr<nsIDOMSVGAnimatedLength> anim;
-    nsCOMPtr<nsIDOMSVGLength> val;
-    nsCOMPtr<nsISVGSVGElement> svg = do_QueryInterface(mContent);
-
     float x, y, width, height;
     mX->GetValue(&x);
     mY->GetValue(&y);
-    svg->GetWidth(getter_AddRefs(anim));
-    anim->GetAnimVal(getter_AddRefs(val));
-    val->GetValue(&width);
-    svg->GetHeight(getter_AddRefs(anim));
-    anim->GetAnimVal(getter_AddRefs(val));
-    val->GetValue(&height);
+    mWidth->GetValue(&width);
+    mHeight->GetValue(&height);
 
     nsCOMPtr<nsIDOMSVGMatrix> clipTransform;
     if (!mPropagateTransform) {
@@ -415,6 +441,29 @@ nsSVGInnerSVGFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
 //  printf("nsSVGInnerSVGFrame(%p)::GetFrameForPoint\n", this);
 #endif
   *hit = nsnull;
+
+  if (GetStyleDisplay()->IsScrollableOverflow()) {
+    float clipX, clipY, clipWidth, clipHeight;
+    nsCOMPtr<nsIDOMSVGMatrix> clipTransform;
+
+    mX->GetValue(&clipX);
+    mY->GetValue(&clipY);
+    mWidth->GetValue(&clipWidth);
+    mHeight->GetValue(&clipHeight);
+
+    nsISVGContainerFrame *parent = nsnull;
+    CallQueryInterface(mParent, &parent);
+
+    if (parent) {
+      clipTransform = parent->GetCanvasTM();
+
+      if (!nsSVGUtils::HitTestRect(clipTransform,
+                                   clipX, clipY, clipWidth, clipHeight,
+                                   x, y))
+        return NS_OK;
+    }
+  }
+
   for (nsIFrame* kid = mFrames.FirstChild(); kid;
        kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=nsnull;
