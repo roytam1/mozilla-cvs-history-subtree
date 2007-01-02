@@ -489,8 +489,20 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
   PR_END_MACRO
 
 #define BROKEN_STRING_BUILDER(var) PR_BEGIN_MACRO \
- /* This is just wrong */                         \
- PR_END_MACRO
+  /* This is just wrong */                        \
+  PR_END_MACRO
+
+#define UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(newed) PR_BEGIN_MACRO \
+  /* OOPS this code is using a glib allocation function which     \
+   * will cause the application to crash when it runs out of      \
+   * memory. This is not cool. either g_try methods should be     \
+   * used or malloc, or new (note that gecko /will/ be replacing  \
+   * its operator new such that new will not throw exceptions).   \
+   * XXX please fix me.                                           \
+   */                                                             \
+  if (!newed) {                                                   \
+  }                                                               \
+  PR_END_MACRO
 
 //*****************************************************************************
 // EmbedGlobalHistory::nsIGlobalHistory
@@ -552,6 +564,7 @@ NS_IMETHODIMP EmbedGlobalHistory::AddURI(nsIURI *aURI, PRBool aRedirect, PRBool 
   // It is not in the history
   if (!entry) {
     entry = g_new0(HistoryEntry, 1);
+    UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(entry);
     rv |= OnVisited(entry);
     SET_TITLE(entry, hostname);
     rv |= SetURL(entry, aURL);
@@ -895,6 +908,7 @@ nsresult EmbedGlobalHistory::GetEntry(const char *entry)
   url[urlLength]='\0';
   title[titleLength]='\0';
   HistoryEntry *newEntry = g_new0(HistoryEntry, 1);
+  UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(newEntry);
   if (!newEntry)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -1036,6 +1050,7 @@ nsresult EmbedGlobalHistory::GetContentList(GtkMozHistoryItem **GtkHI, int *coun
 
   unsigned int num_items = 0;
   *GtkHI = g_new0(GtkMozHistoryItem, g_list_length(mURLList));
+  UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(*GtkHI);
   GtkMozHistoryItem * item = (GtkMozHistoryItem *)*GtkHI;
   while (num_items < g_list_length(mURLList)) {
     HistoryEntry *entry = NS_STATIC_CAST(HistoryEntry*,

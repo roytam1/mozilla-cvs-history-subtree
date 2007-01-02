@@ -119,6 +119,26 @@
 #define GET_OBJECT_CLASS_TYPE(x) (GTK_OBJECT_CLASS(x)->type)
 #endif /* MOZ_WIDGET_GTK */
 
+#define UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(newed) PR_BEGIN_MACRO \
+  /* OOPS this code is using a glib allocation function which     \
+   * will cause the application to crash when it runs out of      \
+   * memory. This is not cool. either g_try methods should be     \
+   * used or malloc, or new (note that gecko /will/ be replacing  \
+   * its operator new such that new will not throw exceptions).   \
+   * XXX please fix me.                                           \
+   */                                                             \
+  if (!newed) {                                                   \
+  }                                                               \
+  PR_END_MACRO
+
+#define ALLOC_NOT_CHECKED(newed) PR_BEGIN_MACRO \
+  /* This might not crash, but the code probably isn't really \
+   * designed to handle it, perhaps the code should be fixed? \
+   */                                                         \
+  if (!newed) {                                               \
+  }                                                           \
+  PR_END_MACRO
+
 // CID used to get the plugin manager
 static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
 
@@ -434,9 +454,13 @@ gtk_moz_embed_common_get_logins(const char* uri, GList **list)
       nsPassword->GetUser (unicodeName);
       nsPassword->GetPassword (unicodePassword);
       GtkMozLogin * login = g_new0(GtkMozLogin, 1);
+      UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(login);
       login->user = ToNewUTF8String(unicodeName);
+      ALLOC_NOT_CHECKED(login->user);
       login->pass = ToNewUTF8String(unicodePassword);
+      ALLOC_NOT_CHECKED(login->pass);
       login->host = NS_strdup(host.get());
+      ALLOC_NOT_CHECKED(login->host);
       login->index = ret;
       *list = g_list_append(*list, login);
     }
@@ -509,6 +533,7 @@ gtk_moz_embed_common_get_cookie_list(void)
     result = cookieEnumerator->GetNext(getter_AddRefs(nsCookie));
     g_return_val_if_fail(NS_SUCCEEDED(result), NULL);
     c = g_new0(GtkMozCookieList, 1);
+    UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(c);
     nsCAutoString transfer;
     nsCookie->GetHost(transfer);
     c->domain = g_strdup(transfer.get());
@@ -603,6 +628,7 @@ gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
   for (int aIndex = 0; aIndex < (gint) aLength; aIndex++)
   {
     GtkMozPlugin *list_item = g_new0(GtkMozPlugin, 1);
+    UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(list_item);
 
     rv = aItems[aIndex]->GetName(string);
     if (!NS_FAILED(rv))
