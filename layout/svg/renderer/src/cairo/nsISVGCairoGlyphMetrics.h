@@ -43,7 +43,7 @@
 #define __NS_ISVGCAIRO_GLYPHMETRICS_H__
 
 #include "nsISVGRendererGlyphMetrics.h"
-#include <cairo.h>
+#include "cairo.h"
 
 #define NS_ISVGCAIROGLYPHMETRICS_IID \
 { 0xabfddcf9, 0x7c92, 0x4b1d, { 0xbd, 0xbc, 0xac, 0xeb, 0x0d, 0x77, 0x8f, 0xc5 } }

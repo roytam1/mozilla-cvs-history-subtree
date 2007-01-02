@@ -51,7 +51,7 @@ CAIRO_BEGIN_DECLS
 /* internal structures and mutexes.                               */
 
 void
-cairo_os2_initialize(void);
+cairo_os2_initialize (void);
 
 /* cairo_os2_uninitialize() :                                     */
 /*                                                                */
@@ -62,7 +62,7 @@ cairo_os2_initialize(void);
 /* to let it free all the resources it has allocated.             */
 
 void
-cairo_os2_uninitialize(void);
+cairo_os2_uninitialize (void);
 
 #if CAIRO_HAS_OS2_SURFACE
 

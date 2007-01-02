@@ -52,7 +52,7 @@
 #include "nsSVGCairoPathBuilder.h"
 #include "nsMemory.h"
 #include <float.h>
-#include <cairo.h>
+#include "cairo.h"
 #include "nsSVGCairoRegion.h"
 #include "nsISVGGradient.h"
 #include "nsSVGCairoGradient.h"

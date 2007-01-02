@@ -43,7 +43,7 @@
 #include "nsISVGRendererPathBuilder.h"
 #include "nsSVGCairoPathBuilder.h"
 #include <math.h>
-#include <cairo.h>
+#include "cairo.h"
 
 /**
  * \addtogroup cairo_renderer Cairo Rendering Engine

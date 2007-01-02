@@ -50,7 +50,7 @@
 #include "nsIDOMSVGRect.h"
 #include "nsSVGTypeCIDs.h"
 #include "nsIComponentManager.h"
-#include <cairo.h>
+#include "cairo.h"
 
 extern cairo_surface_t *gSVGCairoDummySurface;
 

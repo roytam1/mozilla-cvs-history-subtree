@@ -39,7 +39,7 @@
 #include "nsSVGCairoSurface.h"
 #include "nsISVGCairoSurface.h"
 #include "prmem.h"
-#include <cairo.h>
+#include "cairo.h"
 
 /**
  * \addtogroup cairo_renderer Cairo Rendering Engine

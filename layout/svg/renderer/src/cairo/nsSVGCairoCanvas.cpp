@@ -49,7 +49,7 @@
 #include "nsPresContext.h"
 #include "nsRect.h"
 #include "nsISVGCairoSurface.h"
-#include <cairo.h>
+#include "cairo.h"
 
 #ifdef MOZ_X11
 extern "C" {

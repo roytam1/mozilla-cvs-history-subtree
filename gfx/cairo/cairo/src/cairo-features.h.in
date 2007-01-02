@@ -40,6 +40,8 @@
 /* Include NSPR's prcpucfg.h for endianness information */
 #include "prcpucfg.h"
 
+#include "cairo-rename.h"
+
 #ifdef IS_BIG_ENDIAN
 #define WORDS_BIGENDIAN
 #endif

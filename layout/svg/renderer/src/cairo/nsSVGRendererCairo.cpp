@@ -47,7 +47,7 @@
 #include "nsSVGCairoCanvas.h"
 #include "nsSVGCairoRegion.h"
 #include "nsSVGCairoSurface.h"
-#include <cairo.h>
+#include "cairo.h"
 
 cairo_surface_t *gSVGCairoDummySurface = nsnull;
 
