@@ -143,8 +143,9 @@ $BuildNameExtra = 'Fx Trunk l10n';
 
 # Configure only, don't build.
 $ConfigureOnly = 1;
+$LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-3.0a1.en-US.linux-i686.tar.bz2" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.linux-i686.tar.bz2" =>
 	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/firefox.tar.bz2"
 	      );
 

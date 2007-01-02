@@ -139,10 +139,11 @@ $BuildNameExtra = 'Fx-Release';
 $ConfigureOnly = 1; 
 
 # Existing build files to download.
+$LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-3.0a1.en-US.win32.installer.exe" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.installer.exe" =>
 	      "/cygdrive/c/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Clobber/firefox-installer.exe",
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-3.0a1.en-US.win32.zip" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.zip" =>
 	      "/cygdrive/c/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Clobber/firefox.zip"
 	      );
 

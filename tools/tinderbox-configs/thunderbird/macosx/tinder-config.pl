@@ -139,8 +139,9 @@ $BuildNameExtra = 'Tb Trunk l10n';
 
 # Configure only, don't build.
 $ConfigureOnly = 1;
+$LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	     "http://stage.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds/triton-trunk/thunderbird-3.0a1.en-US.mac.dmg" =>
+	     "http://stage.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds/triton-trunk/thunderbird-%version%.en-US.mac.dmg" =>
 	     "/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.7.0_Clobber/thunderbird.dmg"
 	     );
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.7.0_Clobber/thunderbird.dmg";

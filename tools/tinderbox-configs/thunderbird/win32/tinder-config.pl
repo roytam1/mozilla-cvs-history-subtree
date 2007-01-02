@@ -139,9 +139,10 @@ $BuildNameExtra = 'Tb-Release';
 $ConfigureOnly = 1;
 
 # On windows
-%WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-3.0a1.en-US.win32.installer.exe" =>
+$LocalizationVersionFile = 'mail/config/version.txt';
+%WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.installer.exe" =>
 	      "/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird-installer.exe",
-	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-3.0a1.en-US.win32.zip" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.zip" =>
 	      "/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird.zip");
 
 $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird-installer.exe";
