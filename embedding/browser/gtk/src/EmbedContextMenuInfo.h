@@ -95,7 +95,5 @@ private:
 
   EmbedPrivate           *mOwner;
   nsCOMPtr<nsIDOMNode>    mOrigNode;
-  nsString                mSOrigNode;
-  nsString                mSEventNode;
 }; // class EmbedContextMenuInfo
 #endif // EmbedContextMenuInfo_h__
