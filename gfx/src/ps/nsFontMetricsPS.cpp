@@ -1044,8 +1044,10 @@ nsFontPSXft::Init(nsXftEntry* aEntry,
 
 nsFontPSXft::~nsFontPSXft()
 {
-  if (mEntry->mFace) 
+  if (mEntry->mFace) {
     FT_Done_Face(mEntry->mFace);
+    mEntry->mFace = nsnull;
+  }
 
   if (FT_Done_FreeType(mFreeTypeLibrary))
     return;
@@ -2336,8 +2338,10 @@ nsXftType1Generator::Init(nsXftEntry* aEntry)
 
 nsXftType1Generator::~nsXftType1Generator()
 {
-  if (mEntry->mFace) 
+  if (mEntry->mFace) {
     FT_Done_Face(mEntry->mFace);
+    mEntry->mFace = nsnull;
+  }
 
   if (FT_Done_FreeType(mFreeTypeLibrary))
     return;
