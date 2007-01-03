@@ -1,4 +1,4 @@
-pref("general.useragent.extra.minimo", "Minimo/0.016");
+pref("general.useragent.extra.minimo", "Minimo/0.020");
 
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/xhtml?q=");
@@ -14,7 +14,7 @@ pref("browser.cache.disk_cache_ssl",        false);
 // 0 = once-per-session, 1 = each-time, 2 = never, 3 = when-appropriate/automatically
 pref("browser.cache.check_doc_frequency",   3);
 
-pref("browser.sessionhistory.max_entries", 10);
+pref("browser.sessionhistory.max_entries", 3);
 
 // Fastback caching - if this pref is negative, then we calculate the number
 // of content viewers to cache based on the amount of available memory.
@@ -627,7 +627,7 @@ pref("ssr.enabled", true);
 
 pref("skey.enabled", true);
 
-pref("browser.startup.homepage", "http://www.meer.net/~dougt/minimo_ce/start.html");
+pref("browser.startup.homepage", "resource://gre/res/start.html");
 
 pref("snav.enabled", true);
 pref("accessibility.tabfocus", 7);

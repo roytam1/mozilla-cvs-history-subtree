@@ -127,6 +127,7 @@ echo Copying over customized files
 
 cp -a ../customization/all.js                             $OBJDIR/dist/minimo/greprefs
 cp -a ../customization/HelperAppDlg.js                    $OBJDIR/dist/minimo/components
+cp -a ../customization/start.html                         $OBJDIR/dist/minimo/res
 
 cat ../customization/ua.css.additions >> $OBJDIR/dist/minimo/res/ua.css
 
