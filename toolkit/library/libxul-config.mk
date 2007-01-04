@@ -354,6 +354,14 @@ DEFINES += -DMOZ_SPELLCHECK
 COMPONENT_LIBS += spellchecker
 endif
 
+ifdef MOZ_ZAP
+COMPONENT_LIBS += \
+	zap_base \
+	zap_netutils \
+	zmk \
+	$(NULL)
+endif
+
 ifdef GC_LEAK_DETECTOR
 EXTRA_DSO_LIBS += boehm
 endif

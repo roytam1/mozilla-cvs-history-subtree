@@ -142,15 +142,13 @@ MODULES_NS_core :=                              \
   mozilla/js                                    \
   mozilla/js/src                                \
   mozilla/js/jsd                                \
-  $(NULL)                                       \
+  mozilla/db                                    \
+  $(NULL)
 
 MODULES_core :=                                 \
   $(MODULES_necko)                              \
   mozilla/caps                                  \
   mozilla/content                               \
-  mozilla/db/.cvsignore                         \
-  mozilla/db/Makefile.in                        \
-  mozilla/db/README.html                        \
   mozilla/db/mdb                                \
   mozilla/db/mork                               \
   mozilla/docshell                              \
@@ -197,7 +195,6 @@ MODULES_core :=                                 \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
-  mozilla/tools/cross-commit                    \
   $(NULL)
 
 LOCALES_necko :=                                \
@@ -1219,6 +1216,8 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	netwerk/build/nsNetCID.h \
 	netwerk/build/nsNetModule.cpp \
 	toolkit/content/widgets/checkbox.xml \
+	toolkit/library/libxul-config.mk \
+	toolkit/library/nsStaticXULComponents.cpp \
 	xpcom/ds/nsHashPropertyBag.cpp \
 	xpcom/ds/nsHashPropertyBag.h \
 	xpcom/ds/nsIPropertyBag2.idl \

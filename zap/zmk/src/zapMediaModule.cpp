@@ -385,5 +385,5 @@ static const nsModuleComponentInfo gComponents[] =
   }
 };
 
-NS_IMPL_NSGETMODULE(zapMediaService, gComponents)
+NS_IMPL_NSGETMODULE(zapMediaModule, gComponents)
   

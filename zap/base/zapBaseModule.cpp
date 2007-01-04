@@ -48,5 +48,5 @@ static const nsModuleComponentInfo gComponents[] =
   }
 };
 
-NS_IMPL_NSGETMODULE(zapCryptoUtilsModule, gComponents)
+NS_IMPL_NSGETMODULE(zapBaseModule, gComponents)
   

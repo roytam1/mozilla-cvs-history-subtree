@@ -5,8 +5,6 @@
 mk_add_options MOZ_CO_PROJECT=zap
 ac_add_options --enable-application=zap
 
-ac_add_options --enable-extensions=xml-rpc,gnomevfs,jssh
 ac_add_options --enable-crypto
-
-# temporarily disable libxul, broken by the move of base/netutils/zmk to tier 9
-ac_add_options --disable-libxul
+#ac_add_options --enable-extensions=xml-rpc,gnomevfs,jssh
+#ac_add_options --disable-libxul

@@ -262,6 +262,15 @@
 #define SPELLCHECK_MODULE
 #endif
 
+#ifdef MOZ_ZAP
+#define ZAP_MODULES                          \
+    MODULE(zapNetUtilsModule)                \
+    MODULE(zapBaseModule)                    \
+    MODULE(zapMediaModule)
+#else
+#define ZAP_MODULES
+#endif
+
 #define XUL_MODULES                          \
     MODULE(xpconnect)                        \
     MATHML_MODULES                           \
@@ -312,6 +321,7 @@
     MODULE(NSS)                              \
     SYSTEMPREF_MODULES                       \
     SPELLCHECK_MODULE                        \
+    ZAP_MODULES                              \
     /* end of list */
 
 #define MODULE(_name) \

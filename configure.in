@@ -4414,7 +4414,7 @@ zap)
   MOZ_XULRUNNER=1
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs jssh"
+  MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs"
   if test "$MOZ_STORAGE"; then
     MOZ_PLACES=1
   fi
@@ -5715,6 +5715,11 @@ fi
 if test `echo "$MOZ_EXTENSIONS" | grep -c spellcheck` -ne 0; then
     AC_MSG_WARN([spellcheck is no longer an extension.])
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|spellcheck||g'`
+fi
+
+if test -n "$MOZ_NO_XPCOM_OBSOLETE" && test `echo "$MOZ_EXTENSIONS" | grep -c sroaming` -ne 0; then
+    AC_MSG_WARN([Cannot currently build sroaming without xpcom obsolete -- bug 249343. Removing sroaming from MOZ_EXTENSIONS.])
+    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|sroaming||'`
 fi
 
 dnl Remove dupes
