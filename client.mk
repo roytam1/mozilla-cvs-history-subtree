@@ -1217,6 +1217,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	netwerk/build/nsNetModule.cpp \
 	toolkit/content/widgets/checkbox.xml \
 	toolkit/library/libxul-config.mk \
+	toolkit/library/Makefile.in \
 	toolkit/library/nsStaticXULComponents.cpp \
 	xpcom/ds/nsHashPropertyBag.cpp \
 	xpcom/ds/nsHashPropertyBag.h \
