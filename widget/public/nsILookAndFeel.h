@@ -189,7 +189,24 @@ public:
     eMetric_TreeLazyScrollDelay,                          // delay for triggering the tree scrolling
     eMetric_TreeScrollDelay,                              // delay for scrolling the tree
     eMetric_TreeScrollLinesMax,                           // the maximum number of lines to be scrolled at ones
-    eMetric_TabFocusModel                                 // What type of tab-order to use
+    eMetric_TabFocusModel,                                // What type of tab-order to use
+
+    /*
+     * eMetric_AlertNotificationOrigin indicates from which corner of the
+     * screen alerts slide in, and from which direction (horizontal/vertical).
+     * 0, the default, represents bottom right, sliding vertically.
+     * Use any bitwise combination of the following constants:
+     * NS_ALERT_HORIZONTAL (1), NS_ALERT_LEFT (2), NS_ALERT_TOP (4).
+     *
+     *       6       4
+     *     +-----------+
+     *    7|           |5
+     *     |           |
+     *    3|           |1
+     *     +-----------+
+     *       2       0
+     */
+    eMetric_AlertNotificationOrigin
   } nsMetricID;
 
   enum {
@@ -256,5 +273,13 @@ public:
 	// Of course if other plaforms work like the Mac, they can use it too.
 #define NS_DONT_CHANGE_COLOR 	NS_RGB(0x01, 0x01, 0x01)
 
+
+// ------------------------------------------
+//  Bits for eMetric_AlertNotificationOrigin
+// ------------------------------------------
+
+#define NS_ALERT_HORIZONTAL 1
+#define NS_ALERT_LEFT       2
+#define NS_ALERT_TOP        4
 
 #endif /* __nsILookAndFeel */

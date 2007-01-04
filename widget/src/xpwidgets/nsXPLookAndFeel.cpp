@@ -107,6 +107,8 @@ nsLookAndFeelIntPref nsXPLookAndFeel::sIntPrefs[] =
     eMetric_TreeScrollLinesMax, PR_FALSE, nsLookAndFeelTypeInt, 0 },
   { "accessibility.tabfocus",
     eMetric_TabFocusModel, PR_FALSE, nsLookAndFeelTypeInt, 0 },
+  { "ui.alertNotificationOrigin",
+    eMetric_AlertNotificationOrigin, PR_FALSE, nsLookAndFeelTypeInt, 0 },
 };
 
 nsLookAndFeelFloatPref nsXPLookAndFeel::sFloatPrefs[] =
