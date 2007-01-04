@@ -58,7 +58,7 @@ $ProductName              = "Firefox";
 $VendorName               = "Mozilla";
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
+$RegxpcomTest             = 0;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
