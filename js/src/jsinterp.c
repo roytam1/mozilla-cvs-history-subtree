@@ -4582,6 +4582,7 @@ interrupt:
             if (!ok)
                 goto out;
             PUSH_OPND(rval);
+            obj = NULL;
           END_CASE(JSOP_ARGUMENTS)
 
           BEGIN_CASE(JSOP_ARGSUB)
