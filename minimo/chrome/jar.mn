@@ -27,6 +27,10 @@ minimo-skin.jar:
 	skin/classic/minimo/extensions/icon-pan.png    (skin/extensions/icon-pan.png)
 	skin/classic/minimo/extensions/icon-pan-toggle.png    (skin/extensions/icon-pan-toggle.png)
 	skin/classic/minimo/extensions/icon-urlbar.png    (skin/extensions/icon-urlbar.png)
+	skin/classic/minimo/extensions/google.png       (skin/extensions/google.png)
+	skin/classic/minimo/extensions/map.png          (skin/extensions/map.png)
+	skin/classic/minimo/extensions/mobile.png       (skin/extensions/mobile.png)
+	skin/classic/minimo/extensions/weather.png      (skin/extensions/weather.png)
 
 minimo-skin-vga.jar:
 %   skin    minimo   classic-vga/1.0 %skin/classic/minimo/
@@ -57,7 +61,11 @@ minimo-skin-vga.jar:
 	skin/classic/minimo/extensions/icon-pan.png    (skin-vga/extensions/icon-pan.png)
 	skin/classic/minimo/extensions/icon-pan-toggle.png    (skin-vga/extensions/icon-pan-toggle.png)
 	skin/classic/minimo/extensions/icon-urlbar.png    (skin-vga/extensions/icon-urlbar.png)
-
+	skin/classic/minimo/extensions/google.png       (skin/extensions/google.png)
+	skin/classic/minimo/extensions/map.png          (skin/extensions/map.png)
+	skin/classic/minimo/extensions/mobile.png       (skin/extensions/mobile.png)
+	skin/classic/minimo/extensions/weather.png      (skin/extensions/weather.png)
+	
 minimo.jar:
 %   content minimo               %content/minimo/
 	content/minimo/minimo.js		 (content/minimo.js)
