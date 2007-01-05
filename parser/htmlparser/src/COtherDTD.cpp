@@ -732,12 +732,6 @@ nsresult COtherDTD::CollectAttributes(nsIParserNode& aNode,eHTMLTags aTag,PRInt3
     for(attr=0;attr<aCount;++attr){  
       theToken=mTokenizer->PopToken(); 
       if(theToken)  {
-        // Sanitize the key for it might contain some non-alpha-non-digit characters
-        // at its end.  Ex. <OPTION SELECTED/> - This will be tokenized as "<" "OPTION",
-        // "SELECTED/", and ">". In this case the "SELECTED/" key will be sanitized to
-        // a legitimate "SELECTED" key.
-        ((CAttributeToken*)theToken)->SanitizeKey();
- 
         aNode.AddAttribute(theToken); 
       }
     }
