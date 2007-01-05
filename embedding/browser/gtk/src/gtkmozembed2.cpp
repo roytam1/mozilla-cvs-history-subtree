@@ -1526,22 +1526,22 @@ gtk_moz_embed_get_context_info(GtkMozEmbed *embed, gpointer event, gpointer *nod
   g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), GTK_MOZ_EMBED_CTX_NONE);
   embedPrivate = (EmbedPrivate *)embed->data;
 
-   if (!event) {
-      nsIWebBrowser *webBrowser = nsnull;
-      gtk_moz_embed_get_nsIWebBrowser (GTK_MOZ_EMBED (embed), &webBrowser);
-      if (!webBrowser) return GTK_MOZ_EMBED_CTX_NONE;
+  if (!event) {
+    nsIWebBrowser *webBrowser = nsnull;
+    gtk_moz_embed_get_nsIWebBrowser (GTK_MOZ_EMBED (embed), &webBrowser);
+    if (!webBrowser) return GTK_MOZ_EMBED_CTX_NONE;
 
-      nsCOMPtr<nsIDOMWindow> DOMWindow;
-      webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
-      if (!DOMWindow) return GTK_MOZ_EMBED_CTX_NONE;
+    nsCOMPtr<nsIDOMWindow> DOMWindow;
+    webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+    if (!DOMWindow) return GTK_MOZ_EMBED_CTX_NONE;
 
-      nsCOMPtr<nsIDOMDocument> doc;
-      DOMWindow->GetDocument (getter_AddRefs(doc));
-      if (!doc) return GTK_MOZ_EMBED_CTX_NONE;
+    nsCOMPtr<nsIDOMDocument> doc;
+    DOMWindow->GetDocument (getter_AddRefs(doc));
+    if (!doc) return GTK_MOZ_EMBED_CTX_NONE;
 
-      nsCOMPtr<nsIDOMNode> docnode = do_QueryInterface(doc);
-      *node = docnode;
-      return GTK_MOZ_EMBED_CTX_DOCUMENT;
+    nsCOMPtr<nsIDOMNode> docnode = do_QueryInterface(doc);
+    *node = docnode;
+    return GTK_MOZ_EMBED_CTX_DOCUMENT;
   }
 
   if (embedPrivate->mEventListener) {
