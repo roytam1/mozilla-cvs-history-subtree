@@ -582,6 +582,8 @@ EmbedPrivate::Realize(PRBool *aAlreadyRealized)
 
   // Apply the current chrome mask
   ApplyChromeMask();
+  // Initialize focus for window, help for WINDOWWATCHER Service
+  ChildFocusIn();
 
   return NS_OK;
 }
