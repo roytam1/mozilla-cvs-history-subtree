@@ -256,9 +256,9 @@ void _PR_InitLog(void)
         PR_SetLogBuffering(isSync ? bufSize : 0);
 
 #ifdef XP_UNIX
-        if (getuid() != geteuid()) {
+        if ((getuid() != geteuid()) || (getgid() != getegid())) {
             return;
-    }
+        }
 #endif /* XP_UNIX */
 
         ev = PR_GetEnv("NSPR_LOG_FILE");
