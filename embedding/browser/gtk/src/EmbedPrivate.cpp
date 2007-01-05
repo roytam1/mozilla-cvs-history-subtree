@@ -1891,41 +1891,16 @@ EmbedPrivate::GetDOMWindowByNode(nsIDOMNode *aNode, nsIDOMWindow * *aDOMWindow)
   nsCOMPtr <nsIDOMDocument> nodeDoc;
   rv = aNode->GetOwnerDocument(getter_AddRefs(nodeDoc));
   NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIWebBrowser> webBrowser;
-  rv = mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
+  nsCOMPtr <nsIDOMDocumentView> docView = do_QueryInterface(nodeDoc, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr <nsIDOMWindow> mainWindow;
-  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(mainWindow));
+  nsCOMPtr <nsIDOMAbstractView> absView;
   NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIDOMDocument> mainDoc;
-  rv = mainWindow->GetDocument (getter_AddRefs(mainDoc));
-  if (mainDoc == nodeDoc) {
-    *aDOMWindow = mainWindow;
-    NS_IF_ADDREF(*aDOMWindow);
-    return NS_OK;
-  }
-
-  nsCOMPtr <nsIDOMWindowCollection> frames;
-  rv = mainWindow->GetFrames(getter_AddRefs (frames));
+  rv = docView->GetDefaultView(getter_AddRefs(absView));
   NS_ENSURE_SUCCESS(rv, rv);
-  PRUint32 frameCount = 0;
-  rv = frames->GetLength (&frameCount);
-  nsCOMPtr <nsIDOMWindow> curWindow;
-  for (unsigned int i= 0; i < frameCount; i++) {
-    rv = frames->Item(i, getter_AddRefs (curWindow));
-    if (!curWindow)
-      continue;
-    nsCOMPtr <nsIDOMDocument> currentDoc;
-    curWindow->GetDocument (getter_AddRefs(currentDoc));
-    if (currentDoc == nodeDoc) {
-      *aDOMWindow = curWindow;
-      NS_IF_ADDREF(*aDOMWindow);
-      break;
-    }
-  }
+  nsCOMPtr <nsIDOMWindow> window = do_QueryInterface(absView, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  *aDOMWindow = window;
+  NS_IF_ADDREF(*aDOMWindow);
   return rv;
 }
 
