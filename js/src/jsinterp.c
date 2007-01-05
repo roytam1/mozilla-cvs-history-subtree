@@ -4217,6 +4217,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (!ok)
                 goto out;
             PUSH_OPND(rval);
+            obj = NULL;
             break;
 
           case JSOP_ARGSUB:
