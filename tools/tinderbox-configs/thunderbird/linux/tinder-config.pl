@@ -177,11 +177,10 @@ $archive       = 1;
 $update_package = 1;
 $update_product = "Thunderbird";
 $update_version = "1.5.0.x";
+$update_ver_file = "mail/config/version.txt";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
-$update_appv = "1.5.0.5";
-$update_extv = "1.5.0.5";
 $update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
