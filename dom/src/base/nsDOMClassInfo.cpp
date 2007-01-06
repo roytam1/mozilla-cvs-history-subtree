@@ -5222,8 +5222,18 @@ nsDOMClassInfo::UnsetExternallyReferenced(nsIDOMGCParticipant *aParticipant)
 {
   NS_PRECONDITION(aParticipant, "unexpected null pointer");
 
-  PL_DHashTableOperate(&sExternallyReferencedTable, aParticipant,
-                       PL_DHASH_REMOVE);
+  NS_ASSERTION(sExternallyReferencedTable.ops, "unbalanced call");
+  if (sExternallyReferencedTable.ops) {
+#ifdef DEBUG
+    PRUint32 count = sExternallyReferencedTable.entryCount;
+#endif
+    PL_DHashTableOperate(&sExternallyReferencedTable, aParticipant,
+                         PL_DHASH_REMOVE);
+#ifdef DEBUG
+    NS_ASSERTION(count == sExternallyReferencedTable.entryCount + 1,
+                 "unbalanced call");
+#endif
+  }
 
   // Don't destroy the table when the entryCount hits zero, since that
   // is expected to happen often.  Instead, destroy it at shutdown.
