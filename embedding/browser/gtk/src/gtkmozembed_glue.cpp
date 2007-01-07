@@ -73,7 +73,8 @@
   GTKF(gtk_moz_embed_get_selection) \
   GTKF(gtk_moz_embed_get_doc_info) \
   GTKF(gtk_moz_embed_insert_text) \
-  GTKF(gtk_moz_embed_common_nsx509_to_raw)
+  GTKF(gtk_moz_embed_common_nsx509_to_raw) \
+  GTKF(gtk_moz_embed_common_observe)
 #else
 #define GTKMOZEMBED2_FUNCTIONS
 #endif
