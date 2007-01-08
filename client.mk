@@ -429,7 +429,7 @@ MODULES_all :=                                  \
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_3_11_4_RTM
+NSS_CO_TAG           = NSS_3_11_5_BETA1
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
 LOCALES_CO_TAG       =
 
@@ -485,6 +485,18 @@ ifdef CONFIG_GUESS_SCRIPT
   CONFIG_GUESS = $(shell $(CONFIG_GUESS_SCRIPT))
 else
   _IS_FIRST_CHECKOUT := 1
+endif
+
+####################################
+# Sanity checks
+
+ifneq (,$(filter MINGW%,$(shell uname -s)))
+# check for CRLF line endings
+ifneq (0,$(shell $(PERL) -e 'binmode(STDIN); while (<STDIN>) { if (/\r/) { print "1"; exit } } print "0"' < $(TOPSRCDIR)/client.mk))
+$(error This source tree appears to have Windows-style line endings. To \
+convert it to Unix-style line endings, run \
+"python mozilla/build/win32/mozilla-dos2unix.py")
+endif
 endif
 
 ####################################

@@ -40,6 +40,7 @@
 #include "nsAutoLock.h"
 #include "nsAutoPtr.h"
 #include "prlog.h"
+#include "nsThreadUtils.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo *sLog = PR_NewLogModule("nsEventQueue");
@@ -64,28 +65,30 @@ nsEventQueue::~nsEventQueue()
 PRBool
 nsEventQueue::GetEvent(PRBool mayWait, nsIRunnable **result)
 {
-  nsAutoMonitor mon(mMonitor);
-
-  while (IsEmpty()) {
-    if (!mayWait) {
-      if (result)
-        *result = nsnull;
-      return PR_FALSE;
+  {
+    nsAutoMonitor mon(mMonitor);
+    
+    while (IsEmpty()) {
+      if (!mayWait) {
+        if (result)
+          *result = nsnull;
+        return PR_FALSE;
+      }
+      LOG(("EVENTQ(%p): wait begin\n", this)); 
+      mon.Wait();
+      LOG(("EVENTQ(%p): wait end\n", this)); 
     }
-    LOG(("EVENTQ(%p): wait begin\n", this)); 
-    mon.Wait();
-    LOG(("EVENTQ(%p): wait end\n", this)); 
-  }
-
-  if (result) {
-    *result = mHead->mEvents[mOffsetHead++];
-
-    // Check if mHead points to empty Page
-    if (mOffsetHead == EVENTS_PER_PAGE) {
-      Page *dead = mHead;
-      mHead = mHead->mNext;
-      FreePage(dead);
-      mOffsetHead = 0;
+    
+    if (result) {
+      *result = mHead->mEvents[mOffsetHead++];
+      
+      // Check if mHead points to empty Page
+      if (mOffsetHead == EVENTS_PER_PAGE) {
+        Page *dead = mHead;
+        mHead = mHead->mNext;
+        FreePage(dead);
+        mOffsetHead = 0;
+      }
     }
   }
 
