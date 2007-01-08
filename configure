@@ -12600,7 +12600,7 @@ zap)
   MOZ_XULRUNNER=1
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs"
+  MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs jssh"
   if test "$MOZ_STORAGE"; then
     MOZ_PLACES=1
   fi
