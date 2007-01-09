@@ -2593,8 +2593,8 @@ nsXULElement::GetBoxObject(nsIBoxObject** aResult)
   // Be sure to get the same document as the NS_ENSURE_TRUE uses in
   // nsDocument.cpp::GetBoxObjectFor().
   nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(GetOwnerDoc()));
-  NS_ENSURE_TRUE(nsDoc, NS_ERROR_FAILURE);
-  return nsDoc->GetBoxObjectFor(this, aResult);
+
+  return nsDoc ? nsDoc->GetBoxObjectFor(this, aResult) : NS_ERROR_FAILURE;
 }
 
 // Methods for setting/getting attributes from nsIDOMXULElement
