@@ -1658,6 +1658,9 @@ nsMsgDBFolder::AutoCompact(nsIMsgWindow *aWindow)
 
            if (okToCompact)
            {
+              nsCOMPtr <nsIAtom> aboutToCompactAtom = do_GetAtom("AboutToCompact");
+              NotifyFolderEvent(aboutToCompactAtom);
+             
              if ( localExpungedBytes > 0)
              {
                nsCOMPtr <nsIMsgFolder> msgFolder =
