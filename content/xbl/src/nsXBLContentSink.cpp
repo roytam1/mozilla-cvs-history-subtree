@@ -645,10 +645,12 @@ nsXBLContentSink::ConstructHandler(const PRUnichar **aAtts, PRUint32 aLineNumber
       allowuntrusted = aAtts[1];
   }
 
-  if (command && !mIsChromeOrResource)
+  if (command && !mIsChromeOrResource) {
     // Make sure the XBL doc is chrome or resource if we have a command
     // shorthand syntax.
+    mState = eXBL_Error;
     return; // Don't even make this handler.
+  }
 
   // All of our pointers are now filled in. Construct our handler with all of
   // these parameters.
@@ -673,6 +675,8 @@ nsXBLContentSink::ConstructHandler(const PRUnichar **aAtts, PRUint32 aLineNumber
     // Adjust our mHandler pointer to point to the new last handler in the
     // chain.
     mHandler = newHandler;
+  } else {
+    mState = eXBL_Error;
   }
 }
 
