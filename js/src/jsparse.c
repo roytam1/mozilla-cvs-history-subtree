@@ -3505,6 +3505,8 @@ XMLElementContent(JSContext *cx, JSTokenStream *ts, JSParseNode *pn,
     JSParseNode *pn2;
     JSAtom *textAtom;
 
+    CHECK_RECURSION();
+
     ts->flags &= ~TSF_XMLTAGMODE;
     for (;;) {
         ts->flags |= TSF_XMLTEXTMODE;
