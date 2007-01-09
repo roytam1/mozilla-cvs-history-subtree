@@ -4942,6 +4942,8 @@ XMLElementOrList(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     JSTokenType tt;
     JSAtom *startAtom, *endAtom;
 
+    CHECK_RECURSION();
+
     JS_ASSERT(CURRENT_TOKEN(ts).type == TOK_XMLSTAGO);
     pn = NewParseNode(cx, ts, PN_LIST, tc);
     if (!pn)
