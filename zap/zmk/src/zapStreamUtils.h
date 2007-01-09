@@ -41,29 +41,49 @@
 #include "nsIWritablePropertyBag2.h"
 #include "nsCOMPtr.h"
 
-already_AddRefed<nsIWritablePropertyBag2> CreateStreamInfo(const nsACString& type);
+already_AddRefed<nsIWritablePropertyBag2>
+CreateStreamInfo(const nsACString& type);
 
-extern nsCString transientCString;
-extern double transientDouble;
-extern PRUint32 transientUint32;
+inline PRBool
+CHECK_STREAM_CSTRING(nsIPropertyBag2* streamInfo,
+                     const nsAString& name,
+                     const nsACString& val)
+{
+  nsCString v;
+  return (streamInfo &&
+          NS_SUCCEEDED(streamInfo->GetPropertyAsACString(name, v)) &&
+          v == val);
+}
 
-#define CHECK_STREAM_CSTRING(streamInfo, name, val)                     \
-  (NS_SUCCEEDED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING(name), \
-                                                  transientCString)) && \
-   transientCString == val)
+inline PRBool
+CHECK_STREAM_TYPE(nsIPropertyBag2* streamInfo,
+                  const nsACString& type)
+{
+  return CHECK_STREAM_CSTRING(streamInfo,
+                              NS_LITERAL_STRING("type"),
+                              type);
+}
 
-#define CHECK_STREAM_TYPE(streamInfo, type) \
-  CHECK_STREAM_CSTRING(streamInfo, "type", type)
+inline PRBool
+CHECK_STREAM_DOUBLE(nsIPropertyBag2* streamInfo,
+                    const nsAString& name,
+                    double val)
+{
+  double v;
+  return (streamInfo &&
+          NS_SUCCEEDED(streamInfo->GetPropertyAsDouble(name, &v)) &&
+          v == val);
+}
 
-#define CHECK_STREAM_DOUBLE(streamInfo, name, val)                      \
-  (NS_SUCCEEDED(streamInfo->GetPropertyAsDouble(NS_LITERAL_STRING(name), \
-                                                &transientDouble)) &&   \
-   transientDouble == val)
-
-#define CHECK_STREAM_UINT32(streamInfo, name, val)                      \
-  (NS_SUCCEEDED(streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING(name), \
-                                                &transientUint32)) &&   \
-   transientUint32 == val)
-
+inline PRBool
+CHECK_STREAM_UINT32(nsIPropertyBag2* streamInfo,
+                    const nsAString& name,
+                    PRUint32 val)
+{
+  PRUint32 v;
+  return (streamInfo &&
+          NS_SUCCEEDED(streamInfo->GetPropertyAsUint32(name, &v)) &&
+          v == val);
+}
 
 #endif // __ZAP_STREAMUTILS_H__

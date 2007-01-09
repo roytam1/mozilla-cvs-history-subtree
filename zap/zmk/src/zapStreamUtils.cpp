@@ -49,6 +49,3 @@ CreateStreamInfo(const nsACString& type)
   return bag;
 }
 
-nsCString transientCString;
-double transientDouble;
-PRUint32 transientUint32;
