@@ -23,6 +23,15 @@ Source1: ftp://ftp.mozilla.org/pub/mozilla.org/directory/perldap/releases/1.5/Ma
 
 %prep
 %setup -q -n perl-mozldap-%{version}
+# Filter unwanted Provides:
+cat << \EOF > %{name}-prov
+#!/bin/sh
+%{__perl_provides} $* |\
+  sed -e '/perl(Mozilla::LDAP::Entry)/d'
+EOF
+
+%define __perl_provides %{_builddir}/perl-mozldap-%{version}/%{name}-prov
+chmod +x %{__perl_provides}
 
 %build
 
