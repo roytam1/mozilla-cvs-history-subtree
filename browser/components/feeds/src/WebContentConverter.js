@@ -60,6 +60,9 @@ const PREF_SELECTED_WEB = "browser.feeds.handlers.webservice";
 const PREF_SELECTED_ACTION = "browser.feeds.handler";
 const PREF_SELECTED_READER = "browser.feeds.handler.default";
 
+const NS_ERROR_MODULE_DOM = 2152923136;
+const NS_ERROR_DOM_SYNTAX_ERR = NS_ERROR_MODULE_DOM + 12;
+
 function WebContentConverter() {
 }
 WebContentConverter.prototype = {
@@ -401,8 +404,14 @@ var WebContentConverterRegistrar = {
 
     try {
       var uri = this._makeURI(uriString);
+    } catch (ex) {
+      // not supposed to throw according to spec
+      return; 
     }
-    catch(ex) { return; }
+
+    // If the uri doesn't contain '%s', it won't be a good content handler
+    if (uri.spec.indexOf("%s") < 0)
+      throw NS_ERROR_DOM_SYNTAX_ERR;
 
     // For security reasons we reject non-http(s) urls (see bug Bug 354316),
     // we may need to revise this once we support more content types
@@ -410,6 +419,8 @@ var WebContentConverterRegistrar = {
       throw("Permission denied to add " + uri.spec + "as a content handler");
 
     // XXXben - for Firefox 2 we only support feed types
+    // XXX this should be a "security exception" according to spec, but that
+    // isn't defined yet.
     contentType = this._resolveContentType(contentType);
     if (contentType != TYPE_MAYBE_FEED)
       return;    
