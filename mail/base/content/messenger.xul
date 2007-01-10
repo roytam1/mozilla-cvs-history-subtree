@@ -44,7 +44,6 @@
 <?xul-overlay href="chrome://messenger/content/msgHdrViewOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailWindowOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/contentAreaContextOverlay.xul"?>
 
 <!DOCTYPE window [
 <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd" >
@@ -77,6 +76,7 @@
 <script type="application/x-javascript" src="chrome://messenger/content/mailWindow.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/msgMail3PaneWindow.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mail3PaneWindowCommands.js"/>
+<script type="application/x-javascript" src="chrome://global/content/contentAreaUtils.js"/>
 <script type="application/x-javascript" src="chrome://communicator/content/nsContextMenu.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mailContextMenus.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/messengerdnd.js"/>
