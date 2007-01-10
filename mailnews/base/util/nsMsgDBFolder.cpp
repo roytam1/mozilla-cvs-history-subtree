@@ -5429,6 +5429,7 @@ nsresult nsMsgDBFolder::convertMsgSnippetToPlainText(nsAString& aMessageText)
                    | nsIDocumentEncoder::OutputNoScriptContent
                    | nsIDocumentEncoder::OutputNoFramesContent
                    | nsIDocumentEncoder::OutputBodyOnly;
+  textSink->Initialize(&bodyText, flags, 80);
     
   parser->SetContentSink(sink);
   nsCOMPtr<nsIDTD> dtd = do_CreateInstance(kNavDTDCID,&rv);
