@@ -104,3 +104,9 @@ finish the build, e.g.
         $ perl5 Makefile.PL
 	$ make
 	$ make install
+
+RPM
+===
+
+The script Makefile.PL.rpm is used instead of Makefile.PL for building the RPM.
+See the spec file perl-Mozilla-LDAP.spec for more details.
