@@ -341,14 +341,12 @@ NS_IMETHODIMP nsImapMailFolder::AddSubfolder(const nsAString& aName,
   nsCAutoString uri(mURI);
   uri.Append('/');
   
-  // If AddSubFolder starts getting called for folders other than virtual folders, 
-  // we'll have to do convert those names to modified utf-7. For now, the account manager code
-  // that loads the virtual folders for each account, expects utf8 not modified utf-7. 
-  nsCAutoString escapedName;
-  rv = NS_MsgEscapeEncodeURLPath(aName, escapedName);
+  // convert name to imap modified utf7, like an imap server would
+  nsCAutoString utfFolderName;
+  rv = CopyUTF16toMUTF7(PromiseFlatString(aName), utfFolderName);
   NS_ENSURE_SUCCESS(rv, rv);
   
-  uri += escapedName.get();
+  uri += utfFolderName.get();
   
   nsCOMPtr <nsIMsgFolder> msgFolder;
   rv = GetChildWithURI(uri.get(), PR_FALSE/*deep*/, PR_TRUE /*case Insensitive*/, getter_AddRefs(msgFolder));  
@@ -4363,10 +4361,20 @@ nsImapMailFolder::OnlineCopyCompleted(nsIImapProtocol *aProtocol, ImapOnlineCopy
                  do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv,rv);
    
-        return imapService->AddMessageFlags(m_eventQueue, this, nsnull, nsnull,
+        rv = imapService->AddMessageFlags(m_eventQueue, this, nsnull, nsnull,
                                           messageIds,
                                           kImapMsgDeletedFlag,
                                           PR_TRUE);
+      if (NS_SUCCEEDED(rv))
+      {
+        nsMsgKeyArray affectedMessages;
+        char *keyTokenString = nsCRT::strdup(messageIds);
+        ParseUidString(keyTokenString, affectedMessages);
+        if (mDatabase) 
+          mDatabase->DeleteMessages(&affectedMessages,nsnull);
+        nsCRT::free(keyTokenString);
+        return rv;
+      }
     }
     /* unhandled action */
     else return NS_ERROR_FAILURE;
@@ -6484,12 +6492,7 @@ nsresult nsImapMailFolder::CopyOfflineMsgBody(nsIMsgFolder *srcFolder, nsIMsgDBH
     PRUint32 messageSize;
     origHdr->GetMessageOffset(&messageOffset);
     origHdr->GetOfflineMessageSize(&messageSize);
-    if (!messageSize)
-    {
-      nsCOMPtr<nsIMsgLocalMailFolder> localFolder = do_QueryInterface(srcFolder); 
-      if (localFolder)   //can just use regular message size
-        origHdr->GetMessageSize(&messageSize);
-    }
+
     PRInt64 tellPos;
     seekable->Tell(&tellPos);
     nsInt64 curStorePos = tellPos;
@@ -6528,13 +6531,6 @@ nsresult nsImapMailFolder::CopyOfflineMsgBody(nsIMsgFolder *srcFolder, nsIMsgDBH
           outputStream->Flush();
         }
       }
-    }
-    if (NS_SUCCEEDED(rv))
-    {
-      PRUint32 resultFlags;
-      destHdr->OrFlags(MSG_FLAG_OFFLINE, &resultFlags);
-      destHdr->SetOfflineMessageSize(messageSize);
-
     }
   }
   return rv;
@@ -6658,18 +6654,8 @@ nsresult nsImapMailFolder::CopyMessagesOffline(nsIMsgFolder* srcFolder,
             
             if (isMove)
             {
-              PRUint32 msgSize;
-              PRUint32 msgFlags;
-              imapMessageFlagsType newImapFlags = 0;
-              message->GetMessageSize(&msgSize);
-              message->GetFlags(&msgFlags);
               sourceOp->SetDestinationFolderURI(folderURI); // offline move
               sourceOp->SetOperation(nsIMsgOfflineImapOperation::kMsgMoved);
-              sourceOp->SetMsgSize(msgSize);
-              newImapFlags = msgFlags & 0x7;
-              if (msgFlags & MSG_FLAG_FORWARDED)
-                newImapFlags |=  kImapMsgForwardedFlag;
-              sourceOp->SetNewFlags(newImapFlags);
             }
             else
               sourceOp->AddMessageCopyOperation(folderURI); // offline copy

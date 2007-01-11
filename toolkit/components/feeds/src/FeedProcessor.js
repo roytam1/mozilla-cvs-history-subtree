@@ -337,8 +337,8 @@ Feed.prototype = {
     textInput: ["textInput", "rss1:textinput"],
     skipDays: ["skipDays"],
     skipHours: ["skipHours"],
-    updated: ["pubDate", "lastBuildDate", "atom03:modified", "dc:date",
-              "dcterms:modified", "atom:updated"]
+    updated: ["pubDate", "atom03:modified", "dc:date", "dcterms:modified",
+              "atom:updated"]
   },
 
   normalize: function Feed_normalize() {
@@ -1542,15 +1542,12 @@ FeedProcessor.prototype = {
           el.QueryInterface(Ci.nsIFeedPerson);
         else
           return; // don't know about this interface
-
+        
         var propName = localName;
-        var prefix = gNamespaces[uri];
-
         // synonyms
-        if ((uri == "" || 
-             prefix &&
-             ((prefix.indexOf("atom") > -1) ||
-              (prefix.indexOf("rss") > -1))) && 
+        if ((uri == "" ||
+             (gNamespaces[uri].indexOf("atom") > -1) ||
+             (gNamespaces[uri].indexOf("rss") > -1)) && 
             (propName == "url" || propName == "href"))
           propName = "uri";
         

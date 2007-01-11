@@ -5671,13 +5671,11 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         scrollEvent.delta = 0;
         if (isVertical) {
           scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
-          int verticalAmount =
-            msg == WM_MOUSEWHEEL ? (short) HIWORD (wParam) : (int) wParam;
           if (ulScrollLines == WHEEL_PAGESCROLL) {
             scrollEvent.scrollFlags |= nsMouseScrollEvent::kIsFullPage;
-            scrollEvent.delta = verticalAmount > 0 ? -1 : 1;
+            scrollEvent.delta = (((short) HIWORD (wParam)) > 0) ? -1 : 1;
           } else {
-            currentVDelta -= verticalAmount;
+            currentVDelta -= (short) HIWORD (wParam);
             if (PR_ABS(currentVDelta) >= iDeltaPerLine) {
               scrollEvent.delta = currentVDelta / iDeltaPerLine;
               currentVDelta %= iDeltaPerLine;

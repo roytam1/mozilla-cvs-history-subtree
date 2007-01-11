@@ -805,9 +805,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
                       case JSOP_DEFAULT:      op = JSOP_DEFAULTX; break;
                       case JSOP_TABLESWITCH:  op = JSOP_TABLESWITCHX; break;
                       case JSOP_LOOKUPSWITCH: op = JSOP_LOOKUPSWITCHX; break;
-                      default:
-                        ReportStatementTooLarge(cx, cg);
-                        return JS_FALSE;
+                      default:                JS_ASSERT(0);
                     }
                     *pc = (jsbytecode) op;
 
@@ -1798,11 +1796,6 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
           case JSOP_BINDNAME:   return JS_TRUE;
           case JSOP_SETNAME:    op = JSOP_SETELEM; break;
           case JSOP_SETPROP:    op = JSOP_SETELEM; break;
-#if JS_HAS_EXPORT_IMPORT
-          case JSOP_EXPORTNAME:
-            ReportStatementTooLarge(cx, cg);
-            return JS_FALSE;
-#endif
           default:              JS_ASSERT(mode == 0); break;
         }
 
