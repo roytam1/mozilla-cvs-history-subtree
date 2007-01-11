@@ -341,12 +341,14 @@ NS_IMETHODIMP nsImapMailFolder::AddSubfolder(const nsAString& aName,
   nsCAutoString uri(mURI);
   uri.Append('/');
   
-  // convert name to imap modified utf7, like an imap server would
-  nsCAutoString utfFolderName;
-  rv = CopyUTF16toMUTF7(PromiseFlatString(aName), utfFolderName);
+  // If AddSubFolder starts getting called for folders other than virtual folders, 
+  // we'll have to do convert those names to modified utf-7. For now, the account manager code
+  // that loads the virtual folders for each account, expects utf8 not modified utf-7. 
+  nsCAutoString escapedName;
+  rv = NS_MsgEscapeEncodeURLPath(aName, escapedName);
   NS_ENSURE_SUCCESS(rv, rv);
   
-  uri += utfFolderName.get();
+  uri += escapedName.get();
   
   nsCOMPtr <nsIMsgFolder> msgFolder;
   rv = GetChildWithURI(uri.get(), PR_FALSE/*deep*/, PR_TRUE /*case Insensitive*/, getter_AddRefs(msgFolder));  
